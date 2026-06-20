@@ -37,8 +37,9 @@ let merge_diagnostics left right =
       | Some left, Some right -> Some (left @ right))
     left right
 
-let diagnostics t =
-  merge_diagnostics t.syntax (merge_diagnostics t.compiler t.compiler_syntax)
+let diagnostics ?(include_syntax = true) t =
+  let diagnostics = merge_diagnostics t.compiler t.compiler_syntax in
+  if include_syntax then merge_diagnostics t.syntax diagnostics else diagnostics
 
 let replace_snapshot ~old ~latest =
   Uri_map.merge
@@ -64,11 +65,16 @@ let update_syntax ~uri ~(new_diagnostics : Diagnostic.t list) t =
 
 let clear_syntax ~uri t = update_syntax ~uri ~new_diagnostics:[] t
 
-let send t =
+let send ?(include_syntax = true) ?(force_publish_uris = []) t =
+  let diagnostics = diagnostics ~include_syntax t in
   Uri_map.iter
     (fun uri diagnostics ->
       t.send (PublishDiagnosticsParams.create ~uri ~diagnostics ()))
-    (diagnostics t)
+    diagnostics;
+  force_publish_uris
+  |> List.iter (fun uri ->
+         if not (Uri_map.mem uri diagnostics) then
+           t.send (PublishDiagnosticsParams.create ~uri ~diagnostics:[] ()))
 
 (* Convert parsed compiler-log entries into LSP diagnostics grouped by document
    URI. Compiler logs may report paths either relative to the workspace root or
