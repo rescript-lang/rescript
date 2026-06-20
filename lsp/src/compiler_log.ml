@@ -1,31 +1,45 @@
 module Parse : sig
   type path = Relative_path of string | Full_path of string
 
-  type entry =
+  type kind =
     | Syntax_error
     | Warning of {number: int; configured_as_error: bool}
     | Common_error (* type error, value can't be found *)
     | Circular_dependency
     | Unknow
 
-  type diagnostic_entry = {entry: entry; diagnostic: Lsp.Types.Diagnostic.t}
+  type range = Empty | Range of Lsp.Types.Range.t
 
-  val parse_log_content : string -> (path * diagnostic_entry) list
+  type diagnostic_entry = {
+    kind: kind;
+    path: path;
+    message: string;
+    range: range;
+  }
+
+  val parse_log_content : string -> diagnostic_entry list
 end = struct
   type position = {line: int; col: int}
 
-  type range = {start_pos: position; end_pos: position}
+  type parsed_range = {start_pos: position; end_pos: position}
 
   type path = Relative_path of string | Full_path of string
 
-  type entry =
+  type kind =
     | Syntax_error
     | Warning of {number: int; configured_as_error: bool}
     | Common_error
     | Circular_dependency
     | Unknow
 
-  type diagnostic_entry = {entry: entry; diagnostic: Lsp.Types.Diagnostic.t}
+  type range = Empty | Range of Lsp.Types.Range.t
+
+  type diagnostic_entry = {
+    kind: kind;
+    path: path;
+    message: string;
+    range: range;
+  }
 
   type location_format = Path_location | File_location
 
@@ -51,9 +65,6 @@ end = struct
   let filepath_of_path path =
     if Filename.is_relative path then Relative_path path else Full_path path
 
-  let zero_range =
-    {start_pos = {line = 0; col = 0}; end_pos = {line = 0; col = 0}}
-
   let parse_path_location line =
     (* Supported formats:
 
@@ -70,8 +81,7 @@ end = struct
          end   = 2:3
 
        /path/file.res
-         start = 0:0
-         end   = 0:0
+         no range
     *)
     let line = String.trim line in
 
@@ -86,18 +96,19 @@ end = struct
     let make_location filepath start_line start_col end_line end_col =
       Some
         ( filepath_of_path (Str.matched_group filepath line),
-          {
-            start_pos =
-              {
-                line = Str.matched_group start_line line |> int_of_string;
-                col = Str.matched_group start_col line |> int_of_string;
-              };
-            end_pos =
-              {
-                line = Str.matched_group end_line line |> int_of_string;
-                col = Str.matched_group end_col line |> int_of_string;
-              };
-          } )
+          Some
+            {
+              start_pos =
+                {
+                  line = Str.matched_group start_line line |> int_of_string;
+                  col = Str.matched_group start_col line |> int_of_string;
+                };
+              end_pos =
+                {
+                  line = Str.matched_group end_line line |> int_of_string;
+                  col = Str.matched_group end_col line |> int_of_string;
+                };
+            } )
     in
 
     try
@@ -107,11 +118,10 @@ end = struct
         make_location 1 2 3 2 4
       else if Str.string_match point_re line 0 then make_location 1 2 3 2 3
       else if is_rescript_source_path line then
-        Some (filepath_of_path line, zero_range)
+        Some (filepath_of_path line, None)
       else None
     with Not_found | Failure _ ->
-      if is_rescript_source_path line then
-        Some (filepath_of_path line, zero_range)
+      if is_rescript_source_path line then Some (filepath_of_path line, None)
       else None
 
   let parse_file_location line =
@@ -145,10 +155,11 @@ end = struct
       let end_col = Str.matched_group 4 line |> int_of_string in
       Some
         ( filepath_of_path filepath,
-          {
-            start_pos = {line = line_number; col = start_col};
-            end_pos = {line = line_number; col = end_col};
-          } )
+          Some
+            {
+              start_pos = {line = line_number; col = start_col};
+              end_pos = {line = line_number; col = end_col};
+            } )
     else if Str.string_match multi_line_re line 0 then
       let filepath = Str.matched_group 1 line in
       let start_line = Str.matched_group 2 line |> int_of_string in
@@ -157,10 +168,11 @@ end = struct
       let end_col = Str.matched_group 5 line |> int_of_string in
       Some
         ( filepath_of_path filepath,
-          {
-            start_pos = {line = start_line; col = start_col};
-            end_pos = {line = end_line; col = end_col};
-          } )
+          Some
+            {
+              start_pos = {line = start_line; col = start_col};
+              end_pos = {line = end_line; col = end_col};
+            } )
     else None
 
   let parse_location line =
@@ -247,22 +259,6 @@ end = struct
     else if Str.string_match warning_re line 0 then
       Some (Str.matched_group 1 line |> int_of_string, configured_as_error)
     else None
-
-  let severity_from_message lines =
-    let rec loop = function
-      | [] -> None
-      | line :: rest -> (
-        let content = String.trim line in
-        if is_blank content || is_source_excerpt_line content then loop rest
-        else
-          match content with
-          | other when String.starts_with ~prefix:"Warning " other ->
-            Some Lsp.Types.DiagnosticSeverity.Warning
-          | other when String.starts_with ~prefix:"Error" other ->
-            Some Lsp.Types.DiagnosticSeverity.Error
-          | _ -> None)
-    in
-    loop lines
 
   let is_diagnostic_message_start line =
     let content = String.trim line in
@@ -381,11 +377,12 @@ end = struct
           let entries =
             paths
             |> List.map (fun filepath ->
-                   ( filepath_of_path filepath,
-                     Circular_dependency,
-                     zero_range,
-                     Lsp.Types.DiagnosticSeverity.Error,
-                     message ))
+                   {
+                     path = filepath_of_path filepath;
+                     kind = Circular_dependency;
+                     message;
+                     range = Empty;
+                   })
           in
           loop (next_i + 1) (List.rev_append entries acc)
         else if starts_with "FAILED: dependency cycle:" trimmed then
@@ -394,11 +391,12 @@ end = struct
           let entries =
             paths
             |> List.map (fun filepath ->
-                   ( filepath_of_path filepath,
-                     Circular_dependency,
-                     zero_range,
-                     Lsp.Types.DiagnosticSeverity.Error,
-                     message ))
+                   {
+                     path = filepath_of_path filepath;
+                     kind = Circular_dependency;
+                     message;
+                     range = Empty;
+                   })
           in
           loop (i + 1) (List.rev_append entries acc)
         else loop (i + 1) acc
@@ -408,11 +406,14 @@ end = struct
   let replace_double_newline message =
     Str.global_replace (Str.regexp "\n\n") "\n" message
 
-  let make_diagnostic ?severity ~range ~message () =
-    (* -1 because lsp line and col is 0 based *)
-    let minus_one v = if v == 0 then v else v - 1 in
-    Lsp.Types.Diagnostic.create ?severity ~source:"ReScript"
-      ~range:
+  let range_of_parsed_range = function
+    | None -> Empty
+    | Some range ->
+      (* Compiler log locations are 1-based, while LSP locations are 0-based.
+         End columns are already exclusive in compiler output, so only line
+         numbers and start columns are shifted. *)
+      let minus_one v = max 0 (v - 1) in
+      Range
         (Lsp.Types.Range.create
            ~start:
              (Lsp.Types.Position.create
@@ -422,8 +423,6 @@ end = struct
              (Lsp.Types.Position.create
                 ~line:(range.end_pos.line |> minus_one)
                 ~character:range.end_pos.col))
-      ~message:(`String (replace_double_newline message))
-      ()
 
   let parse_log_content (content : string) =
     let lines = split_lines content in
@@ -449,7 +448,7 @@ end = struct
     let rec build entries =
       match entries with
       | [] -> []
-      | (loc_index, title_index, location_format, (filepath, range)) :: rest ->
+      | (loc_index, title_index, location_format, (path, range)) :: rest ->
         let next_boundary =
           match rest with
           | (next_loc_index, next_title_index, next_location_format, _) :: _
@@ -477,23 +476,7 @@ end = struct
           collect message_start []
         in
 
-        let severity =
-          match location_format with
-          | File_location -> severity_from_message raw_message_lines
-          | Path_location -> (
-            match title_index with
-            | Some i -> (
-              let content = String.trim lines.(i) in
-              match content with
-              | "Syntax error!" | "We've found a bug for you!" ->
-                Some Lsp.Types.DiagnosticSeverity.Error
-              | other when String.starts_with ~prefix:"Warning " other ->
-                Some Lsp.Types.DiagnosticSeverity.Warning
-              | _ -> None)
-            | None -> None)
-        in
-
-        let entry =
+        let kind =
           match location_format with
           | File_location -> kind_from_message raw_message_lines
           | Path_location -> (
@@ -502,17 +485,15 @@ end = struct
             | None -> kind_from_message raw_message_lines)
         in
 
-        let message = message_from_lines raw_message_lines in
+        let message =
+          raw_message_lines |> message_from_lines |> replace_double_newline
+        in
 
-        let diagnostic = make_diagnostic ?severity ~range ~message () in
-        (filepath, {entry; diagnostic}) :: build rest
+        {kind; path; message; range = range_of_parsed_range range} :: build rest
     in
 
     let dependency_cycle_diagnostics =
       parse_dependency_cycle_entries lines len
-      |> List.map (fun (filepath, entry, range, severity, message) ->
-             let diagnostic = make_diagnostic ~severity ~range ~message () in
-             (filepath, {entry; diagnostic}))
     in
 
     build diagnostics @ dependency_cycle_diagnostics
@@ -520,16 +501,25 @@ end
 
 (* TODO: Add more tests (fatal error), gentype warning, configured as error, The implementation `does not match the interface *)
 let%expect_test "parse log" =
+  let diagnostic_of_entry (entry : Parse.diagnostic_entry) =
+    let range =
+      match entry.range with
+      | Empty -> `String "Empty"
+      | Range range -> Lsp.Types.Range.yojson_of_t range
+    in
+    Yojson.Safe.pretty_to_string
+      (`Assoc [("message", `String entry.message); ("range", range)])
+  in
   let print_logs logs =
     logs
-    |> List.iter (fun ((path : Parse.path), (entry : Parse.diagnostic_entry)) ->
+    |> List.iter (fun (entry : Parse.diagnostic_entry) ->
            let path =
-             match path with
+             match entry.path with
              | Parse.Relative_path p -> Printf.sprintf "Relative_path(%s)" p
              | Full_path p -> Printf.sprintf "Full_path(%s)" p
            in
            print_endline
-             ((match entry.entry with
+             ((match entry.kind with
               | Syntax_error -> "Syntax_error"
               | Warning {number; configured_as_error} ->
                 if configured_as_error then
@@ -539,8 +529,7 @@ let%expect_test "parse log" =
               | Circular_dependency -> "Circular_dependency"
               | Common_error -> "Common_error")
              ^ " - " ^ path);
-           Lsp.Types.Diagnostic.yojson_of_t entry.diagnostic
-           |> Yojson.Safe.pretty_to_string |> print_endline;
+           diagnostic_of_entry entry |> print_endline;
            print_newline ())
   in
   let example_log_1 =
@@ -593,9 +582,7 @@ let%expect_test "parse log" =
       "range": {
         "end": { "character": 3, "line": 1 },
         "start": { "character": 7, "line": 0 }
-      },
-      "severity": 1,
-      "source": "ReScript"
+      }
     }
 
     Warning 8 - Full_path(/Users/chenglou/github/reason-react/src/test.res)
@@ -604,9 +591,7 @@ let%expect_test "parse log" =
       "range": {
         "end": { "character": 8, "line": 2 },
         "start": { "character": 4, "line": 2 }
-      },
-      "severity": 2,
-      "source": "ReScript"
+      }
     }
 
     Common_error - Full_path(/Users/chenglou/github/reason-react/src/test.res)
@@ -615,19 +600,12 @@ let%expect_test "parse log" =
       "range": {
         "end": { "character": 9, "line": 2 },
         "start": { "character": 8, "line": 2 }
-      },
-      "severity": 1,
-      "source": "ReScript"
+      }
     }
     |}];
 
-  let example_log_2 =
-    {|
-      #Start(1780532423603)
-      #Done(1780532423840)
-
-    |}
-  in
+  let example_log_2 = {|#Start(1780532423603)
+      #Done(1780532423840)|} in
 
   Parse.parse_log_content example_log_2 |> print_logs;
   [%expect {| |}];
@@ -726,9 +704,7 @@ let%expect_test "parse log" =
       "range": {
         "end": { "character": 7, "line": 12 },
         "start": { "character": 5, "line": 10 }
-      },
-      "severity": 2,
-      "source": "ReScript"
+      }
     }
 
     Warning 22 - Full_path(/home/pedro/Desktop/rescript-apollo-client/EXAMPLES/src/clientUsage/PromiseChaining.res)
@@ -737,9 +713,7 @@ let%expect_test "parse log" =
       "range": {
         "end": { "character": 7, "line": 20 },
         "start": { "character": 5, "line": 16 }
-      },
-      "severity": 2,
-      "source": "ReScript"
+      }
     }
 
     Warning 22 - Full_path(/home/pedro/Desktop/rescript-apollo-client/EXAMPLES/src/clientUsage/ClientBasics.res)
@@ -748,9 +722,7 @@ let%expect_test "parse log" =
       "range": {
         "end": { "character": 7, "line": 21 },
         "start": { "character": 5, "line": 17 }
-      },
-      "severity": 2,
-      "source": "ReScript"
+      }
     }
 
     Warning 22 - Full_path(/home/pedro/Desktop/rescript-apollo-client/EXAMPLES/src/docs/Docs.res)
@@ -759,9 +731,7 @@ let%expect_test "parse log" =
       "range": {
         "end": { "character": 7, "line": 10 },
         "start": { "character": 5, "line": 6 }
-      },
-      "severity": 2,
-      "source": "ReScript"
+      }
     }
 
     Warning 22 - Full_path(/home/pedro/Desktop/rescript-apollo-client/EXAMPLES/src/fragmentsUsage/Query_Fragments.res)
@@ -770,9 +740,7 @@ let%expect_test "parse log" =
       "range": {
         "end": { "character": 7, "line": 8 },
         "start": { "character": 5, "line": 5 }
-      },
-      "severity": 2,
-      "source": "ReScript"
+      }
     }
 
     Warning 22 - Full_path(/home/pedro/Desktop/rescript-apollo-client/EXAMPLES/src/hooksUsage/Mutation.res)
@@ -781,9 +749,7 @@ let%expect_test "parse log" =
       "range": {
         "end": { "character": 7, "line": 21 },
         "start": { "character": 5, "line": 17 }
-      },
-      "severity": 2,
-      "source": "ReScript"
+      }
     }
 
     Warning 22 - Full_path(/home/pedro/Desktop/rescript-apollo-client/EXAMPLES/src/hooksUsage/Query_Lazy.res)
@@ -792,9 +758,7 @@ let%expect_test "parse log" =
       "range": {
         "end": { "character": 7, "line": 6 },
         "start": { "character": 5, "line": 2 }
-      },
-      "severity": 2,
-      "source": "ReScript"
+      }
     }
 
     Warning 22 - Full_path(/home/pedro/Desktop/rescript-apollo-client/EXAMPLES/src/hooksUsage/Query_OverlySimple.res)
@@ -803,9 +767,7 @@ let%expect_test "parse log" =
       "range": {
         "end": { "character": 5, "line": 6 },
         "start": { "character": 3, "line": 2 }
-      },
-      "severity": 2,
-      "source": "ReScript"
+      }
     }
 
     Warning 22 - Full_path(/home/pedro/Desktop/rescript-apollo-client/EXAMPLES/src/hooksUsage/Query_SubscribeToMore.res)
@@ -814,9 +776,7 @@ let%expect_test "parse log" =
       "range": {
         "end": { "character": 7, "line": 8 },
         "start": { "character": 5, "line": 4 }
-      },
-      "severity": 2,
-      "source": "ReScript"
+      }
     }
 
     Warning 22 - Full_path(/home/pedro/Desktop/rescript-apollo-client/EXAMPLES/src/hooksUsage/Query_Typical.res)
@@ -825,9 +785,7 @@ let%expect_test "parse log" =
       "range": {
         "end": { "character": 7, "line": 7 },
         "start": { "character": 5, "line": 3 }
-      },
-      "severity": 2,
-      "source": "ReScript"
+      }
     }
     |}];
 
@@ -902,9 +860,7 @@ let%expect_test "parse log" =
       "range": {
         "end": { "character": 15, "line": 0 },
         "start": { "character": 0, "line": 0 }
-      },
-      "severity": 2,
-      "source": "ReScript"
+      }
     }
 
     Warning 27 - Full_path(/home/misha/projects/productionmason/web/auth/src/config/Config.res)
@@ -913,9 +869,7 @@ let%expect_test "parse log" =
       "range": {
         "end": { "character": 27, "line": 9 },
         "start": { "character": 21, "line": 9 }
-      },
-      "severity": 2,
-      "source": "ReScript"
+      }
     }
 
     Warning 34 - Full_path(/home/misha/projects/productionmason/web/auth/src/express-handler/ExpressHandler.re)
@@ -924,21 +878,11 @@ let%expect_test "parse log" =
       "range": {
         "end": { "character": 26, "line": 47 },
         "start": { "character": 4, "line": 47 }
-      },
-      "severity": 2,
-      "source": "ReScript"
+      }
     }
 
     Warning 32 - Full_path(/home/misha/projects/productionmason/web/auth/src/express-handler/ExpressHandler.re)
-    {
-      "message": "unused value t_encode.",
-      "range": {
-        "end": { "character": 0, "line": 0 },
-        "start": { "character": 0, "line": 0 }
-      },
-      "severity": 2,
-      "source": "ReScript"
-    }
+    { "message": "unused value t_encode.", "range": "Empty" }
 
     Common_error - Full_path(/home/misha/projects/productionmason/web/auth/tests/Auth_Test.res)
     {
@@ -946,9 +890,7 @@ let%expect_test "parse log" =
       "range": {
         "end": { "character": 45, "line": 223 },
         "start": { "character": 44, "line": 223 }
-      },
-      "severity": 1,
-      "source": "ReScript"
+      }
     }
     |}];
 
@@ -971,23 +913,13 @@ let%expect_test "parse log" =
     Circular_dependency - Relative_path(src/Demo.res)
     {
       "message": "Can't continue... Found a circular dependency in your code:\nDemo (src/Demo.res)\n→ Other (src/Other.res)\n→ Demo (src/Demo.res)\nPossible solutions:\n- Extract shared code into a new module both depend on.",
-      "range": {
-        "end": { "character": 0, "line": 0 },
-        "start": { "character": 0, "line": 0 }
-      },
-      "severity": 1,
-      "source": "ReScript"
+      "range": "Empty"
     }
 
     Circular_dependency - Relative_path(src/Other.res)
     {
       "message": "Can't continue... Found a circular dependency in your code:\nDemo (src/Demo.res)\n→ Other (src/Other.res)\n→ Demo (src/Demo.res)\nPossible solutions:\n- Extract shared code into a new module both depend on.",
-      "range": {
-        "end": { "character": 0, "line": 0 },
-        "start": { "character": 0, "line": 0 }
-      },
-      "severity": 1,
-      "source": "ReScript"
+      "range": "Empty"
     }
     |}];
 
@@ -1003,23 +935,13 @@ let%expect_test "parse log" =
     Circular_dependency - Relative_path(src/Demo.res)
     {
       "message": "FAILED: dependency cycle: src/Demo.cmj -> src/Other.cmj -> src/Demo.cmj.",
-      "range": {
-        "end": { "character": 0, "line": 0 },
-        "start": { "character": 0, "line": 0 }
-      },
-      "severity": 1,
-      "source": "ReScript"
+      "range": "Empty"
     }
 
     Circular_dependency - Relative_path(src/Other.res)
     {
       "message": "FAILED: dependency cycle: src/Demo.cmj -> src/Other.cmj -> src/Demo.cmj.",
-      "range": {
-        "end": { "character": 0, "line": 0 },
-        "start": { "character": 0, "line": 0 }
-      },
-      "severity": 1,
-      "source": "ReScript"
+      "range": "Empty"
     }
     |}];
 
@@ -1047,9 +969,7 @@ let%expect_test "parse log" =
       "range": {
         "end": { "character": 15, "line": 0 },
         "start": { "character": 8, "line": 0 }
-      },
-      "severity": 1,
-      "source": "ReScript"
+      }
     }
     |}];
 
@@ -1076,9 +996,7 @@ let%expect_test "parse log" =
       "range": {
         "end": { "character": 0, "line": 1 },
         "start": { "character": 40, "line": 0 }
-      },
-      "severity": 1,
-      "source": "ReScript"
+      }
     }
     |}];
 
@@ -1110,9 +1028,7 @@ let%expect_test "parse log" =
       "range": {
         "end": { "character": 43, "line": 0 },
         "start": { "character": 40, "line": 0 }
-      },
-      "severity": 1,
-      "source": "ReScript"
+      }
     }
     |}];
 
@@ -1195,9 +1111,7 @@ let%expect_test "parse log" =
       "range": {
         "end": { "character": 3, "line": 8 },
         "start": { "character": 2, "line": 5 }
-      },
-      "severity": 2,
-      "source": "ReScript"
+      }
     }
 
     Warning 37 - Full_path(/home/pedro/Desktop/projects/rescript-lang.org/apps/docs/app/DocsRoutes.res)
@@ -1206,9 +1120,7 @@ let%expect_test "parse log" =
       "range": {
         "end": { "character": 18, "line": 2 },
         "start": { "character": 0, "line": 2 }
-      },
-      "severity": 2,
-      "source": "ReScript"
+      }
     }
 
     Warning 37 - Full_path(/home/pedro/Desktop/projects/rescript-lang.org/apps/docs/app/DocsRoutes.res)
@@ -1217,9 +1129,7 @@ let%expect_test "parse log" =
       "range": {
         "end": { "character": 18, "line": 2 },
         "start": { "character": 0, "line": 2 }
-      },
-      "severity": 2,
-      "source": "ReScript"
+      }
     }
 
     Warning 37 - Full_path(/home/pedro/Desktop/projects/rescript-lang.org/apps/docs/app/DocsRoutes.res)
@@ -1228,9 +1138,7 @@ let%expect_test "parse log" =
       "range": {
         "end": { "character": 18, "line": 2 },
         "start": { "character": 0, "line": 2 }
-      },
-      "severity": 2,
-      "source": "ReScript"
+      }
     }
 
     Warning 32 - Full_path(/home/pedro/Desktop/projects/rescript-lang.org/apps/docs/app/DocsRoutes.res)
@@ -1239,9 +1147,7 @@ let%expect_test "parse log" =
       "range": {
         "end": { "character": 5, "line": 4 },
         "start": { "character": 4, "line": 4 }
-      },
-      "severity": 2,
-      "source": "ReScript"
+      }
     }
     |}];
 
@@ -1275,9 +1181,7 @@ let%expect_test "parse log" =
       "range": {
         "end": { "character": 15, "line": 11 },
         "start": { "character": 14, "line": 11 }
-      },
-      "severity": 1,
-      "source": "ReScript"
+      }
     }
     |}];
 
@@ -1448,9 +1352,7 @@ let%expect_test "parse log" =
       "range": {
         "end": { "character": 27, "line": 1 },
         "start": { "character": 20, "line": 1 }
-      },
-      "severity": 1,
-      "source": "ReScript"
+      }
     }
 
     Common_error - Relative_path(tests/build_tests/super_errors/fixtures/array_item_type_mismatch.res)
@@ -1459,9 +1361,7 @@ let%expect_test "parse log" =
       "range": {
         "end": { "character": 22, "line": 0 },
         "start": { "character": 15, "line": 0 }
-      },
-      "severity": 1,
-      "source": "ReScript"
+      }
     }
 
     Common_error - Relative_path(tests/build_tests/super_errors/fixtures/include_extension_constructors_mismatch.res)
@@ -1470,9 +1370,7 @@ let%expect_test "parse log" =
       "range": {
         "end": { "character": 1, "line": 6 },
         "start": { "character": 4, "line": 3 }
-      },
-      "severity": 1,
-      "source": "ReScript"
+      }
     }
 
     Common_error - Relative_path(tests/build_tests/super_errors/fixtures/functor_apply_arg_mismatch.res)
@@ -1481,9 +1379,7 @@ let%expect_test "parse log" =
       "range": {
         "end": { "character": 29, "line": 12 },
         "start": { "character": 21, "line": 12 }
-      },
-      "severity": 1,
-      "source": "ReScript"
+      }
     }
 
     Common_error - Relative_path(tests/build_tests/super_errors/fixtures/include_missing_field.res)
@@ -1492,9 +1388,7 @@ let%expect_test "parse log" =
       "range": {
         "end": { "character": 1, "line": 5 },
         "start": { "character": 4, "line": 3 }
-      },
-      "severity": 1,
-      "source": "ReScript"
+      }
     }
 
     Common_error - Relative_path(tests/build_tests/super_errors/fixtures/include_modtype_infos_mismatch.res)
@@ -1503,9 +1397,7 @@ let%expect_test "parse log" =
       "range": {
         "end": { "character": 1, "line": 8 },
         "start": { "character": 4, "line": 4 }
-      },
-      "severity": 1,
-      "source": "ReScript"
+      }
     }
     |}];
 
@@ -1535,9 +1427,7 @@ let%expect_test "parse log" =
       "range": {
         "end": { "character": 21, "line": 0 },
         "start": { "character": 16, "line": 0 }
-      },
-      "severity": 2,
-      "source": "ReScript"
+      }
     }
     |}];
 
@@ -1556,13 +1446,66 @@ let%expect_test "parse log" =
   [%expect
     {|
     Common_error - Full_path(/home/pedro/Desktop/projects/rescript-compiler/tests/build_tests/gpr_978/src/gpr_978_module.res)
+    { "message": "M is exported twice", "range": "Empty" }
+    |}];
+
+  let example_log_14 =
+    {|#Start(1781910915195)
+
+        We've found a bug for you!
+        /home/pedro/Desktop/projects/rescript-lang.org/apps/docs/scripts/LogAlgoliaEnvStatus.res:13:37-85
+
+        11 ┆ switch Node.Process.argv[1] {
+        12 ┆ | Some(entrypoint) =>
+        13 ┆   Node.URL.fileURLToPath(url) === Node.Path.resolve(Node.Process.cwd(),
+           ┆  entrypoint)
+        14 ┆ | None => false
+        15 ┆ }
+
+        This has type: string
+        But it's being compared to something of type: int
+
+        You can only compare things of the same type.
+
+        You can convert string to int with Int.fromString.
+
+
+        We've found a bug for you!
+        /home/pedro/Desktop/projects/rescript-lang.org/apps/docs/scripts/gendocs.res:23:3-24:21
+
+        21 │ let args = Process.argv->Array.slice(~start=2)
+        22 │ let dirname =
+        23 │   url
+        24 │   ->URL.fileURLToPath
+        25 │   ->Path.dirname
+        26 │
+
+        This has type: int
+        But this function argument is expecting: string
+
+        You can convert int to string with Int.toString.
+
+      #Done(1781910915345)|}
+  in
+
+  Parse.parse_log_content example_log_14 |> print_logs;
+  [%expect
+    {|
+    Common_error - Full_path(/home/pedro/Desktop/projects/rescript-lang.org/apps/docs/scripts/LogAlgoliaEnvStatus.res)
     {
-      "message": "M is exported twice",
+      "message": "This has type: string\nBut it's being compared to something of type: int\nYou can only compare things of the same type.\nYou can convert string to int with Int.fromString.",
       "range": {
-        "end": { "character": 0, "line": 0 },
-        "start": { "character": 0, "line": 0 }
-      },
-      "severity": 1,
-      "source": "ReScript"
+        "end": { "character": 85, "line": 12 },
+        "start": { "character": 36, "line": 12 }
+      }
+    }
+
+    Common_error - Full_path(/home/pedro/Desktop/projects/rescript-lang.org/apps/docs/scripts/gendocs.res)
+    {
+      "message": "This has type: int\nBut this function argument is expecting: string\nYou can convert int to string with Int.toString.",
+      "range": {
+        "end": { "character": 21, "line": 23 },
+        "start": { "character": 2, "line": 22 }
+      }
     }
     |}]
