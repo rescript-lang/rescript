@@ -225,7 +225,9 @@ let parse ~root ~fs =
     )
   | None -> Error ("Failed to read rescript.json file at " ^ rescript_json)
 
-(* TODO: Rename this function *)
+(* TODO: Rename this to describe the derived output, for example
+   get_output_suffix_and_module_folder. It returns both the emitted JS suffix
+   and the build folder implied by package-specs. *)
 let get_suffix_and_folder (config : Parse.t) =
   let default_suffix = ".js" in
   let default_in_source = false in

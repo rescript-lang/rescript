@@ -100,7 +100,7 @@ let to_lsp_format ?(include_syntax = false) ?(include_non_syntax = true)
           (Position.create ~line:0
              ~character:(String.length shortest_possible_code - 1))
     | Some {text} ->
-      (* TODO: Revisit this *)
+      (* TODO: On Windows \n is works? *)
       let lines = String.split_on_char '\n' text in
       let line, character =
         match List.rev lines with

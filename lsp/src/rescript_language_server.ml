@@ -68,7 +68,9 @@ let initialization () =
         ]
       ()
   in
-  (* TODO: Support interFileDependencies? *)
+  (* TODO: Revisit interFileDependencies when pull diagnostics can report
+     dependency-aware invalidation. For now compiler-log diagnostics are
+     refreshed as full snapshots, so advertising false is more accurate. *)
   let diagnosticProvider =
     `DiagnosticOptions
       (DiagnosticOptions.create ~workspaceDiagnostics:false
@@ -116,14 +118,15 @@ let discover_subpackages_and_populate ~workspace_root
     match Analysis.Packages.new_bs_package ~root_path with
     | Some p -> Some p
     | None ->
-      (* TODO: When the server starts and the project hasn't been built, (example,
-         right after cloning a repo), almost all features will not work.
-         Some solution to explore:
-         - Leave it as is, let the server running and show message
-         - Show window message and kill the server
-         - Run `rescript build` on server
-         - We can use DidChangeWatchedFiles notification to initialize `analysis_state`
-           when `compiler.log` changes
+      (* TODO: Decide how the server should recover when the workspace has not
+         been built yet, for example right after cloning a repository. Package
+         discovery depends on generated build metadata, so most analysis
+         features cannot work until that metadata exists.
+         Options to evaluate:
+         - Keep the server running and show a window message. In this case user should restart the server after build.
+         - Stop the server after explaining that a build is required.
+         - Re-initialize `analysis_state` after DidChangeWatchedFiles reports a
+           new `.compiler.log` change.
          *)
       let message =
         Printf.sprintf
@@ -206,7 +209,9 @@ let on_initialize (params : InitializeParams.t) (server : State.t Server.t) =
            match Compiler_config.parse ~root:root_path ~fs:state.fs with
            | Ok config -> Some (Uri.of_path root_path, config)
            | Error _ ->
-             (* TODO: Send notification? *)
+             (* TODO: Surface malformed package configs to the client. We ignore
+                them for now so initialization can continue with any remaining
+                valid packages. *)
              None)
     |> Compiler_config.Uri_map.of_seq
   in
@@ -378,7 +383,12 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
     in
     (ok (Some resp), state)
   | DocumentSymbol {textDocument = {uri}} -> (
-    (* NOTE: Neovim sometimes send invalid file uri, i,e, popup, not valid buffers *)
+    (* TODO: Handle invalid document URIs more deliberately. Neovim plugins such
+       as https://github.com/dnlhc/glance.nvim can send `file://` for popup
+       buffers, which are not real workspace documents. `Document_store.get_opt`
+       prevents a crash today, but we should decide whether to ignore these
+       requests silently, return a clearer empty response or raise a error.
+    *)
     match Document_store.get_opt ~uri state.store with
     | None -> (ok (Some (`DocumentSymbol [])), state)
     | Some {text} ->
@@ -496,8 +506,8 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
 
     let format ~source =
       let full_document_text_edit text =
+        (* TODO: \n works on Windows? *)
         let lines = String.split_on_char '\n' text in
-        (* TODO: Revisit this *)
         let end_line, end_character =
           match List.rev lines with
           | [] -> (0, 0)
@@ -531,15 +541,20 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
         | Unix.WSTOPPED signal -> Printf.sprintf "stopped by signal %d" signal
       in
 
-      (* TODO: Run with Eio_unix.run_in_systhread? *)
+      (* TODO: Move this blocking process call into an Eio-friendly abstraction.
+         Unix.open_process_args blocks the current domain; a system thread or a
+         portable process helper would avoid stalling the server during format.
+         We can se Run with Eio_unix.run_in_systhread? *)
       let executable =
         let executable_name =
-          (* TODO: On Windows the command is rescript.cmd? *)
+          (* TODO: Confirm the Windows shim name across package managers. npm
+             usually creates rescript.cmd, but pnpm/yarn shims may differ. *)
           if Sys.win32 then "rescript.cmd" else "rescript"
         in
         let root_path = State.workspace_root state |> Uri.to_path in
         let ( /+ ) = Filename.concat in
-        (* TODO: This works with all package manager? Refactor to handle with erros? *)
+        (* TODO: Resolve the formatter executable with package-manager-aware
+           lookup and return a clear error when the binary is missing. *)
         root_path /+ "node_modules" /+ ".bin" /+ executable_name
       in
       let extension_name = Document.to_string kind_file in
@@ -585,8 +600,9 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
       | Error message ->
         (error ("Failed to run rescript format using. " ^ message), state))
     | true ->
-      (* TODO: Return error or show window/message? *)
-      (* If document has syntax errors respond with null *)
+      (* TODO: Decide the client-facing behavior for formatting invalid syntax.
+         Returning null is spec-valid but silent; a response error or
+         window/showMessage may be easier to understand. *)
       (ok None, state))
   | ExecuteCommand {command; arguments} ->
     let request_show_document ~uri ~takeFocus =
@@ -602,7 +618,8 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
           server;
         (ok `Null, state))
       else
-        (* TODO: Send window/showMessage? *)
+        (* TODO: Also show a window/showMessage notification when showDocument is
+           unsupported. The current error response is easy to miss in clients. *)
         let message =
           match (State.params state).clientInfo with
           | Some {name; version} ->
@@ -636,7 +653,9 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
         with
         | Ok uri -> request_show_document ~uri ~takeFocus:true
         | Error _ ->
-          (* TODO: Send window/showMessage?. If user dont build the project the cmi file dont exists *)
+          (* TODO: Show an window/showMessage when interface creation fails
+             because the project has not been built and the .cmi file is
+             missing. *)
           ( error
               (Printf.sprintf "Failed to create interface file for %s and %s"
                  uri cmi_uri),
