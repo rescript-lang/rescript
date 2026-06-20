@@ -96,16 +96,20 @@ module Parse = struct
           Printf.printf "namespace=%s\n" namespace
         | Some (Namespace_bool namespace) ->
           Printf.printf "namespace=%b\n" namespace
-        | None -> print_endline "namespace=none");
+        | None -> print_endline "namespace=None");
         (match config.package_specs with
-        | Some [Module_format Esmodule; Module_format_object {in_source}] ->
-          Printf.printf "package_specs=ok in_source=%b\n"
-            (Option.value in_source ~default:false)
-        | Some _ -> print_endline "package_specs=other"
-        | None -> print_endline "package_specs=none");
+        | Some specs ->
+          let r =
+            specs
+            |> List.map (fun spec ->
+                   package_spec_to_yojson spec |> Yojson.Safe.pretty_to_string)
+            |> String.concat ", "
+          in
+          Printf.sprintf "package_specs=Some(%s)" r |> print_endline
+        | None -> print_endline "package_specs=None");
         match config.suffix with
         | Some suffix -> Printf.sprintf "suffix=%s" suffix |> print_endline
-        | None -> print_endline "suffix=none")
+        | None -> print_endline "suffix=None")
     in
 
     let json =
@@ -129,8 +133,9 @@ module Parse = struct
       {|
       name=app
       namespace=App
-      package_specs=ok in_source=true
-      suffix=.js |}];
+      package_specs=Some("esmodule", { "in-source": true, "module": "commonjs", "suffix": ".cjs" })
+      suffix=.js
+      |}];
 
     let json_2 =
       Yojson.Safe.from_string
@@ -165,8 +170,9 @@ module Parse = struct
       {|
       name=@rescript-lang/guide
       namespace=false
-      package_specs=none
-      suffix=none |}];
+      package_specs=None
+      suffix=None
+      |}];
 
     let json_3 =
       Yojson.Safe.from_string
@@ -195,8 +201,8 @@ module Parse = struct
     [%expect
       {|
       name=rescript-lang.org-monorepo
-      namespace=none
-      package_specs=other
+      namespace=None
+      package_specs=Some({ "in-source": true, "module": "esmodule" })
       suffix=.jsx
       |}]
 end
