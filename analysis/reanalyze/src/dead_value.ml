@@ -128,12 +128,10 @@ let rec collect_expr ~config ~decls ~refs ~file_deps ~cross_file ~callee_locs
     ~(last_binding : Location.t) super self (e : Typedtree.expression) =
   let loc_from = e.exp_loc in
   let binding = last_binding in
-  let add_optional_arg_value_escape pos_from pos_to =
-    match Declarations.find_opt_builder decls pos_to with
-    | Some {decl_kind = Value {reports_optional_args = true}} ->
+  let add_optional_arg_value_escape ~val_type pos_from pos_to =
+    if Dead_optional_args.has_optional_args val_type then
       Cross_file_items.add_optional_arg_value_escape cross_file ~pos_from
         ~pos_to
-    | _ -> ()
   in
   let rec remove_first target = function
     | [] -> []
@@ -148,7 +146,9 @@ let rec collect_expr ~config ~decls ~refs ~file_deps ~cross_file ~callee_locs
   in
   Option.iter (fun loc -> callee_locs := loc :: !callee_locs) callee_loc_opt;
   (match e.exp_desc with
-  | Texp_ident (_path, _, {Types.val_loc = {loc_ghost = false; _} as loc_to}) ->
+  | Texp_ident
+      (_path, _, {Types.val_loc = {loc_ghost = false; _} as loc_to; val_type})
+    ->
     (* if Path.name _path = "rc" then assert false; *)
     if loc_from = loc_to && _path |> Path.name = "emptyArray" then (
       (* Work around lowercase jsx with no children producing an artifact `emptyArray`
@@ -167,7 +167,7 @@ let rec collect_expr ~config ~decls ~refs ~file_deps ~cross_file ~callee_locs
           if binding = Location.none then loc_from.loc_start
           else binding.loc_start
         in
-        add_optional_arg_value_escape pos_from loc_to.loc_start)
+        add_optional_arg_value_escape ~val_type pos_from loc_to.loc_start)
   | Texp_apply
       {
         funct =
