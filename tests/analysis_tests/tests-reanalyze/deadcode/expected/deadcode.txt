@@ -1504,14 +1504,23 @@
   addValueDeclaration +toSuppress ToSuppress.res:1:4 path:+ToSuppress
   Scanning TopLevelOptionalArgValueUse.cmt Source:TopLevelOptionalArgValueUse.res
   addValueDeclaration +formatDate TopLevelOptionalArgValueUse.res:4:4 path:+TopLevelOptionalArgValueUse
-  addValueDeclaration +takesFn TopLevelOptionalArgValueUse.res:6:4 path:+TopLevelOptionalArgValueUse
-  addValueDeclaration +liveCaller TopLevelOptionalArgValueUse.res:10:4 path:+TopLevelOptionalArgValueUse
+  addValueDeclaration +formatDateEscapes TopLevelOptionalArgValueUse.res:5:4 path:+TopLevelOptionalArgValueUse
+  addValueDeclaration +takesFn TopLevelOptionalArgValueUse.res:7:4 path:+TopLevelOptionalArgValueUse
+  addValueDeclaration +deadEscape TopLevelOptionalArgValueUse.res:9:4 path:+TopLevelOptionalArgValueUse
+  addValueDeclaration +liveCaller TopLevelOptionalArgValueUse.res:11:4 path:+TopLevelOptionalArgValueUse
+  addValueDeclaration +liveEscapeCaller TopLevelOptionalArgValueUse.res:13:4 path:+TopLevelOptionalArgValueUse
   addValueReference TopLevelOptionalArgValueUse.res:4:4 --> TopLevelOptionalArgValueUse.res:4:26
-  addValueReference TopLevelOptionalArgValueUse.res:8:8 --> TopLevelOptionalArgValueUse.res:4:4
-  addValueReference TopLevelOptionalArgValueUse.res:8:0 --> TopLevelOptionalArgValueUse.res:6:4
-  DeadOptionalArgs.addReferences formatDate called with optional argNames: argNamesMaybe: TopLevelOptionalArgValueUse.res:10:23
-  addValueReference TopLevelOptionalArgValueUse.res:10:4 --> TopLevelOptionalArgValueUse.res:4:4
-  addValueReference TopLevelOptionalArgValueUse.res:12:8 --> TopLevelOptionalArgValueUse.res:10:4
+  addValueReference TopLevelOptionalArgValueUse.res:5:4 --> TopLevelOptionalArgValueUse.res:5:33
+  addValueReference TopLevelOptionalArgValueUse.res:9:4 --> TopLevelOptionalArgValueUse.res:4:4
+  addValueReference TopLevelOptionalArgValueUse.res:9:4 --> TopLevelOptionalArgValueUse.res:7:4
+  DeadOptionalArgs.addReferences formatDate called with optional argNames: argNamesMaybe: TopLevelOptionalArgValueUse.res:11:23
+  addValueReference TopLevelOptionalArgValueUse.res:11:4 --> TopLevelOptionalArgValueUse.res:4:4
+  DeadOptionalArgs.addReferences formatDateEscapes called with optional argNames: argNamesMaybe: TopLevelOptionalArgValueUse.res:15:2
+  addValueReference TopLevelOptionalArgValueUse.res:13:4 --> TopLevelOptionalArgValueUse.res:5:4
+  addValueReference TopLevelOptionalArgValueUse.res:13:4 --> TopLevelOptionalArgValueUse.res:5:4
+  addValueReference TopLevelOptionalArgValueUse.res:13:4 --> TopLevelOptionalArgValueUse.res:7:4
+  addValueReference TopLevelOptionalArgValueUse.res:18:8 --> TopLevelOptionalArgValueUse.res:11:4
+  addValueReference TopLevelOptionalArgValueUse.res:19:8 --> TopLevelOptionalArgValueUse.res:13:4
   Scanning TransitiveType1.cmt Source:TransitiveType1.res
   addValueDeclaration +convert TransitiveType1.res:2:4 path:+TransitiveType1
   addValueDeclaration +convertAlias TransitiveType1.res:5:4 path:+TransitiveType1
@@ -2013,9 +2022,9 @@
   
 Forward Liveness Analysis
 
-    decls: 714
-    roots(external targets): 149
-    decl-deps: decls_with_out=423 edges_to_decls=304
+    decls: 717
+    roots(external targets): 148
+    decl-deps: decls_with_out=426 edges_to_decls=308
 
     Root (external ref): Value +FirstClassModules.M.InnerModule2.+k
     Root (external ref): VariantCase DeadRT.moduleAccessPath.Root
@@ -2042,6 +2051,7 @@ Forward Liveness Analysis
     Root (annotated): RecordLabel +ImportHookDefault.props.renderMe
     Root (annotated): Value +TypeParams3.+test
     Root (annotated): Value +Types.+optFunction
+    Root (external ref): Value +TopLevelOptionalArgValueUse.+liveCaller
     Root (annotated): Value +Variants.+sunday
     Root (annotated): Value +NestedModules.Universe.Nested2.Nested3.+nested3Value
     Root (external ref): RecordLabel +Unison.t.doc
@@ -2053,6 +2063,7 @@ Forward Liveness Analysis
     Root (annotated): Value +Uncurried.+uncurried3
     Root (external ref): Value +Newton.+f
     Root (external ref): RecordLabel +Records.record.v
+    Root (external ref): Value +TopLevelOptionalArgValueUse.+liveEscapeCaller
     Root (external ref): Value +ContextOptionalArgs.ComponentUsingAction.+make
     Root (external ref): RecordLabel +Records.person.address
     Root (external ref): RecordLabel +ContextOptionalArgs.NotificationProvider.props.children
@@ -2085,7 +2096,6 @@ Forward Liveness Analysis
     Root (annotated): Value +Hooks.Inner.+make
     Root (external ref): RecordLabel +DeadTest.inlineRecord.IR.c
     Root (external ref): Value +OptArg.+foo
-    Root (external ref): Value +TopLevelOptionalArgValueUse.+formatDate
     Root (annotated): Value +Variants.+fortytwoOK
     Root (annotated): Value +TestOptArg.+liveSuppressesOptArgs
     Root (annotated): Value +Uncurried.+sumU2
@@ -2234,7 +2244,6 @@ Forward Liveness Analysis
     Root (annotated): Value +References.+create
     Root (annotated): Value +FirstClassModules.+testConvert
     Root (external ref): RecordLabel +Records.coord.z
-    Root (external ref): Value +TopLevelOptionalArgValueUse.+liveCaller
     Root (annotated): Value +Types.+someIntList
     Root (annotated): Value +Types.+i64Const
     Root (external ref): VariantCase +Unison.stack.Empty
@@ -2284,7 +2293,6 @@ Forward Liveness Analysis
     Root (annotated): Value +Records.+findAddress2
     Root (external ref): RecordLabel +Uncurried.authU.loginU
     Root (external ref): RecordLabel +Tuples.person.name
-    Root (external ref): Value +TopLevelOptionalArgValueUse.+takesFn
     Root (annotated): Value +ModuleAliases.+testInner2
     Root (annotated): RecordLabel +ImportHooks.props.person
     Root (external ref): Value DeadValueTest.+valueAlive
@@ -2353,16 +2361,19 @@ Forward Liveness Analysis
     Root (annotated): Value +UseImportJsValue.+useGetProp
     Root (annotated): Value +Hooks.+functionWithRenamedArgs
   
-  335 roots found
+  334 roots found
 
     Propagate: DeadRT.moduleAccessPath.Root -> +DeadRT.moduleAccessPath.Root
     Propagate: +TypeReexportCrossFileB.reexportedRecord.usedField -> +TypeReexportCrossFileA.originalRecord.usedField
     Propagate: +OptArg.+wrapfourArgs -> +OptArg.+fourArgs
     Propagate: +DeadTypeTest.deadType.OnlyInImplementation -> DeadTypeTest.deadType.OnlyInImplementation
     Propagate: +OptionalArgsLiveDead.+liveCaller -> +OptionalArgsLiveDead.+formatDate
+    Propagate: +TopLevelOptionalArgValueUse.+liveCaller -> +TopLevelOptionalArgValueUse.+formatDate
     Propagate: +Newton.+f -> +Newton.+-
     Propagate: +Newton.+f -> +Newton.++
     Propagate: +Newton.+f -> +Newton.+*
+    Propagate: +TopLevelOptionalArgValueUse.+liveEscapeCaller -> +TopLevelOptionalArgValueUse.+formatDateEscapes
+    Propagate: +TopLevelOptionalArgValueUse.+liveEscapeCaller -> +TopLevelOptionalArgValueUse.+takesFn
     Propagate: +ContextOptionalArgs.ComponentUsingAction.+make -> +ContextOptionalArgs.NotificationProvider.+useNotification
     Propagate: +TypeReexport.UseOriginal.reexportedType.directlyUsed -> +TypeReexport.UseOriginal.originalType.directlyUsed
     Propagate: +Hooks.+default -> +Hooks.+make
@@ -2411,7 +2422,7 @@ Forward Liveness Analysis
     Propagate: +References.R.+set -> +References.R.+set
     Propagate: +ImportJsValue.AbsoluteValue.+getAbs -> +ImportJsValue.AbsoluteValue.+getAbs
   
-  55 declarations marked live via propagation
+  58 declarations marked live via propagation
 
   Dead VariantCase +AutoAnnotate.variant.R
   Dead RecordLabel +AutoAnnotate.record.variant
@@ -3786,13 +3797,28 @@ Forward Liveness Analysis
       deps: in=0 (live=0 dead=0) out=1
         -> +TestPromise.fromPayload.s
   Dead Value +ToSuppress.+toSuppress
-  Live (external ref) Value +TopLevelOptionalArgValueUse.+formatDate
-      deps: in=1 (live=1 dead=0) out=0
+  Live (propagated) Value +TopLevelOptionalArgValueUse.+formatDate
+      deps: in=2 (live=1 dead=1) out=0
+        <- +TopLevelOptionalArgValueUse.+deadEscape (dead)
         <- +TopLevelOptionalArgValueUse.+liveCaller (live)
-  Live (external ref) Value +TopLevelOptionalArgValueUse.+takesFn
+  Live (propagated) Value +TopLevelOptionalArgValueUse.+formatDateEscapes
+      deps: in=1 (live=1 dead=0) out=0
+        <- +TopLevelOptionalArgValueUse.+liveEscapeCaller (live)
+  Live (propagated) Value +TopLevelOptionalArgValueUse.+takesFn
+      deps: in=2 (live=1 dead=1) out=0
+        <- +TopLevelOptionalArgValueUse.+deadEscape (dead)
+        <- +TopLevelOptionalArgValueUse.+liveEscapeCaller (live)
+  Dead Value +TopLevelOptionalArgValueUse.+deadEscape
+      deps: in=0 (live=0 dead=0) out=2
+        -> +TopLevelOptionalArgValueUse.+formatDate
+        -> +TopLevelOptionalArgValueUse.+takesFn
   Live (external ref) Value +TopLevelOptionalArgValueUse.+liveCaller
       deps: in=0 (live=0 dead=0) out=1
         -> +TopLevelOptionalArgValueUse.+formatDate
+  Live (external ref) Value +TopLevelOptionalArgValueUse.+liveEscapeCaller
+      deps: in=0 (live=0 dead=0) out=2
+        -> +TopLevelOptionalArgValueUse.+formatDateEscapes
+        -> +TopLevelOptionalArgValueUse.+takesFn
   Live (annotated) Value +TransitiveType1.+convert
   Live (annotated) Value +TransitiveType1.+convertAlias
   Dead Value +TransitiveType2.+convertT2
@@ -5151,6 +5177,10 @@ Forward Liveness Analysis
   TestPromise.res:11:19-32
   toPayload.result is a record label never used to read a value
 
+  Warning Dead Value
+  TopLevelOptionalArgValueUse.res:9:1-42
+  deadEscape is never used
+
   Warning Dead Module
   TransitiveType2.res:0:1
   TransitiveType2 is a dead module as all its items are dead.
@@ -5388,6 +5418,10 @@ Forward Liveness Analysis
   optional argument break_ of function group is always supplied (2 calls)
 
   Warning Unused Argument
+  TopLevelOptionalArgValueUse.res:4:1-33
+  optional argument fmt of function formatDate is never used
+
+  Warning Unused Argument
   OptArg.res:14:1-42
   optional argument a of function twoArgs is never used
 
@@ -5395,4 +5429,4 @@ Forward Liveness Analysis
   OptArg.res:14:1-42
   optional argument b of function twoArgs is never used
   
-  Analysis reported 319 issues (Incorrect Dead Annotation:1, Warning Dead Exception:2, Warning Dead Module:22, Warning Dead Type:94, Warning Dead Value:177, Warning Dead Value With Side Effects:5, Warning Redundant Optional Argument:6, Warning Unused Argument:12)
+  Analysis reported 321 issues (Incorrect Dead Annotation:1, Warning Dead Exception:2, Warning Dead Module:22, Warning Dead Type:94, Warning Dead Value:178, Warning Dead Value With Side Effects:5, Warning Redundant Optional Argument:6, Warning Unused Argument:13)

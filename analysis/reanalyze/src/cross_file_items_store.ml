@@ -28,6 +28,15 @@ let iter_function_refs t f =
       (fun _path items -> List.iter f items.Cross_file_items.function_refs)
       r
 
+let iter_optional_arg_value_escapes t f =
+  match t with
+  | Frozen cfi -> List.iter f cfi.Cross_file_items.optional_arg_value_escapes
+  | Reactive r ->
+    Reactive.iter
+      (fun _path items ->
+        List.iter f items.Cross_file_items.optional_arg_value_escapes)
+      r
+
 (** Compute optional args state from calls and function references.
     Returns a map from position to final OptionalArgs.t state.
     Pure function - does not mutate declarations. *)
@@ -65,3 +74,10 @@ let compute_optional_args_state (store : t) ~find_decl ~is_live :
           set_state pos_from updated_from;
           set_state pos_to updated_to));
   state
+
+let compute_live_optional_arg_value_escapes (store : t) ~is_live : Pos_set.t =
+  let escapes = ref Pos_set.empty in
+  iter_optional_arg_value_escapes store
+    (fun {Cross_file_items.pos_from; pos_to} ->
+      if is_live pos_from then escapes := Pos_set.add pos_to !escapes);
+  !escapes
