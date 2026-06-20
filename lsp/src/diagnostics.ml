@@ -107,8 +107,8 @@ let to_lsp_format ?(include_syntax = false) ?(include_non_syntax = true)
   in
 
   let range_of_entry uri = function
-    | Compiler_log.Parse.Empty -> fallback_range uri
-    | Compiler_log.Parse.Range range -> range
+    | Some range -> range
+    | None -> fallback_range uri
   in
 
   let severity_of_kind = function
@@ -240,7 +240,7 @@ let%expect_test "compiler syntax diagnostics don't clear type diagnostics" =
   in
   let entry uri kind message =
     let open Compiler_log.Parse in
-    {kind; path = Full_path (Uri.to_path uri); message; range = Range range}
+    {kind; path = Full_path (Uri.to_path uri); message; range = Some range}
   in
   let print t =
     diagnostics t
