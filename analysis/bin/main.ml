@@ -221,7 +221,7 @@ let main () =
   | [_; "format"; path] -> Cli.format ~path
   | [_; "test"; path] -> Cli.test ~state ~path
   | [_; "cmt"; rescript_json; cmt_path] ->
-    Cmt_viewer.dump ~state rescript_json cmt_path
+    Cli.dump_cmt ~state ~rescript_json ~cmt_path
   | args when List.mem "-h" args || List.mem "--help" args -> prerr_endline help
   | _ ->
     prerr_endline help;
