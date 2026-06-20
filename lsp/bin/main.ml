@@ -24,5 +24,5 @@ Options:
     Rescript_language_server.version |> print_endline
   | [_; ("-h" | "--help")] -> print_endline usage
   | _ ->
-    print_endline usage;
+    prerr_endline usage;
     exit 1
