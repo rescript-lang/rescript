@@ -78,10 +78,12 @@ let add_references ~config ~cross_file ~(loc_from : Location.t)
 
 (** Check for optional args issues. Returns issues instead of logging.
     Uses optional_args_state map for final computed state. *)
-let check ~optional_args_state ~ann_store ~config:_ decl : Issue.t list =
+let check ~optional_args_state ~optional_arg_value_escapes ~ann_store ~config:_
+    decl : Issue.t list =
   match decl with
   | {Decl.decl_kind = Value {reports_optional_args = true; optional_args}}
     when active ()
+         && (not (Pos_set.mem decl.pos optional_arg_value_escapes))
          && not
               (Annotation_store.is_annotated_gentype_or_live ann_store decl.pos)
     ->

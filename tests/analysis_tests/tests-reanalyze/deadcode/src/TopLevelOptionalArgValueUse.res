@@ -1,12 +1,19 @@
-/* Passing a function with optional args as a first-class value must suppress
-   optional-arg warnings even when the function also has a direct call. */
+/* Dead first-class escapes should not suppress optional-arg warnings, but live
+   first-class escapes should suppress them even when there is also a direct call. */
 
 let formatDate = (~fmt=?, s) => s
+let formatDateEscapes = (~fmt=?, s) => s
 
 let takesFn = _ => ()
 
-takesFn(formatDate)
+let deadEscape = () => takesFn(formatDate)
 
 let liveCaller = () => formatDate("2024-01-01")
 
+let liveEscapeCaller = () => {
+  takesFn(formatDateEscapes)
+  formatDateEscapes("2024-01-01")
+}
+
 let _ = liveCaller()
+let _ = liveEscapeCaller()

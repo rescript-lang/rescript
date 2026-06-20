@@ -173,17 +173,19 @@ let rec collect_expr ~config ~decls ~refs ~file_deps ~cross_file
     ~(last_binding : Location.t) super self (e : Typedtree.expression) =
   let loc_from = e.exp_loc in
   let binding = last_binding in
-  let suppress_optional_arg_report pos =
-    match Declarations.find_opt_builder decls pos with
-    | Some
-        ({decl_kind = Value ({reports_optional_args = true} as value_kind)} as
-         decl) ->
-      Declarations.replace_builder decls pos
-        {
-          decl with
-          decl_kind = Value {value_kind with reports_optional_args = false};
-        }
+  let add_optional_arg_value_escape pos_from pos_to =
+    match Declarations.find_opt_builder decls pos_to with
+    | Some {decl_kind = Value {reports_optional_args = true}} ->
+      Cross_file_items.add_optional_arg_value_escape cross_file ~pos_from
+        ~pos_to
     | _ -> ()
+  in
+  let add_optional_arg_value_escape_from_expr arg =
+    let pos_from =
+      if binding = Location.none then loc_from.loc_start else binding.loc_start
+    in
+    arg |> value_use_target_pos
+    |> Option.iter (add_optional_arg_value_escape pos_from)
   in
   (match e.exp_desc with
   | Texp_ident (_path, _, {Types.val_loc = {loc_ghost = false; _} as loc_to}) ->
@@ -218,9 +220,7 @@ let rec collect_expr ~config ~decls ~refs ~file_deps ~cross_file
     args
     |> List.iter (fun (_, arg) ->
            match arg with
-           | Some arg ->
-             arg |> value_use_target_pos
-             |> Option.iter suppress_optional_arg_report
+           | Some arg -> add_optional_arg_value_escape_from_expr arg
            | _ -> ())
   | Texp_let
       ( (* generated for functions with optional args *)
@@ -289,8 +289,7 @@ let rec collect_expr ~config ~decls ~refs ~file_deps ~cross_file
     |> Array.iter (fun (_, record_label_definition, _) ->
            match record_label_definition with
            | Typedtree.Overridden (_, e) -> (
-             e |> value_use_target_pos
-             |> Option.iter suppress_optional_arg_report;
+             add_optional_arg_value_escape_from_expr e;
              match e with
              | {exp_loc; _} when exp_loc.loc_ghost ->
                (* Punned field in OCaml projects has ghost location in expression *)
