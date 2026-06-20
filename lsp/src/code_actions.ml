@@ -430,11 +430,6 @@ end = struct
     diagnostics
     |> List.map (fun diagnostic -> extractor ~uri ~diagnostic ~source)
     |> List.flatten
-  (* diagnostics
-    |> Diagnostics.Uri_map.mapi (fun uri diagnostics ->
-           diagnostics
-           |> List.map (fun diagnostic -> extractor ~uri ~diagnostic)
-           |> List.flatten) *)
 end
 
 module Open_compiled_file = struct
