@@ -495,7 +495,6 @@ end = struct
     build diagnostics @ dependency_cycle_diagnostics
 end
 
-(* TODO: Add more tests (fatal error), gentype warning, configured as error, The implementation `does not match the interface *)
 let%expect_test "parse log" =
   let diagnostic_of_entry (entry : Parse.diagnostic_entry) =
     let range =

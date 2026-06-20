@@ -371,7 +371,9 @@ end = struct
           let record_field_names =
             split_fields fields @ (rest |> List.concat_map split_fields)
           in
-          (* TODO: Use %todo? *)
+          (* TODO: Check whether `%todo` is a better placeholder here. v10
+             diagnostics historically used failwith("TODO"), while newer
+             missing-field diagnostics use `%todo`. *)
           handle_undefined_record_fields ~uri ~diagnostic ~record_field_names
             ~todo_value:"failwith(\"TODO\")")
     in
@@ -518,6 +520,7 @@ module Switch_implementation_interface_file = struct
             ~title ();
         ]
       else []
-    (* TODO: I can have a resi file without a res file *)
+    (* TODO: Offer "create implementation file" when a .resi has no matching
+       .res file, instead of only showing the switch action for existing files. *)
     | _ -> []
 end

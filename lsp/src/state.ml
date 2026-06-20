@@ -35,7 +35,8 @@ let params t =
   | Uninitialized -> assert false
   | Initialized init -> init.params
 
-(* TODO: rewrite this? *)
+(* TODO: Consider storing initialized state in a separate record so updates do
+   not need to reconstruct the full Initialized payload by hand. *)
 let update_diagnostics diagnostics t =
   match t.status with
   | Uninitialized -> assert false
