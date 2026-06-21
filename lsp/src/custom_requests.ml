@@ -39,8 +39,9 @@ module Open_compiled_file = struct
     | _ ->
       Error
         (make_error ?code:(Some InvalidParams)
-           "Invalid params for request textDocument/createInterfaceFile, \
-            expected a TextDocumentIdentifier")
+           (Printf.sprintf
+              "Invalid params for request %s, expected a TextDocumentIdentifier"
+              meth))
 end
 
 module Create_interface_file = struct
@@ -109,6 +110,7 @@ module Create_interface_file = struct
     | _ ->
       Error
         (make_error ?code:(Some InvalidParams)
-           "Invalid params for request textDocument/createInterfaceFile, \
-            expected a TextDocumentIdentifier")
+           (Printf.sprintf
+              "Invalid params for request %s, expected a TextDocumentIdentifier"
+              meth))
 end
