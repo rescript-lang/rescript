@@ -116,6 +116,11 @@ The main objective is to first maintain resource parity with the current server 
     - If interface file already exists server send a error
   - [x] `rescript/switchImplementationInterface`: Trigged by a code action
     - Only avaliable if client support `window/showDocument` request
+  - [x] `rescript/dumpCmt`: Dump cmt file content
+  - [ ] `rescript/dumpParseTree`
+    - Dump parsed tree
+  - [ ] `rescrit/dumpTypedTree`
+    - Dump typed tree
   - Flow to execute a command:
     - ```
       CodeAction.command = "rescript/commandName"
@@ -458,14 +463,14 @@ end
 Below I describe the scenarios. I don't know if this is the expected behavior.
 
 1. I have three files: A, B, and C. Only A is open in the editor. I changed the type of a variable in A that B and C use. The compiler reported the errors in files B and C. All good. I edited A to introduce a syntax error but did not save it. The server now reports three errors: the syntax error in A and the two type errors in B and C. Then I saved file A with the syntax error. The server publishes only the syntax diagnostic. The other two are cleared.
-  - This happens because, when a syntax error is introduced, `.compiler.log` is changed, and the compiler emits only the syntax error.
-  - How can we improve this?
+    - This happens because, when a syntax error is introduced, `.compiler.log` is changed, and the compiler emits only the syntax error.
+    - How can we improve this?
 
 2. Considering the example described above, I now fixed the syntax error in A. The server publishes the two type errors in B and C. I close A, and the server does not clear the diagnostics. In this case, all files are closed. The compiler is running.
-  - Should we clear diagnostics when closing a document?
+    - Should we clear diagnostics when closing a document?
 
 3. I have an open file. I added a syntax error, and the server reports it. All good. I closed the file, and the server clears the syntax error diagnostic. This is the opposite behavior from the case above. The compiler is running.
-  - This happens because we ignore syntax errors coming from the compiler.
+    - This happens because we ignore syntax errors coming from the compiler.
 
 ### Codex suggestion
 
