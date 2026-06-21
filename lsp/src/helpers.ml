@@ -14,7 +14,7 @@ let workspace_root_uri_of_initialize_params (params : InitializeParams.t) =
   | _, _, Some (Some root_path) -> root_path |> Uri.of_path
   | _ ->
     failwith
-      ("Failed to find a root path. Initialize params received: "
+      ("Failed to find workspace root uri of initialize params. Received: "
       ^ Yojson.Safe.pretty_to_string (InitializeParams.yojson_of_t params))
 
 (* Return the most specific root from [entries] that contains [path].

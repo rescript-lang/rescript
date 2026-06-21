@@ -100,7 +100,7 @@ let to_lsp_format ?(include_syntax = false) ?(include_non_syntax = true)
           (Position.create ~line:0
              ~character:(String.length shortest_possible_code - 1))
     | Some {text} ->
-      (* TODO: On Windows \n is works? *)
+      (* TODO: On Windows \n works? *)
       let lines = String.split_on_char '\n' text in
       let line, character =
         match List.rev lines with
@@ -128,7 +128,14 @@ let to_lsp_format ?(include_syntax = false) ?(include_non_syntax = true)
   let diagnostic_of_entry uri (entry : Compiler_log.Parse.diagnostic_entry) =
     let message =
       match entry.kind with
-      | Warning {number} -> entry.message ^ "Warning " ^ string_of_int number
+      | Warning {number; configured_as_error} ->
+        let default = "Warning " ^ string_of_int number in
+        let head_message =
+          if configured_as_error then default ^ " - configured as error"
+          else default
+        in
+        head_message ^ entry.message
+      | Unknow -> "Unknow error - " ^ entry.message
       | _ -> entry.message
     in
     Diagnostic.create
@@ -144,8 +151,8 @@ let to_lsp_format ?(include_syntax = false) ?(include_non_syntax = true)
            let uri =
              match entry.path with
              | Compiler_log.Parse.Relative_path p ->
-               DocumentUri.of_path (Filename.concat workspace_root_path p)
-             | Full_path p -> DocumentUri.of_path p
+               Uri.of_path (Filename.concat workspace_root_path p)
+             | Full_path p -> Uri.of_path p
            in
 
            match entry.kind with
@@ -157,10 +164,7 @@ let to_lsp_format ?(include_syntax = false) ?(include_non_syntax = true)
              else None
            | Circular_dependency ->
              if not include_non_syntax then None
-             else
-               (* Circular dependency diagnostics are file-level diagnostics:
-                  the compiler log has a path but no precise source range. *)
-               Some (uri, diagnostic_of_entry uri entry)
+             else Some (uri, diagnostic_of_entry uri entry)
            | Warning _ | Common_error | Unknow ->
              if not include_non_syntax then None
              else Some (uri, diagnostic_of_entry uri entry))
@@ -217,9 +221,7 @@ let collect_diagnostics_from_log_using_source_dirs workspace_root fs =
      or empty, so opening a document can still publish the last known diagnostics
      from older or partial builds. *)
   let build_roots =
-    match Source_dirs.get_build_roots_from_file ~fs path with
-    | Some build_r -> build_r
-    | _ -> []
+    Source_dirs.get_build_roots_from_file ~fs path |> Option.value ~default:[]
   in
   build_roots
   |> List.filter_map (fun build_root ->
