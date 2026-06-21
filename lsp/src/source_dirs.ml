@@ -1,5 +1,5 @@
 (* TODO: Replace this hand-written JSON traversal with ppx_deriving_yojson once
-   the .sourcedirs.json shape is stable enough to model as typed records. *)
+   the .sourcedirs.json shape is stable enough to model as typed records. Move to helpers.ml? *)
 let get_build_roots_from_json json =
   let build_roots =
     match json with

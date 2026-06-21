@@ -242,7 +242,7 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
   | TextDocumentHover {position; textDocument = {uri}} ->
     let source = (Document_store.get ~uri state.store).text in
     let full = load_full uri state in
-    let hover =
+    let resp =
       Analysis.Commands.hover
         ~state:(State.analysis_state state)
         ~source ~kind_file:(Document.kind uri)
@@ -251,7 +251,7 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
         ~supports_markdown_links:
           state.configuration.hover.support_markdown_links ~full
     in
-    (ok hover, state)
+    (ok resp, state)
   | TextDocumentDiagnostic {textDocument = {uri}} ->
     let diagnostics = State.diagnostics state |> Diagnostics.diagnostics in
     let items =
@@ -266,14 +266,14 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
     let source = (Document_store.get ~uri state.store).text in
     let full = load_full uri state in
 
-    let comp =
+    let resp =
       Analysis.Commands.completion
         ~state:(State.analysis_state state)
         ~debug:false ~source ~kind_file:(Document.kind uri)
         ~pos:(position.line, position.character)
         ~full
     in
-    (ok (Some (`List comp)), state)
+    (ok (Some (`List resp)), state)
   | CompletionItemResolve item ->
     let resp =
       match (item.documentation, item.data) with
@@ -397,11 +397,9 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
           Code_actions.Open_compiled_file.create ~uri ~state
         else []
       in
-
       let create_interface_file =
         Code_actions.Create_interface_file.create ~uri ~state
       in
-
       let switch_implementation_interface_file =
         if client_support_window_show_document then
           Code_actions.Switch_implementation_interface_file.create ~uri ~state
@@ -526,7 +524,7 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
           (Open_compiled_file.meth, Open_compiled_file.on_request);
         ]
     with
-    | Some handler -> (handler ~params ~state, state)
+    | Some on_request -> (on_request ~params ~state, state)
     | None ->
       ( error ?code:(Some Jsonrpc.Response.Error.Code.InvalidRequest)
           (Printf.sprintf "Unknown request %s" meth),
@@ -649,6 +647,13 @@ let on_notification notification (server : State.t Server.t) =
     Server.request
       (Server_request.WorkspaceConfiguration
          (ConfigurationParams.create
+          (* NOTE: The client decides how to map that section to its own configuration store.
+             Behavior I observed using `rescript.settings`:
+              - Neovim send `null`
+              - Zed send `null`
+              - VSCode sends the correct data layout
+             The best approach was to increase the scope to `rescript` and write a small middleware in VSCode extension.
+           *)
             ~items:[ConfigurationItem.create ~section:"rescript" ()]))
       server;
     state
