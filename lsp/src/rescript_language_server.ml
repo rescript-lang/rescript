@@ -61,10 +61,10 @@ let initialization () =
     ExecuteCommandOptions.create
       ~commands:
         [
-          Execute_commands.create_interface;
-          Execute_commands.open_compiled;
-          Execute_commands.switch_implementation_interface;
-          Execute_commands.dump_server_state;
+          Execute_commands.Open_compiled.name;
+          Execute_commands.Switch_implementation_interface.name;
+          Execute_commands.Dump_server_state.name;
+          Execute_commands.Dump_cmt.name;
         ]
       ()
   in
@@ -144,6 +144,7 @@ let discover_subpackages_and_populate ~workspace_root
       let paths =
         dependencies
         |> List.filter_map (fun dep_name ->
+               (* TODO: Resolve for deno and pnpm *)
                let node_modules =
                  (workspace_root |> Uri.to_path) /+ "node_modules"
                in
@@ -224,36 +225,8 @@ let on_initialize (params : InitializeParams.t) (server : State.t Server.t) =
 
 let on_request (Client_request.E request) (server : State.t Server.t) =
   let load_full uri (state : State.t) =
-    let package_for_path t ~path =
-      let analysis_state = State.analysis_state t in
-      let roots =
-        analysis_state.packages_by_root |> Hashtbl.to_seq_keys |> List.of_seq
-      in
-      match Helpers.best_root_match ~path roots with
-      | Some root -> Hashtbl.find_opt analysis_state.packages_by_root root
-      | None -> None
-    in
-
     match state.status with
-    | Initialized _ -> (
-      let path = uri |> Uri.to_path in
-      match package_for_path state ~path with
-      | Some package -> (
-        let module_name =
-          Analysis.Build_system.namespaced_name package.namespace
-            (Analysis.Find_files.get_name path)
-        in
-        match
-          Analysis.Cmt.full_for_incremental_cmt ~package ~module_name ~uri
-        with
-        | Some cmt_info -> Some cmt_info
-        | None -> (
-          match Hashtbl.find_opt package.paths_for_module module_name with
-          | Some paths ->
-            let cmt = Analysis.Shared_types.get_cmt_path ~uri paths in
-            Analysis.Cmt.full_for_cmt ~module_name ~package ~uri cmt
-          | None -> None))
-      | None -> None)
+    | Initialized _ -> Helpers.load_full uri (State.analysis_state state)
     | Uninitialized -> None
   in
 
@@ -604,91 +577,29 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
          Returning null is spec-valid but silent; a response error or
          window/showMessage may be easier to understand. *)
       (ok None, state))
-  | ExecuteCommand {command; arguments} ->
-    let request_show_document ~uri ~takeFocus =
-      let client_support_window_show_document =
-        match (State.params state).capabilities.window with
-        | Some {showDocument = Some {support}} -> support = true
-        | _ -> false
-      in
-      if client_support_window_show_document then (
-        Server.request
-          (Server_request.ShowDocumentRequest
-             (ShowDocumentParams.create ~takeFocus ~uri ()))
-          server;
-        (ok `Null, state))
-      else
-        (* TODO: Also show a window/showMessage notification when showDocument is
-           unsupported. The current error response is easy to miss in clients. *)
-        let message =
-          match (State.params state).clientInfo with
-          | Some {name; version} ->
-            Printf.sprintf
-              "The client %s (version %s) dont support window/showDocument \
-               request"
-              name
-              (Option.value version ~default:"unknown")
-          | None -> "The client dont support window/showDocument request"
-        in
-        (error message, state)
-    in
-
-    if String.equal command Execute_commands.open_compiled then
-      match arguments with
-      | Some [`String uri] ->
-        request_show_document ~uri:(Uri.of_string uri) ~takeFocus:true
-      | _ ->
-        ( error
-            (Printf.sprintf
-               "Invalid arguments for workspace/executeCommand %s. Expected a \
-                list of string: [uri]"
-               Execute_commands.open_compiled),
-          state )
-    else if String.equal command Execute_commands.create_interface then
-      match arguments with
-      | Some [`String uri; `String cmi_uri] -> (
-        match
-          Custom_requests.Create_interface_file.create ~uri:(Uri.of_string uri)
-            ~cmi_uri:(Uri.of_string cmi_uri) ~state
-        with
-        | Ok uri -> request_show_document ~uri ~takeFocus:true
-        | Error _ ->
-          (* TODO: Show an window/showMessage when interface creation fails
-             because the project has not been built and the .cmi file is
-             missing. *)
-          ( error
-              (Printf.sprintf "Failed to create interface file for %s and %s"
-                 uri cmi_uri),
-            state ))
-      | _ ->
-        ( error
-            (Printf.sprintf
-               "Invalid arguments for workspace/executeCommand %s. Expected a \
-                list of string: [uri, cmi_uri]"
-               Execute_commands.create_interface),
-          state )
-    else if
-      String.equal command Execute_commands.switch_implementation_interface
-    then
-      match arguments with
-      | Some [`String uri] ->
-        request_show_document ~uri:(Uri.of_string uri) ~takeFocus:true
-      | _ ->
-        ( error
-            (Printf.sprintf
-               "Invalid arguments for workspace/executeCommand %s. Expected a \
-                list of string: [uri]"
-               Execute_commands.switch_implementation_interface),
-          state )
-    else if String.equal command Execute_commands.dump_server_state then
-      let json = State.to_yojson state |> Yojson.Safe.pretty_to_string in
-      let response = `Assoc [("content", `String json)] in
-      (ok response, state)
-    else
+  | ExecuteCommand {command; arguments} -> (
+    let open Execute_commands in
+    match
+      List.assoc_opt command
+        [
+          (Open_compiled.name, Open_compiled.execute);
+          (Create_interface.name, Create_interface.execute);
+          ( Switch_implementation_interface.name,
+            Switch_implementation_interface.execute );
+          (Dump_server_state.name, Dump_server_state.execute);
+          (Dump_cmt.name, Dump_cmt.execute);
+        ]
+    with
+    | Some execute -> (
+      match execute ~arguments server with
+      | Ok None -> (ok `Null, state)
+      | Ok (Some response) -> (ok response, state)
+      | Error message -> (error message, state))
+    | None ->
       ( error
           (Printf.sprintf
              "Unknown command %s for workspace/executeCommand request" command),
-        state )
+        state ))
   | Shutdown -> (ok (), state)
   | DebugTextDocumentGet _ | DebugEcho _ | WorkspaceSymbol _
   | CodeActionResolve _ | TextDocumentColor _ | TextDocumentColorPresentation _
