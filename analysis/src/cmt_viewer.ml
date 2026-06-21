@@ -109,4 +109,4 @@ let dump ~(filter_for_position : (int * int) option) ~full =
          let loc_str = Warnings.loc_to_string loc in
          let kind_str = Shared_types.loc_type_to_string loc_type in
          printf "%s %s\n" loc_str kind_str);
-  Some (Buffer.contents buffer)
+  Buffer.contents buffer
