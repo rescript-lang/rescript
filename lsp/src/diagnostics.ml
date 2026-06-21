@@ -210,7 +210,7 @@ let update_from_compiler_log ~workspace_root ~doc_store compiler_log t =
 
 let collect_diagnostics_from_log_using_source_dirs workspace_root fs =
   let ( /+ ) = Filename.concat in
-  let workspace_root_path = workspace_root |> Lsp.Types.DocumentUri.to_path in
+  let workspace_root_path = workspace_root |> Uri.to_path in
   let path =
     workspace_root_path /+ Constants.compiler_dir_partial_path
     /+ Constants.sources_dirs
