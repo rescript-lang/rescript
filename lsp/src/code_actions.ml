@@ -450,7 +450,7 @@ module Open_compiled_file = struct
           ~command:
             (Command.create
                ~arguments:[`String (Uri.to_string uri)]
-               ~command:Execute_commands.open_compiled ~title ())
+               ~command:Execute_commands.Open_compiled.name ~title ())
           ~title ();
       ]
     | None -> []
@@ -483,7 +483,7 @@ module Create_interface_file = struct
                    `String (Uri.to_string uri);
                    `String (Uri.of_path cmi_file |> Uri.to_string);
                  ]
-               ~command:Execute_commands.create_interface ~title ())
+               ~command:Execute_commands.Create_interface.name ~title ())
           ~title ();
       ]
     | _ -> []
@@ -501,7 +501,7 @@ module Switch_implementation_interface_file = struct
             ~command:
               (Command.create
                  ~arguments:[`String (Uri.of_path target |> Uri.to_string)]
-                 ~command:Execute_commands.switch_implementation_interface
+                 ~command:Execute_commands.Switch_implementation_interface.name
                  ~title ())
             ~title ();
         ]
@@ -515,7 +515,7 @@ module Switch_implementation_interface_file = struct
             ~command:
               (Command.create
                  ~arguments:[`String (Uri.of_path target |> Uri.to_string)]
-                 ~command:Execute_commands.switch_implementation_interface
+                 ~command:Execute_commands.Switch_implementation_interface.name
                  ~title ())
             ~title ();
         ]

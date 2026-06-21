@@ -205,3 +205,30 @@ let get_compiled_file ~(uri : Uri.t) ~(compiler_config : Compiler_config.t)
 
     js_file_path
   | None -> None
+
+let load_full uri (analysis_state : Analysis.Shared_types.state) =
+  let package_for_path ~path =
+    let roots =
+      analysis_state.packages_by_root |> Hashtbl.to_seq_keys |> List.of_seq
+    in
+    match best_root_match ~path roots with
+    | Some root -> Hashtbl.find_opt analysis_state.packages_by_root root
+    | None -> None
+  in
+
+  let path = uri |> Uri.to_path in
+  match package_for_path ~path with
+  | Some package -> (
+    let module_name =
+      Analysis.Build_system.namespaced_name package.namespace
+        (Analysis.Find_files.get_name path)
+    in
+    match Analysis.Cmt.full_for_incremental_cmt ~package ~module_name ~uri with
+    | Some cmt_info -> Some cmt_info
+    | None -> (
+      match Hashtbl.find_opt package.paths_for_module module_name with
+      | Some paths ->
+        let cmt = Analysis.Shared_types.get_cmt_path ~uri paths in
+        Analysis.Cmt.full_for_cmt ~module_name ~package ~uri cmt
+      | None -> None))
+  | None -> None
