@@ -197,10 +197,9 @@ let dump_cmt ~state ~rescript_json ~cmt_path =
     in
     match Cmt.full_for_cmt ~module_name ~package ~uri cmt_path with
     | None -> print_null ()
-    | Some full -> (
-      match Cmt_viewer.dump ~full ~filter_for_position:None with
-      | None -> print_null ()
-      | Some s -> Printf.printf "%s" s))
+    | Some full ->
+      let content = Cmt_viewer.dump ~full ~filter_for_position:None in
+      Printf.printf "%s" content)
 
 let test ~state ~path =
   Uri.strip_path := true;
