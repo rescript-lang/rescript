@@ -26,10 +26,12 @@ use std::time::SystemTime;
 use tracing::{info_span, instrument};
 
 /// Decode captured compiler output (stdout or stderr) into a String.
+///
+/// The output is not guaranteed to be valid UTF-8: a code frame can truncate a
+/// multi-byte character. Decode lossily so a bad byte becomes a replacement
+/// character instead of crashing the build.
 fn compiler_output_to_string(bytes: &[u8]) -> String {
-    std::str::from_utf8(bytes)
-        .expect("stdout should be non-null")
-        .to_string()
+    String::from_utf8_lossy(bytes).to_string()
 }
 
 /// Execute js-post-build command for a compiled JavaScript file.
