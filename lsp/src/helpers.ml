@@ -163,8 +163,8 @@ let get_compiled_file ~(uri : Uri.t) ~(compiler_config : Compiler_config.t)
   in
   match config with
   | Some config ->
-    let suffix, js_folder, in_source =
-      Compiler_config.get_suffix_and_folder config
+    let {Compiler_config.suffix; folder; in_source} =
+      Compiler_config.get_output_config config
     in
 
     let js_file_path =
@@ -193,8 +193,7 @@ let get_compiled_file ~(uri : Uri.t) ~(compiler_config : Compiler_config.t)
               let res_file = basename relative_path in
               remove_extension res_file ^ suffix
             in
-            Some
-              (package_root_path /+ "lib" /+ js_folder /+ sources_dir /+ js_file)
+            Some (package_root_path /+ "lib" /+ folder /+ sources_dir /+ js_file)
           | None -> None
       in
       match file_path with

@@ -26,7 +26,7 @@ let request_show_document ~uri ~takeFocus (server : State.t Server.t) =
           (Option.value version ~default:"unknown")
       | None -> "The client dont support window/showDocument request"
     in
-    Error message
+    Error (Printf.sprintf "Failed to open %s. %s" (Uri.to_path uri) message)
 
 module Open_compiled = struct
   let name = "rescript/openCompiled"
@@ -103,16 +103,18 @@ module Dump_cmt = struct
     | Some [`String uri] -> (
       let analysis_state = server |> Server.state |> State.analysis_state in
       match Helpers.load_full (Uri.of_string uri) analysis_state with
-      | Some full -> (
+      | Some full ->
         let cmt_content =
           Analysis.Cmt_viewer.dump ~full ~filter_for_position:None
         in
-        match cmt_content with
-        | Some content ->
-          let response = `Assoc [("content", `String content)] in
-          Ok (Some response)
-        | None -> Error "Failed to dump cmt, content is empty")
-      | None -> Error "Failed to dump cmt, full not found")
+        let response = `Assoc [("content", `String cmt_content)] in
+        Ok (Some response)
+      | None ->
+        Error
+          (Printf.sprintf
+             "Failed to dump cmt for %s, we are unable to read the metadata of \
+              cmt file"
+             uri))
     | _ ->
       Error
         (Printf.sprintf

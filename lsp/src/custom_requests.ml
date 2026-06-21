@@ -1,54 +1,46 @@
 open Lsp
+open Lsp.Types
 
 let make_error ?(code = Jsonrpc.Response.Error.Code.InternalError) message =
   Jsonrpc.Response.Error.make ~message ~code ()
 
 module Open_compiled_file = struct
   let meth = "textDocument/openCompiled"
-  let create ~(uri : Uri.t) ~(state : State.t) =
-    let compiled_uri =
-      Helpers.get_compiled_file ~uri
-        ~compiler_config:(State.compiler_config state)
-        ~fs:state.fs
-        ~workspace_root:(State.workspace_root state)
-    in
-    match compiled_uri with
-    | Some uri -> Ok uri
-    | None -> Error ("Failed to get compiled file for " ^ Uri.to_path uri)
 
   (* Custom request to open compiled file
 
-    Request params:
-     {
-        "uri": Uri.t
-     }
-
-     Response:
-     {
-        "uri": Uri.t
-     }
+    Request params: TextDocumentIdentifier
+    Return: TextDocumentIdentifier | ResponseError
   *)
   let on_request ~(params : Jsonrpc.Structured.t option) ~(state : State.t) =
-    let r =
-      match params with
-      | Some (`Assoc fields) -> (
-        match List.assoc_opt "uri" fields with
-        | Some (`String uri) -> (
-          let uri = Uri.of_string uri in
-          match create ~uri ~state with
-          | Ok uri -> Ok (`Assoc [("uri", `String (uri |> Uri.to_string))])
-          | Error message ->
-            Error (make_error ?code:(Some InternalError) message))
-        | _ ->
-          Error
-            (make_error ?code:(Some InvalidParams)
-               "Invalid params for request textDocument/createInterfaceFile"))
-      | _ ->
-        Error
-          (make_error ?code:(Some InvalidParams)
-             "Invalid params for request textDocument/createInterfaceFile")
+    let create ~(uri : Uri.t) ~(state : State.t) =
+      let compiled_uri =
+        Helpers.get_compiled_file ~uri
+          ~compiler_config:(State.compiler_config state)
+          ~fs:state.fs
+          ~workspace_root:(State.workspace_root state)
+      in
+      match compiled_uri with
+      | Some uri -> Ok uri
+      | None -> Error ("Failed to get compiled file for " ^ Uri.to_path uri)
     in
-    r
+    match params with
+    | Some json -> (
+      let doc =
+        json |> Jsonrpc.Structured.yojson_of_t
+        |> TextDocumentIdentifier.t_of_yojson
+      in
+      match create ~uri:doc.uri ~state with
+      | Ok uri ->
+        Ok
+          (TextDocumentIdentifier.create ~uri
+          |> TextDocumentIdentifier.yojson_of_t)
+      | Error message -> Error (make_error message))
+    | _ ->
+      Error
+        (make_error ?code:(Some InvalidParams)
+           "Invalid params for request textDocument/createInterfaceFile, \
+            expected a TextDocumentIdentifier")
 end
 
 module Create_interface_file = struct
@@ -78,53 +70,45 @@ module Create_interface_file = struct
 
   (* Custom request to create a interface file.
 
-    Request params:
-     {
-        "uri": Uri.t
-     }
-
-     Response:
-     {
-        "uri": Uri.t
-     }
+    Request params: TextDocumentIdentifier
+    Return: TextDocumentIdentifier | ResponseError
   *)
   let on_request ~(params : Jsonrpc.Structured.t option) ~(state : State.t) =
-    let r =
-      match params with
-      | Some (`Assoc fields) -> (
-        match List.assoc_opt "uri" fields with
-        | Some (`String uri) ->
-          let uri = Uri.of_string uri in
-          let cmi_file =
-            Helpers.get_cmi_file ~uri ~fs:state.fs
-              ~compiler_config:(State.compiler_config state)
-              ~workspace_root:(State.workspace_root state)
+    match params with
+    | Some json ->
+      let doc =
+        json |> Jsonrpc.Structured.yojson_of_t
+        |> TextDocumentIdentifier.t_of_yojson
+      in
+      let uri = doc.uri in
+      let cmi_file =
+        Helpers.get_cmi_file ~uri ~fs:state.fs
+          ~compiler_config:(State.compiler_config state)
+          ~workspace_root:(State.workspace_root state)
+      in
+      let result =
+        match cmi_file with
+        | Some cmi_file ->
+          let response =
+            match create ~uri ~cmi_uri:(Uri.of_path cmi_file) ~state with
+            | Ok uri ->
+              Ok
+                (TextDocumentIdentifier.create ~uri
+                |> TextDocumentIdentifier.yojson_of_t)
+            | Error message -> Error (make_error message)
           in
-          let result =
-            match cmi_file with
-            | Some cmi_file ->
-              let response =
-                match create ~uri ~cmi_uri:(Uri.of_path cmi_file) ~state with
-                | Ok uri ->
-                  Ok (`Assoc [("uri", `String (uri |> Uri.to_string))])
-                | Error message ->
-                  Error (make_error ?code:(Some InternalError) message)
-              in
-              response
-            | None ->
-              Error
-                (make_error ?code:(Some InternalError)
-                   "Failed to find cmi file to create interface file")
-          in
-          result
-        | _ ->
+          response
+        | None ->
           Error
-            (make_error ?code:(Some InvalidParams)
-               "Invalid params for request textDocument/createInterfaceFile"))
-      | _ ->
-        Error
-          (make_error ?code:(Some InvalidParams)
-             "Invalid params for request textDocument/createInterfaceFile")
-    in
-    r
+            (make_error
+               (Printf.sprintf
+                  "Failed to find cmi file for %s to create interface file"
+                  (Uri.to_string uri)))
+      in
+      result
+    | _ ->
+      Error
+        (make_error ?code:(Some InvalidParams)
+           "Invalid params for request textDocument/createInterfaceFile, \
+            expected a TextDocumentIdentifier")
 end

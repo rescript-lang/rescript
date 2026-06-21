@@ -220,15 +220,16 @@ let parse ~root ~fs =
     | json -> (
       match Parse.of_yojson json with
       | Ok s -> Ok s
-      | Error _ -> Error ("Failed to parse rescript.json at " ^ rescript_json))
+      | Error _ ->
+        Error
+          ("Failed to parse compiler config for rescript.json at "
+         ^ rescript_json))
     | exception _ -> Error ("Failed to parse rescript.json at " ^ rescript_json)
     )
   | None -> Error ("Failed to read rescript.json file at " ^ rescript_json)
 
-(* TODO: Rename this to describe the derived output, for example
-   get_output_suffix_and_module_folder. It returns both the emitted JS suffix
-   and the build folder implied by package-specs. *)
-let get_suffix_and_folder (config : Parse.t) =
+type output_config = {suffix: string; folder: string; in_source: bool}
+let get_output_config (config : Parse.t) =
   let default_suffix = ".js" in
   let default_in_source = false in
   let folder_name = function
@@ -240,13 +241,17 @@ let get_suffix_and_folder (config : Parse.t) =
   | Some pkg_spec -> (
     match pkg_spec with
     | [] ->
-      ( config.suffix |> Option.value ~default:default_suffix,
-        folder_name Parse.Commonjs,
-        default_in_source )
+      {
+        suffix = config.suffix |> Option.value ~default:default_suffix;
+        folder = folder_name Parse.Commonjs;
+        in_source = default_in_source;
+      }
     | Module_format module_ :: _ ->
-      ( config.suffix |> Option.value ~default:default_suffix,
-        folder_name module_,
-        default_in_source )
+      {
+        suffix = config.suffix |> Option.value ~default:default_suffix;
+        folder = folder_name module_;
+        in_source = default_in_source;
+      }
     | Module_format_object {module_; suffix; in_source} :: _ ->
       let suffix =
         match (suffix, config.suffix) with
@@ -254,10 +259,14 @@ let get_suffix_and_folder (config : Parse.t) =
         | None, Some s -> s
         | _ -> default_suffix
       in
-      ( suffix,
-        folder_name module_,
-        in_source |> Option.value ~default:default_in_source ))
+      {
+        suffix;
+        folder = folder_name module_;
+        in_source = in_source |> Option.value ~default:default_in_source;
+      })
   | None ->
-    ( config.suffix |> Option.value ~default:default_suffix,
-      folder_name Parse.Commonjs,
-      default_in_source )
+    {
+      suffix = config.suffix |> Option.value ~default:default_suffix;
+      folder = folder_name Parse.Commonjs;
+      in_source = default_in_source;
+    }
