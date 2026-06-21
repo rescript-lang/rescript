@@ -117,9 +117,9 @@ The main objective is to first maintain resource parity with the current server 
   - [x] `rescript/switchImplementationInterface`: Trigged by a code action
     - Only avaliable if client support `window/showDocument` request
   - [x] `rescript/dumpCmt`: Dump cmt file content
-  - [ ] `rescript/dumpParseTree`
+  - [ ] `rescript/dumpParseTree` **It will not be implemented for now.**
     - Dump parsed tree
-  - [ ] `rescrit/dumpTypedTree`
+  - [ ] `rescrit/dumpTypedTree` **It will not be implemented for now.**
     - Dump typed tree
   - Flow to execute a command:
     - ```
