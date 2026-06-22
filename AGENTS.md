@@ -126,6 +126,8 @@ tests/
    - Unit tests for utility functions
    - Always check JavaScript output quality
 
+4. **Add a `CHANGELOG.md` entry** for any user-facing change (bug fix, feature, or breaking change). Put it under the matching section of the current `(Unreleased)` version and end the line with the PR link. See [CONTRIBUTING.md](CONTRIBUTING.md). PRs are expected to include one.
+
 ### Debugging Techniques
 
 #### View Intermediate Representations

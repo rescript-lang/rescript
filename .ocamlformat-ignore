@@ -1,4 +1,2 @@
-compiler/js_parser/**
 **/*.cppo.ml
 **/*.cppo.mli
-compiler/syntax/compiler-libs-406/*

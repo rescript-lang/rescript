@@ -25,6 +25,15 @@ use std::sync::mpsc;
 use std::time::SystemTime;
 use tracing::{info_span, instrument};
 
+/// Decode captured compiler output (stdout or stderr) into a String.
+///
+/// The output is not guaranteed to be valid UTF-8: a code frame can truncate a
+/// multi-byte character. Decode lossily so a bad byte becomes a replacement
+/// character instead of crashing the build.
+fn compiler_output_to_string(bytes: &[u8]) -> String {
+    String::from_utf8_lossy(bytes).to_string()
+}
+
 /// Execute js-post-build command for a compiled JavaScript file.
 /// The command runs in the directory containing the rescript.json that defines it.
 /// The absolute path to the JS file is passed as an argument.
@@ -1039,9 +1048,7 @@ fn compile_file(
             "Could not compile file. Error: {e}. Path to AST: {ast_path:?}"
         )),
         Ok(x) => {
-            let err = std::str::from_utf8(&x.stderr)
-                .expect("stdout should be non-null")
-                .to_string();
+            let err = compiler_output_to_string(&x.stderr);
 
             let dir = Path::new(implementation_file_path).parent().unwrap();
 
@@ -1345,6 +1352,16 @@ mod tests {
     use std::sync::RwLock;
     use std::time::SystemTime;
     use tempfile::TempDir;
+
+    // The compiler can write a code frame that truncates a multi-byte character, so the
+    // captured output is not always valid UTF-8. Decoding it must not panic.
+    #[test]
+    fn compiler_output_to_string_handles_invalid_utf8() {
+        // 0xe2 0x80 is the start of an em dash (U+2014); the third byte is missing.
+        let truncated = [b'W', b'a', b'r', b'n', b'i', b'n', b'g', b' ', 0xe2, 0x80];
+        let decoded = compiler_output_to_string(&truncated);
+        assert!(decoded.starts_with("Warning "));
+    }
 
     fn test_project_context(root: &Path) -> ProjectContext {
         let config = config::tests::create_config(config::tests::CreateConfigArgs {
