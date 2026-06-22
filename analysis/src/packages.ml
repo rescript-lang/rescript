@@ -173,14 +173,17 @@ let new_bs_package ~root_path =
              |> List.map (fun path -> path @ ["place holder"])
            in
            let dependencies =
-             match config |> Yojson_helpers.get "dependencies" with
-             | Some (`List deps) ->
-               deps
-               |> List.filter_map (fun (x : Yojson.Safe.t) ->
-                      match x with
-                      | `String name -> Some name
-                      | _ -> None)
-             | _ -> []
+             match
+               ( config
+                 |> Yojson_helpers.get "dependencies"
+                 |> bind Yojson_helpers.to_list_opt,
+                 config
+                 |> Yojson_helpers.get "bs-dependencies"
+                 |> bind Yojson_helpers.to_list_opt )
+             with
+             | None, None -> []
+             | Some deps, None | _, Some deps ->
+               deps |> List.filter_map Yojson_helpers.string_opt
            in
            {
              generic_jsx_module;
