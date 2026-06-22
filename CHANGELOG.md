@@ -69,6 +69,7 @@
 - Refactor analysis CLI helpers to use source input. https://github.com/rescript-lang/rescript/pull/8466
 - Include syntax, gentype, analysis, tools, and reanalyze tests in coverage reports. https://github.com/rescript-lang/rescript/pull/8467
 - Remove the unreachable `Longident.Lapply` constructor (OCaml's applicative-functor path syntax `F(X).t`, which ReScript's grammar cannot produce). https://github.com/rescript-lang/rescript/pull/8469
+- Refactor analysis for server side use. https://github.com/rescript-lang/rescript/pull/8478
 - Remove unused files. https://github.com/rescript-lang/rescript/pull/8481
 
 # 13.0.0-alpha.4
