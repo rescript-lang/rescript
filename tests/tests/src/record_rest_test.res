@@ -67,6 +67,7 @@ type baseProps = {
   onClick: unit => unit,
 }
 
+@warning("-112")
 let extractClassName = ({className: ?_, ...baseProps as rest}: fullProps) => rest
 
 type container<'a> = {

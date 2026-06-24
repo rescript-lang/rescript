@@ -191,16 +191,22 @@ let type_record_pat_rest ~env ~pattern_force ~loc ~record_ty ~lbl_pat_list ~rest
     resolve_source_record ~env ~unify_pat_types ~loc ~record_ty ~rest_type_lid
       ~rest_type_expr ~rest_decl
   in
-  let not_optional =
+  let overlapping_fields =
     List.filter
-      (fun rest_field ->
-        List.mem rest_field explicit_fields
-        && not (List.mem rest_field explicit_optional_fields))
+      (fun rest_field -> List.mem rest_field explicit_fields)
       rest_field_names
   in
-  if not_optional <> [] then
+  let non_optional_overlapping_fields =
+    List.filter
+      (fun rest_field -> not (List.mem rest_field explicit_optional_fields))
+      overlapping_fields
+  in
+  if non_optional_overlapping_fields <> [] then
     raise_error rest.rest_loc env
-      (Field_not_optional (not_optional, rest_type_lid.txt));
+      (Field_not_optional (non_optional_overlapping_fields, rest_type_lid.txt))
+  else if overlapping_fields <> [] then
+    Location.prerr_warning rest.rest_loc
+      (Warnings.Bs_record_rest_optional_overlap overlapping_fields);
   let source_field_names =
     List.map (fun field -> field.source_name) source_fields
   in
@@ -237,12 +243,6 @@ let type_record_pat_rest ~env ~pattern_force ~loc ~record_ty ~lbl_pat_list ~rest
         unify_pat_types rest_type_lid.loc env rest_label.ld_type
           source_field.source_type)
     rest_labels;
-  if
-    rest_field_names <> []
-    && List.for_all
-         (fun field -> List.mem field explicit_fields)
-         rest_field_names
-  then Location.prerr_warning rest.rest_loc Warnings.Bs_record_rest_empty;
   let rest_ident = enter_variable rest.rest_loc rest.rest_name rest_type_expr in
   {
     Typedtree.rest_ident;
@@ -270,17 +270,21 @@ let report_error ppf = function
       fields |> List.map (fun field -> "\n- " ^ field) |> String.concat ""
     in
     match fields with
-    | [field] ->
+    | [_] ->
       fprintf ppf
         "The following field appears in both the explicit pattern and the rest \
          type `%a`:%s\n\n\
-         Mark it as optional (`?%s`) in the explicit pattern."
-        Printtyp.longident lid field_list field
+         This is not type-safe because the field would always be absent from \
+         the rest value. Remove it from the rest type, or match it as optional \
+         if absence is intended."
+        Printtyp.longident lid field_list
     | _ ->
       fprintf ppf
         "The following fields appear in both the explicit pattern and the rest \
          type `%a`:%s\n\n\
-         Mark them as optional (e.g. `?fieldName`) in the explicit pattern."
+         This is not type-safe because these fields would always be absent \
+         from the rest value. Remove them from the rest type, or match them as \
+         optional if absence is intended."
         Printtyp.longident lid field_list)
   | Field_missing (fields, lid) -> (
     let field_list =

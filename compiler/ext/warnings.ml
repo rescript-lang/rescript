@@ -75,7 +75,7 @@ type t =
       (string * top_level_unit_help) option (* 109 *)
   | Bs_todo of string option (* 110 *)
   | Bs_private_record_mutation of string (* 111 *)
-  | Bs_record_rest_empty (* 112 *)
+  | Bs_record_rest_optional_overlap of string list (* 112 *)
 
 (* If you remove a warning, leave a hole in the numbering.  NEVER change
    the numbers of existing warnings.
@@ -129,7 +129,7 @@ let number = function
   | Bs_toplevel_expression_unit _ -> 109
   | Bs_todo _ -> 110
   | Bs_private_record_mutation _ -> 111
-  | Bs_record_rest_empty -> 112
+  | Bs_record_rest_optional_overlap _ -> 112
 
 let last_warning_number = 112
 
@@ -450,9 +450,22 @@ let message = function
            `%s->ignore`"
           help_text help_text
       | _ -> "")
-  | Bs_record_rest_empty ->
-    "All fields of the rest type are already present in the explicit pattern. \
-     The rest record will always be empty."
+  | Bs_record_rest_optional_overlap fields -> (
+    let field_list =
+      fields |> List.map (fun field -> "\n- " ^ field) |> String.concat ""
+    in
+    (match fields with
+    | [_] ->
+      "The following optional field appears in both the explicit pattern and \
+       the rest type:"
+    | _ ->
+      "The following optional fields appear in both the explicit pattern and \
+       the rest type:")
+    ^ field_list
+    ^
+    match fields with
+    | [_] -> "\n\nIt will always be absent from the rest record."
+    | _ -> "\n\nThey will always be absent from the rest record.")
   | Bs_todo maybe_text ->
     (match maybe_text with
     | None -> "Todo found."

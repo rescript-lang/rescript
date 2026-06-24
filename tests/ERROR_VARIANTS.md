@@ -241,7 +241,7 @@ Source: [typecore.ml:27](../compiler/ml/typecore.ml).
 | `Empty_record_literal` | ✓ | `empty_record_literal.res` | |
 | `Uncurried_arity_mismatch` | ✓ | `arity_mismatch3.res` etc. | |
 | `Field_not_optional` | ✓ | `fieldNotOptional.res` | |
-| `Record_rest` | ✓ | `record_rest_*.res` | Wrapper for record-rest validation errors reported by `typecore_record_rest.ml`; fixtures cover missing annotation, invalid rest type, non-record and unresolved rest types, private and unboxed record types, mutable source records, field mismatch/missing/extra cases, runtime-name mismatch, empty-rest warning, module destructure rejection, and singular/plural missing and overlap messages. |
+| `Record_rest` | ✓ | `record_rest_*.res` | Wrapper for record-rest validation errors reported by `typecore_record_rest.ml`; fixtures cover missing annotation, invalid rest type, non-record and unresolved rest types, private and unboxed record types, mutable source records, field mismatch/missing/extra cases, runtime-name mismatch, non-optional overlap errors, optional overlap warnings, module destructure rejection, and singular/plural missing messages. |
 | `Type_params_not_supported` | ✓ | `variant_spread_pattern_type_params.res` | Pattern-level variant spread (`| ...a as v`) where `a` has type params; typedecl path covered by `variant_spread_type_parameters.res`. |
 | `Field_access_on_dict_type` | ✓ | `field_access_on_dict_type.res` | |
 | `Jsx_not_enabled` | ☐ (needs harness flag) | — | typecore.ml:218/3470. Fires when JSX is used without `-bs-jsx N`. The `super_errors` runner hard-codes `-bs-jsx 4` in `bscFlags`; adding a per-fixture opt-out (e.g. a `.opts` sidecar) would expose this. Until then, it's reachable in real code but blocked at the harness level. |
