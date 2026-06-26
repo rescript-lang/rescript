@@ -19,6 +19,9 @@ env:
 jobs:
   coverage:
     runs-on: ubuntu-24.04-arm
+    permissions:
+      actions: write # For build cache overwriting
+      id-token: write # For CodeCov OIDC
     env:
       OS: ubuntu-24.04-arm
       OCAML_COMPILER: 5.3.0
@@ -200,4 +203,4 @@ jobs:
         with:
           files: _coverage/coverage.json
           fail_ci_if_error: false
-          token: ${{ secrets.CODECOV_TOKEN }}
+          use_oidc: true
