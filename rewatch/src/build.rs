@@ -188,7 +188,10 @@ pub fn initialize_build(
     let timing_clean_start = Instant::now();
     let packages = packages::make(filter, &project_context, show_progress, prod, features.as_ref())?;
 
-    let compiler_check = verify_compiler_info(&packages, &compiler);
+    let source_map_args = project_context
+        .get_root_config()
+        .get_source_map_args(source_map_command);
+    let compiler_check = verify_compiler_info(&packages, &compiler, &source_map_args);
 
     if !packages::validate_packages_dependencies(&packages) {
         return Err(anyhow!("Failed to validate package dependencies"));
