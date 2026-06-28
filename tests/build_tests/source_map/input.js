@@ -374,18 +374,32 @@ async function assertInlineStdoutOutput() {
 }
 
 async function assertNodeStackTraceUsesSourceMap() {
-  const script = `
+  const stackTraceScriptPath = path.join(
+    import.meta.dirname,
+    ".source-map-stack-trace.cjs",
+  );
+  await fs.writeFile(
+    stackTraceScriptPath,
+    `
     const Demo = require("./lib/bs/src/Demo.cjs");
     Demo.unicodeCrash();
-  `;
-  const { status, stderr } = await node("--enable-source-maps", ["-e", script]);
-
-  assert.notEqual(status, 0, "Node source map stack test should throw");
-  assert.match(
-    stderr,
-    /Demo\.res:\d+:\d+/,
-    `Node stack trace should point to Demo.res, got:\n${stderr}`,
+  `,
   );
+
+  try {
+    const { status, stderr } = await node("--enable-source-maps", [
+      stackTraceScriptPath,
+    ]);
+
+    assert.notEqual(status, 0, "Node source map stack test should throw");
+    assert.match(
+      stderr,
+      /Demo\.res:\d+:\d+/,
+      `Node stack trace should point to Demo.res, got:\n${stderr}`,
+    );
+  } finally {
+    await fs.rm(stackTraceScriptPath, { force: true });
+  }
 }
 
 async function assertHiddenOutput() {
