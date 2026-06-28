@@ -47,6 +47,7 @@ module Types = struct
     params: ident list;
     body: t;
     attr: Lambda.function_attribute;
+    loc: Location.t;
   }
 
   (*
@@ -142,6 +143,7 @@ module X = struct
     params: ident list;
     body: t;
     attr: Lambda.function_attribute;
+    loc: Location.t;
   }
 
   and t = Types.t =
@@ -181,9 +183,9 @@ let inner_map (l : t) (f : t -> X.t) : X.t =
     let ap_func = f ap_func in
     let ap_args = Ext_list.map ap_args f in
     Lapply {ap_func; ap_args; ap_info; ap_transformed_jsx}
-  | Lfunction {body; arity; params; attr} ->
+  | Lfunction {body; arity; params; attr; loc} ->
     let body = f body in
-    Lfunction {body; arity; params; attr}
+    Lfunction {body; arity; params; attr; loc}
   | Llet (str, id, arg, body) ->
     let arg = f arg in
     let body = f body in
@@ -475,8 +477,8 @@ let global_module ?(dynamic_import = false) id =
   Lglobal_module (id, dynamic_import)
 let const ct : t = Lconst ct
 
-let function_ ~attr ~arity ~params ~body : t =
-  Lfunction {arity; params; body; attr}
+let function_ ~loc ~attr ~arity ~params ~body : t =
+  Lfunction {arity; params; body; attr; loc}
 
 let let_ kind id e body : t = Llet (kind, id, e, body)
 let letrec bindings body : t = Lletrec (bindings, body)

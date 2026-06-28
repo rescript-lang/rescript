@@ -28,7 +28,7 @@
   (ocamlformat
    (and :with-test (= 0.27.0)))
   (yojson
-   (and :with-test (= 3.0.0)))
+   (= 3.0.0))
   (ounit2
    (and :with-test (= 2.2.7)))
   (odoc :with-doc)

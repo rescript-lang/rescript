@@ -12,7 +12,7 @@ depends: [
   "cppo" {= "1.8.0"}
   "flow_parser" {= "0.267.0"}
   "ocamlformat" {with-test & = "0.27.0"}
-  "yojson" {with-test & = "3.0.0"}
+  "yojson" {= "3.0.0"}
   "ounit2" {with-test & = "2.2.7"}
   "odoc" {with-doc}
   "ocaml-lsp-server" {with-dev-setup & >= "1.23.0"}

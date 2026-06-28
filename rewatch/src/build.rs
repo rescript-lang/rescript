@@ -12,6 +12,7 @@ pub mod read_compile_state;
 use self::parse::parser_args;
 use crate::build::compile::{mark_modules_with_deleted_deps_dirty, mark_modules_with_expired_deps_dirty};
 use crate::build::compiler_info::{CompilerCheckResult, verify_compiler_info, write_compiler_info};
+use crate::config::SourceMapCommand;
 use crate::helpers::emojis::*;
 use crate::helpers::{self};
 use crate::lock::{LockKind, drop_lock, get_lock_or_exit};
@@ -142,7 +143,8 @@ pub fn get_compiler_args(rescript_file_path: &Path) -> Result<String> {
         is_type_dev,
         true,
         None, // No warn_error_override for compiler-args command
-        &[],  // Source dirs not available outside full build; gentype falls back to defaults.
+        SourceMapCommand::Build,
+        &[], // Source dirs not available outside full build; gentype falls back to defaults.
     )?;
 
     let result = serde_json::to_string_pretty(&CompilerArgs {
@@ -178,6 +180,7 @@ pub fn initialize_build(
     warn_error: Option<String>,
     prod: bool,
     features: Option<Vec<String>>,
+    source_map_command: SourceMapCommand,
 ) -> Result<BuildCommandState> {
     let project_context = ProjectContext::new(path)?;
     let compiler = get_compiler_info(&project_context)?;
@@ -185,7 +188,10 @@ pub fn initialize_build(
     let timing_clean_start = Instant::now();
     let packages = packages::make(filter, &project_context, show_progress, prod, features.as_ref())?;
 
-    let compiler_check = verify_compiler_info(&packages, &compiler);
+    let source_map_args = project_context
+        .get_root_config()
+        .get_source_map_args(source_map_command);
+    let compiler_check = verify_compiler_info(&packages, &compiler, &source_map_args);
 
     if !packages::validate_packages_dependencies(&packages) {
         return Err(anyhow!("Failed to validate package dependencies"));
@@ -198,6 +204,7 @@ pub fn initialize_build(
         compiler,
         warn_error,
         features,
+        source_map_command,
     );
     packages::parse_packages(&mut build_state)?;
 
@@ -640,6 +647,7 @@ pub fn build(
             warn_error,
             prod,
             features,
+            SourceMapCommand::Build,
         )
         .with_context(|| "Could not initialize build")?;
 

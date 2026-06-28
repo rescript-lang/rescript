@@ -53,6 +53,7 @@ and lfunction = {
   params: ident list;
   body: t;
   attr: Lambda.function_attribute;
+  loc: Location.t;
 }
 
 and prim_info = private {
@@ -116,6 +117,7 @@ val const : Lam_constant.t -> t
 val apply : ?ap_transformed_jsx:bool -> t -> t list -> ap_info -> t
 
 val function_ :
+  loc:Location.t ->
   attr:Lambda.function_attribute ->
   arity:int ->
   params:ident list ->
