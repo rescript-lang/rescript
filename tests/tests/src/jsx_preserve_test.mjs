@@ -54,19 +54,15 @@ let baseProps = {
   title: "foo"
 };
 
-let newrecord = {...baseProps};
-
 let _unary_element_with_spread_props = <input
-  {...newrecord} 
+  {...baseProps} 
   type={"text"}
 />;
 
-let newrecord$1 = {...baseProps};
-
 let _container_with_spread_props = <div
-  {...newrecord$1} 
-  title={"barry"}
+  {...baseProps} 
   className={"barry"}
+  title={"barry"}
 >
   {"Hello, world!"}
   <input
@@ -83,21 +79,17 @@ let baseChildren = [
   </span>
 ];
 
-let newrecord$2 = {...baseProps};
-
 let _unary_element_with_spread_props_keyed = <input
   key={"barry-key"} 
-  {...newrecord$2} 
+  {...baseProps} 
   type={"text"}
 />;
 
-let newrecord$3 = {...baseProps};
-
 let _container_with_spread_props_keyed = <div
   key={"barry-key"} 
-  {...newrecord$3} 
-  title={"barry"}
+  {...baseProps} 
   className={"barry"}
+  title={"barry"}
 >
   {"Hello, world!"}
   <input
