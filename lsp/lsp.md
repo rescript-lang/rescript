@@ -536,8 +536,7 @@ Ignore compiler syntax diagnostics only for currently open documents.
 Keep compiler syntax diagnostics for closed documents.
 ```
 
-**Suggested Model**
-Maintain separate diagnostic maps:
+**Suggested Model** Maintain separate diagnostic maps:
 
 ```ocaml
 type diagnostics = {
