@@ -371,11 +371,8 @@ end = struct
           let record_field_names =
             split_fields fields @ (rest |> List.concat_map split_fields)
           in
-          (* TODO: Check whether `%todo` is a better placeholder here. v10
-             diagnostics historically used failwith("TODO"), while newer
-             missing-field diagnostics use `%todo`. *)
           handle_undefined_record_fields ~uri ~diagnostic ~record_field_names
-            ~todo_value:"failwith(\"TODO\")")
+            ~todo_value:"%todo")
     in
     loop lines
 
