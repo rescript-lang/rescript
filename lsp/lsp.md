@@ -6,7 +6,7 @@ It's a separate, OCaml-side exploration alongside the Rust/rewatch-based
 experiment in #8243, the two share the same goal (a LSP server for ReScript) but
 approach it from different ends of the toolchain.
 
-## Why rewrite server in OCaml is a good fit?
+## Why rewriting the server in OCaml is a good fit
 
 The editor features are already implemented in the OCaml analysis library.
 Hover, completion, references, rename, document symbols, code actions, and
@@ -30,9 +30,9 @@ skew and makes bugs easier to reproduce with Dune/expect tests.
 
 ## Status / what's not here yet
 
-> This Language server implementation require ReScript >=v12.1.0
+> This language server implementation requires ReScript >= v12.1.0.
 
-The main objective is to first maintain resource parity with the current server
+The main objective is to first maintain feature parity with the current server
 (server.ts) as much as possible. Below is a list of some requests and
 notifications. Some are out of scope because they don't make sense.
 
@@ -42,48 +42,48 @@ notifications. Some are out of scope because they don't make sense.
 - [x] `exit` - client notification
 - [x] `textDocument/didOpen` - client notification
 - [x] `textDocument/didChange` - client notification
-  - The server receive the full text
+  - The server receives the full text.
 - [x] `textDocument/didClose` - client notification
 - [ ] `textDocument/didSave` - client notification - **It will not be
       implemented for now.**
 - [x] `textDocument/hover` - client request
 - [x] `textDocument/publishDiagnostics` - server notification
-  - [x] Need more work with some kind of erros. How publish circular dependency
-        errors?
+  - [x] More work was needed for some kinds of errors. How should circular
+        dependency errors be published?
     - Circular dependency diagnostics are special-cased because the compiler log
       does not point at a precise source range. When the document is open, we
       expand the diagnostic range to cover the whole document so the editor can
       display a file-level diagnostic. If the document is not open, we keep the
-      range parsed from the compiler log, i.e,
-      `{start: {line: 0: character: 0}, end: {line: 0, character: 6}}`
+      range parsed from the compiler log, i.e.,
+      `{start: {line: 0, character: 0}, end: {line: 0, character: 6}}`
       - The shortest possible code has at least 7 characters: `let a=1`.
-        Protocol position is zero based so, length - 1.
+        Protocol positions are zero-based, so the position is `length - 1`.
   - [x] Use `Analysis` for syntax errors and ignore them in the compiler log
         parser.
     - This lets the server publish syntax errors on `TextDocumentDidChange` and
       provide instant feedback.
   - [x] Compiler-log diagnostics from `.compiler.log` - server feature
-    - [x] Add more tests cases, see `compiler_log.ml`. See `tests/build_tests`
+    - [x] Add more test cases; see `compiler_log.ml`. See `tests/build_tests`
           for more examples.
-    - [ ] Remove support to parse OCaml message?
+    - [ ] Remove support for parsing OCaml messages?
   - [x] Monorepo diagnostics via `.sourcedirs.json` - server feature
-    - Require ReScript v12.1.0. In this version `.sourcedirs.json` is always
+    - Requires ReScript v12.1.0. In this version, `.sourcedirs.json` is always
       generated with `build_root` field for each subpackage.
-  - [x] Add warning number on message diagnostic.
+  - [x] Add the warning number to the diagnostic message.
 - [x] `workspace/didChangeWatchedFiles` - client notification
   - The server uses this notification to detect changes to generated
     `.compiler.log` files, which usually means a ReScript build has finished.
     When a watched log changes, the server re-reads every known compiler log and
     republishes diagnostics so stale errors are cleared and monorepo diagnostics
     stay in sync.
-  - Use GlobPattern with baseUri (workspace root)?
-  - We should watch all `rescript.json` in workspace?
-    - Some functionalities require data defined in `rescript.json`. For example,
+  - Use `GlobPattern` with `baseUri` (workspace root)?
+  - Should we watch all `rescript.json` files in the workspace?
+    - Some features require data defined in `rescript.json`. For example,
       `suffix` and `package-specs` are needed to create the code action
-      `Open compiled js file`. Changes in `dependencies` impact various
+      `Open compiled JS file`. Changes in `dependencies` impact various
       functionalities because they modify the state in
       `Analysis.Shared_types.state`.
-    - User can restart the server when change some config
+    - Users can restart the server after changing the configuration.
 - [x] `client/registerCapability` - server request
   - We use this because `workspace/didChangeWatchedFiles` is commonly registered
     dynamically. The server does not know all file-watch patterns during the
@@ -110,7 +110,7 @@ notifications. Some are out of scope because they don't make sense.
 - [ ] `textDocument/documentHighlight` - client request - **It will not be
       implemented for now.**
 - [x] `textDocument/documentSymbol` - client request
-  - Zed need set the config `"document_symbols": "on"`. When enabled,
+  - Zed needs the `"document_symbols": "on"` configuration. When enabled,
     tree-sitter is not used for document symbols.
 - [ ] `workspace/symbol` - client request - **It will not be implemented for
       now.**
@@ -120,13 +120,13 @@ notifications. Some are out of scope because they don't make sense.
     - https://github.com/rescript-lang/rescript-vscode/pull/373
   - [x] Open compiled js file (Trigger workspace execute command
         `rescript/openCompiled`)
-    - Available if client support `window/showDocument`
+    - Available if the client supports `window/showDocument`.
   - [x] Create interface file (Trigger workspace execute command
         `rescript/createInterface`)
-    - Available if interface dont exists
+    - Available if the interface does not exist.
   - [x] Switch to implementation/interface (Trigger workspace execute command
         `rescript/switchImplementationInterface`)
-    - Avaliable if client support `window/showDocument` request
+    - Available if the client supports the `window/showDocument` request.
 - [ ] `codeAction/resolve` - client request - **It will not be implemented for
       now.**
 - [x] `textDocument/codeLens` - client request
@@ -166,18 +166,18 @@ notifications. Some are out of scope because they don't make sense.
   - [x] `rescript/dumpServerState`
     - Dump the `State.t` (diagnostics, document store, status, configuration,
       analysis state (`Analysis.Shared_types.state`) and compiler config).
-  - [x] `rescript/openCompiled`: Trigged by a code action
-    - Only work if client support `window/showDocument`
-  - [x] `rescript/createInterface`: Trigged by a code action
-    - Server create interface if dont exists and open the interface file if
-      client support `window/showDocument` request.
-    - If interface file already exists server send a error
-  - [x] `rescript/switchImplementationInterface`: Trigged by a code action
-    - Only avaliable if client support `window/showDocument` request
+  - [x] `rescript/openCompiled`: Triggered by a code action
+    - Only works if the client supports `window/showDocument`.
+  - [x] `rescript/createInterface`: Triggered by a code action
+    - The server creates the interface if it does not exist and opens the
+      interface file if the client supports the `window/showDocument` request.
+    - If the interface file already exists, the server sends an error.
+  - [x] `rescript/switchImplementationInterface`: Triggered by a code action
+    - Only available if the client supports the `window/showDocument` request.
   - [x] `rescript/dumpCmt`: Dump cmt file content
   - [ ] `rescript/dumpParseTree` **It will not be implemented for now.**
     - Dump parsed tree
-  - [ ] `rescrit/dumpTypedTree` **It will not be implemented for now.**
+  - [ ] `rescript/dumpTypedTree` **It will not be implemented for now.**
     - Dump typed tree
   - Flow to execute a command:
     - ```
@@ -195,39 +195,39 @@ notifications. Some are out of scope because they don't make sense.
   - [x] `textDocument/openCompiled` - client request
   - [x] `textDocument/createInterface` - client request
   - [x] `textDocument/switchImplementationInterface`: Currently it's done on the
-        client side, but it could be a command trigged by a code action.
+        client side, but it could be a command triggered by a code action.
     - Move to code action feature
   - [ ] `rescript/startBuild` - client request - **How the build integration
         will be done. See last point**
     - Some questions
-      - Create a setting to automatically start the build watcher on
-        initilization and drop this custom request?
-      - When kill the build watcher? Shutdown/Exit?
-      - Create work done progress?
+      - Create a setting to automatically start the build watcher during
+        initialization and drop this custom request?
+      - When should the build watcher be stopped? On shutdown/exit?
+      - Create work-done progress?
       - Add a custom request to kill the watcher `rescript/stopBuild`?
 - [ ] Custom notifications
-  - [x] `rescript/compilationFinished` - server notification - Send from the
-        server to client when compilation is finished
-    - The server (server.ts) send this notification and VSCode client use to run
-      Code Analysis. The server send when the `.compiler.log` changes. Only
-      VSCode use this notification.
+  - [x] `rescript/compilationFinished` - server notification - Sent from the
+        server to the client when compilation is finished
+    - The server (`server.ts`) sends this notification, and the VSCode client
+      uses it to run Code Analysis. The server sends it when `.compiler.log`
+      changes. Only VSCode uses this notification.
     - We can add this notification for compatibility, but in the future,
       reanalyze may be integrated into the server instead of running on the
       client side.
     - We should use progress support `$/progress` server notification?
       - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#workDoneProgress
-  - [ ] `rescript/compilationStatus` - server notification - Send compilation
-        status from the server to client.
-    - VSCode use this notification to show status of compilation on status bar.
-      Only VSCode use this notification.
+  - [ ] `rescript/compilationStatus` - server notification - Sends the
+        compilation status from the server to the client.
+    - VSCode uses this notification to show the compilation status in the status
+      bar. Only VSCode uses this notification.
     - We should use progress support `$/progress` server notification?
       - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#workDoneProgress
 - [x] Channels to support
-  - Current server (server.ts) support stdio and node-ipc. The VSCode client use
-    node-ipc. This implementation support only stdio.
+  - The current server (`server.ts`) supports stdio and node-ipc. The VSCode
+    client uses node-ipc. This implementation supports only stdio.
   - [x] stdio
   - [ ] socket - **It will not be implemented for now**
-- [ ] Support package manager: Deno, Bun, Yarn Plug'n'Play, npm and pnpm
+- [ ] Support package managers: Deno, Bun, Yarn Plug'n'Play, npm, and pnpm
 - [ ] Incremental compilation - server feature
 - [ ] Build integration managed by the LSP server - server feature - **It will
       not be implemented for now.**
@@ -235,7 +235,7 @@ notifications. Some are out of scope because they don't make sense.
     produced by an existing `rescript build`, rather than the LSP starting or
     managing builds itself.
 - [ ] First-class compiler support on the server. **It will not be implemented
-      for now. Ideia to explore**
+      for now. Idea to explore.**
   - Instead of running a `rescript watch` process, it's much harder to compile
     in memory?
 
@@ -252,8 +252,8 @@ file-watcher setup.
 
 ## Breaking Changes
 
-- No configuration/setting in `initializationOptions`. This server ignore
-  settings comming from `initializationOptions`. See
+- No configuration/settings in `initializationOptions`. This server ignores
+  settings coming from `initializationOptions`. See
   https://github.com/microsoft/language-server-protocol/issues/567#issuecomment-448538082.
   We use `workspace/configuration`.
 
@@ -262,15 +262,15 @@ file-watcher setup.
 Proposed interface. Some notes:
 
 - Currently, `supportMarkdownLinks` is not a setting. It's a great feature, but
-  some clients don't have good support; Neovim and Zed is an example. Therefore,
-  I'm promoting it to a setting, so VSCode users can enable/disable.
+  some clients don't have good support; Neovim and Zed are examples. Therefore,
+  I'm promoting it to a setting so VSCode users can enable or disable it.
 - I think we should remove `signatureHelp.enable`. It's a basic feature on many
   servers.
 
 ```ts
 /**
  * Server settings.
- * These configurations are request by the server using `workspace/configuration`
+ * These configurations are requested by the server using `workspace/configuration`.
  */
 interface Settings {
   hover?: {
@@ -281,7 +281,7 @@ interface Settings {
     supportMarkdownLinks?: boolean;
   };
   /**
-   * Enable code lenses to function definitions, showing its full type above the definition
+   * Enable code lenses for function definitions, showing the full type above each definition
    * @default false
    */
   codeLens?: boolean;
@@ -295,7 +295,7 @@ interface Settings {
      */
     enable?: boolean;
     /**
-     * Maximum length of character for inlay hints. Set to null to have an unlimited length.
+     * Maximum number of characters for inlay hints. Set to null to have an unlimited length.
      * Inlay hints that exceed the maximum length will not be shown
      * @default 25
      */
@@ -321,15 +321,15 @@ interface Settings {
 
 ## Release and transition plan
 
-> How publish the server? How dev use the server?
+> How should the server be published? How should developers use the server?
 
 ### Some considerations
 
 - It should be a standalone package (`@rescript/language-server` or another) so
   the user can install it as a development dependency or globally.
-- It should be a basic configuration to test the experimental server, example,
-  set the binary path.
-- It shouldn't be bundled with the VSCode extensison client as a pre-release
+- There should be a basic configuration for testing the experimental server,
+  such as setting the binary path.
+- It shouldn't be bundled with the VSCode extension client as a pre-release
   version. Switching between extension versions is annoying.
 
 ### Release Proposal
@@ -342,12 +342,12 @@ interface Settings {
   - Trigger CI job by commit message
     (`${{ startsWith(github.event.head_commit.message, 'publish language-server') && (github.ref == 'refs/heads/lsp') }}`)
     - Update the `lsp/src/version.ml` and `package.json` version.
-- Users install the language server as development dependency or globally.
+- Users install the language server as a development dependency or globally.
   - The server is just a native binary, so we won't have any dependency
     conflicts.
   - Users must update the server; clients will not perform server updates or
     installations.
-- Update clients VSCode and Zed to support the experimental server
+- Update the VSCode and Zed clients to support the experimental server
   - VSCode: https://github.com/rescript-lang/rescript-vscode/pull/1183
   - Zed: https://github.com/rescript-lang/rescript-zed/pull/24
 - Neovim client
@@ -358,9 +358,9 @@ interface Settings {
 - Features/fixes are merged into `lsp` until we get a stable language server.
   When we have a stable version we merge `lsp` into `master`.
 
-Some points I have doubts about.
+Some points I have questions about.
 
-- Curently we publish `@rescript/language-server` with tag `next` in
+- Currently, we publish `@rescript/language-server` with the tag `next` in the
   vscode-repo. I think it can be confusing? No?
 - Should we ship the server with the compiler?
   - My first impression is no. The compiler release cycle is slower.
@@ -370,16 +370,16 @@ Some points I have doubts about.
 
 ### Neovim setup
 
-This section descrive how Neovim user the experimantal server. The new server
-require some changes on setup of lsp. Use `root_dir` handler function instead of
-`root_markers`.
+This section describes how Neovim users can configure the experimental server.
+The new server requires some changes to the LSP setup. Use the `root_dir`
+handler function instead of `root_markers`.
 
 ```lua
 local use_experimental_server = true
 
 --- You can change the path of binary
 --- Search for `node_modules/.bin/rescript-language-server` in the current working directory
---- If you installed as dev dependencie.
+--- If you installed it as a development dependency.
 local new_rescript_ls_cmd = vim.fs.joinpath(
   vim.uv.cwd(),
   'node_modules',
@@ -411,7 +411,7 @@ local dump_server_state = function(client, bufnr)
 
     local content = result.content
 
-    -- Create an listed scratch buffer.
+    -- Create a listed scratch buffer.
     local dump_buf = vim.api.nvim_create_buf(true, true)
 
     vim.api.nvim_buf_set_name(
@@ -419,7 +419,7 @@ local dump_server_state = function(client, bufnr)
       'rescriptls://rescript-dump-server-state'
     )
 
-    -- Do not specify the file type to avoid freezing with syntax highlighting using Treesitter.
+    -- Do not specify the file type to avoid freezing with syntax highlighting using Tree-sitter.
     -- The state is a large JSON file.
     vim.bo[dump_buf].buftype = 'nofile'
     vim.bo[dump_buf].bufhidden = 'wipe'
@@ -544,13 +544,13 @@ else
 end
 ```
 
-## Other topics related
+## Other related topics
 
-### Refactor analysis to use on server side
+### Refactor analysis for use on the server side
 
 - Parsing from source (not just files) / decouple I/O from core logic #8426
   #8466 #8478
-- Use `yojson` and `lsp` library for analysis library #8436
+- Use the `yojson` and `lsp` libraries in the analysis library #8436
 - Remove global state `Shared_types.state` #8465
 
 ### Relationship to #8243
@@ -560,7 +560,7 @@ shelling out to `rescript-editor-analysis.exe` over stdin. This PR keeps the LSP
 on the OCaml side and uses the `analysis` library directly. Useful as a
 comparison point for the architecture discussion.
 
-## Others TODOs
+## Other TODOs
 
 - Add README.md for `lsp` folder
 - Add CHANGELOG.md?
