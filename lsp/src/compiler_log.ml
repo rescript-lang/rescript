@@ -6,7 +6,7 @@ module Parse : sig
     | Warning of {number: int; configured_as_error: bool}
     | Common_error (* type error, value can't be found *)
     | Circular_dependency
-    | Unknow
+    | Unknown
 
   type diagnostic_entry = {
     kind: kind;
@@ -28,7 +28,7 @@ end = struct
     | Warning of {number: int; configured_as_error: bool}
     | Common_error
     | Circular_dependency
-    | Unknow
+    | Unknown
 
   type diagnostic_entry = {
     kind: kind;
@@ -269,11 +269,11 @@ end = struct
       match warning_from_line other with
       | Some (number, configured_as_error) ->
         Warning {number; configured_as_error}
-      | None -> Unknow)
+      | None -> Unknown)
 
   let kind_from_message lines =
     let rec loop = function
-      | [] -> Unknow
+      | [] -> Unknown
       | line :: rest ->
         let content = String.trim line in
         if is_blank content || is_source_excerpt_line content then loop rest
@@ -281,8 +281,8 @@ end = struct
           match warning_from_line content with
           | Some (number, configured_as_error) ->
             Warning {number; configured_as_error}
-          | None -> Unknow
-        else if String.starts_with ~prefix:"Error" content then Unknow
+          | None -> Unknown
+        else if String.starts_with ~prefix:"Error" content then Unknown
         else loop rest
     in
     loop lines
@@ -520,7 +520,7 @@ let%expect_test "parse log" =
                 if configured_as_error then
                   Printf.sprintf "Warning %d (configured as error)" number
                 else Printf.sprintf "Warning %d" number
-              | Unknow -> "Unknow"
+              | Unknown -> "Unknown"
               | Circular_dependency -> "Circular_dependency"
               | Common_error -> "Common_error")
              ^ " - " ^ path);

@@ -122,7 +122,7 @@ let to_lsp_format ?(include_syntax = false) ?(include_non_syntax = true)
       Some DiagnosticSeverity.Error
     | Warning {configured_as_error = true} -> Some DiagnosticSeverity.Error
     | Warning {configured_as_error = false} -> Some DiagnosticSeverity.Warning
-    | Unknow -> None
+    | Unknown -> None
   in
 
   let diagnostic_of_entry uri (entry : Compiler_log.Parse.diagnostic_entry) =
@@ -135,7 +135,7 @@ let to_lsp_format ?(include_syntax = false) ?(include_non_syntax = true)
           else default
         in
         head_message ^ entry.message
-      | Unknow -> "Unknow error - " ^ entry.message
+      | Unknown -> "Unknown error - " ^ entry.message
       | _ -> entry.message
     in
     Diagnostic.create
@@ -165,7 +165,7 @@ let to_lsp_format ?(include_syntax = false) ?(include_non_syntax = true)
            | Circular_dependency ->
              if not include_non_syntax then None
              else Some (uri, diagnostic_of_entry uri entry)
-           | Warning _ | Common_error | Unknow ->
+           | Warning _ | Common_error | Unknown ->
              if not include_non_syntax then None
              else Some (uri, diagnostic_of_entry uri entry))
   in
@@ -186,7 +186,7 @@ let has_non_syntax_diagnostics diagnostics =
        (fun (diagnostic_entry : Compiler_log.Parse.diagnostic_entry) ->
          match diagnostic_entry.kind with
          | Syntax_error -> false
-         | Warning _ | Circular_dependency | Common_error | Unknow -> true)
+         | Warning _ | Circular_dependency | Common_error | Unknown -> true)
 
 let update_from_compiler_log ~workspace_root ~doc_store compiler_log t =
   let compiler_syntax =
