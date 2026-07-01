@@ -5,6 +5,11 @@ open Asttypes
 
 let mkpat desc = Ast_helper.Pat.mk desc
 
+let untype_record_rest (rest : Typedtree.record_pat_rest) :
+    Parsetree.record_pat_rest =
+  let rest_name = rest.rest_name in
+  {Parsetree.rest_loc = rest_name.loc; rest_name; rest_type = None}
+
 let[@warning "-4"] is_generated_optional_constructor
     (lid : Longident.t Location.loc) =
   match lid.txt with
@@ -76,7 +81,7 @@ let untype typed =
     | Tpat_variant (label, p_opt, _row_desc) ->
       let arg = Option.map loop p_opt in
       mkpat (Ppat_variant (label, arg))
-    | Tpat_record (subpatterns, closed_flag, _rest) ->
+    | Tpat_record (subpatterns, closed_flag, rest) ->
       let fields, saw_optional_rewrite =
         List.fold_right
           (fun (_, lbl, p, opt) (fields, saw_optional_rewrite) ->
@@ -97,7 +102,8 @@ let untype typed =
           subpatterns ([], false)
       in
       let closed_flag = if saw_optional_rewrite then Closed else closed_flag in
-      mkpat (Ppat_record (fields, closed_flag, None))
+      mkpat
+        (Ppat_record (fields, closed_flag, Option.map untype_record_rest rest))
     | Tpat_array lst -> mkpat (Ppat_array (List.map loop lst))
   in
   loop typed
