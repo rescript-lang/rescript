@@ -1968,6 +1968,19 @@ module Conv = struct
     name_counter := !name_counter + 1;
     "#$" ^ name ^ string_of_int current
 
+  let conv_record_rest (rest : Typedtree.record_pat_rest) =
+    match (Btype.repr rest.rest_type).desc with
+    | Tconstr (path, args, _) ->
+      let loc = rest.rest_name.loc in
+      let rest_type =
+        Ast_helper.Typ.constr ~loc
+          (mkloc (Ctype.lid_of_path path) loc)
+          (List.map (fun _ -> Ast_helper.Typ.any ~loc ()) args)
+      in
+      Some
+        {rest_loc = loc; rest_name = rest.rest_name; rest_type = Some rest_type}
+    | _ -> None
+
   let conv typed =
     let constrs = Hashtbl.create 7 in
     let labels = Hashtbl.create 7 in
@@ -1995,7 +2008,7 @@ module Conv = struct
       | Tpat_variant (label, p_opt, _row_desc) ->
         let arg = Misc.may_map loop p_opt in
         mkpat (Ppat_variant (label, arg))
-      | Tpat_record (subpatterns, _closed_flag, _rest) ->
+      | Tpat_record (subpatterns, _closed_flag, rest) ->
         let fields =
           List.map
             (fun (_, lbl, p, optional) ->
@@ -2004,7 +2017,7 @@ module Conv = struct
               {lid = mknoloc (Longident.Lident id); x = loop p; opt = optional})
             subpatterns
         in
-        mkpat (Ppat_record (fields, Open, None))
+        mkpat (Ppat_record (fields, Open, Option.bind rest conv_record_rest))
       | Tpat_array lst -> mkpat (Ppat_array (List.map loop lst))
     in
     let ps = loop typed in
