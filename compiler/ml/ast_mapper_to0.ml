@@ -87,7 +87,8 @@ let for_await_of_attr_name = "_res.for_await_of"
 
 let map_loc sub {loc; txt} = {loc = sub.location sub loc; txt}
 
-let record_rest_attr_name = "res.record_rest"
+(* Internal Parsetree0 bridge metadata; public res.* attributes pass through. *)
+let record_rest_attr_name = "_res.record_rest"
 
 let add_record_rest_attr ~rest attrs =
   (Location.mknoloc record_rest_attr_name, Pt.PPat (rest, None)) :: attrs

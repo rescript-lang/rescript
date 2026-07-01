@@ -93,7 +93,8 @@ let for_await_of_attr_name = "_res.for_await_of"
 
 let map_loc sub {loc; txt} = {loc = sub.location sub loc; txt}
 
-let record_rest_attr_name = "res.record_rest"
+(* Internal Parsetree0 bridge metadata; public res.* attributes pass through. *)
+let record_rest_attr_name = "_res.record_rest"
 
 let record_rest_of_pattern (rest : Pt.pattern) =
   match rest.Pt.ppat_desc with
@@ -105,9 +106,14 @@ let record_rest_of_pattern (rest : Pt.pattern) =
 
 let get_record_rest_attr attrs_ =
   let rec remove_record_rest_attr acc = function
-    | ({Location.txt = attr_name; _}, Pt.PPat (rest, None)) :: attrs
-      when attr_name = record_rest_attr_name ->
-      (record_rest_of_pattern rest, List.rev_append acc attrs)
+    | ({Location.txt = attr_name; _}, payload) :: attrs
+      when attr_name = record_rest_attr_name -> (
+      match payload with
+      | Pt.PPat (rest, None) -> (
+        match record_rest_of_pattern rest with
+        | Some rest -> (Some rest, List.rev_append acc attrs)
+        | None -> failwith "Malformed internal _res.record_rest attribute")
+      | _ -> failwith "Malformed internal _res.record_rest attribute")
     | attr :: attrs -> remove_record_rest_attr (attr :: acc) attrs
     | [] -> (None, List.rev acc)
   in

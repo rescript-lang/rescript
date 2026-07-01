@@ -19,6 +19,7 @@ let suites =
       Ounit_unicode_tests.suites;
       Ounit_util_tests.suites;
       Ounit_rec_check_tests.suites;
+      Ounit_ast_mapper0_tests.suites;
       Ounit_pattern_printer_tests.suites;
       Ounit_js_analyzer_tests.suites;
       Ounit_jsx_loc_tests.suites;
