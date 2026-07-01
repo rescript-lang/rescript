@@ -517,7 +517,7 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
           (NPolyvariantPayload {item_num = 0; constructor_name = txt}
           :: pattern_path)
         ?context_path p
-    | Ppat_record (fields, _) ->
+    | Ppat_record (fields, _, rest) -> (
       Ext_list.iter fields (fun {lid = fname; x = p} ->
           match fname with
           | {Location.txt = Longident.Lident fname} ->
@@ -526,7 +526,16 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
                 (Completable.NFollowRecordField {field_name = fname}
                 :: pattern_path)
               ?context_path p
-          | _ -> ())
+          | _ -> ());
+      match rest with
+      | None -> ()
+      | Some {rest_name = {txt; loc}; rest_type; _} ->
+        let context_path =
+          match rest_type with
+          | Some typ -> Type_utils.context_path_from_core_type typ
+          | None -> context_path_to_save
+        in
+        scope := !scope |> Scope.add_value ~name:txt ~loc ?context_path)
     | Ppat_array pl ->
       pl
       |> List.iter

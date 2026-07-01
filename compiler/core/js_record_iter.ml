@@ -79,6 +79,13 @@ let property_map : property_map fn =
 
 let length_object : length_object fn = unknown
 
+let record_rest_field : record_rest_field fn =
+ fun _self {record_rest_ident; _} -> option _self.ident _self record_rest_ident
+
+let param : param fn =
+ fun _self -> function
+  | Ident_param id -> _self.ident _self id
+
 let expression_desc : expression_desc fn =
  fun _self -> function
   | Length (_x0, _x1) ->
@@ -127,7 +134,7 @@ let expression_desc : expression_desc fn =
     option (fun _self arg -> list _self.expression _self arg) _self _x1
   | Var _x0 -> _self.vident _self _x0
   | Fun {params; body} ->
-    list _self.ident _self params;
+    list param _self params;
     _self.block _self body
   | Str _ -> ()
   | Raw_js_code _ -> ()
@@ -145,6 +152,7 @@ let expression_desc : expression_desc fn =
   | Null -> ()
   | Await _x0 -> _self.expression _self _x0
   | Spread _x0 -> _self.expression _self _x0
+  | Record_rest (_x0, _x1) -> _self.expression _self _x1
 
 let for_ident_expression : for_ident_expression fn =
  fun _self arg -> _self.expression _self arg

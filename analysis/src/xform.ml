@@ -78,7 +78,7 @@ module If_then_else = struct
       in
       match list_to_pat ~item_to_pat items with
       | None -> None
-      | Some pat_items -> Some (mk_pat (Ppat_record (pat_items, Closed))))
+      | Some pat_items -> Some (mk_pat (Ppat_record (pat_items, Closed, None))))
     | Pexp_record (_, Some _) -> None
     | _ -> None
 

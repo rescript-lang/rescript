@@ -1,0 +1,115 @@
+Definition src/RecordRest.res 8:4
+{
+  "range": {
+    "end": { "character": 36, "line": 7 },
+    "start": { "character": 32, "line": 7 }
+  },
+  "uri": "file:///RecordRest.res"
+}
+
+Complete src/RecordRest.res 13:10
+posCursor:[13:10] posNoWhite:[13:9] Found expr:[12:26->16:1]
+posCursor:[13:10] posNoWhite:[13:9] Found expr:[12:78->16:1]
+posCursor:[13:10] posNoWhite:[13:9] Found expr:[13:5->13:10]
+Pexp_ident param:[13:5->13:10]
+Completable: Cpath Value[param]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[param]
+Path param
+[
+  {
+    "detail": "SubConfig.t",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\ntype t = {version: string}\n```"
+    },
+    "kind": 12,
+    "label": "paramRest",
+    "tags": []
+  }
+]
+
+Dump AST src/RecordRest.res 18:19
+
+Source:
+// let {name: _, ...SubConfig.t as localRest} = {name: "v", version: "1"}
+//                 ^ast
+
+<*>Pstr_value(
+  value:
+    <*>Ppat_record(
+      fields:
+        name: Ppat_any
+      rest:
+        localRest as <*>Ptyp_constr(<*>SubConfig.t)
+    )
+  expr:
+    Pexp_record(
+      fields:
+        name: Pexp_constant(Pconst_string(v))
+        version: Pexp_constant(Pconst_string(1))
+    )
+)
+
+Inlay Hint src/RecordRest.res 1:34
+[
+  {
+    "kind": 1,
+    "label": ": SubConfig.t",
+    "paddingLeft": true,
+    "paddingRight": false,
+    "position": { "character": 41, "line": 18 }
+  },
+  {
+    "kind": 1,
+    "label": ": config => string",
+    "paddingLeft": true,
+    "paddingRight": false,
+    "position": { "character": 23, "line": 12 }
+  },
+  {
+    "kind": 1,
+    "label": ": config => string",
+    "paddingLeft": true,
+    "paddingRight": false,
+    "position": { "character": 14, "line": 5 }
+  }
+]
+
+Highlight src/RecordRest.res
+structure items:5 diagnostics:0
+Lident: config 0:5 Type
+Lident: name 0:15 Property
+Lident: string 0:21 Type
+Lident: version 0:29 Property
+Lident: string 0:38 Type
+Lident: SubConfig 1:7 Namespace
+Lident: t 2:7 Type
+Lident: version 2:12 Property
+Lident: string 2:21 Type
+Variable: getVersion [5:4->5:14]
+Variable: config [5:18->5:24]
+Lident: config 5:26 Type
+Lident: config 6:9 Variable
+Lident: name 7:5 Property
+Variable: rest [7:32->7:36]
+Ldot: SubConfig 7:17 Namespace
+Lident: t 7:27 Type
+Lident: version 8:9 Property
+Lident: rest 8:4 Variable
+Variable: getVersionFromParam [12:4->12:23]
+Lident: name 12:28 Property
+Variable: paramRest [12:55->12:64]
+Ldot: SubConfig 12:40 Namespace
+Lident: t 12:50 Type
+Lident: config 12:67 Type
+Lident: version 15:12 Property
+Lident: paramRest 15:2 Variable
+Lident: name 18:5 Property
+Variable: localRest [18:32->18:41]
+Ldot: SubConfig 18:17 Namespace
+Lident: t 18:27 Type
+Lident: name 18:46 Property
+Lident: version 18:57 Property
+

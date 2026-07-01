@@ -1,0 +1,10 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/record_rest_private_type.res[0m:[2m9:12-14[0m
+
+   7 [2m│[0m type source = {a: int, b: string}
+   8 [2m│[0m 
+   [1;31m9[0m [2m│[0m let {a, ...[1;31mM.t[0m as rest} = ({a: 1, b: "x"}: source)
+  10 [2m│[0m 
+
+  Cannot create values of the private type M.t

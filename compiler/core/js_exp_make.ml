@@ -166,6 +166,10 @@ let raw_js_code ?comment info s : t =
   }
 
 let array ?comment mt es : t = {expression_desc = Array (es, mt); comment}
+
+let record_rest ?comment fields source : t =
+  {expression_desc = Record_rest (fields, source); comment}
+
 let some_comment = None
 
 let optional_block e : J.expression =
@@ -239,6 +243,7 @@ let ocaml_fun ?comment ?immutable_mask ?directive ~return_unit ~async
     ~one_unit_arg params body : t =
   let params = if one_unit_arg then [] else params in
   let len = List.length params in
+  let params = List.map (fun id -> J.Ident_param id) params in
   {
     expression_desc =
       Fun
@@ -256,6 +261,7 @@ let ocaml_fun ?comment ?immutable_mask ?directive ~return_unit ~async
 
 let method_ ?comment ?immutable_mask ~async ~return_unit params body : t =
   let len = List.length params in
+  let params = List.map (fun id -> J.Ident_param id) params in
   {
     expression_desc =
       Fun
