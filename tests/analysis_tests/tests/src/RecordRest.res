@@ -10,6 +10,12 @@ let getVersion = (config: config) =>
 //  ^def
   }
 
+let getVersionFromParam = ({name: _, ...SubConfig.t as paramRest}: config) => {
+  // param
+  //      ^com
+  paramRest.version
+}
+
 let {name: _, ...SubConfig.t as localRest} = {name: "v", version: "1"}
 //                 ^ast
 
