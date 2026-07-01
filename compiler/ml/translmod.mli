@@ -18,8 +18,9 @@
 
 val transl_implementation :
   string ->
+  Env.t ->
   Typedtree.structure * Typedtree.module_coercion ->
-  Lambda.lambda * Ident.t list
+  Env.t * Lambda.lambda * Ident.t list
 
 type error
 (* exception Error of Location.t * error *)

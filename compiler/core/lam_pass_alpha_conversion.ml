@@ -23,15 +23,16 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
 let alpha_conversion (meta : Lam_stats.t) (lam : Lam.t) : Lam.t =
-  let rec populate_apply_info ?(ap_transformed_jsx = false)
+  let rec populate_apply_info ?(ap_transformed_jsx = false) ~ap_result_type
       (args_arity : int list) (len : int) (fn : Lam.t) (args : Lam.t list)
       ap_info : Lam.t =
     match args_arity with
     | 0 :: _ | [] ->
-      Lam.apply (simpl fn) (Ext_list.map args simpl) ap_info ~ap_transformed_jsx
+      Lam.apply ~ap_result_type (simpl fn) (Ext_list.map args simpl) ap_info
+        ~ap_transformed_jsx
     | x :: _ ->
       if x = len then
-        Lam.apply (simpl fn) (Ext_list.map args simpl)
+        Lam.apply ~ap_result_type (simpl fn) (Ext_list.map args simpl)
           {ap_info with ap_status = App_infer_full}
           ~ap_transformed_jsx
       else if x > len then
@@ -42,8 +43,8 @@ let alpha_conversion (meta : Lam_stats.t) (lam : Lam.t) : Lam.t =
           fn args
       else
         let first, rest = Ext_list.split_at args x in
-        Lam.apply ~ap_transformed_jsx
-          (Lam.apply (simpl fn) (Ext_list.map first simpl)
+        Lam.apply ~ap_transformed_jsx ~ap_result_type
+          (Lam.apply ~ap_result_type (simpl fn) (Ext_list.map first simpl)
              {ap_info with ap_status = App_infer_full})
           (Ext_list.map rest simpl) ap_info
   (* TODO refien *)
@@ -51,15 +52,15 @@ let alpha_conversion (meta : Lam_stats.t) (lam : Lam.t) : Lam.t =
     match lam with
     | Lconst _ -> lam
     | Lvar _ -> lam
-    | Lapply {ap_func; ap_args; ap_info; ap_transformed_jsx} ->
+    | Lapply {ap_func; ap_args; ap_info; ap_transformed_jsx; ap_result_type} ->
       (* detect functor application *)
       let args_arity =
         Lam_arity.extract_arity (Lam_arity_analysis.get_arity meta ap_func)
       in
       let len = List.length ap_args in
-      populate_apply_info ~ap_transformed_jsx args_arity len ap_func ap_args
-        ap_info
-    | Llet (str, v, l1, l2) -> Lam.let_ str v (simpl l1) (simpl l2)
+      populate_apply_info ~ap_transformed_jsx ~ap_result_type args_arity len
+        ap_func ap_args ap_info
+    | Llet (str, v, ty, l1, l2) -> Lam.let_ str v ty (simpl l1) (simpl l2)
     | Lletrec (bindings, body) ->
       let bindings = Ext_list.map_snd bindings simpl in
       Lam.letrec bindings (simpl body)
@@ -75,19 +76,19 @@ let alpha_conversion (meta : Lam_stats.t) (lam : Lam.t) : Lam.t =
     | Lprim {primitive = Pjs_fn_make_unit; args = [arg]; loc} ->
       let arg =
         match arg with
-        | Lfunction {arity = 1; params = [x]; attr; body}
+        | Lfunction {arity = 1; params = [x]; attr; body; ty}
           when Ident.name x = "param" (* "()" *) ->
           Lam.function_ ~params:[x]
             ~attr:{attr with one_unit_arg = true}
-            ~body ~arity:1
+            ~body ~arity:1 ~ty
         | _ -> arg
       in
       simpl arg
     | Lprim {primitive; args; loc} ->
       Lam.prim ~primitive ~args:(Ext_list.map args simpl) loc
-    | Lfunction {arity; params; body; attr} ->
+    | Lfunction {arity; params; body; attr; ty} ->
       (* Lam_mk.lfunction kind params (simpl l) *)
-      Lam.function_ ~arity ~params ~body:(simpl body) ~attr
+      Lam.function_ ~arity ~params ~body:(simpl body) ~attr ~ty
     | Lswitch
         ( l,
           {

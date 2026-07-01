@@ -67,7 +67,7 @@ let count_helper (lam : Lam.t) : collection =
       count ap_func;
       Ext_list.iter ap_args count
     | Lfunction {body} -> count body
-    | Llet (_, _, l1, l2) ->
+    | Llet (_, _, _, l1, l2) ->
       count l2;
       count l1
     | Lletrec (bindings, body) ->

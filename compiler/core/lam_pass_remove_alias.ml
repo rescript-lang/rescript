@@ -116,7 +116,7 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lam.t) : Lam.t =
         | Eval_unknown -> Lam.if_ (simpl l1) (simpl l2) (simpl l3))
       | _ -> Lam.if_ (simpl l1) (simpl l2) (simpl l3))
     | Lconst _ -> lam
-    | Llet (str, v, l1, l2) -> Lam.let_ str v (simpl l1) (simpl l2)
+    | Llet (str, v, ty, l1, l2) -> Lam.let_ str v ty (simpl l1) (simpl l2)
     | Lletrec (bindings, body) ->
       let bindings = Ext_list.map_snd bindings simpl in
       Lam.letrec bindings (simpl body)
@@ -139,6 +139,7 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lam.t) : Lam.t =
               } as l1;
           ap_args = args;
           ap_info;
+          ap_result_type;
         } -> (
       match
         Lam_compile_env.query_external_id_info ~dynamic_import ident fld_name
@@ -158,7 +159,7 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lam.t) : Lam.t =
              && Lam_analysis.lfunction_can_be_inlined lfunction ->
         simpl (Lam_beta_reduce.propagate_beta_reduce meta params body args)
       | _ ->
-        Lam.apply (simpl l1) (Ext_list.map args simpl) ap_info
+        Lam.apply ~ap_result_type (simpl l1) (Ext_list.map args simpl) ap_info
           ?ap_transformed_jsx:None)
     (* Function inlining interact with other optimizations...
 
@@ -166,13 +167,20 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lam.t) : Lam.t =
        - scope issues
        - code bloat
     *)
-    | Lapply {ap_func = Lvar v as fn; ap_args; ap_info; ap_transformed_jsx} -> (
+    | Lapply
+        {
+          ap_func = Lvar v as fn;
+          ap_args;
+          ap_info;
+          ap_transformed_jsx;
+          ap_result_type;
+        } -> (
       (* Check info for always inlining *)
 
       (* Ext_log.dwarn __LOC__ "%s/%d" v.name v.stamp;     *)
       let ap_args = Ext_list.map ap_args simpl in
       let[@local] normal () =
-        Lam.apply (simpl fn) ap_args ap_info ~ap_transformed_jsx
+        Lam.apply ~ap_result_type (simpl fn) ap_args ap_info ~ap_transformed_jsx
       in
       match Hash_ident.find_opt meta.ident_tbl v with
       | Some
@@ -242,10 +250,18 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lam.t) : Lam.t =
     (*   *\) *)
     (*   when  Ext_list.same_length params args -> *)
     (*   simpl (Lam_beta_reduce.propogate_beta_reduce meta params body args) *)
-    | Lapply {ap_func = l1; ap_args = ll; ap_info; ap_transformed_jsx} ->
-      Lam.apply (simpl l1) (Ext_list.map ll simpl) ap_info ~ap_transformed_jsx
-    | Lfunction {arity; params; body; attr} ->
-      Lam.function_ ~arity ~params ~body:(simpl body) ~attr
+    | Lapply
+        {
+          ap_func = l1;
+          ap_args = ll;
+          ap_info;
+          ap_transformed_jsx;
+          ap_result_type;
+        } ->
+      Lam.apply ~ap_result_type (simpl l1) (Ext_list.map ll simpl) ap_info
+        ~ap_transformed_jsx
+    | Lfunction {arity; params; body; attr; ty} ->
+      Lam.function_ ~arity ~params ~body:(simpl body) ~attr ~ty
     | Lswitch
         ( l,
           {

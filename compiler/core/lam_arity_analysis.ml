@@ -39,7 +39,7 @@ let rec get_arity (meta : Lam_stats.t) (lam : Lam.t) : Lam_arity.t =
   match lam with
   | Lvar v -> arity_of_var meta v
   | Lconst _ -> Lam_arity.non_function_arity_info
-  | Llet (_, _, _, l) -> get_arity meta l
+  | Llet (_, _, _, _, l) -> get_arity meta l
   | Lprim
       {
         primitive = Pfield (_, Fld_module {name});

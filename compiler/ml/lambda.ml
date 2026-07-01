@@ -311,9 +311,9 @@ type primitive =
 
 and comparison = Ceq | Cneq | Clt | Cgt | Cle | Cge
 
-and value_kind = Pgenval
-
 and raise_kind = Raise_regular | Raise_reraise
+
+type type_expr = Types.type_expr
 
 type pointer_info =
   | Pt_constructor of {
@@ -355,7 +355,7 @@ type lambda =
   | Lconst of structured_constant
   | Lapply of lambda_apply
   | Lfunction of lfunction
-  | Llet of let_kind * value_kind * Ident.t * lambda * lambda
+  | Llet of let_kind * Ident.t * type_expr option * lambda * lambda
   | Lletrec of (Ident.t * lambda) list * lambda
   | Lprim of primitive * lambda list * Location.t
   | Lswitch of lambda * lambda_switch * Location.t
@@ -376,10 +376,11 @@ type lambda =
   | Lsend of string * lambda * Location.t
 
 and lfunction = {
-  params: Ident.t list;
+  params: (Ident.t * type_expr option) list;
   body: lambda;
   attr: function_attribute; (* specified with [@inline] attribute *)
   loc: Location.t;
+  ty: type_expr option;
 }
 
 and lambda_apply = {
@@ -388,6 +389,7 @@ and lambda_apply = {
   ap_loc: Location.t;
   ap_inlined: inline_attribute;
   ap_transformed_jsx: bool;
+  ap_result_type: type_expr option;
 }
 
 and lambda_switch = {
@@ -454,18 +456,19 @@ let make_key e =
           ap_func = tr_rec env ap.ap_func;
           ap_args = tr_recs env ap.ap_args;
           ap_loc = Location.none;
+          ap_result_type = None;
         }
-    | Llet (Alias, _k, x, ex, e) ->
+    | Llet (Alias, x, _ty, ex, e) ->
       (* Ignore aliases -> substitute *)
       let ex = tr_rec env ex in
       tr_rec (Ident.add x ex env) e
-    | Llet ((Strict | StrictOpt), _k, x, ex, Lvar v) when Ident.same v x ->
+    | Llet ((Strict | StrictOpt), x, _ty, ex, Lvar v) when Ident.same v x ->
       tr_rec env ex
-    | Llet (str, k, x, ex, e) ->
+    | Llet (str, x, _ty, ex, e) ->
       (* Because of side effects, keep other lets with normalized names *)
       let ex = tr_rec env ex in
       let y = make_key x in
-      Llet (str, k, y, ex, tr_rec (Ident.add x (Lvar y) env) e)
+      Llet (str, y, None, ex, tr_rec (Ident.add x (Lvar y) env) e)
     | Lprim (p, es, _) -> Lprim (p, tr_recs env es, Location.none)
     | Lswitch (e, sw, loc) -> Lswitch (tr_rec env e, tr_sw env sw, loc)
     | Lstringswitch (e, sw, d, _) ->
@@ -510,7 +513,7 @@ let name_lambda strict arg fn =
   | Lvar id -> fn id
   | _ ->
     let id = Ident.create "let" in
-    Llet (strict, Pgenval, id, arg, fn id)
+    Llet (strict, id, None, arg, fn id)
 
 let iter_opt f = function
   | None -> ()
@@ -522,7 +525,7 @@ let iter f = function
     f fn;
     List.iter f args
   | Lfunction {body} -> f body
-  | Llet (_str, _k, _id, arg, body) ->
+  | Llet (_str, _id, _ty, arg, body) ->
     f arg;
     f body
   | Lletrec (decl, body) ->
@@ -578,8 +581,8 @@ let free_ids get l =
     fv := List.fold_right Ident_set.add (get l) !fv;
     match l with
     | Lfunction {params} ->
-      List.iter (fun param -> fv := Ident_set.remove param !fv) params
-    | Llet (_str, _k, id, _arg, _body) -> fv := Ident_set.remove id !fv
+      List.iter (fun (param, _ty) -> fv := Ident_set.remove param !fv) params
+    | Llet (_str, id, _ty, _arg, _body) -> fv := Ident_set.remove id !fv
     | Lletrec (decl, _body) ->
       List.iter (fun (id, _exp) -> fv := Ident_set.remove id !fv) decl
     | Lstaticcatch (_e1, (_, vars), _e2) ->
@@ -622,14 +625,14 @@ let staticfail = Lstaticraise (0, [])
 
 let rec is_guarded = function
   | Lifthenelse (_cond, _body, Lstaticraise (0, [])) -> true
-  | Llet (_str, _k, _id, _lam, body) -> is_guarded body
+  | Llet (_str, _id, _ty, _lam, body) -> is_guarded body
   | _ -> false
 
 let rec patch_guarded patch = function
   | Lifthenelse (cond, body, Lstaticraise (0, [])) ->
     Lifthenelse (cond, body, patch)
-  | Llet (str, k, id, lam, body) ->
-    Llet (str, k, id, lam, patch_guarded patch body)
+  | Llet (str, id, ty, lam, body) ->
+    Llet (str, id, ty, lam, patch_guarded patch body)
   | _ -> assert false
 
 (* Translate an access path *)
@@ -672,9 +675,9 @@ let subst_lambda s lam =
           ap_func = subst ap.ap_func;
           ap_args = List.map subst ap.ap_args;
         }
-    | Lfunction {params; body; attr; loc} ->
-      Lfunction {params; body = subst body; attr; loc}
-    | Llet (str, k, id, arg, body) -> Llet (str, k, id, subst arg, subst body)
+    | Lfunction {params; body; attr; loc; ty} ->
+      Lfunction {params; body = subst body; attr; loc; ty}
+    | Llet (str, id, ty, arg, body) -> Llet (str, id, ty, subst arg, subst body)
     | Lletrec (decl, body) -> Lletrec (List.map subst_decl decl, subst body)
     | Lprim (p, args, loc) -> Lprim (p, List.map subst args, loc)
     | Lswitch (arg, sw, loc) ->
@@ -717,7 +720,7 @@ let subst_lambda s lam =
 let bind str var exp body =
   match exp with
   | Lvar var' when Ident.same var var' -> body
-  | _ -> Llet (str, Pgenval, var, exp, body)
+  | _ -> Llet (str, var, None, exp, body)
 
 let raise_kind = function
   | Raise_regular -> "raise"

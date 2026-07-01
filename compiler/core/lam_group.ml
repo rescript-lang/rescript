@@ -24,14 +24,14 @@
 
 (** This is not a recursive type definition *)
 type t =
-  | Single of Lam_compat.let_kind * Ident.t * Lam.t
+  | Single of Lam_compat.let_kind * Ident.t * Types.type_expr option * Lam.t
   | Recursive of (Ident.t * Lam.t) list
   | Nop of Lam.t
 
-let single (kind : Lam_compat.let_kind) id (body : Lam.t) =
+let single (kind : Lam_compat.let_kind) id ty (body : Lam.t) =
   match (kind, body) with
-  | (Strict | StrictOpt), (Lvar _ | Lconst _) -> Single (Alias, id, body)
-  | _ -> Single (kind, id, body)
+  | (Strict | StrictOpt), (Lvar _ | Lconst _) -> Single (Alias, id, ty, body)
+  | _ -> Single (kind, id, ty, body)
 
 let nop_cons (x : Lam.t) acc =
   match x with
@@ -49,7 +49,7 @@ let str_of_kind (kind : Lam_compat.let_kind) =
 
 let pp_group fmt (x : t) =
   match x with
-  | Single (kind, id, lam) ->
+  | Single (kind, id, _ty, lam) ->
     Format.fprintf fmt "@[let@ %a@ =%s@ @[<hv>%a@]@ @]" Ident.print id
       (str_of_kind kind) Lam_print.lambda lam
   | Recursive lst ->

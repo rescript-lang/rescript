@@ -48,6 +48,9 @@ type t = {
       (** we don't need count arities for all identifiers, for identifiers
       for sure it's not a function, there is no need to count them
   *)
+  mutable export_type_tbl: Types.type_expr Hash_ident.t;
+      (** Captures type annotations for exported identifiers before
+          optimization passes eliminate the carrying [Llet] nodes. *)
 }
 
 let pp = Format.fprintf
@@ -70,4 +73,5 @@ let make ~export_idents ~export_ident_sets : t =
     ident_tbl = Hash_ident.create 31;
     exports = export_idents;
     export_idents = export_ident_sets;
+    export_type_tbl = Hash_ident.create 31;
   }

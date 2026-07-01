@@ -71,7 +71,7 @@ let propagate_beta_reduce (meta : Lam_stats.t) (params : Ident.t list)
         | Lprim {primitive = Psome | Psome_not_nest; args = [v]; _} ->
           Hash_ident.replace meta.ident_tbl param (Normal_optional v)
         | _ -> ());
-        Lam_util.refine_let ~kind:Strict param arg l)
+        Lam_util.refine_let ~kind:Strict ~ty:None param arg l)
 
 let propagate_beta_reduce_with_map (meta : Lam_stats.t)
     (map : Lam_var_stats.stats Map_ident.t) params body args =
@@ -112,11 +112,11 @@ let propagate_beta_reduce_with_map (meta : Lam_stats.t)
         | Lprim {primitive = Psome | Psome_not_nest; args = [v]} ->
           Hash_ident.replace meta.ident_tbl param (Normal_optional v)
         | _ -> ());
-        Lam_util.refine_let ~kind:Strict param arg l)
+        Lam_util.refine_let ~kind:Strict ~ty:None param arg l)
 
 let no_names_beta_reduce params body args =
   match Lam_beta_reduce_util.simple_beta_reduce params body args with
   | Some x -> x
   | None ->
     Ext_list.fold_left2 params args body (fun param arg l ->
-        Lam_util.refine_let ~kind:Strict param arg l)
+        Lam_util.refine_let ~kind:Strict ~ty:None param arg l)

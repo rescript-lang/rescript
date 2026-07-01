@@ -397,6 +397,12 @@ let command_line_flags : (string * Bsc_args.spec * string) array =
     ("-dtypedtree", set Clflags.dump_typedtree, "*internal* debug typedtree");
     ("-dparsetree", set Clflags.dump_parsetree, "*internal* debug parsetree");
     ("-drawlambda", set Clflags.dump_rawlambda, "*internal* debug raw lambda");
+    ( "-dlamtypes",
+      set Clflags.dump_lamtypes,
+      "*internal* dump Lam IR type annotations" );
+    ( "-emit-typedefs",
+      set Clflags.emit_typedefs,
+      "*internal* emit .d.ts declarations" );
     ("-dsource", set Clflags.dump_source, "*internal* print source");
     ( "-reprint-source",
       string_call reprint_source_file,
