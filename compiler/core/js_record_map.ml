@@ -94,20 +94,11 @@ let record_rest_field : record_rest_field fn =
   let record_rest_ident = option _self.ident _self record_rest_ident in
   {field with record_rest_ident}
 
-let object_rest_param : object_rest_param fn =
- fun _self {object_rest_fields; object_rest_rest} ->
-  let object_rest_fields = list record_rest_field _self object_rest_fields in
-  let object_rest_rest = _self.ident _self object_rest_rest in
-  {object_rest_fields; object_rest_rest}
-
 let param : param fn =
  fun _self -> function
   | Ident_param id ->
     let id = _self.ident _self id in
     Ident_param id
-  | Object_rest_param rest ->
-    let rest = object_rest_param _self rest in
-    Object_rest_param rest
 
 let expression_desc : expression_desc fn =
  fun _self -> function

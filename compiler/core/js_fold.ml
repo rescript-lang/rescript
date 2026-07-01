@@ -88,19 +88,10 @@ class fold =
         let _self = option (fun _self -> _self#ident) _self _x0 in
         _self
 
-    method object_rest_param : object_rest_param -> 'self_type =
-      fun {object_rest_fields = _x0; object_rest_rest = _x1} ->
-        let _self = list (fun _self -> _self#record_rest_field) _self _x0 in
-        let _self = _self#ident _x1 in
-        _self
-
     method param : param -> 'self_type =
       function
       | Ident_param _x0 ->
         let _self = _self#ident _x0 in
-        _self
-      | Object_rest_param _x0 ->
-        let _self = _self#object_rest_param _x0 in
         _self
 
     method expression_desc : expression_desc -> 'self_type =

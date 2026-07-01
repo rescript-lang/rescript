@@ -82,12 +82,7 @@ and record_rest_field = {
   record_rest_ident: ident option;
 }
 
-and object_rest_param = {
-  object_rest_fields: record_rest_field list;
-  object_rest_rest: ident;
-}
-
-and param = Ident_param of ident | Object_rest_param of object_rest_param
+and param = Ident_param of ident
 
 and expression_desc =
   | Length of expression * length_object
@@ -341,7 +336,6 @@ and deps_program = {
         property_map;
         length_object;
         record_rest_field;
-        object_rest_param;
         param;
         (* for_ident; *)
         required_modules;
@@ -357,12 +351,8 @@ so that we can achieve the optimal
 let record_rest_field_idents fields =
   List.filter_map (fun {record_rest_ident} -> record_rest_ident) fields
 
-let object_rest_param_idents {object_rest_fields; object_rest_rest} =
-  object_rest_rest :: record_rest_field_idents object_rest_fields
-
 let param_idents = function
   | Ident_param id -> [id]
-  | Object_rest_param param -> object_rest_param_idents param
 
 let params_idents params = List.concat_map param_idents params
 
@@ -370,6 +360,5 @@ let params_as_idents params =
   let rec aux acc = function
     | [] -> Some (List.rev acc)
     | Ident_param id :: rest -> aux (id :: acc) rest
-    | Object_rest_param _ :: _ -> None
   in
   aux [] params

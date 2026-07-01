@@ -82,15 +82,9 @@ let length_object : length_object fn = unknown
 let record_rest_field : record_rest_field fn =
  fun _self {record_rest_ident; _} -> option _self.ident _self record_rest_ident
 
-let object_rest_param : object_rest_param fn =
- fun _self {object_rest_fields; object_rest_rest} ->
-  list record_rest_field _self object_rest_fields;
-  _self.ident _self object_rest_rest
-
 let param : param fn =
  fun _self -> function
   | Ident_param id -> _self.ident _self id
-  | Object_rest_param rest -> object_rest_param _self rest
 
 let expression_desc : expression_desc fn =
  fun _self -> function

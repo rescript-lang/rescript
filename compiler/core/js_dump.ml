@@ -271,8 +271,6 @@ and record_rest_pattern cxt f fields rest =
 
 and param cxt f = function
   | J.Ident_param id -> Ext_pp_scope.ident cxt f id
-  | Object_rest_param {object_rest_fields; object_rest_rest} ->
-    record_rest_pattern cxt f object_rest_fields object_rest_rest
 
 and formal_parameter_list cxt f l = iter_lst cxt f l param comma_sp
 
@@ -401,7 +399,7 @@ and pp_function ~return_unit ~async ~is_method ?directive cxt (f : P.t)
     *)
     let inner_cxt = Ext_pp_scope.sub_scope outer_cxt set_env in
     let param_body () : unit =
-      if is_method then
+      if is_method then (
         match l with
         | [] -> assert false
         | Ident_param this :: arguments ->
@@ -415,8 +413,7 @@ and pp_function ~return_unit ~async ~is_method ?directive cxt (f : P.t)
                 if Js_fun_env.get_unused env 0 then cxt
                 else pp_var_assign_this cxt f this
               in
-              function_body ?directive ~return_unit cxt f b)
-        | Object_rest_param _ :: _ -> assert false
+              function_body ?directive ~return_unit cxt f b))
       else
         let cxt =
           match l with

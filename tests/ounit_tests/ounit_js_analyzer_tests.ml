@@ -106,32 +106,6 @@ let suites =
            OUnit.assert_bool __LOC__ (not (Set_ident.mem free field));
            OUnit.assert_bool __LOC__ (not (Set_ident.mem free rest)) );
          ( __LOC__ >:: fun _ ->
-           let field = Ident.create "name" in
-           let rest = Ident.create "rest" in
-           let folder =
-             {
-               Js_record_fold.super with
-               ident = (fun _ names ident -> Ident.name ident :: names);
-             }
-           in
-           let names =
-             Js_record_fold.param folder []
-               (Object_rest_param
-                  {
-                    object_rest_fields =
-                      [
-                        {
-                          record_rest_label = "name";
-                          record_rest_ident = Some field;
-                        };
-                      ];
-                    object_rest_rest = rest;
-                  })
-           in
-           OUnit.assert_equal ["rest"; "name"] names;
-           OUnit.assert_equal ["name"]
-             (Js_record_fold.param folder [] (Ident_param field)) );
-         ( __LOC__ >:: fun _ ->
            let param = Ident.create "param" in
            let transformed =
              transform_expression
