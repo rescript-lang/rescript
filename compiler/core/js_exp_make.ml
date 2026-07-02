@@ -243,7 +243,6 @@ let ocaml_fun ?comment ?immutable_mask ?directive ~return_unit ~async
     ~one_unit_arg params body : t =
   let params = if one_unit_arg then [] else params in
   let len = List.length params in
-  let params = List.map (fun id -> J.Ident_param id) params in
   {
     expression_desc =
       Fun
@@ -261,7 +260,6 @@ let ocaml_fun ?comment ?immutable_mask ?directive ~return_unit ~async
 
 let method_ ?comment ?immutable_mask ~async ~return_unit params body : t =
   let len = List.length params in
-  let params = List.map (fun id -> J.Ident_param id) params in
   {
     expression_desc =
       Fun

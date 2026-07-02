@@ -108,8 +108,7 @@ let pass =
     expression =
       (fun self expr ->
         match expr.expression_desc with
-        | Fun ({is_method = false; params = [Ident_param param]; body} as fun_)
-          ->
+        | Fun ({is_method = false; params = [param]; body} as fun_) ->
           let body = self.block self body in
           let body =
             match body with

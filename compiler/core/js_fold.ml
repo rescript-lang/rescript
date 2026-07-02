@@ -88,12 +88,6 @@ class fold =
         let _self = option (fun _self -> _self#ident) _self _x0 in
         _self
 
-    method param : param -> 'self_type =
-      function
-      | Ident_param _x0 ->
-        let _self = _self#ident _x0 in
-        _self
-
     method expression_desc : expression_desc -> 'self_type =
       function
       | Length (_x0, _x1) ->
@@ -170,7 +164,7 @@ class fold =
         let _self = _self#vident _x0 in
         _self
       | Fun {params = x1; body = x2} ->
-        let _self = list (fun _self -> _self#param) _self x1 in
+        let _self = list (fun _self -> _self#ident) _self x1 in
         let _self = _self#block x2 in
         _self
       | Str _ -> _self

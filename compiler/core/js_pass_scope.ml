@@ -148,14 +148,10 @@ let record_scope_pass =
           *)
           (* Note that [used_idents] is not complete
               it ignores some locally defined idents *)
-          let param_idents = J.params_idents params in
-          let param_set = Set_ident.of_list param_idents in
+          let param_set = Set_ident.of_list params in
           let {defined_idents = defined_idents'; used_idents = used_idents'} =
             let mutable_params =
-              match J.params_as_idents params with
-              | None -> Set_ident.empty
-              | Some params ->
-                Set_ident.of_list (Js_fun_env.get_mutable_params params env)
+              Set_ident.of_list (Js_fun_env.get_mutable_params params env)
             in
             self.block self
               {init_state with mutable_values = mutable_params}
@@ -166,12 +162,8 @@ let record_scope_pass =
           (* mark which param is used *)
           params
           |> List.iteri (fun i v ->
-                 if
-                   not
-                     (List.exists
-                        (fun ident -> Set_ident.mem used_idents' ident)
-                        (J.param_idents v))
-                 then Js_fun_env.mark_unused env i);
+                 if not (Set_ident.mem used_idents' v) then
+                   Js_fun_env.mark_unused env i);
           let closured_idents' =
             (* pass param_set down *)
             Set_ident.(diff used_idents' (union defined_idents' param_set))

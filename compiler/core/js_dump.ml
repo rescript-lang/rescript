@@ -269,10 +269,7 @@ and record_rest_pattern cxt f fields rest =
   P.string f "}";
   cxt
 
-and param cxt f = function
-  | J.Ident_param id -> Ext_pp_scope.ident cxt f id
-
-and formal_parameter_list cxt f l = iter_lst cxt f l param comma_sp
+and formal_parameter_list cxt f l = iter_lst cxt f l Ext_pp_scope.ident comma_sp
 
 (* IdentMap *)
 (*
@@ -305,18 +302,15 @@ let is_var (b : J.expression) a =
   | _ -> false
 
 let params_match_call params args fn =
-  match J.params_as_idents params with
-  | Some params -> (
-    Ext_list.for_all2_no_exn args params is_var
-    &&
-    match fn with
-    (* This check is needed to avoid some edge cases
-          {[function(x){return x(x)}]}
-          here the function is also called `x`
-       *)
-    | J.Id id -> not (Ext_list.exists params (fun x -> Ident.same x id))
-    | Qualified _ -> true)
-  | None -> false
+  Ext_list.for_all2_no_exn args params is_var
+  &&
+  match fn with
+  (* This check is needed to avoid some edge cases
+        {[function(x){return x(x)}]}
+        here the function is also called `x`
+     *)
+  | J.Id id -> not (Ext_list.exists params (fun x -> Ident.same x id))
+  | Qualified _ -> true
 
 type fn_exp_state =
   | Is_return (* for sure no name *)
@@ -335,7 +329,7 @@ let rec try_optimize_curry cxt f len function_id =
   P.paren_group f 1 (fun _ -> expression ~level:1 cxt f function_id)
 
 and pp_function ~return_unit ~async ~is_method ?directive cxt (f : P.t)
-    ~fn_state (l : J.param list) (b : J.block) (env : Js_fun_env.t) : cxt =
+    ~fn_state (l : Ident.t list) (b : J.block) (env : Js_fun_env.t) : cxt =
   match b with
   | [
    {
@@ -402,7 +396,7 @@ and pp_function ~return_unit ~async ~is_method ?directive cxt (f : P.t)
       if is_method then (
         match l with
         | [] -> assert false
-        | Ident_param this :: arguments ->
+        | this :: arguments ->
           let cxt =
             P.paren_group f 1 (fun _ ->
                 formal_parameter_list inner_cxt f arguments)
@@ -417,8 +411,7 @@ and pp_function ~return_unit ~async ~is_method ?directive cxt (f : P.t)
       else
         let cxt =
           match l with
-          | [Ident_param single] when arrow ->
-            Ext_pp_scope.ident inner_cxt f single
+          | [single] when arrow -> Ext_pp_scope.ident inner_cxt f single
           | l ->
             P.paren_group f 1 (fun _ -> formal_parameter_list inner_cxt f l)
         in

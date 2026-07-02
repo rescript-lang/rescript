@@ -94,12 +94,6 @@ let record_rest_field : record_rest_field fn =
   let record_rest_ident = option _self.ident _self record_rest_ident in
   {field with record_rest_ident}
 
-let param : param fn =
- fun _self -> function
-  | Ident_param id ->
-    let id = _self.ident _self id in
-    Ident_param id
-
 let expression_desc : expression_desc fn =
  fun _self -> function
   | Length (_x0, _x1) ->
@@ -174,7 +168,7 @@ let expression_desc : expression_desc fn =
     let _x0 = _self.vident _self _x0 in
     Var _x0
   | Fun ({params; body} as fun_) ->
-    let params = list param _self params in
+    let params = list _self.ident _self params in
     let body = _self.block _self body in
     Fun {fun_ with params; body}
   | Str _ as v -> v

@@ -37,7 +37,7 @@ let function_expression param body =
       Fun
         {
           is_method = false;
-          params = [Ident_param param];
+          params = [param];
           body;
           env = Js_fun_env.make 1;
           return_unit = false;
@@ -118,7 +118,7 @@ let suites =
            match transformed.expression_desc with
            | Fun
                {
-                 params = [Ident_param transformed_param];
+                 params = [transformed_param];
                  body =
                    [
                      {
