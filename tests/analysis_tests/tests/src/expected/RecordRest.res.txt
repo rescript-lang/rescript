@@ -52,8 +52,37 @@ Source:
     )
 )
 
+Complete src/RecordRest.res 21:9
+posCursor:[21:9] posNoWhite:[21:8] Found pattern:[21:4->21:33]
+posCursor:[21:9] posNoWhite:[21:8] Found type:[21:8->21:19]
+Ptyp_constr SubConfig.t:[21:8->21:19]
+Completable: Cpath Type[SubConfig, t]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Type[SubConfig, t]
+Path SubConfig.t
+[
+  {
+    "detail": "type t",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\ntype t = {version: string}\n```"
+    },
+    "kind": 22,
+    "label": "t",
+    "tags": []
+  }
+]
+
 Inlay Hint src/RecordRest.res 1:34
 [
+  {
+    "kind": 1,
+    "label": ": SubConfig.t",
+    "paddingLeft": true,
+    "paddingRight": false,
+    "position": { "character": 32, "line": 21 }
+  },
   {
     "kind": 1,
     "label": ": SubConfig.t",
@@ -78,7 +107,7 @@ Inlay Hint src/RecordRest.res 1:34
 ]
 
 Highlight src/RecordRest.res
-structure items:5 diagnostics:0
+structure items:6 diagnostics:0
 Lident: config 0:5 Type
 Lident: name 0:15 Property
 Lident: string 0:21 Type
@@ -112,4 +141,8 @@ Ldot: SubConfig 18:17 Namespace
 Lident: t 18:27 Type
 Lident: name 18:46 Property
 Lident: version 18:57 Property
+Variable: wholeRest [21:23->21:32]
+Ldot: SubConfig 21:8 Namespace
+Lident: t 21:18 Type
+Lident: version 21:37 Property
 

@@ -48,6 +48,13 @@ and traverse_pattern (pat : Parsetree.pattern) ~pattern_path ~loc_has_cursor
       Some v)
     else None
   in
+  let rest_cursor (rest : Parsetree.record_pat_rest option) =
+    match rest with
+    | Some {rest_name = {txt; loc}; _} when loc_has_cursor loc ->
+      Some (`Name txt)
+    | Some {rest_loc; _} when loc_has_cursor rest_loc -> Some `Rest
+    | _ -> None
+  in
   match pat.ppat_desc with
   | Ppat_constant _ | Ppat_interval _ -> None
   | Ppat_constraint (p, _)
@@ -106,12 +113,16 @@ and traverse_pattern (pat : Parsetree.pattern) ~pattern_path ~loc_has_cursor
            [Completable.NTupleItem {item_num}] @ pattern_path)
          ~result_from_found_item_num:(fun item_num ->
            [Completable.NTupleItem {item_num = item_num + 1}] @ pattern_path)
-  | Ppat_record ([], _, _rest) ->
+  | Ppat_record ([], _, rest) -> (
     (* Empty fields means we're in a record body `{}`. Complete for the fields. *)
-    some_if_has_cursor
-      ("", [Completable.NRecordBody {seen_fields = []}] @ pattern_path)
-      "Ppat_record(empty)"
-  | Ppat_record (fields, _, _rest) -> (
+    match rest_cursor rest with
+    | Some (`Name txt) -> Some (txt, pattern_path)
+    | Some `Rest -> None
+    | None ->
+      some_if_has_cursor
+        ("", [Completable.NRecordBody {seen_fields = []}] @ pattern_path)
+        "Ppat_record(empty)")
+  | Ppat_record (fields, _, rest) -> (
     let field_with_cursor = ref None in
     let field_with_pat_hole = ref None in
     Ext_list.iter fields (fun {lid = fname; x = f} ->
@@ -131,8 +142,10 @@ and traverse_pattern (pat : Parsetree.pattern) ~pattern_path ~loc_has_cursor
           | {Location.txt = Longident.Lident field_name} -> Some field_name
           | _ -> None)
     in
-    match (!field_with_cursor, !field_with_pat_hole) with
-    | Some (fname, f), _ | None, Some (fname, f) -> (
+    match (rest_cursor rest, !field_with_cursor, !field_with_pat_hole) with
+    | Some (`Name txt), _, _ -> Some (txt, pattern_path)
+    | Some `Rest, _, _ -> None
+    | None, Some (fname, f), _ | None, None, Some (fname, f) -> (
       match f.ppat_desc with
       | Ppat_extension ({txt = "rescript.patternhole"}, _) ->
         (* A pattern hole means for example `{someField: <com>}`. We want to complete for the type of `someField`.  *)
@@ -154,7 +167,7 @@ and traverse_pattern (pat : Parsetree.pattern) ~pattern_path ~loc_has_cursor
                @ pattern_path)
              ~loc_has_cursor ~first_char_before_cursor_no_white
              ~pos_before_cursor)
-    | None, None -> (
+    | None, None, None -> (
       (* Figure out if we're completing for a new field.
          If the cursor is inside of the record body, but no field has the cursor,
          and there's no pattern hole. Check the first char to the left of the cursor,
