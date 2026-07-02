@@ -123,6 +123,10 @@ let arg_label i ppf = function
   | Optional {txt} -> line i ppf "Optional \"%s\"\n" txt
   | Labelled {txt} -> line i ppf "Labelled \"%s\"\n" txt
 
+let record_pat_rest i ppf {rest_ident; rest_type; _} =
+  line i ppf "rest \"%a\" : %a\n" fmt_ident rest_ident Printtyp.type_expr
+    rest_type
+
 let record_representation i ppf =
   let open Types in
   function
@@ -231,9 +235,10 @@ and pattern i ppf x =
     | Tpat_variant (l, po, _) ->
       line i ppf "Tpat_variant \"%s\"\n" l;
       option i pattern ppf po
-    | Tpat_record (l, _c, _rest) ->
+    | Tpat_record (l, _c, rest) ->
       line i ppf "Tpat_record\n";
-      list i longident_x_pattern ppf l
+      list i longident_x_pattern ppf l;
+      Option.iter (record_pat_rest i ppf) rest
     | Tpat_array l ->
       line i ppf "Tpat_array\n";
       list i pattern ppf l
