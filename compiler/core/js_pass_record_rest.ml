@@ -1,5 +1,4 @@
 module E = Js_exp_make
-module S = Js_stmt_make
 open J
 
 let field_ident_name i label =
@@ -102,55 +101,6 @@ let pass =
     | statement :: tail -> self.statement self statement :: self.block self tail
     | [] -> []
   in
-  {
-    super with
-    block;
-    expression =
-      (fun self expr ->
-        match expr.expression_desc with
-        | Fun ({is_method = false; params = [param]; body} as fun_) ->
-          let body = self.block self body in
-          let body =
-            match body with
-            | [
-             {
-               statement_desc =
-                 Return
-                   ({
-                      expression_desc =
-                        Record_rest
-                          ( fields,
-                            ({expression_desc = Var (Id source); _} as
-                             source_expr) );
-                      _;
-                    } as rest_expr);
-               _;
-             };
-            ]
-              when Ident.name param = "param" && Ident.same param source ->
-              let rest = Ext_ident.create "rest" in
-              let fields, body =
-                materialize_fields source_expr fields
-                  [
-                    {
-                      statement_desc = Return (E.var rest);
-                      comment = rest_expr.comment;
-                    };
-                  ]
-              in
-              S.define_variable ~kind:Strict rest
-                {
-                  rest_expr with
-                  expression_desc = Record_rest (fields, source_expr);
-                }
-              :: body
-            | _ -> body
-          in
-          {expr with expression_desc = Fun {fun_ with body}}
-        | Fun ({body} as fun_) ->
-          let body = self.block self body in
-          {expr with expression_desc = Fun {fun_ with body}}
-        | _ -> super.expression self expr);
-  }
+  {super with block}
 
 let program program = pass.program pass program
