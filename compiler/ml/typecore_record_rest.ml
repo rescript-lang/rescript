@@ -81,15 +81,14 @@ let source_fields_of_decl (fields : label_declaration list) =
       })
     fields
 
-let has_mutable_field fields =
-  Ext_list.exists fields (fun (field : label_declaration) ->
-      field.ld_mutable = Mutable)
-
 let source_fields_and_repr ~env ~loc decl =
   match decl.type_kind with
   | Type_record (_, Record_unboxed _) -> raise_error loc env Unboxed_record
   | Type_record (fields, repr) ->
-    if has_mutable_field fields then raise_error loc env Mutable_source_record;
+    if
+      Ext_list.exists fields (fun (field : label_declaration) ->
+          field.ld_mutable = Mutable)
+    then raise_error loc env Mutable_source_record;
     (source_fields_of_decl fields, repr)
   | _ -> assert false
 
@@ -112,9 +111,8 @@ let runtime_excluded_labels ~explicit_runtime_labels source_repr =
   | Record_inlined {attrs; _}
     when not (Ast_untagged_variants.process_untagged attrs) ->
     let tag_name =
-      match Ast_untagged_variants.process_tag_name attrs with
-      | Some s -> s
-      | None -> "TAG"
+      Ast_untagged_variants.process_tag_name attrs
+      |> Option.value ~default:"TAG"
     in
     if List.mem tag_name explicit_runtime_labels then explicit_runtime_labels
     else tag_name :: explicit_runtime_labels
@@ -148,7 +146,7 @@ let type_record_pat_rest ~env ~pattern_force ~loc ~record_ty ~lbl_pat_list ~rest
   List.iter2
     (fun param arg -> unify_pat_types rest_type_lid.loc env param arg)
     rest_annotation_decl.type_params rest_type_args;
-  let rest_decl =
+  let rest_decl, rest_labels =
     match
       try
         Some
@@ -161,7 +159,7 @@ let type_record_pat_rest ~env ~pattern_force ~loc ~record_ty ~lbl_pat_list ~rest
       match rest_decl.type_kind with
       | Type_record (_, Record_unboxed _) ->
         raise_error rest_type_lid.loc env Unboxed_record
-      | Type_record _ -> rest_decl
+      | Type_record (labels, _) -> (rest_decl, labels)
       | _ -> raise_error rest_type_lid.loc env (Not_record rest_type_lid.txt))
     | None -> raise_error rest_type_lid.loc env (Not_record rest_type_lid.txt)
   in
@@ -178,11 +176,6 @@ let type_record_pat_rest ~env ~pattern_force ~loc ~record_ty ~lbl_pat_list ~rest
       (fun (_, label, _, optional) ->
         if optional then Some label.lbl_name else None)
       lbl_pat_list
-  in
-  let rest_labels =
-    match rest_decl.type_kind with
-    | Type_record (labels, _) -> labels
-    | _ -> assert false
   in
   let rest_field_names =
     List.map (fun label -> Ident.name label.ld_id) rest_labels
@@ -207,15 +200,15 @@ let type_record_pat_rest ~env ~pattern_force ~loc ~record_ty ~lbl_pat_list ~rest
   else if overlapping_fields <> [] then
     Location.prerr_warning rest.rest_loc
       (Warnings.Bs_record_rest_optional_overlap overlapping_fields);
-  let source_field_names =
-    List.map (fun field -> field.source_name) source_fields
-  in
   let missing =
-    List.filter
-      (fun source_field ->
-        (not (List.mem source_field explicit_fields))
-        && not (List.mem source_field rest_field_names))
-      source_field_names
+    List.filter_map
+      (fun field ->
+        if
+          (not (List.mem field.source_name explicit_fields))
+          && not (List.mem field.source_name rest_field_names)
+        then Some field.source_name
+        else None)
+      source_fields
   in
   if missing <> [] then
     raise_error rest.rest_loc env (Field_missing (missing, rest_type_lid.txt));

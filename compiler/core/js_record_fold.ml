@@ -89,10 +89,6 @@ let property_map : 'a. ('a, property_map) fn =
 
 let length_object : 'a. ('a, length_object) fn = unknown
 
-let record_rest_field : 'a. ('a, record_rest_field) fn =
- fun _self st {record_rest_ident; _} ->
-  option _self.ident _self st record_rest_ident
-
 let expression_desc : 'a. ('a, expression_desc) fn =
  fun _self st -> function
   | Length (_x0, _x1) ->
