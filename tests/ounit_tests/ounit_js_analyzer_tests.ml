@@ -123,26 +123,41 @@ let suites =
                    [
                      {
                        statement_desc =
-                         Return
+                         Variable
                            {
-                             expression_desc =
-                               Record_rest
-                                 ( [
-                                     {
-                                       record_rest_label = "name";
-                                       record_rest_ident = None;
-                                     };
-                                   ],
-                                   {expression_desc = Var (Id source); _} );
+                             ident = rest;
+                             value =
+                               Some
+                                 {
+                                   expression_desc =
+                                     Record_rest
+                                       ( [
+                                           {
+                                             record_rest_label = "name";
+                                             record_rest_ident = Some ignored;
+                                           };
+                                         ],
+                                         {expression_desc = Var (Id source); _}
+                                       );
+                                   _;
+                                 };
                              _;
                            };
+                       _;
+                     };
+                     {
+                       statement_desc =
+                         Return {expression_desc = Var (Id returned); _};
                        _;
                      };
                    ];
                  _;
                } ->
              OUnit.assert_bool __LOC__ (Ident.same param transformed_param);
-             OUnit.assert_bool __LOC__ (Ident.same param source)
+             OUnit.assert_equal "__unused0" (Ident.name ignored);
+             OUnit.assert_equal "rest" (Ident.name rest);
+             OUnit.assert_bool __LOC__ (Ident.same param source);
+             OUnit.assert_bool __LOC__ (Ident.same rest returned)
            | _ -> OUnit.assert_failure __LOC__ );
          ( __LOC__ >:: fun _ ->
            let rest = Ident.create "rest" in

@@ -62,11 +62,12 @@ function makeConfig() {
 }
 
 function getCallResultRest() {
-  return (({name: __unused0, ...__rest}) => __rest)({
+  let {name: __unused0, ...rest} = {
     name: "call",
     version: "4.5",
     debug: true
-  });
+  };
+  return rest;
 }
 
 function getNameRestAndOriginalVersion(original) {
@@ -89,27 +90,33 @@ function getValue(param) {
 }
 
 function getTupleRest(param) {
-  return (({name: __unused0, ...__rest}) => __rest)(param[0]);
+  let {name: __unused0, ...rest} = param[0];
+  return rest;
 }
 
 function getWrappedRest(wrapped) {
-  return (({name: __unused0, ...__rest}) => __rest)(wrapped._0);
+  let {name: __unused0, ...rest} = wrapped._0;
+  return rest;
 }
 
 function getInlineWrappedRest(wrapped) {
-  return (({TAG: __unused0, name: __unused1, ...__rest}) => __rest)(wrapped);
+  let {TAG: __unused0, name: __unused1, ...rest} = wrapped;
+  return rest;
 }
 
 function getRenamedInlineWrappedRest(wrapped) {
-  return (({TAG: __unused0, "user-name": __unused1, ...__rest}) => __rest)(wrapped);
+  let {TAG: __unused0, "user-name": __unused1, ...rest} = wrapped;
+  return rest;
 }
 
 function getCustomTaggedInlineWrappedRest(wrapped) {
-  return (({kind: __unused0, name: __unused1, ...__rest}) => __rest)(wrapped);
+  let {kind: __unused0, name: __unused1, ...rest} = wrapped;
+  return rest;
 }
 
 function getDashedTaggedInlineWrappedRest(wrapped) {
-  return (({"custom-tag": __unused0, name: __unused1, ...__rest}) => __rest)(wrapped);
+  let {"custom-tag": __unused0, name: __unused1, ...rest} = wrapped;
+  return rest;
 }
 
 Mocha.describe("Record_rest_test", () => {

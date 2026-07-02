@@ -1,4 +1,5 @@
 module E = Js_exp_make
+module S = Js_stmt_make
 open J
 
 let field_ident_name i label =
@@ -98,6 +99,23 @@ let pass =
             };
       }
       :: tail
+    | ({
+         statement_desc =
+           Return
+             ({expression_desc = Record_rest (fields, source); _} as rest_expr);
+         _;
+       } as statement)
+      :: tail ->
+      let rest = Ext_ident.create "rest" in
+      let source = self.expression self source in
+      let tail = self.block self tail in
+      let fields, return =
+        materialize_fields source fields
+          [{statement with statement_desc = Return (E.var rest)}]
+      in
+      S.define_variable ~kind:Strict rest
+        {rest_expr with expression_desc = Record_rest (fields, source)}
+      :: (return @ tail)
     | statement :: tail -> self.statement self statement :: self.block self tail
     | [] -> []
   in
