@@ -172,6 +172,7 @@ let rec exp_need_paren ?(arrow = false) (e : J.expression) =
   | Await _ -> false
   | Spread _ -> false
   | Tagged_template _ -> false
+  | Record_rest _ -> false
   | Optional_block (e, true) when arrow -> exp_need_paren ~arrow e
   | Optional_block _ -> false
 
@@ -237,7 +238,38 @@ let debugger_nl f =
   semi f;
   P.newline f
 
-let formal_parameter_list cxt f l = iter_lst cxt f l Ext_pp_scope.ident comma_sp
+let rec record_rest_field cxt f
+    ({record_rest_label; record_rest_ident} : J.record_rest_field) =
+  let key = Js_dump_property.property_key (Lit record_rest_label) in
+  match record_rest_ident with
+  | None ->
+    P.string f key;
+    cxt
+  | Some id ->
+    let str, cxt = Ext_pp_scope.str_of_ident cxt id in
+    if key = str then P.string f key
+    else (
+      P.string f key;
+      P.string f L.colon_space;
+      P.string f str);
+    cxt
+
+and record_rest_pattern cxt f fields rest =
+  P.string f "{";
+  let cxt =
+    match fields with
+    | [] -> cxt
+    | _ ->
+      let cxt = iter_lst cxt f fields record_rest_field comma_sp in
+      comma_sp f;
+      cxt
+  in
+  P.string f "...";
+  let cxt = Ext_pp_scope.ident cxt f rest in
+  P.string f "}";
+  cxt
+
+and formal_parameter_list cxt f l = iter_lst cxt f l Ext_pp_scope.ident comma_sp
 
 (* IdentMap *)
 (*
@@ -268,6 +300,17 @@ let is_var (b : J.expression) a =
   match b.expression_desc with
   | Var (Id i) -> Ident.same i a
   | _ -> false
+
+let params_match_call params args fn =
+  Ext_list.for_all2_no_exn args params is_var
+  &&
+  match fn with
+  (* This check is needed to avoid some edge cases
+        {[function(x){return x(x)}]}
+        here the function is also called `x`
+     *)
+  | J.Id id -> not (Ext_list.exists params (fun x -> Ident.same x id))
+  | Qualified _ -> true
 
 type fn_exp_state =
   | Is_return (* for sure no name *)
@@ -309,16 +352,7 @@ and pp_function ~return_unit ~async ~is_method ?directive cxt (f : P.t)
             {[ function(x,y){ return u(x,y) } ]}
             it can be optimized in to either [u] or [Curry.__n(u)]
          *)
-         (not is_method)
-         && Ext_list.for_all2_no_exn ls l is_var
-         &&
-         match v with
-         (* This check is needed to avoid some edge cases
-            {[function(x){return x(x)}]}
-            here the function is also called `x`
-         *)
-         | Id id -> not (Ext_list.exists l (fun x -> Ident.same x id))
-         | Qualified _ -> true -> (
+         (not is_method) && params_match_call l ls v -> (
     let optimize len ~p cxt f v =
       if p then try_optimize_curry cxt f len function_id else vident cxt f v
     in
@@ -494,6 +528,25 @@ and expression_desc cxt ~(level : int) f x : cxt =
     P.string f L.undefined;
     cxt
   | Var v -> vident cxt f v
+  | Record_rest (fields, source) ->
+    P.cond_paren_group f (level > 15) (fun _ ->
+        P.string f "(({";
+        fields
+        |> List.iteri (fun i ({record_rest_label; _} : J.record_rest_field) ->
+               if i > 0 then comma_sp f;
+               let key =
+                 Js_dump_property.property_key (Lit record_rest_label)
+               in
+               P.string f key;
+               P.string f L.colon_space;
+               P.string f ("__unused" ^ string_of_int i));
+        (match fields with
+        | [] -> ()
+        | _ -> comma_sp f);
+        P.string f "...__rest}) => __rest)(";
+        let cxt = expression ~level:0 cxt f source in
+        P.string f ")";
+        cxt)
   | Bool b ->
     bool f b;
     cxt
@@ -1294,6 +1347,16 @@ and variable_declaration top cxt f (variable : J.variable_declaration) : cxt =
         pp_function ?directive ~is_method ~return_unit ~async
           ~fn_state:(if top then Name_top name else Name_non_top name)
           cxt f params body env
+      | Record_rest (fields, source) ->
+        P.string f L.let_;
+        P.space f;
+        let cxt = record_rest_pattern cxt f fields name in
+        P.space f;
+        P.string f L.eq;
+        P.space f;
+        let cxt = expression ~level:1 cxt f source in
+        semi f;
+        cxt
       | _ ->
         let cxt = pp_var_assign cxt f name in
         let cxt = expression ~level:1 cxt f e in
