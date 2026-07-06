@@ -129,6 +129,8 @@ let add_defined_ident (st : state) id =
 let add_used_ident (st : state) id =
   {st with used_idents = Set_ident.add st.used_idents id}
 
+let add_defined_idents st ids = List.fold_left add_defined_ident st ids
+
 let super = Js_record_fold.super
 
 let record_scope_pass =
@@ -148,12 +150,11 @@ let record_scope_pass =
               it ignores some locally defined idents *)
           let param_set = Set_ident.of_list params in
           let {defined_idents = defined_idents'; used_idents = used_idents'} =
+            let mutable_params =
+              Set_ident.of_list (Js_fun_env.get_mutable_params params env)
+            in
             self.block self
-              {
-                init_state with
-                mutable_values =
-                  Set_ident.of_list (Js_fun_env.get_mutable_params params env);
-              }
+              {init_state with mutable_values = mutable_params}
               body
           in
           (* let defined_idents', used_idents' =
@@ -189,25 +190,32 @@ let record_scope_pass =
       (fun self state x ->
         match x with
         | {ident; value; property} -> (
+          let record_rest_idents =
+            match value with
+            | Some {expression_desc = Record_rest (fields, _)} ->
+              J.record_rest_field_idents fields
+            | _ -> []
+          in
           let obj =
-            add_defined_ident
-              (match (state.in_loop, property) with
-              | true, Variable -> add_loop_mutable_variable state ident
-              | true, (Strict | StrictOpt | Alias)
-              (* Not real true immutable in javascript
+            add_defined_idents
+              (add_defined_ident
+                 (match (state.in_loop, property) with
+                 | true, Variable -> add_loop_mutable_variable state ident
+                 | true, (Strict | StrictOpt | Alias)
+                 (* Not real true immutable in javascript
                   since it's in the loop
 
                   TODO: we should also
               *)
-                -> (
-                match value with
-                | None ->
-                  add_loop_mutable_variable state ident
-                  (* TODO: Check why assertion failure *)
-                  (* self#add_loop_mutable_variable ident *)
-                  (* assert false *)
-                | Some x -> (
-                  (*
+                   -> (
+                   match value with
+                   | None ->
+                     add_loop_mutable_variable state ident
+                     (* TODO: Check why assertion failure *)
+                     (* self#add_loop_mutable_variable ident *)
+                     (* assert false *)
+                   | Some x -> (
+                     (*
                       when x is an immediate immutable value, 
                       (like integer .. )
                       not a reference, it should be Immutable
@@ -215,22 +223,23 @@ let record_scope_pass =
                       type system might help here
                       TODO:
                   *)
-                  match x.expression_desc with
-                  | Fun _ | Number _ | Str _ -> state
-                  | _ ->
-                    (* if Set_ident.(is_empty @@ *)
-                    (*   inter self#get_mutable_values  *)
-                    (*     ( ({<  *)
-                    (*         defined_idents = Set_ident.empty;  *)
-                    (*         used_idents = Set_ident.empty; *)
-                    (*         >} # expression x) # get_used_idents)) then *)
-                    (*   (\* FIXME: still need to check expression is pure or not*\) *)
-                    (*   self *)
-                    (* else  *)
-                    add_loop_mutable_variable state ident))
-              | false, Variable -> add_mutable_variable state ident
-              | false, (Strict | StrictOpt | Alias) -> state)
-              ident
+                     match x.expression_desc with
+                     | Fun _ | Number _ | Str _ -> state
+                     | _ ->
+                       (* if Set_ident.(is_empty @@ *)
+                       (*   inter self#get_mutable_values  *)
+                       (*     ( ({<  *)
+                       (*         defined_idents = Set_ident.empty;  *)
+                       (*         used_idents = Set_ident.empty; *)
+                       (*         >} # expression x) # get_used_idents)) then *)
+                       (*   (\* FIXME: still need to check expression is pure or not*\) *)
+                       (*   self *)
+                       (* else  *)
+                       add_loop_mutable_variable state ident))
+                 | false, Variable -> add_mutable_variable state ident
+                 | false, (Strict | StrictOpt | Alias) -> state)
+                 ident)
+              record_rest_idents
           in
           match value with
           | None -> obj

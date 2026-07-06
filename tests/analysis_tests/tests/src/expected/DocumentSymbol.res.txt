@@ -1,7 +1,6 @@
 DocumentSymbol src/DocumentSymbol.res
 [
   {
-    "children": [],
     "kind": 16,
     "name": "zzz",
     "range": {
@@ -18,7 +17,6 @@ DocumentSymbol src/DocumentSymbol.res
       {
         "children": [
           {
-            "children": [],
             "kind": 12,
             "name": "make",
             "range": {
@@ -55,7 +53,6 @@ DocumentSymbol src/DocumentSymbol.res
     }
   },
   {
-    "children": [],
     "kind": 16,
     "name": "fa",
     "range": {
@@ -70,7 +67,6 @@ DocumentSymbol src/DocumentSymbol.res
   {
     "children": [
       {
-        "children": [],
         "kind": 12,
         "name": "abd",
         "range": {
@@ -83,7 +79,6 @@ DocumentSymbol src/DocumentSymbol.res
         }
       },
       {
-        "children": [],
         "kind": 12,
         "name": "abc",
         "range": {
@@ -96,7 +91,6 @@ DocumentSymbol src/DocumentSymbol.res
         }
       },
       {
-        "children": [],
         "kind": 26,
         "name": "t",
         "range": {
@@ -121,7 +115,6 @@ DocumentSymbol src/DocumentSymbol.res
     }
   },
   {
-    "children": [],
     "kind": 13,
     "name": "op",
     "range": {
@@ -136,7 +129,6 @@ DocumentSymbol src/DocumentSymbol.res
   {
     "children": [
       {
-        "children": [],
         "kind": 12,
         "name": "next",
         "range": {
@@ -149,7 +141,6 @@ DocumentSymbol src/DocumentSymbol.res
         }
       },
       {
-        "children": [],
         "kind": 12,
         "name": "foo",
         "range": {
@@ -176,7 +167,6 @@ DocumentSymbol src/DocumentSymbol.res
   {
     "children": [
       {
-        "children": [],
         "kind": 12,
         "name": "customDouble",
         "range": {
@@ -201,7 +191,6 @@ DocumentSymbol src/DocumentSymbol.res
     }
   },
   {
-    "children": [],
     "kind": 2,
     "name": "MyList",
     "range": {

@@ -19,13 +19,16 @@ env:
 jobs:
   coverage:
     runs-on: ubuntu-24.04-arm
+    permissions:
+      actions: write # For build cache overwriting
+      id-token: write # For CodeCov OIDC
     env:
       OS: ubuntu-24.04-arm
       OCAML_COMPILER: 5.3.0
       RUST_TARGET: aarch64-unknown-linux-gnu
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Use Node.js
         uses: actions/setup-node@v6
@@ -48,7 +51,7 @@ jobs:
       # and the cargo build when the rewatch sources haven't changed.
       - name: Restore rewatch build cache
         id: rewatch-build-cache
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: rewatch/target
           key: rewatch-build-v3-${{ env.RUST_TARGET }}-${{ hashFiles('rewatch/src/**', 'rewatch/Cargo.lock') }}
@@ -86,7 +89,7 @@ jobs:
 
       - name: Restore OPAM environment
         id: cache-opam-env
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@v6
         with:
           path: |
             ${{ runner.tool_cache }}/opam
@@ -124,7 +127,7 @@ jobs:
       # still get full restore from the latest master-saved cache.
       - name: Save OPAM environment
         if: steps.cache-opam-env.outputs.cache-hit != 'true' && github.event_name == 'push' && github.ref == 'refs/heads/master'
-        uses: actions/cache/save@v5
+        uses: actions/cache/save@v6
         with:
           path: |
             ${{ runner.tool_cache }}/opam
@@ -165,7 +168,7 @@ jobs:
       - name: Restore coverage build state
         if: github.base_ref == 'master' || github.ref == 'refs/heads/master'
         id: coverage-build-state
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@v6
         with:
           path: |
             ~/.cache/dune
@@ -188,7 +191,7 @@ jobs:
 
       - name: Save coverage build state
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-        uses: actions/cache/save@v5
+        uses: actions/cache/save@v6
         with:
           path: |
             ~/.cache/dune
@@ -196,8 +199,8 @@ jobs:
           key: ${{ steps.coverage-build-state-key.outputs.value }}
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v6
+        uses: codecov/codecov-action@v7
         with:
           files: _coverage/coverage.json
           fail_ci_if_error: false
-          token: ${{ secrets.CODECOV_TOKEN }}
+          use_oidc: true

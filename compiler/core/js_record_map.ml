@@ -194,6 +194,9 @@ let expression_desc : expression_desc fn =
   | Spread _x0 ->
     let _x0 = _self.expression _self _x0 in
     Spread _x0
+  | Record_rest (_x0, _x1) ->
+    let _x1 = _self.expression _self _x1 in
+    Record_rest (_x0, _x1)
 
 let for_ident_expression : for_ident_expression fn =
  fun _self arg -> _self.expression _self arg

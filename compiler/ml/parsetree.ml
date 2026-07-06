@@ -161,6 +161,12 @@ and pattern = {
   ppat_attributes: attributes; (* ... [@id1] [@id2] *)
 }
 
+and record_pat_rest = {
+  rest_loc: Location.t;
+  rest_name: string loc;
+  rest_type: core_type option;
+}
+
 and pattern_desc =
   | Ppat_any (* _ *)
   | Ppat_var of string loc (* x *)
@@ -184,9 +190,12 @@ and pattern_desc =
     (* `A             (None)
        `A P           (Some P)
     *)
-  | Ppat_record of pattern record_element list * closed_flag
-    (* { l1=P1; ...; ln=Pn }     (flag = Closed)
-       { l1=P1; ...; ln=Pn; _}   (flag = Open)
+  | Ppat_record of
+      pattern record_element list * closed_flag * record_pat_rest option
+    (* { l1=P1; ...; ln=Pn }        (flag = Closed, rest = None)
+       { l1=P1; ...; ln=Pn; _}      (flag = Open, rest = None)
+       { l1=P1; ...; ...T as r }    (rest = Some {rest_type = Some T; _})
+       { l1=P1; ...; ...restName }  (rest = Some {rest_type = None; _})
 
        Invariant: n > 0
     *)
@@ -290,10 +299,6 @@ and expression_desc =
     (* for i = E1 to E2 do E3 done      (flag = Upto)
        for i = E1 downto E2 do E3 done  (flag = Downto)
     *)
-  | Pexp_for_of of pattern * expression * expression
-    (* for pattern of array_expr do body_expr *)
-  | Pexp_for_await_of of pattern * expression * expression
-    (* for await pattern of iterable_expr do body_expr *)
   | Pexp_constraint of expression * core_type (* (E : T) *)
   | Pexp_coerce of expression * unit * core_type
     (* (E :> T)        (None, T)
@@ -322,6 +327,10 @@ and expression_desc =
   (* . *)
   | Pexp_await of expression
   | Pexp_jsx_element of jsx_element
+  | Pexp_for_of of pattern * expression * expression
+    (* for pattern of array_expr do body_expr *)
+  | Pexp_for_await_of of pattern * expression * expression
+(* for await pattern of iterable_expr do body_expr *)
 
 (* an element of a record pattern or expression *)
 and 'a record_element = {lid: Longident.t loc; x: 'a; opt: bool (* optional *)}

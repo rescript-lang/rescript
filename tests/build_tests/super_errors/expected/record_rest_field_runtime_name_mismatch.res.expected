@@ -1,0 +1,10 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/record_rest_field_runtime_name_mismatch.res[0m:[2m12:12-16[0m
+
+  10 [2m│[0m }
+  11 [2m│[0m 
+  [1;31m12[0m [2m│[0m let {a, ...[1;31mwrong[0m as rest} = ({a: 1, b: "x"}: source)
+  13 [2m│[0m 
+
+  Field `b` in the rest type `wrong` has runtime representation `other-b`, but in the source record type it is `runtime-b`. Runtime representations must match.

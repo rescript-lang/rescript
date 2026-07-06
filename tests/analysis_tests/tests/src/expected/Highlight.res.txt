@@ -1,5 +1,5 @@
 Highlight src/Highlight.res
-structure items:39 diagnostics:0 
+structure items:39 diagnostics:0
 Lident: M 0:7 Namespace
 Lident: C 1:9 Namespace
 Lident: Component 1:13 Namespace

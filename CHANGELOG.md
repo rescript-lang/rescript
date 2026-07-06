@@ -24,6 +24,7 @@
 
 - Add a first-class `taggedTemplate<'param, 'output>` builtin type and the `TaggedTemplate` stdlib module (`TaggedTemplate.make`). Tagged-template tags are now tracked through the type system, so they emit real JS tagged-template syntax across module boundaries, when passed as first-class values, and when constructed at runtime by a factory (e.g. `postgres`). https://github.com/rescript-lang/rescript/pull/8461
 - Make mutation of private record mutable fields a configurable warning instead of a hard error. https://github.com/rescript-lang/rescript/pull/8366
+- Add support for pattern matching/destructuring of record rest. https://github.com/rescript-lang/rescript/pull/8317
 
 #### :bug: Bug fix
 
@@ -37,6 +38,8 @@
 - Fix formatting of trailing comments before `=` in let bindings. https://github.com/rescript-lang/rescript/pull/8444
 - Fix analysis namespace parsing after the Yojson migration. https://github.com/rescript-lang/rescript/pull/8454
 - Fix namespaced reference lookup in editor analysis. https://github.com/rescript-lang/rescript/pull/8455
+- Fix analysis segmentation fault for references after https://github.com/rescript-lang/rescript/pull/7887. https://github.com/rescript-lang/rescript/pull/8477
+- Fix build crash when the compiler emits output that is not valid UTF-8, such as a truncated multibyte character in a code frame. https://github.com/rescript-lang/rescript/pull/8482
 
 #### :memo: Documentation
 
@@ -68,6 +71,8 @@
 - Refactor analysis CLI helpers to use source input. https://github.com/rescript-lang/rescript/pull/8466
 - Include syntax, gentype, analysis, tools, and reanalyze tests in coverage reports. https://github.com/rescript-lang/rescript/pull/8467
 - Remove the unreachable `Longident.Lapply` constructor (OCaml's applicative-functor path syntax `F(X).t`, which ReScript's grammar cannot produce). https://github.com/rescript-lang/rescript/pull/8469
+- Refactor analysis for server side use. https://github.com/rescript-lang/rescript/pull/8478
+- Remove unused files. https://github.com/rescript-lang/rescript/pull/8481
 
 # 13.0.0-alpha.4
 

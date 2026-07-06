@@ -1193,6 +1193,15 @@
   DeadOptionalArgs.addReferences formatDate called with optional argNames: argNamesMaybe: OptionalArgsLiveDead.res:5:23
   addValueReference OptionalArgsLiveDead.res:5:4 --> OptionalArgsLiveDead.res:1:4
   addValueReference OptionalArgsLiveDead.res:7:8 --> OptionalArgsLiveDead.res:5:4
+  Scanning RecordRest.cmt Source:RecordRest.res
+  addValueDeclaration +getRest RecordRest.res:8:4 path:+RecordRest
+  addRecordLabelDeclaration name RecordRest.res:1:15 path:+RecordRest.config
+  addRecordLabelDeclaration version RecordRest.res:1:29 path:+RecordRest.config
+  addRecordLabelDeclaration version RecordRest.res:4:12 path:+RecordRest.SubConfig.t
+  addValueReference RecordRest.res:8:4 --> RecordRest.res:10:14
+  addTypeReference RecordRest.res:10:4 --> RecordRest.res:1:15
+  addTypeReference RecordRest.res:10:32 --> RecordRest.res:4:12
+  addValueReference RecordRest.res:8:4 --> RecordRest.res:8:15
   Scanning Records.cmt Source:Records.res
   addValueDeclaration +origin Records.res:11:4 path:+Records
   addValueDeclaration +computeArea Records.res:14:4 path:+Records
@@ -1949,9 +1958,9 @@
   
 Forward Liveness Analysis
 
-    decls: 698
-    roots(external targets): 135
-    decl-deps: decls_with_out=410 edges_to_decls=287
+    decls: 702
+    roots(external targets): 137
+    decl-deps: decls_with_out=411 edges_to_decls=289
 
     Root (external ref): Value +FirstClassModules.M.InnerModule2.+k
     Root (external ref): VariantCase DeadRT.moduleAccessPath.Root
@@ -2008,6 +2017,7 @@ Forward Liveness Analysis
     Root (annotated): Value +ImportHooks.+foo
     Root (annotated): RecordLabel +ImportIndex.props.method
     Root (annotated): Value +Docstrings.+unnamed2U
+    Root (external ref): RecordLabel +RecordRest.config.name
     Root (external ref): Value +FirstClassModules.M.Z.+u
     Root (annotated): Value +Uncurried.+callback2U
     Root (annotated): Value +ImportJsValue.+default
@@ -2132,6 +2142,7 @@ Forward Liveness Analysis
     Root (annotated): Value +Records.+someBusiness
     Root (external ref): RecordLabel +Hooks.vehicle.name
     Root (annotated): Value +Uncurried.+sumLblCurried
+    Root (annotated): Value +RecordRest.+getRest
     Root (annotated): Value +References.+preserveRefIdentity
     Root (annotated): Value +Types.+jsStringT
     Root (annotated): Value +Variants.+restResult1
@@ -2146,6 +2157,7 @@ Forward Liveness Analysis
     Root (annotated): Value +ImportJsValue.+useColor
     Root (annotated): Value +Tuples.+changeSecondAge
     Root (external ref): Value +Unison.+group
+    Root (external ref): RecordLabel +RecordRest.SubConfig.t.version
     Root (annotated): Value +Docstrings.+unnamed1U
     Root (annotated): Value +Records.+recordValue
     Root (annotated): Value +ImportHookDefault.+make
@@ -2276,7 +2288,7 @@ Forward Liveness Analysis
     Root (annotated): Value +UseImportJsValue.+useGetProp
     Root (annotated): Value +Hooks.+functionWithRenamedArgs
   
-  322 roots found
+  325 roots found
 
     Propagate: DeadRT.moduleAccessPath.Root -> +DeadRT.moduleAccessPath.Root
     Propagate: +TypeReexportCrossFileB.reexportedRecord.usedField -> +TypeReexportCrossFileA.originalRecord.usedField
@@ -3413,6 +3425,17 @@ Forward Liveness Analysis
   Live (external ref) Value +OptionalArgsLiveDead.+liveCaller
       deps: in=0 (live=0 dead=0) out=1
         -> +OptionalArgsLiveDead.+formatDate
+  Live (external ref) RecordLabel +RecordRest.config.name
+      deps: in=1 (live=1 dead=0) out=0
+        <- +RecordRest.+getRest (live)
+  Dead RecordLabel +RecordRest.config.version
+  Live (external ref) RecordLabel +RecordRest.SubConfig.t.version
+      deps: in=1 (live=1 dead=0) out=0
+        <- +RecordRest.+getRest (live)
+  Live (annotated) Value +RecordRest.+getRest
+      deps: in=0 (live=0 dead=0) out=2
+        -> +RecordRest.config.name
+        -> +RecordRest.SubConfig.t.version
   Live (external ref) RecordLabel +Records.coord.x
       deps: in=1 (live=1 dead=0) out=0
         <- +Records.+computeArea (live)
@@ -4903,6 +4926,10 @@ Forward Liveness Analysis
   deadCaller is never used
 
   Warning Dead Type
+  RecordRest.res:1:30-44
+  config.version is a record label never used to read a value
+
+  Warning Dead Type
   Records.res:24:3-14
   person.name is a record label never used to read a value
 
@@ -5246,4 +5273,4 @@ Forward Liveness Analysis
   OptArg.res:26:1-70
   optional argument c of function wrapfourArgs is always supplied (2 calls)
   
-  Analysis reported 318 issues (Incorrect Dead Annotation:1, Warning Dead Exception:2, Warning Dead Module:22, Warning Dead Type:93, Warning Dead Value:177, Warning Dead Value With Side Effects:5, Warning Redundant Optional Argument:6, Warning Unused Argument:12)
+  Analysis reported 319 issues (Incorrect Dead Annotation:1, Warning Dead Exception:2, Warning Dead Module:22, Warning Dead Type:94, Warning Dead Value:177, Warning Dead Value With Side Effects:5, Warning Redundant Optional Argument:6, Warning Unused Argument:12)

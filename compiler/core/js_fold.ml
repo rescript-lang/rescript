@@ -190,6 +190,9 @@ class fold =
       | Spread _x0 ->
         let _self = _self#expression _x0 in
         _self
+      | Record_rest (_x0, _x1) ->
+        let _self = _self#expression _x1 in
+        _self
 
     method for_ident_expression : for_ident_expression -> 'self_type =
       _self#expression
