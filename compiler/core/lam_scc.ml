@@ -45,7 +45,7 @@ let hit_mask (mask : Hash_set_ident_mask.t) (l : Lam.t) : bool =
     | Lstaticcatch (e1, (_, _), e2) -> hit e1 || hit e2
     | Ltrywith (e1, _exn, e2) -> hit e1 || hit e2
     | Lfunction {body; params = _} -> hit body
-    | Llet (_str, _id, arg, body) -> hit arg || hit body
+    | Llet (_str, _id, _, arg, body) -> hit arg || hit body
     | Lletrec (decl, body) -> hit body || hit_list_snd decl
     | Lfor (_v, e1, e2, _dir, e3) -> hit e1 || hit e2 || hit e3
     | Lfor_of (_v, e1, e2) | Lfor_await_of (_v, e1, e2) -> hit e1 || hit e2
@@ -133,7 +133,8 @@ let scc_bindings (groups : bindings) : bindings list =
 let scc (groups : bindings) (lam : Lam.t) (body : Lam.t) =
   match groups with
   | [(id, bind)] ->
-    if Lam_hit.hit_variable id bind then lam else Lam.let_ Strict id bind body
+    if Lam_hit.hit_variable id bind then lam
+    else Lam.let_ Strict id None bind body
   | _ ->
     let domain, int_mapping, node_vec = preprocess_deps groups in
     let clusters = Ext_scc.graph node_vec in
@@ -154,6 +155,6 @@ let scc (groups : bindings) (lam : Lam.t) (body : Lam.t) =
             let base_key = Ordered_hash_map_local_ident.rank domain id in
             if Int_vec_util.mem base_key node_vec.(base_key) then
               Lam.letrec bindings acc
-            else Lam.let_ Strict id lam acc
+            else Lam.let_ Strict id None lam acc
           | _ -> Lam.letrec bindings acc)
         clusters body

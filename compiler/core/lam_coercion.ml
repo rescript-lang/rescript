@@ -113,11 +113,12 @@ let handle_exports (meta : Lam_stats.t) (lambda_exports : Lam.t list)
             let newid = Ident.rename original_export_id in
             let kind : Lam_compat.let_kind = Alias in
             Lam_util.alias_ident_or_global meta newid id NA;
+            let ty = Hash_ident.find_opt meta.export_type_tbl id in
             {
               acc with
               export_list = newid :: acc.export_list;
               export_map = Map_ident.add acc.export_map newid lam;
-              groups = Single (kind, newid, lam) :: acc.groups;
+              groups = Single (kind, newid, ty, lam) :: acc.groups;
             }
         | _ ->
           (*
@@ -149,11 +150,14 @@ let handle_exports (meta : Lam_stats.t) (lambda_exports : Lam.t list)
                       | Lfunction _ -> Some (lam, Lam_non_rec)
                       | _ -> None);
                   }));
+          let ty =
+            Hash_ident.find_opt meta.export_type_tbl original_export_id
+          in
           {
             acc with
             export_list = newid :: acc.export_list;
             export_map = Map_ident.add acc.export_map newid lam;
-            groups = Single (Strict, newid, lam) :: acc.groups;
+            groups = Single (Strict, newid, ty, lam) :: acc.groups;
           })
   in
 
@@ -161,7 +165,7 @@ let handle_exports (meta : Lam_stats.t) (lambda_exports : Lam.t list)
     Ext_list.fold_left reverse_input (result.export_map, result.groups)
       (fun (export_map, acc) x ->
         ( (match x with
-          | Single (_, id, lam) when Set_ident.mem export_set id ->
+          | Single (_, id, _, lam) when Set_ident.mem export_set id ->
             Map_ident.add export_map id lam
           (* relies on the Invariant that [eoid] can not be bound before
               FIX: such invariant may not hold
@@ -179,9 +183,9 @@ let handle_exports (meta : Lam_stats.t) (lambda_exports : Lam.t list)
 let rec flatten (acc : Lam_group.t list) (lam : Lam.t) :
     Lam.t * Lam_group.t list =
   match lam with
-  | Llet (str, id, arg, body) ->
+  | Llet (str, id, ty, arg, body) ->
     let res, l = flatten acc arg in
-    flatten (Single (str, id, res) :: l) body
+    flatten (Single (str, id, ty, res) :: l) body
   | Lletrec (bind_args, body) -> flatten (Recursive bind_args :: acc) body
   | Lsequence (l, r) ->
     let res, l = flatten acc l in

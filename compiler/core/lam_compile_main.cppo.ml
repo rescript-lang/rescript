@@ -56,7 +56,7 @@ let compile_group output_prefix (meta : Lam_stats.t)
      so it should be safe
   *)
 
-  | Single (kind, id, lam) -> 
+  | Single (kind, id, _ty, lam) ->
     (* let lam = Optimizer.simplify_lets [] lam in  *)
     (* can not apply again, it's wrong USE it with care*)
     (* ([Js_stmt_make.comment (Gen_of_env.query_type id  env )], None)  ++ *)
@@ -93,7 +93,7 @@ let compile_group output_prefix (meta : Lam_stats.t)
 let no_side_effects (rest : Lam_group.t list) : string option = 
   Ext_list.find_opt rest (fun x -> 
       match x with 
-      | Single(kind,id,body) -> 
+      | Single (kind, id, _ty, body) -> 
         begin 
           match kind with 
           | Strict | Variable -> 
@@ -130,10 +130,11 @@ let _j = Js_pass_debug.dump
 (** Actually simplify_lets is kind of global optimization since it requires you to know whether 
     it's used or not 
 *)
-let compile  
+let compile
+    ?(typedtree : Typedtree.structure option)
     (output_prefix : string)
     export_idents
-    (lam : Lambda.lambda)  = 
+    (lam : Lambda.lambda)  =
   let export_ident_sets = Set_ident.of_list export_idents in 
   (* To make toplevel happy - reentrant for js-demo *)
   let () = 
@@ -210,9 +211,20 @@ let compile
 #endif    
   in
 
-  let ({Lam_coercion.groups = groups } as coerced_input , meta) = 
+  if !Clflags.dump_lamtypes then
+    Lam_type_dump.collect lam;
+
+  let ({Lam_coercion.groups = groups; export_map = _} as coerced_input , meta) = 
     Lam_coercion.coerce_and_group_big_lambda  meta lam
   in 
+
+  if !Clflags.emit_typedefs then begin
+    let dts_name =
+      Ext_filename.new_extension !Location.input_name ".d.ts"
+    in
+    Ext_fmt.with_file_as_pp dts_name (fun ppf ->
+        Lam_ts_emit.emit_decls ?typedtree ppf groups meta.exports)
+  end;
 
 #ifndef RELEASE
 let () =

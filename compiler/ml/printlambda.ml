@@ -42,15 +42,6 @@ let rec struct_const ppf = function
   | Const_false -> fprintf ppf "false"
   | Const_true -> fprintf ppf "true"
 
-let value_kind = function
-  | Pgenval -> ""
-
-(* let field_kind = function
-   | Pgenval -> "*"
-   | Pintval -> "int"
-   | Pfloatval -> "float"
-   | Pboxedintval bi -> boxed_integer_name bi *)
-
 let string_of_loc_kind = function
   | Loc_FILE -> "loc_FILE"
   | Loc_LINE -> "loc_LINE"
@@ -290,11 +281,13 @@ let rec lam ppf = function
       apply_inlined_attribute ap.ap_inlined
   | Lfunction {params; body; attr} ->
     let pr_params ppf params =
-      List.iter (fun param -> fprintf ppf "@ %a" Ident.print param) params
+      List.iter
+        (fun (param, _ty) -> fprintf ppf "@ %a" Ident.print param)
+        params
     in
     fprintf ppf "@[<2>(function%a@ %a%a)@]" pr_params params function_attribute
       attr lam body
-  | Llet (str, k, id, arg, body) ->
+  | Llet (str, id, _ty, arg, body) ->
     let kind = function
       | Alias -> "a"
       | Strict -> ""
@@ -302,14 +295,13 @@ let rec lam ppf = function
       | Variable -> "v"
     in
     let rec letbody = function
-      | Llet (str, k, id, arg, body) ->
-        fprintf ppf "@ @[<2>%a =%s%s@ %a@]" Ident.print id (kind str)
-          (value_kind k) lam arg;
+      | Llet (str, id, _ty, arg, body) ->
+        fprintf ppf "@ @[<2>%a =%s@ %a@]" Ident.print id (kind str) lam arg;
         letbody body
       | expr -> expr
     in
-    fprintf ppf "@[<2>(let@ @[<hv 1>(@[<2>%a =%s%s@ %a@]" Ident.print id
-      (kind str) (value_kind k) lam arg;
+    fprintf ppf "@[<2>(let@ @[<hv 1>(@[<2>%a =%s@ %a@]" Ident.print id
+      (kind str) lam arg;
     let expr = letbody body in
     fprintf ppf ")@]@ %a)@]" lam expr
   | Lletrec (id_arg_list, body) ->

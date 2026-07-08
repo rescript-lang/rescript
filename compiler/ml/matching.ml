@@ -459,7 +459,7 @@ let make_catch d k =
 (* Introduce a catch, if worth it, delayed version *)
 let rec as_simple_exit = function
   | Lstaticraise (i, []) -> Some i
-  | Llet (Alias, _k, _, _, e) -> as_simple_exit e
+  | Llet (Alias, _id, _ty, _, e) -> as_simple_exit e
   | _ -> None
 
 let make_catch_delayed handler =
@@ -1560,7 +1560,7 @@ let bind_sw arg k =
   | Lvar _ -> k arg
   | _ ->
     let id = Ident.create "switch" in
-    Llet (Strict, Pgenval, id, arg, k (Lvar id))
+    Llet (Strict, id, None, arg, k (Lvar id))
 
 (* Sequential equality tests *)
 
@@ -2160,7 +2160,7 @@ let combine_constructor sw_names loc arg ex_pat cstr partial ctx def
                 (Lprim (Pextension_slot_eq, [Lvar tag; ext], loc), act, rem))
             extension_cases default
         in
-        Llet (Alias, Pgenval, tag, arg, tests)
+        Llet (Alias, tag, None, arg, tests)
     in
     (lambda1, jumps_union local_jumps total1)
   else
@@ -2250,8 +2250,8 @@ let call_switcher_variant_constr loc fail arg int_lambda_list names =
   let v = Ident.create "variant" in
   Llet
     ( Alias,
-      Pgenval,
       v,
+      None,
       Lprim (Pfield (0, Fld_poly_var_tag), [arg], loc),
       call_switcher loc fail (Lvar v) min_int max_int
         (List.map (fun (a, (_, c)) -> (a, c)) int_lambda_list)
@@ -2430,7 +2430,7 @@ let rec approx_present v = function
   | Lconst _ -> false
   | Lstaticraise (_, args) -> List.exists (fun lam -> approx_present v lam) args
   | Lprim (_, args, _) -> List.exists (fun lam -> approx_present v lam) args
-  | Llet (Alias, _k, _, l1, l2) -> approx_present v l1 || approx_present v l2
+  | Llet (Alias, _id, _ty, l1, l2) -> approx_present v l1 || approx_present v l2
   | Lvar vv -> Ident.same v vv
   | _ -> true
 
@@ -2451,9 +2451,9 @@ let rec lower_bind v arg lam =
   | Lswitch (ls, ({sw_consts = []; sw_blocks = [(i, act)]} as sw), loc)
     when not (approx_present v ls) ->
     Lswitch (ls, {sw with sw_blocks = [(i, lower_bind v arg act)]}, loc)
-  | Llet (Alias, k, vv, lv, l) ->
+  | Llet (Alias, vv, k, lv, l) ->
     if approx_present v lv then bind Alias v arg lam
-    else Llet (Alias, k, vv, lv, lower_bind v arg l)
+    else Llet (Alias, vv, k, lv, lower_bind v arg l)
   | Lvar u when Ident.same u v && Ident.name u = "*sth*" ->
     arg (* eliminate let *sth* = from_option x in *sth* *)
   | _ -> bind Alias v arg lam
@@ -2830,9 +2830,9 @@ let for_let loc param pat body =
     (* This eliminates a useless variable (and stack slot in bytecode)
        for "let _ = ...". See #6865. *)
     Lsequence (param, body)
-  | Tpat_var (id, _) ->
+  | Tpat_var (id, _) | Tpat_alias ({pat_desc = Tpat_any}, id, _) ->
     (* fast path, and keep track of simple bindings to unboxable numbers *)
-    Llet (Strict, Pgenval, id, param, body)
+    Llet (Strict, id, Some pat.pat_type, param, body)
   | _ -> simple_for_let loc param pat body
 
 (* Handling of tupled functions and matchings *)

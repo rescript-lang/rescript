@@ -280,9 +280,9 @@ type primitive =
 
 and comparison = Ceq | Cneq | Clt | Cgt | Cle | Cge
 
-and value_kind = Pgenval
-
 and raise_kind = Raise_regular | Raise_reraise
+
+type type_expr = Types.type_expr
 
 type structured_constant =
   | Const_base of constant
@@ -324,7 +324,7 @@ type lambda =
   | Lconst of structured_constant
   | Lapply of lambda_apply
   | Lfunction of lfunction
-  | Llet of let_kind * value_kind * Ident.t * lambda * lambda
+  | Llet of let_kind * Ident.t * type_expr option * lambda * lambda
   | Lletrec of (Ident.t * lambda) list * lambda
   | Lprim of primitive * lambda list * Location.t
   | Lswitch of lambda * lambda_switch * Location.t
@@ -347,10 +347,11 @@ type lambda =
   | Lsend of string * lambda * Location.t
 
 and lfunction = {
-  params: Ident.t list;
+  params: (Ident.t * type_expr option) list;
   body: lambda;
   attr: function_attribute; (* specified with [@inline] attribute *)
   loc: Location.t;
+  ty: type_expr option;
 }
 
 and lambda_apply = {
@@ -359,6 +360,7 @@ and lambda_apply = {
   ap_loc: Location.t;
   ap_inlined: inline_attribute; (* specified with the [@inlined] attribute *)
   ap_transformed_jsx: bool;
+  ap_result_type: type_expr option;
 }
 
 and lambda_switch = {

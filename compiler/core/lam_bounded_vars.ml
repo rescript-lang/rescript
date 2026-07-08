@@ -75,11 +75,11 @@ let rewrite (map : _ Hash_ident.t) (lam : Lam.t) : Lam.t =
   and aux (lam : Lam.t) : Lam.t =
     match lam with
     | Lvar v -> Hash_ident.find_default map v lam
-    | Llet (str, v, l1, l2) ->
+    | Llet (str, v, ty, l1, l2) ->
       let v = rebind v in
       let l1 = aux l1 in
       let l2 = aux l2 in
-      Lam.let_ str v l1 l2
+      Lam.let_ str v ty l1 l2
     | Lletrec (bindings, body) ->
       (*order matters see GPR #405*)
       let vars = Ext_list.map bindings (fun (k, _) -> rebind k) in
@@ -88,10 +88,10 @@ let rewrite (map : _ Hash_ident.t) (lam : Lam.t) : Lam.t =
       in
       let body = aux body in
       Lam.letrec bindings body
-    | Lfunction {arity; params; body; attr} ->
+    | Lfunction {arity; params; body; attr; ty} ->
       let params = Ext_list.map params rebind in
       let body = aux body in
-      Lam.function_ ~arity ~params ~body ~attr
+      Lam.function_ ~arity ~params ~body ~attr ~ty
     | Lstaticcatch (l1, (i, xs), l2) ->
       let l1 = aux l1 in
       let xs = Ext_list.map xs rebind in
@@ -118,10 +118,10 @@ let rewrite (map : _ Hash_ident.t) (lam : Lam.t) : Lam.t =
       (* here it makes sure that global vars are not rebound *)
       Lam.prim ~primitive ~args:(Ext_list.map args aux) loc
     | Lglobal_module _ -> lam
-    | Lapply {ap_func; ap_args; ap_info; ap_transformed_jsx} ->
+    | Lapply {ap_func; ap_args; ap_info; ap_transformed_jsx; ap_result_type} ->
       let fn = aux ap_func in
       let args = Ext_list.map ap_args aux in
-      Lam.apply ~ap_transformed_jsx fn args ap_info
+      Lam.apply ~ap_transformed_jsx ~ap_result_type fn args ap_info
     | Lswitch
         ( l,
           {

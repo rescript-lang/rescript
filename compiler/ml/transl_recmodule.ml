@@ -139,8 +139,8 @@ let eval_rec_bindings_aux (bindings : binding list) (cont : t) : t =
     | (id, Some (loc, shape), _rhs) :: rem ->
       Lambda.Llet
         ( Strict,
-          Pgenval,
           id,
+          None,
           Lprim (Pinit_mod, [loc; shape], Location.none),
           bind_inits rem acc )
   in
@@ -148,7 +148,7 @@ let eval_rec_bindings_aux (bindings : binding list) (cont : t) : t =
     match args with
     | [] -> acc
     | (id, None, rhs) :: rem ->
-      Lambda.Llet (Strict, Pgenval, id, rhs, bind_strict rem acc)
+      Lambda.Llet (Strict, id, None, rhs, bind_strict rem acc)
     | (_id, Some _, _rhs) :: rem -> bind_strict rem acc
   in
   let rec patch_forwards args =
@@ -174,7 +174,7 @@ let rec is_function_or_const_block (lam : Lambda.lambda) acc =
         | Lvar id -> Set_ident.mem acc id
         | Lfunction _ | Lconst _ -> true
         | _ -> false)
-  | Llet (_, _, id, Lfunction _, cont) ->
+  | Llet (_, id, _, Lfunction _, cont) ->
     is_function_or_const_block cont (Set_ident.add acc id)
   | Lletrec (bindings, cont) -> (
     let rec aux_bindings bindings acc =
@@ -188,7 +188,7 @@ let rec is_function_or_const_block (lam : Lambda.lambda) acc =
     | None -> false
     | Some acc -> is_function_or_const_block cont acc)
   | Llet (_, _, _, Lconst _, cont) -> is_function_or_const_block cont acc
-  | Llet (_, _, id1, Lvar id2, cont) when Set_ident.mem acc id2 ->
+  | Llet (_, id1, _, Lvar id2, cont) when Set_ident.mem acc id2 ->
     is_function_or_const_block cont (Set_ident.add acc id1)
   | _ -> false
 

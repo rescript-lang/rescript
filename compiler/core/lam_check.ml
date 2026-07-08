@@ -69,7 +69,7 @@ let check file lam =
       check_staticfails e1 cxt;
       check_staticfails e2 Set_int.empty
     | Lbreak | Lcontinue -> ()
-    | Llet (_str, _id, arg, body) -> check_list [arg; body] cxt
+    | Llet (_str, _id, _, arg, body) -> check_list [arg; body] cxt
     | Lletrec (decl, body) ->
       check_list_snd decl cxt;
       check_staticfails body cxt
@@ -110,7 +110,7 @@ let check file lam =
     | Lfunction {body; params} ->
       List.iter def params;
       iter body
-    | Llet (_str, id, arg, body) ->
+    | Llet (_str, id, _, arg, body) ->
       iter arg;
       def id;
       iter body

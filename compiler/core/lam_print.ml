@@ -231,7 +231,7 @@ let to_print_kind (k : Lam_compat.let_kind) : print_kind =
 
 let rec aux (acc : (print_kind * Ident.t * Lam.t) list) (lam : Lam.t) =
   match lam with
-  | Llet (str3, id3, arg3, body3) ->
+  | Llet (str3, id3, _, arg3, body3) ->
     aux ((to_print_kind str3, id3, arg3) :: acc) body3
   | Lletrec (bind_args, body) ->
     aux
@@ -251,7 +251,7 @@ let rec aux (acc : (print_kind * Ident.t * Lam.t) list) (lam : Lam.t) =
 
 let flatten (lam : Lam.t) : (print_kind * Ident.t * Lam.t) list * Lam.t =
   match lam with
-  | Llet (str, id, arg, body) -> aux [(to_print_kind str, id, arg)] body
+  | Llet (str, id, _, arg, body) -> aux [(to_print_kind str, id, arg)] body
   | Lletrec (bind_args, body) ->
     aux (Ext_list.map bind_args (fun (id, l) -> (Recursive, id, l))) body
   | _ -> assert false
@@ -441,7 +441,7 @@ let lambda ppf v =
 
 (* let rec flat (acc : (left * Lam.t) list ) (lam : Lam.t) =
    match lam with
-   | Llet (str,id,arg,body) ->
+   | Llet (str,id,_,arg,body) ->
     flat ( (Id {kind = to_print_kind str;  id}, arg) :: acc) body
    | Lletrec (bind_args, body) ->
     flat
