@@ -35,11 +35,10 @@ let A0 = /* @__PURE__ */Primitive_exceptions.create("Large_record_duplication_te
 
 Mocha.describe("Large_record_duplication_test", () => {
   Mocha.test("large record spread operation", () => {
-    let f0 = x => {
-      let newrecord = {...x};
-      newrecord.x0 = 1;
-      return newrecord;
-    };
+    let f0 = x => ({
+      ...x,
+      x0: 1
+    });
     let result = f0(v0);
     Test_utils.eq("File \"large_record_duplication_test.res\", line 143, characters 7-14", result.x0, 1);
     Test_utils.eq("File \"large_record_duplication_test.res\", line 144, characters 7-14", result.x1, 9);
@@ -86,10 +85,12 @@ Mocha.describe("Large_record_duplication_test", () => {
     let f1 = x => {
       if (typeof x !== "object") {
         return "A1";
+      } else {
+        return {
+          ...x,
+          x0: 1
+        };
       }
-      let newrecord = {...x};
-      newrecord.x0 = 1;
-      return newrecord;
     };
     Test_utils.eq("File \"large_record_duplication_test.res\", line 201, characters 7-14", get_x0(f1({
       TAG: "A0",
@@ -125,12 +126,14 @@ Mocha.describe("Large_record_duplication_test", () => {
       }
     };
     let f2 = x => {
-      if (x.TAG !== "A0") {
+      if (x.TAG === "A0") {
+        return {
+          ...x,
+          x0: 1
+        };
+      } else {
         return x;
       }
-      let newrecord = {...x};
-      newrecord.x0 = 1;
-      return newrecord;
     };
     Test_utils.eq("File \"large_record_duplication_test.res\", line 243, characters 7-14", get_x0(f2({
       TAG: "A0",
@@ -161,12 +164,14 @@ Mocha.describe("Large_record_duplication_test", () => {
   });
   Mocha.test("exception extension with large record", () => {
     let f3 = x => {
-      if (x.RE_EXN_ID !== A0) {
+      if (x.RE_EXN_ID === A0) {
+        return {
+          ...x,
+          x0: 1
+        };
+      } else {
         return x;
       }
-      let newrecord = {...x};
-      newrecord.x0 = 1;
-      return newrecord;
     };
     let get_x0 = x => {
       if (x.RE_EXN_ID === A0) {
