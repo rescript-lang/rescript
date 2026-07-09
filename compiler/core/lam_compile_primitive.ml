@@ -609,6 +609,16 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
     match args with
     | [e1] -> E.obj ~dup:e1 []
     | _ -> assert false)
+  | Precord_rest excluded -> (
+    match args with
+    | [e1] ->
+      E.record_rest
+        (List.map
+           (fun record_rest_label ->
+             {J.record_rest_label; record_rest_ident = None})
+           excluded)
+        e1
+    | _ -> assert false)
   | Phash -> (
     match args with
     | [e1; e2; e3; e4] -> E.runtime_call Primitive_modules.hash "hash" args

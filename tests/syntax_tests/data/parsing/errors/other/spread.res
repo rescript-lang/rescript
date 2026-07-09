@@ -2,6 +2,7 @@ let [...arr, _] = [1, 2, 3]
 
 let record = {...x, ...y}
 let {...x, ...y} = myRecord
+let {...M.t} = myRecord
 
 let list{...x, ...y} = myList
 

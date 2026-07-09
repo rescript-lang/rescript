@@ -43,6 +43,13 @@ type pattern = {
   pat_attributes: attributes;
 }
 
+and record_pat_rest = {
+  rest_ident: Ident.t;
+  rest_name: string loc;
+  rest_type: type_expr;
+  excluded_runtime_labels: string list;
+}
+
 and pat_extra =
   | Tpat_constraint of core_type
       (** P : T          { pat_desc = P
@@ -85,10 +92,11 @@ and pattern_desc =
   | Tpat_record of
       (Longident.t loc * label_description * pattern * bool (* optional *)) list
       * closed_flag
+      * record_pat_rest option
       (** { l1=P1; ...; ln=Pn }     (flag = Closed)
             { l1=P1; ...; ln=Pn; _}   (flag = Open)
 
-            Invariant: n > 0
+            Invariant: n > 0 unless this is a rest-only record pattern
          *)
   | Tpat_array of pattern list  (** [| P1; ...; Pn |] *)
   | Tpat_or of pattern * pattern * row_desc option
@@ -220,14 +228,17 @@ and expression_desc =
       * expression
       * direction_flag
       * expression
-  | Texp_for_of of Ident.t * Parsetree.pattern * expression * expression
-  | Texp_for_await_of of Ident.t * Parsetree.pattern * expression * expression
   | Texp_send of expression * meth * expression option
   | Texp_letmodule of Ident.t * string loc * module_expr * expression
   | Texp_letexception of extension_constructor * expression
   | Texp_assert of expression
   | Texp_pack of module_expr
   | Texp_extension_constructor of Longident.t loc * Path.t
+  (* Keep new expression constructors at the end. CMT files are marshalled by
+     runtime constructor tag, so inserting constructors before existing ones
+     breaks analysis when it reads CMTs produced by older compiler versions. *)
+  | Texp_for_of of Ident.t * Parsetree.pattern * expression * expression
+  | Texp_for_await_of of Ident.t * Parsetree.pattern * expression * expression
 
 and meth = Tmeth_name of string
 

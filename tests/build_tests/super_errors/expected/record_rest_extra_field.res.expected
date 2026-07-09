@@ -1,0 +1,10 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/record_rest_extra_field.res[0m:[2m3:12-14[0m
+
+  1 [2m│[0m type source = {a: int, x: int}
+  2 [2m│[0m type sub = {a: int, b: string}
+  [1;31m3[0m [2m│[0m let {x, ...[1;31msub[0m as rest} = ({a: 1, x: 2}: source)
+  4 [2m│[0m 
+
+  Field `b` in the rest type `sub` does not exist in the source record type.

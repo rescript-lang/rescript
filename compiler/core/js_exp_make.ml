@@ -166,6 +166,10 @@ let raw_js_code ?comment info s : t =
   }
 
 let array ?comment mt es : t = {expression_desc = Array (es, mt); comment}
+
+let record_rest ?comment fields source : t =
+  {expression_desc = Record_rest (fields, source); comment}
+
 let some_comment = None
 
 let optional_block e : J.expression =

@@ -685,7 +685,8 @@ let signature_help ~debug ~source ~kind_file ~pos
                 match tuple_item_with_cursor with
                 | None -> -1
                 | Some i -> i)
-              | `ConstructorPat (_, {ppat_desc = Ppat_record (fields, _)}) -> (
+              | `ConstructorPat (_, {ppat_desc = Ppat_record (fields, _, _rest)})
+                -> (
                 let field_name_with_cursor =
                   fields
                   |> List.find_map
