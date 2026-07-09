@@ -10,15 +10,13 @@
 > - :nail_care: [Polish]
 > - :house: [Internal]
 
-# 13.0.0-alpha.5 (Unreleased)
+# 13.0.0-alpha.5
 
 #### :boom: Breaking Change
 
 - Make `Jsx.component` abstract. https://github.com/rescript-lang/rescript/pull/8390
 - Drop Node.js version 20.x support, as it is reaching EOL. https://github.com/rescript-lang/rescript/pull/8401
 - Remove the `@taggedTemplate` decorator in favor of the new first-class `taggedTemplate<'param, 'output>` builtin type. Using the decorator, or backtick tagged-template syntax on a value that is not a `taggedTemplate`, is now a compile error pointing to the new binding form. https://github.com/rescript-lang/rescript/pull/8461
-
-#### :eyeglasses: Spec Compliance
 
 #### :rocket: New Feature
 
@@ -42,8 +40,6 @@
 - Fix build crash when the compiler emits output that is not valid UTF-8, such as a truncated multibyte character in a code frame. https://github.com/rescript-lang/rescript/pull/8482
 - Fix unnecessary boxing of `Some(React.component)`. https://github.com/rescript-lang/rescript/pull/8500
 - Fix GenType React element output to support React 19 typedefs. https://github.com/rescript-lang/rescript/pull/8501
-
-#### :memo: Documentation
 
 #### :nail_care: Polish
 
