@@ -74,6 +74,7 @@
 - Remove the unreachable `Longident.Lapply` constructor (OCaml's applicative-functor path syntax `F(X).t`, which ReScript's grammar cannot produce). https://github.com/rescript-lang/rescript/pull/8469
 - Refactor analysis for server side use. https://github.com/rescript-lang/rescript/pull/8478
 - Remove unused files. https://github.com/rescript-lang/rescript/pull/8481
+- Remove the dead `Sig_class`/`Sig_class_type` signature variants (OCaml class items, which ReScript cannot produce). https://github.com/rescript-lang/rescript/pull/8470
 
 # 13.0.0-alpha.4
 

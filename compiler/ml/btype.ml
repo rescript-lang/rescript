@@ -335,8 +335,6 @@ let type_iterators =
     | Sig_typext (_, td, _) -> it.it_extension_constructor it td
     | Sig_module (_, md, _) -> it.it_module_declaration it md
     | Sig_modtype (_, mtd) -> it.it_modtype_declaration it mtd
-    | Sig_class () -> assert false
-    | Sig_class_type () -> assert false
   and it_value_description it vd = it.it_type_expr it vd.val_type
   and it_type_declaration it td =
     List.iter (it.it_type_expr it) td.type_params;
