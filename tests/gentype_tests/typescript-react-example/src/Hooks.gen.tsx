@@ -81,7 +81,7 @@ export const WithRename_componentWithRenamedArgs: React.ComponentType<{
 
 export const WithRef_make: React.ComponentType<{ readonly vehicle: vehicle; readonly ref?: any }> = HooksJS.WithRef.make as any;
 
-export const ForwardRef_input: (_1:r) => JSX.Element = HooksJS.ForwardRef.input as any;
+export const ForwardRef_input: (_1:r) => React.JSX.Element = HooksJS.ForwardRef.input as any;
 
 export const Poly_polymorphicComponent: React.ComponentType<{ readonly p: [vehicle, any] }> = HooksJS.Poly.polymorphicComponent as any;
 
@@ -124,7 +124,7 @@ export const WithRename: { componentWithRenamedArgs: React.ComponentType<{
   readonly cb: cb
 }> } = HooksJS.WithRename as any;
 
-export const ForwardRef: { input: (_1:r) => JSX.Element } = HooksJS.ForwardRef as any;
+export const ForwardRef: { input: (_1:r) => React.JSX.Element } = HooksJS.ForwardRef as any;
 
 export const Fun: { functionReturningReactElement: React.ComponentType<{ readonly name: string }> } = HooksJS.Fun as any;
 
