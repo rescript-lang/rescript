@@ -40,6 +40,7 @@
 - Fix namespaced reference lookup in editor analysis. https://github.com/rescript-lang/rescript/pull/8455
 - Fix analysis segmentation fault for references after https://github.com/rescript-lang/rescript/pull/7887. https://github.com/rescript-lang/rescript/pull/8477
 - Fix build crash when the compiler emits output that is not valid UTF-8, such as a truncated multibyte character in a code frame. https://github.com/rescript-lang/rescript/pull/8482
+- Fix unnecessary boxing of `Some(React.component)`. https://github.com/rescript-lang/rescript/pull/8500
 
 #### :memo: Documentation
 
