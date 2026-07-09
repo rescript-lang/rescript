@@ -72,6 +72,8 @@ let x47 = {};
 
 let x48 = Stdlib_Lazy.make(() => true);
 
+let x49 = param => null;
+
 let x1 = "hello";
 
 let x2 = 1;
@@ -139,5 +141,6 @@ export {
   x46,
   x47,
   x48,
+  x49,
 }
 /* x20 Not a pure module */
