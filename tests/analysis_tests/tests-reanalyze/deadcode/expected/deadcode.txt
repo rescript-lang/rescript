@@ -1016,6 +1016,21 @@
   addVariantCaseDeclaration Foo InnerModuleTypes.res:2:11 path:+InnerModuleTypes.I.t
   Scanning InnerModuleTypes.cmti Source:InnerModuleTypes.resi
   addVariantCaseDeclaration Foo InnerModuleTypes.resi:2:11 path:InnerModuleTypes.I.t
+  Scanning InterfaceOptionalArgEscape.cmt Source:InterfaceOptionalArgEscape.res
+  addValueDeclaration +escaped InterfaceOptionalArgEscape.res:1:4 path:+InterfaceOptionalArgEscape
+  addValueDeclaration +takesFn InterfaceOptionalArgEscape.res:3:4 path:+InterfaceOptionalArgEscape
+  addValueReference InterfaceOptionalArgEscape.res:1:4 --> InterfaceOptionalArgEscape.res:1:23
+  addValueReference InterfaceOptionalArgEscape.res:5:8 --> InterfaceOptionalArgEscape.res:1:4
+  addValueReference InterfaceOptionalArgEscape.res:5:0 --> InterfaceOptionalArgEscape.res:3:4
+  addValueReference InterfaceOptionalArgEscape.resi:1:0 --> InterfaceOptionalArgEscape.res:1:4
+  OptionalArgs.addFunctionReference InterfaceOptionalArgEscape.resi:1:0 InterfaceOptionalArgEscape.res:1:4
+  Scanning InterfaceOptionalArgEscape.cmti Source:InterfaceOptionalArgEscape.resi
+  addValueDeclaration +escaped InterfaceOptionalArgEscape.resi:1:0 path:InterfaceOptionalArgEscape
+  Scanning InterfaceOptionalArgEscapeUse.cmt Source:InterfaceOptionalArgEscapeUse.res
+  addValueDeclaration +use InterfaceOptionalArgEscapeUse.res:1:4 path:+InterfaceOptionalArgEscapeUse
+  DeadOptionalArgs.addReferences InterfaceOptionalArgEscape.escaped called with optional argNames: argNamesMaybe: InterfaceOptionalArgEscapeUse.res:1:16
+  addValueReference InterfaceOptionalArgEscapeUse.res:1:4 --> InterfaceOptionalArgEscape.resi:1:0
+  addValueReference InterfaceOptionalArgEscapeUse.res:3:8 --> InterfaceOptionalArgEscapeUse.res:1:4
   Scanning JSResource.cmt Source:JSResource.res
   Scanning JsxV4.cmt Source:JsxV4.res
   addValueDeclaration +make JsxV4.res:4:23 path:+JsxV4.C
@@ -2077,9 +2092,9 @@
   
 Forward Liveness Analysis
 
-    decls: 736
-    roots(external targets): 157
-    decl-deps: decls_with_out=443 edges_to_decls=317
+    decls: 740
+    roots(external targets): 160
+    decl-deps: decls_with_out=446 edges_to_decls=319
 
     Root (external ref): Value +FirstClassModules.M.InnerModule2.+k
     Root (external ref): VariantCase DeadRT.moduleAccessPath.Root
@@ -2094,6 +2109,7 @@ Forward Liveness Analysis
     Root (annotated): Value +NestedModules.Universe.Nested2.+nested2Function
     Root (annotated): Value +Tuples.+marry
     Root (annotated): Value +Docstrings.+unitArgWithoutConversionU
+    Root (external ref): Value +InterfaceOptionalArgEscape.+escaped
     Root (annotated): Value +Types.+i64Const
     Root (external ref): VariantCase +DeadTypeTest.deadType.OnlyInImplementation
     Root (annotated): Value +TestImport.+valueStartingWithUpperCaseLetter
@@ -2304,6 +2320,7 @@ Forward Liveness Analysis
     Root (annotated): Value +ContextOptionalArgs.+make
     Root (annotated): Value +References.+create
     Root (annotated): Value +Types.+currentTime
+    Root (external ref): Value +InterfaceOptionalArgEscapeUse.+use
     Root (annotated): Value +Records.+someBusiness2
     Root (external ref): Value +TopLevelOptionalArgValueUse.+liveEscapeCaller
     Root (external ref): Value +DeadTest.+ira
@@ -2391,6 +2408,7 @@ Forward Liveness Analysis
     Root (external ref): Value +FirstClassModules.M.+x
     Root (external ref): Value +TypeReexportCrossFileB.+recordValue
     Root (annotated): Value +Records.+computeArea4
+    Root (external ref): Value +InterfaceOptionalArgEscape.+takesFn
     Root (annotated): Value +TestModuleAliases.+testInner1Expanded
     Root (external ref): Value +TypeReexport.OnlyReexportedDead.+value
     Root (annotated): Value +ImportIndex.+make
@@ -2427,7 +2445,7 @@ Forward Liveness Analysis
     Root (annotated): Value +UseImportJsValue.+useGetProp
     Root (annotated): Value +Hooks.+functionWithRenamedArgs
   
-  345 roots found
+  348 roots found
 
     Propagate: DeadRT.moduleAccessPath.Root -> +DeadRT.moduleAccessPath.Root
     Propagate: +TypeReexportCrossFileB.reexportedRecord.usedField -> +TypeReexportCrossFileA.originalRecord.usedField
@@ -2466,6 +2484,7 @@ Forward Liveness Analysis
     Propagate: +References.+set -> +References.R.+set
     Propagate: +DeadTest.MM.+x -> +DeadTest.MM.+x
     Propagate: NestedModulesInSignature.Universe.+theAnswer -> +NestedModulesInSignature.Universe.+theAnswer
+    Propagate: +InterfaceOptionalArgEscapeUse.+use -> InterfaceOptionalArgEscape.+escaped
     Propagate: +TopLevelOptionalArgValueUse.+liveEscapeCaller -> +TopLevelOptionalArgValueUse.+formatDateEscapes
     Propagate: +TopLevelOptionalArgValueUse.+liveTupleCaller -> +TopLevelOptionalArgValueUse.+formatDateTuple
     Propagate: +DeadTypeTest.t.A -> DeadTypeTest.t.A
@@ -2496,7 +2515,7 @@ Forward Liveness Analysis
     Propagate: +TopLevelOptionalArgValueUse.+returnedFunction -> +TopLevelOptionalArgValueUse.+returnsFunction
     Propagate: +ImportJsValue.AbsoluteValue.+getAbs -> +ImportJsValue.AbsoluteValue.+getAbs
   
-  66 declarations marked live via propagation
+  67 declarations marked live via propagation
 
   Dead VariantCase +AutoAnnotate.variant.R
   Dead RecordLabel +AutoAnnotate.record.variant
@@ -3459,6 +3478,17 @@ Forward Liveness Analysis
         <- +InnerModuleTypes.I.t.Foo (live)
         <- +TestInnedModuleTypes.+_ (dead)
         -> +InnerModuleTypes.I.t.Foo
+  Live (external ref) Value +InterfaceOptionalArgEscape.+escaped
+      deps: in=1 (live=1 dead=0) out=0
+        <- InterfaceOptionalArgEscape.+escaped (live)
+  Live (external ref) Value +InterfaceOptionalArgEscape.+takesFn
+  Live (propagated) Value InterfaceOptionalArgEscape.+escaped
+      deps: in=1 (live=1 dead=0) out=1
+        <- +InterfaceOptionalArgEscapeUse.+use (live)
+        -> +InterfaceOptionalArgEscape.+escaped
+  Live (external ref) Value +InterfaceOptionalArgEscapeUse.+use
+      deps: in=0 (live=0 dead=0) out=1
+        -> InterfaceOptionalArgEscape.+escaped
   Live (external ref) Value +JsxV4.C.+make
   Live (annotated) Value +LetPrivate.local_1.+x
       deps: in=1 (live=1 dead=0) out=0
