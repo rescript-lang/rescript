@@ -2,6 +2,14 @@
 
 open Dead_common
 
+(** Identity avoids conflating generated expressions that share source locations. *)
+module Expression_table = Hashtbl.Make (struct
+  type t = Typedtree.expression
+
+  let equal = ( == )
+  let hash (e : t) = Hashtbl.hash e.exp_loc
+end)
+
 let check_any_value_binding_with_no_side_effects ~config ~decls ~file
     ~(module_path : Module_path.t)
     ({vb_pat = {pat_desc}; vb_expr = expr; vb_loc = loc} :
@@ -124,9 +132,8 @@ let process_optional_args ~config ~cross_file ~exp_type ~(loc_from : Location.t)
     |> Dead_optional_args.add_references ~config ~cross_file ~loc_from ~loc_to
          ~binding ~path)
 
-let rec collect_expr ~config ~decls ~refs ~file_deps ~cross_file ~callee_locs
-    ~ignored_escape_locs ~(last_binding : Location.t) super self
-    (e : Typedtree.expression) =
+let rec collect_expr ~config ~refs ~file_deps ~cross_file ~direct_callees
+    ~(last_binding : Location.t) super self (e : Typedtree.expression) =
   let loc_from = e.exp_loc in
   let binding = last_binding in
   let add_optional_arg_value_escape ~val_type pos_from pos_to =
@@ -134,54 +141,6 @@ let rec collect_expr ~config ~decls ~refs ~file_deps ~cross_file ~callee_locs
       Cross_file_items.add_optional_arg_value_escape cross_file ~pos_from
         ~pos_to
   in
-  let rec remove_first target = function
-    | [] -> []
-    | x :: xs when x = target -> xs
-    | x :: xs -> x :: remove_first target xs
-  in
-  let callee_loc_opt =
-    match e.exp_desc with
-    | Texp_apply {funct = {exp_desc = Texp_ident (_, _, _); exp_loc}; _} ->
-      Some exp_loc
-    | _ -> None
-  in
-  let ignored_escape_loc_opt =
-    match e.exp_desc with
-    | Texp_let
-        ( Nonrecursive,
-          [
-            {
-              vb_pat = {pat_desc = Tpat_var (id_arg, _)};
-              vb_expr =
-                {exp_desc = Texp_ident (_, _, _); exp_loc = wrapper_ident_loc};
-            };
-          ],
-          {
-            exp_desc =
-              Texp_function
-                {
-                  case =
-                    {
-                      c_lhs = {pat_desc = Tpat_var (eta_arg, _)};
-                      c_rhs =
-                        {
-                          exp_desc =
-                            Texp_apply
-                              {funct = {exp_desc = Texp_ident (id_arg2, _, _)}};
-                        };
-                    };
-                };
-          } )
-      when Ident.name id_arg = "arg"
-           && Ident.name eta_arg = "eta"
-           && Path.name id_arg2 = "arg" ->
-      Some wrapper_ident_loc
-    | _ -> None
-  in
-  Option.iter (fun loc -> callee_locs := loc :: !callee_locs) callee_loc_opt;
-  Option.iter
-    (fun loc -> ignored_escape_locs := loc :: !ignored_escape_locs)
-    ignored_escape_loc_opt;
   (match e.exp_desc with
   | Texp_ident
       (_path, _, {Types.val_loc = {loc_ghost = false; _} as loc_to; val_type})
@@ -199,10 +158,7 @@ let rec collect_expr ~config ~decls ~refs ~file_deps ~cross_file ~callee_locs
     else (
       add_value_reference ~config ~refs ~file_deps ~binding
         ~add_file_reference:true ~loc_from ~loc_to;
-      if
-        (not (List.mem loc_from !callee_locs))
-        && not (List.mem loc_from !ignored_escape_locs)
-      then
+      if not (Expression_table.mem direct_callees e) then
         let pos_from =
           if binding = Location.none then loc_from.loc_start
           else binding.loc_start
@@ -216,9 +172,10 @@ let rec collect_expr ~config ~decls ~refs ~file_deps ~cross_file ~callee_locs
               Texp_ident
                 (path, _, {Types.val_loc = {loc_ghost = false; _} as loc_to});
             exp_type;
-          };
+          } as direct_callee;
         args;
       } ->
+    Expression_table.replace direct_callees direct_callee ();
     args
     |> process_optional_args ~config ~cross_file ~exp_type
          ~loc_from:(loc_from : Location.t)
@@ -235,7 +192,7 @@ let rec collect_expr ~config ~decls ~refs ~file_deps ~cross_file ~callee_locs
                   Texp_ident
                     (path, _, {Types.val_loc = {loc_ghost = false; _} as loc_to});
                 exp_type;
-              };
+              } as direct_callee;
           };
         ],
         {
@@ -260,6 +217,7 @@ let rec collect_expr ~config ~decls ~refs ~file_deps ~cross_file ~callee_locs
     when Ident.name id_arg = "arg"
          && Ident.name eta_arg = "eta"
          && Path.name id_arg2 = "arg" ->
+    Expression_table.replace direct_callees direct_callee ();
     args
     |> process_optional_args ~config ~cross_file ~exp_type
          ~loc_from:(loc_from : Location.t)
@@ -289,25 +247,16 @@ let rec collect_expr ~config ~decls ~refs ~file_deps ~cross_file ~callee_locs
     fields
     |> Array.iter (fun (_, record_label_definition, _) ->
            match record_label_definition with
-           | Typedtree.Overridden (_, e) -> (
-             match e with
-             | {exp_loc; _} when exp_loc.loc_ghost ->
-               (* Punned field in OCaml projects has ghost location in expression *)
-               let e = {e with exp_loc = {exp_loc with loc_ghost = false}} in
-               collect_expr ~config ~decls ~refs ~file_deps ~cross_file
-                 ~callee_locs ~ignored_escape_locs ~last_binding super self e
-               |> ignore
-             | _ -> ())
+           | Typedtree.Overridden (_, ({exp_loc} as e)) when exp_loc.loc_ghost
+             ->
+             (* Punned field in OCaml projects has ghost location in expression *)
+             let e = {e with exp_loc = {exp_loc with loc_ghost = false}} in
+             collect_expr ~config ~refs ~file_deps ~cross_file ~direct_callees
+               ~last_binding super self e
+             |> ignore
            | _ -> ())
   | _ -> ());
-  let result = super.Tast_mapper.expr self e in
-  Option.iter
-    (fun loc -> callee_locs := remove_first loc !callee_locs)
-    callee_loc_opt;
-  Option.iter
-    (fun loc -> ignored_escape_locs := remove_first loc !ignored_escape_locs)
-    ignored_escape_loc_opt;
-  result
+  super.Tast_mapper.expr self e
 
 (*
   type k. is a locally abstract type
@@ -474,8 +423,7 @@ let rec process_signature_item ~config ~decls ~file ~do_types ~do_values
 (* Traverse the AST *)
 let traverse_structure ~config ~decls ~refs ~file_deps ~cross_file ~file
     ~do_types ~do_externals (structure : Typedtree.structure) : unit =
-  let callee_locs = ref [] in
-  let ignored_escape_locs = ref [] in
+  let direct_callees = Expression_table.create 16 in
   let rec create_mapper (last_binding : Location.t)
       (module_path : Module_path.t) =
     let super = Tast_mapper.default in
@@ -485,8 +433,8 @@ let traverse_structure ~config ~decls ~refs ~file_deps ~cross_file ~file
         expr =
           (fun _self e ->
             e
-            |> collect_expr ~config ~decls ~refs ~file_deps ~cross_file
-                 ~callee_locs ~ignored_escape_locs ~last_binding super mapper);
+            |> collect_expr ~config ~refs ~file_deps ~cross_file ~direct_callees
+                 ~last_binding super mapper);
         pat =
           (fun _self p ->
             p
@@ -624,25 +572,27 @@ let traverse_structure ~config ~decls ~refs ~file_deps ~cross_file ~file
   mapper.structure mapper structure |> ignore
 
 (* Merge a location's references to another one's *)
-let process_value_dependency ~config ~decls ~refs ~file_deps ~cross_file
+let process_value_dependency ~config ~refs ~file_deps ~cross_file
     ( ({
          val_loc =
            {loc_start = {pos_fname = fn_to} as pos_to; loc_ghost = ghost1} as
            loc_to;
+         val_type = type_to;
        } :
         Types.value_description),
       ({
          val_loc =
            {loc_start = {pos_fname = fn_from} as pos_from; loc_ghost = ghost2}
            as loc_from;
+         val_type = type_from;
        } :
         Types.value_description) ) =
   if (not ghost1) && (not ghost2) && pos_to <> pos_from then (
     let add_file_reference = file_is_implementation_of fn_to fn_from in
     add_value_reference ~config ~refs ~file_deps ~binding:Location.none
       ~add_file_reference ~loc_from ~loc_to;
-    Dead_optional_args.add_function_reference ~config ~decls ~cross_file
-      ~loc_from ~loc_to)
+    Dead_optional_args.add_function_reference ~config ~cross_file ~loc_from
+      ~loc_to ~type_from ~type_to)
 
 let process_structure ~config ~decls ~refs ~file_deps ~cross_file ~file
     ~cmt_value_dependencies ~do_types ~do_externals
@@ -651,5 +601,4 @@ let process_structure ~config ~decls ~refs ~file_deps ~cross_file ~file
     ~do_externals structure;
   let value_dependencies = cmt_value_dependencies |> List.rev in
   value_dependencies
-  |> List.iter
-       (process_value_dependency ~config ~decls ~refs ~file_deps ~cross_file)
+  |> List.iter (process_value_dependency ~config ~refs ~file_deps ~cross_file)
