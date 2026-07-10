@@ -1245,7 +1245,7 @@ dependencies = [
 
 [[package]]
 name = "rescript"
-version = "13.0.0-alpha.5"
+version = "13.0.0-alpha.6"
 dependencies = [
  "ahash",
  "anyhow",
