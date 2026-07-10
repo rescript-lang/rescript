@@ -20,6 +20,8 @@
 
 #### :bug: Bug fix
 
+- Fix reanalyze optional-argument diagnostics for functions passed or returned as first-class values. https://github.com/rescript-lang/rescript/pull/8321
+
 #### :memo: Documentation
 
 #### :nail_care: Polish
