@@ -80,4 +80,21 @@ let compute_live_optional_arg_value_escapes (store : t) ~is_live : Pos_set.t =
   iter_optional_arg_value_escapes store
     (fun {Cross_file_items.pos_from; pos_to} ->
       if is_live pos_from then escapes := Pos_set.add pos_to !escapes);
-  !escapes
+  let function_refs = ref [] in
+  iter_function_refs store (fun {Cross_file_items.pos_from; pos_to} ->
+      if is_live pos_from then
+        function_refs := (pos_from, pos_to) :: !function_refs);
+  (* A function reference aliases both declaration positions. Close escapes over
+     the undirected links so aliases and interface/implementation pairs agree. *)
+  let rec propagate escapes =
+    let propagated =
+      List.fold_left
+        (fun escapes (pos_from, pos_to) ->
+          if Pos_set.mem pos_from escapes then Pos_set.add pos_to escapes
+          else if Pos_set.mem pos_to escapes then Pos_set.add pos_from escapes
+          else escapes)
+        escapes !function_refs
+    in
+    if Pos_set.equal propagated escapes then escapes else propagate propagated
+  in
+  propagate !escapes
