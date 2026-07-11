@@ -54,7 +54,7 @@ jobs:
         uses: actions/cache@v6
         with:
           path: rewatch/target
-          key: rewatch-build-v3-${{ env.RUST_TARGET }}-${{ hashFiles('rewatch/src/**', 'rewatch/Cargo.lock') }}
+          key: rewatch-build-v4-${{ env.RUST_TARGET }}-${{ hashFiles('rewatch/src/**', 'rewatch/Cargo.toml', 'rewatch/Cargo.lock', 'rewatch/rust-toolchain.toml', 'rewatch/.cargo/config.toml') }}
 
       - name: Determine Rust toolchain version
         id: rust-version
