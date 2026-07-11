@@ -114,6 +114,9 @@ jobs:
           node-version-file: .nvmrc
           registry-url: https://registry.npmjs.org
 
+      - name: Install npm packages
+        run: yarn install
+
       - name: Download artifacts
         uses: actions/download-artifact@v8
         with:
@@ -135,6 +138,28 @@ jobs:
           yarn workspaces foreach -W --no-private \
             npm publish --provenance --tolerate-republish \
               --tag "${{ needs.release-plan.outputs.publish-tag }}"
+
+      - name: Download playground compiler bundle
+        uses: actions/download-artifact@v8
+        with:
+          name: playground-release
+          path: packages/playground
+
+      - name: Setup Rclone
+        uses: cometkim/rclone-actions/setup-rclone@main
+
+      - name: Configure Rclone remote
+        uses: cometkim/rclone-actions/configure-remote/s3-provider@main
+        with:
+          name: rescript
+          provider: Cloudflare
+          endpoint: https://${{ vars.CLOUDFLARE_ACCOUNT_ID }}.r2.cloudflarestorage.com
+          access-key-id: ${{ secrets.CLOUDFLARE_R2_ACCESS_KEY_ID }}
+          secret-access-key: ${{ secrets.CLOUDFLARE_R2_SECRET_ACCESS_KEY }}
+          acl: private
+
+      - name: Upload playground compiler to CDN
+        run: yarn workspace playground upload-bundle
 
       - name: Update Website Playground
         run: curl -X POST "${{ secrets.CLOUDFLARE_PAGES_DEPLOYMENT_HOOK }}"

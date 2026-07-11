@@ -415,24 +415,15 @@ jobs:
           path: packages/dev-playground/public/playground-bundles/master
           if-no-files-found: error
 
-      - name: Setup Rclone
+      - name: "Upload artifacts: release playground compiler bundle"
         if: ${{ matrix.build_playground && inputs.release-version != '' }}
-        uses: cometkim/rclone-actions/setup-rclone@main
-
-      - name: Configure Rclone remote
-        if: ${{ matrix.build_playground && inputs.release-version != '' }}
-        uses: cometkim/rclone-actions/configure-remote/s3-provider@main
+        uses: actions/upload-artifact@v7
         with:
-          name: rescript
-          provider: Cloudflare
-          endpoint: https://${{ vars.CLOUDFLARE_ACCOUNT_ID }}.r2.cloudflarestorage.com
-          access-key-id: ${{ secrets.CLOUDFLARE_R2_ACCESS_KEY_ID }}
-          secret-access-key: ${{ secrets.CLOUDFLARE_R2_SECRET_ACCESS_KEY }}
-          acl: private
-
-      - name: Upload playground compiler to CDN
-        if: ${{ matrix.build_playground && inputs.release-version != '' }}
-        run: yarn workspace playground upload-bundle
+          name: playground-release
+          path: |
+            packages/playground/compiler.js
+            packages/playground/packages
+          if-no-files-found: error
 
       - name: "Upload artifacts: binaries"
         if: matrix.upload_binaries
