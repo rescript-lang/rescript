@@ -161,6 +161,56 @@ jobs:
       - name: Upload playground compiler to CDN
         run: yarn workspace playground upload-bundle
 
+      - name: Checkout rescript-lang.org
+        uses: actions/checkout@v7
+        with:
+          repository: rescript-lang/rescript-lang.org
+          path: rescript-lang.org
+          ssh-key: ${{ secrets.RESCRIPT_LANG_ORG_DEPLOY_KEY }}
+
+      - name: Download API docs
+        uses: actions/download-artifact@v8
+        with:
+          name: api
+          path: rescript-lang.org/data/api
+
+      - name: Check for API docs changes
+        id: api-docs-diff
+        run: |
+          git status
+          if [[ -z "$(git status --porcelain)" ]]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+        shell: bash
+        working-directory: rescript-lang.org
+
+      - name: Use Node.js for website
+        if: steps.api-docs-diff.outputs.changed == 'true'
+        uses: actions/setup-node@v6
+        with:
+          cache: yarn
+          cache-dependency-path: rescript-lang.org/yarn.lock
+          node-version-file: rescript-lang.org/.node-version
+
+      - name: Build website with updated API docs
+        if: steps.api-docs-diff.outputs.changed == 'true'
+        run: |
+          yarn
+          yarn build
+        working-directory: rescript-lang.org
+
+      - name: Publish API docs
+        if: steps.api-docs-diff.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions@rescript-lang.org"
+          git add data/api
+          git commit -m "Update API docs for v${{ needs.release-plan.outputs.version }}"
+          git push
+        working-directory: rescript-lang.org
+
       - name: Update Website Playground
         run: curl -X POST "${{ secrets.CLOUDFLARE_PAGES_DEPLOYMENT_HOOK }}"
         shell: bash
