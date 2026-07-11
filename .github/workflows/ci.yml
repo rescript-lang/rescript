@@ -3,13 +3,20 @@ name: CI
 on:
   push:
     branches: [master, 11.0_release]
-    # See https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#filter-pattern-cheat-sheet
-    tags:
-      - "v[0-9]+.[0-9]+.[0-9]+"
-      - "v[0-9]+.[0-9]+.[0-9]+-*"
 
   pull_request:
     branches: [master, 11.0_release]
+
+  # Release builds are started by publish.yml after a maintainer indicates
+  # whether the package version is current stable. The npm tag is derived from
+  # that choice and package.json.
+  workflow_call:
+    inputs:
+      release-version:
+        description: Version being released, or empty for a normal CI run.
+        required: false
+        type: string
+        default: ""
 
 concurrency:
   group: ci-${{ github.ref }}-1
@@ -409,11 +416,11 @@ jobs:
           if-no-files-found: error
 
       - name: Setup Rclone
-        if: ${{ matrix.build_playground && startsWith(github.ref, 'refs/tags/v') }}
+        if: ${{ matrix.build_playground && inputs.release-version != '' }}
         uses: cometkim/rclone-actions/setup-rclone@main
 
       - name: Configure Rclone remote
-        if: ${{ matrix.build_playground && startsWith(github.ref, 'refs/tags/v') }}
+        if: ${{ matrix.build_playground && inputs.release-version != '' }}
         uses: cometkim/rclone-actions/configure-remote/s3-provider@main
         with:
           name: rescript
@@ -424,7 +431,7 @@ jobs:
           acl: private
 
       - name: Upload playground compiler to CDN
-        if: ${{ matrix.build_playground && startsWith(github.ref, 'refs/tags/v') }}
+        if: ${{ matrix.build_playground && inputs.release-version != '' }}
         run: yarn workspace playground upload-bundle
 
       - name: "Upload artifacts: binaries"
@@ -589,12 +596,12 @@ jobs:
           yarn build
 
       - name: Commit and push
-        if: ${{ steps.diffcheck.outputs.clean == 'false' && startsWith(github.ref, 'refs/tags/v') }}
+        if: ${{ steps.diffcheck.outputs.clean == 'false' && inputs.release-version != '' }}
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions@rescript-lang.org"
           git add data/api
-          git commit -m "Update API docs for $GITHUB_REF_NAME"
+          git commit -m "Update API docs for v${{ inputs.release-version }}"
           git push
 
   test-devcontainer:
@@ -744,42 +751,4 @@ jobs:
 
       - name: Run rewatch integration tests
         run: ./rewatch/tests/suite.sh rewatch/testrepo/node_modules/.bin/rescript
-        shell: bash
-
-  publish:
-    permissions:
-      id-token: write
-    needs:
-      - test-installation-npm
-      - test-installation-pnpm
-      - test-integration-rewatch
-    if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-24.04-arm
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Use Node.js
-        uses: actions/setup-node@v6
-        with:
-          cache: yarn
-          node-version-file: .nvmrc
-          registry-url: https://registry.npmjs.org # Needed to make auth work for publishing
-
-      - name: Download artifacts
-        uses: actions/download-artifact@v8
-        with:
-          pattern: "@(binaries-*|lib-ocaml)"
-
-      - name: Move artifacts into packages
-        run: .github/workflows/moveArtifacts.sh
-        shell: bash
-
-      - name: Publish packages on npm with tag "ci"
-        run: |
-          yarn workspaces foreach -W --no-private \
-            npm publish --provenance --tolerate-republish --tag ci
-
-      - name: Update Website Playground
-        run: curl -X POST "${{ secrets.CLOUDFLARE_PAGES_DEPLOYMENT_HOOK }}"
         shell: bash
