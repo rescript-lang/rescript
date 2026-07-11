@@ -42,7 +42,7 @@ jobs:
       - name: Install system dependencies
         uses: gerlero/apt-install@v1.3.12
         with:
-          packages: bubblewrap darcs g++-multilib gcc-multilib mercurial musl-tools rsync cmake
+          packages: bubblewrap g++-multilib gcc-multilib musl-tools rsync cmake
           install-recommends: false
           upgrade: false
 
