@@ -1,0 +1,218 @@
+name: Publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      current-stable:
+        description: >-
+          Publish this stable release as npm's default latest version. Leave
+          unchecked for maintenance releases and all prereleases.
+        required: true
+        type: boolean
+        default: false
+
+jobs:
+  release-plan:
+    name: Plan release from ${{ github.ref_name }}
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.plan.outputs.version }}
+      npm-tag: ${{ steps.plan.outputs.npm-tag }}
+      publish-tag: ${{ steps.plan.outputs.publish-tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          cache: yarn
+          node-version-file: .nvmrc
+
+      - name: Install npm packages
+        run: yarn install
+
+      - name: Validate and display release plan
+        id: plan
+        env:
+          CURRENT_STABLE: ${{ inputs.current-stable }}
+        run: |
+          current_stable_args=()
+          if [[ "$CURRENT_STABLE" == "true" ]]; then
+            current_stable_args+=(--current-stable)
+          fi
+          node scripts/releasePlan.js \
+            "${current_stable_args[@]}" \
+            --validate \
+            --github-output "$GITHUB_OUTPUT" \
+            --github-summary "$GITHUB_STEP_SUMMARY"
+        shell: bash
+
+      - name: Check repository versions
+        run: yarn constraints
+
+      - name: Check existing Git tag
+        env:
+          GIT_TAG: v${{ steps.plan.outputs.version }}
+        run: |
+          existing_commit="$(git rev-list -n 1 "$GIT_TAG" 2>/dev/null || true)"
+          if [[ -n "$existing_commit" && "$existing_commit" != "$GITHUB_SHA" ]]; then
+            echo "$GIT_TAG already points to $existing_commit, not $GITHUB_SHA." >&2
+            exit 1
+          fi
+        shell: bash
+
+  ci:
+    name: Build and test release
+    needs: release-plan
+    uses: ./.github/workflows/ci.yml
+    with:
+      release-version: ${{ needs.release-plan.outputs.version }}
+    secrets: inherit
+
+  publish:
+    name: Publish ${{ needs.release-plan.outputs.version }} as ${{ needs.release-plan.outputs.npm-tag }}
+    needs:
+      - release-plan
+      - ci
+    permissions:
+      contents: write
+      id-token: write
+    environment: npm-release
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Create Git tag
+        env:
+          GIT_TAG: v${{ needs.release-plan.outputs.version }}
+          GIT_USER_EMAIL: ${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com
+          GIT_USER_NAME: ${{ github.actor }}
+        run: |
+          existing_commit="$(git rev-list -n 1 "$GIT_TAG" 2>/dev/null || true)"
+          if [[ -z "$existing_commit" ]]; then
+            git \
+              -c user.name="$GIT_USER_NAME" \
+              -c user.email="$GIT_USER_EMAIL" \
+              tag -a "$GIT_TAG" -m "Release $GIT_TAG" "$GITHUB_SHA"
+            git push origin "$GIT_TAG"
+          elif [[ "$existing_commit" != "$GITHUB_SHA" ]]; then
+            echo "$GIT_TAG already points to $existing_commit, not $GITHUB_SHA." >&2
+            exit 1
+          fi
+        shell: bash
+
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          cache: yarn
+          node-version-file: .nvmrc
+          registry-url: https://registry.npmjs.org
+
+      - name: Install npm packages
+        run: yarn install
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v8
+        with:
+          pattern: "@(binaries-*|lib-ocaml)"
+
+      - name: Move artifacts into packages
+        run: .github/workflows/moveArtifacts.sh
+        shell: bash
+
+      - name: Publish current stable packages as latest
+        if: needs.release-plan.outputs.publish-tag == ''
+        run: |
+          yarn workspaces foreach -W --no-private --topological \
+            npm publish --provenance --tolerate-republish
+
+      - name: Publish packages as ${{ needs.release-plan.outputs.publish-tag }}
+        if: needs.release-plan.outputs.publish-tag != ''
+        run: |
+          yarn workspaces foreach -W --no-private --topological \
+            npm publish --provenance --tolerate-republish \
+              --tag "${{ needs.release-plan.outputs.publish-tag }}"
+
+      - name: Download playground compiler bundle
+        uses: actions/download-artifact@v8
+        with:
+          name: playground-release
+          path: packages/playground
+
+      - name: Setup Rclone
+        uses: cometkim/rclone-actions/setup-rclone@main
+
+      - name: Configure Rclone remote
+        uses: cometkim/rclone-actions/configure-remote/s3-provider@main
+        with:
+          name: rescript
+          provider: Cloudflare
+          endpoint: https://${{ vars.CLOUDFLARE_ACCOUNT_ID }}.r2.cloudflarestorage.com
+          access-key-id: ${{ secrets.CLOUDFLARE_R2_ACCESS_KEY_ID }}
+          secret-access-key: ${{ secrets.CLOUDFLARE_R2_SECRET_ACCESS_KEY }}
+          acl: private
+
+      - name: Upload playground compiler to CDN
+        run: yarn workspace playground upload-bundle
+
+      - name: Checkout rescript-lang.org
+        uses: actions/checkout@v7
+        with:
+          repository: rescript-lang/rescript-lang.org
+          path: rescript-lang.org
+          ssh-key: ${{ secrets.RESCRIPT_LANG_ORG_DEPLOY_KEY }}
+
+      - name: Download API docs
+        uses: actions/download-artifact@v8
+        with:
+          name: api
+          path: rescript-lang.org/data/api
+
+      - name: Check for API docs changes
+        id: api-docs-diff
+        run: |
+          git status
+          if [[ -z "$(git status --porcelain)" ]]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+        shell: bash
+        working-directory: rescript-lang.org
+
+      - name: Use Node.js for website
+        if: steps.api-docs-diff.outputs.changed == 'true'
+        uses: actions/setup-node@v6
+        with:
+          cache: yarn
+          cache-dependency-path: rescript-lang.org/yarn.lock
+          node-version-file: rescript-lang.org/.node-version
+
+      - name: Build website with updated API docs
+        if: steps.api-docs-diff.outputs.changed == 'true'
+        run: |
+          yarn
+          yarn build
+        working-directory: rescript-lang.org
+
+      - name: Publish API docs
+        if: steps.api-docs-diff.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions@rescript-lang.org"
+          git add data/api
+          git commit -m "Update API docs for v${{ needs.release-plan.outputs.version }}"
+          git push
+        working-directory: rescript-lang.org
+
+      - name: Update Website Playground
+        run: >-
+          curl --fail-with-body -X POST
+          "${{ secrets.CLOUDFLARE_PAGES_DEPLOYMENT_HOOK }}"
+        shell: bash
