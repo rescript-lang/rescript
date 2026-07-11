@@ -25,14 +25,8 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Use Node.js
-        uses: actions/setup-node@v6
-        with:
-          cache: yarn
-          node-version-file: .nvmrc
-
-      - name: Install npm packages
-        run: yarn install --immutable
+      - name: Setup Node and dependencies
+        uses: ./.github/actions/setup-node
 
       - name: Validate and display release plan
         id: plan
@@ -107,15 +101,8 @@ jobs:
           fi
         shell: bash
 
-      - name: Use Node.js
-        uses: actions/setup-node@v6
-        with:
-          cache: yarn
-          node-version-file: .nvmrc
-          registry-url: https://registry.npmjs.org
-
-      - name: Install npm packages
-        run: yarn install --immutable
+      - name: Setup Node and dependencies
+        uses: ./.github/actions/setup-node
 
       - name: Download artifacts
         uses: actions/download-artifact@v8

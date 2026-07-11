@@ -1,0 +1,130 @@
+name: Setup OCaml
+description: Restore or install the repository OPAM environment.
+
+inputs:
+  compiler:
+    description: OCaml compiler switch specification.
+    required: true
+  os:
+    description: Runner identifier used in the cache key.
+    required: true
+  cache-prefix:
+    description: Cache namespace and version.
+    required: true
+  dependency-flags:
+    description: Flags passed to opam install after the package path.
+    required: false
+    default: --deps-only --with-test
+outputs:
+  setup_version:
+    description: Version of ocaml/setup-ocaml used by this action.
+    value: ${{ steps.cache-key.outputs.setup-version }}
+
+runs:
+  using: composite
+  steps:
+    - name: Get OPAM cache key
+      id: cache-key
+      shell: bash
+      env:
+        CACHE_PREFIX: ${{ inputs.cache-prefix }}
+        COMPILER: ${{ inputs.compiler }}
+        DEPENDENCY_FLAGS: ${{ inputs.dependency-flags }}
+        OS: ${{ inputs.os }}
+      run: |
+        dependency_flags_key="${DEPENDENCY_FLAGS// /_}"
+        key="$CACHE_PREFIX-$OS-3.6.0-$COMPILER-$dependency_flags_key-${{ hashFiles('*.opam') }}"
+        echo "value=${key//,/-}" >> "$GITHUB_OUTPUT"
+        echo "setup-version=3.6.0" >> "$GITHUB_OUTPUT"
+
+    - name: Restore OPAM environment
+      id: cache
+      uses: actions/cache/restore@v6
+      with:
+        path: |
+          ${{ runner.tool_cache }}/opam
+          ~/.opam
+          _opam
+          .opam-path
+          C:\cygwin
+          C:\.opam
+        key: ${{ steps.cache-key.outputs.value }}
+
+    - name: Use OCaml ${{ inputs.compiler }}
+      if: steps.cache.outputs.cache-hit != 'true'
+      uses: ocaml/setup-ocaml@v3.6.0
+      with:
+        ocaml-compiler: ${{ inputs.compiler }}
+        opam-pin: false
+
+    - name: Get OPAM executable path
+      if: steps.cache.outputs.cache-hit != 'true'
+      uses: actions/github-script@v9
+      with:
+        script: |
+          const opamPath = await io.which('opam', true);
+          console.log('opam executable found: %s', opamPath);
+
+          const fs = require('fs/promises');
+          await fs.writeFile('.opam-path', opamPath, 'utf-8');
+          console.log('stored path to .opam-path');
+
+    - name: Install OPAM dependencies
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        DEPENDENCY_FLAGS: ${{ inputs.dependency-flags }}
+      run: |
+        read -ra dependency_flags <<< "$DEPENDENCY_FLAGS"
+        opam install . "${dependency_flags[@]}"
+
+    - name: Cache OPAM environment
+      # Caches created by pull_request runs are scoped to that PR's merge ref
+      # and cannot seed other PRs or branches. Only pushes create shared caches.
+      if: steps.cache.outputs.cache-hit != 'true' && github.event_name == 'push'
+      uses: actions/cache/save@v6
+      with:
+        path: |
+          ${{ runner.tool_cache }}/opam
+          ~/.opam
+          _opam
+          .opam-path
+          C:\cygwin
+          C:\.opam
+        key: ${{ steps.cache-key.outputs.value }}
+
+    - name: Use cached OPAM environment
+      if: steps.cache.outputs.cache-hit == 'true'
+      shell: bash
+      run: |
+        echo "OPAMCOLOR=always"                    >> "$GITHUB_ENV"
+        echo "OPAMCONFIRMLEVEL=unsafe-yes"         >> "$GITHUB_ENV"
+        echo "OPAMDOWNLOADJOBS=4"                  >> "$GITHUB_ENV"
+        echo "OPAMERRLOGLEN=0"                     >> "$GITHUB_ENV"
+        echo "OPAMEXTERNALSOLVER=builtin-0install" >> "$GITHUB_ENV"
+        echo "OPAMPRECISETRACKING=1"               >> "$GITHUB_ENV"
+        echo "OPAMRETRIES=10"                      >> "$GITHUB_ENV"
+        echo "OPAMSOLVERTIMEOUT=600"               >> "$GITHUB_ENV"
+        echo "OPAMYES=1"                           >> "$GITHUB_ENV"
+        echo "CLICOLOR_FORCE=1"                    >> "$GITHUB_ENV"
+
+        if [[ "$RUNNER_OS" != "Windows" ]]; then
+          echo "OPAMROOT=$HOME/.opam" >> "$GITHUB_ENV"
+        else
+          echo "OPAMROOT=C:\\.opam" >> "$GITHUB_ENV"
+        fi
+
+        OPAM_PATH="$(cat .opam-path)"
+        chmod +x "$OPAM_PATH"
+        dirname "$OPAM_PATH" >> "$GITHUB_PATH"
+
+        if [[ "$RUNNER_OS" == "Windows" ]]; then
+          fsutil behavior query SymlinkEvaluation
+          fsutil behavior set symlinkEvaluation R2L:1 R2R:1
+          fsutil behavior query SymlinkEvaluation
+
+          echo "HOME=$USERPROFILE" >> "$GITHUB_ENV"
+          echo "MSYS=winsymlinks:native" >> "$GITHUB_ENV"
+          echo "CYGWIN=winsymlinks:native" >> "$GITHUB_ENV"
+          echo "BASH_ENV=C:\\cygwin\\bash_env" >> "$GITHUB_ENV"
+        fi
