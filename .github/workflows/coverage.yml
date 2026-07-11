@@ -37,7 +37,7 @@ jobs:
           node-version-file: .nvmrc
 
       - name: Install npm packages
-        run: yarn install
+        run: yarn install --immutable
 
       - name: Install system dependencies
         uses: awalsh128/cache-apt-pkgs-action@v1.4.3

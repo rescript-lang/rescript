@@ -32,7 +32,7 @@ jobs:
           node-version-file: .nvmrc
 
       - name: Install npm packages
-        run: yarn install
+        run: yarn install --immutable
 
       - name: Validate and display release plan
         id: plan
@@ -115,7 +115,7 @@ jobs:
           registry-url: https://registry.npmjs.org
 
       - name: Install npm packages
-        run: yarn install
+        run: yarn install --immutable
 
       - name: Download artifacts
         uses: actions/download-artifact@v8

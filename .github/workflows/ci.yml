@@ -105,7 +105,7 @@ jobs:
           node-version-file: .nvmrc
 
       - name: Install npm packages
-        run: yarn install
+        run: yarn install --immutable
 
       - name: Install dependencies (Linux)
         if: runner.os == 'Linux'
@@ -483,7 +483,7 @@ jobs:
           node-version-file: .nvmrc
 
       - name: Install npm packages
-        run: yarn install
+        run: yarn install --immutable
 
       - name: Download dev playground compiler bundle
         uses: actions/download-artifact@v8
