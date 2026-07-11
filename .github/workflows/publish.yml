@@ -129,13 +129,13 @@ jobs:
       - name: Publish current stable packages as latest
         if: needs.release-plan.outputs.publish-tag == ''
         run: |
-          yarn workspaces foreach -W --no-private \
+          yarn workspaces foreach -W --no-private --topological \
             npm publish --provenance --tolerate-republish
 
       - name: Publish packages as ${{ needs.release-plan.outputs.publish-tag }}
         if: needs.release-plan.outputs.publish-tag != ''
         run: |
-          yarn workspaces foreach -W --no-private \
+          yarn workspaces foreach -W --no-private --topological \
             npm publish --provenance --tolerate-republish \
               --tag "${{ needs.release-plan.outputs.publish-tag }}"
 
@@ -212,5 +212,7 @@ jobs:
         working-directory: rescript-lang.org
 
       - name: Update Website Playground
-        run: curl -X POST "${{ secrets.CLOUDFLARE_PAGES_DEPLOYMENT_HOOK }}"
+        run: >-
+          curl --fail-with-body -X POST
+          "${{ secrets.CLOUDFLARE_PAGES_DEPLOYMENT_HOOK }}"
         shell: bash
