@@ -38,6 +38,16 @@ export function createReleasePlan(version, currentStable = false) {
   };
 }
 
+export function findFirstReleasedVersion(changelog) {
+  for (const match of changelog.matchAll(/^# (.+)$/gm)) {
+    const heading = match[1];
+    if (semver.valid(heading) === heading) {
+      return heading;
+    }
+  }
+  return null;
+}
+
 export async function validateReleaseFiles(plan) {
   const packageJson = JSON.parse(await fs.readFile("package.json", "utf8"));
   if (packageJson.version !== plan.version) {
@@ -47,10 +57,10 @@ export async function validateReleaseFiles(plan) {
   }
 
   const changelog = await fs.readFile("CHANGELOG.md", "utf8");
-  const firstHeading = changelog.match(/^# (.+)$/m)?.[1];
-  if (firstHeading !== plan.version) {
+  const firstReleasedVersion = findFirstReleasedVersion(changelog);
+  if (firstReleasedVersion !== plan.version) {
     throw new Error(
-      `The first changelog version is ${firstHeading ?? "missing"}, expected ${plan.version}.`,
+      `The first released changelog version is ${firstReleasedVersion ?? "missing"}, expected ${plan.version}.`,
     );
   }
 }

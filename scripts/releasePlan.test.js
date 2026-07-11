@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createReleasePlan } from "./releasePlan.js";
+import { createReleasePlan, findFirstReleasedVersion } from "./releasePlan.js";
 
 test("plans a maintenance release", () => {
   assert.deepEqual(createReleasePlan("12.3.0"), {
@@ -37,4 +37,28 @@ test("rejects non-canonical and invalid versions", () => {
   assert.throws(() => createReleasePlan("v13.0.0"));
   assert.throws(() => createReleasePlan("13.0"));
   assert.throws(() => createReleasePlan("13.0.0+build.1"));
+});
+
+test("finds the first released version after the changelog title", () => {
+  const changelog = `# Changelog
+
+> Tags and other introductory content
+
+# 13.0.0-alpha.6
+
+#### New Feature
+
+# 13.0.0-alpha.5
+`;
+  assert.equal(findFirstReleasedVersion(changelog), "13.0.0-alpha.6");
+});
+
+test("ignores unreleased changelog headings", () => {
+  const changelog = `# Changelog
+
+# 13.0.0-alpha.6 (Unreleased)
+
+# 13.0.0-alpha.5
+`;
+  assert.equal(findFirstReleasedVersion(changelog), "13.0.0-alpha.5");
 });

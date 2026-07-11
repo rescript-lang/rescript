@@ -91,10 +91,15 @@ jobs:
       - name: Create Git tag
         env:
           GIT_TAG: v${{ needs.release-plan.outputs.version }}
+          GIT_USER_EMAIL: ${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com
+          GIT_USER_NAME: ${{ github.actor }}
         run: |
           existing_commit="$(git rev-list -n 1 "$GIT_TAG" 2>/dev/null || true)"
           if [[ -z "$existing_commit" ]]; then
-            git tag -a "$GIT_TAG" -m "Release $GIT_TAG" "$GITHUB_SHA"
+            git \
+              -c user.name="$GIT_USER_NAME" \
+              -c user.email="$GIT_USER_EMAIL" \
+              tag -a "$GIT_TAG" -m "Release $GIT_TAG" "$GITHUB_SHA"
             git push origin "$GIT_TAG"
           elif [[ "$existing_commit" != "$GITHUB_SHA" ]]; then
             echo "$GIT_TAG already points to $existing_commit, not $GITHUB_SHA." >&2
