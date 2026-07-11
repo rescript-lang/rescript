@@ -42,7 +42,9 @@ jobs:
       - name: Install system dependencies
         uses: gerlero/apt-install@v1.3.12
         with:
-          packages: bubblewrap g++-multilib gcc-multilib musl-tools rsync cmake
+          packages: >-
+            bubblewrap musl-tools rsync cmake
+            ${{ runner.arch == 'X64' && 'g++-multilib gcc-multilib' || '' }}
           install-recommends: false
           upgrade: false
 
