@@ -32,7 +32,8 @@ runs:
         DEPENDENCY_FLAGS: ${{ inputs.dependency-flags }}
         OS: ${{ inputs.os }}
       run: |
-        dependency_flags_key="${DEPENDENCY_FLAGS// /_}"
+        dependency_flags_key="${DEPENDENCY_FLAGS//--/}"
+        dependency_flags_key="${dependency_flags_key// /_}"
         key="$CACHE_PREFIX-$OS-3.6.0-$COMPILER-$dependency_flags_key-${{ hashFiles('*.opam') }}"
         echo "value=${key//,/-}" >> "$GITHUB_OUTPUT"
         echo "setup-version=3.6.0" >> "$GITHUB_OUTPUT"
