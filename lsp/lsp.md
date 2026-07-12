@@ -334,14 +334,13 @@ interface Settings {
 
 ### Release Proposal
 
-- Merge the PR into `lsp` branch
+- Merge the PR into `master` branch
 - Update the CI to publish the language server to npm package
   `@rescript/language-server`
   - Starting from `2.0.0-dev-SHA-.0` with tag `dev`. The current version is
     `1.72.0`
   - Trigger CI job by commit message
-    (`${{ startsWith(github.event.head_commit.message, 'publish language-server') && (github.ref == 'refs/heads/lsp') }}`)
-    - Update the `lsp/src/version.ml` and `package.json` version.
+    (`${{ startsWith(github.event.head_commit.message, 'publish language-server') && (github.ref == 'refs/heads/master') }}`)
 - Users install the language server as a development dependency or globally.
   - The server is just a native binary, so we won't have any dependency
     conflicts.
@@ -351,17 +350,13 @@ interface Settings {
   - VSCode: https://github.com/rescript-lang/rescript-vscode/pull/1183
   - Zed: https://github.com/rescript-lang/rescript-zed/pull/24
 - Neovim client
-  - Users using `mason.nvim` can install the server using
+  - Users using `mason.nvim` plugin can install the server using
     `MasonInstall rescript-language-server@dev --force`
   - Neovim users need to make an adjustment to their LSP setup. See
     [Neovim setup](#neovim-setup)
-- Features/fixes are merged into `lsp` until we get a stable language server.
-  When we have a stable version we merge `lsp` into `master`.
 
 Some points I have questions about.
 
-- Currently, we publish `@rescript/language-server` with the tag `next` in the
-  vscode-repo. I think it can be confusing? No?
 - Should we ship the server with the compiler?
   - My first impression is no. The compiler release cycle is slower.
   - Another point is that the server should ideally support different versions
