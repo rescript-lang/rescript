@@ -83,8 +83,6 @@ jobs:
     runs-on: ${{matrix.os}}
 
     env:
-      # When changing the setup-ocaml version, also adjust it in the setup step further below.
-      SETUP_OCAML_VERSION: 3.6.0 # OPAM <2.6.0
       DUNE_PROFILE: ${{ matrix.dune-profile }}
 
     steps:
@@ -98,169 +96,34 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Use Node.js
-        uses: actions/setup-node@v6
-        with:
-          cache: yarn
-          node-version-file: .nvmrc
+      - name: Setup Node and dependencies
+        uses: ./.github/actions/setup-node
 
-      - name: Install npm packages
-        run: yarn install
-
-      - name: Install dependencies (Linux)
+      - name: Setup Linux dependencies
         if: runner.os == 'Linux'
-        uses: awalsh128/cache-apt-pkgs-action@v1.4.3
-        with:
-          # https://github.com/ocaml/setup-ocaml/blob/2f57267f071bc8547dfcb9433ff21d44fffef190/packages/setup-ocaml/src/unix.ts#L48
-          # plus OPAM wants cmake
-          packages: bubblewrap darcs g++-multilib gcc-multilib mercurial musl-tools rsync cmake
-          version: v4
-
-      - name: Restore rewatch build cache
-        id: rewatch-build-cache
-        uses: actions/cache@v6
-        with:
-          path: rewatch/target
-          key: rewatch-build-v3-${{ matrix.rust-target }}-${{ hashFiles('rewatch/src/**', 'rewatch/Cargo.lock') }}
-
-      - name: Determine Rust toolchain version
-        id: rust-version
-        shell: bash
-        run: |
-          version="$(awk -F '"' '/^rust-version[[:space:]]*=/ { print $2; exit }' rewatch/Cargo.toml)"
-          if [ -z "$version" ]; then
-            echo "rust-version missing in rewatch/Cargo.toml" >&2
-            exit 1
-          fi
-          echo "version=${version}" >> "$GITHUB_OUTPUT"
-
-      - name: Install rust toolchain
-        if: steps.rewatch-build-cache.outputs.cache-hit != 'true'
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: ${{ steps.rust-version.outputs.version }}
-          targets: ${{ matrix.rust-target }}
-          components: clippy, rustfmt
+        uses: ./.github/actions/setup-linux-dependencies
 
       - name: Build rewatch
-        if: steps.rewatch-build-cache.outputs.cache-hit != 'true'
-        run: |
-          cargo build --manifest-path rewatch/Cargo.toml --target ${{ matrix.rust-target }} --release
-
-      - name: Lint rewatch
-        if: steps.rewatch-build-cache.outputs.cache-hit != 'true'
-        run: |
-          cargo clippy --manifest-path rewatch/Cargo.toml --all-targets --all-features
-
-      - name: Run rewatch unit tests
-        if: steps.rewatch-build-cache.outputs.cache-hit != 'true'
-        run: |
-          cargo test --manifest-path rewatch/Cargo.toml --release
-
-      - name: Copy rewatch binary
-        run: |
-          cp rewatch/target/${{ matrix.rust-target }}/release/rescript${{ matrix.exe-suffix }} rescript
-          mkdir -p rewatch/target/release
-          cp rewatch/target/${{ matrix.rust-target }}/release/rescript${{ matrix.exe-suffix }} rewatch/target/release
-          ./scripts/copyExes.js --rewatch
-        shell: bash
-
-      # matrix.ocaml_compiler may contain commas
-      - name: Get OPAM cache key
-        shell: bash
-        run: echo "opam_cache_key=opam-env-v8-${{ matrix.os }}-${{ env.SETUP_OCAML_VERSION }}-${{ matrix.ocaml_compiler }}-${{ hashFiles('*.opam') }}" | sed 's/,/-/g' >> $GITHUB_ENV
-
-      - name: Restore OPAM environment
-        id: cache-opam-env
-        uses: actions/cache/restore@v6
+        uses: ./.github/actions/build-rewatch
         with:
-          path: |
-            ${{ runner.tool_cache }}/opam
-            ~/.opam
-            _opam
-            .opam-path
-            C:\cygwin
-            C:\.opam
-          key: ${{ env.opam_cache_key }}
+          cache-target: ${{ matrix.rust-target }}
+          rust-target: ${{ matrix.rust-target }}
+          exe-suffix: ${{ matrix.exe-suffix }}
+          run-quality-checks: "true"
 
-      - name: Use OCaml ${{matrix.ocaml_compiler}}
-        uses: ocaml/setup-ocaml@v3.6.0
-        if: steps.cache-opam-env.outputs.cache-hit != 'true'
+      - name: Setup OCaml ${{ matrix.ocaml_compiler }}
+        id: setup_ocaml
+        uses: ./.github/actions/setup-ocaml
         with:
-          ocaml-compiler: ${{matrix.ocaml_compiler}}
-          opam-pin: false
-
-      - name: Get OPAM executable path
-        if: steps.cache-opam-env.outputs.cache-hit != 'true'
-        uses: actions/github-script@v9
-        with:
-          script: |
-            const opamPath = await io.which('opam', true);
-            console.log('opam executable found: %s', opamPath);
-
-            const fs = require('fs/promises');
-            await fs.writeFile('.opam-path', opamPath, 'utf-8');
-            console.log('stored path to .opam-path');
-
-      - name: Install OPAM dependencies
-        if: steps.cache-opam-env.outputs.cache-hit != 'true'
-        run: opam install . --deps-only --with-test
-
-      - name: Cache OPAM environment
-        if: steps.cache-opam-env.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v6
-        with:
-          path: |
-            ${{ runner.tool_cache }}/opam
-            ~/.opam
-            _opam
-            .opam-path
-            C:\cygwin
-            C:\.opam
-          key: ${{ env.opam_cache_key }}
-
-      - name: Use cached OPAM environment
-        if: steps.cache-opam-env.outputs.cache-hit == 'true'
-        run: |
-          # https://github.com/ocaml/setup-ocaml/blob/v3.6.0/packages/setup-ocaml/src/installer.ts
-          echo "OPAMCOLOR=always"                    >> "$GITHUB_ENV"
-          echo "OPAMCONFIRMLEVEL=unsafe-yes"         >> "$GITHUB_ENV"
-          echo "OPAMDOWNLOADJOBS=4"                  >> "$GITHUB_ENV"
-          echo "OPAMERRLOGLEN=0"                     >> "$GITHUB_ENV"
-          echo "OPAMEXTERNALSOLVER=builtin-0install" >> "$GITHUB_ENV"
-          echo "OPAMPRECISETRACKING=1"               >> "$GITHUB_ENV"
-          echo "OPAMRETRIES=10"                      >> "$GITHUB_ENV"
-          echo "OPAMSOLVERTIMEOUT=600"               >> "$GITHUB_ENV"
-          echo "OPAMYES=1"                           >> "$GITHUB_ENV"
-          echo "CLICOLOR_FORCE=1"                    >> "$GITHUB_ENV"
-
-          if [[ "$RUNNER_OS" != "Windows" ]]; then
-            echo "OPAMROOT=$HOME/.opam"      >> "$GITHUB_ENV"
-          else
-            echo "OPAMROOT=C:\\.opam"        >> "$GITHUB_ENV"
-          fi
-
-          OPAM_PATH="$(cat .opam-path)"
-          chmod +x "$OPAM_PATH"
-          dirname "$OPAM_PATH" >> "$GITHUB_PATH"
-
-          if [[ "$RUNNER_OS" == "Windows" ]]; then
-            fsutil behavior query SymlinkEvaluation
-            fsutil behavior set symlinkEvaluation R2L:1 R2R:1
-            fsutil behavior query SymlinkEvaluation
-
-            echo "HOME=$USERPROFILE" >> "$GITHUB_ENV"
-            echo "MSYS=winsymlinks:native" >> "$GITHUB_ENV"
-            echo "CYGWIN=winsymlinks:native" >> "$GITHUB_ENV"
-            echo "BASH_ENV=C:\\cygwin\\bash_env" >> "$GITHUB_ENV"
-          fi
-        shell: bash
+          compiler: ${{ matrix.ocaml_compiler }}
+          os: ${{ matrix.os }}
+          cache-prefix: opam-env-v8
 
       - name: Compiler build state key
         id: compiler-build-state-key
         shell: bash
         run: |
-          echo "value=compiler-build-state-v1-${{ matrix.os }}-${{ env.SETUP_OCAML_VERSION }}-${{ matrix.ocaml_compiler }}-${{ hashFiles('*.opam') }}" \
+          echo "value=compiler-build-state-v1-${{ matrix.os }}-${{ steps.setup_ocaml.outputs.setup_version }}-${{ matrix.ocaml_compiler }}-${{ hashFiles('*.opam') }}" \
             | sed 's/,/-/g' >> "$GITHUB_OUTPUT"
 
       - name: Restore compiler build state
@@ -476,14 +339,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Use Node.js
-        uses: actions/setup-node@v6
-        with:
-          cache: yarn
-          node-version-file: .nvmrc
-
-      - name: Install npm packages
-        run: yarn install
+      - name: Setup Node and dependencies
+        uses: ./.github/actions/setup-node
 
       - name: Download dev playground compiler bundle
         uses: actions/download-artifact@v8
