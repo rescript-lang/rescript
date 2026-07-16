@@ -91,9 +91,6 @@ let initialization () =
   in
   InitializeResult.create ~capabilities ~serverInfo ()
 
-let make_error ?(code = Jsonrpc.Response.Error.Code.InternalError) message =
-  Jsonrpc.Response.Error.make ~message ~code ()
-
 let get_updated_diagnostics_from_log (state : State.t) diagnostics =
   let workspace_root = State.workspace_root state in
   let compiler_log =
@@ -134,7 +131,7 @@ let discover_subpackages_and_populate ~workspace_root
            building the project then restart the server"
           root_path
       in
-      Server.show_message_notification ~kind:MessageType.Error message server;
+      Server.log_message_notification ~kind:MessageType.Error message server;
       None
   in
 
@@ -210,7 +207,7 @@ let on_initialize (params : InitializeParams.t) (server : State.t Server.t) =
            match Compiler_config.parse ~root:root_path ~fs:state.fs with
            | Ok config -> Some (Uri.of_path root_path, config)
            | Error _ ->
-             (* TODO: Surface malformed package configs to the client. We ignore
+             (* NOTE: Surface malformed package configs to the client. We ignore
                 them for now so initialization can continue with any remaining
                 valid packages. *)
              None)
@@ -231,7 +228,10 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
   in
 
   let ok value = Ok (Client_request.yojson_of_result request value) in
-  let error ?code message = Error (make_error ?code message) in
+
+  let error ?(code = Jsonrpc.Response.Error.Code.InternalError) message =
+    Error (Jsonrpc.Response.Error.make ~message ~code ())
+  in
 
   let state = Server.state server in
 
@@ -355,21 +355,13 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
         ~debug:false
     in
     (ok (Some resp), state)
-  | DocumentSymbol {textDocument = {uri}} -> (
-    (* TODO: Handle invalid document URIs more deliberately. Neovim plugins such
-       as https://github.com/dnlhc/glance.nvim can send `file://` for popup
-       buffers, which are not real workspace documents. `Document_store.get_opt`
-       prevents a crash today, but we should decide whether to ignore these
-       requests silently, return a clearer empty response or raise a error.
-    *)
-    match Document_store.get_opt ~uri state.store with
-    | None -> (ok (Some (`DocumentSymbol [])), state)
-    | Some {text} ->
-      let resp =
-        Analysis.Document_symbol.get_symbols ~source:text
-          ~kind_file:(Document.kind uri)
-      in
-      (ok (Some (`DocumentSymbol resp)), state))
+  | DocumentSymbol {textDocument = {uri}} ->
+    let source = (Document_store.get ~uri state.store).text in
+    let resp =
+      Analysis.Document_symbol.get_symbols ~source
+        ~kind_file:(Document.kind uri)
+    in
+    (ok (Some (`DocumentSymbol resp)), state)
   | CodeAction
       {textDocument = {uri}; range = {start; end_}; context = {diagnostics}} ->
     let full = load_full uri state in

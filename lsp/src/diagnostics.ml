@@ -105,9 +105,7 @@ let to_lsp_format ?(include_syntax = false) ?(include_non_syntax = true)
       let line, character =
         match List.rev lines with
         | [] -> (0, String.length shortest_possible_code - 1)
-        | last_line :: rest ->
-          let line_count = List.length rest in
-          (line_count - 1, String.length last_line - 1)
+        | last_line :: rest -> (List.length rest, String.length last_line - 1)
       in
       Range.create ~start ~end_:(Position.create ~line ~character)
   in
@@ -117,30 +115,19 @@ let to_lsp_format ?(include_syntax = false) ?(include_non_syntax = true)
     | None -> fallback_range uri
   in
 
-  let severity_of_kind = function
-    | Compiler_log.Parse.Syntax_error | Common_error | Circular_dependency ->
-      Some DiagnosticSeverity.Error
-    | Warning {configured_as_error = true} -> Some DiagnosticSeverity.Error
-    | Warning {configured_as_error = false} -> Some DiagnosticSeverity.Warning
-    | Unknown -> None
-  in
-
   let diagnostic_of_entry uri (entry : Compiler_log.Parse.diagnostic_entry) =
-    let message =
+    let message, severity =
       match entry.kind with
       | Warning {number; configured_as_error} ->
         let default = "Warning " ^ string_of_int number in
-        let head_message =
-          if configured_as_error then default ^ " - configured as error"
-          else default
-        in
-        head_message ^ entry.message
-      | Unknown -> "Unknown error - " ^ entry.message
-      | _ -> entry.message
+        if configured_as_error then
+          ( default ^ " - configured as error.\n" ^ entry.message,
+            DiagnosticSeverity.Error )
+        else (default, DiagnosticSeverity.Warning)
+      | Unknown -> ("Unknown error - " ^ entry.message, DiagnosticSeverity.Error)
+      | _ -> (entry.message, DiagnosticSeverity.Error)
     in
-    Diagnostic.create
-      ?severity:(severity_of_kind entry.kind)
-      ~source:"ReScript"
+    Diagnostic.create ~severity ~source:"ReScript"
       ~range:(range_of_entry uri entry.range)
       ~message:(`String message) ()
   in

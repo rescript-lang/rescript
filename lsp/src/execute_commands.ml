@@ -15,8 +15,6 @@ let request_show_document ~uri ~takeFocus (server : State.t Server.t) =
       server;
     Ok None)
   else
-    (* TODO: Also show a window/showMessage notification when showDocument is
-       unsupported. The current error response is easy to miss in clients. *)
     let message =
       match (State.params state).clientInfo with
       | Some {name; version} ->
@@ -54,13 +52,10 @@ module Create_interface = struct
           ~cmi_uri:(Uri.of_string cmi_uri) ~state:(Server.state server)
       with
       | Ok uri -> request_show_document ~uri ~takeFocus:true server
-      | Error _ ->
-        (* TODO: Show an window/showMessage when interface creation fails
-             because the project has not been built and the .cmi file is
-             missing. *)
+      | Error message ->
         Error
-          (Printf.sprintf "Failed to create interface file for %s and %s" uri
-             cmi_uri))
+          (Printf.sprintf "Failed to create interface file for %s and %s: %s"
+             uri cmi_uri message))
     | _ ->
       Error
         (Printf.sprintf
