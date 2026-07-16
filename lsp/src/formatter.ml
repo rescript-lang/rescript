@@ -11,7 +11,7 @@ let run ~uri ~(state : State.t) =
     let end_line, end_character =
       match List.rev lines with
       | [] -> (0, 0)
-      | last_line :: rest -> (List.length rest + 1, String.length last_line - 1)
+      | last_line :: rest -> (List.length rest, String.length last_line - 1)
     in
     let range =
       Range.create
@@ -83,7 +83,6 @@ let run ~uri ~(state : State.t) =
       close_process_noerr ();
       Error (Printexc.to_string exn))
   | true ->
-    (* TODO: Decide the client-facing behavior for formatting invalid syntax.
-       Returning null is spec-valid but silent; a response error or
-       window/showMessage may be easier to understand. *)
-    Error "Failed to format, document has syntax error"
+    Error
+      (Printf.sprintf "Failed to format %s, document has syntax error"
+         (Uri.to_path uri))

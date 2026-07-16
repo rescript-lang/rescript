@@ -1,27 +1,12 @@
-(* TODO: Replace this hand-written JSON traversal with ppx_deriving_yojson once
-   the .sourcedirs.json shape is stable enough to model as typed records. Move to helpers.ml? *)
+type cmt_scan_item = {build_root: string} [@@deriving yojson {strict = false}]
+
+type source_dirs = {cmt_scan: cmt_scan_item list}
+[@@deriving yojson {strict = false}]
+
 let get_build_roots_from_json json =
-  let build_roots =
-    match json with
-    | `Assoc fields -> (
-      match List.assoc_opt "cmt_scan" fields with
-      | Some (`List cmt_scan_items) ->
-        let build_roots =
-          List.filter_map
-            (fun (cmt_scan_item : Yojson.Safe.t) ->
-              match cmt_scan_item with
-              | `Assoc cmt_scan_fields -> (
-                match List.assoc_opt "build_root" cmt_scan_fields with
-                | Some (`String build_root) -> Some build_root
-                | _ -> None)
-              | _ -> None)
-            cmt_scan_items
-        in
-        Some build_roots
-      | _ -> None)
-    | _ -> None
-  in
-  build_roots
+  match source_dirs_of_yojson json with
+  | Ok {cmt_scan} -> Some (List.map (fun {build_root} -> build_root) cmt_scan)
+  | Error _ -> None
 
 let get_build_roots_from_file ~fs path =
   match Fs.load ~fs path with
