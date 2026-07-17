@@ -464,16 +464,20 @@ We'll merge `11.0_release` into `master` from time to time to propagate those ch
 
 ## Release Process
 
+The repository's `npm-release` GitHub environment should have required reviewers configured. Publishing uses npm trusted publishing and provenance, so no npm token is required.
+
 To build a new version and release it on NPM, follow these steps:
 
 1. Verify that the version number is already set correctly for the release. (It should have been incremented after releasing the previous version.)
 1. Create a PR to update `CHANGELOG.md`, removing the "(Unreleased)" for the version to be released.
-1. Once that PR is merged and built successfully, tag the commit with the version number (e.g., "v10.0.0", or "v10.0.0-beta.1") and push the tag.
-1. This triggers a tag build that will upload the playground bundle to Cloudflare R2 and publish the `rescript` npm package with the tag "ci".
+1. Once that PR is merged and built successfully, run the `Publish` workflow from the GitHub Actions tab. Use the "Run workflow" branch dropdown to select the release branch (normally `master`, or the relevant maintenance branch) and indicate whether this is the current stable release. The version is read from that branch's `package.json`, and the npm tag is derived automatically:
+   - A current stable release is published as `latest`.
+   - A stable maintenance release for an older major is published as `latest-<major>`, for example `latest-12`.
+   - A prerelease is published as `next-<major>`, for example `next-13`. Prereleases cannot be marked as the current stable release.
+1. Review the generated release plan and approve the protected `npm-release` environment. The workflow reuses the normal CI build and installation tests, creates the version tag, and publishes directly with the selected npm tags.
 1. Verify that the playground bundle for the new version is now present on the settings tab in https://rescript-lang.org/try.
-1. Run `npm info rescript` to verify that the new version is now present with tag "ci".
+1. Run `npm info rescript` to verify that the new version is present with the expected tag.
 1. Test the new version.
-1. Tag all packages for the new version as appropriate (`latest` or `next`): `./scripts/npmRelease.js --version <version> --tag <tag>`
 1. Create a release entry for the version tag on the [Github Releases page](https://github.com/rescript-lang/rescript-compiler/releases), copying the changes from `CHANGELOG.md`.
 1. Create a PR with the following changes to prepare for development of the next version:
    - Increment the `EXPECTED_VERSION` number in `yarn.config.cjs` for the next version.

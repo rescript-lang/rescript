@@ -10,15 +10,29 @@
 > - :nail_care: [Polish]
 > - :house: [Internal]
 
-# 13.0.0-alpha.5 (Unreleased)
+# 13.0.0-alpha.6 (Unreleased)
+
+#### :boom: Breaking Change
+
+#### :eyeglasses: Spec Compliance
+
+#### :rocket: New Feature
+
+#### :bug: Bug fix
+
+#### :memo: Documentation
+
+#### :nail_care: Polish
+
+#### :house: Internal
+
+# 13.0.0-alpha.5
 
 #### :boom: Breaking Change
 
 - Make `Jsx.component` abstract. https://github.com/rescript-lang/rescript/pull/8390
 - Drop Node.js version 20.x support, as it is reaching EOL. https://github.com/rescript-lang/rescript/pull/8401
 - Remove the `@taggedTemplate` decorator in favor of the new first-class `taggedTemplate<'param, 'output>` builtin type. Using the decorator, or backtick tagged-template syntax on a value that is not a `taggedTemplate`, is now a compile error pointing to the new binding form. https://github.com/rescript-lang/rescript/pull/8461
-
-#### :eyeglasses: Spec Compliance
 
 #### :rocket: New Feature
 
@@ -40,11 +54,12 @@
 - Fix namespaced reference lookup in editor analysis. https://github.com/rescript-lang/rescript/pull/8455
 - Fix analysis segmentation fault for references after https://github.com/rescript-lang/rescript/pull/7887. https://github.com/rescript-lang/rescript/pull/8477
 - Fix build crash when the compiler emits output that is not valid UTF-8, such as a truncated multibyte character in a code frame. https://github.com/rescript-lang/rescript/pull/8482
-
-#### :memo: Documentation
+- Fix unnecessary boxing of `Some(React.component)`. https://github.com/rescript-lang/rescript/pull/8500
+- Fix GenType React element output to support React 19 typedefs. https://github.com/rescript-lang/rescript/pull/8501
 
 #### :nail_care: Polish
 
+- Consolidate record mutation output into a single spread object literal. https://github.com/rescript-lang/rescript/pull/8473
 - Improve default argument type mismatch errors. https://github.com/rescript-lang/rescript/pull/8389
 - Resolve workspace dependencies in editor analysis. https://github.com/rescript-lang/rescript/pull/8392
 - Build system: Add OpenTelemetry tracing support for cli commands. https://github.com/rescript-lang/rescript/pull/8370
@@ -73,6 +88,7 @@
 - Remove the unreachable `Longident.Lapply` constructor (OCaml's applicative-functor path syntax `F(X).t`, which ReScript's grammar cannot produce). https://github.com/rescript-lang/rescript/pull/8469
 - Refactor analysis for server side use. https://github.com/rescript-lang/rescript/pull/8478
 - Remove unused files. https://github.com/rescript-lang/rescript/pull/8481
+- Remove the dead `Sig_class`/`Sig_class_type` signature variants (OCaml class items, which ReScript cannot produce). https://github.com/rescript-lang/rescript/pull/8470
 
 # 13.0.0-alpha.4
 

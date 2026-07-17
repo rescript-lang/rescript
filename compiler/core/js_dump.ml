@@ -674,6 +674,29 @@ and expression_desc cxt ~(level : int) f x : cxt =
     | [tag; ({expression_desc = J.Var _} as spread_props)] ->
       (* All the props are spread *)
       print_jsx cxt ~level ~spread_props f fn_name tag []
+    | [tag; {expression_desc = J.Object (Some spread, props)}] ->
+      (* Spread props with overrides emitted as a single object literal:
+         {...base, x: 1}
+      *)
+      let fields =
+        List.filter_map
+          (fun (n, x) ->
+            match n with
+            | Js_op.Lit name -> Some (name, x)
+            | Symbol_name -> None)
+          props
+      in
+      print_jsx cxt ~level ~spread_props:spread f fn_name tag fields
+    | [tag; {expression_desc = J.Object (Some spread, props)}; key] ->
+      let fields =
+        List.filter_map
+          (fun (n, x) ->
+            match n with
+            | Js_op.Lit name -> Some (name, x)
+            | Symbol_name -> None)
+          props
+      in
+      print_jsx cxt ~level ~spread_props:spread ~key f fn_name tag fields
     | _ ->
       (* This should not happen, we fallback to the general case *)
       expression_desc cxt ~level f

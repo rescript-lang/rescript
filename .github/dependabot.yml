@@ -11,3 +11,7 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    ignore:
+      # Versions >1.4.3 interfere with caching done by our own CI script,
+      # causing the dune binary not to be found anymore.
+      - dependency-name: "awalsh128/cache-apt-pkgs-action"

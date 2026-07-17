@@ -1,0 +1,93 @@
+name: Build rewatch
+description: Restore or build rewatch and copy its executable into the platform package.
+
+inputs:
+  cache-target:
+    description: Target identifier used in the build cache key.
+    required: true
+  rust-target:
+    description: Explicit Rust compilation target. Empty builds for the runner's native target.
+    required: false
+    default: ""
+  exe-suffix:
+    description: Executable suffix for the target platform.
+    required: false
+    default: ""
+  run-quality-checks:
+    description: Run Clippy and Rust unit tests when populating the cache.
+    required: false
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    - name: Restore rewatch build cache
+      id: build-cache
+      uses: actions/cache@v6
+      with:
+        path: rewatch/target
+        key: rewatch-build-v4-${{ inputs.cache-target }}-${{ hashFiles('rewatch/src/**', 'rewatch/Cargo.toml', 'rewatch/Cargo.lock', 'rewatch/rust-toolchain.toml', 'rewatch/.cargo/config.toml') }}
+
+    - name: Determine Rust toolchain version
+      id: rust-version
+      shell: bash
+      run: |
+        version="$(awk -F '"' '/^rust-version[[:space:]]*=/ { print $2; exit }' rewatch/Cargo.toml)"
+        if [ -z "$version" ]; then
+          echo "rust-version missing in rewatch/Cargo.toml" >&2
+          exit 1
+        fi
+        echo "version=${version}" >> "$GITHUB_OUTPUT"
+
+    - name: Install Rust toolchain for native target
+      if: steps.build-cache.outputs.cache-hit != 'true' && inputs.rust-target == ''
+      uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: ${{ steps.rust-version.outputs.version }}
+        components: clippy, rustfmt
+
+    - name: Install Rust toolchain for explicit target
+      if: steps.build-cache.outputs.cache-hit != 'true' && inputs.rust-target != ''
+      uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: ${{ steps.rust-version.outputs.version }}
+        targets: ${{ inputs.rust-target }}
+        components: clippy, rustfmt
+
+    - name: Build rewatch for native target
+      if: steps.build-cache.outputs.cache-hit != 'true' && inputs.rust-target == ''
+      shell: bash
+      run: cargo build --manifest-path rewatch/Cargo.toml --release
+
+    - name: Build rewatch for explicit target
+      if: steps.build-cache.outputs.cache-hit != 'true' && inputs.rust-target != ''
+      shell: bash
+      run: cargo build --manifest-path rewatch/Cargo.toml --target "${{ inputs.rust-target }}" --release
+
+    - name: Lint rewatch
+      if: steps.build-cache.outputs.cache-hit != 'true' && inputs.run-quality-checks == 'true'
+      shell: bash
+      run: cargo clippy --manifest-path rewatch/Cargo.toml --all-targets --all-features
+
+    - name: Run rewatch unit tests
+      if: steps.build-cache.outputs.cache-hit != 'true' && inputs.run-quality-checks == 'true'
+      shell: bash
+      run: cargo test --manifest-path rewatch/Cargo.toml --release
+
+    - name: Copy rewatch binary
+      shell: bash
+      env:
+        RUST_TARGET: ${{ inputs.rust-target }}
+        EXE_SUFFIX: ${{ inputs.exe-suffix }}
+      run: |
+        if [[ -n "$RUST_TARGET" ]]; then
+          source="rewatch/target/$RUST_TARGET/release/rescript$EXE_SUFFIX"
+        else
+          source="rewatch/target/release/rescript$EXE_SUFFIX"
+        fi
+        cp "$source" rescript
+        if [[ -n "$RUST_TARGET" ]]; then
+          mkdir -p rewatch/target/release
+          cp "$source" rewatch/target/release
+        fi
+        ./scripts/copyExes.js --rewatch
