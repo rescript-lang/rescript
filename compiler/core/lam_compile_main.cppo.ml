@@ -299,42 +299,31 @@ js
 
 let (//) = Filename.concat  
 
-let source_map_enabled () =
-  match !Js_config.source_map with
-  | No_source_map -> false
-  | Linked | Inline | Hidden -> true
+let remove_stale_source_map ?(remove_stale_map = true) target_file =
+  if remove_stale_map && not !Clflags.dont_write_files then
+    Misc.remove_file (target_file ^ ".map")
 
 let dump_deps_program_with_source_map ?(remove_stale_map = true) ~target_file
     ~output_prefix module_system lambda_output chan =
   let builder =
-    if source_map_enabled () then
-      Some
-        (Js_source_map.make ~generated_file:target_file
-           ~source_root:!Js_config.source_map_root
-           ~sources_content:!Js_config.source_map_sources_content)
-    else None
+    Js_source_map.make ~generated_file:target_file
+      ~source_root:!Js_config.source_map_root
+      ~sources_content:!Js_config.source_map_sources_content
   in
   Js_source_map.with_builder builder (fun () ->
       Js_dump_program.pp_deps_program ~output_prefix module_system lambda_output
         (Ext_pp.from_channel chan));
-  let map_file = target_file ^ ".map" in
-  let remove_map_file () =
-    if remove_stale_map && not !Clflags.dont_write_files then
-      Misc.remove_file map_file
-  in
-  match (builder, !Js_config.source_map) with
-  | Some builder, Linked ->
+  match !Js_config.source_map with
+  | Linked ->
     let json = Js_source_map.json builder in
-    output_string chan (Js_source_map.linked_comment ~map_file);
-    Ext_io.write_file map_file json
-  | Some builder, Hidden ->
-    Ext_io.write_file map_file (Js_source_map.json builder)
-  | Some builder, Inline ->
+    output_string chan (Js_source_map.linked_comment ~map_file:(target_file ^ ".map"));
+    Ext_io.write_file (target_file ^ ".map") json
+  | Hidden -> Ext_io.write_file (target_file ^ ".map") (Js_source_map.json builder)
+  | Inline ->
     output_string chan
       (Js_source_map.inline_comment ~json:(Js_source_map.json builder));
-    remove_map_file ()
-  | _, No_source_map -> remove_map_file ()
-  | _ -> ()
+    remove_stale_source_map ~remove_stale_map target_file
+  | No_source_map -> ()
 
 let lambda_as_module 
     (lambda_output : J.deps_program)
@@ -365,9 +354,16 @@ let lambda_as_module
            basename
            (* #913 only generate little-case js file *)
           ) in
-        let output_chan chan  =
-          dump_deps_program_with_source_map ~target_file ~output_prefix
-            module_system (lambda_output) chan in
+        let output_chan chan =
+          match !Js_config.source_map with
+          | No_source_map ->
+            Js_dump_program.dump_deps_program ~output_prefix module_system
+              lambda_output chan;
+            remove_stale_source_map target_file
+          | Linked | Inline | Hidden ->
+            dump_deps_program_with_source_map ~target_file ~output_prefix
+              module_system lambda_output chan
+        in
         (if not !Clflags.dont_write_files then 
            Ext_pervasives.with_file_as_chan
              target_file output_chan );

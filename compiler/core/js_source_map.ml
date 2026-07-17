@@ -47,6 +47,9 @@ type t = {
   mutable last_generated: (int * int) option;
 }
 
+(* A builder is installed only while source map output is active. When source
+   maps are disabled, source_loc_of_loc returns None, so marker calls return
+   before reading this state. *)
 let current : t option ref = ref None
 
 let source_loc_of_loc (loc : Location.t) =
@@ -57,7 +60,7 @@ let source_loc_of_loc (loc : Location.t) =
 
 let with_builder builder f =
   let old = !current in
-  current := builder;
+  current := Some builder;
   Ext_pervasives.finally () ~clean:(fun () -> current := old) f
 
 let normalize_slashes s =
@@ -191,12 +194,14 @@ let add_mapping builder ~generated_line ~generated_column (loc : Location.t) =
         :: builder.mappings;
       builder.last_generated <- Some (generated_line, generated_column)
 
-let mark_source_loc fmt source_loc =
-  match (!current, source_loc) with
-  | Some builder, Some loc ->
-    let generated_line, generated_column = Ext_pp.position fmt in
-    add_mapping builder ~generated_line ~generated_column loc
-  | _ -> ()
+let mark_source_loc fmt = function
+  | None -> ()
+  | Some loc -> (
+    match !current with
+    | None -> ()
+    | Some builder ->
+      let generated_line, generated_column = Ext_pp.position fmt in
+      add_mapping builder ~generated_line ~generated_column loc)
 
 let base64_vlq_chars =
   "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"

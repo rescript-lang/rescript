@@ -160,6 +160,12 @@ function configWithSourceMap(sourceMap) {
   return `${JSON.stringify(config, null, 2)}\n`;
 }
 
+function configWithoutSourceMap() {
+  const config = JSON.parse(originalConfig);
+  delete config.sourceMap;
+  return `${JSON.stringify(config, null, 2)}\n`;
+}
+
 function configWithMode(mode) {
   return configWithSourceMap({ mode });
 }
@@ -431,7 +437,33 @@ async function assertHiddenOutput() {
   }
 }
 
-async function assertDisabledOutput() {
+async function assertDefaultOutput() {
+  await fs.writeFile(configPath, configWithoutSourceMap());
+  await execBuildOrThrow();
+
+  const output = new Map();
+  for (const filename of outputFilenames) {
+    const jsPath = path.join(import.meta.dirname, "lib", "bs", "src", filename);
+    const mapPath = `${jsPath}.map`;
+    const js = await fs.readFile(jsPath, "utf8");
+
+    assert.doesNotMatch(
+      js,
+      /\/\/# sourceMappingURL=/,
+      `${filename} should not include a sourceMappingURL comment by default`,
+    );
+    assert.equal(
+      await fileExists(mapPath),
+      false,
+      `${filename}.map should not exist by default`,
+    );
+    output.set(filename, js);
+  }
+
+  return output;
+}
+
+async function assertDisabledOutput(defaultOutput) {
   await fs.writeFile(configPath, configWithSourceMap(false));
   await execBuildOrThrow();
 
@@ -449,6 +481,11 @@ async function assertDisabledOutput() {
       await fileExists(mapPath),
       false,
       `${filename}.map should be removed when source maps are disabled`,
+    );
+    assert.equal(
+      js,
+      defaultOutput.get(filename),
+      `${filename} should be unchanged when source maps are disabled`,
     );
   }
 }
@@ -484,8 +521,9 @@ async function assertInlineOutput() {
 await execClean();
 try {
   await assertInlineStdoutOutput();
+  const defaultOutput = await assertDefaultOutput();
   await assertLinkedOutput();
-  await assertDisabledOutput();
+  await assertDisabledOutput(defaultOutput);
   await assertHiddenOutput();
   await assertInlineOutput();
 } finally {
