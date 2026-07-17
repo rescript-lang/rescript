@@ -396,7 +396,7 @@ Hover src/Jsx2.res 162:12
 {
   "contents": {
     "kind": "markdown",
-    "value": "```rescript\nComp.props<int>\n```\n\n---\n\n```\n \n```\n```rescript\ntype Comp.props<'age> = {age: 'age}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Jsx2.res%22%2C157%2C2%5D)\n"
+    "value": "```rescript\nComp.props<int>\n```\n\n---\n\n```\n \n```\n```rescript\ntype Comp.props<'age> = {age: 'age}\n```\nGo to: [Type definition](Jsx2.res#L158,3)\n"
   }
 }
 
@@ -404,7 +404,7 @@ Hover src/Jsx2.res 167:16
 {
   "contents": {
     "kind": "markdown",
-    "value": "```rescript\nComp.props<int>\n```\n\n---\n\n```\n \n```\n```rescript\ntype Comp.props<'age> = {age: 'age}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Jsx2.res%22%2C157%2C2%5D)\n"
+    "value": "```rescript\nComp.props<int>\n```\n\n---\n\n```\n \n```\n```rescript\ntype Comp.props<'age> = {age: 'age}\n```\nGo to: [Type definition](Jsx2.res#L158,3)\n"
   }
 }
 
