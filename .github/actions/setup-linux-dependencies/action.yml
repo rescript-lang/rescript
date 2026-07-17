@@ -9,4 +9,4 @@ runs:
       with:
         # Dependencies required by setup-ocaml, plus cmake for OPAM.
         packages: bubblewrap darcs g++-multilib gcc-multilib mercurial musl-tools rsync cmake
-        version: v5
+        version: v4
