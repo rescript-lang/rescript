@@ -14,9 +14,16 @@ let resolve_deno_pnpm ~start_path name =
   in
   let deno = create_path ".deno" in
   let pnpm = create_path ".pnpm" in
-  if Files.exists deno then Some deno
-  else if Files.exists pnpm then Some pnpm
-  else None
+  match (Files.if_exists deno, Files.if_exists pnpm) with
+  | Some deno, None -> Some deno
+  | None, Some pnpm -> Some pnpm
+  | Some deno, Some pnpm ->
+    failwith
+      (Printf.sprintf
+         "Failed to resolve path for %s. Conflict: two directories found. one \
+          for Deno (%s) and one for pnpm (%s)."
+         name deno pnpm)
+  | _ -> None
 
 let rec resolve_from_node_modules ~start_path name =
   let path = start_path /+ "node_modules" /+ package_path name in
