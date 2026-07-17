@@ -1,8 +1,6 @@
 open Lsp
 open Types
 
-let version = Version.version
-
 let initialization () =
   let textDocumentSync =
     `TextDocumentSyncOptions
@@ -86,8 +84,7 @@ let initialization () =
       ~executeCommandProvider ~diagnosticProvider ()
   in
   let serverInfo =
-    InitializeResult.create_serverInfo ~name:"rescript-language-server" ~version
-      ()
+    InitializeResult.create_serverInfo ~name:"rescript-language-server" ()
   in
   InitializeResult.create ~capabilities ~serverInfo ()
 
