@@ -198,7 +198,7 @@ notifications. Some are out of scope because they don't make sense.
         client side, but it could be a command triggered by a code action.
     - Move to code action feature
   - [ ] `rescript/startBuild` - client request - **How the build integration
-        will be done. See last point**
+        will be done. See last point**. **It will not be implemented for now**
     - Some questions
       - Create a setting to automatically start the build watcher during
         initialization and drop this custom request?
@@ -260,11 +260,11 @@ file-watcher setup.
 
 ## Server settings
 
-Proposed interface. Some notes:
+Proposed interface.
 
-- Currently, `supportMarkdownLinks` is not a setting. It's a great feature, but
+- Currently (server.ts), `supportMarkdownLinks` is not a setting. It's a great feature, but
   some clients don't have good support; Neovim are a example. Therefore,
-  I'm promoting it to a setting so VSCode/Zed users can enable or disable it.
+  I'm promoting it to a setting so users can enable or disable it.
 
 ```ts
 /**
@@ -309,7 +309,7 @@ interface Settings {
 
 ### Some considerations
 
-- It should be a standalone package (`@rescript/language-server` or another) so
+- It should be a standalone package (`@rescript/language-server` or `@rescript/experimental-language-server`) so
   the user can install it as a development dependency or globally.
 - There should be a basic configuration for testing the experimental server,
   such as setting the binary path.
@@ -318,24 +318,17 @@ interface Settings {
 
 ### Release Proposal
 
-- Merge the PR into `master` branch
-- Update the CI to publish the language server to npm package
-  `@rescript/language-server`
-  - Starting from `2.0.0-dev-SHA-.0` with tag `dev`. The current version is
-    `1.72.0`
+- Merge the PR into `master` or `lsp` branch?
+- Update the CI to publish the language server to npm
   - Trigger CI job by commit message
-    (`${{ startsWith(github.event.head_commit.message, 'publish language-server') && (github.ref == 'refs/heads/master') }}`)
+    (`${{ startsWith(github.event.head_commit.message, 'publish language-server') && (github.ref == 'refs/heads/<BRANCH_NAME>') }}`)
 - Users install the language server as a development dependency or globally.
   - The server is just a native binary, so we won't have any dependency
     conflicts.
-  <!--- Users must update the server; clients will not perform server updates or
-    installations.-->
 - Update the VSCode and Zed clients to support the experimental server
   - VSCode: https://github.com/rescript-lang/rescript-vscode/pull/1183
   - Zed: https://github.com/rescript-lang/rescript-zed/pull/24
 - Neovim client
-  - Users using `mason.nvim` plugin can install the server using
-    `MasonInstall rescript-language-server@dev --force`
   - Neovim users need to make an adjustment to their LSP setup. See
     [Neovim setup](#neovim-setup)
 
@@ -476,10 +469,6 @@ if new_rescript_ls_available then
           enable = false,
           maxLength = 25,
         },
-        signatureHelp = {
-          enable = true,
-          forConstructorPayloads = true,
-        },
       },
     },
   }
@@ -501,22 +490,6 @@ else
       },
     },
     on_attach = function(client, bufnr)
-      local ok, rescript_tools = pcall(require, 'rescript-tools')
-      if ok then
-        local commands = {
-          ResOpenCompiled = rescript_tools.open_compiled,
-          ResCreateInterface = rescript_tools.create_interface,
-          ResSwitchImplInt = rescript_tools.switch_impl_intf,
-        }
-        for name, fn in pairs(commands) do
-          vim.api.nvim_buf_create_user_command(
-            bufnr,
-            name,
-            fn,
-            { desc = 'ReScript LSP: ' .. name }
-          )
-        end
-      end
       on_attach(client, bufnr)
     end,
   })
@@ -527,10 +500,10 @@ end
 
 ### Refactor analysis for use on the server side
 
-- Parsing from source (not just files) / decouple I/O from core logic #8426
-  #8466 #8478
-- Use the `yojson` and `lsp` libraries in the analysis library #8436
-- Remove global state `Shared_types.state` #8465
+- Parsing from source (not just files) / decouple I/O from core logic [#8426](https://github.com/rescript-lang/rescript/pull/8426)
+  [#8466](https://github.com/rescript-lang/rescript/pull/8466) [#8478](https://github.com/rescript-lang/rescript/pull/8478)
+- Use the `yojson` and `lsp` libraries in the analysis library [##8436](https://github.com/rescript-lang/rescript/pull/8436)
+- Remove global state `Shared_types.state` [#8465](https://github.com/rescript-lang/rescript/pull/8465)
 
 ### Relationship to #8243
 
@@ -538,150 +511,3 @@ end
 shelling out to `rescript-editor-analysis.exe` over stdin. This PR keeps the LSP
 on the OCaml side and uses the `analysis` library directly. Useful as a
 comparison point for the architecture discussion.
-
-## Other TODOs
-
-- Add README.md for `lsp` folder
-- Add CHANGELOG.md?
-
-## Some strange behaviors with diagnostics when testing the server
-
-Below I describe the scenarios. I don't know if this is the expected behavior.
-
-1. I have three files: A, B, and C. Only A is open in the editor. I changed the
-   type of a variable in A that B and C use. The compiler reported the errors in
-   files B and C. All good. I edited A to introduce a syntax error but did not
-   save it. The server now reports three errors: the syntax error in A and the
-   two type errors in B and C. Then I saved file A with the syntax error. The
-   server publishes only the syntax diagnostic. The other two are cleared.
-   - This happens because, when a syntax error is introduced, `.compiler.log` is
-     changed, and the compiler emits only the syntax error.
-   - How can we improve this?
-
-2. Considering the example described above, I now fixed the syntax error in A.
-   The server publishes the two type errors in B and C. I close A, and the
-   server does not clear the diagnostics. In this case, all files are closed.
-   The compiler is running.
-   - Should we clear diagnostics when closing a document?
-
-3. I have an open file. I added a syntax error, and the server reports it. All
-   good. I closed the file, and the server clears the syntax error diagnostic.
-   This is the opposite behavior from the case above. The compiler is running.
-   - This happens because we ignore syntax errors coming from the compiler.
-
-### Codex suggestion
-
-This is mostly a diagnostic ownership problem. Right now the server mixes two
-different sources:
-
-1. **Editor syntax diagnostics** from open, unsaved documents.
-2. **Compiler diagnostics** from `.compiler.log`.
-
-Those sources have different freshness guarantees, so they should be tracked
-separately.
-
-**1. Saved Syntax Error Clears B/C Type Errors** This happens because
-`.compiler.log` becomes incomplete when the compiler stops at the syntax error.
-If the server treats that log as a full compiler snapshot, it overwrites
-previous compiler diagnostics and clears B/C.
-
-I would fix this by making compiler-log updates conditional:
-
-```text
-If compiler log contains syntax errors:
-  parse syntax diagnostics, but do not replace previous compiler diagnostics.
-
-If compiler log contains non-syntax diagnostics:
-  replace previous compiler diagnostics with the new snapshot.
-
-If compiler log is empty / successful:
-  clear previous compiler diagnostics.
-```
-
-Since you already ignore compiler syntax errors, the important part is: **do not
-let a syntax-only compiler log clear the previous type-check diagnostics**.
-
-Tradeoff: B/C diagnostics may be stale while A has a syntax error. But that is
-better than flickering/clearing useful errors. Once syntax is fixed and compiler
-produces a real type-check log, replace them.
-
-**2. Close A While B/C Diagnostics Remain** Do not clear compiler diagnostics on
-document close. Compiler diagnostics are workspace/build diagnostics, not
-open-document diagnostics.
-
-If B and C have errors from the compiler, those should remain even when no files
-are open, because the workspace still has build errors.
-
-So the rule should be:
-
-```text
-On didClose:
-  clear only diagnostics owned by the open-document syntax checker for that URI.
-  keep compiler diagnostics unchanged.
-```
-
-**3. Closing File Clears Syntax Error** This behavior is reasonable if the
-syntax error only exists in the unsaved buffer. Once the document closes, the
-server no longer owns the in-memory text, so it should remove in-memory syntax
-diagnostics.
-
-But if the file was saved with the syntax error, the compiler should own that
-diagnostic. Since you currently ignore compiler syntax diagnostics, saved syntax
-errors disappear on close.
-
-The fix is to distinguish syntax source:
-
-```text
-Open unsaved file:
-  use in-memory syntax diagnostics.
-
-Saved file / closed file:
-  allow compiler syntax diagnostics to be published.
-```
-
-Or more simply:
-
-```text
-Ignore compiler syntax diagnostics only for currently open documents.
-Keep compiler syntax diagnostics for closed documents.
-```
-
-**Suggested Model** Maintain separate diagnostic maps:
-
-```ocaml
-type diagnostics = {
-  syntax_by_uri: Diagnostic.t list Uri_map.t;
-  compiler_by_uri: Diagnostic.t list Uri_map.t;
-}
-```
-
-Publishing becomes:
-
-```text
-published(uri) = syntax_by_uri(uri) + compiler_by_uri(uri)
-```
-
-Then events become predictable:
-
-```text
-didChange:
-  update syntax_by_uri for that open document
-  publish merged diagnostics
-
-compiler log changed:
-  if syntax-only/incomplete log:
-    update compiler syntax diagnostics for closed files only
-    keep previous compiler type diagnostics
-  else:
-    replace compiler_by_uri with new compiler diagnostics
-  publish merged diagnostics
-
-didClose:
-  remove syntax_by_uri for that document
-  keep compiler_by_uri
-  publish merged diagnostics
-```
-
-Main practical fix: stop treating every `.compiler.log` change as a complete
-replacement. Syntax-error logs are incomplete build results, so they need
-special handling.
