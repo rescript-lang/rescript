@@ -1,0 +1,10 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/record_rest_unresolved_rest_type.res[0m:[2m3:12-15[0m
+
+  1 [2m│[0m type source = {a: int, b: string}
+  2 [2m│[0m type rest
+  [1;31m3[0m [2m│[0m let {a, ...[1;31mrest[0m as value} = ({a: 1, b: "x"}: source)
+  4 [2m│[0m 
+
+  Type rest is not a record type and cannot be used as a record rest pattern.

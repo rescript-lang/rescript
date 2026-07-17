@@ -7,7 +7,7 @@ import {make as makeNotChecked} from './hookExample';
 
 // In case of type error, check the type of 'make' in 'JSXV4.res' and './hookExample'.
 export const makeTypeChecked: React.ComponentType<{
-  readonly actions?: JSX.Element; 
+  readonly actions?: React.JSX.Element; 
   readonly person: person; 
   readonly children: React.ReactNode; 
   readonly renderMe: renderMe<any>
@@ -15,7 +15,7 @@ export const makeTypeChecked: React.ComponentType<{
 
 // Export 'make' early to allow circular import from the '.bs.js' file.
 export const make: unknown = makeTypeChecked as React.ComponentType<{
-  readonly actions?: JSX.Element; 
+  readonly actions?: React.JSX.Element; 
   readonly person: person; 
   readonly children: React.ReactNode; 
   readonly renderMe: renderMe<any>
@@ -29,7 +29,7 @@ export type person = { readonly name: string; readonly age: number };
 
 export type props2<a> = { readonly randomString: string; readonly poly: a };
 
-export type renderMe<a> = (_1:props2<a>) => JSX.Element;
+export type renderMe<a> = (_1:props2<a>) => React.JSX.Element;
 
 export type props<actions,person,children,renderMe> = {
   readonly actions?: actions; 

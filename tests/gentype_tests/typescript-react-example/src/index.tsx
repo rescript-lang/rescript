@@ -1,5 +1,5 @@
 import type * as React from "react";
-import * as ReactDOM from "react-dom";
+import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import * as ImportJsValue from "./ImportJsValue.gen.tsx";
 import * as Uncurried from "./Uncurried.gen.tsx";
@@ -62,12 +62,11 @@ Uncurried.sumU2(3)(4);
 Uncurried.sumCurried(3)(4);
 Uncurried.sumLblCurried("hello", 3)(4);
 
-ReactDOM.render(
+createRoot(document.getElementById("root") as HTMLElement).render(
   <div>
     <App name={"Hello"} />
     <Hooks vehicle={{ name: "Car" }} />
   </div>,
-  document.getElementById("root") as HTMLElement,
 );
 
 const x1 = Records.getPayload(Records.payloadValue).v;

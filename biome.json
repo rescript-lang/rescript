@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.4.10/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.5.3/schema.json",
   "vcs": {
     "enabled": true,
     "clientKind": "git",
@@ -9,7 +9,7 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": true,
+      "preset": "recommended",
       "style": {
         "useTemplate": "off",
         "noCommonJs": "error"
@@ -76,7 +76,8 @@
       "!**/package.json",
       "!**/packages/artifacts.json",
       "!**/.mypy_cache",
-      "!**/.history"
+      "!**/.history",
+      "!**/analysis/reanalyze/diagrams/*.svg"
     ]
   }
 }

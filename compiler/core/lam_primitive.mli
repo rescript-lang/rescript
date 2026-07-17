@@ -37,6 +37,7 @@ type t =
   | Psetfield of int * Lambda.set_field_dbg_info
   | Pduprecord
   | Ptagged_template
+  | Precord_rest of string list
   | Pjs_call of {
       (* Location.t *  [loc] is passed down *)
       prim_name: string;

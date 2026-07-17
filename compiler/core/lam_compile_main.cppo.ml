@@ -256,6 +256,8 @@ js
 |> _j "external_shadow"
 |> Js_pass_tailcall_inline.tailcall_inline
 |> _j "inline_and_shake"
+|> Js_pass_record_rest.program
+|> _j "record_rest"
 |> Js_pass_flatten_and_mark_dead.program
 |> _j "flatten_and_mark_dead"
 (* |> Js_inline_and_eliminate.inline_and_shake *)

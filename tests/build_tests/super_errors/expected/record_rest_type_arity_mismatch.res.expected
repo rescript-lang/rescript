@@ -1,0 +1,11 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/record_rest_type_arity_mismatch.res[0m:[2m3:16-19[0m
+
+  1 [2m│[0m type source<'a> = {id: string, value: 'a}
+  2 [2m│[0m type rest<'a> = {value: 'a}
+  [1;31m3[0m [2m│[0m let {id: _, ...[1;31mrest[0m<int, string> as value} = ({id: "x", value: 1}: sourc
+    [2m│[0m [1;31me<int>)[0m
+  4 [2m│[0m 
+
+  The type constructor `rest` expects 1 type argument, but is given 2

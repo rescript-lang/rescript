@@ -1,0 +1,10 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/record_rest_unboxed_source_type.res[0m:[2m4:5-32[0m
+
+  2 [2m│[0m type empty = {}
+  3 [2m│[0m 
+  [1;31m4[0m [2m│[0m let [1;31m{value: _, ...empty as rest}[0m = ({value: 1}: source)
+  5 [2m│[0m 
+
+  Record rest patterns cannot be used with unboxed record types.

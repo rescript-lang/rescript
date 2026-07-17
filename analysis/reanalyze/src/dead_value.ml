@@ -230,16 +230,78 @@ let rec collect_expr ~config ~refs ~file_deps ~cross_file
   With this annotation we declare a new type for each branch to allow the
   function to be typed.
   *)
-let collect_pattern ~config ~refs :
+let type_path_candidates ~file ~(module_path : Module_path.t) path =
+  let path = Dce_path.from_path_t path in
+  let module_context =
+    module_path.path @ [File_context.module_name_tagged file]
+  in
+  let add_unique paths path =
+    if List.exists (fun existing -> existing = path) paths then paths
+    else path :: paths
+  in
+  [path; path @ module_context]
+  |> List.fold_left
+       (fun paths path ->
+         [
+           path;
+           Dce_path.module_to_implementation path;
+           Dce_path.module_to_interface path;
+         ]
+         |> List.fold_left add_unique paths)
+       []
+
+let add_record_label_type_references ~config ~refs ~pos_from labels =
+  labels
+  |> List.iter (fun {Types.ld_loc = {loc_start = pos_to; loc_ghost}; _} ->
+         if not loc_ghost then
+           Dead_type.add_type_reference ~config ~refs ~pos_from ~pos_to)
+
+let add_record_rest_type_references_from_path ~config ~decls ~refs ~file
+    ~module_path ~pos_from rest =
+  if !Config.analyze_types then
+    match (Ctype.repr rest.Typedtree.rest_type).desc with
+    | Types.Tconstr (path, _, _) ->
+      let type_paths = type_path_candidates ~file ~module_path path in
+      decls |> Declarations.builder_to_list
+      |> List.iter (fun (_, decl) ->
+             match (decl.Decl.decl_kind, decl.path) with
+             | RecordLabel, _label :: type_path
+               when List.exists
+                      (fun candidate -> candidate = type_path)
+                      type_paths ->
+               Dead_type.add_type_reference ~config ~refs ~pos_from
+                 ~pos_to:decl.pos
+             | _ -> ())
+    | _ -> ()
+
+let add_record_rest_type_references ~config ~decls ~refs ~file ~module_path
+    ~pos_from ~env rest =
+  if !Config.analyze_types then
+    match
+      try Some (Ctype.extract_concrete_typedecl env rest.Typedtree.rest_type)
+      with Not_found -> None
+    with
+    | Some (_, _, {Types.type_kind = Type_record (labels, _)}) ->
+      add_record_label_type_references ~config ~refs ~pos_from labels
+    | _ ->
+      add_record_rest_type_references_from_path ~config ~decls ~refs ~file
+        ~module_path ~pos_from rest
+
+let collect_pattern ~config ~decls ~refs ~file ~module_path :
     _ -> _ -> Typedtree.pattern -> Typedtree.pattern =
  fun super self pat ->
   let pos_from = pat.Typedtree.pat_loc.loc_start in
   (match pat.pat_desc with
-  | Typedtree.Tpat_record (cases, _clodsedFlag) ->
+  | Typedtree.Tpat_record (cases, _clodsedFlag, rest) -> (
     cases
     |> List.iter (fun (_loc, {Types.lbl_loc = {loc_start = pos_to}}, _pat, _) ->
            if !Config.analyze_types then
-             Dead_type.add_type_reference ~config ~refs ~pos_from ~pos_to)
+             Dead_type.add_type_reference ~config ~refs ~pos_from ~pos_to);
+    match rest with
+    | None -> ()
+    | Some rest ->
+      add_record_rest_type_references ~config ~decls ~refs ~file ~module_path
+        ~pos_from:rest.rest_name.loc.loc_start ~env:pat.pat_env rest)
   | _ -> ());
   super.Tast_mapper.pat self pat
 
@@ -331,7 +393,11 @@ let traverse_structure ~config ~decls ~refs ~file_deps ~cross_file ~file
             e
             |> collect_expr ~config ~refs ~file_deps ~cross_file ~last_binding
                  super mapper);
-        pat = (fun _self p -> p |> collect_pattern ~config ~refs super mapper);
+        pat =
+          (fun _self p ->
+            p
+            |> collect_pattern ~config ~decls ~refs ~file ~module_path super
+                 mapper);
         structure_item =
           (fun _self (structure_item : Typedtree.structure_item) ->
             let modulePath_for_item_opt =

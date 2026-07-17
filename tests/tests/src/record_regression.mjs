@@ -39,9 +39,10 @@ let newrecord$3 = {...v1};
 newrecord$3.y1 = 22;
 
 function h11(v1) {
-  let newrecord = {...v1};
-  newrecord.y1 = 22;
-  return newrecord;
+  return {
+    ...v1,
+    y1: 22
+  };
 }
 
 let po = {

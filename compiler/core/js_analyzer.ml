@@ -30,6 +30,14 @@ type idents_stats = {
 let add_defined_idents (x : idents_stats) ident =
   x.defined_idents <- Set_ident.add x.defined_idents ident
 
+let add_record_rest_field_idents stats fields =
+  List.iter
+    (fun (field : J.record_rest_field) ->
+      match field.record_rest_ident with
+      | None -> ()
+      | Some ident -> add_defined_idents stats ident)
+    fields
+
 (* Assume that functions already calculated closure correctly
    Maybe in the future, we should add a dirty flag, to mark the calcuated
    closure is correct or not
@@ -46,6 +54,9 @@ let free_variables (stats : idents_stats) =
       (fun self st ->
         add_defined_idents stats st.ident;
         match st.value with
+        | Some {expression_desc = Record_rest (fields, source)} ->
+          add_record_rest_field_idents stats fields;
+          self.expression self source
         | None -> ()
         | Some v -> self.expression self v);
     ident =
@@ -102,7 +113,11 @@ let rec no_side_effect_expression_desc (x : J.expression_desc) =
     *)
     Ext_list.for_all xs no_side_effect
   | Optional_block (x, _) -> no_side_effect x
-  | Object (_, kvs) -> Ext_list.for_all_snd kvs no_side_effect
+  | Object (dup, kvs) ->
+    (match dup with
+    | Some e -> no_side_effect e
+    | None -> true)
+    && Ext_list.for_all_snd kvs no_side_effect
   | String_append (a, b) | Seq (a, b) -> no_side_effect a && no_side_effect b
   | Length (e, _) | Caml_block_tag (e, _) | Typeof e -> no_side_effect e
   | Bin (op, a, b) -> op <> Eq && no_side_effect a && no_side_effect b
@@ -118,6 +133,7 @@ let rec no_side_effect_expression_desc (x : J.expression_desc) =
   | FlatCall _ | Call _ | New _ | Raw_js_code _ (* actually true? *) -> false
   | Await _ -> false
   | Spread _ -> false
+  | Record_rest _ -> false
 
 and no_side_effect (x : J.expression) =
   no_side_effect_expression_desc x.expression_desc
@@ -230,7 +246,8 @@ let rec eq_expression ({expression_desc = x0} : J.expression)
     | _ -> false)
   | Length _ | Is_null_or_undefined _ | String_append _ | Typeof _ | Js_not _
   | Js_bnot _ | In _ | Cond _ | FlatCall _ | New _ | Fun _ | Raw_js_code _
-  | Array _ | Caml_block_tag _ | Object _ | Tagged_template _ | Await _ ->
+  | Array _ | Caml_block_tag _ | Object _ | Tagged_template _ | Await _
+  | Record_rest _ ->
     false
   | Spread _ -> false
 

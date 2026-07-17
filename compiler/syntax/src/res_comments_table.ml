@@ -498,6 +498,7 @@ type node =
   | ObjectField of Parsetree.object_field
   | PackageConstraint of Longident.t Asttypes.loc * Parsetree.core_type
   | Pattern of Parsetree.pattern
+  | PatternRecordRest of Parsetree.record_pat_rest
   | PatternRecordRow of Longident.t Asttypes.loc * Parsetree.pattern
   | RowField of Parsetree.row_field
   | SignatureItem of Parsetree.signature_item
@@ -536,6 +537,7 @@ let get_loc node =
     | _ -> Location.none)
   | PackageConstraint (li, te) -> {li.loc with loc_end = te.ptyp_loc.loc_end}
   | Pattern p -> p.ppat_loc
+  | PatternRecordRest rest -> rest.rest_loc
   | PatternRecordRow (li, p) -> {li.loc with loc_end = p.ppat_loc.loc_end}
   | RowField rf -> (
     match rf with
@@ -719,6 +721,7 @@ and walk_node node tbl comments =
   | ObjectField f -> walk_object_field f tbl comments
   | PackageConstraint (li, te) -> walk_package_constraint (li, te) tbl comments
   | Pattern p -> walk_pattern p tbl comments
+  | PatternRecordRest rest -> walk_pattern_record_rest rest tbl comments
   | PatternRecordRow (li, p) -> walk_pattern_record_row (li, p) tbl comments
   | RowField rf -> walk_row_field rf tbl comments
   | SignatureItem si -> walk_signature_item si tbl comments
@@ -2135,10 +2138,16 @@ and walk_pattern pat t comments =
   | Ppat_variant (_label, None) -> ()
   | Ppat_variant (_label, Some pat) -> walk_pattern pat t comments
   | Ppat_type _ -> ()
-  | Ppat_record (record_rows, _) ->
-    walk_list
-      (Ext_list.map record_rows (fun {lid; x = p} -> PatternRecordRow (lid, p)))
-      t comments
+  | Ppat_record (record_rows, _, rest) ->
+    let nodes =
+      Ext_list.map record_rows (fun {lid; x = p} -> PatternRecordRow (lid, p))
+    in
+    let nodes =
+      match rest with
+      | None -> nodes
+      | Some rest -> nodes @ [PatternRecordRest rest]
+    in
+    walk_list nodes t comments
   | Ppat_or _ ->
     walk_list
       (Res_parsetree_viewer.collect_or_pattern_chain pat
@@ -2176,7 +2185,26 @@ and walk_pattern pat t comments =
   | Ppat_extension extension -> walk_extension extension t comments
   | _ -> ()
 
-(* name: firstName *)
+and walk_pattern_record_rest rest t comments =
+  let attach_rest_name comments =
+    let before_name, after_name =
+      partition_leading_trailing comments rest.rest_name.loc
+    in
+    attach t.leading rest.rest_name.loc before_name;
+    attach t.trailing rest.rest_name.loc after_name
+  in
+  match rest.rest_type with
+  | None -> attach_rest_name comments
+  | Some typ ->
+    let before_typ, inside_typ, after_typ =
+      partition_by_loc comments typ.ptyp_loc
+    in
+    attach t.leading typ.ptyp_loc before_typ;
+    walk_core_type typ t inside_typ;
+    let after_typ, rest = partition_adjacent_trailing typ.ptyp_loc after_typ in
+    attach t.trailing typ.ptyp_loc after_typ;
+    attach_rest_name rest
+
 and walk_pattern_record_row row t comments =
   match row with
   (* punned {x}*)

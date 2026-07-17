@@ -1,6 +1,6 @@
 {
   "name": "rescript",
-  "version": "13.0.0-alpha.5",
+  "version": "13.0.0-alpha.6",
   "description": "ReScript toolchain",
   "type": "module",
   "keywords": [
@@ -52,6 +52,7 @@
     "test": "node scripts/test.js -all",
     "test-build": "node scripts/test.js -build",
     "test-ocaml": "node scripts/test.js -ounit",
+    "test-release-plan": "node --test scripts/releasePlan.test.js",
     "check": "biome check --no-errors-on-unmatched .",
     "check:all": "biome check .",
     "format": "biome check --no-errors-on-unmatched . --fix",
@@ -87,8 +88,8 @@
     "@rescript/win32-x64": "workspace:packages/@rescript/win32-x64"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.4.10",
-    "@types/node": "^25.0.3",
+    "@biomejs/biome": "2.5.3",
+    "@types/node": "^26.1.1",
     "@types/semver": "^7.7.0",
     "@yarnpkg/types": "^4.0.1",
     "mocha": "11.7.6",

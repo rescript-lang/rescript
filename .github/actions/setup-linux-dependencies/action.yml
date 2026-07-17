@@ -1,0 +1,12 @@
+name: Setup Linux dependencies
+description: Install and cache the system packages required to build ReScript.
+
+runs:
+  using: composite
+  steps:
+    - name: Install system dependencies
+      uses: awalsh128/cache-apt-pkgs-action@v1.4.3
+      with:
+        # Dependencies required by setup-ocaml, plus cmake for OPAM.
+        packages: bubblewrap darcs g++-multilib gcc-multilib mercurial musl-tools rsync cmake
+        version: v4

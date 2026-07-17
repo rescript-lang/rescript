@@ -46,33 +46,38 @@ let formatter$1 = new Intl.DateTimeFormat(undefined, options);
 
 console.log(formatter$1.format(new Date(Date.now())));
 
-let newrecord = {...options};
-
-let formatter$2 = new Intl.DateTimeFormat(undefined, (newrecord.timeZoneName = "long", newrecord));
+let formatter$2 = new Intl.DateTimeFormat(undefined, {
+  ...options,
+  timeZoneName: "long"
+});
 
 console.log(formatter$2.format(new Date(Date.now())));
 
-let newrecord$1 = {...options};
-
-let formatter$3 = new Intl.DateTimeFormat(undefined, (newrecord$1.timeZoneName = "longOffset", newrecord$1));
+let formatter$3 = new Intl.DateTimeFormat(undefined, {
+  ...options,
+  timeZoneName: "longOffset"
+});
 
 console.log(formatter$3.format(new Date(Date.now())));
 
-let newrecord$2 = {...options};
-
-let formatter$4 = new Intl.DateTimeFormat(undefined, (newrecord$2.timeZoneName = "short", newrecord$2));
+let formatter$4 = new Intl.DateTimeFormat(undefined, {
+  ...options,
+  timeZoneName: "short"
+});
 
 console.log(formatter$4.format(new Date(Date.now())));
 
-let newrecord$3 = {...options};
-
-let formatter$5 = new Intl.DateTimeFormat(undefined, (newrecord$3.timeZoneName = "shortGeneric", newrecord$3));
+let formatter$5 = new Intl.DateTimeFormat(undefined, {
+  ...options,
+  timeZoneName: "shortGeneric"
+});
 
 console.log(formatter$5.format(new Date(Date.now())));
 
-let newrecord$4 = {...options};
-
-let formatter$6 = new Intl.DateTimeFormat(undefined, (newrecord$4.timeZoneName = "shortOffset", newrecord$4));
+let formatter$6 = new Intl.DateTimeFormat(undefined, {
+  ...options,
+  timeZoneName: "shortOffset"
+});
 
 console.log(formatter$6.format(new Date(Date.now())));
 

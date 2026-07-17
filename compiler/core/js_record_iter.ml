@@ -145,6 +145,7 @@ let expression_desc : expression_desc fn =
   | Null -> ()
   | Await _x0 -> _self.expression _self _x0
   | Spread _x0 -> _self.expression _self _x0
+  | Record_rest (_x0, _x1) -> _self.expression _self _x1
 
 let for_ident_expression : for_ident_expression fn =
  fun _self arg -> _self.expression _self arg

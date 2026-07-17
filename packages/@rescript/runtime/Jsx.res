@@ -20,6 +20,7 @@ type componentLike<'props, 'return> = 'props => 'return
 /* Components consume props. If one component can accept broader props, it can
    safely stand in for a component that only needs narrower props, just like a
    function argument type. That makes the props parameter contravariant. */
+@notUndefined
 type component<-'props>
 
 /* this function exists to prepare for making `component` abstract */

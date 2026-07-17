@@ -146,6 +146,7 @@ type primitive =
   | Pfield of int * field_dbg_info
   | Psetfield of int * set_field_dbg_info
   | Pduprecord
+  | Precord_rest of string list (* excluded runtime field names *)
   (* External call *)
   | Pccall of Primitive.description
   (* Exceptions *)

@@ -29,6 +29,14 @@ type meta_info = Info of J.ident_info | Recursive
 
 let super = Js_record_iter.super
 
+let add_binding_info ident_use_stats ident_info ident =
+  match Hash_ident.find_opt ident_use_stats ident with
+  | Some Recursive ->
+    Js_op_util.update_used_stats ident_info Used;
+    Hash_ident.replace ident_use_stats ident (Info ident_info)
+  | Some (Info _) -> ()
+  | None -> Hash_ident.add ident_use_stats ident (Info ident_info)
+
 let mark_dead_code (js : J.program) : J.program =
   let ident_use_stats : meta_info Hash_ident.t = Hash_ident.create 17 in
   let mark_dead =
@@ -64,21 +72,32 @@ let mark_dead_code (js : J.program) : J.program =
               if Set_ident.mem js.export_set ident then
                 Js_op_util.update_used_stats ident_info Exported
             in
-            match Hash_ident.find_opt ident_use_stats ident with
-            | Some Recursive ->
-              Js_op_util.update_used_stats ident_info Used;
-              Hash_ident.replace ident_use_stats ident (Info ident_info)
-            | Some (Info _) ->
-              (* check [camlinternlFormat,box_type] inlined twice
-                  FIXME: seems we have redeclared identifiers
-              *)
-              ()
-            (* assert false *)
-            | None ->
-              (* First time *)
-              Hash_ident.add ident_use_stats ident (Info ident_info);
-              Js_op_util.update_used_stats ident_info
-                (if pure then Scanning_pure else Scanning_non_pure)));
+            let () =
+              match Hash_ident.find_opt ident_use_stats ident with
+              | Some Recursive ->
+                Js_op_util.update_used_stats ident_info Used;
+                Hash_ident.replace ident_use_stats ident (Info ident_info)
+              | Some (Info _) ->
+                (* check [camlinternlFormat,box_type] inlined twice
+                    FIXME: seems we have redeclared identifiers
+                *)
+                ()
+              (* assert false *)
+              | None ->
+                (* First time *)
+                Hash_ident.add ident_use_stats ident (Info ident_info);
+                Js_op_util.update_used_stats ident_info
+                  (if pure then Scanning_pure else Scanning_non_pure)
+            in
+            match value with
+            | Some {expression_desc = Record_rest (fields, _)} ->
+              fields
+              |> List.iter (fun (field : J.record_rest_field) ->
+                     match field.record_rest_ident with
+                     | None -> ()
+                     | Some ident ->
+                       add_binding_info ident_use_stats ident_info ident)
+            | _ -> ()));
     }
   in
   mark_dead.program mark_dead js;

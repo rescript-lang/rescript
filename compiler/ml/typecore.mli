@@ -129,6 +129,7 @@ type error =
   | Field_access_on_dict_type
   | Jsx_not_enabled
   | Tagged_template_non_tag of type_expr
+  | Record_rest of Typecore_record_rest.error
 
 exception Error of Location.t * Env.t * error
 exception Error_forward of Location.error

@@ -14,13 +14,13 @@ const execPromise = util.promisify(exec);
  * @param {Yarn.Constraints.Context} ctx
  */
 async function enforceCompilerMeta({ Yarn }) {
-  const EXPECTED_VERSION = "13.0.0-alpha.5";
+  const EXPECTED_VERSION = "13.0.0-alpha.6";
 
   for (const workspace of Yarn.workspaces()) {
     const { ident } = workspace.pkg;
     if (
-      workspace.cwd.startsWith("packages") &&
-      (ident === "rescript" || ident.startsWith("@rescript/"))
+      ident === "rescript" ||
+      (workspace.cwd.startsWith("packages") && ident.startsWith("@rescript/"))
     ) {
       workspace.set("version", EXPECTED_VERSION);
       workspace.set("homepage", "https://rescript-lang.org");

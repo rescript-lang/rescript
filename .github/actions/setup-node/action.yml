@@ -1,0 +1,16 @@
+name: Setup Node and dependencies
+description: Install the repository Node.js version and immutable Yarn dependencies.
+
+runs:
+  using: composite
+  steps:
+    - name: Use Node.js
+      uses: actions/setup-node@v6
+      with:
+        cache: yarn
+        node-version-file: .nvmrc
+        registry-url: https://registry.npmjs.org
+
+    - name: Install npm packages
+      shell: bash
+      run: yarn install --immutable
