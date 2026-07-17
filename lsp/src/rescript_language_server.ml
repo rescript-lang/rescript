@@ -108,8 +108,6 @@ let get_updated_diagnostics_from_log (state : State.t) diagnostics =
    package roots as a side effect. *)
 let discover_subpackages_and_populate ~workspace_root
     ~(analysis_state : Analysis.Shared_types.state) ~server =
-  let ( /+ ) = Filename.concat in
-
   let root_package =
     let root_path = workspace_root |> Uri.to_path in
     match Analysis.Packages.new_bs_package ~root_path with
@@ -131,31 +129,32 @@ let discover_subpackages_and_populate ~workspace_root
            building the project then restart the server"
           root_path
       in
-      Server.log_message_notification ~kind:MessageType.Error message server;
+      Server.show_message_notification ~kind:MessageType.Error message server;
       None
   in
 
   let resolve_node_modules_paths =
     match root_package with
     | Some {dependencies} ->
-      let paths =
-        dependencies
-        |> List.filter_map (fun dep_name ->
-               (* TODO: Resolve for deno and pnpm *)
-               let node_modules =
-                 (workspace_root |> Uri.to_path) /+ "node_modules"
-               in
-               let path = node_modules /+ dep_name in
-               (* TODO: Replace with fs.ml module *)
-               if Analysis.Files.exists path then Some (Unix.realpath path)
-               else
-                 let rescript = node_modules /+ "rescript" in
-                 if Analysis.Files.exists rescript then
-                   let real_path = Unix.realpath rescript /+ dep_name in
-                   Some real_path
-                 else None)
+      let deps_paths, deps_errors =
+        List.partition_map
+          (fun dep_name ->
+            match
+              Analysis.Module_resolution.resolve_node_module_path
+                ~start_path:(workspace_root |> Uri.to_path)
+                dep_name
+            with
+            | Some value -> Either.Left value
+            | None -> Either.Right dep_name
+            | exception Failure err -> Either.Right err)
+          dependencies
       in
-      Some paths
+      if List.length deps_errors > 0 then
+        Server.show_message_notification ~kind:MessageType.Error
+          (Printf.sprintf "Failed to resolve dependencies. %s"
+             (String.concat ", " deps_errors))
+          server;
+      Some deps_paths
     | None -> None
   in
 
