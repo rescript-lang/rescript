@@ -297,25 +297,20 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
     in
     (ok (resp |> Option.value ~default:item), state)
   | SignatureHelp {textDocument = {uri}; position} ->
-    if state.configuration.signature_help.enable then
-      let source = (Document_store.get ~uri state.store).text in
-      let full = load_full uri state in
-      let resp =
-        match
-          Analysis.Commands.signature_help
-            ~state:(State.analysis_state state)
-            ~source ~kind_file:(Document.kind uri)
-            ~pos:(position.line, position.character)
-            ~full
-            ~allow_for_constructor_payloads:
-              state.configuration.signature_help.for_constructor_payloads
-            ~debug:false
-        with
-        | Some s -> s
-        | None -> SignatureHelp.create ~signatures:[] ()
-      in
-      (ok resp, state)
-    else (ok (SignatureHelp.create ~signatures:[] ()), state)
+    let source = (Document_store.get ~uri state.store).text in
+    let full = load_full uri state in
+    let resp =
+      match
+        Analysis.Commands.signature_help
+          ~state:(State.analysis_state state)
+          ~source ~kind_file:(Document.kind uri)
+          ~pos:(position.line, position.character)
+          ~full ~allow_for_constructor_payloads:true ~debug:false
+      with
+      | Some s -> s
+      | None -> SignatureHelp.create ~signatures:[] ()
+    in
+    (ok resp, state)
   | TextDocumentDefinition {textDocument = {uri}; position} ->
     let full = load_full uri state in
     let resp =
