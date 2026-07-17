@@ -532,6 +532,20 @@ mod tests {
             other => panic!("expected build command, got {other:?}"),
         }
     }
+
+    #[test]
+    fn lsp_stdio_flag_is_parsed() {
+        let cli = parse(&["rescript", "lsp", "--stdio"]).expect("expected lsp command");
+
+        assert!(matches!(cli.command, Command::Lsp { stdio: true }));
+    }
+
+    #[test]
+    fn lsp_stdio_defaults_to_false() {
+        let cli = parse(&["rescript", "lsp"]).expect("expected lsp command");
+
+        assert!(matches!(cli.command, Command::Lsp { stdio: false }));
+    }
 }
 
 #[derive(Args, Clone, Debug)]
@@ -614,6 +628,12 @@ pub enum Command {
         /// Path to a ReScript source file (.res or .resi)
         #[command()]
         path: String,
+    },
+    /// Start the language server.
+    Lsp {
+        /// Use stdio
+        #[arg(long)]
+        stdio: bool,
     },
 }
 

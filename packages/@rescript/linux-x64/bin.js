@@ -11,5 +11,9 @@ export const binPaths = {
     binDir,
     "rescript-editor-analysis.exe",
   ),
+  rescript_language_server_exe: path.join(
+    binDir,
+    "rescript-language-server.exe",
+  ),
   rescript_exe: path.join(binDir, "rescript.exe"),
 };

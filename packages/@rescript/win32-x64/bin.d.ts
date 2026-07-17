@@ -6,5 +6,6 @@ export type BinaryPaths = {
   bsc_exe: string;
   rescript_tools_exe: string;
   rescript_editor_analysis_exe: string;
+  rescript_language_server_exe: string;
   rescript_exe: string;
 };
