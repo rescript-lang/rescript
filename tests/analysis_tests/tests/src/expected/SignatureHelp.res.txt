@@ -36,7 +36,7 @@ extracted params:
         {
           "documentation": {
             "kind": "markdown",
-            "value": "```rescript\ntype someVariant = One | Two | Three\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22SignatureHelp.res%22%2C0%2C0%5D)"
+            "value": "```rescript\ntype someVariant = One | Two | Three\n```\nGo to: [Type definition](SignatureHelp.res#L1,1)"
           },
           "label": [ 53, 71 ]
         },
@@ -87,7 +87,7 @@ extracted params:
         {
           "documentation": {
             "kind": "markdown",
-            "value": "```rescript\ntype someVariant = One | Two | Three\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22SignatureHelp.res%22%2C0%2C0%5D)"
+            "value": "```rescript\ntype someVariant = One | Two | Three\n```\nGo to: [Type definition](SignatureHelp.res#L1,1)"
           },
           "label": [ 53, 71 ]
         },
@@ -138,7 +138,7 @@ extracted params:
         {
           "documentation": {
             "kind": "markdown",
-            "value": "```rescript\ntype someVariant = One | Two | Three\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22SignatureHelp.res%22%2C0%2C0%5D)"
+            "value": "```rescript\ntype someVariant = One | Two | Three\n```\nGo to: [Type definition](SignatureHelp.res#L1,1)"
           },
           "label": [ 53, 71 ]
         },
@@ -189,7 +189,7 @@ extracted params:
         {
           "documentation": {
             "kind": "markdown",
-            "value": "```rescript\ntype someVariant = One | Two | Three\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22SignatureHelp.res%22%2C0%2C0%5D)"
+            "value": "```rescript\ntype someVariant = One | Two | Three\n```\nGo to: [Type definition](SignatureHelp.res#L1,1)"
           },
           "label": [ 53, 71 ]
         },
@@ -240,7 +240,7 @@ extracted params:
         {
           "documentation": {
             "kind": "markdown",
-            "value": "```rescript\ntype someVariant = One | Two | Three\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22SignatureHelp.res%22%2C0%2C0%5D)"
+            "value": "```rescript\ntype someVariant = One | Two | Three\n```\nGo to: [Type definition](SignatureHelp.res#L1,1)"
           },
           "label": [ 53, 71 ]
         },
@@ -291,7 +291,7 @@ extracted params:
         {
           "documentation": {
             "kind": "markdown",
-            "value": "```rescript\ntype someVariant = One | Two | Three\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22SignatureHelp.res%22%2C0%2C0%5D)"
+            "value": "```rescript\ntype someVariant = One | Two | Three\n```\nGo to: [Type definition](SignatureHelp.res#L1,1)"
           },
           "label": [ 53, 71 ]
         },
@@ -709,7 +709,7 @@ extracted params:
         {
           "documentation": {
             "kind": "markdown",
-            "value": "```rescript\ntype someVariant = One | Two | Three\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22SignatureHelp.res%22%2C0%2C0%5D)"
+            "value": "```rescript\ntype someVariant = One | Two | Three\n```\nGo to: [Type definition](SignatureHelp.res#L1,1)"
           },
           "label": [ 53, 71 ]
         },
@@ -828,7 +828,7 @@ Signature help src/SignatureHelp.res 94:15
         {
           "documentation": {
             "kind": "markdown",
-            "value": "```rescript\ntype mySpecialThing = string\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22SignatureHelp.res%22%2C78%2C0%5D)"
+            "value": "```rescript\ntype mySpecialThing = string\n```\nGo to: [Type definition](SignatureHelp.res#L79,1)"
           },
           "label": [ 4, 18 ]
         }
@@ -850,7 +850,7 @@ Signature help src/SignatureHelp.res 97:19
         {
           "documentation": {
             "kind": "markdown",
-            "value": "```rescript\ntype mySpecialThing = string\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22SignatureHelp.res%22%2C78%2C0%5D)"
+            "value": "```rescript\ntype mySpecialThing = string\n```\nGo to: [Type definition](SignatureHelp.res#L79,1)"
           },
           "label": [ 6, 20 ]
         },
@@ -876,7 +876,7 @@ Signature help src/SignatureHelp.res 100:24
         {
           "documentation": {
             "kind": "markdown",
-            "value": "```rescript\ntype mySpecialThing = string\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22SignatureHelp.res%22%2C78%2C0%5D)"
+            "value": "```rescript\ntype mySpecialThing = string\n```\nGo to: [Type definition](SignatureHelp.res#L79,1)"
           },
           "label": [ 6, 20 ]
         },
@@ -965,14 +965,14 @@ extracted params:
         {
           "documentation": {
             "kind": "markdown",
-            "value": "```rescript\ntype x = {age?: int, name?: string}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22SignatureHelp.res%22%2C117%2C0%5D)"
+            "value": "```rescript\ntype x = {age?: int, name?: string}\n```\nGo to: [Type definition](SignatureHelp.res#L118,1)"
           },
           "label": [ 0, 2 ]
         },
         {
           "documentation": {
             "kind": "markdown",
-            "value": "```rescript\ntype tt = One\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22SignatureHelp.res%22%2C123%2C0%5D)"
+            "value": "```rescript\ntype tt = One\n```\nGo to: [Type definition](SignatureHelp.res#L124,1)"
           },
           "label": [ 4, 6 ]
         }
@@ -997,14 +997,14 @@ extracted params:
         {
           "documentation": {
             "kind": "markdown",
-            "value": "```rescript\ntype x = {age?: int, name?: string}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22SignatureHelp.res%22%2C117%2C0%5D)"
+            "value": "```rescript\ntype x = {age?: int, name?: string}\n```\nGo to: [Type definition](SignatureHelp.res#L118,1)"
           },
           "label": [ 0, 2 ]
         },
         {
           "documentation": {
             "kind": "markdown",
-            "value": "```rescript\ntype tt = One\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22SignatureHelp.res%22%2C123%2C0%5D)"
+            "value": "```rescript\ntype tt = One\n```\nGo to: [Type definition](SignatureHelp.res#L124,1)"
           },
           "label": [ 4, 6 ]
         }
@@ -1088,7 +1088,7 @@ Signature help src/SignatureHelp.res 143:7
         {
           "documentation": {
             "kind": "markdown",
-            "value": "```rescript\ntype mySpecialThing = string\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22SignatureHelp.res%22%2C78%2C0%5D)"
+            "value": "```rescript\ntype mySpecialThing = string\n```\nGo to: [Type definition](SignatureHelp.res#L79,1)"
           },
           "label": [ 4, 18 ]
         }
@@ -1110,7 +1110,7 @@ Signature help src/SignatureHelp.res 145:9
         {
           "documentation": {
             "kind": "markdown",
-            "value": "```rescript\ntype mySpecialThing = string\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22SignatureHelp.res%22%2C78%2C0%5D)"
+            "value": "```rescript\ntype mySpecialThing = string\n```\nGo to: [Type definition](SignatureHelp.res#L79,1)"
           },
           "label": [ 6, 20 ]
         },
@@ -1136,7 +1136,7 @@ Signature help src/SignatureHelp.res 147:12
         {
           "documentation": {
             "kind": "markdown",
-            "value": "```rescript\ntype mySpecialThing = string\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22SignatureHelp.res%22%2C78%2C0%5D)"
+            "value": "```rescript\ntype mySpecialThing = string\n```\nGo to: [Type definition](SignatureHelp.res#L79,1)"
           },
           "label": [ 6, 20 ]
         },
