@@ -256,16 +256,15 @@ file-watcher setup.
   settings coming from `initializationOptions`. See
   https://github.com/microsoft/language-server-protocol/issues/567#issuecomment-448538082.
   We use `workspace/configuration`.
+- Signature help is enabled by default.
 
 ## Server settings
 
 Proposed interface. Some notes:
 
 - Currently, `supportMarkdownLinks` is not a setting. It's a great feature, but
-  some clients don't have good support; Neovim and Zed are examples. Therefore,
-  I'm promoting it to a setting so VSCode users can enable or disable it.
-- I think we should remove `signatureHelp.enable`. It's a basic feature on many
-  servers.
+  some clients don't have good support; Neovim are a example. Therefore,
+  I'm promoting it to a setting so VSCode/Zed users can enable or disable it.
 
 ```ts
 /**
@@ -301,21 +300,6 @@ interface Settings {
      */
     maxLength?: number | null;
   };
-  /**
-   * Signature help
-   */
-  signatureHelp?: {
-    /**
-     * Enable signature help
-     * @default true
-     */
-    enable?: boolean;
-    /**
-     * Enable signature help for variant constructors
-     * @default true
-     */
-    forConstructorPayloads?: boolean;
-  };
 }
 ```
 
@@ -344,8 +328,8 @@ interface Settings {
 - Users install the language server as a development dependency or globally.
   - The server is just a native binary, so we won't have any dependency
     conflicts.
-  - Users must update the server; clients will not perform server updates or
-    installations.
+  <!--- Users must update the server; clients will not perform server updates or
+    installations.-->
 - Update the VSCode and Zed clients to support the experimental server
   - VSCode: https://github.com/rescript-lang/rescript-vscode/pull/1183
   - Zed: https://github.com/rescript-lang/rescript-zed/pull/24
