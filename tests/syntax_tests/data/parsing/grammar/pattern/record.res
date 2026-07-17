@@ -88,3 +88,25 @@ for {a, _} in 0 to 10 { () }
 for (({a, _}) in 0 to 10) { () }
 for ({a, _} in 0 to 10) { () }
 for (({a} : myRecord) in 0 to 10) { () }
+
+// Record rest patterns
+let {a, ...rest} = x
+let {a, ...b as rest} = x
+let {a, ...M.t as rest} = x
+let {a, b, ...M.Sub.t as rest} = x
+
+switch x {
+| {a, ...rest} => ()
+| {a, ...b as rest} => ()
+| {a, ...M.t as rest} => ()
+}
+
+let f = ({a, ...rest}) => ()
+let f = ({a, ...b as rest}) => ()
+let f = ({a, ...M.t as rest}) => ()
+
+// Polymorphic rest type args
+let {a, ...t<'v> as rest} = x
+let {a, ...M.t<'v> as rest} = x
+let {a, ...M.t<int> as rest} = x
+let {a, ...M.t<'a, 'b> as rest} = x

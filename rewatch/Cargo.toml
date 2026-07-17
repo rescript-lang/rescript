@@ -1,6 +1,6 @@
 [package]
 name = "rescript"
-version = "13.0.0-alpha.5"
+version = "13.0.0-alpha.6"
 edition = "2024"
 rust-version = "1.91"
 
@@ -37,13 +37,13 @@ tempfile = "3.10.1"
 # OpenTelemetry for tracing
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-tracing-opentelemetry = "0.32"
-opentelemetry = "0.31"
-opentelemetry_sdk = "0.31"
+tracing-opentelemetry = "0.33"
+opentelemetry = "0.32"
+opentelemetry_sdk = "0.32"
 # default-features disabled to skip metrics/logs support and the internal-logs
 # feature we don't need. We only use HTTP/protobuf trace export via blocking
 # reqwest — no Tokio runtime required.
-opentelemetry-otlp = { version = "0.31", default-features = false, features = [
+opentelemetry-otlp = { version = "0.32", default-features = false, features = [
     "http-proto",
     "reqwest-blocking-client",
     "trace",

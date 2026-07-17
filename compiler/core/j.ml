@@ -77,6 +77,11 @@ and property_map = (property_name * expression) list
 and length_object = Js_op.length_object
 and delim = External_arg_spec.delim = DNone | DStarJ | DNoQuotes | DBackQuotes
 
+and record_rest_field = {
+  record_rest_label: string;
+  record_rest_ident: ident option;
+}
+
 and expression_desc =
   | Length of expression * length_object
   | Is_null_or_undefined of expression  (** where we use a trick [== null ] *)
@@ -165,6 +170,7 @@ and expression_desc =
   | Null
   | Await of expression
   | Spread of expression
+  | Record_rest of record_rest_field list * expression
 
 and for_ident_expression = expression
 (* pure*)
@@ -327,6 +333,7 @@ and deps_program = {
         finish_ident_expression;
         property_map;
         length_object;
+        record_rest_field;
         (* for_ident; *)
         required_modules;
         case_clause;
@@ -337,3 +344,6 @@ FIXME: customize for each code generator
 for each code generator, we can provide a white-list
 so that we can achieve the optimal
 *)
+
+let record_rest_field_idents fields =
+  List.filter_map (fun {record_rest_ident} -> record_rest_ident) fields

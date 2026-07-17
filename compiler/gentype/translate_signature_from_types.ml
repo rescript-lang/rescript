@@ -93,12 +93,6 @@ and translate_signature_item_from_types ~config ~output_file_relative ~resolver
   | Types.Sig_modtype _ ->
     log_not_implemented ("Sig_modtype " ^ __LOC__);
     Translation.empty
-  | Types.Sig_class _ ->
-    log_not_implemented ("Sig_class " ^ __LOC__);
-    Translation.empty
-  | Types.Sig_class_type _ ->
-    log_not_implemented ("Sig_class_type " ^ __LOC__);
-    Translation.empty
 
 (** Like translateSignature but from Types not Typedtree *)
 and translate_signature_from_types ~config ~output_file_relative ~resolver

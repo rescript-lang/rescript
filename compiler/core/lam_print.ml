@@ -83,6 +83,8 @@ let primitive ppf (prim : Lam_primitive.t) =
     let instr = "setfield " in
     fprintf ppf "%s%i" instr n
   | Pduprecord -> fprintf ppf "duprecord"
+  | Precord_rest excluded ->
+    fprintf ppf "record_rest(%s)" (String.concat ", " excluded)
   | Pjs_call {prim_name} -> fprintf ppf "%s[js]" prim_name
   | Pjs_object_create _ -> fprintf ppf "[js.obj]"
   | Praise -> fprintf ppf "raise"
@@ -253,33 +255,6 @@ let flatten (lam : Lam.t) : (print_kind * Ident.t * Lam.t) list * Lam.t =
   | Lletrec (bind_args, body) ->
     aux (Ext_list.map bind_args (fun (id, l) -> (Recursive, id, l))) body
   | _ -> assert false
-
-(* let get_string ((id : Ident.t), (pos : int)) (env : Env.t) : string =
-   match  Env.find_module (Pident id) env with
-   | {md_type = Mty_signature signature  ; _ } ->
-    (* Env.prefix_idents, could be cached  *)
-    let serializable_sigs =
-      Ext_list.filter (fun x ->
-          match x with
-          | Sig_typext _
-          | Sig_module _
-          | Sig_class _ -> true
-          | Sig_value(_, {val_kind = Val_prim _}) -> false
-                           | Sig_value _ -> true
-                           | _ -> false
-                           ) signature  in
-                           (begin match Ext_list.nth_opt  serializable_sigs  pos  with
-                           | Some (Sig_value (i,_)
-                           | Sig_module (i,_,_)
-                           | Sig_typext (i,_,_)
-                           | Sig_modtype(i,_)
-                           | Sig_class (i,_,_)
-                           | Sig_class_type(i,_,_)
-                           | Sig_type(i,_,_)) -> i
-                           | None -> assert false
-                           end).name
-                           | _ -> assert false
-*)
 
 let lambda ppf v =
   let rec lam ppf (l : Lam.t) =

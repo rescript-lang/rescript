@@ -1,0 +1,13 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/record_rest_field_not_optional.res[0m:[2m3:9-22[0m
+
+  1 [2m│[0m type source = {a: int, b: string}
+  2 [2m│[0m type sub = {a: int, b: string}
+  [1;31m3[0m [2m│[0m let {a, [1;31m...sub as rest[0m}: source = {a: 1, b: "x"}
+  4 [2m│[0m 
+
+  The following field appears in both the explicit pattern and the rest type `sub`:
+- a
+
+This is not type-safe because the field would always be absent from the rest value. Remove it from the rest type, or match it as optional if absence is intended.

@@ -26,7 +26,7 @@ let type_react_component ~props_type =
 let type_react_context ~type_ =
   "React.Context" |> ident ~builtin:true ~type_args:[type_]
 
-let type_react_element_type_script = ident ~builtin:true "JSX.Element"
+let type_react_element_type_script = ident ~builtin:true "React.JSX.Element"
 let type_react_child_type_script = ident ~builtin:true "React.ReactNode"
 let type_react_element = type_react_element_type_script
 let type_react_child = type_react_child_type_script

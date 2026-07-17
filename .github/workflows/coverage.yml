@@ -12,146 +12,40 @@ concurrency:
 
 env:
   OCAMLRUNPARAM: b
-  # When changing the setup-ocaml version, also adjust it in the setup step
-  # further below.
-  SETUP_OCAML_VERSION: 3.6.0 # OPAM <2.6.0
 
 jobs:
   coverage:
     runs-on: ubuntu-24.04-arm
+    permissions:
+      actions: write # For build cache overwriting
+      id-token: write # For CodeCov OIDC
     env:
       OS: ubuntu-24.04-arm
       OCAML_COMPILER: 5.3.0
       RUST_TARGET: aarch64-unknown-linux-gnu
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
-      - name: Use Node.js
-        uses: actions/setup-node@v6
-        with:
-          cache: yarn
-          node-version-file: .nvmrc
+      - name: Setup Node and dependencies
+        uses: ./.github/actions/setup-node
 
-      - name: Install npm packages
-        run: yarn install
-
-      - name: Install system dependencies
-        uses: awalsh128/cache-apt-pkgs-action@v1.4.3
-        with:
-          packages: bubblewrap darcs g++-multilib gcc-multilib mercurial musl-tools rsync cmake
-          version: v4
-
-      # --- rewatch build cache ---------------------------------------------
-      # `make coverage` shells out to `make` which builds rewatch; cache the
-      # cargo target dir so subsequent runs skip the Rust toolchain install
-      # and the cargo build when the rewatch sources haven't changed.
-      - name: Restore rewatch build cache
-        id: rewatch-build-cache
-        uses: actions/cache@v5
-        with:
-          path: rewatch/target
-          key: rewatch-build-v3-${{ env.RUST_TARGET }}-${{ hashFiles('rewatch/src/**', 'rewatch/Cargo.lock') }}
-
-      - name: Determine Rust toolchain version
-        id: rust-version
-        run: |
-          version="$(awk -F '"' '/^rust-version[[:space:]]*=/ { print $2; exit }' rewatch/Cargo.toml)"
-          echo "version=${version}" >> "$GITHUB_OUTPUT"
-
-      - name: Install Rust toolchain
-        if: steps.rewatch-build-cache.outputs.cache-hit != 'true'
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: ${{ steps.rust-version.outputs.version }}
-          components: clippy, rustfmt
+      - name: Setup Linux dependencies
+        uses: ./.github/actions/setup-linux-dependencies
 
       - name: Build rewatch
-        if: steps.rewatch-build-cache.outputs.cache-hit != 'true'
-        run: cargo build --manifest-path rewatch/Cargo.toml --release
-
-      - name: Copy rewatch binary
-        run: |
-          cp rewatch/target/release/rescript rescript
-          ./scripts/copyExes.js --rewatch
-
-      # --- OPAM environment cache ------------------------------------------
-      # The OPAM install step is the dominant cost on a cold run (often >10
-      # min). Cache the whole opam tree, keyed on the OS, setup-ocaml
-      # version, compiler, and the `.opam` files. The cache also includes
-      # the dev-setup dependencies (e.g. bisect_ppx) so the key is distinct
-      # from the main CI workflow's cache.
-      - name: Get OPAM cache key
-        run: echo "opam_cache_key=opam-coverage-v1-${{ env.OS }}-${{ env.SETUP_OCAML_VERSION }}-${{ env.OCAML_COMPILER }}-${{ hashFiles('*.opam') }}" >> $GITHUB_ENV
-
-      - name: Restore OPAM environment
-        id: cache-opam-env
-        uses: actions/cache/restore@v5
+        uses: ./.github/actions/build-rewatch
         with:
-          path: |
-            ${{ runner.tool_cache }}/opam
-            ~/.opam
-            _opam
-            .opam-path
-          key: ${{ env.opam_cache_key }}
+          cache-target: ${{ env.RUST_TARGET }}
 
-      - name: Use OCaml ${{ env.OCAML_COMPILER }}
-        if: steps.cache-opam-env.outputs.cache-hit != 'true'
-        uses: ocaml/setup-ocaml@v3.6.0
+      - name: Setup OCaml ${{ env.OCAML_COMPILER }}
+        id: setup_ocaml
+        uses: ./.github/actions/setup-ocaml
         with:
-          ocaml-compiler: ${{ env.OCAML_COMPILER }}
-          opam-pin: false
-
-      - name: Get OPAM executable path
-        if: steps.cache-opam-env.outputs.cache-hit != 'true'
-        uses: actions/github-script@v9
-        with:
-          script: |
-            const opamPath = await io.which('opam', true);
-            console.log('opam executable found: %s', opamPath);
-
-            const fs = require('fs/promises');
-            await fs.writeFile('.opam-path', opamPath, 'utf-8');
-            console.log('stored path to .opam-path');
-
-      - name: Install OPAM dependencies (incl. bisect_ppx)
-        if: steps.cache-opam-env.outputs.cache-hit != 'true'
-        run: opam install . --deps-only --with-test --with-dev-setup
-
-      # Only save on master pushes. PR-scoped caches are tied to
-      # refs/pull/<n>/merge and can't be restored by master or other PRs,
-      # so they'd just consume storage and evict the shared entry. PRs
-      # still get full restore from the latest master-saved cache.
-      - name: Save OPAM environment
-        if: steps.cache-opam-env.outputs.cache-hit != 'true' && github.event_name == 'push' && github.ref == 'refs/heads/master'
-        uses: actions/cache/save@v5
-        with:
-          path: |
-            ${{ runner.tool_cache }}/opam
-            ~/.opam
-            _opam
-            .opam-path
-          key: ${{ env.opam_cache_key }}
-
-      - name: Use cached OPAM environment
-        if: steps.cache-opam-env.outputs.cache-hit == 'true'
-        run: |
-          # https://github.com/ocaml/setup-ocaml/blob/v3.6.0/packages/setup-ocaml/src/installer.ts
-          echo "OPAMCOLOR=always"                    >> "$GITHUB_ENV"
-          echo "OPAMCONFIRMLEVEL=unsafe-yes"         >> "$GITHUB_ENV"
-          echo "OPAMDOWNLOADJOBS=4"                  >> "$GITHUB_ENV"
-          echo "OPAMERRLOGLEN=0"                     >> "$GITHUB_ENV"
-          echo "OPAMEXTERNALSOLVER=builtin-0install" >> "$GITHUB_ENV"
-          echo "OPAMPRECISETRACKING=1"               >> "$GITHUB_ENV"
-          echo "OPAMRETRIES=10"                      >> "$GITHUB_ENV"
-          echo "OPAMSOLVERTIMEOUT=600"               >> "$GITHUB_ENV"
-          echo "OPAMYES=1"                           >> "$GITHUB_ENV"
-          echo "CLICOLOR_FORCE=1"                    >> "$GITHUB_ENV"
-          echo "OPAMROOT=$HOME/.opam"                >> "$GITHUB_ENV"
-
-          OPAM_PATH="$(cat .opam-path)"
-          chmod +x "$OPAM_PATH"
-          dirname "$OPAM_PATH" >> "$GITHUB_PATH"
+          compiler: ${{ env.OCAML_COMPILER }}
+          os: ${{ env.OS }}
+          cache-prefix: opam-coverage-v1
+          dependency-flags: --deps-only --with-test --with-dev-setup
 
       # --- Coverage build cache --------------------------------------------
       # The bisect_ppx-instrumented dune build is a separate artifact from
@@ -160,12 +54,12 @@ jobs:
       # poison it.
       - name: Coverage build state key
         id: coverage-build-state-key
-        run: echo "value=coverage-build-state-v1-${{ env.OS }}-${{ env.SETUP_OCAML_VERSION }}-${{ env.OCAML_COMPILER }}-${{ hashFiles('*.opam', 'compiler/**', 'dune-project') }}" >> $GITHUB_OUTPUT
+        run: echo "value=coverage-build-state-v1-${{ env.OS }}-${{ steps.setup_ocaml.outputs.setup_version }}-${{ env.OCAML_COMPILER }}-${{ hashFiles('*.opam', 'compiler/**', 'dune-project') }}" >> $GITHUB_OUTPUT
 
       - name: Restore coverage build state
         if: github.base_ref == 'master' || github.ref == 'refs/heads/master'
         id: coverage-build-state
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@v6
         with:
           path: |
             ~/.cache/dune
@@ -188,7 +82,7 @@ jobs:
 
       - name: Save coverage build state
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-        uses: actions/cache/save@v5
+        uses: actions/cache/save@v6
         with:
           path: |
             ~/.cache/dune
@@ -196,8 +90,8 @@ jobs:
           key: ${{ steps.coverage-build-state-key.outputs.value }}
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v6
+        uses: codecov/codecov-action@v7
         with:
           files: _coverage/coverage.json
           fail_ci_if_error: false
-          token: ${{ secrets.CODECOV_TOKEN }}
+          use_oidc: true
