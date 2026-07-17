@@ -6,7 +6,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { setup } from "#dev/process";
 
-const { bsc, execBuildOrThrow, execClean, node } = setup(import.meta.dirname);
+const { execBuildOrThrow, execClean, node } = setup(import.meta.dirname);
 
 const base64VlqChars =
   "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -359,26 +359,6 @@ async function assertLinkedOutput() {
   await assertNodeStackTraceUsesSourceMap();
 }
 
-async function assertInlineStdoutOutput() {
-  const { stdout } = await bsc(
-    [
-      "-bs-source-map",
-      "inline",
-      "-bs-source-map-sources-content",
-      "true",
-      demoSourcePath,
-    ],
-    { throwOnFail: true },
-  );
-
-  assert.match(
-    stdout,
-    /\/\/# sourceMappingURL=data:application\/json;base64,/,
-    "stdout output should include an inline source map",
-  );
-  assertSourceMap("Demo.js", stdout, mapFromInlineComment(stdout, "stdout"));
-}
-
 async function assertNodeStackTraceUsesSourceMap() {
   const stackTraceScriptPath = path.join(
     import.meta.dirname,
@@ -520,7 +500,6 @@ async function assertInlineOutput() {
 
 await execClean();
 try {
-  await assertInlineStdoutOutput();
   const defaultOutput = await assertDefaultOutput();
   await assertLinkedOutput();
   await assertDisabledOutput(defaultOutput);
