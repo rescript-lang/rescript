@@ -180,18 +180,18 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@biomejs/biome@npm:2.5.3":
-  version: 2.5.3
-  resolution: "@biomejs/biome@npm:2.5.3"
+"@biomejs/biome@npm:2.5.4":
+  version: 2.5.4
+  resolution: "@biomejs/biome@npm:2.5.4"
   dependencies:
-    "@biomejs/cli-darwin-arm64": "npm:2.5.3"
-    "@biomejs/cli-darwin-x64": "npm:2.5.3"
-    "@biomejs/cli-linux-arm64": "npm:2.5.3"
-    "@biomejs/cli-linux-arm64-musl": "npm:2.5.3"
-    "@biomejs/cli-linux-x64": "npm:2.5.3"
-    "@biomejs/cli-linux-x64-musl": "npm:2.5.3"
-    "@biomejs/cli-win32-arm64": "npm:2.5.3"
-    "@biomejs/cli-win32-x64": "npm:2.5.3"
+    "@biomejs/cli-darwin-arm64": "npm:2.5.4"
+    "@biomejs/cli-darwin-x64": "npm:2.5.4"
+    "@biomejs/cli-linux-arm64": "npm:2.5.4"
+    "@biomejs/cli-linux-arm64-musl": "npm:2.5.4"
+    "@biomejs/cli-linux-x64": "npm:2.5.4"
+    "@biomejs/cli-linux-x64-musl": "npm:2.5.4"
+    "@biomejs/cli-win32-arm64": "npm:2.5.4"
+    "@biomejs/cli-win32-x64": "npm:2.5.4"
   dependenciesMeta:
     "@biomejs/cli-darwin-arm64":
       optional: true
@@ -211,62 +211,62 @@ __metadata:
       optional: true
   bin:
     biome: bin/biome
-  checksum: 10c0/217e6d54e610dc64a5029cc3748a7faec226cce4399cc76bea4c751c171dcb2254996fc1ad6e345f220e7dd0271f419b7a3e8ecc9d826c566b653d7389350afc
+  checksum: 10c0/a46639cba046fb6c19ab2e02257ddda696bdda7bb12e0ad696286074540ed0d6b395258f8711babb439b04d0659ce52b05716a8da1914cb7512a9d43c02118d8
   languageName: node
   linkType: hard
 
-"@biomejs/cli-darwin-arm64@npm:2.5.3":
-  version: 2.5.3
-  resolution: "@biomejs/cli-darwin-arm64@npm:2.5.3"
+"@biomejs/cli-darwin-arm64@npm:2.5.4":
+  version: 2.5.4
+  resolution: "@biomejs/cli-darwin-arm64@npm:2.5.4"
   conditions: os=darwin & cpu=arm64
   languageName: node
   linkType: hard
 
-"@biomejs/cli-darwin-x64@npm:2.5.3":
-  version: 2.5.3
-  resolution: "@biomejs/cli-darwin-x64@npm:2.5.3"
+"@biomejs/cli-darwin-x64@npm:2.5.4":
+  version: 2.5.4
+  resolution: "@biomejs/cli-darwin-x64@npm:2.5.4"
   conditions: os=darwin & cpu=x64
   languageName: node
   linkType: hard
 
-"@biomejs/cli-linux-arm64-musl@npm:2.5.3":
-  version: 2.5.3
-  resolution: "@biomejs/cli-linux-arm64-musl@npm:2.5.3"
+"@biomejs/cli-linux-arm64-musl@npm:2.5.4":
+  version: 2.5.4
+  resolution: "@biomejs/cli-linux-arm64-musl@npm:2.5.4"
   conditions: os=linux & cpu=arm64 & libc=musl
   languageName: node
   linkType: hard
 
-"@biomejs/cli-linux-arm64@npm:2.5.3":
-  version: 2.5.3
-  resolution: "@biomejs/cli-linux-arm64@npm:2.5.3"
+"@biomejs/cli-linux-arm64@npm:2.5.4":
+  version: 2.5.4
+  resolution: "@biomejs/cli-linux-arm64@npm:2.5.4"
   conditions: os=linux & cpu=arm64 & libc=glibc
   languageName: node
   linkType: hard
 
-"@biomejs/cli-linux-x64-musl@npm:2.5.3":
-  version: 2.5.3
-  resolution: "@biomejs/cli-linux-x64-musl@npm:2.5.3"
+"@biomejs/cli-linux-x64-musl@npm:2.5.4":
+  version: 2.5.4
+  resolution: "@biomejs/cli-linux-x64-musl@npm:2.5.4"
   conditions: os=linux & cpu=x64 & libc=musl
   languageName: node
   linkType: hard
 
-"@biomejs/cli-linux-x64@npm:2.5.3":
-  version: 2.5.3
-  resolution: "@biomejs/cli-linux-x64@npm:2.5.3"
+"@biomejs/cli-linux-x64@npm:2.5.4":
+  version: 2.5.4
+  resolution: "@biomejs/cli-linux-x64@npm:2.5.4"
   conditions: os=linux & cpu=x64 & libc=glibc
   languageName: node
   linkType: hard
 
-"@biomejs/cli-win32-arm64@npm:2.5.3":
-  version: 2.5.3
-  resolution: "@biomejs/cli-win32-arm64@npm:2.5.3"
+"@biomejs/cli-win32-arm64@npm:2.5.4":
+  version: 2.5.4
+  resolution: "@biomejs/cli-win32-arm64@npm:2.5.4"
   conditions: os=win32 & cpu=arm64
   languageName: node
   linkType: hard
 
-"@biomejs/cli-win32-x64@npm:2.5.3":
-  version: 2.5.3
-  resolution: "@biomejs/cli-win32-x64@npm:2.5.3"
+"@biomejs/cli-win32-x64@npm:2.5.4":
+  version: 2.5.4
+  resolution: "@biomejs/cli-win32-x64@npm:2.5.4"
   conditions: os=win32 & cpu=x64
   languageName: node
   linkType: hard
@@ -2774,7 +2774,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "rescript@workspace:."
   dependencies:
-    "@biomejs/biome": "npm:2.5.3"
+    "@biomejs/biome": "npm:2.5.4"
     "@rescript/darwin-arm64": "workspace:packages/@rescript/darwin-arm64"
     "@rescript/darwin-x64": "workspace:packages/@rescript/darwin-x64"
     "@rescript/linux-arm64": "workspace:packages/@rescript/linux-arm64"
