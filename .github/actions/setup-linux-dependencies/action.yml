@@ -4,9 +4,108 @@ description: Install and cache the system packages required to build ReScript.
 runs:
   using: composite
   steps:
-    - name: Install system dependencies
-      uses: awalsh128/cache-apt-pkgs-action@v1.4.3
+    # This is a small, repository-specific version of the filesystem cache used
+    # by awalsh128/cache-apt-pkgs-action@v1.4.3. Restoring the installed files is
+    # considerably faster than downloading and installing the .deb files again.
+    - name: Resolve package versions
+      id: packages
+      shell: bash
+      env:
+        # Dependencies required by setup-ocaml, plus cmake for OPAM. The
+        # multilib packages are only available on x64 runners.
+        PACKAGES: >-
+          bubblewrap musl-tools rsync cmake
+          ${{ runner.arch == 'X64' && 'g++-multilib gcc-multilib' || '' }}
+        CACHE_VERSION: v5
+      run: |
+        set -euo pipefail
+
+        read -ra packages <<< "$PACKAGES"
+        mapfile -t packages < <(printf '%s\n' "${packages[@]}" | sort -u)
+
+        resolved_packages=()
+        for package in "${packages[@]}"; do
+          version="$(apt-cache policy "$package" | awk '/Candidate:/ { print $2; exit }')"
+          if [[ -z "$version" || "$version" == "(none)" ]]; then
+            echo "Unable to resolve an APT candidate for $package" >&2
+            exit 1
+          fi
+          resolved_packages+=("$package=$version")
+        done
+
+        cache_key="$({
+          printf '%s\n' "$CACHE_VERSION"
+          (. /etc/os-release; printf '%s\n' "$ID" "$VERSION_ID")
+          dpkg --print-architecture
+          printf '%s\n' "${resolved_packages[@]}"
+        } | sha256sum | cut -d' ' -f1)"
+
+        cache_dir="$RUNNER_TEMP/cache-apt-pkgs"
+        mkdir -p "$cache_dir"
+        printf '%s\n' "${resolved_packages[@]}" > "$cache_dir/requested-packages.txt"
+        echo "cache-dir=$cache_dir" >> "$GITHUB_OUTPUT"
+        echo "cache-key=$cache_key" >> "$GITHUB_OUTPUT"
+
+    - name: Restore system dependencies
+      id: cache
+      uses: actions/cache/restore@v6
       with:
-        # Dependencies required by setup-ocaml, plus cmake for OPAM.
-        packages: bubblewrap darcs g++-multilib gcc-multilib mercurial musl-tools rsync cmake
-        version: v4
+        path: ${{ steps.packages.outputs.cache-dir }}
+        key: cache-apt-pkgs-${{ runner.os }}-${{ steps.packages.outputs.cache-key }}
+
+    - name: Restore cached system dependencies
+      if: steps.cache.outputs.cache-hit == 'true'
+      shell: bash
+      env:
+        CACHE_DIR: ${{ steps.packages.outputs.cache-dir }}
+      run: sudo tar -xf "$CACHE_DIR/packages.tar" -C /
+
+    - name: Install and cache system dependencies
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        CACHE_DIR: ${{ steps.packages.outputs.cache-dir }}
+      run: |
+        set -euo pipefail
+
+        sudo apt-get update
+        mapfile -t packages < <(cut -d= -f1 "$CACHE_DIR/requested-packages.txt")
+        sudo DEBIAN_FRONTEND=noninteractive apt-get install --yes \
+          --no-install-recommends --no-upgrade \
+          "${packages[@]}" \
+          | tee "$CACHE_DIR/install.log"
+
+        sed -nE 's/^Unpacking ([^ :]+)(:[^ ]+)? .*\(([^ )]+).*/\1\2/p' \
+          "$CACHE_DIR/install.log" \
+          | sort -u \
+          > "$CACHE_DIR/installed-packages.txt"
+
+        if [[ -s "$CACHE_DIR/installed-packages.txt" ]]; then
+          while IFS= read -r package; do
+            dpkg-query --listfiles "$package"
+          done < "$CACHE_DIR/installed-packages.txt" \
+            | sort -u \
+            | while IFS= read -r path; do
+                if [[ -f "$path" || -L "$path" ]]; then
+                  printf '%s\n' "${path#/}"
+                fi
+              done \
+            | sudo tar -cf "$CACHE_DIR/packages.tar" -C / -T -
+        else
+          # A newer runner image may already contain every requested package.
+          sudo tar -cf "$CACHE_DIR/packages.tar" -T /dev/null
+        fi
+
+    - name: Save system dependencies
+      if: steps.cache.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v6
+      with:
+        path: ${{ steps.packages.outputs.cache-dir }}
+        key: ${{ steps.cache.outputs.cache-primary-key }}
+
+    - name: Clean up system dependency cache
+      if: always()
+      shell: bash
+      env:
+        CACHE_DIR: ${{ steps.packages.outputs.cache-dir }}
+      run: rm -rf "$CACHE_DIR"
