@@ -18,6 +18,7 @@ let for_of_statement =
     J.statement_desc =
       ForOf (None, Ident.create "_for_of", pure_iterable, empty_body);
     comment = None;
+    source_loc = None;
   }
 
 let for_await_of_statement =
@@ -25,6 +26,7 @@ let for_await_of_statement =
     J.statement_desc =
       ForAwaitOf (None, Ident.create "_for_await_of", pure_iterable, empty_body);
     comment = None;
+    source_loc = None;
   }
 
 let record_rest_statement ~source ~field ~rest =
@@ -45,6 +47,7 @@ let function_expression param body =
           directive = None;
         };
     comment = None;
+    source_loc = None;
   }
 
 let transform_expression expression =
@@ -174,7 +177,11 @@ let suites =
                               record_rest_ident = None;
                             };
                           ]
-                          {expression_desc = Object (None, []); comment = None});
+                          {
+                            expression_desc = Object (None, []);
+                            comment = None;
+                            source_loc = None;
+                          });
                    ];
                  exports = [];
                  export_set = Set_ident.empty;

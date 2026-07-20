@@ -299,20 +299,52 @@ js
 
 let (//) = Filename.concat  
 
+let remove_stale_source_map ?(remove_stale_map = true) target_file =
+  if remove_stale_map && not !Clflags.dont_write_files then
+    Misc.remove_file (target_file ^ ".map")
+
+let dump_deps_program_with_source_map ?(remove_stale_map = true) ~target_file
+    ~output_prefix module_system lambda_output chan =
+  let builder =
+    Js_source_map.make ~generated_file:target_file
+      ~source_root:!Js_config.source_map_root
+      ~sources_content:!Js_config.source_map_sources_content
+  in
+  Js_source_map.with_builder builder (fun () ->
+      Js_dump_program.pp_deps_program ~output_prefix module_system lambda_output
+        (Ext_pp.from_channel chan));
+  match !Js_config.source_map with
+  | Linked ->
+    let json = Js_source_map.json builder in
+    output_string chan (Js_source_map.linked_comment ~map_file:(target_file ^ ".map"));
+    Ext_io.write_file (target_file ^ ".map") json
+  | Hidden -> Ext_io.write_file (target_file ^ ".map") (Js_source_map.json builder)
+  | Inline ->
+    output_string chan
+      (Js_source_map.inline_comment ~json:(Js_source_map.json builder));
+    remove_stale_source_map ~remove_stale_map target_file
+  | No_source_map -> ()
+
 let lambda_as_module 
     (lambda_output : J.deps_program)
     (output_prefix : string)
   : unit = 
   let package_info = Js_packages_state.get_packages_info () in 
   if Js_packages_info.is_empty package_info && !Js_config.js_stdout then begin    
-    Js_dump_program.dump_deps_program ~output_prefix Commonjs (lambda_output) stdout
+    match !Js_config.source_map with
+    | Inline ->
+      let target_file =
+        Ext_namespace.change_ext_ns_suffix
+          (Filename.basename output_prefix)
+          Literals.suffix_js
+      in
+      dump_deps_program_with_source_map ~remove_stale_map:false ~target_file
+        ~output_prefix Commonjs lambda_output stdout
+    | _ ->
+      Js_dump_program.dump_deps_program ~output_prefix Commonjs lambda_output
+        stdout
   end else
     Js_packages_info.iter package_info (fun {module_system; path; suffix} -> 
-        let output_chan chan  = 
-          Js_dump_program.dump_deps_program ~output_prefix
-            module_system 
-            (lambda_output)
-            chan in
         let basename =  
           Ext_namespace.change_ext_ns_suffix (Filename.basename output_prefix) suffix
         in
@@ -322,6 +354,16 @@ let lambda_as_module
            basename
            (* #913 only generate little-case js file *)
           ) in
+        let output_chan chan =
+          match !Js_config.source_map with
+          | No_source_map ->
+            Js_dump_program.dump_deps_program ~output_prefix module_system
+              lambda_output chan;
+            remove_stale_source_map target_file
+          | Linked | Inline | Hidden ->
+            dump_deps_program_with_source_map ~target_file ~output_prefix
+              module_system lambda_output chan
+        in
         (if not !Clflags.dont_write_files then 
            Ext_pervasives.with_file_as_chan
              target_file output_chan );

@@ -18,6 +18,8 @@
 
 #### :rocket: New Feature
 
+- Add source map support with linked, inline, and hidden modes. https://github.com/rescript-lang/rescript/pull/8393
+
 #### :bug: Bug fix
 
 #### :memo: Documentation

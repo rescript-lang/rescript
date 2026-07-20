@@ -174,4 +174,6 @@ val break_ : ?label:J.label -> unit -> t
 
 val continue_ : ?label:J.label -> unit -> t
 
+val debugger_stmt : ?comment:string -> unit -> t
+
 val debugger_block : t list

@@ -251,6 +251,7 @@ and case_clause = {
   should_break: bool;
   (* true means break *)
   comment: string option;
+  source_loc: Location.t option;
 }
 
 and string_clause = Ast_untagged_variants.tag_type * case_clause
@@ -295,8 +296,17 @@ and statement_desc =
   | Try of block * (exception_ident * block) option * block option
   | Debugger
 
-and expression = {expression_desc: expression_desc; comment: string option}
-and statement = {statement_desc: statement_desc; comment: string option}
+and expression = {
+  expression_desc: expression_desc;
+  comment: string option;
+  source_loc: Location.t option;
+}
+
+and statement = {
+  statement_desc: statement_desc;
+  comment: string option;
+  source_loc: Location.t option;
+}
 
 and variable_declaration = {
   ident: ident;

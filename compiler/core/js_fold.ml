@@ -201,7 +201,12 @@ class fold =
       _self#expression
 
     method case_clause : case_clause -> 'self_type =
-      fun {switch_body = _x0; should_break = _x1; comment = _x2} ->
+      fun {
+            switch_body = _x0;
+            should_break = _x1;
+            comment = _x2;
+            source_loc = _x3;
+          } ->
         let _self = _self#block _x0 in
         _self
 
@@ -287,12 +292,12 @@ class fold =
       | Debugger -> _self
 
     method expression : expression -> 'self_type =
-      fun {expression_desc = _x0; comment = _x1} ->
+      fun {expression_desc = _x0; comment = _x1; source_loc = _x2} ->
         let _self = _self#expression_desc _x0 in
         _self
 
     method statement : statement -> 'self_type =
-      fun {statement_desc = _x0; comment = _x1} ->
+      fun {statement_desc = _x0; comment = _x1; source_loc = _x2} ->
         let _self = _self#statement_desc _x0 in
         _self
 

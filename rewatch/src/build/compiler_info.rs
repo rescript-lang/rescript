@@ -18,6 +18,7 @@ struct CompilerInfoFile {
     bsc_path: String,
     bsc_hash: String,
     rescript_config_hash: String,
+    source_map_args: Vec<String>,
     runtime_path: String,
     generated_at: String,
 }
@@ -34,6 +35,7 @@ fn get_rescript_config_hash(package: &packages::Package) -> Option<String> {
 pub fn verify_compiler_info(
     packages: &AHashMap<String, packages::Package>,
     compiler: &CompilerInfo,
+    source_map_args: &[String],
 ) -> CompilerCheckResult {
     let mismatched_packages = packages
         .values()
@@ -96,6 +98,15 @@ pub fn verify_compiler_info(
                 );
                 mismatch = true;
             }
+            if parsed.source_map_args != source_map_args {
+                log::debug!(
+                    "compiler-info mismatch for {}: source_map_args changed (stored={:?}, current={:?})",
+                    package.name,
+                    parsed.source_map_args,
+                    source_map_args
+                );
+                mismatch = true;
+            }
 
             mismatch
         })
@@ -121,6 +132,9 @@ pub fn write_compiler_info(build_state: &BuildCommandState) {
         .runtime_path
         .to_string_lossy()
         .to_string();
+    let source_map_args = build_state
+        .get_root_config()
+        .get_source_map_args(build_state.source_map_command);
     // derive version from the crate version
     let version = env!("CARGO_PKG_VERSION").to_string();
     let generated_at = crate::helpers::get_system_time().to_string();
@@ -132,6 +146,7 @@ pub fn write_compiler_info(build_state: &BuildCommandState) {
         bsc_path: &'a str,
         bsc_hash: &'a str,
         rescript_config_hash: String,
+        source_map_args: &'a [String],
         runtime_path: &'a str,
         generated_at: &'a str,
     }
@@ -143,6 +158,7 @@ pub fn write_compiler_info(build_state: &BuildCommandState) {
                 bsc_path: &bsc_path,
                 bsc_hash: &bsc_hash,
                 rescript_config_hash: rescript_config_hash.to_hex().to_string(),
+                source_map_args: &source_map_args,
                 runtime_path: &runtime_path,
                 generated_at: &generated_at,
             };
@@ -204,4 +220,113 @@ pub fn write_compiler_info(build_state: &BuildCommandState) {
             }
         }
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::build::packages::{Namespace, Package};
+    use crate::config;
+    use ahash::{AHashMap, AHashSet};
+    use serde_json::json;
+    use std::fs;
+    use std::path::Path;
+    use tempfile::TempDir;
+
+    fn test_compiler(root: &Path) -> CompilerInfo {
+        CompilerInfo {
+            bsc_path: root.join("bsc"),
+            bsc_hash: blake3::hash(b"test-bsc"),
+            runtime_path: root.join("runtime"),
+        }
+    }
+
+    fn test_package(root: &Path, name: &str) -> Package {
+        let package_path = root.join(name);
+        fs::create_dir_all(&package_path).expect("package directory should be created");
+        let config_path = package_path.join("rescript.json");
+        fs::write(&config_path, format!(r#"{{"name":"{name}"}}"#)).expect("rescript.json should be written");
+
+        Package {
+            name: name.to_string(),
+            config: config::tests::create_config(config::tests::CreateConfigArgs {
+                name: name.to_string(),
+                bs_deps: vec![],
+                build_dev_deps: vec![],
+                allowed_dependents: None,
+                path: config_path,
+            }),
+            source_folders: AHashSet::new(),
+            source_files: None,
+            namespace: Namespace::NoNamespace,
+            modules: None,
+            path: package_path,
+            dirs: None,
+            gentype_dirs: None,
+            is_local_dep: true,
+            is_root: false,
+        }
+    }
+
+    fn write_test_compiler_info(package: &Package, compiler: &CompilerInfo, source_map_args: Vec<&str>) {
+        fs::create_dir_all(package.get_build_path()).expect("build directory should be created");
+        fs::create_dir_all(package.get_ocaml_build_path()).expect("ocaml build directory should be created");
+
+        let rescript_config_hash =
+            get_rescript_config_hash(package).expect("rescript config hash should be available");
+        let contents = json!({
+            "version": env!("CARGO_PKG_VERSION"),
+            "bsc_path": compiler.bsc_path.to_string_lossy().to_string(),
+            "bsc_hash": compiler.bsc_hash.to_hex().to_string(),
+            "rescript_config_hash": rescript_config_hash,
+            "source_map_args": source_map_args,
+            "runtime_path": compiler.runtime_path.to_string_lossy().to_string(),
+            "generated_at": "test",
+        });
+
+        fs::write(
+            package.get_compiler_info_path(),
+            serde_json::to_string_pretty(&contents).expect("compiler info should serialize"),
+        )
+        .expect("compiler info should be written");
+    }
+
+    fn packages_map(package: Package) -> AHashMap<String, Package> {
+        let mut packages = AHashMap::new();
+        packages.insert(package.name.clone(), package);
+        packages
+    }
+
+    #[test]
+    fn verify_compiler_info_keeps_package_when_source_map_args_match() {
+        let temp_dir = TempDir::new().expect("temp dir should be created");
+        let compiler = test_compiler(temp_dir.path());
+        let package = test_package(temp_dir.path(), "dep");
+        let build_path = package.get_build_path();
+        let source_map_args = vec!["-bs-source-map".to_string(), "linked".to_string()];
+        write_test_compiler_info(&package, &compiler, vec!["-bs-source-map", "linked"]);
+
+        let result = verify_compiler_info(&packages_map(package), &compiler, &source_map_args);
+
+        assert!(matches!(result, CompilerCheckResult::SameCompilerAsLastRun));
+        assert!(build_path.exists());
+    }
+
+    #[test]
+    fn verify_compiler_info_cleans_package_when_source_map_args_change() {
+        let temp_dir = TempDir::new().expect("temp dir should be created");
+        let compiler = test_compiler(temp_dir.path());
+        let package = test_package(temp_dir.path(), "dep");
+        let build_path = package.get_build_path();
+        let source_map_args = vec!["-bs-source-map".to_string(), "linked".to_string()];
+        write_test_compiler_info(&package, &compiler, vec!["-bs-source-map", "false"]);
+
+        let result = verify_compiler_info(&packages_map(package), &compiler, &source_map_args);
+
+        assert!(matches!(
+            result,
+            CompilerCheckResult::CleanedPackagesDueToCompiler
+        ));
+        assert!(!build_path.exists());
+    }
 }

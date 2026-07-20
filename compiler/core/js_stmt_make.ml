@@ -26,12 +26,15 @@ module E = Js_exp_make
 
 type t = J.statement
 
-let return_stmt ?comment e : t = {statement_desc = Return e; comment}
+let return_stmt ?comment e : t =
+  {statement_desc = Return e; comment; source_loc = None}
 
-let empty_stmt : t = {statement_desc = Block []; comment = None}
+let empty_stmt : t =
+  {statement_desc = Block []; comment = None; source_loc = None}
 
 (* let empty_block : J.block = [] *)
-let throw_stmt ?comment v : t = {statement_desc = Throw v; comment}
+let throw_stmt ?comment v : t =
+  {statement_desc = Throw v; comment; source_loc = None}
 
 (* avoid nested block *)
 let rec block ?comment (b : J.block) : t =
@@ -39,7 +42,7 @@ let rec block ?comment (b : J.block) : t =
   | [{statement_desc = Block bs}] -> block bs
   | [b] -> b
   | [] -> empty_stmt
-  | _ -> {statement_desc = Block b; comment}
+  | _ -> {statement_desc = Block b; comment; source_loc = None}
 
 (* It's a statement, we can discard some values *)
 let rec exp ?comment (e : E.t) : t =
@@ -50,7 +53,7 @@ let rec exp ?comment (e : E.t) : t =
   | Number _ | Undefined _ -> block []
   (* TODO: we can do more *)
   (* | _ when is_pure e ->  block [] *)
-  | _ -> {statement_desc = Exp e; comment}
+  | _ -> {statement_desc = Exp e; comment; source_loc = None}
 
 let declare_variable ?comment ?ident_info ~kind (ident : Ident.t) : t =
   let property : J.property = kind in
@@ -62,6 +65,7 @@ let declare_variable ?comment ?ident_info ~kind (ident : Ident.t) : t =
   {
     statement_desc = Variable {ident; value = None; property; ident_info};
     comment;
+    source_loc = None;
   }
 
 let define_variable ?comment ?ident_info ~kind (v : Ident.t)
@@ -79,6 +83,7 @@ let define_variable ?comment ?ident_info ~kind (v : Ident.t)
       statement_desc =
         Variable {ident = v; value = Some exp; property; ident_info};
       comment;
+      source_loc = None;
     }
 
 (* let alias_variable ?comment  ~exp (v:Ident.t)  : t=
@@ -86,7 +91,7 @@ let define_variable ?comment ?ident_info ~kind (v : Ident.t)
      Variable {
        ident = v; value = Some exp; property = Alias;
        ident_info = {used_stats = NA }   };
-   comment} *)
+   comment; source_loc = None} *)
 
 let int_switch ?(comment : string option)
     ?(declaration : (J.property * Ident.t) option) ?(default : J.block option)
@@ -129,9 +134,18 @@ let int_switch ?(comment : string option)
       block
         [
           declare_variable ?comment ~kind did;
-          {statement_desc = J.Int_switch (e, clauses, default); comment};
+          {
+            statement_desc = J.Int_switch (e, clauses, default);
+            comment;
+            source_loc = None;
+          };
         ]
-    | None -> {statement_desc = J.Int_switch (e, clauses, default); comment})
+    | None ->
+      {
+        statement_desc = J.Int_switch (e, clauses, default);
+        comment;
+        source_loc = None;
+      })
 
 let string_switch ?(comment : string option)
     ?(declaration : (J.property * Ident.t) option) ?(default : J.block option)
@@ -179,9 +193,18 @@ let string_switch ?(comment : string option)
       block
         [
           declare_variable ?comment ~kind did;
-          {statement_desc = String_switch (e, clauses, default); comment};
+          {
+            statement_desc = String_switch (e, clauses, default);
+            comment;
+            source_loc = None;
+          };
         ]
-    | None -> {statement_desc = String_switch (e, clauses, default); comment})
+    | None ->
+      {
+        statement_desc = String_switch (e, clauses, default);
+        comment;
+        source_loc = None;
+      })
 
 let rec block_last_is_return_throw_or_continue (x : J.block) =
   match x with
@@ -245,9 +268,17 @@ let if_ ?comment ?declaration ?else_ (e : J.expression) (then_ : J.block) : t =
           [{statement_desc = Return ret_ifnot; _}] ) ->
         return_stmt (E.econd e ret_ifso ret_ifnot)
       | _, [{statement_desc = Return _}] ->
-        block ({statement_desc = If (E.not e, ifnot, []); comment} :: ifso)
+        block
+          ({
+             statement_desc = If (E.not e, ifnot, []);
+             comment;
+             source_loc = None;
+           }
+          :: ifso)
       | _, _ when block_last_is_return_throw_or_continue ifso ->
-        block ({statement_desc = If (e, ifso, []); comment} :: ifnot)
+        block
+          ({statement_desc = If (e, ifso, []); comment; source_loc = None}
+          :: ifnot)
       | ( [
             {
               statement_desc =
@@ -299,7 +330,7 @@ let if_ ?comment ?declaration ?else_ (e : J.expression) (then_ : J.block) : t =
       | _, [{statement_desc = If (pred1, ifso1, ifnot1)}]
         when Js_analyzer.eq_block ifso ifnot1 ->
         aux ?comment (E.or_ e (E.not pred1)) ifso ifso1
-      | _ -> {statement_desc = If (e, ifso, ifnot); comment})
+      | _ -> {statement_desc = If (e, ifso, ifnot); comment; source_loc = None})
   in
   let if_block =
     aux ?comment e then_
@@ -312,10 +343,10 @@ let if_ ?comment ?declaration ?else_ (e : J.expression) (then_ : J.block) : t =
   | false, Some (kind, id) -> block (declare_variable ~kind id :: [if_block])
 
 let assign ?comment id e : t =
-  {statement_desc = J.Exp (E.assign (E.var id) e); comment}
+  {statement_desc = J.Exp (E.assign (E.var id) e); comment; source_loc = None}
 
 let while_ ?comment ?label (e : E.t) (st : J.block) : t =
-  {statement_desc = While (label, e, st); comment}
+  {statement_desc = While (label, e, st); comment; source_loc = None}
 
 let for_ ?comment ?label for_ident_expression finish_ident_expression id
     direction (b : J.block) : t =
@@ -324,19 +355,33 @@ let for_ ?comment ?label for_ident_expression finish_ident_expression id
       ForRange
         (label, for_ident_expression, finish_ident_expression, id, direction, b);
     comment;
+    source_loc = None;
   }
 
 let for_of ?comment ?label iterable_expression id (b : J.block) : t =
-  {statement_desc = ForOf (label, id, iterable_expression, b); comment}
+  {
+    statement_desc = ForOf (label, id, iterable_expression, b);
+    comment;
+    source_loc = None;
+  }
 
 let for_await_of ?comment ?label iterable_expression id (b : J.block) : t =
-  {statement_desc = ForAwaitOf (label, id, iterable_expression, b); comment}
+  {
+    statement_desc = ForAwaitOf (label, id, iterable_expression, b);
+    comment;
+    source_loc = None;
+  }
 
 let try_ ?comment ?with_ ?finally body : t =
-  {statement_desc = Try (body, with_, finally); comment}
+  {statement_desc = Try (body, with_, finally); comment; source_loc = None}
 
-let break_ ?label () : t = {statement_desc = Break label; comment = None}
+let break_ ?label () : t =
+  {statement_desc = Break label; comment = None; source_loc = None}
 
-let continue_ ?label () : t = {statement_desc = Continue label; comment = None}
+let continue_ ?label () : t =
+  {statement_desc = Continue label; comment = None; source_loc = None}
 
-let debugger_block : t list = [{statement_desc = Debugger; comment = None}]
+let debugger_stmt ?comment () : t =
+  {statement_desc = Debugger; comment; source_loc = None}
+
+let debugger_block : t list = [debugger_stmt ()]

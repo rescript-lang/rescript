@@ -205,9 +205,10 @@ let finish_ident_expression : finish_ident_expression fn =
  fun _self arg -> _self.expression _self arg
 
 let case_clause : case_clause fn =
- fun _self {switch_body = _x0; should_break = _x1; comment = _x2} ->
+ fun _self
+     {switch_body = _x0; should_break = _x1; comment = _x2; source_loc = _x3} ->
   let _x0 = _self.block _self _x0 in
-  {switch_body = _x0; should_break = _x1; comment = _x2}
+  {switch_body = _x0; should_break = _x1; comment = _x2; source_loc = _x3}
 
 let string_clause : string_clause fn =
  fun _self (_x0, _x1) ->
@@ -289,14 +290,14 @@ let statement_desc : statement_desc fn =
   | Debugger as v -> v
 
 let expression : expression fn =
- fun _self {expression_desc = _x0; comment = _x1} ->
+ fun _self {expression_desc = _x0; comment = _x1; source_loc = _x2} ->
   let _x0 = expression_desc _self _x0 in
-  {expression_desc = _x0; comment = _x1}
+  {expression_desc = _x0; comment = _x1; source_loc = _x2}
 
 let statement : statement fn =
- fun _self {statement_desc = _x0; comment = _x1} ->
+ fun _self {statement_desc = _x0; comment = _x1; source_loc = _x2} ->
   let _x0 = statement_desc _self _x0 in
-  {statement_desc = _x0; comment = _x1}
+  {statement_desc = _x0; comment = _x1; source_loc = _x2}
 
 let variable_declaration : variable_declaration fn =
  fun _self {ident = _x0; value = _x1; property = _x2; ident_info = _x3} ->

@@ -5,7 +5,7 @@
   (backend bisect_ppx))
  (flags
   (:standard -w +a-4-9-27-30-40-41-42-48-70))
- (libraries depends ext flow_parser frontend gentype))
+ (libraries depends ext flow_parser frontend gentype yojson))
 
 (rule
  (target js_name_of_module_id.ml)
