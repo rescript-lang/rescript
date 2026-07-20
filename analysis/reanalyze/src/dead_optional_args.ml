@@ -2,25 +2,6 @@ open Dead_common
 
 let active () = true
 
-let add_function_reference ~config ~decls ~cross_file ~(loc_from : Location.t)
-    ~(loc_to : Location.t) =
-  if active () then
-    let pos_to = loc_to.loc_start in
-    let pos_from = loc_from.loc_start in
-    (* Check if target has optional args - for filtering and debug logging *)
-    let should_add =
-      match Declarations.find_opt_builder decls pos_to with
-      | Some {decl_kind = Value {optional_args}} ->
-        not (Optional_args.is_empty optional_args)
-      | _ -> false
-    in
-    if should_add then (
-      if config.Dce_config.cli.debug then
-        Log_.item "OptionalArgs.addFunctionReference %s %s@."
-          (pos_from |> Pos.to_string)
-          (pos_to |> Pos.to_string);
-      Cross_file_items.add_function_reference cross_file ~pos_from ~pos_to)
-
 let rec has_optional_args (texpr : Types.type_expr) =
   match texpr.desc with
   | _ when not (active ()) -> false
@@ -30,6 +11,17 @@ let rec has_optional_args (texpr : Types.type_expr) =
   | Tsubst t -> has_optional_args t
   | _ -> false
 
+let add_function_reference ~config ~cross_file ~(loc_from : Location.t)
+    ~(loc_to : Location.t) ~type_from ~type_to =
+  if has_optional_args type_from && has_optional_args type_to then (
+    let pos_to = loc_to.loc_start in
+    let pos_from = loc_from.loc_start in
+    if config.Dce_config.cli.debug then
+      Log_.item "OptionalArgs.addFunctionReference %s %s@."
+        (pos_from |> Pos.to_string)
+        (pos_to |> Pos.to_string);
+    Cross_file_items.add_function_reference cross_file ~pos_from ~pos_to)
+
 let rec from_type_expr (texpr : Types.type_expr) =
   match texpr.desc with
   | _ when not (active ()) -> []
@@ -38,6 +30,18 @@ let rec from_type_expr (texpr : Types.type_expr) =
   | Tlink t -> from_type_expr t
   | Tsubst t -> from_type_expr t
   | _ -> []
+
+let rec from_type_expr_with_arity (texpr : Types.type_expr) arity =
+  if arity <= 0 then []
+  else
+    match texpr.desc with
+    | _ when not (active ()) -> []
+    | Tarrow ({lbl = Optional {txt = s}}, t_to, _, _) ->
+      s :: from_type_expr_with_arity t_to (arity - 1)
+    | Tarrow (_, t_to, _, _) -> from_type_expr_with_arity t_to (arity - 1)
+    | Tlink t -> from_type_expr_with_arity t arity
+    | Tsubst t -> from_type_expr_with_arity t arity
+    | _ -> []
 
 let add_references ~config ~cross_file ~(loc_from : Location.t)
     ~(loc_to : Location.t) ~(binding : Location.t) ~path
@@ -59,10 +63,12 @@ let add_references ~config ~cross_file ~(loc_from : Location.t)
 
 (** Check for optional args issues. Returns issues instead of logging.
     Uses optional_args_state map for final computed state. *)
-let check ~optional_args_state ~ann_store ~config:_ decl : Issue.t list =
+let check ~optional_args_state ~optional_arg_value_escapes ~ann_store ~config:_
+    decl : Issue.t list =
   match decl with
-  | {Decl.decl_kind = Value {optional_args}}
+  | {Decl.decl_kind = Value {reports_optional_args = true; optional_args}}
     when active ()
+         && (not (Pos_set.mem decl.pos optional_arg_value_escapes))
          && not
               (Annotation_store.is_annotated_gentype_or_live ann_store decl.pos)
     ->

@@ -124,11 +124,13 @@ let addDeclaration_ ~config ~decls ~(file : File_context.t) ?pos_end ?pos_start
     Declarations.add decls pos decl)
 
 let add_value_declaration ~config ~decls ~file ?(is_toplevel = true)
-    ~(loc : Location.t) ~module_loc ?(optional_args = Optional_args.empty) ~path
-    ~side_effects name =
+    ?(reports_optional_args = false) ~(loc : Location.t) ~module_loc
+    ?(optional_args = Optional_args.empty) ~path ~side_effects name =
   name
   |> addDeclaration_ ~config ~decls ~file
-       ~decl_kind:(Value {is_toplevel; optional_args; side_effects})
+       ~decl_kind:
+         (Value
+            {is_toplevel; reports_optional_args; optional_args; side_effects})
        ~loc ~module_loc ~path
 
 (** Create a dead code issue. Pure - no side effects. *)

@@ -2,6 +2,14 @@
 
 open Dead_common
 
+(** Identity avoids conflating generated expressions that share source locations. *)
+module Expression_table = Hashtbl.Make (struct
+  type t = Typedtree.expression
+
+  let equal = ( == )
+  let hash (e : t) = Hashtbl.hash e.exp_loc
+end)
+
 let check_any_value_binding_with_no_side_effects ~config ~decls ~file
     ~(module_path : Module_path.t)
     ({vb_pat = {pat_desc}; vb_expr = expr; vb_loc = loc} :
@@ -27,13 +35,27 @@ let collect_value_binding ~config ~decls ~file ~(current_binding : Location.t)
         ({pat_desc = Tpat_any}, id, {loc = {loc_start; loc_ghost} as loc})
       when (not loc_ghost) && not vb.vb_loc.loc_ghost ->
       let name = Ident.name id |> Name.create ~is_interface:false in
-      let optional_args =
-        vb.vb_expr.exp_type |> Dead_optional_args.from_type_expr
-        |> Optional_args.from_list
+      let optional_args, reports_optional_args =
+        match vb.vb_expr.exp_desc with
+        | Texp_function {arity = Some arity; _} ->
+          ( vb.vb_expr.exp_type
+            |> (fun texpr ->
+            Dead_optional_args.from_type_expr_with_arity texpr arity)
+            |> Optional_args.from_list,
+            true )
+        | Texp_function _ ->
+          ( vb.vb_expr.exp_type |> Dead_optional_args.from_type_expr
+            |> Optional_args.from_list,
+            true )
+        | _ ->
+          ( vb.vb_expr.exp_type |> Dead_optional_args.from_type_expr
+            |> Optional_args.from_list,
+            false )
       in
       let exists =
         match Declarations.find_opt_builder decls loc_start with
         | Some {decl_kind = Value r} ->
+          r.reports_optional_args <- reports_optional_args;
           r.optional_args <- optional_args;
           true
         | _ -> false
@@ -50,7 +72,8 @@ let collect_value_binding ~config ~decls ~file ~(current_binding : Location.t)
          let side_effects = Side_effects.check_expr vb.vb_expr in
          name
          |> add_value_declaration ~config ~decls ~file ~is_toplevel ~loc
-              ~module_loc:module_path.loc ~optional_args ~path ~side_effects);
+              ~module_loc:module_path.loc ~reports_optional_args ~optional_args
+              ~path ~side_effects);
       (match Declarations.find_opt_builder decls loc_start with
       | None -> ()
       | Some decl ->
@@ -109,12 +132,19 @@ let process_optional_args ~config ~cross_file ~exp_type ~(loc_from : Location.t)
     |> Dead_optional_args.add_references ~config ~cross_file ~loc_from ~loc_to
          ~binding ~path)
 
-let rec collect_expr ~config ~refs ~file_deps ~cross_file
+let rec collect_expr ~config ~refs ~file_deps ~cross_file ~direct_callees
     ~(last_binding : Location.t) super self (e : Typedtree.expression) =
   let loc_from = e.exp_loc in
   let binding = last_binding in
+  let add_optional_arg_value_escape ~val_type pos_from pos_to =
+    if Dead_optional_args.has_optional_args val_type then
+      Cross_file_items.add_optional_arg_value_escape cross_file ~pos_from
+        ~pos_to
+  in
   (match e.exp_desc with
-  | Texp_ident (_path, _, {Types.val_loc = {loc_ghost = false; _} as loc_to}) ->
+  | Texp_ident
+      (_path, _, {Types.val_loc = {loc_ghost = false; _} as loc_to; val_type})
+    ->
     (* if Path.name _path = "rc" then assert false; *)
     if loc_from = loc_to && _path |> Path.name = "emptyArray" then (
       (* Work around lowercase jsx with no children producing an artifact `emptyArray`
@@ -125,9 +155,15 @@ let rec collect_expr ~config ~refs ~file_deps ~cross_file
           (loc_to.loc_start |> Pos.to_string);
       References.add_value_ref refs ~pos_to:loc_to.loc_start
         ~pos_from:Location.none.loc_start)
-    else
+    else (
       add_value_reference ~config ~refs ~file_deps ~binding
-        ~add_file_reference:true ~loc_from ~loc_to
+        ~add_file_reference:true ~loc_from ~loc_to;
+      if not (Expression_table.mem direct_callees e) then
+        let pos_from =
+          if binding = Location.none then loc_from.loc_start
+          else binding.loc_start
+        in
+        add_optional_arg_value_escape ~val_type pos_from loc_to.loc_start)
   | Texp_apply
       {
         funct =
@@ -136,9 +172,10 @@ let rec collect_expr ~config ~refs ~file_deps ~cross_file
               Texp_ident
                 (path, _, {Types.val_loc = {loc_ghost = false; _} as loc_to});
             exp_type;
-          };
+          } as direct_callee;
         args;
       } ->
+    Expression_table.replace direct_callees direct_callee ();
     args
     |> process_optional_args ~config ~cross_file ~exp_type
          ~loc_from:(loc_from : Location.t)
@@ -155,7 +192,7 @@ let rec collect_expr ~config ~refs ~file_deps ~cross_file
                   Texp_ident
                     (path, _, {Types.val_loc = {loc_ghost = false; _} as loc_to});
                 exp_type;
-              };
+              } as direct_callee;
           };
         ],
         {
@@ -180,6 +217,7 @@ let rec collect_expr ~config ~refs ~file_deps ~cross_file
     when Ident.name id_arg = "arg"
          && Ident.name eta_arg = "eta"
          && Path.name id_arg2 = "arg" ->
+    Expression_table.replace direct_callees direct_callee ();
     args
     |> process_optional_args ~config ~cross_file ~exp_type
          ~loc_from:(loc_from : Location.t)
@@ -213,8 +251,8 @@ let rec collect_expr ~config ~refs ~file_deps ~cross_file
              ->
              (* Punned field in OCaml projects has ghost location in expression *)
              let e = {e with exp_loc = {exp_loc with loc_ghost = false}} in
-             collect_expr ~config ~refs ~file_deps ~cross_file ~last_binding
-               super self e
+             collect_expr ~config ~refs ~file_deps ~cross_file ~direct_callees
+               ~last_binding super self e
              |> ignore
            | _ -> ())
   | _ -> ());
@@ -351,13 +389,16 @@ let rec process_signature_item ~config ~decls ~file ~do_types ~do_values
           val_type |> Dead_optional_args.from_type_expr
           |> Optional_args.from_list
         in
+        let reports_optional_args =
+          not (Optional_args.is_empty optional_args)
+        in
 
         (* if Ident.name id = "someValue" then
            Printf.printf "XXX %s\n" (Ident.name id); *)
         Ident.name id
         |> Name.create ~is_interface:false
         |> add_value_declaration ~config ~decls ~file ~loc ~module_loc
-             ~optional_args ~path ~side_effects:false
+             ~reports_optional_args ~optional_args ~path ~side_effects:false
   | Sig_module (id, {Types.md_type = module_type; md_loc = module_loc}, _)
   | Sig_modtype (id, {Types.mtd_type = Some module_type; mtd_loc = module_loc})
     ->
@@ -382,6 +423,7 @@ let rec process_signature_item ~config ~decls ~file ~do_types ~do_values
 (* Traverse the AST *)
 let traverse_structure ~config ~decls ~refs ~file_deps ~cross_file ~file
     ~do_types ~do_externals (structure : Typedtree.structure) : unit =
+  let direct_callees = Expression_table.create 16 in
   let rec create_mapper (last_binding : Location.t)
       (module_path : Module_path.t) =
     let super = Tast_mapper.default in
@@ -391,8 +433,8 @@ let traverse_structure ~config ~decls ~refs ~file_deps ~cross_file ~file
         expr =
           (fun _self e ->
             e
-            |> collect_expr ~config ~refs ~file_deps ~cross_file ~last_binding
-                 super mapper);
+            |> collect_expr ~config ~refs ~file_deps ~cross_file ~direct_callees
+                 ~last_binding super mapper);
         pat =
           (fun _self p ->
             p
@@ -530,25 +572,27 @@ let traverse_structure ~config ~decls ~refs ~file_deps ~cross_file ~file
   mapper.structure mapper structure |> ignore
 
 (* Merge a location's references to another one's *)
-let process_value_dependency ~config ~decls ~refs ~file_deps ~cross_file
+let process_value_dependency ~config ~refs ~file_deps ~cross_file
     ( ({
          val_loc =
            {loc_start = {pos_fname = fn_to} as pos_to; loc_ghost = ghost1} as
            loc_to;
+         val_type = type_to;
        } :
         Types.value_description),
       ({
          val_loc =
            {loc_start = {pos_fname = fn_from} as pos_from; loc_ghost = ghost2}
            as loc_from;
+         val_type = type_from;
        } :
         Types.value_description) ) =
   if (not ghost1) && (not ghost2) && pos_to <> pos_from then (
     let add_file_reference = file_is_implementation_of fn_to fn_from in
     add_value_reference ~config ~refs ~file_deps ~binding:Location.none
       ~add_file_reference ~loc_from ~loc_to;
-    Dead_optional_args.add_function_reference ~config ~decls ~cross_file
-      ~loc_from ~loc_to)
+    Dead_optional_args.add_function_reference ~config ~cross_file ~loc_from
+      ~loc_to ~type_from ~type_to)
 
 let process_structure ~config ~decls ~refs ~file_deps ~cross_file ~file
     ~cmt_value_dependencies ~do_types ~do_externals
@@ -557,5 +601,4 @@ let process_structure ~config ~decls ~refs ~file_deps ~cross_file ~file
     ~do_externals structure;
   let value_dependencies = cmt_value_dependencies |> List.rev in
   value_dependencies
-  |> List.iter
-       (process_value_dependency ~config ~decls ~refs ~file_deps ~cross_file)
+  |> List.iter (process_value_dependency ~config ~refs ~file_deps ~cross_file)

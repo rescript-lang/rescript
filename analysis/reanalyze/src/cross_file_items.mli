@@ -18,12 +18,18 @@ type optional_arg_call = {
 
 type function_ref = {pos_from: Lexing.position; pos_to: Lexing.position}
 
+type optional_arg_value_escape = {
+  pos_from: Lexing.position;
+  pos_to: Lexing.position;
+}
+
 (** {2 Types} *)
 
 type t = {
   exception_refs: exception_ref list;
   optional_arg_calls: optional_arg_call list;
   function_refs: function_ref list;
+  optional_arg_value_escapes: optional_arg_value_escape list;
 }
 (** Immutable cross-file items - for processing after merge *)
 
@@ -49,7 +55,10 @@ val add_optional_arg_call :
 
 val add_function_reference :
   builder -> pos_from:Lexing.position -> pos_to:Lexing.position -> unit
-(** Add a cross-file function reference (for optional args combining). *)
+
+val add_optional_arg_value_escape :
+  builder -> pos_from:Lexing.position -> pos_to:Lexing.position -> unit
+(** Record an optional-arg function used as a first-class value. *)
 
 (** {2 Merge API} *)
 
