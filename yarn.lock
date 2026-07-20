@@ -434,6 +434,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@rescript/core@npm:^1.6.1":
+  version: 1.6.1
+  resolution: "@rescript/core@npm:1.6.1"
+  peerDependencies:
+    rescript: ">=11.1.0"
+  checksum: 10c0/04e7fc14dc050de0a9da8eb0642fb0800bc80c8978ef79aada1823bc2080b47a4d40c1168c63b53642009935342a4feb833fc190a71aa45e83af5d896269b95d
+  languageName: node
+  linkType: hard
+
 "@rescript/darwin-arm64@npm:12.3.0":
   version: 12.3.0
   resolution: "@rescript/darwin-arm64@npm:12.3.0"
@@ -1397,7 +1406,7 @@ __metadata:
     "@rescript/runtime": "npm:12.3.0"
     rescript: "npm:12.3.0"
     vite: "npm:^8.0.14"
-    xote: "npm:6.4.0"
+    xote: "npm:7.0.0"
   languageName: unknown
   linkType: soft
 
@@ -3529,12 +3538,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"xote@npm:6.4.0":
-  version: 6.4.0
-  resolution: "xote@npm:6.4.0"
+"xote@npm:7.0.0":
+  version: 7.0.0
+  resolution: "xote@npm:7.0.0"
   dependencies:
+    "@rescript/core": "npm:^1.6.1"
     rescript-signals: "npm:^3.1.0"
-  checksum: 10c0/80a580e283b9894223d719c9ab2eae97402097d8b5b49b5a2540de5f0f4d40f990e4c858aa387e9b5fc208bcd00b2b5d363511e582d64e09c47404ae521dad5f
+  checksum: 10c0/bf246bae87e38a10c25ddb63c1aa1c32b029e8be4ed64b7605c2aa74de2645db666084d832c8cde4cbe2b822045018ac31c81a792a8e9ca74a8056adce0e65a2
   languageName: node
   linkType: hard
 
