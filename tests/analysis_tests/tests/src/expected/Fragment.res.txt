@@ -2,7 +2,7 @@ Hover src/Fragment.res 6:19
 {
   "contents": {
     "kind": "markdown",
-    "value": "```rescript\nReact.component<SectionHeader.props<React.element>>\n```\n\n---\n\n```\n \n```\n```rescript\ntype React.component<'props> = Jsx.component<'props>\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22React.res%22%2C13%2C0%5D)\n\n\n---\n\n```\n \n```\n```rescript\ntype SectionHeader.props<'children> = {children: 'children}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Fragment.res%22%2C1%2C2%5D)\n\n\n---\n\n```\n \n```\n```rescript\ntype React.element = Jsx.element\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22React.res%22%2C0%2C0%5D)\n"
+    "value": "```rescript\nReact.component<SectionHeader.props<React.element>>\n```\n\n---\n\n```\n \n```\n```rescript\ntype React.component<'props> = Jsx.component<'props>\n```\nGo to: [Type definition](React.res#L14,1)\n\n\n---\n\n```\n \n```\n```rescript\ntype SectionHeader.props<'children> = {children: 'children}\n```\nGo to: [Type definition](Fragment.res#L2,3)\n\n\n---\n\n```\n \n```\n```rescript\ntype React.element = Jsx.element\n```\nGo to: [Type definition](React.res#L1,1)\n"
   }
 }
 
@@ -10,7 +10,7 @@ Hover src/Fragment.res 9:56
 {
   "contents": {
     "kind": "markdown",
-    "value": "```rescript\nReact.component<React.fragmentProps>\n```\n\n---\n\n```\n \n```\n```rescript\ntype React.component<'props> = Jsx.component<'props>\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22React.res%22%2C13%2C0%5D)\n\n\n---\n\n```\n \n```\n```rescript\ntype React.fragmentProps = {children?: element}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22React.res%22%2C42%2C0%5D)\n"
+    "value": "```rescript\nReact.component<React.fragmentProps>\n```\n\n---\n\n```\n \n```\n```rescript\ntype React.component<'props> = Jsx.component<'props>\n```\nGo to: [Type definition](React.res#L14,1)\n\n\n---\n\n```\n \n```\n```rescript\ntype React.fragmentProps = {children?: element}\n```\nGo to: [Type definition](React.res#L43,1)\n"
   }
 }
 

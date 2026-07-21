@@ -4,13 +4,9 @@ let divider = "\n---\n"
 
 type link = {start_pos: Lsp.Types.Position.t; file: string; label: string}
 
-let link_to_command_args link =
-  Printf.sprintf "[\"%s\",%i,%i]" link.file link.start_pos.line
-    link.start_pos.character
-
 let make_goto_command link =
-  Printf.sprintf "[%s](command:rescript-vscode.go_to_location?%s)" link.label
-    (Uri.encode_uri_component (link_to_command_args link))
+  Printf.sprintf "[%s](%s#L%d,%d)" link.label link.file (link.start_pos.line + 1)
+    (link.start_pos.character + 1)
 
 let go_to_definition_text ~env ~pos =
   let start_line, start_col = Pos.of_lexing pos in

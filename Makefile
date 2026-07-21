@@ -100,7 +100,7 @@ clean-rewatch:
 
 COMPILER_SOURCE_DIRS := compiler tests analysis tools
 COMPILER_SOURCES = $(shell find $(COMPILER_SOURCE_DIRS) -type f \( -name '*.ml' -o -name '*.mli' -o -name '*.dune' -o -name dune -o -name dune-project \))
-COMPILER_BIN_NAMES := bsc rescript-editor-analysis rescript-tools
+COMPILER_BIN_NAMES := bsc rescript-editor-analysis rescript-tools rescript-language-server
 COMPILER_EXES := $(addsuffix .exe,$(addprefix $(BIN_DIR)/,$(COMPILER_BIN_NAMES)))
 COMPILER_DUNE_BINS := $(addsuffix $(PLATFORM_EXE_EXT),$(addprefix $(DUNE_BIN_DIR)/,$(COMPILER_BIN_NAMES)))
 
@@ -176,7 +176,25 @@ test-gentype: lib
 test-rewatch: lib
 	./rewatch/tests/suite.sh $(RESCRIPT_EXE)
 
-test-all: test test-gentype test-analysis test-tools test-rewatch
+test-lsp: lib
+	@for dir in tests/lsp_tests/*-workspace/; do \
+			[ -d "$$dir" ] || continue; \
+			echo "Building $${dir%/}..."; \
+			( cd "$$dir" && yarn clean && yarn build ); \
+	done
+	@dune runtest
+	@if [ "$$OS" = "Windows_NT" ]; then \
+		echo "Skipping lsp-tests executable on Windows"; \
+	else \
+		dune exec -- lsp-tests; \
+	fi
+	@if [ -n "$$(git ls-files --modified tests/lsp_tests/**/*.expected)" ]; then \
+    	echo "The lsp_tests snapshot doesn't match. Double check that the output is correct, run 'make test-lsp' and stage the diff"; \
+    	git --no-pager diff tests/lsp_tests/**/*.expected; \
+    	exit 1; \
+    fi \
+
+test-all: test test-gentype test-analysis test-tools test-rewatch test-lsp
 
 # Playground
 

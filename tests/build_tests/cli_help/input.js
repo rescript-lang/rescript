@@ -18,6 +18,7 @@ const cliHelp =
   "  clean          Clean the build artifacts\n" +
   "  format         Format ReScript files\n" +
   "  compiler-args  Print the compiler arguments for a ReScript source file\n" +
+  "  lsp            Start the language server\n" +
   "  help           Print this message or the help of the given subcommand(s)\n" +
   "\n" +
   "Options:\n" +

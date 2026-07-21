@@ -2,7 +2,7 @@ Hover src/Jsx2.resi 1:4
 {
   "contents": {
     "kind": "markdown",
-    "value": "```rescript\nprops<string>\n```\n\n---\n\n```\n \n```\n```rescript\ntype props<'first> = {first: 'first}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Jsx2.resi%22%2C0%2C0%5D)\n"
+    "value": "```rescript\nprops<string>\n```\n\n---\n\n```\n \n```\n```rescript\ntype props<'first> = {first: 'first}\n```\nGo to: [Type definition](Jsx2.resi#L1,1)\n"
   }
 }
 

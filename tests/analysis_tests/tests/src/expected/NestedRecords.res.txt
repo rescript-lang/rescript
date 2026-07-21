@@ -12,7 +12,7 @@ Resolved opens 1 Stdlib
 {
   "contents": {
     "kind": "markdown",
-    "value": "```rescript\noptions\n```\n\n---\n\n```\n \n```\n```rescript\ntype options = {\n  extra: {name: string, superExtra: {age: int}},\n}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22NestedRecords.res%22%2C1%2C0%5D)\n\n\n---\n\n```\n \n```\n```rescript\ntype options.extra = {name: string, superExtra: {age: int}}\n```\n"
+    "value": "```rescript\noptions\n```\n\n---\n\n```\n \n```\n```rescript\ntype options = {\n  extra: {name: string, superExtra: {age: int}},\n}\n```\nGo to: [Type definition](NestedRecords.res#L2,1)\n\n\n---\n\n```\n \n```\n```rescript\ntype options.extra = {name: string, superExtra: {age: int}}\n```\n"
   }
 }
 

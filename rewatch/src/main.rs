@@ -6,7 +6,7 @@ use std::{io::Write, path::Path};
 use rescript::{
     build, cli, cmd, format,
     lock::{LockKind, drop_lock, get_lock_or_exit},
-    telemetry, watcher,
+    lsp, telemetry, watcher,
 };
 
 fn main() {
@@ -112,6 +112,7 @@ fn run_main(otel_enabled: bool) -> i32 {
             code
         }
         cli::Command::Format { stdin, check, files } => exit_code(format::format(stdin, check, files)),
+        cli::Command::Lsp { stdio } => exit_code(lsp::run(stdio)),
     }
 }
 
