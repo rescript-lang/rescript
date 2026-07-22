@@ -931,11 +931,19 @@ and print_mod_type ~state mod_type cmt_tbl =
         if Parens.mod_type_functor_return return_type then add_parens doc
         else doc
       in
+      (* When the functor result is a signature, keep its opening brace on the
+         same line as `=>` instead of breaking onto a new line, mirroring how
+         module-expression functors are printed (see print_mod_functor). *)
+      let arrow_sep =
+        match return_type.pmty_desc with
+        | Pmty_signature _ -> Doc.space
+        | _ -> Doc.line
+      in
       Doc.group
         (Doc.concat
            [
              parameters_doc;
-             Doc.group (Doc.concat [Doc.text " =>"; Doc.line; return_doc]);
+             Doc.group (Doc.concat [Doc.text " =>"; arrow_sep; return_doc]);
            ])
     | Pmty_typeof mod_expr ->
       Doc.concat
