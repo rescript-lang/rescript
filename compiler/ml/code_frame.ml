@@ -37,14 +37,23 @@ let leading_space_count str =
   loop 0 0
 
 let break_long_line max_width line =
-  let rec loop pos accum =
-    if pos = String.length line then accum
+  let line_length = String.length line in
+  let rec find_chunk_end pos remaining_width =
+    if pos = line_length || remaining_width = 0 then pos
     else
-      let chunk_length = min max_width (String.length line - pos) in
-      let chunk = String.sub line pos chunk_length in
-      loop (pos + chunk_length) (chunk :: accum)
+      let char_length =
+        String.get_utf_8_uchar line pos |> Uchar.utf_decode_length
+      in
+      find_chunk_end (pos + char_length) (remaining_width - 1)
   in
-  loop 0 [] |> List.rev
+  let rec loop pos accum =
+    if pos = line_length then List.rev accum
+    else
+      let chunk_end = find_chunk_end pos max_width in
+      let chunk = String.sub line pos (chunk_end - pos) in
+      loop chunk_end (chunk :: accum)
+  in
+  loop 0 []
 
 let filter_mapi f l =
   let rec loop f l i accum =
