@@ -22,7 +22,7 @@
 
 #### :bug: Bug fix
 
-- Fix formatter breaking the opening brace of a functor module type's result signature onto a new line (e.g. `module Make: Pattern => {`). https://github.com/rescript-lang/rescript/pull/PLACEHOLDER_PR
+- Fix formatter breaking the opening brace of a functor module type's result signature onto a new line (e.g. `module Make: Pattern => {`). https://github.com/rescript-lang/rescript/pull/8519
 
 #### :memo: Documentation
 
