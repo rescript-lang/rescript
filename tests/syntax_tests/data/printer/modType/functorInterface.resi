@@ -1,0 +1,17 @@
+module Make: Pattern => {
+  let fmt: event => string
+}
+
+module Curried: (A, B) => {
+  let x: int
+}
+
+module Nested: A => B => {
+  let y: int
+}
+
+module Empty: () => {}
+
+module ResultIdent: A => B
+
+module ResultWith: A => (B with type t = int)
