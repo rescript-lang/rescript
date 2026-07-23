@@ -22,6 +22,8 @@
 
 #### :bug: Bug fix
 
+- Preserve multibyte characters when wrapping long source lines in compiler code frames. https://github.com/rescript-lang/rescript/pull/8520
+
 #### :memo: Documentation
 
 #### :nail_care: Polish
