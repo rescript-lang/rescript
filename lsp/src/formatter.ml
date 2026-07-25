@@ -1,25 +1,8 @@
 open Lsp
-open Types
 
 let run ~uri ~(state : State.t) =
   let source = (Document_store.get ~uri state.store).text in
   let kind_file = Document.kind uri in
-
-  let full_document_text_edit text =
-    (* TODO: \n works on Windows? *)
-    let lines = String.split_on_char '\n' text in
-    let end_line, end_character =
-      match List.rev lines with
-      | [] -> (0, 0)
-      | last_line :: rest -> (List.length rest, String.length last_line - 1)
-    in
-    let range =
-      Range.create
-        ~start:(Position.create ~line:0 ~character:0)
-        ~end_:(Position.create ~line:end_line ~character:end_character)
-    in
-    [TextEdit.create ~range ~newText:text]
-  in
 
   let read_all_from_channel channel =
     let buffer = Buffer.create 4096 in
@@ -73,7 +56,7 @@ let run ~uri ~(state : State.t) =
       close_out stdout;
       let formatted = read_all_from_channel stdin in
       match Unix.close_process (stdin, stdout) with
-      | Unix.WEXITED 0 -> Ok (full_document_text_edit formatted)
+      | Unix.WEXITED 0 -> Ok (Diff.edit ~from:source ~to_:formatted)
       | status ->
         Error
           (Printf.sprintf "%s %s" executable (process_status_to_string status))
