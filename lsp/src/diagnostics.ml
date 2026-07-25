@@ -97,16 +97,55 @@ let%expect_test "get_all merges diagnostics from every source" =
     compiler
     compiler syntax |}]
 
-let send ?(include_syntax = true) ?(force_publish_uris = []) t =
+let send ?(include_syntax = true) ?(force_publish_uris = [])
+    ?(should_publish = fun _ -> true) t =
   let diagnostics = diagnostics ~include_syntax t in
   Uri_map.iter
     (fun uri diagnostics ->
-      t.send (PublishDiagnosticsParams.create ~uri ~diagnostics ()))
+      if should_publish uri then
+        t.send (PublishDiagnosticsParams.create ~uri ~diagnostics ()))
     diagnostics;
   force_publish_uris
   |> List.iter (fun uri ->
-         if not (Uri_map.mem uri diagnostics) then
+         (* A URI excluded from this push may still have diagnostics retained
+            from an earlier push. Publish an empty list when ownership changes
+            so the client does not combine that stale result with pull data. *)
+         if (not (should_publish uri)) || not (Uri_map.mem uri diagnostics) then
            t.send (PublishDiagnosticsParams.create ~uri ~diagnostics:[] ()))
+
+let%expect_test "send can reserve an open document for pull diagnostics" =
+  let open_uri = Uri.of_path "/workspace/Open.res" in
+  let closed_uri = Uri.of_path "/workspace/Closed.res" in
+  let range =
+    Range.create
+      ~start:(Position.create ~line:0 ~character:0)
+      ~end_:(Position.create ~line:0 ~character:1)
+  in
+  let diagnostic message =
+    Diagnostic.create ~range ~message:(`String message) ()
+  in
+  let print ({uri; diagnostics; _} : PublishDiagnosticsParams.t) =
+    Printf.printf "%s: %d\n"
+      (Filename.basename (Uri.to_path uri))
+      (List.length diagnostics)
+  in
+  let t =
+    {
+      compiler =
+        Uri_map.empty
+        |> Uri_map.add open_uri [diagnostic "open compiler"]
+        |> Uri_map.add closed_uri [diagnostic "closed compiler"];
+      compiler_syntax = Uri_map.empty;
+      syntax = Uri_map.singleton open_uri [diagnostic "open syntax"];
+      send = print;
+    }
+  in
+  send ~include_syntax:false ~force_publish_uris:[open_uri]
+    ~should_publish:(fun uri -> Uri.compare uri open_uri <> 0)
+    t;
+  [%expect {|
+    Closed.res: 1
+    Open.res: 0 |}]
 
 (* Convert parsed compiler-log entries into LSP diagnostics grouped by document
    URI. Compiler logs may report paths either relative to the workspace root or
