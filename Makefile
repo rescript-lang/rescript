@@ -98,7 +98,7 @@ clean-rewatch:
 
 # Compiler
 
-COMPILER_SOURCE_DIRS := compiler tests analysis tools
+COMPILER_SOURCE_DIRS := compiler tests analysis tools lsp
 COMPILER_SOURCES = $(shell find $(COMPILER_SOURCE_DIRS) -type f \( -name '*.ml' -o -name '*.mli' -o -name '*.dune' -o -name dune -o -name dune-project \))
 COMPILER_BIN_NAMES := bsc rescript-editor-analysis rescript-tools rescript-language-server
 COMPILER_EXES := $(addsuffix .exe,$(addprefix $(BIN_DIR)/,$(COMPILER_BIN_NAMES)))
