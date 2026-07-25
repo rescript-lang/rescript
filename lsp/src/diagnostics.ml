@@ -37,9 +37,13 @@ let merge_diagnostics left right =
       | Some left, Some right -> Some (left @ right))
     left right
 
+let get_all t : diagnostics =
+  let compiler = merge_diagnostics t.compiler t.compiler_syntax in
+  merge_diagnostics t.syntax compiler
+
 let diagnostics ?(include_syntax = true) t =
-  let diagnostics = merge_diagnostics t.compiler t.compiler_syntax in
-  if include_syntax then merge_diagnostics t.syntax diagnostics else diagnostics
+  if include_syntax then get_all t
+  else merge_diagnostics t.compiler t.compiler_syntax
 
 let replace_snapshot ~old ~latest =
   Uri_map.merge
@@ -64,6 +68,34 @@ let update_syntax ~uri ~(new_diagnostics : Diagnostic.t list) t =
   {t with syntax = Uri_map.add uri new_diagnostics t.syntax}
 
 let clear_syntax ~uri t = update_syntax ~uri ~new_diagnostics:[] t
+
+let%expect_test "get_all merges diagnostics from every source" =
+  let uri = Uri.of_path "/workspace/A.res" in
+  let range =
+    Range.create
+      ~start:(Position.create ~line:0 ~character:0)
+      ~end_:(Position.create ~line:0 ~character:1)
+  in
+  let diagnostic message =
+    Diagnostic.create ~range ~message:(`String message) ()
+  in
+  let t =
+    {
+      compiler = Uri_map.singleton uri [diagnostic "compiler"];
+      compiler_syntax = Uri_map.singleton uri [diagnostic "compiler syntax"];
+      syntax = Uri_map.singleton uri [diagnostic "syntax"];
+      send = (fun _ -> ());
+    }
+  in
+  get_all t |> Uri_map.find uri
+  |> List.iter (fun (diagnostic : Diagnostic.t) ->
+         match diagnostic.message with
+         | `String message -> print_endline message
+         | `MarkupContent {value} -> print_endline value);
+  [%expect {|
+    syntax
+    compiler
+    compiler syntax |}]
 
 let send ?(include_syntax = true) ?(force_publish_uris = []) t =
   let diagnostics = diagnostics ~include_syntax t in
@@ -121,9 +153,9 @@ let to_lsp_format ?(include_syntax = false) ?(include_non_syntax = true)
       | Warning {number; configured_as_error} ->
         let default = "Warning " ^ string_of_int number in
         if configured_as_error then
-          ( default ^ " - configured as error.\n" ^ entry.message,
+          ( default ^ " (configured as error) - " ^ entry.message,
             DiagnosticSeverity.Error )
-        else (default, DiagnosticSeverity.Warning)
+        else (default ^ " - " ^ entry.message, DiagnosticSeverity.Warning)
       | Unknown -> ("Unknown error - " ^ entry.message, DiagnosticSeverity.Error)
       | _ -> (entry.message, DiagnosticSeverity.Error)
     in
@@ -195,6 +227,13 @@ let update_from_compiler_log ~workspace_root ~doc_store compiler_log t =
     update_compiler ~new_diagnostics:compiler t
   else t
 
+let diagnostics_from_completed_logs contents =
+  if List.for_all Compiler_log.Parse.is_complete contents then
+    contents
+    |> List.map Compiler_log.Parse.parse_log_content
+    |> List.flatten |> Option.some
+  else None
+
 let collect_diagnostics_from_log_using_source_dirs workspace_root fs =
   let ( /+ ) = Filename.concat in
   let workspace_root_path = workspace_root |> Uri.to_path in
@@ -215,10 +254,24 @@ let collect_diagnostics_from_log_using_source_dirs workspace_root fs =
          let compiler_log_path =
            workspace_root_path /+ build_root /+ Constants.compiler_log
          in
-         match Fs.load ~fs compiler_log_path with
-         | Some content -> Some (Compiler_log.Parse.parse_log_content content)
-         | None -> None)
-  |> List.flatten
+         Fs.load ~fs compiler_log_path)
+  |> diagnostics_from_completed_logs
+
+let%expect_test "only completed compiler logs form a diagnostics snapshot" =
+  let print = function
+    | None -> print_endline "incomplete"
+    | Some diagnostics ->
+      Printf.printf "complete: %d diagnostics\n" (List.length diagnostics)
+  in
+  diagnostics_from_completed_logs ["#Start(1)\n"] |> print;
+  [%expect {| incomplete |}];
+
+  diagnostics_from_completed_logs ["#Start(1)\n#Done(2)\n"] |> print;
+  [%expect {| complete: 0 diagnostics |}];
+
+  diagnostics_from_completed_logs ["#Start(1)\n#Done(2)\n"; "#Start(3)\n"]
+  |> print;
+  [%expect {| incomplete |}]
 
 let%expect_test "compiler syntax diagnostics don't clear type diagnostics" =
   let workspace_root = Uri.of_path "/workspace" in
@@ -302,4 +355,11 @@ let%expect_test "compiler syntax diagnostics don't clear type diagnostics" =
     {|
     A.res: <empty>
     B.res: type B fixed later
+    C.res: <empty> |}];
+
+  let t = update_from_compiler_log ~workspace_root ~doc_store [] t in
+  print t;
+  [%expect {|
+    A.res: <empty>
+    B.res: <empty>
     C.res: <empty> |}]

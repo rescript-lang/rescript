@@ -97,6 +97,18 @@ module Client = struct
     | Ok json -> Lsp.Client_request.response_of_json req json
     | Error err -> failwith ("LSP error response: " ^ err.message)
 
+  let rec read_request t method_ =
+    match read_message t.stdout with
+    | None -> failwith "Helper.read_request: unexpected EOF"
+    | Some json -> (
+      match Jsonrpc.Packet.t_of_yojson json with
+      | Request request when request.method_ = method_ -> request
+      | _ -> read_request t method_)
+
+  let respond_ok t (request : Jsonrpc.Request.t) =
+    Jsonrpc.Response.ok request.id `Null |> fun response ->
+    send_packet t (Jsonrpc.Packet.Response response)
+
   (** Read the next packet of any kind. Useful when waiting for a server
       notification (e.g. publishDiagnostics). *)
   (* let read_packet t =
@@ -269,7 +281,14 @@ let run_workspace_test ~fs ~workspace_dir client =
       Eio.Path.save ~create:(`Or_truncate 0o644) file content)
     grouped
 
-let client_capabilities = ClientCapabilities.create ()
+let client_capabilities =
+  ClientCapabilities.create
+    ~workspace:
+      (WorkspaceClientCapabilities.create
+         ~diagnostics:
+           (DiagnosticWorkspaceClientCapabilities.create ~refreshSupport:true ())
+         ())
+    ()
 
 let main () =
   let workspace_dir =
@@ -287,6 +306,21 @@ let main () =
   (* Assert than server capabilities return is ok *)
   assert ((Client.read_response client id).result |> Result.is_ok);
   let () = Client.send_notification client Client_notification.Initialized in
+  let registration = Client.read_request client "client/registerCapability" in
+  Client.respond_ok client registration;
+
+  Client.send_notification client
+    (Client_notification.DidChangeWatchedFiles
+       (DidChangeWatchedFilesParams.create
+          ~changes:
+            [
+              FileEvent.create ~type_:FileChangeType.Changed
+                ~uri:
+                  (DocumentUri.of_path
+                     (workspace_dir // "lib" // "bs" // ".compiler.log"));
+            ]));
+  let refresh = Client.read_request client "workspace/diagnostic/refresh" in
+  Client.respond_ok client refresh;
 
   run_workspace_test ~fs:env#fs ~workspace_dir client;
   Client.stop client |> ignore
