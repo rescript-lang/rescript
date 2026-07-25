@@ -15,6 +15,7 @@ module Parse : sig
     range: Lsp.Types.Range.t option;
   }
 
+  val is_complete : string -> bool
   val parse_log_content : string -> diagnostic_entry list
 end = struct
   type position = {line: int; col: int}
@@ -419,6 +420,13 @@ end = struct
              (Lsp.Types.Position.create
                 ~line:(range.end_pos.line |> minus_one)
                 ~character:range.end_pos.col))
+
+  let is_complete content =
+    content |> String.split_on_char '\n' |> List.rev
+    |> List.find_opt (fun line -> not (is_blank line))
+    |> function
+    | Some line -> starts_with "#Done" (String.trim line)
+    | None -> false
 
   let parse_log_content (content : string) =
     let lines = split_lines content in
@@ -1428,12 +1436,12 @@ let%expect_test "parse log" =
 
   let example_log_13 =
     {|#Start(1781744629915)
-    
+
       We've found a bug for you!
       /home/pedro/Desktop/projects/rescript-compiler/tests/build_tests/gpr_978/src/gpr_978_module.res
-    
+
       M is exported twice
-    
+
     #Done(1781744629934)|}
   in
 

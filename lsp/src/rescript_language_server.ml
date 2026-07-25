@@ -90,12 +90,19 @@ let initialization () =
 
 let get_updated_diagnostics_from_log (state : State.t) diagnostics =
   let workspace_root = State.workspace_root state in
-  let compiler_log =
+  match
     Diagnostics.collect_diagnostics_from_log_using_source_dirs workspace_root
       state.fs
-  in
-  Diagnostics.update_from_compiler_log ~workspace_root ~doc_store:state.store
-    compiler_log diagnostics
+  with
+  | None -> None
+  | Some compiler_log ->
+    Some
+      (Diagnostics.update_from_compiler_log ~workspace_root
+         ~doc_store:state.store compiler_log diagnostics)
+
+let get_latest_completed_diagnostics state diagnostics =
+  get_updated_diagnostics_from_log state diagnostics
+  |> Option.value ~default:diagnostics
 
 (* This intentionally mutates [analysis_state] in place. The analysis layer keeps
    package discovery tables as mutable hash tables so later requests can resolve
@@ -249,7 +256,7 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
     in
     (ok resp, state)
   | TextDocumentDiagnostic {textDocument = {uri}} ->
-    let diagnostics = State.diagnostics state |> Diagnostics.diagnostics in
+    let diagnostics = State.diagnostics state |> Diagnostics.get_all in
     let items =
       Diagnostics.Uri_map.find_opt uri diagnostics |> Option.value ~default:[]
     in
@@ -523,7 +530,7 @@ let on_notification notification (server : State.t Server.t) =
 
     let diagnostics =
       State.diagnostics state
-      |> get_updated_diagnostics_from_log state
+      |> get_latest_completed_diagnostics state
       |> Diagnostics.update_syntax ~uri
            ~new_diagnostics:
              (Analysis.Diagnostics.document_syntax
@@ -541,7 +548,7 @@ let on_notification notification (server : State.t Server.t) =
     in
     let diagnostics =
       State.diagnostics state
-      |> get_updated_diagnostics_from_log state
+      |> get_latest_completed_diagnostics state
       |> Diagnostics.update_syntax ~uri
            ~new_diagnostics:
              (Analysis.Diagnostics.document_syntax
@@ -562,7 +569,7 @@ let on_notification notification (server : State.t Server.t) =
     let diagnostics =
       State.diagnostics state
       |> Diagnostics.clear_syntax ~uri
-      |> get_updated_diagnostics_from_log state
+      |> get_latest_completed_diagnostics state
     in
     diagnostics |> Diagnostics.send;
     {state with store} |> State.update_diagnostics diagnostics
@@ -597,28 +604,32 @@ let on_notification notification (server : State.t Server.t) =
     Server.request (Server_request.ClientRegisterCapability params) server;
 
     state
-  | DidChangeWatchedFiles _ ->
+  | DidChangeWatchedFiles _ -> (
     (* Do not limit diagnostics to the path reported by
        DidChangeWatchedFilesParams. In monorepos, a build in one subpackage
        can change diagnostics that should be shown for files in another
        subpackage. Re-read every compiler log listed in .sourcedirs.json so
        stale errors are cleared and cross-package diagnostics stay in sync. *)
-    let diagnostics =
-      State.diagnostics state |> get_updated_diagnostics_from_log state
-    in
-    diagnostics |> Diagnostics.send;
-
     Server.notification
       (Server_notification.UnknownNotification
          (Jsonrpc.Notification.create ~method_:"rescript/compilationFinished" ()))
       server;
+    match State.diagnostics state |> get_updated_diagnostics_from_log state with
+    | None -> state
+    | Some diagnostics ->
+      diagnostics |> Diagnostics.send;
 
-    (match (State.params state).capabilities.workspace with
-    | Some {codeLens = Some {refreshSupport = Some true}} ->
-      Server.request Server_request.CodeLensRefresh server
-    | _ -> ());
+      (match (State.params state).capabilities.workspace with
+      | Some {diagnostics = Some {refreshSupport = Some true}} ->
+        Server.request Server_request.WorkspaceDiagnosticRefresh server
+      | _ -> ());
 
-    state |> State.update_diagnostics diagnostics
+      (match (State.params state).capabilities.workspace with
+      | Some {codeLens = Some {refreshSupport = Some true}} ->
+        Server.request Server_request.CodeLensRefresh server
+      | _ -> ());
+
+      state |> State.update_diagnostics diagnostics)
   | ChangeConfiguration _ ->
     (* workspace/didChangeConfiguration only signals that settings may have
        changed. The LSP configuration model is pull-based, so the server should
