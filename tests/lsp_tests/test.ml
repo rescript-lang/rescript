@@ -283,6 +283,10 @@ let run_workspace_test ~fs ~workspace_dir client =
 
 let client_capabilities =
   ClientCapabilities.create
+    ~textDocument:
+      (TextDocumentClientCapabilities.create
+         ~diagnostic:(DiagnosticClientCapabilities.create ())
+         ())
     ~workspace:
       (WorkspaceClientCapabilities.create
          ~diagnostics:
