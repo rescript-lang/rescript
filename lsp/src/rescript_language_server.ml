@@ -104,6 +104,26 @@ let get_latest_completed_diagnostics state diagnostics =
   get_updated_diagnostics_from_log state diagnostics
   |> Option.value ~default:diagnostics
 
+let uses_pull_diagnostics (state : State.t) =
+  match (State.params state).capabilities.textDocument with
+  | Some {diagnostic = Some _} -> true
+  | _ -> false
+
+(* Clients keep push diagnostics (textDocument/publishDiagnostics) and pull
+   diagnostics (textDocument/diagnostic) as separate results. Sending the same
+   compiler diagnostic through both mechanisms therefore displays it twice.
+   For clients that support pull diagnostics, open documents are owned by pull
+   and only closed documents receive pushed compiler diagnostics. Clients
+   without pull support continue to receive the complete pushed snapshot. *)
+let publish_diagnostics ?(force_publish_uris = []) (state : State.t) diagnostics
+    =
+  if uses_pull_diagnostics state then
+    Diagnostics.send ~include_syntax:false ~force_publish_uris
+      ~should_publish:(fun uri ->
+        Option.is_none (Document_store.get_opt state.store ~uri))
+      diagnostics
+  else Diagnostics.send diagnostics
+
 (* This intentionally mutates [analysis_state] in place. The analysis layer keeps
    package discovery tables as mutable hash tables so later requests can resolve
    files and modules without rebuilding package metadata. That makes this
@@ -537,9 +557,9 @@ let on_notification notification (server : State.t Server.t) =
                 ~source:(Document_store.get ~uri store).text
                 ~kind_file:(Document.kind uri))
     in
-    diagnostics |> Diagnostics.send;
-
-    {state with store} |> State.update_diagnostics diagnostics
+    let state = {state with store} in
+    diagnostics |> publish_diagnostics ~force_publish_uris:[uri] state;
+    state |> State.update_diagnostics diagnostics
   | TextDocumentDidChange {contentChanges; textDocument = {uri; version}} ->
     let store =
       match List.rev contentChanges with
@@ -556,23 +576,19 @@ let on_notification notification (server : State.t Server.t) =
                 ~kind_file:(Document.kind uri))
     in
 
-    (* Syntax diagnostics for open buffers are served by textDocument/diagnostic.
-       Do not push them here as publishDiagnostics too, otherwise clients that
-       support pull diagnostics can show duplicates on every change. Ensure the
-       changed URI is still published with an empty/non-syntax result so any
-       previously pushed syntax diagnostics are cleared. *)
-    diagnostics
-    |> Diagnostics.send ~include_syntax:false ~force_publish_uris:[uri];
-    {state with store} |> State.update_diagnostics diagnostics
+    let state = {state with store} in
+    diagnostics |> publish_diagnostics ~force_publish_uris:[uri] state;
+    state |> State.update_diagnostics diagnostics
   | TextDocumentDidClose {textDocument = {uri; _}} ->
     let store = Document_store.remove ~uri state.store in
+    let state = {state with store} in
     let diagnostics =
       State.diagnostics state
       |> Diagnostics.clear_syntax ~uri
       |> get_latest_completed_diagnostics state
     in
-    diagnostics |> Diagnostics.send;
-    {state with store} |> State.update_diagnostics diagnostics
+    diagnostics |> publish_diagnostics state;
+    state |> State.update_diagnostics diagnostics
   | Initialized ->
     (* Register dynamic file watchers for compiler log files.
        ReScript writes one .compiler.log per build root. In monorepos,
@@ -617,10 +633,11 @@ let on_notification notification (server : State.t Server.t) =
     match State.diagnostics state |> get_updated_diagnostics_from_log state with
     | None -> state
     | Some diagnostics ->
-      diagnostics |> Diagnostics.send;
+      diagnostics |> publish_diagnostics state;
 
       (match (State.params state).capabilities.workspace with
-      | Some {diagnostics = Some {refreshSupport = Some true}} ->
+      | Some {diagnostics = Some {refreshSupport = Some true}}
+        when uses_pull_diagnostics state ->
         Server.request Server_request.WorkspaceDiagnosticRefresh server
       | _ -> ());
 
