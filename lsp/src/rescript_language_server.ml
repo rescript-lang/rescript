@@ -5,7 +5,7 @@ let initialization () =
   let textDocumentSync =
     `TextDocumentSyncOptions
       (TextDocumentSyncOptions.create ~openClose:true
-         ~change:TextDocumentSyncKind.Full ~willSave:false
+         ~change:TextDocumentSyncKind.Incremental ~willSave:false
          ~save:(`SaveOptions (SaveOptions.create ~includeText:false ()))
          ~willSaveWaitUntil:false ())
   in
@@ -25,6 +25,7 @@ let initialization () =
   let renameProvider =
     `RenameOptions (RenameOptions.create ~prepareProvider:true ())
   in
+  (* TODO: We support this? *)
   let workspace =
     let workspaceFolders =
       WorkspaceFoldersServerCapabilities.create ~supported:true
@@ -72,7 +73,7 @@ let initialization () =
   let diagnosticProvider =
     `DiagnosticOptions
       (DiagnosticOptions.create ~workspaceDiagnostics:false
-         ~interFileDependencies:false ())
+         ~identifier:"rescript" ~interFileDependencies:false ())
   in
   let capabilities =
     ServerCapabilities.create ~textDocumentSync ~completionProvider
@@ -211,7 +212,7 @@ let on_initialize (params : InitializeParams.t) (server : State.t Server.t) =
   let state = Server.state server in
 
   let diagnostics =
-    Diagnostics.create ~diagnostics:(Diagnostics.empty ())
+    Diagnostics.make ~diagnostics:(Diagnostics.empty ())
       ~send:(fun publish_diagnostics_params ->
         Server.notification
           (Server_notification.PublishDiagnostics publish_diagnostics_params)
@@ -263,12 +264,13 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
     let initialization_info, state = on_initialize params server in
     (ok initialization_info, state)
   | TextDocumentHover {position; textDocument = {uri}} ->
-    let source = (Document_store.get ~uri state.store).text in
+    let doc = Document_store.get ~uri state.store in
+    let source = doc |> Document.text in
     let full = load_full uri state in
     let resp =
       Analysis.Commands.hover
         ~state:(State.analysis_state state)
-        ~source ~kind_file:(Document.kind uri)
+        ~source ~kind_file:(Document.kind doc)
         ~pos:(position.line, position.character)
         ~debug:false
         ~supports_markdown_links:
@@ -286,13 +288,14 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
     in
     (ok resp, state)
   | TextDocumentCompletion {textDocument = {uri}; position} ->
-    let source = (Document_store.get ~uri state.store).text in
+    let doc = Document_store.get ~uri state.store in
+    let source = doc |> Document.text in
     let full = load_full uri state in
 
     let resp =
       Analysis.Commands.completion
         ~state:(State.analysis_state state)
-        ~debug:false ~source ~kind_file:(Document.kind uri)
+        ~debug:false ~source ~kind_file:(Document.kind doc)
         ~pos:(position.line, position.character)
         ~full
     in
@@ -321,13 +324,14 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
     in
     (ok (resp |> Option.value ~default:item), state)
   | SignatureHelp {textDocument = {uri}; position} ->
-    let source = (Document_store.get ~uri state.store).text in
+    let doc = Document_store.get ~uri state.store in
+    let source = doc |> Document.text in
     let full = load_full uri state in
     let resp =
       match
         Analysis.Commands.signature_help
           ~state:(State.analysis_state state)
-          ~source ~kind_file:(Document.kind uri)
+          ~source ~kind_file:(Document.kind doc)
           ~pos:(position.line, position.character)
           ~full ~allow_for_constructor_payloads:true ~debug:false
       with
@@ -374,18 +378,20 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
     in
     (ok (Some resp), state)
   | DocumentSymbol {textDocument = {uri}} ->
-    let source = (Document_store.get ~uri state.store).text in
+    let doc = Document_store.get ~uri state.store in
+    let source = doc |> Document.text in
     let resp =
       Analysis.Document_symbol.get_symbols ~source
-        ~kind_file:(Document.kind uri)
+        ~kind_file:(Document.kind doc)
     in
     (ok (Some (`DocumentSymbol resp)), state)
   | CodeAction
       {textDocument = {uri}; range = {start; end_}; context = {diagnostics}} ->
     let full = load_full uri state in
-    let source = (Document_store.get ~uri state.store).text in
+    let doc = Document_store.get ~uri state.store in
+    let source = doc |> Document.text in
     let code_actions_from_compiler_log =
-      Code_actions.From_diagnostics.get ~uri ~diagnostics ~source
+      Code_actions.From_diagnostics.get ~doc ~diagnostics
     in
     let code_actions_from_analysis =
       Analysis.Xform.extract_code_actions
@@ -393,7 +399,7 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
         ~path:(Uri.to_path uri)
         ~start_pos:(start.line, start.character)
         ~end_pos:(end_.line, end_.character)
-        ~source ~kind_file:(Document.kind uri) ~full ~debug:false
+        ~source ~kind_file:(Document.kind doc) ~full ~debug:false
     in
     let other_actions =
       let client_support_window_show_document =
@@ -404,15 +410,15 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
 
       let open_compiled_file =
         if client_support_window_show_document then
-          Code_actions.Open_compiled_file.create ~uri ~state
+          Code_actions.Open_compiled_file.make ~doc ~state
         else []
       in
       let create_interface_file =
-        Code_actions.Create_interface_file.create ~uri ~state
+        Code_actions.Create_interface_file.make ~doc ~state
       in
       let switch_implementation_interface_file =
         if client_support_window_show_document then
-          Code_actions.Switch_implementation_interface_file.create ~uri ~state
+          Code_actions.Switch_implementation_interface_file.make ~doc ~state
         else []
       in
 
@@ -427,32 +433,35 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
     (ok (Some resp), state)
   | TextDocumentCodeLens {textDocument = {uri}} ->
     if state.configuration.code_lens then
-      let source = (Document_store.get ~uri state.store).text in
+      let doc = Document_store.get ~uri state.store in
+      let source = doc |> Document.text in
       let full = load_full uri state in
       let resp =
-        Analysis.Hint.code_lens ~source ~kind_file:(Document.kind uri) ~full
+        Analysis.Hint.code_lens ~source ~kind_file:(Document.kind doc) ~full
           ~debug:false
       in
       (ok (resp |> Option.value ~default:[]), state)
     else (ok [], state)
   | InlayHint {textDocument = {uri}; range = {start; end_}} ->
     if state.configuration.inlay_hints.enable then
-      let source = (Document_store.get ~uri state.store).text in
+      let doc = Document_store.get ~uri state.store in
+      let source = doc |> Document.text in
       let full = load_full uri state in
       let resp =
         Analysis.Hint.inlay
           ~state:(State.analysis_state state)
-          ~source ~kind_file:(Document.kind uri) ~full
+          ~source ~kind_file:(Document.kind doc) ~full
           ~pos:(start.line, end_.line)
           ~max_length:state.configuration.inlay_hints.max_length ~debug:false
       in
       (ok resp, state)
     else (ok None, state)
   | SemanticTokensFull {textDocument = {uri}} ->
-    let source = (Document_store.get ~uri state.store).text in
+    let doc = Document_store.get ~uri state.store in
+    let source = doc |> Document.text in
     let resp =
       Analysis.Semantic_tokens.semantic_tokens ~source
-        ~kind_file:(Document.kind uri)
+        ~kind_file:(Document.kind doc)
     in
     (ok (Some resp), state)
   | TextDocumentRename {textDocument = {uri}; position; newName} ->
@@ -544,9 +553,27 @@ let on_notification notification (server : State.t Server.t) =
   let state = Server.state server in
 
   match notification with
-  | Client_notification.TextDocumentDidOpen
-      {textDocument = {uri; text; version; _}} ->
-    let store = Document_store.add ~uri ~text ~version state.store in
+  | Client_notification.TextDocumentDidOpen did_open_params ->
+    let doc = Document.make did_open_params in
+    let store = Document_store.add ~doc state.store in
+
+    let diagnostics =
+      State.diagnostics state
+      |> get_latest_completed_diagnostics state
+      |> Diagnostics.update_syntax ~uri:(Document.uri doc)
+           ~new_diagnostics:
+             (Analysis.Diagnostics.document_syntax ~source:(Document.text doc)
+                ~kind_file:(Document.kind doc))
+    in
+    let state = {state with store} in
+    diagnostics
+    |> publish_diagnostics ~force_publish_uris:[Document.uri doc] state;
+    state |> State.update_diagnostics diagnostics
+  | TextDocumentDidChange {contentChanges; textDocument = {uri; version}} ->
+    let previous_doc = Document_store.get ~uri state.store in
+    let new_doc = Document.update_text ~version previous_doc contentChanges in
+
+    let store = Document_store.update ~doc:new_doc state.store in
 
     let diagnostics =
       State.diagnostics state
@@ -554,26 +581,8 @@ let on_notification notification (server : State.t Server.t) =
       |> Diagnostics.update_syntax ~uri
            ~new_diagnostics:
              (Analysis.Diagnostics.document_syntax
-                ~source:(Document_store.get ~uri store).text
-                ~kind_file:(Document.kind uri))
-    in
-    let state = {state with store} in
-    diagnostics |> publish_diagnostics ~force_publish_uris:[uri] state;
-    state |> State.update_diagnostics diagnostics
-  | TextDocumentDidChange {contentChanges; textDocument = {uri; version}} ->
-    let store =
-      match List.rev contentChanges with
-      | {text} :: _ -> Document_store.update ~uri ~text ~version state.store
-      | [] -> state.store
-    in
-    let diagnostics =
-      State.diagnostics state
-      |> get_latest_completed_diagnostics state
-      |> Diagnostics.update_syntax ~uri
-           ~new_diagnostics:
-             (Analysis.Diagnostics.document_syntax
-                ~source:(Document_store.get ~uri store).text
-                ~kind_file:(Document.kind uri))
+                ~source:(Document.text new_doc)
+                ~kind_file:(Document.kind new_doc))
     in
 
     let state = {state with store} in
@@ -720,7 +729,7 @@ let on_response
 
 let listen ~input ~output ~fs =
   let state =
-    State.create ~store:(Document_store.create ())
+    State.make ~store:(Document_store.make ())
       ~configuration:Configuration.default ~fs
   in
   Server.listen ~input ~output ~on_request ~on_notification ~on_response ~state

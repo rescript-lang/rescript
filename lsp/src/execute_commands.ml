@@ -48,7 +48,7 @@ module Create_interface = struct
     match arguments with
     | Some [`String uri; `String cmi_uri] -> (
       match
-        Custom_requests.Create_interface_file.create ~uri:(Uri.of_string uri)
+        Custom_requests.Create_interface_file.make ~uri:(Uri.of_string uri)
           ~cmi_uri:(Uri.of_string cmi_uri) ~state:(Server.state server)
       with
       | Ok uri -> request_show_document ~uri ~takeFocus:true server

@@ -13,7 +13,7 @@ module Open_compiled_file = struct
     Return: TextDocumentIdentifier | ResponseError
   *)
   let on_request ~(params : Jsonrpc.Structured.t option) ~(state : State.t) =
-    let create ~(uri : Uri.t) ~(state : State.t) =
+    let make ~(uri : Uri.t) ~(state : State.t) =
       let compiled_uri =
         Helpers.get_compiled_file ~uri
           ~compiler_config:(State.compiler_config state)
@@ -30,7 +30,7 @@ module Open_compiled_file = struct
         json |> Jsonrpc.Structured.yojson_of_t
         |> TextDocumentIdentifier.t_of_yojson
       in
-      match create ~uri:doc.uri ~state with
+      match make ~uri:doc.uri ~state with
       | Ok uri ->
         Ok
           (TextDocumentIdentifier.create ~uri
@@ -47,12 +47,12 @@ end
 module Create_interface_file = struct
   let meth = "textDocument/createInterface"
 
-  let create ~uri ~cmi_uri ~(state : State.t) =
-    match Document.kind uri with
+  let make ~uri ~cmi_uri ~(state : State.t) =
+    match Document.kind_of_uri uri with
     | Res -> (
       match
         Analysis.Create_interface.command
-          ~source:(Document_store.get ~uri state.store).text
+          ~source:(Document_store.get ~uri state.store |> Document.text)
           ~cmi_file:(cmi_uri |> Uri.to_path)
       with
       | Ok content ->
@@ -91,7 +91,7 @@ module Create_interface_file = struct
         match cmi_file with
         | Some cmi_file ->
           let response =
-            match create ~uri ~cmi_uri:(Uri.of_path cmi_file) ~state with
+            match make ~uri ~cmi_uri:(Uri.of_path cmi_file) ~state with
             | Ok uri ->
               Ok
                 (TextDocumentIdentifier.create ~uri

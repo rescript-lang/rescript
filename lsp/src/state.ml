@@ -16,7 +16,7 @@ type t = {
   fs: Eio.Fs.dir_ty Eio.Path.t;
 }
 
-let create ~store ~configuration ~fs =
+let make ~store ~configuration ~fs =
   {status = Uninitialized; store; configuration; fs}
 
 let initialize t ~params ~diagnostics ~analysis_state ~compiler_config =
@@ -66,12 +66,13 @@ let workspace_root t =
 let to_yojson (t : t) : Yojson.Safe.t =
   let document_store_to_yojson (store : Document_store.t) =
     store.documents |> Hashtbl.to_seq
-    |> Seq.map (fun (uri, {Document_store.text; version}) ->
+    |> Seq.map (fun (uri, doc) ->
            ( Lsp.Uri.to_string uri,
              `Assoc
                [
-                 ("version", `Int version);
-                 ("text_length", `Int (String.length text));
+                 ("version", `Int (Lsp.Text_document.version doc));
+                 ( "text_length",
+                   `Int (doc |> Lsp.Text_document.text |> String.length) );
                ] ))
     |> List.of_seq
     |> fun fields -> `Assoc fields

@@ -1,8 +1,9 @@
 open Lsp
 
 let run ~uri ~(state : State.t) =
-  let source = (Document_store.get ~uri state.store).text in
-  let kind_file = Document.kind uri in
+  let doc = Document_store.get ~uri state.store in
+  let source = Document.text doc in
+  let kind_file = Document.kind doc in
 
   let read_all_from_channel channel =
     let buffer = Buffer.create 4096 in

@@ -25,7 +25,7 @@ type t = {
 
 let empty () = Uri_map.empty
 
-let create ~diagnostics ~send =
+let make ~diagnostics ~send =
   {compiler = diagnostics; compiler_syntax = empty (); syntax = empty (); send}
 
 let merge_diagnostics left right =
@@ -160,30 +160,14 @@ let to_lsp_format ?(include_syntax = false) ?(include_non_syntax = true)
     =
   let workspace_root_path = workspace_root |> DocumentUri.to_path in
 
-  let fallback_range uri =
-    let shortest_possible_code = "let a=1" in
-    let start = Position.create ~line:0 ~character:0 in
-
-    match Document_store.get_opt ~uri doc_store with
-    | None ->
-      Range.create ~start
-        ~end_:
-          (Position.create ~line:0
-             ~character:(String.length shortest_possible_code - 1))
-    | Some {text} ->
-      (* TODO: On Windows \n works? *)
-      let lines = String.split_on_char '\n' text in
-      let line, character =
-        match List.rev lines with
-        | [] -> (0, String.length shortest_possible_code - 1)
-        | last_line :: rest -> (List.length rest, String.length last_line - 1)
-      in
-      Range.create ~start ~end_:(Position.create ~line ~character)
-  in
-
   let range_of_entry uri = function
     | Some range -> range
-    | None -> fallback_range uri
+    | None -> (
+      match Document_store.get_opt ~uri doc_store with
+      | None ->
+        let shortest_possible_code = "let a=1" in
+        Document.range_of_text shortest_possible_code
+      | Some doc -> Document.range_of_text (Document.text doc))
   in
 
   let diagnostic_of_entry uri (entry : Compiler_log.Parse.diagnostic_entry) =
@@ -345,8 +329,8 @@ let%expect_test "compiler syntax diagnostics don't clear type diagnostics" =
              | [] -> "<empty>"
              | messages -> String.concat ", " messages))
   in
-  let doc_store = Document_store.create () in
-  let t = create ~diagnostics:(empty ()) ~send:(fun _ -> ()) in
+  let doc_store = Document_store.make () in
+  let t = make ~diagnostics:(empty ()) ~send:(fun _ -> ()) in
   let t =
     update_from_compiler_log ~workspace_root ~doc_store
       [entry uri_b Common_error "type B"; entry uri_c Common_error "type C"]
@@ -357,7 +341,14 @@ let%expect_test "compiler syntax diagnostics don't clear type diagnostics" =
     B.res: type B
     C.res: type C |}];
 
-  ignore (Document_store.add doc_store ~uri:uri_a ~text:"let x =" ~version:1);
+  let doc =
+    Document.make
+      (DidOpenTextDocumentParams.create
+         ~textDocument:
+           (TextDocumentItem.create ~languageId:"rescript" ~uri:uri_a
+              ~text:"let x =" ~version:1))
+  in
+  ignore (Document_store.add doc_store ~doc);
   let t = update_syntax ~uri:uri_a ~new_diagnostics:[diagnostic "syntax A"] t in
   let t =
     update_from_compiler_log ~workspace_root ~doc_store
