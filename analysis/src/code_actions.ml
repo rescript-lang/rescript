@@ -2,7 +2,7 @@
 
 let make ~title ~kind ~uri ~new_text ~range =
   let text_document =
-    Lsp.Types.OptionalVersionedTextDocumentIdentifier.create
+    Lsp.Types.OptionalVersionedTextDocumentIdentifier.create ~version:0
       ~uri:(Uri.from_string uri) ()
   in
   let edit =
