@@ -1,7 +1,7 @@
 > Very experimental, WIP!!
 
 This branch introduces a standalone ReScript LSP server
-(`rescript-language-server`) built on top of the existing `analysis` library.
+(`rescript lsp` subcommand) built on top of the existing `analysis` library.
 It's a separate, OCaml-side exploration alongside the Rust/rewatch-based
 experiment in #8243, the two share the same goal (a LSP server for ReScript) but
 approach it from different ends of the toolchain.
@@ -21,16 +21,52 @@ formats, package discovery, or `.cmt` handling changes, the LSP can be updated
 in the same language and build system as the analysis code. That reduces version
 skew and makes bugs easier to reproduce with Dune/expect tests.
 
+## Why ship the language server with the compiler
+
+The OCaml language server is tightly coupled to the compiler version used by a
+project. It reads `.cmt` and `.cmti` files containing marshalled compiler
+internals such as `Typedtree`, `Types`, and `Env`. These files are not a stable,
+schema-aware protocol: changing one of those OCaml types can make an analysis
+binary incompatible with artifacts produced by another compiler revision.
+
+This is not only a theoretical compatibility concern. In
+[#8475](https://github.com/rescript-lang/rescript/issues/8475), adding typedtree
+constructors for `for...of` without changing the CMT magic number allowed a
+newer analysis binary to read incompatible ReScript 12 artifacts and
+segmentation fault. The same class of failure appeared after record-rest
+changes altered compiler data stored in CMT files. Bumping the CMT magic number
+makes these mismatches rejectable, but the project must still be rebuilt with
+the matching compiler.
+
+Shipping the server in the same platform package as the compiler, and exposing
+it through `rescript lsp --stdio`, gives clients one project-local entrypoint.
+The selected ReScript dependency then supplies `bsc`, the analysis code, and the
+language server from the same release. This has several practical benefits:
+
+- Editors do not need to install or select a separate language-server version.
+- Projects pinned to different ReScript versions get the corresponding server.
+- Compiler, analysis, and LSP changes can be released and upgraded atomically.
+- The native `rescript-language-server.exe` path remains a packaging detail.
+
+Bundling does not make stale artifacts safe. Compiler changes that alter
+marshalled CMT data must still bump the magic number, and the server should turn
+version mismatches into an actionable request to rebuild. A separately
+versioned server becomes practical only if analysis moves to a stable,
+explicitly versioned artifact format or maintains decoders for multiple
+compiler-internal formats. Until then, promising one server binary that supports
+multiple compiler versions would hide a compatibility boundary that already
+exists.
+
 ## What's here
 
 - New `lsp/` package split into `lsp/bin` (entrypoint) and `lsp/src` (library),
   with its own opam file (`rescript-language-server.opam`). Depends on `lsp` (>=
   1.22.0), `eio`/`eio_main`, `ppx_deriving_yojson`, `ppx_expect` and the in-tree
   `analysis` library.
+- New rescript command `rescript lsp`. The language server is shipped with the
+  compiler.
 
 ## Status / what's not here yet
-
-> This language server implementation requires ReScript >= v12.1.0.
 
 The main objective is to first maintain feature parity with the current server
 (server.ts) as much as possible. Below is a list of some requests and
@@ -42,7 +78,7 @@ notifications. Some are out of scope because they don't make sense.
 - [x] `exit` - client notification
 - [x] `textDocument/didOpen` - client notification
 - [x] `textDocument/didChange` - client notification
-  - The server receives the full text.
+  - Incremental change
 - [x] `textDocument/didClose` - client notification
 - [ ] `textDocument/didSave` - client notification - **It will not be
       implemented for now.**
@@ -262,9 +298,9 @@ file-watcher setup.
 
 Proposed interface.
 
-- Currently (server.ts), `supportMarkdownLinks` is not a setting. It's a great feature, but
-  some clients don't have good support; Neovim are a example. Therefore,
-  I'm promoting it to a setting so users can enable or disable it.
+- Currently (server.ts), `supportMarkdownLinks` is not a setting. It's a great
+  feature, but some clients don't have good support; Neovim are a example.
+  Therefore, I'm promoting it to a setting so users can enable or disable it.
 
 ```ts
 /**
@@ -307,207 +343,20 @@ interface Settings {
 
 > How should the server be published? How should developers use the server?
 
-### Some considerations
-
-- It should be a standalone package (`@rescript/language-server` or `@rescript/experimental-language-server`) so
-  the user can install it as a development dependency or globally.
-- There should be a basic configuration for testing the experimental server,
-  such as setting the binary path.
-- It shouldn't be bundled with the VSCode extension client as a pre-release
-  version. Switching between extension versions is annoying.
-
-### Release Proposal
-
-- Merge the PR into `master` or `lsp` branch?
-- Update the CI to publish the language server to npm
-  - Trigger CI job by commit message
-    (`${{ startsWith(github.event.head_commit.message, 'publish language-server') && (github.ref == 'refs/heads/<BRANCH_NAME>') }}`)
-- Users install the language server as a development dependency or globally.
-  - The server is just a native binary, so we won't have any dependency
-    conflicts.
 - Update the VSCode and Zed clients to support the experimental server
   - VSCode: https://github.com/rescript-lang/rescript-vscode/pull/1183
   - Zed: https://github.com/rescript-lang/rescript-zed/pull/24
-- Neovim client
-  - Neovim users need to make an adjustment to their LSP setup. See
-    [Neovim setup](#neovim-setup)
-
-Some points I have questions about.
-
-- Should we ship the server with the compiler?
-  - My first impression is no. The compiler release cycle is slower.
-  - Another point is that the server should ideally support different versions
-    of the compiler. Sending it along with the compiler imposes many
-    restrictions.
-
-### Neovim setup
-
-This section describes how Neovim users can configure the experimental server.
-The new server requires some changes to the LSP setup. Use the `root_dir`
-handler function instead of `root_markers`.
-
-```lua
-local use_experimental_server = true
-
---- You can change the path of binary
---- Search for `node_modules/.bin/rescript-language-server` in the current working directory
---- If you installed it as a development dependency.
-local new_rescript_ls_cmd = vim.fs.joinpath(
-  vim.uv.cwd(),
-  'node_modules',
-  '.bin',
-  'rescript-language-server'
-)
-local new_rescript_ls_available = vim.fn.executable(new_rescript_ls_cmd) == 1 and use_experimental_server
-
-local capabilities = vim.lsp.protocol.make_client_capabilities()
--- Enable workspace.didChangeWatchedFiles capabilities
-capabilities.workspace.didChangeWatchedFiles.dynamicRegistration = true
-
----@param client vim.lsp.Client
----@param bufnr integer
-local dump_server_state = function(client, bufnr)
-  client:exec_cmd({
-    title = 'ReScript Dump server state',
-    command = 'rescript/dumpServerState',
-  }, { bufnr = bufnr }, function(err, result)
-    if err then
-      vim.notify(tostring(err), vim.log.levels.ERROR)
-      return
-    end
-
-    if not result or type(result.content) ~= 'string' then
-      vim.notify('Invalid server response', vim.log.levels.ERROR)
-      return
-    end
-
-    local content = result.content
-
-    -- Create a listed scratch buffer.
-    local dump_buf = vim.api.nvim_create_buf(true, true)
-
-    vim.api.nvim_buf_set_name(
-      dump_buf,
-      'rescriptls://rescript-dump-server-state'
-    )
-
-    -- Do not specify the file type to avoid freezing with syntax highlighting using Tree-sitter.
-    -- The state is a large JSON file.
-    vim.bo[dump_buf].buftype = 'nofile'
-    vim.bo[dump_buf].bufhidden = 'wipe'
-    vim.bo[dump_buf].swapfile = false
-
-    -- Open it in the current window.
-    vim.api.nvim_set_current_buf(dump_buf)
-
-    -- Fill buffer with content.
-    local lines = vim.split(content, '\n', { plain = true })
-    vim.api.nvim_buf_set_lines(dump_buf, 0, -1, false, lines)
-
-    -- Optional: make it read-only after writing.
-    vim.bo[dump_buf].modifiable = false
-    vim.bo[dump_buf].readonly = true
-  end)
-end
-
-if new_rescript_ls_available then
-  -- Dot notation defines a new configuration instead of extending one with
-  -- vim.lsp.config(name, cfg).
-  ---@types vim.lsp.Config
-  vim.lsp.config.rescriptls = {
-    cmd = { new_rescript_ls_cmd },
-    filetypes = { 'rescript' },
-    -- Prefer root_dir over root_markers for monorepos. root_markers stops at
-    -- the nearest rescript.json, which may be a package inside the monorepo.
-    -- The ReScript LSP needs the workspace root instead, because package
-    -- discovery, lock files, and build roots are resolved from the directory
-    -- where Neovim was opened.
-    -- This root_dir callback first finds the repository root, then falls back to
-    -- the package-manager lockfile root. It only starts the server when that
-    -- root contains a ReScript project.
-    root_dir = function(bufnr, on_dir)
-      local fname = vim.api.nvim_buf_get_name(bufnr)
-      -- Find the repository root.
-      local git_dir =
-        vim.fs.dirname(vim.fs.find('.git', { path = fname, upward = true })[1])
-      -- Monorepos usually keep one lock file at the workspace root.
-      local lock_file_dir = vim.fs.dirname(
-        vim.fs.find(
-          { 'yarn.lock', 'package-lock.json', 'deno.lock', 'bun.lock', 'pnpm-lock.yaml' },
-          { path = fname, upward = true }
-        )[1]
-      )
-
-
-      if git_dir and vim.fs.root(git_dir, 'rescript.json') then
-        on_dir(git_dir)
-      elseif lock_file_dir and vim.fs.root(lock_file_dir, 'rescript.json') then
-        on_dir(lock_file_dir)
-      end
-    end,
-    ---@param client vim.lsp.Client
-    ---@param bufnr integer
-    on_attach = function(client, bufnr)
-      vim.api.nvim_buf_create_user_command(
-        bufnr,
-        'LspDumpServerState',
-        function()
-          dump_server_state(client, bufnr)
-        end,
-        { desc = 'rescriptls: Dump server state' }
-      )
-      on_attach(client, bufnr)
-    end,
-    capabilities = capabilities,
-    settings = {
-      rescript = {
-        hover = {
-          supportMarkdownLinks = false,
-        },
-        codeLens = false,
-        inlayHints = {
-          enable = false,
-          maxLength = 25,
-        },
-      },
-    },
-  }
-else
-  vim.lsp.config('rescriptls', {
-    init_options = {
-      extensionConfiguration = {
-        askToStartBuild = false,
-        codeLens = false,
-        signatureHelp = {
-          enable = true,
-        },
-        inlayHints = {
-          enable = true,
-        },
-        incrementalTypechecking = {
-          enabled = true,
-        },
-      },
-    },
-    on_attach = function(client, bufnr)
-      on_attach(client, bufnr)
-    end,
-  })
-end
-```
+- Neovim users need to make an adjustment to their LSP setup.
 
 ## Other related topics
 
 ### Refactor analysis for use on the server side
 
-- Parsing from source (not just files) / decouple I/O from core logic [#8426](https://github.com/rescript-lang/rescript/pull/8426)
-  [#8466](https://github.com/rescript-lang/rescript/pull/8466) [#8478](https://github.com/rescript-lang/rescript/pull/8478)
-- Use the `yojson` and `lsp` libraries in the analysis library [##8436](https://github.com/rescript-lang/rescript/pull/8436)
-- Remove global state `Shared_types.state` [#8465](https://github.com/rescript-lang/rescript/pull/8465)
-
-### Relationship to #8243
-
-#8243 collapses the build watcher and LSP into a single Rust process in rewatch,
-shelling out to `rescript-editor-analysis.exe` over stdin. This PR keeps the LSP
-on the OCaml side and uses the `analysis` library directly. Useful as a
-comparison point for the architecture discussion.
+- Parsing from source (not just files) / decouple I/O from core logic
+  [#8426](https://github.com/rescript-lang/rescript/pull/8426)
+  [#8466](https://github.com/rescript-lang/rescript/pull/8466)
+  [#8478](https://github.com/rescript-lang/rescript/pull/8478)
+- Use the `yojson` and `lsp` libraries in the analysis library
+  [##8436](https://github.com/rescript-lang/rescript/pull/8436)
+- Remove global state `Shared_types.state`
+  [#8465](https://github.com/rescript-lang/rescript/pull/8465)
