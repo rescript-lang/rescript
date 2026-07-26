@@ -1,31 +1,34 @@
+open Lsp
 type document = {text: string; version: int}
 
-type t = {documents: (Lsp.Uri.t, document) Hashtbl.t}
+type t = {documents: (Uri.t, Document.t) Hashtbl.t}
 
-let create () = {documents = Hashtbl.create 25}
+let make () = {documents = Hashtbl.create 50}
 
 let raise ~message =
   Jsonrpc.Response.Error.raise
-    (Jsonrpc.Response.Error.make ~code:InternalError ~message ())
+    (Jsonrpc.Response.Error.make ~code:InvalidRequest ~message ())
 
-let add t ~uri ~text ~version =
+let add t ~doc =
+  let uri = Document.uri doc in
   (match Hashtbl.mem t.documents uri with
-  | false -> Hashtbl.add t.documents uri {text; version}
+  | false -> Hashtbl.add t.documents uri doc
   | true ->
     raise
       ~message:
         (Printf.sprintf "Document store already has %s to open"
-           (Lsp.Uri.to_string uri)));
+           (Uri.to_string uri)));
   t
 
-let update t ~uri ~text ~version =
+let update t ~doc =
+  let uri = Document.uri doc in
   (match Hashtbl.find_opt t.documents uri with
   | None ->
     raise
       ~message:
         (Printf.sprintf "Document store not found %s to update"
-           (Lsp.Uri.to_string uri))
-  | Some _ -> Hashtbl.replace t.documents uri {text; version});
+           (Uri.to_string uri))
+  | Some _ -> Hashtbl.replace t.documents uri doc);
   t
 
 let remove t ~uri =
@@ -35,7 +38,7 @@ let remove t ~uri =
     raise
       ~message:
         (Printf.sprintf "Document store not found %s to remove"
-           (Lsp.Uri.to_string uri)));
+           (Uri.to_string uri)));
   t
 
 let get_opt t ~uri = Hashtbl.find_opt t.documents uri
@@ -46,5 +49,4 @@ let get t ~uri =
   | None ->
     raise
       ~message:
-        (Printf.sprintf "Document store not found %s to get"
-           (Lsp.Uri.to_string uri))
+        (Printf.sprintf "Document store not found %s to get" (Uri.to_string uri))

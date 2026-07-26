@@ -2,11 +2,7 @@ open Lsp
 open Types
 
 module From_diagnostics : sig
-  val get :
-    uri:Uri.t ->
-    diagnostics:Diagnostic.t list ->
-    source:string ->
-    CodeAction.t list
+  val get : doc:Document.t -> diagnostics:Diagnostic.t list -> CodeAction.t list
 end = struct
   let diagnostic_message (diagnostic : Diagnostic.t) =
     match diagnostic.message with
@@ -405,7 +401,7 @@ end = struct
     in
     loop lines
 
-  let extractor ~uri ~diagnostic ~source =
+  let extractor ~doc ~diagnostic =
     let code_actions = ref [] in
 
     let append code_action =
@@ -413,26 +409,29 @@ end = struct
       | Some code_action -> code_actions := code_action :: !code_actions
       | None -> ()
     in
+    let uri = Document.uri doc in
 
     did_you_mean ~uri ~diagnostic |> append;
     wrap_in_some ~uri ~diagnostic |> append;
     simple_conversion ~uri ~diagnostic |> append;
     apply_uncurried ~uri ~diagnostic |> append;
-    simple_add_missing_cases ~uri ~diagnostic ~source |> append;
+    simple_add_missing_cases ~uri ~diagnostic ~source:(Document.text doc)
+    |> append;
     simple_type_mismatches ~uri ~diagnostic |> append;
     add_undefined_record_fields_v10 ~uri ~diagnostic |> append;
     add_undefined_record_fields_v11 ~uri ~diagnostic |> append;
 
     !code_actions
 
-  let get ~uri ~diagnostics ~source =
+  let get ~doc ~diagnostics =
     diagnostics
-    |> List.map (fun diagnostic -> extractor ~uri ~diagnostic ~source)
+    |> List.map (fun diagnostic -> extractor ~doc ~diagnostic)
     |> List.flatten
 end
 
 module Open_compiled_file = struct
-  let create ~(uri : Uri.t) ~(state : State.t) =
+  let make ~doc ~state =
+    let uri = Document.uri doc in
     let compiled_uri =
       Helpers.get_compiled_file ~uri
         ~compiler_config:(State.compiler_config state)
@@ -454,11 +453,12 @@ module Open_compiled_file = struct
 end
 
 module Create_interface_file = struct
-  let create ~uri ~(state : State.t) =
+  let make ~doc ~(state : State.t) =
+    let uri = Document.uri doc in
+
     let should_create =
-      match Document.kind uri with
-      | Res ->
-        not (Fs.exists ~fs:state.fs ~follow:false (Uri.to_path uri ^ "i"))
+      match Document.kind doc with
+      | Res -> not (Fs.exists ~fs:state.fs ~follow:false (Uri.to_path uri))
       | _ -> false
     in
 
@@ -487,9 +487,10 @@ module Create_interface_file = struct
 end
 
 module Switch_implementation_interface_file = struct
-  let create ~uri ~(state : State.t) =
-    match Document.kind uri with
+  let make ~doc ~(state : State.t) =
+    match Document.kind doc with
     | Res ->
+      let uri = Document.uri doc in
       let target = Uri.to_path uri ^ "i" in
       if Fs.exists ~follow:false ~fs:state.fs target then
         let title = "Switch to interface file" in
@@ -504,6 +505,7 @@ module Switch_implementation_interface_file = struct
         ]
       else []
     | Resi ->
+      let uri = Document.uri doc in
       let target = (Uri.to_path uri |> Filename.remove_extension) ^ ".res" in
       if Fs.exists ~follow:false ~fs:state.fs target then
         let title = "Switch to implementation file" in
