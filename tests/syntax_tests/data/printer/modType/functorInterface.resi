@@ -15,3 +15,13 @@ module Empty: () => {}
 module ResultIdent: A => B
 
 module ResultWith: A => (B with type t = int)
+
+module ThisIsAVeryLongFunctorModuleTypeNameThatExceedsTheEightyCharacterLimit: Pattern => {
+  let fmt: event => string
+}
+
+module SecondVeryLongFunctorModuleTypeNameWithMultipleShortParameters: (A, B) => {
+  let x: int
+}
+
+module YetAnotherVeryLongFunctorModuleTypeNameHere: SomeVeryLongParameterModuleTypeName => SomeVeryLongResultingModuleTypeName
