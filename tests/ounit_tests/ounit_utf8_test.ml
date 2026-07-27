@@ -4,6 +4,7 @@
 let ( >:: ), ( >::: ) = OUnit.(( >:: ), ( >::: ))
 
 let ( =~ ) = OUnit.assert_equal
+
 let suites =
   __FILE__
   >::: [
@@ -29,4 +30,6 @@ let suites =
                 105;
               ] );
          (__LOC__ >:: fun _ -> Ext_utf8.decode_utf8_string "" =~ []);
+         ( __LOC__ >:: fun _ ->
+           Code_frame.break_long_line 4 "abc—def" =~ ["abc—"; "def"] );
        ]
