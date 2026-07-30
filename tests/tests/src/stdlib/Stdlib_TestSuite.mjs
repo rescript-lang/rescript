@@ -3,6 +3,7 @@
 import * as Stdlib_IntTests from "./Stdlib_IntTests.mjs";
 import * as Stdlib_DictTests from "./Stdlib_DictTests.mjs";
 import * as Stdlib_JsonTests from "./Stdlib_JsonTests.mjs";
+import * as Stdlib_ListTests from "./Stdlib_ListTests.mjs";
 import * as Stdlib_TestTests from "./Stdlib_TestTests.mjs";
 import * as Stdlib_ArrayTests from "./Stdlib_ArrayTests.mjs";
 import * as Stdlib_ErrorTests from "./Stdlib_ErrorTests.mjs";

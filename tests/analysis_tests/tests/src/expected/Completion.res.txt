@@ -315,7 +315,7 @@ Path Array.
     "detail": "(array<'a>, 'a) => bool",
     "documentation": {
       "kind": "markdown",
-      "value": "\n`includes(array, item)` checks whether `array` includes `item`, by doing a [strict check for equality](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Strict_equality).\n\nSee [`Array.includes`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/includes) on MDN.\n\n## Examples\n\n```rescript\n[1, 2]->Array.includes(1) == true\n[1, 2]->Array.includes(3) == false\n\n[{\"language\": \"ReScript\"}]->Array.includes({\"language\": \"ReScript\"}) == false // false, because of strict equality\n```\n"
+      "value": "\n`includes(array, item)` checks whether `array` includes `item` using\n[SameValueZero equality](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Equality_comparisons_and_sameness#same-value-zero_equality).\n\nSee [`Array.includes`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/includes) on MDN.\n\n## Examples\n\n```rescript\n[1, 2]->Array.includes(1) == true\n[1, 2]->Array.includes(3) == false\n[Float.Constants.nan]->Array.includes(Float.Constants.nan) == true\n\n[{\"language\": \"ReScript\"}]->Array.includes({\"language\": \"ReScript\"}) == false // false, because objects compare by reference\n```\n"
     },
     "kind": 12,
     "label": "includes",

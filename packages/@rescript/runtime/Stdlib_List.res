@@ -679,6 +679,12 @@ let rec has = (xs, x, eq) =>
   | list{a, ...l} => eq(a, x) || has(l, x, eq)
   }
 
+let rec includes = (xs, x) =>
+  switch xs {
+  | list{} => false
+  | list{a, ...l} => a === x || includes(l, x)
+  }
+
 @deprecated("Use a `Map` instead")
 let rec getAssoc = (xs, x, eq) =>
   switch xs {
