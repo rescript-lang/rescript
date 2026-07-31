@@ -30,7 +30,7 @@ let run ~uri ~(state : State.t) =
     let ( /+ ) = Filename.concat in
     root_path /+ "node_modules" /+ ".bin" /+ executable_name
   in
-  let extension_name = Document.to_string kind_file in
+  let extension_name = Document.extension_of_kind kind_file in
   let stdin, stdout =
     Unix.open_process_args executable
       [|executable; "format"; "--stdin"; "." ^ extension_name|]

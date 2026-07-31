@@ -19,7 +19,7 @@ let kind_of_uri uri =
 
 let kind doc = doc |> Text_document.documentUri |> kind_of_uri
 
-let to_string (kind : kind) =
+let extension_of_kind (kind : kind) =
   match kind with
   | Res -> "res"
   | Resi -> "resi"
