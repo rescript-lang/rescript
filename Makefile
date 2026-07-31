@@ -183,11 +183,7 @@ test-lsp: lib
 			( cd "$$dir" && yarn clean && yarn build ); \
 	done
 	@dune runtest
-	@if [ "$$OS" = "Windows_NT" ]; then \
-		echo "Skipping lsp-tests executable on Windows"; \
-	else \
-		dune exec -- lsp-tests; \
-	fi
+	@dune exec -- lsp-tests
 	@if [ -n "$$(git ls-files --modified tests/lsp_tests/**/*.expected)" ]; then \
     	echo "The lsp_tests snapshot doesn't match. Double check that the output is correct, run 'make test-lsp' and stage the diff"; \
     	git --no-pager diff tests/lsp_tests/**/*.expected; \
