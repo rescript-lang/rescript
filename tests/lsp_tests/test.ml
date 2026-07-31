@@ -4,23 +4,23 @@ let executable = "_build" // "default" // "lsp" // "bin" // "main.exe"
 
 module Client = struct
   (** Helpers for spawning the ReScript language server in tests, sending
-      LSP requests/notifications over stdio, and reading responses back. *)
+  LSP requests/notifications over stdio, and reading responses back. *)
 
   type t = {
-    proc: [`Generic | `Unix] Eio.Process.ty Eio.Resource.t;
-    stdin: Eio_unix.sink_ty Eio.Resource.t;
-    stdout: Eio.Buf_read.t;
+    process_stdout: in_channel;
+    process_stdin: out_channel;
     mutable next_id: int;
+    mutable stopped: bool;
   }
 
   let frame (json : Yojson.Safe.t) : string =
     let body = Yojson.Safe.to_string json in
     Printf.sprintf "Content-Length: %d\r\n\r\n%s" (String.length body) body
 
-  let read_headers buf =
+  let read_headers t =
     let rec loop acc =
-      match Eio.Buf_read.line buf with
-      | "" -> Some acc
+      match input_line t.process_stdout with
+      | line when String.trim line = "" -> Some acc
       | line ->
         let acc =
           match String.index_opt line ':' with
@@ -37,30 +37,27 @@ module Client = struct
     in
     loop []
 
-  let read_message buf =
-    match read_headers buf with
+  let read_message t =
+    match read_headers t with
     | None -> None
-    | Some headers ->
+    | Some headers -> (
       let len = int_of_string (List.assoc "Content-Length" headers) in
-      let body = Eio.Buf_read.take len buf in
-      Some (Yojson.Safe.from_string body)
+      match really_input_string t.process_stdout len with
+      | body -> Some (Yojson.Safe.from_string body)
+      | exception End_of_file -> None)
 
-  let start ~sw ~env =
-    let mgr = Eio.Stdenv.process_mgr env in
-    let stdin_r, stdin_w = Eio_unix.pipe sw in
-    let stdout_r, stdout_w = Eio_unix.pipe sw in
-    let proc =
-      Eio.Process.spawn ~sw mgr ~stdin:stdin_r ~stdout:stdout_w ~executable
-        [executable; "--stdio"]
+  let start () =
+    let process_stdout, process_stdin =
+      Unix.open_process_args executable [|executable; "--stdio"|]
     in
-    Eio.Resource.close stdin_r;
-    Eio.Resource.close stdout_w;
-    let stdout = Eio.Buf_read.of_flow ~max_size:(16 * 1024 * 1024) stdout_r in
-    {proc; stdin = stdin_w; stdout; next_id = 0}
+    set_binary_mode_in process_stdout true;
+    set_binary_mode_out process_stdin true;
+    {process_stdout; process_stdin; next_id = 0; stopped = false}
 
   let send_packet t (packet : Jsonrpc.Packet.t) =
     let json = Jsonrpc.Packet.yojson_of_t packet in
-    Eio.Flow.copy_string (frame json) t.stdin
+    output_string t.process_stdin (frame json);
+    flush t.process_stdin
 
   let next_id t =
     t.next_id <- t.next_id + 1;
@@ -81,7 +78,7 @@ module Client = struct
   (** Read packets until we find the response matching [id]. Server
       notifications/requests received in the meantime are discarded. *)
   let rec read_response t id =
-    match read_message t.stdout with
+    match read_message t with
     | None -> failwith "Helper.read_response: unexpected EOF"
     | Some json -> (
       match Jsonrpc.Packet.t_of_yojson json with
@@ -98,7 +95,7 @@ module Client = struct
     | Error err -> failwith ("LSP error response: " ^ err.message)
 
   let rec read_request t method_ =
-    match read_message t.stdout with
+    match read_message t with
     | None -> failwith "Helper.read_request: unexpected EOF"
     | Some json -> (
       match Jsonrpc.Packet.t_of_yojson json with
@@ -112,19 +109,22 @@ module Client = struct
   (** Read the next packet of any kind. Useful when waiting for a server
       notification (e.g. publishDiagnostics). *)
   (* let read_packet t =
-    match read_message t.stdout with
+    match read_message t with
     | None -> failwith "Helper.read_packet: unexpected EOF"
     | Some json -> Jsonrpc.Packet.t_of_yojson json *)
 
   let stop t =
-    (try Eio.Resource.close t.stdin with _ -> ());
-    Eio.Process.await t.proc
+    if t.stopped then Unix.WEXITED 0
+    else (
+      t.stopped <- true;
+      (try close_out_noerr t.process_stdin with _ -> ());
+      try Unix.close_process (t.process_stdout, t.process_stdin)
+      with _ -> Unix.WEXITED 0)
 
   (** Run [f] with a freshly started server, ensuring the process is stopped
       and the switch is released afterwards. *)
-  let with_server ~env f =
-    Eio.Switch.run @@ fun sw ->
-    let t = start ~sw ~env in
+  let with_server f =
+    let t = start () in
     Fun.protect ~finally:(fun () -> ignore (stop t)) (fun () -> f t)
 end
 
@@ -299,7 +299,7 @@ let main () =
     Sys.getcwd () // "tests" // "lsp_tests" // "basic-workspace"
   in
   Eio_main.run @@ fun env ->
-  Client.with_server ~env @@ fun client ->
+  Client.with_server @@ fun client ->
   let id =
     Client.send_request client
       (Client_request.Initialize
