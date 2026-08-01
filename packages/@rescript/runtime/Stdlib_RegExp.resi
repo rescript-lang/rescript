@@ -34,7 +34,7 @@ module Result: {
   external fullMatch: (t, @as(0) _) => string = ""
 
   /**
-  `matches(regExpResult)` returns all matches for `regExpResult`.
+  `captures(regExpResult)` returns all capture groups for `regExpResult`.
 
   ## Examples
   ```rescript
@@ -45,7 +45,7 @@ module Result: {
   switch regexp->RegExp.exec("ReScript is pretty cool, right?") {
   | None => Console.log("Nope, no match...")
   | Some(result) =>
-    switch result->RegExp.Result.matches->Array.keepSome {
+    switch result->RegExp.Result.captures->Array.keepSome {
     | [firstWord, secondWord] => Console.log2(firstWord, secondWord)
     | _ => Console.log("Didn't find exactly two words...")
     }
@@ -53,7 +53,15 @@ module Result: {
   ```
   */
   @send
+  external captures: (t, @as(1) _) => array<option<string>> = "slice"
+
+  @deprecated({
+    reason: "Use `RegExp.Result.captures` instead.",
+    migrate: RegExp.Result.captures(),
+  })
+  @send
   external matches: (t, @as(1) _) => array<option<string>> = "slice"
+
   @get external index: t => int = "index"
 
   /**
