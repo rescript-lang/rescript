@@ -23,7 +23,7 @@ skew and makes bugs easier to reproduce with Dune/expect tests.
 
 ## Why ship the language server with the compiler
 
-The OCaml language server is tightly coupled to the compiler version used by a
+The language server is tightly coupled to the compiler version used by a
 project. It reads `.cmt` and `.cmti` files containing marshalled compiler
 internals such as `Typedtree`, `Types`, and `Env`. These files are not a stable,
 schema-aware protocol: changing one of those OCaml types can make an analysis

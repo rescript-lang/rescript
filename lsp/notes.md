@@ -1,5 +1,160 @@
 # Notes
 
+## Neovim setup
+
+This section describes how Neovim users can configure the experimental server.
+The new server requires some changes to the LSP setup. Use the `root_dir`
+handler function instead of `root_markers`.
+
+```lua
+local use_experimental_server = true
+
+--- You can change the path of binary
+--- Search for `node_modules/.bin/rescript` in the current working directory
+local new_rescript_ls_cmd = vim.fs.joinpath(
+  vim.uv.cwd(),
+  'node_modules',
+  '.bin',
+  'rescript'
+)
+local new_rescript_ls_available = vim.fn.executable(new_rescript_ls_cmd) == 1 and use_experimental_server
+
+local capabilities = vim.lsp.protocol.make_client_capabilities()
+-- Enable workspace.didChangeWatchedFiles capabilities
+capabilities.workspace.didChangeWatchedFiles.dynamicRegistration = true
+
+---@param client vim.lsp.Client
+---@param bufnr integer
+local dump_server_state = function(client, bufnr)
+  client:exec_cmd({
+    title = 'ReScript Dump server state',
+    command = 'rescript/dumpServerState',
+  }, { bufnr = bufnr }, function(err, result)
+    if err then
+      vim.notify(tostring(err), vim.log.levels.ERROR)
+      return
+    end
+
+    if not result or type(result.content) ~= 'string' then
+      vim.notify('Invalid server response', vim.log.levels.ERROR)
+      return
+    end
+
+    local content = result.content
+
+    -- Create a listed scratch buffer.
+    local dump_buf = vim.api.nvim_create_buf(true, true)
+
+    vim.api.nvim_buf_set_name(
+      dump_buf,
+      'rescriptls://rescript-dump-server-state'
+    )
+
+    -- Do not specify the file type to avoid freezing with syntax highlighting using Tree-sitter.
+    -- The state is a large JSON file.
+    vim.bo[dump_buf].buftype = 'nofile'
+    vim.bo[dump_buf].bufhidden = 'wipe'
+    vim.bo[dump_buf].swapfile = false
+
+    -- Open it in the current window.
+    vim.api.nvim_set_current_buf(dump_buf)
+
+    -- Fill buffer with content.
+    local lines = vim.split(content, '\n', { plain = true })
+    vim.api.nvim_buf_set_lines(dump_buf, 0, -1, false, lines)
+
+    -- Optional: make it read-only after writing.
+    vim.bo[dump_buf].modifiable = false
+    vim.bo[dump_buf].readonly = true
+  end)
+end
+
+if new_rescript_ls_available then
+  -- Dot notation defines a new configuration instead of extending one with
+  -- vim.lsp.config(name, cfg).
+  ---@types vim.lsp.Config
+  vim.lsp.config.rescriptls = {
+    cmd = { new_rescript_ls_cmd, "lsp", "--stdio" },
+    filetypes = { 'rescript' },
+    -- Prefer root_dir over root_markers for monorepos. root_markers stops at
+    -- the nearest rescript.json, which may be a package inside the monorepo.
+    -- The ReScript LSP needs the workspace root instead, because package
+    -- discovery, lock files, and build roots are resolved from the directory
+    -- where Neovim was opened.
+    -- This root_dir callback first finds the repository root, then falls back to
+    -- the package-manager lockfile root. It only starts the server when that
+    -- root contains a ReScript project.
+    root_dir = function(bufnr, on_dir)
+      local fname = vim.api.nvim_buf_get_name(bufnr)
+      -- Find the repository root.
+      local git_dir =
+        vim.fs.dirname(vim.fs.find('.git', { path = fname, upward = true })[1])
+      -- Monorepos usually keep one lock file at the workspace root.
+      local lock_file_dir = vim.fs.dirname(
+        vim.fs.find(
+          { 'yarn.lock', 'package-lock.json', 'deno.lock', 'bun.lock', 'pnpm-lock.yaml' },
+          { path = fname, upward = true }
+        )[1]
+      )
+
+
+      if git_dir and vim.fs.root(git_dir, 'rescript.json') then
+        on_dir(git_dir)
+      elseif lock_file_dir and vim.fs.root(lock_file_dir, 'rescript.json') then
+        on_dir(lock_file_dir)
+      end
+    end,
+    ---@param client vim.lsp.Client
+    ---@param bufnr integer
+    on_attach = function(client, bufnr)
+      vim.api.nvim_buf_create_user_command(
+        bufnr,
+        'LspDumpServerState',
+        function()
+          dump_server_state(client, bufnr)
+        end,
+        { desc = 'rescriptls: Dump server state' }
+      )
+      on_attach(client, bufnr)
+    end,
+    capabilities = capabilities,
+    settings = {
+      rescript = {
+        hover = {
+          supportMarkdownLinks = false,
+        },
+        codeLens = false,
+        inlayHints = {
+          enable = false,
+          maxLength = 25,
+        },
+      },
+    },
+  }
+else
+  vim.lsp.config('rescriptls', {
+    init_options = {
+      extensionConfiguration = {
+        askToStartBuild = false,
+        codeLens = false,
+        signatureHelp = {
+          enable = true,
+        },
+        inlayHints = {
+          enable = true,
+        },
+        incrementalTypechecking = {
+          enabled = true,
+        },
+      },
+    },
+    on_attach = function(client, bufnr)
+      on_attach(client, bufnr)
+    end,
+  })
+end
+```
+
 ## Some strange behaviors with diagnostics when testing the server
 
 Below I describe the scenarios. I don't know if this is the expected behavior.
