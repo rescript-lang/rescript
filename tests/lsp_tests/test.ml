@@ -1,6 +1,75 @@
 let ( // ) = Filename.concat
 let ( / ) = Eio.Path.( / )
-let executable = "_build" // "default" // "lsp" // "bin" // "main.exe"
+let executable = "rescript-language-server"
+
+let source_root () =
+  Sys.getenv_opt "DUNE_SOURCEROOT" |> Option.value ~default:(Sys.getcwd ())
+
+let rec mkdir_p path =
+  if path = "" || Sys.file_exists path then ()
+  else (
+    mkdir_p (Filename.dirname path);
+    Unix.mkdir path 0o755)
+
+let write_file path content =
+  mkdir_p (Filename.dirname path);
+  let oc = open_out_bin path in
+  Fun.protect
+    ~finally:(fun () -> close_out_noerr oc)
+    (fun () -> output_string oc content)
+
+let local_platform_bin name =
+  let bin_name = name ^ ".exe" in
+  let packages_dir = source_root () // "packages" // "@rescript" in
+  ["linux-x64"; "linux-arm64"; "darwin-x64"; "darwin-arm64"; "win32-x64"]
+  |> List.find_map (fun platform ->
+         let path = packages_dir // platform // "bin" // bin_name in
+         if Sys.file_exists path then Some path else None)
+  |> Option.value ~default:bin_name
+
+let with_chdir dir f =
+  let cwd = Sys.getcwd () in
+  Fun.protect
+    ~finally:(fun () -> Sys.chdir cwd)
+    (fun () ->
+      Sys.chdir dir;
+      f ())
+
+let with_env_var name value env =
+  let prefix = name ^ "=" in
+  let without_name =
+    env |> Array.to_list
+    |> List.filter (fun item -> not (String.starts_with ~prefix item))
+  in
+  Array.of_list ((prefix ^ value) :: without_name)
+
+let run_rescript_build ~root =
+  let executable = local_platform_bin "rescript" in
+  let env =
+    Unix.environment ()
+    |> with_env_var "RESCRIPT_RUNTIME"
+         (source_root () // "packages" // "@rescript" // "runtime")
+  in
+  let null_device = if Sys.os_type = "Win32" then "NUL" else "/dev/null" in
+  let dev_null = Unix.openfile null_device [Unix.O_WRONLY] 0 in
+  Fun.protect
+    ~finally:(fun () -> Unix.close dev_null)
+    (fun () ->
+      with_chdir root (fun () ->
+          let pid =
+            Unix.create_process_env executable [|executable; "build"|] env
+              Unix.stdin dev_null dev_null
+          in
+          match snd (Unix.waitpid [] pid) with
+          | Unix.WEXITED 0 -> ()
+          | Unix.WEXITED code ->
+            failwith (Printf.sprintf "rescript build exited with code %d" code)
+          | Unix.WSIGNALED signal ->
+            failwith
+              (Printf.sprintf "rescript build killed by signal %d" signal)
+          | Unix.WSTOPPED signal ->
+            failwith
+              (Printf.sprintf "rescript build stopped by signal %d" signal)))
 
 module Client = struct
   (** Helpers for spawning the ReScript language server in tests, sending
@@ -48,7 +117,7 @@ module Client = struct
 
   let start () =
     let process_stdout, process_stdin =
-      Unix.open_process_args executable [|executable; "--stdio"|]
+      Unix.open_process_args executable [|executable|]
     in
     set_binary_mode_in process_stdout true;
     set_binary_mode_out process_stdin true;
@@ -131,155 +200,21 @@ end
 open Lsp
 open Types
 
-type caret_comment = {
-  path: string; (* absolute path *)
-  line: int; (* line of the comment *)
-  col: int; (* column of the ^ character *)
-  command: string; (* e.g. "hov" *)
-  text: string; (* file content *)
-}
+let make_document ~uri ~text =
+  TextDocumentItem.create ~uri ~languageId:"rescript" ~version:0 ~text
 
-module String_map = Map.Make (String)
+let write_document path (doc : TextDocumentItem.t) =
+  let path = path // (doc.uri |> Uri.to_path |> Filename.basename) in
+  write_file path doc.text
 
-let find_caret_comments ~fs ~workspace_dir =
-  let results = ref [] in
-
-  (* Read all .res files in directory *)
-  Eio.Path.with_open_dir
-    Eio.Path.(fs / workspace_dir)
-    (fun dir_handle ->
-      Eio.Path.read_dir dir_handle
-      |> List.filter (fun file ->
-             String.ends_with ~suffix:".res" file
-             || String.ends_with ~suffix:".resi" file)
-      |> List.iter (fun filename ->
-             let path = Eio.Path.(dir_handle / filename) in
-             let content = Eio.Path.load path in
-             let lines = String.split_on_char '\n' content in
-
-             List.iteri
-               (fun line_idx line ->
-                 (* Match lines like "// ^command" *)
-                 match String.trim line with
-                 | s when String.length s > 3 && String.sub s 0 3 = "// " -> (
-                   let rest = String.sub s 3 (String.length s - 3) in
-                   match String.index_opt rest '^' with
-                   | None -> ()
-                   | Some caret_in_rest ->
-                     (* Column of ^ in original line *)
-                     let prefix_len =
-                       String.length line - String.length (String.trim line)
-                     in
-                     let col = prefix_len + 3 + caret_in_rest in
-                     let command =
-                       let after = caret_in_rest + 1 in
-                       if after < String.length rest then
-                         String.trim
-                           (String.sub rest after (String.length rest - after))
-                       else ""
-                     in
-                     results :=
-                       {
-                         path = workspace_dir // snd path;
-                         line = line_idx;
-                         col;
-                         command;
-                         text = content;
-                       }
-                       :: !results)
-                 | _ -> ())
-               lines));
-
-  List.rev !results
-
-let open_document ~uri ~text client =
-  Client.send_notification client
-    (Client_notification.TextDocumentDidOpen
-       (DidOpenTextDocumentParams.create
-          ~textDocument:
-            (TextDocumentItem.create ~uri ~languageId:"rescript" ~version:0
-               ~text)))
-
-let pretty_source_loc caret_comment =
-  let relative_path =
-    let dir_len = String.length (Sys.getcwd () ^ "/") in
-    String.sub caret_comment.path dir_len
-      (String.length caret_comment.path - dir_len)
-  in
-
-  Printf.sprintf "%s:%d:%d" relative_path caret_comment.line
-    (caret_comment.col + 1)
-
-let send_request payload client =
-  let response = Client.request client payload in
-  Client_request.yojson_of_result payload response
-  |> Yojson.Safe.pretty_to_string ~std:true
-
-let print_response method_ response caret_comment =
-  Printf.sprintf "Request %s %s\nResponse\n%s\n\n" method_
-    (pretty_source_loc caret_comment)
-    response
-
-let run_test_for_comment (caret_comment : caret_comment) client =
-  let uri = DocumentUri.of_path caret_comment.path in
-  let textDocument = TextDocumentIdentifier.create ~uri in
-
-  let character = caret_comment.col in
-  let line = caret_comment.line - 1 in
-  let position = Position.create ~line ~character in
-
-  match caret_comment.command with
-  | "hov" ->
-    let resp =
-      send_request
-        (Client_request.TextDocumentHover
-           (HoverParams.create ~textDocument ~position ()))
-        client
-    in
-    print_response "textDocument/hover" resp caret_comment
-  (* | "cmp" ->
-    let context =
-      CompletionContext.create ~triggerCharacter:">"
-        ~triggerKind:CompletionTriggerKind.TriggerCharacter ()
-    in
-    send_request
-      (Client_request.TextDocumentCompletion
-         (CompletionParams.create ~textDocument ~position ~context ()))
-      "textDocument/completion" caret_comment *)
-  | other ->
-    Printf.sprintf "Command `%s` not implemented! %s\n\n" other
-      (pretty_source_loc caret_comment)
-
-let run_workspace_test ~fs ~workspace_dir client =
-  let comments = find_caret_comments ~fs ~workspace_dir in
-
-  let grouped =
-    List.fold_left
-      (fun acc comment ->
-        let others =
-          Option.value ~default:[] (String_map.find_opt comment.path acc)
-        in
-        String_map.add comment.path (comment :: others) acc)
-      String_map.empty comments
-  in
-
-  String_map.iter
-    (fun path comments ->
-      let hd = comments |> List.hd in
-      let uri = DocumentUri.of_path hd.path in
-      let text = hd.text in
-
-      open_document ~uri ~text client;
-
-      let filename = Filename.basename path ^ ".expected" in
-      let save_path = workspace_dir // filename in
-      let content =
-        List.rev_map (fun c -> run_test_for_comment c client) comments
-        |> String.concat ""
-      in
-      let file = Eio.Path.(fs / save_path) in
-      Eio.Path.save ~create:(`Or_truncate 0o644) file content)
-    grouped
+let setup_project ~root ~rescript_json ~run_build ~documents =
+  mkdir_p root;
+  write_document root
+    (TextDocumentItem.create ~languageId:"json" ~text:rescript_json
+       ~uri:(Uri.of_string "rescript.json")
+       ~version:0);
+  List.iter (write_document root) documents;
+  if run_build then run_rescript_build ~root
 
 let client_capabilities =
   ClientCapabilities.create
@@ -294,39 +229,50 @@ let client_capabilities =
          ())
     ()
 
-let main () =
-  let workspace_dir =
-    Sys.getcwd () // "tests" // "lsp_tests" // "basic-workspace"
-  in
-  Eio_main.run @@ fun env ->
-  Client.with_server @@ fun client ->
+let initialize_client ~root client =
   let id =
     Client.send_request client
       (Client_request.Initialize
          (InitializeParams.create ~capabilities:client_capabilities
-            ~rootUri:(DocumentUri.of_path workspace_dir)
-            ()))
+            ~rootUri:(DocumentUri.of_path root) ()))
   in
-  (* Assert than server capabilities return is ok *)
   assert ((Client.read_response client id).result |> Result.is_ok);
-  let () = Client.send_notification client Client_notification.Initialized in
+  Client.send_notification client Client_notification.Initialized;
   let registration = Client.read_request client "client/registerCapability" in
-  Client.respond_ok client registration;
+  Client.respond_ok client registration
 
-  Client.send_notification client
-    (Client_notification.DidChangeWatchedFiles
-       (DidChangeWatchedFilesParams.create
-          ~changes:
-            [
-              FileEvent.create ~type_:FileChangeType.Changed
-                ~uri:
-                  (DocumentUri.of_path
-                     (workspace_dir // "lib" // "bs" // ".compiler.log"));
-            ]));
-  let refresh = Client.read_request client "workspace/diagnostic/refresh" in
-  Client.respond_ok client refresh;
+type action =
+  | Request : 'result Client_request.t * ('result -> unit) -> action
+  | Notification of Client_notification.t
 
-  run_workspace_test ~fs:env#fs ~workspace_dir client;
-  Client.stop client |> ignore
+let perform client = function
+  | Request (request, on_response) ->
+    Client.request client request |> on_response
+  | Notification notification -> Client.send_notification client notification
 
-let () = main ()
+let perform_all client actions = List.iter (perform client) actions
+
+let start_client ~root =
+  let client = Client.start () in
+  try
+    initialize_client ~root client;
+    client
+  with exn ->
+    ignore (Client.stop client);
+    raise exn
+
+let with_client ~root f =
+  let client = start_client ~root in
+  Fun.protect
+    ~finally:(fun () -> ignore (Client.stop client))
+    (fun () -> f client)
+
+let open_document (doc : TextDocumentItem.t) =
+  let notification =
+    Client_notification.TextDocumentDidOpen
+      (DidOpenTextDocumentParams.create
+         ~textDocument:
+           (TextDocumentItem.create ~uri:doc.uri ~languageId:"rescript"
+              ~version:0 ~text:doc.text))
+  in
+  Notification notification
