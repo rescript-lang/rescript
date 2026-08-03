@@ -1035,20 +1035,40 @@ Path MultiPropComp.make
   }
 ]
 
-Complete src/CompletionJsx.res 89:26
-posCursor:[89:26] posNoWhite:[89:24] Found expr:[89:3->89:27]
-JSX <Info:[89:4->89:8] _type[89:9->89:14]=...[89:16->89:24]> _children:None
+Complete src/CompletionJsx.res 97:26
+posCursor:[97:26] posNoWhite:[97:24] Found expr:[97:3->97:27]
+JSX <Info:[97:4->97:8] _type[97:9->97:14]=...[97:16->97:24]> _children:None
 Completable: Cjsx([Info], "", [_type])
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 Path Info.make
 [ { "detail": "string", "kind": 4, "label": "key", "tags": [] } ]
 
-Complete src/CompletionJsx.res 93:19
-posCursor:[93:19] posNoWhite:[93:18] Found expr:[93:11->93:24]
-JSX <p:[93:12->93:13] > _children:93:15
-posCursor:[93:19] posNoWhite:[93:18] Found expr:[93:15->93:19]
-Pexp_field [93:15->93:17] s:[93:18->93:19]
+Complete src/CompletionJsx.res 100:30
+posCursor:[100:30] posNoWhite:[100:29] Found expr:[100:3->100:31]
+JSX <DomPropsComponent:[100:4->100:21] onClick[100:22->100:29]=...[100:22->100:29]> _children:None
+Completable: Cexpression CJsxPropValue [DomPropsComponent] onClick
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath CJsxPropValue [DomPropsComponent] onClick
+Path DomPropsComponent.make
+[
+  {
+    "detail": "JsxEvent.Mouse.t => unit",
+    "insertText": "{${1:event} => ${0:event}}",
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "event => event",
+    "sortText": "A",
+    "tags": []
+  }
+]
+
+Complete src/CompletionJsx.res 104:19
+posCursor:[104:19] posNoWhite:[104:18] Found expr:[104:11->104:24]
+JSX <p:[104:12->104:13] > _children:104:15
+posCursor:[104:19] posNoWhite:[104:18] Found expr:[104:15->104:19]
+Pexp_field [104:15->104:17] s:[104:18->104:19]
 Completable: Cpath string.s
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -1064,8 +1084,8 @@ Path s
       {
         "newText": "",
         "range": {
-          "end": { "character": 18, "line": 93 },
-          "start": { "character": 17, "line": 93 }
+          "end": { "character": 18, "line": 104 },
+          "start": { "character": 17, "line": 104 }
         }
       }
     ],
@@ -1086,8 +1106,8 @@ Path s
       {
         "newText": "",
         "range": {
-          "end": { "character": 18, "line": 93 },
-          "start": { "character": 17, "line": 93 }
+          "end": { "character": 18, "line": 104 },
+          "start": { "character": 17, "line": 104 }
         }
       }
     ],
@@ -1107,8 +1127,8 @@ Path s
       {
         "newText": "",
         "range": {
-          "end": { "character": 18, "line": 93 },
-          "start": { "character": 17, "line": 93 }
+          "end": { "character": 18, "line": 104 },
+          "start": { "character": 17, "line": 104 }
         }
       }
     ],
@@ -1128,8 +1148,8 @@ Path s
       {
         "newText": "",
         "range": {
-          "end": { "character": 18, "line": 93 },
-          "start": { "character": 17, "line": 93 }
+          "end": { "character": 18, "line": 104 },
+          "start": { "character": 17, "line": 104 }
         }
       }
     ],
@@ -1149,8 +1169,8 @@ Path s
       {
         "newText": "",
         "range": {
-          "end": { "character": 18, "line": 93 },
-          "start": { "character": 17, "line": 93 }
+          "end": { "character": 18, "line": 104 },
+          "start": { "character": 17, "line": 104 }
         }
       }
     ],
@@ -1171,8 +1191,8 @@ Path s
       {
         "newText": "",
         "range": {
-          "end": { "character": 18, "line": 93 },
-          "start": { "character": 17, "line": 93 }
+          "end": { "character": 18, "line": 104 },
+          "start": { "character": 17, "line": 104 }
         }
       }
     ],
@@ -1192,8 +1212,8 @@ Path s
       {
         "newText": "",
         "range": {
-          "end": { "character": 18, "line": 93 },
-          "start": { "character": 17, "line": 93 }
+          "end": { "character": 18, "line": 104 },
+          "start": { "character": 17, "line": 104 }
         }
       }
     ],
@@ -1213,8 +1233,8 @@ Path s
       {
         "newText": "",
         "range": {
-          "end": { "character": 18, "line": 93 },
-          "start": { "character": 17, "line": 93 }
+          "end": { "character": 18, "line": 104 },
+          "start": { "character": 17, "line": 104 }
         }
       }
     ],
@@ -1235,8 +1255,8 @@ Path s
       {
         "newText": "",
         "range": {
-          "end": { "character": 18, "line": 93 },
-          "start": { "character": 17, "line": 93 }
+          "end": { "character": 18, "line": 104 },
+          "start": { "character": 17, "line": 104 }
         }
       }
     ],
@@ -1256,8 +1276,8 @@ Path s
       {
         "newText": "",
         "range": {
-          "end": { "character": 18, "line": 93 },
-          "start": { "character": 17, "line": 93 }
+          "end": { "character": 18, "line": 104 },
+          "start": { "character": 17, "line": 104 }
         }
       }
     ],
@@ -1277,8 +1297,8 @@ Path s
       {
         "newText": "",
         "range": {
-          "end": { "character": 18, "line": 93 },
-          "start": { "character": 17, "line": 93 }
+          "end": { "character": 18, "line": 104 },
+          "start": { "character": 17, "line": 104 }
         }
       }
     ],
@@ -1298,8 +1318,8 @@ Path s
       {
         "newText": "",
         "range": {
-          "end": { "character": 18, "line": 93 },
-          "start": { "character": 17, "line": 93 }
+          "end": { "character": 18, "line": 104 },
+          "start": { "character": 17, "line": 104 }
         }
       }
     ],
@@ -1319,8 +1339,8 @@ Path s
       {
         "newText": "",
         "range": {
-          "end": { "character": 18, "line": 93 },
-          "start": { "character": 17, "line": 93 }
+          "end": { "character": 18, "line": 104 },
+          "start": { "character": 17, "line": 104 }
         }
       }
     ],

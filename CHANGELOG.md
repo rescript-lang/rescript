@@ -22,6 +22,7 @@
 
 #### :bug: Bug fix
 
+- Fix JSX prop completions in editor analysis for components backed by abstract `Jsx.component` values. https://github.com/rescript-lang/rescript/pull/8390
 - Preserve multibyte characters when wrapping long source lines in compiler code frames. https://github.com/rescript-lang/rescript/pull/8520
 
 #### :memo: Documentation

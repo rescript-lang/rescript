@@ -87,8 +87,19 @@ module Info = {
   }
 }
 
+module DomPropsComponent = {
+  @react.componentWithProps
+  let make = (props: JsxDOM.domProps) => {
+    ignore(props)
+    React.null
+  }
+}
+
 // <Info _type={#warning} >
 //                        ^com
+
+// <DomPropsComponent onClick=>
+//                            ^com
 
 
 // let _ = <p>{"".s}</p>

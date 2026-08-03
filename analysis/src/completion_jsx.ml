@@ -231,42 +231,40 @@ let get_jsx_labels ~component_path ~find_type_of_value ~package ~state =
                (name, t, env))
       | _ -> []
     in
+    let is_component_path path =
+      match Path.last path with
+      | "component" -> true
+      | _ -> false
+    in
+    let is_component_like_path path =
+      match Path.last path with
+      | "componentLike" -> true
+      | _ -> false
+    in
+    let rec get_props_type (t : Types.type_expr) =
+      match t.desc with
+      | Tlink t1 | Tsubst t1 | Tpoly (t1, []) -> get_props_type t1
+      | Tconstr (path, type_args, _) -> Some (path, type_args)
+      | _ -> None
+    in
     let rec get_labels (t : Types.type_expr) =
       match t.desc with
       | Tlink t1 | Tsubst t1 | Tpoly (t1, []) -> get_labels t1
-      | Tconstr (p, [props_type], _) when Path.name p = "React.component" -> (
-        let rec get_props_type (t : Types.type_expr) =
-          match t.desc with
-          | Tlink t1 | Tsubst t1 | Tpoly (t1, []) -> get_props_type t1
-          | Tconstr (path, type_args, _) when Path.last path = "props" ->
-            Some (path, type_args)
-          | _ -> None
-        in
+      | Tconstr (p, [props_type], _) when is_component_path p -> (
         match props_type |> get_props_type with
         | Some (path, type_args) -> get_fields ~path ~type_args
         | None -> [])
       | Tarrow
-          ({lbl = Nolabel; typ = {desc = Tconstr (path, type_args, _)}}, _, _, _)
-        when Path.last path = "props" ->
-        get_fields ~path ~type_args
-      | Tconstr (cl_path, [{desc = Tconstr (path, type_args, _)}; _], _)
-        when Path.name cl_path = "React.componentLike"
-             && Path.last path = "props" ->
+          ({lbl = Nolabel; typ}, _, _, _) -> (
+        match typ |> get_props_type with
+        | Some (path, type_args) -> get_fields ~path ~type_args
+        | None -> [])
+      | Tconstr (cl_path, [props_type; _], _)
+        when is_component_like_path cl_path -> (
         (* JSX V4 external or interface *)
-        get_fields ~path ~type_args
-      | Tarrow ({lbl = Nolabel; typ}, _, _, _) -> (
-        (* Component without the JSX PPX, like a make fn taking a hand-written
-           type props. *)
-        let rec dig_to_constr typ =
-          match typ.Types.desc with
-          | Tlink t1 | Tsubst t1 | Tpoly (t1, []) -> dig_to_constr t1
-          | Tconstr (path, type_args, _) when Path.last path = "props" ->
-            Some (path, type_args)
-          | _ -> None
-        in
-        match dig_to_constr typ with
-        | None -> []
-        | Some (path, type_args) -> get_fields ~path ~type_args)
+        match props_type |> get_props_type with
+        | Some (path, type_args) -> get_fields ~path ~type_args
+        | None -> [])
       | _ -> []
     in
     typ |> get_labels
