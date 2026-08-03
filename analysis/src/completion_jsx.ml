@@ -254,8 +254,7 @@ let get_jsx_labels ~component_path ~find_type_of_value ~package ~state =
         match props_type |> get_props_type with
         | Some (path, type_args) -> get_fields ~path ~type_args
         | None -> [])
-      | Tarrow
-          ({lbl = Nolabel; typ}, _, _, _) -> (
+      | Tarrow ({lbl = Nolabel; typ}, _, _, _) -> (
         match typ |> get_props_type with
         | Some (path, type_args) -> get_fields ~path ~type_args
         | None -> [])
