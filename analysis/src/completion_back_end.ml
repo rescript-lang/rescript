@@ -1641,13 +1641,18 @@ let rec complete_typed_value ?(type_arg_context : type_arg_context option)
   | TtypeT {env; path} when mode = Expression ->
     if Debug.verbose () then
       print_endline "[complete_typed_value]--> TtypeT (Expression)";
-    (* Find all values in the module with type t *)
+    let target_path = path in
+    let target_type_name = Path.last target_path in
+    let is_target_type_path path =
+      Path.same path target_path || Path.last path = target_type_name
+    in
+    (* Find all values in the module with the target type. *)
     let value_with_type_t t =
       match t.Types.desc with
-      | Tconstr (Pident {name = "t"}, [], _) -> true
+      | Tconstr (path, [], _) when is_target_type_path path -> true
       | _ -> false
     in
-    (* Find all functions in the module that returns type t *)
+    (* Find all functions in the module that return the target type. *)
     let rec fn_returns_type_t t =
       match t.Types.desc with
       | Tlink t1 | Tsubst t1 | Tpoly (t1, []) -> fn_returns_type_t t1
@@ -1655,13 +1660,17 @@ let rec complete_typed_value ?(type_arg_context : type_arg_context option)
         match
           Type_utils.extract_function_type ~env ~state ~package:full.package t
         with
-        | ( (Nolabel, {desc = Tconstr (Path.Pident {name = "t"}, _, _)}) :: _,
-            {desc = Tconstr (Path.Pident {name = "t"}, _, _)} ) ->
-          (* Filter out functions that take type t first. These are often
+        | ( (Nolabel, {desc = Tconstr (arg_path, _, _)}) :: _,
+            {desc = Tconstr (return_path, _, _)} )
+          when is_target_type_path arg_path && is_target_type_path return_path
+          ->
+          (* Filter out functions that take the target type first. These are often
              @send style functions that we don't want to have here because
-             they usually aren't meant to create a type t from scratch. *)
+             they usually aren't meant to create a value from scratch. *)
           false
-        | _args, {desc = Tconstr (Path.Pident {name = "t"}, _, _)} -> true
+        | _args, {desc = Tconstr (return_path, _, _)}
+          when is_target_type_path return_path ->
+          true
         | _ -> false)
       | _ -> false
     in
@@ -2443,10 +2452,91 @@ let rec process_completable ~state ~debug ~full ~scope ~env ~pos ~for_hover
             | CJsxPropValue _ -> true
             | _ -> false
         in
+        let complete_named_type_from_module_members typ =
+          match (typ, context_path) with
+          | ( TtypeT {path = target_path},
+              CPId {path = cp_path; completion_context = Type} ) -> (
+            let target_type_name = Path.last target_path in
+            let is_target_type_path path =
+              Path.same path target_path || Path.last path = target_type_name
+            in
+            let value_has_target_type type_expr =
+              match type_expr.Types.desc with
+              | Tconstr (path, [], _) when is_target_type_path path -> true
+              | _ -> false
+            in
+            let rec fn_returns_target_type ~env type_expr =
+              match type_expr.Types.desc with
+              | Tlink t1 | Tsubst t1 | Tpoly (t1, []) ->
+                fn_returns_target_type ~env t1
+              | Tarrow _ -> (
+                match
+                  Type_utils.extract_function_type ~env ~state
+                    ~package:full.package type_expr
+                with
+                | ( (Nolabel, {desc = Tconstr (arg_path, _, _)}) :: _,
+                    {desc = Tconstr (return_path, _, _)} )
+                  when is_target_type_path arg_path
+                       && is_target_type_path return_path ->
+                  false
+                | _args, {desc = Tconstr (return_path, _, _)}
+                  when is_target_type_path return_path ->
+                  true
+                | _ -> false)
+              | _ -> false
+            in
+            match List.rev cp_path with
+            | _type_name :: (_ :: _ as reversed_module_path) ->
+              let module_path = List.rev reversed_module_path in
+              let module_name = module_path |> String.concat "." in
+              get_completions_for_path ~state ~debug:false
+                ~completion_context:ValueOrField ~exact:false ~opens ~full ~pos
+                ~env ~scope (module_path @ [""])
+              |> List.filter_map (fun (c : Completion.t) ->
+                     match c.kind with
+                     | Value type_expr
+                       when value_has_target_type type_expr
+                            || fn_returns_target_type ~env:c.env type_expr ->
+                       let is_function =
+                         fn_returns_target_type ~env:c.env type_expr
+                       in
+                       let qualified_name = module_name ^ "." ^ c.name in
+                       if
+                         prefix <> ""
+                         && not
+                              (Utils.check_name qualified_name ~prefix
+                                 ~exact:false)
+                       then None
+                       else
+                         Some
+                           {
+                             c with
+                             name =
+                               (if is_function then qualified_name ^ "()"
+                                else qualified_name);
+                             sort_text = Some ("A " ^ qualified_name);
+                             insert_text =
+                               Some
+                                 (if is_function then qualified_name ^ "($0)"
+                                  else qualified_name);
+                             insert_text_format =
+                               (if is_function then
+                                  Some Lsp.Types.InsertTextFormat.Snippet
+                                else c.insert_text_format);
+                           }
+                     | _ -> None)
+            | _ -> [])
+          | _ -> []
+        in
         let items =
-          typ
-          |> complete_typed_value ?type_arg_context ~raw_opens ~mode:Expression
-               ~full ~prefix ~completion_context ~state
+          let items =
+            typ
+            |> complete_typed_value ?type_arg_context ~raw_opens
+                 ~mode:Expression ~full ~prefix ~completion_context ~state
+          in
+          (match items with
+          | [] -> complete_named_type_from_module_members typ
+          | _ -> items)
           |> List.map (fun (c : Completion.t) ->
                  if wrap_insert_text_in_braces then
                    {

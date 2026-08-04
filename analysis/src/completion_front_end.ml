@@ -438,6 +438,7 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
         result := Some (x, !scope)
   in
   let in_jsx_context = ref false in
+  let in_jsx_child_context = ref false in
   let set_result x = set_result_opt (Some x) in
   let scope_value_description (vd : Parsetree.value_description) =
     scope :=
@@ -1076,6 +1077,11 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
                 });
            expr iterator prop.exp;
            reset_current_ctx_path previous_ctx_path)
+  and iterate_jsx_children ~(iterator : Ast_iterator.iterator) children =
+    let old_in_jsx_child_context = !in_jsx_child_context in
+    in_jsx_child_context := true;
+    children |> List.iter (fun child -> iterator.expr iterator child);
+    in_jsx_child_context := old_in_jsx_child_context
   and expr (iterator : Ast_iterator.iterator) (expr : Parsetree.expression) =
     let old_in_jsx_context = !in_jsx_context in
     let processed = ref false in
@@ -1122,6 +1128,21 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
                   in_jsx = !in_jsx_context;
                 }));
         true
+    in
+    let set_empty_jsx_child_expr_result () =
+      set_result
+        (Cexpression
+           {
+             context_path =
+               CPId
+                 {
+                   loc = expr.pexp_loc;
+                   path = ["React"; "element"];
+                   completion_context = Type;
+                 };
+             nested = [];
+             prefix = "";
+           })
     in
     typed_completion_expr expr;
     match expr.pexp_desc with
@@ -1256,6 +1277,10 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
                          then ValueOrField
                          else Value);
                     }))
+        | Pexp_construct ({txt = Lident "()"}, _) when !in_jsx_child_context ->
+          set_empty_jsx_child_expr_result ()
+        | Pexp_record ([], _) when !in_jsx_child_context ->
+          set_empty_jsx_child_expr_result ()
         | Pexp_construct (lid, e_opt) -> (
           let lid_path = flatten_lid_check_dot lid in
           if debug then
@@ -1345,6 +1370,10 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
                         in_jsx = !in_jsx_context;
                       }))
             | None -> ())
+        | Pexp_jsx_element (Jsx_fragment {jsx_fragment_children = children}) ->
+          in_jsx_context := true;
+          iterate_jsx_children ~iterator children;
+          processed := true
         | Pexp_jsx_element
             ( Jsx_unary_element
                 {
@@ -1355,7 +1384,7 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
                 {
                   jsx_container_element_tag_name_start = comp_name;
                   jsx_container_element_props = props;
-                } ) -> (
+                } ) ->
           in_jsx_context := true;
           let is_valid_tag_for_props =
             match comp_name.txt with
@@ -1457,10 +1486,12 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
                        path = comp_name_path;
                        completion_context = Module;
                      }))
-          else
-            match jsx_props_opt with
-            | Some jsx_props -> iterate_jsx_props ~iterator jsx_props
-            | None -> ())
+          else ();
+          (match jsx_props_opt with
+          | Some jsx_props -> iterate_jsx_props ~iterator jsx_props
+          | None -> ());
+          iterate_jsx_children ~iterator children;
+          processed := true
         | Pexp_apply
             {
               funct = {pexp_desc = Pexp_ident {txt = Lident "->"}};

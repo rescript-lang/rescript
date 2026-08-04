@@ -32,12 +32,12 @@ Path st
 ]
 
 Complete src/CompletionJsx.res 13:21
-posCursor:[13:21] posNoWhite:[13:20] Found expr:[8:13->33:3]
-posCursor:[13:21] posNoWhite:[13:20] Found expr:[9:4->32:10]
-posCursor:[13:21] posNoWhite:[13:20] Found expr:[10:4->32:10]
-posCursor:[13:21] posNoWhite:[13:20] Found expr:[11:4->32:10]
-posCursor:[13:21] posNoWhite:[13:20] Found expr:[12:4->32:10]
-posCursor:[13:21] posNoWhite:[13:20] Found expr:[13:7->32:10]
+posCursor:[13:21] posNoWhite:[13:20] Found expr:[8:13->35:3]
+posCursor:[13:21] posNoWhite:[13:20] Found expr:[9:4->34:10]
+posCursor:[13:21] posNoWhite:[13:20] Found expr:[10:4->34:10]
+posCursor:[13:21] posNoWhite:[13:20] Found expr:[11:4->34:10]
+posCursor:[13:21] posNoWhite:[13:20] Found expr:[12:4->34:10]
+posCursor:[13:21] posNoWhite:[13:20] Found expr:[13:7->34:10]
 posCursor:[13:21] posNoWhite:[13:20] Found expr:[13:7->13:21]
 Completable: Cpath Value[someString]->st <<jsx>>
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -83,12 +83,12 @@ Path st
 ]
 
 Complete src/CompletionJsx.res 18:24
-posCursor:[18:24] posNoWhite:[18:23] Found expr:[8:13->33:3]
-posCursor:[18:24] posNoWhite:[18:23] Found expr:[9:4->32:10]
-posCursor:[18:24] posNoWhite:[18:23] Found expr:[10:4->32:10]
-posCursor:[18:24] posNoWhite:[18:23] Found expr:[11:4->32:10]
-posCursor:[18:24] posNoWhite:[18:23] Found expr:[12:4->32:10]
-posCursor:[18:24] posNoWhite:[18:23] Found expr:[15:4->32:10]
+posCursor:[18:24] posNoWhite:[18:23] Found expr:[8:13->35:3]
+posCursor:[18:24] posNoWhite:[18:23] Found expr:[9:4->34:10]
+posCursor:[18:24] posNoWhite:[18:23] Found expr:[10:4->34:10]
+posCursor:[18:24] posNoWhite:[18:23] Found expr:[11:4->34:10]
+posCursor:[18:24] posNoWhite:[18:23] Found expr:[12:4->34:10]
+posCursor:[18:24] posNoWhite:[18:23] Found expr:[15:4->34:10]
 JSX <div:[15:5->15:8] > _children:16:7
 posCursor:[18:24] posNoWhite:[18:23] Found expr:[18:10->18:24]
 Completable: Cpath Value[someString]->st <<jsx>>
@@ -135,12 +135,12 @@ Path st
 ]
 
 Complete src/CompletionJsx.res 20:27
-posCursor:[20:27] posNoWhite:[20:26] Found expr:[8:13->33:3]
-posCursor:[20:27] posNoWhite:[20:26] Found expr:[9:4->32:10]
-posCursor:[20:27] posNoWhite:[20:26] Found expr:[10:4->32:10]
-posCursor:[20:27] posNoWhite:[20:26] Found expr:[11:4->32:10]
-posCursor:[20:27] posNoWhite:[20:26] Found expr:[12:4->32:10]
-posCursor:[20:27] posNoWhite:[20:26] Found expr:[15:4->32:10]
+posCursor:[20:27] posNoWhite:[20:26] Found expr:[8:13->35:3]
+posCursor:[20:27] posNoWhite:[20:26] Found expr:[9:4->34:10]
+posCursor:[20:27] posNoWhite:[20:26] Found expr:[10:4->34:10]
+posCursor:[20:27] posNoWhite:[20:26] Found expr:[11:4->34:10]
+posCursor:[20:27] posNoWhite:[20:26] Found expr:[12:4->34:10]
+posCursor:[20:27] posNoWhite:[20:26] Found expr:[15:4->34:10]
 JSX <div:[15:5->15:8] > _children:16:7
 posCursor:[20:27] posNoWhite:[20:26] Found expr:[20:10->20:27]
 Completable: Cpath string->st <<jsx>>
@@ -186,12 +186,12 @@ Path st
 ]
 
 Complete src/CompletionJsx.res 22:40
-posCursor:[22:40] posNoWhite:[22:39] Found expr:[8:13->33:3]
-posCursor:[22:40] posNoWhite:[22:39] Found expr:[9:4->32:10]
-posCursor:[22:40] posNoWhite:[22:39] Found expr:[10:4->32:10]
-posCursor:[22:40] posNoWhite:[22:39] Found expr:[11:4->32:10]
-posCursor:[22:40] posNoWhite:[22:39] Found expr:[12:4->32:10]
-posCursor:[22:40] posNoWhite:[22:39] Found expr:[15:4->32:10]
+posCursor:[22:40] posNoWhite:[22:39] Found expr:[8:13->35:3]
+posCursor:[22:40] posNoWhite:[22:39] Found expr:[9:4->34:10]
+posCursor:[22:40] posNoWhite:[22:39] Found expr:[10:4->34:10]
+posCursor:[22:40] posNoWhite:[22:39] Found expr:[11:4->34:10]
+posCursor:[22:40] posNoWhite:[22:39] Found expr:[12:4->34:10]
+posCursor:[22:40] posNoWhite:[22:39] Found expr:[15:4->34:10]
 JSX <div:[15:5->15:8] > _children:16:7
 posCursor:[22:40] posNoWhite:[22:39] Found expr:[22:10->22:40]
 Completable: Cpath Value[String, trim](Nolabel)->st <<jsx>>
@@ -239,12 +239,12 @@ Path st
 ]
 
 Complete src/CompletionJsx.res 24:19
-posCursor:[24:19] posNoWhite:[24:18] Found expr:[8:13->33:3]
-posCursor:[24:19] posNoWhite:[24:18] Found expr:[9:4->32:10]
-posCursor:[24:19] posNoWhite:[24:18] Found expr:[10:4->32:10]
-posCursor:[24:19] posNoWhite:[24:18] Found expr:[11:4->32:10]
-posCursor:[24:19] posNoWhite:[24:18] Found expr:[12:4->32:10]
-posCursor:[24:19] posNoWhite:[24:18] Found expr:[15:4->32:10]
+posCursor:[24:19] posNoWhite:[24:18] Found expr:[8:13->35:3]
+posCursor:[24:19] posNoWhite:[24:18] Found expr:[9:4->34:10]
+posCursor:[24:19] posNoWhite:[24:18] Found expr:[10:4->34:10]
+posCursor:[24:19] posNoWhite:[24:18] Found expr:[11:4->34:10]
+posCursor:[24:19] posNoWhite:[24:18] Found expr:[12:4->34:10]
+posCursor:[24:19] posNoWhite:[24:18] Found expr:[15:4->34:10]
 JSX <div:[15:5->15:8] > _children:16:7
 posCursor:[24:19] posNoWhite:[24:18] Found expr:[24:10->0:-1]
 Completable: Cpath Value[someInt]-> <<jsx>>
@@ -508,12 +508,12 @@ Path
 ]
 
 Complete src/CompletionJsx.res 26:14
-posCursor:[26:14] posNoWhite:[26:13] Found expr:[8:13->33:3]
-posCursor:[26:14] posNoWhite:[26:13] Found expr:[9:4->32:10]
-posCursor:[26:14] posNoWhite:[26:13] Found expr:[10:4->32:10]
-posCursor:[26:14] posNoWhite:[26:13] Found expr:[11:4->32:10]
-posCursor:[26:14] posNoWhite:[26:13] Found expr:[12:4->32:10]
-posCursor:[26:14] posNoWhite:[26:13] Found expr:[15:4->32:10]
+posCursor:[26:14] posNoWhite:[26:13] Found expr:[8:13->35:3]
+posCursor:[26:14] posNoWhite:[26:13] Found expr:[9:4->34:10]
+posCursor:[26:14] posNoWhite:[26:13] Found expr:[10:4->34:10]
+posCursor:[26:14] posNoWhite:[26:13] Found expr:[11:4->34:10]
+posCursor:[26:14] posNoWhite:[26:13] Found expr:[12:4->34:10]
+posCursor:[26:14] posNoWhite:[26:13] Found expr:[15:4->34:10]
 JSX <div:[15:5->15:8] > _children:16:7
 posCursor:[26:14] posNoWhite:[26:13] Found expr:[26:10->0:-1]
 Completable: Cpath int-> <<jsx>>
@@ -776,12 +776,12 @@ Path
 ]
 
 Complete src/CompletionJsx.res 28:20
-posCursor:[28:20] posNoWhite:[28:19] Found expr:[8:13->33:3]
-posCursor:[28:20] posNoWhite:[28:19] Found expr:[9:4->32:10]
-posCursor:[28:20] posNoWhite:[28:19] Found expr:[10:4->32:10]
-posCursor:[28:20] posNoWhite:[28:19] Found expr:[11:4->32:10]
-posCursor:[28:20] posNoWhite:[28:19] Found expr:[12:4->32:10]
-posCursor:[28:20] posNoWhite:[28:19] Found expr:[15:4->32:10]
+posCursor:[28:20] posNoWhite:[28:19] Found expr:[8:13->35:3]
+posCursor:[28:20] posNoWhite:[28:19] Found expr:[9:4->34:10]
+posCursor:[28:20] posNoWhite:[28:19] Found expr:[10:4->34:10]
+posCursor:[28:20] posNoWhite:[28:19] Found expr:[11:4->34:10]
+posCursor:[28:20] posNoWhite:[28:19] Found expr:[12:4->34:10]
+posCursor:[28:20] posNoWhite:[28:19] Found expr:[15:4->34:10]
 JSX <div:[15:5->15:8] > _children:16:7
 posCursor:[28:20] posNoWhite:[28:19] Found expr:[28:10->28:20]
 Completable: Cpath Value[someArr]->a <<jsx>>
@@ -828,16 +828,140 @@ Path a
   }
 ]
 
-Complete src/CompletionJsx.res 30:12
-posCursor:[30:12] posNoWhite:[30:11] Found expr:[8:13->33:3]
-posCursor:[30:12] posNoWhite:[30:11] Found expr:[9:4->32:10]
-posCursor:[30:12] posNoWhite:[30:11] Found expr:[10:4->32:10]
-posCursor:[30:12] posNoWhite:[30:11] Found expr:[11:4->32:10]
-posCursor:[30:12] posNoWhite:[30:11] Found expr:[12:4->32:10]
-posCursor:[30:12] posNoWhite:[30:11] Found expr:[15:4->32:10]
+Complete src/CompletionJsx.res 30:10
+posCursor:[30:10] posNoWhite:[30:9] Found expr:[8:13->35:3]
+posCursor:[30:10] posNoWhite:[30:9] Found expr:[9:4->34:10]
+posCursor:[30:10] posNoWhite:[30:9] Found expr:[10:4->34:10]
+posCursor:[30:10] posNoWhite:[30:9] Found expr:[11:4->34:10]
+posCursor:[30:10] posNoWhite:[30:9] Found expr:[12:4->34:10]
+posCursor:[30:10] posNoWhite:[30:9] Found expr:[15:4->34:10]
 JSX <div:[15:5->15:8] > _children:16:7
-posCursor:[30:12] posNoWhite:[30:11] Found expr:[30:9->30:12]
-JSX <di:[30:10->30:12] > _children:None
+posCursor:[30:10] posNoWhite:[30:9] Found expr:[30:9->30:11]
+Completable: Cexpression Type[React, element]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Type[React, element]
+Path React.element
+[
+  {
+    "detail": "int => element",
+    "insertText": "React.int($0)",
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "React.int()",
+    "sortText": "A React.int",
+    "tags": []
+  },
+  {
+    "detail": "(component<'props>, 'props, ~key: string=?, unit) => element",
+    "insertText": "React.jsxKeyed($0)",
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "React.jsxKeyed()",
+    "sortText": "A React.jsxKeyed",
+    "tags": []
+  },
+  {
+    "detail": "array<element> => element",
+    "insertText": "React.array($0)",
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "React.array()",
+    "sortText": "A React.array",
+    "tags": []
+  },
+  {
+    "detail": "(component<'props>, 'props, ~key: string=?, unit) => element",
+    "insertText": "React.jsxsKeyed($0)",
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "React.jsxsKeyed()",
+    "sortText": "A React.jsxsKeyed",
+    "tags": []
+  },
+  {
+    "detail": "promise<element> => element",
+    "insertText": "React.promise($0)",
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "React.promise()",
+    "sortText": "A React.promise",
+    "tags": []
+  },
+  {
+    "detail": "string => element",
+    "insertText": "React.string($0)",
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "React.string()",
+    "sortText": "A React.string",
+    "tags": []
+  },
+  {
+    "detail": "float => element",
+    "insertText": "React.float($0)",
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "React.float()",
+    "sortText": "A React.float",
+    "tags": []
+  },
+  {
+    "detail": "element",
+    "insertText": "React.null",
+    "kind": 12,
+    "label": "React.null",
+    "sortText": "A React.null",
+    "tags": []
+  },
+  {
+    "detail": "(component<'props>, 'props) => element",
+    "insertText": "React.createElement($0)",
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "React.createElement()",
+    "sortText": "A React.createElement",
+    "tags": []
+  },
+  {
+    "detail": "(component<'props>, 'props, array<element>) => element",
+    "insertText": "React.createElementVariadic($0)",
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "React.createElementVariadic()",
+    "sortText": "A React.createElementVariadic",
+    "tags": []
+  },
+  {
+    "detail": "(component<'props>, 'props) => element",
+    "insertText": "React.jsxs($0)",
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "React.jsxs()",
+    "sortText": "A React.jsxs",
+    "tags": []
+  },
+  {
+    "detail": "(component<'props>, 'props) => element",
+    "insertText": "React.jsx($0)",
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "React.jsx()",
+    "sortText": "A React.jsx",
+    "tags": []
+  }
+]
+
+Complete src/CompletionJsx.res 32:12
+posCursor:[32:12] posNoWhite:[32:11] Found expr:[8:13->35:3]
+posCursor:[32:12] posNoWhite:[32:11] Found expr:[9:4->34:10]
+posCursor:[32:12] posNoWhite:[32:11] Found expr:[10:4->34:10]
+posCursor:[32:12] posNoWhite:[32:11] Found expr:[11:4->34:10]
+posCursor:[32:12] posNoWhite:[32:11] Found expr:[12:4->34:10]
+posCursor:[32:12] posNoWhite:[32:11] Found expr:[15:4->34:10]
+JSX <div:[15:5->15:8] > _children:16:7
+posCursor:[32:12] posNoWhite:[32:11] Found expr:[32:9->32:12]
+JSX <di:[32:10->32:12] > _children:None
 Completable: ChtmlElement <di
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -878,18 +1002,18 @@ Resolved opens 1 Stdlib
   }
 ]
 
-Complete src/CompletionJsx.res 45:23
-posCursor:[45:23] posNoWhite:[45:22] Found expr:[45:3->45:23]
-JSX <CompWithoutJsxPpx:[45:4->45:21] n[45:22->45:23]=...[45:22->45:23]> _children:None
+Complete src/CompletionJsx.res 47:23
+posCursor:[47:23] posNoWhite:[47:22] Found expr:[47:3->47:23]
+JSX <CompWithoutJsxPpx:[47:4->47:21] n[47:22->47:23]=...[47:22->47:23]> _children:None
 Completable: Cjsx([CompWithoutJsxPpx], n, [n])
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 Path CompWithoutJsxPpx.make
 [ { "detail": "string", "kind": 4, "label": "name", "tags": [] } ]
 
-Complete src/CompletionJsx.res 48:27
-posCursor:[48:27] posNoWhite:[48:26] Found expr:[48:3->48:28]
-JSX <SomeComponent:[48:4->48:17] someProp[48:18->48:26]=...[48:18->48:26]> _children:None
+Complete src/CompletionJsx.res 50:27
+posCursor:[50:27] posNoWhite:[50:26] Found expr:[50:3->50:28]
+JSX <SomeComponent:[50:4->50:17] someProp[50:18->50:26]=...[50:18->50:26]> _children:None
 Completable: Cexpression CJsxPropValue [SomeComponent] someProp
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -907,9 +1031,9 @@ Path SomeComponent.make
   }
 ]
 
-Complete src/CompletionJsx.res 51:11
-posCursor:[51:11] posNoWhite:[51:10] Found expr:[51:3->51:11]
-JSX <h1:[51:4->51:6] hidd[51:7->51:11]=...[51:7->51:11]> _children:None
+Complete src/CompletionJsx.res 53:11
+posCursor:[53:11] posNoWhite:[53:10] Found expr:[53:3->53:11]
+JSX <h1:[53:4->53:6] hidd[53:7->53:11]=...[53:7->53:11]> _children:None
 Completable: Cjsx([h1], hidd, [hidd])
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -917,9 +1041,9 @@ Path ReactDOM.domProps
 Path JsxDOM.domProps
 [ { "detail": "bool", "kind": 4, "label": "hidden", "tags": [] } ]
 
-Complete src/CompletionJsx.res 61:30
-posCursor:[61:30] posNoWhite:[61:28] Found expr:[61:3->61:29]
-JSX <IntrinsicElementLowercase:[61:4->61:29] > _children:None
+Complete src/CompletionJsx.res 63:30
+posCursor:[63:30] posNoWhite:[63:28] Found expr:[63:3->63:29]
+JSX <IntrinsicElementLowercase:[63:4->63:29] > _children:None
 Completable: Cjsx([IntrinsicElementLowercase], "", [])
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -930,9 +1054,9 @@ Path IntrinsicElementLowercase.make
   { "detail": "string", "kind": 4, "label": "key", "tags": [] }
 ]
 
-Complete src/CompletionJsx.res 73:36
-posCursor:[73:36] posNoWhite:[73:35] Found expr:[73:3->73:41]
-JSX <MultiPropComp:[73:4->73:17] name[73:18->73:22]=...[73:23->73:30] time[73:31->73:35]=...[73:37->73:40]> _children:None
+Complete src/CompletionJsx.res 75:36
+posCursor:[75:36] posNoWhite:[75:35] Found expr:[75:3->75:41]
+JSX <MultiPropComp:[75:4->75:17] name[75:18->75:22]=...[75:23->75:30] time[75:31->75:35]=...[75:37->75:40]> _children:None
 Completable: Cexpression CJsxPropValue [MultiPropComp] time
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -965,9 +1089,9 @@ Path MultiPropComp.make
   }
 ]
 
-Complete src/CompletionJsx.res 76:36
-posCursor:[76:36] posNoWhite:[76:35] Found expr:[76:3->76:40]
-JSX <MultiPropComp:[76:4->76:17] name[76:18->76:22]=...[76:23->76:30] time[76:31->76:35]=...[76:37->76:40]> _children:None
+Complete src/CompletionJsx.res 78:36
+posCursor:[78:36] posNoWhite:[78:35] Found expr:[78:3->78:40]
+JSX <MultiPropComp:[78:4->78:17] name[78:18->78:22]=...[78:23->78:30] time[78:31->78:35]=...[78:37->78:40]> _children:None
 Completable: Cexpression CJsxPropValue [MultiPropComp] time
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -1000,9 +1124,9 @@ Path MultiPropComp.make
   }
 ]
 
-Complete src/CompletionJsx.res 79:28
-posCursor:[79:28] posNoWhite:[79:27] Found expr:[79:3->79:32]
-JSX <MultiPropComp:[79:4->79:17] name[79:18->79:22]=...[79:18->79:22] time[79:23->79:27]=...[79:29->79:32]> _children:None
+Complete src/CompletionJsx.res 81:28
+posCursor:[81:28] posNoWhite:[81:27] Found expr:[81:3->81:32]
+JSX <MultiPropComp:[81:4->81:17] name[81:18->81:22]=...[81:18->81:22] time[81:23->81:27]=...[81:29->81:32]> _children:None
 Completable: Cexpression CJsxPropValue [MultiPropComp] time
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -1035,18 +1159,18 @@ Path MultiPropComp.make
   }
 ]
 
-Complete src/CompletionJsx.res 97:26
-posCursor:[97:26] posNoWhite:[97:24] Found expr:[97:3->97:27]
-JSX <Info:[97:4->97:8] _type[97:9->97:14]=...[97:16->97:24]> _children:None
+Complete src/CompletionJsx.res 99:26
+posCursor:[99:26] posNoWhite:[99:24] Found expr:[99:3->99:27]
+JSX <Info:[99:4->99:8] _type[99:9->99:14]=...[99:16->99:24]> _children:None
 Completable: Cjsx([Info], "", [_type])
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 Path Info.make
 [ { "detail": "string", "kind": 4, "label": "key", "tags": [] } ]
 
-Complete src/CompletionJsx.res 100:30
-posCursor:[100:30] posNoWhite:[100:29] Found expr:[100:3->100:31]
-JSX <DomPropsComponent:[100:4->100:21] onClick[100:22->100:29]=...[100:22->100:29]> _children:None
+Complete src/CompletionJsx.res 102:30
+posCursor:[102:30] posNoWhite:[102:29] Found expr:[102:3->102:31]
+JSX <DomPropsComponent:[102:4->102:21] onClick[102:22->102:29]=...[102:22->102:29]> _children:None
 Completable: Cexpression CJsxPropValue [DomPropsComponent] onClick
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -1064,11 +1188,11 @@ Path DomPropsComponent.make
   }
 ]
 
-Complete src/CompletionJsx.res 104:19
-posCursor:[104:19] posNoWhite:[104:18] Found expr:[104:11->104:24]
-JSX <p:[104:12->104:13] > _children:104:15
-posCursor:[104:19] posNoWhite:[104:18] Found expr:[104:15->104:19]
-Pexp_field [104:15->104:17] s:[104:18->104:19]
+Complete src/CompletionJsx.res 106:19
+posCursor:[106:19] posNoWhite:[106:18] Found expr:[106:11->106:24]
+JSX <p:[106:12->106:13] > _children:106:15
+posCursor:[106:19] posNoWhite:[106:18] Found expr:[106:15->106:19]
+Pexp_field [106:15->106:17] s:[106:18->106:19]
 Completable: Cpath string.s
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -1084,8 +1208,8 @@ Path s
       {
         "newText": "",
         "range": {
-          "end": { "character": 18, "line": 104 },
-          "start": { "character": 17, "line": 104 }
+          "end": { "character": 18, "line": 106 },
+          "start": { "character": 17, "line": 106 }
         }
       }
     ],
@@ -1106,8 +1230,8 @@ Path s
       {
         "newText": "",
         "range": {
-          "end": { "character": 18, "line": 104 },
-          "start": { "character": 17, "line": 104 }
+          "end": { "character": 18, "line": 106 },
+          "start": { "character": 17, "line": 106 }
         }
       }
     ],
@@ -1127,8 +1251,8 @@ Path s
       {
         "newText": "",
         "range": {
-          "end": { "character": 18, "line": 104 },
-          "start": { "character": 17, "line": 104 }
+          "end": { "character": 18, "line": 106 },
+          "start": { "character": 17, "line": 106 }
         }
       }
     ],
@@ -1148,8 +1272,8 @@ Path s
       {
         "newText": "",
         "range": {
-          "end": { "character": 18, "line": 104 },
-          "start": { "character": 17, "line": 104 }
+          "end": { "character": 18, "line": 106 },
+          "start": { "character": 17, "line": 106 }
         }
       }
     ],
@@ -1169,8 +1293,8 @@ Path s
       {
         "newText": "",
         "range": {
-          "end": { "character": 18, "line": 104 },
-          "start": { "character": 17, "line": 104 }
+          "end": { "character": 18, "line": 106 },
+          "start": { "character": 17, "line": 106 }
         }
       }
     ],
@@ -1191,8 +1315,8 @@ Path s
       {
         "newText": "",
         "range": {
-          "end": { "character": 18, "line": 104 },
-          "start": { "character": 17, "line": 104 }
+          "end": { "character": 18, "line": 106 },
+          "start": { "character": 17, "line": 106 }
         }
       }
     ],
@@ -1212,8 +1336,8 @@ Path s
       {
         "newText": "",
         "range": {
-          "end": { "character": 18, "line": 104 },
-          "start": { "character": 17, "line": 104 }
+          "end": { "character": 18, "line": 106 },
+          "start": { "character": 17, "line": 106 }
         }
       }
     ],
@@ -1233,8 +1357,8 @@ Path s
       {
         "newText": "",
         "range": {
-          "end": { "character": 18, "line": 104 },
-          "start": { "character": 17, "line": 104 }
+          "end": { "character": 18, "line": 106 },
+          "start": { "character": 17, "line": 106 }
         }
       }
     ],
@@ -1255,8 +1379,8 @@ Path s
       {
         "newText": "",
         "range": {
-          "end": { "character": 18, "line": 104 },
-          "start": { "character": 17, "line": 104 }
+          "end": { "character": 18, "line": 106 },
+          "start": { "character": 17, "line": 106 }
         }
       }
     ],
@@ -1276,8 +1400,8 @@ Path s
       {
         "newText": "",
         "range": {
-          "end": { "character": 18, "line": 104 },
-          "start": { "character": 17, "line": 104 }
+          "end": { "character": 18, "line": 106 },
+          "start": { "character": 17, "line": 106 }
         }
       }
     ],
@@ -1297,8 +1421,8 @@ Path s
       {
         "newText": "",
         "range": {
-          "end": { "character": 18, "line": 104 },
-          "start": { "character": 17, "line": 104 }
+          "end": { "character": 18, "line": 106 },
+          "start": { "character": 17, "line": 106 }
         }
       }
     ],
@@ -1318,8 +1442,8 @@ Path s
       {
         "newText": "",
         "range": {
-          "end": { "character": 18, "line": 104 },
-          "start": { "character": 17, "line": 104 }
+          "end": { "character": 18, "line": 106 },
+          "start": { "character": 17, "line": 106 }
         }
       }
     ],
@@ -1339,8 +1463,8 @@ Path s
       {
         "newText": "",
         "range": {
-          "end": { "character": 18, "line": 104 },
-          "start": { "character": 17, "line": 104 }
+          "end": { "character": 18, "line": 106 },
+          "start": { "character": 17, "line": 106 }
         }
       }
     ],

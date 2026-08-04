@@ -576,9 +576,15 @@ let extract_type_from_resolved_type (typ : Type.t) ~env ~full ~state =
          {env; constructors; variant_name = typ.name; variant_decl = typ.decl})
   | Abstract _ | Open -> (
     match typ.decl.type_manifest with
-    | None -> None
-    | Some t ->
-      t |> extract_type ~state ~env ~package:full.package |> get_extracted_type)
+    | None -> Some (TtypeT {env; path = Pident (Ident.create typ.name)})
+    | Some t -> (
+      match
+        t
+        |> extract_type ~state ~env ~package:full.package
+        |> get_extracted_type
+      with
+      | Some extracted_type -> Some extracted_type
+      | None -> Some (TtypeT {env; path = Pident (Ident.create typ.name)})))
 
 (** The context we just came from as we resolve the nested structure. *)
 type ctx = Rfield of string  (** A record field of name *)

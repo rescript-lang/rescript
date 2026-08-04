@@ -2384,9 +2384,6 @@ posCursor:[339:26] posNoWhite:[339:25] Found expr:[339:16->341:5]
 posCursor:[339:26] posNoWhite:[339:25] Found pattern:[339:20->341:5]
 posCursor:[339:26] posNoWhite:[339:25] Found type:[339:23->341:5]
 Ptyp_constr Res:[339:23->341:5]
-posCursor:[339:26] posNoWhite:[339:25] Found pattern:[339:20->341:5]
-posCursor:[339:26] posNoWhite:[339:25] Found type:[339:23->341:5]
-Ptyp_constr Res:[339:23->341:5]
 Completable: Cpath Type[Res]
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
