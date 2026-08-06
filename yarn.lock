@@ -1673,12 +1673,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"h3@npm:2.0.1-rc.25":
-  version: 2.0.1-rc.25
-  resolution: "h3@npm:2.0.1-rc.25"
+"h3@npm:2.0.1-rc.26":
+  version: 2.0.1-rc.26
+  resolution: "h3@npm:2.0.1-rc.26"
   dependencies:
     rou3: "npm:^0.9.1"
-    srvx: "npm:^0.11.22"
+    srvx: "npm:^0.12.4"
   peerDependencies:
     crossws: ^0.4.9
   peerDependenciesMeta:
@@ -1686,7 +1686,7 @@ __metadata:
       optional: true
   bin:
     h3: bin/h3.mjs
-  checksum: 10c0/35bee64ad4a9c914e251b91d9fa3c2806f63fa7753461afbbf2fa05c2496d877d7de0e4a8f387a5567f846eccb77522f6d13ebd3945915e63eb0c310e46f3f57
+  checksum: 10c0/92c587ee1b47f2c22ffb64bf4d57ff4b719f425e7e1bf48cdcb242f7ed8eea410ec90c49cc1189992f6fef1732a0546b3bec624873722804cb9af7b6ce1c63d8
   languageName: node
   linkType: hard
 
@@ -2617,7 +2617,7 @@ __metadata:
   dependencies:
     "@rescript/react": "workspace:^"
     "@rollup/plugin-node-resolve": "npm:^16.0.0"
-    h3: "npm:2.0.1-rc.25"
+    h3: "npm:2.0.1-rc.26"
     rescript: "workspace:^"
     rollup: "npm:^4.32.0"
   languageName: unknown
@@ -3169,12 +3169,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"srvx@npm:^0.11.22":
-  version: 0.11.22
-  resolution: "srvx@npm:0.11.22"
+"srvx@npm:^0.12.4":
+  version: 0.12.4
+  resolution: "srvx@npm:0.12.4"
   bin:
     srvx: bin/srvx.mjs
-  checksum: 10c0/aae81d7aa2d43e23fd483088533ad471ee2cd28f2065b84119635fd9feabdd4bab94fc06b8d198c205e3613b552624ccd2015c887ba9ca415d9c51dde7e6ec79
+  checksum: 10c0/2a9a0ed86ffd385a77015cc14995d5420befb8f0e42b09d1f49956b9f553e19d777f9d567815f5a34954552ceef98b76193a8fb0e3a41f1f46835888a0c7ed12
   languageName: node
   linkType: hard
 
