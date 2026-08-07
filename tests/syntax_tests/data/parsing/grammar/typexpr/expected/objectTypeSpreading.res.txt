@@ -14,7 +14,8 @@ let steve =
 let steve =
   ((([%obj { name = {js|Steve|js}; age = 30 }] : < user ;age: int   > ))
   [@res.braces ])
-let printFullUser [arity:1](steve : < user ;age: int   > ) = Console.log steve
+let printFullUser [arity:1](steve : < user ;age: int   > ) =
+  Console.log steve
 let printFullUser [arity:1]~user:(user : < user ;age: int   > )  =
   Console.log steve
 let printFullUser [arity:1]~user:(user : < user ;age: int   > )  =

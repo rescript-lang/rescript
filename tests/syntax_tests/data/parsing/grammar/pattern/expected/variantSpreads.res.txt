@@ -19,7 +19,9 @@ let doWithA [arity:1](a : a) =
     | Three -> Console.log {js|threeeee|js})
   [@res.braces ])
 let doWithB [arity:1](b : b) =
-  ((match b with | One -> Console.log {js|aaa|js} | _ -> Console.log {js|twwwoooo|js})
+  ((match b with
+    | One -> Console.log {js|aaa|js}
+    | _ -> Console.log {js|twwwoooo|js})
   [@res.braces ])
 let lookup [arity:1](b : b) =
   match b with

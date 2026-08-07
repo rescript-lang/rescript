@@ -64,7 +64,8 @@ let () =
   [@res.braces ][@res.ternary ])
 let () =
   ((let a = 1 in
-    let b = 2 in (module Teenager).(0); ((module Teenager) -> age) -> Console.log)
+    let b = 2 in
+    (module Teenager).(0); ((module Teenager) -> age) -> Console.log)
   [@res.braces ])
 let () =
   ((let a = 1 in

@@ -35,8 +35,9 @@ switch result {
 | _ => ()
 }
 
-;;((match result with | Some x -> Console.log {js|The sky is blue|js} | _ -> ())
-  [@res.iflet ][@warning "-4"])
+;;((match result with
+    | Some x -> Console.log {js|The sky is blue|js}
+    | _ -> ())[@res.iflet ][@warning "-4"])
 ;;((match result with
     | Error x -> Console.log {js|The sky is red|js}
     | _ ->

@@ -1,6 +1,6 @@
 
   Syntax error!
-  syntax_tests/data/parsing/errors/expressions/try.res:2:37-38
+  syntax_tests/data/parsing/errors/expressions/try.res:2:38-39
 
   1 ┆ let parsedPayload =
   2 ┆   try (JSON.parseOrThrow(response)) {

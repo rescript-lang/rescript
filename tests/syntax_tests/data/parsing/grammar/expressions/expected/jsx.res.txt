@@ -172,8 +172,8 @@ let _ =
                    handleChange eventWithLongIdent)
   [@res.braces ]) />
 let _ =
-  <div onClick=((fun [arity:1]event -> ((Console.log event; handleChange event)
-                   [@res.braces ]))
+  <div onClick=((fun [arity:1]event ->
+                   ((Console.log event; handleChange event)[@res.braces ]))
   [@res.braces ]) />
 let _ =
   <StaticDiv onClick=((fun [arity:5]foo ->
@@ -278,7 +278,8 @@ let _ =
 ;;<div>((Console.log (a <= 10))[@res.braces ])</div>
 ;;<div><div>((Console.log (a <= 10))[@res.braces ])</div></div>
 ;;<div><div onClick=((fun [arity:1]_ -> Console.log (a <= 10))
-  [@res.braces ])><div>((Console.log (a <= 10))[@res.braces ])</div></div></div>
+  [@res.braces ])><div>((Console.log (a <= 10))
+  [@res.braces ])</div></div></div>
 let _ = <A x={js|y|js} {...str} />
 let _ = <p-x-y></p-x-y>
 let _ = <V.x-y></V.x-y>
