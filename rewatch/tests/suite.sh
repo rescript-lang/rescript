@@ -41,6 +41,7 @@ success "No stale rescript processes found"
 # the repository-built compiler and runtime. See ../testrepo/README.md.
 bold "Yarn install"
 (cd ../testrepo && yarn)
+node ./add-belt-dependencies.mjs
 
 bold "Rescript version"
 (cd ../testrepo && ./node_modules/.bin/rescript --version)

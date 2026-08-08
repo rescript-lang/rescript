@@ -2,6 +2,7 @@
   "name": "rescript-tests",
   "private": true,
   "dependencies": {
+    "@rescript/belt": "workspace:^",
     "@rescript/react": "workspace:^",
     "rescript": "workspace:^"
   },

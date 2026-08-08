@@ -109,6 +109,10 @@ if (mochaTest) {
 
   // CommonJS tests
   const commonjsTestDir = path.join(projectDir, "tests/commonjs_tests");
+  await execClean([], {
+    cwd: commonjsTestDir,
+    stdio: "inherit",
+  });
   await execBuild([], {
     cwd: commonjsTestDir,
     stdio: "inherit",

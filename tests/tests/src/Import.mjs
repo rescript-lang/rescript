@@ -2,11 +2,11 @@
 
 
 async function eachIntAsync(list, f) {
-  return (await import("@rescript/runtime/lib/es6/Belt_List.mjs").then(m => m.forEach))(list, f);
+  return (await import("@rescript/belt/src/Belt_List.mjs").then(m => m.forEach))(list, f);
 }
 
 function eachIntLazy(list, f) {
-  return import("@rescript/runtime/lib/es6/Belt_List.mjs").then(m => m.forEach).then(each => Promise.resolve(each(list, f)));
+  return import("@rescript/belt/src/Belt_List.mjs").then(m => m.forEach).then(each => Promise.resolve(each(list, f)));
 }
 
 eachIntLazy({
@@ -35,13 +35,13 @@ eachIntAsync({
   console.log("async", n);
 });
 
-let beltAsModule = await import("@rescript/runtime/lib/es6/Belt_List.mjs");
+let beltAsModule = await import("@rescript/belt/src/Belt_List.mjs");
 
-let M = await import("@rescript/runtime/lib/es6/Belt_List.mjs");
+let M = await import("@rescript/belt/src/Belt_List.mjs");
 
-let N0 = await import("@rescript/runtime/lib/es6/Belt_List.mjs");
+let N0 = await import("@rescript/belt/src/Belt_List.mjs");
 
-let O = await import("@rescript/runtime/lib/es6/Belt_List.mjs");
+let O = await import("@rescript/belt/src/Belt_List.mjs");
 
 let N1_each = O.forEach;
 
@@ -50,7 +50,7 @@ let N1 = {
   each: N1_each
 };
 
-let N2 = await import("@rescript/runtime/lib/es6/Belt_List.mjs");
+let N2 = await import("@rescript/belt/src/Belt_List.mjs");
 
 let N_each = N2.forEach;
 
@@ -61,21 +61,21 @@ let N = {
   each: N_each
 };
 
-let M0 = await import("@rescript/runtime/lib/es6/Belt_List.mjs");
+let M0 = await import("@rescript/belt/src/Belt_List.mjs");
 
-let M1 = await import("@rescript/runtime/lib/es6/Belt_List.mjs");
+let M1 = await import("@rescript/belt/src/Belt_List.mjs");
 
 async function f() {
-  return (await import("@rescript/runtime/lib/es6/Belt_List.mjs")).forEach;
+  return (await import("@rescript/belt/src/Belt_List.mjs")).forEach;
 }
 
 async function f1() {
-  return (await import("@rescript/runtime/lib/es6/Belt_List.mjs")).forEach;
+  return (await import("@rescript/belt/src/Belt_List.mjs")).forEach;
 }
 
 async function f2() {
-  let M3 = await import("@rescript/runtime/lib/es6/Belt_List.mjs");
-  let M4 = await import("@rescript/runtime/lib/es6/Belt_List.mjs");
+  let M3 = await import("@rescript/belt/src/Belt_List.mjs");
+  let M4 = await import("@rescript/belt/src/Belt_List.mjs");
   return [
     M3.forEach,
     M4.forEach
@@ -83,8 +83,8 @@ async function f2() {
 }
 
 async function f3() {
-  let M3 = await import("@rescript/runtime/lib/es6/Belt_List.mjs");
-  let M4 = await import("@rescript/runtime/lib/es6/Belt_List.mjs");
+  let M3 = await import("@rescript/belt/src/Belt_List.mjs");
+  let M4 = await import("@rescript/belt/src/Belt_List.mjs");
   return [
     M3.forEach,
     M4.forEach
@@ -92,12 +92,12 @@ async function f3() {
 }
 
 async function f4() {
-  return (await import("@rescript/runtime/lib/es6/Belt_Array.mjs")).forEach;
+  return (await import("@rescript/belt/src/Belt_Array.mjs")).forEach;
 }
 
 async function f5() {
-  let A = await import("@rescript/runtime/lib/es6/Belt_Array.mjs");
-  let O = await import("@rescript/runtime/lib/es6/Belt_Option.mjs");
+  let A = await import("@rescript/belt/src/Belt_Array.mjs");
+  let O = await import("@rescript/belt/src/Belt_Option.mjs");
   return [
     A.forEach,
     O.forEach
@@ -105,8 +105,8 @@ async function f5() {
 }
 
 async function f6() {
-  let MS = await import("@rescript/runtime/lib/es6/Belt_MapString.mjs");
-  let A = await import("@rescript/runtime/lib/es6/Belt_Array.mjs");
+  let MS = await import("@rescript/belt/src/Belt_MapString.mjs");
+  let A = await import("@rescript/belt/src/Belt_Array.mjs");
   return [
     0,
     MS.forEach,
@@ -115,18 +115,18 @@ async function f6() {
 }
 
 async function f7() {
-  await import("@rescript/runtime/lib/es6/Belt_MapInt.mjs");
+  await import("@rescript/belt/src/Belt_MapInt.mjs");
   return 1;
 }
 
 async function f8() {
-  await import("@rescript/runtime/lib/es6/Belt_MutableQueue.mjs");
+  await import("@rescript/belt/src/Belt_MutableQueue.mjs");
   return 1;
 }
 
 async function f9(value) {
   if (value !== undefined) {
-    await import("@rescript/runtime/lib/es6/Belt_HashMapInt.mjs");
+    await import("@rescript/belt/src/Belt_HashMapInt.mjs");
     return;
   }
 }

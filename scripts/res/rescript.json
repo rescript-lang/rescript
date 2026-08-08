@@ -6,7 +6,7 @@
       "dir": "./"
     }
   ],
-  "dependencies": ["@tests/docstring-tests"],
+  "dependencies": ["@rescript/belt", "@tests/docstring-tests"],
   "package-specs": {
     "module": "esmodule",
     "in-source": true

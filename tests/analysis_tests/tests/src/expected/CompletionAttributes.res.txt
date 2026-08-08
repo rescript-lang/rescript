@@ -24,6 +24,7 @@ Completable: CdecoratorPayload(module=)
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 [
+  { "detail": "Package", "kind": 4, "label": "@rescript/belt", "tags": [] },
   { "detail": "Package", "kind": 4, "label": "@rescript/react", "tags": [] },
   { "detail": "Local file", "kind": 4, "label": "./test.json", "tags": [] },
   { "detail": "Local file", "kind": 4, "label": "./tst.js", "tags": [] }
@@ -233,6 +234,7 @@ Completable: CdecoratorPayload(module=)
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 [
+  { "detail": "Package", "kind": 4, "label": "@rescript/belt", "tags": [] },
   { "detail": "Package", "kind": 4, "label": "@rescript/react", "tags": [] },
   { "detail": "Local file", "kind": 4, "label": "./test.json", "tags": [] },
   { "detail": "Local file", "kind": 4, "label": "./tst.js", "tags": [] }
@@ -244,6 +246,7 @@ Completable: CdecoratorPayload(module=)
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 [
+  { "detail": "Package", "kind": 4, "label": "@rescript/belt", "tags": [] },
   { "detail": "Package", "kind": 4, "label": "@rescript/react", "tags": [] },
   { "detail": "Local file", "kind": 4, "label": "./test.json", "tags": [] },
   { "detail": "Local file", "kind": 4, "label": "./tst.js", "tags": [] }

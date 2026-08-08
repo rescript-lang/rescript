@@ -179,6 +179,14 @@ jobs:
         run: git diff --exit-code lib/js lib/es6
         working-directory: packages/@rescript/runtime
 
+      - name: Build @rescript/belt
+        run: yarn workspace @rescript/belt build
+        shell: bash
+
+      - name: Check for changes in @rescript/belt/lib
+        run: git diff --exit-code lib/js lib/es6
+        working-directory: packages/@rescript/belt
+
       - name: Version Check
         run: yarn constraints
 
@@ -493,12 +501,23 @@ jobs:
         run: |
           COMMIT_SHA="${{ needs.pkg-pr-new.outputs.commit_sha }}"
           npm i --no-audit \
-            "https://pkg.pr.new/rescript-lang/rescript@${COMMIT_SHA}"
+            "https://pkg.pr.new/rescript-lang/rescript@${COMMIT_SHA}" \
+            "https://pkg.pr.new/rescript-lang/rescript/@rescript/belt@${COMMIT_SHA}"
         shell: bash
         working-directory: ${{ steps.tmp-dir.outputs.path }}
 
       - name: Test installation
-        run: npx rescript -h && npx rescript build && cat src/Test.res.js
+        run: |
+          npx rescript -h
+          npx rescript build
+          cp src/BeltTest.res.txt src/BeltTest.res
+          if npx rescript build; then
+            echo "Belt unexpectedly compiled without being listed as a dependency" >&2
+            exit 1
+          fi
+          cp rescript-with-belt.json rescript.json
+          npx rescript build
+          cat src/BeltTest.res.js
         shell: bash
         working-directory: ${{ steps.tmp-dir.outputs.path }}
 
@@ -548,12 +567,23 @@ jobs:
           COMMIT_SHA="${{ needs.pkg-pr-new.outputs.commit_sha }}"
           # pnpm 10 blocks pkg.pr.new's URL-based platform subdependencies unless block-exotic-subdeps is disabled.
           pnpm --config.block-exotic-subdeps=false i \
-            "https://pkg.pr.new/rescript-lang/rescript@${COMMIT_SHA}"
+            "https://pkg.pr.new/rescript-lang/rescript@${COMMIT_SHA}" \
+            "https://pkg.pr.new/rescript-lang/rescript/@rescript/belt@${COMMIT_SHA}"
         shell: bash
         working-directory: ${{ steps.tmp-dir.outputs.path }}
 
       - name: Test installation
-        run: pnpm rescript -h && pnpm rescript build && cat src/Test.res.js
+        run: |
+          pnpm rescript -h
+          pnpm rescript build
+          cp src/BeltTest.res.txt src/BeltTest.res
+          if pnpm rescript build; then
+            echo "Belt unexpectedly compiled without being listed as a dependency" >&2
+            exit 1
+          fi
+          cp rescript-with-belt.json rescript.json
+          pnpm rescript build
+          cat src/BeltTest.res.js
         shell: bash
         working-directory: ${{ steps.tmp-dir.outputs.path }}
 

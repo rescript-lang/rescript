@@ -55,7 +55,7 @@ async function getArtifacts(pkg) {
 /** @type {Record<string, string[]>} */
 const artifactsPerPackage = {};
 
-for (const pkg of ["rescript", "@rescript/runtime"]) {
+for (const pkg of ["rescript", "@rescript/runtime", "@rescript/belt"]) {
   artifactsPerPackage[pkg] = await getArtifacts(pkg);
 }
 

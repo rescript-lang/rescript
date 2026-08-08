@@ -4,7 +4,7 @@
 */
 // hello
 
-import * as Belt_List from "@rescript/runtime/lib/es6/Belt_List.mjs";
+import * as Belt_List from "@rescript/belt/src/Belt_List.mjs";
 
 let x0 = null;
 

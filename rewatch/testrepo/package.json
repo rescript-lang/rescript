@@ -24,6 +24,7 @@
     ]
   },
   "dependencies": {
+    "@rescript/belt": "file:../../packages/@rescript/belt",
     "rescript": "12.0.0"
   },
   "scripts": {
