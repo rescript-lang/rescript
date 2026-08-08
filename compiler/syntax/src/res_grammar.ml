@@ -1,7 +1,7 @@
 module Token = Res_token
 
 type t =
-  | OpenDescription (* open Belt *)
+  | OpenDescription (* open Array *)
   | ModuleLongIdent (* Foo or Foo.Bar *) [@live]
   | Ternary (* condExpr ? trueExpr : falseExpr *)
   | Es6ArrowExpr

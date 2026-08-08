@@ -2453,7 +2453,7 @@ and print_value_binding ~state ~rec_flag (vb : Parsetree.value_binding) cmt_tbl
      *   let decoratorTags =
      *     items
      *     ->Array.filter(items => {items.category === Decorators})
-     *     ->Belt.Array.map(...)
+     *     ->Array.map(...)
      * Multiple pipes chained together lend themselves more towards the last layout.
      *)
     if Parsetree_viewer.is_single_pipe_expr vb.pvb_expr then

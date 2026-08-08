@@ -73,7 +73,7 @@ let pat_mapper (self : mapper) (p : Parsetree.pattern) =
   | _ -> default_pat_mapper self p
 
 (* Unpack requires core_type package for type inference:
-   Generate a module type name eg. __Belt_List__*)
+   Generate a module type name eg. __List__*)
 let local_module_type_name txt =
   "_"
   ^ (Longident.flatten txt |> List.fold_left (fun ll l -> ll ^ "_" ^ l) "")
@@ -323,7 +323,7 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
      the attribute to the whole expression, in general, when shuffuling the ast
      it is very hard to place attributes correctly
   *)
-  (* module M = await Belt.List *)
+  (* module M = await List *)
   | Pexp_letmodule
       (lid, ({pmod_desc = Pmod_ident {txt}; pmod_attributes} as me), expr)
     when Res_parsetree_viewer.has_await_attribute pmod_attributes ->
@@ -339,7 +339,7 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
               ~module_type_lid:safe_module_type_lid me,
             self.expr self expr );
     }
-  (* module M = await (Belt.List: BeltList) *)
+  (* module M = await (List: ListType) *)
   | Pexp_letmodule
       ( lid,
         ({
@@ -661,7 +661,7 @@ let rec structure_mapper ~await_context (self : mapper) (stru : Ast_structure.t)
         | _ -> expand_reverse acc (structure_mapper ~await_context self rest)
       in
       aux [] stru
-    (* Dynamic import of module transformation: module M = @res.await Belt.List *)
+    (* Dynamic import of module transformation: module M = @res.await List *)
     | Pstr_module
         ({pmb_expr = {pmod_desc = Pmod_ident {txt; loc}; pmod_attributes} as me}
          as mb)
@@ -671,7 +671,7 @@ let rec structure_mapper ~await_context (self : mapper) (stru : Ast_structure.t)
       let has_local_module_name =
         Hashtbl.find_opt !await_context safe_module_type_name
       in
-      (* module __Belt_List__ = module type of Belt.List *)
+      (* module __List__ = module type of List *)
       let module_type_decl =
         match has_local_module_name with
         | Some _ -> []
@@ -690,7 +690,7 @@ let rec structure_mapper ~await_context (self : mapper) (stru : Ast_structure.t)
       in
       module_type_decl
       @
-      (* module M = @res.await Belt.List *)
+      (* module M = @res.await List *)
       {
         item with
         pstr_desc =
@@ -705,7 +705,7 @@ let rec structure_mapper ~await_context (self : mapper) (stru : Ast_structure.t)
       :: structure_mapper ~await_context self rest
     | Pstr_value (_, vbs) ->
       let item = self.structure_item self item in
-      (* [ module __Belt_List__ = module type of Belt.List ] *)
+      (* [ module __List__ = module type of List ] *)
       let rec spelunk_vbs acc vbs =
         match vbs with
         | [] -> acc
