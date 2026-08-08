@@ -119,10 +119,9 @@ let strip_option core_type =
 
 let strip_nullable core_type =
   match core_type with
+  | {ptyp_desc = Ptyp_constr ({txt = Lident "nullable"}, core_types)}
   | {
-      ptyp_desc =
-        Ptyp_constr
-          ({txt = Ldot (Ldot (Lident "Js", "Nullable"), "t")}, core_types);
+      ptyp_desc = Ptyp_constr ({txt = Ldot (Lident "Nullable", "t")}, core_types);
     }
   | {
       ptyp_desc =

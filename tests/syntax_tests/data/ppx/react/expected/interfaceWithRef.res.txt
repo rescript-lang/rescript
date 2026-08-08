@@ -4,7 +4,7 @@ type props<'x, 'ref> = {
   ref?: 'ref,
 }
 let make = (
-  {x, _}: props<string, nullable<ReactDOM.Ref.currentDomRef>>,
+  {x, _}: props<string, ReactDOM.Ref.currentDomRef>,
   ref: nullable<ReactDOM.Ref.currentDomRef>,
 ) => {
   let _ = ref->Nullable.toOption->Belt.Option.map(ReactDOM.Ref.domRef)
