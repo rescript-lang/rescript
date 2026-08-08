@@ -726,25 +726,17 @@ let has_spread_attr attrs =
       | _ -> false)
     attrs
 
-let is_spread_belt_list_concat expr =
+let is_spread_list expr =
   match expr.pexp_desc with
   | Pexp_ident
-      {
-        txt =
-          Longident.Ldot
-            (Longident.Ldot (Longident.Lident "Belt", "List"), "concatMany");
-      } ->
+      {txt = Longident.Ldot (Longident.Lident "Primitive_list", "spread")} ->
     has_spread_attr expr.pexp_attributes
   | _ -> false
 
-let is_spread_belt_array_concat expr =
+let is_spread_array expr =
   match expr.pexp_desc with
   | Pexp_ident
-      {
-        txt =
-          Longident.Ldot
-            (Longident.Ldot (Longident.Lident "Belt", "Array"), "concatMany");
-      } ->
+      {txt = Longident.Ldot (Longident.Lident "Primitive_array", "spread")} ->
     has_spread_attr expr.pexp_attributes
   | _ -> false
 

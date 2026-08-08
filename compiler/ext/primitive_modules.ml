@@ -34,6 +34,8 @@ let string = "Primitive_string"
 
 let array = "Primitive_array"
 
+let list = "Primitive_list"
+
 let dict = "Primitive_dict"
 
 let object_ = "Primitive_object"

@@ -1593,14 +1593,10 @@ and walk_expression expr t comments =
     when Res_parsetree_viewer.is_tuple_array key_values ->
     walk_list [Expression key_values] t comments
   | Pexp_apply {funct = call_expr; args = arguments} -> (
-    (* Special handling for Belt.Array.concatMany - treat like an array *)
+    (* Special handling for array spread - treat it like an array *)
     match call_expr.pexp_desc with
     | Pexp_ident
-        {
-          txt =
-            Longident.Ldot
-              (Longident.Ldot (Longident.Lident "Belt", "Array"), "concatMany");
-        }
+        {txt = Longident.Ldot (Longident.Lident "Primitive_array", "spread")}
       when List.length arguments = 1 -> (
       match arguments with
       | [(_, {pexp_desc = Pexp_array sub_arrays})] ->

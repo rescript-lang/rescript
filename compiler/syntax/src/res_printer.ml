@@ -3583,12 +3583,12 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
         print_extension ~state ~at_module_lvl:false extension cmt_tbl)
     | Pexp_apply
         {funct = e; args = [(Nolabel, {pexp_desc = Pexp_array sub_lists})]}
-      when Parsetree_viewer.is_spread_belt_array_concat e ->
-      print_belt_array_concat_apply ~state sub_lists cmt_tbl
+      when Parsetree_viewer.is_spread_array e ->
+      print_array_spread_apply ~state sub_lists cmt_tbl
     | Pexp_apply
         {funct = e; args = [(Nolabel, {pexp_desc = Pexp_array sub_lists})]}
-      when Parsetree_viewer.is_spread_belt_list_concat e ->
-      print_belt_list_concat_apply ~state sub_lists cmt_tbl
+      when Parsetree_viewer.is_spread_list e ->
+      print_list_spread_apply ~state sub_lists cmt_tbl
     | Pexp_apply {funct = call_expr; args} ->
       if Parsetree_viewer.is_unary_expression e then
         print_unary_expression ~state e cmt_tbl
@@ -4381,7 +4381,7 @@ and print_binary_expression ~state (expr : Parsetree.expression) cmt_tbl =
          ])
   | _ -> Doc.nil
 
-and print_belt_array_concat_apply ~state sub_lists cmt_tbl =
+and print_array_spread_apply ~state sub_lists cmt_tbl =
   let make_spread_doc comma_before_spread = function
     | Some expr ->
       (* Extract leading comments before dotdotdot *)
@@ -4451,7 +4451,7 @@ and print_belt_array_concat_apply ~state sub_lists cmt_tbl =
          Doc.rbracket;
        ])
 
-and print_belt_list_concat_apply ~state sub_lists cmt_tbl =
+and print_list_spread_apply ~state sub_lists cmt_tbl =
   let make_spread_doc comma_before_spread = function
     | Some expr ->
       Doc.concat

@@ -147,7 +147,7 @@ make checkformat
 
 ## Adding new Files to the Npm Packages
 
-To make sure that no files are added to or removed from the `rescript` or `@rescript/runtime` npm package inadvertently, an artifact list is kept at `packages/artifacts.json`. During CI build, it is verified that only the files that are listed there are actually included in the npm packages.
+To make sure that no files are added to or removed from the `rescript`, `@rescript/runtime`, or `@rescript/belt` npm package inadvertently, an artifact list is kept at `packages/artifacts.json`. During CI build, it is verified that only the files that are listed there are actually included in the npm packages.
 
 After adding a new file to the repository that should go into one of the npm packages - e.g., a new stdlib module -, run `make artifacts`.
 
