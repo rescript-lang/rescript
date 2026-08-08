@@ -153,9 +153,6 @@ let rec print_out_type_doc (out_type : Outcometree.out_type) =
   (* example: Red | Blue | Green | CustomColour(float, float, float) *)
   | Otyp_sum constructors -> print_out_constructors_doc constructors
   (* example: {"name": string, "age": int} *)
-  | Otyp_constr (Oide_dot (Oide_ident "Js", "t"), [Otyp_object (fields, rest)])
-    ->
-    print_object_fields fields rest
   (* example: node<root, 'value> *)
   | Otyp_constr (out_ident, args) ->
     let args_doc =

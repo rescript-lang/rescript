@@ -14,9 +14,6 @@ let nullable1 = (x: Nullable.t<int>) => x
 let undefined0 = (x: undefined<int>) => x
 
 @genType
-let undefined1 = (x: undefined<int>) => x
-
-@genType
 let dict0 = (x: dict<string>) => x
 
 @genType
@@ -35,19 +32,19 @@ let taggedTemplate0 = (x: taggedTemplate<string, string>) => x
 let taggedTemplate1 = (x: TaggedTemplate.t<string, string>) => x
 
 @genType
-let date0 = (x: Date.t) => x
-
-@genType
 let date1 = (x: Date.t) => x
 
 @genType
 let bigint0 = (x: bigint) => x
 
 @genType
-let regexp0 = (x: RegExp.t) => x
+let stdlibBigInt = (x: Stdlib.BigInt.t) => x
 
 @genType
 let regexp1 = (x: RegExp.t) => x
+
+@genType
+let stdlibArray = (x: Stdlib.Array.t<int>) => x
 
 module Map = Map_
 module Set = Set_

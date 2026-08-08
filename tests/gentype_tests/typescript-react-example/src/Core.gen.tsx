@@ -37,8 +37,6 @@ export const nullable1: (x:(null | undefined | number)) => (null | undefined | n
 
 export const undefined0: (x:(undefined | number)) => (undefined | number) = CoreJS.undefined0 as any;
 
-export const undefined1: (x:(undefined | number)) => (undefined | number) = CoreJS.undefined1 as any;
-
 export const dict0: (x:{[id: string]: string}) => {[id: string]: string} = CoreJS.dict0 as any;
 
 export const dict1: (x:{[id: string]: string}) => {[id: string]: string} = CoreJS.dict1 as any;
@@ -51,15 +49,15 @@ export const taggedTemplate0: (x:((strings:TemplateStringsArray, ...values:strin
 
 export const taggedTemplate1: (x:((strings:TemplateStringsArray, ...values:string[]) => string)) => (strings:TemplateStringsArray, ...values:string[]) => string = CoreJS.taggedTemplate1 as any;
 
-export const date0: (x:Date) => Date = CoreJS.date0 as any;
-
 export const date1: (x:Date) => Date = CoreJS.date1 as any;
 
 export const bigint0: (x:bigint) => bigint = CoreJS.bigint0 as any;
 
-export const regexp0: (x:RegExp) => RegExp = CoreJS.regexp0 as any;
+export const stdlibBigInt: (x:bigint) => bigint = CoreJS.stdlibBigInt as any;
 
 export const regexp1: (x:RegExp) => RegExp = CoreJS.regexp1 as any;
+
+export const stdlibArray: (x:number[]) => number[] = CoreJS.stdlibArray as any;
 
 export const map1: (x:Map<string,number>) => Map<string,number> = CoreJS.map1 as any;
 

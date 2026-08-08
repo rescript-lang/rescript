@@ -43,7 +43,7 @@ let lam_extension_id loc (head : Lam.t) =
     {[
       try .. with 
       | A (x,y) -> 
-      | Js.Error ..
+      | Exn.Error ..
     ]}
 
     Without such wrapping, the code above would raise

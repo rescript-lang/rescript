@@ -185,7 +185,7 @@ let sanitize_type_name name =
        | '\'' -> '_'
        | c -> c)
 let unknown = ident "unknown"
-let bigint_t = ident "BigInt"
+let bigint_t = ident "bigint"
 let boolean_t = ident "boolean"
 let date_t = ident "Date"
 let map_t (x, y) = ident ~type_args:[x; y] "Map"
