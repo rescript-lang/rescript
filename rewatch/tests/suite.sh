@@ -62,6 +62,53 @@ else
   exit 1
 fi
 
+# sury-ppx 11.0.0-rc.0 only ships an arm64 binary for macOS. Temporarily
+# disable the PPX fixture on Intel Macs until the package ships an x64 binary.
+if [[ "$(uname -s)" == "Darwin" && "$(uname -m)" == "x86_64" ]]; then
+  PPX_CONFIG=../testrepo/packages/with-ppx/rescript.json
+  PPX_SOURCE=../testrepo/packages/with-ppx/src/FileWithPpx.res
+  PPX_OUTPUT=../testrepo/packages/with-ppx/src/FileWithPpx.mjs
+  PPX_BACKUP_DIR=$(mktemp -d)
+  PPX_FIXTURE_SHELL_PID=$BASHPID
+
+  cp "$PPX_CONFIG" "$PPX_BACKUP_DIR/rescript.json"
+  cp "$PPX_SOURCE" "$PPX_BACKUP_DIR/FileWithPpx.res"
+  cp "$PPX_OUTPUT" "$PPX_BACKUP_DIR/FileWithPpx.mjs"
+  cp "$(git rev-parse --git-path index)" "$PPX_BACKUP_DIR/index"
+  export GIT_INDEX_FILE="$PPX_BACKUP_DIR/index"
+
+  restore_ppx_fixture() {
+    if [ "$BASHPID" != "$PPX_FIXTURE_SHELL_PID" ]; then
+      return
+    fi
+    cp "$PPX_BACKUP_DIR/rescript.json" "$PPX_CONFIG"
+    cp "$PPX_BACKUP_DIR/FileWithPpx.res" "$PPX_SOURCE"
+    cp "$PPX_BACKUP_DIR/FileWithPpx.mjs" "$PPX_OUTPUT"
+    unset GIT_INDEX_FILE
+    rm -rf "$PPX_BACKUP_DIR"
+  }
+  trap restore_ppx_fixture EXIT
+
+  bold "Disable sury-ppx fixture on Intel macOS"
+  node -e '
+    const fs = require("fs");
+    const path = process.argv[1];
+    const config = JSON.parse(fs.readFileSync(path, "utf8"));
+    delete config["ppx-flags"];
+    fs.writeFileSync(path, `${JSON.stringify(config, null, 2)}\n`);
+  ' "$PPX_CONFIG"
+  printf "\n" > "$PPX_SOURCE"
+
+  if ! error_output=$(cd ../testrepo && "$REWATCH_EXECUTABLE" clean 2>&1 && "$REWATCH_EXECUTABLE" build 2>&1); then
+    error "Error preparing testrepo without sury-ppx"
+    printf "%s\n" "$error_output" >&2
+    exit 1
+  fi
+
+  git add "$PPX_CONFIG" "$PPX_SOURCE" "$PPX_OUTPUT"
+  success "sury-ppx fixture disabled"
+fi
+
 # Individual test files
 # Comment out any test to skip it
 
