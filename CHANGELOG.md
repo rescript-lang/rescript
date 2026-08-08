@@ -14,6 +14,8 @@
 
 #### :boom: Breaking Change
 
+- Remove the deprecated `Js` namespace and its runtime modules. https://github.com/rescript-lang/rescript/pull/8531
+
 #### :eyeglasses: Spec Compliance
 
 #### :rocket: New Feature
