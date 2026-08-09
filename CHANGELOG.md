@@ -19,6 +19,7 @@
 #### :rocket: New Feature
 
 - Add source map support with linked, inline, and hidden modes. https://github.com/rescript-lang/rescript/pull/8393
+- Add `List.includes`, deprecate `List.has` in favor of `List.some`, and clarify the equality semantics of `List.includes` and `Array.includes`. https://github.com/rescript-lang/rescript/pull/8530
 
 #### :bug: Bug fix
 

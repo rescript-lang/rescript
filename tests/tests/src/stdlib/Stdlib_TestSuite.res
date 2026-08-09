@@ -2,6 +2,7 @@ include Stdlib_TestTests
 include Stdlib_PromiseTest
 include Stdlib_ErrorTests
 include Stdlib_ArrayTests
+include Stdlib_ListTests
 include Stdlib_IntTests
 include Stdlib_ObjectTests
 include Stdlib_ResultTests

@@ -609,7 +609,8 @@ See [`Array.flat`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refer
 external flat: array<array<'a>> => array<'a> = "flat"
 
 /**
-`includes(array, item)` checks whether `array` includes `item`, by doing a [strict check for equality](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Strict_equality).
+`includes(array, item)` checks whether `array` includes `item` using
+[SameValueZero equality](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Equality_comparisons_and_sameness#same-value-zero_equality).
 
 See [`Array.includes`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/includes) on MDN.
 
@@ -618,8 +619,9 @@ See [`Array.includes`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/R
 ```rescript
 [1, 2]->Array.includes(1) == true
 [1, 2]->Array.includes(3) == false
+[Float.Constants.nan]->Array.includes(Float.Constants.nan) == true
 
-[{"language": "ReScript"}]->Array.includes({"language": "ReScript"}) == false // false, because of strict equality
+[{"language": "ReScript"}]->Array.includes({"language": "ReScript"}) == false // false, because objects compare by reference
 ```
 */
 @send
