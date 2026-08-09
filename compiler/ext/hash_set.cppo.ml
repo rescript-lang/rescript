@@ -25,19 +25,19 @@
 #ifdef TYPE_INT
 type key = int
 let key_index (h :  _ Hash_set_gen.t ) (key : key) =
-  (Bs_hash_stubs.hash_int  key) land (Array.length h.data - 1)
+  (Ext_platform_primitives.hash_int  key) land (Array.length h.data - 1)
 let eq_key = Ext_int.equal 
 type  t = key  Hash_set_gen.t 
 #elif defined TYPE_STRING
 type key = string 
 let key_index (h :  _ Hash_set_gen.t ) (key : key) =
-  (Bs_hash_stubs.hash_string  key) land (Array.length h.data - 1)
+  (Ext_platform_primitives.hash_string  key) land (Array.length h.data - 1)
 let eq_key = Ext_string.equal 
 type  t = key  Hash_set_gen.t 
 #elif defined TYPE_IDENT
 type key = Ident.t
 let key_index (h :  _ Hash_set_gen.t ) (key : key) =
-  (Bs_hash_stubs.hash_string_int  key.name key.stamp) land (Array.length h.data - 1)
+  (Ext_platform_primitives.hash_string_int  key.name key.stamp) land (Array.length h.data - 1)
 let eq_key = Ext_ident.equal
 type t = key Hash_set_gen.t
 #elif defined TYPE_FUNCTOR
@@ -121,4 +121,3 @@ module Make (H: Hashtbl.HashedType) : (Hash_set_gen.S with type key = H.t) = str
 #ifdef TYPE_FUNCTOR
 end
 #endif
-

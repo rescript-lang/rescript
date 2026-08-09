@@ -37,7 +37,7 @@ module Make ( Resize :  Vec_gen.ResizeType) = struct
 
 type elt = int 
 let null = 0 (* can be optimized *)
-let unsafe_blit = Bs_hash_stubs.int_unsafe_blit
+let unsafe_blit = Ext_platform_primitives.int_unsafe_blit
 #else 
 [%error "unknown type"]
 #endif

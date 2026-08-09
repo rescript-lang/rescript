@@ -10,7 +10,7 @@ struct
   type key = Ident.t
   type   'value t = (key,'value) Ordered_hash_map_gen.t
   let key_index (h : _ t) (key : key) =
-    (Bs_hash_stubs.hash_int  key.stamp) land (Array.length h.data - 1)
+    (Ext_platform_primitives.hash_int  key.stamp) land (Array.length h.data - 1)
   let equal_key = Ext_ident.equal
 
 #else
@@ -99,7 +99,6 @@ struct
 #if defined TYPE_FUNCTOR
 end
 #endif
-
 
 
 

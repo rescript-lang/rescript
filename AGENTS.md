@@ -72,6 +72,15 @@ JS IR
 JavaScript Code
 ```
 
+### Platform-specific compiler modules
+
+The Dune `browser` profile builds the playground compiler. Platform-dependent
+modules are stored below `platform/native/` and `platform/playground/` in their
+owning compiler directory. Rules in that directory's `dune` file copy the
+selected implementation into the build directory as an ordinary `.ml` module;
+all other profiles select the native source. Generated module paths in errors
+or stack traces therefore map back to one of those two source directories.
+
 ### Key Directory Structure
 
 ```

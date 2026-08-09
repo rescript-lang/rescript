@@ -2,20 +2,19 @@
 type key = Ident.t 
 type 'a t = (key, 'a)  Hash_gen.t 
 let key_index (h : _ t ) (key : key) =
-  (Bs_hash_stubs.hash_stamp_and_name  key.stamp key.name ) land (Array.length h.data - 1)
-(* (Bs_hash_stubs.hash_string_int  key.name key.stamp ) land (Array.length h.data - 1) *)
+  (Ext_platform_primitives.hash_stamp_and_name  key.stamp key.name ) land (Array.length h.data - 1)
 let eq_key = Ext_ident.equal 
 #elif defined TYPE_STRING
 type key = string
 type 'a t = (key, 'a)  Hash_gen.t 
 let key_index (h : _ t ) (key : key) =
-  (Bs_hash_stubs.hash_string  key ) land (Array.length h.data - 1)
+  (Ext_platform_primitives.hash_string  key ) land (Array.length h.data - 1)
 let eq_key = Ext_string.equal 
 #elif defined TYPE_INT
 type key = int 
 type 'a t = (key, 'a)  Hash_gen.t 
 let key_index (h : _ t ) (key : key) =
-  (Bs_hash_stubs.hash_int  key ) land (Array.length h.data - 1)
+  (Ext_platform_primitives.hash_int  key ) land (Array.length h.data - 1)
 let eq_key = Ext_int.equal   
 
 #elif defined TYPE_FUNCTOR

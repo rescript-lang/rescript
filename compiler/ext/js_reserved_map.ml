@@ -23,16 +23,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
 module STbl = struct
-  #if OCAML_VERSION >= (5, 0, 0)
-    include Hashtbl.Make (String)
-  #else
-    module StringHash : Hashtbl.HashedType with type t = string = struct
-      type t = string
-      let equal = String.equal
-      let hash = Hashtbl.hash (* polymorphic hash function *)
-    end
-    include Hashtbl.Make (StringHash)
-  #endif
+  include Hashtbl.Make (String)
 
   let of_array arr =
     let tbl = create (Array.length arr) in
@@ -44,61 +35,59 @@ end
 
     See https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Lexical_grammar#reserved_words
  *)
-let js_keywords = STbl.of_array [|
-  "break";
-  "case";
-  "catch";
-  "class";
-  "const";
-  "continue";
-  "debugger";
-  "default";
-  "delete";
-  "do";
-  "else";
-  "export";
-  "extends";
-  "false";
-  "finally";
-  "for";
-  "function";
-  "if";
-  "import";
-  "in";
-  "instanceof";
-  "new";
-  "null";
-  "return";
-  "super";
-  "switch";
-  "this";
-  "throw";
-  "true";
-  "try";
-  "typeof";
-  "var";
-  "void";
-  "while";
-  "with";
-
-  (* The following are also reserved in strict context, including ESM *)
-  "let";
-  "static";
-  "yield";
-
-  (* `await` is reserved in async context, including ESM *)
-  "await";
-
-  (* Future reserved words *)
-  "enum";
-  "implements";
-  "interface";
-  "package";
-  "private";
-  "protected";
-  "public";
-
-  (* Special identifiers
+let js_keywords =
+  STbl.of_array
+    [|
+      "break";
+      "case";
+      "catch";
+      "class";
+      "const";
+      "continue";
+      "debugger";
+      "default";
+      "delete";
+      "do";
+      "else";
+      "export";
+      "extends";
+      "false";
+      "finally";
+      "for";
+      "function";
+      "if";
+      "import";
+      "in";
+      "instanceof";
+      "new";
+      "null";
+      "return";
+      "super";
+      "switch";
+      "this";
+      "throw";
+      "true";
+      "try";
+      "typeof";
+      "var";
+      "void";
+      "while";
+      "with";
+      (* The following are also reserved in strict context, including ESM *)
+      "let";
+      "static";
+      "yield";
+      (* `await` is reserved in async context, including ESM *)
+      "await";
+      (* Future reserved words *)
+      "enum";
+      "implements";
+      "interface";
+      "package";
+      "private";
+      "protected";
+      "public";
+      (* Special identifiers
 
      `arguments` and `eval` is not real *keywords*
 
@@ -107,9 +96,9 @@ let js_keywords = STbl.of_array [|
 
      See https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Lexical_grammar#identifiers_with_special_meanings
    *)
-  "arguments";
-  "eval";
-|]
+      "arguments";
+      "eval";
+    |]
 
 let is_js_keyword s = STbl.mem js_keywords s
 
@@ -121,93 +110,87 @@ let is_js_keyword s = STbl.mem js_keywords s
 
     However, these names are actually used with no problems today. (Except `arguments` and `eval`)
  *)
-let js_special_words = STbl.of_array [|
-  "arguments";
-  "as";
-  "async";
-  "eval";
-  "from";
-  "get";
-  "of";
-  "set";
-|]
+let js_special_words =
+  STbl.of_array
+    [|"arguments"; "as"; "async"; "eval"; "from"; "get"; "of"; "set"|]
 
 let is_js_special_word s = STbl.mem js_special_words s
 
 (** Identifier names _might_ need to care about *)
-let js_globals = STbl.of_array [|
-  (* JavaScript standards built-ins
+let js_globals =
+  STbl.of_array
+    [|
+      (* JavaScript standards built-ins
      See https://developer.mozilla.org/ko/docs/Web/JavaScript/Reference/Global_Objects
   *)
-  "AggregateError";
-  "Array";
-  "ArrayBuffer";
-  "AsyncFunction";
-  "AsyncGenerator";
-  "AsyncGeneratorFunction";
-  "AsyncIterator";
-  "Atomics";
-  "BigInt";
-  "BigInt64Array";
-  "BigUint64Array";
-  "Boolean";
-  "DataView";
-  "Date";
-  "decodeURI";
-  "decodeURIComponent";
-  "encodeURI";
-  "encodeURIComponent";
-  "Error";
-  "eval";
-  "EvalError";
-  "FinalizationRegistry";
-  "Float16Array";
-  "Float32Array";
-  "Float64Array";
-  "Function";
-  "Generator";
-  "GeneratorFunction";
-  "globalThis";
-  "Infinity";
-  "Int16Array";
-  "Int32Array";
-  "Int8Array";
-  "Intl";
-  "isFinite";
-  "isNaN";
-  "Iterator";
-  "JSON";
-  "Map";
-  "Math";
-  "NaN";
-  "Number";
-  "Object";
-  "parseFloat";
-  "parseInt";
-  "Promise";
-  "Proxy";
-  "RangeError";
-  "ReferenceError";
-  "Reflect";
-  "RegExp";
-  "Set";
-  "SharedArrayBuffer";
-  "String";
-  "Symbol";
-  "SyntaxError";
-  "TypedArray";
-  "TypeError";
-  "Uint16Array";
-  "Uint32Array";
-  "Uint8Array";
-  "Uint8ClampedArray";
-  "undefined";
-  "URIError";
-  "WeakMap";
-  "WeakRef";
-  "WeakSet";
-
-  (* A few of the HTML standard globals
+      "AggregateError";
+      "Array";
+      "ArrayBuffer";
+      "AsyncFunction";
+      "AsyncGenerator";
+      "AsyncGeneratorFunction";
+      "AsyncIterator";
+      "Atomics";
+      "BigInt";
+      "BigInt64Array";
+      "BigUint64Array";
+      "Boolean";
+      "DataView";
+      "Date";
+      "decodeURI";
+      "decodeURIComponent";
+      "encodeURI";
+      "encodeURIComponent";
+      "Error";
+      "eval";
+      "EvalError";
+      "FinalizationRegistry";
+      "Float16Array";
+      "Float32Array";
+      "Float64Array";
+      "Function";
+      "Generator";
+      "GeneratorFunction";
+      "globalThis";
+      "Infinity";
+      "Int16Array";
+      "Int32Array";
+      "Int8Array";
+      "Intl";
+      "isFinite";
+      "isNaN";
+      "Iterator";
+      "JSON";
+      "Map";
+      "Math";
+      "NaN";
+      "Number";
+      "Object";
+      "parseFloat";
+      "parseInt";
+      "Promise";
+      "Proxy";
+      "RangeError";
+      "ReferenceError";
+      "Reflect";
+      "RegExp";
+      "Set";
+      "SharedArrayBuffer";
+      "String";
+      "Symbol";
+      "SyntaxError";
+      "TypedArray";
+      "TypeError";
+      "Uint16Array";
+      "Uint32Array";
+      "Uint8Array";
+      "Uint8ClampedArray";
+      "undefined";
+      "URIError";
+      "WeakMap";
+      "WeakRef";
+      "WeakSet";
+      (* A few of the HTML standard globals
   
      See https://developer.mozilla.org/en-US/docs/Web/API/Window
      See https://developer.mozilla.org/en-US/docs/Web/API/WorkerGlobalScope
@@ -222,22 +205,20 @@ let js_globals = STbl.of_array [|
   "origin";
   *)
 
-  (* A few of the Node.js globals
+      (* A few of the Node.js globals
   
      Specifically related to the CommonJS module system
      They cannot be redeclared in nested scope.
   *)
-  "__dirname";
-  "__filename";
-  "require";
-  "module";
-  "exports";
-
-  (* Bun's global namespace *)
-  "Bun";
-
-  (* Deno's global namespace *)
-  "Deno";
-|]
+      "__dirname";
+      "__filename";
+      "require";
+      "module";
+      "exports";
+      (* Bun's global namespace *)
+      "Bun";
+      (* Deno's global namespace *)
+      "Deno";
+    |]
 
 let is_js_global s = STbl.mem js_globals s
