@@ -12,21 +12,21 @@
  syntax)
 
 (env
- (dev
-  (env-vars
-   (CPPO_FLAGS -U=RELEASE)))
  (release
   (env-vars
-   (CPPO_FLAGS -D=RELEASE))
+   (CPPO_FLAGS -U=BROWSER))
   (ocamlopt_flags
    (:standard -O3 -unbox-closures)))
  (static
   (env-vars
-   (CPPO_FLAGS -D=RELEASE))
+   (CPPO_FLAGS -U=BROWSER))
   (ocamlopt_flags
    (:standard -O3 -unbox-closures)))
  (browser
   (env-vars
    (CPPO_FLAGS -D=BROWSER))
   (ocamlopt_flags
-   (:standard -O3 -unbox-closures))))
+   (:standard -O3 -unbox-closures)))
+ (_
+  (env-vars
+   (CPPO_FLAGS -U=BROWSER))))
