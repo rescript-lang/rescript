@@ -33,6 +33,8 @@
 
 #### :house: Internal
 
+- Add the `-check-lam` compiler option, enable Lambda invariant checking in compiler tests, and remove build-profile-dependent checking. https://github.com/rescript-lang/rescript/pull/8534
+
 # 13.0.0-alpha.5
 
 #### :boom: Breaking Change
