@@ -2,7 +2,7 @@
 
 import * as U from "U";
 import * as VV from "VV";
-import * as Belt_List from "@rescript/belt/src/Belt_List.mjs";
+import * as Stdlib_List from "@rescript/runtime/lib/es6/Stdlib_List.mjs";
 
 function f(x, y) {
   return x + y | 0;
@@ -41,187 +41,125 @@ function length_aux(_len, _x) {
   };
 }
 
-let length = Belt_List.length;
+let length = Stdlib_List.length;
 
-let size = Belt_List.size;
+let size = Stdlib_List.size;
 
-let head = Belt_List.head;
+let head = Stdlib_List.head;
 
-let headExn = Belt_List.headExn;
+let headExn = Stdlib_List.headExn;
 
-let headOrThrow = Belt_List.headOrThrow;
+let headOrThrow = Stdlib_List.headOrThrow;
 
-let tail = Belt_List.tail;
+let tail = Stdlib_List.tail;
 
-let tailExn = Belt_List.tailExn;
+let tailExn = Stdlib_List.tailExn;
 
-let tailOrThrow = Belt_List.tailOrThrow;
+let tailOrThrow = Stdlib_List.tailOrThrow;
 
-let add = Belt_List.add;
+let add = Stdlib_List.add;
 
-let get = Belt_List.get;
+let get = Stdlib_List.get;
 
-let getExn = Belt_List.getExn;
+let getExn = Stdlib_List.getExn;
 
-let getOrThrow = Belt_List.getOrThrow;
+let getOrThrow = Stdlib_List.getOrThrow;
 
-let make = Belt_List.make;
+let make = Stdlib_List.make;
 
-let makeByU = Belt_List.makeByU;
+let fromInitializer = Stdlib_List.fromInitializer;
 
-let makeBy = Belt_List.makeBy;
+let shuffle = Stdlib_List.shuffle;
 
-let shuffle = Belt_List.shuffle;
+let toShuffled = Stdlib_List.toShuffled;
 
-let drop = Belt_List.drop;
+let drop = Stdlib_List.drop;
 
-let take = Belt_List.take;
+let take = Stdlib_List.take;
 
-let splitAt = Belt_List.splitAt;
+let splitAt = Stdlib_List.splitAt;
 
-let concat = Belt_List.concat;
+let concat = Stdlib_List.concat;
 
-let concatMany = Belt_List.concatMany;
+let concatMany = Stdlib_List.concatMany;
 
-let reverseConcat = Belt_List.reverseConcat;
+let reverseConcat = Stdlib_List.reverseConcat;
 
-let flatten = Belt_List.flatten;
+let flat = Stdlib_List.flat;
 
-let mapU = Belt_List.mapU;
+let map = Stdlib_List.map;
 
-let map = Belt_List.map;
+let zip = Stdlib_List.zip;
 
-let zip = Belt_List.zip;
+let zipBy = Stdlib_List.zipBy;
 
-let zipByU = Belt_List.zipByU;
+let mapWithIndex = Stdlib_List.mapWithIndex;
 
-let zipBy = Belt_List.zipBy;
+let fromArray = Stdlib_List.fromArray;
 
-let mapWithIndexU = Belt_List.mapWithIndexU;
+let toArray = Stdlib_List.toArray;
 
-let mapWithIndex = Belt_List.mapWithIndex;
+let reverse = Stdlib_List.reverse;
 
-let fromArray = Belt_List.fromArray;
+let mapReverse = Stdlib_List.mapReverse;
 
-let toArray = Belt_List.toArray;
+let forEach = Stdlib_List.forEach;
 
-let reverse = Belt_List.reverse;
+let forEachWithIndex = Stdlib_List.forEachWithIndex;
 
-let mapReverseU = Belt_List.mapReverseU;
+let reduce = Stdlib_List.reduce;
 
-let mapReverse = Belt_List.mapReverse;
+let reduceWithIndex = Stdlib_List.reduceWithIndex;
 
-let forEachU = Belt_List.forEachU;
+let reduceReverse = Stdlib_List.reduceReverse;
 
-let forEach = Belt_List.forEach;
+let mapReverse2 = Stdlib_List.mapReverse2;
 
-let forEachWithIndexU = Belt_List.forEachWithIndexU;
+let forEach2 = Stdlib_List.forEach2;
 
-let forEachWithIndex = Belt_List.forEachWithIndex;
+let reduce2 = Stdlib_List.reduce2;
 
-let reduceU = Belt_List.reduceU;
+let reduceReverse2 = Stdlib_List.reduceReverse2;
 
-let reduce = Belt_List.reduce;
+let every = Stdlib_List.every;
 
-let reduceWithIndexU = Belt_List.reduceWithIndexU;
+let some = Stdlib_List.some;
 
-let reduceWithIndex = Belt_List.reduceWithIndex;
+let every2 = Stdlib_List.every2;
 
-let reduceReverseU = Belt_List.reduceReverseU;
+let some2 = Stdlib_List.some2;
 
-let reduceReverse = Belt_List.reduceReverse;
+let compareLength = Stdlib_List.compareLength;
 
-let mapReverse2U = Belt_List.mapReverse2U;
+let compare = Stdlib_List.compare;
 
-let mapReverse2 = Belt_List.mapReverse2;
+let equal = Stdlib_List.equal;
 
-let forEach2U = Belt_List.forEach2U;
+let has = Stdlib_List.has;
 
-let forEach2 = Belt_List.forEach2;
+let includes = Stdlib_List.includes;
 
-let reduce2U = Belt_List.reduce2U;
+let find = Stdlib_List.find;
 
-let reduce2 = Belt_List.reduce2;
+let filter = Stdlib_List.filter;
 
-let reduceReverse2U = Belt_List.reduceReverse2U;
+let filterWithIndex = Stdlib_List.filterWithIndex;
 
-let reduceReverse2 = Belt_List.reduceReverse2;
+let filterMap = Stdlib_List.filterMap;
 
-let everyU = Belt_List.everyU;
+let partition = Stdlib_List.partition;
 
-let every = Belt_List.every;
+let unzip = Stdlib_List.unzip;
 
-let someU = Belt_List.someU;
+let getAssoc = Stdlib_List.getAssoc;
 
-let some = Belt_List.some;
+let hasAssoc = Stdlib_List.hasAssoc;
 
-let every2U = Belt_List.every2U;
+let removeAssoc = Stdlib_List.removeAssoc;
 
-let every2 = Belt_List.every2;
+let setAssoc = Stdlib_List.setAssoc;
 
-let some2U = Belt_List.some2U;
-
-let some2 = Belt_List.some2;
-
-let cmpByLength = Belt_List.cmpByLength;
-
-let cmpU = Belt_List.cmpU;
-
-let cmp = Belt_List.cmp;
-
-let eqU = Belt_List.eqU;
-
-let eq = Belt_List.eq;
-
-let hasU = Belt_List.hasU;
-
-let has = Belt_List.has;
-
-let getByU = Belt_List.getByU;
-
-let getBy = Belt_List.getBy;
-
-let keepU = Belt_List.keepU;
-
-let keep = Belt_List.keep;
-
-let filter = Belt_List.filter;
-
-let keepWithIndexU = Belt_List.keepWithIndexU;
-
-let keepWithIndex = Belt_List.keepWithIndex;
-
-let filterWithIndex = Belt_List.filterWithIndex;
-
-let keepMapU = Belt_List.keepMapU;
-
-let keepMap = Belt_List.keepMap;
-
-let partitionU = Belt_List.partitionU;
-
-let partition = Belt_List.partition;
-
-let unzip = Belt_List.unzip;
-
-let getAssocU = Belt_List.getAssocU;
-
-let getAssoc = Belt_List.getAssoc;
-
-let hasAssocU = Belt_List.hasAssocU;
-
-let hasAssoc = Belt_List.hasAssoc;
-
-let removeAssocU = Belt_List.removeAssocU;
-
-let removeAssoc = Belt_List.removeAssoc;
-
-let setAssocU = Belt_List.setAssocU;
-
-let setAssoc = Belt_List.setAssoc;
-
-let sortU = Belt_List.sortU;
-
-let sort = Belt_List.sort;
+let sort = Stdlib_List.sort;
 
 export {
   f,
@@ -245,83 +183,52 @@ export {
   getExn,
   getOrThrow,
   make,
-  makeByU,
-  makeBy,
+  fromInitializer,
   shuffle,
+  toShuffled,
   drop,
   take,
   splitAt,
   concat,
   concatMany,
   reverseConcat,
-  flatten,
-  mapU,
+  flat,
   map,
   zip,
-  zipByU,
   zipBy,
-  mapWithIndexU,
   mapWithIndex,
   fromArray,
   toArray,
   reverse,
-  mapReverseU,
   mapReverse,
-  forEachU,
   forEach,
-  forEachWithIndexU,
   forEachWithIndex,
-  reduceU,
   reduce,
-  reduceWithIndexU,
   reduceWithIndex,
-  reduceReverseU,
   reduceReverse,
-  mapReverse2U,
   mapReverse2,
-  forEach2U,
   forEach2,
-  reduce2U,
   reduce2,
-  reduceReverse2U,
   reduceReverse2,
-  everyU,
   every,
-  someU,
   some,
-  every2U,
   every2,
-  some2U,
   some2,
-  cmpByLength,
-  cmpU,
-  cmp,
-  eqU,
-  eq,
-  hasU,
+  compareLength,
+  compare,
+  equal,
   has,
-  getByU,
-  getBy,
-  keepU,
-  keep,
+  includes,
+  find,
   filter,
-  keepWithIndexU,
-  keepWithIndex,
   filterWithIndex,
-  keepMapU,
-  keepMap,
-  partitionU,
+  filterMap,
   partition,
   unzip,
-  getAssocU,
   getAssoc,
-  hasAssocU,
   hasAssoc,
-  removeAssocU,
   removeAssoc,
-  setAssocU,
   setAssoc,
-  sortU,
   sort,
 }
 /* fff Not a pure module */

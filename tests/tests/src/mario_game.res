@@ -1,7 +1,5 @@
 @@config({flags: ["-w", "a", "-bs-no-bin-annot"]})
 
-open Belt
-
 module Random = {
   let self_init = () => ()
 

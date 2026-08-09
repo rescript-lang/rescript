@@ -9,7 +9,6 @@
     "apidocs:generate": "yarn build && node GenApiDocs.res.js"
   },
   "dependencies": {
-    "@rescript/belt": "workspace:^",
     "@tests/docstring-tests": "workspace:^",
     "rescript": "workspace:^"
   }

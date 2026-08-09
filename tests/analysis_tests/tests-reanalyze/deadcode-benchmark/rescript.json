@@ -7,7 +7,7 @@
   },
   "name": "reanalyze-benchmark",
   "jsx": { "version": 4 },
-  "dependencies": ["@rescript/belt", "@rescript/react"],
+  "dependencies": ["@rescript/react"],
   "sources": [
     {
       "dir": "src",

@@ -1,6 +1,5 @@
 open Mocha
 open Test_utils
-open Belt
 
 module N = List
 

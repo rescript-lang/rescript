@@ -168,7 +168,7 @@ module Int_array: {
   }
   let of_array = arr => {
     let v = ref(empty)
-    for i in 0 to Belt.Array.length(arr) - 1 {
+    for i in 0 to Array.length(arr) - 1 {
       v := push_back(v.contents, arr->Array.getUnsafe(i))
     }
     v.contents
@@ -183,6 +183,6 @@ let _ = {
   let u = Int_array.of_array([1, 2, 2, 5, 3, 6])
   assert(\"=~"(Int_array.sort(u), [1, 2, 2, 3, 5, 6]))
   let len = 500
-  let v = Belt.Array.init(len, i => len - i)
-  \"=~"(Int_array.sort(Int_array.of_array(v)), Belt.Array.init(len, i => i + 1))
+  let v = Array.fromInitializer(~length=len, i => len - i)
+  \"=~"(Int_array.sort(Int_array.of_array(v)), Array.fromInitializer(~length=len, i => i + 1))
 }

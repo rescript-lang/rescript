@@ -1,6 +1,5 @@
 open Mocha
 open Test_utils
-open Belt
 
 module Caml_splice_call = {}
 @variadic @val external f: (int, array<int>) => int = "Math.max"
@@ -26,7 +25,7 @@ test("splice_test_static", () => {
 let dynamic = arr => {
   let a = []
   a->push(1, arr)
-  eq(__LOC__, a, Array.concatMany([[1], arr]))
+  eq(__LOC__, a, Array.concatAll([[1], arr]))
 }
 
 dynamic([2, 3, 4])
@@ -46,7 +45,7 @@ test("splice_test_newArr_static", () => {
 
 let dynamicNew = arr => {
   let a = newArr(1, 2, arr)
-  eq(__LOC__, a, Array.concatMany([[1, 2], arr]))
+  eq(__LOC__, a, Array.concatAll([[1, 2], arr]))
 }
 
 dynamicNew([3, 4])
@@ -96,7 +95,7 @@ module Pipe = {
   let dynamic = arr => {
     let a = []
     a->push(1, arr)
-    eq(__LOC__, a, Array.concatMany([[1], arr]))
+    eq(__LOC__, a, Array.concatAll([[1], arr]))
   }
 
   dynamic([2, 3, 4])

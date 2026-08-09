@@ -2,7 +2,7 @@
 
 import * as Mocha from "mocha";
 import * as Test_utils from "./test_utils.mjs";
-import * as Belt_MapInt from "@rescript/belt/src/Belt_MapInt.mjs";
+import * as Belt_MapInt from "@rescript/belt/lib/es6/src/Belt_MapInt.mjs";
 
 Mocha.describe("Belt_mapint_test", () => {
   Mocha.test("set", () => {

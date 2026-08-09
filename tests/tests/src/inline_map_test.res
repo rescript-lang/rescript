@@ -408,10 +408,9 @@ let bindings = s => bindings_aux(list{}, s)
 let choose = min_binding
 
 /* end */
-let m = Belt.List.reduceReverse(list{(10, 'a'), (3, 'b'), (7, 'c'), (20, 'd')}, empty, (
-  acc,
-  (k, v),
-) => add(k, v, acc))
+let m = List.reduceReverse(list{(10, 'a'), (3, 'b'), (7, 'c'), (20, 'd')}, empty, (acc, (k, v)) =>
+  add(k, v, acc)
+)
 
 @val("console.log") external log: 'a => unit = ""
 

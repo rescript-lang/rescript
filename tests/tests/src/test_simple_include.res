@@ -1,4 +1,4 @@
-include Belt.Array
+include Array
 
 include {
   assert(1 + 2 == 3)

@@ -31,4 +31,4 @@ let rec length_aux = (len, x) =>
   | list{a, ...l} => length_aux(len + 1, l)
   }
 
-include Belt.List
+include List

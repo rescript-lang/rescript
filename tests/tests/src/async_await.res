@@ -19,14 +19,14 @@ let f = async (type input, value: input) => {
   await Promise.resolve(1)
 }
 
-module type MT = module type of Belt.Option
+module type MT = module type of Option
 
 let f0 = async () => {
-  module O = await Belt.Option
+  module O = await Option
   O.forEach
 }
 
 let f1 = async () => {
-  module O: MT = await Belt.Option
+  module O: MT = await Option
   O.forEach
 }

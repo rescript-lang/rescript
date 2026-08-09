@@ -6,7 +6,6 @@
     "clean": "rescript clean"
   },
   "dependencies": {
-    "@rescript/belt": "workspace:^",
     "@rescript/react": "workspace:^",
     "rescript": "workspace:^"
   }

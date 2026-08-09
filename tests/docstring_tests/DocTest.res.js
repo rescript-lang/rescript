@@ -58,25 +58,30 @@ async function extractDocFromFile(file) {
 
 let batchSize = Nodeos.cpus().length;
 
-let runtimePath = Nodepath.join("packages", "@rescript", "runtime");
+let docPaths = [
+  Nodepath.join("packages", "@rescript", "runtime"),
+  Nodepath.join("packages", "@rescript", "belt", "src")
+];
 
 async function extractExamples() {
-  let files = Nodefs.readdirSync(runtimePath);
-  let docFiles = files.filter(f => {
-    if (f.startsWith("Js") || f.startsWith("RescriptTools")) {
-      return false;
-    } else if (f.endsWith(".resi")) {
-      return true;
-    } else if (f.endsWith(".res")) {
-      return !files.includes(f + "i");
-    } else {
-      return false;
-    }
+  let docFiles = docPaths.flatMap(docPath => {
+    let files = Nodefs.readdirSync(docPath);
+    return files.filter(f => {
+      if (f.startsWith("Js") || f.startsWith("RescriptTools")) {
+        return false;
+      } else if (f.endsWith(".resi")) {
+        return true;
+      } else if (f.endsWith(".res")) {
+        return !files.includes(f + "i");
+      } else {
+        return false;
+      }
+    }).map(f => Nodepath.join(docPath, f));
   });
-  console.log(`Extracting examples from ` + docFiles.length.toString() + ` runtime files...`);
+  console.log(`Extracting examples from ` + docFiles.length.toString() + ` runtime and Belt files...`);
   let examples = [];
-  await ArrayUtils.forEachAsyncInBatches(docFiles, batchSize, async f => {
-    let doc = await extractDocFromFile(Nodepath.join(runtimePath, f));
+  await ArrayUtils.forEachAsyncInBatches(docFiles, batchSize, async file => {
+    let doc = await extractDocFromFile(file);
     examples.push(...doc.filter(d => d.code.includes("assertEqual(")));
   });
   examples.sort((a, b) => Primitive_string.compare(a.id, b.id));
