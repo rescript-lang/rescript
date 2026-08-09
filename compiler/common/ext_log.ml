@@ -26,7 +26,7 @@ type 'a logging = ('a, Format.formatter, unit, unit, unit, unit) format6 -> 'a
 
 (* TODO: add {[@.]} later for all *)
 let dwarn ?(__POS__ : (string * int * int * int) option) f =
-  if !Js_config.diagnose then
+  if !Js_config.debug_ir then
     match __POS__ with
     | None -> Format.fprintf Format.err_formatter ("WARN: " ^^ f ^^ "@.")
     | Some (file, line, _, _) ->

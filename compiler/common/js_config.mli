@@ -49,8 +49,8 @@ val directives : string list ref
 val cross_module_inline : bool ref
 (** cross module inline option *)
 
-val diagnose : bool ref
-(** diagnose option *)
+val debug_ir : bool ref
+(** dump intermediate representations and related diagnostics *)
 
 val check_lam : bool ref
 (** check Lam invariants after optimization passes *)
