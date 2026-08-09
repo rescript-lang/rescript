@@ -1,12 +1,8 @@
 #include "caml/hash.h"
 #include "caml/mlvalues.h"
-#include <string.h>
 #include <stdint.h>
-#include "caml/memory.h"
-#include "caml/osdeps.h"
-#include "caml/signals.h"
+#include <string.h>
 #include "caml/misc.h"
-#include <sys/stat.h>
 typedef uint32_t uint32;
 
 #define FINAL_MIX(h) \
@@ -45,23 +41,6 @@ CAMLprim value caml_bs_hash_string_and_int  (value obj, value d){
   uint32 h = 0; 
   h = caml_hash_mix_string(h,obj);
   h = caml_hash_mix_intnat(h,d);
-  FINAL_MIX(h);
-  return Val_int(h & 0x3FFFFFFFU);
-}
-
-CAMLprim value caml_bs_hash_string_and_small_int(value obj, value d){
-  uint32 h = 0;
-  h = caml_hash_mix_string(h,obj);
-  MIX(h,d);
-  FINAL_MIX(h);
-  return Val_int(h & 0x3FFFFFFFU);
-}
-
-CAMLprim value caml_bs_hash_small_int(value d){
-  uint32 h = 0; 
-  // intnat stamp = Long_val(d); 
-  // FIXME: unused value
-  MIX(h,d);
   FINAL_MIX(h);
   return Val_int(h & 0x3FFFFFFFU);
 }
@@ -142,75 +121,6 @@ CAMLprim value caml_string_length_based_compare(value s1, value s2)
 
 
 
-#include <sys/time.h>
-#ifdef _WIN32
-#include <sys/utime.h>
-CAMLprim value caml_stale_file(value path)
-{
-  CAMLparam1(path);
-  struct _utimbuf tv;
-  char * p = caml_stat_strdup(String_val(path));
-  tv.modtime = 0;  
-  caml_enter_blocking_section();
-  _utime(p, &tv);
-  caml_leave_blocking_section();
-  caml_stat_free(p);
-  CAMLreturn(Val_unit);
-}
-#else
-CAMLprim value caml_stale_file(value path)
-{
-  CAMLparam1(path);
-  struct timeval tv[2];
-  char * p = caml_stat_strdup_to_os(String_val(path));
-  // unicode friendly
-  tv[0].tv_sec = 0.0;
-  tv[0].tv_usec = 0.0;
-  tv[1].tv_sec = 0.0;
-  tv[1].tv_usec = 0.0;
-  // caml_enter_blocking_section();
-  // not needed for single thread
-  utimes(p, tv);
-  // caml_leave_blocking_section();
-  // not needed for single thread
-  caml_stat_free(p);
-  // TODO: error checking
-  CAMLreturn(Val_unit);
-}
-#endif
-
-
-CAMLprim value caml_sys_is_directory_no_exn(value name)
-{
-  CAMLparam1(name);
-#ifdef _WIN32
-  struct _stati64 st;
-#else
-  struct stat st;
-#endif
-  char_os * p;
-  int ret;
-
-  
-  if(!caml_string_is_c_safe(name)){
-    CAMLreturn(Val_false);
-  }
-
-  p = caml_stat_strdup_to_os(String_val(name));
-  caml_enter_blocking_section();
-  ret = stat_os(p, &st);
-  caml_leave_blocking_section();
-  caml_stat_free(p);
-
-  if (ret == -1) CAMLreturn(Val_false);
-#ifdef S_ISDIR
-  CAMLreturn(Val_bool(S_ISDIR(st.st_mode)));
-#else
-  CAMLreturn(Val_bool(st.st_mode & S_IFDIR));
-#endif
-}
 /* local variables: */
-/* compile-command: "ocamlopt.opt -c ext_basic_hash_stubs.c" */
+/* compile-command: "ocamlopt.opt -c ext_platform_primitives_stubs.c" */
 /* end: */
-
-
