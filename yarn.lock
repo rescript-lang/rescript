@@ -438,6 +438,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@rescript/belt@workspace:packages/@rescript/belt"
   dependencies:
+    "@rescript/runtime": "workspace:^"
     rescript: "workspace:^"
   peerDependencies:
     rescript: "workspace:^"
@@ -872,7 +873,6 @@ __metadata:
   resolution: "@tests/belt@workspace:tests/belt_tests"
   dependencies:
     "@rescript/belt": "workspace:^"
-    "@rescript/runtime": "workspace:^"
     mocha: "npm:11.7.6"
     rescript: "workspace:^"
   languageName: unknown

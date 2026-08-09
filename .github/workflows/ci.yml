@@ -517,7 +517,7 @@ jobs:
           fi
           cp rescript-with-belt.json rescript.json
           npx rescript build
-          cat src/BeltTest.res.js
+          node src/BeltTest.mjs
         shell: bash
         working-directory: ${{ steps.tmp-dir.outputs.path }}
 
@@ -583,7 +583,7 @@ jobs:
           fi
           cp rescript-with-belt.json rescript.json
           pnpm rescript build
-          cat src/BeltTest.res.js
+          node src/BeltTest.mjs
         shell: bash
         working-directory: ${{ steps.tmp-dir.outputs.path }}
 
