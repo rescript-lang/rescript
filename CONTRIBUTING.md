@@ -325,7 +325,8 @@ Note that building the cmijs is based on the dependencies defined in `packages/p
 After a successful compilation, you will find following files in your project:
 
 - `packages/playground/compiler.js` -> This is the ReScript compiler, which binds the ReScript API to the `window` object.
-- `packages/playground/packages/compiler-builtins` -> The compiler base cmij containing all the relevant core modules (`Js`, `Belt`, `Pervasives`, etc.)
+- `packages/playground/packages/compiler-builtins` -> The compiler base cmij containing the runtime and standard-library modules
+- `packages/playground/packages/@rescript/belt` -> The Belt cmij, packaged separately from the compiler built-ins
 - `packages/playground/packages/*` -> Contains third party deps with cmij.js files (as defined in `packages/playground/rescript.json`)
 
 You can now use the `compiler.js` file either directly by using a `<script src="/path/to/compiler.js"/>` and `<script src="/path/to/packages/compilerCmij.js"/>` inside a html file, use a browser bundler infrastructure to optimize it, or use `nodejs` to run it on a command line:

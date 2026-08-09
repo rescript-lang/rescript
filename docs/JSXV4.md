@@ -165,7 +165,7 @@ module FancyInput = {
       <input
         type_="text"
         ?className
-        ref=?{ref_->Nullable.toOption->Belt.Option.map(ReactDOM.Ref.domRef)}
+        ref=?{ref_->Nullable.toOption->Option.map(ReactDOM.Ref.domRef)}
       />
       children
     </div>
@@ -198,7 +198,7 @@ module FancyInput = {
       <input
         type_="text"
         ?className
-        ref=?{ref->Nullable.toOption->Belt.Option.map(ReactDOM.Ref.domRef)}
+        ref=?{ref->Nullable.toOption->Option.map(ReactDOM.Ref.domRef)}
       />
       children
     </div>

@@ -10,6 +10,7 @@
     "suffix": ".res.js"
   },
   "dependencies": [
+    "@rescript/belt",
     "@rescript/react"
   ]
 }

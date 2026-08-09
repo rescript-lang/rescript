@@ -377,13 +377,24 @@ let loadRuntimeLibraries = async version => {
 
     let libraries = try {
       let _ = await loadScript(
-        versionAssetUrl(selectedVersion, "@rescript/react/cmij.js"),
+        versionAssetUrl(selectedVersion, "@rescript/belt/cmij.js"),
         ~cache=false,
       )
-      ["compiler-builtins", "@rescript/react"]
+      ["compiler-builtins", "@rescript/belt"]
     } catch {
     | _ => ["compiler-builtins"]
     }
+
+    let libraries = try {
+      let _ = await loadScript(
+        versionAssetUrl(selectedVersion, "@rescript/react/cmij.js"),
+        ~cache=false,
+      )
+      libraries->Array.concat(["@rescript/react"])
+    } catch {
+    | _ => libraries
+    }
+
     loadedLibrariesByVersion->Map.set(selectedVersion, libraries)
     activeLibraryVersion := Some(selectedVersion)
   }
