@@ -33,6 +33,7 @@ let no_version_header = ref false
 let directives = ref []
 let cross_module_inline = ref false
 let diagnose = ref false
+let check_lam = ref false
 
 (* let (//) = Filename.concat *)
 

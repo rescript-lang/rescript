@@ -116,16 +116,20 @@ let no_side_effects (rest : Lam_group.t list) : string option =
         else None (* TODO :*))
 
 
-let _d  = fun  s lam -> 
-#ifndef RELEASE
-    Lam_util.dump  s lam ;
-  Ext_log.dwarn ~__POS__ "START CHECKING PASS %s@." s;
-  ignore @@ Lam_check.check !Location.input_name lam;
-  Ext_log.dwarn ~__POS__ "FINISH CHECKING PASS %s@." s;
-#endif
+let _d = fun s lam ->
+  let diagnose = !Js_config.diagnose in
+  if diagnose then begin
+    Lam_util.dump s lam;
+    Ext_log.dwarn ~__POS__ "START CHECKING PASS %s@." s
+  end;
+  if !Js_config.check_lam || diagnose then begin
+    ignore @@ Lam_check.check ~file:!Location.input_name ~pass:s lam;
+    if diagnose then Ext_log.dwarn ~__POS__ "FINISH CHECKING PASS %s@." s
+  end;
   lam
 
-let _j = Js_pass_debug.dump 
+let _j name program =
+  if !Js_config.diagnose then Js_pass_debug.dump name program else program
 
 (** Actually simplify_lets is kind of global optimization since it requires you to know whether 
     it's used or not 
@@ -136,13 +140,13 @@ let compile
     (lam : Lambda.lambda)  = 
   let export_ident_sets = Set_ident.of_list export_idents in 
   (* To make toplevel happy - reentrant for js-demo *)
-  let () = 
-#ifndef RELEASE
+  let () =
+    if !Js_config.diagnose then begin
       Ext_list.iter export_idents 
-      (fun id -> Ext_log.dwarn ~__POS__ "export idents: %s/%d"  id.name id.stamp) ;
-#endif      
-    Lam_compile_env.reset () ;
-  in 
+        (fun id -> Ext_log.dwarn ~__POS__ "export idents: %s/%d" id.name id.stamp)
+    end;
+    Lam_compile_env.reset ()
+  in
   let lam, may_required_modules = Lam_convert.convert export_ident_sets lam in 
 
 
@@ -160,12 +164,12 @@ let compile
       |> _d "flattern1"
       |>  Lam_pass_exits.simplify_exits
       |> _d "simplyf_exits"
-      |> (fun lam -> Lam_pass_collect.collect_info meta lam; 
-#ifndef RELEASE      
-      let () = 
-        Ext_log.dwarn ~__POS__ "Before simplify_alias: %a@." Lam_stats.print meta in       
-#endif      
-      lam)
+      |> (fun lam ->
+          Lam_pass_collect.collect_info meta lam;
+          if !Js_config.diagnose then
+            Ext_log.dwarn ~__POS__ "Before simplify_alias: %a@." Lam_stats.print
+              meta;
+          lam)
       |>  Lam_pass_remove_alias.simplify_alias  meta
       |> _d "simplify_alias"
       |> Lam_pass_deep_flatten.deep_flatten
@@ -201,43 +205,43 @@ let compile
        |> _d "scc" *)
     |> Lam_pass_exits.simplify_exits
     |> _d "simplify_lets"
-#ifndef RELEASE
-    |> (fun lam -> 
-        let () = 
-          Ext_log.dwarn ~__POS__ "Before coercion: %a@." Lam_stats.print meta in 
-        Lam_check.check !Location.input_name lam
-      ) 
-#endif    
+    |> (fun lam ->
+        if !Js_config.diagnose then
+          Ext_log.dwarn ~__POS__ "Before coercion: %a@." Lam_stats.print meta;
+        lam)
   in
 
   let ({Lam_coercion.groups = groups } as coerced_input , meta) = 
     Lam_coercion.coerce_and_group_big_lambda  meta lam
   in 
 
-#ifndef RELEASE
 let () =
-  Ext_log.dwarn ~__POS__ "After coercion: %a@." Lam_stats.print meta ;
-  if !Js_config.diagnose then
+  if !Js_config.diagnose then begin
+    Ext_log.dwarn ~__POS__ "After coercion: %a@." Lam_stats.print meta;
     let f =
       Ext_filename.new_extension !Location.input_name  ".lambda" in
     Ext_fmt.with_file_as_pp f begin fun fmt ->
       Format.pp_print_list ~pp_sep:Format.pp_print_newline
         Lam_group.pp_group  fmt (coerced_input.groups) 
-    end;
+    end
+  end
 in
-#endif  
 let maybe_pure = no_side_effects groups in
-#ifndef RELEASE
-let () = Ext_log.dwarn ~__POS__ "\n@[[TIME:]Pre-compile: %f@]@."  (Sys.time () *. 1000.) in      
-#endif  
+let () =
+  if !Js_config.diagnose then
+    Ext_log.dwarn ~__POS__ "\n@[[TIME:]Pre-compile: %f@]@."
+      (Sys.time () *. 1000.)
+in
 let body  =     
   Ext_list.map groups (fun group -> compile_group output_prefix meta group)
   |> Js_output.concat
   |> Js_output.output_as_block
 in
-#ifndef RELEASE
-let () = Ext_log.dwarn ~__POS__ "\n@[[TIME:]Post-compile: %f@]@."  (Sys.time () *. 1000.) in      
-#endif    
+let () =
+  if !Js_config.diagnose then
+    Ext_log.dwarn ~__POS__ "\n@[[TIME:]Post-compile: %f@]@."
+      (Sys.time () *. 1000.)
+in
 (* The file is not big at all compared with [cmo] *)
 (* Ext_marshal.to_file (Ext_path.chop_extension filename ^ ".mj")  js; *)
 let meta_exports = meta.exports in 

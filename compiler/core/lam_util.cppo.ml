@@ -231,25 +231,14 @@ let field_flatten_get
   | Some _
   | None -> lam ()
 
-#if (defined BROWSER || defined RELEASE)
-let dump ext  lam = 
-  ()
-#else
 let log_counter = ref 0
 let dump ext  lam = 
-  if !Js_config.diagnose
-  then 
-    (* ATTENTION: easy to introduce a bug during refactoring when forgeting `begin` `end`*)
-    begin 
-      incr log_counter;
-      Ext_log.dwarn ~__POS__ "\n@[[TIME:]%s: %f@]@." ext (Sys.time () *. 1000.);
-      Lam_print.serialize  
-        (Ext_filename.new_extension
-           !Location.input_name
-           (Printf.sprintf ".%02d%s.lam" !log_counter ext)
-        ) lam;
-    end
-#endif      
+  incr log_counter;
+  Ext_log.dwarn ~__POS__ "\n@[[TIME:]%s: %f@]@." ext (Sys.time () *. 1000.);
+  Lam_print.serialize
+    (Ext_filename.new_extension !Location.input_name
+       (Printf.sprintf ".%02d%s.lam" !log_counter ext))
+    lam
 
 
 

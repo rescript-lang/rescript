@@ -52,6 +52,9 @@ val cross_module_inline : bool ref
 val diagnose : bool ref
 (** diagnose option *)
 
+val check_lam : bool ref
+(** check Lam invariants after optimization passes *)
+
 val no_builtin_ppx : bool ref
 (** options for builtin ppx *)
 

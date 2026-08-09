@@ -26,26 +26,13 @@
 
 
 
-#if (defined BROWSER || defined RELEASE)
-let dump _ (prog : J.program) = 
-  prog
-#else
 let log_counter = ref 0 
 
 let dump name (prog : J.program) =
-  begin
-    let () = 
-      if !Js_config.diagnose
-      then 
-        begin
-          incr log_counter ; 
-          Ext_log.dwarn ~__POS__ "\n@[[TIME:]%s: %f@]@." name (Sys.time () *. 1000.);          
-          Ext_pervasives.with_file_as_chan       
-            (Ext_filename.new_extension !Location.input_name
-               (Printf.sprintf ".%02d.%s.jsx"  !log_counter name)
-            ) (fun chan -> Js_dump_program.dump_program prog chan )
-        end in
-    prog    
-  end
-#endif
-
+  incr log_counter;
+  Ext_log.dwarn ~__POS__ "\n@[[TIME:]%s: %f@]@." name (Sys.time () *. 1000.);
+  Ext_pervasives.with_file_as_chan
+    (Ext_filename.new_extension !Location.input_name
+       (Printf.sprintf ".%02d.%s.jsx" !log_counter name))
+    (fun chan -> Js_dump_program.dump_program prog chan);
+  prog
