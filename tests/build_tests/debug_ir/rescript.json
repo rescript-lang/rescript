@@ -1,0 +1,5 @@
+{
+  "name": "debug_ir",
+  "sources": ["src"],
+  "compiler-flags": ["-debug-ir"]
+}

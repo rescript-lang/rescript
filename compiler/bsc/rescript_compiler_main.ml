@@ -409,7 +409,9 @@ let command_line_flags : (string * Bsc_args.spec * string) array =
     ( "-bs-no-cross-module-opt",
       clear Js_config.cross_module_inline,
       "*internal* Disable cross module inlining(experimental)" );
-    ("-bs-diagnose", set Js_config.diagnose, "*internal* More verbose output");
+    ( "-debug-ir",
+      set Js_config.debug_ir,
+      "*internal* Dump compiler IR and enable Lam invariant checks" );
     ( "-check-lam",
       set Js_config.check_lam,
       "*internal* Check Lam invariants after optimization passes" );
