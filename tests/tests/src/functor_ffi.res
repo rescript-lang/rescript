@@ -7,9 +7,9 @@ module Make = (
   type t<'a>
   @get_index external unsafe_get: (t<elt>, int) => elt = ""
 
-  @get_index external get: (t<elt>, int) => Js.undefined<elt> = ""
+  @get_index external get: (t<elt>, int) => option<elt> = ""
 
-  let opt_get = (f, i) => Js.Undefined.toOption(get(f, i))
+  let opt_get = get
 }
 
 module Int_arr = Make({

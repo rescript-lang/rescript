@@ -864,7 +864,7 @@ let report_error env ppf = function
         "@[@{<info>The module or file %a can't be found.@}@,\
          @,\
          Are you trying to use the standard library's Str?@ If you're \
-         compiling to JavaScript,@ use @{<info>Js.Re@} instead.@ Otherwise, \
+         compiling to JavaScript,@ use @{<info>RegExp@} instead.@ Otherwise, \
          add str.cma to your ocamlc/ocamlopt command.@]"
         Printtyp.longident lid
     | lid ->

@@ -118,13 +118,13 @@ value. You must specify the type of data that will eventually fill the array.
 ## Examples
 
 ```rescript
-let arr: array<Js.undefined<string>> = Belt.Array.makeUninitialized(5)
+let arr: array<undefined<string>> = Belt.Array.makeUninitialized(5)
 
-Belt.Array.getExn(arr, 0) == Js.undefined
+Type.typeof(Belt.Array.getExn(arr, 0)) == #undefined
 ```
 */
 @new
-external makeUninitialized: int => array<Js.undefined<'a>> = "Array"
+external makeUninitialized: int => array<Stdlib.undefined<'a>> = "Array"
 
 /**
 **Unsafe**
@@ -134,7 +134,7 @@ external makeUninitialized: int => array<Js.undefined<'a>> = "Array"
 ```rescript
 let arr = Belt.Array.makeUninitializedUnsafe(5)
 
-Js.log(Belt.Array.getExn(arr, 0)) // undefined
+Console.log(Belt.Array.getExn(arr, 0)) // undefined
 
 Belt.Array.setExn(arr, 0, "example")
 
@@ -392,7 +392,7 @@ repetitively creating side effects.
 ## Examples
 
 ```rescript
-Belt.Array.forEach(["a", "b", "c"], x => Js.log("Item: " ++ x))
+Belt.Array.forEach(["a", "b", "c"], x => Console.log("Item: " ++ x))
 
 /*
   prints:
@@ -518,7 +518,7 @@ supplied two arguments: the index starting from 0 and the element from `xs`.
 
 ```rescript
 Belt.Array.forEachWithIndex(["a", "b", "c"], (i, x) =>
-  Js.log("Item " ++ Belt.Int.toString(i) ++ " is " ++ x)
+  Console.log("Item " ++ Belt.Int.toString(i) ++ " is " ++ x)
 )
 
 /*
@@ -641,9 +641,9 @@ using the separator. If the array is empty, the empty string will be returned.
 ## Examples
 
 ```rescript
-Belt.Array.joinWith([0, 1], ", ", Js.Int.toString) == "0, 1"
-Belt.Array.joinWith([], " ", Js.Int.toString) == ""
-Belt.Array.joinWith([1], " ", Js.Int.toString) == "1"
+Belt.Array.joinWith([0, 1], ", ", x => Int.toString(x)) == "0, 1"
+Belt.Array.joinWith([], " ", x => Int.toString(x)) == ""
+Belt.Array.joinWith([1], " ", x => Int.toString(x)) == "1"
 ```
 */
 let joinWith: (t<'a>, string, 'a => string) => string
@@ -756,7 +756,7 @@ let eq: (t<'a>, t<'a>, ('a, 'a) => bool) => bool
 
 /**
 Unsafe `truncateToLengthUnsafe(xs, n)` sets length of array `xs` to `n`. If `n`
-is greater than the length of `xs`; the extra elements are set to `Js.Null_undefined.null`.
+is greater than the length of `xs`; the extra elements are set to `undefined`.
 If `n` is less than zero; throws a `RangeError`.
 
 ## Examples

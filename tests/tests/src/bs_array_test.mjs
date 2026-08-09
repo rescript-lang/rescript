@@ -4,6 +4,7 @@ import * as Mocha from "mocha";
 import * as Belt_List from "@rescript/runtime/lib/es6/Belt_List.mjs";
 import * as Belt_Array from "@rescript/runtime/lib/es6/Belt_Array.mjs";
 import * as Test_utils from "./test_utils.mjs";
+import * as Stdlib_Array from "@rescript/runtime/lib/es6/Stdlib_Array.mjs";
 import * as Primitive_int from "@rescript/runtime/lib/es6/Primitive_int.mjs";
 import * as Primitive_object from "@rescript/runtime/lib/es6/Primitive_object.mjs";
 
@@ -11,12 +12,12 @@ function push(prim0, prim1) {
   prim0.push(prim1);
 }
 
-console.log([
+console.log(Stdlib_Array.reduce([
   1,
   2,
   3,
   4
-].filter(x => x > 2).map((x, i) => x + i | 0).reduce((x, y) => x + y | 0, 0));
+].filter(x => x > 2).map((x, i) => x + i | 0), 0, (x, y) => x + y | 0));
 
 Mocha.describe("Bs_array_test", () => {
   Mocha.test("bs_array_test_1", () => {

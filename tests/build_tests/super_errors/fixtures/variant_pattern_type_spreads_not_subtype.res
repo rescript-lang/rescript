@@ -4,7 +4,7 @@ type c = Six | Seven
 
 let lookup = (b: b) =>
   switch b {
-  | ...c as c => Js.log(c)
-  | Four => Js.log("four")
-  | Five => Js.log("five")
+  | ...c as c => Console.log(c)
+  | Four => Console.log("four")
+  | Five => Console.log("five")
   }

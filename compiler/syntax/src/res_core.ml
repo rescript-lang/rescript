@@ -5240,7 +5240,7 @@ and parse_type_constructor_arg_region ?inline_types_context
       ?current_type_name_path p)
   else None
 
-(* Js.Nullable.value<'a> *)
+(* Nullable.t<'a> *)
 and parse_type_constructor_args ?inline_types_context ?current_type_name_path
     ~constr_name p =
   let opening = p.Parser.token in

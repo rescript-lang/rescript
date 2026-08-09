@@ -76,7 +76,7 @@ module HackyComponentThatReloadsOnTimeout = {
     let (hasCalledFunction, setHasCalledFunction) = React.useState(_ => false)
 
     React.useEffect4(() => {
-      let timeout = Js.Global.setTimeout(() =>
+      let timeout = setTimeout(() =>
         if !hasCalledFunction {
           reloadFunction()
           setHasCalledFunction(_ => true)
@@ -84,7 +84,7 @@ module HackyComponentThatReloadsOnTimeout = {
           ()
         }
       , timeoutTime)
-      Some(() => Js.Global.clearTimeout(timeout))
+      Some(() => clearTimeout(timeout))
     }, (reloadFunction, hasCalledFunction, setHasCalledFunction, timeoutTime))
 
     React.null

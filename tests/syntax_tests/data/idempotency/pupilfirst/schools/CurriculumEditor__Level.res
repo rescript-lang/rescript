@@ -2,7 +2,7 @@ type t = {
   id: string,
   name: string,
   number: int,
-  unlockOn: option<Js.Date.t>,
+  unlockOn: option<Date.t>,
 }
 
 let id = t => t.id

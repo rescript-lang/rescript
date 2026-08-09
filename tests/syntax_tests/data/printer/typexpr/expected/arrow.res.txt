@@ -216,10 +216,7 @@ type arrows = (int, (float => unit) => unit, float) => unit
 // tuple as single parameter
 let prepare_expansion: ((type_expr, type_expr)) => (type_expr, type_expr) = f
 
-type getInitialPropsFn<'a> = {
-  "query": dict<string>,
-  "req": Js.Nullable.t<Js.t<'a>>,
-} => Js.Promise.t<Js.t<'a>>
+type getInitialPropsFn<'a> = {"query": dict<string>, "req": nullable<{..}>} => Promise.t<{..}>
 
 // keep parens
 external fromPoly: ([> ] as 'a) => t = "%identity"

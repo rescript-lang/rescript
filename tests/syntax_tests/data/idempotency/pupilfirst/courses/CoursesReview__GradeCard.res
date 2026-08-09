@@ -36,7 +36,7 @@ let reducer = (state, action) =>
 
 let passed = (grades, evaluationCriteria) =>
   grades
-  ->Js.Array.filter(g => {
+  ->Array.filter(g => {
     let passGrade =
       evaluationCriteria
       ->ArrayUtils.unsafeFind(
@@ -71,9 +71,9 @@ let undoGrading = (submissionId, send) => {
 
   UndoGradingMutation.make(~submissionId, ())
   ->GraphqlQuery.sendQuery
-  ->Js.Promise.then_(response => {
+  ->Promise.then(response => {
     response["undoGrading"]["success"] ? DomUtils.reload()->ignore : send(FinishSaving)
-    Js.Promise.resolve()
+    Promise.resolve()
   })
   ->ignore
 }
@@ -102,7 +102,7 @@ let gradeSubmissionQuery = (submissionId, state, send, evaluationCriteria, addGr
     (),
   )
   ->GraphqlQuery.sendQuery
-  ->Js.Promise.then_(response => {
+  ->Promise.then(response => {
     response["createGrading"]["success"]
       ? addGradingCB(
           ~newFeedback=state.newFeedback,
@@ -112,7 +112,7 @@ let gradeSubmissionQuery = (submissionId, state, send, evaluationCriteria, addGr
         )
       : ()
     send(FinishSaving)
-    Js.Promise.resolve()
+    Promise.resolve()
   })
   ->ignore
 }
@@ -120,9 +120,8 @@ let gradeSubmissionQuery = (submissionId, state, send, evaluationCriteria, addGr
 let updateGrading = (grade, state, send) => {
   let newGrades =
     state.grades
-    ->Js.Array.filter(g =>
-      g->Grade.evaluationCriterionId != (grade->Grade.evaluationCriterionId)
-    )
+    ->Array.filter(g =>
+      g->Grade.evaluationCriterionId != (grade->Grade.evaluationCriterionId))
     ->Array.append([grade])
 
   send(UpdateGrades(newGrades))
@@ -137,9 +136,8 @@ let handleGradePillClick = (evaluationCriterionId, value, state, send, event) =>
 }
 
 let findEvaluationCriterion = (evaluationCriteria, evaluationCriterionId) =>
-  switch evaluationCriteria->Js.Array.find(ec =>
-    ec->EvaluationCriterion.id == evaluationCriterionId
-  ) {
+  switch evaluationCriteria->Array.find(ec =>
+    ec->EvaluationCriterion.id == evaluationCriterionId) {
   | Some(ec) => ec
   | None =>
     Rollbar.error(
@@ -247,9 +245,8 @@ let renderGradePills = (evaluationCriteria, targetEvaluationCriteriaIds, state, 
         evaluationCriterionId,
       )
     let grade =
-      state.grades->Js.Array.find(g =>
-        g->Grade.evaluationCriterionId == (ec->EvaluationCriterion.id)
-      )
+      state.grades->Array.find(g =>
+        g->Grade.evaluationCriterionId == (ec->EvaluationCriterion.id))
     let gradeValue = switch grade {
     | Some(g) => g->Grade.value
     | None => 0

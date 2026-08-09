@@ -51,10 +51,6 @@ type opaqueVariant =
 
 @genType let stringT: string = "a"
 
-@genType let jsStringT: Js.String.t = "a"
-
-@genType let jsString2T: Js.String2.t = "a"
-
 @genType type twice<'a> = ('a, 'a)
 
 @gentype
@@ -62,38 +58,30 @@ type genTypeMispelled = int
 
 @genType type dictString = dict<string>
 
-@genType let jsonStringify = Js.Json.stringify
+@genType let jsonStringify = value => JSON.stringify(value)
 
 @genType type nullOrString = null<string>
 
 @genType type nullOrString2 = Null.t<string>
 
-@genType type nullOrString3 = Js.null<string>
+@genType type nullOrString3 = null<string>
 
-@genType type nullOrString4 = Js.Null.t<string>
+@genType type nullOrString4 = Null.t<string>
 
 @genType type nullableOrString = nullable<string>
 
 @genType type nullableOrString2 = Nullable.t<string>
 
-@genType type nullableOrString3 = Js.nullable<string>
+@genType type nullableOrString3 = nullable<string>
 
-@genType type nullableOrString4 = Js.Nullable.t<string>
-
-@genType type undefinedOrString = undefined<string>
-
-@genType type undefinedOrString2 = Undefined.t<string>
-
-@genType type undefinedOrString3 = Js.undefined<string>
-
-@genType type undefinedOrString4 = Js.Undefined.t<string>
+@genType type nullableOrString4 = nullable<string>
 
 type record = {
   i: int,
   s: string,
 }
 
-@genType let testConvertNull = (x: Js.Null.t<record>) => x
+@genType let testConvertNull = (x: Null.t<record>) => x
 
 @genType type decorator<'a, 'b> = 'a => 'b constraint 'a = int constraint 'b = _ => _
 
@@ -142,9 +130,9 @@ type instantiateTypeParameter = ocaml_array<someRecord>
 @genType @genType.as("Vector")
 type vector<'a> = ('a, 'a)
 
-@genType type date = Js.Date.t
+@genType type date = Date.t
 
-@genType let currentTime = Js.Date.make()
+@genType let currentTime = Date.make()
 
 @genType let optFunction = Some(() => 3)
 

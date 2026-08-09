@@ -2,6 +2,8 @@
 
 import * as Mocha from "mocha";
 import * as Test_utils from "./test_utils.mjs";
+import * as Stdlib_Float from "@rescript/runtime/lib/es6/Stdlib_Float.mjs";
+import * as Stdlib_Option from "@rescript/runtime/lib/es6/Stdlib_Option.mjs";
 
 function hash_variant(s) {
   let accu = 0;
@@ -47,8 +49,8 @@ Mocha.describe("Int_overflow_test", () => {
   Mocha.test("hash_variant_test2", () => Test_utils.eq("File \"int_overflow_test.res\", line 58, characters 38-45", hash_variant2("xxyyzxzzyy"), -449896130));
   Mocha.test("int_literal_flow", () => Test_utils.eq("File \"int_overflow_test.res\", line 59, characters 36-43", -1, -1));
   Mocha.test("int_literal_flow2", () => Test_utils.eq("File \"int_overflow_test.res\", line 60, characters 37-44", -1, -1));
-  Mocha.test("float_conversion_test1", () => Test_utils.eq("File \"int_overflow_test.res\", line 61, characters 42-49", Number("3") | 0, 3));
-  Mocha.test("float_conversion_test2", () => Test_utils.eq("File \"int_overflow_test.res\", line 62, characters 42-49", Number("3.2") | 0, 3));
+  Mocha.test("float_conversion_test1", () => Test_utils.eq("File \"int_overflow_test.res\", line 62, characters 7-14", Stdlib_Option.map(Stdlib_Float.fromString("3"), prim => prim | 0), 3));
+  Mocha.test("float_conversion_test2", () => Test_utils.eq("File \"int_overflow_test.res\", line 65, characters 7-14", Stdlib_Option.map(Stdlib_Float.fromString("3.2"), prim => prim | 0), 3));
 });
 
 let max_int = 2147483647;

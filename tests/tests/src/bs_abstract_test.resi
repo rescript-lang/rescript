@@ -1,7 +1,7 @@
 @deriving(abstract)
 type rec linked_list<'a> = private {
   /* hd : 'a ; */
-  tl: Js.null<linked_list<'a>>,
+  tl: null<linked_list<'a>>,
 }
 
 type rec t = (int, int) => bool

@@ -26,7 +26,7 @@
   2 │ let = 4
   3 │ 
   4 │ for in 0 to 10 {
-  5 │   Js.log("for")
+  5 │   Console.log("for")
   6 │ }
 
   A for-loop has the following form: `for i in 0 to 10`. Did you forget to supply a name before `in`?
@@ -38,7 +38,7 @@
   2 │ let = 4
   3 │ 
   4 │ for in 0 to 10 {
-  5 │   Js.log("for")
+  5 │   Console.log("for")
   6 │ }
 
   Consecutive statements on a line must be separated by ';' or a newline
@@ -60,5 +60,5 @@ let 4 = [%rescript.exprhole ]
 ;;0
 ;;to
 ;;10
-;;((Js.log {js|for|js})[@res.braces ])
+;;((Console.log {js|for|js})[@res.braces ])
 ;;match x with | () -> [%rescript.exprhole ]

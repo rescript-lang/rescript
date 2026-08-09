@@ -25,7 +25,7 @@ let createCourseAuthorQuery = (courseId, rootPath, email, name, setSaving, addAu
   setSaving(_ => true)
   CreateCourseAuthorQuery.make(~courseId, ~email, ~name, ())
   ->GraphqlQuery.sendQuery
-  ->Js.Promise.then_(response => {
+  ->Promise.then(response => {
     switch response["createCourseAuthor"]["courseAuthor"] {
     | Some(courseAuthor) =>
       addAuthorCB(
@@ -35,11 +35,11 @@ let createCourseAuthorQuery = (courseId, rootPath, email, name, setSaving, addAu
       ReasonReactRouter.push(rootPath)
     | None => setSaving(_ => false)
     }
-    Js.Promise.resolve()
+    Promise.resolve()
   })
-  ->Js.Promise.catch(_ => {
+  ->Promise.catch(_ => {
     setSaving(_ => false)
-    Js.Promise.resolve()
+    Promise.resolve()
   })
   ->ignore
 }
@@ -49,7 +49,7 @@ let updateCourseAuthorQuery = (rootPath, author, name, setSaving, updateAuthorCB
   let id = author->Author.id
   UpdateCourseAuthorQuery.make(~id, ~name, ())
   ->GraphqlQuery.sendQuery
-  ->Js.Promise.then_(response => {
+  ->Promise.then(response => {
     if response["updateCourseAuthor"]["success"] {
       updateAuthorCB(author->Author.updateName(name))
       ReasonReactRouter.push(rootPath)
@@ -57,11 +57,11 @@ let updateCourseAuthorQuery = (rootPath, author, name, setSaving, updateAuthorCB
       setSaving(_ => false)
     }
 
-    Js.Promise.resolve()
+    Promise.resolve()
   })
-  ->Js.Promise.catch(_ => {
+  ->Promise.catch(_ => {
     setSaving(_ => false)
-    Js.Promise.resolve()
+    Promise.resolve()
   })
   ->ignore
 }

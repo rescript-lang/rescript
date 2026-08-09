@@ -5,8 +5,6 @@
 
 import * as TypesJS from './Types.res.js';
 
-import type {Json_t as Js_Json_t} from '../../src/shims/Js.shim';
-
 import type {List_t as Belt_List_t} from '../../src/shims/Belt.shim';
 
 import type {M_t__ as TypeNameSanitize_M_t__} from '../../src/TypeNameSanitize.gen';
@@ -59,14 +57,6 @@ export type nullableOrString3 = (null | undefined | string);
 
 export type nullableOrString4 = (null | undefined | string);
 
-export type undefinedOrString = (undefined | string);
-
-export type undefinedOrString2 = (undefined | string);
-
-export type undefinedOrString3 = (undefined | string);
-
-export type undefinedOrString4 = (undefined | string);
-
 export type record = { readonly i: number; readonly s: string };
 
 export type decorator<a,b> = (_1:a) => b;
@@ -114,11 +104,7 @@ export const testFunctionOnOptionsAsArgument: <T1,a>(a:(undefined | a), foo:((_1
 
 export const stringT: string = TypesJS.stringT as any;
 
-export const jsStringT: string = TypesJS.jsStringT as any;
-
-export const jsString2T: string = TypesJS.jsString2T as any;
-
-export const jsonStringify: (_1:Js_Json_t) => string = TypesJS.jsonStringify as any;
+export const jsonStringify: (value:unknown) => string = TypesJS.jsonStringify as any;
 
 export const testConvertNull: (x:(null | record)) => (null | record) = TypesJS.testConvertNull as any;
 

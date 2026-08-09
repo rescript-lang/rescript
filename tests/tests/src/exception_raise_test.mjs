@@ -90,7 +90,7 @@ try {
   a0 = (function (){throw 2} ());
 } catch (raw_x$3) {
   let x$3 = Primitive_exceptions.internalToException(raw_x$3);
-  if (x$3.RE_EXN_ID === A || x$3.RE_EXN_ID === Stdlib_Exn.$$Error) {
+  if (x$3.RE_EXN_ID === A || x$3.RE_EXN_ID === "JsExn") {
     a0 = x$3._1;
   } else {
     throw {
@@ -160,9 +160,9 @@ Mocha.describe("Exception_raise_test", () => {
     2,
     2
   ]));
-  Mocha.test("Js.Exn.Error conversion", () => {
-    if (a1.RE_EXN_ID === Stdlib_Exn.$$Error) {
-      return Test_utils.eq("File \"exception_raise_test.res\", line 77, characters 28-35", a1._1, 2);
+  Mocha.test("Exn.Error conversion", () => {
+    if (a1.RE_EXN_ID === "JsExn") {
+      return Test_utils.eq("File \"exception_raise_test.res\", line 77, characters 21-28", a1._1, 2);
     }
     throw {
       RE_EXN_ID: "Assert_failure",
@@ -174,7 +174,7 @@ Mocha.describe("Exception_raise_test", () => {
       Error: new Error()
     };
   });
-  Mocha.test("Js.Exn.asJsExn with raw throw", () => {
+  Mocha.test("Exn.asJsExn with raw throw", () => {
     let testValue;
     try {
       testValue = (()=>{throw 2})();

@@ -30,9 +30,9 @@ let createLevelUpQuery = (course, setSaving, event) => {
 
   LevelUpQuery.make(~courseId=course->Course.id, ())
   ->GraphqlQuery.sendQuery
-  ->Js.Promise.then_(response => {
+  ->Promise.then(response => {
     response["levelUp"]["success"] ? refreshPage() : setSaving(_ => false)
-    Js.Promise.resolve()
+    Promise.resolve()
   })
   ->ignore
 }

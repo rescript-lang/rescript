@@ -16,9 +16,8 @@ module Make = (Sortable: Sortable) => {
       </button>
     let dropDownContents =
       criteria
-      ->Js.Array.filter(criterion =>
-        Sortable.criterion(criterion) != Sortable.criterion(selectedCriterion)
-      )
+      ->Array.filter(criterion =>
+        Sortable.criterion(criterion) != Sortable.criterion(selectedCriterion))
       ->Array.map(criterion =>
         <button
           key={Sortable.criterion(criterion)}

@@ -140,7 +140,7 @@ module ExpertView = {
             </strong>
           </small>
           <br />
-          {daysHeldFloat->Js.Float.toFixed->restr}
+          {daysHeldFloat->Float.toFixed->restr}
           <br />
         </p>
       | None => React.null
@@ -221,7 +221,7 @@ module SimpleView = {
           userLink
           {(" has been the guardian of " ++
           (tokenName ++
-          (" for " ++ (daysHeldFloat->Js.Float.toFixed ++ " days "))))->React.string}
+          (" for " ++ (daysHeldFloat->Float.toFixed ++ " days "))))->React.string}
           {switch definiteTime {
           | Some(date) => <>
               {"and has enough deposit to last "->React.string}
@@ -302,7 +302,7 @@ let make = (~chain, ~tokenId: TokenId.t) => {
   | None => (None, None)
   }
 
-  let monthlyRate = Js.Float.toString(ratio *. 100.)
+  let monthlyRate = Float.toString(ratio *. 100.)
 
   let showEthWithUsdConversion = switch chain {
   | Client.MaticQuery => false
@@ -416,7 +416,7 @@ module Auction = {
 
     let ratio = QlHooks.usePledgeRate(~chain, tokenId)
 
-    let monthlyRate = Js.Float.toString(ratio *. 100.)
+    let monthlyRate = Float.toString(ratio *. 100.)
 
     let showEthWithUsdConversion = switch chain {
     | Client.MaticQuery => false
@@ -530,7 +530,7 @@ module Auction = {
             //         </strong>
             //       </small>
             //       <br />
-            //       {daysHeldFloat->Js.Float.toFixed->restr}
+            //       {daysHeldFloat->Float.toFixed->restr}
             //       <br />
             //     </p>;
             //   | None => React.null

@@ -81,8 +81,8 @@ type domRef
 
 module Ref = {
   type t = domRef
-  type currentDomRef = React.ref<Js.nullable<Dom.element>>
-  type callbackDomRef = Js.nullable<Dom.element> => unit
+  type currentDomRef = React.ref<nullable<Dom.element>>
+  type callbackDomRef = nullable<Dom.element> => unit
 
   external domRef: currentDomRef => domRef = "%identity"
   external callbackDomRef: callbackDomRef => domRef = "%identity"
@@ -334,7 +334,7 @@ type domProps = {
   @optional
   manifest: string /* uri */,
   @optional
-  max: string /* should be int or Js.Date.t */,
+  max: string /* should be int or Date.t */,
   @optional
   maxLength: int,
   @optional
@@ -1103,7 +1103,7 @@ type props = {
   @optional
   key: string,
   @optional
-  ref: Js.nullable<Dom.element> => unit,
+  ref: nullable<Dom.element> => unit,
   /* accessibility */
   /* https://www.w3.org/TR/wai-aria-1.1/ */
   /* https://accessibilityresources.org/<aria-tag> is a great resource for these */
@@ -1339,7 +1339,7 @@ type props = {
   @optional
   manifest: string /* uri */,
   @optional
-  max: string /* should be int or Js.Date.t */,
+  max: string /* should be int or Date.t */,
   @optional
   maxLength: int,
   @optional
@@ -2111,8 +2111,8 @@ include (
 
     let createElementVariadic = (domClassName, ~props=?, children) => {
       let variadicArguments =
-        [Obj.magic(domClassName), Obj.magic(props)]->Js.Array.concat(children)
-      createElementInternalHack->apply(Js.Nullable.null, variadicArguments)
+        [Obj.magic(domClassName), Obj.magic(props)]->Array.concat(children)
+      createElementInternalHack->apply(Nullable.null, variadicArguments)
     }
   }: {
     let createElementVariadic: (string, ~props: props=?, array<React.element>) => React.element
@@ -2541,14 +2541,14 @@ module Style = {
   ) => style = ""
   /* CSS2Properties: https://www.w3.org/TR/DOM-Level-2-Style/css.html#CSS-CSS2Properties */
   let combine: (style, style) => style = (a, b) => {
-    let a: Js.t<{..}> = Obj.magic(a)
-    let b: Js.t<{..}> = Obj.magic(b)
-    Js.Obj.assign(Js.Obj.assign(Js.Obj.empty(), a), b)->Obj.magic
+    let a: {..} = Obj.magic(a)
+    let b: {..} = Obj.magic(b)
+    Object.assign(Object.assign(Object.make(), a), b)->Obj.magic
   }
   let unsafeAddProp: (style, string, string) => style = (style, property, value) => {
     let propStyle: style = {
-      let dict = Js.Dict.empty()
-      Js.Dict.set(dict, property, value)
+      let dict = Dict.make()
+      Dict.set(dict, property, value)
       Obj.magic(dict)
     }
     combine(style, propStyle)

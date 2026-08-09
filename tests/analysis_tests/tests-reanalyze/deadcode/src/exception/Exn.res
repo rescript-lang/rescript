@@ -116,7 +116,7 @@ let throwPipe = throw(Not_found)
 let throwArrow = Not_found->throw
 
 @throws(JsExn)
-let bar = () => Js.Json.parseExn("!!!")
+let bar = () => JSON.parseOrThrow("!!!")
 
 let severalCases = cases =>
   switch cases {

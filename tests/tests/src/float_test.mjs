@@ -3,6 +3,7 @@
 import * as Mocha from "mocha";
 import * as Pervasives from "@rescript/runtime/lib/es6/Pervasives.mjs";
 import * as Test_utils from "./test_utils.mjs";
+import * as Stdlib_Float from "@rescript/runtime/lib/es6/Stdlib_Float.mjs";
 import * as Primitive_float from "@rescript/runtime/lib/es6/Primitive_float.mjs";
 import * as Primitive_object from "@rescript/runtime/lib/es6/Primitive_object.mjs";
 
@@ -46,10 +47,12 @@ function float_greaterequal(x, y) {
 
 let generic_greaterequal = Primitive_object.greaterequal;
 
+let nan = NaN;
+
 Mocha.describe("Float_test", () => {
   Mocha.test("float_test_1", () => {
-    Test_utils.eq("File \"float_test.res\", line 21, characters 7-14", Pervasives.classify_float(3), "FP_normal");
-    Test_utils.eq("File \"float_test.res\", line 23, characters 6-13", [
+    Test_utils.eq("File \"float_test.res\", line 22, characters 7-14", Pervasives.classify_float(3), "FP_normal");
+    Test_utils.eq("File \"float_test.res\", line 24, characters 6-13", [
       -1,
       1,
       1
@@ -75,50 +78,50 @@ Mocha.describe("Float_test", () => {
         return 0;
       }
     }));
-    Test_utils.eq("File \"float_test.res\", line 38, characters 7-14", Math.log10(10), 1);
-    Test_utils.eq("File \"float_test.res\", line 39, characters 7-14", Number("3.0"), 3.0);
-    Test_utils.eq("File \"float_test.res\", line 40, characters 7-14", Primitive_float.compare(NaN, NaN), 0);
-    Test_utils.eq("File \"float_test.res\", line 41, characters 7-14", Primitive_object.compare(NaN, NaN), 0);
-    Test_utils.eq("File \"float_test.res\", line 42, characters 7-14", Primitive_float.compare(NaN, Pervasives.neg_infinity), -1);
-    Test_utils.eq("File \"float_test.res\", line 43, characters 7-14", Primitive_object.compare(NaN, Pervasives.neg_infinity), -1);
-    Test_utils.eq("File \"float_test.res\", line 44, characters 7-14", Primitive_float.compare(Pervasives.neg_infinity, NaN), 1);
-    Test_utils.eq("File \"float_test.res\", line 45, characters 7-14", Primitive_object.compare(Pervasives.neg_infinity, NaN), 1);
-    Test_utils.eq("File \"float_test.res\", line 46, characters 7-14", NaN === NaN, false);
-    Test_utils.eq("File \"float_test.res\", line 47, characters 7-14", Primitive_object.equal(NaN, NaN), false);
-    Test_utils.eq("File \"float_test.res\", line 48, characters 7-14", 4.2 === NaN, false);
-    Test_utils.eq("File \"float_test.res\", line 49, characters 7-14", Primitive_object.equal(4.2, NaN), false);
-    Test_utils.eq("File \"float_test.res\", line 50, characters 7-14", NaN === 4.2, false);
-    Test_utils.eq("File \"float_test.res\", line 51, characters 7-14", Primitive_object.equal(NaN, 4.2), false);
-    Test_utils.eq("File \"float_test.res\", line 52, characters 7-14", NaN !== NaN, true);
-    Test_utils.eq("File \"float_test.res\", line 53, characters 7-14", Primitive_object.notequal(NaN, NaN), true);
-    Test_utils.eq("File \"float_test.res\", line 54, characters 7-14", 4.2 !== NaN, true);
-    Test_utils.eq("File \"float_test.res\", line 55, characters 7-14", Primitive_object.notequal(4.2, NaN), true);
-    Test_utils.eq("File \"float_test.res\", line 56, characters 7-14", NaN !== 4.2, true);
-    Test_utils.eq("File \"float_test.res\", line 57, characters 7-14", Primitive_object.notequal(NaN, 4.2), true);
-    Test_utils.eq("File \"float_test.res\", line 58, characters 7-14", NaN < NaN, false);
-    Test_utils.eq("File \"float_test.res\", line 59, characters 7-14", Primitive_object.lessthan(NaN, NaN), false);
-    Test_utils.eq("File \"float_test.res\", line 60, characters 7-14", 4.2 < NaN, false);
-    Test_utils.eq("File \"float_test.res\", line 61, characters 7-14", Primitive_object.lessthan(4.2, NaN), false);
-    Test_utils.eq("File \"float_test.res\", line 62, characters 7-14", NaN < 4.2, false);
-    Test_utils.eq("File \"float_test.res\", line 63, characters 7-14", Primitive_object.lessthan(NaN, 4.2), false);
-    Test_utils.eq("File \"float_test.res\", line 64, characters 7-14", NaN > NaN, false);
-    Test_utils.eq("File \"float_test.res\", line 65, characters 7-14", Primitive_object.greaterthan(NaN, NaN), false);
-    Test_utils.eq("File \"float_test.res\", line 66, characters 7-14", 4.2 > NaN, false);
-    Test_utils.eq("File \"float_test.res\", line 67, characters 7-14", Primitive_object.greaterthan(4.2, NaN), false);
-    Test_utils.eq("File \"float_test.res\", line 68, characters 7-14", NaN > 4.2, false);
-    Test_utils.eq("File \"float_test.res\", line 69, characters 7-14", Primitive_object.greaterthan(NaN, 4.2), false);
-    Test_utils.eq("File \"float_test.res\", line 70, characters 7-14", NaN <= NaN, false);
-    Test_utils.eq("File \"float_test.res\", line 71, characters 7-14", Primitive_object.lessequal(NaN, NaN), false);
-    Test_utils.eq("File \"float_test.res\", line 72, characters 7-14", Primitive_object.lessequal(4.2, NaN), false);
-    Test_utils.eq("File \"float_test.res\", line 73, characters 7-14", Primitive_object.lessequal(4.2, NaN), false);
-    Test_utils.eq("File \"float_test.res\", line 74, characters 7-14", Primitive_object.lessequal(NaN, 4.2), false);
-    Test_utils.eq("File \"float_test.res\", line 75, characters 7-14", Primitive_object.lessequal(NaN, 4.2), false);
-    Test_utils.eq("File \"float_test.res\", line 76, characters 7-14", NaN >= NaN, false);
-    Test_utils.eq("File \"float_test.res\", line 77, characters 7-14", Primitive_object.greaterequal(NaN, NaN), false);
-    Test_utils.eq("File \"float_test.res\", line 78, characters 7-14", 4.2 >= NaN, false);
-    Test_utils.eq("File \"float_test.res\", line 79, characters 7-14", Primitive_object.greaterequal(4.2, NaN), false);
-    Test_utils.eq("File \"float_test.res\", line 80, characters 7-14", NaN >= 4.2, false);
-    Test_utils.eq("File \"float_test.res\", line 81, characters 7-14", Primitive_object.greaterequal(NaN, 4.2), false);
+    Test_utils.eq("File \"float_test.res\", line 39, characters 7-14", Math.log10(10), 1);
+    Test_utils.eq("File \"float_test.res\", line 40, characters 7-14", Stdlib_Float.fromString("3.0"), 3.0);
+    Test_utils.eq("File \"float_test.res\", line 41, characters 7-14", Primitive_float.compare(nan, nan), 0);
+    Test_utils.eq("File \"float_test.res\", line 42, characters 7-14", Primitive_object.compare(nan, nan), 0);
+    Test_utils.eq("File \"float_test.res\", line 43, characters 7-14", Primitive_float.compare(nan, Pervasives.neg_infinity), -1);
+    Test_utils.eq("File \"float_test.res\", line 44, characters 7-14", Primitive_object.compare(nan, Pervasives.neg_infinity), -1);
+    Test_utils.eq("File \"float_test.res\", line 45, characters 7-14", Primitive_float.compare(Pervasives.neg_infinity, nan), 1);
+    Test_utils.eq("File \"float_test.res\", line 46, characters 7-14", Primitive_object.compare(Pervasives.neg_infinity, nan), 1);
+    Test_utils.eq("File \"float_test.res\", line 47, characters 7-14", nan === nan, false);
+    Test_utils.eq("File \"float_test.res\", line 48, characters 7-14", Primitive_object.equal(nan, nan), false);
+    Test_utils.eq("File \"float_test.res\", line 49, characters 7-14", 4.2 === nan, false);
+    Test_utils.eq("File \"float_test.res\", line 50, characters 7-14", Primitive_object.equal(4.2, nan), false);
+    Test_utils.eq("File \"float_test.res\", line 51, characters 7-14", nan === 4.2, false);
+    Test_utils.eq("File \"float_test.res\", line 52, characters 7-14", Primitive_object.equal(nan, 4.2), false);
+    Test_utils.eq("File \"float_test.res\", line 53, characters 7-14", nan !== nan, true);
+    Test_utils.eq("File \"float_test.res\", line 54, characters 7-14", Primitive_object.notequal(nan, nan), true);
+    Test_utils.eq("File \"float_test.res\", line 55, characters 7-14", 4.2 !== nan, true);
+    Test_utils.eq("File \"float_test.res\", line 56, characters 7-14", Primitive_object.notequal(4.2, nan), true);
+    Test_utils.eq("File \"float_test.res\", line 57, characters 7-14", nan !== 4.2, true);
+    Test_utils.eq("File \"float_test.res\", line 58, characters 7-14", Primitive_object.notequal(nan, 4.2), true);
+    Test_utils.eq("File \"float_test.res\", line 59, characters 7-14", nan < nan, false);
+    Test_utils.eq("File \"float_test.res\", line 60, characters 7-14", Primitive_object.lessthan(nan, nan), false);
+    Test_utils.eq("File \"float_test.res\", line 61, characters 7-14", 4.2 < nan, false);
+    Test_utils.eq("File \"float_test.res\", line 62, characters 7-14", Primitive_object.lessthan(4.2, nan), false);
+    Test_utils.eq("File \"float_test.res\", line 63, characters 7-14", nan < 4.2, false);
+    Test_utils.eq("File \"float_test.res\", line 64, characters 7-14", Primitive_object.lessthan(nan, 4.2), false);
+    Test_utils.eq("File \"float_test.res\", line 65, characters 7-14", nan > nan, false);
+    Test_utils.eq("File \"float_test.res\", line 66, characters 7-14", Primitive_object.greaterthan(nan, nan), false);
+    Test_utils.eq("File \"float_test.res\", line 67, characters 7-14", 4.2 > nan, false);
+    Test_utils.eq("File \"float_test.res\", line 68, characters 7-14", Primitive_object.greaterthan(4.2, nan), false);
+    Test_utils.eq("File \"float_test.res\", line 69, characters 7-14", nan > 4.2, false);
+    Test_utils.eq("File \"float_test.res\", line 70, characters 7-14", Primitive_object.greaterthan(nan, 4.2), false);
+    Test_utils.eq("File \"float_test.res\", line 71, characters 7-14", nan <= nan, false);
+    Test_utils.eq("File \"float_test.res\", line 72, characters 7-14", Primitive_object.lessequal(nan, nan), false);
+    Test_utils.eq("File \"float_test.res\", line 73, characters 7-14", Primitive_object.lessequal(4.2, nan), false);
+    Test_utils.eq("File \"float_test.res\", line 74, characters 7-14", Primitive_object.lessequal(4.2, nan), false);
+    Test_utils.eq("File \"float_test.res\", line 75, characters 7-14", Primitive_object.lessequal(nan, 4.2), false);
+    Test_utils.eq("File \"float_test.res\", line 76, characters 7-14", Primitive_object.lessequal(nan, 4.2), false);
+    Test_utils.eq("File \"float_test.res\", line 77, characters 7-14", nan >= nan, false);
+    Test_utils.eq("File \"float_test.res\", line 78, characters 7-14", Primitive_object.greaterequal(nan, nan), false);
+    Test_utils.eq("File \"float_test.res\", line 79, characters 7-14", 4.2 >= nan, false);
+    Test_utils.eq("File \"float_test.res\", line 80, characters 7-14", Primitive_object.greaterequal(4.2, nan), false);
+    Test_utils.eq("File \"float_test.res\", line 81, characters 7-14", nan >= 4.2, false);
+    Test_utils.eq("File \"float_test.res\", line 82, characters 7-14", Primitive_object.greaterequal(nan, 4.2), false);
   });
 });
 
@@ -137,5 +140,6 @@ export {
   generic_lessequal,
   float_greaterequal,
   generic_greaterequal,
+  nan,
 }
-/*  Not a pure module */
+/* nan Not a pure module */

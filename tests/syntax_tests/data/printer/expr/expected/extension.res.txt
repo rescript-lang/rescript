@@ -16,8 +16,8 @@ let f = (x, y) => {
 }
 
 switch %external(__DEV__) {
-| Some(_) => Js.log("dev mode")
-| None => Js.log("production mode")
+| Some(_) => Console.log("dev mode")
+| None => Console.log("production mode")
 }
 
 let node = @attr %raw("0")

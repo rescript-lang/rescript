@@ -20,7 +20,7 @@ let partOfTeamSelected = selectedStudents => {
   let selectedTeamSize = selectedStudents->Array.length
 
   selectedStudents
-  ->Js.Array.filter(s => s.teamSize > selectedTeamSize)
+  ->Array.filter(s => s.teamSize > selectedTeamSize)
   ->Array.length == selectedTeamSize
 }
 

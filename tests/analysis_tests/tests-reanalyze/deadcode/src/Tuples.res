@@ -28,7 +28,7 @@ let computeAreaNoConverters = ((x: int, y: int)) => x * y
 let coord2d = (x, y) => (x, y, None)
 
 @genType
-type coord2 = (int, int, Js.Nullable.t<int>)
+type coord2 = (int, int, nullable<int>)
 
 @genType
 type person = {

@@ -35,8 +35,7 @@ module ChildProcess = {
 
   @send external on: (readable, string, Buffer.t => unit) => unit = "on"
   @send
-  external once: (spawnReturns, string, (Js.Null.t<float>, Js.Null.t<string>) => unit) => unit =
-    "once"
+  external once: (spawnReturns, string, (Null.t<float>, Null.t<string>) => unit) => unit = "once"
   type execSyncOptions = {maxBuffer?: float}
   @module("child_process")
   external execSync: (string, ~options: execSyncOptions=?) => Buffer.t = "execSync"

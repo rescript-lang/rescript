@@ -186,7 +186,7 @@ module OrgPage = {
     | (Some(mainnetEth), Some(maticDai)) => (
         (currentUsdEthPrice->Option.mapWithDefault(0., usdEthRate =>
           mainnetEth->Eth.getFloat(Eth.Usd(usdEthRate, 2))
-        ) +. maticDai->Eth.getFloat(Eth.Eth(#ether)))->Js.Float.toFixedWithPrecision(~digits=6),
+        ) +. maticDai->Eth.getFloat(Eth.Eth(#ether)))->Float.toFixedWithPrecision(~digits=6),
         mainnetEth->Web3Utils.fromWeiBNToEthPrecision(~digits=4) ++
           (" ETH + " ++
           (maticDai->Web3Utils.fromWeiBNToEthPrecision(~digits=2) ++ " DAI")),

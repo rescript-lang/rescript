@@ -42,7 +42,7 @@ let decode = json => {
   {
     id: json->field("id", string),
     createdAt: json->field("createdAt", string),
-    file: json->field("file", nullable(decodeFile))->Js.Null.toOption,
+    file: json->field("file", nullable(decodeFile))->Null.toOption,
     tags: json->field("tags", array(string)),
     exportType: switch json->field("exportType", string) {
     | "Students" => Students

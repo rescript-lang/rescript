@@ -4,6 +4,19 @@ import * as Belt_Array from "./Belt_Array.mjs";
 import * as Primitive_int from "./Primitive_int.mjs";
 import * as Primitive_option from "./Primitive_option.mjs";
 
+function copyBucket(c) {
+  if (c === undefined) {
+    return c;
+  }
+  let head = {
+    key: c.key,
+    value: c.value,
+    next: undefined
+  };
+  copyAuxCont(c.next, head);
+  return head;
+}
+
 function copyAuxCont(_c, _prec) {
   while (true) {
     let prec = _prec;
@@ -21,19 +34,6 @@ function copyAuxCont(_c, _prec) {
     _c = c.next;
     continue;
   };
-}
-
-function copyBucket(c) {
-  if (c === undefined) {
-    return c;
-  }
-  let head = {
-    key: c.key,
-    value: c.value,
-    next: undefined
-  };
-  copyAuxCont(c.next, head);
-  return head;
 }
 
 function copyBuckets(buckets) {

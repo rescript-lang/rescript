@@ -53,7 +53,7 @@ let reducer = (state, action) =>
     }
   | DeselectTag(tag) => {
       ...state,
-      selectedTags: state.selectedTags->Js.Array.filter(t => t->Tag.id != Tag.id(tag)),
+      selectedTags: state.selectedTags->Array.filter(t => t->Tag.id != Tag.id(tag)),
     }
   | SelectExportType(exportType) => {...state, exportType: exportType}
   | UpdateTagSearch(tagSearch) => {...state, tagSearch: tagSearch}
@@ -87,7 +87,7 @@ module TagsSelector = MultiselectInline.Make(Selectable)
 
 let unselected = (allTags, selectedTags) => {
   let selectedTagIds = selectedTags->Array.map(Tag.id)
-  allTags->Js.Array.filter(t => !(selectedTagIds->Array.mem(t->Tag.id)))
+  allTags->Array.filter(t => !(selectedTagIds->Array.mem(t->Tag.id)))
 }
 
 module CreateCourseExportQuery = %graphql(`
@@ -120,7 +120,7 @@ let createCourseExport = (state, send, course, event) => {
     (),
   )
   ->GraphqlQuery.sendQuery
-  ->Js.Promise.then_(response => {
+  ->Promise.then(response => {
     switch response["createCourseExport"]["courseExport"] {
     | Some(\"export") =>
       /* Add the new course export to the list of exports known by this component. */
@@ -136,12 +136,12 @@ let createCourseExport = (state, send, course, event) => {
     | None => send(FailSaving)
     }
 
-    Js.Promise.resolve()
+    Promise.resolve()
   })
-  ->Js.Promise.catch(e => {
-    Js.log(e)
+  ->Promise.catch(e => {
+    Console.log(e)
     send(FailSaving)
-    Js.Promise.resolve()
+    Promise.resolve()
   })
   ->ignore
 }

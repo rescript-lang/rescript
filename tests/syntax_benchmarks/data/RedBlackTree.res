@@ -492,7 +492,7 @@ let make = (~compare) => {size: 0, root: None, compare}
 
 let makeWith = (array, ~compare) => {
   let rbt = make(~compare)
-  array->Js.Array2.forEach(((value, height)) => add(rbt, value, ~height)->ignore)
+  array->Array.forEach(((value, height)) => add(rbt, value, ~height)->ignore)
   rbt
 }
 
@@ -502,7 +502,7 @@ let rec heightOfInterval = (rbt, node, lhs, rhs) => {
   switch node {
   | None => 0.
   | Some(n) =>
-    //Js.log4("heightOfInterval n:", n.value, lhs, rhs)
+    //Console.log4("heightOfInterval n:", n.value, lhs, rhs)
     if lhs === None && rhs === None {
       n.sum
     } else if lhs !== None && rbt.compare(n.value, lhs->castNotOption) < 0 {
@@ -521,7 +521,7 @@ let rec heightOfInterval = (rbt, node, lhs, rhs) => {
 }
 
 let heightOfInterval = (rbt, lhs, rhs) => {
-  //Js.log("-----------")
+  //Console.log("-----------")
   heightOfInterval(rbt, rbt.root, lhs, rhs)
 }
 
@@ -530,7 +530,7 @@ let rec firstVisibleNode = (node, top) => {
   switch node {
   | None => None
   | Some(node) =>
-    //Js.log4("firstVisibleNode", node.value, "top:", top)
+    //Console.log4("firstVisibleNode", node.value, "top:", top)
     if node.sum <= top {
       // no node is visible
       None
@@ -679,12 +679,12 @@ let onChangedVisible = (
   let old = oldNewVisible.new
   let new = oldNewVisible.old
   // empty new
-  new->Js.Array2.removeCountInPlace(~pos=0, ~count=new->Js.Array2.length)->ignore
+  new->Array.splice(~start=0, ~remove=new->Array.length, ~insert=[])->ignore
   oldNewVisible.old = old
   oldNewVisible.new = new
 
   let anchorDelta = rbt->getAnchorDelta(~anchor)
-  //Js.log2("anchorDelta", anchorDelta)
+  //Console.log2("anchorDelta", anchorDelta)
   let top = top_ -. anchorDelta
   let top = top < 0.0 ? 0.0 : top // anchoring can make top negative
   let bottom = bottom_ -. anchorDelta
@@ -692,7 +692,7 @@ let onChangedVisible = (
   let first = firstVisibleNode(rbt.root, top)
   let last = lastVisibleNode(rbt.root, bottom)
 
-  let oldLen = old->Js.Array2.length
+  let oldLen = old->Array.length
   let oldIter = ref(0)
   iterateWithY(~inclusive=true, first, last, ~callback=(node, y_) => {
     let y = y_ +. anchorDelta
@@ -700,14 +700,14 @@ let onChangedVisible = (
       // anchoring can make y negative
       while (
         oldIter.contents < oldLen &&
-          rbt.compare(Js.Array2.unsafe_get(old, oldIter.contents), node.value) < 0
+          rbt.compare(Array.getUnsafe(old, oldIter.contents), node.value) < 0
       ) {
-        disappear(Js.Array2.unsafe_get(old, oldIter.contents))
+        disappear(Array.getUnsafe(old, oldIter.contents))
         oldIter.contents = oldIter.contents + 1
       }
-      new->Js.Array2.push(node.value)->ignore
+      new->Array.push(node.value)->ignore
       if oldIter.contents < oldLen {
-        let cmp = rbt.compare(Js.Array2.unsafe_get(old, oldIter.contents), node.value)
+        let cmp = rbt.compare(Array.getUnsafe(old, oldIter.contents), node.value)
         if cmp == 0 {
           remained(node, y)
           oldIter.contents = oldIter.contents + 1
@@ -720,7 +720,7 @@ let onChangedVisible = (
     }
   })
   while oldIter.contents < oldLen {
-    disappear(Js.Array2.unsafe_get(old, oldIter.contents))
+    disappear(Array.getUnsafe(old, oldIter.contents))
     oldIter.contents = oldIter.contents + 1
   }
 }

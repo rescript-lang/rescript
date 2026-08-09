@@ -2,7 +2,7 @@ type t = {
   id: string,
   author: option<User.t>,
   note: string,
-  createdAt: Js.Date.t,
+  createdAt: Date.t,
 }
 
 let make = (~id, ~note, ~createdAt, ~author) => {

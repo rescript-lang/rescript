@@ -68,13 +68,13 @@ let getSubmissionDetails = (submissionId, setState, syncSubmissionCB, ()) => {
   setState(_ => Loading)
   SubmissionDetailsQuery.make(~submissionId, ())
   ->GraphqlQuery.sendQuery
-  ->Js.Promise.then_(response => {
+  ->Promise.then(response => {
     response["submissionDetails"]->updateSubmissionDetails(
       setState,
       submissionId,
       syncSubmissionCB,
     )
-    Js.Promise.resolve()
+    Promise.resolve()
   })
   ->ignore
 
@@ -211,9 +211,8 @@ let make = (
     {switch state {
     | Loaded(submissionDetails) =>
       let assignedCoaches =
-        teamCoaches->Js.Array.filter(coach =>
-          submissionDetails->SubmissionDetails.coachIds->Array.mem(coach->Coach.id)
-        )
+        teamCoaches->Array.filter(coach =>
+          submissionDetails->SubmissionDetails.coachIds->Array.mem(coach->Coach.id))
 
       <div>
         {headerSection(submissionDetails, courseId, assignedCoaches)}

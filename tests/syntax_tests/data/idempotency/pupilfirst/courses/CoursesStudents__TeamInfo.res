@@ -11,8 +11,8 @@ type t = {
   levelId: string,
   students: array<student>,
   coachUserIds: array<string>,
-  droppedOutAt: option<Js.Date.t>,
-  accessEndsAt: option<Js.Date.t>,
+  droppedOutAt: option<Date.t>,
+  accessEndsAt: option<Date.t>,
 }
 
 let id = t => t.id
@@ -87,9 +87,8 @@ let makeArrayFromJs = detailsOfTeams =>
   detailsOfTeams->Belt.Array.keepMap(OptionUtils.map(makeFromJS))
 
 let otherStudents = (studentId, t) =>
-  t.students->Js.Array.filter((student: student) => student.id != studentId)
+  t.students->Array.filter((student: student) => student.id != studentId)
 
 let coaches = (allTeamCoaches, t) =>
-  allTeamCoaches->Js.Array.filter(teamCoach =>
-    t->coachUserIds->Array.mem(teamCoach->UserProxy.userId)
-  )
+  allTeamCoaches->Array.filter(teamCoach =>
+    t->coachUserIds->Array.mem(teamCoach->UserProxy.userId))

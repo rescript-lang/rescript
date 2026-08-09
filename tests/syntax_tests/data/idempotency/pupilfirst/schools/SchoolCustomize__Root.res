@@ -28,7 +28,7 @@ type rec action =
   | UpdateAddress(string)
   | UpdateEmailAddress(string)
   | UpdateSchoolDetails(name, about)
-  | UpdateImages(Js.Json.t)
+  | UpdateImages(JSON.t)
 and name = string
 and about = option<string>
 
@@ -420,7 +420,7 @@ let make = (~authenticityToken, ~customizations, ~schoolName, ~schoolAbout) => {
             <div className="ml-6 flex items-center text-xs text-gray-600">
               <i className="far fa-copyright" />
               <span className="ml-1">
-                {(Js.Date.make()->Js.Date.getFullYear->int_of_float->string_of_int) ++
+                {(Date.make()->Date.getFullYear->int_of_float->string_of_int) ++
                   (" " ++
                   schoolName)->str}
               </span>

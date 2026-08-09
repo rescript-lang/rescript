@@ -7,6 +7,6 @@ Approximate equality comparison with a threshold parameter.
 Returns true if the absolute difference between two values is less than or equal to the threshold.
 */
 let approxEq = (loc, threshold, a, b) => {
-  let diff = Js.Math.abs_float(a -. b)
+  let diff = Math.abs(a -. b)
   Node_assert.ok(diff <= threshold, ~message=loc)
 }

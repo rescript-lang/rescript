@@ -35,9 +35,8 @@ let makeFromJs = evaluationCriterion => {
   id: evaluationCriterion["id"],
   maxGrade: evaluationCriterion["maxGrade"],
   passGrade: evaluationCriterion["passGrade"],
-  gradesAndLabels: evaluationCriterion["gradeLabels"]->Js.Array.map(gL =>
-    gL->GradeLabel.makeFromJs
-  ),
+  gradesAndLabels: evaluationCriterion["gradeLabels"]->Array.map(gL =>
+    gL->GradeLabel.makeFromJs),
 }
 
 let make = (~id, ~name, ~maxGrade, ~passGrade, ~gradesAndLabels) => {

@@ -1,14 +1,10 @@
-type undefined = nullable<unit>
-
-let undefined: undefined = Nullable.undefined
-
 @module("react-dom/test-utils")
-external reactAct: (unit => undefined) => unit = "act"
+external reactAct: (unit => option<unit>) => unit = "act"
 
 let act: (unit => unit) => unit = func => {
   let reactFunc = () => {
     func()
-    undefined
+    None
   }
   reactAct(reactFunc)
 }

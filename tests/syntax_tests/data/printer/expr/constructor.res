@@ -89,8 +89,8 @@ let math = if discriminant < 0. {
   None
 } else {
   Some((
-    (-.b -. Js.Math.sqrt(discriminant)) /. (2. *. a),
-    (-.b +. Js.Math.sqrt(discriminant)) /. (2. *. a),
+    (-.b -. Math.sqrt(discriminant)) /. (2. *. a),
+    (-.b +. Math.sqrt(discriminant)) /. (2. *. a),
   ))
 }
 

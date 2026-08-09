@@ -6,7 +6,7 @@ external make: (
   @string [@as("qe.bool") #qeBool | @as("gk") #gk],
   string,
   string,
-) => Js.Nullable.t<'a> = "requireCond"
+) => nullable<'a> = "requireCond"
 
 @module
 @deprecated(

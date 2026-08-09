@@ -5,7 +5,7 @@
 ;;match person1 with
   | Teacher _ -> ()
   | Student { reportCard = { gpa } } when gpa < 0.5 ->
-      Js.log {js|What's happening|js}
+      Console.log {js|What's happening|js}
   | Student { reportCard = { gpa } } when gpa > 0.9 ->
-      Js.log {js|Take more free time, you study too much.|js}
-  | Student _ -> Js.log {js|Heyo|js}
+      Console.log {js|Take more free time, you study too much.|js}
+  | Student _ -> Console.log {js|Heyo|js}

@@ -33,7 +33,7 @@ sleep 1
 # Create a new file in the source directory
 cat > ./src/NewWatchTestFile.res << 'EOF'
 let greeting = "hello from new file"
-let () = Js.log(greeting)
+let () = Console.log(greeting)
 EOF
 
 # Wait for the new file to be compiled

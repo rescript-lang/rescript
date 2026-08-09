@@ -21,14 +21,14 @@ let createFeedback = (submissionId, feedback, setState, addFeedbackCB) => {
 
   CreateFeedbackMutation.make(~submissionId, ~feedback, ())
   ->GraphqlQuery.sendQuery
-  ->Js.Promise.then_(response => {
+  ->Promise.then(response => {
     response["createFeedback"]["success"]
       ? {
           addFeedbackCB(feedback)
           setState(_ => {saving: false, newFeedback: "", showFeedbackEditor: false})
         }
       : setState(state => {...state, saving: false})
-    Js.Promise.resolve()
+    Promise.resolve()
   })
   ->ignore
 }

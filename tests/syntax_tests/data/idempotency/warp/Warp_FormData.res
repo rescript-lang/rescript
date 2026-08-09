@@ -13,7 +13,7 @@ let set = (client, formData) => {
   ...client,
   formData: Belt.List.map(formData, ((key, value)) => key ++ ("=" ++ value))
   ->Belt.List.toArray
-  ->Js.Array2.joinWith("&")
+  ->Array.joinUnsafe("&")
   ->Some,
   requestType: "application/x-www-form-urlencoded",
 }
@@ -23,14 +23,14 @@ let remove = (client, keyToRemove) => {
   formData: switch client.formData {
   | Some(formData) =>
     formData
-    ->Js.String2.split("&")
+    ->String.split("&")
     ->Belt.Array.keep(item =>
-      switch item->Js.String2.split("=") {
+      switch item->String.split("=") {
       | [key, _value] => key !== keyToRemove
       | _ => true
       }
     )
-    ->Js.Array2.joinWith("&")
+    ->Array.joinUnsafe("&")
     ->Some
   | None => None
   },

@@ -268,8 +268,8 @@ describe(__MODULE__, () => {
     eq(__LOC__, N.some(list{1, 2, 5}, mod2), true)
     eq(__LOC__, N.some(list{1, 3, 5}, mod2), false)
     eq(__LOC__, N.some(list{}, mod2), false)
-    eq(__LOC__, N.has(list{1, 2, 3}, "2", (x, s) => Js.Int.toString(x) == s), true)
-    eq(__LOC__, N.has(list{1, 2, 3}, "0", (x, s) => Js.Int.toString(x) == s), false)
+    eq(__LOC__, N.has(list{1, 2, 3}, "2", (x, s) => Int.toString(x) == s), true)
+    eq(__LOC__, N.has(list{1, 2, 3}, "0", (x, s) => Int.toString(x) == s), false)
 
     ok(__LOC__, N.reduceReverse(list{1, 2, 3, 4}, 0, \"+") == 10)
     ok(__LOC__, N.reduceReverse(list{1, 2, 3, 4}, 10, \"-") == 0)

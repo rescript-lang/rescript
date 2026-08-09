@@ -167,7 +167,7 @@ module Json = {
 
   /* from js_json.ml
 let classify  (x : t) : tagged_t =
-  let ty = Js.typeof x in
+  let ty = typeof x in
   if ty = "string" then
     JSONString (Obj.magic x)
   else if ty = "number" then
@@ -175,9 +175,9 @@ let classify  (x : t) : tagged_t =
   else if ty = "boolean" then
     if (Obj.magic x) = true then JSONTrue
     else JSONFalse
-  else if (Obj.magic x) == Js.null then
+  else if (Obj.magic x) == Null.null then
     JSONNull
-  else if Js_array2.isArray x  then
+  else if Array.isArray x then
     JSONArray (Obj.magic x)
   else
     JSONObject (Obj.magic x)
@@ -387,8 +387,8 @@ module Arr = {
 module AllInstanceofTypes = {
   type record = {userName: string}
 
-  @get external fileName: Js.File.t => string = "name"
-  @get external blobSize: Js.Blob.t => float = "size"
+  @get external fileName: File.t => string = "name"
+  @get external blobSize: Blob.t => float = "size"
 
   @unboxed
   type t =
@@ -396,10 +396,10 @@ module AllInstanceofTypes = {
     | Array(array<string>)
     | Promise(promise<string>)
     | Object(record)
-    | Date(Js.Date.t)
+    | Date(Date.t)
     | RegExp(Stdlib_RegExp.t)
-    | File(Js.File.t)
-    | Blob(Js.Blob.t)
+    | File(File.t)
+    | Blob(Blob.t)
     | ArrayBuffer(ArrayBuffer.t)
     | Int8Array(Int8Array.t)
     | Int16Array(Int16Array.t)
@@ -423,8 +423,8 @@ module AllInstanceofTypes = {
     | String(s) => Console.log(s)
     | Promise(p) => Console.log(await p)
     | Object({userName}) => Console.log(userName)
-    | Date(date) => Console.log(date->Js.Date.toString)
-    | RegExp(re) => Console.log(re->Js.Re.test_("test"))
+    | Date(date) => Console.log(date->Date.toString)
+    | RegExp(re) => Console.log(re->RegExp.test("test"))
     | Array(arr) => Console.log(arr->Belt.Array.joinWith("-", x => x))
     | File(file) => Console.log(file->fileName)
     | Blob(blob) => Console.log(blob->blobSize)
@@ -449,13 +449,13 @@ module AllInstanceofTypes = {
 }
 
 module Aliased = {
-  type dict = dict<string>
+  type dict = Dict.t<string>
   type fn = unit => option<string>
   @unboxed type t = Object(dict) | String(string) | Function(fn)
 
   let test = (t: t) => {
     switch t {
-    | Object(d) => d->Js.Dict.get("Hello")
+    | Object(d) => d->Dict.get("Hello")
     | String(s) => Some(s)
     | Function(fn) => fn()
     }
@@ -475,7 +475,7 @@ module MergeCases = {
     | Boolean(bool)
     | Object(obj)
     | Array(array<int>)
-    | Date(Js.Date.t)
+    | Date(Date.t)
 
   let should_not_merge = x =>
     switch x {

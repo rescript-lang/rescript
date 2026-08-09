@@ -62,8 +62,8 @@ describe(__MODULE__, () => {
       list{int_config, {"hi": 3, "low": 32}},
       list{string_config, {"hi": 3, "low": "32"}},
     )
-    eq(__LOC__, Belt.Array.length(Js_obj.keys(int_config)), 2)
-    eq(__LOC__, Belt.Array.length(Js_obj.keys(string_config)), 2)
+    eq(__LOC__, int_config->Object.keysToArray->Array.length, 2)
+    eq(__LOC__, string_config->Object.keysToArray->Array.length, 2)
   })
 
   test("side effect config", () => {

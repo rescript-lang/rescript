@@ -109,7 +109,7 @@ let handleAnswer = (
 
       UpdateAnswerQuery.make(~description, ~id=answerId, ())
       ->GraphqlQuery.sendQuery
-      ->Js.Promise.then_(response =>
+      ->Promise.then(response =>
         switch response["updateAnswer"] {
         | #Success(answerUpdated) =>
           answerUpdated
@@ -124,8 +124,8 @@ let handleAnswer = (
               )
             : Notification.error("Something went wrong", "Please refresh the page and try again")
           Notification.success("Success", "Answer updated successfully")
-          Js.Promise.resolve()
-        | #Errors(errors) => Js.Promise.reject(UpdateAnswerErrorHandler.Errors(errors))
+          Promise.resolve()
+        | #Errors(errors) => Promise.reject(UpdateAnswerErrorHandler.Errors(errors))
         }
       )
       ->UpdateAnswerErrorHandler.catch(() => setSaving(_ => false))
@@ -133,7 +133,7 @@ let handleAnswer = (
     | None =>
       CreateAnswerQuery.make(~description, ~questionId=question->Question.id, ())
       ->GraphqlQuery.sendQuery
-      ->Js.Promise.then_(response =>
+      ->Promise.then(response =>
         switch response["createAnswer"] {
         | #AnswerId(answerId) =>
           handleAnswerCreateCB(
@@ -145,8 +145,8 @@ let handleAnswer = (
             handleAnswerCB,
           )
           Notification.success("Done!", "Answer has been saved.")
-          Js.Promise.resolve()
-        | #Errors(errors) => Js.Promise.reject(CreateAnswerErrorHandler.Errors(errors))
+          Promise.resolve()
+        | #Errors(errors) => Promise.reject(CreateAnswerErrorHandler.Errors(errors))
         }
       )
       ->CreateAnswerErrorHandler.catch(() => setSaving(_ => false))

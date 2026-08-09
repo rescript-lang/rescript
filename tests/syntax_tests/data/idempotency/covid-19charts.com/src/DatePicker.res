@@ -1,11 +1,11 @@
 @module("react-datepicker") @react.component
 external make: (
-  ~selected: Js.Date.t,
-  ~onChange: Js.Date.t => unit,
+  ~selected: Date.t,
+  ~onChange: Date.t => unit,
   ~customInput: React.element,
   ~selectsStart: bool=?,
   ~selectsEnd: bool=?,
-  ~startDate: Js.Date.t=?,
-  ~endDate: Js.Date.t=?,
-  ~minDate: Js.Date.t=?,
+  ~startDate: Date.t=?,
+  ~endDate: Date.t=?,
+  ~minDate: Date.t=?,
 ) => React.element = "default"

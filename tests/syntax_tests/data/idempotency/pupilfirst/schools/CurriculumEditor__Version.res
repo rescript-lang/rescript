@@ -1,8 +1,8 @@
 type t = {
   id: string,
   number: int,
-  createdAt: Js.Date.t,
-  updatedAt: Js.Date.t,
+  createdAt: Date.t,
+  updatedAt: Date.t,
 }
 
 let id = t => t.id

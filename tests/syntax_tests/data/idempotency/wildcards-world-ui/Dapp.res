@@ -33,7 +33,7 @@ module Streak = {
 
     switch daysHeld {
     | Some((daysHeldFloat, _timeAquired)) =>
-      let numDaysStr = daysHeldFloat->Js.Float.toFixed
+      let numDaysStr = daysHeldFloat->Float.toFixed
 
       <Rimble.Tooltip message=j`$animalName has been held for $numDaysStr days by the same owner.`>
         <div id="inner" className=Styles.positionRelative>
@@ -56,8 +56,8 @@ module DisplayAfterDate = {
 
     let (beforeDate, setIsBeforeDate) = React.useState(() => isBeforeDate())
     React.useEffect2(() => {
-      let timeout = Js.Global.setTimeout(() => setIsBeforeDate(_ => isBeforeDate()), 1500)
-      Some(() => Js.Global.clearTimeout(timeout))
+      let timeout = setTimeout(() => setIsBeforeDate(_ => isBeforeDate()), 1500)
+      Some(() => clearTimeout(timeout))
     }, (setIsBeforeDate, isBeforeDate))
 
     beforeDate ? beforeComponent : afterComponent
@@ -530,7 +530,7 @@ module DefaultLook = {
     let url = ReasonReactRouter.useUrl()
 
     <div className=Styles.centerText>
-      {switch Js.String.split("/", url.hash) {
+      {switch String.split(url.hash, "/") {
       | ["details", animalStr]
       | ["explorer", "details", animalStr]
       | ["explorer", "details", animalStr, ""] =>
@@ -581,7 +581,7 @@ module UnlaunchedAnimalInfo = {
     let animalName = \"||||"(QlHooks.useWildcardName(animal), "Loading")
 
     let ratio = QlHooks.usePledgeRate(~chain, animal)
-    let monthlyRate = Js.Float.toString(ratio *. 100.)
+    let monthlyRate = Float.toString(ratio *. 100.)
 
     <DisplayAfterDate
       endDateMoment

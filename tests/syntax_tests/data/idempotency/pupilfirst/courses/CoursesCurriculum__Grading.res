@@ -9,7 +9,7 @@ let decode = json => {
   {
     criterionId: json->field("criterionId", string),
     criterionName: json->field("criterionName", string),
-    grade: json->field("grade", nullable(int))->Js.Null.toOption,
+    grade: json->field("grade", nullable(int))->Null.toOption,
   }
 }
 

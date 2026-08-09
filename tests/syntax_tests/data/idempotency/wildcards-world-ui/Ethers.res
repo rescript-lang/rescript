@@ -24,5 +24,5 @@ type txError = {
 external makeProvider: string => Web3.rawProvider = "JsonRpcProvider"
 
 @send
-external waitForTransaction: (Web3.rawProvider, string) => Promise.Js.t<txResult, txError> =
+external waitForTransaction: (Web3.rawProvider, string) => Promise.t<txResult> =
   "waitForTransaction"

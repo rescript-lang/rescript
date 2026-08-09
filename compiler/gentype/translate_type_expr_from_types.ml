@@ -79,19 +79,10 @@ let translate_constr ~config ~params_translation ~(path : Path.t) ~type_env =
   | ["bool"], [] -> {dependencies = []; type_ = boolean_t}
   | ["int"], [] -> {dependencies = []; type_ = number_t}
   | ["float"], [] -> {dependencies = []; type_ = number_t}
-  | ( ( ["string"]
-      | ["String"; "t"]
-      | ["Stdlib"; "String"; "t"]
-      | ["Js"; ("String" | "String2"); "t"] ),
-      [] ) ->
+  | (["string"] | ["Stdlib"; "String"; "t"]), [] ->
     {dependencies = []; type_ = string_t}
-  | ( ( ["Js"; "Types"; "bigint_val"]
-      | ["BigInt"; "t"]
-      | ["Stdlib"; "BigInt"; "t"] ),
-      [] ) ->
-    {dependencies = []; type_ = bigint_t}
-  | (["Js"; "Date"; "t"] | ["Date"; "t"] | ["Stdlib"; "Date"; "t"]), [] ->
-    {dependencies = []; type_ = date_t}
+  | ["Stdlib"; "BigInt"; "t"], [] -> {dependencies = []; type_ = bigint_t}
+  | ["Stdlib"; "Date"; "t"], [] -> {dependencies = []; type_ = date_t}
   | ( (["Map"; "t"] | ["Stdlib"; "Map"; "t"]),
       [param_translation1; param_translation2] ) ->
     {
@@ -116,8 +107,7 @@ let translate_constr ~config ~params_translation ~(path : Path.t) ~type_env =
       dependencies = param_translation.dependencies;
       type_ = weakset_t param_translation.type_;
     }
-  | (["Js"; "Re"; "t"] | ["RegExp"; "t"] | ["Stdlib"; "RegExp"; "t"]), [] ->
-    {dependencies = []; type_ = regexp_t}
+  | ["Stdlib"; "RegExp"; "t"], [] -> {dependencies = []; type_ = regexp_t}
   | ["Stdlib"; "ArrayBuffer"; "t"], [] ->
     {dependencies = []; type_ = ident "ArrayBuffer"}
   | ["Stdlib"; "DataView"; "t"], [] ->
@@ -302,7 +292,7 @@ let translate_constr ~config ~params_translation ~(path : Path.t) ~type_env =
     }
   | ["Stdlib"; "Ordering"; "t"], [] -> {dependencies = []; type_ = number_t}
   | ["unit"], [] -> {dependencies = []; type_ = unit_t}
-  | (["array"] | ["Js"; ("Array" | "Array2"); "t"]), [param_translation] ->
+  | (["array"] | ["Stdlib"; "Array"; "t"]), [param_translation] ->
     {param_translation with type_ = Array (param_translation.type_, Mutable)}
   | ["ImmutableArray"; "t"], [param_translation] ->
     {param_translation with type_ = Array (param_translation.type_, Immutable)}
@@ -404,36 +394,16 @@ let translate_constr ~config ~params_translation ~(path : Path.t) ~type_env =
     {dependencies = []; type_ = Emit_type.type_react_element}
   | ["option"], [param_translation] ->
     {param_translation with type_ = Option param_translation.type_}
-  | ( ( ["Js"; "Undefined"; "t"]
-      | ["Undefined"; "t"]
-      | ["Js"; "undefined"]
-      | ["Stdlib"; "undefined"] ),
-      [param_translation] ) ->
+  | ["Stdlib"; "undefined"], [param_translation] ->
     {param_translation with type_ = Option param_translation.type_}
-  | ( ( ["Js"; "Null"; "t"]
-      | ["Null"; "t"]
-      | ["Js"; "null"]
-      | ["Stdlib"; "Null"; "t"]
-      | ["Stdlib"; "null"] ),
-      [param_translation] ) ->
+  | (["Stdlib"; "Null"; "t"] | ["Stdlib"; "null"]), [param_translation] ->
     {param_translation with type_ = Null param_translation.type_}
-  | ( ( ["Js"; "Nullable"; "t"]
-      | ["Nullable"; "t"]
-      | ["Js"; "nullable"]
-      | ["Js"; "Null_undefined"; "t"]
-      | ["Js"; "null_undefined"]
-      | ["Stdlib"; "Nullable"; "t"]
-      | ["Stdlib"; "nullable"] ),
-      [param_translation] ) ->
+  | (["Stdlib"; "Nullable"; "t"] | ["Stdlib"; "nullable"]), [param_translation]
+    ->
     {param_translation with type_ = Nullable param_translation.type_}
-  | ( ( ["Js"; "Promise"; "t"]
-      | ["Promise"; "t"]
-      | ["promise"]
-      | ["Stdlib"; "Promise"; "t"] ),
-      [param_translation] ) ->
+  | (["promise"] | ["Stdlib"; "Promise"; "t"]), [param_translation] ->
     {param_translation with type_ = Promise param_translation.type_}
-  | ( (["Js"; "Dict"; "t"] | ["Dict"; "t"] | ["dict"] | ["Stdlib"; "Dict"; "t"]),
-      [param_translation] ) ->
+  | (["dict"] | ["Stdlib"; "Dict"; "t"]), [param_translation] ->
     {param_translation with type_ = Dict param_translation.type_}
   | ["Stdlib"; "JSON"; "t"], [] -> {dependencies = []; type_ = unknown}
   | ( (["taggedTemplate"] | ["Stdlib"; "TaggedTemplate"; "t"]),
@@ -556,12 +526,6 @@ and translateTypeExprFromTypes_ ~config ~type_vars_gen ~type_env
     in
     {dependencies = []; type_ = TypeVar type_name}
   | Tvar (Some s) -> {dependencies = []; type_ = TypeVar s}
-  | Tconstr
-      (Pdot (Pident {name = "Js"}, "t", _), [{desc = Tvar _ | Tconstr _}], _) ->
-    (* Preserve some existing uses of Js.t(Obj.t) and Js.t('a). *)
-    translate_obj_type Closed []
-  | Tconstr (Pdot (Pident {name = "Js"}, "t", _), [t], _) ->
-    t |> translateTypeExprFromTypes_ ~config ~type_vars_gen ~type_env
   | Tobject (t_obj, _) ->
     let rec get_field_types (texp : Types.type_expr) =
       match texp.desc with
@@ -629,8 +593,7 @@ and translateTypeExprFromTypes_ ~config ~type_vars_gen ~type_env
       in
       {dependencies = []; type_}
     | {no_payloads = []; payloads = [(_label, t)]; unknowns = []} ->
-      (* Handle ReScript's "Arity_" encoding in first argument of Js.Internal.fn(_,_) for uncurried functions.
-         Return the argument tuple. *)
+      (* A single payload translates directly to its payload type. *)
       t |> translateTypeExprFromTypes_ ~config ~type_vars_gen ~type_env
     | {no_payloads; payloads; unknowns = []} ->
       let no_payloads =

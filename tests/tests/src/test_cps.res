@@ -14,7 +14,7 @@
        {n=n-1;
         acc=
         function()
-         {console.log(Pervasives.Js.Int.toString(n));
+         {console.log(Pervasives.Int.toString(n));
           return acc(/* () */0);};
         continue f_tailcall_0001;}};};
    
@@ -32,7 +32,7 @@
        {n=n-1;
         acc=
         function()
-         {console.log(Pervasives.Js.Int.toString(n));
+         {console.log(Pervasives.Int.toString(n));
           return acc(/* () */0);};
         continue f_tailcall_0001;}}(n,acc)) };};   
    ]}
@@ -54,7 +54,7 @@
             var acc1 = acc ;
             var n1 = n;
             return function() {
-                console.log(Pervasives.Js.Int.toString(n1));
+                console.log(Pervasives.Int.toString(n1));
                 return acc1(/* () */0);}
         }());
            n=n-1;
@@ -70,7 +70,7 @@ let rec f = (n, acc) =>
     acc()
   } else {
     f(n - 1, _ => {
-      n->Js.Int.toString->Console.log
+      n->Int.toString->Console.log
       acc()
     })
   }

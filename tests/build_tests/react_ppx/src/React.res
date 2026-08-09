@@ -44,7 +44,7 @@ module Ref = {
 }
 
 @module("react")
-external createRef: unit => Ref.t<Js.nullable<'a>> = "createRef"
+external createRef: unit => Ref.t<nullable<'a>> = "createRef"
 
 module Children = {
   @module("react") @scope("Children") @val
@@ -75,8 +75,7 @@ module Context = {
 external createContext: 'a => Context.t<'a> = "createContext"
 
 @module("react")
-external forwardRef: (('props, Js.Nullable.t<Ref.t<'a>>) => element) => component<'props> =
-  "forwardRef"
+external forwardRef: (('props, nullable<Ref.t<'a>>) => element) => component<'props> = "forwardRef"
 
 @module("react")
 external memo: component<'props> => component<'props> = "memo"
@@ -222,51 +221,42 @@ external useContext: Context.t<'any> => 'any = "useContext"
 @module("react") external useRef: 'value => Ref.t<'value> = "useRef"
 
 @module("react")
-external useImperativeHandle0: (
-  Js.Nullable.t<Ref.t<'value>>,
-  unit => 'value,
-  @as(json`[]`) _,
-) => unit = "useImperativeHandle"
-
-@module("react")
-external useImperativeHandle1: (Js.Nullable.t<Ref.t<'value>>, unit => 'value, array<'a>) => unit =
+external useImperativeHandle0: (nullable<Ref.t<'value>>, unit => 'value, @as(json`[]`) _) => unit =
   "useImperativeHandle"
 
 @module("react")
-external useImperativeHandle2: (Js.Nullable.t<Ref.t<'value>>, unit => 'value, ('a, 'b)) => unit =
+external useImperativeHandle1: (nullable<Ref.t<'value>>, unit => 'value, array<'a>) => unit =
   "useImperativeHandle"
 
 @module("react")
-external useImperativeHandle3: (
-  Js.Nullable.t<Ref.t<'value>>,
-  unit => 'value,
-  ('a, 'b, 'c),
-) => unit = "useImperativeHandle"
+external useImperativeHandle2: (nullable<Ref.t<'value>>, unit => 'value, ('a, 'b)) => unit =
+  "useImperativeHandle"
 
 @module("react")
-external useImperativeHandle4: (
-  Js.Nullable.t<Ref.t<'value>>,
-  unit => 'value,
-  ('a, 'b, 'c, 'd),
-) => unit = "useImperativeHandle"
+external useImperativeHandle3: (nullable<Ref.t<'value>>, unit => 'value, ('a, 'b, 'c)) => unit =
+  "useImperativeHandle"
+
+@module("react")
+external useImperativeHandle4: (nullable<Ref.t<'value>>, unit => 'value, ('a, 'b, 'c, 'd)) => unit =
+  "useImperativeHandle"
 
 @module("react")
 external useImperativeHandle5: (
-  Js.Nullable.t<Ref.t<'value>>,
+  nullable<Ref.t<'value>>,
   unit => 'value,
   ('a, 'b, 'c, 'd, 'e),
 ) => unit = "useImperativeHandle"
 
 @module("react")
 external useImperativeHandle6: (
-  Js.Nullable.t<Ref.t<'value>>,
+  nullable<Ref.t<'value>>,
   unit => 'value,
   ('a, 'b, 'c, 'd, 'e, 'f),
 ) => unit = "useImperativeHandle"
 
 @module("react")
 external useImperativeHandle7: (
-  Js.Nullable.t<Ref.t<'value>>,
+  nullable<Ref.t<'value>>,
   unit => 'value,
   ('a, 'b, 'c, 'd, 'e, 'f, 'g),
 ) => unit = "useImperativeHandle"

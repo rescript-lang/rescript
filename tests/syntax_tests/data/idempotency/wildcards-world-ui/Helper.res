@@ -5,7 +5,7 @@ let isPositiveStringInteger = str => {
   //       This doesn't check if the number is smaller than 2^256 which is the largest integer ethereum can handle
   let f = /^([0-9]\d*)$/
 
-  Js.Re.test_(f, str)
+  RegExp.test(f, str)
 }
 
 let elipsify: (string, int) => string = (inputString, maxLength) =>
@@ -21,7 +21,7 @@ let elipsifyMiddle: (string, int, int) => string = (inputString, maxLength, trai
   if stringLength > maxLength && trailingCharacters + maxLength < stringLength {
     String.sub(inputString, 0, maxLength - 3) ++
     ("..." ++
-    String.sub(inputString, Js.Math.abs_int(stringLength - trailingCharacters), trailingCharacters))
+    String.sub(inputString, Math.Int.abs(stringLength - trailingCharacters), trailingCharacters))
   } else {
     inputString
   }

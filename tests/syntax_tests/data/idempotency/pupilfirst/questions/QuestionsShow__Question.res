@@ -15,7 +15,7 @@ let decode = json => {
     title: json->field("title", string),
     description: json->field("description", string),
     creatorId: json->field("creatorId", string),
-    editorId: json->field("editorId", nullable(string))->Js.Null.toOption,
+    editorId: json->field("editorId", nullable(string))->Null.toOption,
     createdAt: json->field("createdAt", string),
     updatedAt: json->field("updatedAt", string),
   }

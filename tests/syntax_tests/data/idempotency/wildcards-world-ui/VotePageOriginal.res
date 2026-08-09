@@ -83,7 +83,7 @@ module HackyComponentThatReloadsOnTimeout = {
     let (hasCalledFunction, setHasCalledFunction) = React.useState(_ => false)
 
     React.useEffect4(() => {
-      let timeout = Js.Global.setTimeout(() =>
+      let timeout = setTimeout(() =>
         if !hasCalledFunction {
           reloadFunction()
           setHasCalledFunction(_ => true)
@@ -91,7 +91,7 @@ module HackyComponentThatReloadsOnTimeout = {
           ()
         }
       , timeoutTime)
-      Some(() => Js.Global.clearTimeout(timeout))
+      Some(() => clearTimeout(timeout))
     }, (reloadFunction, hasCalledFunction, setHasCalledFunction, timeoutTime))
 
     React.null
@@ -309,7 +309,7 @@ let make = (~chain) => {
   let currentUser = RootProvider.useCurrentUser()
 
   let userAddressLowerCase = switch currentUser {
-  | Some(currentUser) => currentUser->Js.String.toLowerCase
+  | Some(currentUser) => currentUser->String.toLowerCase
   | _ => CONSTANTS.nullEthAddress
   }
 
@@ -658,7 +658,7 @@ let make = (~chain) => {
                     hasApprovedFullBalance
                       ? switch redeemedLoyaltyTokenBalanceOpt {
                         | Some(redeemedLoyaltyTokenBalance) =>
-                          let maxVote = Js.Math.sqrt(redeemedLoyaltyTokenBalance)
+                          let maxVote = Math.sqrt(redeemedLoyaltyTokenBalance)
                           <QVSelect submitVoteFunction maxVote />
                         | None => <> <Rimble.Loader /> <p> {"Loading your balance"->restr} </p> </>
                         }

@@ -11,7 +11,7 @@ module V4A = {
 
     let make = (
       {?className, children, _}: props<_, _, 'ref>,
-      ref: Js.Nullable.t<'ref>,
+      ref: Stdlib.Nullable.t<'ref>,
     ): React.element =>
       ReactDOM.jsxs(
         "div",
@@ -22,7 +22,7 @@ module V4A = {
               {
                 type_: "text",
                 ?className,
-                ref: ?{Js.Nullable.toOption(ref)->Belt.Option.map(ReactDOM.Ref.domRef)},
+                ref: ?{Nullable.toOption(ref)->Belt.Option.map(ReactDOM.Ref.domRef)},
               },
             ),
             children,
@@ -39,7 +39,7 @@ module V4A = {
   type props = {}
 
   let make = (_: props) => {
-    let input = React.useRef(Js.Nullable.null)
+    let input = React.useRef(Nullable.null)
     (
       ReactDOM.jsx(
         "div",
@@ -69,7 +69,7 @@ module V4AUncurried = {
 
     let make = (
       {?className, children, _}: props<_, _, 'ref>,
-      ref: Js.Nullable.t<'ref>,
+      ref: Stdlib.Nullable.t<'ref>,
     ): React.element =>
       ReactDOM.jsxs(
         "div",
@@ -80,7 +80,7 @@ module V4AUncurried = {
               {
                 type_: "text",
                 ?className,
-                ref: ?{Js.Nullable.toOption(ref)->Belt.Option.map(ReactDOM.Ref.domRef)},
+                ref: ?{Nullable.toOption(ref)->Belt.Option.map(ReactDOM.Ref.domRef)},
               },
             ),
             children,
@@ -97,7 +97,7 @@ module V4AUncurried = {
   type props = {}
 
   let make = (_: props) => {
-    let input = React.useRef(Js.Nullable.null)
+    let input = React.useRef(Nullable.null)
     (
       ReactDOM.jsx(
         "div",

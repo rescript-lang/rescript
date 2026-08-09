@@ -56,7 +56,7 @@ let updateOptional = (optional, t) => {
   optional: optional,
 }
 
-let removeItem = (index, list) => list->Js.Array.filteri((_item, i) => i != index)
+let removeItem = (index, list) => list->Array.filterWithIndex((_item, i) => i != index)
 
 let moveUp = (index, list) => list->ArrayUtils.swapUp(index)
 
@@ -117,7 +117,7 @@ let isFilesKind = t =>
 let isValidChecklistItem = t =>
   switch t.kind {
   | MultiChoice(choices) =>
-    choices->Js.Array.filter(choice => choice->String.trim == "")->ArrayUtils.isEmpty &&
+    choices->Array.filter(choice => choice->String.trim == "")->ArrayUtils.isEmpty &&
       t.title->String.trim->String.length >= 1
   | Files
   | Link

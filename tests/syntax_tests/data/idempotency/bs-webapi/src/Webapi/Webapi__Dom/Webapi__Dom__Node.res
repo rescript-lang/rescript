@@ -17,8 +17,8 @@ module Impl = (
   let nodeType: T.t => Webapi__Dom__Types.nodeType = self =>
     Webapi__Dom__Types.decodeNodeType(nodeType(self))
   @get @return(nullable) external nodeValue: T.t => option<string> = ""
-  @set external setNodeValue: (T.t, Js.null<string>) => unit = "nodeValue"
-  /* let setNodeValue : T.t => option string => unit = fun self value => setNodeValue self (Js.Null.fromOption value); */ /* temporarily removed to reduce codegen size */
+  @set external setNodeValue: (T.t, null<string>) => unit = "nodeValue"
+  /* let setNodeValue : T.t => option string => unit = fun self value => setNodeValue self (Null.fromOption value); */ /* temporarily removed to reduce codegen size */
   /* Not supported yet
   external setNodeValue : T.t => string => unit = "nodeValue" [@@set];
   external clearNodeValue : T.t => _ [@as {json|null|json}] => unit = "nodeValue" [@@set];

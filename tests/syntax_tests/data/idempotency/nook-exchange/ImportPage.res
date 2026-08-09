@@ -174,7 +174,7 @@ module VariantRow = {
           Styles.radioButton,
           Cn.ifTrue(
             Styles.radioButtonSelected,
-            Js.Dict.get(itemsState, User.getItemKey(~itemId=item.id, ~variation=variant)) ==
+            Dict.get(itemsState, User.getItemKey(~itemId=item.id, ~variation=variant)) ==
               Some(destination),
           ),
         })}>
@@ -241,7 +241,7 @@ module ResultRowWithItem = {
           className=Styles.itemRowNameLink>
           {React.string(Item.getName(item))}
         </Link>
-        {Js.Array.length(variants) > 1
+        {Array.length(variants) > 1
           ? <div className=Styles.radioButtonsBatch>
               <span className=Styles.radioButtonsBatchLabel> {React.string("Quick")} </span>
               <div className=Styles.radioButtons>
@@ -256,9 +256,8 @@ module ResultRowWithItem = {
       </div>
       <div className=Styles.itemRowVariants>
         {variants
-        ->Js.Array.map(variant =>
-          <VariantRow item variant itemsState onChange key={string_of_int(variant)} />
-        )
+        ->Array.map(variant =>
+          <VariantRow item variant itemsState onChange key={string_of_int(variant)} />)
         ->React.array}
       </div>
     </div>
@@ -269,7 +268,7 @@ module BulkActions = {
   @react.component
   let make = (~setItemStates) => {
     let (showPopup, setShowPopup) = React.useState(() => false)
-    let reference = React.useRef(Js.Nullable.null)
+    let reference = React.useRef(Nullable.null)
 
     <>
       <a
@@ -305,9 +304,9 @@ module BulkActions = {
                     ReactEvent.Mouse.preventDefault(e)
                     setItemStates(itemStates =>
                       itemStates
-                      ->Js.Dict.entries
-                      ->Js.Array.map(((key, _value)) => (key, #Ignore))
-                      ->Js.Dict.fromArray
+                      ->Dict.toArray
+                      ->Array.map(((key, _value)) => (key, #Ignore))
+                      ->Dict.fromArray
                     )
                     setShowPopup(_ => false)
                     Analytics.Amplitude.logEventWithProperties(
@@ -323,9 +322,9 @@ module BulkActions = {
                     ReactEvent.Mouse.preventDefault(e)
                     setItemStates(itemStates =>
                       itemStates
-                      ->Js.Dict.entries
-                      ->Js.Array.map(((key, _value)) => (key, #ForTrade))
-                      ->Js.Dict.fromArray
+                      ->Dict.toArray
+                      ->Array.map(((key, _value)) => (key, #ForTrade))
+                      ->Dict.fromArray
                     )
                     setShowPopup(_ => false)
                     Analytics.Amplitude.logEventWithProperties(
@@ -341,9 +340,9 @@ module BulkActions = {
                     ReactEvent.Mouse.preventDefault(e)
                     setItemStates(itemStates =>
                       itemStates
-                      ->Js.Dict.entries
-                      ->Js.Array.map(((key, _value)) => (key, #CatalogOnly))
-                      ->Js.Dict.fromArray
+                      ->Dict.toArray
+                      ->Array.map(((key, _value)) => (key, #CatalogOnly))
+                      ->Dict.fromArray
                     )
                     setShowPopup(_ => false)
                     Analytics.Amplitude.logEventWithProperties(
@@ -359,8 +358,8 @@ module BulkActions = {
                     ReactEvent.Mouse.preventDefault(e)
                     setItemStates(itemStates =>
                       itemStates
-                      ->Js.Dict.entries
-                      ->Js.Array.map(((key, value)) => {
+                      ->Dict.toArray
+                      ->Array.map(((key, value)) => {
                         let (itemId, _variant) = User.fromItemKey(~key)->Option.getExn
                         let item = Item.getItem(~itemId)
                         (
@@ -372,7 +371,7 @@ module BulkActions = {
                           },
                         )
                       })
-                      ->Js.Dict.fromArray
+                      ->Dict.fromArray
                     )
                     setShowPopup(_ => false)
                     Analytics.Amplitude.logEventWithProperties(
@@ -388,9 +387,9 @@ module BulkActions = {
                     ReactEvent.Mouse.preventDefault(e)
                     setItemStates(itemStates =>
                       itemStates
-                      ->Js.Dict.entries
-                      ->Js.Array.map(((key, _value)) => (key, #Wishlist))
-                      ->Js.Dict.fromArray
+                      ->Dict.toArray
+                      ->Array.map(((key, _value)) => (key, #Wishlist))
+                      ->Dict.fromArray
                     )
                     setShowPopup(_ => false)
                     Analytics.Amplitude.logEventWithProperties(
@@ -421,7 +420,7 @@ module Results = {
     ~onReset,
   ) => {
     let (itemsState, setItemStates) = React.useState(() =>
-      Js.Dict.fromArray(
+      Dict.fromArray(
         Array.concatMany(
           matches->Array.map(((item, variants)) =>
             variants->Belt.Array.map(variant => (
@@ -464,7 +463,7 @@ module Results = {
             {React.string("!")}
           </div>
         : React.null}
-      {Js.Array.length(misses) > 0
+      {Array.length(misses) > 0
         ? <div className=Styles.missingRows>
             <div className=Styles.sectionTitle> {React.string("Items without matches")} </div>
             {misses
@@ -474,7 +473,7 @@ module Results = {
             ->React.array}
           </div>
         : React.null}
-      {Js.Array.length(matches) > 0
+      {Array.length(matches) > 0
         ? <div className=Styles.matchRows>
             {matches
             ->Belt.Array.map(((item, variants)) =>
@@ -485,7 +484,7 @@ module Results = {
                 onChange={(itemId, variant, destination) =>
                   setItemStates(itemsState => {
                     let clone = Utils.cloneJsDict(itemsState)
-                    clone->Js.Dict.set(User.getItemKey(~itemId, ~variation=variant), destination)
+                    clone->Dict.set(User.getItemKey(~itemId, ~variation=variant), destination)
                     clone
                   })}
                 key={string_of_int(item.id)}
@@ -528,7 +527,7 @@ module Results = {
             let numCatalog = ref(0)
             let numWishlist = ref(0)
             itemsState
-            ->Js.Dict.entries
+            ->Dict.toArray
             ->Array.forEach(((_itemKey, destination)) =>
               switch destination {
               | #ForTrade => numForTrade := numForTrade.contents + 1
@@ -546,9 +545,7 @@ module Results = {
             ) {
               ConfirmDialog.confirm(
                 ~bodyText="This will add " ++
-                (Js.Array.joinWith(
-                  ", ",
-                  Array.keepMap(
+                (Array.joinUnsafe(Array.keepMap(
                     [
                       switch numForTrade.contents {
                       | 0 => None
@@ -568,8 +565,7 @@ module Results = {
                       },
                     ],
                     x => x,
-                  ),
-                ) ++
+                  ), ", ") ++
                 " items. Are you sure you want to continue?"),
                 ~confirmLabel="Do it!",
                 ~cancelLabel="Never mind",
@@ -577,7 +573,7 @@ module Results = {
                   setSubmitState(_ => Some(Submitting))
                   let updates =
                     itemsState
-                    ->Js.Dict.entries
+                    ->Dict.toArray
                     ->Array.keepMap(((itemKey, value)) =>
                       switch value {
                       | #Ignore => None
@@ -606,10 +602,10 @@ module Results = {
                           ~eventProperties={
                             "numMismatch": numMissingRows,
                             "numMatch": numMatchingRows,
-                            "numUpdates": Js.Array.length(updates),
+                            "numUpdates": Array.length(updates),
                           },
                         )
-                        Promise.resolved()
+                        Promise.resolve()
                       } else {
                         %Repromise.JsExn({
                           let text = Fetch.Response.text(response)
@@ -619,16 +615,16 @@ module Results = {
                               "error": text,
                               "numMismatch": numMissingRows,
                               "numMatch": numMatchingRows,
-                              "numUpdates": Js.Array.length(updates),
+                              "numUpdates": Array.length(updates),
                             },
                           )
                           setSubmitState(_ => Some(Error(text)))
-                          Promise.resolved()
+                          Promise.resolve()
                         })
                       }
                     | Error(_error) =>
                       setSubmitState(_ => Some(Error("Something went wrong. Sorry!")))
-                      Promise.resolved()
+                      Promise.resolve()
                     }
                   })->ignore
                 },
@@ -648,18 +644,18 @@ module Results = {
 let process = value => {
   let rows =
     value
-    ->Js.String.split("\n")
-    ->Js.Array.map(str => str->Js.String.trim)
-    ->Js.Array.filter(x => x != "")
-  let resultMap = Js.Dict.empty()
+    ->String.split("\n")
+    ->Array.map(str => str->String.trim)
+    ->Array.filter(x => x != "")
+  let resultMap = Dict.make()
   let missingQueries = []
   rows->Array.forEach(row => {
-    let result = row->Js.Re.exec_(/(.*?) \[(.*?)\]$/g)
+    let result = row->RegExp.exec(/(.*?) \[(.*?)\]$/g)
     let itemWithVariant = switch result {
     | Some(match_) =>
-      let captures = Js.Re.captures(match_)
-      let itemName = Array.getUnsafe(captures, 1)->Js.Nullable.toOption
-      let variantName = Array.getUnsafe(captures, 2)->Js.Nullable.toOption
+      let captures = RegExp.Result.matches(match_)
+      let itemName = Array.getUnsafe(captures, 1)->Nullable.toOption
+      let variantName = Array.getUnsafe(captures, 2)->Nullable.toOption
       switch (itemName, variantName) {
       | (Some(itemName), Some(variantName)) =>
         Item.getByName(~name=itemName)->Option.flatMap(item =>
@@ -676,28 +672,26 @@ let process = value => {
     }
     switch itemWithVariants {
     | Some((item, variants)) =>
-      let resultMapVariants = switch resultMap->Js.Dict.get(string_of_int(item.id)) {
+      let resultMapVariants = switch resultMap->Dict.get(string_of_int(item.id)) {
       | Some(arr) => arr
       | None =>
         let arr = []
-        resultMap->Js.Dict.set(string_of_int(item.id), arr)
+        resultMap->Dict.set(string_of_int(item.id), arr)
         arr
       }
-      variants->Js.Array.forEach(variant =>
-        if !(resultMapVariants->Js.Array.includes(variant)) {
-          resultMapVariants->Js.Array.push(variant)->ignore
-        }
-      )
-    | None => missingQueries->Js.Array.push(row)->ignore
+      variants->Array.forEach(variant =>
+        if !(resultMapVariants->Array.includes(variant)) {
+          resultMapVariants->Array.push(variant)->ignore
+        })
+    | None => missingQueries->Array.push(row)->ignore
     }
   })
   (
     resultMap
-    ->Js.Dict.entries
+    ->Dict.toArray
     ->Array.map(((itemId, variants)) => (Item.getItem(~itemId=int_of_string(itemId)), variants))
-      ->Js.Array.sortInPlaceWith(((aItem, _), (bItem, _)) =>
-        ItemFilters.compareItemsABC(aItem, bItem)
-      ),
+      ->Array.toSorted((a, b) => Ordering.fromInt((((aItem, _), (bItem, _)) =>
+        ItemFilters.compareItemsABC(aItem, bItem))(a, b))),
     missingQueries,
   )
 }
@@ -739,15 +733,15 @@ let make = (~showLogin, ~url: ReasonReactRouter.url) => {
             %Repromise.JsExn({
               let text = Fetch.Response.text(response)
               setResults(_ => Some(process(text)))
-              Promise.resolved()
+              Promise.resolve()
             })
           } else {
-            Promise.resolved()
+            Promise.resolve()
           }
-        | Error(_) => Promise.resolved()
+        | Error(_) => Promise.resolve()
         }
       })
-    | None => Promise.resolved()
+    | None => Promise.resolve()
     }->ignore
     Analytics.Amplitude.logEvent(~eventName="Import Page Viewed")
     None

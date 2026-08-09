@@ -22,10 +22,10 @@ describe(__MODULE__, () => {
 
   test("array_operations_test", () => {
     eq(__LOC__, [1, 2, 3]->map(x => x + 1), [2, 3, 4])
-    eq(__LOC__, [1, 2, 3]->Js.Array2.map(x => x + 1), [2, 3, 4])
-    eq(__LOC__, [1, 2, 3]->Js.Array2.reduce((x, y) => x + y, 0), 6)
-    eq(__LOC__, [1, 2, 3]->Js.Array2.reducei((x, y, i) => x + y + i, 0), 9)
-    eq(__LOC__, [1, 2, 3]->Js.Array2.some(x => x < 1), false)
-    eq(__LOC__, [1, 2, 3]->Js.Array2.every(x => x > 0), true)
+    eq(__LOC__, [1, 2, 3]->Array.map(x => x + 1), [2, 3, 4])
+    eq(__LOC__, [1, 2, 3]->Array.reduce(0, (x, y) => x + y), 6)
+    eq(__LOC__, [1, 2, 3]->Array.reduceWithIndex(0, (x, y, i) => x + y + i), 9)
+    eq(__LOC__, [1, 2, 3]->Array.some(x => x < 1), false)
+    eq(__LOC__, [1, 2, 3]->Array.every(x => x > 0), true)
   })
 })

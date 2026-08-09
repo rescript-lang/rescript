@@ -24,7 +24,7 @@ let createQuizSubmission = (target, selectedAnswersIds, setSaving, addSubmission
     (),
   )
   ->GraphqlQuery.sendQuery
-  ->Js.Promise.then_(response => {
+  ->Promise.then(response => {
     switch response["createQuizSubmission"]["submission"] {
     | Some(submission) =>
       let checklist =
@@ -39,7 +39,7 @@ let createQuizSubmission = (target, selectedAnswersIds, setSaving, addSubmission
       )
     | None => setSaving(_ => false)
     }
-    Js.Promise.resolve()
+    Promise.resolve()
   })
   ->ignore
 }

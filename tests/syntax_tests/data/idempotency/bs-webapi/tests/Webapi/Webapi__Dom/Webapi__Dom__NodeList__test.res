@@ -3,4 +3,4 @@ open NodeList
 
 let items = document->Document.querySelectorAll(".item")
 
-forEach((item, _) => Js.log(item), items)
+forEach((item, _) => Console.log(item), items)

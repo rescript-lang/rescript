@@ -822,8 +822,8 @@ let collect_or_pattern_chain pat =
 let is_single_pipe_expr expr =
   (* handles:
    *   x
-   *   ->Js.Dict.get("wm-property")
-   *   ->Option.flatMap(Js.Json.decodeString)
+   *   ->Dict.get("wm-property")
+   *   ->Option.flatMap(JSON.decodeString)
    *   ->Option.flatMap(x =>
    *     switch x {
    *     | "like-of" => Some(#like)

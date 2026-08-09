@@ -61,7 +61,7 @@ let to_method_callback ~async loc (self : Bs_ast_mapper.mapper) label
     {
       funct =
         Exp.ident ~loc
-          {loc; txt = Ldot (Ast_literal.Lid.js_oo, "unsafe_to_method")};
+          {loc; txt = Ldot (Ast_literal.Lid.js_extern, "unsafe_to_method")};
       args =
         [
           ( Nolabel,
@@ -79,7 +79,7 @@ let to_method_callback ~async loc (self : Bs_ast_mapper.mapper) label
                  {
                    loc;
                    txt =
-                     Ldot (Ast_literal.Lid.js_meth_callback, "arity" ^ arity_s);
+                     Ldot (Ast_literal.Lid.method_callback, "arity" ^ arity_s);
                  }
                  [Typ.any ~loc ()]) );
         ];

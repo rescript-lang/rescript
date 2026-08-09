@@ -4,6 +4,7 @@ let bar = foo ~a
 let comparisonResult = compare currentNode.value ~targetValue
 ;;callback firstNode ~y
 ;;document.createElementWithOptions {js|div|js}
-    (elementProps ~onClick:(fun [arity:1]_ -> Js.log {js|hello world|js}))
+    (elementProps
+       ~onClick:(fun [arity:1]_ -> Console.log {js|hello world|js}))
 ;;resolve ()
 ;;resolve ()

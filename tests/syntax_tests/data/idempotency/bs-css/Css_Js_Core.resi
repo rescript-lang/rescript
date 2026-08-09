@@ -14,7 +14,7 @@ module Make: Css_Core.CssImplementationIntf =>
   let keyframes: (array<(int, array<rule>)>) => animationName
 }
 
-let toJson: array<rule> => Js.Json.t
+let toJson: array<rule> => JSON.t
 
 let important: rule => rule
 let label: string => rule
@@ -1237,7 +1237,7 @@ let before: array<rule> => rule
  ")
 let firstLetter: array<rule> => rule
 
-@ocaml.doc(",LÀ»›,")
+@ocaml.doc(",Lï¿½ï¿½ï¿½,")
 let firstLine: array<rule> => rule
 
 @ocaml.doc("

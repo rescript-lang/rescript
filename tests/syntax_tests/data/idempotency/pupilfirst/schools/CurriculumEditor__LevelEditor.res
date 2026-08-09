@@ -4,7 +4,7 @@ let str = ReasonReact.string
 
 type state = {
   name: string,
-  unlockOn: option<Js.Date.t>,
+  unlockOn: option<Date.t>,
   hasNameError: bool,
   dirty: bool,
   saving: bool,
@@ -12,7 +12,7 @@ type state = {
 
 type action =
   | UpdateName(string, bool)
-  | UpdateUnlockOn(option<Js.Date.t>)
+  | UpdateUnlockOn(option<Date.t>)
   | UpdateSaving
 
 let reducer = (state, action) =>
@@ -35,14 +35,14 @@ let updateName = (send, name) => {
 let saveDisabled = state => state.hasNameError || (!state.dirty || state.saving)
 
 let setPayload = (authenticityToken, state) => {
-  let payload = Js.Dict.empty()
+  let payload = Dict.make()
 
-  Js.Dict.set(payload, "authenticity_token", authenticityToken->Js.Json.string)
-  Js.Dict.set(payload, "name", state.name->Js.Json.string)
+  Dict.set(payload, "authenticity_token", authenticityToken->JSON.string)
+  Dict.set(payload, "name", state.name->JSON.string)
 
   switch state.unlockOn {
-  | Some(date) => Js.Dict.set(payload, "unlock_on", date->Date.iso8601->Js.Json.string)
-  | None => Js.Dict.set(payload, "unlock_on", ""->Js.Json.string)
+  | Some(date) => Dict.set(payload, "unlock_on", date->Date.iso8601->JSON.string)
+  | None => Dict.set(payload, "unlock_on", ""->JSON.string)
   }
   payload
 }

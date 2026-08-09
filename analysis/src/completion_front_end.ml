@@ -328,13 +328,13 @@ let complete_pipe_chain ~(in_jsx_context : bool) (exp : Parsetree.expression) =
   (* Complete the end of pipe chains by reconstructing the pipe chain as a single pipe,
      so it can be completed.
      Example:
-      someArray->Js.Array2.filter(v => v > 10)->Js.Array2.map(v => v + 2)->
+      someArray->Array.filter(v => v > 10)->Array.map(v => v + 2)->
         will complete as:
-      Js.Array2.map(someArray->Js.Array2.filter(v => v > 10), v => v + 2)->
+      Array.map(someArray->Array.filter(v => v > 10), v => v + 2)->
   *)
   match exp.pexp_desc with
   (* When the left side of the pipe we're completing is a function application.
-     Example: someArray->Js.Array2.map(v => v + 2)-> *)
+     Example: someArray->Array.map(v => v + 2)-> *)
   | Pexp_apply
       {
         funct = {pexp_desc = Pexp_ident {txt = Lident "->"}};

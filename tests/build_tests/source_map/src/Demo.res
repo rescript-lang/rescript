@@ -7,7 +7,7 @@ type item =
   | Single(int)
   | Pair(int, int)
 
-let crash = () => Js.Exn.raiseError("source map test")
+let crash = () => Exn.raiseError("source map test")
 
 let debugStatement = () => {
   %debugger
@@ -33,6 +33,6 @@ let describeItem = item =>
 
 let unicodeMessage = "한글 🌏"
 
-let unicodeCrash = () => Js.Exn.raiseError(unicodeMessage)
+let unicodeCrash = () => Exn.raiseError(unicodeMessage)
 
 let value = add(pipedValue, 22)

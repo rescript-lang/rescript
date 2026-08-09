@@ -1,1 +1,1 @@
-type t = Js.Re.t
+type t = RegExp.t

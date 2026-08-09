@@ -29,7 +29,7 @@ module Var = {
   let var = x => #var(x)
   let varDefault = (x, default) => #varDefault(x, default)
 
-  let prefix = x => Js.String.startsWith("--", x) ? x : "--" ++ x
+  let prefix = x => String.startsWith(x, "--") ? x : "--" ++ x
 
   let toString = x =>
     switch x {
@@ -46,8 +46,8 @@ module Time = {
 
   let toString = x =>
     switch x {
-    | #s(v) => Js.Float.toString(v) ++ "s"
-    | #ms(v) => Js.Float.toString(v) ++ "ms"
+    | #s(v) => Float.toString(v) ++ "s"
+    | #ms(v) => Float.toString(v) ++ "ms"
     }
 }
 
@@ -58,7 +58,7 @@ module Percentage = {
 
   let toString = x =>
     switch x {
-    | #percent(x) => Js.Float.toString(x) ++ "%"
+    | #percent(x) => Float.toString(x) ++ "%"
     }
 }
 
@@ -112,26 +112,26 @@ module Length = {
 
   let rec toString = x =>
     switch x {
-    | #ch(x) => Js.Float.toString(x) ++ "ch"
-    | #em(x) => Js.Float.toString(x) ++ "em"
-    | #ex(x) => Js.Float.toString(x) ++ "ex"
-    | #rem(x) => Js.Float.toString(x) ++ "rem"
-    | #vh(x) => Js.Float.toString(x) ++ "vh"
-    | #vw(x) => Js.Float.toString(x) ++ "vw"
-    | #vmin(x) => Js.Float.toString(x) ++ "vmin"
-    | #vmax(x) => Js.Float.toString(x) ++ "vmax"
-    | #px(x) => Js.Int.toString(x) ++ "px"
-    | #pxFloat(x) => Js.Float.toString(x) ++ "px"
-    | #cm(x) => Js.Float.toString(x) ++ "cm"
-    | #mm(x) => Js.Float.toString(x) ++ "mm"
-    | #inch(x) => Js.Float.toString(x) ++ "in"
-    | #pc(x) => Js.Float.toString(x) ++ "pc"
-    | #pt(x) => Js.Int.toString(x) ++ "pt"
+    | #ch(x) => Float.toString(x) ++ "ch"
+    | #em(x) => Float.toString(x) ++ "em"
+    | #ex(x) => Float.toString(x) ++ "ex"
+    | #rem(x) => Float.toString(x) ++ "rem"
+    | #vh(x) => Float.toString(x) ++ "vh"
+    | #vw(x) => Float.toString(x) ++ "vw"
+    | #vmin(x) => Float.toString(x) ++ "vmin"
+    | #vmax(x) => Float.toString(x) ++ "vmax"
+    | #px(x) => Int.toString(x) ++ "px"
+    | #pxFloat(x) => Float.toString(x) ++ "px"
+    | #cm(x) => Float.toString(x) ++ "cm"
+    | #mm(x) => Float.toString(x) ++ "mm"
+    | #inch(x) => Float.toString(x) ++ "in"
+    | #pc(x) => Float.toString(x) ++ "pc"
+    | #pt(x) => Int.toString(x) ++ "pt"
     | #zero => "0"
 
     | #calc(#add, a, b) => "calc(" ++ (toString(a) ++ (" + " ++ (toString(b) ++ ")")))
     | #calc(#sub, a, b) => "calc(" ++ (toString(a) ++ (" - " ++ (toString(b) ++ ")")))
-    | #percent(x) => Js.Float.toString(x) ++ "%"
+    | #percent(x) => Float.toString(x) ++ "%"
     }
 }
 
@@ -145,10 +145,10 @@ module Angle = {
 
   let toString = x =>
     switch x {
-    | #deg(x) => Js.Float.toString(x) ++ "deg"
-    | #rad(x) => Js.Float.toString(x) ++ "rad"
-    | #grad(x) => Js.Float.toString(x) ++ "grad"
-    | #turn(x) => Js.Float.toString(x) ++ "turn"
+    | #deg(x) => Float.toString(x) ++ "deg"
+    | #rad(x) => Float.toString(x) ++ "rad"
+    | #grad(x) => Float.toString(x) ++ "grad"
+    | #turn(x) => Float.toString(x) ++ "turn"
     }
 }
 
@@ -366,14 +366,14 @@ module TimingFunction = {
     | #easeInOut => "ease-in-out"
     | #stepStart => "step-start"
     | #stepEnd => "step-end"
-    | #steps(i, #start) => "steps(" ++ (Js.Int.toString(i) ++ ", start)")
-    | #steps(i, #end_) => "steps(" ++ (Js.Int.toString(i) ++ ", end)")
+    | #steps(i, #start) => "steps(" ++ (Int.toString(i) ++ ", start)")
+    | #steps(i, #end_) => "steps(" ++ (Int.toString(i) ++ ", end)")
     | #cubicBezier(a, b, c, d) =>
       "cubic-bezier(" ++
-      (Js.Float.toString(a) ++
+      (Float.toString(a) ++
       (", " ++
-      (Js.Float.toString(b) ++
-      (", " ++ (Js.Float.toString(c) ++ (", " ++ (Js.Float.toString(d) ++ ")")))))))
+      (Float.toString(b) ++
+      (", " ++ (Float.toString(c) ++ (", " ++ (Float.toString(d) ++ ")")))))))
     }
 }
 
@@ -384,7 +384,7 @@ module RepeatValue = {
     switch x {
     | #autoFill => "auto-fill"
     | #autoFit => "auto-fit"
-    | #num(x) => Js.Int.toString(x)
+    | #num(x) => Int.toString(x)
     }
 }
 
@@ -488,7 +488,7 @@ module FontWeight = {
 
   let toString = x =>
     switch x {
-    | #num(n) => Js.Int.toString(n)
+    | #num(n) => Int.toString(n)
     | #thin => "100"
     | #extraLight => "200"
     | #light => "300"
@@ -546,7 +546,7 @@ module Transform = {
   let skewY = a => #skewY(a)
 
   let string_of_scale = (x, y) =>
-    "scale(" ++ (Js.Float.toString(x) ++ (", " ++ (Js.Float.toString(y) ++ ")")))
+    "scale(" ++ (Float.toString(x) ++ (", " ++ (Float.toString(y) ++ ")")))
 
   let string_of_translate3d = (x, y, z) =>
     "translate3d(" ++
@@ -564,25 +564,25 @@ module Transform = {
     | #scale(x, y) => string_of_scale(x, y)
     | #scale3d(x, y, z) =>
       "scale3d(" ++
-      (Js.Float.toString(x) ++
-      (", " ++ (Js.Float.toString(y) ++ (", " ++ (Js.Float.toString(z) ++ ")")))))
-    | #scaleX(x) => "scaleX(" ++ (Js.Float.toString(x) ++ ")")
-    | #scaleY(y) => "scaleY(" ++ (Js.Float.toString(y) ++ ")")
-    | #scaleZ(z) => "scaleZ(" ++ (Js.Float.toString(z) ++ ")")
+      (Float.toString(x) ++
+      (", " ++ (Float.toString(y) ++ (", " ++ (Float.toString(z) ++ ")")))))
+    | #scaleX(x) => "scaleX(" ++ (Float.toString(x) ++ ")")
+    | #scaleY(y) => "scaleY(" ++ (Float.toString(y) ++ ")")
+    | #scaleZ(z) => "scaleZ(" ++ (Float.toString(z) ++ ")")
     | #rotate(a) => "rotate(" ++ (Angle.toString(a) ++ ")")
     | #rotate3d(x, y, z, a) =>
       "rotate3d(" ++
-      (Js.Float.toString(x) ++
+      (Float.toString(x) ++
       (", " ++
-      (Js.Float.toString(y) ++
-      (", " ++ (Js.Float.toString(z) ++ (", " ++ (Angle.toString(a) ++ ")")))))))
+      (Float.toString(y) ++
+      (", " ++ (Float.toString(z) ++ (", " ++ (Angle.toString(a) ++ ")")))))))
     | #rotateX(a) => "rotateX(" ++ (Angle.toString(a) ++ ")")
     | #rotateY(a) => "rotateY(" ++ (Angle.toString(a) ++ ")")
     | #rotateZ(a) => "rotateZ(" ++ (Angle.toString(a) ++ ")")
     | #skew(x, y) => "skew(" ++ (Angle.toString(x) ++ (", " ++ (Angle.toString(y) ++ ")")))
     | #skewX(a) => "skewX(" ++ (Angle.toString(a) ++ ")")
     | #skewY(a) => "skewY(" ++ (Angle.toString(a) ++ ")")
-    | #perspective(x) => "perspective(" ++ (Js.Int.toString(x) ++ ")")
+    | #perspective(x) => "perspective(" ++ (Int.toString(x) ++ ")")
     }
 }
 
@@ -616,7 +616,7 @@ module AnimationIterationCount = {
   let toString = x =>
     switch x {
     | #infinite => "infinite"
-    | #count(x) => Js.Int.toString(x)
+    | #count(x) => Int.toString(x)
     }
 }
 
@@ -769,7 +769,7 @@ module Color = {
 
   let string_of_alpha = x =>
     switch x {
-    | #num(f) => Js.Float.toString(f)
+    | #num(f) => Float.toString(f)
     | #...Percentage.t as pc => Percentage.toString(pc)
     }
 
@@ -777,14 +777,14 @@ module Color = {
     switch x {
     | #rgb(r, g, b) =>
       "rgb(" ++
-      (Js.Int.toString(r) ++
-      (", " ++ (Js.Int.toString(g) ++ (", " ++ (Js.Int.toString(b) ++ ")")))))
+      (Int.toString(r) ++
+      (", " ++ (Int.toString(g) ++ (", " ++ (Int.toString(b) ++ ")")))))
     | #rgba(r, g, b, a) =>
       "rgba(" ++
-      (Js.Int.toString(r) ++
+      (Int.toString(r) ++
       (", " ++
-      (Js.Int.toString(g) ++
-      (", " ++ (Js.Int.toString(b) ++ (", " ++ (string_of_alpha(a) ++ ")")))))))
+      (Int.toString(g) ++
+      (", " ++ (Int.toString(b) ++ (", " ++ (string_of_alpha(a) ++ ")")))))))
     | #hsl(h, s, l) =>
       "hsl(" ++
       (Angle.toString(h) ++
@@ -866,7 +866,7 @@ module LineHeight = {
   let toString = x =>
     switch x {
     | #normal => "normal"
-    | #abs(x) => Js.Float.toString(x)
+    | #abs(x) => Float.toString(x)
     }
 }
 
@@ -1233,7 +1233,7 @@ module ColumnCount = {
   let toString = x =>
     switch x {
     | #auto => "auto"
-    | #count(v) => Js.Int.toString(v)
+    | #count(v) => Int.toString(v)
     }
 }
 
@@ -1320,7 +1320,7 @@ module BackdropFilter = {
     | #sepia([#num(int) | #percent(float)])
   ]
 
-  let string_of_percent = p => Js.Float.toString(p) ++ "%"
+  let string_of_percent = p => Float.toString(p) ++ "%"
 
   let toString = x =>
     switch x {

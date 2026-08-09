@@ -12,7 +12,7 @@ let handleUpdatePasswordCB = response => {
       open Json.Decode
       field("path", nullable(string))
     }
-    ->Js.Null.toOption
+    ->Null.toOption
   switch path {
   | Some(path) => DomUtils.redirect(path)
   | None => ()
@@ -24,11 +24,11 @@ let validPassword = password => {
   length >= 8 && length < 128
 }
 let updatePassword = (authenticityToken, token, newPassword, confirmPassword, setSaving) => {
-  let payload = Js.Dict.empty()
-  Js.Dict.set(payload, "authenticity_token", authenticityToken->Js.Json.string)
-  Js.Dict.set(payload, "token", token->Js.Json.string)
-  Js.Dict.set(payload, "new_password", newPassword->Js.Json.string)
-  Js.Dict.set(payload, "confirm_password", confirmPassword->Js.Json.string)
+  let payload = Dict.make()
+  Dict.set(payload, "authenticity_token", authenticityToken->JSON.string)
+  Dict.set(payload, "token", token->JSON.string)
+  Dict.set(payload, "new_password", newPassword->JSON.string)
+  Dict.set(payload, "confirm_password", confirmPassword->JSON.string)
 
   let url = "/users/update_password"
   setSaving(_ => true)

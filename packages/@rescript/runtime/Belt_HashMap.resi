@@ -241,7 +241,7 @@ module IntHash = Belt.Id.MakeHashable({
 
 let s0 = Belt.HashMap.make(~hintSize=10, ~id=module(IntHash))
 Belt.HashMap.set(s0, 1, "value1")
-Belt.HashMap.forEach(s0, (key, value) => Js.log2(key, value))
+Belt.HashMap.forEach(s0, (key, value) => Console.log2(key, value))
 // prints (1, "value1")
 ```
 */

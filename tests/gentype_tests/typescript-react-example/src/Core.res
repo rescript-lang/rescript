@@ -1,20 +1,17 @@
 @genType
-let null0 = (x: Js.null<int>) => x
+let null0 = (x: null<int>) => x
 
 @genType
 let null1 = (x: Null.t<int>) => x
 
 @genType
-let nullable0 = (x: Js.nullable<int>) => x
+let nullable0 = (x: nullable<int>) => x
 
 @genType
 let nullable1 = (x: Nullable.t<int>) => x
 
 @genType
-let undefined0 = (x: Js.undefined<int>) => x
-
-@genType
-let undefined1 = (x: Undefined.t<int>) => x
+let undefined0 = (x: undefined<int>) => x
 
 @genType
 let dict0 = (x: dict<string>) => x
@@ -35,19 +32,19 @@ let taggedTemplate0 = (x: taggedTemplate<string, string>) => x
 let taggedTemplate1 = (x: TaggedTemplate.t<string, string>) => x
 
 @genType
-let date0 = (x: Js.Date.t) => x
-
-@genType
 let date1 = (x: Date.t) => x
 
 @genType
 let bigint0 = (x: bigint) => x
 
 @genType
-let regexp0 = (x: Js.Re.t) => x
+let stdlibBigInt = (x: Stdlib.BigInt.t) => x
 
 @genType
 let regexp1 = (x: RegExp.t) => x
+
+@genType
+let stdlibArray = (x: Stdlib.Array.t<int>) => x
 
 module Map = Map_
 module Set = Set_
@@ -76,7 +73,7 @@ let option1 = (x: option<variant>) => x
 type t1 = {x?: string}
 
 @genType
-type t2 = {x: Js.undefined<string>}
+type t2 = {x: undefined<string>}
 
 @genType.import("./CoreTS")
 external someFunWithNullThenOptionalArgs: (

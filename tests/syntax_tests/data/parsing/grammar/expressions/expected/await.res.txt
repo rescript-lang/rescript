@@ -9,11 +9,11 @@ let () =
   ((let response = await (fetch {js|/users.json|js}) in
     let users = await (response.json ()) in
     let comments = (await ((await (fetch {js|comment.json|js})).json ())).(0) in
-    Js.log2 users comments)
+    Console.log2 users comments)
   [@res.braces ])
 let () = ((await (delay 10))[@res.braces ])
 let () = ((await (delay 10); await (delay 20))[@res.braces ])
-let forEach = await ((Js.Import Belt.List.forEach)[@a ][@b ])
+let forEach = await ((import Belt.List.forEach)[@a ][@b ])
 module M = ((Belt.List)[@res.await ][@a ][@b ])
 let f [arity:1]() =
   ((let module M = ((Belt.List)[@res.await ][@a ][@b ]) in M.forEach)

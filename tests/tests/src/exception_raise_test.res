@@ -42,7 +42,7 @@ let fff = try %raw(` function () {throw 2} ()`) catch {
 
 let a0 = try %raw(` function (){throw 2} () `) catch {
 | A(x) => x
-| Js.Exn.Error(v) => Obj.magic(v)
+| JsExn(v) => Obj.magic(v)
 | _ => assert(false)
 }
 
@@ -72,16 +72,16 @@ describe(__MODULE__, () => {
     eq(__LOC__, (f, ff, fff, a0), (2, 2, 2, 2))
   })
 
-  test("Js.Exn.Error conversion", () => {
+  test("Exn.Error conversion", () => {
     switch a1 {
-    | Js.Exn.Error(v) => eq(__LOC__, Obj.magic(v), 2)
+    | JsExn(v) => eq(__LOC__, Obj.magic(v), 2)
     | _ => assert(false)
     }
   })
 
-  test("Js.Exn.asJsExn with raw throw", () => {
+  test("Exn.asJsExn with raw throw", () => {
     let testValue = try %raw(`()=>{throw 2}`)() catch {
-    | e => Js.Exn.asJsExn(e) != None
+    | e => Exn.asJsExn(e) != None
     }
     eq(__LOC__, testValue, true)
   })

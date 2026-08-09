@@ -38,7 +38,7 @@ let fetchFeed = () =>
         ->array(json => {
           let items =
             (json->field("items", dict(User.itemFromJson)))
-            ->Js.Dict.entries
+            ->Dict.toArray
             ->Belt.Array.keepMap(((itemKey, item)) =>
               item->Belt.Option.flatMap(item =>
                 User.fromItemKey(~key=itemKey)->Belt.Option.map(((itemId, variant)) => (
@@ -48,9 +48,8 @@ let fetchFeed = () =>
                 ))
               )
             )
-              ->Js.Array.sortInPlaceWith(((_, _, aItem: User.item), (_, _, bItem: User.item)) =>
-                compareOptionTimestamps(aItem.timeUpdated, bItem.timeUpdated)
-              )
+              ->Array.toSorted((a, b) => Ordering.fromInt((((_, _, aItem: User.item), (_, _, bItem: User.item)) =>
+                compareOptionTimestamps(aItem.timeUpdated, bItem.timeUpdated))(a, b)))
           {
             id: json->field("id", string),
             username: json->field("username", string),
@@ -60,8 +59,8 @@ let fetchFeed = () =>
             items: items,
           }
         })
-        ->Js.Array.sortInPlaceWith((a, b) => compareOptionTimestamps(a.lastUpdate, b.lastUpdate))
-      Promise.resolved(feed)
+        ->Array.toSorted((a, b) => Ordering.fromInt(((a, b) => compareOptionTimestamps(a.lastUpdate, b.lastUpdate))(a, b)))
+      Promise.resolve(feed)
     })
   })
 
@@ -206,7 +205,7 @@ module Followee = {
                     )
                   | Error(_) => ()
                   }
-                  Promise.resolved()
+                  Promise.resolve()
                 })->ignore
               }}
               className=Styles.unfollowLink>
@@ -217,18 +216,17 @@ module Followee = {
       {!unfollowed
         ? <div className=Styles.items>
             {followee.items
-            ->Js.Array.slice(~start=0, ~end_=numCards - 1)
-            ->Js.Array.map(((itemId, variant, userItem)) =>
+            ->Array.slice(~start=0, ~end=numCards - 1)
+            ->Array.map(((itemId, variant, userItem)) =>
               <ItemCard
                 itemId
                 variant
                 userItem
                 username=followee.username
                 key={string_of_int(itemId) ++ string_of_int(variant)}
-              />
-            )
+              />)
             ->React.array}
-            {Js.Array.length(followee.items) > 0
+            {Array.length(followee.items) > 0
               ? <Link
                   path={"/u/" ++ (followee.username ++ "?s=tu")}
                   className={Cn.make(list{
@@ -285,9 +283,9 @@ module WithViewer = {
         setFeed(_ => Some(feed))
         Analytics.Amplitude.logEventWithProperties(
           ~eventName="Friend Page Viewed",
-          ~eventProperties={"numFollowees": Js.Array.length(feed)},
+          ~eventProperties={"numFollowees": Array.length(feed)},
         )
-        Promise.resolved()
+        Promise.resolve()
       })->ignore
       None
     })
@@ -296,10 +294,10 @@ module WithViewer = {
       <PageTitle title="My Friends" />
       {switch feed {
       | Some(feed) =>
-        Js.Array.length(feed) > 0
+        Array.length(feed) > 0
           ? <div>
               {feed
-              ->Js.Array.map(followee => <Followee followee key=followee.id />)
+              ->Array.map(followee => <Followee followee key=followee.id />)
               ->React.array}
             </div>
           : <div className=Styles.emptyFeed>

@@ -16,7 +16,7 @@ let f = ((c, d)) => {
     such block.
 
     It is more general than   
-    [Js.Null.toOption]
+    [Null.toOption]
     since its box number is one and immutable,
     so we can give it a meaningful name for such slot
 
@@ -32,7 +32,7 @@ let g = () => {
 }
 
 let a0 = f => {
-  let u = Js.Null.toOption(f())
+  let u = Null.toOption(f())
   switch u {
   | None => 0
   | Some(x) =>

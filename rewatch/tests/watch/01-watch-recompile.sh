@@ -20,7 +20,7 @@ rewatch_bg watch > rewatch.log 2>&1 &
 success "Watcher Started"
 
 # Trigger a recompilation
-echo 'Js.log("added-by-test")' >> ./packages/main/src/Main.res
+echo 'Console.log("added-by-test")' >> ./packages/main/src/Main.res
 
 # Wait for the compiled JS to show up (can be slow in CI)
 target=./packages/main/src/Main.mjs
@@ -43,7 +43,7 @@ fi
 
 sleep 1
 
-replace '/Js.log("added-by-test")/d' ./packages/main/src/Main.res;
+replace '/Console.log("added-by-test")/d' ./packages/main/src/Main.res;
 
 sleep 5
 

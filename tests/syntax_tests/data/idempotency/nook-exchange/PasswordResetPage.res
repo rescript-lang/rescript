@@ -37,10 +37,10 @@ let make = (~url: ReasonReactRouter.url) => {
           Fetch.RequestInit.make(
             ~method_=Post,
             ~body=Fetch.BodyInit.make(
-              Js.Json.stringify(
+              JSON.stringify(
                 Json.Encode.object_(list{
-                  ("token", Js.Json.string(token)),
-                  ("password", Js.Json.string(password)),
+                  ("token", JSON.string(token)),
+                  ("password", JSON.string(password)),
                 }),
               ),
             ),
@@ -65,7 +65,7 @@ let make = (~url: ReasonReactRouter.url) => {
                 ~eventName="Reset Password Changed Success",
                 ~eventProperties={"token": token, "username": username},
               )
-              Promise.resolved()
+              Promise.resolve()
             })
           } else {
             %Repromise.JsExn({
@@ -75,11 +75,11 @@ let make = (~url: ReasonReactRouter.url) => {
                 ~eventName="Reset Password Changed Failure",
                 ~eventProperties={"token": token, "error": text},
               )
-              Promise.resolved()
+              Promise.resolve()
             })
           }
           setIsSubmitting(_ => false)
-          Promise.resolved()
+          Promise.resolve()
         })
       })->ignore
     | None => setStatus(_ => Some(Error("Missing token")))

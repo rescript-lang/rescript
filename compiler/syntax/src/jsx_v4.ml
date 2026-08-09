@@ -43,7 +43,7 @@ let ref_type_var loc = Typ.var ~loc "ref"
 
 let ref_type loc =
   Typ.constr ~loc
-    {loc; txt = Ldot (Ldot (Lident "Js", "Nullable"), "t")}
+    {loc; txt = Ldot (Ldot (Lident "Stdlib", "Nullable"), "t")}
     [ref_type_var loc]
 
 let jsx_element_type config ~loc =
@@ -117,12 +117,17 @@ let strip_option core_type =
     List.nth_opt core_types 0 [@doesNotRaise]
   | _ -> Some core_type
 
-let strip_js_nullable core_type =
+let strip_nullable core_type =
   match core_type with
+  | {ptyp_desc = Ptyp_constr ({txt = Lident "nullable"}, core_types)}
   | {
-   ptyp_desc =
-     Ptyp_constr ({txt = Ldot (Ldot (Lident "Js", "Nullable"), "t")}, core_types);
-  } ->
+      ptyp_desc = Ptyp_constr ({txt = Ldot (Lident "Nullable", "t")}, core_types);
+    }
+  | {
+      ptyp_desc =
+        Ptyp_constr
+          ({txt = Ldot (Ldot (Lident "Stdlib", "Nullable"), "t")}, core_types);
+    } ->
     List.nth_opt core_types 0 [@doesNotRaise]
   | _ -> Some core_type
 
@@ -131,7 +136,7 @@ let strip_js_nullable core_type =
 (* (Str) let make = ({x, _}: props<'x>) => body *)
 (* (Str) external make: React.componentLike<props< .. >, React.element> = "default" *)
 let make_props_type_params ?(strip_explicit_option = false)
-    ?(strip_explicit_js_nullable_of_ref = false) named_type_list =
+    ?(strip_explicit_nullable_of_ref = false) named_type_list =
   named_type_list
   |> List.filter_map (fun (is_optional, label, _, loc, interior_type) ->
          if label = "key" then None
@@ -144,9 +149,7 @@ let make_props_type_params ?(strip_explicit_option = false)
            match interior_type with
            | {ptyp_desc = Ptyp_any} -> Some (ref_type_var loc)
            | _ ->
-             (* Strip explicit Js.Nullable.t in case of forwardRef *)
-             if strip_explicit_js_nullable_of_ref then
-               strip_js_nullable interior_type
+             if strip_explicit_nullable_of_ref then strip_nullable interior_type
              else Some interior_type
            (* Strip the explicit option type in implementation *)
            (* let make = (~x: option<string>=?) => ... *)
@@ -622,7 +625,7 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name binding =
       (* React component name should start with uppercase letter *)
       (* let make = { let \"App" = props => make(props); \"App" } *)
       (* let make = React.forwardRef({
-           let \"App" = (props, ref) => make({...props, ref: @optional (Js.Nullabel.toOption(ref))})
+           let \"App" = (props, ref) => make({...props, ref: @optional (Stdlib.Nullable.toOption(ref))})
          })*)
       let total_arity = if has_forward_ref then 2 else 1 in
       Exp.fun_ ~arity:(Some total_arity) Nolabel None
@@ -769,7 +772,7 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name binding =
               (match core_type_of_attr with
               | None ->
                 make_props_type_params ~strip_explicit_option:true
-                  ~strip_explicit_js_nullable_of_ref:has_forward_ref
+                  ~strip_explicit_nullable_of_ref:has_forward_ref
                   named_type_list
               | Some _ -> (
                 match typ_vars_of_core_type with

@@ -1,5 +1,5 @@
 type t = {
-  createdAt: Js.Date.t,
+  createdAt: Date.t,
   value: string,
   coachName: string,
   coachAvatarUrl: option<string>,

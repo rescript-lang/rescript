@@ -18,7 +18,7 @@ module V4C: {
       ref?: 'ref,
     }
 
-    let make: React.component<props<React.ref<Js.Nullable.t<inputRef>>>>
+    let make: React.component<props<React.ref<nullable<inputRef>>>>
   }
 }
 
@@ -40,7 +40,7 @@ module V4CUncurried: {
       ref?: 'ref,
     }
 
-    let make: React.component<props<React.ref<Js.Nullable.t<inputRef>>>>
+    let make: React.component<props<React.ref<nullable<inputRef>>>>
   }
 }
 
@@ -64,7 +64,7 @@ module V4A: {
       ref?: 'ref,
     }
 
-    let make: React.component<props<React.ref<Js.Nullable.t<inputRef>>>>
+    let make: React.component<props<React.ref<nullable<inputRef>>>>
   }
 }
 
@@ -86,6 +86,6 @@ module V4AUncurried: {
       ref?: 'ref,
     }
 
-    let make: React.component<props<React.ref<Js.Nullable.t<inputRef>>>>
+    let make: React.component<props<React.ref<nullable<inputRef>>>>
   }
 }

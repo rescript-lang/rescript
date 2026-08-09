@@ -20,7 +20,7 @@ let markAsCorrect = t => {...t, correctAnswer: true}
 
 let markAsIncorrect = t => {...t, correctAnswer: false}
 
-let isValidAnswerOption = t => t.answer->Js.String.trim->Js.String.length >= 1
+let isValidAnswerOption = t => t.answer->String.trim->String.length >= 1
 
 let makeFromJs = answerData => {
   id: answerData["id"],
