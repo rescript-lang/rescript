@@ -2,30 +2,6 @@ let ( >:: ), ( >::: ) = OUnit.(( >:: ), ( >::: ))
 
 let ( =~ ) = OUnit.assert_equal
 
-let count = 2_000_000
-
-let bench () =
-  Ounit_tests_util.time "int hash set" (fun _ ->
-      let v = Hash_set_int.create 2_000_000 in
-      for i = 0 to count do
-        Hash_set_int.add v i
-      done;
-      for _ = 0 to 3 do
-        for i = 0 to count do
-          assert (Hash_set_int.mem v i)
-        done
-      done);
-  Ounit_tests_util.time "int hash set" (fun _ ->
-      let v = Hash_set_poly.create 2_000_000 in
-      for i = 0 to count do
-        Hash_set_poly.add v i
-      done;
-      for _ = 0 to 3 do
-        for i = 0 to count do
-          assert (Hash_set_poly.mem v i)
-        done
-      done)
-
 type id = {stamp: int; name: string; mutable flags: int} (* = Ident.t *)
 let hash id = Ext_platform_primitives.hash_stamp_and_name id.stamp id.name
 let suites =

@@ -1,5 +1,5 @@
 (* Copyright (C) 2015-2016 Bloomberg Finance L.P.
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -17,40 +17,21 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-(** A wrapper around [Ident] module in compiler-libs*)
+include Ext_set.Make (struct
+  type t = Ident.t
 
-val is_js : Ident.t -> bool
+  let compare (x : t) (y : t) =
+    let stamp = Stdlib.compare x.stamp y.stamp in
+    if stamp <> 0 then stamp
+    else
+      let name = Stdlib.compare x.name y.name in
+      if name <> 0 then name else Stdlib.compare x.flags y.flags
 
-val is_js_object : Ident.t -> bool
-
-val create_js : string -> Ident.t
-(** create identifiers for predefined [js] global variables *)
-
-val create : string -> Ident.t
-
-val make_js_object : Ident.t -> unit
-
-val create_tmp : ?name:string -> unit -> Ident.t
-
-val make_unused : unit -> Ident.t
-
-val is_uident : string -> bool
-
-val is_uppercase_exotic : string -> bool
-
-val unwrap_uppercase_exotic : string -> string
-
-val convert : string -> string
-(**
-   Invariant: if name is not converted, the reference should be equal
-*)
-
-val is_js_or_global : Ident.t -> bool
-
-val compare : Ident.t -> Ident.t -> int
-val equal : Ident.t -> Ident.t -> bool
+  let equal = Ident.same
+  let print = Ident.print
+end)
