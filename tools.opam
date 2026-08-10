@@ -10,7 +10,6 @@ depends: [
   "dune" {>= "3.17"}
   "ocaml" {>= "5.0.0"}
   "cmarkit" {>= "0.3.0"}
-  "cppo" {= "1.8.0"}
   "analysis"
   "yojson" {= "3.0.0"}
   "odoc" {with-doc}

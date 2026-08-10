@@ -1,5 +1,5 @@
 (* Copyright (C) 2015-2016 Bloomberg Finance L.P.
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -17,40 +17,42 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
+let key_index (h : _ Hash_set_gen.t) (key : 'a) =
+  Hashtbl.hash key land (Array.length h.data - 1)
+let eq_key = ( = )
+type 'a t = 'a Hash_set_gen.t
 
-(** A wrapper around [Ident] module in compiler-libs*)
+let create = Hash_set_gen.create
+let clear = Hash_set_gen.clear
+let reset = Hash_set_gen.reset
 
-val is_js : Ident.t -> bool
+(* let copy = Hash_set_gen.copy *)
+let iter = Hash_set_gen.iter
+let length = Hash_set_gen.length
 
-val is_js_object : Ident.t -> bool
+(* let stats = Hash_set_gen.stats *)
+let to_list = Hash_set_gen.to_list
 
-val create_js : string -> Ident.t
-(** create identifiers for predefined [js] global variables *)
+let remove (h : _ Hash_set_gen.t) key =
+  let i = key_index h key in
+  let h_data = h.data in
+  Hash_set_gen.remove_bucket h i key ~prec:Empty
+    (Array.unsafe_get h_data i)
+    eq_key
 
-val create : string -> Ident.t
+let add (h : _ Hash_set_gen.t) key =
+  let i = key_index h key in
+  let h_data = h.data in
+  let old_bucket = Array.unsafe_get h_data i in
+  if not (Hash_set_gen.small_bucket_mem eq_key key old_bucket) then (
+    Array.unsafe_set h_data i (Cons {key; next = old_bucket});
+    h.size <- h.size + 1;
+    if h.size > Array.length h_data lsl 1 then Hash_set_gen.resize key_index h)
 
-val make_js_object : Ident.t -> unit
-
-val create_tmp : ?name:string -> unit -> Ident.t
-
-val make_unused : unit -> Ident.t
-
-val is_uident : string -> bool
-
-val is_uppercase_exotic : string -> bool
-
-val unwrap_uppercase_exotic : string -> string
-
-val convert : string -> string
-(**
-   Invariant: if name is not converted, the reference should be equal
-*)
-
-val is_js_or_global : Ident.t -> bool
-
-val compare : Ident.t -> Ident.t -> int
-val equal : Ident.t -> Ident.t -> bool
+let mem (h : _ Hash_set_gen.t) key =
+  Hash_set_gen.small_bucket_mem eq_key key
+    (Array.unsafe_get h.data (key_index h key))

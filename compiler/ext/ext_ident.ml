@@ -52,35 +52,6 @@ let create = Ident.create
 (* FIXME: no need for `$' operator *)
 let create_tmp ?(name = Literals.tmp) () = create name
 
-let js_module_table : Ident.t Hash_string.t = Hash_string.create 31
-
-(* This is for a js exeternal module, we can change it when printing
-   for example
-   {[
-     var React$1 = require('react');
-     React$1.render(..)
-   ]}
-
-   Given a name, if duplicated, they should  have the same id
-*)
-(* let create_js_module (name : string) : Ident.t =
-    let name =
-     String.concat "" @@ Ext_list.map
-     (Ext_string.split name '-')  Ext_string.capitalize_ascii in
-    (* TODO: if we do such transformation, we should avoid       collision for example:
-       react-dom
-       react--dom
-       check collision later
-   *)
-    match Hash_string.find_exn js_module_table name  with
-    | exception Not_found ->
-     let ans = Ident.create name in
-     (* let ans = { v with flags = js_module_flag} in  *)
-     Hash_string.add js_module_table name ans;
-     ans
-    | v -> (* v *) Ident.rename v
-*)
-
 let[@inline] convert ?(op = false) (c : char) : string =
   match c with
   | '*' -> "$star"
@@ -168,8 +139,6 @@ let convert (name : string) =
    - other solution: use lazy values
 *)
 let make_unused () = create "_"
-
-let reset () = Hash_string.clear js_module_table
 
 (* Has to be total order, [x < y]
    and [x > y] should be consistent

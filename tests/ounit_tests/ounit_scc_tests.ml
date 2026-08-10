@@ -2,6 +2,13 @@ let ( >:: ), ( >::: ) = OUnit.(( >:: ), ( >::: ))
 
 let ( =~ ) = OUnit.assert_equal
 
+module String_hash = Hash.Make (struct
+  type t = string
+
+  let equal = Ext_string.equal
+  let hash = Ext_platform_primitives.hash_string
+end)
+
 let tiny_test_cases =
   {|
 13
@@ -224,46 +231,46 @@ let read_file file =
 let test (input : (string * string list) list) =
   (* string -> int mapping 
   *)
-  let tbl = Hash_string.create 32 in
+  let tbl = String_hash.create 32 in
   let idx = ref 0 in
   let add x =
-    if not (Hash_string.mem tbl x) then (
-      Hash_string.add tbl x !idx;
+    if not (String_hash.mem tbl x) then (
+      String_hash.add tbl x !idx;
       incr idx)
   in
   input |> List.iter (fun (x, others) -> List.iter add (x :: others));
-  let nodes_num = Hash_string.length tbl in
+  let nodes_num = String_hash.length tbl in
   let node_array = Array.init nodes_num (fun _ -> Vec_int.empty ()) in
   input
   |> List.iter (fun (x, others) ->
-         let idx = Hash_string.find_exn tbl x in
+         let idx = String_hash.find_exn tbl x in
          others
          |> List.iter (fun y ->
-                Vec_int.push node_array.(idx) (Hash_string.find_exn tbl y)));
+                Vec_int.push node_array.(idx) (String_hash.find_exn tbl y)));
   Ext_scc.graph_check node_array
 
 let test2 (input : (string * string list) list) =
   (* string -> int mapping 
   *)
-  let tbl = Hash_string.create 32 in
+  let tbl = String_hash.create 32 in
   let idx = ref 0 in
   let add x =
-    if not (Hash_string.mem tbl x) then (
-      Hash_string.add tbl x !idx;
+    if not (String_hash.mem tbl x) then (
+      String_hash.add tbl x !idx;
       incr idx)
   in
   input |> List.iter (fun (x, others) -> List.iter add (x :: others));
-  let nodes_num = Hash_string.length tbl in
+  let nodes_num = String_hash.length tbl in
   let other_mapping = Array.make nodes_num "" in
-  Hash_string.iter tbl (fun k v -> other_mapping.(v) <- k);
+  String_hash.iter tbl (fun k v -> other_mapping.(v) <- k);
 
   let node_array = Array.init nodes_num (fun _ -> Vec_int.empty ()) in
   input
   |> List.iter (fun (x, others) ->
-         let idx = Hash_string.find_exn tbl x in
+         let idx = String_hash.find_exn tbl x in
          others
          |> List.iter (fun y ->
-                Vec_int.push node_array.(idx) (Hash_string.find_exn tbl y)));
+                Vec_int.push node_array.(idx) (String_hash.find_exn tbl y)));
   let output = Ext_scc.graph node_array in
   output
   |> Int_vec_vec.map_into_array (fun int_vec ->

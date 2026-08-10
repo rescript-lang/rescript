@@ -21,6 +21,7 @@
   (ocaml
    (>= 5.0.0))
   dune
+  ; Used by packages/@rescript/runtime/scripts/cppo.js to regenerate checked-in ReScript sources.
   (cppo
    (= 1.8.0))
   (flow_parser
@@ -53,8 +54,6 @@
  (depends
   (ocaml
    (>= 5.0.0))
-  (cppo
-   (= 1.8.0))
   (odoc :with-doc)
   (lsp
    (>= 1.23.0))
@@ -69,8 +68,6 @@
    (>= 5.0.0))
   (cmarkit
    (>= 0.3.0))
-  (cppo
-   (= 1.8.0))
   analysis
   (yojson
     (= 3.0.0))
