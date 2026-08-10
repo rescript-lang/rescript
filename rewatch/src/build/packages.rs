@@ -102,11 +102,11 @@ impl Package {
         self.get_build_path().join("compiler-info.json")
     }
 
-    fn get_js_path(&self) -> PathBuf {
+    pub fn get_js_path(&self) -> PathBuf {
         get_js_path(&self.path)
     }
 
-    fn get_esmodule_path(&self) -> PathBuf {
+    pub fn get_esmodule_path(&self) -> PathBuf {
         get_esmodule_path(&self.path)
     }
 
