@@ -11,7 +11,9 @@ pub mod read_compile_state;
 
 use self::parse::parser_args;
 use crate::build::compile::{mark_modules_with_deleted_deps_dirty, mark_modules_with_expired_deps_dirty};
-use crate::build::compiler_info::{CompilerCheckResult, verify_compiler_info, write_compiler_info};
+use crate::build::compiler_info::{
+    CompilerCheckResult, get_package_output_specs, verify_compiler_info, write_compiler_info,
+};
 use crate::config::SourceMapCommand;
 use crate::helpers::emojis::*;
 use crate::helpers::{self};
@@ -191,7 +193,8 @@ pub fn initialize_build(
     let source_map_args = project_context
         .get_root_config()
         .get_source_map_args(source_map_command);
-    let compiler_check = verify_compiler_info(&packages, &compiler, &source_map_args);
+    let package_output_specs = get_package_output_specs(project_context.get_root_config());
+    let compiler_check = verify_compiler_info(&packages, &compiler, &source_map_args, &package_output_specs);
 
     if !packages::validate_packages_dependencies(&packages) {
         return Err(anyhow!("Failed to validate package dependencies"));

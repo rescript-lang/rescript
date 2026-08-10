@@ -51,6 +51,15 @@ else
   exit 1
 fi
 
+if ! wait_for_file_gone "./src/Test.mjs" 20; then
+  error "Previous suffix output was not removed after config change"
+  cat rewatch.log
+  replace "s/.res.mjs/.mjs/g" rescript.json
+  git checkout -- ./src/Test.res
+  exit_watcher
+  exit 1
+fi
+
 # Verify the watcher is still running (didn't crash on config change)
 if [ -f lib/watch.lock ]; then
   success "Watcher still running after config change"
@@ -66,12 +75,18 @@ fi
 replace "s/.res.mjs/.mjs/g" rescript.json
 git checkout -- ./src/Test.res
 
-# Wait for rebuild with restored suffix (old .res.mjs should go away)
-if wait_for_file_gone "./src/Test.res.mjs" 20; then
-  success "Rebuild after restore removed old suffix files"
+# Wait for the restored build to finish before stopping the watcher. Merely
+# waiting for the old output to disappear only observes the cleanup phase and
+# can interrupt the slower Windows rebuild before tracked outputs are recreated.
+if wait_for_clean_worktree . 30; then
+  success "Rebuild after restore removed old suffix files and restored outputs"
 else
-  # Clean up manually if the watcher didn't remove them
-  find . -name "*.res.mjs" -delete 2>/dev/null
+  error "Rebuild after restore did not finish"
+  cat rewatch.log
+  exit_watcher
+  git diff .
+  git ls-files --others --exclude-standard .
+  exit 1
 fi
 
 exit_watcher

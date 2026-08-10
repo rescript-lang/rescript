@@ -99,3 +99,15 @@ wait_for_file_gone() {
   done
   return 1
 }
+
+wait_for_clean_worktree() {
+  local path="$1"; local timeout="${2:-30}"
+  while [ "$timeout" -gt 0 ]; do
+    if git diff --quiet -- "$path" && [ -z "$(git ls-files --others --exclude-standard -- "$path")" ]; then
+      return 0
+    fi
+    sleep 1
+    timeout=$((timeout - 1))
+  done
+  return 1
+}

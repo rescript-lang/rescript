@@ -33,7 +33,7 @@ fn remove_iast(package: &packages::Package, source_file: &Path) {
     ));
 }
 
-fn remove_mjs_file(source_file: &Path, suffix: &str) {
+pub(crate) fn remove_js_file(source_file: &Path, suffix: &str) {
     let js_file = source_file.with_extension(
         // suffix.to_string includes the ., so we need to remove it
         &suffix[1..],
@@ -102,7 +102,7 @@ fn clean_source_files(build_state: &BuildState, root_config: &Config) {
 
     rescript_file_locations
         .par_iter()
-        .for_each(|(rescript_file_location, suffix)| remove_mjs_file(rescript_file_location, suffix));
+        .for_each(|(rescript_file_location, suffix)| remove_js_file(rescript_file_location, suffix));
 }
 
 // TODO: change to scan_previous_build => CompileAssetsState
@@ -145,7 +145,7 @@ pub fn cleanup_previous_build(
                 .get(package_name)
                 .expect("Could not find package");
             remove_compile_assets(package, res_file_location);
-            remove_mjs_file(res_file_location, suffix);
+            remove_js_file(res_file_location, suffix);
             remove_iast(package, res_file_location);
             remove_ast(package, res_file_location);
             match helpers::get_extension(ast_file_path).as_str() {
