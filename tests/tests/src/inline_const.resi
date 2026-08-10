@@ -10,8 +10,7 @@ module N: {
   @inline(`中文`) let f3: string
 }
 
-module N1: () =>
-{
+module N1: () => {
   @inline(`中文`) let f4: string
   @inline(3e-6) let xx: float
 }
