@@ -407,8 +407,12 @@ let suites =
            string_eq (Ext_filename.module_name "a/b/xc.resi") "Xc";
            string_eq (Ext_filename.module_name "a/b/xc.ml") "Xc";
            string_eq (Ext_filename.module_name "a/b/xc.mli") "Xc";
-           string_eq (Ext_filename.module_name "a/b/xc.cppo.mli") "Xc.cppo";
-           string_eq (Ext_filename.module_name "a/b/xc.cppo.") "Xc.cppo";
+           string_eq
+             (Ext_filename.module_name "a/b/xc.generated.mli")
+             "Xc.generated";
+           string_eq
+             (Ext_filename.module_name "a/b/xc.generated.")
+             "Xc.generated";
            string_eq (Ext_filename.module_name "a/b/xc..") "Xc.";
            string_eq (Ext_filename.module_name "a/b/Xc..") "Xc.";
            string_eq (Ext_filename.module_name "a/b/.") "" );

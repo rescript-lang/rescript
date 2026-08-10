@@ -42,8 +42,7 @@
   },
   "scripts": {
     "clean": "rescript clean",
-    "build": "rescript build && touch .buildstamp",
-    "cppo": "node scripts/cppo.js"
+    "build": "rescript build && touch .buildstamp"
   },
   "devDependencies": {
     "rescript": "workspace:^"

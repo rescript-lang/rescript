@@ -2,7 +2,6 @@
   flags: [
     /* "-drawlambda"; */
     /* "-dsource"; */
-    /* "-bs-diagnose" */
   ],
 })
 

@@ -6,7 +6,7 @@ import * as Primitive_string from "@rescript/runtime/lib/es6/Primitive_string.mj
 
 let A = Primitive_module.init([
   "rec_module_opt.res",
-  15,
+  13,
   4
 ], {
   TAG: "Module",
@@ -48,7 +48,7 @@ let Y0 = {};
 
 let X1 = Primitive_module.init([
   "rec_module_opt.res",
-  44,
+  42,
   19
 ], {
   TAG: "Module",
@@ -60,7 +60,7 @@ let X1 = Primitive_module.init([
 
 let Y1 = Primitive_module.init([
   "rec_module_opt.res",
-  47,
+  45,
   12
 ], {
   TAG: "Module",

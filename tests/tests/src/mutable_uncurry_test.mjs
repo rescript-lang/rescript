@@ -134,17 +134,17 @@ function nested1(param, param$1, param$2) {
 }
 
 Mocha.describe("Mutable_uncurry_test", () => {
-  Mocha.test("eq with different refs", () => Test_utils.eq("File \"mutable_uncurry_test.res\", line 46, characters 42-49", false, eq2({
+  Mocha.test("eq with different refs", () => Test_utils.eq("File \"mutable_uncurry_test.res\", line 40, characters 42-49", false, eq2({
     contents: 1
   }, {
     contents: 2
   })));
-  Mocha.test("eq with same refs", () => Test_utils.eq("File \"mutable_uncurry_test.res\", line 47, characters 37-44", true, eq2({
+  Mocha.test("eq with same refs", () => Test_utils.eq("File \"mutable_uncurry_test.res\", line 41, characters 37-44", true, eq2({
     contents: 2
   }, {
     contents: 2
   })));
-  Mocha.test("ut3 function", () => Test_utils.eq("File \"mutable_uncurry_test.res\", line 48, characters 32-39", ut3({
+  Mocha.test("ut3 function", () => Test_utils.eq("File \"mutable_uncurry_test.res\", line 42, characters 32-39", ut3({
     contents: 1
   }, {
     contents: 2
@@ -155,7 +155,7 @@ Mocha.describe("Mutable_uncurry_test", () => {
     2,
     3
   ]));
-  Mocha.test("t3 function", () => Test_utils.eq("File \"mutable_uncurry_test.res\", line 49, characters 31-38", t3({
+  Mocha.test("t3 function", () => Test_utils.eq("File \"mutable_uncurry_test.res\", line 43, characters 31-38", t3({
     contents: 1
   }, {
     contents: 2
@@ -166,7 +166,7 @@ Mocha.describe("Mutable_uncurry_test", () => {
     2,
     3
   ]));
-  Mocha.test("ut5 function", () => Test_utils.eq("File \"mutable_uncurry_test.res\", line 51, characters 7-14", ut5({
+  Mocha.test("ut5 function", () => Test_utils.eq("File \"mutable_uncurry_test.res\", line 45, characters 7-14", ut5({
     contents: 1
   }, {
     contents: 2
