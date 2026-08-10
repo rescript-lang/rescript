@@ -1,1 +1,1 @@
-let () = Js.log("Hello, ReScript")
+let () = Console.log("Hello, ReScript")

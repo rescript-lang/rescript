@@ -1043,6 +1043,20 @@ function has(_xs, x, eq) {
   };
 }
 
+function includes(_xs, x) {
+  while (true) {
+    let xs = _xs;
+    if (xs === 0) {
+      return false;
+    }
+    if (xs.hd === x) {
+      return true;
+    }
+    _xs = xs.tl;
+    continue;
+  };
+}
+
 function getAssoc(_xs, x, eq) {
   while (true) {
     let xs = _xs;
@@ -1350,6 +1364,7 @@ exports.compareLength = compareLength;
 exports.compare = compare;
 exports.equal = equal;
 exports.has = has;
+exports.includes = includes;
 exports.find = find;
 exports.filter = filter;
 exports.filterWithIndex = filterWithIndex;

@@ -18,7 +18,7 @@ let decodeNotification = json => {
 let decodeNotifications = json => json->Json.Decode.list(decodeNotification)
 
 let flashNotifications = obj =>
-  switch Js.Dict.get(obj, "notifications") {
+  switch Dict.get(obj, "notifications") {
   | Some(notifications) =>
     notifications
     ->decodeNotifications
@@ -40,12 +40,12 @@ let sendQuery = (~notify=true, q) => {
     "/graphql",
     RequestInit.make(
       ~method_=Post,
-      ~body=Js.Dict.fromList(list{
-        ("query", Js.Json.string(q["query"])),
+      ~body=Dict.fromList(list{
+        ("query", JSON.string(q["query"])),
         ("variables", q["variables"]),
       })
-      ->Js.Json.object_
-      ->Js.Json.stringify
+      ->JSON.object_
+      ->JSON.stringify
       ->BodyInit.make,
       ~credentials=Include,
       ~headers=HeadersInit.makeWithArray([
@@ -55,7 +55,7 @@ let sendQuery = (~notify=true, q) => {
       (),
     ),
   )
-  ->Js.Promise.then_(resp =>
+  ->Promise.then(resp =>
     if Response.ok(resp) {
       Response.json(resp)
     } else {
@@ -68,18 +68,18 @@ let sendQuery = (~notify=true, q) => {
         )
       }
 
-      Js.Promise.reject(Graphql_error("Request failed: " ++ Response.statusText(resp)))
+      Promise.reject(Graphql_error("Request failed: " ++ Response.statusText(resp)))
     }
   )
-  ->Js.Promise.then_(json =>
-    switch Js.Json.decodeObject(json) {
+  ->Promise.then(json =>
+    switch JSON.decodeObject(json) {
     | Some(obj) =>
       if notify {
         obj->flashNotifications
       }
 
-      Js.Dict.unsafeGet(obj, "data")->q["parse"]->Js.Promise.resolve
-    | None => Js.Promise.reject(Graphql_error("Response is not an object"))
+      Dict.getUnsafe(obj, "data")->q["parse"]->Promise.resolve
+    | None => Promise.reject(Graphql_error("Response is not an object"))
     }
   )
 }

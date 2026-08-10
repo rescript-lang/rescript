@@ -5,4 +5,4 @@ module Dep = {
 exception MyOtherException
 
 let ddjdj = 34
-Js.log(ddjdj)
+Console.log(ddjdj)

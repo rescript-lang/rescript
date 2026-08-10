@@ -49,8 +49,8 @@ If `optionValue` is `Some(value`), it calls `f(value)`; otherwise returns `()`
 ## Examples
 
 ```rescript
-Belt.Option.forEach(Some("thing"), x => Js.log(x)) /* logs "thing" */
-Belt.Option.forEach(None, x => Js.log(x)) /* returns () */
+Belt.Option.forEach(Some("thing"), x => Console.log(x)) /* logs "thing" */
+Belt.Option.forEach(None, x => Console.log(x)) /* returns () */
 ```
 */
 let forEach: (option<'a>, 'a => unit) => unit

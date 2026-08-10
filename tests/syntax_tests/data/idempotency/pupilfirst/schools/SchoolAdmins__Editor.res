@@ -33,7 +33,7 @@ let removeSchoolAdmin = (setState, admin, currentSchoolAdminId, event) => {
 
     DeleteSchoolAdminQuery.make(~id=admin->SchoolAdmin.id, ())
     ->GraphqlQuery.sendQuery
-    ->Js.Promise.then_(response => {
+    ->Promise.then(response => {
       if response["deleteSchoolAdmin"]["success"] {
         if (
           /*
@@ -47,15 +47,14 @@ let removeSchoolAdmin = (setState, admin, currentSchoolAdminId, event) => {
           setState(state => {
             ...state,
             deleting: false,
-            admins: state.admins->Js.Array.filter(a =>
-              a->SchoolAdmin.id != (admin->SchoolAdmin.id)
-            ),
+            admins: state.admins->Array.filter(a =>
+              a->SchoolAdmin.id != (admin->SchoolAdmin.id)),
           })
         }
       } else {
         setState(state => {...state, deleting: false})
       }
-      response->Js.Promise.resolve
+      response->Promise.resolve
     })
     ->ignore
   }

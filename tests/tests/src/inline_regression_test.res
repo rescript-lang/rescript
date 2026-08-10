@@ -4,7 +4,7 @@ open Test_utils
 let generic_basename = (is_dir_sep, current_dir_name, name) => {
   let rec find_end = n =>
     if n < 0 {
-      Js.String2.substrAtMost(name, ~from=0, ~length=1)
+      String.substring(name, ~start=0, ~end=1)
     } else if is_dir_sep(name, n) {
       find_end(n - 1)
     } else {
@@ -12,9 +12,9 @@ let generic_basename = (is_dir_sep, current_dir_name, name) => {
     }
   and find_beg = (n, p) =>
     if n < 0 {
-      Js.String2.substrAtMost(name, ~from=0, ~length=p)
+      String.substring(name, ~start=0, ~end=p)
     } else if is_dir_sep(name, n) {
-      Js.String2.substrAtMost(name, ~from=n + 1, ~length=p - n - 1)
+      String.substring(name, ~start=n + 1, ~end=p)
     } else {
       find_beg(n - 1, p)
     }
@@ -22,7 +22,7 @@ let generic_basename = (is_dir_sep, current_dir_name, name) => {
   if name == "" {
     current_dir_name
   } else {
-    find_end(Js.String2.length(name) - 1)
+    find_end(String.length(name) - 1)
   }
 }
 

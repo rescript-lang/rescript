@@ -1,6 +1,6 @@
-let _assign = Js.Obj.assign
+let _assign = Object.assign
 
-let emptyObject = Js.Obj.empty()
+let emptyObject = Object.make()
 
 %%raw(`
 /**

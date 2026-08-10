@@ -27,7 +27,7 @@ let _ = { a }
 
 let _ = { "constant" }
 
-let _ = { () => Js.log("test") }
+let _ = { () => Console.log("test") }
 let _ = { switch b { | true => () | false => () } }
 let _ = switch { b } { | true => () | false => () }
 let _ = { apply(a, b) }

@@ -51,6 +51,6 @@ let f = () => {
 let () = {
   f()
   arr->Belt.Array.forEach(x => x())
-  v.contents->Js.Int.toString->Console.log
+  v.contents->Int.toString->Console.log
   assert(v.contents == 45)
 }

@@ -11,7 +11,7 @@ module ArchiveQuery = %graphql(`
 let archive = (id, resourceType, archiveCB, setSaving, event) =>
   Webapi.Dom.window->Webapi.Dom.Window.confirm(
     "Are you sure you want to delete this " ++
-    ((resourceType->Js.String.toLowerCase) ++
+    ((resourceType->String.toLowerCase) ++
     ". You cannot undo this."),
   )
     ? {
@@ -19,14 +19,14 @@ let archive = (id, resourceType, archiveCB, setSaving, event) =>
         setSaving(_ => true)
         ArchiveQuery.make(~id, ~resourceType, ())
         ->GraphqlQuery.sendQuery
-        ->Js.Promise.then_(response => {
+        ->Promise.then(response => {
           response["archiveCommunityResource"]["success"]
             ? {
                 Notification.success("Success", resourceType ++ " archived successfully")
                 archiveCB(id, resourceType)
               }
             : Notification.error("Something went wrong", "Please refresh the page and try again")
-          Js.Promise.resolve()
+          Promise.resolve()
         })
         ->ignore
       }

@@ -22,18 +22,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-(* Note that currently there is no way to consume [Js.meth_callback]
-    so it is fine to encode it with a freedom,
-    but we need make it better for error message.
-   - all are encoded as
-   {[
-     type fn =  (`Args_n of _ , 'result ) Js.fn
-     type method = (`Args_n of _, 'result) Js.method
-     type method_callback = (`Args_n of _, 'result) Js.method_callback
-   ]}
-    For [method_callback], the arity is never zero, so both [method]
-    and  [fn] requires (unit -> 'a) to encode arity zero
-*)
+(* Method callbacks encode their arity with
+   [Primitive_js_extern.Callback.arityN]. The arity is never zero. *)
 
 type typ = Parsetree.core_type
 

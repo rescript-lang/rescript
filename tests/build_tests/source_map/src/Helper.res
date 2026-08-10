@@ -15,6 +15,6 @@ let describe = payload =>
 
 let unicodeLabel = "helper 한글 🌏"
 
-let fail = () => Js.Exn.raiseError("helper source map")
+let fail = () => Exn.raiseError("helper source map")
 
 let value = pipeThrough(21, multiply)

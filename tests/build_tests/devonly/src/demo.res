@@ -1,1 +1,1 @@
-let () = Js.log(Depdemo.a)
+let () = Console.log(Depdemo.a)

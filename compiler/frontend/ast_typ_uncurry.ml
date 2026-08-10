@@ -31,7 +31,7 @@ let to_method_callback_type loc (mapper : Bs_ast_mapper.mapper) ~arity
   | Some n ->
     Ast_helper.Typ.constr
       {
-        txt = Ldot (Ast_literal.Lid.js_meth_callback, "arity" ^ string_of_int n);
+        txt = Ldot (Ast_literal.Lid.method_callback, "arity" ^ string_of_int n);
         loc;
       }
       [meth_type]

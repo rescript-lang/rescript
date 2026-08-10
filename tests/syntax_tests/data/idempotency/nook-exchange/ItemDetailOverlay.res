@@ -302,7 +302,7 @@ module TwoDimensionVariants = {
                   <div
                     className=Styles.patternLabel
                     style={ReactDOMRe.Style.make(
-                      ~height=string_of_int(Js.String.length(patternName) * 6) ++ "px",
+                      ~height=string_of_int(String.length(patternName) * 6) ++ "px",
                       (),
                     )}>
                     {React.string(patternName)}
@@ -493,7 +493,7 @@ module FriendsSection = {
             status: json->field("status", int)->User.itemStatusFromJs->Belt.Option.getExn,
           })
           setFriendItems(_ => Some(friendItems))
-          Promise.resolved()
+          Promise.resolve()
         })
       })->ignore
       None
@@ -501,12 +501,12 @@ module FriendsSection = {
 
     switch friendItems {
     | Some(friendItems) =>
-      if Js.Array.length(friendItems) > 0 {
+      if Array.length(friendItems) > 0 {
         <div className=Styles.friendSection>
           <div className=Styles.friendItemList>
             {friendItems
-            ->Js.Array.slice(~start=0, ~end_=showLimit)
-            ->Js.Array.map(friendItem =>
+            ->Array.slice(~start=0, ~end=showLimit)
+            ->Array.map(friendItem =>
               <div
                 className=Styles.friendItem
                 key={friendItem.userId ++ string_of_int(friendItem.variant)}>
@@ -534,10 +534,9 @@ module FriendsSection = {
                     {React.string(User.itemStatusToString(friendItem.status))}
                   </Link>
                 </span>
-              </div>
-            )
+              </div>)
             ->React.array}
-            {Js.Array.length(friendItems) > showLimit
+            {Array.length(friendItems) > showLimit
               ? <div className=Styles.showAllRow>
                   <button
                     onClick={_ => setShowLimit(showLimit => showLimit + 12)}
@@ -565,7 +564,7 @@ let make = (~item: Item.t, ~variant, ~isInitialLoad) => {
     let url = ReasonReactRouter.dangerouslyGetInitialUrl()
     ReasonReactRouter.push(
       "/" ++
-      (Js.Array.joinWith("/", Belt.List.toArray(url.path)) ++
+      (Array.joinUnsafe(Belt.List.toArray(url.path), "/") ++
       switch url.search {
       | "" => ""
       | search => "?" ++ search
@@ -575,7 +574,7 @@ let make = (~item: Item.t, ~variant, ~isInitialLoad) => {
   let variant = variant->Belt.Option.getWithDefault(0)
   let (transitionIn, setTransitionIn) = React.useState(() => isInitialLoad)
   React.useEffect0(() => {
-    Js.Global.setTimeout(() => setTransitionIn(_ => true), 20)->ignore
+    setTimeout(() => setTransitionIn(_ => true), 20)->ignore
     if !hasLoggedDetailOverlay.contents {
       Analytics.Amplitude.logEventWithProperties(
         ~eventName="Item Detail Overlay Shown",
@@ -641,7 +640,7 @@ let make = (~item: Item.t, ~variant, ~isInitialLoad) => {
                 | None => React.null
                 }}
               </div>
-              {if item.tags->Js.Array.length > 0 {
+              {if item.tags->Array.length > 0 {
                 <div className=Styles.itemTags>
                   <span className=Styles.itemTagIcon />
                   {item.tags
@@ -719,7 +718,7 @@ let make = (~item: Item.t, ~variant, ~isInitialLoad) => {
         </div>
         {switch me->Belt.Option.flatMap(me => me.followeeIds) {
         | Some(followeeIds) =>
-          if Js.Array.length(followeeIds) > 0 {
+          if Array.length(followeeIds) > 0 {
             <FriendsSection item />
           } else {
             React.null

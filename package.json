@@ -26,7 +26,6 @@
     "Cristiano Calcagno (https://github.com/cristianoc)",
     "Dmitry Zakharov (https://github.com/DZakh)",
     "Florian Hammerschmidt (https://github.com/fhammerschmidt)",
-    "Florian Verdonck (https://github.com/nojaf)",
     "Gabriel Nordeborn (https://github.com/zth)",
     "Hyeseong Kim (https://github.com/cometkim)",
     "Jaap Frolich (https://github.com/jfrolich)",
@@ -88,7 +87,7 @@
     "@rescript/win32-x64": "workspace:packages/@rescript/win32-x64"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.5.3",
+    "@biomejs/biome": "2.5.5",
     "@types/node": "^26.1.1",
     "@types/semver": "^7.7.0",
     "@yarnpkg/types": "^4.0.1",

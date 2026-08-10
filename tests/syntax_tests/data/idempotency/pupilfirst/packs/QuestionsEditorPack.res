@@ -9,7 +9,7 @@ let decodeProps = json => {
   open Json.Decode
   {
     communityId: json->field("communityId", string),
-    target: json->field("target", nullable(LinkedTarget.decode))->Js.Null.toOption,
+    target: json->field("target", nullable(LinkedTarget.decode))->Null.toOption,
   }
 }
 

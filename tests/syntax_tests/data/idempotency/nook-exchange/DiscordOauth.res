@@ -57,7 +57,7 @@ let process = (~code, ~isLogin, ~isRegister, ~isConnect) =>
       | Error(_) =>
         Error.showPopup(~message="Something went wrong. Sorry! Please reload and try again.")
       }
-      Promise.resolved()
+      Promise.resolve()
     })->ignore
   } else if isConnect {
     UserStore.connectDiscordAccount(~code)->ignore

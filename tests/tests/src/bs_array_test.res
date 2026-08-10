@@ -6,12 +6,12 @@ module L = Belt.List
 
 let {push} = module(A)
 
-type t<'a> = Js.Array2.t<'a>
+type t<'a> = array<'a>
 let () =
   [1, 2, 3, 4]
-  ->Js.Array2.filter(x => x > 2)
-  ->Js.Array2.mapi((x, i) => x + i)
-  ->Js.Array2.reduce((x, y) => x + y, 0)
+  ->Array.filter(x => x > 2)
+  ->Array.mapWithIndex((x, i) => x + i)
+  ->Array.reduce(0, (x, y) => x + y)
   ->Console.log
 
 describe(__MODULE__, () => {

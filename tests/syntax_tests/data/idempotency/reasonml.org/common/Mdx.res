@@ -52,9 +52,9 @@ module MdxChildren: {
   let classify = (Any(v): t): case =>
     if %raw(`function (a) { return  a instanceof Array}`)(v) {
       Array((Obj.magic(v): array<mdxComponent>))
-    } else if Js.typeof(v) == "string" {
+    } else if typeof(v) == "string" {
       String((Obj.magic(v): string))
-    } else if Js.typeof(v) == "object" {
+    } else if typeof(v) == "object" {
       Element((Obj.magic(v): mdxComponent))
     } else {
       Unknown((Obj.magic(v): unknown))

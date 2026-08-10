@@ -48,7 +48,7 @@ module Styles = {
 
 @react.component
 let make = () => {
-  let containerRef = React.useRef(Js.Nullable.null)
+  let containerRef = React.useRef(Nullable.null)
 
   let (state, send) = React.useReducer((state, action) =>
     switch action {
@@ -58,7 +58,7 @@ let make = () => {
           state.history,
           [
             User(state.input),
-            switch state.input->Js.String.trim {
+            switch state.input->String.trim {
             | "" => System("")
             | "help" =>
               System(`available commands:
@@ -81,7 +81,7 @@ let make = () => {
               System("000000")
             | "go-to-home.sh"
             | "./go-to-home.sh" =>
-              Js.Global.setTimeout(() => ReasonReact.Router.push("/"), 1_000)->ignore
+              setTimeout(() => ReasonReact.Router.push("/"), 1_000)->ignore
               System("Redirecting ...")
             | "cat go-to-home.sh"
             | "cat ./go-to-home.sh" =>
@@ -96,7 +96,7 @@ let make = () => {
   , {history: [], input: ""})
 
   React.useEffect1(() => {
-    switch containerRef.current->Js.Nullable.toOption {
+    switch containerRef.current->Nullable.toOption {
     | Some(containerRef) =>
       open Webapi.Dom
       containerRef->Element.setScrollTop(containerRef->Element.scrollHeight->float_of_int)

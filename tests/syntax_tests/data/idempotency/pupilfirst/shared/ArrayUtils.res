@@ -8,7 +8,7 @@ let copyAndSort = (f, t) => {
 
 let copyAndPush = (e, t) => {
   let copy = t->Array.copy
-  copy->Js.Array.push(e)->ignore
+  copy->Array.push(e)->ignore
   copy
 }
 
@@ -21,7 +21,7 @@ let isEmpty = a =>
 let isNotEmpty = a => !(a->isEmpty)
 
 let unsafeFind = (p, message, l) =>
-  switch Js.Array.find(p, l) {
+  switch Array.find(l, p) {
   | Some(e) => e
   | None =>
     Rollbar.error(message)

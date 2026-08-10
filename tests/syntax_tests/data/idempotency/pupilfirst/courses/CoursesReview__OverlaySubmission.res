@@ -1,9 +1,9 @@
 type t = {
   id: string,
-  createdAt: Js.Date.t,
-  passedAt: option<Js.Date.t>,
+  createdAt: Date.t,
+  passedAt: option<Date.t>,
   evaluatorName: option<string>,
-  evaluatedAt: option<Js.Date.t>,
+  evaluatedAt: option<Date.t>,
   feedback: array<CoursesReview__Feedback.t>,
   grades: array<CoursesReview__Grade.t>,
   checklist: array<SubmissionChecklistItem.t>,
@@ -38,33 +38,30 @@ let make = (
 }
 
 let makeFromJs = details =>
-  details->Js.Array.map(s =>
+  details->Array.map(s =>
     make(
       ~id=s["id"],
       ~createdAt=s["createdAt"]->DateFns.parseString,
       ~passedAt=s["passedAt"]->OptionUtils.map(DateFns.parseString),
       ~evaluatorName=s["evaluatorName"],
       ~evaluatedAt=s["evaluatedAt"]->OptionUtils.map(DateFns.parseString),
-      ~feedback=s["feedback"]->Js.Array.map(f =>
+      ~feedback=s["feedback"]->Array.map(f =>
         CoursesReview__Feedback.make(
           ~coachName=f["coachName"],
           ~coachAvatarUrl=f["coachAvatarUrl"],
           ~coachTitle=f["coachTitle"],
           ~createdAt=f["createdAt"]->DateFns.parseString,
           ~value=f["value"],
-        )
-      ),
-      ~grades=s["grades"]->Js.Array.map(g =>
+        )),
+      ~grades=s["grades"]->Array.map(g =>
         CoursesReview__Grade.make(
           ~evaluationCriterionId=g["evaluationCriterionId"],
           ~value=g["grade"],
-        )
-      ),
+        )),
       ~checklist=s["checklist"]->Json.Decode.array(
         SubmissionChecklistItem.decode(SubmissionChecklistItem.makeFiles(s["files"])),
       ),
-    )
-  )
+    ))
 
 let feedbackSent = t => t.feedback->ArrayUtils.isNotEmpty
 

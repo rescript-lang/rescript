@@ -22,11 +22,11 @@ function split(delim, s) {
       let i$p = s.lastIndexOf(delim, x - 1 | 0);
       if (i$p === -1) {
         return {
-          hd: s.substr(0, x),
+          hd: s.slice(0, x),
           tl: l
         };
       }
-      let l_0 = s.substr(i$p + 1 | 0, (x - i$p | 0) - 1 | 0);
+      let l_0 = s.slice(i$p + 1 | 0, x);
       let l$1 = {
         hd: l_0,
         tl: l
@@ -46,7 +46,7 @@ function split(delim, s) {
 
 function string_of_float_option(x) {
   if (x !== undefined) {
-    return x.toString();
+    return String(x);
   } else {
     return "nan";
   }

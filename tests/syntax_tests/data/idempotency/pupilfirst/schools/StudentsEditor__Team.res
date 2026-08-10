@@ -3,7 +3,7 @@ type t = {
   name: string,
   coachIds: array<string>,
   levelId: string,
-  accessEndsAt: option<Js.Date.t>,
+  accessEndsAt: option<Date.t>,
   students: array<StudentsEditor__Student.t>,
 }
 
@@ -31,7 +31,7 @@ let make = (~id, ~name, ~students, ~coachIds, ~levelId, ~accessEndsAt) => {
 }
 
 let makeFromJS = teamDetails =>
-  teamDetails->Js.Array.map(team =>
+  teamDetails->Array.map(team =>
     switch team {
     | Some(team) =>
       let students =
@@ -50,8 +50,7 @@ let makeFromJS = teamDetails =>
         ),
       }
     | None => list{}
-    }
-  )
+    })
 
 let update = (~name, ~student, ~coachIds, ~accessEndsAt, ~team) => {
   let students =
@@ -72,6 +71,6 @@ let unsafeFind = (teams, componentName, teamId) =>
 
 let active = t =>
   switch t.accessEndsAt {
-  | Some(date) => date->DateFns.isAfter(Js.Date.make())
+  | Some(date) => date->DateFns.isAfter(Date.make())
   | None => true
   }

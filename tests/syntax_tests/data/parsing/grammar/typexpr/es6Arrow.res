@@ -41,8 +41,8 @@ type t = @attr ~a: int => unit
 
 type getInitialPropsFn<'a> = {
   "query": dict<string>,
-  "req": Js.Nullable.t<Js.t<'a>>,
-} => Js.Promise.t<Js.t<'a>>
+  "req": nullable<{..}>,
+} => Promise.t<{..}>
 
 // type canvas = {
   // draw: (on: rectangle, stroke: pencil) => unit

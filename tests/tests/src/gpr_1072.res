@@ -20,15 +20,19 @@ external ice_cream_2:
 let my_scoop2 = ice_cream_2 ~flavor:`vanilla ~num:3 ()
 */
 
-type opt_test = {"x": Js.Undefined.t<int>, "y": Js.Undefined.t<int>}
-@obj external opt_test: (~x: int=?, ~y: int=?, unit) => _ = ""
+type opt_test = {"x": option<int>, "y": option<int>}
+@obj external opt_test: (~x: int=?, ~y: int=?, unit) => opt_test = ""
 
 let u: opt_test = opt_test(~y=3, ())
 
+type ice_cream3_expect = {"flavor": option<string>, "num": int}
+
 @obj
-external ice_cream3: (~flavor: @string [#vanilla | @as("x") #chocolate]=?, ~num: int, unit) => _ =
-  "" /* TODO: warn when [_] happens in any place except `obj` */
-type ice_cream3_expect = {"flavor": Js.undefined<string>, "num": int}
+external ice_cream3: (
+  ~flavor: @string [#vanilla | @as("x") #chocolate]=?,
+  ~num: int,
+  unit,
+) => ice_cream3_expect = "" /* TODO: warn when [_] happens in any place except `obj` */
 
 let v_ice_cream3: list<ice_cream3_expect> = list{
   ice_cream3(~flavor=#vanilla, ~num=3, ()),
@@ -60,13 +64,13 @@ type int_expect = {"x__ignore": int}
 
 let int_expect: int_expect = int_test(~x__ignore=#a, ())
 
-@obj external int_test2: (~x__ignore: @int [#a | #b]=?, unit) => _ = ""
+type int_expect2 = {"x__ignore": option<int>}
 
-type int_expect2 = {"x__ignore": Js.Undefined.t<int>}
+@obj external int_test2: (~x__ignore: @int [#a | #b]=?, unit) => int_expect2 = ""
 
 let int_expect2: int_expect2 = int_test2(~x__ignore=#a, ())
 
-@obj external int_test3: (~x__ignore: @int [@as(2) #a | #b]=?, unit) => _ = ""
+@obj external int_test3: (~x__ignore: @int [@as(2) #a | #b]=?, unit) => int_expect2 = ""
 
 let int_expects: list<int_expect2> = list{
   int_test3(),
@@ -79,11 +83,13 @@ type flavor = [#vanilla | #chocolate]
 
 let mk_ice: {"flavour": flavor, "num": int} = ice(~flavour=#vanilla, ~num=3, ())
 
-@obj external ice2: (~flavour: flavor=?, ~num: int, unit) => _ = ""
+type ice2_expect = {"flavour": option<flavor>, "num": int}
 
-let my_ice2: {"flavour": Js.Undefined.t<flavor>, "num": int} = ice2(~flavour=#vanilla, ~num=1, ())
+@obj external ice2: (~flavour: flavor=?, ~num: int, unit) => ice2_expect = ""
 
-let my_ice3: {"flavour": Js.Undefined.t<flavor>, "num": int} = ice2(~num=2, ())
+let my_ice2: ice2_expect = ice2(~flavour=#vanilla, ~num=1, ())
+
+let my_ice3: ice2_expect = ice2(~num=2, ())
 
 @obj external mk4: (~x__ignore: @ignore [#a | #b], ~y: int, unit) => _ = ""
 
@@ -93,16 +99,18 @@ let v_mk4: {"y": int} = mk4(~x__ignore=#a, ~y=3, ())
 
 let v_mk5: {"x": unit, "y": int} = mk5(~x=(), ~y=3, ())
 
-@obj external mk6: (~x: unit=?, ~y: int, unit) => _ = ""
+type mk6_expect = {"x": option<unit>, "y": int}
 
-let v_mk6: {"x": Js.Undefined.t<unit>, "y": int} = mk6(~y=3, ())
+@obj external mk6: (~x: unit=?, ~y: int, unit) => mk6_expect = ""
+
+let v_mk6: mk6_expect = mk6(~y=3, ())
 
 let v_mk6_1 = mk6(~x=(), ~y=3, ())
 type mk
-@obj external mk: (~x__ignore: @int [#a | #b]=?, unit) => _ = ""
+@obj external mk: (~x__ignore: @int [#a | #b]=?, unit) => int_expect2 = ""
 
 /* TODO: fix me */
-let mk_u: {"x__ignore": Js.Undefined.t<int>} = mk(~x__ignore=#a, ())
+let mk_u: int_expect2 = mk(~x__ignore=#a, ())
 
 @obj external mk7: (~x: @ignore [#a | #b]=?, ~y: int, unit) => _ = ""
 

@@ -15,7 +15,7 @@ type rec expression =
 
 let rec str = e =>
   switch e {
-  | Numeral(f) => f->Js.Float.toString
+  | Numeral(f) => f->Float.toString
   | Plus(a, b) => str(a) ++ ("+" ++ str(b))
   | Minus(a, b) => str(a) ++ ("-" ++ str(b))
   | Times(a, b) => str(a) ++ ("*" ++ str(b))

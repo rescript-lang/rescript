@@ -1,1 +1,1 @@
-type t<'a> = Js.null<'a>
+type t<'a> = null<'a>

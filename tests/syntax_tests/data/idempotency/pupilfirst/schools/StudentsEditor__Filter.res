@@ -33,7 +33,7 @@ let changeSearchString = (searchString, t) => {...t, searchString: searchString}
 
 let removeTag = (tag, t) => {
   ...t,
-  tags: t.tags->Js.Array.filter(ts => ts != tag),
+  tags: t.tags->Array.filter(ts => ts != tag),
 }
 
 let removeLevelId = t => {...t, levelId: None}

@@ -25,7 +25,7 @@ let make = (
   | list{} => list{}
   | someList =>
     someList->List.filter(((_, value, _)) =>
-      Js.String.includes(String.lowercase_ascii(searchString), String.lowercase_ascii(value))
+      String.includes(String.lowercase_ascii(value), String.lowercase_ascii(searchString))
     )
   }
 

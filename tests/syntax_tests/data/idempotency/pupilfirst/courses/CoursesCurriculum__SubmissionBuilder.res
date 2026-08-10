@@ -86,7 +86,7 @@ let submit = (state, send, target, addSubmissionCB, event) => {
 
   CreateSubmissionQuery.make(~targetId=target->Target.id, ~fileIds, ~checklist, ())
   ->GraphqlQuery.sendQuery
-  ->Js.Promise.then_(response => {
+  ->Promise.then(response => {
     switch response["createSubmission"]["submission"] {
     | Some(submission) =>
       let files = state.checklist->ChecklistItem.makeFiles
@@ -103,12 +103,12 @@ let submit = (state, send, target, addSubmissionCB, event) => {
       /* Enable the form again in case of a validation failure. */
       send(SetReady)
     }
-    Js.Promise.resolve()
+    Promise.resolve()
   })
-  ->Js.Promise.catch(_error => {
+  ->Promise.catch(_error => {
     /* Enable the form again in case of server crash. */
     send(SetReady)
-    Js.Promise.resolve()
+    Promise.resolve()
   })
   ->ignore
 }

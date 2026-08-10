@@ -18,17 +18,6 @@ let rec addAnnotationsToTypes_ ~config ~(expr : Typedtree.expression)
       else a_name
     in
     {a_name; a_type} :: next_types1
-  | ( Texp_apply
-        {funct = {exp_desc = Texp_ident (path, _, _)}; args = [(_, Some expr1)]},
-      _,
-      _ ) -> (
-    match path |> Translate_type_expr_from_types.path_to_list |> List.rev with
-    | ["Js"; "Internal"; fn_mk]
-      when (* Uncurried function definition uses Js.Internal.fn_mkX(...) *)
-           String.length fn_mk >= 5
-           && (String.sub fn_mk 0 5 [@doesNotRaise]) = "fn_mk" ->
-      arg_types |> addAnnotationsToTypes_ ~config ~expr:expr1
-    | _ -> arg_types)
   | _ -> arg_types
 
 and add_annotations_to_types ~config ~(expr : Typedtree.expression)

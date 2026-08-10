@@ -27,7 +27,7 @@ let update = (label, t) => {...t, label: label}
 
 let asJsObject = t => {"grade": t.grade, "label": t.label}
 
-let valid = t => t.label->Js.String.trim->Js.String.length >= 1
+let valid = t => t.label->String.trim->String.length >= 1
 
 let makeFromJs = rawGradeLabel => {
   label: rawGradeLabel["label"],
@@ -38,7 +38,7 @@ let maxGrade = gradeLabels => {
   let rec aux = (max, remains) =>
     switch remains {
     | list{} => max
-    | list{head, ...tail} => aux(Js.Math.max_int(head.grade, max), tail)
+    | list{head, ...tail} => aux(Math.Int.max(head.grade, max), tail)
     }
 
   switch aux(0, gradeLabels) {

@@ -73,10 +73,10 @@ let clothingCategories = [
   "wetsuits",
 ]
 
-@val @scope("window") external itemsJson: Js.Json.t = "items"
-@val @scope("window") external variantsJson: Js.Json.t = "variants"
+@val @scope("window") external itemsJson: JSON.t = "items"
+@val @scope("window") external variantsJson: JSON.t = "variants"
 
-let loadTranslation: (string, Js.Json.t => unit) => unit = %raw(`function(language, callback) {
+let loadTranslation: (string, JSON.t => unit) => unit = %raw(`function(language, callback) {
     import(/* webpackChunkName */ './translations/' + language + '.json').then(j => callback(j.default))
   }`)
 
@@ -85,18 +85,18 @@ exception UnexpectedType(string)
 let spaceRegex = /\s/g
 
 exception Unexpected
-let jsonToItems = (json: Js.Json.t) => {
+let jsonToItems = (json: JSON.t) => {
   open Json.Decode
   let flags = json->field("flags", int)
   let recipeInfo = json->optional(
     field("recipe", json => {
-      let jsonArray = Js.Json.decodeArray(json)->Belt.Option.getExn
+      let jsonArray = JSON.decodeArray(json)->Belt.Option.getExn
       (
         -int(jsonArray[0]),
         string(jsonArray[1]),
         jsonArray
-        ->Js.Array.sliceFrom(2)
-        ->Js.Array.map(json => {
+        ->Array.slice(~start=2)
+        ->Array.map(json => {
           let (quantity, itemName) = json->tuple2(int, string)
           (itemName, quantity)
         }),
@@ -148,27 +148,27 @@ let jsonToItems = (json: Js.Json.t) => {
     ]
   | None => [item]
   }
-  items->Js.Array.map((item: t) => {
+  items->Array.map((item: t) => {
     let extraTags = []
     switch item.source {
     | Some(source) =>
       if source == "Jolly Redd's Treasure Trawler" {
-        extraTags->Js.Array.push("redd")->ignore
+        extraTags->Array.push("redd")->ignore
       }
     | None => ()
     }
-    {...item, tags: item.tags->Js.Array.concat(extraTags)}
+    {...item, tags: item.tags->Array.concat(extraTags)}
   })
 }
 
 let all = itemsJson->Json.Decode.array(jsonToItems)->Belt.Array.concatMany
 
 let itemMap = {
-  let itemMap = Js.Dict.empty()
-  all->Belt.Array.forEach(item => itemMap->Js.Dict.set(string_of_int(item.id), item))
+  let itemMap = Dict.make()
+  all->Belt.Array.forEach(item => itemMap->Dict.set(string_of_int(item.id), item))
   itemMap
 }
-let getItem = (~itemId) => itemMap->Js.Dict.unsafeGet(string_of_int(itemId))
+let getItem = (~itemId) => itemMap->Dict.getUnsafe(string_of_int(itemId))
 
 exception UnexpectedVersion(string)
 let getImageUrl = (~item, ~variant) =>
@@ -253,7 +253,7 @@ let variantNames: dict<variantNames> = variantsJson->{
   )
 }
 
-let loadTranslation: (string, Js.Json.t => unit) => unit = %raw(`function(language, callback) {
+let loadTranslation: (string, JSON.t => unit) => unit = %raw(`function(language, callback) {
     import(/* webpackChunkName */ './translations/' + language + '.json').then(j => callback(j.default))
   }`)
 type translationItem = {
@@ -272,7 +272,7 @@ let setTranslations = json => {
       items: json->field(
         "items",
         dict(json => {
-          let row = Js.Json.decodeArray(json)->Belt.Option.getExn
+          let row = JSON.decodeArray(json)->Belt.Option.getExn
           {
             name: string(row[0]),
             variants: Belt.Option.map(Belt.Array.get(row, 1), json =>
@@ -294,13 +294,13 @@ let getName = (item: t) =>
   | Recipe(itemId) =>
     open Belt
     translations.contents
-    ->Option.flatMap(translations => Js.Dict.get(translations.items, string_of_int(itemId)))
+    ->Option.flatMap(translations => Dict.get(translations.items, string_of_int(itemId)))
     ->Option.map(translation => translation.name ++ " DIY")
     ->Option.getWithDefault(item.name)
   | Item(_) =>
     open Belt
     translations.contents
-    ->Option.flatMap(translations => Js.Dict.get(translations.items, string_of_int(item.id)))
+    ->Option.flatMap(translations => Dict.get(translations.items, string_of_int(item.id)))
     ->Option.map(translation => translation.name)
     ->Option.getWithDefault(item.name)
   }
@@ -311,10 +311,10 @@ let getVariantName = (~item: t, ~variant: int, ~hideBody=false, ~hidePattern=fal
   | Single => None
   | OneDimension(_) =>
     switch translations.contents
-    ->Option.flatMap(translations => Js.Dict.get(translations.items, string_of_int(item.id)))
+    ->Option.flatMap(translations => Dict.get(translations.items, string_of_int(item.id)))
     ->Option.flatMap(translationItem => translationItem.variants) {
     | Some(value) => Some(value)
-    | None => variantNames->Js.Dict.get(_, string_of_int(item.id))
+    | None => variantNames->Dict.get(_, string_of_int(item.id))
     }->Option.flatMap(value =>
       switch value {
       | NameOneDimension(names) => Some(Option.getExn(names[variant]))
@@ -323,10 +323,10 @@ let getVariantName = (~item: t, ~variant: int, ~hideBody=false, ~hidePattern=fal
     )
   | TwoDimensions(_a, b) =>
     switch translations.contents
-    ->Option.flatMap(translations => Js.Dict.get(translations.items, string_of_int(item.id)))
+    ->Option.flatMap(translations => Dict.get(translations.items, string_of_int(item.id)))
     ->Option.flatMap(translationItem => translationItem.variants) {
     | Some(value) => Some(value)
-    | None => variantNames->Js.Dict.get(_, string_of_int(item.id))
+    | None => variantNames->Dict.get(_, string_of_int(item.id))
     }->Belt.Option.flatMap(value =>
       switch value {
       | NameTwoDimensions((nameA, nameB)) =>
@@ -349,11 +349,11 @@ let getVariantName = (~item: t, ~variant: int, ~hideBody=false, ~hidePattern=fal
 let getMaterialName = (material: string) => {
   open Belt
   translations.contents
-  ->Option.flatMap(translations => Js.Dict.get(translations.materials, material))
+  ->Option.flatMap(translations => Dict.get(translations.materials, material))
   ->Option.getWithDefault(material)
 }
 
-let getCanonicalName = text => Js.String.toLowerCase(text)->Js.String.replaceByRe(spaceRegex, "-")
+let getCanonicalName = text => String.toLowerCase(text)->String.replaceRegExp(spaceRegex, "-")
 let getByName = (~name: string) => {
   let searchName = getCanonicalName(name)
   all->Belt.Array.getBy((item: t) =>

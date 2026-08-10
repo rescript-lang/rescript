@@ -2,7 +2,6 @@
 
 import * as Mocha from "mocha";
 import * as Test_utils from "./test_utils.mjs";
-import * as Js_undefined from "@rescript/runtime/lib/es6/Js_undefined.mjs";
 import * as Primitive_option from "@rescript/runtime/lib/es6/Primitive_option.mjs";
 
 function f1(x) {
@@ -91,39 +90,37 @@ let Test_null = {
 };
 
 function f1$1(x) {
-  let x$1 = Js_undefined.toOption(x);
-  if (x$1 !== undefined) {
-    return x$1 + 1 | 0;
-  } else {
+  if (x == null) {
     return 3;
+  } else {
+    return x + 1 | 0;
   }
 }
 
 function f2$1(x) {
-  let u = Js_undefined.toOption(x);
-  if (u !== undefined) {
-    return u + 1 | 0;
-  } else {
+  if (x == null) {
     return 3;
+  } else {
+    return x + 1 | 0;
   }
 }
 
 function f5$1(h, x) {
-  let u = Js_undefined.toOption(h(32));
-  if (u !== undefined) {
-    return u + 1 | 0;
-  } else {
+  let u = h(32);
+  if (u == null) {
     return 3;
+  } else {
+    return u + 1 | 0;
   }
 }
 
 function f4$1(h, x) {
-  let u = Js_undefined.toOption(h(32));
+  let u = h(32);
   let v = 32 + x | 0;
-  if (u !== undefined) {
-    return u + 1 | 0;
-  } else {
+  if (u == null) {
     return 1 + v | 0;
+  } else {
+    return u + 1 | 0;
   }
 }
 
@@ -136,29 +133,32 @@ function f7$1(x) {
 }
 
 function f8$1(x) {
-  let x$1 = Js_undefined.toOption(x);
-  if (x$1 === undefined) {
+  if (x == null) {
     return 2;
-  }
-  let match = Js_undefined.toOption(Primitive_option.valFromOption(x$1));
-  if (match !== undefined) {
-    return 0;
-  } else {
+  } else if (x == null) {
     return 1;
+  } else {
+    return 0;
   }
 }
 
 let u$1 = f8$1(undefined);
 
-let f9$1 = Js_undefined.toOption;
+function f9$1(x) {
+  if (x == null) {
+    return;
+  } else {
+    return Primitive_option.some(x);
+  }
+}
 
 function f10$1(x) {
-  return x === undefined;
+  return x == null;
 }
 
 let f11$1 = false;
 
-let Test_def = {
+let Test_nullable = {
   f1: f1$1,
   f2: f2$1,
   f5: f5$1,
@@ -172,97 +172,12 @@ let Test_def = {
   f11: f11$1
 };
 
-function f1$2(x) {
-  if (x == null) {
-    return 3;
-  } else {
-    return x + 1 | 0;
-  }
-}
-
-function f2$2(x) {
-  if (x == null) {
-    return 3;
-  } else {
-    return x + 1 | 0;
-  }
-}
-
-function f5$2(h, x) {
-  let u = h(32);
-  if (u == null) {
-    return 3;
-  } else {
-    return u + 1 | 0;
-  }
-}
-
-function f4$2(h, x) {
-  let u = h(32);
-  let v = 32 + x | 0;
-  if (u == null) {
-    return 1 + v | 0;
-  } else {
-    return u + 1 | 0;
-  }
-}
-
-function f6$2(x, y) {
-  return x === y;
-}
-
-function f7$2(x) {
-  return x;
-}
-
-function f8$2(x) {
-  if (x == null) {
-    return 2;
-  } else if (x == null) {
-    return 1;
-  } else {
-    return 0;
-  }
-}
-
-let u$2 = f8$2(undefined);
-
-function f9$2(x) {
-  if (x == null) {
-    return;
-  } else {
-    return Primitive_option.some(x);
-  }
-}
-
-function f10$2(x) {
-  return x == null;
-}
-
-let f11$2 = false;
-
-let Test_null_def = {
-  f1: f1$2,
-  f2: f2$2,
-  f5: f5$2,
-  f4: f4$2,
-  f6: f6$2,
-  f7: f7$2,
-  f8: f8$2,
-  u: u$2,
-  f9: f9$2,
-  f10: f10$2,
-  f11: f11$2
-};
-
 Mocha.describe("Test_zero_nullable", () => {
-  Mocha.test("Test_null_def.f1 with return(0)", () => Test_utils.eq("File \"test_zero_nullable.res\", line 240, characters 7-14", f1$2(0), 1));
-  Mocha.test("Test_null_def.f1 with null", () => Test_utils.eq("File \"test_zero_nullable.res\", line 242, characters 46-53", f1$2(null), 3));
-  Mocha.test("Test_null_def.f1 with undefined", () => Test_utils.eq("File \"test_zero_nullable.res\", line 243, characters 51-58", f1$2(undefined), 3));
-  Mocha.test("Test_null.f1 with return(0)", () => Test_utils.eq("File \"test_zero_nullable.res\", line 245, characters 47-54", f1(0), 1));
-  Mocha.test("Test_null.f1 with null", () => Test_utils.eq("File \"test_zero_nullable.res\", line 246, characters 42-49", f1(null), 3));
-  Mocha.test("Test_def.f1 with return(0)", () => Test_utils.eq("File \"test_zero_nullable.res\", line 248, characters 46-53", f1$1(0), 1));
-  Mocha.test("Test_def.f1 with undefined", () => Test_utils.eq("File \"test_zero_nullable.res\", line 249, characters 46-53", f1$1(undefined), 3));
+  Mocha.test("Test_nullable.f1 with return(0)", () => Test_utils.eq("File \"test_zero_nullable.res\", line 161, characters 51-58", f1$1(0), 1));
+  Mocha.test("Test_nullable.f1 with null", () => Test_utils.eq("File \"test_zero_nullable.res\", line 162, characters 46-53", f1$1(null), 3));
+  Mocha.test("Test_nullable.f1 with undefined", () => Test_utils.eq("File \"test_zero_nullable.res\", line 163, characters 51-58", f1$1(undefined), 3));
+  Mocha.test("Test_null.f1 with return(0)", () => Test_utils.eq("File \"test_zero_nullable.res\", line 165, characters 47-54", f1(0), 1));
+  Mocha.test("Test_null.f1 with null", () => Test_utils.eq("File \"test_zero_nullable.res\", line 166, characters 42-49", f1(null), 3));
 });
 
 let a = null;
@@ -277,8 +192,7 @@ let Null_undefined_neq = {
 
 export {
   Test_null,
-  Test_def,
-  Test_null_def,
+  Test_nullable,
   Null_undefined_neq,
 }
 /* u Not a pure module */

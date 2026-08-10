@@ -19,7 +19,7 @@ let forEachU: (int, int, int => unit) => unit
 ## Examples
 
 ```rescript
-Belt.Range.forEach(0, 4, i => Js.log(i))
+Belt.Range.forEach(0, 4, i => Console.log(i))
 
 // Prints:
 // 0

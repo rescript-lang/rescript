@@ -11,7 +11,7 @@ However it does not prevent things like
 
 ```ocaml
 destruct v begin fun exn -> 
-   Js.log exn ; 
+   Console.log exn ; 
    match exn with 
    | .. 
    | .. 
@@ -44,7 +44,7 @@ Another proposal is
 match%exn computation with 
 | A ..
 | B .. 
-| Js.NonCamlOpenVariant .. 
+| JsExn ..
 | v ->  ..
 ```
 
@@ -53,7 +53,7 @@ Here we pack the data `v`
 ==>
 ```
 
-match (Js_enx.internalTOOCamlException compuation) with
+match (Primitive_exceptions.internalToException computation) with
 | A .. 
 | B 
 | exception .. )
@@ -62,7 +62,7 @@ match (Js_enx.internalTOOCamlException compuation) with
 The same problem is
 
 ```
-match (Js_enx.internalTOOCamlException compuation) with
+match (Primitive_exceptions.internalToException computation) with
 | _ -> ..
 ```
 
@@ -76,6 +76,6 @@ Another very similar proposal would be
 ```ocaml
 fun[@bs:exn] e -> 
   match e with 
-  | Js.Exn.Error ..
+  | JsExn ..
   | .. 
 ```

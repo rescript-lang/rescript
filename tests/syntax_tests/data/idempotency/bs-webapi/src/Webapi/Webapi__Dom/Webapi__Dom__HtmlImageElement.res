@@ -12,8 +12,8 @@ type t
 @get external sizes: t => string = ""
 @set external setSizes: (t, string) => unit = "sizes"
 @get @return(nullable) external crossOrigin: t => option<string> = ""
-@set external setCrossOrigin: (t, Js.null<string>) => unit = "crossOrigin"
-let setCrossOrigin = (self, value) => setCrossOrigin(self, Js.Null.fromOption(value))
+@set external setCrossOrigin: (t, null<string>) => unit = "crossOrigin"
+let setCrossOrigin = (self, value) => setCrossOrigin(self, Null.fromOption(value))
 @get external useMap: t => string = ""
 @set external setUseMap: (t, string) => unit = "useMap"
 @get external isMap: t => bool = ""

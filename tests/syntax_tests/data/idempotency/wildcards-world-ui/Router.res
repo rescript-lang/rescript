@@ -29,10 +29,10 @@ let useUrlState = () => {
   let url = ReasonReactRouter.useUrl()
 
   React.useMemo1(() =>
-    switch Js.String.split("/", url.hash) {
-    | ["user", address] => User(address->Js.String.toLowerCase)
+    switch String.split(url.hash, "/") {
+    | ["user", address] => User(address->String.toLowerCase)
     | ["artist", id] => Artist(id)
-    | ["org", orgId] => Org(orgId->Js.String.toLowerCase)
+    | ["org", orgId] => Org(orgId->String.toLowerCase)
     | ["leaderboards", leaderboardType] =>
       switch leaderboardType {
       | "monthly-contribution" => Leaderboards(MonthlyContribution)

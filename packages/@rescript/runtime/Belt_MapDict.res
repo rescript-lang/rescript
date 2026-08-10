@@ -110,7 +110,7 @@ let rec update = (t: t<_>, newK, f, ~cmp): t<_> =>
 
 /* unboxing API was not exported
     since the correct API is really awkard
-    `bool -> 'k Js.null -> ('a Js.null * bool)`
+    `bool -> 'k Primitive_js_extern.null -> ('a Primitive_js_extern.null * bool)`
     even for specialized `k` the first `bool` can 
     be erased, maybe the perf boost does not justify the inclusion of such API
 

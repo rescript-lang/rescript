@@ -12,7 +12,7 @@ let fizzbuzz = (num) =>
   };
 
 for (i in 1 to 100) {
-  Js.log(fizzbuzz(i))
+  Console.log(fizzbuzz(i))
 };
 \`\`\``
 

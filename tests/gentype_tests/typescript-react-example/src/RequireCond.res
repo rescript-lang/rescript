@@ -2,11 +2,8 @@
 @deprecated(
   "Please use this syntax to guarantee safe usage: [%requireCond(`gk, \"gk_name\", ConditionalModule)]"
 )
-external make: (
-  @string [@as("qe.bool") #qeBool | @as("gk") #gk],
-  string,
-  string,
-) => Js.Nullable.t<'a> = "requireCond"
+external make: (@string [@as("qe.bool") #qeBool | @as("gk") #gk], string, string) => nullable<'a> =
+  "requireCond"
 
 @module
 @deprecated(

@@ -14,21 +14,28 @@
 
 #### :boom: Breaking Change
 
+- Remove the deprecated `Js` namespace and its runtime modules. https://github.com/rescript-lang/rescript/pull/8531
+
 #### :eyeglasses: Spec Compliance
 
 #### :rocket: New Feature
 
 - Add source map support with linked, inline, and hidden modes. https://github.com/rescript-lang/rescript/pull/8393
+- Add `List.includes`, deprecate `List.has` in favor of `List.some`, and clarify the equality semantics of `List.includes` and `Array.includes`. https://github.com/rescript-lang/rescript/pull/8530
 
 #### :bug: Bug fix
 
 - Fix formatter breaking the opening brace of a functor module type's result signature onto a new line (e.g. `module Make: Pattern => {`). https://github.com/rescript-lang/rescript/pull/8519
+- Preserve multibyte characters when wrapping long source lines in compiler code frames. https://github.com/rescript-lang/rescript/pull/8520
 
 #### :memo: Documentation
 
 #### :nail_care: Polish
 
 #### :house: Internal
+
+- Add the `-check-lam` compiler option, enable Lambda invariant checking in compiler tests, and remove build-profile-dependent checking. https://github.com/rescript-lang/rescript/pull/8534
+- Replace `-bs-diagnose` with `-debug-ir` and make IR diagnostic artifacts deterministic, compilation-local, and easy to clean. https://github.com/rescript-lang/rescript/pull/8535
 
 # 13.0.0-alpha.5
 

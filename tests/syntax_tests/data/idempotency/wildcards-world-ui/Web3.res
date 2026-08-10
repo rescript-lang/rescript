@@ -29,20 +29,20 @@ type rpcResult = {result: result}
 external sendAsync: (
   rawProvider,
   rpcDefinition,
-  (Js.Nullable.t<error>, rpcResult) => unit,
+  (nullable<error>, rpcResult) => unit,
 ) => unit = "sendAsync"
 
 @new @module("web3") external new_: rawProvider => t = "default"
 
 @send @scope(("eth", "personal"))
-external personalSign: (t, string, ethAddress) => Js.Promise.t<string> = "sign"
+external personalSign: (t, string, ethAddress) => Promise.t<string> = "sign"
 
 module Contract = {
   type sendParams = {from: ethAddress}
   type txSendResult
   type contractMethod = {
     encodeABI: unit => string,
-    send: sendParams => Js.Promise.t<txSendResult>,
+    send: sendParams => Promise.t<txSendResult>,
   }
 
   type contract

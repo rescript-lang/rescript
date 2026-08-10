@@ -18,12 +18,12 @@ let testWithPayload = (x: withPayload) => x
 @genType
 let printVariantWithPayload = (x: withPayload) =>
   switch x {
-  | #a => Js.log("printVariantWithPayload: a")
-  | #b => Js.log("printVariantWithPayload: b")
-  | #True => Js.log("printVariantWithPayload: True")
-  | #Twenty => Js.log("printVariantWithPayload: Twenty")
-  | #Half => Js.log("printVariantWithPayload: Half")
-  | #c(payload) => Js.log4("printVariantWithPayload x:", payload.x, "y:", payload.y)
+  | #a => Console.log("printVariantWithPayload: a")
+  | #b => Console.log("printVariantWithPayload: b")
+  | #True => Console.log("printVariantWithPayload: True")
+  | #Twenty => Console.log("printVariantWithPayload: Twenty")
+  | #Half => Console.log("printVariantWithPayload: Half")
+  | #c(payload) => Console.log4("printVariantWithPayload x:", payload.x, "y:", payload.y)
   }
 
 @genType
@@ -39,9 +39,9 @@ let testManyPayloads = (x: manyPayloads) => x
 @genType
 let printManyPayloads = (x: manyPayloads) =>
   switch x {
-  | #one(n) => Js.log2("printManyPayloads one:", n)
-  | #two(s1, s2) => Js.log3("printManyPayloads two:", s1, s2)
-  | #three(payload) => Js.log4("printManyPayloads x:", payload.x, "y:", payload.y)
+  | #one(n) => Console.log2("printManyPayloads one:", n)
+  | #two(s1, s2) => Console.log3("printManyPayloads two:", s1, s2)
+  | #three(payload) => Console.log4("printManyPayloads x:", payload.x, "y:", payload.y)
   }
 
 @genType
@@ -67,20 +67,20 @@ let testVariantWithPayloads = (x: variantWithPayloads) => x
 @genType
 let printVariantWithPayloads = x =>
   switch x {
-  | A => Js.log2("printVariantWithPayloads", "A")
-  | B(x) => Js.log2("printVariantWithPayloads", "B(" ++ (string_of_int(x) ++ ")"))
+  | A => Console.log2("printVariantWithPayloads", "A")
+  | B(x) => Console.log2("printVariantWithPayloads", "B(" ++ (string_of_int(x) ++ ")"))
   | C(x, y) =>
-    Js.log2(
+    Console.log2(
       "printVariantWithPayloads",
       "C(" ++ (string_of_int(x) ++ (", " ++ (string_of_int(y) ++ ")"))),
     )
   | D((x, y)) =>
-    Js.log2(
+    Console.log2(
       "printVariantWithPayloads",
       "D((" ++ (string_of_int(x) ++ (", " ++ (string_of_int(y) ++ "))"))),
     )
   | E(x, s, y) =>
-    Js.log2(
+    Console.log2(
       "printVariantWithPayloads",
       "E(" ++ (string_of_int(x) ++ (", " ++ (s ++ (", " ++ (string_of_int(y) ++ ")"))))),
     )

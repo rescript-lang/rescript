@@ -13,7 +13,7 @@
     mutable tail : 'a opt_cell
   }
 
-  and 'a opt_cell = 'a cell Js.null
+  and 'a opt_cell = 'a cell Primitive_js_extern.null
 
   and 'a t = {
     length : int ;
@@ -677,6 +677,12 @@ let rec has = (xs, x, eq) =>
   switch xs {
   | list{} => false
   | list{a, ...l} => eq(a, x) || has(l, x, eq)
+  }
+
+let rec includes = (xs, x) =>
+  switch xs {
+  | list{} => false
+  | list{a, ...l} => a === x || includes(l, x)
   }
 
 @deprecated("Use a `Map` instead")

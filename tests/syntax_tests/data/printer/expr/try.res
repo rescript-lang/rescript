@@ -3,12 +3,12 @@ try {
   let y = 2
   dangerousCall()
 } catch {
-| Foo => Js.log()
-| Exit => Js.log()
+| Foo => Console.log()
+| Exit => Console.log()
 }
 
 try myDangerousFn() catch {
-| Foo => Js.log()
+| Foo => Console.log()
 }
 
 let x = {
@@ -22,12 +22,12 @@ let x = {
 
 @attr @attr2
 try myDangerousFn() catch {
-| Foo => Js.log()
+| Foo => Console.log()
 }
 
 
 let () =
   @attr @attr2
   try myDangerousFn() catch {
-  | Foo => Js.log()
+  | Foo => Console.log()
   }

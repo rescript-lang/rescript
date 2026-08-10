@@ -128,9 +128,9 @@ module RootWithWeb3 = {
       Web3Connectors.injected.isAuthorized()->Promise.get(authorised =>
         if authorised && !triedLoginAlready {
           ignore(
-            context.activate(Web3Connectors.injected, () => (), true)->Promise.Js.catch(_ => {
+            context.activate(Web3Connectors.injected, () => (), true)->Promise.catch(_ => {
               setTriedLoginAlready(_ => true)
-              Promise.resolved()
+              Promise.resolve()
             }),
           )
           ()
@@ -159,10 +159,10 @@ module RootWithWeb3 = {
     //       () => (),
     //       true,
     //     )
-    //     ->Promise.Js.catch(e => {
-    //         Js.log("ERROR ACTIVATING MATIC CONNECTION");
-    //         Js.log(e);
-    //         Promise.resolved();
+    //     ->Promise.catch(e => {
+    //         Console.log("ERROR ACTIVATING MATIC CONNECTION");
+    //         Console.log(e);
+    //         Promise.resolve();
     //       })
     //     ->ignore;
     //     None;
@@ -196,7 +196,7 @@ module RootWithWeb3 = {
       switch (context.library, context.account) {
       | (Some(library), Some(account)) =>
         library.getBalance(account)
-        ->Promise.Js.catch(_ => Promise.resolved(None))
+        ->Promise.catch(_ => Promise.resolve(None))
         ->Promise.get(newBalance =>
           dispatch(
             LoadAddress(
@@ -240,7 +240,7 @@ let useIsAddressCurrentUser: Web3.ethAddress => bool = address => {
   let currentUser = useCurrentUser()
   switch currentUser {
   | Some(currentUserAddress) =>
-    address->Js.String.toLowerCase == currentUserAddress->Js.String.toLowerCase
+    address->String.toLowerCase == currentUserAddress->String.toLowerCase
   | None => false
   }
 }
@@ -365,11 +365,11 @@ let useActivateConnector: unit => (connection, Web3Connectors.injectedType => un
     connectionStatus,
     provider => {
       context.activate(provider, () => (), true)
-      ->Promise.Js.catch(error => {
-        Js.log("Error connecting to network:")
-        Js.log(error)
+      ->Promise.catch(error => {
+        Console.log("Error connecting to network:")
+        Console.log(error)
         setConnectionStatus(_ => ErrorConnecting)
-        Promise.resolved()
+        Promise.resolve()
       })
       ->Promise.get(() => setConnectionStatus(_ => Connected))
       setConnectionStatus(_ => Connecting)

@@ -43,9 +43,9 @@ module Lid : sig
 
   val pervasives : t
 
-  val js_oo : t
+  val js_extern : t
 
-  val js_meth_callback : t
+  val method_callback : t
 
   val hidden_field : string -> t
 

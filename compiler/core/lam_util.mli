@@ -54,9 +54,6 @@ val alias_ident_or_global :
 
 val refine_let : kind:Lam_compat.let_kind -> Ident.t -> Lam.t -> Lam.t -> Lam.t
 
-val dump : string -> Lam.t -> unit
-(** [dump] when {!Js_config.is_same_file}*)
-
 val not_function : Lam.t -> bool
 
 val is_function : Lam.t -> bool

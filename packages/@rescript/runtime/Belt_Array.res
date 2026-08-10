@@ -47,7 +47,7 @@ let setExn = setOrThrow
 
 @set external truncateToLengthUnsafe: (t<'a>, int) => unit = "length"
 
-@new external makeUninitialized: int => array<Js.undefined<'a>> = "Array"
+@new external makeUninitialized: int => array<Stdlib.undefined<'a>> = "Array"
 
 @new external makeUninitializedUnsafe: int => array<'a> = "Array"
 

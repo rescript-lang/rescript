@@ -2454,13 +2454,13 @@ and print_value_binding ~state ~rec_flag (vb : Parsetree.value_binding) cmt_tbl
     in
     (*
      * we want to optimize the layout of one pipe:
-     *   let tbl = data->Js.Array2.reduce((map, curr) => {
+     *   let tbl = data->Array.reduce((map, curr) => {
      *     ...
      *   })
      * important is that we don't do this for multiple pipes:
      *   let decoratorTags =
      *     items
-     *     ->Js.Array2.filter(items => {items.category === Decorators})
+     *     ->Array.filter(items => {items.category === Decorators})
      *     ->Belt.Array.map(...)
      * Multiple pipes chained together lend themselves more towards the last layout.
      *)

@@ -5,16 +5,16 @@ include Css_Js_Core.Make({
   @module("emotion")
   external mergeStyles: (array<string>) => string = "cx"
 
-  @module("emotion") external make: (Js.Json.t) => string = "css"
+  @module("emotion") external make: (JSON.t) => string = "css"
 
   @module("emotion")
-  external injectRule: (Js.Json.t) => unit = "injectGlobal"
+  external injectRule: (JSON.t) => unit = "injectGlobal"
 
   @module("emotion")
   external injectRaw: (string) => unit = "injectGlobal"
 
   @module("emotion")
-  external makeKeyFrames: (dict<Js.Json.t>) => string = "keyframes"
+  external makeKeyFrames: (dict<JSON.t>) => string = "keyframes"
 })
 
 type cache

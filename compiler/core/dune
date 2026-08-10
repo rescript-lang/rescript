@@ -14,19 +14,7 @@
   (run %{bin:cppo} %{env:CPPO_FLAGS=} %{deps} -o %{target})))
 
 (rule
- (target js_pass_debug.ml)
- (deps js_pass_debug.cppo.ml)
- (action
-  (run %{bin:cppo} %{env:CPPO_FLAGS=} %{deps} -o %{target})))
-
-(rule
  (target lam_compile_main.ml)
  (deps lam_compile_main.cppo.ml)
- (action
-  (run %{bin:cppo} %{env:CPPO_FLAGS=} %{deps} -o %{target})))
-
-(rule
- (target lam_util.ml)
- (deps lam_util.cppo.ml)
  (action
   (run %{bin:cppo} %{env:CPPO_FLAGS=} %{deps} -o %{target})))

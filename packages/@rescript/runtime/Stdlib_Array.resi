@@ -609,7 +609,8 @@ See [`Array.flat`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refer
 external flat: array<array<'a>> => array<'a> = "flat"
 
 /**
-`includes(array, item)` checks whether `array` includes `item`, by doing a [strict check for equality](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Strict_equality).
+`includes(array, item)` checks whether `array` includes `item` using
+[SameValueZero equality](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Equality_comparisons_and_sameness#same-value-zero_equality).
 
 See [`Array.includes`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/includes) on MDN.
 
@@ -618,8 +619,9 @@ See [`Array.includes`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/R
 ```rescript
 [1, 2]->Array.includes(1) == true
 [1, 2]->Array.includes(3) == false
+[Float.Constants.nan]->Array.includes(Float.Constants.nan) == true
 
-[{"language": "ReScript"}]->Array.includes({"language": "ReScript"}) == false // false, because of strict equality
+[{"language": "ReScript"}]->Array.includes({"language": "ReScript"}) == false // false, because objects compare by reference
 ```
 */
 @send
@@ -1688,7 +1690,7 @@ See [Array.prototype.entries](https://developer.mozilla.org/en-US/docs/Web/JavaS
 ```rescript
 let array = [5, 6, 7]
 let iterator: IteratorObject.t<(int, int), unit, unknown> = array->Array.entries
-iterator->IteratorObject.toArray == [(0, 5), (1, 6), (2, 7)]
+iterator->IteratorObject.asIterable->Array.fromIterable == [(0, 5), (1, 6), (2, 7)]
 ```
 */
 @send
@@ -1704,7 +1706,7 @@ See [Array.prototype.values](https://developer.mozilla.org/en-US/docs/Web/JavaSc
 ```rescript
 let array = [5, 6, 7]
 let iterator: IteratorObject.t<int, unit, unknown> = array->Array.values
-iterator->IteratorObject.toArray == [5, 6, 7]
+iterator->IteratorObject.asIterable->Array.fromIterable == [5, 6, 7]
 ```
  */
 @send

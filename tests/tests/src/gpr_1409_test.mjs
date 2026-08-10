@@ -20,7 +20,7 @@ function map(f, x) {
 
 function make(foo, param) {
   let tmp = {};
-  let tmp$1 = map(prim => prim.toString(), foo);
+  let tmp$1 = map(prim => String(prim), foo);
   if (tmp$1 !== undefined) {
     tmp.foo = tmp$1;
   }
@@ -31,13 +31,13 @@ let a_ = make(undefined, undefined);
 
 let b_ = make(42, undefined);
 
-Test_utils.eq("File \"gpr_1409_test.res\", line 22, characters 3-10", b_.foo, "42");
+Test_utils.eq("File \"gpr_1409_test.res\", line 24, characters 3-10", b_.foo, "42");
 
 console.log(Object.keys(a_));
 
 console.log(a, b, a_, b_);
 
-Test_utils.eq("File \"gpr_1409_test.res\", line 27, characters 3-10", Object.keys(a_).length, 0);
+Test_utils.eq("File \"gpr_1409_test.res\", line 29, characters 3-10", Object.keys(a_).length, 0);
 
 let test2 = {
   hi: 2
@@ -107,12 +107,12 @@ function keys(xs, ys) {
   return String_set.equal(String_set.of_list(xs), String_set.of_list(Belt_List.fromArray(ys)));
 }
 
-Test_utils.eq("File \"gpr_1409_test.res\", line 65, characters 3-10", keys({
+Test_utils.eq("File \"gpr_1409_test.res\", line 67, characters 3-10", keys({
   hd: "hi",
   tl: /* [] */0
 }, Object.keys(test3(undefined, undefined))), true);
 
-Test_utils.eq("File \"gpr_1409_test.res\", line 67, characters 3-10", keys({
+Test_utils.eq("File \"gpr_1409_test.res\", line 69, characters 3-10", keys({
   hd: "hi",
   tl: {
     hd: "_open",
@@ -120,7 +120,7 @@ Test_utils.eq("File \"gpr_1409_test.res\", line 67, characters 3-10", keys({
   }
 }, Object.keys(test3(2, undefined))), true);
 
-Test_utils.eq("File \"gpr_1409_test.res\", line 69, characters 3-10", keys({
+Test_utils.eq("File \"gpr_1409_test.res\", line 71, characters 3-10", keys({
   hd: "hi",
   tl: {
     hd: "_open",
@@ -132,20 +132,20 @@ Test_utils.eq("File \"gpr_1409_test.res\", line 69, characters 3-10", keys({
 }, Object.keys(test3(2, 2))), true);
 
 Mocha.describe("Gpr_1409_test", () => {
-  Mocha.test("test1", () => Test_utils.eq("File \"gpr_1409_test.res\", line 73, characters 7-14", b_.foo, "42"));
-  Mocha.test("test2", () => Test_utils.eq("File \"gpr_1409_test.res\", line 77, characters 7-14", Object.keys(a_).length, 0));
-  Mocha.test("test3", () => Test_utils.eq("File \"gpr_1409_test.res\", line 81, characters 7-14", keys({
+  Mocha.test("test1", () => Test_utils.eq("File \"gpr_1409_test.res\", line 75, characters 7-14", b_.foo, "42"));
+  Mocha.test("test2", () => Test_utils.eq("File \"gpr_1409_test.res\", line 79, characters 7-14", Object.keys(a_).length, 0));
+  Mocha.test("test3", () => Test_utils.eq("File \"gpr_1409_test.res\", line 83, characters 7-14", keys({
     hd: "hi",
     tl: /* [] */0
   }, Object.keys(test3(undefined, undefined))), true));
-  Mocha.test("test4", () => Test_utils.eq("File \"gpr_1409_test.res\", line 85, characters 7-14", keys({
+  Mocha.test("test4", () => Test_utils.eq("File \"gpr_1409_test.res\", line 87, characters 7-14", keys({
     hd: "hi",
     tl: {
       hd: "_open",
       tl: /* [] */0
     }
   }, Object.keys(test3(2, undefined))), true));
-  Mocha.test("test5", () => Test_utils.eq("File \"gpr_1409_test.res\", line 89, characters 7-14", keys({
+  Mocha.test("test5", () => Test_utils.eq("File \"gpr_1409_test.res\", line 92, characters 6-13", keys({
     hd: "hi",
     tl: {
       hd: "_open",

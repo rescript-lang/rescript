@@ -30,21 +30,21 @@ module UrlPath = {
   }
 
   let parse = (~base: string, route: string): option<t> => {
-    let allPaths = Js.String2.replace(route, base ++ "/", "")->Js.String2.split("/")
+    let allPaths = String.replace(route, base ++ "/", "")->String.split("/")
 
     let total = Belt.Array.length(allPaths)
     if total < 2 {
       None
     } else {
       let version = Belt.Array.getExn(allPaths, 0)
-      let (up, current) = switch Js.Array2.slice(allPaths, ~end_=total, ~start=-2) {
+      let (up, current) = switch Array.slice(allPaths, ~end=total, ~start=-2) {
       | [up, current] =>
         let up = up === version ? None : Some(up)
         (up, Some(current))
       | _ => (None, None)
       }
 
-      let relPaths = Js.Array.slice(allPaths, ~start=1, ~end_=-2)
+      let relPaths = Array.slice(allPaths, ~start=1, ~end=-2)
 
       Some({base: base, relPaths: relPaths, version: version, up: up, current: current})
     }

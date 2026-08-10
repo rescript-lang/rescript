@@ -103,8 +103,8 @@ let prepare_expansion: ((type_expr, type_expr)) => (type_expr, type_expr) = f
 
 type getInitialPropsFn<'a> = {
   "query": dict<string>,
-  "req": Js.Nullable.t<Js.t<'a>>,
-} => Js.Promise.t<Js.t<'a>>
+  "req": nullable<{..}>,
+} => Promise.t<{..}>
 
 // keep parens
 external fromPoly: ([> ] as 'a) => t = "%identity"

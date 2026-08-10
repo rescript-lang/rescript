@@ -23,9 +23,9 @@ if !Fs.existsSync(dirVersion) {
 }
 
 
-let entryPointFiles = ["Belt.res", "Dom.res", "Js.res", "Stdlib.res"]
+let entryPointFiles = ["Belt.res", "Dom.res", "Stdlib.res"]
 
-let hiddenModules = ["Js.Internal", "Js.MapperRt"]
+let hiddenModules = []
 
 type module_ = {
   id: string,

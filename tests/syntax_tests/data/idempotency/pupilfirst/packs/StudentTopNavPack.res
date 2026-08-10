@@ -11,7 +11,7 @@ let decodeProps = json => {
   open Json.Decode
   {
     schoolName: json->field("schoolName", string),
-    logoUrl: json->field("logoUrl", nullable(string))->Js.Null.toOption,
+    logoUrl: json->field("logoUrl", nullable(string))->Null.toOption,
     links: json->field("links", list(NavLink.decode)),
     isLoggedIn: json->field("isLoggedIn", bool),
   }

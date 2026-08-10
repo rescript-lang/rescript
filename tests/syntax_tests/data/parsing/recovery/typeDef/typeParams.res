@@ -1,3 +1,3 @@
 type node('a) = {
-  _value: Js.Nullable.value<'a>
+  _value: Nullable.t<'a>
 }

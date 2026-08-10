@@ -332,25 +332,25 @@ let f = \"switch" => \"switch" + 20
 </div>
 
 let f = (~\"aria-b", ~\"aria-c") => {
-  Js.log(\"aria-b", \"aria-c")
+  Console.log(\"aria-b", \"aria-c")
 }
 
 let f = (~\"aria-b": string, ~\"aria-d" as \"aria-xyz") => {
-  Js.log(\"aria-b", \"aria-xyz")
+  Console.log(\"aria-b", \"aria-xyz")
 }
 
-let f = (type \"😎", x) => Js.log(x)
+let f = (type \"😎", x) => Console.log(x)
 
 let query = (~url, ()): (unit => unit) => {
-  () => Js.log("Queried " ++ url)
+  () => Console.log("Queried " ++ url)
 }
 
 let query = (~url, ()): (unit => unit => unit) => {
-  () => () => Js.log("Queried " ++ url)
+  () => () => Console.log("Queried " ++ url)
 }
 
 let query = (~url, ()): (unit => unit => unit => unit) => {
-  () => () => () => Js.log("Queried " ++ url)
+  () => () => () => Console.log("Queried " ++ url)
 }
 
 let f = a => b => a + b

@@ -24,7 +24,7 @@ let handleClick = (targetId, setStatus, undoSubmissionCB, event) => {
 
     DeleteSubmissionQuery.make(~targetId, ())
     ->GraphqlQuery.sendQuery
-    ->Js.Promise.then_(response => {
+    ->Promise.then(response => {
       if response["undoSubmission"]["success"] {
         undoSubmissionCB()
       } else {
@@ -34,15 +34,15 @@ let handleClick = (targetId, setStatus, undoSubmissionCB, event) => {
         )
         setStatus(_ => Errored)
       }
-      Js.Promise.resolve()
+      Promise.resolve()
     })
-    ->Js.Promise.catch(_ => {
+    ->Promise.catch(_ => {
       Notification.error(
         "Unexpected Error",
         "An unexpected error occured, and our team has been notified about this. Please reload the page before trying again.",
       )
       setStatus(_ => Errored)
-      Js.Promise.resolve()
+      Promise.resolve()
     })
     ->ignore
   } else {

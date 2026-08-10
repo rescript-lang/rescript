@@ -134,7 +134,7 @@ module PasswordReset = {
           Fetch.RequestInit.make(
             ~method_=Post,
             ~body=Fetch.BodyInit.make(
-              Js.Json.stringify(Json.Encode.object_(list{("email", Js.Json.string(email))})),
+              JSON.stringify(Json.Encode.object_(list{("email", JSON.string(email))})),
             ),
             ~headers=Fetch.HeadersInit.make({
               "X-Client-Version": Constants.gitCommitRef,
@@ -151,7 +151,7 @@ module PasswordReset = {
               ~eventName="Reset Password Request Success",
               ~eventProperties={"email": email},
             )
-            Promise.resolved()
+            Promise.resolve()
           } else {
             %Repromise.JsExn({
               let text = Fetch.Response.text(response)
@@ -160,11 +160,11 @@ module PasswordReset = {
                 ~eventName="Reset Password Request Failure",
                 ~eventProperties={"email": email, "error": text},
               )
-              Promise.resolved()
+              Promise.resolve()
             })
           }
           setIsSubmitting(_ => false)
-          Promise.resolved()
+          Promise.resolve()
         })
       })->ignore
     }
@@ -240,7 +240,7 @@ let make = (~onClose) => {
           Analytics.Amplitude.logEvent(~eventName="Login Failed")
           setIsSubmitting(_ => false)
         }
-        Promise.resolved()
+        Promise.resolve()
       })
     }->ignore
   }
@@ -267,12 +267,12 @@ let make = (~onClose) => {
           )
         }
         setIsSubmitting(_ => false)
-        Promise.resolved()
+        Promise.resolve()
       })
     }->ignore
   }
 
-  let usernameRef = React.useRef(Js.Nullable.null)
+  let usernameRef = React.useRef(Nullable.null)
   React.useEffect0(() => {
     open Webapi.Dom
     let usernameInput = Utils.getElementForDomRef(usernameRef)->Element.unsafeAsHtmlElement
@@ -289,7 +289,7 @@ let make = (~onClose) => {
           <div className=Styles.discordLoginRow>
             <button
               onClick={_ => {
-                let state = "login_" ++ string_of_int(Js.Math.random_int(100000, 999999))
+                let state = "login_" ++ string_of_int(Math.Int.random(100000, 999999))
 
                 {
                   open Dom.Storage
@@ -384,7 +384,7 @@ let make = (~onClose) => {
               <div className=Styles.discordLoginRow>
                 <button
                   onClick={_ => {
-                    let state = "register_" ++ string_of_int(Js.Math.random_int(100000, 999999))
+                    let state = "register_" ++ string_of_int(Math.Int.random(100000, 999999))
 
                     {
                       open Dom.Storage
@@ -457,7 +457,7 @@ let make = (~onClose) => {
                     <button
                       type_="submit"
                       className=Styles.submitButton
-                      disabled={Js.String.length(password) < 4 || isSubmitting}>
+                      disabled={String.length(password) < 4 || isSubmitting}>
                       {React.string("Register")}
                     </button>
                   </div>

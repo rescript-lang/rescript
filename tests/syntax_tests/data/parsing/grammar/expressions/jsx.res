@@ -15,8 +15,8 @@ className
   div
 >
 let _ = <div className="menu"></div>
-let _ = <div className="menu" onClick={_ => Js.log("click")}> </div>
-let _ = <div className="menu" onClick={_ => Js.log("click")}></div>
+let _ = <div className="menu" onClick={_ => Console.log("click")}> </div>
+let _ = <div className="menu" onClick={_ => Console.log("click")}></div>
 
 let _ = <Navbar />
 let _ = <Navbar> </Navbar>
@@ -257,7 +257,7 @@ let _ = <div onClick={(event) => handleChange(event)} />
 let _ = <div onClick={(eventWithLongIdent) => handleChange(eventWithLongIdent)} />
 let _ = <div
   onClick={(event) => {
-    Js.log(event)
+    Console.log(event)
     handleChange(event)
   }}
 />
@@ -412,9 +412,9 @@ let _ = <View style=styles["backgroundImageWrapper"]>
 
 // https://github.com/rescript-lang/syntax/issues/113
 // <= should be scanned as <=
-<div>  {Js.log(a <= 10)} </div>
-<div> <div> {Js.log(a <= 10)} </div> </div>
-<div> <div onClick={_ => Js.log(a <= 10) }> <div> {Js.log(a <= 10)} </div> </div> </div>
+<div>  {Console.log(a <= 10)} </div>
+<div> <div> {Console.log(a <= 10)} </div> </div>
+<div> <div onClick={_ => Console.log(a <= 10) }> <div> {Console.log(a <= 10)} </div> </div> </div>
 
 
 let _ = <A x="y" {...str} />

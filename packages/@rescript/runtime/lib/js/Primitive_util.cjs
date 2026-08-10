@@ -11,8 +11,5 @@ function raiseWhenNotFound(x) {
   return x;
 }
 
-let Js;
-
-exports.Js = Js;
 exports.raiseWhenNotFound = raiseWhenNotFound;
 /* No side effect */

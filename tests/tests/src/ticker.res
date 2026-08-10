@@ -8,10 +8,10 @@ module Util = {
       switch x {
       | 0 => l
       | i =>
-        switch Js.String2.lastIndexOfFrom(s, delim, i - 1) {
-        | -1 => list{Js.String2.substrAtMost(s, ~from=0, ~length=i), ...l}
+        switch String.lastIndexOfFrom(s, delim, i - 1) {
+        | -1 => list{String.slice(s, ~start=0, ~end=i), ...l}
         | i' =>
-          let l = list{Js.String2.substrAtMost(s, ~from=i' + 1, ~length=i - i' - 1), ...l}
+          let l = list{String.slice(s, ~start=i' + 1, ~end=i), ...l}
           let l = if i' == 0 {
             list{"", ...l}
           } else {
@@ -21,7 +21,7 @@ module Util = {
         }
       }
 
-    let len = Js.String2.length(s)
+    let len = String.length(s)
     switch len {
     | 0 => list{}
     | _ => loop(list{}, len)
@@ -30,7 +30,7 @@ module Util = {
 
   let string_of_float_option = x =>
     switch x {
-    | Some(x) => Js.Float.toString(x)
+    | Some(x) => Float.toString(x)
     | None => "nan"
     }
 }
@@ -87,17 +87,17 @@ let print_all_composite = all_tickers =>
 
 module Ticker_map = Map.String
 
-/** For each market tickers, this function will compute 
+/** For each market tickers, this function will compute
     the associated list of tickers value to be updated
-    based on the correct graph ordering 
+    based on the correct graph ordering
 
-    We first rank all the tickers with a depth first search 
-    algorithm (lowest rank for the deepest nodes). 
+    We first rank all the tickers with a depth first search
+    algorithm (lowest rank for the deepest nodes).
 
-    We then collect all the tickers which depends on each of the 
-    market tickers and finally we `sort_uniq` that list by rank to 
-    guarantee that a composite ticker is update only once and in 
-    the correct order. 
+    We then collect all the tickers which depends on each of the
+    market tickers and finally we `sort_uniq` that list by rank to
+    guarantee that a composite ticker is update only once and in
+    the correct order.
  */
 let compute_update_sequences = all_tickers => {
   /* Ranking */
@@ -167,7 +167,7 @@ let compute_update_sequences = all_tickers => {
   })
 }
 
-/** Process a new quote for a market ticker 
+/** Process a new quote for a market ticker
  */
 let process_quote = (ticker_map, new_ticker, new_value) => {
   let update_sequence = ticker_map->Ticker_map.getExn(new_ticker)

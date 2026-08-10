@@ -1,12 +1,12 @@
 @deriving(abstract)
 type rec linked_list<'a> = {
   hd: 'a,
-  mutable tl: Js.null<linked_list<'a>>,
+  mutable tl: null<linked_list<'a>>,
 }
 
-let v = linked_list(~hd=3, ~tl=Js.null)
+let v = linked_list(~hd=3, ~tl=Null.null)
 
-tlSet(v, Js.Null.return(v))
+tlSet(v, Null.make(v))
 
 type rec t = (int, int) => bool
 @deriving(abstract)

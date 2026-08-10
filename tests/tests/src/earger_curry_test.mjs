@@ -46,7 +46,7 @@ function f2() {
   let arr = Belt_Array.init(30000000, i => i);
   let b = Belt_Array.map(arr, i => i + i - 1);
   let v = Belt_Array.reduceReverse(b, 0, (prim0, prim1) => prim0 + prim1);
-  console.log(v.toString());
+  console.log(String(v));
 }
 
 f2();

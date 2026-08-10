@@ -4,4 +4,4 @@ module C = {
   })
 }
 )
-Js.log("test"); // Is omitted from the compiled JS
+Console.log("test"); // Is omitted from the compiled JS

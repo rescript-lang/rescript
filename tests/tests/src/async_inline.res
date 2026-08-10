@@ -5,7 +5,7 @@ let inlined = willBeInlined()
 let wrapSomethingAsync: unit => unit = () => {
   let _ = (
     async _ => {
-      let test = await Js.Promise.resolve("Test")
+      let test = await Promise.resolve("Test")
       Console.log(test)
     }
   )(777)
@@ -16,7 +16,7 @@ external ignorePromise: promise<'a> => unit = "%identity"
 let wrapSomethingAsync2 = () =>
   (
     async () => {
-      let test = await Js.Promise.resolve("Test")
+      let test = await Promise.resolve("Test")
       Console.log(test)
     }
   )()->ignorePromise

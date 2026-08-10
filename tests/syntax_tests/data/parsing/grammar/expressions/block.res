@@ -2,14 +2,14 @@ let b = {
   module Array = Belt.Array
   [1, 2]
   ->Array.map(x => x + 1)
-  ->Js.log
+  ->Console.log
 }
 
 let b = {
   open Belt.Array
   [1, 2]
   ->map(x => x + 1)
-  ->Js.log
+  ->Console.log
 }
 
 let b = {
@@ -136,7 +136,7 @@ let reifyStyle = (type a, x: 'a): (style<a>, a) => {
 
   // This not a module application
   (
-    if Js.typeof(x) == "string" {
+    if typeof(x) == "string" {
       Obj.magic(String)
     } else if Internal.instanceOf(x, Internal.canvasGradient) {
       Obj.magic(Gradient)

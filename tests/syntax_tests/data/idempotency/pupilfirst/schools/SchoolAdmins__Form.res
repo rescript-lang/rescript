@@ -23,7 +23,7 @@ let createSchoolAdminQuery = (email, name, setSaving, updateCB) => {
   setSaving(_ => true)
   CreateSchoolAdminQuery.make(~email, ~name, ())
   ->GraphqlQuery.sendQuery
-  ->Js.Promise.then_(response => {
+  ->Promise.then(response => {
     switch response["createSchoolAdmin"]["schoolAdmin"] {
     | Some(schoolAdmin) =>
       updateCB(
@@ -37,7 +37,7 @@ let createSchoolAdminQuery = (email, name, setSaving, updateCB) => {
       Notification.success("Success", "School Admin created successfully.")
     | None => setSaving(_ => false)
     }
-    Js.Promise.resolve()
+    Promise.resolve()
   })
   ->ignore
   ()
@@ -48,14 +48,14 @@ let updateSchoolAdminQuery = (admin, name, setSaving, updateCB) => {
   let id = admin->SchoolAdmin.id
   UpdateSchoolAdminQuery.make(~id, ~name, ())
   ->GraphqlQuery.sendQuery
-  ->Js.Promise.then_(response => {
+  ->Promise.then(response => {
     response["updateSchoolAdmin"]["success"]
       ? {
           updateCB(admin->SchoolAdmin.updateName(name))
           Notification.success("Success", "School Admin updated successfully.")
         }
       : setSaving(_ => false)
-    Js.Promise.resolve()
+    Promise.resolve()
   })
   ->ignore
 }

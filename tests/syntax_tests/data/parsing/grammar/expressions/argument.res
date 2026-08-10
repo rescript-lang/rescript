@@ -5,7 +5,7 @@ let comparisonResult = compare(currentNode.value, ~targetValue)
 callback(firstNode, ~y)
 
 document.createElementWithOptions("div", elementProps(~onClick=_ =>
-    Js.log("hello world")
+    Console.log("hello world")
   ))
 
 

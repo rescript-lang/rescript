@@ -1,5 +1,5 @@
 let f = value =>
-  switch Js.Nullable.isNullable(value) {
+  switch Nullable.isNullable(value) {
   | false => Some((Obj.magic(value): string))
   | true => None
   }

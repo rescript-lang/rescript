@@ -55,7 +55,7 @@ let updateSubmission = (
             ~coachName=currentCoach->Coach.name,
             ~coachAvatarUrl=currentCoach->Coach.avatarUrl,
             ~coachTitle=currentCoach->Coach.title,
-            ~createdAt=Js.Date.make(),
+            ~createdAt=Date.make(),
             ~value=f,
           ),
         ])
@@ -63,7 +63,7 @@ let updateSubmission = (
   }
 
   let (passedAt, evaluatedAt, newGrades) = switch passed {
-  | Some(p) => (p ? Some(Js.Date.make()) : None, Some(Js.Date.make()), grades)
+  | Some(p) => (p ? Some(Date.make()) : None, Some(Date.make()), grades)
   | None => (
       overlaySubmission->OverlaySubmission.passedAt,
       overlaySubmission->OverlaySubmission.evaluatedAt,
@@ -99,7 +99,7 @@ let updateFeedbackArray = (currentCoach, overlaySubmission, newFeedback) =>
           ~coachName=currentCoach->Coach.name,
           ~coachAvatarUrl=currentCoach->Coach.avatarUrl,
           ~coachTitle=currentCoach->Coach.title,
-          ~createdAt=Js.Date.make(),
+          ~createdAt=Date.make(),
           ~value=newFeedback,
         ),
       ])
@@ -115,8 +115,8 @@ let addGrading = (
 ) => {
   let feedback = updateFeedbackArray(currentCoach, overlaySubmission, newFeedback)
 
-  let passedAt = passed ? Some(Js.Date.make()) : None
-  let evaluatedAt = Some(Js.Date.make())
+  let passedAt = passed ? Some(Date.make()) : None
+  let evaluatedAt = Some(Date.make())
 
   OverlaySubmission.make(
     ~id=overlaySubmission->OverlaySubmission.id,

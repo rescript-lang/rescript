@@ -81,7 +81,7 @@ let userHasFriends = (user: option<User.t>) =>
   switch user {
   | Some(me) =>
     switch me.followeeIds {
-    | Some(followeeIds) => Js.Array.length(followeeIds) > 0
+    | Some(followeeIds) => Array.length(followeeIds) > 0
     | None => false
     }
   | None => false

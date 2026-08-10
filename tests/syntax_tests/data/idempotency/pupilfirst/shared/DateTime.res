@@ -1,4 +1,4 @@
-type t = Js.Date.t
+type t = Date.t
 
 @val @module("date-fns")
 external dateFormat: (t, string) => string = "format"
@@ -22,9 +22,9 @@ let format = (f, t) => {
 let stingToFormatedTime = (f, t) => format(f, parse(t))
 
 let randomId = () => {
-  let number = Js.Math.random()->Js.Float.toString
-  let time = Js.Date.now()->Js.Float.toString
-  "I" ++ (time ++ number)->Js.String.replace(".", "-")
+  let number = Math.random()->Float.toString
+  let time = Date.now()->Float.toString
+  "I" ++ (time ++ number)->String.replace(".", "-")
 }
 
 let decode = json => json->Json.Decode.string->DateFns.parseString

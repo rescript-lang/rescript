@@ -1,7 +1,7 @@
 module React = {
   type t
 
-  let render = () => Js.log("foo")
+  let render = () => Console.log("foo")
 }
 
 module Make: () => S = (_: Config, ()) => {}

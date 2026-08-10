@@ -9,5 +9,5 @@ let eToplevel = Etoplevel
 
 let eInside = Inside.Einside
 
-Js.log(eInside)
+Console.log(eInside)
 

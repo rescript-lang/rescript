@@ -1,0 +1,1 @@
+let raiseWhenNotFound: 'a => 'a

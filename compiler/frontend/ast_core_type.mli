@@ -34,7 +34,7 @@ val from_labels : loc:Location.t -> int -> string Asttypes.loc list -> t
 (** return a function type
     [from_labels ~loc tyvars labels]
     example output:
-    {[x:'a0 -> y:'a1 -> < x :'a0 ;y :'a1  > Js.t]}
+    {[x:'a0 -> y:'a1 -> < x :'a0 ;y :'a1 >]}
 *)
 
 val make_obj : loc:Location.t -> Parsetree.object_field list -> t

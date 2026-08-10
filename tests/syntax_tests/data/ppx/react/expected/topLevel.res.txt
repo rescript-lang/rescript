@@ -8,7 +8,7 @@ module V4A = {
   }
 
   let make = ({a, b, _}: props<_, _>) => {
-    Js.log("This function should be named 'TopLevel.react'")
+    Console.log("This function should be named 'TopLevel.react'")
     (ReactDOM.jsx("div", {}): React.element)
   }
   let make = React.component({

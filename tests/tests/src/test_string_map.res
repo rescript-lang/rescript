@@ -15,12 +15,12 @@ include (
       let count = 1000000
       timing("building", ...)(_ =>
         for i in 0 to count {
-          m := m.contents->StringMap.set(Js.Int.toString(i), Js.Int.toString(i))
+          m := m.contents->StringMap.set(Int.toString(i), Int.toString(i))
         }
       )
       timing("querying", ...)(_ =>
         for i in 0 to count {
-          m.contents->StringMap.get(Js.Int.toString(i))->ignore
+          m.contents->StringMap.get(Int.toString(i))->ignore
         }
       )
     }

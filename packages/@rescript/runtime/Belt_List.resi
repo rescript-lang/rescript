@@ -406,7 +406,7 @@ Belt.List.toArray(list{1, 2, 3}) == [1, 2, 3]
 */
 let toArray: t<'a> => array<'a>
 
-/* type json = Js_json.t */
+/* type json = Stdlib_JSON.t */
 
 /* val toJson : 'a t -> ('a -> json  [@bs]) -> json */
 /* val fromJson : json -> (json -> 'a [@bs]) -> 'a t */
@@ -448,7 +448,7 @@ Call `f` on each element of `someList` from the beginning to end.
 ## Examples
 
 ```rescript
-Belt.List.forEach(list{"a", "b", "c"}, x => Js.log("Item: " ++ x))
+Belt.List.forEach(list{"a", "b", "c"}, x => Console.log("Item: " ++ x))
 /*
   prints:
   Item: a
@@ -471,7 +471,7 @@ Function `f` takes two arguments: the index starting from 0 and the element from
 
 ```rescript
 Belt.List.forEachWithIndex(list{"a", "b", "c"}, (index, x) => {
-  Js.log("Item " ++ Belt.Int.toString(index) ++ " is " ++ x)
+  Console.log("Item " ++ Belt.Int.toString(index) ++ " is " ++ x)
 })
 /*
   prints:
@@ -562,7 +562,7 @@ Stops at the length of the shorter list.
 ## Examples
 
 ```rescript
-Belt.List.forEach2(list{"Z", "Y"}, list{"A", "B", "C"}, (x, y) => Js.log2(x, y))
+Belt.List.forEach2(list{"Z", "Y"}, list{"A", "B", "C"}, (x, y) => Console.log2(x, y))
 
 /*
   prints:

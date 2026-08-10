@@ -8,8 +8,8 @@ let decode = json => {
   open Json.Decode
   {
     targetId: json->field("targetId", string),
-    passedAt: json->field("passedAt", nullable(string))->Js.Null.toOption,
-    evaluatorId: json->field("evaluatorId", nullable(string))->Js.Null.toOption,
+    passedAt: json->field("passedAt", nullable(string))->Null.toOption,
+    evaluatorId: json->field("evaluatorId", nullable(string))->Null.toOption,
   }
 }
 
@@ -29,6 +29,6 @@ let hasBeenEvaluated = t =>
 
 let make = (~pending, ~targetId) => {
   targetId: targetId,
-  passedAt: pending ? None : Some(Js.Date.make()->Js.Date.toISOString),
+  passedAt: pending ? None : Some(Date.make()->Date.toISOString),
   evaluatorId: None,
 }

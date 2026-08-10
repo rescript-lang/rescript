@@ -48,7 +48,7 @@ module WithViewer = {
 
   type listInfo = {
     id: string,
-    createTime: Js.Date.t,
+    createTime: Date.t,
     itemIds: array<(int, int)>,
     title: option<string>,
   }
@@ -70,18 +70,17 @@ module WithViewer = {
               title: (json->optional(field("title", string)))
                 ->Belt.Option.flatMap(title => title == "" ? None : Some(title)),
             })
-          }->Js.Array.sortInPlaceWith((a, b) =>
+          }->Array.toSorted((a, b) => Ordering.fromInt(((a, b) =>
             int_of_float({
-              open Js.Date
+              open Date
               getTime(b.createTime) -. getTime(a.createTime)
-            })
-          )
+            }))(a, b)))
           setLists(_ => Some(lists))
           Analytics.Amplitude.logEventWithProperties(
             ~eventName="My Lists Page Viewed",
-            ~eventProperties={"numLists": Js.Array.length(lists)},
+            ~eventProperties={"numLists": Array.length(lists)},
           )
-          Promise.resolved()
+          Promise.resolve()
         })
       })->ignore
       None
@@ -117,7 +116,7 @@ module WithViewer = {
         <div>
           <div className=Styles.body>
             {lists
-            ->Js.Array.map(list =>
+            ->Array.map(list =>
               <Link path={"/l/" ++ list.id} className=Styles.listItem key=list.id>
                 <div className=Styles.listTitleRow>
                   <div className=Styles.listTitle>
@@ -128,7 +127,7 @@ module WithViewer = {
                   </div>
                   <div className=Styles.listNumberItems>
                     {
-                      let numItems = Js.Array.length(list.itemIds)
+                      let numItems = Array.length(list.itemIds)
                       React.string(
                         string_of_int(numItems) ++ (" item" ++ (numItems == 1 ? "" : "s")),
                       )
@@ -137,8 +136,8 @@ module WithViewer = {
                 </div>
                 <div className=Styles.listItemImages>
                   {list.itemIds
-                  ->Js.Array.slice(~start=0, ~end_=8)
-                  ->Js.Array.mapi(((itemId, variant), i) => {
+                  ->Array.slice(~start=0, ~end=8)
+                  ->Array.mapWithIndex(((itemId, variant), i) => {
                     let item = Item.getItem(~itemId)
                     <img
                       src={Item.getImageUrl(~item, ~variant)}
@@ -148,10 +147,9 @@ module WithViewer = {
                   })
                   ->React.array}
                 </div>
-              </Link>
-            )
+              </Link>)
             ->React.array}
-            {if Js.Array.length(lists) == 0 {
+            {if Array.length(lists) == 0 {
               <div className=Styles.noLists>
                 {React.string("You have no custom lists. ")}
                 <Link path="/" onClick={() => QuicklistStore.startList()}>
@@ -162,7 +160,7 @@ module WithViewer = {
               React.null
             }}
           </div>
-          {if Js.Array.length(lists) > 0 {
+          {if Array.length(lists) > 0 {
             <div className=Styles.startListFooter>
               <Link path="/" onClick={() => QuicklistStore.startList()}>
                 {React.string("Create new custom list")}

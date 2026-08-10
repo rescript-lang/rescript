@@ -11,9 +11,9 @@ let () =
     = {|// test file
 
 if true {
-  Js.log("true")
+  Console.log("true")
 } else {
-  Js.log("false")
+  Console.log("false")
 }
 |})
 

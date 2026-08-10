@@ -9,7 +9,7 @@ compilation
 /* first */
 ->Plugin.buildAssets /* first trail */
 /* second */
-->Js.Json.stringify /* second trail */
+->JSON.stringify /* second trail */
 /* last */
 ->Node.Fs.writeFileAsUtf8Sync(path) /* last trail */
 
@@ -37,58 +37,58 @@ let truth =
 
 promise
 // TODO: This comment needs to be here
-->Js.Promise.then(payload => {
-  Js.log2("this payload was received", payload)
-  Js.Promise.resolve(""->Obj.magic)
+->Promise.then(payload => {
+  Console.log2("this payload was received", payload)
+  Promise.resolve(""->Obj.magic)
 })
 
 promise
 /* TODO: This comment needs to be here */
-->Js.Promise.then(payload => {
-  Js.log2("this payload was received", payload)
-  Js.Promise.resolve(""->Obj.magic)
+->Promise.then(payload => {
+  Console.log2("this payload was received", payload)
+  Promise.resolve(""->Obj.magic)
 })
 
 promise
 // comment
-->Js.Promise.then(payload => {
-  Js.Promise.resolve(""->Obj.magic)
+->Promise.then(payload => {
+  Promise.resolve(""->Obj.magic)
 })
 // comment 2
-->Js.Promise.catch(err => {
-  Js.log2("this error was caught", err)
-  Js.Promise.resolve(""->Obj.magic)
+->Promise.catch(err => {
+  Console.log2("this error was caught", err)
+  Promise.resolve(""->Obj.magic)
 })
 
 promise
 /* comment */
-->Js.Promise.then(payload => {
-  Js.Promise.resolve(""->Obj.magic)
+->Promise.then(payload => {
+  Promise.resolve(""->Obj.magic)
 })
 /* comment 2 */
 
 // comment 3
 
 /* comment 4 */
-->Js.Promise.catch(err => {
-  Js.log2("this error was caught", err)
-  Js.Promise.resolve(""->Obj.magic)
+->Promise.catch(err => {
+  Console.log2("this error was caught", err)
+  Promise.resolve(""->Obj.magic)
 })
 
 promise
 // TODO: This comment needs to be here
-->Js.Promise.then(payload => {
-  Js.log2("this payload was received", payload)
-  Js.Promise.resolve(""->Obj.magic)
+->Promise.then(payload => {
+  Console.log2("this payload was received", payload)
+  Promise.resolve(""->Obj.magic)
 })
 
 promise
 // comment
-->Js.Promise.then(payload => {
-  Js.Promise.resolve(""->Obj.magic)
+->Promise.then(payload => {
+  Promise.resolve(""->Obj.magic)
 })
 // comment 2
-->Js.Promise.catch(err => {
-  Js.log2("this error was caught", err)
-  Js.Promise.resolve(""->Obj.magic)
+->Promise.catch(err => {
+  Console.log2("this error was caught", err)
+  Promise.resolve(""->Obj.magic)
 })

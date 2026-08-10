@@ -28,7 +28,7 @@ let is_await_expr (e : Parsetree.expression) =
     true
   | _ -> false
 
-(* Transform `@res.await M` to unpack(@res.await Js.import(module(M: __M0__))) *)
+(* Transform `@res.await M` to unpack(@res.await import(module(M: __M0__))) *)
 let create_await_module_expression ~module_type_lid (e : Parsetree.module_expr)
     =
   let open Ast_helper in

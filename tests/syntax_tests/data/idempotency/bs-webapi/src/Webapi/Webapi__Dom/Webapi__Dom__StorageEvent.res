@@ -8,7 +8,7 @@ include Webapi__Dom__Event.Impl({
 @new external makeWithOptions: (string, {..}) => t = "StorageEvent"
 
 @get external key: t => string = ""
-@get external newValue: t => Js.Nullable.t<string> = ""
-@get external oldValue: t => Js.Nullable.t<string> = ""
+@get external newValue: t => nullable<string> = ""
+@get external oldValue: t => nullable<string> = ""
 @get external storageArea: t => Dom.Storage.t = ""
 @get external url: t => string = ""

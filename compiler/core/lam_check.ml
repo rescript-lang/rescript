@@ -27,19 +27,21 @@
    1. variables are not bound twice
    2. all variables are of right scope
 *)
-let check file lam =
+let check ~file ~pass lam =
   let defined_variables = Hash_set_ident.create 1000 in
   let success = ref true in
   let use (id : Ident.t) =
     if not @@ Hash_set_ident.mem defined_variables id then (
       Format.fprintf Format.err_formatter
-        "\n[SANITY]:%s/%d used before defined in %s@." id.name id.stamp file;
+        "\n[SANITY after %s]:%s/%d used before defined in %s@." pass id.name
+        id.stamp file;
       success := false)
   in
   let def (id : Ident.t) =
     if Hash_set_ident.mem defined_variables id then (
-      Format.fprintf Format.err_formatter "\n[SANITY]:%s/%d bound twice in %s@."
-        id.name id.stamp file;
+      Format.fprintf Format.err_formatter
+        "\n[SANITY after %s]:%s/%d bound twice in %s@." pass id.name id.stamp
+        file;
       success := false)
     else Hash_set_ident.add defined_variables id
   in
@@ -84,7 +86,8 @@ let check file lam =
       Ext_option.iter default (fun x -> check_staticfails x cxt)
     | Lstaticraise (i, args) ->
       if Set_int.mem cxt i then check_list args cxt
-      else failwith ("exit " ^ string_of_int i ^ " unbound")
+      else
+        failwith (Printf.sprintf "exit %d unbound after %s in %s" i pass file)
     | Lstaticcatch (e1, (j, _vars), e2) ->
       check_staticfails e1 (Set_int.add cxt j);
       check_staticfails e2 cxt

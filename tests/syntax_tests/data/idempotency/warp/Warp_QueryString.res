@@ -12,7 +12,7 @@ let set = (client, queryString) => {
   ...client,
   queryString: Belt.List.map(queryString, ((key, value)) => key ++ ("=" ++ value))
   ->Belt.List.toArray
-  ->Js.Array2.joinWith("&")
+  ->Array.joinUnsafe("&")
   ->Some,
 }
 
@@ -21,14 +21,14 @@ let remove = (client, keyToRemove) => {
   queryString: switch client.queryString {
   | Some(queryString) =>
     queryString
-    ->Js.String2.split("&")
+    ->String.split("&")
     ->Belt.Array.keep(item =>
-      switch item->Js.String2.split("=") {
+      switch item->String.split("=") {
       | [key, _value] => key !== keyToRemove
       | _ => true
       }
     )
-    ->Js.Array2.joinWith("&")
+    ->Array.joinUnsafe("&")
     ->Some
   | None => None
   },

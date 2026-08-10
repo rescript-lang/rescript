@@ -64,7 +64,7 @@
   Looks like there might be an expression missing here
 
 let findThreadByIdLinearScan [arity:2]~threads  ~id  =
-  ((Js.Array2.findi ThreadsModel.threads
+  ((Array.findWithIndex ThreadsModel.threads
       (fun [arity:2]thread ->
          fun i ->
            ((let thisId =
@@ -73,7 +73,7 @@ let findThreadByIdLinearScan [arity:2]~threads  ~id  =
                    otherPersonIDWhichIsAlsoThreadID
                | Group { id } -> id
                | Unknown { id } ->
-                   (unknown.id -> Js.String.make) -> FBID.ofStringUnsafe in
+                   (unknown.id -> String.make) -> FBID.ofStringUnsafe in
              thisId === id)
            [@res.braces ])))
   [@res.braces ])

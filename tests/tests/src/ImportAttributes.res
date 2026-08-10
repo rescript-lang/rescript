@@ -1,5 +1,5 @@
 @module({from: "./myJson.json", with: {type_: "json", \"some-identifier": "yep"}})
-external myJson: Js.Json.t = "default"
+external myJson: JSON.t = "default"
 
 Console.log(myJson)
 

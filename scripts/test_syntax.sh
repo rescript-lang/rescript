@@ -23,6 +23,12 @@ function maybeWait {
 
 pushd tests
 
+legacyJsReferences=$(find syntax_tests/data syntax_benchmarks/data \( -name "*.res" -o -name "*.resi" \) -exec grep -nHE '(^|[^[:alnum:]_])Js\.' {} + || true)
+if [[ $legacyJsReferences != "" ]]; then
+  printf "Legacy Js. references remain in syntax fixtures:\n%s\n" "$legacyJsReferences"
+  exit 1
+fi
+
 rm -rf temp
 mkdir temp
 
@@ -65,7 +71,7 @@ diff=$(cat temp/diff.txt)
 if [[ $diff = "" ]]; then
   printf "${successGreen}✅ No unstaged tests difference.${reset}\n"
 else
-  printf "${warningYellow}⚠️ There are unstaged differences in syntax_tests/data/! Did you break a test?\n${diff}\n${reset}"
+  printf "${warningYellow}⚠️ There are unstaged differences in syntax_tests/data/! Did you break a test?\n%s\n${reset}" "$diff"
   rm -r temp/
   exit 1
 fi

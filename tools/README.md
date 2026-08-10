@@ -41,6 +41,6 @@ Add to `bs-dev-dependencies`:
 ```
 
 ```rescript
-// Read JSON file and parse with `Js.Json.parseExn`
+// Read JSON file and parse with `JSON.parseOrThrow`
 json->RescriptTools.Docgen.decodeFromJson
 ```

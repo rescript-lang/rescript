@@ -89,10 +89,10 @@ module TargetDetailsQuery = %graphql(`
 let loadTargetDetails = (targetId, send) =>
   TargetDetailsQuery.make(~targetId, ())
   ->GraphqlQuery.sendQuery
-  ->Js.Promise.then_(result => {
+  ->Promise.then(result => {
     let targetDetails = TargetDetails.makeFromJs(result["targetDetails"])
     send(SaveTargetDetails(targetDetails))
-    Js.Promise.resolve()
+    Promise.resolve()
   })
   ->ignore
 
@@ -182,13 +182,13 @@ let reducer = (state, action) =>
     }
   | UpdateTargetRole(role) => {...state, role: role, dirty: true}
   | AddQuizQuestion =>
-    let quiz = Array.append(state.quiz, [QuizQuestion.empty(Js.Date.now()->Js.Float.toString)])
+    let quiz = Array.append(state.quiz, [QuizQuestion.empty(Date.now()->Float.toString)])
     {...state, quiz: quiz, dirty: true}
   | UpdateQuizQuestion(id, quizQuestion) =>
     let quiz = state.quiz->Array.map(q => QuizQuestion.id(q) == id ? quizQuestion : q)
     {...state, quiz: quiz, dirty: true}
   | RemoveQuizQuestion(id) =>
-    let quiz = state.quiz->Js.Array.filter(q => QuizQuestion.id(q) != id)
+    let quiz = state.quiz->Array.filter(q => QuizQuestion.id(q) != id)
     {...state, quiz: quiz, dirty: true}
   | UpdateVisibility(visibility) => {...state, visibility: visibility, dirty: true}
   | UpdateChecklistItem(indexToChange, newItem) => {
@@ -262,13 +262,13 @@ let eligiblePrerequisiteTargets = (targetId, targets, targetGroups) => {
 let setPrerequisiteSearch = (send, value) => send(UpdatePrerequisiteSearchInput(value))
 
 let selectPrerequisiteTarget = (send, state, target) => {
-  let updatedPrerequisites = state.prerequisiteTargets->Js.Array.concat([target->Target.id])
+  let updatedPrerequisites = state.prerequisiteTargets->Array.concat([target->Target.id])
   send(UpdatePrerequisiteTargets(updatedPrerequisites))
 }
 
 let deSelectPrerequisiteTarget = (send, state, target) => {
   let updatedPrerequisites =
-    state.prerequisiteTargets->Js.Array.filter(targetId => targetId != Target.id(target))
+    state.prerequisiteTargets->Array.filter(targetId => targetId != Target.id(target))
   send(UpdatePrerequisiteTargets(updatedPrerequisites))
 }
 
@@ -283,13 +283,11 @@ module MultiSelectForPrerequisiteTargets = MultiselectInline.Make(SelectablePrer
 
 let prerequisiteTargetEditor = (send, eligiblePrerequisiteTargets, state) => {
   let selected =
-    eligiblePrerequisiteTargets->Js.Array.filter(target =>
-      state.prerequisiteTargets->Array.mem(Target.id(target))
-    )
+    eligiblePrerequisiteTargets->Array.filter(target =>
+      state.prerequisiteTargets->Array.mem(Target.id(target)))
   let unselected =
-    eligiblePrerequisiteTargets->Js.Array.filter(target =>
-      !(state.prerequisiteTargets->Array.mem(Target.id(target)))
-    )
+    eligiblePrerequisiteTargets->Array.filter(target =>
+      !(state.prerequisiteTargets->Array.mem(Target.id(target))))
   eligiblePrerequisiteTargets->ArrayUtils.isNotEmpty
     ? <div className="mb-6">
         <label
@@ -340,15 +338,14 @@ let setEvaluationCriteriaSearch = (send, value) => send(UpdateEvaluationCriteria
 
 let selectEvaluationCriterion = (send, state, evaluationCriterion) => {
   let updatedEvaluationCriteria =
-    state.evaluationCriteria->Js.Array.concat([evaluationCriterion->EvaluationCriteria.id])
+    state.evaluationCriteria->Array.concat([evaluationCriterion->EvaluationCriteria.id])
   send(UpdateEvaluationCriteria(updatedEvaluationCriteria))
 }
 
 let deSelectEvaluationCriterion = (send, state, evaluationCriterion) => {
   let updatedEvaluationCriteria =
-    state.evaluationCriteria->Js.Array.filter(ecId =>
-      ecId != EvaluationCriteria.id(evaluationCriterion)
-    )
+    state.evaluationCriteria->Array.filter(ecId =>
+      ecId != EvaluationCriteria.id(evaluationCriterion))
   send(UpdateEvaluationCriteria(updatedEvaluationCriteria))
 }
 module SelectableEvaluationCriteria = {
@@ -365,11 +362,11 @@ module MultiSelectForEvaluationCriteria = MultiselectInline.Make(SelectableEvalu
 let evaluationCriteriaEditor = (state, evaluationCriteria, send) => {
   let selected =
     evaluationCriteria
-    ->Js.Array.filter(ec => state.evaluationCriteria->Array.mem(EvaluationCriteria.id(ec)))
+    ->Array.filter(ec => state.evaluationCriteria->Array.mem(EvaluationCriteria.id(ec)))
     ->Array.map(ec => SelectableEvaluationCriteria.make(ec))
   let unselected =
     evaluationCriteria
-    ->Js.Array.filter(ec => !(state.evaluationCriteria->Array.mem(EvaluationCriteria.id(ec))))
+    ->Array.filter(ec => !(state.evaluationCriteria->Array.mem(EvaluationCriteria.id(ec))))
     ->Array.map(ec => SelectableEvaluationCriteria.make(ec))
   <div id="evaluation_criteria" className="mb-6">
     <label
@@ -504,12 +501,12 @@ let methodOfCompletionSelector = (state, send) =>
 
 let isValidQuiz = quiz =>
   quiz
-  ->Js.Array.filter(quizQuestion => quizQuestion->QuizQuestion.isValidQuizQuestion != true)
+  ->Array.filter(quizQuestion => quizQuestion->QuizQuestion.isValidQuizQuestion != true)
   ->ArrayUtils.isEmpty
 
 let isValidChecklist = checklist =>
   checklist
-  ->Js.Array.filter(checklistItem => checklistItem->ChecklistItem.isValidChecklistItem != true)
+  ->Array.filter(checklistItem => checklistItem->ChecklistItem.isValidChecklistItem != true)
   ->ArrayUtils.isEmpty
 
 let addQuizQuestion = (send, event) => {
@@ -557,7 +554,7 @@ let quizEditor = (state, send) =>
   </div>
 
 let doRequiredStepsHaveUniqueTitles = checklist => {
-  let requiredSteps = checklist->Js.Array.filter(item => !(item->ChecklistItem.optional))
+  let requiredSteps = checklist->Array.filter(item => !(item->ChecklistItem.optional))
 
   requiredSteps
   ->Array.map(ChecklistItem.title)
@@ -605,7 +602,7 @@ let updateTarget = (target, state, send, updateTargetCB, event) => {
   let visibilityAsString = state.visibility->TargetDetails.visibilityAsString
   let quizAsJs =
     state.quiz
-    ->Js.Array.filter(question => QuizQuestion.isValidQuizQuestion(question))
+    ->Array.filter(question => QuizQuestion.isValidQuizQuestion(question))
     ->QuizQuestion.quizAsJsObject
 
   let (quiz, evaluationCriteria, linkToComplete, checklist) = switch state.methodOfCompletion {
@@ -644,14 +641,14 @@ let updateTarget = (target, state, send, updateTargetCB, event) => {
     (),
   )
   ->GraphqlQuery.sendQuery
-  ->Js.Promise.then_(result => {
+  ->Promise.then(result => {
     result["updateTarget"]["success"]
       ? {
           send(ResetEditor)
           updateTargetCB(newTarget)
         }
       : send(UpdateSaving)
-    Js.Promise.resolve()
+    Promise.resolve()
   })
   ->ignore
   ()
@@ -771,7 +768,7 @@ let make = (
                     {
                       let allowFileKind =
                         state.checklist
-                        ->Js.Array.filter(item => item->ChecklistItem.isFilesKind)
+                        ->Array.filter(item => item->ChecklistItem.isFilesKind)
                         ->ArrayUtils.isEmpty
                       state.checklist
                       ->Array.mapi((index, checklistItem) => {

@@ -6,7 +6,7 @@ type connectorObj = {
 }
 
 @module("./bindings/web3-react/connectors")
-external connectors: Js.Array.t<connectorObj> = "default"
+external connectors: array<connectorObj> = "default"
 
 @react.component
 let make = () => {
