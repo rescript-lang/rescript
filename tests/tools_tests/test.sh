@@ -1,10 +1,14 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
 shopt -s nullglob
 
 for file in src/*.{res,resi}; do
   output="$(dirname $file)/expected/$(basename $file).json"
   ../../_build/install/default/bin/rescript-tools doc $file > $output
   # # CI. We use LF, and the CI OCaml fork prints CRLF. Convert.
-  if [ "$RUNNER_OS" == "Windows" ]; then
+  if [ "${RUNNER_OS:-}" == "Windows" ]; then
     perl -pi -e 's/\r\n/\n/g' -- $output
   fi
 done
@@ -12,7 +16,7 @@ done
 for file in ppx/*.res; do
   output="src/expected/$(basename $file).jsout"
   ../../cli/bsc.js -ppx "../../_build/install/default/bin/rescript-tools ppx" $file > $output
-  if [ "$RUNNER_OS" == "Windows" ]; then
+  if [ "${RUNNER_OS:-}" == "Windows" ]; then
     perl -pi -e 's/\r\n/\n/g' -- $output
   fi
 done
@@ -20,8 +24,15 @@ done
 # Test format-codeblocks command
 for file in src/docstrings-format/*.{res,resi,md}; do
   output="src/expected/$(basename $file).expected"
-  ../../_build/install/default/bin/rescript-tools format-codeblocks "$file" --stdout > $output
-  if [ "$RUNNER_OS" == "Windows" ]; then
+  if [ "$(basename "$file")" == "FormatDocstringsTestError.res" ]; then
+    if ../../_build/install/default/bin/rescript-tools format-codeblocks "$file" --stdout > "$output" 2>/dev/null; then
+      echo "Expected format-codeblocks to fail for $file" >&2
+      exit 1
+    fi
+  else
+    ../../_build/install/default/bin/rescript-tools format-codeblocks "$file" --stdout > "$output"
+  fi
+  if [ "${RUNNER_OS:-}" == "Windows" ]; then
     perl -pi -e 's/\r\n/\n/g' -- $output
   fi
 done
@@ -29,8 +40,15 @@ done
 # Test extract-codeblocks command
 for file in src/docstrings-format/*.{res,resi,md}; do
   output="src/expected/$(basename $file).extracted.json.expected"
-  ../../_build/install/default/bin/rescript-tools extract-codeblocks "$file" --transform-assert-equal > $output
-  if [ "$RUNNER_OS" == "Windows" ]; then
+  if [ "$(basename "$file")" == "FormatDocstringsTestError.res" ]; then
+    if ../../_build/install/default/bin/rescript-tools extract-codeblocks "$file" --transform-assert-equal > "$output" 2>/dev/null; then
+      echo "Expected extract-codeblocks to fail for $file" >&2
+      exit 1
+    fi
+  else
+    ../../_build/install/default/bin/rescript-tools extract-codeblocks "$file" --transform-assert-equal > "$output"
+  fi
+  if [ "${RUNNER_OS:-}" == "Windows" ]; then
     perl -pi -e 's/\r\n/\n/g' -- $output
   fi
 done
@@ -39,7 +57,7 @@ done
 for file in src/migrate/*.{res,resi}; do
   output="src/expected/$(basename $file).expected"
   ../../_build/install/default/bin/rescript-tools migrate "$file" --stdout > $output
-  if [ "$RUNNER_OS" == "Windows" ]; then
+  if [ "${RUNNER_OS:-}" == "Windows" ]; then
     perl -pi -e 's/\r\n/\n/g' -- $output
   fi
 done
