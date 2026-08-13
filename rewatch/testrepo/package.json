@@ -24,7 +24,7 @@
     ]
   },
   "dependencies": {
-    "rescript": "12.0.0-beta.1"
+    "rescript": "12.0.0"
   },
   "scripts": {
     "build": "../target/release/rescript build .",
