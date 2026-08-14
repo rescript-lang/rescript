@@ -274,7 +274,6 @@ val free_variables : ?env:Env.t -> type_expr -> type_expr list
 val closed_type_decl : type_declaration -> type_expr option
 val closed_extension_constructor : extension_constructor -> type_expr option
 val unalias : type_expr -> type_expr
-val arity : type_expr -> int
 (* Return the arity (as for curried functions) of the given type. *)
 
 val get_current_level : unit -> int

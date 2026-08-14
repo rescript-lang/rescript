@@ -159,6 +159,11 @@ completely dead and have been retained as named variants:
   `check_value_name` during definition; `let \"->" = 1` is rejected with
   a clean diagnostic (`illegal_value_name.res`). The parser does **not**
   reject `\"->"`.
+- `typecore.Too_many_arguments` — **removed**: with structural n-ary
+  arrows the expected type is committed to an arrow of the function
+  literal's shape up front, so every path that used to reach this error
+  now surfaces as a regular type clash or `Uncurried_arity_mismatch`
+  (`too_many_arguments.res` exercises the latter).
 - `typedecl.Type_clash` — retained but **appears dead**: its only raise
   site (`update_type`) unifies `t<fresh params>` against `t`'s own
   manifest — a type against an alpha-renamed copy of itself — which cannot
@@ -209,7 +214,6 @@ Source: [typecore.ml:27](../compiler/ml/typecore.ml).
 | `Private_type` | ✓ | `private_type_construction.res` | |
 | `Private_label` | ✓ | `private_label.res` | |
 | `Not_subtype` | ✓ | `subtype_*.res`, `coercion_arity_mismatch.res`, `dict_show_no_coercion.res`, etc. | |
-| `Too_many_arguments` | ✓ | `too_many_arguments.res`, `moreArguments*.res` | |
 | `Abstract_wrong_label` | ✓ | `abstract_wrong_label.res` | Multi-arg function literal where an inner argument label doesn't match the expected arrow's label (e.g. `let f: (~a, ~b) => int = (~a, ~c) => …`). |
 | `Scoping_let_module` | ✓ | `scoping_let_module.res` | |
 | `Not_a_variant_type` | ✓ | `variant_spread_pattern_not_a_variant.res` | Pattern-level variant spread of a non-variant type. |

@@ -59,14 +59,13 @@ let handle_tdcls_in_sigi (self : Bs_ast_mapper.mapper)
            (Incl.mk ~loc
               (Mty.typeof_ ~loc
                  (Mod.constraint_ ~loc
-                    (Mod.structure ~loc
-                       [Ast_compatible.rec_type_str ~loc rf new_tdcls_new_attrs])
+                    (Mod.structure ~loc [Str.type_ ~loc rf new_tdcls_new_attrs])
                     (Mty.signature ~loc []))))
         :: (* include module type of struct [processed_code for checking like invariance ]end *)
            self.signature self codes)
     else
       Ast_signature.fuse_all ~loc
-        (Ast_compatible.rec_type_sig ~loc rf new_tdcls_new_attrs
+        (Sig.type_ ~loc rf new_tdcls_new_attrs
         :: self.signature self (Ast_derive.gen_signature tdcls actions rf))
   | {bs_deriving = None}, _ ->
     Bs_ast_mapper.default_mapper.signature_item self sigi
@@ -81,7 +80,7 @@ let handle_tdcls_in_stru (self : Bs_ast_mapper.mapper)
     let loc = str.pstr_loc in
     let original_tdcls_new_attrs = new_tdcls tdcls new_attrs in
     let new_str : Parsetree.structure_item =
-      Ast_compatible.rec_type_str ~loc rf
+      Str.type_ ~loc rf
         (self.type_declaration_list self original_tdcls_new_attrs)
     in
     let kind = Ast_derive_abstract.is_abstract actions in

@@ -2193,9 +2193,6 @@ and unify3 env t1 t1' t2 t2' =
   | Tfield _, Tfield _ ->
     (* special case for GADTs *)
     unify_fields env t1' t2'
-  | Tconstr (Pident {name = "function$"}, [t_fun], _), Tarrow _ ->
-    (* subtype: an uncurried function is cast to a curried one *)
-    unify2 env t_fun t2
   | _ -> (
     (match !umode with
     | Expression ->
@@ -3929,12 +3926,6 @@ let unalias ty =
     newty2 ty.level (Tvariant {row with row_more = newty2 more.level more.desc})
   | Tobject (ty, nm) -> newty2 ty.level (Tobject (unalias_object ty, nm))
   | _ -> newty2 ty.level ty.desc
-
-(* Return the arity (as for curried functions) of the given type. *)
-let rec arity ty =
-  match (repr ty).desc with
-  | Tarrow (params, ret) -> List.length params + arity ret
-  | _ -> 0
 
 (* Check whether an abbreviation expands to itself. *)
 let cyclic_abbrev env id ty =
