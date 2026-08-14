@@ -316,33 +316,10 @@ let rec collect_list_exprs acc expr =
 (* TODO: use ParsetreeViewer *)
 let arrow_type ct =
   let open Parsetree in
-  let rec process attrs_before acc typ =
-    match typ with
-    | {
-     ptyp_desc = Ptyp_arrow {arg = {lbl = Nolabel} as arg; ret};
-     ptyp_attributes = [];
-    } ->
-      let arg = ([], arg.lbl, arg.typ) in
-      process attrs_before (arg :: acc) ret
-    | {
-     ptyp_desc = Ptyp_arrow {arg = {lbl = Nolabel} as arg; ret};
-     ptyp_attributes = [({txt = "bs"}, _)] as attrs;
-    } ->
-      let arg = (attrs, arg.lbl, arg.typ) in
-      process attrs_before (arg :: acc) ret
-    | {ptyp_desc = Ptyp_arrow {arg = {lbl = Nolabel}}} as return_type ->
-      let args = List.rev acc in
-      (attrs_before, args, return_type)
-    | {ptyp_desc = Ptyp_arrow {arg; ret}; ptyp_attributes = attrs} ->
-      let arg = (attrs, arg.lbl, arg.typ) in
-      process attrs_before (arg :: acc) ret
-    | typ -> (attrs_before, List.rev acc, typ)
-  in
   match ct with
-  | {ptyp_desc = Ptyp_arrow {arg = {lbl = Nolabel}}; ptyp_attributes = attrs} as
-    typ ->
-    process attrs [] {typ with ptyp_attributes = []}
-  | typ -> process [] [] typ
+  | {ptyp_desc = Ptyp_arrow {params; ret}; ptyp_attributes = attrs} ->
+    (attrs, params |> List.map (fun (p : arg) -> (p.attrs, p.lbl, p.typ)), ret)
+  | typ -> ([], [], typ)
 
 (* TODO: avoiding the dependency on ParsetreeViewer here, is this a good idea? *)
 let mod_expr_apply mod_expr =
@@ -408,63 +385,24 @@ let fun_expr expr =
    * | NewType(...)
    * This complicates printing with an extra variant/boxing/allocation for a code-path
    * that is not often used. Lets just keep it simple for now *)
-  let rec collect attrs_before acc expr =
-    match expr with
-    | {
-     pexp_desc =
-       Pexp_fun
-         {
-           arg_label = lbl;
-           default = default_expr;
-           lhs = pattern;
-           rhs = return_expr;
-         };
-     pexp_attributes = [];
-    } ->
-      let parameter = ([], lbl, default_expr, pattern) in
-      collect attrs_before (parameter :: acc) return_expr
-    | {pexp_desc = Pexp_newtype (string_loc, rest); pexp_attributes = attrs} ->
-      let var, return_expr = collect_new_types [string_loc] rest in
-      let parameter =
-        ( attrs,
-          Asttypes.Nolabel,
-          None,
-          Ast_helper.Pat.var ~loc:string_loc.loc var )
-      in
-      collect attrs_before (parameter :: acc) return_expr
-    | {
-     pexp_desc =
-       Pexp_fun
-         {
-           arg_label = lbl;
-           default = default_expr;
-           lhs = pattern;
-           rhs = return_expr;
-         };
-     pexp_attributes = [({txt = "bs"}, _)] as attrs;
-    } ->
-      let parameter = (attrs, lbl, default_expr, pattern) in
-      collect attrs_before (parameter :: acc) return_expr
-    | {
-     pexp_desc =
-       Pexp_fun
-         {
-           arg_label = (Labelled _ | Optional _) as lbl;
-           default = default_expr;
-           lhs = pattern;
-           rhs = return_expr;
-         };
-     pexp_attributes = attrs;
-    } ->
-      let parameter = (attrs, lbl, default_expr, pattern) in
-      collect attrs_before (parameter :: acc) return_expr
-    | expr -> (attrs_before, List.rev acc, expr)
+  let params_of params =
+    params
+    |> List.map (fun {p_attrs; p_lbl; p_default; p_pat} ->
+           (p_attrs, p_lbl, p_default, p_pat))
   in
   match expr with
-  | {pexp_desc = Pexp_fun {arg_label = Nolabel}; pexp_attributes = attrs} as
-    expr ->
-    collect attrs [] {expr with pexp_attributes = []}
-  | expr -> collect [] [] expr
+  | {pexp_desc = Pexp_newtype (string_loc, rest); pexp_attributes = attrs} -> (
+    let var, return_expr = collect_new_types [string_loc] rest in
+    let newtype_param =
+      (attrs, Asttypes.Nolabel, None, Ast_helper.Pat.var ~loc:string_loc.loc var)
+    in
+    match return_expr with
+    | {pexp_desc = Pexp_fun {params; body}; pexp_attributes = []} ->
+      ([], newtype_param :: params_of params, body)
+    | return_expr -> ([], [newtype_param], return_expr))
+  | {pexp_desc = Pexp_fun {params; body}; pexp_attributes = attrs} ->
+    (attrs, params_of params, body)
+  | expr -> ([], [], expr)
 
 let rec is_block_expr expr =
   let open Parsetree in

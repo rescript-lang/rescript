@@ -558,17 +558,24 @@ module Sexp_ast = struct
             Sexp.list (map_empty ~f:value_binding vbs);
             expression expr;
           ]
-      | Pexp_fun
-          {arg_label = arg_lbl; default = expr_opt; lhs = pat; rhs = expr} ->
+      | Pexp_fun {params; body} ->
         Sexp.list
           [
             Sexp.atom "Pexp_fun";
-            arg_label_loc arg_lbl;
-            (match expr_opt with
-            | None -> Sexp.atom "None"
-            | Some expr -> Sexp.list [Sexp.atom "Some"; expression expr]);
-            pattern pat;
-            expression expr;
+            Sexp.list
+              (map_empty
+                 ~f:(fun {p_lbl; p_default; p_pat} ->
+                   Sexp.list
+                     [
+                       arg_label_loc p_lbl;
+                       (match p_default with
+                       | None -> Sexp.atom "None"
+                       | Some expr ->
+                         Sexp.list [Sexp.atom "Some"; expression expr]);
+                       pattern p_pat;
+                     ])
+                 params);
+            expression body;
           ]
       | Pexp_apply {funct = expr; args} ->
         Sexp.list
@@ -897,12 +904,15 @@ module Sexp_ast = struct
       match typexpr.ptyp_desc with
       | Ptyp_any -> Sexp.atom "Ptyp_any"
       | Ptyp_var var -> Sexp.list [Sexp.atom "Ptyp_var"; string var]
-      | Ptyp_arrow {arg; ret} ->
+      | Ptyp_arrow {params; ret} ->
         Sexp.list
           [
             Sexp.atom "Ptyp_arrow";
-            arg_label_loc arg.lbl;
-            core_type arg.typ;
+            Sexp.list
+              (map_empty
+                 ~f:(fun (p : Parsetree.arg) ->
+                   Sexp.list [arg_label_loc p.lbl; core_type p.typ])
+                 params);
             core_type ret;
           ]
       | Ptyp_tuple types ->

@@ -593,7 +593,9 @@ let process_obj (loc : Location.t) (st : external_desc) (prim_name : string)
     in
 
     ( List.length args,
-      Ast_helper.Typ.arrows ~loc args result,
+      (match args with
+      | [] -> result
+      | _ -> Ast_helper.Typ.arrow ~loc args result),
       External_ffi_types.ffi_obj_create arg_kinds )
   | _ -> Location.raise_errorf ~loc "Attribute found that conflicts with %@obj"
 
@@ -906,14 +908,6 @@ let handle_attributes (loc : Bs_loc.t) (type_annotation : Parsetree.core_type)
     (prim_attributes : Ast_attributes.t) (prim_name : string) :
     Parsetree.core_type * External_ffi_types.t * Parsetree.attributes * bool =
   let prim_name_with_source = {name = prim_name; source = External} in
-  let type_annotation, build_uncurried_type =
-    match type_annotation with
-    | {ptyp_desc = Ptyp_arrow {arity = Some _}} ->
-      ( type_annotation,
-        fun ~arity (x : Parsetree.core_type) ->
-          Ast_uncurried.uncurried_type ~arity x )
-    | _ -> (type_annotation, fun ~arity:_ x -> x)
-  in
   let result_type, arg_types_ty =
     (* Note this assumes external type is syntatic (no abstraction)*)
     Ast_core_type.list_of_arrow type_annotation
@@ -925,10 +919,10 @@ let handle_attributes (loc : Bs_loc.t) (type_annotation : Parsetree.core_type)
   in
   if external_desc.mk_obj then
     (* warn unused attributes here ? *)
-    let arity, new_type, spec =
+    let _arity, new_type, spec =
       process_obj loc external_desc prim_name arg_types_ty result_type
     in
-    (build_uncurried_type ~arity new_type, spec, unused_attrs, false)
+    (new_type, spec, unused_attrs, false)
   else
     let splice = external_desc.splice in
     let arg_type_specs, args, arg_type_specs_length =
@@ -1016,7 +1010,9 @@ let handle_attributes (loc : Bs_loc.t) (type_annotation : Parsetree.core_type)
     let return_wrapper =
       check_return_wrapper loc external_desc.return_wrapper result_type
     in
-    ( Ast_helper.Typ.arrows ~loc args result_type,
+    ( (match args with
+      | [] -> result_type
+      | _ -> Ast_helper.Typ.arrow ~loc args result_type),
       External_ffi_types.ffi_bs arg_type_specs return_wrapper ffi,
       unused_attrs,
       relative )

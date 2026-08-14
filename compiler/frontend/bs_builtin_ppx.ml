@@ -95,33 +95,29 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
   | Pexp_newtype (s, body) ->
     let res = self.expr self body in
     {e with pexp_desc = Pexp_newtype (s, res)}
-  | Pexp_fun {arg_label = label; lhs = pat; rhs = body; async; arity; default}
-    -> (
+  | Pexp_fun {params; body; async} -> (
     match Ast_attributes.process_attributes_rev e.pexp_attributes with
     | Nothing, _ ->
       (* Handle @async x => y => ... is in async context *)
       async_context := (old_in_function_def && !async_context) || async;
-      (* The default mapper would descend into nested [Pexp_fun] nodes (used for
-         additional parameters) before visiting the function body. Those
-         nested calls see [async = false] and would reset [async_context] to
-         false, so by the time we translate the body we incorrectly think we are
-         outside of an async function. This shows up with function-level
-         [@directive] (GH #7974): the directive attribute lives on the outer
-         async lambda, while extra parameters are represented as nested
-         functions. Rebuild the function manually to keep the async flag alive
-         until the body is processed. *)
       let attrs = self.attributes self e.pexp_attributes in
-      let default = Option.map (self.expr self) default in
-      let lhs = self.pat self pat in
+      let params =
+        Ext_list.map params (fun (p : Parsetree.fun_param) ->
+            {
+              p with
+              p_default = Option.map (self.expr self) p.p_default;
+              p_pat = self.pat self p.p_pat;
+            })
+      in
       let saved_in_function_def = !in_function_def in
       in_function_def := true;
-      (* Keep reporting nested parameters as part of a function definition so
-         they propagate async context exactly like the original mapper. *)
-      let rhs = self.expr self body in
+      (* Keep reporting the body as part of a function definition so nested
+         functions propagate async context exactly like the legacy curried
+         mapper did (GH #7974). *)
+      let body = self.expr self body in
       in_function_def := saved_in_function_def;
       let mapped =
-        Ast_helper.Exp.fun_ ~loc:e.pexp_loc ~attrs ~arity ~async label default
-          lhs rhs
+        Ast_helper.Exp.fun_ ~loc:e.pexp_loc ~attrs ~async params body
       in
       Ast_async.make_function_async ~async mapped
     | Meth_callback _, pexp_attributes ->
@@ -130,8 +126,7 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
       {
         e with
         pexp_desc =
-          Ast_uncurry_gen.to_method_callback ~async e.pexp_loc self label pat
-            body;
+          Ast_uncurry_gen.to_method_callback ~async e.pexp_loc self params body;
         pexp_attributes;
       })
   | Pexp_apply _ -> Ast_exp_apply.app_exp_mapper e self
@@ -737,7 +732,7 @@ let rec structure_mapper ~await_context (self : mapper) (stru : Ast_structure.t)
             | Pexp_ifthenelse (_, then_expr, Some else_expr) ->
               aux then_expr @ aux else_expr
             | Pexp_construct (_, Some expr) -> aux expr
-            | Pexp_fun {rhs = expr} | Pexp_newtype (_, expr) -> aux expr
+            | Pexp_fun {body = expr} | Pexp_newtype (_, expr) -> aux expr
             | Pexp_constraint (expr, _) -> aux expr
             | Pexp_match (expr, cases) ->
               let case_results =

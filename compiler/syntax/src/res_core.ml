@@ -676,7 +676,9 @@ let process_underscore_application args =
           (Ppat_var (Location.mkloc hidden_var loc))
           ~loc:Location.none
       in
-      Ast_helper.Exp.fun_ ~loc ~arity:(Some 1) Nolabel None pattern exp_apply
+      Ast_helper.Exp.fun_ ~loc
+        [Ast_helper.Exp.fun_param Nolabel pattern]
+        exp_apply
     | None -> exp_apply
   in
   (args, wrap)
@@ -1898,21 +1900,29 @@ and parse_es6_arrow_expression ?(arrow_attrs = []) ?(arrow_start_pos = None)
   Parser.eat_breadcrumb p;
   let end_pos = p.prev_end_pos in
   let type_param_opt, term_parameters = parameters in
-  let arrow_expr =
-    List.fold_right
-      (fun parameter expr ->
-        let {attrs; p_label = lbl; expr = default_expr; pat; p_pos = start_pos}
-            =
-          parameter
-        in
-        let loc = mk_loc start_pos end_pos in
-        Ast_helper.Exp.fun_ ~loc ~attrs ~arity:None lbl default_expr pat expr)
-      term_parameters body
+  (* In-parens attributes are already attached to the parameter patterns by
+     [parse_parameter]; the [attrs] field of a term parameter carries
+     arrow-level attributes (merged into the first parameter above), which
+     belong on the function node itself. *)
+  let fun_params =
+    List.map
+      (fun {p_label = lbl; expr = default_expr; pat} ->
+        {
+          Parsetree.p_attrs = [];
+          p_lbl = lbl;
+          p_default = default_expr;
+          p_pat = pat;
+        })
+      term_parameters
+  in
+  let fun_attrs = List.concat_map (fun {attrs} -> attrs) term_parameters in
+  let loc =
+    match term_parameters with
+    | {p_pos = start_pos} :: _ -> mk_loc start_pos end_pos
+    | [] -> mk_loc start_pos end_pos
   in
   let arrow_expr =
-    Ast_uncurried.uncurried_fun
-      ~arity:(List.length term_parameters)
-      ~async arrow_expr
+    Ast_helper.Exp.fun_ ~loc ~attrs:fun_attrs ~async fun_params body
   in
   let arrow_expr =
     match type_param_opt with
@@ -2694,7 +2704,7 @@ and over_parse_constrained_or_coerced_or_arrow_expression p expr =
       let arrow1 =
         Ast_helper.Exp.fun_
           ~loc:(mk_loc expr.pexp_loc.loc_start body.pexp_loc.loc_end)
-          ~arity:None Asttypes.Nolabel None pat
+          [Ast_helper.Exp.fun_param Asttypes.Nolabel pat]
           (Ast_helper.Exp.constraint_ body typ)
       in
       (* When the "expr" was `()`, the colon must apply to the return type, so
@@ -2704,8 +2714,10 @@ and over_parse_constrained_or_coerced_or_arrow_expression p expr =
         let arrow2 =
           Ast_helper.Exp.fun_
             ~loc:(mk_loc expr.pexp_loc.loc_start body.pexp_loc.loc_end)
-            ~arity:None Asttypes.Nolabel None
-            (Ast_helper.Pat.constraint_ pat typ)
+            [
+              Ast_helper.Exp.fun_param Asttypes.Nolabel
+                (Ast_helper.Pat.constraint_ pat typ);
+            ]
             body
         in
         let msg =
@@ -4632,9 +4644,7 @@ and parse_poly_type_expr ?current_type_name_path ?inline_types_context p =
         let typ = Ast_helper.Typ.var ~loc:var.loc var.txt in
         let return_type = parse_typ_expr ~alias:false p in
         let loc = mk_loc typ.Parsetree.ptyp_loc.loc_start p.prev_end_pos in
-        Ast_helper.Typ.arrow ~loc ~arity:(Some 1)
-          {attrs = []; lbl = Nolabel; typ}
-          return_type
+        Ast_helper.Typ.arrow ~loc [{attrs = []; lbl = Nolabel; typ}] return_type
       | _ -> Ast_helper.Typ.var ~loc:var.loc var.txt)
     | _ -> assert false)
   | _ -> parse_typ_expr ?current_type_name_path ?inline_types_context p
@@ -5057,9 +5067,9 @@ and parse_es6_arrow_type ?current_type_name_path ?inline_types_context ~attrs p
        arrow, exactly like its parenthesized form [(~x: t) => u]; it must
        carry the same arity or the two spellings produce types that print
        identically but do not unify. *)
-    Ast_helper.Typ.arrow ~loc ~arity:(Some 1) {attrs; lbl; typ} return_type
+    Ast_helper.Typ.arrow ~loc [{attrs; lbl; typ}] return_type
   | DocComment _ -> assert false
-  | _ ->
+  | _ -> (
     let parameters =
       parse_type_parameters ?current_type_name_path ?inline_types_context p
     in
@@ -5072,25 +5082,22 @@ and parse_es6_arrow_type ?current_type_name_path ?inline_types_context ~attrs p
       parse_typ_expr ~alias:false ?current_type_name_path:return_path
         ?inline_types_context p
     in
-    let end_pos = p.prev_end_pos in
-    let arity = List.length parameters in
-    let typ =
-      List.fold_right
-        (fun {attrs; label = arg_lbl; typ; start_pos} t ->
-          let loc = mk_loc start_pos end_pos in
-          Ast_helper.Typ.arrow ~loc ~arity:None {attrs; lbl = arg_lbl; typ} t)
-        parameters return_type
+    let params =
+      List.map
+        (fun {attrs; label = arg_lbl; typ; start_pos = _} ->
+          {Parsetree.attrs; lbl = arg_lbl; typ})
+        parameters
     in
-    let typ =
-      match parameters with
-      | [] -> typ
-      | _ -> Ast_uncurried.uncurried_type ~arity typ
-    in
-    {
-      typ with
-      ptyp_attributes = List.concat [typ.ptyp_attributes; attrs];
-      ptyp_loc = mk_loc start_pos p.prev_end_pos;
-    }
+    let loc = mk_loc start_pos p.prev_end_pos in
+    match params with
+    | [] ->
+      (* can happen in error recovery *)
+      {
+        return_type with
+        ptyp_attributes = List.concat [return_type.ptyp_attributes; attrs];
+        ptyp_loc = loc;
+      }
+    | _ -> Ast_helper.Typ.arrow ~loc ~attrs params return_type)
 
 (*
  * typexpr ::=
@@ -5153,9 +5160,7 @@ and parse_arrow_type_rest ?current_type_name_path ?inline_types_context
         ?inline_types_context p
     in
     let loc = mk_loc start_pos p.prev_end_pos in
-    Ast_helper.Typ.arrow ~loc ~arity:(Some 1)
-      {attrs = []; lbl = Nolabel; typ}
-      return_type
+    Ast_helper.Typ.arrow ~loc [{attrs = []; lbl = Nolabel; typ}] return_type
   | _ -> typ
 
 and parse_typ_expr_region p =
@@ -5931,8 +5936,8 @@ and parse_type_equation_or_constr_decl p =
         let return_type = parse_typ_expr ~alias:false p in
         let loc = mk_loc uident_start_pos p.prev_end_pos in
         let arrow_type =
-          Ast_helper.Typ.arrow ~loc ~arity:(Some 1)
-            {attrs = []; lbl = Nolabel; typ}
+          Ast_helper.Typ.arrow ~loc
+            [{attrs = []; lbl = Nolabel; typ}]
             return_type
         in
         let typ = parse_type_alias p arrow_type in

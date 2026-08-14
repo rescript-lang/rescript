@@ -69,7 +69,7 @@ let erase_type_str =
   Str.primitive
     (Val.mk ~prim:["%identity"]
        {loc = noloc; txt = erase_type_lit}
-       (Ast_helper.Typ.arrows [{attrs = []; lbl = Nolabel; typ = any}] any))
+       (Ast_helper.Typ.arrow [{attrs = []; lbl = Nolabel; typ = any}] any))
 
 let unsafe_index = "_index"
 
@@ -79,7 +79,7 @@ let unsafe_index_get =
     (Val.mk ~prim:[""]
        {loc = noloc; txt = unsafe_index}
        ~attrs:[Ast_attributes.get_index]
-       (Ast_helper.Typ.arrows
+       (Ast_helper.Typ.arrow
           [
             {attrs = []; lbl = Nolabel; typ = any};
             {attrs = []; lbl = Nolabel; typ = any};
@@ -135,7 +135,7 @@ let app1 = Ast_compatible.app1
 
 let app2 = Ast_compatible.app2
 
-let ( ->~ ) a b = Ast_helper.Typ.arrows [{attrs = []; lbl = Nolabel; typ = a}] b
+let ( ->~ ) a b = Ast_helper.Typ.arrow [{attrs = []; lbl = Nolabel; typ = a}] b
 
 let raise_when_not_found_ident =
   Longident.Ldot (Lident Primitive_modules.util, "raiseWhenNotFound")
@@ -174,7 +174,7 @@ let init () =
               in
               let to_js_body body =
                 Ast_comb.single_non_rec_value pat_to_js
-                  (Ast_compatible.fun_ ~arity:(Some 1)
+                  (Ast_compatible.fun_
                      (Pat.constraint_ (Pat.var pat_param) core_type)
                      body)
               in
@@ -226,7 +226,7 @@ let init () =
                 in
                 let from_js =
                   Ast_comb.single_non_rec_value pat_from_js
-                    (Ast_compatible.fun_ ~arity:(Some 1) (Pat.var pat_param)
+                    (Ast_compatible.fun_ (Pat.var pat_param)
                        (if create_type then
                           Exp.let_ Nonrecursive
                             [Vb.mk (Pat.var pat_param) (exp_param +: new_type)]
@@ -268,7 +268,7 @@ let init () =
                            app2 unsafe_index_get_exp exp_map exp_param
                          else app1 erase_type_exp exp_param);
                       Ast_comb.single_non_rec_value pat_from_js
-                        (Ast_compatible.fun_ ~arity:(Some 1) (Pat.var pat_param)
+                        (Ast_compatible.fun_ (Pat.var pat_param)
                            (let result =
                               app2 unsafe_index_get_exp rev_exp_map exp_param
                             in
@@ -300,7 +300,7 @@ let init () =
               let pat_from_js = {Asttypes.loc; txt = from_js} in
               let to_js_type result =
                 Ast_comb.single_non_rec_val pat_to_js
-                  (Ast_helper.Typ.arrows
+                  (Ast_helper.Typ.arrow
                      [{attrs = []; lbl = Nolabel; typ = core_type}]
                      result)
               in

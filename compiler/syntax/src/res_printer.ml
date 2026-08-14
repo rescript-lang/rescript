@@ -1880,14 +1880,9 @@ and print_label_declaration ?inline_record_definitions ~state
 
 and print_typ_expr ?inline_record_definitions ~(state : State.t)
     (typ_expr : Parsetree.core_type) cmt_tbl =
-  let print_arrow ~arity typ_expr =
-    let max_arity =
-      match arity with
-      | Some arity -> arity
-      | None -> max_int
-    in
+  let print_arrow typ_expr =
     let attrs_before, args, return_type =
-      Parsetree_viewer.arrow_type ~max_arity typ_expr
+      Parsetree_viewer.arrow_type typ_expr
     in
     let return_type_needs_parens =
       match return_type.ptyp_desc with
@@ -1991,7 +1986,7 @@ and print_typ_expr ?inline_record_definitions ~(state : State.t)
     (* object printings *)
     | Ptyp_object (fields, open_flag) ->
       print_object ~state ~inline:false fields open_flag cmt_tbl
-    | Ptyp_arrow {arity} -> print_arrow ~arity typ_expr
+    | Ptyp_arrow _ -> print_arrow typ_expr
     | Ptyp_constr ({txt = Lident inline_record_name}, _)
       when inline_record_definitions
            |> find_inline_record_definition inline_record_name
@@ -3178,10 +3173,15 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
     match e.pexp_desc with
     | Pexp_fun
         {
-          arg_label = Nolabel;
-          default = None;
-          lhs = {ppat_desc = Ppat_var {txt = "__x"}};
-          rhs = {pexp_desc = Pexp_apply _};
+          params =
+            [
+              {
+                p_lbl = Nolabel;
+                p_default = None;
+                p_pat = {ppat_desc = Ppat_var {txt = "__x"}};
+              };
+            ];
+          body = {pexp_desc = Pexp_apply _};
         } ->
       (* (__x) => f(a, __x, c) -----> f(a, _, c)  *)
       print_expression_with_comments ~state

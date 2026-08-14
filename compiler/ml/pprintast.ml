@@ -301,12 +301,16 @@ and core_type ctxt f x =
       (attributes ctxt) x.ptyp_attributes
   else
     match x.ptyp_desc with
-    | Ptyp_arrow {arg; ret; arity} ->
-      pp f "@[<2>%a@;->@;%a%s@]" (* FIXME remove parens later *)
-        (type_with_label ctxt) arg (core_type ctxt) ret
-        (match arity with
-        | None -> ""
-        | Some n -> " (a:" ^ string_of_int n ^ ")")
+    | Ptyp_arrow {params; ret} ->
+      (* printed in the legacy curried style, with the arity trailing *)
+      let rec args f = function
+        | [] -> ()
+        | arg :: rest ->
+          pp f "%a@;->@;" (type_with_label ctxt) arg;
+          args f rest
+      in
+      pp f "@[<2>%a%a (a:%d)@]" args params (core_type ctxt) ret
+        (List.length params)
     | Ptyp_alias (ct, s) -> pp f "@[<2>%a@;as@;'%s@]" (core_type1 ctxt) ct s
     | Ptyp_poly ([], ct) -> core_type ctxt f ct
     | Ptyp_poly (sl, ct) ->
@@ -623,15 +627,17 @@ and expression ctxt f x =
     | (Pexp_let _ | Pexp_letmodule _ | Pexp_open _ | Pexp_letexception _)
       when ctxt.semi ->
       paren true (expression reset_ctxt) f x
-    | Pexp_fun {arg_label = l; default = e0; lhs = p; rhs = e; arity; async} ->
-      let arity_str =
-        match arity with
-        | None -> ""
-        | Some arity -> "[arity:" ^ string_of_int arity ^ "]"
-      in
+    | Pexp_fun {params; body; async} ->
+      let arity_str = "[arity:" ^ string_of_int (List.length params) ^ "]" in
       let async_str = if async then "async " else "" in
-      pp f "@[<2>%sfun@;%s%a->@;%a@]" async_str arity_str (label_exp ctxt)
-        (l, e0, p) (expression ctxt) e
+      let rec pp_params f = function
+        | [] -> ()
+        | {p_lbl; p_default; p_pat} :: rest ->
+          pp f "%a" (label_exp ctxt) (p_lbl, p_default, p_pat);
+          pp_params f rest
+      in
+      pp f "@[<2>%sfun@;%s%a->@;%a@]" async_str arity_str pp_params params
+        (expression ctxt) body
     | Pexp_match (e, l) ->
       pp f "@[<hv0>@[<hv0>@[<2>match %a@]@ with@]%a@]" (expression reset_ctxt) e
         (case_list ctxt) l
@@ -1056,20 +1062,21 @@ and binding ctxt f {pvb_pat = p; pvb_expr = x; _} =
     if x.pexp_attributes <> [] then pp f "=@;%a" (expression ctxt) x
     else
       match x.pexp_desc with
-      | Pexp_fun
-          {arg_label = label; default = eo; lhs = p; rhs = e; arity; async} ->
-        let arity_str =
-          match arity with
-          | None -> ""
-          | Some arity -> "[arity:" ^ string_of_int arity ^ "]"
-        in
+      | Pexp_fun {params; body; async} ->
+        let arity_str = "[arity:" ^ string_of_int (List.length params) ^ "]" in
         let async_str = if async then "async " else "" in
-        if label = Nolabel then
-          pp f "%s%s%a@ %a" async_str arity_str (simple_pattern ctxt) p
-            pp_print_pexp_function e
-        else
-          pp f "%s%s%a@ %a" async_str arity_str (label_exp ctxt) (label, eo, p)
-            pp_print_pexp_function e
+        let pp_param f {p_lbl; p_default; p_pat} =
+          if p_lbl = Nolabel then simple_pattern ctxt f p_pat
+          else label_exp ctxt f (p_lbl, p_default, p_pat)
+        in
+        let rec pp_params f = function
+          | [] -> ()
+          | param :: rest ->
+            pp f "%a@ " pp_param param;
+            pp_params f rest
+        in
+        pp f "%s%s%a%a" async_str arity_str pp_params params
+          pp_print_pexp_function body
       | Pexp_newtype (str, e) ->
         pp f "(type@ %s)@ %a" str.txt pp_print_pexp_function e
       | _ -> pp f "=@;%a" (expression ctxt) x

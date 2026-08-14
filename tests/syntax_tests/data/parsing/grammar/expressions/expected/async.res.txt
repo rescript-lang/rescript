@@ -18,8 +18,8 @@ let async =
   [@res.braces ])
 let f =
   ((if isPositive
-    then async fun [arity:2]a -> fun b -> (a + b : int)
-    else (async fun [arity:2]c -> fun d -> (c - d : int)))
+    then async fun [arity:2]a b -> (a + b : int)
+    else (async fun [arity:2]c d -> (c - d : int)))
   [@res.ternary ])
 let foo = async ~a:34
 let bar async [arity:1]~a  = a + 1

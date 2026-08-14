@@ -26,8 +26,7 @@ val to_method_callback :
   async:bool ->
   Location.t ->
   Bs_ast_mapper.mapper ->
-  Asttypes.arg_label ->
-  Parsetree.pattern ->
+  Parsetree.fun_param list ->
   Parsetree.expression ->
   Parsetree.expression_desc
 (** syntax: 

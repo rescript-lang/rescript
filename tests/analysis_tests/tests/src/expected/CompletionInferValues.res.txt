@@ -214,8 +214,6 @@ Complete src/CompletionInferValues.res 24:63
 posCursor:[24:63] posNoWhite:[24:62] Found expr:[24:3->24:64]
 Pexp_apply ...[24:3->24:21] (...[24:22->24:63])
 posCursor:[24:63] posNoWhite:[24:62] Found expr:[24:22->24:63]
-posCursor:[24:63] posNoWhite:[24:62] Found expr:[24:36->24:63]
-posCursor:[24:63] posNoWhite:[24:62] Found expr:[24:42->24:63]
 posCursor:[24:63] posNoWhite:[24:62] Found expr:[24:52->24:63]
 Pexp_field [24:52->24:62] _:[24:63->24:63]
 Completable: Cpath Value[someRecord].""
@@ -265,8 +263,6 @@ Complete src/CompletionInferValues.res 27:90
 posCursor:[27:90] posNoWhite:[27:89] Found expr:[27:39->27:91]
 Pexp_apply ...[27:39->27:48] (...[27:49->27:90])
 posCursor:[27:90] posNoWhite:[27:89] Found expr:[27:49->27:90]
-posCursor:[27:90] posNoWhite:[27:89] Found expr:[27:56->27:90]
-posCursor:[27:90] posNoWhite:[27:89] Found expr:[27:69->27:90]
 posCursor:[27:90] posNoWhite:[27:89] Found expr:[27:79->27:90]
 Pexp_field [27:79->27:89] _:[27:90->27:90]
 Completable: Cpath Value[someRecord].""

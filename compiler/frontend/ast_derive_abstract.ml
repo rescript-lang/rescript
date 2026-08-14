@@ -125,11 +125,11 @@ let handle_tdcl light (tdcl : Parsetree.type_declaration) :
           let accessor_type =
             if is_optional then
               let optional_type = Ast_core_type.lift_option_type pld_type in
-              Ast_helper.Typ.arrows ~loc
+              Ast_helper.Typ.arrow ~loc
                 [{attrs = []; lbl = Nolabel; typ = core_type}]
                 optional_type
             else
-              Ast_helper.Typ.arrows ~loc
+              Ast_helper.Typ.arrow ~loc
                 [{attrs = []; lbl = Nolabel; typ = core_type}]
                 pld_type
           in
@@ -159,7 +159,7 @@ let handle_tdcl light (tdcl : Parsetree.type_declaration) :
           let acc =
             if pld_mutable = Mutable then
               let setter_type =
-                Ast_helper.Typ.arrows ~loc:pld_loc
+                Ast_helper.Typ.arrow ~loc:pld_loc
                   [
                     ({attrs = []; lbl = Nolabel; typ = core_type}
                       : Parsetree.arg);
@@ -182,7 +182,7 @@ let handle_tdcl light (tdcl : Parsetree.type_declaration) :
     let make_type =
       match maker_args with
       | [] -> core_type
-      | args -> Ast_helper.Typ.arrows ~loc args core_type
+      | args -> Ast_helper.Typ.arrow ~loc args core_type
     in
     ( new_tdcl,
       if is_private then setter_accessor

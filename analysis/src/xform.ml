@@ -261,7 +261,7 @@ module Add_braces_to_fn = struct
         | _ -> false
       in
       (match e.pexp_desc with
-      | Pexp_fun {rhs = body_expr}
+      | Pexp_fun {body = body_expr}
         when Loc.has_pos ~pos body_expr.pexp_loc
              && is_braced_expr body_expr = false
              && is_function body_expr = false ->
@@ -303,18 +303,18 @@ module Add_type_annotation = struct
         result := Some (if is_unlabeled_only_arg then WithParens else Plain)
       | _ -> ()
     in
-    let rec process_function ~arg_num (e : Parsetree.expression) =
+    let process_function (e : Parsetree.expression) =
       match e.pexp_desc with
-      | Pexp_fun {arg_label; lhs = pat; rhs = e} ->
-        let is_unlabeled_only_arg =
-          arg_num = 1 && arg_label = Nolabel
-          &&
-          match e.pexp_desc with
-          | Pexp_fun _ -> false
-          | _ -> true
+      | Pexp_fun {params} ->
+        let single_param =
+          match params with
+          | [_] -> true
+          | _ -> false
         in
-        process_pattern ~is_unlabeled_only_arg pat;
-        process_function ~arg_num:(arg_num + 1) e
+        params
+        |> List.iter (fun ({p_lbl; p_pat} : Parsetree.fun_param) ->
+               let is_unlabeled_only_arg = single_param && p_lbl = Nolabel in
+               process_pattern ~is_unlabeled_only_arg p_pat)
       | _ -> ()
     in
     let structure_item (iterator : Ast_iterator.iterator)
@@ -327,7 +327,7 @@ module Add_type_annotation = struct
           if not is_jsx_component then process_pattern vb.pvb_pat;
           process_function vb.pvb_expr
         in
-        bindings |> List.iter (process_binding ~arg_num:1);
+        bindings |> List.iter process_binding;
         Ast_iterator.default_iterator.structure_item iterator si
       | _ -> Ast_iterator.default_iterator.structure_item iterator si
     in
