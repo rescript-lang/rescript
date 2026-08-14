@@ -63,10 +63,11 @@ and type_desc =
   | Tvar of string option
       (** [Tvar (Some "a")] ==> ['a] or ['_a]
       [Tvar None]       ==> [_] *)
-  | Tarrow of arg * type_expr * arity
-      (** [Tarrow (Nolabel,      e1, e2)] ==> [e1    -> e2]
-      [Tarrow (Labelled {txt="l"}, e1, e2)] ==> [l:e1  -> e2]
-      [Tarrow (Optional {txt="l"}, e1, e2)] ==> [?l:e1 -> e2] *)
+  | Tarrow of arg list * type_expr
+      (** [Tarrow ([e1; ~l:e2; ?l:e3], ret)] ==> [(e1, ~l:e2, ~l:e3=?) => ret]
+      The n-ary uncurried function type: the arity is the length of the
+      parameter list, and a function returning a function is a nested
+      [Tarrow] in the return type. Invariant: the list is non-empty. *)
   | Ttuple of type_expr list  (** [Ttuple [t1;...;tn]] ==> [(t1 * ... * tn)] *)
   | Tconstr of Path.t * type_expr list * abbrev_memo ref
       (** [Tconstr (`A.B.t', [t1;...;tn], _)] ==> [(t1,...,tn) A.B.t]

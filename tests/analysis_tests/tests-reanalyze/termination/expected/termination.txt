@@ -70,15 +70,16 @@
   Termination Analysis for butSecondArgumentIsAlwaysEvaluated
 
   Function Table
-  1 parseExpression: [_ || _]; [+Parser.next; parseExpression; parseExpression; _ || _]
-  2 parseList<f>: parseList$loop<f:f>
-  3 parseList$loop<f>: [_ || f; parseList$loop<f:f>; _]
-  4 parseListExpression: _
-  5 parseListExpression2: parseExpression; parseList<f:parseExpression>
-  6 parseListInt: _
-  7 parseListIntTailRecursive: parseListIntTailRecursive$loop
-  8 parseListIntTailRecursive$loop: [_ || parseListIntTailRecursive$loop]
-  9 parseListListInt: parseList<f:parseListInt>
+  1 parseExpression: [_ || _]; [+Parser.next; parseExpression; parseExpression; _ || parseInt]
+  2 parseInt: [_ || _]; +Parser.next; _
+  3 parseList<f>: parseList$loop<f:f>
+  4 parseList$loop<f>: [_ || f; parseList$loop<f:f>; _]
+  5 parseListExpression: _
+  6 parseListExpression2: parseExpression; parseList<f:parseExpression>
+  7 parseListInt: parseList<f:parseInt>
+  8 parseListIntTailRecursive: parseListIntTailRecursive$loop
+  9 parseListIntTailRecursive$loop: [_ || parseInt; parseListIntTailRecursive$loop]
+  10 parseListListInt: parseList<f:parseListInt>
 
   Termination Analysis for parseListInt
 
@@ -111,10 +112,13 @@
 
   Function Table
   1 alwaysReturnNone: [+Parser.next; alwaysReturnNone || None]
-  2 parseIntOWrapper: _
-  3 parseListIntO: _
-  4 testAlwaysReturnNone: alwaysReturnNone
-  5 thisMakesNoProgress: None; [_ || +Parser.next; Some]
+  2 parseIntO: [+Parser.next; Some || None]
+  3 parseIntOWrapper: parseIntO
+  4 parseListIntO: parseListO<f:parseIntO>
+  5 parseListO<f>: parseListO$loop<f:f>
+  6 parseListO$loop<f>: [+Parser.next; _ || switch f {some: parseListO$loop<f:f>, none: _}]
+  7 testAlwaysReturnNone: alwaysReturnNone
+  8 thisMakesNoProgress: None; [_ || +Parser.next; Some]
 
   Termination Analysis for parseListIntO
 
@@ -149,10 +153,10 @@
   Termination Analysis Stats
   Files:1
   Recursive Blocks:21
-  Functions:45
-  Infinite Loops:12
-  Hygiene Errors:3
-  Cache Hits:4/21
+  Functions:49
+  Infinite Loops:10
+  Hygiene Errors:2
+  Cache Hits:7/30
   
 
   Error Termination
@@ -207,10 +211,6 @@
   TestCyberTruck.res:217:32-73
   Call must have named argument f
 
-  Error Hygiene
-  TestCyberTruck.res:198:29-53
-  Named argument f must be passed a recursive function
-
   Error Termination
   TestCyberTruck.res:180:15-21
   Possible infinite loop when calling parseList$loop<f:f> which is parseList$loop<f:parseListInt>
@@ -218,21 +218,6 @@
     3 parseList$loop<f:parseListInt> (TestCyberTruck.res 183)
     2 parseList<f:parseListInt> (TestCyberTruck.res 201)
     1 parseListListInt (TestCyberTruck.res 201)
-
-  Error Termination
-  TestCyberTruck.res:180:15-21
-  Possible infinite loop when calling parseList$loop<f:f> which is parseList$loop<f:parseExpression>
-  CallStack:
-    3 parseList$loop<f:parseExpression> (TestCyberTruck.res 183)
-    2 parseList<f:parseExpression> (TestCyberTruck.res 220)
-    1 parseListExpression2 (TestCyberTruck.res 220)
-
-  Error Termination
-  TestCyberTruck.res:228:7-38
-  Possible infinite loop when calling parseListIntTailRecursive$loop
-  CallStack:
-    2 parseListIntTailRecursive$loop (TestCyberTruck.res 230)
-    1 parseListIntTailRecursive (TestCyberTruck.res 223)
 
   Error Termination
   TestCyberTruck.res:238:31-49
@@ -246,4 +231,4 @@
   CallStack:
     1 countRendersCompiled (TestCyberTruck.res 283)
   
-  Analysis reported 15 issues (Error Hygiene:3, Error Termination:12)
+  Analysis reported 12 issues (Error Hygiene:2, Error Termination:10)

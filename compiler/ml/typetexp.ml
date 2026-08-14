@@ -305,9 +305,6 @@ and transl_type_aux env policy styp =
     in
     ctyp (Ttyp_var name) ty
   | Ptyp_arrow {params; ret} ->
-    (* The n-ary arrow is translated to the (still curried) [Tarrow] chain:
-       the head arrow carries [Some arity], inner arrows carry [None]. *)
-    let arity = List.length params in
     let cparams =
       List.map
         (fun (arg : Parsetree.arg) ->
@@ -321,23 +318,23 @@ and transl_type_aux env policy styp =
         params
     in
     let cty2 = transl_type env policy ret in
-    let rec fold n = function
-      | [] -> cty2
-      | ((arg : Parsetree.arg), cty1, ty1) :: rest ->
-        let arrow_arity = if n = 0 then Some arity else None in
-        let ret_cty = fold (n + 1) rest in
-        let ty =
-          newty
-            (Tarrow ({lbl = arg.lbl; typ = ty1}, ret_cty.ctyp_type, arrow_arity))
-        in
-        ctyp
-          (Ttyp_arrow
-             ( {attrs = arg.attrs; lbl = arg.lbl; typ = cty1},
-               ret_cty,
-               arrow_arity ))
-          ty
+    let ty =
+      newty
+        (Tarrow
+           ( List.map
+               (fun ((arg : Parsetree.arg), _, ty1) ->
+                 {Types.lbl = arg.lbl; typ = ty1})
+               cparams,
+             cty2.ctyp_type ))
     in
-    fold 0 cparams
+    ctyp
+      (Ttyp_arrow
+         ( List.map
+             (fun ((arg : Parsetree.arg), cty1, _) ->
+               {Typedtree.attrs = arg.attrs; lbl = arg.lbl; typ = cty1})
+             cparams,
+           cty2 ))
+      ty
   | Ptyp_tuple stl ->
     assert (List.length stl >= 2);
     let ctys = List.map (transl_type env policy) stl in

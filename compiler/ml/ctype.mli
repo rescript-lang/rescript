@@ -209,9 +209,10 @@ val unify_var : Env.t -> type_expr -> type_expr -> unit
 val with_passive_variants : ('a -> 'b) -> 'a -> 'b
 (* Call [f] in passive_variants mode, for exhaustiveness check. *)
 
-val filter_arrow :
-  env:Env.t -> arity:arity -> type_expr -> arg_label -> type_expr * type_expr
-(* A special case of unification (with l:'a -> 'b). *)
+val filter_arrow_n :
+  env:Env.t -> type_expr -> arg_label list -> type_expr list * type_expr
+(* A special case of unification: unify with an n-ary arrow taking
+   parameters with the given labels; return parameter and result types. *)
 
 val filter_method : Env.t -> string -> private_flag -> type_expr -> type_expr
 (* A special case of unification (with {m : 'a; 'b}). *)

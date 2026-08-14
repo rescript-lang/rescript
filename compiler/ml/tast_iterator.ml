@@ -151,7 +151,9 @@ let expr sub {exp_extra; exp_desc; exp_env; _} =
   | Texp_let (rec_flag, list, exp) ->
     sub.value_bindings sub (rec_flag, list);
     sub.expr sub exp
-  | Texp_function {case; _} -> sub.case sub case
+  | Texp_function {params; body} ->
+    List.iter (fun {fp_pat} -> sub.pat sub fp_pat) params;
+    sub.expr sub body
   | Texp_apply {funct = exp; args = list} ->
     sub.expr sub exp;
     List.iter (fun (_, o) -> Option.iter (sub.expr sub) o) list
@@ -291,8 +293,8 @@ let typ sub {ctyp_desc; ctyp_env; _} =
   match ctyp_desc with
   | Ttyp_any -> ()
   | Ttyp_var _ -> ()
-  | Ttyp_arrow (arg, ret, _) ->
-    sub.typ sub arg.typ;
+  | Ttyp_arrow (params, ret) ->
+    List.iter (fun (arg : Typedtree.arg) -> sub.typ sub arg.typ) params;
     sub.typ sub ret
   | Ttyp_tuple list -> List.iter (sub.typ sub) list
   | Ttyp_constr (_, _, list) -> List.iter (sub.typ sub) list

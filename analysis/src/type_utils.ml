@@ -30,7 +30,8 @@ let debug_log_type_arg_context {env; type_args; type_params} =
 let rec has_tvar (ty : Types.type_expr) : bool =
   match ty.desc with
   | Tvar _ -> true
-  | Tarrow (arg, ret, _) -> has_tvar arg.typ || has_tvar ret
+  | Tarrow (params, ret) ->
+    List.exists (fun ({typ} : Types.arg) -> has_tvar typ) params || has_tvar ret
   | Ttuple tyl -> List.exists has_tvar tyl
   | Tconstr (_, tyl, _) -> List.exists has_tvar tyl
   | Tobject (ty, _) -> has_tvar ty
@@ -144,8 +145,16 @@ let instantiate_type ~type_params ~type_args (t : Types.type_expr) =
       | Tsubst t -> loop t
       | Tvariant rd -> {t with desc = Tvariant (row_desc rd)}
       | Tnil -> t
-      | Tarrow (arg, ret, arity) ->
-        {t with desc = Tarrow ({arg with typ = loop arg.typ}, loop ret, arity)}
+      | Tarrow (params, ret) ->
+        {
+          t with
+          desc =
+            Tarrow
+              ( List.map
+                  (fun (arg : Types.arg) -> {arg with typ = loop arg.typ})
+                  params,
+                loop ret );
+        }
       | Ttuple tl -> {t with desc = Ttuple (tl |> List.map loop)}
       | Tobject (t, r) -> {t with desc = Tobject (loop t, r)}
       | Tfield (n, k, t1, t2) -> {t with desc = Tfield (n, k, loop t1, loop t2)}
@@ -197,8 +206,16 @@ let instantiate_type2 ?(type_arg_context : type_arg_context option)
       | Tsubst t -> loop t
       | Tvariant rd -> {t with desc = Tvariant (row_desc rd)}
       | Tnil -> t
-      | Tarrow (arg, ret, arity) ->
-        {t with desc = Tarrow ({arg with typ = loop arg.typ}, loop ret, arity)}
+      | Tarrow (params, ret) ->
+        {
+          t with
+          desc =
+            Tarrow
+              ( List.map
+                  (fun (arg : Types.arg) -> {arg with typ = loop arg.typ})
+                  params,
+                loop ret );
+        }
       | Ttuple tl -> {t with desc = Ttuple (tl |> List.map loop)}
       | Tobject (t, r) -> {t with desc = Tobject (loop t, r)}
       | Tfield (n, k, t1, t2) -> {t with desc = Tfield (n, k, loop t1, loop t2)}
@@ -266,7 +283,12 @@ let extract_function_type ~state ~env ~package ?(dig_into = true) typ =
   let rec loop ~env acc (t : Types.type_expr) =
     match t.desc with
     | Tlink t1 | Tsubst t1 | Tpoly (t1, []) -> loop ~env acc t1
-    | Tarrow (arg, t_ret, _) -> loop ~env ((arg.lbl, arg.typ) :: acc) t_ret
+    | Tarrow (params, t_ret) ->
+      loop ~env
+        (List.rev_append
+           (List.map (fun ({lbl; typ} : Types.arg) -> (lbl, typ)) params)
+           acc)
+        t_ret
     | Tconstr (path, type_args, _) when dig_into -> (
       match References.dig_constructor ~state ~env ~package path with
       | Some (env, {item = {decl = {type_manifest = Some t1; type_params}}}) ->
@@ -281,7 +303,12 @@ let extract_function_type_with_env ~state ~env ~package typ =
   let rec loop ~env acc (t : Types.type_expr) =
     match t.desc with
     | Tlink t1 | Tsubst t1 | Tpoly (t1, []) -> loop ~env acc t1
-    | Tarrow (arg, t_ret, _) -> loop ~env ((arg.lbl, arg.typ) :: acc) t_ret
+    | Tarrow (params, t_ret) ->
+      loop ~env
+        (List.rev_append
+           (List.map (fun ({lbl; typ} : Types.arg) -> (lbl, typ)) params)
+           acc)
+        t_ret
     | Tconstr (path, type_args, _) -> (
       match References.dig_constructor ~state ~env ~package path with
       | Some (_env, {item = {decl = {type_manifest = Some t1; type_params}}}) ->
@@ -317,8 +344,12 @@ let extract_function_type2 ?type_arg_context ~state ~env ~package typ =
     match t.desc with
     | Tlink t1 | Tsubst t1 | Tpoly (t1, []) ->
       loop ?type_arg_context ~env acc t1
-    | Tarrow (arg, t_ret, _) ->
-      loop ?type_arg_context ~env ((arg.lbl, arg.typ) :: acc) t_ret
+    | Tarrow (params, t_ret) ->
+      loop ?type_arg_context ~env
+        (List.rev_append
+           (List.map (fun ({lbl; typ} : Types.arg) -> (lbl, typ)) params)
+           acc)
+        t_ret
     | Tconstr (path, type_args, _) -> (
       match References.dig_constructor ~state ~env ~package path with
       | Some (env, {item = {decl = {type_manifest = Some t1; type_params}}}) ->
@@ -921,17 +952,22 @@ let get_args ~env (t : Types.type_expr) ~full ~state =
     match t.desc with
     | Tlink t1 | Tsubst t1 | Tpoly (t1, []) ->
       get_args_loop ~full ~env ~current_argument_position t1
-    | Tarrow ({lbl = Labelled {txt = l}; typ = t_arg}, t_ret, _) ->
-      (Shared_types.Completable.Labelled l, t_arg)
-      :: get_args_loop ~full ~env ~current_argument_position t_ret
-    | Tarrow ({lbl = Optional {txt = l}; typ = t_arg}, t_ret, _) ->
-      (Optional l, t_arg)
-      :: get_args_loop ~full ~env ~current_argument_position t_ret
-    | Tarrow ({lbl = Nolabel; typ = t_arg}, t_ret, _) ->
-      (Unlabelled {argument_position = current_argument_position}, t_arg)
-      :: get_args_loop ~full ~env
-           ~current_argument_position:(current_argument_position + 1)
-           t_ret
+    | Tarrow (params, t_ret) ->
+      let args, next_position =
+        List.fold_left
+          (fun (acc, position) ({lbl; typ = t_arg} : Types.arg) ->
+            match lbl with
+            | Labelled {txt = l} ->
+              ((Shared_types.Completable.Labelled l, t_arg) :: acc, position)
+            | Optional {txt = l} -> ((Optional l, t_arg) :: acc, position)
+            | Nolabel ->
+              ( (Unlabelled {argument_position = position}, t_arg) :: acc,
+                position + 1 ))
+          ([], current_argument_position)
+          params
+      in
+      List.rev args
+      @ get_args_loop ~full ~env ~current_argument_position:next_position t_ret
     | Tconstr (path, type_args, _) -> (
       match
         References.dig_constructor ~env ~state ~package:full.package path

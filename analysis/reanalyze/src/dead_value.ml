@@ -44,12 +44,6 @@ let collect_value_binding ~config ~decls ~file ~(current_binding : Location.t)
       let name = Ident.name id |> Name.create ~is_interface:false in
       let optional_args, reports_optional_args =
         match vb.vb_expr.exp_desc with
-        | Texp_function {arity = Some arity; _} ->
-          ( vb.vb_expr.exp_type
-            |> (fun texpr ->
-            Dead_optional_args.from_type_expr_with_arity texpr arity)
-            |> Optional_args.from_list,
-            true )
         | Texp_function _ ->
           ( vb.vb_expr.exp_type |> Dead_optional_args.from_type_expr
             |> Optional_args.from_list,
@@ -210,18 +204,12 @@ let rec collect_expr ~config ~refs ~file_deps ~cross_file ~direct_callees
           exp_desc =
             Texp_function
               {
-                case =
+                params = [{fp_pat = {pat_desc = Tpat_var (eta_arg, _)}}];
+                body =
                   {
-                    c_lhs = {pat_desc = Tpat_var (eta_arg, _)};
-                    c_rhs =
-                      {
-                        exp_desc =
-                          Texp_apply
-                            {
-                              funct = {exp_desc = Texp_ident (id_arg2, _, _)};
-                              args;
-                            };
-                      };
+                    exp_desc =
+                      Texp_apply
+                        {funct = {exp_desc = Texp_ident (id_arg2, _, _)}; args};
                   };
               };
         } )
@@ -397,7 +385,7 @@ let rec process_signature_item ~config ~decls ~file ~do_types ~do_values
       in
       if (not is_primitive) || !Config.analyze_externals then
         let optional_args =
-          val_type |> Dead_optional_args.from_type_expr_with_declared_arity
+          val_type |> Dead_optional_args.from_type_expr
           |> Optional_args.from_list
         in
         let reports_optional_args =

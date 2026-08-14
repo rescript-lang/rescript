@@ -350,8 +350,11 @@ let value_detail (typ : Types.type_expr) =
                  collect_signature_types t)
         in
         [{path = p; generic_parameters = ts}])
-    | Tarrow (arg, ret, _) ->
-      collect_signature_types arg.typ @ collect_signature_types ret
+    | Tarrow (params, ret) ->
+      List.concat_map
+        (fun ({typ} : Types.arg) -> collect_signature_types typ)
+        params
+      @ collect_signature_types ret
     | Tvar None -> [{path = "_"; generic_parameters = []}]
     | _ -> []
   in

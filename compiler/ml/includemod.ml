@@ -503,15 +503,27 @@ let find_arity_mismatch env ty1 ty2 =
       let ty1 = Btype.repr (Ctype.expand_head env ty1) in
       let ty2 = Btype.repr (Ctype.expand_head env ty2) in
       match (ty1.desc, ty2.desc) with
-      | Tarrow (arg1, ret1, arity1), Tarrow (arg2, ret2, arity2) -> (
-        match (arity1, arity2) with
-        | Some n1, Some n2 when n1 <> n2 -> Some (n1, n2)
-        | _ when arity1 = arity2 && Asttypes.same_arg_label arg1.lbl arg2.lbl
-          -> (
-          match loop seen arg1.typ arg2.typ with
-          | Some _ as mismatch -> mismatch
-          | None -> loop seen ret1 ret2)
-        | _ -> None)
+      | Tarrow (params1, ret1), Tarrow (params2, ret2) ->
+        let arity1 = List.length params1 in
+        let arity2 = List.length params2 in
+        if arity1 <> arity2 then Some (arity1, arity2)
+        else if
+          List.for_all2
+            (fun (arg1 : Types.arg) (arg2 : Types.arg) ->
+              Asttypes.same_arg_label arg1.lbl arg2.lbl)
+            params1 params2
+        then
+          let rec loop_params params1 params2 =
+            match (params1, params2) with
+            | (arg1 : Types.arg) :: params1, arg2 :: params2 -> (
+              match loop seen arg1.typ arg2.typ with
+              | Some _ as mismatch -> mismatch
+              | None -> loop_params params1 params2)
+            | [], [] -> loop seen ret1 ret2
+            | _ -> assert false
+          in
+          loop_params params1 params2
+        else None
       | _ -> None
   in
   loop [] ty1 ty2

@@ -641,8 +641,10 @@ let rec generalize_expansive env var_level visited ty =
           else generalize_expansive env var_level visited t)
         variance tyl
     | Tpackage (_, _, tyl) -> List.iter (generalize_structure var_level) tyl
-    | Tarrow (arg, ret, _) ->
-      generalize_structure var_level arg.typ;
+    | Tarrow (params, ret) ->
+      List.iter
+        (fun ({typ} : Types.arg) -> generalize_structure var_level typ)
+        params;
       generalize_expansive env var_level visited ret
     | _ -> iter_type_expr (generalize_expansive env var_level visited) ty)
 
@@ -1780,10 +1782,17 @@ let rec mcomp type_pairs env t1 t2 =
             Type_pairs.add type_pairs (t1', t2') ();
             match (t1'.desc, t2'.desc) with
             | Tvar _, Tvar _ -> assert false
-            | Tarrow (arg1, ret1, _), Tarrow (arg2, ret2, _)
-              when Asttypes.same_arg_label arg1.lbl arg2.lbl
-                   || not (is_optional arg1.lbl || is_optional arg2.lbl) ->
-              mcomp type_pairs env arg1.typ arg2.typ;
+            | Tarrow (params1, ret1), Tarrow (params2, ret2)
+              when List.length params1 = List.length params2
+                   && List.for_all2
+                        (fun (a1 : Types.arg) (a2 : Types.arg) ->
+                          Asttypes.same_arg_label a1.lbl a2.lbl
+                          || not (is_optional a1.lbl || is_optional a2.lbl))
+                        params1 params2 ->
+              List.iter2
+                (fun (a1 : Types.arg) (a2 : Types.arg) ->
+                  mcomp type_pairs env a1.typ a2.typ)
+                params1 params2;
               mcomp type_pairs env ret1 ret2
             | Ttuple tl1, Ttuple tl2 -> mcomp_list type_pairs env tl1 tl2
             | Tconstr (p1, tl1, _), Tconstr (p2, tl2, _) ->
@@ -2195,12 +2204,17 @@ and unify3 env t1 t1' t2 t2' =
     | Pattern -> add_type_equality t1' t2');
     try
       (match (d1, d2) with
-      | Tarrow (arg1, ret1, a1), Tarrow (arg2, ret2, a2)
-        when a1 = a2
-             && (Asttypes.same_arg_label arg1.lbl arg2.lbl
-                || !umode = Pattern
-                   && not (is_optional arg1.lbl || is_optional arg2.lbl)) ->
-        unify env arg1.typ arg2.typ;
+      | Tarrow (params1, ret1), Tarrow (params2, ret2)
+        when List.length params1 = List.length params2
+             && List.for_all2
+                  (fun (a1 : Types.arg) (a2 : Types.arg) ->
+                    Asttypes.same_arg_label a1.lbl a2.lbl
+                    || !umode = Pattern
+                       && not (is_optional a1.lbl || is_optional a2.lbl))
+                  params1 params2 ->
+        List.iter2
+          (fun (a1 : Types.arg) (a2 : Types.arg) -> unify env a1.typ a2.typ)
+          params1 params2;
         unify env ret1 ret2
       | Ttuple tl1, Ttuple tl2 -> unify_list env tl1 tl2
       | Tconstr (p1, tl1, _), Tconstr (p2, tl2, _) when Path.same p1 p2 ->
@@ -2629,23 +2643,23 @@ let expand_head_trace env t =
   reset_trace_gadt_instances reset_tracing;
   t
 
-(*
-   Unify [t] and [l:'a -> 'b]. Return ['a] and ['b].
-   In label mode, label mismatch is accepted when
-   (1) the requested label is ""
-   (2) the original label is not optional
-*)
-
-let filter_arrow ~env ~arity t l =
+(* Unify [t] with an n-ary arrow taking parameters with the given labels.
+   Return the parameter types and the result type. *)
+let filter_arrow_n ~env t (labels : arg_label list) =
   let t = expand_head_trace env t in
   match t.desc with
   | Tvar _ ->
     let lv = t.level in
-    let t1 = newvar2 lv and t2 = newvar2 lv in
-    let t' = newty2 lv (Tarrow ({lbl = l; typ = t1}, t2, arity)) in
-    link_type t t';
-    (t1, t2)
-  | Tarrow (arg, ret, _) when Asttypes.same_arg_label l arg.lbl -> (arg.typ, ret)
+    let params = List.map (fun l -> {lbl = l; typ = newvar2 lv}) labels in
+    let t2 = newvar2 lv in
+    link_type t (newty2 lv (Tarrow (params, t2)));
+    (List.map (fun (p : Types.arg) -> p.typ) params, t2)
+  | Tarrow (params, ret)
+    when List.length params = List.length labels
+         && List.for_all2
+              (fun l (p : Types.arg) -> Asttypes.same_arg_label l p.lbl)
+              labels params ->
+    (List.map (fun (p : Types.arg) -> p.typ) params, ret)
   | _ -> raise (Unify [])
 
 (* Used by [filter_method]. *)
@@ -2740,9 +2754,16 @@ let rec moregen inst_nongen type_pairs env t1 t2 =
               | Tvar _, _ when may_instantiate inst_nongen t1' ->
                 moregen_occur env t1'.level t2;
                 link_type t1' t2
-              | Tarrow (arg1, ret1, a1), Tarrow (arg2, ret2, a2)
-                when a1 = a2 && Asttypes.same_arg_label arg1.lbl arg2.lbl ->
-                moregen inst_nongen type_pairs env arg1.typ arg2.typ;
+              | Tarrow (params1, ret1), Tarrow (params2, ret2)
+                when List.length params1 = List.length params2
+                     && List.for_all2
+                          (fun (a1 : Types.arg) (a2 : Types.arg) ->
+                            Asttypes.same_arg_label a1.lbl a2.lbl)
+                          params1 params2 ->
+                List.iter2
+                  (fun (a1 : Types.arg) (a2 : Types.arg) ->
+                    moregen inst_nongen type_pairs env a1.typ a2.typ)
+                  params1 params2;
                 moregen inst_nongen type_pairs env ret1 ret2
               | Ttuple tl1, Ttuple tl2 ->
                 moregen_list inst_nongen type_pairs env tl1 tl2
@@ -3010,9 +3031,16 @@ let rec eqtype rename type_pairs subst env t1 t2 =
                   if List.exists (fun (_, t) -> t == t2') !subst then
                     raise (Unify []);
                   subst := (t1', t2') :: !subst)
-              | Tarrow (arg1, ret1, a1), Tarrow (arg2, ret2, a2)
-                when a1 = a2 && Asttypes.same_arg_label arg1.lbl arg2.lbl ->
-                eqtype rename type_pairs subst env arg1.typ arg2.typ;
+              | Tarrow (params1, ret1), Tarrow (params2, ret2)
+                when List.length params1 = List.length params2
+                     && List.for_all2
+                          (fun (a1 : Types.arg) (a2 : Types.arg) ->
+                            Asttypes.same_arg_label a1.lbl a2.lbl)
+                          params1 params2 ->
+                List.iter2
+                  (fun (a1 : Types.arg) (a2 : Types.arg) ->
+                    eqtype rename type_pairs subst env a1.typ a2.typ)
+                  params1 params2;
                 eqtype rename type_pairs subst env ret1 ret2
               | Ttuple tl1, Ttuple tl2 ->
                 eqtype_list rename type_pairs subst env tl1 tl2
@@ -3210,14 +3238,22 @@ let rec build_subtype env visited loops posi level t =
         (t', Equiv)
       with Not_found -> (t, Unchanged)
     else (t, Unchanged)
-  | Tarrow (arg, ret, a) ->
+  | Tarrow (params, ret) ->
     if memq_warn t visited then (t, Unchanged)
     else
       let visited = t :: visited in
-      let t1, c1 = build_subtype env visited loops (not posi) level arg.typ in
+      let params' =
+        List.map
+          (fun (arg : Types.arg) ->
+            let t1, c1 =
+              build_subtype env visited loops (not posi) level arg.typ
+            in
+            ({arg with typ = t1}, c1))
+          params
+      in
       let t2, c2 = build_subtype env visited loops posi level ret in
-      let c = max c1 c2 in
-      if c > Unchanged then (newty (Tarrow ({arg with typ = t1}, t2, a)), c)
+      let c = List.fold_left (fun acc (_, c1) -> max acc c1) c2 params' in
+      if c > Unchanged then (newty (Tarrow (List.map fst params', t2)), c)
       else (t, Unchanged)
   | Ttuple tlist ->
     if memq_warn t visited then (t, Unchanged)
@@ -3410,12 +3446,17 @@ let rec subtype_rec env trace t1 t2 cstrs =
       Type_pairs.add subtypes (t1, t2) ();
       match (t1.desc, t2.desc) with
       | Tvar _, _ | _, Tvar _ -> (trace, t1, t2, !univar_pairs, None) :: cstrs
-      | Tarrow (arg1, ret1, a1), Tarrow (arg2, ret2, a2)
-        when a1 = a2 && Asttypes.same_arg_label arg1.lbl arg2.lbl ->
+      | Tarrow (params1, ret1), Tarrow (params2, ret2)
+        when List.length params1 = List.length params2
+             && List.for_all2
+                  (fun (a1 : Types.arg) (a2 : Types.arg) ->
+                    Asttypes.same_arg_label a1.lbl a2.lbl)
+                  params1 params2 ->
         let cstrs =
-          subtype_rec env
-            ((arg2.typ, arg1.typ) :: trace)
-            arg2.typ arg1.typ cstrs
+          List.fold_left2
+            (fun cstrs (a1 : Types.arg) (a2 : Types.arg) ->
+              subtype_rec env ((a2.typ, a1.typ) :: trace) a2.typ a1.typ cstrs)
+            cstrs params1 params2
         in
         subtype_rec env ((ret1, ret2) :: trace) ret1 ret2 cstrs
       | Ttuple tl1, Ttuple tl2 ->
@@ -3892,7 +3933,7 @@ let unalias ty =
 (* Return the arity (as for curried functions) of the given type. *)
 let rec arity ty =
   match (repr ty).desc with
-  | Tarrow (_, ret, _) -> 1 + arity ret
+  | Tarrow (params, ret) -> List.length params + arity ret
   | _ -> 0
 
 (* Check whether an abbreviation expands to itself. *)
@@ -4236,5 +4277,5 @@ let maybe_pointer_type env typ =
 
 let get_arity env typ =
   match (expand_head env typ).desc with
-  | Tarrow (_, _, arity) -> arity
+  | Tarrow (params, _) -> Some (List.length params)
   | _ -> None

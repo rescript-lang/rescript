@@ -93,7 +93,7 @@ let rec type_cannot_contain_undefined (typ : Types.type_expr) (env : Env.t) =
 
 let is_function_type env ty =
   match scrape env ty with
-  | Tarrow (arg, rhs, _) -> Some (arg.typ, rhs)
+  | Tarrow (params, ret) -> Some ((List.hd params).typ, ret)
   | _ -> None
 
 let is_base_type env ty base_ty_path =

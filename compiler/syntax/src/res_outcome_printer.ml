@@ -80,13 +80,10 @@ let print_out_attributes_doc (attrs : Outcometree.out_attribute list) =
         Doc.line;
       ]
 
-let rec collect_arrow_args (out_type : Outcometree.out_type) args =
+let collect_arrow_args (out_type : Outcometree.out_type) =
   match out_type with
-  | Otyp_arrow (label, arg_type, return_type, arity)
-    when arity = None || args = [] ->
-    let arg = (label, arg_type) in
-    collect_arrow_args return_type (arg :: args)
-  | _ as return_type -> (List.rev args, return_type)
+  | Otyp_arrow (args, ret) -> (args, ret)
+  | _ -> ([], out_type)
 
 let rec collect_functor_args (out_module_type : Outcometree.out_module_type)
     args =
@@ -240,7 +237,7 @@ let rec print_out_type_doc (out_type : Outcometree.out_type) =
       ]
 
 and print_out_arrow_type typ =
-  let typ_args, typ = collect_arrow_args typ [] in
+  let typ_args, typ = collect_arrow_args typ in
   let args =
     Doc.join
       ~sep:(Doc.concat [Doc.comma; Doc.line])

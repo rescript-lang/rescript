@@ -195,9 +195,14 @@ let expr sub x =
     | Texp_let (rec_flag, list, exp) ->
       let rec_flag, list = sub.value_bindings sub (rec_flag, list) in
       Texp_let (rec_flag, list, sub.expr sub exp)
-    | Texp_function {arg_label; arity; param; case; partial; async} ->
+    | Texp_function {params; body; async} ->
       Texp_function
-        {arg_label; arity; param; case = sub.case sub case; partial; async}
+        {
+          params =
+            List.map (fun fp -> {fp with fp_pat = sub.pat sub fp.fp_pat}) params;
+          body = sub.expr sub body;
+          async;
+        }
     | Texp_apply {funct = exp; args = list; partial; transformed_jsx} ->
       Texp_apply
         {
@@ -365,8 +370,12 @@ let typ sub x =
   let ctyp_desc =
     match x.ctyp_desc with
     | (Ttyp_any | Ttyp_var _) as d -> d
-    | Ttyp_arrow (arg, ret, arity) ->
-      Ttyp_arrow ({arg with typ = sub.typ sub arg.typ}, sub.typ sub ret, arity)
+    | Ttyp_arrow (params, ret) ->
+      Ttyp_arrow
+        ( List.map
+            (fun (arg : Typedtree.arg) -> {arg with typ = sub.typ sub arg.typ})
+            params,
+          sub.typ sub ret )
     | Ttyp_tuple list -> Ttyp_tuple (List.map (sub.typ sub) list)
     | Ttyp_constr (path, lid, list) ->
       Ttyp_constr (path, lid, List.map (sub.typ sub) list)
