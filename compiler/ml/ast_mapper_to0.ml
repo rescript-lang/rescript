@@ -124,10 +124,22 @@ module T = struct
     | Ptyp_var s -> var ~loc ~attrs s
     | Ptyp_arrow {arg; ret; arity} -> (
       let lbl = Asttypes.to_noloc arg.lbl in
+      (* v0 arrows have a single attribute slot for what the current parsetree
+         splits into node attributes and argument attributes. Keep the split
+         recoverable: when node attributes are present, separate the two lists
+         with an internal marker that [Ast_mapper_from0] strips again. Without
+         node attributes (the common case) the encoding is unchanged. *)
+      let arg_attrs = sub.attributes sub arg.attrs in
+      let merged_attrs =
+        if attrs = [] then arg_attrs
+        else
+          attrs
+          @ ({txt = "_res.arrow_node_attrs"; loc = Location.none}, Pt.PStr [])
+            :: arg_attrs
+      in
       let typ0 =
-        arrow ~loc
-          ~attrs:(attrs @ sub.attributes sub arg.attrs)
-          lbl (sub.typ sub arg.typ) (sub.typ sub ret)
+        arrow ~loc ~attrs:merged_attrs lbl (sub.typ sub arg.typ)
+          (sub.typ sub ret)
       in
       match arity with
       | None -> typ0
@@ -526,11 +538,16 @@ module E = struct
       open_ ~loc ~attrs ovf (map_loc sub lid) (sub.expr sub e)
     | Pexp_extension x -> extension ~loc ~attrs (sub.extension sub x)
     | Pexp_await e ->
+      (* Single v0 attribute slot for two nodes: the await node's own
+         attributes go in front of the [res.await] marker, the inner
+         expression's attributes after it, so [Ast_mapper_from0] can split
+         them again. *)
       let e = sub.expr sub e in
       {
         e with
         pexp_attributes =
-          (Location.mknoloc "res.await", Pt.PStr []) :: e.pexp_attributes;
+          attrs
+          @ ((Location.mknoloc "res.await", Pt.PStr []) :: e.pexp_attributes);
       }
     | Pexp_jsx_element
         (Jsx_fragment

@@ -141,8 +141,24 @@ module T = struct
     | Ptyp_var s -> Typ.var ~loc ~attrs s
     | Ptyp_arrow (lbl, t1, t2) ->
       let lbl = Asttypes.to_arg_label lbl in
-      Typ.arrow ~loc ~arity:None
-        {attrs; lbl; typ = sub.typ sub t1}
+      (* [Ast_mapper_to0] flattens the current parsetree's node/argument
+         attribute split into the v0 arrow's single attribute list, marking
+         the boundary with [_res.arrow_node_attrs] when node attributes are
+         present: node attributes come before the marker, argument attributes
+         after it. Without a marker, everything is an argument attribute. *)
+      let node_attrs, arg_attrs =
+        let rec split acc = function
+          | ({txt = "_res.arrow_node_attrs"}, _) :: rest ->
+            Some (List.rev acc, rest)
+          | a :: rest -> split (a :: acc) rest
+          | [] -> None
+        in
+        match split [] attrs with
+        | Some (node_attrs, arg_attrs) -> (node_attrs, arg_attrs)
+        | None -> ([], attrs)
+      in
+      Typ.arrow ~loc ~attrs:node_attrs ~arity:None
+        {attrs = arg_attrs; lbl; typ = sub.typ sub t1}
         (sub.typ sub t2)
     | Ptyp_tuple tyl -> Typ.tuple ~loc ~attrs (List.map (sub.typ sub) tyl)
     | Ptyp_constr (lid, tl) -> (
@@ -345,13 +361,6 @@ module E = struct
         | _ -> false)
       attrs
 
-  let remove_await_attribute attrs =
-    List.filter
-      (function
-        | {Location.txt = "res.await"}, _ -> false
-        | _ -> true)
-      attrs
-
   let extract_for_of_attribute attrs =
     List.find_map
       (function
@@ -468,9 +477,20 @@ module E = struct
     in
     match desc with
     | _ when has_await_attribute attrs ->
-      let attrs = remove_await_attribute e.pexp_attributes in
-      let e = sub.expr sub {e with pexp_attributes = attrs} in
-      await ~loc e
+      (* [Ast_mapper_to0] merges the await node's attributes and the inner
+         expression's attributes into the one v0 slot, with [res.await] as
+         the boundary: await-node attributes before it, inner attributes
+         after it. *)
+      let await_attrs0, inner_attrs0 =
+        let rec split acc = function
+          | ({Location.txt = "res.await"}, _) :: rest -> (List.rev acc, rest)
+          | a :: rest -> split (a :: acc) rest
+          | [] -> (List.rev acc, [])
+        in
+        split [] e.pexp_attributes
+      in
+      let inner = sub.expr sub {e with pexp_attributes = inner_attrs0} in
+      await ~loc ~attrs:(sub.attributes sub await_attrs0) inner
     | Pexp_ident x -> ident ~loc ~attrs (map_loc sub x)
     | Pexp_constant x -> constant ~loc ~attrs (map_constant x)
     | Pexp_let (r, vbs, e) ->
@@ -478,10 +498,25 @@ module E = struct
     | Pexp_fun (lab, def, p, e) ->
       let lab = Asttypes.to_arg_label lab in
       let async = Ext_list.exists attrs (fun ({txt}, _) -> txt = "res.async") in
+      (* [res.async] is bridge metadata added by [Ast_mapper_to0]; it is
+         decoded into the [async] flag and must not survive as a real
+         attribute. *)
+      let attrs = attrs |> List.filter (fun ({txt}, _) -> txt <> "res.async") in
       fun_ ~loc ~attrs ~async ~arity:None lab
         (map_opt (sub.expr sub) def)
         (sub.pat sub p) (sub.expr sub e)
-    | Pexp_function _ -> assert false
+    | Pexp_function cases ->
+      (* The current parsetree has no [function] construct; it can only come
+         from an external PPX emitting OCaml-style [function | p -> e].
+         Desugar to [fun x -> match x with | p -> e] with an unshadowable
+         parameter name, as the OCaml parser would. *)
+      let param = "*function*" in
+      let pat = Pat.var ~loc (Location.mkloc param loc) in
+      let scrutinee =
+        ident ~loc (Location.mkloc (Longident.Lident param) loc)
+      in
+      let body = match_ ~loc scrutinee (sub.cases sub cases) in
+      fun_ ~loc ~attrs ~async:false ~arity:None Nolabel None pat body
     | Pexp_apply ({pexp_desc = Pexp_ident tag_name}, args)
       when has_jsx_attribute () -> (
       let attrs = attrs |> List.filter (fun ({txt}, _) -> txt <> "JSX") in
@@ -502,8 +537,18 @@ module E = struct
       match children with
       | None -> jsx_unary_element ~loc ~attrs jsx_tag_name props
       | Some children ->
+        (* The v0 encoding has no closing-tag information; synthesize one
+           matching the opening tag, otherwise the printer emits an element
+           that is never closed. *)
+        let closing_tag =
+          {
+            Pt.jsx_closing_container_tag_start = Lexing.dummy_pos;
+            jsx_closing_container_tag_name = jsx_tag_name;
+            jsx_closing_container_tag_end = Lexing.dummy_pos;
+          }
+        in
         jsx_container_element ~loc ~attrs jsx_tag_name props Lexing.dummy_pos
-          children None)
+          children (Some closing_tag))
     | Pexp_apply (e, l) ->
       let e =
         match (e.pexp_desc, l) with
