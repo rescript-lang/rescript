@@ -1,0 +1,30 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/module_sig_value_arity_mismatch_alias.res[0m:[2m5:5-7:1[0m
+
+  3 [2m│[0m module M: {
+  4 [2m│[0m   let f: (int, int) => int
+  [1;31m5[0m [2m│[0m } = [1;31m{[0m
+  [1;31m6[0m [2m│[0m [1;31m  let f: curried = (x: int) => (_y: int) => x[0m
+  [1;31m7[0m [2m│[0m [1;31m}[0m
+  8 [2m│[0m 
+
+  Signature mismatch:
+  Modules do not match:
+    {
+  let f: curried
+}
+  is not included in
+    {
+  let f: (int, int) => int
+}
+  Values do not match:
+    let f: curried
+  is not included in
+    let f: (int, int) => int
+  The implementation contains a function taking 1 argument where the interface expects one taking 2 arguments.
+  A function's arity is part of its type: calls are compiled to plain JavaScript calls with exactly that many arguments.
+  [36m/.../fixtures/module_sig_value_arity_mismatch_alias.res[0m:[2m4:3-26[0m:
+    Expected declaration
+  [36m/.../fixtures/module_sig_value_arity_mismatch_alias.res[0m:[2m6:7[0m:
+    Actual declaration

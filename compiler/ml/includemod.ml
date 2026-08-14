@@ -493,16 +493,54 @@ let show_locs ppf (loc1, loc2) =
   show_loc "Expected declaration" ppf loc2;
   show_loc "Actual declaration" ppf loc1
 
-let include_err ppf = function
+let find_arity_mismatch env ty1 ty2 =
+  let rec loop seen ty1 ty2 =
+    let ty1 = Btype.repr ty1 in
+    let ty2 = Btype.repr ty2 in
+    if List.exists (fun (t1, t2) -> t1 == ty1 && t2 == ty2) seen then None
+    else
+      let seen = (ty1, ty2) :: seen in
+      let ty1 = Btype.repr (Ctype.expand_head env ty1) in
+      let ty2 = Btype.repr (Ctype.expand_head env ty2) in
+      match (ty1.desc, ty2.desc) with
+      | Tarrow (arg1, ret1, arity1), Tarrow (arg2, ret2, arity2) -> (
+        match (arity1, arity2) with
+        | Some n1, Some n2 when n1 <> n2 -> Some (n1, n2)
+        | _ when arity1 = arity2 && Asttypes.same_arg_label arg1.lbl arg2.lbl
+          -> (
+          match loop seen arg1.typ arg2.typ with
+          | Some _ as mismatch -> mismatch
+          | None -> loop seen ret1 ret2)
+        | _ -> None)
+      | _ -> None
+  in
+  loop [] ty1 ty2
+
+let show_arity_mismatch env ppf (d1 : value_description)
+    (d2 : value_description) =
+  match find_arity_mismatch env d1.val_type d2.val_type with
+  | Some (n1, n2) ->
+    let args n =
+      if n = 1 then "1 argument" else string_of_int n ^ " arguments"
+    in
+    fprintf ppf
+      "@\n\
+       @[The implementation contains a function taking %s where the interface \
+       expects one taking %s.@ A function's arity is part of its type: calls \
+       are compiled to plain JavaScript calls with exactly that many \
+       arguments.@]"
+      (args n1) (args n2)
+  | _ -> ()
+
+let include_symptom env ppf = function
   | Missing_field (id, loc, kind) ->
     fprintf ppf "The %s `%a' is required but not provided" kind ident id;
     show_loc "Expected declaration" ppf loc
   | Value_descriptions (id, d1, d2) ->
-    let curry_kind_1, curry_kind_2 = ("", "") in
     fprintf ppf
-      "@[<hv 2>Values do not match:@ %a%s@;<1 -2>is not included in@ %a%s@]"
-      (value_description id) d1 curry_kind_1 (value_description id) d2
-      curry_kind_2;
+      "@[<hv 2>Values do not match:@ %a@;<1 -2>is not included in@ %a@]"
+      (value_description id) d1 (value_description id) d2;
+    show_arity_mismatch env ppf d1 d2;
     show_locs ppf (d1.val_loc, d2.val_loc)
   | Type_declarations (id, d1, d2, errs) ->
     fprintf ppf "@[<v>@[<hv>%s:@;<1 2>%a@ %s@;<1 2>%a@]%a%a@]"
@@ -584,7 +622,7 @@ let context ppf cxt =
 
 let include_err ppf (cxt, env, err) =
   Printtyp.wrap_printing_env env (fun () ->
-      fprintf ppf "@[<v>%a%a@]" context (List.rev cxt) include_err err)
+      fprintf ppf "@[<v>%a%a@]" context (List.rev cxt) (include_symptom env) err)
 
 let buffer = ref Bytes.empty
 let is_big obj =
