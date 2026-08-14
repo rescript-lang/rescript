@@ -24,9 +24,9 @@
 
 type t = Parsetree.pattern
 
-let rec labels_of_fun (e : Parsetree.expression) =
+let labels_of_fun (e : Parsetree.expression) =
   match e.pexp_desc with
-  | Pexp_fun {arg_label = l; rhs = e} -> l :: labels_of_fun e
+  | Pexp_fun {params} -> List.map (fun {Parsetree.p_lbl} -> p_lbl) params
   | _ -> []
 
 let rec is_single_variable_pattern_conservative (p : t) =

@@ -165,9 +165,9 @@ let iter_expression f e =
     | Pexp_extension _ (* we don't iterate under extension point *)
     | Pexp_ident _ | Pexp_constant _ ->
       ()
-    | Pexp_fun {default = eo; rhs = e} ->
-      may expr eo;
-      expr e
+    | Pexp_fun {params; body} ->
+      List.iter (fun {p_default} -> may expr p_default) params;
+      expr body
     | Pexp_apply {funct = e; args = lel} ->
       expr e;
       List.iter (fun (_, e) -> expr e) lel
@@ -1971,9 +1971,21 @@ and is_nonexpansive_opt = function
 
 let rec approx_type env sty =
   match sty.ptyp_desc with
-  | Ptyp_arrow {arg = {lbl = p}; ret = sty; arity} ->
-    let ty1 = if is_optional p then type_option (newvar ()) else newvar () in
-    newty (Tarrow ({lbl = p; typ = ty1}, approx_type env sty, arity))
+  | Ptyp_arrow {params; ret = sty} ->
+    let arity = Some (List.length params) in
+    let rec build n = function
+      | [] -> approx_type env sty
+      | ({lbl = p} : Parsetree.arg) :: rest ->
+        let ty1 =
+          if is_optional p then type_option (newvar ()) else newvar ()
+        in
+        newty
+          (Tarrow
+             ( {lbl = p; typ = ty1},
+               build (n + 1) rest,
+               if n = 0 then arity else None ))
+    in
+    build 0 params
   | Ptyp_tuple args -> newty (Ttuple (List.map (approx_type env) args))
   | Ptyp_constr (lid, ctl) -> (
     try
@@ -1989,9 +2001,21 @@ let rec approx_type env sty =
 let rec type_approx env sexp =
   match sexp.pexp_desc with
   | Pexp_let (_, _, e) -> type_approx env e
-  | Pexp_fun {arg_label = p; rhs = e; arity} ->
-    let ty = if is_optional p then type_option (newvar ()) else newvar () in
-    newty (Tarrow ({lbl = p; typ = ty}, type_approx env e, arity))
+  | Pexp_fun {params; body} ->
+    let arity = Some (List.length params) in
+    let rec build n = function
+      | [] -> type_approx env body
+      | {p_lbl} :: rest ->
+        let ty =
+          if is_optional p_lbl then type_option (newvar ()) else newvar ()
+        in
+        newty
+          (Tarrow
+             ( {lbl = p_lbl; typ = ty},
+               build (n + 1) rest,
+               if n = 0 then arity else None ))
+    in
+    build 0 params
   | Pexp_match (_, {pc_rhs = e} :: _) -> type_approx env e
   | Pexp_try (e, _) -> type_approx env e
   | Pexp_tuple l -> newty (Ttuple (List.map (type_approx env) l))
@@ -2449,61 +2473,90 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
         exp_attributes = sexp.pexp_attributes;
         exp_env = env;
       }
-  | Pexp_fun
-      {
-        arg_label = l;
-        default = Some default;
-        lhs = spat;
-        rhs = sbody;
-        arity;
-        async;
-      } ->
-    assert (is_optional l);
-    (* default allowed only with optional argument *)
-    let open Ast_helper in
-    let default_loc = default.pexp_loc in
-    let scases =
-      [
-        Exp.case
-          (Pat.construct ~loc:default_loc
-             (mknoloc Longident.(Ldot (Lident "*predef*", "Some")))
-             (Some (Pat.var ~loc:default_loc (mknoloc "*sth*"))))
-          (Exp.ident ~loc:default_loc (mknoloc (Longident.Lident "*sth*")));
-        Exp.case
-          (Pat.construct ~loc:default_loc
-             (mknoloc Longident.(Ldot (Lident "*predef*", "None")))
-             None)
-          default;
-      ]
+  | Pexp_fun {params; body = sfun_body; async} -> (
+    (* Peel one parameter at a time, reproducing the legacy curried typing:
+       the head parameter carries [Some arity] (the full parameter count),
+       the synthesized rest-functions carry [None]. Rest-functions are
+       marked with an internal attribute consumed right here, so it never
+       appears in user ASTs or in the typedtree. *)
+    let is_rest, node_attrs =
+      let rec split acc = function
+        | ({Location.txt = "#res.fun_rest"}, _) :: rest ->
+          (true, List.rev_append acc rest)
+        | a :: rest -> split (a :: acc) rest
+        | [] -> (false, List.rev acc)
+      in
+      split [] sexp.pexp_attributes
     in
-    let sloc =
-      {
-        Location.loc_start = spat.ppat_loc.Location.loc_start;
-        loc_end = default_loc.Location.loc_end;
-        loc_ghost = true;
-      }
-    in
-    let smatch =
-      Exp.match_ ~loc:sloc
-        ~attrs:[(mknoloc "#optional_arg_default", PStr [])]
-        (Exp.ident ~loc (mknoloc (Longident.Lident "*opt*")))
-        scases
-    in
-    let pat = Pat.var ~loc:sloc (mknoloc "*opt*") in
-    let body =
-      Exp.let_ ~loc Nonrecursive
-        ~attrs:[(mknoloc "#default", PStr [])]
-        [Vb.mk spat smatch]
-        sbody
-    in
-    type_function ?in_function ~arity ~async loc sexp.pexp_attributes env
-      ty_expected l
-      [Exp.case pat body]
-  | Pexp_fun
-      {arg_label = l; default = None; lhs = spat; rhs = sbody; arity; async} ->
-    type_function ?in_function ~arity ~async loc sexp.pexp_attributes env
-      ty_expected l
-      [Ast_helper.Exp.case spat sbody]
+    let arity = if is_rest then None else Some (List.length params) in
+    match params with
+    | [] -> assert false
+    | {p_attrs; p_lbl = l; p_default; p_pat = spat} :: rest_params -> (
+      let level_attrs = node_attrs @ p_attrs in
+      let sbody =
+        match rest_params with
+        | [] -> sfun_body
+        | {p_pat = next_pat} :: _ ->
+          let rest_loc =
+            {
+              sexp.pexp_loc with
+              Location.loc_start = next_pat.ppat_loc.Location.loc_start;
+            }
+          in
+          {
+            pexp_desc =
+              Pexp_fun {params = rest_params; body = sfun_body; async = false};
+            pexp_loc = rest_loc;
+            pexp_attributes = [(mknoloc "#res.fun_rest", PStr [])];
+          }
+      in
+      match p_default with
+      | Some default ->
+        assert (is_optional l);
+        (* default allowed only with optional argument *)
+        let open Ast_helper in
+        let default_loc = default.pexp_loc in
+        let scases =
+          [
+            Exp.case
+              (Pat.construct ~loc:default_loc
+                 (mknoloc Longident.(Ldot (Lident "*predef*", "Some")))
+                 (Some (Pat.var ~loc:default_loc (mknoloc "*sth*"))))
+              (Exp.ident ~loc:default_loc (mknoloc (Longident.Lident "*sth*")));
+            Exp.case
+              (Pat.construct ~loc:default_loc
+                 (mknoloc Longident.(Ldot (Lident "*predef*", "None")))
+                 None)
+              default;
+          ]
+        in
+        let sloc =
+          {
+            Location.loc_start = spat.ppat_loc.Location.loc_start;
+            loc_end = default_loc.Location.loc_end;
+            loc_ghost = true;
+          }
+        in
+        let smatch =
+          Exp.match_ ~loc:sloc
+            ~attrs:[(mknoloc "#optional_arg_default", PStr [])]
+            (Exp.ident ~loc (mknoloc (Longident.Lident "*opt*")))
+            scases
+        in
+        let pat = Pat.var ~loc:sloc (mknoloc "*opt*") in
+        let body =
+          Exp.let_ ~loc Nonrecursive
+            ~attrs:[(mknoloc "#default", PStr [])]
+            [Vb.mk spat smatch]
+            sbody
+        in
+        type_function ?in_function ~arity ~async loc level_attrs env ty_expected
+          l
+          [Exp.case pat body]
+      | None ->
+        type_function ?in_function ~arity ~async loc level_attrs env ty_expected
+          l
+          [Ast_helper.Exp.case spat sbody]))
   | Pexp_apply {funct = sfunct; args = sargs; partial; transformed_jsx} ->
     assert (sargs <> []);
     begin_def ();

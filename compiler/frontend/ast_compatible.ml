@@ -73,18 +73,16 @@ let app2 ?(loc = default_loc) ?(attrs = []) fn arg1 arg2 : expression =
         };
   }
 
-let fun_ ?(loc = default_loc) ?(attrs = []) ?(async = false) ~arity pat exp =
+let fun_ ?(loc = default_loc) ?(attrs = []) ?(async = false) pat exp =
   {
     pexp_loc = loc;
     pexp_attributes = attrs;
     pexp_desc =
       Pexp_fun
         {
-          arg_label = Nolabel;
-          default = None;
-          lhs = pat;
-          rhs = exp;
-          arity;
+          params =
+            [{p_attrs = []; p_lbl = Nolabel; p_default = None; p_pat = pat}];
+          body = exp;
           async;
         };
   }

@@ -55,7 +55,6 @@ let call_expr expr =
        | Pexp_for_of _ | Pexp_for_await_of _ | Pexp_ifthenelse _ );
     } ->
       Parenthesized
-    | _ when Ast_uncurried.expr_is_uncurried_fun expr -> Parenthesized
     | _ when Parsetree_viewer.expr_is_await expr -> Parenthesized
     | _ -> Nothing)
 
@@ -126,7 +125,6 @@ let binary_expr_operand ~is_lhs expr =
       Nothing
     | {pexp_desc = Pexp_constraint _ | Pexp_fun _ | Pexp_newtype _} ->
       Parenthesized
-    | _ when Ast_uncurried.expr_is_uncurried_fun expr -> Parenthesized
     | expr when Parsetree_viewer.is_binary_expression expr -> Parenthesized
     | expr when Parsetree_viewer.is_ternary_expr expr -> Parenthesized
     | {pexp_desc = Pexp_assert _} when is_lhs -> Parenthesized
@@ -181,7 +179,8 @@ let flatten_operand_rhs parent_operator rhs =
     prec_parent >= prec_child || rhs.pexp_attributes <> []
   | Pexp_constraint ({pexp_desc = Pexp_pack _}, {ptyp_desc = Ptyp_package _}) ->
     false
-  | Pexp_fun {lhs = {ppat_desc = Ppat_var {txt = "__x"}}} -> false
+  | Pexp_fun {params = {p_pat = {ppat_desc = Ppat_var {txt = "__x"}}} :: _} ->
+    false
   | Pexp_fun _ | Pexp_newtype _ | Pexp_setfield _ | Pexp_constraint _ -> true
   | _ when Parsetree_viewer.is_ternary_expr rhs -> true
   | _ -> false

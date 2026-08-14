@@ -54,9 +54,9 @@ module Typ : sig
 
   val any : ?loc:loc -> ?attrs:attrs -> unit -> core_type
   val var : ?loc:loc -> ?attrs:attrs -> string -> core_type
-  val arrow :
-    ?loc:loc -> ?attrs:attrs -> arity:arity -> arg -> core_type -> core_type
-  val arrows : ?loc:loc -> ?attrs:attrs -> arg list -> core_type -> core_type
+
+  (* n-ary arrow type; the params list must be non-empty *)
+  val arrow : ?loc:loc -> ?attrs:attrs -> arg list -> core_type -> core_type
   val tuple : ?loc:loc -> ?attrs:attrs -> core_type list -> core_type
   val constr : ?loc:loc -> ?attrs:attrs -> lid -> core_type list -> core_type
   val object_ :
@@ -134,12 +134,12 @@ module Exp : sig
     ?loc:loc ->
     ?attrs:attrs ->
     ?async:bool ->
-    arity:int option ->
-    arg_label ->
-    expression option ->
-    pattern ->
+    fun_param list ->
     expression ->
     expression
+
+  val fun_param :
+    ?attrs:attrs -> ?default:expression -> arg_label -> pattern -> fun_param
   val apply :
     ?loc:loc ->
     ?attrs:attrs ->

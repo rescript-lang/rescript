@@ -22,8 +22,8 @@ type nonrec t = f:(int -> string (a:1)) -> float (a:1)
 type nonrec t = f:(int -> string (a:1)) -> float (a:1)
 type nonrec t = f:int -> string -> float (a:1) (a:1)
 type nonrec t =
-  a:int[@attrBeforeLblA ] ->
-    b:int[@attrBeforeLblB ] -> ((float)[@attr ]) -> unit (a:3)
+  a:int[@attrBeforeLblA ] -> b:int[@attrBeforeLblB ] -> ((float)[@attr ]) ->
+    unit (a:3)
 type nonrec t =
   ((a:int ->
       ((b:int -> ((float)[@attr ]) -> unit (a:1) (a:1))[@attrBeforeLblB ]) (a:1))

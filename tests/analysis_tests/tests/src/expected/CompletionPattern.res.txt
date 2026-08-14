@@ -1163,3 +1163,23 @@ Path hitsUse
   }
 ]
 
+Complete src/CompletionPattern.res 254:38
+posCursor:[254:38] posNoWhite:[254:36] Found expr:[254:3->254:49]
+Pexp_apply ...[254:3->254:20] (...[254:21->254:48])
+posCursor:[254:38] posNoWhite:[254:36] Found expr:[254:21->254:48]
+posCursor:[254:38] posNoWhite:[254:36] Found pattern:[254:30->254:39]
+Ppat_construct Blah:[254:30->254:34]
+posCursor:[254:38] posNoWhite:[254:36] Found pattern:[254:30->254:39]
+Ppat_construct Blah:[254:30->254:34]
+Completable: Cpattern CArgument CArgument Value[callWithTwoParams]($0)($1)->variantPayload::Blah($1)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath CArgument CArgument Value[callWithTwoParams]($0)($1)
+ContextPath CArgument Value[callWithTwoParams]($0)
+ContextPath Value[callWithTwoParams]
+Path callWithTwoParams
+[
+  { "detail": "bool", "kind": 4, "label": "true", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "false", "tags": [] }
+]
+

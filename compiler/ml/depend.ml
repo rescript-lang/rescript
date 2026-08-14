@@ -99,8 +99,8 @@ let rec add_type bv ty =
   match ty.ptyp_desc with
   | Ptyp_any -> ()
   | Ptyp_var _ -> ()
-  | Ptyp_arrow {arg; ret} ->
-    add_type bv arg.typ;
+  | Ptyp_arrow {params; ret} ->
+    List.iter (fun arg -> add_type bv arg.typ) params;
     add_type bv ret
   | Ptyp_tuple tl -> List.iter (add_type bv) tl
   | Ptyp_constr (c, tl) ->
@@ -212,9 +212,15 @@ let rec add_expr bv exp =
   | Pexp_let (rf, pel, e) ->
     let bv = add_bindings rf bv pel in
     add_expr bv e
-  | Pexp_fun {default = opte; lhs = p; rhs = e} ->
-    add_opt add_expr bv opte;
-    add_expr (add_pattern bv p) e
+  | Pexp_fun {params; body} ->
+    let bv =
+      List.fold_left
+        (fun bv {p_default; p_pat} ->
+          add_opt add_expr bv p_default;
+          add_pattern bv p_pat)
+        bv params
+    in
+    add_expr bv body
   | Pexp_apply {funct = e; args = el} ->
     add_expr bv e;
     List.iter (fun (_, e) -> add_expr bv e) el

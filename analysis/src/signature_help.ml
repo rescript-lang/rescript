@@ -103,24 +103,27 @@ let find_function_type ~debug ~source ~kind_file ~pos ~full ~state =
         Some (args, docstring, type_expr, package, env, file)
       | _ -> None))
 
-(* Extracts all parameters from a parsed function signature *)
+(* Extracts all parameters from a parsed function signature. The result type
+   is not entered: a returned function's parameters cannot be passed at this
+   call site. *)
 let extract_parameters ~signature ~type_str_for_parser ~label_prefix_len =
   match signature with
-  | [{Parsetree.psig_desc = Psig_value {pval_type = expr}}]
-    when match expr.ptyp_desc with
-         | Ptyp_arrow _ -> true
-         | _ -> false ->
-    let rec extract_params expr params =
-      match expr with
-      | {
-       (* Gotcha: functions with multiple arugments are modelled as a series of single argument functions. *)
-       Parsetree.ptyp_desc = Ptyp_arrow {arg; ret = next_function_expr};
-       ptyp_loc;
-      } ->
+  | [
+   {
+     Parsetree.psig_desc =
+       Psig_value {pval_type = {ptyp_desc = Ptyp_arrow {params = args}}};
+   };
+  ] ->
+    List.map
+      (fun (arg : Parsetree.arg) ->
+        let start_loc =
+          (* For a labeled argument the label precedes the type. *)
+          match arg.lbl with
+          | Asttypes.Labelled {loc} | Optional {loc} -> loc |> Loc.start
+          | Nolabel -> arg.typ.ptyp_loc |> Loc.start
+        in
         let start_offset =
-          ptyp_loc |> Loc.start
-          |> Pos.position_to_offset type_str_for_parser
-          |> Option.get
+          start_loc |> Pos.position_to_offset type_str_for_parser |> Option.get
         in
         let end_offset =
           arg.typ.ptyp_loc |> Loc.end_
@@ -133,18 +136,12 @@ let extract_parameters ~signature ~type_str_for_parser ~label_prefix_len =
           | Asttypes.Optional _ -> end_offset + 2
           | _ -> end_offset
         in
-        extract_params next_function_expr
-          (params
-          @ [
-              ( arg.lbl,
-                (* Remove the label prefix offset here, since we're not showing
-                   that to the end user. *)
-                start_offset - label_prefix_len,
-                end_offset - label_prefix_len );
-            ])
-      | _ -> params
-    in
-    extract_params expr []
+        ( arg.lbl,
+          (* Remove the label prefix offset here, since we're not
+             showing that to the end user. *)
+          start_offset - label_prefix_len,
+          end_offset - label_prefix_len ))
+      args
   | _ -> []
 
 (* Finds what parameter is active, if any *)

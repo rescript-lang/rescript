@@ -157,8 +157,8 @@ module T = struct
         | Some (node_attrs, arg_attrs) -> (node_attrs, arg_attrs)
         | None -> ([], attrs)
       in
-      Typ.arrow ~loc ~attrs:node_attrs ~arity:None
-        {attrs = arg_attrs; lbl; typ = sub.typ sub t1}
+      Typ.arrow ~loc ~attrs:node_attrs
+        [{attrs = arg_attrs; lbl; typ = sub.typ sub t1}]
         (sub.typ sub t2)
     | Ptyp_tuple tyl -> Typ.tuple ~loc ~attrs (List.map (sub.typ sub) tyl)
     | Ptyp_constr (lid, tl) -> (
@@ -166,8 +166,8 @@ module T = struct
         Typ.constr ~loc ~attrs (map_loc sub lid) (List.map (sub.typ sub) tl)
       in
       match typ0.ptyp_desc with
-      | Ptyp_constr (lid, [({ptyp_desc = Ptyp_arrow arr} as fun_t); t_arity])
-        when lid.txt = Lident "function$" ->
+      | Ptyp_constr (lid, [({ptyp_desc = Ptyp_arrow _} as fun_t); t_arity])
+        when lid.txt = Lident "function$" -> (
         let decode_arity_string arity_s =
           int_of_string
             ((String.sub [@doesNotRaise]) arity_s 9 (String.length arity_s - 9))
@@ -179,7 +179,26 @@ module T = struct
           | _ -> assert false
         in
         let arity = arity_from_type t_arity in
-        {fun_t with ptyp_desc = Ptyp_arrow {arr with arity = Some arity}}
+        (* Gather [arity] parameters from the converted chain of unary
+           arrows into one n-ary node. Nested first-class function types
+           are left intact: gathering stops once [arity] parameters have
+           been collected (or the chain runs out, for PPX-mangled input). *)
+        let rec gather ~is_head n acc (t : Parsetree.core_type) =
+          if n <= 0 then (List.rev acc, t)
+          else
+            match t.ptyp_desc with
+            | Ptyp_arrow {params; ret}
+              when List.length params <= n && (is_head || t.ptyp_attributes = [])
+              ->
+              gather ~is_head:false
+                (n - List.length params)
+                (List.rev_append params acc)
+                ret
+            | _ -> (List.rev acc, t)
+        in
+        match gather ~is_head:true arity [] fun_t with
+        | [], _ -> fun_t
+        | params, ret -> {fun_t with ptyp_desc = Ptyp_arrow {params; ret}})
       | _ -> typ0)
     | Ptyp_object (l, o) ->
       Typ.object_ ~loc ~attrs (List.map (object_field sub) l) o
@@ -496,15 +515,44 @@ module E = struct
     | Pexp_let (r, vbs, e) ->
       let_ ~loc ~attrs r (List.map (sub.value_binding sub) vbs) (sub.expr sub e)
     | Pexp_fun (lab, def, p, e) ->
+      (* A bare (non-Function$-wrapped) v0 fun becomes a one-parameter
+         function; [Function$] decoding below gathers chains of these into
+         one n-ary node.
+
+         [Ast_mapper_to0] flattens the current parsetree's node/parameter
+         attribute split into the v0 fun's single attribute list, marking the
+         boundary with [_res.fun_node_attrs] when parameter attributes are
+         present: node attributes come before the marker, parameter
+         attributes after it. Without a marker, everything is a node
+         attribute (that is where the old parser kept them, and where the
+         built-in PPX looks for decorators like [@this]). *)
       let lab = Asttypes.to_arg_label lab in
       let async = Ext_list.exists attrs (fun ({txt}, _) -> txt = "res.async") in
       (* [res.async] is bridge metadata added by [Ast_mapper_to0]; it is
          decoded into the [async] flag and must not survive as a real
          attribute. *)
       let attrs = attrs |> List.filter (fun ({txt}, _) -> txt <> "res.async") in
-      fun_ ~loc ~attrs ~async ~arity:None lab
-        (map_opt (sub.expr sub) def)
-        (sub.pat sub p) (sub.expr sub e)
+      let node_attrs, param_attrs =
+        let rec split acc = function
+          | ({txt = "_res.fun_node_attrs"}, _) :: rest ->
+            Some (List.rev acc, rest)
+          | a :: rest -> split (a :: acc) rest
+          | [] -> None
+        in
+        match split [] attrs with
+        | Some (node_attrs, param_attrs) -> (node_attrs, param_attrs)
+        | None -> (attrs, [])
+      in
+      fun_ ~loc ~async ~attrs:node_attrs
+        [
+          {
+            p_attrs = param_attrs;
+            p_lbl = lab;
+            p_default = map_opt (sub.expr sub) def;
+            p_pat = sub.pat sub p;
+          };
+        ]
+        (sub.expr sub e)
     | Pexp_function cases ->
       (* The current parsetree has no [function] construct; it can only come
          from an external PPX emitting OCaml-style [function | p -> e].
@@ -516,7 +564,9 @@ module E = struct
         ident ~loc (Location.mkloc (Longident.Lident param) loc)
       in
       let body = match_ ~loc scrutinee (sub.cases sub cases) in
-      fun_ ~loc ~attrs ~async:false ~arity:None Nolabel None pat body
+      fun_ ~loc ~attrs
+        [{p_attrs = []; p_lbl = Nolabel; p_default = None; p_pat = pat}]
+        body
     | Pexp_apply ({pexp_desc = Pexp_ident tag_name}, args)
       when has_jsx_attribute () -> (
       let attrs = attrs |> List.filter (fun ({txt}, _) -> txt <> "JSX") in
@@ -626,9 +676,39 @@ module E = struct
           | [] -> assert false
         in
         match arg1 with
-        | Some ({pexp_desc = Pexp_fun f} as e1) ->
-          let arity = Some (attributes_to_arity attrs) in
-          {e1 with pexp_desc = Pexp_fun {f with arity}}
+        | Some ({pexp_desc = Pexp_fun f} as e1) -> (
+          let arity = attributes_to_arity attrs in
+          (* Gather [arity] parameters from the converted chain of unary
+             functions into one n-ary node. Nested first-class functions are
+             left intact: gathering stops once [arity] parameters have been
+             collected (or the chain shape breaks, for PPX-mangled input). *)
+          let rec gather ~is_head n acc (e : Parsetree.expression) =
+            if n <= 0 then (List.rev acc, e)
+            else
+              match e.pexp_desc with
+              | Pexp_fun {params; body; async = inner_async}
+                when List.length params <= n
+                     && (is_head || (e.pexp_attributes = [] && not inner_async))
+                ->
+                gather ~is_head:false
+                  (n - List.length params)
+                  (List.rev_append params acc)
+                  body
+              | _ -> (List.rev acc, e)
+          in
+          match gather ~is_head:true arity [] e1 with
+          | [], _ -> e1
+          | params, body ->
+            (* The construct node's other attributes become the function
+               node's attributes rather than being dropped. *)
+            let node_attrs =
+              attrs |> List.filter (fun ({txt}, _) -> txt <> "res.arity")
+            in
+            {
+              e1 with
+              pexp_desc = Pexp_fun {params; body; async = f.async};
+              pexp_attributes = e1.pexp_attributes @ node_attrs;
+            })
         | _ -> exp1)
       | _ -> exp1)
     | Pexp_variant (lab, eo) ->

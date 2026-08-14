@@ -242,7 +242,7 @@ and print_expr_item expr ~pos ~indentation =
       | None -> ""
       | Some expr -> "," ^ print_expr_item expr ~pos ~indentation)
     ^ ")"
-  | Pexp_fun {arg_label = arg; lhs = pattern; rhs = next_expr} ->
+  | Pexp_fun {params = {p_lbl = arg; p_pat = pattern} :: _; body = next_expr} ->
     "Pexp_fun(\n"
     ^ add_indentation (indentation + 1)
     ^ "arg: "

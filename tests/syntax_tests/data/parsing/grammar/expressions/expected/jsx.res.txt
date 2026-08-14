@@ -72,22 +72,18 @@ let _ = <a></a> < <b></b>
 let _ = <a></a> > <b></b>
 let y =
   <Routes path=(Routes.stateToPath state) isHistorical=true onHashChange=((
-  fun [arity:3]_oldPath ->
-    fun _oldUrl ->
-      fun newUrl ->
-        updater
-          (fun [arity:2]latestComponentBag ->
-             fun _ ->
-               ((let currentActualPath = Routes.hashOfUri newUrl in
-                 let pathFromState =
-                   Routes.stateToPath latestComponentBag.state in
-                 ((if currentActualPath == pathFromState
-                   then None
-                   else
-                     dispatchEventless (State.UriNavigated currentActualPath)
-                       latestComponentBag ())
-                   [@res.ternary ]))
-               [@res.braces ])) ())
+  fun [arity:3]_oldPath _oldUrl newUrl ->
+    updater
+      (fun [arity:2]latestComponentBag _ ->
+         ((let currentActualPath = Routes.hashOfUri newUrl in
+           let pathFromState = Routes.stateToPath latestComponentBag.state in
+           ((if currentActualPath == pathFromState
+             then None
+             else
+               dispatchEventless (State.UriNavigated currentActualPath)
+                 latestComponentBag ())
+             [@res.ternary ]))
+         [@res.braces ])) ())
   [@res.braces ]) />
 let z =
   <div style=(ReactDOMRe.Style.make ~width ~height ~color ~backgroundColor
@@ -176,14 +172,9 @@ let _ =
                    ((Console.log event; handleChange event)[@res.braces ]))
   [@res.braces ]) />
 let _ =
-  <StaticDiv onClick=((fun [arity:5]foo ->
-                         fun bar ->
-                           fun baz ->
-                             fun lineBreak ->
-                               fun identifier ->
-                                 ((doStuff foo bar baz;
-                                   bar lineBreak identifier)
-                                 [@res.braces ]))
+  <StaticDiv onClick=((fun [arity:5]foo bar baz lineBreak identifier ->
+                         ((doStuff foo bar baz; bar lineBreak identifier)
+                         [@res.braces ]))
   [@res.braces ]) />
 let _ = <AttrDiv onClick=((fun [arity:1]event -> handleChange event)
   [@res.braces ][@bar ]) />
@@ -192,38 +183,26 @@ let _ =
                        handleChange eventLongIdentifier)
   [@res.braces ][@bar ]) />
 let _ =
-  <StaticDivNamed onClick=((fun [arity:6]~foo ->
-                              fun ~bar ->
-                                fun ~baz ->
-                                  fun ~lineBreak ->
-                                    fun ~identifier ->
-                                      fun () -> bar lineBreak identifier)
+  <StaticDivNamed onClick=((fun [arity:6]~foo ~bar ~baz ~lineBreak
+                              ~identifier () -> bar lineBreak identifier)
   [@res.braces ]) />
 let _ =
   <div onClick=((fun [arity:1]e -> (((doStuff (); bar foo)
                    [@res.braces ]) : event))
   [@res.braces ]) />
 let _ =
-  <div onClick=((fun [arity:2]e ->
-                   fun e2 -> (((doStuff (); bar foo)[@res.braces ]) : event))
+  <div onClick=((fun [arity:2]e e2 -> (((doStuff (); bar foo)
+                   [@res.braces ]) : event))
   [@res.braces ]) />
 let _ =
-  <div onClick=((fun [arity:5]foo ->
-                   fun bar ->
-                     fun baz ->
-                       fun superLongIdent ->
-                         fun breakLine -> (((doStuff (); bar foo)
-                           [@res.braces ]) : (event * event2 * event3 *
-                                               event4 * event5)))
+  <div onClick=((fun [arity:5]foo bar baz superLongIdent breakLine ->
+                   (((doStuff (); bar foo)
+                   [@res.braces ]) : (event * event2 * event3 * event4 *
+                                       event5)))
   [@res.braces ]) />
 let _ =
-  <div onClick=((fun [arity:5]foo ->
-                   fun bar ->
-                     fun baz ->
-                       fun superLongIdent ->
-                         fun breakLine ->
-                           (doStuff () : (event * event2 * event3 * event4 *
-                                           event5)))
+  <div onClick=((fun [arity:5]foo bar baz superLongIdent breakLine ->
+                   (doStuff () : (event * event2 * event3 * event4 * event5)))
   [@res.braces ]) />
 let _ =
   <div>((match color with

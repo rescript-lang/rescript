@@ -30,7 +30,7 @@ type typ = Parsetree.core_type
 val to_method_callback_type :
   Ast_helper.loc ->
   Bs_ast_mapper.mapper ->
-  arity:int option ->
+  arity:int ->
   typ ->
   (* Method type *)
   typ

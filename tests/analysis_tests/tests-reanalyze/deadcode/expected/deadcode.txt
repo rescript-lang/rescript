@@ -964,16 +964,16 @@
   addValueDeclaration +make ImportHookDefault.res:6:0 path:+ImportHookDefault
   addRecordLabelDeclaration name ImportHookDefault.res:2:2 path:+ImportHookDefault.person
   addRecordLabelDeclaration age ImportHookDefault.res:3:2 path:+ImportHookDefault.person
-  addRecordLabelDeclaration person ImportHookDefault.res:7:15 path:+ImportHookDefault.props
-  addRecordLabelDeclaration children ImportHookDefault.res:9:2 path:+ImportHookDefault.props
+  addRecordLabelDeclaration person ImportHookDefault.res:8:11 path:+ImportHookDefault.props
+  addRecordLabelDeclaration children ImportHookDefault.res:9:13 path:+ImportHookDefault.props
   addRecordLabelDeclaration renderMe ImportHookDefault.res:11:5 path:+ImportHookDefault.props
   Scanning ImportHooks.cmt Source:ImportHooks.res
   addValueDeclaration +make ImportHooks.res:13:0 path:+ImportHooks
   addValueDeclaration +foo ImportHooks.res:20:0 path:+ImportHooks
   addRecordLabelDeclaration name ImportHooks.res:3:2 path:+ImportHooks.person
   addRecordLabelDeclaration age ImportHooks.res:4:2 path:+ImportHooks.person
-  addRecordLabelDeclaration person ImportHooks.res:14:15 path:+ImportHooks.props
-  addRecordLabelDeclaration children ImportHooks.res:16:2 path:+ImportHooks.props
+  addRecordLabelDeclaration person ImportHooks.res:15:11 path:+ImportHooks.props
+  addRecordLabelDeclaration children ImportHooks.res:16:13 path:+ImportHooks.props
   addRecordLabelDeclaration renderMe ImportHooks.res:18:5 path:+ImportHooks.props
   Scanning ImportIndex.cmt Source:ImportIndex.res
   addValueDeclaration +make ImportIndex.res:2:0 path:+ImportIndex
@@ -2139,6 +2139,7 @@ Forward Liveness Analysis
     Root (external ref): Value +OptionalArgsLiveDead.+liveCaller
     Root (annotated): Value +Types.+testInstantiateTypeParameter
     Root (annotated): RecordLabel +ImportHookDefault.props.renderMe
+    Root (annotated): RecordLabel +ImportHookDefault.props.children
     Root (annotated): Value +TypeParams3.+test
     Root (annotated): Value +Types.+optFunction
     Root (annotated): Value +Variants.+sunday
@@ -2206,6 +2207,7 @@ Forward Liveness Analysis
     Root (external ref): VariantCase DeadTypeTest.deadType.OnlyInInterface
     Root (annotated): Value +ImportJsValue.+higherOrder
     Root (annotated): Value +Variants.+restResult3
+    Root (annotated): RecordLabel +ImportHooks.props.person
     Root (external ref): Value +FirstClassModules.M.InnerModule3.+k3
     Root (annotated): Value +DeadTest.+fortyTwoButExported
     Root (external ref): Value +ContextOptionalArgs.ComponentNotUsingAction.+dispatchNotification
@@ -2295,7 +2297,6 @@ Forward Liveness Analysis
     Root (annotated): Value +OcamlWarningSuppressToplevel.M.+suppressed4
     Root (external ref): VariantCase +DeadTest.inlineRecord.IR
     Root (annotated): Value +Types.+swap
-    Root (annotated): RecordLabel +ImportHookDefault.props.person
     Root (annotated): Value +Variants.+saturday
     Root (annotated): Value +OcamlWarningSuppressToplevel.M.+suppressed3
     Root (annotated): Value +Uncurried.+uncurried0
@@ -2327,6 +2328,7 @@ Forward Liveness Analysis
     Root (external ref): Value +ContextOptionalArgs.ComponentNotUsingAction.+make
     Root (annotated): Value +Records.+testMyRec
     Root (external ref): Value +DeadTest.+make
+    Root (annotated): RecordLabel +ImportHooks.props.children
     Root (annotated): Value NestedModulesInSignature.Universe.+theAnswer
     Root (annotated): Value +ContextOptionalArgs.+make
     Root (annotated): Value +References.+create
@@ -2349,7 +2351,6 @@ Forward Liveness Analysis
     Root (annotated): Value +TestFirstClassModules.+convertInterface
     Root (external ref): RecordLabel +VariantsWithPayload.payload.x
     Root (annotated): RecordLabel +DeadTest.inlineRecord.IR.e
-    Root (annotated): RecordLabel +ImportHooks.props.children
     Root (external ref): RecordLabel +DeadTest.props.s
     Root (external ref): VariantCase +DeadTypeTest.t.A
     Root (annotated): Value +Docstrings.+unitArgWithoutConversion
@@ -2360,6 +2361,7 @@ Forward Liveness Analysis
     Root (annotated): Value +Docstrings.+one
     Root (external ref): RecordLabel +Records.payload.payload
     Root (annotated): Value +ScopedAnnotationsOverride.M.+live2
+    Root (annotated): RecordLabel +ImportHookDefault.props.person
     Root (annotated): Value +FirstClassModules.+someFunctorAsFunction
     Root (external ref): RecordLabel +Records.record.v
     Root (annotated): Value +Variants.+fortytwoBAD
@@ -2392,7 +2394,6 @@ Forward Liveness Analysis
     Root (external ref): RecordLabel +Tuples.person.name
     Root (annotated): Value +Records.+testMyRecBsAs
     Root (annotated): Value +ModuleAliases.+testInner2
-    Root (annotated): RecordLabel +ImportHooks.props.person
     Root (external ref): Value DeadValueTest.+valueAlive
     Root (external ref): Value +DeadTest.+ira
     Root (external ref): RecordLabel +Hooks.RenderPropRequiresConversion.props.renderVehicle
@@ -2454,7 +2455,6 @@ Forward Liveness Analysis
     Root (external ref): VariantCase +DeadTypeTest.deadType.InBoth
     Root (external ref): RecordLabel +Records.business.address
     Root (external ref): RecordLabel +VariantsWithPayload.payload.y
-    Root (annotated): RecordLabel +ImportHookDefault.props.children
     Root (annotated): Value +Records.+testMyObj
     Root (annotated): Value +TestModuleAliases.+testInner1
     Root (annotated): Value +ForAwaitOf.+keep

@@ -24,6 +24,7 @@
   1) (pattern): int => "test"
   2) (pattern: int) => "test"
 
-let a b = ({js|hi|js} : int)
-let x = ((let a = 1 in let b = 2 in fun pattern -> ({js|test|js} : int))
+let a [arity:1]b = ({js|hi|js} : int)
+let x =
+  ((let a = 1 in let b = 2 in fun [arity:1]pattern -> ({js|test|js} : int))
   [@res.braces ])

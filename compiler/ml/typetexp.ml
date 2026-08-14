@@ -304,18 +304,40 @@ and transl_type_aux env policy styp =
           v)
     in
     ctyp (Ttyp_var name) ty
-  | Ptyp_arrow {arg; ret; arity} ->
-    let lbl = arg.lbl in
-    let cty1 = transl_type env policy arg.typ in
-    let cty2 = transl_type env policy ret in
-    let ty1 = cty1.ctyp_type in
-    let ty1 =
-      if Btype.is_optional lbl then
-        newty (Tconstr (Predef.path_option, [ty1], ref Mnil))
-      else ty1
+  | Ptyp_arrow {params; ret} ->
+    (* The n-ary arrow is translated to the (still curried) [Tarrow] chain:
+       the head arrow carries [Some arity], inner arrows carry [None]. *)
+    let arity = List.length params in
+    let cparams =
+      List.map
+        (fun (arg : Parsetree.arg) ->
+          let cty = transl_type env policy arg.typ in
+          let ty =
+            if Btype.is_optional arg.lbl then
+              newty (Tconstr (Predef.path_option, [cty.ctyp_type], ref Mnil))
+            else cty.ctyp_type
+          in
+          (arg, cty, ty))
+        params
     in
-    let ty = newty (Tarrow ({lbl; typ = ty1}, cty2.ctyp_type, arity)) in
-    ctyp (Ttyp_arrow ({attrs = arg.attrs; lbl; typ = cty1}, cty2, arity)) ty
+    let cty2 = transl_type env policy ret in
+    let rec fold n = function
+      | [] -> cty2
+      | ((arg : Parsetree.arg), cty1, ty1) :: rest ->
+        let arrow_arity = if n = 0 then Some arity else None in
+        let ret_cty = fold (n + 1) rest in
+        let ty =
+          newty
+            (Tarrow ({lbl = arg.lbl; typ = ty1}, ret_cty.ctyp_type, arrow_arity))
+        in
+        ctyp
+          (Ttyp_arrow
+             ( {attrs = arg.attrs; lbl = arg.lbl; typ = cty1},
+               ret_cty,
+               arrow_arity ))
+          ty
+    in
+    fold 0 cparams
   | Ptyp_tuple stl ->
     assert (List.length stl >= 2);
     let ctys = List.map (transl_type env policy) stl in

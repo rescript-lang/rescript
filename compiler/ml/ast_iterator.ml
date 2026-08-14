@@ -96,8 +96,8 @@ module T = struct
     sub.attributes sub attrs;
     match desc with
     | Ptyp_any | Ptyp_var _ -> ()
-    | Ptyp_arrow {arg; ret} ->
-      sub.typ sub arg.typ;
+    | Ptyp_arrow {params; ret} ->
+      List.iter (fun (arg : Parsetree.arg) -> sub.typ sub arg.typ) params;
       sub.typ sub ret
     | Ptyp_tuple tyl -> List.iter (sub.typ sub) tyl
     | Ptyp_constr (lid, tl) ->
@@ -289,10 +289,13 @@ module E = struct
     | Pexp_let (_r, vbs, e) ->
       List.iter (sub.value_binding sub) vbs;
       sub.expr sub e
-    | Pexp_fun {default = def; lhs = p; rhs = e} ->
-      iter_opt (sub.expr sub) def;
-      sub.pat sub p;
-      sub.expr sub e
+    | Pexp_fun {params; body} ->
+      List.iter
+        (fun {p_default; p_pat} ->
+          iter_opt (sub.expr sub) p_default;
+          sub.pat sub p_pat)
+        params;
+      sub.expr sub body
     | Pexp_apply {funct = e; args = l} ->
       sub.expr sub e;
       List.iter (iter_snd (sub.expr sub)) l

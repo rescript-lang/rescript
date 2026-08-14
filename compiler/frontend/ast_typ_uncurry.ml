@@ -27,12 +27,9 @@ type typ = Parsetree.core_type
 let to_method_callback_type loc (mapper : Bs_ast_mapper.mapper) ~arity
     (meth_type : Parsetree.core_type) =
   let meth_type = Bs_ast_mapper.default_mapper.typ mapper meth_type in
-  match arity with
-  | Some n ->
-    Ast_helper.Typ.constr
-      {
-        txt = Ldot (Ast_literal.Lid.method_callback, "arity" ^ string_of_int n);
-        loc;
-      }
-      [meth_type]
-  | None -> assert false
+  Ast_helper.Typ.constr
+    {
+      txt = Ldot (Ast_literal.Lid.method_callback, "arity" ^ string_of_int arity);
+      loc;
+    }
+    [meth_type]

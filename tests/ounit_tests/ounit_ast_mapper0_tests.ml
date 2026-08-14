@@ -85,10 +85,15 @@ let test_function_cases_desugar_to_fun_match _ =
   match expr.pexp_desc with
   | Parsetree.Pexp_fun
       {
-        arg_label = Nolabel;
-        default = None;
-        lhs = {ppat_desc = Ppat_var {txt = param}};
-        rhs =
+        params =
+          [
+            {
+              p_lbl = Nolabel;
+              p_default = None;
+              p_pat = {ppat_desc = Ppat_var {txt = param}};
+            };
+          ];
+        body =
           {
             pexp_desc =
               Pexp_match ({pexp_desc = Pexp_ident {txt = Lident scrutinee}}, [_]);
@@ -98,11 +103,99 @@ let test_function_cases_desugar_to_fun_match _ =
       scrutinee
   | _ -> assert_failure "Expected fun x -> match x with ... after desugaring"
 
+(* Only a PPX can put an attribute on the function nested under a newtype
+   (the parser attaches source attributes to the outer node), and the bridge
+   deliberately preserves such attributes. The printer must not drop them
+   when merging the newtype and the function into one parameter list. *)
+let test_attributed_fun_under_newtype_prints_attribute _ =
+  let fun_expr =
+    Ast_helper.Exp.fun_ ~loc
+      ~attrs:[attr "foo" (Parsetree.PStr [])]
+      [
+        Ast_helper.Exp.fun_param Asttypes.Nolabel
+          (Ast_helper.Pat.var ~loc (Location.mknoloc "x"));
+      ]
+      (Ast_helper.Exp.ident ~loc (Location.mknoloc (Longident.Lident "x")))
+  in
+  let expr = Ast_helper.Exp.newtype ~loc (Location.mknoloc "t") fun_expr in
+  let structure =
+    [
+      Ast_helper.Str.value ~loc Asttypes.Nonrecursive
+        [
+          Ast_helper.Vb.mk ~loc
+            (Ast_helper.Pat.var ~loc (Location.mknoloc "f"))
+            expr;
+        ];
+    ]
+  in
+  let printed =
+    Res_printer.print_implementation ~width:80 structure ~comments:[]
+  in
+  OUnit.assert_bool "attribute on the fun under a newtype is printed"
+    (Ext_string.contain_substring printed "@foo")
+
+let map_expr_to0 e =
+  Ast_mapper_to0.default_mapper.expr Ast_mapper_to0.default_mapper e
+
+let attr_names attrs = List.map (fun ({Location.txt}, _) -> txt) attrs
+
+(* Function-node attributes such as [@this] must stay node attributes across
+   the v0 bridge: the built-in PPX reads decorators from [pexp_attributes],
+   so a round trip that moves them into [p_attrs] silently disables them. *)
+let test_fun_node_attrs_roundtrip_through_ast0 _ =
+  let fun_expr =
+    Ast_helper.Exp.fun_ ~loc
+      ~attrs:[attr "this" (Parsetree.PStr [])]
+      [
+        Ast_helper.Exp.fun_param Asttypes.Nolabel
+          (Ast_helper.Pat.var ~loc (Location.mknoloc "self"));
+      ]
+      (Ast_helper.Exp.ident ~loc (Location.mknoloc (Longident.Lident "self")))
+  in
+  let round_tripped = map_expr0 (map_expr_to0 fun_expr) in
+  match round_tripped.pexp_desc with
+  | Parsetree.Pexp_fun {params = [{p_attrs}]} ->
+    OUnit.assert_equal ~msg:"node attributes survive on the function node"
+      ["this"]
+      (attr_names round_tripped.pexp_attributes);
+    OUnit.assert_equal ~msg:"no attributes leak into p_attrs" []
+      (attr_names p_attrs)
+  | _ -> assert_failure "Expected a function after ast0 roundtrip"
+
+(* The converse split: bridge-populated parameter attributes must come back
+   as [p_attrs], not as function-node attributes. *)
+let test_fun_param_attrs_roundtrip_through_ast0 _ =
+  let fun_expr =
+    Ast_helper.Exp.fun_ ~loc
+      ~attrs:[attr "bar" (Parsetree.PStr [])]
+      [
+        Ast_helper.Exp.fun_param
+          ~attrs:[attr "foo" (Parsetree.PStr [])]
+          Asttypes.Nolabel
+          (Ast_helper.Pat.var ~loc (Location.mknoloc "x"));
+      ]
+      (Ast_helper.Exp.ident ~loc (Location.mknoloc (Longident.Lident "x")))
+  in
+  let round_tripped = map_expr0 (map_expr_to0 fun_expr) in
+  match round_tripped.pexp_desc with
+  | Parsetree.Pexp_fun {params = [{p_attrs}]} ->
+    OUnit.assert_equal ~msg:"node attributes stay on the node" ["bar"]
+      (attr_names round_tripped.pexp_attributes);
+    OUnit.assert_equal ~msg:"parameter attributes stay on the parameter" ["foo"]
+      (attr_names p_attrs)
+  | _ -> assert_failure "Expected a function after ast0 roundtrip"
+
 let suites =
   __FILE__
   >::: [
          "public_record_rest_attr_is_not_internal"
          >:: test_public_record_rest_attr_is_not_internal;
+         "attributed_fun_under_newtype_prints_attribute"
+         >:: test_attributed_fun_under_newtype_prints_attribute;
+         "fun_node_attrs_roundtrip_through_ast0"
+         >:: test_fun_node_attrs_roundtrip_through_ast0;
+         "fun_param_attrs_roundtrip_through_ast0"
+         >:: test_fun_param_attrs_roundtrip_through_ast0;
          "malformed_internal_record_rest_attr_fails"
          >:: test_malformed_internal_record_rest_attr_fails;
          "record_rest_roundtrips_through_ast0"

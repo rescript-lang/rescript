@@ -99,9 +99,11 @@ module T = struct
     match desc with
     | Ptyp_any -> Typ.any ~loc ~attrs ()
     | Ptyp_var s -> Typ.var ~loc ~attrs s
-    | Ptyp_arrow {arg; ret; arity} ->
-      Typ.arrow ~loc ~attrs ~arity
-        {arg with typ = sub.typ sub arg.typ}
+    | Ptyp_arrow {params; ret} ->
+      Typ.arrow ~loc ~attrs
+        (List.map
+           (fun (arg : Parsetree.arg) -> {arg with typ = sub.typ sub arg.typ})
+           params)
         (sub.typ sub ret)
     | Ptyp_tuple tyl -> Typ.tuple ~loc ~attrs (List.map (sub.typ sub) tyl)
     | Ptyp_constr (lid, tl) ->
@@ -323,11 +325,17 @@ module E = struct
            sub vbs)
         (sub.expr sub e)
     (* #end *)
-    | Pexp_fun {arg_label = lab; default = def; lhs = p; rhs = e; arity; async}
-      ->
-      fun_ ~loc ~attrs ~arity ~async lab
-        (map_opt (sub.expr sub) def)
-        (sub.pat sub p) (sub.expr sub e)
+    | Pexp_fun {params; body; async} ->
+      fun_ ~loc ~attrs ~async
+        (List.map
+           (fun (param : Parsetree.fun_param) ->
+             {
+               param with
+               p_default = map_opt (sub.expr sub) param.p_default;
+               p_pat = sub.pat sub param.p_pat;
+             })
+           params)
+        (sub.expr sub body)
     | Pexp_apply {funct = e; args = l; partial; transformed_jsx} ->
       apply ~loc ~attrs ~partial ~transformed_jsx (sub.expr sub e)
         (List.map (map_snd (sub.expr sub)) l)

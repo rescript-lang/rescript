@@ -1601,42 +1601,63 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
             | Some context_path ->
               set_result (Cpath (CPObj (context_path, label)))
             | None -> ())
-        | Pexp_fun
-            {arg_label = lbl; default = default_exp_opt; lhs = pat; rhs = e} ->
+        | Pexp_fun {params; body = e} ->
           let old_scope = !scope in
           (match (!processing_fun, !current_ctx_path) with
           | None, Some ctx_path -> processing_fun := Some (ctx_path, 0)
           | _ -> ());
-          let arg_context_path =
-            match !processing_fun with
-            | None -> None
-            | Some (ctx_path, current_unlabelled_count) ->
-              (processing_fun :=
-                 match lbl with
-                 | Nolabel -> Some (ctx_path, current_unlabelled_count + 1)
-                 | _ -> Some (ctx_path, current_unlabelled_count));
-              if Debug.verbose () then
-                print_endline "[expr_iter] Completing for argument value";
-              Some
-                (Completable.CArgument
-                   {
-                     function_context_path = ctx_path;
-                     argument_label =
-                       (match lbl with
-                       | Nolabel ->
-                         Unlabelled
-                           {argument_position = current_unlabelled_count}
-                       | Optional {txt = name} -> Optional name
-                       | Labelled {txt = name} -> Labelled name);
-                   })
+          let param_has_cursor ({p_default; p_pat} : Parsetree.fun_param) =
+            loc_has_cursor p_pat.ppat_loc
+            || loc_is_empty p_pat.ppat_loc
+            ||
+            match p_default with
+            | Some default_exp -> loc_has_cursor default_exp.pexp_loc
+            | None -> false
           in
-          (match default_exp_opt with
-          | None -> ()
-          | Some default_exp -> iterator.expr iterator default_exp);
-          if loc_has_cursor e.pexp_loc = false then
-            complete_pattern ?context_path:arg_context_path pat;
-          scope_pattern ?context_path:arg_context_path pat;
-          iterator.pat iterator pat;
+          let rec iter_params params =
+            match params with
+            | [] -> ()
+            | (({p_lbl = lbl; p_default = default_exp_opt; p_pat = pat} :
+                 Parsetree.fun_param) as param)
+              :: rest ->
+              let arg_context_path =
+                match !processing_fun with
+                | None -> None
+                | Some (ctx_path, current_unlabelled_count) ->
+                  (processing_fun :=
+                     match lbl with
+                     | Nolabel -> Some (ctx_path, current_unlabelled_count + 1)
+                     | _ -> Some (ctx_path, current_unlabelled_count));
+                  if Debug.verbose () then
+                    print_endline "[expr_iter] Completing for argument value";
+                  Some
+                    (Completable.CArgument
+                       {
+                         function_context_path = ctx_path;
+                         argument_label =
+                           (match lbl with
+                           | Nolabel ->
+                             Unlabelled
+                               {argument_position = current_unlabelled_count}
+                           | Optional {txt = name} -> Optional name
+                           | Labelled {txt = name} -> Labelled name);
+                       })
+              in
+              (match default_exp_opt with
+              | None -> ()
+              | Some default_exp -> iterator.expr iterator default_exp);
+              (* Only complete the pattern if the cursor is not in a later
+                 part of the function: a following parameter or the body. *)
+              if
+                loc_has_cursor e.pexp_loc = false
+                && (param_has_cursor param
+                   || not (List.exists param_has_cursor rest))
+              then complete_pattern ?context_path:arg_context_path pat;
+              scope_pattern ?context_path:arg_context_path pat;
+              iterator.pat iterator pat;
+              iter_params rest
+          in
+          iter_params params;
           iterator.expr iterator e;
           scope := old_scope;
           processed := true

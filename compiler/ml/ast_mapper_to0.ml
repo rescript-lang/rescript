@@ -122,37 +122,48 @@ module T = struct
     match desc with
     | Ptyp_any -> any ~loc ~attrs ()
     | Ptyp_var s -> var ~loc ~attrs s
-    | Ptyp_arrow {arg; ret; arity} -> (
-      let lbl = Asttypes.to_noloc arg.lbl in
-      (* v0 arrows have a single attribute slot for what the current parsetree
+    | Ptyp_arrow {params; ret} ->
+      (* Re-curry the n-ary arrow into the v0 chain of unary arrows, and wrap
+         the head in function$(_, [#Has_arityN]).
+
+         v0 arrows have a single attribute slot for what the current parsetree
          splits into node attributes and argument attributes. Keep the split
          recoverable: when node attributes are present, separate the two lists
          with an internal marker that [Ast_mapper_from0] strips again. Without
          node attributes (the common case) the encoding is unchanged. *)
-      let arg_attrs = sub.attributes sub arg.attrs in
-      let merged_attrs =
-        if attrs = [] then arg_attrs
-        else
-          attrs
-          @ ({txt = "_res.arrow_node_attrs"; loc = Location.none}, Pt.PStr [])
-            :: arg_attrs
+      let arity = List.length params in
+      let rec build (params : Parsetree.arg list) =
+        match params with
+        | [] -> sub.typ sub ret
+        | (arg : Parsetree.arg) :: rest ->
+          let lbl = Asttypes.to_noloc arg.lbl in
+          let arg_attrs = sub.attributes sub arg.attrs in
+          let is_head = List.length rest = arity - 1 in
+          let merged_attrs =
+            if is_head && attrs <> [] then
+              attrs
+              @ ( {txt = "_res.arrow_node_attrs"; loc = Location.none},
+                  Pt.PStr [] )
+                :: arg_attrs
+            else arg_attrs
+          in
+          let arrow_loc =
+            if is_head then loc
+            else {loc with loc_start = arg.typ.ptyp_loc.loc_start}
+          in
+          arrow ~loc:arrow_loc ~attrs:merged_attrs lbl (sub.typ sub arg.typ)
+            (build rest)
       in
-      let typ0 =
-        arrow ~loc ~attrs:merged_attrs lbl (sub.typ sub arg.typ)
-          (sub.typ sub ret)
+      let typ0 = build params in
+      let arity_string = "Has_arity" ^ string_of_int arity in
+      let arity_type =
+        Ast_helper0.Typ.variant ~loc
+          [Rtag (Location.mknoloc arity_string, [], true, [])]
+          Closed None
       in
-      match arity with
-      | None -> typ0
-      | Some arity ->
-        let arity_string = "Has_arity" ^ string_of_int arity in
-        let arity_type =
-          Ast_helper0.Typ.variant ~loc
-            [Rtag (Location.mknoloc arity_string, [], true, [])]
-            Closed None
-        in
-        Ast_helper0.Typ.constr ~loc
-          {txt = Lident "function$"; loc}
-          [typ0; arity_type])
+      Ast_helper0.Typ.constr ~loc
+        {txt = Lident "function$"; loc}
+        [typ0; arity_type]
     | Ptyp_tuple tyl -> tuple ~loc ~attrs (List.map (sub.typ sub) tyl)
     | Ptyp_constr (lid, tl) ->
       constr ~loc ~attrs (map_loc sub lid) (List.map (sub.typ sub) tl)
@@ -394,37 +405,61 @@ module E = struct
     | Pexp_constant x -> constant ~loc ~attrs (map_constant x)
     | Pexp_let (r, vbs, e) ->
       let_ ~loc ~attrs r (List.map (sub.value_binding sub) vbs) (sub.expr sub e)
-    | Pexp_fun {arg_label = lab; default = def; lhs = p; rhs = e; arity; async}
-      -> (
-      let lab = Asttypes.to_noloc lab in
-      let attrs =
-        if async then
-          ({txt = "res.async"; loc = Location.none}, Pt.PStr []) :: attrs
-        else attrs
+    | Pexp_fun {params; body; async} ->
+      (* Re-curry the n-ary function into the v0 chain of unary funs, and
+         wrap it in Function$ carrying the arity as a res.arity attribute.
+         The head carries the function node's own attributes (and the
+         res.async marker), matching what the old parser produced.
+
+         v0 fun nodes have a single attribute slot for what the current
+         parsetree splits into node attributes and parameter attributes.
+         Keep the split recoverable: when parameter attributes are present
+         (only the PPX bridge populates them), separate the two lists with an
+         internal marker that [Ast_mapper_from0] strips again. Without
+         parameter attributes (the common case) the encoding is unchanged. *)
+      let arity = List.length params in
+      let rec build (params : Parsetree.fun_param list) =
+        match params with
+        | [] -> sub.expr sub body
+        | {p_attrs; p_lbl; p_default; p_pat} :: rest ->
+          let lab = Asttypes.to_noloc p_lbl in
+          let is_head = List.length rest = arity - 1 in
+          let level_attrs =
+            let param_attrs = sub.attributes sub p_attrs in
+            let marked_param_attrs =
+              if param_attrs = [] then []
+              else
+                ({txt = "_res.fun_node_attrs"; loc = Location.none}, Pt.PStr [])
+                :: param_attrs
+            in
+            if is_head then
+              let base = attrs @ marked_param_attrs in
+              if async then
+                ({txt = "res.async"; loc = Location.none}, Pt.PStr []) :: base
+              else base
+            else marked_param_attrs
+          in
+          let fun_loc =
+            if is_head then loc
+            else {loc with loc_start = p_pat.ppat_loc.loc_start}
+          in
+          fun_ ~loc:fun_loc ~attrs:level_attrs lab
+            (map_opt (sub.expr sub) p_default)
+            (sub.pat sub p_pat) (build rest)
       in
-      let e =
-        fun_ ~loc ~attrs lab
-          (map_opt (sub.expr sub) def)
-          (sub.pat sub p) (sub.expr sub e)
+      let e = build params in
+      let arity_attr =
+        ( Location.mknoloc "res.arity",
+          Parsetree0.PStr
+            [
+              Ast_helper0.Str.eval
+                (Ast_helper0.Exp.constant
+                   (Pconst_integer (string_of_int arity, None)));
+            ] )
       in
-      match arity with
-      | None -> e
-      | Some arity ->
-        let arity_to_attributes arity =
-          [
-            ( Location.mknoloc "res.arity",
-              Parsetree0.PStr
-                [
-                  Ast_helper0.Str.eval
-                    (Ast_helper0.Exp.constant
-                       (Pconst_integer (string_of_int arity, None)));
-                ] );
-          ]
-        in
-        Ast_helper0.Exp.construct
-          ~attrs:(arity_to_attributes arity)
-          (Location.mkloc (Longident.Lident "Function$") e.pexp_loc)
-          (Some e))
+      Ast_helper0.Exp.construct ~attrs:[arity_attr]
+        (Location.mkloc (Longident.Lident "Function$") e.pexp_loc)
+        (Some e)
     | Pexp_apply {funct = e; args; partial} ->
       let e =
         match (e.pexp_desc, args) with
