@@ -55,11 +55,9 @@
   addValueReference ContextOptionalArgs.res:19:43 --> ContextOptionalArgs.res:12:14
   addTypeReference _none_:1:-1 --> ContextOptionalArgs.res:12:14
   addValueReference ContextOptionalArgs.res:12:6 --> React.res:16:0
-  DeadOptionalArgs.addReferences React.useContext called with optional argNames: argNamesMaybe: ContextOptionalArgs.res:22:30
   addValueReference ContextOptionalArgs.res:22:6 --> ContextOptionalArgs.res:2:6
   addValueReference ContextOptionalArgs.res:22:6 --> React.res:250:0
   addValueDeclaration +dispatchNotification ContextOptionalArgs.res:28:8 path:+ContextOptionalArgs.ComponentUsingAction
-  DeadOptionalArgs.addReferences NotificationProvider.useNotification called with optional argNames: argNamesMaybe: ContextOptionalArgs.res:28:31
   addValueReference ContextOptionalArgs.res:28:8 --> ContextOptionalArgs.res:22:6
   addValueReference ContextOptionalArgs.res:35:4 --> React.res:3:0
   DeadOptionalArgs.addReferences dispatchNotification called with optional argNames:action argNamesMaybe: ContextOptionalArgs.res:31:6
@@ -67,7 +65,6 @@
   addValueReference ContextOptionalArgs.res:30:4 --> React.res:150:0
   addValueReference ContextOptionalArgs.res:27:6 --> React.res:16:0
   addValueDeclaration +dispatchNotification ContextOptionalArgs.res:42:8 path:+ContextOptionalArgs.ComponentNotUsingAction
-  DeadOptionalArgs.addReferences NotificationProvider.useNotification called with optional argNames: argNamesMaybe: ContextOptionalArgs.res:42:31
   addValueReference ContextOptionalArgs.res:42:8 --> ContextOptionalArgs.res:22:6
   addValueReference ContextOptionalArgs.res:49:4 --> React.res:3:0
   DeadOptionalArgs.addReferences dispatchNotification called with optional argNames: argNamesMaybe: ContextOptionalArgs.res:45:6
@@ -94,7 +91,6 @@
   Scanning CrossFileOptionalArgValueUse.cmt Source:CrossFileOptionalArgValueUse.res
   addValueDeclaration +liveReturnCaller CrossFileOptionalArgValueUse.res:1:4 path:+CrossFileOptionalArgValueUse
   addValueReference CrossFileOptionalArgValueUse.res:1:4 --> CrossFileOptionalArgProvider.res:1:4
-  DeadOptionalArgs.addReferences liveReturnCaller called with optional argNames: argNamesMaybe: CrossFileOptionalArgValueUse.res:5:8
   addValueReference CrossFileOptionalArgValueUse.res:5:8 --> CrossFileOptionalArgValueUse.res:1:4
   Scanning DeadCodeImplementation.cmt Source:DeadCodeImplementation.res
   addValueDeclaration +x DeadCodeImplementation.res:2:6 path:+DeadCodeImplementation.M
@@ -1597,13 +1593,11 @@
   addValueReference TopLevelOptionalArgValueUse.res:40:8 --> TopLevelOptionalArgValueUse.res:41:4
   addValueReference TopLevelOptionalArgValueUse.res:41:4 --> TopLevelOptionalArgValueUse.res:41:39
   addValueReference TopLevelOptionalArgValueUse.res:43:4 --> TopLevelOptionalArgValueUse.res:43:22
-  DeadOptionalArgs.addReferences returnsFunction called with optional argNames: argNamesMaybe: TopLevelOptionalArgValueUse.res:44:23
   addValueReference TopLevelOptionalArgValueUse.res:44:4 --> TopLevelOptionalArgValueUse.res:43:4
   DeadOptionalArgs.addReferences returnedFunction called with optional argNames: argNamesMaybe: TopLevelOptionalArgValueUse.res:45:39
   addValueReference TopLevelOptionalArgValueUse.res:45:4 --> TopLevelOptionalArgValueUse.res:44:4
   addValueReference TopLevelOptionalArgValueUse.res:47:8 --> TopLevelOptionalArgValueUse.res:18:4
   addValueReference TopLevelOptionalArgValueUse.res:48:8 --> TopLevelOptionalArgValueUse.res:20:4
-  DeadOptionalArgs.addReferences liveReturnCaller called with optional argNames: argNamesMaybe: TopLevelOptionalArgValueUse.res:49:8
   addValueReference TopLevelOptionalArgValueUse.res:49:8 --> TopLevelOptionalArgValueUse.res:25:4
   addValueReference TopLevelOptionalArgValueUse.res:50:8 --> TopLevelOptionalArgValueUse.res:29:4
   DeadOptionalArgs.addReferences liveForwardingCaller called with optional argNames: argNamesMaybe: TopLevelOptionalArgValueUse.res:51:8

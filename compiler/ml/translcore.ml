@@ -552,75 +552,6 @@ let extract_constant = function
 (* Push the default values under the functional abstractions *)
 (* Also push bindings of module patterns, since this sound *)
 
-type binding =
-  | Bind_value of value_binding list
-  | Bind_module of Ident.t * string loc * module_expr
-
-let rec push_defaults loc bindings case partial =
-  match case with
-  | {
-   c_lhs = pat;
-   c_guard = None;
-   c_rhs =
-     {exp_desc = Texp_function {arg_label; arity; param; case; partial; async}}
-     as exp;
-  } ->
-    let case = push_defaults exp.exp_loc bindings case partial in
-
-    {
-      c_lhs = pat;
-      c_guard = None;
-      c_rhs =
-        {
-          exp with
-          exp_desc =
-            Texp_function {arg_label; arity; param; case; partial; async};
-        };
-    }
-  | {
-   c_lhs = pat;
-   c_guard = None;
-   c_rhs =
-     {
-       exp_attributes = [({txt = "#default"}, _)];
-       exp_desc =
-         Texp_let (Nonrecursive, binds, ({exp_desc = Texp_function _} as e2));
-     };
-  } ->
-    push_defaults loc
-      (Bind_value binds :: bindings)
-      {c_lhs = pat; c_guard = None; c_rhs = e2}
-      partial
-  | {
-   c_lhs = pat;
-   c_guard = None;
-   c_rhs =
-     {
-       exp_attributes = [({txt = "#modulepat"}, _)];
-       exp_desc =
-         Texp_letmodule (id, name, mexpr, ({exp_desc = Texp_function _} as e2));
-     };
-  } ->
-    push_defaults loc
-      (Bind_module (id, name, mexpr) :: bindings)
-      {c_lhs = pat; c_guard = None; c_rhs = e2}
-      partial
-  | case ->
-    let exp =
-      List.fold_left
-        (fun exp binds ->
-          {
-            exp with
-            exp_desc =
-              (match binds with
-              | Bind_value binds -> Texp_let (Nonrecursive, binds, exp)
-              | Bind_module (id, name, mexpr) ->
-                Texp_letmodule (id, name, mexpr, exp));
-          })
-        case.c_rhs bindings
-    in
-    {case with c_rhs = exp}
-
 (* Assertions *)
 
 let assert_failed exp =
@@ -681,16 +612,14 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
   | Texp_constant cst -> Lconst (Const_base cst)
   | Texp_let (rec_flag, pat_expr_list, body) ->
     transl_let rec_flag pat_expr_list (transl_exp body)
-  | Texp_function {arg_label = _; arity; param; case; partial; async} -> (
+  | Texp_function {params = fparams; body; async} ->
     let directive =
       match extract_directive_for_fn e with
       | None -> None
       | Some (directive, _) -> Some directive
     in
-    let params, body, return_unit =
-      let pl = push_defaults e.exp_loc [] case partial in
-      transl_function e.exp_loc partial param pl
-    in
+    let arity = List.length fparams in
+    let params, lbody, return_unit = transl_function e.exp_loc fparams body in
     let attr =
       {
         default_function_attribute with
@@ -701,23 +630,20 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
       }
     in
     let loc = e.exp_loc in
-    let lambda = Lfunction {params; body; attr; loc} in
-    match arity with
-    | Some arity ->
-      let prim =
-        let expanded = Ctype.expand_head e.exp_env e.exp_type in
-        match (Btype.repr expanded).desc with
-        | Tarrow ({lbl = Nolabel; typ}, _, _) -> (
-          match (Ctype.expand_head e.exp_env typ).desc with
-          | Tconstr (Pident {name = "unit"}, [], _) -> Pjs_fn_make_unit
-          | _ -> Pjs_fn_make arity)
-        | _ -> Pjs_fn_make arity
-      in
-      Lprim
-        ( prim (* could be replaced with Opaque in the future except arity 0*),
-          [lambda],
-          loc )
-    | None -> lambda)
+    let lambda = Lfunction {params; body = lbody; attr; loc} in
+    let prim =
+      let expanded = Ctype.expand_head e.exp_env e.exp_type in
+      match (Btype.repr expanded).desc with
+      | Tarrow ({lbl = Nolabel; typ} :: _, _) -> (
+        match (Ctype.expand_head e.exp_env typ).desc with
+        | Tconstr (Pident {name = "unit"}, [], _) -> Pjs_fn_make_unit
+        | _ -> Pjs_fn_make arity)
+      | _ -> Pjs_fn_make arity
+    in
+    Lprim
+      ( prim (* could be replaced with Opaque in the future except arity 0*),
+        [lambda],
+        loc )
   | Texp_apply {funct; args = oargs}
     when List.exists
            (fun (attr, _) -> attr.txt = "res.taggedTemplate")
@@ -1080,36 +1006,43 @@ and transl_apply ?(inlined = Default_inline)
           sargs)
       : Lambda.lambda)
 
-and transl_function loc partial param case =
-  match case with
-  | {
-   c_lhs = pat;
-   c_guard = None;
-   c_rhs =
-     {
-       exp_desc =
-         Texp_function
-           {
-             arg_label = _;
-             arity = None;
-             param = param';
-             case;
-             partial = partial';
-             async;
-           };
-     } as exp;
-  }
-    when Parmatch.inactive ~partial pat && not async ->
-    let params, body, return_unit =
-      transl_function exp.exp_loc partial' param' case
-    in
-    ( param :: params,
-      Matching.for_function loc None (Lvar param) [(pat, body)] partial,
-      return_unit )
-  | {c_rhs = {exp_env; exp_type}; _} ->
-    ( [param],
-      Matching.for_function loc None (Lvar param) [transl_case case] partial,
-      is_base_type exp_env exp_type Predef.path_unit )
+and transl_function loc (params : function_param list) body =
+  match params with
+  | [] -> assert false
+  | [{fp_param; fp_pat; fp_partial}] ->
+    ( [fp_param],
+      Matching.for_function loc None (Lvar fp_param)
+        [(fp_pat, transl_exp body)]
+        fp_partial,
+      is_base_type body.exp_env body.exp_type Predef.path_unit )
+  | {fp_param; fp_pat; fp_partial} :: rest ->
+    if Parmatch.inactive ~partial:fp_partial fp_pat then
+      let lparams, lbody, return_unit = transl_function loc rest body in
+      ( fp_param :: lparams,
+        Matching.for_function loc None (Lvar fp_param)
+          [(fp_pat, lbody)]
+          fp_partial,
+        return_unit )
+    else
+      (* An "active" pattern (whose compilation can have side effects, e.g.
+         a lazy or string pattern) must run when its own parameter group is
+         applied: split the remaining parameters into a nested curried
+         function, as the legacy chain representation did. *)
+      let lparams, lbody, _ = transl_function loc rest body in
+      let inner =
+        Lfunction
+          {
+            params = lparams;
+            body = lbody;
+            attr = default_function_attribute;
+            loc;
+          }
+      in
+      ( [fp_param],
+        Matching.for_function loc None (Lvar fp_param)
+          [(fp_pat, inner)]
+          fp_partial,
+        false )
 
 and transl_let rec_flag pat_expr_list body =
   match rec_flag with

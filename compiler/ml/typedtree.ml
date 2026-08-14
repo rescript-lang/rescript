@@ -83,11 +83,8 @@ and expression_desc =
   | Texp_constant of constant
   | Texp_let of rec_flag * value_binding list * expression
   | Texp_function of {
-      arg_label: arg_label;
-      arity: arity;
-      param: Ident.t;
-      case: case;
-      partial: partial;
+      params: function_param list;
+      body: expression;
       async: bool;
     }
   | Texp_apply of {
@@ -142,6 +139,13 @@ and expression_desc =
 and meth = Tmeth_name of string
 
 and case = {c_lhs: pattern; c_guard: expression option; c_rhs: expression}
+
+and function_param = {
+  fp_lbl: arg_label;
+  fp_param: Ident.t; (* the name the compiled parameter binds to *)
+  fp_pat: pattern;
+  fp_partial: partial; (* whether [fp_pat] is exhaustive *)
+}
 
 and record_label_definition =
   | Kept of Types.type_expr
@@ -322,7 +326,7 @@ and arg = {attrs: attributes; lbl: arg_label; typ: core_type}
 and core_type_desc =
   | Ttyp_any
   | Ttyp_var of string
-  | Ttyp_arrow of arg * core_type * arity
+  | Ttyp_arrow of arg list * core_type
   | Ttyp_tuple of core_type list
   | Ttyp_constr of Path.t * Longident.t loc * core_type list
   | Ttyp_object of object_field list * closed_flag

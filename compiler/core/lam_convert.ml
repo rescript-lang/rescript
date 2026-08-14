@@ -323,6 +323,12 @@ let lam_prim ~primitive:(p : Lambda.primitive) ~args loc : Lam.t =
 
 let may_depend = Lam_module_ident.Hash_set.add
 
+let is_opt_param_name name =
+  (* [*opt*] historically; [*opt_<label>*] with the n-ary representation *)
+  String.length name >= 5
+  && String.sub name 0 4 = "*opt"
+  && String.get name (String.length name - 1) = '*'
+
 let rec rename_optional_parameters map params (body : Lambda.lambda) =
   match body with
   | Llet
@@ -330,11 +336,13 @@ let rec rename_optional_parameters map params (body : Lambda.lambda) =
         value_kind,
         id,
         Lifthenelse
-          ( Lprim (p, [Lvar ({name = "*opt*"} as opt)], p_loc),
-            Lprim (p1, [Lvar ({name = "*opt*"} as opt2)], x_loc),
+          ( Lprim (p, [Lvar ({name = opt_name} as opt)], p_loc),
+            Lprim (p1, [Lvar ({name = opt_name2} as opt2)], x_loc),
             f ),
         rest )
-    when Ident.same opt opt2 && List.mem opt params ->
+    when is_opt_param_name opt_name
+         && is_opt_param_name opt_name2
+         && Ident.same opt opt2 && List.mem opt params ->
     let map, rest = rename_optional_parameters map params rest in
     let new_id = Ident.create (id.name ^ "Opt") in
     ( Map_ident.add map opt new_id,

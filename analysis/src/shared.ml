@@ -48,8 +48,8 @@ let find_type_constructors (tel : Types.type_expr list) =
     | Tconstr (path, args, _) ->
       add_path path;
       args |> List.iter loop
-    | Tarrow (arg, ret, _) ->
-      loop arg.typ;
+    | Tarrow (params, ret) ->
+      List.iter (fun ({typ} : Types.arg) -> loop typ) params;
       loop ret
     | Ttuple tel -> tel |> List.iter loop
     | Tnil | Tvar _ | Tobject _ | Tfield _ | Tvariant _ | Tunivar _ | Tpackage _

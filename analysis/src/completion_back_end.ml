@@ -1093,12 +1093,19 @@ and get_completions_for_context_path ~state ~debug ~full ~opens ~raw_opens ~pos
            ~pos
     with
     | Some ((TypeExpr typ | ExtractedType (Tfunction {typ})), env) -> (
-      let rec reconstruct_function_type args t_ret =
+      let reconstruct_function_type args t_ret =
         match args with
         | [] -> t_ret
-        | (label, t_arg) :: rest ->
-          let rest_type = reconstruct_function_type rest t_ret in
-          {typ with desc = Tarrow ({lbl = label; typ = t_arg}, rest_type, None)}
+        | args ->
+          {
+            typ with
+            desc =
+              Tarrow
+                ( List.map
+                    (fun (label, t_arg) -> {Types.lbl = label; typ = t_arg})
+                    args,
+                  t_ret );
+          }
       in
       let rec process_apply args labels =
         match (args, labels) with

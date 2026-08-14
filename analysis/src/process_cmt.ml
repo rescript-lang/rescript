@@ -723,12 +723,7 @@ and scan_let_modules ~env (e : Typedtree.expression) =
     in
     List.iter scan_case cases;
     List.iter scan_case exn_cases
-  | Texp_function {case; _} ->
-    let {Typedtree.c_lhs = _; c_guard; c_rhs} = case in
-    (match c_guard with
-    | Some g -> scan_let_modules ~env g
-    | None -> ());
-    scan_let_modules ~env c_rhs
+  | Texp_function {body; _} -> scan_let_modules ~env body
   | Texp_try (e, cases) ->
     scan_let_modules ~env e;
     cases

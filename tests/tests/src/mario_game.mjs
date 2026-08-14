@@ -847,9 +847,9 @@ function new_id() {
   return id_counter.contents;
 }
 
-function make$2($staropt$star, $staropt$star$1, spawnable, context, param) {
-  let id = $staropt$star !== undefined ? Primitive_option.valFromOption($staropt$star) : undefined;
-  let dir = $staropt$star$1 !== undefined ? $staropt$star$1 : "Left";
+function make$2($staropt_id$star, $staropt_dir$star, spawnable, context, param) {
+  let id = $staropt_id$star !== undefined ? Primitive_option.valFromOption($staropt_id$star) : undefined;
+  let dir = $staropt_dir$star !== undefined ? $staropt_dir$star : "Left";
   let spr = make(spawnable, dir, context);
   let params = make_type$2(spawnable);
   let id$1 = id !== undefined ? id : new_id();

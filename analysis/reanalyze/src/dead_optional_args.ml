@@ -5,8 +5,12 @@ let active () = true
 let rec has_optional_args (texpr : Types.type_expr) =
   match texpr.desc with
   | _ when not (active ()) -> false
-  | Tarrow ({lbl = Optional _}, _tTo, _) -> true
-  | Tarrow (_, t_to, _) -> has_optional_args t_to
+  | Tarrow (params, _) ->
+    params
+    |> List.exists (fun ({lbl} : Types.arg) ->
+           match lbl with
+           | Optional _ -> true
+           | _ -> false)
   | Tlink t -> has_optional_args t
   | Tsubst t -> has_optional_args t
   | _ -> false
@@ -25,33 +29,20 @@ let add_function_reference ~config ~cross_file ~(loc_from : Location.t)
         (pos_to |> Pos.to_string);
     Cross_file_items.add_function_reference cross_file ~pos_from ~pos_to)
 
+(* The function boundary is structural: a function's optional arguments are
+   exactly the optional parameters of its (one) arrow node. *)
 let rec from_type_expr (texpr : Types.type_expr) =
   match texpr.desc with
   | _ when not (active ()) -> []
-  | Tarrow ({lbl = Optional {txt = s}}, t_to, _) -> s :: from_type_expr t_to
-  | Tarrow (_, t_to, _) -> from_type_expr t_to
+  | Tarrow (params, _) ->
+    params
+    |> List.filter_map (fun ({lbl} : Types.arg) ->
+           match lbl with
+           | Optional {txt = s} -> Some s
+           | _ -> None)
   | Tlink t -> from_type_expr t
   | Tsubst t -> from_type_expr t
   | _ -> []
-
-let rec from_type_expr_with_arity (texpr : Types.type_expr) arity =
-  if arity <= 0 then []
-  else
-    match texpr.desc with
-    | _ when not (active ()) -> []
-    | Tarrow ({lbl = Optional {txt = s}}, t_to, _) ->
-      s :: from_type_expr_with_arity t_to (arity - 1)
-    | Tarrow (_, t_to, _) -> from_type_expr_with_arity t_to (arity - 1)
-    | Tlink t -> from_type_expr_with_arity t arity
-    | Tsubst t -> from_type_expr_with_arity t arity
-    | _ -> []
-
-let rec from_type_expr_with_declared_arity (texpr : Types.type_expr) =
-  match texpr.desc with
-  | Tarrow (_, _, Some arity) -> from_type_expr_with_arity texpr arity
-  | Tlink t -> from_type_expr_with_declared_arity t
-  | Tsubst t -> from_type_expr_with_declared_arity t
-  | _ -> from_type_expr texpr
 
 let add_references ~config ~cross_file ~(loc_from : Location.t)
     ~(loc_to : Location.t) ~(binding : Location.t) ~path
