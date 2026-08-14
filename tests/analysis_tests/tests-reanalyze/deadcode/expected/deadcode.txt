@@ -1413,6 +1413,27 @@
   addTypeReference RepeatedLabel.res:12:16 --> RepeatedLabel.res:8:2
   addValueReference RepeatedLabel.res:14:12 --> RepeatedLabel.res:12:4
   Scanning RequireCond.cmt Source:RequireCond.res
+  Scanning ReturnedOptionalSignature.cmt Source:ReturnedOptionalSignature.res
+  addValueDeclaration +returnedOptional ReturnedOptionalSignature.res:1:4 path:+ReturnedOptionalSignature
+  addValueReference ReturnedOptionalSignature.res:1:4 --> ReturnedOptionalSignature.res:1:34
+  addValueReference ReturnedOptionalSignature.resi:1:0 --> ReturnedOptionalSignature.res:1:4
+  OptionalArgs.addFunctionReference ReturnedOptionalSignature.resi:1:0 ReturnedOptionalSignature.res:1:4
+  Scanning ReturnedOptionalSignature.cmti Source:ReturnedOptionalSignature.resi
+  addValueDeclaration +returnedOptional ReturnedOptionalSignature.resi:1:0 path:ReturnedOptionalSignature
+  Scanning ReturnedOptionalSignatureUse.cmt Source:ReturnedOptionalSignatureUse.res
+  addValueDeclaration +useInterfaceDeclaration ReturnedOptionalSignatureUse.res:1:4 path:+ReturnedOptionalSignatureUse
+  addValueDeclaration +returnedOptional ReturnedOptionalSignatureUse.res:5:2 path:+ReturnedOptionalSignatureUse.InlineSignature
+  addValueDeclaration +useInlineSignature ReturnedOptionalSignatureUse.res:10:4 path:+ReturnedOptionalSignatureUse
+  DeadOptionalArgs.addReferences ReturnedOptionalSignature.returnedOptional called with optional argNames: argNamesMaybe: ReturnedOptionalSignatureUse.res:2:2
+  addValueReference ReturnedOptionalSignatureUse.res:1:4 --> ReturnedOptionalSignature.resi:1:0
+  addValueDeclaration +returnedOptional ReturnedOptionalSignatureUse.res:7:6 path:+ReturnedOptionalSignatureUse.InlineSignature
+  addValueReference ReturnedOptionalSignatureUse.res:7:6 --> ReturnedOptionalSignatureUse.res:7:36
+  DeadOptionalArgs.addReferences InlineSignature.returnedOptional called with optional argNames: argNamesMaybe: ReturnedOptionalSignatureUse.res:11:2
+  addValueReference ReturnedOptionalSignatureUse.res:10:4 --> ReturnedOptionalSignatureUse.res:5:2
+  addValueReference ReturnedOptionalSignatureUse.res:13:8 --> ReturnedOptionalSignatureUse.res:1:4
+  addValueReference ReturnedOptionalSignatureUse.res:14:8 --> ReturnedOptionalSignatureUse.res:10:4
+  addValueReference ReturnedOptionalSignatureUse.res:5:2 --> ReturnedOptionalSignatureUse.res:7:6
+  OptionalArgs.addFunctionReference ReturnedOptionalSignatureUse.res:5:2 ReturnedOptionalSignatureUse.res:7:6
   Scanning ScopedAnnotationsLiveVsDead.cmt Source:ScopedAnnotationsLiveVsDead.res
   addValueDeclaration +leafLive ScopedAnnotationsLiveVsDead.res:1:4 path:+ScopedAnnotationsLiveVsDead
   addValueDeclaration +middleLive ScopedAnnotationsLiveVsDead.res:2:4 path:+ScopedAnnotationsLiveVsDead
@@ -2091,9 +2112,9 @@
   
 Forward Liveness Analysis
 
-    decls: 738
-    roots(external targets): 160
-    decl-deps: decls_with_out=446 edges_to_decls=319
+    decls: 744
+    roots(external targets): 162
+    decl-deps: decls_with_out=452 edges_to_decls=323
 
     Root (external ref): Value +FirstClassModules.M.InnerModule2.+k
     Root (external ref): VariantCase DeadRT.moduleAccessPath.Root
@@ -2181,6 +2202,7 @@ Forward Liveness Analysis
     Root (external ref): VariantCase InnerModuleTypes.I.t.Foo
     Root (annotated): Value +Types.+selfRecursiveConverter
     Root (annotated): Value +Opaque.+testConvertNestedRecordFromOtherFile
+    Root (external ref): Value +ReturnedOptionalSignatureUse.+useInterfaceDeclaration
     Root (external ref): RecordLabel +DeadTest.inlineRecord.IR.b
     Root (external ref): Value +OptArg.+bar
     Root (annotated): Value +TestFirstClassModules.+convertRecord
@@ -2231,6 +2253,7 @@ Forward Liveness Analysis
     Root (external ref): RecordLabel +Uncurried.auth.login
     Root (annotated): Value +ImportJsValue.+roundedNumber
     Root (external ref): RecordLabel +RepeatedLabel.tabState.a
+    Root (external ref): Value +ReturnedOptionalSignatureUse.+useInlineSignature
     Root (external ref): Value ErrorHandler.Make.+notify
     Root (annotated): Value +References.+make
     Root (annotated): Value +Shadow.+test
@@ -2442,7 +2465,7 @@ Forward Liveness Analysis
     Root (annotated): Value +UseImportJsValue.+useGetProp
     Root (annotated): Value +Hooks.+functionWithRenamedArgs
   
-  346 roots found
+  348 roots found
 
     Propagate: DeadRT.moduleAccessPath.Root -> +DeadRT.moduleAccessPath.Root
     Propagate: +TypeReexportCrossFileB.reexportedRecord.usedField -> +TypeReexportCrossFileA.originalRecord.usedField
@@ -2458,6 +2481,7 @@ Forward Liveness Analysis
     Propagate: +TopLevelOptionalArgValueUse.+liveAliasCaller -> +TopLevelOptionalArgValueUse.+formatDateAlias2
     Propagate: +Hooks.+default -> +Hooks.+make
     Propagate: InnerModuleTypes.I.t.Foo -> +InnerModuleTypes.I.t.Foo
+    Propagate: +ReturnedOptionalSignatureUse.+useInterfaceDeclaration -> ReturnedOptionalSignature.+returnedOptional
     Propagate: DeadTypeTest.deadType.OnlyInInterface -> +DeadTypeTest.deadType.OnlyInInterface
     Propagate: +DeadTest.VariantUsedOnlyInImplementation.t.A -> +DeadTest.VariantUsedOnlyInImplementation.t.A
     Propagate: +TypeReexport.UseReexported.reexportedType.usedField -> +TypeReexport.UseReexported.originalType.usedField
@@ -2466,6 +2490,7 @@ Forward Liveness Analysis
     Propagate: +References.+get -> +References.R.+get
     Propagate: +TopLevelOptionalArgValueUse.+mutuallyRecursiveCaller -> +TopLevelOptionalArgValueUse.+mutuallyRecursiveTarget
     Propagate: +DeadTest.MM.+x -> +DeadTest.MM.+x
+    Propagate: +ReturnedOptionalSignatureUse.+useInlineSignature -> +ReturnedOptionalSignatureUse.InlineSignature.+returnedOptional
     Propagate: ErrorHandler.Make.+notify -> +ErrorHandler.Make.+notify
     Propagate: +References.+make -> +References.R.+make
     Propagate: +ScopedAnnotationsLiveVsDead.LiveScope.+root -> +ScopedAnnotationsLiveVsDead.+middleLive
@@ -2496,8 +2521,10 @@ Forward Liveness Analysis
     Propagate: +TypeReexport.VariantUseOriginal.reexportedType.A -> +TypeReexport.VariantUseOriginal.originalType.A
     Propagate: +TypeReexport.OnlyReexportedDead.reexportedType.usedField -> +TypeReexport.OnlyReexportedDead.originalType.usedField
     Propagate: +TopLevelOptionalArgValueUse.+formatDateAlias2 -> +TopLevelOptionalArgValueUse.+formatDateAlias
+    Propagate: ReturnedOptionalSignature.+returnedOptional -> +ReturnedOptionalSignature.+returnedOptional
     Propagate: +References.R.+get -> +References.R.+get
     Propagate: +DeadTest.MM.+x -> +DeadTest.MM.+y
+    Propagate: +ReturnedOptionalSignatureUse.InlineSignature.+returnedOptional -> +ReturnedOptionalSignatureUse.InlineSignature.+returnedOptional
     Propagate: +References.R.+make -> +References.R.+make
     Propagate: +ScopedAnnotationsLiveVsDead.+middleLive -> +ScopedAnnotationsLiveVsDead.+leafLive
     Propagate: +Newton.+newton -> +Newton.+/
@@ -2512,7 +2539,7 @@ Forward Liveness Analysis
     Propagate: +TopLevelOptionalArgValueUse.+returnedFunction -> +TopLevelOptionalArgValueUse.+returnsFunction
     Propagate: +ImportJsValue.AbsoluteValue.+getAbs -> +ImportJsValue.AbsoluteValue.+getAbs
   
-  67 declarations marked live via propagation
+  71 declarations marked live via propagation
 
   Dead VariantCase +AutoAnnotate.variant.R
   Dead RecordLabel +AutoAnnotate.record.variant
@@ -3819,6 +3846,26 @@ Forward Liveness Analysis
       deps: in=0 (live=0 dead=0) out=2
         -> +RepeatedLabel.tabState.a
         -> +RepeatedLabel.tabState.b
+  Live (propagated) Value +ReturnedOptionalSignature.+returnedOptional
+      deps: in=1 (live=1 dead=0) out=0
+        <- ReturnedOptionalSignature.+returnedOptional (live)
+  Live (propagated) Value ReturnedOptionalSignature.+returnedOptional
+      deps: in=1 (live=1 dead=0) out=1
+        <- +ReturnedOptionalSignatureUse.+useInterfaceDeclaration (live)
+        -> +ReturnedOptionalSignature.+returnedOptional
+  Live (external ref) Value +ReturnedOptionalSignatureUse.+useInterfaceDeclaration
+      deps: in=0 (live=0 dead=0) out=1
+        -> ReturnedOptionalSignature.+returnedOptional
+  Live (propagated) Value +ReturnedOptionalSignatureUse.InlineSignature.+returnedOptional
+      deps: in=1 (live=1 dead=0) out=1
+        <- +ReturnedOptionalSignatureUse.+useInlineSignature (live)
+        -> +ReturnedOptionalSignatureUse.InlineSignature.+returnedOptional
+  Live (propagated) Value +ReturnedOptionalSignatureUse.InlineSignature.+returnedOptional
+      deps: in=1 (live=1 dead=0) out=0
+        <- +ReturnedOptionalSignatureUse.InlineSignature.+returnedOptional (live)
+  Live (external ref) Value +ReturnedOptionalSignatureUse.+useInlineSignature
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ReturnedOptionalSignatureUse.InlineSignature.+returnedOptional
   Live (propagated) Value +ScopedAnnotationsLiveVsDead.+leafLive
       deps: in=1 (live=1 dead=0) out=0
         <- +ScopedAnnotationsLiveVsDead.+middleLive (live)
@@ -5538,6 +5585,10 @@ Forward Liveness Analysis
   optional argument x of function bar is never used
 
   Warning Unused Argument
+  ReturnedOptionalSignature.resi:1:1-80
+  optional argument outer of function returnedOptional is never used
+
+  Warning Unused Argument
   OptionalArgsLiveDead.res:1:1-33
   optional argument fmt of function formatDate is never used
 
@@ -5548,6 +5599,14 @@ Forward Liveness Analysis
   Warning Redundant Optional Argument
   OptArg.res:9:1-54
   optional argument a of function threeArgs is always supplied (2 calls)
+
+  Warning Unused Argument
+  ReturnedOptionalSignatureUse.res:5:3-82
+  optional argument outer of function InlineSignature.returnedOptional is never used
+
+  Warning Unused Argument
+  ReturnedOptionalSignature.res:1:1-63
+  optional argument outer of function returnedOptional is never used
 
   Warning Redundant Optional Argument
   OptArg.res:20:1-51
@@ -5582,6 +5641,10 @@ Forward Liveness Analysis
   optional argument fmt of function liveForwardingCaller is never used
 
   Warning Unused Argument
+  ReturnedOptionalSignatureUse.res:7:3-65
+  optional argument outer of function InlineSignature.returnedOptional is never used
+
+  Warning Unused Argument
   OptArg.res:14:1-42
   optional argument a of function twoArgs is never used
 
@@ -5589,4 +5652,4 @@ Forward Liveness Analysis
   OptArg.res:14:1-42
   optional argument b of function twoArgs is never used
   
-  Analysis reported 323 issues (Incorrect Dead Annotation:1, Warning Dead Exception:2, Warning Dead Module:22, Warning Dead Type:94, Warning Dead Value:178, Warning Dead Value With Side Effects:5, Warning Redundant Optional Argument:7, Warning Unused Argument:14)
+  Analysis reported 327 issues (Incorrect Dead Annotation:1, Warning Dead Exception:2, Warning Dead Module:22, Warning Dead Type:94, Warning Dead Value:178, Warning Dead Value With Side Effects:5, Warning Redundant Optional Argument:7, Warning Unused Argument:18)

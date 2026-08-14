@@ -76,6 +76,9 @@ let compute_optional_args_state (store : t) ~find_decl ~is_live :
   state
 
 let compute_live_optional_arg_value_escapes (store : t) ~is_live : Pos_set.t =
+  (* Compute this as a batch after solver propagation: the result depends on
+     final liveness and on the fully merged cross-file items. If it becomes a
+     cached/reactive value, both dependencies must participate in invalidation. *)
   let escapes = ref Pos_set.empty in
   iter_optional_arg_value_escapes store
     (fun {Cross_file_items.pos_from; pos_to} ->

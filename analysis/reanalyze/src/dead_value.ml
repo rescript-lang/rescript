@@ -2,7 +2,14 @@
 
 open Dead_common
 
-(** Identity avoids conflating generated expressions that share source locations. *)
+(** Physical identity avoids conflating generated expressions that share source
+    locations. Hashing by [exp_loc] is safe because [==] disambiguates collisions
+    during the bucket scan.
+
+    This table relies on [Tast_mapper] visiting an enclosing [Texp_apply] before
+    its callee child and passing the same physical expression object to the child
+    callback. If either invariant changes, direct calls are conservatively
+    classified as escapes and optional-argument diagnostics silently disappear. *)
 module Expression_table = Hashtbl.Make (struct
   type t = Typedtree.expression
 
@@ -160,6 +167,10 @@ let rec collect_expr ~config ~refs ~file_deps ~cross_file ~direct_callees
         ~add_file_reference:true ~loc_from ~loc_to;
       if not (Expression_table.mem direct_callees e) then
         let pos_from =
+          (* [Location.none] identifies a top-level [Tstr_eval], which executes
+             unconditionally, so use the expression's own position. Both
+             liveness implementations deliberately treat non-declaration
+             positions as live; that behavior is load-bearing here. *)
           if binding = Location.none then loc_from.loc_start
           else binding.loc_start
         in
@@ -386,7 +397,7 @@ let rec process_signature_item ~config ~decls ~file ~do_types ~do_values
       in
       if (not is_primitive) || !Config.analyze_externals then
         let optional_args =
-          val_type |> Dead_optional_args.from_type_expr
+          val_type |> Dead_optional_args.from_type_expr_with_declared_arity
           |> Optional_args.from_list
         in
         let reports_optional_args =

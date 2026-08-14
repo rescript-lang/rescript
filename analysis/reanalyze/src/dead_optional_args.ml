@@ -13,6 +13,9 @@ let rec has_optional_args (texpr : Types.type_expr) =
 
 let add_function_reference ~config ~cross_file ~(loc_from : Location.t)
     ~(loc_to : Location.t) ~type_from ~type_to =
+  (* Keep this filter type-based rather than consulting the declaration table.
+     References can be collected before their target declaration is visited,
+     notably in [let rec ... and ...] groups. *)
   if has_optional_args type_from && has_optional_args type_to then (
     let pos_to = loc_to.loc_start in
     let pos_from = loc_from.loc_start in
@@ -43,6 +46,13 @@ let rec from_type_expr_with_arity (texpr : Types.type_expr) arity =
     | Tsubst t -> from_type_expr_with_arity t arity
     | _ -> []
 
+let rec from_type_expr_with_declared_arity (texpr : Types.type_expr) =
+  match texpr.desc with
+  | Tarrow (_, _, _, Some arity) -> from_type_expr_with_arity texpr arity
+  | Tlink t -> from_type_expr_with_declared_arity t
+  | Tsubst t -> from_type_expr_with_declared_arity t
+  | _ -> from_type_expr texpr
+
 let add_references ~config ~cross_file ~(loc_from : Location.t)
     ~(loc_to : Location.t) ~(binding : Location.t) ~path
     (arg_names, arg_names_maybe) =
@@ -68,6 +78,9 @@ let check ~optional_args_state ~optional_arg_value_escapes ~ann_store ~config:_
   match decl with
   | {Decl.decl_kind = Value {reports_optional_args = true; optional_args}}
     when active ()
+         (* A live escape makes both diagnostic classes unknown: unseen callers
+            may either omit or supply an optional argument, so neither "never
+            used" nor "always supplied" remains trustworthy. *)
          && (not (Pos_set.mem decl.pos optional_arg_value_escapes))
          && not
               (Annotation_store.is_annotated_gentype_or_live ann_store decl.pos)
