@@ -42,7 +42,7 @@ type curriedAnnot = int => int => int
 type nodeAttr = @attr (string => unit)
 type argAttr = (@as("x") ~foo: string, int) => int
 
-// phantom @as arguments in externals (arity != arrow-chain length)
+// phantom @as arguments: written arity differs from lowered call arity
 @val
 external phantom: (~a: int, @as(json`false`) _, ~c: string) => unit = "phantom"
 

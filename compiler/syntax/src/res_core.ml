@@ -263,10 +263,6 @@ module Error_messages = struct
     "Spreading JSX children is no longer supported."
 end
 
-module In_external = struct
-  let status = ref false
-end
-
 let ternary_attr = (Location.mknoloc "res.ternary", Parsetree.PStr [])
 let if_let_attr = (Location.mknoloc "res.iflet", Parsetree.PStr [])
 let make_await_attr loc = (Location.mkloc "res.await" loc, Parsetree.PStr [])
@@ -5057,7 +5053,11 @@ and parse_es6_arrow_type ?current_type_name_path ?inline_types_context ~attrs p
         ?inline_types_context p
     in
     let loc = mk_loc start_pos p.prev_end_pos in
-    Ast_helper.Typ.arrow ~loc ~arity:None {attrs; lbl; typ} return_type
+    (* A bare labeled arrow type [~x: t => u] is a complete one-parameter
+       arrow, exactly like its parenthesized form [(~x: t) => u]; it must
+       carry the same arity or the two spellings produce types that print
+       identically but do not unify. *)
+    Ast_helper.Typ.arrow ~loc ~arity:(Some 1) {attrs; lbl; typ} return_type
   | DocComment _ -> assert false
   | _ ->
     let parameters =
@@ -5073,35 +5073,18 @@ and parse_es6_arrow_type ?current_type_name_path ?inline_types_context ~attrs p
         ?inline_types_context p
     in
     let end_pos = p.prev_end_pos in
-    let return_type_arity = 0 in
-    let _paramNum, typ, _arity =
+    let arity = List.length parameters in
+    let typ =
       List.fold_right
-        (fun {attrs; label = arg_lbl; typ; start_pos} (param_num, t, arity) ->
+        (fun {attrs; label = arg_lbl; typ; start_pos} t ->
           let loc = mk_loc start_pos end_pos in
-          let arity =
-            (* Workaround for ~lbl: @as(json`false`) _, which changes the arity *)
-            match arg_lbl with
-            | Labelled _s ->
-              let typ_is_any =
-                match typ.ptyp_desc with
-                | Ptyp_any -> true
-                | _ -> false
-              in
-              let has_as =
-                Ext_list.exists typ.ptyp_attributes (fun (x, _) -> x.txt = "as")
-              in
-              if !In_external.status && typ_is_any && has_as then arity - 1
-              else arity
-            | _ -> arity
-          in
-          let t_arg =
-            Ast_helper.Typ.arrow ~loc ~arity:None {attrs; lbl = arg_lbl; typ} t
-          in
-          if param_num = 1 then
-            (param_num - 1, Ast_uncurried.uncurried_type ~arity t_arg, 1)
-          else (param_num - 1, t_arg, arity + 1))
-        parameters
-        (List.length parameters, return_type, return_type_arity + 1)
+          Ast_helper.Typ.arrow ~loc ~arity:None {attrs; lbl = arg_lbl; typ} t)
+        parameters return_type
+    in
+    let typ =
+      match parameters with
+      | [] -> typ
+      | _ -> Ast_uncurried.uncurried_type ~arity typ
     in
     {
       typ with
@@ -6638,13 +6621,9 @@ and parse_type_definition_or_extension ~attrs p =
 
 (* external value-name : typexp = external-declaration *)
 and parse_external_def ~attrs ~start_pos p =
-  let in_external = !In_external.status in
-  In_external.status := true;
   Parser.leave_breadcrumb p Grammar.External;
   Fun.protect
-    ~finally:(fun () ->
-      Parser.eat_breadcrumb p;
-      In_external.status := in_external)
+    ~finally:(fun () -> Parser.eat_breadcrumb p)
     (fun () ->
       Parser.expect Token.External p;
       let name, loc = parse_lident p in
