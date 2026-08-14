@@ -744,7 +744,7 @@ let apply_lazy ~source ~target mapper =
 
   let ic = open_in_bin source in
   let magic =
-    really_input_string ic (String.length Config.ast_impl_magic_number)
+    really_input_string ic (String.length Config.res_ast_impl_magic_number)
   in
 
   let rewrite transform =
@@ -762,9 +762,9 @@ let apply_lazy ~source ~target mapper =
     failwith "Ast_mapper: OCaml version mismatch or malformed input"
   in
 
-  if magic = Config.ast_impl_magic_number then
+  if magic = Config.res_ast_impl_magic_number then
     rewrite (implem : structure -> structure)
-  else if magic = Config.ast_intf_magic_number then
+  else if magic = Config.res_ast_intf_magic_number then
     rewrite (iface : signature -> signature)
   else fail ()
 

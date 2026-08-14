@@ -13,6 +13,12 @@ let arrow_type ?(max_arity = max_int) ct =
     | {ptyp_desc = Ptyp_arrow {arg = {lbl = Nolabel; attrs = []} as arg; ret}}
       ->
       process attrs_before (arg :: acc) ret (max_arity - 1)
+    | {ptyp_desc = Ptyp_arrow {arg = {lbl = Nolabel} as arg; ret}} when acc = []
+      ->
+      (* The head argument is always consumed, attributes or not: returning
+         the input node itself as the "return type" would make the printer
+         recurse forever. *)
+      process attrs_before (arg :: acc) ret (max_arity - 1)
     | {ptyp_desc = Ptyp_arrow {arg = {lbl = Nolabel}}; ptyp_attributes = _attrs}
       as return_type ->
       let args = List.rev acc in

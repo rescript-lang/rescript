@@ -1,0 +1,50 @@
+// Round-trip coverage for functions and arrow types through the
+// Parsetree0 bridge (ast_mapper_to0 / ast_mapper_from0).
+
+// n-ary functions and arity-1 sugar
+let add = (a, b, c) => a + b + c
+let id = x => x
+
+// labeled, optional, and default parameters
+let labeled = (~x, ~y) => x - y
+let optional = (~x=?, ~y=1, z) => {
+  switch x {
+  | Some(x) => x + y + z
+  | None => y + z
+  }
+}
+
+// async functions, with and without newtypes
+let fetch = async (url, ~timeout) => url ++ Int.toString(timeout)
+let poly = async (type a, x: a) => x
+let f = async (type a, ()) => await Promise.resolve()
+
+// await with attributes on both the await node and the inner expression
+let g = async () => @outer await (@inner Promise.resolve(1))
+
+// nested and curried-looking shapes must stay distinct
+let curried = a => b => a + b
+let nested = (a, b) => (c, d) => a + b + c + d
+
+// underscore apply sugar
+let underscore = add(1, _, 3)
+
+// explicit partial application
+let partial = add(1, ...)
+
+// arrow types: labeled, optional, uncurried groups, nested functions
+type cb = (~x: int, ~y: float) => string
+type opt = (~x: int=?, unit) => int
+type nested2 = (int, int) => (string, string) => bool
+type curriedAnnot = int => int => int
+
+// attributes on the arrow node vs on an argument
+type nodeAttr = @attr (string => unit)
+type argAttr = (@as("x") ~foo: string, int) => int
+
+// phantom @as arguments in externals (arity != arrow-chain length)
+@val
+external phantom: (~a: int, @as(json`false`) _, ~c: string) => unit = "phantom"
+
+// external with uncurried callback argument
+@val external onEvent: (string, (~event: string) => unit) => unit = "on"

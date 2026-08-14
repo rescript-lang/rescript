@@ -67,6 +67,37 @@ let test_record_rest_roundtrips_through_ast0 _ =
     ()
   | _ -> assert_failure "Expected record rest after ast0 roundtrip"
 
+let map_expr0 e =
+  Ast_mapper_from0.default_mapper.expr Ast_mapper_from0.default_mapper e
+
+(* A PPX can emit OCaml-style [function | p -> e]; the bridge must desugar it
+   to [fun x -> match x with | p -> e] rather than crash. *)
+let test_function_cases_desugar_to_fun_match _ =
+  let case0 =
+    {
+      Parsetree0.pc_lhs = Ast_helper0.Pat.any ~loc ();
+      pc_guard = None;
+      pc_rhs =
+        Ast_helper0.Exp.constant ~loc (Parsetree0.Pconst_integer ("1", None));
+    }
+  in
+  let expr = map_expr0 (Ast_helper0.Exp.function_ ~loc [case0]) in
+  match expr.pexp_desc with
+  | Parsetree.Pexp_fun
+      {
+        arg_label = Nolabel;
+        default = None;
+        lhs = {ppat_desc = Ppat_var {txt = param}};
+        rhs =
+          {
+            pexp_desc =
+              Pexp_match ({pexp_desc = Pexp_ident {txt = Lident scrutinee}}, [_]);
+          };
+      } ->
+    OUnit.assert_equal ~msg:"scrutinee is the introduced parameter" param
+      scrutinee
+  | _ -> assert_failure "Expected fun x -> match x with ... after desugaring"
+
 let suites =
   __FILE__
   >::: [
@@ -76,4 +107,6 @@ let suites =
          >:: test_malformed_internal_record_rest_attr_fails;
          "record_rest_roundtrips_through_ast0"
          >:: test_record_rest_roundtrips_through_ast0;
+         "function_cases_desugar_to_fun_match"
+         >:: test_function_cases_desugar_to_fun_match;
        ]
