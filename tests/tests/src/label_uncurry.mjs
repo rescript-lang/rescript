@@ -18,6 +18,13 @@ function u1(f) {
   console.log(f(2, "x"));
 }
 
+function inferredOrder(g) {
+  return [
+    g(1, 2),
+    g(4, 3)
+  ];
+}
+
 function h(x) {
   return 3;
 }
@@ -28,6 +35,7 @@ export {
   f,
   u,
   u1,
+  inferredOrder,
   h,
   a,
 }

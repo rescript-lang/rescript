@@ -159,11 +159,6 @@ completely dead and have been retained as named variants:
   `check_value_name` during definition; `let \"->" = 1` is rejected with
   a clean diagnostic (`illegal_value_name.res`). The parser does **not**
   reject `\"->"`.
-- `typecore.Incoherent_label_order` — live: a not-yet-generalized
-  function value applied more than once with labelled arguments in
-  conflicting orders (`let f = g => (g(~a=1, ~b=2), g(~b=3, ~a=4))`) hits
-  the leftover/tvar path in `type_unknown_args` after the first call fixes
-  the arrow order (`labeled_args_incoherent_order.res`).
 - `typedecl.Type_clash` — retained but **appears dead**: its only raise
   site (`update_type`) unifies `t<fresh params>` against `t`'s own
   manifest — a type against an alpha-renamed copy of itself — which cannot
@@ -218,7 +213,6 @@ Source: [typecore.ml:27](../compiler/ml/typecore.ml).
 | `Abstract_wrong_label` | ✓ | `abstract_wrong_label.res` | Multi-arg function literal where an inner argument label doesn't match the expected arrow's label (e.g. `let f: (~a, ~b) => int = (~a, ~c) => …`). |
 | `Scoping_let_module` | ✓ | `scoping_let_module.res` | |
 | `Not_a_variant_type` | ✓ | `variant_spread_pattern_not_a_variant.res` | Pattern-level variant spread of a non-variant type. |
-| `Incoherent_label_order` | ✓ | `labeled_args_incoherent_order.res` | A not-yet-generalized function value applied more than once with labelled args in conflicting orders (`g => (g(~a, ~b), g(~b, ~a))`); the reordered second call hits the leftover/tvar path in `type_unknown_args`. |
 | `Less_general` | ✓ | `less_general_universal.res` | |
 | `Modules_not_allowed` | ✓ | `super_errors_multi/Modules_not_allowed_toplevel` | Toplevel `let module(M) = …` pattern with `allow_modules=false`. |
 | `Cannot_infer_signature` | ✓ | `cannot_infer_signature.res` | |

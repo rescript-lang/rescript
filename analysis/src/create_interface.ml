@@ -123,7 +123,6 @@ let print_signature ~extractor ~signature =
     | Tarrow
         ( {typ = {desc = Tconstr (Path.Pident props_id, type_args, _)}},
           ret_type,
-          _,
           _ )
       when Ident.name props_id = "props" ->
       Some (type_args, ret_type)
@@ -176,7 +175,7 @@ let print_signature ~extractor ~signature =
             in
             {
               ret_type with
-              desc = Tarrow ({lbl; typ = prop_type}, mk_fun_type rest, Cok, None);
+              desc = Tarrow ({lbl; typ = prop_type}, mk_fun_type rest, None);
             }
         in
         let fun_type =
@@ -186,7 +185,7 @@ let print_signature ~extractor ~signature =
             in
             {
               ret_type with
-              desc = Tarrow ({lbl = Nolabel; typ = t_unit}, ret_type, Cok, None);
+              desc = Tarrow ({lbl = Nolabel; typ = t_unit}, ret_type, None);
             }
           else mk_fun_type label_decls
         in

@@ -48,7 +48,7 @@ let find_type_constructors (tel : Types.type_expr list) =
     | Tconstr (path, args, _) ->
       add_path path;
       args |> List.iter loop
-    | Tarrow (arg, ret, _, _) ->
+    | Tarrow (arg, ret, _) ->
       loop arg.typ;
       loop ret
     | Ttuple tel -> tel |> List.iter loop

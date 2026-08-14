@@ -1098,10 +1098,7 @@ and get_completions_for_context_path ~state ~debug ~full ~opens ~raw_opens ~pos
         | [] -> t_ret
         | (label, t_arg) :: rest ->
           let rest_type = reconstruct_function_type rest t_ret in
-          {
-            typ with
-            desc = Tarrow ({lbl = label; typ = t_arg}, rest_type, Cok, None);
-          }
+          {typ with desc = Tarrow ({lbl = label; typ = t_arg}, rest_type, None)}
       in
       let rec process_apply args labels =
         match (args, labels) with
