@@ -208,7 +208,7 @@ Source: [typecore.ml:27](../compiler/ml/typecore.ml).
 | `Undefined_method` | ✓ | `super_errors_multi/Cross_module_alias_dot_access`, `undefined_method` | |
 | `Private_type` | ✓ | `private_type_construction.res` | |
 | `Private_label` | ✓ | `private_label.res` | |
-| `Not_subtype` | ✓ | `subtype_*.res`, `dict_show_no_coercion.res`, etc. | |
+| `Not_subtype` | ✓ | `subtype_*.res`, `coercion_arity_mismatch.res`, `dict_show_no_coercion.res`, etc. | |
 | `Too_many_arguments` | ✓ | `too_many_arguments.res`, `moreArguments*.res` | |
 | `Abstract_wrong_label` | ✓ | `abstract_wrong_label.res` | Multi-arg function literal where an inner argument label doesn't match the expected arrow's label (e.g. `let f: (~a, ~b) => int = (~a, ~c) => …`). |
 | `Scoping_let_module` | ✓ | `scoping_let_module.res` | |
@@ -353,8 +353,8 @@ Wrapper symptoms attached to inclusion failures. Source: [includemod.ml:23](../c
 | Variant | Status | Fixture | Notes |
 |---|---|---|---|
 | `Missing_field` | ✓ | `super_errors_multi/Iface_missing_value` | |
-| `Value_descriptions` | ✓ | `super_errors_multi/Iface_value_descriptions`, `super_errors_multi/Smoke_interface_mismatch` | |
-| `Type_declarations` | ✓ | `super_errors_multi/Iface_type_decl_record`, `super_errors_multi/Iface_type_decl_variant`, `RecordInclusion.res` | |
+| `Value_descriptions` | ✓ | `super_errors_multi/Iface_value_descriptions`, `super_errors_multi/Iface_value_arity_mismatch`, `super_errors_multi/Smoke_interface_mismatch`, `module_sig_value_arity_mismatch*.res` | Arity mismatches print a dedicated hint (implementation vs interface argument counts), including through aliases and nested function types. |
+| `Type_declarations` | ✓ | `super_errors_multi/Iface_type_decl_record`, `super_errors_multi/Iface_type_decl_variant`, `RecordInclusion.res`, `type_decl_function_arity_mismatch.res` | |
 | `Extension_constructors` | ✓ | `super_errors_multi/Iface_extension_constructors` | |
 | `Module_types` | ✓ | `super_errors_multi/Iface_module_types` | |
 | `Modtype_infos` | ✓ | `super_errors_multi/Iface_modtype_infos` | |
@@ -377,7 +377,7 @@ Source: [includecore.ml:159](../compiler/ml/includecore.ml).
 | `Privacy` | ✓ | `super_errors_multi/Iface_privacy_mismatch` | |
 | `Kind` | ✓ | `super_errors_multi/Iface_kind_mismatch` | Record-in-impl vs variant-in-interface. |
 | `Constraint` | ✓ | `super_errors_multi/Iface_constraint_mismatch` | Implementation adds a `constraint 'a = …`; interface has none. |
-| `Manifest` | ✓ | `super_errors_multi/Iface_manifest_mismatch` | Manifest types differ (`int` vs `string`). |
+| `Manifest` | ✓ | `super_errors_multi/Iface_manifest_mismatch`, `type_decl_function_arity_mismatch.res` | Manifest types differ, including function types with different arities. |
 | `Variance` | ✓ | `super_errors_multi/Iface_variance_mismatch` | Interface annotates `+'a`; implementation's inferred variance differs. |
 | `Field_type` | ✓ | `super_errors_multi/Iface_type_decl_record` | |
 | `Field_mutable` | ✓ | `super_errors_multi/Iface_field_mutable_mismatch` | |
