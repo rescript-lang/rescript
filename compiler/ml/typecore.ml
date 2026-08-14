@@ -63,7 +63,6 @@ type error =
   | Abstract_wrong_label of arg_label * type_expr
   | Scoping_let_module of string * type_expr
   | Not_a_variant_type of Longident.t
-  | Incoherent_label_order
   | Less_general of string * (type_expr * type_expr) list
   | Modules_not_allowed
   | Cannot_infer_signature
@@ -753,9 +752,9 @@ let show_extra_help ppf _env trace =
 let rec collect_missing_arguments env type1 type2 =
   match type1 with
   (* why do we use Ctype.matches here? Please see https://github.com/rescript-lang/rescript-compiler/pull/2554 *)
-  | {Types.desc = Tarrow (arg, ret, _, _)} when Ctype.matches env ret type2 ->
+  | {Types.desc = Tarrow (arg, ret, _)} when Ctype.matches env ret type2 ->
     Some [(arg.lbl, arg.typ)]
-  | {desc = Tarrow (arg, ret, _, _)} -> (
+  | {desc = Tarrow (arg, ret, _)} -> (
     match collect_missing_arguments env ret type2 with
     | Some res -> Some ((arg.lbl, arg.typ) :: res)
     | None -> None)
@@ -1974,7 +1973,7 @@ let rec approx_type env sty =
   match sty.ptyp_desc with
   | Ptyp_arrow {arg = {lbl = p}; ret = sty; arity} ->
     let ty1 = if is_optional p then type_option (newvar ()) else newvar () in
-    newty (Tarrow ({lbl = p; typ = ty1}, approx_type env sty, Cok, arity))
+    newty (Tarrow ({lbl = p; typ = ty1}, approx_type env sty, arity))
   | Ptyp_tuple args -> newty (Ttuple (List.map (approx_type env) args))
   | Ptyp_constr (lid, ctl) -> (
     try
@@ -1992,7 +1991,7 @@ let rec type_approx env sexp =
   | Pexp_let (_, _, e) -> type_approx env e
   | Pexp_fun {arg_label = p; rhs = e; arity} ->
     let ty = if is_optional p then type_option (newvar ()) else newvar () in
-    newty (Tarrow ({lbl = p; typ = ty}, type_approx env e, Cok, arity))
+    newty (Tarrow ({lbl = p; typ = ty}, type_approx env e, arity))
   | Pexp_match (_, {pc_rhs = e} :: _) -> type_approx env e
   | Pexp_try (e, _) -> type_approx env e
   | Pexp_tuple l -> newty (Ttuple (List.map (type_approx env) l))
@@ -2020,19 +2019,6 @@ let rec type_approx env sexp =
          (Error (sexp.pexp_loc, env, Expr_type_clash {trace; context = None})));
     ty2
   | _ -> newvar ()
-
-(* List labels in a function type, and whether return type is a variable *)
-let rec list_labels_aux env visited ls ty_fun =
-  let ty = expand_head env ty_fun in
-  if List.memq ty visited then (List.rev ls, false)
-  else
-    match ty.desc with
-    | Tarrow (arg, ty_res, _, arity) when arity = None || visited = [] ->
-      list_labels_aux env (ty :: visited) (arg.lbl :: ls) ty_res
-    | _ -> (List.rev ls, is_Tvar ty)
-
-let list_labels env ty =
-  wrap_trace_gadt_instances env (list_labels_aux env [] []) ty
 
 (* Check that all univars are safe in a type *)
 let check_univars env expans kind exp ty_expected vars =
@@ -2300,7 +2286,7 @@ let rec lower_args env seen ty_fun =
   if List.memq ty seen then ()
   else
     match ty.desc with
-    | Tarrow (arg, ty_fun, _com, _) ->
+    | Tarrow (arg, ty_fun, _) ->
       (try unify_var env (newvar ()) arg.typ with Unify _ -> assert false);
       lower_args env (ty :: seen) ty_fun
     | _ -> ()
@@ -3564,7 +3550,7 @@ and type_function ?in_function ~arity ~async loc attrs env ty_expected_ l
     | None -> ty_expected_
     | Some arity ->
       let fun_t =
-        newty (Tarrow ({lbl = l; typ = newvar ()}, newvar (), Cok, Some arity))
+        newty (Tarrow ({lbl = l; typ = newvar ()}, newvar (), Some arity))
       in
       unify_exp_types ~context:None loc env fun_t ty_expected_;
       fun_t
@@ -3605,8 +3591,7 @@ and type_function ?in_function ~arity ~async loc attrs env ty_expected_ l
   let case = List.hd cases in
   let param = name_pattern "param" cases in
   let exp_type =
-    instance env
-      (newgenty (Tarrow ({lbl = l; typ = ty_arg}, ty_res, Cok, arity)))
+    instance env (newgenty (Tarrow ({lbl = l; typ = ty_arg}, ty_res, arity)))
   in
   re
     {
@@ -3824,12 +3809,8 @@ and type_application ~context total_app env funct (sargs : sargs) :
   let result_type omitted ty_fun =
     List.fold_left
       (fun ty_fun (l, ty, lv) ->
-        newty2 lv (Tarrow ({lbl = l; typ = ty}, ty_fun, Cok, None)))
+        newty2 lv (Tarrow ({lbl = l; typ = ty}, ty_fun, None)))
       ty_fun omitted
-  in
-  let has_label l ty_fun =
-    let ls, tvar = list_labels env ty_fun in
-    tvar || List.mem l ls
   in
   let ignored = ref [] in
   let force_tvar =
@@ -3842,7 +3823,7 @@ and type_application ~context total_app env funct (sargs : sargs) :
     if force_tvar then Some (List.length sargs)
     else
       match (expand_head env funct.exp_type).desc with
-      | Tarrow (_, _, _, Some arity) -> Some arity
+      | Tarrow (_, _, Some arity) -> Some arity
       | _ -> None
   in
   let force_uncurried_type funct =
@@ -3896,8 +3877,8 @@ and type_application ~context total_app env funct (sargs : sargs) :
         if fully_applied then new_t
         else
           match new_t.desc with
-          | Tarrow (arg, ret, c, _) ->
-            {new_t with desc = Tarrow (arg, ret, c, Some newarity)}
+          | Tarrow (arg, ret, _) ->
+            {new_t with desc = Tarrow (arg, ret, Some newarity)}
           | _ -> new_t
       in
       (fully_applied, new_t)
@@ -3917,7 +3898,7 @@ and type_application ~context total_app env funct (sargs : sargs) :
       in
       if List.length args < max_arity && total_app then
         match (expand_head env ty_fun).desc with
-        | Tarrow ({lbl; typ = t1}, t2, _, _) when is_optional lbl ->
+        | Tarrow ({lbl; typ = t1}, t2, _) when is_optional lbl ->
           ignored := (lbl, t1, ty_fun.level) :: !ignored;
           let arg =
             (lbl, Some (fun () -> option_none (instance env t1) Location.none))
@@ -3945,11 +3926,9 @@ and type_application ~context total_app env funct (sargs : sargs) :
             && not (is_identity_coercion funct.exp_desc)
           then Location.prerr_warning sarg1.pexp_loc Warnings.Unused_argument;
           unify env ty_fun
-            (newty
-               (Tarrow
-                  ({lbl = l1; typ = t1}, t2, Clink (ref Cunknown), top_arity)));
+            (newty (Tarrow ({lbl = l1; typ = t1}, t2, top_arity)));
           (t1, t2)
-        | Tarrow ({lbl = l; typ = t1}, t2, _, _)
+        | Tarrow ({lbl = l; typ = t1}, t2, _)
           when Asttypes.same_arg_label l l1 && arity_ok ->
           (t1, t2)
         | td -> (
@@ -3965,10 +3944,9 @@ and type_application ~context total_app env funct (sargs : sargs) :
               raise
                 (Error
                    (sarg1.pexp_loc, env, Apply_wrong_label (l1, funct.exp_type)))
-            else if not (has_label l1 ty_fun) then
+            else
               raise
                 (Error (sarg1.pexp_loc, env, Apply_wrong_label (l1, ty_res)))
-            else raise (Error (funct.exp_loc, env, Incoherent_label_order))
           | _ ->
             raise
               (Error
@@ -3988,10 +3966,9 @@ and type_application ~context total_app env funct (sargs : sargs) :
   let rec type_args ~context max_arity args omitted ~ty_fun ty_fun0
       ~(sargs : sargs) ~top_arity =
     match (expand_head env ty_fun, expand_head env ty_fun0) with
-    | ( {desc = Tarrow ({lbl = l; typ = ty}, ty_fun, com, _); level = lv},
-        {desc = Tarrow ({typ = ty0}, ty_fun0, _, _)} )
-      when sargs <> [] && commu_repr com = Cok && List.length args < max_arity
-      ->
+    | ( {desc = Tarrow ({lbl = l; typ = ty}, ty_fun, _); level = lv},
+        {desc = Tarrow ({typ = ty0}, ty_fun0, _)} )
+      when sargs <> [] && List.length args < max_arity ->
       let name = label_name l and optional = is_optional l in
       let sargs, omitted, arg =
         match extract_label name sargs with
@@ -4714,8 +4691,8 @@ let report_error env loc ppf error =
   | Expr_type_clash
       {
         trace =
-          (_, {desc = Tarrow (_, _, _, None)})
-          :: (_, {desc = Tarrow (_, _, _, Some _)})
+          (_, {desc = Tarrow (_, _, None)})
+          :: (_, {desc = Tarrow (_, _, Some _)})
           :: _;
       } ->
     fprintf ppf
@@ -4724,8 +4701,8 @@ let report_error env loc ppf error =
   | Expr_type_clash
       {
         trace =
-          (_, {desc = Tarrow (_, _, _, Some arity_a)})
-          :: (_, {desc = Tarrow (_, _, _, Some arity_b)})
+          (_, {desc = Tarrow (_, _, Some arity_a)})
+          :: (_, {desc = Tarrow (_, _, Some arity_b)})
           :: _;
       }
     when arity_a <> arity_b ->
@@ -4740,10 +4717,10 @@ let report_error env loc ppf error =
   | Apply_non_function typ -> (
     (* modified *)
     match (repr typ).desc with
-    | Tarrow (_, return_type, _, _) ->
+    | Tarrow (_, return_type, _) ->
       let rec count_number_of_args count {Types.desc} =
         match desc with
-        | Tarrow (_, return_type, _, _) ->
+        | Tarrow (_, return_type, _) ->
           count_number_of_args (count + 1) return_type
         | _ -> count
       in
@@ -4863,10 +4840,6 @@ let report_error env loc ppf error =
     fprintf ppf "Cannot create values of the private type %a" type_expr ty
   | Not_a_variant_type lid ->
     fprintf ppf "The type %a@ is not a variant type" longident lid
-  | Incoherent_label_order ->
-    fprintf ppf "This labeled function is applied to arguments@ ";
-    fprintf ppf "in an order different from other calls.@ ";
-    fprintf ppf "This is only allowed when the real type is known."
   | Less_general (kind, trace) ->
     (* modified *)
     super_report_unification_error ppf env trace
@@ -4945,7 +4918,7 @@ let report_error env loc ppf error =
     *)
     let rec collect_args ?(acc = []) typ =
       match typ.desc with
-      | Tarrow (arg, next, _, _) -> collect_args ~acc:(arg.lbl :: acc) next
+      | Tarrow (arg, next, _) -> collect_args ~acc:(arg.lbl :: acc) next
       | _ -> acc
     in
     let args_from_type = collect_args typ in

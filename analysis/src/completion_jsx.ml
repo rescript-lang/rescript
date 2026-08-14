@@ -246,7 +246,7 @@ let get_jsx_labels ~component_path ~find_type_of_value ~package ~state =
         | Some (path, type_args) -> get_fields ~path ~type_args
         | None -> [])
       | Tarrow
-          ({lbl = Nolabel; typ = {desc = Tconstr (path, type_args, _)}}, _, _, _)
+          ({lbl = Nolabel; typ = {desc = Tconstr (path, type_args, _)}}, _, _)
         when Path.last path = "props" ->
         get_fields ~path ~type_args
       | Tconstr (cl_path, [{desc = Tconstr (path, type_args, _)}; _], _)
@@ -254,7 +254,7 @@ let get_jsx_labels ~component_path ~find_type_of_value ~package ~state =
              && Path.last path = "props" ->
         (* JSX V4 external or interface *)
         get_fields ~path ~type_args
-      | Tarrow ({lbl = Nolabel; typ}, _, _, _) -> (
+      | Tarrow ({lbl = Nolabel; typ}, _, _) -> (
         (* Component without the JSX PPX, like a make fn taking a hand-written
            type props. *)
         let rec dig_to_constr typ =

@@ -131,12 +131,6 @@ let rec safe_kind_repr v = function
   | Fpresent -> "Fpresent"
   | Fabsent -> "Fabsent"
 
-let rec safe_commu_repr v = function
-  | Cok -> "Cok"
-  | Cunknown -> "Cunknown"
-  | Clink r ->
-    if List.memq r v then "Clink loop" else safe_commu_repr (r :: v) !r
-
 let rec safe_repr v = function
   | {desc = Tlink t} when not (List.memq t v) -> safe_repr (t :: v) t
   | t -> t
@@ -172,10 +166,10 @@ and raw_type_list tl = raw_list raw_type tl
 
 and raw_type_desc ppf = function
   | Tvar name -> fprintf ppf "Tvar %a" print_name name
-  | Tarrow (arg, ret, c, a) ->
-    fprintf ppf "@[<hov1>Tarrow(\"%s\",@,%a,@,%a,@,%s,@,%s)@]"
+  | Tarrow (arg, ret, a) ->
+    fprintf ppf "@[<hov1>Tarrow(\"%s\",@,%a,@,%a,@,%s)@]"
       (string_of_label arg.lbl) raw_type arg.typ raw_type ret
-      (safe_commu_repr [] c) (string_of_arity a)
+      (string_of_arity a)
   | Ttuple tl -> fprintf ppf "@[<1>Ttuple@,%a@]" raw_type_list tl
   | Tconstr (p, tl, abbrev) ->
     fprintf ppf "@[<hov1>Tconstr(@,%a,@,%a,@,%a)@]" path p raw_type_list tl
@@ -515,7 +509,7 @@ let rec mark_loops_rec visited ty =
     let visited = px :: visited in
     match ty.desc with
     | Tvar _ -> add_named_var ty
-    | Tarrow (arg, ret, _, _) ->
+    | Tarrow (arg, ret, _) ->
       mark_loops_rec visited arg.typ;
       mark_loops_rec visited ret
     | Ttuple tyl -> List.iter (mark_loops_rec visited) tyl
@@ -620,7 +614,7 @@ let rec tree_of_typexp ?(printing_context : printing_context option) sch ty =
         let non_gen = is_non_gen sch ty in
         let name_gen = if non_gen then new_weak_name ty else new_name in
         Otyp_var (non_gen, name_of_type name_gen ty)
-      | Tarrow (arg, ret, _, arity) ->
+      | Tarrow (arg, ret, arity) ->
         let lab = string_of_label arg.lbl in
         let t1 =
           if is_optional arg.lbl then

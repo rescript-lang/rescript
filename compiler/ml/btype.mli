@@ -59,9 +59,6 @@ val field_kind_repr : field_kind -> field_kind
 (* Return the canonical representative of an object field
    kind. *)
 
-val commu_repr : commutable -> commutable
-(* Return the canonical representative of a commutation lock *)
-
 (**** polymorphic variants ****)
 
 val row_repr : row_desc -> row_desc
@@ -224,7 +221,6 @@ val set_name :
 val set_row_field : row_field option ref -> row_field -> unit
 val set_univar : type_expr option ref -> type_expr -> unit
 val set_kind : field_kind option ref -> field_kind -> unit
-val set_commu : commutable ref -> commutable -> unit
 val set_typeset : Type_set.t ref -> Type_set.t -> unit
 (* Set references, logging the old value *)
 

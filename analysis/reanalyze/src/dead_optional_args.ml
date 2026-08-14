@@ -24,8 +24,8 @@ let add_function_reference ~config ~decls ~cross_file ~(loc_from : Location.t)
 let rec has_optional_args (texpr : Types.type_expr) =
   match texpr.desc with
   | _ when not (active ()) -> false
-  | Tarrow ({lbl = Optional _}, _tTo, _, _) -> true
-  | Tarrow (_, t_to, _, _) -> has_optional_args t_to
+  | Tarrow ({lbl = Optional _}, _tTo, _) -> true
+  | Tarrow (_, t_to, _) -> has_optional_args t_to
   | Tlink t -> has_optional_args t
   | Tsubst t -> has_optional_args t
   | _ -> false
@@ -33,8 +33,8 @@ let rec has_optional_args (texpr : Types.type_expr) =
 let rec from_type_expr (texpr : Types.type_expr) =
   match texpr.desc with
   | _ when not (active ()) -> []
-  | Tarrow ({lbl = Optional {txt = s}}, t_to, _, _) -> s :: from_type_expr t_to
-  | Tarrow (_, t_to, _, _) -> from_type_expr t_to
+  | Tarrow ({lbl = Optional {txt = s}}, t_to, _) -> s :: from_type_expr t_to
+  | Tarrow (_, t_to, _) -> from_type_expr t_to
   | Tlink t -> from_type_expr t
   | Tsubst t -> from_type_expr t
   | _ -> []

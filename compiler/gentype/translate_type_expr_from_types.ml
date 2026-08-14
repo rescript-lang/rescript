@@ -467,7 +467,7 @@ let rec translate_arrow_type ~config ~type_vars_gen ~type_env ~rev_arg_deps
   | Tlink t ->
     translate_arrow_type ~config ~type_vars_gen ~type_env ~rev_arg_deps
       ~rev_args t
-  | Tarrow ({lbl = Nolabel; typ = type_expr1}, type_expr2, _, arity)
+  | Tarrow ({lbl = Nolabel; typ = type_expr1}, type_expr2, arity)
     when arity = None || rev_args = [] ->
     let {dependencies; type_} =
       type_expr1 |> fun __x ->
@@ -484,7 +484,6 @@ let rec translate_arrow_type ~config ~type_vars_gen ~type_env ~rev_arg_deps
           typ = type_expr1;
         },
         type_expr2,
-        _,
         arity )
     when arity = None || rev_args = [] -> (
     match type_expr1 |> remove_option ~label with
