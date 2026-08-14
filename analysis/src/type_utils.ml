@@ -279,16 +279,17 @@ let rec extract_object_type ~state ~env ~package (t : Types.type_expr) =
     | _ -> None)
   | _ -> None
 
+let flatten_arrow_params (params : Types.arg list) acc =
+  List.rev_append
+    (List.map (fun ({lbl; typ} : Types.arg) -> (lbl, typ)) params)
+    acc
+
 let extract_function_type ~state ~env ~package ?(dig_into = true) typ =
   let rec loop ~env acc (t : Types.type_expr) =
     match t.desc with
     | Tlink t1 | Tsubst t1 | Tpoly (t1, []) -> loop ~env acc t1
     | Tarrow (params, t_ret) ->
-      loop ~env
-        (List.rev_append
-           (List.map (fun ({lbl; typ} : Types.arg) -> (lbl, typ)) params)
-           acc)
-        t_ret
+      loop ~env (flatten_arrow_params params acc) t_ret
     | Tconstr (path, type_args, _) when dig_into -> (
       match References.dig_constructor ~state ~env ~package path with
       | Some (env, {item = {decl = {type_manifest = Some t1; type_params}}}) ->
@@ -304,11 +305,7 @@ let extract_function_type_with_env ~state ~env ~package typ =
     match t.desc with
     | Tlink t1 | Tsubst t1 | Tpoly (t1, []) -> loop ~env acc t1
     | Tarrow (params, t_ret) ->
-      loop ~env
-        (List.rev_append
-           (List.map (fun ({lbl; typ} : Types.arg) -> (lbl, typ)) params)
-           acc)
-        t_ret
+      loop ~env (flatten_arrow_params params acc) t_ret
     | Tconstr (path, type_args, _) -> (
       match References.dig_constructor ~state ~env ~package path with
       | Some (_env, {item = {decl = {type_manifest = Some t1; type_params}}}) ->
@@ -345,11 +342,7 @@ let extract_function_type2 ?type_arg_context ~state ~env ~package typ =
     | Tlink t1 | Tsubst t1 | Tpoly (t1, []) ->
       loop ?type_arg_context ~env acc t1
     | Tarrow (params, t_ret) ->
-      loop ?type_arg_context ~env
-        (List.rev_append
-           (List.map (fun ({lbl; typ} : Types.arg) -> (lbl, typ)) params)
-           acc)
-        t_ret
+      loop ?type_arg_context ~env (flatten_arrow_params params acc) t_ret
     | Tconstr (path, type_args, _) -> (
       match References.dig_constructor ~state ~env ~package path with
       | Some (env, {item = {decl = {type_manifest = Some t1; type_params}}}) ->

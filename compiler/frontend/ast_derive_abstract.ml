@@ -209,7 +209,7 @@ let handle_tdcls_in_str ~light rf tdcls =
             Ext_list.map_append value_descriptions sts (fun x ->
                 Str.primitive x) ))
   in
-  Ast_compatible.rec_type_str rf tdcls :: code
+  Str.type_ rf tdcls :: code
 (* still need perform transformation for non-abstract type*)
 
 let handle_tdcls_in_sig ~light rf tdcls =
@@ -220,4 +220,4 @@ let handle_tdcls_in_sig ~light rf tdcls =
           ( ntdcl :: tdcls,
             Ext_list.map_append value_descriptions sts (fun x -> Sig.value x) ))
   in
-  Ast_compatible.rec_type_sig rf tdcls :: code
+  Sig.type_ rf tdcls :: code

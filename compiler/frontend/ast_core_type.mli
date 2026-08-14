@@ -42,6 +42,7 @@ val make_obj : loc:Location.t -> Parsetree.object_field list -> t
 val is_user_option : t -> bool
 
 val list_of_arrow : t -> t * Parsetree.arg list
-(** fails when Ptyp_poly *)
+(** [list_of_arrow ty] returns [(return_type, params)] of an arrow type,
+    or [(ty, [])] when [ty] is not an arrow. *)
 
 val is_arity_one : t -> bool

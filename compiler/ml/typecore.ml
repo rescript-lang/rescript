@@ -59,7 +59,6 @@ type error =
   | Private_type of type_expr
   | Not_subtype of
       Ctype.type_pairs * Ctype.type_pairs * Ctype.subtype_context option
-  | Too_many_arguments of bool * type_expr
   | Abstract_wrong_label of arg_label * type_expr
   | Scoping_let_module of string * type_expr
   | Not_a_variant_type of Longident.t
@@ -2343,8 +2342,7 @@ let rec type_exp ?deprecated_context ~context ?recarg env sexp =
    In the principal case, [type_expected'] may be at generic_level.
 *)
 
-and type_expect ~context ?deprecated_context ?in_function ?recarg env sexp
-    ty_expected =
+and type_expect ~context ?deprecated_context ?recarg env sexp ty_expected =
   (* Special errors for braced identifiers passed to records *)
   let context =
     match sexp.pexp_desc with
@@ -2359,15 +2357,14 @@ and type_expect ~context ?deprecated_context ?in_function ?recarg env sexp
   let previous_saved_types = Cmt_format.get_saved_types () in
   let exp =
     Builtin_attributes.warning_scope sexp.pexp_attributes (fun () ->
-        type_expect_ ?deprecated_context ~context ?in_function ?recarg env sexp
-          ty_expected)
+        type_expect_ ?deprecated_context ~context ?recarg env sexp ty_expected)
   in
   Cmt_format.set_saved_types
     (Cmt_format.Partial_expression exp :: previous_saved_types);
   exp
 
-and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
-    env sexp ty_expected =
+and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
+    ty_expected =
   let loc = sexp.pexp_loc in
   (* Record the expression type before unifying it with the expected type *)
   let rue exp =
@@ -2437,7 +2434,7 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
         sbody )
     when contains_gadt env spat ->
     (* TODO: allow non-empty attributes? *)
-    type_expect ~context:None ?in_function env
+    type_expect ~context:None env
       {
         sexp with
         pexp_desc = Pexp_match (sval, [Ast_helper.Exp.case spat sbody]);
@@ -2470,8 +2467,8 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
         exp_env = env;
       }
   | Pexp_fun {params; body = sfun_body; async} ->
-    type_function ?in_function ~async loc sexp.pexp_attributes env ty_expected
-      params sfun_body
+    type_function ~async loc sexp.pexp_attributes env ty_expected params
+      sfun_body
   | Pexp_apply {funct = sfunct; args = sargs; partial; transformed_jsx} ->
     assert (sargs <> []);
     begin_def ();
@@ -3510,7 +3507,7 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
   | Pexp_jsx_element _ ->
     raise (Error (sexp.pexp_loc, Env.empty, Jsx_not_enabled))
 
-and type_function ?in_function ~async loc attrs env ty_expected_
+and type_function ~async loc attrs env ty_expected_
     (sparams : Parsetree.fun_param list) sbody =
   (* Desugar optional-parameter defaults: the parameter becomes a fresh
      [*opt_<label>*] variable and the original pattern is bound in a
@@ -3607,22 +3604,15 @@ and type_function ?in_function ~async loc attrs env ty_expected_
     unify_exp_types ~context:None loc env fun_t ty_expected_;
     fun_t
   in
-  let loc_fun, ty_fun =
-    match in_function with
-    | Some p -> p
-    | None -> (loc, instance env ty_expected)
-  in
   let separate = Env.has_local_constraints env in
   if separate then begin_def ();
   let ty_params, ty_res =
-    try filter_arrow_n ~env (instance env ty_expected) labels
-    with Unify _ -> (
-      match expand_head env ty_expected with
-      | {desc = Tarrow _} as ty ->
-        raise (Error (loc, env, Abstract_wrong_label (List.hd labels, ty)))
-      | _ ->
-        raise
-          (Error (loc_fun, env, Too_many_arguments (in_function <> None, ty_fun))))
+    (* [ty_expected] was just committed to an arrow with exactly these
+       labels, so it can only expand to an arrow. *)
+    match (expand_head env (instance env ty_expected)).desc with
+    | Tarrow (params, ret) ->
+      (List.map (fun (a : Types.arg) -> a.typ) params, ret)
+    | _ -> assert false
   in
   let ty_params =
     List.map2
@@ -3738,10 +3728,7 @@ and type_function ?in_function ~async loc attrs env ty_expected_
     with_reset_control_flow (fun () ->
         let sbody = wrap_unpacks sbody unpacks in
         let ty_res' = if has_gadts then correct_levels ty_res else ty_res in
-        let exp =
-          type_expect ~context:None ~in_function:(loc_fun, ty_fun) body_env
-            sbody ty_res'
-        in
+        let exp = type_expect ~context:None body_env sbody ty_res' in
         {exp with exp_type = instance env ty_res'})
   in
   (if has_gadts then
@@ -4330,9 +4317,8 @@ and type_statement ~context env sexp =
 
 (* Typing of match cases *)
 
-and type_cases ~(call_context : [`LetUnwrap | `Switch | `Function | `Try])
-    ?in_function env ty_arg ty_res partial_flag loc caselist :
-    _ * Typedtree.partial =
+and type_cases ~(call_context : [`LetUnwrap | `Switch | `Function | `Try]) env
+    ty_arg ty_res partial_flag loc caselist : _ * Typedtree.partial =
   (* ty_arg is _fully_ generalized *)
   let patterns = List.map (fun {pc_lhs = p} -> p) caselist in
   let contains_polyvars = List.exists contains_polymorphic_variant patterns in
@@ -4425,7 +4411,6 @@ and type_cases ~(call_context : [`LetUnwrap | `Switch | `Function | `Try])
     end_def ();
     List.iter (iter_pattern (fun {pat_type = t} -> generalize t)) patl);
   (* type bodies *)
-  let in_function = if List.length caselist = 1 then in_function else None in
   let cases =
     List.map2
       (fun (pat, (ext_env, unpacks)) {pc_lhs; pc_guard; pc_rhs} ->
@@ -4452,7 +4437,7 @@ and type_cases ~(call_context : [`LetUnwrap | `Switch | `Function | `Try])
               | `Try -> Some TryReturn
               | `LetUnwrap -> Some LetUnwrapReturn
               | `Function -> None)
-            ?in_function ext_env sexp ty_res'
+            ext_env sexp ty_res'
         in
         {
           c_lhs = pat;
@@ -4961,16 +4946,6 @@ let report_error env loc ppf error =
     | Some valid_methods -> spellcheck ppf me valid_methods)
   | Not_subtype (tr1, tr2, ctx) ->
     report_subtyping_error ppf env tr1 "is not a subtype of" tr2 ctx
-  | Too_many_arguments (in_function, ty) ->
-    if
-      (* modified *)
-      in_function
-    then (
-      fprintf ppf "@[This function expects too many arguments,@ ";
-      fprintf ppf "it should have type@ %a@]" type_expr ty)
-    else (
-      fprintf ppf "@[This expression should not be a function,@ ";
-      fprintf ppf "the expected type is@ %a@]" type_expr ty)
   | Abstract_wrong_label (l, ty) ->
     let label_mark = function
       | Nolabel -> "but its first argument is not labelled"

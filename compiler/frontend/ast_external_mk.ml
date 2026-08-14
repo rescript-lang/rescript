@@ -48,7 +48,7 @@ let local_external_apply loc ?(pval_attributes = []) ~(pval_prim : string list)
         pmod_loc = loc;
         pmod_attributes = [];
       },
-      Ast_compatible.apply_simple
+      Ast_helper.Exp.apply ~loc
         ({
            pexp_desc =
              Pexp_ident
@@ -57,7 +57,7 @@ let local_external_apply loc ?(pval_attributes = []) ~(pval_prim : string list)
            pexp_loc = loc;
          }
           : Parsetree.expression)
-        args ~loc )
+        (Ext_list.map args (fun x -> (Asttypes.Nolabel, x))) )
 
 let local_external_obj loc ?(pval_attributes = []) ~pval_prim ~pval_type
     ?(local_module_name = "J") ?(local_fun_name = "unsafe_expr") args :
@@ -84,7 +84,7 @@ let local_external_obj loc ?(pval_attributes = []) ~pval_prim ~pval_type
         pmod_loc = loc;
         pmod_attributes = [];
       },
-      Ast_compatible.apply_labels
+      Ast_helper.Exp.apply ~loc
         ({
            pexp_desc =
              Pexp_ident
@@ -93,4 +93,5 @@ let local_external_obj loc ?(pval_attributes = []) ~pval_prim ~pval_type
            pexp_loc = loc;
          }
           : Parsetree.expression)
-        args ~loc )
+        (Ext_list.map args (fun (l, a) ->
+             (Asttypes.Labelled {txt = l; loc = Location.none}, a))) )

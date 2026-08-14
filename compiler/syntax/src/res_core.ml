@@ -1915,7 +1915,9 @@ and parse_es6_arrow_expression ?(arrow_attrs = []) ?(arrow_start_pos = None)
         })
       term_parameters
   in
-  let fun_attrs = List.concat_map (fun {attrs} -> attrs) term_parameters in
+  let fun_attrs =
+    List.concat_map (fun (p : fundef_term_param) -> p.attrs) term_parameters
+  in
   let loc =
     match term_parameters with
     | {p_pos = start_pos} :: _ -> mk_loc start_pos end_pos

@@ -95,7 +95,7 @@ let typ_mapper (self : Bs_ast_mapper.mapper) (ty : Parsetree.core_type) =
                 | Nothing, attrs -> (attrs, ty) (* #1678 *)
                 | Meth_callback attr, attrs -> (attrs, attr +> ty)
               in
-              Ast_compatible.object_field name attrs (self.typ self core_type)
+              Parsetree.Otag (name, attrs, self.typ self core_type)
             in
             let set ty name attrs =
               let attrs, core_type =
@@ -103,10 +103,12 @@ let typ_mapper (self : Bs_ast_mapper.mapper) (ty : Parsetree.core_type) =
                 | Nothing, attrs -> (attrs, ty)
                 | Meth_callback attr, attrs -> (attrs, attr +> ty)
               in
-              Ast_compatible.object_field name attrs
-                (Ast_helper.Typ.arrow ~loc
-                   [{attrs = []; lbl = Nolabel; typ = self.typ self core_type}]
-                   (Ast_literal.type_unit ~loc ()))
+              Parsetree.Otag
+                ( name,
+                  attrs,
+                  Ast_helper.Typ.arrow ~loc
+                    [{attrs = []; lbl = Nolabel; typ = self.typ self core_type}]
+                    (Ast_literal.type_unit ~loc ()) )
             in
             let not_getter_setter ty =
               let attrs, core_type =
@@ -114,7 +116,7 @@ let typ_mapper (self : Bs_ast_mapper.mapper) (ty : Parsetree.core_type) =
                 | Nothing, attrs -> (attrs, ty)
                 | Meth_callback attr, attrs -> (attrs, attr +> ty)
               in
-              Ast_compatible.object_field label attrs (self.typ self core_type)
+              Parsetree.Otag (label, attrs, self.typ self core_type)
             in
             process_getter_setter ~not_getter_setter ~get ~set loc label
               ptyp_attrs core_type acc)

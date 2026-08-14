@@ -110,12 +110,10 @@ let make_obj ~loc xs = Typ.object_ ~loc xs Closed
    {[ 'a -> ('a. 'a -> 'b) ]}
 
 *)
-let get_curry_arity (ty : t) =
+let is_arity_one (ty : t) =
   match ty.ptyp_desc with
-  | Ptyp_arrow {params} -> List.length params
-  | _ -> 0
-
-let is_arity_one ty = get_curry_arity ty = 1
+  | Ptyp_arrow {params = [_]} -> true
+  | _ -> false
 
 let list_of_arrow (ty : t) : t * Parsetree.arg list =
   match ty.ptyp_desc with
