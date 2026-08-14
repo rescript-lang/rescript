@@ -28,6 +28,7 @@
 
 - Preserve parentheses around multiplication, division, and modulo expressions used as exponents. https://github.com/rescript-lang/rescript/pull/8550
 - Enforce function arity in interface/module inclusion and type coercion. Previously a curried implementation (e.g. `int => int => int`) could satisfy an uncurried interface (`(int, int) => int`) or be coerced to it, which could miscompile calls made through the interface type. Such mismatches are now compile errors with an explanatory hint. https://github.com/rescript-lang/rescript/pull/8559
+- Fix bare labeled arrow types (`~x: int => string`) getting no arity: they printed identically to their parenthesized form (`(~x: int) => string`) but did not unify with it. https://github.com/rescript-lang/rescript/pull/8563
 - Fix losses of fidelity when code passes through an external PPX: the internal `@res.async` marker no longer leaks into the program, attributes on an arrow type or on an `await` expression are no longer dropped or relocated (previously this could crash the formatter), JSX elements keep their closing tag, and PPX-emitted OCaml-style `function` is desugared instead of crashing the compiler. https://github.com/rescript-lang/rescript/pull/8561
 - Preserve multibyte characters when wrapping long source lines in compiler code frames. https://github.com/rescript-lang/rescript/pull/8520
 - Fix reanalyze optional-argument diagnostics for functions passed or returned as first-class values. https://github.com/rescript-lang/rescript/pull/8321
@@ -44,6 +45,7 @@
 - Sync the platform npm package's compiler binaries (`packages/@rescript/<platform>/bin`) via dune promotion on every `dune build`, instead of Makefile/CI copy steps that only ran when make did: a plain `dune build` can no longer leave `cli/*.js` and the test harnesses running a stale compiler. https://github.com/rescript-lang/rescript/pull/8560
 - Remove unused compiler IR definitions, modules, helpers, error variants, and Typedtree fields. https://github.com/rescript-lang/rescript/pull/8551 https://github.com/rescript-lang/rescript/pull/8555
 - Give marshaled current-parsetree streams (`-as-pp`, `res_parser -print binary`) their own magic numbers, distinct from the frozen Parsetree0 wire format used for external PPXes. https://github.com/rescript-lang/rescript/pull/8561
+- Record the written parameter count in parsed arrow arity for externals with phantom `@as(...) _` arguments. External processing recounts after erasing phantoms, so the parser no longer needs to pre-decrement the arity or the printer to compensate for it. https://github.com/rescript-lang/rescript/pull/8563
 - Add the `-check-lam` compiler option, enable Lambda invariant checking in compiler tests, and remove build-profile-dependent checking. https://github.com/rescript-lang/rescript/pull/8534
 - Replace `-bs-diagnose` with `-debug-ir` and make IR diagnostic artifacts deterministic, compilation-local, and easy to clean. https://github.com/rescript-lang/rescript/pull/8535
 - Replace CPPO-based browser conditionals with Dune-selected native and playground compiler implementations. https://github.com/rescript-lang/rescript/pull/8541
