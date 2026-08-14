@@ -39,16 +39,16 @@ let rec from_type_expr_with_arity (texpr : Types.type_expr) arity =
   else
     match texpr.desc with
     | _ when not (active ()) -> []
-    | Tarrow ({lbl = Optional {txt = s}}, t_to, _, _) ->
+    | Tarrow ({lbl = Optional {txt = s}}, t_to, _) ->
       s :: from_type_expr_with_arity t_to (arity - 1)
-    | Tarrow (_, t_to, _, _) -> from_type_expr_with_arity t_to (arity - 1)
+    | Tarrow (_, t_to, _) -> from_type_expr_with_arity t_to (arity - 1)
     | Tlink t -> from_type_expr_with_arity t arity
     | Tsubst t -> from_type_expr_with_arity t arity
     | _ -> []
 
 let rec from_type_expr_with_declared_arity (texpr : Types.type_expr) =
   match texpr.desc with
-  | Tarrow (_, _, _, Some arity) -> from_type_expr_with_arity texpr arity
+  | Tarrow (_, _, Some arity) -> from_type_expr_with_arity texpr arity
   | Tlink t -> from_type_expr_with_declared_arity t
   | Tsubst t -> from_type_expr_with_declared_arity t
   | _ -> from_type_expr texpr
