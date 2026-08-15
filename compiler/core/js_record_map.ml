@@ -87,14 +87,11 @@ let property_map : property_map fn =
       (_x0, _x1))
     _self arg
 
-let length_object : length_object fn = unknown
-
 let expression_desc : expression_desc fn =
  fun _self -> function
-  | Length (_x0, _x1) ->
+  | Length _x0 ->
     let _x0 = _self.expression _self _x0 in
-    let _x1 = length_object _self _x1 in
-    Length (_x0, _x1)
+    Length _x0
   | Is_null_or_undefined _x0 ->
     let _x0 = _self.expression _self _x0 in
     Is_null_or_undefined _x0

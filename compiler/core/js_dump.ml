@@ -1072,7 +1072,7 @@ and expression_desc cxt ~(level : int) f x : cxt =
            refer and export
         *)
         cxt)
-  | Length (e, _) ->
+  | Length e ->
     (*Todo: check parens *)
     P.cond_paren_group f (level > 15) (fun _ ->
         let cxt = expression ~level:15 cxt f e in

@@ -691,13 +691,13 @@ let array_length ?comment (e : t) : t =
   (* TODO: use array instead? *)
   | (Array (l, _) | Caml_block (l, _, _, _)) when no_side_effect e ->
     int ?comment (Int32.of_int (List.length l))
-  | _ -> {expression_desc = Length (e, Array); comment; source_loc = None}
+  | _ -> {expression_desc = Length e; comment; source_loc = None}
 
 let string_length ?comment (e : t) : t =
   match e.expression_desc with
   | Str {txt; delim = DNone} -> int ?comment (Int32.of_int (String.length txt))
   (* No optimization for {j||j}*)
-  | _ -> {expression_desc = Length (e, String); comment; source_loc = None}
+  | _ -> {expression_desc = Length e; comment; source_loc = None}
 
 let function_length ?comment (e : t) : t =
   match e.expression_desc with
@@ -705,7 +705,7 @@ let function_length ?comment (e : t) : t =
     let params_length = List.length params in
     int ?comment
       (Int32.of_int (if is_method then params_length - 1 else params_length))
-  | _ -> {expression_desc = Length (e, Function); comment; source_loc = None}
+  | _ -> {expression_desc = Length e; comment; source_loc = None}
 
 (** no dependency introduced *)
 (* let js_global_dot ?comment (x : string)  (e1 : string) : t =
@@ -771,9 +771,9 @@ let rec triple_equal ?comment (e0 : t) (e1 : t) : t =
 let bin ?comment (op : J.binop) (e0 : t) (e1 : t) : t =
   match (op, e0.expression_desc, e1.expression_desc) with
   | EqEqEq, _, _ -> triple_equal ?comment e0 e1
-  | Ge, Length (e, _), Number (Int {i = 0l}) when no_side_effect e ->
+  | Ge, Length e, Number (Int {i = 0l}) when no_side_effect e ->
     true_ (* x.length >=0 | [x] is pure  -> true*)
-  | Gt, Length (_, _), Number (Int {i = 0l}) ->
+  | Gt, Length _, Number (Int {i = 0l}) ->
     (* [e] is kept so no side effect check needed *)
     {expression_desc = Bin (NotEqEq, e0, e1); comment; source_loc = None}
   | _ -> {expression_desc = Bin (op, e0, e1); comment; source_loc = None}
@@ -1546,8 +1546,7 @@ let is_type_string ?comment (e : t) : t =
 let is_type_object (e : t) : t = string_equal (typeof e) (str "object")
 
 let obj_length ?comment e : t =
-  to_int32
-    {expression_desc = Length (e, Caml_block); comment; source_loc = None}
+  to_int32 {expression_desc = Length e; comment; source_loc = None}
 
 let compare_int_aux (cmp : Lam_compat.comparison) (l : int) r =
   match cmp with

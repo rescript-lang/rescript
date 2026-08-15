@@ -77,13 +77,9 @@ let property_map : property_map fn =
  fun _self arg ->
   list (fun _self (_x0, _x1) -> _self.expression _self _x1) _self arg
 
-let length_object : length_object fn = unknown
-
 let expression_desc : expression_desc fn =
  fun _self -> function
-  | Length (_x0, _x1) ->
-    _self.expression _self _x0;
-    length_object _self _x1
+  | Length _x0 -> _self.expression _self _x0
   | Is_null_or_undefined _x0 -> _self.expression _self _x0
   | String_append (_x0, _x1) ->
     _self.expression _self _x0;

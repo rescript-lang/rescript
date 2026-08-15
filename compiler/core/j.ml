@@ -33,7 +33,6 @@
 
 type mutable_flag = Js_op.mutable_flag
 type binop = Js_op.binop
-type kind = Js_op.kind
 type property = Js_op.property
 type number = Js_op.number
 type ident_info = Js_op.ident_info
@@ -73,7 +72,6 @@ and exception_ident = ident
 and for_ident = ident
 and for_direction = Js_op.direction_flag
 and property_map = (property_name * expression) list
-and length_object = Js_op.length_object
 and delim = External_arg_spec.delim = DNone | DStarJ | DNoQuotes | DBackQuotes
 
 and record_rest_field = {
@@ -82,7 +80,7 @@ and record_rest_field = {
 }
 
 and expression_desc =
-  | Length of expression * length_object
+  | Length of expression
   | Is_null_or_undefined of expression  (** where we use a trick [== null ] *)
   | String_append of expression * expression
   | Bool of bool (* js true/false*)
@@ -338,7 +336,6 @@ and deps_program = {
         label;
         finish_ident_expression;
         property_map;
-        length_object;
         record_rest_field;
         (* for_ident; *)
         required_modules;
