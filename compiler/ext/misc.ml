@@ -565,19 +565,3 @@ let delete_eol_spaces src =
   in
   let stop = loop 0 0 in
   Bytes.sub_string dst 0 stop
-
-type hook_info = {sourcefile: string}
-
-exception
-  HookExnWrapper of {error: exn; hook_name: string; hook_info: hook_info}
-
-exception HookExn of exn
-
-let raise_direct_hook_exn e = raise (HookExn e)
-
-module type HookSig = sig
-  type t
-
-  val add_hook : string -> (hook_info -> t -> t) -> unit
-  val apply_hooks : hook_info -> t -> t
-end

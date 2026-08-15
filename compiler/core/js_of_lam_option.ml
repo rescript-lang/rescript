@@ -24,8 +24,6 @@
 
 module E = Js_exp_make
 
-type option_unwrap_time = Static_unwrapped | Runtime_maybe_unwrapped
-
 (** Another way: 
     {[
       | Var _  ->

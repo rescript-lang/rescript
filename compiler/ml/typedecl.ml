@@ -22,8 +22,6 @@ open Primitive
 open Types
 open Typetexp
 
-type native_repr_kind = Unboxed | Untagged
-
 type error =
   | Repeated_parameter
   | Duplicate_constructor of string

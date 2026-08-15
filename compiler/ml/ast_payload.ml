@@ -181,8 +181,6 @@ let as_ident (x : t) =
 
 type lid = string Asttypes.loc
 
-type label_expr = lid * Parsetree.expression
-
 type action = lid * Parsetree.expression option
 (** None means punning is hit 
     {[ { x } ]}

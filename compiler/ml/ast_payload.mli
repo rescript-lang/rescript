@@ -29,8 +29,6 @@ type t = Parsetree.payload
 
 type lid = string Asttypes.loc
 
-type label_expr = lid * Parsetree.expression
-
 type action = lid * Parsetree.expression option
 
 val is_single_string : t -> (string * string option) option
