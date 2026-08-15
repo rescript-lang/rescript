@@ -460,12 +460,7 @@ Build / dependency errors. Mostly need the `rescript build` runtime to fire — 
 |---|---|---|---|
 | `Cmj_not_found` | ☐ (needs build harness) | — | Missing `.cmj` from a dependent module. Reachable from `rescript build` but not from raw `bsc`. |
 | `Js_not_found` | ✓ | implicitly — bypassed via `-bs-cmi-only` in `super_errors_multi` runner. Not a fixture, but the harness commit documents the workaround. | |
-| `Bs_cyclic_depends` | ☐ (needs build harness) | — | Cycle across compilation units; the dependency graph that detects this is owned by `rewatch` / `bsb`, not raw `bsc`. |
-| `Bs_duplicated_module` | ☐ (needs build harness) | — | Same module name in two source paths under a single package. |
 | `Bs_duplicate_exports` | ☐ (needs build harness) | — | Same export emitted twice across compilation units. |
-| `Bs_package_not_found` | ☐ (needs build harness) | — | `rescript.json`-referenced package not resolvable. |
-| `Bs_main_not_exist` | ☐ (needs build harness) | — | `rescript.json` `main` entry missing. |
-| `Bs_invalid_path` | ☐ (needs build harness) | — | `-I` / source path with invalid form. |
 | `Missing_ml_dependency` | ☐ (needs build harness) | — | Compile-time missing dependency from a `.cmj` lookup table. |
 | `Dependency_script_module_dependent_not` | ☐ (needs build harness) | — | `core/platform/native/js_name_of_module_id.ml:99`. **Reachable** when a dependent module is in script mode (`Package_script`) but the current module is in package mode (`Package_found _`). Legacy script-vs-package interaction; needs `rescript.json` harness. |
 

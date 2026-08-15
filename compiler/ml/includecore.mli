@@ -64,10 +64,6 @@ val extension_constructors :
   extension_constructor ->
   extension_constructor ->
   bool
-(*
-val class_types:
-        Env.t -> class_type -> class_type -> bool
-*)
 
 val report_type_mismatch :
   string -> string -> string -> Format.formatter -> type_mismatch list -> unit
