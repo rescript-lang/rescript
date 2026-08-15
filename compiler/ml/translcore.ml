@@ -385,7 +385,7 @@ let primitives_table =
       ("%curry_apply6", Pcurry_apply 6);
       ("%curry_apply7", Pcurry_apply 7);
       ("%curry_apply8", Pcurry_apply 8);
-      ("%makemutablelist", Pmakelist Mutable);
+      ("%makemutablelist", Pmakelist);
       ("%unsafe_to_method", Pjs_fn_method);
       (* Compiler internals, never expose to ReScript files *)
       ("#raw_expr", Pjs_raw_expr);
@@ -397,7 +397,7 @@ let primitives_table =
       ("#is_nullable", Pisnullable);
       ("#null_to_opt", Pnull_to_opt);
       ("#nullable_to_opt", Pnullable_to_opt);
-      ("#makemutablelist", Pmakelist Mutable);
+      ("#makemutablelist", Pmakelist);
       ("#import", Pimport);
       (* FIXME: Deprecated *)
       ("%obj_field", Parrayrefu);
@@ -928,7 +928,7 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
     Lprim (access, [transl_exp arg; transl_exp newval], e.exp_loc)
   | Texp_array expr_list ->
     let ll = transl_list expr_list in
-    Lprim (Pmakearray Mutable, ll, e.exp_loc)
+    Lprim (Pmakearray, ll, e.exp_loc)
   | Texp_ifthenelse (cond, ifso, Some ifnot) ->
     Lifthenelse (transl_exp cond, transl_exp ifso, transl_exp ifnot)
   | Texp_ifthenelse (cond, ifso, None) ->

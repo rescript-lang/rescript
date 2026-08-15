@@ -35,7 +35,7 @@ type record_representation =
 
 type t =
   (* Operations on heap blocks *)
-  | Pmakeblock of int * Lam_tag_info.t * Asttypes.mutable_flag
+  | Pmakeblock of int * Lam_tag_info.t
   | Pfield of int * Lam_compat.field_dbg_info
   | Psetfield of int * Lam_compat.set_field_dbg_info
   (* could have field info at least for record *)
@@ -253,10 +253,9 @@ let eq_primitive_approx (lhs : t) (rhs : t) =
     match rhs with
     | Psetfield (i1, info1) -> i0 = i1 && eq_set_field_dbg_info info0 info1
     | _ -> false)
-  | Pmakeblock (i0, info0, flag0) -> (
+  | Pmakeblock (i0, info0) -> (
     match rhs with
-    | Pmakeblock (i1, info1, flag1) ->
-      i0 = i1 && flag0 = flag1 && eq_tag_info info0 info1
+    | Pmakeblock (i1, info1) -> i0 = i1 && eq_tag_info info0 info1
     | _ -> false)
   | Pjs_call {prim_name; arg_types; ffi; dynamic_import; _} -> (
     match rhs with

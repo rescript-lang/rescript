@@ -576,7 +576,7 @@ let prim ~primitive:(prim : Lam_primitive.t) ~args loc : t =
     | _ -> default ())
   | _ -> (
     match prim with
-    | Pmakeblock (_size, Blk_module fields, _) -> (
+    | Pmakeblock (_size, Blk_module fields) -> (
       let rec aux fields args (var : Ident.t) i =
         match (fields, args) with
         | [], [] -> true

@@ -157,7 +157,8 @@ let deep_flatten (lam : Lam.t) : Lam.t =
       match (id.name, str, res) with
       | ( ("match" | "include" | "param"),
           (Alias | Strict | StrictOpt),
-          Lprim {primitive = Pmakeblock (_, _, Immutable); args} ) -> (
+          Lprim {primitive = Pmakeblock (_, tag_info); args} )
+        when Lambda.mutable_flag_of_tag_info tag_info = Immutable -> (
         match eliminate_tuple id body Map_int.empty with
         | Some (tuple_mapping, body) ->
           flatten

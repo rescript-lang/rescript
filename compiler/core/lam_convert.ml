@@ -23,7 +23,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
 let caml_id_field_info : Lambda.field_dbg_info =
-  Fld_record {name = Literals.exception_id; mutable_flag = Immutable}
+  Fld_record {name = Literals.exception_id}
 
 let lam_caml_id : Lam_primitive.t = Pfield (0, caml_id_field_info)
 let prim = Lam.prim
@@ -173,13 +173,12 @@ let lam_prim ~primitive:(p : Lambda.primitive) ~args loc : Lam.t =
   | Pgetglobal _ -> assert false
   | Pmakeblock info -> (
     let tag = Lambda.tag_of_tag_info info in
-    let mutable_flag = Lambda.mutable_flag_of_tag_info info in
     match info with
     | Blk_some_not_nested -> prim ~primitive:Psome_not_nest ~args loc
     | Blk_some -> prim ~primitive:Psome ~args loc
     | Blk_constructor _ | Blk_tuple | Blk_record _ | Blk_record_inlined _
     | Blk_module _ | Blk_module_export _ | Blk_extension | Blk_record_ext _ ->
-      prim ~primitive:(Pmakeblock (tag, info, mutable_flag)) ~args loc
+      prim ~primitive:(Pmakeblock (tag, info)) ~args loc
     | Blk_poly_var s -> (
       match args with
       | [_; value] ->
@@ -189,7 +188,7 @@ let lam_prim ~primitive:(p : Lambda.primitive) ~args loc : Lam.t =
           else Const_string {s; delim = None}
         in
         prim
-          ~primitive:(Pmakeblock (tag, info, mutable_flag))
+          ~primitive:(Pmakeblock (tag, info))
           ~args:[Lam.const tag_val; value]
           loc
       | _ -> assert false))
@@ -288,13 +287,13 @@ let lam_prim ~primitive:(p : Lambda.primitive) ~args loc : Lam.t =
   | Poffsetint x -> prim ~primitive:(Poffsetint x) ~args loc
   | Poffsetref x -> prim ~primitive:(Poffsetref x) ~args loc
   | Pfloatcomp x -> prim ~primitive:(Pfloatcomp x) ~args loc
-  | Pmakearray _mutable_flag (*FIXME*) -> prim ~primitive:Pmakearray ~args loc
+  | Pmakearray -> prim ~primitive:Pmakearray ~args loc
   | Parraylength -> prim ~primitive:Parraylength ~args loc
   | Parrayrefu -> prim ~primitive:Parrayrefu ~args loc
   | Parraysetu -> prim ~primitive:Parraysetu ~args loc
   | Parrayrefs -> prim ~primitive:Parrayrefs ~args loc
   | Parraysets -> prim ~primitive:Parraysets ~args loc
-  | Pmakelist _mutable_flag (*FIXME*) -> prim ~primitive:Pmakelist ~args loc
+  | Pmakelist -> prim ~primitive:Pmakelist ~args loc
   | Pmakedict -> prim ~primitive:Pmakedict ~args loc
   | Pdict_has -> prim ~primitive:Pdict_has ~args loc
   | Pawait -> prim ~primitive:Pawait ~args loc
