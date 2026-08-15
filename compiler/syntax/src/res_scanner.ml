@@ -148,7 +148,6 @@ let peek_char scanner target_char =
   in
   skip_whitespace_and_check scanner.offset
 
-let peek_minus scanner = peek_char scanner '-'
 let peek_slash scanner = peek_char scanner '/'
 
 let make ~filename src =

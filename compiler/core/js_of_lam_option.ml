@@ -101,6 +101,4 @@ let some = E.optional_block
 
 let null_to_opt e = E.econd (E.is_null e) none (some e)
 
-let undef_to_opt e = E.econd (E.is_undef e) none (some e)
-
 let null_undef_to_opt e = E.econd (E.is_null_undefined e) none (some e)

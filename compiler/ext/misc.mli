@@ -16,7 +16,6 @@
 (* Miscellaneous useful types and functions *)
 
 val fatal_error : string -> 'a
-val fatal_errorf : ('a, Format.formatter, unit, 'b) format4 -> 'a
 exception Fatal_error
 
 val try_finally : (unit -> 'a) -> (unit -> unit) -> 'a
@@ -53,12 +52,6 @@ val protect_refs : ref_and_value list -> (unit -> 'a) -> 'a
     while executing [f]. The previous contents of the references is restored
     even if [f] raises an exception. *)
 
-val find_in_path : string list -> string -> string
-(* Search a file in a list of directories. *)
-
-val find_in_path_rel : string list -> string -> string
-(* Search a relative file in a list of directories. *)
-
 val find_in_path_uncap : string list -> string -> string
 (* Same, but search also for uncapitalized name, i.e.
    if name is Foo.ml, allow /path/Foo.ml and /path/foo.ml
@@ -75,19 +68,6 @@ val create_hashtable : ('a * 'b) array -> ('a, 'b) Hashtbl.t
 (* Create a hashtable of the given size and fills it with the
    given bindings. *)
 
-val copy_file : in_channel -> out_channel -> unit
-(* [copy_file ic oc] reads the contents of file [ic] and copies
-   them to [oc]. It stops when encountering EOF on [ic]. *)
-
-val copy_file_chunk : in_channel -> out_channel -> int -> unit
-(* [copy_file_chunk ic oc n] reads [n] bytes from [ic] and copies
-   them to [oc]. It raises [End_of_file] when encountering
-   EOF on [ic]. *)
-
-val string_of_file : in_channel -> string
-(* [string_of_file ic] reads the contents of file [ic] and copies
-   them to a string. It stops when encountering EOF on [ic]. *)
-
 val output_to_bin_file_directly : string -> (string -> out_channel -> 'a) -> 'a
 
 val output_to_file_via_temporary :
@@ -103,26 +83,6 @@ val log2 : int -> int
 (* [log2 n] returns [s] such that [n = 1 lsl s]
    if [n] is a power of 2*)
 
-val align : int -> int -> int
-(* [align n a] rounds [n] upwards to a multiple of [a]
-   (a power of 2). *)
-
-val no_overflow_add : int -> int -> bool
-(* [no_overflow_add n1 n2] returns [true] if the computation of
-   [n1 + n2] does not overflow. *)
-
-val no_overflow_sub : int -> int -> bool
-(* [no_overflow_sub n1 n2] returns [true] if the computation of
-   [n1 - n2] does not overflow. *)
-
-val no_overflow_mul : int -> int -> bool
-(* [no_overflow_mul n1 n2] returns [true] if the computation of
-   [n1 * n2] does not overflow. *)
-
-val no_overflow_lsl : int -> int -> bool
-(* [no_overflow_lsl n k] returns [true] if the computation of
-   [n lsl k] does not overflow. *)
-
 module Int_literal_converter : sig
   val int : string -> int
   val int32 : string -> int32
@@ -136,33 +96,11 @@ val chop_extensions : string -> string
 
    Return the given name if it does not contain an extension. *)
 
-val search_substring : string -> string -> int -> int
-(* [search_substring pat str start] returns the position of the first
-   occurrence of string [pat] in string [str].  Search starts
-   at offset [start] in [str].  Raise [Not_found] if [pat]
-   does not occur. *)
-
-val replace_substring : before:string -> after:string -> string -> string
-(* [replace_substring ~before ~after str] replaces all
-   occurrences of [before] with [after] in [str] and returns
-   the resulting string. *)
-
-val rev_split_words : string -> string list
-(* [rev_split_words s] splits [s] in blank-separated words, and returns
-   the list of words in reverse order. *)
-
 val get_ref : 'a list ref -> 'a list
 (* [get_ref lr] returns the content of the list reference [lr] and reset
    its content to the empty list. *)
 
 val fst3 : 'a * 'b * 'c -> 'a
-val snd3 : 'a * 'b * 'c -> 'b
-val thd3 : 'a * 'b * 'c -> 'c
-
-val fst4 : 'a * 'b * 'c * 'd -> 'a
-val snd4 : 'a * 'b * 'c * 'd -> 'b
-val thd4 : 'a * 'b * 'c * 'd -> 'c
-val for4 : 'a * 'b * 'c * 'd -> 'd
 
 val edit_distance : string -> string -> int -> int option
 (** [edit_distance a b cutoff] computes the edit distance between
@@ -195,17 +133,6 @@ val did_you_mean : Format.formatter -> (unit -> string list) -> unit
     the failure even if producing the hint is slow.
 *)
 
-val cut_at : string -> char -> string * string
-(** [String.cut_at s c] returns a pair containing the sub-string before
-   the first occurrence of [c] in [s], and the sub-string after the
-   first occurrence of [c] in [s].
-   [let (before, after) = String.cut_at s c in
-    before ^ String.make 1 c ^ after] is the identity if [s] contains [c].
-
-   Raise [Not_found] if the character does not appear in the string
-   @since 4.01
-*)
-
 module String_set : Set.S with type elt = string
 module String_map : Map.S with type key = string
 (* TODO: replace all custom instantiations of StringSet/StringMap in various
@@ -228,9 +155,6 @@ module Color : sig
   type styles = {error: style list; warning: style list; loc: style list}
 
   val default_styles : styles
-  val get_styles : unit -> styles
-  val set_styles : styles -> unit
-
   type setting = Auto | Always | Never
 
   val setup : setting option -> unit
@@ -246,8 +170,3 @@ val normalise_eol : string -> string
 (** [normalise_eol s] returns a fresh copy of [s] with any '\r' characters
    removed. Intended for pre-processing text which will subsequently be printed
    on a channel which performs EOL transformations (i.e. Windows) *)
-
-val delete_eol_spaces : string -> string
-(** [delete_eol_spaces s] returns a fresh copy of [s] with any end of
-   line spaces removed. Intended to normalize the output of the
-   toplevel for tests. *)

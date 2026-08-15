@@ -139,10 +139,6 @@ and type_list t = newgenty (Tconstr (path_list, [t], ref Mnil))
 
 and type_option t = newgenty (Tconstr (path_option, [t], ref Mnil))
 
-and type_result t1 t2 = newgenty (Tconstr (path_result, [t1; t2], ref Mnil))
-
-and type_dict t = newgenty (Tconstr (path_dict, [t], ref Mnil))
-
 and type_bigint = newgenty (Tconstr (path_bigint, [], ref Mnil))
 
 and type_string = newgenty (Tconstr (path_string, [], ref Mnil))
@@ -178,24 +174,9 @@ and ident_assert_failure = ident_create_predef_exn "Assert_failure"
 and ident_undefined_recursive_module =
   ident_create_predef_exn "Undefined_recursive_module"
 
-let all_predef_exns =
-  [
-    ident_match_failure;
-    ident_invalid_argument;
-    ident_failure;
-    ident_js_exn;
-    ident_not_found;
-    ident_end_of_file;
-    ident_division_by_zero;
-    ident_assert_failure;
-    ident_undefined_recursive_module;
-  ]
-
 let path_match_failure = Pident ident_match_failure
 
 and path_assert_failure = Pident ident_assert_failure
-
-and path_undefined_recursive_module = Pident ident_undefined_recursive_module
 
 let decl_abstr =
   {
@@ -436,11 +417,8 @@ let build_initial_env add_type add_exception empty_env =
   in
   add_type ident_char decl_type_char common
 
-let builtin_values =
-  List.map
-    (fun id ->
-      Ident.make_global id;
-      (Ident.name id, id))
+let () =
+  List.iter Ident.make_global
     [
       ident_match_failure;
       ident_invalid_argument;

@@ -26,8 +26,6 @@
 
 val is_js : Ident.t -> bool
 
-val is_js_object : Ident.t -> bool
-
 val create_js : string -> Ident.t
 (** create identifiers for predefined [js] global variables *)
 
@@ -36,8 +34,6 @@ val create : string -> Ident.t
 val make_js_object : Ident.t -> unit
 
 val create_tmp : ?name:string -> unit -> Ident.t
-
-val make_unused : unit -> Ident.t
 
 val is_uident : string -> bool
 

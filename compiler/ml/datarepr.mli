@@ -27,11 +27,6 @@ val labels_of_type :
 val constructors_of_type :
   Path.t -> type_declaration -> (Ident.t * constructor_description) list
 
-exception Constr_not_found
-
-val find_constr_by_tag :
-  constructor_tag -> constructor_declaration list -> constructor_declaration
-
 val constructor_existentials :
   constructor_arguments -> type_expr option -> type_expr list * type_expr list
 (** Takes [cd_args] and [cd_res] from a [constructor_declaration] and

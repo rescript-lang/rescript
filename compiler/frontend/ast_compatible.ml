@@ -73,20 +73,6 @@ let app2 ?(loc = default_loc) ?(attrs = []) fn arg1 arg2 : expression =
         };
   }
 
-let app3 ?(loc = default_loc) ?(attrs = []) fn arg1 arg2 arg3 : expression =
-  {
-    pexp_loc = loc;
-    pexp_attributes = attrs;
-    pexp_desc =
-      Pexp_apply
-        {
-          funct = fn;
-          args = [(Nolabel, arg1); (Nolabel, arg2); (Nolabel, arg3)];
-          partial = false;
-          transformed_jsx = false;
-        };
-  }
-
 let fun_ ?(loc = default_loc) ?(attrs = []) ?(async = false) ~arity pat exp =
   {
     pexp_loc = loc;
@@ -101,21 +87,6 @@ let fun_ ?(loc = default_loc) ?(attrs = []) ?(async = false) ~arity pat exp =
           arity;
           async;
         };
-  }
-
-let const_exp_string ?(loc = default_loc) ?(attrs = []) ?delimiter (s : string)
-    : expression =
-  {
-    pexp_loc = loc;
-    pexp_attributes = attrs;
-    pexp_desc = Pexp_constant (Pconst_string (s, delimiter));
-  }
-
-let const_exp_int ?(loc = default_loc) ?(attrs = []) (s : int) : expression =
-  {
-    pexp_loc = loc;
-    pexp_attributes = attrs;
-    pexp_desc = Pexp_constant (Pconst_integer (string_of_int s, None));
   }
 
 let apply_labels ?(loc = default_loc) ?(attrs = []) fn
@@ -149,13 +120,6 @@ let rec_type_sig ?(loc = default_loc) rf tds : signature_item =
       Nonrecursive,
       tds)
    } *)
-
-let const_exp_int_list_as_array xs =
-  Ast_helper.Exp.array (Ext_list.map xs (fun x -> const_exp_int x))
-
-(* let const_exp_string_list_as_array xs =
-   Ast_helper.Exp.array
-   (Ext_list.map xs (fun x -> const_exp_string x ) ) *)
 
 type object_field = Parsetree.object_field
 

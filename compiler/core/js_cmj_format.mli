@@ -80,8 +80,6 @@ val single_na : arity
 
 val from_file : string -> t
 
-val from_file_with_digest : string -> t * Digest.t
-
 val from_string : string -> t
 
 (*

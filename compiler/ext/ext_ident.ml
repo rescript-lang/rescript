@@ -38,8 +38,6 @@ let is_js (i : Ident.t) = i.flags land js_flag <> 0
 
 let is_js_or_global (i : Ident.t) = i.flags land (8 lor 1) <> 0
 
-let is_js_object (i : Ident.t) = i.flags land js_object_flag <> 0
-
 let make_js_object (i : Ident.t) = i.flags <- i.flags lor js_object_flag
 
 (* It's a js function hard coded by js api, so when printing,
@@ -137,12 +135,6 @@ let convert (name : string) =
 (* It is currently made a persistent ident to avoid fresh ids
     which would result in different signature files
    - other solution: use lazy values
-*)
-let make_unused () = create "_"
-
-(* Has to be total order, [x < y]
-   and [x > y] should be consistent
-   flags are not relevant here
 *)
 let compare (x : Ident.t) (y : Ident.t) =
   let u = x.stamp - y.stamp in

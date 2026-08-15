@@ -41,26 +41,6 @@ let map_row_fields_into_ints ptyp_loc (row_fields : Parsetree.row_field list) =
     the underlying representation may change due to       
     unbox
 *)
-let map_constructor_declarations_into_ints
-    (row_fields : Parsetree.constructor_declaration list) =
-  let mark = ref `nothing in
-  let _, acc =
-    Ext_list.fold_left row_fields (0, []) (fun (i, acc) rtag ->
-        let attrs = rtag.pcd_attributes in
-        match Ast_attributes.iter_process_bs_int_as attrs with
-        | Some j ->
-          if j <> i then if i = 0 then mark := `offset j else mark := `complex;
-          (j + 1, j :: acc)
-        | None -> (i + 1, i :: acc))
-  in
-  match !mark with
-  | `nothing -> `Offset 0
-  | `offset j -> `Offset j
-  | `complex -> `New (List.rev acc)
-
-(** It also check in-consistency of cases like 
-    {[ [`a  | `c of int ] ]}       
-*)
 let map_row_fields_into_strings ptyp_loc (row_fields : Parsetree.row_field list)
     : External_arg_spec.attr =
   let has_bs_as = ref false in

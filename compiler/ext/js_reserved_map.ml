@@ -102,21 +102,6 @@ let js_keywords =
 
 let is_js_keyword s = STbl.mem js_keywords s
 
-(** Identifiers with special meanings.
-
-    They can have different meanings depending on the context when used as identifier names, so it should be done carefully.
-
-    See https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Lexical_grammar#identifiers_with_special_meanings
-
-    However, these names are actually used with no problems today. (Except `arguments` and `eval`)
- *)
-let js_special_words =
-  STbl.of_array
-    [|"arguments"; "as"; "async"; "eval"; "from"; "get"; "of"; "set"|]
-
-let is_js_special_word s = STbl.mem js_special_words s
-
-(** Identifier names _might_ need to care about *)
 let js_globals =
   STbl.of_array
     [|

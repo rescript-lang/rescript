@@ -1373,12 +1373,6 @@ let string_of_expression x =
   expression f x;
   flush_str_formatter ()
 
-let string_of_structure x =
-  ignore (flush_str_formatter ());
-  let f = str_formatter in
-  structure reset_ctxt f x;
-  flush_str_formatter ()
-
 let core_type = core_type reset_ctxt
 let pattern = pattern reset_ctxt
 let signature = signature reset_ctxt

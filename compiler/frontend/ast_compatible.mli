@@ -28,13 +28,6 @@ type attrs = Parsetree.attribute list
 
 open Parsetree
 
-val const_exp_string :
-  ?loc:Location.t -> ?attrs:attrs -> ?delimiter:string -> string -> expression
-
-val const_exp_int : ?loc:Location.t -> ?attrs:attrs -> int -> expression
-
-val const_exp_int_list_as_array : int list -> expression
-
 val apply_simple :
   ?loc:Location.t -> ?attrs:attrs -> expression -> expression list -> expression
 
@@ -44,15 +37,6 @@ val app1 :
 val app2 :
   ?loc:Location.t ->
   ?attrs:attrs ->
-  expression ->
-  expression ->
-  expression ->
-  expression
-
-val app3 :
-  ?loc:Location.t ->
-  ?attrs:attrs ->
-  expression ->
   expression ->
   expression ->
   expression ->

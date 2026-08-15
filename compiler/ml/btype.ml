@@ -476,8 +476,6 @@ let mark_type_node ty =
   let ty = repr ty in
   if ty.level >= lowest_level then ty.level <- pivot_level - ty.level
 
-let mark_type_params ty = iter_type_expr mark_type ty
-
 let type_iterators =
   let it_type_expr it ty =
     let ty = repr ty in

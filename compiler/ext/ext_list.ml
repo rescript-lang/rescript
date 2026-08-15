@@ -75,10 +75,6 @@ let rec arr_list_combine_unsafe arr l i j acc f =
     | h :: tl ->
       (f arr.!(i), h) :: arr_list_combine_unsafe arr tl (i + 1) j acc f
 
-let combine_array_append arr l acc f =
-  let len = Array.length arr in
-  arr_list_combine_unsafe arr l 0 len acc f
-
 let combine_array arr l f =
   let len = Array.length arr in
   arr_list_combine_unsafe arr l 0 len [] f
@@ -745,11 +741,6 @@ let rec fold_left l accu f =
   match l with
   | [] -> accu
   | a :: l -> fold_left l (f accu a) f
-
-let reduce_from_left lst fn =
-  match lst with
-  | first :: rest -> fold_left rest first fn
-  | _ -> invalid_arg "Ext_list.reduce_from_left"
 
 let rec fold_left2 l1 l2 accu f =
   match (l1, l2) with

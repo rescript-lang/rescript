@@ -100,12 +100,6 @@ let rec dump r =
 
 let dump v = dump (Obj.repr v)
 
-let dump_endline ?(__LOC__ = "") v =
-  print_endline __LOC__;
-  print_endline (dump v)
-
-let pp_any fmt v = Format.fprintf fmt "@[%s@]" (dump v)
-
 let bt () =
   let raw_bt = Printexc.backtrace_slots (Printexc.get_raw_backtrace ()) in
   match raw_bt with

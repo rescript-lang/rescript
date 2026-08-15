@@ -41,8 +41,6 @@ let field (field_info : Lam_compat.field_dbg_info) e (i : int32) =
   | Fld_record {name} -> E.record_access e name i
   | Fld_module {name} -> E.module_access e name i
 
-let field_by_exp e i = E.array_index e i
-
 let set_field (field_info : Lam_compat.set_field_dbg_info) e i e0 =
   match field_info with
   | Fld_record_extension_set name -> E.extension_assign e i name e0
@@ -50,4 +48,3 @@ let set_field (field_info : Lam_compat.set_field_dbg_info) e i e0 =
     E.record_assign e i name e0
 
 (* This dynamism commes from oo compilaton, it should not happen in record *)
-let set_field_by_exp self index value = E.assign_by_exp self index value

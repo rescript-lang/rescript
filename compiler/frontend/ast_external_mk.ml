@@ -94,37 +94,3 @@ let local_external_obj loc ?(pval_attributes = []) ~pval_prim ~pval_type
          }
           : Parsetree.expression)
         args ~loc )
-
-let local_extern_cont_to_obj loc ?(pval_attributes = []) ~pval_prim ~pval_type
-    ?(local_module_name = "J") ?(local_fun_name = "unsafe_expr")
-    (cb : Parsetree.expression -> 'a) : Parsetree.expression_desc =
-  Pexp_letmodule
-    ( {txt = local_module_name; loc},
-      {
-        pmod_desc =
-          Pmod_structure
-            [
-              {
-                pstr_desc =
-                  Pstr_primitive
-                    {
-                      pval_name = {txt = local_fun_name; loc};
-                      pval_type;
-                      pval_loc = loc;
-                      pval_prim;
-                      pval_attributes;
-                    };
-                pstr_loc = loc;
-              };
-            ];
-        pmod_loc = loc;
-        pmod_attributes = [];
-      },
-      cb
-        {
-          pexp_desc =
-            Pexp_ident
-              {txt = Ldot (Lident local_module_name, local_fun_name); loc};
-          pexp_attributes = [];
-          pexp_loc = loc;
-        } )

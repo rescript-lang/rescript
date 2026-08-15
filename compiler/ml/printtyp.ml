@@ -962,11 +962,6 @@ and type_scheme ppf ty =
   typexp true ppf ty
 
 (* Maxence *)
-let type_scheme_max ?(b_reset_names = true) ppf ty =
-  if b_reset_names then reset_names ();
-  typexp true ppf ty
-(* End Maxence *)
-
 let tree_of_type_scheme ty =
   reset_and_mark_loops ty;
   tree_of_typexp true ty

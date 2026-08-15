@@ -34,9 +34,6 @@ val trim : string -> string
 val split : ?keep_empty:bool -> string -> char -> string list
 (** default is false *)
 
-val quick_split_by_ws : string -> string list
-(** split by space chars for quick scripting *)
-
 val starts_with : string -> string -> bool
 
 val ends_with_index : string -> string -> int
@@ -117,8 +114,6 @@ val rindex_neg : string -> char -> int
 
 val rindex_opt : string -> char -> int option
 
-val no_char : string -> char -> int -> int -> bool
-
 val no_slash : string -> bool
 
 val no_slash_idx : string -> int
@@ -147,9 +142,6 @@ val concat_array : string -> string array -> string
 
 val single_colon : string
 
-val parent_dir_lit : string
-val current_dir_lit : string
-
 val capitalize_ascii : string -> string
 
 val capitalize_sub : string -> int -> string
@@ -157,14 +149,6 @@ val capitalize_sub : string -> int -> string
 val uncapitalize_ascii : string -> string
 
 val lowercase_ascii : string -> string
-
-(** Play parity to {!Ext_buffer.add_int_1} *)
-(* val get_int_1 : string -> int -> int 
-   val get_int_2 : string -> int -> int 
-   val get_int_3 : string -> int -> int 
-   val get_int_4 : string -> int -> int  *)
-
-val get_1_2_3_4 : string -> off:int -> int -> int
 
 val unsafe_sub : string -> int -> int -> string
 

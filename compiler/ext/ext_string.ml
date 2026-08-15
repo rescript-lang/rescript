@@ -66,9 +66,6 @@ let trim s =
 let split ?keep_empty str on =
   if str = "" then [] else split_by ?keep_empty (fun x -> (x : char) = on) str
 
-let quick_split_by_ws str : string list =
-  split_by ~keep_empty:false (fun x -> x = '\t' || x = '\n' || x = ' ') str
-
 let starts_with s beg =
   let beg_len = String.length beg in
   let s_len = String.length s in
@@ -265,12 +262,6 @@ let rec unsafe_no_char_idx x ch i last_idx =
     unsafe_no_char_idx x ch (i + 1) last_idx
   else i
 
-let no_char x ch i len : bool =
-  let str_len = String.length x in
-  if i < 0 || i >= str_len || len >= str_len then
-    invalid_arg "Ext_string.no_char"
-  else unsafe_no_char x ch i len
-
 let no_slash x = unsafe_no_char x '/' 0 (String.length x - 1)
 
 let no_slash_idx x = unsafe_no_char_idx x '/' 0 (String.length x - 1)
@@ -379,10 +370,6 @@ let inter3 a b c = concat5 a single_space b single_space c
 
 let inter4 a b c d = concat_array single_space [|a; b; c; d|]
 
-let parent_dir_lit = ".."
-let current_dir_lit = "."
-
-(* reference {!Bytes.unppercase} *)
 let capitalize_ascii (s : string) : string =
   if String.length s = 0 then s
   else
@@ -424,26 +411,6 @@ let uncapitalize_ascii = String.uncapitalize_ascii
 let lowercase_ascii = String.lowercase_ascii
 
 external ( .![] ) : string -> int -> int = "%string_unsafe_get"
-
-let get_int_1_unsafe (x : string) off : int = x.![off]
-
-let get_int_2_unsafe (x : string) off : int = x.![off] lor (x.![off + 1] lsl 8)
-
-let get_int_3_unsafe (x : string) off : int =
-  x.![off] lor (x.![off + 1] lsl 8) lor (x.![off + 2] lsl 16)
-
-let get_int_4_unsafe (x : string) off : int =
-  x.![off]
-  lor (x.![off + 1] lsl 8)
-  lor (x.![off + 2] lsl 16)
-  lor (x.![off + 3] lsl 24)
-
-let get_1_2_3_4 (x : string) ~off len : int =
-  if len = 1 then get_int_1_unsafe x off
-  else if len = 2 then get_int_2_unsafe x off
-  else if len = 3 then get_int_3_unsafe x off
-  else if len = 4 then get_int_4_unsafe x off
-  else assert false
 
 let unsafe_sub x offs len =
   let b = Bytes.create len in

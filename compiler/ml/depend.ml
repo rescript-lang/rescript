@@ -18,8 +18,6 @@ open Location
 open Longident
 open Parsetree
 
-let pp_deps = ref []
-
 module String_set = Set.Make (struct
   type t = string
   let compare = compare
@@ -519,5 +517,3 @@ and add_struct_item (bv, m) item : _ String_map.t * _ String_map.t =
 and add_implementation bv l =
   if !Clflags.transparent_modules then ignore (add_structure_binding bv l)
   else ignore (add_structure bv l)
-
-and add_implementation_binding bv l = snd (add_structure_binding bv l)

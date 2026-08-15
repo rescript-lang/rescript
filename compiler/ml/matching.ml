@@ -448,14 +448,6 @@ end)
 
 let make_exit i = Lstaticraise (i, [])
 
-(* Introduce a catch, if worth it *)
-let make_catch d k =
-  match d with
-  | Lstaticraise (_, []) -> k d
-  | _ ->
-    let e = next_raise_count () in
-    Lstaticcatch (k (make_exit e), (e, []), d)
-
 (* Introduce a catch, if worth it, delayed version *)
 let rec as_simple_exit = function
   | Lstaticraise (i, []) -> Some i
@@ -1539,97 +1531,7 @@ let make_array_matching p def ctx = function
 let divide_array ctx pm =
   divide make_array_matching ( = ) get_key_array get_args_array ctx pm
 
-(*
-   Specific string test sequence
-   Will be called by the bytecode compiler, from bytegen.ml.
-   The strategy is first dichotomic search (we perform 3-way tests
-   with compare_string), then sequence of equality tests
-   when there are less then T=strings_test_threshold static strings to match.
-
-  Increasing T entails (slightly) less code, decreasing T
-  (slightly) favors runtime speed.
-  T=8 looks a decent tradeoff.
-*)
-
-(* Utilities *)
-
-let strings_test_threshold = 8
-
-let bind_sw arg k =
-  match arg with
-  | Lvar _ -> k arg
-  | _ ->
-    let id = Ident.create "switch" in
-    Llet (Strict, Pgenval, id, arg, k (Lvar id))
-
-(* Sequential equality tests *)
-
-let make_string_test_sequence loc arg sw d =
-  let d, sw =
-    match d with
-    | None -> (
-      match sw with
-      | (_, d) :: sw -> (d, sw)
-      | [] -> assert false)
-    | Some d -> (d, sw)
-  in
-  bind_sw arg (fun arg ->
-      List.fold_right
-        (fun (s, lam) k ->
-          Lifthenelse
-            ( Lprim (Pstringcomp Cneq, [arg; Lconst (Const_immstring s)], loc),
-              k,
-              lam ))
-        sw d)
-
-let rec split k xs =
-  match xs with
-  | [] -> assert false
-  | x0 :: xs ->
-    if k <= 1 then ([], x0, xs)
-    else
-      let xs, y0, ys = split (k - 2) xs in
-      (x0 :: xs, y0, ys)
-
-let zero_lam = Lconst (Const_base (Const_int 0))
-
-let tree_way_test loc arg lt eq gt =
-  Lifthenelse
-    ( Lprim (Pintcomp Clt, [arg; zero_lam], loc),
-      lt,
-      Lifthenelse (Lprim (Pintcomp Clt, [zero_lam; arg], loc), gt, eq) )
-
-(* Dichotomic tree *)
-
-let rec do_make_string_test_tree loc arg sw delta d =
-  let len = List.length sw in
-  if len <= strings_test_threshold + delta then
-    make_string_test_sequence loc arg sw d
-  else
-    let lt, (s, act), gt = split len sw in
-    bind_sw
-      (Lprim (Pstringcomp Ceq, [arg; Lconst (Const_immstring s)], loc))
-      (fun r ->
-        tree_way_test loc r
-          (do_make_string_test_tree loc arg lt delta d)
-          act
-          (do_make_string_test_tree loc arg gt delta d))
-
 (* Entry point *)
-let expand_stringswitch loc arg sw d =
-  match d with
-  | None -> bind_sw arg (fun arg -> do_make_string_test_tree loc arg sw 0 None)
-  | Some e ->
-    bind_sw arg (fun arg ->
-        make_catch e (fun d -> do_make_string_test_tree loc arg sw 1 (Some d)))
-
-(**********************)
-(* Generic test trees *)
-(**********************)
-
-(* Sharing *)
-
-(* Add handler, if shared *)
 let handle_shared () =
   let hs = ref (fun x -> x) in
   let handle_shared act =
@@ -2701,7 +2603,6 @@ let check_partial is_mutable pat_act_list = function
     then Partial
     else Total
 
-let check_partial_list = check_partial (List.exists is_mutable)
 let check_partial = check_partial is_mutable
 
 (* have toplevel handler when appropriate *)
@@ -2838,24 +2739,6 @@ let for_let loc param pat body =
 (* Handling of tupled functions and matchings *)
 
 (* Easy case since variables are available *)
-let for_tupled_function loc paraml pats_act_list partial =
-  let partial = check_partial_list pats_act_list partial in
-  let raise_num = next_raise_count () in
-  let omegas = [List.map (fun _ -> omega) paraml] in
-  let pm =
-    {
-      cases = pats_act_list;
-      args = List.map (fun id -> (Lvar id, Strict)) paraml;
-      default = [(omegas, raise_num)];
-    }
-  in
-  try
-    let lambda, total =
-      compile_match None partial (start_ctx (List.length paraml)) pm
-    in
-    check_total total lambda raise_num (partial_function loc)
-  with Unused -> partial_function loc ()
-
 let flatten_pattern size p =
   match p.pat_desc with
   | Tpat_tuple args -> args

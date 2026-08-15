@@ -61,8 +61,6 @@ val no_builtin_ppx : bool ref
 val check_div_by_zero : bool ref
 (** check-div-by-zero option *)
 
-val get_check_div_by_zero : unit -> bool
-
 val tool_name : string
 
 val syntax_only : bool ref

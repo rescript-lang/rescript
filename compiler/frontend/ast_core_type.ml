@@ -119,11 +119,6 @@ let rec get_uncurry_arity_aux (ty : t) acc =
    {[ unit -> 'a1 -> a2']} arity 2
    {[ 'a1 -> 'a2 -> ... 'aN -> 'b ]} return arity N
 *)
-let get_uncurry_arity (ty : t) =
-  match ty.ptyp_desc with
-  | Ptyp_arrow {ret = rest} -> Some (get_uncurry_arity_aux rest 1)
-  | _ -> None
-
 let get_curry_arity (ty : t) =
   match ty.ptyp_desc with
   | Ptyp_arrow {arity = Some arity} -> arity
@@ -150,9 +145,3 @@ let list_of_arrow (ty : t) : t * Parsetree.arg list =
     | _ -> (ty, List.rev acc)
   in
   aux ty []
-
-let add_last_obj (ty : t) (obj : t) =
-  let result, params = list_of_arrow ty in
-  Typ.arrows ~loc:obj.ptyp_loc
-    (params @ [{lbl = Nolabel; typ = obj; attrs = []}])
-    result

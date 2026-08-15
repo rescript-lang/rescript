@@ -47,9 +47,6 @@ val type_scheme : formatter -> type_expr -> unit
 
 (* Maxence *)
 val reset_names : unit -> unit
-val type_scheme_max : ?b_reset_names:bool -> formatter -> type_expr -> unit
-
-(* End Maxence *)
 val tree_of_value_description : Ident.t -> value_description -> out_sig_item
 val value_description : Ident.t -> formatter -> value_description -> unit
 val tree_of_type_declaration :

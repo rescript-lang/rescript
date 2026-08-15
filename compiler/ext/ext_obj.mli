@@ -23,8 +23,4 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 val dump : 'a -> string
 
-val dump_endline : ?__LOC__:string -> 'a -> unit
-
-val pp_any : Format.formatter -> 'a -> unit
-
 val bt : unit -> unit

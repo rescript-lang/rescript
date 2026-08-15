@@ -79,8 +79,7 @@ and type_desc =
       [Tobject (_, `Some (`A.ct', [t1;...;tn]')] ==> [(t1, ..., tn) A.ct].
       where A.ct is the type of some class.
 
-      There are also special cases for so-called "class-types", cf. [Typeclass]
-      and [Ctype.set_object_name]:
+      There are also special cases for so-called "class-types", cf. [Typeclass]:
 
         [Tobject (Tfield(_,_,...(Tfield(_,_,rv)...),
                          Some(`A.#ct`, [rv;t1;...;tn])]

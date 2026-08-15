@@ -123,10 +123,6 @@ let add_char_string b c s =
 
 let output_buffer oc b = output oc b.buffer 0 b.position
 
-external unsafe_string : bytes -> int -> int -> Digest.t = "caml_md5_string"
-
-let digest b = unsafe_string b.buffer 0 b.position
-
 let rec not_equal_aux (b : bytes) (s : string) i len =
   if i >= len then false
   else
@@ -143,45 +139,3 @@ let not_equal (b : t) (s : string) =
    It could be one byte, two bytes, three bytes and four bytes 
    TODO: inline for better performance
 *)
-let add_int_1 (b : t) (x : int) =
-  let c = Char.unsafe_chr (x land 0xff) in
-  let pos = b.position in
-  if pos >= b.length then resize b 1;
-  Bytes.unsafe_set b.buffer pos c;
-  b.position <- pos + 1
-
-let add_int_2 (b : t) (x : int) =
-  let c1 = Char.unsafe_chr (x land 0xff) in
-  let c2 = Char.unsafe_chr ((x lsr 8) land 0xff) in
-  let pos = b.position in
-  if pos + 1 >= b.length then resize b 2;
-  let b_buffer = b.buffer in
-  Bytes.unsafe_set b_buffer pos c1;
-  Bytes.unsafe_set b_buffer (pos + 1) c2;
-  b.position <- pos + 2
-
-let add_int_3 (b : t) (x : int) =
-  let c1 = Char.unsafe_chr (x land 0xff) in
-  let c2 = Char.unsafe_chr ((x lsr 8) land 0xff) in
-  let c3 = Char.unsafe_chr ((x lsr 16) land 0xff) in
-  let pos = b.position in
-  if pos + 2 >= b.length then resize b 3;
-  let b_buffer = b.buffer in
-  Bytes.unsafe_set b_buffer pos c1;
-  Bytes.unsafe_set b_buffer (pos + 1) c2;
-  Bytes.unsafe_set b_buffer (pos + 2) c3;
-  b.position <- pos + 3
-
-let add_int_4 (b : t) (x : int) =
-  let c1 = Char.unsafe_chr (x land 0xff) in
-  let c2 = Char.unsafe_chr ((x lsr 8) land 0xff) in
-  let c3 = Char.unsafe_chr ((x lsr 16) land 0xff) in
-  let c4 = Char.unsafe_chr ((x lsr 24) land 0xff) in
-  let pos = b.position in
-  if pos + 3 >= b.length then resize b 4;
-  let b_buffer = b.buffer in
-  Bytes.unsafe_set b_buffer pos c1;
-  Bytes.unsafe_set b_buffer (pos + 1) c2;
-  Bytes.unsafe_set b_buffer (pos + 2) c3;
-  Bytes.unsafe_set b_buffer (pos + 3) c4;
-  b.position <- pos + 4

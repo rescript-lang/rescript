@@ -175,15 +175,6 @@ let rec exp_need_paren ?(arrow = false) (e : J.expression) =
   | Optional_block (e, true) when arrow -> exp_need_paren ~arrow e
   | Optional_block _ -> false
 
-(** Print as underscore for unused vars, may not be 
-    needed in the future *)
-(* let ipp_ident cxt f id (un_used : bool) =
-   Ext_pp_scope.ident cxt f (
-    if un_used then
-      Ext_ident.make_unused ()
-    else
-      id) *)
-
 let pp_var_assign cxt f id =
   P.string f L.let_;
   P.space f;
