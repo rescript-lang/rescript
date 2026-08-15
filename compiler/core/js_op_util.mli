@@ -28,8 +28,6 @@ val op_prec : Js_op.binop -> int * int * int
 
 val op_str : Js_op.binop -> string
 
-val str_of_used_stats : Js_op.used_stats -> string
-
 val update_used_stats : J.ident_info -> Js_op.used_stats -> unit
 
 val same_vident : J.vident -> J.vident -> bool

@@ -69,17 +69,6 @@ let op_str (op : Js_op.binop) =
   | Ge -> ">="
   | InstanceOf -> "instanceof"
 
-let str_of_used_stats x =
-  match (x : Js_op.used_stats) with
-  | Js_op.Dead_pure -> "Dead_pure"
-  | Dead_non_pure -> "Dead_non_pure"
-  | Exported -> "Exported"
-  | Once_pure -> "Once_pure"
-  | Used -> "Used"
-  | Scanning_pure -> "Scanning_pure"
-  | Scanning_non_pure -> "Scanning_non_pure"
-  | NA -> "NA"
-
 let update_used_stats (ident_info : J.ident_info) used_stats =
   match ident_info.used_stats with
   | Dead_pure | Dead_non_pure | Exported -> ()
