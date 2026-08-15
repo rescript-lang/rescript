@@ -105,7 +105,7 @@ let rec no_side_effect_expression_desc (x : J.expression_desc) =
     no_side_effect a && no_side_effect b
   | Is_null_or_undefined b -> no_side_effect b
   | Str _ -> true
-  | Array (xs, _mutable_flag) | Caml_block (xs, _mutable_flag, _, _) ->
+  | Array xs | Caml_block (xs, _, _, _) ->
     (* create [immutable] block,
         does not really mean that this opreation itself is [pure].
 
@@ -311,7 +311,7 @@ let rev_toplevel_flatten block =
    | Array_index (a,b) -> is_constant a && is_constant b
    | Str (b,_) -> b
    | Number _ -> true (* Can be refined later *)
-   | Array (xs,_mutable_flag)  -> Ext_list.for_all xs  is_constant
+   | Array xs -> Ext_list.for_all xs is_constant
    | Caml_block(xs, Immutable, tag, _)
     -> Ext_list.for_all xs is_constant && is_constant tag
    | Bin (_op, a, b) ->

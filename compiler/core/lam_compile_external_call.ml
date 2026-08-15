@@ -211,8 +211,7 @@ let assemble_args_has_splice (arg_types : specs) (args : exprs) :
     | {arg_label; arg_type} :: labels, arg :: args -> (
       let accs, eff = aux labels args in
       match (args, (arg : E.t)) with
-      | [], {expression_desc = Array (ls, _mutable_flag); _} ->
-        (Ext_list.append ls accs, eff)
+      | [], {expression_desc = Array ls; _} -> (Ext_list.append ls accs, eff)
       | _ ->
         if args = [] then dynamic := true;
         let acc, new_eff = ocaml_to_js_eff ~arg_type ~arg_label arg in

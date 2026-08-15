@@ -127,7 +127,7 @@ and expression_desc =
         All exported declarations have to be OCaml identifiers
      2. Javascript dot (need to be preserved/or using quote)
   *)
-  | New of expression * expression list option (* TODO: option remove *)
+  | New of expression * expression list
   | Var of vident
   | Fun of {
       is_method: bool;
@@ -145,7 +145,7 @@ and expression_desc =
   | Raw_js_code of Js_raw_info.t
   (* literally raw JS code 
   *)
-  | Array of expression list * mutable_flag
+  | Array of expression list
   | Optional_block of expression * bool
   (* [true] means [identity] *)
   | Caml_block of expression list * mutable_flag * expression * tag_info

@@ -38,8 +38,7 @@ let rec remove_pure_sub_exp (x : t) : t option =
   | Var _ | Str _ | Number _ -> None (* Can be refined later *)
   | Array_index (a, b) ->
     if is_pure_sub_exp a && is_pure_sub_exp b then None else Some x
-  | Array (xs, _mutable_flag) ->
-    if Ext_list.for_all xs is_pure_sub_exp then None else Some x
+  | Array xs -> if Ext_list.for_all xs is_pure_sub_exp then None else Some x
   | Seq (a, b) -> (
     match (remove_pure_sub_exp a, remove_pure_sub_exp b) with
     | None, None -> None
@@ -175,8 +174,8 @@ let raw_js_code ?comment info s : t =
     source_loc = None;
   }
 
-let array ?comment mt es : t =
-  {expression_desc = Array (es, mt); comment; source_loc = None}
+let array ?comment es : t =
+  {expression_desc = Array es; comment; source_loc = None}
 
 let record_rest ?comment fields source : t =
   {expression_desc = Record_rest (fields, source); comment; source_loc = None}
@@ -253,7 +252,7 @@ let is_array (e0 : t) : t =
   }
 
 let new_ ?comment e0 args : t =
-  {expression_desc = New (e0, Some args); comment; source_loc = None}
+  {expression_desc = New (e0, args); comment; source_loc = None}
 
 let unit : t =
   {
@@ -330,7 +329,7 @@ let dummy_obj ?comment (info : Lam_tag_info.t) : t =
   | Blk_poly_var _ | Blk_extension | Blk_record_ext _ ->
     {comment; source_loc = None; expression_desc = Object (None, [])}
   | Blk_tuple | Blk_module_export _ ->
-    {comment; source_loc = None; expression_desc = Array ([], Mutable)}
+    {comment; source_loc = None; expression_desc = Array []}
   | Blk_some | Blk_some_not_nested -> assert false
 
 (* TODO: complete
@@ -477,7 +476,7 @@ let float_mod ?comment e1 e2 : J.expression =
 
 let array_index ?comment (e0 : t) (e1 : t) : t =
   match (e0.expression_desc, e1.expression_desc) with
-  | Array (l, _), Number (Int {i; _})
+  | Array l, Number (Int {i; _})
   (* Float i -- should not appear here *)
     when no_side_effect e0 -> (
     match Ext_list.nth_opt l (Int32.to_int i) with
@@ -488,8 +487,7 @@ let array_index ?comment (e0 : t) (e1 : t) : t =
 
 let array_index_by_int ?comment (e : t) (pos : int32) : t =
   match e.expression_desc with
-  | Array (l, _) (* Float i -- should not appear here *)
-  | Caml_block (l, _, _, _)
+  | (Array l (* Float i -- should not appear here *) | Caml_block (l, _, _, _))
     when no_side_effect e -> (
     match Ext_list.nth_opt l (Int32.to_int pos) with
     | Some x -> x
@@ -509,8 +507,7 @@ let array_index_by_int ?comment (e : t) (pos : int32) : t =
 let record_access (e : t) (name : string) (pos : int32) =
   (* let name = Ext_ident.convert name in  *)
   match e.expression_desc with
-  | Array (l, _) (* Float i -- should not appear here *)
-  | Caml_block (l, _, _, _)
+  | (Array l (* Float i -- should not appear here *) | Caml_block (l, _, _, _))
     when no_side_effect e -> (
     match Ext_list.nth_opt l (Int32.to_int pos) with
     | Some x -> x
@@ -569,8 +566,7 @@ let poly_var_value_access (e : t) =
 
 let extension_access (e : t) name (pos : int32) : t =
   match e.expression_desc with
-  | Array (l, _) (* Float i -- should not appear here *)
-  | Caml_block (l, _, _, _)
+  | (Array l (* Float i -- should not appear here *) | Caml_block (l, _, _, _))
     when no_side_effect e -> (
     match Ext_list.nth_opt l (Int32.to_int pos) with
     | Some x -> x
@@ -684,7 +680,7 @@ let extension_assign (e : t) (pos : int32) name (value : t) =
 let array_length ?comment (e : t) : t =
   match e.expression_desc with
   (* TODO: use array instead? *)
-  | (Array (l, _) | Caml_block (l, _, _, _)) when no_side_effect e ->
+  | (Array l | Caml_block (l, _, _, _)) when no_side_effect e ->
     int ?comment (Int32.of_int (List.length l))
   | _ -> {expression_desc = Length e; comment; source_loc = None}
 

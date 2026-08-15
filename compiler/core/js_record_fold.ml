@@ -150,12 +150,7 @@ let expression_desc : 'a. ('a, expression_desc) fn =
     st
   | New (_x0, _x1) ->
     let st = _self.expression _self st _x0 in
-    let st =
-      option
-        (fun _self st arg -> list _self.expression _self st arg)
-        _self st _x1
-    in
-    st
+    list _self.expression _self st _x1
   | Var _x0 ->
     let st = _self.vident _self st _x0 in
     st
@@ -165,9 +160,7 @@ let expression_desc : 'a. ('a, expression_desc) fn =
     st
   | Str _ -> st
   | Raw_js_code _ -> st
-  | Array (_x0, _x1) ->
-    let st = list _self.expression _self st _x0 in
-    st
+  | Array _x0 -> list _self.expression _self st _x0
   | Optional_block (_x0, _x1) ->
     let st = _self.expression _self st _x0 in
     st

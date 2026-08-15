@@ -280,7 +280,7 @@ val tagged_template : ?comment:string -> t -> t list -> t list -> t
 
 val new_ : ?comment:string -> J.expression -> J.expression list -> t
 
-val array : ?comment:string -> J.mutable_flag -> J.expression list -> t
+val array : ?comment:string -> J.expression list -> t
 
 val optional_block : J.expression -> J.expression
 
