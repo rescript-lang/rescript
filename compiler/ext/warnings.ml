@@ -189,19 +189,6 @@ let is_active x = (not !disabled) && !current.active.(number x)
 
 let is_error x = (not !disabled) && !current.error.(number x)
 
-let mk_lazy f =
-  let state = backup () in
-  lazy
-    (let prev = backup () in
-     restore state;
-     try
-       let r = f () in
-       restore prev;
-       r
-     with exn ->
-       restore prev;
-       raise exn)
-
 let parse_opt error active flags s =
   let set i = flags.(i) <- true in
   let clear i = flags.(i) <- false in

@@ -468,5 +468,3 @@ let serialize (filename : string) (lam : Lam.t) : unit =
   Format.set_margin old
 
 let lambda_to_string = Format.asprintf "%a" lambda
-
-let primitive_to_string = Format.asprintf "%a" primitive

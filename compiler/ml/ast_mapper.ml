@@ -536,21 +536,12 @@ let rec extension_of_error {loc; msg; if_highlight; sub} =
        ]
       @ List.map (fun ext -> Str.extension (extension_of_error ext)) sub) )
 
-let attribute_of_warning loc s =
-  ( {loc; txt = "ocaml.ppwarning"},
-    PStr [Str.eval ~loc (Exp.constant (Pconst_string (s, None)))] )
-
 module String_map = Map.Make (struct
   type t = string
   let compare = compare
 end)
 
 let cookies = ref String_map.empty
-
-let get_cookie k =
-  try Some (String_map.find k !cookies) with Not_found -> None
-
-let set_cookie k v = cookies := String_map.add k v !cookies
 
 let tool_name_ref = ref "_none_"
 

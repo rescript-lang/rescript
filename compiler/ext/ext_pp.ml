@@ -28,8 +28,6 @@ module L = struct
   let indent_str = "  "
 end
 
-let indent_length = String.length L.indent_str
-
 type t = {
   output_string: string -> unit;
   output_char: char -> unit;
@@ -143,8 +141,6 @@ let force_newline t =
   t.last_new_line <- true
 
 let space t = string t L.space
-
-let nspace t n = string t (String.make n ' ')
 
 let group t i action =
   if i = 0 then action ()

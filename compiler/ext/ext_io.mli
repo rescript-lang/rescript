@@ -24,8 +24,6 @@
 
 val load_file : string -> string
 
-val rev_lines_of_file : string -> string list
-
 val rev_lines_of_chann : in_channel -> string list
 
 val write_file : string -> string -> unit

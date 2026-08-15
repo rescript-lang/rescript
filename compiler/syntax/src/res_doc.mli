@@ -40,27 +40,6 @@ val question : t
 val tilde : t
 val equal : t
 val trailing_comma : t
-val double_quote : t [@@live]
-
-(*
- * `willBreak doc` checks whether `doc` contains forced line breaks.
- * This is more or less a "workaround" to make the parent of a `customLayout` break.
- * Forced breaks are not propagated through `customLayout`; otherwise we would always
- * get the last layout the algorithm tries…
- * This might result into some weird layouts:
- *  [fn(x => {
- *     let _ = x
- *   }), fn(y => {
- *     let _ = y
- *   }), fn(z => {
- *     let _ = z
- *   })]
- *  The `[` and `]` would be a lot better broken out.
- *  Although the layout of `fn(x => {...})` is correct, we need to break its parent (the array).
- *  `willBreak` can be used in this scenario to check if the `fn…` contains any forced breaks.
- *  The consumer can then manually insert a `breakParent` doc, to manually propagate the
- *  force breaks from bottom to top.
- *)
 val will_break : t -> bool
 
 val to_string : width:int -> t -> string

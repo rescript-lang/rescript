@@ -26,9 +26,6 @@ val map_row_fields_into_ints :
   Location.t -> Parsetree.row_field list -> (string * int) list
 (** side effect: it will mark used attributes `as`  *)
 
-val map_constructor_declarations_into_ints :
-  Parsetree.constructor_declaration list -> [`Offset of int | `New of int list]
-
 val map_row_fields_into_strings :
   Location.t -> Parsetree.row_field list -> External_arg_spec.attr
 

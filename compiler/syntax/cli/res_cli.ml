@@ -76,9 +76,6 @@ module Color = struct
 
   let cur_styles = ref default_styles
 
-  (* let get_styles () = !cur_styles *)
-  (* let set_styles s = cur_styles := s *)
-
   (* map a tag to a style, if the tag is known.
      @raise Not_found otherwise *)
   let style_of_tag s =

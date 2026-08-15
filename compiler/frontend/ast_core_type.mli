@@ -41,15 +41,7 @@ val make_obj : loc:Location.t -> Parsetree.object_field list -> t
 
 val is_user_option : t -> bool
 
-val get_uncurry_arity : t -> int option
-(**
-   returns 0 when it can not tell arity from the syntax
-   None -- means not a function
-*)
-
 val list_of_arrow : t -> t * Parsetree.arg list
 (** fails when Ptyp_poly *)
-
-val add_last_obj : t -> t -> t
 
 val is_arity_one : t -> bool

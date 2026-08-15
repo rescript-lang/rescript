@@ -33,8 +33,6 @@ type action = lid * Parsetree.expression option
 
 val is_single_string : t -> (string * string option) option
 
-val is_single_string_as_ast : t -> Parsetree.expression option
-
 val is_single_int : t -> int option
 
 val is_single_float : t -> string option
@@ -52,12 +50,6 @@ val raw_as_string_exp_exn :
   Parsetree.expression option
 (** Convert %raw into expression *)
 
-val as_core_type : Location.t -> t -> Parsetree.core_type
-
-(* val as_empty_structure :  t -> bool  *)
-val as_ident : t -> Longident.t Asttypes.loc option
-
-(* val raw_string_payload : Location.t -> string -> t  *)
 val assert_strings : Location.t -> t -> string list
 
 (** as a record or empty 

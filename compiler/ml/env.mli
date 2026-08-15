@@ -101,7 +101,6 @@ val lookup_all_constructors :
   Longident.t ->
   t ->
   (constructor_description * (unit -> unit)) list
-val lookup_label : ?loc:Location.t -> Longident.t -> t -> label_description
 val lookup_all_labels :
   ?loc:Location.t ->
   Longident.t ->
@@ -164,7 +163,6 @@ val enter_value :
   t ->
   Ident.t * t
 val enter_type : string -> type_declaration -> t -> Ident.t * t
-val enter_extension : string -> extension_constructor -> t -> Ident.t * t
 val enter_module : ?arg:bool -> string -> module_type -> t -> Ident.t * t
 val enter_module_declaration :
   ?arg:bool -> Ident.t -> module_declaration -> t -> t
@@ -207,10 +205,6 @@ val save_signature_with_imports :
 
 (* Return the CRC of the interface of the given compilation unit *)
 
-val crc_of_unit : string -> Digest.t
-
-(* Return the set of compilation units imported, with their CRC *)
-
 val imports : unit -> (string * Digest.t option) list
 
 (* Direct access to the table of imported compilation units with their CRC *)
@@ -224,14 +218,9 @@ val add_import : string -> unit
 val summary : t -> summary
 
 (* Return an equivalent environment where all fields have been reset,
-   except the summary. The initial environment can be rebuilt from the
-   summary, using Envaux.env_of_only_summary. *)
+   except the summary. *)
 
 val keep_only_summary : t -> t
-val env_of_only_summary : (summary -> Subst.t -> t) -> t -> t
-
-(* Error report *)
-
 type error =
   | Illegal_renaming of string * string * string
   | Inconsistent_import of string * string * string

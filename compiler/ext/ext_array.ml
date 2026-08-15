@@ -119,8 +119,6 @@ let rec tolist_aux a f i res =
       | Some v -> v :: res
       | None -> res)
 
-let to_list_map a f = tolist_aux a f (Array.length a - 1) []
-
 let to_list_map_acc a acc f = tolist_aux a f (Array.length a - 1) acc
 
 let of_list_map a f =
@@ -170,27 +168,6 @@ let of_list_map a f =
         fill (i + 1) tl
     in
     fill 5 tl
-
-(**
-   {[
-     # rfind_with_index [|1;2;3|] (=) 2;;
-     - : int = 1
-               # rfind_with_index [|1;2;3|] (=) 1;;
-     - : int = 0
-               # rfind_with_index [|1;2;3|] (=) 3;;
-     - : int = 2
-               # rfind_with_index [|1;2;3|] (=) 4;;
-     - : int = -1
-   ]}
-*)
-let rfind_with_index arr cmp v =
-  let len = Array.length arr in
-  let rec aux i =
-    if i < 0 then i
-    else if cmp (Array.unsafe_get arr i) v then i
-    else aux (i - 1)
-  in
-  aux (len - 1)
 
 type 'a split = No_split | Split of 'a array * 'a array
 
@@ -266,6 +243,3 @@ let fold_left a x f =
     r := f !r (unsafe_get a i)
   done;
   !r
-
-let get_or arr i cb =
-  if i >= 0 && i < Array.length arr then Array.unsafe_get arr i else cb ()

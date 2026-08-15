@@ -23,19 +23,11 @@ let clear = Hashtbl.clear
 
 exception Inconsistency of string * string * string
 
-exception Not_available of string
-
 let check tbl name crc source =
   try
     let old_crc, old_source = Hashtbl.find tbl name in
     if crc <> old_crc then raise (Inconsistency (name, source, old_source))
   with Not_found -> Hashtbl.add tbl name (crc, source)
-
-let check_noadd tbl name crc source =
-  try
-    let old_crc, old_source = Hashtbl.find tbl name in
-    if crc <> old_crc then raise (Inconsistency (name, source, old_source))
-  with Not_found -> raise (Not_available name)
 
 let set tbl name crc source = Hashtbl.add tbl name (crc, source)
 

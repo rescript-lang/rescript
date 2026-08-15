@@ -43,13 +43,9 @@ val map2i : (int -> 'a -> 'b -> 'c) -> 'a array -> 'b array -> 'c array
 
 val to_list_f : 'a array -> ('a -> 'b) -> 'b list
 
-val to_list_map : 'a array -> ('a -> 'b option) -> 'b list
-
 val to_list_map_acc : 'a array -> 'b list -> ('a -> 'b option) -> 'b list
 
 val of_list_map : 'a list -> ('a -> 'b) -> 'b array
-
-val rfind_with_index : 'a array -> ('a -> 'b -> bool) -> 'b -> int
 
 type 'a split = No_split | Split of 'a array * 'a array
 
@@ -68,5 +64,3 @@ val map : 'a array -> ('a -> 'b) -> 'b array
 val iter : 'a array -> ('a -> unit) -> unit
 
 val fold_left : 'b array -> 'a -> ('a -> 'b -> 'a) -> 'a
-
-val get_or : 'a array -> int -> (unit -> 'a) -> 'a

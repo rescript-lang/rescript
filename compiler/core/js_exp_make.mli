@@ -141,8 +141,6 @@ val string_append : ?comment:string -> t -> t -> t
    we can not tag [js] object, since it can be frozen 
 *)
 
-val string_index : ?comment:string -> t -> t -> t
-
 val array_index : ?comment:string -> t -> t -> t
 
 val array_index_by_int : ?comment:string -> t -> Int32.t -> t
@@ -164,8 +162,6 @@ val poly_var_tag_access : t -> t
 val poly_var_value_access : t -> t
 
 val extension_assign : t -> int32 -> string -> t -> t
-
-val assign_by_exp : t -> t -> t -> t
 
 val assign : ?comment:string -> t -> t -> t
 

@@ -74,13 +74,6 @@ let from_file name : t =
   close_in ic;
   v
 
-let from_file_with_digest name : t * Digest.t =
-  let ic = open_in_bin name in
-  let digest = Digest.input ic in
-  let v : t = input_value ic in
-  close_in ic;
-  (v, digest)
-
 let from_string s : t = Marshal.from_string s Ext_digest.length
 
 let for_sure_not_changed (name : string) (header : string) =

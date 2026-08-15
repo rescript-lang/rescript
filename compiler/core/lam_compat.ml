@@ -51,15 +51,6 @@ let cmp_float (cmp : comparison) (a : float) b : bool =
   | Clt -> a < b
   | Cge -> a >= b
 
-let cmp_int (cmp : comparison) (a : int) b : bool =
-  match cmp with
-  | Ceq -> a = b
-  | Cneq -> a <> b
-  | Cgt -> a > b
-  | Cle -> a <= b
-  | Clt -> a < b
-  | Cge -> a >= b
-
 type let_kind = Lambda.let_kind = Strict | Alias | StrictOpt | Variable
 
 type field_dbg_info = Lambda.field_dbg_info =

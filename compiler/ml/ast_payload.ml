@@ -39,21 +39,6 @@ let is_single_string (x : t) =
     Some (name, dec)
   | _ -> None
 
-let is_single_string_as_ast (x : t) : Parsetree.expression option =
-  match x with
-  (*TODO also need detect empty phrase case *)
-  | PStr
-      [
-        {
-          pstr_desc =
-            Pstr_eval
-              (({pexp_desc = Pexp_constant (Pconst_string (_, _)); _} as e), _);
-          _;
-        };
-      ] ->
-    Some e
-  | _ -> None
-
 let is_single_int (x : t) : int option =
   match x with
   | PStr
@@ -166,17 +151,6 @@ let raw_as_string_exp_exn ~(kind : Js_raw_info.raw_kind) ?is_function (x : t) :
         errors
       | Raw_program -> snd (Parser_flow.parse_program false None str));
     Some {e with pexp_desc = Pexp_constant (Pconst_string (str, None))}
-  | _ -> None
-
-let as_core_type loc (x : t) =
-  match x with
-  | PTyp x -> x
-  | _ -> Location.raise_errorf ~loc "except a core type"
-
-let as_ident (x : t) =
-  match x with
-  | PStr [{pstr_desc = Pstr_eval ({pexp_desc = Pexp_ident ident}, _)}] ->
-    Some ident
   | _ -> None
 
 type lid = string Asttypes.loc

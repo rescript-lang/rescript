@@ -24,25 +24,6 @@
 
 type t = Parsetree.pattern
 
-let is_unit_cont ~yes ~no (p : t) =
-  match p with
-  | {ppat_desc = Ppat_construct ({txt = Lident "()"}, None)} -> yes
-  | _ -> no
-
-(** [arity_of_fun pat e] tells the arity of 
-    expression [fun pat -> e]
-*)
-let arity_of_fun (pat : Parsetree.pattern) (e : Parsetree.expression) =
-  let rec aux (e : Parsetree.expression) =
-    match e.pexp_desc with
-    | Pexp_fun {rhs = e} -> 1 + aux e (*FIXME error on optional*)
-    (* | Pexp_fun _
-       -> Location.raise_errorf
-           ~loc:e.pexp_loc "Label is not allowed in JS object" *)
-    | _ -> 0
-  in
-  is_unit_cont ~yes:0 ~no:1 pat + aux e
-
 let rec labels_of_fun (e : Parsetree.expression) =
   match e.pexp_desc with
   | Pexp_fun {arg_label = l; rhs = e} -> l :: labels_of_fun e

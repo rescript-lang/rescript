@@ -49,6 +49,4 @@ val cmp_int32 : comparison -> int32 -> int32 -> bool
 
 val cmp_float : comparison -> float -> float -> bool
 
-val cmp_int : comparison -> int -> int -> bool
-
 val eq_comparison : comparison -> comparison -> bool

@@ -92,8 +92,6 @@ and t = private
    we should use record for trivial debugger info
 *)
 
-val inner_map : t -> (t -> t) -> t
-
 val handle_bs_non_obj_ffi :
   ?transformed_jsx:bool ->
   External_arg_spec.params ->

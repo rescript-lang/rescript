@@ -128,12 +128,6 @@ let begin_def () =
   saved_level := (!current_level, !nongen_level) :: !saved_level;
   incr current_level;
   nongen_level := !current_level
-let begin_class_def () =
-  saved_level := (!current_level, !nongen_level) :: !saved_level;
-  incr current_level
-let raise_nongen_level () =
-  saved_level := (!current_level, !nongen_level) :: !saved_level;
-  nongen_level := !current_level
 let end_def () =
   let cl, nl = List.hd !saved_level in
   saved_level := List.tl !saved_level;
@@ -330,69 +324,6 @@ let concrete_object ty =
 
 (**** Close an object ****)
 
-let close_object ty =
-  let rec close ty =
-    let ty = repr ty in
-    match ty.desc with
-    | Tvar _ -> link_type ty (newty2 ty.level Tnil)
-    | Tfield (_, _, _, ty') -> close ty'
-    | _ -> assert false
-  in
-  match (repr ty).desc with
-  | Tobject (ty, _) -> close ty
-  | _ -> assert false
-
-(**** Row variable of an object type ****)
-
-let row_variable ty =
-  let rec find ty =
-    let ty = repr ty in
-    match ty.desc with
-    | Tfield (_, _, _, ty) -> find ty
-    | Tvar _ -> ty
-    | _ -> assert false
-  in
-  match (repr ty).desc with
-  | Tobject (fi, _) -> find fi
-  | _ -> assert false
-
-(**** Object name manipulation ****)
-(* +++ Bientot obsolete *)
-
-let set_object_name id rv params ty =
-  match (repr ty).desc with
-  | Tobject (_fi, nm) -> set_name nm (Some (Path.Pident id, rv :: params))
-  | _ -> assert false
-
-let remove_object_name ty =
-  match (repr ty).desc with
-  | Tobject (_, nm) -> set_name nm None
-  | Tconstr (_, _, _) -> ()
-  | _ -> fatal_error "Ctype.remove_object_name"
-
-(**** Hiding of private methods ****)
-
-let hide_private_methods ty =
-  match (repr ty).desc with
-  | Tobject (fi, nm) ->
-    nm := None;
-    let fl, _ = flatten_fields fi in
-    List.iter
-      (function
-        | _, k, _ -> (
-          match field_kind_repr k with
-          | Fvar r -> set_kind r Fabsent
-          | _ -> ()))
-      fl
-  | _ -> assert false
-
-(*******************************)
-(*  Operations on class types  *)
-(*******************************)
-
-(*******************************************)
-(*  Miscellaneous operations on row types  *)
-(*******************************************)
 type row_fields = (Asttypes.label * Types.row_field) list
 type row_pairs = (Asttypes.label * Types.row_field * Types.row_field) list
 let sort_row_fields : row_fields -> row_fields =
@@ -720,57 +651,12 @@ let generalize_expansive env ty =
   try generalize_expansive env !nongen_level (Hashtbl.create 7) ty
   with Unify ([(_, ty')] as tr) -> raise (Unify ((ty, ty') :: tr))
 
-let generalize_global ty = generalize_structure !global_level ty
 let generalize_structure ty = generalize_structure !current_level ty
 
 (* Correct the levels of type [ty]. *)
 let correct_levels ty = duplicate_type ty
 
 (* Only generalize the type ty0 in ty *)
-let limited_generalize ty0 ty =
-  let ty0 = repr ty0 in
-
-  let graph = Hashtbl.create 17 in
-  let idx = ref lowest_level in
-  let roots = ref [] in
-
-  let rec inverse pty ty =
-    let ty = repr ty in
-    if ty.level > !current_level || ty.level = generic_level then (
-      decr idx;
-      Hashtbl.add graph !idx (ty, ref pty);
-      if ty.level = generic_level || ty == ty0 then roots := ty :: !roots;
-      set_level ty !idx;
-      iter_type_expr (inverse [ty]) ty)
-    else if ty.level < lowest_level then
-      let _, parents = Hashtbl.find graph ty.level in
-      parents := pty @ !parents
-  and generalize_parents ty =
-    let idx = ty.level in
-    if idx <> generic_level then (
-      set_level ty generic_level;
-      List.iter generalize_parents !(snd (Hashtbl.find graph idx));
-      (* Special case for rows: must generalize the row variable *)
-      match ty.desc with
-      | Tvariant row ->
-        let more = row_more row in
-        let lv = more.level in
-        if (lv < lowest_level || lv > !current_level) && lv <> generic_level
-        then set_level more generic_level
-      | _ -> ())
-  in
-
-  inverse [] ty;
-  if ty0.level < lowest_level then iter_type_expr (inverse []) ty0;
-  List.iter generalize_parents !roots;
-  Hashtbl.iter
-    (fun _ (ty, _) ->
-      if ty.level <> generic_level then set_level ty !current_level)
-    graph
-
-(* Compute statically the free univars of all nodes in a type *)
-(* This avoids doing it repeatedly during instantiation *)
-
 type inv_type_expr = {
   inv_type: type_expr;
   mutable inv_parents: inv_type_expr list;
@@ -990,13 +876,6 @@ let instance_def sch =
   cleanup_types ();
   ty
 
-let generic_instance env sch =
-  let old = !current_level in
-  current_level := generic_level;
-  let ty = instance env sch in
-  current_level := old;
-  ty
-
 let instance_list env schl =
   let env = gadt_env env in
   let tyl = List.map (fun t -> copy ?env t) schl in
@@ -1061,13 +940,6 @@ let instance_parameterized_type ?keep_names sch_args sch =
   let ty = copy sch in
   cleanup_types ();
   (ty_args, ty)
-
-let instance_parameterized_type_2 sch_args sch_lst sch =
-  let ty_args = List.map simple_copy sch_args in
-  let ty_lst = List.map simple_copy sch_lst in
-  let ty = copy sch in
-  cleanup_types ();
-  (ty_args, ty_lst, ty)
 
 let map_kind f = function
   | Type_abstract -> Type_abstract
@@ -2816,25 +2688,6 @@ let filter_method env name priv ty =
   | Tobject (f, _) -> filter_method_field env name priv f
   | _ -> raise (Unify [])
 
-let check_filter_method env name priv ty =
-  ignore (filter_method env name priv ty)
-
-let filter_self_method env lab priv meths ty =
-  let ty' = filter_method env lab priv ty in
-  try Meths.find lab !meths
-  with Not_found ->
-    let pair = (Ident.create lab, ty') in
-    meths := Meths.add lab pair !meths;
-    pair
-
-(***********************************)
-(*  Matching between type schemes  *)
-(***********************************)
-
-(*
-   Update the level of [ty]. First check that the levels of generic
-   variables from the subject are not lowered.
-*)
 let moregen_occur env level ty =
   let rec occur ty =
     let ty = repr ty in
@@ -4348,28 +4201,6 @@ let nondep_extension_constructor env mid ext =
   with Not_found ->
     clear_hash ();
     raise Not_found
-
-(* collapse conjunctive types in class parameters *)
-let rec collapse_conj env visited ty =
-  let ty = repr ty in
-  if List.memq ty visited then ()
-  else
-    let visited = ty :: visited in
-    match ty.desc with
-    | Tvariant row ->
-      let row = row_repr row in
-      List.iter
-        (fun (_l, fi) ->
-          match row_field_repr fi with
-          | Reither (c, t1 :: (_ :: _ as tl), m, e) ->
-            List.iter (unify env t1) tl;
-            set_row_field e (Reither (c, [t1], m, ref None))
-          | _ -> ())
-        row.row_fields;
-      iter_row (collapse_conj env visited) row
-    | _ -> iter_type_expr (collapse_conj env visited) ty
-
-let collapse_conj_params env params = List.iter (collapse_conj env []) params
 
 let same_constr env t1 t2 =
   let t1 = expand_head env t1 in

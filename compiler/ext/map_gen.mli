@@ -50,8 +50,6 @@ val join : ('a, 'b) t -> 'a -> 'b -> ('a, 'b) t -> ('a, 'b) t
 
 val concat : ('a, 'b) t -> ('a, 'b) t -> ('a, 'b) t
 
-val concat_or_join : ('a, 'b) t -> 'a -> 'b option -> ('a, 'b) t -> ('a, 'b) t
-
 module type S = sig
   type key
 
