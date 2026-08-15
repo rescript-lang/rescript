@@ -267,22 +267,6 @@ val matches : Env.t -> type_expr -> type_expr -> bool
 (* Same as [moregeneral false], implemented using the two above
    functions and backtracking. Ignore levels *)
 
-type class_match_failure =
-  | CM_Virtual_class
-  | CM_Parameter_arity_mismatch of int * int
-  | CM_Type_parameter_mismatch of Env.t * (type_expr * type_expr) list
-  | CM_Parameter_mismatch of Env.t * (type_expr * type_expr) list
-  | CM_Val_type_mismatch of string * Env.t * (type_expr * type_expr) list
-  | CM_Meth_type_mismatch of string * Env.t * (type_expr * type_expr) list
-  | CM_Non_mutable_value of string
-  | CM_Non_concrete_value of string
-  | CM_Missing_value of string
-  | CM_Missing_method of string
-  | CM_Hide_public of string
-  | CM_Hide_virtual of string * string
-  | CM_Public_method of string
-  | CM_Private_method of string
-  | CM_Virtual_method of string
 val equal : Env.t -> bool -> type_expr list -> type_expr list -> bool
 (* [equal env [x1...xn] tau [y1...yn] sigma]
    checks whether the parameterized types
@@ -324,10 +308,6 @@ val free_variables : ?env:Env.t -> type_expr -> type_expr list
 
 val closed_type_decl : type_declaration -> type_expr option
 val closed_extension_constructor : extension_constructor -> type_expr option
-type closed_class_failure =
-  | CC_Method of type_expr * bool * string * type_expr
-  | CC_Value of type_expr * bool * string * type_expr
-
 val unalias : type_expr -> type_expr
 val arity : type_expr -> int
 (* Return the arity (as for curried functions) of the given type. *)

@@ -532,10 +532,6 @@ let closed_extension_constructor ext =
     unmark_extension_constructor ext;
     Some ty
 
-type closed_class_failure =
-  | CC_Method of type_expr * bool * string * type_expr
-  | CC_Value of type_expr * bool * string * type_expr
-
 (**********************)
 (*  Type duplication  *)
 (**********************)
@@ -3292,23 +3288,6 @@ let equal env rename tyl1 tyl2 =
 (*************************)
 (*  Class type matching  *)
 (*************************)
-
-type class_match_failure =
-  | CM_Virtual_class
-  | CM_Parameter_arity_mismatch of int * int
-  | CM_Type_parameter_mismatch of Env.t * (type_expr * type_expr) list
-  | CM_Parameter_mismatch of Env.t * (type_expr * type_expr) list
-  | CM_Val_type_mismatch of string * Env.t * (type_expr * type_expr) list
-  | CM_Meth_type_mismatch of string * Env.t * (type_expr * type_expr) list
-  | CM_Non_mutable_value of string
-  | CM_Non_concrete_value of string
-  | CM_Missing_value of string
-  | CM_Missing_method of string
-  | CM_Hide_public of string
-  | CM_Hide_virtual of string * string
-  | CM_Public_method of string
-  | CM_Private_method of string
-  | CM_Virtual_method of string
 
 (***************)
 (*  Subtyping  *)
