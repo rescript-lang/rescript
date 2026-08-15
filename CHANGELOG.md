@@ -25,6 +25,7 @@
 
 #### :bug: Bug fix
 
+- Fix formatter breaking the opening brace of a functor module type's result signature onto a new line (e.g. `module Make: Pattern => {`). https://github.com/rescript-lang/rescript/pull/8519
 - Preserve multibyte characters when wrapping long source lines in compiler code frames. https://github.com/rescript-lang/rescript/pull/8520
 - Fix reanalyze optional-argument diagnostics for functions passed or returned as first-class values. https://github.com/rescript-lang/rescript/pull/8321
 
