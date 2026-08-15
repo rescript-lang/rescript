@@ -33,7 +33,6 @@
 
 type mutable_flag = Js_op.mutable_flag
 type binop = Js_op.binop
-type int_op = Js_op.int_op
 type kind = Js_op.kind
 type property = Js_op.property
 type number = Js_op.number
@@ -98,9 +97,6 @@ and expression_desc =
   | Seq of expression * expression
   | Cond of expression * expression * expression
   | Bin of binop * expression * expression
-  (* [int_op] will guarantee return [int32] bits
-     https://developer.mozilla.org/en/docs/Web/JavaScript/Reference/Operators/Bitwise_Operators *)
-  (* | Int32_bin of int_op * expression * expression *)
   | FlatCall of expression * expression
   (* f.apply(null,args) -- Fully applied guaranteed
      TODO: once we know args's shape --

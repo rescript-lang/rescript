@@ -53,6 +53,14 @@ type binop =
   | Pow
   | InstanceOf
 
+(* https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Expressions_and_Operators#Bitwise_operators
+   {[
+     ~
+   ]}
+    ~0xff -> -256
+    design; make sure each operation type is consistent
+*)
+
 (**
    note that we don't need raise [Div_by_zero] in ReScript
 
@@ -87,34 +95,6 @@ type binop =
    ]}
    So in Js, [-1 >>>0] will be the largest Uint32, while [-1>>0] will remain [-1]
    and [-1 >>> 0 >> 0 ] will be [-1]
-*)
-type int_op =
-  | Bor
-  | Bxor
-  | Band
-  | Lsl
-  | Lsr
-  | Asr
-  | Plus
-  (* for [+], given two numbers
-     x + y | 0
-  *)
-  | Minus
-  (* x - y | 0 *)
-  | Mul
-  (* *)
-  | Div
-  (* x / y | 0 *)
-  | Mod
-  (* x  % y *)
-  | Pow (* x ** y | 0 *)
-
-(* https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Expressions_and_Operators#Bitwise_operators
-   {[
-     ~
-   ]}
-    ~0xff -> -256
-    design; make sure each operation type is consistent
 *)
 type level = Log | Info | Warn | Error
 

@@ -43,16 +43,6 @@ let op_prec (op : Js_op.binop) =
   | Mul | Div | Mod -> (12, 12, 13)
   | Pow -> (13, 14, 13)
 
-let op_int_prec (op : Js_op.int_op) =
-  match op with
-  | Bor -> (5, 5, 5)
-  | Bxor -> (6, 6, 6)
-  | Band -> (7, 7, 7)
-  | Lsl | Lsr | Asr -> (10, 10, 11)
-  | Plus | Minus -> (11, 11, 12)
-  | Mul | Div | Mod -> (12, 12, 13)
-  | Pow -> (13, 14, 12)
-
 let op_str (op : Js_op.binop) =
   match op with
   | Bnot -> "~"
@@ -78,21 +68,6 @@ let op_str (op : Js_op.binop) =
   | Gt -> ">"
   | Ge -> ">="
   | InstanceOf -> "instanceof"
-
-let op_int_str (op : Js_op.int_op) =
-  match op with
-  | Bor -> "|"
-  | Bxor -> "^"
-  | Band -> "&"
-  | Lsl -> "<<"
-  | Lsr -> ">>>"
-  | Asr -> ">>"
-  | Plus -> "+"
-  | Minus -> "-"
-  | Mul -> "*"
-  | Div -> "/"
-  | Mod -> "%"
-  | Pow -> "**"
 
 let str_of_used_stats x =
   match (x : Js_op.used_stats) with
