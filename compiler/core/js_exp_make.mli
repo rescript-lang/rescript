@@ -45,8 +45,6 @@ val var : ?comment:string -> J.ident -> t
 
 val js_global : ?comment:string -> string -> t
 
-(* val runtime_var_vid : string -> string -> J.vident *)
-
 val ml_var_dot :
   ?comment:string -> ?dynamic_import:bool -> Ident.t -> string -> t
 (** [ml_var_dot ocaml_module name]
@@ -116,11 +114,8 @@ val bigint : ?comment:string -> bool -> string -> t
 
 val float : ?comment:string -> string -> t
 
-(* val empty_string_literal : t  *)
 (* TODO: we can do hash consing for small integers *)
 val zero_int_literal : t
-
-(* val one_int_literal : t *)
 val zero_float_lit : t
 
 val zero_bigint_literal : t
@@ -145,13 +140,6 @@ val string_append : ?comment:string -> t -> t -> t
    When in ES6 mode, we can use Symbol to guarantee its uniquess,
    we can not tag [js] object, since it can be frozen 
 *)
-
-(* val var_dot : ?comment:string -> Ident.t -> string -> t *)
-
-(* val bind_var_call : ?comment:string -> Ident.t -> string -> t list -> t  *)
-
-(* val bind_call : ?comment:string -> J.expression -> string -> J.expression list -> t *)
-(* val js_global_dot : ?comment:string -> string -> string -> t *)
 
 val string_index : ?comment:string -> t -> t -> t
 

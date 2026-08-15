@@ -150,7 +150,6 @@ let raw_snippet_exp_simple_enough (s : string) =
 *)
 let rec exp_need_paren ?(arrow = false) (e : J.expression) =
   match e.expression_desc with
-  (* | Caml_uninitialized_obj _  *)
   | Call ({expression_desc = Raw_js_code _}, _, _) -> true
   | Raw_js_code {code_info = Exp _}
   | Fun _

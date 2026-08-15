@@ -150,10 +150,8 @@ and expression_desc =
   (* [true] means [identity] *)
   | Caml_block of expression list * mutable_flag * expression * tag_info
   (* The third argument is [tag] , forth is [tag_info] *)
-  (* | Caml_uninitialized_obj of expression * expression *)
   (* [tag] and [size] tailed  for [Obj.new_block] *)
   | Caml_block_tag of expression * string (* e.tag *)
-  (* | Caml_block_set_length of expression * expression *)
   (* It will just fetch tag, to make it safe, when creating it,
      we need apply "|0", we don't do it in the
      last step since "|0" can potentially be optimized
@@ -328,8 +326,6 @@ and deps_program = {
         int_clause;
         string_clause;
         for_direction;
-        (* exception_ident; *)
-        for_direction;
         expression_desc;
         statement_desc;
         for_ident_expression;
@@ -337,7 +333,6 @@ and deps_program = {
         finish_ident_expression;
         property_map;
         record_rest_field;
-        (* for_ident; *)
         required_modules;
         case_clause;
       |];

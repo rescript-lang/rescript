@@ -50,9 +50,6 @@ let rec remove_pure_sub_exp (x : t) : t option =
 
 and is_pure_sub_exp (x : t) = remove_pure_sub_exp x = None
 
-(* let mk ?comment exp : t =
-   {expression_desc = exp ; comment  } *)
-
 let var ?comment id : t =
   {expression_desc = Var (Id id); comment; source_loc = None}
 
@@ -261,9 +258,6 @@ let unit : t =
     source_loc = None;
   }
 
-(* let math ?comment v args  : t =
-   {comment ; expression_desc = Math(v,args)} *)
-
 (* we can do constant folding here, but need to make sure the result is consistent
    {[
      let f x = string_of_int x
@@ -351,9 +345,6 @@ let rec seq ?comment (e0 : t) (e1 : t) : t =
   | _ -> {expression_desc = Seq (e0, e1); comment; source_loc = None}
 
 let fuse_to_seq x xs = if xs = [] then x else Ext_list.fold_left xs x seq
-
-(* let empty_string_literal : t =
-   {expression_desc = Str (true,""); comment = None; source_loc = None} *)
 
 let zero_int_literal : t =
   {
@@ -505,7 +496,6 @@ let array_index_by_int ?comment (e : t) (pos : int32) : t =
     }
 
 let record_access (e : t) (name : string) (pos : int32) =
-  (* let name = Ext_ident.convert name in  *)
   match e.expression_desc with
   | (Array l (* Float i -- should not appear here *) | Caml_block (l, _, _, _))
     when no_side_effect e -> (
@@ -697,11 +687,6 @@ let function_length ?comment (e : t) : t =
     int ?comment
       (Int32.of_int (if is_method then params_length - 1 else params_length))
   | _ -> {expression_desc = Length e; comment; source_loc = None}
-
-(** no dependency introduced *)
-(* let js_global_dot ?comment (x : string)  (e1 : string) : t =
-   { expression_desc = Static_index (js_global x,  e1,None); comment; source_loc = None}
-*)
 
 let rec string_append ?comment (e : t) (el : t) : t =
   let concat a b ~delim = {e with expression_desc = Str {txt = a ^ b; delim}} in
@@ -1381,16 +1366,6 @@ let rec float_equal ?comment (e0 : t) (e1 : t) : t =
   match (e0.expression_desc, e1.expression_desc) with
   | Number (Int {i = i0; _}), Number (Int {i = i1}) -> bool (i0 = i1)
   | Undefined _, Undefined _ -> true_
-  (* | (Bin(Bor,
-         {expression_desc = Number(Int {i = 0l; _})},
-         ({expression_desc = Caml_block_tag _; _} as a ))
-     |
-      Bin(Bor,
-          ({expression_desc = Caml_block_tag _; _} as a),
-          {expression_desc = Number (Int {i = 0l; _})})),
-     Number (Int {i = 0l;}) when e1.comment = None
-     ->  (** (x.tag | 0) === 0  *)
-     not  a *)
   | ( ( Bin
           ( Bor,
             {expression_desc = Number (Int {i = 0l; _})},
@@ -1686,32 +1661,13 @@ let rec float_add ?comment (e1 : t) (e2 : t) =
       source_loc = None;
       expression_desc = Bin (Plus, a1, int (Int32.add k j));
     }
-  (* bin ?comment Plus a1 (int (k + j)) *)
-  (* TODO remove commented code  ?? *)
-  (* | Bin(Plus, a0 , ({expression_desc = Number (Int a1)}  )), *)
-  (*     Bin(Plus, b0 , ({expression_desc = Number (Int b1)}  )) *)
-  (*   ->  *)
-  (*   bin ?comment Plus a1 (int (a1 + b1)) *)
-
-  (* | _, Bin(Plus,  b0, ({expression_desc = Number _}  as v)) *)
-  (*   -> *)
-  (*     bin ?comment Plus (bin ?comment Plus e1 b0) v *)
-  (* | Bin(Plus, a1 , ({expression_desc = Number _}  as v)), _ *)
-  (* | Bin(Plus, ({expression_desc = Number _}  as v),a1), _ *)
-  (*   ->  *)
-  (*     bin ?comment Plus (bin ?comment Plus a1 e2 ) v  *)
-  (* | Number _, _ *)
-  (*   ->  *)
-  (*     bin ?comment Plus  e2 e1 *)
   | _ -> {comment; source_loc = None; expression_desc = Bin (Plus, e1, e2)}
 
-(* bin ?comment Plus e1 e2 *)
 (* associative is error prone due to overflow *)
 and float_minus ?comment (e1 : t) (e2 : t) : t =
   match (e1.expression_desc, e2.expression_desc) with
   | Number (Int {i; _}), Number (Int {i = j; _}) -> int ?comment (Int32.sub i j)
   | _ -> {comment; source_loc = None; expression_desc = Bin (Minus, e1, e2)}
-(* bin ?comment Minus e1 e2 *)
 
 let int32_add ?comment e1 e2 = to_int32 (float_add ?comment e1 e2)
 
@@ -1813,9 +1769,6 @@ let rec int32_band ?comment (e1 : J.expression) (e2 : J.expression) :
     *)
     int32_band a e2
   | _ -> {comment; source_loc = None; expression_desc = Bin (Band, e1, e2)}
-
-(* let int32_bin ?comment op e1 e2 : J.expression =  *)
-(*   {expression_desc = Int32_bin(op,e1, e2); comment; source_loc = None} *)
 
 let bigint_op ?comment op (e1 : t) (e2 : t) = bin ?comment op e1 e2
 
