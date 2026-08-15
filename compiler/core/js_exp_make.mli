@@ -45,8 +45,6 @@ val var : ?comment:string -> J.ident -> t
 
 val js_global : ?comment:string -> string -> t
 
-val runtime_var_dot : ?comment:string -> string -> string -> t
-
 (* val runtime_var_vid : string -> string -> J.vident *)
 
 val ml_var_dot :
@@ -83,17 +81,6 @@ val runtime_call :
   t list ->
   (* args *)
   t
-
-val pure_runtime_call :
-  string ->
-  (* module_name *)
-  string ->
-  (* fn_name *)
-  t list ->
-  (* args *)
-  t
-
-val runtime_ref : string -> string -> t
 
 val str : ?delim:J.delim -> ?comment:string -> string -> t
 
@@ -190,14 +177,6 @@ val poly_var_value_access : t -> t
 
 val extension_assign : t -> int32 -> string -> t -> t
 
-val assign_by_int : ?comment:string -> t -> int32 -> t -> t
-(** 
-    [assign_by_int  e i v]
-    if the expression [e] is a temporay block 
-    which has no side effect,
-    write to it does not really make sense, 
-    optimize it away *)
-
 val assign_by_exp : t -> t -> t -> t
 
 val assign : ?comment:string -> t -> t -> t
@@ -208,8 +187,6 @@ val emit_check : t Ast_untagged_variants.Dynamic_checks.t -> t
 
 val triple_equal : ?comment:string -> t -> t -> t
 (* TODO: reduce [triple_equal] use *)
-
-val float_equal : ?comment:string -> t -> t -> t
 
 val int_equal : ?comment:string -> t -> t -> t
 
@@ -231,8 +208,6 @@ val is_a_literal_case :
   t ->
   t
 
-val is_type_string : ?comment:string -> t -> t
-
 val is_type_object : t -> t
 
 val typeof : ?comment:string -> t -> t
@@ -241,19 +216,13 @@ val is_array : t -> t
 
 val to_int32 : ?comment:string -> t -> t
 
-val unchecked_int32_add : ?comment:string -> t -> t -> t
-
 val int32_add : ?comment:string -> t -> t -> t
 
 val offset : t -> int -> t
 
-val unchecked_int32_minus : ?comment:string -> t -> t -> t
-
 val int32_minus : ?comment:string -> t -> t -> t
 
 val int32_mul : ?comment:string -> t -> t -> t
-
-val unchecked_int32_mul : ?comment:string -> t -> t -> t
 
 val int32_div : checked:bool -> ?comment:string -> t -> t -> t
 
@@ -281,8 +250,6 @@ val float_mul : ?comment:string -> t -> t -> t
 
 val float_div : ?comment:string -> t -> t -> t
 
-val float_notequal : ?comment:string -> t -> t -> t
-
 val float_mod : ?comment:string -> t -> t -> t
 
 val float_pow : ?comment:string -> t -> t -> t
@@ -292,8 +259,6 @@ val int_comp : Lam_compat.comparison -> ?comment:string -> t -> t -> t
 val bool_comp : Lam_compat.comparison -> ?comment:string -> t -> t -> t
 
 val string_comp : Lam_compat.comparison -> ?comment:string -> t -> t -> t
-
-val float_comp : Lam_compat.comparison -> ?comment:string -> t -> t -> t
 
 val bigint_op : ?comment:string -> Js_op.binop -> t -> t -> t
 

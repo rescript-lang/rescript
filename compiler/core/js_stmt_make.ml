@@ -383,5 +383,3 @@ let continue_ ?label () : t =
 
 let debugger_stmt ?comment () : t =
   {statement_desc = Debugger; comment; source_loc = None}
-
-let debugger_block : t list = [debugger_stmt ()]

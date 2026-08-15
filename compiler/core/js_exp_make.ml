@@ -165,8 +165,6 @@ let pure_runtime_call module_name fn_name args =
     (runtime_var_dot module_name fn_name)
     args
 
-let runtime_ref module_name fn_name = runtime_var_dot module_name fn_name
-
 let str ?(delim = J.DNone) ?comment txt : t =
   {expression_desc = Str {txt; delim}; comment; source_loc = None}
 
@@ -636,9 +634,6 @@ let assign_by_exp (e : t) index value : t =
         source_loc = None;
       }
       value
-
-let assign_by_int ?comment e0 (index : int32) value =
-  assign_by_exp e0 (int ?comment index) value
 
 let record_assign (e : t) (pos : int32) (name : string) (value : t) =
   match e.expression_desc with
@@ -1540,9 +1535,6 @@ let string_equal ?comment (e0 : t) (e1 : t) : t = string_comp Ceq ?comment e0 e1
 let is_type_number ?comment (e : t) : t =
   string_equal ?comment (typeof e) (str "number")
 
-let is_type_string ?comment (e : t) : t =
-  string_equal ?comment (typeof e) (str "string")
-
 let is_type_object (e : t) : t = string_equal (typeof e) (str "object")
 
 let obj_length ?comment e : t =
@@ -1611,9 +1603,6 @@ let bool_comp (cmp : Lam_compat.comparison) ?comment (e0 : t) (e1 : t) =
     | Clt | Cge | Ceq | Cneq ->
       bin ?comment (Lam_compile_util.jsop_of_comp cmp) e0 e1)
   | _, _ -> bin ?comment (Lam_compile_util.jsop_of_comp cmp) e0 e1
-
-let float_comp cmp ?comment e0 e1 =
-  bin ?comment (Lam_compile_util.jsop_of_comp cmp) e0 e1
 
 let js_comp cmp ?comment e0 e1 =
   bin ?comment (Lam_compile_util.jsop_of_comp cmp) e0 e1
@@ -1728,7 +1717,6 @@ and float_minus ?comment (e1 : t) (e2 : t) : t =
   | _ -> {comment; source_loc = None; expression_desc = Bin (Minus, e1, e2)}
 (* bin ?comment Minus e1 e2 *)
 
-let unchecked_int32_add ?comment e1 e2 = float_add ?comment e1 e2
 let int32_add ?comment e1 e2 = to_int32 (float_add ?comment e1 e2)
 
 let offset e1 (offset : int) =
@@ -1737,12 +1725,8 @@ let offset e1 (offset : int) =
 let int32_minus ?comment e1 e2 : J.expression =
   to_int32 (float_minus ?comment e1 e2)
 
-let unchecked_int32_minus ?comment e1 e2 : J.expression =
-  float_minus ?comment e1 e2
-
 let float_div ?comment e1 e2 = bin ?comment Div e1 e2
 let float_pow ?comment e1 e2 = bin ?comment Pow e1 e2
-let float_notequal ?comment e1 e2 = bin ?comment NotEqEq e1 e2
 
 let int32_asr ?comment e1 e2 : J.expression =
   {comment; source_loc = None; expression_desc = Bin (Asr, e1, e2)}
@@ -1801,9 +1785,6 @@ let int32_mul ?comment (e1 : J.expression) (e2 : J.expression) : J.expression =
     if i >= 0 then int32_lsl e (small_int i)
     else to_int32 (float_mul ?comment e1 e2)
   | _ -> to_int32 (float_mul ?comment e1 e2)
-
-let unchecked_int32_mul ?comment e1 e2 : J.expression =
-  {comment; source_loc = None; expression_desc = Bin (Mul, e1, e2)}
 
 let int_bnot ?comment (e : t) : J.expression =
   match e.expression_desc with
