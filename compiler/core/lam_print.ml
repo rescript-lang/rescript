@@ -73,12 +73,8 @@ let primitive ppf (prim : Lam_primitive.t) =
   | Pis_undefined -> fprintf ppf "[?undefined]"
   | Pis_null_undefined -> fprintf ppf "[?null?undefined]"
   | Pimport -> fprintf ppf "[import]"
-  | Pmakeblock (tag, tag_info) ->
-    fprintf ppf
-      (match Lambda.mutable_flag_of_tag_info tag_info with
-      | Immutable -> "makeblock %i"
-      | Mutable -> "makemutable %i")
-      tag
+  | Pmakeblock (tag, _, Immutable) -> fprintf ppf "makeblock %i" tag
+  | Pmakeblock (tag, _, Mutable) -> fprintf ppf "makemutable %i" tag
   | Pfield (n, field_info) -> (
     match Lam_compat.str_of_field_info field_info with
     | None -> fprintf ppf "field %i" n
@@ -437,7 +433,7 @@ let lambda ppf v =
     (* -> *)
 
     begin match flat [] lam  with
-      | (Nop, Lprim {primitive = Pmakeblock (_, _); args =  toplevels; _})
+      | (Nop, Lprim {primitive = Pmakeblock (_, _, _); args =  toplevels; _})
         :: rest ->
         (* let spc = ref false in *)
         List.iter

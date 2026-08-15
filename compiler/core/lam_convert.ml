@@ -173,12 +173,13 @@ let lam_prim ~primitive:(p : Lambda.primitive) ~args loc : Lam.t =
   | Pgetglobal _ -> assert false
   | Pmakeblock info -> (
     let tag = Lambda.tag_of_tag_info info in
+    let mutable_flag = Lambda.mutable_flag_of_tag_info info in
     match info with
     | Blk_some_not_nested -> prim ~primitive:Psome_not_nest ~args loc
     | Blk_some -> prim ~primitive:Psome ~args loc
     | Blk_constructor _ | Blk_tuple | Blk_record _ | Blk_record_inlined _
     | Blk_module _ | Blk_module_export _ | Blk_extension | Blk_record_ext _ ->
-      prim ~primitive:(Pmakeblock (tag, info)) ~args loc
+      prim ~primitive:(Pmakeblock (tag, info, mutable_flag)) ~args loc
     | Blk_poly_var s -> (
       match args with
       | [_; value] ->
@@ -188,7 +189,7 @@ let lam_prim ~primitive:(p : Lambda.primitive) ~args loc : Lam.t =
           else Const_string {s; delim = None}
         in
         prim
-          ~primitive:(Pmakeblock (tag, info))
+          ~primitive:(Pmakeblock (tag, info, mutable_flag))
           ~args:[Lam.const tag_val; value]
           loc
       | _ -> assert false))

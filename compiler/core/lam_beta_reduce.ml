@@ -65,8 +65,7 @@ let propagate_beta_reduce (meta : Lam_stats.t) (params : Ident.t list)
     in
     Ext_list.fold_right rest_bindings new_body (fun (param, arg) l ->
         (match arg with
-        | Lprim {primitive = Pmakeblock (_, tag_info); args; _}
-          when Lambda.mutable_flag_of_tag_info tag_info = Immutable ->
+        | Lprim {primitive = Pmakeblock (_, _, Immutable); args; _} ->
           Hash_ident.replace meta.ident_tbl param
             (Lam_util.kind_of_lambda_block args)
         | Lprim {primitive = Psome | Psome_not_nest; args = [v]; _} ->
@@ -107,8 +106,7 @@ let propagate_beta_reduce_with_map (meta : Lam_stats.t)
     in
     Ext_list.fold_right rest_bindings new_body (fun (param, (arg : Lam.t)) l ->
         (match arg with
-        | Lprim {primitive = Pmakeblock (_, tag_info); args}
-          when Lambda.mutable_flag_of_tag_info tag_info = Immutable ->
+        | Lprim {primitive = Pmakeblock (_, _, Immutable); args} ->
           Hash_ident.replace meta.ident_tbl param
             (Lam_util.kind_of_lambda_block args)
         | Lprim {primitive = Psome | Psome_not_nest; args = [v]} ->

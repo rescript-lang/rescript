@@ -26,12 +26,11 @@ let lets_helper (count_var : Ident.t -> Lam_pass_count.used_info) lam : Lam.t =
           v,
           Lprim
             {
-              primitive = Pmakeblock (0, tag_info) as primitive;
+              primitive = Pmakeblock (0, _, Mutable) as primitive;
               args = [linit];
               loc;
             },
-          lbody )
-      when Lambda.mutable_flag_of_tag_info tag_info = Mutable -> (
+          lbody ) -> (
       let slinit = simplif linit in
       let slbody = simplif lbody in
       try
@@ -96,11 +95,10 @@ let lets_helper (count_var : Ident.t -> Lam_pass_count.used_info) lam : Lam.t =
         match l1 with
         | Lprim
             {
-              primitive = Pmakeblock (0, tag_info) as primitive;
+              primitive = Pmakeblock (0, _, Mutable) as primitive;
               args = [linit];
               loc;
-            }
-          when Lambda.mutable_flag_of_tag_info tag_info = Mutable -> (
+            } -> (
           let slinit = simplif linit in
           let slbody = simplif lbody in
           try
