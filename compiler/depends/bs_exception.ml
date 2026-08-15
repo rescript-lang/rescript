@@ -25,12 +25,7 @@
 type error =
   | Cmj_not_found of string
   | Js_not_found of string
-  | Bs_cyclic_depends of string list
-  | Bs_duplicated_module of string * string
   | Bs_duplicate_exports of string (* gpr_974 *)
-  | Bs_package_not_found of string
-  | Bs_main_not_exist of string
-  | Bs_invalid_path of string
   | Missing_ml_dependency of string
   | Dependency_script_module_dependent_not of string
       (** TODO: we need add location handling *)
@@ -52,22 +47,7 @@ let report_error ppf = function
       s
   | Js_not_found s ->
     Format.fprintf ppf "%s not found, needed in script mode " s
-  | Bs_cyclic_depends str ->
-    Format.fprintf ppf "Cyclic depends : @[%a@]"
-      (Format.pp_print_list ~pp_sep:Format.pp_print_space Format.pp_print_string)
-      str
   | Bs_duplicate_exports str -> Format.fprintf ppf "%s is exported twice" str
-  | Bs_duplicated_module (a, b) ->
-    Format.fprintf ppf
-      "The build system does not support two files with same names yet %s, %s" a
-      b
-  | Bs_main_not_exist main -> Format.fprintf ppf "File %s not found " main
-  | Bs_package_not_found package ->
-    Format.fprintf ppf
-      "Package %s not found or %s/lib/ocaml does not exist or set \
-       npm_config_prefix correctly"
-      package package
-  | Bs_invalid_path path -> Format.pp_print_string ppf ("Invalid path: " ^ path)
 
 let () =
   Location.register_error_of_exn (function

@@ -1826,7 +1826,6 @@ let transl_type_extension extend env loc styext =
   let tyext =
     {
       tyext_path = type_path;
-      tyext_txt = styext.ptyext_path;
       tyext_params = ttype_params;
       tyext_constructors = constructors;
       tyext_private = styext.ptyext_private;

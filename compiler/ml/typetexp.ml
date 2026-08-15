@@ -529,7 +529,7 @@ and transl_type_aux env policy styp =
   | Ptyp_package (p, l) ->
     let l, mty = create_package_mty true styp.ptyp_loc env (p, l) in
     let z = narrow () in
-    let mty = !transl_modtype env mty in
+    ignore (!transl_modtype env mty);
     widen z;
     let ptys = List.map (fun (s, pty) -> (s, transl_type env policy pty)) l in
     let path = !transl_modtype_longident styp.ptyp_loc env p.txt in
@@ -540,15 +540,7 @@ and transl_type_aux env policy styp =
              List.map (fun (s, _pty) -> s.txt) l,
              List.map (fun (_, cty) -> cty.ctyp_type) ptys ))
     in
-    ctyp
-      (Ttyp_package
-         {
-           pack_path = path;
-           pack_type = mty.mty_type;
-           pack_fields = ptys;
-           pack_txt = p;
-         })
-      ty
+    ctyp (Ttyp_package {pack_path = path; pack_fields = ptys}) ty
   | Ptyp_extension ext ->
     raise (Error_forward (Builtin_attributes.error_of_extension ext))
 
