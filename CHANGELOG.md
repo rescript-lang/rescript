@@ -19,6 +19,7 @@
 - Fix namespaced reference lookup in editor analysis. https://github.com/rescript-lang/rescript/pull/8455
 - Fix build crash when the compiler emits output that is not valid UTF-8, such as a truncated multibyte character in a code frame. https://github.com/rescript-lang/rescript/pull/8482
 - Preserve multibyte characters when wrapping long source lines in compiler code frames. https://github.com/rescript-lang/rescript/pull/8520
+- Preserve parentheses around multiplication, division, and modulo expressions used as exponents. https://github.com/rescript-lang/rescript/pull/8550
 
 # 12.3.0
 
