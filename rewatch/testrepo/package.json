@@ -25,10 +25,8 @@
   },
   "dependencies": {
     "@rescript/belt": "portal:../../packages/@rescript/belt",
+    "@rescript/runtime": "portal:../../packages/@rescript/runtime",
     "rescript": "12.0.0"
-  },
-  "resolutions": {
-    "@rescript/runtime@workspace:^": "portal:../../packages/@rescript/runtime"
   },
   "scripts": {
     "build": "../target/release/rescript build .",

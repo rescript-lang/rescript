@@ -8,9 +8,8 @@ __metadata:
 "@rescript/belt@portal:../../packages/@rescript/belt::locator=testrepo%40workspace%3A.":
   version: 0.0.0-use.local
   resolution: "@rescript/belt@portal:../../packages/@rescript/belt::locator=testrepo%40workspace%3A."
-  dependencies:
-    "@rescript/runtime": "workspace:^"
   peerDependencies:
+    "@rescript/runtime": "workspace:^"
     rescript: "workspace:^"
   languageName: node
   linkType: soft
@@ -336,6 +335,7 @@ __metadata:
   resolution: "testrepo@workspace:."
   dependencies:
     "@rescript/belt": "portal:../../packages/@rescript/belt"
+    "@rescript/runtime": "portal:../../packages/@rescript/runtime"
     rescript: "npm:12.0.0"
   languageName: unknown
   linkType: soft
