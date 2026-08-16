@@ -27,6 +27,9 @@
     "@rescript/belt": "file:../../packages/@rescript/belt",
     "rescript": "12.0.0"
   },
+  "resolutions": {
+    "@rescript/runtime@workspace:^": "file:../../packages/@rescript/runtime"
+  },
   "scripts": {
     "build": "../target/release/rescript build .",
     "watch": "../target/release/rescript watch .",

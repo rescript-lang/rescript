@@ -7,10 +7,12 @@ __metadata:
 
 "@rescript/belt@file:../../packages/@rescript/belt::locator=testrepo%40workspace%3A.":
   version: 13.0.0-alpha.6
-  resolution: "@rescript/belt@file:../../packages/@rescript/belt#../../packages/@rescript/belt::hash=c6202c&locator=testrepo%40workspace%3A."
+  resolution: "@rescript/belt@file:../../packages/@rescript/belt#../../packages/@rescript/belt::hash=e6c837&locator=testrepo%40workspace%3A."
+  dependencies:
+    "@rescript/runtime": "workspace:^"
   peerDependencies:
     rescript: "workspace:^"
-  checksum: 10c0/2b62136e0b37475dcf468bc116e5d4e81a35d7b3a95c1eecb139506528f4518fdbd4b6eedf319fcff16690a224f7522b03c94bb1352a2dedc7f220e368058893
+  checksum: 10c0/136562c14c814a6e101316a6693089f106a74f451d592325e541c14ab768a6a368189c7091cec5a15527f306c16bfe083ac8c87481603289e03b851fe9a717b4
   languageName: node
   linkType: hard
 
@@ -67,6 +69,13 @@ __metadata:
   version: 12.3.0
   resolution: "@rescript/linux-x64@npm:12.3.0"
   conditions: os=linux & cpu=x64
+  languageName: node
+  linkType: hard
+
+"@rescript/runtime@file:../../packages/@rescript/runtime::locator=testrepo%40workspace%3A.":
+  version: 13.0.0-alpha.6
+  resolution: "@rescript/runtime@file:../../packages/@rescript/runtime#../../packages/@rescript/runtime::hash=80282b&locator=testrepo%40workspace%3A."
+  checksum: 10c0/0ad616bbcc31daa731f4f9689184195ff88695462b934e128a84d2db9335d68cda47e9788d6d8671960bb612fd6c75083ab0eb1c283b33ad91ef508f9b5b5250
   languageName: node
   linkType: hard
 
