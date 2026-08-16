@@ -206,7 +206,7 @@ $(PLAYGROUND_BUILD_STAMP): $(COMPILER_SOURCES)
 # Creates all the relevant core and third party cmij files to side-load together with the playground bundle
 playground-cmijs: $(PLAYGROUND_CMI_BUILD_STAMP)
 
-$(PLAYGROUND_CMI_BUILD_STAMP): $(RUNTIME_BUILD_STAMP)
+$(PLAYGROUND_CMI_BUILD_STAMP): $(RUNTIME_BUILD_STAMP) $(BELT_BUILD_STAMP)
 	yarn workspace playground build
 
 playground-test: playground
