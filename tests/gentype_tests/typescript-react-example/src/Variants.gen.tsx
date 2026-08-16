@@ -45,6 +45,10 @@ export type result3<a,b> =
     { TAG: "Ok"; _0: a }
   | { TAG: "Error"; _0: b };
 
+export type result4<a,b> = 
+    { TAG: "Ok"; _0: a }
+  | { TAG: "Error"; _0: b };
+
 export const isWeekend: (x:weekday) => boolean = VariantsJS.isWeekend as any;
 
 export const monday: "monday" = VariantsJS.monday as any;

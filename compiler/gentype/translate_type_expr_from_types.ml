@@ -312,7 +312,10 @@ let translate_constr ~config ~params_translation ~(path : Path.t) ~type_env =
               };
             ] );
     }
-  | ( (["Pervasives"; "result"] | ["result"] | ["Stdlib"; "Result"; "t"]),
+  | ( ( ["Pervasives"; "result"]
+      | ["Belt"; "Result"; "t"]
+      | ["result"]
+      | ["Stdlib"; "Result"; "t"] ),
       [param_translation1; param_translation2] ) ->
     let case name type_ = {case = {label_js = StringLabel name}; t = type_} in
     let variant =
