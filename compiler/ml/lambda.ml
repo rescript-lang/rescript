@@ -112,7 +112,7 @@ let ref_tag_info : tag_info =
   Blk_record {fields = [|("contents", false)|]; mutable_flag = Mutable}
 
 type field_dbg_info =
-  | Fld_record of {name: string; mutable_flag: Asttypes.mutable_flag}
+  | Fld_record of {name: string}
   | Fld_module of {name: string}
   | Fld_record_inline of {name: string}
   | Fld_record_extension of {name: string}
@@ -125,17 +125,13 @@ type field_dbg_info =
 
 let fld_record (lbl : label) =
   Fld_record
-    {
-      name = Ext_list.find_def lbl.lbl_attributes find_name lbl.lbl_name;
-      mutable_flag = lbl.lbl_mut;
-    }
+    {name = Ext_list.find_def lbl.lbl_attributes find_name lbl.lbl_name}
 
 let fld_record_extension (lbl : label) =
   Fld_record_extension
     {name = Ext_list.find_def lbl.lbl_attributes find_name lbl.lbl_name}
 
-let ref_field_info : field_dbg_info =
-  Fld_record {name = "contents"; mutable_flag = Mutable}
+let ref_field_info : field_dbg_info = Fld_record {name = "contents"}
 
 type set_field_dbg_info =
   | Fld_record_set of string
@@ -261,14 +257,14 @@ type primitive =
   | Pstringmax
   | Pstringadd
   (* Array operations *)
-  | Pmakearray of Asttypes.mutable_flag
+  | Pmakearray
   | Parraylength
   | Parrayrefu
   | Parraysetu
   | Parrayrefs
   | Parraysets
   (* List primitives *)
-  | Pmakelist of Asttypes.mutable_flag
+  | Pmakelist
   (* dict primitives *)
   | Pmakedict
   | Pdict_has

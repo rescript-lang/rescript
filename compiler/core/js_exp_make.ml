@@ -38,8 +38,7 @@ let rec remove_pure_sub_exp (x : t) : t option =
   | Var _ | Str _ | Number _ -> None (* Can be refined later *)
   | Array_index (a, b) ->
     if is_pure_sub_exp a && is_pure_sub_exp b then None else Some x
-  | Array (xs, _mutable_flag) ->
-    if Ext_list.for_all xs is_pure_sub_exp then None else Some x
+  | Array xs -> if Ext_list.for_all xs is_pure_sub_exp then None else Some x
   | Seq (a, b) -> (
     match (remove_pure_sub_exp a, remove_pure_sub_exp b) with
     | None, None -> None
@@ -50,9 +49,6 @@ let rec remove_pure_sub_exp (x : t) : t option =
   | _ -> Some x
 
 and is_pure_sub_exp (x : t) = remove_pure_sub_exp x = None
-
-(* let mk ?comment exp : t =
-   {expression_desc = exp ; comment  } *)
 
 let var ?comment id : t =
   {expression_desc = Var (Id id); comment; source_loc = None}
@@ -165,8 +161,6 @@ let pure_runtime_call module_name fn_name args =
     (runtime_var_dot module_name fn_name)
     args
 
-let runtime_ref module_name fn_name = runtime_var_dot module_name fn_name
-
 let str ?(delim = J.DNone) ?comment txt : t =
   {expression_desc = Str {txt; delim}; comment; source_loc = None}
 
@@ -177,8 +171,8 @@ let raw_js_code ?comment info s : t =
     source_loc = None;
   }
 
-let array ?comment mt es : t =
-  {expression_desc = Array (es, mt); comment; source_loc = None}
+let array ?comment es : t =
+  {expression_desc = Array es; comment; source_loc = None}
 
 let record_rest ?comment fields source : t =
   {expression_desc = Record_rest (fields, source); comment; source_loc = None}
@@ -255,7 +249,7 @@ let is_array (e0 : t) : t =
   }
 
 let new_ ?comment e0 args : t =
-  {expression_desc = New (e0, Some args); comment; source_loc = None}
+  {expression_desc = New (e0, args); comment; source_loc = None}
 
 let unit : t =
   {
@@ -263,9 +257,6 @@ let unit : t =
     comment = None;
     source_loc = None;
   }
-
-(* let math ?comment v args  : t =
-   {comment ; expression_desc = Math(v,args)} *)
 
 (* we can do constant folding here, but need to make sure the result is consistent
    {[
@@ -332,7 +323,7 @@ let dummy_obj ?comment (info : Lam_tag_info.t) : t =
   | Blk_poly_var _ | Blk_extension | Blk_record_ext _ ->
     {comment; source_loc = None; expression_desc = Object (None, [])}
   | Blk_tuple | Blk_module_export _ ->
-    {comment; source_loc = None; expression_desc = Array ([], Mutable)}
+    {comment; source_loc = None; expression_desc = Array []}
   | Blk_some | Blk_some_not_nested -> assert false
 
 (* TODO: complete
@@ -354,9 +345,6 @@ let rec seq ?comment (e0 : t) (e1 : t) : t =
   | _ -> {expression_desc = Seq (e0, e1); comment; source_loc = None}
 
 let fuse_to_seq x xs = if xs = [] then x else Ext_list.fold_left xs x seq
-
-(* let empty_string_literal : t =
-   {expression_desc = Str (true,""); comment = None; source_loc = None} *)
 
 let zero_int_literal : t =
   {
@@ -479,7 +467,7 @@ let float_mod ?comment e1 e2 : J.expression =
 
 let array_index ?comment (e0 : t) (e1 : t) : t =
   match (e0.expression_desc, e1.expression_desc) with
-  | Array (l, _), Number (Int {i; _})
+  | Array l, Number (Int {i; _})
   (* Float i -- should not appear here *)
     when no_side_effect e0 -> (
     match Ext_list.nth_opt l (Int32.to_int i) with
@@ -490,8 +478,7 @@ let array_index ?comment (e0 : t) (e1 : t) : t =
 
 let array_index_by_int ?comment (e : t) (pos : int32) : t =
   match e.expression_desc with
-  | Array (l, _) (* Float i -- should not appear here *)
-  | Caml_block (l, _, _, _)
+  | (Array l (* Float i -- should not appear here *) | Caml_block (l, _, _, _))
     when no_side_effect e -> (
     match Ext_list.nth_opt l (Int32.to_int pos) with
     | Some x -> x
@@ -509,10 +496,8 @@ let array_index_by_int ?comment (e : t) (pos : int32) : t =
     }
 
 let record_access (e : t) (name : string) (pos : int32) =
-  (* let name = Ext_ident.convert name in  *)
   match e.expression_desc with
-  | Array (l, _) (* Float i -- should not appear here *)
-  | Caml_block (l, _, _, _)
+  | (Array l (* Float i -- should not appear here *) | Caml_block (l, _, _, _))
     when no_side_effect e -> (
     match Ext_list.nth_opt l (Int32.to_int pos) with
     | Some x -> x
@@ -571,8 +556,7 @@ let poly_var_value_access (e : t) =
 
 let extension_access (e : t) name (pos : int32) : t =
   match e.expression_desc with
-  | Array (l, _) (* Float i -- should not appear here *)
-  | Caml_block (l, _, _, _)
+  | (Array l (* Float i -- should not appear here *) | Caml_block (l, _, _, _))
     when no_side_effect e -> (
     match Ext_list.nth_opt l (Int32.to_int pos) with
     | Some x -> x
@@ -637,9 +621,6 @@ let assign_by_exp (e : t) index value : t =
       }
       value
 
-let assign_by_int ?comment e0 (index : int32) value =
-  assign_by_exp e0 (int ?comment index) value
-
 let record_assign (e : t) (pos : int32) (name : string) (value : t) =
   match e.expression_desc with
   | Array _
@@ -689,15 +670,15 @@ let extension_assign (e : t) (pos : int32) name (value : t) =
 let array_length ?comment (e : t) : t =
   match e.expression_desc with
   (* TODO: use array instead? *)
-  | (Array (l, _) | Caml_block (l, _, _, _)) when no_side_effect e ->
+  | (Array l | Caml_block (l, _, _, _)) when no_side_effect e ->
     int ?comment (Int32.of_int (List.length l))
-  | _ -> {expression_desc = Length (e, Array); comment; source_loc = None}
+  | _ -> {expression_desc = Length e; comment; source_loc = None}
 
 let string_length ?comment (e : t) : t =
   match e.expression_desc with
   | Str {txt; delim = DNone} -> int ?comment (Int32.of_int (String.length txt))
   (* No optimization for {j||j}*)
-  | _ -> {expression_desc = Length (e, String); comment; source_loc = None}
+  | _ -> {expression_desc = Length e; comment; source_loc = None}
 
 let function_length ?comment (e : t) : t =
   match e.expression_desc with
@@ -705,12 +686,7 @@ let function_length ?comment (e : t) : t =
     let params_length = List.length params in
     int ?comment
       (Int32.of_int (if is_method then params_length - 1 else params_length))
-  | _ -> {expression_desc = Length (e, Function); comment; source_loc = None}
-
-(** no dependency introduced *)
-(* let js_global_dot ?comment (x : string)  (e1 : string) : t =
-   { expression_desc = Static_index (js_global x,  e1,None); comment; source_loc = None}
-*)
+  | _ -> {expression_desc = Length e; comment; source_loc = None}
 
 let rec string_append ?comment (e : t) (el : t) : t =
   let concat a b ~delim = {e with expression_desc = Str {txt = a ^ b; delim}} in
@@ -771,9 +747,9 @@ let rec triple_equal ?comment (e0 : t) (e1 : t) : t =
 let bin ?comment (op : J.binop) (e0 : t) (e1 : t) : t =
   match (op, e0.expression_desc, e1.expression_desc) with
   | EqEqEq, _, _ -> triple_equal ?comment e0 e1
-  | Ge, Length (e, _), Number (Int {i = 0l}) when no_side_effect e ->
+  | Ge, Length e, Number (Int {i = 0l}) when no_side_effect e ->
     true_ (* x.length >=0 | [x] is pure  -> true*)
-  | Gt, Length (_, _), Number (Int {i = 0l}) ->
+  | Gt, Length _, Number (Int {i = 0l}) ->
     (* [e] is kept so no side effect check needed *)
     {expression_desc = Bin (NotEqEq, e0, e1); comment; source_loc = None}
   | _ -> {expression_desc = Bin (op, e0, e1); comment; source_loc = None}
@@ -1390,16 +1366,6 @@ let rec float_equal ?comment (e0 : t) (e1 : t) : t =
   match (e0.expression_desc, e1.expression_desc) with
   | Number (Int {i = i0; _}), Number (Int {i = i1}) -> bool (i0 = i1)
   | Undefined _, Undefined _ -> true_
-  (* | (Bin(Bor,
-         {expression_desc = Number(Int {i = 0l; _})},
-         ({expression_desc = Caml_block_tag _; _} as a ))
-     |
-      Bin(Bor,
-          ({expression_desc = Caml_block_tag _; _} as a),
-          {expression_desc = Number (Int {i = 0l; _})})),
-     Number (Int {i = 0l;}) when e1.comment = None
-     ->  (** (x.tag | 0) === 0  *)
-     not  a *)
   | ( ( Bin
           ( Bor,
             {expression_desc = Number (Int {i = 0l; _})},
@@ -1540,14 +1506,10 @@ let string_equal ?comment (e0 : t) (e1 : t) : t = string_comp Ceq ?comment e0 e1
 let is_type_number ?comment (e : t) : t =
   string_equal ?comment (typeof e) (str "number")
 
-let is_type_string ?comment (e : t) : t =
-  string_equal ?comment (typeof e) (str "string")
-
 let is_type_object (e : t) : t = string_equal (typeof e) (str "object")
 
 let obj_length ?comment e : t =
-  to_int32
-    {expression_desc = Length (e, Caml_block); comment; source_loc = None}
+  to_int32 {expression_desc = Length e; comment; source_loc = None}
 
 let compare_int_aux (cmp : Lam_compat.comparison) (l : int) r =
   match cmp with
@@ -1612,9 +1574,6 @@ let bool_comp (cmp : Lam_compat.comparison) ?comment (e0 : t) (e1 : t) =
     | Clt | Cge | Ceq | Cneq ->
       bin ?comment (Lam_compile_util.jsop_of_comp cmp) e0 e1)
   | _, _ -> bin ?comment (Lam_compile_util.jsop_of_comp cmp) e0 e1
-
-let float_comp cmp ?comment e0 e1 =
-  bin ?comment (Lam_compile_util.jsop_of_comp cmp) e0 e1
 
 let js_comp cmp ?comment e0 e1 =
   bin ?comment (Lam_compile_util.jsop_of_comp cmp) e0 e1
@@ -1702,34 +1661,14 @@ let rec float_add ?comment (e1 : t) (e2 : t) =
       source_loc = None;
       expression_desc = Bin (Plus, a1, int (Int32.add k j));
     }
-  (* bin ?comment Plus a1 (int (k + j)) *)
-  (* TODO remove commented code  ?? *)
-  (* | Bin(Plus, a0 , ({expression_desc = Number (Int a1)}  )), *)
-  (*     Bin(Plus, b0 , ({expression_desc = Number (Int b1)}  )) *)
-  (*   ->  *)
-  (*   bin ?comment Plus a1 (int (a1 + b1)) *)
-
-  (* | _, Bin(Plus,  b0, ({expression_desc = Number _}  as v)) *)
-  (*   -> *)
-  (*     bin ?comment Plus (bin ?comment Plus e1 b0) v *)
-  (* | Bin(Plus, a1 , ({expression_desc = Number _}  as v)), _ *)
-  (* | Bin(Plus, ({expression_desc = Number _}  as v),a1), _ *)
-  (*   ->  *)
-  (*     bin ?comment Plus (bin ?comment Plus a1 e2 ) v  *)
-  (* | Number _, _ *)
-  (*   ->  *)
-  (*     bin ?comment Plus  e2 e1 *)
   | _ -> {comment; source_loc = None; expression_desc = Bin (Plus, e1, e2)}
 
-(* bin ?comment Plus e1 e2 *)
 (* associative is error prone due to overflow *)
 and float_minus ?comment (e1 : t) (e2 : t) : t =
   match (e1.expression_desc, e2.expression_desc) with
   | Number (Int {i; _}), Number (Int {i = j; _}) -> int ?comment (Int32.sub i j)
   | _ -> {comment; source_loc = None; expression_desc = Bin (Minus, e1, e2)}
-(* bin ?comment Minus e1 e2 *)
 
-let unchecked_int32_add ?comment e1 e2 = float_add ?comment e1 e2
 let int32_add ?comment e1 e2 = to_int32 (float_add ?comment e1 e2)
 
 let offset e1 (offset : int) =
@@ -1738,12 +1677,8 @@ let offset e1 (offset : int) =
 let int32_minus ?comment e1 e2 : J.expression =
   to_int32 (float_minus ?comment e1 e2)
 
-let unchecked_int32_minus ?comment e1 e2 : J.expression =
-  float_minus ?comment e1 e2
-
 let float_div ?comment e1 e2 = bin ?comment Div e1 e2
 let float_pow ?comment e1 e2 = bin ?comment Pow e1 e2
-let float_notequal ?comment e1 e2 = bin ?comment NotEqEq e1 e2
 
 let int32_asr ?comment e1 e2 : J.expression =
   {comment; source_loc = None; expression_desc = Bin (Asr, e1, e2)}
@@ -1803,9 +1738,6 @@ let int32_mul ?comment (e1 : J.expression) (e2 : J.expression) : J.expression =
     else to_int32 (float_mul ?comment e1 e2)
   | _ -> to_int32 (float_mul ?comment e1 e2)
 
-let unchecked_int32_mul ?comment e1 e2 : J.expression =
-  {comment; source_loc = None; expression_desc = Bin (Mul, e1, e2)}
-
 let int_bnot ?comment (e : t) : J.expression =
   match e.expression_desc with
   | Number (Int {i}) -> int ?comment (Int32.lognot i)
@@ -1837,9 +1769,6 @@ let rec int32_band ?comment (e1 : J.expression) (e2 : J.expression) :
     *)
     int32_band a e2
   | _ -> {comment; source_loc = None; expression_desc = Bin (Band, e1, e2)}
-
-(* let int32_bin ?comment op e1 e2 : J.expression =  *)
-(*   {expression_desc = Int32_bin(op,e1, e2); comment; source_loc = None} *)
 
 let bigint_op ?comment op (e1 : t) (e2 : t) = bin ?comment op e1 e2
 

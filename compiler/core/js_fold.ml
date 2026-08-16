@@ -81,14 +81,9 @@ class fold =
           _self)
         _self
 
-    method length_object : length_object -> 'self_type = unknown _self
-
     method expression_desc : expression_desc -> 'self_type =
       function
-      | Length (_x0, _x1) ->
-        let _self = _self#expression _x0 in
-        let _self = _self#length_object _x1 in
-        _self
+      | Length _x0 -> _self#expression _x0
       | Is_null_or_undefined _x0 ->
         let _self = _self#expression _x0 in
         _self
@@ -149,12 +144,7 @@ class fold =
         _self
       | New (_x0, _x1) ->
         let _self = _self#expression _x0 in
-        let _self =
-          option
-            (fun _self -> list (fun _self -> _self#expression) _self)
-            _self _x1
-        in
-        _self
+        list (fun _self -> _self#expression) _self _x1
       | Var _x0 ->
         let _self = _self#vident _x0 in
         _self
@@ -164,9 +154,7 @@ class fold =
         _self
       | Str _ -> _self
       | Raw_js_code _ -> _self
-      | Array (_x0, _x1) ->
-        let _self = list (fun _self -> _self#expression) _self _x0 in
-        _self
+      | Array _x0 -> list (fun _self -> _self#expression) _self _x0
       | Optional_block (_x0, _x1) ->
         let _self = _self#expression _x0 in
         _self

@@ -83,7 +83,7 @@ val blk_record_inlined :
 val ref_tag_info : tag_info
 
 type field_dbg_info =
-  | Fld_record of {name: string; mutable_flag: Asttypes.mutable_flag}
+  | Fld_record of {name: string}
   | Fld_module of {name: string}
   | Fld_record_inline of {name: string}
   | Fld_record_extension of {name: string}
@@ -230,14 +230,14 @@ type primitive =
   | Pstringmax
   | Pstringadd
   (* Array operations *)
-  | Pmakearray of mutable_flag
+  | Pmakearray
   | Parraylength
   | Parrayrefu
   | Parraysetu
   | Parrayrefs
   | Parraysets
   (* List primitives *)
-  | Pmakelist of Asttypes.mutable_flag
+  | Pmakelist
   (* dict primitives *)
   | Pmakedict
   | Pdict_has

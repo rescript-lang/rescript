@@ -77,13 +77,9 @@ let property_map : property_map fn =
  fun _self arg ->
   list (fun _self (_x0, _x1) -> _self.expression _self _x1) _self arg
 
-let length_object : length_object fn = unknown
-
 let expression_desc : expression_desc fn =
  fun _self -> function
-  | Length (_x0, _x1) ->
-    _self.expression _self _x0;
-    length_object _self _x1
+  | Length _x0 -> _self.expression _self _x0
   | Is_null_or_undefined _x0 -> _self.expression _self _x0
   | String_append (_x0, _x1) ->
     _self.expression _self _x0;
@@ -124,14 +120,14 @@ let expression_desc : expression_desc fn =
   | Static_index (_x0, _x1, _x2) -> _self.expression _self _x0
   | New (_x0, _x1) ->
     _self.expression _self _x0;
-    option (fun _self arg -> list _self.expression _self arg) _self _x1
+    list _self.expression _self _x1
   | Var _x0 -> _self.vident _self _x0
   | Fun {params; body} ->
     list _self.ident _self params;
     _self.block _self body
   | Str _ -> ()
   | Raw_js_code _ -> ()
-  | Array (_x0, _x1) -> list _self.expression _self _x0
+  | Array _x0 -> list _self.expression _self _x0
   | Optional_block (_x0, _x1) -> _self.expression _self _x0
   | Caml_block (_x0, _x1, _x2, _x3) ->
     list _self.expression _self _x0;

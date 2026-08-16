@@ -211,8 +211,7 @@ let assemble_args_has_splice (arg_types : specs) (args : exprs) :
     | {arg_label; arg_type} :: labels, arg :: args -> (
       let accs, eff = aux labels args in
       match (args, (arg : E.t)) with
-      | [], {expression_desc = Array (ls, _mutable_flag); _} ->
-        (Ext_list.append ls accs, eff)
+      | [], {expression_desc = Array ls; _} -> (Ext_list.append ls accs, eff)
       | _ ->
         if args = [] then dynamic := true;
         let acc, new_eff = ocaml_to_js_eff ~arg_type ~arg_label arg in
@@ -417,7 +416,8 @@ let translate_ffi ?(transformed_jsx = false) (cxt : Lam_compile_context.t)
     add_eff cur_eff
     @@
     match args with
-    | [obj; v] -> Js_arr.ref_array (translate_scoped_access scopes obj) v
+    | [obj; v] ->
+      Js_of_lam_array.ref_array (translate_scoped_access scopes obj) v
     | _ -> assert false)
   | Js_set_index {js_set_index_scopes = scopes} -> (
     let args, cur_eff = assemble_args_no_splice arg_types args in
@@ -425,5 +425,5 @@ let translate_ffi ?(transformed_jsx = false) (cxt : Lam_compile_context.t)
     @@
     match args with
     | [obj; v; value] ->
-      Js_arr.set_array (translate_scoped_access scopes obj) v value
+      Js_of_lam_array.set_array (translate_scoped_access scopes obj) v value
     | _ -> assert false)

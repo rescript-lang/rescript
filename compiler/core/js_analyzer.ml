@@ -105,7 +105,7 @@ let rec no_side_effect_expression_desc (x : J.expression_desc) =
     no_side_effect a && no_side_effect b
   | Is_null_or_undefined b -> no_side_effect b
   | Str _ -> true
-  | Array (xs, _mutable_flag) | Caml_block (xs, _mutable_flag, _, _) ->
+  | Array xs | Caml_block (xs, _, _, _) ->
     (* create [immutable] block,
         does not really mean that this opreation itself is [pure].
 
@@ -119,7 +119,7 @@ let rec no_side_effect_expression_desc (x : J.expression_desc) =
     | None -> true)
     && Ext_list.for_all_snd kvs no_side_effect
   | String_append (a, b) | Seq (a, b) -> no_side_effect a && no_side_effect b
-  | Length (e, _) | Caml_block_tag (e, _) | Typeof e -> no_side_effect e
+  | Length e | Caml_block_tag (e, _) | Typeof e -> no_side_effect e
   | Bin (op, a, b) -> op <> Eq && no_side_effect a && no_side_effect b
   | Tagged_template (call_expr, strings, values) ->
     no_side_effect call_expr
@@ -311,7 +311,7 @@ let rev_toplevel_flatten block =
    | Array_index (a,b) -> is_constant a && is_constant b
    | Str (b,_) -> b
    | Number _ -> true (* Can be refined later *)
-   | Array (xs,_mutable_flag)  -> Ext_list.for_all xs  is_constant
+   | Array xs -> Ext_list.for_all xs is_constant
    | Caml_block(xs, Immutable, tag, _)
     -> Ext_list.for_all xs is_constant && is_constant tag
    | Bin (_op, a, b) ->

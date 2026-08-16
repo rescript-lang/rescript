@@ -99,8 +99,8 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
     match args with
     | [
      fn;
-     {expression_desc = Array (strings, _); _};
-     {expression_desc = Array (values, _); _};
+     {expression_desc = Array strings; _};
+     {expression_desc = Array values; _};
     ] ->
       E.tagged_template fn strings values
     | _ -> assert false)
@@ -568,7 +568,7 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
     | _ -> assert false)
   | Parrayrefs -> E.runtime_call Primitive_modules.array "get" args
   | Parraysets -> E.runtime_call Primitive_modules.array "set" args
-  | Pmakearray -> Js_of_lam_array.make_array Mutable args
+  | Pmakearray -> Js_of_lam_array.make_array args
   | Pmakelist ->
     Js_of_lam_block.make_block
       (Js_op_util.of_lam_mutable_flag Mutable)
@@ -576,7 +576,7 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
       (E.small_int 0) args
   | Pmakedict -> (
     match args with
-    | [{expression_desc = Array (items, _)}] ->
+    | [{expression_desc = Array items}] ->
       E.obj
         (items
         |> List.filter_map (fun (exp : J.expression) ->

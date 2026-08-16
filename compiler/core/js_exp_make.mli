@@ -45,10 +45,6 @@ val var : ?comment:string -> J.ident -> t
 
 val js_global : ?comment:string -> string -> t
 
-val runtime_var_dot : ?comment:string -> string -> string -> t
-
-(* val runtime_var_vid : string -> string -> J.vident *)
-
 val ml_var_dot :
   ?comment:string -> ?dynamic_import:bool -> Ident.t -> string -> t
 (** [ml_var_dot ocaml_module name]
@@ -84,17 +80,6 @@ val runtime_call :
   (* args *)
   t
 
-val pure_runtime_call :
-  string ->
-  (* module_name *)
-  string ->
-  (* fn_name *)
-  t list ->
-  (* args *)
-  t
-
-val runtime_ref : string -> string -> t
-
 val str : ?delim:J.delim -> ?comment:string -> string -> t
 
 val record_rest : ?comment:string -> J.record_rest_field list -> t -> t
@@ -129,11 +114,8 @@ val bigint : ?comment:string -> bool -> string -> t
 
 val float : ?comment:string -> string -> t
 
-(* val empty_string_literal : t  *)
 (* TODO: we can do hash consing for small integers *)
 val zero_int_literal : t
-
-(* val one_int_literal : t *)
 val zero_float_lit : t
 
 val zero_bigint_literal : t
@@ -159,13 +141,6 @@ val string_append : ?comment:string -> t -> t -> t
    we can not tag [js] object, since it can be frozen 
 *)
 
-(* val var_dot : ?comment:string -> Ident.t -> string -> t *)
-
-(* val bind_var_call : ?comment:string -> Ident.t -> string -> t list -> t  *)
-
-(* val bind_call : ?comment:string -> J.expression -> string -> J.expression list -> t *)
-(* val js_global_dot : ?comment:string -> string -> string -> t *)
-
 val string_index : ?comment:string -> t -> t -> t
 
 val array_index : ?comment:string -> t -> t -> t
@@ -190,14 +165,6 @@ val poly_var_value_access : t -> t
 
 val extension_assign : t -> int32 -> string -> t -> t
 
-val assign_by_int : ?comment:string -> t -> int32 -> t -> t
-(** 
-    [assign_by_int  e i v]
-    if the expression [e] is a temporay block 
-    which has no side effect,
-    write to it does not really make sense, 
-    optimize it away *)
-
 val assign_by_exp : t -> t -> t -> t
 
 val assign : ?comment:string -> t -> t -> t
@@ -208,8 +175,6 @@ val emit_check : t Ast_untagged_variants.Dynamic_checks.t -> t
 
 val triple_equal : ?comment:string -> t -> t -> t
 (* TODO: reduce [triple_equal] use *)
-
-val float_equal : ?comment:string -> t -> t -> t
 
 val int_equal : ?comment:string -> t -> t -> t
 
@@ -231,8 +196,6 @@ val is_a_literal_case :
   t ->
   t
 
-val is_type_string : ?comment:string -> t -> t
-
 val is_type_object : t -> t
 
 val typeof : ?comment:string -> t -> t
@@ -241,19 +204,13 @@ val is_array : t -> t
 
 val to_int32 : ?comment:string -> t -> t
 
-val unchecked_int32_add : ?comment:string -> t -> t -> t
-
 val int32_add : ?comment:string -> t -> t -> t
 
 val offset : t -> int -> t
 
-val unchecked_int32_minus : ?comment:string -> t -> t -> t
-
 val int32_minus : ?comment:string -> t -> t -> t
 
 val int32_mul : ?comment:string -> t -> t -> t
-
-val unchecked_int32_mul : ?comment:string -> t -> t -> t
 
 val int32_div : checked:bool -> ?comment:string -> t -> t -> t
 
@@ -281,8 +238,6 @@ val float_mul : ?comment:string -> t -> t -> t
 
 val float_div : ?comment:string -> t -> t -> t
 
-val float_notequal : ?comment:string -> t -> t -> t
-
 val float_mod : ?comment:string -> t -> t -> t
 
 val float_pow : ?comment:string -> t -> t -> t
@@ -292,8 +247,6 @@ val int_comp : Lam_compat.comparison -> ?comment:string -> t -> t -> t
 val bool_comp : Lam_compat.comparison -> ?comment:string -> t -> t -> t
 
 val string_comp : Lam_compat.comparison -> ?comment:string -> t -> t -> t
-
-val float_comp : Lam_compat.comparison -> ?comment:string -> t -> t -> t
 
 val bigint_op : ?comment:string -> Js_op.binop -> t -> t -> t
 
@@ -315,7 +268,7 @@ val tagged_template : ?comment:string -> t -> t list -> t list -> t
 
 val new_ : ?comment:string -> J.expression -> J.expression list -> t
 
-val array : ?comment:string -> J.mutable_flag -> J.expression list -> t
+val array : ?comment:string -> J.expression list -> t
 
 val optional_block : J.expression -> J.expression
 

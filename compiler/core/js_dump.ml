@@ -150,7 +150,6 @@ let raw_snippet_exp_simple_enough (s : string) =
 *)
 let rec exp_need_paren ?(arrow = false) (e : J.expression) =
   match e.expression_desc with
-  (* | Caml_uninitialized_obj _  *)
   | Call ({expression_desc = Raw_js_code _}, _, _) -> true
   | Raw_js_code {code_info = Exp _}
   | Fun _
@@ -754,8 +753,7 @@ and expression_desc cxt ~(level : int) f x : cxt =
                 P.paren_group f 0 (fun _ -> arguments cxt f (e :: el)))
               else (
                 Curry_gen.pp_app_any f;
-                P.paren_group f 0 (fun _ ->
-                    arguments cxt f [e; E.array Mutable el]))))
+                P.paren_group f 0 (fun _ -> arguments cxt f [e; E.array el]))))
   | FlatCall (e, el) ->
     P.group f 0 (fun _ ->
         let cxt = expression ~level:15 cxt f e in
@@ -939,7 +937,7 @@ and expression_desc cxt ~(level : int) f x : cxt =
         P.string f "+";
         P.space f;
         expression ~level:rght cxt f e2)
-  | Array (el, _) -> (
+  | Array el -> (
     (* TODO: simplify for singleton list *)
     match el with
     | [] | [_] -> P.bracket_group f 1 (fun _ -> array_element_list cxt f el)
@@ -955,11 +953,11 @@ and expression_desc cxt ~(level : int) f x : cxt =
            Ext_list.map_combine fields el (fun x ->
                Js_op.Lit (Ext_ident.convert x)) ))
   (*name convention of Record is slight different from modules*)
-  | Caml_block (el, mutable_flag, _, Blk_record {fields}) ->
+  | Caml_block (el, _, _, Blk_record {fields}) ->
     if
       Array.length fields <> 0
       && Ext_array.for_alli fields (fun i (v, _) -> string_of_int i = v)
-    then expression_desc cxt ~level f (Array (el, mutable_flag))
+    then expression_desc cxt ~level f (Array el)
     else
       let fields =
         Ext_list.array_list_filter_map fields el (fun (f, opt) x ->
@@ -1050,8 +1048,8 @@ and expression_desc cxt ~(level : int) f x : cxt =
   | Caml_block (_, _, _, (Blk_module_export _ | Blk_some | Blk_some_not_nested))
     ->
     assert false
-  | Caml_block (el, mutable_flag, _tag, Blk_tuple) ->
-    expression_desc cxt ~level f (Array (el, mutable_flag))
+  | Caml_block (el, _, _tag, Blk_tuple) ->
+    expression_desc cxt ~level f (Array el)
   | Caml_block_tag (e, tag) ->
     P.group f 1 (fun _ ->
         let cxt = expression ~level:15 cxt f e in
@@ -1072,23 +1070,20 @@ and expression_desc cxt ~(level : int) f x : cxt =
            refer and export
         *)
         cxt)
-  | Length (e, _) ->
+  | Length e ->
     (*Todo: check parens *)
     P.cond_paren_group f (level > 15) (fun _ ->
         let cxt = expression ~level:15 cxt f e in
         P.string f L.dot;
         P.string f L.length;
         cxt)
-  | New (e, el) ->
+  | New (e, args) ->
     P.cond_paren_group f (level > 15) (fun _ ->
         P.group f 0 (fun _ ->
             P.string f L.new_;
             P.space f;
             let cxt = expression ~level:16 cxt f e in
-            P.paren_group f 0 (fun _ ->
-                match el with
-                | Some el -> arguments cxt f el
-                | None -> cxt)))
+            P.paren_group f 0 (fun _ -> arguments cxt f args)))
   | Cond (e, e1, e2) ->
     let action () =
       let cxt = expression ~level:3 cxt f e in
@@ -1200,8 +1195,8 @@ and print_jsx cxt ?(spread_props : J.expression option)
         if n = "children" then
           if fn_name = "jsxs" then
             match e.J.expression_desc with
-            | J.Array (xs, _)
-            | J.Optional_block ({expression_desc = J.Array (xs, _)}, _) ->
+            | J.Array xs | J.Optional_block ({expression_desc = J.Array xs}, _)
+              ->
               Some xs
             | _ -> Some [e]
           else Some [e]

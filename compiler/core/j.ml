@@ -33,8 +33,6 @@
 
 type mutable_flag = Js_op.mutable_flag
 type binop = Js_op.binop
-type int_op = Js_op.int_op
-type kind = Js_op.kind
 type property = Js_op.property
 type number = Js_op.number
 type ident_info = Js_op.ident_info
@@ -74,7 +72,6 @@ and exception_ident = ident
 and for_ident = ident
 and for_direction = Js_op.direction_flag
 and property_map = (property_name * expression) list
-and length_object = Js_op.length_object
 and delim = External_arg_spec.delim = DNone | DStarJ | DNoQuotes | DBackQuotes
 
 and record_rest_field = {
@@ -83,7 +80,7 @@ and record_rest_field = {
 }
 
 and expression_desc =
-  | Length of expression * length_object
+  | Length of expression
   | Is_null_or_undefined of expression  (** where we use a trick [== null ] *)
   | String_append of expression * expression
   | Bool of bool (* js true/false*)
@@ -98,9 +95,6 @@ and expression_desc =
   | Seq of expression * expression
   | Cond of expression * expression * expression
   | Bin of binop * expression * expression
-  (* [int_op] will guarantee return [int32] bits
-     https://developer.mozilla.org/en/docs/Web/JavaScript/Reference/Operators/Bitwise_Operators *)
-  (* | Int32_bin of int_op * expression * expression *)
   | FlatCall of expression * expression
   (* f.apply(null,args) -- Fully applied guaranteed
      TODO: once we know args's shape --
@@ -133,7 +127,7 @@ and expression_desc =
         All exported declarations have to be OCaml identifiers
      2. Javascript dot (need to be preserved/or using quote)
   *)
-  | New of expression * expression list option (* TODO: option remove *)
+  | New of expression * expression list
   | Var of vident
   | Fun of {
       is_method: bool;
@@ -151,15 +145,13 @@ and expression_desc =
   | Raw_js_code of Js_raw_info.t
   (* literally raw JS code 
   *)
-  | Array of expression list * mutable_flag
+  | Array of expression list
   | Optional_block of expression * bool
   (* [true] means [identity] *)
   | Caml_block of expression list * mutable_flag * expression * tag_info
   (* The third argument is [tag] , forth is [tag_info] *)
-  (* | Caml_uninitialized_obj of expression * expression *)
   (* [tag] and [size] tailed  for [Obj.new_block] *)
   | Caml_block_tag of expression * string (* e.tag *)
-  (* | Caml_block_set_length of expression * expression *)
   (* It will just fetch tag, to make it safe, when creating it,
      we need apply "|0", we don't do it in the
      last step since "|0" can potentially be optimized
@@ -334,17 +326,13 @@ and deps_program = {
         int_clause;
         string_clause;
         for_direction;
-        (* exception_ident; *)
-        for_direction;
         expression_desc;
         statement_desc;
         for_ident_expression;
         label;
         finish_ident_expression;
         property_map;
-        length_object;
         record_rest_field;
-        (* for_ident; *)
         required_modules;
         case_clause;
       |];

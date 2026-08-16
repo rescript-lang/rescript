@@ -26,10 +26,6 @@
 
 type t = J.statement
 
-(** empty statement, block of length 0 *)
-(* val empty_stmt :
-   t *)
-
 val throw_stmt : ?comment:string -> J.expression -> t
 
 val if_ :
@@ -97,38 +93,7 @@ val define_variable :
   J.expression ->
   t
 
-(** created an alias expression *)
-(* val alias_variable :
-   ?comment:string ->
-   exp:J.expression ->
-   Ident.t ->
-   t *)
-
 val assign : ?comment:string -> J.ident -> J.expression -> t
-
-(** Used in cases like 
-    {[
-      let x = while true do 
-          ...
-        done in ..
-    ]}
-*)
-(* val assign_unit :
-   ?comment:string  ->
-   J.ident ->
-   t *)
-
-(** used in cases like 
-    {[
-      let x = while true do 
-          ...
-        done in ..
-    ]}
-*)
-(* val declare_unit :
-   ?comment:string  ->
-   J.ident ->
-   t *)
 
 val while_ : ?comment:string -> ?label:J.label -> J.expression -> J.block -> t
 
@@ -159,21 +124,8 @@ val exp : ?comment:string -> J.expression -> t
 
 val return_stmt : ?comment:string -> J.expression -> t
 
-(* val return_unit : t list *)
-(** for ocaml function which returns unit 
-    it will be compiled into [return 0] in js *)
-
-(** if [label] is not set, it will default to empty *)
-(* val continue_stmt :
-   ?comment:string  ->
-   ?label:J.label ->
-   unit  ->
-   t *)
-
 val break_ : ?label:J.label -> unit -> t
 
 val continue_ : ?label:J.label -> unit -> t
 
 val debugger_stmt : ?comment:string -> unit -> t
-
-val debugger_block : t list

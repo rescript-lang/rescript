@@ -23,7 +23,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
 let caml_id_field_info : Lambda.field_dbg_info =
-  Fld_record {name = Literals.exception_id; mutable_flag = Immutable}
+  Fld_record {name = Literals.exception_id}
 
 let lam_caml_id : Lam_primitive.t = Pfield (0, caml_id_field_info)
 let prim = Lam.prim
@@ -288,13 +288,13 @@ let lam_prim ~primitive:(p : Lambda.primitive) ~args loc : Lam.t =
   | Poffsetint x -> prim ~primitive:(Poffsetint x) ~args loc
   | Poffsetref x -> prim ~primitive:(Poffsetref x) ~args loc
   | Pfloatcomp x -> prim ~primitive:(Pfloatcomp x) ~args loc
-  | Pmakearray _mutable_flag (*FIXME*) -> prim ~primitive:Pmakearray ~args loc
+  | Pmakearray -> prim ~primitive:Pmakearray ~args loc
   | Parraylength -> prim ~primitive:Parraylength ~args loc
   | Parrayrefu -> prim ~primitive:Parrayrefu ~args loc
   | Parraysetu -> prim ~primitive:Parraysetu ~args loc
   | Parrayrefs -> prim ~primitive:Parrayrefs ~args loc
   | Parraysets -> prim ~primitive:Parraysets ~args loc
-  | Pmakelist _mutable_flag (*FIXME*) -> prim ~primitive:Pmakelist ~args loc
+  | Pmakelist -> prim ~primitive:Pmakelist ~args loc
   | Pmakedict -> prim ~primitive:Pmakedict ~args loc
   | Pdict_has -> prim ~primitive:Pdict_has ~args loc
   | Pawait -> prim ~primitive:Pawait ~args loc

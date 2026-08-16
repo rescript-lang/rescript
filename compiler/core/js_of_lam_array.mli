@@ -24,7 +24,7 @@
 
 (** Utilities for creating Array of JS IR *)
 
-val make_array : J.mutable_flag -> J.expression list -> J.expression
+val make_array : J.expression list -> J.expression
 (** create an array *)
 
 val set_array : J.expression -> J.expression -> J.expression -> J.expression
