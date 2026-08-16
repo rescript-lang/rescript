@@ -441,6 +441,7 @@ __metadata:
     "@rescript/runtime": "workspace:^"
     rescript: "workspace:^"
   peerDependencies:
+    "@rescript/runtime": "workspace:^"
     rescript: "workspace:^"
   languageName: unknown
   linkType: soft

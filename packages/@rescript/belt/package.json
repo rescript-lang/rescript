@@ -41,13 +41,12 @@
     "clean": "rescript clean",
     "build": "rescript build && touch .buildstamp"
   },
-  "dependencies": {
-    "@rescript/runtime": "workspace:^"
-  },
   "peerDependencies": {
+    "@rescript/runtime": "workspace:^",
     "rescript": "workspace:^"
   },
   "devDependencies": {
+    "@rescript/runtime": "workspace:^",
     "rescript": "workspace:^"
   },
   "preferUnplugged": true

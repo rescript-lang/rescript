@@ -409,7 +409,7 @@ jobs:
       - name: Publish packages to pkg.pr.new
         id: publish
         run: |
-          yarn dlx pkg-pr-new publish "." "./packages/@rescript/*"
+          yarn dlx pkg-pr-new publish --yarn "." "./packages/@rescript/*"
 
   api-docs:
     needs:
@@ -502,6 +502,7 @@ jobs:
           COMMIT_SHA="${{ needs.pkg-pr-new.outputs.commit_sha }}"
           npm i --no-audit \
             "https://pkg.pr.new/rescript-lang/rescript@${COMMIT_SHA}" \
+            "https://pkg.pr.new/rescript-lang/rescript/@rescript/runtime@${COMMIT_SHA}" \
             "https://pkg.pr.new/rescript-lang/rescript/@rescript/belt@${COMMIT_SHA}"
         shell: bash
         working-directory: ${{ steps.tmp-dir.outputs.path }}
@@ -568,6 +569,7 @@ jobs:
           # pnpm 10 blocks pkg.pr.new's URL-based platform subdependencies unless block-exotic-subdeps is disabled.
           pnpm --config.block-exotic-subdeps=false i \
             "https://pkg.pr.new/rescript-lang/rescript@${COMMIT_SHA}" \
+            "https://pkg.pr.new/rescript-lang/rescript/@rescript/runtime@${COMMIT_SHA}" \
             "https://pkg.pr.new/rescript-lang/rescript/@rescript/belt@${COMMIT_SHA}"
         shell: bash
         working-directory: ${{ steps.tmp-dir.outputs.path }}
