@@ -5,16 +5,15 @@ __metadata:
   version: 8
   cacheKey: 10c0
 
-"@rescript/belt@file:../../packages/@rescript/belt::locator=testrepo%40workspace%3A.":
-  version: 13.0.0-alpha.6
-  resolution: "@rescript/belt@file:../../packages/@rescript/belt#../../packages/@rescript/belt::hash=e6c837&locator=testrepo%40workspace%3A."
+"@rescript/belt@portal:../../packages/@rescript/belt::locator=testrepo%40workspace%3A.":
+  version: 0.0.0-use.local
+  resolution: "@rescript/belt@portal:../../packages/@rescript/belt::locator=testrepo%40workspace%3A."
   dependencies:
     "@rescript/runtime": "workspace:^"
   peerDependencies:
     rescript: "workspace:^"
-  checksum: 10c0/136562c14c814a6e101316a6693089f106a74f451d592325e541c14ab768a6a368189c7091cec5a15527f306c16bfe083ac8c87481603289e03b851fe9a717b4
   languageName: node
-  linkType: hard
+  linkType: soft
 
 "@rescript/darwin-arm64@npm:12.0.0":
   version: 12.0.0
@@ -72,13 +71,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@rescript/runtime@file:../../packages/@rescript/runtime::locator=testrepo%40workspace%3A.":
-  version: 13.0.0-alpha.6
-  resolution: "@rescript/runtime@file:../../packages/@rescript/runtime#../../packages/@rescript/runtime::hash=80282b&locator=testrepo%40workspace%3A."
-  checksum: 10c0/0ad616bbcc31daa731f4f9689184195ff88695462b934e128a84d2db9335d68cda47e9788d6d8671960bb612fd6c75083ab0eb1c283b33ad91ef508f9b5b5250
-  languageName: node
-  linkType: hard
-
 "@rescript/runtime@npm:12.0.0":
   version: 12.0.0
   resolution: "@rescript/runtime@npm:12.0.0"
@@ -92,6 +84,12 @@ __metadata:
   checksum: 10c0/6d7b58078cec4444a3abd50fdb2ef35dfcc155c45cf824219dbc20180caef1aa891b10f4edf0c13396f7438023014eff0ab9289c9c8fae31d1a6e9d3849924a4
   languageName: node
   linkType: hard
+
+"@rescript/runtime@portal:../../packages/@rescript/runtime::locator=testrepo%40workspace%3A.":
+  version: 0.0.0-use.local
+  resolution: "@rescript/runtime@portal:../../packages/@rescript/runtime::locator=testrepo%40workspace%3A."
+  languageName: node
+  linkType: soft
 
 "@rescript/webapi@npm:0.1.0-experimental-73e6a0d":
   version: 0.1.0-experimental-73e6a0d
@@ -337,7 +335,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "testrepo@workspace:."
   dependencies:
-    "@rescript/belt": "file:../../packages/@rescript/belt"
+    "@rescript/belt": "portal:../../packages/@rescript/belt"
     rescript: "npm:12.0.0"
   languageName: unknown
   linkType: soft
