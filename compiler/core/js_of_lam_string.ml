@@ -30,5 +30,3 @@ module E = Js_exp_make
 *)
 
 let const_char (i : int) = E.int ~c:i (Int32.of_int @@ i)
-
-(* string [s[i]] expects to return a [ocaml_char] *)

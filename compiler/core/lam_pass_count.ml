@@ -36,6 +36,10 @@ let absorb_info (x : used_info) (y : used_info) =
     x.times <- x0 + y0;
     if captured then x.captured <- true
 
+(* The global table [occ] associates each let-bound identifier with its number
+   of uses. A use under a lambda or within a loop is treated as multiple uses,
+   since neither case is suitable for inlining. The local table [bv] tracks
+   locally let-bound variables and is reset when crossing lambdas and loops. *)
 let collect_occurs lam : occ_tbl =
   let occ : occ_tbl = Hash_ident.create 83 in
 

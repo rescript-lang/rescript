@@ -133,9 +133,6 @@ let query_package_infos ({name; module_systems} : t)
       Package_found {rel_path; pkg_rel_path; suffix = k.suffix}
     | None -> Package_not_found)
 
-(* for a single pass compilation, [output_dir]
-   can be cached
-*)
 let add_npm_package_path (packages_info : t) (s : string) : t =
   if is_empty packages_info then
     Bsc_args.bad_arg "Set package name first using -bs-package-name"

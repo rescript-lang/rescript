@@ -46,5 +46,3 @@ let set_field (field_info : Lam_compat.set_field_dbg_info) e i e0 =
   | Fld_record_extension_set name -> E.extension_assign e i name e0
   | Fld_record_inline_set name | Fld_record_set name ->
     E.record_assign e i name e0
-
-(* This dynamism commes from oo compilaton, it should not happen in record *)
