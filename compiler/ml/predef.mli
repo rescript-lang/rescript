@@ -54,11 +54,15 @@ val path_tagged_template : Path.t
 
 val path_match_failure : Path.t
 val path_assert_failure : Path.t
+
 val build_initial_env :
   (Ident.t -> type_declaration -> 'a -> 'a) ->
   (Ident.t -> extension_constructor -> 'a -> 'a) ->
   'a ->
   'a
+(** Build the initial environment. Since [Predef] and [Env] are mutually
+    recursive, this function is parameterized over the empty environment and
+    the functions that add types and exceptions. *)
 
 (* To initialize linker tables *)
 
