@@ -42,12 +42,13 @@ val equal : t
 val trailing_comma : t
 
 val will_break : t -> bool
-(** [will_break doc] checks whether [doc] contains forced line breaks.
+(** [will_break doc] checks whether [doc] contains forced line breaks. For each
+    [custom_layout], it only inspects the first alternative.
 
-    Forced breaks are not propagated through [customLayout], because doing so
+    Forced breaks are not propagated through [custom_layout], because doing so
     would always select the last layout the algorithm tries. Consumers can use
     [will_break] to detect a forced break in a custom layout and explicitly add
-    [breakParent] to propagate it to the parent document. *)
+    [break_parent] to propagate it to the parent document. *)
 
 val to_string : width:int -> t -> string
 val debug : t -> unit [@@live]
