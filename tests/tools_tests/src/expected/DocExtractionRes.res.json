@@ -48,8 +48,21 @@
       "detail": {
         "kind": "signature",
         "details": {
-          "parameters": [ { "path": "string", "genericTypeParameters": [] } ],
-          "returnType": { "path": "t", "genericTypeParameters": [] }
+          "parameters": [
+            {
+              "optional": false,
+              "type": {
+                "kind": "constructor",
+                "path": "string",
+                "genericTypeParameters": []
+              }
+            }
+          ],
+          "returnType": {
+            "kind": "constructor",
+            "path": "t",
+            "genericTypeParameters": []
+          }
         }
       }
     },
@@ -67,8 +80,21 @@
       "detail": {
         "kind": "signature",
         "details": {
-          "parameters": [ { "path": "t", "genericTypeParameters": [] } ],
-          "returnType": { "path": "t", "genericTypeParameters": [] }
+          "parameters": [
+            {
+              "optional": false,
+              "type": {
+                "kind": "constructor",
+                "path": "t",
+                "genericTypeParameters": []
+              }
+            }
+          ],
+          "returnType": {
+            "kind": "constructor",
+            "path": "t",
+            "genericTypeParameters": []
+          }
         }
       }
     },
@@ -82,13 +108,6 @@
         "filepath": "src/DocExtractionRes.res",
         "line": 26,
         "col": 5
-      },
-      "detail": {
-        "kind": "signature",
-        "details": {
-          "parameters": [],
-          "returnType": { "path": "int", "genericTypeParameters": [] }
-        }
       }
     },
     {
@@ -211,11 +230,19 @@
             "details": {
               "parameters": [
                 {
-                  "path": "SomeInnerModule.status",
-                  "genericTypeParameters": []
+                  "optional": false,
+                  "type": {
+                    "kind": "constructor",
+                    "path": "SomeInnerModule.status",
+                    "genericTypeParameters": []
+                  }
                 }
               ],
-              "returnType": { "path": "bool", "genericTypeParameters": [] }
+              "returnType": {
+                "kind": "constructor",
+                "path": "bool",
+                "genericTypeParameters": []
+              }
             }
           }
         },
@@ -312,9 +339,20 @@
             "kind": "signature",
             "details": {
               "parameters": [
-                { "path": "unit", "genericTypeParameters": [] }
+                {
+                  "optional": false,
+                  "type": {
+                    "kind": "constructor",
+                    "path": "unit",
+                    "genericTypeParameters": []
+                  }
+                }
               ],
-              "returnType": { "path": "t", "genericTypeParameters": [] }
+              "returnType": {
+                "kind": "constructor",
+                "path": "t",
+                "genericTypeParameters": []
+              }
             }
           }
         }
@@ -357,8 +395,21 @@
           "detail": {
             "kind": "signature",
             "details": {
-              "parameters": [ { "path": "t", "genericTypeParameters": [] } ],
-              "returnType": { "path": "t", "genericTypeParameters": [] }
+              "parameters": [
+                {
+                  "optional": false,
+                  "type": {
+                    "kind": "constructor",
+                    "path": "t",
+                    "genericTypeParameters": []
+                  }
+                }
+              ],
+              "returnType": {
+                "kind": "constructor",
+                "path": "t",
+                "genericTypeParameters": []
+              }
             }
           }
         }
@@ -402,9 +453,20 @@
             "kind": "signature",
             "details": {
               "parameters": [
-                { "path": "int", "genericTypeParameters": [] }
+                {
+                  "optional": false,
+                  "type": {
+                    "kind": "constructor",
+                    "path": "int",
+                    "genericTypeParameters": []
+                  }
+                }
               ],
-              "returnType": { "path": "int", "genericTypeParameters": [] }
+              "returnType": {
+                "kind": "constructor",
+                "path": "int",
+                "genericTypeParameters": []
+              }
             }
           }
         }
@@ -432,13 +494,6 @@
             "filepath": "src/DocExtractionRes.res",
             "line": 138,
             "col": 3
-          },
-          "detail": {
-            "kind": "signature",
-            "details": {
-              "parameters": [],
-              "returnType": { "path": "int", "genericTypeParameters": [] }
-            }
           }
         }
       ]
@@ -464,13 +519,6 @@
             "filepath": "src/DocExtractionRes.res",
             "line": 142,
             "col": 7
-          },
-          "detail": {
-            "kind": "signature",
-            "details": {
-              "parameters": [],
-              "returnType": { "path": "int", "genericTypeParameters": [] }
-            }
           }
         }
       ],
@@ -508,16 +556,6 @@
                 "filepath": "src/DocExtractionRes.res",
                 "line": 147,
                 "col": 9
-              },
-              "detail": {
-                "kind": "signature",
-                "details": {
-                  "parameters": [],
-                  "returnType": {
-                    "path": "int",
-                    "genericTypeParameters": []
-                  }
-                }
               }
             }
           ],

@@ -16,14 +16,7 @@
           "name": "name",
           "signature": "let name: string",
           "docstrings": [],
-          "source": { "filepath": "src/ModC.resi", "line": 5, "col": 3 },
-          "detail": {
-            "kind": "signature",
-            "details": {
-              "parameters": [],
-              "returnType": { "path": "string", "genericTypeParameters": [] }
-            }
-          }
+          "source": { "filepath": "src/ModC.resi", "line": 5, "col": 3 }
         }
       ]
     }
