@@ -706,7 +706,8 @@ module E = struct
             in
             {
               e1 with
-              pexp_desc = Pexp_fun {params; body; async = f.async};
+              pexp_desc =
+                Pexp_fun {newtypes = []; params; body; async = f.async};
               pexp_attributes = e1.pexp_attributes @ node_attrs;
             })
         | _ -> exp1)
@@ -779,8 +780,55 @@ module E = struct
     | Pexp_lazy _ -> failwith "Pexp_lazy is no longer present in ReScript"
     | Pexp_poly _ -> failwith "Pexp_poly is no longer present in ReScript"
     | Pexp_object () -> assert false
-    | Pexp_newtype (s, e) ->
-      newtype ~loc ~attrs (map_loc sub s) (sub.expr sub e)
+    | Pexp_newtype (s, e) -> (
+      (* Fuse a chain of newtype wrappers over a Function$ node into the
+         function's [newtypes] field. Each wrapper's attributes are its
+         newtype's attributes, except on this outermost wrapper:
+         attributes before the internal [_res.newtype_attrs] marker (or
+         all of them, when there is no marker) are function-node
+         attributes, the ones after the marker belong to the first
+         newtype. Chains over anything else (e.g. the
+         [let f: type t. ...] sugar) keep their [Pexp_newtype] nodes. *)
+      let node_attrs, first_nt_attrs =
+        let rec split acc = function
+          | ({txt = "_res.newtype_attrs"}, _) :: rest -> (List.rev acc, rest)
+          | a :: rest -> split (a :: acc) rest
+          | [] -> (List.rev acc, [])
+        in
+        split [] attrs
+      in
+      let rec gather acc (e0 : Parsetree0.expression) =
+        match e0.pexp_desc with
+        | Pexp_newtype (s1, body) ->
+          gather
+            ((map_loc sub s1, sub.attributes sub e0.pexp_attributes) :: acc)
+            body
+        | Pexp_construct ({txt = Longident.Lident "Function$"}, Some _) ->
+          Some (List.rev acc, e0)
+        | _ -> None
+      in
+      match gather [(map_loc sub s, first_nt_attrs)] e with
+      | Some (newtypes, base) -> (
+        let base1 = sub.expr sub base in
+        match base1.pexp_desc with
+        | Pexp_fun ({newtypes = []} as f) ->
+          {
+            Pt.pexp_desc = Pexp_fun {f with newtypes};
+            pexp_attributes = base1.pexp_attributes @ node_attrs;
+            pexp_loc = loc;
+          }
+        | _ -> (
+          (* PPX-mangled Function$: keep the wrapper chain as-is. *)
+          match newtypes with
+          | [] -> assert false
+          | (n0, _) :: rest ->
+            let inner =
+              List.fold_right
+                (fun (n, a) acc -> newtype ~loc ~attrs:a n acc)
+                rest base1
+            in
+            newtype ~loc ~attrs n0 inner))
+      | None -> newtype ~loc ~attrs (map_loc sub s) (sub.expr sub e))
     | Pexp_pack me -> pack ~loc ~attrs (sub.module_expr sub me)
     | Pexp_open (ovf, lid, e) ->
       open_ ~loc ~attrs ovf (map_loc sub lid) (sub.expr sub e)

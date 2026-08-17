@@ -627,17 +627,23 @@ and expression ctxt f x =
     | (Pexp_let _ | Pexp_letmodule _ | Pexp_open _ | Pexp_letexception _)
       when ctxt.semi ->
       paren true (expression reset_ctxt) f x
-    | Pexp_fun {params; body; async} ->
+    | Pexp_fun {newtypes; params; body; async} ->
       let arity_str = "[arity:" ^ string_of_int (List.length params) ^ "]" in
       let async_str = if async then "async " else "" in
+      let rec pp_newtypes f = function
+        | [] -> ()
+        | ((name : string Location.loc), nt_attrs) :: rest ->
+          pp f "%a(type %s)@;" (attributes ctxt) nt_attrs name.txt;
+          pp_newtypes f rest
+      in
       let rec pp_params f = function
         | [] -> ()
         | {p_lbl; p_default; p_pat} :: rest ->
           pp f "%a" (label_exp ctxt) (p_lbl, p_default, p_pat);
           pp_params f rest
       in
-      pp f "@[<2>%sfun@;%s%a->@;%a@]" async_str arity_str pp_params params
-        (expression ctxt) body
+      pp f "@[<2>%sfun@;%a%s%a->@;%a@]" async_str pp_newtypes newtypes arity_str
+        pp_params params (expression ctxt) body
     | Pexp_match (e, l) ->
       pp f "@[<hv0>@[<hv0>@[<2>match %a@]@ with@]%a@]" (expression reset_ctxt) e
         (case_list ctxt) l
@@ -1062,9 +1068,15 @@ and binding ctxt f {pvb_pat = p; pvb_expr = x; _} =
     if x.pexp_attributes <> [] then pp f "=@;%a" (expression ctxt) x
     else
       match x.pexp_desc with
-      | Pexp_fun {params; body; async} ->
+      | Pexp_fun {newtypes; params; body; async} ->
         let arity_str = "[arity:" ^ string_of_int (List.length params) ^ "]" in
         let async_str = if async then "async " else "" in
+        let rec pp_newtypes f = function
+          | [] -> ()
+          | ((name : string Location.loc), nt_attrs) :: rest ->
+            pp f "%a(type@ %s)@ " (attributes ctxt) nt_attrs name.txt;
+            pp_newtypes f rest
+        in
         let pp_param f {p_lbl; p_default; p_pat} =
           if p_lbl = Nolabel then simple_pattern ctxt f p_pat
           else label_exp ctxt f (p_lbl, p_default, p_pat)
@@ -1075,8 +1087,8 @@ and binding ctxt f {pvb_pat = p; pvb_expr = x; _} =
             pp f "%a@ " pp_param param;
             pp_params f rest
         in
-        pp f "%s%s%a%a" async_str arity_str pp_params params
-          pp_print_pexp_function body
+        pp f "%s%a%s%a%a" async_str pp_newtypes newtypes arity_str pp_params
+          params pp_print_pexp_function body
       | Pexp_newtype (str, e) ->
         pp f "(type@ %s)@ %a" str.txt pp_print_pexp_function e
       | _ -> pp f "=@;%a" (expression ctxt) x

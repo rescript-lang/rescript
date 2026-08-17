@@ -241,11 +241,13 @@ let make_props_record_type_sig ~core_type_of_attr ~external_
 
 let rec recursively_transform_named_args_for_make expr args newtypes core_type =
   match expr.pexp_desc with
-  | Pexp_fun {params; body} ->
+  | Pexp_fun {newtypes = fun_newtypes; params; body} ->
+    (* Collected newtypes are accumulated in reverse source order. *)
+    let newtypes = List.rev_append fun_newtypes newtypes in
     transform_params_for_make ~expr ~body params args newtypes core_type
   | Pexp_newtype (label, expression) ->
     recursively_transform_named_args_for_make expression args
-      (label :: newtypes) core_type
+      ((label, []) :: newtypes) core_type
   | Pexp_constraint (expression, core_type) ->
     recursively_transform_named_args_for_make expression args newtypes
       (Some core_type)
@@ -793,12 +795,10 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name binding =
                   | [] -> []
                   | _ -> [Typ.any ()]))))
       in
-      Exp.fun_ ~async:is_async (props_param :: nolabel_params) expression
-    in
-    let expression =
-      (* Add new tupes (type a,b,c) to make's definition *)
-      newtypes
-      |> List.fold_left (fun e newtype -> Exp.newtype newtype e) expression
+      (* Add the collected newtypes (type a b c) to make's definition *)
+      Exp.fun_ ~async:is_async ~newtypes:(List.rev newtypes)
+        (props_param :: nolabel_params)
+        expression
     in
     (* let make = ({id, name, ...}: props<'id, 'name, ...>) => { ... } *)
     let binding =

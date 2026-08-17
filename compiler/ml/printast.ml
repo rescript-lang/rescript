@@ -249,10 +249,15 @@ and expression i ppf x =
     line i ppf "Pexp_let %a\n" fmt_rec_flag rf;
     list i value_binding ppf l;
     expression i ppf e
-  | Pexp_fun {params; body; async} ->
+  | Pexp_fun {newtypes; params; body; async} ->
     line i ppf "Pexp_fun\n";
     let () = if async then line i ppf "async\n" in
     line i ppf "arity:%d\n" (List.length params);
+    List.iter
+      (fun ((name : string loc), attrs) ->
+        attributes i ppf attrs;
+        line i ppf "newtype \"%s\"\n" name.txt)
+      newtypes;
     List.iter
       (fun {p_attrs; p_lbl; p_default; p_pat} ->
         attributes i ppf p_attrs;

@@ -48,3 +48,6 @@ external phantom: (~a: int, @as(json`false`) _, ~c: string) => unit = "phantom"
 
 // external with uncurried callback argument
 @val external onEvent: (string, (~event: string) => unit) => unit = "on"
+
+// attributed newtype groups: attribute ownership must survive the v0 bridge
+let grouped = @fn (@one type a b, @two type c, x: a, y: c) => (x, y)
