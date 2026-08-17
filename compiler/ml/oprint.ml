@@ -253,9 +253,10 @@ and print_out_type_1 ppf = function
     pp_open_box ppf 0;
     List.iter
       (fun (lab, ty1) ->
-        if lab <> "" then (
-          pp_print_string ppf lab;
-          pp_print_char ppf ':');
+        (match lab with
+        | Asttypes.Noloc.Nolabel -> ()
+        | Asttypes.Noloc.Labelled label -> fprintf ppf "%s:" label
+        | Asttypes.Noloc.Optional label -> fprintf ppf "?%s:" label);
         print_out_type_2 ppf ty1;
         pp_print_string ppf " ->";
         pp_print_space ppf ())
@@ -406,10 +407,6 @@ let rec print_out_class_type ppf = function
       | tyl -> fprintf ppf "@[<1>[%a]@]@ " (print_typlist !out_type ",") tyl
     in
     fprintf ppf "@[%a%a@]" pr_tyl tyl print_ident id
-  | Octy_arrow (lab, ty, cty) ->
-    fprintf ppf "@[%s%a ->@ %a@]"
-      (if lab <> "" then lab ^ ":" else "")
-      print_out_type_2 ty print_out_class_type cty
   | Octy_signature (self_ty, csil) ->
     let pr_param ppf = function
       | Some ty -> fprintf ppf "@ @[(%a)@]" !out_type ty

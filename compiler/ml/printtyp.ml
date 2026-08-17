@@ -616,7 +616,6 @@ let rec tree_of_typexp ?(printing_context : printing_context option) sch ty =
         let args =
           List.map
             (fun (arg : Types.arg) ->
-              let lab = string_of_label arg.lbl in
               let t1 =
                 if is_optional arg.lbl then
                   match (repr arg.typ).desc with
@@ -626,7 +625,7 @@ let rec tree_of_typexp ?(printing_context : printing_context option) sch ty =
                   | _ -> Otyp_stuff "<hidden>"
                 else tree_of_typexp ?printing_context sch arg.typ
               in
-              (lab, t1))
+              (Asttypes.to_noloc arg.lbl, t1))
             params
         in
         Otyp_arrow (args, tree_of_typexp ?printing_context sch ret)

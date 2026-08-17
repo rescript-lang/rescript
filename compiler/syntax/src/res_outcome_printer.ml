@@ -238,29 +238,26 @@ let rec print_out_type_doc (out_type : Outcometree.out_type) =
 
 and print_out_arrow_type typ =
   let typ_args, typ = collect_arrow_args typ in
+  let print_labeled_arg label optional_indicator typ =
+    Doc.group
+      (Doc.concat
+         [
+           Doc.text ("~" ^ label ^ ": ");
+           print_out_type_doc typ;
+           optional_indicator;
+         ])
+  in
   let args =
     Doc.join
       ~sep:(Doc.concat [Doc.comma; Doc.line])
       (List.map
          (fun (lbl, typ) ->
-           let lbl_len = String.length lbl in
-           if lbl_len = 0 then print_out_type_doc typ
-           else
-             let lbl, optional_indicator =
-               (* the ocaml compiler hardcodes the optional label inside the string of the label in printtyp.ml *)
-               match String.unsafe_get lbl 0 with
-               | '?' ->
-                 ( (String.sub [@doesNotRaise]) lbl 1 (lbl_len - 1),
-                   Doc.text "=?" )
-               | _ -> (lbl, Doc.nil)
-             in
-             Doc.group
-               (Doc.concat
-                  [
-                    Doc.text ("~" ^ lbl ^ ": ");
-                    print_out_type_doc typ;
-                    optional_indicator;
-                  ]))
+           match lbl with
+           | Asttypes.Noloc.Nolabel -> print_out_type_doc typ
+           | Asttypes.Noloc.Labelled label ->
+             print_labeled_arg label Doc.nil typ
+           | Asttypes.Noloc.Optional label ->
+             print_labeled_arg label (Doc.text "=?") typ)
          typ_args)
   in
   let args_doc =
@@ -268,7 +265,7 @@ and print_out_arrow_type typ =
       match typ_args with
       | [(_, (Otyp_tuple _ | Otyp_arrow _))] -> true
       (* single argument should not be wrapped *)
-      | [("", _)] -> false
+      | [(Asttypes.Noloc.Nolabel, _)] -> false
       | _ -> true
     in
     if needs_parens then
