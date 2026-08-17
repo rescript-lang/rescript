@@ -158,9 +158,9 @@ module Exp = struct
   let ident ?loc ?attrs a = mk ?loc ?attrs (Pexp_ident a)
   let constant ?loc ?attrs a = mk ?loc ?attrs (Pexp_constant a)
   let let_ ?loc ?attrs a b c = mk ?loc ?attrs (Pexp_let (a, b, c))
-  let fun_ ?loc ?attrs ?(async = false) params body =
+  let fun_ ?loc ?attrs ?(async = false) ?(newtypes = []) params body =
     assert (params <> []);
-    mk ?loc ?attrs (Pexp_fun {params; body; async})
+    mk ?loc ?attrs (Pexp_fun {newtypes; params; body; async})
 
   let fun_param ?(attrs = []) ?default lbl pat =
     {p_attrs = attrs; p_lbl = lbl; p_default = default; p_pat = pat}

@@ -185,6 +185,19 @@ type fun_param_kind =
     }
   | NewTypes of {attrs: Parsetree.attributes; locs: string Asttypes.loc list}
 
+(* Turns the function's newtypes into printable groups: a new group starts
+   at each attribute-bearing newtype, matching how the parser distributes
+   group attributes. *)
+let group_newtypes newtypes =
+  List.fold_left
+    (fun groups ((name : string Asttypes.loc), attrs) ->
+      match groups with
+      | (gattrs, locs) :: rest when attrs = [] ->
+        (gattrs, locs @ [name]) :: rest
+      | _ -> (attrs, [name]) :: groups)
+    [] newtypes
+  |> List.rev
+
 let fun_expr expr_ =
   let params_of_fun params =
     List.map
@@ -192,6 +205,10 @@ let fun_expr expr_ =
         Parameter
           {attrs = p_attrs; lbl = p_lbl; default_expr = p_default; pat = p_pat})
       params
+  in
+  let newtype_params newtypes =
+    group_newtypes newtypes
+    |> List.map (fun (attrs, locs) -> NewTypes {attrs; locs})
   in
   (* Turns (type t, type u, type z) into "type t u z". An attribute on a
      nested node (only constructible via PPX) stops the merge so the
@@ -205,14 +222,21 @@ let fun_expr expr_ =
   in
   match expr_ with
   | {pexp_desc = Pexp_newtype (string_loc, rest)} -> (
+    (* PPX-authored wrapper chains; the parser puts a function's newtypes
+       in the [newtypes] field instead. *)
     let string_locs, return_expr = collect_new_types [string_loc] rest in
     let newtype_param = NewTypes {attrs = []; locs = string_locs} in
     match return_expr with
-    | {pexp_desc = Pexp_fun {params; body; async}; pexp_attributes = []} ->
-      (async, newtype_param :: params_of_fun params, body)
+    | {
+     pexp_desc = Pexp_fun {newtypes; params; body; async};
+     pexp_attributes = [];
+    } ->
+      ( async,
+        (newtype_param :: newtype_params newtypes) @ params_of_fun params,
+        body )
     | _ -> (false, [newtype_param], return_expr))
-  | {pexp_desc = Pexp_fun {params; body; async}} ->
-    (async, params_of_fun params, body)
+  | {pexp_desc = Pexp_fun {newtypes; params; body; async}} ->
+    (async, newtype_params newtypes @ params_of_fun params, body)
   | _ -> (false, [], expr_)
 
 let process_braces_attr expr =

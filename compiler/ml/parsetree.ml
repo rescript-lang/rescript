@@ -232,10 +232,18 @@ and expression_desc =
     (* let P1 = E1 and ... and Pn = EN in E       (flag = Nonrecursive)
        let rec P1 = E1 and ... and Pn = EN in E   (flag = Recursive)
     *)
-  | Pexp_fun of {params: fun_param list; body: expression; async: bool}
-    (* (P1, ~l:P2, ?l:P3=E0) => E           n-ary uncurried function.
+  | Pexp_fun of {
+      newtypes: (string loc * attributes) list;
+      params: fun_param list;
+      body: expression;
+      async: bool;
+    }
+    (* (type t, P1, ~l:P2, ?l:P3=E0) => E   n-ary uncurried function.
        The function's arity is [List.length params]; a function returning
        another function is a nested [Pexp_fun] in [body].
+       [newtypes] are the function's locally abstract types, each with its
+       own attributes; the parser hoists them in front of the value
+       parameters.
 
        Notes:
        - A default expression is only allowed on Optional parameters.

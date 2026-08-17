@@ -95,7 +95,7 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
   | Pexp_newtype (s, body) ->
     let res = self.expr self body in
     {e with pexp_desc = Pexp_newtype (s, res)}
-  | Pexp_fun {params; body; async} -> (
+  | Pexp_fun {newtypes; params; body; async} -> (
     match Ast_attributes.process_attributes_rev e.pexp_attributes with
     | Nothing, _ ->
       (* Handle @async x => y => ... is in async context *)
@@ -116,19 +116,29 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
          mapper did (GH #7974). *)
       let body = self.expr self body in
       in_function_def := saved_in_function_def;
+      let newtypes =
+        Ext_list.map newtypes (fun (name, nt_attrs) ->
+            (name, self.attributes self nt_attrs))
+      in
       let mapped =
-        Ast_helper.Exp.fun_ ~loc:e.pexp_loc ~attrs ~async params body
+        Ast_helper.Exp.fun_ ~loc:e.pexp_loc ~attrs ~async ~newtypes params body
       in
       Ast_async.make_function_async ~async mapped
     | Meth_callback _, pexp_attributes ->
       (* FIXME: does it make sense to have a label for [this] ? *)
       async_context := false;
-      {
-        e with
-        pexp_desc =
-          Ast_uncurry_gen.to_method_callback ~async e.pexp_loc self params body;
-        pexp_attributes;
-      })
+      let callback =
+        {
+          e with
+          pexp_desc =
+            Ast_uncurry_gen.to_method_callback ~async e.pexp_loc self params
+              body;
+          pexp_attributes;
+        }
+      in
+      (* Keep the locally abstract types in scope around the callback. *)
+      Ext_list.fold_right newtypes callback (fun (name, nt_attrs) acc ->
+          Ast_helper.Exp.newtype ~loc:e.pexp_loc ~attrs:nt_attrs name acc))
   | Pexp_apply _ -> Ast_exp_apply.app_exp_mapper e self
   | Pexp_match
       ( b,

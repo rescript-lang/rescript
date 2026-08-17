@@ -289,7 +289,12 @@ module E = struct
     | Pexp_let (_r, vbs, e) ->
       List.iter (sub.value_binding sub) vbs;
       sub.expr sub e
-    | Pexp_fun {params; body} ->
+    | Pexp_fun {newtypes; params; body} ->
+      List.iter
+        (fun (name, attrs) ->
+          iter_loc sub name;
+          sub.attributes sub attrs)
+        newtypes;
       List.iter
         (fun {p_default; p_pat} ->
           iter_opt (sub.expr sub) p_default;

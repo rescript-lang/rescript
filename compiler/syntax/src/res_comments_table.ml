@@ -359,6 +359,21 @@ let functor_type modtype =
 
 let fun_expr expr =
   let open Parsetree in
+  (* For simplicity reason each newtype gets converted to a Nolabel
+   * parameter with a fake pattern variable carrying the name's own
+   * location, otherwise this function would need to return a variant:
+   * | NormalParamater(...)
+   * | NewType(...)
+   * This complicates printing with an extra variant/boxing/allocation for a code-path
+   * that is not often used. Lets just keep it simple for now *)
+  let newtype_params newtypes =
+    (* One fake parameter per newtype, carrying the name's own location:
+       comments attach to exactly the identifier locations the printer
+       looks up when printing a "type a b" group. *)
+    newtypes
+    |> List.map (fun ((name : string Location.loc), attrs) ->
+           (attrs, Asttypes.Nolabel, None, Ast_helper.Pat.var ~loc:name.loc name))
+  in
   (* Turns (type t, type u, type z) into "type t u z" *)
   let rec collect_new_types acc return_expr =
     match return_expr with
@@ -379,16 +394,18 @@ let fun_expr expr =
       in
       (Location.mkloc txt loc, return_expr)
   in
-  (* For simplicity reason Pexp_newtype gets converted to a Nolabel parameter,
-   * otherwise this function would need to return a variant:
-   * | NormalParamater(...)
-   * | NewType(...)
-   * This complicates printing with an extra variant/boxing/allocation for a code-path
-   * that is not often used. Lets just keep it simple for now *)
   let params_of params =
     params
     |> List.map (fun {p_attrs; p_lbl; p_default; p_pat} ->
            (p_attrs, p_lbl, p_default, p_pat))
+  in
+  (* Comments are attached by walking the parameters in source order, so
+     the newtype groups are interleaved back at their original positions. *)
+  let in_source_order params =
+    List.stable_sort
+      (fun (_, _, _, (p1 : Parsetree.pattern)) (_, _, _, p2) ->
+        compare p1.ppat_loc.loc_start.pos_cnum p2.ppat_loc.loc_start.pos_cnum)
+      params
   in
   match expr with
   | {pexp_desc = Pexp_newtype (string_loc, rest); pexp_attributes = attrs} -> (
@@ -397,11 +414,14 @@ let fun_expr expr =
       (attrs, Asttypes.Nolabel, None, Ast_helper.Pat.var ~loc:string_loc.loc var)
     in
     match return_expr with
-    | {pexp_desc = Pexp_fun {params; body}; pexp_attributes = []} ->
-      ([], newtype_param :: params_of params, body)
+    | {pexp_desc = Pexp_fun {newtypes; params; body}; pexp_attributes = []} ->
+      ( [],
+        newtype_param
+        :: in_source_order (newtype_params newtypes @ params_of params),
+        body )
     | return_expr -> ([], [newtype_param], return_expr))
-  | {pexp_desc = Pexp_fun {params; body}; pexp_attributes = attrs} ->
-    (attrs, params_of params, body)
+  | {pexp_desc = Pexp_fun {newtypes; params; body}; pexp_attributes = attrs} ->
+    (attrs, in_source_order (newtype_params newtypes @ params_of params), body)
   | expr -> ([], [], expr)
 
 let rec is_block_expr expr =

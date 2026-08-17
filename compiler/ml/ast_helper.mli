@@ -134,6 +134,7 @@ module Exp : sig
     ?loc:loc ->
     ?attrs:attrs ->
     ?async:bool ->
+    ?newtypes:(str * attrs) list ->
     fun_param list ->
     expression ->
     expression

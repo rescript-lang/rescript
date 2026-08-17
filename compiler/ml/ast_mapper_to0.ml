@@ -405,11 +405,12 @@ module E = struct
     | Pexp_constant x -> constant ~loc ~attrs (map_constant x)
     | Pexp_let (r, vbs, e) ->
       let_ ~loc ~attrs r (List.map (sub.value_binding sub) vbs) (sub.expr sub e)
-    | Pexp_fun {params; body; async} ->
+    | Pexp_fun {newtypes; params; body; async} -> (
       (* Re-curry the n-ary function into the v0 chain of unary funs, and
          wrap it in Function$ carrying the arity as a res.arity attribute.
-         The head carries the function node's own attributes (and the
-         res.async marker), matching what the old parser produced.
+         Without newtypes the head carries the function node's own
+         attributes (and the res.async marker), matching what the old parser
+         produced; with newtypes they travel on the newtype wrapper instead.
 
          v0 fun nodes have a single attribute slot for what the current
          parsetree splits into node attributes and parameter attributes.
@@ -433,7 +434,10 @@ module E = struct
                 :: param_attrs
             in
             if is_head then
-              let base = attrs @ marked_param_attrs in
+              let base =
+                if newtypes = [] then attrs @ marked_param_attrs
+                else marked_param_attrs
+              in
               if async then
                 ({txt = "res.async"; loc = Location.none}, Pt.PStr []) :: base
               else base
@@ -457,9 +461,41 @@ module E = struct
                    (Pconst_integer (string_of_int arity, None)));
             ] )
       in
-      Ast_helper0.Exp.construct ~attrs:[arity_attr]
-        (Location.mkloc (Longident.Lident "Function$") e.pexp_loc)
-        (Some e)
+      let fn =
+        Ast_helper0.Exp.construct ~attrs:[arity_attr]
+          (Location.mkloc (Longident.Lident "Function$") e.pexp_loc)
+          (Some e)
+      in
+      (* Expand the newtypes back into the v0 wrapper chain around the
+         Function$ node. Each wrapper carries its own newtype's attributes.
+         The outermost wrapper is the whole expression in v0, so it also
+         carries the function node's attributes: when the first newtype has
+         attributes of its own, an internal [_res.newtype_attrs] marker
+         separates node attributes (before) from the first newtype's
+         attributes (after); without a marker every attribute on the
+         outermost wrapper is a function-node attribute, which is also how
+         wrapper attributes behaved before newtypes became a field. *)
+      match newtypes with
+      | [] -> fn
+      | (first_name, first_attrs) :: rest_newtypes ->
+        let inner =
+          List.fold_right
+            (fun (name, nt_attrs) acc ->
+              Ast_helper0.Exp.newtype ~loc
+                ~attrs:(sub.attributes sub nt_attrs)
+                (map_loc sub name) acc)
+            rest_newtypes fn
+        in
+        let first_attrs = sub.attributes sub first_attrs in
+        let outer_attrs =
+          if first_attrs = [] then attrs
+          else
+            attrs
+            @ ({txt = "_res.newtype_attrs"; loc = Location.none}, Pt.PStr [])
+              :: first_attrs
+        in
+        Ast_helper0.Exp.newtype ~loc ~attrs:outer_attrs (map_loc sub first_name)
+          inner)
     | Pexp_apply {funct = e; args; partial} ->
       let e =
         match (e.pexp_desc, args) with

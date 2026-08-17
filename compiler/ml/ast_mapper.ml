@@ -288,8 +288,12 @@ module E = struct
     | Pexp_constant x -> constant ~loc ~attrs x
     | Pexp_let (r, vbs, e) ->
       let_ ~loc ~attrs r (List.map (sub.value_binding sub) vbs) (sub.expr sub e)
-    | Pexp_fun {params; body; async} ->
+    | Pexp_fun {newtypes; params; body; async} ->
       fun_ ~loc ~attrs ~async
+        ~newtypes:
+          (List.map
+             (fun (name, attrs) -> (map_loc sub name, sub.attributes sub attrs))
+             newtypes)
         (List.map
            (fun param ->
              {

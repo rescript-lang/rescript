@@ -2466,7 +2466,29 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
         exp_attributes = sexp.pexp_attributes;
         exp_env = env;
       }
-  | Pexp_fun {params; body = sfun_body; async} ->
+  | Pexp_fun {newtypes = _ :: _ as newtypes; params; body = sfun_body; async} ->
+    (* Bring the function's locally abstract types into scope, innermost
+       last, typing the newtype-free function inside all of them - the same
+       nesting a chain of [Pexp_newtype] wrappers produced. Each group's
+       attributes open a warning scope over everything within its scope,
+       as the attributes on the former wrapper nodes did. The function
+       node's own attributes stay on the inner dispatch only, so its
+       warning scope is entered once, not once per newtype. *)
+    let rec peel env = function
+      | [] ->
+        (* The newtype-free function, typed directly against a fresh
+           expectation (the caller's expected type is unified outside the
+           newtype scopes, below): dispatching through [type_exp] instead
+           would enter the node's warning scope a second time. *)
+        type_function ~async loc sexp.pexp_attributes env (newvar ()) params
+          sfun_body
+      | (name, nt_attrs) :: rest ->
+        Builtin_attributes.warning_scope nt_attrs (fun () ->
+            type_newtype ~loc ~env ~name:name.Asttypes.txt ~attrs:nt_attrs
+              (fun new_env -> peel new_env rest))
+    in
+    rue (peel env newtypes)
+  | Pexp_fun {newtypes = []; params; body = sfun_body; async} ->
     type_function ~async loc sexp.pexp_attributes env ty_expected params
       sfun_body
   | Pexp_apply {funct = sfunct; args = sargs; partial; transformed_jsx} ->
@@ -3394,61 +3416,9 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
         exp_env = env;
       }
   | Pexp_newtype ({txt = name}, sbody) ->
-    let ty = newvar () in
-    (* remember original level *)
-    begin_def ();
-    (* Create a fake abstract type declaration for name. *)
-    let level = get_current_level () in
-    let decl =
-      {
-        type_params = [];
-        type_arity = 0;
-        type_kind = Type_abstract;
-        type_private = Public;
-        type_manifest = None;
-        type_variance = [];
-        type_newtype_level = Some (level, level);
-        type_loc = loc;
-        type_attributes = [];
-        type_immediate = false;
-        type_unboxed = unboxed_false_default_false;
-        type_inlined_types = [];
-      }
-    in
-    Ident.set_current_time ty.level;
-    let id, new_env = Env.enter_type name decl env in
-    Ctype.init_def (Ident.current_time ());
-
-    let body = type_exp ~context:None new_env sbody in
-    (* Replace every instance of this type constructor in the resulting
-       type. *)
-    let seen = Hashtbl.create 8 in
-    let rec replace t =
-      if Hashtbl.mem seen t.id then ()
-      else (
-        Hashtbl.add seen t.id ();
-        match t.desc with
-        | Tconstr (Path.Pident id', _, _) when id == id' -> link_type t ty
-        | _ -> Btype.iter_type_expr replace t)
-    in
-    let ety = Subst.type_expr Subst.identity body.exp_type in
-    replace ety;
-    (* back to original level *)
-    end_def ();
-
-    (* lower the levels of the result type *)
-    (* unify_var env ty ety; *)
-
-    (* non-expansive if the body is non-expansive, so we don't introduce
-       any new extra node in the typed AST. *)
     rue
-      {
-        body with
-        exp_loc = loc;
-        exp_type = ety;
-        exp_extra =
-          (Texp_newtype name, loc, sexp.pexp_attributes) :: body.exp_extra;
-      }
+      (type_newtype ~loc ~env ~name ~attrs:sexp.pexp_attributes (fun new_env ->
+           type_exp ~context:None new_env sbody))
   | Pexp_pack m ->
     let p, nl =
       match Ctype.expand_head env (instance env ty_expected) with
@@ -3506,6 +3476,68 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
   | Pexp_await _ -> (* should be handled earlier *) assert false
   | Pexp_jsx_element _ ->
     raise (Error (sexp.pexp_loc, Env.empty, Jsx_not_enabled))
+
+(* Type [type_body] with the locally abstract type [name] in scope: a
+   fresh abstract type constructor is entered into the environment, and
+   every occurrence of it in the result type is replaced by a type
+   variable afterwards. Used both for [Pexp_newtype] nodes and for the
+   [newtypes] of a function. The result still needs to be unified with
+   the expected type by the caller. *)
+and type_newtype ~loc ~env ~name ~attrs
+    (type_body : Env.t -> Typedtree.expression) =
+  let ty = newvar () in
+  (* remember original level *)
+  begin_def ();
+  (* Create a fake abstract type declaration for name. *)
+  let level = get_current_level () in
+  let decl =
+    {
+      type_params = [];
+      type_arity = 0;
+      type_kind = Type_abstract;
+      type_private = Public;
+      type_manifest = None;
+      type_variance = [];
+      type_newtype_level = Some (level, level);
+      type_loc = loc;
+      type_attributes = [];
+      type_immediate = false;
+      type_unboxed = unboxed_false_default_false;
+      type_inlined_types = [];
+    }
+  in
+  Ident.set_current_time ty.level;
+  let id, new_env = Env.enter_type name decl env in
+  Ctype.init_def (Ident.current_time ());
+
+  let body = type_body new_env in
+  (* Replace every instance of this type constructor in the resulting
+     type. *)
+  let seen = Hashtbl.create 8 in
+  let rec replace t =
+    if Hashtbl.mem seen t.id then ()
+    else (
+      Hashtbl.add seen t.id ();
+      match t.desc with
+      | Tconstr (Path.Pident id', _, _) when id == id' -> link_type t ty
+      | _ -> Btype.iter_type_expr replace t)
+  in
+  let ety = Subst.type_expr Subst.identity body.exp_type in
+  replace ety;
+  (* back to original level *)
+  end_def ();
+
+  (* lower the levels of the result type *)
+  (* unify_var env ty ety; *)
+
+  (* non-expansive if the body is non-expansive, so we don't introduce
+     any new extra node in the typed AST. *)
+  {
+    body with
+    exp_loc = loc;
+    exp_type = ety;
+    exp_extra = (Texp_newtype name, loc, attrs) :: body.exp_extra;
+  }
 
 and type_function ~async loc attrs env ty_expected_
     (sparams : Parsetree.fun_param list) sbody =

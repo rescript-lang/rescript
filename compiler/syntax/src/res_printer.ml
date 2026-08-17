@@ -2355,7 +2355,8 @@ and print_value_binding ~state ~rec_flag (vb : Parsetree.value_binding) cmt_tbl
        ppat_desc =
          Ppat_constraint (pattern, ({ptyp_desc = Ptyp_poly _} as pat_typ));
      };
-   pvb_expr = {pexp_desc = Pexp_newtype _} as expr;
+   pvb_expr =
+     {pexp_desc = Pexp_newtype _ | Pexp_fun {newtypes = _ :: _}} as expr;
   } -> (
     let _, parameters, return_expr = Parsetree_viewer.fun_expr expr in
     let abstract_type =

@@ -558,10 +558,16 @@ module Sexp_ast = struct
             Sexp.list (map_empty ~f:value_binding vbs);
             expression expr;
           ]
-      | Pexp_fun {params; body} ->
+      | Pexp_fun {newtypes; params; body} ->
         Sexp.list
           [
             Sexp.atom "Pexp_fun";
+            Sexp.list
+              (map_empty
+                 ~f:(fun ((name : string Location.loc), attrs) ->
+                   Sexp.list
+                     [Sexp.atom "newtype"; string name.txt; attributes attrs])
+                 newtypes);
             Sexp.list
               (map_empty
                  ~f:(fun {p_lbl; p_default; p_pat} ->
