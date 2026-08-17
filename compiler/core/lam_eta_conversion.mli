@@ -29,6 +29,3 @@
 *)
 
 val transform_under_supply : int -> Lam.ap_info -> Lam.t -> Lam.t list -> Lam.t
-
-val unsafe_adjust_to_arity :
-  Location.t -> to_:int -> ?from:int -> Lam.t -> Lam.t

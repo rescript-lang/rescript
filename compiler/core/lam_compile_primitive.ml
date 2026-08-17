@@ -155,8 +155,7 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
   | Pis_undefined -> E.is_undef (Ext_list.singleton_exn args)
   | Pis_null_undefined -> E.is_null_undefined (Ext_list.singleton_exn args)
   | Ptypeof -> E.typeof (Ext_list.singleton_exn args)
-  | Pjs_unsafe_downgrade _ | Pdebugger | Pjs_fn_make _ | Pjs_fn_make_unit
-  | Pjs_fn_method ->
+  | Pjs_unsafe_downgrade _ | Pdebugger | Pjs_fn_method ->
     assert false (* already handled by {!Lam_compile} *)
   | Pstringadd -> (
     match args with

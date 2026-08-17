@@ -300,8 +300,6 @@ type primitive =
   | Pis_poly_var_block
   | Pjs_raw_expr
   | Pjs_raw_stmt
-  | Pjs_fn_make of int
-  | Pjs_fn_make_unit
   | Pjs_fn_method
   (* Tagged template literal: [tag; strings_array; values_array] *)
   | Ptagged_template

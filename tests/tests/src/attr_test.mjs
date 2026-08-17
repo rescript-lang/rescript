@@ -5,8 +5,6 @@ function u(x, y) {
   return x + y | 0;
 }
 
-let h = 3;
-
 function max2(x, y) {
   return x + y;
 }
@@ -18,6 +16,8 @@ function f(x) {
     console.log("hei");
   });
 }
+
+let h = 3;
 
 export {
   u,

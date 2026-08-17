@@ -151,8 +151,6 @@ type t =
   | Pinit_mod
   | Pupdate_mod
   | Praw_js_code of Js_raw_info.t
-  | Pjs_fn_make of int
-  | Pjs_fn_make_unit
   | Pjs_fn_method
   | Pnull_to_opt
   | Pnull_undefined_to_opt

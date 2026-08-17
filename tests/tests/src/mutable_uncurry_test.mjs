@@ -34,77 +34,57 @@ function t3(param, param$1, param$2) {
 function ut4(param, param$1, param$2, param$3) {
   let x0 = param.contents;
   let x1 = param$1.contents;
-  return (param => {
-    let x2 = param.contents;
-    return param => {
-      let x3 = param.contents;
-      return [
-        x0,
-        x1,
-        x2,
-        x3
-      ];
-    };
-  })(param$2)(param$3);
+  let x2 = param$2.contents;
+  let x3 = param$3.contents;
+  return [
+    x0,
+    x1,
+    x2,
+    x3
+  ];
 }
 
 function t4(param, param$1, param$2, param$3) {
   let x0 = param.contents;
   let x1 = param$1.contents;
-  return (param => {
-    let x2 = param.contents;
-    return param => {
-      let x3 = param.contents;
-      return [
-        x0,
-        x1,
-        x2,
-        x3
-      ];
-    };
-  })(param$2)(param$3);
+  let x2 = param$2.contents;
+  let x3 = param$3.contents;
+  return [
+    x0,
+    x1,
+    x2,
+    x3
+  ];
 }
 
 function ut5(param, param$1, param$2, param$3, param$4) {
   let x0 = param.contents;
   let x1 = param$1.contents;
-  return (param => {
-    let x2 = param.contents;
-    return param => {
-      let x3 = param.contents;
-      return param => {
-        let x4 = param.contents;
-        return [
-          x0,
-          x1,
-          x2,
-          x3,
-          x4
-        ];
-      };
-    };
-  })(param$2)(param$3)(param$4);
+  let x2 = param$2.contents;
+  let x3 = param$3.contents;
+  let x4 = param$4.contents;
+  return [
+    x0,
+    x1,
+    x2,
+    x3,
+    x4
+  ];
 }
 
 function t5(param, param$1, param$2, param$3, param$4) {
   let x0 = param.contents;
   let x1 = param$1.contents;
-  return (param => {
-    let x2 = param.contents;
-    return param => {
-      let x3 = param.contents;
-      return param => {
-        let x4 = param.contents;
-        return [
-          x0,
-          x1,
-          x2,
-          x3,
-          x4
-        ];
-      };
-    };
-  })(param$2)(param$3)(param$4);
+  let x2 = param$2.contents;
+  let x3 = param$3.contents;
+  let x4 = param$4.contents;
+  return [
+    x0,
+    x1,
+    x2,
+    x3,
+    x4
+  ];
 }
 
 function nested0(param, param$1, param$2) {

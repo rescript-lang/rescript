@@ -3,8 +3,6 @@
 import * as Mocha from "mocha";
 import * as Test_utils from "./test_utils.mjs";
 
-let u = 3;
-
 function nullary() {
   return 3;
 }
@@ -13,27 +11,26 @@ function unary(a) {
   return a + 3 | 0;
 }
 
-let xx = 6;
-
-Mocha.test("ppx_apply_test_unary", () => Test_utils.eq("File \"ppx_apply_test.res\", line 12, characters 5-12", u, 3));
+Mocha.test("ppx_apply_test_unary", () => Test_utils.eq("File \"ppx_apply_test.res\", line 12, characters 5-12", 3, 3));
 
 function h(a) {
   return xx(a);
 }
 
 Mocha.describe("Ppx_apply_test", () => {
-  Mocha.test("function_application_test", () => {
-    let u = 3;
-    Test_utils.eq("File \"ppx_apply_test.res\", line 25, characters 7-14", u, 3);
-  });
+  Mocha.test("function_application_test", () => Test_utils.eq("File \"ppx_apply_test.res\", line 25, characters 7-14", 3, 3));
   Mocha.test("external_function_test", () => Test_utils.ok("File \"ppx_apply_test.res\", line 30, characters 7-14", true));
 });
+
+let u = 3;
+
+let xx$1 = 6;
 
 export {
   u,
   nullary,
   unary,
-  xx,
+  xx$1 as xx,
   h,
 }
 /*  Not a pure module */

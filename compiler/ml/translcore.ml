@@ -618,8 +618,16 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
       | None -> None
       | Some (directive, _) -> Some directive
     in
-    let arity = List.length fparams in
     let params, lbody, return_unit = transl_function e.exp_loc fparams body in
+    let one_unit_arg =
+      match (fparams, (Ctype.expand_head e.exp_env e.exp_type).desc) with
+      | [{fp_pat}], Tarrow ([{lbl = Nolabel; typ}], _)
+        when Typedtree.pat_bound_idents fp_pat = [] -> (
+        match (Ctype.expand_head e.exp_env typ).desc with
+        | Tconstr (Pident {name = "unit"}, [], _) -> true
+        | _ -> false)
+      | _ -> false
+    in
     let attr =
       {
         default_function_attribute with
@@ -627,23 +635,11 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
         async;
         return_unit;
         directive;
+        one_unit_arg;
       }
     in
     let loc = e.exp_loc in
-    let lambda = Lfunction {params; body = lbody; attr; loc} in
-    let prim =
-      let expanded = Ctype.expand_head e.exp_env e.exp_type in
-      match (Btype.repr expanded).desc with
-      | Tarrow ({lbl = Nolabel; typ} :: _, _) -> (
-        match (Ctype.expand_head e.exp_env typ).desc with
-        | Tconstr (Pident {name = "unit"}, [], _) -> Pjs_fn_make_unit
-        | _ -> Pjs_fn_make arity)
-      | _ -> Pjs_fn_make arity
-    in
-    Lprim
-      ( prim (* could be replaced with Opaque in the future except arity 0*),
-        [lambda],
-        loc )
+    Lfunction {params; body = lbody; attr; loc}
   | Texp_apply {funct; args = oargs}
     when List.exists
            (fun (attr, _) -> attr.txt = "res.taggedTemplate")
@@ -1016,33 +1012,12 @@ and transl_function loc (params : function_param list) body =
         fp_partial,
       is_base_type body.exp_env body.exp_type Predef.path_unit )
   | {fp_param; fp_pat; fp_partial} :: rest ->
-    if Parmatch.inactive ~partial:fp_partial fp_pat then
-      let lparams, lbody, return_unit = transl_function loc rest body in
-      ( fp_param :: lparams,
-        Matching.for_function loc None (Lvar fp_param)
-          [(fp_pat, lbody)]
-          fp_partial,
-        return_unit )
-    else
-      (* An "active" pattern (whose compilation can have side effects, e.g.
-         a lazy or string pattern) must run when its own parameter group is
-         applied: split the remaining parameters into a nested curried
-         function, as the legacy chain representation did. *)
-      let lparams, lbody, _ = transl_function loc rest body in
-      let inner =
-        Lfunction
-          {
-            params = lparams;
-            body = lbody;
-            attr = default_function_attribute;
-            loc;
-          }
-      in
-      ( [fp_param],
-        Matching.for_function loc None (Lvar fp_param)
-          [(fp_pat, inner)]
-          fp_partial,
-        false )
+    let lparams, lbody, return_unit = transl_function loc rest body in
+    ( fp_param :: lparams,
+      Matching.for_function loc None (Lvar fp_param)
+        [(fp_pat, lbody)]
+        fp_partial,
+      return_unit )
 
 and transl_let rec_flag pat_expr_list body =
   match rec_flag with
@@ -1080,20 +1055,6 @@ and transl_let rec_flag pat_expr_list body =
 
 and transl_record loc env fields repres opt_init_expr =
   match (opt_init_expr, repres, fields) with
-  | None, Record_unboxed _, [|({lbl_name; lbl_loc}, Overridden (_, expr), _)|]
-    ->
-    (* ReScript uncurried encoding *)
-    let loc = lbl_loc in
-    let lambda = transl_exp expr in
-    if lbl_name.[0] = 'I' then
-      let arity_s = String.sub lbl_name 1 (String.length lbl_name - 1) in
-      let arity = Int32.of_string arity_s |> Int32.to_int in
-      Lprim
-        ( Pjs_fn_make arity,
-          (* could be replaced with Opaque in the future except arity 0*)
-          [lambda],
-          loc )
-    else lambda
   | _ -> (
     let size = Array.length fields in
     let optional =

@@ -20,8 +20,6 @@ function f2(extra) {
   return 3 + extra | 0;
 }
 
-let g = 7;
-
 function ff(extra) {
   return U.test_primit(3, extra);
 }
@@ -40,6 +38,8 @@ function length_aux(_len, _x) {
     continue;
   };
 }
+
+let g = 7;
 
 let length = Stdlib_List.length;
 

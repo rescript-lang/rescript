@@ -260,8 +260,6 @@ let primitive ppf = function
   | Pis_poly_var_block -> fprintf ppf "#is_poly_var_block"
   | Pjs_raw_expr -> fprintf ppf "#raw_expr"
   | Pjs_raw_stmt -> fprintf ppf "#raw_stmt"
-  | Pjs_fn_make arity -> fprintf ppf "#fn_mk(%d)" arity
-  | Pjs_fn_make_unit -> fprintf ppf "#fn_mk_unit"
   | Pjs_fn_method -> fprintf ppf "#fn_method"
   (* Debug-only dump, exercised solely under -drawlambda/-dlambda. *)
   | Ptagged_template -> fprintf ppf "#tagged_template" [@coverage off]
