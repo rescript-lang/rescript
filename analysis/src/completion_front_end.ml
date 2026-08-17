@@ -769,7 +769,8 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
     let old_in_jsx_context = !in_jsx_context in
     if Utils.is_jsx_component value_binding then in_jsx_context := true;
     (match value_binding with
-    | {pvb_pat = {ppat_desc = Ppat_constraint (_pat, core_type)}; pvb_expr}
+    | {pvb_pat = {ppat_desc = Ppat_constraint (_, core_type)}; pvb_expr}
+    | {pvb_constraint = Some {pvc_type = core_type}; pvb_expr}
       when loc_has_cursor pvb_expr.pexp_loc -> (
       (* Expression with derivable type annotation.
          E.g: let x: someRecord = {<com>} *)
@@ -806,9 +807,14 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
              {context_path = CTypeAtPos loc; prefix; nested = List.rev nested})
       | _ -> ())
     | {
-     pvb_pat = {ppat_desc = Ppat_constraint (_pat, core_type); ppat_loc};
-     pvb_expr;
-    }
+        pvb_pat = {ppat_desc = Ppat_constraint (_, core_type); ppat_loc};
+        pvb_expr;
+      }
+    | {
+        pvb_pat = {ppat_loc};
+        pvb_expr;
+        pvb_constraint = Some {pvc_type = core_type};
+      }
       when loc_has_cursor value_binding.pvb_loc
            && loc_has_cursor ppat_loc = false
            && loc_has_cursor pvb_expr.pexp_loc = false

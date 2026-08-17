@@ -185,7 +185,6 @@ let expr sub x =
     | Texp_coerce cty2 -> Texp_coerce (sub.typ sub cty2)
     | Texp_open (ovf, path, loc, env) ->
       Texp_open (ovf, path, loc, sub.env sub env)
-    | Texp_newtype _ as d -> d
   in
   let exp_extra = List.map (tuple3 extra id id) x.exp_extra in
   let exp_env = sub.env sub x.exp_env in

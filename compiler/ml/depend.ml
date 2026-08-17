@@ -285,7 +285,6 @@ let rec add_expr bv exp =
     add_expr (String_map.add id.txt b bv) e
   | Pexp_letexception (_, e) -> add_expr bv e
   | Pexp_assert e -> add_expr bv e
-  | Pexp_newtype (_, e) -> add_expr bv e
   | Pexp_pack m -> add_module bv m
   | Pexp_open (_ovf, m, e) ->
     let bv = open_module bv m.txt in

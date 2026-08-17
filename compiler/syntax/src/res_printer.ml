@@ -2350,13 +2350,45 @@ and print_value_binding ~state ~rec_flag (vb : Parsetree.value_binding) cmt_tbl
   in
   match vb with
   | {
+   pvb_pat = pattern;
+   pvb_expr = expr;
+   pvb_constraint = Some {pvc_newtypes; pvc_type};
+  } ->
+    let newtypes =
+      Doc.join ~sep:Doc.space
+        (List.map
+           (fun ({Asttypes.txt; loc} : string Asttypes.loc) ->
+             print_comments (print_ident_like txt) cmt_tbl loc)
+           pvc_newtypes)
+    in
+    Doc.group
+      (Doc.concat
+         [
+           attrs;
+           header;
+           print_pattern ~state pattern cmt_tbl;
+           Doc.text ":";
+           Doc.indent
+             (Doc.concat
+                [
+                  Doc.line;
+                  Doc.text "type ";
+                  newtypes;
+                  Doc.dot;
+                  Doc.space;
+                  print_typ_expr ~state pvc_type cmt_tbl;
+                  Doc.text " =";
+                  Doc.line;
+                  print_expression_with_comments ~state expr cmt_tbl;
+                ]);
+         ])
+  | {
    pvb_pat =
      {
        ppat_desc =
          Ppat_constraint (pattern, ({ptyp_desc = Ptyp_poly _} as pat_typ));
      };
-   pvb_expr =
-     {pexp_desc = Pexp_newtype _ | Pexp_fun {newtypes = _ :: _}} as expr;
+   pvb_expr = {pexp_desc = Pexp_fun {newtypes = _ :: _}} as expr;
   } -> (
     let _, parameters, return_expr = Parsetree_viewer.fun_expr expr in
     let abstract_type =
@@ -2482,7 +2514,6 @@ and print_value_binding ~state ~rec_flag (vb : Parsetree.value_binding) cmt_tbl
           } ->
             Parsetree_viewer.is_binary_expression if_expr
             || Parsetree_viewer.has_attributes if_expr.pexp_attributes
-          | {pexp_desc = Pexp_newtype _} -> false
           | {pexp_attributes = [({Location.txt = "res.taggedTemplate"}, _)]} ->
             false
           | {pexp_desc = Pexp_jsx_element _} -> true
@@ -3188,7 +3219,7 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
       print_expression_with_comments ~state
         (Parsetree_viewer.rewrite_underscore_apply e)
         cmt_tbl
-    | Pexp_fun _ | Pexp_newtype _ -> print_arrow e
+    | Pexp_fun _ -> print_arrow e
     | Parsetree.Pexp_constant c ->
       print_constant
         ~template_literal:(Parsetree_viewer.is_template_literal e)
@@ -3877,9 +3908,7 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
   in
   let should_print_its_own_attributes =
     match e.pexp_desc with
-    | Pexp_apply _ | Pexp_fun _ | Pexp_newtype _ | Pexp_setfield _
-    | Pexp_ifthenelse _ ->
-      true
+    | Pexp_apply _ | Pexp_fun _ | Pexp_setfield _ | Pexp_ifthenelse _ -> true
     | Pexp_match _ when Parsetree_viewer.is_if_let_expr e -> true
     | Pexp_jsx_element _ -> true
     | _ -> false
@@ -4687,7 +4716,6 @@ and print_pexp_apply ~state expr cmt_tbl =
         } ->
           Parsetree_viewer.is_binary_expression if_expr
           || Parsetree_viewer.has_attributes if_expr.pexp_attributes
-        | {pexp_desc = Pexp_newtype _} -> false
         | e ->
           Parsetree_viewer.has_attributes e.pexp_attributes
           || Parsetree_viewer.is_array_access e

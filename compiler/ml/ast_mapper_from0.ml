@@ -786,9 +786,8 @@ module E = struct
          newtype's attributes, except on this outermost wrapper:
          attributes before the internal [_res.newtype_attrs] marker (or
          all of them, when there is no marker) are function-node
-         attributes, the ones after the marker belong to the first
-         newtype. Chains over anything else (e.g. the
-         [let f: type t. ...] sugar) keep their [Pexp_newtype] nodes. *)
+         attributes, and those after the marker belong to the first
+         newtype. *)
       let node_attrs, first_nt_attrs =
         let rec split acc = function
           | ({txt = "_res.newtype_attrs"}, _) :: rest -> (List.rev acc, rest)
@@ -807,6 +806,14 @@ module E = struct
           Some (List.rev acc, e0)
         | _ -> None
       in
+      let unsupported () =
+        extension ~loc ~attrs
+          (Ast_mapper.extension_of_error
+             (Location.errorf ~loc
+                "A PPX returned a locally abstract type wrapper that does not \
+                 enclose a ReScript function. This v0 AST form is not \
+                 supported."))
+      in
       match gather [(map_loc sub s, first_nt_attrs)] e with
       | Some (newtypes, base) -> (
         let base1 = sub.expr sub base in
@@ -817,18 +824,8 @@ module E = struct
             pexp_attributes = base1.pexp_attributes @ node_attrs;
             pexp_loc = loc;
           }
-        | _ -> (
-          (* PPX-mangled Function$: keep the wrapper chain as-is. *)
-          match newtypes with
-          | [] -> assert false
-          | (n0, _) :: rest ->
-            let inner =
-              List.fold_right
-                (fun (n, a) acc -> newtype ~loc ~attrs:a n acc)
-                rest base1
-            in
-            newtype ~loc ~attrs n0 inner))
-      | None -> newtype ~loc ~attrs (map_loc sub s) (sub.expr sub e))
+        | _ -> unsupported ())
+      | None -> unsupported ())
     | Pexp_pack me -> pack ~loc ~attrs (sub.module_expr sub me)
     | Pexp_open (ovf, lid, e) ->
       open_ ~loc ~attrs ovf (map_loc sub lid) (sub.expr sub e)
@@ -944,9 +941,57 @@ let default_mapper =
           ~attrs:(this.attributes this pincl_attributes));
     value_binding =
       (fun this {pvb_pat; pvb_expr; pvb_attributes; pvb_loc} ->
-        Vb.mk (this.pat this pvb_pat) (this.expr this pvb_expr)
-          ~loc:(this.location this pvb_loc)
-          ~attrs:(this.attributes this pvb_attributes));
+        let decoded =
+          match pvb_pat with
+          | {
+           ppat_desc =
+             Ppat_constraint
+               ( pat,
+                 {
+                   ptyp_desc = Ptyp_poly (poly_newtypes, poly_type);
+                   ptyp_attributes = [];
+                 } );
+           ppat_attributes = [];
+          }
+            when poly_newtypes <> [] -> (
+            let rec gather_newtypes acc (expr : Parsetree0.expression) =
+              match expr with
+              | {pexp_desc = Pexp_newtype (newtype, rest); pexp_attributes = []}
+                ->
+                gather_newtypes (newtype :: acc) rest
+              | {pexp_desc = Pexp_constraint (expr, typ); pexp_attributes = []}
+                ->
+                Some (List.rev acc, expr, typ)
+              | _ -> None
+            in
+            match gather_newtypes [] pvb_expr with
+            | Some (newtypes, expr, typ)
+              when List.map (fun {txt} -> txt) newtypes
+                   = List.map (fun {txt} -> txt) poly_newtypes
+                   &&
+                   try
+                     Ast_helper0.Typ.varify_constructors newtypes typ
+                     = poly_type
+                   with Syntaxerr.Error _ -> false ->
+              Some (pat, expr, newtypes, typ)
+            | _ -> None)
+          | _ -> None
+        in
+        match decoded with
+        | Some (pat, expr, newtypes, typ) ->
+          let constraint_ =
+            {
+              Pt.pvc_newtypes = List.map (map_loc this) newtypes;
+              pvc_type = this.typ this typ;
+            }
+          in
+          Vb.mk (this.pat this pat) (this.expr this expr) ~constraint_
+            ~loc:(this.location this pvb_loc)
+            ~attrs:(this.attributes this pvb_attributes)
+        | None ->
+          Vb.mk (this.pat this pvb_pat) (this.expr this pvb_expr)
+            ~loc:(this.location this pvb_loc)
+            ~attrs:(this.attributes this pvb_attributes));
     constructor_declaration =
       (fun this {pcd_name; pcd_args; pcd_res; pcd_loc; pcd_attributes} ->
         Type.constructor (map_loc this pcd_name)

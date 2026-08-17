@@ -611,27 +611,6 @@ let lident_of_path longident =
   | [] -> ""
   | ident :: _ -> ident
 
-let make_newtypes ~loc newtypes exp =
-  List.fold_right
-    (fun newtype exp -> Ast_helper.Exp.mk ~loc (Pexp_newtype (newtype, exp)))
-    newtypes exp
-
-(* locally abstract types syntax sugar
- * Transforms
- *  let f: type t u v. = (foo : list</t, u, v/>) => ...
- * into
- *  let f = (type t u v. foo : list</t, u, v/>) => ...
- *)
-let wrap_type_annotation ~loc newtypes core_type body =
-  let exp =
-    make_newtypes ~loc newtypes (Ast_helper.Exp.constraint_ ~loc body core_type)
-  in
-  let typ =
-    Ast_helper.Typ.poly ~loc newtypes
-      (Ast_helper.Typ.varify_constructors newtypes core_type)
-  in
-  (exp, typ)
-
 (**
   * process the occurrence of _ in the arguments of a function application
   * replace _ with a new variable, currently __x, in the arguments
@@ -2711,7 +2690,7 @@ and over_parse_constrained_or_coerced_or_arrow_expression p expr =
 and parse_let_binding_body ~start_pos ~attrs p =
   Parser.begin_region p;
   Parser.leave_breadcrumb p Grammar.LetBinding;
-  let pat, exp =
+  let pat, exp, constraint_ =
     Parser.leave_breadcrumb p Grammar.Pattern;
     let pat = parse_pattern p in
     Parser.eat_breadcrumb p;
@@ -2727,10 +2706,7 @@ and parse_let_binding_body ~start_pos ~attrs p =
         let typ = parse_typ_expr p in
         Parser.expect Equal p;
         let expr = parse_expr p in
-        let loc = mk_loc start_pos p.prev_end_pos in
-        let exp, poly = wrap_type_annotation ~loc newtypes typ expr in
-        let pat = Ast_helper.Pat.constraint_ ~loc pat poly in
-        (pat, exp)
+        (pat, expr, Some {Parsetree.pvc_newtypes = newtypes; pvc_type = typ})
       | _ ->
         let poly_type = parse_poly_type_expr p in
         let loc =
@@ -2740,16 +2716,16 @@ and parse_let_binding_body ~start_pos ~attrs p =
         Parser.expect Token.Equal p;
         let exp = parse_expr p in
         let exp = over_parse_constrained_or_coerced_or_arrow_expression p exp in
-        (pat, exp))
+        (pat, exp, None))
     | _ ->
       Parser.expect Token.Equal p;
       let exp =
         over_parse_constrained_or_coerced_or_arrow_expression p (parse_expr p)
       in
-      (pat, exp)
+      (pat, exp, None)
   in
   let loc = mk_loc start_pos p.prev_end_pos in
-  let vb = Ast_helper.Vb.mk ~loc ~attrs pat exp in
+  let vb = Ast_helper.Vb.mk ~loc ~attrs ?constraint_ pat exp in
   Parser.eat_breadcrumb p;
   Parser.end_region p;
   vb

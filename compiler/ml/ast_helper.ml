@@ -191,7 +191,6 @@ module Exp = struct
   let letmodule ?loc ?attrs a b c = mk ?loc ?attrs (Pexp_letmodule (a, b, c))
   let letexception ?loc ?attrs a b = mk ?loc ?attrs (Pexp_letexception (a, b))
   let assert_ ?loc ?attrs a = mk ?loc ?attrs (Pexp_assert a)
-  let newtype ?loc ?attrs a b = mk ?loc ?attrs (Pexp_newtype (a, b))
   let pack ?loc ?attrs a = mk ?loc ?attrs (Pexp_pack a)
   let open_ ?loc ?attrs a b c = mk ?loc ?attrs (Pexp_open (a, b, c))
   let extension ?loc ?attrs a = mk ?loc ?attrs (Pexp_extension a)
@@ -358,8 +357,14 @@ module Incl = struct
 end
 
 module Vb = struct
-  let mk ?(loc = !default_loc) ?(attrs = []) pat expr =
-    {pvb_pat = pat; pvb_expr = expr; pvb_attributes = attrs; pvb_loc = loc}
+  let mk ?(loc = !default_loc) ?(attrs = []) ?constraint_ pat expr =
+    {
+      pvb_pat = pat;
+      pvb_expr = expr;
+      pvb_constraint = constraint_;
+      pvb_attributes = attrs;
+      pvb_loc = loc;
+    }
 end
 
 module Type = struct

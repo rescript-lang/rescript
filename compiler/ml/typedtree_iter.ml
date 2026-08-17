@@ -217,8 +217,7 @@ end = struct
           match cstr with
           | Texp_constraint ct -> iter_core_type ct
           | Texp_coerce cty2 -> iter_core_type cty2
-          | Texp_open _ -> ()
-          | Texp_newtype _ -> ()))
+          | Texp_open _ -> ()))
       exp.exp_extra;
     (match exp.exp_desc with
     | Texp_ident _ -> ()

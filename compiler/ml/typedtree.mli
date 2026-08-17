@@ -123,7 +123,6 @@ and exp_extra =
       (** let open[!] M in    [Texp_open (!, P, M, env)]
                                 where [env] is the environment after opening [P]
          *)
-  | Texp_newtype of string  (** fun (type t) ->  *)
 
 and expression_desc =
   | Texp_ident of Path.t * Longident.t loc * Types.value_description

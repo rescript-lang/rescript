@@ -215,7 +215,6 @@ module Exp : sig
     expression ->
     expression
   val assert_ : ?loc:loc -> ?attrs:attrs -> expression -> expression
-  val newtype : ?loc:loc -> ?attrs:attrs -> str -> expression -> expression
   val pack : ?loc:loc -> ?attrs:attrs -> module_expr -> expression
   val open_ :
     ?loc:loc -> ?attrs:attrs -> override_flag -> lid -> expression -> expression
@@ -446,5 +445,11 @@ end
 
 (** Value bindings *)
 module Vb : sig
-  val mk : ?loc:loc -> ?attrs:attrs -> pattern -> expression -> value_binding
+  val mk :
+    ?loc:loc ->
+    ?attrs:attrs ->
+    ?constraint_:value_constraint ->
+    pattern ->
+    expression ->
+    value_binding
 end

@@ -1,6 +1,8 @@
 let /* before */ x /* after */:
-  type t. (/* a */ int /* b */, /* c */ int /* d */) => /* e */ int =
+  type t. (/* a */ int /* b */, /* c */ int /* d */) => /* e */ int /* f */ =
   (/* c0 */ a /* c1 */, /* c2 */ b /* c3 */) => {
     // comment
     a + b
   }
+
+let y: type /* before t */ t /* after t */ /* before u */ u /* after u */. (t, u) => t = (x, _) => x

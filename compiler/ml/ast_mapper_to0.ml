@@ -602,8 +602,6 @@ module E = struct
         (sub.extension_constructor sub cd)
         (sub.expr sub e)
     | Pexp_assert e -> assert_ ~loc ~attrs (sub.expr sub e)
-    | Pexp_newtype (s, e) ->
-      newtype ~loc ~attrs (map_loc sub s) (sub.expr sub e)
     | Pexp_pack me -> pack ~loc ~attrs (sub.module_expr sub me)
     | Pexp_open (ovf, lid, e) ->
       open_ ~loc ~attrs ovf (map_loc sub lid) (sub.expr sub e)
@@ -792,10 +790,33 @@ let default_mapper =
           ~loc:(this.location this pincl_loc)
           ~attrs:(this.attributes this pincl_attributes));
     value_binding =
-      (fun this {pvb_pat; pvb_expr; pvb_attributes; pvb_loc} ->
-        Vb.mk (this.pat this pvb_pat) (this.expr this pvb_expr)
-          ~loc:(this.location this pvb_loc)
-          ~attrs:(this.attributes this pvb_attributes));
+      (fun this {pvb_pat; pvb_expr; pvb_constraint; pvb_attributes; pvb_loc} ->
+        let loc = this.location this pvb_loc in
+        let pvb_pat, pvb_expr =
+          match pvb_constraint with
+          | None -> (this.pat this pvb_pat, this.expr this pvb_expr)
+          | Some {pvc_newtypes; pvc_type} ->
+            let poly =
+              Ast_helper.Typ.poly ~loc:pvb_loc pvc_newtypes
+                (Ast_helper.Typ.varify_constructors pvc_newtypes pvc_type)
+            in
+            let pat =
+              Ast_helper0.Pat.constraint_ ~loc (this.pat this pvb_pat)
+                (this.typ this poly)
+            in
+            let expr =
+              Ast_helper0.Exp.constraint_ ~loc (this.expr this pvb_expr)
+                (this.typ this pvc_type)
+            in
+            let expr =
+              List.fold_right
+                (fun newtype expr ->
+                  Ast_helper0.Exp.newtype ~loc (map_loc this newtype) expr)
+                pvc_newtypes expr
+            in
+            (pat, expr)
+        in
+        Vb.mk pvb_pat pvb_expr ~loc ~attrs:(this.attributes this pvb_attributes));
     constructor_declaration =
       (fun this {pcd_name; pcd_args; pcd_res; pcd_loc; pcd_attributes} ->
         Type.constructor (map_loc this pcd_name)

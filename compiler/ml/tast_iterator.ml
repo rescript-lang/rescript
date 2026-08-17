@@ -140,7 +140,6 @@ let expr sub {exp_extra; exp_desc; exp_env; _} =
   let extra = function
     | Texp_constraint cty -> sub.typ sub cty
     | Texp_coerce cty2 -> sub.typ sub cty2
-    | Texp_newtype _ -> ()
     | Texp_open (_, _, _, _) -> ()
   in
   List.iter (fun (e, _, _) -> extra e) exp_extra;

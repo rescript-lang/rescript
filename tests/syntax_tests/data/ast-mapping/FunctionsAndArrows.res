@@ -51,3 +51,6 @@ external phantom: (~a: int, @as(json`false`) _, ~c: string) => unit = "phantom"
 
 // attributed newtype groups: attribute ownership must survive the v0 bridge
 let grouped = @fn (@one type a b, x: a, @two type c, y: c) => (x, y)
+
+// locally abstract value constraints survive v0 AST conversion and re-fuse
+let choose: type a b. (a, b) => a = (x, _) => x

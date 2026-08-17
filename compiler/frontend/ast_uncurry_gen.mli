@@ -24,6 +24,7 @@
 
 val to_method_callback :
   async:bool ->
+  newtypes:(string Asttypes.loc * Parsetree.attributes) list ->
   Location.t ->
   Bs_ast_mapper.mapper ->
   Parsetree.fun_param list ->

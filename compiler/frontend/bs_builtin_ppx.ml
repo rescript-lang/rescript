@@ -92,9 +92,6 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
   | Pexp_constant (Pconst_integer (s, Some 'l')) ->
     {e with pexp_desc = Pexp_constant (Pconst_integer (s, None))}
   (* End rewriting *)
-  | Pexp_newtype (s, body) ->
-    let res = self.expr self body in
-    {e with pexp_desc = Pexp_newtype (s, res)}
   | Pexp_fun {newtypes; params; body; async} -> (
     match Ast_attributes.process_attributes_rev e.pexp_attributes with
     | Nothing, _ ->
@@ -131,14 +128,12 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
         {
           e with
           pexp_desc =
-            Ast_uncurry_gen.to_method_callback ~async e.pexp_loc self params
-              body;
+            Ast_uncurry_gen.to_method_callback ~async ~newtypes e.pexp_loc self
+              params body;
           pexp_attributes;
         }
       in
-      (* Keep the locally abstract types in scope around the callback. *)
-      Ext_list.fold_right newtypes callback (fun (name, nt_attrs) acc ->
-          Ast_helper.Exp.newtype ~loc:e.pexp_loc ~attrs:nt_attrs name acc))
+      callback)
   | Pexp_apply _ -> Ast_exp_apply.app_exp_mapper e self
   | Pexp_match
       ( b,
@@ -193,6 +188,7 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
                       ({txt = Lident ("None" as variant_name)}, None) );
               } as pvb_pat;
             pvb_expr;
+            pvb_constraint = None;
             pvb_attributes;
           };
         ],
@@ -305,6 +301,7 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
               ( {ppat_desc = Ppat_record _}
               | {ppat_desc = Ppat_alias ({ppat_desc = Ppat_record _}, _)} ) as p;
             pvb_expr;
+            pvb_constraint = None;
             pvb_attributes;
             pvb_loc = _;
           };
@@ -519,6 +516,7 @@ let structure_item_mapper (self : mapper) (str : Parsetree.structure_item) :
           {
             pvb_pat = {ppat_desc = Ppat_var pval_name} as pvb_pat;
             pvb_expr;
+            pvb_constraint = None;
             pvb_attributes;
             pvb_loc;
           };
@@ -592,7 +590,16 @@ let structure_item_mapper (self : mapper) (str : Parsetree.structure_item) :
         str with
         pstr_desc =
           Pstr_value
-            (Nonrecursive, [{pvb_pat; pvb_expr; pvb_attributes; pvb_loc}]);
+            ( Nonrecursive,
+              [
+                {
+                  pvb_pat;
+                  pvb_expr;
+                  pvb_constraint = None;
+                  pvb_attributes;
+                  pvb_loc;
+                };
+              ] );
       })
   | Pstr_attribute ({txt = "config"}, _) -> str
   | _ -> default_mapper.structure_item self str
@@ -742,7 +749,7 @@ let rec structure_mapper ~await_context (self : mapper) (stru : Ast_structure.t)
             | Pexp_ifthenelse (_, then_expr, Some else_expr) ->
               aux then_expr @ aux else_expr
             | Pexp_construct (_, Some expr) -> aux expr
-            | Pexp_fun {body = expr} | Pexp_newtype (_, expr) -> aux expr
+            | Pexp_fun {body = expr} -> aux expr
             | Pexp_constraint (expr, _) -> aux expr
             | Pexp_match (expr, cases) ->
               let case_results =

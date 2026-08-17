@@ -311,7 +311,6 @@ and expression_desc =
     (* assert E
        Note: "assert false" is treated in a special way by the
        type-checker. *)
-  | Pexp_newtype of string loc * expression (* fun (type t) -> E *)
   | Pexp_pack of module_expr
     (* (module ME)
 
@@ -670,9 +669,16 @@ and structure_item_desc =
   | Pstr_extension of extension * attributes
 (* [%%id] *)
 
+and value_constraint = {
+  pvc_newtypes: string loc list;
+  (* Nonempty for parser-produced [let x: type a. t = e] bindings. *)
+  pvc_type: core_type;
+}
+
 and value_binding = {
   pvb_pat: pattern;
   pvb_expr: expression;
+  pvb_constraint: value_constraint option;
   pvb_attributes: attributes;
   pvb_loc: Location.t;
 }

@@ -56,6 +56,7 @@ let inlay ~source ~kind_file ~pos ~max_length ~full ~state ~debug =
     (match vb with
     | {
      pvb_pat = {ppat_desc = Ppat_var _};
+     pvb_constraint = None;
      pvb_expr =
        {
          pexp_desc =
@@ -125,6 +126,7 @@ let code_lens ~source ~kind_file ~full ~debug =
     (match vb with
     | {
      pvb_pat = {ppat_desc = Ppat_var _; ppat_loc};
+     pvb_constraint = None;
      pvb_expr = {pexp_desc = Pexp_fun _};
     } ->
       push ppat_loc
