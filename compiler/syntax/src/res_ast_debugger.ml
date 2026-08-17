@@ -392,6 +392,18 @@ module Sexp_ast = struct
       [
         Sexp.atom "value_binding";
         pattern vb.pvb_pat;
+        (match vb.pvb_constraint with
+        | None -> Sexp.atom "None"
+        | Some {pvc_newtypes; pvc_type} ->
+          Sexp.list
+            [
+              Sexp.atom "Some";
+              Sexp.list
+                (map_empty
+                   ~f:(fun ({txt} : string Asttypes.loc) -> string txt)
+                   pvc_newtypes);
+              core_type pvc_type;
+            ]);
         expression vb.pvb_expr;
         attributes vb.pvb_attributes;
       ]
@@ -721,9 +733,6 @@ module Sexp_ast = struct
             expression expr;
           ]
       | Pexp_assert expr -> Sexp.list [Sexp.atom "Pexp_assert"; expression expr]
-      | Pexp_newtype (lbl, expr) ->
-        Sexp.list
-          [Sexp.atom "Pexp_newtype"; string lbl.Asttypes.txt; expression expr]
       | Pexp_pack mod_expr ->
         Sexp.list [Sexp.atom "Pexp_pack"; module_expression mod_expr]
       | Pexp_open (flag, longident_loc, expr) ->

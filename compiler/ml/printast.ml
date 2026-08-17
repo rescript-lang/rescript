@@ -358,9 +358,6 @@ and expression i ppf x =
   | Pexp_assert e ->
     line i ppf "Pexp_assert\n";
     expression i ppf e
-  | Pexp_newtype (s, e) ->
-    line i ppf "Pexp_newtype \"%s\"\n" s.txt;
-    expression i ppf e
   | Pexp_pack me ->
     line i ppf "Pexp_pack\n";
     module_expr i ppf me
@@ -726,6 +723,14 @@ and value_binding i ppf x =
   line i ppf "<def>\n";
   attributes (i + 1) ppf x.pvb_attributes;
   pattern (i + 1) ppf x.pvb_pat;
+  (match x.pvb_constraint with
+  | None -> ()
+  | Some {pvc_newtypes; pvc_type} ->
+    line (i + 1) ppf "<constraint>\n";
+    List.iter
+      (fun {txt} -> line (i + 2) ppf "newtype \"%s\"\n" txt)
+      pvc_newtypes;
+    core_type (i + 2) ppf pvc_type);
   expression (i + 1) ppf x.pvb_expr
 
 and longident_x_expression i ppf {lid = li; x = e; opt} =

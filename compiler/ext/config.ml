@@ -13,6 +13,6 @@ and ast0_impl_magic_number = "Caml1999M022"
 
 and ast0_intf_magic_number = "Caml1999N022"
 
-and cmt_magic_number = "Caml1999T023"
+and cmt_magic_number = "Caml1999T024"
 
 let load_path = ref ([] : string list)

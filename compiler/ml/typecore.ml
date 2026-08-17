@@ -182,7 +182,6 @@ let iter_expression f e =
       may expr eo;
       List.iter (fun {x = e} -> expr e) iel
     | Pexp_open (_, _, e)
-    | Pexp_newtype (_, e)
     | Pexp_assert e
     | Pexp_send (e, _)
     | Pexp_constraint (e, _)
@@ -2468,12 +2467,10 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
       }
   | Pexp_fun {newtypes = _ :: _ as newtypes; params; body = sfun_body; async} ->
     (* Bring the function's locally abstract types into scope, innermost
-       last, typing the newtype-free function inside all of them - the same
-       nesting a chain of [Pexp_newtype] wrappers produced. Each group's
-       attributes open a warning scope over everything within its scope,
-       as the attributes on the former wrapper nodes did. The function
-       node's own attributes stay on the inner dispatch only, so its
-       warning scope is entered once, not once per newtype. *)
+       last, typing the newtype-free function inside all of them. Each
+       group's attributes open a warning scope over everything within its
+       scope. The function node's own attributes stay on the inner call
+       only, so its warning scope is entered once, not once per newtype. *)
     let rec peel env = function
       | [] ->
         (* The newtype-free function, typed directly against a fresh
@@ -2484,8 +2481,8 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
           sfun_body
       | (name, nt_attrs) :: rest ->
         Builtin_attributes.warning_scope nt_attrs (fun () ->
-            type_newtype ~loc ~env ~name:name.Asttypes.txt ~attrs:nt_attrs
-              (fun new_env -> peel new_env rest))
+            type_newtype ~loc ~env ~name:name.Asttypes.txt (fun new_env ->
+                peel new_env rest))
     in
     rue (peel env newtypes)
   | Pexp_fun {newtypes = []; params; body = sfun_body; async} ->
@@ -3415,10 +3412,6 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
         exp_attributes = sexp.pexp_attributes;
         exp_env = env;
       }
-  | Pexp_newtype ({txt = name}, sbody) ->
-    rue
-      (type_newtype ~loc ~env ~name ~attrs:sexp.pexp_attributes (fun new_env ->
-           type_exp ~context:None new_env sbody))
   | Pexp_pack m ->
     let p, nl =
       match Ctype.expand_head env (instance env ty_expected) with
@@ -3480,11 +3473,10 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
 (* Type [type_body] with the locally abstract type [name] in scope: a
    fresh abstract type constructor is entered into the environment, and
    every occurrence of it in the result type is replaced by a type
-   variable afterwards. Used both for [Pexp_newtype] nodes and for the
-   [newtypes] of a function. The result still needs to be unified with
-   the expected type by the caller. *)
-and type_newtype ~loc ~env ~name ~attrs
-    (type_body : Env.t -> Typedtree.expression) =
+   variable afterwards. Used for structurally represented locally abstract
+   type binders. The result still needs to be unified with the expected type
+   by the caller. *)
+and type_newtype ~loc ~env ~name (type_body : Env.t -> Typedtree.expression) =
   let ty = newvar () in
   (* remember original level *)
   begin_def ();
@@ -3530,14 +3522,9 @@ and type_newtype ~loc ~env ~name ~attrs
   (* lower the levels of the result type *)
   (* unify_var env ty ety; *)
 
-  (* non-expansive if the body is non-expansive, so we don't introduce
-     any new extra node in the typed AST. *)
-  {
-    body with
-    exp_loc = loc;
-    exp_type = ety;
-    exp_extra = (Texp_newtype name, loc, attrs) :: body.exp_extra;
-  }
+  (* Locally abstract type binders affect typing only; they do not introduce
+     an expression node in the typed tree. *)
+  {body with exp_loc = loc; exp_type = ety}
 
 and type_function ~async loc attrs env ty_expected_
     (sparams : Parsetree.fun_param list) sbody =
@@ -4513,6 +4500,20 @@ and type_cases ~(call_context : [`LetUnwrap | `Switch | `Function | `Try]) env
 and type_let ~context ?(check = fun s -> Warnings.Unused_var s)
     ?(check_strict = fun s -> Warnings.Unused_var_strict s) env rec_flag
     spat_sexp_list scope allow =
+  let spat_sexp_list =
+    List.map
+      (fun (vb : Parsetree.value_binding) ->
+        match vb.pvb_constraint with
+        | None -> vb
+        | Some {pvc_newtypes; pvc_type} ->
+          let loc = vb.pvb_loc in
+          let poly =
+            Ast_helper.Typ.poly ~loc pvc_newtypes
+              (Ast_helper.Typ.varify_constructors pvc_newtypes pvc_type)
+          in
+          {vb with pvb_pat = Ast_helper.Pat.constraint_ ~loc vb.pvb_pat poly})
+      spat_sexp_list
+  in
   begin_def ();
   let is_fake_let =
     match spat_sexp_list with
@@ -4632,25 +4633,39 @@ and type_let ~context ?(check = fun s -> Warnings.Unused_var s)
   in
   let exp_list =
     List.map2
-      (fun {pvb_expr = sexp; pvb_attributes; _} (pat, slot) ->
+      (fun {pvb_expr = sexp; pvb_constraint; pvb_attributes; pvb_loc; _}
+           (pat, slot) ->
         let sexp =
           if rec_flag = Recursive then wrap_unpacks sexp unpacks else sexp
         in
         if is_recursive then current_slot := slot;
+        let type_expression expected =
+          Builtin_attributes.warning_scope pvb_attributes (fun () ->
+              match pvb_constraint with
+              | None -> type_expect ~context exp_env sexp expected
+              | Some {pvc_newtypes; pvc_type} ->
+                let constrained =
+                  Ast_helper.Exp.constraint_ ~loc:pvb_loc sexp pvc_type
+                in
+                let rec scope env = function
+                  | [] -> type_exp ~context env constrained
+                  | {txt = name} :: rest ->
+                    type_newtype ~loc:pvb_loc ~env ~name (fun env ->
+                        scope env rest)
+                in
+                let exp = scope exp_env pvc_newtypes in
+                unify_exp ~context exp_env exp (instance exp_env expected);
+                exp)
+        in
         match pat.pat_type.desc with
         | Tpoly (ty, tl) ->
           begin_def ();
           let vars, ty' = instance_poly ~keep_names:true true tl ty in
-          let exp =
-            Builtin_attributes.warning_scope pvb_attributes (fun () ->
-                type_expect ~context exp_env sexp ty')
-          in
+          let exp = type_expression ty' in
           end_def ();
           check_univars env true "definition" exp pat.pat_type vars;
           {exp with exp_type = instance env exp.exp_type}
-        | _ ->
-          Builtin_attributes.warning_scope pvb_attributes (fun () ->
-              type_expect ~context exp_env sexp pat.pat_type))
+        | _ -> type_expression pat.pat_type)
       spat_sexp_list pat_slot_list
   in
   current_slot := None;

@@ -245,9 +245,6 @@ let rec recursively_transform_named_args_for_make expr args newtypes core_type =
     (* Collected newtypes are accumulated in reverse source order. *)
     let newtypes = List.rev_append fun_newtypes newtypes in
     transform_params_for_make ~expr ~body params args newtypes core_type
-  | Pexp_newtype (label, expression) ->
-    recursively_transform_named_args_for_make expression args
-      ((label, []) :: newtypes) core_type
   | Pexp_constraint (expression, core_type) ->
     recursively_transform_named_args_for_make expression args newtypes
       (Some core_type)
@@ -397,7 +394,7 @@ let modified_binding_old binding =
   let rec spelunk_for_fun_expression expression =
     match expression with
     (* let make = (~prop) => ... *)
-    | {pexp_desc = Pexp_fun _} | {pexp_desc = Pexp_newtype _} -> expression
+    | {pexp_desc = Pexp_fun _} -> expression
     (* let make = {let foo = bar in (~prop) => ...} *)
     | {pexp_desc = Pexp_let (_recursive, _vbs, return_expression)} ->
       (* here's where we spelunk! *)
@@ -553,8 +550,6 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name binding =
         expr with
         pexp_desc = Pexp_fun {desc with body = constrain_jsx_return body};
       }
-    | Pexp_newtype (param, inner) ->
-      {expr with pexp_desc = Pexp_newtype (param, constrain_jsx_return inner)}
     | Pexp_constraint (inner, _) ->
       let constrained_inner = constrain_jsx_return inner in
       jsx_element_constraint constrained_inner
@@ -569,6 +564,12 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name binding =
   in
   if Jsx_common.has_attr_on_binding Jsx_common.has_attr binding then (
     check_multiple_components ~config ~loc:pstr_loc;
+    let binding_newtypes, binding_core_type =
+      match binding.pvb_constraint with
+      | None -> ([], None)
+      | Some {pvc_newtypes; pvc_type} ->
+        (List.rev_map (fun name -> (name, [])) pvc_newtypes, Some pvc_type)
+    in
     let core_type_of_attr =
       Jsx_common.core_type_of_attrs binding.pvb_attributes
     in
@@ -583,6 +584,7 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name binding =
       {
         binding with
         pvb_pat = {binding.pvb_pat with ppat_loc = empty_loc};
+        pvb_constraint = None;
         pvb_loc = empty_loc;
         pvb_attributes = binding.pvb_attributes |> List.filter other_attrs_pure;
       }
@@ -598,7 +600,7 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name binding =
     let named_arg_list, newtypes, _typeConstraints =
       recursively_transform_named_args_for_make
         (modified_binding_old binding)
-        [] [] None
+        [] binding_newtypes binding_core_type
     in
     let named_type_list = List.fold_left arg_to_type [] named_arg_list in
     (* type props = { ... } *)
@@ -679,8 +681,6 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name binding =
     let rec returned_expression patterns_with_label patterns_with_nolabel
         ({pexp_desc} as expr) =
       match pexp_desc with
-      | Pexp_newtype (_, expr) ->
-        returned_expression patterns_with_label patterns_with_nolabel expr
       | Pexp_constraint (expr, _) ->
         returned_expression patterns_with_label patterns_with_nolabel expr
       | Pexp_fun {params; body} ->

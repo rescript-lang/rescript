@@ -322,10 +322,13 @@ module Add_type_annotation = struct
       match si.pstr_desc with
       | Pstr_value (_recFlag, bindings) ->
         let process_binding (vb : Parsetree.value_binding) =
-          (* Can't add a type annotation to a jsx component, or the compiler crashes *)
-          let is_jsx_component = Utils.is_jsx_component vb in
-          if not is_jsx_component then process_pattern vb.pvb_pat;
-          process_function vb.pvb_expr
+          match vb.pvb_constraint with
+          | Some _ -> ()
+          | None ->
+            (* Can't add a type annotation to a jsx component, or the compiler crashes *)
+            let is_jsx_component = Utils.is_jsx_component vb in
+            if not is_jsx_component then process_pattern vb.pvb_pat;
+            process_function vb.pvb_expr
         in
         bindings |> List.iter process_binding;
         Ast_iterator.default_iterator.structure_item iterator si

@@ -169,7 +169,7 @@ val has_if_let_attribute : Parsetree.attributes -> bool
 
 val is_rewritten_underscore_apply_sugar : Parsetree.expression -> bool
 
-val is_fun_newtype : Parsetree.expression -> bool
+val is_fun_expr : Parsetree.expression -> bool
 
 val is_tuple_array : Parsetree.expression -> bool
 

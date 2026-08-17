@@ -4,3 +4,8 @@ let /* before */ x /* after */:
     // comment
     a + b
   }
+
+let y:
+  type /* before t */ t /* after t */ /* before u */ u /* after u */.
+  (t, u) => t =
+  (x, _) => x

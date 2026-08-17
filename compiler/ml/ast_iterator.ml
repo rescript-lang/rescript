@@ -369,7 +369,6 @@ module E = struct
       sub.extension_constructor sub cd;
       sub.expr sub e
     | Pexp_assert e -> sub.expr sub e
-    | Pexp_newtype (_s, e) -> sub.expr sub e
     | Pexp_pack me -> sub.module_expr sub me
     | Pexp_open (_ovf, lid, e) ->
       iter_loc sub lid;
@@ -504,8 +503,13 @@ let default_iterator =
         this.location this pincl_loc;
         this.attributes this pincl_attributes);
     value_binding =
-      (fun this {pvb_pat; pvb_expr; pvb_attributes; pvb_loc} ->
+      (fun this {pvb_pat; pvb_expr; pvb_constraint; pvb_attributes; pvb_loc} ->
         this.pat this pvb_pat;
+        Option.iter
+          (fun {pvc_newtypes; pvc_type} ->
+            List.iter (iter_loc this) pvc_newtypes;
+            this.typ this pvc_type)
+          pvb_constraint;
         this.expr this pvb_expr;
         this.location this pvb_loc;
         this.attributes this pvb_attributes);

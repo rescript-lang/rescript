@@ -210,31 +210,7 @@ let fun_expr expr_ =
     group_newtypes newtypes
     |> List.map (fun (attrs, locs) -> NewTypes {attrs; locs})
   in
-  (* Turns (type t, type u, type z) into "type t u z". An attribute on a
-     nested node (only constructible via PPX) stops the merge so the
-     attribute is printed on the node carrying it instead of dropped. *)
-  let rec collect_new_types acc return_expr =
-    match return_expr with
-    | {pexp_desc = Pexp_newtype (string_loc, return_expr); pexp_attributes = []}
-      ->
-      collect_new_types (string_loc :: acc) return_expr
-    | return_expr -> (List.rev acc, return_expr)
-  in
   match expr_ with
-  | {pexp_desc = Pexp_newtype (string_loc, rest)} -> (
-    (* PPX-authored wrapper chains; the parser puts a function's newtypes
-       in the [newtypes] field instead. *)
-    let string_locs, return_expr = collect_new_types [string_loc] rest in
-    let newtype_param = NewTypes {attrs = []; locs = string_locs} in
-    match return_expr with
-    | {
-     pexp_desc = Pexp_fun {newtypes; params; body; async};
-     pexp_attributes = [];
-    } ->
-      ( async,
-        (newtype_param :: newtype_params newtypes) @ params_of_fun params,
-        body )
-    | _ -> (false, [newtype_param], return_expr))
   | {pexp_desc = Pexp_fun {newtypes; params; body; async}} ->
     (async, newtype_params newtypes @ params_of_fun params, body)
   | _ -> (false, [], expr_)
@@ -619,17 +595,17 @@ let partition_doc_comment_attributes attrs =
       | _ -> false)
     attrs
 
-let is_fun_newtype expr =
+let is_fun_expr expr =
   match expr.pexp_desc with
-  | Pexp_fun _ | Pexp_newtype _ -> true
+  | Pexp_fun _ -> true
   | _ -> false
 
 let requires_special_callback_printing_last_arg args =
   let rec loop args =
     match args with
     | [] -> false
-    | [(_, expr)] when is_fun_newtype expr -> true
-    | (_, expr) :: _ when is_fun_newtype expr -> false
+    | [(_, expr)] when is_fun_expr expr -> true
+    | (_, expr) :: _ when is_fun_expr expr -> false
     | _ :: rest -> loop rest
   in
   loop args
@@ -638,12 +614,12 @@ let requires_special_callback_printing_first_arg args =
   let rec loop args =
     match args with
     | [] -> true
-    | (_, expr) :: _ when is_fun_newtype expr -> false
+    | (_, expr) :: _ when is_fun_expr expr -> false
     | _ :: rest -> loop rest
   in
   match args with
-  | [(_, expr)] when is_fun_newtype expr -> false
-  | (_, expr) :: rest when is_fun_newtype expr -> loop rest
+  | [(_, expr)] when is_fun_expr expr -> false
+  | (_, expr) :: rest when is_fun_expr expr -> loop rest
   | _ -> false
 
 let mod_expr_apply mod_expr =
