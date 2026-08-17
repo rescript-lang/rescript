@@ -46,15 +46,15 @@ function idx(v) {
   Test_utils.eq("File \"ast_abstract_test.res\", line 21, characters 18-25", xFromJs(v), v);
 }
 
-let x0 = "a";
-
-let x1 = "b";
-
 Mocha.describe("Ast_abstract_test", () => {
   Mocha.test("jsConverter roundtrip for #a", () => idx("a"));
   Mocha.test("jsConverter roundtrip for #b", () => idx("b"));
   Mocha.test("jsConverter roundtrip for #c", () => idx("c"));
 });
+
+let x0 = "a";
+
+let x1 = "b";
 
 export {
   tToJs,

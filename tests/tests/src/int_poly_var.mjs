@@ -58,8 +58,6 @@ function h(x) {
   return x === 0;
 }
 
-let g = /* 'b' */98;
-
 let hihi = f3(3, 0);
 
 let hh10 = "3" === 3;
@@ -165,6 +163,8 @@ Mocha.describe("Int_poly_var", () => {
 });
 
 let u = 1;
+
+let g = /* 'b' */98;
 
 let hh9 = true;
 

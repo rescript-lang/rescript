@@ -288,14 +288,16 @@ let u = of_array([
   6
 ]);
 
-if (!$eq$tilde(sort(u), [
+let x = sort(u);
+
+if (!Primitive_object.equal(x, of_array([
     1,
     2,
     2,
     3,
     5,
     6
-  ])) {
+  ]))) {
   throw {
     RE_EXN_ID: "Assert_failure",
     _1: [
@@ -309,7 +311,11 @@ if (!$eq$tilde(sort(u), [
 
 let v = Stdlib_Array.fromInitializer(500, i => 500 - i | 0);
 
-$eq$tilde(sort(of_array(v)), Stdlib_Array.fromInitializer(500, i => i + 1 | 0));
+let x$1 = sort(of_array(v));
+
+let y = Stdlib_Array.fromInitializer(500, i => i + 1 | 0);
+
+Primitive_object.equal(x$1, of_array(y));
 
 export {
   sub,

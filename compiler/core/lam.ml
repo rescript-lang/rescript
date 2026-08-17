@@ -140,13 +140,6 @@ let rec is_eta_conversion_exn params inner_args outer_args : t list =
   match (params, inner_args, outer_args) with
   | x :: xs, Lvar y :: ys, r :: rest when Ident.same x y ->
     r :: is_eta_conversion_exn xs ys rest
-  | ( x :: xs,
-      Lprim
-        ({primitive = Pjs_fn_make _ | Pjs_fn_make_unit; args = [Lvar y]} as p)
-      :: ys,
-      r :: rest )
-    when Ident.same x y ->
-    Lprim {p with args = [r]} :: is_eta_conversion_exn xs ys rest
   | [], [], [] -> []
   | _, _, _ -> raise_notrace Not_simple_form
 

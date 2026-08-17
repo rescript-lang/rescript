@@ -52,13 +52,10 @@ function g1(x, y) {
   return (xx, yy) => (xx + yy | 0) + u | 0;
 }
 
-let u = 8;
-
-let x = u + 6 | 0;
+let x = 14;
 
 function v(extra) {
-  let u = 7;
-  return (6 + extra | 0) + u | 0;
+  return (6 + extra | 0) + 7 | 0;
 }
 
 let nil = "Nil";

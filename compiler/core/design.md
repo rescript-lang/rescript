@@ -173,20 +173,6 @@ We can simply do inlining, it may have side efffect in `b0`, `b1`, our optimizer
 
 Maybe in the future, we should lift the restriction about `variadic` (delegate to `slow` mode when we can not resolve it statically, my personal expereince is that people will complain about why it fails to compile more than why it is slow in some corner cases)
 
-Note this also interacts with `[@uncurry]`
-
-for example
-
-```ocaml
-external filter : 'a array -> ('a -> bool [@uncurry]) -> 'a array = "filter"
-[@@send]
-
-let f xs =
-    xs |. filter (fun x -> x > 2)
-```
-
-Here whether the callback gets inlined to the call of `filter` will have an effect on how `Pjs_fn_make` gets cancelled.
-
 Note when we pattern match over the original lamba,`Levent` needs to be removed as early as possible. Due to the existence of `Levent`, we can not pattern match over nested original raw lambda.
 
 We turned off event generation temporarily
@@ -470,7 +456,6 @@ is consistent with the generalized version):
 
 So far we haven't specialized option comparison, but we need be careful when 
 we do the optimizer, e.g, `Js_exp_make.int_comp`, we need make sure the peepwhole is consistent
-
 
 
 

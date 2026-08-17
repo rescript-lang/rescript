@@ -315,8 +315,6 @@ let lam_prim ~primitive:(p : Lambda.primitive) ~args loc : Lam.t =
   | Pis_poly_var_block -> prim ~primitive:Pis_poly_var_block ~args loc
   | Pjs_raw_expr -> assert false
   | Pjs_raw_stmt -> assert false
-  | Pjs_fn_make arity -> prim ~primitive:(Pjs_fn_make arity) ~args loc
-  | Pjs_fn_make_unit -> prim ~primitive:Pjs_fn_make_unit ~args loc
   | Pjs_fn_method -> prim ~primitive:Pjs_fn_method ~args loc
 
 (* Does not exist since we compile array in js backend unlike native backend *)

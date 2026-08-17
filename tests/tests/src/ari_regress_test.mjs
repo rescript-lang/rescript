@@ -3,8 +3,6 @@
 import * as Mocha from "mocha";
 import * as Test_utils from "./test_utils.mjs";
 
-let g = 7;
-
 let h = {
   contents: 0
 };
@@ -15,16 +13,14 @@ function g1(x, y) {
   return (xx, yy) => (xx + yy | 0) + u | 0;
 }
 
-let u = 8;
-
-let x = u + 6 | 0;
+let x = 14;
 
 function v(__x) {
   return g1(3, 4)(6, __x);
 }
 
 Mocha.describe("Ari_regress_test", () => {
-  Mocha.test("curry", () => Test_utils.eq("File \"ari_regress_test.res\", line 25, characters 7-14", g, 7));
+  Mocha.test("curry", () => Test_utils.eq("File \"ari_regress_test.res\", line 25, characters 7-14", 7, 7));
   Mocha.test("curry2", () => Test_utils.eq("File \"ari_regress_test.res\", line 30, characters 6-13", 14, (v(1), v(1))));
   Mocha.test("curry3", () => Test_utils.eq("File \"ari_regress_test.res\", line 40, characters 7-14", x, 14));
   Mocha.test("ref count", () => Test_utils.eq("File \"ari_regress_test.res\", line 44, characters 7-14", h.contents, 2));

@@ -12,24 +12,19 @@ function f2(a) {
 
 let a = (3).toString();
 
-function f3(extra) {
-  return 101;
-}
-
-let b = f3(2);
-
 let arr = Stdlib_Array.fromInitializer(2, param => 0);
 
 for (let i = 0; i <= 1; ++i) {
-  let f3$1 = extra => i + 1 | 0;
-  arr[i] = f3$1(2);
+  arr[i] = i + 1 | 0;
 }
 
 console.log([
   a,
-  b,
+  101,
   arr
 ]);
+
+let b = 101;
 
 let c = arr;
 

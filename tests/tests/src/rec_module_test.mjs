@@ -2,31 +2,6 @@
 
 import * as Mocha from "mocha";
 import * as Test_utils from "./test_utils.mjs";
-import * as Primitive_module from "@rescript/runtime/lib/es6/Primitive_module.mjs";
-
-let A = Primitive_module.init([
-  "rec_module_test.res",
-  6,
-  4
-], {
-  TAG: "Module",
-  _0: [[
-      "Function",
-      "even"
-    ]]
-});
-
-let B = Primitive_module.init([
-  "rec_module_test.res",
-  18,
-  4
-], {
-  TAG: "Module",
-  _0: [[
-      "Function",
-      "odd"
-    ]]
-});
 
 function even(n) {
   if (n === 0) {
@@ -38,15 +13,9 @@ function even(n) {
   }
 }
 
-Primitive_module.update({
-  TAG: "Module",
-  _0: [[
-      "Function",
-      "even"
-    ]]
-}, A, {
+let A = {
   even: even
-});
+};
 
 function odd(n) {
   if (n === 1) {
@@ -58,51 +27,9 @@ function odd(n) {
   }
 }
 
-Primitive_module.update({
-  TAG: "Module",
-  _0: [[
-      "Function",
-      "odd"
-    ]]
-}, B, {
+let B = {
   odd: odd
-});
-
-let AA = Primitive_module.init([
-  "rec_module_test.res",
-  32,
-  4
-], {
-  TAG: "Module",
-  _0: [
-    [
-      "Function",
-      "even"
-    ],
-    [
-      "Function",
-      "x"
-    ]
-  ]
-});
-
-let BB = Primitive_module.init([
-  "rec_module_test.res",
-  46,
-  4
-], {
-  TAG: "Module",
-  _0: [
-    [
-      "Function",
-      "odd"
-    ],
-    [
-      "Function",
-      "y"
-    ]
-  ]
-});
+};
 
 function even$1(n) {
   if (n === 0) {
@@ -118,22 +45,10 @@ function x() {
   return BB.y() + 3 | 0;
 }
 
-Primitive_module.update({
-  TAG: "Module",
-  _0: [
-    [
-      "Function",
-      "even"
-    ],
-    [
-      "Function",
-      "x"
-    ]
-  ]
-}, AA, {
+let AA = {
   even: even$1,
   x: x
-});
+};
 
 function odd$1(n) {
   if (n === 1) {
@@ -141,7 +56,7 @@ function odd$1(n) {
   } else if (n === 0) {
     return false;
   } else {
-    return AA.even(n - 1 | 0);
+    return even$1(n - 1 | 0);
   }
 }
 
@@ -149,22 +64,10 @@ function y() {
   return 32;
 }
 
-Primitive_module.update({
-  TAG: "Module",
-  _0: [
-    [
-      "Function",
-      "odd"
-    ],
-    [
-      "Function",
-      "y"
-    ]
-  ]
-}, BB, {
+let BB = {
   odd: odd$1,
   y: y
-});
+};
 
 let Even = {};
 
@@ -178,14 +81,14 @@ Mocha.describe("Rec_module_test", () => {
     false
   ], [
     A.even(2),
-    AA.even(4),
+    even$1(4),
     B.odd(2),
-    BB.odd(4)
+    odd$1(4)
   ]));
-  Mocha.test("test2", () => Test_utils.eq("File \"rec_module_test.res\", line 75, characters 7-14", BB.y(), 32));
-  Mocha.test("test3", () => Test_utils.eq("File \"rec_module_test.res\", line 79, characters 7-14", AA.x(), 35));
+  Mocha.test("test2", () => Test_utils.eq("File \"rec_module_test.res\", line 75, characters 7-14", y(), 32));
+  Mocha.test("test3", () => Test_utils.eq("File \"rec_module_test.res\", line 79, characters 7-14", x(), 35));
   Mocha.test("test4 - A.even", () => Test_utils.eq("File \"rec_module_test.res\", line 83, characters 7-14", true, A.even(2)));
-  Mocha.test("test4 - AA.even", () => Test_utils.eq("File \"rec_module_test.res\", line 87, characters 7-14", true, AA.even(4)));
+  Mocha.test("test4 - AA.even", () => Test_utils.eq("File \"rec_module_test.res\", line 87, characters 7-14", true, even$1(4)));
   Mocha.test("test5", () => Test_utils.eq("File \"rec_module_test.res\", line 91, characters 7-14", false, B.odd(2)));
 });
 
@@ -197,4 +100,4 @@ export {
   Even,
   Odd,
 }
-/* A Not a pure module */
+/*  Not a pure module */

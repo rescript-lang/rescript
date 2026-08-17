@@ -7,20 +7,20 @@ function $$(x, y) {
   return x + y | 0;
 }
 
-let v = 3;
-
 function $$$plus(x, y) {
   return x * y | 0;
 }
 
-let u = 3;
-
 Mocha.describe("Dollar_escape_test", () => {
   Mocha.test("dollar escape operators", () => {
-    Test_utils.eq("File \"dollar_escape_test.res\", line 14, characters 7-14", v, 3);
-    Test_utils.eq("File \"dollar_escape_test.res\", line 15, characters 7-14", u, 3);
+    Test_utils.eq("File \"dollar_escape_test.res\", line 14, characters 7-14", 3, 3);
+    Test_utils.eq("File \"dollar_escape_test.res\", line 15, characters 7-14", 3, 3);
   });
 });
+
+let v = 3;
+
+let u = 3;
 
 export {
   $$,
