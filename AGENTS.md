@@ -278,6 +278,14 @@ The compiler is designed for fast feedback loops and scales to large codebases:
 - Include appropriate tests with all changes
 - Build must pass before committing
 
+### Stacked pull requests
+
+When a PR depends on another unmerged PR, create a native GitHub stack with
+`gh stack` rather than only targeting the preceding feature branch. Keep the
+branches linear and in the same repository, and list branches or PRs from
+bottom to top. For existing PRs, use `gh stack link BOTTOM_PR [NEXT_PR...]`,
+then verify that GitHub reports stack metadata and runs CI for every PR.
+
 ### Code Quality
 
 - Follow existing patterns in the codebase
