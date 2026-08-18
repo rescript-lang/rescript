@@ -1,0 +1,10 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/primitive_catchall_duplicate_number.res[0m:[2m4:3-43[0m
+
+  2 [2m│[0m type t =
+  3 [2m│[0m   | @as(int) A({@as("kind") kind: int})
+  [1;31m4[0m [2m│[0m   [1;31m| @as(float) B({@as("kind") kind: float})[0m
+  5 [2m│[0m 
+
+  Constructor "B": field "kind" must have type int (direct builtin)
