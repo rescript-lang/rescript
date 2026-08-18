@@ -42,6 +42,7 @@ export const {
     bsc_exe,
     rescript_editor_analysis_exe,
     rescript_tools_exe,
+    rescript_language_server_exe,
     rescript_exe,
   },
 } = mod;

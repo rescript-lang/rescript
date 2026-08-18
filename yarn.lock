@@ -904,6 +904,15 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@tests/lsp-tests-basic-workspace@workspace:tests/lsp_tests/basic-workspace":
+  version: 0.0.0-use.local
+  resolution: "@tests/lsp-tests-basic-workspace@workspace:tests/lsp_tests/basic-workspace"
+  dependencies:
+    "@rescript/react": "workspace:^"
+    rescript: "workspace:^"
+  languageName: unknown
+  linkType: soft
+
 "@tests/namespaced-references@workspace:tests/analysis_tests/tests-namespaced-references":
   version: 0.0.0-use.local
   resolution: "@tests/namespaced-references@workspace:tests/analysis_tests/tests-namespaced-references"

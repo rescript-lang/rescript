@@ -126,7 +126,7 @@ Hover src/Hover.res 116:16
 {
   "contents": {
     "kind": "markdown",
-    "value": "```rescript\nAA.cond<([< #str(string)] as 'a)> => AA.cond<'a>\n```\n\n---\n\n```\n \n```\n```rescript\ntype AA.cond<'a> = 'a\n  constraint 'a = [< #str(string)]\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C110%2C2%5D)\n"
+    "value": "```rescript\nAA.cond<([< #str(string)] as 'a)> => AA.cond<'a>\n```\n\n---\n\n```\n \n```\n```rescript\ntype AA.cond<'a> = 'a\n  constraint 'a = [< #str(string)]\n```\nGo to: [Type definition](Hover.res#L111,3)\n"
   }
 }
 
@@ -134,7 +134,7 @@ Hover src/Hover.res 119:25
 {
   "contents": {
     "kind": "markdown",
-    "value": "```rescript\nAA.cond<([< #str(string)] as 'a)> => AA.cond<'a>\n```\n\n---\n\n```\n \n```\n```rescript\ntype AA.cond<'a> = 'a\n  constraint 'a = [< #str(string)]\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C110%2C2%5D)\n"
+    "value": "```rescript\nAA.cond<([< #str(string)] as 'a)> => AA.cond<'a>\n```\n\n---\n\n```\n \n```\n```rescript\ntype AA.cond<'a> = 'a\n  constraint 'a = [< #str(string)]\n```\nGo to: [Type definition](Hover.res#L111,3)\n"
   }
 }
 
@@ -203,7 +203,7 @@ Hover src/Hover.res 165:23
 {
   "contents": {
     "kind": "markdown",
-    "value": "```rescript\nfoo<bar>\n```\n\n---\n\n```\n \n```\n```rescript\ntype foo<'a> = {content: 'a, zzz: string}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C161%2C2%5D)\n\n\n---\n\n```\n \n```\n```rescript\ntype bar = {age: int}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C162%2C2%5D)\n"
+    "value": "```rescript\nfoo<bar>\n```\n\n---\n\n```\n \n```\n```rescript\ntype foo<'a> = {content: 'a, zzz: string}\n```\nGo to: [Type definition](Hover.res#L162,3)\n\n\n---\n\n```\n \n```\n```rescript\ntype bar = {age: int}\n```\nGo to: [Type definition](Hover.res#L163,3)\n"
   }
 }
 
@@ -211,7 +211,7 @@ Hover src/Hover.res 167:22
 {
   "contents": {
     "kind": "markdown",
-    "value": "```rescript\nfoobar\n```\n\n---\n\n```\n \n```\n```rescript\ntype foobar = foo<bar>\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C163%2C2%5D)\n"
+    "value": "```rescript\nfoobar\n```\n\n---\n\n```\n \n```\n```rescript\ntype foobar = foo<bar>\n```\nGo to: [Type definition](Hover.res#L164,3)\n"
   }
 }
 
@@ -387,7 +387,7 @@ Hover src/Hover.res 197:4
 {
   "contents": {
     "kind": "markdown",
-    "value": "```rescript\nCompV4.props<int, string> => React.element\n```\n\n---\n\n```\n \n```\n```rescript\ntype CompV4.props<'n, 's> = {n?: 'n, s: 's}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C190%2C2%5D)\n\n\n---\n\n```\n \n```\n```rescript\ntype React.element = Jsx.element\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22React.res%22%2C0%2C0%5D)\n"
+    "value": "```rescript\nCompV4.props<int, string> => React.element\n```\n\n---\n\n```\n \n```\n```rescript\ntype CompV4.props<'n, 's> = {n?: 'n, s: 's}\n```\nGo to: [Type definition](Hover.res#L191,3)\n\n\n---\n\n```\n \n```\n```rescript\ntype React.element = Jsx.element\n```\nGo to: [Type definition](React.res#L1,1)\n"
   }
 }
 
@@ -395,7 +395,7 @@ Hover src/Hover.res 202:16
 {
   "contents": {
     "kind": "markdown",
-    "value": "```rescript\nuseR\n```\n\n---\n\n```\n \n```\n```rescript\ntype useR = {x: int, y: list<option<r<float>>>}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C200%2C0%5D)\n\n\n---\n\n```\n \n```\n```rescript\ntype r<'a> = {i: 'a, f: float}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C101%2C0%5D)\n"
+    "value": "```rescript\nuseR\n```\n\n---\n\n```\n \n```\n```rescript\ntype useR = {x: int, y: list<option<r<float>>>}\n```\nGo to: [Type definition](Hover.res#L201,1)\n\n\n---\n\n```\n \n```\n```rescript\ntype r<'a> = {i: 'a, f: float}\n```\nGo to: [Type definition](Hover.res#L102,1)\n"
   }
 }
 
@@ -413,7 +413,7 @@ Resolved opens 1 Stdlib
 {
   "contents": {
     "kind": "markdown",
-    "value": "```rescript\nuseR\n```\n\n---\n\n```\n \n```\n```rescript\ntype useR = {x: int, y: list<option<r<float>>>}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C200%2C0%5D)\n\n\n---\n\n```\n \n```\n```rescript\ntype r<'a> = {i: 'a, f: float}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C101%2C0%5D)\n"
+    "value": "```rescript\nuseR\n```\n\n---\n\n```\n \n```\n```rescript\ntype useR = {x: int, y: list<option<r<float>>>}\n```\nGo to: [Type definition](Hover.res#L201,1)\n\n\n---\n\n```\n \n```\n```rescript\ntype r<'a> = {i: 'a, f: float}\n```\nGo to: [Type definition](Hover.res#L102,1)\n"
   }
 }
 
@@ -470,7 +470,7 @@ Hover src/Hover.res 253:20
 {
   "contents": {
     "kind": "markdown",
-    "value": "```rescript\nvariant\nCoolVariant\n```\n---\n Cool variant! \n\n---\n\n```\n \n```\n```rescript\ntype variant = CoolVariant | OtherCoolVariant\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C251%2C0%5D)\n"
+    "value": "```rescript\nvariant\nCoolVariant\n```\n---\n Cool variant! \n\n---\n\n```\n \n```\n```rescript\ntype variant = CoolVariant | OtherCoolVariant\n```\nGo to: [Type definition](Hover.res#L252,1)\n"
   }
 }
 
@@ -478,7 +478,7 @@ Hover src/Hover.res 258:22
 {
   "contents": {
     "kind": "markdown",
-    "value": "```rescript\npayloadVariants\nInlineRecord({field1: int, field2: bool})\n```\n\n---\n\n```\n \n```\n```rescript\ntype payloadVariants =\n  | InlineRecord({field1: int, field2: bool})\n  | Args(int, bool)\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C256%2C0%5D)\n"
+    "value": "```rescript\npayloadVariants\nInlineRecord({field1: int, field2: bool})\n```\n\n---\n\n```\n \n```\n```rescript\ntype payloadVariants =\n  | InlineRecord({field1: int, field2: bool})\n  | Args(int, bool)\n```\nGo to: [Type definition](Hover.res#L257,1)\n"
   }
 }
 
@@ -486,7 +486,7 @@ Hover src/Hover.res 261:23
 {
   "contents": {
     "kind": "markdown",
-    "value": "```rescript\npayloadVariants\nArgs(int, bool)\n```\n\n---\n\n```\n \n```\n```rescript\ntype payloadVariants =\n  | InlineRecord({field1: int, field2: bool})\n  | Args(int, bool)\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C256%2C0%5D)\n"
+    "value": "```rescript\npayloadVariants\nArgs(int, bool)\n```\n\n---\n\n```\n \n```\n```rescript\ntype payloadVariants =\n  | InlineRecord({field1: int, field2: bool})\n  | Args(int, bool)\n```\nGo to: [Type definition](Hover.res#L257,1)\n"
   }
 }
 
@@ -494,7 +494,7 @@ Hover src/Hover.res 268:42
 {
   "contents": {
     "kind": "markdown",
-    "value": "```rescript\nRecursiveVariants.t\nAction1(int)\n```\n\n---\n\n```\n \n```\n```rescript\ntype RecursiveVariants.t =\n  | Action1(int)\n  | Action2(float)\n  | Batch(array<t>)\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C265%2C2%5D)\n"
+    "value": "```rescript\nRecursiveVariants.t\nAction1(int)\n```\n\n---\n\n```\n \n```\n```rescript\ntype RecursiveVariants.t =\n  | Action1(int)\n  | Action2(float)\n  | Batch(array<t>)\n```\nGo to: [Type definition](Hover.res#L266,3)\n"
   }
 }
 
@@ -540,7 +540,7 @@ Hover src/Hover.res 281:6
 {
   "contents": {
     "kind": "markdown",
-    "value": "```rescript\ntype aliased = variant\n```\n\n---\n\n```\n \n```\n```rescript\ntype variant = CoolVariant | OtherCoolVariant\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C251%2C0%5D)\n"
+    "value": "```rescript\ntype aliased = variant\n```\n\n---\n\n```\n \n```\n```rescript\ntype variant = CoolVariant | OtherCoolVariant\n```\nGo to: [Type definition](Hover.res#L252,1)\n"
   }
 }
 

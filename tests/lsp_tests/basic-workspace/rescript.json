@@ -1,0 +1,13 @@
+{
+  "name": "@tests/lsp-tests-basic-workspace",
+  "sources": {
+    "dir": "."
+  },
+  "package-specs": {
+    "module": "esmodule",
+    "in-source": false
+  },
+  "suffix": ".res.js",
+  "dependencies": ["@rescript/react"],
+  "jsx": { "version": 4 }
+}
