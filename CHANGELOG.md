@@ -38,6 +38,7 @@
 
 #### :house: Internal
 
+- Sync the platform npm package's compiler binaries (`packages/@rescript/<platform>/bin`) via dune promotion on every `dune build`, instead of Makefile/CI copy steps that only ran when make did: a plain `dune build` can no longer leave `cli/*.js` and the test harnesses running a stale compiler. https://github.com/rescript-lang/rescript/pull/8560
 - Remove unused compiler IR definitions, modules, helpers, error variants, and Typedtree fields. https://github.com/rescript-lang/rescript/pull/8551 https://github.com/rescript-lang/rescript/pull/8555
 - Add the `-check-lam` compiler option, enable Lambda invariant checking in compiler tests, and remove build-profile-dependent checking. https://github.com/rescript-lang/rescript/pull/8534
 - Replace `-bs-diagnose` with `-debug-ir` and make IR diagnostic artifacts deterministic, compilation-local, and easy to clean. https://github.com/rescript-lang/rescript/pull/8535

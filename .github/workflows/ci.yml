@@ -162,8 +162,8 @@ jobs:
             _build
           key: ${{ steps.compiler-build-state-key.outputs.value }}
 
-      - name: Copy compiler exes to platform bin dir
-        run: node scripts/copyExes.js --compiler
+      - name: Verify promoted compiler exes
+        run: node scripts/checkCompilerExes.js
 
       - name: "Syntax: Run tests"
         env:
