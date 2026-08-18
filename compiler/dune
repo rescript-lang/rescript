@@ -9,6 +9,7 @@
  gentype
  jsoo
  ml
+ sync
  syntax)
 
 (env
