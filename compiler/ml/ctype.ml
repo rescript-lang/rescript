@@ -2914,8 +2914,8 @@ let rec moregen inst_nongen type_pairs env t1 t2 =
               | Tvar _, _ when may_instantiate inst_nongen t1' ->
                 moregen_occur env t1'.level t2;
                 link_type t1' t2
-              | Tarrow (arg1, ret1, _, _), Tarrow (arg2, ret2, _, _)
-                when Asttypes.same_arg_label arg1.lbl arg2.lbl ->
+              | Tarrow (arg1, ret1, _, a1), Tarrow (arg2, ret2, _, a2)
+                when a1 = a2 && Asttypes.same_arg_label arg1.lbl arg2.lbl ->
                 moregen inst_nongen type_pairs env arg1.typ arg2.typ;
                 moregen inst_nongen type_pairs env ret1 ret2
               | Ttuple tl1, Ttuple tl2 ->
@@ -3184,8 +3184,8 @@ let rec eqtype rename type_pairs subst env t1 t2 =
                   if List.exists (fun (_, t) -> t == t2') !subst then
                     raise (Unify []);
                   subst := (t1', t2') :: !subst)
-              | Tarrow (arg1, ret1, _, _), Tarrow (arg2, ret2, _, _)
-                when Asttypes.same_arg_label arg1.lbl arg2.lbl ->
+              | Tarrow (arg1, ret1, _, a1), Tarrow (arg2, ret2, _, a2)
+                when a1 = a2 && Asttypes.same_arg_label arg1.lbl arg2.lbl ->
                 eqtype rename type_pairs subst env arg1.typ arg2.typ;
                 eqtype rename type_pairs subst env ret1 ret2
               | Ttuple tl1, Ttuple tl2 ->
@@ -3597,8 +3597,8 @@ let rec subtype_rec env trace t1 t2 cstrs =
       TypePairs.add subtypes (t1, t2) ();
       match (t1.desc, t2.desc) with
       | Tvar _, _ | _, Tvar _ -> (trace, t1, t2, !univar_pairs, None) :: cstrs
-      | Tarrow (arg1, ret1, _, _), Tarrow (arg2, ret2, _, _)
-        when Asttypes.same_arg_label arg1.lbl arg2.lbl ->
+      | Tarrow (arg1, ret1, _, a1), Tarrow (arg2, ret2, _, a2)
+        when a1 = a2 && Asttypes.same_arg_label arg1.lbl arg2.lbl ->
         let cstrs =
           subtype_rec env
             ((arg2.typ, arg1.typ) :: trace)
