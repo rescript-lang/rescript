@@ -46,7 +46,7 @@ let someBusiness = {name: "SomeBusiness", owner: None, address: None}
 let findAllAddresses = (businesses: array<business>): array<string> =>
   businesses
   ->Array.map(business =>
-    \"@"(
+    List.concat(
       business.address->getOpt(list{}, a => list{a}),
       business.owner->getOpt(list{}, p => p.address->getOpt(list{}, a => list{a})),
     )
