@@ -39,6 +39,40 @@ else
   exit 1
 fi
 
+bold "Test: Stored warnings are replayed after an early compile error"
+warning_count=$(grep -c "unusedValue" rewatch.log || true)
+echo 'B.world()' >> ./packages/watch-warnings/src/ModuleA.res
+timeout=20
+while [ "$(grep -c "unusedValue" rewatch.log || true)" -le "$warning_count" ] && [ "$timeout" -gt 0 ]; do
+  sleep 1
+  timeout=$((timeout - 1))
+done
+if [ "$timeout" -eq 0 ]; then
+  error "Expected warning was not emitted before the error test"
+  git checkout -- ./packages/watch-warnings/src/ModuleA.res
+  exit_watcher
+  exit 1
+fi
+
+error_log_start=$(($(wc -l < rewatch.log) + 1))
+echo 'let broken: int = "broken"' >> ./packages/watch-warnings/src/B.res
+timeout=20
+while ! tail -n +"$error_log_start" rewatch.log | grep -q 'let broken' && [ "$timeout" -gt 0 ]; do
+  sleep 1
+  timeout=$((timeout - 1))
+done
+warning_replay_output=$(tail -n +"$error_log_start" rewatch.log)
+if [[ "$warning_replay_output" == *"unusedValue"* ]]; then
+  success "Stored warning was replayed"
+else
+  error "Stored warning was not replayed"
+  printf "%s\n" "$warning_replay_output" >&2
+  git checkout -- ./packages/watch-warnings/src/ModuleA.res ./packages/watch-warnings/src/B.res
+  exit_watcher
+  exit 1
+fi
+git checkout -- ./packages/watch-warnings/src/ModuleA.res ./packages/watch-warnings/src/B.res
+
 sleep 1
 
 replace '/Js.log("added-by-test")/d' ./packages/main/src/Main.res;
