@@ -760,7 +760,7 @@ Belt.List.eq(list{1, 2, 3}, list{1, 2}, (a, b) => a == b) == false
 
 Belt.List.eq(list{1, 2}, list{1, 2}, (a, b) => a == b) == true
 
-Belt.List.eq(list{1, 2, 3}, list{-1, -2, -3}, (a, b) => abs(a) == abs(b)) == true
+Belt.List.eq(list{1, 2, 3}, list{-1, -2, -3}, (a, b) => Math.Int.abs(a) == Math.Int.abs(b)) == true
 ```
 */
 let eq: (t<'a>, t<'a>, ('a, 'a) => bool) => bool
@@ -780,7 +780,7 @@ list{1, 2, 3}->Belt.List.has(2, (a, b) => a == b) == true
 
 list{1, 2, 3}->Belt.List.has(4, (a, b) => a == b) == false
 
-list{-1, -2, -3}->Belt.List.has(2, (a, b) => abs(a) == abs(b)) == true
+list{-1, -2, -3}->Belt.List.has(2, (a, b) => Math.Int.abs(a) == Math.Int.abs(b)) == true
 ```
 */
 let has: (t<'a>, 'b, ('a, 'b) => bool) => bool

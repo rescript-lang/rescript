@@ -33,8 +33,8 @@ describe(__MODULE__, () => {
   test("mutable map operations with large range", () => {
     let a0 = f(randomRange(0, 10000))
     \".!()<-"(a0, 2000, 33)
-    a0->M.removeMany(randomRange(0, 1998)->A.map(fst))
-    a0->M.removeMany(randomRange(2002, 11000)->A.map(fst))
+    a0->M.removeMany(randomRange(0, 1998)->A.map(Stdlib.Pair.first))
+    a0->M.removeMany(randomRange(2002, 11000)->A.map(Stdlib.Pair.first))
     eq(__LOC__, a0->M.toArray, [(1999, 1999), (2000, 33), (2001, 2001)])
   })
 })

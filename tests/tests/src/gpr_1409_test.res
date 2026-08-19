@@ -51,7 +51,7 @@ let test6 = (f, x) => {
   let x = ref(3)
   mangle(
     ~_open=?{
-      incr(x)
+      Int.Ref.increment(x)
       Some(x.contents)
     },
     ~xx__hi=?f(x),

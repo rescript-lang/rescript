@@ -704,8 +704,8 @@ module Particle: {
 
   /* Converts an x,y [pair] to an Actors.xy record */
   let pair_to_xy = pair => {
-    x: fst(pair),
-    y: snd(pair),
+    x: Pair.first(pair),
+    y: Pair.second(pair),
   }
 
   /* Function wrapper to assist in generating the template paramss for a
@@ -910,7 +910,7 @@ module Object: {
     speed: float,
   }
 
-  let id_counter = ref(min_int)
+  let id_counter = ref(Int.Constants.minValue)
 
   type obj = {
     params: obj_params,
@@ -1083,7 +1083,7 @@ module Object: {
         player.jumping = true
         player.grounded = false
         player.vel.y = max(
-          player.vel.y -. (player_jump +. abs_float(player.vel.x) *. 0.25),
+          player.vel.y -. (player_jump +. Math.abs(player.vel.x) *. 0.25),
           player_max_jump,
         )
       }
@@ -1108,10 +1108,10 @@ module Object: {
    *Mario sprites/collidables should be used. */
   let update_player = (player, keys, context) => {
     let prev_jumping = player.jumping
-    let prev_dir = player.dir and prev_vx = abs_float(player.vel.x)
+    let prev_dir = player.dir and prev_vx = Math.abs(player.vel.x)
     keys->List.forEach(update_player_keys(player, ...))
     let v = player.vel.x *. friction
-    let vel_damped = if abs_float(v) < 0.1 {
+    let vel_damped = if Math.abs(v) < 0.1 {
       0.
     } else {
       v
@@ -1125,7 +1125,7 @@ module Object: {
     if !prev_jumping && player.jumping {
       Some(pl_typ, Sprite.make(SPlayer(pl_typ, Jumping), player.dir, context))
     } else if (
-      prev_dir != player.dir || (prev_vx == 0. && abs_float(player.vel.x) > 0. && !player.jumping)
+      prev_dir != player.dir || (prev_vx == 0. && Math.abs(player.vel.x) > 0. && !player.jumping)
     ) {
       Some(pl_typ, Sprite.make(SPlayer(pl_typ, Running), player.dir, context))
     } else if prev_dir != player.dir && (player.jumping && prev_jumping) {
@@ -1144,7 +1144,7 @@ module Object: {
     if obj.grounded {
       obj.vel.y = 0.
     } else if obj.params.has_gravity {
-      obj.vel.y = min(obj.vel.y +. gravity +. abs_float(obj.vel.y) *. 0.01, max_y_vel)
+      obj.vel.y = min(obj.vel.y +. gravity +. Math.abs(obj.vel.y) *. 0.01, max_y_vel)
     }
 
   let update_pos = obj => {
@@ -1271,7 +1271,7 @@ module Object: {
   let spawn_above = (player_dir, obj, typ, context) => {
     let item = spawn(SItem(typ), context, (obj.pos.x, obj.pos.y))
     let item_obj = get_obj(item)
-    item_obj.pos.y = item_obj.pos.y -. snd(get_sprite(item).params.frame_size)
+    item_obj.pos.y = item_obj.pos.y -. Pair.second(get_sprite(item).params.frame_size)
     item_obj.dir = opposite_dir(player_dir)
     set_vel_to_speed(item_obj)
     item
@@ -1320,9 +1320,9 @@ module Object: {
       let vy = b1.center.y -. b2.center.y
       let hwidths = b1.half.x +. b2.half.x
       let hheights = b1.half.y +. b2.half.y
-      if abs_float(vx) < hwidths && abs_float(vy) < hheights {
-        let ox = hwidths -. abs_float(vx)
-        let oy = hheights -. abs_float(vy)
+      if Math.abs(vx) < hwidths && Math.abs(vy) < hheights {
+        let ox = hwidths -. Math.abs(vx)
+        let oy = hheights -. Math.abs(vy)
         if ox >= oy {
           if vy > 0. {
             o1.pos.y = o1.pos.y +. oy
@@ -1358,7 +1358,7 @@ module Object: {
       | Goomba => list{Particle.make(GoombaSquish, pos, ctx)}
       | _ => list{}
       }
-      \"@"(score, remains)
+      List.concat(score, remains)
     | Block(t, s, o) =>
       switch t {
       | Brick =>
@@ -1433,7 +1433,7 @@ module Draw: {
     let (sw, sh) = sprite.params.frame_size
     let (dx, dy) = (posx, posy)
     let (dw, dh) = sprite.params.frame_size
-    let sx = sx +. float_of_int(sprite.frame.contents) *. sw
+    let sx = sx +. Int.toFloat(sprite.frame.contents) *. sw
     /* Console.log(sprite.frame) */
     /* context##clearRect(0.,0.,sw, sh); */
     context["drawImage"](sprite.img, sx, sy, sw, sh, dx, dy, dw, dh)
@@ -1444,15 +1444,15 @@ module Draw: {
    *between two background images. */
   let draw_bgd = (bgd, off_x) => {
     render(bgd, (-.off_x, 0.))
-    render(bgd, (fst(bgd.params.frame_size) -. off_x, 0.))
+    render(bgd, (Pair.first(bgd.params.frame_size) -. off_x, 0.))
   }
 
   /* Used for animation updating. Canvas is cleared each frame and redrawn. */
   let clear_canvas = canvas => {
     let canvas = Dom_html.canvasElementToJsObj(canvas)
     let context = Dom_html.canvasRenderingContext2DToJsObj(canvas["getContext"]("2d"))
-    let cwidth = float_of_int(canvas["width"])
-    let cheight = float_of_int(canvas["height"])
+    let cwidth = Int.toFloat(canvas["width"])
+    let cheight = Int.toFloat(canvas["height"])
     ignore(context["clearRect"](0., 0., cwidth, cheight))
   }
 
@@ -1464,7 +1464,7 @@ module Draw: {
     let context = Dom_html.canvasRenderingContext2DToJsObj(canvas["getContext"]("2d"))
     ignore(context["font"] = "10px 'Press Start 2P'")
     ignore(
-      context["fillText"]("Score: " ++ score_string, float_of_int(canvas["width"]) -. 140., 18.),
+      context["fillText"]("Score: " ++ score_string, Int.toFloat(canvas["width"]) -. 140., 18.),
     )
     ignore(context["fillText"]("Coins: " ++ coin_string, 120., 18.))
   }
@@ -1551,7 +1551,7 @@ module Viewport: {
    * centered about the origin point. */
   let calc_viewport_point = (cc, vc, mc) => {
     let vc_half = vc /. 2.
-    min(max(cc -. vc_half, 0.), min(mc -. vc, abs_float(cc -. vc_half)))
+    min(max(cc -. vc_half, 0.), min(mc -. vc, Math.abs(cc -. vc_half)))
   }
 
   /* Returns whether a coordinate pair [pos] is inside the viewport [v] */
@@ -2001,8 +2001,8 @@ module Director: {
     let k = pressed_keys
     let ctrls = list{(k.left, CLeft), (k.right, CRight), (k.up, CUp), (k.down, CDown)}
     ctrls->List.reduceReverse(list{}, (a, x) =>
-      if fst(x) {
-        list{snd(x), ...a}
+      if Pair.first(x) {
+        list{Pair.second(x), ...a}
       } else {
         a
       }
@@ -2025,20 +2025,20 @@ module Director: {
         Player(new_typ, new_spr, o)
       }
       let evolved = update_collidable(state, player, all_collids)
-      collid_objs := \"@"(collid_objs.contents, evolved)
+      collid_objs := List.concat(collid_objs.contents, evolved)
       player
     | _ =>
       let obj = get_obj(collid)
       let evolved = update_collidable(state, collid, all_collids)
       if !obj.kill {
-        collid_objs := list{collid, ...\"@"(collid_objs.contents, evolved)}
+        collid_objs := list{collid, ...List.concat(collid_objs.contents, evolved)}
       }
       let new_parts = if obj.kill {
         Object.kill(collid, state.ctx)
       } else {
         list{}
       }
-      particles := \"@"(particles.contents, new_parts)
+      particles := List.concat(particles.contents, new_parts)
       collid
     }
 
@@ -2057,8 +2057,8 @@ module Director: {
   let update_loop = (canvas, (player, objs), map_dim) => {
     let scale = 1.
     let ctx = Dom_html.canvasElementToJsObj(canvas)["getContext"]("2d")
-    let cwidth = float_of_int(Dom_html.canvasElementToJsObj(canvas)["width"]) /. scale
-    let cheight = float_of_int(Dom_html.canvasElementToJsObj(canvas)["height"]) /. scale
+    let cwidth = Int.toFloat(Dom_html.canvasElementToJsObj(canvas)["width"]) /. scale
+    let cheight = Int.toFloat(Dom_html.canvasElementToJsObj(canvas)["height"]) /. scale
     let viewport = Viewport.make((cwidth, cheight), map_dim)
     let state = {
       bgd: Sprite.make_bgd(ctx),
@@ -2067,7 +2067,7 @@ module Director: {
       score: 0,
       coins: 0,
       multiplier: 1,
-      map: snd(map_dim),
+      map: Pair.second(map_dim),
       game_over: false,
     }
     Dom_html.canvasRenderingContext2DToJsObj(state.ctx)["scale"](scale, scale)
@@ -2084,9 +2084,9 @@ module Director: {
         Draw.clear_canvas(canvas)
 
         /* Parallax background */
-        let vpos_x_int = int_of_float(state.vpt.pos.x /. 5.)
-        let bgd_width = int_of_float(fst(state.bgd.params.frame_size))
-        Draw.draw_bgd(state.bgd, float_of_int(mod(vpos_x_int, bgd_width)))
+        let vpos_x_int = Float.toInt(state.vpt.pos.x /. 5.)
+        let bgd_width = Float.toInt(Pair.first(state.bgd.params.frame_size))
+        Draw.draw_bgd(state.bgd, Int.toFloat(mod(vpos_x_int, bgd_width)))
 
         let player = run_update_collid(state, player, objs)
 
@@ -2163,7 +2163,7 @@ module Procedural_generator: {
     switch loclist {
     | list{} => false
     | list{h, ...t} =>
-      if checkloc == snd(h) {
+      if checkloc == Pair.second(h) {
         true
       } else {
         mem_loc(checkloc, t)
@@ -2176,7 +2176,12 @@ module Procedural_generator: {
     switch lst {
     | list{} => list{}
     | list{h, ...t} =>
-      \"@"(list{(fst(h), (fst(snd(h)) *. 16., snd(snd(h)) *. 16.))}, convert_list(t))
+      List.concat(
+        list{
+          (Pair.first(h), (Pair.first(Pair.second(h)) *. 16., Pair.second(Pair.second(h)) *. 16.)),
+        },
+        convert_list(t),
+      )
     }
 
   /* Chooses what type of enemy should be instantiated given typ number */
@@ -2205,10 +2210,10 @@ module Procedural_generator: {
     switch lst {
     | list{} => list{}
     | list{h, ...t} =>
-      if mem_loc(snd(h), currentLst) {
+      if mem_loc(Pair.second(h), currentLst) {
         avoid_overlap(t, currentLst)
       } else {
-        \"@"(list{h}, avoid_overlap(t, currentLst))
+        List.concat(list{h}, avoid_overlap(t, currentLst))
       }
     }
 
@@ -2218,14 +2223,14 @@ module Procedural_generator: {
     switch lst {
     | list{} => list{}
     | list{h, ...t} =>
-      let cx = fst(snd(h))
-      let cy = snd(snd(h))
+      let cx = Pair.first(Pair.second(h))
+      let cy = Pair.second(Pair.second(h))
       let pixx = blockw *. 16.
       let pixy = blockh *. 16.
       if cx < 128. || (pixx -. cx < 528. || (cy == 0. || pixy -. cy < 48.)) {
         trim_edges(t, blockw, blockh)
       } else {
-        \"@"(list{h}, trim_edges(t, blockw, blockh))
+        List.concat(list{h}, trim_edges(t, blockw, blockh))
       }
     }
 
@@ -2245,7 +2250,7 @@ module Procedural_generator: {
     }
     let two = list{(typ, (cbx +. 2., cby -. 2.)), (typ, (cbx +. 3., cby -. 2.))}
     let one = list{(typ, (cbx +. 3., cby -. 3.))}
-    \"@"(four, \"@"(three, \"@"(two, one)))
+    List.concat(four, List.concat(three, List.concat(two, one)))
   }
 
   /* Generates a stair formation going upwards. */
@@ -2257,7 +2262,7 @@ module Procedural_generator: {
       (typ, (cbx +. 5., cby -. 2.)),
       (typ, (cbx +. 6., cby -. 2.)),
     }
-    \"@"(one, \"@"(two, three))
+    List.concat(one, List.concat(two, three))
   }
 
   /* Generates a stair formation going downwards */
@@ -2265,7 +2270,7 @@ module Procedural_generator: {
     let three = list{(typ, (cbx, cby)), (typ, (cbx +. 1., cby)), (typ, (cbx +. 2., cby))}
     let two = list{(typ, (cbx +. 2., cby +. 1.)), (typ, (cbx +. 3., cby +. 1.))}
     let one = list{(typ, (cbx +. 5., cby +. 2.)), (typ, (cbx +. 6., cby +. 2.))}
-    \"@"(three, \"@"(two, one))
+    List.concat(three, List.concat(two, one))
   }
 
   /* Generates a cloud block platform with some length num. */
@@ -2273,7 +2278,7 @@ module Procedural_generator: {
     if num == 0 {
       list{}
     } else {
-      \"@"(list{(typ, (cbx, cby))}, generate_clouds(cbx +. 1., cby, typ, num - 1))
+      List.concat(list{(typ, (cbx, cby))}, generate_clouds(cbx +. 1., cby, typ, num - 1))
     }
 
   /* Generates an obj_coord list (typ, coordinates) of coins to be placed. */
@@ -2283,9 +2288,9 @@ module Procedural_generator: {
     | list{} => list{}
     | list{h, ...t} =>
       if place_coin == 0 {
-        let xc = fst(snd(h))
-        let yc = snd(snd(h))
-        \"@"(list{(0, (xc, yc -. 16.))}, generate_coins(t))
+        let xc = Pair.first(Pair.second(h))
+        let yc = Pair.second(Pair.second(h))
+        List.concat(list{(0, (xc, yc -. 16.))}, generate_coins(t))
       } else {
         generate_coins(t)
       }
@@ -2390,7 +2395,7 @@ module Procedural_generator: {
       let enem_prob = 3
       if prob < enem_prob && blockh -. 1. == cby {
         let enemy = list{(prob, (cbx *. 16., cby *. 16.))}
-        \"@"(enemy, generate_enemies(blockw, blockh, cbx, cby +. 1., acc))
+        List.concat(enemy, generate_enemies(blockw, blockh, cbx, cby +. 1., acc))
       } else {
         generate_enemies(blockw, blockh, cbx, cby +. 1., acc)
       }
@@ -2404,9 +2409,9 @@ module Procedural_generator: {
     | list{} => list{}
     | list{h, ...t} =>
       if place_enemy == 0 {
-        let xc = fst(snd(h))
-        let yc = snd(snd(h))
-        \"@"(list{(enemy_typ, (xc, yc -. 16.))}, generate_block_enemies(t))
+        let xc = Pair.first(Pair.second(h))
+        let yc = Pair.second(Pair.second(h))
+        List.concat(list{(enemy_typ, (xc, yc -. 16.))}, generate_block_enemies(t))
       } else {
         generate_block_enemies(t)
       }
@@ -2433,7 +2438,7 @@ module Procedural_generator: {
       if prob < block_prob {
         let newacc = choose_block_pattern(blockw, blockh, cbx, cby, prob)
         let undup_lst = avoid_overlap(newacc, acc)
-        let called_acc = \"@"(acc, undup_lst)
+        let called_acc = List.concat(acc, undup_lst)
         generate_block_locs(blockw, blockh, cbx, cby +. 1., called_acc)
       } else {
         generate_block_locs(blockw, blockh, cbx, cby +. 1., acc)
@@ -2464,14 +2469,14 @@ module Procedural_generator: {
       acc
     } else if inc > 10. {
       let skip = Random.int(10)
-      let newacc = \"@"(acc, list{(4, (inc *. 16., blockh *. 16.))})
+      let newacc = List.concat(acc, list{(4, (inc *. 16., blockh *. 16.))})
       if skip == 7 && blockw -. inc > 32. {
         generate_ground(blockw, blockh, inc +. 1., acc)
       } else {
         generate_ground(blockw, blockh, inc +. 1., newacc)
       }
     } else {
-      let newacc = \"@"(acc, list{(4, (inc *. 16., blockh *. 16.))})
+      let newacc = List.concat(acc, list{(4, (inc *. 16., blockh *. 16.))})
       generate_ground(blockw, blockh, inc +. 1., newacc)
     }
 
@@ -2484,9 +2489,9 @@ module Procedural_generator: {
     switch lst {
     | list{} => list{}
     | list{h, ...t} =>
-      let sblock_typ = choose_sblock_typ(fst(h))
-      let ob = Object.spawn(SBlock(sblock_typ), context, snd(h))
-      \"@"(list{ob}, convert_to_block_obj(t, context))
+      let sblock_typ = choose_sblock_typ(Pair.first(h))
+      let ob = Object.spawn(SBlock(sblock_typ), context, Pair.second(h))
+      List.concat(list{ob}, convert_to_block_obj(t, context))
     }
 
   /* Converts the obj_coord list called by generate_enemies to a list of objects
@@ -2498,9 +2503,9 @@ module Procedural_generator: {
     switch lst {
     | list{} => list{}
     | list{h, ...t} =>
-      let senemy_typ = choose_enemy_typ(fst(h))
-      let ob = Object.spawn(SEnemy(senemy_typ), context, snd(h))
-      \"@"(list{ob}, convert_to_enemy_obj(t, context))
+      let senemy_typ = choose_enemy_typ(Pair.first(h))
+      let ob = Object.spawn(SEnemy(senemy_typ), context, Pair.second(h))
+      List.concat(list{ob}, convert_to_enemy_obj(t, context))
     }
 
   /* Converts the list of coordinates into a list of Coin objects */
@@ -2512,8 +2517,8 @@ module Procedural_generator: {
     | list{} => list{}
     | list{h, ...t} =>
       let sitem_typ = Coin
-      let ob = Object.spawn(SItem(sitem_typ), context, snd(h))
-      \"@"(list{ob}, convert_to_coin_obj(t, context))
+      let ob = Object.spawn(SItem(sitem_typ), context, Pair.second(h))
+      List.concat(list{ob}, convert_to_coin_obj(t, context))
     }
 
   /* Procedurally generates a list of collidables given canvas width, height and
@@ -2531,21 +2536,24 @@ module Procedural_generator: {
     let obj_converted_block_locs = convert_to_block_obj(converted_block_locs, context)
     let ground_blocks = generate_ground(blockw, blockh, 0., list{})
     let obj_converted_ground_blocks = convert_to_block_obj(ground_blocks, context)
-    let block_locations = \"@"(block_locs, ground_blocks)
-    let all_blocks = \"@"(obj_converted_block_locs, obj_converted_ground_blocks)
+    let block_locations = List.concat(block_locs, ground_blocks)
+    let all_blocks = List.concat(obj_converted_block_locs, obj_converted_ground_blocks)
     let enemy_locs = generate_enemies(blockw, blockh, 0., 0., block_locations)
     let obj_converted_enemies = convert_to_enemy_obj(enemy_locs, context)
     let coin_locs = generate_coins(converted_block_locs)
     let undup_coin_locs = trim_edges(avoid_overlap(coin_locs, converted_block_locs), blockw, blockh)
-    let converted_block_coin_locs = \"@"(converted_block_locs, coin_locs)
+    let converted_block_coin_locs = List.concat(converted_block_locs, coin_locs)
     let enemy_block_locs = generate_block_enemies(converted_block_locs)
     let undup_enemy_block_locs = avoid_overlap(enemy_block_locs, converted_block_coin_locs)
     let obj_enemy_blocks = convert_to_enemy_obj(undup_enemy_block_locs, context)
     let coin_objects = convert_to_coin_obj(undup_coin_locs, context)
     let obj_panel = generate_panel(context, blockw, blockh)
-    \"@"(
+    List.concat(
       all_blocks,
-      \"@"(obj_converted_enemies, \"@"(coin_objects, \"@"(obj_enemy_blocks, list{obj_panel}))),
+      List.concat(
+        obj_converted_enemies,
+        List.concat(coin_objects, List.concat(obj_enemy_blocks, list{obj_panel})),
+      ),
     )
   }
 

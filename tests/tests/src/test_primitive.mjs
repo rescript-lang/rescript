@@ -28,8 +28,6 @@ function a6(prim) {
   ];
 }
 
-let test_float = 3;
-
 let test_abs = Math.abs(3.0);
 
 let v = [
@@ -87,6 +85,8 @@ let a1 = "Test_primitive";
 let a2 = 27;
 
 let a3 = "Test_primitive";
+
+let test_float = 3;
 
 let xx = [
   0,

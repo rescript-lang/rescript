@@ -89,7 +89,7 @@ let add_help = speclist => {
   | Not_found => list{("--help", Unit(help_action), " Display this list of options")}
   }
 
-  \"@"(speclist, \"@"(add1, add2))
+  List.concat(speclist, List.concat(add1, add2))
 }
 
 /* FIXME- not compatible with strict mode */

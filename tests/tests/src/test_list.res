@@ -51,7 +51,7 @@ let nth = (l, n) =>
     nth_aux(l, n)
   }
 
-let append = \"@"
+let append = List.concat
 
 let rec rev_append = (l1, l2) =>
   switch l1 {
@@ -64,7 +64,7 @@ let rev = l => rev_append(l, list{})
 let rec flatten = x =>
   switch x {
   | list{} => list{}
-  | list{l, ...r} => \"@"(l, flatten(r))
+  | list{l, ...r} => List.concat(l, flatten(r))
   }
 
 let concat = flatten
@@ -394,7 +394,7 @@ let stable_sort = (cmp, l) => {
         list{x3, x2, x1}
       }
     | (n, l) =>
-      let n1 = asr(n, 1)
+      let n1 = Int.shiftRight(n, 1)
       let n2 = n - n1
       let l2 = chop(n1, l)
       let s1 = rev_sort(n1, l)
@@ -426,7 +426,7 @@ let stable_sort = (cmp, l) => {
         list{x3, x2, x1}
       }
     | (n, l) =>
-      let n1 = asr(n, 1)
+      let n1 = Int.shiftRight(n, 1)
       let n2 = n - n1
       let l2 = chop(n1, l)
       let s1 = sort(n1, l)
@@ -534,7 +534,7 @@ let sort_uniq = (cmp, l) => {
         }
       }
     | (n, l) =>
-      let n1 = asr(n, 1)
+      let n1 = Int.shiftRight(n, 1)
       let n2 = n - n1
       let l2 = chop(n1, l)
       let s1 = rev_sort(n1, l)
@@ -597,7 +597,7 @@ let sort_uniq = (cmp, l) => {
         }
       }
     | (n, l) =>
-      let n1 = asr(n, 1)
+      let n1 = Int.shiftRight(n, 1)
       let n2 = n - n1
       let l2 = chop(n1, l)
       let s1 = sort(n1, l)

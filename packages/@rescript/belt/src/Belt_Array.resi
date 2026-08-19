@@ -749,7 +749,7 @@ one by one using `f(xi, yi)`; and return true if all results are true false othe
 ## Examples
 
 ```rescript
-Belt.Array.eq([1, 2, 3], [-1, -2, -3], (a, b) => abs(a) == abs(b)) == true
+Belt.Array.eq([1, 2, 3], [-1, -2, -3], (a, b) => Math.Int.abs(a) == Math.Int.abs(b)) == true
 ```
 */
 let eq: (t<'a>, t<'a>, ('a, 'a) => bool) => bool

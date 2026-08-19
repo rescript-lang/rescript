@@ -79,7 +79,7 @@ function rev(l) {
 
 function flatten(x) {
   if (x !== 0) {
-    return Pervasives.$at(x.hd, flatten(x.tl));
+    return Stdlib_List.concat(x.hd, flatten(x.tl));
   } else {
     return /* [] */0;
   }
@@ -1409,7 +1409,7 @@ function isEmpty2(x) {
 
 let u = Stdlib_List.length;
 
-let append = Pervasives.$at;
+let append = Stdlib_List.concat;
 
 let concat = flatten;
 

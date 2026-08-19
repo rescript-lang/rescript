@@ -36,7 +36,7 @@ function unsafe_pop(q) {
     RE_EXN_ID: "Assert_failure",
     _1: [
       "Primitive_hash.res",
-      58,
+      59,
       12
     ],
     Error: new Error()
@@ -133,7 +133,7 @@ function hash(count, _limit, seed, obj) {
             }
             return size
           })(obj$1, v => push_back(queue, v));
-        s = hash_mix_int(s, (size$1 << 10) | 0);
+        s = hash_mix_int(s, (size$1 << 10));
       }
     }
   };

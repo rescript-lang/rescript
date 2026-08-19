@@ -22,7 +22,7 @@ function reset2() {
 }
 
 function incr2() {
-  v.contents = v.contents + 1 | 0;
+  vv.contents = vv.contents + 1 | 0;
 }
 
 function f(a, b, d, e) {

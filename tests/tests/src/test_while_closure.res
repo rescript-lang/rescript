@@ -44,7 +44,7 @@ let f = () => {
   while n.contents < count {
     let j = n.contents
     arr[j] = _ => v := v.contents + j
-    incr(n)
+    Int.Ref.increment(n)
   }
 }
 

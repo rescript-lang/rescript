@@ -1,18 +1,18 @@
 let l = Console.log
-module C = Char
+module C = String
 
-module C': module type of Char = C
-l(C'.chr(66))
+module C': module type of String = C
+l(C'.fromCharCode(66))
 
 module C''': module type of C = C' /* fails */
 
-module C'': module type of Char = C
-l(C''.chr(66))
+module C'': module type of String = C
+l(C''.fromCharCode(66))
 
 module C3 = {
-  include Char
+  include String
 }
-l(C3.chr(66))
+l(C3.fromCharCode(66))
 
 let f = x => {
   module M = {
@@ -22,12 +22,12 @@ let f = x => {
 }
 let g = x => {
   module L = List
-  L.length(L.map(x, succ))
+  L.length(L.map(x, n => n + 1))
 }
 
-module F = (X: {}) => Char
+module F = (X: {}) => String
 module C4 = F()
-l(C4.chr(66))
+l(C4.fromCharCode(66))
 
 module G = (X: {}) => X /* does not alias X */
 module M = G()
@@ -124,24 +124,24 @@ open M6
 l(N'.x)
 
 module M8 = {
-  module C = Char
+  module C = String
   module C' = C
 }
 module M9: {
   module C: {
-    let chr: int => char
+    let fromCharCode: int => string
   }
   module C' = C
 } = M8
-l(M9.C'.chr(66))
+l(M9.C'.fromCharCode(66))
 module M10: {
   module C': {
-    let chr: int => char
+    let fromCharCode: int => string
   }
 } = (M8: {
   module C: {
-    let chr: int => char
+    let fromCharCode: int => string
   }
   module C' = C
 })
-l(M10.C'.chr(66))
+l(M10.C'.fromCharCode(66))

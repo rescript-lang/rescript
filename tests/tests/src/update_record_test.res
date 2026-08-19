@@ -15,7 +15,7 @@ type t = {
 type invalidRecord = {invalid_js_id': int, x: int}
 
 let f = (x: t) => {
-  let y: t = Obj.magic(Obj.dup(Obj.repr(x)))
+  let y: t = {...x, a0: x.a0}
   {...y, a0: 1}
 }
 

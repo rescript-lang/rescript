@@ -3,7 +3,7 @@ include (
     module M = () => {
       let v = ref(0)
       {
-        incr(v)
+        Int.Ref.increment(v)
         v.contents->Int.toString->Console.log
       }
       let u = 3

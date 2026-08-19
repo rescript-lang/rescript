@@ -501,7 +501,7 @@ module Make = (Ord: OrderedType) => {
         }
       }
 
-    fst(sub(List.length(l), l))
+    Pair.first(sub(List.length(l), l))
   }
 
   let of_list = l =>

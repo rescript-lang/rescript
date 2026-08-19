@@ -67,7 +67,7 @@ let string_of_rank = x =>
   switch x {
   | Uninitialized => "Uninitialized"
   | Visited => "Visited"
-  | Ranked(i) => "Ranked(" ++ __unsafe_cast(i) ++ ")"
+  | Ranked(i) => "Ranked(" ++ Int.toString(i) ++ ")"
   }
 
 let find_ticker_by_name = (all_tickers, ticker) =>
@@ -141,7 +141,7 @@ let compute_update_sequences = all_tickers => {
           switch type_ {
           | Market =>
             let l = map->Ticker_map.getExn(ticker_name)
-            map->Ticker_map.set(ticker_name, \"@"(up, l))
+            map->Ticker_map.set(ticker_name, List.concat(up, l))
           | Binary_op({lhs, rhs, _}) =>
             let map = loop(list{ticker, ...up}, map, lhs)
             loop(list{ticker, ...up}, map, rhs)

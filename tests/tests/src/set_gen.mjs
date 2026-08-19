@@ -206,7 +206,7 @@ function check_height_and_diff(x) {
       Error: new Error()
     };
   }
-  let diff = Pervasives.abs(hl - hr | 0);
+  let diff = Math.abs(hl - hr | 0);
   if (diff > 2) {
     throw {
       RE_EXN_ID: Height_diff_borken,

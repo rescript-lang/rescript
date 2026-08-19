@@ -11,7 +11,7 @@ function hey(x, y) {
 
 let counter = ref(0)
 let side_effect = x => {
-  incr(x)
+  Int.Ref.increment(x)
   x.contents
 }
 
@@ -21,7 +21,7 @@ let bug_to_fix2 = (f, x) => xx(~x=?f(x), ~y=3, ()) /* : [f x] is done once */
 
 let counter2 = ref(0)
 let side_effect2 = x => {
-  incr(x)
+  Int.Ref.increment(x)
   Some(x.contents)
 }
 

@@ -81,13 +81,13 @@ external land: (int, int) => int = "%andint"
 external lor: (int, int) => int = "%orint"
 external lxor: (int, int) => int = "%xorint"
 
-let lnot = x => lxor(x, -1)
+let lnot = x => Int.bitwiseXor(x, -1)
 
 external lsl: (int, int) => int = "%lslint"
 external lsr: (int, int) => int = "%lsrint"
 external asr: (int, int) => int = "%asrint"
 
-let max_int = lsr(-1, 1)
+let max_int = Int.shiftRightUnsigned(-1, 1)
 let min_int = max_int + 1
 
 /* Floating-point operations */

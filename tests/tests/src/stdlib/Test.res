@@ -30,7 +30,7 @@ let run = (loc, left, comparator, right) => {
     )
     let errorMessage = `
   \u001b[31mTest Failure!
-  \u001b[36m${file}\u001b[0m:\u001b[2m${string_of_int(line)}
+  \u001b[36m${file}\u001b[0m:\u001b[2m${Int.toString(line)}
 ${codeFrame}
   \u001b[39mLeft: \u001b[31m${left}
   \u001b[39mRight: \u001b[31m${right}\u001b[0m

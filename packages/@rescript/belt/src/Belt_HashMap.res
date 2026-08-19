@@ -30,7 +30,7 @@ let rec copyBucketReHash = (~hash, ~h_buckets, ~ndata_tail, old_bucket) =>
   switch C.toOpt(old_bucket) {
   | None => ()
   | Some(cell) =>
-    let nidx = land(hash(cell.N.key), A.length(h_buckets) - 1)
+    let nidx = Int.bitwiseAnd(hash(cell.N.key), A.length(h_buckets) - 1)
     let v = C.return(cell)
     switch C.toOpt(A.getUnsafe(ndata_tail, nidx)) {
     | None => A.setUnsafe(h_buckets, nidx, v)
@@ -75,7 +75,7 @@ let rec replaceInBucket = (~eq, key, info, cell) =>
 let set0 = (h, key, value, ~eq, ~hash) => {
   let h_buckets = h.C.buckets
   let buckets_len = A.length(h_buckets)
-  let i = land(hash(key), buckets_len - 1)
+  let i = Int.bitwiseAnd(hash(key), buckets_len - 1)
   let l = A.getUnsafe(h_buckets, i)
   switch C.toOpt(l) {
   | None =>
@@ -87,7 +87,7 @@ let set0 = (h, key, value, ~eq, ~hash) => {
       h.C.size = h.C.size + 1
     }
   }
-  if h.C.size > lsl(buckets_len, 1) {
+  if h.C.size > Int.shiftLeft(buckets_len, 1) {
     resize(~hash, h)
   }
 }
@@ -113,7 +113,7 @@ let rec removeInBucket = (h, h_buckets, i, key, prec, bucket, ~eq) =>
 
 let remove = (h, key) => {
   let h_buckets = h.C.buckets
-  let i = land(Belt_Id.getHashInternal(h.C.hash)(key), A.length(h_buckets) - 1)
+  let i = Int.bitwiseAnd(Belt_Id.getHashInternal(h.C.hash)(key), A.length(h_buckets) - 1)
   let bucket = A.getUnsafe(h_buckets, i)
   switch C.toOpt(bucket) {
   | None => ()
@@ -141,7 +141,7 @@ let rec getAux = (~eq, key, buckets) =>
 
 let get = (h, key) => {
   let h_buckets = h.C.buckets
-  let nid = land(Belt_Id.getHashInternal(h.C.hash)(key), A.length(h_buckets) - 1)
+  let nid = Int.bitwiseAnd(Belt_Id.getHashInternal(h.C.hash)(key), A.length(h_buckets) - 1)
   switch C.toOpt(A.getUnsafe(h_buckets, nid)) {
   | None => None
   | Some(cell1: N.bucket<_>) =>
@@ -179,7 +179,7 @@ let rec memInBucket = (key, cell, ~eq) =>
 
 let has = (h, key) => {
   let h_buckets = h.C.buckets
-  let nid = land(Belt_Id.getHashInternal(h.C.hash)(key), A.length(h_buckets) - 1)
+  let nid = Int.bitwiseAnd(Belt_Id.getHashInternal(h.C.hash)(key), A.length(h_buckets) - 1)
   let bucket = A.getUnsafe(h_buckets, nid)
   switch C.toOpt(bucket) {
   | None => false

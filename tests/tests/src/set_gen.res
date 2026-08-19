@@ -133,7 +133,7 @@ let rec check_height_and_diff = x =>
     if h != max_int_2(hl, hr) + 1 {
       throw(Height_invariant_broken)
     } else {
-      let diff = abs(hl - hr)
+      let diff = Math.Int.abs(hl - hr)
       if diff > 2 {
         throw(Height_diff_borken)
       } else {
@@ -451,7 +451,7 @@ let of_sorted_list = l => {
       }
     }
 
-  fst(sub(List.length(l), l))
+  Pair.first(sub(List.length(l), l))
 }
 
 let of_sorted_array = l => {

@@ -6,8 +6,6 @@ type arrayLike<'a>
 external getUnsafe: (array<'a>, int) => 'a = "%array_unsafe_get"
 external setUnsafe: (array<'a>, int, 'a) => unit = "%array_unsafe_set"
 
-external unsafe_get: (array<'a>, int) => 'a = "%array_unsafe_get"
-
 external asIterable: array<'a> => Stdlib_Iterable.t<'a> = "%identity"
 
 @val

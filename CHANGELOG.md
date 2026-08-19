@@ -14,6 +14,7 @@
 
 #### :boom: Breaking Change
 
+- Remove runtime APIs that were deprecated for removal in ReScript 13, including the `Char` module, unsafe `Obj` operations, legacy `Pervasives` helpers, and `Array.unsafe_get`.
 - Remove the deprecated `Js` namespace and its runtime modules. https://github.com/rescript-lang/rescript/pull/8531
 - Move Belt into the separately installed `@rescript/belt` package. Projects using Belt must install the package and list it in their `rescript.json` dependencies. https://github.com/rescript-lang/rescript/pull/8554
 

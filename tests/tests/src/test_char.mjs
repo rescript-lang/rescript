@@ -2,8 +2,9 @@
 
 
 function caml_is_printable(c) {
-  if (c > 31) {
-    return c < 127;
+  let code = c.charCodeAt(0);
+  if (code > 31) {
+    return code < 127;
   } else {
     return false;
   }

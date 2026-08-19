@@ -14,7 +14,7 @@ let rec copyBucket = (~h_buckets, ~ndata_tail, old_bucket) =>
   switch C.toOpt(old_bucket) {
   | None => ()
   | Some(cell) =>
-    let nidx = land(hash(cell.N.key), A.length(h_buckets) - 1)
+    let nidx = Int.bitwiseAnd(hash(cell.N.key), A.length(h_buckets) - 1)
     let v = C.return(cell)
     switch C.toOpt(A.getUnsafe(ndata_tail, nidx)) {
     | None => A.setUnsafe(h_buckets, nidx, v)
@@ -60,7 +60,7 @@ let rec removeBucket = (h, h_buckets, i, key: key, prec, cell) => {
 
 let remove = (h, key: key) => {
   let h_buckets = h.C.buckets
-  let i = land(hash(key), A.length(h_buckets) - 1)
+  let i = Int.bitwiseAnd(hash(key), A.length(h_buckets) - 1)
   let l = A.getUnsafe(h_buckets, i)
   switch C.toOpt(l) {
   | None => ()
@@ -92,7 +92,7 @@ let rec addBucket = (h, key: key, cell) =>
 let add = (h, key: key) => {
   let h_buckets = h.C.buckets
   let buckets_len = A.length(h_buckets)
-  let i = land(hash(key), buckets_len - 1)
+  let i = Int.bitwiseAnd(hash(key), buckets_len - 1)
   let l = A.getUnsafe(h_buckets, i)
   switch C.toOpt(l) {
   | None =>
@@ -100,7 +100,7 @@ let add = (h, key: key) => {
     h.C.size = h.C.size + 1
   | Some(cell) => addBucket(h, key, cell)
   }
-  if h.C.size > lsl(buckets_len, 1) {
+  if h.C.size > Int.shiftLeft(buckets_len, 1) {
     tryDoubleResize(h)
   }
 }
@@ -114,7 +114,7 @@ let rec memInBucket = (key: key, cell) =>
 
 let has = (h, key) => {
   let h_buckets = h.C.buckets
-  let nid = land(hash(key), A.length(h_buckets) - 1)
+  let nid = Int.bitwiseAnd(hash(key), A.length(h_buckets) - 1)
   let bucket = A.getUnsafe(h_buckets, nid)
   switch C.toOpt(bucket) {
   | None => false
