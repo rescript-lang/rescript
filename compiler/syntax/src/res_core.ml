@@ -4726,7 +4726,7 @@ and parse_es6_arrow_type ~attrs p =
     Parser.expect EqualGreater p;
     let return_type = parse_typ_expr ~alias:false p in
     let loc = mk_loc start_pos p.prev_end_pos in
-    Ast_helper.Typ.arrow ~loc ~arity:None {attrs; lbl; typ} return_type
+    Ast_helper.Typ.arrow ~loc ~arity:(Some 1) {attrs; lbl; typ} return_type
   | DocComment _ -> assert false
   | _ ->
     let parameters = parse_type_parameters p in

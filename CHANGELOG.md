@@ -21,6 +21,7 @@
 - Preserve multibyte characters when wrapping long source lines in compiler code frames. https://github.com/rescript-lang/rescript/pull/8520
 - Preserve parentheses around multiplication, division, and modulo expressions used as exponents. https://github.com/rescript-lang/rescript/pull/8550
 - Enforce function arity in interface/module inclusion, type equality, and coercion. https://github.com/rescript-lang/rescript/pull/8559
+- Fix bare labeled arrow types (`~x: int => string`) getting no arity and failing to unify with their parenthesized form. https://github.com/rescript-lang/rescript/pull/8563
 
 # 12.3.0
 
