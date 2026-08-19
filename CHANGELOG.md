@@ -10,6 +10,12 @@
 > - :nail_care: [Polish]
 > - :house: [Internal]
 
+# 12.3.1 (Unreleased)
+
+#### :bug: Bug fix
+
+- Fix rewatch warning replay after early compile errors. https://github.com/rescript-lang/rescript/pull/8408
+
 # 12.3.0
 
 No changes compared to 12.3.0-beta.1.

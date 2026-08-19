@@ -113,6 +113,7 @@ pub fn compile(
     let mut compile_errors = "".to_string();
     let mut compile_warnings = "".to_string();
     let mut num_compiled_modules = 0;
+    let mut recompiled_modules = AHashSet::<String>::new();
     let mut sorted_modules = build_state.module_names.iter().collect::<Vec<&String>>();
     sorted_modules.sort();
 
@@ -271,6 +272,7 @@ pub fn compile(
 
             if *is_compiled {
                 num_compiled_modules += 1;
+                recompiled_modules.insert(module_name.to_string());
             }
 
             files_current_loop_count += 1;
@@ -443,11 +445,11 @@ pub fn compile(
         };
     }
 
-    // Collect warnings from modules that were not recompiled in this build
-    // but still have stored warnings from a previous compilation.
-    // This ensures warnings are not lost during incremental builds in watch mode.
+    // Collect warnings from modules that were not recompiled in this build but still have stored
+    // warnings from a previous compilation. This includes modules in the compile universe that
+    // were never reached because an earlier module failed.
     for (module_name, module) in build_state.modules.iter() {
-        if compile_universe.contains(module_name) {
+        if recompiled_modules.contains(module_name) {
             continue;
         }
         if let SourceType::SourceFile(ref source_file) = module.source_type {
