@@ -224,7 +224,7 @@ let main () =
   | ["ppx"; file_in; file_out] ->
     let ic = open_in_bin file_in in
     let magic =
-      really_input_string ic (String.length Config.ast_impl_magic_number)
+      really_input_string ic (String.length Config.ast0_impl_magic_number)
     in
     let loc = input_value ic in
     let ast0 : Parsetree0.structure = input_value ic in

@@ -43,7 +43,7 @@ let after_parsing_sig ppf outputprefix ast =
          (* to support relocate to another directory *)
          ast);
     if !Js_config.as_pp then (
-      output_string stdout Config.res_ast_intf_magic_number;
+      output_string stdout Config.ast_intf_magic_number;
       output_value stdout (!Location.input_name : string);
       output_value stdout ast);
     if !Js_config.syntax_only then Warnings.check_fatal ()
@@ -124,7 +124,7 @@ let after_parsing_impl ppf outputprefix (ast : Parsetree.structure) =
          ~output:(outputprefix ^ Literals.suffix_ast)
          ast);
     if !Js_config.as_pp then (
-      output_string stdout Config.res_ast_impl_magic_number;
+      output_string stdout Config.ast_impl_magic_number;
       output_value stdout (!Location.input_name : string);
       output_value stdout ast);
     if !Js_config.syntax_only then Warnings.check_fatal ()
