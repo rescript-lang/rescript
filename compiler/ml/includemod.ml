@@ -526,9 +526,7 @@ let show_arity_mismatch env ppf (d1 : value_description)
     fprintf ppf
       "@\n\
        @[The implementation contains a function taking %s where the interface \
-       expects one taking %s.@ A function's arity is part of its type: calls \
-       are compiled to plain JavaScript calls with exactly that many \
-       arguments.@]"
+       expects one taking %s.@]"
       (args n1) (args n2)
   | _ -> ()
 

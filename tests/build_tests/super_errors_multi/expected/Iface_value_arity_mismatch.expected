@@ -13,7 +13,6 @@
   is not included in
     let f: (int, int) => int
   The implementation contains a function taking 1 argument where the interface expects one taking 2 arguments.
-  A function's arity is part of its type: calls are compiled to plain JavaScript calls with exactly that many arguments.
   [36m/.../fixtures/Iface_value_arity_mismatch/Foo.resi[0m:[2m1:1-24[0m:
     Expected declaration
   [36m/.../fixtures/Iface_value_arity_mismatch/Foo.res[0m:[2m1:5[0m:
