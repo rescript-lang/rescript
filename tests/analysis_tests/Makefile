@@ -7,7 +7,12 @@ test-analysis-binary:
 	make -C tests-namespaced-references test
 	make -C tests-sourcedirs-dependency test
 
+# Belt is shared by CommonJS and ES module test projects. Rebuild it until
+# Rewatch invalidates source dependencies when package output settings change:
+# https://github.com/rescript-lang/rescript/issues/8539
 test-reanalyze:
+	yarn workspace @rescript/belt rescript clean
+	yarn workspace @rescript/belt build
 	make -C tests-reanalyze test
 
 test: test-analysis-binary test-reanalyze

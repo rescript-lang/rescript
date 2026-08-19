@@ -51,26 +51,35 @@ let extractDocFromFile = async file => {
 
 let batchSize = OS.cpus()->Array.length
 
-let runtimePath = Path.join(["packages", "@rescript", "runtime"])
+let docPaths = [
+  Path.join(["packages", "@rescript", "runtime"]),
+  Path.join(["packages", "@rescript", "belt", "src"]),
+]
 
 let extractExamples = async () => {
-  let files = Fs.readdirSync(runtimePath)
+  let docFiles = docPaths->Array.flatMap(docPath => {
+    let files = Fs.readdirSync(docPath)
 
-  let docFiles = files->Array.filter(f =>
-    switch f {
-    // Ignore Js modules and RescriptTools for now
-    | f if f->String.startsWith("Js") || f->String.startsWith("RescriptTools") => false
-    | f if f->String.endsWith(".resi") => true
-    | f if f->String.endsWith(".res") && !(files->Array.includes(f ++ "i")) => true
-    | _ => false
-    }
+    files
+    ->Array.filter(f =>
+      switch f {
+      // Ignore Js modules and RescriptTools for now
+      | f if f->String.startsWith("Js") || f->String.startsWith("RescriptTools") => false
+      | f if f->String.endsWith(".resi") => true
+      | f if f->String.endsWith(".res") && !(files->Array.includes(f ++ "i")) => true
+      | _ => false
+      }
+    )
+    ->Array.map(f => Path.join([docPath, f]))
+  })
+
+  Console.log(
+    `Extracting examples from ${docFiles->Array.length->Int.toString} runtime and Belt files...`,
   )
 
-  Console.log(`Extracting examples from ${docFiles->Array.length->Int.toString} runtime files...`)
-
   let examples = []
-  await docFiles->ArrayUtils.forEachAsyncInBatches(~batchSize, async f => {
-    let doc = await extractDocFromFile(Path.join([runtimePath, f]))
+  await docFiles->ArrayUtils.forEachAsyncInBatches(~batchSize, async file => {
+    let doc = await extractDocFromFile(file)
     // TODO: Should this be a flag in the actual command instead, to only include code blocks with tests?
     examples->Array.pushMany(doc->Array.filter(d => d.code->String.includes("assertEqual(")))
   })

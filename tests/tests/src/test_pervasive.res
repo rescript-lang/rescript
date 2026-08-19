@@ -1,5 +1,5 @@
 module Pervasives = {
-  include Belt.List
+  include List
   include Pervasives
 }
 

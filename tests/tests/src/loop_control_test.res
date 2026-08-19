@@ -20,7 +20,7 @@ describe(__MODULE__, () => {
       values := list{i.contents, ...values.contents}
     }
 
-    eq(__LOC__, [1, 3, 4], values.contents->Belt.List.reverse->Belt.List.toArray)
+    eq(__LOC__, [1, 3, 4], values.contents->List.reverse->List.toArray)
   })
 
   test("switch inside while targets the loop", () => {
@@ -37,7 +37,7 @@ describe(__MODULE__, () => {
       }
     }
 
-    eq(__LOC__, [1, 3, 4], values.contents->Belt.List.reverse->Belt.List.toArray)
+    eq(__LOC__, [1, 3, 4], values.contents->List.reverse->List.toArray)
   })
 
   // Keep a JS `switch` in the generated output so this exercises labeled loop control.
@@ -61,7 +61,7 @@ describe(__MODULE__, () => {
       }
     }
 
-    eq(__LOC__, [1, 3, 4], values.contents->Belt.List.reverse->Belt.List.toArray)
+    eq(__LOC__, [1, 3, 4], values.contents->List.reverse->List.toArray)
   })
 
   test("for loop break and continue", () => {
@@ -79,7 +79,7 @@ describe(__MODULE__, () => {
       values := list{i, ...values.contents}
     }
 
-    eq(__LOC__, [0, 2, 3], values.contents->Belt.List.reverse->Belt.List.toArray)
+    eq(__LOC__, [0, 2, 3], values.contents->List.reverse->List.toArray)
   })
 
   test("braced break expression in value position compiles", () => {
@@ -108,7 +108,7 @@ describe(__MODULE__, () => {
       values := list{i, ...values.contents}
     }
 
-    eq(__LOC__, [0, 2, 3], values.contents->Belt.List.reverse->Belt.List.toArray)
+    eq(__LOC__, [0, 2, 3], values.contents->List.reverse->List.toArray)
   })
 
   test("switch inside for targets the loop", () => {
@@ -122,7 +122,7 @@ describe(__MODULE__, () => {
       }
     }
 
-    eq(__LOC__, [0, 2, 3], values.contents->Belt.List.reverse->Belt.List.toArray)
+    eq(__LOC__, [0, 2, 3], values.contents->List.reverse->List.toArray)
   })
 
   // Keep a JS `switch` in the generated output so this exercises labeled loop control.
@@ -143,7 +143,7 @@ describe(__MODULE__, () => {
       }
     }
 
-    eq(__LOC__, [0, 2, 3], values.contents->Belt.List.reverse->Belt.List.toArray)
+    eq(__LOC__, [0, 2, 3], values.contents->List.reverse->List.toArray)
   })
 
   test("for..of loop break and continue", () => {
@@ -161,7 +161,7 @@ describe(__MODULE__, () => {
       values := list{i, ...values.contents}
     }
 
-    eq(__LOC__, [0, 2, 3], values.contents->Belt.List.reverse->Belt.List.toArray)
+    eq(__LOC__, [0, 2, 3], values.contents->List.reverse->List.toArray)
   })
 
   test("switch inside for..of targets the loop", () => {
@@ -175,7 +175,7 @@ describe(__MODULE__, () => {
       }
     }
 
-    eq(__LOC__, [0, 2, 3], values.contents->Belt.List.reverse->Belt.List.toArray)
+    eq(__LOC__, [0, 2, 3], values.contents->List.reverse->List.toArray)
   })
 
   // Keep a JS `switch` in the generated output so this exercises labeled loop control.
@@ -196,6 +196,6 @@ describe(__MODULE__, () => {
       }
     }
 
-    eq(__LOC__, [0, 2, 3], values.contents->Belt.List.reverse->Belt.List.toArray)
+    eq(__LOC__, [0, 2, 3], values.contents->List.reverse->List.toArray)
   })
 })

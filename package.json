@@ -103,6 +103,7 @@
     "tests/dependencies/**",
     "tests/analysis_tests/**",
     "tests/docstring_tests",
+    "tests/belt_tests",
     "tests/gentype_tests/**",
     "tests/tests",
     "tests/tools_tests",

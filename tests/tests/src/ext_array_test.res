@@ -22,8 +22,6 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. */
 
-open Belt
-
 let reverse_range = (a, i, len) =>
   if len == 0 {
     ()
@@ -55,7 +53,7 @@ let reverse_of_list = x =>
   | list{} => []
   | list{hd, ...tl} as l =>
     let len = List.length(l)
-    let a = Array.make(len, hd)
+    let a = Array.make(~length=len, hd)
     let rec fill = (i, x) =>
       switch x {
       | list{} => a
@@ -101,7 +99,7 @@ let range = (from, to_) =>
   if from > to_ {
     invalid_arg("Ext_array_test.range")
   } else {
-    Array.init(to_ - from + 1, i => i + from)
+    Array.fromInitializer(~length=to_ - from + 1, i => i + from)
   }
 
 let map2i = (f, a, b) => {
@@ -140,7 +138,7 @@ let of_list_map = (f, a) =>
   | list{h, ...tl} =>
     let hd = f(h)
     let len = List.length(tl) + 1
-    let arr = Array.make(len, hd)
+    let arr = Array.make(~length=len, hd)
     let rec fill = (i, x) =>
       switch x {
       | list{} => arr
@@ -182,10 +180,7 @@ let rfind_and_split = (arr, cmp, v): split<_> => {
   if i < 0 {
     #No_split
   } else {
-    #Split(
-      Array.slice(arr, ~offset=0, ~len=i),
-      Array.slice(arr, ~offset=i + 1, ~len=Array.length(arr) - i - 1),
-    )
+    #Split(Array.slice(arr, ~start=0, ~end=i), Array.slice(arr, ~start=i + 1))
   }
 }
 
@@ -207,10 +202,7 @@ let find_and_split = (arr, cmp, v): split<_> => {
   if i < 0 {
     #No_split
   } else {
-    #Split(
-      Array.slice(arr, ~offset=0, ~len=i),
-      Array.slice(arr, ~offset=i + 1, ~len=Array.length(arr) - i - 1),
-    )
+    #Split(Array.slice(arr, ~start=0, ~end=i), Array.slice(arr, ~start=i + 1))
   }
 }
 

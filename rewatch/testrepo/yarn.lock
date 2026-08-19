@@ -5,6 +5,15 @@ __metadata:
   version: 8
   cacheKey: 10c0
 
+"@rescript/belt@portal:../../packages/@rescript/belt::locator=testrepo%40workspace%3A.":
+  version: 0.0.0-use.local
+  resolution: "@rescript/belt@portal:../../packages/@rescript/belt::locator=testrepo%40workspace%3A."
+  peerDependencies:
+    "@rescript/runtime": "workspace:^"
+    rescript: "workspace:^"
+  languageName: node
+  linkType: soft
+
 "@rescript/darwin-arm64@npm:12.0.0":
   version: 12.0.0
   resolution: "@rescript/darwin-arm64@npm:12.0.0"
@@ -74,6 +83,12 @@ __metadata:
   checksum: 10c0/6d7b58078cec4444a3abd50fdb2ef35dfcc155c45cf824219dbc20180caef1aa891b10f4edf0c13396f7438023014eff0ab9289c9c8fae31d1a6e9d3849924a4
   languageName: node
   linkType: hard
+
+"@rescript/runtime@portal:../../packages/@rescript/runtime::locator=testrepo%40workspace%3A.":
+  version: 0.0.0-use.local
+  resolution: "@rescript/runtime@portal:../../packages/@rescript/runtime::locator=testrepo%40workspace%3A."
+  languageName: node
+  linkType: soft
 
 "@rescript/webapi@npm:0.1.0-experimental-73e6a0d":
   version: 0.1.0-experimental-73e6a0d
@@ -319,6 +334,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "testrepo@workspace:."
   dependencies:
+    "@rescript/belt": "portal:../../packages/@rescript/belt"
+    "@rescript/runtime": "portal:../../packages/@rescript/runtime"
     rescript: "npm:12.0.0"
   languageName: unknown
   linkType: soft

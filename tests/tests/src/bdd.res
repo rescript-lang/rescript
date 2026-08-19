@@ -39,14 +39,14 @@ let getId = bdd =>
 let initSize_1 = 8 * 1024 - 1
 let nodeC = ref(1)
 let sz_1 = ref(initSize_1)
-let htab = ref(Belt.Array.make(sz_1.contents + 1, list{}))
+let htab = ref(Array.make(~length=sz_1.contents + 1, list{}))
 let n_items = ref(0)
 let hashVal = (x, y, v) => lsl(x, 1) + y + lsl(v, 2)
 
 let resize = newSize => {
   let arr = htab.contents
   let newSz_1 = newSize - 1
-  let newArr = Belt.Array.make(newSize, list{})
+  let newArr = Array.make(~length=newSize, list{})
   let rec copyBucket = bucket =>
     switch bucket {
     | list{} => ()
@@ -81,7 +81,7 @@ let rec insert = (idl, idh, v, ind, bucket, newNode) =>
 
 let resetUnique = () => {
   sz_1 := initSize_1
-  htab := Belt.Array.make(sz_1.contents + 1, list{})
+  htab := Array.make(~length=sz_1.contents + 1, list{})
   n_items := 0
   nodeC := 1
 }
@@ -144,14 +144,14 @@ let mkVar = x => mkNode(zero, x, one)
 
 let cacheSize = 1999
 
-let andslot1 = Belt.Array.make(cacheSize, 0)
-let andslot2 = Belt.Array.make(cacheSize, 0)
-let andslot3 = Belt.Array.make(cacheSize, zero)
-let xorslot1 = Belt.Array.make(cacheSize, 0)
-let xorslot2 = Belt.Array.make(cacheSize, 0)
-let xorslot3 = Belt.Array.make(cacheSize, zero)
-let notslot1 = Belt.Array.make(cacheSize, 0)
-let notslot2 = Belt.Array.make(cacheSize, one)
+let andslot1 = Array.make(~length=cacheSize, 0)
+let andslot2 = Array.make(~length=cacheSize, 0)
+let andslot3 = Array.make(~length=cacheSize, zero)
+let xorslot1 = Array.make(~length=cacheSize, 0)
+let xorslot2 = Array.make(~length=cacheSize, 0)
+let xorslot3 = Array.make(~length=cacheSize, zero)
+let notslot1 = Array.make(~length=cacheSize, 0)
+let notslot2 = Array.make(~length=cacheSize, one)
 let hash = (x, y) => mod(lsl(x, 1) + y, cacheSize)
 
 let rec not = n =>
@@ -254,7 +254,7 @@ let random = () => {
 }
 
 let random_vars = n => {
-  let vars = Belt.Array.make(n, false)
+  let vars = Array.make(~length=n, false)
   for i in 0 to n - 1 {
     vars->Array.setUnsafe(i, random())
   }
@@ -274,7 +274,7 @@ let test_hwb = (bdd, vars) => {
         eval bdd vars = false if n = 0
      where n is the number of "true" elements in vars. */
   let ntrue = ref(0)
-  for i in 0 to Belt.Array.length(vars) - 1 {
+  for i in 0 to Array.length(vars) - 1 {
     if vars->Array.getUnsafe(i) {
       incr(ntrue)
     }

@@ -13,7 +13,7 @@
 
 /* List operations */
 
-let u = Belt.List.length
+let u = List.length
 let rec length_aux = (len, x) =>
   switch x {
   | list{} => len

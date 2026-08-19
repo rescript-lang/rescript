@@ -22,7 +22,7 @@ let a2 = (x, y) => x + y
 let a3 = (x, y, z) => x + y + z
 /* polymoprhic restriction */
 
-let test_as: (_ as 'b, 'a => 'a) => 'b = Belt.List.map
+let test_as: (_ as 'b, 'a => 'a) => 'b = List.map
 
 let xx: unit => _ => unit = () => _ => Console.log(3)
 

@@ -1,5 +1,3 @@
-open Belt
-
 let l = Console.log
 module C = Char
 

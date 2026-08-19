@@ -1,6 +1,5 @@
 open Mocha
 open Test_utils
-open Belt
 
 /* type t */
 @get external foo: {..} => option<string> = "foo"
@@ -16,7 +15,7 @@ let map = (f, x) =>
   | Some(x) => Some(f(x))
   }
 
-let make = (~foo: option<int>=?, ()) => make(~foo=?map(Int.toString, foo), ())
+let make = (~foo: option<int>=?, ()) => make(~foo=?map(x => Int.toString(x), foo), ())
 
 let a_ = make()
 let b_ = make(~foo=42, ())

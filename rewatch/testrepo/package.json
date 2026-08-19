@@ -24,6 +24,8 @@
     ]
   },
   "dependencies": {
+    "@rescript/belt": "portal:../../packages/@rescript/belt",
+    "@rescript/runtime": "portal:../../packages/@rescript/runtime",
     "rescript": "12.0.0"
   },
   "scripts": {

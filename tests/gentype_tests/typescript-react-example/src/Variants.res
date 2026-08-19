@@ -101,7 +101,9 @@ type result1<'a, 'b> =
 
 @genType type result2<'a, 'b> = result<'a, 'b>
 
-@genType type result3<'a, 'b> = Belt.Result.t<'a, 'b>
+@genType type result3<'a, 'b> = Stdlib.Result.t<'a, 'b>
+
+@genType type result4<'a, 'b> = Belt.Result.t<'a, 'b>
 
 @genType let restResult1 = (x: result1<int, string>) => x
 

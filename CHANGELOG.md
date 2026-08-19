@@ -15,6 +15,7 @@
 #### :boom: Breaking Change
 
 - Remove the deprecated `Js` namespace and its runtime modules. https://github.com/rescript-lang/rescript/pull/8531
+- Move Belt into the separately installed `@rescript/belt` package. Projects using Belt must install the package and list it in their `rescript.json` dependencies. https://github.com/rescript-lang/rescript/pull/8554
 
 #### :eyeglasses: Spec Compliance
 

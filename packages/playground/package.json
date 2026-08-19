@@ -10,6 +10,7 @@
     "serve-bundle": "node serve-bundle.mjs"
   },
   "dependencies": {
+    "@rescript/belt": "workspace:^",
     "@rescript/react": "workspace:^",
     "rescript": "workspace:^"
   },

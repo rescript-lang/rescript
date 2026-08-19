@@ -1,11 +1,9 @@
-open Belt
-
 let map = (f, a) => {
   let l = Array.length(a)
   if l == 0 {
     []
   } else {
-    let r = Array.make(l, f(Array.getUnsafe(a, 0)))
+    let r = Array.make(~length=l, f(Array.getUnsafe(a, 0)))
     for i in 1 to l - 1 {
       Array.setUnsafe(r, i, f(Array.getUnsafe(a, i)))
     }
@@ -24,7 +22,7 @@ let init = (l, f) =>
     /* See #6575. We could also check for maximum array size, but this depends
      on whether we create a float array or a regular one... */
 
-    let res = Array.make(l, f(0))
+    let res = Array.make(~length=l, f(0))
     for i in 1 to pred(l) {
       Array.setUnsafe(res, i, f(i))
     }

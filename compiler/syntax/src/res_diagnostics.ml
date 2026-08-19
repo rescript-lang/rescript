@@ -47,7 +47,7 @@ let explain t =
       let token = Token.to_string t in
       "`" ^ token ^ "` is a reserved keyword."
     | _ ->
-      "At this point, I'm looking for an uppercased name like `Belt` or `Array`"
+      "At this point, I'm looking for an uppercased name like `Array` or `Math`"
     )
   | Lident current_token -> (
     match current_token with

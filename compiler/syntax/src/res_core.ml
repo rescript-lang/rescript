@@ -4465,8 +4465,7 @@ and parse_list_expr ~start_pos p =
     Ast_helper.Exp.apply ~loc
       (Ast_helper.Exp.ident ~loc ~attrs:[spread_attr]
          (Location.mkloc
-            (Longident.Ldot
-               (Longident.Ldot (Longident.Lident "Belt", "List"), "concatMany"))
+            (Longident.Ldot (Longident.Lident Primitive_modules.list, "spread"))
             loc))
       [(Asttypes.Nolabel, Ast_helper.Exp.array ~loc list_exprs)]
 
@@ -4608,8 +4607,7 @@ and parse_array_exp p =
     Ast_helper.Exp.apply ~loc
       (Ast_helper.Exp.ident ~loc ~attrs:[spread_attr]
          (Location.mkloc
-            (Longident.Ldot
-               (Longident.Ldot (Longident.Lident "Belt", "Array"), "concatMany"))
+            (Longident.Ldot (Longident.Lident Primitive_modules.array, "spread"))
             loc))
       [(Nolabel, Ast_helper.Exp.array ~loc list_exprs)]
 

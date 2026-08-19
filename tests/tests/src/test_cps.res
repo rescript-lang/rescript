@@ -90,7 +90,7 @@ let rec f = (n, acc) =>
  */
 let test_closure = () => {
   let n = 6
-  let arr = Belt.Array.make(n, x => x)
+  let arr = Array.make(~length=n, x => x)
   for i in 0 to n {
     arr[i] = _ => i
   }

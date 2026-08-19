@@ -2,7 +2,7 @@ module Uncurried = {
   let raise = e => throw(e)
 
   module List = {
-    let map = (l, f) => Belt.List.map(l, f)
+    let map = (l, f) => List.map(l, f)
   }
 }
 

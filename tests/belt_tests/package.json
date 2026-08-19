@@ -1,0 +1,10 @@
+{
+  "name": "@tests/belt",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@rescript/belt": "workspace:^",
+    "mocha": "11.7.6",
+    "rescript": "workspace:^"
+  }
+}

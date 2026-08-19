@@ -451,7 +451,7 @@ let of_sorted_list = l => {
       }
     }
 
-  fst(sub(Belt.List.length(l), l))
+  fst(sub(List.length(l), l))
 }
 
 let of_sorted_array = l => {
@@ -459,27 +459,27 @@ let of_sorted_array = l => {
     if n == 0 {
       Empty
     } else if n == 1 {
-      let x0 = Belt.Array.getUnsafe(l, start)
+      let x0 = Array.getUnsafe(l, start)
       Node(Empty, x0, Empty, 1)
     } else if n == 2 {
-      let x0 = Belt.Array.getUnsafe(l, start)
-      let x1 = Belt.Array.getUnsafe(l, start + 1)
+      let x0 = Array.getUnsafe(l, start)
+      let x1 = Array.getUnsafe(l, start + 1)
       Node(Node(Empty, x0, Empty, 1), x1, Empty, 2)
     } else if n == 3 {
-      let x0 = Belt.Array.getUnsafe(l, start)
-      let x1 = Belt.Array.getUnsafe(l, start + 1)
-      let x2 = Belt.Array.getUnsafe(l, start + 2)
+      let x0 = Array.getUnsafe(l, start)
+      let x1 = Array.getUnsafe(l, start + 1)
+      let x2 = Array.getUnsafe(l, start + 2)
       Node(Node(Empty, x0, Empty, 1), x1, Node(Empty, x2, Empty, 1), 2)
     } else {
       let nl = n / 2
       let left = sub(start, nl, l)
       let mid = start + nl
-      let v = Belt.Array.getUnsafe(l, mid)
+      let v = Array.getUnsafe(l, mid)
       let right = sub(mid + 1, n - nl - 1, l)
       create(left, v, right)
     }
 
-  sub(0, Belt.Array.length(l), l)
+  sub(0, Array.length(l), l)
 }
 
 let is_ordered = (cmp, tree) => {

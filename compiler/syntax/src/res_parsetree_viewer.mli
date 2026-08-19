@@ -133,9 +133,9 @@ val is_template_literal : Parsetree.expression -> bool
 val is_tagged_template_literal : Parsetree.expression -> bool
 val has_template_literal_attr : Parsetree.attributes -> bool
 
-val is_spread_belt_list_concat : Parsetree.expression -> bool
+val is_spread_list : Parsetree.expression -> bool
 
-val is_spread_belt_array_concat : Parsetree.expression -> bool
+val is_spread_array : Parsetree.expression -> bool
 
 val collect_spread_dict_expr_parts :
   Parsetree.expression -> dict_expr_part list option

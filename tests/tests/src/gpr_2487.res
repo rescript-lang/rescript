@@ -1,3 +1,3 @@
-module A = Belt.Array
+module A = Array
 
-let b = A.eq([1, 2, 3], [1, 2, 3], \"==")
+let b = A.equal([1, 2, 3], [1, 2, 3], \"==")
