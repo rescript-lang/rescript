@@ -21,6 +21,12 @@ use std::process::Command;
 use std::sync::OnceLock;
 use std::time::SystemTime;
 
+/// Decode captured compiler output without crashing if a code frame truncates a
+/// multi-byte character.
+fn compiler_output_to_string(bytes: &[u8]) -> String {
+    String::from_utf8_lossy(bytes).to_string()
+}
+
 /// Execute js-post-build command for a compiled JavaScript file.
 /// The command runs in the directory containing the rescript.json that defines it.
 /// The absolute path to the JS file is passed as an argument.
@@ -789,9 +795,7 @@ fn compile_file(
             "Could not compile file. Error: {e}. Path to AST: {ast_path:?}"
         )),
         Ok(x) => {
-            let err = std::str::from_utf8(&x.stderr)
-                .expect("stdout should be non-null")
-                .to_string();
+            let err = compiler_output_to_string(&x.stderr);
 
             let dir = Path::new(implementation_file_path).parent().unwrap();
 
@@ -1049,4 +1053,17 @@ pub fn mark_modules_with_expired_deps_dirty(build_state: &mut BuildCommandState)
             module.compile_dirty = true;
         }
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::compiler_output_to_string;
+
+    #[test]
+    fn compiler_output_to_string_handles_invalid_utf8() {
+        // Start of an em dash (U+2014), with its third byte missing.
+        let truncated = [b'W', b'a', b'r', b'n', b'i', b'n', b'g', b' ', 0xe2, 0x80];
+        let decoded = compiler_output_to_string(&truncated);
+        assert!(decoded.starts_with("Warning "));
+    }
 }

@@ -17,6 +17,7 @@
 - Fix rewatch warning replay after early compile errors. https://github.com/rescript-lang/rescript/pull/8408
 - Fix formatting of trailing comments before `=` in let bindings. https://github.com/rescript-lang/rescript/pull/8444
 - Fix namespaced reference lookup in editor analysis. https://github.com/rescript-lang/rescript/pull/8455
+- Fix build crash when the compiler emits output that is not valid UTF-8, such as a truncated multibyte character in a code frame. https://github.com/rescript-lang/rescript/pull/8482
 
 # 12.3.0
 
