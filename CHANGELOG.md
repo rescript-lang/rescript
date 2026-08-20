@@ -22,6 +22,7 @@
 - Preserve parentheses around multiplication, division, and modulo expressions used as exponents. https://github.com/rescript-lang/rescript/pull/8550
 - Enforce function arity in interface/module inclusion, type equality, and coercion. https://github.com/rescript-lang/rescript/pull/8559
 - Fix bare labeled arrow types (`~x: int => string`) getting no arity and failing to unify with their parenthesized form. https://github.com/rescript-lang/rescript/pull/8563
+- Fix argument evaluation order when a function call is inlined: the beta reducer could evaluate non-substitutable arguments from last to first. https://github.com/rescript-lang/rescript/pull/8572
 
 # 12.3.0
 
