@@ -27,6 +27,7 @@
 
 #### :bug: Bug fix
 
+- Fix argument evaluation order when a function call is inlined: the beta reducer stacked argument bindings in reverse parameter order, so the last argument was evaluated first when arguments could not be substituted directly. https://github.com/rescript-lang/rescript/pull/8572
 - Preserve parentheses around multiplication, division, and modulo expressions used as exponents. https://github.com/rescript-lang/rescript/pull/8550
 - Enforce function arity in interface/module inclusion and type coercion. Previously a curried implementation (e.g. `int => int => int`) could satisfy an uncurried interface (`(int, int) => int`) or be coerced to it, which could miscompile calls made through the interface type. Such mismatches are now compile errors with an explanatory hint. https://github.com/rescript-lang/rescript/pull/8559
 - Fix bare labeled arrow types (`~x: int => string`) getting no arity: they printed identically to their parenthesized form (`(~x: int) => string`) but did not unify with it. https://github.com/rescript-lang/rescript/pull/8563
