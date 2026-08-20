@@ -61,23 +61,23 @@ Mocha.describe("Bs_set_int_test", () => {
     let nr = r;
     Test_utils.ok("File \"bs_set_int_test.res\", line 40, characters 7-14", Belt_SetInt.eq(match[0], nl));
     Test_utils.ok("File \"bs_set_int_test.res\", line 41, characters 7-14", Belt_SetInt.eq(match[1], nr));
-    let i$2 = range(50, 100);
     let s = Belt_SetInt.intersect(Belt_SetInt.fromArray(range(1, 100)), Belt_SetInt.fromArray(range(50, 200)));
+    let i$2 = range(50, 100);
     Test_utils.ok("File \"bs_set_int_test.res\", line 44, characters 6-13", Belt_SetInt.eq(Belt_SetInt.fromArray(i$2), s));
-    let i$3 = range(1, 200);
     let s$1 = Belt_SetInt.union(Belt_SetInt.fromArray(range(1, 100)), Belt_SetInt.fromArray(range(50, 200)));
+    let i$3 = range(1, 200);
     Test_utils.ok("File \"bs_set_int_test.res\", line 55, characters 6-13", Belt_SetInt.eq(Belt_SetInt.fromArray(i$3), s$1));
-    let i$4 = range(1, 49);
     let s$2 = Belt_SetInt.diff(Belt_SetInt.fromArray(range(1, 100)), Belt_SetInt.fromArray(range(50, 200)));
+    let i$4 = range(1, 49);
     Test_utils.ok("File \"bs_set_int_test.res\", line 66, characters 6-13", Belt_SetInt.eq(Belt_SetInt.fromArray(i$4), s$2));
-    let i$5 = revRange(50, 100);
     let s$3 = Belt_SetInt.intersect(Belt_SetInt.fromArray(revRange(1, 100)), Belt_SetInt.fromArray(revRange(50, 200)));
+    let i$5 = revRange(50, 100);
     Test_utils.ok("File \"bs_set_int_test.res\", line 77, characters 6-13", Belt_SetInt.eq(Belt_SetInt.fromArray(i$5), s$3));
-    let i$6 = revRange(1, 200);
     let s$4 = Belt_SetInt.union(Belt_SetInt.fromArray(revRange(1, 100)), Belt_SetInt.fromArray(revRange(50, 200)));
+    let i$6 = revRange(1, 200);
     Test_utils.ok("File \"bs_set_int_test.res\", line 88, characters 6-13", Belt_SetInt.eq(Belt_SetInt.fromArray(i$6), s$4));
-    let i$7 = revRange(1, 49);
     let s$5 = Belt_SetInt.diff(Belt_SetInt.fromArray(revRange(1, 100)), Belt_SetInt.fromArray(revRange(50, 200)));
+    let i$7 = revRange(1, 49);
     Test_utils.ok("File \"bs_set_int_test.res\", line 99, characters 6-13", Belt_SetInt.eq(Belt_SetInt.fromArray(i$7), s$5));
     let ss = [
       1,
