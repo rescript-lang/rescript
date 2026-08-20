@@ -6,7 +6,7 @@ let called = ref(0)
 let g = () => {
   let rec v = ref(next)
   and next = (i, b) => {
-    incr(called)
+    Int.Ref.increment(called)
     if b {
       ignore(v.contents(i, false))
     }

@@ -27,7 +27,7 @@ let fff = () => {
   /* No inline */
   Console.log("x")
   Console.log("x")
-  incr(vvv)
+  Int.Ref.increment(vvv)
 }
 
 let g = () => fff()

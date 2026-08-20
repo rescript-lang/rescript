@@ -28,7 +28,7 @@ let rec dfs1 = (nodes, graph, visited) =>
       dfs1(xs, graph, visited)
     } else {
       Console.log(x)
-      dfs1(\"@"(nexts(x, graph), xs), graph, list{x, ...visited})
+      dfs1(List.concat(nexts(x, graph), xs), graph, list{x, ...visited})
     }
   }
 

@@ -69,15 +69,15 @@ element that is larger than value.
 If value is not found and value is greater
 than all elements in array, the negative number returned is the bitwise
 complement of (the index of the last element plus 1)for example, if `key` is
-smaller than all elements return `-1` since `lnot(-1) == 0` if `key` is larger
-than all elements return `lnot(-1) == 0` since `lnot(- (len + 1)) == len`
+smaller than all elements return `-1` since `Int.bitwiseNot(-1) == 0` if `key` is larger
+than all elements return `Int.bitwiseNot(-1) == 0` since `Int.bitwiseNot(- (len + 1)) == len`
 
 ## Examples
 
 ```rescript
 Belt.SortArray.binarySearchBy([1, 2, 3, 4, 33, 35, 36], 33, Pervasives.compare) == 4
 
-lnot(Belt.SortArray.binarySearchBy([1, 3, 5, 7], 4, Pervasives.compare)) == 2
+Int.bitwiseNot(Belt.SortArray.binarySearchBy([1, 3, 5, 7], 4, Pervasives.compare)) == 2
 ```
 */
 let binarySearchBy: (array<'a>, 'a, ('a, 'a) => int) => int

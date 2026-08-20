@@ -9,7 +9,7 @@ let f = () => {
     fib(n.contents) > 10
   } {
     n.contents->Int.toString->Console.log
-    incr(n)
+    Int.Ref.increment(n)
   }
 }
 

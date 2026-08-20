@@ -2120,19 +2120,18 @@ Forward Liveness Analysis
     Root (external ref): VariantCase DeadRT.moduleAccessPath.Root
     Root (external ref): Value +TypeReexport.VariantUseOriginal.+value
     Root (annotated): Value +NestedModules.Universe.Nested2.Nested3.+nested3Function
-    Root (annotated): Value +Records.+someBusiness2
     Root (annotated): Value +Types.+setMatch
-    Root (annotated): Value +Uncurried.+sumCurried
+    Root (annotated): Value +Docstrings.+oneU
     Root (annotated): Value +ImportJsValue.+areaValue
+    Root (annotated): Value +Uncurried.+callback2
     Root (annotated): Value +Types.+testConvertNull
     Root (external ref): Value +CreateErrorHandler2.Error2.+notification
     Root (annotated): Value +ScopedAnnotationsOverride.M.+live1
     Root (annotated): Value +VariantsWithPayload.+testSimpleVariant
-    Root (annotated): Value +Docstrings.+twoU
     Root (external ref): RecordLabel +TypeReexportCrossFileB.reexportedRecord.usedField
     Root (annotated): Value +NestedModules.Universe.Nested2.+nested2Function
     Root (external ref): Value +OptArg.+wrapfourArgs
-    Root (annotated): Value +Docstrings.+unitArgWithoutConversionU
+    Root (annotated): Value +Records.+getPayloadRecordPlusOne
     Root (external ref): Value +InterfaceOptionalArgEscape.+escaped
     Root (external ref): VariantCase +DeadTypeTest.deadType.OnlyInImplementation
     Root (annotated): Value +TestImport.+valueStartingWithUpperCaseLetter
@@ -2150,16 +2149,15 @@ Forward Liveness Analysis
     Root (annotated): Value +LetPrivate.+y
     Root (annotated): Value +TestImport.+innerStuffContentsAsEmptyObject
     Root (annotated): Value +Types.+testFunctionOnOptionsAsArgument
-    Root (annotated): Value +Docstrings.+two
-    Root (annotated): Value +Uncurried.+uncurried3
+    Root (annotated): Value +Records.+testMyObj2
     Root (external ref): Value +Newton.+f
-    Root (external ref): RecordLabel +Records.record.v
     Root (external ref): Value +ContextOptionalArgs.ComponentUsingAction.+make
     Root (external ref): RecordLabel +Records.person.address
     Root (external ref): RecordLabel +ContextOptionalArgs.NotificationProvider.props.children
     Root (annotated): Value +Variants.+testConvert2
     Root (annotated): Value +Tuples.+coord2d
     Root (external ref): Value +CreateErrorHandler1.Error1.+notification
+    Root (external ref): RecordLabel +Records.business2.address2
     Root (annotated): Value +TransitiveType3.+convertT3
     Root (annotated): Value +Variants.+swap
     Root (annotated): Value +Shadow.+test
@@ -2168,40 +2166,38 @@ Forward Liveness Analysis
     Root (annotated): Value +NestedModules.+notNested
     Root (annotated): Value +Records.+computeArea
     Root (external ref): RecordLabel +TypeReexport.UseOriginal.reexportedType.directlyUsed
+    Root (annotated): Value +Docstrings.+useParam
+    Root (annotated): Value +Docstrings.+unitArgWithConversion
+    Root (annotated): Value +Docstrings.+unitArgWithConversionU
     Root (annotated): Value +ImportJsValue.+convertVariant
-    Root (annotated): Value +Uncurried.+curried3
-    Root (annotated): Value +Docstrings.+tree
     Root (annotated): Value +ImportHooks.+foo
     Root (annotated): RecordLabel +ImportIndex.props.method
-    Root (annotated): Value +Docstrings.+unnamed2U
     Root (external ref): RecordLabel +RecordRest.config.name
-    Root (annotated): Value +Records.+testMyRecBsAs
     Root (external ref): Value +FirstClassModules.M.Z.+u
-    Root (annotated): Value +Uncurried.+callback2U
+    Root (annotated): Value +Records.+findAddress2
     Root (annotated): Value +ImportJsValue.+default
     Root (external ref): Value +DynamicallyLoadedComponent.+make
     Root (annotated): Value +Hooks.RenderPropRequiresConversion.+make
-    Root (annotated): Value +Uncurried.+uncurried2
     Root (annotated): Value +UseImportJsValue.+useTypeImportedInOtherModule
     Root (annotated): Value +Hooks.Inner.+make
     Root (external ref): RecordLabel +DeadTest.inlineRecord.IR.c
     Root (external ref): Value +OptArg.+foo
+    Root (annotated): Value +Records.+someBusiness2
     Root (annotated): Value +Variants.+fortytwoOK
     Root (annotated): Value +TestOptArg.+liveSuppressesOptArgs
-    Root (annotated): Value +Uncurried.+sumU2
     Root (external ref): Value OptArg.+bar
     Root (external ref): Value +TopLevelOptionalArgValueUse.+liveAliasCaller
-    Root (annotated): Value +Records.+payloadValue
     Root (annotated): Value +Hooks.+default
     Root (annotated): Value +Types.+currentTime
-    Root (annotated): Value +VariantsWithPayload.+testVariant1Object
+    Root (external ref): RecordLabel +Records.myRec.type_
     Root (external ref): VariantCase +Unison.break_.Never
     Root (external ref): Value +ContextOptionalArgs.NotificationProvider.+make
-    Root (annotated): Value +Records.+computeArea3
     Root (annotated): Value +TestEmitInnerModules.Inner.+y
     Root (external ref): VariantCase InnerModuleTypes.I.t.Foo
     Root (annotated): Value +Types.+selfRecursiveConverter
+    Root (annotated): Value +Uncurried.+sumLblCurried
     Root (annotated): Value +Opaque.+testConvertNestedRecordFromOtherFile
+    Root (annotated): Value +Docstrings.+two
     Root (external ref): Value +ReturnedOptionalSignatureUse.+useInterfaceDeclaration
     Root (external ref): RecordLabel +DeadTest.inlineRecord.IR.b
     Root (external ref): Value +OptArg.+bar
@@ -2216,6 +2212,7 @@ Forward Liveness Analysis
     Root (external ref): VariantCase +DeadTest.VariantUsedOnlyInImplementation.t.A
     Root (external ref): RecordLabel +Records.coord.x
     Root (annotated): RecordLabel +DeadTypeTest.record.y
+    Root (annotated): Value +Records.+testMyRecBsAs2
     Root (annotated): Value +TestImport.+defaultValue
     Root (annotated): Value +DeadTest.GloobLive.+globallyLive2
     Root (external ref): RecordLabel +TypeReexport.UseReexported.reexportedType.usedField
@@ -2233,16 +2230,16 @@ Forward Liveness Analysis
     Root (external ref): VariantCase +DeadTest.WithInclude.t.A
     Root (annotated): Value +Records.+origin
     Root (annotated): Value +Variants.+onlySunday
-    Root (annotated): Value +Docstrings.+treeU
-    Root (annotated): Value +Docstrings.+unnamed1
     Root (annotated): Value +TypeParams3.+test2
     Root (annotated): Value +Tuples.+origin
-    Root (annotated): Value +Docstrings.+unitArgWithConversionU
-    Root (annotated): Value +Records.+computeArea4
+    Root (annotated): Value +Records.+getPayloadRecord
     Root (annotated): Value +Tuples.+computeArea
     Root (annotated): Value +References.+get
+    Root (annotated): Value +Docstrings.+unnamed1
     Root (annotated): Value +ModuleAliases.+testNested
+    Root (annotated): Value +Docstrings.+twoU
     Root (external ref): Value +OptArg.+threeArgs
+    Root (annotated): Value +Records.+computeArea3
     Root (annotated): Value +Types.+jsonStringify
     Root (external ref): Value +FirstClassModules.SomeFunctor.+ww
     Root (annotated): Value +Types.+testMarshalFields
@@ -2250,7 +2247,6 @@ Forward Liveness Analysis
     Root (annotated): Value +ImportJsValue.+area
     Root (external ref): Value +TopLevelOptionalArgValueUse.+mutuallyRecursiveCaller
     Root (external ref): Value +DeadTest.MM.+x
-    Root (external ref): RecordLabel +Uncurried.auth.login
     Root (annotated): Value +ImportJsValue.+roundedNumber
     Root (external ref): RecordLabel +RepeatedLabel.tabState.a
     Root (external ref): Value +ReturnedOptionalSignatureUse.+useInlineSignature
@@ -2266,18 +2262,18 @@ Forward Liveness Analysis
     Root (annotated): Value +Hooks.NoProps.+make
     Root (annotated): Value +ImportJsValue.+useGetProp
     Root (annotated): Value +Variants.+id2
-    Root (annotated): Value +Uncurried.+sumU
+    Root (annotated): Value +Docstrings.+unnamed1U
     Root (annotated): Value +DeadTest.+thisIsMarkedLive
-    Root (annotated): Value +Docstrings.+one
+    Root (external ref): RecordLabel +Uncurried.authU.loginU
+    Root (annotated): Value +VariantsWithPayload.+testVariant1Int
     Root (annotated): Value +OcamlWarningSuppressToplevel.+suppressed1
+    Root (annotated): Value +Uncurried.+sumCurried
     Root (external ref): Value +TopLevelOptionalArgValueUse.+liveCaller
     Root (annotated): Value +Tuples.+testTuple
     Root (external ref): Value +ContextOptionalArgs.NotificationProvider.+dispatchNotification
     Root (external ref): Value +OptArg.+wrapOneArg
-    Root (annotated): Value +Uncurried.+callback2
     Root (annotated): Value +ImportMyBanner.+make
     Root (annotated): Value +VariantsWithPayload.+testVariantWithPayloads
-    Root (external ref): RecordLabel +Records.payload.payload
     Root (annotated): Value +Tuples.+marry
     Root (annotated): Value +ImportJsValue.+returnMixedArray
     Root (annotated): Value +TestEmitInnerModules.Outer.Medium.Inner.+y
@@ -2286,62 +2282,59 @@ Forward Liveness Analysis
     Root (external ref): RecordLabel +ComponentAsProp.props.title
     Root (external ref): Value +ContextOptionalArgs.ComponentUsingAction.+dispatchNotification
     Root (annotated): Value +Records.+findAddress
-    Root (annotated): Value +Uncurried.+callback
     Root (external ref): Value +DeadTest.+thisIsUsedTwice
     Root (annotated): Value +VariantsWithPayload.+printVariantWithPayload
+    Root (annotated): Value +VariantsWithPayload.+testVariant1Object
     Root (annotated): Value +TestImmutableArray.+testImmutableArrayGet
     Root (annotated): Value +VariantsWithPayload.+printManyPayloads
     Root (external ref): Value +TopLevelOptionalArgValueUse.+formatDateTopLevelEscape
     Root (external ref): Value +TypeReexport.UseOriginal.+value
-    Root (annotated): Value +Docstrings.+unnamed2
     Root (annotated): Value +LetPrivate.local_1.+x
     Root (annotated): Value +TestImport.+make
     Root (external ref): Value +ContextOptionalArgs.NotificationProvider.Provider.+make
-    Root (annotated): Value +Docstrings.+grouped
     Root (annotated): Value +OcamlWarningSuppressToplevel.M.+suppressed4
     Root (external ref): VariantCase +DeadTest.inlineRecord.IR
-    Root (annotated): Value +Records.+getPayloadRecordPlusOne
     Root (annotated): Value +Types.+swap
     Root (annotated): RecordLabel +ImportHookDefault.props.person
     Root (annotated): Value +Variants.+saturday
-    Root (external ref): VariantCase +Docstrings.t.A
     Root (annotated): Value +OcamlWarningSuppressToplevel.M.+suppressed3
     Root (annotated): Value +Uncurried.+uncurried0
     Root (annotated): Value +Records.+someBusiness
+    Root (annotated): Value +Records.+computeArea4
     Root (external ref): RecordLabel +Hooks.vehicle.name
     Root (external ref): RecordLabel +Tuples.person.age
     Root (annotated): Value +RecordRest.+getRest
     Root (annotated): Value +References.+preserveRefIdentity
     Root (annotated): Value +Variants.+restResult1
     Root (external ref): Value +TestOptArg.+notSuppressesOptArgs
-    Root (external ref): RecordLabel +Records.myRecBsAs.type_
     Root (external ref): VariantCase +TypeReexport.VariantUseReexported.reexportedType.A
     Root (external ref): Value +Unison.+toString
     Root (annotated): Value +ImportJsValue.+polymorphic
     Root (annotated): Value +References.+set
-    Root (annotated): Value +Records.+testMyRecBsAs2
+    Root (external ref): VariantCase +Docstrings.t.A
     Root (annotated): Value +ModuleAliases.+testInner
     Root (external ref): RecordLabel +ComponentAsProp.props.description
-    Root (annotated): Value +Docstrings.+useParamU
     Root (annotated): Value +ImportJsValue.+useColor
+    Root (annotated): Value +Uncurried.+sumU
     Root (external ref): Value +Unison.+group
     Root (external ref): RecordLabel +RecordRest.SubConfig.t.version
-    Root (annotated): Value +Docstrings.+unnamed1U
-    Root (annotated): Value +Records.+recordValue
+    Root (annotated): Value +Uncurried.+uncurried2
+    Root (annotated): Value +Uncurried.+sumU2
     Root (annotated): Value +ImportHookDefault.+make
     Root (annotated): Value +Types.+map
     Root (annotated): RecordLabel +DeadTypeTest.record.x
     Root (external ref): Value +TestOptArg.+bar
     Root (external ref): Value +ContextOptionalArgs.ComponentNotUsingAction.+make
-    Root (external ref): RecordLabel +Records.myRec.type_
+    Root (annotated): Value +Records.+testMyRec
     Root (external ref): Value +DeadTest.+make
     Root (annotated): Value NestedModulesInSignature.Universe.+theAnswer
-    Root (annotated): Value +Docstrings.+unitArgWithoutConversion
     Root (annotated): Value +ContextOptionalArgs.+make
     Root (annotated): Value +References.+create
     Root (external ref): Value +InterfaceOptionalArgEscapeUse.+use
     Root (external ref): Value +TopLevelOptionalArgValueUse.+liveEscapeCaller
+    Root (annotated): Value +Docstrings.+unnamed2U
     Root (annotated): Value +FirstClassModules.+testConvert
+    Root (annotated): Value +Docstrings.+unnamed2
     Root (external ref): Value +TopLevelOptionalArgValueUse.+liveTupleCaller
     Root (external ref): RecordLabel +Records.coord.z
     Root (annotated): Value +Types.+someIntList
@@ -2359,16 +2352,19 @@ Forward Liveness Analysis
     Root (annotated): RecordLabel +ImportHooks.props.children
     Root (external ref): RecordLabel +DeadTest.props.s
     Root (external ref): VariantCase +DeadTypeTest.t.A
-    Root (annotated): Value +Docstrings.+oneU
+    Root (annotated): Value +Docstrings.+unitArgWithoutConversion
     Root (annotated): RecordLabel +DeadTypeTest.record.z
-    Root (annotated): Value +Records.+testMyObj2
     Root (annotated): Value +Docstrings.+flat
     Root (annotated): Value +NestedModules.Universe.Nested2.+nested2Value
-    Root (external ref): RecordLabel +Records.business2.address2
     Root (external ref): VariantCase DeadTypeTest.deadType.InBoth
+    Root (annotated): Value +Docstrings.+one
+    Root (external ref): RecordLabel +Records.payload.payload
     Root (annotated): Value +ScopedAnnotationsOverride.M.+live2
     Root (annotated): Value +FirstClassModules.+someFunctorAsFunction
+    Root (external ref): RecordLabel +Records.record.v
     Root (annotated): Value +Variants.+fortytwoBAD
+    Root (annotated): Value +Records.+testMyRec2
+    Root (annotated): Value +Records.+recordValue
     Root (external ref): RecordLabel +Unison.t.break_
     Root (external ref): RecordLabel +Hooks.Inner.props.vehicle
     Root (external ref): Value ImmutableArray.+fromArray
@@ -2376,35 +2372,38 @@ Forward Liveness Analysis
     Root (annotated): Value +Variants.+testConvert2to3
     Root (external ref): Value +DeadTest.+thisIsUsedOnce
     Root (annotated): Value +ImportJsValue.+round
+    Root (annotated): Value +Docstrings.+unitArgWithoutConversionU
     Root (annotated): Value +TestModuleAliases.+testInner2
+    Root (annotated): Value +Uncurried.+uncurried3
     Root (annotated): Value +Tuples.+getFirstName
     Root (annotated): Value +TestFirstClassModules.+convert
-    Root (annotated): Value +Records.+testMyRec
     Root (external ref): VariantCase +DeadRT.moduleAccessPath.Kaboom
     Root (external ref): Value +TypeReexport.UseReexported.+value
     Root (external ref): Value +DeadTest.+deadIncorrect
     Root (external ref): Value +DeadCodeImplementation.M.+x
     Root (annotated): Value +Variants.+restResult2
-    Root (annotated): Value +Docstrings.+useParam
-    Root (annotated): Value +Records.+getPayload
+    Root (annotated): Value +Uncurried.+curried3
     Root (external ref): Value +TopLevelOptionalArgValueUse.+liveReturnedFunctionCaller
     Root (annotated): Value +VariantsWithPayload.+printVariantWithPayloads
+    Root (annotated): Value +Docstrings.+tree
     Root (annotated): Value +ScopedAnnotationsOverride.M.NestedInLive.+nestedLive
+    Root (annotated): Value +Docstrings.+treeU
     Root (external ref): Value +FirstClassModules.M.+y
-    Root (annotated): Value +Records.+findAddress2
-    Root (external ref): RecordLabel +Uncurried.authU.loginU
     Root (external ref): RecordLabel +Tuples.person.name
+    Root (annotated): Value +Records.+testMyRecBsAs
     Root (annotated): Value +ModuleAliases.+testInner2
     Root (annotated): RecordLabel +ImportHooks.props.person
     Root (external ref): Value DeadValueTest.+valueAlive
     Root (external ref): Value +DeadTest.+ira
     Root (external ref): RecordLabel +Hooks.RenderPropRequiresConversion.props.renderVehicle
     Root (annotated): Value +Shadow.M.+test
-    Root (annotated): Value +Uncurried.+sumLblCurried
     Root (annotated): Value +ComponentAsProp.+make
     Root (annotated): Value +TestFirstClassModules.+convertFirstClassModuleWithTypeEquations
+    Root (annotated): Value +Docstrings.+grouped
     Root (annotated): Value +TransitiveType1.+convertAlias
+    Root (annotated): Value +Records.+payloadValue
     Root (annotated): Value +ForOf.+keep
+    Root (external ref): RecordLabel +Uncurried.auth.login
     Root (external ref): VariantCase +Unison.stack.Cons
     Root (external ref): Exception +DeadExn.Inside.Einside
     Root (annotated): Value +TestImport.+defaultValue2
@@ -2413,12 +2412,12 @@ Forward Liveness Analysis
     Root (annotated): Value +Variants.+monday
     Root (annotated): Value +Unboxed.+r2Test
     Root (external ref): RecordLabel +Records.coord.y
-    Root (annotated): Value +Records.+testMyObj
     Root (annotated): Value +TestPromise.+convert
     Root (annotated): Value +FirstClassModules.+firstClassModule
     Root (external ref): RecordLabel +Hooks.props.vehicle
     Root (external ref): Value +DeadTest.VariantUsedOnlyInImplementation.+a
     Root (annotated): Value +ImportJsValue.+useGetAbs
+    Root (annotated): Value +Docstrings.+useParamU
     Root (external ref): Value +JsxV4.C.+make
     Root (external ref): RecordLabel +Types.selfRecursive.self
     Root (external ref): VariantCase +TypeReexport.VariantUseOriginal.reexportedType.A
@@ -2426,13 +2425,13 @@ Forward Liveness Analysis
     Root (annotated): Value +References.+destroysRefIdentity
     Root (external ref): Value +Hooks.RenderPropRequiresConversion.+car
     Root (external ref): Value +OptArg.+twoArgs
+    Root (external ref): RecordLabel +Records.myRecBsAs.type_
     Root (external ref): Value +FirstClassModules.M.+x
     Root (external ref): Value +TypeReexportCrossFileB.+recordValue
     Root (external ref): Value +InterfaceOptionalArgEscape.+takesFn
     Root (annotated): Value +TestModuleAliases.+testInner1Expanded
     Root (external ref): Value +TypeReexport.OnlyReexportedDead.+value
     Root (annotated): Value +DeadTest.GloobLive.+globallyLive3
-    Root (annotated): Value +VariantsWithPayload.+testVariant1Int
     Root (annotated): Value +ImportIndex.+make
     Root (annotated): Value +Unboxed.+testV1
     Root (annotated): Value +NestedModules.Universe.+theAnswer
@@ -2446,20 +2445,21 @@ Forward Liveness Analysis
     Root (annotated): Value +Opaque.+noConversion
     Root (external ref): RecordLabel +RepeatedLabel.tabState.b
     Root (annotated): Value +VariantsWithPayload.+testManyPayloads
+    Root (annotated): Value +Records.+getPayload
+    Root (annotated): Value +Uncurried.+callback
     Root (external ref): RecordLabel +TypeReexport.OnlyReexportedDead.reexportedType.usedField
-    Root (annotated): Value +Docstrings.+unitArgWithConversion
     Root (external ref): Value +TopLevelOptionalArgValueUse.+takesFn
     Root (external ref): RecordLabel +Records.business.owner
+    Root (annotated): Value +Uncurried.+callback2U
     Root (external ref): VariantCase +DeadTypeTest.deadType.InBoth
     Root (external ref): RecordLabel +Records.business.address
     Root (external ref): RecordLabel +VariantsWithPayload.payload.y
     Root (annotated): RecordLabel +ImportHookDefault.props.children
-    Root (annotated): Value +Records.+testMyRec2
+    Root (annotated): Value +Records.+testMyObj
     Root (annotated): Value +TestModuleAliases.+testInner1
     Root (annotated): Value +ForAwaitOf.+keep
     Root (annotated): Value +OcamlWarningSuppressToplevel.+suppressed2
     Root (annotated): Value +VariantsWithPayload.+testWithPayload
-    Root (annotated): Value +Records.+getPayloadRecord
     Root (annotated): Value +Tuples.+computeAreaNoConverters
     Root (annotated): Value +Types.+mutuallyRecursiveConverter
     Root (annotated): Value +UseImportJsValue.+useGetProp
@@ -2478,6 +2478,7 @@ Forward Liveness Analysis
     Propagate: +Newton.+f -> +Newton.+*
     Propagate: +ContextOptionalArgs.ComponentUsingAction.+make -> +ContextOptionalArgs.NotificationProvider.+useNotification
     Propagate: +TypeReexport.UseOriginal.reexportedType.directlyUsed -> +TypeReexport.UseOriginal.originalType.directlyUsed
+    Propagate: +Records.+findAddress2 -> +Records.+getOpt
     Propagate: +TopLevelOptionalArgValueUse.+liveAliasCaller -> +TopLevelOptionalArgValueUse.+formatDateAlias2
     Propagate: +Hooks.+default -> +Hooks.+make
     Propagate: InnerModuleTypes.I.t.Foo -> +InnerModuleTypes.I.t.Foo
@@ -2496,7 +2497,6 @@ Forward Liveness Analysis
     Propagate: +ScopedAnnotationsLiveVsDead.LiveScope.+root -> +ScopedAnnotationsLiveVsDead.+middleLive
     Propagate: +Newton.+result -> +Newton.+newton
     Propagate: +Newton.+result -> +Newton.+fPrimed
-    Propagate: +Records.+findAllAddresses -> +Records.+getOpt
     Propagate: +DeadTest.+thisIsMarkedLive -> +DeadTest.+thisIsKeptAlive
     Propagate: +TopLevelOptionalArgValueUse.+liveCaller -> +TopLevelOptionalArgValueUse.+formatDate
     Propagate: +OptArg.+wrapOneArg -> +OptArg.+oneArg

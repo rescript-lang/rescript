@@ -18,7 +18,6 @@
     "package.json"
   ],
   "@rescript/runtime": [
-    "lib/es6/Char.mjs",
     "lib/es6/Dom.mjs",
     "lib/es6/Dom_storage.mjs",
     "lib/es6/Dom_storage2.mjs",
@@ -126,7 +125,6 @@
     "lib/es6/Stdlib_Uint8ClampedArray.mjs",
     "lib/es6/Stdlib_WeakMap.mjs",
     "lib/es6/Stdlib_WeakSet.mjs",
-    "lib/js/Char.cjs",
     "lib/js/Dom.cjs",
     "lib/js/Dom_storage.cjs",
     "lib/js/Dom_storage2.cjs",
@@ -234,12 +232,6 @@
     "lib/js/Stdlib_Uint8ClampedArray.cjs",
     "lib/js/Stdlib_WeakMap.cjs",
     "lib/js/Stdlib_WeakSet.cjs",
-    "lib/ocaml/Char.cmi",
-    "lib/ocaml/Char.cmj",
-    "lib/ocaml/Char.cmt",
-    "lib/ocaml/Char.cmti",
-    "lib/ocaml/Char.res",
-    "lib/ocaml/Char.resi",
     "lib/ocaml/Dom.cmi",
     "lib/ocaml/Dom.cmj",
     "lib/ocaml/Dom.cmt",

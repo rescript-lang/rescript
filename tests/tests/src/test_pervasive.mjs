@@ -65,22 +65,7 @@ let Pervasives$1 = {
   sort: Stdlib_List.sort,
   failwith: Pervasives.failwith,
   invalid_arg: Pervasives.invalid_arg,
-  Exit: Pervasives.Exit,
-  abs: Pervasives.abs,
-  max_int: Pervasives.max_int,
-  min_int: Pervasives.min_int,
-  infinity: Pervasives.infinity,
-  neg_infinity: Pervasives.neg_infinity,
-  max_float: Pervasives.max_float,
-  min_float: Pervasives.min_float,
-  epsilon_float: Pervasives.epsilon_float,
-  classify_float: Pervasives.classify_float,
-  char_of_int: Pervasives.char_of_int,
-  string_of_bool: Pervasives.string_of_bool,
-  bool_of_string: Pervasives.bool_of_string,
-  bool_of_string_opt: Pervasives.bool_of_string_opt,
-  int_of_string_opt: Pervasives.int_of_string_opt,
-  $at: Pervasives.$at
+  Exit: Pervasives.Exit
 };
 
 function a0(prim) {
@@ -159,7 +144,7 @@ function a18(prim0, prim1) {
   return prim0 ** prim1 | 0;
 }
 
-let f = Pervasives.$at;
+let f = Stdlib_List.concat;
 
 export {
   Pervasives$1 as Pervasives,

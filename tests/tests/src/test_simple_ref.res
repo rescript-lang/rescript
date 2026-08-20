@@ -3,7 +3,7 @@ include (
     let v = ref(0)
 
     let gen = () => {
-      incr(v)
+      Int.Ref.increment(v)
       v.contents
     }
     let h = ref(0)

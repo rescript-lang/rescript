@@ -424,7 +424,7 @@ See [`Array.sort`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refer
 
 ```rescript
 let array = [3, 2, 1]
-array->Array.sort((a, b) => float(a - b))
+array->Array.sort((a, b) => Int.toFloat(a - b))
 array == [1, 2, 3]
 ```
 */
@@ -1328,29 +1328,6 @@ for index in 0 to array->Array.length - 1 {
 ```
 */
 external getUnsafe: (array<'a>, int) => 'a = "%array_unsafe_get"
-
-/**
-`unsafe_get(array, index)` returns the element at `index` of `array`.
-
-This is _unsafe_, meaning it will return `undefined` value if `index` does not exist in `array`.
-
-Use `Array.unsafe_get` only when you are sure the `index` exists (i.e. when using for-loop).
-
-## Examples
-
-```rescript
-let array = [1, 2, 3]
-for index in 0 to array->Array.length - 1 {
-  let value = array->Array.unsafe_get(index)
-  Console.log(value)
-}
-```
-*/
-@deprecated({
-  reason: "Use getUnsafe instead. This will be removed in v13",
-  migrate: Array.getUnsafe(),
-})
-external unsafe_get: (array<'a>, int) => 'a = "%array_unsafe_get"
 
 /**
 `setUnsafe(array, index, item)` sets the provided `item` at `index` of `array`.

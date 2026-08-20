@@ -16,8 +16,8 @@ let get = (A(x)) => x
   let x = A("foo")
   eq(
     __LOC__,
-    Obj.repr(x),
-    Obj.repr(
+    Obj.magic(x),
+    Obj.magic(
       switch x {
       | A(s) => s
       },
@@ -30,7 +30,7 @@ let get = (A(x)) => x
 
 {
   let x = {f: "foo"}
-  eq(__LOC__, Obj.repr(x), Obj.repr(x.f))
+  eq(__LOC__, Obj.magic(x), Obj.magic(x.f))
 }
 
 /* For inline records */
@@ -40,8 +40,8 @@ let get = (A(x)) => x
   let x = B({g: "foo"})
   eq(
     __LOC__,
-    Obj.repr(x),
-    Obj.repr(
+    Obj.magic(x),
+    Obj.magic(
       switch x {
       | B({g}) => g
       },

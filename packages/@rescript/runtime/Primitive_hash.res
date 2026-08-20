@@ -5,6 +5,7 @@
  */
 
 module Float = Primitive_float_extern
+module Int = Stdlib_Int
 module Obj = Primitive_object_extern
 module String = Primitive_string_extern
 
@@ -69,24 +70,24 @@ let unsafe_pop = (q: t<'a>) =>
     cell.content
   }
 
-let rotl32 = (x: int, n) => lor(lsl(x, n), lsr(x, 32 - n))
+let rotl32 = (x: int, n) => Int.bitwiseOr(Int.shiftLeft(x, n), Int.shiftRightUnsigned(x, 32 - n))
 
 let hash_mix_int = (h, d) => {
   let d = ref(d)
   d.contents = imul(d.contents, 0xcc9e2d51)
   d.contents = rotl32(d.contents, 15)
   d.contents = imul(d.contents, 0x1b873593)
-  let h = ref(lxor(h, d.contents))
+  let h = ref(Int.bitwiseXor(h, d.contents))
   h.contents = rotl32(h.contents, 13)
-  h.contents + lsl(h.contents, 2) + 0xe6546b64
+  h.contents + Int.shiftLeft(h.contents, 2) + 0xe6546b64
 }
 
 let hash_final_mix = h => {
-  let h = ref(lxor(h, lsr(h, 16)))
+  let h = ref(Int.bitwiseXor(h, Int.shiftRightUnsigned(h, 16)))
   h.contents = imul(h.contents, 0x85ebca6b)
-  h.contents = lxor(h.contents, lsr(h.contents, 13))
+  h.contents = Int.bitwiseXor(h.contents, Int.shiftRightUnsigned(h.contents, 13))
   h.contents = imul(h.contents, 0xc2b2ae35)
-  lxor(h.contents, lsr(h.contents, 16))
+  Int.bitwiseXor(h.contents, Int.shiftRightUnsigned(h.contents, 16))
 }
 
 let hash_mix_string = (h, s) => {
@@ -95,29 +96,35 @@ let hash_mix_string = (h, s) => {
   let hash = ref(h)
   for i in 0 to block {
     let j = 4 * i
-    let w = lor(
-      lor(lor(s->charCodeAt(j), lsl(s->charCodeAt(j + 1), 8)), lsl(s->charCodeAt(j + 2), 16)),
-      lsl(s->charCodeAt(j + 3), 24),
+    let w = Int.bitwiseOr(
+      Int.bitwiseOr(
+        Int.bitwiseOr(s->charCodeAt(j), Int.shiftLeft(s->charCodeAt(j + 1), 8)),
+        Int.shiftLeft(s->charCodeAt(j + 2), 16),
+      ),
+      Int.shiftLeft(s->charCodeAt(j + 3), 24),
     )
 
     hash.contents = hash_mix_int(hash.contents, w)
   }
-  let modulo = land(len, 0b11)
+  let modulo = Int.bitwiseAnd(len, 0b11)
   if modulo != 0 {
     let w = if modulo == 3 {
-      lor(
-        lor(lsl(s->charCodeAt(len - 1), 16), lsl(s->charCodeAt(len - 2), 8)),
+      Int.bitwiseOr(
+        Int.bitwiseOr(
+          Int.shiftLeft(s->charCodeAt(len - 1), 16),
+          Int.shiftLeft(s->charCodeAt(len - 2), 8),
+        ),
         s->charCodeAt(len - 3),
       )
     } else if modulo == 2 {
-      lor(lsl(s->charCodeAt(len - 1), 8), s->charCodeAt(len - 2))
+      Int.bitwiseOr(Int.shiftLeft(s->charCodeAt(len - 1), 8), s->charCodeAt(len - 2))
     } else {
       s->charCodeAt(len - 1)
     }
 
     hash.contents = hash_mix_int(hash.contents, w)
   }
-  hash.contents = lxor(hash.contents, len)
+  hash.contents = Int.bitwiseXor(hash.contents, len)
   hash.contents
 }
 
@@ -161,7 +168,7 @@ let hash = (count: int, _limit, seed: int, obj: Obj.t): int => {
         let size = Obj.size(obj)
         if size != 0 {
           let obj_tag = Obj.tag(obj)
-          let tag = lor(lsl(size, 10), obj_tag)
+          let tag = Int.bitwiseOr(Int.shiftLeft(size, 10), obj_tag)
           s.contents = hash_mix_int(s.contents, tag)
           let block = {
             let v = size - 1
@@ -183,7 +190,7 @@ let hash = (count: int, _limit, seed: int, obj: Obj.t): int => {
             }
             return size
           }`)(obj, v => push_back(queue, v))
-          s.contents = hash_mix_int(s.contents, lor(lsl(size, 10), 0)) /* tag */
+          s.contents = hash_mix_int(s.contents, Int.shiftLeft(size, 10)) /* tag */
         }
       }
     }

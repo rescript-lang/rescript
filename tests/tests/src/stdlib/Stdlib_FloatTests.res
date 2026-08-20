@@ -1,4 +1,7 @@
 let eq = (a, b) => a == b
+let nan = Float.Constants.nan
+let infinity = Float.Constants.positiveInfinity
+let neg_infinity = Float.Constants.negativeInfinity
 
 Test.run(__POS_OF__("clamp"), Float.clamp(4.2), eq, 4.2)
 Test.run(__POS_OF__("clamp - < min"), Float.clamp(~min=4.3, 4.1), eq, 4.3)

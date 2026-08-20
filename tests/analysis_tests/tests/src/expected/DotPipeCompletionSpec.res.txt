@@ -358,28 +358,6 @@ Path u
         }
       }
     ],
-    "deprecated": true,
-    "detail": "(array<'a>, int) => 'a",
-    "documentation": {
-      "kind": "markdown",
-      "value": "Deprecated: Use getUnsafe instead. This will be removed in v13\n\n\n`unsafe_get(array, index)` returns the element at `index` of `array`.\n\nThis is _unsafe_, meaning it will return `undefined` value if `index` does not exist in `array`.\n\nUse `Array.unsafe_get` only when you are sure the `index` exists (i.e. when using for-loop).\n\n## Examples\n\n```rescript\nlet array = [1, 2, 3]\nfor index in 0 to array->Array.length - 1 {\n  let value = array->Array.unsafe_get(index)\n  Console.log(value)\n}\n```\n"
-    },
-    "insertText": "->Array.unsafe_get",
-    "kind": 12,
-    "label": "->Array.unsafe_get",
-    "sortText": "unsafe_get",
-    "tags": [ 1 ]
-  },
-  {
-    "additionalTextEdits": [
-      {
-        "newText": "",
-        "range": {
-          "end": { "character": 8, "line": 75 },
-          "start": { "character": 7, "line": 75 }
-        }
-      }
-    ],
     "detail": "array<('a, 'b)> => (t<'a>, array<'b>)",
     "documentation": {
       "kind": "markdown",

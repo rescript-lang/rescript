@@ -19,7 +19,7 @@ let nan = Float.Constants.nan
 
 describe(__MODULE__, () => {
   test("float_test_1", () => {
-    eq(__LOC__, classify_float(3.), FP_normal)
+    eq(__LOC__, Float.isFinite(3.), true)
     eq(
       __LOC__,
       [-1, 1, 1],
@@ -36,14 +36,14 @@ describe(__MODULE__, () => {
           },
       ),
     )
-    eq(__LOC__, log10(10.), 1.)
+    eq(__LOC__, Math.log10(10.), 1.)
     eq(__LOC__, Float.fromString("3.0"), Some(3.0))
     eq(__LOC__, float_compare(nan, nan), 0)
     eq(__LOC__, generic_compare(nan, nan), 0)
-    eq(__LOC__, float_compare(nan, neg_infinity), -1)
-    eq(__LOC__, generic_compare(nan, neg_infinity), -1)
-    eq(__LOC__, float_compare(neg_infinity, nan), 1)
-    eq(__LOC__, generic_compare(neg_infinity, nan), 1)
+    eq(__LOC__, float_compare(nan, Float.Constants.negativeInfinity), -1)
+    eq(__LOC__, generic_compare(nan, Float.Constants.negativeInfinity), -1)
+    eq(__LOC__, float_compare(Float.Constants.negativeInfinity, nan), 1)
+    eq(__LOC__, generic_compare(Float.Constants.negativeInfinity, nan), 1)
     eq(__LOC__, float_equal(nan, nan), false)
     eq(__LOC__, generic_equal(nan, nan), false)
     eq(__LOC__, float_equal(4.2, nan), false)

@@ -56,7 +56,7 @@ let f = x => {
   let sum = ref(0)
   while v.contents > 0 {
     sum := sum.contents + v.contents
-    decr(v)
+    Int.Ref.decrement(v)
   }
   sum.contents
 }

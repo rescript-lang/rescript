@@ -25,7 +25,7 @@ let init = (l, f) =>
      on whether we create a float array or a regular one... */
 
     let res = Array.make(~length=l, f(0))
-    for i in 1 to pred(l) {
+    for i in 1 to l - 1 {
       Array.setUnsafe(res, i, f(i))
     }
     res
@@ -50,7 +50,7 @@ let fold_left = (f, x, a) => fold_left((x, y) => f(x, y), x, a)
 let f = {
   open Array
   () => {
-    let arr = init(10000000, i => float_of_int(i))
+    let arr = init(10000000, i => Int.toFloat(i))
     let b = arr->map(i => i +. i -. 1.)
     let v = b->Array.reduceRight(0., \"+.")
     v->Float.toString->Console.log
@@ -59,7 +59,7 @@ let f = {
 
 let f2 = () => {
   open Array
-  let arr = init(30_000_000, i => float_of_int(i))
+  let arr = init(30_000_000, i => Int.toFloat(i))
   let b = arr->map(i => i +. i -. 1.)
   let v = b->Array.reduceRight(0., \"+.")
   v->Float.toString->Console.log
@@ -96,11 +96,11 @@ let f = x =>
   /* let u = */ add5(
     x,
     {
-      incr(v)
+      Int.Ref.increment(v)
       1
     },
     {
-      incr(v)
+      Int.Ref.increment(v)
       2
     },
     ...
@@ -113,11 +113,11 @@ let g = x => {
     add5(
       x,
       {
-        incr(v)
+        Int.Ref.increment(v)
         1
       },
       {
-        incr(v)
+        Int.Ref.increment(v)
         2
       },
       a,

@@ -1,7 +1,7 @@
 let v = ref(0)
 
 let f = (x, x) => {
-  incr(v)
+  Int.Ref.increment(v)
   x + x
 }
 

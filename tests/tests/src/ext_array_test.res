@@ -214,7 +214,7 @@ let exists = (p, a) => {
     } else if p(Array.getUnsafe(a, i)) {
       true
     } else {
-      loop(succ(i))
+      loop(i + 1)
     }
   loop(0)
 }
@@ -226,7 +226,7 @@ let rec unsafe_loop = (index, len, p, xs, ys) =>
     true
   } else {
     p(Array.getUnsafe(xs, index), Array.getUnsafe(ys, index)) &&
-    unsafe_loop(succ(index), len, p, xs, ys)
+    unsafe_loop(index + 1, len, p, xs, ys)
   }
 
 let for_all2_no_exn = (p, xs, ys) => {

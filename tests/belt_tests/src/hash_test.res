@@ -39,7 +39,7 @@ let test_strings_hash_results = [
   831138595,
 ]
 
-let normalize = x => land(x, 0x3FFFFFFF)
+let normalize = x => Stdlib.Int.bitwiseAnd(x, 0x3FFFFFFF)
 let caml_hash = x => normalize(Hash_utils.hash(x))
 
 describe(__MODULE__, () => {

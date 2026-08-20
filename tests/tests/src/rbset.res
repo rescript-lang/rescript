@@ -190,7 +190,7 @@ let rec remove_aux = (x, n) =>
     }
   }
 
-let remove = (x, s) => fst(remove_aux(x, s))
+let remove = (x, s) => Pair.first(remove_aux(x, s))
 
 let rec cardinal = x =>
   switch x {

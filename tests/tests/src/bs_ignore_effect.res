@@ -15,10 +15,10 @@ let v = ref(0)
 
 @obj external config: (~hi: int, ~lo: int, unit) => _ = ""
 
-let h = config(~hi=2, ~lo=0, ignore(incr(v)))
+let h = config(~hi=2, ~lo=0, ignore(Int.Ref.increment(v)))
 let z = add(
   {
-    incr(v)
+    Int.Ref.increment(v)
     Float
   },
   3.0,

@@ -65,7 +65,7 @@ function string_of_rank(x) {
       return "Visited";
     }
   } else {
-    return "Ranked(" + x._0 + ")";
+    return "Ranked(" + String(x._0) + ")";
   }
 }
 
@@ -132,7 +132,7 @@ function compute_update_sequences(all_tickers) {
         let ticker_name = ticker.ticker_name;
         if (typeof type_ !== "object") {
           let l = Belt_MapString.getExn(map, ticker_name);
-          return Belt_MapString.set(map, ticker_name, Pervasives.$at(up, l));
+          return Belt_MapString.set(map, ticker_name, Belt_List.concat(up, l));
         }
         let match = type_._0;
         let map$1 = loop({

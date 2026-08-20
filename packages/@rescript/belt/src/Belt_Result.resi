@@ -77,7 +77,7 @@ ordinary value.
 ## Examples
 
 ```rescript
-let f = x => sqrt(Belt.Int.toFloat(x))
+let f = x => Math.sqrt(Belt.Int.toFloat(x))
 
 Belt.Result.map(Ok(64), f) == Ok(8.0)
 

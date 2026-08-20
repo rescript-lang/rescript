@@ -6,7 +6,7 @@ open Test_utils
 let v = ref(3)
 
 let update = () => {
-  incr(v)
+  Int.Ref.increment(v)
   true
 }
 

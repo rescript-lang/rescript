@@ -22,7 +22,10 @@ let rec copyBucket = (~hash, ~h_buckets, ~ndata_tail, old_bucket) =>
   switch C.toOpt(old_bucket) {
   | None => ()
   | Some(cell) =>
-    let nidx = land(Belt_Id.getHashInternal(hash)(cell.N.key), A.length(h_buckets) - 1)
+    let nidx = Stdlib.Int.bitwiseAnd(
+      Belt_Id.getHashInternal(hash)(cell.N.key),
+      A.length(h_buckets) - 1,
+    )
     let v = C.return(cell)
     switch C.toOpt(A.getUnsafe(ndata_tail, nidx)) {
     | None => A.setUnsafe(h_buckets, nidx, v)
@@ -69,7 +72,7 @@ let rec removeBucket = (~eq, h, h_buckets, i, key, prec, cell) => {
 let remove = (h, key) => {
   let eq = h.C.eq
   let h_buckets = h.C.buckets
-  let i = land(Belt_Id.getHashInternal(h.C.hash)(key), A.length(h_buckets) - 1)
+  let i = Stdlib.Int.bitwiseAnd(Belt_Id.getHashInternal(h.C.hash)(key), A.length(h_buckets) - 1)
   let l = A.getUnsafe(h_buckets, i)
   switch C.toOpt(l) {
   | None => ()
@@ -101,7 +104,7 @@ let rec addBucket = (h, key, cell, ~eq) =>
 let add0 = (h, key, ~hash, ~eq) => {
   let h_buckets = h.C.buckets
   let buckets_len = A.length(h_buckets)
-  let i = land(Belt_Id.getHashInternal(hash)(key), buckets_len - 1)
+  let i = Stdlib.Int.bitwiseAnd(Belt_Id.getHashInternal(hash)(key), buckets_len - 1)
   let l = A.getUnsafe(h_buckets, i)
   switch C.toOpt(l) {
   | None =>
@@ -109,7 +112,7 @@ let add0 = (h, key, ~hash, ~eq) => {
     A.setUnsafe(h_buckets, i, C.return({N.key, next: C.emptyOpt}))
   | Some(cell) => addBucket(~eq, h, key, cell)
   }
-  if h.C.size > lsl(buckets_len, 1) {
+  if h.C.size > Stdlib.Int.shiftLeft(buckets_len, 1) {
     tryDoubleResize(~hash, h)
   }
 }
@@ -125,7 +128,7 @@ let rec memInBucket = (~eq, key, cell) =>
 
 let has = (h, key) => {
   let (eq, h_buckets) = (h.C.eq, h.C.buckets)
-  let nid = land(Belt_Id.getHashInternal(h.C.hash)(key), A.length(h_buckets) - 1)
+  let nid = Stdlib.Int.bitwiseAnd(Belt_Id.getHashInternal(h.C.hash)(key), A.length(h_buckets) - 1)
   let bucket = A.getUnsafe(h_buckets, nid)
   switch C.toOpt(bucket) {
   | None => false

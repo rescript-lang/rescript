@@ -235,7 +235,7 @@ Mocha.describe("Bs_array_test", () => {
     Test_utils.eq("File \"bs_array_test.res\", line 123, characters 7-14", makeMatrixExn(0, 3, 1), []);
     Test_utils.eq("File \"bs_array_test.res\", line 124, characters 7-14", makeMatrixExn(1, 1, 1), [[1]]);
     Test_utils.eq("File \"bs_array_test.res\", line 125, characters 7-14", [].slice(0), []);
-    Test_utils.eq("File \"bs_array_test.res\", line 126, characters 7-14", Belt_Array.map([], prim => prim + 1 | 0), []);
+    Test_utils.eq("File \"bs_array_test.res\", line 126, characters 7-14", Belt_Array.map([], x => x + 1 | 0), []);
     Test_utils.eq("File \"bs_array_test.res\", line 127, characters 7-14", Belt_Array.mapWithIndex([], add), []);
     Test_utils.eq("File \"bs_array_test.res\", line 128, characters 7-14", Belt_Array.mapWithIndex([
       1,
@@ -269,7 +269,7 @@ Mocha.describe("Bs_array_test", () => {
       1,
       2,
       3
-    ], prim => prim + 1 | 0), [
+    ], x => x + 1 | 0), [
       2,
       3,
       4

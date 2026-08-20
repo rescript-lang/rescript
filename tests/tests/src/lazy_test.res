@@ -41,7 +41,7 @@ let exotic = x =>
 let l_from_fun = Lazy.make(_ => 3)
 let forward_test = Lazy.make(() => {
   let u = ref(3)
-  incr(u)
+  Int.Ref.increment(u)
   u.contents
 })
 
