@@ -26,13 +26,16 @@ let rec struct_const ppf (cst : Lam_constant.t) =
   | Const_float f -> fprintf ppf "%s" f
   | Const_bigint (sign, i) -> fprintf ppf "%sn" (Bigint_utils.to_string sign i)
   | Const_pointer name -> fprintf ppf "`%s" name
+  | Const_constructor {name} -> fprintf ppf "`%s" name
   | Const_some n -> fprintf ppf "[some-c]%a" struct_const n
-  | Const_block (tag, _, []) -> fprintf ppf "[%i]" tag
-  | Const_block (tag, _, sc1 :: scl) ->
+  | Const_block (i, []) -> fprintf ppf "[%s]" (Lambda.tag_label_of_tag_info i)
+  | Const_block (i, sc1 :: scl) ->
     let sconsts ppf scl =
       List.iter (fun sc -> fprintf ppf "@ %a" struct_const sc) scl
     in
-    fprintf ppf "@[<1>[%i:@ @[%a%a@]]@]" tag struct_const sc1 sconsts scl
+    fprintf ppf "@[<1>[%s:@ @[%a%a@]]@]"
+      (Lambda.tag_label_of_tag_info i)
+      struct_const sc1 sconsts scl
 
 (* let string_of_loc_kind (loc : Lambda.loc_kind) =
    match loc with
@@ -71,8 +74,10 @@ let primitive ppf (prim : Lam_primitive.t) =
   | Pis_undefined -> fprintf ppf "[?undefined]"
   | Pis_null_undefined -> fprintf ppf "[?null?undefined]"
   | Pimport -> fprintf ppf "[import]"
-  | Pmakeblock (tag, _, Immutable) -> fprintf ppf "makeblock %i" tag
-  | Pmakeblock (tag, _, Mutable) -> fprintf ppf "makemutable %i" tag
+  | Pmakeblock (i, Immutable) ->
+    fprintf ppf "makeblock %s" (Lambda.tag_label_of_tag_info i)
+  | Pmakeblock (i, Mutable) ->
+    fprintf ppf "makemutable %s" (Lambda.tag_label_of_tag_info i)
   | Pfield (n, field_info) -> (
     match Lam_compat.str_of_field_info field_info with
     | None -> fprintf ppf "field %i" n
@@ -314,22 +319,24 @@ let lambda ppf v =
       let switch ppf (sw : Lam.lambda_switch) =
         let spc = ref false in
         List.iter
-          (fun (n, l) ->
+          (fun (key, l) ->
             if !spc then fprintf ppf "@ " else spc := true;
-            fprintf ppf "@[<hv 1>case int %i %S:@ %a@]" n
-              (match sw.sw_names with
-              | None -> ""
-              | Some x -> x.consts.(n).name)
-              lam l)
+            match key with
+            | Lambda.Switch_int ordinal ->
+              fprintf ppf "@[<hv 1>case int %i:@ %a@]" ordinal lam l
+            | Lambda.Switch_constructor (Constant {name}) ->
+              fprintf ppf "@[<hv 1>case constructor %S:@ %a@]" name lam l
+            | Lambda.Switch_constructor (Block _) -> assert false)
           sw.sw_consts;
         List.iter
-          (fun (n, l) ->
+          (fun (key, l) ->
             if !spc then fprintf ppf "@ " else spc := true;
-            fprintf ppf "@[<hv 1>case tag %i %S:@ %a@]" n
-              (match sw.sw_names with
-              | None -> ""
-              | Some x -> x.blocks.(n).tag.name)
-              lam l)
+            match key with
+            | Lambda.Switch_int ordinal ->
+              fprintf ppf "@[<hv 1>case tag %i:@ %a@]" ordinal lam l
+            | Lambda.Switch_constructor (Block {runtime = {tag = {name}}}) ->
+              fprintf ppf "@[<hv 1>case constructor %S:@ %a@]" name lam l
+            | Lambda.Switch_constructor (Constant _) -> assert false)
           sw.sw_blocks;
         match sw.sw_failaction with
         | None -> ()
@@ -431,7 +438,7 @@ let lambda ppf v =
     (* -> *)
 
     begin match flat [] lam  with
-      | (Nop, Lprim {primitive = Pmakeblock (_, _, _); args =  toplevels; _})
+      | (Nop, Lprim {primitive = Pmakeblock (_, _); args =  toplevels; _})
         :: rest ->
         (* let spc = ref false in *)
         List.iter

@@ -201,7 +201,7 @@ let field_flatten_get lam v i info (tbl : Lam_id_kind.t Hash_ident.t) : Lam.t =
     | NA -> lam ()
     | SimpleForm l -> l
     | exception _ -> lam ())
-  | Some (Constant (Const_block (_, Blk_record {fields}, ls))) -> (
+  | Some (Constant (Const_block (Blk_record {fields}, ls))) -> (
     match info with
     | Fld_record {name} -> (
       let found = ref None in
@@ -212,7 +212,7 @@ let field_flatten_get lam v i info (tbl : Lam_id_kind.t Hash_ident.t) : Lam.t =
       | Some c when not (Lam_constant.is_allocating c) -> Lam.const c
       | _ -> lam ())
     | _ -> lam ())
-  | Some (Constant (Const_block (_, _, ls))) -> (
+  | Some (Constant (Const_block (_, ls))) -> (
     match Ext_list.nth_opt ls i with
     | None -> lam ()
     | Some x when not (Lam_constant.is_allocating x) -> Lam.const x

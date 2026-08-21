@@ -141,8 +141,18 @@ let all_coherent column =
     | (Tpat_var _ | Tpat_alias _ | Tpat_or _), _
     | _, (Tpat_var _ | Tpat_alias _ | Tpat_or _) ->
       assert false
-    | Tpat_construct (_, c, _), Tpat_construct (_, c', _) ->
-      c.cstr_consts = c'.cstr_consts && c.cstr_nonconsts = c'.cstr_nonconsts
+    | Tpat_construct _, Tpat_construct _ -> (
+      (* Simplification of or- and GADT-refined patterns can produce columns
+         mixing constructors of different types; such columns are incoherent
+         and excluded from the analysis. Compare the declared types. *)
+      let head_path p =
+        match (Ctype.expand_head p.pat_env p.pat_type).desc with
+        | Tconstr (path, _, _) -> Some path
+        | _ -> None
+      in
+      match (head_path hp1, head_path hp2) with
+      | Some path1, Some path2 -> Path.same path1 path2
+      | _ -> false)
     | Tpat_constant c1, Tpat_constant c2 -> (
       match (c1, c2) with
       | Const_char _, Const_char _
@@ -321,11 +331,9 @@ module Compat = struct
     | _, _ -> false
 end
 
-let equal_tag c1 c2 = Types.equal_tag c1.cstr_tag c2.cstr_tag
+let compat = Compat.compat ~equal_cd:Types.same_constructor
 
-let compat = Compat.compat ~equal_cd:equal_tag
-
-and compats = Compat.compats ~equal_cd:equal_tag
+and compats = Compat.compats ~equal_cd:Types.same_constructor
 
 (* Due to (potential) rebinding, two extension constructors
    of the same arity type may equal *)
@@ -479,11 +487,24 @@ let pretty_matrix (pss : matrix) =
 (* Utilities for matching   *)
 (****************************)
 
+let rec get_variant_constructors env ty =
+  match (Ctype.repr ty).desc with
+  | Tconstr (path, _, _) -> (
+    try
+      match Env.find_type path env with
+      | {type_kind = Type_variant _} -> fst (Env.find_type_descrs path env)
+      | {type_manifest = Some _} ->
+        get_variant_constructors env
+          (Ctype.expand_head_once env (clean_copy ty))
+      | _ -> fatal_error "Parmatch.get_variant_constructors"
+    with Not_found -> fatal_error "Parmatch.get_variant_constructors")
+  | _ -> fatal_error "Parmatch.get_variant_constructors"
+
 (* Check top matching *)
 let simple_match p1 p2 =
   match (p1.pat_desc, p2.pat_desc) with
   | Tpat_construct (_, c1, _), Tpat_construct (_, c2, _) ->
-    Types.equal_tag c1.cstr_tag c2.cstr_tag
+    Types.same_constructor c1 c2
   | Tpat_variant (l1, _, _), Tpat_variant (l2, _, _) -> l1 = l2
   | Tpat_constant c1, Tpat_constant c2 -> const_compare c1 c2 = 0
   | Tpat_record _, Tpat_record _ -> true
@@ -845,9 +866,12 @@ let row_of_pat pat =
 
 let full_match closing env =
   match env with
-  | ({pat_desc = Tpat_construct (_, c, _)}, _) :: _ ->
-    if c.cstr_consts < 0 then false (* extensions *)
-    else List.length env = c.cstr_consts + c.cstr_nonconsts
+  | (({pat_desc = Tpat_construct (_, c, _)} as p), _) :: _ -> (
+    match c.cstr_identity with
+    | Extension_constructor _ -> false
+    | Ordinary_constructor _ ->
+      List.length env
+      = List.length (get_variant_constructors p.pat_env c.cstr_res))
   | (({pat_desc = Tpat_variant _} as p), _) :: _ ->
     let fields =
       List.map
@@ -891,41 +915,15 @@ let should_extend ext env =
     | [] -> assert false
     | (p, _) :: _ -> (
       match p.pat_desc with
-      | Tpat_construct
-          (_, {cstr_tag = Cstr_constant _ | Cstr_block _ | Cstr_unboxed}, _) ->
+      | Tpat_construct (_, {cstr_identity = Ordinary_constructor _}, _) ->
         let path = get_type_path p.pat_type p.pat_env in
         Path.same path ext
-      | Tpat_construct (_, {cstr_tag = Cstr_extension _}, _) -> false
+      | Tpat_construct (_, {cstr_identity = Extension_constructor _}, _) ->
+        false
       | Tpat_constant _ | Tpat_tuple _ | Tpat_variant _ | Tpat_record _
       | Tpat_array _ ->
         false
       | Tpat_any | Tpat_var _ | Tpat_alias _ | Tpat_or _ -> assert false))
-
-module Constructor_tag_hashtbl = Hashtbl.Make (struct
-  type t = Types.constructor_tag
-  let hash = Hashtbl.hash
-  let equal = Types.equal_tag
-end)
-
-(* complement constructor tags *)
-let complete_tags nconsts nconstrs tags =
-  let seen_const = Array.make nconsts false
-  and seen_constr = Array.make nconstrs false in
-  List.iter
-    (function
-      | Cstr_constant i -> seen_const.(i) <- true
-      | Cstr_block i -> seen_constr.(i) <- true
-      | _ -> assert false)
-    tags;
-  let r = Constructor_tag_hashtbl.create (nconsts + nconstrs) in
-  for i = 0 to nconsts - 1 do
-    if not seen_const.(i) then
-      Constructor_tag_hashtbl.add r (Cstr_constant i) ()
-  done;
-  for i = 0 to nconstrs - 1 do
-    if not seen_constr.(i) then Constructor_tag_hashtbl.add r (Cstr_block i) ()
-  done;
-  r
 
 (* build a pattern from a constructor list *)
 let pat_of_constr ex_pat cstr =
@@ -975,31 +973,17 @@ let pats_of_type ?(always = false) env ty =
   | Ttuple tl -> [make_pat (Tpat_tuple (omegas (List.length tl))) ty env]
   | _ -> [omega]
 
-let rec get_variant_constructors env ty =
-  match (Ctype.repr ty).desc with
-  | Tconstr (path, _, _) -> (
-    try
-      match Env.find_type path env with
-      | {type_kind = Type_variant _} -> fst (Env.find_type_descrs path env)
-      | {type_manifest = Some _} ->
-        get_variant_constructors env
-          (Ctype.expand_head_once env (clean_copy ty))
-      | _ -> fatal_error "Parmatch.get_variant_constructors"
-    with Not_found -> fatal_error "Parmatch.get_variant_constructors")
-  | _ -> fatal_error "Parmatch.get_variant_constructors"
-
-(* Sends back a pattern that complements constructor tags all_tag *)
-let complete_constrs p all_tags =
+(* Sends back the constructors of p's type matched by none of seen_constrs *)
+let complete_constrs p seen_constrs =
   let c =
     match p.pat_desc with
     | Tpat_construct (_, c, _) -> c
     | _ -> assert false
   in
-  let not_tags = complete_tags c.cstr_consts c.cstr_nonconsts all_tags in
   let constrs = get_variant_constructors p.pat_env c.cstr_res in
   let others =
     Ext_list.filter constrs (fun cnstr ->
-        Constructor_tag_hashtbl.mem not_tags cnstr.cstr_tag)
+        not (List.exists (Types.same_constructor cnstr) seen_constrs))
   in
   let const, nonconst =
     List.partition (fun cnstr -> cnstr.cstr_arity = 0) others
@@ -1008,13 +992,13 @@ let complete_constrs p all_tags =
 
 let build_other_constrs env p =
   match p.pat_desc with
-  | Tpat_construct (_, {cstr_tag = Cstr_constant _ | Cstr_block _}, _) ->
-    let get_tag = function
-      | {pat_desc = Tpat_construct (_, c, _)} -> c.cstr_tag
-      | _ -> fatal_error "Parmatch.get_tag"
+  | Tpat_construct (_, {cstr_identity = Ordinary_constructor _}, _) ->
+    let get_constr = function
+      | {pat_desc = Tpat_construct (_, c, _)} -> c
+      | _ -> fatal_error "Parmatch.get_constr"
     in
-    let all_tags = List.map (fun (p, _) -> get_tag p) env in
-    pat_of_constrs p (complete_constrs p all_tags)
+    let seen_constrs = List.map (fun (p, _) -> get_constr p) env in
+    pat_of_constrs p (complete_constrs p seen_constrs)
   | _ -> extra_pat
 
 (* Auxiliary for build_other *)
@@ -1036,7 +1020,11 @@ let some_other_tag = "<some other tag>"
 
 let build_other ext env : Typedtree.pattern =
   match env with
-  | ({pat_desc = Tpat_construct (lid, {cstr_tag = Cstr_extension _}, _)}, _)
+  | ( {
+        pat_desc =
+          Tpat_construct (lid, {cstr_identity = Extension_constructor _}, _);
+      },
+      _ )
     :: _ ->
     (* let c = {c with cstr_name = "*extension*"} in *)
     (* PR#7330 *)
@@ -1781,7 +1769,7 @@ let rec le_pat p q =
   | _, Tpat_alias (q, _, _) -> le_pat p q
   | Tpat_constant c1, Tpat_constant c2 -> const_compare c1 c2 = 0
   | Tpat_construct (_, c1, ps), Tpat_construct (_, c2, qs) ->
-    Types.equal_tag c1.cstr_tag c2.cstr_tag && le_pats ps qs
+    Types.same_constructor c1 c2 && le_pats ps qs
   | Tpat_variant (l1, Some p1, _), Tpat_variant (l2, Some p2, _) ->
     l1 = l2 && le_pat p1 p2
   | Tpat_variant (l1, None, _r1), Tpat_variant (l2, None, _) -> l1 = l2
@@ -1826,7 +1814,7 @@ let rec lub p q =
     let rs = lubs ps qs in
     make_pat (Tpat_tuple rs) p.pat_type p.pat_env
   | Tpat_construct (lid, c1, ps1), Tpat_construct (_, c2, ps2)
-    when Types.equal_tag c1.cstr_tag c2.cstr_tag ->
+    when Types.same_constructor c1 c2 ->
     let rs = lubs ps1 ps2 in
     make_pat (Tpat_construct (lid, c1, rs)) p.pat_type p.pat_env
   | Tpat_variant (l1, Some p1, row), Tpat_variant (l2, Some p2, _) when l1 = l2
@@ -2158,8 +2146,7 @@ let extendable_path path =
 
 let rec collect_paths_from_pat r p =
   match p.pat_desc with
-  | Tpat_construct
-      (_, {cstr_tag = Cstr_constant _ | Cstr_block _ | Cstr_unboxed}, ps) ->
+  | Tpat_construct (_, {cstr_identity = Ordinary_constructor _}, ps) ->
     let path = get_type_path p.pat_type p.pat_env in
     List.fold_left collect_paths_from_pat
       (if extendable_path path then add_path path r else r)
@@ -2167,7 +2154,7 @@ let rec collect_paths_from_pat r p =
   | Tpat_any | Tpat_var _ | Tpat_constant _ | Tpat_variant (_, None, _) -> r
   | Tpat_tuple ps
   | Tpat_array ps
-  | Tpat_construct (_, {cstr_tag = Cstr_extension _}, ps) ->
+  | Tpat_construct (_, {cstr_identity = Extension_constructor _}, ps) ->
     List.fold_left collect_paths_from_pat r ps
   | Tpat_record (lps, _, _rest) ->
     List.fold_left (fun r (_, _, p, _) -> collect_paths_from_pat r p) r lps

@@ -196,8 +196,7 @@ let subst_map (substitution : J.expression Hash_ident.t) =
                  Some
                    ({
                       expression_desc =
-                        Caml_block
-                          ((_ :: _ :: _ as ls), Immutable, tag, tag_info);
+                        Caml_block ((_ :: _ :: _ as ls), Immutable, tag_info);
                     } as block);
              } as variable) -> (
           (* If we do this, we should prevent incorrect inlning to inline it into an array :)
@@ -235,7 +234,7 @@ let subst_map (substitution : J.expression Hash_ident.t) =
           let e =
             {
               block with
-              expression_desc = Caml_block (List.rev e, Immutable, tag, tag_info);
+              expression_desc = Caml_block (List.rev e, Immutable, tag_info);
             }
           in
           let () = add_substitue substitution ident e in
@@ -259,7 +258,7 @@ let subst_map (substitution : J.expression Hash_ident.t) =
               {expression_desc = Number (Int {i; _})} )
         | Static_index ({expression_desc = Var (Id id)}, _, Some i) -> (
           match Hash_ident.find_opt substitution id with
-          | Some {expression_desc = Caml_block (ls, Immutable, _, _)} -> (
+          | Some {expression_desc = Caml_block (ls, Immutable, _)} -> (
             (* user program can be wrong, we should not
                turn a runtime crash into compile time crash : )
             *)

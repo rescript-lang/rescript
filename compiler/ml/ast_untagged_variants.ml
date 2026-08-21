@@ -145,8 +145,75 @@ type tag_type =
   | Undefined (* literal or tagged block *)
   | Untagged of block_type (* untagged block *)
 type tag = {name: string; tag_type: tag_type option}
-type block = {tag: tag; tag_name: string option; block_type: block_type option}
-type switch_names = {consts: tag array; blocks: block array}
+
+type block_runtime = {tag: tag; tag_name: string option; untagged: bool}
+(** Runtime information shared by construction and pattern matching for a
+    constructor carrying a payload. [block_type] is deliberately not part of
+    this value: it describes how a matcher recognizes an unboxed payload, not
+    how the value itself is constructed. *)
+
+type block = {runtime: block_runtime; block_type: block_type option}
+
+type constructor_case = Constant of tag | Block of block
+
+type variant_layout = {
+  constructors: constructor_case array;
+  constructors_by_name: (int * constructor_case) Map_string.t;
+}
+(** Canonical runtime layout in source-constructor order. *)
+
+type variant_dispatch = {
+  tag_name: string option;
+  block_types: block_type list;
+  literal_tags: tag_type list;
+  has_null: bool;
+  has_undefined: bool;
+  has_other_literal: bool;
+}
+(** The whole-variant information needed to choose a JavaScript dispatch
+    strategy. Constructor identity is carried by each switch arm instead. *)
+
+let dispatch_from_layout layout =
+  let tag_name = ref None in
+  let block_types = ref [] in
+  let literal_tags = ref [] in
+  let has_null = ref false in
+  let has_undefined = ref false in
+  let has_other_literal = ref false in
+  Array.iter
+    (function
+      | Constant {name; tag_type} -> (
+        let tag =
+          match tag_type with
+          | Some tag -> tag
+          | None -> String name
+        in
+        literal_tags := tag :: !literal_tags;
+        match tag with
+        | Null -> has_null := true
+        | Undefined -> has_undefined := true
+        | String _ | Int _ | Float _ | BigInt _ | Bool _ | Untagged _ ->
+          has_other_literal := true)
+      | Block {runtime = {tag_name = constructor_tag_name}; block_type} -> (
+        if !tag_name = None then tag_name := constructor_tag_name;
+        match block_type with
+        | Some block_type -> block_types := block_type :: !block_types
+        | None -> ()))
+    layout.constructors;
+  {
+    tag_name = !tag_name;
+    block_types = !block_types;
+    literal_tags = !literal_tags;
+    has_null = !has_null;
+    has_undefined = !has_undefined;
+    has_other_literal = !has_other_literal;
+  }
+
+let constructor_by_name layout name =
+  snd (Map_string.find_exn layout.constructors_by_name name)
+
+let constructor_position layout name =
+  fst (Map_string.find_exn layout.constructors_by_name name)
 
 let tag_type_to_user_visible_string = function
   | String _ -> "string"
@@ -340,6 +407,15 @@ let process_tag_name (attrs : Parsetree.attributes) =
 let get_tag_name (cstr : Types.constructor_declaration) =
   process_tag_name cstr.cd_attributes
 
+let constructor_tag ~name attrs = {name; tag_type = process_tag_type attrs}
+
+let block_runtime ~name attrs =
+  {
+    tag = constructor_tag ~name attrs;
+    tag_name = process_tag_name attrs;
+    untagged = process_untagged attrs;
+  }
+
 let is_nullary_variant (x : Types.constructor_arguments) =
   match x with
   | Types.Cstr_tuple [] -> true
@@ -438,18 +514,14 @@ let check_invariant ~is_untagged_def ~(consts : (Location.t * tag) list)
           | BigintType -> incr bigint_types
           | BooleanType -> incr boolean_types
           | StringType -> incr string_types);
-          invariant loc block.tag.name
+          invariant loc block.runtime.tag.name
         | None -> ())
   else
     Ext_list.rev_iter blocks (fun (loc, block) ->
-        check_literal ~is_const:false ~loc block.tag)
+        check_literal ~is_const:false ~loc block.runtime.tag)
 
 let get_cstr_loc_tag (cstr : Types.constructor_declaration) =
-  ( cstr.cd_loc,
-    {
-      name = Ident.name cstr.cd_id;
-      tag_type = process_tag_type cstr.cd_attributes;
-    } )
+  (cstr.cd_loc, constructor_tag ~name:(Ident.name cstr.cd_id) cstr.cd_attributes)
 
 let constructor_declaration_from_constructor_description ~env
     (cd : Types.constructor_description) : Types.constructor_declaration option
@@ -463,24 +535,48 @@ let constructor_declaration_from_constructor_description ~env
     | _ -> None)
   | _ -> None
 
-let names_from_type_variant ?(is_untagged_def = false) ~env
+let layout_from_type_variant ?(is_untagged_def = false) ~env
     (cstrs : Types.constructor_declaration list) =
   let get_block (cstr : Types.constructor_declaration) : block =
-    let tag = snd (get_cstr_loc_tag cstr) in
-    {tag; tag_name = get_tag_name cstr; block_type = get_block_type ~env cstr}
+    {
+      runtime = block_runtime ~name:(Ident.name cstr.cd_id) cstr.cd_attributes;
+      block_type = get_block_type ~env cstr;
+    }
+  in
+  let located_constructors =
+    List.map
+      (fun (cstr : Types.constructor_declaration) ->
+        if is_nullary_variant cstr.cd_args then
+          let loc, tag = get_cstr_loc_tag cstr in
+          (loc, Constant tag)
+        else (cstr.cd_loc, Block (get_block cstr)))
+      cstrs
   in
   let consts, blocks =
-    Ext_list.fold_left cstrs ([], []) (fun (consts, blocks) cstr ->
-        if is_nullary_variant cstr.cd_args then
-          (get_cstr_loc_tag cstr :: consts, blocks)
-        else (consts, (cstr.cd_loc, get_block cstr) :: blocks))
+    Ext_list.fold_left located_constructors ([], [])
+      (fun (consts, blocks) (loc, constructor) ->
+        match constructor with
+        | Constant tag -> ((loc, tag) :: consts, blocks)
+        | Block block -> (consts, (loc, block) :: blocks))
   in
   check_invariant ~is_untagged_def ~consts ~blocks;
-  let blocks = blocks |> List.map snd in
-  let consts = consts |> List.map snd in
-  let consts = Ext_array.reverse_of_list consts in
-  let blocks = Ext_array.reverse_of_list blocks in
-  Some {consts; blocks}
+  let constructors =
+    Array.of_list
+      (List.map (fun (_, constructor) -> constructor) located_constructors)
+  in
+  let constructors_by_name =
+    let _, constructors_by_name =
+      List.fold_left2
+        (fun (index, constructors_by_name)
+             (cstr : Types.constructor_declaration) (_, constructor) ->
+          ( index + 1,
+            Map_string.add constructors_by_name (Ident.name cstr.cd_id)
+              (index, constructor) ))
+        (0, Map_string.empty) cstrs located_constructors
+    in
+    constructors_by_name
+  in
+  Some {constructors; constructors_by_name}
 
 let check_tag_field_conflicts (cstrs : Types.constructor_declaration list) =
   List.iter
@@ -520,7 +616,7 @@ type well_formedness_check = {
 
 let check_well_formed ~env {is_untagged_def; cstrs} =
   check_tag_field_conflicts cstrs;
-  ignore (names_from_type_variant ~env ~is_untagged_def cstrs)
+  ignore (layout_from_type_variant ~env ~is_untagged_def cstrs)
 
 let has_undefined_literal attrs = process_tag_type attrs = Some Undefined
 

@@ -133,7 +133,7 @@ let record_representation i ppf =
   | Record_regular -> line i ppf "Record_regular\n"
   | Record_float_unused -> assert false
   | Record_unboxed b -> line i ppf "Record_unboxed %b\n" b
-  | Record_inlined {tag = i} -> line i ppf "Record_inlined %d\n" i
+  | Record_inlined {name} -> line i ppf "Record_inlined %s\n" name
   | Record_extension -> line i ppf "Record_extension\n"
 
 let attributes i ppf l =

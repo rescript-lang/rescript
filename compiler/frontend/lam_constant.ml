@@ -22,21 +22,11 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-type constructor_tag = {
-  cstr_name: Ast_untagged_variants.tag;
-  const: int;
-  non_const: int;
-}
-
-type pointer_info =
-  | None
-  | Pt_constructor of constructor_tag
-  | Pt_assertfalse
-  | Some of string
+type pointer_info = None | Pt_assertfalse | Some of string
 
 let string_of_pointer_info (x : pointer_info) : string option =
   match x with
-  | Some name | Pt_constructor {cstr_name = {name}; _} -> Some name
+  | Some name -> Some name
   | Pt_assertfalse -> Some "assert_false"
   | None -> None
 
@@ -46,12 +36,15 @@ type t =
   | Const_js_true
   | Const_js_false
   | Const_int of {i: int32; comment: pointer_info}
+  | Const_constructor of Ast_untagged_variants.tag
+    (* Constant constructor of a nominal variant, emitted from its
+         canonical runtime descriptor rather than an ordinal *)
   | Const_char of int
   | Const_string of {s: string; delim: External_arg_spec.delim option}
   | Const_float of string
   | Const_bigint of bool * string
   | Const_pointer of string
-  | Const_block of int * Lambda.tag_info * t list
+  | Const_block of Lambda.tag_info * t list
   | Const_some of t
   | Const_module_alias
 (* eventually we can remove it, since we know
@@ -68,6 +61,10 @@ let rec eq_approx (x : t) (y : t) =
   | Const_int ix -> (
     match y with
     | Const_int iy -> ix.i = iy.i
+    | _ -> false)
+  | Const_constructor ix -> (
+    match y with
+    | Const_constructor iy -> ix = iy
     | _ -> false)
   | Const_char ix -> (
     match y with
@@ -89,9 +86,9 @@ let rec eq_approx (x : t) (y : t) =
     match y with
     | Const_pointer iy -> ix = iy
     | _ -> false)
-  | Const_block (ix, _, ixs) -> (
+  | Const_block (ix, ixs) -> (
     match y with
-    | Const_block (iy, _, iys) ->
+    | Const_block (iy, iys) ->
       ix = iy && Ext_list.for_all2_no_exn ixs iys eq_approx
     | _ -> false)
   | Const_some ix -> (
@@ -106,6 +103,6 @@ let rec is_allocating (c : t) : bool =
   | Const_some t -> is_allocating t
   | Const_block _ -> true
   | Const_js_null | Const_js_undefined _ | Const_js_true | Const_js_false
-  | Const_int _ | Const_char _ | Const_string _ | Const_float _ | Const_bigint _
-  | Const_pointer _ | Const_module_alias ->
+  | Const_int _ | Const_constructor _ | Const_char _ | Const_string _
+  | Const_float _ | Const_bigint _ | Const_pointer _ | Const_module_alias ->
     false

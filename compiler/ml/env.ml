@@ -510,7 +510,7 @@ let is_ident = function
   | Pdot _ | Papply _ -> false
 
 let is_local_ext = function
-  | {cstr_tag = Cstr_extension p} -> is_ident p
+  | {cstr_identity = Extension_constructor p} -> is_ident p
   | _ -> false
 
 let diff env1 env2 =
@@ -851,7 +851,7 @@ let find_type_full path env =
       Ext_list.filter
         (try Tbl.find_str s comps.comp_constrs with Not_found -> assert false)
         (function
-          | {cstr_tag = Cstr_extension _} -> true
+          | {cstr_identity = Extension_constructor _} -> true
           | _ -> false)
     in
 
@@ -1092,8 +1092,8 @@ let lookup_all_simple proj1 proj2 shadow ?loc lid env =
 let has_local_constraints env = not (Path_map.is_empty env.local_constraints)
 
 let cstr_shadow cstr1 cstr2 =
-  match (cstr1.cstr_tag, cstr2.cstr_tag) with
-  | Cstr_extension _, Cstr_extension _ -> true
+  match (cstr1.cstr_identity, cstr2.cstr_identity) with
+  | Extension_constructor _, Extension_constructor _ -> true
   | _ -> false
 
 let lbl_shadow _lbl1 _lbl2 = false
@@ -1211,8 +1211,8 @@ let lookup_all_constructors ?loc lid env =
 
 let mark_constructor usage env name desc =
   if not (is_implicit_coercion env) then
-    match desc.cstr_tag with
-    | Cstr_extension _ -> (
+    match desc.cstr_identity with
+    | Extension_constructor _ -> (
       let ty_path = ty_path desc.cstr_res in
       let ty_name = Path.last ty_path in
       try Hashtbl.find used_constructors (ty_name, desc.cstr_loc, name) usage

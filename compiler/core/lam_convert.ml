@@ -117,20 +117,20 @@ let lam_is_var (x : Lam.t) (y : Ident.t) =
 (** Make sure no int range overflow happens
     also we only check [int]
 *)
-let happens_to_be_diff (sw_consts : (int * Lambda.lambda) list) sw_names :
+let happens_to_be_diff (sw_consts : (Lambda.switch_key * Lambda.lambda) list) :
     int option =
   match sw_consts with
-  | (a, Lconst (Const_base (Const_int a0)))
-    :: (b, Lconst (Const_base (Const_int b0)))
+  | (Switch_int a, Lconst (Const_base (Const_int a0)))
+    :: (Switch_int b, Lconst (Const_base (Const_int b0)))
     :: rest
-    when sw_names = None && no_over_flow a && no_over_flow a0 && no_over_flow b
-         && no_over_flow b0 ->
+    when no_over_flow a && no_over_flow a0 && no_over_flow b && no_over_flow b0
+    ->
     let diff = a0 - a in
     if b0 - b = diff then
       if
-        Ext_list.for_all rest (fun (x, lam) ->
-            match lam with
-            | Lconst (Const_base (Const_int x0))
+        Ext_list.for_all rest (fun (key, lam) ->
+            match (key, lam) with
+            | Switch_int x, Lconst (Const_base (Const_int x0))
               when no_over_flow x0 && no_over_flow x ->
               x0 - x = diff
             | _ -> false)
@@ -172,14 +172,13 @@ let lam_prim ~primitive:(p : Lambda.primitive) ~args loc : Lam.t =
     seq (Ext_list.singleton_exn args) unit
   | Pgetglobal _ -> assert false
   | Pmakeblock info -> (
-    let tag = Lambda.tag_of_tag_info info in
     let mutable_flag = Lambda.mutable_flag_of_tag_info info in
     match info with
     | Blk_some_not_nested -> prim ~primitive:Psome_not_nest ~args loc
     | Blk_some -> prim ~primitive:Psome ~args loc
     | Blk_constructor _ | Blk_tuple | Blk_record _ | Blk_record_inlined _
     | Blk_module _ | Blk_module_export _ | Blk_extension | Blk_record_ext _ ->
-      prim ~primitive:(Pmakeblock (tag, info, mutable_flag)) ~args loc
+      prim ~primitive:(Pmakeblock (info, mutable_flag)) ~args loc
     | Blk_poly_var s -> (
       match args with
       | [_; value] ->
@@ -189,7 +188,7 @@ let lam_prim ~primitive:(p : Lambda.primitive) ~args loc : Lam.t =
           else Const_string {s; delim = None}
         in
         prim
-          ~primitive:(Pmakeblock (tag, info, mutable_flag))
+          ~primitive:(Pmakeblock (info, mutable_flag))
           ~args:[Lam.const tag_val; value]
           loc
       | _ -> assert false))
@@ -301,11 +300,11 @@ let lam_prim ~primitive:(p : Lambda.primitive) ~args loc : Lam.t =
   | Pimport -> prim ~primitive:Pimport ~args loc
   | Pinit_mod -> (
     match args with
-    | [_loc; Lconst (Const_block (0, _, [Const_block (0, _, [])]))] -> Lam.unit
+    | [_loc; Lconst (Const_block (_, [Const_block (_, [])]))] -> Lam.unit
     | _ -> prim ~primitive:Pinit_mod ~args loc)
   | Pupdate_mod -> (
     match args with
-    | [Lconst (Const_block (0, _, [Const_block (0, _, [])])); _; _] -> Lam.unit
+    | [Lconst (Const_block (_, [Const_block (_, [])])); _; _] -> Lam.unit
     | _ -> prim ~primitive:Pupdate_mod ~args loc)
   | Phash -> prim ~primitive:Phash ~args loc
   | Phash_mixint -> prim ~primitive:Phash_mixint ~args loc
@@ -569,7 +568,10 @@ let convert (exports : Set_ident.t) (lam : Lambda.lambda) :
           {
             px with
             sw_consts =
-              Ext_list.map sw_consts (fun (i, act) -> (i - offset, act));
+              Ext_list.map sw_consts (fun (key, act) ->
+                  match key with
+                  | Lambda.Switch_int i -> (Lambda.Switch_int (i - offset), act)
+                  | Lambda.Switch_constructor _ -> assert false);
           }
       | _ -> Lam.let_ kind id new_e new_body)
   and convert_pipe (f : Lambda.lambda) (x : Lambda.lambda) outer_loc =
@@ -618,12 +620,12 @@ let convert (exports : Set_ident.t) (lam : Lambda.lambda) :
     | {
      sw_failaction = None;
      sw_blocks = [];
-     sw_numblocks = 0;
+     sw_blocks_full = true;
      sw_consts;
-     sw_numconsts;
-     sw_names;
+     sw_consts_full;
+     sw_dispatch;
     } -> (
-      match happens_to_be_diff sw_consts sw_names with
+      match happens_to_be_diff sw_consts with
       | Some 0 -> e
       | Some i ->
         prim ~primitive:Paddint
@@ -636,18 +638,18 @@ let convert (exports : Set_ident.t) (lam : Lambda.lambda) :
             sw_blocks = [];
             sw_blocks_full = true;
             sw_consts = Ext_list.map_snd sw_consts convert_aux;
-            sw_consts_full = Ext_list.length_ge sw_consts sw_numconsts;
-            sw_names = s.sw_names;
+            sw_consts_full;
+            sw_dispatch;
           })
     | _ ->
       Lam.switch e
         {
-          sw_consts_full = Ext_list.length_ge s.sw_consts s.sw_numconsts;
+          sw_consts_full = s.sw_consts_full;
           sw_consts = Ext_list.map_snd s.sw_consts convert_aux;
-          sw_blocks_full = Ext_list.length_ge s.sw_blocks s.sw_numblocks;
+          sw_blocks_full = s.sw_blocks_full;
           sw_blocks = Ext_list.map_snd s.sw_blocks convert_aux;
           sw_failaction = Ext_option.map s.sw_failaction convert_aux;
-          sw_names = s.sw_names;
+          sw_dispatch = s.sw_dispatch;
         }
   in
   (convert_aux lam, may_depends)

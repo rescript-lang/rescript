@@ -77,7 +77,7 @@ let alpha_conversion (meta : Lam_stats.t) (lam : Lam.t) : Lam.t =
             sw_blocks;
             sw_blocks_full;
             sw_consts_full;
-            sw_names;
+            sw_dispatch;
           } ) ->
       Lam.switch (simpl l)
         {
@@ -86,7 +86,7 @@ let alpha_conversion (meta : Lam_stats.t) (lam : Lam.t) : Lam.t =
           sw_consts_full;
           sw_blocks_full;
           sw_failaction = Ext_option.map sw_failaction simpl;
-          sw_names;
+          sw_dispatch;
         }
     | Lstringswitch (l, sw, d) ->
       Lam.stringswitch (simpl l)

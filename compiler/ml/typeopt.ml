@@ -23,7 +23,7 @@ let scrape_ty env ty =
   match ty.desc with
   | Tconstr (p, _, _) -> (
     match Env.find_type p env with
-    | {type_unboxed = {unboxed = true; _}; _} -> (
+    | {type_representation = Transparent; _} -> (
       match Typedecl.get_unboxed_type_representation env ty with
       | None -> ty
       | Some ty2 -> ty2)

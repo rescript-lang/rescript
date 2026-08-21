@@ -24,15 +24,8 @@
 
 type ident = Ident.t
 
-type record_representation =
-  | Record_regular
-  | Record_inlined of {tag: int; name: string; num_nonconsts: int}
-    (* Inlined record *)
-  | Record_extension
-(* Inlined record under extension *)
-
 type t =
-  | Pmakeblock of int * Lam_tag_info.t * Asttypes.mutable_flag
+  | Pmakeblock of Lam_tag_info.t * Asttypes.mutable_flag
   | Pfield of int * Lambda.field_dbg_info
   | Psetfield of int * Lambda.set_field_dbg_info
   | Pduprecord

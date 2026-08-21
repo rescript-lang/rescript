@@ -133,7 +133,7 @@ type type_declaration = {
   type_loc: Location.t;
   type_attributes: Parsetree.attributes;
   type_immediate: bool;
-  type_unboxed: unboxed_status;
+  type_representation: type_representation;
   type_inlined_types: type_inlined_type list;
 }
 
@@ -153,7 +153,6 @@ and record_representation =
   | Record_inlined of
       (* Inlined record *)
        {
-      tag: int;
       name: string;
       num_nonconsts: int;
       attrs: Parsetree.attributes;
@@ -181,15 +180,9 @@ and constructor_arguments =
   | Cstr_tuple of type_expr list
   | Cstr_record of label_declaration list
 
-and unboxed_status = {
-  unboxed: bool;
-  default: bool; (* False if the unboxed field was set from an attribute. *)
-}
-
-let unboxed_false_default_false = {unboxed = false; default = false}
-let unboxed_false_default_true = {unboxed = false; default = true}
-let unboxed_true_default_false = {unboxed = true; default = false}
-let unboxed_true_default_true = {unboxed = true; default = true}
+and type_representation = Boxed | Transparent
+(* Single-payload @unboxed type: the payload is the whole runtime
+         value. Untagged unions are tracked by their attributes, not here. *)
 
 type extension_constructor = {
   ext_type_path: Path.t;
@@ -256,9 +249,10 @@ type constructor_description = {
   cstr_existentials: type_expr list; (* list of existentials *)
   cstr_args: type_expr list; (* Type of the arguments *)
   cstr_arity: int; (* Number of arguments *)
-  cstr_tag: constructor_tag; (* Tag for heap blocks *)
-  cstr_consts: int; (* Number of constant constructors *)
-  cstr_nonconsts: int; (* Number of non-const constructors *)
+  cstr_identity: constructor_identity; (* Semantic identity *)
+  cstr_transparent: bool;
+      (* Sole payload-carrying constructor of an unboxed type: constructing
+         it is the identity at runtime *)
   cstr_generalized: bool; (* Constrained return type? *)
   cstr_private: private_flag; (* Read-only constructor? *)
   cstr_loc: Location.t;
@@ -266,25 +260,33 @@ type constructor_description = {
   cstr_inlined: type_declaration option;
 }
 
-and constructor_tag =
-  | Cstr_constant of int (* Constant constructor (an int) *)
-  | Cstr_block of int (* Regular constructor (a block) *)
-  | Cstr_unboxed (* Constructor of an unboxed type *)
-  | Cstr_extension of Path.t (* Extension constructor *)
+and constructor_identity =
+  | Ordinary_constructor of {type_path: Path.t; name: string}
+    (* Constructor introduced by a variant type declaration. The path is
+         the path of the declaring type as written, so a re-exported variant
+         (type u = M.t = A | B) yields descriptions carrying the
+         re-exporting type's path. *)
+  | Extension_constructor of Path.t (* Extension constructor *)
 
-let equal_tag t1 t2 =
-  match (t1, t2) with
-  | Cstr_constant i1, Cstr_constant i2 -> i2 = i1
-  | Cstr_block i1, Cstr_block i2 -> i2 = i1
-  | Cstr_unboxed, Cstr_unboxed -> true
-  | Cstr_extension path1, Cstr_extension path2 -> Path.same path1 path2
-  | (Cstr_constant _ | Cstr_block _ | Cstr_unboxed | Cstr_extension _), _ ->
-    false
+(* Whether two constructor descriptions denote the same constructor of a
+   common scrutinee type. Because a re-exported variant mints descriptions
+   with a different type path, ordinary constructors are compared by name
+   only; the shared scrutinee type makes the name unambiguous. Not a
+   general-purpose identity test across unrelated types. *)
+let same_constructor c1 c2 =
+  match (c1.cstr_identity, c2.cstr_identity) with
+  | Ordinary_constructor {name = n1}, Ordinary_constructor {name = n2} ->
+    n1 = n2
+  | Extension_constructor p1, Extension_constructor p2 -> Path.same p1 p2
+  | (Ordinary_constructor _ | Extension_constructor _), _ -> false
 
 let may_equal_constr c1 c2 =
-  match (c1.cstr_tag, c2.cstr_tag) with
-  | Cstr_extension _, Cstr_extension _ -> c1.cstr_arity = c2.cstr_arity
-  | tag1, tag2 -> equal_tag tag1 tag2
+  match (c1.cstr_identity, c2.cstr_identity) with
+  | Extension_constructor _, Extension_constructor _ ->
+    (* extension constructors may be rebound, so paths cannot disprove
+       equality; arity can *)
+    c1.cstr_arity = c2.cstr_arity
+  | _ -> same_constructor c1 c2
 
 type label_description = {
   lbl_name: string; (* Short name *)
@@ -304,10 +306,9 @@ let same_record_representation x y =
   match x with
   | Record_regular -> y = Record_regular
   | Record_float_unused -> y = Record_float_unused
-  | Record_inlined {tag; name; num_nonconsts} -> (
+  | Record_inlined {name; num_nonconsts} -> (
     match y with
-    | Record_inlined y ->
-      tag = y.tag && name = y.name && num_nonconsts = y.num_nonconsts
+    | Record_inlined y -> name = y.name && num_nonconsts = y.num_nonconsts
     | _ -> false)
   | Record_extension -> y = Record_extension
   | Record_unboxed x -> (

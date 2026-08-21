@@ -191,13 +191,13 @@ let rec size (lam : Lam.t) =
 
 and size_constant x =
   match x with
-  | Const_int _ | Const_char _ | Const_float _ | Const_bigint _
-  | Const_pointer _ | Const_js_null | Const_js_undefined _ | Const_module_alias
-  | Const_js_true | Const_js_false ->
+  | Const_int _ | Const_constructor _ | Const_char _ | Const_float _
+  | Const_bigint _ | Const_pointer _ | Const_js_null | Const_js_undefined _
+  | Const_module_alias | Const_js_true | Const_js_false ->
     1
   | Const_string _ -> 1
   | Const_some s -> size_constant s
-  | Const_block (_, _, str) ->
+  | Const_block (_, str) ->
     Ext_list.fold_left str 0 (fun acc x -> acc + size_constant x)
 
 and size_lams acc (lams : Lam.t list) =
@@ -267,8 +267,7 @@ let safe_to_inline (lam : Lam.t) =
   match lam with
   | Lfunction _ -> true
   | Lconst
-      ( Const_pointer _
-      | Const_int {comment = Pt_constructor _}
-      | Const_js_true | Const_js_false | Const_js_undefined _ ) ->
+      ( Const_pointer _ | Const_constructor _ | Const_js_true | Const_js_false
+      | Const_js_undefined _ ) ->
     true
   | _ -> false

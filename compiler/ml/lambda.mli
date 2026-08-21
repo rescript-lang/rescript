@@ -23,16 +23,14 @@ type tag_info =
   | Blk_constructor of {
       name: string;
       num_nonconst: int;
-      tag: int;
-      attrs: Parsetree.attributes;
+      runtime: Ast_untagged_variants.block_runtime;
     }
   | Blk_record_inlined of {
       name: string;
       num_nonconst: int;
-      tag: int;
       fields: (string * bool (* optional *)) array;
       mutable_flag: mutable_flag;
-      attrs: Parsetree.attributes;
+      runtime: Ast_untagged_variants.block_runtime;
     }
   | Blk_tuple
   | Blk_poly_var of string
@@ -59,7 +57,7 @@ type tag_info =
 
 val find_name : Parsetree.attribute -> Asttypes.label option
 
-val tag_of_tag_info : tag_info -> int
+val tag_label_of_tag_info : tag_info -> string
 val mutable_flag_of_tag_info : tag_info -> mutable_flag
 val blk_record :
   (Types.label_description * Typedtree.record_label_definition * bool) array ->
@@ -75,8 +73,7 @@ val blk_record_inlined :
   (Types.label_description * Typedtree.record_label_definition * bool) array ->
   string ->
   int ->
-  tag:int ->
-  attrs:Parsetree.attributes ->
+  runtime:Ast_untagged_variants.block_runtime ->
   mutable_flag ->
   tag_info
 
@@ -118,12 +115,7 @@ val fld_record_extension_set : Types.label_description -> set_field_dbg_info
 type immediate_or_pointer = Immediate | Pointer
 
 type pointer_info =
-  | Pt_constructor of {
-      name: string;
-      const: int;
-      non_const: int;
-      attrs: Parsetree.attributes;
-    }
+  | Pt_constructor of Ast_untagged_variants.tag
   | Pt_variant of {name: string}
   | Pt_module_alias
   | Pt_shape_none
@@ -284,7 +276,7 @@ and raise_kind = Raise_regular | Raise_reraise
 
 type structured_constant =
   | Const_base of constant
-  | Const_pointer of int * pointer_info
+  | Const_pointer of pointer_info
   | Const_block of tag_info * structured_constant list
   | Const_immstring of string
   | Const_false
@@ -359,14 +351,24 @@ and lambda_apply = {
   ap_transformed_jsx: bool;
 }
 
-and lambda_switch = {
-  sw_numconsts: int; (* Number of integer cases *)
-  sw_consts: (int * lambda) list; (* Integer cases *)
-  sw_numblocks: int; (* Number of tag block cases *)
-  sw_blocks: (int * lambda) list; (* Tag block cases *)
-  sw_failaction: lambda option; (* Action to take if failure *)
-  sw_names: Ast_untagged_variants.switch_names option;
+and switch_key =
+  | Switch_int of int
+  | Switch_constructor of Ast_untagged_variants.constructor_case
+
+and switch_dispatch =
+  | Switch_direct
+  | Switch_variant of Ast_untagged_variants.variant_dispatch
+
+and 'a switch = {
+  sw_consts_full: bool;
+  sw_consts: (switch_key * 'a) list;
+  sw_blocks_full: bool;
+  sw_blocks: (switch_key * 'a) list;
+  sw_failaction: 'a option; (* Action to take if failure *)
+  sw_dispatch: switch_dispatch;
 }
+
+and lambda_switch = lambda switch
 
 (* Lambda code for the middle-end.
    * In the closure case the code is a sequence of assignments to a

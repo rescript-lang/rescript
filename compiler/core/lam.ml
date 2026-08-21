@@ -32,15 +32,7 @@ type ap_info = {
 }
 
 module Types = struct
-  type lambda_switch = {
-    sw_consts_full: bool;
-    (* TODO: refine its representation *)
-    sw_consts: (int * t) list;
-    sw_blocks_full: bool;
-    sw_blocks: (int * t) list;
-    sw_failaction: t option;
-    sw_names: Ast_untagged_variants.switch_names option;
-  }
+  type lambda_switch = t Lambda.switch
 
   and lfunction = {
     arity: int;
@@ -66,10 +58,13 @@ module Types = struct
 
       In most cases: {[
         let sw =
-          {sw_consts_full = cstr.cstr_consts; sw_consts = consts;
-           sw_blocks_full = cstr.cstr_nonconsts; sw_blocks = nonconsts;
+          {sw_consts_full = List.length consts >= num_consts;
+           sw_consts = consts;
+           sw_blocks_full = List.length nonconsts >= num_nonconsts;
+           sw_blocks = nonconsts;
            sw_failaction = None} in
       ]}
+      where the counts come from the variant layout.
 
       but there are some edge cases (see https://caml.inria.fr/mantis/view.php?id=6033)
       one predicate used is
@@ -274,17 +269,57 @@ and eq_option l1 l2 =
 and eq_approx_list ls ls1 = Ext_list.for_all2_no_exn ls ls1 eq_approx
 
 let switch lam (lam_switch : lambda_switch) : t =
+  let action_or_switch = function
+    | Some action -> action
+    | None -> (
+      match lam_switch.sw_failaction with
+      | Some action -> action
+      | None -> Lswitch (lam, lam_switch))
+  in
   match lam with
-  | Lconst (Const_int {i}) -> (
+  | Lconst (Const_constructor cstr_name) ->
+    let action =
+      Ext_list.find_opt lam_switch.sw_consts (fun (key, action) ->
+          match key with
+          | Lambda.Switch_constructor (Constant tag) when cstr_name = tag ->
+            Some action
+          | Switch_int _ | Switch_constructor _ -> None)
+    in
+    action_or_switch action
+  | Lconst (Const_int {i; comment}) ->
     (* Because of inlining and dead code, we might be looking at a value of unexpected type
        e.g. an integer, so the const case might not be found *)
-    try
-      Ext_list.assoc_by_int lam_switch.sw_consts (Int32.to_int i)
-        lam_switch.sw_failaction
-    with _ -> Lswitch (lam, lam_switch))
-  | Lconst (Const_block (i, _, _)) -> (
-    try Ext_list.assoc_by_int lam_switch.sw_blocks i lam_switch.sw_failaction
-    with _ -> Lswitch (lam, lam_switch))
+    let i = Int32.to_int i in
+    let action =
+      Ext_list.find_opt lam_switch.sw_consts (fun (key, action) ->
+          match key with
+          | Lambda.Switch_int ordinal when ordinal = i -> Some action
+          | Switch_constructor
+              (Constant {tag_type = Some (Ast_untagged_variants.Int value)})
+            when comment = None && value = i ->
+            Some action
+          | Switch_int _ | Switch_constructor _ -> None)
+    in
+    action_or_switch action
+  | Lconst (Const_block (tag_info, _)) ->
+    let runtime =
+      match tag_info with
+      | Lambda.Blk_constructor {runtime} | Blk_record_inlined {runtime} ->
+        Some runtime
+      | Blk_tuple | Blk_poly_var _ | Blk_record _ | Blk_record_ext _
+      | Blk_module _ | Blk_module_export _ | Blk_extension | Blk_some
+      | Blk_some_not_nested ->
+        None
+    in
+    let action =
+      Ext_list.find_opt lam_switch.sw_blocks (fun (key, action) ->
+          match key with
+          | Switch_constructor (Block {runtime = case_runtime})
+            when runtime = Some case_runtime ->
+            Some action
+          | Lambda.Switch_int _ | Switch_constructor _ -> None)
+    in
+    action_or_switch action
   | _ -> Lswitch (lam, lam_switch)
 
 let stringswitch (lam : t) cases default : t =
@@ -374,6 +409,15 @@ let prim ~primitive:(prim : Lam_primitive.t) ~args loc : t =
         | Ceq -> a = (b : string)
         | Cneq -> a <> b
         | _ -> assert false)
+    | ( Pintcomp ((Ceq | Cneq) as op),
+        Const_constructor {name = a; tag_type = None},
+        Const_constructor {name = b; tag_type = None} ) ->
+      (* Both runtime representations are the constructor names *)
+      Lift.bool
+        (match op with
+        | Ceq -> a = b
+        | Cneq -> a <> b
+        | _ -> assert false)
     | ( ( Paddint | Psubint | Pmulint | Pdivint | Pmodint | Pandint | Porint
         | Pxorint | Plslint | Plsrint | Pasrint ),
         Const_int {i = aa},
@@ -411,7 +455,7 @@ let prim ~primitive:(prim : Lam_primitive.t) ~args loc : t =
     | _ -> default ())
   | _ -> (
     match prim with
-    | Pmakeblock (_size, Blk_module fields, _) -> (
+    | Pmakeblock (Blk_module fields, _) -> (
       let rec aux fields args (var : Ident.t) i =
         match (fields, args) with
         | [], [] -> true
@@ -466,28 +510,42 @@ let has_boolean_type (x : t) =
 (** [complete_range sw_consts 0 7]
     is complete with [0,1,.. 7]
 *)
-let rec complete_range (sw_consts : (int * _) list) ~(start : int) ~finish =
+let rec complete_range (sw_consts : (Lambda.switch_key * _) list) ~(start : int)
+    ~finish =
   match sw_consts with
   | [] -> finish < start
-  | (i, _) :: rest ->
+  | (Switch_int i, _) :: rest ->
     start <= finish && i = start
     && complete_range rest ~start:(start + 1) ~finish
+  | (Switch_constructor _, _) :: _ -> false
 
-let rec eval_const_as_bool (v : Lam_constant.t) : bool =
+let rec eval_const_as_bool (v : Lam_constant.t) : bool option =
   match v with
-  | Const_int {i = x} -> x <> 0l
-  | Const_char x -> x <> 0
+  | Const_int {i = x} -> Some (x <> 0l)
+  | Const_char x -> Some (x <> 0)
   | Const_js_false | Const_js_null | Const_module_alias | Const_js_undefined _
     ->
-    false
+    Some false
   | Const_js_true | Const_string _ | Const_pointer _ | Const_float _
   | Const_bigint _ | Const_block _ ->
-    true
+    Some true
   | Const_some b -> eval_const_as_bool b
+  | Const_constructor {name; tag_type} -> (
+    (* Truthiness of the canonical runtime representation *)
+    match tag_type with
+    | None -> Some (name <> "[]") (* the name string; [] is the number 0 *)
+    | Some (String s) -> Some (s <> "")
+    | Some (Int i) -> Some (i <> 0)
+    | Some (Bool b) -> Some b
+    | Some Null | Some Undefined -> Some false
+    | Some (Float _ | BigInt _ | Untagged _) -> None)
 
 let if_ (a : t) (b : t) (c : t) : t =
   match a with
-  | Lconst v -> if eval_const_as_bool v then b else c
+  | Lconst v -> (
+    match eval_const_as_bool v with
+    | Some v -> if v then b else c
+    | None -> Lifthenelse (a, b, c))
   | _ -> (
     match (b, c) with
     | _, Lconst (Const_int {comment = Pt_assertfalse}) ->

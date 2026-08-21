@@ -32,14 +32,7 @@ type ap_info = {
 
 type ident = Ident.t
 
-type lambda_switch = {
-  sw_consts_full: bool;
-  sw_consts: (int * t) list;
-  sw_blocks_full: bool;
-  sw_blocks: (int * t) list;
-  sw_failaction: t option;
-  sw_names: Ast_untagged_variants.switch_names option;
-}
+type lambda_switch = t Lambda.switch
 
 and apply = private {
   ap_func: t;

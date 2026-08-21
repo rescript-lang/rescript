@@ -156,7 +156,6 @@ let rec exp_need_paren ?(arrow = false) (e : J.expression) =
   | Caml_block
       ( _,
         _,
-        _,
         ( Blk_record _ | Blk_module _ | Blk_poly_var _ | Blk_extension
         | Blk_record_ext _ | Blk_record_inlined _ | Blk_constructor _ ) )
   | Object _ ->
@@ -588,7 +587,7 @@ and expression_desc cxt ~(level : int) f x : cxt =
      {
        expression_desc =
          (* This is the props javascript object *)
-         Caml_block (el, _mutable_flag, _, Lambda.Blk_record {fields});
+         Caml_block (el, _mutable_flag, Lambda.Blk_record {fields});
      };
     ] ->
       (* We extract the props from the javascript object *)
@@ -603,7 +602,7 @@ and expression_desc cxt ~(level : int) f x : cxt =
      tag;
      {
        expression_desc =
-         Caml_block (el, _mutable_flag, _, Lambda.Blk_record {fields});
+         Caml_block (el, _mutable_flag, Lambda.Blk_record {fields});
      };
      key;
     ] ->
@@ -937,14 +936,14 @@ and expression_desc cxt ~(level : int) f x : cxt =
     expression ~level cxt f
       (if identity then e
        else E.runtime_call Primitive_modules.option "some" [e])
-  | Caml_block (el, _, _, Blk_module fields) ->
+  | Caml_block (el, _, Blk_module fields) ->
     expression_desc cxt ~level f
       (Object
          ( None,
            Ext_list.map_combine fields el (fun x ->
                Js_op.Lit (Ext_ident.convert x)) ))
   (*name convention of Record is slight different from modules*)
-  | Caml_block (el, _, _, Blk_record {fields}) ->
+  | Caml_block (el, _, Blk_record {fields}) ->
     if
       Array.length fields <> 0
       && Ext_array.for_alli fields (fun i (v, _) -> string_of_int i = v)
@@ -957,7 +956,7 @@ and expression_desc cxt ~(level : int) f x : cxt =
             | _ -> Some (Js_op.Lit f, x))
       in
       expression_desc cxt ~level f (Object (None, fields))
-  | Caml_block (el, _, _, Blk_poly_var _) -> (
+  | Caml_block (el, _, Blk_poly_var _) -> (
     match el with
     | [tag; value] ->
       expression_desc cxt ~level f
@@ -968,19 +967,15 @@ and expression_desc cxt ~(level : int) f x : cxt =
                (Lit Literals.polyvar_value, value);
              ] ))
     | _ -> assert false)
-  | Caml_block (el, _, _, ((Blk_extension | Blk_record_ext _) as ext)) ->
+  | Caml_block (el, _, ((Blk_extension | Blk_record_ext _) as ext)) ->
     expression_desc cxt ~level f (exn_block_as_obj ~stack:false el ext)
-  | Caml_block (el, _, tag, Blk_record_inlined p) ->
-    let untagged = Ast_untagged_variants.process_untagged p.attrs in
+  | Caml_block (el, _, Blk_record_inlined p) ->
+    let {Ast_untagged_variants.tag; tag_name; untagged} = p.runtime in
     let objs =
       let tails =
         Ext_list.combine_array p.fields el (fun (i, opt) -> (Js_op.Lit i, opt))
       in
-      let tag_name =
-        match Ast_untagged_variants.process_tag_name p.attrs with
-        | None -> L.tag
-        | Some s -> s
-      in
+      let tag_name = Option.value tag_name ~default:L.tag in
       let tails =
         Ext_list.filter_map tails (fun ((f, optional), x) ->
             match x.expression_desc with
@@ -991,21 +986,17 @@ and expression_desc cxt ~(level : int) f x : cxt =
       else
         ( Js_op.Lit tag_name,
           (* TAG:xx for inline records *)
-          match Ast_untagged_variants.process_tag_type p.attrs with
+          match tag.tag_type with
           | None -> E.str p.name
           | Some t -> E.tag_type t )
         :: tails
     in
     expression_desc cxt ~level f (Object (None, objs))
-  | Caml_block (el, _, tag, Blk_constructor p) ->
+  | Caml_block (el, _, Blk_constructor p) ->
     let not_is_cons = p.name <> Literals.cons in
-    let tag_type = Ast_untagged_variants.process_tag_type p.attrs in
-    let untagged = Ast_untagged_variants.process_untagged p.attrs in
-    let tag_name =
-      match Ast_untagged_variants.process_tag_name p.attrs with
-      | None -> L.tag
-      | Some s -> s
-    in
+    let {Ast_untagged_variants.tag; tag_name; untagged} = p.runtime in
+    let tag_type = tag.tag_type in
+    let tag_name = Option.value tag_name ~default:L.tag in
     let objs =
       let tails =
         Ext_list.mapi_append el
@@ -1036,11 +1027,9 @@ and expression_desc cxt ~(level : int) f x : cxt =
       | _ -> J.Object (None, objs)
     in
     expression_desc cxt ~level f exp
-  | Caml_block (_, _, _, (Blk_module_export _ | Blk_some | Blk_some_not_nested))
-    ->
+  | Caml_block (_, _, (Blk_module_export _ | Blk_some | Blk_some_not_nested)) ->
     assert false
-  | Caml_block (el, _, _tag, Blk_tuple) ->
-    expression_desc cxt ~level f (Array el)
+  | Caml_block (el, _, Blk_tuple) -> expression_desc cxt ~level f (Array el)
   | Caml_block_tag (e, tag) ->
     P.group f 1 (fun _ ->
         let cxt = expression ~level:15 cxt f e in
@@ -1717,7 +1706,7 @@ and statement_desc top cxt f (s : J.statement_desc) : cxt =
   | Throw e ->
     let e =
       match e.expression_desc with
-      | Caml_block (el, _, _, ((Blk_extension | Blk_record_ext _) as ext)) ->
+      | Caml_block (el, _, ((Blk_extension | Blk_record_ext _) as ext)) ->
         {e with expression_desc = exn_block_as_obj ~stack:true el ext}
       | _ -> e
     in

@@ -148,9 +148,7 @@ and expression_desc =
   | Array of expression list
   | Optional_block of expression * bool
   (* [true] means [identity] *)
-  | Caml_block of expression list * mutable_flag * expression * tag_info
-  (* The third argument is [tag] , forth is [tag_info] *)
-  (* [tag] and [size] tailed  for [Obj.new_block] *)
+  | Caml_block of expression list * mutable_flag * tag_info
   | Caml_block_tag of expression * string (* e.tag *)
   (* It will just fetch tag, to make it safe, when creating it,
      we need apply "|0", we don't do it in the

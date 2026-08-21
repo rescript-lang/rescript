@@ -370,9 +370,6 @@ let command_line_flags : (string * Bsc_args.spec * string) array =
       "*internal* Set gentype bsb project root (workspace root containing \
        .sourcedirs.json)" );
     (******************************************************************************)
-    ( "-unboxed-types",
-      set Clflags.unboxed_types,
-      "*internal* Unannotated unboxable types will be unboxed" );
     ("-nostdlib", set Js_config.no_stdlib, "*internal* Don't use stdlib");
     ( "-color",
       string_call set_color_option,

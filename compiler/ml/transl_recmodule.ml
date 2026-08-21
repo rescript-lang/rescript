@@ -21,25 +21,31 @@ let undefined_location loc =
            Const_base (Const_int char);
          ] ))
 
-let cstr_const = 3
-
-let cstr_non_const = 2
-
 let init_shape modl =
   let add_name x id =
     Const_block (Blk_tuple, [x; Const_base (Const_string (Ident.name id, None))])
   in
   let module_tag_info : Lambda.tag_info =
-    Blk_constructor {name = "Module"; num_nonconst = 2; tag = 0; attrs = []}
+    Blk_constructor
+      {
+        name = "Module";
+        num_nonconst = 2;
+        runtime = Ast_untagged_variants.block_runtime ~name:"Module" [];
+      }
   in
   let value_tag_info : Lambda.tag_info =
-    Blk_constructor {name = "value"; num_nonconst = 2; tag = 1; attrs = []}
+    Blk_constructor
+      {
+        name = "value";
+        num_nonconst = 2;
+        runtime = Ast_untagged_variants.block_runtime ~name:"value" [];
+      }
   in
   let rec init_shape_mod env mty =
     match Mtype.scrape env mty with
     | Mty_ident _ -> raise Not_found
     | Mty_alias _ ->
-      Const_block (value_tag_info, [Const_pointer (0, Pt_module_alias)])
+      Const_block (value_tag_info, [Const_pointer Pt_module_alias])
     | Mty_signature sg ->
       Const_block
         (module_tag_info, [Const_block (Blk_tuple, init_shape_struct env sg)])
@@ -58,14 +64,8 @@ let init_shape modl =
         match Ctype.expand_head env ty with
         | t when is_function t ->
           Const_pointer
-            ( 0,
-              Pt_constructor
-                {
-                  name = "Function";
-                  const = cstr_const;
-                  non_const = cstr_non_const;
-                  attrs = [];
-                } )
+            (Pt_constructor
+               (Ast_untagged_variants.constructor_tag ~name:"Function" []))
         | _ -> raise Not_found
       in
       add_name init_v id :: init_shape_struct env rem

@@ -29,8 +29,6 @@ val editor_mode : bool ref
 val parse_color_setting : string -> Misc.Color.setting option
 val color : Misc.Color.setting option ref
 
-val unboxed_types : bool ref
-
 val reset_dump_state : unit -> unit
 
 type mli_status = Mli_exists | Mli_non_exists

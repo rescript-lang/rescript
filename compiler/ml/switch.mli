@@ -80,13 +80,7 @@ module type S = sig
      make_switch arg cases acts
      NB:  cases is in the value form *)
   val make_switch :
-    Location.t ->
-    act ->
-    int array ->
-    act array ->
-    offset:int ->
-    Ast_untagged_variants.switch_names option ->
-    act
+    Location.t -> act -> int array -> act array -> offset:int -> act
 
   (* Build last minute sharing of action stuff *)
   val make_catch : act -> int * (act -> act)
@@ -111,7 +105,6 @@ module Make : functor (Arg : S) -> sig
     Arg.act ->
     (int * int * int) array ->
     Arg.act t_store ->
-    Ast_untagged_variants.switch_names option ->
     Arg.act
 
   (* Output test sequence, sharing tracked *)

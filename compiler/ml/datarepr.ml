@@ -68,10 +68,10 @@ let constructor_args priv cd_args cd_res path rep =
   | Cstr_record lbls ->
     let arg_vars_set = free_vars ~param:true (newgenty (Ttuple tyl)) in
     let type_params = Type_set.elements arg_vars_set in
-    let type_unboxed =
+    let type_representation =
       match rep with
-      | Record_unboxed _ -> unboxed_true_default_false
-      | _ -> unboxed_false_default_false
+      | Record_unboxed _ -> Transparent
+      | _ -> Boxed
     in
     let tdecl =
       {
@@ -85,7 +85,7 @@ let constructor_args priv cd_args cd_res path rep =
         type_loc = Location.none;
         type_attributes = [];
         type_immediate = false;
-        type_unboxed;
+        type_representation;
         type_inlined_types = [];
       }
     in
@@ -107,7 +107,7 @@ let constructor_descrs ty_path decl cstrs =
     (fun {cd_args; _} ->
       if cd_args = Cstr_tuple [] then incr num_consts else incr num_nonconsts)
     cstrs;
-  let rec describe_constructors idx_const idx_nonconst = function
+  let rec describe_constructors = function
     | [] -> []
     | {cd_id; cd_args; cd_res; cd_loc; cd_attributes} :: rem ->
       let ty_res =
@@ -115,26 +115,14 @@ let constructor_descrs ty_path decl cstrs =
         | Some ty_res' -> ty_res'
         | None -> ty_res
       in
-      let tag, descr_rem =
-        match cd_args with
-        | _ when decl.type_unboxed.unboxed ->
-          assert (rem = []);
-          (Cstr_unboxed, [])
-        | Cstr_tuple [] ->
-          ( Cstr_constant idx_const,
-            describe_constructors (idx_const + 1) idx_nonconst rem )
-        | _ ->
-          ( Cstr_block idx_nonconst,
-            describe_constructors idx_const (idx_nonconst + 1) rem )
-      in
+      let descr_rem = describe_constructors rem in
       let cstr_name = Ident.name cd_id in
       let existentials, cstr_args, cstr_inlined =
         let representation =
-          if decl.type_unboxed.unboxed then Record_unboxed true
+          if decl.type_representation = Transparent then Record_unboxed true
           else
             Record_inlined
               {
-                tag = idx_nonconst;
                 name = cstr_name;
                 num_nonconsts = !num_nonconsts;
                 attrs = cd_attributes;
@@ -151,9 +139,13 @@ let constructor_descrs ty_path decl cstrs =
           cstr_existentials = existentials;
           cstr_args;
           cstr_arity = List.length cstr_args;
-          cstr_tag = tag;
-          cstr_consts = !num_consts;
-          cstr_nonconsts = !num_nonconsts;
+          cstr_identity =
+            Ordinary_constructor {type_path = ty_path; name = cstr_name};
+          cstr_transparent =
+            !num_consts = 0 && !num_nonconsts = 1 && cstr_args <> []
+            && List.exists
+                 (fun (attribute, _) -> attribute.txt = "unboxed")
+                 cd_attributes;
           cstr_private = decl.type_private;
           cstr_generalized = cd_res <> None;
           cstr_loc = cd_loc;
@@ -163,7 +155,7 @@ let constructor_descrs ty_path decl cstrs =
       in
       (cd_id, cstr) :: descr_rem
   in
-  let result = describe_constructors 0 0 cstrs in
+  let result = describe_constructors cstrs in
   match result with
   | [
       (({Ident.name = "None"} as a_id), ({cstr_args = []} as a_descr));
@@ -203,9 +195,8 @@ let extension_descr path_ext ext =
     cstr_existentials = existentials;
     cstr_args;
     cstr_arity = List.length cstr_args;
-    cstr_tag = Cstr_extension path_ext;
-    cstr_consts = -1;
-    cstr_nonconsts = -1;
+    cstr_identity = Extension_constructor path_ext;
+    cstr_transparent = false;
     cstr_private = ext.ext_private;
     cstr_generalized = ext.ext_ret_type <> None;
     cstr_loc = ext.ext_loc;

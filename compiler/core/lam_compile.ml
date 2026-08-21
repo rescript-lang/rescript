@@ -199,60 +199,36 @@ let default_action ~saturated failaction =
   | None -> Complete
   | Some x -> if saturated then Complete else Default x
 
-let get_const_tag i (sw_names : Ast_untagged_variants.switch_names option) =
-  match sw_names with
-  | None -> None
-  | Some {consts} -> Some consts.(i)
+let tag_of_switch_key = function
+  | Lambda.Switch_int _ -> None
+  | Switch_constructor (Constant tag) -> Some tag
+  | Switch_constructor
+      (Block
+         {
+           runtime = {tag = {name}; untagged = true};
+           block_type = Some block_type;
+         }) ->
+    Some {name; tag_type = Some (Untagged block_type)}
+  | Switch_constructor (Block {runtime = {untagged = false; tag}}) -> Some tag
+  | Switch_constructor (Block {runtime = {untagged = true}; block_type = None})
+    ->
+    assert false
 
-let get_block i (sw_names : Ast_untagged_variants.switch_names option) =
-  match sw_names with
-  | None -> None
-  | Some {blocks} -> Some blocks.(i)
-
-let get_tag_name (sw_names : Ast_untagged_variants.switch_names option) =
-  match sw_names with
-  | None -> Js_dump_lit.tag
-  | Some {blocks} -> (
-    match
-      Array.find_opt
-        (fun {Ast_untagged_variants.tag_name} -> tag_name <> None)
-        blocks
-    with
-    | Some {tag_name = Some s} -> s
-    | _ -> Js_dump_lit.tag)
-
-let get_block_cases (sw_names : Ast_untagged_variants.switch_names option) =
-  let res = ref [] in
-  (match sw_names with
-  | None -> res := []
-  | Some {blocks} ->
-    Ext_array.iter blocks (function
-      | {block_type = Some block_type} -> res := block_type :: !res
-      | {block_type = None} -> ()));
-  !res
-
-let get_literal_cases (sw_names : Ast_untagged_variants.switch_names option) =
-  let res = ref [] in
-  (match sw_names with
-  | None -> res := []
-  | Some {consts} ->
-    Ext_array.iter consts (function
-      | {tag_type = Some t} -> res := t :: !res
-      | {name; tag_type = None} -> res := String name :: !res));
-  !res
-
-let has_null_undefined_other
-    (sw_names : Ast_untagged_variants.switch_names option) =
-  let null, undefined, other = (ref false, ref false, ref false) in
-  (match sw_names with
-  | None -> ()
-  | Some {consts; blocks} ->
-    Ext_array.iter consts (fun x ->
-        match x.tag_type with
-        | Some Undefined -> undefined := true
-        | Some Null -> null := true
-        | _ -> other := true));
-  (!null, !undefined, !other)
+let dispatch_info = function
+  | Lambda.Switch_direct -> (Js_dump_lit.tag, [], [], (false, false, false))
+  | Switch_variant
+      {
+        Ast_untagged_variants.tag_name;
+        block_types;
+        literal_tags;
+        has_null;
+        has_undefined;
+        has_other_literal;
+      } ->
+    ( Option.value tag_name ~default:Js_dump_lit.tag,
+      block_types,
+      literal_tags,
+      (has_null, has_undefined, has_other_literal) )
 
 let no_effects_const = lazy true
 (* let has_effects_const = lazy false *)
@@ -456,7 +432,7 @@ let compile output_prefix =
           result
           ~no_effects:(lazy (Lam_analysis.no_side_effects arg)),
         [] )
-    | Lprim {primitive = Pmakeblock (_, _, _); args}
+    | Lprim {primitive = Pmakeblock (_, _); args}
       when args_either_function_or_const args ->
       (compile_lambda {cxt with continuation = Declare (Alias, id)} arg, [])
     (* case of lazy blocks, treat it as usual *)
@@ -464,8 +440,7 @@ let compile output_prefix =
         {
           primitive =
             Pmakeblock
-              ( _,
-                (( Blk_record _
+              ( (( Blk_record _
                  | Blk_constructor {num_nonconst = 1}
                  | Blk_record_inlined {num_nonconst = 1} ) as tag_info),
                 _ );
@@ -509,7 +484,7 @@ let compile output_prefix =
                       | Lconst x -> Lam_compile_const.translate x
                       | _ -> assert false)))),
         [] )
-    | Lprim {primitive = Pmakeblock (_, tag_info, _)} -> (
+    | Lprim {primitive = Pmakeblock (tag_info, _)} -> (
       (* Lconst should not appear here if we do [scc]
          optimization, since it's faked recursive value,
          however it would affect scope issues, we have to declare it first
@@ -711,11 +686,10 @@ let compile output_prefix =
           in
 
           [switch ?default ?declaration switch_exp body])
-  and use_compile_literal_cases table
-      ~(get_tag : _ -> Ast_untagged_variants.tag option) =
+  and use_compile_literal_cases table =
     List.fold_right
-      (fun (i, lam) acc ->
-        match (get_tag i, acc) with
+      (fun (key, lam) acc ->
+        match (tag_of_switch_key key, acc) with
         | Some {Ast_untagged_variants.tag_type = Some t}, Some string_table ->
           Some ((t, lam) :: string_table)
         | Some {name; tag_type = None}, Some string_table ->
@@ -723,9 +697,9 @@ let compile output_prefix =
         | _, _ -> None)
       table (Some [])
   and compile_cases ?(untagged = false) ?(has_null_case = false) ~cxt
-      ~(switch_exp : E.t) ?(default = NonComplete) ?(get_tag = fun _ -> None)
-      ?(block_cases = []) cases : initialization =
-    match use_compile_literal_cases cases ~get_tag with
+      ~(switch_exp : E.t) ?(default = NonComplete) ?(block_cases = []) cases :
+      initialization =
+    match use_compile_literal_cases cases with
     | Some string_cases ->
       if untagged then
         compile_untagged_cases ~cxt ~switch_exp ~block_cases ~default
@@ -734,15 +708,19 @@ let compile output_prefix =
     | None ->
       cases
       |> compile_general_cases
-           ~make_exp:(fun i ->
-             match get_tag i with
-             | None -> E.small_int i
-             | Some {tag_type = Some (String s)} -> E.str s
-             | Some {name} -> E.str name)
+           ~make_exp:(function
+             | Lambda.Switch_int i -> E.small_int i
+             | Switch_constructor _ -> assert false)
            ~eq_exp:(fun _ x _ y -> E.int_equal x y)
            ~cxt
            ~switch:(fun ?default ?declaration e clauses ->
-             S.int_switch ?default ?declaration e clauses)
+             S.int_switch ?default ?declaration e
+               (List.map
+                  (fun (key, clause) ->
+                    match key with
+                    | Lambda.Switch_int i -> (i, clause)
+                    | Switch_constructor _ -> assert false)
+                  clauses))
            ~switch_exp ~default
   and compile_switch (switch_arg : Lam.t) (sw : Lam.lambda_switch)
       (lambda_cxt : Lam_compile_context.t) =
@@ -759,7 +737,7 @@ let compile output_prefix =
            sw_blocks_full;
            sw_blocks;
            sw_failaction;
-           sw_names;
+           sw_dispatch;
          }
           : Lam.lambda_switch) =
       sw
@@ -770,19 +748,9 @@ let compile output_prefix =
     let sw_blocks_default =
       default_action ~saturated:sw_blocks_full sw_failaction
     in
-    let get_const_tag i = get_const_tag i sw_names in
-    let get_block i = get_block i sw_names in
-    let block_cases = get_block_cases sw_names in
-    let get_block_tag i : Ast_untagged_variants.tag option =
-      match get_block i with
-      | None -> None
-      | Some {tag = {name}; block_type = Some block_type} ->
-        Some {name; tag_type = Some (Untagged block_type)} (* untagged block *)
-      | Some {block_type = None; tag} ->
-        (* tagged block *)
-        Some tag
+    let tag_name, block_cases, literal_cases, has_null_undefined_other =
+      dispatch_info sw_dispatch
     in
-    let tag_name = get_tag_name sw_names in
     let untagged = block_cases <> [] in
     let compile_whole (cxt : Lam_compile_context.t) =
       match
@@ -795,22 +763,16 @@ let compile output_prefix =
         if sw_consts_full && sw_consts = [] then
           compile_cases ~block_cases ~untagged ~cxt
             ~switch_exp:(if untagged then e else E.tag ~name:tag_name e)
-            ~default:sw_blocks_default ~get_tag:get_block_tag sw_blocks
+            ~default:sw_blocks_default sw_blocks
         else if sw_blocks_full && sw_blocks = [] then
           compile_cases ~cxt ~switch_exp:e ~block_cases ~default:sw_num_default
-            ~get_tag:get_const_tag sw_consts
+            sw_consts
         else
           (* [e] will be used twice  *)
           let dispatch e =
             let is_a_literal_case () =
-              if untagged then
-                E.is_a_literal_case
-                  ~literal_cases:(get_literal_cases sw_names)
-                  ~block_cases e
-              else
-                E.is_int_tag
-                  ~has_null_undefined_other:(has_null_undefined_other sw_names)
-                  e
+              if untagged then E.is_a_literal_case ~literal_cases ~block_cases e
+              else E.is_int_tag ~has_null_undefined_other e
             in
             let eq_default d1 d2 =
               match (d1, d2) with
@@ -824,25 +786,22 @@ let compile output_prefix =
               && List.length sw_consts = 0
               && eq_default sw_num_default sw_blocks_default
             then
-              let literal_cases = get_literal_cases sw_names in
               let has_null_case =
                 List.mem Ast_untagged_variants.Null literal_cases
               in
               compile_cases ~untagged ~cxt
                 ~switch_exp:(if untagged then e else E.tag ~name:tag_name e)
-                ~block_cases ~has_null_case ~default:sw_blocks_default
-                ~get_tag:get_block_tag sw_blocks
+                ~block_cases ~has_null_case ~default:sw_blocks_default sw_blocks
             else
               [
                 S.if_ (is_a_literal_case ())
                   (compile_cases ~cxt ~switch_exp:e ~block_cases
-                     ~default:sw_num_default ~get_tag:get_const_tag sw_consts)
+                     ~default:sw_num_default sw_consts)
                   ~else_:
                     (compile_cases ~untagged ~cxt
                        ~switch_exp:
                          (if untagged then e else E.tag ~name:tag_name e)
-                       ~block_cases ~default:sw_blocks_default
-                       ~get_tag:get_block_tag sw_blocks);
+                       ~block_cases ~default:sw_blocks_default sw_blocks);
               ]
           in
           match e.expression_desc with
@@ -1090,6 +1049,9 @@ let compile output_prefix =
       let exit_expr = E.var exit_id in
       let jmp_table, handlers =
         Lam_compile_context.add_jmps lambda_cxt.jmp_table exit_id code_table
+      in
+      let handlers =
+        List.map (fun (i, handler) -> (Lambda.Switch_int i, handler)) handlers
       in
 
       (* Declaration First, body and handler have the same value *)

@@ -44,7 +44,7 @@ let id_is_for_sure_true_in_boolean (tbl : Lam_stats.ident_tbl) id =
 let is_const_some (cst : Lam_constant.t) : bool =
   match cst with
   | Const_some _ -> true
-  | Const_block (_, (Lambda.Blk_some | Lambda.Blk_some_not_nested), _) -> true
+  | Const_block ((Lambda.Blk_some | Lambda.Blk_some_not_nested), _) -> true
   | _ -> false
 
 let simplify_alias (meta : Lam_stats.t) (lam : Lam.t) : Lam.t =
@@ -254,7 +254,7 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lam.t) : Lam.t =
             sw_blocks;
             sw_blocks_full;
             sw_consts_full;
-            sw_names;
+            sw_dispatch;
           } ) ->
       Lam.switch (simpl l)
         {
@@ -263,7 +263,7 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lam.t) : Lam.t =
           sw_consts_full;
           sw_blocks_full;
           sw_failaction = Ext_option.map sw_failaction simpl;
-          sw_names;
+          sw_dispatch;
         }
     | Lstringswitch (l, sw, d) ->
       let l =

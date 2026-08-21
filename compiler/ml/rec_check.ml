@@ -264,15 +264,11 @@ let rec expression : Env.env -> Typedtree.expression -> Use.t =
   | Texp_array exprs -> Use.guard (list expression env exprs)
   | Texp_construct (_, desc, exprs) ->
     let access_constructor =
-      match desc.cstr_tag with
-      | Cstr_extension pth -> Use.inspect (path env pth)
+      match desc.cstr_identity with
+      | Extension_constructor pth -> Use.inspect (path env pth)
       | _ -> Use.empty
     in
-    let use =
-      match desc.cstr_tag with
-      | Cstr_unboxed -> fun x -> x
-      | Cstr_constant _ | Cstr_block _ | Cstr_extension _ -> Use.guard
-    in
+    let use = if desc.cstr_transparent then fun x -> x else Use.guard in
     Use.join access_constructor (use (list expression env exprs))
   | Texp_variant (_, eo) -> Use.guard (option expression env eo)
   | Texp_record {fields = es; extended_expression = eo; representation = rep} ->

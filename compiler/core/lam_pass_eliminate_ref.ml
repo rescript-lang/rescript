@@ -78,7 +78,7 @@ let rec eliminate_ref id (lam : Lam.t) =
           (match sw.sw_failaction with
           | None -> None
           | Some x -> Some (eliminate_ref id x));
-        sw_names = sw.sw_names;
+        sw_dispatch = sw.sw_dispatch;
       }
   | Lstringswitch (e, sw, default) ->
     Lam.stringswitch (eliminate_ref id e)
