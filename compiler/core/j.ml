@@ -244,7 +244,7 @@ and case_clause = {
   source_loc: Location.t option;
 }
 
-and string_clause = Ast_untagged_variants.tag_type * case_clause
+and string_clause = Variant_runtime.tag_type * case_clause
 and int_clause = int * case_clause
 and label = string
 

@@ -254,9 +254,6 @@ type constructor_description = {
   cstr_layout: Variant_runtime.variant_layout option;
       (* Runtime layout of the declaring variant; None for extension
          constructors *)
-  cstr_transparent: bool;
-      (* Sole payload-carrying constructor of an unboxed type: constructing
-         it is the identity at runtime *)
   cstr_generalized: bool; (* Constrained return type? *)
   cstr_private: private_flag; (* Read-only constructor? *)
   cstr_loc: Location.t;

@@ -21,14 +21,14 @@ type tag_info =
   | Blk_constructor of {
       name: string;
       num_nonconst: int;
-      runtime: Ast_untagged_variants.block_runtime;
+      runtime: Variant_runtime.block_runtime;
     }
   | Blk_record_inlined of {
       name: string;
       num_nonconst: int;
       fields: (string * bool (* optional *)) array;
       mutable_flag: Asttypes.mutable_flag;
-      runtime: Ast_untagged_variants.block_runtime;
+      runtime: Variant_runtime.block_runtime;
     }
   | Blk_tuple
   | Blk_poly_var of string
@@ -312,7 +312,7 @@ and value_kind = Pgenval
 and raise_kind = Raise_regular | Raise_reraise
 
 type pointer_info =
-  | Pt_constructor of Ast_untagged_variants.tag
+  | Pt_constructor of Variant_runtime.tag
   | Pt_variant of {name: string}
   | Pt_module_alias
   | Pt_shape_none
@@ -383,11 +383,11 @@ and lambda_apply = {
 
 and switch_key =
   | Switch_int of int
-  | Switch_constructor of Ast_untagged_variants.constructor_case
+  | Switch_constructor of Variant_runtime.constructor_case
 
 and switch_dispatch =
   | Switch_direct
-  | Switch_variant of Ast_untagged_variants.variant_dispatch
+  | Switch_variant of Variant_runtime.variant_dispatch
 
 and 'a switch = {
   sw_consts_full: bool;
@@ -405,8 +405,7 @@ and lambda_switch = lambda switch
     alias etc.
 *)
 let const_unit =
-  Const_pointer
-    (Pt_constructor {Ast_untagged_variants.name = "()"; tag_type = None})
+  Const_pointer (Pt_constructor {Variant_runtime.name = "()"; tag_type = None})
 
 let lambda_assert_false = Lconst (Const_pointer Pt_assertfalse)
 

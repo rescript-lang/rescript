@@ -563,9 +563,7 @@ let all_record_args lbls =
             match cd.cstr_layout with
             | None -> x
             | Some layout -> (
-              match
-                Ast_untagged_variants.constructor_by_name layout cd.cstr_name
-              with
+              match Variant_runtime.constructor_by_name layout cd.cstr_name with
               | Block {block_type = Some block_type}
                 when not
                        (Ast_untagged_variants.block_type_can_be_undefined
@@ -861,12 +859,10 @@ let row_of_pat pat =
 
 let full_match closing env =
   match env with
-  | (({pat_desc = Tpat_construct (_, c, _)} as p), _) :: _ -> (
-    match c.cstr_kind with
-    | Extension_constructor _ -> false
-    | Ordinary_constructor ->
-      List.length env
-      = List.length (get_variant_constructors p.pat_env c.cstr_res))
+  | ({pat_desc = Tpat_construct (_, c, _)}, _) :: _ -> (
+    match c.cstr_layout with
+    | None -> false (* extensions *)
+    | Some layout -> List.length env = Array.length layout)
   | (({pat_desc = Tpat_variant _} as p), _) :: _ ->
     let fields =
       List.map

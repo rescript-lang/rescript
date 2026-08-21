@@ -6,12 +6,12 @@ type variant_runtime_representation_issue =
   | Mismatched_as_payload of {
       constructor_name: string;
       expected_typename: Path.t;
-      as_payload: Ast_untagged_variants.tag_type option;
+      as_payload: Variant_runtime.tag_type option;
     }
   | As_payload_not_elgible_for_coercion of {
       constructor_name: string;
       expected_typename: Path.t;
-      as_payload: Ast_untagged_variants.tag_type;
+      as_payload: Variant_runtime.tag_type;
     }
   | Inline_record_cannot_be_coerced of {constructor_name: string}
   | Cannot_coerce_non_unboxed_with_payload of {

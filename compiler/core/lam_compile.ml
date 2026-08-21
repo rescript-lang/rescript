@@ -218,7 +218,7 @@ let dispatch_info = function
   | Lambda.Switch_direct -> (Js_dump_lit.tag, [], [], (false, false, false))
   | Switch_variant
       {
-        Ast_untagged_variants.tag_name;
+        Variant_runtime.tag_name;
         block_types;
         literal_tags;
         has_null;
@@ -723,7 +723,7 @@ let compile output_prefix =
     List.fold_right
       (fun (key, lam) acc ->
         match (tag_of_switch_key key, acc) with
-        | Some {Ast_untagged_variants.tag_type = Some t}, Some string_table ->
+        | Some {Variant_runtime.tag_type = Some t}, Some string_table ->
           Some ((t, lam) :: string_table)
         | Some {name; tag_type = None}, Some string_table ->
           Some ((String name, lam) :: string_table)
@@ -819,9 +819,7 @@ let compile output_prefix =
               && List.length sw_consts = 0
               && eq_default sw_num_default sw_blocks_default
             then
-              let has_null_case =
-                List.mem Ast_untagged_variants.Null literal_cases
-              in
+              let has_null_case = List.mem Variant_runtime.Null literal_cases in
               compile_cases ~untagged ~cxt
                 ~switch_exp:(if untagged then e else E.tag ~name:tag_name e)
                 ~block_cases ~has_null_case ~default:sw_blocks_default sw_blocks
@@ -871,7 +869,7 @@ let compile output_prefix =
          ~switch_exp ~default
   and compile_untagged_cases ~cxt ~switch_exp ~default ~block_cases
       ~has_null_case cases =
-    let mk_eq (i : Ast_untagged_variants.tag_type option) x j y =
+    let mk_eq (i : Variant_runtime.tag_type option) x j y =
       let check =
         match (i, j) with
         | Some tag_type, _ ->
@@ -885,7 +883,7 @@ let compile output_prefix =
       E.emit_check check
     in
     let tag_is_not_typeof = function
-      | Ast_untagged_variants.Untagged (InstanceType _) -> true
+      | Variant_runtime.Untagged (InstanceType _) -> true
       | _ -> false
     in
     let clause_is_not_typeof (tag, _) = tag_is_not_typeof tag in
@@ -896,21 +894,21 @@ let compile output_prefix =
       let has_object_typeof =
         List.exists
           (function
-            | Ast_untagged_variants.Untagged ObjectType, _ -> true
+            | Variant_runtime.Untagged ObjectType, _ -> true
             | _ -> false)
           typeof_clauses
       in
       let clauses_have_array_case =
         List.exists
           (function
-            | Ast_untagged_variants.Untagged (InstanceType Array), _ -> true
+            | Variant_runtime.Untagged (InstanceType Array), _ -> true
             | _ -> false)
           not_typeof_clauses
       in
       let type_has_array_case =
         List.exists
           (function
-            | Ast_untagged_variants.InstanceType Array -> true
+            | Variant_runtime.InstanceType Array -> true
             | _ -> false)
           block_cases
       in
@@ -923,7 +921,7 @@ let compile output_prefix =
       in
       let rec build_if_chain remaining_clauses =
         match remaining_clauses with
-        | ( Ast_untagged_variants.Untagged (InstanceType instance_type),
+        | ( Variant_runtime.Untagged (InstanceType instance_type),
             {J.switch_body} )
           :: rest ->
           S.if_
@@ -963,7 +961,7 @@ let compile output_prefix =
         The [gen] can be elimiated when number of [cases] is less than 3
     *)
     let cases =
-      cases |> List.map (fun (s, l) -> (Ast_untagged_variants.String s, l))
+      cases |> List.map (fun (s, l) -> (Variant_runtime.String s, l))
     in
     match
       compile_lambda {lambda_cxt with continuation = NeedValue Not_tail} l

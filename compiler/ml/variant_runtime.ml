@@ -104,16 +104,42 @@ type variant_dispatch = {
 (** The whole-variant information needed to choose a JavaScript dispatch
     strategy. Constructor identity is carried by each switch arm instead. *)
 
-type variant_layout = {
-  constructors: constructor_case array;
-  constructors_by_name: (int * constructor_case) Map_string.t;
-  dispatch: variant_dispatch;
-}
-(** Canonical runtime layout in source-constructor order, with the
-    precomputed dispatch strategy. *)
+type variant_layout = constructor_case array
+(** Canonical runtime layout in source-constructor order. *)
 
-let dispatch_of_constructors (constructors : constructor_case array) :
-    variant_dispatch =
+let case_name = function
+  | Constant {name} -> name
+  | Block {runtime = {tag = {name}}} -> name
+
+let constructor_position (layout : variant_layout) name =
+  let rec find i =
+    if i >= Array.length layout then
+      invalid_arg ("Variant_runtime.constructor_position: " ^ name)
+    else if case_name layout.(i) = name then i
+    else find (i + 1)
+  in
+  find 0
+
+let constructor_by_name (layout : variant_layout) name =
+  layout.(constructor_position layout name)
+
+let num_constants (layout : variant_layout) =
+  Array.fold_left
+    (fun n case ->
+      match case with
+      | Constant _ -> n + 1
+      | Block _ -> n)
+    0 layout
+
+let num_blocks (layout : variant_layout) =
+  Array.fold_left
+    (fun n case ->
+      match case with
+      | Block _ -> n + 1
+      | Constant _ -> n)
+    0 layout
+
+let dispatch (constructors : variant_layout) : variant_dispatch =
   let tag_name = ref None in
   let block_types = ref [] in
   let literal_tags = ref [] in
@@ -152,16 +178,12 @@ let dispatch_of_constructors (constructors : constructor_case array) :
 (* Placeholder used while a recursive declaration group is being typed;
    [Typedecl] replaces it with the computed layout once the group is in the
    environment *)
-let dummy_layout =
-  {
-    constructors = [||];
-    constructors_by_name = Map_string.empty;
-    dispatch = dispatch_of_constructors [||];
-  }
+let dummy_layout : variant_layout = [||]
 
 (* Layout of a variant that carries no representation attributes; used for
    predefined types, whose declarations are built by hand *)
-let plain_layout (cases : (string * bool (* has payload *)) list) =
+let plain_layout (cases : (string * bool (* has payload *)) list) :
+    variant_layout =
   let case (name, has_payload) =
     if has_payload then
       Block
@@ -172,15 +194,4 @@ let plain_layout (cases : (string * bool (* has payload *)) list) =
         }
     else Constant {name; tag_type = None}
   in
-  let constructors = Array.of_list (List.map case cases) in
-  let _, constructors_by_name =
-    List.fold_left
-      (fun (index, by_name) (name, _) ->
-        (index + 1, Map_string.add by_name name (index, constructors.(index))))
-      (0, Map_string.empty) cases
-  in
-  {
-    constructors;
-    constructors_by_name;
-    dispatch = dispatch_of_constructors constructors;
-  }
+  Array.of_list (List.map case cases)

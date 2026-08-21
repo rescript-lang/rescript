@@ -42,7 +42,7 @@ let rec convert_constant (const : Lambda.structured_constant) : Lam_constant.t =
     | Pt_module_alias -> Const_module_alias
     | Pt_shape_none -> Lam_constant.lam_none
     | Pt_assertfalse -> Const_int {i = 0l; comment = Pt_assertfalse}
-    | Pt_constructor {tag_type = Some (Ast_untagged_variants.Int v)} ->
+    | Pt_constructor {tag_type = Some (Variant_runtime.Int v)} ->
       (* A constructor represented as a number is a genuine number at
          runtime; folding relies on it being an ordinary int constant *)
       Const_int {i = Int32.of_int v; comment = None}

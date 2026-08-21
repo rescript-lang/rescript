@@ -970,7 +970,7 @@ and expression_desc cxt ~(level : int) f x : cxt =
   | Caml_block (el, _, ((Blk_extension | Blk_record_ext _) as ext)) ->
     expression_desc cxt ~level f (exn_block_as_obj ~stack:false el ext)
   | Caml_block (el, _, Blk_record_inlined p) ->
-    let {Ast_untagged_variants.tag; tag_name; untagged} = p.runtime in
+    let {Variant_runtime.tag; tag_name; untagged} = p.runtime in
     let objs =
       let tails =
         Ext_list.combine_array p.fields el (fun (i, opt) -> (Js_op.Lit i, opt))
@@ -994,7 +994,7 @@ and expression_desc cxt ~(level : int) f x : cxt =
     expression_desc cxt ~level f (Object (None, objs))
   | Caml_block (el, _, Blk_constructor p) ->
     let not_is_cons = p.name <> Literals.cons in
-    let {Ast_untagged_variants.tag; tag_name; untagged} = p.runtime in
+    let {Variant_runtime.tag; tag_name; untagged} = p.runtime in
     let tag_type = tag.tag_type in
     let tag_name = Option.value tag_name ~default:L.tag in
     let objs =
@@ -1010,7 +1010,7 @@ and expression_desc cxt ~(level : int) f x : cxt =
              [(name_symbol, E.str p.name)]
            else [])
       in
-      if untagged || (not_is_cons = false && p.num_nonconst = 1) then tails
+      if untagged || not_is_cons = false then tails
       else
         ( Js_op.Lit tag_name,
           (* TAG:xx *)
@@ -1689,7 +1689,7 @@ and statement_desc top cxt f (s : J.statement_desc) : cxt =
     let cxt = P.paren_group f 1 (fun _ -> expression ~level:0 cxt f e) in
     P.space f;
     P.brace_vgroup f 1 (fun _ ->
-        let pp_as_value f (tag_type : Ast_untagged_variants.tag_type) =
+        let pp_as_value f (tag_type : Variant_runtime.tag_type) =
           let e = E.tag_type tag_type in
           ignore @@ expression_desc cxt ~level:0 f e.expression_desc
         in

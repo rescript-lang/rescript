@@ -2041,14 +2041,13 @@ let sort_constructor_cases layout cases =
   List.sort
     (fun (cstr1, _) (cstr2, _) ->
       let index cstr =
-        Ast_untagged_variants.constructor_position layout cstr.cstr_name
+        Variant_runtime.constructor_position layout cstr.cstr_name
       in
       Int.compare (index cstr1) (index cstr2))
     cases
 
 let constructor_switch_key layout (cstr : Types.constructor_description) =
-  Switch_constructor
-    (Ast_untagged_variants.constructor_by_name layout cstr.cstr_name)
+  Switch_constructor (Variant_runtime.constructor_by_name layout cstr.cstr_name)
 
 let combine_constructor loc arg ex_pat cstr partial ctx def
     (tag_lambda_list, total1, pats) =
@@ -2092,18 +2091,10 @@ let combine_constructor loc arg ex_pat cstr partial ctx def
       | Some layout -> layout
       | None -> assert false
     in
-    let num_consts, num_nonconsts =
-      Array.fold_left
-        (fun (consts, nonconsts) (case : Ast_untagged_variants.constructor_case)
-           ->
-          match case with
-          | Constant _ -> (consts + 1, nonconsts)
-          | Block _ -> (consts, nonconsts + 1))
-        (0, 0) layout.Ast_untagged_variants.constructors
-    in
-    let ncases = List.length tag_lambda_list
-    and nconstrs = num_consts + num_nonconsts in
-    let sig_complete = ncases = nconstrs in
+    let num_consts = Variant_runtime.num_constants layout
+    and num_nonconsts = Variant_runtime.num_blocks layout in
+    let ncases = List.length tag_lambda_list in
+    let sig_complete = ncases = Array.length layout in
     let fail_opt, fails, local_jumps =
       if sig_complete then (None, [], jumps_empty)
       else mk_failaction_pos partial pats ctx def
@@ -2165,7 +2156,7 @@ let combine_constructor loc arg ex_pat cstr partial ctx def
               sw_blocks_full = List.length nonconsts >= num_nonconsts;
               sw_blocks = nonconsts;
               sw_failaction = fail_opt;
-              sw_dispatch = Switch_variant layout.dispatch;
+              sw_dispatch = Switch_variant (Variant_runtime.dispatch layout);
             }
           in
           let hs, sw = share_actions_sw sw in

@@ -73,7 +73,7 @@ val string_switch :
   ?declaration:Lam_compat.let_kind * Ident.t ->
   ?default:J.block ->
   J.expression ->
-  (Ast_untagged_variants.tag_type * J.case_clause) list ->
+  (Variant_runtime.tag_type * J.case_clause) list ->
   t
 
 val declare_variable :
