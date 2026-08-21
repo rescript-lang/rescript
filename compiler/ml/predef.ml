@@ -221,17 +221,27 @@ and ident_some = ident_create "Some"
 
 and ident_ctor_unknown = ident_create "Unknown"
 
+(* Predefined declarations are built by hand, so their layouts are too *)
+let plain_variant (cstrs : Types.constructor_declaration list) =
+  Type_variant
+    ( cstrs,
+      Variant_runtime.plain_layout
+        (List.map
+           (fun (c : Types.constructor_declaration) ->
+             (Ident.name c.cd_id, c.cd_args <> Cstr_tuple []))
+           cstrs) )
+
 let common_initial_env add_type add_extension empty_env =
   let decl_bool =
     {
       decl_abstr with
-      type_kind = Type_variant [cstr ident_false []; cstr ident_true []];
+      type_kind = plain_variant [cstr ident_false []; cstr ident_true []];
       type_immediate = true;
     }
   and decl_unit =
     {
       decl_abstr with
-      type_kind = Type_variant [cstr ident_void []];
+      type_kind = plain_variant [cstr ident_void []];
       type_immediate = true;
     }
   and decl_exn = {decl_abstr with type_kind = Type_open}
@@ -266,7 +276,8 @@ let common_initial_env add_type add_extension empty_env =
       type_params = [tvar];
       type_arity = 1;
       type_kind =
-        Type_variant [cstr ident_nil []; cstr ident_cons [tvar; type_list tvar]];
+        plain_variant
+          [cstr ident_nil []; cstr ident_cons [tvar; type_list tvar]];
       type_variance = [Variance.covariant];
     }
   and decl_option =
@@ -275,7 +286,7 @@ let common_initial_env add_type add_extension empty_env =
       decl_abstr with
       type_params = [tvar];
       type_arity = 1;
-      type_kind = Type_variant [cstr ident_none []; cstr ident_some [tvar]];
+      type_kind = plain_variant [cstr ident_none []; cstr ident_some [tvar]];
       type_variance = [Variance.covariant];
     }
   and decl_result =
@@ -284,7 +295,8 @@ let common_initial_env add_type add_extension empty_env =
       decl_abstr with
       type_params = [tvar1; tvar2];
       type_arity = 2;
-      type_kind = Type_variant [cstr ident_ok [tvar1]; cstr ident_error [tvar2]];
+      type_kind =
+        plain_variant [cstr ident_ok [tvar1]; cstr ident_error [tvar2]];
       type_variance = [Variance.covariant; Variance.covariant];
     }
   and decl_dict =
@@ -328,7 +340,7 @@ let common_initial_env add_type add_extension empty_env =
       type_params = [];
       type_arity = 0;
       type_kind =
-        Type_variant
+        plain_variant
           [
             {
               cd_id = ident_ctor_unknown;

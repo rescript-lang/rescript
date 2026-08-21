@@ -39,7 +39,7 @@ let add_declaration ~config ~decls ~file ~(module_path : Module_path.t)
         Ident.name ld_id |> Name.create
         |> process_type_label ~decl_kind:RecordLabel ~loc:ld_loc)
       l
-  | Type_variant decls ->
+  | Type_variant (decls, _) ->
     List.iteri
       (fun i {Types.cd_id; cd_loc; cd_args} ->
         let _handle_inline_records =

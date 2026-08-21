@@ -322,7 +322,7 @@ let is_private_record_field env label =
 
 let extract_concrete_variant env ty =
   match extract_concrete_typedecl env ty with
-  | p0, p, {type_kind = Type_variant cstrs} -> (p0, p, cstrs)
+  | p0, p, {type_kind = Type_variant (cstrs, _)} -> (p0, p, cstrs)
   | p0, p, {type_kind = Type_open} -> (p0, p, [])
   | _ -> raise Not_found
 
@@ -627,7 +627,7 @@ let build_or_pat env loc lid =
 let extract_type_from_pat_variant_spread env lid expected_ty =
   let path, decl = Typetexp.find_type env lid.loc lid.txt in
   match decl with
-  | {type_kind = Type_variant constructors; type_params} ->
+  | {type_kind = Type_variant (constructors, _); type_params} ->
     if List.length type_params > 0 then
       raise (Error (lid.loc, env, Type_params_not_supported lid.txt));
     let ty = newgenty (Tconstr (path, [], ref Mnil)) in

@@ -249,7 +249,7 @@ let label_descrs ty_res lbls repres priv =
 
 let constructors_of_type ty_path decl =
   match decl.type_kind with
-  | Type_variant cstrs -> constructor_descrs ty_path decl cstrs
+  | Type_variant (cstrs, _) -> constructor_descrs ty_path decl cstrs
   | Type_record _ | Type_abstract | Type_open -> []
 
 let labels_of_type ty_path decl =

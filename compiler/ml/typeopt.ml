@@ -56,17 +56,18 @@ let rec type_cannot_contain_undefined (typ : Types.type_expr) (env : Env.t) =
       | Type_open -> false
       | Type_record _ -> true
       | Type_variant
-          ( [
-              {cd_id = {name = "None"}; cd_args = Cstr_tuple []};
-              {cd_id = {name = "Some"}; cd_args = Cstr_tuple [_]};
-            ]
-          | [
-              {cd_id = {name = "Some"}; cd_args = Cstr_tuple [_]};
-              {cd_id = {name = "None"}; cd_args = Cstr_tuple []};
-            ]
-          | [{cd_id = {name = "()"}; cd_args = Cstr_tuple []}] ) ->
+          ( ( [
+                {cd_id = {name = "None"}; cd_args = Cstr_tuple []};
+                {cd_id = {name = "Some"}; cd_args = Cstr_tuple [_]};
+              ]
+            | [
+                {cd_id = {name = "Some"}; cd_args = Cstr_tuple [_]};
+                {cd_id = {name = "None"}; cd_args = Cstr_tuple []};
+              ]
+            | [{cd_id = {name = "()"}; cd_args = Cstr_tuple []}] ),
+            _ ) ->
         false (* conservative *)
-      | Type_variant cdecls ->
+      | Type_variant (cdecls, _) ->
         let untagged =
           Ast_untagged_variants.has_untagged decl.type_attributes
         in

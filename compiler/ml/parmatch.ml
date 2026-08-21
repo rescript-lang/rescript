@@ -953,7 +953,7 @@ let pats_of_type ?(always = false) env ty =
   | Tconstr (path, _, _) -> (
     try
       match (Env.find_type path env).type_kind with
-      | Type_variant cl
+      | Type_variant (cl, _)
         when always
              || List.length cl = 1
              || List.for_all (fun cd -> cd.Types.cd_res <> None) cl ->
