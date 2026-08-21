@@ -27,23 +27,6 @@ let () =
     Ctype.extract_concrete_typedecl
 let () = Ast_untagged_variants.expand_head := Ctype.expand_head
 
-let names_from_construct_pattern (pat : Typedtree.pattern) =
-  let rec resolve_path n (path : Path.t) =
-    match Env.find_type path pat.pat_env with
-    | {type_kind = Type_variant cstrs; _} ->
-      Ast_untagged_variants.names_from_type_variant ~env:pat.pat_env cstrs
-    | {type_kind = Type_abstract; type_manifest = Some t; _} -> (
-      match (Ctype.unalias t).desc with
-      | Tconstr (pathn, _, _) -> resolve_path (n + 1) pathn
-      | _ -> None)
-    | {type_kind = Type_abstract; type_manifest = None; _} -> None
-    | {type_kind = Type_record _ | Type_open (* Exceptions *); _} -> None
-  in
-
-  match (Btype.repr pat.pat_type).desc with
-  | Tconstr (path, _, _) -> resolve_path 0 path
-  | _ -> assert false
-
 (**
     Note it is a bit tricky when there is unbound var, 
     its type will be Tvar which is too complicated to support subtyping

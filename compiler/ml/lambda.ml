@@ -21,16 +21,14 @@ type tag_info =
   | Blk_constructor of {
       name: string;
       num_nonconst: int;
-      tag: int;
-      attrs: Parsetree.attributes;
+      runtime: Ast_untagged_variants.block_runtime;
     }
   | Blk_record_inlined of {
       name: string;
       num_nonconst: int;
-      tag: int;
       fields: (string * bool (* optional *)) array;
       mutable_flag: Asttypes.mutable_flag;
-      attrs: Parsetree.attributes;
+      runtime: Ast_untagged_variants.block_runtime;
     }
   | Blk_tuple
   | Blk_poly_var of string
@@ -49,14 +47,15 @@ type tag_info =
       mutable_flag: Asttypes.mutable_flag;
     }
 
-let tag_of_tag_info (tag : tag_info) =
+(* Label used by the lambda printer for a block; blocks carry no
+   numeric tag anymore *)
+let tag_label_of_tag_info (tag : tag_info) =
   match tag with
-  | Blk_constructor {tag} | Blk_record_inlined {tag} -> tag
+  | Blk_constructor {name} | Blk_record_inlined {name} -> name
   | Blk_tuple | Blk_poly_var _ | Blk_record _ | Blk_module _
-  | Blk_module_export _ | Blk_extension | Blk_some (* tag not make sense *)
-  | Blk_some_not_nested (* tag not make sense *)
-  | Blk_record_ext _ (* similar to Blk_extension*) ->
-    0
+  | Blk_module_export _ | Blk_extension | Blk_some | Blk_some_not_nested
+  | Blk_record_ext _ ->
+    "0"
 
 let mutable_flag_of_tag_info (tag : tag_info) =
   match tag with
@@ -100,7 +99,7 @@ let blk_record_ext fields mutable_flag =
   in
   Blk_record_ext {fields = all_labels_info; mutable_flag}
 
-let blk_record_inlined fields name num_nonconst ~tag ~attrs mutable_flag =
+let blk_record_inlined fields name num_nonconst ~runtime mutable_flag =
   let fields =
     Array.map
       (fun ((lbl : label), _, _) ->
@@ -108,7 +107,7 @@ let blk_record_inlined fields name num_nonconst ~tag ~attrs mutable_flag =
           lbl.lbl_optional ))
       fields
   in
-  Blk_record_inlined {fields; name; num_nonconst; tag; mutable_flag; attrs}
+  Blk_record_inlined {fields; name; num_nonconst; mutable_flag; runtime}
 
 let ref_tag_info : tag_info =
   Blk_record {fields = [|("contents", false)|]; mutable_flag = Mutable}
@@ -313,12 +312,7 @@ and value_kind = Pgenval
 and raise_kind = Raise_regular | Raise_reraise
 
 type pointer_info =
-  | Pt_constructor of {
-      name: string;
-      const: int;
-      non_const: int;
-      attrs: Parsetree.attributes;
-    }
+  | Pt_constructor of Ast_untagged_variants.tag
   | Pt_variant of {name: string}
   | Pt_module_alias
   | Pt_shape_none
@@ -326,7 +320,7 @@ type pointer_info =
 
 type structured_constant =
   | Const_base of Asttypes.constant
-  | Const_pointer of int * pointer_info
+  | Const_pointer of pointer_info
   | Const_block of tag_info * structured_constant list
   | Const_immstring of string
   | Const_false
@@ -387,14 +381,24 @@ and lambda_apply = {
   ap_transformed_jsx: bool;
 }
 
-and lambda_switch = {
-  sw_numconsts: int;
-  sw_consts: (int * lambda) list;
-  sw_numblocks: int;
-  sw_blocks: (int * lambda) list;
-  sw_failaction: lambda option;
-  sw_names: Ast_untagged_variants.switch_names option;
+and switch_key =
+  | Switch_int of int
+  | Switch_constructor of Ast_untagged_variants.constructor_case
+
+and switch_dispatch =
+  | Switch_direct
+  | Switch_variant of Ast_untagged_variants.variant_dispatch
+
+and 'a switch = {
+  sw_consts_full: bool;
+  sw_consts: (switch_key * 'a) list;
+  sw_blocks_full: bool;
+  sw_blocks: (switch_key * 'a) list;
+  sw_failaction: 'a option;
+  sw_dispatch: switch_dispatch;
 }
+
+and lambda_switch = lambda switch
 
 (* This is actually a dummy value
     not necessary "()", it can be used as a place holder for module
@@ -402,11 +406,11 @@ and lambda_switch = {
 *)
 let const_unit =
   Const_pointer
-    (0, Pt_constructor {name = "()"; const = 1; non_const = 0; attrs = []})
+    (Pt_constructor {Ast_untagged_variants.name = "()"; tag_type = None})
 
-let lambda_assert_false = Lconst (Const_pointer (0, Pt_assertfalse))
+let lambda_assert_false = Lconst (Const_pointer Pt_assertfalse)
 
-let lambda_module_alias = Lconst (Const_pointer (0, Pt_module_alias))
+let lambda_module_alias = Lconst (Const_pointer Pt_module_alias)
 
 let lambda_unit = Lconst const_unit
 

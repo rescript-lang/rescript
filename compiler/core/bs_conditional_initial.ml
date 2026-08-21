@@ -44,8 +44,6 @@ let setup_env () =
     Record_attributes_check.check_bs_attributes_inclusion;
   Builtin_attributes.check_duplicated_labels :=
     Record_attributes_check.check_duplicated_labels;
-  Matching.names_from_construct_pattern :=
-    Matching_polyfill.names_from_construct_pattern;
 
   Printtyp.print_res_poly_identifier := Res_printer.polyvar_ident_to_string
 (*; Switch.cut := 100*)

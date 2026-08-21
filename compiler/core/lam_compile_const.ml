@@ -50,12 +50,11 @@ and translate (x : Lam_constant.t) : J.expression =
   | Const_js_null -> E.nil
   | Const_js_undefined {is_unit = true} -> E.unit
   | Const_js_undefined {is_unit = false} -> E.undefined
-  | Const_int
-      {i; comment = Pt_constructor {cstr_name = {name; tag_type = None}}}
-    when name <> "[]" ->
-    E.str name
-  | Const_int {i; comment = Pt_constructor {cstr_name = {tag_type = Some t}}} ->
-    E.tag_type t
+  | Const_constructor {name; tag_type = None} ->
+    (* The runtime representation of a constant constructor is its name,
+       except for the list constructor [] which is the number 0 *)
+    if name = "[]" then E.int 0l ~comment:"[]" else E.str name
+  | Const_constructor {tag_type = Some t} -> E.tag_type t
   | Const_int {i; comment} ->
     E.int i ?comment:(Lam_constant.string_of_pointer_info comment)
   | Const_char i -> Js_of_lam_string.const_char i
@@ -64,9 +63,8 @@ and translate (x : Lam_constant.t) : J.expression =
   | Const_string {s; delim = None | Some DNoQuotes} -> E.str s
   | Const_string {s; delim = Some delim} -> E.str ~delim s
   | Const_pointer name -> E.str name
-  | Const_block (tag, tag_info, xs) ->
-    Js_of_lam_block.make_block NA tag_info (E.small_int tag)
-      (Ext_list.map xs translate)
+  | Const_block (tag_info, xs) ->
+    Js_of_lam_block.make_block NA tag_info (Ext_list.map xs translate)
 
 (* E.arr Mutable ~comment:"float array" *)
 (*   (Ext_list.map (fun x ->  E.float  x ) ars) *)

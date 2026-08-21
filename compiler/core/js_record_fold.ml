@@ -164,9 +164,8 @@ let expression_desc : 'a. ('a, expression_desc) fn =
   | Optional_block (_x0, _x1) ->
     let st = _self.expression _self st _x0 in
     st
-  | Caml_block (_x0, _x1, _x2, _x3) ->
+  | Caml_block (_x0, _x1, _x2) ->
     let st = list _self.expression _self st _x0 in
-    let st = _self.expression _self st _x2 in
     st
   | Caml_block_tag (_x0, _tag) ->
     let st = _self.expression _self st _x0 in

@@ -64,7 +64,7 @@ let or_list (arg : lam) (hash_names : (int * string) list) =
     let init : lam =
       Lprim
         ( Pintcomp Ceq,
-          [arg; Lconst (Const_pointer (hash, Pt_variant {name}))],
+          [arg; Lconst (Const_pointer (Pt_variant {name}))],
           Location.none )
     in
     Ext_list.fold_left rest init (fun acc (hash, name) ->
@@ -74,7 +74,7 @@ let or_list (arg : lam) (hash_names : (int * string) list) =
               acc;
               Lprim
                 ( Pintcomp Ceq,
-                  [arg; Lconst (Const_pointer (hash, Pt_variant {name}))],
+                  [arg; Lconst (Const_pointer (Pt_variant {name}))],
                   Location.none );
             ],
             Location.none ))
@@ -93,8 +93,7 @@ let make_test_sequence_variant_constant (fail : lam option) (arg : lam)
   | [], None -> assert false
 
 let call_switcher_variant_constant (_loc : Location.t) (fail : lam option)
-    (arg : lam) (int_lambda_list : (int * (string * lam)) list)
-    (_names : Ast_untagged_variants.switch_names option) =
+    (arg : lam) (int_lambda_list : (int * (string * lam)) list) =
   let int_lambda_list = convert int_lambda_list in
   match (int_lambda_list, fail) with
   | (_, act) :: rest, None | rest, Some act ->
@@ -104,12 +103,11 @@ let call_switcher_variant_constant (_loc : Location.t) (fail : lam option)
   | [], None -> assert false
 
 let call_switcher_variant_constr (loc : Location.t) (fail : lam option)
-    (arg : lam) int_lambda_list
-    (names : Ast_untagged_variants.switch_names option) : lam =
+    (arg : lam) int_lambda_list : lam =
   let v = Ident.create "variant" in
   Llet
     ( Alias,
       Pgenval,
       v,
       Lprim (Pfield (0, Fld_poly_var_tag), [arg], loc),
-      call_switcher_variant_constant loc fail (Lvar v) int_lambda_list names )
+      call_switcher_variant_constant loc fail (Lvar v) int_lambda_list )

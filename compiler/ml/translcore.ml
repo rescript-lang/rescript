@@ -34,6 +34,21 @@ let transl_module =
     (fun _cc _rootpath _modl -> assert false
       : module_coercion -> Path.t option -> module_expr -> lambda)
 
+(* Number of payload-carrying constructors of the variant declaring
+   [cstr]; part of the runtime representation of its blocks *)
+let num_nonconst_constructors env (cstr : Types.constructor_description) =
+  match cstr.cstr_identity with
+  | Ordinary_constructor {type_path} -> (
+    match (Env.find_type type_path env).type_kind with
+    | Type_variant cstrs ->
+      List.length
+        (List.filter
+           (fun (cd : Types.constructor_declaration) ->
+             cd.cd_args <> Cstr_tuple [])
+           cstrs)
+    | _ -> assert false)
+  | Extension_constructor _ -> assert false
+
 (* Compile an exception/extension definition *)
 
 let transl_extension_constructor env path ext =
@@ -520,10 +535,24 @@ let transl_primitive_application loc prim env ty args =
         let has_constant_constructor =
           match args with
           | [
-              _; {exp_desc = Texp_construct (_, {cstr_tag = Cstr_constant _}, _)};
+              _;
+              {
+                exp_desc =
+                  Texp_construct
+                    ( _,
+                      {cstr_identity = Ordinary_constructor _; cstr_args = []},
+                      _ );
+              };
             ]
           | [
-              {exp_desc = Texp_construct (_, {cstr_tag = Cstr_constant _}, _)}; _;
+              {
+                exp_desc =
+                  Texp_construct
+                    ( _,
+                      {cstr_identity = Ordinary_constructor _; cstr_args = []},
+                      _ );
+              };
+              _;
             ]
           | [_; {exp_desc = Texp_variant (_, None)}]
           | [{exp_desc = Texp_variant (_, None)}; _] ->
@@ -772,60 +801,52 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
     with Not_constant -> Lprim (Pmakeblock Blk_tuple, ll, e.exp_loc))
   | Texp_construct ({txt = Lident "false"}, _, []) -> Lconst Const_false
   | Texp_construct ({txt = Lident "true"}, _, []) -> Lconst Const_true
-  | Texp_construct (lid, cstr, args) -> (
+  | Texp_construct (_, cstr, args) -> (
     let ll = transl_list args in
     if cstr.cstr_inlined <> None then
       match ll with
       | [x] -> x
       | _ -> assert false
     else
-      match cstr.cstr_tag with
-      | Cstr_constant n ->
+      match cstr.cstr_identity with
+      | Ordinary_constructor _ when cstr.cstr_args = [] ->
         Lconst
           (Const_pointer
-             ( n,
-               match lid.txt with
-               | Longident.Ldot (Longident.Lident "*predef*", "None")
-               | Longident.Lident "None"
-                 when Datarepr.constructor_has_optional_shape cstr ->
-                 Pt_shape_none
-               | _ ->
-                 if Datarepr.constructor_has_optional_shape cstr then
-                   Pt_shape_none
-                 else
-                   Pt_constructor
-                     {
-                       name = cstr.cstr_name;
-                       const = cstr.cstr_consts;
-                       non_const = cstr.cstr_nonconsts;
-                       attrs = cstr.cstr_attributes;
-                     } ))
-      | Cstr_unboxed -> (
-        match ll with
-        | [v] -> v
-        | _ -> assert false)
-      | Cstr_block n -> (
-        let tag_info : Lambda.tag_info =
-          if Datarepr.constructor_has_optional_shape cstr then
-            match args with
-            | [arg]
-              when Typeopt.type_cannot_contain_undefined arg.exp_type
-                     arg.exp_env ->
-              (* Format.fprintf Format.err_formatter "@[special boxingl@]@."; *)
-              Blk_some_not_nested
-            | _ -> Blk_some
-          else
-            Blk_constructor
-              {
-                name = cstr.cstr_name;
-                num_nonconst = cstr.cstr_nonconsts;
-                tag = n;
-                attrs = cstr.cstr_attributes;
-              }
+             (if Datarepr.constructor_has_optional_shape cstr then Pt_shape_none
+              else
+                Pt_constructor
+                  (Ast_untagged_variants.constructor_tag ~name:cstr.cstr_name
+                     cstr.cstr_attributes)))
+      | Ordinary_constructor _ -> (
+        let runtime =
+          Ast_untagged_variants.block_runtime ~name:cstr.cstr_name
+            cstr.cstr_attributes
         in
-        try Lconst (Const_block (tag_info, List.map extract_constant ll))
-        with Not_constant -> Lprim (Pmakeblock tag_info, ll, e.exp_loc))
-      | Cstr_extension path ->
+        if cstr.cstr_transparent then
+          match ll with
+          | [value] -> value
+          | _ -> assert false
+        else
+          let tag_info : Lambda.tag_info =
+            if Datarepr.constructor_has_optional_shape cstr then
+              match args with
+              | [arg]
+                when Typeopt.type_cannot_contain_undefined arg.exp_type
+                       arg.exp_env ->
+                (* Format.fprintf Format.err_formatter "@[special boxingl@]@."; *)
+                Blk_some_not_nested
+              | _ -> Blk_some
+            else
+              Blk_constructor
+                {
+                  name = cstr.cstr_name;
+                  num_nonconst = num_nonconst_constructors e.exp_env cstr;
+                  runtime;
+                }
+          in
+          try Lconst (Const_block (tag_info, List.map extract_constant ll))
+          with Not_constant -> Lprim (Pmakeblock tag_info, ll, e.exp_loc))
+      | Extension_constructor path ->
         Lprim
           ( Pmakeblock Blk_extension,
             transl_extension_path e.exp_env path :: ll,
@@ -834,7 +855,7 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
   | Texp_variant (l, arg) -> (
     let tag = Btype.hash_variant l in
     match arg with
-    | None -> Lconst (Const_pointer (tag, Pt_variant {name = l}))
+    | None -> Lconst (Const_pointer (Pt_variant {name = l}))
     | Some arg -> (
       let lam = transl_exp arg in
       let tag_info = Blk_poly_var l in
@@ -1138,11 +1159,12 @@ and transl_record loc env fields repres opt_init_expr =
           | Record_float_unused -> assert false
           | Record_regular ->
             Lconst (Const_block (Lambda.blk_record fields mut, cl))
-          | Record_inlined {tag; name; num_nonconsts; attrs} ->
+          | Record_inlined {name; num_nonconsts; attrs} ->
             Lconst
               (Const_block
-                 ( Lambda.blk_record_inlined fields name num_nonconsts ~tag
-                     ~attrs mut,
+                 ( Lambda.blk_record_inlined fields name num_nonconsts
+                     ~runtime:(Ast_untagged_variants.block_runtime ~name attrs)
+                     mut,
                    cl ))
           | Record_unboxed _ ->
             Lconst
@@ -1155,11 +1177,12 @@ and transl_record loc env fields repres opt_init_expr =
           | Record_regular ->
             Lprim (Pmakeblock (Lambda.blk_record fields mut), ll, loc)
           | Record_float_unused -> assert false
-          | Record_inlined {tag; name; num_nonconsts; attrs} ->
+          | Record_inlined {name; num_nonconsts; attrs} ->
             Lprim
               ( Pmakeblock
-                  (Lambda.blk_record_inlined fields name num_nonconsts ~tag
-                     ~attrs mut),
+                  (Lambda.blk_record_inlined fields name num_nonconsts
+                     ~runtime:(Ast_untagged_variants.block_runtime ~name attrs)
+                     mut),
                 ll,
                 loc )
           | Record_unboxed _ -> (

@@ -23,7 +23,6 @@ val call_switcher_variant_constant :
   Lambda.lambda option ->
   Lambda.lambda ->
   (int * (string * Lambda.lambda)) list ->
-  Ast_untagged_variants.switch_names option ->
   Lambda.lambda)
   ref
 
@@ -32,7 +31,6 @@ val call_switcher_variant_constr :
   Lambda.lambda option ->
   Lambda.lambda ->
   (int * (string * Lambda.lambda)) list ->
-  Ast_untagged_variants.switch_names option ->
   Lambda.lambda)
   ref
 
@@ -59,7 +57,3 @@ val for_multiple_match :
 exception Cannot_flatten
 
 val flatten_pattern : int -> pattern -> pattern list
-
-(* Expand stringswitch to  string test tree *)
-val names_from_construct_pattern :
-  (pattern -> Ast_untagged_variants.switch_names option) ref

@@ -105,7 +105,7 @@ let rec no_side_effect_expression_desc (x : J.expression_desc) =
     no_side_effect a && no_side_effect b
   | Is_null_or_undefined b -> no_side_effect b
   | Str _ -> true
-  | Array xs | Caml_block (xs, _, _, _) ->
+  | Array xs | Caml_block (xs, _, _) ->
     (* create [immutable] block,
         does not really mean that this opreation itself is [pure].
 
@@ -239,10 +239,10 @@ let rec eq_expression ({expression_desc = x0} : J.expression)
     match y0 with
     | Optional_block (a1, b1) -> b0 = b1 && eq_expression a0 a1
     | _ -> false)
-  | Caml_block (ls0, flag0, tag0, _) -> (
+  | Caml_block (ls0, flag0, info0) -> (
     match y0 with
-    | Caml_block (ls1, flag1, tag1, _) ->
-      eq_expression_list ls0 ls1 && flag0 = flag1 && eq_expression tag0 tag1
+    | Caml_block (ls1, flag1, info1) ->
+      eq_expression_list ls0 ls1 && flag0 = flag1 && info0 = info1
     | _ -> false)
   | Length _ | Is_null_or_undefined _ | String_append _ | Typeof _ | Js_not _
   | Js_bnot _ | In _ | Cond _ | FlatCall _ | New _ | Fun _ | Raw_js_code _
@@ -312,7 +312,7 @@ let rev_toplevel_flatten block =
    | Str (b,_) -> b
    | Number _ -> true (* Can be refined later *)
    | Array xs -> Ext_list.for_all xs is_constant
-   | Caml_block(xs, Immutable, tag, _)
+   | Caml_block(xs, Immutable, _)
     -> Ext_list.for_all xs is_constant && is_constant tag
    | Bin (_op, a, b) ->
     is_constant a && is_constant b

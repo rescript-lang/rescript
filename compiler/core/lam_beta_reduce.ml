@@ -68,7 +68,7 @@ let propagate_beta_reduce (meta : Lam_stats.t) (params : Ident.t list)
        order. *)
     Ext_list.fold_left rest_bindings new_body (fun l (param, arg) ->
         (match arg with
-        | Lprim {primitive = Pmakeblock (_, _, Immutable); args; _} ->
+        | Lprim {primitive = Pmakeblock (_, Immutable); args; _} ->
           Hash_ident.replace meta.ident_tbl param
             (Lam_util.kind_of_lambda_block args)
         | Lprim {primitive = Psome | Psome_not_nest; args = [v]; _} ->
@@ -110,7 +110,7 @@ let propagate_beta_reduce_with_map (meta : Lam_stats.t)
     (* See above: fold left so arguments evaluate in call order. *)
     Ext_list.fold_left rest_bindings new_body (fun l (param, (arg : Lam.t)) ->
         (match arg with
-        | Lprim {primitive = Pmakeblock (_, _, Immutable); args} ->
+        | Lprim {primitive = Pmakeblock (_, Immutable); args} ->
           Hash_ident.replace meta.ident_tbl param
             (Lam_util.kind_of_lambda_block args)
         | Lprim {primitive = Psome | Psome_not_nest; args = [v]} ->

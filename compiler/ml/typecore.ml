@@ -3450,8 +3450,8 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
           };
         ] ->
       let path =
-        match (Typetexp.find_constructor env lid.loc lid.txt).cstr_tag with
-        | Cstr_extension path -> path
+        match (Typetexp.find_constructor env lid.loc lid.txt).cstr_identity with
+        | Extension_constructor path -> path
         | _ -> raise (Error (lid.loc, env, Not_an_extension_constructor))
       in
       rue
@@ -3494,7 +3494,7 @@ and type_newtype ~loc ~env ~name (type_body : Env.t -> Typedtree.expression) =
       type_loc = loc;
       type_attributes = [];
       type_immediate = false;
-      type_unboxed = unboxed_false_default_false;
+      type_representation = Boxed;
       type_inlined_types = [];
     }
   in

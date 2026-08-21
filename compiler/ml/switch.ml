@@ -105,13 +105,7 @@ module type S = sig
   val make_isin : act -> act -> act
   val make_if : act -> act -> act -> act
   val make_switch :
-    Location.t ->
-    act ->
-    int array ->
-    act array ->
-    offset:int ->
-    Ast_untagged_variants.switch_names option ->
-    act
+    Location.t -> act -> int array -> act array -> offset:int -> act
   val make_catch : act -> int * (act -> act)
   val make_exit : int -> act
 end
@@ -618,7 +612,7 @@ let rec pkey chan  = function
     (min_clusters.(len - 1), k)
 
   (* Assume j > i *)
-  let make_switch loc {cases; actions} i j sw_names =
+  let make_switch loc {cases; actions} i j =
     let ll, _, _ = cases.(i) and _, hh, _ = cases.(j) in
     let tbl = Array.make (hh - ll + 1) 0
     and t = Hashtbl.create 17
@@ -641,10 +635,9 @@ let rec pkey chan  = function
     done;
     let acts = Array.make !index actions.(0) in
     Hashtbl.iter (fun act i -> acts.(i) <- actions.(act)) t;
-    fun ctx ->
-      Arg.make_switch ~offset:(ll + ctx.off) loc ctx.arg tbl acts sw_names
+    fun ctx -> Arg.make_switch ~offset:(ll + ctx.off) loc ctx.arg tbl acts
 
-  let make_clusters loc ({cases; actions} as s) n_clusters k sw_names =
+  let make_clusters loc ({cases; actions} as s) n_clusters k =
     let len = Array.length cases in
     let r = Array.make n_clusters (0, 0, 0)
     and t = Hashtbl.create 17
@@ -675,7 +668,7 @@ let rec pkey chan  = function
        else
          (* assert i < j *)
          let l, _, _ = cases.(i) and _, h, _ = cases.(j) in
-         r.(ir) <- (l, h, add_index (make_switch loc s i j sw_names)));
+         r.(ir) <- (l, h, add_index (make_switch loc s i j)));
       if i > 0 then zyva (i - 1) (ir - 1)
     in
 
@@ -684,7 +677,7 @@ let rec pkey chan  = function
     Hashtbl.iter (fun _ (i, act) -> acts.(i) <- act) t;
     {cases = r; actions = acts}
 
-  let do_zyva loc (low, high) arg cases actions sw_names =
+  let do_zyva loc (low, high) arg cases actions =
     let old_ok = !ok_inter in
     ok_inter := abs low <= inter_limit && abs high <= inter_limit;
     if !ok_inter <> old_ok then Hashtbl.clear t;
@@ -697,7 +690,7 @@ let rec pkey chan  = function
   prerr_endline "" ;
 *)
     let n_clusters, k = comp_clusters s in
-    let clusters = make_clusters loc s n_clusters k sw_names in
+    let clusters = make_clusters loc s n_clusters k in
     c_test {arg; off = 0} clusters
 
   let abstract_shared actions =
@@ -716,11 +709,11 @@ let rec pkey chan  = function
     in
     (!handlers, actions)
 
-  let zyva loc lh arg cases actions names =
+  let zyva loc lh arg cases actions =
     assert (Array.length cases > 0);
     let actions = actions.act_get_shared () in
     let hs, actions = abstract_shared actions in
-    hs (do_zyva loc lh arg cases actions names)
+    hs (do_zyva loc lh arg cases actions)
 
   and test_sequence arg cases actions =
     assert (Array.length cases > 0);

@@ -121,7 +121,7 @@ let rec rhs_is_beta_residue (lam : Lam.t) =
   | Llet
       ( (Alias | Strict | StrictOpt),
         _,
-        (Lprim {primitive = Pmakeblock (_, _, Immutable)} | Lvar _),
+        (Lprim {primitive = Pmakeblock (_, Immutable)} | Lvar _),
         rest ) ->
     rhs_is_beta_residue rest
   | Lapply _ -> true
@@ -177,7 +177,7 @@ let deep_flatten (lam : Lam.t) : Lam.t =
       match (id.name, str, res) with
       | ( ("match" | "include" | "param"),
           (Alias | Strict | StrictOpt),
-          Lprim {primitive = Pmakeblock (_, _, Immutable); args} ) -> (
+          Lprim {primitive = Pmakeblock (_, Immutable); args} ) -> (
         match eliminate_tuple id body Map_int.empty with
         | Some (tuple_mapping, body) ->
           flatten
@@ -259,7 +259,7 @@ let deep_flatten (lam : Lam.t) : Lam.t =
             sw_blocks;
             sw_blocks_full;
             sw_consts_full;
-            sw_names;
+            sw_dispatch;
           } ) ->
       Lam.switch (aux l)
         {
@@ -268,7 +268,7 @@ let deep_flatten (lam : Lam.t) : Lam.t =
           sw_consts_full;
           sw_blocks_full;
           sw_failaction = Ext_option.map sw_failaction aux;
-          sw_names;
+          sw_dispatch;
         }
     | Lstringswitch (l, sw, d) ->
       Lam.stringswitch (aux l) (Ext_list.map_snd sw aux) (Ext_option.map d aux)

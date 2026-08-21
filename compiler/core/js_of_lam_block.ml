@@ -24,8 +24,8 @@
 
 module E = Js_exp_make
 
-let make_block mutable_flag (tag_info : Lam_tag_info.t) tag args =
-  E.make_block tag tag_info args mutable_flag
+let make_block mutable_flag (tag_info : Lam_tag_info.t) args =
+  E.make_block tag_info args mutable_flag
 
 let field (field_info : Lam_compat.field_dbg_info) e (i : int32) =
   match field_info with

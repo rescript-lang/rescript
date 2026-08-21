@@ -60,18 +60,13 @@ open Typedtree
 
 exception Error of Location.t * error
 
-(* Note: do not factor the branches in the following pattern-matching:
-   the records must be constants for the compiler to do sharing on them.
-*)
-let get_unboxed_from_attributes sdecl =
+let get_representation_from_attributes sdecl =
   let unboxed = Builtin_attributes.has_unboxed sdecl.ptype_attributes in
   let boxed = Builtin_attributes.has_boxed sdecl.ptype_attributes in
-  match (boxed, unboxed, !Clflags.unboxed_types) with
-  | true, true, _ -> raise (Error (sdecl.ptype_loc, Boxed_and_unboxed))
-  | true, false, _ -> unboxed_false_default_false
-  | false, true, _ -> unboxed_true_default_false
-  | false, false, false -> unboxed_false_default_true
-  | false, false, true -> unboxed_true_default_true
+  match (boxed, unboxed) with
+  | true, true -> raise (Error (sdecl.ptype_loc, Boxed_and_unboxed))
+  | true, false | false, false -> Boxed
+  | false, true -> Transparent
 
 (* Enter all declared types in the environment as abstract types *)
 
@@ -106,7 +101,7 @@ let enter_type rec_flag env sdecl id =
         type_loc = sdecl.ptype_loc;
         type_attributes = sdecl.ptype_attributes;
         type_immediate = false;
-        type_unboxed = unboxed_false_default_false;
+        type_representation = Boxed;
         type_inlined_types = [];
       }
     in
@@ -138,7 +133,7 @@ let rec get_unboxed_type_representation env ty fuel =
     | Tconstr (p, args, _) -> (
       match Env.find_type p env with
       | exception Not_found -> Some ty
-      | {type_unboxed = {unboxed = false}} -> Some ty
+      | {type_representation = Boxed} -> Some ty
       | {
        type_params;
        type_kind =
@@ -399,7 +394,7 @@ let transl_declaration ~type_record_as_object ~untagged_wfc env sdecl id =
           loc ))
       sdecl.ptype_cstrs
   in
-  let raw_status = get_unboxed_from_attributes sdecl in
+  let raw_status = get_representation_from_attributes sdecl in
 
   let check_untagged_variant () =
     match sdecl.ptype_kind with
@@ -415,10 +410,7 @@ let transl_declaration ~type_record_as_object ~untagged_wfc env sdecl id =
     | _ -> false
   in
 
-  (if
-     raw_status.unboxed && (not raw_status.default)
-     && not (check_untagged_variant ())
-   then
+  (if raw_status = Transparent && not (check_untagged_variant ()) then
      match sdecl.ptype_kind with
      | Ptype_abstract ->
        raise (Error (sdecl.ptype_loc, Bad_unboxed_attribute "it is abstract"))
@@ -436,10 +428,9 @@ let transl_declaration ~type_record_as_object ~untagged_wfc env sdecl id =
             ( sdecl.ptype_loc,
               Bad_unboxed_attribute "extensible variant types cannot be unboxed"
             )));
-  let unboxed_status =
+  let representation =
     match sdecl.ptype_kind with
-    | Ptype_variant [{pcd_args = Pcstr_tuple []; _}] ->
-      unboxed_false_default_false
+    | Ptype_variant [{pcd_args = Pcstr_tuple []; _}] -> Boxed
     | Ptype_variant [{pcd_args = Pcstr_tuple _; _}]
     | Ptype_variant
         [{pcd_args = Pcstr_record [{pld_mutable = Immutable; _}]; _}]
@@ -447,9 +438,9 @@ let transl_declaration ~type_record_as_object ~untagged_wfc env sdecl id =
       raw_status
     | _ ->
       (* The type is not unboxable, mark it as boxed *)
-      unboxed_false_default_false
+      Boxed
   in
-  let unbox = unboxed_status.unboxed in
+  let unbox = representation = Transparent in
   let tkind, kind, sdecl =
     match sdecl.ptype_kind with
     | Ptype_abstract -> (Ttype_abstract, Type_abstract, sdecl)
@@ -713,7 +704,7 @@ let transl_declaration ~type_record_as_object ~untagged_wfc env sdecl id =
       type_loc = sdecl.ptype_loc;
       type_attributes = sdecl.ptype_attributes;
       type_immediate = false;
-      type_unboxed = unboxed_status;
+      type_representation = representation;
       type_inlined_types = [];
     }
   in
@@ -1332,7 +1323,7 @@ let compute_immediacy env tdecl =
   | Type_variant [{cd_args = Cstr_tuple [arg]; _}], _
   | Type_variant [{cd_args = Cstr_record [{ld_type = arg; _}]; _}], _
   | Type_record ([{ld_type = arg; _}], _), _
-    when tdecl.type_unboxed.unboxed -> (
+    when tdecl.type_representation = Transparent -> (
     match get_unboxed_type_representation env arg with
     | Some argrepr -> not (Ctype.maybe_pointer_type env argrepr)
     | None -> false)
@@ -1690,8 +1681,8 @@ let transl_extension_constructor env type_path type_params typext_params priv
       | Private, Public -> raise (Error (lid.loc, Rebind_private lid.txt))
       | _ -> ());
       let path =
-        match cdescr.cstr_tag with
-        | Cstr_extension path -> path
+        match cdescr.cstr_identity with
+        | Extension_constructor path -> path
         | _ -> assert false
       in
       let args =
@@ -1975,9 +1966,10 @@ let transl_with_constraint env id row_path orig_decl sdecl =
     && orig_decl.type_kind <> Type_abstract
     && sdecl.ptype_private = Private
   then Location.deprecated sdecl.ptype_loc "spurious use of private";
-  let type_kind, type_unboxed =
-    if arity_ok && man <> None then (orig_decl.type_kind, orig_decl.type_unboxed)
-    else (Type_abstract, unboxed_false_default_false)
+  let type_kind, type_representation =
+    if arity_ok && man <> None then
+      (orig_decl.type_kind, orig_decl.type_representation)
+    else (Type_abstract, Boxed)
   in
   let decl =
     {
@@ -1991,7 +1983,7 @@ let transl_with_constraint env id row_path orig_decl sdecl =
       type_loc = sdecl.ptype_loc;
       type_attributes = sdecl.ptype_attributes;
       type_immediate = false;
-      type_unboxed;
+      type_representation;
       type_inlined_types = [];
     }
   in
@@ -2042,7 +2034,7 @@ let abstract_type_decl arity =
       type_loc = Location.none;
       type_attributes = [];
       type_immediate = false;
-      type_unboxed = unboxed_false_default_false;
+      type_representation = Boxed;
       type_inlined_types = [];
     }
   in

@@ -238,7 +238,7 @@ type type_declaration = {
   type_loc: Location.t;
   type_attributes: Parsetree.attributes;
   type_immediate: bool; (* true iff type should not be a pointer *)
-  type_unboxed: unboxed_status;
+  type_representation: type_representation;
   type_inlined_types: type_inlined_type list;
       (** Representation of inlined types, needed for printing *)
 }
@@ -259,7 +259,6 @@ and record_representation =
   | Record_inlined of
       (* Inlined record *)
        {
-      tag: int;
       name: string;
       num_nonconsts: int;
       attrs: Parsetree.attributes;
@@ -287,19 +286,9 @@ and constructor_arguments =
   | Cstr_tuple of type_expr list
   | Cstr_record of label_declaration list
 
-and unboxed_status =
-  private
-  (* This type must be private in order to ensure perfect sharing of the
-     four possible values. Otherwise, ocamlc.byte and ocamlc.opt produce
-     different executables. *) {
-  unboxed: bool;
-  default: bool; (* True for unannotated unboxable types. *)
-}
-
-val unboxed_false_default_false : unboxed_status
-val unboxed_false_default_true : unboxed_status
-val unboxed_true_default_false : unboxed_status
-val unboxed_true_default_true : unboxed_status
+and type_representation = Boxed | Transparent
+(* Single-payload @unboxed type: the payload is the whole runtime
+         value. Untagged unions are tracked by their attributes, not here. *)
 
 type extension_constructor = {
   ext_type_path: Path.t;
@@ -364,9 +353,10 @@ type constructor_description = {
   cstr_existentials: type_expr list; (* list of existentials *)
   cstr_args: type_expr list; (* Type of the arguments *)
   cstr_arity: int; (* Number of arguments *)
-  cstr_tag: constructor_tag; (* Tag for heap blocks *)
-  cstr_consts: int; (* Number of constant constructors *)
-  cstr_nonconsts: int; (* Number of non-const constructors *)
+  cstr_identity: constructor_identity; (* Semantic identity *)
+  cstr_transparent: bool;
+      (* Sole payload-carrying constructor of an unboxed type: constructing
+         it is the identity at runtime *)
   cstr_generalized: bool; (* Constrained return type? *)
   cstr_private: private_flag; (* Read-only constructor? *)
   cstr_loc: Location.t;
@@ -374,14 +364,20 @@ type constructor_description = {
   cstr_inlined: type_declaration option;
 }
 
-and constructor_tag =
-  | Cstr_constant of int (* Constant constructor (an int) *)
-  | Cstr_block of int (* Regular constructor (a block) *)
-  | Cstr_unboxed (* Constructor of an unboxed type *)
-  | Cstr_extension of Path.t (* Extension constructor *)
+and constructor_identity =
+  | Ordinary_constructor of {type_path: Path.t; name: string}
+    (* Constructor introduced by a variant type declaration. The path is
+         the path of the declaring type as written, so a re-exported variant
+         (type u = M.t = A | B) yields descriptions carrying the
+         re-exporting type's path. *)
+  | Extension_constructor of Path.t (* Extension constructor *)
 
-(* Constructors are the same *)
-val equal_tag : constructor_tag -> constructor_tag -> bool
+(* Constructor descriptions of a common scrutinee type denote the same
+   constructor: ordinary constructors compare by name (re-exported variants
+   carry a different type path), extension constructors by path. Not a
+   general-purpose identity test across unrelated types. *)
+val same_constructor :
+  constructor_description -> constructor_description -> bool
 
 (* Constructors may be the same, given potential rebinding *)
 val may_equal_constr :

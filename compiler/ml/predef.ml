@@ -190,7 +190,7 @@ let decl_abstr =
     type_newtype_level = None;
     type_attributes = [];
     type_immediate = false;
-    type_unboxed = unboxed_false_default_false;
+    type_representation = Boxed;
     type_inlined_types = [];
   }
 
@@ -338,7 +338,7 @@ let common_initial_env add_type add_extension empty_env =
               cd_attributes = [];
             };
           ];
-      type_unboxed = Types.unboxed_true_default_false;
+      type_representation = Types.Transparent;
     }
   and decl_promise =
     let tvar = newgenvar () in

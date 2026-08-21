@@ -61,8 +61,6 @@ let color = ref None
 
 (* -color *)
 
-let unboxed_types = ref false
-
 type mli_status = Mli_exists | Mli_non_exists
 let assume_no_mli = ref Mli_non_exists
 let dont_record_crc_unit : string option ref = ref None

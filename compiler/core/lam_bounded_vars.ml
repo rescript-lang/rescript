@@ -130,7 +130,7 @@ let rewrite (map : _ Hash_ident.t) (lam : Lam.t) : Lam.t =
             sw_blocks;
             sw_blocks_full;
             sw_consts_full;
-            sw_names;
+            sw_dispatch;
           } ) ->
       let l = aux l in
       Lam.switch l
@@ -140,7 +140,7 @@ let rewrite (map : _ Hash_ident.t) (lam : Lam.t) : Lam.t =
           sw_consts_full;
           sw_blocks_full;
           sw_failaction = option_map sw_failaction;
-          sw_names;
+          sw_dispatch;
         }
     | Lstringswitch (l, sw, d) ->
       let l = aux l in

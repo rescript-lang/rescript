@@ -908,7 +908,7 @@ let new_declaration newtype manifest =
     type_loc = Location.none;
     type_attributes = [];
     type_immediate = false;
-    type_unboxed = unboxed_false_default_false;
+    type_representation = Boxed;
     type_inlined_types = [];
   }
 
@@ -4192,7 +4192,7 @@ let nondep_type_decl env mid id is_covariant decl =
       type_loc = decl.type_loc;
       type_attributes = decl.type_attributes;
       type_immediate = decl.type_immediate;
-      type_unboxed = decl.type_unboxed;
+      type_representation = decl.type_representation;
       type_inlined_types = decl.type_inlined_types;
     }
   with Not_found ->

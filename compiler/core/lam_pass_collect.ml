@@ -58,7 +58,7 @@ let collect_info (meta : Lam_stats.t) (lam : Lam.t) =
   let rec collect_bind rec_flag (ident : Ident.t) (lam : Lam.t) =
     match lam with
     | Lconst v -> Hash_ident.replace meta.ident_tbl ident (Constant v)
-    | Lprim {primitive = Pmakeblock (_, _, Immutable); args = ls} ->
+    | Lprim {primitive = Pmakeblock (_, Immutable); args = ls} ->
       Hash_ident.replace meta.ident_tbl ident (Lam_util.kind_of_lambda_block ls);
       List.iter collect ls
     | Lprim {primitive = Psome | Psome_not_nest; args = [v]} ->

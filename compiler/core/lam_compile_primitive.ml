@@ -174,11 +174,11 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
       E.optional_not_nest_block arg
     | _ -> E.optional_block arg)
   | Psome_not_nest -> E.optional_not_nest_block (Ext_list.singleton_exn args)
-  | Pmakeblock (tag, tag_info, mutable_flag) ->
+  | Pmakeblock (tag_info, mutable_flag) ->
     (* RUNTIME *)
     Js_of_lam_block.make_block
       (Js_op_util.of_lam_mutable_flag mutable_flag)
-      tag_info (E.small_int tag) args
+      tag_info args
   | Pval_from_option ->
     Js_of_lam_option.val_from_option (Ext_list.singleton_exn args)
   | Pval_from_option_not_nest -> Ext_list.singleton_exn args
@@ -571,8 +571,13 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
   | Pmakelist ->
     Js_of_lam_block.make_block
       (Js_op_util.of_lam_mutable_flag Mutable)
-      (Blk_constructor {name = "::"; num_nonconst = 1; tag = 0; attrs = []})
-      (E.small_int 0) args
+      (Blk_constructor
+         {
+           name = "::";
+           num_nonconst = 1;
+           runtime = Ast_untagged_variants.block_runtime ~name:"::" [];
+         })
+      args
   | Pmakedict -> (
     match args with
     | [{expression_desc = Array items}] ->
@@ -580,7 +585,7 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
         (items
         |> List.filter_map (fun (exp : J.expression) ->
                match exp.expression_desc with
-               | Caml_block ([{expression_desc = Str {txt}}; expr], _, _, _) ->
+               | Caml_block ([{expression_desc = Str {txt}}; expr], _, _) ->
                  Some (Js_op.Lit txt, expr)
                | _ -> None))
     | _ -> assert false)
