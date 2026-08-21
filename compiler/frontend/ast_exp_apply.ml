@@ -42,7 +42,7 @@ let bound (e : exp) (cb : exp -> _) =
       [Vb.mk ~loc (Pat.var ~loc {txt = tuple_obj_id; loc}) e]
       (cb (Exp.ident ~loc {txt = Lident tuple_obj_id; loc}))
 
-let default_expr_mapper = Bs_ast_mapper.default_mapper.expr
+let default_expr_mapper = Ast_mapper.default_mapper.expr
 
 let check_and_discard (args : (Asttypes.arg_label * Parsetree.expression) list)
     =
@@ -72,7 +72,7 @@ let view_as_app (fn : exp) (s : string list) : app_pattern option =
 
 let infix_ops = ["->"; "#="; "##"]
 
-let app_exp_mapper (e : exp) (self : Bs_ast_mapper.mapper) : exp =
+let app_exp_mapper (e : exp) (self : Ast_mapper.mapper) : exp =
   match view_as_app e infix_ops with
   | Some {op = "->"; args = [a_; f_]; loc} -> (
     (*

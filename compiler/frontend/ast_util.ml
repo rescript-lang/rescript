@@ -25,7 +25,7 @@
 let js_property loc obj (name : string) =
   Parsetree.Pexp_send (obj, {loc; txt = name})
 
-let record_as_js_object loc (self : Bs_ast_mapper.mapper)
+let record_as_js_object loc (self : Ast_mapper.mapper)
     (label_exprs : Parsetree.expression Parsetree.record_element list) :
     Parsetree.expression_desc =
   let labels, args, arity =
