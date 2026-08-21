@@ -537,18 +537,14 @@ let transl_primitive_application loc prim env ty args =
               {
                 exp_desc =
                   Texp_construct
-                    ( _,
-                      {cstr_identity = Ordinary_constructor _; cstr_args = []},
-                      _ );
+                    (_, {cstr_kind = Ordinary_constructor; cstr_args = []}, _);
               };
             ]
           | [
               {
                 exp_desc =
                   Texp_construct
-                    ( _,
-                      {cstr_identity = Ordinary_constructor _; cstr_args = []},
-                      _ );
+                    (_, {cstr_kind = Ordinary_constructor; cstr_args = []}, _);
               };
               _;
             ]
@@ -778,8 +774,8 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
       | [x] -> x
       | _ -> assert false
     else
-      match cstr.cstr_identity with
-      | Ordinary_constructor _ when cstr.cstr_args = [] ->
+      match cstr.cstr_kind with
+      | Ordinary_constructor when cstr.cstr_args = [] ->
         Lconst
           (Const_pointer
              (if Datarepr.constructor_has_optional_shape cstr then Pt_shape_none
@@ -787,7 +783,7 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
                 Pt_constructor
                   (Ast_untagged_variants.constructor_tag ~name:cstr.cstr_name
                      cstr.cstr_attributes)))
-      | Ordinary_constructor _ -> (
+      | Ordinary_constructor -> (
         let runtime =
           Ast_untagged_variants.block_runtime ~name:cstr.cstr_name
             cstr.cstr_attributes

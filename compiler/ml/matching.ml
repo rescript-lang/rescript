@@ -927,7 +927,7 @@ and split_constr cls args def k =
   let ex_pat = what_is_cases cls in
   match ex_pat.pat_desc with
   | Tpat_any -> precompile_var args cls def k
-  | Tpat_construct (_, {cstr_identity = Extension_constructor _}, _) ->
+  | Tpat_construct (_, {cstr_kind = Extension_constructor _}, _) ->
     split_naive cls args def k
   | _ -> (
     let group = get_group ex_pat in
@@ -1271,8 +1271,8 @@ let make_constr_matching p def ctx = function
       if cstr.cstr_inlined <> None || (untagged && cstr.cstr_args <> []) then
         (arg, Alias) :: argl
       else
-        match cstr.cstr_identity with
-        | Ordinary_constructor _
+        match cstr.cstr_kind with
+        | Ordinary_constructor
           when cstr.cstr_args <> []
                && Datarepr.constructor_has_optional_shape cstr ->
           let from_option =
@@ -1283,7 +1283,7 @@ let make_constr_matching p def ctx = function
             | _ -> Pval_from_option
           in
           (Lprim (from_option, [arg], p.pat_loc), Alias) :: argl
-        | Ordinary_constructor _ ->
+        | Ordinary_constructor ->
           make_field_args p.pat_loc Alias arg 0 (cstr.cstr_arity - 1) argl
             ~fld_info:(if cstr.cstr_name = "::" then Fld_cons else Fld_variant)
         | Extension_constructor _ ->
@@ -2005,8 +2005,8 @@ let split_cases tag_lambda_list =
     | [] -> ([], [])
     | (cstr, act) :: rem -> (
       let consts, nonconsts = split_rec rem in
-      match cstr.cstr_identity with
-      | Ordinary_constructor _ ->
+      match cstr.cstr_kind with
+      | Ordinary_constructor ->
         if cstr.cstr_args = [] then ((cstr, act) :: consts, nonconsts)
         else (consts, (cstr, act) :: nonconsts)
       | Extension_constructor _ -> assert false)
@@ -2031,9 +2031,9 @@ let get_extension_cases tag_lambda_list =
     | [] -> []
     | (cstr, act) :: rem -> (
       let nonconsts = split_rec rem in
-      match cstr.cstr_identity with
+      match cstr.cstr_kind with
       | Extension_constructor path -> (path, act) :: nonconsts
-      | Ordinary_constructor _ -> assert false)
+      | Ordinary_constructor -> assert false)
   in
   split_rec tag_lambda_list
 
@@ -2053,9 +2053,9 @@ let constructor_switch_key layout (cstr : Types.constructor_description) =
 let combine_constructor loc arg ex_pat cstr partial ctx def
     (tag_lambda_list, total1, pats) =
   let is_extension =
-    match cstr.cstr_identity with
+    match cstr.cstr_kind with
     | Extension_constructor _ -> true
-    | Ordinary_constructor _ -> false
+    | Ordinary_constructor -> false
   in
   if is_extension then
     (* Special cases for extensions *)

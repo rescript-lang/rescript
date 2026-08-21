@@ -354,7 +354,7 @@ type constructor_description = {
   cstr_existentials: type_expr list; (* list of existentials *)
   cstr_args: type_expr list; (* Type of the arguments *)
   cstr_arity: int; (* Number of arguments *)
-  cstr_identity: constructor_identity; (* Semantic identity *)
+  cstr_kind: constructor_kind;
   cstr_layout: Variant_runtime.variant_layout option;
       (* Runtime layout of the declaring variant; None for extension
          constructors *)
@@ -368,13 +368,13 @@ type constructor_description = {
   cstr_inlined: type_declaration option;
 }
 
-and constructor_identity =
-  | Ordinary_constructor of {type_path: Path.t; name: string}
-    (* Constructor introduced by a variant type declaration. The path is
-         the path of the declaring type as written, so a re-exported variant
-         (type u = M.t = A | B) yields descriptions carrying the
-         re-exporting type's path. *)
-  | Extension_constructor of Path.t (* Extension constructor *)
+and constructor_kind =
+  | Ordinary_constructor
+    (* Constructor introduced by a variant type declaration; identified
+         within its variant by [cstr_name] *)
+  | Extension_constructor of Path.t
+(* Extension constructor, identified by its own path since extension
+         constructors can be rebound *)
 
 (* Constructor descriptions of a common scrutinee type denote the same
    constructor: ordinary constructors compare by name (re-exported variants

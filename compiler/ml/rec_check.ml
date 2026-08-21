@@ -264,7 +264,7 @@ let rec expression : Env.env -> Typedtree.expression -> Use.t =
   | Texp_array exprs -> Use.guard (list expression env exprs)
   | Texp_construct (_, desc, exprs) ->
     let access_constructor =
-      match desc.cstr_identity with
+      match desc.cstr_kind with
       | Extension_constructor pth -> Use.inspect (path env pth)
       | _ -> Use.empty
     in

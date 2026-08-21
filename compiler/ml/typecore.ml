@@ -3450,7 +3450,7 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
           };
         ] ->
       let path =
-        match (Typetexp.find_constructor env lid.loc lid.txt).cstr_identity with
+        match (Typetexp.find_constructor env lid.loc lid.txt).cstr_kind with
         | Extension_constructor path -> path
         | _ -> raise (Error (lid.loc, env, Not_an_extension_constructor))
       in

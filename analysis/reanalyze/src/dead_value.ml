@@ -230,10 +230,10 @@ let rec collect_expr ~config ~refs ~file_deps ~cross_file ~direct_callees
       ( _,
         {
           cstr_loc = {Location.loc_start = pos_to; loc_ghost} as loc_to;
-          cstr_identity;
+          cstr_kind;
         },
         _ ) ->
-    (match cstr_identity with
+    (match cstr_kind with
     | Extension_constructor path ->
       path
       |> Dead_exception.mark_as_used ~config ~refs ~file_deps ~cross_file
