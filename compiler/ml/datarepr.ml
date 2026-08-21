@@ -144,8 +144,7 @@ let constructor_descrs ty_path decl cstrs =
           cstr_existentials = existentials;
           cstr_args;
           cstr_arity = List.length cstr_args;
-          cstr_identity =
-            Ordinary_constructor {type_path = ty_path; name = cstr_name};
+          cstr_kind = Ordinary_constructor;
           cstr_layout = Some layout;
           cstr_transparent =
             !num_consts = 0 && !num_nonconsts = 1 && cstr_args <> []
@@ -201,7 +200,7 @@ let extension_descr path_ext ext =
     cstr_existentials = existentials;
     cstr_args;
     cstr_arity = List.length cstr_args;
-    cstr_identity = Extension_constructor path_ext;
+    cstr_kind = Extension_constructor path_ext;
     cstr_layout = None;
     cstr_transparent = false;
     cstr_private = ext.ext_private;

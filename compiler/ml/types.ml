@@ -250,7 +250,7 @@ type constructor_description = {
   cstr_existentials: type_expr list; (* list of existentials *)
   cstr_args: type_expr list; (* Type of the arguments *)
   cstr_arity: int; (* Number of arguments *)
-  cstr_identity: constructor_identity; (* Semantic identity *)
+  cstr_kind: constructor_kind;
   cstr_layout: Variant_runtime.variant_layout option;
       (* Runtime layout of the declaring variant; None for extension
          constructors *)
@@ -264,13 +264,13 @@ type constructor_description = {
   cstr_inlined: type_declaration option;
 }
 
-and constructor_identity =
-  | Ordinary_constructor of {type_path: Path.t; name: string}
-    (* Constructor introduced by a variant type declaration. The path is
-         the path of the declaring type as written, so a re-exported variant
-         (type u = M.t = A | B) yields descriptions carrying the
-         re-exporting type's path. *)
-  | Extension_constructor of Path.t (* Extension constructor *)
+and constructor_kind =
+  | Ordinary_constructor
+    (* Constructor introduced by a variant type declaration; identified
+         within its variant by [cstr_name] *)
+  | Extension_constructor of Path.t
+(* Extension constructor, identified by its own path since extension
+         constructors can be rebound *)
 
 (* Whether two constructor descriptions denote the same constructor of a
    common scrutinee type. Because a re-exported variant mints descriptions
@@ -278,14 +278,13 @@ and constructor_identity =
    only; the shared scrutinee type makes the name unambiguous. Not a
    general-purpose identity test across unrelated types. *)
 let same_constructor c1 c2 =
-  match (c1.cstr_identity, c2.cstr_identity) with
-  | Ordinary_constructor {name = n1}, Ordinary_constructor {name = n2} ->
-    n1 = n2
+  match (c1.cstr_kind, c2.cstr_kind) with
+  | Ordinary_constructor, Ordinary_constructor -> c1.cstr_name = c2.cstr_name
   | Extension_constructor p1, Extension_constructor p2 -> Path.same p1 p2
-  | (Ordinary_constructor _ | Extension_constructor _), _ -> false
+  | (Ordinary_constructor | Extension_constructor _), _ -> false
 
 let may_equal_constr c1 c2 =
-  match (c1.cstr_identity, c2.cstr_identity) with
+  match (c1.cstr_kind, c2.cstr_kind) with
   | Extension_constructor _, Extension_constructor _ ->
     (* extension constructors may be rebound, so paths cannot disprove
        equality; arity can *)

@@ -862,9 +862,9 @@ let row_of_pat pat =
 let full_match closing env =
   match env with
   | (({pat_desc = Tpat_construct (_, c, _)} as p), _) :: _ -> (
-    match c.cstr_identity with
+    match c.cstr_kind with
     | Extension_constructor _ -> false
-    | Ordinary_constructor _ ->
+    | Ordinary_constructor ->
       List.length env
       = List.length (get_variant_constructors p.pat_env c.cstr_res))
   | (({pat_desc = Tpat_variant _} as p), _) :: _ ->
@@ -910,11 +910,10 @@ let should_extend ext env =
     | [] -> assert false
     | (p, _) :: _ -> (
       match p.pat_desc with
-      | Tpat_construct (_, {cstr_identity = Ordinary_constructor _}, _) ->
+      | Tpat_construct (_, {cstr_kind = Ordinary_constructor}, _) ->
         let path = get_type_path p.pat_type p.pat_env in
         Path.same path ext
-      | Tpat_construct (_, {cstr_identity = Extension_constructor _}, _) ->
-        false
+      | Tpat_construct (_, {cstr_kind = Extension_constructor _}, _) -> false
       | Tpat_constant _ | Tpat_tuple _ | Tpat_variant _ | Tpat_record _
       | Tpat_array _ ->
         false
@@ -987,7 +986,7 @@ let complete_constrs p seen_constrs =
 
 let build_other_constrs env p =
   match p.pat_desc with
-  | Tpat_construct (_, {cstr_identity = Ordinary_constructor _}, _) ->
+  | Tpat_construct (_, {cstr_kind = Ordinary_constructor}, _) ->
     let get_constr = function
       | {pat_desc = Tpat_construct (_, c, _)} -> c
       | _ -> fatal_error "Parmatch.get_constr"
@@ -1015,10 +1014,7 @@ let some_other_tag = "<some other tag>"
 
 let build_other ext env : Typedtree.pattern =
   match env with
-  | ( {
-        pat_desc =
-          Tpat_construct (lid, {cstr_identity = Extension_constructor _}, _);
-      },
+  | ( {pat_desc = Tpat_construct (lid, {cstr_kind = Extension_constructor _}, _)},
       _ )
     :: _ ->
     (* let c = {c with cstr_name = "*extension*"} in *)
@@ -2141,7 +2137,7 @@ let extendable_path path =
 
 let rec collect_paths_from_pat r p =
   match p.pat_desc with
-  | Tpat_construct (_, {cstr_identity = Ordinary_constructor _}, ps) ->
+  | Tpat_construct (_, {cstr_kind = Ordinary_constructor}, ps) ->
     let path = get_type_path p.pat_type p.pat_env in
     List.fold_left collect_paths_from_pat
       (if extendable_path path then add_path path r else r)
@@ -2149,7 +2145,7 @@ let rec collect_paths_from_pat r p =
   | Tpat_any | Tpat_var _ | Tpat_constant _ | Tpat_variant (_, None, _) -> r
   | Tpat_tuple ps
   | Tpat_array ps
-  | Tpat_construct (_, {cstr_identity = Extension_constructor _}, ps) ->
+  | Tpat_construct (_, {cstr_kind = Extension_constructor _}, ps) ->
     List.fold_left collect_paths_from_pat r ps
   | Tpat_record (lps, _, _rest) ->
     List.fold_left (fun r (_, _, p, _) -> collect_paths_from_pat r p) r lps

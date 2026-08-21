@@ -1690,7 +1690,7 @@ let transl_extension_constructor env type_path type_params typext_params priv
       | Private, Public -> raise (Error (lid.loc, Rebind_private lid.txt))
       | _ -> ());
       let path =
-        match cdescr.cstr_identity with
+        match cdescr.cstr_kind with
         | Extension_constructor path -> path
         | _ -> assert false
       in
