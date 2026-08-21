@@ -251,6 +251,9 @@ type constructor_description = {
   cstr_args: type_expr list; (* Type of the arguments *)
   cstr_arity: int; (* Number of arguments *)
   cstr_identity: constructor_identity; (* Semantic identity *)
+  cstr_layout: Variant_runtime.variant_layout option;
+      (* Runtime layout of the declaring variant; None for extension
+         constructors *)
   cstr_transparent: bool;
       (* Sole payload-carrying constructor of an unboxed type: constructing
          it is the identity at runtime *)

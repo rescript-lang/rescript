@@ -36,18 +36,16 @@ let transl_module =
 
 (* Number of payload-carrying constructors of the variant declaring
    [cstr]; part of the runtime representation of its blocks *)
-let num_nonconst_constructors env (cstr : Types.constructor_description) =
-  match cstr.cstr_identity with
-  | Ordinary_constructor {type_path} -> (
-    match (Env.find_type type_path env).type_kind with
-    | Type_variant (cstrs, _) ->
-      List.length
-        (List.filter
-           (fun (cd : Types.constructor_declaration) ->
-             cd.cd_args <> Cstr_tuple [])
-           cstrs)
-    | _ -> assert false)
-  | Extension_constructor _ -> assert false
+let num_nonconst_constructors (cstr : Types.constructor_description) =
+  match cstr.cstr_layout with
+  | Some layout ->
+    Array.fold_left
+      (fun n (case : Variant_runtime.constructor_case) ->
+        match case with
+        | Block _ -> n + 1
+        | Constant _ -> n)
+      0 layout.constructors
+  | None -> assert false
 
 (* Compile an exception/extension definition *)
 
@@ -840,7 +838,7 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
               Blk_constructor
                 {
                   name = cstr.cstr_name;
-                  num_nonconst = num_nonconst_constructors e.exp_env cstr;
+                  num_nonconst = num_nonconst_constructors cstr;
                   runtime;
                 }
           in
