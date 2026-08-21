@@ -1358,7 +1358,7 @@ let rec float_equal ?comment (e0 : t) (e1 : t) : t =
 let int_equal = float_equal
 
 let tag_type = function
-  | Ast_untagged_variants.String s -> str s ~delim:DStarJ
+  | Variant_runtime.String s -> str s ~delim:DStarJ
   | Int i -> small_int i
   | Float f -> float f
   | BigInt i ->
@@ -1374,7 +1374,7 @@ let tag_type = function
   | Untagged FunctionType -> str "function"
   | Untagged StringType -> str "string"
   | Untagged (InstanceType i) ->
-    str (Ast_untagged_variants.Instance.to_string i) ~delim:DNoQuotes
+    str (Variant_runtime.Instance.to_string i) ~delim:DNoQuotes
   | Untagged ObjectType -> str "object"
   | Untagged UnknownType ->
     (* TODO: this should not happen *)
@@ -1395,7 +1395,7 @@ let rec emit_check (check : t Ast_untagged_variants.Dynamic_checks.t) =
   | TypeOf x -> typeof (emit_check x)
   | IsInstanceOf (Array, x) -> is_array (emit_check x)
   | IsInstanceOf (instance, x) ->
-    let instance_name = Ast_untagged_variants.Instance.to_string instance in
+    let instance_name = Variant_runtime.Instance.to_string instance in
     instanceof (emit_check x) (str instance_name ~delim:DNoQuotes)
   | Not x -> not (emit_check x)
   | Expr x -> x

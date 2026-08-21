@@ -19,6 +19,9 @@
 open Types
 
 val constructor_has_optional_shape : Types.constructor_description -> bool
+val constructor_case :
+  Types.constructor_description -> Variant_runtime.constructor_case
+val constructor_is_transparent : Types.constructor_description -> bool
 
 val extension_descr : Path.t -> extension_constructor -> constructor_description
 

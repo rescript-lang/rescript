@@ -100,6 +100,22 @@ let constructor_has_optional_shape
     ({cstr_attributes = attrs} : constructor_description) =
   List.exists (fun (x, _) -> x.txt = internal_optional) attrs
 
+(* The constructor's entry in its variant's canonical layout *)
+let constructor_case (cstr : constructor_description) =
+  match cstr.cstr_layout with
+  | Some layout -> Variant_runtime.constructor_by_name layout cstr.cstr_name
+  | None -> assert false
+
+(* Sole payload-carrying constructor of an unboxed type: constructing it is
+   the identity at runtime *)
+let constructor_is_transparent (cstr : constructor_description) =
+  (match cstr.cstr_layout with
+  | Some [|Block _|] -> true
+  | _ -> false)
+  && List.exists
+       (fun (attribute, _) -> attribute.txt = "unboxed")
+       cstr.cstr_attributes
+
 let constructor_descrs ty_path decl cstrs =
   let layout =
     match decl.type_kind with
@@ -107,11 +123,7 @@ let constructor_descrs ty_path decl cstrs =
     | Type_abstract | Type_record _ | Type_open -> assert false
   in
   let ty_res = newgenconstr ty_path decl.type_params in
-  let num_consts = ref 0 and num_nonconsts = ref 0 in
-  List.iter
-    (fun {cd_args; _} ->
-      if cd_args = Cstr_tuple [] then incr num_consts else incr num_nonconsts)
-    cstrs;
+  let num_nonconsts = Variant_runtime.num_blocks layout in
   let rec describe_constructors = function
     | [] -> []
     | {cd_id; cd_args; cd_res; cd_loc; cd_attributes} :: rem ->
@@ -127,11 +139,7 @@ let constructor_descrs ty_path decl cstrs =
           if decl.type_representation = Transparent then Record_unboxed true
           else
             Record_inlined
-              {
-                name = cstr_name;
-                num_nonconsts = !num_nonconsts;
-                attrs = cd_attributes;
-              }
+              {name = cstr_name; num_nonconsts; attrs = cd_attributes}
         in
         constructor_args decl.type_private cd_args cd_res
           (Path.Pdot (ty_path, cstr_name, Path.nopos))
@@ -146,11 +154,6 @@ let constructor_descrs ty_path decl cstrs =
           cstr_arity = List.length cstr_args;
           cstr_kind = Ordinary_constructor;
           cstr_layout = Some layout;
-          cstr_transparent =
-            !num_consts = 0 && !num_nonconsts = 1 && cstr_args <> []
-            && List.exists
-                 (fun (attribute, _) -> attribute.txt = "unboxed")
-                 cd_attributes;
           cstr_private = decl.type_private;
           cstr_generalized = cd_res <> None;
           cstr_loc = cd_loc;
@@ -202,7 +205,6 @@ let extension_descr path_ext ext =
     cstr_arity = List.length cstr_args;
     cstr_kind = Extension_constructor path_ext;
     cstr_layout = None;
-    cstr_transparent = false;
     cstr_private = ext.ext_private;
     cstr_generalized = ext.ext_ret_type <> None;
     cstr_loc = ext.ext_loc;

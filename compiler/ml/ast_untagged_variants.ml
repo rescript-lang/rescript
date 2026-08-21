@@ -1,4 +1,4 @@
-module Instance = Variant_runtime.Instance
+open Variant_runtime
 
 type untagged_error =
   | OnlyOneUnknown of string
@@ -58,17 +58,6 @@ let report_error ppf =
        rename the field."
       constructor_name runtime_value field_name
 
-type block_type = Variant_runtime.block_type =
-  | IntType
-  | StringType
-  | FloatType
-  | BigintType
-  | BooleanType
-  | InstanceType of Instance.t
-  | FunctionType
-  | ObjectType
-  | UnknownType
-
 let block_type_to_user_visible_string = function
   | IntType -> "int"
   | StringType -> "string"
@@ -85,60 +74,6 @@ let block_type_to_user_visible_string = function
   Can be a literal (case with no payload), or a block (case with payload).
   In the case of block it can be tagged or untagged.
 *)
-type tag_type = Variant_runtime.tag_type =
-  | String of string
-  | Int of int
-  | Float of string
-  | BigInt of string
-  | Bool of bool
-  | Null
-  | Undefined (* literal or tagged block *)
-  | Untagged of block_type (* untagged block *)
-type tag = Variant_runtime.tag = {name: string; tag_type: tag_type option}
-
-type block_runtime = Variant_runtime.block_runtime = {
-  tag: tag;
-  tag_name: string option;
-  untagged: bool;
-}
-(** Runtime information shared by construction and pattern matching for a
-    constructor carrying a payload. [block_type] is deliberately not part of
-    this value: it describes how a matcher recognizes an unboxed payload, not
-    how the value itself is constructed. *)
-
-type block = Variant_runtime.block = {
-  runtime: block_runtime;
-  block_type: block_type option;
-}
-
-type constructor_case = Variant_runtime.constructor_case =
-  | Constant of tag
-  | Block of block
-
-type variant_layout = Variant_runtime.variant_layout = {
-  constructors: constructor_case array;
-  constructors_by_name: (int * constructor_case) Map_string.t;
-  dispatch: Variant_runtime.variant_dispatch;
-}
-(** Canonical runtime layout in source-constructor order. *)
-
-type variant_dispatch = Variant_runtime.variant_dispatch = {
-  tag_name: string option;
-  block_types: block_type list;
-  literal_tags: tag_type list;
-  has_null: bool;
-  has_undefined: bool;
-  has_other_literal: bool;
-}
-(** The whole-variant information needed to choose a JavaScript dispatch
-    strategy. Constructor identity is carried by each switch arm instead. *)
-
-let constructor_by_name layout name =
-  snd (Map_string.find_exn layout.constructors_by_name name)
-
-let constructor_position layout name =
-  fst (Map_string.find_exn layout.constructors_by_name name)
-
 let tag_type_to_user_visible_string = function
   | String _ -> "string"
   | Int _ -> "int"

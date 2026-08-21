@@ -38,13 +38,7 @@ let transl_module =
    [cstr]; part of the runtime representation of its blocks *)
 let num_nonconst_constructors (cstr : Types.constructor_description) =
   match cstr.cstr_layout with
-  | Some layout ->
-    Array.fold_left
-      (fun n (case : Variant_runtime.constructor_case) ->
-        match case with
-        | Block _ -> n + 1
-        | Constant _ -> n)
-      0 layout.constructors
+  | Some layout -> Variant_runtime.num_blocks layout
   | None -> assert false
 
 (* Compile an exception/extension definition *)
@@ -781,14 +775,16 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
              (if Datarepr.constructor_has_optional_shape cstr then Pt_shape_none
               else
                 Pt_constructor
-                  (Ast_untagged_variants.constructor_tag ~name:cstr.cstr_name
-                     cstr.cstr_attributes)))
+                  (match Datarepr.constructor_case cstr with
+                  | Constant tag -> tag
+                  | Block _ -> assert false)))
       | Ordinary_constructor -> (
         let runtime =
-          Ast_untagged_variants.block_runtime ~name:cstr.cstr_name
-            cstr.cstr_attributes
+          match Datarepr.constructor_case cstr with
+          | Block {runtime} -> runtime
+          | Constant _ -> assert false
         in
-        if cstr.cstr_transparent then
+        if Datarepr.constructor_is_transparent cstr then
           match ll with
           | [value] -> value
           | _ -> assert false

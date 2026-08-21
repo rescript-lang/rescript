@@ -5,6 +5,7 @@
    [Type_variant] and never re-derived. It lives above [Ctype] because
    classifying untagged payloads requires expanding their types. *)
 
+open Variant_runtime
 open Ast_untagged_variants
 
 let get_block_type_from_typ ~env (t : Types.type_expr) : block_type option =
@@ -88,20 +89,4 @@ let layout_from_type_variant ?(is_untagged_def = false) ~env
     Array.of_list
       (List.map (fun (_, constructor) -> constructor) located_constructors)
   in
-  let constructors_by_name =
-    let _, constructors_by_name =
-      List.fold_left2
-        (fun (index, constructors_by_name)
-             (cstr : Types.constructor_declaration) (_, constructor) ->
-          ( index + 1,
-            Map_string.add constructors_by_name (Ident.name cstr.cd_id)
-              (index, constructor) ))
-        (0, Map_string.empty) cstrs located_constructors
-    in
-    constructors_by_name
-  in
-  {
-    constructors;
-    constructors_by_name;
-    dispatch = Variant_runtime.dispatch_of_constructors constructors;
-  }
+  constructors

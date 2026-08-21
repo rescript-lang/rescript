@@ -295,7 +295,7 @@ let switch lam (lam_switch : lambda_switch) : t =
           match key with
           | Lambda.Switch_int ordinal when ordinal = i -> Some action
           | Switch_constructor
-              (Constant {tag_type = Some (Ast_untagged_variants.Int value)})
+              (Constant {tag_type = Some (Variant_runtime.Int value)})
             when comment = None && value = i ->
             Some action
           | Switch_int _ | Switch_constructor _ -> None)

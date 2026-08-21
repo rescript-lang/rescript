@@ -36,7 +36,7 @@ type t =
   | Const_js_true
   | Const_js_false
   | Const_int of {i: int32; comment: pointer_info}
-  | Const_constructor of Ast_untagged_variants.tag
+  | Const_constructor of Variant_runtime.tag
     (* Constant constructor of a nominal variant, emitted from its
          canonical runtime descriptor rather than an ordinal *)
   | Const_char of int

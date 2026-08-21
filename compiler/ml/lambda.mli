@@ -23,14 +23,14 @@ type tag_info =
   | Blk_constructor of {
       name: string;
       num_nonconst: int;
-      runtime: Ast_untagged_variants.block_runtime;
+      runtime: Variant_runtime.block_runtime;
     }
   | Blk_record_inlined of {
       name: string;
       num_nonconst: int;
       fields: (string * bool (* optional *)) array;
       mutable_flag: mutable_flag;
-      runtime: Ast_untagged_variants.block_runtime;
+      runtime: Variant_runtime.block_runtime;
     }
   | Blk_tuple
   | Blk_poly_var of string
@@ -73,7 +73,7 @@ val blk_record_inlined :
   (Types.label_description * Typedtree.record_label_definition * bool) array ->
   string ->
   int ->
-  runtime:Ast_untagged_variants.block_runtime ->
+  runtime:Variant_runtime.block_runtime ->
   mutable_flag ->
   tag_info
 
@@ -115,7 +115,7 @@ val fld_record_extension_set : Types.label_description -> set_field_dbg_info
 type immediate_or_pointer = Immediate | Pointer
 
 type pointer_info =
-  | Pt_constructor of Ast_untagged_variants.tag
+  | Pt_constructor of Variant_runtime.tag
   | Pt_variant of {name: string}
   | Pt_module_alias
   | Pt_shape_none
@@ -353,11 +353,11 @@ and lambda_apply = {
 
 and switch_key =
   | Switch_int of int
-  | Switch_constructor of Ast_untagged_variants.constructor_case
+  | Switch_constructor of Variant_runtime.constructor_case
 
 and switch_dispatch =
   | Switch_direct
-  | Switch_variant of Ast_untagged_variants.variant_dispatch
+  | Switch_variant of Variant_runtime.variant_dispatch
 
 and 'a switch = {
   sw_consts_full: bool;
