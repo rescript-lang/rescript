@@ -93,12 +93,6 @@ type block = {runtime: block_runtime; block_type: block_type option}
 
 type constructor_case = Constant of tag | Block of block
 
-type variant_layout = {
-  constructors: constructor_case array;
-  constructors_by_name: (int * constructor_case) Map_string.t;
-}
-(** Canonical runtime layout in source-constructor order. *)
-
 type variant_dispatch = {
   tag_name: string option;
   block_types: block_type list;
@@ -110,11 +104,60 @@ type variant_dispatch = {
 (** The whole-variant information needed to choose a JavaScript dispatch
     strategy. Constructor identity is carried by each switch arm instead. *)
 
+type variant_layout = {
+  constructors: constructor_case array;
+  constructors_by_name: (int * constructor_case) Map_string.t;
+  dispatch: variant_dispatch;
+}
+(** Canonical runtime layout in source-constructor order, with the
+    precomputed dispatch strategy. *)
+
+let dispatch_of_constructors (constructors : constructor_case array) :
+    variant_dispatch =
+  let tag_name = ref None in
+  let block_types = ref [] in
+  let literal_tags = ref [] in
+  let has_null = ref false in
+  let has_undefined = ref false in
+  let has_other_literal = ref false in
+  Array.iter
+    (function
+      | Constant {name; tag_type} -> (
+        let tag =
+          match tag_type with
+          | Some tag -> tag
+          | None -> String name
+        in
+        literal_tags := tag :: !literal_tags;
+        match tag with
+        | Null -> has_null := true
+        | Undefined -> has_undefined := true
+        | String _ | Int _ | Float _ | BigInt _ | Bool _ | Untagged _ ->
+          has_other_literal := true)
+      | Block {runtime = {tag_name = constructor_tag_name}; block_type} -> (
+        if !tag_name = None then tag_name := constructor_tag_name;
+        match block_type with
+        | Some block_type -> block_types := block_type :: !block_types
+        | None -> ()))
+    constructors;
+  {
+    tag_name = !tag_name;
+    block_types = !block_types;
+    literal_tags = !literal_tags;
+    has_null = !has_null;
+    has_undefined = !has_undefined;
+    has_other_literal = !has_other_literal;
+  }
+
 (* Placeholder used while a recursive declaration group is being typed;
    [Typedecl] replaces it with the computed layout once the group is in the
    environment *)
 let dummy_layout =
-  {constructors = [||]; constructors_by_name = Map_string.empty}
+  {
+    constructors = [||];
+    constructors_by_name = Map_string.empty;
+    dispatch = dispatch_of_constructors [||];
+  }
 
 (* Layout of a variant that carries no representation attributes; used for
    predefined types, whose declarations are built by hand *)
@@ -136,4 +179,8 @@ let plain_layout (cases : (string * bool (* has payload *)) list) =
         (index + 1, Map_string.add by_name name (index, constructors.(index))))
       (0, Map_string.empty) cases
   in
-  {constructors; constructors_by_name}
+  {
+    constructors;
+    constructors_by_name;
+    dispatch = dispatch_of_constructors constructors;
+  }

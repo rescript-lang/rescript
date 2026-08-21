@@ -118,6 +118,7 @@ type constructor_case = Variant_runtime.constructor_case =
 type variant_layout = Variant_runtime.variant_layout = {
   constructors: constructor_case array;
   constructors_by_name: (int * constructor_case) Map_string.t;
+  dispatch: Variant_runtime.variant_dispatch;
 }
 (** Canonical runtime layout in source-constructor order. *)
 
@@ -131,42 +132,6 @@ type variant_dispatch = Variant_runtime.variant_dispatch = {
 }
 (** The whole-variant information needed to choose a JavaScript dispatch
     strategy. Constructor identity is carried by each switch arm instead. *)
-
-let dispatch_from_layout layout =
-  let tag_name = ref None in
-  let block_types = ref [] in
-  let literal_tags = ref [] in
-  let has_null = ref false in
-  let has_undefined = ref false in
-  let has_other_literal = ref false in
-  Array.iter
-    (function
-      | Constant {name; tag_type} -> (
-        let tag =
-          match tag_type with
-          | Some tag -> tag
-          | None -> String name
-        in
-        literal_tags := tag :: !literal_tags;
-        match tag with
-        | Null -> has_null := true
-        | Undefined -> has_undefined := true
-        | String _ | Int _ | Float _ | BigInt _ | Bool _ | Untagged _ ->
-          has_other_literal := true)
-      | Block {runtime = {tag_name = constructor_tag_name}; block_type} -> (
-        if !tag_name = None then tag_name := constructor_tag_name;
-        match block_type with
-        | Some block_type -> block_types := block_type :: !block_types
-        | None -> ()))
-    layout.constructors;
-  {
-    tag_name = !tag_name;
-    block_types = !block_types;
-    literal_tags = !literal_tags;
-    has_null = !has_null;
-    has_undefined = !has_undefined;
-    has_other_literal = !has_other_literal;
-  }
 
 let constructor_by_name layout name =
   snd (Map_string.find_exn layout.constructors_by_name name)
@@ -209,16 +174,6 @@ let process_untagged (attrs : Parsetree.attributes) =
       | "unboxed" -> st := true
       | _ -> ());
   !st
-
-(* Filled in by [Typedecl] to break the module cycle through [Ctype];
-   installed at module initialization of the typing layer, so they are set
-   before any declaration is typed. *)
-let extract_concrete_typedecl :
-    (Env.t -> Types.type_expr -> Path.t * Path.t * Types.type_declaration) ref =
-  ref (Obj.magic ())
-
-let expand_head : (Env.t -> Types.type_expr -> Types.type_expr) ref =
-  ref (Obj.magic ())
 
 let process_tag_type (attrs : Parsetree.attributes) =
   let st : tag_type option ref = ref None in
@@ -300,57 +255,6 @@ let type_to_instanceof_backed_obj (t : Types.type_expr) =
     | "Stdlib.WeakMap.t" -> Some WeakMap
     | _ -> None)
   | _ -> None
-
-let get_block_type_from_typ ~env (t : Types.type_expr) : block_type option =
-  (* First check the original (unexpanded) type for typed arrays and other instance types *)
-  match type_to_instanceof_backed_obj t with
-  | Some instance_type -> Some (InstanceType instance_type)
-  | None -> (
-    (* If original type didn't match, expand and try standard checks *)
-    let expanded_t = !expand_head env t in
-    match expanded_t with
-    | {desc = Tconstr (path, _, _)} when Path.same path Predef.path_string ->
-      Some StringType
-    | {desc = Tconstr (path, _, _)} when Path.same path Predef.path_int ->
-      Some IntType
-    | {desc = Tconstr (path, _, _)} when Path.same path Predef.path_float ->
-      Some FloatType
-    | {desc = Tconstr (path, _, _)} when Path.same path Predef.path_bigint ->
-      Some BigintType
-    | {desc = Tconstr (path, _, _)} when Path.same path Predef.path_bool ->
-      Some BooleanType
-    | {desc = Tarrow _} -> Some FunctionType
-    | {desc = Tconstr _} as expanded_t when type_is_builtin_object expanded_t ->
-      Some ObjectType
-    | {desc = Tconstr _} as expanded_t
-      when type_to_instanceof_backed_obj expanded_t |> Option.is_some -> (
-      match type_to_instanceof_backed_obj expanded_t with
-      | None -> None
-      | Some instance_type -> Some (InstanceType instance_type))
-    | {desc = Ttuple _} -> Some (InstanceType Array)
-    | _ -> None)
-
-let get_block_type ~env (cstr : Types.constructor_declaration) :
-    block_type option =
-  match (process_untagged cstr.cd_attributes, cstr.cd_args) with
-  | false, _ -> None
-  | true, Cstr_tuple [t] when get_block_type_from_typ ~env t |> Option.is_some
-    ->
-    get_block_type_from_typ ~env t
-  | true, Cstr_tuple [ty] -> (
-    let default = Some UnknownType in
-    match !extract_concrete_typedecl env ty with
-    | _, _, {type_kind = Type_record (_, Record_unboxed _)} -> default
-    | _, _, {type_kind = Type_record (_, _)} -> Some ObjectType
-    | _ -> default
-    | exception _ -> default)
-  | true, Cstr_tuple (_ :: _ :: _) ->
-    (* C(_, _) with at least 2 args is an object *)
-    Some ObjectType
-  | true, Cstr_record _ ->
-    (* inline record is an object *)
-    Some ObjectType
-  | true, _ -> None (* TODO: add restrictions here *)
 
 let process_tag_name (attrs : Parsetree.attributes) =
   let st = ref None in
@@ -485,61 +389,6 @@ let check_invariant ~is_untagged_def ~(consts : (Location.t * tag) list)
 let get_cstr_loc_tag (cstr : Types.constructor_declaration) =
   (cstr.cd_loc, constructor_tag ~name:(Ident.name cstr.cd_id) cstr.cd_attributes)
 
-let constructor_declaration_from_constructor_description ~env
-    (cd : Types.constructor_description) : Types.constructor_declaration option
-    =
-  match cd.cstr_res.desc with
-  | Tconstr (path, _, _) -> (
-    match Env.find_type path env with
-    | {type_kind = Type_variant (cstrs, _)} ->
-      Ext_list.find_opt cstrs (fun cstr ->
-          if cstr.cd_id.name = cd.cstr_name then Some cstr else None)
-    | _ -> None)
-  | _ -> None
-
-let layout_from_type_variant ?(is_untagged_def = false) ~env
-    (cstrs : Types.constructor_declaration list) =
-  let get_block (cstr : Types.constructor_declaration) : block =
-    {
-      runtime = block_runtime ~name:(Ident.name cstr.cd_id) cstr.cd_attributes;
-      block_type = get_block_type ~env cstr;
-    }
-  in
-  let located_constructors =
-    List.map
-      (fun (cstr : Types.constructor_declaration) ->
-        if is_nullary_variant cstr.cd_args then
-          let loc, tag = get_cstr_loc_tag cstr in
-          (loc, Constant tag)
-        else (cstr.cd_loc, Block (get_block cstr)))
-      cstrs
-  in
-  let consts, blocks =
-    Ext_list.fold_left located_constructors ([], [])
-      (fun (consts, blocks) (loc, constructor) ->
-        match constructor with
-        | Constant tag -> ((loc, tag) :: consts, blocks)
-        | Block block -> (consts, (loc, block) :: blocks))
-  in
-  check_invariant ~is_untagged_def ~consts ~blocks;
-  let constructors =
-    Array.of_list
-      (List.map (fun (_, constructor) -> constructor) located_constructors)
-  in
-  let constructors_by_name =
-    let _, constructors_by_name =
-      List.fold_left2
-        (fun (index, constructors_by_name)
-             (cstr : Types.constructor_declaration) (_, constructor) ->
-          ( index + 1,
-            Map_string.add constructors_by_name (Ident.name cstr.cd_id)
-              (index, constructor) ))
-        (0, Map_string.empty) cstrs located_constructors
-    in
-    constructors_by_name
-  in
-  Some {constructors; constructors_by_name}
-
 let check_tag_field_conflicts (cstrs : Types.constructor_declaration list) =
   List.iter
     (fun (cstr : Types.constructor_declaration) ->
@@ -572,8 +421,6 @@ let check_tag_field_conflicts (cstrs : Types.constructor_declaration list) =
     cstrs
 
 let has_undefined_literal attrs = process_tag_type attrs = Some Undefined
-
-let block_is_object ~env attrs = get_block_type ~env attrs = Some ObjectType
 
 module Dynamic_checks = struct
   type op = EqEqEq | NotEqEq | Or | And

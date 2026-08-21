@@ -22,11 +22,6 @@ open Primitive
 open Types
 open Typetexp
 
-let () =
-  Ast_untagged_variants.extract_concrete_typedecl :=
-    Ctype.extract_concrete_typedecl
-let () = Ast_untagged_variants.expand_head := Ctype.expand_head
-
 type error =
   | Repeated_parameter
   | Duplicate_constructor of string
@@ -1593,12 +1588,8 @@ let transl_type_decl env rec_flag sdecl_list =
             Ast_untagged_variants.has_untagged decl.type_attributes
           in
           let layout =
-            match
-              Ast_untagged_variants.layout_from_type_variant ~is_untagged_def
-                ~env:newenv cstrs
-            with
-            | Some layout -> layout
-            | None -> assert false
+            Variant_layout.layout_from_type_variant ~is_untagged_def ~env:newenv
+              cstrs
           in
           (id, {decl with type_kind = Type_variant (cstrs, layout)})
         | Type_abstract | Type_record _ | Type_open -> (id, decl))

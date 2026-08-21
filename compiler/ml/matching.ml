@@ -2050,7 +2050,7 @@ let constructor_switch_key layout (cstr : Types.constructor_description) =
   Switch_constructor
     (Ast_untagged_variants.constructor_by_name layout cstr.cstr_name)
 
-let combine_constructor sw_layout loc arg ex_pat cstr partial ctx def
+let combine_constructor loc arg ex_pat cstr partial ctx def
     (tag_lambda_list, total1, pats) =
   let is_extension =
     match cstr.cstr_identity with
@@ -2088,7 +2088,7 @@ let combine_constructor sw_layout loc arg ex_pat cstr partial ctx def
   else
     (* Regular concrete type *)
     let layout =
-      match sw_layout with
+      match cstr.cstr_layout with
       | Some layout -> layout
       | None -> assert false
     in
@@ -2165,9 +2165,7 @@ let combine_constructor sw_layout loc arg ex_pat cstr partial ctx def
               sw_blocks_full = List.length nonconsts >= num_nonconsts;
               sw_blocks = nonconsts;
               sw_failaction = fail_opt;
-              sw_dispatch =
-                Switch_variant
-                  (Ast_untagged_variants.dispatch_from_layout layout);
+              sw_dispatch = Switch_variant layout.dispatch;
             }
           in
           let hs, sw = share_actions_sw sw in
@@ -2457,24 +2455,6 @@ let arg_to_var arg cls =
     let v = name_pattern "match" cls in
     (v, Lvar v)
 
-(* Resolve the canonical variant layout of a constructor pattern's type,
-   following manifest chains to the declaration *)
-let layout_from_construct_pattern (pat : pattern) =
-  let rec resolve_path (path : Path.t) =
-    match Env.find_type path pat.pat_env with
-    | {type_kind = Type_variant (cstrs, _)} ->
-      Ast_untagged_variants.layout_from_type_variant ~env:pat.pat_env cstrs
-    | {type_kind = Type_abstract; type_manifest = Some t} -> (
-      match (Ctype.unalias t).desc with
-      | Tconstr (pathn, _, _) -> resolve_path pathn
-      | _ -> None)
-    | {type_kind = Type_abstract; type_manifest = None} -> None
-    | {type_kind = Type_record _ | Type_open (* Exceptions *)} -> None
-  in
-  match (Btype.repr pat.pat_type).desc with
-  | Tconstr (path, _, _) -> resolve_path path
-  | _ -> assert false
-
 (*
   The main compilation function.
    Input:
@@ -2545,11 +2525,10 @@ and do_compile_matching repr partial ctx arg pmh =
         (combine_constant pat.pat_loc arg cst partial)
         ctx pm
     | Tpat_construct (_, cstr, _) ->
-      let sw_layout = layout_from_construct_pattern pat in
       compile_test
         (compile_match repr partial)
         partial divide_constructor
-        (combine_constructor sw_layout pat.pat_loc arg pat cstr partial)
+        (combine_constructor pat.pat_loc arg pat cstr partial)
         ctx pm
     | Tpat_array _ ->
       compile_test

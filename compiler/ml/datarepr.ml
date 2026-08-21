@@ -101,6 +101,11 @@ let constructor_has_optional_shape
   List.exists (fun (x, _) -> x.txt = internal_optional) attrs
 
 let constructor_descrs ty_path decl cstrs =
+  let layout =
+    match decl.type_kind with
+    | Type_variant (_, layout) -> layout
+    | Type_abstract | Type_record _ | Type_open -> assert false
+  in
   let ty_res = newgenconstr ty_path decl.type_params in
   let num_consts = ref 0 and num_nonconsts = ref 0 in
   List.iter
@@ -141,6 +146,7 @@ let constructor_descrs ty_path decl cstrs =
           cstr_arity = List.length cstr_args;
           cstr_identity =
             Ordinary_constructor {type_path = ty_path; name = cstr_name};
+          cstr_layout = Some layout;
           cstr_transparent =
             !num_consts = 0 && !num_nonconsts = 1 && cstr_args <> []
             && List.exists
@@ -196,6 +202,7 @@ let extension_descr path_ext ext =
     cstr_args;
     cstr_arity = List.length cstr_args;
     cstr_identity = Extension_constructor path_ext;
+    cstr_layout = None;
     cstr_transparent = false;
     cstr_private = ext.ext_private;
     cstr_generalized = ext.ext_ret_type <> None;
