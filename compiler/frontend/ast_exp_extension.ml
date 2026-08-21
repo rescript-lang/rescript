@@ -23,7 +23,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 open Ast_helper
 
-let handle_extension e (self : Bs_ast_mapper.mapper)
+let handle_extension e (self : Ast_mapper.mapper)
     (({txt; loc}, payload) : Parsetree.extension) =
   match txt with
   | "todo" ->
@@ -81,4 +81,4 @@ let handle_extension e (self : Bs_ast_mapper.mapper)
 (* For an unknown extension, we don't really need to process further*)
 (* Exp.extension ~loc ~attrs:e.pexp_attributes (
     self.extension self extension) *)
-(* Bs_ast_mapper.default_mapper.expr self e   *)
+(* Ast_mapper.default_mapper.expr self e   *)

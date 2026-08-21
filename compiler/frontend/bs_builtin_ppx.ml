@@ -58,11 +58,28 @@ let succeed attr attrs =
     Used_attributes.mark_used_attribute attr;
     Bs_ast_invariant.warn_discarded_unused_attributes attrs
 
-type mapper = Bs_ast_mapper.mapper
+type mapper = Ast_mapper.mapper
 
-let default_mapper = Bs_ast_mapper.default_mapper
-let default_expr_mapper = Bs_ast_mapper.default_mapper.expr
-let default_pat_mapper = Bs_ast_mapper.default_mapper.pat
+let default_mapper = Ast_mapper.default_mapper
+
+(* [Ast_mapper.default_mapper.expr], with non-recursive binding groups
+   routed through tuple/module-record pattern flattening ([let rec] groups
+   only admit variable patterns, so they map per binding). Every fallback in
+   [expr_mapper] funnels through here, so the flattening applies uniformly. *)
+let default_expr_mapper (self : mapper) (e : Parsetree.expression) =
+  match e.pexp_desc with
+  | Pexp_let (Nonrecursive, vbs, body) ->
+    {
+      e with
+      pexp_desc =
+        Pexp_let
+          ( Nonrecursive,
+            Ast_tuple_pattern_flatten.value_bindings_mapper self vbs,
+            self.expr self body );
+      pexp_attributes = self.attributes self e.pexp_attributes;
+    }
+  | _ -> Ast_mapper.default_mapper.expr self e
+let default_pat_mapper = Ast_mapper.default_mapper.pat
 
 let pat_mapper (self : mapper) (p : Parsetree.pattern) =
   match p.ppat_desc with
@@ -602,6 +619,9 @@ let structure_item_mapper (self : mapper) (str : Parsetree.structure_item) :
               ] );
       })
   | Pstr_attribute ({txt = "config"}, _) -> str
+  | Pstr_value (Nonrecursive, vbs) ->
+    Ast_helper.Str.value ~loc:str.pstr_loc Nonrecursive
+      (Ast_tuple_pattern_flatten.value_bindings_mapper self vbs)
   | _ -> default_mapper.structure_item self str
 
 let local_module_name =
@@ -784,7 +804,6 @@ let mapper : mapper =
     pat = pat_mapper;
     typ = typ_mapper;
     signature_item = signature_item_mapper;
-    value_bindings = Ast_tuple_pattern_flatten.value_bindings_mapper;
     structure_item = structure_item_mapper;
     structure = structure_mapper ~await_context:(ref (Hashtbl.create 10));
     (* Ad-hoc way to internalize stuff *)

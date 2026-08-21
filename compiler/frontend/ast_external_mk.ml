@@ -28,35 +28,20 @@ let local_external_apply loc ?(pval_attributes = []) ~(pval_prim : string list)
     Parsetree.expression_desc =
   Pexp_letmodule
     ( {txt = local_module_name; loc},
-      {
-        pmod_desc =
-          Pmod_structure
-            [
-              {
-                pstr_desc =
-                  Pstr_primitive
-                    {
-                      pval_name = {txt = local_fun_name; loc};
-                      pval_type;
-                      pval_loc = loc;
-                      pval_prim;
-                      pval_attributes;
-                    };
-                pstr_loc = loc;
-              };
-            ];
-        pmod_loc = loc;
-        pmod_attributes = [];
-      },
+      Ast_helper.Mod.structure ~loc
+        [
+          Ast_helper.Str.primitive ~loc
+            {
+              pval_name = {txt = local_fun_name; loc};
+              pval_type;
+              pval_loc = loc;
+              pval_prim;
+              pval_attributes;
+            };
+        ],
       Ast_helper.Exp.apply ~loc
-        ({
-           pexp_desc =
-             Pexp_ident
-               {txt = Ldot (Lident local_module_name, local_fun_name); loc};
-           pexp_attributes = [];
-           pexp_loc = loc;
-         }
-          : Parsetree.expression)
+        (Ast_helper.Exp.ident ~loc
+           {txt = Ldot (Lident local_module_name, local_fun_name); loc})
         (Ext_list.map args (fun x -> (Asttypes.Nolabel, x))) )
 
 let local_external_obj loc ?(pval_attributes = []) ~pval_prim ~pval_type
@@ -64,34 +49,19 @@ let local_external_obj loc ?(pval_attributes = []) ~pval_prim ~pval_type
     Parsetree.expression_desc =
   Pexp_letmodule
     ( {txt = local_module_name; loc},
-      {
-        pmod_desc =
-          Pmod_structure
-            [
-              {
-                pstr_desc =
-                  Pstr_primitive
-                    {
-                      pval_name = {txt = local_fun_name; loc};
-                      pval_type;
-                      pval_loc = loc;
-                      pval_prim;
-                      pval_attributes;
-                    };
-                pstr_loc = loc;
-              };
-            ];
-        pmod_loc = loc;
-        pmod_attributes = [];
-      },
+      Ast_helper.Mod.structure ~loc
+        [
+          Ast_helper.Str.primitive ~loc
+            {
+              pval_name = {txt = local_fun_name; loc};
+              pval_type;
+              pval_loc = loc;
+              pval_prim;
+              pval_attributes;
+            };
+        ],
       Ast_helper.Exp.apply ~loc
-        ({
-           pexp_desc =
-             Pexp_ident
-               {txt = Ldot (Lident local_module_name, local_fun_name); loc};
-           pexp_attributes = [];
-           pexp_loc = loc;
-         }
-          : Parsetree.expression)
+        (Ast_helper.Exp.ident ~loc
+           {txt = Ldot (Lident local_module_name, local_fun_name); loc})
         (Ext_list.map args (fun (l, a) ->
              (Asttypes.Labelled {txt = l; loc = Location.none}, a))) )

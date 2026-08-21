@@ -22,7 +22,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-let handle_external_in_sig (self : Bs_ast_mapper.mapper)
+let handle_external_in_sig (self : Ast_mapper.mapper)
     (prim : Parsetree.value_description) (sigi : Parsetree.signature_item) :
     Parsetree.signature_item =
   let loc = prim.pval_loc in
@@ -51,7 +51,7 @@ let handle_external_in_sig (self : Bs_ast_mapper.mapper)
             };
       })
 
-let handle_external_in_stru (self : Bs_ast_mapper.mapper)
+let handle_external_in_stru (self : Ast_mapper.mapper)
     (prim : Parsetree.value_description) (str : Parsetree.structure_item) :
     Parsetree.structure_item =
   let loc = prim.pval_loc in

@@ -30,7 +30,7 @@
 
 val record_as_js_object :
   Location.t ->
-  Bs_ast_mapper.mapper ->
+  Ast_mapper.mapper ->
   Parsetree.expression Parsetree.record_element list ->
   Parsetree.expression_desc
 
