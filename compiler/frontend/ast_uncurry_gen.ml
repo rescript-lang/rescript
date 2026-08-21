@@ -25,7 +25,7 @@
 open Ast_helper
 
 (* Handling `fun [@this]` used in `object [@bs] end` *)
-let to_method_callback ~async ~newtypes loc (self : Bs_ast_mapper.mapper)
+let to_method_callback ~async ~newtypes loc (self : Ast_mapper.mapper)
     (params : Parsetree.fun_param list) body : Parsetree.expression_desc =
   match params with
   | [] -> assert false

@@ -41,7 +41,7 @@ let rec is_simple_pattern (p : Parsetree.pattern) =
   [ let a = M.N.c
     and b = M.N.d ]
 *)
-let flattern_tuple_pattern_vb (self : Bs_ast_mapper.mapper)
+let flattern_tuple_pattern_vb (self : Ast_mapper.mapper)
     (vb : Parsetree.value_binding) (acc : Parsetree.value_binding list) :
     Parsetree.value_binding list =
   let pvb_pat = self.pat self vb.pvb_pat in
@@ -108,8 +108,8 @@ let flattern_tuple_pattern_vb (self : Bs_ast_mapper.mapper)
     {pvb_pat; pvb_expr; pvb_constraint; pvb_loc = vb.pvb_loc; pvb_attributes}
     :: acc
 
-let value_bindings_mapper (self : Bs_ast_mapper.mapper)
+let value_bindings_mapper (self : Ast_mapper.mapper)
     (vbs : Parsetree.value_binding list) =
-  (* Bs_ast_mapper.default_mapper.value_bindings self  vbs   *)
+  (* Ast_mapper.default_mapper.value_bindings self  vbs   *)
   Ext_list.fold_right vbs [] (fun vb acc ->
       flattern_tuple_pattern_vb self vb acc)

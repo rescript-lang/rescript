@@ -22,7 +22,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-val mapper : Bs_ast_mapper.mapper
+val mapper : Ast_mapper.mapper
 
 (* object 
     for setter : we can push more into [Lsend] and enclose it with a unit type
