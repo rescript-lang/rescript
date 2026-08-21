@@ -217,7 +217,7 @@ let is_jsx_component_type ~env ty =
 let get_variant_constructors
     ~(extract_concrete_typedecl : extract_concrete_typedecl) ~env ty =
   match extract_concrete_typedecl env ty with
-  | _, _, {Types.type_kind = Type_variant constructors; _} -> constructors
+  | _, _, {Types.type_kind = Type_variant (constructors, _); _} -> constructors
   | _ -> []
 
 let extract_string_constant text =

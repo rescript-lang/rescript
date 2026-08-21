@@ -826,7 +826,7 @@ and tree_of_type_decl id decl =
   in
   (match decl.type_kind with
   | Type_abstract -> ()
-  | Type_variant cstrs ->
+  | Type_variant (cstrs, _) ->
     List.iter
       (fun c ->
         mark_loops_constructor_arguments c.cd_args;
@@ -845,7 +845,7 @@ and tree_of_type_decl id decl =
       | Type_abstract ->
         decl.type_manifest = None || decl.type_private = Private
       | Type_record _ -> decl.type_private = Private
-      | Type_variant tll ->
+      | Type_variant (tll, _) ->
         decl.type_private = Private
         || List.exists (fun cd -> cd.cd_res <> None) tll
       | Type_open -> decl.type_manifest = None
@@ -878,7 +878,7 @@ and tree_of_type_decl id decl =
       | None -> (Otyp_abstract, Public)
       | Some ty -> (tree_of_typexp ~printing_context false ty, decl.type_private)
       )
-    | Type_variant cstrs ->
+    | Type_variant (cstrs, _) ->
       untagged := Ast_untagged_variants.process_untagged decl.type_attributes;
       ( tree_of_manifest
           (Otyp_sum (List.map (tree_of_constructor ~printing_context) cstrs)),

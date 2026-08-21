@@ -143,7 +143,8 @@ and type_inlined_type =
 and type_kind =
   | Type_abstract
   | Type_record of label_declaration list * record_representation
-  | Type_variant of constructor_declaration list
+  | Type_variant of
+      constructor_declaration list * Variant_runtime.variant_layout
   | Type_open
 
 and record_representation =

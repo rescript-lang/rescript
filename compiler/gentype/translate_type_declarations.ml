@@ -341,7 +341,7 @@ let translate_type_declaration ~config ~output_file_relative ~resolver ~type_env
     match typ_type.type_kind with
     | Type_record (label_declarations, _) ->
       RecordDeclarationFromTypes label_declarations
-    | Type_variant constructor_declarations ->
+    | Type_variant (constructor_declarations, _) ->
       VariantDeclarationFromTypes constructor_declarations
     | Type_abstract -> GeneralDeclaration typ_manifest
     | _ -> NoDeclaration

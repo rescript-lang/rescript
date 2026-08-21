@@ -313,7 +313,7 @@ let map_type_expr_cstr_args f = function
 
 let iter_type_expr_kind f = function
   | Type_abstract -> ()
-  | Type_variant cstrs ->
+  | Type_variant (cstrs, _) ->
     List.iter
       (fun cd ->
         iter_type_expr_cstr_args f cd.cd_args;

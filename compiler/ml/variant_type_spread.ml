@@ -42,9 +42,9 @@ let map_constructors ~(sdecl : Parsetree.type_declaration) ~all_constructors env
     in
 
     match type_decl with
-    | {type_kind = Type_variant []} ->
+    | {type_kind = Type_variant ([], _)} ->
       raise (VariantTypeSpreadError (loc.loc, InvalidType))
-    | {type_kind = Type_variant cstrs; type_attributes; type_params} ->
+    | {type_kind = Type_variant (cstrs, _); type_attributes; type_params} ->
       if List.length type_params > 0 then
         raise (VariantTypeSpreadError (loc.loc, HasTypeParams));
 
@@ -145,7 +145,7 @@ let expand_dummy_constructor_args (sdecl_list : Parsetree.type_declaration list)
     (fun sdecl (_, decl) ->
       match (sdecl, decl) with
       | ( {Parsetree.ptype_kind = Ptype_variant c1},
-          {Types.type_kind = Type_variant c2} ) ->
+          {Types.type_kind = Type_variant (c2, _)} ) ->
         {
           sdecl with
           ptype_kind =

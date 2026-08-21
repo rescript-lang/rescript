@@ -430,7 +430,7 @@ let closed_type_decl decl =
     List.iter mark_type decl.type_params;
     (match decl.type_kind with
     | Type_abstract -> ()
-    | Type_variant v ->
+    | Type_variant (v, _) ->
       List.iter
         (fun {cd_args; cd_res; _} ->
           match cd_res with
@@ -946,16 +946,17 @@ let instance_parameterized_type ?keep_names sch_args sch =
 let map_kind f = function
   | Type_abstract -> Type_abstract
   | Type_open -> Type_open
-  | Type_variant cl ->
+  | Type_variant (cl, layout) ->
     Type_variant
-      (List.map
-         (fun c ->
-           {
-             c with
-             cd_args = map_type_expr_cstr_args f c.cd_args;
-             cd_res = may_map f c.cd_res;
-           })
-         cl)
+      ( List.map
+          (fun c ->
+            {
+              c with
+              cd_args = map_type_expr_cstr_args f c.cd_args;
+              cd_res = may_map f c.cd_res;
+            })
+          cl,
+        layout )
   | Type_record (fl, rr) ->
     Type_record (List.map (fun l -> {l with ld_type = f l.ld_type}) fl, rr)
 
@@ -1900,7 +1901,7 @@ and mcomp_type_decl type_pairs env p1 p2 tl1 tl2 =
         when Types.same_record_representation r r' ->
         mcomp_list type_pairs env tl1 tl2;
         mcomp_record_description type_pairs env lst lst'
-      | Type_variant v1, Type_variant v2 ->
+      | Type_variant (v1, _), Type_variant (v2, _) ->
         mcomp_list type_pairs env tl1 tl2;
         mcomp_variant_description type_pairs env v1 v2
       | Type_open, Type_open -> mcomp_list type_pairs env tl1 tl2
@@ -3571,8 +3572,12 @@ let rec subtype_rec env trace t1 t2 cstrs =
         match
           (extract_concrete_typedecl env t1, extract_concrete_typedecl env t2)
         with
-        | ( (p1, _, {type_kind = Type_variant c1; type_attributes = t1attrs}),
-            (p2, _, {type_kind = Type_variant c2; type_attributes = t2attrs}) )
+        | ( ( p1,
+              _,
+              {type_kind = Type_variant (c1, _); type_attributes = t1attrs} ),
+            ( p2,
+              _,
+              {type_kind = Type_variant (c2, _); type_attributes = t2attrs} ) )
           -> (
           match
             Variant_coercion.variant_configuration_can_be_coerced t1attrs
@@ -3756,8 +3761,12 @@ let rec subtype_rec env trace t1 t2 cstrs =
              |> Variant_coercion.type_is_variant -> (
         (* TODO(subtype-errors) Polyvariant to variant *)
         match extract_concrete_typedecl env t2 with
-        | _, _, {type_kind = Type_variant variant_constructors; type_attributes}
-          -> (
+        | ( _,
+            _,
+            {
+              type_kind = Type_variant (variant_constructors, _);
+              type_attributes;
+            } ) -> (
           match
             Variant_coercion.can_coerce_polyvariant_to_variant ~row_fields
               ~variant_constructors ~type_attributes

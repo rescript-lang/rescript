@@ -14,7 +14,7 @@ let translate_type_declaration_from_types ~config ~output_file_relative
     match type_kind with
     | Type_record (label_declarations, _) ->
       Translate_type_declarations.RecordDeclarationFromTypes label_declarations
-    | Type_variant constructor_declarations
+    | Type_variant (constructor_declarations, _)
       when not
              (Translate_type_declarations.has_some_gadt_leaf
                 constructor_declarations) ->

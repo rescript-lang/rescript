@@ -40,7 +40,7 @@ let num_nonconst_constructors env (cstr : Types.constructor_description) =
   match cstr.cstr_identity with
   | Ordinary_constructor {type_path} -> (
     match (Env.find_type type_path env).type_kind with
-    | Type_variant cstrs ->
+    | Type_variant (cstrs, _) ->
       List.length
         (List.filter
            (fun (cd : Types.constructor_declaration) ->

@@ -137,7 +137,11 @@ let variant_has_same_runtime_representation_as_target ~(target_path : Path.t)
 let can_try_coerce_variant_to_primitive
     ((_, p, typedecl) : Path.t * Path.t * Types.type_declaration) =
   match typedecl with
-  | {type_kind = Type_variant constructors; type_params = []; type_attributes}
+  | {
+   type_kind = Type_variant (constructors, _);
+   type_params = [];
+   type_attributes;
+  }
     when not (Path.same p Predef.path_bool) ->
     (* bool is represented as a variant internally, so we need to account for that *)
     (* TODO(subtype-errors) Report about bool? *)

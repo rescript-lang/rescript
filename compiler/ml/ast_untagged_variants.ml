@@ -1,53 +1,4 @@
-module Instance = struct
-  type t =
-    | Array
-    | ArrayBuffer
-    | BigInt64Array
-    | BigUint64Array
-    | Blob
-    | DataView
-    | Date
-    | File
-    | Float32Array
-    | Float64Array
-    | Int16Array
-    | Int32Array
-    | Int8Array
-    | Promise
-    | RegExp
-    | Uint16Array
-    | Uint32Array
-    | Uint8Array
-    | Uint8ClampedArray
-    | Set
-    | Map
-    | WeakSet
-    | WeakMap
-  let to_string = function
-    | Array -> "Array"
-    | ArrayBuffer -> "ArrayBuffer"
-    | BigInt64Array -> "BigInt64Array"
-    | BigUint64Array -> "BigUint64Array"
-    | Blob -> "Blob"
-    | DataView -> "DataView"
-    | Date -> "Date"
-    | File -> "File"
-    | Float32Array -> "Float32Array"
-    | Float64Array -> "Float64Array"
-    | Int16Array -> "Int16Array"
-    | Int32Array -> "Int32Array"
-    | Int8Array -> "Int8Array"
-    | Promise -> "Promise"
-    | RegExp -> "RegExp"
-    | Uint16Array -> "Uint16Array"
-    | Uint32Array -> "Uint32Array"
-    | Uint8Array -> "Uint8Array"
-    | Uint8ClampedArray -> "Uint8ClampedArray"
-    | Set -> "Set"
-    | Map -> "Map"
-    | WeakSet -> "WeakSet"
-    | WeakMap -> "WeakMap"
-end
+module Instance = Variant_runtime.Instance
 
 type untagged_error =
   | OnlyOneUnknown of string
@@ -107,8 +58,7 @@ let report_error ppf =
        rename the field."
       constructor_name runtime_value field_name
 
-(* Type of the runtime representation of an untagged block (case with payoad) *)
-type block_type =
+type block_type = Variant_runtime.block_type =
   | IntType
   | StringType
   | FloatType
@@ -135,7 +85,7 @@ let block_type_to_user_visible_string = function
   Can be a literal (case with no payload), or a block (case with payload).
   In the case of block it can be tagged or untagged.
 *)
-type tag_type =
+type tag_type = Variant_runtime.tag_type =
   | String of string
   | Int of int
   | Float of string
@@ -144,25 +94,34 @@ type tag_type =
   | Null
   | Undefined (* literal or tagged block *)
   | Untagged of block_type (* untagged block *)
-type tag = {name: string; tag_type: tag_type option}
+type tag = Variant_runtime.tag = {name: string; tag_type: tag_type option}
 
-type block_runtime = {tag: tag; tag_name: string option; untagged: bool}
+type block_runtime = Variant_runtime.block_runtime = {
+  tag: tag;
+  tag_name: string option;
+  untagged: bool;
+}
 (** Runtime information shared by construction and pattern matching for a
     constructor carrying a payload. [block_type] is deliberately not part of
     this value: it describes how a matcher recognizes an unboxed payload, not
     how the value itself is constructed. *)
 
-type block = {runtime: block_runtime; block_type: block_type option}
+type block = Variant_runtime.block = {
+  runtime: block_runtime;
+  block_type: block_type option;
+}
 
-type constructor_case = Constant of tag | Block of block
+type constructor_case = Variant_runtime.constructor_case =
+  | Constant of tag
+  | Block of block
 
-type variant_layout = {
+type variant_layout = Variant_runtime.variant_layout = {
   constructors: constructor_case array;
   constructors_by_name: (int * constructor_case) Map_string.t;
 }
 (** Canonical runtime layout in source-constructor order. *)
 
-type variant_dispatch = {
+type variant_dispatch = Variant_runtime.variant_dispatch = {
   tag_name: string option;
   block_types: block_type list;
   literal_tags: tag_type list;
@@ -251,6 +210,9 @@ let process_untagged (attrs : Parsetree.attributes) =
       | _ -> ());
   !st
 
+(* Filled in by [Typedecl] to break the module cycle through [Ctype];
+   installed at module initialization of the typing layer, so they are set
+   before any declaration is typed. *)
 let extract_concrete_typedecl :
     (Env.t -> Types.type_expr -> Path.t * Path.t * Types.type_declaration) ref =
   ref (Obj.magic ())
@@ -529,7 +491,7 @@ let constructor_declaration_from_constructor_description ~env
   match cd.cstr_res.desc with
   | Tconstr (path, _, _) -> (
     match Env.find_type path env with
-    | {type_kind = Type_variant cstrs} ->
+    | {type_kind = Type_variant (cstrs, _)} ->
       Ext_list.find_opt cstrs (fun cstr ->
           if cstr.cd_id.name = cd.cstr_name then Some cstr else None)
     | _ -> None)
@@ -608,15 +570,6 @@ let check_tag_field_conflicts (cstrs : Types.constructor_declaration list) =
           fields
       | _ -> ())
     cstrs
-
-type well_formedness_check = {
-  is_untagged_def: bool;
-  cstrs: Types.constructor_declaration list;
-}
-
-let check_well_formed ~env {is_untagged_def; cstrs} =
-  check_tag_field_conflicts cstrs;
-  ignore (layout_from_type_variant ~env ~is_untagged_def cstrs)
 
 let has_undefined_literal attrs = process_tag_type attrs = Some Undefined
 

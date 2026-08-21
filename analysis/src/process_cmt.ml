@@ -90,7 +90,7 @@ let rec for_type_signature_item ~(env : Shared_types.Env.t)
                 (* TODO dig *)
                 | _ -> Abstract None)
               | Type_open -> Open
-              | Type_variant constructors ->
+              | Type_variant (constructors, _) ->
                 Variant
                   (constructors
                   |> List.map

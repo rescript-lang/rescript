@@ -22,6 +22,11 @@ open Primitive
 open Types
 open Typetexp
 
+let () =
+  Ast_untagged_variants.extract_concrete_typedecl :=
+    Ctype.extract_concrete_typedecl
+let () = Ast_untagged_variants.expand_head := Ctype.expand_head
+
 type error =
   | Repeated_parameter
   | Duplicate_constructor of string
@@ -138,8 +143,8 @@ let rec get_unboxed_type_representation env ty fuel =
        type_params;
        type_kind =
          ( Type_record ([{ld_type = ty2; _}], _)
-         | Type_variant [{cd_args = Cstr_tuple [ty2]; _}]
-         | Type_variant [{cd_args = Cstr_record [{ld_type = ty2; _}]; _}] );
+         | Type_variant ([{cd_args = Cstr_tuple [ty2]; _}], _)
+         | Type_variant ([{cd_args = Cstr_record [{ld_type = ty2; _}]; _}], _) );
       } ->
         get_unboxed_type_representation env
           (Ctype.apply env type_params ty2 args)
@@ -366,7 +371,7 @@ let is_not_undefined_attr (attr : attribute) =
    any type variable present in [ty].
 *)
 
-let transl_declaration ~type_record_as_object ~untagged_wfc env sdecl id =
+let transl_declaration ~type_record_as_object env sdecl id =
   (* Check for @notUndefined attribute *)
   let has_not_undefined =
     List.exists is_not_undefined_attr sdecl.ptype_attributes
@@ -490,7 +495,7 @@ let transl_declaration ~type_record_as_object ~untagged_wfc env sdecl id =
           (match args with
           | Cstr_tuple [spread_variant] -> (
             match Ctype.extract_concrete_typedecl env spread_variant with
-            | _, _, {type_kind = Type_variant constructors} ->
+            | _, _, {type_kind = Type_variant (constructors, _)} ->
               constructors
               |> List.iter (fun (c : Types.constructor_declaration) ->
                      Hashtbl.add constructors_from_variant_spreads c.cd_id.name
@@ -591,15 +596,11 @@ let transl_declaration ~type_record_as_object ~untagged_wfc env sdecl id =
             make_cstr scstr)
       in
       let tcstrs, cstrs = List.split (List.filter_map make_cstr scstrs) in
-      let is_untagged_def =
-        Ast_untagged_variants.has_untagged sdecl.ptype_attributes
-      in
-      let well_formedness_check : Ast_untagged_variants.well_formedness_check =
-        {is_untagged_def; cstrs}
-      in
-      (* delay the check until the newenv is created to handle recursive types *)
-      untagged_wfc := well_formedness_check :: !untagged_wfc;
-      (Ttype_variant tcstrs, Type_variant cstrs, sdecl)
+      (* the canonical layout is computed once the whole recursive group is
+         in the environment *)
+      ( Ttype_variant tcstrs,
+        Type_variant (cstrs, Variant_runtime.dummy_layout),
+        sdecl )
     | Ptype_record lbls_ -> (
       let optional_labels =
         Ext_list.filter_map lbls_ (fun lbl ->
@@ -796,7 +797,7 @@ let check_constraints ~type_record_as_object env sdecl (_, decl) =
   let visited = ref Type_set.empty in
   (match decl.type_kind with
   | Type_abstract -> ()
-  | Type_variant l ->
+  | Type_variant (l, _) ->
     let find_pl = function
       | Ptype_variant pl -> pl
       | Ptype_record _ | Ptype_abstract | Ptype_open -> assert false
@@ -1288,7 +1289,7 @@ let compute_variance_decl env check decl ((required, _) as rloc) =
     in
     match decl.type_kind with
     | Type_abstract | Type_open -> compute_variance_type env check rloc decl mn
-    | Type_variant tll -> (
+    | Type_variant (tll, _) -> (
       if List.for_all (fun c -> c.Types.cd_res = None) tll then
         compute_variance_type env check rloc decl
           (mn
@@ -1320,14 +1321,14 @@ let marked_as_immediate decl = Builtin_attributes.immediate decl.type_attributes
 
 let compute_immediacy env tdecl =
   match (tdecl.type_kind, tdecl.type_manifest) with
-  | Type_variant [{cd_args = Cstr_tuple [arg]; _}], _
-  | Type_variant [{cd_args = Cstr_record [{ld_type = arg; _}]; _}], _
+  | Type_variant ([{cd_args = Cstr_tuple [arg]; _}], _), _
+  | Type_variant ([{cd_args = Cstr_record [{ld_type = arg; _}]; _}], _), _
   | Type_record ([{ld_type = arg; _}], _), _
     when tdecl.type_representation = Transparent -> (
     match get_unboxed_type_representation env arg with
     | Some argrepr -> not (Ctype.maybe_pointer_type env argrepr)
     | None -> false)
-  | Type_variant (_ :: _ as cstrs), _ ->
+  | Type_variant ((_ :: _ as cstrs), _), _ ->
     not (List.exists (fun c -> c.Types.cd_args <> Types.Cstr_tuple []) cstrs)
   | Type_abstract, Some typ -> not (Ctype.maybe_pointer_type env typ)
   | Type_abstract, None -> marked_as_immediate tdecl
@@ -1502,12 +1503,10 @@ let transl_type_decl env rec_flag sdecl_list =
     | Asttypes.Recursive | Asttypes.Nonrecursive -> (id, None)
   in
   let type_record_as_object = ref false in
-  let untagged_wfc = ref [] in
   let transl_declaration name_sdecl (id, slot) =
     current_slot := slot;
     Builtin_attributes.warning_scope name_sdecl.ptype_attributes (fun () ->
-        transl_declaration ~type_record_as_object ~untagged_wfc temp_env
-          name_sdecl id)
+        transl_declaration ~type_record_as_object temp_env name_sdecl id)
   in
   let tdecls =
     List.map2 transl_declaration sdecl_list (List.map id_slots id_list)
@@ -1582,10 +1581,29 @@ let transl_type_decl env rec_flag sdecl_list =
       | Some ty -> raise (Error (sdecl.ptype_loc, Unbound_type_var (ty, decl)))
       | None -> ())
     sdecl_list tdecls;
-  (* Check that constraints are enforced *)
-  List.iter
-    (fun check -> Ast_untagged_variants.check_well_formed ~env:newenv check)
-    !untagged_wfc;
+  (* Compute canonical runtime layouts. This also validates the untagged
+     invariants, which need the whole recursive group in the environment. *)
+  let decls =
+    List.map
+      (fun (id, decl) ->
+        match decl.type_kind with
+        | Type_variant (cstrs, _) ->
+          Ast_untagged_variants.check_tag_field_conflicts cstrs;
+          let is_untagged_def =
+            Ast_untagged_variants.has_untagged decl.type_attributes
+          in
+          let layout =
+            match
+              Ast_untagged_variants.layout_from_type_variant ~is_untagged_def
+                ~env:newenv cstrs
+            with
+            | Some layout -> layout
+            | None -> assert false
+          in
+          (id, {decl with type_kind = Type_variant (cstrs, layout)})
+        | Type_abstract | Type_record _ | Type_open -> (id, decl))
+      decls
+  in
   List.iter2 (check_constraints ~type_record_as_object newenv) sdecl_list decls;
   (* Name recursion *)
   let decls =
@@ -2169,7 +2187,7 @@ let report_error ppf = function
     fprintf ppf "A type variable is unbound in this type declaration";
     let ty = Ctype.repr ty in
     match (decl.type_kind, decl.type_manifest) with
-    | Type_variant tl, _ ->
+    | Type_variant (tl, _), _ ->
       explain_unbound_gen ppf ty tl
         (fun c ->
           let tl = tys_of_constr_args c.Types.cd_args in

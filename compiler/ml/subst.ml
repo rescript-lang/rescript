@@ -278,8 +278,8 @@ let type_declaration s decl =
       type_kind =
         (match decl.type_kind with
         | Type_abstract -> Type_abstract
-        | Type_variant cstrs ->
-          Type_variant (List.map (constructor_declaration s) cstrs)
+        | Type_variant (cstrs, layout) ->
+          Type_variant (List.map (constructor_declaration s) cstrs, layout)
         | Type_record (lbls, rep) ->
           Type_record (List.map (label_declaration s) lbls, rep)
         | Type_open -> Type_open);

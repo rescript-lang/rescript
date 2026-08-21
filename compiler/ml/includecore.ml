@@ -374,7 +374,7 @@ let type_declarations ?(equality = false) ~loc env name decl1 id decl2 =
           let err =
             match (decl1.type_kind, decl2.type_kind) with
             | _, Type_abstract -> []
-            | Type_variant cstrs1, Type_variant cstrs2 ->
+            | Type_variant (cstrs1, _), Type_variant (cstrs2, _) ->
               let mark cstrs usage name decl =
                 List.iter
                   (fun c ->

@@ -82,7 +82,7 @@ let find_relevant_types_from_type ~state ~file ~package typ =
         match decl.type_kind with
         | Type_record (lds, _) ->
           (env1, typ :: (lds |> label_declarations_types))
-        | Type_variant cds ->
+        | Type_variant (cds, _) ->
           ( env1,
             cds
             |> List.map (fun (cd : Types.constructor_declaration) ->

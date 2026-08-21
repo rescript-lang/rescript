@@ -2462,7 +2462,7 @@ let arg_to_var arg cls =
 let layout_from_construct_pattern (pat : pattern) =
   let rec resolve_path (path : Path.t) =
     match Env.find_type path pat.pat_env with
-    | {type_kind = Type_variant cstrs} ->
+    | {type_kind = Type_variant (cstrs, _)} ->
       Ast_untagged_variants.layout_from_type_variant ~env:pat.pat_env cstrs
     | {type_kind = Type_abstract; type_manifest = Some t} -> (
       match (Ctype.unalias t).desc with
