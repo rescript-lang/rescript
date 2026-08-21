@@ -24,6 +24,7 @@
 - Fix bare labeled arrow types (`~x: int => string`) getting no arity and failing to unify with their parenthesized form. https://github.com/rescript-lang/rescript/pull/8563
 - Fix argument evaluation order when a function call is inlined: the beta reducer could evaluate non-substitutable arguments from last to first. https://github.com/rescript-lang/rescript/pull/8572
 - Compute optional-parameter defaults when their own curried function group is applied instead of deferring outer defaults until an inner function is called. https://github.com/rescript-lang/rescript/pull/8568
+- Fix termination-analysis false positives when progress flows through helper functions. https://github.com/rescript-lang/rescript/pull/8568
 
 # 12.3.0
 
