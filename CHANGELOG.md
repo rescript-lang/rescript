@@ -10,6 +10,23 @@
 > - :nail_care: [Polish]
 > - :house: [Internal]
 
+# 12.3.1
+
+#### :bug: Bug fix
+
+- Fix rewatch warning replay after early compile errors. https://github.com/rescript-lang/rescript/pull/8408
+- Fix formatting of trailing comments before `=` in let bindings. https://github.com/rescript-lang/rescript/pull/8444
+- Fix namespaced reference lookup in editor analysis. https://github.com/rescript-lang/rescript/pull/8455
+- Fix build crash when the compiler emits output that is not valid UTF-8, such as a truncated multibyte character in a code frame. https://github.com/rescript-lang/rescript/pull/8482
+- Preserve multibyte characters when wrapping long source lines in compiler code frames. https://github.com/rescript-lang/rescript/pull/8520
+- Preserve parentheses around multiplication, division, and modulo expressions used as exponents. https://github.com/rescript-lang/rescript/pull/8550
+- Enforce function arity in interface/module inclusion, type equality, and coercion. https://github.com/rescript-lang/rescript/pull/8559
+- Fix bare labeled arrow types (`~x: int => string`) getting no arity and failing to unify with their parenthesized form. https://github.com/rescript-lang/rescript/pull/8563
+- Fix signature help for functions returning functions so it reports the parameters and source ranges of the current call. https://github.com/rescript-lang/rescript/pull/8566
+- Fix argument evaluation order when a function call is inlined: the beta reducer could evaluate non-substitutable arguments from last to first. https://github.com/rescript-lang/rescript/pull/8572
+- Compute optional-parameter defaults when their own curried function group is applied instead of deferring outer defaults until an inner function is called. https://github.com/rescript-lang/rescript/pull/8568
+- Fix termination-analysis false positives when progress flows through helper functions. https://github.com/rescript-lang/rescript/pull/8568
+
 # 12.3.0
 
 No changes compared to 12.3.0-beta.1.

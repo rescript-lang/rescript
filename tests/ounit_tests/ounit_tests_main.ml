@@ -22,6 +22,7 @@ let suites =
       Ounit_bsb_pkg_tests.suites;
       Ounit_util_tests.suites;
       Ounit_jsx_loc_tests.suites;
+      Ounit_analysis_references_tests.suites;
     ]
 
 let _ = OUnit.run_test_tt_main suites

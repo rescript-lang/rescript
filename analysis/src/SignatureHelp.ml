@@ -101,24 +101,28 @@ let findFunctionType ~currentFile ~debug ~path ~pos =
         Some (args, docstring, type_expr, package, env, file)
       | _ -> None))
 
-(* Extracts all parameters from a parsed function signature *)
+(* Extracts the parameters from the outermost parsed function signature. A
+   returned function's parameters belong to a different call site. *)
 let extractParameters ~signature ~typeStrForParser ~labelPrefixLen =
   match signature with
-  | [{Parsetree.psig_desc = Psig_value {pval_type = expr}}]
-    when match expr.ptyp_desc with
-         | Ptyp_arrow _ -> true
-         | _ -> false ->
-    let rec extractParams expr params =
+  | [
+   {
+     Parsetree.psig_desc =
+       Psig_value
+         {pval_type = {ptyp_desc = Ptyp_arrow {arity = outerArity}} as expr};
+   };
+  ] ->
+    let rec extractParams expr params remaining =
       match expr with
-      | {
-       (* Gotcha: functions with multiple arugments are modelled as a series of single argument functions. *)
-       Parsetree.ptyp_desc = Ptyp_arrow {arg; ret = nextFunctionExpr};
-       ptyp_loc;
-      } ->
+      | {Parsetree.ptyp_desc = Ptyp_arrow {arg; ret = nextFunctionExpr}}
+        when remaining > 0 ->
+        let startLoc =
+          match arg.lbl with
+          | Asttypes.Labelled {loc} | Optional {loc} -> loc |> Loc.start
+          | Nolabel -> arg.typ.ptyp_loc |> Loc.start
+        in
         let startOffset =
-          ptyp_loc |> Loc.start
-          |> Pos.positionToOffset typeStrForParser
-          |> Option.get
+          startLoc |> Pos.positionToOffset typeStrForParser |> Option.get
         in
         let endOffset =
           arg.typ.ptyp_loc |> Loc.end_
@@ -140,9 +144,10 @@ let extractParameters ~signature ~typeStrForParser ~labelPrefixLen =
                 startOffset - labelPrefixLen,
                 endOffset - labelPrefixLen );
             ])
+          (remaining - 1)
       | _ -> params
     in
-    extractParams expr []
+    extractParams expr [] (Option.value outerArity ~default:max_int)
   | _ -> []
 
 (* Finds what parameter is active, if any *)

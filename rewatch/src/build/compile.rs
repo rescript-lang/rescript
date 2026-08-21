@@ -21,6 +21,12 @@ use std::process::Command;
 use std::sync::OnceLock;
 use std::time::SystemTime;
 
+/// Decode captured compiler output without crashing if a code frame truncates a
+/// multi-byte character.
+fn compiler_output_to_string(bytes: &[u8]) -> String {
+    String::from_utf8_lossy(bytes).to_string()
+}
+
 /// Execute js-post-build command for a compiled JavaScript file.
 /// The command runs in the directory containing the rescript.json that defines it.
 /// The absolute path to the JS file is passed as an argument.
@@ -113,6 +119,7 @@ pub fn compile(
     let mut compile_errors = "".to_string();
     let mut compile_warnings = "".to_string();
     let mut num_compiled_modules = 0;
+    let mut recompiled_modules = AHashSet::<String>::new();
     let mut sorted_modules = build_state.module_names.iter().collect::<Vec<&String>>();
     sorted_modules.sort();
 
@@ -271,6 +278,7 @@ pub fn compile(
 
             if *is_compiled {
                 num_compiled_modules += 1;
+                recompiled_modules.insert(module_name.to_string());
             }
 
             files_current_loop_count += 1;
@@ -443,11 +451,11 @@ pub fn compile(
         };
     }
 
-    // Collect warnings from modules that were not recompiled in this build
-    // but still have stored warnings from a previous compilation.
-    // This ensures warnings are not lost during incremental builds in watch mode.
+    // Collect warnings from modules that were not recompiled in this build but still have stored
+    // warnings from a previous compilation. This includes modules in the compile universe that
+    // were never reached because an earlier module failed.
     for (module_name, module) in build_state.modules.iter() {
-        if compile_universe.contains(module_name) {
+        if recompiled_modules.contains(module_name) {
             continue;
         }
         if let SourceType::SourceFile(ref source_file) = module.source_type {
@@ -787,9 +795,7 @@ fn compile_file(
             "Could not compile file. Error: {e}. Path to AST: {ast_path:?}"
         )),
         Ok(x) => {
-            let err = std::str::from_utf8(&x.stderr)
-                .expect("stdout should be non-null")
-                .to_string();
+            let err = compiler_output_to_string(&x.stderr);
 
             let dir = Path::new(implementation_file_path).parent().unwrap();
 
@@ -1047,4 +1053,17 @@ pub fn mark_modules_with_expired_deps_dirty(build_state: &mut BuildCommandState)
             module.compile_dirty = true;
         }
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::compiler_output_to_string;
+
+    #[test]
+    fn compiler_output_to_string_handles_invalid_utf8() {
+        // Start of an em dash (U+2014), with its third byte missing.
+        let truncated = [b'W', b'a', b'r', b'n', b'i', b'n', b'g', b' ', 0xe2, 0x80];
+        let decoded = compiler_output_to_string(&truncated);
+        assert!(decoded.starts_with("Warning "));
+    }
 }
