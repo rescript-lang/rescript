@@ -58,11 +58,37 @@ let succeed attr attrs =
     Used_attributes.mark_used_attribute attr;
     Bs_ast_invariant.warn_discarded_unused_attributes attrs
 
-type mapper = Bs_ast_mapper.mapper
+type mapper = Ast_mapper.mapper
 
-let default_mapper = Bs_ast_mapper.default_mapper
-let default_expr_mapper = Bs_ast_mapper.default_mapper.expr
-let default_pat_mapper = Bs_ast_mapper.default_mapper.pat
+let default_mapper = Ast_mapper.default_mapper
+
+let mark_hoisted_function_attributes (bindings : Parsetree.value_binding list) =
+  Ext_list.iter bindings (fun {pvb_attributes} ->
+      Ext_list.iter pvb_attributes (fun (({txt}, _) as attr) ->
+          if txt = "res.hoistedFunction" then
+            Used_attributes.mark_used_attribute attr))
+
+(* [Ast_mapper.default_mapper.expr], with non-recursive binding groups
+   routed through tuple/module-record pattern flattening ([let rec] groups
+   only admit variable patterns, so they map per binding). Every fallback in
+   [expr_mapper] funnels through here, so the flattening applies uniformly. *)
+let default_expr_mapper (self : mapper) (e : Parsetree.expression) =
+  (match e.pexp_desc with
+  | Pexp_let (_, bindings, _) -> mark_hoisted_function_attributes bindings
+  | _ -> ());
+  match e.pexp_desc with
+  | Pexp_let (Nonrecursive, vbs, body) ->
+    {
+      e with
+      pexp_desc =
+        Pexp_let
+          ( Nonrecursive,
+            Ast_tuple_pattern_flatten.value_bindings_mapper self vbs,
+            self.expr self body );
+      pexp_attributes = self.attributes self e.pexp_attributes;
+    }
+  | _ -> Ast_mapper.default_mapper.expr self e
+let default_pat_mapper = Ast_mapper.default_mapper.pat
 
 let pat_mapper (self : mapper) (p : Parsetree.pattern) =
   match p.ppat_desc with
@@ -406,22 +432,6 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
 let typ_mapper (self : mapper) (typ : Parsetree.core_type) =
   Ast_core_type_class_type.typ_mapper self typ
 
-let mark_hoisted_function_attributes (bindings : Parsetree.value_binding list) =
-  Ext_list.iter bindings (fun {pvb_attributes} ->
-      Ext_list.iter pvb_attributes (fun (({txt}, _) as attr) ->
-          if txt = "res.hoistedFunction" then
-            Used_attributes.mark_used_attribute attr))
-
-let value_bindings_mapper (self : mapper)
-    (bindings : Parsetree.value_binding list) =
-  mark_hoisted_function_attributes bindings;
-  Ast_tuple_pattern_flatten.value_bindings_mapper self bindings
-
-let value_bindings_rec_mapper (self : mapper)
-    (bindings : Parsetree.value_binding list) =
-  mark_hoisted_function_attributes bindings;
-  default_mapper.value_bindings_rec self bindings
-
 let signature_item_mapper (self : mapper) (sigi : Parsetree.signature_item) :
     Parsetree.signature_item =
   match sigi.psig_desc with
@@ -621,6 +631,9 @@ let structure_item_mapper (self : mapper) (str : Parsetree.structure_item) :
               ] );
       })
   | Pstr_attribute ({txt = "config"}, _) -> str
+  | Pstr_value (Nonrecursive, vbs) ->
+    Ast_helper.Str.value ~loc:str.pstr_loc Nonrecursive
+      (Ast_tuple_pattern_flatten.value_bindings_mapper self vbs)
   | _ -> default_mapper.structure_item self str
 
 let local_module_name =
@@ -803,8 +816,6 @@ let mapper : mapper =
     pat = pat_mapper;
     typ = typ_mapper;
     signature_item = signature_item_mapper;
-    value_bindings = value_bindings_mapper;
-    value_bindings_rec = value_bindings_rec_mapper;
     structure_item = structure_item_mapper;
     structure = structure_mapper ~await_context:(ref (Hashtbl.create 10));
     (* Ad-hoc way to internalize stuff *)
