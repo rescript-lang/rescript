@@ -74,6 +74,8 @@ let is_predef_exn i = i.flags land predef_exn_flag <> 0
 
 let make_js_hoisted i = i.flags <- i.flags lor js_hoisted_flag
 
+let clear_js_hoisted i = i.flags <- i.flags land lnot js_hoisted_flag
+
 let js_hoisted i = i.flags land js_hoisted_flag <> 0
 
 let print ppf i =

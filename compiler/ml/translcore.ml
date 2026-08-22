@@ -600,6 +600,12 @@ let extract_directive_for_fn exp =
 
 let hoisted_function_attr_name = "res.hoistedFunction"
 
+let js_hoisted_found = ref false
+
+let reset_js_hoisted_found () = js_hoisted_found := false
+
+let has_js_hoisted () = !js_hoisted_found
+
 let find_js_hoisted_attr attrs =
   Translattribute.get_empty_attribute hoisted_function_attr_name attrs
 
@@ -615,7 +621,9 @@ let mark_js_hoisted_pattern ~allow_js_hoist attrs pat lam =
     | Lfunction _ -> (
       match pat.pat_desc with
       | Tpat_var (id, _) | Tpat_alias ({pat_desc = Tpat_any}, id, _) ->
-        if allow_js_hoist then Ident.make_js_hoisted id
+        if allow_js_hoist then (
+          Ident.make_js_hoisted id;
+          js_hoisted_found := true)
         else
           Location.prerr_warning loc
             (Warnings.Misplaced_attribute hoisted_function_attr_name)
