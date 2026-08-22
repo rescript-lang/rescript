@@ -234,15 +234,14 @@ let get_functor_params mexp coercion root_path =
   | _ -> assert false
 
 let export_identifiers : Ident.t list ref = ref []
-let js_hoisted : (Ident.t * string list * Location.t) list ref = ref []
+let js_hoisted : (string list * Location.t) list ref = ref []
 
 let js_hoist_handler rootpath =
   match exportable_module_path rootpath with
   | None -> None
   | Some path ->
     Some
-      (fun id loc ->
-        js_hoisted := (id, path @ [id.Ident.name], loc) :: !js_hoisted)
+      (fun id loc -> js_hoisted := (path @ [id.Ident.name], loc) :: !js_hoisted)
 
 let rec remove_prefix prefix path =
   match (prefix, path) with
@@ -269,32 +268,27 @@ let rec exported_by_coercion path coercion =
       find fields names
     | Tcoerce_functor _ | Tcoerce_primitive _ | Tcoerce_alias _ -> false)
 
+let validate_js_hoisted_path prefix exported =
+  js_hoisted :=
+    List.filter
+      (fun (path, loc) ->
+        match remove_prefix prefix path with
+        | Some path when not (exported path) ->
+          Location.prerr_warning loc
+            (Warnings.Misplaced_attribute "res.hoistedFunction");
+          false
+        | Some _ | None -> true)
+      !js_hoisted
+
 let validate_js_hoisted prefix coercion =
   match coercion with
   | Tcoerce_none -> ()
   | _ ->
-    List.iter
-      (fun (id, path, loc) ->
-        if Ident.js_hoisted id then
-          match remove_prefix prefix path with
-          | Some path when not (exported_by_coercion path coercion) ->
-            Ident.clear_js_hoisted id;
-            Location.prerr_warning loc
-              (Warnings.Misplaced_attribute "res.hoistedFunction")
-          | Some _ | None -> ())
-      !js_hoisted
+    validate_js_hoisted_path prefix (fun path ->
+        exported_by_coercion path coercion)
 
 let reject_js_hoisted prefix =
-  List.iter
-    (fun (id, path, loc) ->
-      if Ident.js_hoisted id then
-        match remove_prefix prefix path with
-        | Some _ ->
-          Ident.clear_js_hoisted id;
-          Location.prerr_warning loc
-            (Warnings.Misplaced_attribute "res.hoistedFunction")
-        | None -> ())
-    !js_hoisted
+  validate_js_hoisted_path prefix (fun _path -> false)
 
 let rec compile_functor mexp coercion root_path loc =
   let functor_param, body, body_path, res_coercion, inline_attribute =
@@ -555,7 +549,7 @@ let transl_implementation module_name (str, cc) =
   let module_id = Ident.create_persistent module_name in
   let body, _ = transl_struct Location.none [] cc (global_path module_id) str in
   validate_js_hoisted [] cc;
-  (body, !export_identifiers)
+  (body, !export_identifiers, !js_hoisted)
 
 (* Build the list of value identifiers defined by a toplevel structure
    (excluding primitive declarations). *)

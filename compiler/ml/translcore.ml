@@ -616,9 +616,7 @@ let mark_js_hoisted_pattern ~js_hoist attrs pat lam =
       match pat.pat_desc with
       | Tpat_var (id, _) | Tpat_alias ({pat_desc = Tpat_any}, id, _) -> (
         match js_hoist with
-        | Some register ->
-          Ident.make_js_hoisted id;
-          register id loc
+        | Some register -> register id loc
         | None ->
           Location.prerr_warning loc
             (Warnings.Misplaced_attribute hoisted_function_attr_name))

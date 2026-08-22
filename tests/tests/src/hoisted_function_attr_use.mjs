@@ -28,6 +28,12 @@ let recursive = Hoisted_function_attr.RecursiveA$make();
 
 let typed = Hoisted_function_attr.Typed$make();
 
+let coerced = Hoisted_function_attr.Coerced$make();
+
+let included = Hoisted_function_attr.Included.make();
+
+let aliased = Hoisted_function_attr.One$make();
+
 export {
   one,
   oneKeep,
@@ -42,5 +48,8 @@ export {
   exoticPath,
   recursive,
   typed,
+  coerced,
+  included,
+  aliased,
 }
 /* one Not a pure module */

@@ -26,4 +26,13 @@ describe(__MODULE__, () => {
   test("explicit function type annotations", () => {
     eq(__LOC__, Hoisted_function_attr_use.typed, "typed")
   })
+
+  test("signature coercion preserves hoists", () => {
+    eq(__LOC__, Hoisted_function_attr_use.coerced, "coerced")
+  })
+
+  test("includes and aliases do not create additional hoists", () => {
+    eq(__LOC__, Hoisted_function_attr_use.included, "one")
+    eq(__LOC__, Hoisted_function_attr_use.aliased, "one")
+  })
 })

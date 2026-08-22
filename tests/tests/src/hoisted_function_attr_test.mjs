@@ -21,6 +21,11 @@ Mocha.describe("Hoisted_function_attr_test", () => {
   });
   Mocha.test("recursive modules", () => Test_utils.eq("File \"hoisted_function_attr_test.res\", line 23, characters 7-14", Hoisted_function_attr_use.recursive, "recursive"));
   Mocha.test("explicit function type annotations", () => Test_utils.eq("File \"hoisted_function_attr_test.res\", line 27, characters 7-14", Hoisted_function_attr_use.typed, "typed"));
+  Mocha.test("signature coercion preserves hoists", () => Test_utils.eq("File \"hoisted_function_attr_test.res\", line 31, characters 7-14", Hoisted_function_attr_use.coerced, "coerced"));
+  Mocha.test("includes and aliases do not create additional hoists", () => {
+    Test_utils.eq("File \"hoisted_function_attr_test.res\", line 35, characters 7-14", Hoisted_function_attr_use.included, "one");
+    Test_utils.eq("File \"hoisted_function_attr_test.res\", line 36, characters 7-14", Hoisted_function_attr_use.aliased, "one");
+  });
 });
 
 /*  Not a pure module */

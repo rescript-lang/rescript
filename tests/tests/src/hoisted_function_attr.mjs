@@ -124,6 +124,23 @@ let Typed = {
   make: make$5
 };
 
+function make$6() {
+  return "coerced";
+}
+
+let Coerced = {
+  make: make$6
+};
+
+let Included = {
+  make: make,
+  keep: keep
+};
+
+let Aliased;
+
+let Coerced$make = Coerced.make;
+
 let Typed$make = Typed.make;
 
 let RecursiveA$make = RecursiveA.make;
@@ -152,6 +169,10 @@ export {
   RecursiveA,
   RecursiveB,
   Typed,
+  Coerced,
+  Included,
+  Aliased,
+  Coerced$make,
   Typed$make,
   RecursiveA$make,
   Ambiguous$B$make,

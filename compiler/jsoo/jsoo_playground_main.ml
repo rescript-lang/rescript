@@ -519,12 +519,12 @@ module Compile = struct
         (a, b)
       in
       typed_tree |> Translmod.transl_implementation modulename
-      |> (* Printlambda.lambda ppf *) fun (lam, exports) ->
+      |> (* Printlambda.lambda ppf *) fun (lam, exports, hoisted) ->
       let buffer = Buffer.create 1000 in
       let () =
         Js_dump_program.pp_deps_program ~output_prefix:""
           (* does not matter here *) module_system
-          (Lam_compile_main.compile "" exports lam)
+          (Lam_compile_main.compile "" exports hoisted lam)
           (Ext_pp.from_buffer buffer)
       in
       let v = Buffer.contents buffer in

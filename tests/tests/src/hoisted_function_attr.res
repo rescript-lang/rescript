@@ -67,3 +67,18 @@ module Typed = {
   @res.hoistedFunction
   let make: unit => string = () => "typed"
 }
+
+module Coerced: {
+  let make: unit => string
+} = {
+  let hidden = () => "coerced"
+
+  @res.hoistedFunction
+  let make = () => hidden()
+}
+
+module Included = {
+  include One
+}
+
+module Aliased = One
