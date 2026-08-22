@@ -50,6 +50,7 @@ val make_global : t -> unit
 val global : t -> bool
 val is_predef_exn : t -> bool
 val make_js_hoisted : t -> unit
+val clear_js_hoisted : t -> unit
 val js_hoisted : t -> bool
 
 val binding_time : t -> int

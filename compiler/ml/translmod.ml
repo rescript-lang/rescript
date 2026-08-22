@@ -32,12 +32,17 @@ let is_top (rootpath : Path.t option) =
   | Some (Pident _) -> true
   | _ -> false
 
-let has_exportable_module_path = function
+let module_path = function
   | Some path -> (
     match Path.flatten path with
-    | `Ok (_, _ :: _) -> true
-    | `Ok (_, []) | `Contains_apply -> false)
-  | None -> false
+    | `Ok (_, segments) -> Some segments
+    | `Contains_apply -> None)
+  | None -> None
+
+let exportable_module_path rootpath =
+  match module_path rootpath with
+  | Some (_ :: _ as path) -> Some path
+  | _ -> None
 
 let functor_path path param : Path.t option =
   match path with
@@ -229,6 +234,55 @@ let get_functor_params mexp coercion root_path =
   | _ -> assert false
 
 let export_identifiers : Ident.t list ref = ref []
+let js_hoisted : (Ident.t * string list * Location.t) list ref = ref []
+
+let js_hoist_handler rootpath =
+  match exportable_module_path rootpath with
+  | None -> None
+  | Some path ->
+    Some
+      (fun id loc ->
+        js_hoisted := (id, path @ [id.Ident.name], loc) :: !js_hoisted)
+
+let rec remove_prefix prefix path =
+  match (prefix, path) with
+  | [], path -> Some path
+  | prefix :: prefixes, segment :: segments when prefix = segment ->
+    remove_prefix prefixes segments
+  | _ -> None
+
+let rec exported_by_coercion path coercion =
+  match path with
+  | [] -> true
+  | segment :: rest -> (
+    match coercion with
+    | Tcoerce_none -> true
+    | Tcoerce_structure (fields, _, names) ->
+      let rec find fields names =
+        match (fields, names) with
+        | (_, coercion) :: fields, name :: names ->
+          if name = segment then exported_by_coercion rest coercion
+          else find fields names
+        | [], [] -> false
+        | _ -> assert false
+      in
+      find fields names
+    | Tcoerce_functor _ | Tcoerce_primitive _ | Tcoerce_alias _ -> false)
+
+let validate_js_hoisted prefix coercion =
+  match coercion with
+  | Tcoerce_none -> ()
+  | _ ->
+    List.iter
+      (fun (id, path, loc) ->
+        if Ident.js_hoisted id then
+          match remove_prefix prefix path with
+          | Some path when not (exported_by_coercion path coercion) ->
+            Ident.clear_js_hoisted id;
+            Location.prerr_warning loc
+              (Warnings.Misplaced_attribute "res.hoistedFunction")
+          | Some _ | None -> ())
+      !js_hoisted
 
 let rec compile_functor mexp coercion root_path loc =
   let functor_param, body, body_path, res_coercion, inline_attribute =
@@ -270,7 +324,11 @@ and transl_module cc rootpath mexp =
     | Tmod_ident (path, _) ->
       apply_coercion loc Strict cc
         (Lambda.transl_module_path ~loc mexp.mod_env path)
-    | Tmod_structure str -> fst (transl_struct loc [] cc rootpath str)
+    | Tmod_structure str ->
+      let lam = fst (transl_struct loc [] cc rootpath str) in
+      Ext_option.iter (module_path rootpath) (fun path ->
+          validate_js_hoisted path cc);
+      lam
     | Tmod_functor _ -> compile_functor mexp cc rootpath loc
     | Tmod_apply (funct, arg, ccarg) ->
       let inlined_attribute, funct =
@@ -375,7 +433,7 @@ and transl_structure loc fields cc rootpath final_env = function
               if not (Parmatch.irrefutable vb_pat) then
                 raise (Error (vb_pat.pat_loc, Fragile_pattern_in_toplevel)));
       ( Translcore.transl_let
-          ~allow_js_hoist:(has_exportable_module_path rootpath)
+          ~js_hoist:(js_hoist_handler rootpath)
           rec_flag pat_expr_list body,
         size )
     | Tstr_typext tyext ->
@@ -479,8 +537,10 @@ let _ = Translcore.transl_module := transl_module
 
 let transl_implementation module_name (str, cc) =
   export_identifiers := [];
+  js_hoisted := [];
   let module_id = Ident.create_persistent module_name in
   let body, _ = transl_struct Location.none [] cc (global_path module_id) str in
+  validate_js_hoisted [] cc;
   (body, !export_identifiers)
 
 (* Build the list of value identifiers defined by a toplevel structure

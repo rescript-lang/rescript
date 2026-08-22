@@ -607,18 +607,21 @@ let find_js_hoisted_attr attrs =
    emission.  When a function has @res.hoistedFunction, mark the bound variable
    itself so later compiler stages can add the flat JS export and write the
    matching .cmj metadata. *)
-let mark_js_hoisted_pattern ~allow_js_hoist attrs pat lam =
+let mark_js_hoisted_pattern ~js_hoist attrs pat lam =
   match find_js_hoisted_attr attrs with
   | None -> ()
   | Some loc -> (
     match lam with
     | Lfunction _ -> (
       match pat.pat_desc with
-      | Tpat_var (id, _) | Tpat_alias ({pat_desc = Tpat_any}, id, _) ->
-        if allow_js_hoist then Ident.make_js_hoisted id
-        else
+      | Tpat_var (id, _) | Tpat_alias ({pat_desc = Tpat_any}, id, _) -> (
+        match js_hoist with
+        | Some register ->
+          Ident.make_js_hoisted id;
+          register id loc
+        | None ->
           Location.prerr_warning loc
-            (Warnings.Misplaced_attribute hoisted_function_attr_name)
+            (Warnings.Misplaced_attribute hoisted_function_attr_name))
       | _ ->
         Location.prerr_warning loc
           (Warnings.Misplaced_attribute hoisted_function_attr_name))
@@ -639,7 +642,7 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
     transl_value_path ~loc:e.exp_loc e.exp_env path
   | Texp_constant cst -> Lconst (Const_base cst)
   | Texp_let (rec_flag, pat_expr_list, body) ->
-    transl_let ~allow_js_hoist:false rec_flag pat_expr_list (transl_exp body)
+    transl_let ~js_hoist:None rec_flag pat_expr_list (transl_exp body)
   | Texp_function {params = fparams; body; async} ->
     let directive =
       match extract_directive_for_fn e with
@@ -1047,7 +1050,7 @@ and transl_function loc (params : function_param list) body =
         fp_partial,
       return_unit )
 
-and transl_let ~allow_js_hoist rec_flag pat_expr_list body =
+and transl_let ~js_hoist rec_flag pat_expr_list body =
   match rec_flag with
   | Nonrecursive ->
     let rec transl = function
@@ -1058,7 +1061,7 @@ and transl_let ~allow_js_hoist rec_flag pat_expr_list body =
               transl_exp expr)
         in
         let lam = Translattribute.add_inline_attribute lam vb_loc attr in
-        mark_js_hoisted_pattern ~allow_js_hoist attr pat lam;
+        mark_js_hoisted_pattern ~js_hoist attr pat lam;
         Matching.for_let pat.pat_loc lam pat (transl rem)
     in
     transl pat_expr_list
@@ -1078,7 +1081,7 @@ and transl_let ~allow_js_hoist rec_flag pat_expr_list body =
           (fun () -> transl_exp expr)
       in
       let lam = Translattribute.add_inline_attribute lam vb_loc vb_attributes in
-      mark_js_hoisted_pattern ~allow_js_hoist vb_attributes pat lam;
+      mark_js_hoisted_pattern ~js_hoist vb_attributes pat lam;
       (id, lam)
     in
     Lletrec (Ext_list.map pat_expr_list transl_case, body)
