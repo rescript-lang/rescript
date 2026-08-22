@@ -71,6 +71,9 @@ val query_external_id_info :
    will raise if not found
 *)
 
+val find_hoisted_external_export :
+  ?dynamic_import:bool -> Ident.t -> string list -> string option
+
 val is_pure_module : Lam_module_ident.t -> bool
 
 val get_package_path_from_cmj :

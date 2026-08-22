@@ -32,6 +32,13 @@ let is_top (rootpath : Path.t option) =
   | Some (Pident _) -> true
   | _ -> false
 
+let has_exportable_module_path = function
+  | Some path -> (
+    match Path.flatten path with
+    | `Ok (_, _ :: _) -> true
+    | `Ok (_, []) | `Contains_apply -> false)
+  | None -> false
+
 let functor_path path param : Path.t option =
   match path with
   | None -> None
@@ -367,7 +374,10 @@ and transl_structure loc fields cc rootpath final_env = function
             | _ ->
               if not (Parmatch.irrefutable vb_pat) then
                 raise (Error (vb_pat.pat_loc, Fragile_pattern_in_toplevel)));
-      (Translcore.transl_let rec_flag pat_expr_list body, size)
+      ( Translcore.transl_let
+          ~allow_js_hoist:(has_exportable_module_path rootpath)
+          rec_flag pat_expr_list body,
+        size )
     | Tstr_typext tyext ->
       let ids = List.map (fun ext -> ext.ext_id) tyext.tyext_constructors in
       let body, size =
@@ -445,8 +455,19 @@ and transl_structure loc fields cc rootpath final_env = function
             transl_module Tcoerce_none None modl,
             body ),
         size )
-    | Tstr_primitive _ | Tstr_type _ | Tstr_modtype _ | Tstr_open _
-    | Tstr_attribute _ ->
+    | Tstr_primitive {val_attributes} ->
+      (* Externals do not introduce a Lambda function binding that can be
+         hoisted, so surface the attribute as misplaced here. *)
+      (match
+         Translattribute.get_empty_attribute "res.hoistedFunction"
+           val_attributes
+       with
+      | Some loc ->
+        Location.prerr_warning loc
+          (Warnings.Misplaced_attribute "res.hoistedFunction")
+      | None -> ());
+      transl_structure loc fields cc rootpath final_env rem
+    | Tstr_type _ | Tstr_modtype _ | Tstr_open _ | Tstr_attribute _ ->
       transl_structure loc fields cc rootpath final_env rem)
 
 (* Update forward declaration in Translcore *)
