@@ -19,15 +19,7 @@ const fixtures = readdirSync(fixturesDir)
 // `-bs-cmi-only` stops the pipeline after typechecking. Without it, bsc tries
 // to emit .mjs and resolve sibling .js files for cross-module imports, which
 // fails in this harness because we don't run the build system.
-const bscFlags = [
-  "-w",
-  "+A",
-  "-bs-jsx",
-  "4",
-  "-color",
-  "always",
-  "-bs-cmi-only",
-];
+const bscFlags = ["-w", "+A", "-bs-jsx", "4", "-color", "always"];
 
 const updateTests = process.argv[2] === "update";
 
@@ -85,13 +77,18 @@ async function cleanArtifacts(dir) {
  */
 async function runFixture(fixtureName) {
   const fixtureDir = path.join(fixturesDir, fixtureName);
+  const entries = await fs.readdir(fixtureDir);
+  // Most fixtures only need typechecking. A `full_compile` marker opts into
+  // Lambda and JS compilation for diagnostics emitted after signature
+  // coercion.
+  const compileFlags = entries.includes("full_compile") ? [] : ["-bs-cmi-only"];
 
   // Compile sources in alphabetical order, with one tweak: for any module
   // that has both `.resi` and `.res`, the interface goes first so the
   // implementation type-checks against the produced `.cmi`. Fixtures that
   // need a specific dependency order across modules can prefix filenames
   // with numeric labels (e.g. `01_Foo.res`, `02_Bar.res`).
-  const sources = (await fs.readdir(fixtureDir))
+  const sources = entries
     .filter(name => name.endsWith(".res") || name.endsWith(".resi"))
     .sort((a, b) => {
       const aStem = a.replace(/\.resi?$/, "");
@@ -120,6 +117,7 @@ async function runFixture(fixtureName) {
     const { stderr } = await bsc(
       [
         ...bscFlags,
+        ...compileFlags,
         ...extraFlags,
         "-I",
         fixtureDir,

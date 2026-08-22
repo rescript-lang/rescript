@@ -1,0 +1,11 @@
+
+  [1;33mWarning number 53[0m
+  [36m/.../fixtures/hoisted_function_hidden_by_signature.res[0m:[2m5:16-29[0m
+
+  3 [2m│[0m } = {
+  4 [2m│[0m   @res.hoistedFunction
+  [1;33m5[0m [2m│[0m   let hidden = [1;33m() => "hidden"[0m
+  6 [2m│[0m   let visible = hidden
+  7 [2m│[0m }
+
+  the @res.hoistedFunction attribute cannot appear in this context

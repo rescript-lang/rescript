@@ -32,6 +32,13 @@ let is_top (rootpath : Path.t option) =
   | Some (Pident _) -> true
   | _ -> false
 
+let has_exportable_module_path = function
+  | Some path -> (
+    match Path.flatten path with
+    | `Ok (_, _ :: _) -> true
+    | `Ok (_, []) | `Contains_apply -> false)
+  | None -> false
+
 let functor_path path param : Path.t option =
   match path with
   | None -> None
@@ -367,7 +374,10 @@ and transl_structure loc fields cc rootpath final_env = function
             | _ ->
               if not (Parmatch.irrefutable vb_pat) then
                 raise (Error (vb_pat.pat_loc, Fragile_pattern_in_toplevel)));
-      (Translcore.transl_let rec_flag pat_expr_list body, size)
+      ( Translcore.transl_let
+          ~allow_js_hoist:(has_exportable_module_path rootpath)
+          rec_flag pat_expr_list body,
+        size )
     | Tstr_typext tyext ->
       let ids = List.map (fun ext -> ext.ext_id) tyext.tyext_constructors in
       let body, size =
@@ -445,8 +455,19 @@ and transl_structure loc fields cc rootpath final_env = function
             transl_module Tcoerce_none None modl,
             body ),
         size )
-    | Tstr_primitive _ | Tstr_type _ | Tstr_modtype _ | Tstr_open _
-    | Tstr_attribute _ ->
+    | Tstr_primitive {val_attributes} ->
+      (* Externals do not introduce a Lambda function binding that can be
+         hoisted, so surface the attribute as misplaced here. *)
+      (match
+         Translattribute.get_empty_attribute "res.hoistedFunction"
+           val_attributes
+       with
+      | Some loc ->
+        Location.prerr_warning loc
+          (Warnings.Misplaced_attribute "res.hoistedFunction")
+      | None -> ());
+      transl_structure loc fields cc rootpath final_env rem
+    | Tstr_type _ | Tstr_modtype _ | Tstr_open _ | Tstr_attribute _ ->
       transl_structure loc fields cc rootpath final_env rem)
 
 (* Update forward declaration in Translcore *)
@@ -456,10 +477,91 @@ let _ = Translcore.transl_module := transl_module
 
 (* Compile an implementation *)
 
+let warn_unexported_js_hoisted lam =
+  let open Lambda in
+  let bindings = ref Map_ident.empty in
+  let hoisted = ref Map_ident.empty in
+  let add_binding id arg =
+    bindings := Map_ident.add !bindings id arg;
+    if Ident.js_hoisted id then
+      match arg with
+      | Lfunction {loc} -> hoisted := Map_ident.add !hoisted id loc
+      | _ -> ()
+  in
+  let rec collect = function
+    | Llet (_, _, id, arg, body) ->
+      add_binding id arg;
+      collect arg;
+      collect body
+    | Lletrec (decls, body) ->
+      List.iter
+        (fun (id, arg) ->
+          add_binding id arg;
+          collect arg)
+        decls;
+      collect body
+    | lam -> Lambda.iter collect lam
+  in
+  collect lam;
+  let reachable = ref Set_ident.empty in
+  let rec field seen pos = function
+    | Lvar id ->
+      if Set_ident.mem seen id then None
+      else
+        Option.bind
+          (Map_ident.find_opt !bindings id)
+          (field (Set_ident.add seen id) pos)
+    | Llet (_, _, _, _, body) | Lletrec (_, body) | Lsequence (_, body) ->
+      field seen pos body
+    | Lprim (Pmakeblock (Blk_module _ | Blk_module_export _), args, _loc) ->
+      List.nth_opt args pos
+    | Lprim (Pfield (inner_pos, _), [base], _loc) ->
+      Option.bind (field seen inner_pos base) (field seen pos)
+    | _ -> None
+  and scan seen field_name = function
+    | Lvar id ->
+      if Ident.js_hoisted id then
+        match field_name with
+        | Some name when name = id.Ident.name ->
+          reachable := Set_ident.add !reachable id
+        | Some _ | None -> ()
+      else if not (Set_ident.mem seen id) then
+        Map_ident.find_opt !bindings id
+        |> Option.iter (scan (Set_ident.add seen id) field_name)
+    | Llet (_, _, _, _, body) | Lletrec (_, body) | Lsequence (_, body) ->
+      scan seen field_name body
+    | Lprim (Pmakeblock (Blk_module fields), args, _loc) ->
+      List.iter2 (fun field arg -> scan seen (Some field) arg) fields args
+    | Lprim (Pmakeblock (Blk_module_export fields), args, _loc) ->
+      List.iter2
+        (fun field arg -> scan seen (Some field.Ident.name) arg)
+        fields args
+    | Lprim (Pfield (pos, _), [base], _loc) ->
+      field seen pos base |> Option.iter (scan seen field_name)
+    | _ -> ()
+  in
+  let rec scan_root = function
+    | Llet (_, _, _, _, body) | Lletrec (_, body) | Lsequence (_, body) ->
+      scan_root body
+    | Lprim (Pmakeblock (Blk_module_export fields), args, _loc) ->
+      List.iter2
+        (fun field arg -> scan Set_ident.empty (Some field.Ident.name) arg)
+        fields args
+    | _ -> ()
+  in
+  scan_root lam;
+  Map_ident.iter !hoisted (fun id loc ->
+      if not (Set_ident.mem !reachable id) then (
+        Ident.clear_js_hoisted id;
+        Location.prerr_warning loc
+          (Warnings.Misplaced_attribute "res.hoistedFunction")))
+
 let transl_implementation module_name (str, cc) =
   export_identifiers := [];
+  Translcore.reset_js_hoisted_found ();
   let module_id = Ident.create_persistent module_name in
   let body, _ = transl_struct Location.none [] cc (global_path module_id) str in
+  if Translcore.has_js_hoisted () then warn_unexported_js_hoisted body;
   (body, !export_identifiers)
 
 (* Build the list of value identifiers defined by a toplevel structure

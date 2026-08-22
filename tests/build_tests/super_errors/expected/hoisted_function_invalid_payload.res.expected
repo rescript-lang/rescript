@@ -1,0 +1,11 @@
+
+  [1;33mWarning number 47[0m
+  [36m/.../fixtures/hoisted_function_invalid_payload.res[0m:[2m2:3-22[0m
+
+  1 [2m│[0m module Nested = {
+  [1;33m2[0m [2m│[0m   [1;33m@res.hoistedFunction[0m("name")
+  3 [2m│[0m   let make = () => ()
+  4 [2m│[0m }
+
+  illegal payload for attribute @res.hoistedFunction.
+This attribute does not accept a payload

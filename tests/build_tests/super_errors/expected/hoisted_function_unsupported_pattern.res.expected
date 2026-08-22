@@ -1,0 +1,10 @@
+
+  [1;33mWarning number 53[0m
+  [36m/.../fixtures/hoisted_function_unsupported_pattern.res[0m:[2m2:3-22[0m
+
+  1 [2m│[0m module Nested = {
+  [1;33m2[0m [2m│[0m   [1;33m@res.hoistedFunction[0m
+  3 [2m│[0m   let f as g = () => "ok"
+  4 [2m│[0m }
+
+  the @res.hoistedFunction attribute cannot appear in this context

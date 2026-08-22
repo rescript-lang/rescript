@@ -1,0 +1,11 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/hoisted_function_export_collision.res[0m:[2m3:14-21[0m
+
+  1 [2m│[0m module One = {
+  2 [2m│[0m   @res.hoistedFunction
+  [1;31m3[0m [2m│[0m   let make = [1;31m() => ()[0m
+  4 [2m│[0m }
+  5 [2m│[0m let \"One$make" = () => ()
+
+  Cannot hoist this function as `One$make` because that name is already used by a top-level binding.

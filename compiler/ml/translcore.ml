@@ -598,6 +598,42 @@ let extract_directive_for_fn exp =
          if txt = "directive" then Ast_payload.is_single_string payload
          else None)
 
+let hoisted_function_attr_name = "res.hoistedFunction"
+
+let js_hoisted_found = ref false
+
+let reset_js_hoisted_found () = js_hoisted_found := false
+
+let has_js_hoisted () = !js_hoisted_found
+
+let find_js_hoisted_attr attrs =
+  Translattribute.get_empty_attribute hoisted_function_attr_name attrs
+
+(* A value binding's source attributes are not carried all the way to JS
+   emission.  When a function has @res.hoistedFunction, mark the bound variable
+   itself so later compiler stages can add the flat JS export and write the
+   matching .cmj metadata. *)
+let mark_js_hoisted_pattern ~allow_js_hoist attrs pat lam =
+  match find_js_hoisted_attr attrs with
+  | None -> ()
+  | Some loc -> (
+    match lam with
+    | Lfunction _ -> (
+      match pat.pat_desc with
+      | Tpat_var (id, _) | Tpat_alias ({pat_desc = Tpat_any}, id, _) ->
+        if allow_js_hoist then (
+          Ident.make_js_hoisted id;
+          js_hoisted_found := true)
+        else
+          Location.prerr_warning loc
+            (Warnings.Misplaced_attribute hoisted_function_attr_name)
+      | _ ->
+        Location.prerr_warning loc
+          (Warnings.Misplaced_attribute hoisted_function_attr_name))
+    | _ ->
+      Location.prerr_warning loc
+        (Warnings.Misplaced_attribute hoisted_function_attr_name))
+
 let rec transl_exp e =
   Builtin_attributes.warning_scope ~ppwarning:false e.exp_attributes (fun () ->
       List.iter (Translattribute.check_attribute e) e.exp_attributes;
@@ -611,7 +647,7 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
     transl_value_path ~loc:e.exp_loc e.exp_env path
   | Texp_constant cst -> Lconst (Const_base cst)
   | Texp_let (rec_flag, pat_expr_list, body) ->
-    transl_let rec_flag pat_expr_list (transl_exp body)
+    transl_let ~allow_js_hoist:false rec_flag pat_expr_list (transl_exp body)
   | Texp_function {params = fparams; body; async} ->
     let directive =
       match extract_directive_for_fn e with
@@ -1019,7 +1055,7 @@ and transl_function loc (params : function_param list) body =
         fp_partial,
       return_unit )
 
-and transl_let rec_flag pat_expr_list body =
+and transl_let ~allow_js_hoist rec_flag pat_expr_list body =
   match rec_flag with
   | Nonrecursive ->
     let rec transl = function
@@ -1030,6 +1066,7 @@ and transl_let rec_flag pat_expr_list body =
               transl_exp expr)
         in
         let lam = Translattribute.add_inline_attribute lam vb_loc attr in
+        mark_js_hoisted_pattern ~allow_js_hoist attr pat lam;
         Matching.for_let pat.pat_loc lam pat (transl rem)
     in
     transl pat_expr_list
@@ -1049,6 +1086,7 @@ and transl_let rec_flag pat_expr_list body =
           (fun () -> transl_exp expr)
       in
       let lam = Translattribute.add_inline_attribute lam vb_loc vb_attributes in
+      mark_js_hoisted_pattern ~allow_js_hoist vb_attributes pat lam;
       (id, lam)
     in
     Lletrec (Ext_list.map pat_expr_list transl_case, body)
