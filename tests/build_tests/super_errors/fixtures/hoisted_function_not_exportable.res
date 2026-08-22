@@ -15,3 +15,9 @@ module Make = () => {
   @res.hoistedFunction
   let make = () => ()
 }
+%%private(
+  @res.hoistedFunction
+  let privateMake = () => ()
+)
+
+let usePrivate = privateMake()

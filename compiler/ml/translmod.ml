@@ -284,6 +284,18 @@ let validate_js_hoisted prefix coercion =
           | Some _ | None -> ())
       !js_hoisted
 
+let reject_js_hoisted prefix =
+  List.iter
+    (fun (id, path, loc) ->
+      if Ident.js_hoisted id then
+        match remove_prefix prefix path with
+        | Some _ ->
+          Ident.clear_js_hoisted id;
+          Location.prerr_warning loc
+            (Warnings.Misplaced_attribute "res.hoistedFunction")
+        | None -> ())
+    !js_hoisted
+
 let rec compile_functor mexp coercion root_path loc =
   let functor_param, body, body_path, res_coercion, inline_attribute =
     get_functor_params mexp coercion root_path
@@ -459,14 +471,16 @@ and transl_structure loc fields cc rootpath final_env = function
         size )
     | Tstr_module mb as s ->
       let id = mb.mb_id in
+      let hidden = Typemod.rescript_hide s in
       let body, size =
         transl_structure loc
-          (if Typemod.rescript_hide s then fields else id :: fields)
+          (if hidden then fields else id :: fields)
           cc rootpath final_env rem
       in
-      let module_body =
-        transl_module Tcoerce_none (field_path rootpath id) mb.mb_expr
-      in
+      let module_rootpath = field_path rootpath id in
+      let module_body = transl_module Tcoerce_none module_rootpath mb.mb_expr in
+      if hidden then
+        Ext_option.iter (module_path module_rootpath) reject_js_hoisted;
       let module_body =
         Translattribute.add_inline_attribute module_body mb.mb_loc
           mb.mb_attributes
