@@ -619,7 +619,9 @@ let mark_js_hoisted_pattern ~allow_js_hoist attrs pat lam =
         else
           Location.prerr_warning loc
             (Warnings.Misplaced_attribute hoisted_function_attr_name)
-      | _ -> ())
+      | _ ->
+        Location.prerr_warning loc
+          (Warnings.Misplaced_attribute hoisted_function_attr_name))
     | _ ->
       Location.prerr_warning loc
         (Warnings.Misplaced_attribute hoisted_function_attr_name))
