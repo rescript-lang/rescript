@@ -549,15 +549,15 @@ module Compile = struct
         let typedtree =
           Printer.to_string Printtyped.implementation_with_coercion typed_tree
         in
-        let lambda = Printer.to_string Printlambda.lambda lam in
-        let lam, _ = Lam_convert.convert export_ident_sets lam in
+        let lambda_output = Printer.to_string Printlambda.lambda lambda in
+        let lam, _ = Lam_convert.convert export_ident_sets lambda in
         let lam = Lam_print.lambda_to_string lam in
         let debug_attrs =
           Js.Unsafe.
             [|
               ("parsetree", inject @@ Js.string parsetree);
               ("typedtree", inject @@ Js.string typedtree);
-              ("lambda", inject @@ Js.string lambda);
+              ("lambda", inject @@ Js.string lambda_output);
               ("lam", inject @@ Js.string lam);
             |]
         in
