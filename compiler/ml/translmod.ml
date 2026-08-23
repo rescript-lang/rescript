@@ -234,14 +234,22 @@ let get_functor_params mexp coercion root_path =
   | _ -> assert false
 
 let export_identifiers : Ident.t list ref = ref []
-let js_hoisted : (string list * Location.t) list ref = ref []
+let js_hoisted : (Ident.t * string list * Location.t) list ref = ref []
 
 let js_hoist_handler rootpath =
   match exportable_module_path rootpath with
   | None -> None
   | Some path ->
     Some
-      (fun id loc -> js_hoisted := (path @ [id.Ident.name], loc) :: !js_hoisted)
+      (fun id loc ->
+        js_hoisted := (id, path @ [id.Ident.name], loc) :: !js_hoisted)
+
+let reject_js_hoisted_attribute attrs =
+  match Translattribute.get_empty_attribute "res.hoistedFunction" attrs with
+  | Some loc ->
+    Location.prerr_warning loc
+      (Warnings.Misplaced_attribute "res.hoistedFunction")
+  | None -> ()
 
 let rec remove_prefix prefix path =
   match (prefix, path) with
@@ -271,7 +279,7 @@ let rec exported_by_coercion path coercion =
 let validate_js_hoisted_path prefix exported =
   js_hoisted :=
     List.filter
-      (fun (path, loc) ->
+      (fun (_, path, loc) ->
         match remove_prefix prefix path with
         | Some path when not (exported path) ->
           Location.prerr_warning loc
@@ -524,16 +532,17 @@ and transl_structure loc fields cc rootpath final_env = function
     | Tstr_primitive {val_attributes} ->
       (* Externals do not introduce a Lambda function binding that can be
          hoisted, so surface the attribute as misplaced here. *)
-      (match
-         Translattribute.get_empty_attribute "res.hoistedFunction"
-           val_attributes
-       with
-      | Some loc ->
-        Location.prerr_warning loc
-          (Warnings.Misplaced_attribute "res.hoistedFunction")
-      | None -> ());
+      reject_js_hoisted_attribute val_attributes;
       transl_structure loc fields cc rootpath final_env rem
-    | Tstr_type _ | Tstr_modtype _ | Tstr_open _ | Tstr_attribute _ ->
+    | Tstr_type (_, declarations) ->
+      List.iter
+        (fun {typ_attributes} -> reject_js_hoisted_attribute typ_attributes)
+        declarations;
+      transl_structure loc fields cc rootpath final_env rem
+    | Tstr_modtype {mtd_attributes} ->
+      reject_js_hoisted_attribute mtd_attributes;
+      transl_structure loc fields cc rootpath final_env rem
+    | Tstr_open _ | Tstr_attribute _ ->
       transl_structure loc fields cc rootpath final_env rem)
 
 (* Update forward declaration in Translcore *)

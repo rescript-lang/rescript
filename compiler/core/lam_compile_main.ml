@@ -111,7 +111,8 @@ let no_side_effects (rest : Lam_group.t list) : string option =
    value still lives at its normal module path, but downstream tools can import
    the flat name directly when the .cmj metadata marks it as hoisted. *)
 let js_hoisted_aliases (export_ids : Ident.t list)
-    (hoisted : (string list * Location.t) list) (groups : Lam_group.t list) =
+    (hoisted : (Ident.t * string list * Location.t) list)
+    (groups : Lam_group.t list) =
   if hoisted = [] then []
   else
     let group_map =
@@ -134,25 +135,30 @@ let js_hoisted_aliases (export_ids : Ident.t list)
              ~args:[base] loc)
           fields
     in
-    let rec resolve seen = function
+    let rec resolve_binding seen = function
       | Lam.Lvar id as lam -> (
-        if Set_ident.mem seen id then lam
+        if Set_ident.mem seen id then (lam, Some id)
         else
           match Map_ident.find_opt group_map id with
-          | Some resolved -> resolve (Set_ident.add seen id) resolved
-          | None -> lam)
+          | Some
+              ((Lam.Lvar _ | Lam.Lprim {primitive = Lam_primitive.Pfield _; _})
+               as alias) ->
+            resolve_binding (Set_ident.add seen id) alias
+          | Some resolved -> (resolved, Some id)
+          | None -> (lam, Some id))
       | Lam.Lprim {primitive = Lam_primitive.Pfield (pos, _); args = [base]} as
         lam -> (
-        match resolve seen base with
+        match fst (resolve_binding seen base) with
         | Lam.Lprim
             {primitive = Lam_primitive.Pmakeblock (_, Blk_module _, _); args}
           -> (
           match List.nth_opt args pos with
-          | Some field -> resolve seen field
-          | None -> lam)
-        | _ -> lam)
-      | lam -> lam
+          | Some field -> resolve_binding seen field
+          | None -> (lam, None))
+        | _ -> (lam, None))
+      | lam -> (lam, None)
     in
+    let resolve seen lam = fst (resolve_binding seen lam) in
     let rec find_field name pos fields args =
       match (fields, args) with
       | field :: _, arg :: _ when field = name -> Some (pos, arg)
@@ -162,7 +168,9 @@ let js_hoisted_aliases (export_ids : Ident.t list)
     in
     let rec find_path lam fields positions =
       match fields with
-      | [] -> Some (List.rev positions, resolve Set_ident.empty lam)
+      | [] ->
+        let target, binding_id = resolve_binding Set_ident.empty lam in
+        Some (List.rev positions, binding_id, target)
       | field :: fields -> (
         match resolve Set_ident.empty lam with
         | Lam.Lprim
@@ -191,7 +199,8 @@ let js_hoisted_aliases (export_ids : Ident.t list)
     in
     fst
       (Ext_list.fold_left hoisted ([], occupied_names)
-         (fun ((aliases, occupied_names) as state) (segments, loc) ->
+         (fun
+           ((aliases, occupied_names) as state) (binding_id, segments, loc) ->
            let missing_path () =
              Location.prerr_warning loc
                (Warnings.Misplaced_attribute "res.hoistedFunction");
@@ -204,7 +213,8 @@ let js_hoisted_aliases (export_ids : Ident.t list)
                match Map_ident.find_opt group_map top_id with
                | Some lam -> (
                  match find_path lam fields [] with
-                 | Some (path, target) ->
+                 | Some (path, Some target_id, target)
+                   when Ident.same binding_id target_id ->
                    let name =
                      segments
                      |> List.map Ext_ident.unwrap_uppercase_exotic
@@ -231,7 +241,7 @@ let js_hoisted_aliases (export_ids : Ident.t list)
                          name )
                        :: aliases,
                        Set_string.add occupied_names js_name )
-                 | None -> missing_path ())
+                 | Some _ | None -> missing_path ())
                | None -> missing_path ())
              | None -> missing_path ())
            | [] -> missing_path ()))

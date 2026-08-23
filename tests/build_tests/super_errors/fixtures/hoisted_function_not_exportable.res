@@ -21,3 +21,13 @@ module Make = () => {
 )
 
 let usePrivate = privateMake()
+module Shadowed = {
+  @res.hoistedFunction
+  let make = () => "first"
+  let make = () => "second"
+}
+@res.hoistedFunction
+type markedType = int
+@res.hoistedFunction
+module type MarkedModule = {}
+let after = ()

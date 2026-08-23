@@ -604,9 +604,8 @@ let find_js_hoisted_attr attrs =
   Translattribute.get_empty_attribute hoisted_function_attr_name attrs
 
 (* A value binding's source attributes are not carried all the way to JS
-   emission.  When a function has @res.hoistedFunction, mark the bound variable
-   itself so later compiler stages can add the flat JS export and write the
-   matching .cmj metadata. *)
+   emission. Record the binding and its source path here so later compiler
+   stages can add the flat JS export and matching .cmj metadata. *)
 let mark_js_hoisted_pattern ~js_hoist attrs pat lam =
   match find_js_hoisted_attr attrs with
   | None -> ()
