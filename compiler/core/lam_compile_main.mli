@@ -30,7 +30,7 @@
 val compile :
   string ->
   Ident.t list ->
-  (Ident.t * string list * Location.t) list ->
+  Lambda.hoisted_function list ->
   Lambda.lambda ->
   J.deps_program
 (** For toplevel, [filename] is [""] which is the same as

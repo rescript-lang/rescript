@@ -19,7 +19,7 @@
 val transl_implementation :
   string ->
   Typedtree.structure * Typedtree.module_coercion ->
-  Lambda.lambda * Ident.t list * (Ident.t * string list * Location.t) list
+  Lambda.lambda * Ident.t list * Lambda.hoisted_function list
 
 type error
 (* exception Error of Location.t * error *)

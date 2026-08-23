@@ -111,8 +111,7 @@ let no_side_effects (rest : Lam_group.t list) : string option =
    value still lives at its normal module path, but downstream tools can import
    the flat name directly when the .cmj metadata marks it as hoisted. *)
 let js_hoisted_aliases (export_ids : Ident.t list)
-    (hoisted : (Ident.t * string list * Location.t) list)
-    (groups : Lam_group.t list) =
+    (hoisted : Lambda.hoisted_function list) (groups : Lam_group.t list) =
   if hoisted = [] then []
   else
     let group_map =
@@ -199,24 +198,24 @@ let js_hoisted_aliases (export_ids : Ident.t list)
     in
     fst
       (Ext_list.fold_left hoisted ([], occupied_names)
-         (fun
-           ((aliases, occupied_names) as state) (binding_id, segments, loc) ->
+         (fun ((aliases, occupied_names) as state) hoisted ->
+           let {Lambda.binding; path; loc} = hoisted in
            let missing_path () =
              Location.prerr_warning loc
                (Warnings.Misplaced_attribute "res.hoistedFunction");
              state
            in
-           match segments with
+           match path with
            | top :: fields -> (
              match Map_string.find_opt exported_modules top with
              | Some top_id -> (
                match Map_ident.find_opt group_map top_id with
                | Some lam -> (
                  match find_path lam fields [] with
-                 | Some (path, Some target_id, target)
-                   when Ident.same binding_id target_id ->
+                 | Some (access_path, Some target_id, target)
+                   when Ident.same binding target_id ->
                    let name =
-                     segments
+                     path
                      |> List.map Ext_ident.unwrap_uppercase_exotic
                      |> String.concat "$"
                    in
@@ -233,11 +232,11 @@ let js_hoisted_aliases (export_ids : Ident.t list)
                        name
                    else
                      let alias_id = Ident.create name in
-                     let alias = access loc (Lam.var top_id) path in
+                     let alias = access loc (Lam.var top_id) access_path in
                      ( ( Lam_group.Single (Alias, alias_id, alias),
                          alias_id,
                          alias,
-                         segments,
+                         path,
                          name )
                        :: aliases,
                        Set_string.add occupied_names js_name )

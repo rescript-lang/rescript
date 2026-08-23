@@ -234,7 +234,7 @@ let get_functor_params mexp coercion root_path =
   | _ -> assert false
 
 let export_identifiers : Ident.t list ref = ref []
-let js_hoisted : (Ident.t * string list * Location.t) list ref = ref []
+let js_hoisted : Lambda.hoisted_function list ref = ref []
 
 let js_hoist_handler rootpath =
   match exportable_module_path rootpath with
@@ -242,7 +242,9 @@ let js_hoist_handler rootpath =
   | Some path ->
     Some
       (fun id loc ->
-        js_hoisted := (id, path @ [id.Ident.name], loc) :: !js_hoisted)
+        js_hoisted :=
+          {Lambda.binding = id; path = path @ [id.Ident.name]; loc}
+          :: !js_hoisted)
 
 let reject_js_hoisted_attribute attrs =
   match Translattribute.get_empty_attribute "res.hoistedFunction" attrs with
@@ -279,7 +281,7 @@ let rec exported_by_coercion path coercion =
 let validate_js_hoisted_path prefix exported =
   js_hoisted :=
     List.filter
-      (fun (_, path, loc) ->
+      (fun {Lambda.path; loc} ->
         match remove_prefix prefix path with
         | Some path when not (exported path) ->
           Location.prerr_warning loc
