@@ -47,7 +47,8 @@ type keyed_cmj_values = keyed_cmj_value array
 
 type hoisted_export = {
   path: string list;  (** Exact source-level module path segments. *)
-  name: string;  (** Flat compiler identifier used for the public JS export. *)
+  export_name: string;
+      (** Flat compiler identifier used for the public JS export. *)
 }
 
 type t = {
@@ -105,8 +106,7 @@ let to_file name ~check_exists (v : t) =
     output_string oc s;
     close_out oc)
 
-let key_comp (a : string) (b : keyed_cmj_value) =
-  Map_string.compare_key a b.name
+let key_comp a b = Map_string.compare_key a b.name
 
 let not_found key =
   {name = key; arity = single_na; persistent_closed_lambda = None}
@@ -163,7 +163,7 @@ let query_by_name (cmj_table : t) name : keyed_cmj_value =
 let find_hoisted_export (cmj_table : t) path =
   Array.find_map
     (fun value ->
-      if List.equal Ext_string.equal value.path path then Some value.name
+      if List.equal Ext_string.equal value.path path then Some value.export_name
       else None)
     cmj_table.hoisted_exports
 

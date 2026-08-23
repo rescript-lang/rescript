@@ -30,4 +30,10 @@ module Shadowed = {
 type markedType = int
 @res.hoistedFunction
 module type MarkedModule = {}
+@res.hoistedFunction
+module MarkedModule = {}
+module type MarkedSignature = {
+  @res.hoistedFunction
+  let make: unit => unit
+}
 let after = ()

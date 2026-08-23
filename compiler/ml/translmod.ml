@@ -247,11 +247,31 @@ let js_hoist_handler rootpath =
           :: !js_hoisted)
 
 let reject_js_hoisted_attribute attrs =
-  match Translattribute.get_empty_attribute "res.hoistedFunction" attrs with
-  | Some loc ->
-    Location.prerr_warning loc
-      (Warnings.Misplaced_attribute "res.hoistedFunction")
-  | None -> ()
+  Translattribute.reject_attribute "res.hoistedFunction" attrs
+
+let reject_js_hoisted_structure_item = function
+  | Tstr_value _ -> ()
+  | Tstr_eval (_, attrs) -> reject_js_hoisted_attribute attrs
+  | Tstr_primitive {val_attributes} ->
+    reject_js_hoisted_attribute val_attributes
+  | Tstr_type (_, declarations) ->
+    List.iter
+      (fun {typ_attributes} -> reject_js_hoisted_attribute typ_attributes)
+      declarations
+  | Tstr_typext {tyext_attributes} ->
+    reject_js_hoisted_attribute tyext_attributes
+  | Tstr_exception {ext_attributes} ->
+    reject_js_hoisted_attribute ext_attributes
+  | Tstr_module {mb_attributes} -> reject_js_hoisted_attribute mb_attributes
+  | Tstr_recmodule bindings ->
+    List.iter
+      (fun {mb_attributes} -> reject_js_hoisted_attribute mb_attributes)
+      bindings
+  | Tstr_modtype {mtd_attributes} -> reject_js_hoisted_attribute mtd_attributes
+  | Tstr_open {open_attributes} -> reject_js_hoisted_attribute open_attributes
+  | Tstr_include {incl_attributes} ->
+    reject_js_hoisted_attribute incl_attributes
+  | Tstr_attribute attr -> reject_js_hoisted_attribute [attr]
 
 let rec remove_prefix prefix path =
   match (prefix, path) with
@@ -431,6 +451,7 @@ and transl_structure loc fields cc rootpath final_env = function
         List.length pos_cc_list )
     | _ -> Misc.fatal_error "Translmod.transl_structure")
   | item :: rem -> (
+    reject_js_hoisted_structure_item item.str_desc;
     match item.str_desc with
     | Tstr_eval (expr, _) ->
       let body, size = transl_structure loc fields cc rootpath final_env rem in
@@ -531,20 +552,8 @@ and transl_structure loc fields cc rootpath final_env = function
             transl_module Tcoerce_none None modl,
             body ),
         size )
-    | Tstr_primitive {val_attributes} ->
-      (* Externals do not introduce a Lambda function binding that can be
-         hoisted, so surface the attribute as misplaced here. *)
-      reject_js_hoisted_attribute val_attributes;
-      transl_structure loc fields cc rootpath final_env rem
-    | Tstr_type (_, declarations) ->
-      List.iter
-        (fun {typ_attributes} -> reject_js_hoisted_attribute typ_attributes)
-        declarations;
-      transl_structure loc fields cc rootpath final_env rem
-    | Tstr_modtype {mtd_attributes} ->
-      reject_js_hoisted_attribute mtd_attributes;
-      transl_structure loc fields cc rootpath final_env rem
-    | Tstr_open _ | Tstr_attribute _ ->
+    | Tstr_primitive _ | Tstr_type _ | Tstr_modtype _ | Tstr_open _
+    | Tstr_attribute _ ->
       transl_structure loc fields cc rootpath final_env rem)
 
 (* Update forward declaration in Translcore *)
@@ -554,13 +563,23 @@ let _ = Translcore.transl_module := transl_module
 
 (* Compile an implementation *)
 
+type implementation = {
+  lambda: Lambda.lambda;
+  exports: Ident.t list;
+  hoisted_functions: Lambda.hoisted_function list;
+}
+
 let transl_implementation module_name (str, cc) =
   export_identifiers := [];
   js_hoisted := [];
   let module_id = Ident.create_persistent module_name in
   let body, _ = transl_struct Location.none [] cc (global_path module_id) str in
   validate_js_hoisted [] cc;
-  (body, !export_identifiers, !js_hoisted)
+  {
+    lambda = body;
+    exports = !export_identifiers;
+    hoisted_functions = !js_hoisted;
+  }
 
 (* Build the list of value identifiers defined by a toplevel structure
    (excluding primitive declarations). *)

@@ -518,13 +518,14 @@ module Compile = struct
         types_signature := signature;
         (a, b)
       in
-      typed_tree |> Translmod.transl_implementation modulename
-      |> (* Printlambda.lambda ppf *) fun (lam, exports, hoisted) ->
+      let {Translmod.lambda; exports; hoisted_functions} =
+        Translmod.transl_implementation modulename typed_tree
+      in
       let buffer = Buffer.create 1000 in
       let () =
         Js_dump_program.pp_deps_program ~output_prefix:""
           (* does not matter here *) module_system
-          (Lam_compile_main.compile "" exports hoisted lam)
+          (Lam_compile_main.compile "" exports hoisted_functions lambda)
           (Ext_pp.from_buffer buffer)
       in
       let v = Buffer.contents buffer in

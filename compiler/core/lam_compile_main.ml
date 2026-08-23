@@ -354,7 +354,7 @@ let compile (output_prefix : string) export_idents hoisted (lam : Lambda.lambda)
         ( group :: groups,
           id :: exports,
           Map_ident.add export_map id lam,
-          {Js_cmj_format.path; name} :: hoisted_metadata ))
+          {Js_cmj_format.path; export_name = name} :: hoisted_metadata ))
   in
   let groups = groups @ List.rev hoisted_groups in
   let meta =

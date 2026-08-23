@@ -600,6 +600,32 @@ let check_recmod_typedecls env sdecls decls =
         (Mtype.type_paths env (Pident id) mty))
     sdecls decls
 
+let reject_js_hoisted_attribute attrs =
+  Translattribute.reject_attribute "res.hoistedFunction" attrs
+
+let reject_js_hoisted_signature_item = function
+  | Psig_value {pval_attributes} -> reject_js_hoisted_attribute pval_attributes
+  | Psig_type (_, declarations) ->
+    List.iter
+      (fun {ptype_attributes} -> reject_js_hoisted_attribute ptype_attributes)
+      declarations
+  | Psig_typext {ptyext_attributes} ->
+    reject_js_hoisted_attribute ptyext_attributes
+  | Psig_exception {pext_attributes} ->
+    reject_js_hoisted_attribute pext_attributes
+  | Psig_module {pmd_attributes} -> reject_js_hoisted_attribute pmd_attributes
+  | Psig_recmodule declarations ->
+    List.iter
+      (fun {pmd_attributes} -> reject_js_hoisted_attribute pmd_attributes)
+      declarations
+  | Psig_modtype {pmtd_attributes} ->
+    reject_js_hoisted_attribute pmtd_attributes
+  | Psig_open {popen_attributes} -> reject_js_hoisted_attribute popen_attributes
+  | Psig_include {pincl_attributes} ->
+    reject_js_hoisted_attribute pincl_attributes
+  | Psig_attribute attr -> reject_js_hoisted_attribute [attr]
+  | Psig_extension (_, attrs) -> reject_js_hoisted_attribute attrs
+
 (* Auxiliaries for checking uniqueness of names in signatures and structures *)
 
 module String_set = Set.Make (struct
@@ -751,6 +777,7 @@ and transl_signature env sg =
     | [] -> ([], [], env)
     | item :: srem -> (
       let loc = item.psig_loc in
+      reject_js_hoisted_signature_item item.psig_desc;
       match item.psig_desc with
       | Psig_value sdesc ->
         let tdesc, newenv =

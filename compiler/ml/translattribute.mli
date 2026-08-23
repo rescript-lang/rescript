@@ -25,6 +25,8 @@ val get_inline_attribute : Parsetree.attributes -> Lambda.inline_attribute
 
 val get_empty_attribute : string -> Parsetree.attributes -> Location.t option
 
+val reject_attribute : string -> Parsetree.attributes -> unit
+
 val get_and_remove_inlined_attribute :
   Typedtree.expression -> Lambda.inline_attribute * Typedtree.expression
 

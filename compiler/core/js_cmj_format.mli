@@ -62,7 +62,8 @@ type keyed_cmj_value = {
 
 type hoisted_export = {
   path: string list;  (** Exact source-level module path segments. *)
-  name: string;  (** Flat compiler identifier used for the public JS export. *)
+  export_name: string;
+      (** Flat compiler identifier used for the public JS export. *)
 }
 
 type t = {
