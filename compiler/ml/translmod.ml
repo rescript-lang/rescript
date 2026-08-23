@@ -246,53 +246,6 @@ let js_hoist_handler rootpath =
           {Lambda.binding = id; path = path @ [id.Ident.name]; loc}
           :: !js_hoisted)
 
-let rec remove_prefix prefix path =
-  match (prefix, path) with
-  | [], path -> Some path
-  | prefix :: prefixes, segment :: segments when prefix = segment ->
-    remove_prefix prefixes segments
-  | _ -> None
-
-let rec exported_by_coercion path coercion =
-  match path with
-  | [] -> true
-  | segment :: rest -> (
-    match coercion with
-    | Tcoerce_none -> true
-    | Tcoerce_structure (fields, _, names) ->
-      let rec find fields names =
-        match (fields, names) with
-        | (_, coercion) :: fields, name :: names ->
-          if name = segment then exported_by_coercion rest coercion
-          else find fields names
-        | [], [] -> false
-        | _ -> assert false
-      in
-      find fields names
-    | Tcoerce_functor _ | Tcoerce_primitive _ | Tcoerce_alias _ -> false)
-
-let validate_js_hoisted_path prefix exported =
-  js_hoisted :=
-    List.filter
-      (fun {Lambda.path; loc} ->
-        match remove_prefix prefix path with
-        | Some path when not (exported path) ->
-          Location.prerr_warning loc
-            (Warnings.Misplaced_attribute "res.hoistedFunction");
-          false
-        | Some _ | None -> true)
-      !js_hoisted
-
-let validate_js_hoisted prefix coercion =
-  match coercion with
-  | Tcoerce_none -> ()
-  | _ ->
-    validate_js_hoisted_path prefix (fun path ->
-        exported_by_coercion path coercion)
-
-let reject_js_hoisted prefix =
-  validate_js_hoisted_path prefix (fun _path -> false)
-
 let rec compile_functor mexp coercion root_path loc =
   let functor_param, body, body_path, res_coercion, inline_attribute =
     get_functor_params mexp coercion root_path
@@ -333,11 +286,7 @@ and transl_module cc rootpath mexp =
     | Tmod_ident (path, _) ->
       apply_coercion loc Strict cc
         (Lambda.transl_module_path ~loc mexp.mod_env path)
-    | Tmod_structure str ->
-      let lam = fst (transl_struct loc [] cc rootpath str) in
-      Ext_option.iter (module_path rootpath) (fun path ->
-          validate_js_hoisted path cc);
-      lam
+    | Tmod_structure str -> fst (transl_struct loc [] cc rootpath str)
     | Tmod_functor _ -> compile_functor mexp cc rootpath loc
     | Tmod_apply (funct, arg, ccarg) ->
       let inlined_attribute, funct =
@@ -474,10 +423,9 @@ and transl_structure loc fields cc rootpath final_env = function
           (if hidden then fields else id :: fields)
           cc rootpath final_env rem
       in
-      let module_rootpath = field_path rootpath id in
-      let module_body = transl_module Tcoerce_none module_rootpath mb.mb_expr in
-      if hidden then
-        Ext_option.iter (module_path module_rootpath) reject_js_hoisted;
+      let module_body =
+        transl_module Tcoerce_none (field_path rootpath id) mb.mb_expr
+      in
       let module_body =
         Translattribute.add_inline_attribute module_body mb.mb_loc
           mb.mb_attributes
@@ -546,7 +494,6 @@ let transl_implementation module_name (str, cc) =
   js_hoisted := [];
   let module_id = Ident.create_persistent module_name in
   let body, _ = transl_struct Location.none [] cc (global_path module_id) str in
-  validate_js_hoisted [] cc;
   {
     lambda = body;
     exports = !export_identifiers;
