@@ -406,6 +406,22 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
 let typ_mapper (self : mapper) (typ : Parsetree.core_type) =
   Ast_core_type_class_type.typ_mapper self typ
 
+let mark_hoisted_function_attributes (bindings : Parsetree.value_binding list) =
+  Ext_list.iter bindings (fun {pvb_attributes} ->
+      Ext_list.iter pvb_attributes (fun (({txt}, _) as attr) ->
+          if txt = "res.hoistedFunction" then
+            Used_attributes.mark_used_attribute attr))
+
+let value_bindings_mapper (self : mapper)
+    (bindings : Parsetree.value_binding list) =
+  mark_hoisted_function_attributes bindings;
+  Ast_tuple_pattern_flatten.value_bindings_mapper self bindings
+
+let value_bindings_rec_mapper (self : mapper)
+    (bindings : Parsetree.value_binding list) =
+  mark_hoisted_function_attributes bindings;
+  default_mapper.value_bindings_rec self bindings
+
 let signature_item_mapper (self : mapper) (sigi : Parsetree.signature_item) :
     Parsetree.signature_item =
   match sigi.psig_desc with
@@ -486,6 +502,9 @@ let signature_item_mapper (self : mapper) (sigi : Parsetree.signature_item) :
 
 let structure_item_mapper (self : mapper) (str : Parsetree.structure_item) :
     Parsetree.structure_item =
+  (match str.pstr_desc with
+  | Pstr_value (_, bindings) -> mark_hoisted_function_attributes bindings
+  | _ -> ());
   match str.pstr_desc with
   | Pstr_value (_, vbs)
     when List.exists
@@ -784,7 +803,8 @@ let mapper : mapper =
     pat = pat_mapper;
     typ = typ_mapper;
     signature_item = signature_item_mapper;
-    value_bindings = Ast_tuple_pattern_flatten.value_bindings_mapper;
+    value_bindings = value_bindings_mapper;
+    value_bindings_rec = value_bindings_rec_mapper;
     structure_item = structure_item_mapper;
     structure = structure_mapper ~await_context:(ref (Hashtbl.create 10));
     (* Ad-hoc way to internalize stuff *)

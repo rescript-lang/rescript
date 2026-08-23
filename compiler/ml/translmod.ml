@@ -246,33 +246,6 @@ let js_hoist_handler rootpath =
           {Lambda.binding = id; path = path @ [id.Ident.name]; loc}
           :: !js_hoisted)
 
-let reject_js_hoisted_attribute attrs =
-  Translattribute.reject_attribute "res.hoistedFunction" attrs
-
-let reject_js_hoisted_structure_item = function
-  | Tstr_value _ -> ()
-  | Tstr_eval (_, attrs) -> reject_js_hoisted_attribute attrs
-  | Tstr_primitive {val_attributes} ->
-    reject_js_hoisted_attribute val_attributes
-  | Tstr_type (_, declarations) ->
-    List.iter
-      (fun {typ_attributes} -> reject_js_hoisted_attribute typ_attributes)
-      declarations
-  | Tstr_typext {tyext_attributes} ->
-    reject_js_hoisted_attribute tyext_attributes
-  | Tstr_exception {ext_attributes} ->
-    reject_js_hoisted_attribute ext_attributes
-  | Tstr_module {mb_attributes} -> reject_js_hoisted_attribute mb_attributes
-  | Tstr_recmodule bindings ->
-    List.iter
-      (fun {mb_attributes} -> reject_js_hoisted_attribute mb_attributes)
-      bindings
-  | Tstr_modtype {mtd_attributes} -> reject_js_hoisted_attribute mtd_attributes
-  | Tstr_open {open_attributes} -> reject_js_hoisted_attribute open_attributes
-  | Tstr_include {incl_attributes} ->
-    reject_js_hoisted_attribute incl_attributes
-  | Tstr_attribute attr -> reject_js_hoisted_attribute [attr]
-
 let rec remove_prefix prefix path =
   match (prefix, path) with
   | [], path -> Some path
@@ -451,7 +424,6 @@ and transl_structure loc fields cc rootpath final_env = function
         List.length pos_cc_list )
     | _ -> Misc.fatal_error "Translmod.transl_structure")
   | item :: rem -> (
-    reject_js_hoisted_structure_item item.str_desc;
     match item.str_desc with
     | Tstr_eval (expr, _) ->
       let body, size = transl_structure loc fields cc rootpath final_env rem in

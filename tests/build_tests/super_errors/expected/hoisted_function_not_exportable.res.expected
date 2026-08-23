@@ -1,16 +1,4 @@
 
-  [1;33mWarning number 53[0m
-  [36m/.../fixtures/hoisted_function_not_exportable.res[0m:[2m36:3-22[0m
-
-  34 [2m│[0m module MarkedModule = {}
-  35 [2m│[0m module type MarkedSignature = {
-  [1;33m36[0m [2m│[0m   [1;33m@res.hoistedFunction[0m
-  37 [2m│[0m   let make: unit => unit
-  38 [2m│[0m }
-
-  the @res.hoistedFunction attribute cannot appear in this context
-
-
   [1;33mWarning number 32[0m
   [36m/.../fixtures/hoisted_function_not_exportable.res[0m:[2m26:7-10[0m
 
@@ -21,42 +9,6 @@
   28 [2m│[0m }
 
   unused value make.
-
-
-  [1;33mWarning number 53[0m
-  [36m/.../fixtures/hoisted_function_not_exportable.res[0m:[2m29:1-20[0m
-
-  27 [2m│[0m   let make = () => "second"
-  28 [2m│[0m }
-  [1;33m29[0m [2m│[0m [1;33m@res.hoistedFunction[0m
-  30 [2m│[0m type markedType = int
-  31 [2m│[0m @res.hoistedFunction
-
-  the @res.hoistedFunction attribute cannot appear in this context
-
-
-  [1;33mWarning number 53[0m
-  [36m/.../fixtures/hoisted_function_not_exportable.res[0m:[2m31:1-20[0m
-
-  29 [2m│[0m @res.hoistedFunction
-  30 [2m│[0m type markedType = int
-  [1;33m31[0m [2m│[0m [1;33m@res.hoistedFunction[0m
-  32 [2m│[0m module type MarkedModule = {}
-  33 [2m│[0m @res.hoistedFunction
-
-  the @res.hoistedFunction attribute cannot appear in this context
-
-
-  [1;33mWarning number 53[0m
-  [36m/.../fixtures/hoisted_function_not_exportable.res[0m:[2m33:1-20[0m
-
-  31 [2m│[0m @res.hoistedFunction
-  32 [2m│[0m module type MarkedModule = {}
-  [1;33m33[0m [2m│[0m [1;33m@res.hoistedFunction[0m
-  34 [2m│[0m module MarkedModule = {}
-  35 [2m│[0m module type MarkedSignature = {
-
-  the @res.hoistedFunction attribute cannot appear in this context
 
 
   [1;33mWarning number 53[0m

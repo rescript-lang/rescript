@@ -26,14 +26,4 @@ module Shadowed = {
   let make = () => "first"
   let make = () => "second"
 }
-@res.hoistedFunction
-type markedType = int
-@res.hoistedFunction
-module type MarkedModule = {}
-@res.hoistedFunction
-module MarkedModule = {}
-module type MarkedSignature = {
-  @res.hoistedFunction
-  let make: unit => unit
-}
 let after = ()

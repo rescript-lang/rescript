@@ -22,19 +22,20 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-(** Warning unused bs attributes
+(** Warn about unused compiler attributes.
     Note if we warn `deriving` too, 
     it may fail third party ppxes
 *)
-let is_bs_attribute txt =
+let is_checked_attribute txt =
   match txt with
-  | "as" | "config" | "ignore" | "int" | "optional" | "string" | "unwrap" ->
+  | "as" | "config" | "ignore" | "int" | "optional" | "res.hoistedFunction"
+  | "string" | "unwrap" ->
     true
   | _ -> false
 
 let warn_unused_attribute ((({txt; loc} as sloc), _) : Parsetree.attribute) =
   if
-    is_bs_attribute txt && (not loc.loc_ghost)
+    is_checked_attribute txt && (not loc.loc_ghost)
     && not (Used_attributes.is_used_attribute sloc)
   then
     (*

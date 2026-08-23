@@ -52,11 +52,6 @@ let get_empty_attribute name attributes =
          (name, "This attribute does not accept a payload"));
     None
 
-let reject_attribute name attributes =
-  match get_empty_attribute name attributes with
-  | Some loc -> Location.prerr_warning loc (Warnings.Misplaced_attribute name)
-  | None -> ()
-
 let parse_inline_attribute (attr : t option) : Lambda.inline_attribute =
   match attr with
   | None -> Default_inline
