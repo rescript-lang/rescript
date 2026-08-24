@@ -263,10 +263,6 @@ module Error_messages = struct
     "Spreading JSX children is no longer supported."
 end
 
-module In_external = struct
-  let status = ref false
-end
-
 let ternary_attr = (Location.mknoloc "res.ternary", Parsetree.PStr [])
 let if_let_attr = (Location.mknoloc "res.iflet", Parsetree.PStr [])
 let make_await_attr loc = (Location.mkloc "res.await" loc, Parsetree.PStr [])
@@ -320,15 +316,12 @@ type typ_def_or_ext =
 type fundef_type_param = {
   attrs: Parsetree.attributes;
   locs: string Location.loc list;
-  p_pos: Lexing.position;
 }
 
 type fundef_term_param = {
-  attrs: Parsetree.attributes;
   p_label: Asttypes.arg_label;
   expr: Parsetree.expression option;
   pat: Parsetree.pattern;
-  p_pos: Lexing.position;
 }
 
 (* Single parameter of a function definition  (type a b, x, ~y) *)
@@ -343,27 +336,17 @@ type record_pattern_item =
 
 type context = OrdinaryExpr | TernaryTrueBranchExpr | WhenExpr
 
-(* Extracts type and term parameters from a list of function definition parameters, combining all type parameters into one *)
-let rec extract_fundef_params ~(type_acc : fundef_type_param option)
+(* Extracts type and term parameters from a list of function definition
+   parameters, keeping the type parameter groups in source order *)
+let rec extract_fundef_params ~(type_acc : fundef_type_param list)
     ~(term_acc : fundef_term_param list) (params : fundef_parameter list) :
-    fundef_type_param option * fundef_term_param list =
+    fundef_type_param list * fundef_term_param list =
   match params with
   | TermParameter tp :: rest ->
     extract_fundef_params ~type_acc ~term_acc:(tp :: term_acc) rest
   | TypeParameter tp :: rest ->
-    let type_acc =
-      match type_acc with
-      | Some tpa ->
-        Some
-          {
-            attrs = tpa.attrs @ tp.attrs;
-            locs = tpa.locs @ tp.locs;
-            p_pos = tpa.p_pos;
-          }
-      | None -> Some tp
-    in
-    extract_fundef_params ~type_acc ~term_acc rest
-  | [] -> (type_acc, List.rev term_acc)
+    extract_fundef_params ~type_acc:(tp :: type_acc) ~term_acc rest
+  | [] -> (List.rev type_acc, List.rev term_acc)
 
 let get_closing_token = function
   | Token.Lparen -> Token.Rparen
@@ -628,31 +611,6 @@ let lident_of_path longident =
   | [] -> ""
   | ident :: _ -> ident
 
-let make_newtypes ~attrs ~loc newtypes exp =
-  let expr =
-    List.fold_right
-      (fun newtype exp -> Ast_helper.Exp.mk ~loc (Pexp_newtype (newtype, exp)))
-      newtypes exp
-  in
-  {expr with pexp_attributes = attrs}
-
-(* locally abstract types syntax sugar
- * Transforms
- *  let f: type t u v. = (foo : list</t, u, v/>) => ...
- * into
- *  let f = (type t u v. foo : list</t, u, v/>) => ...
- *)
-let wrap_type_annotation ~loc newtypes core_type body =
-  let exp =
-    make_newtypes ~attrs:[] ~loc newtypes
-      (Ast_helper.Exp.constraint_ ~loc body core_type)
-  in
-  let typ =
-    Ast_helper.Typ.poly ~loc newtypes
-      (Ast_helper.Typ.varify_constructors newtypes core_type)
-  in
-  (exp, typ)
-
 (**
   * process the occurrence of _ in the arguments of a function application
   * replace _ with a new variable, currently __x, in the arguments
@@ -680,7 +638,9 @@ let process_underscore_application args =
           (Ppat_var (Location.mkloc hidden_var loc))
           ~loc:Location.none
       in
-      Ast_helper.Exp.fun_ ~loc ~arity:(Some 1) Nolabel None pattern exp_apply
+      Ast_helper.Exp.fun_ ~loc
+        [Ast_helper.Exp.fun_param Nolabel pattern]
+        exp_apply
     | None -> exp_apply
   in
   (args, wrap)
@@ -1843,8 +1803,8 @@ and parse_ternary_expr left_operand p =
       true_branch (Some false_branch)
   | _ -> left_operand
 
-and parse_es6_arrow_expression ?(arrow_attrs = []) ?(arrow_start_pos = None)
-    ?context ?term_parameters ~async p =
+and parse_es6_arrow_expression ?(arrow_attrs = []) ?context ?term_parameters
+    ~async p =
   let start_pos = p.Parser.start_pos in
   Parser.leave_breadcrumb p Grammar.Es6ArrowExpr;
   (* Parsing function parameters and attributes:
@@ -1853,34 +1813,8 @@ and parse_es6_arrow_expression ?(arrow_attrs = []) ?(arrow_start_pos = None)
      labeled, optional or nolabeled. *)
   let parameters =
     match term_parameters with
-    | Some params -> (None, params)
+    | Some params -> ([], params)
     | None -> parse_parameters p
-  in
-  let parameters =
-    let update_attrs attrs = arrow_attrs @ attrs in
-    let update_pos pos =
-      match arrow_start_pos with
-      | Some start_pos -> start_pos
-      | None -> pos
-    in
-    match parameters with
-    | None, termp :: rest ->
-      ( None,
-        {
-          termp with
-          attrs = update_attrs termp.attrs;
-          p_pos = update_pos termp.p_pos;
-        }
-        :: rest )
-    | Some (tpa : fundef_type_param), term_params ->
-      ( Some
-          {
-            tpa with
-            attrs = update_attrs tpa.attrs;
-            p_pos = update_pos tpa.p_pos;
-          },
-        term_params )
-    | _ -> parameters
   in
   let return_type =
     match p.Parser.token with
@@ -1901,28 +1835,38 @@ and parse_es6_arrow_expression ?(arrow_attrs = []) ?(arrow_start_pos = None)
   in
   Parser.eat_breadcrumb p;
   let end_pos = p.prev_end_pos in
-  let type_param_opt, term_parameters = parameters in
-  let arrow_expr =
-    List.fold_right
-      (fun parameter expr ->
-        let {attrs; p_label = lbl; expr = default_expr; pat; p_pos = start_pos}
-            =
-          parameter
-        in
-        let loc = mk_loc start_pos end_pos in
-        Ast_helper.Exp.fun_ ~loc ~attrs ~arity:None lbl default_expr pat expr)
-      term_parameters body
+  let type_groups, term_parameters = parameters in
+  (* In-parens attributes are already attached to the parameter patterns by
+     [parse_parameter]. *)
+  let fun_params =
+    List.map
+      (fun {p_label = lbl; expr = default_expr; pat} ->
+        {
+          Parsetree.p_attrs = [];
+          p_lbl = lbl;
+          p_default = default_expr;
+          p_pat = pat;
+        })
+      term_parameters
+  in
+  (* Attributes written in front of the arrow belong to the function node
+     itself, independently of any type parameter groups. *)
+  let fun_attrs = arrow_attrs in
+  let loc = mk_loc start_pos end_pos in
+  let newtypes =
+    (* Each type parameter group carries its attributes on its first
+       newtype; the printer starts a new group at each attribute-bearing
+       newtype, so grouping and attributes round-trip. *)
+    List.concat_map
+      (fun {attrs; locs} ->
+        match locs with
+        | [] -> []
+        | first :: rest ->
+          (first, attrs) :: List.map (fun name -> (name, [])) rest)
+      type_groups
   in
   let arrow_expr =
-    Ast_uncurried.uncurried_fun
-      ~arity:(List.length term_parameters)
-      ~async arrow_expr
-  in
-  let arrow_expr =
-    match type_param_opt with
-    | None -> arrow_expr
-    | Some {attrs; locs = newtypes; p_pos = start_pos} ->
-      make_newtypes ~attrs ~loc:(mk_loc start_pos end_pos) newtypes arrow_expr
+    Ast_helper.Exp.fun_ ~loc ~attrs:fun_attrs ~async ~newtypes fun_params body
   in
   {arrow_expr with pexp_loc = {arrow_expr.pexp_loc with loc_start = start_pos}}
 
@@ -1959,9 +1903,9 @@ and parse_parameter p =
     if p.Parser.token = Typ then (
       Parser.next p;
       let lidents = parse_lident_list p in
-      Some (TypeParameter {attrs; locs = lidents; p_pos = start_pos}))
+      Some (TypeParameter {attrs; locs = lidents}))
     else
-      let attrs, lbl, lbl_loc, pat =
+      let lbl, lbl_loc, pat =
         match p.Parser.token with
         | Tilde -> (
           Parser.next p;
@@ -1969,8 +1913,7 @@ and parse_parameter p =
           match p.Parser.token with
           | Comma | Equal | Rparen ->
             let loc = mk_loc start_pos p.prev_end_pos in
-            ( [],
-              Asttypes.Labelled {txt = lbl_name; loc = lbl_loc},
+            ( Asttypes.Labelled {txt = lbl_name; loc = lbl_loc},
               lbl_loc,
               Ast_helper.Pat.var ~attrs ~loc (Location.mkloc lbl_name loc) )
           | Colon ->
@@ -1983,26 +1926,24 @@ and parse_parameter p =
               let loc = mk_loc start_pos p.prev_end_pos in
               Ast_helper.Pat.constraint_ ~attrs ~loc pat typ
             in
-            ([], Asttypes.Labelled {txt = lbl_name; loc = lbl_loc}, lbl_loc, pat)
+            (Asttypes.Labelled {txt = lbl_name; loc = lbl_loc}, lbl_loc, pat)
           | As ->
             Parser.next p;
             let pat =
               let pat = parse_constrained_pattern p in
               {pat with ppat_attributes = attrs @ pat.ppat_attributes}
             in
-            ([], Asttypes.Labelled {txt = lbl_name; loc = lbl_loc}, lbl_loc, pat)
+            (Asttypes.Labelled {txt = lbl_name; loc = lbl_loc}, lbl_loc, pat)
           | t ->
             Parser.err p (Diagnostics.unexpected t p.breadcrumbs);
             let loc = mk_loc start_pos p.prev_end_pos in
-            ( [],
-              Asttypes.Labelled {txt = lbl_name; loc = lbl_loc},
+            ( Asttypes.Labelled {txt = lbl_name; loc = lbl_loc},
               lbl_loc,
               Ast_helper.Pat.var ~attrs ~loc (Location.mkloc lbl_name loc) ))
         | _ ->
           let pattern = parse_constrained_pattern p in
           let attrs = List.concat [pattern.ppat_attributes; attrs] in
-          ( [],
-            Asttypes.Nolabel,
+          ( Asttypes.Nolabel,
             Location.none,
             {pattern with ppat_attributes = attrs} )
       in
@@ -2027,19 +1968,11 @@ and parse_parameter p =
         match p.Parser.token with
         | Question ->
           Parser.next p;
-          Some
-            (TermParameter
-               {attrs; p_label = lbl; expr = None; pat; p_pos = start_pos})
+          Some (TermParameter {p_label = lbl; expr = None; pat})
         | _ ->
           let expr = parse_constrained_or_coerced_expr p in
-          Some
-            (TermParameter
-               {attrs; p_label = lbl; expr = Some expr; pat; p_pos = start_pos})
-        )
-      | _ ->
-        Some
-          (TermParameter
-             {attrs; p_label = lbl; expr = None; pat; p_pos = start_pos}))
+          Some (TermParameter {p_label = lbl; expr = Some expr; pat}))
+      | _ -> Some (TermParameter {p_label = lbl; expr = None; pat}))
   else None
 
 and parse_parameter_list p =
@@ -2048,7 +1981,7 @@ and parse_parameter_list p =
       ~f:parse_parameter ~closing:Rparen p
   in
   Parser.expect Rparen p;
-  extract_fundef_params ~type_acc:None ~term_acc:[] parameters
+  extract_fundef_params ~type_acc:[] ~term_acc:[] parameters
 
 (* parameters ::=
  *   | _
@@ -2057,7 +1990,7 @@ and parse_parameter_list p =
  *   | (.)                                   (* deprecated uncurried syntax *)
  *   | ( parameter {, parameter} [,] )
  *)
-and parse_parameters p : fundef_type_param option * fundef_term_param list =
+and parse_parameters p : fundef_type_param list * fundef_term_param list =
   let start_pos = p.Parser.start_pos in
   let unit_term_parameter () =
     let loc = mk_loc start_pos p.Parser.prev_end_pos in
@@ -2066,39 +1999,29 @@ and parse_parameters p : fundef_type_param option * fundef_term_param list =
         (Location.mkloc (Longident.Lident "()") loc)
         None
     in
-    {
-      attrs = [];
-      p_label = Asttypes.Nolabel;
-      expr = None;
-      pat = unit_pattern;
-      p_pos = start_pos;
-    }
+    {p_label = Asttypes.Nolabel; expr = None; pat = unit_pattern}
   in
   match p.Parser.token with
   | Lident ident ->
     Parser.next p;
     let loc = mk_loc start_pos p.Parser.prev_end_pos in
-    ( None,
+    ( [],
       [
         {
-          attrs = [];
           p_label = Asttypes.Nolabel;
           expr = None;
           pat = Ast_helper.Pat.var ~loc (Location.mkloc ident loc);
-          p_pos = start_pos;
         };
       ] )
   | Underscore ->
     Parser.next p;
     let loc = mk_loc start_pos p.Parser.prev_end_pos in
-    ( None,
+    ( [],
       [
         {
-          attrs = [];
           p_label = Asttypes.Nolabel;
           expr = None;
           pat = Ast_helper.Pat.any ~loc ();
-          p_pos = start_pos;
         };
       ] )
   | Lparen ->
@@ -2114,7 +2037,7 @@ and parse_parameters p : fundef_type_param option * fundef_term_param list =
     (type_params, term_params)
   | token ->
     Parser.err p (Diagnostics.unexpected token p.breadcrumbs);
-    (None, [])
+    ([], [])
 
 and parse_coerced_expr ~(expr : Parsetree.expression) p =
   Parser.expect ColonGreaterThan p;
@@ -2698,7 +2621,7 @@ and over_parse_constrained_or_coerced_or_arrow_expression p expr =
       let arrow1 =
         Ast_helper.Exp.fun_
           ~loc:(mk_loc expr.pexp_loc.loc_start body.pexp_loc.loc_end)
-          ~arity:None Asttypes.Nolabel None pat
+          [Ast_helper.Exp.fun_param Asttypes.Nolabel pat]
           (Ast_helper.Exp.constraint_ body typ)
       in
       (* When the "expr" was `()`, the colon must apply to the return type, so
@@ -2708,8 +2631,10 @@ and over_parse_constrained_or_coerced_or_arrow_expression p expr =
         let arrow2 =
           Ast_helper.Exp.fun_
             ~loc:(mk_loc expr.pexp_loc.loc_start body.pexp_loc.loc_end)
-            ~arity:None Asttypes.Nolabel None
-            (Ast_helper.Pat.constraint_ pat typ)
+            [
+              Ast_helper.Exp.fun_param Asttypes.Nolabel
+                (Ast_helper.Pat.constraint_ pat typ);
+            ]
             body
         in
         let msg =
@@ -2765,7 +2690,7 @@ and over_parse_constrained_or_coerced_or_arrow_expression p expr =
 and parse_let_binding_body ~start_pos ~attrs p =
   Parser.begin_region p;
   Parser.leave_breadcrumb p Grammar.LetBinding;
-  let pat, exp =
+  let pat, exp, constraint_ =
     Parser.leave_breadcrumb p Grammar.Pattern;
     let pat = parse_pattern p in
     Parser.eat_breadcrumb p;
@@ -2781,10 +2706,7 @@ and parse_let_binding_body ~start_pos ~attrs p =
         let typ = parse_typ_expr p in
         Parser.expect Equal p;
         let expr = parse_expr p in
-        let loc = mk_loc start_pos p.prev_end_pos in
-        let exp, poly = wrap_type_annotation ~loc newtypes typ expr in
-        let pat = Ast_helper.Pat.constraint_ ~loc pat poly in
-        (pat, exp)
+        (pat, expr, Some {Parsetree.pvc_newtypes = newtypes; pvc_type = typ})
       | _ ->
         let poly_type = parse_poly_type_expr p in
         let loc =
@@ -2794,16 +2716,16 @@ and parse_let_binding_body ~start_pos ~attrs p =
         Parser.expect Token.Equal p;
         let exp = parse_expr p in
         let exp = over_parse_constrained_or_coerced_or_arrow_expression p exp in
-        (pat, exp))
+        (pat, exp, None))
     | _ ->
       Parser.expect Token.Equal p;
       let exp =
         over_parse_constrained_or_coerced_or_arrow_expression p (parse_expr p)
       in
-      (pat, exp)
+      (pat, exp, None)
   in
   let loc = mk_loc start_pos p.prev_end_pos in
-  let vb = Ast_helper.Vb.mk ~loc ~attrs pat exp in
+  let vb = Ast_helper.Vb.mk ~loc ~attrs ?constraint_ pat exp in
   Parser.eat_breadcrumb p;
   Parser.end_region p;
   vb
@@ -3402,11 +3324,9 @@ and parse_braced_or_record_expr p =
             ~term_parameters:
               [
                 {
-                  attrs = [];
                   p_label = Nolabel;
                   expr = None;
                   pat = Ast_helper.Pat.var ~loc:ident.loc ident;
-                  p_pos = start_pos;
                 };
               ]
             p
@@ -3768,10 +3688,8 @@ and parse_expr_block ?first p =
   over_parse_constrained_or_coerced_or_arrow_expression p block_expr
 
 and parse_async_arrow_expression ?(arrow_attrs = []) p =
-  let start_pos = p.Parser.start_pos in
   Parser.expect (Lident "async") p;
-  parse_es6_arrow_expression ~async:true ~arrow_attrs
-    ~arrow_start_pos:(Some start_pos) p
+  parse_es6_arrow_expression ~async:true ~arrow_attrs p
 
 and parse_await_expression p =
   let await_loc = mk_loc p.Parser.start_pos p.end_pos in
@@ -4465,8 +4383,7 @@ and parse_list_expr ~start_pos p =
     Ast_helper.Exp.apply ~loc
       (Ast_helper.Exp.ident ~loc ~attrs:[spread_attr]
          (Location.mkloc
-            (Longident.Ldot
-               (Longident.Ldot (Longident.Lident "Belt", "List"), "concatMany"))
+            (Longident.Ldot (Longident.Lident Primitive_modules.list, "spread"))
             loc))
       [(Asttypes.Nolabel, Ast_helper.Exp.array ~loc list_exprs)]
 
@@ -4608,8 +4525,7 @@ and parse_array_exp p =
     Ast_helper.Exp.apply ~loc
       (Ast_helper.Exp.ident ~loc ~attrs:[spread_attr]
          (Location.mkloc
-            (Longident.Ldot
-               (Longident.Ldot (Longident.Lident "Belt", "Array"), "concatMany"))
+            (Longident.Ldot (Longident.Lident Primitive_modules.array, "spread"))
             loc))
       [(Nolabel, Ast_helper.Exp.array ~loc list_exprs)]
 
@@ -4638,9 +4554,7 @@ and parse_poly_type_expr ?current_type_name_path ?inline_types_context p =
         let typ = Ast_helper.Typ.var ~loc:var.loc var.txt in
         let return_type = parse_typ_expr ~alias:false p in
         let loc = mk_loc typ.Parsetree.ptyp_loc.loc_start p.prev_end_pos in
-        Ast_helper.Typ.arrow ~loc ~arity:(Some 1)
-          {attrs = []; lbl = Nolabel; typ}
-          return_type
+        Ast_helper.Typ.arrow ~loc [{attrs = []; lbl = Nolabel; typ}] return_type
       | _ -> Ast_helper.Typ.var ~loc:var.loc var.txt)
     | _ -> assert false)
   | _ -> parse_typ_expr ?current_type_name_path ?inline_types_context p
@@ -5059,9 +4973,13 @@ and parse_es6_arrow_type ?current_type_name_path ?inline_types_context ~attrs p
         ?inline_types_context p
     in
     let loc = mk_loc start_pos p.prev_end_pos in
-    Ast_helper.Typ.arrow ~loc ~arity:None {attrs; lbl; typ} return_type
+    (* A bare labeled arrow type [~x: t => u] is a complete one-parameter
+       arrow, exactly like its parenthesized form [(~x: t) => u]; it must
+       carry the same arity or the two spellings produce types that print
+       identically but do not unify. *)
+    Ast_helper.Typ.arrow ~loc [{attrs; lbl; typ}] return_type
   | DocComment _ -> assert false
-  | _ ->
+  | _ -> (
     let parameters =
       parse_type_parameters ?current_type_name_path ?inline_types_context p
     in
@@ -5074,42 +4992,22 @@ and parse_es6_arrow_type ?current_type_name_path ?inline_types_context ~attrs p
       parse_typ_expr ~alias:false ?current_type_name_path:return_path
         ?inline_types_context p
     in
-    let end_pos = p.prev_end_pos in
-    let return_type_arity = 0 in
-    let _paramNum, typ, _arity =
-      List.fold_right
-        (fun {attrs; label = arg_lbl; typ; start_pos} (param_num, t, arity) ->
-          let loc = mk_loc start_pos end_pos in
-          let arity =
-            (* Workaround for ~lbl: @as(json`false`) _, which changes the arity *)
-            match arg_lbl with
-            | Labelled _s ->
-              let typ_is_any =
-                match typ.ptyp_desc with
-                | Ptyp_any -> true
-                | _ -> false
-              in
-              let has_as =
-                Ext_list.exists typ.ptyp_attributes (fun (x, _) -> x.txt = "as")
-              in
-              if !In_external.status && typ_is_any && has_as then arity - 1
-              else arity
-            | _ -> arity
-          in
-          let t_arg =
-            Ast_helper.Typ.arrow ~loc ~arity:None {attrs; lbl = arg_lbl; typ} t
-          in
-          if param_num = 1 then
-            (param_num - 1, Ast_uncurried.uncurried_type ~arity t_arg, 1)
-          else (param_num - 1, t_arg, arity + 1))
+    let params =
+      List.map
+        (fun {attrs; label = arg_lbl; typ; start_pos = _} ->
+          {Parsetree.attrs; lbl = arg_lbl; typ})
         parameters
-        (List.length parameters, return_type, return_type_arity + 1)
     in
-    {
-      typ with
-      ptyp_attributes = List.concat [typ.ptyp_attributes; attrs];
-      ptyp_loc = mk_loc start_pos p.prev_end_pos;
-    }
+    let loc = mk_loc start_pos p.prev_end_pos in
+    match params with
+    | [] ->
+      (* can happen in error recovery *)
+      {
+        return_type with
+        ptyp_attributes = List.concat [return_type.ptyp_attributes; attrs];
+        ptyp_loc = loc;
+      }
+    | _ -> Ast_helper.Typ.arrow ~loc ~attrs params return_type)
 
 (*
  * typexpr ::=
@@ -5172,9 +5070,7 @@ and parse_arrow_type_rest ?current_type_name_path ?inline_types_context
         ?inline_types_context p
     in
     let loc = mk_loc start_pos p.prev_end_pos in
-    Ast_helper.Typ.arrow ~loc ~arity:(Some 1)
-      {attrs = []; lbl = Nolabel; typ}
-      return_type
+    Ast_helper.Typ.arrow ~loc [{attrs = []; lbl = Nolabel; typ}] return_type
   | _ -> typ
 
 and parse_typ_expr_region p =
@@ -5950,8 +5846,8 @@ and parse_type_equation_or_constr_decl p =
         let return_type = parse_typ_expr ~alias:false p in
         let loc = mk_loc uident_start_pos p.prev_end_pos in
         let arrow_type =
-          Ast_helper.Typ.arrow ~loc ~arity:(Some 1)
-            {attrs = []; lbl = Nolabel; typ}
+          Ast_helper.Typ.arrow ~loc
+            [{attrs = []; lbl = Nolabel; typ}]
             return_type
         in
         let typ = parse_type_alias p arrow_type in
@@ -6640,13 +6536,9 @@ and parse_type_definition_or_extension ~attrs p =
 
 (* external value-name : typexp = external-declaration *)
 and parse_external_def ~attrs ~start_pos p =
-  let in_external = !In_external.status in
-  In_external.status := true;
   Parser.leave_breadcrumb p Grammar.External;
   Fun.protect
-    ~finally:(fun () ->
-      Parser.eat_breadcrumb p;
-      In_external.status := in_external)
+    ~finally:(fun () -> Parser.eat_breadcrumb p)
     (fun () ->
       Parser.expect Token.External p;
       let name, loc = parse_lident p in

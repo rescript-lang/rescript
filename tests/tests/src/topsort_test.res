@@ -1,5 +1,3 @@
-open Belt
-
 type graph = list<(string, string)>
 
 let graph: graph = list{
@@ -30,7 +28,7 @@ let rec dfs1 = (nodes, graph, visited) =>
       dfs1(xs, graph, visited)
     } else {
       Console.log(x)
-      dfs1(\"@"(nexts(x, graph), xs), graph, list{x, ...visited})
+      dfs1(List.concat(nexts(x, graph), xs), graph, list{x, ...visited})
     }
   }
 
@@ -114,21 +112,17 @@ let unsafe_topsort = graph => {
 
 let () = assert(unsafe_topsort(grwork) == list{"wake", "shower", "dress", "eat", "washup", "go"})
 
-module String_set = Belt.Set.String
 exception Cycle(list<string>)
 let pathsort = graph => {
   let visited = ref(list{})
-  let empty_path = (String_set.empty, list{})
-  let \"+>" = (node, (set, stack)) =>
-    if String_set.has(set, node) {
-      throw(Cycle(list{node, ...stack}))
+  let empty_path = list{}
+  let \"+>" = (node, path) =>
+    if List.has(path, node, \"==") {
+      throw(Cycle(list{node, ...path}))
     } else {
-      (String_set.add(set, node), list{node, ...stack})
+      list{node, ...path}
     }
 
-  /* let check node (set,stack) = 
-      if String_set.mem node set then 
-        raise (Cycle (node::stack))  in */
   let rec sort_nodes = (path, nodes) => nodes->List.forEach(node => sort_node(path, node))
   and sort_node = (path, node) =>
     if !List.has(visited.contents, node, \"==") {

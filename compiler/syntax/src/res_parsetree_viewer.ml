@@ -1,45 +1,10 @@
 open Parsetree
 
-let arrow_type ?(max_arity = max_int) ct =
-  let has_as_attr attrs =
-    Ext_list.exists attrs (fun (x, _) -> x.Asttypes.txt = "as")
-  in
-  let rec process attrs_before acc typ max_arity =
-    match typ with
-    | _ when max_arity < 0 -> (attrs_before, List.rev acc, typ)
-    | {ptyp_desc = Ptyp_arrow {arity = Some _; arg = {attrs = []}}}
-      when acc <> [] ->
-      (attrs_before, List.rev acc, typ)
-    | {ptyp_desc = Ptyp_arrow {arg = {lbl = Nolabel; attrs = []} as arg; ret}}
-      ->
-      process attrs_before (arg :: acc) ret (max_arity - 1)
-    | {ptyp_desc = Ptyp_arrow {arg = {lbl = Nolabel}}; ptyp_attributes = _attrs}
-      as return_type ->
-      let args = List.rev acc in
-      (attrs_before, args, return_type)
-    | {
-     ptyp_desc = Ptyp_arrow {arg = {lbl = Labelled _ | Optional _} as arg; ret};
-     ptyp_attributes = _attrs;
-    } ->
-      (* Res_core.parse_es6_arrow_type has a workaround that removed an extra arity for the function if the
-         argument is a Ptyp_any with @as attribute i.e. ~x: @as(`{prop: value}`) _.
-
-         When this case is encountered we add that missing arity so the arrow is printed properly.
-      *)
-      let arity =
-        match arg.typ with
-        | {ptyp_desc = Ptyp_any; ptyp_attributes = attrs1}
-          when has_as_attr attrs1 ->
-          max_arity
-        | _ -> max_arity - 1
-      in
-      process attrs_before (arg :: acc) ret arity
-    | typ -> (attrs_before, List.rev acc, typ)
-  in
+let arrow_type ct =
   match ct with
-  | {ptyp_desc = Ptyp_arrow _; ptyp_attributes = attrs1} as typ ->
-    process attrs1 [] {typ with ptyp_attributes = []} max_arity
-  | typ -> process [] [] typ max_arity
+  | {ptyp_desc = Ptyp_arrow {params; ret}; ptyp_attributes = attrs} ->
+    (attrs, params, ret)
+  | typ -> ([], [], typ)
 
 let functor_type modtype =
   let rec process acc modtype =
@@ -118,10 +83,15 @@ let rewrite_underscore_apply expr =
   match expr.pexp_desc with
   | Pexp_fun
       {
-        arg_label = Nolabel;
-        default = None;
-        lhs = {ppat_desc = Ppat_var {txt = "__x"}};
-        rhs = {pexp_desc = Pexp_apply {funct = call_expr; args}} as e;
+        params =
+          [
+            {
+              p_lbl = Nolabel;
+              p_default = None;
+              p_pat = {ppat_desc = Ppat_var {txt = "__x"}};
+            };
+          ];
+        body = {pexp_desc = Pexp_apply {funct = call_expr; args}} as e;
       } ->
     let new_args =
       List.map
@@ -175,10 +145,15 @@ let rewrite_underscore_apply_in_pipe expr =
   match expr.pexp_desc with
   | Pexp_fun
       {
-        arg_label = Nolabel;
-        default = None;
-        lhs = {ppat_desc = Ppat_var {txt = "__x"}};
-        rhs = {pexp_desc = Pexp_apply {funct; args}} as e;
+        params =
+          [
+            {
+              p_lbl = Nolabel;
+              p_default = None;
+              p_pat = {ppat_desc = Ppat_var {txt = "__x"}};
+            };
+          ];
+        body = {pexp_desc = Pexp_apply {funct; args}} as e;
       } -> (
     match args with
     | first_arg :: rest_args when is_underscore_arg first_arg ->
@@ -210,41 +185,35 @@ type fun_param_kind =
     }
   | NewTypes of {attrs: Parsetree.attributes; locs: string Asttypes.loc list}
 
+(* Turns the function's newtypes into printable groups: a new group starts
+   at each attribute-bearing newtype, matching how the parser distributes
+   group attributes. *)
+let group_newtypes newtypes =
+  List.fold_left
+    (fun groups ((name : string Asttypes.loc), attrs) ->
+      match groups with
+      | (gattrs, locs) :: rest when attrs = [] ->
+        (gattrs, locs @ [name]) :: rest
+      | _ -> (attrs, [name]) :: groups)
+    [] newtypes
+  |> List.rev
+
 let fun_expr expr_ =
-  let async = Ast_async.dig_async_payload_from_function expr_ in
-  let rec collect_params ~n_fun ~params expr =
-    match expr with
-    | {
-     pexp_desc =
-       Pexp_fun
-         {
-           arg_label = lbl;
-           default = default_expr;
-           lhs = pattern;
-           rhs = return_expr;
-           arity;
-         };
-     pexp_attributes = attrs;
-    }
-      when arity = None || n_fun = 0 ->
-      let parameter = Parameter {attrs; lbl; default_expr; pat = pattern} in
-      collect_params ~n_fun:(n_fun + 1) ~params:(parameter :: params)
-        return_expr
-    | _ -> (async, List.rev params, expr)
+  let params_of_fun params =
+    List.map
+      (fun {p_attrs; p_lbl; p_default; p_pat} ->
+        Parameter
+          {attrs = p_attrs; lbl = p_lbl; default_expr = p_default; pat = p_pat})
+      params
   in
-  (* Turns (type t, type u, type z) into "type t u z" *)
-  let rec collect_new_types acc return_expr =
-    match return_expr with
-    | {pexp_desc = Pexp_newtype (string_loc, return_expr)} ->
-      collect_new_types (string_loc :: acc) return_expr
-    | return_expr -> (List.rev acc, return_expr)
+  let newtype_params newtypes =
+    group_newtypes newtypes
+    |> List.map (fun (attrs, locs) -> NewTypes {attrs; locs})
   in
   match expr_ with
-  | {pexp_desc = Pexp_newtype (string_loc, rest)} ->
-    let string_locs, return_expr = collect_new_types [string_loc] rest in
-    let param = NewTypes {attrs = []; locs = string_locs} in
-    collect_params ~n_fun:0 ~params:[param] return_expr
-  | _ -> collect_params ~n_fun:0 ~params:[] {expr_ with pexp_attributes = []}
+  | {pexp_desc = Pexp_fun {newtypes; params; body; async}} ->
+    (async, newtype_params newtypes @ params_of_fun params, body)
+  | _ -> (false, [], expr_)
 
 let process_braces_attr expr =
   match expr.pexp_attributes with
@@ -626,17 +595,17 @@ let partition_doc_comment_attributes attrs =
       | _ -> false)
     attrs
 
-let is_fun_newtype expr =
+let is_fun_expr expr =
   match expr.pexp_desc with
-  | Pexp_fun _ | Pexp_newtype _ -> true
+  | Pexp_fun _ -> true
   | _ -> false
 
 let requires_special_callback_printing_last_arg args =
   let rec loop args =
     match args with
     | [] -> false
-    | [(_, expr)] when is_fun_newtype expr -> true
-    | (_, expr) :: _ when is_fun_newtype expr -> false
+    | [(_, expr)] when is_fun_expr expr -> true
+    | (_, expr) :: _ when is_fun_expr expr -> false
     | _ :: rest -> loop rest
   in
   loop args
@@ -645,12 +614,12 @@ let requires_special_callback_printing_first_arg args =
   let rec loop args =
     match args with
     | [] -> true
-    | (_, expr) :: _ when is_fun_newtype expr -> false
+    | (_, expr) :: _ when is_fun_expr expr -> false
     | _ :: rest -> loop rest
   in
   match args with
-  | [(_, expr)] when is_fun_newtype expr -> false
-  | (_, expr) :: rest when is_fun_newtype expr -> loop rest
+  | [(_, expr)] when is_fun_expr expr -> false
+  | (_, expr) :: rest when is_fun_expr expr -> loop rest
   | _ -> false
 
 let mod_expr_apply mod_expr =
@@ -726,25 +695,17 @@ let has_spread_attr attrs =
       | _ -> false)
     attrs
 
-let is_spread_belt_list_concat expr =
+let is_spread_list expr =
   match expr.pexp_desc with
   | Pexp_ident
-      {
-        txt =
-          Longident.Ldot
-            (Longident.Ldot (Longident.Lident "Belt", "List"), "concatMany");
-      } ->
+      {txt = Longident.Ldot (Longident.Lident "Primitive_list", "spread")} ->
     has_spread_attr expr.pexp_attributes
   | _ -> false
 
-let is_spread_belt_array_concat expr =
+let is_spread_array expr =
   match expr.pexp_desc with
   | Pexp_ident
-      {
-        txt =
-          Longident.Ldot
-            (Longident.Ldot (Longident.Lident "Belt", "Array"), "concatMany");
-      } ->
+      {txt = Longident.Ldot (Longident.Lident "Primitive_array", "spread")} ->
     has_spread_attr expr.pexp_attributes
   | _ -> false
 
@@ -856,10 +817,15 @@ let is_underscore_apply_sugar expr =
   match expr.pexp_desc with
   | Pexp_fun
       {
-        arg_label = Nolabel;
-        default = None;
-        lhs = {ppat_desc = Ppat_var {txt = "__x"}};
-        rhs = {pexp_desc = Pexp_apply _};
+        params =
+          [
+            {
+              p_lbl = Nolabel;
+              p_default = None;
+              p_pat = {ppat_desc = Ppat_var {txt = "__x"}};
+            };
+          ];
+        body = {pexp_desc = Pexp_apply _};
       } ->
     true
   | _ -> false

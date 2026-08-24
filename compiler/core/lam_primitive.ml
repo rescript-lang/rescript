@@ -157,8 +157,6 @@ type t =
   | Pinit_mod
   | Pupdate_mod
   | Praw_js_code of Js_raw_info.t
-  | Pjs_fn_make of int
-  | Pjs_fn_make_unit
   (* we wrap it when do the conversion to prevent
      accendential optimization
      play safe first
@@ -230,8 +228,8 @@ let eq_primitive_approx (lhs : t) (rhs : t) =
   | Psome_not_nest | Pis_undefined | Pis_null_undefined | Pimport | Ptypeof
   | Pfn_arity | Pis_poly_var_block | Pdebugger | Pinit_mod | Pupdate_mod
   | Pduprecord | Pmakearray | Parraylength | Parrayrefu | Parraysetu
-  | Parrayrefs | Parraysets | Pjs_fn_make_unit | Pjs_fn_method | Phash
-  | Phash_mixstring | Phash_mixint | Phash_finalmix | Precord_rest _ ->
+  | Parrayrefs | Parraysets | Pjs_fn_method | Phash | Phash_mixstring
+  | Phash_mixint | Phash_finalmix | Precord_rest _ ->
     rhs = lhs
   (* Reachable only via the optimizer's term-equality comparison, which the
      test suite doesn't exercise for tagged templates. *)
@@ -299,10 +297,6 @@ let eq_primitive_approx (lhs : t) (rhs : t) =
   | Pjs_unsafe_downgrade {name; setter} -> (
     match rhs with
     | Pjs_unsafe_downgrade rhs -> name = rhs.name && setter = rhs.setter
-    | _ -> false)
-  | Pjs_fn_make i -> (
-    match rhs with
-    | Pjs_fn_make i1 -> i = i1
     | _ -> false)
   | Praw_js_code _ -> false
 (* TOO lazy, here comparison is only approximation*)

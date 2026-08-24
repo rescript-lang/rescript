@@ -20,7 +20,7 @@ let ff = c =>
   switch {
     let a = 1
     let b = 1
-    incr(c)
+    Int.Ref.increment(c)
     a + c.contents + b
   } {
   | 0 => 1

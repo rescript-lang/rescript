@@ -385,7 +385,7 @@ let primitives_table =
       ("%curry_apply6", Pcurry_apply 6);
       ("%curry_apply7", Pcurry_apply 7);
       ("%curry_apply8", Pcurry_apply 8);
-      ("%makemutablelist", Pmakelist Mutable);
+      ("%makemutablelist", Pmakelist);
       ("%unsafe_to_method", Pjs_fn_method);
       (* Compiler internals, never expose to ReScript files *)
       ("#raw_expr", Pjs_raw_expr);
@@ -397,7 +397,7 @@ let primitives_table =
       ("#is_nullable", Pisnullable);
       ("#null_to_opt", Pnull_to_opt);
       ("#nullable_to_opt", Pnullable_to_opt);
-      ("#makemutablelist", Pmakelist Mutable);
+      ("#makemutablelist", Pmakelist);
       ("#import", Pimport);
       (* FIXME: Deprecated *)
       ("%obj_field", Parrayrefu);
@@ -552,75 +552,6 @@ let extract_constant = function
 (* Push the default values under the functional abstractions *)
 (* Also push bindings of module patterns, since this sound *)
 
-type binding =
-  | Bind_value of value_binding list
-  | Bind_module of Ident.t * string loc * module_expr
-
-let rec push_defaults loc bindings case partial =
-  match case with
-  | {
-   c_lhs = pat;
-   c_guard = None;
-   c_rhs =
-     {exp_desc = Texp_function {arg_label; arity; param; case; partial; async}}
-     as exp;
-  } ->
-    let case = push_defaults exp.exp_loc bindings case partial in
-
-    {
-      c_lhs = pat;
-      c_guard = None;
-      c_rhs =
-        {
-          exp with
-          exp_desc =
-            Texp_function {arg_label; arity; param; case; partial; async};
-        };
-    }
-  | {
-   c_lhs = pat;
-   c_guard = None;
-   c_rhs =
-     {
-       exp_attributes = [({txt = "#default"}, _)];
-       exp_desc =
-         Texp_let (Nonrecursive, binds, ({exp_desc = Texp_function _} as e2));
-     };
-  } ->
-    push_defaults loc
-      (Bind_value binds :: bindings)
-      {c_lhs = pat; c_guard = None; c_rhs = e2}
-      partial
-  | {
-   c_lhs = pat;
-   c_guard = None;
-   c_rhs =
-     {
-       exp_attributes = [({txt = "#modulepat"}, _)];
-       exp_desc =
-         Texp_letmodule (id, name, mexpr, ({exp_desc = Texp_function _} as e2));
-     };
-  } ->
-    push_defaults loc
-      (Bind_module (id, name, mexpr) :: bindings)
-      {c_lhs = pat; c_guard = None; c_rhs = e2}
-      partial
-  | case ->
-    let exp =
-      List.fold_left
-        (fun exp binds ->
-          {
-            exp with
-            exp_desc =
-              (match binds with
-              | Bind_value binds -> Texp_let (Nonrecursive, binds, exp)
-              | Bind_module (id, name, mexpr) ->
-                Texp_letmodule (id, name, mexpr, exp));
-          })
-        case.c_rhs bindings
-    in
-    {case with c_rhs = exp}
-
 (* Assertions *)
 
 let assert_failed exp =
@@ -681,15 +612,21 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
   | Texp_constant cst -> Lconst (Const_base cst)
   | Texp_let (rec_flag, pat_expr_list, body) ->
     transl_let rec_flag pat_expr_list (transl_exp body)
-  | Texp_function {arg_label = _; arity; param; case; partial; async} -> (
+  | Texp_function {params = fparams; body; async} ->
     let directive =
       match extract_directive_for_fn e with
       | None -> None
       | Some (directive, _) -> Some directive
     in
-    let params, body, return_unit =
-      let pl = push_defaults e.exp_loc [] case partial in
-      transl_function e.exp_loc partial param pl
+    let params, lbody, return_unit = transl_function e.exp_loc fparams body in
+    let one_unit_arg =
+      match (fparams, (Ctype.expand_head e.exp_env e.exp_type).desc) with
+      | [{fp_pat}], Tarrow ([{lbl = Nolabel; typ}], _)
+        when Typedtree.pat_bound_idents fp_pat = [] -> (
+        match (Ctype.expand_head e.exp_env typ).desc with
+        | Tconstr (Pident {name = "unit"}, [], _) -> true
+        | _ -> false)
+      | _ -> false
     in
     let attr =
       {
@@ -698,26 +635,11 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
         async;
         return_unit;
         directive;
+        one_unit_arg;
       }
     in
     let loc = e.exp_loc in
-    let lambda = Lfunction {params; body; attr; loc} in
-    match arity with
-    | Some arity ->
-      let prim =
-        let expanded = Ctype.expand_head e.exp_env e.exp_type in
-        match (Btype.repr expanded).desc with
-        | Tarrow ({lbl = Nolabel; typ}, _, _, _) -> (
-          match (Ctype.expand_head e.exp_env typ).desc with
-          | Tconstr (Pident {name = "unit"}, [], _) -> Pjs_fn_make_unit
-          | _ -> Pjs_fn_make arity)
-        | _ -> Pjs_fn_make arity
-      in
-      Lprim
-        ( prim (* could be replaced with Opaque in the future except arity 0*),
-          [lambda],
-          loc )
-    | None -> lambda)
+    Lfunction {params; body = lbody; attr; loc}
   | Texp_apply {funct; args = oargs}
     when List.exists
            (fun (attr, _) -> attr.txt = "res.taggedTemplate")
@@ -928,7 +850,7 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
     Lprim (access, [transl_exp arg; transl_exp newval], e.exp_loc)
   | Texp_array expr_list ->
     let ll = transl_list expr_list in
-    Lprim (Pmakearray Mutable, ll, e.exp_loc)
+    Lprim (Pmakearray, ll, e.exp_loc)
   | Texp_ifthenelse (cond, ifso, Some ifnot) ->
     Lifthenelse (transl_exp cond, transl_exp ifso, transl_exp ifnot)
   | Texp_ifthenelse (cond, ifso, None) ->
@@ -1080,36 +1002,22 @@ and transl_apply ?(inlined = Default_inline)
           sargs)
       : Lambda.lambda)
 
-and transl_function loc partial param case =
-  match case with
-  | {
-   c_lhs = pat;
-   c_guard = None;
-   c_rhs =
-     {
-       exp_desc =
-         Texp_function
-           {
-             arg_label = _;
-             arity = None;
-             param = param';
-             case;
-             partial = partial';
-             async;
-           };
-     } as exp;
-  }
-    when Parmatch.inactive ~partial pat && not async ->
-    let params, body, return_unit =
-      transl_function exp.exp_loc partial' param' case
-    in
-    ( param :: params,
-      Matching.for_function loc None (Lvar param) [(pat, body)] partial,
+and transl_function loc (params : function_param list) body =
+  match params with
+  | [] -> assert false
+  | [{fp_param; fp_pat; fp_partial}] ->
+    ( [fp_param],
+      Matching.for_function loc None (Lvar fp_param)
+        [(fp_pat, transl_exp body)]
+        fp_partial,
+      is_base_type body.exp_env body.exp_type Predef.path_unit )
+  | {fp_param; fp_pat; fp_partial} :: rest ->
+    let lparams, lbody, return_unit = transl_function loc rest body in
+    ( fp_param :: lparams,
+      Matching.for_function loc None (Lvar fp_param)
+        [(fp_pat, lbody)]
+        fp_partial,
       return_unit )
-  | {c_rhs = {exp_env; exp_type}; _} ->
-    ( [param],
-      Matching.for_function loc None (Lvar param) [transl_case case] partial,
-      is_base_type exp_env exp_type Predef.path_unit )
 
 and transl_let rec_flag pat_expr_list body =
   match rec_flag with
@@ -1147,20 +1055,6 @@ and transl_let rec_flag pat_expr_list body =
 
 and transl_record loc env fields repres opt_init_expr =
   match (opt_init_expr, repres, fields) with
-  | None, Record_unboxed _, [|({lbl_name; lbl_loc}, Overridden (_, expr), _)|]
-    ->
-    (* ReScript uncurried encoding *)
-    let loc = lbl_loc in
-    let lambda = transl_exp expr in
-    if lbl_name.[0] = 'I' then
-      let arity_s = String.sub lbl_name 1 (String.length lbl_name - 1) in
-      let arity = Int32.of_string arity_s |> Int32.to_int in
-      Lprim
-        ( Pjs_fn_make arity,
-          (* could be replaced with Opaque in the future except arity 0*)
-          [lambda],
-          loc )
-    else lambda
   | _ -> (
     let size = Array.length fields in
     let optional =

@@ -101,10 +101,6 @@ val backup : unit -> state
 
 val restore : state -> unit
 
-val mk_lazy : (unit -> 'a) -> 'a Lazy.t
-(** Like [Lazy.of_fun], but the function is applied with
-        the warning settings at the time [mk_lazy] is called. *)
-
 val has_warnings : bool ref
 
 val nerrors : int ref

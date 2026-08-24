@@ -36,26 +36,11 @@ let absorb_info (x : used_info) (y : used_info) =
     x.times <- x0 + y0;
     if captured then x.captured <- true
 
-let pp_info fmt (x : used_info) =
-  Format.fprintf fmt "(<captured:%b>:%d)" x.captured x.times
-
-let pp_occ_tbl fmt tbl =
-  Hash_ident.iter tbl (fun k v ->
-      Format.fprintf fmt "@[%a@ %a@]@." Ident.print k pp_info v)
-
-(* The global table [occ] associates to each let-bound identifier
-   the number of its uses (as a reference):
-   - 0 if never used
-   - 1 if used exactly once in and not under a lambda or within a loop
-   - when under a lambda,
-   - it's probably a closure
-   - within a loop
-   - update reference,
-       niether is good for inlining
-   - > 1 if used several times or under a lambda or within a loop.
-     The local table [bv] associates to each locally-let-bound variable
-     its reference count, as above.  [bv] is enriched at let bindings
-     but emptied when crossing lambdas and loops. *)
+(* The global table [occ] records each let-bound identifier's number of uses and
+   whether it is captured by a function or loop. The local table [bv] tracks
+   locally let-bound variables and is reset when crossing functions and loops,
+   so uses of outer bindings are marked as captured. The optimizer uses the
+   captured flag to restrict inlining without inflating the occurrence count. *)
 let collect_occurs lam : occ_tbl =
   let occ : occ_tbl = Hash_ident.create 83 in
 
@@ -79,8 +64,8 @@ let collect_occurs lam : occ_tbl =
     | Some r -> r.times <- r.times + 1
     | None -> (
       (* ident is not locally bound, therefore this is a use under a lambda
-         or within a loop.  Increase use count by 2 -- enough so
-         that single-use optimizations will not apply. *)
+         or within a loop. Mark it as captured so that single-use
+         optimizations only apply when moving the value is safe. *)
       match Hash_ident.find_opt occ ident with
       | Some r -> absorb_info r {times = 1; captured = true}
       | None ->
@@ -98,8 +83,8 @@ let collect_occurs lam : occ_tbl =
     | Some r -> absorb_info r n
     | None -> (
       (* ident is not locally bound, therefore this is a use under a lambda
-         or within a loop.  Increase use count by 2 -- enough so
-         that single-use optimizations will not apply. *)
+         or within a loop. Mark it as captured so that single-use
+         optimizations only apply when moving the value is safe. *)
       match Hash_ident.find_opt occ ident with
       | Some r -> absorb_info r {n with captured = true}
       | None ->

@@ -23,7 +23,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
 let caml_id_field_info : Lambda.field_dbg_info =
-  Fld_record {name = Literals.exception_id; mutable_flag = Immutable}
+  Fld_record {name = Literals.exception_id}
 
 let lam_caml_id : Lam_primitive.t = Pfield (0, caml_id_field_info)
 let prim = Lam.prim
@@ -288,13 +288,13 @@ let lam_prim ~primitive:(p : Lambda.primitive) ~args loc : Lam.t =
   | Poffsetint x -> prim ~primitive:(Poffsetint x) ~args loc
   | Poffsetref x -> prim ~primitive:(Poffsetref x) ~args loc
   | Pfloatcomp x -> prim ~primitive:(Pfloatcomp x) ~args loc
-  | Pmakearray _mutable_flag (*FIXME*) -> prim ~primitive:Pmakearray ~args loc
+  | Pmakearray -> prim ~primitive:Pmakearray ~args loc
   | Parraylength -> prim ~primitive:Parraylength ~args loc
   | Parrayrefu -> prim ~primitive:Parrayrefu ~args loc
   | Parraysetu -> prim ~primitive:Parraysetu ~args loc
   | Parrayrefs -> prim ~primitive:Parrayrefs ~args loc
   | Parraysets -> prim ~primitive:Parraysets ~args loc
-  | Pmakelist _mutable_flag (*FIXME*) -> prim ~primitive:Pmakelist ~args loc
+  | Pmakelist -> prim ~primitive:Pmakelist ~args loc
   | Pmakedict -> prim ~primitive:Pmakedict ~args loc
   | Pdict_has -> prim ~primitive:Pdict_has ~args loc
   | Pawait -> prim ~primitive:Pawait ~args loc
@@ -315,13 +315,17 @@ let lam_prim ~primitive:(p : Lambda.primitive) ~args loc : Lam.t =
   | Pis_poly_var_block -> prim ~primitive:Pis_poly_var_block ~args loc
   | Pjs_raw_expr -> assert false
   | Pjs_raw_stmt -> assert false
-  | Pjs_fn_make arity -> prim ~primitive:(Pjs_fn_make arity) ~args loc
-  | Pjs_fn_make_unit -> prim ~primitive:Pjs_fn_make_unit ~args loc
   | Pjs_fn_method -> prim ~primitive:Pjs_fn_method ~args loc
 
 (* Does not exist since we compile array in js backend unlike native backend *)
 
 let may_depend = Lam_module_ident.Hash_set.add
+
+let is_opt_param_name name =
+  (* [*opt*] historically; [*opt_<label>*] with the n-ary representation *)
+  String.length name >= 5
+  && String.sub name 0 4 = "*opt"
+  && String.get name (String.length name - 1) = '*'
 
 let rec rename_optional_parameters map params (body : Lambda.lambda) =
   match body with
@@ -330,11 +334,13 @@ let rec rename_optional_parameters map params (body : Lambda.lambda) =
         value_kind,
         id,
         Lifthenelse
-          ( Lprim (p, [Lvar ({name = "*opt*"} as opt)], p_loc),
-            Lprim (p1, [Lvar ({name = "*opt*"} as opt2)], x_loc),
+          ( Lprim (p, [Lvar ({name = opt_name} as opt)], p_loc),
+            Lprim (p1, [Lvar ({name = opt_name2} as opt2)], x_loc),
             f ),
         rest )
-    when Ident.same opt opt2 && List.mem opt params ->
+    when is_opt_param_name opt_name
+         && is_opt_param_name opt_name2
+         && Ident.same opt opt2 && List.mem opt params ->
     let map, rest = rename_optional_parameters map params rest in
     let new_id = Ident.create (id.name ^ "Opt") in
     ( Map_ident.add map opt new_id,

@@ -201,7 +201,6 @@ Path SomeModule.
 
 Complete src/FirstClassModules.res 65:17
 posCursor:[65:17] posNoWhite:[65:16] Found expr:[58:16->69:1]
-posCursor:[65:17] posNoWhite:[65:16] Found expr:[60:2->69:1]
 posCursor:[65:17] posNoWhite:[65:16] Found expr:[62:2->68:3]
 posCursor:[65:17] posNoWhite:[65:16] Found expr:[64:4->67:6]
 posCursor:[65:17] posNoWhite:[65:16] Found expr:[65:6->67:6]

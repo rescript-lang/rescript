@@ -41,6 +41,7 @@ endef
 
 BIN_DIR := packages/@rescript/$(RESCRIPT_PLATFORM)/bin
 RUNTIME_DIR := packages/@rescript/runtime
+BELT_DIR := packages/@rescript/belt
 DUNE_BIN_DIR = ./_build/install/default/bin
 
 # Build stamps
@@ -56,6 +57,8 @@ COMPILER_BUILD_STAMP := _build/log
 # after running `yarn workspace @rescript/runtime build`, which now runs `touch`
 # as part of its build script.
 RUNTIME_BUILD_STAMP := packages/@rescript/runtime/.buildstamp
+# Belt workspace touches this stamp after building against the runtime.
+BELT_BUILD_STAMP := packages/@rescript/belt/.buildstamp
 
 # Default target
 
@@ -102,24 +105,26 @@ COMPILER_SOURCE_DIRS := compiler tests analysis tools
 COMPILER_SOURCES = $(shell find $(COMPILER_SOURCE_DIRS) -type f \( -name '*.ml' -o -name '*.mli' -o -name '*.dune' -o -name dune -o -name dune-project \))
 COMPILER_BIN_NAMES := bsc rescript-editor-analysis rescript-tools
 COMPILER_EXES := $(addsuffix .exe,$(addprefix $(BIN_DIR)/,$(COMPILER_BIN_NAMES)))
-COMPILER_DUNE_BINS := $(addsuffix $(PLATFORM_EXE_EXT),$(addprefix $(DUNE_BIN_DIR)/,$(COMPILER_BIN_NAMES)))
 
 compiler: $(COMPILER_EXES)
 
-define MAKE_COMPILER_COPY_RULE
-$(BIN_DIR)/$(1).exe: $(DUNE_BIN_DIR)/$(1)$(PLATFORM_EXE_EXT)
-	$$(call COPY_EXE,$$<,$$@)
-endef
-
-$(foreach bin,$(COMPILER_BIN_NAMES),$(eval $(call MAKE_COMPILER_COPY_RULE,$(bin))))
-
-# "touch" after dune build to make sure that the binaries' timestamps are updated
-# even if the actual content of the sources hasn't changed.
+# The compiler binaries in $(BIN_DIR) are produced by dune itself: the
+# promotion rules in compiler/sync/dune copy (and strip) them into the
+# platform npm package on every `dune build`, comparing content so unchanged
+# binaries are not rewritten. Make only needs to know that running dune
+# produces them.
 $(COMPILER_BUILD_STAMP): $(COMPILER_SOURCES)
 	dune build
-	@$(foreach bin,$(COMPILER_DUNE_BINS),touch $(bin);)
 
-$(COMPILER_DUNE_BINS): $(COMPILER_BUILD_STAMP) ;
+$(COMPILER_EXES): $(COMPILER_BUILD_STAMP)
+	@cmp -s $@ _build/default/compiler/sync/$(@F) || { \
+	  rm -f _build/default/compiler/sync/$(@F); dune build; }
+	@cmp -s $@ _build/default/compiler/sync/$(@F) || { \
+	  echo "Error: $@ is missing or does not match the dune build output."; \
+	  echo "Dune promotion did not produce it; check that this platform is"; \
+	  echo "covered by a rule in compiler/sync/dune."; \
+	  exit 1; }
+	@test -x $@ || chmod 755 $@
 
 clean-compiler:
 	dune clean && rm -f $(COMPILER_EXES) $(COMPILER_BUILD_STAMP)
@@ -127,15 +132,20 @@ clean-compiler:
 # Runtime / stdlib
 
 RUNTIME_SOURCES := $(shell find $(RUNTIME_DIR) -path '$(RUNTIME_DIR)/lib' -prune -o -type f \( -name '*.res' -o -name '*.resi' -o -name 'rescript.json' \) -print)
+BELT_SOURCES := $(shell find $(BELT_DIR) -path '$(BELT_DIR)/lib' -prune -o -type f \( -name '*.res' -o -name '*.resi' -o -name 'rescript.json' \) -print)
 
-lib: $(RUNTIME_BUILD_STAMP)
+lib: $(RUNTIME_BUILD_STAMP) $(BELT_BUILD_STAMP)
 
 $(RUNTIME_BUILD_STAMP): $(RUNTIME_SOURCES) $(COMPILER_EXES) $(RESCRIPT_EXE) | $(YARN_INSTALL_STAMP)
 	yarn workspace @rescript/runtime build
 
+$(BELT_BUILD_STAMP): $(BELT_SOURCES) $(RUNTIME_BUILD_STAMP) $(COMPILER_EXES) $(RESCRIPT_EXE) | $(YARN_INSTALL_STAMP)
+	yarn workspace @rescript/belt build
+
 clean-lib:
+	yarn workspace @rescript/belt rescript clean
 	yarn workspace @rescript/runtime rescript clean
-	rm -f $(RUNTIME_BUILD_STAMP)
+	rm -f $(RUNTIME_BUILD_STAMP) $(BELT_BUILD_STAMP)
 
 # Artifact list
 
@@ -198,7 +208,7 @@ $(PLAYGROUND_BUILD_STAMP): $(COMPILER_SOURCES)
 # Creates all the relevant core and third party cmij files to side-load together with the playground bundle
 playground-cmijs: $(PLAYGROUND_CMI_BUILD_STAMP)
 
-$(PLAYGROUND_CMI_BUILD_STAMP): $(RUNTIME_BUILD_STAMP)
+$(PLAYGROUND_CMI_BUILD_STAMP): $(RUNTIME_BUILD_STAMP) $(BELT_BUILD_STAMP)
 	yarn workspace playground build
 
 playground-test: playground
@@ -270,7 +280,6 @@ COVERAGE_TEST_ENV := BISECT_FILE=$(COVERAGE_BISECT_PREFIX) BISECT_SILENT=YES
 .PHONY: coverage-build
 coverage-build: | $(YARN_INSTALL_STAMP)
 	dune build --instrument-with bisect_ppx
-	@$(foreach bin,$(COMPILER_DUNE_BINS),touch $(bin);)
 	@$(foreach bin,$(COMPILER_BIN_NAMES), \
 		cp $(DUNE_BIN_DIR)/$(bin)$(PLATFORM_EXE_EXT) $(BIN_DIR)/$(bin).exe && \
 		chmod 755 $(BIN_DIR)/$(bin).exe;)

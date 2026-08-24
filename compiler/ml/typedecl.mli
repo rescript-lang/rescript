@@ -64,8 +64,6 @@ val is_fixed_type : Parsetree.type_declaration -> bool
 val get_unboxed_type_representation : Env.t -> type_expr -> type_expr option
 val is_not_undefined_attr : Parsetree.attribute -> bool
 
-type native_repr_kind = Unboxed | Untagged
-
 type error
 
 exception Error of Location.t * error

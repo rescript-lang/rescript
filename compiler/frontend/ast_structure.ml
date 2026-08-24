@@ -49,5 +49,3 @@ let constraint_ ?(loc = Location.none) (stru : t) (sign : Ast_signature.t) =
   Str.include_ ~loc
     (Incl.mk ~loc
        (Mod.constraint_ ~loc (Mod.structure ~loc stru) (Mty.signature ~loc sign)))
-
-let dummy_item loc : item = Str.eval ~loc (Ast_literal.val_unit ~loc ())

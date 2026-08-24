@@ -131,15 +131,15 @@ let rec core_type i ppf x =
   match x.ptyp_desc with
   | Ptyp_any -> line i ppf "Ptyp_any\n"
   | Ptyp_var s -> line i ppf "Ptyp_var %s\n" s
-  | Ptyp_arrow {arg; ret; arity} ->
+  | Ptyp_arrow {params; ret} ->
     line i ppf "Ptyp_arrow\n";
-    let () =
-      match arity with
-      | None -> ()
-      | Some n -> line i ppf "arity = %d\n" n
-    in
-    arg_label_loc i ppf arg.lbl;
-    core_type i ppf arg.typ;
+    line i ppf "arity = %d\n" (List.length params);
+    List.iter
+      (fun (arg : Parsetree.arg) ->
+        arg_label_loc i ppf arg.lbl;
+        attributes i ppf arg.attrs;
+        core_type i ppf arg.typ)
+      params;
     core_type i ppf ret
   | Ptyp_tuple l ->
     line i ppf "Ptyp_tuple\n";
@@ -249,18 +249,23 @@ and expression i ppf x =
     line i ppf "Pexp_let %a\n" fmt_rec_flag rf;
     list i value_binding ppf l;
     expression i ppf e
-  | Pexp_fun {arg_label = l; default = eo; lhs = p; rhs = e; arity; async} ->
+  | Pexp_fun {newtypes; params; body; async} ->
     line i ppf "Pexp_fun\n";
     let () = if async then line i ppf "async\n" in
-    let () =
-      match arity with
-      | None -> ()
-      | Some arity -> line i ppf "arity:%d\n" arity
-    in
-    arg_label_loc i ppf l;
-    option i expression ppf eo;
-    pattern i ppf p;
-    expression i ppf e
+    line i ppf "arity:%d\n" (List.length params);
+    List.iter
+      (fun ((name : string loc), attrs) ->
+        attributes i ppf attrs;
+        line i ppf "newtype \"%s\"\n" name.txt)
+      newtypes;
+    List.iter
+      (fun {p_attrs; p_lbl; p_default; p_pat} ->
+        attributes i ppf p_attrs;
+        arg_label_loc i ppf p_lbl;
+        option i expression ppf p_default;
+        pattern i ppf p_pat)
+      params;
+    expression i ppf body
   | Pexp_apply {funct = e; args = l; partial; transformed_jsx} ->
     line i ppf "Pexp_apply\n";
     if partial then line i ppf "partial\n";
@@ -352,9 +357,6 @@ and expression i ppf x =
     expression i ppf e
   | Pexp_assert e ->
     line i ppf "Pexp_assert\n";
-    expression i ppf e
-  | Pexp_newtype (s, e) ->
-    line i ppf "Pexp_newtype \"%s\"\n" s.txt;
     expression i ppf e
   | Pexp_pack me ->
     line i ppf "Pexp_pack\n";
@@ -721,6 +723,14 @@ and value_binding i ppf x =
   line i ppf "<def>\n";
   attributes (i + 1) ppf x.pvb_attributes;
   pattern (i + 1) ppf x.pvb_pat;
+  (match x.pvb_constraint with
+  | None -> ()
+  | Some {pvc_newtypes; pvc_type} ->
+    line (i + 1) ppf "<constraint>\n";
+    List.iter
+      (fun {txt} -> line (i + 2) ppf "newtype \"%s\"\n" txt)
+      pvc_newtypes;
+    core_type (i + 2) ppf pvc_type);
   expression (i + 1) ppf x.pvb_expr
 
 and longident_x_expression i ppf {lid = li; x = e; opt} =

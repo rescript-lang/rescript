@@ -22,8 +22,6 @@ open Primitive
 open Types
 open Typetexp
 
-type native_repr_kind = Unboxed | Untagged
-
 type error =
   | Repeated_parameter
   | Duplicate_constructor of string
@@ -1054,13 +1052,15 @@ let compute_variance env visited vari ty =
       visited := Type_map.add ty vari !visited;
       let compute_same = compute_variance_rec vari in
       match ty.desc with
-      | Tarrow (arg, ret, _, _) ->
+      | Tarrow (params, ret) ->
         let open Variance in
         let v = conjugate vari in
         let v1 =
           if mem May_pos v || mem May_neg v then set May_weak true v else v
         in
-        compute_variance_rec v1 arg.typ;
+        List.iter
+          (fun ({typ} : Types.arg) -> compute_variance_rec v1 typ)
+          params;
         compute_same ret
       | Ttuple tl -> List.iter compute_same tl
       | Tconstr (path, tl, _) -> (
@@ -1828,7 +1828,6 @@ let transl_type_extension extend env loc styext =
   let tyext =
     {
       tyext_path = type_path;
-      tyext_txt = styext.ptyext_path;
       tyext_params = ttype_params;
       tyext_constructors = constructors;
       tyext_private = styext.ptyext_private;
@@ -1859,14 +1858,7 @@ let transl_exception env sext =
   let newenv = Env.add_extension ~check:true ext.ext_id ext.ext_type env in
   (ext, newenv)
 
-let rec arity_from_arrow_type env core_type ty =
-  match (core_type.ptyp_desc, (Ctype.repr ty).desc) with
-  | Ptyp_arrow {ret = ct2}, Tarrow (_, ret, _, _) ->
-    1 + arity_from_arrow_type env ct2 ret
-  | Ptyp_arrow _, _ | _, Tarrow _ -> assert false
-  | _ -> 0
-
-let parse_arity env core_type ty =
+let parse_arity env _core_type ty =
   match Ctype.get_arity env ty with
   | Some arity ->
     let from_constructor =
@@ -1875,7 +1867,7 @@ let parse_arity env core_type ty =
       | _ -> false
     in
     (arity, from_constructor)
-  | None -> (arity_from_arrow_type env core_type ty, false)
+  | None -> (0, false)
 
 (* Translate a value declaration *)
 let transl_value_decl env loc valdecl =

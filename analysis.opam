@@ -9,7 +9,6 @@ bug-reports: "https://github.com/rescript-lang/rescript-compiler/issues"
 depends: [
   "dune" {>= "3.17"}
   "ocaml" {>= "5.0.0"}
-  "cppo" {= "1.8.0"}
   "odoc" {with-doc}
   "lsp" {>= "1.23.0"}
   "yojson" {= "3.0.0"}

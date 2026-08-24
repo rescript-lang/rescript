@@ -44,7 +44,8 @@ let bound (e : exp) (cb : exp -> _) =
 
 let default_expr_mapper = Bs_ast_mapper.default_mapper.expr
 
-let check_and_discard (args : Ast_compatible.args) =
+let check_and_discard (args : (Asttypes.arg_label * Parsetree.expression) list)
+    =
   Ext_list.map args (fun (label, x) ->
       Bs_syntaxerr.err_if_label x.pexp_loc label;
       x)
@@ -125,11 +126,12 @@ let app_exp_mapper (e : exp) (self : Bs_ast_mapper.mapper) : exp =
                          pexp_loc = fn.pexp_loc;
                        }
                      | _ ->
-                       Ast_compatible.app1 ~loc:fn.pexp_loc fn bounded_obj_arg));
+                       Exp.apply ~loc:fn.pexp_loc fn
+                         [(Nolabel, bounded_obj_arg)]));
             pexp_attributes = f.pexp_attributes;
             pexp_loc = f.pexp_loc;
           })
-    | _ -> Ast_compatible.app1 ~loc ~attrs:e.pexp_attributes f a)
+    | _ -> Exp.apply ~loc ~attrs:e.pexp_attributes f [(Nolabel, a)])
   | Some {op = "##"; loc; args = [obj; rest]} -> (
     (* - obj##property
        - obj#(method a b )

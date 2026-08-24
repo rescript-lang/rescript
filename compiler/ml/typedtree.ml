@@ -76,18 +76,14 @@ and exp_extra =
   | Texp_constraint of core_type
   | Texp_coerce of core_type
   | Texp_open of override_flag * Path.t * Longident.t loc * Env.t
-  | Texp_newtype of string
 
 and expression_desc =
   | Texp_ident of Path.t * Longident.t loc * Types.value_description
   | Texp_constant of constant
   | Texp_let of rec_flag * value_binding list * expression
   | Texp_function of {
-      arg_label: arg_label;
-      arity: arity;
-      param: Ident.t;
-      case: case;
-      partial: partial;
+      params: function_param list;
+      body: expression;
       async: bool;
     }
   | Texp_apply of {
@@ -142,6 +138,13 @@ and expression_desc =
 and meth = Tmeth_name of string
 
 and case = {c_lhs: pattern; c_guard: expression option; c_rhs: expression}
+
+and function_param = {
+  fp_lbl: arg_label;
+  fp_param: Ident.t; (* the name the compiled parameter binds to *)
+  fp_pat: pattern;
+  fp_partial: partial; (* whether [fp_pat] is exhaustive *)
+}
 
 and record_label_definition =
   | Kept of Types.type_expr
@@ -289,7 +292,6 @@ and open_description = {
   open_path: Path.t;
   open_txt: Longident.t loc;
   open_override: override_flag;
-  open_loc: Location.t;
   open_attributes: attribute list;
 }
 
@@ -323,7 +325,7 @@ and arg = {attrs: attributes; lbl: arg_label; typ: core_type}
 and core_type_desc =
   | Ttyp_any
   | Ttyp_var of string
-  | Ttyp_arrow of arg * core_type * arity
+  | Ttyp_arrow of arg list * core_type
   | Ttyp_tuple of core_type list
   | Ttyp_constr of Path.t * Longident.t loc * core_type list
   | Ttyp_object of object_field list * closed_flag
@@ -335,8 +337,6 @@ and core_type_desc =
 and package_type = {
   pack_path: Path.t;
   pack_fields: (Longident.t loc * core_type) list;
-  pack_type: Types.module_type;
-  pack_txt: Longident.t loc;
 }
 
 and row_field =
@@ -401,7 +401,6 @@ and constructor_arguments =
 
 and type_extension = {
   tyext_path: Path.t;
-  tyext_txt: Longident.t loc;
   tyext_params: (core_type * variance) list;
   tyext_constructors: extension_constructor list;
   tyext_private: private_flag;

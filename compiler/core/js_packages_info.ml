@@ -88,34 +88,11 @@ let from_name (name : string) : t =
 
 let is_empty (x : t) = x.name = Pkg_empty
 
-let string_of_module_system (ms : module_system) =
-  match ms with
-  | Commonjs -> "CommonJS"
-  | Esmodule -> "ESModule"
-
 let module_system_of_string package_name : module_system option =
   match package_name with
   | "commonjs" -> Some Commonjs
   | "esmodule" -> Some Esmodule
   | _ -> None
-
-let dump_package_info (fmt : Format.formatter)
-    ({module_system = ms; path = name; suffix} : package_info) =
-  Format.fprintf fmt "@[%s@ %s@ %s@]" (string_of_module_system ms) name suffix
-
-let dump_package_name fmt (x : package_name) =
-  match x with
-  | Pkg_empty -> Format.fprintf fmt "@empty_pkg@"
-  | Pkg_normal s -> Format.pp_print_string fmt s
-  | Pkg_runtime -> Format.pp_print_string fmt "@runtime"
-
-let dump_packages_info (fmt : Format.formatter)
-    ({name; module_systems = ls} : t) =
-  Format.fprintf fmt "@[%a;@ @[%a@]@]" dump_package_name name
-    (Format.pp_print_list
-       ~pp_sep:(fun fmt () -> Format.pp_print_space fmt ())
-       dump_package_info)
-    ls
 
 type package_found_info = {
   rel_path: string;
@@ -155,20 +132,6 @@ let query_package_infos ({name; module_systems} : t)
       let pkg_rel_path = Runtime_package.name // rel_path in
       Package_found {rel_path; pkg_rel_path; suffix = k.suffix}
     | None -> Package_not_found)
-
-let get_js_path (x : t) (module_system : module_system) : string =
-  match
-    Ext_list.find_first x.module_systems (fun k ->
-        compatible k.module_system module_system)
-  with
-  | Some k -> k.path
-  | None -> assert false
-
-(* for a single pass compilation, [output_dir]
-   can be cached
-*)
-let get_output_dir (info : t) ~package_dir module_system =
-  Filename.concat package_dir (get_js_path info module_system)
 
 let add_npm_package_path (packages_info : t) (s : string) : t =
   if is_empty packages_info then

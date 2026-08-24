@@ -36,8 +36,6 @@ and dump_typedtree = ref false (* -dtypedtree *)
 
 and dump_rawlambda = ref false (* -drawlambda *)
 
-and dump_lambda = ref false (* -dlambda *)
-
 and only_parse = ref false (* -only-parse *)
 
 and editor_mode = ref false (* -editor-mode *)

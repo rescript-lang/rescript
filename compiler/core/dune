@@ -1,20 +1,44 @@
+(env
+ (_
+  (flags
+   (:standard -w +a-4-9-27-30-40-41-42-48-70))))
+
+; The browser profile builds the playground compiler; these rules generate modules from platform/{native,playground}.
+
+(rule
+ (target build_artifact.ml)
+ (enabled_if
+  (= %{profile} browser))
+ (action
+  (copy platform/playground/build_artifact.ml build_artifact.ml)))
+
+(rule
+ (target build_artifact.ml)
+ (enabled_if
+  (<> %{profile} browser))
+ (action
+  (copy platform/native/build_artifact.ml build_artifact.ml)))
+
+(rule
+ (target js_name_of_module_id.ml)
+ (enabled_if
+  (= %{profile} browser))
+ (action
+  (copy platform/playground/js_name_of_module_id.ml js_name_of_module_id.ml)))
+
+(rule
+ (target js_name_of_module_id.ml)
+ (enabled_if
+  (<> %{profile} browser))
+ (action
+  (copy platform/native/js_name_of_module_id.ml js_name_of_module_id.ml)))
+
 (library
  (name core)
  (wrapped false)
  (instrumentation
   (backend bisect_ppx))
- (flags
-  (:standard -w +a-4-9-27-30-40-41-42-48-70))
+ (foreign_stubs
+  (language c)
+  (names build_artifact_stubs))
  (libraries depends ext flow_parser frontend gentype yojson))
-
-(rule
- (target js_name_of_module_id.ml)
- (deps js_name_of_module_id.cppo.ml)
- (action
-  (run %{bin:cppo} %{env:CPPO_FLAGS=} %{deps} -o %{target})))
-
-(rule
- (target lam_compile_main.ml)
- (deps lam_compile_main.cppo.ml)
- (action
-  (run %{bin:cppo} %{env:CPPO_FLAGS=} %{deps} -o %{target})))

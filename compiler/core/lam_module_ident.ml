@@ -64,10 +64,10 @@ module Cmp = struct
     match x.kind with
     | External {name = x_kind; _} ->
       (* The hash collision is rare? *)
-      Bs_hash_stubs.hash_string x_kind
+      Ext_platform_primitives.hash_string x_kind
     | Ml | Runtime ->
       let x_id = x.id in
-      Bs_hash_stubs.hash_stamp_and_name x_id.stamp x_id.name
+      Ext_platform_primitives.hash_stamp_and_name x_id.stamp x_id.name
 end
 
 module Hash = Hash.Make (Cmp)

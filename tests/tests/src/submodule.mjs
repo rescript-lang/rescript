@@ -55,8 +55,6 @@ let A0 = {
   A1: A1
 };
 
-let v0 = 4;
-
 let v1 = a1(1, 2);
 
 let v2 = a2(1, 2);
@@ -64,6 +62,8 @@ let v2 = a2(1, 2);
 let v3 = a3(1, 2);
 
 let v4 = a4(1, 2);
+
+let v0 = 4;
 
 export {
   A0,

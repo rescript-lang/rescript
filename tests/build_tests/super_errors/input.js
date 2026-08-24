@@ -15,7 +15,19 @@ const fixtures = readdirSync(path.join(import.meta.dirname, "fixtures"))
   .filter(fileName => path.extname(fileName) === ".res")
   .sort();
 
-const prefix = ["-w", "+A", "-bs-jsx", "4"];
+const beltLib = path.join(
+  import.meta.dirname,
+  "..",
+  "..",
+  "..",
+  "packages",
+  "@rescript",
+  "belt",
+  "lib",
+  "ocaml",
+);
+
+const prefix = ["-w", "+A", "-bs-jsx", "4", "-I", beltLib];
 
 const updateTests = process.argv[2] === "update";
 

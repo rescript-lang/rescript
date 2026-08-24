@@ -2,22 +2,21 @@
 
 // @ts-check
 
-// Copy exes built by dune to platform bin dir
+// Copy the rewatch exe built by cargo to the platform bin dir.
+// The dune-built compiler binaries are copied by dune promotion instead
+// (see compiler/sync/dune).
 
 import * as child_process from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { parseArgs } from "node:util";
 import { binDir } from "#cli/bins";
-import { compilerBinDir, rewatchDir } from "#dev/paths";
+import { rewatchDir } from "#dev/paths";
 
 const args = parseArgs({
   args: process.argv.slice(2),
   options: {
     all: {
-      type: "boolean",
-    },
-    compiler: {
       type: "boolean",
     },
     rewatch: {
@@ -26,14 +25,7 @@ const args = parseArgs({
   },
 });
 
-const shouldCopyCompiler = args.values.all || args.values.compiler;
 const shouldCopyRewatch = args.values.all || args.values.rewatch;
-
-if (shouldCopyCompiler) {
-  copyExe(compilerBinDir, "rescript-editor-analysis");
-  copyExe(compilerBinDir, "rescript-tools");
-  copyExe(compilerBinDir, "bsc");
-}
 
 if (shouldCopyRewatch) {
   copyExe(path.join(rewatchDir, "target", "release"), "rescript");

@@ -88,6 +88,8 @@ let create (source : (string, Dce_file_processing.file_data option) Reactive.t)
             exception_refs = a.exception_refs @ b.exception_refs;
             optional_arg_calls = a.optional_arg_calls @ b.optional_arg_calls;
             function_refs = a.function_refs @ b.function_refs;
+            optional_arg_value_escapes =
+              a.optional_arg_value_escapes @ b.optional_arg_value_escapes;
           })
       ()
   in
@@ -225,17 +227,22 @@ let collect_cross_file_items (t : t) : Cross_file_items.t =
   let exception_refs = ref [] in
   let optional_arg_calls = ref [] in
   let function_refs = ref [] in
+  let optional_arg_value_escapes = ref [] in
   Reactive.iter
     (fun _path items ->
       exception_refs := items.Cross_file_items.exception_refs @ !exception_refs;
       optional_arg_calls :=
         items.Cross_file_items.optional_arg_calls @ !optional_arg_calls;
-      function_refs := items.Cross_file_items.function_refs @ !function_refs)
+      function_refs := items.Cross_file_items.function_refs @ !function_refs;
+      optional_arg_value_escapes :=
+        items.Cross_file_items.optional_arg_value_escapes
+        @ !optional_arg_value_escapes)
     t.cross_file_items;
   {
     Cross_file_items.exception_refs = !exception_refs;
     optional_arg_calls = !optional_arg_calls;
     function_refs = !function_refs;
+    optional_arg_value_escapes = !optional_arg_value_escapes;
   }
 
 (** Convert reactive file deps to FileDeps.t for solver.

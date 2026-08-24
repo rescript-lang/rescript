@@ -10,8 +10,7 @@ ContextPath Value[someFunc]
 Path someFunc
 argAtCursor: unlabelled<0>
 extracted params: 
-[(
-  int, ~two: string=?, ~three: unit => unit, ~four: someVariant, unit]
+[int, two: string=?, three: unit => unit, four: someVariant, unit]
 {
   "activeParameter": 0,
   "activeSignature": 0,
@@ -23,22 +22,22 @@ extracted params:
       "parameters": [
         {
           "documentation": { "kind": "markdown", "value": "" },
-          "label": [ 0, 7 ]
+          "label": [ 4, 7 ]
         },
         {
           "documentation": { "kind": "markdown", "value": "" },
-          "label": [ 11, 25 ]
+          "label": [ 12, 25 ]
         },
         {
           "documentation": { "kind": "markdown", "value": "" },
-          "label": [ 29, 49 ]
+          "label": [ 30, 49 ]
         },
         {
           "documentation": {
             "kind": "markdown",
             "value": "```rescript\ntype someVariant = One | Two | Three\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22SignatureHelp.res%22%2C0%2C0%5D)"
           },
-          "label": [ 53, 71 ]
+          "label": [ 54, 71 ]
         },
         {
           "documentation": { "kind": "markdown", "value": "" },
@@ -61,8 +60,7 @@ ContextPath Value[someFunc]
 Path someFunc
 argAtCursor: unlabelled<0>
 extracted params: 
-[(
-  int, ~two: string=?, ~three: unit => unit, ~four: someVariant, unit]
+[int, two: string=?, three: unit => unit, four: someVariant, unit]
 {
   "activeParameter": 0,
   "activeSignature": 0,
@@ -74,22 +72,22 @@ extracted params:
       "parameters": [
         {
           "documentation": { "kind": "markdown", "value": "" },
-          "label": [ 0, 7 ]
+          "label": [ 4, 7 ]
         },
         {
           "documentation": { "kind": "markdown", "value": "" },
-          "label": [ 11, 25 ]
+          "label": [ 12, 25 ]
         },
         {
           "documentation": { "kind": "markdown", "value": "" },
-          "label": [ 29, 49 ]
+          "label": [ 30, 49 ]
         },
         {
           "documentation": {
             "kind": "markdown",
             "value": "```rescript\ntype someVariant = One | Two | Three\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22SignatureHelp.res%22%2C0%2C0%5D)"
           },
-          "label": [ 53, 71 ]
+          "label": [ 54, 71 ]
         },
         {
           "documentation": { "kind": "markdown", "value": "" },
@@ -112,8 +110,7 @@ ContextPath Value[someFunc]
 Path someFunc
 argAtCursor: ~two
 extracted params: 
-[(
-  int, ~two: string=?, ~three: unit => unit, ~four: someVariant, unit]
+[int, two: string=?, three: unit => unit, four: someVariant, unit]
 {
   "activeParameter": 1,
   "activeSignature": 0,
@@ -125,22 +122,22 @@ extracted params:
       "parameters": [
         {
           "documentation": { "kind": "markdown", "value": "" },
-          "label": [ 0, 7 ]
+          "label": [ 4, 7 ]
         },
         {
           "documentation": { "kind": "markdown", "value": "" },
-          "label": [ 11, 25 ]
+          "label": [ 12, 25 ]
         },
         {
           "documentation": { "kind": "markdown", "value": "" },
-          "label": [ 29, 49 ]
+          "label": [ 30, 49 ]
         },
         {
           "documentation": {
             "kind": "markdown",
             "value": "```rescript\ntype someVariant = One | Two | Three\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22SignatureHelp.res%22%2C0%2C0%5D)"
           },
-          "label": [ 53, 71 ]
+          "label": [ 54, 71 ]
         },
         {
           "documentation": { "kind": "markdown", "value": "" },
@@ -163,8 +160,7 @@ ContextPath Value[someFunc]
 Path someFunc
 argAtCursor: ~two
 extracted params: 
-[(
-  int, ~two: string=?, ~three: unit => unit, ~four: someVariant, unit]
+[int, two: string=?, three: unit => unit, four: someVariant, unit]
 {
   "activeParameter": 1,
   "activeSignature": 0,
@@ -176,22 +172,22 @@ extracted params:
       "parameters": [
         {
           "documentation": { "kind": "markdown", "value": "" },
-          "label": [ 0, 7 ]
+          "label": [ 4, 7 ]
         },
         {
           "documentation": { "kind": "markdown", "value": "" },
-          "label": [ 11, 25 ]
+          "label": [ 12, 25 ]
         },
         {
           "documentation": { "kind": "markdown", "value": "" },
-          "label": [ 29, 49 ]
+          "label": [ 30, 49 ]
         },
         {
           "documentation": {
             "kind": "markdown",
             "value": "```rescript\ntype someVariant = One | Two | Three\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22SignatureHelp.res%22%2C0%2C0%5D)"
           },
-          "label": [ 53, 71 ]
+          "label": [ 54, 71 ]
         },
         {
           "documentation": { "kind": "markdown", "value": "" },
@@ -214,8 +210,7 @@ ContextPath Value[someFunc]
 Path someFunc
 argAtCursor: ~four
 extracted params: 
-[(
-  int, ~two: string=?, ~three: unit => unit, ~four: someVariant, unit]
+[int, two: string=?, three: unit => unit, four: someVariant, unit]
 {
   "activeParameter": 3,
   "activeSignature": 0,
@@ -227,22 +222,22 @@ extracted params:
       "parameters": [
         {
           "documentation": { "kind": "markdown", "value": "" },
-          "label": [ 0, 7 ]
+          "label": [ 4, 7 ]
         },
         {
           "documentation": { "kind": "markdown", "value": "" },
-          "label": [ 11, 25 ]
+          "label": [ 12, 25 ]
         },
         {
           "documentation": { "kind": "markdown", "value": "" },
-          "label": [ 29, 49 ]
+          "label": [ 30, 49 ]
         },
         {
           "documentation": {
             "kind": "markdown",
             "value": "```rescript\ntype someVariant = One | Two | Three\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22SignatureHelp.res%22%2C0%2C0%5D)"
           },
-          "label": [ 53, 71 ]
+          "label": [ 54, 71 ]
         },
         {
           "documentation": { "kind": "markdown", "value": "" },
@@ -265,8 +260,7 @@ ContextPath Value[someFunc]
 Path someFunc
 argAtCursor: ~four
 extracted params: 
-[(
-  int, ~two: string=?, ~three: unit => unit, ~four: someVariant, unit]
+[int, two: string=?, three: unit => unit, four: someVariant, unit]
 {
   "activeParameter": 3,
   "activeSignature": 0,
@@ -278,22 +272,22 @@ extracted params:
       "parameters": [
         {
           "documentation": { "kind": "markdown", "value": "" },
-          "label": [ 0, 7 ]
+          "label": [ 4, 7 ]
         },
         {
           "documentation": { "kind": "markdown", "value": "" },
-          "label": [ 11, 25 ]
+          "label": [ 12, 25 ]
         },
         {
           "documentation": { "kind": "markdown", "value": "" },
-          "label": [ 29, 49 ]
+          "label": [ 30, 49 ]
         },
         {
           "documentation": {
             "kind": "markdown",
             "value": "```rescript\ntype someVariant = One | Two | Three\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22SignatureHelp.res%22%2C0%2C0%5D)"
           },
-          "label": [ 53, 71 ]
+          "label": [ 54, 71 ]
         },
         {
           "documentation": { "kind": "markdown", "value": "" },
@@ -316,7 +310,7 @@ ContextPath Value[otherFunc]
 Path otherFunc
 argAtCursor: unlabelled<0>
 extracted params: 
-[(string, int, float]
+[string, int, float]
 {
   "activeParameter": 0,
   "activeSignature": 0,
@@ -327,7 +321,7 @@ extracted params:
       "parameters": [
         {
           "documentation": { "kind": "markdown", "value": "" },
-          "label": [ 0, 7 ]
+          "label": [ 1, 7 ]
         },
         {
           "documentation": { "kind": "markdown", "value": "" },
@@ -354,7 +348,7 @@ ContextPath Value[otherFunc]
 Path otherFunc
 argAtCursor: unlabelled<0>
 extracted params: 
-[(string, int, float]
+[string, int, float]
 {
   "activeParameter": 0,
   "activeSignature": 0,
@@ -365,7 +359,7 @@ extracted params:
       "parameters": [
         {
           "documentation": { "kind": "markdown", "value": "" },
-          "label": [ 0, 7 ]
+          "label": [ 1, 7 ]
         },
         {
           "documentation": { "kind": "markdown", "value": "" },
@@ -392,7 +386,7 @@ ContextPath Value[otherFunc]
 Path otherFunc
 argAtCursor: unlabelled<2>
 extracted params: 
-[(string, int, float]
+[string, int, float]
 {
   "activeParameter": 2,
   "activeSignature": 0,
@@ -403,7 +397,7 @@ extracted params:
       "parameters": [
         {
           "documentation": { "kind": "markdown", "value": "" },
-          "label": [ 0, 7 ]
+          "label": [ 1, 7 ]
         },
         {
           "documentation": { "kind": "markdown", "value": "" },
@@ -430,7 +424,7 @@ ContextPath Value[Completion, Lib, foo]
 Path Completion.Lib.foo
 argAtCursor: ~age
 extracted params: 
-[(~age: int, ~name: string]
+[age: int, name: string]
 {
   "activeParameter": 0,
   "activeSignature": 0,
@@ -441,11 +435,11 @@ extracted params:
       "parameters": [
         {
           "documentation": { "kind": "markdown", "value": "" },
-          "label": [ 0, 10 ]
+          "label": [ 2, 10 ]
         },
         {
           "documentation": { "kind": "markdown", "value": "" },
-          "label": [ 12, 25 ]
+          "label": [ 13, 25 ]
         }
       ]
     }
@@ -495,7 +489,7 @@ ContextPath Value[otherFunc]
 Path otherFunc
 argAtCursor: unlabelled<1>
 extracted params: 
-[(string, int, float]
+[string, int, float]
 {
   "activeParameter": 1,
   "activeSignature": 0,
@@ -506,7 +500,7 @@ extracted params:
       "parameters": [
         {
           "documentation": { "kind": "markdown", "value": "" },
-          "label": [ 0, 7 ]
+          "label": [ 1, 7 ]
         },
         {
           "documentation": { "kind": "markdown", "value": "" },
@@ -533,7 +527,7 @@ ContextPath Value[fn]
 Path fn
 argAtCursor: unlabelled<1>
 extracted params: 
-[(int, string, int]
+[int, string, int]
 {
   "activeParameter": 1,
   "activeSignature": 0,
@@ -544,7 +538,7 @@ extracted params:
       "parameters": [
         {
           "documentation": { "kind": "markdown", "value": "" },
-          "label": [ 0, 4 ]
+          "label": [ 1, 4 ]
         },
         {
           "documentation": { "kind": "markdown", "value": "" },
@@ -571,7 +565,7 @@ ContextPath Value[fn]
 Path fn
 argAtCursor: unlabelled<1>
 extracted params: 
-[(int, string, int]
+[int, string, int]
 {
   "activeParameter": 1,
   "activeSignature": 0,
@@ -582,7 +576,7 @@ extracted params:
       "parameters": [
         {
           "documentation": { "kind": "markdown", "value": "" },
-          "label": [ 0, 4 ]
+          "label": [ 1, 4 ]
         },
         {
           "documentation": { "kind": "markdown", "value": "" },
@@ -609,7 +603,7 @@ ContextPath Value[fn]
 Path fn
 argAtCursor: unlabelled<2>
 extracted params: 
-[(int, string, int]
+[int, string, int]
 {
   "activeParameter": 2,
   "activeSignature": 0,
@@ -620,7 +614,7 @@ extracted params:
       "parameters": [
         {
           "documentation": { "kind": "markdown", "value": "" },
-          "label": [ 0, 4 ]
+          "label": [ 1, 4 ]
         },
         {
           "documentation": { "kind": "markdown", "value": "" },
@@ -683,8 +677,7 @@ ContextPath Value[someFunc]
 Path someFunc
 argAtCursor: unlabelled<0>
 extracted params: 
-[(
-  int, ~two: string=?, ~three: unit => unit, ~four: someVariant, unit]
+[int, two: string=?, three: unit => unit, four: someVariant, unit]
 {
   "activeParameter": 0,
   "activeSignature": 0,
@@ -696,22 +689,22 @@ extracted params:
       "parameters": [
         {
           "documentation": { "kind": "markdown", "value": "" },
-          "label": [ 0, 7 ]
+          "label": [ 4, 7 ]
         },
         {
           "documentation": { "kind": "markdown", "value": "" },
-          "label": [ 11, 25 ]
+          "label": [ 12, 25 ]
         },
         {
           "documentation": { "kind": "markdown", "value": "" },
-          "label": [ 29, 49 ]
+          "label": [ 30, 49 ]
         },
         {
           "documentation": {
             "kind": "markdown",
             "value": "```rescript\ntype someVariant = One | Two | Three\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22SignatureHelp.res%22%2C0%2C0%5D)"
           },
-          "label": [ 53, 71 ]
+          "label": [ 54, 71 ]
         },
         {
           "documentation": { "kind": "markdown", "value": "" },
@@ -923,7 +916,7 @@ Signature help src/SignatureHelp.res 105:9
 Signature help src/SignatureHelp.res 113:42
 argAtCursor: unlabelled<1>
 extracted params: 
-[(array<int>, int => int]
+[array<int>, int => int]
 {
   "activeParameter": 1,
   "activeSignature": 0,
@@ -938,7 +931,7 @@ extracted params:
       "parameters": [
         {
           "documentation": { "kind": "markdown", "value": "" },
-          "label": [ 0, 11 ]
+          "label": [ 1, 11 ]
         },
         {
           "documentation": { "kind": "markdown", "value": "" },
@@ -952,7 +945,7 @@ extracted params:
 Signature help src/SignatureHelp.res 132:18
 argAtCursor: unlabelled<0>
 extracted params: 
-[(x, tt]
+[x, tt]
 {
   "activeParameter": 0,
   "activeSignature": 0,
@@ -967,7 +960,7 @@ extracted params:
             "kind": "markdown",
             "value": "```rescript\ntype x = {age?: int, name?: string}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22SignatureHelp.res%22%2C117%2C0%5D)"
           },
-          "label": [ 0, 2 ]
+          "label": [ 1, 2 ]
         },
         {
           "documentation": {
@@ -984,7 +977,7 @@ extracted params:
 Signature help src/SignatureHelp.res 135:22
 argAtCursor: unlabelled<1>
 extracted params: 
-[(x, tt]
+[x, tt]
 {
   "activeParameter": 1,
   "activeSignature": 0,
@@ -999,7 +992,7 @@ extracted params:
             "kind": "markdown",
             "value": "```rescript\ntype x = {age?: int, name?: string}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22SignatureHelp.res%22%2C117%2C0%5D)"
           },
-          "label": [ 0, 2 ]
+          "label": [ 1, 2 ]
         },
         {
           "documentation": {
@@ -1209,6 +1202,40 @@ Signature help src/SignatureHelp.res 157:16
         {
           "documentation": { "kind": "markdown", "value": "" },
           "label": [ 5, 9 ]
+        }
+      ]
+    }
+  ]
+}
+
+Signature help src/SignatureHelp.res 167:25
+posCursor:[167:20] posNoWhite:[167:19] Found expr:[167:11->167:26]
+Pexp_apply ...[167:11->167:20] (...[167:21->167:22], ...[167:24->167:25])
+posCursor:[167:20] posNoWhite:[167:19] Found expr:[167:11->167:20]
+Pexp_ident makeAdder:[167:11->167:20]
+Completable: Cpath Value[makeAdder]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[makeAdder]
+Path makeAdder
+argAtCursor: unlabelled<1>
+extracted params: 
+[int, int]
+{
+  "activeParameter": 1,
+  "activeSignature": 0,
+  "signatures": [
+    {
+      "activeParameter": 1,
+      "label": "(int, int) => int => int",
+      "parameters": [
+        {
+          "documentation": { "kind": "markdown", "value": "" },
+          "label": [ 1, 4 ]
+        },
+        {
+          "documentation": { "kind": "markdown", "value": "" },
+          "label": [ 6, 9 ]
         }
       ]
     }

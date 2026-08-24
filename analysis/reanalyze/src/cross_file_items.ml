@@ -16,24 +16,36 @@ type optional_arg_call = {
 
 type function_ref = {pos_from: Lexing.position; pos_to: Lexing.position}
 
+type optional_arg_value_escape = {
+  pos_from: Lexing.position;
+  pos_to: Lexing.position;
+}
+
 (** {2 Types} *)
 
 type t = {
   exception_refs: exception_ref list;
   optional_arg_calls: optional_arg_call list;
   function_refs: function_ref list;
+  optional_arg_value_escapes: optional_arg_value_escape list;
 }
 
 type builder = {
   mutable exception_refs: exception_ref list;
   mutable optional_arg_calls: optional_arg_call list;
   mutable function_refs: function_ref list;
+  mutable optional_arg_value_escapes: optional_arg_value_escape list;
 }
 
 (** {2 Builder API} *)
 
 let create_builder () : builder =
-  {exception_refs = []; optional_arg_calls = []; function_refs = []}
+  {
+    exception_refs = [];
+    optional_arg_calls = [];
+    function_refs = [];
+    optional_arg_value_escapes = [];
+  }
 
 let add_exception_ref (b : builder) ~exception_path ~loc_from =
   b.exception_refs <- {exception_path; loc_from} :: b.exception_refs
@@ -46,6 +58,10 @@ let add_optional_arg_call (b : builder) ~pos_from ~pos_to ~arg_names
 let add_function_reference (b : builder) ~pos_from ~pos_to =
   b.function_refs <- {pos_from; pos_to} :: b.function_refs
 
+let add_optional_arg_value_escape (b : builder) ~pos_from ~pos_to =
+  b.optional_arg_value_escapes <-
+    {pos_from; pos_to} :: b.optional_arg_value_escapes
+
 (** {2 Merge API} *)
 
 let merge_all (builders : builder list) : t =
@@ -56,7 +72,15 @@ let merge_all (builders : builder list) : t =
     builders |> List.concat_map (fun b -> b.optional_arg_calls)
   in
   let function_refs = builders |> List.concat_map (fun b -> b.function_refs) in
-  {exception_refs; optional_arg_calls; function_refs}
+  let optional_arg_value_escapes =
+    builders |> List.concat_map (fun b -> b.optional_arg_value_escapes)
+  in
+  {
+    exception_refs;
+    optional_arg_calls;
+    function_refs;
+    optional_arg_value_escapes;
+  }
 
 (** {2 Builder extraction for reactive merge} *)
 
@@ -65,6 +89,7 @@ let builder_to_t (builder : builder) : t =
     exception_refs = builder.exception_refs;
     optional_arg_calls = builder.optional_arg_calls;
     function_refs = builder.function_refs;
+    optional_arg_value_escapes = builder.optional_arg_value_escapes;
   }
 
 (** {2 Processing API} *)

@@ -304,18 +304,37 @@ and transl_type_aux env policy styp =
           v)
     in
     ctyp (Ttyp_var name) ty
-  | Ptyp_arrow {arg; ret; arity} ->
-    let lbl = arg.lbl in
-    let cty1 = transl_type env policy arg.typ in
-    let cty2 = transl_type env policy ret in
-    let ty1 = cty1.ctyp_type in
-    let ty1 =
-      if Btype.is_optional lbl then
-        newty (Tconstr (Predef.path_option, [ty1], ref Mnil))
-      else ty1
+  | Ptyp_arrow {params; ret} ->
+    let cparams =
+      List.map
+        (fun (arg : Parsetree.arg) ->
+          let cty = transl_type env policy arg.typ in
+          let ty =
+            if Btype.is_optional arg.lbl then
+              newty (Tconstr (Predef.path_option, [cty.ctyp_type], ref Mnil))
+            else cty.ctyp_type
+          in
+          (arg, cty, ty))
+        params
     in
-    let ty = newty (Tarrow ({lbl; typ = ty1}, cty2.ctyp_type, Cok, arity)) in
-    ctyp (Ttyp_arrow ({attrs = arg.attrs; lbl; typ = cty1}, cty2, arity)) ty
+    let cty2 = transl_type env policy ret in
+    let ty =
+      newty
+        (Tarrow
+           ( List.map
+               (fun ((arg : Parsetree.arg), _, ty1) ->
+                 {Types.lbl = arg.lbl; typ = ty1})
+               cparams,
+             cty2.ctyp_type ))
+    in
+    ctyp
+      (Ttyp_arrow
+         ( List.map
+             (fun ((arg : Parsetree.arg), cty1, _) ->
+               {Typedtree.attrs = arg.attrs; lbl = arg.lbl; typ = cty1})
+             cparams,
+           cty2 ))
+      ty
   | Ptyp_tuple stl ->
     assert (List.length stl >= 2);
     let ctys = List.map (transl_type env policy) stl in
@@ -529,7 +548,7 @@ and transl_type_aux env policy styp =
   | Ptyp_package (p, l) ->
     let l, mty = create_package_mty true styp.ptyp_loc env (p, l) in
     let z = narrow () in
-    let mty = !transl_modtype env mty in
+    ignore (!transl_modtype env mty);
     widen z;
     let ptys = List.map (fun (s, pty) -> (s, transl_type env policy pty)) l in
     let path = !transl_modtype_longident styp.ptyp_loc env p.txt in
@@ -540,15 +559,7 @@ and transl_type_aux env policy styp =
              List.map (fun (s, _pty) -> s.txt) l,
              List.map (fun (_, cty) -> cty.ctyp_type) ptys ))
     in
-    ctyp
-      (Ttyp_package
-         {
-           pack_path = path;
-           pack_type = mty.mty_type;
-           pack_fields = ptys;
-           pack_txt = p;
-         })
-      ty
+    ctyp (Ttyp_package {pack_path = path; pack_fields = ptys}) ty
   | Ptyp_extension ext ->
     raise (Error_forward (Builtin_attributes.error_of_extension ext))
 

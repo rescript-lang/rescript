@@ -41,8 +41,6 @@ type closed_flag = Closed | Open
 
 type label = string
 
-type arity = int option
-
 type 'a loc = 'a Location.loc = {txt: 'a; loc: Location.t}
 
 type variance = Covariant | Contravariant | Invariant

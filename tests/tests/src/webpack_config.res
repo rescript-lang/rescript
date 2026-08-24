@@ -1,5 +1,3 @@
-open Belt
-
 module type Config = {
   let configx: JSON.t
 }

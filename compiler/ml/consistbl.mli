@@ -29,10 +29,6 @@ val check : t -> string -> Digest.t -> string -> unit
      [source] is the name of the file from which the information
      comes from.  This is used for error reporting. *)
 
-val check_noadd : t -> string -> Digest.t -> string -> unit
-(* Same as [check], but raise [Not_available] if no CRC was previously
-     associated with [name]. *)
-
 val set : t -> string -> Digest.t -> string -> unit
 (* [set tbl name crc source] forcefully associates [name] with
    [crc] in [tbl], even if [name] already had a different CRC
@@ -57,6 +53,3 @@ exception Inconsistency of string * string * string
    First string is the name of the compilation unit.
    Second string is the source that caused the inconsistency.
    Third string is the source that set the CRC. *)
-
-exception Not_available of string
-(* Raised by [check_noadd] when a name doesn't have an associated CRC. *)

@@ -243,3 +243,14 @@ let hitsUse = (): hitsUse => Obj.magic()
 
 // let {results: {query, nbHits}, } = hitsUse()
 //                               ^com
+
+type firstParamVariant = One(bool) | TwoAlt
+type secondParamVariant = Blah(bool, bool) | Other
+
+let callWithTwoParams = (fn: (firstParamVariant, secondParamVariant) => bool) =>
+  fn(One(true), Blah(true, false))
+
+// With the cursor in the second parameter's pattern, only that parameter
+// must be completed; the first parameter's comma recovery must not shadow it.
+// callWithTwoParams((One(x), Blah(a, )) => true)
+//                                    ^com

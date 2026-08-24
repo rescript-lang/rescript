@@ -24,15 +24,6 @@
 
 open Ast_helper
 
-(* let fun_no_label ?loc ?attrs  pat body =
-   Ast_compatible.fun_ ?loc ?attrs  pat body *)
-
-(* let discard_exp_as_unit loc e =
-   Ast_compatible.apply_simple ~loc
-    (Exp.ident ~loc {txt = Ast_literal.Lid.ignore_id; loc})
-    [Exp.constraint_ ~loc e
-       (Ast_literal.type_unit ~loc ())] *)
-
 let regexp_id = Ast_literal.Lid.regexp_id
 
 let to_regexp_type loc = Typ.constr ~loc {txt = regexp_id; loc} []

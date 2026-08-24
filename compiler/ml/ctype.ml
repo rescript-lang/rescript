@@ -128,12 +128,6 @@ let begin_def () =
   saved_level := (!current_level, !nongen_level) :: !saved_level;
   incr current_level;
   nongen_level := !current_level
-let begin_class_def () =
-  saved_level := (!current_level, !nongen_level) :: !saved_level;
-  incr current_level
-let raise_nongen_level () =
-  saved_level := (!current_level, !nongen_level) :: !saved_level;
-  nongen_level := !current_level
 let end_def () =
   let cl, nl = List.hd !saved_level in
   saved_level := List.tl !saved_level;
@@ -330,69 +324,6 @@ let concrete_object ty =
 
 (**** Close an object ****)
 
-let close_object ty =
-  let rec close ty =
-    let ty = repr ty in
-    match ty.desc with
-    | Tvar _ -> link_type ty (newty2 ty.level Tnil)
-    | Tfield (_, _, _, ty') -> close ty'
-    | _ -> assert false
-  in
-  match (repr ty).desc with
-  | Tobject (ty, _) -> close ty
-  | _ -> assert false
-
-(**** Row variable of an object type ****)
-
-let row_variable ty =
-  let rec find ty =
-    let ty = repr ty in
-    match ty.desc with
-    | Tfield (_, _, _, ty) -> find ty
-    | Tvar _ -> ty
-    | _ -> assert false
-  in
-  match (repr ty).desc with
-  | Tobject (fi, _) -> find fi
-  | _ -> assert false
-
-(**** Object name manipulation ****)
-(* +++ Bientot obsolete *)
-
-let set_object_name id rv params ty =
-  match (repr ty).desc with
-  | Tobject (_fi, nm) -> set_name nm (Some (Path.Pident id, rv :: params))
-  | _ -> assert false
-
-let remove_object_name ty =
-  match (repr ty).desc with
-  | Tobject (_, nm) -> set_name nm None
-  | Tconstr (_, _, _) -> ()
-  | _ -> fatal_error "Ctype.remove_object_name"
-
-(**** Hiding of private methods ****)
-
-let hide_private_methods ty =
-  match (repr ty).desc with
-  | Tobject (fi, nm) ->
-    nm := None;
-    let fl, _ = flatten_fields fi in
-    List.iter
-      (function
-        | _, k, _ -> (
-          match field_kind_repr k with
-          | Fvar r -> set_kind r Fabsent
-          | _ -> ()))
-      fl
-  | _ -> assert false
-
-(*******************************)
-(*  Operations on class types  *)
-(*******************************)
-
-(*******************************************)
-(*  Miscellaneous operations on row types  *)
-(*******************************************)
 type row_fields = (Asttypes.label * Types.row_field) list
 type row_pairs = (Asttypes.label * Types.row_field * Types.row_field) list
 let sort_row_fields : row_fields -> row_fields =
@@ -531,10 +462,6 @@ let closed_extension_constructor ext =
   with Non_closed (ty, _) ->
     unmark_extension_constructor ext;
     Some ty
-
-type closed_class_failure =
-  | CC_Method of type_expr * bool * string * type_expr
-  | CC_Value of type_expr * bool * string * type_expr
 
 (**********************)
 (*  Type duplication  *)
@@ -714,8 +641,10 @@ let rec generalize_expansive env var_level visited ty =
           else generalize_expansive env var_level visited t)
         variance tyl
     | Tpackage (_, _, tyl) -> List.iter (generalize_structure var_level) tyl
-    | Tarrow (arg, ret, _, _) ->
-      generalize_structure var_level arg.typ;
+    | Tarrow (params, ret) ->
+      List.iter
+        (fun ({typ} : Types.arg) -> generalize_structure var_level typ)
+        params;
       generalize_expansive env var_level visited ret
     | _ -> iter_type_expr (generalize_expansive env var_level visited) ty)
 
@@ -724,57 +653,12 @@ let generalize_expansive env ty =
   try generalize_expansive env !nongen_level (Hashtbl.create 7) ty
   with Unify ([(_, ty')] as tr) -> raise (Unify ((ty, ty') :: tr))
 
-let generalize_global ty = generalize_structure !global_level ty
 let generalize_structure ty = generalize_structure !current_level ty
 
 (* Correct the levels of type [ty]. *)
 let correct_levels ty = duplicate_type ty
 
 (* Only generalize the type ty0 in ty *)
-let limited_generalize ty0 ty =
-  let ty0 = repr ty0 in
-
-  let graph = Hashtbl.create 17 in
-  let idx = ref lowest_level in
-  let roots = ref [] in
-
-  let rec inverse pty ty =
-    let ty = repr ty in
-    if ty.level > !current_level || ty.level = generic_level then (
-      decr idx;
-      Hashtbl.add graph !idx (ty, ref pty);
-      if ty.level = generic_level || ty == ty0 then roots := ty :: !roots;
-      set_level ty !idx;
-      iter_type_expr (inverse [ty]) ty)
-    else if ty.level < lowest_level then
-      let _, parents = Hashtbl.find graph ty.level in
-      parents := pty @ !parents
-  and generalize_parents ty =
-    let idx = ty.level in
-    if idx <> generic_level then (
-      set_level ty generic_level;
-      List.iter generalize_parents !(snd (Hashtbl.find graph idx));
-      (* Special case for rows: must generalize the row variable *)
-      match ty.desc with
-      | Tvariant row ->
-        let more = row_more row in
-        let lv = more.level in
-        if (lv < lowest_level || lv > !current_level) && lv <> generic_level
-        then set_level more generic_level
-      | _ -> ())
-  in
-
-  inverse [] ty;
-  if ty0.level < lowest_level then iter_type_expr (inverse []) ty0;
-  List.iter generalize_parents !roots;
-  Hashtbl.iter
-    (fun _ (ty, _) ->
-      if ty.level <> generic_level then set_level ty !current_level)
-    graph
-
-(* Compute statically the free univars of all nodes in a type *)
-(* This avoids doing it repeatedly during instantiation *)
-
 type inv_type_expr = {
   inv_type: type_expr;
   mutable inv_parents: inv_type_expr list;
@@ -994,13 +878,6 @@ let instance_def sch =
   cleanup_types ();
   ty
 
-let generic_instance env sch =
-  let old = !current_level in
-  current_level := generic_level;
-  let ty = instance env sch in
-  current_level := old;
-  ty
-
 let instance_list env schl =
   let env = gadt_env env in
   let tyl = List.map (fun t -> copy ?env t) schl in
@@ -1065,13 +942,6 @@ let instance_parameterized_type ?keep_names sch_args sch =
   let ty = copy sch in
   cleanup_types ();
   (ty_args, ty)
-
-let instance_parameterized_type_2 sch_args sch_lst sch =
-  let ty_args = List.map simple_copy sch_args in
-  let ty_lst = List.map simple_copy sch_lst in
-  let ty = copy sch in
-  cleanup_types ();
-  (ty_args, ty_lst, ty)
 
 let map_kind f = function
   | Type_abstract -> Type_abstract
@@ -1912,10 +1782,17 @@ let rec mcomp type_pairs env t1 t2 =
             Type_pairs.add type_pairs (t1', t2') ();
             match (t1'.desc, t2'.desc) with
             | Tvar _, Tvar _ -> assert false
-            | Tarrow (arg1, ret1, _, _), Tarrow (arg2, ret2, _, _)
-              when Asttypes.same_arg_label arg1.lbl arg2.lbl
-                   || not (is_optional arg1.lbl || is_optional arg2.lbl) ->
-              mcomp type_pairs env arg1.typ arg2.typ;
+            | Tarrow (params1, ret1), Tarrow (params2, ret2)
+              when List.length params1 = List.length params2
+                   && List.for_all2
+                        (fun (a1 : Types.arg) (a2 : Types.arg) ->
+                          Asttypes.same_arg_label a1.lbl a2.lbl
+                          || not (is_optional a1.lbl || is_optional a2.lbl))
+                        params1 params2 ->
+              List.iter2
+                (fun (a1 : Types.arg) (a2 : Types.arg) ->
+                  mcomp type_pairs env a1.typ a2.typ)
+                params1 params2;
               mcomp type_pairs env ret1 ret2
             | Ttuple tl1, Ttuple tl2 -> mcomp_list type_pairs env tl1 tl2
             | Tconstr (p1, tl1, _), Tconstr (p2, tl2, _) ->
@@ -2316,9 +2193,6 @@ and unify3 env t1 t1' t2 t2' =
   | Tfield _, Tfield _ ->
     (* special case for GADTs *)
     unify_fields env t1' t2'
-  | Tconstr (Pident {name = "function$"}, [t_fun], _), Tarrow _ ->
-    (* subtype: an uncurried function is cast to a curried one *)
-    unify2 env t_fun t2
   | _ -> (
     (match !umode with
     | Expression ->
@@ -2327,17 +2201,18 @@ and unify3 env t1 t1' t2 t2' =
     | Pattern -> add_type_equality t1' t2');
     try
       (match (d1, d2) with
-      | Tarrow (arg1, ret1, c1, a1), Tarrow (arg2, ret2, c2, a2)
-        when a1 = a2
-             && (Asttypes.same_arg_label arg1.lbl arg2.lbl
-                || !umode = Pattern
-                   && not (is_optional arg1.lbl || is_optional arg2.lbl)) -> (
-        unify env arg1.typ arg2.typ;
-        unify env ret1 ret2;
-        match (commu_repr c1, commu_repr c2) with
-        | Clink r, c2 -> set_commu r c2
-        | c1, Clink r -> set_commu r c1
-        | _ -> ())
+      | Tarrow (params1, ret1), Tarrow (params2, ret2)
+        when List.length params1 = List.length params2
+             && List.for_all2
+                  (fun (a1 : Types.arg) (a2 : Types.arg) ->
+                    Asttypes.same_arg_label a1.lbl a2.lbl
+                    || !umode = Pattern
+                       && not (is_optional a1.lbl || is_optional a2.lbl))
+                  params1 params2 ->
+        List.iter2
+          (fun (a1 : Types.arg) (a2 : Types.arg) -> unify env a1.typ a2.typ)
+          params1 params2;
+        unify env ret1 ret2
       | Ttuple tl1, Ttuple tl2 -> unify_list env tl1 tl2
       | Tconstr (p1, tl1, _), Tconstr (p2, tl2, _) when Path.same p1 p2 ->
         if !umode = Expression || not !generate_equations then
@@ -2765,24 +2640,23 @@ let expand_head_trace env t =
   reset_trace_gadt_instances reset_tracing;
   t
 
-(*
-   Unify [t] and [l:'a -> 'b]. Return ['a] and ['b].
-   In label mode, label mismatch is accepted when
-   (1) the requested label is ""
-   (2) the original label is not optional
-*)
-
-let filter_arrow ~env ~arity t l =
+(* Unify [t] with an n-ary arrow taking parameters with the given labels.
+   Return the parameter types and the result type. *)
+let filter_arrow_n ~env t (labels : arg_label list) =
   let t = expand_head_trace env t in
   match t.desc with
   | Tvar _ ->
     let lv = t.level in
-    let t1 = newvar2 lv and t2 = newvar2 lv in
-    let t' = newty2 lv (Tarrow ({lbl = l; typ = t1}, t2, Cok, arity)) in
-    link_type t t';
-    (t1, t2)
-  | Tarrow (arg, ret, _, _) when Asttypes.same_arg_label l arg.lbl ->
-    (arg.typ, ret)
+    let params = List.map (fun l -> {lbl = l; typ = newvar2 lv}) labels in
+    let t2 = newvar2 lv in
+    link_type t (newty2 lv (Tarrow (params, t2)));
+    (List.map (fun (p : Types.arg) -> p.typ) params, t2)
+  | Tarrow (params, ret)
+    when List.length params = List.length labels
+         && List.for_all2
+              (fun l (p : Types.arg) -> Asttypes.same_arg_label l p.lbl)
+              labels params ->
+    (List.map (fun (p : Types.arg) -> p.typ) params, ret)
   | _ -> raise (Unify [])
 
 (* Used by [filter_method]. *)
@@ -2825,25 +2699,6 @@ let filter_method env name priv ty =
   | Tobject (f, _) -> filter_method_field env name priv f
   | _ -> raise (Unify [])
 
-let check_filter_method env name priv ty =
-  ignore (filter_method env name priv ty)
-
-let filter_self_method env lab priv meths ty =
-  let ty' = filter_method env lab priv ty in
-  try Meths.find lab !meths
-  with Not_found ->
-    let pair = (Ident.create lab, ty') in
-    meths := Meths.add lab pair !meths;
-    pair
-
-(***********************************)
-(*  Matching between type schemes  *)
-(***********************************)
-
-(*
-   Update the level of [ty]. First check that the levels of generic
-   variables from the subject are not lowered.
-*)
 let moregen_occur env level ty =
   let rec occur ty =
     let ty = repr ty in
@@ -2896,9 +2751,16 @@ let rec moregen inst_nongen type_pairs env t1 t2 =
               | Tvar _, _ when may_instantiate inst_nongen t1' ->
                 moregen_occur env t1'.level t2;
                 link_type t1' t2
-              | Tarrow (arg1, ret1, _, _), Tarrow (arg2, ret2, _, _)
-                when Asttypes.same_arg_label arg1.lbl arg2.lbl ->
-                moregen inst_nongen type_pairs env arg1.typ arg2.typ;
+              | Tarrow (params1, ret1), Tarrow (params2, ret2)
+                when List.length params1 = List.length params2
+                     && List.for_all2
+                          (fun (a1 : Types.arg) (a2 : Types.arg) ->
+                            Asttypes.same_arg_label a1.lbl a2.lbl)
+                          params1 params2 ->
+                List.iter2
+                  (fun (a1 : Types.arg) (a2 : Types.arg) ->
+                    moregen inst_nongen type_pairs env a1.typ a2.typ)
+                  params1 params2;
                 moregen inst_nongen type_pairs env ret1 ret2
               | Ttuple tl1, Ttuple tl2 ->
                 moregen_list inst_nongen type_pairs env tl1 tl2
@@ -3166,9 +3028,16 @@ let rec eqtype rename type_pairs subst env t1 t2 =
                   if List.exists (fun (_, t) -> t == t2') !subst then
                     raise (Unify []);
                   subst := (t1', t2') :: !subst)
-              | Tarrow (arg1, ret1, _, _), Tarrow (arg2, ret2, _, _)
-                when Asttypes.same_arg_label arg1.lbl arg2.lbl ->
-                eqtype rename type_pairs subst env arg1.typ arg2.typ;
+              | Tarrow (params1, ret1), Tarrow (params2, ret2)
+                when List.length params1 = List.length params2
+                     && List.for_all2
+                          (fun (a1 : Types.arg) (a2 : Types.arg) ->
+                            Asttypes.same_arg_label a1.lbl a2.lbl)
+                          params1 params2 ->
+                List.iter2
+                  (fun (a1 : Types.arg) (a2 : Types.arg) ->
+                    eqtype rename type_pairs subst env a1.typ a2.typ)
+                  params1 params2;
                 eqtype rename type_pairs subst env ret1 ret2
               | Ttuple tl1, Ttuple tl2 ->
                 eqtype_list rename type_pairs subst env tl1 tl2
@@ -3298,23 +3167,6 @@ let equal env rename tyl1 tyl2 =
 (*  Class type matching  *)
 (*************************)
 
-type class_match_failure =
-  | CM_Virtual_class
-  | CM_Parameter_arity_mismatch of int * int
-  | CM_Type_parameter_mismatch of Env.t * (type_expr * type_expr) list
-  | CM_Parameter_mismatch of Env.t * (type_expr * type_expr) list
-  | CM_Val_type_mismatch of string * Env.t * (type_expr * type_expr) list
-  | CM_Meth_type_mismatch of string * Env.t * (type_expr * type_expr) list
-  | CM_Non_mutable_value of string
-  | CM_Non_concrete_value of string
-  | CM_Missing_value of string
-  | CM_Missing_method of string
-  | CM_Hide_public of string
-  | CM_Hide_virtual of string * string
-  | CM_Public_method of string
-  | CM_Private_method of string
-  | CM_Virtual_method of string
-
 (***************)
 (*  Subtyping  *)
 (***************)
@@ -3383,14 +3235,22 @@ let rec build_subtype env visited loops posi level t =
         (t', Equiv)
       with Not_found -> (t, Unchanged)
     else (t, Unchanged)
-  | Tarrow (arg, ret, _, a) ->
+  | Tarrow (params, ret) ->
     if memq_warn t visited then (t, Unchanged)
     else
       let visited = t :: visited in
-      let t1, c1 = build_subtype env visited loops (not posi) level arg.typ in
+      let params' =
+        List.map
+          (fun (arg : Types.arg) ->
+            let t1, c1 =
+              build_subtype env visited loops (not posi) level arg.typ
+            in
+            ({arg with typ = t1}, c1))
+          params
+      in
       let t2, c2 = build_subtype env visited loops posi level ret in
-      let c = max c1 c2 in
-      if c > Unchanged then (newty (Tarrow ({arg with typ = t1}, t2, Cok, a)), c)
+      let c = List.fold_left (fun acc (_, c1) -> max acc c1) c2 params' in
+      if c > Unchanged then (newty (Tarrow (List.map fst params', t2)), c)
       else (t, Unchanged)
   | Ttuple tlist ->
     if memq_warn t visited then (t, Unchanged)
@@ -3583,12 +3443,17 @@ let rec subtype_rec env trace t1 t2 cstrs =
       Type_pairs.add subtypes (t1, t2) ();
       match (t1.desc, t2.desc) with
       | Tvar _, _ | _, Tvar _ -> (trace, t1, t2, !univar_pairs, None) :: cstrs
-      | Tarrow (arg1, ret1, _, _), Tarrow (arg2, ret2, _, _)
-        when Asttypes.same_arg_label arg1.lbl arg2.lbl ->
+      | Tarrow (params1, ret1), Tarrow (params2, ret2)
+        when List.length params1 = List.length params2
+             && List.for_all2
+                  (fun (a1 : Types.arg) (a2 : Types.arg) ->
+                    Asttypes.same_arg_label a1.lbl a2.lbl)
+                  params1 params2 ->
         let cstrs =
-          subtype_rec env
-            ((arg2.typ, arg1.typ) :: trace)
-            arg2.typ arg1.typ cstrs
+          List.fold_left2
+            (fun cstrs (a1 : Types.arg) (a2 : Types.arg) ->
+              subtype_rec env ((a2.typ, a1.typ) :: trace) a2.typ a1.typ cstrs)
+            cstrs params1 params2
         in
         subtype_rec env ((ret1, ret2) :: trace) ret1 ret2 cstrs
       | Ttuple tl1, Ttuple tl2 ->
@@ -4062,12 +3927,6 @@ let unalias ty =
   | Tobject (ty, nm) -> newty2 ty.level (Tobject (unalias_object ty, nm))
   | _ -> newty2 ty.level ty.desc
 
-(* Return the arity (as for curried functions) of the given type. *)
-let rec arity ty =
-  match (repr ty).desc with
-  | Tarrow (_, ret, _, _) -> 1 + arity ret
-  | _ -> 0
-
 (* Check whether an abbreviation expands to itself. *)
 let cyclic_abbrev env id ty =
   let rec check_cycle seen ty =
@@ -4375,28 +4234,6 @@ let nondep_extension_constructor env mid ext =
     clear_hash ();
     raise Not_found
 
-(* collapse conjunctive types in class parameters *)
-let rec collapse_conj env visited ty =
-  let ty = repr ty in
-  if List.memq ty visited then ()
-  else
-    let visited = ty :: visited in
-    match ty.desc with
-    | Tvariant row ->
-      let row = row_repr row in
-      List.iter
-        (fun (_l, fi) ->
-          match row_field_repr fi with
-          | Reither (c, t1 :: (_ :: _ as tl), m, e) ->
-            List.iter (unify env t1) tl;
-            set_row_field e (Reither (c, [t1], m, ref None))
-          | _ -> ())
-        row.row_fields;
-      iter_row (collapse_conj env visited) row
-    | _ -> iter_type_expr (collapse_conj env visited) ty
-
-let collapse_conj_params env params = List.iter (collapse_conj env []) params
-
 let same_constr env t1 t2 =
   let t1 = expand_head env t1 in
   let t2 = expand_head env t2 in
@@ -4431,5 +4268,5 @@ let maybe_pointer_type env typ =
 
 let get_arity env typ =
   match (expand_head env typ).desc with
-  | Tarrow (_, _, _, arity) -> arity
+  | Tarrow (params, _) -> Some (List.length params)
   | _ -> None

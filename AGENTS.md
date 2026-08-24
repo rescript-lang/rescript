@@ -72,6 +72,15 @@ JS IR
 JavaScript Code
 ```
 
+### Platform-specific compiler modules
+
+The Dune `browser` profile builds the playground compiler. Platform-dependent
+modules are stored below `platform/native/` and `platform/playground/` in their
+owning compiler directory. Rules in that directory's `dune` file copy the
+selected implementation into the build directory as an ordinary `.ml` module;
+all other profiles select the native source. Generated module paths in errors
+or stack traces therefore map back to one of those two source directories.
+
 ### Key Directory Structure
 
 ```
@@ -268,6 +277,14 @@ The compiler is designed for fast feedback loops and scales to large codebases:
 - Use DCO sign-off: `Signed-Off-By: Your Name <email>`
 - Include appropriate tests with all changes
 - Build must pass before committing
+
+### Stacked pull requests
+
+When a PR depends on another unmerged PR, create a native GitHub stack with
+`gh stack` rather than only targeting the preceding feature branch. Keep the
+branches linear and in the same repository, and list branches or PRs from
+bottom to top. For existing PRs, use `gh stack link BOTTOM_PR [NEXT_PR...]`,
+then verify that GitHub reports stack metadata and runs CI for every PR.
 
 ### Code Quality
 

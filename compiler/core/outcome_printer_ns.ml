@@ -26,38 +26,6 @@ let ps = Format.pp_print_string
 
 let out_ident ppf s =
   ps ppf
-    (match s with
-    (* Belt_libs  *)
-    | "Belt_Id" -> "Belt.Id"
-    | "Belt_Array" -> "Belt.Array"
-    | "Belt_SortArray" -> "Belt.SortArray"
-    | "Belt_SortArrayInt" -> "Belt.SortArray.Int"
-    | "Belt_SortArrayString" -> "Belt.SortArray.String"
-    | "Belt_MutableQueue" -> "Belt.MutableQueue"
-    | "Belt_MutableStack" -> "Belt.MutableStack"
-    | "Belt_List" -> "Belt.List"
-    | "Belt_Range" -> "Belt.Range"
-    | "Belt_Set" -> "Belt.Set"
-    | "Belt_SetInt" -> "Belt.Set.Int"
-    | "Belt_SetString" -> "Belt.Set.String"
-    | "Belt_Map" -> "Belt.Map"
-    | "Belt_MapInt" -> "Belt.Map.Int"
-    | "Belt_MapString" -> "Belt.Map.String"
-    | "Belt_Option" -> "Belt.Option"
-    | "Belt_MutableSet" -> "Belt.MutableSet"
-    | "Belt_MutableSetInt" -> "Belt.MutableSet.Int"
-    | "Belt_MutableSetString" -> "Belt.MutableSet.String"
-    | "Belt_MutableMap" -> "Belt.MutableMap"
-    | "Belt_MutableMapInt" -> "Belt.MutableMap.Int"
-    | "Belt_MutableMapString" -> "Belt.MutableMap.String"
-    | "Belt_HashSet" -> "Belt.HashSet"
-    | "Belt_HashSetInt" -> "Belt.HashSet.Int"
-    | "Belt_HashSetString" -> "Belt.HashSet.String"
-    | "Belt_HashMap" -> "Belt.HashMap"
-    | "Belt_HashMapString" -> "Belt.HashMap.String"
-    | "Belt_HashMapInt" -> "Belt.HashMap.Int"
-    | "Belt_Debug" -> "Belt.Debug"
-    | s -> (
-      match Ext_namespace.try_split_module_name s with
-      | None -> s
-      | Some (ns, m) -> ns ^ "." ^ m))
+    (match Ext_namespace.try_split_module_name s with
+    | None -> s
+    | Some (ns, m) -> ns ^ "." ^ m)

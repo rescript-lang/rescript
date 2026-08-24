@@ -18,8 +18,8 @@ let async =
   [@res.braces ])
 let f =
   ((if isPositive
-    then async fun [arity:2]a -> fun b -> (a + b : int)
-    else (async fun [arity:2]c -> fun d -> (c - d : int)))
+    then async fun [arity:2]a b -> (a + b : int)
+    else (async fun [arity:2]c d -> (c - d : int)))
   [@res.ternary ])
 let foo = async ~a:34
 let bar async [arity:1]~a  = a + 1
@@ -28,17 +28,17 @@ let ex2 = (await 3) ** (await 4)
 let ex3 = await (foo -> (bar ~arg))
 let ex4 = await ((foo.bar).baz)
 let attr1 = ((async fun [arity:1]x -> x + 1)[@a ])
-let attr2 = ((fun (type a) ->
-  async fun [arity:1]() -> fun (type b) -> fun (type c) ->
-    fun [arity:1]x -> 3)
+let attr2 =
+  ((async fun (type a) [arity:1]() -> fun (type b) (type c) [arity:1]x -> 3)
   [@a ])
-let attr3 = ((fun (type a) ->
-  fun [arity:1]() -> fun (type b) -> fun (type c) ->
-    async fun [arity:1]x -> 3)
+let attr3 =
+  ((fun (type a) [arity:1]() -> async fun (type b) (type c) [arity:1]x -> 3)
   [@a ])
-let attr4 = ((fun (type a) ->
-  fun [arity:1]() -> ((fun (type b) -> fun (type c) ->
-    async fun [arity:1]x -> 3)[@b ]))
+let attr4 =
+  ((fun (type a) [arity:1]() ->
+      ((async fun (type b) (type c) [arity:1]x -> 3)[@b ]))
   [@a ])
-let (attr5 : int) = ((fun (type a) -> fun (type b) -> fun (type c) ->
-  async fun [arity:1]() -> fun [arity:1](x : a) -> x)[@a ][@b ])
+let (attr5 : int) =
+  ((async fun (type a) (type b) (type c) [arity:1]() ->
+      fun [arity:1](x : a) -> x)
+  [@a ][@b ])

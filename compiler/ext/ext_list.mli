@@ -28,9 +28,6 @@ val map_combine : 'a list -> 'b list -> ('a -> 'c) -> ('c * 'b) list
 
 val combine_array : 'a array -> 'b list -> ('a -> 'c) -> ('c * 'b) list
 
-val combine_array_append :
-  'a array -> 'b list -> ('c * 'b) list -> ('a -> 'c) -> ('c * 'b) list
-
 val has_string : string list -> string -> bool
 
 val map_split_opt :
@@ -188,9 +185,6 @@ val for_all2_no_exn : 'a list -> 'b list -> ('a -> 'b -> bool) -> bool
 
 val split_map : 'a list -> ('a -> 'b * 'c) -> 'b list * 'c list
 (** [f] is applied follow the list order *)
-
-val reduce_from_left : 'a list -> ('a -> 'a -> 'a) -> 'a
-(** [fn] is applied from left to right *)
 
 val sort_via_array : 'a list -> ('a -> 'a -> int) -> 'a list
 

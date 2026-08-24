@@ -105,7 +105,6 @@ let type_open ?toplevel env sod =
       open_path = path;
       open_txt = sod.popen_lid;
       open_attributes = sod.popen_attributes;
-      open_loc = sod.popen_loc;
     }
   in
   (path, newenv, od)

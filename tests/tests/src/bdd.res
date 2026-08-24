@@ -39,21 +39,21 @@ let getId = bdd =>
 let initSize_1 = 8 * 1024 - 1
 let nodeC = ref(1)
 let sz_1 = ref(initSize_1)
-let htab = ref(Belt.Array.make(sz_1.contents + 1, list{}))
+let htab = ref(Array.make(~length=sz_1.contents + 1, list{}))
 let n_items = ref(0)
-let hashVal = (x, y, v) => lsl(x, 1) + y + lsl(v, 2)
+let hashVal = (x, y, v) => Int.shiftLeft(x, 1) + y + Int.shiftLeft(v, 2)
 
 let resize = newSize => {
   let arr = htab.contents
   let newSz_1 = newSize - 1
-  let newArr = Belt.Array.make(newSize, list{})
+  let newArr = Array.make(~length=newSize, list{})
   let rec copyBucket = bucket =>
     switch bucket {
     | list{} => ()
     | list{n, ...ns} =>
       switch n {
       | Node(l, v, _, h) =>
-        let ind = land(hashVal(getId(l), getId(h), v), newSz_1)
+        let ind = Int.bitwiseAnd(hashVal(getId(l), getId(h), v), newSz_1)
 
         newArr->Array.setUnsafe(ind, list{n, ...newArr->Array.getUnsafe(ind)})
         copyBucket(ns)
@@ -71,17 +71,17 @@ let resize = newSize => {
 let rec insert = (idl, idh, v, ind, bucket, newNode) =>
   if n_items.contents <= sz_1.contents {
     htab.contents->Array.setUnsafe(ind, list{newNode, ...bucket})
-    incr(n_items)
+    Int.Ref.increment(n_items)
   } else {
     resize(sz_1.contents + sz_1.contents + 2)
-    let ind = land(hashVal(idl, idh, v), sz_1.contents)
+    let ind = Int.bitwiseAnd(hashVal(idl, idh, v), sz_1.contents)
 
     htab.contents->Array.setUnsafe(ind, list{newNode, ...htab.contents->Array.getUnsafe(ind)})
   }
 
 let resetUnique = () => {
   sz_1 := initSize_1
-  htab := Belt.Array.make(sz_1.contents + 1, list{})
+  htab := Array.make(~length=sz_1.contents + 1, list{})
   n_items := 0
   nodeC := 1
 }
@@ -93,7 +93,7 @@ let mkNode = (low, v, high) => {
   if idl == idh {
     low
   } else {
-    let ind = land(hashVal(idl, idh, v), sz_1.contents)
+    let ind = Int.bitwiseAnd(hashVal(idl, idh, v), sz_1.contents)
     let bucket = htab.contents->Array.getUnsafe(ind)
     let rec lookup = b =>
       switch b {
@@ -102,7 +102,7 @@ let mkNode = (low, v, high) => {
           low,
           v,
           {
-            incr(nodeC)
+            Int.Ref.increment(nodeC)
             nodeC.contents
           },
           high,
@@ -144,15 +144,15 @@ let mkVar = x => mkNode(zero, x, one)
 
 let cacheSize = 1999
 
-let andslot1 = Belt.Array.make(cacheSize, 0)
-let andslot2 = Belt.Array.make(cacheSize, 0)
-let andslot3 = Belt.Array.make(cacheSize, zero)
-let xorslot1 = Belt.Array.make(cacheSize, 0)
-let xorslot2 = Belt.Array.make(cacheSize, 0)
-let xorslot3 = Belt.Array.make(cacheSize, zero)
-let notslot1 = Belt.Array.make(cacheSize, 0)
-let notslot2 = Belt.Array.make(cacheSize, one)
-let hash = (x, y) => mod(lsl(x, 1) + y, cacheSize)
+let andslot1 = Array.make(~length=cacheSize, 0)
+let andslot2 = Array.make(~length=cacheSize, 0)
+let andslot3 = Array.make(~length=cacheSize, zero)
+let xorslot1 = Array.make(~length=cacheSize, 0)
+let xorslot2 = Array.make(~length=cacheSize, 0)
+let xorslot3 = Array.make(~length=cacheSize, zero)
+let notslot1 = Array.make(~length=cacheSize, 0)
+let notslot2 = Array.make(~length=cacheSize, one)
+let hash = (x, y) => mod(Int.shiftLeft(x, 1) + y, cacheSize)
 
 let rec not = n =>
   switch n {
@@ -250,11 +250,11 @@ let seed = ref(0)
 
 let random = () => {
   seed := seed.contents * 25173 + 17431
-  land(seed.contents, 1) > 0
+  Int.bitwiseAnd(seed.contents, 1) > 0
 }
 
 let random_vars = n => {
-  let vars = Belt.Array.make(n, false)
+  let vars = Array.make(~length=n, false)
   for i in 0 to n - 1 {
     vars->Array.setUnsafe(i, random())
   }
@@ -274,9 +274,9 @@ let test_hwb = (bdd, vars) => {
         eval bdd vars = false if n = 0
      where n is the number of "true" elements in vars. */
   let ntrue = ref(0)
-  for i in 0 to Belt.Array.length(vars) - 1 {
+  for i in 0 to Array.length(vars) - 1 {
     if vars->Array.getUnsafe(i) {
-      incr(ntrue)
+      Int.Ref.increment(ntrue)
     }
   }
   bool_equal(

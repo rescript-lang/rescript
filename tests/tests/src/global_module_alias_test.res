@@ -1,4 +1,3 @@
-open Belt
 open Mocha
 open Test_utils
 
@@ -23,18 +22,18 @@ let v = ref(0)
 
 module Make = (U: S) => {
   let () = {
-    incr(v)
-    incr(v)
-    incr(v)
+    Int.Ref.increment(v)
+    Int.Ref.increment(v)
+    Int.Ref.increment(v)
   }
   include U
 }
 
 let f = () => {
   let () = {
-    incr(v)
-    incr(v)
-    incr(v)
+    Int.Ref.increment(v)
+    Int.Ref.increment(v)
+    Int.Ref.increment(v)
   }
   module G = F /* local module is not module alias */
   module H = G

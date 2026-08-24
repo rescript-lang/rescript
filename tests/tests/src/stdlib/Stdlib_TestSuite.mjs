@@ -70,6 +70,12 @@ let areSame = Stdlib_TypedArrayTests.areSame;
 
 let o = Stdlib_TypedArrayTests.o;
 
+let nan = Stdlib_FloatTests.nan;
+
+let infinity = Stdlib_FloatTests.infinity;
+
+let neg_infinity = Stdlib_FloatTests.neg_infinity;
+
 let decodeJsonTest = Stdlib_JsonTests.decodeJsonTest;
 
 let shouldHandleNullableValues = Stdlib_NullableTests.shouldHandleNullableValues;
@@ -194,6 +200,9 @@ export {
   assertWillThrow,
   areSame,
   o,
+  nan,
+  infinity,
+  neg_infinity,
   decodeJsonTest,
   shouldHandleNullableValues,
   someString,

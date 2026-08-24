@@ -54,17 +54,9 @@ module Typ = struct
 
   let any ?loc ?attrs () = mk ?loc ?attrs Ptyp_any
   let var ?loc ?attrs a = mk ?loc ?attrs (Ptyp_var a)
-  let arrow ?loc ?attrs ~arity arg ret =
-    mk ?loc ?attrs (Ptyp_arrow {arg; ret; arity})
-  let arrows ?loc ?attrs args ret =
-    let arity = Some (List.length args) in
-    let rec build_arrows arity_to_use = function
-      | [] -> ret
-      | [arg] -> arrow ?loc ?attrs ~arity:arity_to_use arg ret
-      | arg :: rest ->
-        arrow ?loc ?attrs ~arity:arity_to_use arg (build_arrows None rest)
-    in
-    build_arrows arity args
+  let arrow ?loc ?attrs params ret =
+    assert (params <> []);
+    mk ?loc ?attrs (Ptyp_arrow {params; ret})
   let tuple ?loc ?attrs a = mk ?loc ?attrs (Ptyp_tuple a)
   let constr ?loc ?attrs a b = mk ?loc ?attrs (Ptyp_constr (a, b))
   let object_ ?loc ?attrs a b = mk ?loc ?attrs (Ptyp_object (a, b))
@@ -91,9 +83,15 @@ module Typ = struct
         | Ptyp_var x ->
           check_variable var_names t.ptyp_loc x;
           Ptyp_var x
-        | Ptyp_arrow ({arg; ret} as arr) ->
+        | Ptyp_arrow {params; ret} ->
           Ptyp_arrow
-            {arr with arg = {arr.arg with typ = loop arg.typ}; ret = loop ret}
+            {
+              params =
+                List.map
+                  (fun (arg : Parsetree.arg) -> {arg with typ = loop arg.typ})
+                  params;
+              ret = loop ret;
+            }
         | Ptyp_tuple lst -> Ptyp_tuple (List.map loop lst)
         | Ptyp_constr ({txt = Longident.Lident s}, []) when List.mem s var_names
           ->
@@ -160,9 +158,12 @@ module Exp = struct
   let ident ?loc ?attrs a = mk ?loc ?attrs (Pexp_ident a)
   let constant ?loc ?attrs a = mk ?loc ?attrs (Pexp_constant a)
   let let_ ?loc ?attrs a b c = mk ?loc ?attrs (Pexp_let (a, b, c))
-  let fun_ ?loc ?attrs ?(async = false) ~arity a b c d =
-    mk ?loc ?attrs
-      (Pexp_fun {arg_label = a; default = b; lhs = c; rhs = d; arity; async})
+  let fun_ ?loc ?attrs ?(async = false) ?(newtypes = []) params body =
+    assert (params <> []);
+    mk ?loc ?attrs (Pexp_fun {newtypes; params; body; async})
+
+  let fun_param ?(attrs = []) ?default lbl pat =
+    {p_attrs = attrs; p_lbl = lbl; p_default = default; p_pat = pat}
   let apply ?loc ?attrs ?(partial = false) ?(transformed_jsx = false) funct args
       =
     mk ?loc ?attrs (Pexp_apply {funct; args; partial; transformed_jsx})
@@ -190,7 +191,6 @@ module Exp = struct
   let letmodule ?loc ?attrs a b c = mk ?loc ?attrs (Pexp_letmodule (a, b, c))
   let letexception ?loc ?attrs a b = mk ?loc ?attrs (Pexp_letexception (a, b))
   let assert_ ?loc ?attrs a = mk ?loc ?attrs (Pexp_assert a)
-  let newtype ?loc ?attrs a b = mk ?loc ?attrs (Pexp_newtype (a, b))
   let pack ?loc ?attrs a = mk ?loc ?attrs (Pexp_pack a)
   let open_ ?loc ?attrs a b c = mk ?loc ?attrs (Pexp_open (a, b, c))
   let extension ?loc ?attrs a = mk ?loc ?attrs (Pexp_extension a)
@@ -357,8 +357,14 @@ module Incl = struct
 end
 
 module Vb = struct
-  let mk ?(loc = !default_loc) ?(attrs = []) pat expr =
-    {pvb_pat = pat; pvb_expr = expr; pvb_attributes = attrs; pvb_loc = loc}
+  let mk ?(loc = !default_loc) ?(attrs = []) ?constraint_ pat expr =
+    {
+      pvb_pat = pat;
+      pvb_expr = expr;
+      pvb_constraint = constraint_;
+      pvb_attributes = attrs;
+      pvb_loc = loc;
+    }
 end
 
 module Type = struct

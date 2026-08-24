@@ -1,28 +1,28 @@
 module Pervasives = {
-  include Belt.List
+  include List
   include Pervasives
 }
 
-let f = Pervasives.\"@"
+let f = List.concat
 
-let a0 = abs_float
-let a1 = acos
-let a2 = tan
-let a3 = tanh
-let a4 = asin
-let a5 = atan2
-let a6 = atan
-let a7 = ceil
-let a8 = cos
-let a9 = cosh
-let a10 = exp
-let a11 = sin
-let a12 = sinh
-let a13 = sqrt
-let a14 = floor
-let a15 = log
-let a16 = log10
-let a17 = log1p
+let a0 = Math.abs
+let a1 = Math.acos
+let a2 = Math.tan
+let a3 = Math.tanh
+let a4 = Math.asin
+let a5 = Math.atan2
+let a6 = Math.atan
+let a7 = Math.ceil
+let a8 = Math.cos
+let a9 = Math.cosh
+let a10 = Math.exp
+let a11 = Math.sin
+let a12 = Math.sinh
+let a13 = Math.sqrt
+let a14 = Math.floor
+let a15 = Math.log
+let a16 = Math.log10
+let a17 = Math.log1p
 let a18 = \"**"
 /* local variables: */
 /* compile-command: "ocamlc -dlambda -c test_pervasive.ml" */

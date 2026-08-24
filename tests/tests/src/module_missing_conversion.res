@@ -1,7 +1,7 @@
 module type S = module type of String
 
 module XX = {
-  include Belt.Array
+  include Array
   let f = x => x
 }
 let u = [module(String: S)]

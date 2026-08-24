@@ -1,0 +1,13 @@
+lib/bs
+lib/ocaml
+*.lock
+.buildstamp
+bs/
+*.ast
+*.iast
+rescript.lock
+.compiler.log
+src/*.js
+src/*.mjs
+src/*.cjs
+lib/**/*.res.js

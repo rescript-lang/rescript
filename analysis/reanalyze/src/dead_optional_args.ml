@@ -2,39 +2,44 @@ open Dead_common
 
 let active () = true
 
-let add_function_reference ~config ~decls ~cross_file ~(loc_from : Location.t)
-    ~(loc_to : Location.t) =
-  if active () then
-    let pos_to = loc_to.loc_start in
-    let pos_from = loc_from.loc_start in
-    (* Check if target has optional args - for filtering and debug logging *)
-    let should_add =
-      match Declarations.find_opt_builder decls pos_to with
-      | Some {decl_kind = Value {optional_args}} ->
-        not (Optional_args.is_empty optional_args)
-      | _ -> false
-    in
-    if should_add then (
-      if config.Dce_config.cli.debug then
-        Log_.item "OptionalArgs.addFunctionReference %s %s@."
-          (pos_from |> Pos.to_string)
-          (pos_to |> Pos.to_string);
-      Cross_file_items.add_function_reference cross_file ~pos_from ~pos_to)
-
 let rec has_optional_args (texpr : Types.type_expr) =
   match texpr.desc with
   | _ when not (active ()) -> false
-  | Tarrow ({lbl = Optional _}, _tTo, _, _) -> true
-  | Tarrow (_, t_to, _, _) -> has_optional_args t_to
+  | Tarrow (params, _) ->
+    params
+    |> List.exists (fun ({lbl} : Types.arg) ->
+           match lbl with
+           | Optional _ -> true
+           | _ -> false)
   | Tlink t -> has_optional_args t
   | Tsubst t -> has_optional_args t
   | _ -> false
 
+let add_function_reference ~config ~cross_file ~(loc_from : Location.t)
+    ~(loc_to : Location.t) ~type_from ~type_to =
+  (* Keep this filter type-based rather than consulting the declaration table.
+     References can be collected before their target declaration is visited,
+     notably in [let rec ... and ...] groups. *)
+  if has_optional_args type_from && has_optional_args type_to then (
+    let pos_to = loc_to.loc_start in
+    let pos_from = loc_from.loc_start in
+    if config.Dce_config.cli.debug then
+      Log_.item "OptionalArgs.addFunctionReference %s %s@."
+        (pos_from |> Pos.to_string)
+        (pos_to |> Pos.to_string);
+    Cross_file_items.add_function_reference cross_file ~pos_from ~pos_to)
+
+(* The function boundary is structural: a function's optional arguments are
+   exactly the optional parameters of its (one) arrow node. *)
 let rec from_type_expr (texpr : Types.type_expr) =
   match texpr.desc with
   | _ when not (active ()) -> []
-  | Tarrow ({lbl = Optional {txt = s}}, t_to, _, _) -> s :: from_type_expr t_to
-  | Tarrow (_, t_to, _, _) -> from_type_expr t_to
+  | Tarrow (params, _) ->
+    params
+    |> List.filter_map (fun ({lbl} : Types.arg) ->
+           match lbl with
+           | Optional {txt = s} -> Some s
+           | _ -> None)
   | Tlink t -> from_type_expr t
   | Tsubst t -> from_type_expr t
   | _ -> []
@@ -59,10 +64,15 @@ let add_references ~config ~cross_file ~(loc_from : Location.t)
 
 (** Check for optional args issues. Returns issues instead of logging.
     Uses optional_args_state map for final computed state. *)
-let check ~optional_args_state ~ann_store ~config:_ decl : Issue.t list =
+let check ~optional_args_state ~optional_arg_value_escapes ~ann_store ~config:_
+    decl : Issue.t list =
   match decl with
-  | {Decl.decl_kind = Value {optional_args}}
+  | {Decl.decl_kind = Value {reports_optional_args = true; optional_args}}
     when active ()
+         (* A live escape makes both diagnostic classes unknown: unseen callers
+            may either omit or supply an optional argument, so neither "never
+            used" nor "always supplied" remains trustworthy. *)
+         && (not (Pos_set.mem decl.pos optional_arg_value_escapes))
          && not
               (Annotation_store.is_annotated_gentype_or_live ann_store decl.pos)
     ->

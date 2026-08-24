@@ -121,10 +121,8 @@ let print_signature ~extractor ~signature =
     in
     match typ.desc with
     | Tarrow
-        ( {typ = {desc = Tconstr (Path.Pident props_id, type_args, _)}},
-          ret_type,
-          _,
-          _ )
+        ( {typ = {desc = Tconstr (Path.Pident props_id, type_args, _)}} :: _,
+          ret_type )
       when Ident.name props_id = "props" ->
       Some (type_args, ret_type)
     | Tconstr
@@ -160,24 +158,24 @@ let print_signature ~extractor ~signature =
           | Some x -> x
           | None -> assert false
         in
-        let rec mk_fun_type (label_decls : Types.label_declaration list) =
-          match label_decls with
-          | [] -> ret_type
-          | label_decl :: rest ->
-            let prop_type =
-              Type_utils.instantiate_type ~type_params ~type_args
-                label_decl.ld_type
-            in
-            let lbl_name = label_decl.ld_id |> Ident.name in
-            let lbl =
-              if label_decl.ld_optional then
-                Asttypes.Optional {txt = lbl_name; loc = Location.none}
-              else Asttypes.Labelled {txt = lbl_name; loc = Location.none}
-            in
-            {
-              ret_type with
-              desc = Tarrow ({lbl; typ = prop_type}, mk_fun_type rest, Cok, None);
-            }
+        let mk_fun_type (label_decls : Types.label_declaration list) =
+          let params =
+            label_decls
+            |> List.map (fun (label_decl : Types.label_declaration) ->
+                   let prop_type =
+                     Type_utils.instantiate_type ~type_params ~type_args
+                       label_decl.ld_type
+                   in
+                   let lbl_name = label_decl.ld_id |> Ident.name in
+                   let lbl =
+                     if label_decl.ld_optional then
+                       Asttypes.Optional {txt = lbl_name; loc = Location.none}
+                     else
+                       Asttypes.Labelled {txt = lbl_name; loc = Location.none}
+                   in
+                   {Types.lbl; typ = prop_type})
+          in
+          {ret_type with desc = Tarrow (params, ret_type)}
         in
         let fun_type =
           if List.length label_decls = 0 (* No props *) then
@@ -186,7 +184,7 @@ let print_signature ~extractor ~signature =
             in
             {
               ret_type with
-              desc = Tarrow ({lbl = Nolabel; typ = t_unit}, ret_type, Cok, None);
+              desc = Tarrow ([{Types.lbl = Nolabel; typ = t_unit}], ret_type);
             }
           else mk_fun_type label_decls
         in

@@ -141,8 +141,24 @@ module T = struct
     | Ptyp_var s -> Typ.var ~loc ~attrs s
     | Ptyp_arrow (lbl, t1, t2) ->
       let lbl = Asttypes.to_arg_label lbl in
-      Typ.arrow ~loc ~arity:None
-        {attrs; lbl; typ = sub.typ sub t1}
+      (* [Ast_mapper_to0] flattens the current parsetree's node/argument
+         attribute split into the v0 arrow's single attribute list, marking
+         the boundary with [_res.arrow_node_attrs] when node attributes are
+         present: node attributes come before the marker, argument attributes
+         after it. Without a marker, everything is an argument attribute. *)
+      let node_attrs, arg_attrs =
+        let rec split acc = function
+          | ({txt = "_res.arrow_node_attrs"}, _) :: rest ->
+            Some (List.rev acc, rest)
+          | a :: rest -> split (a :: acc) rest
+          | [] -> None
+        in
+        match split [] attrs with
+        | Some (node_attrs, arg_attrs) -> (node_attrs, arg_attrs)
+        | None -> ([], attrs)
+      in
+      Typ.arrow ~loc ~attrs:node_attrs
+        [{attrs = arg_attrs; lbl; typ = sub.typ sub t1}]
         (sub.typ sub t2)
     | Ptyp_tuple tyl -> Typ.tuple ~loc ~attrs (List.map (sub.typ sub) tyl)
     | Ptyp_constr (lid, tl) -> (
@@ -150,8 +166,8 @@ module T = struct
         Typ.constr ~loc ~attrs (map_loc sub lid) (List.map (sub.typ sub) tl)
       in
       match typ0.ptyp_desc with
-      | Ptyp_constr (lid, [({ptyp_desc = Ptyp_arrow arr} as fun_t); t_arity])
-        when lid.txt = Lident "function$" ->
+      | Ptyp_constr (lid, [({ptyp_desc = Ptyp_arrow _} as fun_t); t_arity])
+        when lid.txt = Lident "function$" -> (
         let decode_arity_string arity_s =
           int_of_string
             ((String.sub [@doesNotRaise]) arity_s 9 (String.length arity_s - 9))
@@ -163,7 +179,26 @@ module T = struct
           | _ -> assert false
         in
         let arity = arity_from_type t_arity in
-        {fun_t with ptyp_desc = Ptyp_arrow {arr with arity = Some arity}}
+        (* Gather [arity] parameters from the converted chain of unary
+           arrows into one n-ary node. Nested first-class function types
+           are left intact: gathering stops once [arity] parameters have
+           been collected (or the chain runs out, for PPX-mangled input). *)
+        let rec gather ~is_head n acc (t : Parsetree.core_type) =
+          if n <= 0 then (List.rev acc, t)
+          else
+            match t.ptyp_desc with
+            | Ptyp_arrow {params; ret}
+              when List.length params <= n && (is_head || t.ptyp_attributes = [])
+              ->
+              gather ~is_head:false
+                (n - List.length params)
+                (List.rev_append params acc)
+                ret
+            | _ -> (List.rev acc, t)
+        in
+        match gather ~is_head:true arity [] fun_t with
+        | [], _ -> fun_t
+        | params, ret -> {fun_t with ptyp_desc = Ptyp_arrow {params; ret}})
       | _ -> typ0)
     | Ptyp_object (l, o) ->
       Typ.object_ ~loc ~attrs (List.map (object_field sub) l) o
@@ -345,13 +380,6 @@ module E = struct
         | _ -> false)
       attrs
 
-  let remove_await_attribute attrs =
-    List.filter
-      (function
-        | {Location.txt = "res.await"}, _ -> false
-        | _ -> true)
-      attrs
-
   let extract_for_of_attribute attrs =
     List.find_map
       (function
@@ -468,20 +496,77 @@ module E = struct
     in
     match desc with
     | _ when has_await_attribute attrs ->
-      let attrs = remove_await_attribute e.pexp_attributes in
-      let e = sub.expr sub {e with pexp_attributes = attrs} in
-      await ~loc e
+      (* [Ast_mapper_to0] merges the await node's attributes and the inner
+         expression's attributes into the one v0 slot, with [res.await] as
+         the boundary: await-node attributes before it, inner attributes
+         after it. *)
+      let await_attrs0, inner_attrs0 =
+        let rec split acc = function
+          | ({Location.txt = "res.await"}, _) :: rest -> (List.rev acc, rest)
+          | a :: rest -> split (a :: acc) rest
+          | [] -> (List.rev acc, [])
+        in
+        split [] e.pexp_attributes
+      in
+      let inner = sub.expr sub {e with pexp_attributes = inner_attrs0} in
+      await ~loc ~attrs:(sub.attributes sub await_attrs0) inner
     | Pexp_ident x -> ident ~loc ~attrs (map_loc sub x)
     | Pexp_constant x -> constant ~loc ~attrs (map_constant x)
     | Pexp_let (r, vbs, e) ->
       let_ ~loc ~attrs r (List.map (sub.value_binding sub) vbs) (sub.expr sub e)
     | Pexp_fun (lab, def, p, e) ->
+      (* A bare (non-Function$-wrapped) v0 fun becomes a one-parameter
+         function; [Function$] decoding below gathers chains of these into
+         one n-ary node.
+
+         [Ast_mapper_to0] flattens the current parsetree's node/parameter
+         attribute split into the v0 fun's single attribute list, marking the
+         boundary with [_res.fun_node_attrs] when parameter attributes are
+         present: node attributes come before the marker, parameter
+         attributes after it. Without a marker, everything is a node
+         attribute (that is where the old parser kept them, and where the
+         built-in PPX looks for decorators like [@this]). *)
       let lab = Asttypes.to_arg_label lab in
       let async = Ext_list.exists attrs (fun ({txt}, _) -> txt = "res.async") in
-      fun_ ~loc ~attrs ~async ~arity:None lab
-        (map_opt (sub.expr sub) def)
-        (sub.pat sub p) (sub.expr sub e)
-    | Pexp_function _ -> assert false
+      (* [res.async] is bridge metadata added by [Ast_mapper_to0]; it is
+         decoded into the [async] flag and must not survive as a real
+         attribute. *)
+      let attrs = attrs |> List.filter (fun ({txt}, _) -> txt <> "res.async") in
+      let node_attrs, param_attrs =
+        let rec split acc = function
+          | ({txt = "_res.fun_node_attrs"}, _) :: rest ->
+            Some (List.rev acc, rest)
+          | a :: rest -> split (a :: acc) rest
+          | [] -> None
+        in
+        match split [] attrs with
+        | Some (node_attrs, param_attrs) -> (node_attrs, param_attrs)
+        | None -> (attrs, [])
+      in
+      fun_ ~loc ~async ~attrs:node_attrs
+        [
+          {
+            p_attrs = param_attrs;
+            p_lbl = lab;
+            p_default = map_opt (sub.expr sub) def;
+            p_pat = sub.pat sub p;
+          };
+        ]
+        (sub.expr sub e)
+    | Pexp_function cases ->
+      (* The current parsetree has no [function] construct; it can only come
+         from an external PPX emitting OCaml-style [function | p -> e].
+         Desugar to [fun x -> match x with | p -> e] with an unshadowable
+         parameter name, as the OCaml parser would. *)
+      let param = "*function*" in
+      let pat = Pat.var ~loc (Location.mkloc param loc) in
+      let scrutinee =
+        ident ~loc (Location.mkloc (Longident.Lident param) loc)
+      in
+      let body = match_ ~loc scrutinee (sub.cases sub cases) in
+      fun_ ~loc ~attrs
+        [{p_attrs = []; p_lbl = Nolabel; p_default = None; p_pat = pat}]
+        body
     | Pexp_apply ({pexp_desc = Pexp_ident tag_name}, args)
       when has_jsx_attribute () -> (
       let attrs = attrs |> List.filter (fun ({txt}, _) -> txt <> "JSX") in
@@ -502,8 +587,18 @@ module E = struct
       match children with
       | None -> jsx_unary_element ~loc ~attrs jsx_tag_name props
       | Some children ->
+        (* The v0 encoding has no closing-tag information; synthesize one
+           matching the opening tag, otherwise the printer emits an element
+           that is never closed. *)
+        let closing_tag =
+          {
+            Pt.jsx_closing_container_tag_start = Lexing.dummy_pos;
+            jsx_closing_container_tag_name = jsx_tag_name;
+            jsx_closing_container_tag_end = Lexing.dummy_pos;
+          }
+        in
         jsx_container_element ~loc ~attrs jsx_tag_name props Lexing.dummy_pos
-          children None)
+          children (Some closing_tag))
     | Pexp_apply (e, l) ->
       let e =
         match (e.pexp_desc, l) with
@@ -581,9 +676,40 @@ module E = struct
           | [] -> assert false
         in
         match arg1 with
-        | Some ({pexp_desc = Pexp_fun f} as e1) ->
-          let arity = Some (attributes_to_arity attrs) in
-          {e1 with pexp_desc = Pexp_fun {f with arity}}
+        | Some ({pexp_desc = Pexp_fun f} as e1) -> (
+          let arity = attributes_to_arity attrs in
+          (* Gather [arity] parameters from the converted chain of unary
+             functions into one n-ary node. Nested first-class functions are
+             left intact: gathering stops once [arity] parameters have been
+             collected (or the chain shape breaks, for PPX-mangled input). *)
+          let rec gather ~is_head n acc (e : Parsetree.expression) =
+            if n <= 0 then (List.rev acc, e)
+            else
+              match e.pexp_desc with
+              | Pexp_fun {params; body; async = inner_async}
+                when List.length params <= n
+                     && (is_head || (e.pexp_attributes = [] && not inner_async))
+                ->
+                gather ~is_head:false
+                  (n - List.length params)
+                  (List.rev_append params acc)
+                  body
+              | _ -> (List.rev acc, e)
+          in
+          match gather ~is_head:true arity [] e1 with
+          | [], _ -> e1
+          | params, body ->
+            (* The construct node's other attributes become the function
+               node's attributes rather than being dropped. *)
+            let node_attrs =
+              attrs |> List.filter (fun ({txt}, _) -> txt <> "res.arity")
+            in
+            {
+              e1 with
+              pexp_desc =
+                Pexp_fun {newtypes = []; params; body; async = f.async};
+              pexp_attributes = e1.pexp_attributes @ node_attrs;
+            })
         | _ -> exp1)
       | _ -> exp1)
     | Pexp_variant (lab, eo) ->
@@ -654,8 +780,52 @@ module E = struct
     | Pexp_lazy _ -> failwith "Pexp_lazy is no longer present in ReScript"
     | Pexp_poly _ -> failwith "Pexp_poly is no longer present in ReScript"
     | Pexp_object () -> assert false
-    | Pexp_newtype (s, e) ->
-      newtype ~loc ~attrs (map_loc sub s) (sub.expr sub e)
+    | Pexp_newtype (s, e) -> (
+      (* Fuse a chain of newtype wrappers over a Function$ node into the
+         function's [newtypes] field. Each wrapper's attributes are its
+         newtype's attributes, except on this outermost wrapper:
+         attributes before the internal [_res.newtype_attrs] marker (or
+         all of them, when there is no marker) are function-node
+         attributes, and those after the marker belong to the first
+         newtype. *)
+      let node_attrs, first_nt_attrs =
+        let rec split acc = function
+          | ({txt = "_res.newtype_attrs"}, _) :: rest -> (List.rev acc, rest)
+          | a :: rest -> split (a :: acc) rest
+          | [] -> (List.rev acc, [])
+        in
+        split [] attrs
+      in
+      let rec gather acc (e0 : Parsetree0.expression) =
+        match e0.pexp_desc with
+        | Pexp_newtype (s1, body) ->
+          gather
+            ((map_loc sub s1, sub.attributes sub e0.pexp_attributes) :: acc)
+            body
+        | Pexp_construct ({txt = Longident.Lident "Function$"}, Some _) ->
+          Some (List.rev acc, e0)
+        | _ -> None
+      in
+      let unsupported () =
+        extension ~loc ~attrs
+          (Ast_mapper.extension_of_error
+             (Location.errorf ~loc
+                "A PPX returned a locally abstract type wrapper that does not \
+                 enclose a ReScript function. This v0 AST form is not \
+                 supported."))
+      in
+      match gather [(map_loc sub s, first_nt_attrs)] e with
+      | Some (newtypes, base) -> (
+        let base1 = sub.expr sub base in
+        match base1.pexp_desc with
+        | Pexp_fun ({newtypes = []} as f) ->
+          {
+            Pt.pexp_desc = Pexp_fun {f with newtypes};
+            pexp_attributes = base1.pexp_attributes @ node_attrs;
+            pexp_loc = loc;
+          }
+        | _ -> unsupported ())
+      | None -> unsupported ())
     | Pexp_pack me -> pack ~loc ~attrs (sub.module_expr sub me)
     | Pexp_open (ovf, lid, e) ->
       open_ ~loc ~attrs ovf (map_loc sub lid) (sub.expr sub e)
@@ -771,9 +941,57 @@ let default_mapper =
           ~attrs:(this.attributes this pincl_attributes));
     value_binding =
       (fun this {pvb_pat; pvb_expr; pvb_attributes; pvb_loc} ->
-        Vb.mk (this.pat this pvb_pat) (this.expr this pvb_expr)
-          ~loc:(this.location this pvb_loc)
-          ~attrs:(this.attributes this pvb_attributes));
+        let decoded =
+          match pvb_pat with
+          | {
+           ppat_desc =
+             Ppat_constraint
+               ( pat,
+                 {
+                   ptyp_desc = Ptyp_poly (poly_newtypes, poly_type);
+                   ptyp_attributes = [];
+                 } );
+           ppat_attributes = [];
+          }
+            when poly_newtypes <> [] -> (
+            let rec gather_newtypes acc (expr : Parsetree0.expression) =
+              match expr with
+              | {pexp_desc = Pexp_newtype (newtype, rest); pexp_attributes = []}
+                ->
+                gather_newtypes (newtype :: acc) rest
+              | {pexp_desc = Pexp_constraint (expr, typ); pexp_attributes = []}
+                ->
+                Some (List.rev acc, expr, typ)
+              | _ -> None
+            in
+            match gather_newtypes [] pvb_expr with
+            | Some (newtypes, expr, typ)
+              when List.map (fun {txt} -> txt) newtypes
+                   = List.map (fun {txt} -> txt) poly_newtypes
+                   &&
+                   try
+                     Ast_helper0.Typ.varify_constructors newtypes typ
+                     = poly_type
+                   with Syntaxerr.Error _ -> false ->
+              Some (pat, expr, newtypes, typ)
+            | _ -> None)
+          | _ -> None
+        in
+        match decoded with
+        | Some (pat, expr, newtypes, typ) ->
+          let constraint_ =
+            {
+              Pt.pvc_newtypes = List.map (map_loc this) newtypes;
+              pvc_type = this.typ this typ;
+            }
+          in
+          Vb.mk (this.pat this pat) (this.expr this expr) ~constraint_
+            ~loc:(this.location this pvb_loc)
+            ~attrs:(this.attributes this pvb_attributes)
+        | None ->
+          Vb.mk (this.pat this pvb_pat) (this.expr this pvb_expr)
+            ~loc:(this.location this pvb_loc)
+            ~attrs:(this.attributes this pvb_attributes));
     constructor_declaration =
       (fun this {pcd_name; pcd_args; pcd_res; pcd_loc; pcd_attributes} ->
         Type.constructor (map_loc this pcd_name)

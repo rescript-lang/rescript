@@ -3,28 +3,20 @@ let labelled_to_unlabelled_arguments_in_fn_definition (e : Parsetree.expression)
   (* `(~a, ~b, ~c) => ...` to `(a, b, c) => ...` *)
   let rec drop_labels (e : Parsetree.expression) : Parsetree.expression =
     match e.pexp_desc with
-    | Pexp_fun
-        {arg_label = Labelled _ | Optional _; default; lhs; rhs; arity; async}
-      ->
+    | Pexp_fun {newtypes; params; body; async} ->
       {
         e with
         pexp_desc =
           Pexp_fun
             {
-              arg_label = Nolabel;
-              default;
-              lhs;
-              rhs = drop_labels rhs;
-              arity;
+              newtypes;
+              params =
+                List.map
+                  (fun (p : Parsetree.fun_param) -> {p with p_lbl = Nolabel})
+                  params;
+              body = drop_labels body;
               async;
             };
-      }
-    | Pexp_fun {arg_label; default; lhs; rhs; arity; async} ->
-      {
-        e with
-        pexp_desc =
-          Pexp_fun
-            {arg_label; default; lhs; rhs = drop_labels rhs; arity; async};
       }
     | _ -> e
   in

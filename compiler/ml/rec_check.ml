@@ -309,8 +309,19 @@ let rec expression : Env.env -> Typedtree.expression -> Use.t =
     (* This is more permissive than the old check. *)
     let case env {Typedtree.c_rhs} = expression env c_rhs in
     Use.join (expression env e) (list case env cases)
-  | Texp_function {case = case_} ->
-    Use.delay (list (case ~scrutinee:Use.empty) env [case_])
+  | Texp_function {params; body} ->
+    let env =
+      List.fold_left
+        (fun env {Typedtree.fp_pat} ->
+          let ty =
+            if is_destructuring_pattern fp_pat then Use.inspect Use.empty
+            else Use.discard Use.empty
+          in
+          let vars = pattern_variables fp_pat in
+          List.fold_left (fun env id -> Ident.add id ty env) env vars)
+        env params
+    in
+    Use.delay (expression env body)
   | Texp_extension_constructor _ -> Use.empty
 
 and option : 'a. (Env.env -> 'a -> Use.t) -> Env.env -> 'a option -> Use.t =

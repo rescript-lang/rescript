@@ -22,10 +22,6 @@ let fatal_error msg =
   prerr_endline msg;
   raise Fatal_error
 
-let fatal_errorf fmt = Format.kasprintf fatal_error fmt
-
-(* Exceptions *)
-
 let try_finally work cleanup =
   let result =
     try work ()
@@ -89,35 +85,6 @@ let may_map = Stdlib.Option.map
 
 (* File functions *)
 
-let find_in_path path name =
-  if not (Filename.is_implicit name) then
-    if Sys.file_exists name then name else raise Not_found
-  else
-    let rec try_dir = function
-      | [] -> raise Not_found
-      | dir :: rem ->
-        let fullname = Filename.concat dir name in
-        if Sys.file_exists fullname then fullname else try_dir rem
-    in
-    try_dir path
-
-let find_in_path_rel path name =
-  let rec simplify s =
-    let open Filename in
-    let base = basename s in
-    let dir = dirname s in
-    if dir = s then dir
-    else if base = current_dir_name then simplify dir
-    else concat (simplify dir) base
-  in
-  let rec try_dir = function
-    | [] -> raise Not_found
-    | dir :: rem ->
-      let fullname = simplify (Filename.concat dir name) in
-      if Sys.file_exists fullname then fullname else try_dir rem
-  in
-  try_dir path
-
 let find_in_path_uncap path name =
   let uname = String.uncapitalize_ascii name in
   let rec try_dir = function
@@ -152,42 +119,6 @@ let create_hashtable init =
   tbl
 
 (* File copy *)
-
-let copy_file ic oc =
-  let buff = Bytes.create 0x1000 in
-  let rec copy () =
-    let n = input ic buff 0 0x1000 in
-    if n = 0 then ()
-    else (
-      output oc buff 0 n;
-      copy ())
-  in
-  copy ()
-
-let copy_file_chunk ic oc len =
-  let buff = Bytes.create 0x1000 in
-  let rec copy n =
-    if n <= 0 then ()
-    else
-      let r = input ic buff 0 (min n 0x1000) in
-      if r = 0 then raise End_of_file
-      else (
-        output oc buff 0 r;
-        copy (n - r))
-  in
-  copy len
-
-let string_of_file ic =
-  let b = Buffer.create 0x10000 in
-  let buff = Bytes.create 0x1000 in
-  let rec copy () =
-    let n = input ic buff 0 0x1000 in
-    if n = 0 then Buffer.contents b
-    else (
-      Buffer.add_subbytes b buff 0 n;
-      copy ())
-  in
-  copy ()
 
 let output_to_bin_file_directly filename fn =
   let oc = open_out_bin filename in
@@ -233,17 +164,6 @@ let output_to_file_via_temporary ?(mode = [Open_text]) filename fn =
 
 let rec log2 n = if n <= 1 then 0 else 1 + log2 (n asr 1)
 
-let align n a = if n >= 0 then (n + a - 1) land -a else n land -a
-
-let no_overflow_add a b = a lxor b lor (a lxor lnot (a + b)) < 0
-
-let no_overflow_sub a b = a lxor lnot b lor (b lxor (a - b)) < 0
-
-let no_overflow_mul a b = b <> 0 && a * b / b = a
-
-let no_overflow_lsl a k =
-  0 <= k && k < Sys.word_size && min_int asr k <= a && a <= max_int asr k
-
 module Int_literal_converter = struct
   (* To convert integer literals, allowing max_int + 1 (PR#4210) *)
   let cvt_int_aux str neg of_string =
@@ -266,58 +186,12 @@ let chop_extensions file =
     else Filename.concat dirname basename
   with Not_found -> file
 
-let search_substring pat str start =
-  let rec search i j =
-    if j >= String.length pat then i
-    else if i + j >= String.length str then raise Not_found
-    else if str.[i + j] = pat.[j] then search i (j + 1)
-    else search (i + 1) 0
-  in
-  search start 0
-
-let replace_substring ~before ~after str =
-  let rec search acc curr =
-    match search_substring before str curr with
-    | next ->
-      let prefix = String.sub str curr (next - curr) in
-      search (prefix :: acc) (next + String.length before)
-    | exception Not_found ->
-      let suffix = String.sub str curr (String.length str - curr) in
-      List.rev (suffix :: acc)
-  in
-  String.concat after (search [] 0)
-
-let rev_split_words s =
-  let rec split1 res i =
-    if i >= String.length s then res
-    else
-      match s.[i] with
-      | ' ' | '\t' | '\r' | '\n' -> split1 res (i + 1)
-      | _ -> split2 res i (i + 1)
-  and split2 res i j =
-    if j >= String.length s then String.sub s i (j - i) :: res
-    else
-      match s.[j] with
-      | ' ' | '\t' | '\r' | '\n' ->
-        split1 (String.sub s i (j - i) :: res) (j + 1)
-      | _ -> split2 res i (j + 1)
-  in
-  split1 [] 0
-
 let get_ref r =
   let v = !r in
   r := [];
   v
 
 let fst3 (x, _, _) = x
-let snd3 (_, x, _) = x
-let thd3 (_, _, x) = x
-
-let fst4 (x, _, _, _) = x
-let snd4 (_, x, _, _) = x
-let thd4 (_, _, x, _) = x
-let for4 (_, _, _, x) = x
-
 let edit_distance a b cutoff =
   let la, lb = (String.length a, String.length b) in
   let cutoff =
@@ -397,10 +271,6 @@ let did_you_mean ppf get_choices =
       (if rest = [] then "" else " or ")
       last
 
-let cut_at s c =
-  let pos = String.index s c in
-  (String.sub s 0 pos, String.sub s (pos + 1) (String.length s - pos - 1))
-
 module String_set = Set.Make (struct
   type t = string
   let compare = compare
@@ -454,11 +324,6 @@ module Color = struct
     {warning = [Bold; FG Magenta]; error = [Bold; FG Red]; loc = [Bold]}
 
   let cur_styles = ref default_styles
-  let get_styles () = !cur_styles
-  let set_styles s = cur_styles := s
-
-  (* map a tag to a style, if the tag is known.
-     @raise Not_found otherwise *)
   let style_of_tag s =
     match s with
     | Format.String_tag "error" -> !cur_styles.error
@@ -537,47 +402,3 @@ let normalise_eol s =
     if s.[i] <> '\r' then Buffer.add_char b s.[i]
   done;
   Buffer.contents b
-
-let delete_eol_spaces src =
-  let len_src = String.length src in
-  let dst = Bytes.create len_src in
-  let rec loop i_src i_dst =
-    if i_src = len_src then i_dst
-    else
-      match src.[i_src] with
-      | ' ' | '\t' -> loop_spaces 1 (i_src + 1) i_dst
-      | c ->
-        Bytes.set dst i_dst c;
-        loop (i_src + 1) (i_dst + 1)
-  and loop_spaces spaces i_src i_dst =
-    if i_src = len_src then i_dst
-    else
-      match src.[i_src] with
-      | ' ' | '\t' -> loop_spaces (spaces + 1) (i_src + 1) i_dst
-      | '\n' ->
-        Bytes.set dst i_dst '\n';
-        loop (i_src + 1) (i_dst + 1)
-      | _ ->
-        for n = 0 to spaces do
-          Bytes.set dst (i_dst + n) src.[i_src - spaces + n]
-        done;
-        loop (i_src + 1) (i_dst + spaces + 1)
-  in
-  let stop = loop 0 0 in
-  Bytes.sub_string dst 0 stop
-
-type hook_info = {sourcefile: string}
-
-exception
-  HookExnWrapper of {error: exn; hook_name: string; hook_info: hook_info}
-
-exception HookExn of exn
-
-let raise_direct_hook_exn e = raise (HookExn e)
-
-module type HookSig = sig
-  type t
-
-  val add_hook : string -> (hook_info -> t -> t) -> unit
-  val apply_hooks : hook_info -> t -> t
-end

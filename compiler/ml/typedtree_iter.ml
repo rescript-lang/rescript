@@ -217,8 +217,7 @@ end = struct
           match cstr with
           | Texp_constraint ct -> iter_core_type ct
           | Texp_coerce cty2 -> iter_core_type cty2
-          | Texp_open _ -> ()
-          | Texp_newtype _ -> ()))
+          | Texp_open _ -> ()))
       exp.exp_extra;
     (match exp.exp_desc with
     | Texp_ident _ -> ()
@@ -226,7 +225,9 @@ end = struct
     | Texp_let (rec_flag, list, exp) ->
       iter_bindings rec_flag list;
       iter_expression exp
-    | Texp_function {case; _} -> iter_case case
+    | Texp_function {params; body} ->
+      List.iter (fun {fp_pat} -> iter_pattern fp_pat) params;
+      iter_expression body
     | Texp_apply {funct = exp; args = list} ->
       iter_expression exp;
       List.iter
@@ -382,8 +383,8 @@ end = struct
     (match ct.ctyp_desc with
     | Ttyp_any -> ()
     | Ttyp_var _ -> ()
-    | Ttyp_arrow (arg, ret, _) ->
-      iter_core_type arg.typ;
+    | Ttyp_arrow (params, ret) ->
+      List.iter (fun (arg : Typedtree.arg) -> iter_core_type arg.typ) params;
       iter_core_type ret
     | Ttyp_tuple list -> List.iter iter_core_type list
     | Ttyp_constr (_path, _, list) -> List.iter iter_core_type list

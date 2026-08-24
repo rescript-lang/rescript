@@ -52,7 +52,7 @@ module C7 = {
       let times = switch count {
       | 1 => "once"
       | 2 => "twice"
-      | n => Belt.Int.toString(n) ++ " times"
+      | n => Int.toString(n) ++ " times"
       }
 
       let name = switch username {

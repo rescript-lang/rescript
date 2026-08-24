@@ -9,7 +9,7 @@ let flat = 34
   * @returns A signed message
  ")
 @genType
-let signMessage = (message, key) => message ++ string_of_int(key)
+let signMessage = (message, key) => message ++ Int.toString(key)
 
 @genType
 let one = a => a + 0
@@ -65,4 +65,3 @@ let unitArgWithConversion = () => A
 
 @genType
 let unitArgWithConversionU = (()) => A
-

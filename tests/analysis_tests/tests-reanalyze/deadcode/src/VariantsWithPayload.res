@@ -68,21 +68,21 @@ let testVariantWithPayloads = (x: variantWithPayloads) => x
 let printVariantWithPayloads = x =>
   switch x {
   | A => Console.log2("printVariantWithPayloads", "A")
-  | B(x) => Console.log2("printVariantWithPayloads", "B(" ++ (string_of_int(x) ++ ")"))
+  | B(x) => Console.log2("printVariantWithPayloads", "B(" ++ (Int.toString(x) ++ ")"))
   | C(x, y) =>
     Console.log2(
       "printVariantWithPayloads",
-      "C(" ++ (string_of_int(x) ++ (", " ++ (string_of_int(y) ++ ")"))),
+      "C(" ++ (Int.toString(x) ++ (", " ++ (Int.toString(y) ++ ")"))),
     )
   | D((x, y)) =>
     Console.log2(
       "printVariantWithPayloads",
-      "D((" ++ (string_of_int(x) ++ (", " ++ (string_of_int(y) ++ "))"))),
+      "D((" ++ (Int.toString(x) ++ (", " ++ (Int.toString(y) ++ "))"))),
     )
   | E(x, s, y) =>
     Console.log2(
       "printVariantWithPayloads",
-      "E(" ++ (string_of_int(x) ++ (", " ++ (s ++ (", " ++ (string_of_int(y) ++ ")"))))),
+      "E(" ++ (Int.toString(x) ++ (", " ++ (s ++ (", " ++ (Int.toString(y) ++ ")"))))),
     )
   }
 
@@ -97,4 +97,3 @@ type variant1Object = R(payload)
 
 @genType
 let testVariant1Object = (x: variant1Object) => x
-

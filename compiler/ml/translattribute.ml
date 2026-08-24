@@ -66,7 +66,7 @@ let get_inline_attribute l =
   let attr, _ = find_attribute is_inline_attribute l in
   parse_inline_attribute attr
 
-let rec add_inline_attribute (expr : Lambda.lambda) loc attributes =
+let add_inline_attribute (expr : Lambda.lambda) loc attributes =
   match (expr, get_inline_attribute attributes) with
   | expr, Default_inline -> expr
   | Lfunction ({attr} as funct), inline ->
@@ -76,8 +76,6 @@ let rec add_inline_attribute (expr : Lambda.lambda) loc attributes =
       Location.prerr_warning loc (Warnings.Duplicated_attribute "inline"));
     let attr = {attr with inline} in
     Lfunction {funct with attr}
-  | Lprim (((Pjs_fn_make _ | Pjs_fn_make_unit) as p), [e], l), _ ->
-    Lambda.Lprim (p, [add_inline_attribute e loc attributes], l)
   | expr, Always_inline ->
     Location.prerr_warning loc (Warnings.Misplaced_attribute "inline");
     expr

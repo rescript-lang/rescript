@@ -3,7 +3,6 @@
     /* "-drawlambda"; */
     /* "-dlambda"; */
     /* "-dtypedtree"; */
-    /* "-bs-diagnose" */
     "-bs-g",
   ],
 })

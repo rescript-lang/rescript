@@ -20,8 +20,19 @@ type constructor_doc = {
   items: constructor_payload option;
 }
 
-type type_doc = {path: string; generic_parameters: type_doc list}
-type value_signature = {parameters: type_doc list; return_type: type_doc}
+type type_doc =
+  | Constructor of {path: string; generic_parameters: type_doc list}
+  | Variable of {name: string; weak: bool}
+  | Tuple of type_doc list
+  | Function of value_signature
+  | Rendered of string
+
+and signature_parameter = {label: string option; optional: bool; typ: type_doc}
+
+and value_signature = {
+  parameters: signature_parameter list;
+  return_type: type_doc;
+}
 
 type source = {filepath: string; line: int; col: int}
 
@@ -103,13 +114,45 @@ let stringify_constructor_payload (constructor_payload : constructor_payload) =
         ("fields", `List (field_docs |> List.map stringify_field_doc));
       ]
 
-let rec stringify_type_doc (td : type_doc) =
-  let ps =
-    match td.generic_parameters with
-    | [] -> `List []
-    | ts -> ts |> List.map stringify_type_doc |> fun ts -> `List ts
-  in
-  `Assoc [("path", `String td.path); ("genericTypeParameters", ps)]
+let rec stringify_type_doc = function
+  | Constructor {path; generic_parameters} ->
+    `Assoc
+      [
+        ("kind", `String "constructor");
+        ("path", `String path);
+        ( "genericTypeParameters",
+          `List (List.map stringify_type_doc generic_parameters) );
+      ]
+  | Variable {name; weak} ->
+    `Assoc
+      [
+        ("kind", `String "variable");
+        ("name", `String name);
+        ("weak", `Bool weak);
+      ]
+  | Tuple elements ->
+    `Assoc
+      [
+        ("kind", `String "tuple");
+        ("elements", `List (List.map stringify_type_doc elements));
+      ]
+  | Function signature ->
+    `Assoc (("kind", `String "function") :: stringify_value_signature signature)
+  | Rendered signature ->
+    `Assoc [("kind", `String "rendered"); ("signature", `String signature)]
+
+and stringify_signature_parameter {label; optional; typ} =
+  `Assoc
+    ((match label with
+     | Some label -> [("label", `String label)]
+     | None -> [])
+    @ [("optional", `Bool optional); ("type", stringify_type_doc typ)])
+
+and stringify_value_signature {parameters; return_type} =
+  [
+    ("parameters", `List (List.map stringify_signature_parameter parameters));
+    ("returnType", stringify_type_doc return_type);
+  ]
 
 let stringify_detail (detail : doc_item_detail) =
   match detail with
@@ -147,18 +190,10 @@ let stringify_detail (detail : doc_item_detail) =
                      | None -> []))) );
       ]
   | Signature {parameters; return_type} ->
-    let ps =
-      match parameters with
-      | [] -> `List []
-      | ps -> ps |> List.map stringify_type_doc |> fun ps -> `List ps
-    in
     `Assoc
       [
         ("kind", `String "signature");
-        ( "details",
-          `Assoc
-            [("parameters", ps); ("returnType", stringify_type_doc return_type)]
-        );
+        ("details", `Assoc (stringify_value_signature {parameters; return_type}));
       ]
 
 let stringify_source source =
@@ -309,57 +344,51 @@ let type_detail typ ~env ~full ~state =
          })
   | _ -> None
 
-(* split a list into two parts all the items except the last one and the last item *)
-let split_last l =
-  let rec splitLast' acc = function
-    | [] -> failwith "splitLast: empty list"
-    | [x] -> (List.rev acc, x)
-    | x :: xs -> splitLast' (x :: acc) xs
-  in
-  splitLast' [] l
+let rec string_of_out_ident = function
+  | Outcometree.Oide_ident name -> name
+  | Oide_dot (path, name) -> string_of_out_ident path ^ "." ^ name
+  | Oide_apply (functor_, argument) ->
+    string_of_out_ident functor_ ^ "(" ^ string_of_out_ident argument ^ ")"
 
-let path_to_string path =
-  let buf = Buffer.create 64 in
-  let rec aux = function
-    | Path.Pident id -> Buffer.add_string buf (Ident.name id)
-    | Path.Pdot (p, s, _) ->
-      aux p;
-      Buffer.add_char buf '.';
-      Buffer.add_string buf s
-    | Path.Papply (p1, p2) ->
-      aux p1;
-      Buffer.add_char buf '(';
-      aux p2;
-      Buffer.add_char buf ')'
+let render_out_type typ =
+  Res_doc.to_string ~width:80 (Res_outcome_printer.print_out_type_doc typ)
+
+let rec type_doc_of_out_type (typ : Outcometree.out_type) =
+  match typ with
+  | Otyp_constr (path, generic_parameters) ->
+    Constructor
+      {
+        path = string_of_out_ident path;
+        generic_parameters = List.map type_doc_of_out_type generic_parameters;
+      }
+  | Otyp_var (weak, name) -> Variable {name; weak}
+  | Otyp_tuple elements -> Tuple (List.map type_doc_of_out_type elements)
+  | Otyp_arrow (parameters, return_type) ->
+    Function (value_signature_of_arrow parameters return_type)
+  | _ -> Rendered (render_out_type typ)
+
+and signature_parameter_of_out_type (label, typ) =
+  let label, optional =
+    match label with
+    | Asttypes.Noloc.Nolabel -> (None, false)
+    | Asttypes.Noloc.Labelled label -> (Some label, false)
+    | Asttypes.Noloc.Optional label -> (Some label, true)
   in
-  aux path;
-  Buffer.contents buf
+  {label; optional; typ = type_doc_of_out_type typ}
+
+and value_signature_of_arrow parameters return_type =
+  {
+    parameters = List.map signature_parameter_of_out_type parameters;
+    return_type = type_doc_of_out_type return_type;
+  }
 
 let value_detail (typ : Types.type_expr) =
-  let rec collect_signature_types (typ : Types.type_expr) =
-    match typ.desc with
-    | Tlink t | Tsubst t | Tpoly (t, []) -> collect_signature_types t
-    | Tconstr (path, ts, _) -> (
-      let p = path_to_string path in
-      match ts with
-      | [] -> [{path = p; generic_parameters = []}]
-      | ts ->
-        let ts =
-          ts
-          |> List.concat_map (fun (t : Types.type_expr) ->
-                 collect_signature_types t)
-        in
-        [{path = p; generic_parameters = ts}])
-    | Tarrow (arg, ret, _, _) ->
-      collect_signature_types arg.typ @ collect_signature_types ret
-    | Tvar None -> [{path = "_"; generic_parameters = []}]
-    | _ -> []
-  in
-  match collect_signature_types typ with
-  | [] -> None
-  | ts ->
-    let parameters, return_type = split_last ts in
-    Some (Signature {parameters; return_type})
+  Printtyp.reset_names ();
+  Printtyp.reset_and_mark_loops typ;
+  match Printtyp.tree_of_typexp false typ with
+  | Otyp_arrow (parameters, return_type) ->
+    Some (Signature (value_signature_of_arrow parameters return_type))
+  | _ -> None
 
 let make_id module_path ~identifier =
   identifier :: module_path |> List.rev |> Shared_types.ident

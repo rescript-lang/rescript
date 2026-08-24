@@ -32,7 +32,6 @@ let return_stmt ?comment e : t =
 let empty_stmt : t =
   {statement_desc = Block []; comment = None; source_loc = None}
 
-(* let empty_block : J.block = [] *)
 let throw_stmt ?comment v : t =
   {statement_desc = Throw v; comment; source_loc = None}
 
@@ -85,13 +84,6 @@ let define_variable ?comment ?ident_info ~kind (v : Ident.t)
       comment;
       source_loc = None;
     }
-
-(* let alias_variable ?comment  ~exp (v:Ident.t)  : t=
-   {statement_desc =
-     Variable {
-       ident = v; value = Some exp; property = Alias;
-       ident_info = {used_stats = NA }   };
-   comment; source_loc = None} *)
 
 let int_switch ?(comment : string option)
     ?(declaration : (J.property * Ident.t) option) ?(default : J.block option)
@@ -383,5 +375,3 @@ let continue_ ?label () : t =
 
 let debugger_stmt ?comment () : t =
   {statement_desc = Debugger; comment; source_loc = None}
-
-let debugger_block : t list = [debugger_stmt ()]

@@ -9,24 +9,16 @@
  gentype
  jsoo
  ml
+ sync
  syntax)
 
 (env
  (release
-  (env-vars
-   (CPPO_FLAGS -U=BROWSER))
   (ocamlopt_flags
    (:standard -O3 -unbox-closures)))
  (static
-  (env-vars
-   (CPPO_FLAGS -U=BROWSER))
   (ocamlopt_flags
    (:standard -O3 -unbox-closures)))
  (browser
-  (env-vars
-   (CPPO_FLAGS -D=BROWSER))
   (ocamlopt_flags
-   (:standard -O3 -unbox-closures)))
- (_
-  (env-vars
-   (CPPO_FLAGS -U=BROWSER))))
+   (:standard -O3 -unbox-closures))))

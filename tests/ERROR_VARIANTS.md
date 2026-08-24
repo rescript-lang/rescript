@@ -159,11 +159,11 @@ completely dead and have been retained as named variants:
   `check_value_name` during definition; `let \"->" = 1` is rejected with
   a clean diagnostic (`illegal_value_name.res`). The parser does **not**
   reject `\"->"`.
-- `typecore.Incoherent_label_order` — live: a not-yet-generalized
-  function value applied more than once with labelled arguments in
-  conflicting orders (`let f = g => (g(~a=1, ~b=2), g(~b=3, ~a=4))`) hits
-  the leftover/tvar path in `type_unknown_args` after the first call fixes
-  the arrow order (`labeled_args_incoherent_order.res`).
+- `typecore.Too_many_arguments` — **removed**: with structural n-ary
+  arrows the expected type is committed to an arrow of the function
+  literal's shape up front, so every path that used to reach this error
+  now surfaces as a regular type clash or `Uncurried_arity_mismatch`
+  (`too_many_arguments.res` exercises the latter).
 - `typedecl.Type_clash` — retained but **appears dead**: its only raise
   site (`update_type`) unifies `t<fresh params>` against `t`'s own
   manifest — a type against an alpha-renamed copy of itself — which cannot
@@ -213,12 +213,10 @@ Source: [typecore.ml:27](../compiler/ml/typecore.ml).
 | `Undefined_method` | ✓ | `super_errors_multi/Cross_module_alias_dot_access`, `undefined_method` | |
 | `Private_type` | ✓ | `private_type_construction.res` | |
 | `Private_label` | ✓ | `private_label.res` | |
-| `Not_subtype` | ✓ | `subtype_*.res`, `dict_show_no_coercion.res`, etc. | |
-| `Too_many_arguments` | ✓ | `too_many_arguments.res`, `moreArguments*.res` | |
+| `Not_subtype` | ✓ | `subtype_*.res`, `coercion_arity_mismatch.res`, `dict_show_no_coercion.res`, etc. | |
 | `Abstract_wrong_label` | ✓ | `abstract_wrong_label.res` | Multi-arg function literal where an inner argument label doesn't match the expected arrow's label (e.g. `let f: (~a, ~b) => int = (~a, ~c) => …`). |
 | `Scoping_let_module` | ✓ | `scoping_let_module.res` | |
 | `Not_a_variant_type` | ✓ | `variant_spread_pattern_not_a_variant.res` | Pattern-level variant spread of a non-variant type. |
-| `Incoherent_label_order` | ✓ | `labeled_args_incoherent_order.res` | A not-yet-generalized function value applied more than once with labelled args in conflicting orders (`g => (g(~a, ~b), g(~b, ~a))`); the reordered second call hits the leftover/tvar path in `type_unknown_args`. |
 | `Less_general` | ✓ | `less_general_universal.res` | |
 | `Modules_not_allowed` | ✓ | `super_errors_multi/Modules_not_allowed_toplevel` | Toplevel `let module(M) = …` pattern with `allow_modules=false`. |
 | `Cannot_infer_signature` | ✓ | `cannot_infer_signature.res` | |
@@ -359,8 +357,8 @@ Wrapper symptoms attached to inclusion failures. Source: [includemod.ml:23](../c
 | Variant | Status | Fixture | Notes |
 |---|---|---|---|
 | `Missing_field` | ✓ | `super_errors_multi/Iface_missing_value` | |
-| `Value_descriptions` | ✓ | `super_errors_multi/Iface_value_descriptions`, `super_errors_multi/Smoke_interface_mismatch` | |
-| `Type_declarations` | ✓ | `super_errors_multi/Iface_type_decl_record`, `super_errors_multi/Iface_type_decl_variant`, `RecordInclusion.res` | |
+| `Value_descriptions` | ✓ | `super_errors_multi/Iface_value_descriptions`, `super_errors_multi/Iface_value_arity_mismatch`, `super_errors_multi/Smoke_interface_mismatch`, `module_sig_value_arity_mismatch*.res` | Arity mismatches print a dedicated hint (implementation vs interface argument counts), including through aliases and nested function types. |
+| `Type_declarations` | ✓ | `super_errors_multi/Iface_type_decl_record`, `super_errors_multi/Iface_type_decl_variant`, `RecordInclusion.res`, `type_decl_function_arity_mismatch.res` | |
 | `Extension_constructors` | ✓ | `super_errors_multi/Iface_extension_constructors` | |
 | `Module_types` | ✓ | `super_errors_multi/Iface_module_types` | |
 | `Modtype_infos` | ✓ | `super_errors_multi/Iface_modtype_infos` | |
@@ -383,7 +381,7 @@ Source: [includecore.ml:159](../compiler/ml/includecore.ml).
 | `Privacy` | ✓ | `super_errors_multi/Iface_privacy_mismatch` | |
 | `Kind` | ✓ | `super_errors_multi/Iface_kind_mismatch` | Record-in-impl vs variant-in-interface. |
 | `Constraint` | ✓ | `super_errors_multi/Iface_constraint_mismatch` | Implementation adds a `constraint 'a = …`; interface has none. |
-| `Manifest` | ✓ | `super_errors_multi/Iface_manifest_mismatch` | Manifest types differ (`int` vs `string`). |
+| `Manifest` | ✓ | `super_errors_multi/Iface_manifest_mismatch`, `type_decl_function_arity_mismatch.res` | Manifest types differ, including function types with different arities. |
 | `Variance` | ✓ | `super_errors_multi/Iface_variance_mismatch` | Interface annotates `+'a`; implementation's inferred variance differs. |
 | `Field_type` | ✓ | `super_errors_multi/Iface_type_decl_record` | |
 | `Field_mutable` | ✓ | `super_errors_multi/Iface_field_mutable_mismatch` | |
@@ -466,14 +464,9 @@ Build / dependency errors. Mostly need the `rescript build` runtime to fire — 
 |---|---|---|---|
 | `Cmj_not_found` | ☐ (needs build harness) | — | Missing `.cmj` from a dependent module. Reachable from `rescript build` but not from raw `bsc`. |
 | `Js_not_found` | ✓ | implicitly — bypassed via `-bs-cmi-only` in `super_errors_multi` runner. Not a fixture, but the harness commit documents the workaround. | |
-| `Bs_cyclic_depends` | ☐ (needs build harness) | — | Cycle across compilation units; the dependency graph that detects this is owned by `rewatch` / `bsb`, not raw `bsc`. |
-| `Bs_duplicated_module` | ☐ (needs build harness) | — | Same module name in two source paths under a single package. |
 | `Bs_duplicate_exports` | ☐ (needs build harness) | — | Same export emitted twice across compilation units. |
-| `Bs_package_not_found` | ☐ (needs build harness) | — | `rescript.json`-referenced package not resolvable. |
-| `Bs_main_not_exist` | ☐ (needs build harness) | — | `rescript.json` `main` entry missing. |
-| `Bs_invalid_path` | ☐ (needs build harness) | — | `-I` / source path with invalid form. |
 | `Missing_ml_dependency` | ☐ (needs build harness) | — | Compile-time missing dependency from a `.cmj` lookup table. |
-| `Dependency_script_module_dependent_not` | ☐ (needs build harness) | — | `js_name_of_module_id.cppo.ml:122`. **Reachable** when a dependent module is in script mode (`Package_script`) but the current module is in package mode (`Package_found _`). Legacy script-vs-package interaction; needs `rescript.json` harness. |
+| `Dependency_script_module_dependent_not` | ☐ (needs build harness) | — | `core/platform/native/js_name_of_module_id.ml:99`. **Reachable** when a dependent module is in script mode (`Package_script`) but the current module is in package mode (`Package_found _`). Legacy script-vs-package interaction; needs `rescript.json` harness. |
 
 ---
 
@@ -529,7 +522,7 @@ multi-file harnesses, which never set `-ppx`.
 | `compiler/ml/transl_recmodule.ml` | `Circular_dependency` | ✓ | `recmodule_circular_dependency.res` | |
 | `compiler/ml/rec_check.ml` | `Illegal_letrec_expr` | ✓ | `illegal_letrec_expr.res` | |
 | `compiler/ml/syntaxerr.ml` | `Variable_in_scope` | ? (live, broken printer) | — | Reachable via `let f: type t. (t, 't) => t = …` (locally-abstract `t` collides with type variable `'t` during `varify_constructors`), but `Syntaxerr.error` has no registered pretty-printer, so it propagates as an uncaught `Fatal error: exception Syntaxerr.Error(_)`. Not removed because the variant is live; the fix should wire up a printer or convert the check into a regular typed diagnostic. |
-| `compiler/ml/cmt_format.cppo.ml` | `Not_a_typedtree` | ☐ (needs binary harness) | — | cmt_format.cppo.ml:147. Fires when a tool reads a `.cmt` file whose first block isn't a typed tree. Reachable in principle by pointing the analyzer at an arbitrary file with a `.cmt` extension; out of scope for the source-only fixture harnesses. |
+| `compiler/ml/cmt_format_common.ml` | `Not_a_typedtree` | ☐ (needs binary harness) | — | cmt_format_common.ml:139. Fires when a tool reads a `.cmt` file whose first block isn't a typed tree. Reachable in principle by pointing the analyzer at an arbitrary file with a `.cmt` extension; out of scope for the source-only fixture harnesses. |
 | `compiler/ext/bsc_args.ml` | `Unknown` | ☐ (needs CLI harness) | — | bsc_args.ml:45. Reachable trivially via `bsc --bogus`, but the `super_errors{,_multi}` runners only pass `bsc` a fixed flag list plus the source file — they can't exercise CLI-level errors. |
 | `compiler/ext/bsc_args.ml` | `Missing` | ☐ (needs CLI harness) | — | Same as above: `bsc -o` (no following filename). Needs a harness that invokes `bsc` with crafted argv. |
 

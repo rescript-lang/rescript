@@ -28,14 +28,6 @@ let is_dir_sep_win_cygwin c = c = '/' || c = '\\' || c = ':'
 
 let is_dir_sep = if Sys.unix then is_dir_sep_unix else is_dir_sep_win_cygwin
 
-let chop_extension_maybe name =
-  let rec search_dot i =
-    if i < 0 || is_dir_sep (String.unsafe_get name i) then name
-    else if String.unsafe_get name i = '.' then String.sub name 0 i
-    else search_dot (i - 1)
-  in
-  search_dot (String.length name - 1)
-
 let get_extension_maybe name =
   let name_len = String.length name in
   let rec search_dot name i name_len =

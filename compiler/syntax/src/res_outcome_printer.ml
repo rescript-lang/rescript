@@ -80,13 +80,10 @@ let print_out_attributes_doc (attrs : Outcometree.out_attribute list) =
         Doc.line;
       ]
 
-let rec collect_arrow_args (out_type : Outcometree.out_type) args =
+let collect_arrow_args (out_type : Outcometree.out_type) =
   match out_type with
-  | Otyp_arrow (label, arg_type, return_type, arity)
-    when arity = None || args = [] ->
-    let arg = (label, arg_type) in
-    collect_arrow_args return_type (arg :: args)
-  | _ as return_type -> (List.rev args, return_type)
+  | Otyp_arrow (args, ret) -> (args, ret)
+  | _ -> ([], out_type)
 
 let rec collect_functor_args (out_module_type : Outcometree.out_module_type)
     args =
@@ -240,30 +237,27 @@ let rec print_out_type_doc (out_type : Outcometree.out_type) =
       ]
 
 and print_out_arrow_type typ =
-  let typ_args, typ = collect_arrow_args typ [] in
+  let typ_args, typ = collect_arrow_args typ in
+  let print_labeled_arg label optional_indicator typ =
+    Doc.group
+      (Doc.concat
+         [
+           Doc.text ("~" ^ label ^ ": ");
+           print_out_type_doc typ;
+           optional_indicator;
+         ])
+  in
   let args =
     Doc.join
       ~sep:(Doc.concat [Doc.comma; Doc.line])
       (List.map
          (fun (lbl, typ) ->
-           let lbl_len = String.length lbl in
-           if lbl_len = 0 then print_out_type_doc typ
-           else
-             let lbl, optional_indicator =
-               (* the ocaml compiler hardcodes the optional label inside the string of the label in printtyp.ml *)
-               match String.unsafe_get lbl 0 with
-               | '?' ->
-                 ( (String.sub [@doesNotRaise]) lbl 1 (lbl_len - 1),
-                   Doc.text "=?" )
-               | _ -> (lbl, Doc.nil)
-             in
-             Doc.group
-               (Doc.concat
-                  [
-                    Doc.text ("~" ^ lbl ^ ": ");
-                    print_out_type_doc typ;
-                    optional_indicator;
-                  ]))
+           match lbl with
+           | Asttypes.Noloc.Nolabel -> print_out_type_doc typ
+           | Asttypes.Noloc.Labelled label ->
+             print_labeled_arg label Doc.nil typ
+           | Asttypes.Noloc.Optional label ->
+             print_labeled_arg label (Doc.text "=?") typ)
          typ_args)
   in
   let args_doc =
@@ -271,7 +265,7 @@ and print_out_arrow_type typ =
       match typ_args with
       | [(_, (Otyp_tuple _ | Otyp_arrow _))] -> true
       (* single argument should not be wrapped *)
-      | [("", _)] -> false
+      | [(Asttypes.Noloc.Nolabel, _)] -> false
       | _ -> true
     in
     if needs_parens then

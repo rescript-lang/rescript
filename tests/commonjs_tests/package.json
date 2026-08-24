@@ -1,5 +1,9 @@
 {
   "name": "rescript-commonjs-tests",
   "private": true,
-  "type": "commonjs"
+  "type": "commonjs",
+  "dependencies": {
+    "@rescript/belt": "workspace:^",
+    "rescript": "workspace:^"
+  }
 }

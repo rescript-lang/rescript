@@ -1,1 +1,1 @@
-let const_v = Belt.Array.concat([1, 2], [3])
+let const_v = Array.concat([1, 2], [3])

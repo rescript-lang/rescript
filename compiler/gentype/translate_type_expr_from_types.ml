@@ -461,61 +461,43 @@ let process_variant row_fields =
   in
   row_fields |> loop ~no_payloads:[] ~payloads:[] ~unknowns:[]
 
-let rec translate_arrow_type ~config ~type_vars_gen ~type_env ~rev_arg_deps
-    ~rev_args (type_expr : Types.type_expr) =
-  match type_expr.desc with
-  | Tlink t ->
-    translate_arrow_type ~config ~type_vars_gen ~type_env ~rev_arg_deps
-      ~rev_args t
-  | Tarrow ({lbl = Nolabel; typ = type_expr1}, type_expr2, _, arity)
-    when arity = None || rev_args = [] ->
-    let {dependencies; type_} =
-      type_expr1 |> fun __x ->
-      translateTypeExprFromTypes_ ~config ~type_vars_gen ~type_env __x
-    in
-    let next_rev_deps = List.rev_append dependencies rev_arg_deps in
-    type_expr2
-    |> translate_arrow_type ~config ~type_vars_gen ~type_env
-         ~rev_arg_deps:next_rev_deps
-         ~rev_args:((Nolabel, type_) :: rev_args)
-  | Tarrow
-      ( {
-          lbl = (Labelled {txt = lbl} | Optional {txt = lbl}) as label;
-          typ = type_expr1;
-        },
-        type_expr2,
-        _,
-        arity )
-    when arity = None || rev_args = [] -> (
-    match type_expr1 |> remove_option ~label with
-    | None ->
-      let {dependencies; type_ = type1} =
-        type_expr1
-        |> translateTypeExprFromTypes_ ~config ~type_vars_gen ~type_env
-      in
-      let next_rev_deps = List.rev_append dependencies rev_arg_deps in
-      type_expr2
-      |> translate_arrow_type ~config ~type_vars_gen ~type_env
-           ~rev_arg_deps:next_rev_deps
-           ~rev_args:((Label lbl, type1) :: rev_args)
-    | Some (lbl, t1) ->
-      let {dependencies; type_ = type1} =
-        t1 |> translateTypeExprFromTypes_ ~config ~type_vars_gen ~type_env
-      in
-      let next_rev_deps = List.rev_append dependencies rev_arg_deps in
-      type_expr2
-      |> translate_arrow_type ~config ~type_vars_gen ~type_env
-           ~rev_arg_deps:next_rev_deps
-           ~rev_args:((OptLabel lbl, type1) :: rev_args))
-  | _ ->
-    let {dependencies; type_ = ret_type} =
-      type_expr |> translateTypeExprFromTypes_ ~config ~type_vars_gen ~type_env
-    in
-    let all_deps = List.rev_append rev_arg_deps dependencies in
-    let labeled_convertable_types = rev_args |> List.rev in
-    let arg_types = labeled_convertable_types |> Named_args.group in
-    let function_type = Function {arg_types; ret_type; type_vars = []} in
-    {dependencies = all_deps; type_ = function_type}
+let rec translate_arrow_type ~config ~type_vars_gen ~type_env
+    (params : Types.arg list) (ret : Types.type_expr) =
+  let rev_arg_deps, rev_args =
+    List.fold_left
+      (fun (rev_arg_deps, rev_args) ({lbl; typ} : Types.arg) ->
+        match lbl with
+        | Nolabel ->
+          let {dependencies; type_} =
+            typ |> translateTypeExprFromTypes_ ~config ~type_vars_gen ~type_env
+          in
+          ( List.rev_append dependencies rev_arg_deps,
+            (Nolabel, type_) :: rev_args )
+        | (Labelled {txt = lbl_txt} | Optional {txt = lbl_txt}) as label -> (
+          match typ |> remove_option ~label with
+          | None ->
+            let {dependencies; type_ = type1} =
+              typ
+              |> translateTypeExprFromTypes_ ~config ~type_vars_gen ~type_env
+            in
+            ( List.rev_append dependencies rev_arg_deps,
+              (Label lbl_txt, type1) :: rev_args )
+          | Some (lbl_txt, t1) ->
+            let {dependencies; type_ = type1} =
+              t1 |> translateTypeExprFromTypes_ ~config ~type_vars_gen ~type_env
+            in
+            ( List.rev_append dependencies rev_arg_deps,
+              (OptLabel lbl_txt, type1) :: rev_args )))
+      ([], []) params
+  in
+  let {dependencies; type_ = ret_type} =
+    ret |> translateTypeExprFromTypes_ ~config ~type_vars_gen ~type_env
+  in
+  let all_deps = List.rev_append rev_arg_deps dependencies in
+  let labeled_convertable_types = rev_args |> List.rev in
+  let arg_types = labeled_convertable_types |> Named_args.group in
+  let function_type = Function {arg_types; ret_type; type_vars = []} in
+  {dependencies = all_deps; type_ = function_type}
 
 and translateTypeExprFromTypes_ ~config ~type_vars_gen ~type_env
     (type_expr : Types.type_expr) =
@@ -556,10 +538,8 @@ and translateTypeExprFromTypes_ ~config ~type_vars_gen ~type_env
     translate_constr ~config ~params_translation ~path ~type_env
   | Tpoly (t, []) ->
     t |> translateTypeExprFromTypes_ ~config ~type_vars_gen ~type_env
-  | Tarrow _ ->
-    type_expr
-    |> translate_arrow_type ~config ~type_vars_gen ~type_env ~rev_arg_deps:[]
-         ~rev_args:[]
+  | Tarrow (params, ret) ->
+    translate_arrow_type ~config ~type_vars_gen ~type_env params ret
   | Ttuple list_exp ->
     let inner_types_translation =
       list_exp |> translateTypeExprsFromTypes_ ~config ~type_vars_gen ~type_env

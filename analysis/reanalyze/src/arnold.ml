@@ -546,7 +546,7 @@ module Find_functions_called = struct
   let find_callees (expression : Typedtree.expression) =
     let is_function =
       match expression.exp_desc with
-      | Texp_function {arity = None} -> true
+      | Texp_function _ -> true
       | _ -> false
     in
     let callees = ref String_set.empty in
@@ -937,7 +937,7 @@ module Compile = struct
         let open Command in
         c +++ ConstrOption Rnone
       | _ -> c)
-    | Texp_function {case = case_} -> case ~ctx case_
+    | Texp_function {body} -> body |> expression ~ctx
     | Texp_match (e, cases_ok, cases_exn, _partial)
       when not
              (cases_exn

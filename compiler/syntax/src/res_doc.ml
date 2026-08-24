@@ -70,8 +70,6 @@ let question = Text "?"
 let tilde = Text "~"
 let equal = Text "="
 let trailing_comma = if_breaks comma nil
-let double_quote = Text "\""
-
 let propagate_forced_breaks doc =
   let rec walk doc =
     match doc with

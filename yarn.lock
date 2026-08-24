@@ -434,6 +434,18 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@rescript/belt@workspace:^, @rescript/belt@workspace:packages/@rescript/belt":
+  version: 0.0.0-use.local
+  resolution: "@rescript/belt@workspace:packages/@rescript/belt"
+  dependencies:
+    "@rescript/runtime": "workspace:^"
+    rescript: "workspace:^"
+  peerDependencies:
+    "@rescript/runtime": "workspace:^"
+    rescript: "workspace:^"
+  languageName: unknown
+  linkType: soft
+
 "@rescript/darwin-arm64@npm:12.3.0":
   version: 12.3.0
   resolution: "@rescript/darwin-arm64@npm:12.3.0"
@@ -501,7 +513,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@rescript/runtime@workspace:packages/@rescript/runtime":
+"@rescript/runtime@workspace:^, @rescript/runtime@workspace:packages/@rescript/runtime":
   version: 0.0.0-use.local
   resolution: "@rescript/runtime@workspace:packages/@rescript/runtime"
   dependencies:
@@ -851,7 +863,18 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@tests/analysis@workspace:tests/analysis_tests/tests"
   dependencies:
+    "@rescript/belt": "workspace:^"
     "@rescript/react": "workspace:^"
+    rescript: "workspace:^"
+  languageName: unknown
+  linkType: soft
+
+"@tests/belt@workspace:tests/belt_tests":
+  version: 0.0.0-use.local
+  resolution: "@tests/belt@workspace:tests/belt_tests"
+  dependencies:
+    "@rescript/belt": "workspace:^"
+    mocha: "npm:11.7.6"
     rescript: "workspace:^"
   languageName: unknown
   linkType: soft
@@ -860,6 +883,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@tests/docstring-tests@workspace:tests/docstring_tests"
   dependencies:
+    "@rescript/belt": "workspace:^"
     "@rescript/react": "workspace:^"
     rescript: "workspace:^"
   languageName: unknown
@@ -877,6 +901,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@tests/gentype-react-example@workspace:tests/gentype_tests/typescript-react-example"
   dependencies:
+    "@rescript/belt": "workspace:^"
     "@rescript/react": "workspace:^"
     "@types/react": "npm:^19.2.18"
     "@types/react-dom": "npm:^19.2.4"
@@ -925,6 +950,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@tests/reanalyze-deadcode@workspace:tests/analysis_tests/tests-reanalyze/deadcode"
   dependencies:
+    "@rescript/belt": "workspace:^"
     "@rescript/react": "workspace:^"
     rescript: "workspace:^"
   languageName: unknown
@@ -2615,6 +2641,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "playground@workspace:packages/playground"
   dependencies:
+    "@rescript/belt": "workspace:^"
     "@rescript/react": "workspace:^"
     "@rollup/plugin-node-resolve": "npm:^16.0.0"
     h3: "npm:2.0.1-rc.26"
@@ -2720,6 +2747,9 @@ __metadata:
 "rescript-commonjs-tests@workspace:tests/commonjs_tests":
   version: 0.0.0-use.local
   resolution: "rescript-commonjs-tests@workspace:tests/commonjs_tests"
+  dependencies:
+    "@rescript/belt": "workspace:^"
+    rescript: "workspace:^"
   languageName: unknown
   linkType: soft
 

@@ -171,6 +171,14 @@ let isConfiguredVersion = version =>
 let isLoadableVersion = version =>
   version->isConfiguredVersion || version->previewVersionRoot->Option.isSome
 
+// A PR preview URL is reused after every push, while the CDN caches its assets.
+let previewCacheBust = Date.now()->Float.toString
+
+let versionAssetUrl = (version, path) => {
+  let url = `${versionRoot(version)}/${path}`
+  version->isPreviewVersion ? `${url}?cacheBust=${previewCacheBust}` : url
+}
+
 let selectableCompilerVersions = activeVersion =>
   if activeVersion->isConfiguredVersion || !(activeVersion->previewVersionRoot->Option.isSome) {
     availableCompilerVersions
@@ -362,14 +370,29 @@ let loadRuntimeLibraries = async version => {
   switch activeLibraryVersion.contents {
   | Some(activeVersion) if activeVersion === selectedVersion => ()
   | _ =>
-    let root = versionRoot(selectedVersion)
-    let _ = await loadScript(`${root}/compiler-builtins/cmij.js`, ~cache=false)
+    let _ = await loadScript(
+      versionAssetUrl(selectedVersion, "compiler-builtins/cmij.js"),
+      ~cache=false,
+    )
 
     let libraries = try {
-      let _ = await loadScript(`${root}/@rescript/react/cmij.js`, ~cache=false)
-      ["compiler-builtins", "@rescript/react"]
+      let _ = await loadScript(
+        versionAssetUrl(selectedVersion, "@rescript/belt/cmij.js"),
+        ~cache=false,
+      )
+      ["compiler-builtins", "@rescript/belt"]
     } catch {
     | _ => ["compiler-builtins"]
+    }
+
+    let libraries = try {
+      let _ = await loadScript(
+        versionAssetUrl(selectedVersion, "@rescript/react/cmij.js"),
+        ~cache=false,
+      )
+      libraries->Array.concat(["@rescript/react"])
+    } catch {
+    | _ => libraries
     }
 
     loadedLibrariesByVersion->Map.set(selectedVersion, libraries)
@@ -389,8 +412,7 @@ let ensureCompilerApi = async version => {
     await loadRuntimeLibraries(selectedVersion)
     compilerApis->getMapValueOrThrow(selectedVersion, "Compiler API was not cached")
   } else {
-    let root = versionRoot(selectedVersion)
-    await loadScript(`${root}/compiler.js`)
+    await loadScript(versionAssetUrl(selectedVersion, "compiler.js"))
     let api = switch Api.global {
     | Some(api) if hasFunction(api, "make") => api
     | _ => JsError.throwWithMessage("rescript_compiler global was not registered by compiler.js")

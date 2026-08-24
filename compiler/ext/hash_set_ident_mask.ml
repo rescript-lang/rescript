@@ -35,7 +35,8 @@ type t = {
 }
 
 let key_index_by_ident (h : t) (key : Ident.t) =
-  Bs_hash_stubs.hash_string_int key.name key.stamp land (Array.length h.data - 1)
+  Ext_platform_primitives.hash_string_int key.name key.stamp
+  land (Array.length h.data - 1)
 
 let create initial_size =
   let s = Ext_util.power_2_above 8 initial_size in

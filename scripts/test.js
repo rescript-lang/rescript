@@ -73,10 +73,27 @@ if (ounitTest) {
 }
 
 if (mochaTest) {
+  const beltPackageDir = path.join(projectDir, "packages/@rescript/belt");
+  const beltTestDir = path.join(projectDir, "tests/belt_tests");
+
   // No need to clean beforehand, rewatch detects changes to the compiler binary
   // and rebuilds automatically in that case.
   await execBuild([], {
     cwd: compilerTestDir,
+    stdio: "inherit",
+  });
+  // The CommonJS tests clean their dependencies, including Belt. Force a full
+  // rebuild so repeated test runs don't rely on stale dependency artifacts.
+  await execClean([], {
+    cwd: beltPackageDir,
+    stdio: "inherit",
+  });
+  await execBuild([], {
+    cwd: beltPackageDir,
+    stdio: "inherit",
+  });
+  await execBuild([], {
+    cwd: beltTestDir,
     stdio: "inherit",
   });
 
@@ -85,6 +102,7 @@ if (mochaTest) {
       "-t",
       "10000",
       "tests/tests/src/**/*_test.mjs",
+      "tests/belt_tests/src/**/*_test.mjs",
       // Ignore the preserve_jsx_test.mjs file.
       // I can't run because Mocha doesn't support jsx.
       // We also want to keep the output as is.
@@ -109,6 +127,10 @@ if (mochaTest) {
 
   // CommonJS tests
   const commonjsTestDir = path.join(projectDir, "tests/commonjs_tests");
+  await execClean([], {
+    cwd: commonjsTestDir,
+    stdio: "inherit",
+  });
   await execBuild([], {
     cwd: commonjsTestDir,
     stdio: "inherit",

@@ -56,8 +56,6 @@ let primitive ppf (prim : Lam_primitive.t) =
   | Pjs_unsafe_downgrade {name; setter} ->
     if setter then fprintf ppf "##%s#=" name else fprintf ppf "##%s" name
   | Pfn_arity -> fprintf ppf "fn.length"
-  | Pjs_fn_make i -> fprintf ppf "js_fn_make_%i" i
-  | Pjs_fn_make_unit -> fprintf ppf "js_fn_make_unit"
   | Pjs_fn_method -> fprintf ppf "js_fn_method"
   | Pdebugger -> fprintf ppf "debugger"
   | Praw_js_code _ -> fprintf ppf "[raw]"
@@ -468,5 +466,3 @@ let serialize (filename : string) (lam : Lam.t) : unit =
   Format.set_margin old
 
 let lambda_to_string = Format.asprintf "%a" lambda
-
-let primitive_to_string = Format.asprintf "%a" primitive

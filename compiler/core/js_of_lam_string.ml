@@ -30,23 +30,3 @@ module E = Js_exp_make
 *)
 
 let const_char (i : int) = E.int ~c:i (Int32.of_int @@ i)
-
-(* string [s[i]] expects to return a [ocaml_char] *)
-let ref_string e e1 = E.string_index e e1
-
-(**
-   Note that [String.fromCharCode] also works, but it only 
-   work for small arrays, however, for {bytes_to_string} it is likely the bytes 
-   will become big
-   {[
-     String.fromCharCode.apply(null,[87,97])
-       "Wa"
-       String.fromCharCode(87,97)
-       "Wa" 
-   ]}
-   This does not work for large arrays
-   {[
-     String.fromCharCode.apply(null, prim = Array[1048576]) 
-       Maxiume call stack size exceeded
-   ]}
-*)

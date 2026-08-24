@@ -24,12 +24,8 @@
 
 module E = Js_exp_make
 
-(* TODO: it would be even better, if the [tag_info] contains more information
-   about immutablility
-*)
 let make_block mutable_flag (tag_info : Lam_tag_info.t) tag args =
-  match tag_info with
-  | _ -> E.make_block tag tag_info args mutable_flag
+  E.make_block tag tag_info args mutable_flag
 
 let field (field_info : Lam_compat.field_dbg_info) e (i : int32) =
   match field_info with
@@ -45,13 +41,8 @@ let field (field_info : Lam_compat.field_dbg_info) e (i : int32) =
   | Fld_record {name} -> E.record_access e name i
   | Fld_module {name} -> E.module_access e name i
 
-let field_by_exp e i = E.array_index e i
-
 let set_field (field_info : Lam_compat.set_field_dbg_info) e i e0 =
   match field_info with
   | Fld_record_extension_set name -> E.extension_assign e i name e0
   | Fld_record_inline_set name | Fld_record_set name ->
     E.record_assign e i name e0
-
-(* This dynamism commes from oo compilaton, it should not happen in record *)
-let set_field_by_exp self index value = E.assign_by_exp self index value

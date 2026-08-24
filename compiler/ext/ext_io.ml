@@ -40,9 +40,6 @@ let rev_lines_of_chann chan =
   in
   loop [] chan
 
-let rev_lines_of_file file =
-  Ext_pervasives.finally ~clean:close_in (open_in_bin file) rev_lines_of_chann
-
 let write_file f content =
   Ext_pervasives.finally ~clean:close_out (open_out_bin f) (fun oc ->
       output_string oc content)

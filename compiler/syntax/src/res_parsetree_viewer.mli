@@ -2,7 +2,6 @@
  * The parsetree contains: a => b => c => d, for printing purposes
  * we restructure the tree into (a, b, c) and its returnType d *)
 val arrow_type :
-  ?max_arity:int ->
   Parsetree.core_type ->
   Parsetree.attributes * Parsetree.arg list * Parsetree.core_type
 
@@ -51,6 +50,12 @@ type fun_param_kind =
       pat: Parsetree.pattern;
     }
   | NewTypes of {attrs: Parsetree.attributes; locs: string Asttypes.loc list}
+
+(* Groups a function's newtypes into printable groups: a new group starts
+   at each attribute-bearing newtype. *)
+val group_newtypes :
+  (string Asttypes.loc * Parsetree.attributes) list ->
+  (Parsetree.attributes * string Asttypes.loc list) list
 
 val fun_expr :
   Parsetree.expression -> bool * fun_param_kind list * Parsetree.expression
@@ -133,9 +138,9 @@ val is_template_literal : Parsetree.expression -> bool
 val is_tagged_template_literal : Parsetree.expression -> bool
 val has_template_literal_attr : Parsetree.attributes -> bool
 
-val is_spread_belt_list_concat : Parsetree.expression -> bool
+val is_spread_list : Parsetree.expression -> bool
 
-val is_spread_belt_array_concat : Parsetree.expression -> bool
+val is_spread_array : Parsetree.expression -> bool
 
 val collect_spread_dict_expr_parts :
   Parsetree.expression -> dict_expr_part list option
@@ -164,7 +169,7 @@ val has_if_let_attribute : Parsetree.attributes -> bool
 
 val is_rewritten_underscore_apply_sugar : Parsetree.expression -> bool
 
-val is_fun_newtype : Parsetree.expression -> bool
+val is_fun_expr : Parsetree.expression -> bool
 
 val is_tuple_array : Parsetree.expression -> bool
 

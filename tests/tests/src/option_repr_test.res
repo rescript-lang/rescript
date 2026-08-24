@@ -77,10 +77,10 @@ let a = f13(~x=2, ())
 
 let f12 = (x: list<_>) => Some(x)
 
-module N = Belt.List
+module N = List
 
-let length_8_id: list<int> = N.makeBy(8, x => x)
-let length_10_id: list<int> = N.makeBy(10, x => x)
+let length_8_id: list<int> = N.fromInitializer(~length=8, x => x)
+let length_10_id: list<int> = N.fromInitializer(~length=10, x => x)
 
 type xx<'a> = option<'a> =
   | None
@@ -110,7 +110,7 @@ let gtx = (a, b) => a > b && b < a
 let eqx = (a, b) => a == b && b == a
 let neqx = (a, b) => a != b && b != a
 
-let all_true = xs => Belt.List.every(xs, x => x)
+let all_true = xs => List.every(xs, x => x)
 
 describe(__MODULE__, () => {
   test("option comparison operations", () => {

@@ -122,25 +122,48 @@ module T = struct
     match desc with
     | Ptyp_any -> any ~loc ~attrs ()
     | Ptyp_var s -> var ~loc ~attrs s
-    | Ptyp_arrow {arg; ret; arity} -> (
-      let lbl = Asttypes.to_noloc arg.lbl in
-      let typ0 =
-        arrow ~loc
-          ~attrs:(attrs @ sub.attributes sub arg.attrs)
-          lbl (sub.typ sub arg.typ) (sub.typ sub ret)
+    | Ptyp_arrow {params; ret} ->
+      (* Re-curry the n-ary arrow into the v0 chain of unary arrows, and wrap
+         the head in function$(_, [#Has_arityN]).
+
+         v0 arrows have a single attribute slot for what the current parsetree
+         splits into node attributes and argument attributes. Keep the split
+         recoverable: when node attributes are present, separate the two lists
+         with an internal marker that [Ast_mapper_from0] strips again. Without
+         node attributes (the common case) the encoding is unchanged. *)
+      let arity = List.length params in
+      let rec build (params : Parsetree.arg list) =
+        match params with
+        | [] -> sub.typ sub ret
+        | (arg : Parsetree.arg) :: rest ->
+          let lbl = Asttypes.to_noloc arg.lbl in
+          let arg_attrs = sub.attributes sub arg.attrs in
+          let is_head = List.length rest = arity - 1 in
+          let merged_attrs =
+            if is_head && attrs <> [] then
+              attrs
+              @ ( {txt = "_res.arrow_node_attrs"; loc = Location.none},
+                  Pt.PStr [] )
+                :: arg_attrs
+            else arg_attrs
+          in
+          let arrow_loc =
+            if is_head then loc
+            else {loc with loc_start = arg.typ.ptyp_loc.loc_start}
+          in
+          arrow ~loc:arrow_loc ~attrs:merged_attrs lbl (sub.typ sub arg.typ)
+            (build rest)
       in
-      match arity with
-      | None -> typ0
-      | Some arity ->
-        let arity_string = "Has_arity" ^ string_of_int arity in
-        let arity_type =
-          Ast_helper0.Typ.variant ~loc
-            [Rtag (Location.mknoloc arity_string, [], true, [])]
-            Closed None
-        in
-        Ast_helper0.Typ.constr ~loc
-          {txt = Lident "function$"; loc}
-          [typ0; arity_type])
+      let typ0 = build params in
+      let arity_string = "Has_arity" ^ string_of_int arity in
+      let arity_type =
+        Ast_helper0.Typ.variant ~loc
+          [Rtag (Location.mknoloc arity_string, [], true, [])]
+          Closed None
+      in
+      Ast_helper0.Typ.constr ~loc
+        {txt = Lident "function$"; loc}
+        [typ0; arity_type]
     | Ptyp_tuple tyl -> tuple ~loc ~attrs (List.map (sub.typ sub) tyl)
     | Ptyp_constr (lid, tl) ->
       constr ~loc ~attrs (map_loc sub lid) (List.map (sub.typ sub) tl)
@@ -382,37 +405,97 @@ module E = struct
     | Pexp_constant x -> constant ~loc ~attrs (map_constant x)
     | Pexp_let (r, vbs, e) ->
       let_ ~loc ~attrs r (List.map (sub.value_binding sub) vbs) (sub.expr sub e)
-    | Pexp_fun {arg_label = lab; default = def; lhs = p; rhs = e; arity; async}
-      -> (
-      let lab = Asttypes.to_noloc lab in
-      let attrs =
-        if async then
-          ({txt = "res.async"; loc = Location.none}, Pt.PStr []) :: attrs
-        else attrs
+    | Pexp_fun {newtypes; params; body; async} -> (
+      (* Re-curry the n-ary function into the v0 chain of unary funs, and
+         wrap it in Function$ carrying the arity as a res.arity attribute.
+         Without newtypes the head carries the function node's own
+         attributes (and the res.async marker), matching what the old parser
+         produced; with newtypes they travel on the newtype wrapper instead.
+
+         v0 fun nodes have a single attribute slot for what the current
+         parsetree splits into node attributes and parameter attributes.
+         Keep the split recoverable: when parameter attributes are present
+         (only the PPX bridge populates them), separate the two lists with an
+         internal marker that [Ast_mapper_from0] strips again. Without
+         parameter attributes (the common case) the encoding is unchanged. *)
+      let arity = List.length params in
+      let rec build (params : Parsetree.fun_param list) =
+        match params with
+        | [] -> sub.expr sub body
+        | {p_attrs; p_lbl; p_default; p_pat} :: rest ->
+          let lab = Asttypes.to_noloc p_lbl in
+          let is_head = List.length rest = arity - 1 in
+          let level_attrs =
+            let param_attrs = sub.attributes sub p_attrs in
+            let marked_param_attrs =
+              if param_attrs = [] then []
+              else
+                ({txt = "_res.fun_node_attrs"; loc = Location.none}, Pt.PStr [])
+                :: param_attrs
+            in
+            if is_head then
+              let base =
+                if newtypes = [] then attrs @ marked_param_attrs
+                else marked_param_attrs
+              in
+              if async then
+                ({txt = "res.async"; loc = Location.none}, Pt.PStr []) :: base
+              else base
+            else marked_param_attrs
+          in
+          let fun_loc =
+            if is_head then loc
+            else {loc with loc_start = p_pat.ppat_loc.loc_start}
+          in
+          fun_ ~loc:fun_loc ~attrs:level_attrs lab
+            (map_opt (sub.expr sub) p_default)
+            (sub.pat sub p_pat) (build rest)
       in
-      let e =
-        fun_ ~loc ~attrs lab
-          (map_opt (sub.expr sub) def)
-          (sub.pat sub p) (sub.expr sub e)
+      let e = build params in
+      let arity_attr =
+        ( Location.mknoloc "res.arity",
+          Parsetree0.PStr
+            [
+              Ast_helper0.Str.eval
+                (Ast_helper0.Exp.constant
+                   (Pconst_integer (string_of_int arity, None)));
+            ] )
       in
-      match arity with
-      | None -> e
-      | Some arity ->
-        let arity_to_attributes arity =
-          [
-            ( Location.mknoloc "res.arity",
-              Parsetree0.PStr
-                [
-                  Ast_helper0.Str.eval
-                    (Ast_helper0.Exp.constant
-                       (Pconst_integer (string_of_int arity, None)));
-                ] );
-          ]
-        in
-        Ast_helper0.Exp.construct
-          ~attrs:(arity_to_attributes arity)
+      let fn =
+        Ast_helper0.Exp.construct ~attrs:[arity_attr]
           (Location.mkloc (Longident.Lident "Function$") e.pexp_loc)
-          (Some e))
+          (Some e)
+      in
+      (* Expand the newtypes back into the v0 wrapper chain around the
+         Function$ node. Each wrapper carries its own newtype's attributes.
+         The outermost wrapper is the whole expression in v0, so it also
+         carries the function node's attributes: when the first newtype has
+         attributes of its own, an internal [_res.newtype_attrs] marker
+         separates node attributes (before) from the first newtype's
+         attributes (after); without a marker every attribute on the
+         outermost wrapper is a function-node attribute, which is also how
+         wrapper attributes behaved before newtypes became a field. *)
+      match newtypes with
+      | [] -> fn
+      | (first_name, first_attrs) :: rest_newtypes ->
+        let inner =
+          List.fold_right
+            (fun (name, nt_attrs) acc ->
+              Ast_helper0.Exp.newtype ~loc
+                ~attrs:(sub.attributes sub nt_attrs)
+                (map_loc sub name) acc)
+            rest_newtypes fn
+        in
+        let first_attrs = sub.attributes sub first_attrs in
+        let outer_attrs =
+          if first_attrs = [] then attrs
+          else
+            attrs
+            @ ({txt = "_res.newtype_attrs"; loc = Location.none}, Pt.PStr [])
+              :: first_attrs
+        in
+        Ast_helper0.Exp.newtype ~loc ~attrs:outer_attrs (map_loc sub first_name)
+          inner)
     | Pexp_apply {funct = e; args; partial} ->
       let e =
         match (e.pexp_desc, args) with
@@ -519,18 +602,21 @@ module E = struct
         (sub.extension_constructor sub cd)
         (sub.expr sub e)
     | Pexp_assert e -> assert_ ~loc ~attrs (sub.expr sub e)
-    | Pexp_newtype (s, e) ->
-      newtype ~loc ~attrs (map_loc sub s) (sub.expr sub e)
     | Pexp_pack me -> pack ~loc ~attrs (sub.module_expr sub me)
     | Pexp_open (ovf, lid, e) ->
       open_ ~loc ~attrs ovf (map_loc sub lid) (sub.expr sub e)
     | Pexp_extension x -> extension ~loc ~attrs (sub.extension sub x)
     | Pexp_await e ->
+      (* Single v0 attribute slot for two nodes: the await node's own
+         attributes go in front of the [res.await] marker, the inner
+         expression's attributes after it, so [Ast_mapper_from0] can split
+         them again. *)
       let e = sub.expr sub e in
       {
         e with
         pexp_attributes =
-          (Location.mknoloc "res.await", Pt.PStr []) :: e.pexp_attributes;
+          attrs
+          @ ((Location.mknoloc "res.await", Pt.PStr []) :: e.pexp_attributes);
       }
     | Pexp_jsx_element
         (Jsx_fragment
@@ -704,10 +790,33 @@ let default_mapper =
           ~loc:(this.location this pincl_loc)
           ~attrs:(this.attributes this pincl_attributes));
     value_binding =
-      (fun this {pvb_pat; pvb_expr; pvb_attributes; pvb_loc} ->
-        Vb.mk (this.pat this pvb_pat) (this.expr this pvb_expr)
-          ~loc:(this.location this pvb_loc)
-          ~attrs:(this.attributes this pvb_attributes));
+      (fun this {pvb_pat; pvb_expr; pvb_constraint; pvb_attributes; pvb_loc} ->
+        let loc = this.location this pvb_loc in
+        let pvb_pat, pvb_expr =
+          match pvb_constraint with
+          | None -> (this.pat this pvb_pat, this.expr this pvb_expr)
+          | Some {pvc_newtypes; pvc_type} ->
+            let poly =
+              Ast_helper.Typ.poly ~loc:pvb_loc pvc_newtypes
+                (Ast_helper.Typ.varify_constructors pvc_newtypes pvc_type)
+            in
+            let pat =
+              Ast_helper0.Pat.constraint_ ~loc (this.pat this pvb_pat)
+                (this.typ this poly)
+            in
+            let expr =
+              Ast_helper0.Exp.constraint_ ~loc (this.expr this pvb_expr)
+                (this.typ this pvc_type)
+            in
+            let expr =
+              List.fold_right
+                (fun newtype expr ->
+                  Ast_helper0.Exp.newtype ~loc (map_loc this newtype) expr)
+                pvc_newtypes expr
+            in
+            (pat, expr)
+        in
+        Vb.mk pvb_pat pvb_expr ~loc ~attrs:(this.attributes this pvb_attributes));
     constructor_declaration =
       (fun this {pcd_name; pcd_args; pcd_res; pcd_loc; pcd_attributes} ->
         Type.constructor (map_loc this pcd_name)

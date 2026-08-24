@@ -1,14 +1,30 @@
+(env
+ (_
+  (flags
+   (:standard -w +a-4-42-40-41-44-45-9-48-67-70))))
+
+; The browser profile builds the playground compiler; this rule pair generates a module from platform/{native,playground}.
+
+(rule
+ (target cmt_format_persistence.ml)
+ (enabled_if
+  (= %{profile} browser))
+ (action
+  (copy
+   platform/playground/cmt_format_persistence.ml
+   cmt_format_persistence.ml)))
+
+(rule
+ (target cmt_format_persistence.ml)
+ (enabled_if
+  (<> %{profile} browser))
+ (action
+  (copy platform/native/cmt_format_persistence.ml cmt_format_persistence.ml)))
+
 (library
  (name ml)
  (wrapped false)
+ (private_modules cmt_format_common cmt_format_persistence)
  (instrumentation
   (backend bisect_ppx))
- (flags
-  (:standard -w +a-4-42-40-41-44-45-9-48-67-70))
  (libraries ext flow_parser))
-
-(rule
- (target cmt_format.ml)
- (deps cmt_format.cppo.ml)
- (action
-  (run %{bin:cppo} %{env:CPPO_FLAGS=} %{deps} -o %{target})))

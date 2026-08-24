@@ -1225,14 +1225,6 @@ let mark_constructor usage env name desc =
       let ty_name = Path.last ty_path in
       mark_constructor_used usage env ty_name ty_decl name
 
-let lookup_label ?loc lid env =
-  match lookup_all_labels ?loc lid env with
-  | [] -> raise Not_found
-  | (desc, use) :: _ ->
-    mark_type_path env (ty_path desc.lbl_res);
-    use ();
-    desc
-
 let lookup_all_labels ?loc lid env =
   try
     let lbls = lookup_all_labels ?loc lid env in
@@ -1770,8 +1762,6 @@ let enter_value ?check = enter (store_value ?check)
 
 and enter_type = enter (store_type ~check:true)
 
-and enter_extension = enter (store_extension ~check:true)
-
 and enter_module_declaration ?arg id md env =
   add_module_declaration ?arg ~check:true id md env
 (* let (id, env) = enter store_module name md env in
@@ -1879,15 +1869,6 @@ let read_signature modname filename =
   Lazy.force ps.ps_sig
 
 (* Return the CRC of the interface of the given compilation unit *)
-
-let crc_of_unit name =
-  let ps = find_pers_struct name in
-  let crco = try List.assoc name ps.ps_crcs with Not_found -> assert false in
-  match crco with
-  | None -> assert false
-  | Some crc -> crc
-
-(* Return the list of imported interfaces with their CRCs *)
 
 let imports () =
   let dont_record_crc_unit = !Clflags.dont_record_crc_unit in
@@ -2051,12 +2032,6 @@ let keep_only_summary env =
     last_env := env;
     last_reduced_env := new_env;
     new_env
-
-let env_of_only_summary env_from_summary env =
-  let new_env = env_from_summary env.summary Subst.identity in
-  {new_env with local_constraints = env.local_constraints; flags = env.flags}
-
-(* Error report *)
 
 open Format
 

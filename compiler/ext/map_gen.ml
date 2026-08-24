@@ -281,11 +281,6 @@ let concat t1 t2 =
     let x, d = min_binding_exn t2 in
     join t1 x d (remove_min_binding t2)
 
-let concat_or_join t1 v d t2 =
-  match d with
-  | Some d -> join t1 v d t2
-  | None -> concat t1 t2
-
 module type S = sig
   type key
 

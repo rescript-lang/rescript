@@ -45,7 +45,6 @@ let check ~file ~pass lam =
       success := false)
     else Hash_set_ident.add defined_variables id
   in
-  (* TODO: replaced by a slow version of {!Lam_iter.inner_iter} *)
   let rec check_list xs (cxt : Set_int.t) =
     Ext_list.iter xs (fun x -> check_staticfails x cxt)
   and check_list_snd : 'a. ('a * Lam.t) list -> _ -> unit =

@@ -28,10 +28,6 @@ let predef_prefix_ident : Longident.t = Lident "*predef*"
 
 let predef_option : Longident.t = Ldot (predef_prefix_ident, "option")
 
-let predef_some : Longident.t = Ldot (predef_prefix_ident, "Some")
-
-let predef_none : Longident.t = Ldot (predef_prefix_ident, "None")
-
 module Lid = struct
   type t = Longident.t
 
@@ -54,8 +50,6 @@ module Lid = struct
   let js_extern : t = Lident Primitive_modules.js_extern
 
   let method_callback : t = Ldot (js_extern, "Callback")
-
-  let ignore_id : t = Ldot (pervasives, "ignore")
 
   let hidden_field n : t = Lident ("I" ^ n)
 

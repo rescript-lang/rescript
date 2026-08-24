@@ -87,14 +87,11 @@ let property_map : property_map fn =
       (_x0, _x1))
     _self arg
 
-let length_object : length_object fn = unknown
-
 let expression_desc : expression_desc fn =
  fun _self -> function
-  | Length (_x0, _x1) ->
+  | Length _x0 ->
     let _x0 = _self.expression _self _x0 in
-    let _x1 = length_object _self _x1 in
-    Length (_x0, _x1)
+    Length _x0
   | Is_null_or_undefined _x0 ->
     let _x0 = _self.expression _self _x0 in
     Is_null_or_undefined _x0
@@ -155,9 +152,7 @@ let expression_desc : expression_desc fn =
     Static_index (_x0, _x1, _x2)
   | New (_x0, _x1) ->
     let _x0 = _self.expression _self _x0 in
-    let _x1 =
-      option (fun _self arg -> list _self.expression _self arg) _self _x1
-    in
+    let _x1 = list _self.expression _self _x1 in
     New (_x0, _x1)
   | Var _x0 ->
     let _x0 = _self.vident _self _x0 in
@@ -168,9 +163,9 @@ let expression_desc : expression_desc fn =
     Fun {fun_ with params; body}
   | Str _ as v -> v
   | Raw_js_code _ as v -> v
-  | Array (_x0, _x1) ->
+  | Array _x0 ->
     let _x0 = list _self.expression _self _x0 in
-    Array (_x0, _x1)
+    Array _x0
   | Optional_block (_x0, _x1) ->
     let _x0 = _self.expression _self _x0 in
     Optional_block (_x0, _x1)

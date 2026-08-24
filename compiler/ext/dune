@@ -1,155 +1,33 @@
+(env
+ (_
+  (flags
+   (:standard -w +a-4-42-40-9-48-70))))
+
+; The browser profile builds the playground compiler; this rule pair generates a module from platform/{native,playground}.
+
+(rule
+ (target ext_platform_primitives.ml)
+ (enabled_if
+  (= %{profile} browser))
+ (action
+  (copy
+   platform/playground/ext_platform_primitives.ml
+   ext_platform_primitives.ml)))
+
+(rule
+ (target ext_platform_primitives.ml)
+ (enabled_if
+  (<> %{profile} browser))
+ (action
+  (copy
+   platform/native/ext_platform_primitives.ml
+   ext_platform_primitives.ml)))
+
 (library
  (name ext)
  (wrapped false)
  (instrumentation
   (backend bisect_ppx))
- (flags
-  (:standard -w +a-4-42-40-9-48-70))
  (foreign_stubs
   (language c)
-  (names ext_basic_hash_stubs)))
-
-(rule
- (target bs_hash_stubs.ml)
- (deps bs_hash_stubs.cppo.ml)
- (action
-  (run %{bin:cppo} %{env:CPPO_FLAGS=} %{deps} -o %{target})))
-
-(rule
- (target js_reserved_map.ml)
- (deps js_reserved_map.cppo.ml)
- (action
-  (run
-   %{bin:cppo}
-   -V
-   OCAML:%{ocaml_version}
-   %{env:CPPO_FLAGS=}
-   %{deps}
-   -o
-   %{target})))
-
-(rule
- (target ext_sys.ml)
- (deps ext_sys.cppo.ml)
- (action
-  (run %{bin:cppo} %{env:CPPO_FLAGS=} %{deps} -o %{target})))
-
-(rule
- (target ext_string.ml)
- (deps ext_string.cppo.ml)
- (action
-  (run %{bin:cppo} %{env:CPPO_FLAGS=} %{deps} -o %{target})))
-
-(rule
- (target ext_string.mli)
- (deps ext_string.cppo.mli)
- (action
-  (run %{bin:cppo} %{env:CPPO_FLAGS=} %{deps} -o %{target})))
-
-(rule
- (targets hash_set_string.ml)
- (deps hash_set.cppo.ml)
- (action
-  (run %{bin:cppo} -D TYPE_STRING %{deps} -o %{targets})))
-
-(rule
- (targets hash_set_int.ml)
- (deps hash_set.cppo.ml)
- (action
-  (run %{bin:cppo} -D TYPE_INT %{deps} -o %{targets})))
-
-(rule
- (targets hash_set_ident.ml)
- (deps hash_set.cppo.ml)
- (action
-  (run %{bin:cppo} -D TYPE_IDENT %{deps} -o %{targets})))
-
-(rule
- (targets hash_set.ml)
- (deps hash_set.cppo.ml)
- (action
-  (run %{bin:cppo} -D TYPE_FUNCTOR %{deps} -o %{targets})))
-
-(rule
- (targets hash_set_poly.ml)
- (deps hash_set.cppo.ml)
- (action
-  (run %{bin:cppo} -D TYPE_POLY %{deps} -o %{targets})))
-
-(rule
- (targets vec_int.ml)
- (deps vec.cppo.ml)
- (action
-  (run %{bin:cppo} -D TYPE_INT %{deps} -o %{targets})))
-
-(rule
- (targets vec.ml)
- (deps vec.cppo.ml)
- (action
-  (run %{bin:cppo} -D TYPE_FUNCTOR %{deps} -o %{targets})))
-
-(rule
- (targets set_string.ml)
- (deps set.cppo.ml)
- (action
-  (run %{bin:cppo} -D TYPE_STRING %{deps} -o %{targets})))
-
-(rule
- (targets set_int.ml)
- (deps set.cppo.ml)
- (action
-  (run %{bin:cppo} -D TYPE_INT %{deps} -o %{targets})))
-
-(rule
- (targets set_ident.ml)
- (deps set.cppo.ml)
- (action
-  (run %{bin:cppo} -D TYPE_IDENT %{deps} -o %{targets})))
-
-(rule
- (targets map_string.ml)
- (deps map.cppo.ml)
- (action
-  (run %{bin:cppo} -D TYPE_STRING %{deps} -o %{targets})))
-
-(rule
- (targets map_int.ml)
- (deps map.cppo.ml)
- (action
-  (run %{bin:cppo} -D TYPE_INT %{deps} -o %{targets})))
-
-(rule
- (targets map_ident.ml)
- (deps map.cppo.ml)
- (action
-  (run %{bin:cppo} -D TYPE_IDENT %{deps} -o %{targets})))
-
-(rule
- (targets ordered_hash_map_local_ident.ml)
- (deps ordered_hash_map.cppo.ml)
- (action
-  (run %{bin:cppo} -D TYPE_LOCAL_IDENT %{deps} -o %{targets})))
-
-(rule
- (targets hash_string.ml)
- (deps hash.cppo.ml)
- (action
-  (run %{bin:cppo} -D TYPE_STRING %{deps} -o %{targets})))
-
-(rule
- (targets hash_int.ml)
- (deps hash.cppo.ml)
- (action
-  (run %{bin:cppo} -D TYPE_INT %{deps} -o %{targets})))
-
-(rule
- (targets hash_ident.ml)
- (deps hash.cppo.ml)
- (action
-  (run %{bin:cppo} -D TYPE_IDENT %{deps} -o %{targets})))
-
-(rule
- (targets hash.ml)
- (deps hash.cppo.ml)
- (action
-  (run %{bin:cppo} -D TYPE_FUNCTOR %{deps} -o %{targets})))
+  (names ext_platform_primitives_stubs)))

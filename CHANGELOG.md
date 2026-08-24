@@ -14,7 +14,10 @@
 
 #### :boom: Breaking Change
 
+- Remove runtime APIs that were deprecated for removal in ReScript 13, including the `Char` module, unsafe `Obj` operations, legacy `Pervasives` helpers, and `Array.unsafe_get`. https://github.com/rescript-lang/rescript/pull/8564
 - Remove the deprecated `Js` namespace and its runtime modules. https://github.com/rescript-lang/rescript/pull/8531
+- Move Belt into the separately installed `@rescript/belt` package. Projects using Belt must install the package and list it in their `rescript.json` dependencies. https://github.com/rescript-lang/rescript/pull/8554
+- Correct the structured function details produced by `rescript-tools doc` and exposed by `RescriptTools.Docgen`: parameters now retain labels and optionality, nested functions, tuples, variables, and generic arguments retain their type structure, return types are identified correctly, and non-function values no longer receive fake function details. This changes the published docgen detail schema. https://github.com/rescript-lang/rescript/pull/8576
 
 #### :eyeglasses: Spec Compliance
 
@@ -26,16 +29,42 @@
 #### :bug: Bug fix
 
 - Fix formatter breaking the opening brace of a functor module type's result signature onto a new line (e.g. `module Make: Pattern => {`). https://github.com/rescript-lang/rescript/pull/8519
+- Fix argument evaluation order when a function call is inlined: the beta reducer stacked argument bindings in reverse parameter order, so the last argument was evaluated first when arguments could not be substituted directly. https://github.com/rescript-lang/rescript/pull/8572
+- Preserve parentheses around multiplication, division, and modulo expressions used as exponents. https://github.com/rescript-lang/rescript/pull/8550
+- Make a function's locally abstract types (`(type t, x) => ...`) part of the function AST node instead of a chain of wrapper nodes. Fixes the formatter dropping the association of attributes with their `type` group (`(@attr type t, x, @attr2 type s, y)` used to print as `@attr @attr2` on the function) and comments written next to a type parameter migrating onto the following value parameter. https://github.com/rescript-lang/rescript/pull/8574
+- Preserve trailing comments between the type and `=` in locally abstract value constraints (`let f: type a. t /* comment */ = value`). https://github.com/rescript-lang/rescript/pull/8575
+- Enforce function arity in interface/module inclusion and type coercion. Previously a curried implementation (e.g. `int => int => int`) could satisfy an uncurried interface (`(int, int) => int`) or be coerced to it, which could miscompile calls made through the interface type. Such mismatches are now compile errors with an explanatory hint. https://github.com/rescript-lang/rescript/pull/8559
+- Fix termination-analysis false positives for functions whose progress flows through un-annotated helpers: collecting the callees of a function binding was accidentally disabled in 2024 (the collection guard required a node shape that uncurried code never produces), so helpers calling `@progress` functions were no longer added to the function table. https://github.com/rescript-lang/rescript/pull/8568
+- Fix default values of optional parameters being computed at the wrong time for curried functions: in `(~x=default, y) => (~z=default, w) => ...`, `x`'s default was only computed when the *inner* function was applied. Each default is now computed when its own parameter group is applied. https://github.com/rescript-lang/rescript/pull/8568
+- Fix bare labeled arrow types (`~x: int => string`) getting no arity: they printed identically to their parenthesized form (`(~x: int) => string`) but did not unify with it. https://github.com/rescript-lang/rescript/pull/8563
+- Fix losses of fidelity when code passes through an external PPX: the internal `@res.async` marker no longer leaks into the program, attributes on an arrow type or on an `await` expression are no longer dropped or relocated (previously this could crash the formatter), JSX elements keep their closing tag, and PPX-emitted OCaml-style `function` is desugared instead of crashing the compiler. https://github.com/rescript-lang/rescript/pull/8561
 - Preserve multibyte characters when wrapping long source lines in compiler code frames. https://github.com/rescript-lang/rescript/pull/8520
+- Fix reanalyze optional-argument diagnostics for functions passed or returned as first-class values. https://github.com/rescript-lang/rescript/pull/8321
+- Prevent the developer playground from loading stale compiler and library assets after PR preview updates. https://github.com/rescript-lang/rescript/pull/8556
 
 #### :memo: Documentation
 
 #### :nail_care: Polish
 
+- Allow inferred labeled functions to be called with labels in any order by removing legacy curried-arrow commutation locks. https://github.com/rescript-lang/rescript/pull/8547
+
 #### :house: Internal
 
+- Sync the platform npm package's compiler binaries (`packages/@rescript/<platform>/bin`) via dune promotion on every `dune build`, instead of Makefile/CI copy steps that only ran when make did: a plain `dune build` can no longer leave `cli/*.js` and the test harnesses running a stale compiler. https://github.com/rescript-lang/rescript/pull/8560
+- Remove unused compiler IR definitions, modules, helpers, error variants, and Typedtree fields. https://github.com/rescript-lang/rescript/pull/8551 https://github.com/rescript-lang/rescript/pull/8555
+- Make locally abstract value constraints (`let f: type a. t = value`) structural in the parsetree, remove the obsolete `Pexp_newtype` and `Texp_newtype` wrapper metadata, and keep the old encoding confined to the frozen external-PPX bridge. The CMT magic number is bumped to `Caml1999T024`. https://github.com/rescript-lang/rescript/pull/8575
+- Eliminate the `Pjs_fn_make`/`Pjs_fn_make_unit` arity-adjustment primitives and the `unsafe_adjust_to_arity` machinery: with structural arity, functions are constructed at their final arity, so the enforcement layer (and the active-pattern currying split it compensated for) is deleted. Generated code improves: no adapter closures for patterns on mutable fields, better constant propagation and name preservation, and recursive modules whose members are plain functions compile statically without the runtime bootstrap. https://github.com/rescript-lang/rescript/pull/8570
+- Cleanups enabled by structural arity: remove the unreachable `Too_many_arguments` error and the `?in_function` threading through the type checker that existed only to decorate it; remove the dead `function$`-vs-arrow unification bridge, `Ctype.arity`, and the unused parsetree arity helpers; deduplicate the analysis arrow-flattening helpers. https://github.com/rescript-lang/rescript/pull/8569
+
+- Make the typed layers n-ary as well: `Types.Tarrow` carries a parameter list, `Texp_function` carries typed parameters (label, ident, pattern, per-parameter exhaustiveness) and a body, and `Ttyp_arrow`/`Otyp_arrow` follow. The `arity` annotation and its `int option` phantom state are gone from the compiler entirely; `push_defaults` in translcore and the hand-rolled gather-until-arity walks in gentype, reanalyze, and the outcome printer are deleted. The cmi and cmt magic numbers are bumped (`Caml1999I023`/`Caml1999T023`). Generated JavaScript is byte-identical across the test suite (optional-parameter internals are named `*opt_<label>*` instead of `*opt*`, visible only in the rare unprettified case); reanalyze no longer emits spurious empty optional-argument references, and genType recovers real parameter names after defaulted parameters. https://github.com/rescript-lang/rescript/pull/8568
+- Make functions and arrow types n-ary in the parsetree: `Pexp_fun` carries a parameter list and `Ptyp_arrow` a parameter list, replacing the curried one-parameter-per-node chains with an `arity` annotation on the head. Arity is now structural (`List.length params`) and `ast_uncurried.ml` is deleted. The typed layers, cmt format, printed output, and the external-PPX wire format are unchanged. Generated JavaScript is unchanged with one deliberate exception: `@this this => async arg => ...` now means what it says (a method returning an async function) instead of absorbing the nested parameter into the method; write `@this async (this, arg) => ...` for the old meaning. https://github.com/rescript-lang/rescript/pull/8566
+- Give marshaled current-parsetree streams (`-as-pp`, `res_parser -print binary`) their own magic numbers, distinct from the frozen Parsetree0 wire format used for external PPXes. https://github.com/rescript-lang/rescript/pull/8561
+- Record the written parameter count in parsed arrow arity for externals with phantom `@as(...) _` arguments. External processing recounts after erasing phantoms, so the parser no longer needs to pre-decrement the arity or the printer to compensate for it. https://github.com/rescript-lang/rescript/pull/8563
 - Add the `-check-lam` compiler option, enable Lambda invariant checking in compiler tests, and remove build-profile-dependent checking. https://github.com/rescript-lang/rescript/pull/8534
 - Replace `-bs-diagnose` with `-debug-ir` and make IR diagnostic artifacts deterministic, compilation-local, and easy to clean. https://github.com/rescript-lang/rescript/pull/8535
+- Replace CPPO-based browser conditionals with Dune-selected native and playground compiler implementations. https://github.com/rescript-lang/rescript/pull/8541
+- Replace compiler data-structure CPPO specializations with OCaml functors. https://github.com/rescript-lang/rescript/pull/8542
+- Remove the obsolete CPPO generator for frozen Belt runtime specializations. https://github.com/rescript-lang/rescript/pull/8543
 
 # 13.0.0-alpha.5
 

@@ -63,12 +63,11 @@ and type_desc =
   | Tvar of string option
       (** [Tvar (Some "a")] ==> ['a] or ['_a]
       [Tvar None]       ==> [_] *)
-  | Tarrow of arg * type_expr * commutable * arity
-      (** [Tarrow (Nolabel,      e1, e2, c)] ==> [e1    -> e2]
-      [Tarrow (Labelled {txt="l"}, e1, e2, c)] ==> [l:e1  -> e2]
-      [Tarrow (Optional {txt="l"}, e1, e2, c)] ==> [?l:e1 -> e2]
-
-      See [commutable] for the last argument. *)
+  | Tarrow of arg list * type_expr
+      (** [Tarrow ([e1; ~l:e2; ?l:e3], ret)] ==> [(e1, ~l:e2, ~l:e3=?) => ret]
+      The n-ary uncurried function type: the arity is the length of the
+      parameter list, and a function returning a function is a nested
+      [Tarrow] in the return type. Invariant: the list is non-empty. *)
   | Ttuple of type_expr list  (** [Ttuple [t1;...;tn]] ==> [(t1 * ... * tn)] *)
   | Tconstr of Path.t * type_expr list * abbrev_memo ref
       (** [Tconstr (`A.B.t', [t1;...;tn], _)] ==> [(t1,...,tn) A.B.t]
@@ -81,8 +80,7 @@ and type_desc =
       [Tobject (_, `Some (`A.ct', [t1;...;tn]')] ==> [(t1, ..., tn) A.ct].
       where A.ct is the type of some class.
 
-      There are also special cases for so-called "class-types", cf. [Typeclass]
-      and [Ctype.set_object_name]:
+      There are also special cases for so-called "class-types", cf. [Typeclass]:
 
         [Tobject (Tfield(_,_,...(Tfield(_,_,rv)...),
                          Some(`A.#ct`, [rv;t1;...;tn])]
@@ -180,29 +178,6 @@ and abbrev_memo =
       (** Abbreviations can be found after this indirection *)
 
 and field_kind = Fvar of field_kind option ref | Fpresent | Fabsent
-
-(** [commutable] is a flag appended to every arrow type.
-
-    When typing an application, if the type of the functional is
-    known, its type is instantiated with [Cok] arrows, otherwise as
-    [Clink (ref Cunknown)].
-
-    When the type is not known, the application will be used to infer
-    the actual type.  This is fragile in presence of labels where
-    there is no principal type.
-
-    Two incompatible applications relying on [Cunknown] arrows will
-    trigger an error.
-
-    let f g =
-      g ~a:() ~b:();
-      g ~b:() ~a:();
-
-    Error: This function is applied to arguments
-    in an order different from other calls.
-    This is only allowed when the real type is known.
-*)
-and commutable = Cok | Cunknown | Clink of commutable ref
 
 module Type_ops : sig
   type t = type_expr

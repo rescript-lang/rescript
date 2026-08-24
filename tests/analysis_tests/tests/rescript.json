@@ -10,7 +10,7 @@
     }
   ],
   "compiler-flags": ["-w -33-44-8-26-27-110"],
-  "dependencies": ["@rescript/react"],
+  "dependencies": ["@rescript/belt", "@rescript/react"],
   "jsx": { "version": 4 },
   "package-specs": [{ "module": "commonjs", "in-source": false }],
   "suffix": ".res.js",

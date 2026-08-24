@@ -19,13 +19,23 @@
 val load_path : string list ref
 
 val cmi_magic_number : string
-
 (* Magic number for compiled interface files *)
+
 val ast_intf_magic_number : string
+(* Magic number for a marshaled current-parsetree signature (layout changes
+   across compiler versions; distinct from the frozen Parsetree0 wire format) *)
 
-(* Magic number for file holding an interface syntax tree *)
 val ast_impl_magic_number : string
+(* Magic number for a marshaled current-parsetree structure (layout changes
+   across compiler versions; distinct from the frozen Parsetree0 wire format) *)
 
-(* Magic number for file holding an implementation syntax tree *)
+val ast0_intf_magic_number : string
+(* Magic number for a frozen Parsetree0 (OCaml 4.06) interface syntax tree, as
+   used on the external-PPX wire *)
+
+val ast0_impl_magic_number : string
+(* Magic number for a frozen Parsetree0 (OCaml 4.06) implementation syntax
+   tree, as used on the external-PPX wire *)
+
 val cmt_magic_number : string
 (* Magic number for compiled interface files *)

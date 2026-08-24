@@ -3,6 +3,7 @@
 const { rescript_compiler } = require("./compiler.js");
 
 require("./packages/compiler-builtins/cmij.js");
+require("./packages/@rescript/belt/cmij.js");
 require("./packages/@rescript/react/cmij.js");
 
 const compiler = rescript_compiler.make();
@@ -36,7 +37,7 @@ const result = compiler.rescript.compile(`
   }
 
   let sum = [1,2,3]
-    ->Array.map(x => x * 2)
+    ->Belt.Array.map(x => x * 2)
     ->Array.reduce(0, (acc, item) => acc + item)
 
 

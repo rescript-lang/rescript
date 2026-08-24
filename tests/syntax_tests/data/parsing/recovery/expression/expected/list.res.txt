@@ -42,7 +42,8 @@ let flags =
           ((match items with
             | [|{js|-pp|js};_ppFlag;rest|] -> loop rest
             | [|x;rest|] ->
-                ((Belt.Array.concatMany)[@res.spread ]) [|[|x|];(loop rest)|]
+                ((Primitive_array.spread)[@res.spread ])
+                  [|[|x|];(loop rest)|]
             | [||] -> [||])
           [@res.braces ]) in
         (loop parts) -> (String.concat {js| |js}))

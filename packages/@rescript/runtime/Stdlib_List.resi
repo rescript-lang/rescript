@@ -750,7 +750,7 @@ List.equal(list{1, 2, 3}, list{1, 2}, (a, b) => a == b) == false
 
 List.equal(list{1, 2}, list{1, 2}, (a, b) => a == b) == true
 
-List.equal(list{1, 2, 3}, list{-1, -2, -3}, (a, b) => abs(a) == abs(b)) == true
+List.equal(list{1, 2, 3}, list{-1, -2, -3}, (a, b) => Math.Int.abs(a) == Math.Int.abs(b)) == true
 ```
 */
 let equal: (list<'a>, list<'a>, ('a, 'a) => bool) => bool
@@ -768,7 +768,7 @@ list{1, 2, 3}->List.has(2, (a, b) => a == b) == true
 
 list{1, 2, 3}->List.has(4, (a, b) => a == b) == false
 
-list{-1, -2, -3}->List.has(2, (a, b) => abs(a) == abs(b)) == true
+list{-1, -2, -3}->List.has(2, (a, b) => Math.Int.abs(a) == Math.Int.abs(b)) == true
 ```
 */
 @deprecated("Use `some` instead")

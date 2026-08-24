@@ -64,9 +64,9 @@ let StandardNotation = {
   set: StandardNotation_set
 };
 
-function methodWithAsync(param) {
+function methodWithAsync() {
   let $$this = this ;
-  return (async arg => $$this + arg | 0)(param);
+  return async arg => $$this + arg | 0;
 }
 
 let p1 = {

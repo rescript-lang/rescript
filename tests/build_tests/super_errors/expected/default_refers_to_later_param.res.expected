@@ -1,0 +1,8 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/default_refers_to_later_param.res[0m:[2m1:13[0m
+
+  [1;31m1[0m [2m│[0m let f = (~x=[1;31mz[0m, z) => x + z
+  2 [2m│[0m 
+
+  The value z can't be found

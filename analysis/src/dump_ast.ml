@@ -242,7 +242,7 @@ and print_expr_item expr ~pos ~indentation =
       | None -> ""
       | Some expr -> "," ^ print_expr_item expr ~pos ~indentation)
     ^ ")"
-  | Pexp_fun {arg_label = arg; lhs = pattern; rhs = next_expr} ->
+  | Pexp_fun {params = {p_lbl = arg; p_pat = pattern} :: _; body = next_expr} ->
     "Pexp_fun(\n"
     ^ add_indentation (indentation + 1)
     ^ "arg: "
@@ -298,11 +298,25 @@ and print_expr_item expr ~pos ~indentation =
   | v -> Printf.sprintf "<unimplemented_pexp_desc: %s>" (Utils.identify_pexp v)
 
 let print_value_binding value ~pos ~indentation =
+  let constraint_ =
+    match value.Parsetree.pvb_constraint with
+    | None -> ""
+    | Some {pvc_newtypes; pvc_type} ->
+      "\n"
+      ^ add_indentation indentation
+      ^ "constraint: type "
+      ^ (pvc_newtypes
+        |> List.map (fun ({Location.txt} as name) ->
+               (name |> print_loc_denominator_loc ~pos) ^ txt)
+        |> String.concat " ")
+      ^ ". "
+      ^ print_core_type pvc_type ~pos
+  in
   print_attributes value.Parsetree.pvb_attributes
   ^ "value" ^ ":\n"
   ^ add_indentation (indentation + 1)
   ^ (value.pvb_pat |> print_pattern ~pos ~indentation:(indentation + 1))
-  ^ "\n"
+  ^ constraint_ ^ "\n"
   ^ add_indentation indentation
   ^ "expr:\n"
   ^ add_indentation (indentation + 1)

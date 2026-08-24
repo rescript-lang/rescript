@@ -22,8 +22,6 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-type option_unwrap_time = Static_unwrapped | Runtime_maybe_unwrapped
-
 val val_from_option : J.expression -> J.expression
 (** Given [Some a ], return [a] *)
 
@@ -46,7 +44,5 @@ val some : J.expression -> J.expression
 val is_not_none : J.expression -> J.expression
 
 val null_to_opt : J.expression -> J.expression
-
-val undef_to_opt : J.expression -> J.expression
 
 val null_undef_to_opt : J.expression -> J.expression

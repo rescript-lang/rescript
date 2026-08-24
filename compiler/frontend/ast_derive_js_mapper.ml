@@ -27,10 +27,11 @@ module U = Ast_derive_util
 
 type tdcls = Parsetree.type_declaration list
 
+let app1 f arg1 = Exp.apply f [(Nolabel, arg1)]
+let app2 f arg1 arg2 = Exp.apply f [(Nolabel, arg1); (Nolabel, arg2)]
+
 let js_field (o : Parsetree.expression) m =
-  Ast_compatible.app2
-    (Exp.ident {txt = Lident "##"; loc = o.pexp_loc})
-    o (Exp.ident m)
+  app2 (Exp.ident {txt = Lident "##"; loc = o.pexp_loc}) o (Exp.ident m)
 
 let handle_config (config : Parsetree.expression option) =
   match config with
@@ -62,14 +63,14 @@ let erase_type_lit = "_eraseType"
 
 let erase_type_exp = Exp.ident {loc = noloc; txt = Lident erase_type_lit}
 
-let erase_type x = Ast_compatible.app1 erase_type_exp x
+let erase_type x = app1 erase_type_exp x
 
 let erase_type_str =
   let any = Typ.any () in
   Str.primitive
     (Val.mk ~prim:["%identity"]
        {loc = noloc; txt = erase_type_lit}
-       (Ast_helper.Typ.arrows [{attrs = []; lbl = Nolabel; typ = any}] any))
+       (Ast_helper.Typ.arrow [{attrs = []; lbl = Nolabel; typ = any}] any))
 
 let unsafe_index = "_index"
 
@@ -79,7 +80,7 @@ let unsafe_index_get =
     (Val.mk ~prim:[""]
        {loc = noloc; txt = unsafe_index}
        ~attrs:[Ast_attributes.get_index]
-       (Ast_helper.Typ.arrows
+       (Ast_helper.Typ.arrow
           [
             {attrs = []; lbl = Nolabel; typ = any};
             {attrs = []; lbl = Nolabel; typ = any};
@@ -131,11 +132,7 @@ let build_map (row_fields : Parsetree.row_field list) =
   in
   (data, rev_data, !has_bs_as)
 
-let app1 = Ast_compatible.app1
-
-let app2 = Ast_compatible.app2
-
-let ( ->~ ) a b = Ast_helper.Typ.arrows [{attrs = []; lbl = Nolabel; typ = a}] b
+let ( ->~ ) a b = Ast_helper.Typ.arrow [{attrs = []; lbl = Nolabel; typ = a}] b
 
 let raise_when_not_found_ident =
   Longident.Ldot (Lident Primitive_modules.util, "raiseWhenNotFound")
@@ -170,12 +167,15 @@ let init () =
               in
               let new_type_str =
                 (* Abstract type *)
-                Ast_compatible.rec_type_str Nonrecursive [new_tdcl]
+                Str.type_ Nonrecursive [new_tdcl]
               in
               let to_js_body body =
                 Ast_comb.single_non_rec_value pat_to_js
-                  (Ast_compatible.fun_ ~arity:(Some 1)
-                     (Pat.constraint_ (Pat.var pat_param) core_type)
+                  (Exp.fun_
+                     [
+                       Exp.fun_param Nolabel
+                         (Pat.constraint_ (Pat.var pat_param) core_type);
+                     ]
                      body)
               in
               let ( +> ) a ty = Exp.constraint_ (erase_type a) ty in
@@ -226,7 +226,8 @@ let init () =
                 in
                 let from_js =
                   Ast_comb.single_non_rec_value pat_from_js
-                    (Ast_compatible.fun_ ~arity:(Some 1) (Pat.var pat_param)
+                    (Exp.fun_
+                       [Exp.fun_param Nolabel (Pat.var pat_param)]
                        (if create_type then
                           Exp.let_ Nonrecursive
                             [Vb.mk (Pat.var pat_param) (exp_param +: new_type)]
@@ -268,7 +269,8 @@ let init () =
                            app2 unsafe_index_get_exp exp_map exp_param
                          else app1 erase_type_exp exp_param);
                       Ast_comb.single_non_rec_value pat_from_js
-                        (Ast_compatible.fun_ ~arity:(Some 1) (Pat.var pat_param)
+                        (Exp.fun_
+                           [Exp.fun_param Nolabel (Pat.var pat_param)]
                            (let result =
                               app2 unsafe_index_get_exp rev_exp_map exp_param
                             in
@@ -300,16 +302,14 @@ let init () =
               let pat_from_js = {Asttypes.loc; txt = from_js} in
               let to_js_type result =
                 Ast_comb.single_non_rec_val pat_to_js
-                  (Ast_helper.Typ.arrows
+                  (Ast_helper.Typ.arrow
                      [{attrs = []; lbl = Nolabel; typ = core_type}]
                      result)
               in
               let new_type, new_tdcl =
                 U.new_type_of_type_declaration tdcl ("abs_" ^ name)
               in
-              let new_type_str =
-                Ast_compatible.rec_type_sig Nonrecursive [new_tdcl]
-              in
+              let new_type_str = Sig.type_ Nonrecursive [new_tdcl] in
               let ( +? ) v rest = if create_type then v :: rest else rest in
               match tdcl.ptype_kind with
               | Ptype_record label_declarations ->

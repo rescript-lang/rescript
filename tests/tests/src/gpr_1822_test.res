@@ -9,8 +9,8 @@ describe(__MODULE__, () => {
   test("gpr_1822_test", () => {
     let myShape = Circle(10)
     let area = switch myShape {
-    | Circle(r) => float_of_int(r * r) *. 3.14
-    | Rectangle(w, h) => float_of_int(w * h)
+    | Circle(r) => Int.toFloat(r * r) *. 3.14
+    | Rectangle(w, h) => Int.toFloat(w * h)
     }
 
     eq(__LOC__, area, 314.)

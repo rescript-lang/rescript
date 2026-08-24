@@ -24,18 +24,6 @@ Primitive_module.update({
     ]]
 }, Int3, Int3);
 
-let M = Primitive_module.init([
-  "recursive_module_test.res",
-  12,
-  20
-], {
-  TAG: "Module",
-  _0: [[
-      "Function",
-      "fact"
-    ]]
-});
-
 function fact(n) {
   if (n <= 1) {
     return 1;
@@ -44,15 +32,9 @@ function fact(n) {
   }
 }
 
-Primitive_module.update({
-  TAG: "Module",
-  _0: [[
-      "Function",
-      "fact"
-    ]]
-}, M, {
+let M = {
   fact: fact
-});
+};
 
 let fact$1 = M.fact;
 

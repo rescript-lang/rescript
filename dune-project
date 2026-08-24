@@ -21,8 +21,6 @@
   (ocaml
    (>= 5.0.0))
   dune
-  (cppo
-   (= 1.8.0))
   (flow_parser
    (= 0.267.0))
   (ocamlformat
@@ -53,8 +51,6 @@
  (depends
   (ocaml
    (>= 5.0.0))
-  (cppo
-   (= 1.8.0))
   (odoc :with-doc)
   (lsp
    (>= 1.23.0))
@@ -69,8 +65,6 @@
    (>= 5.0.0))
   (cmarkit
    (>= 0.3.0))
-  (cppo
-   (= 1.8.0))
   analysis
   (yojson
     (= 3.0.0))

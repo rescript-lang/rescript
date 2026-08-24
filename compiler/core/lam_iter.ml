@@ -26,68 +26,6 @@ type t = Lam.t
 
 type ident = Ident.t
 
-let inner_iter (l : t) (f : t -> unit) : unit =
-  match l with
-  | Lvar (_ : ident) | Lconst (_ : Lam_constant.t) -> ()
-  | Lapply {ap_func; ap_args; ap_info = _} ->
-    f ap_func;
-    List.iter f ap_args
-  | Lfunction {body; arity = _; params = _} -> f body
-  | Llet (_str, _id, arg, body) ->
-    f arg;
-    f body
-  | Lletrec (decl, body) ->
-    f body;
-    Ext_list.iter_snd decl f
-  | Lswitch
-      ( arg,
-        {
-          sw_consts;
-          sw_consts_full = _;
-          sw_blocks;
-          sw_blocks_full = _;
-          sw_failaction;
-        } ) ->
-    f arg;
-    Ext_list.iter_snd sw_consts f;
-    Ext_list.iter_snd sw_blocks f;
-    Ext_option.iter sw_failaction f
-  | Lstringswitch (arg, cases, default) ->
-    f arg;
-    Ext_list.iter_snd cases f;
-    Ext_option.iter default f
-  | Lglobal_module _ -> ()
-  | Lprim {args; primitive = _; loc = _} -> List.iter f args
-  | Lstaticraise (_id, args) -> List.iter f args
-  | Lstaticcatch (e1, _vars, e2) ->
-    f e1;
-    f e2
-  | Ltrywith (e1, _exn, e2) ->
-    f e1;
-    f e2
-  | Lifthenelse (e1, e2, e3) ->
-    f e1;
-    f e2;
-    f e3
-  | Lsequence (e1, e2) ->
-    f e1;
-    f e2
-  | Lbreak | Lcontinue -> ()
-  | Lwhile (e1, e2) ->
-    f e1;
-    f e2
-  | Lfor (_v, e1, e2, _dir, e3) ->
-    f e1;
-    f e2;
-    f e3
-  | Lfor_of (_v, e1, e2) ->
-    f e1;
-    f e2
-  | Lfor_await_of (_v, e1, e2) ->
-    f e1;
-    f e2
-  | Lassign (_id, e) -> f e
-
 let inner_exists (l : t) (f : t -> bool) : bool =
   match l with
   | Lvar (_ : ident) | Lglobal_module _ | Lconst (_ : Lam_constant.t) -> false

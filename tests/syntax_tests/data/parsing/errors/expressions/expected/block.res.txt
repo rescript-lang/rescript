@@ -65,17 +65,16 @@
 
 let findThreadByIdLinearScan [arity:2]~threads  ~id  =
   ((Array.findWithIndex ThreadsModel.threads
-      (fun [arity:2]thread ->
-         fun i ->
-           ((let thisId =
-               match thread with
-               | ServerData.OneToOne { otherPersonIDWhichIsAlsoThreadID } ->
-                   otherPersonIDWhichIsAlsoThreadID
-               | Group { id } -> id
-               | Unknown { id } ->
-                   (unknown.id -> String.make) -> FBID.ofStringUnsafe in
-             thisId === id)
-           [@res.braces ])))
+      (fun [arity:2]thread i ->
+         ((let thisId =
+             match thread with
+             | ServerData.OneToOne { otherPersonIDWhichIsAlsoThreadID } ->
+                 otherPersonIDWhichIsAlsoThreadID
+             | Group { id } -> id
+             | Unknown { id } ->
+                 (unknown.id -> String.make) -> FBID.ofStringUnsafe in
+           thisId === id)
+         [@res.braces ])))
   [@res.braces ])
 let x = ((loop 0 (Nil -> (push doc)))[@res.braces ])
 ;;match stack with

@@ -58,7 +58,7 @@ type cmt_infos = {
   cmt_sourcefile: string option;
   cmt_builddir: string;
   cmt_loadpath: string list;
-  cmt_source_digest: string option;
+  cmt_source_digest: Digest.t option;
   cmt_initial_env: Env.t;
   cmt_imports: (string * Digest.t option) list;
   cmt_interface_digest: Digest.t option;

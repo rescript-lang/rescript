@@ -99,9 +99,11 @@ module T = struct
     match desc with
     | Ptyp_any -> Typ.any ~loc ~attrs ()
     | Ptyp_var s -> Typ.var ~loc ~attrs s
-    | Ptyp_arrow {arg; ret; arity} ->
-      Typ.arrow ~loc ~attrs ~arity
-        {arg with typ = sub.typ sub arg.typ}
+    | Ptyp_arrow {params; ret} ->
+      Typ.arrow ~loc ~attrs
+        (List.map
+           (fun (arg : Parsetree.arg) -> {arg with typ = sub.typ sub arg.typ})
+           params)
         (sub.typ sub ret)
     | Ptyp_tuple tyl -> Typ.tuple ~loc ~attrs (List.map (sub.typ sub) tyl)
     | Ptyp_constr (lid, tl) ->
@@ -323,11 +325,21 @@ module E = struct
            sub vbs)
         (sub.expr sub e)
     (* #end *)
-    | Pexp_fun {arg_label = lab; default = def; lhs = p; rhs = e; arity; async}
-      ->
-      fun_ ~loc ~attrs ~arity ~async lab
-        (map_opt (sub.expr sub) def)
-        (sub.pat sub p) (sub.expr sub e)
+    | Pexp_fun {newtypes; params; body; async} ->
+      fun_ ~loc ~attrs ~async
+        ~newtypes:
+          (List.map
+             (fun (name, attrs) -> (map_loc sub name, sub.attributes sub attrs))
+             newtypes)
+        (List.map
+           (fun (param : Parsetree.fun_param) ->
+             {
+               param with
+               p_default = map_opt (sub.expr sub) param.p_default;
+               p_pat = sub.pat sub param.p_pat;
+             })
+           params)
+        (sub.expr sub body)
     | Pexp_apply {funct = e; args = l; partial; transformed_jsx} ->
       apply ~loc ~attrs ~partial ~transformed_jsx (sub.expr sub e)
         (List.map (map_snd (sub.expr sub)) l)
@@ -376,8 +388,6 @@ module E = struct
         (sub.extension_constructor sub cd)
         (sub.expr sub e)
     | Pexp_assert e -> assert_ ~loc ~attrs (sub.expr sub e)
-    | Pexp_newtype (s, e) ->
-      newtype ~loc ~attrs (map_loc sub s) (sub.expr sub e)
     | Pexp_pack me -> pack ~loc ~attrs (sub.module_expr sub me)
     | Pexp_open (ovf, lid, e) ->
       open_ ~loc ~attrs ovf (map_loc sub lid) (sub.expr sub e)
@@ -526,8 +536,19 @@ let default_mapper =
           ~loc:(this.location this pincl_loc)
           ~attrs:(this.attributes this pincl_attributes));
     value_binding =
-      (fun this {pvb_pat; pvb_expr; pvb_attributes; pvb_loc} ->
-        Vb.mk (this.pat this pvb_pat) (this.expr this pvb_expr)
+      (fun this {pvb_pat; pvb_expr; pvb_constraint; pvb_attributes; pvb_loc} ->
+        let pvb_pat = this.pat this pvb_pat in
+        let constraint_ =
+          Option.map
+            (fun {pvc_newtypes; pvc_type} ->
+              {
+                pvc_newtypes = List.map (map_loc this) pvc_newtypes;
+                pvc_type = this.typ this pvc_type;
+              })
+            pvb_constraint
+        in
+        let pvb_expr = this.expr this pvb_expr in
+        Vb.mk pvb_pat pvb_expr ?constraint_
           ~loc:(this.location this pvb_loc)
           ~attrs:(this.attributes this pvb_attributes));
     (* #if true then  *)

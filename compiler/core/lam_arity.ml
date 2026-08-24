@@ -56,12 +56,6 @@ let print (fmt : Format.formatter) (x : t) =
     if tail then pp fmt "@ *";
     pp fmt "]@]"
 
-let print_arities_tbl (fmt : Format.formatter)
-    (arities_tbl : (Ident.t, t ref) Hashtbl.t) =
-  Hashtbl.fold
-    (fun (i : Ident.t) (v : t ref) _ -> pp fmt "@[%s -> %a@]@." i.name print !v)
-    arities_tbl ()
-
 let merge (n : int) (x : t) : t =
   match x with
   | Arity_na -> Arity_info ([n], false)

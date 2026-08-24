@@ -9,7 +9,7 @@ let () = {
             let prev = delayed.contents
             () => {
               prev()
-              f(succ(n) + i - i, pred(j))
+              f(n + 1 + i - i, j - 1)
             }
           }
       }

@@ -29,9 +29,6 @@ val type_iterable : type_expr -> type_expr
 val type_async_iterable : type_expr -> type_expr
 val type_list : type_expr -> type_expr
 val type_option : type_expr -> type_expr
-val type_result : type_expr -> type_expr -> type_expr
-val type_dict : type_expr -> type_expr
-
 val type_bigint : type_expr
 val type_extension_constructor : type_expr
 
@@ -57,21 +54,18 @@ val path_tagged_template : Path.t
 
 val path_match_failure : Path.t
 val path_assert_failure : Path.t
-val path_undefined_recursive_module : Path.t
-
-(* To build the initial environment. Since there is a nasty mutual
-   recursion between predef and env, we break it by parameterizing
-   over Env.t, Env.add_type and Env.add_extension. *)
 
 val build_initial_env :
   (Ident.t -> type_declaration -> 'a -> 'a) ->
   (Ident.t -> extension_constructor -> 'a -> 'a) ->
   'a ->
   'a
+(** Build the initial environment. Since [Predef] and [Env] are mutually
+    recursive, this function is parameterized over the empty environment and
+    the functions that add types and exceptions. *)
 
 (* To initialize linker tables *)
 
-val builtin_values : (string * Ident.t) list
 val builtin_idents : (string * Ident.t) list
 
 val ident_division_by_zero : Ident.t
@@ -79,8 +73,6 @@ val ident_division_by_zero : Ident.t
     building value approximations).
     The [Ident.t] for division by zero is also exported explicitly
     so flambda can generate code to raise it. *)
-
-val all_predef_exns : Ident.t list
 
 type test = For_sure_yes | For_sure_no | NA
 

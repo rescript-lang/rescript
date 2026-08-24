@@ -257,8 +257,9 @@ let command ~debug ~emitter ~source ~kind_file =
           (* Don't emit semantic tokens for identifiers not present in source code *)
           let should_emit =
             match lid with
-            (* Array spread (`...`) is converted to `Belt.Array.concatMany` with `@res.spread` decorator *)
-            | Ldot (Ldot (Lident "Belt", "Array"), "concatMany") ->
+            (* Collection spreads (`...`) are converted to primitive spread calls
+               with an `@res.spread` decorator. *)
+            | Ldot (Lident ("Primitive_array" | "Primitive_list"), "spread") ->
               let has_spread_attr =
                 e.pexp_attributes
                 |> List.exists (fun ({Location.txt}, _) -> txt = "res.spread")

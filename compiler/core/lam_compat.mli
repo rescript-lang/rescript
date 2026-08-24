@@ -27,7 +27,7 @@ type comparison = Lambda.comparison = Ceq | Cneq | Clt | Cgt | Cle | Cge
 type let_kind = Lambda.let_kind = Strict | Alias | StrictOpt | Variable
 
 type field_dbg_info = Lambda.field_dbg_info =
-  | Fld_record of {name: string; mutable_flag: Asttypes.mutable_flag}
+  | Fld_record of {name: string}
   | Fld_module of {name: string}
   | Fld_record_inline of {name: string}
   | Fld_record_extension of {name: string}
@@ -48,7 +48,5 @@ type set_field_dbg_info = Lambda.set_field_dbg_info =
 val cmp_int32 : comparison -> int32 -> int32 -> bool
 
 val cmp_float : comparison -> float -> float -> bool
-
-val cmp_int : comparison -> int -> int -> bool
 
 val eq_comparison : comparison -> comparison -> bool

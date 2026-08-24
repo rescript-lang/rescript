@@ -25,7 +25,7 @@ and arg = {lbl: arg_label; typ: type_expr}
 
 and type_desc =
   | Tvar of string option
-  | Tarrow of arg * type_expr * commutable * arity
+  | Tarrow of arg list * type_expr
   | Ttuple of type_expr list
   | Tconstr of Path.t * type_expr list * abbrev_memo ref
   | Tobject of type_expr * (Path.t * type_expr list) option ref
@@ -60,8 +60,6 @@ and abbrev_memo =
   | Mlink of abbrev_memo ref
 
 and field_kind = Fvar of field_kind option ref | Fpresent | Fabsent
-
-and commutable = Cok | Cunknown | Clink of commutable ref
 
 module Type_ops = struct
   type t = type_expr

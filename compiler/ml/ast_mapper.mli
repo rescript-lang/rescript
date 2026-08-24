@@ -150,13 +150,6 @@ val extension_of_error : Location.error -> extension
     inserted in a generated Parsetree.  The compiler will be
     responsible for reporting the error. *)
 
-val attribute_of_warning : Location.t -> string -> attribute
-(** Encode a warning message into an 'ocaml.ppwarning' attribute which can be
-    inserted in a generated Parsetree.  The compiler will be
-    responsible for reporting the warning. *)
-
-(** {1 Helper functions to call external mappers} *)
-
 val add_ppx_context_str :
   tool_name:string -> Parsetree.structure -> Parsetree.structure
 (** Extract information from the current environment and encode it
@@ -183,6 +176,3 @@ val drop_ppx_context_sig :
 (** Cookies are used to pass information from a ppx processor to
     a further invocation of itself, when called from the OCaml
     toplevel (or other tools that support cookies). *)
-
-val set_cookie : string -> Parsetree.expression -> unit
-val get_cookie : string -> Parsetree.expression option
