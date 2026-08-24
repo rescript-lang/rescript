@@ -82,8 +82,7 @@ module F0 = (X: {}) => {
   }
   module N' = N
 }
-module G0: (X: {}) =>
-{
+module G0: (X: {}) => {
   module N': {
     let x: int
   }

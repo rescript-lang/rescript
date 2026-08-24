@@ -28,6 +28,7 @@
 
 #### :bug: Bug fix
 
+- Fix formatter breaking the opening brace of a functor module type's result signature onto a new line (e.g. `module Make: Pattern => {`). https://github.com/rescript-lang/rescript/pull/8519
 - Fix argument evaluation order when a function call is inlined: the beta reducer stacked argument bindings in reverse parameter order, so the last argument was evaluated first when arguments could not be substituted directly. https://github.com/rescript-lang/rescript/pull/8572
 - Preserve parentheses around multiplication, division, and modulo expressions used as exponents. https://github.com/rescript-lang/rescript/pull/8550
 - Make a function's locally abstract types (`(type t, x) => ...`) part of the function AST node instead of a chain of wrapper nodes. Fixes the formatter dropping the association of attributes with their `type` group (`(@attr type t, x, @attr2 type s, y)` used to print as `@attr @attr2` on the function) and comments written next to a type parameter migrating onto the following value parameter. https://github.com/rescript-lang/rescript/pull/8574
