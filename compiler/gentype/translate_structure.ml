@@ -7,16 +7,15 @@ let rec addAnnotationsToTypes_ ~config ~(expr : Typedtree.expression)
     let rec zip (params : Typedtree.function_param list)
         (arg_types : arg_type list) =
       match (params, arg_types) with
-      | {fp_lbl; fp_param} :: rest_params, {a_type} :: rest_types ->
-        let a_name = Ident.name fp_param in
+      | ( {fp_lbl; fp_param; fp_has_default} :: rest_params,
+          {a_type} :: rest_types ) ->
         let a_name =
-          (* optional parameters with a default are bound to a synthetic
-             [*opt_<label>*] variable; show the label instead *)
-          if String.length a_name >= 4 && String.sub a_name 0 4 = "*opt" then
-            match fp_lbl with
-            | Optional {txt = l} -> l
-            | _ -> "" (* should not happen *)
-          else a_name
+          match fp_lbl with
+          | Optional {txt = l} when fp_has_default ->
+            (* the compiled parameter is a synthetic option carrier; show the
+               label instead *)
+            l
+          | _ -> Ident.name fp_param
         in
         {a_name; a_type} :: zip rest_params rest_types
       | [], rest -> rest |> addAnnotationsToTypes_ ~config ~expr:body
