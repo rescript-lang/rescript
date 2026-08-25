@@ -149,8 +149,7 @@ let js_hoisted_aliases (export_ids : Ident.t list)
         lam -> (
         match fst (resolve_binding seen base) with
         | Lam.Lprim
-            {primitive = Lam_primitive.Pmakeblock (_, Blk_module _, _); args}
-          -> (
+            {primitive = Lam_primitive.Pmakeblock (Blk_module _, _); args} -> (
           match List.nth_opt args pos with
           | Some field -> resolve_binding seen field
           | None -> (lam, None))
@@ -173,10 +172,8 @@ let js_hoisted_aliases (export_ids : Ident.t list)
       | field :: fields -> (
         match resolve Set_ident.empty lam with
         | Lam.Lprim
-            {
-              primitive = Lam_primitive.Pmakeblock (_, Blk_module names, _);
-              args;
-            } -> (
+            {primitive = Lam_primitive.Pmakeblock (Blk_module names, _); args}
+          -> (
           match find_field field 0 names args with
           | Some (pos, arg) -> find_path arg fields ((pos, field) :: positions)
           | None -> None)
