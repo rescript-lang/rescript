@@ -226,7 +226,7 @@ let rec compare_constructor_arguments ~loc env cstr params1 params2 arg1 arg2 =
     compare_records env ~loc params1 params2 0 l1 l2
   | _ -> [Field_type cstr]
 
-and compare_variants ~loc env params1 params2 n
+and compare_variants ~loc env params1 params2 ~layout1 ~layout2 n
     (cstrs1 : Types.constructor_declaration list)
     (cstrs2 : Types.constructor_declaration list) =
   match (cstrs1, cstrs2) with
@@ -257,18 +257,16 @@ and compare_variants ~loc env params1 params2 n
         else
           match Ast_untagged_variants.is_nullary_variant cd1.cd_args with
           | true ->
-            let tag_type1 =
-              Ast_untagged_variants.process_tag_type cd1.cd_attributes
-            in
-            let tag_type2 =
-              Ast_untagged_variants.process_tag_type cd2.cd_attributes
-            in
+            let tag_type1 = Variant_runtime.constructor_tag layout1 (n - 1) in
+            let tag_type2 = Variant_runtime.constructor_tag layout2 (n - 1) in
             if tag_type1 <> tag_type2 then [Variant_representation cd1.cd_id]
             else []
           | false -> r
       in
       if r <> [] then r
-      else compare_variants ~loc env params1 params2 (n + 1) rem1 rem2)
+      else
+        compare_variants ~loc env params1 params2 ~layout1 ~layout2 (n + 1) rem1
+          rem2)
 
 and compare_records ~loc env params1_ params2_ n_
     (labels1_ : Types.label_declaration list)
@@ -342,17 +340,19 @@ let type_declarations ?(equality = false) ~loc env name decl1 id decl2 =
     if err <> [] then err
     else
       let err =
-        let untagged1 =
-          Ast_untagged_variants.process_untagged decl1.type_attributes
+        let is_unboxed decl =
+          match decl.type_kind with
+          | Type_variant (_, layout_ref) ->
+            let layout = Variant_runtime.get_layout layout_ref in
+            let {Variant_runtime.unboxed} =
+              Variant_coercion.runtime_configuration
+                ~type_representation:decl.type_representation ~layout
+            in
+            unboxed
+          | Type_abstract | Type_record _ | Type_open ->
+            decl.type_representation = Unboxed
         in
-        let untagged2 =
-          Ast_untagged_variants.process_untagged decl2.type_attributes
-        in
-        match
-          ( decl2.type_kind,
-            decl1.type_representation = Unboxed || untagged1,
-            decl2.type_representation = Unboxed || untagged2 )
-        with
+        match (decl2.type_kind, is_unboxed decl1, is_unboxed decl2) with
         | Type_abstract, _, _ -> []
         | _, true, false -> [Unboxed_representation false]
         | _, false, true -> [Unboxed_representation true]
@@ -361,12 +361,19 @@ let type_declarations ?(equality = false) ~loc env name decl1 id decl2 =
       if err <> [] then err
       else
         let err =
-          let tag1 =
-            Ast_untagged_variants.process_tag_name decl1.type_attributes
+          let tag_name decl =
+            match decl.type_kind with
+            | Type_variant (_, layout_ref) ->
+              let layout = Variant_runtime.get_layout layout_ref in
+              let configuration : Variant_runtime.configuration =
+                Variant_coercion.runtime_configuration
+                  ~type_representation:decl.type_representation ~layout
+              in
+              configuration.tag_name
+            | Type_abstract | Type_record _ | Type_open -> None
           in
-          let tag2 =
-            Ast_untagged_variants.process_tag_name decl2.type_attributes
-          in
+          let tag1 = tag_name decl1 in
+          let tag2 = tag_name decl2 in
           if tag1 <> tag2 then [Tag_name] else err
         in
         if err <> [] then err
@@ -374,7 +381,8 @@ let type_declarations ?(equality = false) ~loc env name decl1 id decl2 =
           let err =
             match (decl1.type_kind, decl2.type_kind) with
             | _, Type_abstract -> []
-            | Type_variant (cstrs1, _), Type_variant (cstrs2, _) ->
+            | ( Type_variant (cstrs1, layout_ref1),
+                Type_variant (cstrs2, layout_ref2) ) ->
               let mark cstrs usage name decl =
                 List.iter
                   (fun c ->
@@ -390,6 +398,8 @@ let type_declarations ?(equality = false) ~loc env name decl1 id decl2 =
               mark cstrs1 usage name decl1;
               if equality then mark cstrs2 Env.Positive (Ident.name id) decl2;
               compare_variants ~loc env decl1.type_params decl2.type_params 1
+                ~layout1:(Variant_runtime.get_layout layout_ref1)
+                ~layout2:(Variant_runtime.get_layout layout_ref2)
                 cstrs1 cstrs2
             | Type_record (labels1, rep1), Type_record (labels2, rep2) ->
               let err =

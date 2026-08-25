@@ -1584,11 +1584,15 @@ let transl_type_decl env rec_flag sdecl_list =
         match decl.type_kind with
         | Type_variant (cstrs, pending_layout) ->
           Ast_untagged_variants.check_tag_field_conflicts cstrs;
-          let is_untagged_def =
-            Ast_untagged_variants.has_untagged decl.type_attributes
+          let configuration : Variant_runtime.configuration =
+            {
+              unboxed = Ast_untagged_variants.has_untagged decl.type_attributes;
+              tag_name =
+                Ast_untagged_variants.process_tag_name decl.type_attributes;
+            }
           in
           let layout =
-            Variant_layout.layout_from_type_variant ~is_untagged_def ~env:newenv
+            Variant_layout.layout_from_type_variant ~configuration ~env:newenv
               cstrs
           in
           Variant_runtime.complete_layout pending_layout layout;

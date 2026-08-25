@@ -1,11 +1,15 @@
 open Gentype_common
 
 type declaration_kind =
-  | RecordDeclarationFromTypes of Types.label_declaration list
+  | RecordDeclarationFromTypes of
+      Types.label_declaration list * Types.record_representation
   | GeneralDeclaration of Typedtree.core_type option
   | GeneralDeclarationFromTypes of Types.type_expr option
       (** As the above, but from Types not Typedtree *)
-  | VariantDeclarationFromTypes of Types.constructor_declaration list
+  | VariantDeclarationFromTypes of
+      Types.constructor_declaration list
+      * Variant_runtime.layout
+      * Types.type_representation
   | NoDeclaration
 
 let create_export_type_from_type_declaration ~annotation ~loc ~name_as ~opaque
@@ -20,7 +24,7 @@ let create_export_type_from_type_declaration ~annotation ~loc ~name_as ~opaque
     annotation;
   }
 
-let create_case (label, attributes) ~poly =
+let create_polyvariant_case (label, attributes) =
   {
     label_js =
       (match
@@ -32,9 +36,19 @@ let create_case (label, attributes) ~poly =
       | Some (_, FloatPayload s) -> FloatLabel s
       | Some (_, IntPayload i) -> IntLabel i
       | Some (_, StringPayload as_label) -> StringLabel as_label
-      | _ ->
-        if poly && is_number label then IntLabel label else StringLabel label);
+      | _ -> if is_number label then IntLabel label else StringLabel label);
   }
+
+let create_variant_case label = function
+  | Some (Variant_runtime.String label) -> {label_js = StringLabel label}
+  | Some (Variant_runtime.Int label) ->
+    {label_js = IntLabel (string_of_int label)}
+  | Some (Variant_runtime.Float label) -> {label_js = FloatLabel label}
+  | Some (Variant_runtime.BigInt label) -> {label_js = IntLabel label}
+  | Some (Variant_runtime.Bool label) -> {label_js = BoolLabel label}
+  | Some Variant_runtime.Null -> {label_js = NullLabel}
+  | Some Variant_runtime.Undefined -> {label_js = UndefinedLabel}
+  | Some (Variant_runtime.Untagged _) | None -> {label_js = StringLabel label}
 
 (**
  * Rename record fields.
@@ -65,10 +79,6 @@ let traslate_declaration_kind ~config ~loc ~output_file_relative ~resolver
   let import_string_opt, name_as =
     type_attributes |> Annotation.get_attribute_import_renaming
   in
-  let unboxed_annotation =
-    type_attributes |> Annotation.has_attribute Annotation.tag_is_unboxed
-  in
-  let tag_annotation = type_attributes |> Annotation.get_tag in
   let return_type_declaration (type_declaration : Code_item.type_declaration) =
     match opaque = Some true with
     | true -> [{type_declaration with import_types = []}]
@@ -88,7 +98,8 @@ let traslate_declaration_kind ~config ~loc ~output_file_relative ~resolver
     in
     {Code_item.import_types; export_from_type_declaration}
   in
-  let translate_label_declarations ?(inline = false) label_declarations =
+  let translate_label_declarations ?(inline = false) ?(unboxed = false)
+      label_declarations =
     let field_translations =
       label_declarations
       |> List.map
@@ -137,7 +148,7 @@ let traslate_declaration_kind ~config ~loc ~output_file_relative ~resolver
     in
     let type_ =
       match fields with
-      | [field] when unboxed_annotation -> field.type_
+      | [field] when unboxed -> field.type_
       | _ -> Object ((if inline then Inline else Closed), fields)
     in
     {Translate_type_expr_from_types.dependencies; type_}
@@ -201,7 +212,7 @@ let traslate_declaration_kind ~config ~loc ~output_file_relative ~resolver
           row_fields |> Translate_core_type.process_variant
         in
         let no_payloads =
-          row_fields_variants.no_payloads |> List.map (create_case ~poly:true)
+          row_fields_variants.no_payloads |> List.map create_polyvariant_case
         in
         let payloads =
           if
@@ -211,7 +222,7 @@ let traslate_declaration_kind ~config ~loc ~output_file_relative ~resolver
             (List.combine variant.payloads row_fields_variants.payloads
              [@doesNotRaise])
             |> List.map (fun (payload, (label, attributes, _)) ->
-                   let case = (label, attributes) |> create_case ~poly:true in
+                   let case = create_polyvariant_case (label, attributes) in
                    {payload with case})
           else variant.payloads
         in
@@ -221,9 +232,15 @@ let traslate_declaration_kind ~config ~loc ~output_file_relative ~resolver
     in
     {translation with type_} |> handle_general_declaration
     |> return_type_declaration
-  | RecordDeclarationFromTypes label_declarations, None ->
+  | RecordDeclarationFromTypes (label_declarations, representation), None ->
+    let unboxed =
+      match representation with
+      | Record_unboxed _ -> true
+      | Record_regular | Record_inlined _ | Record_extension -> false
+      | Record_float_unused -> assert false
+    in
     let {Translate_type_expr_from_types.dependencies; type_} =
-      label_declarations |> translate_label_declarations
+      label_declarations |> translate_label_declarations ~unboxed
     in
     let import_types =
       dependencies
@@ -238,13 +255,16 @@ let traslate_declaration_kind ~config ~loc ~output_file_relative ~resolver
              ~name_as ~opaque ~type_ ~type_env ~type_vars;
     }
     |> return_type_declaration
-  | VariantDeclarationFromTypes constructor_declarations, None ->
+  | ( VariantDeclarationFromTypes
+        (constructor_declarations, layout, type_representation),
+      None ) ->
+    let {Variant_runtime.tag_name} = Variant_runtime.matching_facts layout in
     let variants =
       constructor_declarations
-      |> List.map (fun constructor_declaration ->
+      |> List.mapi (fun position constructor_declaration ->
              let constructor_args = constructor_declaration.Types.cd_args in
-             let attributes = constructor_declaration.cd_attributes in
              let name = constructor_declaration.cd_id |> Ident.name in
+             let tag = Variant_runtime.constructor_tag layout position in
              let args_translation =
                match constructor_args with
                | Cstr_tuple type_exprs ->
@@ -254,7 +274,11 @@ let traslate_declaration_kind ~config ~loc ~output_file_relative ~resolver
                | Cstr_record label_declarations ->
                  [
                    label_declarations
-                   |> translate_label_declarations ~inline:true;
+                   |> translate_label_declarations ~inline:true
+                        ~unboxed:
+                          (type_representation = Unboxed
+                          || Variant_runtime.constructor_is_untagged layout
+                               position);
                  ]
              in
              let arg_types =
@@ -269,29 +293,34 @@ let traslate_declaration_kind ~config ~loc ~output_file_relative ~resolver
                |> Translation.translate_dependencies ~config
                     ~output_file_relative ~resolver
              in
-             (name, attributes, arg_types, import_types))
+             (name, tag, arg_types, import_types))
     in
     let variants_no_payload, variants_with_payload =
       variants |> List.partition (fun (_, _, arg_types, _) -> arg_types = [])
     in
     let no_payloads =
       variants_no_payload
-      |> List.map (fun (name, attributes, _argTypes, _importTypes) ->
-             (name, attributes) |> create_case ~poly:false)
+      |> List.map (fun (name, tag, _argTypes, _importTypes) ->
+             create_variant_case name tag)
     in
     let payloads =
       variants_with_payload
-      |> List.map (fun (name, attributes, arg_types, _importTypes) ->
+      |> List.map (fun (name, tag, arg_types, _importTypes) ->
              let type_ =
                match arg_types with
                | [type_] -> type_
                | _ -> Tuple arg_types
              in
-             {case = (name, attributes) |> create_case ~poly:false; t = type_})
+             {case = create_variant_case name tag; t = type_})
     in
     let variant_typ =
+      let unboxed =
+        match type_representation with
+        | Unboxed -> true
+        | Boxed -> (Variant_runtime.configuration layout).unboxed
+      in
       create_variant ~inherits:[] ~no_payloads ~payloads ~polymorphic:false
-        ~tag:tag_annotation ~unboxed:unboxed_annotation
+        ~tag:tag_name ~unboxed
     in
     let resolved_type_name =
       type_name |> sanitize_type_name |> Type_env.add_module_path ~type_env
@@ -339,10 +368,13 @@ let translate_type_declaration ~config ~output_file_relative ~resolver ~type_env
   in
   let declaration_kind =
     match typ_type.type_kind with
-    | Type_record (label_declarations, _) ->
-      RecordDeclarationFromTypes label_declarations
-    | Type_variant (constructor_declarations, _) ->
-      VariantDeclarationFromTypes constructor_declarations
+    | Type_record (label_declarations, representation) ->
+      RecordDeclarationFromTypes (label_declarations, representation)
+    | Type_variant (constructor_declarations, layout_ref) ->
+      VariantDeclarationFromTypes
+        ( constructor_declarations,
+          Variant_runtime.get_layout layout_ref,
+          typ_type.type_representation )
     | Type_abstract -> GeneralDeclaration typ_manifest
     | _ -> NoDeclaration
   in

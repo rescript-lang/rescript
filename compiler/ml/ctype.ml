@@ -3510,7 +3510,7 @@ let rec subtype_rec env trace t1 t2 cstrs =
           Variant_coercion.can_try_coerce_variant_to_primitive_opt
             (extract_concrete_typedecl_opt env t2)
         with
-        | Some (p, _, false) ->
+        | Some (p, _, _, false) ->
           (* Not @unboxed *)
           ( trace,
             t1,
@@ -3520,7 +3520,7 @@ let rec subtype_rec env trace t1 t2 cstrs =
               (Coercion_target_variant_not_unboxed
                  {variant_name = p; primitive = path}) )
           :: cstrs
-        | Some (p, constructors, true) ->
+        | Some (p, constructors, _, true) ->
           if
             Variant_coercion.variant_has_case_covering_type constructors
               ~path_is_same_fn:(fun p -> Path.same p path)
@@ -3548,12 +3548,12 @@ let rec subtype_rec env trace t1 t2 cstrs =
           Variant_coercion.can_try_coerce_variant_to_primitive_opt
             (extract_concrete_typedecl_opt env t1)
         with
-        | Some (p, constructors, unboxed) ->
+        | Some (p, constructors, layout, unboxed) ->
           let runtime_representation_issues =
             constructors
             |> Variant_coercion
                .variant_has_same_runtime_representation_as_target
-                 ~target_path:path ~unboxed
+                 ~target_path:path ~unboxed ~layout
           in
           if List.length runtime_representation_issues <> 0 then
             ( trace,
@@ -3574,14 +3574,29 @@ let rec subtype_rec env trace t1 t2 cstrs =
         with
         | ( ( p1,
               _,
-              {type_kind = Type_variant (c1, _); type_attributes = t1attrs} ),
+              {
+                type_kind = Type_variant (c1, layout_ref1);
+                type_representation = type_representation1;
+              } ),
             ( p2,
               _,
-              {type_kind = Type_variant (c2, _); type_attributes = t2attrs} ) )
-          -> (
+              {
+                type_kind = Type_variant (c2, layout_ref2);
+                type_representation = type_representation2;
+              } ) ) -> (
+          let layout1 = Variant_runtime.get_layout layout_ref1 in
+          let layout2 = Variant_runtime.get_layout layout_ref2 in
+          let configuration1 =
+            Variant_coercion.runtime_configuration
+              ~type_representation:type_representation1 ~layout:layout1
+          in
+          let configuration2 =
+            Variant_coercion.runtime_configuration
+              ~type_representation:type_representation2 ~layout:layout2
+          in
           match
-            Variant_coercion.variant_configuration_can_be_coerced t1attrs
-              t2attrs
+            Variant_coercion.variant_configuration_can_be_coerced configuration1
+              configuration2
           with
           | Error issue ->
             ( trace,
@@ -3623,28 +3638,26 @@ let rec subtype_rec env trace t1 t2 cstrs =
             else
               let constructor_map = Hashtbl.create c1_len in
               c2
-              |> List.iter (fun (c : Types.constructor_declaration) ->
-                     Hashtbl.add constructor_map (Ident.name c.cd_id) c);
+              |> List.iteri (fun position (c : Types.constructor_declaration) ->
+                     Hashtbl.add constructor_map (Ident.name c.cd_id)
+                       (c, position));
               let field_subtype_violations =
                 c1
-                |> List.filter_map (fun (c : Types.constructor_declaration) ->
+                |> List.mapi
+                     (fun position1 (c : Types.constructor_declaration) ->
                        match
                          ( c,
                            Hashtbl.find_opt constructor_map (Ident.name c.cd_id)
                          )
                        with
-                       | ( {
-                             Types.cd_args = Cstr_record fields1;
-                             cd_attributes = c1_attributes;
-                           },
+                       | ( {Types.cd_args = Cstr_record fields1},
                            Some
-                             {
-                               Types.cd_args = Cstr_record fields2;
-                               cd_attributes = c2_attributes;
-                             } ) ->
+                             ({Types.cd_args = Cstr_record fields2}, position2)
+                         ) ->
                          if
                            Variant_coercion.variant_representation_matches
-                             c1_attributes c2_attributes
+                             (Variant_runtime.constructor_tag layout1 position1)
+                             (Variant_runtime.constructor_tag layout2 position2)
                          then
                            let violations, tl1, tl2 =
                              Record_coercion.check_record_fields fields1 fields2
@@ -3665,18 +3678,13 @@ let rec subtype_rec env trace t1 t2 cstrs =
                          else
                            Some
                              [ (* TODO(subtype-errors) Variant constructor representation mismatch*) ]
-                       | ( {
-                             Types.cd_args = Cstr_tuple tl1;
-                             cd_attributes = c1_attributes;
-                           },
-                           Some
-                             {
-                               Types.cd_args = Cstr_tuple tl2;
-                               cd_attributes = c2_attributes;
-                             } ) ->
+                       | ( {Types.cd_args = Cstr_tuple tl1},
+                           Some ({Types.cd_args = Cstr_tuple tl2}, position2) )
+                         ->
                          if
                            Variant_coercion.variant_representation_matches
-                             c1_attributes c2_attributes
+                             (Variant_runtime.constructor_tag layout1 position1)
+                             (Variant_runtime.constructor_tag layout2 position2)
                          then
                            try
                              let lst = subtype_list env trace tl1 tl2 cstrs in
@@ -3692,6 +3700,7 @@ let rec subtype_rec env trace t1 t2 cstrs =
                              [ (* TODO(subtype-errors) Variant constructor tuple mismatch *) ]
                        | _ ->
                          Some [ (* TODO(subtype-errors) Variant other issue *) ])
+                |> List.filter_map Fun.id
               in
               if field_subtype_violations = [] then cstrs
               else (trace, t1, t2, !univar_pairs, None) :: cstrs)
@@ -3764,12 +3773,16 @@ let rec subtype_rec env trace t1 t2 cstrs =
         | ( _,
             _,
             {
-              type_kind = Type_variant (variant_constructors, _);
-              type_attributes;
+              type_kind = Type_variant (variant_constructors, layout_ref);
+              type_representation;
             } ) -> (
+          let layout = Variant_runtime.get_layout layout_ref in
+          let {Variant_runtime.unboxed} =
+            Variant_coercion.runtime_configuration ~type_representation ~layout
+          in
           match
             Variant_coercion.can_coerce_polyvariant_to_variant ~row_fields
-              ~variant_constructors ~type_attributes
+              ~variant_constructors ~layout ~unboxed
           with
           | Ok _ -> cstrs
           | Error _ -> (trace, t1, t2, !univar_pairs, None) :: cstrs)

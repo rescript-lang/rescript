@@ -93,6 +93,8 @@ type block = {runtime: block_runtime; block_type: block_type option}
 
 type constructor_case = Constant of tag | Block of block
 
+type configuration = {unboxed: bool; tag_name: string option}
+
 type matching_facts = {
   tag_name: string option;
       (** Custom object field containing constructor tags. [None] means the
@@ -111,6 +113,7 @@ type matching_facts = {
     default, guard, or exhaustiveness information. *)
 
 type layout = {
+  unboxed: bool;
   constructors: constructor_case array;
   matching_facts: matching_facts;
 }
@@ -139,6 +142,16 @@ let get_layout layout_ref =
 
 let constructor_at (layout : layout) position = layout.constructors.(position)
 
+let constructor_tag layout position =
+  match constructor_at layout position with
+  | Constant tag -> tag.tag_type
+  | Block {runtime = {tag}} -> tag.tag_type
+
+let constructor_is_untagged layout position =
+  match constructor_at layout position with
+  | Constant _ -> false
+  | Block {runtime = {untagged}} -> untagged
+
 let representation ({variant; position} : constructor_reference) =
   constructor_at (get_layout variant) position
 
@@ -160,9 +173,8 @@ let num_blocks (layout : layout) =
       | Constant _ -> n)
     0 layout.constructors
 
-let compute_matching_facts (constructors : constructor_case array) :
+let compute_matching_facts ~tag_name (constructors : constructor_case array) :
     matching_facts =
-  let tag_name = ref None in
   let block_types = ref [] in
   let literal_tags = ref [] in
   let has_null = ref false in
@@ -182,14 +194,13 @@ let compute_matching_facts (constructors : constructor_case array) :
         | Undefined -> has_undefined := true
         | String _ | Int _ | Float _ | BigInt _ | Bool _ | Untagged _ ->
           has_other_literal := true)
-      | Block {runtime = {tag_name = constructor_tag_name}; block_type} -> (
-        if !tag_name = None then tag_name := constructor_tag_name;
+      | Block {block_type} -> (
         match block_type with
         | Some block_type -> block_types := block_type :: !block_types
         | None -> ()))
     constructors;
   {
-    tag_name = !tag_name;
+    tag_name;
     block_types = !block_types;
     literal_tags = !literal_tags;
     has_null = !has_null;
@@ -197,10 +208,18 @@ let compute_matching_facts (constructors : constructor_case array) :
     has_other_literal = !has_other_literal;
   }
 
-let make_layout constructors =
-  {constructors; matching_facts = compute_matching_facts constructors}
+let make_layout ~(configuration : configuration) constructors =
+  {
+    unboxed = configuration.unboxed;
+    constructors;
+    matching_facts =
+      compute_matching_facts ~tag_name:configuration.tag_name constructors;
+  }
 
 let matching_facts layout = layout.matching_facts
+
+let configuration layout =
+  {unboxed = layout.unboxed; tag_name = layout.matching_facts.tag_name}
 
 let pending_layout () = ref Pending
 
@@ -224,4 +243,8 @@ let plain_layout (cases : (string * bool (* has payload *)) list) : layout_ref =
         }
     else Constant {name; tag_type = None}
   in
-  ref (Complete (make_layout (Array.of_list (List.map case cases))))
+  ref
+    (Complete
+       (make_layout
+          ~configuration:{unboxed = false; tag_name = None}
+          (Array.of_list (List.map case cases))))

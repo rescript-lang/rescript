@@ -217,8 +217,9 @@ let is_jsx_component_type ~env ty =
 let get_variant_constructors
     ~(extract_concrete_typedecl : extract_concrete_typedecl) ~env ty =
   match extract_concrete_typedecl env ty with
-  | _, _, {Types.type_kind = Type_variant (constructors, _); _} -> constructors
-  | _ -> []
+  | _, _, {Types.type_kind = Type_variant (constructors, layout_ref); _} ->
+    Some (constructors, Variant_runtime.get_layout layout_ref)
+  | _ -> None
 
 let extract_string_constant text =
   match !Parser.parse_source text with
@@ -685,16 +686,16 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
     let target_expr_text = Parser.extract_text_at_loc loc in
     match extract_string_constant target_expr_text with
     | Some string_value -> (
-      let constructors =
-        get_variant_constructors ~extract_concrete_typedecl ~env t2
+      let constructors, layout =
+        Option.get (get_variant_constructors ~extract_concrete_typedecl ~env t2)
       in
       (* Extract runtime representations from constructor declarations *)
       let constructor_mappings =
-        List.filter_map
-          (fun (cd : Types.constructor_declaration) ->
+        List.mapi
+          (fun position (cd : Types.constructor_declaration) ->
             let constructor_name = Ident.name cd.cd_id in
             let runtime_repr =
-              match Ast_untagged_variants.process_tag_type cd.cd_attributes with
+              match Variant_runtime.constructor_tag layout position with
               | Some (String s) -> Some s (* @as("string_value") *)
               | Some _ -> None (* @as with non-string values *)
               | None -> Some constructor_name (* No @as, use constructor name *)
@@ -703,6 +704,7 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
             | Some repr -> Some (repr, constructor_name)
             | None -> None)
           constructors
+        |> List.filter_map Fun.id
       in
       let matching_constructor =
         List.find_opt
