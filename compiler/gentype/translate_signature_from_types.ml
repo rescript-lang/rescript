@@ -3,7 +3,14 @@ open Gentype_common
 (** Like translateTypeDeclaration but from Types not Typedtree  *)
 let translate_type_declaration_from_types ~config ~output_file_relative
     ~resolver ~type_env ~id
-    ({type_attributes; type_kind; type_loc; type_manifest; type_params} :
+    ({
+       type_attributes;
+       type_kind;
+       type_loc;
+       type_manifest;
+       type_params;
+       type_representation;
+     } :
       Types.type_declaration) : Code_item.type_declaration list =
   type_env |> Type_env.new_type ~name:(id |> Ident.name);
   let type_name = Ident.name id in
@@ -12,13 +19,17 @@ let translate_type_declaration_from_types ~config ~output_file_relative
     Log_.item "Translate Types.type_declaration %s\n" type_name;
   let declaration_kind =
     match type_kind with
-    | Type_record (label_declarations, _) ->
-      Translate_type_declarations.RecordDeclarationFromTypes label_declarations
-    | Type_variant (constructor_declarations, _)
+    | Type_record (label_declarations, representation) ->
+      Translate_type_declarations.RecordDeclarationFromTypes
+        (label_declarations, representation)
+    | Type_variant (constructor_declarations, layout_ref)
       when not
              (Translate_type_declarations.has_some_gadt_leaf
                 constructor_declarations) ->
-      VariantDeclarationFromTypes constructor_declarations
+      VariantDeclarationFromTypes
+        ( constructor_declarations,
+          Variant_runtime.get_layout layout_ref,
+          type_representation )
     | Type_abstract -> GeneralDeclarationFromTypes type_manifest
     | _ -> NoDeclaration
   in

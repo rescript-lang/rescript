@@ -52,6 +52,15 @@ type tag = {name: string; tag_type: tag_type option}
 type block_runtime = {tag: tag; tag_name: string option; untagged: bool}
 type block = {runtime: block_runtime; block_type: block_type option}
 type constructor_case = Constant of tag | Block of block
+type configuration = {
+  unboxed: bool;
+      (** Whether the declaration carries [@unboxed]. This is retained even
+          when the declaration has no payload constructor, where it cannot be
+          recovered by inspecting constructor layouts. *)
+  tag_name: string option;
+      (** Custom object field containing constructor tags. This is retained
+          even when the variant currently has no object constructor. *)
+}
 
 type matching_facts = {
   tag_name: string option;
@@ -67,12 +76,16 @@ type layout_ref
 
 type constructor_reference = {variant: layout_ref; position: int}
 
-val make_layout : constructor_case array -> layout
+val make_layout :
+  configuration:configuration -> constructor_case array -> layout
 val pending_layout : unit -> layout_ref
 val complete_layout : layout_ref -> layout -> unit
 val get_layout : layout_ref -> layout
 val matching_facts : layout -> matching_facts
+val configuration : layout -> configuration
 val constructor_at : layout -> int -> constructor_case
+val constructor_tag : layout -> int -> tag_type option
+val constructor_is_untagged : layout -> int -> bool
 val representation : constructor_reference -> constructor_case
 val length : layout -> int
 val num_constants : layout -> int

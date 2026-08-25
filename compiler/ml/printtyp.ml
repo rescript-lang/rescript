@@ -870,24 +870,39 @@ and tree_of_type_decl id decl =
   in
   let name, args = type_defined decl in
   let constraints = tree_of_constraints ~printing_context params in
-  let untagged = ref false in
-  let ty, priv =
+  let ty, priv, unboxed =
     match decl.type_kind with
     | Type_abstract -> (
       match ty_manifest with
-      | None -> (Otyp_abstract, Public)
-      | Some ty -> (tree_of_typexp ~printing_context false ty, decl.type_private)
-      )
-    | Type_variant (cstrs, _) ->
-      untagged := Ast_untagged_variants.process_untagged decl.type_attributes;
+      | None -> (Otyp_abstract, Public, decl.type_representation = Unboxed)
+      | Some ty ->
+        ( tree_of_typexp ~printing_context false ty,
+          decl.type_private,
+          decl.type_representation = Unboxed ))
+    | Type_variant (cstrs, layout_ref) ->
+      let layout = Variant_runtime.get_layout layout_ref in
+      let {Variant_runtime.unboxed} =
+        Variant_coercion.runtime_configuration
+          ~type_representation:decl.type_representation ~layout
+      in
       ( tree_of_manifest
-          (Otyp_sum (List.map (tree_of_constructor ~printing_context) cstrs)),
-        decl.type_private )
+          (Otyp_sum
+             (List.mapi
+                (fun position constructor ->
+                  tree_of_constructor ~printing_context ~layout ~position
+                    constructor)
+                cstrs)),
+        decl.type_private,
+        unboxed )
     | Type_record (lbls, _rep) ->
       ( tree_of_manifest
           (Otyp_record (List.map (tree_of_label ~printing_context) lbls)),
-        decl.type_private )
-    | Type_open -> (tree_of_manifest Otyp_open, decl.type_private)
+        decl.type_private,
+        decl.type_representation = Unboxed )
+    | Type_open ->
+      ( tree_of_manifest Otyp_open,
+        decl.type_private,
+        decl.type_representation = Unboxed )
   in
   let immediate = Builtin_attributes.immediate decl.type_attributes in
   {
@@ -896,7 +911,7 @@ and tree_of_type_decl id decl =
     otype_type = ty;
     otype_private = priv;
     otype_immediate = immediate;
-    otype_unboxed = decl.type_representation = Unboxed || !untagged;
+    otype_unboxed = unboxed;
     otype_cstrs = constraints;
   }
 
@@ -904,13 +919,13 @@ and tree_of_constructor_arguments ?printing_context = function
   | Cstr_tuple l -> tree_of_typlist ?printing_context false l
   | Cstr_record l -> [Otyp_record (List.map tree_of_label l)]
 
-and tree_of_constructor ?printing_context cd =
+and tree_of_constructor ?printing_context ~layout ~position cd =
   let name = Ident.name cd.cd_id in
   let nullary = Ast_untagged_variants.is_nullary_variant cd.cd_args in
   let repr =
     if not nullary then None
     else
-      match Ast_untagged_variants.process_tag_type cd.cd_attributes with
+      match Variant_runtime.constructor_tag layout position with
       | Some Null -> Some "@as(null)"
       | Some Undefined -> Some "@as(undefined)"
       | Some (String s) -> Some (Printf.sprintf "@as(%S)" s)

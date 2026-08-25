@@ -59,7 +59,7 @@ let get_block_type ~env (cstr : Types.constructor_declaration) :
     Some ObjectType
   | true, _ -> None (* TODO: add restrictions here *)
 
-let layout_from_type_variant ?(is_untagged_def = false) ~env
+let layout_from_type_variant ~(configuration : configuration) ~env
     (cstrs : Types.constructor_declaration list) : Variant_runtime.layout =
   let get_block (cstr : Types.constructor_declaration) : block =
     {
@@ -83,9 +83,9 @@ let layout_from_type_variant ?(is_untagged_def = false) ~env
         | Constant tag -> ((loc, tag) :: consts, blocks)
         | Block block -> (consts, (loc, block) :: blocks))
   in
-  check_invariant ~is_untagged_def ~consts ~blocks;
+  check_invariant ~is_untagged_def:configuration.unboxed ~consts ~blocks;
   let constructors =
     Array.of_list
       (List.map (fun (_, constructor) -> constructor) located_constructors)
   in
-  Variant_runtime.make_layout constructors
+  Variant_runtime.make_layout ~configuration constructors
