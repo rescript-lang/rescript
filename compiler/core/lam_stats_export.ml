@@ -23,9 +23,6 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
 (* let pp = Format.fprintf  *)
-(* we should exclude meaninglist names and do the convert as well *)
-
-(* let meaningless_names  = ["*opt*"; "param";] *)
 
 let single_na = Js_cmj_format.single_na
 

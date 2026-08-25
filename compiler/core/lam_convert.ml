@@ -320,40 +320,6 @@ let lam_prim ~primitive:(p : Lambda.primitive) ~args loc : Lam.t =
 
 let may_depend = Lam_module_ident.Hash_set.add
 
-let is_opt_param_name name =
-  (* [*opt*] historically; [*opt_<label>*] with the n-ary representation *)
-  String.length name >= 5
-  && String.sub name 0 4 = "*opt"
-  && String.get name (String.length name - 1) = '*'
-
-let rec rename_optional_parameters map params (body : Lambda.lambda) =
-  match body with
-  | Llet
-      ( k,
-        value_kind,
-        id,
-        Lifthenelse
-          ( Lprim (p, [Lvar ({name = opt_name} as opt)], p_loc),
-            Lprim (p1, [Lvar ({name = opt_name2} as opt2)], x_loc),
-            f ),
-        rest )
-    when is_opt_param_name opt_name
-         && is_opt_param_name opt_name2
-         && Ident.same opt opt2 && List.mem opt params ->
-    let map, rest = rename_optional_parameters map params rest in
-    let new_id = Ident.create (id.name ^ "Opt") in
-    ( Map_ident.add map opt new_id,
-      Lambda.Llet
-        ( k,
-          value_kind,
-          id,
-          Lifthenelse
-            ( Lprim (p, [Lvar new_id], p_loc),
-              Lprim (p1, [Lvar new_id], x_loc),
-              f ),
-          rest ) )
-  | _ -> (map, body)
-
 let convert (exports : Set_ident.t) (lam : Lambda.lambda) :
     Lam.t * Lam_module_ident.Hash_set.t =
   let alias_tbl = Hash_ident.create 64 in
@@ -415,18 +381,8 @@ let convert (exports : Set_ident.t) (lam : Lambda.lambda) :
         {ap_loc = loc; ap_inlined; ap_status = App_uncurry}
         ~ap_transformed_jsx
     | Lfunction {params; body; attr; loc} ->
-      let new_map, body =
-        rename_optional_parameters Map_ident.empty params body
-      in
-      if Map_ident.is_empty new_map then
-        Lam.function_ ~loc ~attr ~arity:(List.length params) ~params
-          ~body:(convert_aux body)
-      else
-        let params =
-          Ext_list.map params (fun x -> Map_ident.find_default new_map x x)
-        in
-        Lam.function_ ~loc ~attr ~arity:(List.length params) ~params
-          ~body:(convert_aux body)
+      Lam.function_ ~loc ~attr ~arity:(List.length params) ~params
+        ~body:(convert_aux body)
     | Llet (_, _, _, Lprim (Pgetglobal id, args, _), _body) when dynamic_import
       ->
       (*

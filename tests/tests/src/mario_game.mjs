@@ -25,13 +25,13 @@ let Actors = {};
 
 let Dom_html = {};
 
-function setup_sprite(loopOpt, bbox_offsetOpt, bbox_sizeOpt, img_src, max_frames, max_ticks, frame_size, src_offset) {
+function setup_sprite(loopOpt, bb_offOpt, bb_szOpt, img_src, max_frames, max_ticks, frame_size, src_offset) {
   let loop = loopOpt !== undefined ? loopOpt : true;
-  let bbox_offset = bbox_offsetOpt !== undefined ? bbox_offsetOpt : [
+  let bbox_offset = bb_offOpt !== undefined ? bb_offOpt : [
       0,
       0
     ];
-  let bbox_size = bbox_sizeOpt !== undefined ? bbox_sizeOpt : [
+  let bbox_size = bb_szOpt !== undefined ? bb_szOpt : [
       0,
       0
     ];
@@ -794,9 +794,9 @@ let id_counter = {
   contents: Stdlib_Int.Constants.minValue
 };
 
-function setup_obj(has_gravityOpt, speedOpt, param) {
-  let has_gravity = has_gravityOpt !== undefined ? has_gravityOpt : true;
-  let speed = speedOpt !== undefined ? speedOpt : 1;
+function setup_obj(gOpt, spdOpt, param) {
+  let has_gravity = gOpt !== undefined ? gOpt : true;
+  let speed = spdOpt !== undefined ? spdOpt : 1;
   return {
     has_gravity: has_gravity,
     speed: speed
@@ -847,9 +847,9 @@ function new_id() {
   return id_counter.contents;
 }
 
-function make$2($staropt_id$star, $staropt_dir$star, spawnable, context, param) {
-  let id = $staropt_id$star !== undefined ? Primitive_option.valFromOption($staropt_id$star) : undefined;
-  let dir = $staropt_dir$star !== undefined ? $staropt_dir$star : "Left";
+function make$2(idOpt, dirOpt, spawnable, context, param) {
+  let id = idOpt !== undefined ? Primitive_option.valFromOption(idOpt) : undefined;
+  let dir = dirOpt !== undefined ? dirOpt : "Left";
   let spr = make(spawnable, dir, context);
   let params = make_type$2(spawnable);
   let id$1 = id !== undefined ? id : new_id();

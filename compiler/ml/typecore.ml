@@ -2441,10 +2441,9 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
       ty_expected
   | Pexp_let (rec_flag, spat_sexp_list, sbody) ->
     let scp =
-      match (sexp.pexp_attributes, rec_flag) with
-      | [({txt = "#default"}, _)], _ -> None
-      | _, Recursive -> Some (Annot.Idef loc)
-      | _, Nonrecursive -> Some (Annot.Idef sbody.pexp_loc)
+      match rec_flag with
+      | Recursive -> Some (Annot.Idef loc)
+      | Nonrecursive -> Some (Annot.Idef sbody.pexp_loc)
     in
     let pat_exp_list, new_env, unpacks =
       type_let ~context:None env rec_flag spat_sexp_list scp true
@@ -3530,7 +3529,7 @@ and type_function ~async loc attrs env ty_expected_
     (sparams : Parsetree.fun_param list) sbody =
   (* Desugar optional-parameter defaults: the parameter becomes a fresh
      [*opt_<label>*] variable and the original pattern is bound in a
-     [#default]-annotated let at the head of the body. The let syntax is kept
+     let at the head of the body. The let syntax is kept
      alongside its parameter rather than wrapped into the body here: each
      binding is typed while the parameter environment accumulates left to
      right, so a default only sees the parameters before it (typing it as
@@ -3722,20 +3721,77 @@ and type_function ~async loc attrs env ty_expected_
          parameter enters the environment, mirroring the curried per-level
          typing this replaced: a default sees only the parameters to its
          left, and its pattern's bindings are in scope for what follows. *)
-      let ext_env, unpacks, defaults_acc =
+      let pat, ext_env, unpacks, defaults_acc, opt_param =
         match default_binding with
-        | None -> (ext_env, unpacks, defaults_acc)
+        | None -> (pat, ext_env, unpacks, defaults_acc, None)
         | Some vb ->
           let let_env = ext_env in
           let pat_exp_list, ext_env, let_unpacks =
             type_let ~context:None ext_env Nonrecursive [vb] None true
           in
-          ( ext_env,
+          (* The pattern binds the option carrier under an unspellable name
+             ([*opt_<label>*]), which typing needs so that user code can
+             neither reference nor shadow it. Everything mentioning the
+             carrier has been typed at this point: replace it with a fresh
+             user-legible parameter ident derived from the label, both at its
+             binder and at its single use, the scrutinee of the synthetic
+             match. The carrier then never reaches the lambda layer. *)
+          let param_id = Ident.create (label_name p.p_lbl ^ "Opt") in
+          let pat =
+            match pat.pat_desc with
+            | Tpat_var (_, name) ->
+              {
+                pat with
+                pat_desc =
+                  Tpat_var (param_id, {name with txt = Ident.name param_id});
+              }
+            | _ -> assert false
+          in
+          let pat_exp_list =
+            match pat_exp_list with
+            | [
+             ({
+                vb_expr =
+                  {
+                    exp_desc =
+                      Texp_match
+                        ( ({exp_desc = Texp_ident (Path.Pident _, lid, vd)} as
+                           scrut),
+                          cases,
+                          exn_cases,
+                          m_partial );
+                  } as vb_expr;
+              } as vb);
+            ] ->
+              [
+                {
+                  vb with
+                  vb_expr =
+                    {
+                      vb_expr with
+                      exp_desc =
+                        Texp_match
+                          ( {
+                              scrut with
+                              exp_desc =
+                                Texp_ident (Path.Pident param_id, lid, vd);
+                            },
+                            cases,
+                            exn_cases,
+                            m_partial );
+                    };
+                };
+              ]
+            | _ -> assert false
+          in
+          ( pat,
+            ext_env,
             unpacks @ let_unpacks,
-            (pat_exp_list, let_env) :: defaults_acc )
+            (pat_exp_list, let_env) :: defaults_acc,
+            Some param_id )
       in
       type_params
-        ((p, pat, ty_arg_c) :: typed_acc)
+        ((p, opt_param, pat, ty_arg_c) :: typed_acc)
         ext_env (unpacks_acc @ unpacks) defaults_acc rest_params rest_tys
     | _ -> assert false
   in
@@ -3754,8 +3810,8 @@ and type_function ~async loc attrs env ty_expected_
      let ty_res' = instance env ty_res in
      unify_exp ~context:None env body_exp ty_res');
   (* Stack the typed default bindings back onto the body, leftmost parameter
-     outermost — the same [#default] let shape [type_expect] would have
-     produced had the lets been part of the body's syntax. *)
+     outermost — the same let shape [type_expect] would have produced had the
+     lets been part of the body's syntax. *)
   let body_exp =
     List.fold_right
       (fun (pat_exp_list, let_env) inner ->
@@ -3765,14 +3821,14 @@ and type_function ~async loc attrs env ty_expected_
             exp_loc = loc;
             exp_extra = [];
             exp_type = inner.exp_type;
-            exp_attributes = [(mknoloc "#default", Parsetree.PStr [])];
+            exp_attributes = [];
             exp_env = let_env;
           })
       default_lets body_exp
   in
   let needs_exhaust_check =
     List.exists
-      (fun ((p : Parsetree.fun_param), _, _) -> not (is_var p.p_pat))
+      (fun ((p : Parsetree.fun_param), _, _, _) -> not (is_var p.p_pat))
       typed_params
   in
   let do_init = has_gadts || needs_exhaust_check in
@@ -3780,7 +3836,7 @@ and type_function ~async loc attrs env ty_expected_
   ignore lev;
   let tparams =
     List.map
-      (fun ((p : Parsetree.fun_param), pat, ty_arg_c) ->
+      (fun ((p : Parsetree.fun_param), opt_param, pat, ty_arg_c) ->
         let case = {c_lhs = pat; c_guard = None; c_rhs = body_exp} in
         let ty_arg_check =
           if do_init then
@@ -3796,11 +3852,17 @@ and type_function ~async loc attrs env ty_expected_
         if contains_polyvars || do_init then
           Delayed_checks.add_delayed_check unused_check
         else unused_check ();
+        let fp_param =
+          match opt_param with
+          | Some id -> id
+          | None -> name_pattern "param" [case]
+        in
         {
           fp_lbl = p.p_lbl;
-          fp_param = name_pattern "param" [case];
+          fp_param;
           fp_pat = pat;
           fp_partial = partial;
+          fp_has_default = opt_param <> None;
         })
       typed_params
   in
@@ -4516,18 +4578,13 @@ and type_let ~context ?(check = fun s -> Warnings.Unused_var s)
   in
   begin_def ();
   let is_fake_let =
+    (* the synthetic let-declaration introduced for an optional parameter's
+       default: its variables are parameters from the user's point of view,
+       so an unused one gets the strict (parameter) warning *)
     match spat_sexp_list with
-    | [
-     {
-       pvb_expr =
-         {
-           pexp_desc =
-             Pexp_match
-               ({pexp_desc = Pexp_ident {txt = Longident.Lident "*opt*"}}, _);
-         };
-     };
-    ] ->
-      true (* the fake let-declaration introduced by fun ?(x = e) -> ... *)
+    | [{pvb_expr = {pexp_attributes}}] ->
+      Ext_list.exists pexp_attributes (fun ({txt}, _) ->
+          txt = "#optional_arg_default")
     | _ -> false
   in
   let check = if is_fake_let then check_strict else check in

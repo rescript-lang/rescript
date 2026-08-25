@@ -2404,8 +2404,10 @@ let rec lower_bind v arg lam =
   | Llet (Alias, k, vv, lv, l) ->
     if approx_present v lv then bind Alias v arg lam
     else Llet (Alias, k, vv, lv, lower_bind v arg l)
-  | Lvar u when Ident.same u v && Ident.name u = "*sth*" ->
-    arg (* eliminate let *sth* = from_option x in *sth* *)
+  | Lvar u when Ident.same u v ->
+    (* eliminate [let v = arg in v]; [lower_bind] is only used for alias
+       bindings, so [arg] is pure *)
+    arg
   | _ -> bind Alias v arg lam
 
 let bind_check str v arg lam =
