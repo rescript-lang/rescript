@@ -1266,13 +1266,14 @@ let make_constr_matching p def ctx = function
   | [] -> fatal_error "Matching.make_constr_matching"
   | (arg, _mut) :: argl ->
     let cstr = pat_as_constr p in
-    let untagged = Ast_untagged_variants.has_untagged cstr.cstr_attributes in
+    let payload_is_unboxed = Datarepr.constructor_payload_is_unboxed cstr in
     let newargs =
-      if cstr.cstr_inlined <> None || (untagged && cstr.cstr_args <> []) then
-        (arg, Alias) :: argl
+      if
+        cstr.cstr_inlined <> None || (payload_is_unboxed && cstr.cstr_args <> [])
+      then (arg, Alias) :: argl
       else
         match cstr.cstr_kind with
-        | Ordinary_constructor
+        | Ordinary_constructor _
           when cstr.cstr_args <> []
                && Datarepr.constructor_has_optional_shape cstr ->
           let from_option =
@@ -1283,7 +1284,7 @@ let make_constr_matching p def ctx = function
             | _ -> Pval_from_option
           in
           (Lprim (from_option, [arg], p.pat_loc), Alias) :: argl
-        | Ordinary_constructor ->
+        | Ordinary_constructor _ ->
           make_field_args p.pat_loc Alias arg 0 (cstr.cstr_arity - 1) argl
             ~fld_info:(if cstr.cstr_name = "::" then Fld_cons else Fld_variant)
         | Extension_constructor _ ->
@@ -2006,7 +2007,7 @@ let split_cases tag_lambda_list =
     | (cstr, act) :: rem -> (
       let consts, nonconsts = split_rec rem in
       match cstr.cstr_kind with
-      | Ordinary_constructor ->
+      | Ordinary_constructor _ ->
         if cstr.cstr_args = [] then ((cstr, act) :: consts, nonconsts)
         else (consts, (cstr, act) :: nonconsts)
       | Extension_constructor _ -> assert false)
@@ -2033,28 +2034,110 @@ let get_extension_cases tag_lambda_list =
       let nonconsts = split_rec rem in
       match cstr.cstr_kind with
       | Extension_constructor path -> (path, act) :: nonconsts
-      | Ordinary_constructor -> assert false)
+      | Ordinary_constructor _ -> assert false)
   in
   split_rec tag_lambda_list
 
-let sort_constructor_cases layout cases =
+let sort_constructor_cases cases =
   List.sort
     (fun (cstr1, _) (cstr2, _) ->
-      let index cstr =
-        Variant_runtime.constructor_position layout cstr.cstr_name
-      in
-      Int.compare (index cstr1) (index cstr2))
+      Int.compare
+        (Datarepr.constructor_position cstr1)
+        (Datarepr.constructor_position cstr2))
     cases
 
-let constructor_switch_key layout (cstr : Types.constructor_description) =
-  Switch_constructor (Variant_runtime.constructor_by_name layout cstr.cstr_name)
+let constructor_switch_key (cstr : Types.constructor_description) =
+  Switch_constructor (Datarepr.constructor_case cstr)
+
+(* An occurrence-specific plan for one constructor decision-tree node. It is
+   deliberately local to pattern matching: [lower_constructor_matching_plan]
+   immediately expresses the decision with existing Lambda control-flow
+   nodes, so Lambda and Lam do not acquire another expression language. *)
+type payload_presence_test = Is_present_option | Is_nonempty_list
+
+type constructor_matching_plan =
+  | Use_constructor_action of Lambda.lambda
+      (** Every possible constructor reaches the same action. *)
+  | Test_payload_presence of {
+      test: payload_presence_test;
+      absent: Lambda.lambda;
+      present: Lambda.lambda;
+    }
+      (** A two-constructor representation whose runtime value directly
+          reveals whether the payload constructor is present. *)
+  | Test_boolean_value of {if_false: Lambda.lambda; if_true: Lambda.lambda}
+      (** The predefined boolean constructors are JavaScript booleans. *)
+  | Switch_on_constructors of Lambda.lambda_switch
+      (** General nominal and untagged variant matching. *)
+
+let lower_constructor_matching_plan ~loc ~arg = function
+  | Use_constructor_action action -> action
+  | Test_payload_presence {test; absent; present} ->
+    let condition =
+      match test with
+      | Is_present_option -> Lprim (Pis_not_none, [arg], loc)
+      | Is_nonempty_list ->
+        Lprim (Pjscomp Cneq, [arg; Lconst (Const_base (Const_int 0))], loc)
+    in
+    Lifthenelse (condition, present, absent)
+  | Test_boolean_value {if_false; if_true} ->
+    Lifthenelse (arg, if_true, if_false)
+  | Switch_on_constructors sw ->
+    let hs, sw = share_actions_sw sw in
+    let sw = reintroduce_fail sw in
+    hs (Lswitch (arg, sw, loc))
+
+let make_constructor_matching_plan ~cstr ~(layout : Variant_runtime.layout)
+    ~fail_opt ~num_consts ~num_nonconsts ~tag_lambda_list ~consts ~nonconsts =
+  match (fail_opt, same_actions tag_lambda_list) with
+  | None, Some action -> Use_constructor_action action
+  | _ -> (
+    match (num_consts, num_nonconsts, consts, nonconsts) with
+    | 1, 1, [(_, absent)], [(_, present)]
+      when cstr.cstr_name = "::" || cstr.cstr_name = "[]"
+           || Datarepr.constructor_has_optional_shape cstr ->
+      Test_payload_presence
+        {
+          test =
+            (if Datarepr.constructor_has_optional_shape cstr then
+               Is_present_option
+             else Is_nonempty_list);
+          absent;
+          present;
+        }
+    | 2, 0, _, [] when cstr.cstr_name = "true" || cstr.cstr_name = "false" ->
+      let find_action name =
+        match
+          Ext_list.find_opt consts (fun (cstr, action) ->
+              if cstr.cstr_name = name then Some action else None)
+        with
+        | Some action -> action
+        | None -> assert false
+      in
+      Test_boolean_value
+        {if_false = find_action "false"; if_true = find_action "true"}
+    | _, _, _, _ ->
+      let switch_cases cases =
+        List.map
+          (fun (cstr, action) -> (constructor_switch_key cstr, action))
+          cases
+      in
+      Switch_on_constructors
+        {
+          sw_consts_full = List.length consts >= num_consts;
+          sw_consts = switch_cases consts;
+          sw_blocks_full = List.length nonconsts >= num_nonconsts;
+          sw_blocks = switch_cases nonconsts;
+          sw_failaction = fail_opt;
+          sw_dispatch = Switch_variant (Variant_runtime.matching_facts layout);
+        })
 
 let combine_constructor loc arg ex_pat cstr partial ctx def
     (tag_lambda_list, total1, pats) =
   let is_extension =
     match cstr.cstr_kind with
     | Extension_constructor _ -> true
-    | Ordinary_constructor -> false
+    | Ordinary_constructor _ -> false
   in
   if is_extension then
     (* Special cases for extensions *)
@@ -2086,15 +2169,11 @@ let combine_constructor loc arg ex_pat cstr partial ctx def
     (lambda1, jumps_union local_jumps total1)
   else
     (* Regular concrete type *)
-    let layout =
-      match cstr.cstr_layout with
-      | Some layout -> layout
-      | None -> assert false
-    in
+    let layout = Datarepr.constructor_variant cstr in
     let num_consts = Variant_runtime.num_constants layout
     and num_nonconsts = Variant_runtime.num_blocks layout in
     let ncases = List.length tag_lambda_list in
-    let sig_complete = ncases = Array.length layout in
+    let sig_complete = ncases = Variant_runtime.length layout in
     let fail_opt, fails, local_jumps =
       if sig_complete then (None, [], jumps_empty)
       else mk_failaction_pos partial pats ctx def
@@ -2102,67 +2181,13 @@ let combine_constructor loc arg ex_pat cstr partial ctx def
 
     let tag_lambda_list = fails @ tag_lambda_list in
     let consts, nonconsts = split_cases tag_lambda_list in
-    let consts = sort_constructor_cases layout consts
-    and nonconsts = sort_constructor_cases layout nonconsts in
-    let lambda1 =
-      match (fail_opt, same_actions tag_lambda_list) with
-      | None, Some act -> act (* Identical actions, no failure *)
-      | _ -> (
-        match (num_consts, num_nonconsts, consts, nonconsts) with
-        | 1, 1, [(_, act1)], [(_, act2)]
-          when cstr.cstr_name = "::" || cstr.cstr_name = "[]"
-               || Datarepr.constructor_has_optional_shape cstr ->
-          (* Typically, match on lists, will avoid isint primitive in that
-             case *)
-          let arg =
-            if Datarepr.constructor_has_optional_shape cstr then
-              Lprim (Pis_not_none, [arg], loc)
-            else
-              Lprim (Pjscomp Cneq, [arg; Lconst (Const_base (Const_int 0))], loc)
-          in
-          Lifthenelse (arg, act2, act1)
-        | 2, 0, _, [] when cstr.cstr_name = "true" || cstr.cstr_name = "false"
-          ->
-          let find_action name =
-            match
-              Ext_list.find_opt consts (fun (cstr, action) ->
-                  if cstr.cstr_name = name then Some action else None)
-            with
-            | Some action -> action
-            | None -> assert false
-          in
-          let false_action = find_action "false"
-          and true_action = find_action "true" in
-          Lifthenelse (arg, true_action, false_action)
-        | _, _, _, _ ->
-          (* Emit a switch after constructor identity has been resolved to its
-             canonical runtime representation. *)
-          let consts =
-            List.map
-              (fun (cstr, action) ->
-                (constructor_switch_key layout cstr, action))
-              consts
-          in
-          let nonconsts =
-            List.map
-              (fun (cstr, action) ->
-                (constructor_switch_key layout cstr, action))
-              nonconsts
-          in
-          let sw =
-            {
-              sw_consts_full = List.length consts >= num_consts;
-              sw_consts = consts;
-              sw_blocks_full = List.length nonconsts >= num_nonconsts;
-              sw_blocks = nonconsts;
-              sw_failaction = fail_opt;
-              sw_dispatch = Switch_variant (Variant_runtime.dispatch layout);
-            }
-          in
-          let hs, sw = share_actions_sw sw in
-          let sw = reintroduce_fail sw in
-          hs (Lswitch (arg, sw, loc)))
+    let consts = sort_constructor_cases consts
+    and nonconsts = sort_constructor_cases nonconsts in
+    let plan =
+      make_constructor_matching_plan ~cstr ~layout ~fail_opt ~num_consts
+        ~num_nonconsts ~tag_lambda_list ~consts ~nonconsts
     in
+    let lambda1 = lower_constructor_matching_plan ~loc ~arg plan in
     (lambda1, jumps_union local_jumps total1)
 
 let make_test_sequence_variant_constant fail arg int_lambda_list =

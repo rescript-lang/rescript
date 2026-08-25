@@ -143,8 +143,7 @@ and type_inlined_type =
 and type_kind =
   | Type_abstract
   | Type_record of label_declaration list * record_representation
-  | Type_variant of
-      constructor_declaration list * Variant_runtime.variant_layout
+  | Type_variant of constructor_declaration list * Variant_runtime.layout_ref
   | Type_open
 
 and record_representation =
@@ -155,8 +154,7 @@ and record_representation =
       (* Inlined record *)
        {
       name: string;
-      num_nonconsts: int;
-      attrs: Parsetree.attributes;
+      representation: Variant_runtime.constructor_reference;
     }
   | Record_extension (* Inlined record under extension *)
 
@@ -181,9 +179,10 @@ and constructor_arguments =
   | Cstr_tuple of type_expr list
   | Cstr_record of label_declaration list
 
-and type_representation = Boxed | Transparent
+and type_representation = Boxed | Unboxed
 (* Single-payload @unboxed type: the payload is the whole runtime
-         value. Untagged unions are tracked by their attributes, not here. *)
+         value. Multi-constructor unboxed variants are tracked by their layout,
+         not here. *)
 
 type extension_constructor = {
   ext_type_path: Path.t;
@@ -251,9 +250,6 @@ type constructor_description = {
   cstr_args: type_expr list; (* Type of the arguments *)
   cstr_arity: int; (* Number of arguments *)
   cstr_kind: constructor_kind;
-  cstr_layout: Variant_runtime.variant_layout option;
-      (* Runtime layout of the declaring variant; None for extension
-         constructors *)
   cstr_generalized: bool; (* Constrained return type? *)
   cstr_private: private_flag; (* Read-only constructor? *)
   cstr_loc: Location.t;
@@ -262,9 +258,10 @@ type constructor_description = {
 }
 
 and constructor_kind =
-  | Ordinary_constructor
-    (* Constructor introduced by a variant type declaration; identified
-         within its variant by [cstr_name] *)
+  | Ordinary_constructor of Variant_runtime.constructor_reference
+    (* Constructor introduced by a variant type declaration. This stable
+       reference addresses its runtime representation directly; the shared
+       variant value also supplies declaration-level matching facts. *)
   | Extension_constructor of Path.t
 (* Extension constructor, identified by its own path since extension
          constructors can be rebound *)
@@ -276,9 +273,10 @@ and constructor_kind =
    general-purpose identity test across unrelated types. *)
 let same_constructor c1 c2 =
   match (c1.cstr_kind, c2.cstr_kind) with
-  | Ordinary_constructor, Ordinary_constructor -> c1.cstr_name = c2.cstr_name
+  | Ordinary_constructor _, Ordinary_constructor _ ->
+    c1.cstr_name = c2.cstr_name
   | Extension_constructor p1, Extension_constructor p2 -> Path.same p1 p2
-  | (Ordinary_constructor | Extension_constructor _), _ -> false
+  | (Ordinary_constructor _ | Extension_constructor _), _ -> false
 
 let may_equal_constr c1 c2 =
   match (c1.cstr_kind, c2.cstr_kind) with
@@ -306,9 +304,9 @@ let same_record_representation x y =
   match x with
   | Record_regular -> y = Record_regular
   | Record_float_unused -> y = Record_float_unused
-  | Record_inlined {name; num_nonconsts} -> (
+  | Record_inlined {name} -> (
     match y with
-    | Record_inlined y -> name = y.name && num_nonconsts = y.num_nonconsts
+    | Record_inlined y -> name = y.name
     | _ -> false)
   | Record_extension -> y = Record_extension
   | Record_unboxed x -> (

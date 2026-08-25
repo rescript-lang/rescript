@@ -350,8 +350,8 @@ let type_declarations ?(equality = false) ~loc env name decl1 id decl2 =
         in
         match
           ( decl2.type_kind,
-            decl1.type_representation = Transparent || untagged1,
-            decl2.type_representation = Transparent || untagged2 )
+            decl1.type_representation = Unboxed || untagged1,
+            decl2.type_representation = Unboxed || untagged2 )
         with
         | Type_abstract, _, _ -> []
         | _, true, false -> [Unboxed_representation false]

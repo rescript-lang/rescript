@@ -60,8 +60,7 @@ let get_block_type ~env (cstr : Types.constructor_declaration) :
   | true, _ -> None (* TODO: add restrictions here *)
 
 let layout_from_type_variant ?(is_untagged_def = false) ~env
-    (cstrs : Types.constructor_declaration list) :
-    Variant_runtime.variant_layout =
+    (cstrs : Types.constructor_declaration list) : Variant_runtime.layout =
   let get_block (cstr : Types.constructor_declaration) : block =
     {
       runtime = block_runtime ~name:(Ident.name cstr.cd_id) cstr.cd_attributes;
@@ -89,4 +88,4 @@ let layout_from_type_variant ?(is_untagged_def = false) ~env
     Array.of_list
       (List.map (fun (_, constructor) -> constructor) located_constructors)
   in
-  constructors
+  Variant_runtime.make_layout constructors

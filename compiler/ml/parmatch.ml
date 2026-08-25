@@ -560,10 +560,10 @@ let all_record_args lbls =
                 _,
                 [({pat_desc = Tpat_construct (_, cd, _)} as pat_construct)] )
             when lbl_is_optional () -> (
-            match cd.cstr_layout with
-            | None -> x
-            | Some layout -> (
-              match Variant_runtime.constructor_by_name layout cd.cstr_name with
+            match cd.cstr_kind with
+            | Extension_constructor _ -> x
+            | Ordinary_constructor representation -> (
+              match Variant_runtime.representation representation with
               | Block {block_type = Some block_type}
                 when not
                        (Ast_untagged_variants.block_type_can_be_undefined
@@ -860,9 +860,11 @@ let row_of_pat pat =
 let full_match closing env =
   match env with
   | ({pat_desc = Tpat_construct (_, c, _)}, _) :: _ -> (
-    match c.cstr_layout with
-    | None -> false (* extensions *)
-    | Some layout -> List.length env = Array.length layout)
+    match c.cstr_kind with
+    | Extension_constructor _ -> false
+    | Ordinary_constructor {variant} ->
+      List.length env
+      = Variant_runtime.length (Variant_runtime.get_layout variant))
   | (({pat_desc = Tpat_variant _} as p), _) :: _ ->
     let fields =
       List.map
@@ -906,7 +908,7 @@ let should_extend ext env =
     | [] -> assert false
     | (p, _) :: _ -> (
       match p.pat_desc with
-      | Tpat_construct (_, {cstr_kind = Ordinary_constructor}, _) ->
+      | Tpat_construct (_, {cstr_kind = Ordinary_constructor _}, _) ->
         let path = get_type_path p.pat_type p.pat_env in
         Path.same path ext
       | Tpat_construct (_, {cstr_kind = Extension_constructor _}, _) -> false
@@ -982,7 +984,7 @@ let complete_constrs p seen_constrs =
 
 let build_other_constrs env p =
   match p.pat_desc with
-  | Tpat_construct (_, {cstr_kind = Ordinary_constructor}, _) ->
+  | Tpat_construct (_, {cstr_kind = Ordinary_constructor _}, _) ->
     let get_constr = function
       | {pat_desc = Tpat_construct (_, c, _)} -> c
       | _ -> fatal_error "Parmatch.get_constr"
@@ -2133,7 +2135,7 @@ let extendable_path path =
 
 let rec collect_paths_from_pat r p =
   match p.pat_desc with
-  | Tpat_construct (_, {cstr_kind = Ordinary_constructor}, ps) ->
+  | Tpat_construct (_, {cstr_kind = Ordinary_constructor _}, ps) ->
     let path = get_type_path p.pat_type p.pat_env in
     List.fold_left collect_paths_from_pat
       (if extendable_path path then add_path path r else r)

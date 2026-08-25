@@ -269,7 +269,7 @@ let rec expression : Env.env -> Typedtree.expression -> Use.t =
       | _ -> Use.empty
     in
     let use =
-      if Datarepr.constructor_is_transparent desc then fun x -> x else Use.guard
+      if Datarepr.constructor_is_unboxed desc then fun x -> x else Use.guard
     in
     Use.join access_constructor (use (list expression env exprs))
   | Texp_variant (_, eo) -> Use.guard (option expression env eo)

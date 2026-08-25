@@ -66,7 +66,7 @@ let get_representation_from_attributes sdecl =
   match (boxed, unboxed) with
   | true, true -> raise (Error (sdecl.ptype_loc, Boxed_and_unboxed))
   | true, false | false, false -> Boxed
-  | false, true -> Transparent
+  | false, true -> Unboxed
 
 (* Enter all declared types in the environment as abstract types *)
 
@@ -410,7 +410,7 @@ let transl_declaration ~type_record_as_object env sdecl id =
     | _ -> false
   in
 
-  (if raw_status = Transparent && not (check_untagged_variant ()) then
+  (if raw_status = Unboxed && not (check_untagged_variant ()) then
      match sdecl.ptype_kind with
      | Ptype_abstract ->
        raise (Error (sdecl.ptype_loc, Bad_unboxed_attribute "it is abstract"))
@@ -440,7 +440,7 @@ let transl_declaration ~type_record_as_object env sdecl id =
       (* The type is not unboxable, mark it as boxed *)
       Boxed
   in
-  let unbox = representation = Transparent in
+  let unbox = representation = Unboxed in
   let tkind, kind, sdecl =
     match sdecl.ptype_kind with
     | Ptype_abstract -> (Ttype_abstract, Type_abstract, sdecl)
@@ -594,7 +594,7 @@ let transl_declaration ~type_record_as_object env sdecl id =
       (* the canonical layout is computed once the whole recursive group is
          in the environment *)
       ( Ttype_variant tcstrs,
-        Type_variant (cstrs, Variant_runtime.dummy_layout),
+        Type_variant (cstrs, Variant_runtime.pending_layout ()),
         sdecl )
     | Ptype_record lbls_ -> (
       let optional_labels =
@@ -1319,7 +1319,7 @@ let compute_immediacy env tdecl =
   | Type_variant ([{cd_args = Cstr_tuple [arg]; _}], _), _
   | Type_variant ([{cd_args = Cstr_record [{ld_type = arg; _}]; _}], _), _
   | Type_record ([{ld_type = arg; _}], _), _
-    when tdecl.type_representation = Transparent -> (
+    when tdecl.type_representation = Unboxed -> (
     match get_unboxed_type_representation env arg with
     | Some argrepr -> not (Ctype.maybe_pointer_type env argrepr)
     | None -> false)
@@ -1582,7 +1582,7 @@ let transl_type_decl env rec_flag sdecl_list =
     List.map
       (fun (id, decl) ->
         match decl.type_kind with
-        | Type_variant (cstrs, _) ->
+        | Type_variant (cstrs, pending_layout) ->
           Ast_untagged_variants.check_tag_field_conflicts cstrs;
           let is_untagged_def =
             Ast_untagged_variants.has_untagged decl.type_attributes
@@ -1591,7 +1591,8 @@ let transl_type_decl env rec_flag sdecl_list =
             Variant_layout.layout_from_type_variant ~is_untagged_def ~env:newenv
               cstrs
           in
-          (id, {decl with type_kind = Type_variant (cstrs, layout)})
+          Variant_runtime.complete_layout pending_layout layout;
+          (id, decl)
         | Type_abstract | Type_record _ | Type_open -> (id, decl))
       decls
   in
