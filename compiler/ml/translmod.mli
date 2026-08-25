@@ -16,10 +16,14 @@
 (* Translation from typed abstract syntax to lambda terms,
    for the module language *)
 
+type implementation = {
+  lambda: Lambda.lambda;
+  exports: Ident.t list;
+  hoisted_functions: Lambda.hoisted_function list;
+}
+
 val transl_implementation :
-  string ->
-  Typedtree.structure * Typedtree.module_coercion ->
-  Lambda.lambda * Ident.t list
+  string -> Typedtree.structure * Typedtree.module_coercion -> implementation
 
 type error
 (* exception Error of Location.t * error *)

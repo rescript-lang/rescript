@@ -107,10 +107,149 @@ let no_side_effects (rest : Lam_group.t list) : string option =
           Some ""
         else None (* TODO :*))
 
+(* Materialize JS-hoisted values as root-level aliases and exports. The source
+   value still lives at its normal module path, but downstream tools can import
+   the flat name directly when the .cmj metadata marks it as hoisted. *)
+let js_hoisted_aliases (export_ids : Ident.t list)
+    (hoisted : Lambda.hoisted_function list) (groups : Lam_group.t list) =
+  if hoisted = [] then []
+  else
+    let group_map =
+      Ext_list.fold_left groups Map_ident.empty (fun group_map group ->
+          match group with
+          | Single (_, id, lam) -> Map_ident.add group_map id lam
+          | Recursive bindings ->
+            Ext_list.fold_left bindings group_map (fun group_map (id, lam) ->
+                Map_ident.add group_map id lam)
+          | Nop _ -> group_map)
+    in
+    let rec access loc base fields =
+      match fields with
+      | [] -> base
+      | (pos, name) :: fields ->
+        access loc
+          (Lam.prim
+             ~primitive:
+               (Lam_primitive.Pfield (pos, Lam_compat.Fld_module {name}))
+             ~args:[base] loc)
+          fields
+    in
+    let rec resolve_binding seen = function
+      | Lam.Lvar id as lam -> (
+        if Set_ident.mem seen id then (lam, Some id)
+        else
+          match Map_ident.find_opt group_map id with
+          | Some
+              ((Lam.Lvar _ | Lam.Lprim {primitive = Lam_primitive.Pfield _; _})
+               as alias) ->
+            resolve_binding (Set_ident.add seen id) alias
+          | Some resolved -> (resolved, Some id)
+          | None -> (lam, Some id))
+      | Lam.Lprim {primitive = Lam_primitive.Pfield (pos, _); args = [base]} as
+        lam -> (
+        match fst (resolve_binding seen base) with
+        | Lam.Lprim
+            {primitive = Lam_primitive.Pmakeblock (_, Blk_module _, _); args}
+          -> (
+          match List.nth_opt args pos with
+          | Some field -> resolve_binding seen field
+          | None -> (lam, None))
+        | _ -> (lam, None))
+      | lam -> (lam, None)
+    in
+    let resolve seen lam = fst (resolve_binding seen lam) in
+    let rec find_field name pos fields args =
+      match (fields, args) with
+      | field :: _, arg :: _ when field = name -> Some (pos, arg)
+      | _ :: fields, _ :: args -> find_field name (pos + 1) fields args
+      | [], [] -> None
+      | _ -> invalid_arg "find_field"
+    in
+    let rec find_path lam fields positions =
+      match fields with
+      | [] ->
+        let target, binding_id = resolve_binding Set_ident.empty lam in
+        Some (List.rev positions, binding_id, target)
+      | field :: fields -> (
+        match resolve Set_ident.empty lam with
+        | Lam.Lprim
+            {
+              primitive = Lam_primitive.Pmakeblock (_, Blk_module names, _);
+              args;
+            } -> (
+          match find_field field 0 names args with
+          | Some (pos, arg) -> find_path arg fields ((pos, field) :: positions)
+          | None -> None)
+        | _ -> None)
+    in
+    let exported_modules =
+      Ext_list.fold_left export_ids Map_string.empty (fun modules id ->
+          Map_string.add modules id.Ident.name id)
+    in
+    let occupied_names =
+      Ext_list.fold_left groups Set_string.empty (fun occupied group ->
+          match group with
+          | Single (_, id, _) ->
+            Set_string.add occupied (Ext_ident.convert id.Ident.name)
+          | Recursive bindings ->
+            Ext_list.fold_left bindings occupied (fun occupied (id, _) ->
+                Set_string.add occupied (Ext_ident.convert id.Ident.name))
+          | Nop _ -> occupied)
+    in
+    fst
+      (Ext_list.fold_left hoisted ([], occupied_names)
+         (fun ((aliases, occupied_names) as state) hoisted ->
+           let {Lambda.binding; path; loc} = hoisted in
+           let missing_path () =
+             Location.prerr_warning loc
+               (Warnings.Misplaced_attribute "res.hoistedFunction");
+             state
+           in
+           match path with
+           | top :: fields -> (
+             match Map_string.find_opt exported_modules top with
+             | Some top_id -> (
+               match Map_ident.find_opt group_map top_id with
+               | Some lam -> (
+                 match find_path lam fields [] with
+                 | Some (access_path, Some target_id, target)
+                   when Ident.same binding target_id ->
+                   let name =
+                     path
+                     |> List.map Ext_ident.unwrap_uppercase_exotic
+                     |> String.concat "$"
+                   in
+                   let js_name = Ext_ident.convert name in
+                   if Set_string.mem occupied_names js_name then
+                     let error_loc =
+                       match target with
+                       | Lam.Lfunction {loc} -> loc
+                       | _ -> loc
+                     in
+                     Location.raise_errorf ~loc:error_loc
+                       "Cannot hoist this function as `%s` because that name \
+                        is already used by a top-level binding."
+                       name
+                   else
+                     let alias_id = Ident.create name in
+                     let alias = access loc (Lam.var top_id) access_path in
+                     ( ( Lam_group.Single (Alias, alias_id, alias),
+                         alias_id,
+                         alias,
+                         path,
+                         name )
+                       :: aliases,
+                       Set_string.add occupied_names js_name )
+                 | Some _ | None -> missing_path ())
+               | None -> missing_path ())
+             | None -> missing_path ())
+           | [] -> missing_path ()))
+
 (** Actually simplify_lets is kind of global optimization since it requires you to know whether
     it's used or not
 *)
-let compile (output_prefix : string) export_idents (lam : Lambda.lambda) =
+let compile (output_prefix : string) export_idents hoisted (lam : Lambda.lambda)
+    =
   let debug_ir = !Js_config.debug_ir in
   let diagnostics =
     if debug_ir then Some (Ir_diagnostics.create ~output_prefix) else None
@@ -203,6 +342,34 @@ let compile (output_prefix : string) export_idents (lam : Lambda.lambda) =
           Ir_diagnostics.dump_groups diagnostics coerced_input.groups))
   in
   let maybe_pure = no_side_effects groups in
+  (* Add the generated alias groups before JS lowering so regular export
+     printing, tree shaking, and .cmj metadata all see the flat runtime value. *)
+  let hoisted_aliases = js_hoisted_aliases meta.exports hoisted groups in
+  let hoisted_groups, hoisted_exports, hoisted_export_map, hoisted_metadata =
+    Ext_list.fold_left hoisted_aliases ([], [], Map_ident.empty, [])
+      (fun
+        (groups, exports, export_map, hoisted_metadata)
+        (group, id, lam, path, name)
+      ->
+        ( group :: groups,
+          id :: exports,
+          Map_ident.add export_map id lam,
+          {Js_cmj_format.path; export_name = name} :: hoisted_metadata ))
+  in
+  let groups = groups @ List.rev hoisted_groups in
+  let meta =
+    {
+      meta with
+      exports = meta.exports @ List.rev hoisted_exports;
+      export_idents =
+        Ext_list.fold_left hoisted_exports meta.export_idents (fun acc id ->
+            Set_ident.add acc id);
+    }
+  in
+  let export_map =
+    Map_ident.fold hoisted_export_map coerced_input.export_map
+      (fun id lam acc -> Map_ident.add acc id lam)
+  in
   let () =
     if debug_ir then
       Ext_log.dwarn ~__POS__ "\n@[[TIME:]Pre-compile: %f@]@."
@@ -250,7 +417,7 @@ let compile (output_prefix : string) export_idents (lam : Lambda.lambda) =
     Lam_stats_export.get_dependent_module_effect maybe_pure external_module_ids
   in
   let v : Js_cmj_format.t =
-    Lam_stats_export.export_to_cmj meta effect_ coerced_input.export_map
+    Lam_stats_export.export_to_cmj meta effect_ export_map hoisted_metadata
       (if Ext_char.is_lower_case (Filename.basename output_prefix).[0] then
          Little
        else Upper)

@@ -518,13 +518,14 @@ module Compile = struct
         types_signature := signature;
         (a, b)
       in
-      typed_tree |> Translmod.transl_implementation modulename
-      |> (* Printlambda.lambda ppf *) fun (lam, exports) ->
+      let {Translmod.lambda; exports; hoisted_functions} =
+        Translmod.transl_implementation modulename typed_tree
+      in
       let buffer = Buffer.create 1000 in
       let () =
         Js_dump_program.pp_deps_program ~output_prefix:""
           (* does not matter here *) module_system
-          (Lam_compile_main.compile "" exports lam)
+          (Lam_compile_main.compile "" exports hoisted_functions lambda)
           (Ext_pp.from_buffer buffer)
       in
       let v = Buffer.contents buffer in
@@ -548,15 +549,15 @@ module Compile = struct
         let typedtree =
           Printer.to_string Printtyped.implementation_with_coercion typed_tree
         in
-        let lambda = Printer.to_string Printlambda.lambda lam in
-        let lam, _ = Lam_convert.convert export_ident_sets lam in
+        let lambda_output = Printer.to_string Printlambda.lambda lambda in
+        let lam, _ = Lam_convert.convert export_ident_sets lambda in
         let lam = Lam_print.lambda_to_string lam in
         let debug_attrs =
           Js.Unsafe.
             [|
               ("parsetree", inject @@ Js.string parsetree);
               ("typedtree", inject @@ Js.string typedtree);
-              ("lambda", inject @@ Js.string lambda);
+              ("lambda", inject @@ Js.string lambda_output);
               ("lam", inject @@ Js.string lam);
             |]
         in

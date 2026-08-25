@@ -19,6 +19,8 @@ open Asttypes
 
 type loc_kind = Loc_FILE | Loc_LINE | Loc_MODULE | Loc_LOC | Loc_POS
 
+type hoisted_function = {binding: Ident.t; path: string list; loc: Location.t}
+
 type tag_info =
   | Blk_constructor of {
       name: string;

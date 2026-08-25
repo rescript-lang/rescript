@@ -32,6 +32,18 @@ let is_top (rootpath : Path.t option) =
   | Some (Pident _) -> true
   | _ -> false
 
+let module_path = function
+  | Some path -> (
+    match Path.flatten path with
+    | `Ok (_, segments) -> Some segments
+    | `Contains_apply -> None)
+  | None -> None
+
+let exportable_module_path rootpath =
+  match module_path rootpath with
+  | Some (_ :: _ as path) -> Some path
+  | _ -> None
+
 let functor_path path param : Path.t option =
   match path with
   | None -> None
@@ -222,6 +234,17 @@ let get_functor_params mexp coercion root_path =
   | _ -> assert false
 
 let export_identifiers : Ident.t list ref = ref []
+let js_hoisted : Lambda.hoisted_function list ref = ref []
+
+let js_hoist_handler rootpath =
+  match exportable_module_path rootpath with
+  | None -> None
+  | Some path ->
+    Some
+      (fun id loc ->
+        js_hoisted :=
+          {Lambda.binding = id; path = path @ [id.Ident.name]; loc}
+          :: !js_hoisted)
 
 let rec compile_functor mexp coercion root_path loc =
   let functor_param, body, body_path, res_coercion, inline_attribute =
@@ -367,7 +390,10 @@ and transl_structure loc fields cc rootpath final_env = function
             | _ ->
               if not (Parmatch.irrefutable vb_pat) then
                 raise (Error (vb_pat.pat_loc, Fragile_pattern_in_toplevel)));
-      (Translcore.transl_let rec_flag pat_expr_list body, size)
+      ( Translcore.transl_let
+          ~js_hoist:(js_hoist_handler rootpath)
+          rec_flag pat_expr_list body,
+        size )
     | Tstr_typext tyext ->
       let ids = List.map (fun ext -> ext.ext_id) tyext.tyext_constructors in
       let body, size =
@@ -391,9 +417,10 @@ and transl_structure loc fields cc rootpath final_env = function
         size )
     | Tstr_module mb as s ->
       let id = mb.mb_id in
+      let hidden = Typemod.rescript_hide s in
       let body, size =
         transl_structure loc
-          (if Typemod.rescript_hide s then fields else id :: fields)
+          (if hidden then fields else id :: fields)
           cc rootpath final_env rem
       in
       let module_body =
@@ -456,11 +483,22 @@ let _ = Translcore.transl_module := transl_module
 
 (* Compile an implementation *)
 
+type implementation = {
+  lambda: Lambda.lambda;
+  exports: Ident.t list;
+  hoisted_functions: Lambda.hoisted_function list;
+}
+
 let transl_implementation module_name (str, cc) =
   export_identifiers := [];
+  js_hoisted := [];
   let module_id = Ident.create_persistent module_name in
   let body, _ = transl_struct Location.none [] cc (global_path module_id) str in
-  (body, !export_identifiers)
+  {
+    lambda = body;
+    exports = !export_identifiers;
+    hoisted_functions = !js_hoisted;
+  }
 
 (* Build the list of value identifiers defined by a toplevel structure
    (excluding primitive declarations). *)

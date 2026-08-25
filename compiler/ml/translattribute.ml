@@ -37,6 +37,21 @@ let find_attribute p (attributes : t list) =
   in
   (attr, other_attributes)
 
+let get_empty_attribute name attributes =
+  let attr, _ =
+    find_attribute
+      (fun (({txt}, _) : Parsetree.attribute) -> txt = name)
+      attributes
+  in
+  match attr with
+  | None -> None
+  | Some ({loc}, Parsetree.PStr []) -> Some loc
+  | Some ({loc}, _) ->
+    Location.prerr_warning loc
+      (Warnings.Attribute_payload
+         (name, "This attribute does not accept a payload"));
+    None
+
 let parse_inline_attribute (attr : t option) : Lambda.inline_attribute =
   match attr with
   | None -> Default_inline

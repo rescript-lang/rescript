@@ -1,4 +1,4 @@
-let cmi_magic_number = "Caml1999I023"
+let cmi_magic_number = "Caml1999I024"
 
 (* Magic numbers for marshaled values of the *current* parsetree, whose layout
    changes across compiler versions. *)
