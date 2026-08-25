@@ -249,8 +249,7 @@ and type_inlined_type =
 and type_kind =
   | Type_abstract
   | Type_record of label_declaration list * record_representation
-  | Type_variant of
-      constructor_declaration list * Variant_runtime.variant_layout
+  | Type_variant of constructor_declaration list * Variant_runtime.layout_ref
   | Type_open
 
 and record_representation =
@@ -261,8 +260,7 @@ and record_representation =
       (* Inlined record *)
        {
       name: string;
-      num_nonconsts: int;
-      attrs: Parsetree.attributes;
+      representation: Variant_runtime.constructor_reference;
     }
   | Record_extension (* Inlined record under extension *)
 
@@ -287,9 +285,10 @@ and constructor_arguments =
   | Cstr_tuple of type_expr list
   | Cstr_record of label_declaration list
 
-and type_representation = Boxed | Transparent
+and type_representation = Boxed | Unboxed
 (* Single-payload @unboxed type: the payload is the whole runtime
-         value. Untagged unions are tracked by their attributes, not here. *)
+         value. Multi-constructor unboxed variants are tracked by their layout,
+         not here. *)
 
 type extension_constructor = {
   ext_type_path: Path.t;
@@ -355,9 +354,6 @@ type constructor_description = {
   cstr_args: type_expr list; (* Type of the arguments *)
   cstr_arity: int; (* Number of arguments *)
   cstr_kind: constructor_kind;
-  cstr_layout: Variant_runtime.variant_layout option;
-      (* Runtime layout of the declaring variant; None for extension
-         constructors *)
   cstr_generalized: bool; (* Constrained return type? *)
   cstr_private: private_flag; (* Read-only constructor? *)
   cstr_loc: Location.t;
@@ -366,9 +362,10 @@ type constructor_description = {
 }
 
 and constructor_kind =
-  | Ordinary_constructor
-    (* Constructor introduced by a variant type declaration; identified
-         within its variant by [cstr_name] *)
+  | Ordinary_constructor of Variant_runtime.constructor_reference
+    (* Constructor introduced by a variant type declaration. This stable
+       reference addresses its runtime representation directly; the shared
+       variant value also supplies declaration-level matching facts. *)
   | Extension_constructor of Path.t
 (* Extension constructor, identified by its own path since extension
          constructors can be rebound *)

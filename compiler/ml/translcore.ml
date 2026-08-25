@@ -37,9 +37,7 @@ let transl_module =
 (* Number of payload-carrying constructors of the variant declaring
    [cstr]; part of the runtime representation of its blocks *)
 let num_nonconst_constructors (cstr : Types.constructor_description) =
-  match cstr.cstr_layout with
-  | Some layout -> Variant_runtime.num_blocks layout
-  | None -> assert false
+  Variant_runtime.num_blocks (Datarepr.constructor_variant cstr)
 
 (* Compile an exception/extension definition *)
 
@@ -531,14 +529,14 @@ let transl_primitive_application loc prim env ty args =
               {
                 exp_desc =
                   Texp_construct
-                    (_, {cstr_kind = Ordinary_constructor; cstr_args = []}, _);
+                    (_, {cstr_kind = Ordinary_constructor _; cstr_args = []}, _);
               };
             ]
           | [
               {
                 exp_desc =
                   Texp_construct
-                    (_, {cstr_kind = Ordinary_constructor; cstr_args = []}, _);
+                    (_, {cstr_kind = Ordinary_constructor _; cstr_args = []}, _);
               };
               _;
             ]
@@ -769,7 +767,7 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
       | _ -> assert false
     else
       match cstr.cstr_kind with
-      | Ordinary_constructor when cstr.cstr_args = [] ->
+      | Ordinary_constructor _ when cstr.cstr_args = [] ->
         Lconst
           (Const_pointer
              (if Datarepr.constructor_has_optional_shape cstr then Pt_shape_none
@@ -778,13 +776,13 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
                   (match Datarepr.constructor_case cstr with
                   | Constant tag -> tag
                   | Block _ -> assert false)))
-      | Ordinary_constructor -> (
+      | Ordinary_constructor _ -> (
         let runtime =
           match Datarepr.constructor_case cstr with
           | Block {runtime} -> runtime
           | Constant _ -> assert false
         in
-        if Datarepr.constructor_is_transparent cstr then
+        if Datarepr.constructor_is_unboxed cstr then
           match ll with
           | [value] -> value
           | _ -> assert false
@@ -1119,11 +1117,19 @@ and transl_record loc env fields repres opt_init_expr =
           | Record_float_unused -> assert false
           | Record_regular ->
             Lconst (Const_block (Lambda.blk_record fields mut, cl))
-          | Record_inlined {name; num_nonconsts; attrs} ->
+          | Record_inlined {name; representation} ->
+            let runtime =
+              match Variant_runtime.representation representation with
+              | Block {runtime} -> runtime
+              | Constant _ -> assert false
+            in
+            let num_nonconsts =
+              Variant_runtime.num_blocks
+                (Variant_runtime.get_layout representation.variant)
+            in
             Lconst
               (Const_block
-                 ( Lambda.blk_record_inlined fields name num_nonconsts
-                     ~runtime:(Ast_untagged_variants.block_runtime ~name attrs)
+                 ( Lambda.blk_record_inlined fields name num_nonconsts ~runtime
                      mut,
                    cl ))
           | Record_unboxed _ ->
@@ -1137,11 +1143,19 @@ and transl_record loc env fields repres opt_init_expr =
           | Record_regular ->
             Lprim (Pmakeblock (Lambda.blk_record fields mut), ll, loc)
           | Record_float_unused -> assert false
-          | Record_inlined {name; num_nonconsts; attrs} ->
+          | Record_inlined {name; representation} ->
+            let runtime =
+              match Variant_runtime.representation representation with
+              | Block {runtime} -> runtime
+              | Constant _ -> assert false
+            in
+            let num_nonconsts =
+              Variant_runtime.num_blocks
+                (Variant_runtime.get_layout representation.variant)
+            in
             Lprim
               ( Pmakeblock
-                  (Lambda.blk_record_inlined fields name num_nonconsts
-                     ~runtime:(Ast_untagged_variants.block_runtime ~name attrs)
+                  (Lambda.blk_record_inlined fields name num_nonconsts ~runtime
                      mut),
                 ll,
                 loc )

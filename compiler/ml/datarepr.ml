@@ -70,7 +70,7 @@ let constructor_args priv cd_args cd_res path rep =
     let type_params = Type_set.elements arg_vars_set in
     let type_representation =
       match rep with
-      | Record_unboxed _ -> Transparent
+      | Record_unboxed _ -> Unboxed
       | _ -> Boxed
     in
     let tdecl =
@@ -102,19 +102,37 @@ let constructor_has_optional_shape
 
 (* The constructor's entry in its variant's canonical layout *)
 let constructor_case (cstr : constructor_description) =
-  match cstr.cstr_layout with
-  | Some layout -> Variant_runtime.constructor_by_name layout cstr.cstr_name
-  | None -> assert false
+  match cstr.cstr_kind with
+  | Ordinary_constructor representation ->
+    Variant_runtime.representation representation
+  | Extension_constructor _ -> assert false
 
-(* Sole payload-carrying constructor of an unboxed type: constructing it is
-   the identity at runtime *)
-let constructor_is_transparent (cstr : constructor_description) =
-  (match cstr.cstr_layout with
-  | Some [|Block _|] -> true
-  | _ -> false)
-  && List.exists
-       (fun (attribute, _) -> attribute.txt = "unboxed")
-       cstr.cstr_attributes
+let constructor_variant (cstr : constructor_description) =
+  match cstr.cstr_kind with
+  | Ordinary_constructor {variant} -> Variant_runtime.get_layout variant
+  | Extension_constructor _ -> assert false
+
+let constructor_position (cstr : constructor_description) =
+  match cstr.cstr_kind with
+  | Ordinary_constructor {position} -> position
+  | Extension_constructor _ -> assert false
+
+let constructor_payload_is_unboxed (cstr : constructor_description) =
+  match cstr.cstr_kind with
+  | Ordinary_constructor representation -> (
+    match Variant_runtime.representation representation with
+    | Block {runtime = {untagged = true}} -> true
+    | Constant _ | Block _ -> false)
+  | Extension_constructor _ -> false
+
+(* Sole payload-carrying constructor of an @unboxed type: constructing it is
+   the identity at runtime. *)
+let constructor_is_unboxed (cstr : constructor_description) =
+  match cstr.cstr_kind with
+  | Ordinary_constructor {variant} ->
+    constructor_payload_is_unboxed cstr
+    && Variant_runtime.length (Variant_runtime.get_layout variant) = 1
+  | Extension_constructor _ -> false
 
 let constructor_descrs ty_path decl cstrs =
   let layout =
@@ -123,8 +141,7 @@ let constructor_descrs ty_path decl cstrs =
     | Type_abstract | Type_record _ | Type_open -> assert false
   in
   let ty_res = newgenconstr ty_path decl.type_params in
-  let num_nonconsts = Variant_runtime.num_blocks layout in
-  let rec describe_constructors = function
+  let rec describe_constructors position = function
     | [] -> []
     | {cd_id; cd_args; cd_res; cd_loc; cd_attributes} :: rem ->
       let ty_res =
@@ -132,18 +149,24 @@ let constructor_descrs ty_path decl cstrs =
         | Some ty_res' -> ty_res'
         | None -> ty_res
       in
-      let descr_rem = describe_constructors rem in
+      let descr_rem = describe_constructors (position + 1) rem in
       let cstr_name = Ident.name cd_id in
+      let representation : Variant_runtime.constructor_reference =
+        {variant = layout; position}
+      in
       let existentials, cstr_args, cstr_inlined =
-        let representation =
-          if decl.type_representation = Transparent then Record_unboxed true
-          else
-            Record_inlined
-              {name = cstr_name; num_nonconsts; attrs = cd_attributes}
+        let record_representation =
+          match cd_args with
+          | Cstr_tuple _ ->
+            (* [constructor_args] ignores this value for tuple payloads. *)
+            Record_regular
+          | Cstr_record _ when decl.type_representation = Unboxed ->
+            Record_unboxed true
+          | Cstr_record _ -> Record_inlined {name = cstr_name; representation}
         in
         constructor_args decl.type_private cd_args cd_res
           (Path.Pdot (ty_path, cstr_name, Path.nopos))
-          representation
+          record_representation
       in
       let cstr =
         {
@@ -152,8 +175,7 @@ let constructor_descrs ty_path decl cstrs =
           cstr_existentials = existentials;
           cstr_args;
           cstr_arity = List.length cstr_args;
-          cstr_kind = Ordinary_constructor;
-          cstr_layout = Some layout;
+          cstr_kind = Ordinary_constructor representation;
           cstr_private = decl.type_private;
           cstr_generalized = cd_res <> None;
           cstr_loc = cd_loc;
@@ -163,7 +185,7 @@ let constructor_descrs ty_path decl cstrs =
       in
       (cd_id, cstr) :: descr_rem
   in
-  let result = describe_constructors cstrs in
+  let result = describe_constructors 0 cstrs in
   match result with
   | [
       (({Ident.name = "None"} as a_id), ({cstr_args = []} as a_descr));
@@ -204,7 +226,6 @@ let extension_descr path_ext ext =
     cstr_args;
     cstr_arity = List.length cstr_args;
     cstr_kind = Extension_constructor path_ext;
-    cstr_layout = None;
     cstr_private = ext.ext_private;
     cstr_generalized = ext.ext_ret_type <> None;
     cstr_loc = ext.ext_loc;

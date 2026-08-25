@@ -357,7 +357,7 @@ and switch_key =
 
 and switch_dispatch =
   | Switch_direct
-  | Switch_variant of Variant_runtime.variant_dispatch
+  | Switch_variant of Variant_runtime.matching_facts
 
 and 'a switch = {
   sw_consts_full: bool;

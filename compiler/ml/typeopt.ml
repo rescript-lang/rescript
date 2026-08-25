@@ -23,7 +23,7 @@ let scrape_ty env ty =
   match ty.desc with
   | Tconstr (p, _, _) -> (
     match Env.find_type p env with
-    | {type_representation = Transparent; _} -> (
+    | {type_representation = Unboxed; _} -> (
       match Typedecl.get_unboxed_type_representation env ty with
       | None -> ty
       | Some ty2 -> ty2)
@@ -67,26 +67,35 @@ let rec type_cannot_contain_undefined (typ : Types.type_expr) (env : Env.t) =
             | [{cd_id = {name = "()"}; cd_args = Cstr_tuple []}] ),
             _ ) ->
         false (* conservative *)
-      | Type_variant (cdecls, _) ->
-        let untagged =
-          Ast_untagged_variants.has_untagged decl.type_attributes
+      | Type_variant (cdecls, layout_ref) ->
+        let layout = Variant_runtime.get_layout layout_ref in
+        let rec all_cases_cannot_contain_undefined position = function
+          | [] -> true
+          | cd :: rest ->
+            let case = Variant_runtime.constructor_at layout position in
+            let tag, payload_is_unboxed =
+              match case with
+              | Variant_runtime.Constant tag -> (tag, false)
+              | Variant_runtime.Block {runtime = {tag; untagged}} ->
+                (tag, untagged)
+            in
+            tag.tag_type <> Some Variant_runtime.Undefined
+            && ((not payload_is_unboxed)
+               ||
+               match cd.cd_args with
+               | Cstr_tuple [t] ->
+                 Ast_untagged_variants.type_is_builtin_object t
+                 || type_cannot_contain_undefined t env
+               | Cstr_tuple [] -> true
+               | Cstr_tuple (_ :: _ :: _) ->
+                 true (* Not actually possible for an unboxed payload. *)
+               | Cstr_record [{ld_type = t}] ->
+                 Ast_untagged_variants.type_is_builtin_object t
+                 || type_cannot_contain_undefined t env
+               | Cstr_record ([] | _ :: _ :: _) -> true)
+            && all_cases_cannot_contain_undefined (position + 1) rest
         in
-        Ext_list.for_all cdecls (fun cd ->
-            if Ast_untagged_variants.has_undefined_literal cd.cd_attributes then
-              false
-            else if untagged then
-              match cd.cd_args with
-              | Cstr_tuple [t] ->
-                Ast_untagged_variants.type_is_builtin_object t
-                || type_cannot_contain_undefined t env
-              | Cstr_tuple [] -> true
-              | Cstr_tuple (_ :: _ :: _) ->
-                true (* Not actually possible for untagged *)
-              | Cstr_record [{ld_type = t}] ->
-                Ast_untagged_variants.type_is_builtin_object t
-                || type_cannot_contain_undefined t env
-              | Cstr_record ([] | _ :: _ :: _) -> true
-            else true)))
+        all_cases_cannot_contain_undefined 0 cdecls))
   | Ttuple _ | Tvariant _ | Tpackage _ | Tarrow _ -> true
   | Tfield _ | Tpoly _ | Tunivar _ | Tlink _ | Tsubst _ | Tnil | Tvar _
   | Tobject _ ->

@@ -93,53 +93,75 @@ type block = {runtime: block_runtime; block_type: block_type option}
 
 type constructor_case = Constant of tag | Block of block
 
-type variant_dispatch = {
+type matching_facts = {
   tag_name: string option;
+      (** Custom object field containing constructor tags. [None] means the
+          standard [TAG] field. *)
   block_types: block_type list;
+      (** Runtime shapes of constructors represented directly by their
+          payload. Tagged object constructors do not appear here. *)
   literal_tags: tag_type list;
+      (** Runtime values of all nullary constructors. *)
   has_null: bool;
   has_undefined: bool;
   has_other_literal: bool;
 }
-(** The whole-variant information needed to choose a JavaScript dispatch
-    strategy. Constructor identity is carried by each switch arm instead. *)
+(** Declaration-level facts needed when lowering a constructor match. This is
+    not an occurrence-specific matching plan: it contains no arms, actions,
+    default, guard, or exhaustiveness information. *)
 
-type variant_layout = constructor_case array
-(** Canonical runtime layout in source-constructor order. *)
+type layout = {
+  constructors: constructor_case array;
+  matching_facts: matching_facts;
+}
+(** Completed, immutable runtime representation of a variant declaration.
+    Constructor cases are kept in source order and [matching_facts] is computed
+    once from those cases. *)
 
-let case_name = function
-  | Constant {name} -> name
-  | Block {runtime = {tag = {name}}} -> name
+type layout_state = Pending | Complete of layout
 
-let constructor_position (layout : variant_layout) name =
-  let rec find i =
-    if i >= Array.length layout then
-      invalid_arg ("Variant_runtime.constructor_position: " ^ name)
-    else if case_name layout.(i) = name then i
-    else find (i + 1)
-  in
-  find 0
+type layout_ref = layout_state ref
+(** Stable forward reference used while translating a recursive declaration.
+    It is completed exactly once, after the whole recursive group is available
+    in the environment. *)
 
-let constructor_by_name (layout : variant_layout) name =
-  layout.(constructor_position layout name)
+type constructor_reference = {variant: layout_ref; position: int}
+(** Stable, constant-time reference from a constructor description to its
+    entry in the declaring variant. *)
 
-let num_constants (layout : variant_layout) =
+let get_layout layout_ref =
+  match !layout_ref with
+  | Complete layout -> layout
+  | Pending ->
+    failwith
+      "Variant_runtime.get_layout: layout accessed before type declaration was \
+       complete"
+
+let constructor_at (layout : layout) position = layout.constructors.(position)
+
+let representation ({variant; position} : constructor_reference) =
+  constructor_at (get_layout variant) position
+
+let length (layout : layout) = Array.length layout.constructors
+
+let num_constants (layout : layout) =
   Array.fold_left
     (fun n case ->
       match case with
       | Constant _ -> n + 1
       | Block _ -> n)
-    0 layout
+    0 layout.constructors
 
-let num_blocks (layout : variant_layout) =
+let num_blocks (layout : layout) =
   Array.fold_left
     (fun n case ->
       match case with
       | Block _ -> n + 1
       | Constant _ -> n)
-    0 layout
+    0 layout.constructors
 
-let dispatch (constructors : variant_layout) : variant_dispatch =
+let compute_matching_facts (constructors : constructor_case array) :
+    matching_facts =
   let tag_name = ref None in
   let block_types = ref [] in
   let literal_tags = ref [] in
@@ -175,15 +197,23 @@ let dispatch (constructors : variant_layout) : variant_dispatch =
     has_other_literal = !has_other_literal;
   }
 
-(* Placeholder used while a recursive declaration group is being typed;
-   [Typedecl] replaces it with the computed layout once the group is in the
-   environment *)
-let dummy_layout : variant_layout = [||]
+let make_layout constructors =
+  {constructors; matching_facts = compute_matching_facts constructors}
+
+let matching_facts layout = layout.matching_facts
+
+let pending_layout () = ref Pending
+
+let complete_layout layout_ref layout =
+  match !layout_ref with
+  | Pending -> layout_ref := Complete layout
+  | Complete _ ->
+    failwith
+      "Variant_runtime.complete_layout: type declaration layout completed twice"
 
 (* Layout of a variant that carries no representation attributes; used for
    predefined types, whose declarations are built by hand *)
-let plain_layout (cases : (string * bool (* has payload *)) list) :
-    variant_layout =
+let plain_layout (cases : (string * bool (* has payload *)) list) : layout_ref =
   let case (name, has_payload) =
     if has_payload then
       Block
@@ -194,4 +224,4 @@ let plain_layout (cases : (string * bool (* has payload *)) list) :
         }
     else Constant {name; tag_type = None}
   in
-  Array.of_list (List.map case cases)
+  ref (Complete (make_layout (Array.of_list (List.map case cases))))

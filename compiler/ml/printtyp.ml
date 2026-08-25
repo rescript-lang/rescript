@@ -896,7 +896,7 @@ and tree_of_type_decl id decl =
     otype_type = ty;
     otype_private = priv;
     otype_immediate = immediate;
-    otype_unboxed = decl.type_representation = Transparent || !untagged;
+    otype_unboxed = decl.type_representation = Unboxed || !untagged;
     otype_cstrs = constraints;
   }
 

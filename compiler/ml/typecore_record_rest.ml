@@ -108,14 +108,13 @@ let resolve_source_record ~env ~unify_pat_types ~loc ~record_ty
 
 let runtime_excluded_labels ~explicit_runtime_labels source_repr =
   match source_repr with
-  | Record_inlined {attrs; _}
-    when not (Ast_untagged_variants.process_untagged attrs) ->
-    let tag_name =
-      Ast_untagged_variants.process_tag_name attrs
-      |> Option.value ~default:"TAG"
-    in
-    if List.mem tag_name explicit_runtime_labels then explicit_runtime_labels
-    else tag_name :: explicit_runtime_labels
+  | Record_inlined {representation; _} -> (
+    match Variant_runtime.representation representation with
+    | Block {runtime = {untagged = false; tag_name}} ->
+      let tag_name = Option.value tag_name ~default:"TAG" in
+      if List.mem tag_name explicit_runtime_labels then explicit_runtime_labels
+      else tag_name :: explicit_runtime_labels
+    | Constant _ | Block _ -> explicit_runtime_labels)
   | _ -> explicit_runtime_labels
 
 (* Type a record-rest pattern by resolving its annotation, checking that the

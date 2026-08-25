@@ -350,7 +350,7 @@ let common_initial_env add_type add_extension empty_env =
               cd_attributes = [];
             };
           ];
-      type_representation = Types.Transparent;
+      type_representation = Types.Unboxed;
     }
   and decl_promise =
     let tvar = newgenvar () in
