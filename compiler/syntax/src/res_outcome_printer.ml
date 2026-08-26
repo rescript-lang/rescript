@@ -478,37 +478,185 @@ let print_type_parameter_doc (typ, (co, cn)) =
       (if typ = "_" then Doc.text "_" else Doc.text ("'" ^ typ));
     ]
 
+(* Decompile a digested FFI spec back to the surface attributes the user
+   wrote. Total: every constructor of [External_ffi_types.external_spec]
+   originates from attribute syntax. *)
+let print_string_literal_doc s = Doc.text ("\"" ^ String.escaped s ^ "\"")
+
+let print_inline_const_doc (c : External_ffi_types.inline_const) =
+  match c with
+  | Const_str {s; delim = None | Some DNone} -> print_string_literal_doc s
+  | Const_str {s; delim = Some DStarJ} -> Doc.text ("json`" ^ s ^ "`")
+  | Const_str {s; delim = Some DBackQuotes} -> Doc.text ("`" ^ s ^ "`")
+  | Const_str {s; delim = Some DNoQuotes} -> Doc.text s
+  | Const_bool b -> Doc.text (if b then "true" else "false")
+  | Const_int i -> Doc.text (Int32.to_string i)
+  | Const_bigint {negative; digits} ->
+    Doc.text ((if negative then "-" else "") ^ digits ^ "n")
+  | Const_float f -> Doc.text f
+
+let print_external_module_doc (emn : External_ffi_types.external_module_name) =
+  let payload =
+    match (emn.module_bind_name, emn.import_attributes) with
+    | Phint_nothing, None -> print_string_literal_doc emn.bundle
+    | Phint_name hint, None ->
+      Doc.concat
+        [
+          Doc.text "(";
+          print_string_literal_doc emn.bundle;
+          Doc.text ", ";
+          print_string_literal_doc hint;
+          Doc.text ")";
+        ]
+    | bind_name, Some import_attributes ->
+      (* @module({from: "x", with: {k: "v"}}) record payload *)
+      let with_fields =
+        Hashtbl.fold (fun k v acc -> (k, v) :: acc) import_attributes []
+        |> List.sort compare
+        |> List.map (fun (k, v) ->
+               Doc.concat
+                 [Doc.text k; Doc.text ": "; print_string_literal_doc v])
+      in
+      Doc.concat
+        [
+          Doc.text "{from: ";
+          print_string_literal_doc emn.bundle;
+          (match bind_name with
+          | Phint_nothing -> Doc.nil
+          | Phint_name hint ->
+            Doc.concat [Doc.text ", as: "; print_string_literal_doc hint]);
+          Doc.text ", with: {";
+          Doc.join ~sep:(Doc.text ", ") with_fields;
+          Doc.text "}}";
+        ]
+  in
+  Doc.concat [Doc.text "@module("; payload; Doc.text ") "]
+
+let print_scopes_doc (scopes : string list) =
+  match scopes with
+  | [] -> Doc.nil
+  | [s] ->
+    Doc.concat [Doc.text "@scope("; print_string_literal_doc s; Doc.text ") "]
+  | _ ->
+    Doc.concat
+      [
+        Doc.text "@scope((";
+        Doc.join ~sep:(Doc.text ", ") (List.map print_string_literal_doc scopes);
+        Doc.text ")) ";
+      ]
+
+let print_variadic_doc splice =
+  if splice then Doc.text "@variadic " else Doc.nil
+
+let print_return_wrapper_doc (w : External_ffi_types.return_wrapper) =
+  match w with
+  | Return_unset | Return_replaced_with_unit -> Doc.nil
+  | Return_identity -> Doc.text "@return(identity) "
+  | Return_null_to_opt -> Doc.text "@return(null_to_opt) "
+  | Return_null_undefined_to_opt -> Doc.text "@return(nullable) "
+
+let print_external_spec_attrs_doc (spec : External_ffi_types.external_spec)
+    (return_wrapper : External_ffi_types.return_wrapper) =
+  let opt_module emn =
+    match emn with
+    | None -> Doc.nil
+    | Some emn -> print_external_module_doc emn
+  in
+  let spec_doc =
+    match spec with
+    | Js_var {name = _; external_module_name; scopes} ->
+      Doc.concat
+        [
+          Doc.text "@val ";
+          opt_module external_module_name;
+          print_scopes_doc scopes;
+        ]
+    | Js_call {name = _; external_module_name; splice; scopes} ->
+      Doc.concat
+        [
+          Doc.text "@val ";
+          opt_module external_module_name;
+          print_scopes_doc scopes;
+          print_variadic_doc splice;
+        ]
+    | Js_module_as_var emn -> print_external_module_doc emn
+    | Js_module_as_fn {external_module_name; splice} ->
+      Doc.concat
+        [
+          print_external_module_doc external_module_name;
+          print_variadic_doc splice;
+        ]
+    | Js_module_as_class emn ->
+      Doc.concat [Doc.text "@new "; print_external_module_doc emn]
+    | Js_new {name = _; external_module_name; splice; scopes} ->
+      Doc.concat
+        [
+          Doc.text "@new ";
+          opt_module external_module_name;
+          print_scopes_doc scopes;
+          print_variadic_doc splice;
+        ]
+    | Js_send {name = _; splice; js_send_scopes} ->
+      Doc.concat
+        [
+          Doc.text "@send ";
+          print_scopes_doc js_send_scopes;
+          print_variadic_doc splice;
+        ]
+    | Js_get {js_get_name = _; js_get_scopes} ->
+      Doc.concat [Doc.text "@get "; print_scopes_doc js_get_scopes]
+    | Js_set {js_set_name = _; js_set_scopes} ->
+      Doc.concat [Doc.text "@set "; print_scopes_doc js_set_scopes]
+    | Js_get_index {js_get_index_scopes} ->
+      Doc.concat [Doc.text "@get_index "; print_scopes_doc js_get_index_scopes]
+    | Js_set_index {js_set_index_scopes} ->
+      Doc.concat [Doc.text "@set_index "; print_scopes_doc js_set_index_scopes]
+  in
+  Doc.concat [spec_doc; print_return_wrapper_doc return_wrapper]
+
 let rec print_out_sig_item_doc ?(print_name_as_is = false)
     (out_sig_item : Outcometree.out_sig_item) =
   match out_sig_item with
   | Osig_class _ | Osig_class_type _ -> Doc.nil
   | Osig_ellipsis -> Doc.dotdotdot
   | Osig_value value_decl ->
+    let ffi_attrs, keyword, prim_name =
+      match value_decl.oval_prim with
+      | None -> (Doc.nil, "let ", None)
+      | Some (Prim_name s) -> (Doc.nil, "external ", Some s)
+      | Some (Prim_ffi {name; spec}) -> (
+        match spec with
+        | Ffi_inline_const c ->
+          (* surface syntax: [@inline("hello") let f: string] *)
+          ( Doc.concat
+              [Doc.text "@inline("; print_inline_const_doc c; Doc.text ") "],
+            "let ",
+            None )
+        | Ffi_obj_create _ -> (Doc.text "@obj ", "external ", Some name)
+        | Ffi_bs (_params, return_wrapper, external_spec) ->
+          ( print_external_spec_attrs_doc external_spec return_wrapper,
+            "external ",
+            Some name ))
+    in
     Doc.group
       (Doc.concat
          [
            print_out_attributes_doc value_decl.oval_attributes;
-           Doc.text
-             (match value_decl.oval_prims with
-             | [] -> "let "
-             | _ -> "external ");
+           ffi_attrs;
+           Doc.text keyword;
            Doc.text value_decl.oval_name;
            Doc.text ":";
            Doc.space;
            print_out_type_doc value_decl.oval_type;
-           (match value_decl.oval_prims with
-           | [] -> Doc.nil
-           | primitives ->
+           (match prim_name with
+           | None -> Doc.nil
+           | Some prim ->
              Doc.indent
                (Doc.concat
                   [
                     Doc.text " =";
                     Doc.line;
-                    Doc.group
-                      (Doc.join ~sep:Doc.line
-                         (List.map
-                            (fun prim -> Doc.text ("\"" ^ prim ^ "\""))
-                            primitives));
+                    Doc.group (Doc.text ("\"" ^ prim ^ "\""));
                   ]));
          ])
   | Osig_typext (out_extension_constructor, _outExtStatus) ->

@@ -1055,7 +1055,7 @@ let tree_of_value_description id decl =
   let id = Ident.name id in
   let ty = tree_of_type_scheme decl.val_type in
   let vd =
-    {oval_name = id; oval_type = ty; oval_prims = []; oval_attributes = []}
+    {oval_name = id; oval_type = ty; oval_prim = None; oval_attributes = []}
   in
   let vd =
     match decl.val_kind with

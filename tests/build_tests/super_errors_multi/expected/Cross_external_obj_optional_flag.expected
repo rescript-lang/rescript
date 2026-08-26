@@ -10,10 +10,9 @@
   The implementation /.../fixtures/Cross_external_obj_optional_flag/Objflag.res
   does not match the interface /.../fixtures/Cross_external_obj_optional_flag/objflag.cmi:
   Values do not match:
-    external make: (~x: int=?, unit) => {"x": undefined<int>} =
-  "" "#rescript-external"
+    @obj external make: (~x: int=?, unit) => {"x": undefined<int>} = ""
   is not included in
-    external make: (~x: s=?, unit) => {"x": undefined<s>} = "" "#rescript-external"
+    @obj external make: (~x: s=?, unit) => {"x": undefined<s>} = ""
   [36m/.../fixtures/Cross_external_obj_optional_flag/Objflag.resi[0m:[2m2:1-45[0m:
     Expected declaration
   [36m/.../fixtures/Cross_external_obj_optional_flag/Objflag.res[0m:[2m2:1-47[0m:
