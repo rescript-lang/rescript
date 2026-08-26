@@ -513,6 +513,9 @@ let print_external_module_doc (emn : External_ffi_types.external_module_name) =
       let with_fields =
         import_attributes
         |> List.map (fun (k, v) ->
+               (* digestion stores the source key [type_] as [type]; map it
+                  back so the printed record is writable source *)
+               let k = if k = "type" then "type_" else k in
                Doc.concat
                  [Doc.text k; Doc.text ": "; print_string_literal_doc v])
       in
@@ -555,18 +558,31 @@ let print_return_wrapper_doc (w : External_ffi_types.return_wrapper) =
   | Return_null_undefined_to_opt -> Doc.text "@return(nullable) "
 
 let print_decl_kind_doc (kind : External_ffi_types.decl_kind)
-    (module_ : External_ffi_types.module_source option) =
+    (module_ : External_ffi_types.module_source option) ~prim_name =
+  (* the attribute payload names the JS entity when it differs from the
+     external's primitive string; print it back, or two declarations
+     differing only in payload would display identically *)
+  let with_payload attr name =
+    if name = prim_name then Doc.text ("@" ^ attr ^ " ")
+    else
+      Doc.concat
+        [
+          Doc.text ("@" ^ attr ^ "(");
+          print_string_literal_doc name;
+          Doc.text ") ";
+        ]
+  in
   match kind with
-  | Decl_val _ -> (
+  | Decl_val {name} -> (
     (* [@val] conflicts with bare [@module]; elsewhere it is the default and
        always legal to write *)
     match module_ with
     | Some Module_itself -> Doc.nil
-    | _ -> Doc.text "@val ")
-  | Decl_send _ -> Doc.text "@send "
-  | Decl_new _ -> Doc.text "@new "
-  | Decl_get _ -> Doc.text "@get "
-  | Decl_set _ -> Doc.text "@set "
+    | _ -> with_payload "val" name)
+  | Decl_send {name} -> with_payload "send" name
+  | Decl_new {name} -> with_payload "new" name
+  | Decl_get {name} -> with_payload "get" name
+  | Decl_set {name} -> with_payload "set" name
   | Decl_get_index -> Doc.text "@get_index "
   | Decl_set_index -> Doc.text "@set_index "
 
@@ -578,10 +594,10 @@ let print_module_source_doc (module_ : External_ffi_types.module_source option)
   | Some (Module_named emn) -> print_external_module_doc emn
 
 let print_external_decl_attrs_doc (decl : External_ffi_types.external_decl)
-    (return_wrapper : External_ffi_types.return_wrapper) =
+    (return_wrapper : External_ffi_types.return_wrapper) ~prim_name =
   Doc.concat
     [
-      print_decl_kind_doc decl.kind decl.module_;
+      print_decl_kind_doc decl.kind decl.module_ ~prim_name;
       print_module_source_doc decl.module_;
       print_scopes_doc decl.scopes;
       print_variadic_doc decl.variadic;
@@ -608,7 +624,7 @@ let rec print_out_sig_item_doc ?(print_name_as_is = false)
         match spec with
         | Ffi_obj_create _ -> (Doc.text "@obj ", "external ", Some name)
         | Ffi_bs (_params, return_wrapper, decl) ->
-          ( print_external_decl_attrs_doc decl return_wrapper,
+          ( print_external_decl_attrs_doc decl return_wrapper ~prim_name:name,
             "external ",
             Some name ))
     in
