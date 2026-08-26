@@ -131,15 +131,11 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
       let oid = Lam_module_ident.of_ml ~dynamic_import:true module_ in
       Lam_compile_env.register_ml_module ~dynamic_import:true module_;
       let import = import_of_path (import_path oid) in
-      (* a ReScript module's JS export names go through the same identifier
-         conversion js_dump applies to qualified access and export lists:
-         a binding named [case] is exported as [$$case], and a hoisted
-         [Operator.\"+"] whose cmj metadata stores the raw flattened name
-         [Operator$+] is exported as [Operator$$plus] *)
-      let ml_export_name name =
-        if name = Js_dump_import_export.default_export then name
-        else Ext_ident.convert name
-      in
+      (* the single source of truth for ML export names: a binding named
+         [case] is exported as [$$case], and a hoisted [Operator.\"+"] whose
+         cmj metadata stores the raw flattened name [Operator$+] is
+         exported as [Operator$$plus] *)
+      let ml_export_name = Js_dump_import_export.js_export_name in
       match path with
       | [] -> import
       | [name] -> wrap_then import (ml_export_name name)

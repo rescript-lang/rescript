@@ -496,9 +496,7 @@ and vident cxt f (v : J.vident) =
   | Qualified ({id; kind = Ml | Runtime}, Some name) ->
     let cxt = Ext_pp_scope.ident cxt f id in
     P.string f L.dot;
-    P.string f
-      (if name = Js_dump_import_export.default_export then name
-       else Ext_ident.convert name);
+    P.string f (Js_dump_import_export.js_export_name name);
     cxt
   | Qualified ({id; kind = External _}, Some name) ->
     let cxt = Ext_pp_scope.ident cxt f id in
