@@ -357,7 +357,7 @@ Wrapper symptoms attached to inclusion failures. Source: [includemod.ml:23](../c
 | Variant | Status | Fixture | Notes |
 |---|---|---|---|
 | `Missing_field` | ✓ | `super_errors_multi/Iface_missing_value` | |
-| `Value_descriptions` | ✓ | `super_errors_multi/Iface_value_descriptions`, `super_errors_multi/Iface_value_arity_mismatch`, `super_errors_multi/Smoke_interface_mismatch`, `super_errors_multi/Cross_external_spec_mismatch`, `super_errors_multi/Cross_external_payload_name`, `module_sig_value_arity_mismatch*.res` | Arity mismatches print a dedicated hint (implementation vs interface argument counts), including through aliases and nested function types. |
+| `Value_descriptions` | ✓ | `super_errors_multi/Iface_value_descriptions`, `super_errors_multi/Iface_value_arity_mismatch`, `super_errors_multi/Smoke_interface_mismatch`, `super_errors_multi/Cross_external_spec_mismatch`, `super_errors_multi/Cross_external_payload_name`, `super_errors_multi/Cross_external_import_attrs`, `module_sig_value_arity_mismatch*.res` | Arity mismatches print a dedicated hint (implementation vs interface argument counts), including through aliases and nested function types. |
 | `Type_declarations` | ✓ | `super_errors_multi/Iface_type_decl_record`, `super_errors_multi/Iface_type_decl_variant`, `RecordInclusion.res`, `type_decl_function_arity_mismatch.res` | |
 | `Extension_constructors` | ✓ | `super_errors_multi/Iface_extension_constructors` | |
 | `Module_types` | ✓ | `super_errors_multi/Iface_module_types` | |
