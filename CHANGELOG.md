@@ -23,6 +23,7 @@
 
 #### :rocket: New Feature
 
+- Support dynamic imports of external bindings annotated with `@scope`; the generated import follows the complete property path. These imports were previously rejected. https://github.com/rescript-lang/rescript/pull/8582
 - Add `@res.hoistedFunction` for emitting nested module functions as flat JavaScript exports. https://github.com/rescript-lang/rescript/pull/8402
 - Add source map support with linked, inline, and hidden modes. https://github.com/rescript-lang/rescript/pull/8393
 - Add `List.includes`, deprecate `List.has` in favor of `List.some`, and clarify the equality semantics of `List.includes` and `Array.includes`. https://github.com/rescript-lang/rescript/pull/8530
@@ -31,6 +32,7 @@
 
 - Fix signature inclusion rejecting equivalent object externals after type-alias expansion. https://github.com/rescript-lang/rescript/pull/8581
 - Fix externals whose result type is an alias of `unit` so they use the same unit-return behavior as externals declared to return `unit`. https://github.com/rescript-lang/rescript/pull/8581
+- Fix dynamic imports of external bindings that require FFI argument or result conversions, including `@variadic`, `@unwrap`, polymorphic variant encodings, `@as` phantom arguments, optional labeled arguments, and `@return` wrappers. The imported value now applies the same conversions as a direct external call. https://github.com/rescript-lang/rescript/pull/8582
 - Fix formatter breaking the opening brace of a functor module type's result signature onto a new line (e.g. `module Make: Pattern => {`). https://github.com/rescript-lang/rescript/pull/8519
 - Fix argument evaluation order when a function call is inlined: the beta reducer stacked argument bindings in reverse parameter order, so the last argument was evaluated first when arguments could not be substituted directly. https://github.com/rescript-lang/rescript/pull/8572
 - Preserve parentheses around multiplication, division, and modulo expressions used as exponents. https://github.com/rescript-lang/rescript/pull/8550
@@ -50,11 +52,13 @@
 #### :nail_care: Polish
 
 - Print external declarations in signatures and type errors with their processed attributes instead of the `"#rescript-external"` placeholder, and print inline constants using `@inline` syntax. https://github.com/rescript-lang/rescript/pull/8581
+- Improve diagnostics for dynamic imports of local values and attempts to use `import` as a first-class value. https://github.com/rescript-lang/rescript/pull/8582
 - Allow inferred labeled functions to be called with labels in any order by removing legacy curried-arrow commutation locks. https://github.com/rescript-lang/rescript/pull/8547
 
 #### :house: Internal
 
 - Store processed external declarations as structured data instead of serialized values in `pval_prim`, and lower external calls during Lambda translation. This removes `Pccall`, `external_spec`, and the unsupported `%absfloat` primitive. The AST, CMI, and CMT magic numbers are bumped (`ResImpl01301`/`ResIntf01301`, `Caml1999I025`, `Caml1999T026`). https://github.com/rescript-lang/rescript/pull/8581
+- Resolve dynamic-import targets during Lambda translation and store the module and export path directly in `Pimport`. This removes the `dynamic_import` flags from `Pjs_call` and `Lglobal_module`, along with backend expression-shape detection. https://github.com/rescript-lang/rescript/pull/8582
 - Give nominal variants one canonical runtime layout: compute their JavaScript representation once after typing each declaration, replace positional constructor tags with semantic runtime descriptors, and make construction, matching, coercion, printing, diagnostics, and GenType consume the stored representation instead of reinterpreting annotations. Pattern matching keeps occurrence-specific plans local without adding another Lambda or Lam expression form. https://github.com/rescript-lang/rescript/pull/8579
 - Represent optional parameters with defaults structurally, removing downstream name-based detection and producing more consistent JavaScript parameter names. https://github.com/rescript-lang/rescript/pull/8580
 - Sync the platform npm package's compiler binaries (`packages/@rescript/<platform>/bin`) via dune promotion on every `dune build`, instead of Makefile/CI copy steps that only ran when make did: a plain `dune build` can no longer leave `cli/*.js` and the test harnesses running a stale compiler. https://github.com/rescript-lang/rescript/pull/8560
