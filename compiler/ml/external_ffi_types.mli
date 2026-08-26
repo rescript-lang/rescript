@@ -39,43 +39,39 @@ type arg_type = External_arg_spec.attr
 
 type arg_label = External_arg_spec.label
 
-type external_spec =
-  | Js_var of {
-      name: string;
-      external_module_name: external_module_name option;
-      scopes: string list;
-    }
-  | Js_module_as_var of external_module_name
-  | Js_module_as_fn of {
-      external_module_name: external_module_name;
-      splice: bool;
-    }
-  | Js_module_as_class of external_module_name
-  | Js_call of {
-      name: string;
-      external_module_name: external_module_name option;
-      splice: bool;
-      scopes: string list;
-    }
-  | Js_send of {name: string; splice: bool; js_send_scopes: string list}
-    (* we know it is a js send, but what will happen if you pass an ocaml objct *)
-  | Js_new of {
-      name: string;
-      external_module_name: external_module_name option;
-      splice: bool;
-      scopes: string list;
-    }
-  | Js_set of {js_set_name: string; js_set_scopes: string list}
-  | Js_get of {js_get_name: string; js_get_scopes: string list}
-  | Js_get_index of {js_get_index_scopes: string list}
-  | Js_set_index of {js_set_index_scopes: string list}
+(* The declaration, as the attribute language states it. The backend
+   compiles it directly; digestion validates it with [check_decl]. *)
+type module_source =
+  | Module_named of external_module_name (* @module("...") payload forms *)
+  | Module_itself
+(* bare @module: the external is the module itself, under its
+         primitive name *)
+
+type decl_kind =
+  | Decl_val of {name: string} (* @val, or no attribute at all *)
+  | Decl_send of {name: string} (* @send *)
+  | Decl_new of {name: string} (* @new *)
+  | Decl_get of {name: string} (* @get *)
+  | Decl_set of {name: string} (* @set *)
+  | Decl_get_index (* @get_index *)
+  | Decl_set_index (* @set_index *)
+
+type external_decl = {
+  kind: decl_kind;
+  module_: module_source option;
+  scopes: string list; (* @scope *)
+  variadic: bool; (* @variadic *)
+  effective_arity: int;
+      (* counted (non-@ignore) declared parameters; a function of the
+         declared type, stored because the padded trailing unit makes it
+         unrecoverable from the parameter specs alone *)
+}
 
 type return_wrapper =
   | Return_unset
   | Return_identity
   | Return_null_to_opt
   | Return_null_undefined_to_opt
-  | Return_replaced_with_unit
 
 (* An external declared as an inline constant is only ever a literal; the
    frontend parses delimiters and bigint signs before constructing this. *)
@@ -87,12 +83,12 @@ type inline_const =
   | Const_float of string
 
 type t = private
-  | Ffi_bs of External_arg_spec.params * return_wrapper * external_spec
+  | Ffi_bs of External_arg_spec.params * return_wrapper * external_decl
   | Ffi_obj_create of External_arg_spec.obj_params
 
-(* val name_of_ffi : external_spec -> string *)
-
-val check_ffi : ?loc:Location.t -> external_spec -> bool
+val check_decl : ?loc:Location.t -> external_decl -> prim_name:string -> bool
+(** Validation of a declaration; returns whether the binding refers to a
+    package-relative path (which disables cross-module inlining). *)
 
 val inclusion_compatible : t -> t -> bool
 (** [inclusion_compatible impl intf]: can an implementation's spec satisfy an
@@ -101,6 +97,6 @@ val inclusion_compatible : t -> t -> bool
     field's [for_sure_no_nested_option] from false (implementation) to true
     (interface). *)
 
-val ffi_bs : External_arg_spec.params -> return_wrapper -> external_spec -> t
+val ffi_bs : External_arg_spec.params -> return_wrapper -> external_decl -> t
 
 val ffi_obj_create : External_arg_spec.obj_params -> t

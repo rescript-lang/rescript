@@ -482,28 +482,43 @@ let lambda_of_inline_const (c : External_ffi_types.inline_const) :
     Const_base (Const_bigint (negative, digits))
   | Const_float f -> Const_base (Const_float f)
 
+(* Does the external's declared type return unit? Decides whether the JS
+   call's result is replaced by unit. Computed from the declared scheme so
+   it is stable across use sites; aliases of unit count as unit. *)
+let external_returns_unit env (p : Primitive.description) (val_type : type_expr)
+    =
+  let result_type =
+    if p.prim_arity = 0 then val_type
+    else
+      match (Ctype.expand_head env val_type).desc with
+      | Tarrow (_, ret) -> ret
+      | _ -> val_type
+  in
+  is_base_type env result_type Predef.path_unit
+
 let external_result_wrap loc (result_type : External_ffi_types.return_wrapper)
-    result =
+    ~returns_unit result =
   match result_type with
-  | Return_replaced_with_unit -> Lsequence (result, Lconst const_unit)
+  | Return_unset when returns_unit -> Lsequence (result, Lconst const_unit)
   | Return_null_to_opt -> Lprim (Pnull_to_opt, [result], loc)
   | Return_null_undefined_to_opt -> Lprim (Pnullable_to_opt, [result], loc)
   | Return_unset | Return_identity -> result
 
-let transl_external_application loc (p : Primitive.description) argl
-    ~transformed_jsx : Lambda.lambda =
+let transl_external_application loc env (p : Primitive.description)
+    ~(val_type : type_expr) argl ~transformed_jsx : Lambda.lambda =
   match p.prim_kind with
   | Kind_inline_const c -> Lconst (lambda_of_inline_const c)
   | Kind_external (Ffi_obj_create labels) ->
     Lprim (Pjs_object_create labels, argl, loc)
-  | Kind_external (Ffi_bs (arg_types, result_type, ffi)) ->
+  | Kind_external (Ffi_bs (arg_types, result_type, decl)) ->
     external_result_wrap loc result_type
+      ~returns_unit:(external_returns_unit env p val_type)
       (Lprim
          ( Pjs_call
              {
                prim_name = p.prim_name;
                arg_types;
-               ffi;
+               ffi = decl;
                (* under a dynamic import the flag is established during
                   Lambda conversion, where the [Pimport] context lives *)
                dynamic_import = false;
@@ -518,7 +533,7 @@ let transl_external_application loc (p : Primitive.description) argl
 
 (* Eta-expand a primitive *)
 
-let transl_primitive loc p env ty =
+let transl_primitive loc p env ty ~val_type =
   (* Printf.eprintf "----transl_primitive %s----\n" p.prim_name; *)
   let prim =
     try Some (specialize_primitive p env ty) with Not_found -> None
@@ -527,7 +542,7 @@ let transl_primitive loc p env ty =
   | None ->
     (* an external: expand its FFI spec, eta-expanded to its arity *)
     if p.prim_from_constructor || p.prim_arity = 0 then
-      transl_external_application loc p [] ~transformed_jsx:false
+      transl_external_application loc env p ~val_type [] ~transformed_jsx:false
     else
       let params =
         if p.prim_arity = 1 then [Ident.create "prim"]
@@ -541,7 +556,7 @@ let transl_primitive loc p env ty =
           attr = default_function_attribute;
           loc;
           body =
-            transl_external_application loc p
+            transl_external_application loc env p ~val_type
               (List.map (fun id -> Lvar id) params)
               ~transformed_jsx:false;
         }
@@ -732,8 +747,8 @@ let rec transl_exp e =
 
 and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
   match e.exp_desc with
-  | Texp_ident (_, _, {val_kind = Val_prim p}) ->
-    transl_primitive e.exp_loc p e.exp_env e.exp_type
+  | Texp_ident (_, _, ({val_kind = Val_prim p} as vd)) ->
+    transl_primitive e.exp_loc p e.exp_env e.exp_type ~val_type:vd.val_type
   | Texp_ident (path, _, {val_kind = Val_reg}) ->
     transl_value_path ~loc:e.exp_loc e.exp_env path
   | Texp_constant cst -> Lconst (Const_base cst)
@@ -789,7 +804,7 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
       {
         funct =
           {
-            exp_desc = Texp_ident (_, _, {val_kind = Val_prim p});
+            exp_desc = Texp_ident (_, _, ({val_kind = Val_prim p} as prim_vd));
             exp_type = prim_type;
           } as funct;
         args = oargs;
@@ -827,7 +842,9 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
         wrap (Lprim (Praw_js_code {code; code_info = Stmt kind}, [], e.exp_loc))
       | ("#raw_expr" | "#raw_stmt"), _ -> assert false
       | _ ->
-        wrap (transl_external_application e.exp_loc p argl ~transformed_jsx))
+        wrap
+          (transl_external_application e.exp_loc e.exp_env p
+             ~val_type:prim_vd.val_type argl ~transformed_jsx))
     | Some prim -> (
       warn_polymorphic_comparison e.exp_loc prim argl;
       match (prim, args) with

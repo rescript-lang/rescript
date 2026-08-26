@@ -42,64 +42,39 @@ type arg_type = External_arg_spec.attr
 
 type arg_label = External_arg_spec.label
 
-type external_spec =
-  | Js_var of {
-      name: string;
-      external_module_name: external_module_name option;
-      scopes: string list;
-    }
-  | Js_module_as_var of external_module_name
-  | Js_module_as_fn of {
-      external_module_name: external_module_name;
-      splice: bool;
-    }
-  | Js_module_as_class of external_module_name
-  | Js_call of {
-      name: string;
-      external_module_name: external_module_name option;
-      splice: bool;
-      scopes: string list;
-    }
-  | Js_send of {name: string; splice: bool; js_send_scopes: string list}
-    (* we know it is a js send, but what will happen if you pass an ocaml objct *)
-  | Js_new of {
-      name: string;
-      external_module_name: external_module_name option;
-      splice: bool;
-      scopes: string list;
-    }
-  | Js_set of {js_set_name: string; js_set_scopes: string list}
-  | Js_get of {js_get_name: string; js_get_scopes: string list}
-  | Js_get_index of {js_get_index_scopes: string list}
-  | Js_set_index of {js_set_index_scopes: string list}
+(* The declaration, as the attribute language states it. The backend
+   compiles it directly; digestion validates it with [check_decl]. *)
+type module_source =
+  | Module_named of external_module_name (* @module("...") payload forms *)
+  | Module_itself
+(* bare @module: the external is the module itself, under its
+         primitive name *)
 
-(* let not_inlineable (x : external_spec) =     *)
+type decl_kind =
+  | Decl_val of {name: string} (* @val, or no attribute at all *)
+  | Decl_send of {name: string} (* @send *)
+  | Decl_new of {name: string} (* @new *)
+  | Decl_get of {name: string} (* @get *)
+  | Decl_set of {name: string} (* @set *)
+  | Decl_get_index (* @get_index *)
+  | Decl_set_index (* @set_index *)
 
-(* let name_of_ffi ffi =
-   match ffi with
-   | Js_get_index _scope -> "@get_index .."
-   | Js_set_index _scope -> "@set_index .."
-   | Js_get { js_get_name = s} -> Printf.sprintf "[@@get %S]" s
-   | Js_set { js_set_name = s} -> Printf.sprintf "[@@set %S]" s
-   | Js_call v  -> Printf.sprintf "[@@val %S]" v.name
-   | Js_send v  -> Printf.sprintf "[@@send %S]" v.name
-   | Js_module_as_fn v  -> Printf.sprintf "[@@val %S]" v.external_module_name.bundle
-   | Js_new v  -> Printf.sprintf "[@@new %S]" v.name
-   | Js_module_as_class v
-    -> Printf.sprintf "[@@module] %S " v.bundle
-   | Js_module_as_var v
-    ->
-    Printf.sprintf "[@@module] %S " v.bundle
-   | Js_var v (* FIXME: could be [@@module "xx"] as well *)
-    ->
-    Printf.sprintf "[@@val] %S " v.name *)
+type external_decl = {
+  kind: decl_kind;
+  module_: module_source option;
+  scopes: string list; (* @scope *)
+  variadic: bool; (* @variadic *)
+  effective_arity: int;
+      (* counted (non-@ignore) declared parameters; a function of the
+         declared type, stored because the padded trailing unit makes it
+         unrecoverable from the parameter specs alone *)
+}
 
 type return_wrapper =
   | Return_unset
   | Return_identity
   | Return_null_to_opt
   | Return_null_undefined_to_opt
-  | Return_replaced_with_unit
 
 (* An external declared as an inline constant is only ever a literal; the
    frontend parses delimiters and bigint signs before constructing this. *)
@@ -111,11 +86,7 @@ type inline_const =
   | Const_float of string
 
 type t =
-  | Ffi_bs of External_arg_spec.params * return_wrapper * external_spec
-      (**  [Ffi_bs(args,return,attr) ]
-       [return] means return value is unit or not,
-        [true] means is [unit]
-  *)
+  | Ffi_bs of External_arg_spec.params * return_wrapper * external_decl
   | Ffi_obj_create of External_arg_spec.obj_params
 
 let valid_js_char =
@@ -177,33 +148,44 @@ let check_external_module_name ?loc x =
     Location.raise_errorf ?loc "empty name encountered"
   | _ -> ()
 
-let check_ffi ?loc ffi : bool =
+(* Validation of a declaration; returns whether the binding refers to a
+   package-relative path (which disables cross-module inlining). The checks
+   mirror the historical per-runtime-shape checks exactly, including their
+   asymmetries (a zero-arity value also checks its own name for
+   relativeness; an applied one checks the module name for emptiness). *)
+let check_decl ?loc (decl : external_decl) ~prim_name : bool =
   let xrelative = ref false in
   let upgrade bool = if not !xrelative then xrelative := bool in
-  (match ffi with
-  | Js_var {name; external_module_name; scopes = _} ->
-    upgrade (is_package_relative_path name);
-    Ext_option.iter external_module_name (fun name ->
-        upgrade (is_package_relative_path name.bundle));
-    valid_global_name ?loc name
-  | Js_send {name; splice = _; js_send_scopes = _}
-  | Js_set {js_set_name = name; js_set_scopes = _}
-  | Js_get {js_get_name = name; js_get_scopes = _} ->
-    valid_method_name ?loc name
-  | Js_get_index _ (* TODO: check scopes *) | Js_set_index _ -> ()
-  | Js_module_as_var external_module_name
-  | Js_module_as_fn {external_module_name; splice = _}
-  | Js_module_as_class external_module_name ->
-    upgrade (is_package_relative_path external_module_name.bundle);
-    check_external_module_name external_module_name
-  | Js_new {external_module_name; name; splice = _; scopes = _}
-  | Js_call {external_module_name; name; splice = _; scopes = _} ->
-    Ext_option.iter external_module_name (fun external_module_name ->
-        upgrade (is_package_relative_path external_module_name.bundle));
-    Ext_option.iter external_module_name (fun name ->
-        check_external_module_name ?loc name);
-
-    valid_global_name ?loc name);
+  (match decl.module_ with
+  | Some Module_itself ->
+    upgrade (is_package_relative_path prim_name);
+    if prim_name = "" then Location.raise_errorf ?loc "empty name encountered"
+  | (None | Some (Module_named _)) as module_ -> (
+    let emn =
+      match module_ with
+      | Some (Module_named emn) -> Some emn
+      | _ -> None
+    in
+    match decl.kind with
+    | Decl_val {name} ->
+      if decl.effective_arity = 0 then (
+        upgrade (is_package_relative_path name);
+        Ext_option.iter emn (fun emn ->
+            upgrade (is_package_relative_path emn.bundle));
+        valid_global_name ?loc name)
+      else (
+        Ext_option.iter emn (fun emn ->
+            upgrade (is_package_relative_path emn.bundle));
+        Ext_option.iter emn (fun emn -> check_external_module_name ?loc emn);
+        valid_global_name ?loc name)
+    | Decl_new {name} ->
+      Ext_option.iter emn (fun emn ->
+          upgrade (is_package_relative_path emn.bundle));
+      Ext_option.iter emn (fun emn -> check_external_module_name ?loc emn);
+      valid_global_name ?loc name
+    | Decl_send {name} | Decl_set {name} | Decl_get {name} ->
+      valid_method_name ?loc name
+    | Decl_get_index | Decl_set_index -> ()));
   !xrelative
 
 (* Can an implementation's spec satisfy an interface's spec during signature

@@ -35,7 +35,7 @@ type t =
       (* Location.t *  [loc] is passed down *)
       prim_name: string;
       arg_types: External_arg_spec.params;
-      ffi: External_ffi_types.external_spec;
+      ffi: External_ffi_types.external_decl;
       dynamic_import: bool;
       transformed_jsx: bool;
     }
