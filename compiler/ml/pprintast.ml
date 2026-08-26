@@ -897,8 +897,12 @@ and value_description ctxt f x =
            but they're already printed by the callers this method *)
   pp f "@[<hov2>%a%a@]" (core_type ctxt) x.pval_type
     (fun f x ->
-      if x.pval_prim <> [] then
-        pp f "@ =@ %a" (list constant_string) x.pval_prim)
+      match x.pval_prim with
+      | None -> ()
+      | Some (Prim_name s) -> pp f "@ =@ %a" constant_string s
+      | Some (Prim_ffi {name}) ->
+        pp f "@ =@ %a@ %a" constant_string name constant_string
+          "#rescript-external")
     x
 
 and extension ctxt f (s, e) = pp f "@[<2>[%%%s@ %a]@]" s.txt (payload ctxt) e
@@ -964,7 +968,7 @@ and signature_item ctxt f x : unit =
   match x.psig_desc with
   | Psig_type (rf, l) -> type_def_list ctxt f (rf, l)
   | Psig_value vd ->
-    let intro = if vd.pval_prim = [] then "val" else "external" in
+    let intro = if vd.pval_prim = None then "val" else "external" in
     pp f "@[<2>%s@ %a@ :@ %a@]%a" intro protect_ident vd.pval_name.txt
       (value_description ctxt) vd (item_attributes ctxt) vd.pval_attributes
   | Psig_typext te -> type_extension ctxt f te

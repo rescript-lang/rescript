@@ -6558,16 +6558,16 @@ and parse_external_def ~attrs ~start_pos p =
         match p.token with
         | String s ->
           Parser.next p;
-          [s]
+          Some (Parsetree.Prim_name s)
         | _ ->
           Parser.err ~start_pos:equal_start ~end_pos:equal_end p
             (Diagnostics.message
                ("An external requires the name of the JS value you're \
                  referring to, like \"" ^ name.txt ^ "\"."));
-          []
+          None
       in
       let loc = mk_loc start_pos p.prev_end_pos in
-      let vb = Ast_helper.Val.mk ~loc ~attrs ~prim name typ_expr in
+      let vb = Ast_helper.Val.mk ~loc ~attrs ?prim name typ_expr in
       let inline_types =
         inline_types_context.found_inline_types
         |> List.rev_map (fun inline_type ->

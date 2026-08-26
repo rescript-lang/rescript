@@ -898,10 +898,18 @@ let default_mapper =
     extension_constructor = T.map_extension_constructor;
     value_description =
       (fun this {pval_name; pval_type; pval_prim; pval_loc; pval_attributes} ->
+        let prim =
+          match pval_prim with
+          | [] -> None
+          | [s] -> Some (Parsetree.Prim_name s)
+          | _ :: _ :: _ ->
+            Location.raise_errorf ~loc:pval_loc
+              "An external declaration can carry only a single primitive string"
+        in
         Val.mk (map_loc this pval_name) (this.typ this pval_type)
           ~attrs:(this.attributes this pval_attributes)
           ~loc:(this.location this pval_loc)
-          ~prim:pval_prim);
+          ?prim);
     pat = P.map;
     expr = E.map;
     module_declaration =

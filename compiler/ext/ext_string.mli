@@ -155,5 +155,3 @@ val unsafe_sub : string -> int -> int -> string
 val is_valid_hash_number : string -> bool
 
 val hash_number_as_i32_exn : string -> int32
-
-val first_marshal_char : string -> bool

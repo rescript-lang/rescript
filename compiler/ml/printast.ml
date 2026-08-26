@@ -422,7 +422,12 @@ and value_description i ppf x =
     x.pval_loc;
   attributes i ppf x.pval_attributes;
   core_type (i + 1) ppf x.pval_type;
-  list (i + 1) string ppf x.pval_prim
+  match x.pval_prim with
+  | None -> ()
+  | Some (Prim_name s) -> string (i + 1) ppf s
+  | Some (Prim_ffi {name}) ->
+    string (i + 1) ppf name;
+    line (i + 1) ppf "<ffi spec>\n"
 
 and type_parameter i ppf (x, _variance) = core_type i ppf x
 

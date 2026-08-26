@@ -1083,7 +1083,7 @@ let transform_signature_item ~config item =
             | [] -> []
             | _ -> [Typ.any ()]))
       in
-      let external_ = psig_desc.pval_prim <> [] in
+      let external_ = psig_desc.pval_prim <> None in
       let props_record_type =
         make_props_record_type_sig ~core_type_of_attr ~external_
           ~typ_vars_of_core_type "props" psig_loc named_type_list

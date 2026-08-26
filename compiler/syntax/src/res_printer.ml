@@ -1224,8 +1224,8 @@ and print_value_bindings ~state ~rec_flag (vbs : Parsetree.value_binding list)
 and print_value_description ~state value_description cmt_tbl =
   let is_external =
     match value_description.pval_prim with
-    | [] -> false
-    | _ -> true
+    | None -> false
+    | Some _ -> true
   in
   let attrs =
     print_attributes ~state ~loc:value_description.pval_name.loc
@@ -1263,12 +1263,14 @@ and print_value_description ~state value_description cmt_tbl =
                      (Doc.concat
                         [
                           Doc.line;
-                          Doc.join ~sep:Doc.line
-                            (List.map
-                               (fun s ->
-                                 Doc.concat
-                                   [Doc.text "\""; Doc.text s; Doc.text "\""])
-                               value_description.pval_prim);
+                          (let s =
+                             match value_description.pval_prim with
+                             | Some (Prim_name s) | Some (Prim_ffi {name = s})
+                               ->
+                               s
+                             | None -> ""
+                           in
+                           Doc.concat [Doc.text "\""; Doc.text s; Doc.text "\""]);
                         ]);
                  ])
           else Doc.nil);

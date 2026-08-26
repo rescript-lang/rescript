@@ -406,7 +406,7 @@ let check_return_wrapper loc (wrapper : External_ffi_types.return_wrapper)
 
 type response = {
   pval_type: Parsetree.core_type;
-  pval_prim: string list;
+  pval_prim: Parsetree.primitive_repr;
   pval_attributes: Parsetree.attributes;
   no_inline_cross_module: bool;
 }
@@ -1017,14 +1017,14 @@ let handle_attributes (loc : Bs_loc.t) (type_annotation : Parsetree.core_type)
       unused_attrs,
       relative )
 
-let encode_attributes_as_string (pval_loc : Location.t) (typ : Ast_core_type.t)
+let handle_attributes_as_prim (pval_loc : Location.t) (typ : Ast_core_type.t)
     (attrs : Ast_attributes.t) (prim_name : string) : response =
   let pval_type, ffi, pval_attributes, no_inline_cross_module =
     handle_attributes pval_loc typ attrs prim_name
   in
   {
     pval_type;
-    pval_prim = [prim_name; External_ffi_types.to_string ffi];
+    pval_prim = Prim_ffi {name = prim_name; spec = ffi};
     pval_attributes;
     no_inline_cross_module;
   }
@@ -1037,7 +1037,8 @@ let pval_prim_of_labels (labels : string Asttypes.loc list) =
         let obj_arg_label = External_arg_spec.obj_label p.txt in
         {obj_arg_type = Nothing; obj_arg_label} :: arg_kinds)
   in
-  External_ffi_types.ffi_obj_as_prims arg_kinds
+  Parsetree.Prim_ffi
+    {name = ""; spec = External_ffi_types.ffi_obj_create arg_kinds}
 
 let pval_prim_of_option_labels (labels : (bool * string Asttypes.loc) list)
     (ends_with_unit : bool) =
@@ -1052,4 +1053,5 @@ let pval_prim_of_option_labels (labels : (bool * string Asttypes.loc) list)
         in
         {obj_arg_type = Nothing; obj_arg_label} :: arg_kinds)
   in
-  External_ffi_types.ffi_obj_as_prims arg_kinds
+  Parsetree.Prim_ffi
+    {name = ""; spec = External_ffi_types.ffi_obj_create arg_kinds}

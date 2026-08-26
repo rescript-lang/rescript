@@ -417,15 +417,23 @@ and fun_param = {
 and value_description = {
   pval_name: string loc;
   pval_type: core_type;
-  pval_prim: string list;
+  pval_prim: primitive_repr option;
   pval_attributes: attributes; (* ... [@@id1] [@@id2] *)
   pval_loc: Location.t;
 }
 
 (*
-  val x: T                            (prim = [])
-  external x: T = "s1" ... "sn"       (prim = ["s1";..."sn"])
+  val x: T                            (prim = None)
+  external x: T = "s"                 (prim = Some _)
 *)
+and primitive_repr =
+  | Prim_name of string
+    (* as written in the source: an intrinsic ("%identity", "#raw_expr")
+         or the not-yet-digested JS name of an FFI external *)
+  | Prim_ffi of {name: string; spec: External_ffi_types.t}
+(* produced by the frontend digestion of an FFI external's
+         attributes; never observed by external PPXes, which run before
+         digestion *)
 
 (* Type declarations *)
 and type_declaration = {

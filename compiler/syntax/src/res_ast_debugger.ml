@@ -414,7 +414,11 @@ module Sexp_ast = struct
         Sexp.atom "value_description";
         string vd.pval_name.Asttypes.txt;
         core_type vd.pval_type;
-        Sexp.list (map_empty ~f:string vd.pval_prim);
+        Sexp.list
+          (match vd.pval_prim with
+          | None -> []
+          | Some (Prim_name s) -> [string s]
+          | Some (Prim_ffi {name}) -> [string name; string "<ffi spec>"]);
         attributes vd.pval_attributes;
       ]
 

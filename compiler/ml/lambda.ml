@@ -219,7 +219,6 @@ type primitive =
   | Pintoffloat
   | Pfloatofint
   | Pnegfloat
-  | Pabsfloat
   | Pmodfloat
   | Paddfloat
   | Psubfloat

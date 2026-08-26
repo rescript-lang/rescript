@@ -17,7 +17,6 @@ open Format
 open Outcometree
 
 val out_ident : (formatter -> string -> unit) ref
-val map_primitive_name : (string -> string) ref
 
 val out_value : (formatter -> out_value -> unit) ref
 val out_type : (formatter -> out_type -> unit) ref

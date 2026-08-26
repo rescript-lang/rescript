@@ -21,7 +21,6 @@ exception Ellipsis
 let cautious f ppf arg = try f ppf arg with Ellipsis -> fprintf ppf "..."
 
 let out_ident = ref pp_print_string
-let map_primitive_name = ref (fun x -> x)
 
 let print_lident ppf = function
   | "::" -> !out_ident ppf "(::)"
@@ -545,7 +544,7 @@ and print_out_sig_item ppf = function
           (fun s ->
             (* TODO: in general, we should print bs attributes, some attributes like
                variadic do need it *)
-            fprintf ppf "@ \"%s\"" (!map_primitive_name s))
+            fprintf ppf "@ \"%s\"" s)
           sl
     in
     fprintf ppf "@[<2>%s %a :@ %a%a%a@]" kwd value_ident vd.oval_name !out_type

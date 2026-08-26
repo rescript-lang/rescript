@@ -458,7 +458,7 @@ let default_mapper =
         Val.mk (map_loc this pval_name) (this.typ this pval_type)
           ~attrs:(this.attributes this pval_attributes)
           ~loc:(this.location this pval_loc)
-          ~prim:pval_prim);
+          ?prim:pval_prim);
     pat = P.map;
     expr = E.map;
     module_declaration =
