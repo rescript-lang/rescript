@@ -243,11 +243,8 @@ let primitive ppf = function
   | Pawait -> fprintf ppf "await"
   | Pimport (Import_module {module_; path}) ->
     fprintf ppf "import[%s]" (String.concat "." (Ident.name module_ :: path))
-  | Pimport (Import_external {module_ = {bundle}; name}) ->
-    fprintf ppf "import[%s%s]" bundle
-      (match name with
-      | None -> ""
-      | Some n -> "." ^ n)
+  | Pimport (Import_external {module_ = {bundle}; path}) ->
+    fprintf ppf "import[%s]" (String.concat "." (bundle :: path))
   | Pinit_mod -> fprintf ppf "#init_mod"
   | Pupdate_mod -> fprintf ppf "#update_mod"
   | Phash -> fprintf ppf "hash"

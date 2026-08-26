@@ -167,7 +167,9 @@ type import_source =
          where the cmj tables live, at emission. *)
   | Import_external of {
       module_: External_ffi_types.external_module_name;
-      name: string option; (* [None]: the external is the module itself *)
+      path: string list;
+          (* access path inside the module: @scope segments then the
+             name; [] means the external is the module itself *)
     }
 
 type primitive =
