@@ -29,6 +29,8 @@
 
 #### :bug: Bug fix
 
+- Fix signature inclusion rejecting equivalent object externals after type-alias expansion. https://github.com/rescript-lang/rescript/pull/8581
+- Fix externals whose result type is an alias of `unit` so they use the same unit-return behavior as externals declared to return `unit`. https://github.com/rescript-lang/rescript/pull/8581
 - Fix formatter breaking the opening brace of a functor module type's result signature onto a new line (e.g. `module Make: Pattern => {`). https://github.com/rescript-lang/rescript/pull/8519
 - Fix argument evaluation order when a function call is inlined: the beta reducer stacked argument bindings in reverse parameter order, so the last argument was evaluated first when arguments could not be substituted directly. https://github.com/rescript-lang/rescript/pull/8572
 - Preserve parentheses around multiplication, division, and modulo expressions used as exponents. https://github.com/rescript-lang/rescript/pull/8550
@@ -47,14 +49,12 @@
 
 #### :nail_care: Polish
 
-- Print externals in signatures and type errors with their real attributes reconstructed from the declaration (`@val @module("m") external f: int => int = "f"`) instead of a constant `"#rescript-external"` placeholder, so an inclusion error between two externals shows the actual difference; inline constants print as their surface form (`@inline("hello") let f: string`). https://github.com/rescript-lang/rescript/pull/8581
-
+- Print external declarations in signatures and type errors with their processed attributes instead of the `"#rescript-external"` placeholder, and print inline constants using `@inline` syntax. https://github.com/rescript-lang/rescript/pull/8581
 - Allow inferred labeled functions to be called with labels in any order by removing legacy curried-arrow commutation locks. https://github.com/rescript-lang/rescript/pull/8547
 
 #### :house: Internal
 
-- Represent externals structurally end-to-end: the declaration (name, module source, scopes, variadic, argument specs, return annotation) is the stored FFI representation, consumed directly by validation, signature inclusion, printing, and code generation. This removes the `Marshal`-encoded spec that rode in `pval_prim`'s second slot and every magic-byte sniff that recognized it; `Pccall` and the runtime `external_spec` shape are deleted (externals expand to their JS call form at translation, visible in `-drawlambda`); signature inclusion compares declarations, fixing two quirks where identical-after-alias-expansion declarations were rejected (object-external optional fields, and `unit` vs an alias of `unit` in result types — the latter also fixes external unit-return handling for alias result types); `%absfloat`, a latent compiler crash, is removed. The ast, cmi, and cmt magic numbers are bumped (`ResImpl01301`/`ResIntf01301`, `Caml1999I025`, `Caml1999T026`). https://github.com/rescript-lang/rescript/pull/8581
-
+- Store processed external declarations as structured data instead of serialized values in `pval_prim`, and lower external calls during Lambda translation. This removes `Pccall`, `external_spec`, and the unsupported `%absfloat` primitive. The AST, CMI, and CMT magic numbers are bumped (`ResImpl01301`/`ResIntf01301`, `Caml1999I025`, `Caml1999T026`). https://github.com/rescript-lang/rescript/pull/8581
 - Give nominal variants one canonical runtime layout: compute their JavaScript representation once after typing each declaration, replace positional constructor tags with semantic runtime descriptors, and make construction, matching, coercion, printing, diagnostics, and GenType consume the stored representation instead of reinterpreting annotations. Pattern matching keeps occurrence-specific plans local without adding another Lambda or Lam expression form. https://github.com/rescript-lang/rescript/pull/8579
 - Represent optional parameters with defaults structurally, removing downstream name-based detection and producing more consistent JavaScript parameter names. https://github.com/rescript-lang/rescript/pull/8580
 - Sync the platform npm package's compiler binaries (`packages/@rescript/<platform>/bin`) via dune promotion on every `dune build`, instead of Makefile/CI copy steps that only ran when make did: a plain `dune build` can no longer leave `cli/*.js` and the test harnesses running a stale compiler. https://github.com/rescript-lang/rescript/pull/8560
