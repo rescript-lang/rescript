@@ -30,7 +30,7 @@ let handle_external_in_sig (self : Ast_mapper.mapper)
   let pval_attributes = self.attributes self prim.pval_attributes in
   match prim.pval_prim with
   | None -> Location.raise_errorf ~loc "empty primitive string"
-  | Some (Prim_ffi _) ->
+  | Some (Prim_ffi _ | Prim_inline_const _) ->
     Location.raise_errorf ~loc "external declaration already processed"
   | Some (Prim_name v) -> (
     match
@@ -59,7 +59,7 @@ let handle_external_in_stru (self : Ast_mapper.mapper)
   let pval_attributes = self.attributes self prim.pval_attributes in
   match prim.pval_prim with
   | None -> Location.raise_errorf ~loc "empty primitive string"
-  | Some (Prim_ffi _) ->
+  | Some (Prim_ffi _ | Prim_inline_const _) ->
     Location.raise_errorf ~loc "external declaration already processed"
   | Some (Prim_name v) -> (
     match

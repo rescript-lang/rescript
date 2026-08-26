@@ -9,3 +9,7 @@ type s = int
 @obj external make_alias_impl: (~x: s=?, unit) => _ = ""
 
 @val external parse_int: string => int = "parseInt"
+
+type s2 = int
+
+@obj external make_alias_intf: (~x: int=?, unit) => _ = ""

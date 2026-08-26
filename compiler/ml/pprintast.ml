@@ -902,7 +902,9 @@ and value_description ctxt f x =
       | Some (Prim_name s) -> pp f "@ =@ %a" constant_string s
       | Some (Prim_ffi {name}) ->
         pp f "@ =@ %a@ %a" constant_string name constant_string
-          "#rescript-external")
+          "#rescript-external"
+      | Some (Prim_inline_const _) ->
+        pp f "@ =@ %a" constant_string "#rescript-inline")
     x
 
 and extension ctxt f (s, e) = pp f "@[<2>[%%%s@ %a]@]" s.txt (payload ctxt) e

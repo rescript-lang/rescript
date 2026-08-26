@@ -485,10 +485,11 @@ let print_string_literal_doc s = Doc.text ("\"" ^ String.escaped s ^ "\"")
 
 let print_inline_const_doc (c : External_ffi_types.inline_const) =
   match c with
-  | Const_str {s; delim = None | Some DNone} -> print_string_literal_doc s
-  | Const_str {s; delim = Some DStarJ} -> Doc.text ("json`" ^ s ^ "`")
+  | Const_str {s; delim = None | Some DNone | Some DStarJ} ->
+    (* DStarJ is the processed form of an ordinary double-quoted string *)
+    print_string_literal_doc s
   | Const_str {s; delim = Some DBackQuotes} -> Doc.text ("`" ^ s ^ "`")
-  | Const_str {s; delim = Some DNoQuotes} -> Doc.text s
+  | Const_str {s; delim = Some DNoQuotes} -> Doc.text ("json`" ^ s ^ "`")
   | Const_bool b -> Doc.text (if b then "true" else "false")
   | Const_int i -> Doc.text (Int32.to_string i)
   | Const_bigint {negative; digits} ->
@@ -511,8 +512,7 @@ let print_external_module_doc (emn : External_ffi_types.external_module_name) =
     | bind_name, Some import_attributes ->
       (* @module({from: "x", with: {k: "v"}}) record payload *)
       let with_fields =
-        Hashtbl.fold (fun k v acc -> (k, v) :: acc) import_attributes []
-        |> List.sort compare
+        import_attributes
         |> List.map (fun (k, v) ->
                Doc.concat
                  [Doc.text k; Doc.text ": "; print_string_literal_doc v])
@@ -624,14 +624,14 @@ let rec print_out_sig_item_doc ?(print_name_as_is = false)
       match value_decl.oval_prim with
       | None -> (Doc.nil, "let ", None)
       | Some (Prim_name s) -> (Doc.nil, "external ", Some s)
+      | Some (Prim_inline_const c) ->
+        (* surface syntax: [@inline("hello") let f: string] *)
+        ( Doc.concat
+            [Doc.text "@inline("; print_inline_const_doc c; Doc.text ") "],
+          "let ",
+          None )
       | Some (Prim_ffi {name; spec}) -> (
         match spec with
-        | Ffi_inline_const c ->
-          (* surface syntax: [@inline("hello") let f: string] *)
-          ( Doc.concat
-              [Doc.text "@inline("; print_inline_const_doc c; Doc.text ") "],
-            "let ",
-            None )
         | Ffi_obj_create _ -> (Doc.text "@obj ", "external ", Some name)
         | Ffi_bs (_params, return_wrapper, external_spec) ->
           ( print_external_spec_attrs_doc external_spec return_wrapper,

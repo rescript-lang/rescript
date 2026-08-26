@@ -120,7 +120,7 @@ let prim_to_be_encoded (name : string) = not (first_char_special name)
 
 let rs_externals (attrs : t) (pval_prim : Parsetree.primitive_repr option) =
   match (attrs, pval_prim) with
-  | _, (None | Some (Prim_ffi _)) -> false
+  | _, (None | Some (Prim_ffi _ | Prim_inline_const _)) -> false
   (* [None] is a [val]; an already-digested external is not processed again *)
   | [], Some (Prim_name name) ->
     (* Not any attribute found *)

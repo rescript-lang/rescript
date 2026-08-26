@@ -15,12 +15,18 @@
 
 (* Description of primitive functions *)
 
+type prim_kind =
+  | Kind_intrinsic
+  | Kind_external of External_ffi_types.t
+  | Kind_inline_const of External_ffi_types.inline_const
+
 type description = private {
-  prim_name: string; (* Name of the intrinsic or the external's JS name *)
+  prim_name: string;
+      (* Name of the intrinsic or the external's JS name; "" for inline
+         constants and object creation *)
   prim_arity: int; (* Number of arguments *)
   prim_alloc: bool; (* Does it allocates or raise? *)
-  prim_ffi: External_ffi_types.t option;
-      (* FFI spec of the external; [None] for compiler intrinsics *)
+  prim_kind: prim_kind;
   prim_from_constructor: bool;
       (* Is it from a type constructor instead of a concrete function type? *)
 }

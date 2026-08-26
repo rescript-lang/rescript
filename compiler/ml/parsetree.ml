@@ -431,9 +431,12 @@ and primitive_repr =
     (* as written in the source: an intrinsic ("%identity", "#raw_expr")
          or the not-yet-digested JS name of an FFI external *)
   | Prim_ffi of {name: string; spec: External_ffi_types.t}
-(* produced by the frontend digestion of an FFI external's
-         attributes; never observed by external PPXes, which run before
-         digestion *)
+    (* produced by the frontend digestion of an FFI external's
+       attributes; never observed by external PPXes, which run before
+       digestion *)
+  | Prim_inline_const of External_ffi_types.inline_const
+(* an [@inline(<literal>)] value declaration: a compile-time constant,
+   not an FFI; produced by digestion like [Prim_ffi] *)
 
 (* Type declarations *)
 and type_declaration = {

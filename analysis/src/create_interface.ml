@@ -223,7 +223,7 @@ let print_signature ~extractor ~signature =
       in
       process_signature ~indent rest
     | Sig_value (id, ({val_kind = Val_prim prim; val_loc} as vd)) :: items
-      when prim.prim_ffi <> None ->
+      when prim.prim_kind <> Primitive.Kind_intrinsic ->
       (* Rescript primitive name, e.g. @val external ... *)
       let lines =
         let pos_start, pos_end = Loc.range val_loc in

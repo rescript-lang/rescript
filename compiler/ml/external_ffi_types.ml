@@ -27,7 +27,7 @@ type module_bind_name =
   (* explicit hint name *)
   | Phint_nothing
 
-type import_attributes = (string, string) Hashtbl.t
+type import_attributes = (string * string) list (* ordered as written *)
 
 type external_module_name = {
   bundle: string;
@@ -101,8 +101,6 @@ type return_wrapper =
   | Return_null_undefined_to_opt
   | Return_replaced_with_unit
 
-type params = Params of External_arg_spec.params | Param_number of int
-
 (* An external declared as an inline constant is only ever a literal; the
    frontend parses delimiters and bigint signs before constructing this. *)
 type inline_const =
@@ -113,13 +111,12 @@ type inline_const =
   | Const_float of string
 
 type t =
-  | Ffi_bs of params * return_wrapper * external_spec
+  | Ffi_bs of External_arg_spec.params * return_wrapper * external_spec
       (**  [Ffi_bs(args,return,attr) ]
        [return] means return value is unit or not,
         [true] means is [unit]
   *)
   | Ffi_obj_create of External_arg_spec.obj_params
-  | Ffi_inline_const of inline_const
 
 let valid_js_char =
   let a =
@@ -210,40 +207,26 @@ let check_ffi ?loc ffi : bool =
   !xrelative
 
 (* Can an implementation's spec satisfy an interface's spec during signature
-   inclusion? Equal specs always can. Object-creation specs additionally
-   accept a widening of an optional field's [for_sure_no_nested_option]: the
-   implementation may be unsure (false) where the interface is sure (true),
-   but never the reverse. *)
+   inclusion? Equal specs always can. Object-creation specs compare their
+   optional fields by name only: [for_sure_no_nested_option] is per-module
+   codegen conservatism derived from each side's own view of the field's
+   type (false is always sound), not part of the declaration, so it plays
+   no role in compatibility. *)
 let inclusion_compatible (impl : t) (intf : t) : bool =
   match (impl, intf) with
   | Ffi_obj_create obj_parms, Ffi_obj_create obj_parms2 ->
     Ext_list.for_all2_no_exn obj_parms obj_parms2
       (fun {obj_arg_type; obj_arg_label} b ->
-        let b_obj_arg_label = b.obj_arg_label in
         obj_arg_type = b.obj_arg_type
-        && (obj_arg_label = b_obj_arg_label
-           ||
-           match (obj_arg_label, b_obj_arg_label) with
-           | Obj_optional {name; for_sure_no_nested_option}, Obj_optional p ->
-             name = p.name
-             && ((not for_sure_no_nested_option) || p.for_sure_no_nested_option)
-           | _ -> false))
+        &&
+        match (obj_arg_label, b.obj_arg_label) with
+        | ( Obj_optional {name = n1; for_sure_no_nested_option = _},
+            Obj_optional {name = n2; for_sure_no_nested_option = _} ) ->
+          n1 = n2
+        | l1, l2 -> l1 = l2)
   | _ -> impl = intf
 
-let ffi_inline_const (c : inline_const) : t = Ffi_inline_const c
-
-let rec ffi_bs_aux acc (params : External_arg_spec.params) =
-  match params with
-  | {arg_type = Nothing; arg_label = Arg_empty}
-      (* same as External_arg_spec.dummy*)
-    :: rest ->
-    ffi_bs_aux (acc + 1) rest
-  | _ :: _ -> -1
-  | [] -> acc
-
 let ffi_bs (params : External_arg_spec.params) return attr =
-  let n = ffi_bs_aux 0 params in
-  if n < 0 then Ffi_bs (Params params, return, attr)
-  else Ffi_bs (Param_number n, return, attr)
+  Ffi_bs (params, return, attr)
 
 let ffi_obj_create obj_params = Ffi_obj_create obj_params

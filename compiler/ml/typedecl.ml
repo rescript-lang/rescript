@@ -1898,7 +1898,8 @@ let transl_value_decl env loc valdecl =
       let arity, from_constructor = parse_arity env valdecl.pval_type ty in
       let prim = Primitive.parse_declaration valdecl ~arity ~from_constructor in
       if
-        prim.prim_arity = 0 && prim.prim_ffi = None
+        prim.prim_arity = 0
+        && prim.prim_kind = Kind_intrinsic
         && (prim.prim_name = ""
            || (prim.prim_name.[0] <> '%' && prim.prim_name.[0] <> '#'))
       then raise (Error (valdecl.pval_type.ptyp_loc, Null_arity_external));
