@@ -15,7 +15,6 @@
 
 open Format
 open Asttypes
-open Primitive
 open Lambda
 
 let rec struct_const ppf = function
@@ -122,7 +121,8 @@ let primitive ppf = function
   | Pduprecord -> fprintf ppf "duprecord"
   | Precord_rest excluded ->
     fprintf ppf "record_rest(%s)" (String.concat ", " excluded)
-  | Pccall p -> fprintf ppf "%s" p.prim_name
+  | Pjs_call {prim_name} -> fprintf ppf "js_call[%s]" prim_name
+  | Pjs_object_create _ -> fprintf ppf "js_obj_create"
   | Praise k -> fprintf ppf "%s" (Lambda.raise_kind k)
   | Pobjcomp Ceq -> fprintf ppf "=="
   | Pobjcomp Cneq -> fprintf ppf "!="
@@ -261,8 +261,7 @@ let primitive ppf = function
   | Pval_from_option -> fprintf ppf "#val_from_option"
   | Pval_from_option_not_nest -> fprintf ppf "#val_from_option_not_nest"
   | Pis_poly_var_block -> fprintf ppf "#is_poly_var_block"
-  | Pjs_raw_expr -> fprintf ppf "#raw_expr"
-  | Pjs_raw_stmt -> fprintf ppf "#raw_stmt"
+  | Praw_js_code _ -> fprintf ppf "raw_js_code"
   | Pjs_fn_method -> fprintf ppf "#fn_method"
   (* Debug-only dump, exercised solely under -drawlambda/-dlambda. *)
   | Ptagged_template -> fprintf ppf "#tagged_template" [@coverage off]
