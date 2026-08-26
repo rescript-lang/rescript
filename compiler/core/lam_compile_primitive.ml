@@ -36,12 +36,6 @@ let ensure_value_unit (st : Lam_compile_context.continuation) e : E.t =
   | EffectCall Not_tail -> e
 (* NeedValue should return a meaningful expression*)
 
-let module_of_expression = function
-  | J.Var (J.Qualified (module_id, value)) -> [(module_id, value)]
-  | J.Call ({expression_desc = J.Var (J.Qualified (module_id, value))}, _, _) ->
-    [(module_id, value)]
-  | _ -> []
-
 let get_module_system () =
   let package_info = Js_packages_state.get_packages_info () in
   let module_system =
@@ -118,37 +112,56 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
       | Var _ | Undefined _ | Null -> Js_of_lam_option.null_undef_to_opt e
       | _ -> E.runtime_call Primitive_modules.option "fromNullable" args)
     | _ -> assert false)
-  (* Compile %import: The module argument for dynamic import is represented as a path,
-     and the module value is expressed through wrapping it with promise.then *)
-  | Pimport -> (
-    match args with
-    | [e] -> (
-      let output_dir = Filename.dirname output_prefix in
-
-      let module_id, module_value =
-        match module_of_expression e.expression_desc with
-        | [module_] -> module_
-        | _ ->
+  (* Compile a dynamic import from its translation-resolved source: the
+     module is registered as a dynamic dependency here, the single place
+     that knows about it, and the emitted form is
+     [import("path")[.then(m => m.<name>)]]. *)
+  | Pimport source -> (
+    let output_dir = Filename.dirname output_prefix in
+    let module_system = get_module_system () in
+    let import_path (module_id : Lam_module_ident.t) =
+      Js_name_of_module_id.string_of_module_id module_id ~output_dir
+        module_system
+    in
+    match source with
+    | Import_module {module_; path} -> (
+      let oid = Lam_module_ident.of_ml ~dynamic_import:true module_ in
+      Lam_compile_env.register_ml_module ~dynamic_import:true module_;
+      let import = import_of_path (import_path oid) in
+      match path with
+      | [] -> import
+      | [name] -> wrap_then import name
+      | _ :: _ :: _ -> (
+        (* a nested path is importable when the target is a hoisted
+           root-level export; the cmj knows *)
+        match
+          Lam_compile_env.find_hoisted_external_export ~dynamic_import:true
+            module_ path
+        with
+        | Some hoisted_name -> wrap_then import hoisted_name
+        | None ->
           Location.raise_errorf ~loc
             "Invalid argument: Dynamic import requires a module or module \
              value that is a file as argument. Passing a value or local module \
-             is not allowed."
+             is not allowed."))
+    | Import_external
+        {module_ = {bundle; module_bind_name; import_attributes}; name} -> (
+      let default = name = Some "default" in
+      let id =
+        Lam_compile_env.add_js_module ?import_attributes module_bind_name bundle
+          default ~dynamic_import:true
       in
-
-      let path =
-        let module_system = get_module_system () in
-        Js_name_of_module_id.string_of_module_id
-          {module_id with dynamic_import = true}
-          ~output_dir module_system
+      let oid : Lam_module_ident.t =
+        {
+          id;
+          kind = External {name = bundle; default; import_attributes};
+          dynamic_import = true;
+        }
       in
-
-      match module_value with
-      | Some value -> wrap_then (import_of_path path) value
-      | None -> import_of_path path)
-    | [] | _ ->
-      Location.raise_errorf ~loc
-        "Invalid argument: Dynamic import must take a single module or module \
-         value as its argument.")
+      let import = import_of_path (import_path oid) in
+      match name with
+      | Some value -> wrap_then import value
+      | None -> import))
   | Pfn_arity -> E.function_length (Ext_list.singleton_exn args)
   | Pobjsize -> E.obj_length (Ext_list.singleton_exn args)
   | Pis_null -> E.is_null (Ext_list.singleton_exn args)
@@ -609,9 +622,9 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
   (* Lam_compile_external_call.translate loc cxt prim args *)
   (* Test if the argument is a block or an immediate integer *)
   | Pjs_object_create _ -> assert false
-  | Pjs_call {prim_name; arg_types; ffi; dynamic_import; transformed_jsx} ->
+  | Pjs_call {prim_name; arg_types; ffi; transformed_jsx} ->
     Lam_compile_external_call.translate_ffi cxt arg_types ~prim_name ffi args
-      ~dynamic_import ~transformed_jsx
+      ~transformed_jsx
   (* FIXME, this can be removed later *)
   | Pisint -> E.is_type_number (Ext_list.singleton_exn args)
   | Pis_poly_var_block -> E.is_type_object (Ext_list.singleton_exn args)

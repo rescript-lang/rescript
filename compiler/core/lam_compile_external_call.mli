@@ -36,7 +36,6 @@ val translate_ffi :
   prim_name:string ->
   External_ffi_types.external_decl ->
   J.expression list ->
-  dynamic_import:bool ->
   J.expression
 
 (** TODO: document supported attributes

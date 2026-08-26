@@ -41,7 +41,6 @@ type t =
       prim_name: string;
       arg_types: External_arg_spec.params;
       ffi: External_ffi_types.external_decl;
-      dynamic_import: bool;
       transformed_jsx: bool;
     }
   | Pjs_object_create of External_arg_spec.obj_params
@@ -160,7 +159,7 @@ type t =
   | Pis_null
   | Pis_undefined
   | Pis_null_undefined
-  | Pimport
+  | Pimport of Lambda.import_source
   | Ptypeof
   | Pfn_arity
   | Pwrap_exn
@@ -218,11 +217,11 @@ let eq_primitive_approx (lhs : t) (rhs : t) =
   (* etc *)
   | Pjs_apply | Pjs_runtime_apply | Pval_from_option | Pval_from_option_not_nest
   | Pnull_to_opt | Pnull_undefined_to_opt | Pis_null | Pis_not_none | Psome
-  | Psome_not_nest | Pis_undefined | Pis_null_undefined | Pimport | Ptypeof
-  | Pfn_arity | Pis_poly_var_block | Pdebugger | Pinit_mod | Pupdate_mod
-  | Pduprecord | Pmakearray | Parraylength | Parrayrefu | Parraysetu
-  | Parrayrefs | Parraysets | Pjs_fn_method | Phash | Phash_mixstring
-  | Phash_mixint | Phash_finalmix | Precord_rest _ ->
+  | Psome_not_nest | Pis_undefined | Pis_null_undefined | Ptypeof | Pfn_arity
+  | Pis_poly_var_block | Pdebugger | Pinit_mod | Pupdate_mod | Pduprecord
+  | Pmakearray | Parraylength | Parrayrefu | Parraysetu | Parrayrefs
+  | Parraysets | Pjs_fn_method | Phash | Phash_mixstring | Phash_mixint
+  | Phash_finalmix | Precord_rest _ ->
     rhs = lhs
   (* Reachable only via the optimizer's term-equality comparison, which the
      test suite doesn't exercise for tagged templates. *)
@@ -248,11 +247,14 @@ let eq_primitive_approx (lhs : t) (rhs : t) =
     match rhs with
     | Pmakeblock (info1, flag1) -> flag0 = flag1 && eq_tag_info info0 info1
     | _ -> false)
-  | Pjs_call {prim_name; arg_types; ffi; dynamic_import; _} -> (
+  | Pjs_call {prim_name; arg_types; ffi; _} -> (
     match rhs with
     | Pjs_call rhs ->
       prim_name = rhs.prim_name && arg_types = rhs.arg_types && ffi = rhs.ffi
-      && dynamic_import = rhs.dynamic_import
+    | _ -> false)
+  | Pimport src -> (
+    match rhs with
+    | Pimport src2 -> src = src2
     | _ -> false)
   | Pjs_object_create obj_create -> (
     match rhs with

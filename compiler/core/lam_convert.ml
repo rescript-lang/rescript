@@ -295,7 +295,7 @@ let lam_prim ~primitive:(p : Lambda.primitive) ~args loc : Lam.t =
   | Pmakedict -> prim ~primitive:Pmakedict ~args loc
   | Pdict_has -> prim ~primitive:Pdict_has ~args loc
   | Pawait -> prim ~primitive:Pawait ~args loc
-  | Pimport -> prim ~primitive:Pimport ~args loc
+  | Pimport src -> prim ~primitive:(Pimport src) ~args loc
   | Pinit_mod -> (
     match args with
     | [_loc; Lconst (Const_block (_, [Const_block (_, [])]))] -> Lam.unit
@@ -310,10 +310,9 @@ let lam_prim ~primitive:(p : Lambda.primitive) ~args loc : Lam.t =
   | Phash_finalmix -> prim ~primitive:Phash_finalmix ~args loc
   | Pcurry_apply _ -> prim ~primitive:Pjs_apply ~args loc
   | Pis_poly_var_block -> prim ~primitive:Pis_poly_var_block ~args loc
-  | Pjs_call {prim_name; arg_types; ffi; dynamic_import; transformed_jsx} ->
+  | Pjs_call {prim_name; arg_types; ffi; transformed_jsx} ->
     prim
-      ~primitive:
-        (Pjs_call {prim_name; arg_types; ffi; dynamic_import; transformed_jsx})
+      ~primitive:(Pjs_call {prim_name; arg_types; ffi; transformed_jsx})
       ~args loc
   | Pjs_object_create labels ->
     prim ~primitive:(Pjs_object_create labels) ~args loc
@@ -330,7 +329,7 @@ let convert (exports : Set_ident.t) (lam : Lambda.lambda) :
   let exit_map = Hash_int.create 0 in
   let may_depends = Lam_module_ident.Hash_set.create 0 in
 
-  let rec convert_aux ?(dynamic_import = false) (lam : Lambda.lambda) : Lam.t =
+  let rec convert_aux (lam : Lambda.lambda) : Lam.t =
     match lam with
     | Lvar x -> Lam.var (Hash_ident.find_default alias_tbl x x)
     | Lconst x -> Lam.const (Lam_constant_convert.convert_constant x)
@@ -366,22 +365,6 @@ let convert (exports : Set_ident.t) (lam : Lambda.lambda) :
     | Lfunction {params; body; attr; loc} ->
       Lam.function_ ~loc ~attr ~arity:(List.length params) ~params
         ~body:(convert_aux body)
-    | Llet (_, _, _, Lprim (Pgetglobal id, args, _), _body) when dynamic_import
-      ->
-      (*
-        Normally `await M` produces (global M!)
-        but when M contains an alias such as `module VS = VariantSpreads`,
-        it produces something like this:
-      
-        (let (let/1202 = (global M!))
-              (makeblock [x;M;y;X] (field:x/0 let/1202)
-                ...)
-
-        Here, we need to extract the original module id from the Llet.
-      *)
-      may_depend may_depends (Lam_module_ident.of_ml ~dynamic_import id);
-      assert (args = []);
-      Lam.global_module ~dynamic_import id
     | Llet (kind, Pgenval, id, e, body) (*FIXME*) -> convert_let kind id e body
     | Lletrec (bindings, body) ->
       let bindings = Ext_list.map_snd bindings convert_aux in
@@ -394,33 +377,16 @@ let convert (exports : Set_ident.t) (lam : Lambda.lambda) :
       convert_pipe f x outer_loc
     | Lprim (Prevapply, _, _) -> assert false
     | Lprim (Pdirapply, _, _) -> assert false
-    | Lprim
-        ( Pjs_call
-            {prim_name; arg_types; ffi; dynamic_import = _; transformed_jsx},
-          args,
-          loc )
-      when dynamic_import ->
-      (* the [Pimport] context flags the call; the context does not reach
-         into the call's own arguments, matching the previous expansion *)
-      let args = Ext_list.map args convert_aux in
-      prim
-        ~primitive:
-          (Pjs_call
-             {prim_name; arg_types; ffi; dynamic_import = true; transformed_jsx})
-        ~args loc
     | Lprim (Pgetglobal id, args, _) ->
       let args = Ext_list.map args convert_aux in
       if Ident.is_predef_exn id then
         Lam.const (Const_string {s = id.name; delim = None})
       else (
-        may_depend may_depends (Lam_module_ident.of_ml ~dynamic_import id);
+        may_depend may_depends (Lam_module_ident.of_ml id);
         assert (args = []);
-        Lam.global_module ~dynamic_import id)
-    | Lprim (Pimport, args, loc) ->
-      let args = Ext_list.map args (convert_aux ~dynamic_import:true) in
-      lam_prim ~primitive:Pimport ~args loc
+        Lam.global_module id)
     | Lprim (primitive, args, loc) ->
-      let args = Ext_list.map args (convert_aux ~dynamic_import) in
+      let args = Ext_list.map args convert_aux in
       lam_prim ~primitive ~args loc
     | Lswitch (e, s, _loc) -> convert_switch e s
     | Lstringswitch (e, cases, default, _) ->

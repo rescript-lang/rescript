@@ -286,29 +286,25 @@ let compile output_prefix =
     | ( Lam_primitive.Pfield (_, Fld_module {name}),
         [Lam.Lprim {primitive; args; _}] ) ->
       extract_field_path (name :: segments) primitive args
-    | ( Lam_primitive.Pfield (_, Fld_module {name}),
-        [Lam.Lglobal_module (id, dynamic_import)] ) ->
-      Some (id, dynamic_import, name :: segments)
+    | Lam_primitive.Pfield (_, Fld_module {name}), [Lam.Lglobal_module id] ->
+      Some (id, name :: segments)
     | _ -> None
   in
   let hoisted_external_field_name primitive args =
     match extract_field_path [] primitive args with
-    | Some (id, dynamic_import, (_ :: _ :: _ as segments)) ->
-      Ext_option.map
-        (Lam_compile_env.find_hoisted_external_export ~dynamic_import id
-           segments) (fun name -> (id, dynamic_import, name))
-    | Some (_, _, ([] | [_])) | None -> None
+    | Some (id, (_ :: _ :: _ as segments)) ->
+      Ext_option.map (Lam_compile_env.find_hoisted_external_export id segments)
+        (fun name -> (id, name))
+    | Some (_, ([] | [_])) | None -> None
   in
   let rec compile_external_field (* Like [List.empty]*)
-      ?(dynamic_import = false) (lamba_cxt : Lam_compile_context.t)
-      (id : Ident.t) name : Js_output.t =
-    match Lam_compile_env.query_external_id_info ~dynamic_import id name with
+      (lamba_cxt : Lam_compile_context.t) (id : Ident.t) name : Js_output.t =
+    match Lam_compile_env.query_external_id_info id name with
     | {persistent_closed_lambda = Some lam} when Lam_util.not_function lam ->
       compile_lambda lamba_cxt lam
     | _ ->
       Js_output.output_of_expression lamba_cxt.continuation
-        ~no_effects:no_effects_const
-        (E.ml_var_dot ~dynamic_import id name)
+        ~no_effects:no_effects_const (E.ml_var_dot id name)
   (* TODO: how nested module call would behave,
      In the future, we should keep in track  of if
      it is fully applied from [Lapply]
@@ -336,12 +332,10 @@ let compile output_prefix =
       for the function, generative module or functor can be a function,
       however it can not be global -- global can only module
   *)
-  and compile_external_field_apply ?(dynamic_import = false)
-      (appinfo : Lam.apply) (module_id : Ident.t) (field_name : string)
-      (lambda_cxt : Lam_compile_context.t) : Js_output.t =
+  and compile_external_field_apply (appinfo : Lam.apply) (module_id : Ident.t)
+      (field_name : string) (lambda_cxt : Lam_compile_context.t) : Js_output.t =
     let ident_info =
-      Lam_compile_env.query_external_id_info ~dynamic_import module_id
-        field_name
+      Lam_compile_env.query_external_id_info module_id field_name
     in
     let ap_args = appinfo.ap_args in
     match ident_info.persistent_closed_lambda with
@@ -368,7 +362,7 @@ let compile output_prefix =
               | _ -> assert false)
       in
 
-      let fn = E.ml_var_dot ~dynamic_import module_id ident_info.name in
+      let fn = E.ml_var_dot module_id ident_info.name in
       let expression =
         match appinfo.ap_info.ap_status with
         | (App_infer_full | App_uncurry) as ap_status ->
@@ -1624,16 +1618,11 @@ let compile output_prefix =
     (* External function call: it can not be tailcall in this case*)
     | {
      ap_func =
-       Lprim
-         {
-           primitive = Pfield (_, fld_info);
-           args = [Lglobal_module (id, dynamic_import)];
-           _;
-         };
+       Lprim {primitive = Pfield (_, fld_info); args = [Lglobal_module id]; _};
     } -> (
       match fld_info with
       | Fld_module {name} ->
-        compile_external_field_apply ~dynamic_import appinfo id name lambda_cxt
+        compile_external_field_apply appinfo id name lambda_cxt
       | _ -> assert false)
     | _ -> (
       (* TODO: ---
@@ -1733,21 +1722,17 @@ let compile output_prefix =
     match prim_info with
     | {primitive = Pfield (_, Fld_module _); _} -> (
       match hoisted_external_field_name prim_info.primitive prim_info.args with
-      | Some (id, dynamic_import, hoisted_name) ->
+      | Some (id, hoisted_name) ->
         Js_output.output_of_expression lambda_cxt.continuation
           ~no_effects:no_effects_const
-          (E.ml_var_dot ~dynamic_import id hoisted_name)
+          (E.ml_var_dot id hoisted_name)
       | None -> (
         match prim_info with
-        | {
-         primitive = Pfield (_, fld_info);
-         args = [Lglobal_module (id, dynamic_import)];
-         _;
-        } -> (
+        | {primitive = Pfield (_, fld_info); args = [Lglobal_module id]; _} -> (
           (* should be before Lglobal_global *)
           match fld_info with
           | Fld_module {name = field} ->
-            compile_external_field ~dynamic_import lambda_cxt id field
+            compile_external_field lambda_cxt id field
           | _ -> assert false)
         | _ ->
           compile_primitive_default prim_info.primitive prim_info.args
@@ -1867,60 +1852,6 @@ let compile output_prefix =
       Js_output.output_of_block_and_expression lambda_cxt.continuation
         (Ext_list.concat_append args_block block)
         exp
-    | {primitive = Pimport; args = [] | _ :: _ :: _; loc} ->
-      Location.raise_errorf ~loc
-        "Missing argument: Dynamic import requires a module or module value \
-         that is a file as argument."
-    | {primitive = Pimport as primitive; args = [mod_]; loc} -> (
-      match mod_ with
-      | Lglobal_module _ | Lvar _ | Lprim {primitive = Pfield _ | Pjs_call _; _}
-        ->
-        let args_block, args_expr =
-          let new_cxt = {lambda_cxt with continuation = NeedValue Not_tail} in
-          match compile_lambda new_cxt mod_ with
-          | {block; value = Some b; _} -> ([block], b)
-          | {value = None; _} -> assert false
-        in
-        let args_code : J.block = List.concat args_block in
-        let exp =
-          Lam_compile_primitive.translate output_prefix loc lambda_cxt primitive
-            [args_expr]
-        in
-        Js_output.output_of_block_and_expression lambda_cxt.continuation
-          args_code (with_source_loc loc exp)
-      | Lfunction
-          {
-            body =
-              ( (Lprim _ as body)
-              | Lsequence ((Lprim _ as body), Lconst (Const_js_undefined _)) );
-            _;
-          } ->
-        let body =
-          match body with
-          | Lprim {primitive = Pjs_call prim_info; args; loc} ->
-            Lam.prim
-              ~primitive:
-                (Lam_primitive.Pjs_call {prim_info with dynamic_import = true})
-              ~args loc
-          | _ -> body
-        in
-        let args_block, args_expr =
-          let new_cxt = {lambda_cxt with continuation = NeedValue Not_tail} in
-          match compile_lambda new_cxt body with
-          | {block; value = Some b; _} -> ([block], b)
-          | {value = None; _} -> assert false
-        in
-        let args_code : J.block = List.concat args_block in
-        let exp =
-          Lam_compile_primitive.translate output_prefix loc lambda_cxt primitive
-            [args_expr]
-        in
-        Js_output.output_of_block_and_expression lambda_cxt.continuation
-          args_code (with_source_loc loc exp)
-      | _ ->
-        Location.raise_errorf ~loc
-          "Invalid argument: unsupported argument to dynamic import. If you \
-           believe this should be supported, please open an issue.")
     | {primitive; args; loc} -> compile_primitive_default primitive args loc
   and collect_dup_overrides (copy_id : Ident.t) (lam : Lam.t)
       (acc : (Lam_compat.set_field_dbg_info * Lam.t) list) :
@@ -2039,13 +1970,13 @@ let compile output_prefix =
       Js_output.output_of_expression lambda_cxt.continuation
         ~no_effects:no_effects_const
         (Lam_compile_const.translate c)
-    | Lglobal_module (i, dynamic_import) ->
+    | Lglobal_module i ->
       (* introduced by
          1. {[ include Array --> let include  = Array  ]}
          2. inline functor application
       *)
       Js_output.output_of_block_and_expression lambda_cxt.continuation []
-        (E.ml_module_as_var ~dynamic_import i)
+        (E.ml_module_as_var i)
     | Lprim prim_info -> compile_prim prim_info lambda_cxt
     | Lsequence (l1, l2) ->
       let output_l1 =

@@ -39,10 +39,10 @@ module E = Js_exp_make
 
 let external_var
     ({bundle; module_bind_name; import_attributes} :
-      External_ffi_types.external_module_name) ~dynamic_import =
+      External_ffi_types.external_module_name) =
   let id =
     Lam_compile_env.add_js_module ?import_attributes module_bind_name bundle
-      false ~dynamic_import
+      false ~dynamic_import:false
   in
   E.external_var ?import_attributes ~external_name:bundle id
 
@@ -229,7 +229,7 @@ let assemble_args_has_splice (arg_types : specs) (args : exprs) :
 
 let translate_scoped_module_val
     (module_name : External_ffi_types.external_module_name option) (fn : string)
-    (scopes : string list) ~dynamic_import =
+    (scopes : string list) =
   match module_name with
   | Some {bundle; module_bind_name; import_attributes} -> (
     match scopes with
@@ -237,7 +237,7 @@ let translate_scoped_module_val
       let default = fn = "default" in
       let id =
         Lam_compile_env.add_js_module ?import_attributes module_bind_name bundle
-          default ~dynamic_import
+          default ~dynamic_import:false
       in
       E.external_var_field ?import_attributes ~external_name:bundle ~field:fn
         ~default id
@@ -246,7 +246,7 @@ let translate_scoped_module_val
       let default = false in
       let id =
         Lam_compile_env.add_js_module ?import_attributes module_bind_name bundle
-          default ~dynamic_import
+          default ~dynamic_import:false
       in
       let start =
         E.external_var_field ?import_attributes ~external_name:bundle ~field:x
@@ -268,7 +268,7 @@ let translate_scoped_access scopes obj =
 
 let translate_ffi ?(transformed_jsx = false) (cxt : Lam_compile_context.t)
     arg_types ~(prim_name : string) (decl : External_ffi_types.external_decl)
-    (args : J.expression list) ~dynamic_import =
+    (args : J.expression list) =
   let {External_ffi_types.kind; module_; scopes; variadic = splice; _} = decl in
   (* a bare [@module] binds the module itself under the primitive name *)
   let module_itself_name () : External_ffi_types.external_module_name =
@@ -293,10 +293,10 @@ let translate_ffi ?(transformed_jsx = false) (cxt : Lam_compile_context.t)
   match (kind, module_) with
   | Decl_val _, Some Module_itself when decl.effective_arity = 0 ->
     (* the module itself, as a value *)
-    external_var (module_itself_name ()) ~dynamic_import
+    external_var (module_itself_name ())
   | Decl_val _, Some Module_itself ->
     (* the module itself, called as a function *)
-    let fn = external_var (module_itself_name ()) ~dynamic_import in
+    let fn = external_var (module_itself_name ()) in
     if splice then
       let args, eff, dynamic = assemble_args_has_splice arg_types args in
       let args = if dynamic then E.variadic_args args else args in
@@ -309,7 +309,7 @@ let translate_ffi ?(transformed_jsx = false) (cxt : Lam_compile_context.t)
         (E.call ~info:(Js_call_info.na_full_call transformed_jsx) fn args)
   | Decl_new _, Some Module_itself ->
     (* the module itself, as a class *)
-    let fn = external_var (module_itself_name ()) ~dynamic_import in
+    let fn = external_var (module_itself_name ()) in
     let args, eff = assemble_args_no_splice arg_types args in
     (* TODO: fix in rest calling convention *)
     add_eff eff
@@ -320,16 +320,12 @@ let translate_ffi ?(transformed_jsx = false) (cxt : Lam_compile_context.t)
     assert false (* rejected during digestion *)
   | Decl_val {name}, _ when decl.effective_arity = 0 ->
     (* a global value *)
-    let e =
-      translate_scoped_module_val named_module name scopes ~dynamic_import
-    in
+    let e = translate_scoped_module_val named_module name scopes in
     if args = [] then e
     else E.call ~info:(Js_call_info.na_full_call transformed_jsx) e args
   | Decl_val {name = fn}, _ ->
     (* a global (possibly module-scoped) function call *)
-    let fn =
-      translate_scoped_module_val named_module fn scopes ~dynamic_import
-    in
+    let fn = translate_scoped_module_val named_module fn scopes in
     if splice then
       let args, eff, dynamic = assemble_args_has_splice arg_types args in
       let args = if dynamic then E.variadic_args args else args in
@@ -350,17 +346,13 @@ let translate_ffi ?(transformed_jsx = false) (cxt : Lam_compile_context.t)
     if splice then
       let args, eff, dynamic = assemble_args_has_splice arg_types args in
       let args = if dynamic then E.variadic_args args else args in
-      let fn =
-        translate_scoped_module_val named_module fn scopes ~dynamic_import
-      in
+      let fn = translate_scoped_module_val named_module fn scopes in
       add_eff eff
         (mark_new_object ();
          E.new_ fn args)
     else
       let args, eff = assemble_args_no_splice arg_types args in
-      let fn =
-        translate_scoped_module_val named_module fn scopes ~dynamic_import
-      in
+      let fn = translate_scoped_module_val named_module fn scopes in
       add_eff eff
         (mark_new_object ();
          E.new_ fn args)

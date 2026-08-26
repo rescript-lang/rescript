@@ -10,4 +10,4 @@ export {
   a,
   b,
 }
-/* a Not a pure module */
+/* b Not a pure module */

@@ -1,0 +1,9 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/dynamic_import_scoped_external.res[0m:[2m2:16[0m
+
+  1 [2m│[0m @val @scope("Math") @module("m") external f: int => int = "f"
+  [1;31m2[0m [2m│[0m let a = import([1;31mf[0m)
+  3 [2m│[0m 
+
+  Dynamic import of an external with @scope is not supported.

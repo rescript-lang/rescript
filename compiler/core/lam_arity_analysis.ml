@@ -41,14 +41,9 @@ let rec get_arity (meta : Lam_stats.t) (lam : Lam.t) : Lam_arity.t =
   | Lconst _ -> Lam_arity.non_function_arity_info
   | Llet (_, _, _, l) -> get_arity meta l
   | Lprim
-      {
-        primitive = Pfield (_, Fld_module {name});
-        args = [Lglobal_module (id, dynamic_import)];
-        _;
-      } -> (
-    match
-      (Lam_compile_env.query_external_id_info ~dynamic_import id name).arity
-    with
+      {primitive = Pfield (_, Fld_module {name}); args = [Lglobal_module id]; _}
+    -> (
+    match (Lam_compile_env.query_external_id_info id name).arity with
     | Single x -> x
     | Submodule _ -> Lam_arity.na)
   | Lprim
@@ -59,14 +54,12 @@ let rec get_arity (meta : Lam_stats.t) (lam : Lam.t) : Lam_arity.t =
             Lprim
               {
                 primitive = Pfield (_, Fld_module {name});
-                args = [Lglobal_module (id, dynamic_import)];
+                args = [Lglobal_module id];
               };
           ];
         _;
       } -> (
-    match
-      (Lam_compile_env.query_external_id_info ~dynamic_import id name).arity
-    with
+    match (Lam_compile_env.query_external_id_info id name).arity with
     | Submodule subs -> subs.(m) (* TODO: shall we store it as array?*)
     | Single _ -> Lam_arity.na)
   | Lprim {primitive = Praise; _} -> Lam_arity.raise_arity_info

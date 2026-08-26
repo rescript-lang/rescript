@@ -45,8 +45,7 @@ val var : ?comment:string -> J.ident -> t
 
 val js_global : ?comment:string -> string -> t
 
-val ml_var_dot :
-  ?comment:string -> ?dynamic_import:bool -> Ident.t -> string -> t
+val ml_var_dot : ?comment:string -> Ident.t -> string -> t
 (** [ml_var_dot ocaml_module name]
 *)
 
@@ -69,7 +68,7 @@ val external_var :
   Ident.t ->
   t
 
-val ml_module_as_var : ?comment:string -> ?dynamic_import:bool -> Ident.t -> t
+val ml_module_as_var : ?comment:string -> Ident.t -> t
 
 val runtime_call :
   string ->
