@@ -130,19 +130,16 @@ let dump_import_attributes f
     P.space f;
     P.string f "with";
     P.space f;
-    let total = Hashtbl.length import_attributes in
-    let idx = ref 1 in
+    let total = List.length import_attributes in
     P.brace_group f 0 (fun _ ->
         import_attributes
-        |> Hashtbl.iter (fun key value ->
+        |> List.iteri (fun idx (key, value) ->
                Js_dump_string.pp_string f key;
                P.string f L.colon_space;
                Js_dump_string.pp_string f value;
-               let should_add_comma = !idx < total in
-               if should_add_comma then (
+               if idx < total - 1 then (
                  P.string f L.comma;
-                 P.space f);
-               idx := !idx + 1))
+                 P.space f)))
 
 (** ES6 module style imports *)
 let imports cxt f

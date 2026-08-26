@@ -492,14 +492,11 @@ let external_result_wrap loc (result_type : External_ffi_types.return_wrapper)
 
 let transl_external_application loc (p : Primitive.description) argl
     ~transformed_jsx : Lambda.lambda =
-  match p.prim_ffi with
-  | Some (Ffi_obj_create labels) -> Lprim (Pjs_object_create labels, argl, loc)
-  | Some (Ffi_bs (arg_types, result_type, ffi)) ->
-    let arg_types =
-      match arg_types with
-      | Params ls -> ls
-      | Param_number i -> Ext_list.init i (fun _ -> External_arg_spec.dummy)
-    in
+  match p.prim_kind with
+  | Kind_inline_const c -> Lconst (lambda_of_inline_const c)
+  | Kind_external (Ffi_obj_create labels) ->
+    Lprim (Pjs_object_create labels, argl, loc)
+  | Kind_external (Ffi_bs (arg_types, result_type, ffi)) ->
     external_result_wrap loc result_type
       (Lprim
          ( Pjs_call
@@ -514,8 +511,7 @@ let transl_external_application loc (p : Primitive.description) argl
              },
            argl,
            loc ))
-  | Some (Ffi_inline_const c) -> Lconst (lambda_of_inline_const c)
-  | None ->
+  | Kind_intrinsic ->
     Location.raise_errorf ~loc
       "@{<error>Error:@} internal error, using unrecognized primitive %s"
       p.prim_name

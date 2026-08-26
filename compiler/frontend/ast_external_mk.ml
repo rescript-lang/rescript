@@ -69,7 +69,7 @@ let local_external_obj loc ?(pval_attributes = [])
 
 let inline_const (c : External_ffi_types.inline_const) :
     Parsetree.primitive_repr =
-  Prim_ffi {name = ""; spec = External_ffi_types.ffi_inline_const c}
+  Prim_inline_const c
 
 let inline_string (s : string) (delim_raw : string option) =
   inline_const

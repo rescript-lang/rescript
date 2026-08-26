@@ -27,7 +27,7 @@ type module_bind_name =
   (* explicit hint name *)
   | Phint_nothing
 
-type import_attributes = (string, string) Hashtbl.t
+type import_attributes = (string * string) list (* ordered as written *)
 
 type external_module_name = {
   bundle: string;
@@ -77,8 +77,6 @@ type return_wrapper =
   | Return_null_undefined_to_opt
   | Return_replaced_with_unit
 
-type params = Params of External_arg_spec.params | Param_number of int
-
 (* An external declared as an inline constant is only ever a literal; the
    frontend parses delimiters and bigint signs before constructing this. *)
 type inline_const =
@@ -89,9 +87,8 @@ type inline_const =
   | Const_float of string
 
 type t = private
-  | Ffi_bs of params * return_wrapper * external_spec
+  | Ffi_bs of External_arg_spec.params * return_wrapper * external_spec
   | Ffi_obj_create of External_arg_spec.obj_params
-  | Ffi_inline_const of inline_const
 
 (* val name_of_ffi : external_spec -> string *)
 
@@ -103,8 +100,6 @@ val inclusion_compatible : t -> t -> bool
     object-creation specs additionally accept a widening of an optional
     field's [for_sure_no_nested_option] from false (implementation) to true
     (interface). *)
-
-val ffi_inline_const : inline_const -> t
 
 val ffi_bs : External_arg_spec.params -> return_wrapper -> external_spec -> t
 

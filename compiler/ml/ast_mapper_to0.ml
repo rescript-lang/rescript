@@ -752,7 +752,7 @@ let default_mapper =
           match pval_prim with
           | None -> []
           | Some (Prim_name s) -> [s]
-          | Some (Prim_ffi _) ->
+          | Some (Prim_ffi _ | Prim_inline_const _) ->
             (* External PPXes run before the frontend digests externals, and
                nothing else crosses this bridge, so a digested external can
                never legitimately reach it. *)

@@ -396,6 +396,7 @@ and value_description i ppf x =
   | Some (Prim_ffi {name}) ->
     string (i + 1) ppf name;
     line (i + 1) ppf "<ffi spec>\n"
+  | Some (Prim_inline_const _) -> line (i + 1) ppf "<inline const>\n"
 
 and type_parameter i ppf (x, _variance) = core_type i ppf x
 

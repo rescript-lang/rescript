@@ -418,7 +418,8 @@ module Sexp_ast = struct
           (match vd.pval_prim with
           | None -> []
           | Some (Prim_name s) -> [string s]
-          | Some (Prim_ffi {name}) -> [string name; string "<ffi spec>"]);
+          | Some (Prim_ffi {name}) -> [string name; string "<ffi spec>"]
+          | Some (Prim_inline_const _) -> [string "<inline const>"]);
         attributes vd.pval_attributes;
       ]
 

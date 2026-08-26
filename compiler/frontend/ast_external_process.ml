@@ -292,12 +292,6 @@ let parse_external_attributes (no_arguments : bool) (prim_name_check : string)
                         Location.raise_errorf ~loc:exp.pexp_loc
                           "Only string values are allowed here.")
                 in
-                let import_attributes =
-                  Hashtbl.create (List.length import_attributes_from_record)
-                in
-                import_attributes_from_record
-                |> List.iter (fun (key, value) ->
-                       Hashtbl.replace import_attributes key value);
                 {
                   st with
                   external_module_name =
@@ -305,7 +299,7 @@ let parse_external_attributes (no_arguments : bool) (prim_name_check : string)
                       {
                         bundle = from_name;
                         module_bind_name = Phint_nothing;
-                        import_attributes = Some import_attributes;
+                        import_attributes = Some import_attributes_from_record;
                       };
                 })
             | _ -> (
