@@ -141,8 +141,15 @@ type primitive =
   | Psetfield of int * set_field_dbg_info
   | Pduprecord
   | Precord_rest of string list (* excluded runtime field names *)
-  (* External call *)
-  | Pccall of Primitive.description
+  (* JS FFI calls, expanded from the external's spec at translation *)
+  | Pjs_call of {
+      prim_name: string;
+      arg_types: External_arg_spec.params;
+      ffi: External_ffi_types.external_spec;
+      dynamic_import: bool;
+      transformed_jsx: bool;
+    }
+  | Pjs_object_create of External_arg_spec.obj_params
   (* Exceptions *)
   | Praise of raise_kind
   (* object primitives *)
@@ -264,8 +271,7 @@ type primitive =
   | Pval_from_option
   | Pval_from_option_not_nest
   | Pis_poly_var_block
-  | Pjs_raw_expr
-  | Pjs_raw_stmt
+  | Praw_js_code of Js_raw_info.t
   | Pjs_fn_method
   | Ptagged_template
 

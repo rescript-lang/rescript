@@ -628,21 +628,3 @@ let sequor l r = if_ l true_ r
 
 (** [l && r ] *)
 let sequand l r = if_ l r false_
-
-let result_wrap loc (result_type : External_ffi_types.return_wrapper) result =
-  match result_type with
-  | Return_replaced_with_unit -> seq result unit
-  | Return_null_to_opt -> prim ~primitive:Pnull_to_opt ~args:[result] loc
-  | Return_null_undefined_to_opt ->
-    prim ~primitive:Pnull_undefined_to_opt ~args:[result] loc
-  | Return_unset | Return_identity -> result
-
-let handle_bs_non_obj_ffi ?(transformed_jsx = false)
-    (arg_types : External_arg_spec.params)
-    (result_type : External_ffi_types.return_wrapper) ffi args loc prim_name
-    ~dynamic_import =
-  result_wrap loc result_type
-    (prim
-       ~primitive:
-         (Pjs_call {prim_name; arg_types; ffi; dynamic_import; transformed_jsx})
-       ~args loc)

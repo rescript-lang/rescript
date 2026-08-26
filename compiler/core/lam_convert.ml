@@ -154,7 +154,6 @@ let lam_prim ~primitive:(p : Lambda.primitive) ~args loc : Lam.t =
   | Pidentity -> Ext_list.singleton_exn args
   | Pnull -> Lam.const Const_js_null
   | Pundefined -> Lam.const (Const_js_undefined {is_unit = false})
-  | Pccall _ -> assert false
   | Prevapply -> assert false
   | Pdirapply -> assert false
   | Ploc _ -> assert false (* already compiled away here*)
@@ -311,8 +310,14 @@ let lam_prim ~primitive:(p : Lambda.primitive) ~args loc : Lam.t =
   | Phash_finalmix -> prim ~primitive:Phash_finalmix ~args loc
   | Pcurry_apply _ -> prim ~primitive:Pjs_apply ~args loc
   | Pis_poly_var_block -> prim ~primitive:Pis_poly_var_block ~args loc
-  | Pjs_raw_expr -> assert false
-  | Pjs_raw_stmt -> assert false
+  | Pjs_call {prim_name; arg_types; ffi; dynamic_import; transformed_jsx} ->
+    prim
+      ~primitive:
+        (Pjs_call {prim_name; arg_types; ffi; dynamic_import; transformed_jsx})
+      ~args loc
+  | Pjs_object_create labels ->
+    prim ~primitive:(Pjs_object_create labels) ~args loc
+  | Praw_js_code info -> prim ~primitive:(Praw_js_code info) ~args loc
   | Pjs_fn_method -> prim ~primitive:Pjs_fn_method ~args loc
 
 (* Does not exist since we compile array in js backend unlike native backend *)
@@ -325,36 +330,7 @@ let convert (exports : Set_ident.t) (lam : Lambda.lambda) :
   let exit_map = Hash_int.create 0 in
   let may_depends = Lam_module_ident.Hash_set.create 0 in
 
-  let rec convert_ccall (a_prim : Primitive.description)
-      (args : Lambda.lambda list) loc ~dynamic_import : Lam.t =
-    let prim_name = a_prim.prim_name in
-    match a_prim.prim_ffi with
-    | Some (Ffi_obj_create labels) ->
-      let args = Ext_list.map args convert_aux in
-      prim ~primitive:(Pjs_object_create labels) ~args loc
-    | Some (Ffi_bs (arg_types, result_type, ffi)) ->
-      let arg_types =
-        match arg_types with
-        | Params ls -> ls
-        | Param_number i -> Ext_list.init i (fun _ -> External_arg_spec.dummy)
-      in
-      let args = Ext_list.map args convert_aux in
-      Lam.handle_bs_non_obj_ffi ~transformed_jsx:a_prim.transformed_jsx
-        arg_types result_type ffi args loc prim_name ~dynamic_import
-    | Some (Ffi_inline_const c) ->
-      Lam.const
-        (match c with
-        | Const_str {s; delim} -> Const_string {s; delim}
-        | Const_bool true -> Const_js_true
-        | Const_bool false -> Const_js_false
-        | Const_int i -> Const_int {i; comment = None}
-        | Const_bigint {negative; digits} -> Const_bigint (negative, digits)
-        | Const_float f -> Const_float f)
-    | None ->
-      Location.raise_errorf ~loc
-        "@{<error>Error:@} internal error, using unrecognized primitive %s"
-        prim_name
-  and convert_aux ?(dynamic_import = false) (lam : Lambda.lambda) : Lam.t =
+  let rec convert_aux ?(dynamic_import = false) (lam : Lambda.lambda) : Lam.t =
     match lam with
     | Lvar x -> Lam.var (Hash_ident.find_default alias_tbl x x)
     | Lconst x -> Lam.const (Lam_constant_convert.convert_constant x)
@@ -418,22 +394,20 @@ let convert (exports : Set_ident.t) (lam : Lambda.lambda) :
       convert_pipe f x outer_loc
     | Lprim (Prevapply, _, _) -> assert false
     | Lprim (Pdirapply, _, _) -> assert false
-    | Lprim (Pccall a, args, loc) -> convert_ccall a args loc ~dynamic_import
-    | Lprim (Pjs_raw_expr, args, loc) -> (
-      match args with
-      | [Lconst (Const_base (Const_string (code, _)))] ->
-        (* js parsing here *)
-        let kind = Classify_function.classify code in
-        prim ~primitive:(Praw_js_code {code; code_info = Exp kind}) ~args:[] loc
-      | _ -> assert false)
-    | Lprim (Pjs_raw_stmt, args, loc) -> (
-      match args with
-      | [Lconst (Const_base (Const_string (code, _)))] ->
-        let kind = Classify_function.classify_stmt code in
-        prim
-          ~primitive:(Praw_js_code {code; code_info = Stmt kind})
-          ~args:[] loc
-      | _ -> assert false)
+    | Lprim
+        ( Pjs_call
+            {prim_name; arg_types; ffi; dynamic_import = _; transformed_jsx},
+          args,
+          loc )
+      when dynamic_import ->
+      (* the [Pimport] context flags the call; the context does not reach
+         into the call's own arguments, matching the previous expansion *)
+      let args = Ext_list.map args convert_aux in
+      prim
+        ~primitive:
+          (Pjs_call
+             {prim_name; arg_types; ffi; dynamic_import = true; transformed_jsx})
+        ~args loc
     | Lprim (Pgetglobal id, args, _) ->
       let args = Ext_list.map args convert_aux in
       if Ident.is_predef_exn id then

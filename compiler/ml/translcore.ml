@@ -392,8 +392,6 @@ let primitives_table =
       ("%makemutablelist", Pmakelist);
       ("%unsafe_to_method", Pjs_fn_method);
       (* Compiler internals, never expose to ReScript files *)
-      ("#raw_expr", Pjs_raw_expr);
-      ("#raw_stmt", Pjs_raw_stmt);
       (* FIXME: Core compatibility *)
       ("#null", Pnull);
       ("#undefined", Pundefined);
@@ -457,54 +455,144 @@ let warn_polymorphic_comparison loc prim args =
     Location.prerr_warning loc Warnings.Bs_polymorphic_comparison
   | _ -> ()
 
+(* Expansion of an external declaration: the final FFI form is produced
+   here, at translation, from the structured spec. *)
+
+let lambda_of_inline_const (c : External_ffi_types.inline_const) :
+    Lambda.structured_constant =
+  match c with
+  | Const_str {s; delim} ->
+    (* [Lam_constant_convert] re-parses the delimiter with
+       [Ast_utf8_string_interp.parse_processed_delim]; pick its exact
+       preimage. A parsed [None] (unrecognized delimiter) round-trips
+       through "js", which the processed-delimiter parser does not accept. *)
+    let raw_delim =
+      match delim with
+      | Some DNone -> None
+      | Some DNoQuotes -> Some "json"
+      | Some DStarJ -> Some "*j"
+      | Some DBackQuotes -> Some "bq"
+      | None -> Some "js"
+    in
+    Const_base (Const_string (s, raw_delim))
+  | Const_bool true -> Const_true
+  | Const_bool false -> Const_false
+  | Const_int i -> Const_base (Const_int32 i)
+  | Const_bigint {negative; digits} ->
+    Const_base (Const_bigint (negative, digits))
+  | Const_float f -> Const_base (Const_float f)
+
+let external_result_wrap loc (result_type : External_ffi_types.return_wrapper)
+    result =
+  match result_type with
+  | Return_replaced_with_unit -> Lsequence (result, Lconst const_unit)
+  | Return_null_to_opt -> Lprim (Pnull_to_opt, [result], loc)
+  | Return_null_undefined_to_opt -> Lprim (Pnullable_to_opt, [result], loc)
+  | Return_unset | Return_identity -> result
+
+let transl_external_application loc (p : Primitive.description) argl
+    ~transformed_jsx : Lambda.lambda =
+  match p.prim_ffi with
+  | Some (Ffi_obj_create labels) -> Lprim (Pjs_object_create labels, argl, loc)
+  | Some (Ffi_bs (arg_types, result_type, ffi)) ->
+    let arg_types =
+      match arg_types with
+      | Params ls -> ls
+      | Param_number i -> Ext_list.init i (fun _ -> External_arg_spec.dummy)
+    in
+    external_result_wrap loc result_type
+      (Lprim
+         ( Pjs_call
+             {
+               prim_name = p.prim_name;
+               arg_types;
+               ffi;
+               (* under a dynamic import the flag is established during
+                  Lambda conversion, where the [Pimport] context lives *)
+               dynamic_import = false;
+               transformed_jsx;
+             },
+           argl,
+           loc ))
+  | Some (Ffi_inline_const c) -> Lconst (lambda_of_inline_const c)
+  | None ->
+    Location.raise_errorf ~loc
+      "@{<error>Error:@} internal error, using unrecognized primitive %s"
+      p.prim_name
+
 (* Eta-expand a primitive *)
 
 let transl_primitive loc p env ty =
   (* Printf.eprintf "----transl_primitive %s----\n" p.prim_name; *)
   let prim =
-    try specialize_primitive p env ty (* ~has_constant_constructor:false *)
-    with Not_found -> Pccall p
+    try Some (specialize_primitive p env ty) with Not_found -> None
   in
-  warn_polymorphic_comparison loc prim [];
   match prim with
-  | Ploc kind -> (
-    let lam = lam_of_loc kind loc in
-    match p.prim_arity with
-    | 0 -> lam
-    | 1 ->
-      (* TODO: we should issue a warning ? *)
-      let param = Ident.create "prim" in
-      Lfunction
-        {
-          params = [param];
-          attr = default_function_attribute;
-          loc;
-          body = Lprim (Pmakeblock Blk_tuple, [lam; Lvar param], loc);
-        }
-    | _ -> assert false)
-  | _ ->
-    let rec make_params n total =
-      if n <= 0 then []
-      else
-        Ident.create ("prim" ^ string_of_int (total - n))
-        :: make_params (n - 1) total
-    in
-    let prim_arity = p.prim_arity in
-    if p.prim_from_constructor || prim_arity = 0 then Lprim (prim, [], loc)
+  | None ->
+    (* an external: expand its FFI spec, eta-expanded to its arity *)
+    if p.prim_from_constructor || p.prim_arity = 0 then
+      transl_external_application loc p [] ~transformed_jsx:false
     else
       let params =
-        if prim_arity = 1 then [Ident.create "prim"]
-        else make_params prim_arity prim_arity
+        if p.prim_arity = 1 then [Ident.create "prim"]
+        else
+          List.init p.prim_arity (fun i ->
+              Ident.create ("prim" ^ string_of_int i))
       in
       Lfunction
         {
           params;
           attr = default_function_attribute;
           loc;
-          body = Lprim (prim, List.map (fun id -> Lvar id) params, loc);
+          body =
+            transl_external_application loc p
+              (List.map (fun id -> Lvar id) params)
+              ~transformed_jsx:false;
         }
+  | Some prim -> (
+    warn_polymorphic_comparison loc prim [];
+    match prim with
+    | Ploc kind -> (
+      let lam = lam_of_loc kind loc in
+      match p.prim_arity with
+      | 0 -> lam
+      | 1 ->
+        (* TODO: we should issue a warning ? *)
+        let param = Ident.create "prim" in
+        Lfunction
+          {
+            params = [param];
+            attr = default_function_attribute;
+            loc;
+            body = Lprim (Pmakeblock Blk_tuple, [lam; Lvar param], loc);
+          }
+      | _ -> assert false)
+    | _ ->
+      let rec make_params n total =
+        if n <= 0 then []
+        else
+          Ident.create ("prim" ^ string_of_int (total - n))
+          :: make_params (n - 1) total
+      in
+      let prim_arity = p.prim_arity in
+      if p.prim_from_constructor || prim_arity = 0 then Lprim (prim, [], loc)
+      else
+        let params =
+          if prim_arity = 1 then [Ident.create "prim"]
+          else make_params prim_arity prim_arity
+        in
+        Lfunction
+          {
+            params;
+            attr = default_function_attribute;
+            loc;
+            body = Lprim (prim, List.map (fun id -> Lvar id) params, loc);
+          })
 
-let transl_primitive_application loc prim env ty args =
+(* [None] means the primitive is an external whose application must be
+   expanded from its FFI spec *)
+let transl_primitive_application loc prim env ty args : Lambda.primitive option
+    =
   let prim_name = prim.prim_name in
   let unified =
     match args with
@@ -512,14 +600,14 @@ let transl_primitive_application loc prim env ty args =
     | _ -> None
   in
   match unified with
-  | Some primitive -> primitive
+  | Some primitive -> Some primitive
   | None -> (
     try
       match args with
       | [arg1; _]
         when is_base_type env arg1.exp_type Predef.path_bool
              && Hashtbl.mem comparisons_table prim_name ->
-        (Hashtbl.find comparisons_table prim_name).boolcomp
+        Some (Hashtbl.find comparisons_table prim_name).boolcomp
       | _ ->
         let has_constant_constructor =
           match args with
@@ -546,14 +634,15 @@ let transl_primitive_application loc prim env ty args =
         in
         if has_constant_constructor then
           match Hashtbl.find_opt comparisons_table prim_name with
-          | Some table when table.simplify_constant_constructor -> table.intcomp
-          | Some _ | None -> specialize_primitive prim env ty
+          | Some table when table.simplify_constant_constructor ->
+            Some table.intcomp
+          | Some _ | None -> Some (specialize_primitive prim env ty)
           (* ~has_constant_constructor*)
-        else specialize_primitive prim env ty
+        else Some (specialize_primitive prim env ty)
     with Not_found ->
       if String.length prim_name > 0 && prim_name.[0] = '%' then
         raise (Error (loc, Unknown_builtin_primitive prim_name));
-      Pccall prim)
+      None)
 
 (* To propagate structured constants *)
 
@@ -729,31 +818,37 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
         args
     in
     let argl = transl_list args in
-    let prim =
-      transl_primitive_application e.exp_loc p e.exp_env prim_type args
-    in
-    warn_polymorphic_comparison e.exp_loc prim argl;
-    match (prim, args) with
-    | Praise k, [_] ->
-      let targ = List.hd argl in
-      let k =
-        match (k, targ) with
-        | Raise_regular, Lvar id when Hashtbl.mem try_ids id -> Raise_reraise
-        | _ -> k
-      in
-      wrap (Lprim (Praise k, [targ], e.exp_loc))
-    | Ploc kind, [] -> lam_of_loc kind e.exp_loc
-    | Ploc kind, [arg1] ->
-      let lam = lam_of_loc kind arg1.exp_loc in
-      Lprim (Pmakeblock Blk_tuple, lam :: argl, e.exp_loc)
-    | Ploc _, _ -> assert false
-    | _, _ -> (
-      match (prim, argl) with
-      | Pccall d, _ ->
-        wrap
-          (Lprim
-             (Pccall (set_transformed_jsx d ~transformed_jsx), argl, e.exp_loc))
-      | _ -> wrap (Lprim (prim, argl, e.exp_loc))))
+    match transl_primitive_application e.exp_loc p e.exp_env prim_type args with
+    | None -> (
+      (* an external: expand its FFI spec here; %raw parses and classifies
+         its snippet *)
+      match (p.prim_name, argl) with
+      | "#raw_expr", [Lconst (Const_base (Const_string (code, _)))] ->
+        let kind = Classify_function.classify code in
+        wrap (Lprim (Praw_js_code {code; code_info = Exp kind}, [], e.exp_loc))
+      | "#raw_stmt", [Lconst (Const_base (Const_string (code, _)))] ->
+        let kind = Classify_function.classify_stmt code in
+        wrap (Lprim (Praw_js_code {code; code_info = Stmt kind}, [], e.exp_loc))
+      | ("#raw_expr" | "#raw_stmt"), _ -> assert false
+      | _ ->
+        wrap (transl_external_application e.exp_loc p argl ~transformed_jsx))
+    | Some prim -> (
+      warn_polymorphic_comparison e.exp_loc prim argl;
+      match (prim, args) with
+      | Praise k, [_] ->
+        let targ = List.hd argl in
+        let k =
+          match (k, targ) with
+          | Raise_regular, Lvar id when Hashtbl.mem try_ids id -> Raise_reraise
+          | _ -> k
+        in
+        wrap (Lprim (Praise k, [targ], e.exp_loc))
+      | Ploc kind, [] -> lam_of_loc kind e.exp_loc
+      | Ploc kind, [arg1] ->
+        let lam = lam_of_loc kind arg1.exp_loc in
+        Lprim (Pmakeblock Blk_tuple, lam :: argl, e.exp_loc)
+      | Ploc _, _ -> assert false
+      | _, _ -> wrap (Lprim (prim, argl, e.exp_loc))))
   | Texp_apply {funct; args = oargs; partial; transformed_jsx} ->
     let inlined, funct =
       Translattribute.get_and_remove_inlined_attribute funct

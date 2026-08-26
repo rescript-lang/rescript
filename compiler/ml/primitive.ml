@@ -26,10 +26,7 @@ type description = {
       (* FFI spec of the external; [None] for compiler intrinsics *)
   prim_from_constructor: bool;
       (* Is it from a type constructor instead of a concrete function type? *)
-  transformed_jsx: bool;
 }
-
-let set_transformed_jsx d ~transformed_jsx = {d with transformed_jsx}
 
 let with_arity d ~arity ~from_constructor =
   {d with prim_arity = arity; prim_from_constructor = from_constructor}
@@ -61,7 +58,6 @@ let parse_declaration (valdecl : Parsetree.value_description) ~arity
     prim_alloc = true;
     prim_ffi = ffi;
     prim_from_constructor = from_constructor;
-    transformed_jsx = false;
   }
 
 open Outcometree

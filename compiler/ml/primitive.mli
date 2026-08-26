@@ -23,10 +23,7 @@ type description = private {
       (* FFI spec of the external; [None] for compiler intrinsics *)
   prim_from_constructor: bool;
       (* Is it from a type constructor instead of a concrete function type? *)
-  transformed_jsx: bool;
 }
-
-val set_transformed_jsx : description -> transformed_jsx:bool -> description
 
 val with_arity :
   description -> arity:int -> from_constructor:bool -> description

@@ -85,17 +85,6 @@ and t = private
    we should use record for trivial debugger info
 *)
 
-val handle_bs_non_obj_ffi :
-  ?transformed_jsx:bool ->
-  External_arg_spec.params ->
-  External_ffi_types.return_wrapper ->
-  External_ffi_types.external_spec ->
-  t list ->
-  Location.t ->
-  string ->
-  dynamic_import:bool ->
-  t
-
 (**************************************************************)
 
 val var : ident -> t
