@@ -49,7 +49,7 @@ let value_descriptions ~loc env name (vd1 : Types.value_description)
     | Val_prim p1, Val_prim p2 ->
       let p1 = normalize_primitive ~env vd1.val_type p1 in
       let p2 = normalize_primitive ~env vd2.val_type p2 in
-      if !Primitive.coerce p1 p2 then Tcoerce_none else raise Dont_match
+      if Primitive.coercible p1 p2 then Tcoerce_none else raise Dont_match
     | Val_prim p, _ ->
       let pc =
         {

@@ -300,7 +300,6 @@ let primitives_table =
       ("%intmax", Pintmax);
       (* float primitives *)
       ("%negfloat", Pnegfloat);
-      ("%absfloat", Pabsfloat);
       ("%addfloat", Paddfloat);
       ("%subfloat", Psubfloat);
       ("%mulfloat", Pmulfloat);

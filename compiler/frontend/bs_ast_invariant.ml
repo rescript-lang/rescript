@@ -119,7 +119,7 @@ let emit_external_warnings : iterator =
     value_description =
       (fun self v ->
         match v with
-        | ({pval_loc; pval_prim = [byte_name]; pval_type} :
+        | ({pval_loc; pval_prim = Some (Prim_name byte_name); pval_type} :
             Parsetree.value_description) -> (
           match byte_name with
           | ("%identity" | "%component_identity")

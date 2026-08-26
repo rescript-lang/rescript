@@ -19,10 +19,11 @@ open Misc
 open Parsetree
 
 type description = {
-  prim_name: string; (* Name of primitive  or C function *)
+  prim_name: string; (* Name of the intrinsic or the external's JS name *)
   prim_arity: int; (* Number of arguments *)
   prim_alloc: bool; (* Does it allocates or raise? *)
-  prim_native_name: string; (* Name of C function for the nat. code gen. *)
+  prim_ffi: External_ffi_types.t option;
+      (* FFI spec of the external; [None] for compiler intrinsics *)
   prim_from_constructor: bool;
       (* Is it from a type constructor instead of a concrete function type? *)
   transformed_jsx: bool;
@@ -33,30 +34,43 @@ let set_transformed_jsx d ~transformed_jsx = {d with transformed_jsx}
 let with_arity d ~arity ~from_constructor =
   {d with prim_arity = arity; prim_from_constructor = from_constructor}
 
-let coerce : (description -> description -> bool) ref =
-  ref (fun (p1 : description) (p2 : description) -> p1 = p2)
+(* Can an implementation's primitive satisfy an interface's during signature
+   inclusion? The specs must be equal, up to the widening rule in
+   [External_ffi_types.inclusion_compatible]. *)
+let coercible (impl : description) (intf : description) =
+  impl.prim_name = intf.prim_name
+  && impl.prim_arity = intf.prim_arity
+  && impl.prim_ffi = intf.prim_ffi
+  ||
+  match (impl.prim_ffi, intf.prim_ffi) with
+  | Some impl_ffi, Some intf_ffi ->
+    External_ffi_types.inclusion_compatible impl_ffi intf_ffi
+  | _ -> false
 
-let parse_declaration valdecl ~arity ~from_constructor =
-  let name, native_name =
+let parse_declaration (valdecl : Parsetree.value_description) ~arity
+    ~from_constructor =
+  let name, ffi =
     match valdecl.pval_prim with
-    | name :: name2 :: _ -> (name, name2)
-    | name :: _ -> (name, "")
-    | [] -> fatal_error "Primitive.parse_declaration"
+    | Some (Prim_name name) -> (name, None)
+    | Some (Prim_ffi {name; spec}) -> (name, Some spec)
+    | None -> fatal_error "Primitive.parse_declaration"
   in
   {
     prim_name = name;
     prim_arity = arity;
     prim_alloc = true;
-    prim_native_name = native_name;
+    prim_ffi = ffi;
     prim_from_constructor = from_constructor;
     transformed_jsx = false;
   }
 
 open Outcometree
 
+(* The spec itself is not rendered in signatures; a fixed placeholder marks
+   the declaration as a processed FFI external. *)
 let print p osig_val_decl =
   let prims =
-    if p.prim_native_name <> "" then [p.prim_name; p.prim_native_name]
+    if p.prim_ffi <> None then [p.prim_name; "#rescript-external"]
     else [p.prim_name]
   in
   {osig_val_decl with oval_prims = prims; oval_attributes = []}

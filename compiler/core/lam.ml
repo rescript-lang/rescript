@@ -385,7 +385,6 @@ let prim ~primitive:(prim : Lam_primitive.t) ~args loc : t =
     | Pintoffloat, Const_float a ->
       Lift.int (Int32.of_float (float_of_string a))
     (* | Pnegfloat -> Lift.float (-. a) *)
-    (* | Pabsfloat -> Lift.float (abs_float a) *)
     | Pstringlength, Const_string {s; delim = None} ->
       Lift.int (Int32.of_int (String.length s))
     (* | Pnegbint Pnativeint, ( (Const_nativeint i)) *)

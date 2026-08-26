@@ -452,7 +452,7 @@ let signature_item_mapper (self : mapper) (sigi : Parsetree.signature_item) :
               Psig_value
                 {
                   value_desc with
-                  pval_prim = External_ffi_types.inline_string_primitive s dec;
+                  pval_prim = Some (Ast_external_mk.inline_string s dec);
                   pval_attributes = [];
                 };
           }
@@ -465,7 +465,7 @@ let signature_item_mapper (self : mapper) (sigi : Parsetree.signature_item) :
               Psig_value
                 {
                   value_desc with
-                  pval_prim = External_ffi_types.inline_int_primitive s;
+                  pval_prim = Some (Ast_external_mk.inline_int s);
                   pval_attributes = [];
                 };
           }
@@ -477,7 +477,7 @@ let signature_item_mapper (self : mapper) (sigi : Parsetree.signature_item) :
               Psig_value
                 {
                   value_desc with
-                  pval_prim = External_ffi_types.inline_bigint_primitive s;
+                  pval_prim = Some (Ast_external_mk.inline_bigint s);
                   pval_attributes = [];
                 };
           }
@@ -489,7 +489,7 @@ let signature_item_mapper (self : mapper) (sigi : Parsetree.signature_item) :
               Psig_value
                 {
                   value_desc with
-                  pval_prim = External_ffi_types.inline_float_primitive s;
+                  pval_prim = Some (Ast_external_mk.inline_float s);
                   pval_attributes = [];
                 };
           }
@@ -501,8 +501,7 @@ let signature_item_mapper (self : mapper) (sigi : Parsetree.signature_item) :
               Psig_value
                 {
                   value_desc with
-                  pval_prim =
-                    External_ffi_types.inline_bool_primitive (txt = "true");
+                  pval_prim = Some (Ast_external_mk.inline_bool (txt = "true"));
                   pval_attributes = [];
                 };
           }
@@ -567,7 +566,7 @@ let structure_item_mapper (self : mapper) (str : Parsetree.structure_item) :
               pval_type = Ast_literal.type_string ();
               pval_loc = pvb_loc;
               pval_attributes = [];
-              pval_prim = External_ffi_types.inline_string_primitive s dec;
+              pval_prim = Some (Ast_external_mk.inline_string s dec);
             };
       }
     | Some attr, Pexp_constant (Pconst_integer (s, None)) ->
@@ -582,7 +581,7 @@ let structure_item_mapper (self : mapper) (str : Parsetree.structure_item) :
               pval_type = Ast_literal.type_int ();
               pval_loc = pvb_loc;
               pval_attributes = [];
-              pval_prim = External_ffi_types.inline_int_primitive s;
+              pval_prim = Some (Ast_external_mk.inline_int s);
             };
       }
     | Some attr, Pexp_constant (Pconst_float (s, None)) ->
@@ -596,7 +595,7 @@ let structure_item_mapper (self : mapper) (str : Parsetree.structure_item) :
               pval_type = Ast_literal.type_float;
               pval_loc = pvb_loc;
               pval_attributes = [];
-              pval_prim = External_ffi_types.inline_float_primitive s;
+              pval_prim = Some (Ast_external_mk.inline_float s);
             };
       }
     | ( Some attr,
@@ -611,7 +610,7 @@ let structure_item_mapper (self : mapper) (str : Parsetree.structure_item) :
               pval_type = Ast_literal.type_bool ();
               pval_loc = pvb_loc;
               pval_attributes = [];
-              pval_prim = External_ffi_types.inline_bool_primitive (txt = "true");
+              pval_prim = Some (Ast_external_mk.inline_bool (txt = "true"));
             };
       }
     | _ ->

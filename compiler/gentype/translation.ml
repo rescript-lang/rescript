@@ -127,12 +127,12 @@ let translate_primitive ~config ~output_file_relative ~resolver ~type_env
     (value_description : Typedtree.value_description) : t =
   if !Debug.translation then Log_.item "Translate Primitive\n";
   let value_name =
+    (* external foo : someType = "abc" -- the extern name is "abc" *)
     match value_description.val_prim with
-    | "" :: _ | [] -> value_description.val_id |> Ident.name
-    | name_of_extern :: _ ->
-      (* extern foo : someType = "abc"
-         The first element of val_prim is "abc" *)
+    | (Some (Prim_name name_of_extern) | Some (Prim_ffi {name = name_of_extern}))
+      when name_of_extern <> "" ->
       name_of_extern
+    | _ -> value_description.val_id |> Ident.name
   in
   let type_expr_translation =
     value_description.val_desc

@@ -748,10 +748,22 @@ let default_mapper =
     extension_constructor = T.map_extension_constructor;
     value_description =
       (fun this {pval_name; pval_type; pval_prim; pval_loc; pval_attributes} ->
+        let prim =
+          match pval_prim with
+          | None -> []
+          | Some (Prim_name s) -> [s]
+          | Some (Prim_ffi _) ->
+            (* External PPXes run before the frontend digests externals, and
+               nothing else crosses this bridge, so a digested external can
+               never legitimately reach it. *)
+            Location.raise_errorf ~loc:pval_loc
+              "External declarations already processed for compilation cannot \
+               be converted for an external PPX"
+        in
         Val.mk (map_loc this pval_name) (this.typ this pval_type)
           ~attrs:(this.attributes this pval_attributes)
           ~loc:(this.location this pval_loc)
-          ~prim:pval_prim);
+          ~prim);
     pat = P.map;
     expr = E.map;
     module_declaration =

@@ -175,7 +175,6 @@ let primitive ppf = function
   | Pintoffloat -> fprintf ppf "int_of_float"
   | Pfloatofint -> fprintf ppf "float_of_int"
   | Pnegfloat -> fprintf ppf "~-."
-  | Pabsfloat -> fprintf ppf "abs."
   | Paddfloat -> fprintf ppf "+."
   | Psubfloat -> fprintf ppf "-."
   | Pmulfloat -> fprintf ppf "*."

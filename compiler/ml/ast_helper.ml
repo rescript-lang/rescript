@@ -316,7 +316,7 @@ module Str = struct
 end
 
 module Val = struct
-  let mk ?(loc = !default_loc) ?(attrs = []) ?(prim = []) name typ =
+  let mk ?(loc = !default_loc) ?(attrs = []) ?prim name typ =
     {
       pval_name = name;
       pval_type = typ;

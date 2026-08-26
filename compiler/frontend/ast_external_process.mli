@@ -24,28 +24,28 @@
 
 type response = {
   pval_type: Parsetree.core_type;
-  pval_prim: string list;
+  pval_prim: Parsetree.primitive_repr;
   pval_attributes: Parsetree.attributes;
   no_inline_cross_module: bool;
 }
 
-val encode_attributes_as_string :
+val handle_attributes_as_prim :
   Bs_loc.t -> Ast_core_type.t -> Ast_attributes.t -> string -> response
 (**
-   [encode_attributes_as_string
+   [handle_attributes_as_prim
    loc pval_name.txt pval_type pval_attributes pval_prim]
    [pval_name.txt] is the name of identifier
    [pval_prim] is the name of string literal
 
-   return value is of [pval_type, pval_prims, new_attrs]
+   return value is of [pval_type, pval_prim, new_attrs]
 *)
 
-val pval_prim_of_labels : string Asttypes.loc list -> string list
+val pval_prim_of_labels : string Asttypes.loc list -> Parsetree.primitive_repr
 (** [pval_prim_of_labels labels]
-    return [pval_prims] for FFI, it is specialized for
+    return [pval_prim] for FFI, it is specialized for
     external object which is used in
     {[ [%obj { x = 2; y = 1} ] ]}
 *)
 
 val pval_prim_of_option_labels :
-  (bool * string Asttypes.loc) list -> bool -> string list
+  (bool * string Asttypes.loc) list -> bool -> Parsetree.primitive_repr

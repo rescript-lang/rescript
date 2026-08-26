@@ -79,37 +79,33 @@ type return_wrapper =
 
 type params = Params of External_arg_spec.params | Param_number of int
 
+(* An external declared as an inline constant is only ever a literal; the
+   frontend parses delimiters and bigint signs before constructing this. *)
+type inline_const =
+  | Const_str of {s: string; delim: External_arg_spec.delim option}
+  | Const_bool of bool
+  | Const_int of int32
+  | Const_bigint of {negative: bool; digits: string}
+  | Const_float of string
+
 type t = private
   | Ffi_bs of params * return_wrapper * external_spec
   | Ffi_obj_create of External_arg_spec.obj_params
-  | Ffi_inline_const of Lam_constant.t
-  | Ffi_normal
-(* When it's normal, it is handled as normal c functional ffi call *)
+  | Ffi_inline_const of inline_const
 
 (* val name_of_ffi : external_spec -> string *)
 
 val check_ffi : ?loc:Location.t -> external_spec -> bool
 
-val to_string : t -> string
+val inclusion_compatible : t -> t -> bool
+(** [inclusion_compatible impl intf]: can an implementation's spec satisfy an
+    interface's spec during signature inclusion? Equal specs always can;
+    object-creation specs additionally accept a widening of an optional
+    field's [for_sure_no_nested_option] from false (implementation) to true
+    (interface). *)
 
-val from_string : string -> t
-(** Note *)
-
-val inline_string_primitive : string -> string option -> string list
-
-val inline_bool_primitive : bool -> string list
-
-val inline_int_primitive : int32 -> string list
-
-val inline_float_primitive : string -> string list
-
-val inline_bigint_primitive : string -> string list
+val ffi_inline_const : inline_const -> t
 
 val ffi_bs : External_arg_spec.params -> return_wrapper -> external_spec -> t
 
-val ffi_bs_as_prims :
-  External_arg_spec.params -> return_wrapper -> external_spec -> string list
-
 val ffi_obj_create : External_arg_spec.obj_params -> t
-
-val ffi_obj_as_prims : External_arg_spec.obj_params -> string list

@@ -507,16 +507,7 @@ let rec print_out_sig_item_doc ?(print_name_as_is = false)
                     Doc.group
                       (Doc.join ~sep:Doc.line
                          (List.map
-                            (fun prim ->
-                              let prim =
-                                if
-                                  prim <> ""
-                                  && (prim.[0] [@doesNotRaise]) = '\132'
-                                then "#rescript-external"
-                                else prim
-                              in
-                              (* not display those garbage '\132' is a magic number for marshal *)
-                              Doc.text ("\"" ^ prim ^ "\""))
+                            (fun prim -> Doc.text ("\"" ^ prim ^ "\""))
                             primitives));
                   ]));
          ])

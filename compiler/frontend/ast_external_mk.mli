@@ -25,7 +25,7 @@
 val local_external_apply :
   Location.t ->
   ?pval_attributes:Parsetree.attributes ->
-  pval_prim:string list ->
+  pval_prim:Parsetree.primitive_repr ->
   pval_type:Parsetree.core_type ->
   ?local_module_name:string ->
   ?local_fun_name:string ->
@@ -45,10 +45,20 @@ val local_external_apply :
 val local_external_obj :
   Location.t ->
   ?pval_attributes:Parsetree.attributes ->
-  pval_prim:string list ->
+  pval_prim:Parsetree.primitive_repr ->
   pval_type:Parsetree.core_type ->
   ?local_module_name:string ->
   ?local_fun_name:string ->
   (string * Parsetree.expression) list ->
   (* [ (label, exp )]*)
   Parsetree.expression_desc
+
+val inline_string : string -> string option -> Parsetree.primitive_repr
+
+val inline_bool : bool -> Parsetree.primitive_repr
+
+val inline_int : int32 -> Parsetree.primitive_repr
+
+val inline_bigint : string -> Parsetree.primitive_repr
+
+val inline_float : string -> Parsetree.primitive_repr

@@ -1880,30 +1880,25 @@ let transl_value_decl env loc valdecl =
   let ty = cty.ctyp_type in
   let v =
     match valdecl.pval_prim with
-    | [] when Env.is_in_signature env ->
+    | None when Env.is_in_signature env ->
       {
         val_type = ty;
         val_kind = Val_reg;
         Types.val_loc = loc;
         val_attributes = valdecl.pval_attributes;
       }
-    | [] ->
-      (* unreachable: `pval_prim = []` outside a signature can only arise
-         from the parser's `external` recovery, which sets `prim = []`
+    | None ->
+      (* unreachable: `pval_prim = None` outside a signature can only arise
+         from the parser's `external` recovery, which clears the primitive
          *after* emitting a syntax error, so the typer never sees the
          declaration. A bare `val x: int` in a .res is also rejected at
          parse time. *)
       assert false
-    | _ ->
+    | Some _ ->
       let arity, from_constructor = parse_arity env valdecl.pval_type ty in
       let prim = Primitive.parse_declaration valdecl ~arity ~from_constructor in
-      let prim_native_name = prim.prim_native_name in
       if
-        prim.prim_arity = 0
-        && (not
-              (String.length prim_native_name >= 20
-              && String.unsafe_get prim_native_name 0 = '\132'
-              && String.unsafe_get prim_native_name 1 = '\149'))
+        prim.prim_arity = 0 && prim.prim_ffi = None
         && (prim.prim_name = ""
            || (prim.prim_name.[0] <> '%' && prim.prim_name.[0] <> '#'))
       then raise (Error (valdecl.pval_type.ptyp_loc, Null_arity_external));

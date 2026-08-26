@@ -68,7 +68,7 @@ let erase_type x = app1 erase_type_exp x
 let erase_type_str =
   let any = Typ.any () in
   Str.primitive
-    (Val.mk ~prim:["%identity"]
+    (Val.mk ~prim:(Parsetree.Prim_name "%identity")
        {loc = noloc; txt = erase_type_lit}
        (Ast_helper.Typ.arrow [{attrs = []; lbl = Nolabel; typ = any}] any))
 
@@ -77,7 +77,7 @@ let unsafe_index = "_index"
 let unsafe_index_get =
   let any = Typ.any () in
   Str.primitive
-    (Val.mk ~prim:[""]
+    (Val.mk ~prim:(Parsetree.Prim_name "")
        {loc = noloc; txt = unsafe_index}
        ~attrs:[Ast_attributes.get_index]
        (Ast_helper.Typ.arrow

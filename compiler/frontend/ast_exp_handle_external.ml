@@ -25,7 +25,7 @@
 let handle_debugger loc (payload : Ast_payload.t) =
   match payload with
   | PStr [] ->
-    Ast_external_mk.local_external_apply loc ~pval_prim:["%debugger"]
+    Ast_external_mk.local_external_apply loc ~pval_prim:(Prim_name "%debugger")
       ~pval_type:
         (Ast_helper.Typ.arrow
            [{attrs = []; lbl = Nolabel; typ = Ast_helper.Typ.any ()}]
@@ -52,7 +52,8 @@ let handle_raw ~kind loc payload =
     {
       exp with
       pexp_desc =
-        Ast_external_mk.local_external_apply loc ~pval_prim:["#raw_expr"]
+        Ast_external_mk.local_external_apply loc
+          ~pval_prim:(Prim_name "#raw_expr")
           ~pval_type:
             (Ast_helper.Typ.arrow
                [{attrs = []; lbl = Nolabel; typ = Ast_helper.Typ.any ()}]
@@ -97,7 +98,8 @@ let handle_ffi ~loc ~payload =
       {
         exp with
         pexp_desc =
-          Ast_external_mk.local_external_apply loc ~pval_prim:["#raw_expr"]
+          Ast_external_mk.local_external_apply loc
+            ~pval_prim:(Prim_name "#raw_expr")
             ~pval_type:
               (Ast_helper.Typ.arrow
                  [{attrs = []; lbl = Nolabel; typ = Ast_helper.Typ.any ()}]
@@ -116,7 +118,8 @@ let handle_raw_structure loc payload =
       {
         exp with
         pexp_desc =
-          Ast_external_mk.local_external_apply loc ~pval_prim:["#raw_stmt"]
+          Ast_external_mk.local_external_apply loc
+            ~pval_prim:(Prim_name "#raw_stmt")
             ~pval_type:
               (Ast_helper.Typ.arrow
                  [{attrs = []; lbl = Nolabel; typ = Ast_helper.Typ.any ()}]

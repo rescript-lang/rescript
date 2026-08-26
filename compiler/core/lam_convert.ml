@@ -246,7 +246,6 @@ let lam_prim ~primitive:(p : Lambda.primitive) ~args loc : Lam.t =
   | Pstringmin -> prim ~primitive:Pstringmin ~args loc
   | Pstringmax -> prim ~primitive:Pstringmax ~args loc
   | Pstringadd -> prim ~primitive:Pstringadd ~args loc
-  | Pabsfloat -> assert false
   | Pstringrefs -> prim ~primitive:Pstringrefs ~args loc
   | Pisint -> prim ~primitive:Pisint ~args loc
   | Pisout -> (
@@ -329,11 +328,11 @@ let convert (exports : Set_ident.t) (lam : Lambda.lambda) :
   let rec convert_ccall (a_prim : Primitive.description)
       (args : Lambda.lambda list) loc ~dynamic_import : Lam.t =
     let prim_name = a_prim.prim_name in
-    match External_ffi_types.from_string a_prim.prim_native_name with
-    | Ffi_obj_create labels ->
+    match a_prim.prim_ffi with
+    | Some (Ffi_obj_create labels) ->
       let args = Ext_list.map args convert_aux in
       prim ~primitive:(Pjs_object_create labels) ~args loc
-    | Ffi_bs (arg_types, result_type, ffi) ->
+    | Some (Ffi_bs (arg_types, result_type, ffi)) ->
       let arg_types =
         match arg_types with
         | Params ls -> ls
@@ -342,8 +341,16 @@ let convert (exports : Set_ident.t) (lam : Lambda.lambda) :
       let args = Ext_list.map args convert_aux in
       Lam.handle_bs_non_obj_ffi ~transformed_jsx:a_prim.transformed_jsx
         arg_types result_type ffi args loc prim_name ~dynamic_import
-    | Ffi_inline_const i -> Lam.const i
-    | Ffi_normal ->
+    | Some (Ffi_inline_const c) ->
+      Lam.const
+        (match c with
+        | Const_str {s; delim} -> Const_string {s; delim}
+        | Const_bool true -> Const_js_true
+        | Const_bool false -> Const_js_false
+        | Const_int i -> Const_int {i; comment = None}
+        | Const_bigint {negative; digits} -> Const_bigint (negative, digits)
+        | Const_float f -> Const_float f)
+    | None ->
       Location.raise_errorf ~loc
         "@{<error>Error:@} internal error, using unrecognized primitive %s"
         prim_name

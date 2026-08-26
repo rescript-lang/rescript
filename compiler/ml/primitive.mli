@@ -16,10 +16,11 @@
 (* Description of primitive functions *)
 
 type description = private {
-  prim_name: string; (* Name of primitive  or C function *)
+  prim_name: string; (* Name of the intrinsic or the external's JS name *)
   prim_arity: int; (* Number of arguments *)
   prim_alloc: bool; (* Does it allocates or raise? *)
-  prim_native_name: string; (* Name of C function for the nat. code gen. *)
+  prim_ffi: External_ffi_types.t option;
+      (* FFI spec of the external; [None] for compiler intrinsics *)
   prim_from_constructor: bool;
       (* Is it from a type constructor instead of a concrete function type? *)
   transformed_jsx: bool;
@@ -40,4 +41,6 @@ val parse_declaration :
 
 val print : description -> Outcometree.out_val_decl -> Outcometree.out_val_decl
 
-val coerce : (description -> description -> bool) ref
+val coercible : description -> description -> bool
+(** Can an implementation's primitive satisfy an interface's during signature
+    inclusion? *)

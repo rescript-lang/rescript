@@ -105,12 +105,7 @@ let first_char_special (x : string) =
   | '#' | '?' | '%' -> true
   | _ -> false
 
-let prims_to_be_encoded (attrs : string list) =
-  match attrs with
-  | [] -> assert false (* normal val declaration *)
-  | x :: _ when first_char_special x -> false
-  | _ :: x :: _ when Ext_string.first_marshal_char x -> false
-  | _ -> true
+let prim_to_be_encoded (name : string) = not (first_char_special name)
 
 (**
 
@@ -123,17 +118,17 @@ let prims_to_be_encoded (attrs : string list) =
    They are not considered externals, they are part of the language
 *)
 
-let rs_externals (attrs : t) pval_prim =
+let rs_externals (attrs : t) (pval_prim : Parsetree.primitive_repr option) =
   match (attrs, pval_prim) with
-  | _, [] -> false
-  (* This is  val *)
-  | [], _ ->
+  | _, (None | Some (Prim_ffi _)) -> false
+  (* [None] is a [val]; an already-digested external is not processed again *)
+  | [], Some (Prim_name name) ->
     (* Not any attribute found *)
-    prims_to_be_encoded pval_prim
-  | _, _ ->
+    prim_to_be_encoded name
+  | _, Some (Prim_name name) ->
     Ext_list.exists_fst attrs (fun ({txt} : string Asttypes.loc) ->
         Ext_array.exists external_attrs (fun (x : string) -> txt = x))
-    || prims_to_be_encoded pval_prim
+    || prim_to_be_encoded name
 
 let is_inline : attr -> bool = fun ({txt}, _) -> txt = "inline"
 

@@ -29,13 +29,12 @@ let handle_external_in_sig (self : Ast_mapper.mapper)
   let pval_type = self.typ self prim.pval_type in
   let pval_attributes = self.attributes self prim.pval_attributes in
   match prim.pval_prim with
-  | [] -> Location.raise_errorf ~loc "empty primitive string"
-  | a :: b :: _ ->
-    Location.raise_errorf ~loc
-      "only a single string is allowed in bs external %S %S" a b
-  | [v] -> (
+  | None -> Location.raise_errorf ~loc "empty primitive string"
+  | Some (Prim_ffi _) ->
+    Location.raise_errorf ~loc "external declaration already processed"
+  | Some (Prim_name v) -> (
     match
-      Ast_external_process.encode_attributes_as_string loc pval_type
+      Ast_external_process.handle_attributes_as_prim loc pval_type
         pval_attributes v
     with
     | {pval_type; pval_prim; pval_attributes; no_inline_cross_module} ->
@@ -46,7 +45,8 @@ let handle_external_in_sig (self : Ast_mapper.mapper)
             {
               prim with
               pval_type;
-              pval_prim = (if no_inline_cross_module then [] else pval_prim);
+              pval_prim =
+                (if no_inline_cross_module then None else Some pval_prim);
               pval_attributes;
             };
       })
@@ -58,13 +58,12 @@ let handle_external_in_stru (self : Ast_mapper.mapper)
   let pval_type = self.typ self prim.pval_type in
   let pval_attributes = self.attributes self prim.pval_attributes in
   match prim.pval_prim with
-  | [] -> Location.raise_errorf ~loc "empty primitive string"
-  | a :: b :: _ ->
-    Location.raise_errorf ~loc
-      "only a single string is allowed in bs external %S : %S" a b
-  | [v] -> (
+  | None -> Location.raise_errorf ~loc "empty primitive string"
+  | Some (Prim_ffi _) ->
+    Location.raise_errorf ~loc "external declaration already processed"
+  | Some (Prim_name v) -> (
     match
-      Ast_external_process.encode_attributes_as_string loc pval_type
+      Ast_external_process.handle_attributes_as_prim loc pval_type
         pval_attributes v
     with
     | {pval_type; pval_prim; pval_attributes; no_inline_cross_module} ->
@@ -72,7 +71,8 @@ let handle_external_in_stru (self : Ast_mapper.mapper)
         {
           str with
           pstr_desc =
-            Pstr_primitive {prim with pval_type; pval_prim; pval_attributes};
+            Pstr_primitive
+              {prim with pval_type; pval_prim = Some pval_prim; pval_attributes};
         }
       in
       if not no_inline_cross_module then external_result
@@ -90,7 +90,7 @@ let handle_external_in_stru (self : Ast_mapper.mapper)
                            {
                              prim with
                              pval_type;
-                             pval_prim = [];
+                             pval_prim = None;
                              pval_attributes;
                            };
                        psig_loc = loc;

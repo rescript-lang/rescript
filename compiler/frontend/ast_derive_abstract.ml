@@ -105,7 +105,7 @@ let handle_tdcl light (tdcl : Parsetree.type_declaration) :
             | None -> (label_name, pld_name)
             | Some new_name -> (new_name, {pld_name with txt = new_name})
           in
-          let prim = [prim_as_name] in
+          let prim = Parsetree.Prim_name prim_as_name in
           let is_optional = Ast_attributes.has_bs_optional pld_attributes in
 
           (* build the argument representing this field *)
@@ -137,9 +137,14 @@ let handle_tdcl light (tdcl : Parsetree.type_declaration) :
             (* Not needed actually *)
             if is_optional then prim
             else
-              External_ffi_types.ffi_bs_as_prims [External_arg_spec.dummy]
-                Return_identity
-                (Js_get {js_get_name = prim_as_name; js_get_scopes = []})
+              Parsetree.Prim_ffi
+                {
+                  name = "";
+                  spec =
+                    External_ffi_types.ffi_bs [External_arg_spec.dummy]
+                      Return_identity
+                      (Js_get {js_get_name = prim_as_name; js_get_scopes = []});
+                }
           in
           let accessor_attrs =
             if is_optional then get_optional_attrs else get_attrs
