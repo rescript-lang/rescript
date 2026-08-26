@@ -30,6 +30,7 @@ val transl_primitive :
   Primitive.description ->
   Env.t ->
   Types.type_expr ->
+  val_type:Types.type_expr ->
   Lambda.lambda
 
 val transl_extension_constructor :

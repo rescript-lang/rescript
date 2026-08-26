@@ -143,7 +143,13 @@ let handle_tdcl light (tdcl : Parsetree.type_declaration) :
                   spec =
                     External_ffi_types.ffi_bs [External_arg_spec.dummy]
                       Return_identity
-                      (Js_get {js_get_name = prim_as_name; js_get_scopes = []});
+                      {
+                        kind = Decl_get {name = prim_as_name};
+                        module_ = None;
+                        scopes = [];
+                        variadic = false;
+                        effective_arity = 1;
+                      };
                 }
           in
           let accessor_attrs =

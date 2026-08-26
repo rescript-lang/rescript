@@ -478,9 +478,8 @@ let print_type_parameter_doc (typ, (co, cn)) =
       (if typ = "_" then Doc.text "_" else Doc.text ("'" ^ typ));
     ]
 
-(* Decompile a digested FFI spec back to the surface attributes the user
-   wrote. Total: every constructor of [External_ffi_types.external_spec]
-   originates from attribute syntax. *)
+(* Print a digested FFI declaration as the surface attributes the user
+   wrote; the stored form is the declaration itself. *)
 let print_string_literal_doc s = Doc.text ("\"" ^ String.escaped s ^ "\"")
 
 let print_inline_const_doc (c : External_ffi_types.inline_const) =
@@ -550,69 +549,44 @@ let print_variadic_doc splice =
 
 let print_return_wrapper_doc (w : External_ffi_types.return_wrapper) =
   match w with
-  | Return_unset | Return_replaced_with_unit -> Doc.nil
+  | Return_unset -> Doc.nil
   | Return_identity -> Doc.text "@return(identity) "
   | Return_null_to_opt -> Doc.text "@return(null_to_opt) "
   | Return_null_undefined_to_opt -> Doc.text "@return(nullable) "
 
-let print_external_spec_attrs_doc (spec : External_ffi_types.external_spec)
+let print_decl_kind_doc (kind : External_ffi_types.decl_kind)
+    (module_ : External_ffi_types.module_source option) =
+  match kind with
+  | Decl_val _ -> (
+    (* [@val] conflicts with bare [@module]; elsewhere it is the default and
+       always legal to write *)
+    match module_ with
+    | Some Module_itself -> Doc.nil
+    | _ -> Doc.text "@val ")
+  | Decl_send _ -> Doc.text "@send "
+  | Decl_new _ -> Doc.text "@new "
+  | Decl_get _ -> Doc.text "@get "
+  | Decl_set _ -> Doc.text "@set "
+  | Decl_get_index -> Doc.text "@get_index "
+  | Decl_set_index -> Doc.text "@set_index "
+
+let print_module_source_doc (module_ : External_ffi_types.module_source option)
+    =
+  match module_ with
+  | None -> Doc.nil
+  | Some Module_itself -> Doc.text "@module "
+  | Some (Module_named emn) -> print_external_module_doc emn
+
+let print_external_decl_attrs_doc (decl : External_ffi_types.external_decl)
     (return_wrapper : External_ffi_types.return_wrapper) =
-  let opt_module emn =
-    match emn with
-    | None -> Doc.nil
-    | Some emn -> print_external_module_doc emn
-  in
-  let spec_doc =
-    match spec with
-    | Js_var {name = _; external_module_name; scopes} ->
-      Doc.concat
-        [
-          Doc.text "@val ";
-          opt_module external_module_name;
-          print_scopes_doc scopes;
-        ]
-    | Js_call {name = _; external_module_name; splice; scopes} ->
-      Doc.concat
-        [
-          Doc.text "@val ";
-          opt_module external_module_name;
-          print_scopes_doc scopes;
-          print_variadic_doc splice;
-        ]
-    | Js_module_as_var emn -> print_external_module_doc emn
-    | Js_module_as_fn {external_module_name; splice} ->
-      Doc.concat
-        [
-          print_external_module_doc external_module_name;
-          print_variadic_doc splice;
-        ]
-    | Js_module_as_class emn ->
-      Doc.concat [Doc.text "@new "; print_external_module_doc emn]
-    | Js_new {name = _; external_module_name; splice; scopes} ->
-      Doc.concat
-        [
-          Doc.text "@new ";
-          opt_module external_module_name;
-          print_scopes_doc scopes;
-          print_variadic_doc splice;
-        ]
-    | Js_send {name = _; splice; js_send_scopes} ->
-      Doc.concat
-        [
-          Doc.text "@send ";
-          print_scopes_doc js_send_scopes;
-          print_variadic_doc splice;
-        ]
-    | Js_get {js_get_name = _; js_get_scopes} ->
-      Doc.concat [Doc.text "@get "; print_scopes_doc js_get_scopes]
-    | Js_set {js_set_name = _; js_set_scopes} ->
-      Doc.concat [Doc.text "@set "; print_scopes_doc js_set_scopes]
-    | Js_get_index {js_get_index_scopes} ->
-      Doc.concat [Doc.text "@get_index "; print_scopes_doc js_get_index_scopes]
-    | Js_set_index {js_set_index_scopes} ->
-      Doc.concat [Doc.text "@set_index "; print_scopes_doc js_set_index_scopes]
-  in
-  Doc.concat [spec_doc; print_return_wrapper_doc return_wrapper]
+  Doc.concat
+    [
+      print_decl_kind_doc decl.kind decl.module_;
+      print_module_source_doc decl.module_;
+      print_scopes_doc decl.scopes;
+      print_variadic_doc decl.variadic;
+      print_return_wrapper_doc return_wrapper;
+    ]
 
 let rec print_out_sig_item_doc ?(print_name_as_is = false)
     (out_sig_item : Outcometree.out_sig_item) =
@@ -633,8 +607,8 @@ let rec print_out_sig_item_doc ?(print_name_as_is = false)
       | Some (Prim_ffi {name; spec}) -> (
         match spec with
         | Ffi_obj_create _ -> (Doc.text "@obj ", "external ", Some name)
-        | Ffi_bs (_params, return_wrapper, external_spec) ->
-          ( print_external_spec_attrs_doc external_spec return_wrapper,
+        | Ffi_bs (_params, return_wrapper, decl) ->
+          ( print_external_decl_attrs_doc decl return_wrapper,
             "external ",
             Some name ))
     in

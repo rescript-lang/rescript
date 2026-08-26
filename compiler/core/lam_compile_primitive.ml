@@ -609,8 +609,8 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
   (* Lam_compile_external_call.translate loc cxt prim args *)
   (* Test if the argument is a block or an immediate integer *)
   | Pjs_object_create _ -> assert false
-  | Pjs_call {arg_types; ffi; dynamic_import; transformed_jsx} ->
-    Lam_compile_external_call.translate_ffi cxt arg_types ffi args
+  | Pjs_call {prim_name; arg_types; ffi; dynamic_import; transformed_jsx} ->
+    Lam_compile_external_call.translate_ffi cxt arg_types ~prim_name ffi args
       ~dynamic_import ~transformed_jsx
   (* FIXME, this can be removed later *)
   | Pisint -> E.is_type_number (Ext_list.singleton_exn args)

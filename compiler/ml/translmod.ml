@@ -92,7 +92,7 @@ let rec apply_coercion loc strict (restr : Typedtree.module_coercion) arg =
     let carg = apply_coercion loc Alias cc_arg (Lvar param) in
     apply_coercion_result loc strict arg param carg cc_res
   | Tcoerce_primitive {pc_loc; pc_desc; pc_env; pc_type} ->
-    Translcore.transl_primitive pc_loc pc_desc pc_env pc_type
+    Translcore.transl_primitive pc_loc pc_desc pc_env pc_type ~val_type:pc_type
   | Tcoerce_alias (path, cc) ->
     Lambda.name_lambda strict arg (fun _ ->
         apply_coercion loc Alias cc (Lambda.transl_normal_path path))
@@ -351,6 +351,7 @@ and transl_structure loc fields cc rootpath final_env = function
               if is_top rootpath then
                 export_identifiers := p.pc_id :: !export_identifiers;
               Translcore.transl_primitive p.pc_loc p.pc_desc p.pc_env p.pc_type
+                ~val_type:p.pc_type
               :: code
             | _ ->
               if is_top rootpath then
