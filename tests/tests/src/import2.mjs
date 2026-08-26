@@ -8,9 +8,12 @@ let b = A;
 
 let c = import("./export_keyword.mjs").then(m => m.$$case);
 
+let d = import("./hoisted_function_attr.mjs").then(m => m.Operator$$plus);
+
 export {
   a,
   b,
   c,
+  d,
 }
 /* b Not a pure module */
