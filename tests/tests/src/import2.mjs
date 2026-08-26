@@ -6,8 +6,11 @@ let a = import("a").then(m => m.default);
 
 let b = A;
 
+let c = import("./export_keyword.mjs").then(m => m.$$case);
+
 export {
   a,
   b,
+  c,
 }
 /* b Not a pure module */
