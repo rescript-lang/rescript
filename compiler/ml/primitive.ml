@@ -66,11 +66,10 @@ let parse_declaration (valdecl : Parsetree.value_description) ~arity
 
 open Outcometree
 
-(* The spec itself is not rendered in signatures; a fixed placeholder marks
-   the declaration as a processed FFI external. *)
 let print p osig_val_decl =
-  let prims =
-    if p.prim_ffi <> None then [p.prim_name; "#rescript-external"]
-    else [p.prim_name]
+  let repr : Parsetree.primitive_repr =
+    match p.prim_ffi with
+    | None -> Prim_name p.prim_name
+    | Some spec -> Prim_ffi {name = p.prim_name; spec}
   in
-  {osig_val_decl with oval_prims = prims; oval_attributes = []}
+  {osig_val_decl with oval_prim = Some repr; oval_attributes = []}

@@ -9,9 +9,9 @@
   The implementation /.../fixtures/Cross_external_spec_mismatch/Specmismatch.res
   does not match the interface /.../fixtures/Cross_external_spec_mismatch/specmismatch.cmi:
   Values do not match:
-    external f: int => int = "f" "#rescript-external"
+    @val @module("m") external f: int => int = "f"
   is not included in
-    external f: int => int = "f" "#rescript-external"
+    @val external f: int => int = "f"
   [36m/.../fixtures/Cross_external_spec_mismatch/Specmismatch.resi[0m:[2m1:1-33[0m:
     Expected declaration
   [36m/.../fixtures/Cross_external_spec_mismatch/Specmismatch.res[0m:[2m1:1-46[0m:
