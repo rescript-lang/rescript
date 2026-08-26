@@ -27,6 +27,14 @@ module L = Js_dump_lit
 
 let default_export = "default"
 
+(* The emitted export name of an ML binding: JS identifier conversion, with
+   the ES default export kept literal. Every site that emits, reads, or
+   reconstructs an ML module's export name must agree with this - the
+   qualified-access printer in [Js_dump] and the dynamic-import emitter in
+   [Lam_compile_primitive] included. *)
+let js_export_name name =
+  if name = default_export then name else Ext_ident.convert name
+
 let es_module = ("__esModule", "true")
 (* Exports printer *)
 
@@ -45,12 +53,12 @@ let exports cxt f (idents : Ident.t list) =
   let outer_cxt, reversed_list =
     Ext_list.fold_left idents (cxt, []) (fun (cxt, acc) id ->
         let id_name = id.name in
-        let s = Ext_ident.convert id_name in
+        let s = js_export_name id_name in
         let str, cxt = Ext_pp_scope.str_of_ident cxt id in
         ( cxt,
           if id_name = default_export then
             (* TODO check how it will affect AMDJS*)
-            es_module :: (default_export, str) :: acc
+            es_module :: (s, str) :: acc
           else (s, str) :: acc ))
   in
   P.at_least_two_lines f;
@@ -77,11 +85,9 @@ let esmodule_export cxt f (idents : Ident.t list) =
     let outer_cxt, reversed_list =
       Ext_list.fold_left idents (cxt, []) (fun (cxt, acc) id ->
           let id_name = id.name in
-          let s = Ext_ident.convert id_name in
+          let s = js_export_name id_name in
           let str, cxt = Ext_pp_scope.str_of_ident cxt id in
-          ( cxt,
-            if id_name = default_export then (default_export, str) :: acc
-            else (s, str) :: acc ))
+          (cxt, (s, str) :: acc))
     in
     P.string f L.export;
     P.space f;
