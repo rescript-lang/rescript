@@ -47,9 +47,13 @@
 
 #### :nail_care: Polish
 
+- Print externals in signatures and type errors with their real attributes reconstructed from the declaration (`@val @module("m") external f: int => int = "f"`) instead of a constant `"#rescript-external"` placeholder, so an inclusion error between two externals shows the actual difference; inline constants print as their surface form (`@inline("hello") let f: string`). https://github.com/rescript-lang/rescript/pull/8581
+
 - Allow inferred labeled functions to be called with labels in any order by removing legacy curried-arrow commutation locks. https://github.com/rescript-lang/rescript/pull/8547
 
 #### :house: Internal
+
+- Represent externals structurally end-to-end: the declaration (name, module source, scopes, variadic, argument specs, return annotation) is the stored FFI representation, consumed directly by validation, signature inclusion, printing, and code generation. This removes the `Marshal`-encoded spec that rode in `pval_prim`'s second slot and every magic-byte sniff that recognized it; `Pccall` and the runtime `external_spec` shape are deleted (externals expand to their JS call form at translation, visible in `-drawlambda`); signature inclusion compares declarations, fixing two quirks where identical-after-alias-expansion declarations were rejected (object-external optional fields, and `unit` vs an alias of `unit` in result types — the latter also fixes external unit-return handling for alias result types); `%absfloat`, a latent compiler crash, is removed. The ast, cmi, and cmt magic numbers are bumped (`ResImpl01301`/`ResIntf01301`, `Caml1999I025`, `Caml1999T026`). https://github.com/rescript-lang/rescript/pull/8581
 
 - Give nominal variants one canonical runtime layout: compute their JavaScript representation once after typing each declaration, replace positional constructor tags with semantic runtime descriptors, and make construction, matching, coercion, printing, diagnostics, and GenType consume the stored representation instead of reinterpreting annotations. Pattern matching keeps occurrence-specific plans local without adding another Lambda or Lam expression form. https://github.com/rescript-lang/rescript/pull/8579
 - Represent optional parameters with defaults structurally, removing downstream name-based detection and producing more consistent JavaScript parameter names. https://github.com/rescript-lang/rescript/pull/8580
