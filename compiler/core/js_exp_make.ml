@@ -96,10 +96,10 @@ let runtime_var_dot ?comment (x : string) (e1 : string) : J.expression =
     source_loc = None;
   }
 
-let ml_var_dot ?comment ?(dynamic_import = false) (id : Ident.t) e :
-    J.expression =
+let ml_var_dot ?comment (id : Ident.t) e : J.expression =
   {
-    expression_desc = Var (Qualified ({id; kind = Ml; dynamic_import}, Some e));
+    expression_desc =
+      Var (Qualified ({id; kind = Ml; dynamic_import = false}, Some e));
     comment;
     source_loc = None;
   }
@@ -143,9 +143,10 @@ let external_var ?import_attributes ?comment ~external_name (id : Ident.t) : t =
     source_loc = None;
   }
 
-let ml_module_as_var ?comment ?(dynamic_import = false) (id : Ident.t) : t =
+let ml_module_as_var ?comment (id : Ident.t) : t =
   {
-    expression_desc = Var (Qualified ({id; kind = Ml; dynamic_import}, None));
+    expression_desc =
+      Var (Qualified ({id; kind = Ml; dynamic_import = false}, None));
     comment;
     source_loc = None;
   }

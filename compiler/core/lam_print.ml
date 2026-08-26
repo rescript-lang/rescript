@@ -73,7 +73,7 @@ let primitive ppf (prim : Lam_primitive.t) =
   | Pval_from_option_not_nest -> fprintf ppf "[?unbox-not-nest]"
   | Pis_undefined -> fprintf ppf "[?undefined]"
   | Pis_null_undefined -> fprintf ppf "[?null?undefined]"
-  | Pimport -> fprintf ppf "[import]"
+  | Pimport _ -> fprintf ppf "[import]"
   | Pmakeblock (i, Immutable) ->
     fprintf ppf "makeblock %s" (Lambda.tag_label_of_tag_info i)
   | Pmakeblock (i, Mutable) ->
@@ -263,10 +263,7 @@ let lambda ppf v =
   let rec lam ppf (l : Lam.t) =
     match l with
     | Lvar id -> Ident.print ppf id
-    | Lglobal_module (id, dynamic_import) ->
-      fprintf ppf
-        (if dynamic_import then "dynamic global %a" else "global %a")
-        Ident.print id
+    | Lglobal_module id -> fprintf ppf "global %a" Ident.print id
     | Lconst cst -> struct_const ppf cst
     | Lapply {ap_func; ap_args; ap_info = {ap_inlined}} ->
       let lams ppf args = List.iter (fun l -> fprintf ppf "@ %a" lam l) args in
@@ -304,12 +301,10 @@ let lambda ppf v =
     | Lprim
         {
           primitive = Pfield (n, Fld_module {name = s});
-          args = [Lglobal_module (id, dynamic_import)];
+          args = [Lglobal_module id];
           _;
         } ->
-      fprintf ppf
-        (if dynamic_import then "dynamic %s.%s/%d" else "%s.%s/%d")
-        id.name s n
+      fprintf ppf "%s.%s/%d" id.name s n
     | Lprim {primitive = prim; args = largs; _} ->
       let lams ppf largs =
         List.iter (fun l -> fprintf ppf "@ %a" lam l) largs

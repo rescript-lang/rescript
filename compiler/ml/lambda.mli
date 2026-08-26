@@ -123,6 +123,19 @@ type pointer_info =
   | Pt_shape_none
   | Pt_assertfalse
 
+(* The target of a dynamic [import], resolved at translation: the argument
+   of the import primitive is a module reference, never an expression. *)
+type import_source =
+  | Import_module of {module_: Ident.t; path: string list}
+    (* a ReScript module, or a value/submodule reached from one
+         ([path = []]: the module itself). The module is resolved here, at
+         translation; the JS export name for a nested [path] is resolved
+         where the cmj tables live, at emission. *)
+  | Import_external of {
+      module_: External_ffi_types.external_module_name;
+      name: string option; (* [None]: the external is the module itself *)
+    }
+
 type primitive =
   | Pidentity
   | Pignore
@@ -146,7 +159,6 @@ type primitive =
       prim_name: string;
       arg_types: External_arg_spec.params;
       ffi: External_ffi_types.external_decl;
-      dynamic_import: bool;
       transformed_jsx: bool;
     }
   | Pjs_object_create of External_arg_spec.obj_params
@@ -244,7 +256,7 @@ type primitive =
   (* promise *)
   | Pawait
   (* modules *)
-  | Pimport
+  | Pimport of import_source
   | Pinit_mod
   | Pupdate_mod
   (* hash *)

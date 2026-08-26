@@ -36,7 +36,6 @@ type t =
       prim_name: string;
       arg_types: External_arg_spec.params;
       ffi: External_ffi_types.external_decl;
-      dynamic_import: bool;
       transformed_jsx: bool;
     }
   | Pjs_object_create of External_arg_spec.obj_params
@@ -150,7 +149,7 @@ type t =
   | Pis_null
   | Pis_undefined
   | Pis_null_undefined
-  | Pimport
+  | Pimport of Lambda.import_source
   | Ptypeof
   | Pfn_arity
   | Pwrap_exn

@@ -134,15 +134,13 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lam.t) : Lam.t =
             Lprim
               {
                 primitive = Pfield (_, Fld_module {name = fld_name});
-                args = [Lglobal_module (ident, dynamic_import)];
+                args = [Lglobal_module ident];
                 _;
               } as l1;
           ap_args = args;
           ap_info;
         } -> (
-      match
-        Lam_compile_env.query_external_id_info ~dynamic_import ident fld_name
-      with
+      match Lam_compile_env.query_external_id_info ident fld_name with
       | {
        persistent_closed_lambda = Some (Lfunction ({params; body} as lfunction));
       }

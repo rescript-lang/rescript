@@ -94,6 +94,9 @@ let cmj_table_of_module_id ~dynamic_import (module_id : Ident.t) =
   | Some (Ml {cmj_table}) -> cmj_table
   | Some External -> assert false
 
+let register_ml_module ~dynamic_import (module_id : Ident.t) : unit =
+  ignore (cmj_table_of_module_id ~dynamic_import module_id)
+
 let query_external_id_info ?(dynamic_import = false) (module_id : Ident.t)
     (name : string) : ident_info =
   let cmj_table = cmj_table_of_module_id ~dynamic_import module_id in
