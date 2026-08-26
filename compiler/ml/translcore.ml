@@ -528,12 +528,10 @@ let import_source_of_arg (arg : Typedtree.expression) : Lambda.import_source =
     match prim_kind with
     | Kind_external
         (Ffi_bs (_, _, {kind = Decl_val {name}; module_; scopes; _})) -> (
-      if scopes <> [] then
-        Location.raise_errorf ~loc:arg.exp_loc
-          "Dynamic import of an external with %@scope is not supported.";
       match module_ with
       | Some (Module_named emn) ->
-        Import_external {module_ = emn; name = Some name}
+        (* the external's value lives at [module.<scopes>.<name>] *)
+        Import_external {module_ = emn; path = scopes @ [name]}
       | Some Module_itself ->
         Import_external
           {
@@ -543,7 +541,7 @@ let import_source_of_arg (arg : Typedtree.expression) : Lambda.import_source =
                 module_bind_name = Phint_nothing;
                 import_attributes = None;
               };
-            name = None;
+            path = [];
           }
       | None ->
         ignore p;
@@ -573,6 +571,141 @@ let external_result_wrap loc (result_type : External_ffi_types.return_wrapper)
   | Return_null_to_opt -> Lprim (Pnull_to_opt, [result], loc)
   | Return_null_undefined_to_opt -> Lprim (Pnullable_to_opt, [result], loc)
   | Return_unset | Return_identity -> result
+
+(* Does importing this external as a value require the FFI adaptation a
+   direct call would apply? Identity bindings (and pure unit-return
+   conventions) hand out the raw JS value; adapters whose absence is
+   observably wrong at the import's call sites get a wrapper. *)
+let external_import_needs_adaptation (arg_types : External_arg_spec.params)
+    (decl : External_ffi_types.external_decl)
+    (return_wrapper : External_ffi_types.return_wrapper) =
+  decl.variadic
+  || (match return_wrapper with
+     | Return_null_to_opt | Return_null_undefined_to_opt -> true
+     | Return_unset | Return_identity -> false)
+  || Ext_list.exists arg_types (fun {arg_type; arg_label} ->
+         (match arg_type with
+         | Nothing | Extern_unit -> false
+         | Poly_var_string _ | Poly_var _ | Int _ | Arg_cst _ | Ignore | Unwrap
+           ->
+           true)
+         ||
+         match arg_label with
+         | Arg_optional -> true
+         | Arg_label | Arg_empty -> false)
+
+(* [import(f)] where [f]'s binding needs adaptation lowers to
+
+     import("module").then(m => (a1 .. an) => <adapted call of m.<f>>)
+
+   so the imported value honestly has the external's ReScript type. The
+   [.then] is itself a send, and the adapted call is a send on the awaited
+   module (a get for an arity-0 value), reusing the ordinary FFI call
+   machinery - including scope-chain access on the receiver. *)
+let transl_adapted_external_import loc env
+    ~(emn : External_ffi_types.external_module_name) ~name ~scopes ~variadic
+    ~(arg_types : External_arg_spec.params) ~return_wrapper
+    (p : Primitive.description) (val_type : type_expr) : Lambda.lambda =
+  let returns_unit = external_returns_unit env p val_type in
+  let send_call receiver args (kind : External_ffi_types.decl_kind) =
+    Lprim
+      ( Pjs_call
+          {
+            prim_name = name;
+            arg_types = External_arg_spec.dummy :: arg_types;
+            ffi =
+              {
+                kind;
+                module_ = None;
+                scopes;
+                variadic;
+                effective_arity = List.length arg_types + 1;
+              };
+            transformed_jsx = false;
+          },
+        receiver :: args,
+        loc )
+  in
+  let m = Ident.create "m" in
+  let adapted_value =
+    if p.prim_arity = 0 then
+      external_result_wrap loc return_wrapper ~returns_unit
+        (send_call (Lvar m) [] (Decl_get {name}))
+    else
+      let params =
+        List.init p.prim_arity (fun i ->
+            Ident.create ("prim" ^ string_of_int i))
+      in
+      Lfunction
+        {
+          params;
+          attr = default_function_attribute;
+          loc;
+          body =
+            external_result_wrap loc return_wrapper ~returns_unit
+              (send_call (Lvar m)
+                 (List.map (fun i -> Lvar i) params)
+                 (Decl_send {name}));
+        }
+  in
+  let callback =
+    Lfunction
+      {
+        params = [m];
+        attr = default_function_attribute;
+        loc;
+        body = adapted_value;
+      }
+  in
+  Lprim
+    ( Pjs_call
+        {
+          prim_name = "then";
+          arg_types = [External_arg_spec.dummy; External_arg_spec.dummy];
+          ffi =
+            {
+              kind = Decl_send {name = "then"};
+              module_ = None;
+              scopes = [];
+              variadic = false;
+              effective_arity = 2;
+            };
+          transformed_jsx = false;
+        },
+      [
+        Lprim (Pimport (Import_external {module_ = emn; path = []}), [], loc);
+        callback;
+      ],
+      loc )
+
+let transl_dynamic_import loc (arg : Typedtree.expression) : Lambda.lambda =
+  match arg.exp_desc with
+  | Texp_ident
+      ( _,
+        _,
+        {
+          val_kind =
+            Val_prim
+              ({
+                 prim_kind =
+                   Kind_external
+                     (Ffi_bs
+                        ( arg_types,
+                          return_wrapper,
+                          ({
+                             kind = Decl_val {name};
+                             module_ = Some (Module_named emn);
+                             scopes;
+                             variadic;
+                             _;
+                           } as decl) ));
+               } as p);
+          val_type;
+        } )
+    when external_import_needs_adaptation arg_types decl return_wrapper ->
+    transl_adapted_external_import loc arg.exp_env ~emn ~name ~scopes ~variadic
+      ~arg_types ~return_wrapper p val_type
+  | _ -> Lprim (Pimport (import_source_of_arg arg), [], loc)
 
 let transl_external_application loc env (p : Primitive.description)
     ~(val_type : type_expr) argl ~transformed_jsx : Lambda.lambda =
@@ -896,7 +1029,7 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
     in
     match (p.prim_name, args) with
     | ("%import" | "#import"), [arg] ->
-      wrap (Lprim (Pimport (import_source_of_arg arg), [], e.exp_loc))
+      wrap (transl_dynamic_import e.exp_loc arg)
     | _ -> (
       let argl = transl_list args in
       match

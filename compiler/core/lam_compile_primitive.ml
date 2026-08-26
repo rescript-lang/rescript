@@ -54,19 +54,22 @@ let call_info =
 let import_of_path path =
   E.call ~info:call_info (E.js_global "import") [E.str path]
 
-let wrap_then import value =
+(* [import(...).then(m => m.<p0>.<p1>...)] *)
+let wrap_then_path import (path : string list) =
   let arg = Ident.create "m" in
   E.call ~info:call_info (E.dot import "then")
     [
       E.ocaml_fun ~return_unit:false ~async:false ~one_unit_arg:false [arg]
         [
           {
-            statement_desc = J.Return (E.dot (E.var arg) value);
+            statement_desc = J.Return (Ext_list.fold_left path (E.var arg) E.dot);
             comment = None;
             source_loc = None;
           };
         ];
     ]
+
+let wrap_then import value = wrap_then_path import [value]
 
 let translate output_prefix loc (cxt : Lam_compile_context.t)
     (prim : Lam_primitive.t) (args : J.expression list) : J.expression =
@@ -145,8 +148,8 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
              value that is a file as argument. Passing a value or local module \
              is not allowed."))
     | Import_external
-        {module_ = {bundle; module_bind_name; import_attributes}; name} -> (
-      let default = name = Some "default" in
+        {module_ = {bundle; module_bind_name; import_attributes}; path} -> (
+      let default = path = ["default"] in
       let id =
         Lam_compile_env.add_js_module ?import_attributes module_bind_name bundle
           default ~dynamic_import:true
@@ -159,9 +162,9 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
         }
       in
       let import = import_of_path (import_path oid) in
-      match name with
-      | Some value -> wrap_then import value
-      | None -> import))
+      match path with
+      | [] -> import
+      | _ :: _ -> wrap_then_path import path))
   | Pfn_arity -> E.function_length (Ext_list.singleton_exn args)
   | Pobjsize -> E.obj_length (Ext_list.singleton_exn args)
   | Pis_null -> E.is_null (Ext_list.singleton_exn args)
