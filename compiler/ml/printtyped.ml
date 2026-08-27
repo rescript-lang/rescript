@@ -367,6 +367,13 @@ and expression i ppf x =
   | Texp_send (e, s) ->
     line i ppf "Texp_send \"%s\"\n" s;
     expression i ppf e
+  | Texp_object_literal fields ->
+    line i ppf "Texp_object_literal\n";
+    List.iter
+      (fun ((s : string Asttypes.loc), e) ->
+        line i ppf "field \"%s\"\n" s.txt;
+        expression i ppf e)
+      fields
   | Texp_letmodule (s, _, me, e) ->
     line i ppf "Texp_letmodule \"%a\"\n" fmt_ident s;
     module_expr i ppf me;

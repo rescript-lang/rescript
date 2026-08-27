@@ -489,7 +489,6 @@
   addRecordLabelDeclaration renderVehicle Hooks.res:66:14 path:+Hooks.RenderPropRequiresConversion.props
   addValueDeclaration +car Hooks.res:67:8 path:+Hooks.RenderPropRequiresConversion
   addValueReference Hooks.res:68:30 --> Hooks.res:67:8
-  addValueReference Hooks.res:68:18 --> Hooks.res:68:18
   addValueReference Hooks.res:68:4 --> Hooks.res:66:14
   addTypeReference _none_:1:-1 --> Hooks.res:66:14
   addValueReference Hooks.res:66:6 --> React.res:16:0
@@ -1735,7 +1734,6 @@
   addValueReference Types.res:23:8 --> Types.res:23:8
   addValueReference Types.res:23:8 --> Types.res:23:16
   addValueReference Types.res:23:8 --> Types.res:23:8
-  addValueReference Types.res:23:8 --> Types.res:24:2
   addRecordLabelDeclaration self Types.res:31:26 path:+Types.selfRecursive
   addRecordLabelDeclaration b Types.res:34:31 path:+Types.mutuallyRecursiveA
   addRecordLabelDeclaration a Types.res:35:26 path:+Types.mutuallyRecursiveB
@@ -1750,7 +1748,6 @@
   addRecordLabelDeclaration i Types.res:78:2 path:+Types.record
   addRecordLabelDeclaration s Types.res:79:2 path:+Types.record
   addValueReference Types.res:83:4 --> Types.res:83:23
-  addValueReference Types.res:103:4 --> Types.res:103:39
   addValueReference Types.res:119:4 --> Types.res:119:16
   addRecordLabelDeclaration id Types.res:124:19 path:+Types.someRecord
   addValueReference Types.res:129:4 --> Types.res:129:36
@@ -2107,8 +2104,8 @@
 Forward Liveness Analysis
 
     decls: 744
-    roots(external targets): 162
-    decl-deps: decls_with_out=452 edges_to_decls=323
+    roots(external targets): 161
+    decl-deps: decls_with_out=451 edges_to_decls=323
 
     Root (external ref): Value +FirstClassModules.M.InnerModule2.+k
     Root (external ref): VariantCase DeadRT.moduleAccessPath.Root

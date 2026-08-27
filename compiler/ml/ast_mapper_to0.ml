@@ -593,6 +593,20 @@ module E = struct
     | Pexp_constraint (e, t) ->
       constraint_ ~loc ~attrs (sub.expr sub e) (sub.typ sub t)
     | Pexp_send (e, s) -> send ~loc ~attrs (sub.expr sub e) (map_loc sub s)
+    | Pexp_object_literal fields ->
+      (* v0 encoding: the reserved %obj extension over a record expression. *)
+      let rows =
+        List.map
+          (fun (s, e) ->
+            let s = map_loc sub s in
+            ({s with txt = Longident.Lident s.txt}, sub.expr sub e))
+          fields
+      in
+      extension ~loc ~attrs
+        ( {txt = "obj"; loc},
+          PStr
+            [Ast_helper0.Str.eval ~loc (Ast_helper0.Exp.record ~loc rows None)]
+        )
     | Pexp_letmodule (s, me, e) ->
       letmodule ~loc ~attrs (map_loc sub s) (sub.module_expr sub me)
         (sub.expr sub e)

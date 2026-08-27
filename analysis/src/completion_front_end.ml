@@ -1230,8 +1230,8 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
       if expr.pexp_loc |> Loc.has_pos ~pos:pos_no_white && !result = None then (
         set_found ();
         match expr.pexp_desc with
-        | Pexp_extension ({txt = "obj"}, PStr [str_item]) ->
-          Ast_iterator.default_iterator.structure_item iterator str_item
+        | Pexp_object_literal fields ->
+          List.iter (fun (_, e) -> iterator.expr iterator e) fields
         | Pexp_extension ({txt}, _) -> set_result (CextensionNode txt)
         | Pexp_constant _ -> set_result Cnone
         | Pexp_ident lid ->

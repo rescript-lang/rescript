@@ -200,6 +200,8 @@ let expr sub {exp_extra; exp_desc; exp_env; _} =
     sub.expr sub exp1;
     sub.expr sub exp2
   | Texp_send (exp, _) -> sub.expr sub exp
+  | Texp_object_literal fields ->
+    List.iter (fun (_, e) -> sub.expr sub e) fields
   | Texp_letmodule (_, _, mexpr, exp) ->
     sub.module_expr sub mexpr;
     sub.expr sub exp

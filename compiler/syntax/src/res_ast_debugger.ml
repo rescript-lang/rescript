@@ -722,6 +722,16 @@ module Sexp_ast = struct
       | Pexp_coerce (expr, (), typexpr) ->
         Sexp.list [Sexp.atom "Pexp_coerce"; expression expr; core_type typexpr]
       | Pexp_send _ -> Sexp.list [Sexp.atom "Pexp_send"]
+      | Pexp_object_literal fields ->
+        Sexp.list
+          [
+            Sexp.atom "Pexp_object_literal";
+            Sexp.list
+              (map_empty
+                 ~f:(fun ((s : string Asttypes.loc), e) ->
+                   Sexp.list [Sexp.atom s.txt; expression e])
+                 fields);
+          ]
       | Pexp_letmodule (mod_name, mod_expr, expr) ->
         Sexp.list
           [

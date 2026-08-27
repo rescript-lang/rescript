@@ -124,6 +124,7 @@ and expression_desc =
       * direction_flag
       * expression
   | Texp_send of expression * string
+  | Texp_object_literal of (string Asttypes.loc * expression) list
   | Texp_letmodule of Ident.t * string loc * module_expr * expression
   | Texp_letexception of extension_constructor * expression
   | Texp_assert of expression

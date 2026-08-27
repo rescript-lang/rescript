@@ -1,10 +1,9 @@
 let zero = 0
-let x = [%obj { age = 30 }]
-let y = [%obj { age = 30 }]
-let y = [%obj { age = 30; name = {js|steve|js} }]
-let y = [%obj { age = 30; name = {js|steve|js} }]
-let z =
-  [%obj { \xff = 1; \u2212 = {js|two|js}; \0 = zero; \o123 = {js|o123|js} }]
+let x = {"age": 30}
+let y = {"age": 30}
+let y = {"age": 30, "name": {js|steve|js}}
+let y = {"age": 30, "name": {js|steve|js}}
+let z = {"\xff": 1, "\u2212": {js|two|js}, "\0": zero, "\o123": {js|o123|js}}
 let x = (({js|age|js})[@res.braces ])
 let x = (({js|age|js}.(0))[@res.braces ])
 let x = (({js|age|js} -> Console.log)[@res.braces ])

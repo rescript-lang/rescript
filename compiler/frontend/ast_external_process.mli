@@ -40,12 +40,5 @@ val handle_attributes_as_prim :
    return value is of [pval_type, pval_prim, new_attrs]
 *)
 
-val pval_prim_of_labels : string Asttypes.loc list -> Parsetree.primitive_repr
-(** [pval_prim_of_labels labels]
-    return [pval_prim] for FFI, it is specialized for
-    external object which is used in
-    {[ [%obj { x = 2; y = 1} ] ]}
-*)
-
 val pval_prim_of_option_labels :
   (bool * string Asttypes.loc) list -> bool -> Parsetree.primitive_repr

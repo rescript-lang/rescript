@@ -3537,11 +3537,16 @@ and parse_record_expr_with_string_keys ~start_pos first_row p =
          ~closing:Rbrace ~f:parse_record_expr_row_with_string_key p
   in
   let loc = mk_loc start_pos p.end_pos in
-  let record_str_expr =
-    Ast_helper.Str.eval ~loc (Ast_helper.Exp.record ~loc rows None)
+  let fields =
+    Ext_list.map rows (fun {Parsetree.lid; x} ->
+        let name =
+          match lid.txt with
+          | Longident.Lident name -> Location.mkloc name lid.loc
+          | _ -> assert false
+        in
+        (name, x))
   in
-  Ast_helper.Exp.extension ~loc
-    (Location.mkloc "obj" loc, Parsetree.PStr [record_str_expr])
+  Ast_helper.Exp.object_literal ~loc fields
 
 and parse_record_expr ~start_pos ?(spread = None) rows p =
   let exprs =

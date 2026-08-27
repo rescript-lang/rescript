@@ -770,6 +770,11 @@ and expression2 ctxt f x =
     | Pexp_field (e, li) ->
       pp f "@[<hov2>%a.%a@]" (simple_expr ctxt) e longident_loc li
     | Pexp_send (e, s) -> pp f "@[<hov2>%a#%s@]" (simple_expr ctxt) e s.txt
+    | Pexp_object_literal fields ->
+      pp f "@[<hov2>{%a}@]"
+        (list ~sep:",@ " (fun f ((s : string Asttypes.loc), e) ->
+             pp f "@[<hov2>\"%s\":@ %a@]" s.txt (expression ctxt) e))
+        fields
     | _ -> simple_expr ctxt f x
 
 and simple_expr ctxt f x =

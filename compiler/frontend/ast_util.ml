@@ -24,21 +24,3 @@
 
 let js_property loc obj (name : string) =
   Parsetree.Pexp_send (obj, {loc; txt = name})
-
-let record_as_js_object loc (self : Ast_mapper.mapper)
-    (label_exprs : Parsetree.expression Parsetree.record_element list) :
-    Parsetree.expression_desc =
-  let labels, args, arity =
-    Ext_list.fold_right label_exprs ([], [], 0)
-      (fun {lid = {txt; loc}; x = e} (labels, args, i) ->
-        match txt with
-        | Lident x ->
-          ( {Asttypes.loc; txt = x} :: labels,
-            (x, self.expr self e) :: args,
-            i + 1 )
-        | Ldot _ -> Location.raise_errorf ~loc "invalid js label ")
-  in
-  Ast_external_mk.local_external_obj loc
-    ~pval_prim:(Ast_external_process.pval_prim_of_labels labels)
-    ~pval_type:(Ast_core_type.from_labels ~loc arity labels)
-    args

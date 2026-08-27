@@ -349,6 +349,9 @@ module E = struct
     | Pexp_constraint (e, t) ->
       constraint_ ~loc ~attrs (sub.expr sub e) (sub.typ sub t)
     | Pexp_send (e, s) -> send ~loc ~attrs (sub.expr sub e) (map_loc sub s)
+    | Pexp_object_literal fields ->
+      object_literal ~loc ~attrs
+        (List.map (fun (s, e) -> (map_loc sub s, sub.expr sub e)) fields)
     | Pexp_letmodule (s, me, e) ->
       letmodule ~loc ~attrs (map_loc sub s) (sub.module_expr sub me)
         (sub.expr sub e)

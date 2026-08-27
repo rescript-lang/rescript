@@ -7,8 +7,8 @@
   [1;31m4[0m [2m│[0m let x: xx = [[1;31m{"one": true}[0m]
   5 [2m│[0m 
 
-  This has type: [1;31m{"one": bool}[0m
-  But it's expected to have type: [1;33mx[0m
+  This array item has type: [1;31m{"one": bool}[0m
+  But this array is expected to have items of type: [1;33mx[0m
   
   You're passing a [1;31mReScript object[0m where a [1;33mrecord[0m is expected. Objects are written with quoted keys, and records with unquoted keys.
   

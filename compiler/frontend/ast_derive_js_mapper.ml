@@ -192,27 +192,12 @@ let init () =
               | Ptype_record label_declarations ->
                 let exp =
                   coerce_result_to_new_type
-                    (Exp.extension
-                       ( {Asttypes.loc; txt = "obj"},
-                         PStr
-                           [
-                             Str.eval
-                               (Exp.record
-                                  (Ext_list.map label_declarations
-                                     (fun {pld_name = {loc; txt}} ->
-                                       let label =
-                                         {
-                                           Asttypes.loc;
-                                           txt = Longident.Lident txt;
-                                         }
-                                       in
-                                       {
-                                         Parsetree.lid = label;
-                                         x = Exp.field exp_param label;
-                                         opt = false;
-                                       }))
-                                  None);
-                           ] ))
+                    (Exp.object_literal ~loc
+                       (Ext_list.map label_declarations
+                          (fun {pld_name = {loc; txt}} ->
+                            ( {Asttypes.loc; txt},
+                              Exp.field exp_param
+                                {Asttypes.loc; txt = Longident.Lident txt} ))))
                 in
                 let to_js = to_js_body exp in
                 let obj_exp =
