@@ -5,7 +5,7 @@ let f = (x: u) => {
   x["height"] * 2
 }
 
-let f = (x: {@set({no_get: no_get}) "height": int}) => x["height"] = 3
+let f = (x: {@set "height": int}) => x["height"] = 3
 
 type v = {@set "dec": int => {"x": int, "y": float}}
 

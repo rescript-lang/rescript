@@ -408,7 +408,6 @@ FFI / attribute / experimental-feature errors. Source: [bs_syntaxerr.ml:27](../c
 
 | Variant | Status | Fixture | Notes |
 |---|---|---|---|
-| `Unsupported_predicates` | ✓ | `bs_unsupported_predicates.res` | `@get({weird: true})` on object type field. |
 | `Duplicated_bs_deriving` | ✓ | `duplicated_bs_deriving.res` | |
 | `Conflict_attributes` | ✓ | `bs_conflict_attributes.res` | |
 | `Expect_int_literal` | ✓ | `bs_expect_int_literal.res` | |

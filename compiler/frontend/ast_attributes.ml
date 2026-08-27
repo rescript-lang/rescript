@@ -24,55 +24,13 @@
 
 type attr = Parsetree.attribute
 type t = attr list
-type ('a, 'b) st = {get: 'a option; set: 'b option}
 
-let process_method_attributes_rev (attrs : t) =
-  Ext_list.fold_left attrs
-    ({get = None; set = None}, [])
-    (fun (st, acc) (({txt; loc}, payload) as attr) ->
-      match txt with
-      | "get" (* @get{null; undefined}*) ->
-        let result =
-          Ext_list.fold_left (Ast_payload.ident_or_record_as_config loc payload)
-            (false, false) (fun (null, undefined) ({txt; loc}, opt_expr) ->
-              match txt with
-              | "null" ->
-                ( (match opt_expr with
-                  | None -> true
-                  | Some e -> Ast_payload.assert_bool_lit e),
-                  undefined )
-              | "undefined" ->
-                ( null,
-                  match opt_expr with
-                  | None -> true
-                  | Some e -> Ast_payload.assert_bool_lit e )
-              | "nullable" -> (
-                match opt_expr with
-                | None -> (true, true)
-                | Some e ->
-                  let v = Ast_payload.assert_bool_lit e in
-                  (v, v))
-              | _ -> Bs_syntaxerr.err loc Unsupported_predicates)
-        in
-
-        ({st with get = Some result}, acc)
-      | "set" ->
-        let result =
-          Ext_list.fold_left (Ast_payload.ident_or_record_as_config loc payload)
-            `Get (fun _st ({txt; loc}, opt_expr) ->
-              (*FIXME*)
-              if txt = "no_get" then
-                match opt_expr with
-                | None -> `No_get
-                | Some e ->
-                  if Ast_payload.assert_bool_lit e then `No_get else `Get
-              else Bs_syntaxerr.err loc Unsupported_predicates)
-        in
-        (* properties -- void
-              [@@set{only}]
-        *)
-        ({st with set = Some result}, acc)
-      | _ -> (st, attr :: acc))
+let process_object_field_attributes_rev (attrs : t) : bool * t =
+  Ext_list.fold_left attrs (false, [])
+    (fun (has_set, acc) (({txt}, payload) as attr) ->
+      match (txt, payload) with
+      | "set", Parsetree.PStr [] -> (true, acc)
+      | _ -> (has_set, attr :: acc))
 
 type attr_kind = Nothing | Meth_callback of attr
 

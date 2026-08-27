@@ -21,40 +21,18 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
-open Ast_helper
-
 let process_getter_setter ~not_getter_setter
-    ~(get : Parsetree.core_type -> _ -> Parsetree.attributes -> _) ~set loc name
+    ~(get : Parsetree.core_type -> _ -> Parsetree.attributes -> _) ~set name
     (attrs : Ast_attributes.t) (ty : Parsetree.core_type) (acc : _ list) =
-  match Ast_attributes.process_method_attributes_rev attrs with
-  | {get = None; set = None}, _ -> not_getter_setter ty :: acc
-  | st, pctf_attributes ->
-    let get_acc =
-      match st.set with
-      | Some `No_get -> acc
-      | None | Some `Get ->
-        let lift txt = Typ.constr ~loc {txt; loc} [ty] in
-        let null, undefined =
-          match st with
-          | {get = Some (null, undefined)} -> (null, undefined)
-          | {get = None} -> (false, false)
-        in
-        let ty =
-          match (null, undefined) with
-          | false, false -> ty
-          | true, false -> lift Ast_literal.Lid.js_null
-          | false, true -> lift Ast_literal.Lid.js_undefined
-          | true, true -> lift Ast_literal.Lid.js_null_undefined
-        in
-        get ty name pctf_attributes :: acc
-    in
-    if st.set = None then get_acc
-    else
-      set ty
-        ({name with txt = name.Asttypes.txt ^ Literals.setter_suffix}
-          : _ Asttypes.loc)
-        pctf_attributes
-      :: get_acc
+  match Ast_attributes.process_object_field_attributes_rev attrs with
+  | false, _ -> not_getter_setter ty :: acc
+  | true, pctf_attributes ->
+    set ty
+      ({name with txt = name.Asttypes.txt ^ Literals.setter_suffix}
+        : _ Asttypes.loc)
+      pctf_attributes
+    :: get ty name pctf_attributes
+    :: acc
 
 let default_typ_mapper = Ast_mapper.default_mapper.typ
 (*
@@ -129,8 +107,8 @@ let typ_mapper (self : Ast_mapper.mapper) (ty : Parsetree.core_type) =
               in
               Parsetree.Otag (label, attrs, self.typ self core_type)
             in
-            process_getter_setter ~not_getter_setter ~get ~set loc label
-              ptyp_attrs core_type acc)
+            process_getter_setter ~not_getter_setter ~get ~set label ptyp_attrs
+              core_type acc)
     in
     {ty with ptyp_desc = Ptyp_object (new_methods, closed_flag)}
   | _ -> default_typ_mapper self ty
