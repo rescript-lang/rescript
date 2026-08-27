@@ -296,9 +296,7 @@ let rec expression : Env.env -> Typedtree.expression -> Use.t =
     Use.(join (discard (expression env e1)) (expression env e2))
   | Texp_while (e1, e2) ->
     Use.(join (inspect (expression env e1)) (discard (expression env e2)))
-  | Texp_send (e1, _, eo) ->
-    Use.(
-      join (inspect (expression env e1)) (inspect (option expression env eo)))
+  | Texp_send (e1, _) -> Use.inspect (expression env e1)
   | Texp_field (e, _, _) -> Use.(inspect (expression env e))
   | Texp_letexception (_, e) -> expression env e
   | Texp_assert e -> Use.inspect (expression env e)

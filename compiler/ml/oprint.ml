@@ -270,10 +270,6 @@ and print_out_type_2 ppf = function
   | ty -> print_simple_out_type ppf ty
 
 and print_simple_out_type ppf = function
-  | Otyp_class (ng, id, tyl) ->
-    fprintf ppf "@[%a%s#%a@]" print_typargs tyl
-      (if ng then "_" else "")
-      print_ident id
   | Otyp_constr (id, tyl) ->
     pp_open_box ppf 0;
     print_typargs ppf tyl;
@@ -392,45 +388,6 @@ let type_parameter ppf (ty, (co, cn)) =
     (if not cn then "+" else if not co then "-" else "")
     (if ty = "_" then ty else "'" ^ ty)
 
-let print_out_class_params ppf = function
-  | [] -> ()
-  | tyl ->
-    fprintf ppf "@[<1>[%a]@]@ "
-      (print_list type_parameter (fun ppf -> fprintf ppf ", "))
-      tyl
-
-let rec print_out_class_type ppf = function
-  | Octy_constr (id, tyl) ->
-    let pr_tyl ppf = function
-      | [] -> ()
-      | tyl -> fprintf ppf "@[<1>[%a]@]@ " (print_typlist !out_type ",") tyl
-    in
-    fprintf ppf "@[%a%a@]" pr_tyl tyl print_ident id
-  | Octy_signature (self_ty, csil) ->
-    let pr_param ppf = function
-      | Some ty -> fprintf ppf "@ @[(%a)@]" !out_type ty
-      | None -> ()
-    in
-    fprintf ppf "@[<hv 2>@[<2>object%a@]@ %a@;<1 -2>end@]" pr_param self_ty
-      (print_list print_out_class_sig_item (fun ppf -> fprintf ppf "@ "))
-      csil
-
-and print_out_class_sig_item ppf = function
-  | Ocsg_constraint (ty1, ty2) ->
-    fprintf ppf "@[<2>constraint %a =@ %a@]" !out_type ty1 !out_type ty2
-  | Ocsg_method (name, priv, virt, ty) ->
-    fprintf ppf "@[<2>method %s%s%s :@ %a@]"
-      (if priv then "private " else "")
-      (if virt then "virtual " else "")
-      name !out_type ty
-  | Ocsg_value (name, mut, vr, ty) ->
-    fprintf ppf "@[<2>val %s%s%s :@ %a@]"
-      (if mut then "mutable " else "")
-      (if vr then "virtual " else "")
-      name !out_type ty
-
-let out_class_type = ref print_out_class_type
-
 (* Signature *)
 
 let out_module_type = ref (fun _ -> failwith "Oprint.out_module_type")
@@ -500,16 +457,6 @@ and print_out_signature ppf = function
     fprintf ppf "%a@ %a" !out_sig_item item print_out_signature items
 
 and print_out_sig_item ppf = function
-  | Osig_class (vir_flag, name, params, clt, rs) ->
-    fprintf ppf "@[<2>%s%s@ %a%s@ :@ %a@]"
-      (if rs = Orec_next then "and" else "class")
-      (if vir_flag then " virtual" else "")
-      print_out_class_params params name !out_class_type clt
-  | Osig_class_type (vir_flag, name, params, clt, rs) ->
-    fprintf ppf "@[<2>%s%s@ %a%s@ =@ %a@]"
-      (if rs = Orec_next then "and" else "class type")
-      (if vir_flag then " virtual" else "")
-      print_out_class_params params name !out_class_type clt
   | Osig_typext (ext, Oext_exception) ->
     fprintf ppf "@[<2>exception %a@]" print_out_constr
       (ext.oext_name, ext.oext_args, ext.oext_ret_type, ext.oext_repr)

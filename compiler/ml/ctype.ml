@@ -190,7 +190,7 @@ let newvar ?name () = newty2 !current_level (Tvar name)
 let newvar2 ?name level = newty2 level (Tvar name)
 let new_global_var ?name () = newty2 !global_level (Tvar name)
 
-let newobj fields = newty (Tobject (fields, ref None))
+let newobj fields = newty (Tobject fields)
 
 let newconstr path tyl = newty (Tconstr (path, tyl, ref Mnil))
 
@@ -261,17 +261,12 @@ let is_datatype decl =
 (*  Miscellaneous operations on object types  *)
 (**********************************************)
 
-(* Note:
-   We need to maintain some invariants:
-   * cty_self must be a Tobject
-   * ...
-*)
 type fields = (string * Types.field_kind * Types.type_expr) list
 (**** Object field manipulation. ****)
 
 let object_fields ty =
   match (repr ty).desc with
-  | Tobject (fields, _) -> fields
+  | Tobject fields -> fields
   | _ -> assert false
 
 let flatten_fields (ty : Types.type_expr) : fields * _ =
@@ -308,7 +303,7 @@ let associate_fields (fields1 : fields) (fields2 : fields) : _ * fields * fields
 let rec object_row ty =
   let ty = repr ty in
   match ty.desc with
-  | Tobject (t, _) -> object_row t
+  | Tobject t -> object_row t
   | Tfield (_, _, _, t) -> object_row t
   | _ -> ty
 
@@ -380,11 +375,7 @@ let rec free_vars_rec real ty =
            free_variables := (ty, real) :: !free_variables
        with Not_found -> ());
       List.iter (free_vars_rec true) tl
-    (* Do not count "virtual" free variables
-        | Tobject(ty, {contents = Some (_, p)}) ->
-            free_vars_rec false ty; List.iter (free_vars_rec true) p
-    *)
-    | Tobject (ty, _), _ -> free_vars_rec false ty
+    | Tobject ty, _ -> free_vars_rec false ty
     | Tfield (_, _, ty1, ty2), _ ->
       free_vars_rec true ty1;
       free_vars_rec false ty2
@@ -469,8 +460,6 @@ let closed_extension_constructor ext =
 
 (* Duplicate a type, preserving only type variables *)
 let duplicate_type ty = Subst.type_expr Subst.identity ty
-
-(* Same, for class types *)
 
 (*****************************)
 (*  Type level manipulation  *)
@@ -588,10 +577,6 @@ let rec update_level env level expand ty =
       if Path.same p p' then raise (Unify [(ty, newvar2 level)]);
       log_type ty;
       ty.desc <- Tpackage (p', nl, tl);
-      update_level env level expand ty
-    | Tobject (_, ({contents = Some (p, _tl)} as nm))
-      when level < get_level env p ->
-      set_name nm None;
       update_level env level expand ty
     | Tvariant row ->
       let row = row_repr row in
@@ -852,7 +837,7 @@ let rec copy ?env ?partial ?keep_names ty =
             | Fvar r ->
               dup_kind r;
               copy_type_desc copy desc)
-          | Tobject (ty1, _) when partial <> None -> Tobject (copy ty1, ref None)
+          | Tobject ty1 when partial <> None -> Tobject (copy ty1)
           | _ -> copy_type_desc ?keep_names copy desc);
         t
 
@@ -1302,12 +1287,7 @@ let enforce_constraints env ty =
 
 (* Recursively expand the head of a type.
    Also expand #-types. *)
-let full_expand env ty =
-  let ty = repr (expand_head env ty) in
-  match ty.desc with
-  | Tobject (fi, {contents = Some (_, v :: _)}) when is_Tvar (repr v) ->
-    newty2 ty.level (Tobject (fi, ref None))
-  | _ -> ty
+let full_expand env ty = repr (expand_head env ty)
 
 (*
    Check whether the abbreviation expands to a well-defined type.
@@ -1810,8 +1790,7 @@ let rec mcomp type_pairs env t1 t2 =
         *)
             | Tpackage _, Tpackage _ -> ()
             | Tvariant row1, Tvariant row2 -> mcomp_row type_pairs env row1 row2
-            | Tobject (fi1, _), Tobject (fi2, _) ->
-              mcomp_fields type_pairs env fi1 fi2
+            | Tobject fi1, Tobject fi2 -> mcomp_fields type_pairs env fi1 fi2
             | Tfield _, Tfield _ ->
               (* Actually unused *)
               mcomp_fields type_pairs env t1' t2'
@@ -2267,18 +2246,7 @@ and unify3 env t1 t1' t2 t2' =
         reify env t1';
         reify env t2';
         if !generate_equations then mcomp !env t1' t2'
-      | Tobject (fi1, nm1), Tobject (fi2, _) -> (
-        unify_fields env fi1 fi2;
-        (* Type [t2'] may have been instantiated by [unify_fields] *)
-        (* XXX One should do some kind of unification... *)
-        match (repr t2').desc with
-        | Tobject (_, {contents = Some (_, va :: _)})
-          when match (repr va).desc with
-               | Tvar _ | Tunivar _ | Tnil -> true
-               | _ -> false ->
-          ()
-        | Tobject (_, nm2) -> set_name nm2 !nm1
-        | _ -> ())
+      | Tobject fi1, Tobject fi2 -> unify_fields env fi1 fi2
       | Tvariant row1, Tvariant row2 -> (
         if !umode = Expression then unify_row env row1 row2
         else
@@ -2697,7 +2665,7 @@ let filter_method env name priv ty =
     update_level env ty.level ty';
     link_type ty ty';
     filter_method_field env name priv ty1
-  | Tobject (f, _) -> filter_method_field env name priv f
+  | Tobject f -> filter_method_field env name priv f
   | _ -> raise (Unify [])
 
 let moregen_occur env level ty =
@@ -2776,7 +2744,7 @@ let rec moregen inst_nongen type_pairs env t1 t2 =
                 with Not_found -> raise (Unify []))
               | Tvariant row1, Tvariant row2 ->
                 moregen_row inst_nongen type_pairs env row1 row2
-              | Tobject (fi1, _nm1), Tobject (fi2, _nm2) ->
+              | Tobject fi1, Tobject fi2 ->
                 moregen_fields inst_nongen type_pairs env fi1 fi2
               | Tfield _, Tfield _ ->
                 (* Actually unused *)
@@ -3053,7 +3021,7 @@ let rec eqtype rename type_pairs subst env t1 t2 =
                 with Not_found -> raise (Unify []))
               | Tvariant row1, Tvariant row2 ->
                 eqtype_row rename type_pairs subst env row1 row2
-              | Tobject (fi1, _nm1), Tobject (fi2, _nm2) ->
+              | Tobject fi1, Tobject fi2 ->
                 eqtype_fields rename type_pairs subst env fi1 fi2
               | Tfield _, Tfield _ ->
                 (* Actually unused *)
@@ -3085,8 +3053,7 @@ and eqtype_fields rename type_pairs subst env ty1 ty2 : unit =
   else
     (* Try expansion, needed when called from Includecore.type_manifest *)
     match expand_head_rigid env rest2 with
-    | {desc = Tobject (ty2, _)} ->
-      eqtype_fields rename type_pairs subst env ty1 ty2
+    | {desc = Tobject ty2} -> eqtype_fields rename type_pairs subst env ty1 ty2
     | _ ->
       let pairs, miss1, miss2 = associate_fields fields1 fields2 in
       eqtype rename type_pairs subst env rest1 rest2;
@@ -3177,7 +3144,7 @@ let equal env rename tyl1 tyl2 =
 (* build_subtype:
    [visited] traces traversed object and variant types
    [loops] is a mapping from variables to variables, to reproduce
-     positive loops in a class type
+     positive loops
    [posi] true if the current variance is positive
    [level] number of expansions/enlargement allowed on this branch *)
 
@@ -3211,17 +3178,6 @@ let rec lid_of_path ?(hash = "") = function
      application by name (e.g. "F(Arg)") rather than aborting, so any diagnostic
      that reaches here degrades gracefully instead of crashing the compiler. *)
   | Path.Papply _ as p -> Longident.Lident (hash ^ Path.name p)
-
-let find_cltype_for_path env p =
-  let cl_path = Env.lookup_type (lid_of_path ~hash:"#" p) env in
-  let cl_abbr = Env.find_type cl_path env in
-
-  match cl_abbr.type_manifest with
-  | Some ty -> (
-    match (repr ty).desc with
-    | Tobject (_, {contents = Some (p', _)}) when Path.same p p' -> (cl_abbr, ty)
-    | _ -> raise Not_found)
-  | None -> assert false
 
 let has_constr_row' env t = has_constr_row (expand_abbrev env t)
 
@@ -3263,48 +3219,13 @@ let rec build_subtype env visited loops posi level t =
       let c = collect tlist' in
       if c > Unchanged then (newty (Ttuple (List.map fst tlist')), c)
       else (t, Unchanged)
-  | Tconstr (p, tl, abbrev)
+  | Tconstr (p, _, _)
     when level > 0 && generic_abbrev env p && safe_abbrev env t
-         && not (has_constr_row' env t) -> (
+         && not (has_constr_row' env t) ->
     let t' = repr (expand_abbrev env t) in
     let level' = pred_expand level in
-    try
-      match t'.desc with
-      | Tobject _ when posi && not (opened_object t') ->
-        let cl_abbr, body = find_cltype_for_path env p in
-        let ty =
-          subst env !current_level Public abbrev None cl_abbr.type_params tl
-            body
-        in
-        let ty = repr ty in
-        let ty1, tl1 =
-          match ty.desc with
-          | Tobject (ty1, {contents = Some (p', tl1)}) when Path.same p p' ->
-            (ty1, tl1)
-          | _ -> raise Not_found
-        in
-        (* Fix PR#4505: do not set ty to Tvar when it appears in tl1,
-           as this occurrence might break the occur check.
-           XXX not clear whether this correct anyway... *)
-        if List.exists (deep_occur ty) tl1 then raise Not_found;
-        ty.desc <- Tvar None;
-        let t'' = newvar () in
-        let loops = (ty, t'') :: loops in
-        (* May discard [visited] as level is going down *)
-        let ty1', c =
-          build_subtype env [t'] loops posi (pred_enlarge level') ty1
-        in
-        assert (is_Tvar t'');
-        let nm =
-          if c > Equiv || deep_occur ty ty1' then None else Some (p, tl1)
-        in
-        t''.desc <- Tobject (ty1', ref nm);
-        (try unify_var env ty t with Unify _ -> assert false);
-        (t'', Changed)
-      | _ -> raise Not_found
-    with Not_found ->
-      let t'', c = build_subtype env visited loops posi level' t' in
-      if c > Unchanged then (t'', c) else (t, Unchanged))
+    let t'', c = build_subtype env visited loops posi level' t' in
+    if c > Unchanged then (t'', c) else (t, Unchanged)
   | Tconstr (p, tl, _abbrev) -> (
     if
       (* Must check recursion on constructors, since we do not always
@@ -3371,7 +3292,7 @@ let rec build_subtype env visited loops posi level t =
         }
       in
       (newty (Tvariant row), Changed)
-  | Tobject (t1, _) ->
+  | Tobject t1 ->
     if memq_warn t visited || opened_object t1 then (t, Unchanged)
     else
       let level' = pred_enlarge level in
@@ -3379,8 +3300,7 @@ let rec build_subtype env visited loops posi level t =
         t :: (if level' < level then [] else filter_visited visited)
       in
       let t1', c = build_subtype env visited loops posi level' t1 in
-      if c > Unchanged then (newty (Tobject (t1', ref None)), c)
-      else (t, Unchanged)
+      if c > Unchanged then (newty (Tobject t1'), c) else (t, Unchanged)
   | Tfield (s, _, t1, t2) (* Always present *) ->
     let t1', c1 = build_subtype env visited loops posi level t1 in
     let t2', c2 = build_subtype env visited loops posi level t2 in
@@ -3756,11 +3676,11 @@ let rec subtype_rec env trace t1 t2 cstrs =
         | exception Not_found -> (trace, t1, t2, !univar_pairs, None) :: cstrs)
       (* | (_, Tconstr(p2, _, _)) when generic_private_abbrev false env p2 ->
          subtype_rec env trace t1 (expand_abbrev_opt env t2) cstrs *)
-      | Tobject (f1, _), Tobject (f2, _)
+      | Tobject f1, Tobject f2
         when is_Tvar (object_row f1) && is_Tvar (object_row f2) ->
         (* Same row variable implies same object. *)
         (trace, t1, t2, !univar_pairs, None) :: cstrs
-      | Tobject (f1, _), Tobject (f2, _) -> subtype_fields env trace f1 f2 cstrs
+      | Tobject f1, Tobject f2 -> subtype_fields env trace f1 f2 cstrs
       | Tvariant row1, Tvariant row2 -> (
         try subtype_row env trace row1 row2 cstrs
         with Exit -> (trace, t1, t2, !univar_pairs, None) :: cstrs)
@@ -3945,7 +3865,7 @@ let unalias ty =
     let row = row_repr row in
     let more = row.row_more in
     newty2 ty.level (Tvariant {row with row_more = newty2 more.level more.desc})
-  | Tobject (ty, nm) -> newty2 ty.level (Tobject (unalias_object ty, nm))
+  | Tobject ty -> newty2 ty.level (Tobject (unalias_object ty))
   | _ -> newty2 ty.level ty.desc
 
 (* Check whether an abbreviation expands to itself. *)
@@ -4055,23 +3975,7 @@ let rec normalize_type_rec env visited ty =
          in
          log_type ty;
          ty.desc <- Tvariant {row with row_fields = fields}
-       | Tobject (fi, nm) ->
-         (match !nm with
-         | None -> ()
-         | Some (n, v :: l) -> (
-           if deep_occur ty (newgenty (Ttuple l)) then
-             (* The abbreviation may be hiding something, so remove it *)
-             set_name nm None
-           else
-             let v' = repr v in
-             match v'.desc with
-             | Tvar _ | Tunivar _ ->
-               if v' != v then set_name nm (Some (n, v' :: l))
-             | Tnil ->
-               log_type ty;
-               ty.desc <- Tconstr (n, l, ref Mnil)
-             | _ -> set_name nm None)
-         | _ -> fatal_error "Ctype.normalize_type_rec");
+       | Tobject fi ->
          let fi = repr fi in
          if fi.level < lowest_level then ()
          else
@@ -4131,15 +4035,7 @@ let rec nondep_type_rec env id ty =
           let p' = normalize_package_path env p in
           if Path.isfree id p' then raise Not_found;
           Tpackage (p', nl, List.map (nondep_type_rec env id) tl)
-        | Tobject (t1, name) ->
-          Tobject
-            ( nondep_type_rec env id t1,
-              ref
-                (match !name with
-                | None -> None
-                | Some (p, tl) ->
-                  if Path.isfree id p then None
-                  else Some (p, List.map (nondep_type_rec env id) tl)) )
+        | Tobject t1 -> Tobject (nondep_type_rec env id t1)
         | Tvariant row -> (
           let row = row_repr row in
           let more = repr row.row_more in

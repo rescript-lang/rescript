@@ -224,7 +224,7 @@ and expression_desc =
       * expression
       * direction_flag
       * expression
-  | Texp_send of expression * meth * expression option
+  | Texp_send of expression * string
   | Texp_letmodule of Ident.t * string loc * module_expr * expression
   | Texp_letexception of extension_constructor * expression
   | Texp_assert of expression
@@ -235,8 +235,6 @@ and expression_desc =
      breaks analysis when it reads CMTs produced by older compiler versions. *)
   | Texp_for_of of Ident.t * Parsetree.pattern * expression * expression
   | Texp_for_await_of of Ident.t * Parsetree.pattern * expression * expression
-
-and meth = Tmeth_name of string
 
 and case = {c_lhs: pattern; c_guard: expression option; c_rhs: expression}
 

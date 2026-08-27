@@ -199,9 +199,7 @@ let expr sub {exp_extra; exp_desc; exp_env; _} =
   | Texp_for_await_of (_, _, exp1, exp2) ->
     sub.expr sub exp1;
     sub.expr sub exp2
-  | Texp_send (exp, _, expo) ->
-    sub.expr sub exp;
-    Option.iter (sub.expr sub) expo
+  | Texp_send (exp, _) -> sub.expr sub exp
   | Texp_letmodule (_, _, mexpr, exp) ->
     sub.module_expr sub mexpr;
     sub.expr sub exp

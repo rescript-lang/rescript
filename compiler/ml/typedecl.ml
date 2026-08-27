@@ -185,7 +185,7 @@ let set_fixed_row env loc p decl =
       let row = Btype.row_repr row in
       tm.desc <- Tvariant {row with row_fixed = true};
       if Btype.static_row row then Btype.newgenty Tnil else row.row_more
-    | Tobject (ty, _) -> snd (Ctype.flatten_fields ty)
+    | Tobject ty -> snd (Ctype.flatten_fields ty)
     | _ -> raise (Error (loc, Bad_fixed_type "is not an object or variant"))
   in
   if not (Btype.is_Tvar rv) then
@@ -1077,7 +1077,7 @@ let compute_variance env visited vari ty =
                   compute_variance_rec v2 ty)
               tl decl.type_variance
           with Not_found -> List.iter (compute_variance_rec may_inv) tl)
-      | Tobject (ty, _) -> compute_same ty
+      | Tobject ty -> compute_same ty
       | Tfield (_, _, ty1, ty2) ->
         compute_same ty1;
         compute_same ty2
@@ -2077,7 +2077,7 @@ let explain_unbound_gen ppf tv tl typ kwd pr =
     let ti = List.find (fun ti -> Ctype.deep_occur tv (typ ti)) tl in
     let ty0 =
       (* Hack to force aliasing when needed *)
-      Btype.newgenty (Tobject (tv, ref None))
+      Btype.newgenty (Tobject tv)
     in
     Printtyp.reset_and_mark_loops_list [typ ti; ty0];
     fprintf ppf ".@.@[<hov2>In %s@ %a@;<1 -2>the variable %a is unbound@]" kwd
@@ -2093,7 +2093,7 @@ let explain_unbound_single ppf tv ty =
     explain_unbound ppf tv [ty] (fun t -> t) "type" (fun _ -> "")
   in
   match (Ctype.repr ty).desc with
-  | Tobject (fi, _) ->
+  | Tobject fi ->
     let tl, rv = Ctype.flatten_fields fi in
     if rv == tv then trivial ty
     else

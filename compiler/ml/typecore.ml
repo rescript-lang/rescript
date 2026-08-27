@@ -3302,27 +3302,21 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
       }
   | Pexp_send (e, {txt = met}) -> (
     let obj = type_exp ~context:None env e in
-    let obj_meths = ref None in
     try
-      let meth, exp, typ =
-        match obj.exp_desc with
-        | _ -> (Tmeth_name met, None, filter_method env met Public obj.exp_type)
-      in
+      let typ = filter_method env met Public obj.exp_type in
       let typ =
         match repr typ with
         | {desc = Tpoly (ty, [])} -> instance env ty
-        | {desc = Tpoly (ty, tl); level = _} -> snd (instance_poly false tl ty)
+        | {desc = Tpoly (ty, tl)} -> snd (instance_poly false tl ty)
         | {desc = Tvar _} as ty ->
           let ty' = newvar () in
           unify env (instance_def ty) (newty (Tpoly (ty', [])));
-          (* if not !Clflags.nolabels then
-             Location.prerr_warning loc (Warnings.Unknown_method met); *)
           ty'
         | _ -> assert false
       in
       rue
         {
-          exp_desc = Texp_send (obj, meth, exp);
+          exp_desc = Texp_send (obj, met);
           exp_loc = loc;
           exp_extra = [];
           exp_type = typ;
@@ -3331,18 +3325,14 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
         }
     with Unify _ ->
       let valid_methods =
-        match !obj_meths with
-        | Some meths ->
-          Some (Meths.fold (fun meth _meth_ty li -> meth :: li) !meths [])
-        | None -> (
-          match (expand_head env obj.exp_type).desc with
-          | Tobject (fields, _) ->
-            let fields, _ = Ctype.flatten_fields fields in
-            let collect_fields li (meth, meth_kind, _meth_ty) =
-              if meth_kind = Fpresent then meth :: li else li
-            in
-            Some (List.fold_left collect_fields [] fields)
-          | _ -> None)
+        match (expand_head env obj.exp_type).desc with
+        | Tobject fields ->
+          let fields, _ = Ctype.flatten_fields fields in
+          let collect_fields li (meth, meth_kind, _meth_ty) =
+            if meth_kind = Fpresent then meth :: li else li
+          in
+          Some (List.fold_left collect_fields [] fields)
+        | _ -> None
       in
       raise
         (Error

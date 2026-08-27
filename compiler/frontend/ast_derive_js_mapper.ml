@@ -30,8 +30,13 @@ type tdcls = Parsetree.type_declaration list
 let app1 f arg1 = Exp.apply f [(Nolabel, arg1)]
 let app2 f arg1 arg2 = Exp.apply f [(Nolabel, arg1); (Nolabel, arg2)]
 
-let js_field (o : Parsetree.expression) m =
-  app2 (Exp.ident {txt = Lident "##"; loc = o.pexp_loc}) o (Exp.ident m)
+let js_field (o : Parsetree.expression) (m : Longident.t Asttypes.loc) =
+  let name =
+    match m.txt with
+    | Lident name -> name
+    | _ -> assert false
+  in
+  Exp.mk ~loc:m.loc (Ast_util.js_property m.loc o name)
 
 let handle_config (config : Parsetree.expression option) =
   match config with

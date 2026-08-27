@@ -142,7 +142,6 @@ let rec print_out_type_doc (out_type : Outcometree.out_type) =
   | Otyp_var (ng, s) ->
     Doc.concat [Doc.text ("'" ^ if ng then "_" else ""); Doc.text s]
   | Otyp_object (fields, rest) -> print_object_fields fields rest
-  | Otyp_class _ -> Doc.nil
   | Otyp_attribute (typ, attribute) ->
     Doc.group
       (Doc.concat
@@ -611,7 +610,6 @@ let print_external_decl_attrs_doc (decl : External_ffi_types.external_decl)
 let rec print_out_sig_item_doc ?(print_name_as_is = false)
     (out_sig_item : Outcometree.out_sig_item) =
   match out_sig_item with
-  | Osig_class _ | Osig_class_type _ -> Doc.nil
   | Osig_ellipsis -> Doc.dotdotdot
   | Osig_value value_decl ->
     let ffi_attrs, keyword, prim_name =

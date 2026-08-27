@@ -70,7 +70,7 @@ let view_as_app (fn : exp) (s : string list) : app_pattern option =
     Some {op; loc = fn.pexp_loc; args = check_and_discard args}
   | _ -> None
 
-let infix_ops = ["->"; "#="; "##"]
+let infix_ops = ["->"; "#="]
 
 let app_exp_mapper (e : exp) (self : Ast_mapper.mapper) : exp =
   match view_as_app e infix_ops with
@@ -132,41 +132,6 @@ let app_exp_mapper (e : exp) (self : Ast_mapper.mapper) : exp =
             pexp_loc = f.pexp_loc;
           })
     | _ -> Exp.apply ~loc ~attrs:e.pexp_attributes f [(Nolabel, a)])
-  | Some {op = "##"; loc; args = [obj; rest]} -> (
-    (* - obj##property
-       - obj#(method a b )
-         we should warn when we discard attributes
-         gpr#1063 foo##(bar##baz) we should rewrite (bar##baz)
-           first  before pattern match.
-           currently the pattern match is written in a top down style.
-           Another corner case: f##(g a b [@bs])
-    *)
-    match rest with
-    | {
-     pexp_desc =
-       ( Pexp_ident {txt = Lident name; _}
-       | Pexp_constant (Pconst_string (name, None)) );
-     pexp_loc;
-    }
-    (* f##paint
-       TODO: this is not relevant: remove it later
-    *) ->
-      sane_property_name_check pexp_loc name;
-      {e with pexp_desc = Ast_util.js_property loc (self.expr self obj) name}
-    | _ -> Location.raise_errorf ~loc "invalid ## syntax")
-  (* we can not use [:=] for precedece cases
-     like {[i @@ x##length := 3 ]}
-     is parsed as {[ (i @@ x##length) := 3]}
-     since we allow user to create Js objects in OCaml, it can be of
-     ref type
-     {[
-       let u = object (self)
-         val x = ref 3
-         method setX x = self##x := 32
-         method getX () = !self##x
-       end
-     ]}
-  *)
   | Some {op = "#="; loc; args = [obj; arg]} -> (
     let gen_assignment obj name name_loc =
       sane_property_name_check name_loc name;
@@ -180,29 +145,10 @@ let app_exp_mapper (e : exp) (self : Ast_mapper.mapper) : exp =
     match obj.pexp_desc with
     | Pexp_send (obj, {txt = name; loc = name_loc}) ->
       gen_assignment obj name name_loc
-    | _ -> (
-      match view_as_app obj ["##"] with
-      | Some
-          {
-            args =
-              [
-                obj;
-                {
-                  pexp_desc =
-                    ( Pexp_ident {txt = Lident name}
-                    | Pexp_constant (Pconst_string (name, None)) );
-                  pexp_loc = name_loc;
-                };
-              ];
-          } ->
-        gen_assignment obj name name_loc
-      | _ -> Location.raise_errorf ~loc "invalid #= assignment"))
+    | _ -> Location.raise_errorf ~loc "invalid #= assignment")
   | Some {op = "->"; loc} ->
     Location.raise_errorf ~loc
       "Invalid pipe syntax. The pipe symbol (->) can only be used as a binary \
        operator."
-  | Some {op = "##"; loc} ->
-    Location.raise_errorf ~loc
-      "Js object ## expect syntax like obj##(paint (a,b)) "
   | Some {op} -> Location.raise_errorf "invalid %s syntax" op
   | None -> default_expr_mapper self e

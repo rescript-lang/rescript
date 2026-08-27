@@ -113,7 +113,6 @@ val associate_fields :
   * (string * field_kind * type_expr) list
   * (string * field_kind * type_expr) list
 val opened_object : type_expr -> bool
-val find_cltype_for_path : Env.t -> Path.t -> type_declaration * type_expr
 val lid_of_path : ?hash:string -> Path.t -> Longident.t
 
 val sort_row_fields : (label * row_field) list -> (label * row_field) list

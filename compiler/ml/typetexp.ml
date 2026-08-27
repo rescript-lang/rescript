@@ -596,7 +596,7 @@ and transl_fields env policy o fields =
       in
       let t = expand_head env cty.ctyp_type in
       match (t, nm) with
-      | {desc = Tobject ({desc = (Tfield _ | Tnil) as tf}, _)}, _ ->
+      | {desc = Tobject {desc = (Tfield _ | Tnil) as tf}}, _ ->
         if opened_object t then
           raise (Error (sty.ptyp_loc, env, Opened_object nm));
         let rec iter_add = function
