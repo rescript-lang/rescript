@@ -76,7 +76,14 @@ module Match_pattern (Parse : PARSER) : Parser_common.MATCH_PATTERN = struct
       Eat.token env;
       let trailing = Eat.trailing_comments env in
       let comments = Flow_ast_utils.mk_comments_opt ~leading ~trailing () in
-      (loc, WildcardPattern comments)
+      (loc, WildcardPattern { WildcardPattern.comments; invalid_syntax_default_keyword = false })
+    | T_DEFAULT ->
+      let leading = Peek.comments env in
+      let loc = Peek.loc env in
+      Eat.token env;
+      let trailing = Eat.trailing_comments env in
+      let comments = Flow_ast_utils.mk_comments_opt ~leading ~trailing () in
+      (loc, WildcardPattern { WildcardPattern.comments; invalid_syntax_default_keyword = true })
     | T_LPAREN ->
       let leading = Peek.comments env in
       Expect.token env T_LPAREN;
@@ -120,8 +127,10 @@ module Match_pattern (Parse : PARSER) : Parser_common.MATCH_PATTERN = struct
       let trailing = Eat.trailing_comments env in
       let comments = Flow_ast_utils.mk_comments_opt ~leading ~trailing () in
       (loc, NullPattern comments)
-    | T_PLUS -> unary_pattern env ~operator:UnaryPattern.Plus
-    | T_MINUS -> unary_pattern env ~operator:UnaryPattern.Minus
+    | T_PLUS ->
+      with_loc (fun env -> UnaryPattern (unary_pattern env ~operator:UnaryPattern.Plus)) env
+    | T_MINUS ->
+      with_loc (fun env -> UnaryPattern (unary_pattern env ~operator:UnaryPattern.Minus)) env
     | T_CONST ->
       let (loc, binding) = binding_pattern env ~kind:Ast.Variable.Const in
       (loc, BindingPattern binding)
@@ -131,8 +140,8 @@ module Match_pattern (Parse : PARSER) : Parser_common.MATCH_PATTERN = struct
     | T_VAR ->
       let (loc, binding) = binding_pattern env ~kind:Ast.Variable.Var in
       (loc, BindingPattern binding)
-    | T_LCURLY -> object_pattern env
-    | T_LBRACKET -> array_pattern env
+    | T_LCURLY -> with_loc (fun env -> ObjectPattern (object_pattern env)) env
+    | T_LBRACKET -> with_loc (fun env -> ArrayPattern (array_pattern env)) env
     | _ when Peek.is_identifier env ->
       let start_loc = Peek.loc env in
       let id = Parse.identifier env in
@@ -191,12 +200,28 @@ module Match_pattern (Parse : PARSER) : Parser_common.MATCH_PATTERN = struct
               env
           in
           member (MemberPattern.BaseMember mem)
-        | _ ->
-          (match acc with
-          | MemberPattern.BaseIdentifier ((loc, _) as id) -> (loc, IdentifierPattern id)
-          | MemberPattern.BaseMember (loc, member) -> (loc, MemberPattern (loc, member)))
+        | _ -> acc
       in
-      member (MemberPattern.BaseIdentifier id)
+      let base = member (MemberPattern.BaseIdentifier id) in
+      (match Peek.token env with
+      | T_LCURLY ->
+        with_loc
+          ~start_loc
+          (fun env ->
+            let properties = with_loc (fun env -> object_pattern env) env in
+            let constructor =
+              match base with
+              | MemberPattern.BaseIdentifier id -> InstancePattern.IdentifierConstructor id
+              | MemberPattern.BaseMember member -> InstancePattern.MemberConstructor member
+            in
+            let trailing = Eat.trailing_comments env in
+            let comments = Flow_ast_utils.mk_comments_opt ~trailing () in
+            InstancePattern { InstancePattern.constructor; properties; comments })
+          env
+      | _ ->
+        (match base with
+        | MemberPattern.BaseIdentifier ((loc, _) as id) -> (loc, IdentifierPattern id)
+        | MemberPattern.BaseMember (loc, member) -> (loc, MemberPattern (loc, member))))
     | t ->
       let leading = Peek.comments env in
       let loc = Peek.loc env in
@@ -206,41 +231,37 @@ module Match_pattern (Parse : PARSER) : Parser_common.MATCH_PATTERN = struct
       | T_ERROR _ -> Eat.token env
       | _ -> ());
       let comments = Flow_ast_utils.mk_comments_opt ~leading ~trailing:[] () in
-      (loc, WildcardPattern comments)
+      (loc, WildcardPattern { WildcardPattern.comments; invalid_syntax_default_keyword = false })
 
   and unary_pattern env ~operator =
-    with_loc
-      (fun env ->
+    let leading = Peek.comments env in
+    Eat.token env;
+    let argument =
+      match Peek.token env with
+      | T_NUMBER { kind; raw } ->
         let leading = Peek.comments env in
-        Eat.token env;
-        let argument =
-          match Peek.token env with
-          | T_NUMBER { kind; raw } ->
-            let leading = Peek.comments env in
-            let loc = Peek.loc env in
-            let value = Parse.number env kind raw in
-            let trailing = Eat.trailing_comments env in
-            let comments = Flow_ast_utils.mk_comments_opt ~leading ~trailing () in
-            (loc, UnaryPattern.NumberLiteral { Ast.NumberLiteral.value; raw; comments })
-          | T_BIGINT { kind; raw } ->
-            let leading = Peek.comments env in
-            let loc = Peek.loc env in
-            let value = Parse.bigint env kind raw in
-            let trailing = Eat.trailing_comments env in
-            let comments = Flow_ast_utils.mk_comments_opt ~leading ~trailing () in
-            (loc, UnaryPattern.BigIntLiteral { Ast.BigIntLiteral.value; raw; comments })
-          | _ ->
-            let loc = Peek.loc env in
-            error_unexpected ~expected:"a number literal" env;
-            ( loc,
-              UnaryPattern.NumberLiteral
-                { Ast.NumberLiteral.value = 0.; raw = "0"; comments = None }
-            )
-        in
+        let loc = Peek.loc env in
+        let value = Parse.number env kind raw in
         let trailing = Eat.trailing_comments env in
         let comments = Flow_ast_utils.mk_comments_opt ~leading ~trailing () in
-        UnaryPattern { UnaryPattern.operator; argument; comments })
-      env
+        (loc, UnaryPattern.NumberLiteral { Ast.NumberLiteral.value; raw; comments })
+      | T_BIGINT { kind; raw } ->
+        let leading = Peek.comments env in
+        let loc = Peek.loc env in
+        let value = Parse.bigint env kind raw in
+        let trailing = Eat.trailing_comments env in
+        let comments = Flow_ast_utils.mk_comments_opt ~leading ~trailing () in
+        (loc, UnaryPattern.BigIntLiteral { Ast.BigIntLiteral.value; raw; comments })
+      | _ ->
+        let loc = Peek.loc env in
+        error_unexpected ~expected:"a number literal" env;
+        ( loc,
+          UnaryPattern.NumberLiteral { Ast.NumberLiteral.value = 0.; raw = "0"; comments = None }
+        )
+    in
+    let trailing = Eat.trailing_comments env in
+    let comments = Flow_ast_utils.mk_comments_opt ~leading ~trailing () in
+    { UnaryPattern.operator; argument; comments }
 
   and binding_pattern env ~kind =
     with_loc
@@ -330,21 +351,17 @@ module Match_pattern (Parse : PARSER) : Parser_common.MATCH_PATTERN = struct
         if not (Peek.token env = T_RCURLY) then Expect.token env T_COMMA;
         properties env (prop :: acc)
     in
-    with_loc
-      (fun env ->
-        let leading = Peek.comments env in
-        Expect.token env T_LCURLY;
-        let (properties, rest) = properties env [] in
-        let internal = Peek.comments env in
-        Expect.token env T_RCURLY;
-        let trailing = Eat.trailing_comments env in
-        ObjectPattern
-          {
-            ObjectPattern.properties;
-            rest;
-            comments = Flow_ast_utils.mk_comments_with_internal_opt ~leading ~trailing ~internal ();
-          })
-      env
+    let leading = Peek.comments env in
+    Expect.token env T_LCURLY;
+    let (properties, rest) = properties env [] in
+    let internal = Peek.comments env in
+    Expect.token env T_RCURLY;
+    let trailing = Eat.trailing_comments env in
+    {
+      ObjectPattern.properties;
+      rest;
+      comments = Flow_ast_utils.mk_comments_with_internal_opt ~leading ~trailing ~internal ();
+    }
 
   and array_pattern env =
     let rec elements env ~start_loc acc =
@@ -364,20 +381,15 @@ module Match_pattern (Parse : PARSER) : Parser_common.MATCH_PATTERN = struct
         let element = { ArrayPattern.Element.index; pattern } in
         elements env ~start_loc (element :: acc)
     in
-    with_loc
-      (fun env ->
-        let leading = Peek.comments env in
-        let start_loc = Peek.loc env in
-        Expect.token env T_LBRACKET;
-        let (elements, rest) = elements env ~start_loc [] in
-        let internal = Peek.comments env in
-        Expect.token env T_RBRACKET;
-        let trailing = Eat.trailing_comments env in
-        let comments =
-          Flow_ast_utils.mk_comments_with_internal_opt ~leading ~trailing ~internal ()
-        in
-        ArrayPattern { ArrayPattern.elements; rest; comments })
-      env
+    let leading = Peek.comments env in
+    let start_loc = Peek.loc env in
+    Expect.token env T_LBRACKET;
+    let (elements, rest) = elements env ~start_loc [] in
+    let internal = Peek.comments env in
+    Expect.token env T_RBRACKET;
+    let trailing = Eat.trailing_comments env in
+    let comments = Flow_ast_utils.mk_comments_with_internal_opt ~leading ~trailing ~internal () in
+    { ArrayPattern.elements; rest; comments }
 
   and rest_pattern env =
     with_loc
@@ -409,7 +421,8 @@ module Match_pattern (Parse : PARSER) : Parser_common.MATCH_PATTERN = struct
     in
     ( loc,
       match pattern with
-      | WildcardPattern comments -> WildcardPattern (merge_comments comments)
+      | WildcardPattern ({ WildcardPattern.comments; _ } as p) ->
+        WildcardPattern { p with WildcardPattern.comments = merge_comments comments }
       | NumberPattern ({ Ast.NumberLiteral.comments; _ } as p) ->
         NumberPattern { p with Ast.NumberLiteral.comments = merge_comments comments }
       | BigIntPattern ({ Ast.BigIntLiteral.comments; _ } as p) ->
@@ -431,6 +444,8 @@ module Match_pattern (Parse : PARSER) : Parser_common.MATCH_PATTERN = struct
         ObjectPattern { p with ObjectPattern.comments = merge_comments_with_internal comments }
       | ArrayPattern ({ ArrayPattern.comments; _ } as p) ->
         ArrayPattern { p with ArrayPattern.comments = merge_comments_with_internal comments }
+      | InstancePattern ({ InstancePattern.comments; _ } as p) ->
+        InstancePattern { p with InstancePattern.comments = merge_comments comments }
       | OrPattern ({ OrPattern.comments; _ } as p) ->
         OrPattern { p with OrPattern.comments = merge_comments comments }
       | AsPattern ({ AsPattern.comments; _ } as p) ->

@@ -47,7 +47,7 @@ module type PARSER = sig
   val identifier : ?restricted_error:Parse_error.t -> env -> (Loc.t, Loc.t) Identifier.t
 
   val identifier_with_type :
-    env -> ?no_optional:bool -> Parse_error.t -> Loc.t * (Loc.t, Loc.t) Pattern.Identifier.t
+    env -> allow_optional:bool -> Parse_error.t -> Loc.t * (Loc.t, Loc.t) Pattern.Identifier.t
 
   val block_body : env -> Loc.t * (Loc.t, Loc.t) Statement.Block.t
 
@@ -58,7 +58,7 @@ module type PARSER = sig
     env ->
     Loc.t * [ `Element of (Loc.t, Loc.t) JSX.element | `Fragment of (Loc.t, Loc.t) JSX.fragment ]
 
-  val pattern : env -> Parse_error.t -> (Loc.t, Loc.t) Pattern.t
+  val pattern : env -> allow_optional:bool -> Parse_error.t -> (Loc.t, Loc.t) Pattern.t
 
   val pattern_from_expr : env -> (Loc.t, Loc.t) Expression.t -> (Loc.t, Loc.t) Pattern.t
 
@@ -81,6 +81,8 @@ end
 
 module type TYPE = sig
   val _type : env -> (Loc.t, Loc.t) Type.t
+
+  val union : env -> (Loc.t, Loc.t) Type.t
 
   val type_identifier : env -> (Loc.t, Loc.t) Identifier.t
 
@@ -132,7 +134,7 @@ end
 module type PATTERN = sig
   val from_expr : Parser_env.env -> (Loc.t, Loc.t) Expression.t -> (Loc.t, Loc.t) Pattern.t
 
-  val pattern : Parser_env.env -> Parse_error.t -> (Loc.t, Loc.t) Pattern.t
+  val pattern : Parser_env.env -> allow_optional:bool -> Parse_error.t -> (Loc.t, Loc.t) Pattern.t
 end
 
 module type OBJECT = sig
@@ -147,6 +149,8 @@ module type OBJECT = sig
   val class_implements : env -> attach_leading:bool -> (Loc.t, Loc.t) Class.Implements.t
 
   val decorator_list : env -> (Loc.t, Loc.t) Class.Decorator.t list
+
+  val record_declaration : env -> (Loc.t, Loc.t) Statement.t
 end
 
 module type JSX = sig
@@ -244,6 +248,8 @@ module type STATEMENT = sig
   val var : env -> (Loc.t, Loc.t) Statement.t
 
   val const : env -> (Loc.t, Loc.t) Statement.t
+
+  val declare_namespace : env -> global:bool -> implicit_declare:bool -> (Loc.t, Loc.t) Statement.t
 end
 
 module type DECLARATION = sig
@@ -251,7 +257,8 @@ module type DECLARATION = sig
 
   val generator : env -> bool * Loc.t Comment.t list
 
-  val variance : env -> parse_readonly:bool -> bool -> bool -> Loc.t Variance.t option
+  val variance :
+    env -> parse_property_variance_keyword:bool -> bool -> bool -> Loc.t Variance.t option
 
   val function_params : await:bool -> yield:bool -> env -> (Loc.t, Loc.t) Function.Params.t
 
@@ -300,11 +307,21 @@ module type DECLARATION = sig
     * Loc.t Comment.t list
     * (Loc.t * Parse_error.t) list
 
+  val variable_declaration_list :
+    env ->
+    (Loc.t, Loc.t) Statement.VariableDeclaration.Declarator.t list * (Loc.t * Parse_error.t) list
+
   val _function : env -> (Loc.t, Loc.t) Statement.t
 
-  val enum_declaration : ?leading:Loc.t Comment.t list -> env -> (Loc.t, Loc.t) Statement.t
+  val enum_declaration :
+    ?leading:Loc.t Comment.t list -> const_:bool -> env -> (Loc.t, Loc.t) Statement.t
+
+  val component_params : env -> (Loc.t, Loc.t) Statement.ComponentDeclaration.Params.t
 
   val component : env -> (Loc.t, Loc.t) Statement.t
+
+  val convert_function_params_to_type_params :
+    (Loc.t, Loc.t) Function.Params.t -> ((Loc.t, Loc.t) Type.Function.Params.t, string list) result
 end
 
 module type MATCH_PATTERN = sig
@@ -376,6 +393,7 @@ let identifier_name_raw env =
     | T_OPAQUE -> "opaque"
     | T_ANY_TYPE -> "any"
     | T_MATCH -> "match"
+    | T_RECORD -> "record"
     | T_MIXED_TYPE -> "mixed"
     | T_EMPTY_TYPE -> "empty"
     | T_BOOLEAN_TYPE BOOL -> "bool"
@@ -390,6 +408,8 @@ let identifier_name_raw env =
     | T_UNDEFINED_TYPE -> "undefined"
     | T_KEYOF -> "keyof"
     | T_READONLY -> "readonly"
+    | T_WRITEONLY -> "writeonly"
+    | T_INFER -> "infer"
     (* Contextual stuff *)
     | T_OF -> "of"
     | T_ASYNC -> "async"
@@ -433,7 +453,11 @@ let private_identifier env =
     https://tc39.es/ecma262/#sec-static-semantics-issimpleparameterlist *)
 let is_simple_parameter_list =
   let is_simple_param = function
-    | (_, { Flow_ast.Function.Param.argument = (_, Pattern.Identifier _); default = None }) -> true
+    | ( _,
+        Flow_ast.Function.Param.RegularParam
+          { argument = (_, Pattern.Identifier _); default = None }
+      ) ->
+      true
     | _ -> false
   in
   fun (_, { Flow_ast.Function.Params.params; rest; comments = _; this_ = _ }) ->
@@ -475,7 +499,10 @@ let assert_identifier_name_is_identifier
   | _ when is_reserved name -> error_at env (loc, Parse_error.UnexpectedReserved)
   | _ -> begin
     match restricted_error with
-    | Some err when is_restricted name -> strict_error_at env (loc, err)
+    (* In ambient contexts (e.g. declaration files), "eval" and "arguments" are
+       allowed as identifiers since they are type-level declarations, not runtime code. *)
+    | Some err when is_restricted name && not (in_ambient_context env) ->
+      strict_error_at env (loc, err)
     | _ -> ()
   end
 
@@ -507,19 +534,23 @@ let is_start_of_type_guard env =
   (* Parse the identifier part as normal code, since this can be any name that
    * a parameter can be. *)
   Eat.push_lex_mode env Lex_mode.NORMAL;
+  let token_1_is_identifier_name = Peek.ith_is_identifier_name ~i:0 env in
   let token_1 = Peek.token env in
   Eat.pop_lex_mode env;
-  let token_2 = Peek.ith_token ~i:1 env in
-  match (token_1, token_2) with
-  | (T_IDENTIFIER { raw = "asserts"; _ }, (T_IDENTIFIER _ | T_THIS))
-  | (T_IDENTIFIER { raw = "implies"; _ }, (T_IDENTIFIER _ | T_THIS))
-  | ((T_IDENTIFIER _ | T_THIS), (T_IS | T_IDENTIFIER { raw = "is"; _ })) ->
-    true
-  | _ -> false
+  if not token_1_is_identifier_name then
+    false
+  else
+    let token_2 = Peek.ith_token ~i:1 env in
+    match (token_1, token_2) with
+    | (T_IDENTIFIER { raw = "asserts"; _ }, (T_IDENTIFIER _ | T_THIS))
+    | (T_IDENTIFIER { raw = "implies"; _ }, (T_IDENTIFIER _ | T_THIS))
+    | (_, (T_IS | T_IDENTIFIER { raw = "is"; _ })) ->
+      true
+    | _ -> false
 
 let reparse_arguments_as_match_argument env (args_loc, args) =
   let { Expression.ArgList.arguments; _ } = args in
-  if Base.List.is_empty arguments then Parser_env.error_at env (args_loc, Parse_error.MatchEmptyArgument);
+  if List.is_empty arguments then Parser_env.error_at env (args_loc, Parse_error.MatchEmptyArgument);
   let filtered_args =
     List.filter_map
       (function

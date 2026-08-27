@@ -42,15 +42,24 @@ let filter_duplicate_errors =
 
 let check_for_duplicate_exports =
   let open Ast in
-  let record_export env seen (loc, { Identifier.name = export_name; comments = _ }) =
+  let record_export
+      env (type_seen, value_seen) kind (loc, { Identifier.name = export_name; comments = _ }) =
     if export_name = "" then
       (* empty identifiers signify an error, don't export it *)
-      seen
-    else if SSet.mem export_name seen then (
-      error_at env (loc, Parse_error.DuplicateExport export_name);
-      seen
-    ) else
-      SSet.add export_name seen
+      (type_seen, value_seen)
+    else
+      let relevant_seen =
+        match kind with
+        | Statement.ExportType -> type_seen
+        | Statement.ExportValue -> value_seen
+      in
+      if SSet.mem export_name relevant_seen then (
+        error_at env (loc, Parse_error.DuplicateExport export_name);
+        (type_seen, value_seen)
+      ) else
+        match kind with
+        | Statement.ExportType -> (SSet.add export_name type_seen, value_seen)
+        | Statement.ExportValue -> (type_seen, SSet.add export_name value_seen)
   in
   let extract_pattern_binding_names =
     let rec fold acc =
@@ -83,10 +92,16 @@ let check_for_duplicate_exports =
   let record_export_of_statement env seen decl =
     match decl with
     | (_, Statement.ExportDefaultDeclaration { Statement.ExportDefaultDeclaration.default; _ }) ->
-      record_export env seen (Flow_ast_utils.ident_of_source (default, "default"))
+      let id = Flow_ast_utils.ident_of_source (default, "default") in
+      record_export env seen Statement.ExportValue id
     | ( _,
         Statement.ExportNamedDeclaration
-          { Statement.ExportNamedDeclaration.specifiers = Some specifiers; declaration = None; _ }
+          {
+            Statement.ExportNamedDeclaration.specifiers = Some specifiers;
+            declaration = None;
+            export_kind = statement_export_kind;
+            _;
+          }
       ) ->
       let open Statement.ExportNamedDeclaration in
       (match specifiers with
@@ -97,13 +112,17 @@ let check_for_duplicate_exports =
                  {
                    Statement.ExportNamedDeclaration.ExportSpecifier.local;
                    exported;
+                   export_kind = spec_export_kind;
                    from_remote = _;
                    imported_name_def_loc = _;
                  }
                ) ->
+            let kind =
+              Flow_ast_utils.effective_export_kind ~statement_export_kind spec_export_kind
+            in
             match exported with
-            | Some exported -> record_export env seen exported
-            | None -> record_export env seen local)
+            | Some exported -> record_export env seen kind exported
+            | None -> record_export env seen kind local)
           seen
           specifiers
       | ExportBatchSpecifier _ ->
@@ -111,7 +130,12 @@ let check_for_duplicate_exports =
         seen)
     | ( _,
         Statement.ExportNamedDeclaration
-          { Statement.ExportNamedDeclaration.specifiers = None; declaration = Some declaration; _ }
+          {
+            Statement.ExportNamedDeclaration.specifiers = None;
+            declaration = Some declaration;
+            export_kind;
+            _;
+          }
       ) ->
       (match declaration with
       | ( loc,
@@ -121,11 +145,13 @@ let check_for_duplicate_exports =
           | Statement.ClassDeclaration { Class.id = Some id; _ }
           | Statement.FunctionDeclaration { Function.id = Some id; _ }
           | Statement.EnumDeclaration { Statement.EnumDeclaration.id; _ }
-          | Statement.ComponentDeclaration { Statement.ComponentDeclaration.id; _ } )
+          | Statement.ComponentDeclaration { Statement.ComponentDeclaration.id; _ }
+          | Statement.RecordDeclaration { Statement.RecordDeclaration.id; _ } )
         ) ->
         record_export
           env
           seen
+          export_kind
           (Flow_ast_utils.ident_of_source (loc, Flow_ast_utils.name_of_ident id))
       | (_, Statement.VariableDeclaration { Statement.VariableDeclaration.declarations; _ }) ->
         declarations
@@ -133,7 +159,7 @@ let check_for_duplicate_exports =
              (fun names (_, { Statement.VariableDeclaration.Declarator.id; _ }) ->
                extract_pattern_binding_names names [id])
              []
-        |> List.fold_left (record_export env) seen
+        |> List.fold_left (fun seen id -> record_export env seen export_kind id) seen
       | ( _,
           Statement.(
             ( Block _ | Break _
@@ -142,10 +168,11 @@ let check_for_duplicate_exports =
             | DeclareExportDeclaration _ | DeclareFunction _ | DeclareInterface _ | DeclareModule _
             | DeclareModuleExports _ | DeclareNamespace _ | DeclareTypeAlias _ | DeclareOpaqueType _
             | DeclareVariable _ | DoWhile _ | Empty _ | ExportDefaultDeclaration _
-            | ExportNamedDeclaration _ | Expression _ | For _ | ForIn _ | ForOf _
+            | ExportNamedDeclaration _ | ExportAssignment _ | NamespaceExportDeclaration _
+            | Expression _ | For _ | ForIn _ | ForOf _
             | FunctionDeclaration { Function.id = None; _ }
-            | If _ | ImportDeclaration _ | Labeled _ | Match _ | Return _ | Switch _ | Throw _
-            | Try _ | While _ | With _ ))
+            | If _ | ImportDeclaration _ | ImportEqualsDeclaration _ | Labeled _ | Match _
+            | Return _ | Switch _ | Throw _ | Try _ | While _ | With _ ))
         ) ->
         (* these don't export names -- some are invalid, but the AST allows them *)
         seen)
@@ -165,14 +192,16 @@ let check_for_duplicate_exports =
           | DeclareComponent _ | DeclareEnum _ | DeclareExportDeclaration _ | DeclareFunction _
           | DeclareInterface _ | DeclareModule _ | DeclareModuleExports _ | DeclareNamespace _
           | DeclareTypeAlias _ | DeclareOpaqueType _ | DeclareVariable _ | DoWhile _ | Empty _
-          | EnumDeclaration _ | Expression _ | For _ | ForIn _ | ForOf _ | FunctionDeclaration _
-          | ComponentDeclaration _ | If _ | ImportDeclaration _ | InterfaceDeclaration _ | Labeled _
-          | Match _ | Return _ | Switch _ | Throw _ | Try _ | TypeAlias _ | OpaqueType _
-          | VariableDeclaration _ | While _ | With _ ))
+          | EnumDeclaration _ | ExportAssignment _ | NamespaceExportDeclaration _ | Expression _
+          | For _ | ForIn _ | ForOf _ | FunctionDeclaration _ | ComponentDeclaration _ | If _
+          | ImportDeclaration _ | ImportEqualsDeclaration _ | InterfaceDeclaration _ | Labeled _
+          | Match _ | RecordDeclaration _ | Return _ | Switch _ | Throw _ | Try _ | TypeAlias _
+          | OpaqueType _ | VariableDeclaration _ | While _ | With _ ))
       ) ->
       seen
   in
-  (fun env stmts -> ignore (List.fold_left (record_export_of_statement env) SSet.empty stmts))
+  fun env stmts ->
+    ignore (List.fold_left (record_export_of_statement env) (SSet.empty, SSet.empty) stmts)
 
 module rec Parse : PARSER = struct
   module Type = Type_parser.Type (Parse)
@@ -194,6 +223,13 @@ module rec Parse : PARSER = struct
     id
 
   let rec program env =
+    (* Set ambient context for .flow files *)
+    let env =
+      match source env with
+      | Some file_key when File_key.check_suffix file_key ".flow" || is_d_ts env ->
+        with_ambient_context true env
+      | _ -> env
+    in
     let interpreter =
       match Peek.token env with
       | T_INTERPRETER (loc, value) ->
@@ -320,14 +356,31 @@ module rec Parse : PARSER = struct
     (* Remember kids, these look like statements but they're not
        * statements... (see section 13) *)
     | T_LET -> let_ env
+    | T_CONST when (parse_options env).enums && Peek.ith_token ~i:1 env = T_ENUM ->
+      Eat.token env;
+      Declaration.enum_declaration ~const_:true env
     | T_CONST -> const env
     | _ when Peek.is_function env || Peek.is_hook env -> Declaration._function env
     | _ when Peek.is_class env -> class_declaration env decorators
     | T_INTERFACE -> interface env
+    | T_IDENTIFIER { raw = "namespace"; _ } when in_ambient_context env ->
+      Statement.declare_namespace ~global:false ~implicit_declare:true env
+    | T_IDENTIFIER { raw = "module"; _ }
+      when in_ambient_context env
+           && is_d_ts env
+           &&
+           match Peek.ith_token ~i:1 env with
+           | T_IDENTIFIER _ -> true
+           | _ -> false ->
+      Statement.declare_namespace ~global:false ~implicit_declare:true env
+    | T_IDENTIFIER { raw = "global"; _ }
+      when in_ambient_context env && Peek.ith_token ~i:1 env = T_LCURLY ->
+      Statement.declare_namespace ~global:true ~implicit_declare:true env
     | T_DECLARE -> declare env
     | T_TYPE -> type_alias env
     | T_OPAQUE -> opaque_type env
-    | T_ENUM when (parse_options env).enums -> Declaration.enum_declaration env
+    | T_ENUM when (parse_options env).enums -> Declaration.enum_declaration ~const_:false env
+    | T_RECORD when Peek.is_record env -> Object.record_declaration env
     | _ when Peek.is_component env -> Declaration.component env
     | _ -> statement env
 
@@ -447,18 +500,29 @@ module rec Parse : PARSER = struct
   and bigint = Expression.bigint
 
   and identifier_with_type =
-    let with_loc_helper no_optional restricted_error env =
+    let with_loc_helper allow_optional restricted_error env =
       let name = identifier ~restricted_error env in
-      let optional = (not no_optional) && Peek.token env = T_PLING in
-      if optional then (
-        if not (should_parse_types env) then error env Parse_error.UnexpectedTypeAnnotation;
-        Expect.token env T_PLING
-      );
+      let optional =
+        match Peek.token env with
+        | T_PLING ->
+          let optional =
+            if allow_optional then (
+              if not (should_parse_types env) then error env Parse_error.UnexpectedTypeAnnotation;
+              true
+            ) else (
+              error env Parse_error.UnexpectedOptional;
+              false
+            )
+          in
+          Eat.token env;
+          optional
+        | _ -> false
+      in
       let annot = Type.annotation_opt env in
       Ast.Pattern.Identifier.{ name; optional; annot }
     in
-    fun env ?(no_optional = false) restricted_error ->
-      with_loc (with_loc_helper no_optional restricted_error) env
+    fun env ~allow_optional restricted_error ->
+      with_loc (with_loc_helper allow_optional restricted_error) env
 
   and block_body env =
     let start_loc = Peek.loc env in

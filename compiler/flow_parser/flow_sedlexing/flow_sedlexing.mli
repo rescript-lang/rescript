@@ -32,7 +32,7 @@ module Utf8 : sig
   val from_string : string -> lexbuf
   val sub_lexeme : lexbuf -> int -> int -> string
   val lexeme : lexbuf -> string
-  (* This API avoids another allocation. *)
+  (* This API avoids another allocation *)
   val lexeme_to_buffer : lexbuf -> Buffer.t -> unit
   val lexeme_to_buffer2 : lexbuf -> Buffer.t -> Buffer.t -> unit
 end
@@ -45,3 +45,5 @@ val string_of_utf8 : int array -> string
 val current_code_point : lexbuf -> int
 val backoff : lexbuf -> int -> unit
 val set_lexeme_start : lexbuf -> int -> unit
+val peek : lexbuf -> int -> int
+val bump : lexbuf -> int -> unit

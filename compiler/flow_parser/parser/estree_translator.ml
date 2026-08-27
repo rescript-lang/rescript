@@ -9,6 +9,8 @@ module Ast = Flow_ast
 
 module type Config = sig
   val include_locs : bool
+
+  val include_filename : bool
 end
 
 module Translate (Impl : Translator_intf.S) (Config : Config) : sig
@@ -45,13 +47,12 @@ with type t = Impl.t = struct
 
   let loc location =
     let source =
-      match Loc.source location with
-      | Some (File_key.LibFile src)
-      | Some (File_key.SourceFile src)
-      | Some (File_key.JsonFile src)
-      | Some (File_key.ResourceFile src) ->
-        string src
-      | None -> null
+      if Config.include_filename then
+        match Loc.source location with
+        | Some file_key -> string (File_key.suffix file_key)
+        | None -> null
+      else
+        null
     in
     obj
       [
@@ -84,6 +85,15 @@ with type t = Impl.t = struct
           ]
       )
     in
+    (* Optional-chain rewrite: mirror upstream Hermes' mapChainExpression by
+       emitting `OptionalMember`/`OptionalCall` AST nodes as
+       `MemberExpression`/`CallExpression` with `optional` flags, wrapped in a
+       single `ChainExpression` at the chain root. Plain `Member`/`Call` inside
+       an optional chain mark a parenthesis boundary: emit with `optional:
+       false` and reset the chain state for their children so an inner optional
+       access starts a new chain. The chain state is threaded explicitly as
+       the [in_optional_chain] argument of [expression] (and propagated through
+       [call_node_properties] / [member_node_properties]). *)
     let rec node _type location ?comments props =
       let locs =
         if Config.include_locs then
@@ -178,6 +188,81 @@ with type t = Impl.t = struct
           "SwitchStatement"
           loc
           [("discriminant", expression discriminant); ("cases", array_of_list case cases)]
+      | ( loc,
+          RecordDeclaration
+            { RecordDeclaration.id; tparams; implements; body; comments; invalid_syntax = _ }
+        ) ->
+        let record_property
+            ( loc,
+              { RecordDeclaration.Property.key; annot; default_value; comments; invalid_syntax = _ }
+            ) =
+          let (key, computed, comments) = property_key ~comments key in
+          if computed then failwith "Records cannot have computed keys";
+          node
+            ?comments
+            "RecordDeclarationProperty"
+            loc
+            [
+              ("key", key);
+              ("typeAnnotation", type_annotation annot);
+              ("defaultValue", option expression default_value);
+            ]
+        in
+        let record_static_property
+            ( loc,
+              { RecordDeclaration.StaticProperty.key; annot; value; comments; invalid_syntax = _ }
+            ) =
+          let (key, computed, comments) = property_key ~comments key in
+          if computed then failwith "Records cannot have computed keys";
+          node
+            ?comments
+            "RecordDeclarationStaticProperty"
+            loc
+            [("key", key); ("typeAnnotation", type_annotation annot); ("value", expression value)]
+        in
+
+        let record_element element =
+          let open RecordDeclaration.Body in
+          match element with
+          | Property prop -> record_property prop
+          | StaticProperty prop -> record_static_property prop
+          | Method meth -> class_method meth
+        in
+        let record_body (loc, { RecordDeclaration.Body.body; comments }) =
+          node
+            ?comments
+            "RecordDeclarationBody"
+            loc
+            [("elements", array_of_list record_element body)]
+        in
+        let record_implements (loc, { Class.Implements.Interface.id; targs }) =
+          let id =
+            match id with
+            | Type.Generic.Identifier.Unqualified id -> identifier id
+            | Type.Generic.Identifier.Qualified q -> generic_type_qualified_identifier q
+            | Type.Generic.Identifier.ImportTypeAnnot it -> import_type it
+          in
+          node
+            "RecordDeclarationImplements"
+            loc
+            [("id", id); ("typeArguments", option type_args targs)]
+        in
+        let implements =
+          match implements with
+          | Some (_, { Class.Implements.interfaces; comments = _ }) ->
+            array_of_list record_implements interfaces
+          | None -> array []
+        in
+        node
+          ?comments
+          "RecordDeclaration"
+          loc
+          [
+            ("id", identifier id);
+            ("typeParameters", option type_parameter_declaration tparams);
+            ("implements", implements);
+            ("body", record_body body);
+          ]
       | (loc, Return { Return.argument; comments; return_out = _ }) ->
         node ?comments "ReturnStatement" loc [("argument", option expression argument)]
       | (loc, Throw { Throw.argument; comments }) ->
@@ -265,20 +350,7 @@ with type t = Impl.t = struct
           | DeclareModule.Identifier id -> identifier id
         in
         node ?comments "DeclareModule" loc [("id", id); ("body", block body)]
-      | (loc, DeclareNamespace { DeclareNamespace.id; body; comments }) ->
-        let (id, global) =
-          match id with
-          | DeclareNamespace.Local id -> (identifier id, false)
-          | DeclareNamespace.Global id -> (identifier id, true)
-        in
-        let props = [("id", id); ("body", block body)] in
-        let props =
-          if global then
-            ("global", bool global) :: props
-          else
-            props
-        in
-        node ?comments "DeclareNamespace" loc props
+      | (loc, DeclareNamespace ns) -> declare_namespace (loc, ns)
       | ( loc,
           DeclareExportDeclaration
             { DeclareExportDeclaration.specifiers; declaration; default; source; comments }
@@ -302,6 +374,7 @@ with type t = Impl.t = struct
             | Some (DeclareExportDeclaration.NamedOpaqueType t) -> opaque_type ~declare:true t
             | Some (DeclareExportDeclaration.Interface i) -> interface_declaration i
             | Some (DeclareExportDeclaration.Enum enum) -> declare_enum enum
+            | Some (DeclareExportDeclaration.Namespace n) -> declare_namespace n
             | None -> null
           in
           node
@@ -370,15 +443,24 @@ with type t = Impl.t = struct
             ("declaration", declaration);
             ("exportKind", string (string_of_export_kind Statement.ExportValue));
           ]
+      | (loc, ExportAssignment { ExportAssignment.rhs; comments }) ->
+        (match rhs with
+        | ExportAssignment.Expression expr ->
+          node ?comments "ExportAssignment" loc [("expression", expression expr)]
+        | ExportAssignment.DeclareFunction (fn_loc, decl) ->
+          node ?comments "ExportAssignment" loc [("expression", declare_function (fn_loc, decl))])
+      | (loc, NamespaceExportDeclaration { NamespaceExportDeclaration.id; comments }) ->
+        node ?comments "NamespaceExportDeclaration" loc [("id", identifier id)]
       | ( loc,
-          ImportDeclaration { ImportDeclaration.specifiers; default; import_kind; source; comments }
+          ImportDeclaration
+            { ImportDeclaration.specifiers; default; import_kind; source; attributes; comments }
         ) ->
         let specifiers =
           match specifiers with
           | Some (ImportDeclaration.ImportNamedSpecifiers specifiers) ->
             List.map
-              (fun { ImportDeclaration.local; remote; remote_name_def_loc = _; kind } ->
-                import_named_specifier local remote kind)
+              (fun { ImportDeclaration.local; remote; remote_name_def_loc = _; kind; kind_loc } ->
+                import_named_specifier local remote kind kind_loc)
               specifiers
           | Some (ImportDeclaration.ImportNamespaceSpecifier id) -> [import_namespace_specifier id]
           | None -> []
@@ -394,26 +476,79 @@ with type t = Impl.t = struct
           | ImportDeclaration.ImportTypeof -> "typeof"
           | ImportDeclaration.ImportValue -> "value"
         in
+        let attributes_json =
+          match attributes with
+          | None -> []
+          | Some (_, attrs) -> [("attributes", array (List.map import_attribute attrs))]
+        in
         node
           ?comments
           "ImportDeclaration"
           loc
+          ([
+             ("specifiers", array specifiers);
+             ("source", string_literal source);
+             ("importKind", string import_kind);
+           ]
+          @ attributes_json
+          )
+      | ( loc,
+          ImportEqualsDeclaration
+            {
+              ImportEqualsDeclaration.id = ident;
+              module_reference;
+              import_kind;
+              is_export;
+              comments;
+            }
+        ) ->
+        let module_reference_json =
+          let open ImportEqualsDeclaration in
+          match module_reference with
+          | ExternalModuleReference (annot_loc, lit) ->
+            node
+              "ExternalModuleReference"
+              annot_loc
+              [("expression", string_literal (annot_loc, lit))]
+          | Identifier git ->
+            let open Type.Generic.Identifier in
+            let generic_id = function
+              | Unqualified id -> identifier id
+              | Qualified q -> generic_type_qualified_identifier q
+              | ImportTypeAnnot it -> import_type it
+            in
+            generic_id git
+        in
+        let import_kind_str =
+          match import_kind with
+          | ImportDeclaration.ImportType -> "type"
+          | ImportDeclaration.ImportTypeof -> "typeof"
+          | ImportDeclaration.ImportValue -> "value"
+        in
+        node
+          ?comments
+          "ImportEqualsDeclaration"
+          loc
           [
-            ("specifiers", array specifiers);
-            ("source", string_literal source);
-            ("importKind", string import_kind);
+            ("id", identifier ident);
+            ("moduleReference", module_reference_json);
+            ("importKind", string import_kind_str);
+            ("isExport", bool is_export);
           ]
-    and expression =
+    and expression ?(in_optional_chain = false) expr =
       let open Expression in
-      function
+      match expr with
       | (loc, This { This.comments }) -> node ?comments "ThisExpression" loc []
       | (loc, Super { Super.comments }) -> node ?comments "Super" loc []
-      | (loc, Array { Array.elements; comments }) ->
+      | (loc, Array { Array.elements; trailing_comma; comments }) ->
         node
           ?comments:(format_internal_comments comments)
           "ArrayExpression"
           loc
-          [("elements", array_of_list array_element elements)]
+          [
+            ("elements", array_of_list array_element elements);
+            ("trailingComma", bool trailing_comma);
+          ]
       | (loc, Object { Object.properties; comments }) ->
         node
           ?comments:(format_internal_comments comments)
@@ -473,6 +608,12 @@ with type t = Impl.t = struct
         Unary.(
           (match operator with
           | Await -> node ?comments "AwaitExpression" loc [("argument", expression argument)]
+          | Nonnull ->
+            node
+              ?comments
+              "NonNullExpression"
+              loc
+              [("argument", expression argument); ("chain", bool false)]
           | _ ->
             let operator =
               match operator with
@@ -483,7 +624,9 @@ with type t = Impl.t = struct
               | Typeof -> "typeof"
               | Void -> "void"
               | Delete -> "delete"
-              | Await -> failwith "matched above"
+              | Nonnull
+              | Await ->
+                failwith "matched above"
             in
             node
               ?comments
@@ -575,7 +718,7 @@ with type t = Impl.t = struct
         let (arguments, comments) =
           match arguments with
           | Some ((_, { ArgList.comments = args_comments; _ }) as arguments) ->
-            ( arg_list arguments,
+            ( arg_list ~in_optional_chain:false arguments,
               Flow_ast_utils.merge_comments
                 ~inner:(format_internal_comments args_comments)
                 ~outer:comments
@@ -600,7 +743,15 @@ with type t = Impl.t = struct
             ~inner:(format_internal_comments args_comments)
             ~outer:comments
         in
-        node ?comments "CallExpression" loc (call_node_properties call)
+        (* Plain Call inside an optional chain marks a parenthesis boundary:
+           reset chain state for children so an inner optional access starts a
+           new chain. Otherwise, normal call. Either way emit CallExpression
+           with optional=false. *)
+        node
+          ?comments
+          "CallExpression"
+          loc
+          (call_node_properties ~in_optional_chain:false call @ [("optional", bool false)])
       | ( loc,
           OptionalCall
             {
@@ -616,22 +767,85 @@ with type t = Impl.t = struct
             ~inner:(format_internal_comments args_comments)
             ~outer:comments
         in
+        (match optional with
+        | OptionalCall.AssertNonnull ->
+          (* AssertNonnull (`expr!()`): emit CallExpression with
+             optional=false and the callee wrapped in NonNullExpression
+             (chain: true). Not part of the optional-chain rewrite, so
+             no ChainExpression wrap. *)
+          let wrap_callee callee =
+            node "NonNullExpression" loc [("argument", callee); ("chain", bool true)]
+          in
+          node
+            ?comments
+            "CallExpression"
+            loc
+            (call_node_properties ~in_optional_chain:false ~wrap_callee call
+            @ [("optional", bool false)]
+            )
+        | OptionalCall.Optional
+        | OptionalCall.NonOptional ->
+          let optional_value =
+            match optional with
+            | OptionalCall.Optional -> bool true
+            | _ -> bool false
+          in
+          let emit_inner () =
+            node
+              ?comments
+              "CallExpression"
+              loc
+              (call_node_properties ~in_optional_chain:true call @ [("optional", optional_value)])
+          in
+          if in_optional_chain then
+            emit_inner ()
+          else
+            node "ChainExpression" loc [("expression", emit_inner ())])
+      | (loc, Member ({ Member.comments; _ } as member)) ->
+        (* Plain Member inside an optional chain marks a parenthesis boundary;
+           reset chain state for children so an inner optional access starts a
+           new chain. Either way emit MemberExpression with optional=false. *)
         node
           ?comments
-          "OptionalCallExpression"
+          "MemberExpression"
           loc
-          (call_node_properties call @ [("optional", bool optional)])
-      | (loc, Member ({ Member.comments; _ } as member)) ->
-        node ?comments "MemberExpression" loc (member_node_properties member)
+          (member_node_properties ~in_optional_chain:false member @ [("optional", bool false)])
       | ( loc,
           OptionalMember
             { OptionalMember.member = { Member.comments; _ } as member; optional; filtered_out = _ }
         ) ->
-        node
-          ?comments
-          "OptionalMemberExpression"
-          loc
-          (member_node_properties member @ [("optional", bool optional)])
+        (match optional with
+        | OptionalMember.AssertNonnull ->
+          let wrap_receiver receiver =
+            node "NonNullExpression" loc [("argument", receiver); ("chain", bool true)]
+          in
+          node
+            ?comments
+            "MemberExpression"
+            loc
+            (member_node_properties ~in_optional_chain:false ~wrap_receiver member
+            @ [("optional", bool false)]
+            )
+        | OptionalMember.Optional
+        | OptionalMember.NonOptional ->
+          let optional_value =
+            match optional with
+            | OptionalMember.Optional -> bool true
+            | _ -> bool false
+          in
+          let emit_inner () =
+            node
+              ?comments
+              "MemberExpression"
+              loc
+              (member_node_properties ~in_optional_chain:true member
+              @ [("optional", optional_value)]
+              )
+          in
+          if in_optional_chain then
+            emit_inner ()
+          else
+            node "ChainExpression" loc [("expression", emit_inner ())])
       | (loc, Yield { Yield.argument; delegate; comments; result_out = _ }) ->
         node
           ?comments
@@ -663,12 +877,50 @@ with type t = Impl.t = struct
           "MetaProperty"
           loc
           [("meta", identifier meta); ("property", identifier property)]
-      | (loc, Import { Import.argument; comments }) ->
-        node ?comments "ImportExpression" loc [("source", expression argument)]
+      | (loc, Record { Record.constructor; targs; properties; comments }) ->
+        let properties =
+          let (props_loc, { Expression.Object.properties = props; comments = props_comments }) =
+            properties
+          in
+          node
+            ?comments:(format_internal_comments props_comments)
+            "RecordExpressionProperties"
+            props_loc
+            [("properties", array_of_list object_property props)]
+        in
+        node
+          ?comments
+          "RecordExpression"
+          loc
+          [
+            ("recordConstructor", expression constructor);
+            ("typeArguments", option call_type_args targs);
+            ("properties", properties);
+          ]
+      | (loc, Import { Import.argument; options; comments }) ->
+        let fields =
+          ("source", expression argument)
+          ::
+          (match options with
+          | Some opts -> [("options", expression opts)]
+          | None -> [])
+        in
+        node ?comments "ImportExpression" loc fields
     and match_expression_case case = match_case "MatchExpressionCase" ~on_case_body:expression case
     and match_case
           : 'B. string -> on_case_body:('B -> Impl.t) -> (Loc.t, Loc.t, 'B) Match.Case.t -> Impl.t =
-     fun kind ~on_case_body (loc, { Match.Case.pattern; body; guard; comments }) ->
+     fun kind
+         ~on_case_body
+         ( loc,
+           {
+             Match.Case.pattern;
+             body;
+             guard;
+             comments;
+             invalid_syntax = _;
+             case_match_root_loc = _;
+           }
+         ) ->
       node
         ?comments
         kind
@@ -683,7 +935,8 @@ with type t = Impl.t = struct
       let open MatchPattern in
       let literal x = node "MatchLiteralPattern" loc [("literal", x)] in
       match pattern with
-      | WildcardPattern comments -> node ?comments "MatchWildcardPattern" loc []
+      | WildcardPattern { WildcardPattern.comments; _ } ->
+        node ?comments "MatchWildcardPattern" loc []
       | StringPattern lit -> literal (string_literal (loc, lit))
       | BooleanPattern lit -> literal (boolean_literal (loc, lit))
       | NullPattern comments -> literal (null_literal (loc, comments))
@@ -707,78 +960,22 @@ with type t = Impl.t = struct
           [("operator", string operator); ("argument", argument)]
       | BindingPattern binding -> match_binding_pattern (loc, binding)
       | IdentifierPattern id -> match_identifier_pattern id
-      | MemberPattern mem ->
-        let rec member (loc, { MemberPattern.base; property; comments }) =
-          let member_base = function
-            | MemberPattern.BaseIdentifier id -> match_identifier_pattern id
-            | MemberPattern.BaseMember mem -> member mem
-          in
-          let member_property = function
-            | MemberPattern.PropertyString lit -> string_literal lit
-            | MemberPattern.PropertyNumber lit -> number_literal lit
-            | MemberPattern.PropertyBigInt lit -> bigint_literal lit
-            | MemberPattern.PropertyIdentifier id -> identifier id
-          in
-          node
-            ?comments
-            "MatchMemberPattern"
-            loc
-            [("base", member_base base); ("property", member_property property)]
+      | MemberPattern member -> match_member_pattern member
+      | ObjectPattern obj -> match_object_pattern "MatchObjectPattern" (loc, obj)
+      | ArrayPattern arr -> match_array_pattern (loc, arr)
+      | InstancePattern { InstancePattern.constructor; properties; comments } ->
+        let constructor =
+          match constructor with
+          | InstancePattern.IdentifierConstructor id -> match_identifier_pattern id
+          | InstancePattern.MemberConstructor member -> match_member_pattern member
         in
-        member mem
-      | ObjectPattern { ObjectPattern.properties; rest; comments } ->
-        let property_key key =
-          match key with
-          | ObjectPattern.Property.StringLiteral lit -> string_literal lit
-          | ObjectPattern.Property.NumberLiteral lit -> number_literal lit
-          | ObjectPattern.Property.BigIntLiteral lit -> bigint_literal lit
-          | ObjectPattern.Property.Identifier id -> identifier id
-        in
-        let property = function
-          | ( loc,
-              ObjectPattern.Property.Valid
-                { ObjectPattern.Property.key; pattern; shorthand; comments }
-            ) ->
-            node
-              ?comments
-              "MatchObjectPatternProperty"
-              loc
-              [
-                ("key", property_key key);
-                ("pattern", match_pattern pattern);
-                ("shorthand", bool shorthand);
-              ]
-          | (loc, ObjectPattern.Property.InvalidShorthand id) ->
-            node
-              "MatchObjectPatternProperty"
-              loc
-              [
-                ("key", identifier id);
-                ("pattern", match_identifier_pattern id);
-                ("shorthand", bool true);
-              ]
-        in
-
         node
-          ?comments:(format_internal_comments comments)
-          "MatchObjectPattern"
+          ?comments
+          "MatchInstancePattern"
           loc
           [
-            ("properties", array_of_list property properties);
-            ("rest", option match_rest_pattern rest);
-          ]
-      | ArrayPattern { ArrayPattern.elements; rest; comments } ->
-        node
-          ?comments:(format_internal_comments comments)
-          "MatchArrayPattern"
-          loc
-          [
-            ( "elements",
-              array_of_list
-                (fun { ArrayPattern.Element.pattern; _ } -> match_pattern pattern)
-                elements
-            );
-            ("rest", option match_rest_pattern rest);
+            ("targetConstructor", constructor);
+            ("properties", match_object_pattern "MatchInstanceObjectPattern" properties);
           ]
       | OrPattern { OrPattern.patterns; comments } ->
         node ?comments "MatchOrPattern" loc [("patterns", array_of_list match_pattern patterns)]
@@ -792,9 +989,73 @@ with type t = Impl.t = struct
     and match_identifier_pattern id =
       let (loc, _) = id in
       node "MatchIdentifierPattern" loc [("id", identifier id)]
+    and match_member_pattern (loc, { MatchPattern.MemberPattern.base; property; comments }) =
+      let open MatchPattern.MemberPattern in
+      let member_base = function
+        | BaseIdentifier id -> match_identifier_pattern id
+        | BaseMember member -> match_member_pattern member
+      in
+      let member_property = function
+        | PropertyString lit -> string_literal lit
+        | PropertyNumber lit -> number_literal lit
+        | PropertyBigInt lit -> bigint_literal lit
+        | PropertyIdentifier id -> identifier id
+      in
+      node
+        ?comments
+        "MatchMemberPattern"
+        loc
+        [("base", member_base base); ("property", member_property property)]
     and match_binding_pattern (loc, { MatchPattern.BindingPattern.kind; id; comments }) =
       let kind = Flow_ast_utils.string_of_variable_kind kind in
       node ?comments "MatchBindingPattern" loc [("id", identifier id); ("kind", string kind)]
+    and match_array_pattern (loc, { MatchPattern.ArrayPattern.elements; rest; comments }) =
+      let open MatchPattern.ArrayPattern in
+      node
+        ?comments:(format_internal_comments comments)
+        "MatchArrayPattern"
+        loc
+        [
+          ("elements", array_of_list (fun { Element.pattern; _ } -> match_pattern pattern) elements);
+          ("rest", option match_rest_pattern rest);
+        ]
+    and match_object_pattern kind (loc, { MatchPattern.ObjectPattern.properties; rest; comments }) =
+      let open MatchPattern.ObjectPattern in
+      let property_key key =
+        match key with
+        | Property.StringLiteral lit -> string_literal lit
+        | Property.NumberLiteral lit -> number_literal lit
+        | Property.BigIntLiteral lit -> bigint_literal lit
+        | Property.Identifier id -> identifier id
+      in
+      let property = function
+        | (loc, Property.Valid { Property.key; pattern; shorthand; comments }) ->
+          node
+            ?comments
+            "MatchObjectPatternProperty"
+            loc
+            [
+              ("key", property_key key);
+              ("pattern", match_pattern pattern);
+              ("shorthand", bool shorthand);
+            ]
+        | (loc, Property.InvalidShorthand id) ->
+          node
+            "MatchObjectPatternProperty"
+            loc
+            [
+              ("key", identifier id);
+              ("pattern", match_identifier_pattern id);
+              ("shorthand", bool true);
+            ]
+      in
+      node
+        ?comments:(format_internal_comments comments)
+        kind
+        loc
+        [
+          ("properties", array_of_list property properties); ("rest", option match_rest_pattern rest);
+        ]
     and match_rest_pattern (loc, { MatchPattern.RestPattern.argument; comments }) =
       node ?comments "MatchRestPattern" loc [("argument", option match_binding_pattern argument)]
     and function_declaration
@@ -825,7 +1086,7 @@ with type t = Impl.t = struct
       in
       let (node_name, nonhook_attrs) =
         if effect_ = Function.Hook then
-          ("HookDeclaration", [])
+          ("HookDeclaration", [("async", bool async)])
         else
           ( "FunctionDeclaration",
             [
@@ -916,11 +1177,11 @@ with type t = Impl.t = struct
           ("typeAnnotation", hint type_annotation annot);
           ("optional", bool optional);
         ]
-    and arg_list (_loc, { Expression.ArgList.arguments; comments = _ }) =
+    and arg_list ~in_optional_chain (_loc, { Expression.ArgList.arguments; comments = _ }) =
       (* ESTree does not have a unique node for argument lists, so there's nowhere to
          include the loc. *)
-      array_of_list expression_or_spread arguments
-    and case (loc, { Statement.Switch.Case.test; consequent; comments }) =
+      array_of_list (expression_or_spread ~in_optional_chain) arguments
+    and case (loc, { Statement.Switch.Case.test; case_test_loc = _; consequent; comments }) =
       node
         ?comments
         "SwitchCase"
@@ -934,28 +1195,41 @@ with type t = Impl.t = struct
         "BlockStatement"
         loc
         [("body", statement_list body)]
-    and declare_variable (loc, { Statement.DeclareVariable.id; annot; kind; comments }) =
-      let id_loc = Loc.btwn (fst id) (fst annot) in
-      let kind = Flow_ast_utils.string_of_variable_kind kind in
+    and declare_variable (loc, { Statement.DeclareVariable.declarations; kind; comments }) =
+      let kind_str = Flow_ast_utils.string_of_variable_kind kind in
       node
         ?comments
         "DeclareVariable"
         loc
         [
-          ( "id",
-            pattern_identifier
-              id_loc
-              { Pattern.Identifier.name = id; annot = Ast.Type.Available annot; optional = false }
-          );
-          ("kind", string kind);
+          ("declarations", array_of_list variable_declarator declarations); ("kind", string kind_str);
         ]
     and declare_function
-        (loc, { Statement.DeclareFunction.id; annot; predicate = predicate_; comments }) =
-      let id_loc = Loc.btwn (fst id) (fst annot) in
+        ( loc,
+          {
+            Statement.DeclareFunction.id;
+            annot;
+            predicate = predicate_;
+            comments;
+            implicit_declare;
+          }
+        ) =
+      let id_loc =
+        match id with
+        | Some id -> Loc.btwn (fst id) (fst annot)
+        | None -> fst annot
+      in
       let (name, predicate) =
         match annot with
         | (_, (_, Type.Function { Type.Function.effect_ = Function.Hook; _ })) -> ("DeclareHook", [])
         | _ -> ("DeclareFunction", [("predicate", option predicate predicate_)])
+      in
+      let annot_field =
+        (* Only output if we aren't putting the annot on the `id` *)
+        if Option.is_none id then
+          [("typeAnnotation", type_annotation annot)]
+        else
+          []
       in
       node
         ?comments
@@ -963,19 +1237,48 @@ with type t = Impl.t = struct
         loc
         ([
            ( "id",
-             pattern_identifier
-               id_loc
-               { Pattern.Identifier.name = id; annot = Ast.Type.Available annot; optional = false }
+             match id with
+             | Some id ->
+               pattern_identifier
+                 id_loc
+                 {
+                   Pattern.Identifier.name = id;
+                   annot = Ast.Type.Available annot;
+                   optional = false;
+                 }
+             | None -> null
            );
+           ("implicitDeclare", bool implicit_declare);
          ]
+        @ annot_field
         @ predicate
         )
     and declare_class
-        (loc, { Statement.DeclareClass.id; tparams; body; extends; implements; mixins; comments }) =
+        ( loc,
+          {
+            Statement.DeclareClass.id;
+            tparams;
+            body;
+            extends;
+            implements;
+            mixins;
+            abstract;
+            comments;
+          }
+        ) =
       (* TODO: extends shouldn't return an array *)
+      let rec declare_class_extends_to_estree (loc, ext) =
+        match ext with
+        | Statement.DeclareClass.ExtendsIdent generic -> interface_extends (loc, generic)
+        | Statement.DeclareClass.ExtendsCall { callee; arg } ->
+          node
+            "DeclareClassExtendsCall"
+            loc
+            [("callee", generic_type callee); ("argument", declare_class_extends_to_estree arg)]
+      in
       let extends =
         match extends with
-        | Some extends -> array [interface_extends extends]
+        | Some ext -> array [declare_class_extends_to_estree ext]
         | None -> array []
       in
       let implements =
@@ -988,19 +1291,26 @@ with type t = Impl.t = struct
         ?comments
         "DeclareClass"
         loc
-        [
-          ("id", identifier id);
-          ("typeParameters", option type_parameter_declaration tparams);
-          ("body", object_type ~include_inexact:false body);
-          ("extends", extends);
-          ("implements", implements);
-          ("mixins", array_of_list interface_extends mixins);
-        ]
+        ([
+           ("id", identifier id);
+           ("typeParameters", option type_parameter_declaration tparams);
+           ("body", object_type ~include_inexact:false body);
+           ("extends", extends);
+           ("implements", implements);
+           ("mixins", array_of_list interface_extends mixins);
+         ]
+        @
+        if abstract then
+          [("abstract", bool abstract)]
+        else
+          []
+        )
     and declare_component (loc, component) =
       let {
         Statement.DeclareComponent.id;
         tparams;
-        params = (_, { Type.Component.Params.comments = params_comments; _ }) as params;
+        params =
+          (_, { Statement.ComponentDeclaration.Params.comments = params_comments; _ }) as params;
         renders;
         comments = component_comments;
       } =
@@ -1011,16 +1321,13 @@ with type t = Impl.t = struct
           ~outer:component_comments
           ~inner:(format_internal_comments params_comments)
       in
-      let (_, { Type.Component.Params.params = param_list; rest; comments = _ }) = params in
       node
         ?comments
         "DeclareComponent"
         loc
         [
           ("id", identifier id);
-          ("params", component_type_params param_list);
-          ("rest", option component_type_rest_param rest);
-          ("params", component_type_params param_list);
+          ("params", component_params params);
           ("rendersType", renders_annotation renders);
           ("typeParameters", option type_parameter_declaration tparams);
         ]
@@ -1081,8 +1388,15 @@ with type t = Impl.t = struct
         "ComponentTypeParameter"
         loc
         [("name", name'); ("typeAnnotation", _type annot); ("optional", bool optional)]
-    and declare_enum (loc, { Statement.EnumDeclaration.id; body; comments }) =
-      node ?comments "DeclareEnum" loc [("id", identifier id); ("body", enum_body body)]
+    and declare_enum (loc, { Statement.EnumDeclaration.id; body; const_; comments }) =
+      let props = [("id", identifier id); ("body", enum_body body)] in
+      let props =
+        if const_ then
+          ("const", bool true) :: props
+        else
+          props
+      in
+      node ?comments "DeclareEnum" loc props
     and declare_interface (loc, { Statement.Interface.id; tparams; body; extends; comments }) =
       node
         ?comments
@@ -1094,6 +1408,33 @@ with type t = Impl.t = struct
           ("body", object_type ~include_inexact:false body);
           ("extends", array_of_list interface_extends extends);
         ]
+    and declare_namespace
+        (loc, { Statement.DeclareNamespace.id; body; comments; implicit_declare; keyword }) =
+      let (id, global) =
+        match id with
+        | Statement.DeclareNamespace.Local id -> (identifier id, false)
+        | Statement.DeclareNamespace.Global id -> (identifier id, true)
+      in
+      let keyword_str =
+        match keyword with
+        | Statement.DeclareNamespace.Namespace -> "namespace"
+        | Statement.DeclareNamespace.Module -> "module"
+      in
+      let props =
+        [
+          ("id", id);
+          ("body", block body);
+          ("implicitDeclare", bool implicit_declare);
+          ("keyword", string keyword_str);
+        ]
+      in
+      let props =
+        if global then
+          ("global", bool global) :: props
+        else
+          props
+      in
+      node ?comments "DeclareNamespace" loc props
     and string_of_export_kind = function
       | Statement.ExportType -> "type"
       | Statement.ExportValue -> "value"
@@ -1129,7 +1470,18 @@ with type t = Impl.t = struct
           ("right", _type right);
         ]
     and opaque_type
-        ~declare (loc, { Statement.OpaqueType.id; tparams; impltype; supertype; comments }) =
+        ~declare
+        ( loc,
+          {
+            Statement.OpaqueType.id;
+            tparams;
+            impl_type;
+            lower_bound;
+            upper_bound;
+            legacy_upper_bound;
+            comments;
+          }
+        ) =
       let name =
         if declare then
           "DeclareOpaqueType"
@@ -1143,13 +1495,16 @@ with type t = Impl.t = struct
         [
           ("id", identifier id);
           ("typeParameters", option type_parameter_declaration tparams);
-          ("impltype", option _type impltype);
-          ("supertype", option _type supertype);
+          ("impltype", option _type impl_type);
+          ("lowerBound", option _type lower_bound);
+          ("upperBound", option _type upper_bound);
+          ("supertype", option _type legacy_upper_bound);
         ]
     and class_declaration ast = class_helper "ClassDeclaration" ast
     and class_expression ast = class_helper "ClassExpression" ast
     and class_helper
-        node_type (loc, { Class.id; extends; body; tparams; implements; class_decorators; comments })
+        node_type
+        (loc, { Class.id; extends; body; tparams; implements; class_decorators; abstract; comments })
         =
       let (super, super_targs, comments) =
         match extends with
@@ -1169,32 +1524,74 @@ with type t = Impl.t = struct
         ?comments
         node_type
         loc
-        [
-          (* estree hasn't come around to the idea that class decls can have
-             optional ids, but acorn, babel, espree and esprima all have, so let's
-             do it too. see https://github.com/estree/estree/issues/98 *)
-          ("id", option identifier id);
-          ("body", class_body body);
-          ("typeParameters", option type_parameter_declaration tparams);
-          ("superClass", option expression super);
-          ("superTypeParameters", option type_args super_targs);
-          ("implements", implements);
-          ("decorators", array_of_list class_decorator class_decorators);
-        ]
+        ([
+           (* estree hasn't come around to the idea that class decls can have
+              optional ids, but acorn, babel, espree and esprima all have, so let's
+              do it too. see https://github.com/estree/estree/issues/98 *)
+           ("id", option identifier id);
+           ("body", class_body body);
+           ("typeParameters", option type_parameter_declaration tparams);
+           ("superClass", option expression super);
+           ("superTypeArguments", option type_args super_targs);
+           ("implements", implements);
+           ("decorators", array_of_list class_decorator class_decorators);
+         ]
+        @
+        if abstract then
+          [("abstract", bool abstract)]
+        else
+          []
+        )
     and class_decorator (loc, { Class.Decorator.expression = expr; comments }) =
       node ?comments "Decorator" loc [("expression", expression expr)]
     and class_implements (loc, { Class.Implements.Interface.id; targs }) =
-      node "ClassImplements" loc [("id", identifier id); ("typeParameters", option type_args targs)]
+      let id =
+        match id with
+        | Type.Generic.Identifier.Unqualified id -> identifier id
+        | Type.Generic.Identifier.Qualified q -> generic_type_qualified_identifier q
+        | Type.Generic.Identifier.ImportTypeAnnot it -> import_type it
+      in
+      node "ClassImplements" loc [("id", id); ("typeParameters", option type_args targs)]
     and class_body (loc, { Class.Body.body; comments }) =
       node ?comments "ClassBody" loc [("body", array_of_list class_element body)]
+    and ts_accessibility_to_string ts_accessibility =
+      match ts_accessibility with
+      | Some (_, { Class.TSAccessibility.kind = Class.TSAccessibility.Public; _ }) -> Some "public"
+      | Some (_, { Class.TSAccessibility.kind = Class.TSAccessibility.Protected; _ }) ->
+        Some "protected"
+      | Some (_, { Class.TSAccessibility.kind = Class.TSAccessibility.Private; _ }) ->
+        Some "private"
+      | None -> None
     and class_element =
       Class.Body.(
         function
         | Method m -> class_method m
         | PrivateField p -> class_private_field p
         | Property p -> class_property p
+        | StaticBlock (loc, { Class.StaticBlock.body; comments }) ->
+          node
+            ?comments:(format_internal_comments comments)
+            "StaticBlock"
+            loc
+            [("body", statement_list body)]
+        | DeclareMethod dm -> class_declare_method dm
+        | AbstractMethod am -> class_abstract_method am
+        | AbstractProperty ap -> class_abstract_property ap
+        | IndexSignature i -> object_type_indexer i
       )
-    and class_method (loc, { Class.Method.key; value; kind; static; decorators; comments }) =
+    and class_method
+        ( loc,
+          {
+            Class.Method.key;
+            value;
+            kind;
+            static;
+            override;
+            ts_accessibility;
+            decorators;
+            comments;
+          }
+        ) =
       let (key, computed, comments) =
         let open Expression.Object.Property in
         match key with
@@ -1222,14 +1619,117 @@ with type t = Impl.t = struct
         ?comments
         "MethodDefinition"
         loc
-        [
-          ("key", key);
-          ("value", function_expression value);
-          ("kind", string kind);
-          ("static", bool static);
-          ("computed", bool computed);
-          ("decorators", array_of_list class_decorator decorators);
-        ]
+        ([
+           ("key", key);
+           ("value", function_expression value);
+           ("kind", string kind);
+           ("static", bool static);
+           ("computed", bool computed);
+           ("decorators", array_of_list class_decorator decorators);
+         ]
+        @ ( if override then
+            [("override", bool override)]
+          else
+            []
+          )
+        @
+        match ts_accessibility_to_string ts_accessibility with
+        | Some v -> [("tsAccessibility", string v)]
+        | None -> []
+        )
+    and class_declare_method
+        (loc, { Class.DeclareMethod.kind; key; annot; static; override; optional; comments }) =
+      let (key, computed, comments) =
+        let open Expression.Object.Property in
+        match key with
+        | StringLiteral lit -> (string_literal lit, false, comments)
+        | NumberLiteral lit -> (number_literal lit, false, comments)
+        | BigIntLiteral lit -> (bigint_literal lit, false, comments)
+        | Identifier id -> (identifier id, false, comments)
+        | PrivateName name -> (private_identifier name, false, comments)
+        | Computed (_, { ComputedKey.expression = expr; comments = computed_comments }) ->
+          ( expression expr,
+            true,
+            Flow_ast_utils.merge_comments ~outer:comments ~inner:computed_comments
+          )
+      in
+      let kind_prop =
+        let open Class.Method in
+        match kind with
+        | Get -> [("kind", string "get")]
+        | Set -> [("kind", string "set")]
+        | Method
+        | Constructor ->
+          []
+      in
+      node
+        ?comments
+        "DeclareMethodDefinition"
+        loc
+        ([
+           ("key", key);
+           ("value", type_annotation annot);
+           ("static", bool static);
+           ("optional", bool optional);
+           ("computed", bool computed);
+         ]
+        @ ( if override then
+            [("override", bool override)]
+          else
+            []
+          )
+        @ kind_prop
+        )
+    and class_abstract_method
+        (loc, { Class.AbstractMethod.key; annot; override; ts_accessibility; comments }) =
+      let (key, computed, comments) = property_key ~comments key in
+      node
+        ?comments
+        "AbstractMethodDefinition"
+        loc
+        ([("key", key); ("value", function_type annot); ("computed", bool computed)]
+        @ ( if override then
+            [("override", bool override)]
+          else
+            []
+          )
+        @
+        match ts_accessibility_to_string ts_accessibility with
+        | Some v -> [("tsAccessibility", string v)]
+        | None -> []
+        )
+    and class_abstract_property
+        ( loc,
+          {
+            Class.AbstractProperty.key;
+            annot;
+            override;
+            ts_accessibility;
+            variance = variance_;
+            comments;
+          }
+        ) =
+      let (key, computed, comments) = property_key ~comments key in
+      node
+        ?comments
+        "AbstractPropertyDefinition"
+        loc
+        ([
+           ("key", key);
+           ("value", hint type_annotation annot);
+           ("computed", bool computed);
+           ("variance", option variance variance_);
+         ]
+        @ ( if override then
+            [("override", bool override)]
+          else
+            []
+          )
+        @
+        match ts_accessibility_to_string ts_accessibility with
+        | Some v -> [("tsAccessibility", string v)]
+        | None -> []
+        )
     and class_private_field
         ( loc,
           {
@@ -1237,7 +1737,10 @@ with type t = Impl.t = struct
             value;
             annot;
             static;
+            override;
+            optional;
             variance = variance_;
+            ts_accessibility;
             decorators;
             comments;
           }
@@ -1255,8 +1758,17 @@ with type t = Impl.t = struct
           ("typeAnnotation", hint type_annotation annot);
           ("computed", bool false);
           ("static", bool static);
+          ("optional", bool optional);
           ("variance", option variance variance_);
         ]
+        @ ( if override then
+            [("override", bool override)]
+          else
+            []
+          )
+        @ (match ts_accessibility_to_string ts_accessibility with
+          | Some v -> [("tsAccessibility", string v)]
+          | None -> [])
         @ ( if decorators = [] then
             []
           else
@@ -1269,22 +1781,32 @@ with type t = Impl.t = struct
           []
       in
       node ?comments "PropertyDefinition" loc props
-    and class_property
-        ( loc,
-          { Class.Property.key; value; annot; static; variance = variance_; decorators; comments }
-        ) =
-      let (key, computed, comments) =
-        match key with
-        | Expression.Object.Property.StringLiteral lit -> (string_literal lit, false, comments)
-        | Expression.Object.Property.NumberLiteral lit -> (number_literal lit, false, comments)
-        | Expression.Object.Property.BigIntLiteral lit -> (bigint_literal lit, false, comments)
-        | Expression.Object.Property.Identifier id -> (identifier id, false, comments)
-        | Expression.Object.Property.PrivateName _ ->
-          failwith "Internal Error: Private name found in class prop"
-        | Expression.Object.Property.Computed
-            (_, { ComputedKey.expression = expr; comments = key_comments }) ->
-          (expression expr, true, Flow_ast_utils.merge_comments ~outer:comments ~inner:key_comments)
-      in
+    and property_key ~comments = function
+      | Expression.Object.Property.StringLiteral lit -> (string_literal lit, false, comments)
+      | Expression.Object.Property.NumberLiteral lit -> (number_literal lit, false, comments)
+      | Expression.Object.Property.BigIntLiteral lit -> (bigint_literal lit, false, comments)
+      | Expression.Object.Property.Identifier id -> (identifier id, false, comments)
+      | Expression.Object.Property.PrivateName name -> (private_identifier name, false, comments)
+      | Expression.Object.Property.Computed
+          (_, { ComputedKey.expression = expr; comments = key_comments }) ->
+        (expression expr, true, Flow_ast_utils.merge_comments ~outer:comments ~inner:key_comments)
+    and class_property (loc, prop) = class_property_helper "PropertyDefinition" loc prop
+    and class_property_helper
+        type_
+        loc
+        {
+          Class.Property.key;
+          value;
+          annot;
+          static;
+          override;
+          optional;
+          variance = variance_;
+          ts_accessibility;
+          decorators;
+          comments;
+        } =
+      let (key, computed, comments) = property_key ~comments key in
       let (value, declare) =
         match value with
         | Class.Property.Declared -> (None, true)
@@ -1298,8 +1820,17 @@ with type t = Impl.t = struct
           ("typeAnnotation", hint type_annotation annot);
           ("computed", bool computed);
           ("static", bool static);
+          ("optional", bool optional);
           ("variance", option variance variance_);
         ]
+        @ ( if override then
+            [("override", bool override)]
+          else
+            []
+          )
+        @ (match ts_accessibility_to_string ts_accessibility with
+          | Some v -> [("tsAccessibility", string v)]
+          | None -> [])
         @ ( if decorators = [] then
             []
           else
@@ -1311,7 +1842,7 @@ with type t = Impl.t = struct
         else
           []
       in
-      node ?comments "PropertyDefinition" loc props
+      node ?comments type_ loc props
     and component_declaration (loc, component) =
       let open Statement.ComponentDeclaration in
       let {
@@ -1320,6 +1851,7 @@ with type t = Impl.t = struct
         params = (_, { Params.comments = params_comments; _ }) as params;
         body;
         renders;
+        async;
         comments = component_comments;
         sig_loc = _;
       } =
@@ -1330,13 +1862,20 @@ with type t = Impl.t = struct
           ~outer:component_comments
           ~inner:(format_internal_comments params_comments)
       in
+      let (node_type, implicit_declare) =
+        match body with
+        | None -> ("DeclareComponent", true)
+        | Some _ -> ("ComponentDeclaration", false)
+      in
       node
         ?comments
-        "ComponentDeclaration"
+        node_type
         loc
         [
-          ("body", block body);
+          ("async", bool async);
+          ("body", option block body);
           ("id", identifier id);
+          ("implicitDeclare", bool implicit_declare);
           ("params", component_params params);
           ("rendersType", renders_annotation renders);
           ("typeParameters", option type_parameter_declaration tparams);
@@ -1378,94 +1917,46 @@ with type t = Impl.t = struct
         [("name", name'); ("local", local'); ("shorthand", bool shorthand)]
     and enum_body body =
       let open Statement.EnumDeclaration in
-      match body with
-      | (loc, BooleanBody { BooleanBody.members; explicit_type; has_unknown_members; comments }) ->
-        node
-          ?comments:(format_internal_comments comments)
-          "EnumBooleanBody"
-          loc
-          [
-            ( "members",
-              array_of_list
-                (fun (loc, { InitializedMember.id; init }) ->
-                  node
-                    "EnumBooleanMember"
-                    loc
-                    [("id", identifier id); ("init", boolean_literal init)])
-                members
-            );
-            ("explicitType", bool explicit_type);
-            ("hasUnknownMembers", bool has_unknown_members);
-          ]
-      | (loc, NumberBody { NumberBody.members; explicit_type; has_unknown_members; comments }) ->
-        node
-          ?comments:(format_internal_comments comments)
-          "EnumNumberBody"
-          loc
-          [
-            ( "members",
-              array_of_list
-                (fun (loc, { InitializedMember.id; init }) ->
-                  node "EnumNumberMember" loc [("id", identifier id); ("init", number_literal init)])
-                members
-            );
-            ("explicitType", bool explicit_type);
-            ("hasUnknownMembers", bool has_unknown_members);
-          ]
-      | (loc, StringBody { StringBody.members; explicit_type; has_unknown_members; comments }) ->
-        let members =
-          match members with
-          | StringBody.Defaulted defaulted_members ->
-            List.map
-              (fun (loc, { DefaultedMember.id }) ->
-                node "EnumDefaultedMember" loc [("id", identifier id)])
-              defaulted_members
-          | StringBody.Initialized initialized_members ->
-            List.map
-              (fun (loc, { InitializedMember.id; init }) ->
-                node "EnumStringMember" loc [("id", identifier id); ("init", string_literal init)])
-              initialized_members
-        in
-        node
-          ?comments:(format_internal_comments comments)
-          "EnumStringBody"
-          loc
-          [
-            ("members", array members);
-            ("explicitType", bool explicit_type);
-            ("hasUnknownMembers", bool has_unknown_members);
-          ]
-      | (loc, SymbolBody { SymbolBody.members; has_unknown_members; comments }) ->
-        node
-          ?comments:(format_internal_comments comments)
-          "EnumSymbolBody"
-          loc
-          [
-            ( "members",
-              array_of_list
-                (fun (loc, { DefaultedMember.id }) ->
-                  node "EnumDefaultedMember" loc [("id", identifier id)])
-                members
-            );
-            ("hasUnknownMembers", bool has_unknown_members);
-          ]
-      | (loc, BigIntBody { BigIntBody.members; explicit_type; has_unknown_members; comments }) ->
-        node
-          ?comments:(format_internal_comments comments)
-          "EnumBigIntBody"
-          loc
-          [
-            ( "members",
-              array_of_list
-                (fun (loc, { InitializedMember.id; init }) ->
-                  node "EnumBigIntMember" loc [("id", identifier id); ("init", bigint_literal init)])
-                members
-            );
-            ("explicitType", bool explicit_type);
-            ("hasUnknownMembers", bool has_unknown_members);
-          ]
-    and enum_declaration (loc, { Statement.EnumDeclaration.id; body; comments }) =
-      node ?comments "EnumDeclaration" loc [("id", identifier id); ("body", enum_body body)]
+      let (loc, { Body.members; explicit_type; has_unknown_members; comments }) = body in
+      let enum_member_name = function
+        | Identifier id -> identifier id
+        | StringLiteral sl -> string_literal sl
+      in
+      let enum_member = function
+        | BooleanMember (loc, { InitializedMember.id; init }) ->
+          node "EnumBooleanMember" loc [("id", enum_member_name id); ("init", boolean_literal init)]
+        | NumberMember (loc, { InitializedMember.id; init }) ->
+          node "EnumNumberMember" loc [("id", enum_member_name id); ("init", number_literal init)]
+        | StringMember (loc, { InitializedMember.id; init }) ->
+          node "EnumStringMember" loc [("id", enum_member_name id); ("init", string_literal init)]
+        | BigIntMember (loc, { InitializedMember.id; init }) ->
+          node "EnumBigIntMember" loc [("id", enum_member_name id); ("init", bigint_literal init)]
+        | DefaultedMember (loc, { DefaultedMember.id }) ->
+          node "EnumDefaultedMember" loc [("id", enum_member_name id)]
+      in
+      let explicit_type_str =
+        match explicit_type with
+        | Some (_, et) -> string (Flow_ast_utils.string_of_enum_explicit_type et)
+        | None -> null
+      in
+      node
+        ?comments:(format_internal_comments comments)
+        "EnumBody"
+        loc
+        [
+          ("members", array_of_list enum_member members);
+          ("explicitType", explicit_type_str);
+          ("hasUnknownMembers", bool (has_unknown_members <> None));
+        ]
+    and enum_declaration (loc, { Statement.EnumDeclaration.id; body; const_; comments }) =
+      let props = [("id", identifier id); ("body", enum_body body)] in
+      let props =
+        if const_ then
+          ("const", bool true) :: props
+        else
+          props
+      in
+      node ?comments "EnumDeclaration" loc props
     and interface_declaration (loc, { Statement.Interface.id; tparams; body; extends; comments }) =
       node
         ?comments
@@ -1482,12 +1973,13 @@ with type t = Impl.t = struct
         match id with
         | Type.Generic.Identifier.Unqualified id -> identifier id
         | Type.Generic.Identifier.Qualified q -> generic_type_qualified_identifier q
+        | Type.Generic.Identifier.ImportTypeAnnot it -> import_type it
       in
       node ?comments "InterfaceExtends" loc [("id", id); ("typeParameters", option type_args targs)]
     and pattern =
       Pattern.(
         function
-        | (loc, Object { Object.properties; annot; comments }) ->
+        | (loc, Object { Object.properties; annot; optional; comments }) ->
           node
             ?comments:(format_internal_comments comments)
             "ObjectPattern"
@@ -1495,8 +1987,9 @@ with type t = Impl.t = struct
             [
               ("properties", array_of_list object_pattern_property properties);
               ("typeAnnotation", hint type_annotation annot);
+              ("optional", bool optional);
             ]
-        | (loc, Array { Array.elements; annot; comments }) ->
+        | (loc, Array { Array.elements; annot; optional; comments }) ->
           node
             ?comments:(format_internal_comments comments)
             "ArrayPattern"
@@ -1504,15 +1997,20 @@ with type t = Impl.t = struct
             [
               ("elements", array_of_list array_pattern_element elements);
               ("typeAnnotation", hint type_annotation annot);
+              ("optional", bool optional);
             ]
         | (loc, Identifier pattern_id) -> pattern_identifier loc pattern_id
         | (_loc, Expression expr) -> expression expr
       )
-    and function_param (loc, { Ast.Function.Param.argument; default }) =
-      match default with
-      | Some default ->
-        node "AssignmentPattern" loc [("left", pattern argument); ("right", expression default)]
-      | None -> pattern argument
+    and function_param (loc, param) =
+      let open Ast.Function.Param in
+      match param with
+      | RegularParam { argument; default } ->
+        (match default with
+        | Some default ->
+          node "AssignmentPattern" loc [("left", pattern argument); ("right", expression default)]
+        | None -> pattern argument)
+      | ParamProperty prop -> class_property_helper "ParameterProperty" loc prop
     and this_param (loc, { Function.ThisParam.annot; comments }) =
       node
         ?comments
@@ -1577,19 +2075,7 @@ with type t = Impl.t = struct
             | Set { key; value = (loc, func); comments } ->
               (key, function_expression (loc, func), "set", false, false, comments)
           in
-          let (key, computed, comments) =
-            match key with
-            | StringLiteral lit -> (string_literal lit, false, comments)
-            | NumberLiteral lit -> (number_literal lit, false, comments)
-            | BigIntLiteral lit -> (bigint_literal lit, false, comments)
-            | Identifier id -> (identifier id, false, comments)
-            | PrivateName _ -> failwith "Internal Error: Found private field in object props"
-            | Computed (_, { ComputedKey.expression = expr; comments = key_comments }) ->
-              ( expression expr,
-                true,
-                Flow_ast_utils.merge_comments ~outer:comments ~inner:key_comments
-              )
-          in
+          let (key, computed, comments) = property_key ~comments key in
           node
             ?comments
             "Property"
@@ -1638,32 +2124,23 @@ with type t = Impl.t = struct
             ("computed", bool computed);
           ]
       | RestElement (loc, el) -> rest_element loc el
-    and spread_element (loc, { Expression.SpreadElement.argument; comments }) =
-      node ?comments "SpreadElement" loc [("argument", expression argument)]
-    and expression_or_spread =
+    and spread_element ~in_optional_chain (loc, { Expression.SpreadElement.argument; comments }) =
+      node ?comments "SpreadElement" loc [("argument", expression ~in_optional_chain argument)]
+    and expression_or_spread ~in_optional_chain =
       let open Expression in
       function
-      | Expression expr -> expression expr
-      | Spread spread -> spread_element spread
+      | Expression expr -> expression ~in_optional_chain expr
+      | Spread spread -> spread_element ~in_optional_chain spread
     and array_element =
       let open Expression.Array in
       function
       | Hole _ -> null
       | Expression expr -> expression expr
-      | Spread spread -> spread_element spread
+      | Spread spread -> spread_element ~in_optional_chain:false spread
     and number_literal (loc, { NumberLiteral.value; raw; comments }) =
       node ?comments "Literal" loc [("value", number value); ("raw", string raw)]
-    and bigint_literal (loc, { BigIntLiteral.value; raw; comments }) =
-      (* https://github.com/estree/estree/blob/master/es2020.md#bigintliteral
-       * `bigint` property is the string representation of the `BigInt` value.
-       * It must contain only decimal digits and not include numeric separators `_` or the suffix `n`.
-       *)
-      let bigint =
-        match value with
-        | Some value -> Int64.to_string value
-        | None ->
-          String.sub raw 0 (String.length raw - 1) |> String.split_on_char '_' |> String.concat ""
-      in
+    and bigint_literal (loc, ({ BigIntLiteral.raw; value = _; comments } as bigint)) =
+      let bigint = Flow_ast_utils.string_of_bigint bigint in
       node ?comments "Literal" loc [("value", null); ("bigint", string bigint); ("raw", string raw)]
     and string_literal (loc, { StringLiteral.value; raw; comments }) =
       node ?comments "Literal" loc [("value", string value); ("raw", string raw)]
@@ -1702,12 +2179,16 @@ with type t = Impl.t = struct
         ) =
       let value = obj [("raw", string raw); ("cooked", string cooked)] in
       node "TemplateElement" loc [("value", value); ("tail", bool tail)]
-    and tagged_template (loc, { Expression.TaggedTemplate.tag; quasi; comments }) =
+    and tagged_template (loc, { Expression.TaggedTemplate.tag; targs; quasi; comments }) =
       node
         ?comments
         "TaggedTemplateExpression"
         loc
-        [("tag", expression tag); ("quasi", template_literal quasi)]
+        [
+          ("tag", expression tag);
+          ("typeArguments", option call_type_args targs);
+          ("quasi", template_literal quasi);
+        ]
     and variable_declaration (loc, { Statement.VariableDeclaration.kind; declarations; comments }) =
       let kind = Flow_ast_utils.string_of_variable_kind kind in
       node
@@ -1724,6 +2205,7 @@ with type t = Impl.t = struct
         | Plus -> "plus"
         | Minus -> "minus"
         | Readonly -> "readonly"
+        | Writeonly -> "writeonly"
         | In -> "in"
         | Out -> "out"
         | InOut -> "in-out"
@@ -1764,10 +2246,13 @@ with type t = Impl.t = struct
         | NumberLiteral n -> number_literal_type (loc, n)
         | BigIntLiteral n -> bigint_literal_type (loc, n)
         | BooleanLiteral b -> boolean_literal_type (loc, b)
+        | TemplateLiteral t -> template_literal_type (loc, t)
         | Exists comments -> exists_type loc comments
         | Unknown comments -> unknown_type loc comments
         | Never comments -> never_type loc comments
         | Undefined comments -> undefined_type loc comments
+        | UniqueSymbol comments -> unique_symbol_type loc comments
+        | ConstructorType ct -> constructor_type (loc, ct)
       )
     and any_type loc comments = node ?comments "AnyTypeAnnotation" loc []
     and mixed_type loc comments = node ?comments "MixedTypeAnnotation" loc []
@@ -1784,8 +2269,15 @@ with type t = Impl.t = struct
     and unknown_type loc comments = node ?comments "UnknownTypeAnnotation" loc []
     and never_type loc comments = node ?comments "NeverTypeAnnotation" loc []
     and undefined_type loc comments = node ?comments "UndefinedTypeAnnotation" loc []
+    and unique_symbol_type loc comments =
+      node
+        ?comments
+        "TypeOperator"
+        loc
+        [("operator", string "unique"); ("typeAnnotation", node "SymbolTypeAnnotation" loc [])]
     and return_annotation = function
-      | Ast.Type.Function.TypeAnnotation t -> _type t
+      | Ast.Type.Function.Missing _ -> null
+      | Ast.Type.Function.Available t -> _type t
       | Ast.Type.Function.TypeGuard g -> type_guard g
     and type_guard (loc, { Ast.Type.TypeGuard.kind; guard = (x, t); comments }) =
       let kind =
@@ -1838,16 +2330,53 @@ with type t = Impl.t = struct
         else
           [("this", option function_type_this_constraint this_)]
         )
-    and function_type_param ?comments (loc, { Type.Function.Param.name; annot; optional }) =
+    and constructor_type
+        ( loc,
+          {
+            Type.ConstructorType.abstract_;
+            func =
+              {
+                Type.Function.params =
+                  (_, { Type.Function.Params.this_ = _; params; rest; comments = params_comments });
+                return;
+                tparams;
+                effect_ = _;
+                comments = func_comments;
+              };
+          }
+        ) =
+      let comments =
+        Flow_ast_utils.merge_comments
+          ~inner:(format_internal_comments params_comments)
+          ~outer:func_comments
+      in
       node
         ?comments
-        "FunctionTypeParam"
+        "ConstructorTypeAnnotation"
         loc
         [
-          ("name", option identifier name);
-          ("typeAnnotation", _type annot);
-          ("optional", bool optional);
+          ("abstract", bool abstract_);
+          ("params", array_of_list function_type_param params);
+          ("returnType", return_annotation return);
+          ("rest", option function_type_rest rest);
+          ("typeParameters", option type_parameter_declaration tparams);
         ]
+    and function_type_param ?comments (loc, param) =
+      let open Type.Function.Param in
+      match param with
+      | Anonymous annot ->
+        node
+          ?comments
+          "FunctionTypeParam"
+          loc
+          [("name", null); ("typeAnnotation", _type annot); ("optional", bool false)]
+      | Labeled { name; annot; optional } ->
+        node
+          ?comments
+          "FunctionTypeParam"
+          loc
+          [("name", identifier name); ("typeAnnotation", _type annot); ("optional", bool optional)]
+      | Destructuring patt -> pattern patt
     and function_type_rest (_loc, { Type.Function.RestParam.argument; comments }) =
       (* TODO: add a node for the rest param itself, including the `...`,
          like we do with RestElement on normal functions. This should be
@@ -1888,7 +2417,10 @@ with type t = Impl.t = struct
                 (props, ixs, calls, slot :: slots)
               | MappedType m ->
                 let mapped_type = object_type_mapped_type m in
-                (mapped_type :: props, ixs, calls, slots))
+                (mapped_type :: props, ixs, calls, slots)
+              | PrivateField pf ->
+                let prop = object_type_private_field pf in
+                (prop :: props, ixs, calls, slots))
             ([], [], [], [])
             properties
         in
@@ -1919,23 +2451,18 @@ with type t = Impl.t = struct
             proto;
             variance = variance_;
             _method;
+            abstract;
+            override;
+            ts_accessibility;
+            init = init_;
             comments;
           }
         ) =
-      let key =
-        match key with
-        | Expression.Object.Property.StringLiteral lit -> string_literal lit
-        | Expression.Object.Property.NumberLiteral lit -> number_literal lit
-        | Expression.Object.Property.BigIntLiteral lit -> bigint_literal lit
-        | Expression.Object.Property.Identifier id -> identifier id
-        | Expression.Object.Property.PrivateName _ ->
-          failwith "Internal Error: Found private field in object props"
-        | Expression.Object.Property.Computed _ ->
-          failwith "There should not be computed object type property keys"
-      in
+      let (key, computed, comments) = property_key ~comments key in
       let (value, kind) =
         match value with
-        | Type.Object.Property.Init value -> (_type value, "init")
+        | Type.Object.Property.Init (Some value) -> (_type value, "init")
+        | Type.Object.Property.Init None -> (null, "init")
         | Type.Object.Property.Get (loc, f) -> (function_type (loc, f), "get")
         | Type.Object.Property.Set (loc, f) -> (function_type (loc, f), "set")
       in
@@ -1943,31 +2470,56 @@ with type t = Impl.t = struct
         ?comments
         "ObjectTypeProperty"
         loc
-        [
-          ("key", key);
-          ("value", value);
-          ("method", bool _method);
-          ("optional", bool optional);
-          ("static", bool static);
-          ("proto", bool proto);
-          ("variance", option variance variance_);
-          ("kind", string kind);
-        ]
+        ([
+           ("key", key);
+           ("value", value);
+           ("method", bool _method);
+           ("optional", bool optional);
+           ("static", bool static);
+           ("proto", bool proto);
+           ("abstract", bool abstract);
+           ("variance", option variance variance_);
+           ("kind", string kind);
+           ("init", option expression init_);
+         ]
+        @ ( if computed then
+            [("computed", bool computed)]
+          else
+            []
+          )
+        @ ( if override then
+            [("override", bool override)]
+          else
+            []
+          )
+        @
+        match ts_accessibility_to_string ts_accessibility with
+        | Some v -> [("tsAccessibility", string v)]
+        | None -> []
+        )
     and object_type_spread_property (loc, { Type.Object.SpreadProperty.argument; comments }) =
       node ?comments "ObjectTypeSpreadProperty" loc [("argument", _type argument)]
     and object_type_indexer
-        (loc, { Type.Object.Indexer.id; key; value; static; variance = variance_; comments }) =
+        ( loc,
+          { Type.Object.Indexer.id; key; value; static; variance = variance_; optional; comments }
+        ) =
       node
         ?comments
         "ObjectTypeIndexer"
         loc
-        [
-          ("id", option identifier id);
-          ("key", _type key);
-          ("value", _type value);
-          ("static", bool static);
-          ("variance", option variance variance_);
-        ]
+        ([
+           ("id", option identifier id);
+           ("key", _type key);
+           ("value", _type value);
+           ("static", bool static);
+           ("variance", option variance variance_);
+         ]
+        @
+        if optional then
+          [("optional", bool optional)]
+        else
+          []
+        )
     and object_type_call_property (loc, { Type.Object.CallProperty.value; static; comments }) =
       node
         ?comments
@@ -1980,7 +2532,9 @@ with type t = Impl.t = struct
             Type.Object.MappedType.key_tparam;
             prop_type;
             source_type;
+            name_type;
             variance = variance_;
+            variance_op;
             comments;
             optional;
           }
@@ -1994,6 +2548,12 @@ with type t = Impl.t = struct
           | NoOptionalFlag -> null
         )
       in
+      let variance_op =
+        match variance_op with
+        | Some Type.Object.MappedType.Add -> string "+"
+        | Some Type.Object.MappedType.Remove -> string "-"
+        | None -> null
+      in
       node
         ?comments
         "ObjectTypeMappedTypeProperty"
@@ -2002,7 +2562,9 @@ with type t = Impl.t = struct
           ("keyTparam", type_param key_tparam);
           ("propType", _type prop_type);
           ("sourceType", _type source_type);
+          ("nameType", option _type name_type);
           ("variance", option variance variance_);
+          ("varianceOp", variance_op);
           ("optional", optional_flag optional);
         ]
     and object_type_internal_slot
@@ -2018,6 +2580,8 @@ with type t = Impl.t = struct
           ("method", bool _method);
           ("value", _type value);
         ]
+    and object_type_private_field (loc, { Type.Object.PrivateField.key; comments }) =
+      node ?comments "ObjectTypePrivateField" loc [("key", private_identifier key)]
     and interface_type (loc, { Type.Interface.extends; body; comments }) =
       node
         ?comments
@@ -2043,24 +2607,37 @@ with type t = Impl.t = struct
         ]
     and infer_type loc { Type.Infer.tparam; comments } =
       node ?comments "InferTypeAnnotation" loc [("typeParameter", type_param tparam)]
+    and import_type (loc, { Type.Generic.Identifier.argument; comments }) =
+      node ?comments "ImportType" loc [("argument", string_literal argument)]
     and generic_type_qualified_identifier (loc, { Type.Generic.Identifier.id; qualification }) =
       let qualification =
         match qualification with
         | Type.Generic.Identifier.Unqualified id -> identifier id
         | Type.Generic.Identifier.Qualified q -> generic_type_qualified_identifier q
+        | Type.Generic.Identifier.ImportTypeAnnot it -> import_type it
       in
       node "QualifiedTypeIdentifier" loc [("qualification", qualification); ("id", identifier id)]
     and generic_type (loc, { Type.Generic.id; targs; comments }) =
-      let id =
-        match id with
-        | Type.Generic.Identifier.Unqualified id -> identifier id
-        | Type.Generic.Identifier.Qualified q -> generic_type_qualified_identifier q
-      in
-      node
-        ?comments
-        "GenericTypeAnnotation"
-        loc
-        [("id", id); ("typeParameters", option type_args targs)]
+      (* Mirror upstream Hermes' mapGenericTypeAnnotation: collapse the
+         no-targs `this` identifier case to a ThisTypeAnnotation leaf node.
+         OCaml's parser produces `Type.Generic { id: Unqualified "this";
+         targs: None }` for both `type T = this` and `(this) => void` /
+         `m(): this`. *)
+      match (targs, id) with
+      | (None, Type.Generic.Identifier.Unqualified (_, { Identifier.name = "this"; _ })) ->
+        node ?comments "ThisTypeAnnotation" loc []
+      | _ ->
+        let id =
+          match id with
+          | Type.Generic.Identifier.Unqualified id -> identifier id
+          | Type.Generic.Identifier.Qualified q -> generic_type_qualified_identifier q
+          | Type.Generic.Identifier.ImportTypeAnnot it -> import_type it
+        in
+        node
+          ?comments
+          "GenericTypeAnnotation"
+          loc
+          [("id", id); ("typeParameters", option type_args targs)]
     and indexed_access_properties { Type.IndexedAccess._object; index; comments = _ } =
       [("objectType", _type _object); ("indexType", _type index)]
     and indexed_access (loc, ({ Type.IndexedAccess.comments; _ } as ia)) =
@@ -2097,6 +2674,7 @@ with type t = Impl.t = struct
       match id with
       | Type.Typeof.Target.Unqualified id -> identifier id
       | Type.Typeof.Target.Qualified q -> typeof_qualifier q
+      | Type.Typeof.Target.Import it -> import_type it
     and typeof_qualifier (loc, { Type.Typeof.Target.id; qualification }) =
       let qualification = typeof_expr qualification in
       node "QualifiedTypeofIdentifier" loc [("qualification", qualification); ("id", identifier id)]
@@ -2130,7 +2708,15 @@ with type t = Impl.t = struct
           ( "elementTypes",
             array_of_list
               (function
-                | (_, Type.Tuple.UnlabeledElement annot) -> _type annot
+                | (loc, Type.Tuple.UnlabeledElement { Type.Tuple.UnlabeledElement.annot; optional })
+                  ->
+                  if optional then
+                    node
+                      "TupleTypeElement"
+                      loc
+                      [("elementType", _type annot); ("optional", bool true)]
+                  else
+                    _type annot
                 | (loc, Type.Tuple.LabeledElement e) -> tuple_labeled_element loc e
                 | (loc, Type.Tuple.SpreadElement e) -> tuple_spread_element loc e)
               elements
@@ -2185,6 +2771,25 @@ with type t = Impl.t = struct
               )
           );
         ]
+    and template_literal_type (loc, { Ast.Type.TemplateLiteral.quasis; types; comments }) =
+      node
+        ?comments
+        "TemplateLiteralTypeAnnotation"
+        loc
+        [
+          ("quasis", array_of_list template_element_type quasis);
+          ("types", array_of_list _type types);
+        ]
+    and template_element_type
+        ( loc,
+          {
+            Ast.Type.TemplateLiteral.Element.value =
+              { Ast.Type.TemplateLiteral.Element.raw; cooked };
+            tail;
+          }
+        ) =
+      let value = obj [("raw", string raw); ("cooked", string cooked)] in
+      node "TemplateElement" loc [("value", value); ("tail", bool tail)]
     and exists_type loc comments = node ?comments "ExistsTypeAnnotation" loc []
     and type_annotation (loc, ty) = node "TypeAnnotation" loc [("typeAnnotation", _type ty)]
     and type_guard_annotation (loc, (loc1, guard)) =
@@ -2214,7 +2819,11 @@ with type t = Impl.t = struct
            (* we track the location of the name, but don't expose it here for
               backwards-compatibility. TODO: change this? *)
            ("name", string name);
-           ("bound", hint type_annotation bound);
+           (* Hermes' deserializeTypeParameter reads `bound` as a plain type
+              node, NOT a TypeAnnotation-wrapped node. Emit the inner annotation
+              directly rather than going through `type_annotation` (which writes
+              a TypeAnnotation header). When the bound is missing, write null. *)
+           ("bound", hint (fun (_loc, ty) -> _type ty) bound);
            ("const", bool (Option.is_some const));
            ("variance", option variance tp_var);
            ("default", option _type default);
@@ -2377,6 +2986,7 @@ with type t = Impl.t = struct
           {
             Statement.ExportNamedDeclaration.ExportSpecifier.exported;
             local;
+            export_kind;
             from_remote = _;
             imported_name_def_loc = _;
           }
@@ -2386,17 +2996,29 @@ with type t = Impl.t = struct
         | Some exported -> identifier exported
         | None -> identifier local
       in
-      node "ExportSpecifier" loc [("local", identifier local); ("exported", exported)]
+      node
+        "ExportSpecifier"
+        loc
+        [
+          ("local", identifier local);
+          ("exported", exported);
+          ("exportKind", string (string_of_export_kind export_kind));
+        ]
     and import_default_specifier
         { Statement.ImportDeclaration.identifier = id; remote_default_name_def_loc = _ } =
       node "ImportDefaultSpecifier" (fst id) [("local", identifier id)]
     and import_namespace_specifier (loc, id) =
       node "ImportNamespaceSpecifier" loc [("local", identifier id)]
-    and import_named_specifier local_id remote_id kind =
+    and import_named_specifier local_id remote_id kind kind_loc =
+      let start_loc =
+        match kind_loc with
+        | Some kl -> kl
+        | None -> fst remote_id
+      in
       let span_loc =
         match local_id with
-        | Some local_id -> Loc.btwn (fst remote_id) (fst local_id)
-        | None -> fst remote_id
+        | Some local_id -> Loc.btwn start_loc (fst local_id)
+        | None -> Loc.btwn start_loc (fst remote_id)
       in
       let local_id =
         match local_id with
@@ -2418,6 +3040,14 @@ with type t = Impl.t = struct
               null
           );
         ]
+    and import_attribute { Statement.ImportDeclaration.loc; key; value } =
+      let key_json =
+        match key with
+        | Statement.ImportDeclaration.Identifier id -> identifier id
+        | Statement.ImportDeclaration.StringLiteral (loc, lit) -> string_literal (loc, lit)
+      in
+      let value_json = string_literal value in
+      node "ImportAttribute" loc [("key", key_json); ("value", value_json)]
     and comment_list comments = array_of_list comment comments
     and comment (loc, c) =
       Comment.(
@@ -2436,20 +3066,32 @@ with type t = Impl.t = struct
         | Inferred -> ("InferredPredicate", [])
       in
       node ?comments _type loc value
-    and call_node_properties { Expression.Call.callee; targs; arguments; comments = _ } =
+    and call_node_properties
+        ~in_optional_chain ?wrap_callee { Expression.Call.callee; targs; arguments; comments = _ } =
+      let callee =
+        match wrap_callee with
+        | None -> expression ~in_optional_chain callee
+        | Some wrap -> wrap (expression ~in_optional_chain callee)
+      in
       [
-        ("callee", expression callee);
+        ("callee", callee);
         ("typeArguments", option call_type_args targs);
-        ("arguments", arg_list arguments);
+        ("arguments", arg_list ~in_optional_chain arguments);
       ]
-    and member_node_properties { Expression.Member._object; property; comments = _ } =
+    and member_node_properties
+        ~in_optional_chain ?wrap_receiver { Expression.Member._object; property; comments = _ } =
       let (property, computed) =
         match property with
         | Expression.Member.PropertyIdentifier id -> (identifier id, false)
         | Expression.Member.PropertyPrivateName name -> (private_identifier name, false)
-        | Expression.Member.PropertyExpression expr -> (expression expr, true)
+        | Expression.Member.PropertyExpression expr -> (expression ~in_optional_chain expr, true)
       in
-      [("object", expression _object); ("property", property); ("computed", bool computed)]
+      let _object =
+        match wrap_receiver with
+        | None -> expression ~in_optional_chain _object
+        | Some wrap -> wrap (expression ~in_optional_chain _object)
+      in
+      [("object", _object); ("property", property); ("computed", bool computed)]
     in
     { program; expression }
 

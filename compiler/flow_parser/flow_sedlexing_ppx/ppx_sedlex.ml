@@ -4,7 +4,6 @@
 
 open Ppxlib
 open Ast_builder.Default
-open Ast_helper
 
 (* let ocaml_version = Versions.ocaml_408 *)
 
@@ -360,14 +359,7 @@ let gen_state lexbuf auto i (trans, final) =
       (appfun (partition_name partition) [[%expr Sedlexing.__private__next_int [%e evar ~loc lexbuf]]])
       (cases @ [case ~lhs:[%pat? _] ~guard:None ~rhs:[%expr Sedlexing.backtrack [%e evar ~loc lexbuf]]])
   in
-  let ret body =
-    let lhs = pvar ~loc lexbuf in
-    [
-      value_binding ~loc
-        ~pat:(pvar ~loc (state_fun i))
-        ~expr:(Exp.fun_ ~loc Nolabel None lhs body);
-    ]
-  in
+  let ret body = [ value_binding ~loc ~pat:(pvar ~loc (state_fun i)) ~expr:(pexp_function ~loc [case ~lhs:(pvar ~loc lexbuf) ~guard:None ~rhs:body]) ] in
   match best_final final with
     | None -> ret (body ())
     | Some _ when Array.length trans = 0 -> []
