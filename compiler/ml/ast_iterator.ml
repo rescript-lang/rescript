@@ -361,6 +361,12 @@ module E = struct
       sub.expr sub e;
       sub.typ sub t
     | Pexp_send (e, _s) -> sub.expr sub e
+    | Pexp_object_literal fields ->
+      List.iter
+        (fun (s, e) ->
+          iter_loc sub s;
+          sub.expr sub e)
+        fields
     | Pexp_letmodule (s, me, e) ->
       iter_loc sub s;
       sub.module_expr sub me;

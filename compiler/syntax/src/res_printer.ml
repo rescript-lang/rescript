@@ -3577,40 +3577,37 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
                Doc.soft_line;
                Doc.rbrace;
              ])
+    | Pexp_object_literal fields ->
+      (* If the object is written over multiple lines, break automatically
+       * `let x = {"a": 1, "b": 3}` -> same line, break when line-width exceeded
+       * `let x = {
+       *   "a": 1,
+       *   "b": 2,
+       *  }` -> object is written on multiple lines, break the group *)
+      let loc = e.pexp_loc in
+      let force_break = loc.loc_start.pos_lnum < loc.loc_end.pos_lnum in
+      Doc.breakable_group ~force_break
+        (Doc.concat
+           [
+             Doc.lbrace;
+             Doc.indent
+               (Doc.concat
+                  [
+                    Doc.soft_line;
+                    Doc.join
+                      ~sep:(Doc.concat [Doc.text ","; Doc.line])
+                      (Ext_list.map fields
+                         (fun ((s : string Asttypes.loc), e) ->
+                           print_bs_object_row ~state
+                             (Location.mkloc (Longident.Lident s.txt) s.loc, e)
+                             cmt_tbl));
+                  ]);
+             Doc.trailing_comma;
+             Doc.soft_line;
+             Doc.rbrace;
+           ])
     | Pexp_extension extension -> (
       match extension with
-      | ( {txt = "obj"},
-          PStr
-            [
-              {
-                pstr_loc = loc;
-                pstr_desc = Pstr_eval ({pexp_desc = Pexp_record (rows, _)}, []);
-              };
-            ] ) ->
-        (* If the object is written over multiple lines, break automatically
-         * `let x = {"a": 1, "b": 3}` -> same line, break when line-width exceeded
-         * `let x = {
-         *   "a": 1,
-         *   "b": 2,
-         *  }` -> object is written on multiple lines, break the group *)
-        let force_break = loc.loc_start.pos_lnum < loc.loc_end.pos_lnum in
-        Doc.breakable_group ~force_break
-          (Doc.concat
-             [
-               Doc.lbrace;
-               Doc.indent
-                 (Doc.concat
-                    [
-                      Doc.soft_line;
-                      Doc.join
-                        ~sep:(Doc.concat [Doc.text ","; Doc.line])
-                        (Ext_list.map rows (fun {lid; x = e} ->
-                             print_bs_object_row ~state (lid, e) cmt_tbl));
-                    ]);
-               Doc.trailing_comma;
-               Doc.soft_line;
-               Doc.rbrace;
-             ])
       | ( {txt = "re"},
           PStr
             [

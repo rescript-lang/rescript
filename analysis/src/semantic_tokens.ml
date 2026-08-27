@@ -358,6 +358,15 @@ let command ~debug ~emitter ~source ~kind_file =
         Printf.printf "Binary operator %s %s\n" op (Loc.to_string loc);
       emitter |> emit_from_loc ~loc ~type_:Operator;
       Ast_iterator.default_iterator.expr iterator e
+    | Pexp_object_literal fields ->
+      fields
+      |> List.iter (fun ((s : string Asttypes.loc), _) ->
+             if not (Utils.is_first_char_uppercase s.txt) then
+               emitter
+               |> emit_record_label
+                    ~label:{Asttypes.txt = Longident.Lident s.txt; loc = s.loc}
+                    ~debug);
+      Ast_iterator.default_iterator.expr iterator e
     | Pexp_record (cases, _) ->
       Ext_list.filter_map cases (fun {lid} ->
           match lid.txt with

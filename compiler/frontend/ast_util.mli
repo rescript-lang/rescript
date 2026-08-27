@@ -28,11 +28,5 @@
     - convert a uncuried application to normal 
 *)
 
-val record_as_js_object :
-  Location.t ->
-  Ast_mapper.mapper ->
-  Parsetree.expression Parsetree.record_element list ->
-  Parsetree.expression_desc
-
 val js_property :
   Location.t -> Parsetree.expression -> string -> Parsetree.expression_desc

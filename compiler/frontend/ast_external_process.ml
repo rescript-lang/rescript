@@ -1015,17 +1015,6 @@ let handle_attributes_as_prim (pval_loc : Location.t) (typ : Ast_core_type.t)
     no_inline_cross_module;
   }
 
-let pval_prim_of_labels (labels : string Asttypes.loc list) =
-  let arg_kinds =
-    Ext_list.fold_right labels
-      ([] : External_arg_spec.obj_params)
-      (fun p arg_kinds ->
-        let obj_arg_label = External_arg_spec.obj_label p.txt in
-        {obj_arg_type = Nothing; obj_arg_label} :: arg_kinds)
-  in
-  Parsetree.Prim_ffi
-    {name = ""; spec = External_ffi_types.ffi_obj_create arg_kinds}
-
 let pval_prim_of_option_labels (labels : (bool * string Asttypes.loc) list)
     (ends_with_unit : bool) =
   let arg_kinds =

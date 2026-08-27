@@ -188,6 +188,7 @@ module Exp = struct
   let constraint_ ?loc ?attrs a b = mk ?loc ?attrs (Pexp_constraint (a, b))
   let coerce ?loc ?attrs a c = mk ?loc ?attrs (Pexp_coerce (a, (), c))
   let send ?loc ?attrs a b = mk ?loc ?attrs (Pexp_send (a, b))
+  let object_literal ?loc ?attrs a = mk ?loc ?attrs (Pexp_object_literal a)
   let letmodule ?loc ?attrs a b c = mk ?loc ?attrs (Pexp_letmodule (a, b, c))
   let letexception ?loc ?attrs a b = mk ?loc ?attrs (Pexp_letexception (a, b))
   let assert_ ?loc ?attrs a = mk ?loc ?attrs (Pexp_assert a)

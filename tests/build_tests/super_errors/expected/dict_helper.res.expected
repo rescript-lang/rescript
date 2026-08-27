@@ -8,6 +8,6 @@
   4 [2m│[0m 
 
   This has type: [1;31m{"test": string}[0m
-  But it's expected to have type: [1;33mdict<string>[0m
+  But this function argument is expecting: [1;33mdict<string>[0m
   
   Dicts are written like: [1;33mdict{"a": 1, "b": 2}[0m

@@ -287,6 +287,8 @@ end = struct
       iter_expression exp1;
       iter_expression exp2
     | Texp_send (exp, _meth) -> iter_expression exp
+    | Texp_object_literal fields ->
+      List.iter (fun (_, e) -> iter_expression e) fields
     | Texp_letmodule (_id, _, mexpr, exp) ->
       iter_module_expr mexpr;
       iter_expression exp

@@ -1,6 +1,5 @@
 Complete src/CompletionObjects.res 5:7
 posCursor:[5:7] posNoWhite:[5:5] Found expr:[2:10->9:1]
-posCursor:[5:7] posNoWhite:[5:5] Found expr:[2:10->9:1]
 posCursor:[5:7] posNoWhite:[5:5] Found pattern:__ghost__[0:-1->7:5]
 posCursor:[5:7] posNoWhite:[5:5] Found pattern:__ghost__[0:-1->7:5]
 Completable: Cpattern Value[x]

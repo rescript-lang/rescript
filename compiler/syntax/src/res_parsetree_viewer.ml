@@ -267,8 +267,7 @@ let is_huggable_expression expr =
   | Pexp_array _ | Pexp_tuple _
   | Pexp_constant (Pconst_string (_, Some _))
   | Pexp_construct ({txt = Longident.Lident ("::" | "[]")}, _)
-  | Pexp_extension ({txt = "obj"}, _)
-  | Pexp_record _ ->
+  | Pexp_object_literal _ | Pexp_record _ ->
     true
   | _ when is_block_expr expr -> true
   | _ when is_braced_expr expr -> true
@@ -277,10 +276,7 @@ let is_huggable_expression expr =
 
 let is_huggable_rhs expr =
   match expr.pexp_desc with
-  | Pexp_array _ | Pexp_tuple _
-  | Pexp_extension ({txt = "obj"}, _)
-  | Pexp_record _ ->
-    true
+  | Pexp_array _ | Pexp_tuple _ | Pexp_object_literal _ | Pexp_record _ -> true
   | _ when is_braced_expr expr -> true
   | _ -> false
 

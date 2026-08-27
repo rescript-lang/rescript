@@ -1069,12 +1069,10 @@ and walk_expression expr t comments =
       attach t.leading expr2.pexp_loc leading;
       walk_expression expr2 t inside;
       attach t.trailing expr2.pexp_loc trailing
-  | Pexp_extension
-      ( {txt = "obj"},
-        PStr [{pstr_desc = Pstr_eval ({pexp_desc = Pexp_record (rows, _)}, [])}]
-      ) ->
+  | Pexp_object_literal fields ->
     walk_list
-      (Ext_list.map rows (fun {lid; x = e} -> ExprRecordRow (lid, e)))
+      (Ext_list.map fields (fun ((s : string Asttypes.loc), e) ->
+           ExprRecordRow (Location.mkloc (Longident.Lident s.txt) s.loc, e)))
       t comments
   | Pexp_extension extension -> walk_extension extension t comments
   | Pexp_letexception (extension_constructor, expr2) ->

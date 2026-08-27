@@ -183,12 +183,13 @@ let iter_expression f e =
       List.iter (fun {x = e} -> expr e) iel
     | Pexp_open (_, _, e)
     | Pexp_assert e
-    | Pexp_send (e, _)
     | Pexp_constraint (e, _)
     | Pexp_coerce (e, _, _)
     | Pexp_letexception (_, e)
+    | Pexp_send (e, _)
     | Pexp_field (e, _) ->
       expr e
+    | Pexp_object_literal fields -> List.iter (fun (_, e) -> expr e) fields
     | Pexp_while (e1, e2) | Pexp_sequence (e1, e2) | Pexp_setfield (e1, _, e2)
       ->
       expr e1;
@@ -3299,6 +3300,42 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
         exp_env = env;
         exp_extra =
           (Texp_coerce cty', loc, sexp.pexp_attributes) :: arg.exp_extra;
+      }
+  | Pexp_object_literal sfields ->
+    (* Fields are typed in source order. A duplicate name is typed against the
+       first occurrence's type and appears once in the row (the runtime object
+       still writes every field, in order; JavaScript keeps the last value). *)
+    let seen : (string, type_expr) Hashtbl.t = Hashtbl.create 8 in
+    let fields =
+      List.map
+        (fun ((s : string loc), sfield) ->
+          match Hashtbl.find_opt seen s.txt with
+          | Some ty -> (s, type_expect ~context:None env sfield ty)
+          | None ->
+            let field = type_exp ~context:None env sfield in
+            Hashtbl.add seen s.txt field.exp_type;
+            (s, field))
+        sfields
+    in
+    let emitted : (string, unit) Hashtbl.t = Hashtbl.create 8 in
+    let row =
+      List.fold_right
+        (fun ((s : string loc), (field : Typedtree.expression)) rest ->
+          if Hashtbl.mem emitted s.txt then rest
+          else (
+            Hashtbl.add emitted s.txt ();
+            newty
+              (Tfield (s.txt, Fpresent, newty (Tpoly (field.exp_type, [])), rest))))
+        fields (newty Tnil)
+    in
+    rue
+      {
+        exp_desc = Texp_object_literal fields;
+        exp_loc = loc;
+        exp_extra = [];
+        exp_type = newty (Tobject row);
+        exp_attributes = sexp.pexp_attributes;
+        exp_env = env;
       }
   | Pexp_send (e, {txt = met}) -> (
     let obj = type_exp ~context:None env e in

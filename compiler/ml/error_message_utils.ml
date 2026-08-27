@@ -233,6 +233,40 @@ let extract_string_constant text =
     Some s
   | _ -> None
 
+let print_object_vs_record_hint ppf ~loc =
+  fprintf ppf
+    "@,\
+     @,\
+     You're passing a @{<error>ReScript object@} where a @{<info>record@} is \
+     expected. Objects are written with quoted keys, and records with unquoted \
+     keys.";
+  let suggested_rewrite =
+    Parser.reprint_expr_at_loc loc ~mapper:(fun exp ->
+        match exp.Parsetree.pexp_desc with
+        | Pexp_object_literal fields ->
+          Some
+            (Ast_helper.Exp.record ~loc:exp.pexp_loc
+               (List.map
+                  (fun ((s : string Asttypes.loc), e) ->
+                    {
+                      Parsetree.lid =
+                        {Asttypes.txt = Longident.Lident s.txt; loc = s.loc};
+                      x = e;
+                      opt = false;
+                    })
+                  fields)
+               None)
+        | _ -> None)
+  in
+  fprintf ppf
+    "@,@,Possible solutions: @,- Rewrite the object to a record%s@{<info>%s@}@,"
+    (match suggested_rewrite with
+    | Some _ -> ", like: "
+    | None -> "")
+    (match suggested_rewrite with
+    | Some rewrite -> rewrite
+    | None -> "")
+
 let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
     (bottom_aliases : (Types.type_expr * Types.type_expr) option) trace
     type_clash_context =
@@ -416,6 +450,11 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
        `yourValue->Option.getOr(someDefaultValue)`"
   | Some ComparisonOperator, _ ->
     fprintf ppf "\n\n  You can only compare things of the same type."
+  | Some ArrayValue, Some ({desc = Tobject _}, ({Types.desc = Tconstr _} as t1))
+    when is_record_type ~extract_concrete_typedecl ~env t1 ->
+    (* The array-item mismatch is an object-vs-record confusion; give the
+       specific hint rather than the generic array advice. *)
+    print_object_vs_record_hint ppf ~loc
   | Some ArrayValue, _ ->
     fprintf ppf
       "\n\n\
@@ -465,39 +504,7 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
          @{<info>ignore@} via @{<info>expression->ignore@}\n\n"
   | _, Some ({desc = Tobject _}, ({Types.desc = Tconstr _} as t1))
     when is_record_type ~extract_concrete_typedecl ~env t1 ->
-    fprintf ppf
-      "@,\
-       @,\
-       You're passing a @{<error>ReScript object@} where a @{<info>record@} is \
-       expected. Objects are written with quoted keys, and records with \
-       unquoted keys.";
-
-    let suggested_rewrite =
-      Parser.reprint_expr_at_loc loc ~mapper:(fun exp ->
-          match exp.Parsetree.pexp_desc with
-          | Pexp_extension
-              ( {txt = "obj"},
-                PStr
-                  [
-                    {
-                      pstr_desc =
-                        Pstr_eval (({pexp_desc = Pexp_record _} as record), _);
-                    };
-                  ] ) ->
-            Some record
-          | _ -> None)
-    in
-    fprintf ppf
-      "@,\
-       @,\
-       Possible solutions: @,\
-       - Rewrite the object to a record%s@{<info>%s@}@,"
-      (match suggested_rewrite with
-      | Some _ -> ", like: "
-      | None -> "")
-      (match suggested_rewrite with
-      | Some rewrite -> rewrite
-      | None -> "")
+    print_object_vs_record_hint ppf ~loc
   | _, Some ({Types.desc = Tconstr (p1, _, _)}, _)
     when Path.same p1 Predef.path_promise ->
     fprintf ppf "\n\n  - Did you mean to await this promise before using it?\n"

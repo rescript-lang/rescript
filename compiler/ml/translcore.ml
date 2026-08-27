@@ -1228,6 +1228,20 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
     Lfor_of (param, transl_exp iterable, transl_exp body)
   | Texp_for_await_of (param, _, iterable, body) ->
     Lfor_await_of (param, transl_exp iterable, transl_exp body)
+  | Texp_object_literal fields ->
+    let labels =
+      List.map
+        (fun ((s : string Asttypes.loc), _) ->
+          {
+            External_arg_spec.obj_arg_label = External_arg_spec.obj_label s.txt;
+            obj_arg_type = External_arg_spec.Nothing;
+          })
+        fields
+    in
+    Lprim
+      ( Pjs_object_create labels,
+        List.map (fun (_, field) -> transl_exp field) fields,
+        e.exp_loc )
   | Texp_send (expr, nm) ->
     (* A setter member only ever occurs applied (recognized in the
        [Texp_apply] case); a bare occurrence cannot be compiled. *)
