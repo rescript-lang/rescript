@@ -25,9 +25,10 @@ type attr = Parsetree.attribute
 
 type t = attr list
 
-type ('a, 'b) st = {get: 'a option; set: 'b option}
-
-val process_method_attributes_rev : t -> (bool * bool, [`Get | `No_get]) st * t
+val process_object_field_attributes_rev : t -> bool * t
+(** Recognizes the bare [@set] marker on an object-type field. Returns whether
+    the field is settable, plus the remaining attributes. Any other form is
+    left in place and ignored, like any unrecognized attribute. *)
 
 type attr_kind = Nothing | Meth_callback of attr
 
