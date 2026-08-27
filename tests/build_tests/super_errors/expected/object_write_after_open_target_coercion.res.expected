@@ -1,0 +1,12 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/object_write_after_open_target_coercion.res[0m:[2m12:3[0m
+
+  10 [2m│[0m let p = (v: {"x": wide}) => {
+  11 [2m│[0m   let r = (v :> {.."x": narrow})
+  [1;31m12[0m [2m│[0m   [1;31mr[0m["x"] = {"a": 1}
+  13 [2m│[0m }
+  14 [2m│[0m 
+
+  This expression has type {"x": narrow}
+  It has no field x#=

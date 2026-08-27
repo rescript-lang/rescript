@@ -1,0 +1,10 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/object_coercion_readonly_to_mutable.res[0m:[2m6:20-39[0m
+
+  4 [2m│[0m    See docs/object_representation_cleanup.md. */
+  5 [2m│[0m type t = {"x": int}
+  [1;31m6[0m [2m│[0m let p = (v: t) => ([1;31mv :> {@set "x": int}[0m)
+  7 [2m│[0m 
+
+  Type t = {"x": int} is not a subtype of {"x": int, "x#=": int => unit}

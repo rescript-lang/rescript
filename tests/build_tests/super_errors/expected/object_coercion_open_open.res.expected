@@ -1,0 +1,14 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/object_coercion_open_open.res[0m:[2m9:32-51[0m
+
+   7 [2m│[0m type wide = {"a": int, "b": int}
+   8 [2m│[0m type narrow = {"a": int}
+   [1;31m9[0m [2m│[0m let p = (o: {.."x": wide}) => ([1;31mo :> {.."x": narrow}[0m)
+  10 [2m│[0m 
+
+  Type {.."x": wide} is not a subtype of {.."x": narrow} 
+  Type wide = {"a": int, "b": int} is not compatible with type
+    narrow = {"a": int} 
+  
+  The second object is expected to have a field [1;33m"b"[0m of type [1;33mint[0m, but it does not.
