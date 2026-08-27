@@ -1405,50 +1405,6 @@ let compile output_prefix =
         Js_output.make
           (aux lambda_cxt
              {lambda_cxt with continuation = EffectCall new_return_type})
-  (* Note that in [Texp_apply] for [%sendcache] the cache might not be used
-     see {!CamlinternalOO.send_meth} and {!Translcore.transl_exp0} the branch
-     [Texp_apply] when [public_send ], args are simply dropped
-
-     reference
-     [js_of_ocaml]
-     1. GETPUBMET
-     2. GETDYNMET
-     3. GETMETHOD
-     [ocaml]
-     Lsend (bytegen.ml)
-     For the object layout refer to [camlinternalOO/create_object]
-     {[
-       let create_object table =
-         (* XXX Appel de [obj_block] *)
-         let obj = mark_ocaml_object @@ Obj.new_block Obj.object_tag table.size in
-         (* XXX Appel de [caml_modify] *)
-         Obj.set_field obj 0 (Obj.repr table.methods);
-         Obj.obj (set_id obj)
-
-       let create_object_opt obj_0 table =
-         if (Obj.magic obj_0 : bool) then obj_0 else begin
-           (* XXX Appel de [obj_block] *)
-           let obj = mark_ocaml_object @@ Obj.new_block Obj.object_tag table.size in
-           (* XXX Appel de [caml_modify] *)
-           Obj.set_field obj 0 (Obj.repr table.methods);
-           Obj.obj (set_id obj)
-         end
-     ]}
-     it's a block with tag [248], the first field is [table.methods] which is an array
-     {[
-       type table =
-         { mutable size: int;
-           mutable methods: closure array;
-           mutable methods_by_name: meths;
-           mutable methods_by_label: labs;
-           mutable previous_states:
-             (meths * labs * (label * item) list * vars *
-              label list * string list) list;
-           mutable hidden_meths: (label * item) list;
-           mutable vars: vars;
-           mutable initializers: (obj -> unit) list }
-     ]}
-  *)
   and compile_ifthenelse (predicate : Lam.t) (t_branch : Lam.t)
       (f_branch : Lam.t) (lambda_cxt : Lam_compile_context.t) =
     match
@@ -1765,11 +1721,8 @@ let compile output_prefix =
          check the arity of fn before wrapping it
          we need mark something that such eta-conversion can not be simplified in some cases
       *)
-    | {
-     primitive = Pjs_unsafe_downgrade {name = property; setter = false};
-     args = [obj];
-    } -> (
-      (* getter {[ x #. height ]} *)
+    | {primitive = Pjs_object_get property; args = [obj]} -> (
+      (* property read: obj["height"] *)
       match
         compile_lambda {lambda_cxt with continuation = NeedValue Not_tail} obj
       with
@@ -1785,11 +1738,8 @@ let compile output_prefix =
         in
         Js_output.output_of_block_and_expression lambda_cxt.continuation blocks
           ret)
-    | {
-     primitive = Pjs_unsafe_downgrade {name = property; setter = true};
-     args = [obj; setter_val];
-    } -> (
-      (* setter {[ x ## method_call ]} *)
+    | {primitive = Pjs_object_set property; args = [obj; setter_val]} -> (
+      (* property write: obj["height"] = v *)
       let need_value_no_return_cxt =
         {lambda_cxt with continuation = NeedValue Not_tail}
       in
@@ -1812,7 +1762,7 @@ let compile output_prefix =
         | Some (obj_code, obj) ->
           cont obj_block arg_block (Some obj_code)
             (E.seq (E.assign (E.dot (E.var obj) property) value) E.unit)))
-    | {primitive = Pjs_unsafe_downgrade _; args} -> assert false
+    | {primitive = Pjs_object_get _ | Pjs_object_set _; args} -> assert false
     | {primitive = Pjs_fn_method; args = args_lambda} -> (
       match args_lambda with
       | [Lfunction {params; body; attr = {return_unit; async}; loc}] ->

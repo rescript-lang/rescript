@@ -93,7 +93,8 @@ let rec no_side_effects (lam : Lam.t) : bool =
     (* A tagged template invokes its tag at runtime, so it always has side
        effects. *)
     | Ptagged_template | Pjs_apply | Pjs_runtime_apply | Pjs_call _ | Pinit_mod
-    | Pupdate_mod | Pjs_unsafe_downgrade _ | Pdebugger | Pjs_fn_method
+    | Pupdate_mod | Pjs_object_get _ | Pjs_object_set _ | Pdebugger
+    | Pjs_fn_method
     (* Await promise *)
     | Pawait
     (* TODO *)
@@ -123,7 +124,6 @@ let rec no_side_effects (lam : Lam.t) : bool =
   | Lfor _ -> false
   | Lfor_of _ | Lfor_await_of _ -> false
   | Lassign _ -> false (* actually it depends ... *)
-  (* | Lsend _ -> false  *)
   | Lapply
       {
         ap_func = Lprim {primitive = Pfield (_, Fld_module {name = "from_fun"})};
@@ -186,7 +186,6 @@ let rec size (lam : Lam.t) =
     | Lfor_of _ | Lfor_await_of _ -> really_big ()
     | Lassign (_, v) -> 1 + size v
     (* This is side effectful,  be careful *)
-    (* | Lsend _  ->  really_big () *)
   with Too_big_to_inline -> 1000
 
 and size_constant x =

@@ -198,6 +198,8 @@ type primitive =
       transformed_jsx: bool;
     }
   | Pjs_object_create of External_arg_spec.obj_params
+  | Pjs_object_get of string
+  | Pjs_object_set of string
   (* Exceptions *)
   | Praise of raise_kind
   (* object operations *)
@@ -383,7 +385,6 @@ type lambda =
   | Lfor_of of Ident.t * lambda * lambda
   | Lfor_await_of of Ident.t * lambda * lambda
   | Lassign of Ident.t * lambda
-  | Lsend of string * lambda * Location.t
 
 and lfunction = {
   params: Ident.t list;
@@ -503,7 +504,6 @@ let make_key e =
     | Lbreak -> Lbreak
     | Lcontinue -> Lcontinue
     | Lassign (x, e) -> Lassign (x, tr_rec env e)
-    | Lsend (m, e1, _loc) -> Lsend (m, tr_rec env e1, Location.none)
     | Lletrec _ | Lfunction _ | Lfor _ | Lfor_of _ | Lfor_await_of _ | Lwhile _
       ->
       raise_notrace Not_simple
@@ -586,7 +586,6 @@ let iter f = function
     f e1;
     f e2
   | Lassign (_, e) -> f e
-  | Lsend (_k, obj, _) -> f obj
 
 module Ident_set = Set.Make (Ident)
 
@@ -610,7 +609,7 @@ let free_ids get l =
     | Lassign (id, _e) -> fv := Ident_set.add id !fv
     | Lvar _ | Lconst _ | Lapply _ | Lprim _ | Lswitch _ | Lstringswitch _
     | Lstaticraise _ | Lifthenelse _ | Lsequence _ | Lbreak | Lcontinue
-    | Lwhile _ | Lsend _ ->
+    | Lwhile _ ->
       ()
   in
   free l;
@@ -721,7 +720,6 @@ let subst_lambda s lam =
     | Lfor_of (v, e1, e2) -> Lfor_of (v, subst e1, subst e2)
     | Lfor_await_of (v, e1, e2) -> Lfor_await_of (v, subst e1, subst e2)
     | Lassign (id, e) -> Lassign (id, subst e)
-    | Lsend (k, obj, loc) -> Lsend (k, subst obj, loc)
   and subst_decl (id, exp) = (id, subst exp)
   and subst_case (key, case) = (key, subst case)
   and subst_strcase (key, case) = (key, subst case)

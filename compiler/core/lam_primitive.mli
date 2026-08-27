@@ -139,7 +139,8 @@ type t =
   | Pjs_apply (*[f;arg0;arg1; arg2; ... argN]*)
   | Pjs_runtime_apply (* [f; [...]] *)
   | Pdebugger
-  | Pjs_unsafe_downgrade of {name: string; setter: bool}
+  | Pjs_object_get of string
+  | Pjs_object_set of string
   | Pinit_mod
   | Pupdate_mod
   | Praw_js_code of Js_raw_info.t

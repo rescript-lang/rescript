@@ -107,7 +107,6 @@ module Types = struct
     | Lfor_of of ident * t * t
     | Lfor_await_of of ident * t * t
     | Lassign of ident * t
-  (* | Lsend of Lam_compat.meth_kind * t * t * t list * Location.t *)
 end
 
 include Types

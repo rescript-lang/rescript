@@ -123,6 +123,8 @@ let primitive ppf = function
     fprintf ppf "record_rest(%s)" (String.concat ", " excluded)
   | Pjs_call {prim_name} -> fprintf ppf "js_call[%s]" prim_name
   | Pjs_object_create _ -> fprintf ppf "js_obj_create"
+  | Pjs_object_get name -> fprintf ppf "js_object_get[%s]" name
+  | Pjs_object_set name -> fprintf ppf "js_object_set[%s]" name
   | Praise k -> fprintf ppf "%s" (Lambda.raise_kind k)
   | Pobjcomp Ceq -> fprintf ppf "=="
   | Pobjcomp Cneq -> fprintf ppf "!="
@@ -410,7 +412,6 @@ let rec lam ppf = function
       iterable lam body
   | Lassign (id, expr) ->
     fprintf ppf "@[<2>(assign@ %a@ %a)@]" Ident.print id lam expr
-  | Lsend (name, obj, _) -> fprintf ppf "@[<2>(send%s@ %a@ )@]" name lam obj
 
 and sequence ppf = function
   | Lsequence (l1, l2) -> fprintf ppf "%a@ %a" sequence l1 sequence l2
