@@ -145,7 +145,8 @@ type t =
   | Pjs_apply (*[f;arg0;arg1; arg2; ... argN]*)
   | Pjs_runtime_apply (* [f; [...]] *)
   | Pdebugger
-  | Pjs_unsafe_downgrade of {name: string; setter: bool}
+  | Pjs_object_get of string
+  | Pjs_object_set of string
   | Pinit_mod
   | Pupdate_mod
   | Praw_js_code of Js_raw_info.t
@@ -288,9 +289,13 @@ let eq_primitive_approx (lhs : t) (rhs : t) =
     match rhs with
     | Poffsetref i1 -> i0 = i1
     | _ -> false)
-  | Pjs_unsafe_downgrade {name; setter} -> (
+  | Pjs_object_get name -> (
     match rhs with
-    | Pjs_unsafe_downgrade rhs -> name = rhs.name && setter = rhs.setter
+    | Pjs_object_get rhs_name -> name = rhs_name
+    | _ -> false)
+  | Pjs_object_set name -> (
+    match rhs with
+    | Pjs_object_set rhs_name -> name = rhs_name
     | _ -> false)
   | Praw_js_code _ -> false
 (* TOO lazy, here comparison is only approximation*)

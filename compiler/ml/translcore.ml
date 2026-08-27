@@ -1069,6 +1069,17 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
           Lprim (Pmakeblock Blk_tuple, lam :: argl, e.exp_loc)
         | Ploc _, _ -> assert false
         | _, _ -> wrap (Lprim (prim, argl, e.exp_loc)))))
+  | Texp_apply
+      {
+        funct = {exp_desc = Texp_send (obj, name)};
+        args = [(Nolabel, Some value)];
+      }
+    when Ext_string.ends_with name Literals.setter_suffix ->
+    let property =
+      String.sub name 0 (String.length name - Literals.setter_suffix_len)
+    in
+    Lprim
+      (Pjs_object_set property, [transl_exp obj; transl_exp value], e.exp_loc)
   | Texp_apply {funct; args = oargs; partial; transformed_jsx} ->
     let inlined, funct =
       Translattribute.get_and_remove_inlined_attribute funct
@@ -1218,8 +1229,10 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
   | Texp_for_await_of (param, _, iterable, body) ->
     Lfor_await_of (param, transl_exp iterable, transl_exp body)
   | Texp_send (expr, nm) ->
-    let obj = transl_exp expr in
-    Lsend (nm, obj, e.exp_loc)
+    (* A setter member only ever occurs applied (recognized in the
+       [Texp_apply] case); a bare occurrence cannot be compiled. *)
+    assert (not (Ext_string.ends_with nm Literals.setter_suffix));
+    Lprim (Pjs_object_get nm, [transl_exp expr], e.exp_loc)
   | Texp_letmodule (id, _loc, modl, body) ->
     let defining_expr = !transl_module Tcoerce_none None modl in
     Llet (Strict, Pgenval, id, defining_expr, transl_exp body)

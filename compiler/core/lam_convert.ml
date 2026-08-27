@@ -316,6 +316,8 @@ let lam_prim ~primitive:(p : Lambda.primitive) ~args loc : Lam.t =
       ~args loc
   | Pjs_object_create labels ->
     prim ~primitive:(Pjs_object_create labels) ~args loc
+  | Pjs_object_get name -> prim ~primitive:(Pjs_object_get name) ~args loc
+  | Pjs_object_set name -> prim ~primitive:(Pjs_object_set name) ~args loc
   | Praw_js_code info -> prim ~primitive:(Praw_js_code info) ~args loc
   | Pjs_fn_method -> prim ~primitive:Pjs_fn_method ~args loc
 
@@ -333,22 +335,6 @@ let convert (exports : Set_ident.t) (lam : Lambda.lambda) :
     match lam with
     | Lvar x -> Lam.var (Hash_ident.find_default alias_tbl x x)
     | Lconst x -> Lam.const (Lam_constant_convert.convert_constant x)
-    | Lapply {ap_func = Lsend (name, obj, loc); ap_args}
-      when Ext_string.ends_with name Literals.setter_suffix ->
-      let obj = convert_aux obj in
-      let args = obj :: Ext_list.map ap_args convert_aux in
-      let property =
-        String.sub name 0 (String.length name - Literals.setter_suffix_len)
-      in
-      prim
-        ~primitive:(Pjs_unsafe_downgrade {name = property; setter = true})
-        ~args loc
-    | Lsend (name, obj, loc) ->
-      let obj = convert_aux obj in
-      let args = [obj] in
-      let setter = Ext_string.ends_with name Literals.setter_suffix in
-      let _ = assert (not setter) in
-      prim ~primitive:(Pjs_unsafe_downgrade {name; setter}) ~args loc
     | Lapply
         {
           ap_func = fn;
@@ -483,10 +469,8 @@ let convert (exports : Set_ident.t) (lam : Lambda.lambda) :
         match f with
         | Lapply {ap_loc} -> Some ap_loc
         | Lfunction {loc} -> Some loc
-        | Lprim (_, _, loc)
-        | Lswitch (_, _, loc)
-        | Lstringswitch (_, _, _, loc)
-        | Lsend (_, _, loc) ->
+        | Lprim (_, _, loc) | Lswitch (_, _, loc) | Lstringswitch (_, _, _, loc)
+          ->
           Some loc
         | _ -> None
       in

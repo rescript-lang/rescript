@@ -164,6 +164,8 @@ type primitive =
       transformed_jsx: bool;
     }
   | Pjs_object_create of External_arg_spec.obj_params
+  | Pjs_object_get of string
+  | Pjs_object_set of string
   (* Exceptions *)
   | Praise of raise_kind
   (* object primitives *)
@@ -355,7 +357,6 @@ type lambda =
   | Lfor_of of Ident.t * lambda * lambda
   | Lfor_await_of of Ident.t * lambda * lambda
   | Lassign of Ident.t * lambda
-  | Lsend of string * lambda * Location.t
 
 and lfunction = {
   params: Ident.t list;

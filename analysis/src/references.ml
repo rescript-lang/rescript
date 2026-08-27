@@ -79,21 +79,6 @@ let get_loc_item ~full ~pos ~debug =
     if debug then Printf.printf "n1:%s n2:%s\n" (name_of li1) (name_of li2);
     Some li2
   | [
-   ({loc_type = Typed (_, _, LocalReference _)} as li1);
-   ({
-      loc_type = Typed (_, _, GlobalReference ("Js_OO", ["unsafe_downgrade"], _));
-    } as li2);
-   li3;
-  ]
-  (* For older compiler 9.0 or earlier *)
-    when li1.loc = li2.loc && li2.loc = li3.loc ->
-    (* Not currently testable on 9.1.4 *)
-    log 6
-      "heuristic for JSX and compiler combined:\n\
-       ~x becomes Js_OO.unsafe_downgrade(Props)#x\n\
-       heuristic for: [Props, unsafe_downgrade, x], give loc of `x`";
-    Some li3
-  | [
    ({loc_type = Typed (_, _, LocalReference (_, Value))} as li1);
    ({loc_type = Typed (_, _, Definition (_, Value))} as li2);
   ] ->

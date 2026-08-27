@@ -79,7 +79,6 @@ and t = private
   | Lfor_await_of of ident * t * t
   | Lassign of ident * t
 
-(* | Lsend of Lambda.meth_kind * t * t * t list * Location.t *)
 (* | Levent of t * Lambda.lambda_event
    [Levent] in the branch hurt pattern match,
    we should use record for trivial debugger info

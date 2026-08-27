@@ -23,35 +23,3 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
 val mapper : Ast_mapper.mapper
-
-(* object 
-    for setter : we can push more into [Lsend] and enclose it with a unit type
-
-    for getter :
-
-    (* Invariant: we expect the typechecker & lambda emitter  
-       will not do agressive inlining
-       Worst things could happen
-   {[
-     let x = y## case 3  in 
-     x 2
-   ]}
-       in normal case, it should be compiled into Lambda
-   {[
-     let x = Lsend(y,case, [3]) in 
-     Lapp(x,2)
-   ]}
-
-       worst:
-   {[ Lsend(y, case, [3,2])
-   ]}               
-       for setter(include case setter), this could 
-       be prevented by type system, for getter.
-
-       solution: we can prevent this by rewrite into 
-   {[
-     Fn.run1  (!x# case) v 
-]}
- *)
-
- *)
