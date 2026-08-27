@@ -1,0 +1,12 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/object_coercion_mutable_unequal.res[0m:[2m8:35-57[0m
+
+  6 [2m│[0m type wide = {"a": int, "b": int}
+  7 [2m│[0m type narrow = {"a": int}
+  [1;31m8[0m [2m│[0m let p = (v: {@set "x": wide}) => ([1;31mv :> {@set "x": narrow}[0m)
+  9 [2m│[0m 
+
+  Type {"x": wide, "x#=": wide => unit} is not a subtype of
+    {"x": narrow, "x#=": narrow => unit} 
+  Type narrow = {"a": int} is not a subtype of wide = {"a": int, "b": int}
