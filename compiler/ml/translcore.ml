@@ -1217,7 +1217,7 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
     Lfor_of (param, transl_exp iterable, transl_exp body)
   | Texp_for_await_of (param, _, iterable, body) ->
     Lfor_await_of (param, transl_exp iterable, transl_exp body)
-  | Texp_send (expr, Tmeth_name nm, _) ->
+  | Texp_send (expr, nm) ->
     let obj = transl_exp expr in
     Lsend (nm, obj, e.exp_loc)
   | Texp_letmodule (id, _loc, modl, body) ->

@@ -172,12 +172,7 @@ and raw_type_desc ppf = function
   | Tconstr (p, tl, abbrev) ->
     fprintf ppf "@[<hov1>Tconstr(@,%a,@,%a,@,%a)@]" path p raw_type_list tl
       (raw_list path) (list_of_memo !abbrev)
-  | Tobject (t, nm) ->
-    fprintf ppf "@[<hov1>Tobject(@,%a,@,@[<1>ref%t@])@]" raw_type t (fun ppf ->
-        match !nm with
-        | None -> fprintf ppf " None"
-        | Some (p, tl) ->
-          fprintf ppf "(Some(@,%a,@,%a))" path p raw_type_list tl)
+  | Tobject t -> fprintf ppf "@[<hov1>Tobject@,%a@]" raw_type t
   | Tfield (f, k, t1, t2) ->
     fprintf ppf "@[<hov1>Tfield(@,%s,@,%s,@,%a,@;<0 -1>%a)@]" f
       (safe_kind_repr [] k) raw_type t1 raw_type t2
@@ -524,18 +519,15 @@ let rec mark_loops_rec visited ty =
         | Some (_p, tyl) when namable_row row ->
           List.iter (mark_loops_rec visited) tyl
         | _ -> iter_row (mark_loops_rec visited) row)
-    | Tobject (fi, nm) ->
+    | Tobject fi ->
       if List.memq px !visited_objects then add_alias px
       else (
         if opened_object ty then visited_objects := px :: !visited_objects;
-        match !nm with
-        | None ->
-          let fields, _ = flatten_fields fi in
-          List.iter
-            (fun (_, kind, ty) ->
-              if field_kind_repr kind = Fpresent then mark_loops_rec visited ty)
-            fields
-        | Some (_, l) -> List.iter (mark_loops_rec visited) (List.tl l))
+        let fields, _ = flatten_fields fi in
+        List.iter
+          (fun (_, kind, ty) ->
+            if field_kind_repr kind = Fpresent then mark_loops_rec visited ty)
+          fields)
     | Tfield (_, kind, ty1, ty2) when field_kind_repr kind = Fpresent ->
       mark_loops_rec visited ty1;
       mark_loops_rec visited ty2
@@ -691,8 +683,8 @@ let rec tree_of_typexp ?(printing_context : printing_context option) sch ty =
             if all_present then None else Some (List.map fst present)
           in
           Otyp_variant (non_gen, Ovar_fields fields, row.row_closed, tags))
-      | Tobject (fi, nm) -> tree_of_typobject ?printing_context sch fi !nm
-      | Tnil | Tfield _ -> tree_of_typobject ?printing_context sch ty None
+      | Tobject fi -> tree_of_typobject ?printing_context sch fi
+      | Tnil | Tfield _ -> tree_of_typobject ?printing_context sch ty
       | Tsubst ty -> tree_of_typexp ?printing_context sch ty
       | Tlink _ -> fatal_error "Printtyp.tree_of_typexp"
       | Tpoly (ty, []) -> tree_of_typexp ?printing_context sch ty
@@ -740,33 +732,23 @@ and tree_of_row_field ?printing_context sch (l, f) =
 and tree_of_typlist ?printing_context sch tyl =
   List.map ((tree_of_typexp ?printing_context) sch) tyl
 
-and tree_of_typobject ?printing_context sch fi nm =
-  match nm with
-  | None ->
-    let pr_fields fi =
-      let fields, rest = flatten_fields fi in
-      let present_fields =
-        List.fold_right
-          (fun (n, k, t) l ->
-            match field_kind_repr k with
-            | Fpresent -> (n, t) :: l
-            | _ -> l)
-          fields []
-      in
-      let sorted_fields =
-        List.sort (fun (n, _) (n', _) -> String.compare n n') present_fields
-      in
-      tree_of_typfields ?printing_context sch rest sorted_fields
-    in
-    let fields, rest = pr_fields fi in
-    Otyp_object (fields, rest)
-  | Some (p, ty :: tyl) ->
-    let non_gen = is_non_gen sch (repr ty) in
-    let args = tree_of_typlist ?printing_context sch tyl in
-    let p', s = best_type_path p in
-    assert (s = Id);
-    Otyp_class (non_gen, tree_of_path p', args)
-  | _ -> fatal_error "Printtyp.tree_of_typobject"
+and tree_of_typobject ?printing_context sch fi =
+  let fields, rest = flatten_fields fi in
+  let present_fields =
+    List.fold_right
+      (fun (n, k, t) l ->
+        match field_kind_repr k with
+        | Fpresent -> (n, t) :: l
+        | _ -> l)
+      fields []
+  in
+  let sorted_fields =
+    List.sort (fun (n, _) (n', _) -> String.compare n n') present_fields
+  in
+  let fields, rest =
+    tree_of_typfields ?printing_context sch rest sorted_fields
+  in
+  Otyp_object (fields, rest)
 
 and is_non_gen sch ty = sch && is_Tvar ty && ty.level <> generic_level
 
@@ -1066,8 +1048,6 @@ let tree_of_value_description id decl =
 
 let value_description id ppf decl =
   !Oprint.out_sig_item ppf (tree_of_value_description id decl)
-
-(* Print a class type *)
 
 (* Print a module type *)
 

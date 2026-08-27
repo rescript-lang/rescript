@@ -72,23 +72,10 @@ and type_desc =
   | Tconstr of Path.t * type_expr list * abbrev_memo ref
       (** [Tconstr (`A.B.t', [t1;...;tn], _)] ==> [(t1,...,tn) A.B.t]
       The last parameter keep tracks of known expansions, see [abbrev_memo]. *)
-  | Tobject of type_expr * (Path.t * type_expr list) option ref
-      (** [Tobject (`f1:t1;...;fn: tn', `None')] ==> [< f1: t1; ...; fn: tn >]
+  | Tobject of type_expr
+      (** [Tobject `f1:t1;...;fn: tn'] ==> [{"f1": t1, ..., "fn": tn}]
       f1, fn are represented as a linked list of types using Tfield and Tnil
-      constructors.
-
-      [Tobject (_, `Some (`A.ct', [t1;...;tn]')] ==> [(t1, ..., tn) A.ct].
-      where A.ct is the type of some class.
-
-      There are also special cases for so-called "class-types", cf. [Typeclass]:
-
-        [Tobject (Tfield(_,_,...(Tfield(_,_,rv)...),
-                         Some(`A.#ct`, [rv;t1;...;tn])]
-             ==> [(t1, ..., tn) #A.ct]
-        [Tobject (_, Some(`A.#ct`, [Tnil;t1;...;tn])] ==> [(t1, ..., tn) A.ct]
-
-      where [rv] is the hidden row variable.
-  *)
+      constructors, terminated by a row variable when the row is open. *)
   | Tfield of string * field_kind * type_expr * type_expr
       (** [Tfield ("foo", Fpresent, t, ts)] ==> [<...; foo : t; ts>] *)
   | Tnil  (** [Tnil] ==> [<...; >] *)
@@ -186,9 +173,6 @@ module Type_ops : sig
   val hash : t -> int
 end
 
-(* Maps of methods and instance variables *)
-
-module Meths : Map.S with type key = string
 module Vars : Map.S with type key = string
 
 (* Value descriptions *)

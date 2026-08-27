@@ -364,10 +364,9 @@ and expression i ppf x =
     line i ppf "Texp_for_await_of \"%a\"\n" fmt_ident s;
     expression i ppf e1;
     expression i ppf e2
-  | Texp_send (e, Tmeth_name s, eo) ->
+  | Texp_send (e, s) ->
     line i ppf "Texp_send \"%s\"\n" s;
-    expression i ppf e;
-    option i expression ppf eo
+    expression i ppf e
   | Texp_letmodule (s, _, me, e) ->
     line i ppf "Texp_letmodule \"%a\"\n" fmt_ident s;
     module_expr i ppf me;

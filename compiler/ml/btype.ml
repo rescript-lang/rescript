@@ -195,7 +195,7 @@ let proxy ty =
   let ty0 = repr ty in
   match ty0.desc with
   | Tvariant row when not (static_row row) -> row_more row
-  | Tobject (ty, _) ->
+  | Tobject ty ->
     let rec proxy_obj ty =
       match ty.desc with
       | Tfield (_, _, _, ty) | Tlink ty -> proxy_obj ty
@@ -210,7 +210,7 @@ let proxy ty =
 
 let row_of_type t =
   match (repr t).desc with
-  | Tobject (t, _) ->
+  | Tobject t ->
     let rec get_row t =
       let t = repr t in
       match t.desc with
@@ -260,10 +260,7 @@ let iter_type_expr f ty =
     f ret
   | Ttuple l -> List.iter f l
   | Tconstr (_, l, _) -> List.iter f l
-  | Tobject (ty, {contents = Some (_, p)}) ->
-    f ty;
-    List.iter f p
-  | Tobject (ty, _) -> f ty
+  | Tobject ty -> f ty
   | Tvariant row ->
     iter_row f row;
     f (row_more row)
@@ -352,10 +349,7 @@ let type_iterators =
   and it_do_type_expr it ty =
     iter_type_expr (it.it_type_expr it) ty;
     match ty.desc with
-    | Tconstr (p, _, _)
-    | Tobject (_, {contents = Some (p, _)})
-    | Tpackage (p, _, _) ->
-      it.it_path p
+    | Tconstr (p, _, _) | Tpackage (p, _, _) -> it.it_path p
     | Tvariant row -> may (fun (p, _) -> it.it_path p) (row_repr row).row_name
     | _ -> ()
   and it_path _p = () in
@@ -423,9 +417,7 @@ let rec copy_type_desc ?(keep_names = false) f = function
     Tarrow (List.map (fun arg -> {arg with typ = f arg.typ}) params, f ret)
   | Ttuple l -> Ttuple (List.map f l)
   | Tconstr (p, l, _) -> Tconstr (p, List.map f l, ref Mnil)
-  | Tobject (ty, {contents = Some (p, tl)}) ->
-    Tobject (f ty, ref (Some (p, List.map f tl)))
-  | Tobject (ty, _) -> Tobject (f ty, ref None)
+  | Tobject ty -> Tobject (f ty)
   | Tvariant _ -> assert false (* too ambiguous *)
   | Tfield (p, k, ty1, ty2) ->
     (* the kind is kept shared *)

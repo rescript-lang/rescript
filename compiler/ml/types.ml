@@ -28,7 +28,7 @@ and type_desc =
   | Tarrow of arg list * type_expr
   | Ttuple of type_expr list
   | Tconstr of Path.t * type_expr list * abbrev_memo ref
-  | Tobject of type_expr * (Path.t * type_expr list) option ref
+  | Tobject of type_expr
   | Tfield of string * field_kind * type_expr * type_expr
   | Tnil
   | Tlink of type_expr
@@ -74,8 +74,7 @@ module Ordered_string = struct
   type t = string
   let compare (x : t) y = compare x y
 end
-module Meths = Map.Make (Ordered_string)
-module Vars = Meths
+module Vars = Map.Make (Ordered_string)
 
 (* Value descriptions *)
 

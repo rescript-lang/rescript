@@ -179,15 +179,7 @@ let rec typexp s ty =
              (!ctype_apply_env_empty params body args).desc)
          | Tpackage (p, n, tl) ->
            Tpackage (modtype_path s p, n, List.map (typexp s) tl)
-         | Tobject (t1, name) ->
-           Tobject
-             ( typexp s t1,
-               ref
-                 (match !name with
-                 | None -> None
-                 | Some (p, tl) ->
-                   if to_subst_by_type_function s p then None
-                   else Some (type_path s p, List.map (typexp s) tl)) )
+         | Tobject t1 -> Tobject (typexp s t1)
          | Tvariant row -> (
            let row = row_repr row in
            let more = repr row.row_more in

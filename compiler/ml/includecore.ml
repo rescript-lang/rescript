@@ -125,8 +125,8 @@ let type_manifest env ty1 params1 ty2 params2 priv2 =
     &&
     let tl1, tl2 = List.split !to_equal in
     Ctype.equal env true tl1 tl2
-  | Tobject (fi1, _), Tobject (fi2, _)
-    when is_absrow env (snd (Ctype.flatten_fields fi2)) ->
+  | Tobject fi1, Tobject fi2 when is_absrow env (snd (Ctype.flatten_fields fi2))
+    ->
     let fields2, rest2 = Ctype.flatten_fields fi2 in
     Ctype.equal env true (ty1 :: params1) (rest2 :: params2)
     &&

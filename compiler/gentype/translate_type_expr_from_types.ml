@@ -508,7 +508,7 @@ and translateTypeExprFromTypes_ ~config ~type_vars_gen ~type_env
     in
     {dependencies = []; type_ = TypeVar type_name}
   | Tvar (Some s) -> {dependencies = []; type_ = TypeVar s}
-  | Tobject (t_obj, _) ->
+  | Tobject t_obj ->
     let rec get_field_types (texp : Types.type_expr) =
       match texp.desc with
       | Tfield (name, _, t1, t2) ->
