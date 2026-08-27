@@ -21,8 +21,13 @@
   (ocaml
    (>= 5.0.0))
   dune
-  (flow_parser
-   (= 0.267.0))
+  (base
+   (>= v0.16.3))
+  (ppxlib
+   (>= 0.32.1))
+  (ppx_deriving :build)
+  (ppx_gen_rec :build)
+  wtf8
   (ocamlformat
    (and :with-test (= 0.27.0)))
   (yojson
