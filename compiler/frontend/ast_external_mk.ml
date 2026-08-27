@@ -78,7 +78,6 @@ let inline_string (s : string) (delim_raw : string option) =
 
 let inline_bool b = inline_const (Const_bool b)
 
-(* FIXME: check overflow ?*)
 let inline_int i = inline_const (Const_int i)
 
 let inline_bigint s =
