@@ -36,9 +36,6 @@ type external_module_name = {
 }
 
 type arg_type = External_arg_spec.attr
-(** TODO: information between [arg_type] and [arg_label] are duplicated,
-    design a more compact representation so that it is also easy to seralize by hand
-*)
 
 type arg_label = External_arg_spec.label
 
