@@ -22,6 +22,7 @@ let suites =
       Ounit_ast_mapper0_tests.suites;
       Ounit_pattern_printer_tests.suites;
       Ounit_js_analyzer_tests.suites;
+      Ounit_flow_parser_tests.suites;
       Ounit_jsx_loc_tests.suites;
       Ounit_analysis_config_tests.suites;
       Ounit_analysis_references_tests.suites;

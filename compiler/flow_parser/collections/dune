@@ -1,0 +1,6 @@
+(include_subdirs unqualified)
+
+(library
+ (name collections)
+ (wrapped false)
+ (libraries base))
