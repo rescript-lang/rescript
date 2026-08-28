@@ -34,9 +34,9 @@ runs:
       run: |
         dependency_flags_key="${DEPENDENCY_FLAGS//--/}"
         dependency_flags_key="${dependency_flags_key// /_}"
-        key="$CACHE_PREFIX-$OS-3.6.0-$COMPILER-$dependency_flags_key-${{ hashFiles('*.opam') }}"
+        key="$CACHE_PREFIX-$OS-3.7.2-$COMPILER-$dependency_flags_key-${{ hashFiles('*.opam') }}"
         echo "value=${key//,/-}" >> "$GITHUB_OUTPUT"
-        echo "setup-version=3.6.0" >> "$GITHUB_OUTPUT"
+        echo "setup-version=3.7.2" >> "$GITHUB_OUTPUT"
 
     - name: Restore OPAM environment
       id: cache
@@ -53,7 +53,7 @@ runs:
 
     - name: Use OCaml ${{ inputs.compiler }}
       if: steps.cache.outputs.cache-hit != 'true'
-      uses: ocaml/setup-ocaml@v3.6.0
+      uses: ocaml/setup-ocaml@v3.7.2
       with:
         ocaml-compiler: ${{ inputs.compiler }}
         opam-pin: false

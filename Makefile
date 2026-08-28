@@ -238,10 +238,9 @@ checkformat: | $(YARN_INSTALL_STAMP)
 
 # Coverage (bisect_ppx)
 #
-# Requires the `bisect_ppx` opam package (>= 2.8.0) in your switch:
-#   opam install bisect_ppx
-# or pull it in via the rescript dev-setup deps:
-#   opam install . --deps-only --with-dev-setup
+# Requires the pending `bisect_ppx` OCaml 5.5 compatibility patch in your switch:
+#   opam pin add bisect_ppx \
+#     git+https://github.com/patricoferris/bisect_ppx.git#7061d643ff492b0045796357ee6917ded21fb1f0
 #
 # Quick start:
 #   make coverage         # run full test suite, generate report
