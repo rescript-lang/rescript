@@ -1,3 +1,4 @@
 (library
  (name flow_sedlexing)
- (wrapped false))
+ (wrapped false)
+ (modules Flow_sedlexing))

@@ -1,6 +1,7 @@
 (library
  (name flow_sedlexing_ppx)
  (kind ppx_rewriter)
+ (modules Flow_sedlex Ppx_sedlex Sedlex_cset)
  (libraries ppxlib flow_sedlexing)
  (ppx_runtime_libraries flow_sedlexing)
  (preprocess

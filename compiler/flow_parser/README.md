@@ -24,6 +24,13 @@ call uses an empty-list comparison to retain OCaml 5.0 compatibility. The
 Sedlex PPX uses `Ast_helper.Exp.fun_` to generate single-argument functions
 with newer ppxlib versions.
 
+Only modules in the dependency closure of ReScript's expression and program
+parser entry points are retained. Upstream ESTree translation, JSDoc parsing,
+location translation, token translation, and unused collection helpers are
+omitted. The core statement, declaration, type, JSX, pattern, comment, and AST
+modules remain because the parser connects them transitively and `%raw`
+validates both complete JavaScript programs and individual expressions.
+
 Vendored sources are excluded from the repository-wide OCamlformat check so
 that they remain comparable with their upstream versions.
 
