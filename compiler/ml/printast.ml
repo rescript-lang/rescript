@@ -351,8 +351,12 @@ and expression i ppf x =
     line i ppf "Pexp_coerce\n";
     expression i ppf e;
     core_type i ppf cto2
-  | Pexp_send (e, s) ->
-    line i ppf "Pexp_send \"%s\"\n" s.txt;
+  | Pexp_object_set (e, s, v) ->
+    line i ppf "Pexp_object_set \"%s\"\n" s.txt;
+    expression i ppf e;
+    expression i ppf v
+  | Pexp_object_get (e, s) ->
+    line i ppf "Pexp_object_get \"%s\"\n" s.txt;
     expression i ppf e
   | Pexp_letmodule (s, me, e) ->
     line i ppf "Pexp_letmodule %a\n" fmt_string_loc s;

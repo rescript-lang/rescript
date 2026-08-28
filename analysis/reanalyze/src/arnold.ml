@@ -1003,8 +1003,11 @@ module Compile = struct
     | Texp_for_await_of (_id, _pat, e1, e2) ->
       let open Command in
       expression ~ctx e1 +++ expression ~ctx e2
-    | Texp_send _ ->
-      not_implemented "Texp_send";
+    | Texp_object_get _ ->
+      not_implemented "Texp_object_get";
+      assert false
+    | Texp_object_set _ ->
+      not_implemented "Texp_object_set";
       assert false
     | Texp_letmodule _ ->
       not_implemented "Texp_letmodule";

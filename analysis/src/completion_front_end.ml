@@ -254,7 +254,7 @@ let rec expr_to_context_path_inner ~(in_jsx_context : bool)
            expr_loc = e1.pexp_loc;
            in_jsx = in_jsx_context;
          })
-  | Pexp_send (e1, {txt}) -> (
+  | Pexp_object_get (e1, {txt}) -> (
     match expr_to_context_path ~in_jsx_context e1 with
     | None -> None
     | Some contex_path -> Some (CPObj (contex_path, txt)))
@@ -1580,7 +1580,8 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
               |> iterate_fn_arguments ~is_pipe:false ~args ~iterator;
               reset_current_ctx_path old_ctx_path)
           | Some arg_completable -> set_result arg_completable)
-        | Pexp_send (lhs, {txt; loc}) -> (
+        | (Pexp_object_get (lhs, {txt; loc}) as object_access)
+        | (Pexp_object_set (lhs, {txt; loc}, _) as object_access) -> (
           (* e["txt"]
              If the string for txt is not closed, it could go over several lines.
              Only take the first like to represent the label *)
@@ -1596,7 +1597,12 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
             ((l, c + 1), (l, c + 1 + String.length label))
           in
           if debug then
-            Printf.printf "Pexp_send %s%s e:%s\n" label
+            Printf.printf "%s %s%s e:%s\n"
+              (match object_access with
+              | Pexp_object_get _ -> "Pexp_object_get"
+              | Pexp_object_set _ -> "Pexp_object_set"
+              | _ -> assert false)
+              label
               (Range.to_string label_range)
               (Loc.to_string lhs.pexp_loc);
           if

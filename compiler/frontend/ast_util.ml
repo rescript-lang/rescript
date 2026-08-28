@@ -23,4 +23,4 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
 let js_property loc obj (name : string) =
-  Parsetree.Pexp_send (obj, {loc; txt = name})
+  Parsetree.Pexp_object_get (obj, {loc; txt = name})

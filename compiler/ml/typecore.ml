@@ -56,6 +56,7 @@ type error =
   | Name_type_mismatch of
       string * Longident.t * (Path.t * Path.t) * (Path.t * Path.t) list
   | Undefined_method of type_expr * string * string list option
+  | Object_field_not_mutable of type_expr * string
   | Private_type of type_expr
   | Not_subtype of
       Ctype.type_pairs * Ctype.type_pairs * Ctype.subtype_context option
@@ -186,9 +187,12 @@ let iter_expression f e =
     | Pexp_constraint (e, _)
     | Pexp_coerce (e, _, _)
     | Pexp_letexception (_, e)
-    | Pexp_send (e, _)
+    | Pexp_object_get (e, _)
     | Pexp_field (e, _) ->
       expr e
+    | Pexp_object_set (e1, _, e2) ->
+      expr e1;
+      expr e2
     | Pexp_object_literal fields -> List.iter (fun (_, e) -> expr e) fields
     | Pexp_while (e1, e2) | Pexp_sequence (e1, e2) | Pexp_setfield (e1, _, e2)
       ->
@@ -2332,6 +2336,26 @@ let should_unify_expected_result_before_typing_lowered_apply funct sargs =
   | _ -> false
 
 type targs = (Asttypes.arg_label * Typedtree.expression option) list
+let object_field_use_type env typ =
+  match Ctype.repr typ with
+  | {desc = Tpoly (ty, [])} -> instance env ty
+  | {desc = Tpoly (ty, tl)} -> snd (instance_poly false tl ty)
+  | {desc = Tvar _} as ty ->
+    let ty' = newvar () in
+    unify env (instance_def ty) (newty (Tpoly (ty', [])));
+    ty'
+  | _ -> assert false
+
+let object_valid_fields env ty =
+  match (expand_head env ty).desc with
+  | Tobject fields ->
+    let fields, _ = Ctype.flatten_fields fields in
+    let collect_fields li (f : Ctype.field_info) =
+      if f.f_kind = Fpresent then f.f_name :: li else li
+    in
+    Some (List.fold_left collect_fields [] fields)
+  | _ -> None
+
 let rec type_exp ?deprecated_context ~context ?recarg env sexp =
   (* We now delegate everything to type_expect *)
   type_expect ?deprecated_context ~context ?recarg env sexp (newvar ())
@@ -3325,7 +3349,14 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
           else (
             Hashtbl.add emitted s.txt ();
             newty
-              (Tfield (s.txt, Fpresent, newty (Tpoly (field.exp_type, [])), rest))))
+              (Tfield
+                 {
+                   name = s.txt;
+                   presence = Fpresent;
+                   mutability = ref (Mutability_value Asttypes.Immutable);
+                   typ = newty (Tpoly (field.exp_type, []));
+                   rest;
+                 })))
         fields (newty Tnil)
     in
     rue
@@ -3337,23 +3368,14 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
         exp_attributes = sexp.pexp_attributes;
         exp_env = env;
       }
-  | Pexp_send (e, {txt = met}) -> (
+  | Pexp_object_get (e, ({txt = met} as met_loc)) -> (
     let obj = type_exp ~context:None env e in
     try
       let typ = filter_method env met Public obj.exp_type in
-      let typ =
-        match repr typ with
-        | {desc = Tpoly (ty, [])} -> instance env ty
-        | {desc = Tpoly (ty, tl)} -> snd (instance_poly false tl ty)
-        | {desc = Tvar _} as ty ->
-          let ty' = newvar () in
-          unify env (instance_def ty) (newty (Tpoly (ty', [])));
-          ty'
-        | _ -> assert false
-      in
+      let typ = object_field_use_type env typ in
       rue
         {
-          exp_desc = Texp_send (obj, met);
+          exp_desc = Texp_object_get (obj, met_loc);
           exp_loc = loc;
           exp_extra = [];
           exp_type = typ;
@@ -3361,20 +3383,40 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
           exp_env = env;
         }
     with Unify _ ->
-      let valid_methods =
-        match (expand_head env obj.exp_type).desc with
-        | Tobject fields ->
-          let fields, _ = Ctype.flatten_fields fields in
-          let collect_fields li (meth, meth_kind, _meth_ty) =
-            if meth_kind = Fpresent then meth :: li else li
-          in
-          Some (List.fold_left collect_fields [] fields)
-        | _ -> None
-      in
       raise
         (Error
-           (e.pexp_loc, env, Undefined_method (obj.exp_type, met, valid_methods)))
-    )
+           ( e.pexp_loc,
+             env,
+             Undefined_method
+               (obj.exp_type, met, object_valid_fields env obj.exp_type) )))
+  | Pexp_object_set (e, ({txt = name} as name_loc), svalue) -> (
+    let obj = type_exp ~context:None env e in
+    let field_typ =
+      try Ctype.filter_object_field_for_write env name obj.exp_type
+      with Unify _ -> Error Ctype.Owrite_missing
+    in
+    match field_typ with
+    | Error Owrite_missing ->
+      raise
+        (Error
+           ( e.pexp_loc,
+             env,
+             Undefined_method
+               (obj.exp_type, name, object_valid_fields env obj.exp_type) ))
+    | Error Owrite_not_mutable ->
+      raise (Error (loc, env, Object_field_not_mutable (obj.exp_type, name)))
+    | Ok typ ->
+      let typ = object_field_use_type env typ in
+      let value = type_expect ~context:None env svalue typ in
+      rue
+        {
+          exp_desc = Texp_object_set (obj, name_loc, value);
+          exp_loc = loc;
+          exp_extra = [];
+          exp_type = instance_def Predef.type_unit;
+          exp_attributes = sexp.pexp_attributes;
+          exp_env = env;
+        })
   | Pexp_letmodule (name, smodl, sbody) ->
     let ty = newvar () in
     (* remember original level *)
@@ -5068,6 +5110,13 @@ let report_error env loc ppf error =
       (function
         | ppf ->
         fprintf ppf "but a %s was expected belonging to the %s type" name kind)
+  | Object_field_not_mutable (ty, name) ->
+    fprintf ppf
+      "@[<v>@[This expression has type@;\
+       <1 2>%a@]@,\
+       The field %s is not settable. Only fields annotated with @set, e.g. \
+       {@set \"%s\": int}, can be assigned.@]"
+      type_expr ty name name
   | Undefined_method (ty, me, valid_methods) -> (
     fprintf ppf
       "@[<v>@[This expression has type@;<1 2>%a@]@,It has no field %s@]"

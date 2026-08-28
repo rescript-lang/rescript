@@ -139,7 +139,8 @@ let type_manifest env ty1 params1 ty2 params2 priv2 =
     miss2 = []
     &&
     let tl1, tl2 =
-      List.split (List.map (fun (_, _, t1, _, t2) -> (t1, t2)) pairs)
+      List.split
+        (List.map (fun (f1, f2) -> (f1.Ctype.f_typ, f2.Ctype.f_typ)) pairs)
     in
     Ctype.equal env true (params1 @ tl1) (params2 @ tl2)
   | _ ->

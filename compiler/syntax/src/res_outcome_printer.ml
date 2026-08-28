@@ -356,10 +356,11 @@ and print_object_fields fields rest =
                 Doc.join
                   ~sep:(Doc.concat [Doc.comma; Doc.line])
                   (List.map
-                     (fun (lbl, out_type) ->
+                     (fun (lbl, mut, out_type) ->
                        Doc.group
                          (Doc.concat
                             [
+                              (if mut then Doc.text "@set " else Doc.nil);
                               Doc.text ("\"" ^ lbl ^ "\": ");
                               print_out_type_doc out_type;
                             ]))

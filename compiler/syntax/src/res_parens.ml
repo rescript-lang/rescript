@@ -102,7 +102,8 @@ let unary_expr_operand expr =
      pexp_desc =
        ( Pexp_assert _ | Pexp_fun _ | Pexp_constraint _ | Pexp_setfield _
        | Pexp_extension _ (* readability? maybe remove *)
-       | Pexp_object_literal _ (* ({"a": 1})["a"] *) | Pexp_match _ | Pexp_try _
+       | Pexp_object_literal _ (* ({"a": 1})["a"] *)
+       | Pexp_object_set _ (* (o["x"] = v)["y"] *) | Pexp_match _ | Pexp_try _
        | Pexp_while _ | Pexp_for _ | Pexp_for_of _ | Pexp_for_await_of _
        | Pexp_ifthenelse _ );
     } ->

@@ -33,17 +33,20 @@ function read_from_readonly() {
   return readonlyObj.x;
 }
 
-function open_source_setter_narrower(o) {
-  return o;
+function set_x(o, v) {
+  o.x = v;
 }
 
-function unrelated_setter_type(o) {
-  o.x = "hello";
-  return o.x;
+function set_at_int() {
+  intTarget.x = 1;
 }
 
-function run_unrelated_setter() {
-  return unrelated_setter_type(plainIntObj);
+function set_at_string() {
+  stringTarget.x = "s";
+}
+
+function closed_immutable_covariant(v) {
+  return v;
 }
 
 export {
@@ -55,8 +58,9 @@ export {
   read_x,
   read_from_settable,
   read_from_readonly,
-  open_source_setter_narrower,
-  unrelated_setter_type,
-  run_unrelated_setter,
+  set_x,
+  set_at_int,
+  set_at_string,
+  closed_immutable_covariant,
 }
 /* No side effect */

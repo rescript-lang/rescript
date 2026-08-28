@@ -348,7 +348,10 @@ module E = struct
       coerce ~loc ~attrs (sub.expr sub e) (sub.typ sub t2)
     | Pexp_constraint (e, t) ->
       constraint_ ~loc ~attrs (sub.expr sub e) (sub.typ sub t)
-    | Pexp_send (e, s) -> send ~loc ~attrs (sub.expr sub e) (map_loc sub s)
+    | Pexp_object_get (e, s) ->
+      object_get ~loc ~attrs (sub.expr sub e) (map_loc sub s)
+    | Pexp_object_set (e, s, v) ->
+      object_set ~loc ~attrs (sub.expr sub e) (map_loc sub s) (sub.expr sub v)
     | Pexp_object_literal fields ->
       object_literal ~loc ~attrs
         (List.map (fun (s, e) -> (map_loc sub s, sub.expr sub e)) fields)

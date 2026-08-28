@@ -199,7 +199,10 @@ let expr sub {exp_extra; exp_desc; exp_env; _} =
   | Texp_for_await_of (_, _, exp1, exp2) ->
     sub.expr sub exp1;
     sub.expr sub exp2
-  | Texp_send (exp, _) -> sub.expr sub exp
+  | Texp_object_get (exp, _) -> sub.expr sub exp
+  | Texp_object_set (exp, _, v) ->
+    sub.expr sub exp;
+    sub.expr sub v
   | Texp_object_literal fields ->
     List.iter (fun (_, e) -> sub.expr sub e) fields
   | Texp_letmodule (_, _, mexpr, exp) ->

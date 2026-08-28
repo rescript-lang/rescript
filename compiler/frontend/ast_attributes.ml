@@ -25,13 +25,6 @@
 type attr = Parsetree.attribute
 type t = attr list
 
-let process_object_field_attributes_rev (attrs : t) : bool * t =
-  Ext_list.fold_left attrs (false, [])
-    (fun (has_set, acc) (({txt}, payload) as attr) ->
-      match (txt, payload) with
-      | "set", Parsetree.PStr [] -> (true, acc)
-      | _ -> (has_set, attr :: acc))
-
 type attr_kind = Nothing | Meth_callback of attr
 
 let process_attributes_rev (attrs : t) : attr_kind * t =

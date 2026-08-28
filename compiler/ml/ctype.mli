@@ -101,17 +101,23 @@ val repr : type_expr -> type_expr
 (* Return the canonical representative of a type. *)
 
 val object_fields : type_expr -> type_expr
-val flatten_fields :
-  type_expr -> (string * field_kind * type_expr) list * type_expr
 
-(* Transform a field type into a list of pairs label-type *)
-(* The fields are sorted *)
+type field_info = {
+  f_name: string;
+  f_kind: field_kind;
+  f_mut: field_mutability ref;
+      (* the field's cell as stored; read the class value with
+         [Btype.mutability_repr] *)
+  f_typ: type_expr;
+}
+
+type fields = field_info list
+
+val flatten_fields : type_expr -> fields * type_expr
+
+(* Transform a field type into a sorted list of field infos *)
 val associate_fields :
-  (string * field_kind * type_expr) list ->
-  (string * field_kind * type_expr) list ->
-  (string * field_kind * type_expr * field_kind * type_expr) list
-  * (string * field_kind * type_expr) list
-  * (string * field_kind * type_expr) list
+  fields -> fields -> (field_info * field_info) list * fields * fields
 val opened_object : type_expr -> bool
 val lid_of_path : ?hash:string -> Path.t -> Longident.t
 
@@ -214,6 +220,11 @@ val filter_arrow_n :
    parameters with the given labels; return parameter and result types. *)
 
 val filter_method : Env.t -> string -> private_flag -> type_expr -> type_expr
+
+type object_field_write_error = Owrite_missing | Owrite_not_mutable
+
+val filter_object_field_for_write :
+  Env.t -> string -> type_expr -> (type_expr, object_field_write_error) Result.t
 (* A special case of unification (with {m : 'a; 'b}). *)
 
 val occur_in : Env.t -> type_expr -> type_expr -> bool

@@ -1389,7 +1389,7 @@ Found type for function (~age: int, ~name: string) => string
 
 Complete src/Completion.res 90:13
 posCursor:[90:13] posNoWhite:[90:12] Found expr:[90:3->93:18]
-Pexp_send a[90:12->90:13] e:[90:3->90:10]
+Pexp_object_get a[90:12->90:13] e:[90:3->90:10]
 Completable: Cpath Value[someObj]["a"]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -1400,7 +1400,7 @@ Path someObj
 
 Complete src/Completion.res 95:24
 posCursor:[95:24] posNoWhite:[95:23] Found expr:[95:3->99:6]
-Pexp_send [95:24->95:24] e:[95:3->95:22]
+Pexp_object_get [95:24->95:24] e:[95:3->95:22]
 Completable: Cpath Value[nestedObj]["x"]["y"][""]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -1416,7 +1416,7 @@ Path nestedObj
 
 Complete src/Completion.res 99:7
 posCursor:[99:7] posNoWhite:[99:6] Found expr:[99:3->102:20]
-Pexp_send a[99:6->99:7] e:[99:3->99:4]
+Pexp_object_get a[99:6->99:7] e:[99:3->99:4]
 Completable: Cpath Value[o]["a"]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -1427,7 +1427,7 @@ Path o
 
 Complete src/Completion.res 104:17
 posCursor:[104:17] posNoWhite:[104:16] Found expr:[104:3->125:19]
-Pexp_send [104:17->104:17] e:[104:3->104:15]
+Pexp_object_get [104:17->104:17] e:[104:3->104:15]
 Completable: Cpath Value[no]["x"]["y"][""]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -1538,7 +1538,7 @@ Path my
 
 Complete src/Completion.res 125:19
 posCursor:[125:19] posNoWhite:[125:18] Found expr:[125:3->145:32]
-Pexp_send [125:19->125:19] e:[125:3->125:17]
+Pexp_object_get [125:19->125:19] e:[125:3->125:17]
 Completable: Cpath Value[Objects, object][""]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -1816,7 +1816,7 @@ Path sha
 
 Complete src/Completion.res 221:22
 posCursor:[221:22] posNoWhite:[221:21] Found expr:[221:3->224:22]
-Pexp_send [221:22->221:22] e:[221:3->221:20]
+Pexp_object_get [221:22->221:22] e:[221:3->221:20]
 Completable: Cpath Value[FAO, forAutoObject][""]
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -2466,7 +2466,7 @@ Hover src/Completion.res 349:14
 Hover src/Completion.res 352:17
 Nothing at that position. Now trying to use completion.
 posCursor:[352:17] posNoWhite:[352:16] Found expr:[352:11->352:35]
-Pexp_send age[352:30->352:33] e:[352:11->352:28]
+Pexp_object_get age[352:30->352:33] e:[352:11->352:28]
 posCursor:[352:17] posNoWhite:[352:16] Found expr:[352:11->352:28]
 Pexp_ident FAO.forAutoObject:[352:11->352:28]
 Completable: Cpath Value[FAO, forAutoObject]
@@ -2670,7 +2670,7 @@ Pexp_apply ...__ghost__[0:-1->0:-1] (...[384:12->384:39], ...[384:39->384:40])
 posCursor:[384:38] posNoWhite:[384:37] Found expr:[384:12->384:39]
 Pexp_apply ...__ghost__[0:-1->0:-1] (...[384:12->384:17], ...[384:19->384:39])
 posCursor:[384:38] posNoWhite:[384:37] Found expr:[384:19->384:39]
-Pexp_send [384:38->384:38] e:[384:19->384:36]
+Pexp_object_get [384:38->384:38] e:[384:19->384:36]
 Completable: Cpath Value[FAO, forAutoObject][""]
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder

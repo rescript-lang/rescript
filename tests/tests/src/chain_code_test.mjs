@@ -20,7 +20,7 @@ function f4(h, x, y) {
     x,
     y
   ];
-  h.paint.draw = [
+  h.brush.draw = [
     x,
     y
   ];

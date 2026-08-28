@@ -332,14 +332,16 @@ and print_fields rest ppf = function
     match rest with
     | Some non_gen -> fprintf ppf "%s.." (if non_gen then "_" else "")
     | None -> ())
-  | [(s, t)] ->
-    fprintf ppf "%s : %a" s print_out_type t;
+  | [(s, mut, t)] ->
+    fprintf ppf "%s%s : %a" (if mut then "mutable " else "") s print_out_type t;
     (match rest with
     | Some _ -> fprintf ppf ";@ "
     | None -> ());
     print_fields rest ppf []
-  | (s, t) :: l ->
-    fprintf ppf "%s : %a;@ %a" s print_out_type t (print_fields rest) l
+  | (s, mut, t) :: l ->
+    fprintf ppf "%s%s : %a;@ %a"
+      (if mut then "mutable " else "")
+      s print_out_type t (print_fields rest) l
 
 and print_row_field ppf (l, opt_amp, tyl) =
   let pr_of ppf =

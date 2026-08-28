@@ -28,14 +28,4 @@ let js_variant_value ~polymorphic =
   | true -> "VAL"
   | false -> "value"
 
-let is_mutable_object_field name =
-  String.length name >= 2
-  && (String.sub name (String.length name - 2) 2 [@doesNotRaise]) = "#="
-
-(** Mutable fields, i.e. fields annotated "[@set]"
-   are represented as extra fields called "fieldName#="
-   preceding the normal field. *)
-let check_mutable_object_field ~previous_name ~name =
-  previous_name = name ^ "#="
-
 let default = "$$default"

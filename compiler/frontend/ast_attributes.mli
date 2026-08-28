@@ -25,11 +25,6 @@ type attr = Parsetree.attribute
 
 type t = attr list
 
-val process_object_field_attributes_rev : t -> bool * t
-(** Recognizes the bare [@set] marker on an object-type field. Returns whether
-    the field is settable, plus the remaining attributes. Any other form is
-    left in place and ignored, like any unrecognized attribute. *)
-
 type attr_kind = Nothing | Meth_callback of attr
 
 val process_attributes_rev : t -> attr_kind * t

@@ -1775,7 +1775,17 @@ and walk_expression expr t comments =
       attach t.leading expr2.pexp_loc leading;
       walk_expression expr2 t inside;
       attach t.trailing expr2.pexp_loc trailing
-  | Pexp_send _ -> ()
+  | Pexp_object_get (e1, _) -> walk_expression e1 t comments
+  | Pexp_object_set (e1, _, e2) ->
+    let leading, inside, trailing = partition_by_loc comments e1.pexp_loc in
+    attach t.leading e1.pexp_loc leading;
+    walk_expression e1 t inside;
+    let after_lhs, rest = partition_adjacent_trailing e1.pexp_loc trailing in
+    attach t.trailing e1.pexp_loc after_lhs;
+    let before, inside, after = partition_by_loc rest e2.pexp_loc in
+    attach t.leading e2.pexp_loc before;
+    walk_expression e2 t inside;
+    attach t.trailing e2.pexp_loc after
 
 and walk_expr_parameter (_attrs, _argLbl, expr_opt, pattern) t comments =
   let leading, inside, trailing = partition_by_loc comments pattern.ppat_loc in

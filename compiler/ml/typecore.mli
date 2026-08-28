@@ -89,6 +89,7 @@ type error =
   | Name_type_mismatch of
       string * Longident.t * (Path.t * Path.t) * (Path.t * Path.t) list
   | Undefined_method of type_expr * string * string list option
+  | Object_field_not_mutable of type_expr * string
   | Private_type of type_expr
   | Not_subtype of
       Ctype.type_pairs * Ctype.type_pairs * Ctype.subtype_context option

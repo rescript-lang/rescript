@@ -1078,7 +1078,7 @@ let compute_variance env visited vari ty =
               tl decl.type_variance
           with Not_found -> List.iter (compute_variance_rec may_inv) tl)
       | Tobject ty -> compute_same ty
-      | Tfield (_, _, ty1, ty2) ->
+      | Tfield {typ = ty1; rest = ty2} ->
         compute_same ty1;
         compute_same ty2
       | Tsubst ty -> compute_same ty
@@ -2098,9 +2098,9 @@ let explain_unbound_single ppf tv ty =
     if rv == tv then trivial ty
     else
       explain_unbound ppf tv tl
-        (fun (_, _, t) -> t)
-        "method"
-        (fun (lab, _, _) -> lab ^ ": ")
+        (fun (f : Ctype.field_info) -> f.f_typ)
+        "field"
+        (fun (f : Ctype.field_info) -> f.f_name ^ ": ")
   | Tvariant row ->
     let row = Btype.row_repr row in
     if row.row_more == tv then trivial ty

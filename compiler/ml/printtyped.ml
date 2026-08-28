@@ -364,9 +364,13 @@ and expression i ppf x =
     line i ppf "Texp_for_await_of \"%a\"\n" fmt_ident s;
     expression i ppf e1;
     expression i ppf e2
-  | Texp_send (e, s) ->
-    line i ppf "Texp_send \"%s\"\n" s;
+  | Texp_object_get (e, s) ->
+    line i ppf "Texp_object_get \"%s\"\n" s.txt;
     expression i ppf e
+  | Texp_object_set (e, s, v) ->
+    line i ppf "Texp_object_set \"%s\"\n" s.txt;
+    expression i ppf e;
+    expression i ppf v
   | Texp_object_literal fields ->
     line i ppf "Texp_object_literal\n";
     List.iter
