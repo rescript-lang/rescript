@@ -8,11 +8,11 @@ let show_constructor {Constructor.cname = {txt}; args; res} =
       "({"
       ^ (fields
         |> List.map (fun (field : field) ->
-               Printf.sprintf "%s%s: %s" field.fname.txt
-                 (if field.optional then "?" else "")
-                 (Shared.type_to_string
-                    (if field.optional then Utils.unwrap_if_option field.typ
-                     else field.typ)))
+            Printf.sprintf "%s%s: %s" field.fname.txt
+              (if field.optional then "?" else "")
+              (Shared.type_to_string
+                 (if field.optional then Utils.unwrap_if_option field.typ
+                  else field.typ)))
         |> String.concat ", ")
       ^ "})"
     | Args args ->
@@ -115,18 +115,18 @@ let completions_for_exported_constructors ~(env : Query_env.t) ~prefix ~exact
         res :=
           (constructors
           |> List.filter (fun c ->
-                 Utils.check_name c.Constructor.cname.txt ~prefix ~exact)
+              Utils.check_name c.Constructor.cname.txt ~prefix ~exact)
           |> Utils.filter_map (fun c ->
-                 let name = c.Constructor.cname.txt in
-                 if not (Hashtbl.mem names_used name) then
-                   let () = Hashtbl.add names_used name () in
-                   Some
-                     (Completion.create name ~env ~docstring:c.docstring
-                        ?deprecated:c.deprecated
-                        ~kind:
-                          (Completion.Constructor
-                             (c, t.item.decl |> Shared.decl_to_string t.name.txt)))
-                 else None))
+              let name = c.Constructor.cname.txt in
+              if not (Hashtbl.mem names_used name) then
+                let () = Hashtbl.add names_used name () in
+                Some
+                  (Completion.create name ~env ~docstring:c.docstring
+                     ?deprecated:c.deprecated
+                     ~kind:
+                       (Completion.Constructor
+                          (c, t.item.decl |> Shared.decl_to_string t.name.txt)))
+              else None))
           @ !res
       | _ -> ());
   !res
@@ -141,16 +141,16 @@ let completion_for_exported_fields ~(env : Query_env.t) ~prefix ~exact
           (fields
           |> List.filter (fun f -> Utils.check_name f.fname.txt ~prefix ~exact)
           |> Utils.filter_map (fun f ->
-                 let name = f.fname.txt in
-                 if not (Hashtbl.mem names_used name) then
-                   let () = Hashtbl.add names_used name () in
-                   Some
-                     (Completion.create name ~env ~docstring:f.docstring
-                        ?deprecated:f.deprecated
-                        ~kind:
-                          (Completion.Field
-                             (f, t.item.decl |> Shared.decl_to_string t.name.txt)))
-                 else None))
+              let name = f.fname.txt in
+              if not (Hashtbl.mem names_used name) then
+                let () = Hashtbl.add names_used name () in
+                Some
+                  (Completion.create name ~env ~docstring:f.docstring
+                     ?deprecated:f.deprecated
+                     ~kind:
+                       (Completion.Field
+                          (f, t.item.decl |> Shared.decl_to_string t.name.txt)))
+              else None))
           @ !res
       | _ -> ());
   !res
@@ -159,9 +159,9 @@ let find_module_in_scope ~env ~module_name ~scope =
   let modules_table = Hashtbl.create 10 in
   env.Query_env.file.stamps
   |> Stamps.iter_modules (fun _ declared ->
-         Hashtbl.replace modules_table
-           (declared.name.txt, declared.extent_loc |> Loc.start)
-           declared);
+      Hashtbl.replace modules_table
+        (declared.name.txt, declared.extent_loc |> Loc.start)
+        declared);
   let result = ref None in
   let process_module name loc =
     if name = module_name && !result = None then
@@ -202,21 +202,20 @@ let completions_from_structure_items ~(env : Query_env.t)
     (structure : Module.structure) =
   Structure_utils.unique_items structure
   |> List.filter_map (fun (it : Module.item) ->
-         match it.kind with
-         | Module.Value typ ->
-           Some
-             (Completion.create ~env ~docstring:it.docstring
-                ~kind:(Completion.Value typ) it.name)
-         | Module.Module {type_ = m} ->
-           Some
-             (Completion.create ~env ~docstring:it.docstring
-                ~kind:
-                  (Completion.Module {docstring = it.docstring; module_ = m})
-                it.name)
-         | Module.Type (t, _recStatus) ->
-           Some
-             (Completion.create ~env ~docstring:it.docstring
-                ~kind:(Completion.Type t) it.name))
+      match it.kind with
+      | Module.Value typ ->
+        Some
+          (Completion.create ~env ~docstring:it.docstring
+             ~kind:(Completion.Value typ) it.name)
+      | Module.Module {type_ = m} ->
+        Some
+          (Completion.create ~env ~docstring:it.docstring
+             ~kind:(Completion.Module {docstring = it.docstring; module_ = m})
+             it.name)
+      | Module.Type (t, _recStatus) ->
+        Some
+          (Completion.create ~env ~docstring:it.docstring
+             ~kind:(Completion.Type t) it.name))
 
 let resolve_path_from_stamps ~state ~(env : Query_env.t) ~package ~scope
     ~module_name ~path =
@@ -692,16 +691,16 @@ let get_complementary_completions_for_typed_value ~opens ~all_files ~scope ~env
   let file_modules =
     all_files |> File_set.elements
     |> Utils.filter_map (fun name ->
-           if
-             Utils.check_name name ~prefix ~exact
-             && not
-                  (* TODO complete the namespaced name too *)
-                  (Utils.file_name_has_unallowed_chars name)
-           then
-             Some
-               (Completion.create name ~synthetic:true ~env
-                  ~kind:(Completion.FileModule name))
-           else None)
+        if
+          Utils.check_name name ~prefix ~exact
+          && not
+               (* TODO complete the namespaced name too *)
+               (Utils.file_name_has_unallowed_chars name)
+        then
+          Some
+            (Completion.create name ~synthetic:true ~env
+               ~kind:(Completion.FileModule name))
+        else None)
   in
   local_completions_with_opens @ file_modules
 
@@ -719,15 +718,15 @@ let get_completions_for_path ~state ~debug ~opens ~full ~pos ~exact ~scope
     let file_modules =
       all_files |> File_set.elements
       |> Utils.filter_map (fun name ->
-             if
-               Utils.check_name name ~prefix ~exact
-               && not
-                    (* TODO complete the namespaced name too *)
-                    (Utils.file_name_has_unallowed_chars name)
-             then
-               Some
-                 (Completion.create name ~env ~kind:(Completion.FileModule name))
-             else None)
+          if
+            Utils.check_name name ~prefix ~exact
+            && not
+                 (* TODO complete the namespaced name too *)
+                 (Utils.file_name_has_unallowed_chars name)
+          then
+            Some
+              (Completion.create name ~env ~kind:(Completion.FileModule name))
+          else None)
     in
     local_completions_with_opens @ file_modules
   | module_name :: path -> (
@@ -801,7 +800,7 @@ let completions_for_pipe_from_completion_path ~state
   let completions =
     completions
     |> List.map (fun (completion : Completion.t) ->
-           {completion with name = completion_name completion.name})
+        {completion with name = completion_name completion.name})
   in
   completions
 
@@ -827,8 +826,8 @@ let mk_item ?data ?additional_text_edits name ~kind ~detail ~deprecated
     ~docstring =
   let doc_content =
     (match deprecated with
-    | None -> ""
-    | Some s -> "Deprecated: " ^ s ^ "\n\n")
+      | None -> ""
+      | Some s -> "Deprecated: " ^ s ^ "\n\n")
     ^
     match docstring with
     | [] -> ""
@@ -1202,8 +1201,8 @@ and get_completions_for_context_path ~state ~debug ~full ~opens ~raw_opens ~pos
         |> get_completions_for_context_path ~state ~debug ~full ~opens
              ~raw_opens ~pos ~env:env_completion_is_made_from ~exact ~scope
         |> List.filter_map (fun c ->
-               Type_utils.transform_completion_to_pipe_completion
-                 ~synthetic:true ~env ?pos_of_dot c)
+            Type_utils.transform_completion_to_pipe_completion ~synthetic:true
+              ~env ?pos_of_dot c)
       in
       field_completions @ pipe_completions)
   | CPObj (cp, label) -> (
@@ -1220,10 +1219,10 @@ and get_completions_for_context_path ~state ~debug ~full ~opens ~raw_opens ~pos
       | Some (env, t_obj) ->
         t_obj |> Type_utils.get_obj_fields
         |> Utils.filter_map (fun (field, typ) ->
-               if Utils.check_name field ~prefix:label ~exact then
-                 Some
-                   (Completion.create field ~env ~kind:(Completion.ObjLabel typ))
-               else None)
+            if Utils.check_name field ~prefix:label ~exact then
+              Some
+                (Completion.create field ~env ~kind:(Completion.ObjLabel typ))
+            else None)
       | None -> [])
     | None -> [])
   | CPPipe {context_path = cp; id = prefix; lhs_loc; in_jsx; synthetic} -> (
@@ -1302,20 +1301,20 @@ and get_completions_for_context_path ~state ~debug ~full ~opens ~raw_opens ~pos
             |> Type_utils.filter_pipeable_functions ~env ~state ~full ~synthetic
                  ~target_type_id:main_type_id
             |> List.filter (fun (c : Completion.t) ->
-                   (* If we're completing from the current module then we need to care about scope.
+                (* If we're completing from the current module then we need to care about scope.
                       This is automatically taken care of in other cases. *)
-                   if is_from_current_module then
-                     match c.kind with
-                     | Value _ ->
-                       scope
-                       |> List.find_opt (fun (item : Scope_types.item) ->
-                              match item with
-                              | Value (scope_item_name, _, _, _) ->
-                                scope_item_name = c.name
-                              | _ -> false)
-                       |> Option.is_some
-                     | _ -> false
-                   else true)
+                if is_from_current_module then
+                  match c.kind with
+                  | Value _ ->
+                    scope
+                    |> List.find_opt (fun (item : Scope_types.item) ->
+                        match item with
+                        | Value (scope_item_name, _, _, _) ->
+                          scope_item_name = c.name
+                        | _ -> false)
+                    |> Option.is_some
+                  | _ -> false
+                else true)
         in
 
         let globally_configured_completions_for_type =
@@ -1330,9 +1329,9 @@ and get_completions_for_context_path ~state ~debug ~full ~opens ~raw_opens ~pos
         let globally_configured_completions =
           globally_configured_completions_for_type
           |> List.map (fun completion_path ->
-                 completions_for_pipe_from_completion_path ~state
-                   ~env_completion_is_made_from ~opens ~pos ~scope ~debug
-                   ~prefix ~env ~raw_opens ~full completion_path)
+              completions_for_pipe_from_completion_path ~state
+                ~env_completion_is_made_from ~opens ~pos ~scope ~debug ~prefix
+                ~env ~raw_opens ~full completion_path)
           |> List.flatten
           |> Type_utils.filter_pipeable_functions ~synthetic:true ~state ~env
                ~full ~target_type_id:main_type_id
@@ -1344,9 +1343,9 @@ and get_completions_for_context_path ~state ~debug ~full ~opens ~raw_opens ~pos
           Type_utils.get_extra_modules_to_complete_from_for_type ~state ~env
             ~full typ
           |> List.map (fun completion_path ->
-                 completions_for_pipe_from_completion_path ~state
-                   ~env_completion_is_made_from ~opens ~pos ~scope ~debug
-                   ~prefix ~env ~raw_opens ~full completion_path)
+              completions_for_pipe_from_completion_path ~state
+                ~env_completion_is_made_from ~opens ~pos ~scope ~debug ~prefix
+                ~env ~raw_opens ~full completion_path)
           |> List.flatten
           |> Type_utils.filter_pipeable_functions ~synthetic:true ~state ~env
                ~full ~target_type_id:main_type_id
@@ -1373,13 +1372,13 @@ and get_completions_for_context_path ~state ~debug ~full ~opens ~raw_opens ~pos
     let type_exrps =
       ctx_paths
       |> List.map (fun context_path ->
-             context_path
-             |> get_completions_for_context_path ~state ~debug ~full ~opens
-                  ~raw_opens ~pos ~env ~exact:true ~scope)
+          context_path
+          |> get_completions_for_context_path ~state ~debug ~full ~opens
+               ~raw_opens ~pos ~env ~exact:true ~scope)
       |> List.filter_map (fun completion_items ->
-             match completion_items with
-             | {Completion.kind = Value typ} :: _ -> Some typ
-             | _ -> None)
+          match completion_items with
+          | {Completion.kind = Value typ} :: _ -> Some typ
+          | _ -> None)
     in
     if List.length ctx_paths = List.length type_exrps then
       [
@@ -1484,14 +1483,14 @@ and get_completions_for_context_path ~state ~debug ~full ~opens ~raw_opens ~pos
     let target_label =
       labels
       |> List.find_opt (fun (label, _) ->
-             match (argument_label, label) with
-             | ( Unlabelled {argument_position = pos1},
-                 Completable.Unlabelled {argument_position = pos2} ) ->
-               pos1 = pos2
-             | ( (Labelled name1 | Optional name1),
-                 (Labelled name2 | Optional name2) ) ->
-               name1 = name2
-             | _ -> false)
+          match (argument_label, label) with
+          | ( Unlabelled {argument_position = pos1},
+              Completable.Unlabelled {argument_position = pos2} ) ->
+            pos1 = pos2
+          | (Labelled name1 | Optional name1), (Labelled name2 | Optional name2)
+            ->
+            name1 = name2
+          | _ -> false)
     in
     let expand_option =
       match target_label with
@@ -1567,7 +1566,7 @@ let filter_items items ~prefix =
   else
     items
     |> List.filter (fun (item : Completion.t) ->
-           Utils.starts_with item.name prefix)
+        Utils.starts_with item.name prefix)
 
 type completion_mode = Pattern of Completable.pattern_mode | Expression
 
@@ -1605,27 +1604,27 @@ let rec complete_typed_value ?(type_arg_context : type_arg_context option)
     | Some (Completable.RecordField {seen_fields}) ->
       fields
       |> List.filter (fun (field : field) ->
-             List.mem field.fname.txt seen_fields = false)
+          List.mem field.fname.txt seen_fields = false)
       |> List.map (fun (field : field) ->
-             match (field.optional, mode) with
-             | true, Pattern Destructuring ->
-               create ("?" ^ field.fname.txt) ?deprecated:field.deprecated
-                 ~docstring:
-                   [
-                     field.fname.txt
-                     ^ " is an optional field, and needs to be destructured \
-                        using '?'.";
-                   ]
-                 ~kind:
-                   (Field
-                      (field, Type_utils.extracted_type_to_string extracted_type))
-                 ~env
-             | _ ->
-               create field.fname.txt ?deprecated:field.deprecated
-                 ~kind:
-                   (Field
-                      (field, Type_utils.extracted_type_to_string extracted_type))
-                 ~env)
+          match (field.optional, mode) with
+          | true, Pattern Destructuring ->
+            create ("?" ^ field.fname.txt) ?deprecated:field.deprecated
+              ~docstring:
+                [
+                  field.fname.txt
+                  ^ " is an optional field, and needs to be destructured using \
+                     '?'.";
+                ]
+              ~kind:
+                (Field
+                   (field, Type_utils.extracted_type_to_string extracted_type))
+              ~env
+          | _ ->
+            create field.fname.txt ?deprecated:field.deprecated
+              ~kind:
+                (Field
+                   (field, Type_utils.extracted_type_to_string extracted_type))
+              ~env)
       |> filter_items ~prefix
     | _ ->
       if prefix = "" then
@@ -1690,15 +1689,15 @@ let rec complete_typed_value ?(type_arg_context : type_arg_context option)
       if value_with_type_t type_expr then
         get_completion_name name
         |> Option.map (fun name ->
-               create name ~includes_snippets:true ~insert_text:name
-                 ~kind:(Value type_expr) ~env)
+            create name ~includes_snippets:true ~insert_text:name
+              ~kind:(Value type_expr) ~env)
       else if fn_returns_type_t type_expr then
         get_completion_name name
         |> Option.map (fun name ->
-               create
-                 (Printf.sprintf "%s()" name)
-                 ~includes_snippets:true ~insert_text:(name ^ "($0)")
-                 ~kind:(Value type_expr) ~env)
+            create
+              (Printf.sprintf "%s()" name)
+              ~includes_snippets:true ~insert_text:(name ^ "($0)")
+              ~kind:(Value type_expr) ~env)
       else None
     in
     let completion_items =
@@ -1753,44 +1752,43 @@ let rec complete_typed_value ?(type_arg_context : type_arg_context option)
     if Debug.verbose () then print_endline "[complete_typed_value]--> Tvariant";
     constructors
     |> List.map (fun (constructor : Constructor.t) ->
-           let num_args =
-             match constructor.args with
-             | InlineRecord _ -> 1
-             | Args args -> List.length args
-           in
-           create ?deprecated:constructor.deprecated ~includes_snippets:true
-             (constructor.cname.txt
-             ^ print_constructor_args num_args ~as_snippet:false)
-             ~insert_text:
-               (constructor.cname.txt
-               ^ print_constructor_args num_args ~as_snippet:true)
-             ~kind:
-               (Constructor
-                  ( constructor,
-                    variant_decl |> Shared.decl_to_string variant_name ))
-             ~env)
+        let num_args =
+          match constructor.args with
+          | InlineRecord _ -> 1
+          | Args args -> List.length args
+        in
+        create ?deprecated:constructor.deprecated ~includes_snippets:true
+          (constructor.cname.txt
+          ^ print_constructor_args num_args ~as_snippet:false)
+          ~insert_text:
+            (constructor.cname.txt
+            ^ print_constructor_args num_args ~as_snippet:true)
+          ~kind:
+            (Constructor
+               (constructor, variant_decl |> Shared.decl_to_string variant_name))
+          ~env)
     |> filter_items ~prefix
   | Tpolyvariant {env; constructors; type_expr} ->
     if Debug.verbose () then
       print_endline "[complete_typed_value]--> Tpolyvariant";
     constructors
     |> List.map (fun (constructor : poly_variant_constructor) ->
-           create
-             ("#" ^ constructor.display_name
-             ^ print_constructor_args
-                 (List.length constructor.args)
-                 ~as_snippet:false)
-             ~includes_snippets:true
-             ~insert_text:
-               ((if Utils.starts_with prefix "#" then "" else "#")
-               ^ constructor.display_name
-               ^ print_constructor_args
-                   (List.length constructor.args)
-                   ~as_snippet:true)
-             ~kind:
-               (PolyvariantConstructor
-                  (constructor, type_expr |> Shared.type_to_string))
-             ~env)
+        create
+          ("#" ^ constructor.display_name
+          ^ print_constructor_args
+              (List.length constructor.args)
+              ~as_snippet:false)
+          ~includes_snippets:true
+          ~insert_text:
+            ((if Utils.starts_with prefix "#" then "" else "#")
+            ^ constructor.display_name
+            ^ print_constructor_args
+                (List.length constructor.args)
+                ~as_snippet:true)
+          ~kind:
+            (PolyvariantConstructor
+               (constructor, type_expr |> Shared.type_to_string))
+          ~env)
     |> filter_items
          ~prefix:(if Utils.starts_with prefix "#" then prefix else "#" ^ prefix)
   | Toption (env, t) ->
@@ -1809,15 +1807,15 @@ let rec complete_typed_value ?(type_arg_context : type_arg_context option)
         |> complete_typed_value ~raw_opens ~full ~state ~prefix
              ~completion_context ~mode
         |> List.map (fun (c : Completion.t) ->
-               {
-                 c with
-                 name = "Some(" ^ c.name ^ ")";
-                 sort_text = None;
-                 insert_text =
-                   (match c.insert_text with
-                   | None -> None
-                   | Some insert_text -> Some ("Some(" ^ insert_text ^ ")"));
-               })
+            {
+              c with
+              name = "Some(" ^ c.name ^ ")";
+              sort_text = None;
+              insert_text =
+                (match c.insert_text with
+                | None -> None
+                | Some insert_text -> Some ("Some(" ^ insert_text ^ ")"));
+            })
     in
     let none_case =
       Completion.create "None" ~kind:(kind_from_inner_type t) ~env
@@ -1857,15 +1855,15 @@ let rec complete_typed_value ?(type_arg_context : type_arg_context option)
         |> complete_typed_value ~raw_opens ~full ~prefix ~completion_context
              ~mode ~state
         |> List.map (fun (c : Completion.t) ->
-               {
-                 c with
-                 name = "Ok(" ^ c.name ^ ")";
-                 sort_text = None;
-                 insert_text =
-                   (match c.insert_text with
-                   | None -> None
-                   | Some insert_text -> Some ("Ok(" ^ insert_text ^ ")"));
-               })
+            {
+              c with
+              name = "Ok(" ^ c.name ^ ")";
+              sort_text = None;
+              insert_text =
+                (match c.insert_text with
+                | None -> None
+                | Some insert_text -> Some ("Ok(" ^ insert_text ^ ")"));
+            })
     in
     let expanded_error_completions =
       match error_inner_type with
@@ -1875,15 +1873,15 @@ let rec complete_typed_value ?(type_arg_context : type_arg_context option)
         |> complete_typed_value ~raw_opens ~full ~prefix ~completion_context
              ~mode ~state
         |> List.map (fun (c : Completion.t) ->
-               {
-                 c with
-                 name = "Error(" ^ c.name ^ ")";
-                 sort_text = None;
-                 insert_text =
-                   (match c.insert_text with
-                   | None -> None
-                   | Some insert_text -> Some ("Error(" ^ insert_text ^ ")"));
-               })
+            {
+              c with
+              name = "Error(" ^ c.name ^ ")";
+              sort_text = None;
+              insert_text =
+                (match c.insert_text with
+                | None -> None
+                | Some insert_text -> Some ("Error(" ^ insert_text ^ ")"));
+            })
     in
     let ok_any_case =
       create "Ok(_)" ~includes_snippets:true ~kind:(Value ok_type) ~env
@@ -1968,21 +1966,21 @@ let rec complete_typed_value ?(type_arg_context : type_arg_context option)
         let args_text =
           args
           |> List.map (fun ((label, typ) : typed_fn_arg) ->
-                 match label with
-                 | Optional {txt = name} -> "~" ^ name ^ "=?"
-                 | Labelled {txt = name} -> "~" ^ name
-                 | Nolabel ->
-                   if Type_utils.type_is_unit typ then "()"
-                   else (
-                     current_unlabelled_index := !current_unlabelled_index + 1;
-                     let num = !current_unlabelled_index in
-                     let var_name =
-                       Completion_expressions.pretty_print_fn_template_arg_name
-                         ~current_index:num ~env ~full ~state typ
-                     in
-                     if as_snippet then
-                       "${" ^ string_of_int num ^ ":" ^ var_name ^ "}"
-                     else var_name))
+              match label with
+              | Optional {txt = name} -> "~" ^ name ^ "=?"
+              | Labelled {txt = name} -> "~" ^ name
+              | Nolabel ->
+                if Type_utils.type_is_unit typ then "()"
+                else (
+                  current_unlabelled_index := !current_unlabelled_index + 1;
+                  let num = !current_unlabelled_index in
+                  let var_name =
+                    Completion_expressions.pretty_print_fn_template_arg_name
+                      ~current_index:num ~env ~full ~state typ
+                  in
+                  if as_snippet then
+                    "${" ^ string_of_int num ^ ":" ^ var_name ^ "}"
+                  else var_name))
           |> String.concat ", "
         in
         "(" ^ args_text ^ ")"
@@ -2085,14 +2083,14 @@ let rec process_completable ~state ~debug ~full ~scope ~env ~pos ~for_hover
         Some
           (fields
           |> List.filter_map (fun (f : field) ->
-                 if
-                   Utils.starts_with f.fname.txt prefix
-                   && (for_hover || not (List.mem f.fname.txt idents_seen))
-                 then
-                   Some
-                     ( f.fname.txt,
-                       Shared.type_to_string (Utils.unwrap_if_option f.typ) )
-                 else None)
+              if
+                Utils.starts_with f.fname.txt prefix
+                && (for_hover || not (List.mem f.fname.txt idents_seen))
+              then
+                Some
+                  ( f.fname.txt,
+                    Shared.type_to_string (Utils.unwrap_if_option f.typ) )
+              else None)
           |> List.map mk_label)
     in
     match from_element_props with
@@ -2121,9 +2119,9 @@ let rec process_completable ~state ~debug ~full ~scope ~env ~pos ~for_hover
     else
       (labels
       |> List.filter (fun (name, _t, _env) ->
-             Utils.starts_with name prefix
-             && name <> "key"
-             && (for_hover || not (List.mem name idents_seen)))
+          Utils.starts_with name prefix
+          && name <> "key"
+          && (for_hover || not (List.mem name idents_seen)))
       |> List.map mk_label)
       @ key_labels
   | CdecoratorPayload (JsxConfig {prefix; nested}) -> (
@@ -2221,15 +2219,15 @@ let rec process_completable ~state ~debug ~full ~scope ~env ~pos ~for_hover
           | Some (`Assoc items) ->
             items
             |> List.filter_map (fun (key, t) ->
-                   match (key, t) with
-                   | ("dependencies" | "devDependencies"), `Assoc o ->
-                     Some
-                       (o
-                       |> List.filter_map (fun (pkg_name, _) ->
-                              match pkg_name with
-                              | "rescript" -> None
-                              | pkg_name -> Some pkg_name))
-                   | _ -> None)
+                match (key, t) with
+                | ("dependencies" | "devDependencies"), `Assoc o ->
+                  Some
+                    (o
+                    |> List.filter_map (fun (pkg_name, _) ->
+                        match pkg_name with
+                        | "rescript" -> None
+                        | pkg_name -> Some pkg_name))
+                | _ -> None)
             |> List.flatten
           | _ ->
             if debug then print_endline "Could not parse package.json";
@@ -2247,9 +2245,9 @@ let rec process_completable ~state ~debug ~full ~scope ~env ~pos ~for_hover
           String_set.of_list
             (files
             |> List.filter_map (fun f ->
-                   if Filename.extension f = ".res" then
-                     Some (try Filename.chop_extension f with _ -> f)
-                   else None))
+                if Filename.extension f = ".res" then
+                  Some (try Filename.chop_extension f with _ -> f)
+                else None))
         in
         let is_internal_artifact_extension = function
           | ".ast" | ".cmi" | ".cmj" | ".cmt" | ".cmti" | ".iast" -> true
@@ -2257,18 +2255,18 @@ let rec process_completable ~state ~debug ~full ~scope ~env ~pos ~for_hover
         in
         files
         |> List.filter_map (fun file_name ->
-               let without_extension =
-                 try Filename.chop_extension file_name with _ -> file_name
-               in
-               if
-                 String.ends_with file_name ~suffix:package.suffix
-                 && res_files |> String_set.mem without_extension
-               then None
-               else
-                 match Filename.extension file_name with
-                 | ".res" | ".resi" | "" -> None
-                 | ext when is_internal_artifact_extension ext -> None
-                 | _ -> Some ("./" ^ file_name))
+            let without_extension =
+              try Filename.chop_extension file_name with _ -> file_name
+            in
+            if
+              String.ends_with file_name ~suffix:package.suffix
+              && res_files |> String_set.mem without_extension
+            then None
+            else
+              match Filename.extension file_name with
+              | ".res" | ".resi" | "" -> None
+              | ext when is_internal_artifact_extension ext -> None
+              | _ -> Some ("./" ^ file_name))
         |> List.sort String.compare
       with _ ->
         if debug then print_endline "Could not read relative directory";
@@ -2278,10 +2276,10 @@ let rec process_completable ~state ~debug ~full ~scope ~env ~pos ~for_hover
     items
     |> List.filter (fun name -> Utils.starts_with name prefix)
     |> List.map (fun name ->
-           let is_local = Utils.starts_with name "./" in
-           Completion.create name
-             ~kind:(Label (if is_local then "Local file" else "Package"))
-             ~env)
+        let is_local = Utils.starts_with name "./" in
+        Completion.create name
+          ~kind:(Label (if is_local then "Local file" else "Package"))
+          ~env)
   | Cdecorator prefix ->
     let mk_decorator (name, docstring, maybe_insert_text) =
       {
@@ -2303,14 +2301,14 @@ let rec process_completable ~state ~debug ~full ~scope ~env ~pos ~for_hover
     decorators
     |> List.filter (fun (decorator, _, _) -> Utils.starts_with decorator prefix)
     |> List.map (fun (decorator, maybe_insert_text, doc) ->
-           let parts = String.split_on_char '.' prefix in
-           let len = String.length prefix in
-           let dec2 =
-             if List.length parts > 1 then
-               String.sub decorator len (String.length decorator - len)
-             else decorator
-           in
-           (dec2, doc, maybe_insert_text))
+        let parts = String.split_on_char '.' prefix in
+        let len = String.length prefix in
+        let dec2 =
+          if List.length parts > 1 then
+            String.sub decorator len (String.length decorator - len)
+          else decorator
+        in
+        (dec2, doc, maybe_insert_text))
     |> List.map mk_decorator
   | CnamedArg (cp, prefix, idents_seen) ->
     let labels =
@@ -2328,10 +2326,10 @@ let rec process_completable ~state ~debug ~full ~scope ~env ~pos ~for_hover
         typ
         |> Type_utils.get_args ~full ~env ~state
         |> List.filter_map (fun arg ->
-               match arg with
-               | Shared_types.Completable.Labelled name, a -> Some (name, a)
-               | Optional name, a -> Some (name, a)
-               | _ -> None)
+            match arg with
+            | Shared_types.Completable.Labelled name, a -> Some (name, a)
+            | Optional name, a -> Some (name, a)
+            | _ -> None)
       | None -> []
     in
     let mk_label (name, typ) =
@@ -2339,8 +2337,8 @@ let rec process_completable ~state ~debug ~full ~scope ~env ~pos ~for_hover
     in
     labels
     |> List.filter (fun (name, _t) ->
-           Utils.starts_with name prefix
-           && (for_hover || not (List.mem name idents_seen)))
+        Utils.starts_with name prefix
+        && (for_hover || not (List.mem name idents_seen)))
     |> List.map mk_label
   | Cpattern {context_path; prefix; nested; fallback; pattern_mode} -> (
     let fallback_or_empty ?items () =
@@ -2362,9 +2360,9 @@ let rec process_completable ~state ~debug ~full ~scope ~env ~pos ~for_hover
         typ
         |> Type_utils.extract_type ~env ~package:full.package ~state
         |> Utils.Option.flat_map (fun (typ, type_arg_context) ->
-               typ
-               |> Type_utils.resolve_nested ?type_arg_context ~env ~full ~nested
-                    ~state)
+            typ
+            |> Type_utils.resolve_nested ?type_arg_context ~env ~full ~nested
+                 ~state)
       with
       | None -> fallback_or_empty ()
       | Some (typ, _env, completion_context, type_arg_context) ->
@@ -2452,15 +2450,15 @@ let rec process_completable ~state ~debug ~full ~scope ~env ~pos ~for_hover
           |> complete_typed_value ?type_arg_context ~raw_opens ~mode:Expression
                ~full ~prefix ~completion_context ~state
           |> List.map (fun (c : Completion.t) ->
-                 if wrap_insert_text_in_braces then
-                   {
-                     c with
-                     insert_text =
-                       (match c.insert_text with
-                       | None -> None
-                       | Some text -> Some ("{" ^ text ^ "}"));
-                   }
-                 else c)
+              if wrap_insert_text_in_braces then
+                {
+                  c with
+                  insert_text =
+                    (match c.insert_text with
+                    | None -> None
+                    | Some text -> Some ("{" ^ text ^ "}"));
+                }
+              else c)
         in
         match (prefix, completion_context) with
         | "", _ -> items
@@ -2472,7 +2470,7 @@ let rec process_completable ~state ~debug ~full ~scope ~env ~pos ~for_hover
                  guaranteed to end up on top. *)
               items
               |> List.map (fun (c : Completion.t) ->
-                     {c with sort_text = Some ("A" ^ " " ^ c.name)})
+                  {c with sort_text = Some ("A" ^ " " ^ c.name)})
             else items
           in
           items @ regular_completions
@@ -2487,8 +2485,8 @@ let rec process_completable ~state ~debug ~full ~scope ~env ~pos ~for_hover
         c.name ^ " {\n"
         ^ (cases
           |> List.mapi (fun index case_text ->
-                 "| " ^ case_text ^ " => "
-                 ^ print_failwith_str (start_index + index + 1))
+              "| " ^ case_text ^ " => "
+              ^ print_failwith_str (start_index + index + 1))
           |> String.concat "\n")
         ^ "\n}"
         |> Utils.indent range.start.character
@@ -2512,55 +2510,53 @@ let rec process_completable ~state ~debug ~full ~scope ~env ~pos ~for_hover
     in
     completions_for_context_path
     |> List.map (fun (c : Completion.t) ->
-           match c.kind with
-           | Value typ_expr -> (
-             match
-               typ_expr |> Type_utils.extract_type ~env:c.env ~package ~state
-             with
-             | Some (Tvariant v, _) ->
-               with_exhaustive_item c
-                 ~cases:
-                   (v.constructors
-                   |> List.map (fun (constructor : Constructor.t) ->
-                          constructor.cname.txt
-                          ^
-                          match constructor.args with
-                          | Args [] -> ""
-                          | _ -> "(_)"))
-             | Some (Tpolyvariant v, _) ->
-               with_exhaustive_item c
-                 ~cases:
-                   (v.constructors
-                   |> List.map (fun (constructor : poly_variant_constructor) ->
-                          "#" ^ constructor.display_name
-                          ^
-                          match constructor.args with
-                          | [] -> ""
-                          | _ -> "(_)"))
-             | Some (Toption (_env, _typ), _) ->
-               with_exhaustive_item c ~cases:["Some($1)"; "None"] ~start_index:1
-             | Some (Tresult _, _) ->
-               with_exhaustive_item c ~cases:["Ok($1)"; "Error($1)"]
-                 ~start_index:1
-             | Some (Tbool _, _) ->
-               with_exhaustive_item c ~cases:["true"; "false"]
-             | _ -> [c])
-           | _ -> [c])
+        match c.kind with
+        | Value typ_expr -> (
+          match
+            typ_expr |> Type_utils.extract_type ~env:c.env ~package ~state
+          with
+          | Some (Tvariant v, _) ->
+            with_exhaustive_item c
+              ~cases:
+                (v.constructors
+                |> List.map (fun (constructor : Constructor.t) ->
+                    constructor.cname.txt
+                    ^
+                    match constructor.args with
+                    | Args [] -> ""
+                    | _ -> "(_)"))
+          | Some (Tpolyvariant v, _) ->
+            with_exhaustive_item c
+              ~cases:
+                (v.constructors
+                |> List.map (fun (constructor : poly_variant_constructor) ->
+                    "#" ^ constructor.display_name
+                    ^
+                    match constructor.args with
+                    | [] -> ""
+                    | _ -> "(_)"))
+          | Some (Toption (_env, _typ), _) ->
+            with_exhaustive_item c ~cases:["Some($1)"; "None"] ~start_index:1
+          | Some (Tresult _, _) ->
+            with_exhaustive_item c ~cases:["Ok($1)"; "Error($1)"] ~start_index:1
+          | Some (Tbool _, _) -> with_exhaustive_item c ~cases:["true"; "false"]
+          | _ -> [c])
+        | _ -> [c])
     |> List.flatten
   | ChtmlElement {prefix} ->
     Completion_jsx.html_elements
     |> List.filter_map (fun (element_name, description, deprecated) ->
-           if Utils.starts_with element_name prefix then
-             let name = "<" ^ element_name ^ ">" in
-             Some
-               (Completion.create name ~synthetic:true ~kind:(Label name)
-                  ~detail:description ~env ~docstring:[description]
-                  ~insert_text:element_name
-                  ?deprecated:
-                    (match deprecated with
-                    | true -> Some "true"
-                    | false -> None))
-           else None)
+        if Utils.starts_with element_name prefix then
+          let name = "<" ^ element_name ^ ">" in
+          Some
+            (Completion.create name ~synthetic:true ~kind:(Label name)
+               ~detail:description ~env ~docstring:[description]
+               ~insert_text:element_name
+               ?deprecated:
+                 (match deprecated with
+                 | true -> Some "true"
+                 | false -> None))
+        else None)
   | CextensionNode prefix ->
     if Utils.starts_with "todo" prefix then
       let detail =

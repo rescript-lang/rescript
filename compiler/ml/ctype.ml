@@ -247,10 +247,10 @@ let in_current_module = function
 let in_pervasives p =
   in_current_module p
   &&
-  try
-    ignore (Env.find_type p Env.initial_safe_string);
-    true
-  with Not_found -> false
+    try
+      ignore (Env.find_type p Env.initial_safe_string);
+      true
+    with Not_found -> false
 
 let is_datatype decl =
   match decl.type_kind with
@@ -3619,7 +3619,7 @@ let rec subtype_rec env trace t1 t2 cstrs =
               let incompatible_constructor_names =
                 c1_constructor_names
                 |> List.filter (fun name ->
-                       not (List.mem name c2_constructor_names))
+                    not (List.mem name c2_constructor_names))
               in
               ( trace,
                 t1,
@@ -3639,8 +3639,7 @@ let rec subtype_rec env trace t1 t2 cstrs =
               let constructor_map = Hashtbl.create c1_len in
               c2
               |> List.iteri (fun position (c : Types.constructor_declaration) ->
-                     Hashtbl.add constructor_map (Ident.name c.cd_id)
-                       (c, position));
+                  Hashtbl.add constructor_map (Ident.name c.cd_id) (c, position));
               let field_subtype_violations =
                 c1
                 |> List.mapi
@@ -3956,8 +3955,8 @@ let cyclic_abbrev env id ty =
     match ty.desc with
     | Tconstr (p, _tl, _abbrev) -> (
       (match p with
-      | Path.Pident p -> Ident.same p id
-      | _ -> false)
+        | Path.Pident p -> Ident.same p id
+        | _ -> false)
       || List.memq ty seen
       ||
       try check_cycle (ty :: seen) (expand_abbrev_opt env ty) with

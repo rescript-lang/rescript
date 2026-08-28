@@ -31,9 +31,9 @@ let test_fixpoint_add_base () =
       | Batch entries ->
         entries
         |> List.iter (fun (k, v_opt) ->
-               match v_opt with
-               | Some () -> added := k :: !added
-               | None -> removed := k :: !removed))
+            match v_opt with
+            | Some () -> added := k :: !added
+            | None -> removed := k :: !removed))
     fp;
 
   emit_init (Set ("c", ()));
@@ -299,9 +299,9 @@ let test_fixpoint_remove_spurious_root () =
       | Batch entries ->
         entries
         |> List.iter (fun (k, v_opt) ->
-               match v_opt with
-               | Some () -> added := k :: !added
-               | None -> removed := k :: !removed))
+            match v_opt with
+            | Some () -> added := k :: !added
+            | None -> removed := k :: !removed))
     fp;
 
   (* Step 1: "b" is spuriously marked as a root *)
@@ -429,9 +429,9 @@ let test_fixpoint_remove_edge_rederivation () =
       | Batch entries ->
         entries
         |> List.iter (fun (k, v_opt) ->
-               match v_opt with
-               | Some () -> added := k :: !added
-               | None -> removed := k :: !removed))
+            match v_opt with
+            | Some () -> added := k :: !added
+            | None -> removed := k :: !removed))
     fp;
 
   (* Add root *)
@@ -542,9 +542,9 @@ let test_fixpoint_remove_edge_entry_higher_rank_support () =
       | Batch entries ->
         entries
         |> List.iter (fun (k, v_opt) ->
-               match v_opt with
-               | Some () -> added := k :: !added
-               | None -> removed := k :: !removed))
+            match v_opt with
+            | Some () -> added := k :: !added
+            | None -> removed := k :: !removed))
     fp;
 
   (* Add root *)

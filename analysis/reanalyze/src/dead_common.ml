@@ -232,8 +232,8 @@ let report_declaration ~config ~has_ref_below ?check_module_dead ?should_report
     let should_emit_warning =
       (not inside_reported_value)
       && (match decl.path with
-         | name :: _ when name |> Name.is_underscore -> Config.report_underscore
-         | _ -> true)
+        | name :: _ when name |> Name.is_underscore -> Config.report_underscore
+        | _ -> true)
       && (config.Dce_config.run.transitive || not (has_ref_below decl))
     in
     if should_emit_warning then
@@ -324,138 +324,134 @@ let solve_dead_forward ~ann_store ~config ~decl_store ~refs ~optional_args_state
 
   all_decls
   |> List.iter (fun (decl : Decl.t) ->
-         let pos = decl.pos in
-         let live_reason = Liveness.get_live_reason ~live pos in
-         let is_live = Option.is_some live_reason in
-         let is_dead = not is_live in
+      let pos = decl.pos in
+      let live_reason = Liveness.get_live_reason ~live pos in
+      let is_live = Option.is_some live_reason in
+      let is_dead = not is_live in
 
-         (* Debug output (forward model):
+      (* Debug output (forward model):
             show reachability + why (root/propagated), and a compact dependency
             summary (incoming/outgoing declaration edges). *)
-         if debug then (
-           let status =
-             match live_reason with
-             | None -> "Dead"
-             | Some reason ->
-               Printf.sprintf "Live (%s)" (Liveness.reason_to_string reason)
-           in
-           Log_.item "%s %s %s@." status
-             (decl.decl_kind |> Decl.Kind.to_string)
-             (decl.path |> Dce_path.to_string);
-           (* Print dependency context to help understand why a decl is (not) live.
+      if debug then (
+        let status =
+          match live_reason with
+          | None -> "Dead"
+          | Some reason ->
+            Printf.sprintf "Live (%s)" (Liveness.reason_to_string reason)
+        in
+        Log_.item "%s %s %s@." status
+          (decl.decl_kind |> Decl.Kind.to_string)
+          (decl.path |> Dce_path.to_string);
+        (* Print dependency context to help understand why a decl is (not) live.
                This is declaration-to-declaration deps only, derived from refs_from. *)
-           let outgoing_to_decls =
-             match Pos_hash.find_opt decl_refs_index pos with
-             | None -> 0
-             | Some (value_targets, type_targets) ->
-               let count_targets targets =
-                 Pos_set.fold
-                   (fun target acc ->
-                     match Declaration_store.find_opt decl_store target with
-                     | Some _ -> acc + 1
-                     | None -> acc)
-                   targets 0
-               in
-               count_targets value_targets + count_targets type_targets
-           in
-           let incoming_from_decls, incoming_from_live_decls =
-             match Pos_hash.find_opt incoming_decl_deps pos with
-             | None -> (0, 0)
-             | Some sources ->
-               let total = Pos_set.cardinal sources in
-               let live_src =
-                 Pos_set.fold
-                   (fun src acc ->
-                     if Pos_hash.mem live src then acc + 1 else acc)
-                   sources 0
-               in
-               (total, live_src)
-           in
-           if incoming_from_decls > 0 || outgoing_to_decls > 0 then
-             Log_.item "    deps: in=%d (live=%d dead=%d) out=%d@."
-               incoming_from_decls incoming_from_live_decls
-               (incoming_from_decls - incoming_from_live_decls)
-               outgoing_to_decls;
-           (* For debugging, print a small sample of incoming/outgoing decl deps.
+        let outgoing_to_decls =
+          match Pos_hash.find_opt decl_refs_index pos with
+          | None -> 0
+          | Some (value_targets, type_targets) ->
+            let count_targets targets =
+              Pos_set.fold
+                (fun target acc ->
+                  match Declaration_store.find_opt decl_store target with
+                  | Some _ -> acc + 1
+                  | None -> acc)
+                targets 0
+            in
+            count_targets value_targets + count_targets type_targets
+        in
+        let incoming_from_decls, incoming_from_live_decls =
+          match Pos_hash.find_opt incoming_decl_deps pos with
+          | None -> (0, 0)
+          | Some sources ->
+            let total = Pos_set.cardinal sources in
+            let live_src =
+              Pos_set.fold
+                (fun src acc -> if Pos_hash.mem live src then acc + 1 else acc)
+                sources 0
+            in
+            (total, live_src)
+        in
+        if incoming_from_decls > 0 || outgoing_to_decls > 0 then
+          Log_.item "    deps: in=%d (live=%d dead=%d) out=%d@."
+            incoming_from_decls incoming_from_live_decls
+            (incoming_from_decls - incoming_from_live_decls)
+            outgoing_to_decls;
+        (* For debugging, print a small sample of incoming/outgoing decl deps.
                This is meant to answer: "what would make this decl live?" *)
-           let max_show = 3 in
-           (match Pos_hash.find_opt incoming_decl_deps pos with
-           | None -> ()
-           | Some sources ->
-             let shown = ref 0 in
-             Pos_set.iter
-               (fun src_pos ->
-                 if !shown < max_show then (
-                   incr shown;
-                   match Declaration_store.find_opt decl_store src_pos with
-                   | Some src_decl ->
-                     let src_status =
-                       if Pos_hash.mem live src_pos then "live" else "dead"
-                     in
-                     Log_.item "      <- %s (%s)@."
-                       (src_decl.path |> Dce_path.to_string)
-                       src_status
-                   | None -> ()))
-               sources;
-             if Pos_set.cardinal sources > max_show then
-               Log_.item "      <- ... (%d more)@."
-                 (Pos_set.cardinal sources - max_show));
-           match Pos_hash.find_opt decl_refs_index pos with
-           | None -> ()
-           | Some (value_targets, type_targets) ->
-             let show_target target =
-               match Declaration_store.find_opt decl_store target with
-               | None -> false
-               | Some target_decl ->
-                 Log_.item "      -> %s@."
-                   (target_decl.path |> Dce_path.to_string);
-                 true
-             in
-             let shown = ref 0 in
-             let try_show targets =
-               Pos_set.iter
-                 (fun target ->
-                   if !shown < max_show then
-                     if show_target target then incr shown)
-                 targets
-             in
-             try_show value_targets;
-             try_show type_targets;
-             if outgoing_to_decls > max_show then
-               Log_.item "      -> ... (%d more)@."
-                 (outgoing_to_decls - max_show));
+        let max_show = 3 in
+        (match Pos_hash.find_opt incoming_decl_deps pos with
+        | None -> ()
+        | Some sources ->
+          let shown = ref 0 in
+          Pos_set.iter
+            (fun src_pos ->
+              if !shown < max_show then (
+                incr shown;
+                match Declaration_store.find_opt decl_store src_pos with
+                | Some src_decl ->
+                  let src_status =
+                    if Pos_hash.mem live src_pos then "live" else "dead"
+                  in
+                  Log_.item "      <- %s (%s)@."
+                    (src_decl.path |> Dce_path.to_string)
+                    src_status
+                | None -> ()))
+            sources;
+          if Pos_set.cardinal sources > max_show then
+            Log_.item "      <- ... (%d more)@."
+              (Pos_set.cardinal sources - max_show));
+        match Pos_hash.find_opt decl_refs_index pos with
+        | None -> ()
+        | Some (value_targets, type_targets) ->
+          let show_target target =
+            match Declaration_store.find_opt decl_store target with
+            | None -> false
+            | Some target_decl ->
+              Log_.item "      -> %s@." (target_decl.path |> Dce_path.to_string);
+              true
+          in
+          let shown = ref 0 in
+          let try_show targets =
+            Pos_set.iter
+              (fun target ->
+                if !shown < max_show then if show_target target then incr shown)
+              targets
+          in
+          try_show value_targets;
+          try_show type_targets;
+          if outgoing_to_decls > max_show then
+            Log_.item "      -> ... (%d more)@." (outgoing_to_decls - max_show));
 
-         decl.resolved_dead <- Some is_dead;
+      decl.resolved_dead <- Some is_dead;
 
-         if is_dead then (
-           decl.path
-           |> Dead_modules.mark_dead ~config
-                ~is_type:(decl.decl_kind |> Decl.Kind.is_type)
-                ~loc:decl.module_loc;
-           if not (do_report_dead ~ann_store decl.pos) then decl.report <- false;
-           dead_declarations := decl :: !dead_declarations)
-         else (
-           (* Collect optional args issues for live declarations *)
-           check_optional_arg_fn ~optional_args_state ~ann_store ~config decl
-           |> List.iter (fun issue -> inline_issues := issue :: !inline_issues);
-           decl.path
-           |> Dead_modules.mark_live ~config
-                ~is_type:(decl.decl_kind |> Decl.Kind.is_type)
-                ~loc:decl.module_loc;
-           if Annotation_store.is_annotated_dead ann_store decl.pos then (
-             (* Collect incorrect @dead annotation issue *)
-             let issue =
-               make_dead_issue ~decl ~message:" is annotated @dead but is live"
-                 IncorrectDeadAnnotation
-             in
-             decl.path
-             |> Dce_path.to_module_name
-                  ~is_type:(decl.decl_kind |> Decl.Kind.is_type)
-             |> Dead_modules.check_module_dead ~config
-                  ~file_name:decl.pos.pos_fname
-             |> Option.iter (fun mod_issue ->
-                    inline_issues := mod_issue :: !inline_issues);
-             inline_issues := issue :: !inline_issues)));
+      if is_dead then (
+        decl.path
+        |> Dead_modules.mark_dead ~config
+             ~is_type:(decl.decl_kind |> Decl.Kind.is_type)
+             ~loc:decl.module_loc;
+        if not (do_report_dead ~ann_store decl.pos) then decl.report <- false;
+        dead_declarations := decl :: !dead_declarations)
+      else (
+        (* Collect optional args issues for live declarations *)
+        check_optional_arg_fn ~optional_args_state ~ann_store ~config decl
+        |> List.iter (fun issue -> inline_issues := issue :: !inline_issues);
+        decl.path
+        |> Dead_modules.mark_live ~config
+             ~is_type:(decl.decl_kind |> Decl.Kind.is_type)
+             ~loc:decl.module_loc;
+        if Annotation_store.is_annotated_dead ann_store decl.pos then (
+          (* Collect incorrect @dead annotation issue *)
+          let issue =
+            make_dead_issue ~decl ~message:" is annotated @dead but is live"
+              IncorrectDeadAnnotation
+          in
+          decl.path
+          |> Dce_path.to_module_name
+               ~is_type:(decl.decl_kind |> Decl.Kind.is_type)
+          |> Dead_modules.check_module_dead ~config
+               ~file_name:decl.pos.pos_fname
+          |> Option.iter (fun mod_issue ->
+              inline_issues := mod_issue :: !inline_issues);
+          inline_issues := issue :: !inline_issues)));
 
   let sorted_dead_declarations =
     !dead_declarations |> List.fast_sort Decl.compare_for_reporting
@@ -466,7 +462,7 @@ let solve_dead_forward ~ann_store ~config ~decl_store ~refs ~optional_args_state
   let dead_issues =
     sorted_dead_declarations
     |> List.concat_map (fun decl ->
-           report_declaration ~config ~has_ref_below reporting_ctx decl)
+        report_declaration ~config ~has_ref_below reporting_ctx decl)
   in
   let all_issues = List.rev !inline_issues @ dead_issues in
   Analysis_result.add_issues Analysis_result.empty all_issues
@@ -519,64 +515,64 @@ let solve_dead_reactive ~ann_store ~config ~decl_store ~value_refs_from
 
   all_decls
   |> List.iter (fun (decl : Decl.t) ->
-         let pos = decl.pos in
-         incr num_live_checks;
-         let is_live = is_live pos in
-         let is_dead = not is_live in
+      let pos = decl.pos in
+      incr num_live_checks;
+      let is_live = is_live pos in
+      let is_dead = not is_live in
 
-         (* Debug output (forward model): derive root/propagated from [roots]. *)
-         (if debug then
-            let live_reason : Liveness.live_reason option =
-              if not is_live then None
-              else if Reactive.get roots pos <> None then
-                if Annotation_store.is_annotated_gentype_or_live ann_store pos
-                then Some Liveness.Annotated
-                else Some Liveness.ExternalRef
-              else Some Liveness.Propagated
-            in
-            let status =
-              match live_reason with
-              | None -> "Dead"
-              | Some reason ->
-                Printf.sprintf "Live (%s)" (Liveness.reason_to_string reason)
-            in
-            Log_.item "%s %s %s@." status
-              (decl.decl_kind |> Decl.Kind.to_string)
-              (decl.path |> Dce_path.to_string));
+      (* Debug output (forward model): derive root/propagated from [roots]. *)
+      (if debug then
+         let live_reason : Liveness.live_reason option =
+           if not is_live then None
+           else if Reactive.get roots pos <> None then
+             if Annotation_store.is_annotated_gentype_or_live ann_store pos then
+               Some Liveness.Annotated
+             else Some Liveness.ExternalRef
+           else Some Liveness.Propagated
+         in
+         let status =
+           match live_reason with
+           | None -> "Dead"
+           | Some reason ->
+             Printf.sprintf "Live (%s)" (Liveness.reason_to_string reason)
+         in
+         Log_.item "%s %s %s@." status
+           (decl.decl_kind |> Decl.Kind.to_string)
+           (decl.path |> Dce_path.to_string));
 
-         decl.resolved_dead <- Some is_dead;
+      decl.resolved_dead <- Some is_dead;
 
-         if is_dead then (
-           incr num_dead;
-           decl.path
-           |> Dead_modules.mark_dead ~config
-                ~is_type:(decl.decl_kind |> Decl.Kind.is_type)
-                ~loc:decl.module_loc;
-           if not (do_report_dead ~ann_store decl.pos) then decl.report <- false;
-           dead_declarations := decl :: !dead_declarations)
-         else (
-           incr num_live;
-           (* Collect optional args issues for live declarations *)
-           check_optional_arg_fn ~optional_args_state ~ann_store ~config decl
-           |> List.iter (fun issue -> inline_issues := issue :: !inline_issues);
-           decl.path
-           |> Dead_modules.mark_live ~config
-                ~is_type:(decl.decl_kind |> Decl.Kind.is_type)
-                ~loc:decl.module_loc;
-           if Annotation_store.is_annotated_dead ann_store decl.pos then (
-             (* Collect incorrect @dead annotation issue *)
-             let issue =
-               make_dead_issue ~decl ~message:" is annotated @dead but is live"
-                 IncorrectDeadAnnotation
-             in
-             decl.path
-             |> Dce_path.to_module_name
-                  ~is_type:(decl.decl_kind |> Decl.Kind.is_type)
-             |> Dead_modules.check_module_dead ~config
-                  ~file_name:decl.pos.pos_fname
-             |> Option.iter (fun mod_issue ->
-                    inline_issues := mod_issue :: !inline_issues);
-             inline_issues := issue :: !inline_issues)));
+      if is_dead then (
+        incr num_dead;
+        decl.path
+        |> Dead_modules.mark_dead ~config
+             ~is_type:(decl.decl_kind |> Decl.Kind.is_type)
+             ~loc:decl.module_loc;
+        if not (do_report_dead ~ann_store decl.pos) then decl.report <- false;
+        dead_declarations := decl :: !dead_declarations)
+      else (
+        incr num_live;
+        (* Collect optional args issues for live declarations *)
+        check_optional_arg_fn ~optional_args_state ~ann_store ~config decl
+        |> List.iter (fun issue -> inline_issues := issue :: !inline_issues);
+        decl.path
+        |> Dead_modules.mark_live ~config
+             ~is_type:(decl.decl_kind |> Decl.Kind.is_type)
+             ~loc:decl.module_loc;
+        if Annotation_store.is_annotated_dead ann_store decl.pos then (
+          (* Collect incorrect @dead annotation issue *)
+          let issue =
+            make_dead_issue ~decl ~message:" is annotated @dead but is live"
+              IncorrectDeadAnnotation
+          in
+          decl.path
+          |> Dce_path.to_module_name
+               ~is_type:(decl.decl_kind |> Decl.Kind.is_type)
+          |> Dead_modules.check_module_dead ~config
+               ~file_name:decl.pos.pos_fname
+          |> Option.iter (fun mod_issue ->
+              inline_issues := mod_issue :: !inline_issues);
+          inline_issues := issue :: !inline_issues)));
   let t4 = Unix.gettimeofday () in
 
   let sorted_dead_declarations =
@@ -589,7 +585,7 @@ let solve_dead_reactive ~ann_store ~config ~decl_store ~value_refs_from
   let dead_issues =
     sorted_dead_declarations
     |> List.concat_map (fun decl ->
-           report_declaration ~config ~has_ref_below reporting_ctx decl)
+        report_declaration ~config ~has_ref_below reporting_ctx decl)
   in
   let t6 = Unix.gettimeofday () in
   let all_issues = List.rev !inline_issues @ dead_issues in

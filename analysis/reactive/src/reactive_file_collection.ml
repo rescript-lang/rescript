@@ -87,10 +87,10 @@ let remove_batch t paths =
   let entries =
     paths
     |> List.filter_map (fun path ->
-           if Hashtbl.mem t.internal.cache path then (
-             Hashtbl.remove t.internal.cache path;
-             Some (path, None))
-           else None)
+        if Hashtbl.mem t.internal.cache path then (
+          Hashtbl.remove t.internal.cache path;
+          Some (path, None))
+        else None)
   in
   if entries <> [] then emit t (Reactive.Batch entries);
   List.length entries

@@ -30,8 +30,8 @@ let good_hint_name module_name offset =
        | _ -> false)
        (String.unsafe_get module_name offset)
   && Ext_string.for_all_from module_name (offset + 1) (function
-       | 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | '_' -> true
-       | _ -> false)
+    | 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | '_' -> true
+    | _ -> false)
 
 let rec collect_start buf s off len =
   if off >= len then ()

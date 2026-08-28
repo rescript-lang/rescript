@@ -7,13 +7,13 @@ let show_module_top_level ~docstring ~is_type ~name
   let contents =
     top_level
     |> List.map (fun item ->
-           match item.Module.kind with
-           (* TODO pretty print module contents *)
-           | Type ({decl}, rec_status) ->
-             "  " ^ (decl |> Shared.decl_to_string ~rec_status item.name)
-           | Module _ -> "  module " ^ item.name
-           | Value typ ->
-             "  let " ^ item.name ^ ": " ^ (typ |> Shared.type_to_string))
+        match item.Module.kind with
+        (* TODO pretty print module contents *)
+        | Type ({decl}, rec_status) ->
+          "  " ^ (decl |> Shared.decl_to_string ~rec_status item.name)
+        | Module _ -> "  module " ^ item.name
+        | Value typ ->
+          "  let " ^ item.name ^ ": " ^ (typ |> Shared.type_to_string))
     (* TODO indent *)
     |> String.concat "\n"
   in
@@ -86,16 +86,16 @@ let find_relevant_types_from_type ~state ~file ~package typ =
           ( env1,
             cds
             |> List.map (fun (cd : Types.constructor_declaration) ->
-                   let from_args =
-                     match cd.cd_args with
-                     | Cstr_tuple ts -> ts
-                     | Cstr_record lds -> lds |> label_declarations_types
-                   in
-                   typ
-                   ::
-                   (match cd.cd_res with
-                   | None -> from_args
-                   | Some t -> t :: from_args))
+                let from_args =
+                  match cd.cd_args with
+                  | Cstr_tuple ts -> ts
+                  | Cstr_record lds -> lds |> label_declarations_types
+                in
+                typ
+                ::
+                (match cd.cd_res with
+                | None -> from_args
+                | Some t -> t :: from_args))
             |> List.flatten )
         | _ -> (env, [typ])))
     | None -> (env, [typ])
@@ -133,30 +133,28 @@ let expand_types ~state ~file ~package ~supports_markdown_links typ =
     ( all
       (* Don't produce duplicate type definitions for recursive types *)
       |> List.filter (fun {env; name} ->
-             let type_id = type_id ~env ~name in
-             if String_set.mem type_id !types_seen then false
-             else (
-               types_seen := String_set.add type_id !types_seen;
-               true))
+          let type_id = type_id ~env ~name in
+          if String_set.mem type_id !types_seen then false
+          else (
+            types_seen := String_set.add type_id !types_seen;
+            true))
       |> List.map (fun {decl; env; loc; path} ->
-             let link_to_type_definition_str =
-               if
-                 supports_markdown_links
-                 && not
-                      (Res_parsetree_viewer
-                       .has_inline_record_definition_attribute
-                         decl.type_attributes)
-               then
-                 Markdown.go_to_definition_text ~env ~pos:loc.Warnings.loc_start
-               else ""
-             in
-             Markdown.divider
-             ^ (if supports_markdown_links then Markdown.spacing else "")
-             ^ Markdown.code_block
-                 (decl
-                 |> Shared.decl_to_string ~print_name_as_is:true
-                      (Shared_types.path_ident_to_string path))
-             ^ link_to_type_definition_str ^ "\n"),
+          let link_to_type_definition_str =
+            if
+              supports_markdown_links
+              && not
+                   (Res_parsetree_viewer.has_inline_record_definition_attribute
+                      decl.type_attributes)
+            then Markdown.go_to_definition_text ~env ~pos:loc.Warnings.loc_start
+            else ""
+          in
+          Markdown.divider
+          ^ (if supports_markdown_links then Markdown.spacing else "")
+          ^ Markdown.code_block
+              (decl
+              |> Shared.decl_to_string ~print_name_as_is:true
+                   (Shared_types.path_ident_to_string path))
+          ^ link_to_type_definition_str ^ "\n"),
       `Default )
 
 (* Produces a hover with relevant types expanded in the main type being hovered. *)

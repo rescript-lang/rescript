@@ -20,7 +20,7 @@ let suites =
          ( __LOC__ >:: fun _ ->
            Array.init 100 (fun i -> String.make i 'a')
            |> Array.iter (fun x ->
-                  Ext_platform_primitives.hash_string x =~ Hashtbl.hash x) );
+               Ext_platform_primitives.hash_string x =~ Hashtbl.hash x) );
          ( __LOC__ >:: fun _ ->
            (* only string matters here *)
            hash {stamp = 0; name = "Pervasives"; flags = 0}

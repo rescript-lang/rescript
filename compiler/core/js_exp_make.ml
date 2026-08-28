@@ -1745,13 +1745,13 @@ let bigint_comp (cmp : Lam_compat.comparison) ?comment (e0 : t) (e1 : t) =
     let trim = ref false in
     s
     |> String.iteri (fun i c ->
-           match (c, i, !trim) with
-           | '0', 0, _ -> trim := true
-           | '0', _, true -> ()
-           | '_', _, _ -> ()
-           | _ ->
-             trim := false;
-             Buffer.add_char buf c);
+        match (c, i, !trim) with
+        | '0', 0, _ -> trim := true
+        | '0', _, true -> ()
+        | '_', _, _ -> ()
+        | _ ->
+          trim := false;
+          Buffer.add_char buf c);
     buf |> Buffer.to_bytes |> Bytes.to_string
   in
   match (cmp, e0.expression_desc, e1.expression_desc) with

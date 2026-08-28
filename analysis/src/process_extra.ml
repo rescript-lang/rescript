@@ -16,48 +16,43 @@ let extra_for_file ~(file : File.t) =
   let extra = init_extra () in
   file.stamps
   |> Stamps.iter_modules (fun stamp (d : Module.t Declared.t) ->
-         add_loc_item extra d.name.loc (LModule (Definition (stamp, Module)));
-         add_reference ~extra stamp d.name.loc);
+      add_loc_item extra d.name.loc (LModule (Definition (stamp, Module)));
+      add_reference ~extra stamp d.name.loc);
   file.stamps
   |> Stamps.iter_values (fun stamp (d : Types.type_expr Declared.t) ->
-         add_loc_item extra d.name.loc
-           (Typed (d.name.txt, d.item, Definition (stamp, Value)));
-         add_reference ~extra stamp d.name.loc);
+      add_loc_item extra d.name.loc
+        (Typed (d.name.txt, d.item, Definition (stamp, Value)));
+      add_reference ~extra stamp d.name.loc);
   file.stamps
   |> Stamps.iter_types (fun stamp (d : Type.t Declared.t) ->
-         add_loc_item extra d.name.loc
-           (TypeDefinition (d.name.txt, d.item.Type.decl, stamp));
-         add_reference ~extra stamp d.name.loc;
-         match d.item.Type.kind with
-         | Record labels ->
-           labels
-           |> List.iter (fun {stamp; fname; typ} ->
-                  add_reference ~extra stamp fname.loc;
-                  add_loc_item extra fname.loc
-                    (Typed
-                       (d.name.txt, typ, Definition (d.stamp, Field fname.txt))))
-         | Variant constructors ->
-           constructors
-           |> List.iter (fun {Constructor.stamp; cname} ->
-                  add_reference ~extra stamp cname.loc;
-                  let t =
-                    {
-                      Types.id = 0;
-                      level = 0;
-                      desc =
-                        Tconstr
-                          ( Path.Pident
-                              {Ident.stamp; name = d.name.txt; flags = 0},
-                            [],
-                            ref Types.Mnil );
-                    }
-                  in
-                  add_loc_item extra cname.loc
-                    (Typed
-                       ( d.name.txt,
-                         t,
-                         Definition (d.stamp, Constructor cname.txt) )))
-         | _ -> ());
+      add_loc_item extra d.name.loc
+        (TypeDefinition (d.name.txt, d.item.Type.decl, stamp));
+      add_reference ~extra stamp d.name.loc;
+      match d.item.Type.kind with
+      | Record labels ->
+        labels
+        |> List.iter (fun {stamp; fname; typ} ->
+            add_reference ~extra stamp fname.loc;
+            add_loc_item extra fname.loc
+              (Typed (d.name.txt, typ, Definition (d.stamp, Field fname.txt))))
+      | Variant constructors ->
+        constructors
+        |> List.iter (fun {Constructor.stamp; cname} ->
+            add_reference ~extra stamp cname.loc;
+            let t =
+              {
+                Types.id = 0;
+                level = 0;
+                desc =
+                  Tconstr
+                    ( Path.Pident {Ident.stamp; name = d.name.txt; flags = 0},
+                      [],
+                      ref Types.Mnil );
+              }
+            in
+            add_loc_item extra cname.loc
+              (Typed (d.name.txt, t, Definition (d.stamp, Constructor cname.txt))))
+      | _ -> ());
   extra
 
 let add_external_reference ~extra module_name path tip loc =
@@ -100,15 +95,15 @@ let extra_for_cmt ~(iterator : Tast_iterator.iterator)
   let extra_for_parts parts =
     parts
     |> Array.iter (fun part ->
-           match part with
-           | Cmt_format.Partial_signature str -> iterator.signature iterator str
-           | Partial_signature_item str -> iterator.signature_item iterator str
-           | Partial_expression expression -> iterator.expr iterator expression
-           | Partial_pattern pattern -> iterator.pat iterator pattern
-           | Partial_class_expr _ -> ()
-           | Partial_module_type module_type ->
-             iterator.module_type iterator module_type
-           | Partial_structure _ | Partial_structure_item _ -> ())
+        match part with
+        | Cmt_format.Partial_signature str -> iterator.signature iterator str
+        | Partial_signature_item str -> iterator.signature_item iterator str
+        | Partial_expression expression -> iterator.expr iterator expression
+        | Partial_pattern pattern -> iterator.pat iterator pattern
+        | Partial_class_expr _ -> ()
+        | Partial_module_type module_type ->
+          iterator.module_type iterator module_type
+        | Partial_structure _ | Partial_structure_item _ -> ())
   in
   match cmt_annots with
   | Implementation structure ->
@@ -117,11 +112,11 @@ let extra_for_cmt ~(iterator : Tast_iterator.iterator)
     let items =
       parts |> Array.to_list
       |> Utils.filter_map (fun (p : Cmt_format.binary_part) ->
-             match p with
-             | Partial_structure str -> Some str.str_items
-             | Partial_structure_item str -> Some [str]
-             (* | Partial_expression(exp) => Some([ str]) *)
-             | _ -> None)
+          match p with
+          | Partial_structure str -> Some str.str_items
+          | Partial_structure_item str -> Some [str]
+          (* | Partial_expression(exp) => Some([ str]) *)
+          | _ -> None)
       |> List.concat
     in
     extra_for_structure_items ~iterator items;
@@ -132,10 +127,10 @@ let extra_for_cmt ~(iterator : Tast_iterator.iterator)
     let items =
       parts |> Array.to_list
       |> Utils.filter_map (fun (p : Cmt_format.binary_part) ->
-             match p with
-             | Partial_signature s -> Some s.sig_items
-             | Partial_signature_item str -> Some [str]
-             | _ -> None)
+          match p with
+          | Partial_signature s -> Some s.sig_items
+          | Partial_signature_item str -> Some [str]
+          | _ -> None)
       |> List.concat
     in
     extra_for_signature_items ~iterator items;
@@ -237,24 +232,23 @@ let add_for_record ~env ~extra ~record_type items =
     let t = get_type_at_path ~env path in
     items
     |> List.iter (fun ({Asttypes.txt; loc}, _, _, _) ->
-           (* let name = Longident.last(txt); *)
-           let name = handle_constructor txt in
-           let name_loc = Utils.end_of_location loc (String.length name) in
-           let loc_type =
-             match t with
-             | `Local {stamp; item = {kind = Record fields}} -> (
-               match fields |> List.find_opt (fun f -> f.fname.txt = name) with
-               | Some {stamp = astamp} ->
-                 add_reference ~extra astamp name_loc;
-                 LocalReference (stamp, Field name)
-               | None -> NotFound)
-             | `Global (module_name, path) ->
-               add_external_reference ~extra module_name path (Field name)
-                 name_loc;
-               GlobalReference (module_name, path, Field name)
-             | _ -> NotFound
-           in
-           add_loc_item extra name_loc (Typed (name, record_type, loc_type)))
+        (* let name = Longident.last(txt); *)
+        let name = handle_constructor txt in
+        let name_loc = Utils.end_of_location loc (String.length name) in
+        let loc_type =
+          match t with
+          | `Local {stamp; item = {kind = Record fields}} -> (
+            match fields |> List.find_opt (fun f -> f.fname.txt = name) with
+            | Some {stamp = astamp} ->
+              add_reference ~extra astamp name_loc;
+              LocalReference (stamp, Field name)
+            | None -> NotFound)
+          | `Global (module_name, path) ->
+            add_external_reference ~extra module_name path (Field name) name_loc;
+            GlobalReference (module_name, path, Field name)
+          | _ -> NotFound
+        in
+        add_loc_item extra name_loc (Typed (name, record_type, loc_type)))
   | _ -> ()
 
 let add_for_constructor ~env ~extra constructor_type {Asttypes.txt; loc}
@@ -366,8 +360,8 @@ let pat ~(file : File.t) ~env ~extra (iter : Tast_iterator.iterator)
       match
         pattern.pat_extra
         |> List.filter_map (function
-             | Typedtree.Tpat_unpack, _, _ -> Some ()
-             | _ -> None)
+          | Typedtree.Tpat_unpack, _, _ -> Some ()
+          | _ -> None)
       with
       | _ :: _ -> true
       | [] -> false
@@ -444,9 +438,9 @@ let expr ~env ~(extra : extra) (iter : Tast_iterator.iterator)
     add_for_record ~env ~extra ~record_type:expression.exp_type
       (fields |> Array.to_list
       |> Utils.filter_map (fun (desc, item, opt) ->
-             match item with
-             | Typedtree.Overridden (loc, _) -> Some (loc, desc, (), opt)
-             | _ -> None))
+          match item with
+          | Typedtree.Overridden (loc, _) -> Some (loc, desc, (), opt)
+          | _ -> None))
   | Texp_constant constant ->
     add_loc_item extra expression.exp_loc (Constant constant)
   (* Skip unit and list literals *)

@@ -479,22 +479,22 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
     | Ppat_tuple pl ->
       pl
       |> List.iteri (fun index p ->
-             scope_pattern p
-               ~pattern_path:(NTupleItem {item_num = index} :: pattern_path)
-               ?context_path)
+          scope_pattern p
+            ~pattern_path:(NTupleItem {item_num = index} :: pattern_path)
+            ?context_path)
     | Ppat_construct (_, None) -> ()
     | Ppat_construct ({txt}, Some {ppat_desc = Ppat_tuple pl}) ->
       pl
       |> List.iteri (fun index p ->
-             scope_pattern p
-               ~pattern_path:
-                 (NVariantPayload
-                    {
-                      item_num = index;
-                      constructor_name = Utils.get_unqualified_name txt;
-                    }
-                 :: pattern_path)
-               ?context_path)
+          scope_pattern p
+            ~pattern_path:
+              (NVariantPayload
+                 {
+                   item_num = index;
+                   constructor_name = Utils.get_unqualified_name txt;
+                 }
+              :: pattern_path)
+            ?context_path)
     | Ppat_construct ({txt}, Some p) ->
       scope_pattern
         ~pattern_path:
@@ -506,11 +506,11 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
     | Ppat_variant (txt, Some {ppat_desc = Ppat_tuple pl}) ->
       pl
       |> List.iteri (fun index p ->
-             scope_pattern p
-               ~pattern_path:
-                 (NPolyvariantPayload {item_num = index; constructor_name = txt}
-                 :: pattern_path)
-               ?context_path)
+          scope_pattern p
+            ~pattern_path:
+              (NPolyvariantPayload {item_num = index; constructor_name = txt}
+              :: pattern_path)
+            ?context_path)
     | Ppat_variant (txt, Some p) ->
       scope_pattern
         ~pattern_path:
@@ -591,14 +591,14 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
     | Ptype_variant constr_decls ->
       constr_decls
       |> List.iter (fun (cd : Parsetree.constructor_declaration) ->
-             scope :=
-               !scope
-               |> Scope.add_constructor ~name:cd.pcd_name.txt ~loc:cd.pcd_loc)
+          scope :=
+            !scope
+            |> Scope.add_constructor ~name:cd.pcd_name.txt ~loc:cd.pcd_loc)
     | Ptype_record label_decls ->
       label_decls
       |> List.iter (fun (ld : Parsetree.label_declaration) ->
-             scope :=
-               !scope |> Scope.add_field ~name:ld.pld_name.txt ~loc:ld.pld_loc)
+          scope :=
+            !scope |> Scope.add_field ~name:ld.pld_name.txt ~loc:ld.pld_loc)
     | _ -> ()
   in
   let scope_type_declaration (td : Parsetree.type_declaration) =
@@ -690,13 +690,13 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
           let has_case_with_cursor =
             cases
             |> List.find_opt (fun case ->
-                   loc_has_cursor case.Parsetree.pc_lhs.ppat_loc)
+                loc_has_cursor case.Parsetree.pc_lhs.ppat_loc)
             |> Option.is_some
           in
           let has_case_with_empty_loc =
             cases
             |> List.find_opt (fun case ->
-                   loc_is_empty case.Parsetree.pc_lhs.ppat_loc)
+                loc_is_empty case.Parsetree.pc_lhs.ppat_loc)
             |> Option.is_some
           in
           if Debug.verbose () && debug_typed_completion_expr then
@@ -1051,37 +1051,37 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
         let current_unlabelled_count = ref (if is_pipe then 1 else 0) in
         args
         |> List.iter (fun (arg : arg) ->
-               let previous_ctx_path = !current_ctx_path in
-               set_current_ctx_path
-                 (CArgument
-                    {
-                      function_context_path;
-                      argument_label =
-                        (match arg with
-                        | {label = None} ->
-                          let current = !current_unlabelled_count in
-                          current_unlabelled_count := current + 1;
-                          Unlabelled {argument_position = current}
-                        | {label = Some {name; opt = true}} -> Optional name
-                        | {label = Some {name; opt = false}} -> Labelled name);
-                    });
-               expr iterator arg.exp;
-               reset_current_ctx_path previous_ctx_path))
+            let previous_ctx_path = !current_ctx_path in
+            set_current_ctx_path
+              (CArgument
+                 {
+                   function_context_path;
+                   argument_label =
+                     (match arg with
+                     | {label = None} ->
+                       let current = !current_unlabelled_count in
+                       current_unlabelled_count := current + 1;
+                       Unlabelled {argument_position = current}
+                     | {label = Some {name; opt = true}} -> Optional name
+                     | {label = Some {name; opt = false}} -> Labelled name);
+                 });
+            expr iterator arg.exp;
+            reset_current_ctx_path previous_ctx_path))
     | Some arg_completable -> set_result arg_completable
   and iterate_jsx_props ~iterator (props : Completion_jsx.jsx_props) =
     props.props
     |> List.iter (fun (prop : Completion_jsx.prop) ->
-           let previous_ctx_path = !current_ctx_path in
-           set_current_ctx_path
-             (CJsxPropValue
-                {
-                  path_to_component =
-                    Utils.flatten_long_ident ~jsx:true props.comp_name.txt;
-                  prop_name = prop.name;
-                  empty_jsx_prop_name_hint = None;
-                });
-           expr iterator prop.exp;
-           reset_current_ctx_path previous_ctx_path)
+        let previous_ctx_path = !current_ctx_path in
+        set_current_ctx_path
+          (CJsxPropValue
+             {
+               path_to_component =
+                 Utils.flatten_long_ident ~jsx:true props.comp_name.txt;
+               prop_name = prop.name;
+               empty_jsx_prop_name_hint = None;
+             });
+        expr iterator prop.exp;
+        reset_current_ctx_path previous_ctx_path)
   and expr (iterator : Ast_iterator.iterator) (expr : Parsetree.expression) =
     let old_in_jsx_context = !in_jsx_context in
     let processed = ref false in
@@ -1143,14 +1143,14 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
       let old_ctx_path = !current_ctx_path in
       cases
       |> List.iter (fun (case : Parsetree.case) ->
-             let old_scope = !scope in
-             if
-               loc_has_cursor case.pc_rhs.pexp_loc = false
-               && loc_has_cursor case.pc_lhs.ppat_loc
-             then complete_pattern ?context_path:ctx_path case.pc_lhs;
-             scope_pattern ?context_path:ctx_path case.pc_lhs;
-             Ast_iterator.default_iterator.case iterator case;
-             scope := old_scope);
+          let old_scope = !scope in
+          if
+            loc_has_cursor case.pc_rhs.pexp_loc = false
+            && loc_has_cursor case.pc_lhs.ppat_loc
+          then complete_pattern ?context_path:ctx_path case.pc_lhs;
+          scope_pattern ?context_path:ctx_path case.pc_lhs;
+          Ast_iterator.default_iterator.case iterator case;
+          scope := old_scope);
       reset_current_ctx_path old_ctx_path
     | Pexp_apply
         {
@@ -1184,17 +1184,17 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
       when Res_parsetree_viewer.is_tagged_template_literal inner_expr ->
       expr_to_context_path ~in_jsx_context:!in_jsx_context inner_expr
       |> Option.iter (fun cpath ->
-             set_result
-               (Cpath
-                  (CPField
-                     {
-                       context_path = cpath;
-                       field_name = "";
-                       pos_of_dot;
-                       expr_loc = expr.pexp_loc;
-                       in_jsx = !in_jsx_context;
-                     }));
-             set_found ())
+          set_result
+            (Cpath
+               (CPField
+                  {
+                    context_path = cpath;
+                    field_name = "";
+                    pos_of_dot;
+                    expr_loc = expr.pexp_loc;
+                    in_jsx = !in_jsx_context;
+                  }));
+          set_found ())
     (*
        A dot completion for a tagged templated application with an ident.
        Example:
@@ -1215,17 +1215,17 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
            && expr.pexp_loc |> Loc.has_pos ~pos:pos_before_cursor ->
       expr_to_context_path ~in_jsx_context:!in_jsx_context inner_expr
       |> Option.iter (fun cpath ->
-             set_result
-               (Cpath
-                  (CPField
-                     {
-                       context_path = cpath;
-                       field_name;
-                       pos_of_dot;
-                       expr_loc = expr.pexp_loc;
-                       in_jsx = !in_jsx_context;
-                     }));
-             set_found ())
+          set_result
+            (Cpath
+               (CPField
+                  {
+                    context_path = cpath;
+                    field_name;
+                    pos_of_dot;
+                    expr_loc = expr.pexp_loc;
+                    in_jsx = !in_jsx_context;
+                  }));
+          set_found ())
     | _ -> (
       if expr.pexp_loc |> Loc.has_pos ~pos:pos_no_white && !result = None then (
         set_found ();
@@ -1546,14 +1546,14 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
               (Loc.to_string fun_expr.pexp_loc)
               (args
               |> List.map (fun {label; exp} ->
-                     Printf.sprintf "%s...%s"
-                       (match label with
-                       | None -> ""
-                       | Some {name; opt; pos_start; pos_end} ->
-                         "~" ^ name ^ Pos.to_string pos_start ^ "->"
-                         ^ Pos.to_string pos_end ^ "="
-                         ^ if opt then "?" else "")
-                       (Loc.to_string exp.pexp_loc))
+                  Printf.sprintf "%s...%s"
+                    (match label with
+                    | None -> ""
+                    | Some {name; opt; pos_start; pos_end} ->
+                      "~" ^ name ^ Pos.to_string pos_start ^ "->"
+                      ^ Pos.to_string pos_end ^ "="
+                      ^ if opt then "?" else "")
+                    (Loc.to_string exp.pexp_loc))
               |> String.concat ", ");
 
           let fun_ctx_path =

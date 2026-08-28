@@ -59,8 +59,8 @@ let non_shadowed_pervasive_or_stdlib = function
   | Pdot (Pident id, s, _pos) as path -> (
     (Ident.same id ident_pervasives || Ident.same id ident_stdlib)
     &&
-    try Path.same path (Env.lookup_type (Lident s) !printing_env)
-    with Not_found -> true)
+      try Path.same path (Env.lookup_type (Lident s) !printing_env)
+      with Not_found -> true)
   | _ -> false
 
 let rec tree_of_path = function
@@ -382,8 +382,8 @@ let best_type_path p =
     while
       !printing_cont <> []
       &&
-      try fst (path_size (get_path ())) > !printing_depth
-      with Not_found -> true
+        try fst (path_size (get_path ())) > !printing_depth
+        with Not_found -> true
     do
       printing_cont := List.map snd (Env.run_iter_cont !printing_cont);
       incr printing_depth
@@ -591,8 +591,8 @@ let find_inlined_type name (printing_context : printing_context option) =
   | Some {inlined_types} ->
     inlined_types
     |> List.find_opt (fun inlined_type ->
-           match inlined_type with
-           | Record {type_name} -> type_name = name)
+        match inlined_type with
+        | Record {type_name} -> type_name = name)
 
 (* Disabled in classic mode when printing an unification error *)
 
@@ -1681,8 +1681,8 @@ let print_variant_configuration_issue ppf
 
     constructor_names_to_print
     |> List.iteri (fun index name ->
-           if index = 0 then () else fprintf ppf ", ";
-           fprintf ppf "@{<info>%s@}" name);
+        if index = 0 then () else fprintf ppf ", ";
+        fprintf ppf "@{<info>%s@}" name);
     if not_printed_constructor_count > 0 then
       fprintf ppf " (+%i more)" not_printed_constructor_count;
 

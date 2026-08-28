@@ -52,22 +52,22 @@ end = struct
     let res = ref [] in
     lines
     |> List.iteri (fun line_idx line ->
-           let state = ref Search in
-           for i = 0 to String.length line - 1 do
-             let ch = line.[i] in
-             match (!state, ch) with
-             | Search, '@' -> state := Collect i
-             | Collect attr_offset, ' ' ->
-               res := make_attr line_idx attr_offset i line :: !res;
-               state := Search
-             | Search, _ | Collect _, _ -> ()
-           done;
+        let state = ref Search in
+        for i = 0 to String.length line - 1 do
+          let ch = line.[i] in
+          match (!state, ch) with
+          | Search, '@' -> state := Collect i
+          | Collect attr_offset, ' ' ->
+            res := make_attr line_idx attr_offset i line :: !res;
+            state := Search
+          | Search, _ | Collect _, _ -> ()
+        done;
 
-           match !state with
-           | Collect attr_offset ->
-             res :=
-               make_attr line_idx attr_offset (String.length line) line :: !res
-           | _ -> ());
+        match !state with
+        | Collect attr_offset ->
+          res :=
+            make_attr line_idx attr_offset (String.length line) line :: !res
+        | _ -> ());
     !res |> List.rev
 
   let contains attribute_for_search t =
@@ -82,15 +82,15 @@ end = struct
       let res = ref [] in
       t
       |> List.iter (fun attr ->
-             let {line; offset; name} = attr in
+          let {line; offset; name} = attr in
 
-             if line <> !prev_line then (
-               res := !buffer :: !res;
-               buffer := "";
-               prev_line := line);
+          if line <> !prev_line then (
+            res := !buffer :: !res;
+            buffer := "";
+            prev_line := line);
 
-             let indent = String.make (offset - String.length !buffer) ' ' in
-             buffer := !buffer ^ indent ^ name);
+          let indent = String.make (offset - String.length !buffer) ' ' in
+          buffer := !buffer ^ indent ^ name);
       res := !buffer :: !res;
       !res |> List.rev |> String.concat "\n"
 end
@@ -162,18 +162,17 @@ let print_signature ~extractor ~signature =
           let params =
             label_decls
             |> List.map (fun (label_decl : Types.label_declaration) ->
-                   let prop_type =
-                     Type_utils.instantiate_type ~type_params ~type_args
-                       label_decl.ld_type
-                   in
-                   let lbl_name = label_decl.ld_id |> Ident.name in
-                   let lbl =
-                     if label_decl.ld_optional then
-                       Asttypes.Optional {txt = lbl_name; loc = Location.none}
-                     else
-                       Asttypes.Labelled {txt = lbl_name; loc = Location.none}
-                   in
-                   {Types.lbl; typ = prop_type})
+                let prop_type =
+                  Type_utils.instantiate_type ~type_params ~type_args
+                    label_decl.ld_type
+                in
+                let lbl_name = label_decl.ld_id |> Ident.name in
+                let lbl =
+                  if label_decl.ld_optional then
+                    Asttypes.Optional {txt = lbl_name; loc = Location.none}
+                  else Asttypes.Labelled {txt = lbl_name; loc = Location.none}
+                in
+                {Types.lbl; typ = prop_type})
           in
           {ret_type with desc = Tarrow (params, ret_type)}
         in
@@ -282,13 +281,13 @@ let print_signature ~extractor ~signature =
       Buffer.add_string buf "(";
       args
       |> List.iter (fun (id, mto) ->
-             Buffer.add_string buf ("\n" ^ indent ^ "  ");
-             (match mto with
-             | None -> Buffer.add_string buf (Ident.name id)
-             | Some mt ->
-               Buffer.add_string buf (Ident.name id ^ ": ");
-               process_module_type ~indent:(indent ^ "  ") mt);
-             Buffer.add_string buf ",");
+          Buffer.add_string buf ("\n" ^ indent ^ "  ");
+          (match mto with
+          | None -> Buffer.add_string buf (Ident.name id)
+          | Some mt ->
+            Buffer.add_string buf (Ident.name id ^ ": ");
+            process_module_type ~indent:(indent ^ "  ") mt);
+          Buffer.add_string buf ",");
       if args <> [] then Buffer.add_string buf ("\n" ^ indent);
       Buffer.add_string buf (") =>\n" ^ indent);
       process_module_type ~indent ret_mt

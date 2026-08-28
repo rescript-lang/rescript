@@ -243,10 +243,10 @@ let test (input : (string * string list) list) =
   let node_array = Array.init nodes_num (fun _ -> Vec_int.empty ()) in
   input
   |> List.iter (fun (x, others) ->
-         let idx = String_hash.find_exn tbl x in
-         others
-         |> List.iter (fun y ->
-                Vec_int.push node_array.(idx) (String_hash.find_exn tbl y)));
+      let idx = String_hash.find_exn tbl x in
+      others
+      |> List.iter (fun y ->
+          Vec_int.push node_array.(idx) (String_hash.find_exn tbl y)));
   Ext_scc.graph_check node_array
 
 let test2 (input : (string * string list) list) =
@@ -267,14 +267,14 @@ let test2 (input : (string * string list) list) =
   let node_array = Array.init nodes_num (fun _ -> Vec_int.empty ()) in
   input
   |> List.iter (fun (x, others) ->
-         let idx = String_hash.find_exn tbl x in
-         others
-         |> List.iter (fun y ->
-                Vec_int.push node_array.(idx) (String_hash.find_exn tbl y)));
+      let idx = String_hash.find_exn tbl x in
+      others
+      |> List.iter (fun y ->
+          Vec_int.push node_array.(idx) (String_hash.find_exn tbl y)));
   let output = Ext_scc.graph node_array in
   output
   |> Int_vec_vec.map_into_array (fun int_vec ->
-         Vec_int.map_into_array (fun i -> other_mapping.(i)) int_vec)
+      Vec_int.map_into_array (fun i -> other_mapping.(i)) int_vec)
 
 let suites =
   __FILE__

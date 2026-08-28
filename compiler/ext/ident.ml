@@ -115,8 +115,8 @@ let balance l d r =
     match l with
     | Node (ll, ld, lr, _)
       when (match ll with
-           | Empty -> 0
-           | Node (_, _, _, h) -> h)
+             | Empty -> 0
+             | Node (_, _, _, h) -> h)
            >=
            match lr with
            | Empty -> 0
@@ -129,8 +129,8 @@ let balance l d r =
     match r with
     | Node (rl, rd, rr, _)
       when (match rr with
-           | Empty -> 0
-           | Node (_, _, _, h) -> h)
+             | Empty -> 0
+             | Node (_, _, _, h) -> h)
            >=
            match rl with
            | Empty -> 0

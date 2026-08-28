@@ -479,7 +479,7 @@ let compile output_prefix =
                  Ident.same pid id
                  || not
                     @@ Ext_list.exists all_bindings (fun (other, _) ->
-                           Ident.same other pid)
+                        Ident.same other pid)
                | Lconst _ -> true
                | _ -> false) ->
       (* capture cases like for {!Queue}
@@ -492,24 +492,24 @@ let compile output_prefix =
       ( Js_output.make
           (S.define_variable ~kind:Variable id (E.dummy_obj tag_info)
           :: Ext_list.mapi ls (fun i x ->
-                 S.exp
-                   (Js_of_lam_block.set_field
-                      (match tag_info with
-                      | Blk_record {fields = xs} -> Fld_record_set (fst xs.(i))
-                      | Blk_record_inlined xs ->
-                        Fld_record_inline_set (fst xs.fields.(i))
-                      | Blk_constructor p -> (
-                        let is_cons = p.name = Literals.cons in
-                        match (is_cons, i) with
-                        | true, 0 -> Fld_record_inline_set Literals.hd
-                        | true, 1 -> Fld_record_inline_set Literals.tl
-                        | _, _ -> Fld_record_inline_set ("_" ^ string_of_int i))
-                      | _ -> assert false)
-                      (E.var id) (Int32.of_int i)
-                      (match x with
-                      | Lvar lid -> E.var lid
-                      | Lconst x -> Lam_compile_const.translate x
-                      | _ -> assert false)))),
+              S.exp
+                (Js_of_lam_block.set_field
+                   (match tag_info with
+                   | Blk_record {fields = xs} -> Fld_record_set (fst xs.(i))
+                   | Blk_record_inlined xs ->
+                     Fld_record_inline_set (fst xs.fields.(i))
+                   | Blk_constructor p -> (
+                     let is_cons = p.name = Literals.cons in
+                     match (is_cons, i) with
+                     | true, 0 -> Fld_record_inline_set Literals.hd
+                     | true, 1 -> Fld_record_inline_set Literals.tl
+                     | _, _ -> Fld_record_inline_set ("_" ^ string_of_int i))
+                   | _ -> assert false)
+                   (E.var id) (Int32.of_int i)
+                   (match x with
+                   | Lvar lid -> E.var lid
+                   | Lconst x -> Lam_compile_const.translate x
+                   | _ -> assert false)))),
         [] )
     | Lprim {primitive = Pmakeblock (tag_info, _)} -> (
       (* Lconst should not appear here if we do [scc]
@@ -1082,10 +1082,9 @@ let compile output_prefix =
       (* Declaration First, body and handler have the same value *)
       let declares =
         S.define_variable ~kind:Variable exit_id E.zero_int_literal
-        :: (* we should always make it zero here, since [zero] is reserved in our mapping*)
-           Ext_list.flat_map code_table (fun {bindings} ->
-               Ext_list.map bindings (fun x ->
-                   S.declare_variable ~kind:Variable x))
+        (* we should always make it zero here, since [zero] is reserved in our mapping*)
+        :: Ext_list.flat_map code_table (fun {bindings} ->
+            Ext_list.map bindings (fun x -> S.declare_variable ~kind:Variable x))
       in
       match lambda_cxt.continuation with
       (* could be optimized when cases are less than 3 *)

@@ -206,27 +206,27 @@ end = struct
   let run () =
     List.to_seq specs
     |> Seq.flat_map (fun spec ->
-           let filename, action = spec in
-           let test_name = string_of_action action ^ " " ^ filename in
-           let {Benchmark.ms_per_run; allocs_per_run} = benchmark spec in
-           [
-             `Assoc
-               [
-                 ("name", `String (Format.sprintf "%s - time/run" test_name));
-                 ("unit", `String "ms");
-                 ("value", `Float ms_per_run);
-               ];
-             `Assoc
-               [
-                 ("name", `String (Format.sprintf "%s - allocs/run" test_name));
-                 ("unit", `String "words");
-                 ("value", `Int allocs_per_run);
-               ];
-           ]
-           |> List.to_seq)
+        let filename, action = spec in
+        let test_name = string_of_action action ^ " " ^ filename in
+        let {Benchmark.ms_per_run; allocs_per_run} = benchmark spec in
+        [
+          `Assoc
+            [
+              ("name", `String (Format.sprintf "%s - time/run" test_name));
+              ("unit", `String "ms");
+              ("value", `Float ms_per_run);
+            ];
+          `Assoc
+            [
+              ("name", `String (Format.sprintf "%s - allocs/run" test_name));
+              ("unit", `String "words");
+              ("value", `Int allocs_per_run);
+            ];
+        ]
+        |> List.to_seq)
     |> Seq.iteri (fun i json ->
-           print_endline (if i == 0 then "[" else ",");
-           print_string (Yojson.to_string json));
+        print_endline (if i == 0 then "[" else ",");
+        print_string (Yojson.to_string json));
     print_newline ();
     print_endline "]"
 end

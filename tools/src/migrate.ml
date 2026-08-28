@@ -85,9 +85,9 @@ module Mapper_utils = struct
           ] ->
         elems
         |> List.filter_map (fun (e : Parsetree.expression) ->
-               match e.pexp_desc with
-               | Pexp_constant (Pconst_string (s, _)) -> Some s
-               | _ -> None)
+            match e.pexp_desc with
+            | Pexp_constant (Pconst_string (s, _)) -> Some s
+            | _ -> None)
       | _ -> []
 
     let apply_names (names : string list) (e : Parsetree.expression) :
@@ -151,12 +151,12 @@ module Mapper_utils = struct
     let idx = ref 0 in
     source_args
     |> List.iter (fun (lbl, arg) ->
-           match lbl with
-           | Asttypes.Nolabel ->
-             Hashtbl.replace unlabelled !idx arg;
-             incr idx
-           | Asttypes.Labelled {txt} | Optional {txt} ->
-             Hashtbl.replace labelled txt arg);
+        match lbl with
+        | Asttypes.Nolabel ->
+          Hashtbl.replace unlabelled !idx arg;
+          incr idx
+        | Asttypes.Labelled {txt} | Optional {txt} ->
+          Hashtbl.replace labelled txt arg);
     (labelled, unlabelled)
 
   (* Replace placeholders anywhere inside an expression using the given
@@ -190,11 +190,11 @@ module Mapper_utils = struct
   let build_labelled_args_map (template_args : args) =
     template_args
     |> List.filter_map (fun (label, arg) ->
-           match (label, Insert_ext.placeholder_of_expr arg) with
-           | ( (Asttypes.Labelled {txt = label} | Optional {txt = label}),
-               Some (Insert_ext.Labelled arg_name) ) ->
-             Some (arg_name, label)
-           | _ -> None)
+        match (label, Insert_ext.placeholder_of_expr arg) with
+        | ( (Asttypes.Labelled {txt = label} | Optional {txt = label}),
+            Some (Insert_ext.Labelled arg_name) ) ->
+          Some (arg_name, label)
+        | _ -> None)
     |> List.fold_left
          (fun map (k, v) -> String_map.add k v map)
          String_map.empty
@@ -273,16 +273,16 @@ module Mapper_utils = struct
   let rename_labels (source_args : args) ~labelled_args_map =
     source_args
     |> List.map (fun (label, arg) ->
-           match label with
-           | Asttypes.Labelled ({loc; txt} as l) -> (
-             match String_map.find_opt txt labelled_args_map with
-             | Some mapped -> (Asttypes.Labelled {loc; txt = mapped}, arg)
-             | None -> (Asttypes.Labelled l, arg))
-           | Optional ({loc; txt} as l) -> (
-             match String_map.find_opt txt labelled_args_map with
-             | Some mapped -> (Optional {loc; txt = mapped}, arg)
-             | None -> (Optional l, arg))
-           | _ -> (label, arg))
+        match label with
+        | Asttypes.Labelled ({loc; txt} as l) -> (
+          match String_map.find_opt txt labelled_args_map with
+          | Some mapped -> (Asttypes.Labelled {loc; txt = mapped}, arg)
+          | None -> (Asttypes.Labelled l, arg))
+        | Optional ({loc; txt} as l) -> (
+          match String_map.find_opt txt labelled_args_map with
+          | Some mapped -> (Optional {loc; txt = mapped}, arg)
+          | None -> (Optional l, arg))
+        | _ -> (label, arg))
 
   let apply_migration_template mapper (template_args : args)
       (source_args : args) =
@@ -555,47 +555,47 @@ let make_mapper (deprecated_used : Cmt_utils.deprecated_used list) =
   let deprecated_function_calls =
     deprecated_used
     |> List.filter (fun (d : Cmt_utils.deprecated_used) ->
-           match d.context with
-           | Some FunctionCall -> true
-           | _ -> false)
+        match d.context with
+        | Some FunctionCall -> true
+        | _ -> false)
   in
   let loc_to_deprecated_fn_call =
     Hashtbl.create (List.length deprecated_function_calls)
   in
   deprecated_function_calls
   |> List.iter (fun ({Cmt_utils.source_loc} as d) ->
-         Hashtbl.replace loc_to_deprecated_fn_call source_loc d);
+      Hashtbl.replace loc_to_deprecated_fn_call source_loc d);
 
   let deprecated_references =
     deprecated_used
     |> List.filter (fun (d : Cmt_utils.deprecated_used) ->
-           match d.context with
-           | Some Reference -> true
-           | _ -> false)
+        match d.context with
+        | Some Reference -> true
+        | _ -> false)
   in
   let loc_to_deprecated_reference =
     Hashtbl.create (List.length deprecated_references)
   in
   deprecated_references
   |> List.iter (fun ({Cmt_utils.source_loc} as d) ->
-         Hashtbl.replace loc_to_deprecated_reference source_loc d);
+      Hashtbl.replace loc_to_deprecated_reference source_loc d);
 
   let deprecated_constructor_constructors =
     deprecated_used
     |> List.filter_map (fun (d : Cmt_utils.deprecated_used) ->
-           match d.migration_template with
-           | Some template -> (
-             match Constructor_replace.of_template template with
-             | Some target -> Some (d.source_loc, target)
-             | None -> None)
-           | None -> None)
+        match d.migration_template with
+        | Some template -> (
+          match Constructor_replace.of_template template with
+          | Some target -> Some (d.source_loc, target)
+          | None -> None)
+        | None -> None)
   in
   let loc_to_deprecated_constructor_constructor =
     Hashtbl.create (List.length deprecated_constructor_constructors)
   in
   deprecated_constructor_constructors
   |> List.iter (fun (loc, target) ->
-         Hashtbl.replace loc_to_deprecated_constructor_constructor loc target);
+      Hashtbl.replace loc_to_deprecated_constructor_constructor loc target);
 
   let find_constructor_target ~loc ~lid_loc =
     match Hashtbl.find_opt loc_to_deprecated_constructor_constructor loc with
@@ -616,20 +616,20 @@ let make_mapper (deprecated_used : Cmt_utils.deprecated_used list) =
       (Cmt_utils.deprecated_used * Parsetree.core_type) list =
     deprecated_used
     |> List.filter_map (fun (d : Cmt_utils.deprecated_used) ->
-           match d.migration_template with
-           | Some e -> (
-             match Type_replace.core_type_of_expr_extension e with
-             | Some ct -> Some (d, ct)
-             | None -> None)
-           | None -> None)
+        match d.migration_template with
+        | Some e -> (
+          match Type_replace.core_type_of_expr_extension e with
+          | Some ct -> Some (d, ct)
+          | None -> None)
+        | None -> None)
   in
   let find_type_replace_template (loc : Location.t) : Parsetree.core_type option
       =
     type_replace_deprecations
     |> List.find_map (fun ((d : Cmt_utils.deprecated_used), ct) ->
-           if loc_contains loc d.source_loc || loc_contains d.source_loc loc
-           then Some ct
-           else None)
+        if loc_contains loc d.source_loc || loc_contains d.source_loc loc then
+          Some ct
+        else None)
   in
 
   let mapper =

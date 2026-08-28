@@ -104,12 +104,12 @@ let make_module_name file_name nested_modules fn_name =
 let make_props_type_params_tvar named_type_list =
   named_type_list
   |> List.filter_map (fun (_isOptional, label, _, loc, _interiorType) ->
-         if label = "key" then None
-         else
-           Some
-             (Typ.var ~loc
-             @@ safe_type_from_value
-                  (Labelled {txt = label; loc = Location.none})))
+      if label = "key" then None
+      else
+        Some
+          (Typ.var ~loc
+          @@ safe_type_from_value (Labelled {txt = label; loc = Location.none})
+          ))
 
 let strip_option core_type =
   match core_type with
@@ -139,23 +139,23 @@ let make_props_type_params ?(strip_explicit_option = false)
     ?(strip_explicit_nullable_of_ref = false) named_type_list =
   named_type_list
   |> List.filter_map (fun (is_optional, label, _, loc, interior_type) ->
-         if label = "key" then None
-           (* TODO: Worth thinking how about "ref_" or "_ref" usages *)
-         else if label = "ref" then
-           (*
+      if label = "key" then
+        None (* TODO: Worth thinking how about "ref_" or "_ref" usages *)
+      else if label = "ref" then
+        (*
                 If ref has a type annotation then use it, else 'ref.
                 For example, if JSX ppx is used for React Native, type would be different.
              *)
-           match interior_type with
-           | {ptyp_desc = Ptyp_any} -> Some (ref_type_var loc)
-           | _ ->
-             if strip_explicit_nullable_of_ref then strip_nullable interior_type
-             else Some interior_type
-           (* Strip the explicit option type in implementation *)
-           (* let make = (~x: option<string>=?) => ... *)
-         else if is_optional && strip_explicit_option then
-           strip_option interior_type
-         else Some interior_type)
+        match interior_type with
+        | {ptyp_desc = Ptyp_any} -> Some (ref_type_var loc)
+        | _ ->
+          if strip_explicit_nullable_of_ref then strip_nullable interior_type
+          else Some interior_type
+        (* Strip the explicit option type in implementation *)
+        (* let make = (~x: option<string>=?) => ... *)
+      else if is_optional && strip_explicit_option then
+        strip_option interior_type
+      else Some interior_type)
 
 let make_label_decls named_type_list =
   let rec check_duplicated_label l =
@@ -176,17 +176,16 @@ let make_label_decls named_type_list =
 
   named_type_list
   |> List.map (fun (is_optional, label, attrs, loc, interior_type) ->
-         if label = "key" then
-           Type.field ~loc ~attrs ~optional:true {txt = label; loc}
-             interior_type
-         else if is_optional then
-           Type.field ~loc ~attrs ~optional:true {txt = label; loc}
-             (Typ.var @@ safe_type_from_value
-             @@ Labelled {txt = label; loc = Location.none})
-         else
-           Type.field ~loc ~attrs {txt = label; loc}
-             (Typ.var @@ safe_type_from_value
-             @@ Labelled {txt = label; loc = Location.none}))
+      if label = "key" then
+        Type.field ~loc ~attrs ~optional:true {txt = label; loc} interior_type
+      else if is_optional then
+        Type.field ~loc ~attrs ~optional:true {txt = label; loc}
+          (Typ.var @@ safe_type_from_value
+          @@ Labelled {txt = label; loc = Location.none})
+      else
+        Type.field ~loc ~attrs {txt = label; loc}
+          (Typ.var @@ safe_type_from_value
+          @@ Labelled {txt = label; loc = Location.none}))
 
 let make_type_decls ~attrs props_name loc named_type_list =
   let label_decl_list = make_label_decls named_type_list in
@@ -362,7 +361,7 @@ let arg_to_type types
 let has_default_value name_arg_list =
   name_arg_list
   |> List.exists (fun (name, default, _, _, _, _) ->
-         Option.is_some default && is_optional name)
+      Option.is_some default && is_optional name)
 
 let arg_to_concrete_type types (name, attrs, loc, type_) =
   match name with
@@ -764,13 +763,13 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name binding =
     let nolabel_params =
       patterns_with_nolabel
       |> List.rev_map (fun (_, pattern, _opt) ->
-             let pattern =
-               match pattern.ppat_desc with
-               | Ppat_var {txt} when txt = "ref" ->
-                 Pat.constraint_ pattern (ref_type Location.none)
-               | _ -> pattern
-             in
-             Exp.fun_param Nolabel pattern)
+          let pattern =
+            match pattern.ppat_desc with
+            | Ppat_var {txt} when txt = "ref" ->
+              Pat.constraint_ pattern (ref_type Location.none)
+            | _ -> pattern
+          in
+          Exp.fun_param Nolabel pattern)
     in
     (* ({a, b, _}: props<'a, 'b>) *)
     let record_pattern =
@@ -1149,10 +1148,10 @@ let mk_record_from_props mapper (jsx_expr_loc : Location.t) (props : jsx_props)
   let props =
     props
     |> List.filter (function
-         | JSXPropPunning (_, {txt = "key"}) | JSXPropValue ({txt = "key"}, _, _)
-           ->
-           false
-         | _ -> true)
+      | JSXPropPunning (_, {txt = "key"}) | JSXPropValue ({txt = "key"}, _, _)
+        ->
+        false
+      | _ -> true)
   in
   let props, spread_props =
     match props with
@@ -1164,23 +1163,23 @@ let mk_record_from_props mapper (jsx_expr_loc : Location.t) (props : jsx_props)
   let record_fields =
     props
     |> List.map (function
-         | JSXPropPunning (is_optional, name) ->
-           {
-             lid = {txt = Lident name.txt; loc = name.loc};
-             x = Exp.ident ~loc:name.loc {txt = Lident name.txt; loc = name.loc};
-             opt = is_optional;
-           }
-         | JSXPropValue (name, is_optional, value) ->
-           {
-             lid = {txt = Lident name.txt; loc = name.loc};
-             x = mapper.expr mapper value;
-             opt = is_optional;
-           }
-         | JSXPropSpreading (loc, _) ->
-           (* There can only be one spread expression and it is expected to be the first prop *)
-           Jsx_common.raise_error ~loc
-             "JSX: use {...p} {x: v} not {x: v} {...p} \n\
-             \     multiple spreads {...p} {...p} not allowed.")
+      | JSXPropPunning (is_optional, name) ->
+        {
+          lid = {txt = Lident name.txt; loc = name.loc};
+          x = Exp.ident ~loc:name.loc {txt = Lident name.txt; loc = name.loc};
+          opt = is_optional;
+        }
+      | JSXPropValue (name, is_optional, value) ->
+        {
+          lid = {txt = Lident name.txt; loc = name.loc};
+          x = mapper.expr mapper value;
+          opt = is_optional;
+        }
+      | JSXPropSpreading (loc, _) ->
+        (* There can only be one spread expression and it is expected to be the first prop *)
+        Jsx_common.raise_error ~loc
+          "JSX: use {...p} {x: v} not {x: v} {...p} \n\
+          \     multiple spreads {...p} {...p} not allowed.")
   in
   match (record_fields, spread_props) with
   | [], Some spread_props ->
@@ -1195,13 +1194,13 @@ let mk_record_from_props mapper (jsx_expr_loc : Location.t) (props : jsx_props)
 let try_find_key_prop (props : jsx_props) : (arg_label * expression) option =
   props
   |> List.find_map (function
-       | JSXPropPunning (is_optional, ({txt = "key"} as name)) ->
-         let arg_label = if is_optional then Optional name else Labelled name in
-         Some (arg_label, Exp.ident {txt = Lident "key"; loc = name.loc})
-       | JSXPropValue (({txt = "key"} as name), is_optional, expr) ->
-         let arg_label = if is_optional then Optional name else Labelled name in
-         Some (arg_label, expr)
-       | _ -> None)
+    | JSXPropPunning (is_optional, ({txt = "key"} as name)) ->
+      let arg_label = if is_optional then Optional name else Labelled name in
+      Some (arg_label, Exp.ident {txt = Lident "key"; loc = name.loc})
+    | JSXPropValue (({txt = "key"} as name), is_optional, expr) ->
+      let arg_label = if is_optional then Optional name else Labelled name in
+      Some (arg_label, expr)
+    | _ -> None)
 
 let append_children_prop (config : Jsx_common.jsx_config) mapper
     (component_description : component_description) (props : jsx_props)

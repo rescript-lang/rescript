@@ -648,16 +648,16 @@ let build_ppat_or_for_variant_spread pat env expected_ty =
     let synthetic_or_patterns =
       constructors
       |> List.map (fun (c : Types.constructor_declaration) ->
-             Ast_helper.Pat.mk
-               ~attrs:[Variant_type_spread.mk_pat_from_variant_spread_attr ()]
-               ~loc:lident.loc
-               (Ppat_construct
-                  ( Location.mkloc
-                      (Longident.Lident (Ident.name c.cd_id))
-                      lident.loc,
-                    match c.cd_args with
-                    | Cstr_tuple [] -> None
-                    | _ -> Some (Ast_helper.Pat.any ()) )))
+          Ast_helper.Pat.mk
+            ~attrs:[Variant_type_spread.mk_pat_from_variant_spread_attr ()]
+            ~loc:lident.loc
+            (Ppat_construct
+               ( Location.mkloc
+                   (Longident.Lident (Ident.name c.cd_id))
+                   lident.loc,
+                 match c.cd_args with
+                 | Cstr_tuple [] -> None
+                 | _ -> Some (Ast_helper.Pat.any ()) )))
       |> List.rev
     in
     let pat =
@@ -4246,9 +4246,9 @@ and type_application ~context total_app env funct (sargs : sargs) :
       let targs =
         List.rev !rev_args
         |> List.map (fun (l, thunk) ->
-               match thunk with
-               | None -> (l, None)
-               | Some f -> (l, Some (f ())))
+            match thunk with
+            | None -> (l, None)
+            | Some f -> (l, Some (f ())))
       in
       let provided = List.length !ignored + nargs in
       let newarity = arity - provided in
@@ -5170,16 +5170,16 @@ let report_error env loc ppf error =
     let required_args =
       args_from_type
       |> List.filter_map (fun arg ->
-             match arg with
-             | Labelled {txt = n} -> Some n
-             | Optional _ | Nolabel -> None)
+          match arg with
+          | Labelled {txt = n} -> Some n
+          | Optional _ | Nolabel -> None)
     in
     let passed_named_args =
       sargs
       |> List.filter_map (fun arg ->
-             match arg with
-             | Labelled {txt} | Optional {txt} -> Some txt
-             | Nolabel -> None)
+          match arg with
+          | Labelled {txt} | Optional {txt} -> Some txt
+          | Nolabel -> None)
     in
     let missing_required_args =
       required_args
@@ -5190,9 +5190,9 @@ let report_error env loc ppf error =
     let named_args_of_fn_type =
       args_from_type
       |> List.filter_map (fun arg ->
-             match arg with
-             | Labelled {txt = n} | Optional {txt = n} -> Some n
-             | Nolabel -> None)
+          match arg with
+          | Labelled {txt = n} | Optional {txt = n} -> Some n
+          | Nolabel -> None)
     in
     let superfluous_args =
       passed_named_args

@@ -360,9 +360,9 @@ module Scheduler = struct
         let nodes_with_levels =
           dirty
           |> List.filter_map (fun name ->
-                 match Hashtbl.find_opt Registry.nodes name with
-                 | Some info -> Some (info.Registry.level, name, info)
-                 | None -> None)
+              match Hashtbl.find_opt Registry.nodes name with
+              | Some info -> Some (info.Registry.level, name, info)
+              | None -> None)
         in
 
         let sorted =
@@ -875,10 +875,10 @@ let join ~name (left : ('k1, 'v1) t) (right : ('k2, 'v2) t) ~key_of ~f ?merge ()
     let output_entries =
       !all_affected
       |> List.filter_map (fun k3 ->
-             if Hashtbl.mem seen k3 then None
-             else (
-               Hashtbl.replace seen k3 ();
-               recompute_target k3))
+          if Hashtbl.mem seen k3 then None
+          else (
+            Hashtbl.replace seen k3 ();
+            recompute_target k3))
     in
 
     if output_entries <> [] then (
@@ -1010,10 +1010,10 @@ let union ~name (left : ('k, 'v) t) (right : ('k, 'v) t) ?merge () : ('k, 'v) t
     let output_entries =
       !all_affected
       |> List.filter_map (fun k ->
-             if Hashtbl.mem seen k then None
-             else (
-               Hashtbl.replace seen k ();
-               recompute_target k))
+          if Hashtbl.mem seen k then None
+          else (
+            Hashtbl.replace seen k ();
+            recompute_target k))
     in
 
     if output_entries <> [] then (

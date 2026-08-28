@@ -513,15 +513,15 @@ let print_external_module_doc (emn : External_ffi_types.external_module_name) =
       let with_fields =
         import_attributes
         |> List.map (fun (k, v) ->
-               (* digestion stores the source key [type_] as [type]; other
+            (* digestion stores the source key [type_] as [type]; other
                   keys are stored as written, including exotic ones from
                   escaped idents (\"some-identifier"), which must print
                   escaped again to be writable source *)
-               let key =
-                 if k = "type" then Doc.text "type_"
-                 else Res_printer.print_ident_like k
-               in
-               Doc.concat [key; Doc.text ": "; print_string_literal_doc v])
+            let key =
+              if k = "type" then Doc.text "type_"
+              else Res_printer.print_ident_like k
+            in
+            Doc.concat [key; Doc.text ": "; print_string_literal_doc v])
       in
       Doc.concat
         [

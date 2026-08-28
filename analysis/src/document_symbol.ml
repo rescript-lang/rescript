@@ -30,11 +30,11 @@ let get_symbols ~source ~kind_file =
     | Ptype_variant constr_decls ->
       constr_decls
       |> List.iter (fun (cd : Parsetree.constructor_declaration) ->
-             add_symbol cd.pcd_name.txt cd.pcd_loc EnumMember)
+          add_symbol cd.pcd_name.txt cd.pcd_loc EnumMember)
     | Ptype_record label_decls ->
       label_decls
       |> List.iter (fun (ld : Parsetree.label_declaration) ->
-             add_symbol ld.pld_name.txt ld.pld_loc Property)
+          add_symbol ld.pld_name.txt ld.pld_loc Property)
     | _ -> ()
   in
   let process_type_declaration (td : Parsetree.type_declaration) =

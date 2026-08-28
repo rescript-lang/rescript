@@ -442,12 +442,12 @@ let message = function
       fields |> List.map (fun field -> "\n- " ^ field) |> String.concat ""
     in
     (match fields with
-    | [_] ->
-      "The following optional field appears in both the explicit pattern and \
-       the rest type:"
-    | _ ->
-      "The following optional fields appear in both the explicit pattern and \
-       the rest type:")
+      | [_] ->
+        "The following optional field appears in both the explicit pattern and \
+         the rest type:"
+      | _ ->
+        "The following optional fields appear in both the explicit pattern and \
+         the rest type:")
     ^ field_list
     ^
     match fields with
@@ -455,8 +455,8 @@ let message = function
     | _ -> "\n\nThey will always be absent from the rest record.")
   | Bs_todo maybe_text ->
     (match maybe_text with
-    | None -> "Todo found."
-    | Some todo -> "Todo found: " ^ todo)
+      | None -> "Todo found."
+      | Some todo -> "Todo found: " ^ todo)
     ^ "\n\n\
       \  This code is not implemented yet and will crash at runtime. Make sure \
        you implement this before running the code."

@@ -41,25 +41,25 @@ let dump ~(filter_for_position : (int * int) option) ~full =
 
   stamps
   |> List.sort (fun (_, a) (_, b) ->
-         let a_loc = loc_of_kind a in
-         let b_loc = loc_of_kind b in
-         match compare a_loc.loc_start.pos_lnum b_loc.loc_start.pos_lnum with
-         | 0 -> compare a_loc.loc_start.pos_cnum b_loc.loc_start.pos_cnum
-         | c -> c)
+      let a_loc = loc_of_kind a in
+      let b_loc = loc_of_kind b in
+      match compare a_loc.loc_start.pos_lnum b_loc.loc_start.pos_lnum with
+      | 0 -> compare a_loc.loc_start.pos_cnum b_loc.loc_start.pos_cnum
+      | c -> c)
   |> List.iter (fun (stamp, kind) ->
-         match kind with
-         | KType t ->
-           printf "%d ktype        %s\n" stamp
-             (Warnings.loc_to_string t.extent_loc)
-         | KValue t ->
-           printf "%d kvalue       %s\n" stamp
-             (Warnings.loc_to_string t.extent_loc)
-         | KModule t ->
-           printf "%d kmodule      %s\n" stamp
-             (Warnings.loc_to_string t.extent_loc)
-         | KConstructor t ->
-           printf "%d kconstructor %s\n" stamp
-             (Warnings.loc_to_string t.extent_loc));
+      match kind with
+      | KType t ->
+        printf "%d ktype        %s\n" stamp
+          (Warnings.loc_to_string t.extent_loc)
+      | KValue t ->
+        printf "%d kvalue       %s\n" stamp
+          (Warnings.loc_to_string t.extent_loc)
+      | KModule t ->
+        printf "%d kmodule      %s\n" stamp
+          (Warnings.loc_to_string t.extent_loc)
+      | KConstructor t ->
+        printf "%d kconstructor %s\n" stamp
+          (Warnings.loc_to_string t.extent_loc));
 
   (* dump the structure *)
   let rec dump_structure indent (structure : Module.structure) =
@@ -100,13 +100,13 @@ let dump ~(filter_for_position : (int * int) option) ~full =
 
   loc_items
   |> List.sort (fun a b ->
-         let a_loc = a.loc.Location.loc_start in
-         let b_loc = b.loc.Location.loc_start in
-         match compare a_loc.pos_lnum b_loc.pos_lnum with
-         | 0 -> compare a_loc.pos_cnum b_loc.pos_cnum
-         | c -> c)
+      let a_loc = a.loc.Location.loc_start in
+      let b_loc = b.loc.Location.loc_start in
+      match compare a_loc.pos_lnum b_loc.pos_lnum with
+      | 0 -> compare a_loc.pos_cnum b_loc.pos_cnum
+      | c -> c)
   |> List.iter (fun {loc; loc_type} ->
-         let loc_str = Warnings.loc_to_string loc in
-         let kind_str = Shared_types.loc_type_to_string loc_type in
-         printf "%s %s\n" loc_str kind_str);
+      let loc_str = Warnings.loc_to_string loc in
+      let kind_str = Shared_types.loc_type_to_string loc_type in
+      printf "%s %s\n" loc_str kind_str);
   Buffer.contents buffer

@@ -36,9 +36,9 @@ let rec traverse_expr (exp : Parsetree.expression) ~expr_path ~pos
       let array_item_with_cursor =
         array_patterns
         |> List.find_map (fun e ->
-               e
-               |> traverse_expr ~expr_path:next_expr_path
-                    ~first_char_before_cursor_no_white ~pos)
+            e
+            |> traverse_expr ~expr_path:next_expr_path
+                 ~first_char_before_cursor_no_white ~pos)
       in
 
       match (array_item_with_cursor, loc_has_cursor exp.pexp_loc) with
@@ -222,10 +222,10 @@ and traverse_expr_tuple_items tuple_items ~next_expr_path
   let item_with_cursor =
     tuple_items
     |> List.find_map (fun e ->
-           item_num := !item_num + 1;
-           e
-           |> traverse_expr ~expr_path:(next_expr_path !item_num)
-                ~first_char_before_cursor_no_white ~pos)
+        item_num := !item_num + 1;
+        e
+        |> traverse_expr ~expr_path:(next_expr_path !item_num)
+             ~first_char_before_cursor_no_white ~pos)
   in
   match (item_with_cursor, first_char_before_cursor_no_white) with
   | None, Some ',' ->
@@ -234,7 +234,7 @@ and traverse_expr_tuple_items tuple_items ~next_expr_path
     let pos_num = ref (-1) in
     tuple_items
     |> List.iteri (fun index e ->
-           if pos >= Loc.start e.Parsetree.pexp_loc then pos_num := index);
+        if pos >= Loc.start e.Parsetree.pexp_loc then pos_num := index);
     if !pos_num > -1 then Some ("", result_from_found_item_num !pos_num)
     else None
   | v, _ -> v

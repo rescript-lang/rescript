@@ -34,10 +34,10 @@ let process_attributes ~(scope_default : scope_default) ~state ~config
     let fname_len = String.length fname in
     config.Dce_config.cli.live_paths
     |> List.exists (fun prefix ->
-           String.length prefix <= fname_len
-           &&
-           try String.sub fname 0 (String.length prefix) = prefix
-           with Invalid_argument _ -> false)
+        String.length prefix <= fname_len
+        &&
+          try String.sub fname 0 (String.length prefix) = prefix
+          with Invalid_argument _ -> false)
   in
   if get_payload live_annotation <> None || name_is_in_live_names_or_paths ()
   then File_annotations.annotate_live state pos;

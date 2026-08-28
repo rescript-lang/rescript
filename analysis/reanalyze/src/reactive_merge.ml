@@ -126,7 +126,7 @@ let create (source : (string, Dce_file_processing.file_data option) Reactive.t)
       ~f:(fun _path items ->
         items.Cross_file_items.exception_refs
         |> List.map (fun (r : Cross_file_items.exception_ref) ->
-               (r.exception_path, r.loc_from)))
+            (r.exception_path, r.loc_from)))
       ()
   in
 

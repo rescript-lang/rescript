@@ -84,7 +84,7 @@ module Token = struct
     let sorted_tokens =
       e.tokens
       |> List.sort (fun (l1, c1, _, _) (l2, c2, _, _) ->
-             if l1 = l2 then compare c1 c2 else compare l1 l2)
+          if l1 = l2 then compare c1 c2 else compare l1 l2)
     in
     let arrays =
       sorted_tokens |> List.filter_map (fun t -> e |> emit_token t)

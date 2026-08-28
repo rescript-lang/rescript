@@ -37,35 +37,35 @@ let sourcedirs_to_map ~(config : Config.t) ~extensions ~exclude_file =
   let add_dir ~dir_on_disk ~dir_emitted ~filter ~map =
     dir_on_disk |> Sys.readdir
     |> Array.iter (fun fname ->
-           if fname |> filter then
-             map :=
-               !map
-               |> Module_name_map.add
-                    (fname |> chop_extensions |> Module_name.from_string_unsafe)
-                    dir_emitted)
+        if fname |> filter then
+          map :=
+            !map
+            |> Module_name_map.add
+                 (fname |> chop_extensions |> Module_name.from_string_unsafe)
+                 dir_emitted)
   in
   config.sources
   |> List.iter (fun dir ->
-         let dir_on_disk = config.project_root +++ dir in
-         if Sys.file_exists dir_on_disk && Sys.is_directory dir_on_disk then
-           add_dir ~dir_emitted:dir ~dir_on_disk ~filter:filter_given_extension
-             ~map:file_map);
+      let dir_on_disk = config.project_root +++ dir in
+      if Sys.file_exists dir_on_disk && Sys.is_directory dir_on_disk then
+        add_dir ~dir_emitted:dir ~dir_on_disk ~filter:filter_given_extension
+          ~map:file_map);
   config.bs_dependencies
   |> List.iter (fun package_name ->
-         match Hashtbl.find config.dep_paths package_name with
-         | path ->
-           let root = ["lib"; "bs"] |> List.fold_left ( +++ ) path in
-           let filter file_name =
-             [".cmt"; ".cmti"]
-             |> List.exists (fun ext -> Filename.check_suffix file_name ext)
-           in
-           read_bs_dependencies_dirs ~root
-           |> List.iter (fun dir ->
-                  let dir_on_disk = root +++ dir in
-                  let dir_emitted = package_name +++ dir in
-                  add_dir ~dir_emitted ~dir_on_disk ~filter
-                    ~map:bs_dependencies_file_map)
-         | exception Not_found -> ());
+      match Hashtbl.find config.dep_paths package_name with
+      | path ->
+        let root = ["lib"; "bs"] |> List.fold_left ( +++ ) path in
+        let filter file_name =
+          [".cmt"; ".cmti"]
+          |> List.exists (fun ext -> Filename.check_suffix file_name ext)
+        in
+        read_bs_dependencies_dirs ~root
+        |> List.iter (fun dir ->
+            let dir_on_disk = root +++ dir in
+            let dir_emitted = package_name +++ dir in
+            add_dir ~dir_emitted ~dir_on_disk ~filter
+              ~map:bs_dependencies_file_map)
+      | exception Not_found -> ());
   (!file_map, !bs_dependencies_file_map)
 
 type case = Lowercase | Uppercase
@@ -159,8 +159,8 @@ let resolve_module ~(config : Config.t) ~import_extension ~output_file_relative
       in
       (* e.g. import "../dst/ModuleName.ext" *)
       (match case = Uppercase with
-      | true -> module_name
-      | false -> module_name |> Module_name.uncapitalize)
+        | true -> module_name
+        | false -> module_name |> Module_name.uncapitalize)
       |> Import_path.from_module ~dir:from_output_dir_to_module_dir
            ~import_extension
 

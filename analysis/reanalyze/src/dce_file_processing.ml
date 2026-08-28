@@ -30,11 +30,11 @@ let process_signature ~config ~decls ~(file : file_context) ~do_values ~do_types
   in
   signature
   |> List.iter (fun sig_item ->
-         Dead_value.process_signature_item ~config ~decls ~file:dead_common_file
-           ~do_values ~do_types ~module_loc:Location.none
-           ~module_path:Module_path.initial
-           ~path:[module_name_tagged file]
-           sig_item)
+      Dead_value.process_signature_item ~config ~decls ~file:dead_common_file
+        ~do_values ~do_types ~module_loc:Location.none
+        ~module_path:Module_path.initial
+        ~path:[module_name_tagged file]
+        sig_item)
 
 (* ===== Main entry point ===== *)
 

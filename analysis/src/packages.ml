@@ -6,10 +6,10 @@ let make_paths_for_module ~project_files_and_paths ~dependencies_files_and_paths
   let paths_for_module = Hashtbl.create 30 in
   dependencies_files_and_paths
   |> List.iter (fun (mod_name, paths) ->
-         Hashtbl.replace paths_for_module mod_name paths);
+      Hashtbl.replace paths_for_module mod_name paths);
   project_files_and_paths
   |> List.iter (fun (mod_name, paths) ->
-         Hashtbl.replace paths_for_module mod_name paths);
+      Hashtbl.replace paths_for_module mod_name paths);
   paths_for_module
 
 let override_rescript_version = ref None
@@ -73,8 +73,8 @@ let new_bs_package ~root_path =
                      let values =
                        items
                        |> List.filter_map (function
-                            | `String s -> Some s
-                            | _ -> None)
+                         | `String s -> Some s
+                         | _ -> None)
                      in
                      Misc.String_map.add key values acc
                    | _ -> acc)
@@ -145,9 +145,9 @@ let new_bs_package ~root_path =
            let no_pervasives =
              compiler_flags
              |> List.exists (fun s ->
-                    match s with
-                    | `String s -> s = "-nopervasives"
-                    | _ -> false)
+                 match s with
+                 | `String s -> s = "-nopervasives"
+                 | _ -> false)
            in
            let opens_from_compiler_flags =
              List.fold_left

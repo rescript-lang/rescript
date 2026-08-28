@@ -140,12 +140,12 @@ let dump_import_attributes f
     P.brace_group f 0 (fun _ ->
         import_attributes
         |> List.iteri (fun idx (key, value) ->
-               Js_dump_string.pp_string f key;
-               P.string f L.colon_space;
-               Js_dump_string.pp_string f value;
-               if idx < total - 1 then (
-                 P.string f L.comma;
-                 P.space f)))
+            Js_dump_string.pp_string f key;
+            P.string f L.colon_space;
+            Js_dump_string.pp_string f value;
+            if idx < total - 1 then (
+              P.string f L.comma;
+              P.space f)))
 
 (** ES6 module style imports *)
 let imports cxt f

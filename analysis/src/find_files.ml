@@ -75,18 +75,18 @@ let filter_duplicates cmts =
   let intfs = Hashtbl.create 100 in
   cmts
   |> List.iter (fun path ->
-         if
-           Filename.check_suffix path ".rei"
-           || Filename.check_suffix path ".mli"
-           || Filename.check_suffix path ".cmti"
-         then Hashtbl.add intfs (get_name path) true);
+      if
+        Filename.check_suffix path ".rei"
+        || Filename.check_suffix path ".mli"
+        || Filename.check_suffix path ".cmti"
+      then Hashtbl.add intfs (get_name path) true);
   cmts
   |> List.filter (fun path ->
-         not
-           ((Filename.check_suffix path ".re"
-            || Filename.check_suffix path ".ml"
-            || Filename.check_suffix path ".cmt")
-           && Hashtbl.mem intfs (get_name path)))
+      not
+        ((Filename.check_suffix path ".re"
+         || Filename.check_suffix path ".ml"
+         || Filename.check_suffix path ".cmt")
+        && Hashtbl.mem intfs (get_name path)))
 
 let name_space_to_name n =
   n
@@ -139,18 +139,17 @@ let collect_files directory =
   let sources = all_files |> List.filter is_source_file |> filter_duplicates in
   compileds
   |> Utils.filter_map (fun path ->
-         let mod_name = get_name path in
-         let cmt = directory /+ path in
-         let res_opt =
-           Utils.find
-             (fun name ->
-               if get_name name = mod_name then Some (directory /+ name)
-               else None)
-             sources
-         in
-         match res_opt with
-         | None -> None
-         | Some res -> Some (mod_name, Shared_types.Impl {cmt; res}))
+      let mod_name = get_name path in
+      let cmt = directory /+ path in
+      let res_opt =
+        Utils.find
+          (fun name ->
+            if get_name name = mod_name then Some (directory /+ name) else None)
+          sources
+      in
+      match res_opt with
+      | None -> None
+      | Some res -> Some (mod_name, Shared_types.Impl {cmt; res}))
 
 (* Dependency resolution uses the package graph recorded by the build system in
    .sourcedirs.json when available. If a package is not listed there, analysis
@@ -194,68 +193,61 @@ let find_project_files ~public ~namespace ~path ~source_directories ~lib_bs =
   in
   dirs
   |> if_debug true "Source directories" (fun s ->
-         s |> String_set.elements |> List.map Utils.dump_path
-         |> String.concat " ");
+      s |> String_set.elements |> List.map Utils.dump_path |> String.concat " ");
   files
   |> if_debug true "Source files" (fun s ->
-         s |> String_set.elements |> List.map Utils.dump_path
-         |> String.concat " ");
+      s |> String_set.elements |> List.map Utils.dump_path |> String.concat " ");
 
   let interfaces = Hashtbl.create 100 in
   files
   |> String_set.iter (fun path ->
-         if is_interface path then
-           Hashtbl.replace interfaces (get_name path) path);
+      if is_interface path then Hashtbl.replace interfaces (get_name path) path);
 
   let normals =
     files |> String_set.elements
     |> Utils.filter_map (fun file ->
-           if is_implementation file then (
-             let module_name = get_name file in
-             let resi = Hashtbl.find_opt interfaces module_name in
-             Hashtbl.remove interfaces module_name;
-             let base =
-               compiled_base_name ~namespace (Files.relpath path file)
-             in
-             match resi with
-             | Some resi ->
-               let cmti = (lib_bs /+ base) ^ ".cmti" in
-               let cmt = (lib_bs /+ base) ^ ".cmt" in
-               if Files.exists cmti then
-                 if Files.exists cmt then
-                   (* Log.log("Intf and impl " ++ cmti ++ " " ++ cmt) *)
-                   Some
-                     ( module_name,
-                       Shared_types.IntfAndImpl {cmti; resi; cmt; res = file} )
-                 else None
-               else (
-                 (* Log.log("Just intf " ++ cmti) *)
-                 Log.log
-                   ("Bad source file (no cmt/cmti/cmi) " ^ (lib_bs /+ base));
-                 None)
-             | None ->
-               let cmt = (lib_bs /+ base) ^ ".cmt" in
-               if Files.exists cmt then
-                 Some (module_name, Impl {cmt; res = file})
-               else (
-                 Log.log ("Bad source file (no cmt/cmi) " ^ (lib_bs /+ base));
-                 None))
-           else None)
+        if is_implementation file then (
+          let module_name = get_name file in
+          let resi = Hashtbl.find_opt interfaces module_name in
+          Hashtbl.remove interfaces module_name;
+          let base = compiled_base_name ~namespace (Files.relpath path file) in
+          match resi with
+          | Some resi ->
+            let cmti = (lib_bs /+ base) ^ ".cmti" in
+            let cmt = (lib_bs /+ base) ^ ".cmt" in
+            if Files.exists cmti then
+              if Files.exists cmt then
+                (* Log.log("Intf and impl " ++ cmti ++ " " ++ cmt) *)
+                Some
+                  ( module_name,
+                    Shared_types.IntfAndImpl {cmti; resi; cmt; res = file} )
+              else None
+            else (
+              (* Log.log("Just intf " ++ cmti) *)
+              Log.log ("Bad source file (no cmt/cmti/cmi) " ^ (lib_bs /+ base));
+              None)
+          | None ->
+            let cmt = (lib_bs /+ base) ^ ".cmt" in
+            if Files.exists cmt then Some (module_name, Impl {cmt; res = file})
+            else (
+              Log.log ("Bad source file (no cmt/cmi) " ^ (lib_bs /+ base));
+              None))
+        else None)
   in
   let result =
     normals
     |> List.filter_map (fun (name, paths) ->
-           let original_name = name in
-           let name =
-             match namespace with
-             | None -> name
-             | Some namespace -> name ^ "-" ^ namespace
-           in
-           match public with
-           | Some public ->
-             if public |> String_set.mem original_name then Some (name, paths)
-             else None
-           | None -> Some (name, paths))
+        let original_name = name in
+        let name =
+          match namespace with
+          | None -> name
+          | Some namespace -> name ^ "-" ^ namespace
+        in
+        match public with
+        | Some public ->
+          if public |> String_set.mem original_name then Some (name, paths)
+          else None
+        | None -> Some (name, paths))
   in
   match namespace with
   | None -> result
@@ -298,49 +290,49 @@ let find_dependency_files base config =
   let dep_files =
     deps
     |> List.map (fun name ->
-           let result =
-             bind
-               (fun path ->
-                 let rescript_json_path = path /+ "rescript.json" in
+        let result =
+          bind
+            (fun path ->
+              let rescript_json_path = path /+ "rescript.json" in
 
-                 let parse_text text =
-                   match Yojson_helpers.from_string_opt text with
-                   | Some inner -> (
-                     let namespace = get_namespace inner in
-                     let source_directories =
-                       get_source_directories ~include_dev:false ~base_dir:path
-                         inner
-                     in
-                     match Build_system.get_lib_bs path with
-                     | None -> None
-                     | Some lib_bs ->
-                       let compiled_directories =
-                         source_directories |> List.map (Filename.concat lib_bs)
-                       in
-                       let compiled_directories =
-                         match namespace with
-                         | None -> compiled_directories
-                         | Some _ -> lib_bs :: compiled_directories
-                       in
-                       let project_files =
-                         find_project_files ~public:(get_public inner)
-                           ~namespace ~path ~source_directories ~lib_bs
-                       in
-                       Some (compiled_directories, project_files))
-                   | None -> None
-                 in
+              let parse_text text =
+                match Yojson_helpers.from_string_opt text with
+                | Some inner -> (
+                  let namespace = get_namespace inner in
+                  let source_directories =
+                    get_source_directories ~include_dev:false ~base_dir:path
+                      inner
+                  in
+                  match Build_system.get_lib_bs path with
+                  | None -> None
+                  | Some lib_bs ->
+                    let compiled_directories =
+                      source_directories |> List.map (Filename.concat lib_bs)
+                    in
+                    let compiled_directories =
+                      match namespace with
+                      | None -> compiled_directories
+                      | Some _ -> lib_bs :: compiled_directories
+                    in
+                    let project_files =
+                      find_project_files ~public:(get_public inner) ~namespace
+                        ~path ~source_directories ~lib_bs
+                    in
+                    Some (compiled_directories, project_files))
+                | None -> None
+              in
 
-                 match Files.read_file rescript_json_path with
-                 | Some text -> parse_text text
-                 | None -> None)
-               (find_package_root ~base ~sourcedirs_package_roots name)
-           in
+              match Files.read_file rescript_json_path with
+              | Some text -> parse_text text
+              | None -> None)
+            (find_package_root ~base ~sourcedirs_package_roots name)
+        in
 
-           match result with
-           | Some (files, directories) -> (files, directories)
-           | None ->
-             Log.log ("Skipping nonexistent dependency: " ^ name);
-             ([], []))
+        match result with
+        | Some (files, directories) -> (files, directories)
+        | None ->
+          Log.log ("Skipping nonexistent dependency: " ^ name);
+          ([], []))
   in
   match Build_system.get_stdlib base with
   | None -> None

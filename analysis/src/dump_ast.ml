@@ -135,8 +135,8 @@ let rec print_pattern pattern ~pos ~indentation =
     "Ppat_tuple(\n"
     ^ (patterns
       |> List.map (fun pattern ->
-             add_indentation (indentation + 2)
-             ^ (pattern |> print_pattern ~pos ~indentation:(indentation + 2)))
+          add_indentation (indentation + 2)
+          ^ (pattern |> print_pattern ~pos ~indentation:(indentation + 2)))
       |> String.concat ",\n")
     ^ "\n"
     ^ add_indentation indentation
@@ -180,7 +180,7 @@ and print_expr_item expr ~pos ~indentation =
     ^ add_indentation (indentation + 1)
     ^ (exprs
       |> List.map (fun expr ->
-             expr |> print_expr_item ~pos ~indentation:(indentation + 1))
+          expr |> print_expr_item ~pos ~indentation:(indentation + 1))
       |> String.concat ("\n" ^ add_indentation (indentation + 1)))
     ^ "\n"
     ^ add_indentation indentation
@@ -191,8 +191,8 @@ and print_expr_item expr ~pos ~indentation =
     ^ ")\n"
     ^ (cases
       |> List.mapi (fun case_num case ->
-             print_case case ~pos ~case_num:(case_num + 1)
-               ~indentation:(indentation + 1))
+          print_case case ~pos ~case_num:(case_num + 1)
+            ~indentation:(indentation + 1))
       |> String.concat "\n")
   | Pexp_ident {txt} ->
     "Pexp_ident:" ^ (Utils.flatten_long_ident txt |> Shared_types.ident)
@@ -219,10 +219,10 @@ and print_expr_item expr ~pos ~indentation =
     ^ "args:\n"
     ^ (args
       |> List.map (fun arg ->
-             add_indentation (indentation + 2)
-             ^ print_label arg.label ~pos ^ "=\n"
-             ^ add_indentation (indentation + 3)
-             ^ print_expr_item arg.exp ~pos ~indentation:(indentation + 3))
+          add_indentation (indentation + 2)
+          ^ print_label arg.label ~pos ^ "=\n"
+          ^ add_indentation (indentation + 3)
+          ^ print_expr_item arg.exp ~pos ~indentation:(indentation + 3))
       |> String.concat ",\n")
     ^ "\n"
     ^ add_indentation indentation
@@ -289,8 +289,8 @@ and print_expr_item expr ~pos ~indentation =
     "Pexp_tuple(\n"
     ^ (exprs
       |> List.map (fun expr ->
-             add_indentation (indentation + 2)
-             ^ (expr |> print_expr_item ~pos ~indentation:(indentation + 2)))
+          add_indentation (indentation + 2)
+          ^ (expr |> print_expr_item ~pos ~indentation:(indentation + 2)))
       |> String.concat ",\n")
     ^ "\n"
     ^ add_indentation indentation
@@ -307,7 +307,7 @@ let print_value_binding value ~pos ~indentation =
       ^ "constraint: type "
       ^ (pvc_newtypes
         |> List.map (fun ({Location.txt} as name) ->
-               (name |> print_loc_denominator_loc ~pos) ^ txt)
+            (name |> print_loc_denominator_loc ~pos) ^ txt)
         |> String.concat " ")
       ^ ". "
       ^ print_core_type pvc_type ~pos
@@ -357,7 +357,7 @@ let print_struct_item struct_item ~pos ~source =
         | Nonrecursive -> "")
       ^ (values
         |> List.map (fun value ->
-               add_indentation 1 ^ print_value_binding value ~pos ~indentation:1)
+            add_indentation 1 ^ print_value_binding value ~pos ~indentation:1)
         |> String.concat ",\n")
       ^ "\n)"
     | _ -> "<structure_item_not_implemented>")

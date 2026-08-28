@@ -273,18 +273,16 @@ module Res_driver = struct
         let errors =
           parse_result.diagnostics
           |> List.map (fun d ->
-                 let full_msg =
-                   diagnostic_to_string ~src:parse_result.source d
-                 in
-                 let short_msg = Res_diagnostics.explain d in
-                 let loc =
-                   {
-                     Location.loc_start = Res_diagnostics.get_start_pos d;
-                     Location.loc_end = Res_diagnostics.get_end_pos d;
-                     loc_ghost = false;
-                   }
-                 in
-                 {full_msg; short_msg; loc})
+              let full_msg = diagnostic_to_string ~src:parse_result.source d in
+              let short_msg = Res_diagnostics.explain d in
+              let loc =
+                {
+                  Location.loc_start = Res_diagnostics.get_start_pos d;
+                  Location.loc_end = Res_diagnostics.get_end_pos d;
+                  loc_ghost = false;
+                }
+              in
+              {full_msg; short_msg; loc})
           |> List.rev
         in
         raise (RescriptParsingErrors errors)
@@ -607,12 +605,12 @@ module Export = struct
         ( "compile",
           inject
           @@ Js.wrap_meth_callback (fun _ code ->
-                 Compile.implementation ~config ~lang (Js.to_string code)) );
+              Compile.implementation ~config ~lang (Js.to_string code)) );
         ( "compileWithDebug",
           inject
           @@ Js.wrap_meth_callback (fun _ code ->
-                 Compile.implementation ~include_debug_outputs:true ~config
-                   ~lang (Js.to_string code)) );
+              Compile.implementation ~include_debug_outputs:true ~config ~lang
+                (Js.to_string code)) );
         ("version", inject @@ Js.string Bs_version.version);
       |]
     in
@@ -622,8 +620,8 @@ module Export = struct
           ( "format",
             inject
             @@ Js.wrap_meth_callback (fun _ code ->
-                   Compile.syntax_format ?filename:config.filename ~from:lang
-                     ~to_:lang (Js.to_string code)) );
+                Compile.syntax_format ?filename:config.filename ~from:lang
+                  ~to_:lang (Js.to_string code)) );
         |]
     in
     obj attrs
@@ -688,61 +686,60 @@ module Export = struct
           ( "convertSyntax",
             inject
             @@ Js.wrap_meth_callback (fun _ from_lang to_lang src ->
-                   convert_syntax ~from_lang:(Js.to_string from_lang)
-                     ~to_lang:(Js.to_string to_lang) (Js.to_string src)) );
+                convert_syntax ~from_lang:(Js.to_string from_lang)
+                  ~to_lang:(Js.to_string to_lang) (Js.to_string src)) );
           ( "setModuleSystem",
             inject
             @@ Js.wrap_meth_callback (fun _ value ->
-                   Js.bool (set_module_system (Js.to_string value))) );
+                Js.bool (set_module_system (Js.to_string value))) );
           ( "setFilename",
             inject
             @@ Js.wrap_meth_callback (fun _ value ->
-                   Js.bool (set_filename (Js.to_string value))) );
+                Js.bool (set_filename (Js.to_string value))) );
           ( "setWarnFlags",
             inject
             @@ Js.wrap_meth_callback (fun _ value ->
-                   Js.bool (set_warn_flags (Js.to_string value))) );
+                Js.bool (set_warn_flags (Js.to_string value))) );
           ( "setOpenModules",
             inject
             @@ Js.wrap_meth_callback (fun _ value ->
-                   Js.bool
-                     (set_open_modules
-                        (value |> Js.to_array |> Array.map Js.to_string
-                       |> Array.to_list))) );
+                Js.bool
+                  (set_open_modules
+                     (value |> Js.to_array |> Array.map Js.to_string
+                    |> Array.to_list))) );
           ( "setExperimentalFeatures",
             inject
             @@ Js.wrap_meth_callback (fun _ value ->
-                   Js.bool
-                     (set_experimental_features
-                        (value |> Js.to_array |> Array.map Js.to_string
-                       |> Array.to_list))) );
+                Js.bool
+                  (set_experimental_features
+                     (value |> Js.to_array |> Array.map Js.to_string
+                    |> Array.to_list))) );
           ( "setJsxPreserveMode",
             inject
             @@ Js.wrap_meth_callback (fun _ value ->
-                   Js.bool (set_jsx_preserve_mode (Js.to_bool value))) );
+                Js.bool (set_jsx_preserve_mode (Js.to_bool value))) );
           ( "getConfig",
             inject
             @@ Js.wrap_meth_callback (fun _ ->
-                   Js.Unsafe.(
-                     obj
-                       [|
-                         ( "module_system",
-                           inject
-                           @@ (config.module_system
-                             |> Bundle_config.string_of_module_system
-                             |> Js.string) );
-                         ("warn_flags", inject @@ Js.string config.warn_flags);
-                         ( "jsx_preserve_mode",
-                           inject @@ (config.jsx_preserve_mode |> Js.bool) );
-                         ( "experimental_features",
-                           inject
-                           @@ (config.experimental_features |> Array.of_list
-                             |> Js.array) );
-                         ( "open_modules",
-                           inject
-                           @@ (config.open_modules |> Array.of_list |> Js.array)
-                         );
-                       |])) );
+                Js.Unsafe.(
+                  obj
+                    [|
+                      ( "module_system",
+                        inject
+                        @@ (config.module_system
+                          |> Bundle_config.string_of_module_system |> Js.string
+                           ) );
+                      ("warn_flags", inject @@ Js.string config.warn_flags);
+                      ( "jsx_preserve_mode",
+                        inject @@ (config.jsx_preserve_mode |> Js.bool) );
+                      ( "experimental_features",
+                        inject
+                        @@ (config.experimental_features |> Array.of_list
+                          |> Js.array) );
+                      ( "open_modules",
+                        inject
+                        @@ (config.open_modules |> Array.of_list |> Js.array) );
+                    |])) );
         |])
 end
 

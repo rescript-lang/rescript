@@ -68,8 +68,8 @@ let path_from_type_expr (t : Types.type_expr) =
 
 let print_record_from_fields ?name (fields : field list) =
   (match name with
-  | None -> ""
-  | Some name -> "type " ^ name ^ " = ")
+    | None -> ""
+    | Some name -> "type " ^ name ^ " = ")
   ^ "{"
   ^ (fields
     |> List.map (fun f -> f.fname.txt ^ ": " ^ Shared.type_to_string f.typ)
@@ -254,10 +254,10 @@ let rec extract_record_type ~state ~env ~package (t : Types.type_expr) =
       let fields =
         fields
         |> List.map (fun field ->
-               let field_typ =
-                 field.typ |> instantiate_type ~type_params ~type_args
-               in
-               {field with typ = field_typ})
+            let field_typ =
+              field.typ |> instantiate_type ~type_params ~type_args
+            in
+            {field with typ = field_typ})
       in
       Some (env, fields, typ)
     | Some (env, {item = {decl = {type_manifest = Some t1; type_params}}}) ->
@@ -465,19 +465,19 @@ let rec extract_type ?(print_opening_debug = true)
     let constructors =
       row_fields
       |> List.map (fun (label, field) ->
-             {
-               name = label;
-               display_name =
-                 Utils.print_maybe_exotic_ident ~allow_uident:true label;
-               args =
-                 (* Multiple arguments are represented as a Ttuple, while a single argument is just the type expression itself. *)
-                 (match field with
-                 | Types.Rpresent (Some type_expr) -> (
-                   match type_expr.desc with
-                   | Ttuple args -> args
-                   | _ -> [type_expr])
-                 | _ -> []);
-             })
+          {
+            name = label;
+            display_name =
+              Utils.print_maybe_exotic_ident ~allow_uident:true label;
+            args =
+              (* Multiple arguments are represented as a Ttuple, while a single argument is just the type expression itself. *)
+              (match field with
+              | Types.Rpresent (Some type_expr) -> (
+                match type_expr.desc with
+                | Ttuple args -> args
+                | _ -> [type_expr])
+              | _ -> []);
+          })
     in
     Some (Tpolyvariant {env; constructors; type_expr = t}, type_arg_context)
   | Tvar (Some var_name) -> (
@@ -641,8 +641,7 @@ let rec resolve_nested ?type_arg_context ~env ~full ~state ~nested ?ctx
         typ
         |> extract_type ~state ~env ~package:full.package
         |> Utils.Option.flat_map (fun (typ, type_arg_context) ->
-               typ |> resolve_nested ?type_arg_context ~env ~state ~full ~nested)
-      )
+            typ |> resolve_nested ?type_arg_context ~env ~state ~full ~nested))
     | ( NFollowRecordField {field_name},
         (TinlineRecord {env; fields} | Trecord {env; fields}) ) -> (
       if Debug.verbose () then
@@ -667,18 +666,18 @@ let rec resolve_nested ?type_arg_context ~env ~full ~state ~nested ?ctx
         typ
         |> extract_type ~env ~state ~package:full.package
         |> Utils.Option.flat_map (fun (typ, type_arg_context) ->
-               typ
-               |> resolve_nested ?type_arg_context ~ctx:(Rfield field_name) ~env
-                    ~state ~full ~nested))
+            typ
+            |> resolve_nested ?type_arg_context ~ctx:(Rfield field_name) ~env
+                 ~state ~full ~nested))
     | NRecordBody {seen_fields}, Trecord {env; definition = `TypeExpr type_expr}
       ->
       type_expr
       |> extract_type ~env ~state ~package:full.package
       |> Option.map (fun (typ, type_arg_context) ->
-             ( typ,
-               env,
-               Some (Completable.RecordField {seen_fields}),
-               type_arg_context ))
+          ( typ,
+            env,
+            Some (Completable.RecordField {seen_fields}),
+            type_arg_context ))
     | ( NRecordBody {seen_fields},
         (Trecord {env; definition = `NameOnly _} as extracted_type) ) ->
       Some
@@ -704,14 +703,14 @@ let rec resolve_nested ?type_arg_context ~env ~full ~state ~nested ?ctx
       typ
       |> extract_type ~env ~state ~package:full.package
       |> Utils.Option.flat_map (fun (t, type_arg_context) ->
-             t |> resolve_nested ?type_arg_context ~env ~state ~full ~nested)
+          t |> resolve_nested ?type_arg_context ~env ~state ~full ~nested)
     | NVariantPayload {constructor_name = "Ok"; item_num = 0}, Tresult {ok_type}
       ->
       if Debug.verbose () then print_endline "[nested]--> moving into result Ok";
       ok_type
       |> extract_type ~env ~state ~package:full.package
       |> Utils.Option.flat_map (fun (t, type_arg_context) ->
-             t |> resolve_nested ?type_arg_context ~env ~state ~full ~nested)
+          t |> resolve_nested ?type_arg_context ~env ~state ~full ~nested)
     | ( NVariantPayload {constructor_name = "Error"; item_num = 0},
         Tresult {error_type} ) ->
       if Debug.verbose () then
@@ -719,7 +718,7 @@ let rec resolve_nested ?type_arg_context ~env ~full ~state ~nested ?ctx
       error_type
       |> extract_type ~env ~state ~package:full.package
       |> Utils.Option.flat_map (fun (t, type_arg_context) ->
-             t |> resolve_nested ?type_arg_context ~env ~state ~full ~nested)
+          t |> resolve_nested ?type_arg_context ~env ~state ~full ~nested)
     | NVariantPayload {constructor_name; item_num}, Tvariant {env; constructors}
       -> (
       if Debug.verbose () then
@@ -730,7 +729,7 @@ let rec resolve_nested ?type_arg_context ~env ~full ~state ~nested ?ctx
       match
         constructors
         |> List.find_opt (fun (c : Constructor.t) ->
-               c.cname.txt = constructor_name)
+            c.cname.txt = constructor_name)
       with
       | Some {args = Args args} -> (
         if Debug.verbose () then
@@ -748,13 +747,13 @@ let rec resolve_nested ?type_arg_context ~env ~full ~state ~nested ?ctx
           typ
           |> extract_type ~env ~state ~package:full.package
           |> Utils.Option.flat_map (fun (typ, type_arg_context) ->
-                 if Debug.verbose () then
-                   Printf.printf
-                     "[nested]--> extracted %s, continuing descent of %i items\n"
-                     (extracted_type_to_string typ)
-                     (List.length nested);
-                 typ
-                 |> resolve_nested ?type_arg_context ~env ~state ~full ~nested))
+              if Debug.verbose () then
+                Printf.printf
+                  "[nested]--> extracted %s, continuing descent of %i items\n"
+                  (extracted_type_to_string typ)
+                  (List.length nested);
+              typ |> resolve_nested ?type_arg_context ~env ~state ~full ~nested)
+        )
       | Some {args = InlineRecord fields} when item_num = 0 ->
         if Debug.verbose () then
           print_endline "[nested]--> found constructor (inline record)";
@@ -766,7 +765,7 @@ let rec resolve_nested ?type_arg_context ~env ~full ~state ~nested ?ctx
       match
         constructors
         |> List.find_opt (fun (c : poly_variant_constructor) ->
-               c.name = constructor_name)
+            c.name = constructor_name)
       with
       | None -> None
       | Some constructor -> (
@@ -776,16 +775,15 @@ let rec resolve_nested ?type_arg_context ~env ~full ~state ~nested ?ctx
           typ
           |> extract_type ~env ~state ~package:full.package
           |> Utils.Option.flat_map (fun (typ, type_arg_context) ->
-                 typ
-                 |> resolve_nested ?type_arg_context ~env ~state ~full ~nested))
-      )
+              typ |> resolve_nested ?type_arg_context ~env ~state ~full ~nested)
+        ))
     | NArray, Tarray (env, ExtractedType typ) ->
       typ |> resolve_nested ?type_arg_context ~env ~state ~full ~nested
     | NArray, Tarray (env, TypeExpr typ) ->
       typ
       |> extract_type ~env ~state ~package:full.package
       |> Utils.Option.flat_map (fun (typ, type_arg_context) ->
-             typ |> resolve_nested ?type_arg_context ~env ~state ~full ~nested)
+          typ |> resolve_nested ?type_arg_context ~env ~state ~full ~nested)
     | _ -> None)
 
 let find_type_of_record_field fields ~field_name =
@@ -816,7 +814,7 @@ let find_type_of_polyvariant_arg constructors ~constructor_name ~payload_num =
   match
     constructors
     |> List.find_opt (fun (c : poly_variant_constructor) ->
-           c.name = constructor_name)
+        c.name = constructor_name)
   with
   | Some {args} -> (
     match List.nth_opt args payload_num with
@@ -892,8 +890,8 @@ let rec resolve_nested_pattern_path (typ : inner_type) ~env ~full ~state ~nested
           |> extract_type ~env ~state ~package:full.package
           |> get_extracted_type
           |> Utils.Option.flat_map (fun typ ->
-                 ExtractedType typ
-                 |> resolve_nested_pattern_path ~env ~state ~full ~nested))
+              ExtractedType typ
+              |> resolve_nested_pattern_path ~env ~state ~full ~nested))
       | NTupleItem {item_num}, Tuple (env, tuple_items, _) -> (
         match List.nth_opt tuple_items item_num with
         | None -> None
@@ -902,8 +900,8 @@ let rec resolve_nested_pattern_path (typ : inner_type) ~env ~full ~state ~nested
           |> extract_type ~env ~state ~package:full.package
           |> get_extracted_type
           |> Utils.Option.flat_map (fun typ ->
-                 ExtractedType typ
-                 |> resolve_nested_pattern_path ~env ~state ~full ~nested))
+              ExtractedType typ
+              |> resolve_nested_pattern_path ~env ~state ~full ~nested))
       | ( NVariantPayload {constructor_name; item_num},
           Tvariant {env; constructors} ) -> (
         match
@@ -1027,22 +1025,22 @@ module Codegen = struct
       Some
         (v.constructors
         |> List.map (fun (c : Shared_types.Constructor.t) ->
-               mk_construct_pat
-                 ?payload:
-                   (match c.args with
-                   | Args [] -> None
-                   | _ -> Some (any ()))
-                 c.cname.txt))
+            mk_construct_pat
+              ?payload:
+                (match c.args with
+                | Args [] -> None
+                | _ -> Some (any ()))
+              c.cname.txt))
     | Tpolyvariant v ->
       Some
         (v.constructors
         |> List.map (fun (c : Shared_types.poly_variant_constructor) ->
-               mk_tag_pat
-                 ?payload:
-                   (match c.args with
-                   | [] -> None
-                   | _ -> Some (any ()))
-                 c.display_name))
+            mk_tag_pat
+              ?payload:
+                (match c.args with
+                | [] -> None
+                | _ -> Some (any ()))
+              c.display_name))
     | Toption (_, inner_type) ->
       let extracted_type =
         match inner_type with
@@ -1068,7 +1066,7 @@ module Codegen = struct
          ]
         @ (expanded_branches
           |> List.map (fun (pat : Parsetree.pattern) ->
-                 mk_construct_pat ~payload:pat "Some")))
+              mk_construct_pat ~payload:pat "Some")))
     | Tresult {ok_type; error_type} ->
       let extracted_ok_type =
         ok_type
@@ -1105,10 +1103,10 @@ module Codegen = struct
       Some
         ((expanded_ok_branches
          |> List.map (fun (pat : Parsetree.pattern) ->
-                mk_construct_pat ~payload:pat "Ok"))
+             mk_construct_pat ~payload:pat "Ok"))
         @ (expanded_error_branches
           |> List.map (fun (pat : Parsetree.pattern) ->
-                 mk_construct_pat ~payload:pat "Error")))
+              mk_construct_pat ~payload:pat "Error")))
     | Tbool _ -> Some [mk_construct_pat "true"; mk_construct_pat "false"]
     | _ -> None
 
@@ -1123,7 +1121,7 @@ module Codegen = struct
       Some
         (patterns
         |> List.map (fun (pat : Parsetree.pattern) ->
-               Ast_helper.Exp.case pat (mk_fail_with_exp ())))
+            Ast_helper.Exp.case pat (mk_fail_with_exp ())))
 end
 
 let get_module_path_relative_to_env ~debug ~(env : Query_env.t) ~env_from_item
@@ -1185,8 +1183,8 @@ let get_extra_modules_to_complete_from_for_type ~env ~state ~full
   let add_to_module_paths attributes =
     Process_attributes.find_editor_complete_from_attribute attributes
     |> List.iter (fun e ->
-           found_module_paths :=
-             String_set.add (e |> String.concat ".") !found_module_paths)
+        found_module_paths :=
+          String_set.add (e |> String.concat ".") !found_module_paths)
   in
   let rec inner ~env ~full (t : Types.type_expr) =
     match t |> Shared.dig_constructor with
@@ -1304,26 +1302,26 @@ let filter_pipeable_functions ~env ~state ~full ?synthetic ?target_type_id
   | Some target_type_id ->
     completions
     |> List.filter_map (fun (completion : Completion.t) ->
-           let this_completion_item_type_id =
-             match completion.kind with
-             | Value t -> (
-               match
-                 get_first_fn_unlabelled_arg_type ~full ~env:completion.env
-                   ~state t
-               with
-               | None -> None
-               | Some (t, env_from_labelled_arg) ->
-                 find_root_type_id ~full ~env:env_from_labelled_arg ~state t)
-             | _ -> None
-           in
-           match this_completion_item_type_id with
-           | Some main_type_id when main_type_id = target_type_id -> (
-             match pos_of_dot with
-             | None -> Some completion
-             | Some pos_of_dot ->
-               transform_completion_to_pipe_completion ?synthetic ~env
-                 ~pos_of_dot completion)
-           | _ -> None)
+        let this_completion_item_type_id =
+          match completion.kind with
+          | Value t -> (
+            match
+              get_first_fn_unlabelled_arg_type ~full ~env:completion.env ~state
+                t
+            with
+            | None -> None
+            | Some (t, env_from_labelled_arg) ->
+              find_root_type_id ~full ~env:env_from_labelled_arg ~state t)
+          | _ -> None
+        in
+        match this_completion_item_type_id with
+        | Some main_type_id when main_type_id = target_type_id -> (
+          match pos_of_dot with
+          | None -> Some completion
+          | Some pos_of_dot ->
+            transform_completion_to_pipe_completion ?synthetic ~env ~pos_of_dot
+              completion)
+        | _ -> None)
 
 let remove_current_module_if_needed ~env_completion_is_made_from completion_path
     =

@@ -93,10 +93,10 @@ let mark_dead_code (js : J.program) : J.program =
             | Some {expression_desc = Record_rest (fields, _)} ->
               fields
               |> List.iter (fun (field : J.record_rest_field) ->
-                     match field.record_rest_ident with
-                     | None -> ()
-                     | Some ident ->
-                       add_binding_info ident_use_stats ident_info ident)
+                  match field.record_rest_ident with
+                  | None -> ()
+                  | Some ident ->
+                    add_binding_info ident_use_stats ident_info ident)
             | _ -> ()));
     }
   in

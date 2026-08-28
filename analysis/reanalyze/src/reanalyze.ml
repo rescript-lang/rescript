@@ -13,15 +13,15 @@ let load_cmt_file ~config cmt_file_path : cmt_file_result option =
   let exclude_path source_file =
     config.Dce_config.cli.exclude_paths
     |> List.exists (fun prefix_ ->
-           let prefix =
-             match Filename.is_relative source_file with
-             | true -> prefix_
-             | false -> Filename.concat (Sys.getcwd ()) prefix_
-           in
-           String.length prefix <= String.length source_file
-           &&
-           try String.sub source_file 0 (String.length prefix) = prefix
-           with Invalid_argument _ -> false)
+        let prefix =
+          match Filename.is_relative source_file with
+          | true -> prefix_
+          | false -> Filename.concat (Sys.getcwd ()) prefix_
+        in
+        String.length prefix <= String.length source_file
+        &&
+          try String.sub source_file 0 (String.length prefix) = prefix
+          with Invalid_argument _ -> false)
   in
   match cmt_infos.cmt_annots |> Find_source_file.cmt with
   | Some source_file when not (exclude_path source_file) ->
@@ -115,24 +115,24 @@ let collect_cmt_file_paths ~cmt_root : string list =
       in
       files
       |> List.filter (fun x ->
-             Filename.check_suffix x ".cmt" || Filename.check_suffix x ".cmti")
+          Filename.check_suffix x ".cmt" || Filename.check_suffix x ".cmti")
       |> List.sort String.compare
       |> List.iter (fun f ->
-             let p = Filename.concat abs_dir f in
-             if not (Hashtbl.mem seen p) then (
-               Hashtbl.add seen p ();
-               paths := p :: !paths))
+          let p = Filename.concat abs_dir f in
+          if not (Hashtbl.mem seen p) then (
+            Hashtbl.add seen p ();
+            paths := p :: !paths))
     in
     scan_plan
     |> List.iter (fun (entry : Paths.cmt_scan_entry) ->
-           let build_root_abs =
-             Filename.concat run_config.project_root entry.build_root
-           in
-           (* Scan configured subdirs. *)
-           entry.scan_dirs
-           |> List.iter (fun d -> add_dir (Filename.concat build_root_abs d));
-           (* Optionally scan build root itself for namespace/mlmap `.cmt`s. *)
-           if entry.also_scan_build_root then add_dir build_root_abs));
+        let build_root_abs =
+          Filename.concat run_config.project_root entry.build_root
+        in
+        (* Scan configured subdirs. *)
+        entry.scan_dirs
+        |> List.iter (fun d -> add_dir (Filename.concat build_root_abs d));
+        (* Optionally scan build root itself for namespace/mlmap `.cmt`s. *)
+        if entry.also_scan_build_root then add_dir build_root_abs));
   !paths |> List.rev
 
 (** Process files sequentially *)
@@ -143,15 +143,15 @@ let process_files_sequential ~config (cmt_file_paths : string list) :
       let exception_results = ref [] in
       cmt_file_paths
       |> List.iter (fun cmt_file_path ->
-             match load_cmt_file ~config cmt_file_path with
-             | Some {dce_data; exception_data} -> (
-               (match dce_data with
-               | Some data -> dce_data_list := data :: !dce_data_list
-               | None -> ());
-               match exception_data with
-               | Some data -> exception_results := data :: !exception_results
-               | None -> ())
-             | None -> ());
+          match load_cmt_file ~config cmt_file_path with
+          | Some {dce_data; exception_data} -> (
+            (match dce_data with
+            | Some data -> dce_data_list := data :: !dce_data_list
+            | None -> ());
+            match exception_data with
+            | Some data -> exception_results := data :: !exception_results
+            | None -> ())
+          | None -> ());
       {dce_data_list = !dce_data_list; exception_results = !exception_results})
 
 (** Process all cmt files and return results for DCE and Exception analysis.
@@ -244,7 +244,7 @@ let run_analysis ~dce_config ~cmt_root ~reactive_collection ~reactive_merge
                     (File_annotations.merge_all
                        (dce_data_list
                        |> List.map (fun fd ->
-                              fd.Dce_file_processing.annotations))),
+                           fd.Dce_file_processing.annotations))),
                   Declaration_store.of_frozen decls,
                   Cross_file_items_store.of_frozen
                     (Cross_file_items.merge_all
@@ -295,11 +295,11 @@ let run_analysis ~dce_config ~cmt_root ~reactive_collection ~reactive_merge
                 | None ->
                   dce_data_list
                   |> List.iter (fun fd ->
-                         References.merge_into_builder
-                           ~from:fd.Dce_file_processing.refs ~into:refs_builder;
-                         File_deps.merge_into_builder
-                           ~from:fd.Dce_file_processing.file_deps
-                           ~into:file_deps_builder));
+                      References.merge_into_builder
+                        ~from:fd.Dce_file_processing.refs ~into:refs_builder;
+                      File_deps.merge_into_builder
+                        ~from:fd.Dce_file_processing.file_deps
+                        ~into:file_deps_builder));
                 (* Compute type-label dependencies after merge *)
                 Dead_type.process_type_label_dependencies ~config:dce_config
                   ~decls ~refs:refs_builder;
@@ -434,7 +434,7 @@ let run_analysis ~dce_config ~cmt_root ~reactive_collection ~reactive_merge
       | Some result ->
         Analysis_result.get_issues result
         |> List.iter (fun (issue : Issue.t) ->
-               Log_.warning ~loc:issue.loc issue.description)
+            Log_.warning ~loc:issue.loc issue.description)
       | None -> ());
       if dce_config.Dce_config.run.exception_ then
         Exception.run_checks ~config:dce_config exception_results;

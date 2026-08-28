@@ -86,30 +86,30 @@ let inlay ~source ~kind_file ~pos ~max_length ~full ~state ~debug =
     let result =
       !hints
       |> List.filter_map (fun ((range : Lsp.Types.Range.t), hint_kind) ->
-             match
-               References.get_loc_item ~full
-                 ~pos:(range.start.line, range.start.character + 1)
-                 ~debug
-             with
-             | None -> None
-             | Some loc_item -> (
-               let position =
-                 Lsp.Types.Position.create ~line:range.start.line
-                   ~character:range.end_.character
-               in
-               match loc_item_to_type_hint loc_item ~state ~full with
-               | Some label -> (
-                 let kind = inlay_kind_to_lsp_inlay_hint hint_kind in
-                 let label = ": " ^ label in
-                 let result =
-                   Lsp.Types.InlayHint.create ~position ~kind ~paddingLeft:true
-                     ~paddingRight:false ~label:(`String label) ()
-                 in
-                 match max_length with
-                 | Some value ->
-                   if String.length label > value then None else Some result
-                 | None -> Some result)
-               | None -> None))
+          match
+            References.get_loc_item ~full
+              ~pos:(range.start.line, range.start.character + 1)
+              ~debug
+          with
+          | None -> None
+          | Some loc_item -> (
+            let position =
+              Lsp.Types.Position.create ~line:range.start.line
+                ~character:range.end_.character
+            in
+            match loc_item_to_type_hint loc_item ~state ~full with
+            | Some label -> (
+              let kind = inlay_kind_to_lsp_inlay_hint hint_kind in
+              let label = ": " ^ label in
+              let result =
+                Lsp.Types.InlayHint.create ~position ~kind ~paddingLeft:true
+                  ~paddingRight:false ~label:(`String label) ()
+              in
+              match max_length with
+              | Some value ->
+                if String.length label > value then None else Some result
+              | None -> Some result)
+            | None -> None))
     in
     Some result
 
@@ -149,23 +149,23 @@ let code_lens ~source ~kind_file ~full ~debug =
     let result =
       !lenses
       |> List.filter_map (fun (range : Lsp.Types.Range.t) ->
-             match
-               References.get_loc_item ~full
-                 ~pos:(range.start.line, range.start.character + 1)
-                 ~debug
-             with
-             | Some {loc_type = Typed (_, type_expr, _)} ->
-               (* Code lenses can run commands. An empty command string means we just want the editor
+          match
+            References.get_loc_item ~full
+              ~pos:(range.start.line, range.start.character + 1)
+              ~debug
+          with
+          | Some {loc_type = Typed (_, type_expr, _)} ->
+            (* Code lenses can run commands. An empty command string means we just want the editor
                    to print the text, not link to running a command. *)
-               let command =
-                 Lsp.Types.Command.create
-                   ~command:""
-                     (* Print the type with a huge line width, because the code lens always prints on a
+            let command =
+              Lsp.Types.Command.create
+                ~command:""
+                  (* Print the type with a huge line width, because the code lens always prints on a
                        single line in the editor. *)
-                   ~title:(type_expr |> Shared.type_to_string ~line_width:400)
-                   ()
-               in
-               Some (Lsp.Types.CodeLens.create ~range ~command ())
-             | _ -> None)
+                ~title:(type_expr |> Shared.type_to_string ~line_width:400)
+                ()
+            in
+            Some (Lsp.Types.CodeLens.create ~range ~command ())
+          | _ -> None)
     in
     Some result

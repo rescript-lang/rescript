@@ -313,8 +313,8 @@ module Add_type_annotation = struct
         in
         params
         |> List.iter (fun ({p_lbl; p_pat} : Parsetree.fun_param) ->
-               let is_unlabeled_only_arg = single_param && p_lbl = Nolabel in
-               process_pattern ~is_unlabeled_only_arg p_pat)
+            let is_unlabeled_only_arg = single_param && p_lbl = Nolabel in
+            process_pattern ~is_unlabeled_only_arg p_pat)
       | _ -> ()
     in
     let structure_item (iterator : Ast_iterator.iterator)
@@ -375,9 +375,9 @@ module Expand_catch_all_for_variants = struct
            let catch_all_case =
              cases
              |> List.find_opt (fun (c : Parsetree.case) ->
-                    match c with
-                    | {pc_lhs = {ppat_desc = Ppat_any}} -> true
-                    | _ -> false)
+                 match c with
+                 | {pc_lhs = {ppat_desc = Ppat_any}} -> true
+                 | _ -> false)
            in
            match catch_all_case with
            | None -> ()
@@ -417,8 +417,8 @@ module Expand_catch_all_for_variants = struct
       let get_current_constructor_names ?mode cases =
         cases
         |> List.map (fun (c : Parsetree.case) ->
-               if Option.is_some c.pc_guard then []
-               else find_all_constructor_names ?mode c.pc_lhs)
+            if Option.is_some c.pc_guard then []
+            else find_all_constructor_names ?mode c.pc_lhs)
         |> List.flatten
       in
       let current_constructor_names = get_current_constructor_names cases in
@@ -431,17 +431,17 @@ module Expand_catch_all_for_variants = struct
         let missing_constructors =
           constructors
           |> List.filter (fun (c : Shared_types.Constructor.t) ->
-                 current_constructor_names |> List.mem c.cname.txt = false)
+              current_constructor_names |> List.mem c.cname.txt = false)
         in
         if List.length missing_constructors > 0 then
           let new_text =
             missing_constructors
             |> List.map (fun (c : Shared_types.Constructor.t) ->
-                   c.cname.txt
-                   ^
-                   match c.args with
-                   | Args [] -> ""
-                   | Args _ | InlineRecord _ -> "(_)")
+                c.cname.txt
+                ^
+                match c.args with
+                | Args [] -> ""
+                | Args _ | InlineRecord _ -> "(_)")
             |> String.concat " | "
           in
           let range = Loc.range_of_loc catch_all_case.pc_lhs.ppat_loc in
@@ -455,17 +455,17 @@ module Expand_catch_all_for_variants = struct
         let missing_constructors =
           constructors
           |> List.filter (fun (c : Shared_types.poly_variant_constructor) ->
-                 current_constructor_names |> List.mem c.name = false)
+              current_constructor_names |> List.mem c.name = false)
         in
         if List.length missing_constructors > 0 then
           let new_text =
             missing_constructors
             |> List.map (fun (c : Shared_types.poly_variant_constructor) ->
-                   Res_printer.polyvar_ident_to_string c.name
-                   ^
-                   match c.args with
-                   | [] -> ""
-                   | _ -> "(_)")
+                Res_printer.polyvar_ident_to_string c.name
+                ^
+                match c.args with
+                | [] -> ""
+                | _ -> "(_)")
             |> String.concat " | "
           in
           let range = Loc.range_of_loc catch_all_case.pc_lhs.ppat_loc in
@@ -497,24 +497,23 @@ module Expand_catch_all_for_variants = struct
           let has_none_case =
             cases
             |> List.exists (fun (c : Parsetree.case) ->
-                   match c.pc_lhs.ppat_desc with
-                   | Ppat_construct ({txt = Lident "None"}, _) -> true
-                   | _ -> false)
+                match c.pc_lhs.ppat_desc with
+                | Ppat_construct ({txt = Lident "None"}, _) -> true
+                | _ -> false)
           in
           let missing_constructors =
             match variant with
             | Tvariant {constructors} ->
               constructors
               |> List.filter_map (fun (c : Shared_types.Constructor.t) ->
-                     if
-                       current_constructor_names |> List.mem c.cname.txt = false
-                     then
-                       Some
-                         ( c.cname.txt,
-                           match c.args with
-                           | Args [] -> false
-                           | _ -> true )
-                     else None)
+                  if current_constructor_names |> List.mem c.cname.txt = false
+                  then
+                    Some
+                      ( c.cname.txt,
+                        match c.args with
+                        | Args [] -> false
+                        | _ -> true )
+                  else None)
             | Tpolyvariant {constructors} ->
               constructors
               |> List.filter_map
@@ -534,7 +533,7 @@ module Expand_catch_all_for_variants = struct
               "Some("
               ^ (missing_constructors
                 |> List.map (fun (name, has_args) ->
-                       name ^ if has_args then "(_)" else "")
+                    name ^ if has_args then "(_)" else "")
                 |> String.concat " | ")
               ^ ")"
             in
