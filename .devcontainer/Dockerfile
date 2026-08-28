@@ -4,6 +4,7 @@ LABEL org.opencontainers.image.description="Docker image for ReScript developmen
 
 RUN sudo apt-get update && export DEBIAN_FRONTEND=noninteractive \
     && apt-get -y install --no-install-recommends \
+    binaryen \
     cmake \
     musl-tools \
     ninja-build \
@@ -16,4 +17,4 @@ RUN printf '\n\n' | bash -c "sh <(curl -fsSL https://raw.githubusercontent.com/o
 USER vscode
 ENV HOME=/home/vscode
 
-RUN opam init -y --shell-setup --enable-shell-hook --compiler=5.3.0 --disable-sandboxing
+RUN opam init -y --shell-setup --enable-shell-hook --compiler=5.5.0 --disable-sandboxing

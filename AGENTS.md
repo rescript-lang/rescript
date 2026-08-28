@@ -295,7 +295,7 @@ then verify that GitHub reports stack metadata and runs CI for every PR.
 
 ## Development Environment
 
-- **OCaml**: 5.3.0+ with opam
+- **OCaml**: 5.5.0+ with opam
 - **Build System**: dune with profiles (dev, release, browser)
 - **JavaScript**: Node.js 20+ for tooling
 - **Rust**: Toolchain needed for rewatch

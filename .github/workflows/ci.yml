@@ -37,14 +37,14 @@ jobs:
       matrix:
         include:
           - os: ubuntu-24.04 # x64
-            ocaml_compiler: ocaml-variants.5.3.0+options,ocaml-option-static
+            ocaml_compiler: ocaml-variants.5.5.0+options,ocaml-option-static
             upload_binaries: true
             upload_libs: true
             node-target: linux-x64
             rust-target: x86_64-unknown-linux-musl
             dune-profile: static
           - os: ubuntu-24.04-arm # ARM
-            ocaml_compiler: ocaml-variants.5.3.0+options,ocaml-option-static
+            ocaml_compiler: ocaml-variants.5.5.0+options,ocaml-option-static
             upload_binaries: true
             # Build the playground compiler and run the benchmarks on the fastest runner
             build_playground: true
@@ -54,19 +54,19 @@ jobs:
             rust-target: aarch64-unknown-linux-musl
             dune-profile: static
           - os: macos-15-intel # x64
-            ocaml_compiler: 5.3.0
+            ocaml_compiler: 5.5.0
             upload_binaries: true
             node-target: darwin-x64
             rust-target: x86_64-apple-darwin
             dune-profile: release
           - os: macos-15 # ARM
-            ocaml_compiler: 5.3.0
+            ocaml_compiler: 5.5.0
             upload_binaries: true
             node-target: darwin-arm64
             rust-target: aarch64-apple-darwin
             dune-profile: release
           - os: windows-2025
-            ocaml_compiler: 5.3.0
+            ocaml_compiler: 5.5.0
             upload_binaries: true
             node-target: win32-x64
             rust-target: x86_64-pc-windows-gnu

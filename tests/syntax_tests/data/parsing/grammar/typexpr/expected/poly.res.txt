@@ -5,5 +5,5 @@ external getLogger :
                                                                     'a -> 'b
                                                                     ->
                                                                     int (a:2)
-                                                                >  (a:1) =
+                                                               >  (a:1) =
     "./src/logger.mock.js"

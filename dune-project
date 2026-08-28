@@ -24,7 +24,7 @@
   (base
    (>= v0.16.3))
   (ppxlib
-   (>= 0.32.1))
+   (>= 0.38.0))
   (ppx_deriving :build)
   (ppx_gen_rec :build)
   wtf8
@@ -37,18 +37,16 @@
   (odoc :with-doc)
   (ocaml-lsp-server
    (and :with-dev-setup (>= 1.23.0)))
-  (bisect_ppx
-   (and :with-dev-setup (>= 2.8.0)))
   (js_of_ocaml
    (and
     (<> :os "win32")
     :with-test
-    (= 6.0.1)))
+    (= 6.4.1)))
   (wasm_of_ocaml-compiler
    (and
     (<> :os "win32")
     :with-test
-    (= 6.0.1)))))
+    (= 6.4.1)))))
 
 (package
  (name analysis)

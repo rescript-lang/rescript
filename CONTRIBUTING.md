@@ -48,9 +48,9 @@ opam init
 
 # Any recent OCaml version works as a development compiler
 # Can also create local switch with opam switch create
-# If you get "No compiler matching `5.3.0' found" error,
+# If you get "No compiler matching `5.5.0' found" error,
 # then you need to run `opam update && opam upgrade` first
-opam switch create 5.3.0
+opam switch create 5.5.0
 
 # Install dev dependencies from OPAM
 opam install . --deps-only --with-test --with-dev-setup -y

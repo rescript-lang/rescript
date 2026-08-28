@@ -57,6 +57,7 @@
 
 #### :house: Internal
 
+- Upgrade the development toolchain and primary CI builds to OCaml 5.5 while retaining OCaml 5.0 as the minimum supported version. https://github.com/rescript-lang/rescript/pull/8589
 - Upgrade the vendored Flow parser from 0.267.0 to 0.320.0, the final release of the OCaml implementation. https://github.com/rescript-lang/rescript/pull/8588
 - Vendor the Flow parser 0.267.0 sources used by the compiler, removing the external `flow_parser` dependency and establishing a maintained baseline for future OCaml upgrades. https://github.com/rescript-lang/rescript/pull/8587
 - Store processed external declarations as structured data instead of serialized values in `pval_prim`, and lower external calls during Lambda translation. This removes `Pccall`, `external_spec`, and the unsupported `%absfloat` primitive. The AST, CMI, and CMT magic numbers are bumped (`ResImpl01301`/`ResIntf01301`, `Caml1999I025`, `Caml1999T026`). https://github.com/rescript-lang/rescript/pull/8581
