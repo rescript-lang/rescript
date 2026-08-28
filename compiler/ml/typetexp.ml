@@ -641,7 +641,6 @@ and transl_fields env policy o fields =
           (Tfield
              {
                name = s;
-               presence = Fpresent;
                mutability = ref (Mutability_value mut);
                typ = ty';
                rest = ty;

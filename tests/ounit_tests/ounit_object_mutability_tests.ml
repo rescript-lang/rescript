@@ -22,14 +22,7 @@ let obj_with_cell ?(closed = false) cell =
   let rest = if closed then Ctype.newty Types.Tnil else Ctype.newvar () in
   Ctype.newobj
     (Ctype.newty
-       (Types.Tfield
-          {
-            name = "x";
-            presence = Types.Fpresent;
-            mutability = cell;
-            typ = int_typ ();
-            rest;
-          }))
+       (Types.Tfield {name = "x"; mutability = cell; typ = int_typ (); rest}))
 
 let field_of ty =
   match Ctype.flatten_fields (Ctype.object_fields ty) with

@@ -263,7 +263,6 @@ let is_datatype decl =
 
 type field_info = {
   f_name: string;
-  f_kind: Types.field_kind;
   f_mut: Types.field_mutability ref;
       (* the field's cell as stored; read its class value with
          [Btype.mutability_repr] *)
@@ -282,27 +281,17 @@ let flatten_fields (ty : Types.type_expr) : fields * _ =
   let rec flatten (l : fields) ty =
     let ty = repr ty in
     match ty.desc with
-    | Tfield {name; presence; mutability; typ; rest} ->
-      flatten
-        ({f_name = name; f_kind = presence; f_mut = mutability; f_typ = typ}
-        :: l)
-        rest
+    | Tfield {name; mutability; typ; rest} ->
+      flatten ({f_name = name; f_mut = mutability; f_typ = typ} :: l) rest
     | _ -> (l, ty)
   in
   let l, r = flatten [] ty in
   (List.sort (fun f f' -> compare f.f_name f'.f_name) l, r)
 
 let build_fields level =
-  List.fold_right (fun {f_name; f_kind; f_mut; f_typ} rest ->
+  List.fold_right (fun {f_name; f_mut; f_typ} rest ->
       newty2 level
-        (Tfield
-           {
-             name = f_name;
-             presence = f_kind;
-             mutability = f_mut;
-             typ = f_typ;
-             rest;
-           }))
+        (Tfield {name = f_name; mutability = f_mut; typ = f_typ; rest}))
 
 let associate_fields (fields1 : fields) (fields2 : fields) : _ * fields * fields
     =
@@ -607,9 +596,6 @@ let rec update_level env level expand ty =
       | _ -> ());
       set_level ty level;
       iter_type_expr (update_level env level expand) ty
-    | Tfield {name = lab; typ = ty1}
-      when lab = dummy_method && (repr ty1).level > level ->
-      raise (Unify [(ty1, newvar2 level)])
     | _ ->
       set_level ty level;
       (* XXX what about abbreviations in Tconstr ? *)
@@ -850,13 +836,6 @@ let rec copy ?env ?partial ?keep_names ty =
               more.desc <- Tsubst (newgenty (Ttuple [more'; t]));
               (* Return a new copy *)
               Tvariant (copy_row copy true row keep more'))
-          | Tfield {presence = k; rest = ty2} -> (
-            match field_kind_repr k with
-            | Fabsent -> Tlink (copy ty2)
-            | Fpresent -> copy_type_desc copy desc
-            | Fvar r ->
-              dup_kind r;
-              copy_type_desc copy desc)
           | Tobject ty1 when partial <> None -> Tobject (copy ty1)
           | _ -> copy_type_desc ?keep_names copy desc);
         t
@@ -1822,26 +1801,12 @@ and mcomp_fields type_pairs env ty1 ty2 =
   let fields2, rest2 = flatten_fields ty2 in
   let fields1, rest1 = flatten_fields ty1 in
   let pairs, miss1, miss2 = associate_fields fields1 fields2 in
-  let has_present =
-    List.exists (fun f -> field_kind_repr f.f_kind = Fpresent)
-  in
   mcomp type_pairs env rest1 rest2;
   if
-    (has_present miss1 && (object_row ty2).desc = Tnil)
-    || (has_present miss2 && (object_row ty1).desc = Tnil)
+    (miss1 <> [] && (object_row ty2).desc = Tnil)
+    || (miss2 <> [] && (object_row ty1).desc = Tnil)
   then raise (Unify []);
-  List.iter
-    (fun (f1, f2) ->
-      mcomp_kind f1.f_kind f2.f_kind;
-      mcomp type_pairs env f1.f_typ f2.f_typ)
-    pairs
-
-and mcomp_kind k1 k2 =
-  let k1 = field_kind_repr k1 in
-  let k2 = field_kind_repr k2 in
-  match (k1, k2) with
-  | Fpresent, Fabsent | Fabsent, Fpresent -> raise (Unify [])
-  | _ -> ()
+  List.iter (fun (f1, f2) -> mcomp type_pairs env f1.f_typ f2.f_typ) pairs
 
 and mcomp_row type_pairs env row1 row2 =
   let row1 = row_repr row1 and row2 = row_repr row2 in
@@ -2268,14 +2233,6 @@ and unify3 env t1 t1' t2 t2' =
             reify env t1';
             reify env t2';
             if !generate_equations then mcomp !env t1' t2')
-      | Tfield {name = f; presence = kind; rest = rem}, Tnil
-      | Tnil, Tfield {name = f; presence = kind; rest = rem} -> (
-        match field_kind_repr kind with
-        | Fvar r when f <> dummy_method ->
-          set_kind r Fabsent;
-          if d2 = Tnil then unify env rem t2'
-          else unify env (newty2 rem.level Tnil) rem
-        | _ -> raise (Unify []))
       | Tnil, Tnil -> ()
       | Tpoly (t1, []), Tpoly (t2, []) -> unify env t1 t2
       | Tpoly (t1, tl1), Tpoly (t2, tl2) ->
@@ -2350,7 +2307,6 @@ and unify_fields env (ty1 : Types.type_expr) (ty2 : Types.type_expr) =
     unify env rest1 (build_fields l2 miss2 va);
     List.iter
       (fun (f1, f2) ->
-        unify_kind f1.f_kind f2.f_kind;
         unify_mutability ~open1 ~open2 f1 f2;
         try
           if !trace_gadt_instances then update_level !env va.level f1.f_typ;
@@ -2362,7 +2318,6 @@ and unify_fields env (ty1 : Types.type_expr) (ty2 : Types.type_expr) =
                     (Tfield
                        {
                          name = f1.f_name;
-                         presence = f1.f_kind;
                          mutability = f1.f_mut;
                          typ = f1.f_typ;
                          rest = newty Tnil;
@@ -2371,7 +2326,6 @@ and unify_fields env (ty1 : Types.type_expr) (ty2 : Types.type_expr) =
                     (Tfield
                        {
                          name = f2.f_name;
-                         presence = f2.f_kind;
                          mutability = f2.f_mut;
                          typ = f2.f_typ;
                          rest = newty Tnil;
@@ -2402,17 +2356,6 @@ and unify_mutability ~open1 ~open2 f1 f2 =
     (* Merge the two equivalence classes: linking the representatives makes
        every present and future member of either class share one state. *)
     set_mutability r2 (Mutability_link r1))
-
-and unify_kind k1 k2 =
-  let k1 = field_kind_repr k1 in
-  let k2 = field_kind_repr k2 in
-  if k1 == k2 then ()
-  else
-    match (k1, k2) with
-    | Fvar r, (Fvar _ | Fpresent) -> set_kind r k2
-    | Fpresent, Fvar r -> set_kind r k1
-    | Fpresent, Fpresent -> ()
-    | _ -> assert false
 
 and unify_row env row1 row2 =
   let row1 = row_repr row1 and row2 = row_repr row2 in
@@ -2679,7 +2622,7 @@ let filter_arrow_n ~env t (labels : arg_label list) =
   | _ -> raise (Unify [])
 
 (* Used by [filter_method]. *)
-let rec filter_method_field env name priv ty =
+let rec filter_method_field env name ty =
   let ty = expand_head_trace env ty in
   match ty.desc with
   | Tvar _ ->
@@ -2690,10 +2633,6 @@ let rec filter_method_field env name priv ty =
         (Tfield
            {
              name;
-             presence =
-               (match priv with
-               | Private -> Fvar (ref None)
-               | Public -> Fpresent);
              mutability = ref (Mutability_value Asttypes.Immutable);
              typ = ty1;
              rest = ty2;
@@ -2701,12 +2640,8 @@ let rec filter_method_field env name priv ty =
     in
     link_type ty ty';
     ty1
-  | Tfield {name = n; presence = kind; typ = ty1; rest = ty2} ->
-    let kind = field_kind_repr kind in
-    if n = name && kind <> Fabsent then (
-      if priv = Public then unify_kind kind Fpresent;
-      ty1)
-    else filter_method_field env name priv ty2
+  | Tfield {name = n; typ = ty1; rest = ty2} ->
+    if n = name then ty1 else filter_method_field env name ty2
   | _ -> raise (Unify [])
 
 type object_field_write_error = Owrite_missing | Owrite_not_mutable
@@ -2730,7 +2665,6 @@ let filter_object_field_for_write env name ty :
           (Tfield
              {
                name;
-               presence = Fpresent;
                mutability = ref (Mutability_value Asttypes.Mutable);
                typ = ty1;
                rest = ty2;
@@ -2738,10 +2672,8 @@ let filter_object_field_for_write env name ty :
       in
       link_type ty ty';
       Ok ty1
-    | Tfield ({name = n; presence = kind; mutability; typ} as f) ->
-      let kind = field_kind_repr kind in
-      if n = name && kind <> Fabsent then (
-        unify_kind kind Fpresent;
+    | Tfield ({name = n; mutability; typ} as f) ->
+      if n = name then
         match mutability_repr mutability with
         | Asttypes.Mutable -> Ok typ
         | Immutable ->
@@ -2750,7 +2682,7 @@ let filter_object_field_for_write env name ty :
               (mutability_ref_repr mutability)
               (Mutability_value Asttypes.Mutable);
             Ok typ)
-          else Error Owrite_not_mutable)
+          else Error Owrite_not_mutable
       else write_field ~opened f.rest
     | _ -> Error Owrite_missing
   in
@@ -2765,8 +2697,8 @@ let filter_object_field_for_write env name ty :
   | Tobject f -> write_field ~opened:(opened_object ty) f
   | _ -> Error Owrite_missing
 
-(* Unify [ty] and [< name : 'a; .. >]. Return ['a]. *)
-let filter_method env name priv ty =
+(* Unify [ty] and [{.. name: 'a}]. Return ['a]. *)
+let filter_method env name ty =
   let ty = expand_head_trace env ty in
   match ty.desc with
   | Tvar _ ->
@@ -2774,8 +2706,8 @@ let filter_method env name priv ty =
     let ty' = newobj ty1 in
     update_level env ty.level ty';
     link_type ty ty';
-    filter_method_field env name priv ty1
-  | Tobject f -> filter_method_field env name priv f
+    filter_method_field env name ty1
+  | Tobject f -> filter_method_field env name f
   | _ -> raise (Unify [])
 
 let moregen_occur env level ty =
@@ -2882,7 +2814,6 @@ and moregen_fields inst_nongen type_pairs env ty1 ty2 =
     (build_fields (repr ty2).level miss2 rest2);
   List.iter
     (fun (f1, f2) ->
-      moregen_kind f1.f_kind f2.f_kind;
       if mutability_repr f1.f_mut <> mutability_repr f2.f_mut then
         raise (Unify []);
       try moregen inst_nongen type_pairs env f1.f_typ f2.f_typ
@@ -2893,7 +2824,6 @@ and moregen_fields inst_nongen type_pairs env ty1 ty2 =
                   (Tfield
                      {
                        name = f1.f_name;
-                       presence = f1.f_kind;
                        mutability = f1.f_mut;
                        typ = f1.f_typ;
                        rest = rest2;
@@ -2902,23 +2832,12 @@ and moregen_fields inst_nongen type_pairs env ty1 ty2 =
                   (Tfield
                      {
                        name = f2.f_name;
-                       presence = f2.f_kind;
                        mutability = f2.f_mut;
                        typ = f2.f_typ;
                        rest = rest2;
                      }) )
              :: trace)))
     pairs
-
-and moregen_kind k1 k2 =
-  let k1 = field_kind_repr k1 in
-  let k2 = field_kind_repr k2 in
-  if k1 == k2 then ()
-  else
-    match (k1, k2) with
-    | Fvar r, (Fvar _ | Fpresent) -> set_kind r k2
-    | Fpresent, Fpresent -> ()
-    | _ -> raise (Unify [])
 
 and moregen_row inst_nongen type_pairs env row1 row2 =
   let row1 = row_repr row1 and row2 = row_repr row2 in
@@ -3188,7 +3107,6 @@ and eqtype_fields rename type_pairs subst env ty1 ty2 : unit =
       if miss1 <> [] || miss2 <> [] then raise (Unify []);
       List.iter
         (fun (f1, f2) ->
-          eqtype_kind f1.f_kind f2.f_kind;
           if mutability_repr f1.f_mut <> mutability_repr f2.f_mut then
             raise (Unify []);
           try eqtype rename type_pairs subst env f1.f_typ f2.f_typ
@@ -3199,7 +3117,6 @@ and eqtype_fields rename type_pairs subst env ty1 ty2 : unit =
                       (Tfield
                          {
                            name = f1.f_name;
-                           presence = f1.f_kind;
                            mutability = f1.f_mut;
                            typ = f1.f_typ;
                            rest = rest2;
@@ -3208,20 +3125,12 @@ and eqtype_fields rename type_pairs subst env ty1 ty2 : unit =
                       (Tfield
                          {
                            name = f2.f_name;
-                           presence = f2.f_kind;
                            mutability = f2.f_mut;
                            typ = f2.f_typ;
                            rest = rest2;
                          }) )
                  :: trace)))
         pairs
-
-and eqtype_kind k1 k2 =
-  let k1 = field_kind_repr k1 in
-  let k2 = field_kind_repr k2 in
-  match (k1, k2) with
-  | Fvar _, Fvar _ | Fpresent, Fpresent -> ()
-  | _ -> raise (Unify [])
 
 and eqtype_row rename type_pairs subst env row1 row2 =
   (* Try expansion, needed when called from Includecore.type_manifest *)
@@ -3463,7 +3372,6 @@ let rec build_subtype env visited loops posi level t =
           (Tfield
              {
                f with
-               presence = Fpresent;
                (* The enlarged type is an approximation, not a view of the
                   declared type: it gets its own unlinked cell, so trial
                   unification can never promote the declared target or the
@@ -3964,7 +3872,6 @@ and subtype_fields env trace ty1 ty2 cstrs =
             (Tfield
                {
                  name = f1.f_name;
-                 presence = f1.f_kind;
                  mutability = f1.f_mut;
                  typ = f1.f_typ;
                  rest = rest1;
@@ -3975,7 +3882,6 @@ and subtype_fields env trace ty1 ty2 cstrs =
             (Tfield
                {
                  name = f2.f_name;
-                 presence = f2.f_kind;
                  mutability = f2.f_mut;
                  typ = f2.f_typ;
                  rest = newvar ();
@@ -4104,8 +4010,8 @@ let rec closed_schema_rec env ty =
           visited := old;
           closed_schema_rec env (try_expand_head try_expand_safe env ty)
         with Cannot_expand -> raise Non_closed0))
-    | Tfield {presence = kind; typ = t1; rest = t2} ->
-      if field_kind_repr kind = Fpresent then closed_schema_rec env t1;
+    | Tfield {typ = t1; rest = t2} ->
+      closed_schema_rec env t1;
       closed_schema_rec env t2
     | Tvariant row ->
       let row = row_repr row in

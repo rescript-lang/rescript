@@ -2350,9 +2350,7 @@ let object_valid_fields env ty =
   match (expand_head env ty).desc with
   | Tobject fields ->
     let fields, _ = Ctype.flatten_fields fields in
-    let collect_fields li (f : Ctype.field_info) =
-      if f.f_kind = Fpresent then f.f_name :: li else li
-    in
+    let collect_fields li (f : Ctype.field_info) = f.f_name :: li in
     Some (List.fold_left collect_fields [] fields)
   | _ -> None
 
@@ -3352,7 +3350,6 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
               (Tfield
                  {
                    name = s.txt;
-                   presence = Fpresent;
                    mutability = ref (Mutability_value Asttypes.Immutable);
                    typ = newty (Tpoly (field.exp_type, []));
                    rest;
@@ -3371,7 +3368,7 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
   | Pexp_object_get (e, ({txt = met} as met_loc)) -> (
     let obj = type_exp ~context:None env e in
     try
-      let typ = filter_method env met Public obj.exp_type in
+      let typ = filter_method env met obj.exp_type in
       let typ = object_field_use_type env typ in
       rue
         {

@@ -104,7 +104,6 @@ val object_fields : type_expr -> type_expr
 
 type field_info = {
   f_name: string;
-  f_kind: field_kind;
   f_mut: field_mutability ref;
       (* the field's cell as stored; read the class value with
          [Btype.mutability_repr] *)
@@ -219,7 +218,7 @@ val filter_arrow_n :
 (* A special case of unification: unify with an n-ary arrow taking
    parameters with the given labels; return parameter and result types. *)
 
-val filter_method : Env.t -> string -> private_flag -> type_expr -> type_expr
+val filter_method : Env.t -> string -> type_expr -> type_expr
 
 type object_field_write_error = Owrite_missing | Owrite_not_mutable
 

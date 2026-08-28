@@ -89,12 +89,11 @@ and type_desc =
       constructors, terminated by a row variable when the row is open. *)
   | Tfield of {
       name: string;
-      presence: field_kind;
       mutability: field_mutability ref;
       typ: type_expr;
       rest: type_expr;
     }
-      (** [Tfield {name = "foo"; presence = Fpresent; mutability; typ; rest}]
+      (** [Tfield {name = "foo"; mutability; typ; rest}]
       ==> [{.. "foo": typ, rest}]; [mutability] records whether the field
       admits assignment ([@set]). *)
   | Tnil  (** [Tnil] ==> [<...; >] *)
@@ -182,8 +181,6 @@ and abbrev_memo =
       The first expression is the abbreviation and the second the expansion. *)
   | Mlink of abbrev_memo ref
       (** Abbreviations can be found after this indirection *)
-
-and field_kind = Fvar of field_kind option ref | Fpresent | Fabsent
 
 (** Mutability state of an object field, shared through an equivalence class
     of cells. [Mutability_link] is an internal graph edge (union by
