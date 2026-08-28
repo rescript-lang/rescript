@@ -1,0 +1,12 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/object_write_after_forgetting.res[0m:[2m7:3-20[0m
+
+  5 [2m│[0m let writeAfterForgetting = (o: {..@set "x": int}) => {
+  6 [2m│[0m   let forgotten = (o :> {"x": int})
+  [1;31m7[0m [2m│[0m   [1;31mforgotten["x"] = 2[0m
+  8 [2m│[0m }
+  9 [2m│[0m 
+
+  This expression has type {"x": int}
+  The field x is not settable. Only fields annotated with @set, e.g. {@set "x": int}, can be assigned.

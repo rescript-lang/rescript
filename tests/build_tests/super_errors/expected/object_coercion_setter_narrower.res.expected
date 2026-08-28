@@ -1,13 +1,13 @@
 
   [1;31mWe've found a bug for you![0m
-  [36m/.../fixtures/object_coercion_mutable_unequal.res[0m:[2m8:35-57[0m
+  [36m/.../fixtures/object_coercion_setter_narrower.res[0m:[2m8:32-54[0m
 
   6 [2m│[0m type wide = {"a": int, "b": int}
   7 [2m│[0m type narrow = {"a": int}
-  [1;31m8[0m [2m│[0m let p = (v: {@set "x": wide}) => ([1;31mv :> {@set "x": narrow}[0m)
+  [1;31m8[0m [2m│[0m let p = (o: {.."x": wide}) => ([1;31mo :> {@set "x": narrow}[0m)
   9 [2m│[0m 
 
-  Type {@set "x": wide} is not a subtype of {@set "x": narrow} 
+  Type {..@set "x": wide} is not a subtype of {@set "x": narrow} 
   Type wide = {"a": int, "b": int} is not compatible with type
     narrow = {"a": int} 
   

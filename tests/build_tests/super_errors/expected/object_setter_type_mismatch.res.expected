@@ -1,0 +1,14 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/object_setter_type_mismatch.res[0m:[2m6:12-18[0m
+
+  4 [2m│[0m    produced a value of declared type int that was "hello" at runtime. */
+  5 [2m│[0m let breakSoundness = (o: {.."x": int}): int => {
+  [1;31m6[0m [2m│[0m   o["x"] = [1;31m"hello"[0m
+  7 [2m│[0m   o["x"]
+  8 [2m│[0m }
+
+  This has type: [1;31mstring[0m
+  But it's expected to have type: [1;33mint[0m
+  
+  You can convert [1;33mstring[0m to [1;33mint[0m with [1;33mInt.fromString[0m.

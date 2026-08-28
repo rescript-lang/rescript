@@ -83,6 +83,7 @@ type change =
       (Path.t * type_expr list) option ref * (Path.t * type_expr list) option
   | Crow of row_field option ref * row_field option
   | Ckind of field_kind option ref * field_kind option
+  | Cmutability of field_mutability ref * field_mutability
   | Cuniv of type_expr option ref * type_expr option
   | Ctypeset of Type_set.t ref * Type_set.t
 
@@ -106,7 +107,8 @@ let rec field_kind_repr = function
 
 let rec repr_link compress t d = function
   | {desc = Tlink t' as d'} -> repr_link true t d' t'
-  | {desc = Tfield (_, k, _, t') as d'} when field_kind_repr k = Fabsent ->
+  | {desc = Tfield {presence = k; rest = t'} as d'}
+    when field_kind_repr k = Fabsent ->
     repr_link true t d' t'
   | t' ->
     if compress then (
@@ -117,7 +119,7 @@ let rec repr_link compress t d = function
 let repr t =
   match t.desc with
   | Tlink t' as d -> repr_link false t d t'
-  | Tfield (_, k, _, t') as d when field_kind_repr k = Fabsent ->
+  | Tfield {presence = k; rest = t'} as d when field_kind_repr k = Fabsent ->
     repr_link false t d t'
   | _ -> t
 
@@ -198,7 +200,7 @@ let proxy ty =
   | Tobject ty ->
     let rec proxy_obj ty =
       match ty.desc with
-      | Tfield (_, _, _, ty) | Tlink ty -> proxy_obj ty
+      | Tfield {rest = ty} | Tlink ty -> proxy_obj ty
       | Tvar _ | Tunivar _ | Tconstr _ -> ty
       | Tnil -> ty0
       | _ -> assert false
@@ -214,7 +216,7 @@ let row_of_type t =
     let rec get_row t =
       let t = repr t in
       match t.desc with
-      | Tfield (_, _, _, t) -> get_row t
+      | Tfield {rest = t} -> get_row t
       | _ -> t
     in
     get_row t
@@ -264,7 +266,7 @@ let iter_type_expr f ty =
   | Tvariant row ->
     iter_row f row;
     f (row_more row)
-  | Tfield (_, _, ty1, ty2) ->
+  | Tfield {typ = ty1; rest = ty2} ->
     f ty1;
     f ty2
   | Tnil -> ()
@@ -411,6 +413,104 @@ let rec norm_univar ty =
   | Ttuple (ty :: _) -> norm_univar ty
   | _ -> assert false
 
+(* Chase mutability links to the terminal cell. *)
+let rec mutability_ref_repr (r : field_mutability ref) =
+  match !r with
+  | Mutability_link r' -> mutability_ref_repr r'
+  | Mutability_value _ -> r
+
+let mutability_repr r =
+  match !(mutability_ref_repr r) with
+  | Mutability_value flag -> flag
+  | Mutability_link _ -> assert false
+
+type type_copy_session = {
+  mutable saved_desc: (type_expr * type_desc) list;
+  mutable saved_kinds: field_kind option ref list;
+  mutable new_kinds: field_kind option ref list;
+  mutable saved_mutabilities: (field_mutability ref * field_mutability) list;
+  mutable new_mutabilities: field_mutability ref list;
+  mutable copy_policy_memo: (int, bool) Hashtbl.t option;
+}
+
+let type_copy_sessions = ref []
+
+let begin_type_copy_session () =
+  type_copy_sessions :=
+    {
+      saved_desc = [];
+      saved_kinds = [];
+      new_kinds = [];
+      saved_mutabilities = [];
+      new_mutabilities = [];
+      copy_policy_memo = None;
+    }
+    :: !type_copy_sessions
+
+let current_type_copy_session () =
+  match !type_copy_sessions with
+  | session :: _ -> session
+  | [] -> assert false
+
+let end_type_copy_session () =
+  match !type_copy_sessions with
+  | session :: rest ->
+    List.iter (fun (ty, desc) -> ty.desc <- desc) session.saved_desc;
+    List.iter (fun r -> r := None) session.saved_kinds;
+    List.iter (fun (r, v) -> r := v) session.saved_mutabilities;
+    type_copy_sessions := rest
+  | [] -> assert false
+
+(* Duplicate a mutability cell for the current copy session: the original
+   representative is temporarily linked to the duplicate, so every field
+   copied in this session that shares the cell reaches the same duplicate
+   (the [dup_kind] idiom); [cleanup_types] restores the originals. *)
+let dup_mutability r =
+  let session = current_type_copy_session () in
+  let r = mutability_ref_repr r in
+  if List.memq r session.new_mutabilities then r
+  else
+    let r' = ref !r in
+    session.new_mutabilities <- r' :: session.new_mutabilities;
+    session.saved_mutabilities <- (r, !r) :: session.saved_mutabilities;
+    r := Mutability_link r';
+    r'
+
+(* Copy policy for an object row, memoized per node so copying a row is
+   linear in its length: duplicate the mutability cells iff the row ends in
+   a generic variable (a scheme instantiation); share them otherwise (a
+   structure-generalized copy, whose occurrences must see promotions). *)
+let row_terminator_generic rest =
+  let session = current_type_copy_session () in
+  let copy_policy_memo =
+    match session.copy_policy_memo with
+    | Some memo -> memo
+    | None ->
+      let memo = Hashtbl.create 17 in
+      session.copy_policy_memo <- Some memo;
+      memo
+  in
+  let rec go t =
+    let t = repr t in
+    match Hashtbl.find_opt copy_policy_memo t.id with
+    | Some b -> b
+    | None ->
+      let b =
+        match t.desc with
+        | Tfield {rest} -> go rest
+        | Tvar _ -> t.level = generic_level
+        | Tsubst t' ->
+          (* Already copied in this session: follow the copy; its fresh
+             terminator is generic exactly when the row is being
+             instantiated. *)
+          go t'
+        | _ -> false
+      in
+      Hashtbl.add copy_policy_memo t.id b;
+      b
+  in
+  go rest
+
 let rec copy_type_desc ?(keep_names = false) f = function
   | Tvar _ as ty -> if keep_names then ty else Tvar None
   | Tarrow (params, ret) ->
@@ -419,9 +519,26 @@ let rec copy_type_desc ?(keep_names = false) f = function
   | Tconstr (p, l, _) -> Tconstr (p, List.map f l, ref Mnil)
   | Tobject ty -> Tobject (f ty)
   | Tvariant _ -> assert false (* too ambiguous *)
-  | Tfield (p, k, ty1, ty2) ->
-    (* the kind is kept shared *)
-    Tfield (p, field_kind_repr k, f ty1, f ty2)
+  | Tfield f_ ->
+    (* The presence kind is kept shared. The mutability cell follows the
+       row variable's sharing law: instantiating a generalized row (generic
+       terminator) duplicates each cell once per session via
+       [dup_mutability], so aliases within the instance stay correlated
+       while the scheme and sibling instances are untouched; other copies
+       hold the shared representative, so promotions reach every
+       occurrence. *)
+    let mutability =
+      if row_terminator_generic f_.rest then dup_mutability f_.mutability
+      else mutability_ref_repr f_.mutability
+    in
+    Tfield
+      {
+        f_ with
+        presence = field_kind_repr f_.presence;
+        mutability;
+        typ = f f_.typ;
+        rest = f f_.rest;
+      }
   | Tnil -> Tnil
   | Tlink ty -> copy_type_desc f ty.desc
   | Tsubst _ -> assert false
@@ -433,30 +550,33 @@ let rec copy_type_desc ?(keep_names = false) f = function
 
 (* Utilities for copying *)
 
-let saved_desc = ref []
-(* Saved association of generic nodes with their description. *)
+let save_desc ty desc =
+  let session = current_type_copy_session () in
+  session.saved_desc <- (ty, desc) :: session.saved_desc
 
-let save_desc ty desc = saved_desc := (ty, desc) :: !saved_desc
-
-let saved_kinds = ref [] (* duplicated kind variables *)
-let new_kinds = ref [] (* new kind variables *)
 let dup_kind r =
+  let session = current_type_copy_session () in
   (match !r with
   | None -> ()
   | Some _ -> assert false);
-  if not (List.memq r !new_kinds) then (
-    saved_kinds := r :: !saved_kinds;
+  if not (List.memq r session.new_kinds) then (
+    session.saved_kinds <- r :: session.saved_kinds;
     let r' = ref None in
-    new_kinds := r' :: !new_kinds;
+    session.new_kinds <- r' :: session.new_kinds;
     r := Some (Fvar r'))
 
 (* Restored type descriptions. *)
-let cleanup_types () =
-  List.iter (fun (ty, desc) -> ty.desc <- desc) !saved_desc;
-  List.iter (fun r -> r := None) !saved_kinds;
-  saved_desc := [];
-  saved_kinds := [];
-  new_kinds := []
+let cleanup_types () = end_type_copy_session ()
+
+let with_copy_session f =
+  begin_type_copy_session ();
+  match f () with
+  | result ->
+    cleanup_types ();
+    result
+  | exception exn ->
+    cleanup_types ();
+    raise exn
 
 (* Mark a type. *)
 let rec mark_type ty =
@@ -614,6 +734,7 @@ let undo_change = function
   | Cname (r, v) -> r := v
   | Crow (r, v) -> r := v
   | Ckind (r, v) -> r := v
+  | Cmutability (r, v) -> r := v
   | Cuniv (r, v) -> r := v
   | Ctypeset (r, v) -> r := v
 
@@ -656,6 +777,10 @@ let set_name nm v =
 let set_row_field e v =
   log_change (Crow (e, !e));
   e := Some v
+let set_mutability r v =
+  log_change (Cmutability (r, !r));
+  r := v
+
 let set_kind rk k =
   log_change (Ckind (rk, !rk));
   rk := Some k

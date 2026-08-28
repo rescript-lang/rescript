@@ -113,13 +113,23 @@ and translateCoreType_ ~config ~type_vars_gen
   | Ttyp_object (t_obj, closed_flag) ->
     let get_field_type object_field =
       match object_field with
-      | Typedtree.OTtag ({txt = name}, _, t) ->
+      | Typedtree.OTtag ({txt = name}, attrs, t) ->
+        let mutable_ =
+          if
+            List.exists
+              (fun (({txt}, payload) : Parsetree.attribute) ->
+                txt = "set" && payload = Parsetree.PStr [])
+              attrs
+          then Mutable
+          else Immutable
+        in
         ( name,
-          match name |> Runtime.is_mutable_object_field with
-          | true -> {dependencies = []; type_ = ident ""}
-          | false -> t |> translateCoreType_ ~config ~type_vars_gen ~type_env )
+          mutable_,
+          t |> translateCoreType_ ~config ~type_vars_gen ~type_env )
       | OTinherit t ->
-        ("Inherit", t |> translateCoreType_ ~config ~type_vars_gen ~type_env)
+        ( "Inherit",
+          Immutable,
+          t |> translateCoreType_ ~config ~type_vars_gen ~type_env )
     in
     let fields_translations = t_obj |> List.map get_field_type in
     translate_obj_type

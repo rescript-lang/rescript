@@ -127,7 +127,7 @@ let norm = function
 let ctype_apply_env_empty = ref (fun _ -> assert false)
 
 (* Similar to [Ctype.nondep_type_rec]. *)
-let rec typexp s ty =
+let rec typexp_rec s ty =
   let ty = repr ty in
   match ty.desc with
   | (Tvar _ | Tunivar _) as desc ->
@@ -140,7 +140,7 @@ let rec typexp s ty =
       ty')
     else ty
   | Tsubst ty -> ty
-  | Tfield (m, k, _t1, _t2)
+  | Tfield {name = m; presence = k}
     when (not s.for_saving) && m = dummy_method
          && field_kind_repr k <> Fabsent
          && (repr ty).level < generic_level ->
@@ -171,15 +171,15 @@ let rec typexp s ty =
        else
          match desc with
          | Tconstr (p, args, _abbrev) -> (
-           let args = List.map (typexp s) args in
+           let args = List.map (typexp_rec s) args in
            match Path_map.find p s.types with
            | exception Not_found -> Tconstr (type_path s p, args, ref Mnil)
            | Path _ -> Tconstr (type_path s p, args, ref Mnil)
            | Type_function {params; body} ->
              (!ctype_apply_env_empty params body args).desc)
          | Tpackage (p, n, tl) ->
-           Tpackage (modtype_path s p, n, List.map (typexp s) tl)
-         | Tobject t1 -> Tobject (typexp s t1)
+           Tpackage (modtype_path s p, n, List.map (typexp_rec s) tl)
+         | Tobject t1 -> Tobject (typexp_rec s t1)
          | Tvariant row -> (
            let row = row_repr row in
            let more = repr row.row_more in
@@ -203,7 +203,7 @@ let rec typexp s ty =
              let more' =
                match more.desc with
                | Tsubst ty -> ty
-               | Tconstr _ | Tnil -> typexp s more
+               | Tconstr _ | Tnil -> typexp_rec s more
                | Tunivar _ | Tvar _ ->
                  save_desc more more.desc;
                  if s.for_saving then newpersty (norm more.desc)
@@ -214,7 +214,7 @@ let rec typexp s ty =
              (* Register new type first for recursion *)
              more.desc <- Tsubst (newgenty (Ttuple [more'; ty']));
              (* Return a new copy *)
-             let row = copy_row (typexp s) true row (not dup) more' in
+             let row = copy_row (typexp_rec s) true row (not dup) more' in
              match row.row_name with
              | Some (p, tl) ->
                Tvariant
@@ -225,72 +225,69 @@ let rec typexp s ty =
                       else Some (type_path s p, tl));
                  }
              | None -> Tvariant row))
-         | Tfield (_label, kind, _t1, t2) when field_kind_repr kind = Fabsent ->
-           Tlink (typexp s t2)
-         | _ -> copy_type_desc (typexp s) desc);
+         | Tfield {presence = kind; rest = t2}
+           when field_kind_repr kind = Fabsent ->
+           Tlink (typexp_rec s t2)
+         | _ -> copy_type_desc (typexp_rec s) desc);
     ty'
 
 (*
    Always make a copy of the type. If this is not done, type levels
    might not be correct.
 *)
-let type_expr s ty =
-  let ty' = typexp s ty in
-  cleanup_types ();
-  ty'
+let type_expr s ty = with_copy_session (fun () -> typexp_rec s ty)
+
+let typexp = type_expr
 
 let label_declaration s l =
   {
     ld_id = l.ld_id;
     ld_mutable = l.ld_mutable;
     ld_optional = l.ld_optional;
-    ld_type = typexp s l.ld_type;
+    ld_type = typexp_rec s l.ld_type;
     ld_loc = loc s l.ld_loc;
     ld_attributes = attrs s l.ld_attributes;
   }
 
 let constructor_arguments s = function
-  | Cstr_tuple l -> Cstr_tuple (List.map (typexp s) l)
+  | Cstr_tuple l -> Cstr_tuple (List.map (typexp_rec s) l)
   | Cstr_record l -> Cstr_record (List.map (label_declaration s) l)
 
 let constructor_declaration s c =
   {
     cd_id = c.cd_id;
     cd_args = constructor_arguments s c.cd_args;
-    cd_res = may_map (typexp s) c.cd_res;
+    cd_res = may_map (typexp_rec s) c.cd_res;
     cd_loc = loc s c.cd_loc;
     cd_attributes = attrs s c.cd_attributes;
   }
 
 let type_declaration s decl =
-  let decl =
-    {
-      type_params = List.map (typexp s) decl.type_params;
-      type_arity = decl.type_arity;
-      type_kind =
-        (match decl.type_kind with
-        | Type_abstract -> Type_abstract
-        | Type_variant (cstrs, layout) ->
-          Type_variant (List.map (constructor_declaration s) cstrs, layout)
-        | Type_record (lbls, rep) ->
-          Type_record (List.map (label_declaration s) lbls, rep)
-        | Type_open -> Type_open);
-      type_manifest =
-        (match decl.type_manifest with
-        | None -> None
-        | Some ty -> Some (typexp s ty));
-      type_private = decl.type_private;
-      type_variance = decl.type_variance;
-      type_newtype_level = None;
-      type_loc = loc s decl.type_loc;
-      type_attributes = attrs s decl.type_attributes;
-      type_immediate = decl.type_immediate;
-      type_representation = decl.type_representation;
-      type_inlined_types = decl.type_inlined_types;
-    }
-  in
-  cleanup_types ();
-  decl
+  with_copy_session (fun () ->
+      {
+        type_params = List.map (typexp_rec s) decl.type_params;
+        type_arity = decl.type_arity;
+        type_kind =
+          (match decl.type_kind with
+          | Type_abstract -> Type_abstract
+          | Type_variant (cstrs, layout) ->
+            Type_variant (List.map (constructor_declaration s) cstrs, layout)
+          | Type_record (lbls, rep) ->
+            Type_record (List.map (label_declaration s) lbls, rep)
+          | Type_open -> Type_open);
+        type_manifest =
+          (match decl.type_manifest with
+          | None -> None
+          | Some ty -> Some (typexp_rec s ty));
+        type_private = decl.type_private;
+        type_variance = decl.type_variance;
+        type_newtype_level = None;
+        type_loc = loc s decl.type_loc;
+        type_attributes = attrs s decl.type_attributes;
+        type_immediate = decl.type_immediate;
+        type_representation = decl.type_representation;
+        type_inlined_types = decl.type_inlined_types;
+      })
 
 let value_description s descr =
   {
@@ -301,20 +298,17 @@ let value_description s descr =
   }
 
 let extension_constructor s ext =
-  let ext =
-    {
-      ext_type_path = type_path s ext.ext_type_path;
-      ext_type_params = List.map (typexp s) ext.ext_type_params;
-      ext_args = constructor_arguments s ext.ext_args;
-      ext_ret_type = may_map (typexp s) ext.ext_ret_type;
-      ext_private = ext.ext_private;
-      ext_attributes = attrs s ext.ext_attributes;
-      ext_loc = (if s.for_saving then Location.none else ext.ext_loc);
-      ext_is_exception = ext.ext_is_exception;
-    }
-  in
-  cleanup_types ();
-  ext
+  with_copy_session (fun () ->
+      {
+        ext_type_path = type_path s ext.ext_type_path;
+        ext_type_params = List.map (typexp_rec s) ext.ext_type_params;
+        ext_args = constructor_arguments s ext.ext_args;
+        ext_ret_type = may_map (typexp_rec s) ext.ext_ret_type;
+        ext_private = ext.ext_private;
+        ext_attributes = attrs s ext.ext_attributes;
+        ext_loc = (if s.for_saving then Location.none else ext.ext_loc);
+        ext_is_exception = ext.ext_is_exception;
+      })
 
 let rec rename_bound_idents s idents = function
   | [] -> (List.rev idents, s)

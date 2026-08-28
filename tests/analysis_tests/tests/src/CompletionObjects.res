@@ -8,3 +8,8 @@ let _ff = {
   | _ => ""
   },
 }
+
+@val external settable: {@set "one": int, @set "two": int} = "settable"
+
+// settable["o"] = 1
+//            ^com

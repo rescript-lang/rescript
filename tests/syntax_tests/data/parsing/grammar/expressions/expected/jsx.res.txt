@@ -114,19 +114,19 @@ let icon =
                | _ -> {js|sound-max|js})
   [@res.braces ]) />
 let _ =
-  <MessengerSharedPhotosAlbumViewPhotoReact ref=?((if foo#bar === baz
+  <MessengerSharedPhotosAlbumViewPhotoReact ref=?((if foo["bar"] === baz
                                                    then
                                                      Some
                                                        (foooooooooooooooooooooooo
                                                           setRefChild)
                                                    else None)
-  [@res.ternary ]) key=(node#legacy_attachment_id) />
+  [@res.ternary ]) key=(node["legacy_attachment_id"]) />
 let _ = <Foo bar />
 let _ = <Foo bar=?bar />
 let _ = <Foo bar=?Baz.bar />
 let x = <div />
 let _ = <div asd=1></div>
-;;foo#bar #= <bar />
+;;foo["bar"] = <bar />
 ;;foo #= <bar />
 ;;foo #= <bar />
 let x = [|<div />|]
@@ -236,10 +236,10 @@ let _ =
            [@res.template ]) -> React.string)
   [@res.braces ])</div>
 let _ =
-  <View style=(styles#backgroundImageWrapper)>((let uri =
-                                                  {js|/images/header-background.png|js} in
-                                                <Image resizeMode=Contain style=(
-                                                  styles#backgroundImage) uri />)
+  <View style=(styles["backgroundImageWrapper"])>((let uri =
+                                                     {js|/images/header-background.png|js} in
+                                                   <Image resizeMode=Contain style=(
+                                                     styles["backgroundImage"]) uri />)
   [@res.braces ])</View>
 ;;<div>(((((possibleGradeValues ->
               (List.filter (fun [arity:1]g -> g <= state.maxGrade)))

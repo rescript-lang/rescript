@@ -279,7 +279,10 @@ let rec add_expr bv exp =
   | Pexp_constraint (e1, ty2) ->
     add_expr bv e1;
     add_type bv ty2
-  | Pexp_send (e, _m) -> add_expr bv e
+  | Pexp_object_get (e, _m) -> add_expr bv e
+  | Pexp_object_set (e, _m, v) ->
+    add_expr bv e;
+    add_expr bv v
   | Pexp_object_literal fields -> List.iter (fun (_, e) -> add_expr bv e) fields
   | Pexp_letmodule (id, m, e) ->
     let b = add_module_binding bv m in

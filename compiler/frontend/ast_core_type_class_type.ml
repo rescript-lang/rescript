@@ -21,19 +21,6 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
-let process_getter_setter ~not_getter_setter
-    ~(get : Parsetree.core_type -> _ -> Parsetree.attributes -> _) ~set name
-    (attrs : Ast_attributes.t) (ty : Parsetree.core_type) (acc : _ list) =
-  match Ast_attributes.process_object_field_attributes_rev attrs with
-  | false, _ -> not_getter_setter ty :: acc
-  | true, pctf_attributes ->
-    set ty
-      ({name with txt = name.Asttypes.txt ^ Literals.setter_suffix}
-        : _ Asttypes.loc)
-      pctf_attributes
-    :: get ty name pctf_attributes
-    :: acc
-
 let default_typ_mapper = Ast_mapper.default_mapper.typ
 (*
   Attributes are very hard to attribute
@@ -78,37 +65,15 @@ let typ_mapper (self : Ast_mapper.mapper) (ty : Parsetree.core_type) =
           match meth_ with
           | Parsetree.Oinherit _ -> meth_ :: acc
           | Parsetree.Otag (label, ptyp_attrs, core_type) ->
-            let get ty name attrs =
-              let attrs, core_type =
-                match Ast_attributes.process_attributes_rev attrs with
-                | Nothing, attrs -> (attrs, ty) (* #1678 *)
-                | Meth_callback attr, attrs -> (attrs, attr +> ty)
-              in
-              Parsetree.Otag (name, attrs, self.typ self core_type)
+            (* Field attributes (including @set, consumed during type
+               checking) stay on the field; only method-callback attributes
+               move onto the field's type. *)
+            let attrs, core_type =
+              match Ast_attributes.process_attributes_rev ptyp_attrs with
+              | Nothing, attrs -> (attrs, core_type)
+              | Meth_callback attr, attrs -> (attrs, attr +> core_type)
             in
-            let set ty name attrs =
-              let attrs, core_type =
-                match Ast_attributes.process_attributes_rev attrs with
-                | Nothing, attrs -> (attrs, ty)
-                | Meth_callback attr, attrs -> (attrs, attr +> ty)
-              in
-              Parsetree.Otag
-                ( name,
-                  attrs,
-                  Ast_helper.Typ.arrow ~loc
-                    [{attrs = []; lbl = Nolabel; typ = self.typ self core_type}]
-                    (Ast_literal.type_unit ~loc ()) )
-            in
-            let not_getter_setter ty =
-              let attrs, core_type =
-                match Ast_attributes.process_attributes_rev ptyp_attrs with
-                | Nothing, attrs -> (attrs, ty)
-                | Meth_callback attr, attrs -> (attrs, attr +> ty)
-              in
-              Parsetree.Otag (label, attrs, self.typ self core_type)
-            in
-            process_getter_setter ~not_getter_setter ~get ~set label ptyp_attrs
-              core_type acc)
+            Parsetree.Otag (label, attrs, self.typ self core_type) :: acc)
     in
     {ty with ptyp_desc = Ptyp_object (new_methods, closed_flag)}
   | _ -> default_typ_mapper self ty

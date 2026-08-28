@@ -54,7 +54,18 @@ type type_expr = {mutable desc: type_desc; mutable level: int; id: int}
     Whereas [type_expr] is a pure construct which allows referring to existing
     types.
 
-    Note on mutability: TBD.
+    Note on object-field mutability: each [Tfield] carries a
+    [field_mutability ref]. Semantically the state is two-valued
+    ([Immutable] or [Mutable], read through [Btype.mutability_repr]);
+    [Mutability_link] is pure representation — a union-find edge that makes
+    every field constrained to have the same mutability share one
+    equivalence class, so a promotion (Immutable to Mutable on an open row)
+    is seen by all of them at once. Classes are merged only by unification;
+    promotions and merges are logged on the backtracking trail; copying
+    duplicates a class iff the row ends in a generic variable (a scheme
+    instantiation) and shares it otherwise, mirroring the sharing law of
+    the row variable itself. Links never appear in saved (marshalled)
+    types.
  *)
 
 and arg = {lbl: arg_label; typ: type_expr}
@@ -76,8 +87,16 @@ and type_desc =
       (** [Tobject `f1:t1;...;fn: tn'] ==> [{"f1": t1, ..., "fn": tn}]
       f1, fn are represented as a linked list of types using Tfield and Tnil
       constructors, terminated by a row variable when the row is open. *)
-  | Tfield of string * field_kind * type_expr * type_expr
-      (** [Tfield ("foo", Fpresent, t, ts)] ==> [<...; foo : t; ts>] *)
+  | Tfield of {
+      name: string;
+      presence: field_kind;
+      mutability: field_mutability ref;
+      typ: type_expr;
+      rest: type_expr;
+    }
+      (** [Tfield {name = "foo"; presence = Fpresent; mutability; typ; rest}]
+      ==> [{.. "foo": typ, rest}]; [mutability] records whether the field
+      admits assignment ([@set]). *)
   | Tnil  (** [Tnil] ==> [<...; >] *)
   | Tlink of type_expr  (** Indirection used by unification engine. *)
   | Tsubst of type_expr (* for copying *)
@@ -165,6 +184,14 @@ and abbrev_memo =
       (** Abbreviations can be found after this indirection *)
 
 and field_kind = Fvar of field_kind option ref | Fpresent | Fabsent
+
+(** Mutability state of an object field, shared through an equivalence class
+    of cells. [Mutability_link] is an internal graph edge (union by
+    unification, duplication memo during copying) — never a third semantic
+    state; the class's value is at the end of the link chain. *)
+and field_mutability =
+  | Mutability_value of Asttypes.mutable_flag
+  | Mutability_link of field_mutability ref
 
 module Type_ops : sig
   type t = type_expr

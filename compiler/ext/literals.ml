@@ -50,10 +50,6 @@ let runtime = "runtime" (* runtime directory *)
 
 let stdlib = "stdlib"
 
-let setter_suffix = "#="
-
-let setter_suffix_len = String.length setter_suffix
-
 let debugger = "debugger"
 
 let fn_run = "fn_run"

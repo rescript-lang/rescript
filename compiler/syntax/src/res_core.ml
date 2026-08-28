@@ -2226,21 +2226,25 @@ and parse_bracket_access p expr start_pos =
     let e =
       let ident_loc = mk_loc string_start string_end in
       let loc = mk_loc start_pos rbracket in
-      Ast_helper.Exp.send ~loc expr (Location.mkloc s ident_loc)
+      Ast_helper.Exp.object_get ~loc expr (Location.mkloc s ident_loc)
     in
     let e = parse_primary_expr ~operand:e p in
     let equal_start = p.start_pos in
     match p.token with
-    | Equal ->
+    | Equal -> (
       Parser.next p;
       let equal_end = p.prev_end_pos in
       let rhs_expr = parse_expr p in
       let loc = mk_loc start_pos rhs_expr.pexp_loc.loc_end in
-      let operator_loc = mk_loc equal_start equal_end in
-      Ast_helper.Exp.apply ~loc
-        (Ast_helper.Exp.ident ~loc:operator_loc
-           (Location.mkloc (Longident.Lident "#=") operator_loc))
-        [(Nolabel, e); (Nolabel, rhs_expr)]
+      match e.Parsetree.pexp_desc with
+      | Parsetree.Pexp_object_get (obj, name) ->
+        Ast_helper.Exp.object_set ~loc obj name rhs_expr
+      | _ ->
+        Parser.err ~start_pos:equal_start ~end_pos:equal_end p
+          (Diagnostics.message
+             "The left-hand side of this assignment is not an object property \
+              access.");
+        e)
     | _ -> e)
   | _ -> (
     let access_expr = parse_constrained_or_coerced_expr p in

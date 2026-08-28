@@ -57,11 +57,6 @@ type app_pattern = {
   args: Parsetree.expression list;
 }
 
-let sane_property_name_check loc s =
-  if String.contains s '#' then
-    Location.raise_errorf ~loc
-      "property name (%s) can not contain speical character #" s
-
 (* match fn as *)
 let view_as_app (fn : exp) (s : string list) : app_pattern option =
   match fn.pexp_desc with
@@ -70,7 +65,7 @@ let view_as_app (fn : exp) (s : string list) : app_pattern option =
     Some {op; loc = fn.pexp_loc; args = check_and_discard args}
   | _ -> None
 
-let infix_ops = ["->"; "#="]
+let infix_ops = ["->"]
 
 let app_exp_mapper (e : exp) (self : Ast_mapper.mapper) : exp =
   match view_as_app e infix_ops with
@@ -132,20 +127,6 @@ let app_exp_mapper (e : exp) (self : Ast_mapper.mapper) : exp =
             pexp_loc = f.pexp_loc;
           })
     | _ -> Exp.apply ~loc ~attrs:e.pexp_attributes f [(Nolabel, a)])
-  | Some {op = "#="; loc; args = [obj; arg]} -> (
-    let gen_assignment obj name name_loc =
-      sane_property_name_check name_loc name;
-      let obj = self.expr self obj in
-      let arg = self.expr self arg in
-      let fn = Exp.send ~loc obj {txt = name ^ Literals.setter_suffix; loc} in
-      Exp.constraint_ ~loc
-        (Exp.apply ~loc fn [(Nolabel, arg)])
-        (Ast_literal.type_unit ~loc ())
-    in
-    match obj.pexp_desc with
-    | Pexp_send (obj, {txt = name; loc = name_loc}) ->
-      gen_assignment obj name name_loc
-    | _ -> Location.raise_errorf ~loc "invalid #= assignment")
   | Some {op = "->"; loc} ->
     Location.raise_errorf ~loc
       "Invalid pipe syntax. The pipe symbol (->) can only be used as a binary \

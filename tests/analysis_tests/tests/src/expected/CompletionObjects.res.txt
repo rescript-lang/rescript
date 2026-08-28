@@ -21,3 +21,14 @@ Path x
   { "detail": "bool", "kind": 4, "label": "Some(false)", "tags": [] }
 ]
 
+Complete src/CompletionObjects.res 13:14
+posCursor:[13:14] posNoWhite:[13:13] Found expr:[13:3->13:20]
+Pexp_object_set o[13:13->13:14] e:[13:3->13:11]
+Completable: Cpath Value[settable]["o"]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[settable]["o"]
+ContextPath Value[settable]
+Path settable
+[ { "detail": "int", "kind": 4, "label": "one", "tags": [] } ]
+

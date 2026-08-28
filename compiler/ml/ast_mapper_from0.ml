@@ -567,6 +567,14 @@ module E = struct
       fun_ ~loc ~attrs
         [{p_attrs = []; p_lbl = Nolabel; p_default = None; p_pat = pat}]
         body
+    | Pexp_apply
+        ( {pexp_desc = Pexp_ident {txt = Longident.Lident "#="}},
+          [
+            (Asttypes.Noloc.Nolabel, {pexp_desc = Pexp_send (e, s)});
+            (Asttypes.Noloc.Nolabel, v);
+          ] ) ->
+      (* Decode the v0 encoding of property assignment. *)
+      object_set ~loc ~attrs (sub.expr sub e) (map_loc sub s) (sub.expr sub v)
     | Pexp_apply ({pexp_desc = Pexp_ident tag_name}, args)
       when has_jsx_attribute () -> (
       let attrs = attrs |> List.filter (fun ({txt}, _) -> txt <> "JSX") in
@@ -763,7 +771,8 @@ module E = struct
       coerce ~loc ~attrs (sub.expr sub e) (sub.typ sub t2)
     | Pexp_constraint (e, t) ->
       constraint_ ~loc ~attrs (sub.expr sub e) (sub.typ sub t)
-    | Pexp_send (e, s) -> send ~loc ~attrs (sub.expr sub e) (map_loc sub s)
+    | Pexp_send (e, s) ->
+      object_get ~loc ~attrs (sub.expr sub e) (map_loc sub s)
     | Pexp_extension
         ( {txt = "obj"},
           PStr

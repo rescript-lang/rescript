@@ -29,7 +29,13 @@ and type_desc =
   | Ttuple of type_expr list
   | Tconstr of Path.t * type_expr list * abbrev_memo ref
   | Tobject of type_expr
-  | Tfield of string * field_kind * type_expr * type_expr
+  | Tfield of {
+      name: string;
+      presence: field_kind;
+      mutability: field_mutability ref;
+      typ: type_expr;
+      rest: type_expr;
+    }
   | Tnil
   | Tlink of type_expr
   | Tsubst of type_expr (* for copying *)
@@ -60,6 +66,10 @@ and abbrev_memo =
   | Mlink of abbrev_memo ref
 
 and field_kind = Fvar of field_kind option ref | Fpresent | Fabsent
+
+and field_mutability =
+  | Mutability_value of Asttypes.mutable_flag
+  | Mutability_link of field_mutability ref
 
 module Type_ops = struct
   type t = type_expr

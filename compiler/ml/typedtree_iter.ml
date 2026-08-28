@@ -286,7 +286,10 @@ end = struct
     | Texp_for_await_of (_id, _, exp1, exp2) ->
       iter_expression exp1;
       iter_expression exp2
-    | Texp_send (exp, _meth) -> iter_expression exp
+    | Texp_object_get (exp, _) -> iter_expression exp
+    | Texp_object_set (exp, _, v) ->
+      iter_expression exp;
+      iter_expression v
     | Texp_object_literal fields ->
       List.iter (fun (_, e) -> iter_expression e) fields
     | Texp_letmodule (_id, _, mexpr, exp) ->

@@ -7,4 +7,4 @@
   [1;31m6[0m [2m│[0m let p = (v: t) => ([1;31mv :> {@set "x": int}[0m)
   7 [2m│[0m 
 
-  Type t = {"x": int} is not a subtype of {"x": int, "x#=": int => unit}
+  Type t = {"x": int} is not a subtype of {@set "x": int}

@@ -173,9 +173,13 @@ and raw_type_desc ppf = function
     fprintf ppf "@[<hov1>Tconstr(@,%a,@,%a,@,%a)@]" path p raw_type_list tl
       (raw_list path) (list_of_memo !abbrev)
   | Tobject t -> fprintf ppf "@[<hov1>Tobject@,%a@]" raw_type t
-  | Tfield (f, k, t1, t2) ->
-    fprintf ppf "@[<hov1>Tfield(@,%s,@,%s,@,%a,@;<0 -1>%a)@]" f
-      (safe_kind_repr [] k) raw_type t1 raw_type t2
+  | Tfield {name = f; presence = k; mutability; typ = t1; rest = t2} ->
+    fprintf ppf "@[<hov1>Tfield(@,%s,@,%s,@,%s,@,%a,@;<0 -1>%a)@]" f
+      (safe_kind_repr [] k)
+      (match Btype.mutability_repr mutability with
+      | Mutable -> "mutable"
+      | Immutable -> "immutable")
+      raw_type t1 raw_type t2
   | Tnil -> fprintf ppf "Tnil"
   | Tlink t -> fprintf ppf "@[<1>Tlink@,%a@]" raw_type t
   | Tsubst t -> fprintf ppf "@[<1>Tsubst@,%a@]" raw_type t
@@ -525,13 +529,15 @@ let rec mark_loops_rec visited ty =
         if opened_object ty then visited_objects := px :: !visited_objects;
         let fields, _ = flatten_fields fi in
         List.iter
-          (fun (_, kind, ty) ->
-            if field_kind_repr kind = Fpresent then mark_loops_rec visited ty)
+          (fun {Ctype.f_kind; f_typ} ->
+            if field_kind_repr f_kind = Fpresent then
+              mark_loops_rec visited f_typ)
           fields)
-    | Tfield (_, kind, ty1, ty2) when field_kind_repr kind = Fpresent ->
+    | Tfield {presence = kind; typ = ty1; rest = ty2}
+      when field_kind_repr kind = Fpresent ->
       mark_loops_rec visited ty1;
       mark_loops_rec visited ty2
-    | Tfield (_, _, _, ty2) -> mark_loops_rec visited ty2
+    | Tfield {rest = ty2} -> mark_loops_rec visited ty2
     | Tnil -> ()
     | Tsubst ty -> mark_loops_rec visited ty
     | Tlink _ -> fatal_error "Printtyp.mark_loops_rec (2)"
@@ -736,14 +742,15 @@ and tree_of_typobject ?printing_context sch fi =
   let fields, rest = flatten_fields fi in
   let present_fields =
     List.fold_right
-      (fun (n, k, t) l ->
-        match field_kind_repr k with
-        | Fpresent -> (n, t) :: l
+      (fun {f_name; f_kind; f_mut; f_typ} l ->
+        match field_kind_repr f_kind with
+        | Fpresent ->
+          (f_name, Btype.mutability_repr f_mut = Asttypes.Mutable, f_typ) :: l
         | _ -> l)
       fields []
   in
   let sorted_fields =
-    List.sort (fun (n, _) (n', _) -> String.compare n n') present_fields
+    List.sort (fun (n, _, _) (n', _, _) -> String.compare n n') present_fields
   in
   let fields, rest =
     tree_of_typfields ?printing_context sch rest sorted_fields
@@ -762,8 +769,8 @@ and tree_of_typfields ?printing_context sch rest = function
       | _ -> fatal_error "typfields (1)"
     in
     ([], rest)
-  | (s, t) :: l ->
-    let field = (s, tree_of_typexp ?printing_context sch t) in
+  | (s, mut, t) :: l ->
+    let field = (s, mut, tree_of_typexp ?printing_context sch t) in
     let fields, rest = tree_of_typfields ?printing_context sch rest l in
     (field :: fields, rest)
 
@@ -1294,7 +1301,9 @@ let has_explanation t3 t4 =
   | Tvar _, _
   | Tvariant _, Tvariant _ ->
     true
-  | Tfield (l, _, _, {desc = Tnil}), Tfield (l', _, _, {desc = Tnil}) -> l = l'
+  | ( Tfield {name = l; rest = {desc = Tnil}},
+      Tfield {name = l'; rest = {desc = Tnil}} ) ->
+    l = l'
   | _ -> false
 
 let rec mismatch = function
@@ -1326,11 +1335,12 @@ let explanation unif t3 t4 ppf =
     else
       fprintf ppf "@,@[<hov>This instance of %a is ambiguous:@ %s@]" type_expr
         t' "it would escape the scope of its equation"
-  | Tfield (lab, _, _, _), _ when lab = dummy_method ->
+  | Tfield {name = lab}, _ when lab = dummy_method ->
     fprintf ppf "@,Self type cannot be unified with a closed object type"
-  | _, Tfield (lab, _, _, _) when lab = dummy_method ->
+  | _, Tfield {name = lab} when lab = dummy_method ->
     fprintf ppf "@,Self type cannot be unified with a closed object type"
-  | Tfield (l, _, f1, {desc = Tnil}), Tfield (l', _, f2, {desc = Tnil})
+  | ( Tfield {name = l; typ = f1; rest = {desc = Tnil}},
+      Tfield {name = l'; typ = f2; rest = {desc = Tnil}} )
     when l = l' ->
     fprintf ppf
       "@,\
@@ -1339,14 +1349,14 @@ let explanation unif t3 t4 ppf =
        Field @{<info>\"%s\"@} in the passed object has type @{<error>%a@}, but \
        is expected to have type @{<info>%a@}."
       l l type_expr f1 type_expr f2
-  | (Tnil | Tconstr _), Tfield (l, _, f1, _) ->
+  | (Tnil | Tconstr _), Tfield {name = l; typ = f1} ->
     fprintf ppf
       "@,\
        @,\
        @[The first object is expected to have a field @{<info>\"%s\"@} of type \
        @{<info>%a@}, but it does not.@]"
       l type_expr f1
-  | Tfield (l, _, f1, _), (Tnil | Tconstr _) ->
+  | Tfield {name = l; typ = f1}, (Tnil | Tconstr _) ->
     fprintf ppf
       "@,\
        @,\

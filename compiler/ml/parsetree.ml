@@ -302,7 +302,8 @@ and expression_desc =
   | Pexp_coerce of expression * unit * core_type
     (* (E :> T)        (None, T)
          *)
-  | Pexp_send of expression * label loc (*  E # m *)
+  | Pexp_object_get of expression * label loc (* obj["x"] *)
+  | Pexp_object_set of expression * label loc * expression (* obj["x"] = v *)
   | Pexp_object_literal of (label loc * expression) list
     (* {"a": 1, "b": true} *)
   | Pexp_letmodule of string loc * module_expr * expression

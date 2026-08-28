@@ -34,7 +34,8 @@ let substitute_types ~type_map (t : Types.type_expr) =
         }
       | Ttuple tl -> {t with desc = Ttuple (tl |> List.map loop)}
       | Tobject t -> {t with desc = Tobject (loop t)}
-      | Tfield (n, k, t1, t2) -> {t with desc = Tfield (n, k, loop t1, loop t2)}
+      | Tfield f ->
+        {t with desc = Tfield {f with typ = loop f.typ; rest = loop f.rest}}
       | Tpoly (t, []) -> loop t
       | Tpoly (t, tl) -> {t with desc = Tpoly (loop t, tl |> List.map loop)}
       | Tpackage (p, l, tl) ->

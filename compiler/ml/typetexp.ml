@@ -568,15 +568,28 @@ and transl_poly_type env policy t =
 
 and transl_fields env policy o fields =
   let hfields = Hashtbl.create 17 in
-  let add_typed_field loc l ty =
+  let add_typed_field loc l ty mut =
     try
-      let ty' = Hashtbl.find hfields l in
+      let ty', _ = Hashtbl.find hfields l in
+      (* When duplicate declarations of a field are collapsed, preserve
+         [Mutable] if any declaration has [@set]. *)
+      if mut = Asttypes.Mutable then
+        Hashtbl.replace hfields l (ty', Asttypes.Mutable);
       if equal env false [ty] [ty'] then ()
       else
         try unify env ty ty'
         with Unify _trace ->
           raise (Error (loc, env, Method_mismatch (l, ty, ty')))
-    with Not_found -> Hashtbl.add hfields l ty
+    with Not_found -> Hashtbl.add hfields l (ty, mut)
+  in
+  let field_mutability (attrs : Parsetree.attributes) =
+    if
+      List.exists
+        (fun (({txt}, payload) : Parsetree.attribute) ->
+          txt = "set" && payload = Parsetree.PStr [])
+        attrs
+    then Asttypes.Mutable
+    else Asttypes.Immutable
   in
   let add_field = function
     | Otag (s, a, ty1) ->
@@ -585,7 +598,7 @@ and transl_fields env policy o fields =
             transl_poly_type env policy ty1)
       in
       let field = OTtag (s, a, ty1) in
-      add_typed_field ty1.ctyp_loc s.txt ty1.ctyp_type;
+      add_typed_field ty1.ctyp_loc s.txt ty1.ctyp_type (field_mutability a);
       field
     | Oinherit sty -> (
       let cty = transl_type env policy sty in
@@ -600,8 +613,9 @@ and transl_fields env policy o fields =
         if opened_object t then
           raise (Error (sty.ptyp_loc, env, Opened_object nm));
         let rec iter_add = function
-          | Tfield (s, _k, ty1, ty2) ->
-            add_typed_field sty.ptyp_loc s ty1;
+          | Tfield {name = s; mutability; typ = ty1; rest = ty2} ->
+            add_typed_field sty.ptyp_loc s ty1
+              (Btype.mutability_repr mutability);
             iter_add ty2.desc
           | Tnil -> ()
           | _ -> assert false
@@ -613,7 +627,7 @@ and transl_fields env policy o fields =
       | _ -> raise (Error (sty.ptyp_loc, env, Not_an_object t)))
   in
   let object_fields = List.map add_field fields in
-  let fields = Hashtbl.fold (fun s ty l -> (s, ty) :: l) hfields [] in
+  let fields = Hashtbl.fold (fun s f l -> (s, f) :: l) hfields [] in
   let ty_init =
     match (o, policy) with
     | Closed, _ -> newty Tnil
@@ -622,7 +636,16 @@ and transl_fields env policy o fields =
   in
   let ty =
     List.fold_left
-      (fun ty (s, ty') -> newty (Tfield (s, Fpresent, ty', ty)))
+      (fun ty (s, (ty', mut)) ->
+        newty
+          (Tfield
+             {
+               name = s;
+               presence = Fpresent;
+               mutability = ref (Mutability_value mut);
+               typ = ty';
+               rest = ty;
+             }))
       ty_init fields
   in
   (ty, object_fields)

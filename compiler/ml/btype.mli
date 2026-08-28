@@ -136,8 +136,7 @@ val save_desc : type_expr -> type_desc -> unit
 val dup_kind : field_kind option ref -> unit
 (* Save a None field_kind, and make it point to a fresh Fvar *)
 
-val cleanup_types : unit -> unit
-(* Restore type descriptions *)
+val with_copy_session : (unit -> 'a) -> 'a
 
 val lowest_level : int
 (* Marked type: ty.level < lowest_level *)
@@ -218,6 +217,15 @@ val set_name :
 val set_row_field : row_field option ref -> row_field -> unit
 val set_univar : type_expr option ref -> type_expr -> unit
 val set_kind : field_kind option ref -> field_kind -> unit
+
+(* Logged (backtrackable) update of a mutability cell: promotion
+   ([Mutability_value Mutable]) or an equivalence-class merge
+   ([Mutability_link]). *)
+val set_mutability : field_mutability ref -> field_mutability -> unit
+
+(* Terminal cell of a link chain / its semantic value. *)
+val mutability_ref_repr : field_mutability ref -> field_mutability ref
+val mutability_repr : field_mutability ref -> Asttypes.mutable_flag
 val set_typeset : Type_set.t ref -> Type_set.t -> unit
 (* Set references, logging the old value *)
 

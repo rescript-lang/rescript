@@ -35,7 +35,7 @@ let rec has_tvar (ty : Types.type_expr) : bool =
   | Ttuple tyl -> List.exists has_tvar tyl
   | Tconstr (_, tyl, _) -> List.exists has_tvar tyl
   | Tobject ty -> has_tvar ty
-  | Tfield (_, _, ty1, ty2) -> has_tvar ty1 || has_tvar ty2
+  | Tfield {typ = ty1; rest = ty2} -> has_tvar ty1 || has_tvar ty2
   | Tnil -> false
   | Tlink ty -> has_tvar ty
   | Tsubst ty -> has_tvar ty
@@ -157,7 +157,8 @@ let instantiate_type ~type_params ~type_args (t : Types.type_expr) =
         }
       | Ttuple tl -> {t with desc = Ttuple (tl |> List.map loop)}
       | Tobject t -> {t with desc = Tobject (loop t)}
-      | Tfield (n, k, t1, t2) -> {t with desc = Tfield (n, k, loop t1, loop t2)}
+      | Tfield f ->
+        {t with desc = Tfield {f with typ = loop f.typ; rest = loop f.rest}}
       | Tpoly (t, []) -> loop t
       | Tpoly (t, tl) -> {t with desc = Tpoly (loop t, tl |> List.map loop)}
       | Tpackage (p, l, tl) ->
@@ -218,7 +219,8 @@ let instantiate_type2 ?(type_arg_context : type_arg_context option)
         }
       | Ttuple tl -> {t with desc = Ttuple (tl |> List.map loop)}
       | Tobject t -> {t with desc = Tobject (loop t)}
-      | Tfield (n, k, t1, t2) -> {t with desc = Tfield (n, k, loop t1, loop t2)}
+      | Tfield f ->
+        {t with desc = Tfield {f with typ = loop f.typ; rest = loop f.rest}}
       | Tpoly (t, []) -> loop t
       | Tpoly (t, tl) -> {t with desc = Tpoly (loop t, tl |> List.map loop)}
       | Tpackage (p, l, tl) ->
@@ -1334,7 +1336,7 @@ let remove_current_module_if_needed ~env_completion_is_made_from completion_path
 
 let rec get_obj_fields (texp : Types.type_expr) =
   match texp.desc with
-  | Tfield (name, _, t1, t2) ->
+  | Tfield {name; typ = t1; rest = t2} ->
     let fields = t2 |> get_obj_fields in
     (name, t1) :: fields
   | Tlink te | Tsubst te | Tpoly (te, []) -> te |> get_obj_fields
