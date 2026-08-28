@@ -6,6 +6,11 @@
  *)
 
 type t =
+  | AbstractMethodInNonAbstractClass
+  | AbstractMethodWithBody
+  | AbstractPrivateMember
+  | AbstractPropertyInNonAbstractClass
+  | AbstractPropertyWithInitializer
   | AccessorDataProperty
   | AccessorGetSet
   | AdjacentJSXElements
@@ -17,7 +22,10 @@ type t =
   | ConstructorCannotBeAccessor
   | ConstructorCannotBeAsync
   | ConstructorCannotBeGenerator
+  | ConstructorCannotBeOptional
   | DeclareAsync
+  | DeclareAsyncComponent
+  | DeclareAsyncHook
   | DeclareClassElement
   | DeclareClassFieldInitializer
   | DeclareOpaqueTypeInitializer
@@ -25,19 +33,6 @@ type t =
   | DuplicateExport of string
   | DuplicatePrivateFields of string
   | ElementAfterRestElement
-  | EnumBigIntMemberNotInitialized of {
-      enum_name: string;
-      member_name: string;
-    }
-  | EnumBooleanMemberNotInitialized of {
-      enum_name: string;
-      member_name: string;
-    }
-  | EnumDuplicateMemberName of {
-      enum_name: string;
-      member_name: string;
-    }
-  | EnumInconsistentMemberValues of { enum_name: string }
   | EnumInvalidEllipsis of { trailing_comma: bool }
   | EnumInvalidExplicitType of {
       enum_name: string;
@@ -47,20 +42,10 @@ type t =
   | EnumInvalidInitializerSeparator of { member_name: string }
   | EnumInvalidMemberInitializer of {
       enum_name: string;
-      explicit_type: Enum_common.explicit_type option;
-      member_name: string;
-    }
-  | EnumInvalidMemberName of {
-      enum_name: string;
+      explicit_type: Flow_ast.Statement.EnumDeclaration.explicit_type option;
       member_name: string;
     }
   | EnumInvalidMemberSeparator
-  | EnumNumberMemberNotInitialized of {
-      enum_name: string;
-      member_name: string;
-    }
-  | EnumStringMemberInconsistentlyInitialized of { enum_name: string }
-  | EnumInvalidConstPrefix
   | ExpectedJSXClosingTag of string
   | ExpectedPatternFoundExpression
   | ExportSpecifierMissingComma
@@ -68,12 +53,14 @@ type t =
   | GeneratorFunctionAsStatement
   | GetterArity
   | GetterMayNotHaveThisParam
-  | IllegalBreak
+  | IllegalBreak of { in_match_statement: bool }
   | IllegalContinue
   | IllegalReturn
   | IllegalUnicodeEscape
+  | ImportAttributeMissingComma
   | ImportSpecifierMissingComma
   | ImportTypeShorthandOnlyInPureImport
+  | IndexSignatureInvalidModifier of string
   | InexactInsideExact
   | InexactInsideNonObject
   | InvalidClassMemberName of {
@@ -108,6 +95,8 @@ type t =
   | MatchNonLastRest of [ `Object | `Array ]
   | MatchEmptyArgument
   | MatchSpreadArgument
+  | MatchExpressionAwait
+  | MatchExpressionYield
   | MethodInDestructuring
   | MissingJSXClosingTag of string
   | MissingTypeParam
@@ -121,13 +110,25 @@ type t =
   | NullishCoalescingUnexpectedLogical of string
   | OptionalChainNew
   | OptionalChainTemplate
+  | OptionalMethodCannotBeAbstract
+  | OverrideOnConstructor
   | ParameterAfterRestParameter
   | PrivateDelete
   | PrivateNotInClass
   | PropertyAfterRestElement
+  | RecordComputedPropertyUnsupported
+  | RecordExtendsUnsupported
+  | RecordInvalidPropertyName of {
+      name: string;
+      static: bool;
+      method_: bool;
+    }
+  | RecordPrivateElementUnsupported
+  | RecordPropertyAnnotationRequired
   | Redeclaration of string * string
   | SetterArity
   | SetterMayNotHaveThisParam
+  | StaticAbstractMethod
   | StrictCatchVariable
   | StrictDelete
   | StrictDuplicateProperty
@@ -144,12 +145,10 @@ type t =
   | StrictReservedWord
   | StrictVarName
   | SuperPrivate
-  | TSAbstractClass
-  | TSClassVisibility of [ `Public | `Private | `Protected ]
-  | TSTemplateLiteralType
   | ThisParamAnnotationRequired
   | ThisParamBannedInArrowFunctions
   | ThisParamBannedInConstructor
+  | ThisParamBannedInConstructorType
   | ThisParamMayNotBeOptional
   | ThisParamMustBeFirst
   | TrailingCommaAfterRestElement
@@ -161,6 +160,8 @@ type t =
   | UnexpectedProto
   | UnexpectedReserved
   | UnexpectedReservedType
+  | UnexpectedOptional
+  | OptionalDestructuringMustHaveDefault
   | UnexpectedSpreadType
   | UnexpectedStatic
   | UnexpectedSuper
@@ -188,6 +189,13 @@ let error loc e = raise (Error ((loc, e), []))
 
 module PP = struct
   let error = function
+    | AbstractMethodInNonAbstractClass ->
+      "Abstract methods can only appear within an abstract class."
+    | AbstractMethodWithBody -> "Abstract methods cannot have an implementation."
+    | AbstractPrivateMember -> "The `abstract` modifier cannot be used with a private identifier."
+    | AbstractPropertyInNonAbstractClass ->
+      "Abstract properties can only appear within an abstract class."
+    | AbstractPropertyWithInitializer -> "Abstract properties cannot have an initializer."
     | AccessorDataProperty ->
       "Object literal may not have data and accessor property with the same name"
     | AccessorGetSet -> "Object literal may not have multiple get/set accessors with the same name"
@@ -203,9 +211,14 @@ module PP = struct
     | ConstructorCannotBeAccessor -> "Constructor can't be an accessor."
     | ConstructorCannotBeAsync -> "Constructor can't be an async function."
     | ConstructorCannotBeGenerator -> "Constructor can't be a generator."
+    | ConstructorCannotBeOptional -> "Constructor can't be optional."
     | DeclareAsync ->
       "async is an implementation detail and isn't necessary for your declare function statement. "
       ^ "It is sufficient for your declare function to just have a Promise return type."
+    | DeclareAsyncComponent ->
+      "async is an implementation detail and isn't necessary for declared components. Use `declare component` instead."
+    | DeclareAsyncHook ->
+      "async is an implementation detail and isn't necessary for declared hooks. Use `declare hook` instead."
     | DeclareClassElement -> "`declare` modifier can only appear on class fields."
     | DeclareClassFieldInitializer ->
       "Unexpected token `=`. Initializers are not allowed in a `declare`."
@@ -218,26 +231,6 @@ module PP = struct
         "Private fields may only be declared once. `#%s` is declared more than once."
         name
     | ElementAfterRestElement -> "Rest element must be final element of an array pattern"
-    | EnumBigIntMemberNotInitialized { enum_name; member_name } ->
-      Printf.sprintf
-        "bigint enum members need to be initialized, e.g. `%s = 1n,` in enum `%s`."
-        member_name
-        enum_name
-    | EnumBooleanMemberNotInitialized { enum_name; member_name } ->
-      Printf.sprintf
-        "Boolean enum members need to be initialized. Use either `%s = true,` or `%s = false,` in enum `%s`."
-        member_name
-        member_name
-        enum_name
-    | EnumDuplicateMemberName { enum_name; member_name } ->
-      Printf.sprintf
-        "Enum member names need to be unique, but the name `%s` has already been used before in enum `%s`."
-        member_name
-        enum_name
-    | EnumInconsistentMemberValues { enum_name } ->
-      Printf.sprintf
-        "Enum `%s` has inconsistent member initializers. Either use no initializers, or consistently use literals (either booleans, numbers, or strings) for all member initializers."
-        enum_name
     | EnumInvalidEllipsis { trailing_comma } ->
       if trailing_comma then
         "The `...` must come at the end of the enum body. Remove the trailing comma."
@@ -262,50 +255,27 @@ module PP = struct
         "Enum member names and initializers are separated with `=`. Replace `%s:` with `%s =`."
         member_name
         member_name
-    | EnumInvalidMemberInitializer { enum_name; explicit_type; member_name } -> begin
-      match explicit_type with
-      | Some (Enum_common.Boolean as explicit_type)
-      | Some (Enum_common.Number as explicit_type)
-      | Some (Enum_common.String as explicit_type)
-      | Some (Enum_common.BigInt as explicit_type) ->
-        let explicit_type_str = Enum_common.string_of_explicit_type explicit_type in
-        Printf.sprintf
-          "Enum `%s` has type `%s`, so the initializer of `%s` needs to be a %s literal."
-          enum_name
-          explicit_type_str
-          member_name
-          explicit_type_str
-      | Some Enum_common.Symbol ->
+    | EnumInvalidMemberInitializer { enum_name; explicit_type; member_name } ->
+      (match explicit_type with
+      | Some Flow_ast.Statement.EnumDeclaration.Symbol ->
         Printf.sprintf
           "Symbol enum members cannot be initialized. Use `%s,` in enum `%s`."
           member_name
           enum_name
+      | Some t ->
+        let type_str = Flow_ast_utils.string_of_enum_explicit_type t in
+        Printf.sprintf
+          "Enum `%s` has type `%s`, so the initializer of `%s` needs to be a %s literal."
+          enum_name
+          type_str
+          member_name
+          type_str
       | None ->
         Printf.sprintf
-          "The enum member initializer for `%s` needs to be a literal (either a boolean, number, or string) in enum `%s`."
+          "The enum member initializer for `%s` needs to be a literal (either a boolean, number, bigint, or string) in enum `%s`."
           member_name
-          enum_name
-    end
-    | EnumInvalidMemberName { enum_name; member_name } ->
-      (* Based on the error condition, we will only receive member names starting with [a-z] *)
-      let suggestion = String.capitalize_ascii member_name in
-      Printf.sprintf
-        "Enum member names cannot start with lowercase 'a' through 'z'. Instead of using `%s`, consider using `%s`, in enum `%s`."
-        member_name
-        suggestion
-        enum_name
+          enum_name)
     | EnumInvalidMemberSeparator -> "Enum members are separated with `,`. Replace `;` with `,`."
-    | EnumNumberMemberNotInitialized { enum_name; member_name } ->
-      Printf.sprintf
-        "Number enum members need to be initialized, e.g. `%s = 1,` in enum `%s`."
-        member_name
-        enum_name
-    | EnumStringMemberInconsistentlyInitialized { enum_name } ->
-      Printf.sprintf
-        "String enum members need to consistently either all use initializers, or use no initializers, in enum %s."
-        enum_name
-    | EnumInvalidConstPrefix ->
-      "`const` enums are not supported. Flow Enums are designed to allow for inlining, however the inlining itself needs to be part of the build system (whatever you use) rather than Flow itself."
     | ExpectedJSXClosingTag name ->
       Printf.sprintf "Expected corresponding JSX closing tag for %s" name
     | ExpectedPatternFoundExpression ->
@@ -322,14 +292,24 @@ module PP = struct
       "Generators can only be declared at top level or immediately within another function."
     | GetterArity -> "Getter should have zero parameters"
     | GetterMayNotHaveThisParam -> "A getter cannot have a `this` parameter."
-    | IllegalBreak -> "Illegal break statement"
+    | IllegalBreak { in_match_statement } ->
+      let extra =
+        if in_match_statement then
+          " `break` statements are not required in `match` statements, as unlike `switch` statements, `match` statement cases do not fall-through by default."
+        else
+          ""
+      in
+      Printf.sprintf "Illegal break statement.%s" extra
     | IllegalContinue -> "Illegal continue statement"
     | IllegalReturn -> "Illegal return statement"
     | IllegalUnicodeEscape -> "Illegal Unicode escape"
+    | ImportAttributeMissingComma -> "Missing comma between import attributes"
     | ImportSpecifierMissingComma -> "Missing comma between import specifiers"
     | ImportTypeShorthandOnlyInPureImport ->
       "The `type` and `typeof` keywords on named imports can only be used on regular `import` statements. "
       ^ "It cannot be used with `import type` or `import typeof` statements"
+    | IndexSignatureInvalidModifier modifier ->
+      Printf.sprintf "`%s` modifier cannot be used with index signatures." modifier
     | InexactInsideExact ->
       "Explicit inexact syntax cannot appear inside an explicit exact object type"
     | InexactInsideNonObject -> "Explicit inexact syntax can only appear inside an object type"
@@ -405,6 +385,8 @@ module PP = struct
       Printf.sprintf "In match %s pattern, the rest must be the last element in the pattern" kind
     | MatchEmptyArgument -> "`match` argument must not be empty"
     | MatchSpreadArgument -> "`match` argument cannot contain spread elements"
+    | MatchExpressionAwait -> "`await` is not yet supported in `match` expressions"
+    | MatchExpressionYield -> "`yield` is not yet supported in `match` expressions"
     | MethodInDestructuring -> "Object pattern can't contain methods"
     | MissingJSXClosingTag name ->
       Printf.sprintf "JSX element %s has no corresponding closing tag." name
@@ -423,13 +405,35 @@ module PP = struct
         operator
     | OptionalChainNew -> "An optional chain may not be used in a `new` expression."
     | OptionalChainTemplate -> "Template literals may not be used in an optional chain."
+    | OptionalMethodCannotBeAbstract -> "Optional methods can't be abstract."
+    | OverrideOnConstructor -> "'override' modifier cannot appear on a constructor declaration"
     | ParameterAfterRestParameter -> "Rest parameter must be final parameter of an argument list"
     | PrivateDelete -> "Private fields may not be deleted."
     | PrivateNotInClass -> "Private fields can only be referenced from within a class."
     | PropertyAfterRestElement -> "Rest property must be final property of an object pattern"
+    | RecordComputedPropertyUnsupported -> "Records do not support computed properties."
+    | RecordExtendsUnsupported ->
+      "Records to not support `extends`: they do not allow hierarchies. Implementing an interface by using `implements` is supported."
+    | RecordInvalidPropertyName { name; static; method_ } ->
+      let static_modifier =
+        if static then
+          "static "
+        else
+          ""
+      in
+      let category =
+        if method_ then
+          "methods"
+        else
+          "properties"
+      in
+      Printf.sprintf "Records may not have %s%s named `%s`." static_modifier category name
+    | RecordPrivateElementUnsupported -> "Records to not support private elements. Remove the `#`."
+    | RecordPropertyAnnotationRequired -> "Record properties must have a type annotation."
     | Redeclaration (what, name) -> Printf.sprintf "%s '%s' has already been declared" what name
     | SetterArity -> "Setter should have exactly one parameter"
     | SetterMayNotHaveThisParam -> "A setter cannot have a `this` parameter."
+    | StaticAbstractMethod -> "`static` modifier can't be used with the `abstract` modifier."
     | StrictCatchVariable -> "Catch variable may not be eval or arguments in strict mode"
     | StrictDelete -> "Delete of an unqualified identifier in strict mode."
     | StrictDuplicateProperty ->
@@ -450,27 +454,12 @@ module PP = struct
     | StrictReservedWord -> "Use of reserved word in strict mode"
     | StrictVarName -> "Variable name may not be eval or arguments in strict mode"
     | SuperPrivate -> "You may not access a private field through the `super` keyword."
-    | TSAbstractClass -> "Flow does not support abstract classes."
-    | TSClassVisibility kind ->
-      let (keyword, append) =
-        match kind with
-        | `Private ->
-          ( "private",
-            " You can try using JavaScript private fields by prepending `#` to the field name."
-          )
-        | `Public ->
-          ( "public",
-            " Fields and methods are public by default. You can simply omit the `public` keyword."
-          )
-        | `Protected -> ("protected", "")
-      in
-      Printf.sprintf "Flow does not support using `%s` in classes.%s" keyword append
-    | TSTemplateLiteralType -> "Flow does not support template literal types."
     | ThisParamAnnotationRequired -> "A type annotation is required for the `this` parameter."
     | ThisParamBannedInArrowFunctions ->
       "Arrow functions cannot have a `this` parameter; arrow functions automatically bind `this` when declared."
     | ThisParamBannedInConstructor ->
       "Constructors cannot have a `this` parameter; constructors don't bind `this` like other functions."
+    | ThisParamBannedInConstructorType -> "Constructor types cannot have a `this` parameter."
     | ThisParamMayNotBeOptional -> "The `this` parameter cannot be optional."
     | ThisParamMustBeFirst -> "The `this` parameter must be the first function parameter."
     | TrailingCommaAfterRestElement -> "A trailing comma is not permitted after the rest element"
@@ -486,6 +475,9 @@ module PP = struct
     | UnexpectedProto -> "Unexpected proto modifier"
     | UnexpectedReserved -> "Unexpected reserved word"
     | UnexpectedReservedType -> "Unexpected reserved type"
+    | UnexpectedOptional -> "Unexpected `?` (optional modifier not allowed here)"
+    | OptionalDestructuringMustHaveDefault ->
+      "Optional destructuring patterns must use a default value (e.g., `{...}: T = {}`)."
     | UnexpectedSpreadType -> "Spreading a type is only allowed inside an object type"
     | UnexpectedStatic -> "Unexpected static modifier"
     | UnexpectedSuper -> "Unexpected `super` outside of a class method"

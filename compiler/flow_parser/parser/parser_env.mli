@@ -16,7 +16,6 @@ module Lex_mode : sig
     | TYPE
     | JSX_TAG
     | JSX_CHILD
-    | TEMPLATE
     | REGEXP
 
   val debug_string_of_lex_mode : t -> string
@@ -32,11 +31,15 @@ type parse_options = {
   components: bool; (* enable parsing of Flow component syntax *)
   enums: bool;  (** enable parsing of Flow enums *)
   pattern_matching: bool;
+  records: bool;
   esproposal_decorators: bool;  (** enable parsing of decorators *)
   types: bool;  (** enable parsing of Flow types *)
   use_strict: bool;  (** treat the file as strict, without needing a "use strict" directive *)
   module_ref_prefix: string option;
-  module_ref_prefix_LEGACY_INTEROP: string option;
+  assert_operator: bool;
+  allow_return_outside_function: bool;
+      (** suppress the [IllegalReturn] diagnostic for top-level [return]
+          statements; matches hermes-parser [allowReturnOutsideFunction] *)
 }
 
 val default_parse_options : parse_options
@@ -81,6 +84,10 @@ val in_formal_parameters : env -> bool
 
 val in_function : env -> bool
 
+val in_match_expression : env -> bool
+
+val in_match_statement : env -> bool
+
 val allow_yield : env -> bool
 
 val allow_await : env -> bool
@@ -88,6 +95,8 @@ val allow_await : env -> bool
 val allow_directive : env -> bool
 
 val allow_super : env -> allowed_super
+
+val in_ambient_context : env -> bool
 
 val has_simple_parameters : env -> bool
 
@@ -103,6 +112,8 @@ val no_conditional_type : env -> bool
 
 val no_new : env -> bool
 
+val no_record : env -> bool
+
 val errors : env -> (Loc.t * Parse_error.t) list
 
 val parse_options : env -> parse_options
@@ -110,6 +121,8 @@ val parse_options : env -> parse_options
 val source : env -> File_key.t option
 
 val should_parse_types : env -> bool
+
+val is_d_ts : env -> bool
 
 (* mutators: *)
 val error_at : env -> Loc.t * Parse_error.t -> unit
@@ -146,7 +159,9 @@ val with_strict : bool -> env -> env
 
 val with_in_formal_parameters : bool -> env -> env
 
-val with_in_function : bool -> env -> env
+val with_in_match_expression : bool -> env -> env
+
+val with_in_match_statement : bool -> env -> env
 
 val with_allow_yield : bool -> env -> env
 
@@ -155,6 +170,8 @@ val with_allow_await : bool -> env -> env
 val with_allow_directive : bool -> env -> env
 
 val with_allow_super : allowed_super -> env -> env
+
+val with_ambient_context : bool -> env -> env
 
 val with_no_let : bool -> env -> env
 
@@ -167,6 +184,8 @@ val with_no_anon_function_type : bool -> env -> env
 val with_no_conditional_type : bool -> env -> env
 
 val with_no_new : bool -> env -> env
+
+val with_no_record : bool -> env -> env
 
 val with_in_switch : bool -> env -> env
 
@@ -187,8 +206,6 @@ val enter_function : env -> async:bool -> generator:bool -> simple_params:bool -
 val is_contextually_reserved : string -> bool
 
 val is_reserved : string -> bool
-
-val token_is_contextually_reserved : Token.t -> bool
 
 val token_is_reserved : Token.t -> bool
 
@@ -225,10 +242,6 @@ module Peek : sig
 
   val is_identifier : env -> bool
 
-  val is_type_identifier : env -> bool
-
-  val is_identifier_name : env -> bool
-
   val is_function : env -> bool
 
   val is_hook : env -> bool
@@ -236,6 +249,8 @@ module Peek : sig
   val is_class : env -> bool
 
   val is_component : env -> bool
+
+  val is_record : env -> bool
 
   val is_renders_ident : env -> bool
 
@@ -256,6 +271,10 @@ module Peek : sig
   val ith_is_identifier_name : i:int -> env -> bool
 
   val ith_is_type_identifier : i:int -> env -> bool
+
+  val ith_is_object_key : i:int -> is_class:bool -> env -> bool
+
+  val lex_env : env -> Lex_env.t
 end
 
 module Eat : sig
@@ -268,6 +287,10 @@ module Eat : sig
   val pop_lex_mode : env -> unit
 
   val double_pop_lex_mode : env -> unit
+
+  val rescan_as_template : env -> unit
+
+  val rescan_as_template_from : env -> Lex_env.t -> unit
 
   val trailing_comments : env -> Loc.t Flow_ast.Comment.t list
 

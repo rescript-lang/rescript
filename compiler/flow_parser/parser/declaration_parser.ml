@@ -61,7 +61,18 @@ module Declaration (Parse : Parser_common.PARSER) (Type : Parser_common.TYPE) :
     let (_, { Ast.Function.Params.params; rest; this_ = _; comments = _ }) = params in
     let acc =
       List.fold_left
-        (fun acc (_, { Function.Param.argument; default = _ }) -> check_param acc argument)
+        (fun acc (loc, param) ->
+          match param with
+          | Function.Param.RegularParam { argument; default = _ } -> check_param acc argument
+          | Function.Param.ParamProperty { Class.Property.key; annot; _ } ->
+            (match key with
+            | Expression.Object.Property.Identifier ((id_loc, _) as name) ->
+              check_param
+                acc
+                (id_loc, Pattern.Identifier { Pattern.Identifier.name; annot; optional = false })
+            | _ ->
+              error_at env (loc, Parse_error.ExpectedPatternFoundExpression);
+              acc))
         (env, SSet.empty)
         params
     in
@@ -94,6 +105,7 @@ module Declaration (Parse : Parser_common.PARSER) (Type : Parser_common.TYPE) :
           {
             Ast.Pattern.Object.properties = pattern_obj_props;
             annot = Ast.Type.Missing Loc.none;
+            optional = false;
             comments = None;
           }
       )
@@ -103,6 +115,55 @@ module Declaration (Parse : Parser_common.PARSER) (Type : Parser_common.TYPE) :
     | Some (_, { Ast.Statement.ComponentDeclaration.RestParam.argument; comments = _ }) ->
       ignore (check_param acc argument)
     | None -> ()
+
+  let variance env ~parse_property_variance_keyword is_async is_generator =
+    let loc = Peek.loc env in
+    let variance =
+      match Peek.token env with
+      | T_PLUS ->
+        let leading = Peek.comments env in
+        Eat.token env;
+        Some
+          ( loc,
+            { Variance.kind = Variance.Plus; comments = Flow_ast_utils.mk_comments_opt ~leading () }
+          )
+      | T_MINUS ->
+        let leading = Peek.comments env in
+        Eat.token env;
+        Some
+          ( loc,
+            {
+              Variance.kind = Variance.Minus;
+              comments = Flow_ast_utils.mk_comments_opt ~leading ();
+            }
+          )
+      | T_IDENTIFIER { raw = "readonly"; _ } when parse_property_variance_keyword ->
+        let leading = Peek.comments env in
+        Eat.token env;
+        Some
+          ( loc,
+            {
+              Variance.kind = Variance.Readonly;
+              comments = Flow_ast_utils.mk_comments_opt ~leading ();
+            }
+          )
+      | T_IDENTIFIER { raw = "writeonly"; _ } when parse_property_variance_keyword ->
+        let leading = Peek.comments env in
+        Eat.token env;
+        Some
+          ( loc,
+            {
+              Variance.kind = Variance.Writeonly;
+              comments = Flow_ast_utils.mk_comments_opt ~leading ();
+            }
+          )
+      | _ -> None
+    in
+    match variance with
+    | Some (loc, _) when is_async || is_generator ->
+      error_at env (loc, Parse_error.UnexpectedVariance);
+      None
+    | _ -> variance
 
   type param_type =
     | FunctionParams of (Loc.t, Loc.t) Ast.Function.Params.t
@@ -144,14 +205,14 @@ module Declaration (Parse : Parser_common.PARSER) (Type : Parser_common.TYPE) :
   let strict_component_post_check env ~contains_use_strict id params =
     strict_post_check env ~contains_use_strict (Some id) (ComponentParams params)
 
-  let rest_param env t =
+  let rest_param ~allow_optional env t =
     if t = T_ELLIPSIS then
       let leading = Peek.comments env in
       let (loc, id) =
         with_loc
           (fun env ->
             Expect.token env T_ELLIPSIS;
-            Parse.pattern env Parse_error.StrictParamName)
+            Parse.pattern env ~allow_optional Parse_error.StrictParamName)
           env
       in
       let comments = Flow_ast_utils.mk_comments_opt ~leading () in
@@ -160,24 +221,84 @@ module Declaration (Parse : Parser_common.PARSER) (Type : Parser_common.TYPE) :
       None
 
   let function_params =
+    let param_property env ts_accessibility =
+      let variance = variance env ~parse_property_variance_keyword:true false false in
+      let leading = Peek.comments env in
+      let (name_loc, name_id) = Parse.identifier env in
+      let key =
+        Ast.Expression.Object.Property.Identifier
+          (name_loc, { name_id with Ast.Identifier.comments = None })
+      in
+      let annot = Type.annotation_opt env in
+      let value =
+        if Peek.token env = T_ASSIGN then (
+          Expect.token env T_ASSIGN;
+          Ast.Class.Property.Initialized (Parse.assignment env)
+        ) else
+          Ast.Class.Property.Uninitialized
+      in
+      let comments = Flow_ast_utils.mk_comments_opt ~leading () in
+      {
+        Ast.Class.Property.key;
+        value;
+        annot;
+        static = false;
+        override = false;
+        optional = false;
+        variance;
+        ts_accessibility;
+        decorators = [];
+        comments;
+      }
+    in
     let rec param =
       with_loc (fun env ->
           if Peek.token env = T_THIS then error env Parse_error.ThisParamMustBeFirst;
-          let argument = Parse.pattern env Parse_error.StrictParamName in
-          let default =
-            if Peek.token env = T_ASSIGN then (
-              Expect.token env T_ASSIGN;
-              Some (Parse.assignment env)
-            ) else
-              None
-          in
-          { Function.Param.argument; default }
+          match Peek.token env with
+          | (T_PUBLIC as t)
+          | (T_PRIVATE as t)
+          | (T_PROTECTED as t)
+            when Peek.ith_is_identifier ~i:1 env ->
+            let ts_accessibility =
+              (with_loc (fun env ->
+                   let leading = Peek.comments env in
+                   Eat.token env;
+                   let kind =
+                     match t with
+                     | T_PUBLIC -> Ast.Class.TSAccessibility.Public
+                     | T_PRIVATE -> Ast.Class.TSAccessibility.Private
+                     | T_PROTECTED -> Ast.Class.TSAccessibility.Protected
+                     | _ -> failwith "Must be one of the above"
+                   in
+                   {
+                     Ast.Class.TSAccessibility.kind;
+                     comments = Flow_ast_utils.mk_comments_opt ~leading ();
+                   }
+               )
+              )
+                env
+            in
+            Function.Param.ParamProperty (param_property env (Some ts_accessibility))
+          | T_IDENTIFIER { raw = "readonly"; _ } when Peek.ith_is_identifier ~i:1 env ->
+            Function.Param.ParamProperty (param_property env None)
+          | T_IDENTIFIER { raw = "writeonly"; _ } when Peek.ith_is_identifier ~i:1 env ->
+            Function.Param.ParamProperty (param_property env None)
+          | _ ->
+            let argument = Parse.pattern env ~allow_optional:true Parse_error.StrictParamName in
+            let default =
+              if Peek.token env = T_ASSIGN then (
+                Expect.token env T_ASSIGN;
+                Some (Parse.assignment env)
+              ) else
+                None
+            in
+            Function.Param.RegularParam { argument; default }
       )
     and param_list env acc =
       match Peek.token env with
       | (T_EOF | T_RPAREN | T_ELLIPSIS) as t ->
         let rest =
-          rest_param env t
+          rest_param ~allow_optional:false env t
           |> Option.map (fun (loc, id, comments) ->
                  (loc, { Function.RestParam.argument = id; comments })
              )
@@ -250,45 +371,6 @@ module Declaration (Parse : Parser_common.PARSER) (Type : Parser_common.TYPE) :
     in
     (Function.BodyBlock body_block, contains_use_strict)
 
-  let variance env ~parse_readonly is_async is_generator =
-    let loc = Peek.loc env in
-    let variance =
-      match Peek.token env with
-      | T_PLUS ->
-        let leading = Peek.comments env in
-        Eat.token env;
-        Some
-          ( loc,
-            { Variance.kind = Variance.Plus; comments = Flow_ast_utils.mk_comments_opt ~leading () }
-          )
-      | T_MINUS ->
-        let leading = Peek.comments env in
-        Eat.token env;
-        Some
-          ( loc,
-            {
-              Variance.kind = Variance.Minus;
-              comments = Flow_ast_utils.mk_comments_opt ~leading ();
-            }
-          )
-      | T_IDENTIFIER { raw = "readonly"; _ } when parse_readonly ->
-        let leading = Peek.comments env in
-        Eat.token env;
-        Some
-          ( loc,
-            {
-              Variance.kind = Variance.Readonly;
-              comments = Flow_ast_utils.mk_comments_opt ~leading ();
-            }
-          )
-      | _ -> None
-    in
-    match variance with
-    | Some (loc, _) when is_async || is_generator ->
-      error_at env (loc, Parse_error.UnexpectedVariance);
-      None
-    | _ -> variance
-
   let generator env =
     if Peek.token env = T_MULT then (
       let leading = Peek.comments env in
@@ -307,6 +389,85 @@ module Declaration (Parse : Parser_common.PARSER) (Type : Parser_common.TYPE) :
     else
       (false, [])
 
+  (* Convert a Function.Param to Type.Function.Param for implicit declare function.
+     Returns Ok type_param or Error error_reason. *)
+  let convert_function_param_to_type_param (param_loc, param) =
+    let open Function.Param in
+    match param with
+    | RegularParam { argument; default = _ } ->
+      (match argument with
+      | (_, Pattern.Identifier { Pattern.Identifier.name; annot; optional }) ->
+        (match annot with
+        | Ast.Type.Available (_, annot_type) ->
+          Ok (param_loc, Ast.Type.Function.Param.Labeled { name; annot = annot_type; optional })
+        | Ast.Type.Missing _ ->
+          let (_, { Identifier.name = param_name; _ }) = name in
+          Error (Printf.sprintf "parameter '%s' is missing a type annotation" param_name))
+      | (_, Pattern.Object { Pattern.Object.annot = Ast.Type.Available _; _ })
+      | (_, Pattern.Array { Pattern.Array.annot = Ast.Type.Available _; _ }) ->
+        Ok (param_loc, Ast.Type.Function.Param.Destructuring argument)
+      | (_, Pattern.Object _)
+      | (_, Pattern.Array _) ->
+        Error "destructuring parameter is missing a type annotation"
+      | _ -> Error "complex parameter patterns are not allowed")
+    | ParamProperty _ -> Error "parameter properties are not allowed"
+
+  (* Convert Function.Params to Type.Function.Params for implicit declare function.
+     Returns Ok type_params or Error error_reasons. *)
+  let convert_function_params_to_type_params (params_loc, params) =
+    let open Function.Params in
+    let { this_; params = param_list; rest; comments } = params in
+    let (converted, errors) =
+      List.fold_left
+        (fun (acc_params, acc_errors) param ->
+          match convert_function_param_to_type_param param with
+          | Ok p -> (p :: acc_params, acc_errors)
+          | Error e -> (acc_params, e :: acc_errors))
+        ([], [])
+        param_list
+    in
+    (* Convert this_ param *)
+    let type_this =
+      match this_ with
+      | Some (loc, { Function.ThisParam.annot; comments = this_comments }) ->
+        Some (loc, { Ast.Type.Function.ThisParam.annot; comments = this_comments })
+      | None -> None
+    in
+    (* Convert rest param - simplified, may need more robust handling *)
+    let (type_rest, rest_errors) =
+      match rest with
+      | Some (rest_loc, { Function.RestParam.argument; comments = rest_comments }) ->
+        (match
+           convert_function_param_to_type_param
+             (rest_loc, Function.Param.RegularParam { argument; default = None })
+         with
+        | Ok (_, type_param) ->
+          let rest_param =
+            ( rest_loc,
+              {
+                Ast.Type.Function.RestParam.argument = (rest_loc, type_param);
+                comments = rest_comments;
+              }
+            )
+          in
+          (Some rest_param, [])
+        | Error e -> (None, [e]))
+      | None -> (None, [])
+    in
+    let all_errors = errors @ rest_errors in
+    if all_errors = [] then
+      Ok
+        ( params_loc,
+          {
+            Ast.Type.Function.Params.this_ = type_this;
+            params = List.rev converted;
+            rest = type_rest;
+            comments;
+          }
+        )
+    else
+      Error all_errors
+
   let _function =
     with_loc (fun env ->
         let (async, leading_async) = async env in
@@ -319,7 +480,7 @@ module Declaration (Parse : Parser_common.PARSER) (Type : Parser_common.TYPE) :
                 | T_FUNCTION ->
                   Eat.token env;
                   (Function.Arbitrary, generator env)
-                | T_IDENTIFIER { raw = "hook"; _ } when not async ->
+                | T_IDENTIFIER { raw = "hook"; _ } ->
                   Eat.token env;
                   (Function.Hook, (false, []))
                 | t ->
@@ -385,25 +546,103 @@ module Declaration (Parse : Parser_common.PARSER) (Type : Parser_common.TYPE) :
               (generator, effect_, tparams, id, params, return, predicate, leading))
             env
         in
-        let simple_params = is_simple_parameter_list params in
-        let (body, contains_use_strict) =
-          function_body env ~async ~generator ~expression:false ~simple_params
+        (* Check for implicit declare function: in ambient context with semicolon instead of body.
+           We check all conversion conditions BEFORE consuming the semicolon. If conversion
+           would fail, we fall through to normal body parsing which will emit appropriate errors.
+           We also accept implicit semicolons (ASI). *)
+        let implicit_declare_conversion =
+          if
+            in_ambient_context env
+            && (Peek.token env = T_SEMICOLON || Peek.is_implicit_semicolon env)
+            && (not async)
+            && (not generator)
+            && effect_ <> Function.Hook
+            &&
+            match return with
+            | Function.ReturnAnnot.Missing _ -> false
+            | _ -> true
+          then
+            match convert_function_params_to_type_params params with
+            | Ok tp -> Some tp
+            | Error _ -> None
+          else
+            None
         in
-        strict_function_post_check env ~contains_use_strict id params;
-        Statement.FunctionDeclaration
-          {
-            Function.id;
-            params;
-            body;
-            generator;
-            effect_;
-            async;
-            predicate;
-            return;
-            tparams;
-            sig_loc;
-            comments = Flow_ast_utils.mk_comments_opt ~leading ();
-          }
+        match implicit_declare_conversion with
+        | Some type_params ->
+          (* Consume the semicolon if explicit, or handle ASI trailing comments *)
+          let trailing =
+            if Peek.token env = T_SEMICOLON then begin
+              Eat.token env;
+              if Peek.is_line_terminator env then
+                Eat.comments_until_next_line env
+              else
+                []
+            end else
+              (* Implicit semicolon (ASI): don't consume any token *)
+              Eat.comments_until_next_line env
+          in
+          let annot_loc =
+            match tparams with
+            | Some (tparams_loc, _) -> tparams_loc
+            | None -> fst params
+          in
+          let return_annot =
+            match return with
+            | Function.ReturnAnnot.Available (_, (ret_loc, t)) ->
+              Ast.Type.Function.Available (ret_loc, t)
+            | Function.ReturnAnnot.TypeGuard (_, tg) -> Ast.Type.Function.TypeGuard tg
+            | Function.ReturnAnnot.Missing _ ->
+              (* Should not happen - already checked above *)
+              Ast.Type.Function.Available (Loc.none, Ast.Type.Any None)
+          in
+          let fn_type =
+            Ast.Type.Function
+              {
+                Ast.Type.Function.tparams;
+                params = type_params;
+                return = return_annot;
+                comments = None;
+                effect_;
+              }
+          in
+          let annot = (annot_loc, (annot_loc, fn_type)) in
+          (* Convert predicate if present *)
+          let type_predicate =
+            match predicate with
+            | Some (loc, { Flow_ast.Type.Predicate.kind; comments = pred_comments }) ->
+              Some (loc, { Flow_ast.Type.Predicate.kind; comments = pred_comments })
+            | None -> None
+          in
+          Statement.DeclareFunction
+            {
+              Statement.DeclareFunction.id;
+              annot;
+              predicate = type_predicate;
+              comments = Flow_ast_utils.mk_comments_opt ~leading ~trailing ();
+              implicit_declare = true;
+            }
+        | None ->
+          (* Normal function: parse body *)
+          let simple_params = is_simple_parameter_list params in
+          let (body, contains_use_strict) =
+            function_body env ~async ~generator ~expression:false ~simple_params
+          in
+          strict_function_post_check env ~contains_use_strict id params;
+          Statement.FunctionDeclaration
+            {
+              Function.id;
+              params;
+              body;
+              generator;
+              effect_;
+              async;
+              predicate;
+              return;
+              tparams;
+              sig_loc;
+              comments = Flow_ast_utils.mk_comments_opt ~leading ();
+            }
     )
 
   let variable_declaration_list =
@@ -411,7 +650,7 @@ module Declaration (Parse : Parser_common.PARSER) (Type : Parser_common.TYPE) :
       let (loc, (decl, err)) =
         with_loc
           (fun env ->
-            let id = Parse.pattern env Parse_error.StrictVarName in
+            let id = Parse.pattern env ~allow_optional:false Parse_error.StrictVarName in
             let (init, err) =
               if Eat.maybe env T_ASSIGN then
                 (Some (Parse.assignment env), None)
@@ -443,8 +682,6 @@ module Declaration (Parse : Parser_common.PARSER) (Type : Parser_common.TYPE) :
   let declarations token env =
     let leading = Peek.comments env in
     Expect.token env token;
-    if (parse_options env).enums && token = T_CONST && Peek.token env = T_ENUM then
-      error env Parse_error.EnumInvalidConstPrefix;
     let (declarations, errs) = variable_declaration_list env in
     (declarations, leading, errs)
 
@@ -453,13 +690,18 @@ module Declaration (Parse : Parser_common.PARSER) (Type : Parser_common.TYPE) :
   let const env =
     let env = env |> with_no_let true in
     let (declarations, leading_comments, errs) = declarations T_CONST env in
-    (* Make sure all consts defined are initialized *)
+    (* Make sure all consts defined are initialized, unless we're in an ambient context with type annotation *)
     let errs =
       List.fold_left
         (fun errs decl ->
           match decl with
-          | (loc, { Statement.VariableDeclaration.Declarator.init = None; _ }) ->
-            (loc, Parse_error.NoUninitializedConst) :: errs
+          | (loc, { Statement.VariableDeclaration.Declarator.init = None; id }) ->
+            (* In ambient context, allow uninitialized const only if there's a type annotation *)
+            if Parser_env.in_ambient_context env && Flow_ast_utils.pattern_has_type_annotation id
+            then
+              errs
+            else
+              (loc, Parse_error.NoUninitializedConst) :: errs
           | _ -> errs)
         errs
         declarations
@@ -470,9 +712,9 @@ module Declaration (Parse : Parser_common.PARSER) (Type : Parser_common.TYPE) :
     let env = env |> with_no_let true in
     declarations T_LET env
 
-  let enum_declaration ?leading =
+  let enum_declaration ?leading ~const_ =
     with_loc (fun env ->
-        let enum = Enum.declaration ?leading env in
+        let enum = Enum.declaration ?leading ~const_ env in
         Statement.EnumDeclaration enum
     )
 
@@ -521,21 +763,23 @@ module Declaration (Parse : Parser_common.PARSER) (Type : Parser_common.TYPE) :
                 (name, local, false)
               | _ ->
                 Eat.token env;
-                let local = Parse.pattern env Parse_error.StrictParamName in
+                let local = Parse.pattern env ~allow_optional:true Parse_error.StrictParamName in
                 (name, local, false))
             | (_, T_IDENTIFIER { raw = "as"; _ }) ->
               let name = Statement.ComponentDeclaration.Param.Identifier (identifier_name env) in
               Expect.identifier env "as";
-              (name, Parse.pattern env Parse_error.StrictParamName, false)
+              (name, Parse.pattern env ~allow_optional:true Parse_error.StrictParamName, false)
             | (T_LCURLY, _) ->
               error env Parse_error.InvalidComponentParamName;
               let fake_name_loc = Peek.loc env in
               let fallback_ident = (fake_name_loc, { Ast.Identifier.name = ""; comments = None }) in
               let name = Statement.ComponentDeclaration.Param.Identifier fallback_ident in
-              let local = Parse.pattern env Parse_error.StrictParamName in
+              let local = Parse.pattern env ~allow_optional:false Parse_error.StrictParamName in
               (name, local, false)
             | (_, _) ->
-              let id = Parse.identifier_with_type env Parse_error.StrictParamName in
+              let id =
+                Parse.identifier_with_type env ~allow_optional:true Parse_error.StrictParamName
+              in
               (match id with
               | (loc, ({ Ast.Pattern.Identifier.name; _ } as id)) ->
                 ( Ast.Statement.ComponentDeclaration.Param.Identifier name,
@@ -557,7 +801,7 @@ module Declaration (Parse : Parser_common.PARSER) (Type : Parser_common.TYPE) :
       match Peek.token env with
       | (T_EOF | T_RPAREN | T_ELLIPSIS) as t ->
         let rest =
-          rest_param env t
+          rest_param ~allow_optional:true env t
           |> Option.map (fun (loc, id, comments) ->
                  if Peek.token env = T_COMMA then Eat.token env;
                  (loc, { Statement.ComponentDeclaration.RestParam.argument = id; comments })
@@ -585,20 +829,16 @@ module Declaration (Parse : Parser_common.PARSER) (Type : Parser_common.TYPE) :
         }
     )
 
-  let component_body env =
-    function_or_component_body
-      env
-      ~async:false
-      ~generator:false
-      ~expression:false
-      ~simple_params:false
+  let component_body ~async env =
+    function_or_component_body env ~async ~generator:false ~expression:false ~simple_params:false
 
   let component =
     with_loc (fun env ->
+        let (async, async_leading) = async env in
         let (sig_loc, (tparams, id, params, renders, leading)) =
           with_loc
             (fun env ->
-              let leading = Peek.comments env in
+              let leading = async_leading @ Peek.comments env in
               Expect.identifier env "component";
               let id =
                 id_remove_trailing
@@ -624,7 +864,25 @@ module Declaration (Parse : Parser_common.PARSER) (Type : Parser_common.TYPE) :
               (tparams, id, params, renders, leading))
             env
         in
-        let (body, contains_use_strict) = component_body env in
+        let (body, contains_use_strict, trailing) =
+          if Peek.token env <> T_LCURLY then begin
+            let trailing =
+              (* No body - consume semicolon if present *)
+              if Peek.token env = T_SEMICOLON then begin
+                Eat.token env;
+                if Peek.is_line_terminator env then
+                  Eat.comments_until_next_line env
+                else
+                  []
+              end else
+                []
+            in
+            (None, false, trailing)
+          end else begin
+            let (body, contains_use_strict) = component_body ~async env in
+            (Some body, contains_use_strict, [])
+          end
+        in
         strict_component_post_check env ~contains_use_strict id params;
         Statement.ComponentDeclaration
           {
@@ -633,8 +891,9 @@ module Declaration (Parse : Parser_common.PARSER) (Type : Parser_common.TYPE) :
             body;
             renders;
             tparams;
+            async;
             sig_loc;
-            comments = Flow_ast_utils.mk_comments_opt ~leading ();
+            comments = Flow_ast_utils.mk_comments_opt ~leading ~trailing ();
           }
     )
 end

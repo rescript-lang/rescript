@@ -114,8 +114,18 @@ let rec match_pattern_has_binding =
     || List.exists
          (fun { ArrayPattern.Element.pattern; _ } -> match_pattern_has_binding pattern)
          elements
+  | (_, InstancePattern { InstancePattern.properties = (properties_loc, properties); _ }) ->
+    match_pattern_has_binding (properties_loc, ObjectPattern properties)
   | (_, OrPattern { OrPattern.patterns; _ }) -> List.exists match_pattern_has_binding patterns
   | (_, AsPattern _) -> true
+
+let pattern_has_type_annotation =
+  let open Pattern in
+  function
+  | (_, Identifier { Identifier.annot = Type.Available _; _ }) -> true
+  | (_, Object { Object.annot = Type.Available _; _ }) -> true
+  | (_, Array { Array.annot = Type.Available _; _ }) -> true
+  | _ -> false
 
 let string_of_variable_kind = function
   | Variable.Var -> "var"
@@ -302,6 +312,26 @@ let is_module_dot_exports callee =
     true
   | _ -> false
 
+(** Checks if an expression is a well-known Symbol like Symbol.iterator.
+    Returns Some "@@iterator" etc. if it is, None otherwise. *)
+let well_known_symbol_name expr =
+  match expr with
+  | ( _,
+      E.Member
+        {
+          E.Member._object = (_, E.Identifier (_, { I.name = "Symbol"; comments = _ }));
+          property = E.Member.PropertyIdentifier (_, { I.name; comments = _ });
+          comments = _;
+        }
+    ) ->
+    (match name with
+    | "iterator" -> Some "@@iterator"
+    | "asyncIterator" -> Some "@@asyncIterator"
+    | "dispose" -> Some "@@dispose"
+    | "asyncDispose" -> Some "@@asyncDispose"
+    | _ -> None)
+  | _ -> None
+
 let get_call_to_jest_module_mocking_fn callee arguments =
   match (callee, arguments) with
   | ( ( _,
@@ -361,6 +391,7 @@ let acceptable_statement_in_declaration_context ~in_declare_namespace =
   | Block _ -> Error "block"
   | Break _ -> Error "break"
   | ClassDeclaration _ -> Error "class declaration"
+  | ComponentDeclaration { ComponentDeclaration.body = None; _ } -> Ok ()
   | ComponentDeclaration _ -> Error "component declaration"
   | Continue _ -> Error "continue"
   | Debugger _ -> Error "debugger"
@@ -376,11 +407,21 @@ let acceptable_statement_in_declaration_context ~in_declare_namespace =
   | If _ -> Error "if"
   | Labeled _ -> Error "labeled"
   | Match _ -> Error "match"
+  | RecordDeclaration _ -> Error "record declaration"
   | Return _ -> Error "return"
   | Switch _ -> Error "switch"
   | Throw _ -> Error "throw"
   | Try _ -> Error "try"
-  | VariableDeclaration _ -> Error "variable declaration"
+  | VariableDeclaration { VariableDeclaration.declarations; _ } ->
+    (* Allow variable declarations if all have type annotations and no initializers (ambient) *)
+    let is_ambient_declarator = function
+      | (_, { VariableDeclaration.Declarator.id; init = None }) -> pattern_has_type_annotation id
+      | _ -> false
+    in
+    if List.for_all is_ambient_declarator declarations then
+      Ok ()
+    else
+      Error "variable declaration"
   | While _ -> Error "while"
   | With _ -> Error "with"
   | ImportDeclaration _ ->
@@ -406,7 +447,10 @@ let acceptable_statement_in_declaration_context ~in_declare_namespace =
   | DeclareVariable _
   | Empty _
   | EnumDeclaration _
+  | ExportAssignment _
+  | NamespaceExportDeclaration _
   | ExportNamedDeclaration { ExportNamedDeclaration.export_kind = ExportType; _ }
+  | ImportEqualsDeclaration _
   | InterfaceDeclaration _
   | OpaqueType _
   | TypeAlias _ ->
@@ -427,6 +471,13 @@ let rec is_type_only_declaration_statement (_, stmt') =
         DeclareExportDeclaration.
           { declaration = Some (NamedType _ | NamedOpaqueType _ | Interface _); _ } ->
       true
+    | DeclareExportDeclaration
+        DeclareExportDeclaration.
+          {
+            declaration = Some (Namespace (_, { DeclareNamespace.body = (_, { Block.body; _ }); _ }));
+            _;
+          } ->
+      List.for_all is_type_only_declaration_statement body
     | DeclareNamespace { DeclareNamespace.body = (_, { Block.body; _ }); _ } ->
       List.for_all is_type_only_declaration_statement body
     | ExportNamedDeclaration { ExportNamedDeclaration.export_kind; _ } -> export_kind = ExportType
@@ -438,6 +489,8 @@ let rec is_type_only_declaration_statement (_, stmt') =
     | Debugger _
     | DoWhile _
     | EnumDeclaration _
+    | ExportAssignment _
+    | NamespaceExportDeclaration _
     | ExportDefaultDeclaration _
     | Expression _
     | For _
@@ -445,8 +498,10 @@ let rec is_type_only_declaration_statement (_, stmt') =
     | ForOf _
     | FunctionDeclaration _
     | If _
+    | ImportEqualsDeclaration _
     | Labeled _
     | Match _
+    | RecordDeclaration _
     | Return _
     | Switch _
     | Throw _
@@ -593,6 +648,7 @@ module ExpressionSort = struct
     | Object
     | OptionalCall
     | OptionalMember
+    | Record
     | Satisfies
     | Sequence
     | Super
@@ -627,6 +683,7 @@ module ExpressionSort = struct
     | Object -> "object"
     | OptionalCall -> "optional call expression"
     | OptionalMember -> "optional member expression"
+    | Record -> "record expression"
     | Satisfies -> "satisfies expression"
     | Sequence -> "sequence"
     | Super -> "`super` reference"
@@ -741,14 +798,15 @@ let get_inferred_type_guard_candidate params body return =
           Function.Params.params =
             [
               ( _,
-                {
-                  Function.Param.argument =
-                    ( _,
-                      Pattern.Identifier
-                        { Pattern.Identifier.name = (loc, { Identifier.name; _ }); _ }
-                    );
-                  _;
-                }
+                Function.Param.RegularParam
+                  {
+                    argument =
+                      ( _,
+                        Pattern.Identifier
+                          { Pattern.Identifier.name = (loc, { Identifier.name; _ }); _ }
+                      );
+                    _;
+                  }
               );
             ];
           rest = None;
@@ -759,3 +817,111 @@ let get_inferred_type_guard_candidate params body return =
     | _ -> None
   end
   | _ -> None
+
+let rec unwrap_nonnull_lhs_expr :
+          'loc 'tloc1 'tloc2.
+          ('loc, 'tloc1) Expression.t ->
+          ('loc, 'tloc1) Expression.t
+          * bool
+          * (('loc, 'tloc2) Expression.t ->
+            filter_nullish:('tloc1 -> 'tloc2) ->
+            ('loc, 'tloc2) Expression.t
+            ) =
+ fun expr ->
+  match expr with
+  | ( loc,
+      Expression.Unary { Expression.Unary.operator = Expression.Unary.Nonnull; argument; comments }
+    ) ->
+    let (argument, _, reconstruct) = unwrap_nonnull_lhs_expr argument in
+    let reconstruct argument ~filter_nullish =
+      ( filter_nullish loc,
+        Expression.Unary
+          {
+            Expression.Unary.operator = Expression.Unary.Nonnull;
+            argument = reconstruct ~filter_nullish argument;
+            comments;
+          }
+      )
+    in
+    (argument, true, reconstruct)
+  | _ -> (expr, false, (fun argument ~filter_nullish:_ -> argument))
+
+let unwrap_nonnull_lhs : 'loc 'tloc. ('loc, 'tloc) Pattern.t -> ('loc, 'tloc) Pattern.t * bool =
+ fun pat ->
+  match pat with
+  | (loc, Pattern.Expression expr) ->
+    let (expr, optional, _) = unwrap_nonnull_lhs_expr expr in
+    begin
+      match expr with
+      | (e_loc, Expression.Identifier name) ->
+        assert optional;
+        ( ( loc,
+            Pattern.Identifier
+              { Pattern.Identifier.name; optional = false; annot = Type.Missing e_loc }
+          ),
+          true
+        )
+      | _ -> ((loc, Pattern.Expression expr), optional)
+    end
+  | _ -> (pat, false)
+
+let effective_export_kind ~statement_export_kind specifier_export_kind =
+  match specifier_export_kind with
+  | Statement.ExportType -> Statement.ExportType
+  | Statement.ExportValue -> statement_export_kind
+
+let export_specifiers_has_value_export ~statement_export_kind specs =
+  let open Statement.ExportNamedDeclaration in
+  List.exists
+    (fun (_, { ExportSpecifier.export_kind = specifier_export_kind; _ }) ->
+      effective_export_kind ~statement_export_kind specifier_export_kind = Statement.ExportValue)
+    specs
+
+let pattern_optional = function
+  | (_, Pattern.Object { Pattern.Object.optional; _ }) -> optional
+  | (_, Pattern.Array { Pattern.Array.optional; _ }) -> optional
+  | (_, Pattern.Identifier { Pattern.Identifier.optional; _ }) -> optional
+  | _ -> false
+
+let pattern_annot (patt : ('M, 'T) Pattern.t) =
+  match patt with
+  | (_, Pattern.Object { Pattern.Object.annot; _ }) -> annot
+  | (_, Pattern.Array { Pattern.Array.annot; _ }) -> annot
+  | (_, Pattern.Identifier { Pattern.Identifier.annot; _ }) -> annot
+  | (_, Pattern.Expression _) -> failwith "Expression patterns have no annotation"
+
+let function_type_param_parts param =
+  let open Type.Function.Param in
+  match param with
+  | Anonymous annot -> (None, annot, false)
+  | Labeled { name; annot; optional } -> (Some name, annot, optional)
+  | Destructuring pattern ->
+    (match pattern_annot pattern with
+    | Type.Available (_, annot) -> (None, annot, pattern_optional pattern)
+    | Type.Missing _ -> failwith "Destructuring function type param must have annotation")
+
+let string_of_enum_explicit_type =
+  let open Statement.EnumDeclaration in
+  function
+  | Boolean -> "boolean"
+  | Number -> "number"
+  | String -> "string"
+  | Symbol -> "symbol"
+  | BigInt -> "bigint"
+
+let string_of_enum_member_name =
+  let open Statement.EnumDeclaration in
+  function
+  | Identifier (_, { I.name; _ }) -> name
+  | StringLiteral (_, { StringLiteral.value; _ }) -> value
+
+let string_of_bigint { BigIntLiteral.value; raw; comments = _ } =
+  (* https://github.com/estree/estree/blob/master/es2020.md#bigintliteral
+   * `bigint` property is the string representation of the `BigInt` value.
+   * It must contain only decimal digits and not include numeric separators `_` or the suffix `n`.
+   *)
+  match value with
+  | Some value -> Int64.to_string value
+  | None ->
+    (* Remove the 'n' suffix and the underscores. *)
+    String.sub raw 0 (String.length raw - 1) |> String.split_on_char '_' |> String.concat ""
