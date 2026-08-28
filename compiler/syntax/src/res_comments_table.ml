@@ -372,12 +372,12 @@ let fun_expr expr =
        looks up when printing a "type a b" group. *)
     newtypes
     |> List.map (fun ((name : string Location.loc), attrs) ->
-           (attrs, Asttypes.Nolabel, None, Ast_helper.Pat.var ~loc:name.loc name))
+        (attrs, Asttypes.Nolabel, None, Ast_helper.Pat.var ~loc:name.loc name))
   in
   let params_of params =
     params
     |> List.map (fun {p_attrs; p_lbl; p_default; p_pat} ->
-           (p_attrs, p_lbl, p_default, p_pat))
+        (p_attrs, p_lbl, p_default, p_pat))
   in
   (* Comments are attached by walking the parameters in source order, so
      the newtype groups are interleaved back at their original positions. *)
@@ -985,13 +985,13 @@ and walk_expression expr t comments =
     walk_list
       (arguments
       |> List.map (fun (lbl, expr) ->
-             let loc =
-               match lbl with
-               | Asttypes.Labelled {loc} | Optional {loc} ->
-                 {loc with loc_end = expr.Parsetree.pexp_loc.loc_end}
-               | _ -> expr.pexp_loc
-             in
-             ExprArgument {expr; loc}))
+          let loc =
+            match lbl with
+            | Asttypes.Labelled {loc} | Optional {loc} ->
+              {loc with loc_end = expr.Parsetree.pexp_loc.loc_end}
+            | _ -> expr.pexp_loc
+          in
+          ExprArgument {expr; loc}))
       t rest
   in
   match expr.Parsetree.pexp_desc with

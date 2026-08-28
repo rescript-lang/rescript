@@ -248,7 +248,7 @@ let for_type_declaration ~env ~(exported : Exported.t)
                                Args
                                  (args
                                  |> List.map (fun t ->
-                                        (t.Typedtree.ctyp_type, t.ctyp_loc)))
+                                     (t.Typedtree.ctyp_type, t.ctyp_loc)))
                              | Cstr_record fields ->
                                InlineRecord
                                  (fields
@@ -351,13 +351,13 @@ let rec for_signature_item ~env ~(exported : Exported.t)
   | Tsig_type (rec_flag, decls) ->
     decls
     |> List.mapi (fun i decl ->
-           let rec_status =
-             match rec_flag with
-             | Recursive when i = 0 -> Types.Trec_first
-             | Nonrecursive when i = 0 -> Types.Trec_not
-             | _ -> Types.Trec_next
-           in
-           decl |> for_type_declaration ~env ~exported ~rec_status)
+        let rec_status =
+          match rec_flag with
+          | Recursive when i = 0 -> Types.Trec_first
+          | Nonrecursive when i = 0 -> Types.Trec_not
+          | _ -> Types.Trec_next
+        in
+        decl |> for_type_declaration ~env ~exported ~rec_status)
   | Tsig_module
       {md_id; md_attributes; md_loc; md_name = name; md_type = {mty_type}} ->
     let item =
@@ -385,8 +385,8 @@ let rec for_signature_item ~env ~(exported : Exported.t)
   | Tsig_recmodule mod_decls ->
     mod_decls
     |> List.map (fun mod_decl ->
-           for_signature_item ~env ~exported
-             {item with sig_desc = Tsig_module mod_decl})
+        for_signature_item ~env ~exported
+          {item with sig_desc = Tsig_module mod_decl})
     |> List.flatten
   | Tsig_include {incl_mod; incl_type} ->
     let env =
@@ -450,8 +450,8 @@ let rec for_structure_item ~(env : Shared_types.Env.t) ~(exported : Exported.t)
           match
             pat.pat_extra
             |> Utils.filter_map (function
-                 | Typedtree.Tpat_unpack, loc, _ -> Some loc
-                 | _ -> None)
+              | Typedtree.Tpat_unpack, loc, _ -> Some loc
+              | _ -> None)
           with
           | loc :: _ -> Some loc
           | [] -> None
@@ -575,8 +575,8 @@ let rec for_structure_item ~(env : Shared_types.Env.t) ~(exported : Exported.t)
   | Tstr_recmodule mod_decls ->
     mod_decls
     |> List.map (fun mod_decl ->
-           for_structure_item ~env ~exported
-             {item with str_desc = Tstr_module mod_decl})
+        for_structure_item ~env ~exported
+          {item with str_desc = Tstr_module mod_decl})
     |> List.flatten
   | Tstr_modtype
       {
@@ -640,13 +640,13 @@ let rec for_structure_item ~(env : Shared_types.Env.t) ~(exported : Exported.t)
   | Tstr_type (rec_flag, decls) ->
     decls
     |> List.mapi (fun i decl ->
-           let rec_status =
-             match rec_flag with
-             | Recursive when i = 0 -> Types.Trec_first
-             | Nonrecursive when i = 0 -> Types.Trec_not
-             | _ -> Types.Trec_next
-           in
-           decl |> for_type_declaration ~env ~exported ~rec_status)
+        let rec_status =
+          match rec_flag with
+          | Recursive when i = 0 -> Types.Trec_first
+          | Nonrecursive when i = 0 -> Types.Trec_not
+          | _ -> Types.Trec_next
+        in
+        decl |> for_type_declaration ~env ~exported ~rec_status)
   | _ -> []
 
 and for_module ~env mod_desc module_name =
@@ -707,8 +707,8 @@ and scan_let_modules ~env (e : Typedtree.expression) =
     scan_let_modules ~env funct;
     args
     |> List.iter (function
-         | _, Some e -> scan_let_modules ~env e
-         | _, None -> ())
+      | _, Some e -> scan_let_modules ~env e
+      | _, None -> ())
   | Texp_tuple exprs -> List.iter (scan_let_modules ~env) exprs
   | Texp_sequence (e1, e2) ->
     scan_let_modules ~env e1;
@@ -728,10 +728,10 @@ and scan_let_modules ~env (e : Typedtree.expression) =
     scan_let_modules ~env e;
     cases
     |> List.iter (fun {Typedtree.c_lhs = _; c_guard; c_rhs} ->
-           (match c_guard with
-           | Some g -> scan_let_modules ~env g
-           | None -> ());
-           scan_let_modules ~env c_rhs)
+        (match c_guard with
+        | Some g -> scan_let_modules ~env g
+        | None -> ());
+        scan_let_modules ~env c_rhs)
   | Texp_ifthenelse (e1, e2, e3_opt) -> (
     scan_let_modules ~env e1;
     scan_let_modules ~env e2;
@@ -750,9 +750,9 @@ and for_structure ~name ~env str_items =
   let attributes =
     str_items
     |> List.filter_map (fun (struc : Typedtree.structure_item) ->
-           match struc with
-           | {str_desc = Tstr_attribute attr} -> Some attr
-           | _ -> None)
+        match struc with
+        | {str_desc = Tstr_attribute attr} -> Some attr
+        | _ -> None)
   in
   let docstring = attrs_to_docstring attributes in
   let deprecated = Process_attributes.find_deprecated_attribute attributes in
@@ -768,10 +768,10 @@ let file_for_cmt_infos ~module_name ~uri
     let items =
       parts |> Array.to_list
       |> Utils.filter_map (fun p ->
-             match (p : Cmt_format.binary_part) with
-             | Partial_structure str -> Some str.str_items
-             | Partial_structure_item str -> Some [str]
-             | _ -> None)
+          match (p : Cmt_format.binary_part) with
+          | Partial_structure str -> Some str.str_items
+          | Partial_structure_item str -> Some [str]
+          | _ -> None)
       |> List.concat
     in
     let structure = for_structure ~name:module_name ~env items in
@@ -780,10 +780,10 @@ let file_for_cmt_infos ~module_name ~uri
     let items =
       parts |> Array.to_list
       |> Utils.filter_map (fun (p : Cmt_format.binary_part) ->
-             match p with
-             | Partial_signature str -> Some str.sig_items
-             | Partial_signature_item str -> Some [str]
-             | _ -> None)
+          match p with
+          | Partial_signature str -> Some str.sig_items
+          | Partial_signature_item str -> Some [str]
+          | _ -> None)
       |> List.concat
     in
     let structure = for_signature ~name:module_name ~env items in

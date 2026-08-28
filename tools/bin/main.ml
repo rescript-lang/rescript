@@ -97,12 +97,12 @@ let main () =
       let files =
         module_names
         |> List.filter_map (fun mod_name ->
-               Hashtbl.find_opt package.paths_for_module mod_name
-               |> Option.map Analysis.Shared_types.get_src)
+            Hashtbl.find_opt package.paths_for_module mod_name
+            |> Option.map Analysis.Shared_types.get_src)
         |> List.concat
         |> List.filter (fun path ->
-               Filename.check_suffix path ".res"
-               || Filename.check_suffix path ".resi")
+            Filename.check_suffix path ".res"
+            || Filename.check_suffix path ".resi")
       in
       let total = List.length files in
       if total = 0 then log_and_exit (Ok "No source files found to migrate")

@@ -25,9 +25,7 @@ let merge_all (builders : builder list) : t =
   let result = Pos_hash.create 256 in
   builders
   |> List.iter (fun builder ->
-         Pos_hash.iter
-           (fun pos decl -> Pos_hash.replace result pos decl)
-           builder);
+      Pos_hash.iter (fun pos decl -> Pos_hash.replace result pos decl) builder);
   result
 
 (* ===== Builder extraction for reactive merge ===== *)

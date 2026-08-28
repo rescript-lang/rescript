@@ -43,8 +43,8 @@ let add_async doc = Doc.concat [Doc.text "async "; doc]
 let has_inline_type_definitions type_declarations =
   type_declarations
   |> List.find_opt (fun (td : Parsetree.type_declaration) ->
-         Res_parsetree_viewer.has_inline_record_definition_attribute
-           td.ptype_attributes)
+      Res_parsetree_viewer.has_inline_record_definition_attribute
+        td.ptype_attributes)
   |> Option.is_some
 
 let get_first_leading_comment tbl loc =
@@ -468,8 +468,8 @@ let is_valid_numeric_polyvar_number (x : string) =
   if len > 1 then
     a > 48
     && for_all_from x 1 (function
-         | '0' .. '9' -> true
-         | _ -> false)
+      | '0' .. '9' -> true
+      | _ -> false)
   else a >= 48
 
 (* Exotic identifiers in poly-vars have a "lighter" syntax: #"ease-in" *)
@@ -500,7 +500,7 @@ let find_inline_record_definition inline_record_name
   | Some inline_record_definitions ->
     inline_record_definitions
     |> List.find_opt (fun (r : Parsetree.type_declaration) ->
-           r.ptype_name.txt = inline_record_name)
+        r.ptype_name.txt = inline_record_name)
 
 let pending_inline_record_definitions inline_record_definitions =
   let external_name_of_type_declaration
@@ -1281,8 +1281,8 @@ and print_type_declarations ~state ~rec_flag type_declarations cmt_tbl =
     let inline_record_definitions, regular_declarations =
       type_declarations
       |> List.partition (fun (td : Parsetree.type_declaration) ->
-             Res_parsetree_viewer.has_inline_record_definition_attribute
-               td.ptype_attributes)
+          Res_parsetree_viewer.has_inline_record_definition_attribute
+            td.ptype_attributes)
     in
     match regular_declarations with
     | [] -> (
@@ -2347,10 +2347,10 @@ and print_value_binding ~state ~rec_flag (vb : Parsetree.value_binding) cmt_tbl
   let attrs =
     vb.pvb_attributes
     |> List.filter_map (function
-         | {Asttypes.txt = "let.unwrap"}, _ ->
-           has_unwrap := true;
-           None
-         | attr -> Some attr)
+      | {Asttypes.txt = "let.unwrap"}, _ ->
+        has_unwrap := true;
+        None
+      | attr -> Some attr)
   in
   let attrs = print_attributes ~state ~loc:vb.pvb_pat.ppat_loc attrs cmt_tbl in
   let header =
@@ -5009,9 +5009,9 @@ and print_jsx_children ~state (children : Parsetree.jsx_children) cmt_tbl =
     let braces =
       expr.pexp_attributes
       |> List.find_map (fun (attr, _) ->
-             match attr with
-             | {Location.txt = "res.braces"; loc} -> Some loc
-             | _ -> None)
+          match attr with
+          | {Location.txt = "res.braces"; loc} -> Some loc
+          | _ -> None)
     in
     match braces with
     | None -> expr.pexp_loc

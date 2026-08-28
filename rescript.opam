@@ -14,7 +14,7 @@ depends: [
   "ppx_deriving" {build}
   "ppx_gen_rec" {build}
   "wtf8"
-  "ocamlformat" {with-test & = "0.27.0"}
+  "ocamlformat" {with-test & = "0.29.0"}
   "yojson" {= "3.0.0"}
   "ounit2" {with-test & = "2.2.7"}
   "odoc" {with-doc}

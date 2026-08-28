@@ -70,12 +70,12 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
              So: posTo=other, posFrom=first *)
           rest
           |> List.concat_map (fun other ->
-                 (* Always add: other -> first (posTo=other, posFrom=first) *)
-                 let refs = [(other.pos, Pos_set.singleton first.pos)] in
-                 if report_types_dead_only_in_interface then refs
-                 else
-                   (* Also add: first -> other (posTo=first, posFrom=other) *)
-                   (first.pos, Pos_set.singleton other.pos) :: refs))
+              (* Always add: other -> first (posTo=other, posFrom=first) *)
+              let refs = [(other.pos, Pos_set.singleton first.pos)] in
+              if report_types_dead_only_in_interface then refs
+              else
+                (* Also add: first -> other (posTo=first, posFrom=other) *)
+                (first.pos, Pos_set.singleton other.pos) :: refs))
       ~merge:Pos_set.union ()
   in
 

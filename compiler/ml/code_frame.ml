@@ -153,16 +153,16 @@ let print ~is_warning ~src ~(start_pos : Lexing.position)
         (end_line_line_end_offset - start_line_line_offset)
       |> String.split_on_char '\n'
       |> filter_mapi (fun i line ->
-             let line_number = i + first_shown_line in
-             if more_than_5_highlighted_lines then
-               if line_number = highlight_line_start_line + 2 then
-                 Some (Elided, line)
-               else if
-                 line_number > highlight_line_start_line + 2
-                 && line_number < highlight_line_end_line - 1
-               then None
-               else Some (Number line_number, line)
-             else Some (Number line_number, line))
+          let line_number = i + first_shown_line in
+          if more_than_5_highlighted_lines then
+            if line_number = highlight_line_start_line + 2 then
+              Some (Elided, line)
+            else if
+              line_number > highlight_line_start_line + 2
+              && line_number < highlight_line_end_line - 1
+            then None
+            else Some (Number line_number, line)
+          else Some (Number line_number, line))
     else []
   in
   let leading_space_to_cut =
@@ -180,48 +180,47 @@ let print ~is_warning ~src ~(start_pos : Lexing.position)
   let stripped_lines =
     lines
     |> List.map (fun (gutter, line) ->
-           let new_content =
-             if String.length line <= leading_space_to_cut then
-               [{s = ""; start = 0; end_ = 0}]
-             else
-               String.sub line leading_space_to_cut
-                 (String.length line - leading_space_to_cut)
-               |> break_long_line line_width
-               |> List.mapi (fun i line ->
-                      match gutter with
-                      | Elided -> {s = line; start = 0; end_ = 0}
-                      | Number line_number ->
-                        let highlight_line_start_offset =
-                          start_pos.pos_cnum - start_pos.pos_bol
-                        in
-                        let highlight_line_end_offset =
-                          end_pos.pos_cnum - end_pos.pos_bol
-                        in
-                        let start =
-                          if i = 0 && line_number = highlight_line_start_line
-                          then
-                            highlight_line_start_offset - leading_space_to_cut
-                          else 0
-                        in
-                        let end_ =
-                          if line_number < highlight_line_start_line then 0
-                          else if
-                            line_number = highlight_line_start_line
-                            && line_number = highlight_line_end_line
-                          then highlight_line_end_offset - leading_space_to_cut
-                          else if line_number = highlight_line_start_line then
-                            String.length line
-                          else if
-                            line_number > highlight_line_start_line
-                            && line_number < highlight_line_end_line
-                          then String.length line
-                          else if line_number = highlight_line_end_line then
-                            highlight_line_end_offset - leading_space_to_cut
-                          else 0
-                        in
-                        {s = line; start; end_})
-           in
-           {gutter; content = new_content})
+        let new_content =
+          if String.length line <= leading_space_to_cut then
+            [{s = ""; start = 0; end_ = 0}]
+          else
+            String.sub line leading_space_to_cut
+              (String.length line - leading_space_to_cut)
+            |> break_long_line line_width
+            |> List.mapi (fun i line ->
+                match gutter with
+                | Elided -> {s = line; start = 0; end_ = 0}
+                | Number line_number ->
+                  let highlight_line_start_offset =
+                    start_pos.pos_cnum - start_pos.pos_bol
+                  in
+                  let highlight_line_end_offset =
+                    end_pos.pos_cnum - end_pos.pos_bol
+                  in
+                  let start =
+                    if i = 0 && line_number = highlight_line_start_line then
+                      highlight_line_start_offset - leading_space_to_cut
+                    else 0
+                  in
+                  let end_ =
+                    if line_number < highlight_line_start_line then 0
+                    else if
+                      line_number = highlight_line_start_line
+                      && line_number = highlight_line_end_line
+                    then highlight_line_end_offset - leading_space_to_cut
+                    else if line_number = highlight_line_start_line then
+                      String.length line
+                    else if
+                      line_number > highlight_line_start_line
+                      && line_number < highlight_line_end_line
+                    then String.length line
+                    else if line_number = highlight_line_end_line then
+                      highlight_line_end_offset - leading_space_to_cut
+                    else 0
+                  in
+                  {s = line; start; end_})
+        in
+        {gutter; content = new_content})
   in
   let buf = Buffer.create 100 in
   let open Color in
@@ -258,36 +257,36 @@ let print ~is_warning ~src ~(start_pos : Lexing.position)
   in
   stripped_lines
   |> List.iter (fun {gutter; content} ->
-         match gutter with
-         | Elided ->
-           draw_gutter Dim ".";
-           add_ch Dim '.';
-           add_ch Dim '.';
-           add_ch Dim '.';
-           add_ch NoColor '\n'
-         | Number line_number ->
-           content
-           |> List.iteri (fun i line ->
-                  let gutter_content =
-                    if i = 0 then string_of_int line_number else ""
-                  in
-                  let gutter_color =
-                    if
-                      i = 0
-                      && line_number >= highlight_line_start_line
-                      && line_number <= highlight_line_end_line
-                    then if is_warning then Warn else Err
-                    else NoColor
-                  in
-                  draw_gutter gutter_color gutter_content;
+      match gutter with
+      | Elided ->
+        draw_gutter Dim ".";
+        add_ch Dim '.';
+        add_ch Dim '.';
+        add_ch Dim '.';
+        add_ch NoColor '\n'
+      | Number line_number ->
+        content
+        |> List.iteri (fun i line ->
+            let gutter_content =
+              if i = 0 then string_of_int line_number else ""
+            in
+            let gutter_color =
+              if
+                i = 0
+                && line_number >= highlight_line_start_line
+                && line_number <= highlight_line_end_line
+              then if is_warning then Warn else Err
+              else NoColor
+            in
+            draw_gutter gutter_color gutter_content;
 
-                  line.s
-                  |> String.iteri (fun ii ch ->
-                         let c =
-                           if ii >= line.start && ii < line.end_ then
-                             if is_warning then Warn else Err
-                           else NoColor
-                         in
-                         add_ch c ch);
-                  add_ch NoColor '\n'));
+            line.s
+            |> String.iteri (fun ii ch ->
+                let c =
+                  if ii >= line.start && ii < line.end_ then
+                    if is_warning then Warn else Err
+                  else NoColor
+                in
+                add_ch c ch);
+            add_ch NoColor '\n'));
   Buffer.contents buf

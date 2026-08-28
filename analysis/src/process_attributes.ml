@@ -33,11 +33,11 @@ let rec find_deprecated_attribute attributes =
 
       fields
       |> List.iter (fun {lid = {txt}; x} ->
-             match (txt, x) with
-             | ( Lident "reason",
-                 {pexp_desc = Pexp_constant (Pconst_string (msg, _))} ) ->
-               reason := msg
-             | _ -> ());
+          match (txt, x) with
+          | ( Lident "reason",
+              {pexp_desc = Pexp_constant (Pconst_string (msg, _))} ) ->
+            reason := msg
+          | _ -> ());
 
       Some !reason
     | _ -> None)
@@ -75,10 +75,10 @@ let rec find_editor_complete_from_attribute ?(module_paths = []) attributes =
     let module_paths_from_array =
       items
       |> List.filter_map (fun item ->
-             match item.Parsetree.pexp_desc with
-             | Pexp_construct ({txt = path}, None) ->
-               Some (Utils.flatten_long_ident path)
-             | _ -> None)
+          match item.Parsetree.pexp_desc with
+          | Pexp_construct ({txt = path}, None) ->
+            Some (Utils.flatten_long_ident path)
+          | _ -> None)
     in
     find_editor_complete_from_attribute
       ~module_paths:(module_paths_from_array @ module_paths)

@@ -45,14 +45,13 @@ let convert (xs : input) : output =
   let os : value list ref = ref [] in
   xs
   |> List.iteri (fun i (hash, (name, act)) ->
-         match Lambda.make_key act with
-         | None ->
-           os := {stamp = i; hash_names_act = ([(hash, name)], act)} :: !os
-         | Some key ->
-           Coll.add_or_update coll key
-             ~update:(fun ({hash_names_act = hash_names, act} as acc) ->
-               {acc with hash_names_act = ((hash, name) :: hash_names, act)})
-             {hash_names_act = ([(hash, name)], act); stamp = i});
+      match Lambda.make_key act with
+      | None -> os := {stamp = i; hash_names_act = ([(hash, name)], act)} :: !os
+      | Some key ->
+        Coll.add_or_update coll key
+          ~update:(fun ({hash_names_act = hash_names, act} as acc) ->
+            {acc with hash_names_act = ((hash, name) :: hash_names, act)})
+          {hash_names_act = ([(hash, name)], act); stamp = i});
   let result = Coll.to_list coll (fun _ value -> value) @ !os in
   Ext_list.sort_via_arrayf result
     (fun x y -> compare x.stamp y.stamp)

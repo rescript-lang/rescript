@@ -44,9 +44,9 @@ module Config = struct
       let names =
         elements
         |> List.filter_map (fun (x : Yojson.Safe.t) ->
-               match x with
-               | `String s -> Some s
-               | _ -> None)
+            match x with
+            | `String s -> Some s
+            | _ -> None)
       in
       run_config.suppress <- names @ run_config.suppress
     | _ -> ()
@@ -57,9 +57,9 @@ module Config = struct
       let names =
         elements
         |> List.filter_map (fun (x : Yojson.Safe.t) ->
-               match x with
-               | `String s -> Some s
-               | _ -> None)
+            match x with
+            | `String s -> Some s
+            | _ -> None)
       in
       run_config.unsuppress <- names @ run_config.unsuppress
     | _ -> ()
@@ -69,12 +69,12 @@ module Config = struct
     | Some (`List elements) ->
       elements
       |> List.iter (fun (x : Yojson.Safe.t) ->
-             match x with
-             | `String "all" -> Run_config.all ()
-             | `String "dce" -> Run_config.dce ()
-             | `String "exception" -> Run_config.exception_ ()
-             | `String "termination" -> Run_config.termination ()
-             | _ -> ())
+          match x with
+          | `String "all" -> Run_config.all ()
+          | `String "dce" -> Run_config.dce ()
+          | `String "exception" -> Run_config.exception_ ()
+          | `String "termination" -> Run_config.termination ()
+          | _ -> ())
     | _ ->
       (* if no "analysis" specified, default to dce *)
       Run_config.dce ()

@@ -234,11 +234,11 @@ let raises_lib_table : (Name.t, Exceptions.t) Hashtbl.t =
     ("Yojson.Basic.Util", yojson_basic_util);
   ]
   |> List.iter (fun (name, group) ->
-         group
-         |> List.iter (fun (s, e) ->
-                Hashtbl.add table
-                  (name ^ "." ^ s |> Name.create)
-                  (e |> Exceptions.from_list)));
+      group
+      |> List.iter (fun (s, e) ->
+          Hashtbl.add table
+            (name ^ "." ^ s |> Name.create)
+            (e |> Exceptions.from_list)));
   table
 
 let find (path : Dce_path.t) =

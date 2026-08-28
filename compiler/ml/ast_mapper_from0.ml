@@ -977,10 +977,10 @@ let default_mapper =
               when List.map (fun {txt} -> txt) newtypes
                    = List.map (fun {txt} -> txt) poly_newtypes
                    &&
-                   try
-                     Ast_helper0.Typ.varify_constructors newtypes typ
-                     = poly_type
-                   with Syntaxerr.Error _ -> false ->
+                     try
+                       Ast_helper0.Typ.varify_constructors newtypes typ
+                       = poly_type
+                     with Syntaxerr.Error _ -> false ->
               Some (pat, expr, newtypes, typ)
             | _ -> None)
           | _ -> None

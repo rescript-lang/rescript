@@ -605,10 +605,10 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
       E.obj
         (items
         |> List.filter_map (fun (exp : J.expression) ->
-               match exp.expression_desc with
-               | Caml_block ([{expression_desc = Str {txt}}; expr], _, _) ->
-                 Some (Js_op.Lit txt, expr)
-               | _ -> None))
+            match exp.expression_desc with
+            | Caml_block ([{expression_desc = Str {txt}}; expr], _, _) ->
+              Some (Js_op.Lit txt, expr)
+            | _ -> None))
     | _ -> assert false)
   | Pdict_has -> (
     match args with

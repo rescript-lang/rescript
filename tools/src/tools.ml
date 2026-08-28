@@ -144,8 +144,8 @@ let rec stringify_type_doc = function
 and stringify_signature_parameter {label; optional; typ} =
   `Assoc
     ((match label with
-     | Some label -> [("label", `String label)]
-     | None -> [])
+       | Some label -> [("label", `String label)]
+       | None -> [])
     @ [("optional", `Bool optional); ("type", stringify_type_doc typ)])
 
 and stringify_value_signature {parameters; return_type} =
@@ -170,24 +170,24 @@ let stringify_detail (detail : doc_item_detail) =
           `List
             (constructor_docs
             |> List.map (fun constructor_doc ->
-                   `Assoc
-                     ([
-                        ("name", `String constructor_doc.constructor_name);
-                        ( "docstrings",
-                          stringify_docstrings constructor_doc.docstrings );
-                        ("signature", `String constructor_doc.signature);
-                      ]
-                     @ (match constructor_doc.deprecated with
-                       | Some d -> [("deprecated", `String d)]
-                       | None -> [])
-                     @
-                     match constructor_doc.items with
-                     | Some constructor_payload ->
-                       [
-                         ( "payload",
-                           stringify_constructor_payload constructor_payload );
-                       ]
-                     | None -> []))) );
+                `Assoc
+                  ([
+                     ("name", `String constructor_doc.constructor_name);
+                     ( "docstrings",
+                       stringify_docstrings constructor_doc.docstrings );
+                     ("signature", `String constructor_doc.signature);
+                   ]
+                  @ (match constructor_doc.deprecated with
+                    | Some d -> [("deprecated", `String d)]
+                    | None -> [])
+                  @
+                  match constructor_doc.items with
+                  | Some constructor_payload ->
+                    [
+                      ( "payload",
+                        stringify_constructor_payload constructor_payload );
+                    ]
+                  | None -> []))) );
       ]
   | Signature {parameters; return_type} ->
     `Assoc
@@ -325,22 +325,19 @@ let type_detail typ ~env ~full ~state =
            constructor_docs =
              constructors
              |> List.map (fun (c : Constructor.t) ->
-                    {
-                      constructor_name = c.cname.txt;
-                      docstrings = c.docstring;
-                      signature = Completion_back_end.show_constructor c;
-                      deprecated = c.deprecated;
-                      items =
-                        (match c.args with
-                        | InlineRecord fields ->
-                          Some
-                            (InlineRecord
-                               {
-                                 field_docs =
-                                   fields |> List.map field_to_field_doc;
-                               })
-                        | _ -> None);
-                    });
+                 {
+                   constructor_name = c.cname.txt;
+                   docstrings = c.docstring;
+                   signature = Completion_back_end.show_constructor c;
+                   deprecated = c.deprecated;
+                   items =
+                     (match c.args with
+                     | InlineRecord fields ->
+                       Some
+                         (InlineRecord
+                            {field_docs = fields |> List.map field_to_field_doc})
+                     | _ -> None);
+                 });
          })
   | _ -> None
 
@@ -467,149 +464,148 @@ let extract_docs ~entry_point_file ~debug =
             items =
               structure.items
               |> List.filter_map (fun (item : Module.item) ->
-                     let item =
-                       {
-                         item with
-                         name = Ext_ident.unwrap_uppercase_exotic item.name;
-                       }
-                     in
-                     let source = get_source ~root_path item.loc in
-                     match item.kind with
-                     | Value typ ->
-                       Some
-                         (Value
-                            {
-                              id = module_path |> make_id ~identifier:item.name;
-                              docstring = item.docstring |> List.map String.trim;
-                              signature =
-                                "let " ^ item.name ^ ": "
-                                ^ Shared.type_to_string typ;
-                              name = item.name;
-                              deprecated = item.deprecated;
-                              detail = value_detail typ;
-                              source;
-                            })
-                     | Type (typ, _) ->
-                       Some
-                         (Type
-                            {
-                              id = module_path |> make_id ~identifier:item.name;
-                              docstring = item.docstring |> List.map String.trim;
-                              signature =
-                                typ.decl |> Shared.decl_to_string item.name;
-                              name = item.name;
-                              deprecated = item.deprecated;
-                              detail = type_detail typ ~full ~env ~state;
-                              source;
-                            })
-                     | Module {type_ = Ident p; is_module_type = false} ->
-                       (* module Whatever = OtherModule *)
-                       let alias_to_module = p |> path_ident_to_string in
-                       let id =
-                         (module_path |> List.rev |> List.hd) ^ "." ^ item.name
-                       in
-                       let items, internal_docstrings =
-                         match
-                           Process_cmt.file_for_module ~package:full.package
-                             ~state alias_to_module
-                         with
-                         | None -> ([], [])
-                         | Some file ->
-                           let docs =
-                             extract_docs_for_module ~module_path:[id]
-                               file.structure
-                           in
-                           (docs.items, docs.docstring)
-                       in
-                       Some
-                         (ModuleAlias
-                            {
-                              id;
-                              name = item.name;
-                              source;
-                              items;
-                              docstring =
-                                item.docstring @ internal_docstrings
-                                |> List.map String.trim;
-                            })
-                     | Module {type_ = Structure m; is_module_type = false} ->
-                       (* module Whatever = {} in res or module Whatever: {} in resi. *)
-                       let module_path = m.name :: module_path in
-                       let docs = extract_docs_for_module ~module_path m in
-                       Some
-                         (Module
-                            {
-                              id = module_path |> List.rev |> ident;
-                              name = m.name;
-                              moduletypeid = None;
-                              docstring = item.docstring @ m.docstring;
-                              deprecated = item.deprecated;
-                              source;
-                              items = docs.items;
-                            })
-                     | Module {type_ = Structure m; is_module_type = true} ->
-                       (* module type Whatever = {} *)
-                       let module_path = m.name :: module_path in
-                       let docs = extract_docs_for_module ~module_path m in
-                       Some
-                         (ModuleType
-                            {
-                              id = module_path |> List.rev |> ident;
-                              name = m.name;
-                              docstring = item.docstring @ m.docstring;
-                              deprecated = item.deprecated;
-                              source;
-                              items = docs.items;
-                            })
-                     | Module
+                  let item =
+                    {
+                      item with
+                      name = Ext_ident.unwrap_uppercase_exotic item.name;
+                    }
+                  in
+                  let source = get_source ~root_path item.loc in
+                  match item.kind with
+                  | Value typ ->
+                    Some
+                      (Value
                          {
-                           type_ =
-                             Constraint (Structure _impl, Structure interface);
-                         } ->
-                       (* module Whatever: { <interface> } = { <impl> }. Prefer the interface. *)
-                       Some
-                         (Module
-                            (extract_docs_for_module
-                               ~module_path:(interface.name :: module_path)
-                               interface))
-                     | Module {type_ = Constraint (Structure m, Ident p)} ->
-                       (* module M: T = { <impl> }. Print M *)
-                       let docs =
-                         extract_docs_for_module
-                           ~module_path:(m.name :: module_path) m
-                       in
-                       let ident_module_path = p |> Path.head |> Ident.name in
+                           id = module_path |> make_id ~identifier:item.name;
+                           docstring = item.docstring |> List.map String.trim;
+                           signature =
+                             "let " ^ item.name ^ ": "
+                             ^ Shared.type_to_string typ;
+                           name = item.name;
+                           deprecated = item.deprecated;
+                           detail = value_detail typ;
+                           source;
+                         })
+                  | Type (typ, _) ->
+                    Some
+                      (Type
+                         {
+                           id = module_path |> make_id ~identifier:item.name;
+                           docstring = item.docstring |> List.map String.trim;
+                           signature =
+                             typ.decl |> Shared.decl_to_string item.name;
+                           name = item.name;
+                           deprecated = item.deprecated;
+                           detail = type_detail typ ~full ~env ~state;
+                           source;
+                         })
+                  | Module {type_ = Ident p; is_module_type = false} ->
+                    (* module Whatever = OtherModule *)
+                    let alias_to_module = p |> path_ident_to_string in
+                    let id =
+                      (module_path |> List.rev |> List.hd) ^ "." ^ item.name
+                    in
+                    let items, internal_docstrings =
+                      match
+                        Process_cmt.file_for_module ~package:full.package ~state
+                          alias_to_module
+                      with
+                      | None -> ([], [])
+                      | Some file ->
+                        let docs =
+                          extract_docs_for_module ~module_path:[id]
+                            file.structure
+                        in
+                        (docs.items, docs.docstring)
+                    in
+                    Some
+                      (ModuleAlias
+                         {
+                           id;
+                           name = item.name;
+                           source;
+                           items;
+                           docstring =
+                             item.docstring @ internal_docstrings
+                             |> List.map String.trim;
+                         })
+                  | Module {type_ = Structure m; is_module_type = false} ->
+                    (* module Whatever = {} in res or module Whatever: {} in resi. *)
+                    let module_path = m.name :: module_path in
+                    let docs = extract_docs_for_module ~module_path m in
+                    Some
+                      (Module
+                         {
+                           id = module_path |> List.rev |> ident;
+                           name = m.name;
+                           moduletypeid = None;
+                           docstring = item.docstring @ m.docstring;
+                           deprecated = item.deprecated;
+                           source;
+                           items = docs.items;
+                         })
+                  | Module {type_ = Structure m; is_module_type = true} ->
+                    (* module type Whatever = {} *)
+                    let module_path = m.name :: module_path in
+                    let docs = extract_docs_for_module ~module_path m in
+                    Some
+                      (ModuleType
+                         {
+                           id = module_path |> List.rev |> ident;
+                           name = m.name;
+                           docstring = item.docstring @ m.docstring;
+                           deprecated = item.deprecated;
+                           source;
+                           items = docs.items;
+                         })
+                  | Module
+                      {
+                        type_ = Constraint (Structure _impl, Structure interface);
+                      } ->
+                    (* module Whatever: { <interface> } = { <impl> }. Prefer the interface. *)
+                    Some
+                      (Module
+                         (extract_docs_for_module
+                            ~module_path:(interface.name :: module_path)
+                            interface))
+                  | Module {type_ = Constraint (Structure m, Ident p)} ->
+                    (* module M: T = { <impl> }. Print M *)
+                    let docs =
+                      extract_docs_for_module
+                        ~module_path:(m.name :: module_path) m
+                    in
+                    let ident_module_path = p |> Path.head |> Ident.name in
 
-                       let module_type_id_path =
-                         match
-                           Process_cmt.file_for_module ~package:full.package
-                             ~state ident_module_path
-                           |> Option.is_none
-                         with
-                         | false -> []
-                         | true -> [module_path |> List.rev |> List.hd]
-                       in
+                    let module_type_id_path =
+                      match
+                        Process_cmt.file_for_module ~package:full.package ~state
+                          ident_module_path
+                        |> Option.is_none
+                      with
+                      | false -> []
+                      | true -> [module_path |> List.rev |> List.hd]
+                    in
 
-                       Some
-                         (Module
-                            {
-                              docs with
-                              moduletypeid =
-                                Some
-                                  (make_id ~identifier:(Path.name p)
-                                     module_type_id_path);
-                            })
-                     | _ -> None)
+                    Some
+                      (Module
+                         {
+                           docs with
+                           moduletypeid =
+                             Some
+                               (make_id ~identifier:(Path.name p)
+                                  module_type_id_path);
+                         })
+                  | _ -> None)
               (* Filter out shadowed bindings by keeping only the last value associated with an id *)
               |> List.rev
               |> List.filter_map (fun (doc_item : doc_item) ->
-                     match doc_item with
-                     | Value {id} ->
-                       if String_set.mem id !values_seen then None
-                       else (
-                         values_seen := String_set.add id !values_seen;
-                         Some doc_item)
-                     | _ -> Some doc_item)
+                  match doc_item with
+                  | Value {id} ->
+                    if String_set.mem id !values_seen then None
+                    else (
+                      values_seen := String_set.add id !values_seen;
+                      Some doc_item)
+                  | _ -> Some doc_item)
               |> List.rev;
           }
         in
@@ -656,14 +652,14 @@ let extract_embedded ~extension_points ~filename =
   let result =
     !content
     |> List.map (fun (loc, extension_name, contents) ->
-           `Assoc
-             [
-               ("extensionName", `String extension_name);
-               ("contents", `String contents);
-               ( "loc",
-                 Analysis.Utils.cmt_loc_to_range loc
-                 |> Lsp.Types.Range.yojson_of_t );
-             ])
+        `Assoc
+          [
+            ("extensionName", `String extension_name);
+            ("contents", `String contents);
+            ( "loc",
+              Analysis.Utils.cmt_loc_to_range loc |> Lsp.Types.Range.yojson_of_t
+            );
+          ])
     |> List.rev
   in
   Yojson.Safe.pretty_to_string (`List result)
@@ -1075,56 +1071,54 @@ module Extract_codeblocks = struct
 
             structure.items
             |> List.iter (fun (item : Module.item) ->
-                   match item.kind with
-                   | Value _typ ->
-                     let id = module_path |> make_id ~identifier:item.name in
-                     let name = item.name in
-                     process_docstrings ~id ~name (get_docstring item.docstring)
-                   | Type (_typ, _) ->
-                     let id = module_path |> make_id ~identifier:item.name in
-                     let name = item.name in
-                     process_docstrings ~id ~name (get_docstring item.docstring)
-                   | Module {type_ = Ident _p; is_module_type = false} ->
-                     (* module Whatever = OtherModule *)
-                     let id =
-                       (module_path |> List.rev |> List.hd) ^ "." ^ item.name
-                     in
-                     let name = item.name in
-                     process_docstrings ~id ~name (get_docstring item.docstring)
-                   | Module {type_ = Structure m; is_module_type = false} ->
-                     (* module Whatever = {} in res or module Whatever: {} in resi. *)
-                     let module_path = m.name :: module_path in
-                     let id = module_path |> List.rev |> ident in
-                     let name = m.name in
-                     process_docstrings ~id ~name (get_docstring m.docstring);
-                     extract_code_blocks_for_module ~module_path m
-                   | Module {type_ = Structure m; is_module_type = true} ->
-                     (* module type Whatever = {} *)
-                     let module_path = m.name :: module_path in
-                     let id = module_path |> List.rev |> ident in
-                     let name = m.name in
-                     process_docstrings ~id ~name (get_docstring m.docstring);
-                     extract_code_blocks_for_module ~module_path m
-                   | Module
-                       {
-                         type_ =
-                           Constraint (Structure _impl, Structure interface);
-                       } ->
-                     (* module Whatever: { <interface> } = { <impl> }. Prefer the interface. *)
-                     let module_path = interface.name :: module_path in
-                     let id = module_path |> List.rev |> ident in
-                     let name = interface.name in
-                     process_docstrings ~id ~name
-                       (get_docstring interface.docstring);
-                     extract_code_blocks_for_module ~module_path interface
-                   | Module {type_ = Constraint (Structure m, Ident _p)} ->
-                     (* module M: T = { <impl> }. Print M *)
-                     let module_path = m.name :: module_path in
-                     let id = module_path |> List.rev |> ident in
-                     let name = m.name in
-                     process_docstrings ~id ~name (get_docstring m.docstring);
-                     extract_code_blocks_for_module ~module_path m
-                   | Module.Module _ -> ())
+                match item.kind with
+                | Value _typ ->
+                  let id = module_path |> make_id ~identifier:item.name in
+                  let name = item.name in
+                  process_docstrings ~id ~name (get_docstring item.docstring)
+                | Type (_typ, _) ->
+                  let id = module_path |> make_id ~identifier:item.name in
+                  let name = item.name in
+                  process_docstrings ~id ~name (get_docstring item.docstring)
+                | Module {type_ = Ident _p; is_module_type = false} ->
+                  (* module Whatever = OtherModule *)
+                  let id =
+                    (module_path |> List.rev |> List.hd) ^ "." ^ item.name
+                  in
+                  let name = item.name in
+                  process_docstrings ~id ~name (get_docstring item.docstring)
+                | Module {type_ = Structure m; is_module_type = false} ->
+                  (* module Whatever = {} in res or module Whatever: {} in resi. *)
+                  let module_path = m.name :: module_path in
+                  let id = module_path |> List.rev |> ident in
+                  let name = m.name in
+                  process_docstrings ~id ~name (get_docstring m.docstring);
+                  extract_code_blocks_for_module ~module_path m
+                | Module {type_ = Structure m; is_module_type = true} ->
+                  (* module type Whatever = {} *)
+                  let module_path = m.name :: module_path in
+                  let id = module_path |> List.rev |> ident in
+                  let name = m.name in
+                  process_docstrings ~id ~name (get_docstring m.docstring);
+                  extract_code_blocks_for_module ~module_path m
+                | Module
+                    {type_ = Constraint (Structure _impl, Structure interface)}
+                  ->
+                  (* module Whatever: { <interface> } = { <impl> }. Prefer the interface. *)
+                  let module_path = interface.name :: module_path in
+                  let id = module_path |> List.rev |> ident in
+                  let name = interface.name in
+                  process_docstrings ~id ~name
+                    (get_docstring interface.docstring);
+                  extract_code_blocks_for_module ~module_path interface
+                | Module {type_ = Constraint (Structure m, Ident _p)} ->
+                  (* module M: T = { <impl> }. Print M *)
+                  let module_path = m.name :: module_path in
+                  let id = module_path |> List.rev |> ident in
+                  let name = m.name in
+                  process_docstrings ~id ~name (get_docstring m.docstring);
+                  extract_code_blocks_for_module ~module_path m
+                | Module.Module _ -> ())
           in
           extract_code_blocks_for_module structure;
           Ok ())
@@ -1233,11 +1227,11 @@ module Extract_codeblocks = struct
         Ok
           (code_blocks
           |> List.mapi (fun index code_block ->
-                 {
-                   id = "codeblock-" ^ string_of_int (index + 1);
-                   name = "codeblock-" ^ string_of_int (index + 1);
-                   code = code_block;
-                 }))
+              {
+                id = "codeblock-" ^ string_of_int (index + 1);
+                name = "codeblock-" ^ string_of_int (index + 1);
+                code = code_block;
+              }))
       else
         let extracted =
           extract_code_blocks ~entry_point_file
@@ -1250,16 +1244,16 @@ module Extract_codeblocks = struct
               if List.length code_blocks > 1 then
                 code_blocks |> List.rev
                 |> List.iteri (fun index code_block ->
-                       add_code_block
-                         {
-                           id = id ^ "-" ^ string_of_int (index + 1);
-                           name;
-                           code = code_block;
-                         })
+                    add_code_block
+                      {
+                        id = id ^ "-" ^ string_of_int (index + 1);
+                        name;
+                        code = code_block;
+                      })
               else
                 code_blocks
                 |> List.iter (fun code_block ->
-                       add_code_block {id; name; code = code_block}))
+                    add_code_block {id; name; code = code_block}))
         in
 
         match extracted with
@@ -1279,12 +1273,12 @@ module Extract_codeblocks = struct
              (`List
                 (code_blocks
                 |> List.map (fun code_block ->
-                       `Assoc
-                         [
-                           ("id", `String code_block.id);
-                           ("name", `String code_block.name);
-                           ("code", `String code_block.code);
-                         ]))))
+                    `Assoc
+                      [
+                        ("id", `String code_block.id);
+                        ("name", `String code_block.name);
+                        ("code", `String code_block.code);
+                      ]))))
 end
 
 module Migrate = Migrate

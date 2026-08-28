@@ -29,7 +29,7 @@
   (ppx_gen_rec :build)
   wtf8
   (ocamlformat
-   (and :with-test (= 0.27.0)))
+   (and :with-test (= 0.29.0)))
   (yojson
    (= 3.0.0))
   (ounit2

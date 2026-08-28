@@ -175,12 +175,12 @@ let emit_code_item ~config ~emitters ~module_items_emitter ~env ~file_name
         let fields =
           fields
           |> List.map (fun (field : field) ->
-                 match
-                   field.name_js = "children"
-                   && field.type_ |> Emit_type.is_type_react_element
-                 with
-                 | true -> {field with type_ = Emit_type.type_react_child}
-                 | false -> field)
+              match
+                field.name_js = "children"
+                && field.type_ |> Emit_type.is_type_react_element
+              with
+              | true -> {field with type_ = Emit_type.type_react_child}
+              | false -> field)
         in
         let function_ =
           {
@@ -295,12 +295,12 @@ let emit_code_item ~config ~emitters ~module_items_emitter ~env ~file_name
           let fields =
             fields
             |> List.map (fun (field : field) ->
-                   match
-                     field.name_js = "children"
-                     && field.type_ |> Emit_type.is_type_react_element
-                   with
-                   | true -> {field with type_ = Emit_type.type_react_child}
-                   | false -> field)
+                match
+                  field.name_js = "children"
+                  && field.type_ |> Emit_type.is_type_react_element
+                with
+                | true -> {field with type_ = Emit_type.type_react_child}
+                | false -> field)
           in
           Object (closed_flags, fields)
         in
@@ -470,7 +470,7 @@ let rec read_cmt_files_recursively ~config ~env
       let new_import_types =
         type_declarations
         |> List.map (fun (type_declaration : Code_item.type_declaration) ->
-               type_declaration.import_types)
+            type_declaration.import_types)
         |> List.concat
       in
       new_import_types
@@ -513,23 +513,23 @@ let emit_import_types ~config ~emitters ~env
 let get_annotated_typed_declarations ~annotated_set type_declarations =
   type_declarations
   |> List.map (fun type_declaration ->
-         let name_in_annotated_set =
-           annotated_set
-           |> String_set.mem
-                (type_declaration.Code_item.export_from_type_declaration
-                   .export_type
-                   .resolved_type_name |> Resolved_name.to_string)
-         in
-         if name_in_annotated_set then
-           {
-             type_declaration with
-             export_from_type_declaration =
-               {
-                 type_declaration.export_from_type_declaration with
-                 annotation = GenType;
-               };
-           }
-         else type_declaration)
+      let name_in_annotated_set =
+        annotated_set
+        |> String_set.mem
+             (type_declaration.Code_item.export_from_type_declaration
+                .export_type
+                .resolved_type_name |> Resolved_name.to_string)
+      in
+      if name_in_annotated_set then
+        {
+          type_declaration with
+          export_from_type_declaration =
+            {
+              type_declaration.export_from_type_declaration with
+              annotation = GenType;
+            };
+        }
+      else type_declaration)
   |> List.filter
        (fun
          ({export_from_type_declaration = {annotation}} :
@@ -542,7 +542,7 @@ let propagate_annotation_to_sub_types ~code_items
   let initial_annotated_types =
     type_map |> String_map.bindings
     |> List.filter (fun (_, {Code_item.annotation}) ->
-           annotation = Annotation.GenType)
+        annotation = Annotation.GenType)
     |> List.map (fun (_, {Code_item.type_}) -> type_)
   in
   let types_of_exported_value (code_item : Code_item.t) =
@@ -627,13 +627,13 @@ let emit_translation_as_string ~config ~file_name
   let import_types_from_type_declarations =
     annotated_type_declarations
     |> List.map (fun (type_declaration : Code_item.type_declaration) ->
-           type_declaration.import_types)
+        type_declaration.import_types)
     |> List.concat
   in
   let export_from_type_declarations =
     annotated_type_declarations
     |> List.map (fun (type_declaration : Code_item.type_declaration) ->
-           type_declaration.export_from_type_declaration)
+        type_declaration.export_from_type_declaration)
   in
   let type_name_is_interface ~env =
     type_name_is_interface ~export_type_map

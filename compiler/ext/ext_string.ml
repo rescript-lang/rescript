@@ -427,8 +427,8 @@ let is_valid_hash_number (x : string) =
   if len > 1 then
     a > 48
     && for_all_from x 1 (function
-         | '0' .. '9' -> true
-         | _ -> false)
+      | '0' .. '9' -> true
+      | _ -> false)
   else a >= 48
 
 let hash_number_as_i32_exn (x : string) : int32 = Int32.of_string x

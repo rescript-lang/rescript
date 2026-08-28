@@ -19,7 +19,7 @@ let white_table_side_effects =
 let path_is_whitelisted_for_side_effects path =
   path
   |> Dce_path.on_ok_path ~when_contains_apply:false ~f:(fun s ->
-         Hashtbl.mem (Lazy.force white_table_side_effects) s)
+      Hashtbl.mem (Lazy.force white_table_side_effects) s)
 
 let rec expr_no_side_effects (expr : Typedtree.expression) =
   match expr.exp_desc with
@@ -38,7 +38,7 @@ let rec expr_no_side_effects (expr : Typedtree.expression) =
   | Texp_let (_, vbs, e) ->
     vbs
     |> List.for_all (fun (vb : Typedtree.value_binding) ->
-           vb.vb_expr |> expr_no_side_effects)
+        vb.vb_expr |> expr_no_side_effects)
     && e |> expr_no_side_effects
   | Texp_record {fields; extended_expression} ->
     fields |> Array.for_all field_no_side_effects

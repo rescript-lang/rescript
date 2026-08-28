@@ -232,22 +232,22 @@ let encode_mappings mappings =
   let first_segment = ref true in
   mappings |> List.sort compare_mapping
   |> List.iter (fun mapping ->
-         while !current_line < mapping.generated_line do
-           Buffer.add_char buf ';';
-           incr current_line;
-           previous_generated_column := 0;
-           first_segment := true
-         done;
-         if not !first_segment then Buffer.add_char buf ',';
-         first_segment := false;
-         add_vlq buf (mapping.generated_column - !previous_generated_column);
-         add_vlq buf (mapping.source_index - !previous_source);
-         add_vlq buf (mapping.original_line - !previous_original_line);
-         add_vlq buf (mapping.original_column - !previous_original_column);
-         previous_generated_column := mapping.generated_column;
-         previous_source := mapping.source_index;
-         previous_original_line := mapping.original_line;
-         previous_original_column := mapping.original_column);
+      while !current_line < mapping.generated_line do
+        Buffer.add_char buf ';';
+        incr current_line;
+        previous_generated_column := 0;
+        first_segment := true
+      done;
+      if not !first_segment then Buffer.add_char buf ',';
+      first_segment := false;
+      add_vlq buf (mapping.generated_column - !previous_generated_column);
+      add_vlq buf (mapping.source_index - !previous_source);
+      add_vlq buf (mapping.original_line - !previous_original_line);
+      add_vlq buf (mapping.original_column - !previous_original_column);
+      previous_generated_column := mapping.generated_column;
+      previous_source := mapping.source_index;
+      previous_original_line := mapping.original_line;
+      previous_original_column := mapping.original_column);
   Buffer.contents buf
 
 let json builder =

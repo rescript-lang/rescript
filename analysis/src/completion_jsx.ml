@@ -223,12 +223,11 @@ let get_jsx_labels ~component_path ~find_type_of_value ~package ~state =
             } ) ->
         label_decls
         |> List.map (fun (ld : Types.label_declaration) ->
-               let name = Ident.name ld.ld_id in
-               let t =
-                 ld.ld_type
-                 |> Type_utils.instantiate_type ~type_params ~type_args
-               in
-               (name, t, env))
+            let name = Ident.name ld.ld_id in
+            let t =
+              ld.ld_type |> Type_utils.instantiate_type ~type_params ~type_args
+            in
+            (name, t, env))
       | _ -> []
     in
     let rec get_labels (t : Types.type_expr) =
@@ -470,28 +469,28 @@ let extract_jsx_props ~(comp_name : Longident.t Location.loc) ~props ~children =
   let props =
     props
     |> List.map (function
-         | JSXPropPunning (_, name) ->
-           {
-             name = name.txt;
-             pos_start = Loc.start name.loc;
-             pos_end = Loc.end_ name.loc;
-             exp =
-               Ast_helper.Exp.ident ~loc:name.loc
-                 {txt = Longident.Lident name.txt; loc = name.loc};
-           }
-         | JSXPropValue (name, _, value) ->
-           {
-             name = name.txt;
-             pos_start = Loc.start name.loc;
-             pos_end = Loc.end_ name.loc;
-             exp = value;
-           }
-         | JSXPropSpreading (loc, expr) ->
-           {
-             name = "_spreadProps";
-             pos_start = Loc.start loc;
-             pos_end = Loc.end_ loc;
-             exp = expr;
-           })
+      | JSXPropPunning (_, name) ->
+        {
+          name = name.txt;
+          pos_start = Loc.start name.loc;
+          pos_end = Loc.end_ name.loc;
+          exp =
+            Ast_helper.Exp.ident ~loc:name.loc
+              {txt = Longident.Lident name.txt; loc = name.loc};
+        }
+      | JSXPropValue (name, _, value) ->
+        {
+          name = name.txt;
+          pos_start = Loc.start name.loc;
+          pos_end = Loc.end_ name.loc;
+          exp = value;
+        }
+      | JSXPropSpreading (loc, expr) ->
+        {
+          name = "_spreadProps";
+          pos_start = Loc.start loc;
+          pos_end = Loc.end_ loc;
+          exp = expr;
+        })
   in
   {comp_name; props; children_start}

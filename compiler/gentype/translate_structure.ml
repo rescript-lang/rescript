@@ -35,7 +35,7 @@ and add_annotations_to_types ~config ~(expr : Typedtree.expression)
     (* Underscore "_" appears as "param", can occur more than once *)
     arg_types
     |> List.mapi (fun i {a_name; a_type} ->
-           {a_name = a_name ^ "_" ^ string_of_int i; a_type})
+        {a_name = a_name ^ "_" ^ string_of_int i; a_type})
   else arg_types
 
 and add_annotations_to_fields ~config (expr : Typedtree.expression)
@@ -125,10 +125,10 @@ let rec remove_duplicate_value_bindings
     let value_bindings_filtered =
       value_bindings
       |> List.filter (fun value_binding ->
-             match value_binding with
-             | {Typedtree.vb_pat = {pat_desc = Tpat_var (id, _)}} ->
-               not (bound_in_rest |> String_set.mem (id |> Ident.name))
-             | _ -> true)
+          match value_binding with
+          | {Typedtree.vb_pat = {pat_desc = Tpat_var (id, _)}} ->
+            not (bound_in_rest |> String_set.mem (id |> Ident.name))
+          | _ -> true)
     in
     let bound =
       value_bindings
@@ -353,6 +353,6 @@ and translate_structure ~config ~output_file_relative ~resolver ~type_env
   if !Debug.translation then Log_.item "Translate Structure\n";
   structure.Typedtree.str_items |> remove_value_binding_duplicates
   |> List.map (fun struct_item ->
-         struct_item
-         |> translate_structure_item ~config ~output_file_relative ~resolver
-              ~type_env)
+      struct_item
+      |> translate_structure_item ~config ~output_file_relative ~resolver
+           ~type_env)

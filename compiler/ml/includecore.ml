@@ -91,8 +91,8 @@ let type_manifest env ty1 params1 ty2 params2 priv2 =
     let row1 = Btype.row_repr row1 and row2 = Btype.row_repr row2 in
     Ctype.equal env true (ty1 :: params1) (row2.row_more :: params2)
     && (match row1.row_more with
-       | {desc = Tvar _ | Tconstr _ | Tnil} -> true
-       | _ -> false)
+      | {desc = Tvar _ | Tconstr _ | Tnil} -> true
+      | _ -> false)
     &&
     let r1, r2, pairs =
       Ctype.merge_row_fields row1.row_fields row2.row_fields
@@ -132,8 +132,8 @@ let type_manifest env ty1 params1 ty2 params2 priv2 =
     &&
     let fields1, rest1 = Ctype.flatten_fields fi1 in
     (match rest1 with
-    | {desc = Tnil | Tvar _ | Tconstr _} -> true
-    | _ -> false)
+      | {desc = Tnil | Tvar _ | Tconstr _} -> true
+      | _ -> false)
     &&
     let pairs, _miss1, miss2 = Ctype.associate_fields fields1 fields2 in
     miss2 = []
@@ -147,10 +147,10 @@ let type_manifest env ty1 params1 ty2 params2 priv2 =
       Ctype.equal env true (ty1 :: params1) (ty2 :: params2)
       || priv2 = Private
          &&
-         try
-           check_super
-             (Ctype.try_expand_once_opt env (Ctype.expand_head env ty1))
-         with Ctype.Cannot_expand -> false
+           try
+             check_super
+               (Ctype.try_expand_once_opt env (Ctype.expand_head env ty1))
+           with Ctype.Cannot_expand -> false
     in
     check_super ty1
 

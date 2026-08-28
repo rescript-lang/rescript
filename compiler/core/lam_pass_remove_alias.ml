@@ -147,12 +147,12 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lam.t) : Lam.t =
       (* be more cautious when do cross module inlining *)
         when Ext_list.same_length params args
              && Ext_list.for_all args (fun arg ->
-                    match arg with
-                    | Lvar p -> (
-                      match Hash_ident.find_opt meta.ident_tbl p with
-                      | Some v -> v <> Parameter
-                      | None -> true)
-                    | _ -> true)
+                 match arg with
+                 | Lvar p -> (
+                   match Hash_ident.find_opt meta.ident_tbl p with
+                   | Some v -> v <> Parameter
+                   | None -> true)
+                 | _ -> true)
              && Lam_analysis.lfunction_can_be_inlined lfunction ->
         simpl (Lam_beta_reduce.propagate_beta_reduce meta params body args)
       | _ ->

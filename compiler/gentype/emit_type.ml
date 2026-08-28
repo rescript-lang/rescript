@@ -95,13 +95,13 @@ let rec render_type ~(config : Config.t) ?(indent = None)
     let fields =
       fields
       |> List.map (fun field ->
-             {
-               field with
-               type_ =
-                 field.type_
-                 |> Type_vars.substitute ~f:(fun s ->
-                        if type_vars |> List.mem s then Some type_any else None);
-             })
+          {
+            field with
+            type_ =
+              field.type_
+              |> Type_vars.substitute ~f:(fun s ->
+                  if type_vars |> List.mem s then Some type_any else None);
+          })
     in
     let component_type =
       type_react_component ~props_type:(Object (closed_flag, fields))
@@ -122,8 +122,8 @@ let rec render_type ~(config : Config.t) ?(indent = None)
        (not builtin) && config.export_interfaces
        && name |> type_name_is_interface
      with
-    | true -> name |> interface_name ~config
-    | false -> name)
+      | true -> name |> interface_name ~config
+      | false -> name)
     ^ Emit_text.generics_string
         ~type_vars:
           (type_args
@@ -172,8 +172,8 @@ let rec render_type ~(config : Config.t) ?(indent = None)
     let inherits_rendered =
       inherits
       |> List.map (fun type_ ->
-             type_
-             |> render_type ~config ~indent ~type_name_is_interface ~in_fun_type)
+          type_
+          |> render_type ~config ~indent ~type_name_is_interface ~in_fun_type)
     in
     let no_payloads_rendered = no_payloads |> List.map label_js_to_string in
     let field ~name value =
@@ -192,63 +192,61 @@ let rec render_type ~(config : Config.t) ?(indent = None)
     let payloads_rendered =
       payloads
       |> List.map (fun {case; t = type_} ->
-             let render t =
-               t
-               |> render_type ~config ~indent ~type_name_is_interface
-                    ~in_fun_type
-             in
-             let tag_field =
-               case |> label_js_to_string
-               |> field ~name:(Runtime.js_variant_tag ~polymorphic:false ~tag)
-             in
-             match (unboxed, type_) with
-             | true, type_ ->
-               let need_parens =
-                 match type_ with
-                 | Function _ -> true
-                 | _ -> false
-               in
-               let t = type_ |> render in
-               if need_parens then Emit_text.parens [t] else t
-             | false, type_ when polymorphic ->
-               (* poly variant *)
-               [
-                 case |> label_js_to_string
-                 |> field ~name:(Runtime.js_variant_tag ~polymorphic ~tag);
-                 type_ |> render
-                 |> field ~name:(Runtime.js_variant_value ~polymorphic);
-               ]
-               |> fields
-             | false, Object (Inline, flds) ->
-               (* inlined record *)
-               tag_field :: flds |> fields
-             | false, type_ ->
-               (* ordinary variant *)
-               let payloads =
-                 match type_ with
-                 | Tuple ts -> ts
-                 | _ -> [type_]
-               in
-               let flds =
-                 tag_field
-                 :: Ext_list.mapi payloads (fun n t ->
-                        t |> render
-                        |> field ~name:(Runtime.js_variant_payload_tag ~n))
-               in
-               flds |> fields)
+          let render t =
+            t
+            |> render_type ~config ~indent ~type_name_is_interface ~in_fun_type
+          in
+          let tag_field =
+            case |> label_js_to_string
+            |> field ~name:(Runtime.js_variant_tag ~polymorphic:false ~tag)
+          in
+          match (unboxed, type_) with
+          | true, type_ ->
+            let need_parens =
+              match type_ with
+              | Function _ -> true
+              | _ -> false
+            in
+            let t = type_ |> render in
+            if need_parens then Emit_text.parens [t] else t
+          | false, type_ when polymorphic ->
+            (* poly variant *)
+            [
+              case |> label_js_to_string
+              |> field ~name:(Runtime.js_variant_tag ~polymorphic ~tag);
+              type_ |> render
+              |> field ~name:(Runtime.js_variant_value ~polymorphic);
+            ]
+            |> fields
+          | false, Object (Inline, flds) ->
+            (* inlined record *)
+            tag_field :: flds |> fields
+          | false, type_ ->
+            (* ordinary variant *)
+            let payloads =
+              match type_ with
+              | Tuple ts -> ts
+              | _ -> [type_]
+            in
+            let flds =
+              tag_field
+              :: Ext_list.mapi payloads (fun n t ->
+                  t |> render |> field ~name:(Runtime.js_variant_payload_tag ~n))
+            in
+            flds |> fields)
     in
     let rendered =
       inherits_rendered @ no_payloads_rendered @ payloads_rendered
     in
     let indent1 = rendered |> Indent.heuristic_variants ~indent in
     (match indent1 = None with
-    | true -> ""
-    | false -> Indent.break ~indent:indent1 ^ "  ")
+      | true -> ""
+      | false -> Indent.break ~indent:indent1 ^ "  ")
     ^ (rendered
       |> String.concat
            ((match indent1 = None with
-            | true -> " "
-            | false -> Indent.break ~indent:indent1)
+              | true -> " "
+              | false -> Indent.break ~indent:indent1)
            ^ "| "))
 
 and render_field ~config ~indent ~type_name_is_interface ~in_fun_type
@@ -299,8 +297,8 @@ and render_fields ~config ~indent ~in_fun_type ~type_name_is_interface fields =
 and render_fun_type ~config ~indent ~in_fun_type ~type_name_is_interface
     ~type_vars arg_types ret_type =
   (match in_fun_type with
-  | true -> "("
-  | false -> "")
+    | true -> "("
+    | false -> "")
   ^ Emit_text.generics_string ~type_vars
   ^ "("
   ^ String.concat ", "
@@ -308,8 +306,8 @@ and render_fun_type ~config ~indent ~in_fun_type ~type_name_is_interface
          (fun i {a_name; a_type} ->
            let parameter_name =
              (match a_name = "" with
-             | true -> "_" ^ string_of_int (i + 1)
-             | false -> a_name)
+               | true -> "_" ^ string_of_int (i + 1)
+               | false -> a_name)
              ^ ":"
            in
            parameter_name
@@ -333,8 +331,8 @@ let emit_export_const ~early ?(comment = "") ~config
     ~type_name_is_interface line =
   let type_string = type_ |> type_to_string ~config ~type_name_is_interface in
   (match comment = "" with
-  | true -> comment
-  | false -> "// " ^ comment ^ "\n")
+    | true -> comment
+    | false -> "// " ^ comment ^ "\n")
   ^ Doc_string.render doc_string
   ^ "export const " ^ name ^ ": " ^ type_string ^ " = " ^ line ^ " as any;"
   |> (match early with

@@ -222,8 +222,8 @@ let traslate_declaration_kind ~config ~loc ~output_file_relative ~resolver
             (List.combine variant.payloads row_fields_variants.payloads
              [@doesNotRaise])
             |> List.map (fun (payload, (label, attributes, _)) ->
-                   let case = create_polyvariant_case (label, attributes) in
-                   {payload with case})
+                let case = create_polyvariant_case (label, attributes) in
+                {payload with case})
           else variant.payloads
         in
         create_variant ~inherits:variant.inherits ~no_payloads ~payloads
@@ -262,38 +262,38 @@ let traslate_declaration_kind ~config ~loc ~output_file_relative ~resolver
     let variants =
       constructor_declarations
       |> List.mapi (fun position constructor_declaration ->
-             let constructor_args = constructor_declaration.Types.cd_args in
-             let name = constructor_declaration.cd_id |> Ident.name in
-             let tag = Variant_runtime.constructor_tag layout position in
-             let args_translation =
-               match constructor_args with
-               | Cstr_tuple type_exprs ->
-                 type_exprs
-                 |> Translate_type_expr_from_types
-                    .translate_type_exprs_from_types ~config ~type_env
-               | Cstr_record label_declarations ->
-                 [
-                   label_declarations
-                   |> translate_label_declarations ~inline:true
-                        ~unboxed:
-                          (type_representation = Unboxed
-                          || Variant_runtime.constructor_is_untagged layout
-                               position);
-                 ]
-             in
-             let arg_types =
-               args_translation
-               |> List.map (fun {Translate_type_expr_from_types.type_} -> type_)
-             in
-             let import_types =
-               args_translation
-               |> List.map (fun {Translate_type_expr_from_types.dependencies} ->
-                      dependencies)
-               |> List.concat
-               |> Translation.translate_dependencies ~config
-                    ~output_file_relative ~resolver
-             in
-             (name, tag, arg_types, import_types))
+          let constructor_args = constructor_declaration.Types.cd_args in
+          let name = constructor_declaration.cd_id |> Ident.name in
+          let tag = Variant_runtime.constructor_tag layout position in
+          let args_translation =
+            match constructor_args with
+            | Cstr_tuple type_exprs ->
+              type_exprs
+              |> Translate_type_expr_from_types.translate_type_exprs_from_types
+                   ~config ~type_env
+            | Cstr_record label_declarations ->
+              [
+                label_declarations
+                |> translate_label_declarations ~inline:true
+                     ~unboxed:
+                       (type_representation = Unboxed
+                       || Variant_runtime.constructor_is_untagged layout
+                            position);
+              ]
+          in
+          let arg_types =
+            args_translation
+            |> List.map (fun {Translate_type_expr_from_types.type_} -> type_)
+          in
+          let import_types =
+            args_translation
+            |> List.map (fun {Translate_type_expr_from_types.dependencies} ->
+                dependencies)
+            |> List.concat
+            |> Translation.translate_dependencies ~config ~output_file_relative
+                 ~resolver
+          in
+          (name, tag, arg_types, import_types))
     in
     let variants_no_payload, variants_with_payload =
       variants |> List.partition (fun (_, _, arg_types, _) -> arg_types = [])
@@ -301,17 +301,17 @@ let traslate_declaration_kind ~config ~loc ~output_file_relative ~resolver
     let no_payloads =
       variants_no_payload
       |> List.map (fun (name, tag, _argTypes, _importTypes) ->
-             create_variant_case name tag)
+          create_variant_case name tag)
     in
     let payloads =
       variants_with_payload
       |> List.map (fun (name, tag, arg_types, _importTypes) ->
-             let type_ =
-               match arg_types with
-               | [type_] -> type_
-               | _ -> Tuple arg_types
-             in
-             {case = create_variant_case name tag; t = type_})
+          let type_ =
+            match arg_types with
+            | [type_] -> type_
+            | _ -> Tuple arg_types
+          in
+          {case = create_variant_case name tag; t = type_})
     in
     let variant_typ =
       let unboxed =
@@ -394,12 +394,12 @@ let translate_type_declarations ~config ~output_file_relative ~recursive
     |> List.iter (add_type_declaration_id_to_type_env ~type_env);
   type_declarations
   |> List.map (fun type_declaration ->
-         let res =
-           type_declaration
-           |> translate_type_declaration ~config ~output_file_relative ~resolver
-                ~type_env
-         in
-         if not recursive then
-           type_declaration |> add_type_declaration_id_to_type_env ~type_env;
-         res)
+      let res =
+        type_declaration
+        |> translate_type_declaration ~config ~output_file_relative ~resolver
+             ~type_env
+      in
+      if not recursive then
+        type_declaration |> add_type_declaration_id_to_type_env ~type_env;
+      res)
   |> List.concat

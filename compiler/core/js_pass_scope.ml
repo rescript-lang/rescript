@@ -162,8 +162,8 @@ let record_scope_pass =
           (* mark which param is used *)
           params
           |> List.iteri (fun i v ->
-                 if not (Set_ident.mem used_idents' v) then
-                   Js_fun_env.mark_unused env i);
+              if not (Set_ident.mem used_idents' v) then
+                Js_fun_env.mark_unused env i);
           let closured_idents' =
             (* pass param_set down *)
             Set_ident.(diff used_idents' (union defined_idents' param_set))

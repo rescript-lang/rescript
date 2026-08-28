@@ -35,8 +35,8 @@ let relpath base path =
     in
     String.concat Filename.dir_sep
       ((match base with
-       | [] -> ["."]
-       | _ -> List.map (fun _ -> "..") base)
+         | [] -> ["."]
+         | _ -> List.map (fun _ -> "..") base)
       @ path)
     |> remove_extra_dots
 
@@ -92,16 +92,14 @@ let rec collect ?(check_dir = fun _ -> true) ?max_depth path test =
     if check_dir path then
       read_directory path
       |> List.map (fun name ->
-             collect ~check_dir (Filename.concat path name) test)
+          collect ~check_dir (Filename.concat path name) test)
       |> List.concat
     else []
   | Some n, Some {Unix.st_kind = Unix.S_DIR} ->
     if check_dir path then
       read_directory path
       |> List.map (fun name ->
-             collect ~check_dir ~max_depth:(n - 1)
-               (Filename.concat path name)
-               test)
+          collect ~check_dir ~max_depth:(n - 1) (Filename.concat path name) test)
       |> List.concat
     else []
   | _ -> if test path then [path] else []

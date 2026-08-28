@@ -523,13 +523,11 @@ and expression_desc cxt ~(level : int) f x : cxt =
         P.string f "(({";
         fields
         |> List.iteri (fun i ({record_rest_label; _} : J.record_rest_field) ->
-               if i > 0 then comma_sp f;
-               let key =
-                 Js_dump_property.property_key (Lit record_rest_label)
-               in
-               P.string f key;
-               P.string f L.colon_space;
-               P.string f ("__unused" ^ string_of_int i));
+            if i > 0 then comma_sp f;
+            let key = Js_dump_property.property_key (Lit record_rest_label) in
+            P.string f key;
+            P.string f L.colon_space;
+            P.string f ("__unused" ^ string_of_int i));
         (match fields with
         | [] -> ()
         | _ -> comma_sp f);
@@ -891,7 +889,7 @@ and expression_desc cxt ~(level : int) f x : cxt =
         {expression_desc = Bin (EqEqEq, e1, {expression_desc = Undefined _})},
         {expression_desc = Bin (EqEqEq, e2, {expression_desc = Null})} )
     when e1 = e2 ->
-    expression_desc cxt ~level:(level : int) f (Is_null_or_undefined e1)
+    expression_desc cxt ~(level : int) f (Is_null_or_undefined e1)
   | Bin (op, e1, e2) ->
     let out, lft, rght = Js_op_util.op_prec op in
     let need_paren =
@@ -1214,8 +1212,8 @@ and print_jsx cxt ?(spread_props : J.expression option)
     in
     let printable_props =
       (match key with
-      | None -> []
-      | Some k -> [print_key k])
+        | None -> []
+        | Some k -> [print_key k])
       @ (match spread_props with
         | None -> []
         | Some spread -> [print_spread_props spread])

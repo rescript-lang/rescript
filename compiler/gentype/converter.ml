@@ -66,7 +66,7 @@ let type_get_inlined ~config ~lookup_id ~type_name_is_interface type0 =
       let with_payload_converted =
         variant.payloads
         |> List.map (fun (payload : payload) ->
-               {payload with t = payload.t |> visit ~visited})
+            {payload with t = payload.t |> visit ~visited})
       in
       let normalized =
         match with_payload_converted with

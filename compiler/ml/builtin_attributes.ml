@@ -88,32 +88,32 @@ let rec deprecated_of_attrs_with_migrate = function
     let reason =
       fields
       |> List.find_map (fun field ->
-             match field with
-             | {
-              lid = {txt = Lident "reason"};
-              x = {pexp_desc = Pexp_constant (Pconst_string (reason, _))};
-             } ->
-               Some reason
-             | _ -> None)
+          match field with
+          | {
+           lid = {txt = Lident "reason"};
+           x = {pexp_desc = Pexp_constant (Pconst_string (reason, _))};
+          } ->
+            Some reason
+          | _ -> None)
     in
     let migration_template =
       fields
       |> List.find_map (fun field ->
-             match field with
-             | {lid = {txt = Lident "migrate"}; x = migration_template} ->
-               Some migration_template
-             | _ -> None)
+          match field with
+          | {lid = {txt = Lident "migrate"}; x = migration_template} ->
+            Some migration_template
+          | _ -> None)
     in
     let migration_in_pipe_chain_template =
       fields
       |> List.find_map (fun field ->
-             match field with
-             | {
-              lid = {txt = Lident "migrateInPipeChain"};
-              x = migration_in_pipe_chain_template;
-             } ->
-               Some migration_in_pipe_chain_template
-             | _ -> None)
+          match field with
+          | {
+           lid = {txt = Lident "migrateInPipeChain"};
+           x = migration_in_pipe_chain_template;
+          } ->
+            Some migration_in_pipe_chain_template
+          | _ -> None)
     in
 
     (* TODO: Validate and error if expected shape mismatches *)

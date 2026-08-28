@@ -33,15 +33,15 @@ let process_cmt_infos ~config ~cmt_file_path cmt_infos : cmt_file_result option
   let exclude_path source_file =
     config.Dce_config.cli.exclude_paths
     |> List.exists (fun prefix_ ->
-           let prefix =
-             match Filename.is_relative source_file with
-             | true -> prefix_
-             | false -> Filename.concat (Sys.getcwd ()) prefix_
-           in
-           String.length prefix <= String.length source_file
-           &&
-           try String.sub source_file 0 (String.length prefix) = prefix
-           with Invalid_argument _ -> false)
+        let prefix =
+          match Filename.is_relative source_file with
+          | true -> prefix_
+          | false -> Filename.concat (Sys.getcwd ()) prefix_
+        in
+        String.length prefix <= String.length source_file
+        &&
+          try String.sub source_file 0 (String.length prefix) = prefix
+          with Invalid_argument _ -> false)
   in
   match cmt_infos.Cmt_format.cmt_annots |> Find_source_file.cmt with
   | Some source_file when not (exclude_path source_file) ->

@@ -366,27 +366,26 @@ module E = struct
   let map_jsx_props sub props =
     props
     |> List.map (function
-         | JSXPropPunning (is_optional, name) ->
-           let ident =
-             Exp.ident ~loc:name.loc
-               {txt = Longident.Lident name.txt; loc = name.loc}
-           in
-           let label =
-             if is_optional then Asttypes.Noloc.Optional name.txt
-             else Asttypes.Noloc.Labelled name.txt
-           in
-           (label, ident)
-         | JSXPropValue (name, is_optional, value) ->
-           let label =
-             if is_optional then Asttypes.Noloc.Optional name.txt
-             else Asttypes.Noloc.Labelled name.txt
-           in
-           ( label,
-             sub.expr sub value |> wrap_with_loc_attr jsx_prop_loc_attr name.loc
-           )
-         | JSXPropSpreading (loc, value) ->
-           ( Asttypes.Noloc.Labelled "_spreadProps",
-             sub.expr sub value |> wrap_with_loc_attr jsx_spread_loc_attr loc ))
+      | JSXPropPunning (is_optional, name) ->
+        let ident =
+          Exp.ident ~loc:name.loc
+            {txt = Longident.Lident name.txt; loc = name.loc}
+        in
+        let label =
+          if is_optional then Asttypes.Noloc.Optional name.txt
+          else Asttypes.Noloc.Labelled name.txt
+        in
+        (label, ident)
+      | JSXPropValue (name, is_optional, value) ->
+        let label =
+          if is_optional then Asttypes.Noloc.Optional name.txt
+          else Asttypes.Noloc.Labelled name.txt
+        in
+        ( label,
+          sub.expr sub value |> wrap_with_loc_attr jsx_prop_loc_attr name.loc )
+      | JSXPropSpreading (loc, value) ->
+        ( Asttypes.Noloc.Labelled "_spreadProps",
+          sub.expr sub value |> wrap_with_loc_attr jsx_spread_loc_attr loc ))
 
   let map_jsx_children sub loc children =
     match children with

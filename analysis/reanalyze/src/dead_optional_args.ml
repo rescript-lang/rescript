@@ -8,9 +8,9 @@ let rec has_optional_args (texpr : Types.type_expr) =
   | Tarrow (params, _) ->
     params
     |> List.exists (fun ({lbl} : Types.arg) ->
-           match lbl with
-           | Optional _ -> true
-           | _ -> false)
+        match lbl with
+        | Optional _ -> true
+        | _ -> false)
   | Tlink t -> has_optional_args t
   | Tsubst t -> has_optional_args t
   | _ -> false
@@ -37,9 +37,9 @@ let rec from_type_expr (texpr : Types.type_expr) =
   | Tarrow (params, _) ->
     params
     |> List.filter_map (fun ({lbl} : Types.arg) ->
-           match lbl with
-           | Optional {txt = s} -> Some s
-           | _ -> None)
+        match lbl with
+        | Optional {txt = s} -> Some s
+        | _ -> None)
   | Tlink t -> from_type_expr t
   | Tsubst t -> from_type_expr t
   | _ -> []

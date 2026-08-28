@@ -170,46 +170,44 @@ and translateCoreType_ ~config ~type_vars_gen
       let no_payloads =
         no_payloads
         |> List.map (fun (label, attributes) ->
-               let label_js =
-                 if as_string then
-                   match attributes |> Annotation.get_as_string with
-                   | Some label_renamed -> StringLabel label_renamed
-                   | None ->
-                     if is_number label then IntLabel label
-                     else StringLabel label
-                 else if as_int then (
-                   match attributes |> Annotation.get_as_int with
-                   | Some n ->
-                     last_bs_int := n;
-                     IntLabel (string_of_int n)
-                   | None ->
-                     last_bs_int := !last_bs_int + 1;
-                     IntLabel (string_of_int !last_bs_int))
-                 else if is_number label then IntLabel label
-                 else StringLabel label
-               in
-               {label_js})
+            let label_js =
+              if as_string then
+                match attributes |> Annotation.get_as_string with
+                | Some label_renamed -> StringLabel label_renamed
+                | None ->
+                  if is_number label then IntLabel label else StringLabel label
+              else if as_int then (
+                match attributes |> Annotation.get_as_int with
+                | Some n ->
+                  last_bs_int := n;
+                  IntLabel (string_of_int n)
+                | None ->
+                  last_bs_int := !last_bs_int + 1;
+                  IntLabel (string_of_int !last_bs_int))
+              else if is_number label then IntLabel label
+              else StringLabel label
+            in
+            {label_js})
       in
       let payloads_translations =
         payloads
         |> List.map (fun (label, attributes, payload) ->
-               ( label,
-                 attributes,
-                 payload |> translateCoreType_ ~config ~type_vars_gen ~type_env
-               ))
+            ( label,
+              attributes,
+              payload |> translateCoreType_ ~config ~type_vars_gen ~type_env ))
       in
       let payloads =
         payloads_translations
         |> List.map (fun (label, _attributes, translation) ->
-               {
-                 case =
-                   {
-                     label_js =
-                       (if is_number label then IntLabel label
-                        else StringLabel label);
-                   };
-                 t = translation.type_;
-               })
+            {
+              case =
+                {
+                  label_js =
+                    (if is_number label then IntLabel label
+                     else StringLabel label);
+                };
+              t = translation.type_;
+            })
       in
       let inherits_translations =
         inherits |> translateCoreTypes_ ~config ~type_vars_gen ~type_env
@@ -234,8 +232,8 @@ and translateCoreType_ ~config ~type_vars_gen
       let type_equations_translation =
         pack_fields
         |> List.map (fun (x, t) ->
-               ( x.Asttypes.txt,
-                 t |> translateCoreType_ ~config ~type_vars_gen ~type_env ))
+            ( x.Asttypes.txt,
+              t |> translateCoreType_ ~config ~type_vars_gen ~type_env ))
       in
       let type_equations =
         type_equations_translation
@@ -272,5 +270,5 @@ let translate_core_type ~config ~type_env core_type =
   if !Debug.dependencies then
     translation.dependencies
     |> List.iter (fun dep ->
-           Log_.item "Dependency: %s\n" (dep |> dep_to_string));
+        Log_.item "Dependency: %s\n" (dep |> dep_to_string));
   translation

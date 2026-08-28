@@ -101,14 +101,14 @@ let process_type_label_dependencies ~config ~decls ~refs =
      connect them together. *)
   index
   |> Path_map.iter (fun _key locs ->
-         match locs with
-         | [] | [_] -> ()
-         | loc0 :: rest ->
-           rest
-           |> List.iter (fun loc ->
-                  extend_type_dependencies ~config ~refs loc loc0;
-                  if not Config.report_types_dead_only_in_interface then
-                    extend_type_dependencies ~config ~refs loc0 loc));
+      match locs with
+      | [] | [_] -> ()
+      | loc0 :: rest ->
+        rest
+        |> List.iter (fun loc ->
+            extend_type_dependencies ~config ~refs loc loc0;
+            if not Config.report_types_dead_only_in_interface then
+              extend_type_dependencies ~config ~refs loc0 loc));
 
   (* Cross-file impl<->intf linking, modeled after the previous lookup logic. *)
   let hd_opt = function
@@ -209,18 +209,16 @@ let process_type_label_dependencies ~config ~decls ~refs =
 
   groups |> Hashtbl.to_seq |> List.of_seq
   |> List.map (fun (current_type_path, (rep_pos, manifest_type_path, items)) ->
-         (rep_pos, current_type_path, manifest_type_path, items))
+      (rep_pos, current_type_path, manifest_type_path, items))
   (* Later (lower) types first *)
   |> List.fast_sort (fun (p1, _, _, _) (p2, _, _, _) -> compare_pos p2 p1)
   |> List.iter (fun (_rep_pos, _currentTypePath, manifest_type_path, items) ->
-         items
-         |> List.fast_sort (fun (p1, _, _) (p2, _, _) -> compare_pos p1 p2)
-         |> List.iter (fun (_pos, field_name, current_loc) ->
-                let manifest_field_path = field_name :: manifest_type_path in
-                match find_one manifest_field_path with
-                | None -> ()
-                | Some manifest_loc ->
-                  extend_type_dependencies ~config ~refs current_loc
-                    manifest_loc;
-                  extend_type_dependencies ~config ~refs manifest_loc
-                    current_loc))
+      items
+      |> List.fast_sort (fun (p1, _, _) (p2, _, _) -> compare_pos p1 p2)
+      |> List.iter (fun (_pos, field_name, current_loc) ->
+          let manifest_field_path = field_name :: manifest_type_path in
+          match find_one manifest_field_path with
+          | None -> ()
+          | Some manifest_loc ->
+            extend_type_dependencies ~config ~refs current_loc manifest_loc;
+            extend_type_dependencies ~config ~refs manifest_loc current_loc))

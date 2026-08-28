@@ -496,7 +496,7 @@ let for_local_stamp ~state ~full:{file; extra; package} stamp (tip : Tip.t) =
                   | Some locs ->
                     locs
                     |> List.map (fun loc ->
-                           {uri = file.uri; loc_opt = Some loc})))
+                        {uri = file.uri; loc_opt = Some loc})))
               (* if this file has a corresponding interface or implementation file
                  also find the references in that file *)
             in
@@ -513,24 +513,23 @@ let for_local_stamp ~state ~full:{file; extra; package} stamp (tip : Tip.t) =
               package.project_files |> File_set.elements
               |> List.filter (fun name -> name <> file.module_name)
               |> List.map (fun module_name ->
-                     Cmt.fulls_from_module ~package ~module_name
-                     |> List.map (fun {file; extra} ->
-                            match
-                              Hashtbl.find_opt extra.external_references
-                                normalized_module_name
-                            with
-                            | None -> []
-                            | Some refs ->
-                              let locs =
-                                refs
-                                |> Utils.filter_map (fun (p, t, locs) ->
-                                       if p = normalized_path && t = tip then
-                                         Some locs
-                                       else None)
-                              in
-                              locs
-                              |> List.map (fun loc ->
-                                     {uri = file.uri; loc_opt = Some loc})))
+                  Cmt.fulls_from_module ~package ~module_name
+                  |> List.map (fun {file; extra} ->
+                      match
+                        Hashtbl.find_opt extra.external_references
+                          normalized_module_name
+                      with
+                      | None -> []
+                      | Some refs ->
+                        let locs =
+                          refs
+                          |> Utils.filter_map (fun (p, t, locs) ->
+                              if p = normalized_path && t = tip then Some locs
+                              else None)
+                        in
+                        locs
+                        |> List.map (fun loc ->
+                            {uri = file.uri; loc_opt = Some loc})))
               |> List.concat |> List.concat
             in
             alternative_references @ externals)
@@ -549,17 +548,17 @@ let all_references_for_loc_item ~state ~full:({file; package} as full) loc_item
     let other_modules_references =
       package.project_files |> File_set.elements
       |> Utils.filter_map (fun module_name ->
-             Cmt.full_from_module ~package ~module_name)
+          Cmt.full_from_module ~package ~module_name)
       |> List.map (fun full ->
-             match Hashtbl.find_opt full.extra.file_references module_name with
-             | None -> []
-             | Some locs ->
-               locs |> Location_set.elements
-               |> List.map (fun loc ->
-                      {
-                        uri = Uri.from_path loc.Location.loc_start.pos_fname;
-                        loc_opt = Some loc;
-                      }))
+          match Hashtbl.find_opt full.extra.file_references module_name with
+          | None -> []
+          | Some locs ->
+            locs |> Location_set.elements
+            |> List.map (fun loc ->
+                {
+                  uri = Uri.from_path loc.Location.loc_start.pos_fname;
+                  loc_opt = Some loc;
+                }))
       |> List.flatten
     in
     let target_module_references =

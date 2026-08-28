@@ -112,11 +112,11 @@ let rename ~state ~path ~pos ~new_name ~debug =
   | Some {documentChanges = Some document_changes} ->
     document_changes
     |> List.map (fun c ->
-           match c with
-           | `RenameFile r -> Lsp.Types.RenameFile.yojson_of_t r
-           | `TextDocumentEdit te -> Lsp.Types.TextDocumentEdit.yojson_of_t te
-           | `DeleteFile df -> Lsp.Types.DeleteFile.yojson_of_t df
-           | `CreateFile cf -> Lsp.Types.CreateFile.yojson_of_t cf)
+        match c with
+        | `RenameFile r -> Lsp.Types.RenameFile.yojson_of_t r
+        | `TextDocumentEdit te -> Lsp.Types.TextDocumentEdit.yojson_of_t te
+        | `DeleteFile df -> Lsp.Types.DeleteFile.yojson_of_t df
+        | `CreateFile cf -> Lsp.Types.CreateFile.yojson_of_t cf)
     |> print_list
   | _ -> print_null ()
 
@@ -227,10 +227,10 @@ let test ~state ~path =
         in
         lines
         |> List.iteri (fun j l ->
-               let line_to_output =
-                 if j == i - 1 then remove_line_comment l else l
-               in
-               Printf.fprintf cout "%s\n" line_to_output);
+            let line_to_output =
+              if j == i - 1 then remove_line_comment l else l
+            in
+            Printf.fprintf cout "%s\n" line_to_output);
         close_out cout;
         current_file
       in
@@ -372,60 +372,60 @@ let test ~state ~path =
             Sys.remove current_file;
             code_actions
             |> List.iter (fun {Lsp.Types.CodeAction.title; edit} ->
-                   Printf.printf "Hit: %s\n" title;
-                   match edit with
-                   | Some {documentChanges} ->
-                     documentChanges |> Option.get
-                     |> List.iter
-                          (fun
-                            (dc :
-                              [ `CreateFile of Lsp.Types.CreateFile.t
-                              | `DeleteFile of Lsp.Types.DeleteFile.t
-                              | `RenameFile of Lsp.Types.RenameFile.t
-                              | `TextDocumentEdit of
-                                Lsp.Types.TextDocumentEdit.t ])
-                          ->
-                            match dc with
-                            | `TextDocumentEdit tde ->
-                              let filename =
-                                tde.textDocument.uri |> Uri.to_path
-                                |> Filename.basename
-                              in
-                              Printf.printf "\nTextDocumentEdit: %s\n" filename;
+                Printf.printf "Hit: %s\n" title;
+                match edit with
+                | Some {documentChanges} ->
+                  documentChanges |> Option.get
+                  |> List.iter
+                       (fun
+                         (dc :
+                           [ `CreateFile of Lsp.Types.CreateFile.t
+                           | `DeleteFile of Lsp.Types.DeleteFile.t
+                           | `RenameFile of Lsp.Types.RenameFile.t
+                           | `TextDocumentEdit of Lsp.Types.TextDocumentEdit.t
+                           ])
+                       ->
+                         match dc with
+                         | `TextDocumentEdit tde ->
+                           let filename =
+                             tde.textDocument.uri |> Uri.to_path
+                             |> Filename.basename
+                           in
+                           Printf.printf "\nTextDocumentEdit: %s\n" filename;
 
-                              tde.edits
-                              |> List.iter
-                                   (fun
-                                     (edit :
-                                       [ `AnnotatedTextEdit of
-                                         Lsp.Types.AnnotatedTextEdit.t
-                                       | `TextEdit of Lsp.Types.TextEdit.t ])
-                                   ->
-                                     let start_char, new_text, range =
-                                       match edit with
-                                       | `TextEdit te ->
-                                         ( te.range.start.character,
-                                           te.newText,
-                                           te.range )
-                                       | `AnnotatedTextEdit te ->
-                                         ( te.range.start.character,
-                                           te.newText,
-                                           te.range )
-                                     in
-                                     let indent = String.make start_char ' ' in
-                                     Printf.printf
-                                       "%s\nnewText:\n%s<--here\n%s%s\n"
-                                       (Lsp.Types.Range.yojson_of_t range
-                                       |> Yojson.Safe.pretty_to_string)
-                                       indent indent new_text)
-                            | `CreateFile cf ->
-                              let filename =
-                                cf.uri |> Uri.to_path |> Filename.basename
-                              in
-                              Printf.printf "\nCreateFile: %s\n" filename
-                            | _ ->
-                              failwith "not implemented text document edit test")
-                   | None -> ())
+                           tde.edits
+                           |> List.iter
+                                (fun
+                                  (edit :
+                                    [ `AnnotatedTextEdit of
+                                      Lsp.Types.AnnotatedTextEdit.t
+                                    | `TextEdit of Lsp.Types.TextEdit.t ])
+                                ->
+                                  let start_char, new_text, range =
+                                    match edit with
+                                    | `TextEdit te ->
+                                      ( te.range.start.character,
+                                        te.newText,
+                                        te.range )
+                                    | `AnnotatedTextEdit te ->
+                                      ( te.range.start.character,
+                                        te.newText,
+                                        te.range )
+                                  in
+                                  let indent = String.make start_char ' ' in
+                                  Printf.printf
+                                    "%s\nnewText:\n%s<--here\n%s%s\n"
+                                    (Lsp.Types.Range.yojson_of_t range
+                                    |> Yojson.Safe.pretty_to_string)
+                                    indent indent new_text)
+                         | `CreateFile cf ->
+                           let filename =
+                             cf.uri |> Uri.to_path |> Filename.basename
+                           in
+                           Printf.printf "\nCreateFile: %s\n" filename
+                         | _ ->
+                           failwith "not implemented text document edit test")
+                | None -> ())
           | "c-a" ->
             let hint = String.sub rest 3 (String.length rest - 3) in
             print_endline

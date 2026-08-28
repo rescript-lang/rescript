@@ -581,18 +581,18 @@ let external_import_needs_adaptation (arg_types : External_arg_spec.params)
     (return_wrapper : External_ffi_types.return_wrapper) =
   decl.variadic
   || (match return_wrapper with
-     | Return_null_to_opt | Return_null_undefined_to_opt -> true
-     | Return_unset | Return_identity -> false)
+    | Return_null_to_opt | Return_null_undefined_to_opt -> true
+    | Return_unset | Return_identity -> false)
   || Ext_list.exists arg_types (fun {arg_type; arg_label} ->
-         (match arg_type with
-         | Nothing | Extern_unit -> false
-         | Poly_var_string _ | Poly_var _ | Int _ | Arg_cst _ | Ignore | Unwrap
-           ->
-           true)
-         ||
-         match arg_label with
-         | Arg_optional -> true
-         | Arg_label | Arg_empty -> false)
+      (match arg_type with
+        | Nothing | Extern_unit -> false
+        | Poly_var_string _ | Poly_var _ | Int _ | Arg_cst _ | Ignore | Unwrap
+          ->
+          true)
+      ||
+      match arg_label with
+      | Arg_optional -> true
+      | Arg_label | Arg_empty -> false)
 
 (* [import(f)] where [f]'s binding needs adaptation lowers to
 
@@ -908,8 +908,7 @@ let try_ids = Hashtbl.create 8
 let extract_directive_for_fn exp =
   exp.exp_attributes
   |> List.find_map (fun ({txt}, payload) ->
-         if txt = "directive" then Ast_payload.is_single_string payload
-         else None)
+      if txt = "directive" then Ast_payload.is_single_string payload else None)
 
 let hoisted_function_attr_name = "res.hoistedFunction"
 

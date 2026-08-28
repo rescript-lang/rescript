@@ -493,8 +493,7 @@ let transl_declaration ~type_record_as_object env sdecl id =
             | _, _, {type_kind = Type_variant (constructors, _)} ->
               constructors
               |> List.iter (fun (c : Types.constructor_declaration) ->
-                     Hashtbl.add constructors_from_variant_spreads c.cd_id.name
-                       c)
+                  Hashtbl.add constructors_from_variant_spreads c.cd_id.name c)
             | _ -> ())
           | _ -> ());
           None)
@@ -518,14 +517,14 @@ let transl_declaration ~type_record_as_object env sdecl id =
                       Cstr_tuple
                         (args
                         |> List.map (fun texpr : Typedtree.core_type ->
-                               {
-                                 ctyp_attributes = cstr.cd_attributes;
-                                 ctyp_loc = cstr.cd_loc;
-                                 ctyp_env = env;
-                                 ctyp_type = texpr;
-                                 ctyp_desc = Ttyp_any;
-                                 (* This is fine because the type checker seems to only look at `ctyp_type` for type checking. *)
-                               }))
+                            {
+                              ctyp_attributes = cstr.cd_attributes;
+                              ctyp_loc = cstr.cd_loc;
+                              ctyp_env = env;
+                              ctyp_type = texpr;
+                              ctyp_desc = Ttyp_any;
+                              (* This is fine because the type checker seems to only look at `ctyp_type` for type checking. *)
+                            }))
                     | Cstr_record lbls ->
                       Cstr_record
                         (lbls
@@ -1509,15 +1508,15 @@ let transl_type_decl env rec_flag sdecl_list =
   let inline_types =
     tdecls
     |> List.filter (fun tdecl ->
-           tdecl.typ_attributes
-           |> List.find_opt (fun (({txt}, _) : Parsetree.attribute) ->
-                  txt = "res.inlineRecordDefinition")
-           |> Option.is_some)
+        tdecl.typ_attributes
+        |> List.find_opt (fun (({txt}, _) : Parsetree.attribute) ->
+            txt = "res.inlineRecordDefinition")
+        |> Option.is_some)
     |> List.filter_map (fun tdecl ->
-           match tdecl.typ_type.type_kind with
-           | Type_record (labels, _) ->
-             Some (Record {type_name = tdecl.typ_name.txt; labels})
-           | _ -> None)
+        match tdecl.typ_type.type_kind with
+        | Type_record (labels, _) ->
+          Some (Record {type_name = tdecl.typ_name.txt; labels})
+        | _ -> None)
   in
   let decls =
     List.map

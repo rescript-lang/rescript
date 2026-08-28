@@ -145,13 +145,13 @@ let iter_files_from_roots_to_leaves (t : t) iter_fun =
     Hashtbl.remove references_by_number 0;
     files_with_no_incoming_references
     |> File_set.iter (fun file_name ->
-           iter_fun file_name;
-           let references = get_deps t file_name in
-           references
-           |> File_set.iter (fun to_file -> remove_edge file_name to_file))
+        iter_fun file_name;
+        let references = get_deps t file_name in
+        references
+        |> File_set.iter (fun to_file -> remove_edge file_name to_file))
   done;
   (* Process any remaining items in case of circular references *)
   references_by_number
   |> Hashtbl.iter (fun _num set ->
-         if File_set.is_empty set then ()
-         else set |> File_set.iter (fun file_name -> iter_fun file_name))
+      if File_set.is_empty set then ()
+      else set |> File_set.iter (fun file_name -> iter_fun file_name))

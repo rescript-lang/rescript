@@ -113,7 +113,7 @@ let apply_type_equations ~config ~path type_env =
           (type_env |> to_string) (id |> Ident.name)
           (type_
           |> Emit_type.type_to_string ~config ~type_name_is_interface:(fun _ ->
-                 false));
+              false));
       Some type_
     | exception Not_found -> None)
   | _ -> None
@@ -176,9 +176,9 @@ let rec get_module_equations type_env : Resolved_name.eq list =
   let sub_equations =
     type_env.map |> String_map.bindings
     |> List.map (fun (_, entry) ->
-           match entry with
-           | Module te -> te |> get_module_equations
-           | Type _ -> [])
+        match entry with
+        | Module te -> te |> get_module_equations
+        | Type _ -> [])
     |> List.concat
   in
   match (type_env.module_equation, type_env.parent) with

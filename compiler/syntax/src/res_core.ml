@@ -42,9 +42,9 @@ let inline_type_name_exists inline_types_context inline_type_name =
 let inline_type_param_exists params param_name =
   params
   |> List.exists (fun (param, _) ->
-         match param.Parsetree.ptyp_desc with
-         | Ptyp_var existing_name -> existing_name = param_name
-         | _ -> false)
+      match param.Parsetree.ptyp_desc with
+      | Ptyp_var existing_name -> existing_name = param_name
+      | _ -> false)
 
 let maybe_track_inline_type_param inline_types_context name loc =
   match inline_types_context with
@@ -523,8 +523,8 @@ let recover_keyword_field_name_if_probably_field p ~mk_message :
   if
     Token.is_keyword p.Parser.token
     && Parser.lookahead p (fun st ->
-           Parser.next st;
-           st.Parser.token = Colon)
+        Parser.next st;
+        st.Parser.token = Colon)
   then (
     emit_keyword_field_error p ~mk_message;
     let loc = mk_loc p.Parser.start_pos p.Parser.end_pos in
@@ -905,7 +905,7 @@ let read_jsx_tag_name (p : Parser.t) :
   | Some (_, _, `Lower) ->
     read_local_jsx_name p
     |> Option.map (fun (name, loc, _) ->
-           {Location.txt = Parsetree.JsxLowerTag name; loc})
+        {Location.txt = Parsetree.JsxLowerTag name; loc})
     |> Option.to_result ~none:""
   | Some (first_seg, first_loc, `Upper) ->
     let start_pos = first_loc.Location.loc_start in
@@ -2883,11 +2883,11 @@ and parse_jsx_opening_or_self_closing_element (* start of the opening < *)
         let closing_tag =
           closing_tag_start
           |> Option.map (fun closing_tag_start ->
-                 {
-                   Parsetree.jsx_closing_container_tag_start = closing_tag_start;
-                   jsx_closing_container_tag_name = end_tag_name;
-                   jsx_closing_container_tag_end = closing_tag_end;
-                 })
+              {
+                Parsetree.jsx_closing_container_tag_start = closing_tag_start;
+                jsx_closing_container_tag_name = end_tag_name;
+                jsx_closing_container_tag_end = closing_tag_end;
+              })
         in
         Ast_helper.Exp.jsx_container_element ~loc name jsx_props opening_tag_end
           children closing_tag
@@ -2924,11 +2924,11 @@ and parse_jsx_opening_or_self_closing_element (* start of the opening < *)
         let closing_tag =
           closing_tag_start
           |> Option.map (fun closing_tag_start ->
-                 {
-                   Parsetree.jsx_closing_container_tag_start = closing_tag_start;
-                   jsx_closing_container_tag_name = end_tag_name;
-                   jsx_closing_container_tag_end = closing_tag_end;
-                 })
+              {
+                Parsetree.jsx_closing_container_tag_start = closing_tag_start;
+                jsx_closing_container_tag_name = end_tag_name;
+                jsx_closing_container_tag_end = closing_tag_end;
+              })
         in
         Ast_helper.Exp.jsx_container_element
           ~loc:(mk_loc start_pos p.prev_end_pos)
@@ -4641,12 +4641,11 @@ and parse_atomic_typ_expr ?current_type_name_path ?inline_types_context ~attrs p
           let inline_types = inline_types_context.found_inline_types in
           args
           |> List.filter (fun (c : Parsetree.core_type) ->
-                 match c.ptyp_desc with
-                 | Ptyp_constr ({txt = Lident typename}, _) ->
-                   inline_types
-                   |> List.exists (fun inline_type ->
-                          inline_type.name = typename)
-                 | _ -> false)
+              match c.ptyp_desc with
+              | Ptyp_constr ({txt = Lident typename}, _) ->
+                inline_types
+                |> List.exists (fun inline_type -> inline_type.name = typename)
+              | _ -> false)
           |> List.length
       in
       if number_of_inline_records_in_args > 1 then
@@ -6527,10 +6526,10 @@ and parse_type_definition_or_extension ~attrs p =
     let inline_types =
       inline_types_context.found_inline_types
       |> List.map (fun inline_type ->
-             Ast_helper.Type.mk ~params:inline_type.params
-               ~attrs:[(Location.mknoloc "res.inlineRecordDefinition", PStr [])]
-               ~loc:inline_type.loc ~kind:inline_type.kind
-               {name with txt = inline_type.name})
+          Ast_helper.Type.mk ~params:inline_type.params
+            ~attrs:[(Location.mknoloc "res.inlineRecordDefinition", PStr [])]
+            ~loc:inline_type.loc ~kind:inline_type.kind
+            {name with txt = inline_type.name})
     in
     TypeDef {rec_flag; types = inline_types @ type_defs}
 
@@ -6571,11 +6570,10 @@ and parse_external_def ~attrs ~start_pos p =
       let inline_types =
         inline_types_context.found_inline_types
         |> List.rev_map (fun inline_type ->
-               Ast_helper.Type.mk ~params:inline_type.params
-                 ~attrs:
-                   [(Location.mknoloc "res.inlineRecordDefinition", PStr [])]
-                 ~loc:inline_type.loc ~kind:inline_type.kind
-                 {name with txt = inline_type.name})
+            Ast_helper.Type.mk ~params:inline_type.params
+              ~attrs:[(Location.mknoloc "res.inlineRecordDefinition", PStr [])]
+              ~loc:inline_type.loc ~kind:inline_type.kind
+              {name with txt = inline_type.name})
         |> List.rev
       in
       (vb, inline_types))

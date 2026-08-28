@@ -718,9 +718,9 @@ module Completable = struct
       context_path_to_string cp ^ "("
       ^ (labels
         |> List.map (function
-             | Asttypes.Nolabel -> "Nolabel"
-             | Labelled {txt} -> "~" ^ txt
-             | Optional {txt} -> "?" ^ txt)
+          | Asttypes.Nolabel -> "Nolabel"
+          | Labelled {txt} -> "~" ^ txt
+          | Optional {txt} -> "?" ^ txt)
         |> String.concat ", ")
       ^ ")"
     | CPArray (Some ctx_path) ->
@@ -1006,7 +1006,7 @@ let state_to_yojson (state : state) =
   let autocomplete_to_yojson autocomplete =
     autocomplete |> Misc.String_map.bindings
     |> List.map (fun (name, files) ->
-           (name, `List (List.map (fun file -> `String file) files)))
+        (name, `List (List.map (fun file -> `String file) files)))
     |> fun fields -> `Assoc fields
   in
 

@@ -238,10 +238,10 @@ module Tycomp_tbl = struct
     Ext_list.filter keys2 (fun id ->
         is_local (find_same id tbl2)
         &&
-        try
-          ignore (find_same id tbl1);
-          false
-        with Not_found -> true)
+          try
+            ignore (find_same id tbl1);
+            false
+          with Not_found -> true)
 end
 
 module Id_tbl = struct
@@ -1704,8 +1704,8 @@ let components_of_functor_appl f env p1 p2 =
     let sub = Subst.add_module f.fcomp_param p2 Subst.identity in
     let mty = Subst.modtype sub f.fcomp_res in
     let comps =
-      components_of_module ~deprecated:None ~loc:Location.none (*???*)
-        env Subst.identity p mty
+      components_of_module ~deprecated:None ~loc:Location.none (*???*) env
+        Subst.identity p mty
     in
     Hashtbl.add f.fcomp_cache p2 comps;
     comps

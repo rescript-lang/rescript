@@ -17,12 +17,12 @@ let rec traverse_tuple_items tuple_items ~next_pattern_path
   let item_with_cursor =
     tuple_items
     |> List.find_map (fun pat ->
-           item_num := !item_num + 1;
-           pat
-           |> traverse_pattern
-                ~pattern_path:(next_pattern_path !item_num)
-                ~loc_has_cursor ~first_char_before_cursor_no_white
-                ~pos_before_cursor)
+        item_num := !item_num + 1;
+        pat
+        |> traverse_pattern
+             ~pattern_path:(next_pattern_path !item_num)
+             ~loc_has_cursor ~first_char_before_cursor_no_white
+             ~pos_before_cursor)
   in
   match (item_with_cursor, first_char_before_cursor_no_white) with
   | None, Some ',' ->
@@ -31,8 +31,8 @@ let rec traverse_tuple_items tuple_items ~next_pattern_path
     let pos_num = ref (-1) in
     tuple_items
     |> List.iteri (fun index pat ->
-           if pos_before_cursor >= Loc.start pat.Parsetree.ppat_loc then
-             pos_num := index);
+        if pos_before_cursor >= Loc.start pat.Parsetree.ppat_loc then
+          pos_num := index);
     if !pos_num > -1 then Some ("", result_from_found_item_num !pos_num)
     else None
   | v, _ -> v
@@ -68,9 +68,9 @@ and traverse_pattern (pat : Parsetree.pattern) ~pattern_path ~loc_has_cursor
     let or_pat_with_item =
       [p1; p2]
       |> List.find_map (fun p ->
-             p
-             |> traverse_pattern ~pattern_path ~loc_has_cursor
-                  ~first_char_before_cursor_no_white ~pos_before_cursor)
+          p
+          |> traverse_pattern ~pattern_path ~loc_has_cursor
+               ~first_char_before_cursor_no_white ~pos_before_cursor)
     in
     match or_pat_with_item with
     | None when is_pattern_hole p1 || is_pattern_hole p2 ->
@@ -102,9 +102,9 @@ and traverse_pattern (pat : Parsetree.pattern) ~pattern_path ~loc_has_cursor
     else
       array_patterns
       |> List.find_map (fun pat ->
-             pat
-             |> traverse_pattern ~pattern_path:next_pattern_path ~loc_has_cursor
-                  ~first_char_before_cursor_no_white ~pos_before_cursor)
+          pat
+          |> traverse_pattern ~pattern_path:next_pattern_path ~loc_has_cursor
+               ~first_char_before_cursor_no_white ~pos_before_cursor)
   | Ppat_tuple tuple_items when loc_has_cursor pat.ppat_loc ->
     tuple_items
     |> traverse_tuple_items ~first_char_before_cursor_no_white

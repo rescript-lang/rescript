@@ -256,10 +256,10 @@ let can_coerce_polyvariant_to_variant ~row_fields ~variant_constructors ~layout
   let polyvariant_runtime_representations =
     row_fields
     |> List.filter_map (fun (label, (field : Types.row_field)) ->
-           (* Check that there's no payload in the polyvariant *)
-           match field with
-           | Rpresent None -> Some label
-           | _ -> None)
+        (* Check that there's no payload in the polyvariant *)
+        match field with
+        | Rpresent None -> Some label
+        | _ -> None)
   in
   if List.length polyvariant_runtime_representations <> List.length row_fields
   then
@@ -270,25 +270,25 @@ let can_coerce_polyvariant_to_variant ~row_fields ~variant_constructors ~layout
       (fun polyvariant_value ->
         variant_constructors
         |> List.mapi (fun position (c : Types.constructor_declaration) ->
-               let constructor_name = Ident.name c.cd_id in
-               match Variant_runtime.constructor_tag layout position with
-               | Some (String as_runtime_string) ->
-                 (* `@as("")`, does the configured string match the polyvariant value? *)
-                 as_runtime_string = polyvariant_value
-               | Some _ ->
-                 (* Any other `@as` can't match since it's by definition not a string *)
-                 false
-               | None -> (
-                 (* No `@as` means the runtime representation will be the constructor
+            let constructor_name = Ident.name c.cd_id in
+            match Variant_runtime.constructor_tag layout position with
+            | Some (String as_runtime_string) ->
+              (* `@as("")`, does the configured string match the polyvariant value? *)
+              as_runtime_string = polyvariant_value
+            | Some _ ->
+              (* Any other `@as` can't match since it's by definition not a string *)
+              false
+            | None -> (
+              (* No `@as` means the runtime representation will be the constructor
                       name as a string.
 
                       However, there's a special case with unboxed types where there's a
                       string catch-all case. In that case, any polyvariant will match,
                       since the catch-all case will match any string. *)
-                 match (unboxed, c.cd_args) with
-                 | true, Cstr_tuple [{desc = Tconstr (p, _, _)}] ->
-                   Path.same p Predef.path_string
-                 | _ -> polyvariant_value = constructor_name))
+              match (unboxed, c.cd_args) with
+              | true, Cstr_tuple [{desc = Tconstr (p, _, _)}] ->
+                Path.same p Predef.path_string
+              | _ -> polyvariant_value = constructor_name))
         |> List.exists Fun.id)
       polyvariant_runtime_representations
   then Ok ()
@@ -302,5 +302,5 @@ let type_is_variant (typ : (Path.t * Path.t * Types.type_declaration) option) =
 let has_res_pat_variant_spread_attribute attrs =
   attrs
   |> List.find_opt (fun (({txt}, _) : Parsetree.attribute) ->
-         txt = "res.patVariantSpread")
+      txt = "res.patVariantSpread")
   |> Option.is_some

@@ -159,8 +159,8 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
     let file_issues =
       sorted
       |> List.concat_map (fun decl ->
-             Dead_common.report_declaration ~config ~has_ref_below
-               ~check_module_dead ~should_report reporting_ctx decl)
+          Dead_common.report_declaration ~config ~has_ref_below
+            ~check_module_dead ~should_report reporting_ctx decl)
     in
     let modules_list =
       Hashtbl.fold (fun m () acc -> m :: acc) modules_with_values []
@@ -298,7 +298,7 @@ let collect_issues ~(t : t) ~(config : Dce_config.t)
       check_module_dead ~dead_modules:t.dead_modules ~reported_modules
         ~file_name:decl.pos.pos_fname (decl_module_name decl)
       |> Option.iter (fun mod_issue ->
-             incorrect_dead_issues := mod_issue :: !incorrect_dead_issues);
+          incorrect_dead_issues := mod_issue :: !incorrect_dead_issues);
       incorrect_dead_issues := issue :: !incorrect_dead_issues)
     t.incorrect_dead_decls;
   let t1 = Unix.gettimeofday () in

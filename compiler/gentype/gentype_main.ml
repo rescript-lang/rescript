@@ -116,14 +116,14 @@ let read_input_cmt is_interface cmt_file =
     let has_gentype_annotations_impl =
       input_cmt_impl
       |> cmt_check_annotations ~check_annotation:(fun ~loc attributes ->
-             if attributes |> check_annotation ~loc then (
-               if not !ignore_interface then (
-                 Log_.Color.setup ();
-                 Log_.info ~loc ~name:"Warning genType" (fun ppf () ->
-                     Format.fprintf ppf
-                       "Annotation is ignored as there's a .resi file"));
-               true)
-             else false)
+          if attributes |> check_annotation ~loc then (
+            if not !ignore_interface then (
+              Log_.Color.setup ();
+              Log_.info ~loc ~name:"Warning genType" (fun ppf () ->
+                  Format.fprintf ppf
+                    "Annotation is ignored as there's a .resi file"));
+            true)
+          else false)
     in
     ( (match !ignore_interface with
       | true -> input_cmt_impl

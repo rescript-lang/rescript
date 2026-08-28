@@ -203,15 +203,15 @@ module Stats = struct
     let counters2 = Hashtbl.create 1 in
     !issues
     |> List.iter (fun (issue : Issue.t) ->
-           let counter =
-             match Hashtbl.find_opt counters2 issue.name with
-             | Some counter -> counter
-             | None ->
-               let counter = ref 0 in
-               Hashtbl.add counters2 issue.name counter;
-               counter
-           in
-           incr counter);
+        let counter =
+          match Hashtbl.find_opt counters2 issue.name with
+          | Some counter -> counter
+          | None ->
+            let counter = ref 0 in
+            Hashtbl.add counters2 issue.name counter;
+            counter
+        in
+        incr counter);
     let issues, n_issues =
       Hashtbl.fold
         (fun name cnt (issues, n_issues) ->

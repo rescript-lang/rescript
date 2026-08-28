@@ -31,19 +31,19 @@ type case = {label_js: label_js}
 let is_js_safe_property_name name =
   name = ""
   || (match name.[0] [@doesNotRaise] with
-     | 'A' .. 'z' -> true
-     | _ -> false)
+       | 'A' .. 'z' -> true
+       | _ -> false)
      && name
         |> String.for_all (function
-             | 'A' .. 'z' | '0' .. '9' -> true
-             | _ -> false)
+          | 'A' .. 'z' | '0' .. '9' -> true
+          | _ -> false)
 
 let is_number s =
   let len = String.length s in
   len > 0
   && (match len > 1 with
-     | true -> (s.[0] [@doesNotRaise]) > '0'
-     | false -> true)
+    | true -> (s.[0] [@doesNotRaise]) > '0'
+    | false -> true)
   &&
   let res = ref true in
   for i = 0 to len - 1 do
@@ -147,8 +147,8 @@ struct
   let is_generated_module id ~(config : Config.t) =
     config.bs_dependencies
     |> List.exists (fun package_name ->
-           package_name |> package_name_to_generated_module_name
-           = Some (id |> Ident.name))
+        package_name |> package_name_to_generated_module_name
+        = Some (id |> Ident.name))
 
   (** (Common, DemoSomelibrary) -> Common-DemoSomelibrary *)
   let add_generated_module s ~generated_module =
@@ -182,8 +182,8 @@ let ident ?(builtin = true) ?(type_args = []) name =
 let sanitize_type_name name =
   name |> Ext_ident.unwrap_uppercase_exotic
   |> String.map (function
-       | '\'' -> '_'
-       | c -> c)
+    | '\'' -> '_'
+    | c -> c)
 let unknown = ident "unknown"
 let bigint_t = ident "bigint"
 let boolean_t = ident "boolean"

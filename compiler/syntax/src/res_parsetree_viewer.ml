@@ -48,13 +48,13 @@ let has_res_pat_variant_spread_attribute attrs =
 let has_dict_pattern_attribute attrs =
   attrs
   |> List.find_opt (fun (({txt}, _) : Parsetree.attribute) ->
-         txt = "res.dictPattern")
+      txt = "res.dictPattern")
   |> Option.is_some
 
 let has_dict_spread_attribute attrs =
   attrs
   |> List.find_opt (fun (({txt}, _) : Parsetree.attribute) ->
-         txt = "res.dictSpread")
+      txt = "res.dictSpread")
   |> Option.is_some
 
 type dict_expr_part =

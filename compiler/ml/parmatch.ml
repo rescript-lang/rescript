@@ -2242,9 +2242,9 @@ let check_unused pred casel =
            | Upartial ps ->
              ps
              |> List.filter (fun p ->
-                    not (Variant_type_spread.is_pat_from_variant_spread_attr p))
+                 not (Variant_type_spread.is_pat_from_variant_spread_attr p))
              |> List.iter (fun p ->
-                    Location.prerr_warning p.pat_loc Warnings.Unused_pat)
+                 Location.prerr_warning p.pat_loc Warnings.Unused_pat)
            | Used -> ()
          with Empty | Not_found | NoGuard -> assert false);
 

@@ -21,7 +21,7 @@ let transform_opt ~source ~pos ~debug ~typ ~hint =
         let cases =
           collect_patterns pattern
           |> List.map (fun (p : Parsetree.pattern) ->
-                 Ast_helper.Exp.case p (Type_utils.Codegen.mk_fail_with_exp ()))
+              Ast_helper.Exp.case p (Type_utils.Codegen.mk_fail_with_exp ()))
         in
         let result = ref None in
         let mk_iterator ~pos ~result =

@@ -18,7 +18,7 @@ let import_type_compare i1 i2 =
 let combine (translations : t list) : t =
   ( translations
   |> List.map (fun {Code_item.import_types; code_items; type_declarations} ->
-         ((import_types, code_items), type_declarations))
+      ((import_types, code_items), type_declarations))
   |> List.split
   |> fun (x, y) -> (x |> List.split, y) )
   |> fun ((import_types, code_items), type_declarations) ->
@@ -175,38 +175,35 @@ let add_type_declarations_from_module_equations ~type_env (translation : t) =
   let new_type_declarations =
     translation.type_declarations
     |> List.map (fun (type_declaration : Code_item.type_declaration) ->
-           let export_type =
-             type_declaration.export_from_type_declaration.export_type
-           in
-           let equations =
-             export_type.resolved_type_name
-             |> Resolved_name.apply_equations ~eqs
-           in
-           equations
-           |> List.map (fun (x, y) ->
-                  let new_export_type =
-                    {
-                      export_type with
-                      name_as = None;
-                      type_ =
-                        y |> Resolved_name.to_string
-                        |> ident ~builtin:false
-                             ~type_args:
-                               (export_type.type_vars
-                               |> List.map (fun s -> TypeVar s));
-                      resolved_type_name = x;
-                    }
-                  in
-                  {
-                    Code_item.export_from_type_declaration =
-                      {
-                        Code_item.export_type = new_export_type;
-                        annotation =
-                          type_declaration.export_from_type_declaration
-                            .annotation;
-                      };
-                    import_types = [];
-                  }))
+        let export_type =
+          type_declaration.export_from_type_declaration.export_type
+        in
+        let equations =
+          export_type.resolved_type_name |> Resolved_name.apply_equations ~eqs
+        in
+        equations
+        |> List.map (fun (x, y) ->
+            let new_export_type =
+              {
+                export_type with
+                name_as = None;
+                type_ =
+                  y |> Resolved_name.to_string
+                  |> ident ~builtin:false
+                       ~type_args:
+                         (export_type.type_vars |> List.map (fun s -> TypeVar s));
+                resolved_type_name = x;
+              }
+            in
+            {
+              Code_item.export_from_type_declaration =
+                {
+                  Code_item.export_type = new_export_type;
+                  annotation =
+                    type_declaration.export_from_type_declaration.annotation;
+                };
+              import_types = [];
+            }))
     |> List.concat
   in
   match new_type_declarations = [] with

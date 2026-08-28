@@ -8,8 +8,8 @@ let is_artifact filename =
 let remove_stale_artifacts directory =
   Sys.readdir directory
   |> Array.iter (fun filename ->
-         if is_artifact filename then
-           Misc.remove_file (Filename.concat directory filename))
+      if is_artifact filename then
+        Misc.remove_file (Filename.concat directory filename))
 
 let create ~output_prefix =
   let directory = output_prefix ^ ".debug-ir" in

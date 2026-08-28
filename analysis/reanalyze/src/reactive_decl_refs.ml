@@ -37,8 +37,8 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
         | Some decls_in_file ->
           decls_in_file
           |> List.filter_map (fun (decl_pos, decl) ->
-                 if pos_in_decl pos_from decl then Some (decl_pos, targets)
-                 else None))
+              if pos_in_decl pos_from decl then Some (decl_pos, targets)
+              else None))
       ~merge:Pos_set.union ()
   in
 
@@ -51,8 +51,8 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
         | Some decls_in_file ->
           decls_in_file
           |> List.filter_map (fun (decl_pos, decl) ->
-                 if pos_in_decl pos_from decl then Some (decl_pos, targets)
-                 else None))
+              if pos_in_decl pos_from decl then Some (decl_pos, targets)
+              else None))
       ~merge:Pos_set.union ()
   in
 

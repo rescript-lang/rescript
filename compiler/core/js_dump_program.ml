@@ -112,8 +112,8 @@ let pp_deps_program ~(output_prefix : string)
     (f : Ext_pp.t) =
   !Js_config.directives
   |> List.iter (fun prim ->
-         P.string f prim;
-         P.newline f);
+      P.string f prim;
+      P.newline f);
   if not !Js_config.no_version_header then (
     P.string f Bs_version.header;
     P.newline f);
