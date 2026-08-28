@@ -23,6 +23,54 @@ outputs:
 runs:
   using: composite
   steps:
+    # wasm_of_ocaml requires Binaryen 119 or newer, including wasm-merge.
+    # Hosted runners do not consistently provide a suitable complete version,
+    # so use the same pinned official release on Linux and macOS.
+    - name: Install Binaryen
+      if: runner.os != 'Windows'
+      shell: bash
+      env:
+        BINARYEN_VERSION: "131"
+      run: |
+        case "$RUNNER_OS-$RUNNER_ARCH" in
+          Linux-X64)
+            platform=x86_64-linux
+            checksum=b5bf1f0eaf17c63ee588ff7a5954dc8f6ce2c26989051c66f24dfe9ece3e46db
+            ;;
+          Linux-ARM64)
+            platform=aarch64-linux
+            checksum=ba991f677edd9a21d2bc96c0144bc8ac5b112d4d98a3eb266e075e22e557df2a
+            ;;
+          macOS-X64)
+            platform=x86_64-macos
+            checksum=d209fadd8a894bdaf3bd3612a23c32a0af184d2f4a979b8c789e6e4f6a4de883
+            ;;
+          macOS-ARM64)
+            platform=arm64-macos
+            checksum=e441b48dc22163d209b4f05e44dc7210909b01237642b6c9ae48fd710a3ef83e
+            ;;
+          *)
+            echo "Unsupported Binaryen platform: $RUNNER_OS-$RUNNER_ARCH" >&2
+            exit 1
+            ;;
+        esac
+
+        archive="binaryen-version_${BINARYEN_VERSION}-${platform}.tar.gz"
+        install_dir="$RUNNER_TOOL_CACHE/binaryen/$BINARYEN_VERSION/$RUNNER_ARCH"
+        curl -fsSL \
+          "https://github.com/WebAssembly/binaryen/releases/download/version_${BINARYEN_VERSION}/${archive}" \
+          -o "$RUNNER_TEMP/$archive"
+
+        if [[ "$RUNNER_OS" == "macOS" ]]; then
+          echo "$checksum  $RUNNER_TEMP/$archive" | shasum -a 256 --check
+        else
+          echo "$checksum  $RUNNER_TEMP/$archive" | sha256sum --check
+        fi
+
+        mkdir -p "$install_dir"
+        tar -xzf "$RUNNER_TEMP/$archive" --strip-components=1 -C "$install_dir"
+        echo "$install_dir/bin" >> "$GITHUB_PATH"
+
     - name: Get OPAM cache key
       id: cache-key
       shell: bash

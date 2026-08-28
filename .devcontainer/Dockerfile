@@ -4,6 +4,7 @@ LABEL org.opencontainers.image.description="Docker image for ReScript developmen
 
 RUN sudo apt-get update && export DEBIAN_FRONTEND=noninteractive \
     && apt-get -y install --no-install-recommends \
+    binaryen \
     cmake \
     musl-tools \
     ninja-build \
