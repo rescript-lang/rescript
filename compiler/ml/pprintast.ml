@@ -243,10 +243,18 @@ let longident_loc f x = pp f "%a" longident x.txt
 
 let string_of_int_as_char i = Ext_util.string_of_int_as_char i
 
+(* Keep layout stable across OCaml <5.4 (byte width) and >=5.4 (Unicode scalar width). *)
+let print_string_with_byte_width f s = Format.pp_print_as f (String.length s) s
+
+let print_quoted_string_with_byte_width f s =
+  let quoted = Printf.sprintf "%S" s in
+  print_string_with_byte_width f quoted
+
 let constant f = function
   | Pconst_char i -> pp f "%s" (string_of_int_as_char i)
-  | Pconst_string (i, None) -> pp f "%S" i
-  | Pconst_string (i, Some delim) -> pp f "{%s|%s|%s}" delim i delim
+  | Pconst_string (i, None) -> print_quoted_string_with_byte_width f i
+  | Pconst_string (i, Some delim) ->
+    pp f "{%s|%a|%s}" delim print_string_with_byte_width i delim
   | Pconst_integer (i, None) -> paren (i.[0] = '-') (fun f -> pp f "%s") f i
   | Pconst_integer (i, Some m) ->
     paren (i.[0] = '-') (fun f (i, m) -> pp f "%s%c" i m) f (i, m)
@@ -279,7 +287,7 @@ let private_flag f = function
   | Public -> ()
   | Private -> pp f "private@ "
 
-let constant_string f s = pp f "%S" s
+let constant_string = print_quoted_string_with_byte_width
 let tyvar f str = pp f "'%s" str
 let tyvar_loc f str = pp f "'%s" str.txt
 let string_quot f x = pp f "`%s" x
@@ -373,6 +381,8 @@ and core_type1 ctxt f x =
         low
     | Ptyp_object (l, o) ->
       let core_field_type f = function
+        | Otag (l, [], ct) ->
+          pp f "@[<hov2>%s: %a@;<2 0>@]" l.txt (core_type ctxt) ct
         | Otag (l, attrs, ct) ->
           pp f "@[<hov2>%s: %a@ %a@ @]" l.txt (core_type ctxt) ct
             (attributes ctxt) attrs (* Cf #7200 *)
