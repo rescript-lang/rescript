@@ -12,7 +12,8 @@ The Dune files were adapted to build these sources as private libraries inside
 the ReScript repository. Sources used only by the upstream JavaScript and C API
 targets are not included. One ambiguous Sedlex documentation comment was
 converted to a regular comment and one unused loop index was renamed so the
-vendored sources build with ReScript's warning settings.
+vendored sources build with ReScript's warning settings. One `List.is_empty`
+call uses an empty-list comparison to retain OCaml 5.0 compatibility.
 
 Vendored sources are excluded from the repository-wide OCamlformat check so
 that they remain comparable with their upstream versions.
