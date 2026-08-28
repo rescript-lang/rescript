@@ -219,7 +219,8 @@ let rec typexp_rec s ty =
                       else Some (type_path s p, tl));
                  }
              | None -> Tvariant row))
-         | _ -> copy_type_desc (typexp_rec s) desc);
+         | _ ->
+           copy_type_desc ~fresh_mutability:s.for_saving (typexp_rec s) desc);
     ty'
 
 (*

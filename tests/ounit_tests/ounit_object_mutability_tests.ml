@@ -1,5 +1,5 @@
 (* Representation-level tests for object-field mutability state: the
-   linkable [field_mutability] cells in [Tfield] (doc §7). These properties
+   linkable [field_mutability] cells in [Tfield] (doc §6.7). These properties
    are not observable from generated JavaScript, so they are tested here
    directly against [Ctype]/[Btype].
 
@@ -149,9 +149,7 @@ let test_structure_generalized_occurrences_share _ =
   assert_bool "promotion is visible through the annotation itself"
     (flag_of annotated = Asttypes.Mutable)
 
-(* ---- §7.4 Q1: every path that shares a mutability class between two
-   owners also shares the row terminator node, so terminator genericity is
-   a property of the sharing class and the copy policy is well defined. *)
+(* Copy-policy coverage for ordinary typing and substitution paths. *)
 
 let terminator_of ty =
   let _, rest = Ctype.flatten_fields (Ctype.object_fields ty) in
@@ -173,14 +171,14 @@ let abstract_type_decl type_manifest : Types.type_declaration =
     type_inlined_types = [];
   }
 
-let test_q1_unified_owners_share_terminator _ =
+let test_unified_owners_share_terminator _ =
   let a = obj_with_cell (immutable_cell ()) in
   let b = obj_with_cell ~closed:true (immutable_cell ()) in
   Ctype.unify Env.empty a b;
   assert_bool "unification makes both rows end at the same terminator node"
     (terminator_of a == terminator_of b)
 
-let test_q1_shared_copy_shares_terminator _ =
+let test_shared_copy_shares_terminator _ =
   let annotated = obj_with_cell (immutable_cell ()) in
   Ctype.generalize_structure annotated;
   let occurrence = Ctype.instance Env.empty annotated in
@@ -188,7 +186,7 @@ let test_q1_shared_copy_shares_terminator _ =
   assert_bool "terminator shared"
     (terminator_of occurrence == terminator_of annotated)
 
-let test_q1_generalized_instance_fresh_cell_fresh_terminator _ =
+let test_generalized_instance_fresh_cell_fresh_terminator _ =
   Ctype.begin_def ();
   let scheme = obj_with_cell (immutable_cell ()) in
   Ctype.end_def ();
@@ -197,7 +195,7 @@ let test_q1_generalized_instance_fresh_cell_fresh_terminator _ =
   assert_bool "class fresh" (cell_of inst != cell_of scheme);
   assert_bool "terminator fresh" (terminator_of inst != terminator_of scheme)
 
-let test_q1_subst_generic_copy_gets_fresh_cell _ =
+let test_subst_generic_copy_gets_fresh_cell _ =
   Ctype.begin_def ();
   let scheme = obj_with_cell (immutable_cell ()) in
   Ctype.end_def ();
@@ -283,12 +281,10 @@ let test_nondep_failure_ends_copy_session _ =
     | Types.Mutability_value Asttypes.Immutable -> true
     | Types.Mutability_value Asttypes.Mutable | Types.Mutability_link _ -> false)
 
-let test_saving_closed_row_resolves_links _ =
-  (* Closed rows have no generic terminator, so saving shares the source's
-     cell rather than duplicating it (safe: marshalling deep-copies). The
-     shared cell must be the resolved representative — saved graphs never
-     contain [Mutability_link], even when the source field's own ref is a
-     link left by an earlier class merge. *)
+let test_saving_closed_row_gets_fresh_resolved_cell _ =
+  (* A saved graph owns fresh cells even for closed rows. The copied cell must
+     contain the resolved value: saved graphs never contain [Mutability_link],
+     even when the source field's own ref is a merged-class link. *)
   let rep = immutable_cell () in
   let a = obj_with_cell ~closed:true (ref (Types.Mutability_link rep)) in
   assert_bool "the source field holds a link (a merged class member)"
@@ -301,7 +297,9 @@ let test_saving_closed_row_resolves_links _ =
     | Types.Mutability_value _ -> true
     | Types.Mutability_link _ -> false);
   assert_bool "the saved flag is the class value"
-    (flag_of saved = Asttypes.Immutable)
+    (flag_of saved = Asttypes.Immutable);
+  assert_bool "the saved graph does not retain the source cell"
+    (cell_of saved != cell_of a)
 
 let test_saving_marshal_round_trip _ =
   (* The real persistence claim: after [for_saving] the graph marshals, and
@@ -350,6 +348,56 @@ let test_saving_preserves_class_sharing _ =
     | Types.Mutability_value _ -> true
     | Types.Mutability_link _ -> false)
 
+let test_for_saving_copy_order_is_irrelevant _ =
+  (* [generalize_structure] makes the field spine generic while leaving its
+     open-row terminator non-generic. [for_saving] makes the copied terminator
+     generic. If the two graphs still share one mutability cell, copying them
+     in one session can then choose different policies for that cell. *)
+  Ctype.begin_def ();
+  let source = obj_with_cell (immutable_cell ()) in
+  Ctype.end_def ();
+  Ctype.generalize_structure source;
+  let saved = Subst.type_expr (Subst.for_saving Subst.identity) source in
+  assert_bool "the fixture has different row-copy classifications"
+    ((terminator_of source).level <> Btype.generic_level
+    && (terminator_of saved).level = Btype.generic_level);
+  assert_bool "for_saving gives the copied graph an independent class"
+    (cell_of source != cell_of saved);
+  let copy_pair first second =
+    match Ctype.instance_list Env.empty [first; second] with
+    | [first'; second'] -> (first', second')
+    | _ -> OUnit.assert_failure "expected two copied object types"
+  in
+  let source_first, saved_second = copy_pair source saved in
+  let saved_first, source_second = copy_pair saved source in
+  let source_first_shares = cell_of source_first == cell_of saved_second in
+  let saved_first_shares = cell_of saved_first == cell_of source_second in
+  assert_bool "source-first copies are separate" (not source_first_shares);
+  assert_bool "saved-first copies are separate" (not saved_first_shares);
+  assert_bool
+    "copying owners of one class must not depend on their order in the session"
+    (source_first_shares = saved_first_shares)
+
+let test_for_saving_fresh_copy_preserves_internal_aliasing _ =
+  Ctype.begin_def ();
+  let cell = immutable_cell () in
+  let source =
+    Ctype.newty (Types.Ttuple [obj_with_cell cell; obj_with_cell cell])
+  in
+  Ctype.end_def ();
+  Ctype.generalize_structure source;
+  let saved = Subst.type_expr (Subst.for_saving Subst.identity) source in
+  let source_a, source_b, saved_a, saved_b =
+    match ((Btype.repr source).desc, (Btype.repr saved).desc) with
+    | Types.Ttuple [source_a; source_b], Types.Ttuple [saved_a; saved_b] ->
+      (source_a, source_b, saved_a, saved_b)
+    | _ -> OUnit.assert_failure "expected source and saved object pairs"
+  in
+  assert_bool "the source aliases share one class"
+    (cell_of source_a == cell_of source_b);
+  assert_bool "the saved aliases share one fresh class"
+    (cell_of saved_a == cell_of saved_b && cell_of saved_a != cell_of source_a)
+
 let suites =
   __FILE__
   >::: [
@@ -365,23 +413,26 @@ let suites =
          >:: test_generalized_instance_preserves_internal_aliasing;
          "structure_generalized_occurrences_share"
          >:: test_structure_generalized_occurrences_share;
-         "q1_unified_owners_share_terminator"
-         >:: test_q1_unified_owners_share_terminator;
-         "q1_shared_copy_shares_terminator"
-         >:: test_q1_shared_copy_shares_terminator;
-         "q1_generalized_instance_fresh_cell_fresh_terminator"
-         >:: test_q1_generalized_instance_fresh_cell_fresh_terminator;
-         "q1_subst_generic_copy_gets_fresh_cell"
-         >:: test_q1_subst_generic_copy_gets_fresh_cell;
+         "unified_owners_share_terminator"
+         >:: test_unified_owners_share_terminator;
+         "shared_copy_shares_terminator" >:: test_shared_copy_shares_terminator;
+         "generalized_instance_fresh_cell_fresh_terminator"
+         >:: test_generalized_instance_fresh_cell_fresh_terminator;
+         "subst_generic_copy_gets_fresh_cell"
+         >:: test_subst_generic_copy_gets_fresh_cell;
          "nondep_type_ends_its_copy_session"
          >:: test_nondep_type_ends_its_copy_session;
          "nondep_nested_copy_preserves_class_sharing"
          >:: test_nondep_nested_copy_preserves_class_sharing;
          "nondep_failure_ends_copy_session"
          >:: test_nondep_failure_ends_copy_session;
-         "saving_closed_row_resolves_links"
-         >:: test_saving_closed_row_resolves_links;
+         "saving_closed_row_gets_fresh_resolved_cell"
+         >:: test_saving_closed_row_gets_fresh_resolved_cell;
          "saving_marshal_round_trip" >:: test_saving_marshal_round_trip;
          "saving_preserves_class_sharing"
          >:: test_saving_preserves_class_sharing;
+         "for_saving_copy_order_is_irrelevant"
+         >:: test_for_saving_copy_order_is_irrelevant;
+         "for_saving_fresh_copy_preserves_internal_aliasing"
+         >:: test_for_saving_fresh_copy_preserves_internal_aliasing;
        ]
