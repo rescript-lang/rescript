@@ -454,10 +454,10 @@ let dup_mutability r =
     r := Mutability_link r';
     r'
 
-(* Copy policy for an object row, memoized per node so copying a row is
-   linear in its length: duplicate the mutability cells iff the row ends in
-   a generic variable (a scheme instantiation); share them otherwise (a
-   structure-generalized copy, whose occurrences must see promotions). *)
+(* Copy policy for an object row, memoized per node so its terminator is
+   classified once per session: duplicate the mutability cells iff the row
+   ends in a generic variable (a scheme instantiation); share them otherwise
+   (a structure-generalized copy, whose occurrences must see promotions). *)
 let row_terminator_generic rest =
   let session = current_type_copy_session () in
   let copy_policy_memo =
@@ -489,7 +489,8 @@ let row_terminator_generic rest =
   in
   go rest
 
-let rec copy_type_desc ?(keep_names = false) f = function
+let rec copy_type_desc ?(keep_names = false) ?(fresh_mutability = false) f =
+  function
   | Tvar _ as ty -> if keep_names then ty else Tvar None
   | Tarrow (params, ret) ->
     Tarrow (List.map (fun arg -> {arg with typ = f arg.typ}) params, f ret)
@@ -498,19 +499,20 @@ let rec copy_type_desc ?(keep_names = false) f = function
   | Tobject ty -> Tobject (f ty)
   | Tvariant _ -> assert false (* too ambiguous *)
   | Tfield f_ ->
-    (* The mutability cell follows the row variable's sharing law:
-       instantiating a generalized row (generic terminator) duplicates each
-       cell once per session via [dup_mutability], so aliases within the
-       instance stay correlated while the scheme and sibling instances are
-       untouched; other copies hold the shared representative, so
-       promotions reach every occurrence. *)
+    (* Unless the caller requests an independent graph, the mutability cell
+       follows the row variable's sharing law: instantiating a generalized row
+       (generic terminator) duplicates each cell once per session via
+       [dup_mutability], so aliases within the instance stay correlated while
+       the scheme and sibling instances are untouched; other copies hold the
+       shared representative, so promotions reach every occurrence. *)
     let mutability =
-      if row_terminator_generic f_.rest then dup_mutability f_.mutability
+      if fresh_mutability || row_terminator_generic f_.rest then
+        dup_mutability f_.mutability
       else mutability_ref_repr f_.mutability
     in
     Tfield {f_ with mutability; typ = f f_.typ; rest = f f_.rest}
   | Tnil -> Tnil
-  | Tlink ty -> copy_type_desc f ty.desc
+  | Tlink ty -> copy_type_desc ~keep_names ~fresh_mutability f ty.desc
   | Tsubst _ -> assert false
   | Tunivar _ as ty -> ty (* always keep the name *)
   | Tpoly (ty, tyl) ->
