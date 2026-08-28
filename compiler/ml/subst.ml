@@ -140,12 +140,6 @@ let rec typexp_rec s ty =
       ty')
     else ty
   | Tsubst ty -> ty
-  | Tfield {name = m; presence = k}
-    when (not s.for_saving) && m = dummy_method
-         && field_kind_repr k <> Fabsent
-         && (repr ty).level < generic_level ->
-    (* do not copy the type of self when it is not generalized *)
-    ty
   (* cannot do it, since it would omit substitution
      | Tvariant row when not (static_row row) ->
          ty
@@ -225,9 +219,6 @@ let rec typexp_rec s ty =
                       else Some (type_path s p, tl));
                  }
              | None -> Tvariant row))
-         | Tfield {presence = kind; rest = t2}
-           when field_kind_repr kind = Fabsent ->
-           Tlink (typexp_rec s t2)
          | _ -> copy_type_desc (typexp_rec s) desc);
     ty'
 

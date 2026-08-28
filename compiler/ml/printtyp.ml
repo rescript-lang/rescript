@@ -110,27 +110,6 @@ let raw_list pr ppf = function
     fprintf ppf "@[<1>[%a%t]@]" pr a (fun ppf ->
         List.iter (fun x -> fprintf ppf ";@,%a" pr x) l)
 
-let kind_vars = ref []
-let kind_count = ref 0
-
-let rec safe_kind_repr v = function
-  | Fvar {contents = Some k} ->
-    if List.memq k v then "Fvar loop" else safe_kind_repr (k :: v) k
-  | Fvar r ->
-    let vid =
-      try List.assq r !kind_vars
-      with Not_found ->
-        let c =
-          incr kind_count;
-          !kind_count
-        in
-        kind_vars := (r, c) :: !kind_vars;
-        c
-    in
-    Printf.sprintf "Fvar {None}@%d" vid
-  | Fpresent -> "Fpresent"
-  | Fabsent -> "Fabsent"
-
 let rec safe_repr v = function
   | {desc = Tlink t} when not (List.memq t v) -> safe_repr (t :: v) t
   | t -> t
@@ -173,9 +152,8 @@ and raw_type_desc ppf = function
     fprintf ppf "@[<hov1>Tconstr(@,%a,@,%a,@,%a)@]" path p raw_type_list tl
       (raw_list path) (list_of_memo !abbrev)
   | Tobject t -> fprintf ppf "@[<hov1>Tobject@,%a@]" raw_type t
-  | Tfield {name = f; presence = k; mutability; typ = t1; rest = t2} ->
-    fprintf ppf "@[<hov1>Tfield(@,%s,@,%s,@,%s,@,%a,@;<0 -1>%a)@]" f
-      (safe_kind_repr [] k)
+  | Tfield {name = f; mutability; typ = t1; rest = t2} ->
+    fprintf ppf "@[<hov1>Tfield(@,%s,@,%s,@,%a,@;<0 -1>%a)@]" f
       (match Btype.mutability_repr mutability with
       | Mutable -> "mutable"
       | Immutable -> "immutable")
@@ -213,11 +191,8 @@ and raw_field ppf = function
 
 let raw_type_expr ppf t =
   visited := [];
-  kind_vars := [];
-  kind_count := 0;
   raw_type ppf t;
-  visited := [];
-  kind_vars := []
+  visited := []
 
 let () = Btype.print_raw := raw_type_expr
 
@@ -528,16 +503,10 @@ let rec mark_loops_rec visited ty =
       else (
         if opened_object ty then visited_objects := px :: !visited_objects;
         let fields, _ = flatten_fields fi in
-        List.iter
-          (fun {Ctype.f_kind; f_typ} ->
-            if field_kind_repr f_kind = Fpresent then
-              mark_loops_rec visited f_typ)
-          fields)
-    | Tfield {presence = kind; typ = ty1; rest = ty2}
-      when field_kind_repr kind = Fpresent ->
+        List.iter (fun {Ctype.f_typ} -> mark_loops_rec visited f_typ) fields)
+    | Tfield {typ = ty1; rest = ty2} ->
       mark_loops_rec visited ty1;
       mark_loops_rec visited ty2
-    | Tfield {rest = ty2} -> mark_loops_rec visited ty2
     | Tnil -> ()
     | Tsubst ty -> mark_loops_rec visited ty
     | Tlink _ -> fatal_error "Printtyp.mark_loops_rec (2)"
@@ -741,13 +710,10 @@ and tree_of_typlist ?printing_context sch tyl =
 and tree_of_typobject ?printing_context sch fi =
   let fields, rest = flatten_fields fi in
   let present_fields =
-    List.fold_right
-      (fun {f_name; f_kind; f_mut; f_typ} l ->
-        match field_kind_repr f_kind with
-        | Fpresent ->
-          (f_name, Btype.mutability_repr f_mut = Asttypes.Mutable, f_typ) :: l
-        | _ -> l)
-      fields []
+    List.map
+      (fun {f_name; f_mut; f_typ} ->
+        (f_name, Btype.mutability_repr f_mut = Asttypes.Mutable, f_typ))
+      fields
   in
   let sorted_fields =
     List.sort (fun (n, _, _) (n', _, _) -> String.compare n n') present_fields
@@ -1335,10 +1301,6 @@ let explanation unif t3 t4 ppf =
     else
       fprintf ppf "@,@[<hov>This instance of %a is ambiguous:@ %s@]" type_expr
         t' "it would escape the scope of its equation"
-  | Tfield {name = lab}, _ when lab = dummy_method ->
-    fprintf ppf "@,Self type cannot be unified with a closed object type"
-  | _, Tfield {name = lab} when lab = dummy_method ->
-    fprintf ppf "@,Self type cannot be unified with a closed object type"
   | ( Tfield {name = l; typ = f1; rest = {desc = Tnil}},
       Tfield {name = l'; typ = f2; rest = {desc = Tnil}} )
     when l = l' ->

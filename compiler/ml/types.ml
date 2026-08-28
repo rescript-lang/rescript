@@ -31,7 +31,6 @@ and type_desc =
   | Tobject of type_expr
   | Tfield of {
       name: string;
-      presence: field_kind;
       mutability: field_mutability ref;
       typ: type_expr;
       rest: type_expr;
@@ -64,8 +63,6 @@ and abbrev_memo =
   | Mnil
   | Mcons of private_flag * Path.t * type_expr * type_expr * abbrev_memo
   | Mlink of abbrev_memo ref
-
-and field_kind = Fvar of field_kind option ref | Fpresent | Fabsent
 
 and field_mutability =
   | Mutability_value of Asttypes.mutable_flag
