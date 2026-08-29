@@ -57,6 +57,7 @@
 
 #### :house: Internal
 
+- Distribute generated, target-specific third-party license notices with the native platform npm packages. https://github.com/rescript-lang/rescript/pull/8594
 - Upgrade the development toolchain and primary CI builds to OCaml 5.5 while retaining OCaml 5.0 as the minimum supported version. https://github.com/rescript-lang/rescript/pull/8589
 - Upgrade the vendored Flow parser from 0.267.0 to 0.320.0, the final release of the OCaml implementation. https://github.com/rescript-lang/rescript/pull/8588
 - Vendor the Flow parser 0.267.0 sources used by the compiler, removing the external `flow_parser` dependency and establishing a maintained baseline for future OCaml upgrades. https://github.com/rescript-lang/rescript/pull/8587

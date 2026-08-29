@@ -64,6 +64,7 @@
       "!**/tests/tests/**/src",
       "!**/tests/tools_tests/**/src",
       "!**/rewatch",
+      "!**/licenses/toolchains/*.html",
       "!**/lib/es6",
       "!**/lib/js",
       "!**/lib/bs",

@@ -3,9 +3,15 @@ This repository contains code under multiple licenses.
 - compiler/: LGPL-3.0-or-later
 - compiler/syntax/: MIT
 - packages/@rescript/runtime/: MIT
+- packages/@rescript/belt/: MIT
 - rewatch/: MIT
 
 See full license texts:
 
 - LGPL-3.0-or-later: COPYING.LESSER (and COPYING where applicable)
 - MIT: LICENSE.MIT
+
+Native platform packages also contain third-party software. The generated
+THIRD_PARTY_LICENSES file in each native package contains the applicable
+notices and license texts. See licenses/README.md for the source inventory and
+generation process.

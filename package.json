@@ -57,7 +57,10 @@
     "format": "biome check --no-errors-on-unmatched . --fix",
     "coverage": "nyc --timeout=3000 --reporter=html mocha tests/tests/src/*_test.js && open ./coverage/index.html",
     "typecheck": "tsc",
-    "apidocs:generate": "yarn workspace @utils/scripts apidocs:generate"
+    "apidocs:generate": "yarn workspace @utils/scripts apidocs:generate",
+    "licenses:generate": "node scripts/generateThirdPartyLicenses.js",
+    "licenses:check": "node scripts/generateThirdPartyLicenses.js --check",
+    "licenses:check-packages": "node scripts/checkThirdPartyLicensePackages.js"
   },
   "files": [
     "CHANGELOG.md",

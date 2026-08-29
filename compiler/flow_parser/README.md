@@ -10,10 +10,12 @@ This directory contains the OCaml Flow parser used by the ReScript compiler.
 - Original source directories: `src/parser`, `src/third-party/sedlex`,
   `src/third-party/sedlex-ppx`, and `src/hack_forked/utils/collections`
 
-The collection helpers retain the MIT-licensed 0.267.0 sources. Their code is
-identical in Flow 0.320.0, but that release replaces their MIT notices with
-"Confidential and proprietary" notices that do not grant redistribution
-rights.
+The collection helpers retain the redistributable 0.267.0 sources. Their code
+is identical in Flow 0.320.0, but that release replaces their license notices
+with "Confidential and proprietary" notices that do not grant redistribution
+rights. The Meta-authored collection modules are MIT licensed. `Flow_map` and
+`Flow_set` are derived from the OCaml standard library and remain under LGPL
+2.1 with the OCaml linking exception.
 
 The Dune files were adapted to build these sources as private libraries inside
 the ReScript repository. Sources used only by the upstream JavaScript and C API
@@ -34,6 +36,7 @@ validates both complete JavaScript programs and individual expressions.
 Vendored sources are excluded from the repository-wide OCamlformat check so
 that they remain comparable with their upstream versions.
 
-The Flow parser and retained collection sources are licensed under the MIT
-licence in `LICENSE` and their source headers. Vendored Sedlex and collection
-third-party sources retain the licence files in their respective directories.
+The Flow parser and Meta-authored collection sources are licensed under the
+MIT licence in `LICENSE` and their source headers. Vendored Sedlex and the
+OCaml-derived collection sources retain the licence files in their respective
+directories.

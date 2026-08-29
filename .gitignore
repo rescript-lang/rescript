@@ -82,6 +82,9 @@ packages/dev-playground/public/playground-bundles/*
 rewatch/target/
 rewatch/rewatch
 
+# Generated into native platform packages immediately before packaging.
+packages/@rescript/*/THIRD_PARTY_LICENSES
+
 tests/tools_tests/**/*.res.js
 tests/tools_tests/lib
 tests/analysis_tests*/lib

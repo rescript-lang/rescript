@@ -392,6 +392,21 @@ jobs:
           cache: yarn
           node-version-file: .nvmrc
 
+      - name: Install cargo-about
+        shell: bash
+        env:
+          CARGO_ABOUT_VERSION: "0.9.2"
+          CARGO_ABOUT_SHA256: "af5169282fb6f84e13471493f405437e43ac517744c9ae12fbe2cdf0a6f0e5a8"
+        run: |
+          archive="cargo-about-${CARGO_ABOUT_VERSION}-aarch64-unknown-linux-musl.tar.gz"
+          curl -fsSL \
+            "https://github.com/EmbarkStudios/cargo-about/releases/download/${CARGO_ABOUT_VERSION}/${archive}" \
+            -o "$RUNNER_TEMP/$archive"
+          echo "$CARGO_ABOUT_SHA256  $RUNNER_TEMP/$archive" | sha256sum --check
+          tar -xzf "$RUNNER_TEMP/$archive" --strip-components=1 -C "$RUNNER_TEMP" \
+            "cargo-about-${CARGO_ABOUT_VERSION}-aarch64-unknown-linux-musl/cargo-about"
+          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+
       - name: Download artifacts
         uses: actions/download-artifact@v8
         with:
@@ -401,10 +416,19 @@ jobs:
         run: .github/workflows/moveArtifacts.sh
         shell: bash
 
+      - name: Generate third-party licenses
+        run: node scripts/generateThirdPartyLicenses.js
+
+      - name: Check generated third-party licenses
+        run: node scripts/generateThirdPartyLicenses.js --check
+
       - name: Check artifact list
         run: |
           node ./scripts/updateArtifactList.js
           git diff --exit-code packages/artifacts.json
+
+      - name: Check package license contents
+        run: node scripts/checkThirdPartyLicensePackages.js
 
       - name: Publish packages to pkg.pr.new
         id: publish

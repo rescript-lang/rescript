@@ -1,0 +1,17 @@
+RUST DEPENDENCIES
+=================
+
+The following notices were generated from rewatch/Cargo.lock with cargo-about.
+Platform-specific dependencies are included when used by any supported release
+target.
+
+{{#each licenses}}
+-------------------------------------------------------------------------------
+License: {{name}}
+Used by:
+{{#each used_by}}
+- {{crate.name}} {{crate.version}}{{#if crate.repository}} ({{crate.repository}}){{/if}}
+{{/each}}
+
+{{text}}
+{{/each}}

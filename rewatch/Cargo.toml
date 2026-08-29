@@ -3,6 +3,8 @@ name = "rescript"
 version = "13.0.0-alpha.6"
 edition = "2024"
 rust-version = "1.91"
+license = "MIT"
+publish = false
 
 [dependencies]
 ahash = "0.8.3"
