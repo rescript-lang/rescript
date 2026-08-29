@@ -7,7 +7,6 @@ use crate::helpers;
 use crate::helpers::StrippedVerbatimPath;
 use crate::lock::LockKind;
 use crate::queue::FifoQueue;
-use crate::queue::*;
 use anyhow::{Context, Result};
 use console::Term;
 use futures_timer::Delay;
