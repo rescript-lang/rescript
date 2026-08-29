@@ -1423,7 +1423,7 @@ __metadata:
     "@rescript/runtime": "npm:12.3.0"
     rescript: "npm:12.3.0"
     vite: "npm:^8.0.14"
-    xote: "npm:6.4.0"
+    xote: "npm:7.1.0"
   languageName: unknown
   linkType: soft
 
@@ -3559,12 +3559,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"xote@npm:6.4.0":
-  version: 6.4.0
-  resolution: "xote@npm:6.4.0"
+"xote@npm:7.1.0":
+  version: 7.1.0
+  resolution: "xote@npm:7.1.0"
   dependencies:
     rescript-signals: "npm:^3.1.0"
-  checksum: 10c0/80a580e283b9894223d719c9ab2eae97402097d8b5b49b5a2540de5f0f4d40f990e4c858aa387e9b5fc208bcd00b2b5d363511e582d64e09c47404ae521dad5f
+  checksum: 10c0/cf3e95269c5132aa9f03ef8d77365e583ae482ff90e1251c8c20063ee7ec8995e85b6869751db3c3a5df98e8fef60b15537a88f1e0a168ca0e24bed608e84c40
   languageName: node
   linkType: hard
 

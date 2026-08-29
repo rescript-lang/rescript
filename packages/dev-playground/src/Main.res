@@ -175,7 +175,7 @@ module TabButton = {
       class={() => Signal.get(activeTab) === tab ? "tab-button tab-button-active" : "tab-button"}
       onClick={_ => onSelect(tab)}
     >
-      {Node.text(tabLabel(tab))}
+      {View.text(tabLabel(tab))}
     </button>
   }
 }
@@ -184,9 +184,9 @@ module Problems = {
   @jsx.component
   let make = (~compileResult: Signal.t<option<CompilerApi.compileResult>>) => {
     <div class="problems">
-      <div class="problems-title"> {Node.text("Problems")} </div>
+      <div class="problems-title"> {View.text("Problems")} </div>
       <pre class="problems-output">
-        {Node.signalText(() =>
+        {View.signalText(() =>
           switch Signal.get(compileResult) {
           | Some(Ok({warnings})) if warnings->Array.length > 0 => warnings->Array.join("\n")
           | Some(Error({warnings})) if warnings->Array.length > 0 => warnings->Array.join("\n")
@@ -219,7 +219,7 @@ module SettingsPanel = {
     >
       <section class="settings-section">
         <label class="setting-label" for_="compiler-version">
-          {Node.text("Compiler Version")}
+          {View.text("Compiler Version")}
         </label>
         <select
           id="compiler-version"
@@ -230,17 +230,17 @@ module SettingsPanel = {
             switchCompiler(nextVersion)
           }}
         >
-          {Node.fragment(
+          {View.fragment(
             CompilerApi.selectableCompilerVersions(
               Signal.get(config).compilerVersion,
-            )->Array.map(version => <option value=version.id> {Node.text(version.label)} </option>),
+            )->Array.map(version => <option value=version.id> {View.text(version.label)} </option>),
           )}
         </select>
       </section>
       <section class="settings-section">
-        <label class="setting-label"> {Node.text("Loaded Compiler")} </label>
+        <label class="setting-label"> {View.text("Loaded Compiler")} </label>
         <div class="setting-value">
-          {Node.signalText(() =>
+          {View.signalText(() =>
             switch Signal.get(compilerInfo) {
             | Some(info) => `${info.version} / API ${info.apiVersion} / ${info.bundleId}`
             | None => "loading"
@@ -249,7 +249,7 @@ module SettingsPanel = {
         </div>
       </section>
       <section class="settings-section">
-        <label class="setting-label" for_="module-system"> {Node.text("Module System")} </label>
+        <label class="setting-label" for_="module-system"> {View.text("Module System")} </label>
         <select
           id="module-system"
           value={() => (Signal.get(config).moduleSystem :> string)}
@@ -263,16 +263,16 @@ module SettingsPanel = {
             }
           }}
         >
-          {Node.fragment(
+          {View.fragment(
             moduleSystems->Array.map(moduleSystem => {
               let value = (moduleSystem :> string)
-              <option value> {Node.text(value)} </option>
+              <option value> {View.text(value)} </option>
             }),
           )}
         </select>
       </section>
       <section class="settings-section">
-        <label class="setting-label" for_="warning-flags"> {Node.text("Warning Flags")} </label>
+        <label class="setting-label" for_="warning-flags"> {View.text("Warning Flags")} </label>
         <input
           id="warning-flags"
           value={() => Signal.get(config).warnFlags}
@@ -291,7 +291,7 @@ module SettingsPanel = {
             compileNow()
           }}
         >
-          {Node.text("Reset")}
+          {View.text("Reset")}
         </button>
       </section>
       <section class="settings-section setting-row">
@@ -305,7 +305,7 @@ module SettingsPanel = {
             compileNow()
           }}
         />
-        <label for_="jsx-preserve"> {Node.text("Preserve JSX output")} </label>
+        <label for_="jsx-preserve"> {View.text("Preserve JSX output")} </label>
       </section>
       <section class="settings-section setting-row">
         <input
@@ -321,12 +321,12 @@ module SettingsPanel = {
             compileNow()
           }}
         />
-        <label for_="feature-let-unwrap"> {Node.text("Experimental: let?")} </label>
+        <label for_="feature-let-unwrap"> {View.text("Experimental: let?")} </label>
       </section>
       <section class="settings-section">
-        <label class="setting-label"> {Node.text("Loaded Libraries")} </label>
+        <label class="setting-label"> {View.text("Loaded Libraries")} </label>
         <div class="setting-value">
-          {Node.signalText(() =>
+          {View.signalText(() =>
             switch Signal.get(compilerInfo) {
             | Some(info) => info.libraries->Array.join(", ")
             | None => "loading"
@@ -349,7 +349,7 @@ module StatusBadge = {
         | Ready => "status"
         }}
     >
-      {Node.signalText(() =>
+      {View.signalText(() =>
         switch Signal.get(status) {
         | Failed(message) => message
         | other => statusLabel(other)
@@ -371,7 +371,7 @@ module App = {
     let activeLine = Signal.make(1)
     let editorScrollTop = Signal.make(0)
     let editorScrollLeft = Signal.make(0)
-    let highlightedSource: Signal.t<array<Node.node>> = Obj.magic(
+    let highlightedSource: Signal.t<array<View.node>> = Obj.magic(
       Computed.make(() => SourceHighlight.render(Signal.get(source))),
     )
     let timerId: ref<option<int>> = ref(None)
@@ -596,17 +596,17 @@ module App = {
     <main class="app-shell">
       <header class="topbar">
         <div>
-          <h1> {Node.text("ReScript Developer Playground")} </h1>
+          <h1> {View.text("ReScript Developer Playground")} </h1>
         </div>
         <StatusBadge status />
       </header>
       <section class="workspace">
         <div class="source-column">
           <div class="column-header">
-            <h2> {Node.text("Source")} </h2>
+            <h2> {View.text("Source")} </h2>
             <div class="actions">
               <button class="secondary-action" onClick={_ => formatSource()}>
-                {Node.text("Format")}
+                {View.text("Format")}
               </button>
               <button
                 class="secondary-action"
@@ -619,10 +619,10 @@ module App = {
                   scheduleCompile()
                 }}
               >
-                {Node.text("Reset")}
+                {View.text("Reset")}
               </button>
               <button class="secondary-action" onClick={_ => shareCurrentUrl()}>
-                {Node.text("Share")}
+                {View.text("Share")}
               </button>
             </div>
           </div>
@@ -638,16 +638,16 @@ module App = {
             <div class="active-line" ariaHidden=true />
             <div class="line-number-gutter" ariaHidden=true>
               <pre class="line-numbers">
-                {Node.signalText(() => lineNumbersText(Signal.get(source)))}
+                {View.signalText(() => lineNumbersText(Signal.get(source)))}
               </pre>
             </div>
             <pre class="syntax-layer" ariaHidden=true>
-              {Node.signalFragment(highlightedSource)}
+              {View.signalFragment(highlightedSource)}
             </pre>
             <textarea
               id="source-editor"
               class="editor"
-              value={ReactiveProp.reactive(source)}
+              value={MaybeSignal.reactive(source)}
               spellcheck=false
               onInput={event => {
                 Signal.set(source, Event.value(event))
@@ -673,7 +673,7 @@ module App = {
         </div>
         <div class="result-column">
           <div class="tabs">
-            {Node.fragment(
+            {View.fragment(
               tabs->Array.map(tab =>
                 <TabButton tab activeTab onSelect={tab => Signal.set(activeTab, tab)} />
               ),
@@ -684,11 +684,11 @@ module App = {
               Signal.get(activeTab) === Settings ? "output-panel hidden-panel" : "output-panel"}
           >
             <div class="result-meta">
-              {Node.signalText(() => resultSummary(Signal.get(compileResult)))}
+              {View.signalText(() => resultSummary(Signal.get(compileResult)))}
             </div>
             <div class="output-shell">
               <pre class="output">
-                {Node.signalText(() =>
+                {View.signalText(() =>
                   selectedOutput(Signal.get(compileResult), Signal.get(activeTab))
                 )}
               </pre>
@@ -707,7 +707,7 @@ module App = {
           | None => "toast"
           }}
       >
-        {Node.signalText(() =>
+        {View.signalText(() =>
           switch Signal.get(shareToast) {
           | Some(message) => message
           | None => ""
@@ -718,4 +718,4 @@ module App = {
   }
 }
 
-Node.mountById(<App />, "app")
+View.mountById(<App />, "app")
