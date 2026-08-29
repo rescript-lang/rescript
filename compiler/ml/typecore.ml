@@ -2336,6 +2336,13 @@ let should_unify_expected_result_before_typing_lowered_apply funct sargs =
   | _ -> false
 
 type targs = (Asttypes.arg_label * Typedtree.expression option) list
+
+(* Eliminate an object-field scheme for a read. A declared field payload is
+   wrapped in [Tpoly]: an empty binder list needs ordinary instantiation, while
+   a nonempty list needs polymorphic instantiation. An inferred field whose
+   scheme is not known yet can still be a variable; constrain it to the
+   ordinary, empty-binder form. Assignment uses [type_object_field_value] to
+   introduce rather than eliminate a scheme. *)
 let object_field_use_type env typ =
   match Ctype.repr typ with
   | {desc = Tpoly (ty, [])} -> instance env ty
@@ -3990,18 +3997,15 @@ and type_label_access env srecord lid =
   in
   (record, label, opath)
 
-(* Typing the right-hand side of an object-field assignment: the
-   introduction dual of [object_field_use_type]. A field's type is a scheme:
-   reading instantiates it, while writing must establish it, so a
-   polymorphic field only accepts a value at least as polymorphic — checked
-   by typing the value at a fixed instance and verifying it generalizes
-   ([instance_poly true] + [check_univars]), the same discipline as
-   [type_label_exp] for record labels and [type_let] for polymorphic
-   annotations. With no quantified variables, establishing and instantiating
-   the scheme coincide. [type_label_exp] additionally retries an expansive
-   value without type propagation (PR#4862); that is a label-specific
-   completeness recovery, not part of the scheme-introduction contract, and
-   is deliberately not replicated here. *)
+(* Introduce the right-hand side of an object-field assignment at the field's
+   scheme. A polymorphic field accepts only a value at least as general as the
+   scheme: type the value at a fixed instance, verify generality with
+   [check_univars], then replace the expression type with an ordinary instance.
+   [type_label_exp] for record labels and [type_let] for polymorphic annotations
+   use the same discipline. With no quantified variables, introduction and
+   elimination coincide. [type_label_exp] also retries an expansive value
+   without type propagation (PR#4862); that label-specific completeness
+   recovery is not part of scheme introduction and is not used here. *)
 and type_object_field_value env svalue typ =
   match (Ctype.repr typ).desc with
   | Tpoly (ty, (_ :: _ as tl)) ->
