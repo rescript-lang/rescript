@@ -378,6 +378,31 @@ let test_for_saving_copy_order_is_irrelevant _ =
     "copying owners of one class must not depend on their order in the session"
     (source_first_shares = saved_first_shares)
 
+let private_row_obj cell =
+  let rest =
+    Ctype.newty
+      (Types.Tconstr (Path.Pident (Ident.create "t#row"), [], ref Types.Mnil))
+  in
+  Ctype.newobj
+    (Ctype.newty
+       (Types.Tfield {name = "x"; mutability = cell; typ = int_typ (); rest}))
+
+let test_private_row_write_does_not_promote _ =
+  (* Structural openness includes a [Tconstr] terminator, but assignment must
+     use the same [Tvar] gate as [unify_mutability]: copies share this cell
+     with the declaration. *)
+  let cell = immutable_cell () in
+  let ty = private_row_obj cell in
+  assert_bool "the private row is structurally open"
+    (Ctype.object_row_is_structurally_open ty);
+  (match Ctype.filter_object_field_for_write Env.empty "x" ty with
+  | Error Ctype.Owrite_not_mutable -> ()
+  | Error Ctype.Owrite_missing ->
+    OUnit.assert_failure "expected not-mutable, got missing"
+  | Ok _ -> OUnit.assert_failure "private-row write should be rejected");
+  assert_bool "the declaration cell is untouched"
+    (Btype.mutability_repr cell = Asttypes.Immutable)
+
 let test_for_saving_fresh_copy_preserves_internal_aliasing _ =
   Ctype.begin_def ();
   let cell = immutable_cell () in
@@ -435,4 +460,6 @@ let suites =
          >:: test_for_saving_copy_order_is_irrelevant;
          "for_saving_fresh_copy_preserves_internal_aliasing"
          >:: test_for_saving_fresh_copy_preserves_internal_aliasing;
+         "private_row_write_does_not_promote"
+         >:: test_private_row_write_does_not_promote;
        ]

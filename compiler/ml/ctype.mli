@@ -117,7 +117,13 @@ val flatten_fields : type_expr -> fields * type_expr
 (* Transform a field type into a sorted list of field infos *)
 val associate_fields :
   fields -> fields -> (field_info * field_info) list * fields * fields
-val opened_object : type_expr -> bool
+
+val object_row_is_structurally_open : type_expr -> bool
+(** Whether an object row is structurally open: its terminator is a [Tvar],
+    [Tunivar], or [Tconstr], rather than [Tnil]. This does not imply that the
+    row can be strengthened. Row-strengthening operations that add a field or
+    promote field mutability require a [Tvar] terminator. *)
+
 val lid_of_path : ?hash:string -> Path.t -> Longident.t
 
 val sort_row_fields : (label * row_field) list -> (label * row_field) list

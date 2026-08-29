@@ -316,7 +316,7 @@ let rec object_row ty =
   | Tfield {rest = t} -> object_row t
   | _ -> ty
 
-let opened_object ty =
+let object_row_is_structurally_open ty =
   match (object_row ty).desc with
   | Tvar _ | Tunivar _ | Tconstr _ -> true
   | _ -> false
@@ -2648,13 +2648,17 @@ type object_field_write_error = Owrite_missing | Owrite_not_mutable
 
 (* Look up [name] for assignment in the object type [ty].
    - A [Mutable] field yields its type.
-   - An [Immutable] field is promoted iff the object row is open; on a
-     closed row the write is rejected.
-   - An absent field is added as [Mutable] through an open row; on a closed
-     row the write is rejected as missing. *)
+   - An [Immutable] field is promoted iff the row ends in a [Tvar], the
+     same predicate [unify_mutability] uses.
+     [object_row_is_structurally_open] also holds for rigid [Tunivar] and
+     private-row [Tconstr] terminators. It cannot therefore gate promotion;
+     in particular, ordinary copies of a private row share the declaration's
+     mutability cell, so a write would later be saved as [@set] in the .cmi.
+   - An absent field is added as [Mutable] through a [Tvar] rest; on a
+     closed or private row the write is rejected as missing. *)
 let filter_object_field_for_write env name ty :
     (type_expr, object_field_write_error) Result.t =
-  let rec write_field ~opened ty =
+  let rec write_field ~can_promote ty =
     let ty = expand_head_trace env ty in
     match ty.desc with
     | Tvar _ ->
@@ -2677,13 +2681,13 @@ let filter_object_field_for_write env name ty :
         match mutability_repr mutability with
         | Asttypes.Mutable -> Ok typ
         | Immutable ->
-          if opened then (
+          if can_promote then (
             set_mutability
               (mutability_ref_repr mutability)
               (Mutability_value Asttypes.Mutable);
             Ok typ)
           else Error Owrite_not_mutable
-      else write_field ~opened f.rest
+      else write_field ~can_promote f.rest
     | _ -> Error Owrite_missing
   in
   let ty = expand_head_trace env ty in
@@ -2693,8 +2697,8 @@ let filter_object_field_for_write env name ty :
     let ty' = newobj ty1 in
     update_level env ty.level ty';
     link_type ty ty';
-    write_field ~opened:true ty1
-  | Tobject f -> write_field ~opened:(opened_object ty) f
+    write_field ~can_promote:true ty1
+  | Tobject f -> write_field ~can_promote:(is_Tvar (object_row ty)) f
   | _ -> Error Owrite_missing
 
 (* Unify [ty] and [{.. name: 'a}]. Return ['a]. *)
@@ -3347,7 +3351,8 @@ let rec build_subtype env visited loops posi level t =
       in
       (newty (Tvariant row), Changed)
   | Tobject t1 ->
-    if memq_warn t visited || opened_object t1 then (t, Unchanged)
+    if memq_warn t visited || object_row_is_structurally_open t1 then
+      (t, Unchanged)
     else
       let level' = pred_enlarge level in
       let visited =

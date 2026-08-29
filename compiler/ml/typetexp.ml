@@ -610,7 +610,7 @@ and transl_fields env policy o fields =
       let t = expand_head env cty.ctyp_type in
       match (t, nm) with
       | {desc = Tobject {desc = (Tfield _ | Tnil) as tf}}, _ ->
-        if opened_object t then
+        if object_row_is_structurally_open t then
           raise (Error (sty.ptyp_loc, env, Opened_object nm));
         let rec iter_add = function
           | Tfield {name = s; mutability; typ = ty1; rest = ty2} ->

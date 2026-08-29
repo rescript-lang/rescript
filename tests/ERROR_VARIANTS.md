@@ -216,7 +216,7 @@ Source: [typecore.ml:27](../compiler/ml/typecore.ml).
 | `Wrong_name` | ✓ | `wrong_name_record_field.res`, `Cross_record_extra_field` (multi) | |
 | `Name_type_mismatch` | ✓ | `super_errors_multi/Cross_qualified_constructor_mismatch` | Cross-module constructor disambiguation. |
 | `Undefined_method` | ✓ | `super_errors_multi/Cross_module_alias_dot_access`, `undefined_method` | |
-| `Object_field_not_mutable` | ✓ | `object_write_closed_row`, `object_write_alias`, `object_write_after_forgetting` | Assignment to a field without `@set`; the latter two pin that promotion is per equivalence class (an alias write strengthens the shared constraint) and that a coercion never grants write capability. |
+| `Object_field_not_mutable` | ✓ | `object_write_closed_row`, `object_write_alias`, `object_write_after_forgetting`, `object_private_row_write`, `object_private_row_write_through_signature` | Assignment to a field without `@set`. `object_write_alias` pins that promotion is per equivalence class, and `object_write_after_forgetting` pins that a coercion never grants write capability. The private-row fixtures pin that a `Tconstr` row terminator is structurally open but cannot be strengthened: writing through `type t = private {.."x": int}` (directly or via a signature) is rejected, matching `unify_mutability`. |
 | `Private_type` | ✓ | `private_type_construction.res` | |
 | `Private_label` | ✓ | `private_label.res` | |
 | `Not_subtype` | ✓ | `subtype_*.res`, `coercion_arity_mismatch.res`, `dict_show_no_coercion.res`, etc. | |
