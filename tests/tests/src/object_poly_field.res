@@ -19,3 +19,14 @@ let use_open = (o: {.."id": 'a. 'a => 'a}) => (o["id"](1), o["id"]("x"))
 let value: poly = %raw(`{id: x => x}`)
 
 let pair = use_poly(value)
+
+/* A settable polymorphic field accepts a value as polymorphic as its
+   scheme, and stays usable at several types afterwards. The rejection of a
+   monomorphic value is pinned in
+   tests/build_tests/super_errors/fixtures/object_write_poly_field_less_general.res. */
+type settable_poly = {@set "id": 'a. 'a => 'a}
+
+let write_poly = (o: settable_poly) => {
+  o["id"] = x => x
+  (o["id"](1), o["id"]("x"))
+}

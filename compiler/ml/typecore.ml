@@ -1280,7 +1280,7 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
     match ty.desc with
     | Tpoly (body, tyl) ->
       begin_def ();
-      let _, ty' = instance_poly ~keep_names:true false tyl body in
+      let _, ty' = instance_poly ~keep_names:true ~fixed:false tyl body in
       end_def ();
       generalize ty';
       let id = enter_variable lloc name ty' in
@@ -2339,7 +2339,7 @@ type targs = (Asttypes.arg_label * Typedtree.expression option) list
 let object_field_use_type env typ =
   match Ctype.repr typ with
   | {desc = Tpoly (ty, [])} -> instance env ty
-  | {desc = Tpoly (ty, tl)} -> snd (instance_poly false tl ty)
+  | {desc = Tpoly (ty, tl)} -> snd (instance_poly ~fixed:false tl ty)
   | {desc = Tvar _} as ty ->
     let ty' = newvar () in
     unify env (instance_def ty) (newty (Tpoly (ty', [])));
@@ -3403,8 +3403,7 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
     | Error Owrite_not_mutable ->
       raise (Error (loc, env, Object_field_not_mutable (obj.exp_type, name)))
     | Ok typ ->
-      let typ = object_field_use_type env typ in
-      let value = type_expect ~context:None env svalue typ in
+      let value = type_object_field_value env svalue typ in
       rue
         {
           exp_desc = Texp_object_set (obj, name_loc, value);
@@ -3980,6 +3979,31 @@ and type_label_access env srecord lid =
       labels
   in
   (record, label, opath)
+
+(* Typing the right-hand side of an object-field assignment: the
+   introduction dual of [object_field_use_type]. A field's type is a scheme:
+   reading instantiates it, while writing must establish it, so a
+   polymorphic field only accepts a value at least as polymorphic — checked
+   by typing the value at a fixed instance and verifying it generalizes
+   ([instance_poly true] + [check_univars]), the same discipline as
+   [type_label_exp] for record labels and [type_let] for polymorphic
+   annotations. With no quantified variables, establishing and instantiating
+   the scheme coincide. [type_label_exp] additionally retries an expansive
+   value without type propagation (PR#4862); that is a label-specific
+   completeness recovery, not part of the scheme-introduction contract, and
+   is deliberately not replicated here. *)
+and type_object_field_value env svalue typ =
+  match (Ctype.repr typ).desc with
+  | Tpoly (ty, (_ :: _ as tl)) ->
+    begin_def ();
+    let vars, ty' = instance_poly ~fixed:true tl ty in
+    let value = type_expect ~context:None env svalue ty' in
+    end_def ();
+    check_univars env true "field value" value typ vars;
+    {value with exp_type = instance env value.exp_type}
+  | _ ->
+    let typ = object_field_use_type env typ in
+    type_expect ~context:None env svalue typ
 
 (* Typing format strings for printing or reading.
    These formats are used by functions in modules Printf, Format, and Scanf.
@@ -4675,7 +4699,7 @@ and type_let ~context ?(check = fun s -> Warnings.Unused_var s)
           | Tpoly (ty, tl) ->
             {
               pat with
-              pat_type = snd (instance_poly ~keep_names:true false tl ty);
+              pat_type = snd (instance_poly ~keep_names:true ~fixed:false tl ty);
             }
           | _ -> pat
         in
@@ -4783,7 +4807,7 @@ and type_let ~context ?(check = fun s -> Warnings.Unused_var s)
         match pat.pat_type.desc with
         | Tpoly (ty, tl) ->
           begin_def ();
-          let vars, ty' = instance_poly ~keep_names:true true tl ty in
+          let vars, ty' = instance_poly ~keep_names:true ~fixed:true tl ty in
           let exp = type_expression ty' in
           end_def ();
           check_univars env true "definition" exp pat.pat_type vars;

@@ -1014,7 +1014,7 @@ let rec copy_sep fixed free bound visited ty =
         | _ -> copy_type_desc copy_rec ty.desc);
       t
 
-let instance_poly ?(keep_names = false) fixed univars sch =
+let instance_poly ?(keep_names = false) ~fixed univars sch =
   with_copy_session (fun () ->
       let univars = List.map repr univars in
       let copy_var ty =
@@ -1035,7 +1035,7 @@ let instance_label fixed lbl =
       let ty_res = copy lbl.lbl_res in
       let vars, ty_arg =
         match repr lbl.lbl_arg with
-        | {desc = Tpoly (ty, tl)} -> instance_poly fixed tl ty
+        | {desc = Tpoly (ty, tl)} -> instance_poly ~fixed tl ty
         | _ -> ([], copy lbl.lbl_arg)
       in
       (vars, ty_arg, ty_res))
@@ -3785,7 +3785,7 @@ let rec subtype_rec env trace t1 t2 cstrs =
       | Tvariant v, _ when !variant_is_subtype env (row_repr v) t2 -> cstrs
       | Tpoly (u1, []), Tpoly (u2, []) -> subtype_rec env trace u1 u2 cstrs
       | Tpoly (u1, tl1), Tpoly (u2, []) ->
-        let _, u1' = instance_poly false tl1 u1 in
+        let _, u1' = instance_poly ~fixed:false tl1 u1 in
         subtype_rec env trace u1' u2 cstrs
       | Tpoly (u1, tl1), Tpoly (u2, tl2) -> (
         try

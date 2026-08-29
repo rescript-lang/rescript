@@ -8,3 +8,6 @@ let forget_extra: {"id": 'a. 'a => 'a, "extra": int} => poly
 let use_open: {.."id": 'a. 'a => 'a} => (int, string)
 let value: poly
 let pair: (int, string)
+
+type settable_poly = {@set "id": 'a. 'a => 'a}
+let write_poly: settable_poly => (int, string)

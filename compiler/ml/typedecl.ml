@@ -770,7 +770,7 @@ let rec check_constraints_rec env loc visited ty =
         raise (Error (loc, Constraint_failed (ty, ty')));
       List.iter (check_constraints_rec env loc visited) args
     | Tpoly (ty, tl) ->
-      let _, ty = Ctype.instance_poly false tl ty in
+      let _, ty = Ctype.instance_poly ~fixed:false tl ty in
       check_constraints_rec env loc visited ty
     | _ -> Btype.iter_type_expr (check_constraints_rec env loc visited) ty)
 
@@ -1003,7 +1003,7 @@ let check_recursion env loc path decl to_check =
              with Not_found -> ());
           List.iter (check_regular cpath args prev_exp) args'
         | Tpoly (ty, tl) ->
-          let _, ty = Ctype.instance_poly ~keep_names:true false tl ty in
+          let _, ty = Ctype.instance_poly ~keep_names:true ~fixed:false tl ty in
           check_regular cpath args prev_exp ty
         | _ -> Btype.iter_type_expr (check_regular cpath args prev_exp) ty)
     in
@@ -1078,8 +1078,12 @@ let compute_variance env visited vari ty =
               tl decl.type_variance
           with Not_found -> List.iter (compute_variance_rec may_inv) tl)
       | Tobject ty -> compute_same ty
-      | Tfield {typ = ty1; rest = ty2} ->
-        compute_same ty1;
+      | Tfield {mutability; typ = ty1; rest = ty2} ->
+        (* A settable field can be both read and written, so its payload is
+           an invariant occurrence, like a mutable record label. *)
+        (match Btype.mutability_repr mutability with
+        | Mutable -> compute_variance_rec Variance.full ty1
+        | Immutable -> compute_same ty1);
         compute_same ty2
       | Tsubst ty -> compute_same ty
       | Tvariant row ->

@@ -223,7 +223,7 @@ Source: [typecore.ml:27](../compiler/ml/typecore.ml).
 | `Abstract_wrong_label` | ✓ | `abstract_wrong_label.res` | Multi-arg function literal where an inner argument label doesn't match the expected arrow's label (e.g. `let f: (~a, ~b) => int = (~a, ~c) => …`). |
 | `Scoping_let_module` | ✓ | `scoping_let_module.res` | |
 | `Not_a_variant_type` | ✓ | `variant_spread_pattern_not_a_variant.res` | Pattern-level variant spread of a non-variant type. |
-| `Less_general` | ✓ | `less_general_universal.res` | |
+| `Less_general` | ✓ | `less_general_universal.res`, `object_write_poly_field_less_general.res` | The latter pins that assigning to a polymorphic object field checks the value against the field's scheme. |
 | `Modules_not_allowed` | ✓ | `super_errors_multi/Modules_not_allowed_toplevel` | Toplevel `let module(M) = …` pattern with `allow_modules=false`. |
 | `Cannot_infer_signature` | ✓ | `cannot_infer_signature.res` | |
 | `Not_a_packed_module` | ✓ | `not_a_packed_module.res` | |
@@ -278,7 +278,7 @@ Type-declaration errors. Source: [typedecl.ml:27](../compiler/ml/typedecl.ml).
 | `Rebind_wrong_type` | ✓ | `extension_rebind_mismatch.res` | Rebinding constructor into a different extensible type fails while unifying the source constructor result with the extension target. |
 | `Rebind_mismatch` | ? | — | The later declaration-shape check after `Rebind_wrong_type`; no source fixture was confirmed in this pass. |
 | `Rebind_private` | ✓ | `extension_rebind_private.res` | Rebinding a private extension constructor as public. |
-| `Bad_variance` | ✓ | `bad_variance.res`, `bad_variance_contra.res` | |
+| `Bad_variance` | ✓ | `bad_variance.res`, `bad_variance_contra.res`, `object_settable_field_covariant_param.res` | The latter pins that a settable object field is an invariant occurrence, like a mutable record label. |
 | `Unavailable_type_constructor` | ☐ (needs build harness) | — | typedecl.ml:778. Requires a type path findable at parse time but missing during constraint enforcement; only cross-unit scenarios where a `.cmi` was found but later removed. |
 | `Bad_fixed_type` | ✓ | `fixed_type_no_row_variable.res` | Fully-bounded closed private polymorphic variant (`type t = private [< #A | #B > #A #B]`) satisfies `is_fixed_type` but has a static (non-`Tvar`) row. |
 | `Unbound_type_var_ext` | ✓ | `unbound_type_var_extension.res` | |

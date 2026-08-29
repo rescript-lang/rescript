@@ -23,11 +23,20 @@ let value = ({id: x => x});
 
 let pair = use_poly(value);
 
+function write_poly(o) {
+  o.id = x => x;
+  return [
+    o.id(1),
+    o.id("x")
+  ];
+}
+
 export {
   use_poly,
   forget_extra,
   use_open,
   value,
   pair,
+  write_poly,
 }
 /* value Not a pure module */

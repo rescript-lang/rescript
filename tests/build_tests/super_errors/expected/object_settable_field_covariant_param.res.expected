@@ -1,0 +1,13 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/object_settable_field_covariant_param.res[0m:[2m4:1-30[0m
+
+  2 [2m│[0m    both read and written), so a covariant parameter annotation is reject
+    [2m│[0m ed,
+  3 [2m│[0m    like a mutable record label. */
+  [1;31m4[0m [2m│[0m [1;31mtype box<+'a> = {@set "x": 'a}[0m
+  5 [2m│[0m 
+
+  In this definition, expected parameter variances are not satisfied.
+  The 1st type parameter was expected to be covariant,
+  but it is injective invariant.

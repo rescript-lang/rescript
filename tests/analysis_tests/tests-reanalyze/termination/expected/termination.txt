@@ -150,11 +150,31 @@
 
   Termination Analysis for testTry
 
+  Function Table
+  1 testObjectLiteral: +progress; testObjectLiteral
+
+  Termination Analysis for testObjectLiteral
+
+  Function Table
+  1 testObjectLiteralProgressFirst: +progress; testObjectLiteralProgressFirst; _
+
+  Termination Analysis for testObjectLiteralProgressFirst
+
+  Function Table
+  1 testObjectLiteralRecursionFirst: testObjectLiteralRecursionFirst; +progress; _
+
+  Termination Analysis for testObjectLiteralRecursionFirst
+
+  Function Table
+  1 testObjectAccess: +progress; testObjectAccess
+
+  Termination Analysis for testObjectAccess
+
   Termination Analysis Stats
   Files:1
-  Recursive Blocks:21
-  Functions:49
-  Infinite Loops:10
+  Recursive Blocks:25
+  Functions:53
+  Infinite Loops:11
   Hygiene Errors:2
   Cache Hits:7/30
   
@@ -230,5 +250,11 @@
   Possible infinite loop when calling countRendersCompiled
   CallStack:
     1 countRendersCompiled (TestCyberTruck.res 283)
+
+  Error Termination
+  TestCyberTruck.res:468:20-52
+  Possible infinite loop when calling testObjectLiteralRecursionFirst
+  CallStack:
+    1 testObjectLiteralRecursionFirst (TestCyberTruck.res 467)
   
-  Analysis reported 12 issues (Error Hygiene:2, Error Termination:10)
+  Analysis reported 13 issues (Error Hygiene:2, Error Termination:11)
