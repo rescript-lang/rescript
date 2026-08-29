@@ -501,7 +501,8 @@ let rec mark_loops_rec visited ty =
     | Tobject fi ->
       if List.memq px !visited_objects then add_alias px
       else (
-        if opened_object ty then visited_objects := px :: !visited_objects;
+        if object_row_is_structurally_open ty then
+          visited_objects := px :: !visited_objects;
         let fields, _ = flatten_fields fi in
         List.iter (fun {Ctype.f_typ} -> mark_loops_rec visited f_typ) fields)
     | Tfield {typ = ty1; rest = ty2} ->

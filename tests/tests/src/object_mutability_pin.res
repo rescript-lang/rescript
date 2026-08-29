@@ -63,9 +63,15 @@ let closed_immutable_covariant = (v: {"x": wide}): {"x": narrow} => (v :> {"x": 
    implementation's settable field is abstracted to a read-only one. The
    reverse (a signature granting @set over a plain implementation field) is
    pinned as an error in
-   tests/build_tests/super_errors/fixtures/object_private_row_grants_set.res. */
+   tests/build_tests/super_errors/fixtures/object_private_row_grants_set.res.
+   Writing a private row that already has @set is accepted; writing a
+   private readonly row is pinned as an error in
+   object_private_row_write.res. */
 module PrivateRowForgetsSet: {
   type t = private {.."x": int}
 } = {
   type t = private {..@set "x": int}
 }
+
+type private_settable = private {..@set "x": int}
+let write_private_settable = (o: private_settable) => o["x"] = 1
