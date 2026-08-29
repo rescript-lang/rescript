@@ -110,6 +110,18 @@ tests/
 
 ### Development Workflow
 
+Read the area guide before changing a compiler subsystem:
+
+- [`compiler/syntax/README.md`](compiler/syntax/README.md) for parsing,
+  printing, and JSX transformation
+- [`compiler/ml/README.md`](compiler/ml/README.md) for the type checker and
+  typed tree
+- [`compiler/core/README.md`](compiler/core/README.md) for Lambda, Lam, and
+  JavaScript generation
+- [`analysis/README.md`](analysis/README.md) for editor analysis
+- [`rewatch/README.md`](rewatch/README.md) for the build system
+- [`tools/README.md`](tools/README.md) for `rescript-tools`
+
 1. **Understand which layer you're working on:**
    - **Syntax layer** (`compiler/syntax/`): Parsing and surface syntax
    - **ML layer** (`compiler/ml/`): Type checking and AST transformations
@@ -137,7 +149,7 @@ tests/
    - Unit tests for utility functions
    - Always check JavaScript output quality
 
-4. **Add a `CHANGELOG.md` entry** for any user-facing change (bug fix, feature, or breaking change). Put it under the matching section of the current `(Unreleased)` version and end the line with the PR link. See [CONTRIBUTING.md](CONTRIBUTING.md). PRs are expected to include one.
+4. **Add a `CHANGELOG.md` entry** for any user-facing change (bug fix, feature, or breaking change). Create the PR first, then put the entry under the matching section of the current `(Unreleased)` version and end it with the PR link. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ### Debugging Techniques
 
