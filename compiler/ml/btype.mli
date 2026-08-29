@@ -123,15 +123,30 @@ val copy_type_desc :
   (type_expr -> type_expr) ->
   type_desc ->
   type_desc
-(* Copy on types *)
+(** Copy one type description, using the supplied function to copy children.
+
+    Run this operation inside [with_copy_session]. By default, object-field
+    mutability classes are duplicated when the field's row ends in a generic
+    variable and shared otherwise. [fresh_mutability:true] instead gives the
+    result classes which are independent from the source, while preserving
+    class sharing among fields copied in the same session. *)
 
 val copy_row :
   (type_expr -> type_expr) -> bool -> row_desc -> bool -> type_expr -> row_desc
 
 val save_desc : type_expr -> type_desc -> unit
-(* Save a type description *)
+(** Record a temporary change to a source type description in the current copy
+    session. The session restores the description when it ends. *)
 
 val with_copy_session : (unit -> 'a) -> 'a
+(** Run a graph-copy operation with scoped temporary state.
+
+    The scope is nestable and restores its own source-graph changes on normal
+    return and on exceptions. Repeated low-level copy calls in one scope share
+    copy memos. An inner operation can reuse a copied node through an outer
+    [Tsubst] mark; if it independently duplicates a mutability class, that
+    duplicate belongs to the inner scope. Each scope restores only changes it
+    owns. This restoration is separate from the [snapshot]/[backtrack] trail. *)
 
 val lowest_level : int
 (* Marked type: ty.level < lowest_level *)
@@ -212,9 +227,10 @@ val set_name :
 val set_row_field : row_field option ref -> row_field -> unit
 val set_univar : type_expr option ref -> type_expr -> unit
 
-(* Logged (backtrackable) update of a mutability cell: promotion
+(* Logged (backtrackable) update of a terminal mutability cell: promotion
    ([Mutability_value Mutable]) or an equivalence-class merge
-   ([Mutability_link]). *)
+   ([Mutability_link]). Resolve the first argument with
+   [mutability_ref_repr] before calling. *)
 val set_mutability : field_mutability ref -> field_mutability -> unit
 
 (* Terminal cell of a link chain / its semantic value. *)

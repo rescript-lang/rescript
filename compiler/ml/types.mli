@@ -53,19 +53,6 @@ type type_expr = {mutable desc: type_desc; mutable level: int; id: int}
     all other known types.
     Whereas [type_expr] is a pure construct which allows referring to existing
     types.
-
-    Note on object-field mutability: each [Tfield] carries a
-    [field_mutability ref]. Semantically the state is two-valued
-    ([Immutable] or [Mutable], read through [Btype.mutability_repr]);
-    [Mutability_link] is pure representation — a union-find edge that makes
-    every field constrained to have the same mutability share one
-    equivalence class, so a promotion (Immutable to Mutable on an open row)
-    is seen by all of them at once. Classes are merged only by unification;
-    promotions and merges are logged on the backtracking trail; copying
-    duplicates a class iff the row ends in a generic variable (a scheme
-    instantiation) and shares it otherwise, mirroring the sharing law of
-    the row variable itself. Links never appear in saved (marshalled)
-    types.
  *)
 
 and arg = {lbl: arg_label; typ: type_expr}
@@ -94,8 +81,8 @@ and type_desc =
       rest: type_expr;
     }
       (** [Tfield {name = "foo"; mutability; typ; rest}]
-      ==> [{.. "foo": typ, rest}]; [mutability] records whether the field
-      admits assignment ([@set]). *)
+      ==> [{.. "foo": typ, rest}]. [mutability] is a shared cell; inspect its
+      semantic value with [Btype.mutability_repr]. *)
   | Tnil  (** [Tnil] ==> [<...; >] *)
   | Tlink of type_expr  (** Indirection used by unification engine. *)
   | Tsubst of type_expr (* for copying *)
@@ -182,10 +169,12 @@ and abbrev_memo =
   | Mlink of abbrev_memo ref
       (** Abbreviations can be found after this indirection *)
 
-(** Mutability state of an object field, shared through an equivalence class
-    of cells. [Mutability_link] is an internal graph edge (union by
-    unification, duplication memo during copying) — never a third semantic
-    state; the class's value is at the end of the link chain. *)
+(** Assignment capability of an object field.
+
+    The semantic value is [Immutable] or [Mutable]. [Mutability_link] is an
+    internal edge between cells which have the same capability, not a third
+    value. Code making a semantic decision must use [Btype.mutability_repr]
+    rather than inspect a cell directly. *)
 and field_mutability =
   | Mutability_value of Asttypes.mutable_flag
   | Mutability_link of field_mutability ref

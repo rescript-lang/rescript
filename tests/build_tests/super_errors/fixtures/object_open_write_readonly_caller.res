@@ -1,8 +1,8 @@
-/* Pin (object mutability cleanup): writing a bare field of an OPEN row is
-   accepted but strengthens the function's demand — callers must supply a
-   writable field, so a read-only argument is rejected. Both halves must
-   survive the new model (write = promotion on the open row; the demand
-   becomes a Mutable field). See docs/object_representation_cleanup.md. */
+/* Writing a field in an open row promotes it to mutable. The promotion is
+   visible in the function's parameter type, which requires callers to supply
+   a mutable field. A closed read-only object cannot satisfy that strengthened
+   parameter. */
+
 let f = (o: {.."x": int}) => o["x"] = 1
 @val external readonly: {"x": int} = "readonly"
 let _ = f(readonly)

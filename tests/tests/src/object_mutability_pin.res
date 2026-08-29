@@ -1,14 +1,5 @@
-/* Pins the typing behavior of object-field mutability
-   (docs/object_representation_cleanup.md).
-
-   Every case in this file must keep compiling. The two cases that the
-   cleanup intentionally flipped to errors (a setter acquired at a type
-   different from the getter, via coercion or assignment) are pinned as
-   super_errors fixtures instead: object_coercion_setter_narrower.res and
-   object_setter_type_mismatch.res.
-
-   The rejecting counterparts are pinned in
-   tests/build_tests/super_errors/fixtures/object_*.res. */
+/* Accepted object-field mutability and subtyping cases. Rejecting
+ counterparts are under tests/build_tests/super_errors/fixtures/object_*.res. */
 
 type wide = {"a": int, "b": int}
 type narrow = {"a": int} /* wide <: narrow (width subtyping) */
@@ -17,24 +8,20 @@ type narrow = {"a": int} /* wide <: narrow (width subtyping) */
  (Mutable A :> Immutable B with A <: B.) */
 let forget_write_covariant = (v: {@set "x": wide}): {"x": narrow} => (v :> {"x": narrow})
 
-/* Open source, closed immutable target: ordinary covariance. Sound forever:
-   the coerced alias is read-only, and a later promotion of the source
-   writes at the source's own field type. */
+/* Open source, closed immutable target: ordinary covariance. The result is
+ read-only, while later source promotion writes at the source field type. */
 let open_source_covariant = (o: {.."x": wide}): {"x": narrow} => (o :> {"x": narrow})
 
 /* Closed source, open target: covariant; the target's tail is instantiated
  from the (closed) source, so the result is not promotable. */
 let closed_source_open_target = (v: {"x": wide}) => (v :> {.."x": narrow})
 
-/* Open source, mutable target at the SAME type: accepted, and constrains
-   callers to writable objects (today: absorbs the "x#=" member; new model:
-   promotion Immutable -> Mutable at the same type). */
+/* Open source, mutable target at the same type: promotion constrains callers
+ to objects with a mutable field. */
 let open_source_promote_same_type = (o: {.."x": wide}): {@set "x": wide} => (o :> {@set "x": wide})
 
-/* Writing a bare field of an open row is accepted and strengthens the
-   demand on callers (today: adds "x#=" through the tail; new model:
-   promotion). The rejection of a read-only caller is pinned in
-   object_open_write_readonly_caller.res. */
+/* Writing a field of an open row promotes it and strengthens the demand on
+ callers. */
 let open_row_write = (o: {.."x": int}) => o["x"] = 1
 
 /* A generalized getter accepts both read-only and settable objects. */

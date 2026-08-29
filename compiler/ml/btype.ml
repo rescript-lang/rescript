@@ -74,6 +74,13 @@ let default_mty = function
 
 (**** Definitions for backtracking ****)
 
+(* The backtracking trail owns semantic changes made while checking a
+   speculative constraint. [log_type] and [set_level] use [last_snapshot] to
+   avoid logging nodes allocated after the active snapshot. Link compression
+   and separately allocated references cannot use that node-id test, so their
+   changes are logged whenever a trail is active. Temporary graph-copy memos
+   are not trail entries; [type_copy_session] below owns and restores them. *)
+
 type change =
   | Ctype of type_expr * type_desc
   | Ccompress of type_expr * type_desc * type_desc
@@ -414,6 +421,14 @@ type type_copy_session = {
   mutable copy_policy_memo: (int, bool) Hashtbl.t option;
 }
 
+(* A copy session owns temporary writes made to the source graph. [Tsubst]
+   marks live on type nodes and are visible across the active session stack: a
+   nested copy which encounters an outer mark reuses that copied node.
+   Mutability duplication membership is instead per-session; if a nested copy
+   reaches a cell independently, it creates and owns a further duplicate.
+   Several copy calls in one session deliberately share both memo kinds.
+   Session writes are raw writes restored on exit; semantic mutability changes
+   use the backtracking trail instead. *)
 let type_copy_sessions = ref []
 
 let begin_type_copy_session () =
@@ -439,10 +454,11 @@ let end_type_copy_session () =
     type_copy_sessions := rest
   | [] -> assert false
 
-(* Duplicate a mutability cell for the current copy session: the original
-   representative is temporarily linked to the duplicate, so every field
-   copied in this session that shares the cell reaches the same duplicate
-   (the former [dup_kind] idiom); [cleanup_types] restores the originals. *)
+(* Duplicate a mutability class for the current copy session. The source
+   representative temporarily links to the duplicate, so all fields in this
+   session which shared the source class reach the same duplicate. Semantic
+   operations follow representatives and therefore affect the copy while the
+   link is installed; ending the session restores the source cell. *)
 let dup_mutability r =
   let session = current_type_copy_session () in
   let r = mutability_ref_repr r in
@@ -504,7 +520,10 @@ let rec copy_type_desc ?(keep_names = false) ?(fresh_mutability = false) f =
        (generic terminator) duplicates each cell once per session via
        [dup_mutability], so aliases within the instance stay correlated while
        the scheme and sibling instances are untouched; other copies hold the
-       shared representative, so promotions reach every occurrence. *)
+       shared representative, so promotions reach every occurrence. Determine
+       this policy before copying either child: recursive copying can install
+       [Tsubst] marks in the row, and OCaml record-field evaluation order must
+       not decide which terminator is classified. *)
     let mutability =
       if fresh_mutability || row_terminator_generic f_.rest then
         dup_mutability f_.mutability

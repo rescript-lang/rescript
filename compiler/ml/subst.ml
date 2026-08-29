@@ -220,6 +220,9 @@ let rec typexp_rec s ty =
                  }
              | None -> Tvariant row))
          | _ ->
+           (* A graph prepared for persistence must not retain mutable cells
+              from the live typing graph. Fresh cells still use the enclosing
+              copy session, so sharing within the saved graph is preserved. *)
            copy_type_desc ~fresh_mutability:s.for_saving (typexp_rec s) desc);
     ty'
 

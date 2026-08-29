@@ -144,17 +144,23 @@ val generalize_expansive : Env.t -> type_expr -> unit
    contravariant branches non-generalizable *)
 
 val generalize_structure : type_expr -> unit
-(* Same, but variables are only lowered to !current_level *)
+(** Generalize eligible structural nodes, but lower their variables to
+    [current_level] instead of generalizing the variables. *)
 
 val correct_levels : type_expr -> type_expr
 (* Returns a copy with decreasing levels *)
 
 val instance : ?partial:bool -> Env.t -> type_expr -> type_expr
+(** Instantiate a type scheme in a fresh copy session.
 
-(* Take an instance of a type scheme *)
-(* partial=None  -> normal
-   partial=false -> newvar() for non generic subterms
-   partial=true  -> newty2 ty.level Tvar for non generic subterms *)
+    Without [partial], generic nodes are copied and non-generic nodes are
+    shared. With [partial], non-generic subterms without free universal
+    variables are replaced by fresh variables: at [current_level] when false,
+    or at the original subterm's level when true. Structured subterms with free
+    universal variables are copied. Copies belonging to local GADT constraints
+    are recorded in [env], but that recording does not select additional nodes
+    for copying. *)
+
 val instance_def : type_expr -> type_expr
 (* use defaults *)
 
@@ -233,12 +239,21 @@ val filter_arrow_n :
    parameters with the given labels; return parameter and result types. *)
 
 val filter_method : Env.t -> string -> type_expr -> type_expr
+(** Constrain a type to have the named readable object field and return the
+    field's stored type. A missing field extends an open row as [Immutable].
+    A closed row without the field, or a non-object type which cannot be
+    constrained to an object, raises [Unify]. *)
 
 type object_field_write_error = Owrite_missing | Owrite_not_mutable
 
 val filter_object_field_for_write :
   Env.t -> string -> type_expr -> (type_expr, object_field_write_error) Result.t
-(* A special case of unification (with {m : 'a; 'b}). *)
+(** Constrain a type for assignment to the named object field.
+
+    A mutable field returns its stored type. On an open row, an immutable field
+    is promoted without changing its type, and a missing field is added as
+    mutable. On a closed row, these cases return [Owrite_not_mutable] and
+    [Owrite_missing], respectively. *)
 
 val occur_in : Env.t -> type_expr -> type_expr -> bool
 val deep_occur : type_expr -> type_expr -> bool
@@ -261,13 +276,17 @@ val equal : Env.t -> bool -> type_expr list -> type_expr list -> bool
    [/\x1.../\xn.tau] and [/\y1.../\yn.sigma] are equivalent. *)
 
 val enlarge_type : Env.t -> type_expr -> type_expr * bool
-(* Make a type larger, flag is true if some pruning had to be done *)
+(** Build a supertype approximation used by the first coercion-checking path.
+    The result may share unchanged nodes with its input. Changed object fields
+    have independent mutability cells so trial unification cannot change the
+    input. The flag reports that a more complex coercion may do better. *)
 
 val subtype : Env.t -> type_expr -> type_expr -> unit -> unit
-(* [subtype env t1 t2] checks that [t1] is a subtype of [t2].
-   It accumulates the constraints the type variables must
-   enforce and returns a function that enforces this
-   constraints. *)
+(** [subtype env t1 t2] checks that [t1] is a subtype of [t2] and returns a
+    function which enforces the type-variable equality constraints accumulated
+    during traversal. Callers can bind variables to their actual types before
+    invoking the returned function. Specialized cases may perform speculative
+    unification while constructing the constraints. *)
 
 val nondep_type : Env.t -> Ident.t -> type_expr -> type_expr
 (* Return a type equivalent to the given type but without

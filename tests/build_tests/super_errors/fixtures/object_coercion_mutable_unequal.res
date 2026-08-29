@@ -1,8 +1,8 @@
-/* Pin (object mutability cleanup): mutable-to-mutable coercion is invariant
-   in the field type — with unequal types it is rejected (today the setter
-   member demands contravariance while the getter demands covariance). Must
-   stay an error under the new model (Mutable A <: Mutable B iff A = B).
-   See docs/object_representation_cleanup.md. */
+/* Mutable fields are invariant in the field type. A mutable field of A is a
+   subtype of a mutable field of B only when A and B are equivalent: reads
+   require covariance, while writes require contravariance. This coercion
+   therefore fails because wide and narrow are not equivalent. */
+
 type wide = {"a": int, "b": int}
 type narrow = {"a": int}
 let p = (v: {@set "x": wide}) => (v :> {@set "x": narrow})
