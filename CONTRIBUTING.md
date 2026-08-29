@@ -10,6 +10,24 @@ We tried to keep the installation process as simple as possible. In case you are
 
 Happy hacking!
 
+## Repository guides
+
+This document covers repository-wide setup and workflow. Start with the guide
+for the compiler area you are changing:
+
+- [parser, printer, and JSX transformation](compiler/syntax/README.md)
+- [type checker and typed tree](compiler/ml/README.md)
+- [Lambda, Lam, and JavaScript generation](compiler/core/README.md)
+- [editor analysis](analysis/README.md)
+- [build system](rewatch/README.md)
+- [`rescript-tools`](tools/README.md)
+
+Public language and library documentation belongs on the
+[ReScript website](https://github.com/rescript-association/rescript-lang.org).
+The guides in this repository document its current implementation and
+contributor workflows. Detailed caller contracts belong in module interfaces;
+algorithm and representation invariants belong beside their implementation.
+
 ## Setup
 
 > Most of our contributors are working on Apple machines, so all our instructions are currently macOS / Linux centric. Contributions for Windows development welcome!
@@ -422,7 +440,7 @@ Adding a new entry there requires re-running the analysis tests. Follow these st
 
 (If a `make` command fails, consider using the [DevContainer](#b-devcontainer).)
 
-Finally, add a line to [CHANGELOG.md](CHANGELOG.md), using the `#### :nail_care: Polish` section.
+Finally, add a line to [CHANGELOG.md](CHANGELOG.md), using the `#### :nail_care: Polish` section. Create the pull request first, then add the entry with its PR link.
 
 ## Code structure
 
