@@ -1,6 +1,10 @@
 ## ReScript build configuration
 
-This document contains a list of all config parameters with remarks, and whether they are already implemented in rewatch. It is based on https://rescript-lang.org/docs/manual/latest/build-configuration-schema.
+This document lists configuration fields recognized by Rewatch and whether
+their behavior is implemented. The public schema is maintained in the
+[ReScript manual](https://rescript-lang.org/docs/manual/build-configuration-schema/).
+Compatibility fields can remain implemented here after they stop being
+recommended for new projects.
 
 | Parameter             | JSON type               | Remark                                                      | Implemented? |
 | --------------------- | ----------------------- | ----------------------------------------------------------- | :----------: |

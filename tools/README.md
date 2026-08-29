@@ -32,6 +32,11 @@ rescript-tools doc src/EntryPointLibFile.res > doc.json
 rescript-tools reanalyze --help
 ```
 
+## Contributor documentation
+
+- [Migration framework capabilities](src/migrate.md)
+- [Reanalyze architecture](../analysis/reanalyze/README.md)
+
 ## Decode JSON
 
 Add to `bs-dev-dependencies`:

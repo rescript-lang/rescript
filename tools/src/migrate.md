@@ -1,6 +1,6 @@
 # Migration Framework – Current Capabilities
 
-This document captures what the migration framework currently supports, based on `tools/src/migrate.ml` (and helpers in `tools/src/transforms.ml`, `compiler/ml/builtin_attributes.ml`, and `analysis/src/Cmt.ml`).
+This document captures what the migration framework currently supports, based on `tools/src/migrate.ml` (and helpers in `tools/src/transforms.ml`, `compiler/ml/builtin_attributes.ml`, and `analysis/src/cmt.ml`).
 
 ## Inputs & Preconditions
 
