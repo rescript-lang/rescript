@@ -18,6 +18,8 @@
 - Remove the deprecated `Js` namespace and its runtime modules. https://github.com/rescript-lang/rescript/pull/8531
 - Move Belt into the separately installed `@rescript/belt` package. Projects using Belt must install the package and list it in their `rescript.json` dependencies. https://github.com/rescript-lang/rescript/pull/8554
 - Correct the structured function details produced by `rescript-tools doc` and exposed by `RescriptTools.Docgen`: parameters now retain labels and optionality, nested functions, tuples, variables, and generic arguments retain their type structure, return types are identified correctly, and non-function values no longer receive fake function details. This changes the published docgen detail schema. https://github.com/rescript-lang/rescript/pull/8576
+- Make object-field mutability part of the type. A property has one type for reading and writing, `obj["x"] = v` requires the field to be settable (`@set`, or an inferred open row, which the write makes settable), and a coercion never grants or widens write capability. Previously the getter type and a hidden mangled `"x#="` setter member were tracked independently, so a property could be written at a different type than it was read, and a value coerced to a type without `@set` could still be written through. https://github.com/rescript-lang/rescript/pull/8597
+- Remove the undocumented object-field attribute forms `@get` (bare or with a `null`/`undefined`/`nullable` payload) and `@set({no_get: ...})` on object types. Only bare `@set` marks a field settable; nullable getter types are written directly (`null<t>`, `undefined<t>`, `nullable<t>`). https://github.com/rescript-lang/rescript/pull/8597
 
 #### :eyeglasses: Spec Compliance
 
@@ -30,6 +32,7 @@
 
 #### :bug: Bug fix
 
+- Object typing errors now describe fields directly: assigning to a field without `@set` reports that the field is not settable and suggests the annotation, and missing-property errors name the field instead of a phantom `"x#="` member. https://github.com/rescript-lang/rescript/pull/8597
 - Fix signature inclusion rejecting equivalent object externals after type-alias expansion. https://github.com/rescript-lang/rescript/pull/8581
 - Fix externals whose result type is an alias of `unit` so they use the same unit-return behavior as externals declared to return `unit`. https://github.com/rescript-lang/rescript/pull/8581
 - Fix dynamic imports of external bindings that require FFI argument or result conversions, including `@variadic`, `@unwrap`, polymorphic variant encodings, `@as` phantom arguments, optional labeled arguments, and `@return` wrappers. The imported value now applies the same conversions as a direct external call. https://github.com/rescript-lang/rescript/pull/8582
@@ -57,6 +60,7 @@
 
 #### :house: Internal
 
+- Rework the object-type representation end to end: object rows are plain field chains carrying a per-field mutability state (no phantom setter members), object literals are typed directly and property access and assignment are first-class AST and Lambda nodes shared between the Lambda and JS pipelines, and dead class-system remnants (the field-presence lattice, the class-abbreviation memo on object types, method-send typing) are removed. https://github.com/rescript-lang/rescript/pull/8597
 - Upgrade the development toolchain and primary CI builds to OCaml 5.5 while retaining OCaml 5.0 as the minimum supported version. https://github.com/rescript-lang/rescript/pull/8589
 - Upgrade the vendored Flow parser from 0.267.0 to 0.320.0, the final release of the OCaml implementation. https://github.com/rescript-lang/rescript/pull/8588
 - Vendor the Flow parser 0.267.0 sources used by the compiler, removing the external `flow_parser` dependency and establishing a maintained baseline for future OCaml upgrades. https://github.com/rescript-lang/rescript/pull/8587
