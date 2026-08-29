@@ -1,0 +1,28 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/object_value_signature_set_mismatch.res[0m:[2m7:5-9:1[0m
+
+   5 [2m│[0m module M: {
+   6 [2m│[0m   let v: {"x": int}
+   [1;31m7[0m [2m│[0m } = [1;31m{[0m
+   [1;31m8[0m [2m│[0m [1;31m  let v = impl[0m
+   [1;31m9[0m [2m│[0m [1;31m}[0m
+  10 [2m│[0m 
+
+  Signature mismatch:
+  Modules do not match:
+    {
+  let v: {@set "x": int}
+}
+  is not included in
+    {
+  let v: {"x": int}
+}
+  Values do not match:
+    let v: {@set "x": int}
+  is not included in
+    let v: {"x": int}
+  [36m/.../fixtures/object_value_signature_set_mismatch.res[0m:[2m6:3-19[0m:
+    Expected declaration
+  [36m/.../fixtures/object_value_signature_set_mismatch.res[0m:[2m8:7[0m:
+    Actual declaration

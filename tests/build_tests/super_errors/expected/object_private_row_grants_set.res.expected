@@ -1,0 +1,28 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/object_private_row_grants_set.res[0m:[2m7:5-9:1[0m
+
+   5 [2m│[0m module M: {
+   6 [2m│[0m   type t = private {..@set "x": int}
+   [1;31m7[0m [2m│[0m } = [1;31m{[0m
+   [1;31m8[0m [2m│[0m [1;31m  type t = private {.."x": int}[0m
+   [1;31m9[0m [2m│[0m [1;31m}[0m
+  10 [2m│[0m 
+
+  Signature mismatch:
+  Modules do not match:
+    {
+  type t = {.."x": int}
+}
+  is not included in
+    {
+  type t = {..@set "x": int}
+}
+  Type declarations do not match:
+    type t = {.."x": int}
+  is not included in
+    type t = {..@set "x": int}
+  [36m/.../fixtures/object_private_row_grants_set.res[0m:[2m6:3-36[0m:
+    Expected declaration
+  [36m/.../fixtures/object_private_row_grants_set.res[0m:[2m8:3-31[0m:
+    Actual declaration

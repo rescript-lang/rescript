@@ -49,6 +49,8 @@ function closed_immutable_covariant(v) {
   return v;
 }
 
+let PrivateRowForgetsSet = {};
+
 export {
   forget_write_covariant,
   open_source_covariant,
@@ -62,5 +64,6 @@ export {
   set_at_int,
   set_at_string,
   closed_immutable_covariant,
+  PrivateRowForgetsSet,
 }
 /* No side effect */

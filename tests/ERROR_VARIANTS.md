@@ -363,7 +363,7 @@ Wrapper symptoms attached to inclusion failures. Source: [includemod.ml:23](../c
 | Variant | Status | Fixture | Notes |
 |---|---|---|---|
 | `Missing_field` | ✓ | `super_errors_multi/Iface_missing_value` | |
-| `Value_descriptions` | ✓ | `super_errors_multi/Iface_value_descriptions`, `super_errors_multi/Iface_value_arity_mismatch`, `super_errors_multi/Smoke_interface_mismatch`, `super_errors_multi/Cross_external_spec_mismatch`, `super_errors_multi/Cross_external_payload_name`, `super_errors_multi/Cross_external_import_attrs`, `module_sig_value_arity_mismatch*.res` | Arity mismatches print a dedicated hint (implementation vs interface argument counts), including through aliases and nested function types. |
+| `Value_descriptions` | ✓ | `super_errors_multi/Iface_value_descriptions`, `super_errors_multi/Iface_value_arity_mismatch`, `super_errors_multi/Smoke_interface_mismatch`, `super_errors_multi/Cross_external_spec_mismatch`, `super_errors_multi/Cross_external_payload_name`, `super_errors_multi/Cross_external_import_attrs`, `module_sig_value_arity_mismatch*.res`, `object_value_signature_set_mismatch.res` | Arity mismatches print a dedicated hint (implementation vs interface argument counts), including through aliases and nested function types. The object fixture pins that a value signature cannot drop `@set` from an object type (moregeneral requires equal field mutability). |
 | `Type_declarations` | ✓ | `super_errors_multi/Iface_type_decl_record`, `super_errors_multi/Iface_type_decl_variant`, `RecordInclusion.res`, `type_decl_function_arity_mismatch.res` | |
 | `Extension_constructors` | ✓ | `super_errors_multi/Iface_extension_constructors` | |
 | `Module_types` | ✓ | `super_errors_multi/Iface_module_types` | |
@@ -387,7 +387,7 @@ Source: [includecore.ml:159](../compiler/ml/includecore.ml).
 | `Privacy` | ✓ | `super_errors_multi/Iface_privacy_mismatch` | |
 | `Kind` | ✓ | `super_errors_multi/Iface_kind_mismatch` | Record-in-impl vs variant-in-interface. |
 | `Constraint` | ✓ | `super_errors_multi/Iface_constraint_mismatch` | Implementation adds a `constraint 'a = …`; interface has none. |
-| `Manifest` | ✓ | `super_errors_multi/Iface_manifest_mismatch`, `type_decl_function_arity_mismatch.res` | Manifest types differ, including function types with different arities. |
+| `Manifest` | ✓ | `super_errors_multi/Iface_manifest_mismatch`, `type_decl_function_arity_mismatch.res`, `object_private_row_grants_set.res`, `object_manifest_set_mismatch.res` | Manifest types differ, including function types with different arities. The object fixtures pin the `@set` inclusion matrix: a private row's signature cannot grant `@set` its implementation lacks (but may forget it — pinned compiling in `object_mutability_pin.res`), while a transparent manifest is an equation and cannot forget it either. |
 | `Variance` | ✓ | `super_errors_multi/Iface_variance_mismatch` | Interface annotates `+'a`; implementation's inferred variance differs. |
 | `Field_type` | ✓ | `super_errors_multi/Iface_type_decl_record` | |
 | `Field_mutable` | ✓ | `super_errors_multi/Iface_field_mutable_mismatch` | |
