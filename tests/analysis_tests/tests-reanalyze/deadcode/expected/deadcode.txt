@@ -1161,6 +1161,9 @@
   addValueReference Newton.res:31:13 --> Newton.res:29:4
   addValueReference Newton.res:31:23 --> Newton.res:29:4
   addValueReference Newton.res:31:21 --> Newton.res:25:4
+  Scanning ObjectLiteralSideEffects.cmt Source:ObjectLiteralSideEffects.res
+  addValueDeclaration +deadWithEffect ObjectLiteralSideEffects.res:3:4 path:+ObjectLiteralSideEffects
+  addValueDeclaration +deadNoEffect ObjectLiteralSideEffects.res:4:4 path:+ObjectLiteralSideEffects
   Scanning OcamlWarningSuppressToplevel.cmt Source:OcamlWarningSuppressToplevel.res
   addValueDeclaration +suppressed1 OcamlWarningSuppressToplevel.res:3:4 path:+OcamlWarningSuppressToplevel
   addValueDeclaration +suppressed2 OcamlWarningSuppressToplevel.res:4:4 path:+OcamlWarningSuppressToplevel
@@ -2103,7 +2106,7 @@
   
 Forward Liveness Analysis
 
-    decls: 744
+    decls: 746
     roots(external targets): 161
     decl-deps: decls_with_out=451 edges_to_decls=323
 
@@ -3635,6 +3638,8 @@ Forward Liveness Analysis
         -> +Newton.+newton
         -> +Newton.+f
         -> +Newton.+fPrimed
+  Dead Value +ObjectLiteralSideEffects.+deadWithEffect
+  Dead Value +ObjectLiteralSideEffects.+deadNoEffect
   Live (annotated) Value +OcamlWarningSuppressToplevel.+suppressed1
   Live (annotated) Value +OcamlWarningSuppressToplevel.+suppressed2
   Live (annotated) Value +OcamlWarningSuppressToplevel.M.+suppressed3
@@ -5251,6 +5256,18 @@ Forward Liveness Analysis
   Newsyntax.res:12:24-29
   record2.yy is a record label never used to read a value
 
+  Warning Dead Module
+  ObjectLiteralSideEffects.res:0:1
+  ObjectLiteralSideEffects is a dead module as all its items are dead.
+
+  Warning Dead Value With Side Effects
+  ObjectLiteralSideEffects.res:3:1-49
+  deadWithEffect is never used and could have side effects
+
+  Warning Dead Value
+  ObjectLiteralSideEffects.res:4:1-27
+  deadNoEffect is never used
+
   Warning Dead Type
   Opaque.res:2:26-41
   opaqueFromRecords.A is a variant case which is never constructed
@@ -5643,4 +5660,4 @@ Forward Liveness Analysis
   OptArg.res:14:1-42
   optional argument b of function twoArgs is never used
   
-  Analysis reported 327 issues (Incorrect Dead Annotation:1, Warning Dead Exception:2, Warning Dead Module:22, Warning Dead Type:94, Warning Dead Value:178, Warning Dead Value With Side Effects:5, Warning Redundant Optional Argument:7, Warning Unused Argument:18)
+  Analysis reported 330 issues (Incorrect Dead Annotation:1, Warning Dead Exception:2, Warning Dead Module:23, Warning Dead Type:94, Warning Dead Value:179, Warning Dead Value With Side Effects:6, Warning Redundant Optional Argument:7, Warning Unused Argument:18)

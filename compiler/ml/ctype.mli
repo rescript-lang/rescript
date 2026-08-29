@@ -166,10 +166,18 @@ val instance_parameterized_type :
 val instance_declaration : type_declaration -> type_declaration
 val instance_poly :
   ?keep_names:bool ->
-  bool ->
+  fixed:bool ->
   type_expr list ->
   type_expr ->
   type_expr list * type_expr
+(* Instantiate a scheme [Tpoly(sch, univars)]: replace the universal
+   variables with fresh ones and return them with the instance. [~fixed]
+   controls the copy of polymorphic-variant rows: a fixed copy keeps their
+   rows closed to further extension. Scheme *use* sites instantiate with
+   [~fixed:false]; scheme *introduction* sites (checking a value against
+   the scheme) instantiate with [~fixed:true] and then verify the value
+   generalizes over the returned variables ([Typecore.check_univars]) -
+   the introduction discipline is that whole operation, not this flag. *)
 (* Take an instance of a type scheme containing free univars *)
 
 val instance_label :
