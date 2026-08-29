@@ -176,25 +176,28 @@ val instance_constructor :
 val instance_parameterized_type :
   ?keep_names:bool -> type_expr list -> type_expr -> type_expr list * type_expr
 val instance_declaration : type_declaration -> type_declaration
+
 val instance_poly :
   ?keep_names:bool ->
   fixed:bool ->
   type_expr list ->
   type_expr ->
   type_expr list * type_expr
-(* Instantiate a scheme [Tpoly(sch, univars)]: replace the universal
-   variables with fresh ones and return them with the instance. [~fixed]
-   controls the copy of polymorphic-variant rows: a fixed copy keeps their
-   rows closed to further extension. Scheme *use* sites instantiate with
-   [~fixed:false]; scheme *introduction* sites (checking a value against
-   the scheme) instantiate with [~fixed:true] and then verify the value
-   generalizes over the returned variables ([Typecore.check_univars]) -
-   the introduction discipline is that whole operation, not this flag. *)
-(* Take an instance of a type scheme containing free univars *)
+(** [instance_poly ~fixed univars body] replaces the universal variables of a
+    [Tpoly(body, univars)] scheme with fresh variables and returns those
+    variables with the copied body.
+
+    [fixed] controls how fixed polymorphic-variant rows are copied; when true,
+    the copied rows remain closed to extension. It does not by itself select
+    scheme introduction or elimination. A type-checking caller introducing a
+    value at the scheme must separately verify generality. Callers in Typecore
+    do this with the local [check_univars] operation. *)
 
 val instance_label :
   bool -> label_description -> type_expr list * type_expr * type_expr
-(* Same, for a label *)
+(** Instantiate a record label's argument and result types. The Boolean is the
+    [fixed] argument passed to [instance_poly] when the argument is a
+    polymorphic scheme. *)
 
 val apply : Env.t -> type_expr list -> type_expr -> type_expr list -> type_expr
 (* [apply [p1...pN] t [a1...aN]] match the arguments [ai] to

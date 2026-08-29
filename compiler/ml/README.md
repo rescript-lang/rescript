@@ -59,6 +59,28 @@ For module inclusion and signature compatibility, start with
 : Substitution and copying across environments and persistence boundaries.
   `for_saving` has stronger independence requirements than an ordinary copy.
 
+## Polymorphic value positions
+
+A `Tpoly` node represents a type scheme, so the operation depends on whether
+the surrounding syntax consumes or defines a value at that scheme:
+
+- An elimination site instantiates the scheme for one use. Object-field reads
+  do this in `object_field_use_type`.
+- An introduction site must show that the expression is at least as general as
+  the scheme. `type_let` for polymorphic annotations, `type_label_exp` for
+  record fields, and `type_object_field_value` for object-field assignments all
+  type the expression at a fixed instance and call `check_univars`.
+
+The `fixed` argument of `Ctype.instance_poly` controls the copying of fixed
+polymorphic-variant rows; it is not by itself an introduction/elimination
+marker. The generality check is what distinguishes introduction. After a
+successful check, the typed expression carries an ordinary instance rather
+than the fixed checking instance.
+
+Do not copy `type_label_exp`'s retry for expansive expressions into another
+introduction site by default. That retry recovers completeness lost through
+record-label type propagation and is specific to that typing path.
+
 ## Choosing the right level for documentation
 
 - Put caller-observable requirements in a module interface. Examples include
