@@ -1,0 +1,28 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/object_manifest_set_mismatch.res[0m:[2m6:5-8:1[0m
+
+  4 [2m│[0m module M: {
+  5 [2m│[0m   type t = {"x": int}
+  [1;31m6[0m [2m│[0m } = [1;31m{[0m
+  [1;31m7[0m [2m│[0m [1;31m  type t = {@set "x": int}[0m
+  [1;31m8[0m [2m│[0m [1;31m}[0m
+  9 [2m│[0m 
+
+  Signature mismatch:
+  Modules do not match:
+    {
+  type t = {@set "x": int}
+}
+  is not included in
+    {
+  type t = {"x": int}
+}
+  Type declarations do not match:
+    type t = {@set "x": int}
+  is not included in
+    type t = {"x": int}
+  [36m/.../fixtures/object_manifest_set_mismatch.res[0m:[2m5:3-21[0m:
+    Expected declaration
+  [36m/.../fixtures/object_manifest_set_mismatch.res[0m:[2m7:3-26[0m:
+    Actual declaration

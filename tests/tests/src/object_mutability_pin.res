@@ -58,3 +58,14 @@ let set_at_string = () => set_x(string_target, "s")
 
 /* Closed immutable-to-immutable coercion is covariant (matrix pin). */
 let closed_immutable_covariant = (v: {"x": wide}): {"x": narrow} => (v :> {"x": narrow})
+
+/* Private-row signature inclusion may forget write capability: the
+   implementation's settable field is abstracted to a read-only one. The
+   reverse (a signature granting @set over a plain implementation field) is
+   pinned as an error in
+   tests/build_tests/super_errors/fixtures/object_private_row_grants_set.res. */
+module PrivateRowForgetsSet: {
+  type t = private {.."x": int}
+} = {
+  type t = private {..@set "x": int}
+}
