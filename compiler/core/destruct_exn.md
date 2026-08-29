@@ -68,7 +68,7 @@ match (Primitive_exceptions.internalToException computation) with
 
 What will happen if JS side `raises` an OCaml extensible variant, 
 we view it as OCaml exception..
-It is slightly differnt in OCaml, since it always start from `catch(id)..` 
+It is slightly different in OCaml, since it always start from `catch(id)..` 
 where `id` is defined by the compiler
 
 Another very similar proposal would be 
