@@ -30,18 +30,18 @@ let translate_obj_type closed_flag fields_translations =
   let fields =
     fields_translations
     |> List.map (fun (name, mutable_, {type_ = t}) ->
-           let optional, type_ =
-             match t with
-             | Option t -> (Optional, t)
-             | _ -> (Mandatory, t)
-           in
-           {
-             mutable_;
-             name_js = name;
-             optional;
-             type_;
-             doc_string = Doc_string.empty;
-           })
+        let optional, type_ =
+          match t with
+          | Option t -> (Optional, t)
+          | _ -> (Mandatory, t)
+        in
+        {
+          mutable_;
+          name_js = name;
+          optional;
+          type_;
+          doc_string = Doc_string.empty;
+        })
   in
   let type_ = Object (closed_flag, fields) in
   {dependencies; type_}
@@ -551,11 +551,10 @@ and translateTypeExprFromTypes_ ~config ~type_vars_gen ~type_env
       let no_payloads =
         no_payloads
         |> List.map (fun label ->
-               {
-                 label_js =
-                   (if is_number label then IntLabel label
-                    else StringLabel label);
-               })
+            {
+              label_js =
+                (if is_number label then IntLabel label else StringLabel label);
+            })
       in
       let type_ =
         create_variant ~inherits:[] ~no_payloads ~payloads:[] ~polymorphic:true
@@ -572,15 +571,14 @@ and translateTypeExprFromTypes_ ~config ~type_vars_gen ~type_env
       let payload_translations =
         payloads
         |> List.map (fun (label, payload) ->
-               ( label,
-                 payload
-                 |> translateTypeExprFromTypes_ ~config ~type_vars_gen ~type_env
-               ))
+            ( label,
+              payload
+              |> translateTypeExprFromTypes_ ~config ~type_vars_gen ~type_env ))
       in
       let payloads =
         payload_translations
         |> List.map (fun (label, translation) ->
-               {case = {label_js = StringLabel label}; t = translation.type_})
+            {case = {label_js = StringLabel label}; t = translation.type_})
       in
       let type_ =
         create_variant ~inherits:[] ~no_payloads ~payloads ~polymorphic:true
@@ -599,10 +597,9 @@ and translateTypeExprFromTypes_ ~config ~type_vars_gen ~type_env
       let type_equations_translation =
         (List.combine ids types [@doesNotRaise])
         |> List.map (fun (x, t) ->
-               ( x,
-                 t
-                 |> translateTypeExprFromTypes_ ~config ~type_vars_gen ~type_env
-               ))
+            ( x,
+              t |> translateTypeExprFromTypes_ ~config ~type_vars_gen ~type_env
+            ))
       in
       let type_equations =
         type_equations_translation
@@ -638,53 +635,50 @@ and signature_to_module_runtime_representation ~config ~type_vars_gen ~type_env
   let dependencies_and_fields =
     signature
     |> List.map (fun signature_item ->
-           match signature_item with
-           | Types.Sig_value (_id, {val_kind = Val_prim _}) -> ([], [])
-           | Types.Sig_value (id, {val_type = type_expr; val_attributes}) ->
-             let {dependencies; type_} =
-               type_expr
-               |> translateTypeExprFromTypes_ ~config ~type_vars_gen ~type_env
-             in
-             let field =
-               {
-                 mutable_ = Immutable;
-                 name_js = id |> Ident.name;
-                 optional = Mandatory;
-                 type_;
-                 doc_string = Annotation.doc_string_from_attrs val_attributes;
-               }
-             in
-             (dependencies, [field])
-           | Types.Sig_module (id, module_declaration, _recStatus) ->
-             let type_env1 =
-               match
-                 type_env |> Type_env.get_module ~name:(id |> Ident.name)
-               with
-               | Some type_env1 -> type_env1
-               | None -> type_env
-             in
-             let dependencies, type_ =
-               match module_declaration.md_type with
-               | Mty_signature signature ->
-                 signature
-                 |> signature_to_module_runtime_representation ~config
-                      ~type_vars_gen ~type_env:type_env1
-               | Mty_ident _ | Mty_functor _ | Mty_alias _ -> ([], unknown)
-             in
-             let field =
-               {
-                 mutable_ = Immutable;
-                 name_js = id |> Ident.name;
-                 optional = Mandatory;
-                 type_;
-                 doc_string =
-                   Annotation.doc_string_from_attrs
-                     module_declaration.md_attributes;
-               }
-             in
-             (dependencies, [field])
-           | Types.Sig_type _ | Types.Sig_typext _ | Types.Sig_modtype _ ->
-             ([], []))
+        match signature_item with
+        | Types.Sig_value (_id, {val_kind = Val_prim _}) -> ([], [])
+        | Types.Sig_value (id, {val_type = type_expr; val_attributes}) ->
+          let {dependencies; type_} =
+            type_expr
+            |> translateTypeExprFromTypes_ ~config ~type_vars_gen ~type_env
+          in
+          let field =
+            {
+              mutable_ = Immutable;
+              name_js = id |> Ident.name;
+              optional = Mandatory;
+              type_;
+              doc_string = Annotation.doc_string_from_attrs val_attributes;
+            }
+          in
+          (dependencies, [field])
+        | Types.Sig_module (id, module_declaration, _recStatus) ->
+          let type_env1 =
+            match type_env |> Type_env.get_module ~name:(id |> Ident.name) with
+            | Some type_env1 -> type_env1
+            | None -> type_env
+          in
+          let dependencies, type_ =
+            match module_declaration.md_type with
+            | Mty_signature signature ->
+              signature
+              |> signature_to_module_runtime_representation ~config
+                   ~type_vars_gen ~type_env:type_env1
+            | Mty_ident _ | Mty_functor _ | Mty_alias _ -> ([], unknown)
+          in
+          let field =
+            {
+              mutable_ = Immutable;
+              name_js = id |> Ident.name;
+              optional = Mandatory;
+              type_;
+              doc_string =
+                Annotation.doc_string_from_attrs
+                  module_declaration.md_attributes;
+            }
+          in
+          (dependencies, [field])
+        | Types.Sig_type _ | Types.Sig_typext _ | Types.Sig_modtype _ -> ([], []))
   in
   let dependencies, fields =
     let dl, fl = dependencies_and_fields |> List.split in
@@ -700,7 +694,7 @@ let translate_type_expr_from_types ~config ~type_env type_expr =
   if !Debug.dependencies then
     translation.dependencies
     |> List.iter (fun dep ->
-           Log_.item "Dependency: %s\n" (dep |> dep_to_string));
+        Log_.item "Dependency: %s\n" (dep |> dep_to_string));
   translation
 
 let translate_type_exprs_from_types ~config ~type_env type_exprs =
@@ -711,7 +705,7 @@ let translate_type_exprs_from_types ~config ~type_env type_exprs =
   if !Debug.dependencies then
     translations
     |> List.iter (fun translation ->
-           translation.dependencies
-           |> List.iter (fun dep ->
-                  Log_.item "Dependency: %s\n" (dep |> dep_to_string)));
+        translation.dependencies
+        |> List.iter (fun dep ->
+            Log_.item "Dependency: %s\n" (dep |> dep_to_string)));
   translations
