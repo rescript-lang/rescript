@@ -1,106 +1,82 @@
-# Analysis Library and Binary
+# Editor analysis
 
-This subfolder builds a private command line binary used by the plugin to power a few functionalities such as jump to definition, hover and autocomplete.
+The analysis executable powers editor features such as completion, hover,
+references, semantic tokens, and code actions. It reads compiler-produced
+`.cmt` and `.cmti` files, so an analysis binary and the project artifacts it
+inspects must be built with compatible compiler representations.
 
-The binary reads the `.cmt` and `.cmti` files and analyses them.
+## Code map
 
-For installation & build instructions, see the main CONTRIBUTING.md.
+- [`bin/main.ml`](bin/main.ml) starts the `rescript-editor-analysis` command.
+- [`src/commands.ml`](src/commands.ml) dispatches commands, including the
+  source-annotated test command.
+- `src/completion_*.ml` implements the completion frontend, context-specific
+  completion logic, and result conversion.
+- [`src/hover.ml`](src/hover.ml), [`src/references.ml`](src/references.ml),
+  [`src/semantic_tokens.ml`](src/semantic_tokens.ml), and
+  [`src/code_actions.ml`](src/code_actions.ml) own the corresponding features.
+- [`src/cmt.ml`](src/cmt.ml), [`src/process_cmt.ml`](src/process_cmt.ml), and
+  [`src/process_extra.ml`](src/process_extra.ml) are the main typed-artifact
+  boundary. Shared typed-tree definitions and traversal utilities live under
+  `compiler/ml`.
+- [`reactive/README.md`](reactive/README.md) documents the reactive analysis
+  library. [`reanalyze/README.md`](reanalyze/README.md) covers Reanalyze, which
+  is a separate analysis pipeline in this directory.
 
-## Overview
+Run the binary from the repository root:
 
-See main CONTRIBUTING.md's repo structure. Check out `test.sh` (invoked through `make test`) to see the snapshots testing workflow stored in `tests/`.
-
-## Usage
-
-```shell
+```sh
 dune exec -- rescript-editor-analysis --help
 ```
 
-Add verbose logging via:
-
-```shell
-dune exec -- rescript-editor-analysis debug-dump verbose test
-```
-
-## History
-
-This project is based on a fork of [Reason Language Server](https://github.com/jaredly/reason-language-server).
-
 ## Tests
 
-### Prerequisites
+Build the compiler and runtime, then run the repository target:
 
-- Ensure the compiler is built (`make build` in the repository root).
-- Ensure the library is built (`make lib` in the repository root).
-
-### Running the Tests
-
-Run `make test` in `tests/analysis_tests/tests`.
-
-### Key Concept
-
-The tests in the `tests/analysis_tests/tests` folder are based on the `dune exec -- rescript-editor-analysis test` command. This special subcommand processes a file and executes specific editor analysis functionality based on special syntax found in code comments.
-
-Consider the following code:
-
-```res
-let a = 5
-// a.
-//   ^com
+```sh
+make lib
+make test-analysis
 ```
 
-After building the ReScript project (**⚠️ this is a requirement**), you can execute `dune exec -- rescript-editor-analysis test Sample.res`, and completion will be performed for the cursor position indicated by `^`. The `com` directive requests completion. To see other commands, check out the pattern match in the `test` function in [Commands.ml](./src/Commands.ml).
+The target runs the suites under `tests/analysis_tests/`, including the main
+snapshot suite and focused projects for generic JSX, incremental type checking,
+namespaced references, and source-directory dependencies.
 
-> [!WARNING]
-> Ensure there are no spaces in the code comments, as the commands are captured by a regular expression that expects spaces and not tabs!
+The main suite uses directives embedded in ReScript comments. For example:
 
-Here’s how it works: once a command is found in a comment, a copy of the source file is created inside a temporary directory, where the line above `^com` is uncommented. The corresponding analysis functionality is then processed, typically with `~debug:true`. With debug enabled, code paths like
-
-```ml
-if Debug.verbose () then
-      print_endline "[complete_typed_value]--> Tfunction #other";
+```rescript
+let value = 5
+// value.
+//       ^com
 ```
 
-will print to stdout. This is helpful for observing what happens during the analysis.
+`^com` asks the test command to compute completion at that position. See the
+directive match in `analysis/src/commands.ml` for the current set. Tests compile
+a temporary source file and compare command output with checked-in snapshots.
+After an intentional change, inspect every updated snapshot rather than
+accepting the directory wholesale.
 
-When you run `make test` (from the `tests/analysis_tests` folder), `dune exec -- rescript-editor-analysis test <file>` will be executed for each `*.res` file in `analysis/tests/src`. The stdout will be compared to the corresponding `analysis/tests/src/expected` file. If `git diff` indicates changes, `make test` will fail, as these differences might be unintentional.
+To inspect one test while developing:
 
-## Testing on Your Own Projects
-
-To use a local version of `rescript-editor-analysis`, the targeted project needs to be compiled with the local compiler.
-
-Install your local ReScript with `npm i /path/to/your-local-rescript-repo`.
-Reinstall the dependencies and run `npx rescript` in your project. This ensures the project is compiled with the same compiler version that the `rescript-editor-analysis` will process.
-
-## Debugging
-
-It is possible to debug `analysis` via [ocamlearlybird](https://github.com/hackwaly/ocamlearlybird).
-
-1. Install `opam install earlybird`.
-2. Install the [earlybird extension](https://marketplace.visualstudio.com/items?itemName=hackwaly.ocamlearlybird).
-3. Create a launch configuration (`.vscode/launch.json`):
-
-```json
-{
-    "version": "0.2.0",
-    "configurations": [
-        {
-            "name": "Debug analysis",
-            "type": "ocaml.earlybird",
-            "request": "launch",
-            "program": "${workspaceFolder}/_build/default/analysis/bin/main.bc",
-            "stopOnEntry": true,
-            "cwd": "/projects/your-project",
-            "env": {
-                "CAML_LD_LIBRARY_PATH": "${workspaceFolder}/_build/default/compiler/ext"
-            },
-            "arguments": [
-                "test",
-                "src/Main.res"
-            ]
-        }
-    ]
-}
+```sh
+dune exec -- rescript-editor-analysis test tests/analysis_tests/tests/src/CompletePrioritize1.res
 ```
 
-The `CAML_LD_LIBRARY_PATH` environment variable is required to tell OCaml where `dllext_stubs.so` can be loaded from.
+Use paths from the repository root, and ensure the test project has first been
+built with the local compiler.
+
+## Changing typed compiler representations
+
+Editor analysis consumes typedtree nodes and compiler type representations
+directly. When adding or changing a parsetree or typedtree node:
+
+1. search this directory for matches on the surrounding constructors, rather
+   than relying only on exhaustiveness warnings;
+2. check completion, hover/type printing, references, document symbols,
+   semantic tokens, code actions, and interface generation as applicable;
+3. update both positive results and recovery behavior for incomplete source;
+4. run `make test-analysis` in addition to compiler tests.
+
+Keep compiler representation contracts in the owning compiler `.mli` files.
+Put analysis-specific assumptions beside the analysis code that relies on them,
+and use this guide only for navigation and cross-cutting workflow.

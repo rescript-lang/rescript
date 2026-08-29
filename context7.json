@@ -37,7 +37,6 @@
     "migrate.ml",
     "migrate.mli",
     "package.json",
-    "reactive_reanalyze_design.md",
     "rescript.json",
     "tools.ml",
     "transforms.ml",

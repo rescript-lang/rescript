@@ -126,16 +126,20 @@ AnalysisResult.get_issues analysis_result
 
 ---
 
-## Incremental Updates (Future)
+## Incremental updates in the non-reactive pipeline
 
-The architecture enables incremental updates when a file changes:
+The phase boundaries permit the non-reactive pipeline to update one file's
+input without retaining mutable per-file analysis state:
 
 1. Re-run Phase 1 for changed file only → new `file_data`
 2. Replace in `file_data` map (keyed by filename)
 3. Re-run Phase 2 (merge) - fast, pure function
 4. Re-run Phase 3 (solve) - fast, pure function
 
-The key insight: **immutable data structures enable safe incremental updates** - you can swap one file's data without affecting others.
+Immutable phase outputs allow one file's data to be replaced without mutating
+the retained outputs for other files. The current reactive pipeline below goes
+further by propagating deltas through derived collections rather than rerunning
+the complete merge and solve phases.
 
 ---
 
@@ -334,4 +338,3 @@ Use `-timing` flag to see per-node statistics:
 | `Issue` | Issue type definitions |
 | `Log_` | Phase 4: Logging output |
 | `ReactiveSolver` | Reactive dead_decls → issues computation |
-

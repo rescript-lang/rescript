@@ -159,7 +159,7 @@ let rec collect_expr ~config ~refs ~file_deps ~cross_file ~direct_callees
           (* [Location.none] identifies a top-level [Tstr_eval], which executes
              unconditionally, so use the expression's own position. Both
              liveness implementations deliberately treat non-declaration
-             positions as live; that behavior is load-bearing here. *)
+             positions as live; this analysis depends on that behavior. *)
           if binding = Location.none then loc_from.loc_start
           else binding.loc_start
         in

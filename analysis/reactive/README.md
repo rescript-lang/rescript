@@ -98,6 +98,11 @@ This prevents issues like:
 - Anti-joins seeing partial data (e.g., refs without matching decls)
 - Multi-level unions causing spurious additions/removals
 
+The `fixpoint` implementation maintains exact reachability when roots and
+edges are added or removed. See
+[IncrementalFixpointReport.md](IncrementalFixpointReport.md) for the algorithm,
+its invariants, and the limits of its evaluation data.
+
 ## Usage in Reanalyze
 
 This library powers the reactive dead code analysis in reanalyze:
@@ -106,4 +111,3 @@ This library powers the reactive dead code analysis in reanalyze:
 - `ReactiveMerge`: Merges per-file data into global collections
 - `ReactiveLiveness`: Computes live declarations via fixpoint
 - `ReactiveSolver`: Generates dead code issues reactively
-
