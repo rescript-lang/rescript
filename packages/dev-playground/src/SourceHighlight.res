@@ -227,5 +227,5 @@ let tokenClass = kind =>
 
 let render = source =>
   tokenize(source)->Array.map(token =>
-    <span class={tokenClass(token.kind)}> {Node.text(token.text)} </span>
+    <span class={tokenClass(token.kind)}> {View.text(token.text)} </span>
   )
