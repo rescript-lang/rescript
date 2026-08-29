@@ -2707,9 +2707,9 @@ let filter_object_field_for_write env name ty :
   | Tobject f -> write_field ~can_promote:(is_Tvar (object_row ty)) f
   | _ -> Error Owrite_missing
 
-(* Require a readable [name] field and return its type. An open object row can
-   acquire the missing field; a closed row cannot. This operation does not
-   require or introduce write capability. *)
+(* Require a readable [name] field and return its type. If lookup reaches a
+   [Tvar] row terminator, it can acquire the missing field. Rigid and closed
+   rows cannot. This operation does not require or introduce write capability. *)
 let filter_method env name ty =
   let ty = expand_head_trace env ty in
   match ty.desc with

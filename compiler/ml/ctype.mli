@@ -243,9 +243,10 @@ val filter_arrow_n :
 
 val filter_method : Env.t -> string -> type_expr -> type_expr
 (** Constrain a type to have the named readable object field and return the
-    field's stored type. A missing field extends an open row as [Immutable].
-    A closed row without the field, or a non-object type which cannot be
-    constrained to an object, raises [Unify]. *)
+    field's stored type. If lookup reaches a [Tvar] row terminator, a missing
+    field extends that inferred row as [Immutable]. A row ending in [Tunivar],
+    [Tconstr], or [Tnil] cannot acquire a missing field. A non-object type which
+    cannot be constrained to an object also raises [Unify]. *)
 
 type object_field_write_error = Owrite_missing | Owrite_not_mutable
 
@@ -253,10 +254,12 @@ val filter_object_field_for_write :
   Env.t -> string -> type_expr -> (type_expr, object_field_write_error) Result.t
 (** Constrain a type for assignment to the named object field.
 
-    A mutable field returns its stored type. On an open row, an immutable field
-    is promoted without changing its type, and a missing field is added as
-    mutable. On a closed row, these cases return [Owrite_not_mutable] and
-    [Owrite_missing], respectively. *)
+    A mutable field returns its stored type. When the object row ends in a
+    [Tvar], an immutable field is promoted without changing its type, and a
+    missing field is added as mutable. [Tunivar] and private-row [Tconstr]
+    terminators are structurally open but cannot be strengthened. With either
+    of those terminators, or with [Tnil], an immutable field returns
+    [Owrite_not_mutable] and a missing field returns [Owrite_missing]. *)
 
 val occur_in : Env.t -> type_expr -> type_expr -> bool
 val deep_occur : type_expr -> type_expr -> bool
