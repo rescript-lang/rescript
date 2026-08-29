@@ -1,6 +1,34 @@
 (library
  (name flow_parser)
  (wrapped false)
+ (modules
+  Comment_attachment
+  Declaration_parser
+  Enum_parser
+  Expression_parser
+  File_key
+  Flow_ast
+  Flow_ast_mapper
+  Flow_ast_utils
+  Flow_lexer
+  Js_id
+  Js_id_unicode
+  Jsx_parser
+  Lex_env
+  Lex_result
+  Loc
+  Match_pattern_parser
+  Object_parser
+  Parse_error
+  Parse_error_utils
+  Parser_common
+  Parser_env
+  Parser_flow
+  Pattern_cover
+  Pattern_parser
+  Statement_parser
+  Token
+  Type_parser)
  (libraries base wtf8 flow_sedlexing collections)
  (preprocess
   (pps ppx_gen_rec ppx_deriving.std flow_sedlexing_ppx)))
