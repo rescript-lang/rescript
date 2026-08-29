@@ -2,8 +2,8 @@
   [1;31mWe've found a bug for you![0m
   [36m/.../fixtures/object_write_closed_row.res[0m:[2m6:28-37[0m
 
-  4 [2m│[0m    See docs/object_representation_cleanup.md; compiling counterparts in
-  5 [2m│[0m    tests/tests/src/object_mutability_pin.res. */
+  4 [2m│[0m    end-to-end object mutability tests, where assignment strengthens the
+  5 [2m│[0m    function parameter instead. */
   [1;31m6[0m [2m│[0m let g = (o: {"x": int}) => [1;31mo["x"] = 1[0m
   7 [2m│[0m 
 

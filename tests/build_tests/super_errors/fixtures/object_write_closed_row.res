@@ -1,6 +1,6 @@
-/* Pin (object mutability cleanup): writing a bare field of a CLOSED object
-   row is an error — the row cannot acquire a setter. Must stay an error
-   under the new model (Immutable field in a closed row cannot be promoted).
-   See docs/object_representation_cleanup.md; compiling counterparts in
-   tests/tests/src/object_mutability_pin.res. */
+/* A closed immutable field cannot be promoted. Assignment may promote an
+   immutable field only while its object row remains open; a closed row cannot
+   acquire write capability. The compiling open-row case is covered in the
+   end-to-end object mutability tests, where assignment strengthens the
+   function parameter instead. */
 let g = (o: {"x": int}) => o["x"] = 1

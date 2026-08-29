@@ -699,13 +699,15 @@ let rec find_repr p1 = function
   | Mlink {contents = rem} -> find_repr p1 rem
 
 (*
-   Generic nodes are duplicated, while non-generic nodes are left
-   as-is.
-   During instantiation, the description of a generic node is first
-   replaced by a link to a stub ([Tsubst (newvar ())]). Once the
-   copy is made, it replaces the stub.
-   After instantiation, the description of generic node, which was
-   stored by [save_desc], must be put back, using [cleanup_types].
+   Ordinary instantiation copies generic nodes and reuses non-generic nodes.
+   Pattern typing can pass [partial] to copy selected non-generic nodes as
+   fresh variables as well. [env] does not affect that choice; when local GADT
+   constraints are present, it only records the corresponding fresh instance.
+
+   A copied source node is temporarily marked with [Tsubst]. These marks are
+   visible to nested copy operations, which is intentional: copies made in the
+   same operation can preserve graph sharing. [with_copy_session] restores the
+   marks and the temporary mutability links installed by [copy_type_desc].
 *)
 
 let abbreviations = ref (ref Mnil)
@@ -2293,8 +2295,9 @@ and unify_fields env (ty1 : Types.type_expr) (ty2 : Types.type_expr) =
   and fields2, rest2 = flatten_fields ty2 in
   let pairs, miss1, miss2 = associate_fields fields1 fields2 in
   let l1 = (repr ty1).level and l2 = (repr ty2).level in
-  (* Row openness before the rests are instantiated below: an [Immutable]
-     field may be promoted to [Mutable] only while its row is open. *)
+  (* Sample openness before unifying the row tails below. [unify_mutability]
+     requires this pre-unification state because tail unification can close an
+     open row before the matching fields are processed. *)
   let open1 = is_Tvar (repr rest1) and open2 = is_Tvar (repr rest2) in
   let va =
     make_rowvar
@@ -2340,6 +2343,9 @@ and unify_fields env (ty1 : Types.type_expr) (ty2 : Types.type_expr) =
     raise exn
 
 and unify_mutability ~open1 ~open2 f1 f2 =
+  (* [open1] and [open2] describe the rows before their tails were unified.
+     Promotion and class merging operate on representatives, and are recorded
+     on the ordinary type-checker trail. *)
   let r1 = mutability_ref_repr f1.f_mut and r2 = mutability_ref_repr f2.f_mut in
   if r1 != r2 then (
     (match (!r1, !r2) with
@@ -2701,7 +2707,9 @@ let filter_object_field_for_write env name ty :
   | Tobject f -> write_field ~can_promote:(is_Tvar (object_row ty)) f
   | _ -> Error Owrite_missing
 
-(* Unify [ty] and [{.. name: 'a}]. Return ['a]. *)
+(* Require a readable [name] field and return its type. An open object row can
+   acquire the missing field; a closed row cannot. This operation does not
+   require or introduce write capability. *)
 let filter_method env name ty =
   let ty = expand_head_trace env ty in
   match ty.desc with
@@ -3360,7 +3368,7 @@ let rec build_subtype env visited loops posi level t =
       in
       let t1', c = build_subtype env visited loops posi level' t1 in
       if c > Unchanged then (newty (Tobject t1'), c) else (t, Unchanged)
-  | Tfield ({typ = t1; rest = t2} as f) (* Always present *) ->
+  | Tfield ({typ = t1; rest = t2} as f) ->
     let t1', c1 =
       match mutability_repr f.mutability with
       | Asttypes.Mutable ->
@@ -3868,10 +3876,13 @@ and subtype_fields env trace ty1 ty2 cstrs =
            write permission. *)
         subtype_rec env ((f1.f_typ, f2.f_typ) :: trace) f1.f_typ f2.f_typ cstrs
       | Mutable ->
-        (* Writable target: delegate to unification of the two fields. The
-           source fragment uses [rest1], so [unify_mutability] can promote an
-           [Immutable] source field only when the source row is open. Field
-           type unification also enforces equivalence. *)
+        (* A writable target requires equivalent field types. Add a deferred
+           unification constraint over transient one-field fragments. The
+           source fragment retains [rest1], allowing [unify_fields] to observe
+           whether the source row was open before it unifies the tails and, if
+           so, promote the field. These fragments borrow the existing cells;
+           they are consumed by deferred constraint enforcement and must not
+           be copied, generalized, or persisted. *)
         let src =
           newty
             (Tfield
@@ -4116,6 +4127,11 @@ let clear_hash () =
   Type_hash.clear nondep_variants
 
 let with_nondep_copy_session f =
+  (* [nondep_type_rec] cannot use [Tsubst] because abbreviation expansion can
+     unify while the copy is in progress. Mutability cells may nevertheless be
+     temporarily linked by [copy_type_desc]. Semantic operations follow their
+     representatives, so any such unification updates the copy under
+     construction; the source link is restored when this session ends. *)
   with_copy_session (fun () ->
       match f () with
       | result ->

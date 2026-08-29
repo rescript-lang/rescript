@@ -3289,10 +3289,15 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
           gen)
         else true
       in
+      (* Coercion has two checking paths. For a suitable non-generalizable
+         source, first try unification with an enlarged approximation of the
+         target under a snapshot. Otherwise, or if that trial fails, generate
+         and enforce subtype constraints. A type constructor whose variance or
+         capabilities affect coercion must therefore be represented correctly
+         both by [Ctype.enlarge_type] and by [Ctype.subtype]. *)
       (if
          (not gen)
          &&
-         (* first try a single coercion *)
          let snap = snapshot () in
          let ty, _b = enlarge_type env ty' in
          try
@@ -3368,6 +3373,8 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
   | Pexp_object_get (e, ({txt = met} as met_loc)) -> (
     let obj = type_exp ~context:None env e in
     try
+      (* Lookup constrains an open object row to contain the field, without
+         requiring or adding write capability. *)
       let typ = filter_method env met obj.exp_type in
       let typ = object_field_use_type env typ in
       rue
@@ -3388,6 +3395,9 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
                (obj.exp_type, met, object_valid_fields env obj.exp_type) )))
   | Pexp_object_set (e, ({txt = name} as name_loc), svalue) -> (
     let obj = type_exp ~context:None env e in
+    (* Assignment can add or promote a field only while its object row is
+       open. The result distinguishes a missing field from a closed immutable
+       field so the two cases retain their respective diagnostics. *)
     let field_typ =
       try Ctype.filter_object_field_for_write env name obj.exp_type
       with Unify _ -> Error Ctype.Owrite_missing

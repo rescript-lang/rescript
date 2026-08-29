@@ -40,7 +40,13 @@ val add_type_function :
 val add_module : Ident.t -> Path.t -> t -> t
 val add_module_path : Path.t -> Path.t -> t -> t
 val add_modtype : Ident.t -> module_type -> t -> t
+
 val for_saving : t -> t
+(** Return a substitution mode for constructing persistent compiler data.
+    Types copied in this mode are independent from the live source graph:
+    object-field mutability classes are fresh, while sharing between fields in
+    the copied result is preserved. *)
+
 val reset_for_saving : unit -> unit
 
 val module_path : t -> Path.t -> Path.t
