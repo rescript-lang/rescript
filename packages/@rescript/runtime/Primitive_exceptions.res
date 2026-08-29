@@ -40,7 +40,11 @@ type js_error = {cause: exn}
      | None -> (* assert it is not an exception *)
    ]}
 
-   This is not a problem in `try .. with` since the logic above is not expressible, see more design in [destruct_exn.md]
+   This is not a problem in `try .. with`: a handler only asks whether the
+   caught value matches an exception branch, never whether an arbitrary value
+   is an exception - the question a general exception-destruction operator
+   would force, and which cannot be answered soundly while open variants
+   share the exception representation.
 */
 let isExtension = (type a, e: a): bool =>
   if Primitive_js_extern.testAny(e) {
