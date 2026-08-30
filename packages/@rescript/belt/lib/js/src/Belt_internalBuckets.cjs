@@ -4,19 +4,6 @@ let Belt_Array = require("./Belt_Array.cjs");
 let Primitive_int = require("@rescript/runtime/lib/js/Primitive_int.cjs");
 let Primitive_option = require("@rescript/runtime/lib/js/Primitive_option.cjs");
 
-function copyBucket(c) {
-  if (c === undefined) {
-    return c;
-  }
-  let head = {
-    key: c.key,
-    value: c.value,
-    next: undefined
-  };
-  copyAuxCont(c.next, head);
-  return head;
-}
-
 function copyAuxCont(_c, _prec) {
   while (true) {
     let prec = _prec;
@@ -34,6 +21,19 @@ function copyAuxCont(_c, _prec) {
     _c = c.next;
     continue;
   };
+}
+
+function copyBucket(c) {
+  if (c === undefined) {
+    return c;
+  }
+  let head = {
+    key: c.key,
+    value: c.value,
+    next: undefined
+  };
+  copyAuxCont(c.next, head);
+  return head;
 }
 
 function copyBuckets(buckets) {

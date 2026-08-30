@@ -109,7 +109,7 @@ let RecursiveB = {
 };
 
 function make$4() {
-  return RecursiveB.value();
+  return "recursive";
 }
 
 let RecursiveA = {

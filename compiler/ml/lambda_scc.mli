@@ -1,5 +1,5 @@
 (* Copyright (C) 2018 - Hongbo Zhang, Authors of ReScript
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -17,13 +17,11 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-type bindings = (Ident.t * Lam.t) list
-
-val scc_bindings : bindings -> bindings list
-
-val scc : bindings -> Lam.t -> Lam.t -> Lam.t
+val bind_rec : (Ident.t * Lambda.lambda) list -> Lambda.lambda -> Lambda.lambda
+(** Split a syntactic [let rec] group into the actual recursive clusters
+    and demote bindings that are not recursive. *)

@@ -1501,7 +1501,7 @@ and transl_let ~js_hoist rec_flag pat_expr_list body =
       mark_js_hoisted_pattern ~js_hoist vb_attributes pat lam;
       (id, lam)
     in
-    Lletrec (Ext_list.map pat_expr_list transl_case, body)
+    Lambda_scc.bind_rec (Ext_list.map pat_expr_list transl_case) body
 
 and transl_record loc env fields repres opt_init_expr =
   match (opt_init_expr, repres, fields) with

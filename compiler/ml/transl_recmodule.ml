@@ -230,7 +230,9 @@ let is_strict_or_all_functions (xs : binding list) =
 *)
 let eval_rec_bindings (bindings : binding list) (cont : t) : t =
   if is_strict_or_all_functions bindings then
-    Lambda.Lletrec (Ext_list.map bindings (fun (id, _, rhs) -> (id, rhs)), cont)
+    Lambda_scc.bind_rec
+      (Ext_list.map bindings (fun (id, _, rhs) -> (id, rhs)))
+      cont
   else eval_rec_bindings_aux bindings cont
 
 let compile_recmodule compile_rhs bindings cont =
