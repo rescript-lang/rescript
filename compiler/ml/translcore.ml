@@ -240,9 +240,9 @@ let comparisons_table =
 let primitives_table =
   create_hashtable
     [|
-      ("%identity", Pidentity);
-      ("%component_identity", Pidentity);
-      ("%ignore", Pignore);
+      ("%identity", Peliminated Identity);
+      ("%component_identity", Peliminated Identity);
+      ("%ignore", Peliminated Ignore);
       (* BEGIN Triples for  ref data type *)
       ("%makeref", Pmakeblock Lambda.ref_tag_info);
       ("%refset", Psetfield (0, Lambda.ref_field_set_info));
@@ -820,7 +820,7 @@ let transl_primitive loc p env ty ~val_type =
           :: make_params (n - 1) total
       in
       let prim_arity = p.prim_arity in
-      if p.prim_from_constructor || prim_arity = 0 then Lprim (prim, [], loc)
+      if p.prim_from_constructor || prim_arity = 0 then mk_prim prim [] loc
       else
         let params =
           if prim_arity = 1 then [Ident.create "prim"]
@@ -831,7 +831,7 @@ let transl_primitive loc p env ty ~val_type =
             params;
             attr = default_function_attribute;
             loc;
-            body = Lprim (prim, List.map (fun id -> Lvar id) params, loc);
+            body = mk_prim prim (List.map (fun id -> Lvar id) params) loc;
           })
 
 (* [None] means the primitive is an external whose application must be
@@ -1162,7 +1162,7 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
                  ~val_type:prim_vd.val_type argl ~transformed_jsx))
         | Some prim ->
           warn_polymorphic_comparison e.exp_loc prim argl;
-          wrap (Lprim (prim, argl, e.exp_loc)))))
+          wrap (mk_prim prim argl e.exp_loc))))
   | Texp_apply {funct; args = oargs; partial; transformed_jsx} ->
     let inlined, funct =
       Translattribute.get_and_remove_inlined_attribute funct

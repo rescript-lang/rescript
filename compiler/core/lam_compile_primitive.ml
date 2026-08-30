@@ -74,6 +74,7 @@ let wrap_then import value = wrap_then_path import [value]
 let translate output_prefix loc (cxt : Lam_compile_context.t)
     (prim : Lam_primitive.t) (args : J.expression list) : J.expression =
   match prim with
+  | Peliminated _ -> assert false
   | Pis_not_none -> Js_of_lam_option.is_not_none (Ext_list.singleton_exn args)
   | Pcreate_extension s -> E.make_exception s
   | Praw_js_code {code; code_info} -> E.raw_js_code code_info code

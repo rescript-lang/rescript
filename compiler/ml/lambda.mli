@@ -136,9 +136,10 @@ type import_source =
              name; [] means the external is the module itself *)
     }
 
+type eliminated = Identity | Ignore
+
 type primitive =
-  | Pidentity
-  | Pignore
+  | Peliminated of eliminated
   | Pdebugger
   | Ptypeof
   | Pnull
@@ -401,6 +402,10 @@ val make_key : lambda -> lambda option
 val const_unit : structured_constant
 val lambda_assert_false : lambda
 val lambda_unit : lambda
+
+val mk_prim : primitive -> lambda list -> Location.t -> lambda
+(** Expands [Peliminated] so it never appears as [Lprim]. *)
+
 val lambda_module_alias : lambda
 val name_lambda : let_kind -> lambda -> (Ident.t -> lambda) -> lambda
 

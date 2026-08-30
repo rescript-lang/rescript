@@ -32,13 +32,10 @@ let prim = Lam.prim
 *)
 let lam_prim ~primitive:(p : Lambda.primitive) ~args loc : Lam.t =
   match p with
-  | Pidentity -> Ext_list.singleton_exn args
+  | Peliminated e -> prim ~primitive:(Peliminated e) ~args loc
   | Pnull -> Lam.const Const_js_null
   | Pundefined -> Lam.const (Const_js_undefined {is_unit = false})
   | Pcreate_extension s -> prim ~primitive:(Pcreate_extension s) ~args loc
-  | Pignore ->
-    (* Pignore means return unit, it is not an nop *)
-    Lam.seq (Ext_list.singleton_exn args) Lam.unit
   | Pgetglobal _ -> assert false
   | Pmakeblock info -> (
     let mutable_flag = Lambda.mutable_flag_of_tag_info info in
