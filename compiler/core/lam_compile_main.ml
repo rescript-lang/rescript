@@ -275,7 +275,7 @@ let compile (output_prefix : string) export_idents hoisted (lam : Lambda.lambda)
           Ext_log.dwarn ~__POS__ "export idents: %s/%d" id.name id.stamp);
     Lam_compile_env.reset ()
   in
-  let lam, may_required_modules = Lam_convert.convert export_ident_sets lam in
+  let lam, may_required_modules = Lam_convert.convert lam in
   let lam =
     Lam_pass_collapse_var_aliases.collapse ~exports:export_ident_sets lam
   in

@@ -30,10 +30,6 @@ let prim = Lam.prim
     see #3852, we drop all these required global modules
     but added it back based on our own module analysis
 *)
-let seq = Lam.seq
-
-let unit = Lam.unit
-
 let lam_prim ~primitive:(p : Lambda.primitive) ~args loc : Lam.t =
   match p with
   | Pidentity -> Ext_list.singleton_exn args
@@ -42,7 +38,7 @@ let lam_prim ~primitive:(p : Lambda.primitive) ~args loc : Lam.t =
   | Pcreate_extension s -> prim ~primitive:(Pcreate_extension s) ~args loc
   | Pignore ->
     (* Pignore means return unit, it is not an nop *)
-    seq (Ext_list.singleton_exn args) unit
+    Lam.seq (Ext_list.singleton_exn args) Lam.unit
   | Pgetglobal _ -> assert false
   | Pmakeblock info -> (
     let mutable_flag = Lambda.mutable_flag_of_tag_info info in
@@ -199,8 +195,7 @@ let lam_prim ~primitive:(p : Lambda.primitive) ~args loc : Lam.t =
 
 let may_depend = Lam_module_ident.Hash_set.add
 
-let convert (_exports : Set_ident.t) (lam : Lambda.lambda) :
-    Lam.t * Lam_module_ident.Hash_set.t =
+let convert (lam : Lambda.lambda) : Lam.t * Lam_module_ident.Hash_set.t =
   let may_depends = Lam_module_ident.Hash_set.create 0 in
 
   let rec convert_aux (lam : Lambda.lambda) : Lam.t =
