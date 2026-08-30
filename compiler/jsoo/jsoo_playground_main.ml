@@ -52,7 +52,7 @@
  * v5: Removed .ml support.
  * v6: Added `config.experimental_features` and `config.jsx_preserve_mode` to the BundleConfig.
  * v7: Added debug dump output APIs for developer playground tooling,
- * including gentype output.
+ * including gentype and source map output.
  * *)
 let api_version = "7"
 
@@ -80,6 +80,9 @@ module Bundle_config = struct
     mutable experimental_features: string list;
     mutable jsx_preserve_mode: bool;
     mutable gentype_enabled: bool;
+    mutable source_map_mode: Js_config.source_map;
+    mutable source_map_sources_content: bool;
+    mutable source_map_root: string;
   }
 
   let make () =
@@ -91,6 +94,9 @@ module Bundle_config = struct
       experimental_features = [];
       jsx_preserve_mode = false;
       gentype_enabled = false;
+      source_map_mode = No_source_map;
+      source_map_sources_content = false;
+      source_map_root = "";
     }
 
   let default_filename (lang : Lang.t) = "playground." ^ Lang.to_string lang
@@ -99,6 +105,21 @@ module Bundle_config = struct
     match m with
     | Ext_module_system.Commonjs -> "commonjs"
     | Esmodule -> "esmodule"
+
+  let source_map_of_string value =
+    match String.lowercase_ascii value with
+    | "linked" -> Some Js_config.Linked
+    | "inline" -> Some Inline
+    | "hidden" -> Some Hidden
+    | "false" | "none" | "disabled" -> Some No_source_map
+    | _ -> None
+
+  let string_of_source_map mode =
+    match mode with
+    | Js_config.Linked -> "linked"
+    | Inline -> "inline"
+    | Hidden -> "hidden"
+    | No_source_map -> "false"
 end
 
 type loc_err_info = {
@@ -542,6 +563,47 @@ module Compile = struct
       ^ "\n" ^ code_text ^ "\n"
     else "No @gentype annotations found."
 
+  let render_javascript ~module_system ~filename ~source ~source_map_mode
+      ~source_map_sources_content ~source_map_root lambda_output =
+    let buffer = Buffer.create 1000 in
+    let generated_file =
+      Filename.concat (Sys.getcwd ())
+        (Filename.remove_extension (Filename.basename filename)
+        ^ Literals.suffix_js)
+    in
+    let source_map_builder =
+      match source_map_mode with
+      | Js_config.No_source_map -> None
+      | Linked | Inline | Hidden ->
+        Some
+          (Js_source_map.make ~source_contents:[(filename, source)] ~generated_file
+             ~source_root:source_map_root
+             ~sources_content:source_map_sources_content)
+    in
+    let print_javascript () =
+      Js_dump_program.pp_deps_program ~output_prefix:"" module_system
+        lambda_output (Ext_pp.from_buffer buffer)
+    in
+    (match source_map_builder with
+    | None -> print_javascript ()
+    | Some builder -> Js_source_map.with_builder builder print_javascript);
+    let source_map =
+      match source_map_builder with
+      | None -> None
+      | Some builder ->
+        let json = Js_source_map.json builder in
+        (match source_map_mode with
+        | Linked ->
+          Buffer.add_string buffer
+            (Js_source_map.linked_comment ~map_file:(generated_file ^ ".map"))
+        | Inline ->
+          Buffer.add_string buffer (Js_source_map.inline_comment ~json)
+        | Hidden -> ()
+        | No_source_map -> assert false);
+        Some json
+    in
+    (Buffer.contents buffer, source_map)
+
   let implementation ?(include_debug_outputs = false)
       ~(config : Bundle_config.t) ~lang str =
     let {
@@ -551,6 +613,9 @@ module Compile = struct
       experimental_features;
       jsx_preserve_mode;
       gentype_enabled;
+      source_map_mode;
+      source_map_sources_content;
+      source_map_root;
     } =
       config
     in
@@ -572,6 +637,9 @@ module Compile = struct
       let types_signature = ref [] in
       Js_config.jsx_version := Some Js_config.Jsx_v4;
       Js_config.jsx_preserve := jsx_preserve_mode;
+      Js_config.source_map := source_map_mode;
+      Js_config.source_map_sources_content := source_map_sources_content;
+      Js_config.source_map_root := source_map_root;
       experimental_features
       |> List.iter Experimental_features.enable_from_string;
       (* default *)
@@ -589,19 +657,18 @@ module Compile = struct
       let {Translmod.lambda; exports; hoisted_functions} =
         Translmod.transl_implementation modulename typed_tree
       in
-      let buffer = Buffer.create 1000 in
-      let () =
-        Js_dump_program.pp_deps_program ~output_prefix:""
-          (* does not matter here *) module_system
-          (Lam_compile_main.compile "" exports hoisted_functions lambda)
-          (Ext_pp.from_buffer buffer)
+      let lambda_output =
+        Lam_compile_main.compile "" exports hoisted_functions lambda
       in
-      let v = Buffer.contents buffer in
+      let js_code, source_map =
+        render_javascript ~module_system ~filename ~source:str ~source_map_mode
+          ~source_map_sources_content ~source_map_root lambda_output
+      in
       let type_hints = collect_type_hints typed_tree in
       let attrs =
         Js.Unsafe.
           [|
-            ("js_code", inject @@ Js.string v);
+            ("js_code", inject @@ Js.string js_code);
             ( "warnings",
               inject
               @@ (!warning_infos
@@ -631,13 +698,12 @@ module Compile = struct
               |]
           else [||]
         in
-        (* TODO(sourcemap PR): The developer playground already knows how to
-           show an optional "source_map" debug tab. Add optional instance
-           setters named "setSourceMapMode", "setSourceMapSourcesContent",
-           and "setSourceMapRoot", matching getConfig fields named
-           "source_map_mode", "source_map_sources_content", and
-           "source_map_root", plus a compileWithDebug output field named
-           "source_map". *)
+        let source_map_attrs =
+          match source_map with
+          | None -> [||]
+          | Some source_map ->
+            Js.Unsafe.[|("source_map", inject @@ Js.string source_map)|]
+        in
         let debug_attrs =
           Js.Unsafe.
             [|
@@ -647,7 +713,8 @@ module Compile = struct
               ("lam", inject @@ Js.string lam);
             |]
         in
-        Js.Unsafe.obj (Array.concat [attrs; debug_attrs; gentype_attrs])
+        Js.Unsafe.obj
+          (Array.concat [attrs; debug_attrs; gentype_attrs; source_map_attrs])
       else Js.Unsafe.obj attrs
     with e -> (
       match e with
@@ -752,6 +819,21 @@ module Export = struct
       config.gentype_enabled <- value;
       true
     in
+    let set_source_map_mode value =
+      match Bundle_config.source_map_of_string value with
+      | Some source_map_mode ->
+        config.source_map_mode <- source_map_mode;
+        true
+      | None -> false
+    in
+    let set_source_map_sources_content value =
+      config.source_map_sources_content <- value;
+      true
+    in
+    let set_source_map_root value =
+      config.source_map_root <- value;
+      true
+    in
     let convert_syntax ~(from_lang : string) ~(to_lang : string) (src : string)
         =
       let open Lang in
@@ -814,6 +896,19 @@ module Export = struct
             inject
             @@ Js.wrap_meth_callback (fun _ value ->
                    Js.bool (set_gentype_enabled (Js.to_bool value))) );
+          ( "setSourceMapMode",
+            inject
+            @@ Js.wrap_meth_callback (fun _ value ->
+                   Js.bool (set_source_map_mode (Js.to_string value))) );
+          ( "setSourceMapSourcesContent",
+            inject
+            @@ Js.wrap_meth_callback (fun _ value ->
+                   Js.bool
+                     (set_source_map_sources_content (Js.to_bool value))) );
+          ( "setSourceMapRoot",
+            inject
+            @@ Js.wrap_meth_callback (fun _ value ->
+                   Js.bool (set_source_map_root (Js.to_string value))) );
           ( "getConfig",
             inject
             @@ Js.wrap_meth_callback (fun _ ->
@@ -830,6 +925,16 @@ module Export = struct
                            inject @@ (config.jsx_preserve_mode |> Js.bool) );
                          ( "gentype_enabled",
                            inject @@ (config.gentype_enabled |> Js.bool) );
+                         ( "source_map_mode",
+                           inject
+                           @@ (config.source_map_mode
+                             |> Bundle_config.string_of_source_map |> Js.string)
+                         );
+                         ( "source_map_sources_content",
+                           inject
+                           @@ (config.source_map_sources_content |> Js.bool) );
+                         ( "source_map_root",
+                           inject @@ Js.string config.source_map_root );
                          ( "experimental_features",
                            inject
                            @@ (config.experimental_features |> Array.of_list

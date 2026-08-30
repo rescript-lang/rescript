@@ -1,5 +1,6 @@
 // Playground bundle is UMD module
 // It uses `module.exports` in current context, or fallback to `globalThis`
+const assert = require("node:assert/strict");
 const { rescript_compiler } = require("./compiler.js");
 
 require("./packages/compiler-builtins/cmij.js");
@@ -76,3 +77,62 @@ if (result.js_code !== "") {
   console.log(result.js_code);
   console.log("-- Playground test complete --");
 }
+
+const sourceMapSource = `let double = value => value * 2
+let result = double(21)
+`;
+
+compiler.setFilename("Playground.res");
+assert.equal(compiler.setSourceMapMode("linked"), true);
+assert.equal(compiler.setSourceMapSourcesContent(true), true);
+assert.equal(compiler.setSourceMapRoot("rescript://playground/"), true);
+assert.deepEqual(
+  {
+    mode: compiler.getConfig().source_map_mode,
+    sourcesContent: compiler.getConfig().source_map_sources_content,
+    sourceRoot: compiler.getConfig().source_map_root,
+  },
+  {
+    mode: "linked",
+    sourcesContent: true,
+    sourceRoot: "rescript://playground/",
+  },
+);
+
+const linkedResult = compiler.rescript.compileWithDebug(sourceMapSource);
+assert.equal(linkedResult.type, "success");
+assert.match(linkedResult.js_code, /\/\/# sourceMappingURL=Playground\.js\.map\n$/);
+
+const sourceMap = JSON.parse(linkedResult.source_map);
+assert.equal(sourceMap.version, 3);
+assert.equal(sourceMap.file, "Playground.js");
+assert.equal(sourceMap.sourceRoot, "rescript://playground/");
+assert.ok(sourceMap.sources.some(source => source.endsWith("Playground.res")));
+assert.ok(sourceMap.sourcesContent.includes(sourceMapSource));
+assert.ok(sourceMap.mappings.length > 0);
+
+assert.equal(compiler.setSourceMapMode("inline"), true);
+const inlineResult = compiler.rescript.compileWithDebug(sourceMapSource);
+assert.equal(inlineResult.type, "success");
+assert.match(
+  inlineResult.js_code,
+  /\/\/# sourceMappingURL=data:application\/json;base64,[A-Za-z0-9+/=]+\n$/,
+);
+assert.deepEqual(JSON.parse(inlineResult.source_map), sourceMap);
+
+assert.equal(compiler.setSourceMapMode("hidden"), true);
+const hiddenResult = compiler.rescript.compileWithDebug(sourceMapSource);
+assert.equal(hiddenResult.type, "success");
+assert.doesNotMatch(hiddenResult.js_code, /\/\/# sourceMappingURL=/);
+assert.deepEqual(JSON.parse(hiddenResult.source_map), sourceMap);
+
+assert.equal(compiler.setSourceMapMode("unsupported"), false);
+assert.equal(compiler.getConfig().source_map_mode, "hidden");
+
+assert.equal(compiler.setSourceMapMode("false"), true);
+const disabledResult = compiler.rescript.compileWithDebug(sourceMapSource);
+assert.equal(disabledResult.type, "success");
+assert.equal(disabledResult.source_map, undefined);
+assert.doesNotMatch(disabledResult.js_code, /\/\/# sourceMappingURL=/);
+
+console.log("-- Playground source map test complete --");

@@ -226,6 +226,11 @@ button {
   pointer-events: none;
 }
 
+.source-map-source-active .active-line {
+  background: rgba(221, 140, 27, 0.12);
+  border-color: rgba(221, 140, 27, 0.24);
+}
+
 .line-number-gutter {
   grid-column: 1;
   grid-row: 1;
@@ -426,6 +431,34 @@ button {
   background: var(--playground-panel);
 }
 
+.source-map-output-link {
+  color: var(--ocean-dark);
+  text-decoration-line: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 3px;
+}
+
+.source-map-output-link:hover,
+.source-map-output-link:focus-visible {
+  color: var(--white);
+  text-decoration-style: solid;
+}
+
+.source-map-mapped-segment {
+  border-radius: 2px;
+  cursor: pointer;
+  transition: background-color 100ms ease;
+}
+
+.source-map-mapped-segment:hover {
+  background: rgba(138, 174, 200, 0.16);
+}
+
+.source-map-mapped-segment-active {
+  background: rgba(221, 140, 27, 0.18);
+  box-shadow: inset 0 -1px var(--orange);
+}
+
 .problems {
   min-height: 0;
   display: grid;
@@ -487,6 +520,47 @@ button {
   overflow-wrap: anywhere;
 }
 
+.source-map-settings {
+  align-items: start;
+}
+
+.source-map-controls,
+.source-map-options {
+  display: grid;
+  gap: 12px;
+}
+
+.source-map-control {
+  display: grid;
+  grid-template-columns: minmax(100px, 140px) minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+}
+
+.source-map-control > label {
+  color: var(--playground-text-secondary);
+  font-size: 13px;
+}
+
+.source-map-options {
+  margin-left: 12px;
+  padding: 4px 0 4px 18px;
+  border-left: 2px solid var(--playground-border-soft);
+  transition: opacity 120ms ease;
+}
+
+.source-map-options-disabled {
+  opacity: 0.45;
+}
+
+.source-map-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--playground-text-primary);
+  font-size: 13px;
+}
+
 select,
 input {
   min-height: 34px;
@@ -497,6 +571,15 @@ input {
   color: var(--playground-text-primary);
   padding: 0 10px;
   outline: 0;
+}
+
+select {
+  appearance: none;
+  padding-right: 40px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='8' viewBox='0 0 14 8' fill='none'%3E%3Cpath d='M1 1l6 6 6-6' stroke='%23edf0f2' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-position: right 14px center;
+  background-repeat: no-repeat;
+  background-size: 14px 8px;
 }
 
 select:focus,
@@ -625,6 +708,10 @@ input[type="checkbox"] {
   }
 
   .settings-section {
+    grid-template-columns: 1fr;
+  }
+
+  .source-map-control {
     grid-template-columns: 1fr;
   }
 

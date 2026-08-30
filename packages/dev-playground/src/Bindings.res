@@ -97,6 +97,13 @@ module Window = {
   @val external isSecureContext: bool = "window.isSecureContext"
 }
 
+module WindowSelection = {
+  type t
+
+  @val @scope("window") @return(nullable) external get: unit => option<t> = "getSelection"
+  @get external isCollapsed: t => bool = "isCollapsed"
+}
+
 module Url = {
   type t
 
@@ -146,6 +153,11 @@ module CssStyle = {
   @set external setLeft: (t, string) => unit = "left"
 }
 
+type scrollIntoViewOptions = {
+  block: string,
+  inline: string,
+}
+
 module Element = {
   @send external setAttribute: (Dom.element, string, string) => unit = "setAttribute"
   @send
@@ -155,6 +167,10 @@ module Element = {
     "removeEventListener"
   @send external appendChild: (Dom.element, Dom.element) => unit = "appendChild"
   @send external removeChild: (Dom.element, Dom.element) => unit = "removeChild"
+  @send external focus: Dom.element => unit = "focus"
+  @send
+  external scrollIntoView: (Dom.element, scrollIntoViewOptions) => unit =
+    "scrollIntoView"
   @get external style: Dom.element => CssStyle.t = "style"
   @get @return(nullable)
   external getScrollHandler: Dom.element => option<Dom.event => unit> =
@@ -174,6 +190,10 @@ module ScriptElement = {
 module TextAreaElement = {
   @set external setValue: (Dom.element, string) => unit = "value"
   @send external select: Dom.element => unit = "select"
+  @send external setSelectionRange: (Dom.element, int, int) => unit = "setSelectionRange"
+  @get external clientHeight: Dom.element => int = "clientHeight"
+  @get external scrollTop: Dom.element => int = "scrollTop"
+  @set external setScrollTop: (Dom.element, int) => unit = "scrollTop"
 }
 
 module Document = {

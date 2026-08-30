@@ -443,7 +443,7 @@ let remove_stale_source_map ?(remove_stale_map = true) target_file =
 let dump_deps_program_with_source_map ?(remove_stale_map = true) ~target_file
     ~output_prefix module_system lambda_output chan =
   let builder =
-    Js_source_map.make ~generated_file:target_file
+    Js_source_map.make ~source_contents:[] ~generated_file:target_file
       ~source_root:!Js_config.source_map_root
       ~sources_content:!Js_config.source_map_sources_content
   in

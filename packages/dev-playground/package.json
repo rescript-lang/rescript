@@ -9,11 +9,13 @@
     "prepare-pages-site": "node scripts/prepare-pages-site.mjs",
     "res:build": "rescript",
     "res:watch": "rescript -w",
+    "test": "rescript && node --test scripts/source-map-navigation.test.mjs",
     "dev": "vite --host 127.0.0.1",
     "build": "rescript && vite build",
     "preview": "vite preview --host 127.0.0.1"
   },
   "dependencies": {
+    "@jridgewell/trace-mapping": "^0.3.31",
     "@rescript/runtime": "12.3.0",
     "rescript": "12.3.0",
     "vite": "^8.0.14",

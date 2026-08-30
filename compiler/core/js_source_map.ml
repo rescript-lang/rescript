@@ -41,6 +41,7 @@ type t = {
   generated_dir: string;
   source_root: string;
   sources_content: bool;
+  provided_source_contents: (string, string) Hashtbl.t;
   sources: (string, int) Hashtbl.t;
   mutable source_list: source list;
   mutable mappings: mapping list;
@@ -109,20 +110,27 @@ let relative_path ~from_dir ~to_file =
     let parts = repeat ".." (List.length from_rest) @ to_rest in
     if parts = [] then Filename.basename to_file else String.concat "/" parts
 
-let make ~generated_file ~source_root ~sources_content =
+let make ~source_contents ~generated_file ~source_root ~sources_content =
+  let provided_source_contents = Hashtbl.create (List.length source_contents) in
+  source_contents
+  |> List.iter (fun (filename, content) ->
+      Hashtbl.replace provided_source_contents (absolute_path filename) content);
   {
     generated_file = Filename.basename generated_file;
     generated_dir = Filename.dirname generated_file;
     source_root;
     sources_content;
+    provided_source_contents;
     sources = Hashtbl.create 4;
     source_list = [];
     mappings = [];
     last_generated = None;
   }
 
-let load_content filename =
-  try Some (Ext_io.load_file filename) with _ -> None
+let load_content builder filename =
+  match Hashtbl.find_opt builder.provided_source_contents filename with
+  | Some content -> Some content
+  | None -> (try Some (Ext_io.load_file filename) with _ -> None)
 
 let add_source builder filename =
   let filename =
@@ -138,7 +146,7 @@ let add_source builder filename =
       {
         relative_path =
           relative_path ~from_dir:builder.generated_dir ~to_file:filename;
-        content = load_content filename;
+        content = load_content builder filename;
       }
     in
     let index = List.length builder.source_list in
