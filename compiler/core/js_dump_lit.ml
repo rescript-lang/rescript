@@ -134,8 +134,6 @@ let bind = "bind"
 
 let math = "Math"
 
-let apply = "apply"
-
 let null = "null"
 
 let undefined = "undefined"

@@ -257,8 +257,6 @@ val not : t -> t
 
 val call : ?comment:string -> info:Js_call_info.t -> t -> t list -> t
 
-val flat_call : ?comment:string -> t -> t -> t
-
 val tagged_template : ?comment:string -> t -> t list -> t list -> t
 
 val new_ : ?comment:string -> J.expression -> J.expression list -> t

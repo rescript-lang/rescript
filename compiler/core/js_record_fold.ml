@@ -124,10 +124,6 @@ let expression_desc : 'a. ('a, expression_desc) fn =
     let st = _self.expression _self st _x1 in
     let st = _self.expression _self st _x2 in
     st
-  | FlatCall (_x0, _x1) ->
-    let st = _self.expression _self st _x0 in
-    let st = _self.expression _self st _x1 in
-    st
   | Call (_x0, _x1, _x2) ->
     let st = _self.expression _self st _x0 in
     let st = list _self.expression _self st _x1 in

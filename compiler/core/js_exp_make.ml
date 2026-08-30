@@ -68,12 +68,6 @@ let nil : t = {expression_desc = Null; comment = None; source_loc = None}
 let call ?comment ~info e0 args : t =
   {expression_desc = Call (e0, args, info); comment; source_loc = None}
 
-(* TODO: optimization when es is known at compile time
-    to be an array
-*)
-let flat_call ?comment e0 es : t =
-  {expression_desc = FlatCall (e0, es); comment; source_loc = None}
-
 let tagged_template ?comment call_expr string_args value_args : t =
   {
     expression_desc = Tagged_template (call_expr, string_args, value_args);

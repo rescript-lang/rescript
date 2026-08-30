@@ -137,7 +137,6 @@ type t =
   | Pisout of int
   | Pjscomp of Lam_compat.comparison
   | Pjs_apply (*[f;arg0;arg1; arg2; ... argN]*)
-  | Pjs_runtime_apply (* [f; [...]] *)
   | Pdebugger
   | Pjs_object_get of string
   | Pjs_object_set of string

@@ -83,10 +83,6 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
      trim can not be done before syntax checking
      otherwise location is incorrect
   *)
-  | Pjs_runtime_apply -> (
-    match args with
-    | [f; args] -> E.flat_call f args
-    | _ -> assert false)
   | Pjs_apply -> (
     match args with
     | fn :: rest -> E.call ~info:call_info fn rest
