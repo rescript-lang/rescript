@@ -22,89 +22,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-let caml_id_field_info : Lambda.field_dbg_info =
-  Fld_record {name = Literals.exception_id}
-
-let lam_caml_id : Lam_primitive.t = Pfield (0, caml_id_field_info)
 let prim = Lam.prim
-
-let lam_extension_id loc (head : Lam.t) =
-  prim ~primitive:lam_caml_id ~args:[head] loc
-
-(** A conservative approach to avoid packing exceptions
-    for lambda expression like {[
-      try { ... }catch(id){body}
-    ]}
-    we approximate that if [id] is destructed or not.
-    If it is destructed, we need pack it in case it is JS exception.
-    The packing is called Primitive_exceptions.internalToException, which is a nop for OCaml exception,
-    but will wrap as (Error e) when it is an JS exception. 
-
-    {[
-      try .. with 
-      | A (x,y) -> 
-      | Exn.Error ..
-    ]}
-
-    Without such wrapping, the code above would raise
-
-    Note it is not guaranteed that exception raised(or re-raised) is a structured
-    ocaml exception but it is guaranteed that if such exception is processed it would
-    still be an ocaml exception.
-    for example {[
-      match x with
-      | exception e -> raise e
-    ]}
-    it will re-raise an exception as it is (we are not packing it anywhere)
-
-    It is hard to judge an exception is destructed or escaped, any potential
-    alias(or if it is passed as an argument) would cause it to be leaked
-*)
-let exception_id_destructed (l : Lam.t) (fv : Ident.t) : bool =
-  let rec hit_opt (x : _ option) =
-    match x with
-    | None -> false
-    | Some a -> hit a
-  and hit_list_snd : 'a. ('a * _) list -> bool =
-   fun x -> Ext_list.exists_snd x hit
-  and hit_list xs = Ext_list.exists xs hit
-  and hit (l : Lam.t) =
-    match l with
-    (* | Lprim {primitive = Pintcomp _ ;
-             args = ([x;y ])  } ->
-       begin match x,y with
-        | Lvar _, Lvar _ -> false
-        | Lvar _, _ -> hit y
-        | _, Lvar _ -> hit x
-        | _, _  -> hit x || hit y
-       end *)
-    (* FIXME: this can be uncovered after we do the unboxing *)
-    | Lprim {primitive = Praise; args = [Lvar _]} -> false
-    | Lprim {primitive = _; args; _} -> hit_list args
-    | Lvar id -> Ident.same id fv
-    | Lassign (id, e) -> Ident.same id fv || hit e
-    | Lstaticcatch (e1, (_, _vars), e2) -> hit e1 || hit e2
-    | Ltrywith (e1, _exn, e2) -> hit e1 || hit e2
-    | Lfunction {body; params = _} -> hit body
-    | Llet (_str, _id, arg, body) -> hit arg || hit body
-    | Lletrec (decl, body) -> hit body || hit_list_snd decl
-    | Lfor (_v, e1, e2, _dir, e3) -> hit e1 || hit e2 || hit e3
-    | Lfor_of (_v, e1, e2) | Lfor_await_of (_v, e1, e2) -> hit e1 || hit e2
-    | Lconst _ -> false
-    | Lapply {ap_func; ap_args; _} -> hit ap_func || hit_list ap_args
-    | Lglobal_module _ (* global persistent module, play safe *) -> false
-    | Lswitch (arg, sw) ->
-      hit arg || hit_list_snd sw.sw_consts || hit_list_snd sw.sw_blocks
-      || hit_opt sw.sw_failaction
-    | Lstringswitch (arg, cases, default) ->
-      hit arg || hit_list_snd cases || hit_opt default
-    | Lstaticraise (_, args) -> hit_list args
-    | Lifthenelse (e1, e2, e3) -> hit e1 || hit e2 || hit e3
-    | Lsequence (e1, e2) -> hit e1 || hit e2
-    | Lbreak | Lcontinue -> false
-    | Lwhile (e1, e2) -> hit e1 || hit e2
-  in
-  hit l
 
 let abs_int x = if x < 0 then -x else x
 let no_over_flow x = abs_int x < 0x1fff_ffff
@@ -150,13 +68,6 @@ let lam_prim ~primitive:(p : Lambda.primitive) ~args loc : Lam.t =
   | Pnull -> Lam.const Const_js_null
   | Pundefined -> Lam.const (Const_js_undefined {is_unit = false})
   | Pcreate_extension s -> prim ~primitive:(Pcreate_extension s) ~args loc
-  | Pextension_slot_eq -> (
-    match args with
-    | [lhs; rhs] ->
-      prim ~primitive:(Pstringcomp Ceq)
-        ~args:[lam_extension_id loc lhs; rhs]
-        loc
-    | _ -> assert false)
   | Pwrap_exn -> prim ~primitive:Pwrap_exn ~args loc
   | Pignore ->
     (* Pignore means return unit, it is not an nop *)
@@ -199,7 +110,7 @@ let lam_prim ~primitive:(p : Lambda.primitive) ~args loc : Lam.t =
   | Pduprecord -> prim ~primitive:Pduprecord ~args loc
   | Ptagged_template -> prim ~primitive:Ptagged_template ~args loc
   | Precord_rest excluded -> prim ~primitive:(Precord_rest excluded) ~args loc
-  | Praise _ -> prim ~primitive:Praise ~args loc
+  | Praise -> prim ~primitive:Praise ~args loc
   | Pobjcomp x -> prim ~primitive:(Pobjcomp x) ~args loc
   | Pobjorder -> prim ~primitive:Pobjorder ~args loc
   | Pobjmin -> prim ~primitive:Pobjmin ~args loc
@@ -376,15 +287,7 @@ let convert (_exports : Set_ident.t) (lam : Lambda.lambda) :
     | Lstaticcatch (b, (i, ids), handler) ->
       Lam.staticcatch (convert_aux b) (i, ids) (convert_aux handler)
     | Ltrywith (b, id, handler) ->
-      let body = convert_aux b in
-      let handler = convert_aux handler in
-      if exception_id_destructed handler id then
-        let new_id = Ident.create ("raw_" ^ id.name) in
-        Lam.try_ body new_id
-          (Lam.let_ StrictOpt id
-             (prim ~primitive:Pwrap_exn ~args:[Lam.var new_id] Location.none)
-             handler)
-      else Lam.try_ body id handler
+      Lam.try_ (convert_aux b) id (convert_aux handler)
     | Lifthenelse (b, then_, else_) ->
       Lam.if_ (convert_aux b) (convert_aux then_) (convert_aux else_)
     | Lsequence (a, b) -> Lam.seq (convert_aux a) (convert_aux b)

@@ -2161,7 +2161,18 @@ let combine_constructor loc arg ex_pat cstr partial ctx def
             (fun (path, act) rem ->
               let ext = transl_extension_path ex_pat.pat_env path in
               Lifthenelse
-                (Lprim (Pextension_slot_eq, [Lvar tag; ext], loc), act, rem))
+                ( Lprim
+                    ( Pstringcomp Ceq,
+                      [
+                        Lprim
+                          ( Pfield (0, Fld_record {name = Literals.exception_id}),
+                            [Lvar tag],
+                            loc );
+                        ext;
+                      ],
+                      loc ),
+                  act,
+                  rem ))
             extension_cases default
         in
         Llet (Alias, Pgenval, tag, arg, tests)
@@ -2687,7 +2698,7 @@ let partial_function loc () =
   let fname, line, char = Location.get_pos_info loc.Location.loc_start in
   let fname = Filename.basename fname in
   Lprim
-    ( Praise Raise_regular,
+    ( Praise,
       [
         Lprim
           ( Pmakeblock Blk_extension,
@@ -2712,7 +2723,7 @@ let for_function loc repr param pat_act_list partial =
 (* In the following two cases, exhaustiveness info is not available! *)
 let for_trywith param pat_act_list =
   compile_matching None
-    (fun () -> Lprim (Praise Raise_reraise, [param], Location.none))
+    (fun () -> Lprim (Praise, [param], Location.none))
     param pat_act_list Partial
 
 let simple_for_let loc param pat body =
