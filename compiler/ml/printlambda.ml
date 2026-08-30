@@ -97,8 +97,10 @@ let print_taginfo ppf = function
     fprintf ppf "[%s]" (String.concat ";" (List.map fst (Array.to_list ss)))
 
 let primitive ppf = function
-  | Pidentity -> fprintf ppf "id"
-  | Pignore -> fprintf ppf "ignore"
+  | Peliminated kind -> (
+    match kind with
+    | Identity -> fprintf ppf "id"
+    | Ignore -> fprintf ppf "ignore")
   | Pdebugger -> fprintf ppf "debugger"
   | Ptypeof -> fprintf ppf "typeof"
   | Pnull -> fprintf ppf "null"

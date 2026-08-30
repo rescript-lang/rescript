@@ -63,10 +63,10 @@ let entries =
       form = Unary;
       specialization =
         {
-          int = Pidentity;
+          int = Peliminated Identity;
           bool = None;
-          float = Some Pidentity;
-          bigint = Some Pidentity;
+          float = Some (Peliminated Identity);
+          bigint = Some (Peliminated Identity);
           string = None;
         };
     };

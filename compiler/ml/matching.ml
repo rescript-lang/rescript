@@ -1615,8 +1615,7 @@ let make_test_sequence loc fail tst lt_tst arg const_lambda_list =
   let hs, const_lambda_list, fail = share_actions_tree const_lambda_list fail in
 
   let rec make_test_sequence const_lambda_list =
-    if List.length const_lambda_list >= 4 && lt_tst <> Pignore then
-      split_sequence const_lambda_list
+    if List.length const_lambda_list >= 4 then split_sequence const_lambda_list
     else
       match fail with
       | None -> do_tests_nofail loc tst arg const_lambda_list
@@ -1644,7 +1643,7 @@ module S_arg = struct
 
   type act = Lambda.lambda
 
-  let make_prim p args = Lprim (p, args, Location.none)
+  let make_prim p args = mk_prim p args Location.none
   let make_offset arg n =
     match n with
     | 0 -> arg

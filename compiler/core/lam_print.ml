@@ -39,6 +39,7 @@ let rec struct_const ppf (cst : Lam_constant.t) =
 
 let primitive ppf (prim : Lam_primitive.t) =
   match prim with
+  | Peliminated _ -> assert false
   (* | Pcreate_exception s -> fprintf ppf "[exn-create]%S" s  *)
   | Pcreate_extension s -> fprintf ppf "[ext-create]%S" s
   | Pinit_mod -> fprintf ppf "init_mod!"
