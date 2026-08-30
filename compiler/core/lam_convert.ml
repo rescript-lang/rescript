@@ -109,11 +109,6 @@ let exception_id_destructed (l : Lam.t) (fv : Ident.t) : bool =
 let abs_int x = if x < 0 then -x else x
 let no_over_flow x = abs_int x < 0x1fff_ffff
 
-let lam_is_var (x : Lam.t) (y : Ident.t) =
-  match x with
-  | Lvar y2 -> Ident.same y2 y
-  | _ -> false
-
 (** Make sure no int range overflow happens
     also we only check [int]
 *)
@@ -154,9 +149,6 @@ let lam_prim ~primitive:(p : Lambda.primitive) ~args loc : Lam.t =
   | Pidentity -> Ext_list.singleton_exn args
   | Pnull -> Lam.const Const_js_null
   | Pundefined -> Lam.const (Const_js_undefined {is_unit = false})
-  | Prevapply -> assert false
-  | Pdirapply -> assert false
-  | Ploc _ -> assert false (* already compiled away here*)
   | Pcreate_extension s -> prim ~primitive:(Pcreate_extension s) ~args loc
   | Pextension_slot_eq -> (
     match args with
@@ -357,11 +349,6 @@ let convert (_exports : Set_ident.t) (lam : Lambda.lambda) :
       let lam = Lam.letrec bindings body in
       Lam_scc.scc bindings lam body
     (* inlining will affect how mututal recursive behave *)
-    | Lprim (Prevapply, [x; f], outer_loc) | Lprim (Pdirapply, [f; x], outer_loc)
-      ->
-      convert_pipe f x outer_loc
-    | Lprim (Prevapply, _, _) -> assert false
-    | Lprim (Pdirapply, _, _) -> assert false
     | Lprim (Pgetglobal id, args, _) ->
       let args = Ext_list.map args convert_aux in
       if Ident.is_predef_exn id then
@@ -454,44 +441,6 @@ let convert (_exports : Set_ident.t) (lam : Lambda.lambda) :
                 | Lambda.Switch_constructor _ -> assert false);
         }
     | _ -> Lam.let_ kind id new_e new_body
-  and convert_pipe (f : Lambda.lambda) (x : Lambda.lambda) outer_loc =
-    let pipe_loc =
-      let candidate =
-        match f with
-        | Lapply {ap_loc} -> Some ap_loc
-        | Lfunction {loc} -> Some loc
-        | Lprim (_, _, loc) | Lswitch (_, _, loc) | Lstringswitch (_, _, _, loc)
-          ->
-          Some loc
-        | _ -> None
-      in
-      match candidate with
-      | Some loc when (not loc.loc_ghost) && loc.loc_start.pos_cnum >= 0 -> loc
-      | _ -> outer_loc
-    in
-    let x = convert_aux x in
-    let f = convert_aux f in
-    match f with
-    | Lfunction
-        {params = [param]; body = Lprim {primitive; args = [Lvar inner_arg]}}
-      when Ident.same param inner_arg ->
-      Lam.prim ~primitive ~args:[x] pipe_loc
-    | Lapply
-        {
-          ap_func =
-            Lfunction {params; body = Lprim {primitive; args = inner_args}};
-          ap_args = args;
-        }
-      when Ext_list.for_all2_no_exn inner_args params lam_is_var
-           && Ext_list.length_larger_than_n inner_args args 1 ->
-      Lam.prim ~primitive ~args:(Ext_list.append_one args x) pipe_loc
-    | Lapply {ap_func; ap_args; ap_info; ap_transformed_jsx} ->
-      Lam.apply ~ap_transformed_jsx ap_func
-        (Ext_list.append_one ap_args x)
-        {ap_loc = pipe_loc; ap_inlined = ap_info.ap_inlined; ap_status = App_na}
-    | _ ->
-      Lam.apply f [x]
-        {ap_loc = pipe_loc; ap_inlined = Default_inline; ap_status = App_na}
   and convert_switch (e : Lambda.lambda) (s : Lambda.lambda_switch) =
     let e = convert_aux e in
     match s with

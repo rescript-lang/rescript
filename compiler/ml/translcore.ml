@@ -243,13 +243,6 @@ let primitives_table =
       ("%identity", Pidentity);
       ("%component_identity", Pidentity);
       ("%ignore", Pignore);
-      ("%revapply", Prevapply);
-      ("%apply", Pdirapply);
-      ("%loc_LOC", Ploc Loc_LOC);
-      ("%loc_FILE", Ploc Loc_FILE);
-      ("%loc_LINE", Ploc Loc_LINE);
-      ("%loc_POS", Ploc Loc_POS);
-      ("%loc_MODULE", Ploc Loc_MODULE);
       (* BEGIN Triples for  ref data type *)
       ("%makeref", Pmakeblock Lambda.ref_tag_info);
       ("%refset", Psetfield (0, Lambda.ref_field_set_info));
@@ -726,58 +719,101 @@ let transl_external_application loc env (p : Primitive.description)
       "@{<error>Error:@} internal error, using unrecognized primitive %s"
       p.prim_name
 
+(* Compile-time source location (`__LOC__` / `%loc_*`). Lowered here so
+   Lambda never carries a location primitive. *)
+type loc_kind = Loc_FILE | Loc_LINE | Loc_MODULE | Loc_LOC | Loc_POS
+
+let loc_kind_of_prim_name = function
+  | "%loc_LOC" -> Some Loc_LOC
+  | "%loc_FILE" -> Some Loc_FILE
+  | "%loc_LINE" -> Some Loc_LINE
+  | "%loc_POS" -> Some Loc_POS
+  | "%loc_MODULE" -> Some Loc_MODULE
+  | _ -> None
+
+let lam_of_loc kind loc =
+  let loc_start = loc.Location.loc_start in
+  let file, lnum, cnum = Location.get_pos_info loc_start in
+  let file = Filename.basename file in
+  let enum =
+    loc.Location.loc_end.Lexing.pos_cnum - loc_start.Lexing.pos_cnum + cnum
+  in
+  match kind with
+  | Loc_POS ->
+    Lconst
+      (Const_block
+         ( Blk_tuple,
+           [
+             Const_immstring file;
+             Const_base (Const_int lnum);
+             Const_base (Const_int cnum);
+             Const_base (Const_int enum);
+           ] ))
+  | Loc_FILE -> Lconst (Const_immstring file)
+  | Loc_MODULE ->
+    let filename = Filename.basename file in
+    let name = Env.get_unit_name () in
+    let module_name = if name = "" then "//" ^ filename ^ "//" else name in
+    Lconst (Const_immstring module_name)
+  | Loc_LOC ->
+    let loc =
+      Printf.sprintf "File %S, line %d, characters %d-%d" file lnum cnum enum
+    in
+    Lconst (Const_immstring loc)
+  | Loc_LINE -> Lconst (Const_base (Const_int lnum))
+
 (* Eta-expand a primitive *)
 
 let transl_primitive loc p env ty ~val_type =
   (* Printf.eprintf "----transl_primitive %s----\n" p.prim_name; *)
-  let prim =
-    try Some (specialize_primitive p env ty) with Not_found -> None
-  in
-  match prim with
-  | None when p.prim_name = "%import" || p.prim_name = "#import" ->
-    Location.raise_errorf ~loc
-      "Dynamic import must be applied directly to a module or a value from \
-       another module; it cannot be used as a first-class value."
-  | None ->
-    (* an external: expand its FFI spec, eta-expanded to its arity *)
-    if p.prim_from_constructor || p.prim_arity = 0 then
-      transl_external_application loc env p ~val_type [] ~transformed_jsx:false
-    else
-      let params =
-        if p.prim_arity = 1 then [Ident.create "prim"]
-        else
-          List.init p.prim_arity (fun i ->
-              Ident.create ("prim" ^ string_of_int i))
-      in
+  match loc_kind_of_prim_name p.prim_name with
+  | Some kind -> (
+    let lam = lam_of_loc kind loc in
+    match p.prim_arity with
+    | 0 -> lam
+    | 1 ->
+      let param = Ident.create "prim" in
       Lfunction
         {
-          params;
+          params = [param];
           attr = default_function_attribute;
           loc;
-          body =
-            transl_external_application loc env p ~val_type
-              (List.map (fun id -> Lvar id) params)
-              ~transformed_jsx:false;
+          body = Lprim (Pmakeblock Blk_tuple, [lam; Lvar param], loc);
         }
-  | Some prim -> (
-    warn_polymorphic_comparison loc prim [];
+    | _ -> assert false)
+  | None -> (
+    let prim =
+      try Some (specialize_primitive p env ty) with Not_found -> None
+    in
     match prim with
-    | Ploc kind -> (
-      let lam = lam_of_loc kind loc in
-      match p.prim_arity with
-      | 0 -> lam
-      | 1 ->
-        (* TODO: we should issue a warning ? *)
-        let param = Ident.create "prim" in
+    | None when p.prim_name = "%import" || p.prim_name = "#import" ->
+      Location.raise_errorf ~loc
+        "Dynamic import must be applied directly to a module or a value from \
+         another module; it cannot be used as a first-class value."
+    | None ->
+      (* an external: expand its FFI spec, eta-expanded to its arity *)
+      if p.prim_from_constructor || p.prim_arity = 0 then
+        transl_external_application loc env p ~val_type []
+          ~transformed_jsx:false
+      else
+        let params =
+          if p.prim_arity = 1 then [Ident.create "prim"]
+          else
+            List.init p.prim_arity (fun i ->
+                Ident.create ("prim" ^ string_of_int i))
+        in
         Lfunction
           {
-            params = [param];
+            params;
             attr = default_function_attribute;
             loc;
-            body = Lprim (Pmakeblock Blk_tuple, [lam; Lvar param], loc);
+            body =
+              transl_external_application loc env p ~val_type
+                (List.map (fun id -> Lvar id) params)
+                ~transformed_jsx:false;
           }
-      | _ -> assert false)
-    | _ ->
+    | Some prim ->
+      warn_polymorphic_comparison loc prim [];
       let rec make_params n total =
         if n <= 0 then []
         else
@@ -1031,44 +1067,48 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
       wrap (transl_dynamic_import e.exp_loc arg)
     | _ -> (
       let argl = transl_list args in
-      match
-        transl_primitive_application e.exp_loc p e.exp_env prim_type args
-      with
-      | None -> (
-        (* an external: expand its FFI spec here; %raw parses and classifies
-         its snippet *)
-        match (p.prim_name, argl) with
-        | "#raw_expr", [Lconst (Const_base (Const_string (code, _)))] ->
-          let kind = Classify_function.classify code in
-          wrap
-            (Lprim (Praw_js_code {code; code_info = Exp kind}, [], e.exp_loc))
-        | "#raw_stmt", [Lconst (Const_base (Const_string (code, _)))] ->
-          let kind = Classify_function.classify_stmt code in
-          wrap
-            (Lprim (Praw_js_code {code; code_info = Stmt kind}, [], e.exp_loc))
-        | ("#raw_expr" | "#raw_stmt"), _ -> assert false
-        | _ ->
-          wrap
-            (transl_external_application e.exp_loc e.exp_env p
-               ~val_type:prim_vd.val_type argl ~transformed_jsx))
-      | Some prim -> (
-        warn_polymorphic_comparison e.exp_loc prim argl;
-        match (prim, args) with
-        | Praise k, [_] ->
-          let targ = List.hd argl in
-          let k =
-            match (k, targ) with
-            | Raise_regular, Lvar id when Hashtbl.mem try_ids id ->
-              Raise_reraise
-            | _ -> k
-          in
-          wrap (Lprim (Praise k, [targ], e.exp_loc))
-        | Ploc kind, [] -> lam_of_loc kind e.exp_loc
-        | Ploc kind, [arg1] ->
+      match loc_kind_of_prim_name p.prim_name with
+      | Some kind -> (
+        match args with
+        | [] -> wrap (lam_of_loc kind e.exp_loc)
+        | [arg1] ->
           let lam = lam_of_loc kind arg1.exp_loc in
-          Lprim (Pmakeblock Blk_tuple, lam :: argl, e.exp_loc)
-        | Ploc _, _ -> assert false
-        | _, _ -> wrap (Lprim (prim, argl, e.exp_loc)))))
+          wrap (Lprim (Pmakeblock Blk_tuple, lam :: argl, e.exp_loc))
+        | _ -> assert false)
+      | None -> (
+        match
+          transl_primitive_application e.exp_loc p e.exp_env prim_type args
+        with
+        | None -> (
+          (* an external: expand its FFI spec here; %raw parses and classifies
+         its snippet *)
+          match (p.prim_name, argl) with
+          | "#raw_expr", [Lconst (Const_base (Const_string (code, _)))] ->
+            let kind = Classify_function.classify code in
+            wrap
+              (Lprim (Praw_js_code {code; code_info = Exp kind}, [], e.exp_loc))
+          | "#raw_stmt", [Lconst (Const_base (Const_string (code, _)))] ->
+            let kind = Classify_function.classify_stmt code in
+            wrap
+              (Lprim (Praw_js_code {code; code_info = Stmt kind}, [], e.exp_loc))
+          | ("#raw_expr" | "#raw_stmt"), _ -> assert false
+          | _ ->
+            wrap
+              (transl_external_application e.exp_loc e.exp_env p
+                 ~val_type:prim_vd.val_type argl ~transformed_jsx))
+        | Some prim -> (
+          warn_polymorphic_comparison e.exp_loc prim argl;
+          match (prim, args) with
+          | Praise k, [_] ->
+            let targ = List.hd argl in
+            let k =
+              match (k, targ) with
+              | Raise_regular, Lvar id when Hashtbl.mem try_ids id ->
+                Raise_reraise
+              | _ -> k
+            in
+            wrap (Lprim (Praise k, [targ], e.exp_loc))
+          | _, _ -> wrap (Lprim (prim, argl, e.exp_loc))))))
   | Texp_apply {funct; args = oargs; partial; transformed_jsx} ->
     let inlined, funct =
       Translattribute.get_and_remove_inlined_attribute funct

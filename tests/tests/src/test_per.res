@@ -7,11 +7,6 @@ let invalid_arg = s => throw(Invalid_argument(s))
 
 exception Exit
 
-/* Composition operators */
-
-external \"|>": ('a, 'a => 'b) => 'b = "%revapply"
-external \"@@": ('a => 'b, 'a) => 'b = "%apply"
-
 /* Debugging */
 
 external __LOC__: string = "%loc_LOC"
