@@ -372,7 +372,6 @@ let primitives_table =
       ("%null_to_opt", Pnull_to_opt);
       ("%nullable_to_opt", Pnullable_to_opt);
       ("%function_arity", Pfn_arity);
-      ("%wrap_exn", Pwrap_exn);
       ("%curry_apply1", Pcurry_apply 1);
       ("%curry_apply2", Pcurry_apply 2);
       ("%curry_apply3", Pcurry_apply 3);
@@ -940,8 +939,28 @@ let rec cut n l =
 (* Translation of expressions *)
 
 (* JS catch can receive a ReScript exception or a raw throw. If the handler
-   inspects [fv], bind [fv] to [Pwrap_exn raw] so matching sees a ReScript
-   value. Pure [throw v] is not an inspect: rethrow the raw JS value. *)
+   inspects [fv], bind [fv] to [Primitive_exceptions.internalToException raw]
+   so matching sees a ReScript value. Pure [throw v] is not an inspect:
+   rethrow the raw JS value. *)
+let wrap_exn loc arg =
+  Lapply
+    {
+      ap_func =
+        Lprim
+          ( Pfield (0, Fld_module {name = "internalToException"}),
+            [
+              Lprim
+                ( Pgetglobal
+                    (Ident.create_persistent Primitive_modules.exceptions),
+                  [],
+                  loc );
+            ],
+            loc );
+      ap_args = [arg];
+      ap_loc = loc;
+      ap_inlined = Default_inline;
+      ap_transformed_jsx = false;
+    }
 let exception_id_destructed (l : lambda) (fv : Ident.t) : bool =
   let rec hit_opt = function
     | None -> false
@@ -982,11 +1001,8 @@ let pack_trywith_exn id handler =
     let raw_id = Ident.create ("raw_" ^ id.name) in
     ( raw_id,
       Llet
-        ( StrictOpt,
-          Pgenval,
-          id,
-          Lprim (Pwrap_exn, [Lvar raw_id], Location.none),
-          handler ) )
+        (StrictOpt, Pgenval, id, wrap_exn Location.none (Lvar raw_id), handler)
+    )
   else (id, handler)
 
 let extract_directive_for_fn exp =

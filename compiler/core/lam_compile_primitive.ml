@@ -76,8 +76,6 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
   match prim with
   | Pis_not_none -> Js_of_lam_option.is_not_none (Ext_list.singleton_exn args)
   | Pcreate_extension s -> E.make_exception s
-  | Pwrap_exn ->
-    E.runtime_call Primitive_modules.exceptions "internalToException" args
   | Praw_js_code {code; code_info} -> E.raw_js_code code_info code
   (* FIXME: save one allocation
      trim can not be done before syntax checking

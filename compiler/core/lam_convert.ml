@@ -68,7 +68,6 @@ let lam_prim ~primitive:(p : Lambda.primitive) ~args loc : Lam.t =
   | Pnull -> Lam.const Const_js_null
   | Pundefined -> Lam.const (Const_js_undefined {is_unit = false})
   | Pcreate_extension s -> prim ~primitive:(Pcreate_extension s) ~args loc
-  | Pwrap_exn -> prim ~primitive:Pwrap_exn ~args loc
   | Pignore ->
     (* Pignore means return unit, it is not an nop *)
     seq (Ext_list.singleton_exn args) unit

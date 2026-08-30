@@ -152,8 +152,6 @@ type t =
   | Pimport of Lambda.import_source
   | Ptypeof
   | Pfn_arity
-  | Pwrap_exn
-    (* convert either JS exception or OCaml exception into OCaml format *)
   | Pcreate_extension of string
   | Pis_not_none
   | Pval_from_option

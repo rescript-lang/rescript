@@ -1,6 +1,7 @@
 'use strict';
 
 let Primitive_option = require("./Primitive_option.cjs");
+let Primitive_exceptions = require("./Primitive_exceptions.cjs");
 
 let $$Error = "JsExn";
 
@@ -9,6 +10,8 @@ function asJsExn(exn) {
     return Primitive_option.some(exn._1);
   }
 }
+
+let anyToExnInternal = Primitive_exceptions.internalToException;
 
 function raiseError(str) {
   throw new Error(str);
@@ -40,6 +43,7 @@ function raiseUriError(str) {
 
 exports.$$Error = $$Error;
 exports.asJsExn = asJsExn;
+exports.anyToExnInternal = anyToExnInternal;
 exports.raiseError = raiseError;
 exports.raiseEvalError = raiseEvalError;
 exports.raiseRangeError = raiseRangeError;
