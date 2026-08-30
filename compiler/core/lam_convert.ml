@@ -201,7 +201,6 @@ let may_depend = Lam_module_ident.Hash_set.add
 
 let convert (_exports : Set_ident.t) (lam : Lambda.lambda) :
     Lam.t * Lam_module_ident.Hash_set.t =
-  let exit_map = Hash_int.create 0 in
   let may_depends = Lam_module_ident.Hash_set.create 0 in
 
   let rec convert_aux (lam : Lambda.lambda) : Lam.t =
@@ -244,14 +243,8 @@ let convert (_exports : Set_ident.t) (lam : Lambda.lambda) :
       Lam.stringswitch (convert_aux e)
         (Ext_list.map_snd cases convert_aux)
         (Ext_option.map default convert_aux)
-    | Lstaticraise (id, []) ->
-      Lam.staticraise (Hash_int.find_default exit_map id id) []
     | Lstaticraise (id, args) ->
       Lam.staticraise id (Ext_list.map args convert_aux)
-    | Lstaticcatch (b, (i, []), Lstaticraise (j, [])) ->
-      (* peep-hole [i] aliased to [j] *)
-      Hash_int.add exit_map i (Hash_int.find_default exit_map j j);
-      convert_aux b
     | Lstaticcatch (b, (i, ids), handler) ->
       Lam.staticcatch (convert_aux b) (i, ids) (convert_aux handler)
     | Ltrywith (b, id, handler) ->
