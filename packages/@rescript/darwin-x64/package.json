@@ -48,6 +48,7 @@
     "x64"
   ],
   "files": [
+    "THIRD_PARTY_LICENSES",
     "bin.js",
     "bin.d.ts",
     "bin/"

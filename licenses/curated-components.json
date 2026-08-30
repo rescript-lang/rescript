@@ -1,0 +1,152 @@
+[
+  {
+    "name": "Flow parser",
+    "version": "0.320.0",
+    "source": "https://github.com/facebook/flow/commit/7c64d4b077bc6fc45c12cee3cfa7368fdb2186ce",
+    "license": "MIT",
+    "scope": "bsc, rescript-editor-analysis, and rescript-tools",
+    "notes": "Vendored and modified by ReScript. This entry also covers the MIT-licensed StringKey and SSet collection helpers.",
+    "licenseFiles": ["compiler/flow_parser/LICENSE"]
+  },
+  {
+    "name": "Sedlex",
+    "version": "Flow commit 7c64d4b077bc6fc45c12cee3cfa7368fdb2186ce",
+    "source": "https://github.com/facebook/flow/tree/7c64d4b077bc6fc45c12cee3cfa7368fdb2186ce/src/third-party",
+    "license": "MIT",
+    "scope": "Flow lexer runtime and lexer code generation",
+    "notes": "Vendored and modified by ReScript.",
+    "licenseFiles": ["compiler/flow_parser/flow_sedlexing/LICENSE"]
+  },
+  {
+    "name": "OCaml Map and Set derivatives used by Flow",
+    "version": "Flow 0.267.0 collection sources",
+    "source": "https://github.com/facebook/flow/commit/9ea4062c0b7e037415c4413a7634c459ebd5c31b",
+    "license": "LGPL-2.1-only WITH OCaml-LGPL-linking-exception",
+    "scope": "Flow_map and Flow_set in the compiler binaries",
+    "notes": "Derived from the OCaml standard library, with portions copyright Meta Platforms, Inc. and affiliates.",
+    "licenseFiles": ["compiler/flow_parser/collections/third-party/LICENSE"]
+  },
+  {
+    "name": "Base",
+    "version": "v0.17.3",
+    "source": "https://github.com/janestreet/base",
+    "license": "MIT",
+    "scope": "compiler binaries",
+    "licenseFiles": ["licenses/ocaml/base-v0.17.3.txt"]
+  },
+  {
+    "name": "ocaml_intrinsics_kernel",
+    "version": "v0.17.2",
+    "source": "https://github.com/janestreet/ocaml_intrinsics_kernel",
+    "license": "MIT",
+    "scope": "transitive dependency of Base",
+    "licenseFiles": ["licenses/ocaml/ocaml_intrinsics_kernel-v0.17.2.txt"]
+  },
+  {
+    "name": "sexplib0",
+    "version": "v0.17.0",
+    "source": "https://github.com/janestreet/sexplib0",
+    "license": "MIT",
+    "scope": "transitive dependency of Base and ppx_yojson_conv_lib",
+    "licenseFiles": ["licenses/ocaml/sexplib0-v0.17.0.txt"]
+  },
+  {
+    "name": "ocaml-wtf8",
+    "version": "1.0.2",
+    "source": "https://github.com/flowtype/ocaml-wtf8",
+    "license": "MIT",
+    "scope": "compiler binaries",
+    "licenseFiles": ["licenses/ocaml/wtf8-1.0.2.txt"]
+  },
+  {
+    "name": "Yojson",
+    "version": "3.0.0",
+    "source": "https://github.com/ocaml-community/yojson",
+    "license": "BSD-3-Clause",
+    "scope": "compiler, analysis, and tools binaries",
+    "licenseFiles": ["licenses/ocaml/yojson-3.0.0.txt"]
+  },
+  {
+    "name": "LSP and Jsonrpc",
+    "version": "1.27.0",
+    "source": "https://github.com/ocaml/ocaml-lsp",
+    "license": "ISC",
+    "scope": "rescript-editor-analysis and rescript-tools",
+    "licenseFiles": ["licenses/ocaml/lsp-jsonrpc-1.27.0.txt"]
+  },
+  {
+    "name": "ppx_yojson_conv_lib",
+    "version": "v0.17.0",
+    "source": "https://github.com/janestreet/ppx_yojson_conv_lib",
+    "license": "MIT",
+    "scope": "runtime dependency of LSP",
+    "licenseFiles": ["licenses/ocaml/ppx_yojson_conv_lib-v0.17.0.txt"]
+  },
+  {
+    "name": "Uutf",
+    "version": "1.0.4",
+    "source": "https://erratique.ch/software/uutf",
+    "license": "ISC",
+    "scope": "runtime dependency of LSP",
+    "licenseFiles": ["licenses/ocaml/uutf-1.0.4.txt"]
+  },
+  {
+    "name": "Cmarkit",
+    "version": "0.4.0",
+    "source": "https://erratique.ch/software/cmarkit",
+    "license": "ISC",
+    "scope": "rescript-tools",
+    "licenseFiles": ["licenses/ocaml/cmarkit-0.4.0.txt"]
+  },
+  {
+    "name": "LexiFi dead_code_analyzer",
+    "version": "adapted source",
+    "source": "https://github.com/LexiFi/dead_code_analyzer",
+    "license": "MIT",
+    "scope": "dead-code analysis in rescript-editor-analysis and rescript-tools",
+    "notes": "Selected modules were adapted and subsequently modified by ReScript.",
+    "licenseFiles": ["licenses/ocaml/dead-code-analyzer.txt"]
+  },
+  {
+    "name": "js_of_ocaml JavaScript pretty-printer",
+    "version": "adapted source; license snapshot from 6.4.1",
+    "source": "https://github.com/ocsigen/js_of_ocaml",
+    "license": "LGPL-2.1-or-later WITH OCaml-LGPL-linking-exception",
+    "scope": "JavaScript output generation in bsc",
+    "notes": "The incorporated pretty-printer has been heavily modified by ReScript.",
+    "licenseFiles": ["licenses/ocaml/js_of_ocaml-6.4.1.txt"]
+  },
+  {
+    "name": "OCaml runtime, standard library, and incorporated compiler sources",
+    "version": "5.5.0",
+    "source": "https://github.com/ocaml/ocaml/tree/5.5.0",
+    "license": "LGPL-2.1-or-later WITH OCaml-LGPL-linking-exception",
+    "scope": "OCaml compiler, analysis, and tools binaries, including adapted compiler and collection modules",
+    "licenseFiles": ["licenses/toolchains/ocaml-5.5.0.txt"]
+  },
+  {
+    "name": "Rust standard library",
+    "version": "1.91.0",
+    "source": "https://github.com/rust-lang/rust/tree/1.91.0",
+    "license": "Multiple; see the official Rust standard-library inventory below",
+    "scope": "rescript build-system binary",
+    "licenseFiles": ["licenses/toolchains/rust-1.91.0-standard-library.html"]
+  },
+  {
+    "name": "musl",
+    "version": "1.2.4-2",
+    "source": "https://packages.ubuntu.com/noble/musl-tools",
+    "license": "Multiple permissive licenses; see the Ubuntu copyright inventory below",
+    "scope": "statically linked Linux binaries",
+    "platforms": ["linux"],
+    "licenseFiles": ["licenses/toolchains/musl-1.2.4-2.txt"]
+  },
+  {
+    "name": "MinGW-w64 runtime",
+    "source": "https://github.com/mingw-w64/mingw-w64",
+    "license": "Multiple permissive licenses; see the runtime notice below",
+    "scope": "Windows binaries",
+    "platforms": ["win32"],
+    "licenseFiles": ["licenses/toolchains/mingw-w64-runtime.txt"]
+  }
+]

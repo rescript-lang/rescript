@@ -10,7 +10,6 @@ use std::time::{Duration, SystemTime};
 use sysinfo::{PidExt, ProcessExt, System, SystemExt};
 
 use crate::queue::FifoQueue;
-use crate::queue::*;
 
 /* This locking mechanism is meant to never be deleted. Instead, it stores the PID of the process
  * that's running, when trying to aquire a lock, it checks wether that process is still running. If

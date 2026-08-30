@@ -151,6 +151,13 @@ To make sure that no files are added to or removed from the `rescript`, `@rescri
 
 After adding a new file to the repository that should go into one of the npm packages - e.g., a new stdlib module -, run `make artifacts`.
 
+The native platform packages additionally contain a generated
+`THIRD_PARTY_LICENSES` file. It is not managed through `packages/artifacts.json`
+or committed to Git; it is generated and checked before publishing. When a
+vendored component, linked OCaml dependency, platform toolchain, or Rust
+dependency changes, follow the inventory maintenance instructions in
+[`licenses/README.md`](licenses/README.md).
+
 ## Test the compiler
 
 ### Single file
@@ -523,7 +530,13 @@ Then attempt to rebuild your project as you would normally.
 
 ## Contribution Licensing
 
-Since ReScript is distributed under the terms of the [LGPL Version 3](LICENSE), contributions that you make are licensed under the same terms. In order for us to be able to accept your contributions, we will need explicit confirmation from you that you are able and willing to provide them under these terms, and the mechanism we use to do this is called a Developer's Certificate of Origin [DCO](DCO.md). This is very similar to the process used by the Linux(R) kernel, Samba, and many other major open source projects.
+ReScript contains components under multiple licenses, as documented in
+[`LICENSE`](LICENSE). Contributions are made under the license of the component
+being changed. In order for us to accept your contributions, we need explicit
+confirmation that you are able and willing to provide them under the applicable
+terms. The mechanism we use for this is called a Developer's Certificate of
+Origin [DCO](DCO.md). This is very similar to the process used by the Linux(R)
+kernel, Samba, and many other major open source projects.
 
 To participate under these terms, all that you must do is include a line like the following as the last line of the commit message for each commit in your contribution:
 

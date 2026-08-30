@@ -97,9 +97,14 @@ ReScript uses multiple licenses in this monorepo:
 - `compiler/`: LGPL-3.0-or-later
 - `compiler/syntax/`: MIT
 - `packages/@rescript/runtime/`: MIT
+- `packages/@rescript/belt/`: MIT
 - `rewatch/`: MIT
 
 See the repository license index in [`LICENSE`](LICENSE) and full license texts in [`COPYING.LESSER`](COPYING.LESSER) and [`LICENSE.MIT`](LICENSE.MIT).
+
+Native platform packages also contain third-party software. Their generated
+`THIRD_PARTY_LICENSES` files and the source inventory used to produce them are
+documented in [`licenses/README.md`](licenses/README.md).
 
 ## 🏅 Acknowledgments
 

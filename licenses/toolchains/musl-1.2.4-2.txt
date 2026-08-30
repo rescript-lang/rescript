@@ -1,0 +1,287 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: musl
+Source: https://musl.libc.org/releases/
+
+Files: *
+Copyright: 2005-2020 Rich Felker <dalias@aerifal.cx>
+           2005-2020 Many other contributors
+License: MIT
+
+Files: debian/*
+Copyright: 2013-2015 Kevin Bortis <pkgs@bortis.ch>
+           2016-2023 Reiner Herrmann <reiner@reiner-h.de>
+License: MIT
+
+Files: arch/mips64/*
+       src/*/mips64/*
+Copyright: 2016 Mahesh Bodapati
+           2016 Jaydeep Patil
+           2016 Imagination Technologies
+License: MIT
+
+Files: arch/riscv64/*
+       src/*/riscv64/*
+Copyright: Alex Suykov <alex.suykov@gmail.com>
+           Aric Belsito <lluixhi@gmail.com>
+           Drew DeVault <sir@cmpwn.com>
+           Michael Clark <mjc@sifive.com>
+           Michael Forney <mforney@mforney.org>
+           Stefan O'Rear <sorear2@gmail.com>
+           Rich Felker <dalias@aerifal.cx>
+License: MIT
+
+Files: include/*
+       arch/*/bits/*
+       arch/*/crt_arch.h
+       crt/*
+       ldso/dlstart.c
+Copyright: 2005-2014 Rich Felker <dalias@aerifal.cx>
+License: public-domain
+ In addition, permission is hereby granted for all public header files
+ (include/* and arch/*/bits/*) and crt files intended to be linked into
+ applications (crt/*, ldso/dlstart.c, and arch/*/crt_arch.h) to omit
+ the copyright notice and permission notice otherwise required by the
+ license, and to use these files without any requirement of
+ attribution. These files include substantial contributions from:
+ .
+ Bobby Bingham
+ John Spencer
+ Nicholas J. Kain
+ Rich Felker
+ Richard Pennington
+ Stefan Kristiansson
+ Szabolcs Nagy
+ .
+ all of whom have explicitly granted such permission.
+
+Files: src/regex/reg*
+       src/regex/tre*
+Copyright: 2001-2008 Ville Laurikari <vl@iki.fi>
+           2012 Rich Felker <dalias@aerifal.cx>
+License: BSD-2-clause
+
+Files: src/math/tgammal.c
+       src/math/lgammal.c
+       src/math/powl.c
+       src/math/logl.c
+       src/math/log2l.c
+       src/math/log1pl.c
+       src/math/log10l.c
+       src/math/erfl.c
+       src/math/expm1l.c
+       src/math/expl.c
+       src/math/__polevll.c
+Copyright: 2008 Stephen L. Moshier <steve@moshier.net>
+           1993 Sun Microsystems, Inc.
+License: ISC
+
+Files: src/math/fmal.c
+       src/math/fmaf.c
+       src/math/fma.c
+       src/math/exp2l.c
+Copyright: 2005-2011 David Schultz <das@freebsd.org>
+           1993 Sun Microsystems, Inc.
+License: BSD-2-clause
+
+Files: src/math/tanf.c
+       src/math/tan.c
+       src/math/sinf.c
+       src/math/sincosf.c
+       src/math/sincos.c
+       src/math/sin.c
+       src/math/scalbf.c
+       src/math/scalb.c
+       src/math/log1pf.c
+       src/math/log1p.c
+       src/math/log10f.c
+       src/math/log10.c
+       src/math/lgammaf_r.c
+       src/math/lgamma_r.c
+       src/math/j*.c
+       src/math/expm1f.c
+       src/math/expm1.c
+       src/math/erf.c
+       src/math/erff.c
+       src/math/cosf.c
+       src/math/cos.c
+       src/math/cbrt*.c
+       src/math/atanl.c
+       src/math/atanf.c
+       src/math/atan2*.c
+       src/math/atan.c
+       src/math/asinl.c
+       src/math/asinf.c
+       src/math/asin.c
+       src/math/acosl.c
+       src/math/acosf.c
+       src/math/acos.c
+       src/math/__tan*.c
+       src/math/__sin*.c
+       src/math/__rem*.c
+       src/math/__cos*.c
+Copyright: 1993, 2004 Sun Microsystems, Inc.
+           2008, 2009-2011 Bruce D. Evans
+           2008, 2009-2011 Steven G. Kargl
+           2008, 2009-2011 David Schultz
+License: permissive
+ Developed at SunPro, a Sun Microsystems, Inc. business.
+ Permission to use, copy, modify, and distribute this
+ software is freely granted, provided that this notice
+ is preserved.
+
+Files: src/math/logf.c
+       src/math/logf_data.*
+       src/math/log2.c
+       src/math/log2_data.*
+       src/math/log2f.c
+       src/math/log2f_data.*
+       src/math/log.c
+       src/math/log_data.*
+       src/math/exp.c
+       src/math/exp_data.*
+       src/math/exp2.c
+       src/math/expf.c
+       src/math/exp2f.c
+       src/math/exp2f_data.*
+       src/math/pow.c
+       src/math/pow_data.c
+       src/math/powf.c
+       src/math/powf_data.*
+       src/string/aarch64/*
+Copyright: 2012-2018 Arm Limited.
+License: MIT
+
+Files: src/crypt/crypt_blowfish.c
+Copyright: 1998-2014 Solar Designer <solar@openwall.com>
+           2012 Rich Felker <dalias@aerifal.cx>
+License: public-domain
+ Written by Solar Designer <solar at openwall.com> in 1998-2012.
+ No copyright is claimed, and the software is hereby placed in the public
+ domain.  In case this attempt to disclaim copyright and place the software
+ in the public domain is deemed null and void, then the software is
+ Copyright (c) 1998-2012 Solar Designer and it is hereby released to the
+ general public under the following terms:
+ .
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted.
+ .
+ There's ABSOLUTELY NO WARRANTY, express or implied.
+ .
+ It is my intent that you should be able to use this on your system,
+ as part of a software package, or anywhere else to improve security,
+ ensure compatibility, or for any other purpose.  I would appreciate
+ it if you give credit where it is due and keep your modifications in
+ the public domain as well, but I don't require that in order to let
+ you place this code and any modifications you make under a license
+ of your choice.
+
+Files: src/crypt/crypt_des.c
+Copyright: 1994 David Burren
+           2000,2002,2010,2012 Solar Designer <solar@openwall.com>
+           2012 Rich Felker <dalias@aerifal.cx>
+License: BSD-3-clause
+
+Files: src/stdlib/qsort.c
+Copyright: 2011 Valentin Ochs
+License: MIT
+
+Files: src/setjmp/x32/longjmp.s
+       src/setjmp/x32/setjmp.s
+       src/setjmp/x86_64/longjmp.s
+       src/setjmp/x86_64/setjmp.s
+       src/thread/x32/__set_thread_area.s
+       src/thread/x32/__unmapself.s
+       src/thread/x86_64/__set_thread_area.s
+       src/thread/x86_64/__unmapself.s
+Copyright: 2011-2012 Nicholas J. Kain
+License: MIT
+
+Files: src/string/arm/memcpy.S
+Copyright: 2008 The Android Open Source Project
+License: BSD-2-clause
+
+Files: debian/musl-fts/fts.*
+Copyright: 1989, 1990, 1993, 1994 The Regents of the University of California
+License: BSD-3-clause
+Comment: imported from https://github.com/void-linux/musl-fts tag v1.2.7
+
+License: MIT
+ Permission is hereby granted, free of charge, to any person obtaining a
+ copy of this software and associated documentation files (the "Software"),
+ to deal in the Software without restriction, including without limitation
+ the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ and/or sell copies of the Software, and to permit persons to whom the
+ Software is furnished to do so, subject to the following conditions:
+ .
+ The above copyright notice and this permission notice shall be included
+ in all copies or substantial portions of the Software.
+ .
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+License: ISC
+ Permission to use, copy, modify, and distribute this software for any
+ purpose with or without fee is hereby granted, provided that the above
+ copyright notice and this permission notice appear in all copies.
+ .
+ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+License: BSD-2-clause
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions
+ are met:
+ .
+ 1. Redistributions of source code must retain the above copyright
+    notice, this list of conditions and the following disclaimer.
+ .
+ 2. Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in the
+    documentation and/or other materials provided with the distribution.
+ .
+ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER AND CONTRIBUTORS
+ ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT
+ HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+License: BSD-3-clause
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions
+ are met:
+ 1. Redistributions of source code must retain the above copyright
+    notice, this list of conditions and the following disclaimer.
+ 2. Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in the
+    documentation and/or other materials provided with the distribution.
+ 3. Neither the name of the author nor the names of other contributors
+    may be used to endorse or promote products derived from this software
+    without specific prior written permission.
+ .
+ THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+ FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ SUCH DAMAGE.
