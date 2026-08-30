@@ -22,9 +22,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-val convert :
-  Set_ident.t -> Lambda.lambda -> Lam.t * Lam_module_ident.Hash_set.t
-(** [convert exports lam] translates Lambda to Lam and collects potential
+val convert : Lambda.lambda -> Lam.t * Lam_module_ident.Hash_set.t
+(** [convert lam] translates Lambda to Lam and collects potential
     depended modules. [let x = y] aliases are left for
     {!Lam_pass_collapse_var_aliases}; unused lets are left for
     {!Lam_pass_lets_dce}. *)
