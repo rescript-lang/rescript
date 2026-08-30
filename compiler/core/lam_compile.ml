@@ -265,6 +265,25 @@ type initialization = J.block
       non-toplevel, it will explode code very quickly
 *)
 
+(* Semantic SCC already ran in [Lambda_scc.bind_rec]. JS still wants
+   functions before values so dummy / updateDummy init is well-ordered. *)
+let functions_before_values (group : (Ident.t * Lam.t) list) =
+  if
+    Ext_list.for_all group (fun (_, x) ->
+        match x with
+        | Lfunction _ -> true
+        | _ -> false)
+  then group
+  else
+    List.sort
+      (fun (_, lama) (_, lamb) ->
+        match ((lama : Lam.t), (lamb : Lam.t)) with
+        | Lfunction _, Lfunction _ -> 0
+        | Lfunction _, _ -> -1
+        | _, Lfunction _ -> 1
+        | _, _ -> 0)
+      group
+
 let compile output_prefix =
   (* When compiling a read from another module, a nested source path like
      Other.A.B.make reaches this point as nested module-field reads:
@@ -553,8 +572,8 @@ let compile output_prefix =
          ]}
       *)
       (compile_lambda {cxt with continuation = Declare (Alias, id)} arg, [])
-  and compile_recursive_lets_aux cxt (id_args : Lam_scc.bindings) : Js_output.t
-      =
+  and compile_recursive_lets_aux cxt (id_args : (Ident.t * Lam.t) list) :
+      Js_output.t =
     (* #1716 *)
     let output_code, ids =
       Ext_list.fold_right id_args (Js_output.dummy, [])
@@ -570,14 +589,7 @@ let compile output_prefix =
   and compile_recursive_lets cxt id_args : Js_output.t =
     match id_args with
     | [] -> Js_output.dummy
-    | _ -> (
-      let id_args_group = Lam_scc.scc_bindings id_args in
-      match id_args_group with
-      | [] -> assert false
-      | first :: rest ->
-        let acc = compile_recursive_lets_aux cxt first in
-        Ext_list.fold_left rest acc (fun acc x ->
-            Js_output.append_output acc (compile_recursive_lets_aux cxt x)))
+    | _ -> compile_recursive_lets_aux cxt (functions_before_values id_args)
   and compile_general_cases :
       'a.
       make_exp:('a -> J.expression) ->

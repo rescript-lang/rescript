@@ -36,7 +36,7 @@ let Intb = {
   a: a
 };
 
-let a$1 = Stdlib_Lazy.make(() => Stdlib_Lazy.get(Intb.a) + 1 | 0);
+let a$1 = Stdlib_Lazy.make(() => Stdlib_Lazy.get(a) + 1 | 0);
 
 let Inta = {
   a: a$1

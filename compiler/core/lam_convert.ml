@@ -254,11 +254,7 @@ let convert (_exports : Set_ident.t) (lam : Lambda.lambda) :
         ~body:(convert_aux body)
     | Llet (kind, Pgenval, id, e, body) (*FIXME*) -> convert_let kind id e body
     | Lletrec (bindings, body) ->
-      let bindings = Ext_list.map_snd bindings convert_aux in
-      let body = convert_aux body in
-      let lam = Lam.letrec bindings body in
-      Lam_scc.scc bindings lam body
-    (* inlining will affect how mututal recursive behave *)
+      Lam.letrec (Ext_list.map_snd bindings convert_aux) (convert_aux body)
     | Lprim (Pgetglobal id, args, _) ->
       let args = Ext_list.map args convert_aux in
       if Ident.is_predef_exn id then
