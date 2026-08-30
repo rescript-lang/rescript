@@ -95,12 +95,6 @@ and expression_desc =
   | Seq of expression * expression
   | Cond of expression * expression * expression
   | Bin of binop * expression * expression
-  | FlatCall of expression * expression
-  (* f.apply(null,args) -- Fully applied guaranteed
-     TODO: once we know args's shape --
-     if it's know at compile time, we can turn it into
-     f(args[0], args[1], ... )
-  *)
   | Call of expression * expression list * Js_call_info.t
   (* Analysze over J expression is hard since,
       some primitive  call is translated

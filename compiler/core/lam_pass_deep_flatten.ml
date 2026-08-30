@@ -110,8 +110,6 @@ let lambda_of_groups ~(rev_bindings : Lam_group.t list) (result : Lam.t) : Lam.t
 
 (* TODO:
     refine effectful [ket_kind] to be pure or not
-    Be careful of how [Lifused(v,l)] work
-    since its semantics depend on whether v is used or not
     return value are in reverse order, but handled by [lambda_of_groups]
 *)
 (* The shape [let x = <immutable block> in ... in apply f args]: the residue
