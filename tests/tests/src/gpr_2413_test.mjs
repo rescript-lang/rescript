@@ -21,11 +21,11 @@ function f(x) {
 
 function ff(c) {
   c.contents = c.contents + 1 | 0;
-  let match = (1 + c.contents | 0) + 1 | 0;
-  if (match > 3 || match < 0) {
+  let n = (1 + c.contents | 0) + 1 | 0;
+  if (n > 3 || n < 0) {
     return 0;
   } else {
-    return match + 1 | 0;
+    return n + 1 | 0;
   }
 }
 

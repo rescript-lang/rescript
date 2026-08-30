@@ -24,34 +24,6 @@
 
 let prim = Lam.prim
 
-let abs_int x = if x < 0 then -x else x
-let no_over_flow x = abs_int x < 0x1fff_ffff
-
-(** Make sure no int range overflow happens
-    also we only check [int]
-*)
-let happens_to_be_diff (sw_consts : (Lambda.switch_key * Lambda.lambda) list) :
-    int option =
-  match sw_consts with
-  | (Switch_int a, Lconst (Const_base (Const_int a0)))
-    :: (Switch_int b, Lconst (Const_base (Const_int b0)))
-    :: rest
-    when no_over_flow a && no_over_flow a0 && no_over_flow b && no_over_flow b0
-    ->
-    let diff = a0 - a in
-    if b0 - b = diff then
-      if
-        Ext_list.for_all rest (fun (key, lam) ->
-            match (key, lam) with
-            | Switch_int x, Lconst (Const_base (Const_int x0))
-              when no_over_flow x0 && no_over_flow x ->
-              x0 - x = diff
-            | _ -> false)
-      then Some diff
-      else None
-    else None
-  | _ -> None
-
 (* type required_modules = Lam_module_ident.Hash_set.t *)
 
 (** drop Lseq (List! ) etc 
@@ -252,7 +224,8 @@ let convert (_exports : Set_ident.t) (lam : Lambda.lambda) :
     | Lfunction {params; body; attr; loc} ->
       Lam.function_ ~loc ~attr ~arity:(List.length params) ~params
         ~body:(convert_aux body)
-    | Llet (kind, Pgenval, id, e, body) (*FIXME*) -> convert_let kind id e body
+    | Llet (kind, Pgenval, id, e, body) ->
+      Lam.let_ kind id (convert_aux e) (convert_aux body)
     | Lletrec (bindings, body) ->
       Lam.letrec (Ext_list.map_snd bindings convert_aux) (convert_aux body)
     | Lprim (Pgetglobal id, args, _) ->
@@ -296,85 +269,15 @@ let convert (_exports : Set_ident.t) (lam : Lambda.lambda) :
     | Lfor_await_of (id, iterable, body) ->
       Lam.for_await_of id (convert_aux iterable) (convert_aux body)
     | Lassign (id, body) -> Lam.assign id (convert_aux body)
-  and convert_let (kind : Lam_compat.let_kind) id (e : Lambda.lambda) body :
-      Lam.t =
-    let new_e = convert_aux e in
-    let new_body = convert_aux body in
-    (*
-            reverse engineering cases as {[           
-           (let (switcher/1013 =a (-1+ match/1012))
-               (if (isout 2 switcher/1013) (exit 1)
-                   (switch* switcher/1013
-                      case int 0: 'a'
-                        case int 1: 'b'
-                        case int 2: 'c')))            
-         ]}
-         To elemininate the id [switcher], we need ensure it appears only 
-         in two places.
-
-         To advance this case, when [sw_failaction] is None
-      *)
-    match (kind, new_e, new_body) with
-    | ( Alias,
-        Lprim {primitive = Poffsetint offset; args = [(Lvar _ as matcher)]},
-        Lswitch
-          ( Lvar switcher3,
-            ({
-               sw_consts_full = false;
-               sw_consts;
-               sw_blocks = [];
-               sw_blocks_full = true;
-               sw_failaction = Some ifso;
-             } as px) ) )
-      when Ident.same switcher3 id
-           && (not (Lam_hit.hit_variable id ifso))
-           && not (Ext_list.exists_snd sw_consts (Lam_hit.hit_variable id)) ->
-      Lam.switch matcher
-        {
-          px with
-          sw_consts =
-            Ext_list.map sw_consts (fun (key, act) ->
-                match key with
-                | Lambda.Switch_int i -> (Lambda.Switch_int (i - offset), act)
-                | Lambda.Switch_constructor _ -> assert false);
-        }
-    | _ -> Lam.let_ kind id new_e new_body
   and convert_switch (e : Lambda.lambda) (s : Lambda.lambda_switch) =
-    let e = convert_aux e in
-    match s with
-    | {
-     sw_failaction = None;
-     sw_blocks = [];
-     sw_blocks_full = true;
-     sw_consts;
-     sw_consts_full;
-     sw_dispatch;
-    } -> (
-      match happens_to_be_diff sw_consts with
-      | Some 0 -> e
-      | Some i ->
-        prim ~primitive:Paddint
-          ~args:[e; Lam.const (Const_int {i = Int32.of_int i; comment = None})]
-          Location.none
-      | _ ->
-        Lam.switch e
-          {
-            sw_failaction = None;
-            sw_blocks = [];
-            sw_blocks_full = true;
-            sw_consts = Ext_list.map_snd sw_consts convert_aux;
-            sw_consts_full;
-            sw_dispatch;
-          })
-    | _ ->
-      Lam.switch e
-        {
-          sw_consts_full = s.sw_consts_full;
-          sw_consts = Ext_list.map_snd s.sw_consts convert_aux;
-          sw_blocks_full = s.sw_blocks_full;
-          sw_blocks = Ext_list.map_snd s.sw_blocks convert_aux;
-          sw_failaction = Ext_option.map s.sw_failaction convert_aux;
-          sw_dispatch = s.sw_dispatch;
-        }
+    Lam.switch (convert_aux e)
+      {
+        sw_consts_full = s.sw_consts_full;
+        sw_consts = Ext_list.map_snd s.sw_consts convert_aux;
+        sw_blocks_full = s.sw_blocks_full;
+        sw_blocks = Ext_list.map_snd s.sw_blocks convert_aux;
+        sw_failaction = Ext_option.map s.sw_failaction convert_aux;
+        sw_dispatch = s.sw_dispatch;
+      }
   in
   (convert_aux lam, may_depends)

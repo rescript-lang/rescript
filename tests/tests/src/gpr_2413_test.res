@@ -23,9 +23,6 @@ let ff = c =>
     Int.Ref.increment(c)
     a + c.contents + b
   } {
-  | 0 => 1
-  | 1 => 2
-  | 2 => 3
-  | 3 => 4
+  | (0 | 1 | 2 | 3) as n => n + 1
   | _ => 0
   }
