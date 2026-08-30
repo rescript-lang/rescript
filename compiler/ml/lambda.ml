@@ -305,7 +305,6 @@ type primitive =
   | Pisnullable
   (* exn *)
   | Pcreate_extension of string
-  | Pwrap_exn
   (* js *)
   | Pcurry_apply of int
   | Pjscomp of comparison

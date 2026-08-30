@@ -70,7 +70,7 @@ a value passed to a Promise.catch callback)
   reason: "Use `JsExn.anyToExnInternal` instead",
   migrate: JsExn.anyToExnInternal(),
 })
-external anyToExnInternal: 'a => exn = "%wrap_exn"
+let anyToExnInternal: 'a => exn
 
 /** Raise Js exception Error object with stacktrace */
 @deprecated({

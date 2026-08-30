@@ -162,8 +162,6 @@ type t =
   | Pimport of Lambda.import_source
   | Ptypeof
   | Pfn_arity
-  | Pwrap_exn
-    (* convert either JS exception or OCaml exception into OCaml format *)
   | Pcreate_extension of string
   | Pis_not_none (* no info about its type *)
   | Pval_from_option
@@ -189,7 +187,7 @@ let eq_tag_info (x : Lam_tag_info.t) y = x = y
 
 let eq_primitive_approx (lhs : t) (rhs : t) =
   match lhs with
-  | Pwrap_exn | Praise
+  | Praise
   (* generic comparison *)
   | Pobjorder | Pobjmin | Pobjmax | Pobjtag | Pobjsize
   (* bool primitives *)

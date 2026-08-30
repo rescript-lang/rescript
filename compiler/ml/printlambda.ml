@@ -230,7 +230,6 @@ let primitive ppf = function
   | Pisout -> fprintf ppf "isout"
   | Pisnullable -> fprintf ppf "isnullable"
   | Pcreate_extension s -> fprintf ppf "extension[%s]" s
-  | Pwrap_exn -> fprintf ppf "wrap_exn"
   | Pawait -> fprintf ppf "await"
   | Pimport (Import_module {module_; path}) ->
     fprintf ppf "import[%s]" (String.concat "." (Ident.name module_ :: path))

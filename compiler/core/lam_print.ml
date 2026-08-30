@@ -41,7 +41,6 @@ let primitive ppf (prim : Lam_primitive.t) =
   match prim with
   (* | Pcreate_exception s -> fprintf ppf "[exn-create]%S" s  *)
   | Pcreate_extension s -> fprintf ppf "[ext-create]%S" s
-  | Pwrap_exn -> fprintf ppf "#exn"
   | Pinit_mod -> fprintf ppf "init_mod!"
   | Pupdate_mod -> fprintf ppf "update_mod!"
   | Pjs_apply -> fprintf ppf "#apply"
