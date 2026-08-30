@@ -325,15 +325,14 @@ let lam_prim ~primitive:(p : Lambda.primitive) ~args loc : Lam.t =
 
 let may_depend = Lam_module_ident.Hash_set.add
 
-let convert (exports : Set_ident.t) (lam : Lambda.lambda) :
+let convert (_exports : Set_ident.t) (lam : Lambda.lambda) :
     Lam.t * Lam_module_ident.Hash_set.t =
-  let alias_tbl = Hash_ident.create 64 in
   let exit_map = Hash_int.create 0 in
   let may_depends = Lam_module_ident.Hash_set.create 0 in
 
   let rec convert_aux (lam : Lambda.lambda) : Lam.t =
     match lam with
-    | Lvar x -> Lam.var (Hash_ident.find_default alias_tbl x x)
+    | Lvar x -> Lam.var x
     | Lconst x -> Lam.const (Lam_constant_convert.convert_constant x)
     | Lapply
         {
@@ -414,17 +413,9 @@ let convert (exports : Set_ident.t) (lam : Lambda.lambda) :
     | Lassign (id, body) -> Lam.assign id (convert_aux body)
   and convert_let (kind : Lam_compat.let_kind) id (e : Lambda.lambda) body :
       Lam.t =
-    match (kind, e) with
-    | Alias, Lvar u ->
-      let new_u = Hash_ident.find_default alias_tbl u u in
-      Hash_ident.add alias_tbl id new_u;
-      if Set_ident.mem exports id then
-        Lam.let_ kind id (Lam.var new_u) (convert_aux body)
-      else convert_aux body
-    | _, _ -> (
-      let new_e = convert_aux e in
-      let new_body = convert_aux body in
-      (*
+    let new_e = convert_aux e in
+    let new_body = convert_aux body in
+    (*
             reverse engineering cases as {[           
            (let (switcher/1013 =a (-1+ match/1012))
                (if (isout 2 switcher/1013) (exit 1)
@@ -438,31 +429,31 @@ let convert (exports : Set_ident.t) (lam : Lambda.lambda) :
 
          To advance this case, when [sw_failaction] is None
       *)
-      match (kind, new_e, new_body) with
-      | ( Alias,
-          Lprim {primitive = Poffsetint offset; args = [(Lvar _ as matcher)]},
-          Lswitch
-            ( Lvar switcher3,
-              ({
-                 sw_consts_full = false;
-                 sw_consts;
-                 sw_blocks = [];
-                 sw_blocks_full = true;
-                 sw_failaction = Some ifso;
-               } as px) ) )
-        when Ident.same switcher3 id
-             && (not (Lam_hit.hit_variable id ifso))
-             && not (Ext_list.exists_snd sw_consts (Lam_hit.hit_variable id)) ->
-        Lam.switch matcher
-          {
-            px with
-            sw_consts =
-              Ext_list.map sw_consts (fun (key, act) ->
-                  match key with
-                  | Lambda.Switch_int i -> (Lambda.Switch_int (i - offset), act)
-                  | Lambda.Switch_constructor _ -> assert false);
-          }
-      | _ -> Lam.let_ kind id new_e new_body)
+    match (kind, new_e, new_body) with
+    | ( Alias,
+        Lprim {primitive = Poffsetint offset; args = [(Lvar _ as matcher)]},
+        Lswitch
+          ( Lvar switcher3,
+            ({
+               sw_consts_full = false;
+               sw_consts;
+               sw_blocks = [];
+               sw_blocks_full = true;
+               sw_failaction = Some ifso;
+             } as px) ) )
+      when Ident.same switcher3 id
+           && (not (Lam_hit.hit_variable id ifso))
+           && not (Ext_list.exists_snd sw_consts (Lam_hit.hit_variable id)) ->
+      Lam.switch matcher
+        {
+          px with
+          sw_consts =
+            Ext_list.map sw_consts (fun (key, act) ->
+                match key with
+                | Lambda.Switch_int i -> (Lambda.Switch_int (i - offset), act)
+                | Lambda.Switch_constructor _ -> assert false);
+        }
+    | _ -> Lam.let_ kind id new_e new_body
   and convert_pipe (f : Lambda.lambda) (x : Lambda.lambda) outer_loc =
     let pipe_loc =
       let candidate =

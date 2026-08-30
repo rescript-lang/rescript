@@ -27,24 +27,7 @@
 
 val convert :
   Set_ident.t -> Lambda.lambda -> Lam.t * Lam_module_ident.Hash_set.t
-(** 
-   [convert exports lam]
-   it also collect [exit_map] and a collection of potential depended modules [may_depends]
-   In this pass we also synchronized aliases so that 
-   {[
-     let a1 = a0 in 
-     let a2 = a1 in 
-     let a3 = a2 in 
-     let a4 = a3 in 
-   ]}
-    converted to 
-   {[
-     let a1 = a0 in 
-     let a2 = a0 in 
-     let a3 = a0 in 
-     let a4 = a0 in 
-   ]}
-    we dont eliminate unused let bindings to leave it for {!Lam_pass_lets_dce}
-    we should remove all those let aliases, otherwise, it will be
-    pushed into alias table again
-*)
+(** [convert exports lam] translates Lambda to Lam and collects potential
+    depended modules. [let x = y] aliases are left for
+    {!Lam_pass_collapse_var_aliases}; unused lets are left for
+    {!Lam_pass_lets_dce}. *)

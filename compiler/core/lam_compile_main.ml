@@ -276,6 +276,9 @@ let compile (output_prefix : string) export_idents hoisted (lam : Lambda.lambda)
     Lam_compile_env.reset ()
   in
   let lam, may_required_modules = Lam_convert.convert export_ident_sets lam in
+  let lam =
+    Lam_pass_collapse_var_aliases.collapse ~exports:export_ident_sets lam
+  in
 
   let lam = d "initial" lam in
   let lam = Lam_pass_deep_flatten.deep_flatten lam in
