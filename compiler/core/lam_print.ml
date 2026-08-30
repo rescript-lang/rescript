@@ -37,14 +37,6 @@ let rec struct_const ppf (cst : Lam_constant.t) =
       (Lambda.tag_label_of_tag_info i)
       struct_const sc1 sconsts scl
 
-(* let string_of_loc_kind (loc : Lambda.loc_kind) =
-   match loc with
-   | Loc_FILE -> "loc_FILE"
-   | Loc_LINE -> "loc_LINE"
-   | Loc_MODULE -> "loc_MODULE"
-   | Loc_POS -> "loc_POS"
-   | Loc_LOC -> "loc_LOC" *)
-
 let primitive ppf (prim : Lam_primitive.t) =
   match prim with
   (* | Pcreate_exception s -> fprintf ppf "[exn-create]%S" s  *)

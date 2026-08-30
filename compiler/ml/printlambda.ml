@@ -54,13 +54,6 @@ let value_kind = function
    | Pfloatval -> "float"
    | Pboxedintval bi -> boxed_integer_name bi *)
 
-let string_of_loc_kind = function
-  | Loc_FILE -> "loc_FILE"
-  | Loc_LINE -> "loc_LINE"
-  | Loc_MODULE -> "loc_MODULE"
-  | Loc_POS -> "loc_POS"
-  | Loc_LOC -> "loc_LOC"
-
 (* let block_shape ppf shape = match shape with
    | None | Some [] -> ()
    | Some l when List.for_all ((=) Pgenval) l -> ()
@@ -111,9 +104,6 @@ let primitive ppf = function
   | Pnull -> fprintf ppf "null"
   | Pundefined -> fprintf ppf "undefined"
   | Pfn_arity -> fprintf ppf "fn.length"
-  | Prevapply -> fprintf ppf "revapply"
-  | Pdirapply -> fprintf ppf "dirapply"
-  | Ploc kind -> fprintf ppf "%s" (string_of_loc_kind kind)
   | Pgetglobal id -> fprintf ppf "global %a" Ident.print id
   | Pmakeblock taginfo -> fprintf ppf "makeblock %a" print_taginfo taginfo
   | Pfield (n, fld) -> fprintf ppf "field:%s/%i" (str_of_field_info fld) n

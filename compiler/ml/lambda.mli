@@ -17,8 +17,6 @@
 
 open Asttypes
 
-type loc_kind = Loc_FILE | Loc_LINE | Loc_MODULE | Loc_LOC | Loc_POS
-
 type hoisted_function = {binding: Ident.t; path: string list; loc: Location.t}
 
 type tag_info =
@@ -146,9 +144,6 @@ type primitive =
   | Pnull
   | Pundefined
   | Pfn_arity
-  | Prevapply
-  | Pdirapply
-  | Ploc of loc_kind (* Globals *)
   | Pgetglobal of Ident.t
   (* Operations on heap blocks *)
   | Pmakeblock of tag_info
@@ -447,4 +442,3 @@ val is_guarded : lambda -> bool
 val patch_guarded : lambda -> lambda -> lambda
 
 val raise_kind : raise_kind -> string
-val lam_of_loc : loc_kind -> Location.t -> lambda
