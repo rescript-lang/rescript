@@ -742,8 +742,9 @@ module App = {
             switch Document.current->Document.getElementById("source-editor") {
             | Some(editor) => {
                 let offset = offsetForPosition(Signal.peek(source), original.position)
-                editor->Element.focus
                 editor->TextAreaElement.setSelectionRange(offset, offset)
+                editor->Element.focus
+                Signal.set(activeLine, original.position.line)
                 let scrollTop = Math.Int.max(
                   0,
                   18 + (original.position.line - 1) * 22 - editor->TextAreaElement.clientHeight / 2,
