@@ -257,7 +257,7 @@ let primitives_table =
       ("%obj_size", Pobjsize);
       ("%obj_get_field", Parrayrefu);
       ("%obj_set_field", Parraysetu);
-      ("%raise", Praise Raise_regular);
+      ("%raise", Praise);
       (* bool primitives *)
       ("%sequand", Psequand);
       ("%sequor", Psequor);
@@ -909,7 +909,7 @@ let assert_failed exp =
   in
   let fname = Filename.basename fname in
   Lprim
-    ( Praise Raise_regular,
+    ( Praise,
       [
         Lprim
           ( Pmakeblock Blk_extension,
@@ -939,7 +939,55 @@ let rec cut n l =
 
 (* Translation of expressions *)
 
-let try_ids = Hashtbl.create 8
+(* JS catch can receive a ReScript exception or a raw throw. If the handler
+   inspects [fv], bind [fv] to [Pwrap_exn raw] so matching sees a ReScript
+   value. Pure [throw v] is not an inspect: rethrow the raw JS value. *)
+let exception_id_destructed (l : lambda) (fv : Ident.t) : bool =
+  let rec hit_opt = function
+    | None -> false
+    | Some a -> hit a
+  and hit_list_snd : 'a. ('a * _) list -> bool =
+   fun x -> Ext_list.exists_snd x hit
+  and hit_list xs = Ext_list.exists xs hit
+  and hit (l : lambda) =
+    match l with
+    | Lprim (Praise, [Lvar _], _) -> false
+    | Lprim (_, args, _) -> hit_list args
+    | Lvar id -> Ident.same id fv
+    | Lassign (id, e) -> Ident.same id fv || hit e
+    | Lstaticcatch (e1, _, e2) -> hit e1 || hit e2
+    | Ltrywith (e1, _, e2) -> hit e1 || hit e2
+    | Lfunction {body} -> hit body
+    | Llet (_, _, _, arg, body) -> hit arg || hit body
+    | Lletrec (decl, body) -> hit body || hit_list_snd decl
+    | Lfor (_, e1, e2, _, e3) -> hit e1 || hit e2 || hit e3
+    | Lfor_of (_, e1, e2) | Lfor_await_of (_, e1, e2) -> hit e1 || hit e2
+    | Lconst _ -> false
+    | Lapply {ap_func; ap_args} -> hit ap_func || hit_list ap_args
+    | Lswitch (arg, sw, _) ->
+      hit arg || hit_list_snd sw.sw_consts || hit_list_snd sw.sw_blocks
+      || hit_opt sw.sw_failaction
+    | Lstringswitch (arg, cases, default, _) ->
+      hit arg || hit_list_snd cases || hit_opt default
+    | Lstaticraise (_, args) -> hit_list args
+    | Lifthenelse (e1, e2, e3) -> hit e1 || hit e2 || hit e3
+    | Lsequence (e1, e2) -> hit e1 || hit e2
+    | Lbreak | Lcontinue -> false
+    | Lwhile (e1, e2) -> hit e1 || hit e2
+  in
+  hit l
+
+let pack_trywith_exn id handler =
+  if exception_id_destructed handler id then
+    let raw_id = Ident.create ("raw_" ^ id.name) in
+    ( raw_id,
+      Llet
+        ( StrictOpt,
+          Pgenval,
+          id,
+          Lprim (Pwrap_exn, [Lvar raw_id], Location.none),
+          handler ) )
+  else (id, handler)
 
 let extract_directive_for_fn exp =
   exp.exp_attributes
@@ -1096,19 +1144,9 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
             wrap
               (transl_external_application e.exp_loc e.exp_env p
                  ~val_type:prim_vd.val_type argl ~transformed_jsx))
-        | Some prim -> (
+        | Some prim ->
           warn_polymorphic_comparison e.exp_loc prim argl;
-          match (prim, args) with
-          | Praise k, [_] ->
-            let targ = List.hd argl in
-            let k =
-              match (k, targ) with
-              | Raise_regular, Lvar id when Hashtbl.mem try_ids id ->
-                Raise_reraise
-              | _ -> k
-            in
-            wrap (Lprim (Praise k, [targ], e.exp_loc))
-          | _, _ -> wrap (Lprim (prim, argl, e.exp_loc))))))
+          wrap (Lprim (prim, argl, e.exp_loc)))))
   | Texp_apply {funct; args = oargs; partial; transformed_jsx} ->
     let inlined, funct =
       Translattribute.get_and_remove_inlined_attribute funct
@@ -1131,10 +1169,9 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
     transl_match e arg pat_expr_list exn_pat_expr_list partial
   | Texp_try (body, pat_expr_list) ->
     let id = Typecore.name_pattern "exn" pat_expr_list in
-    Ltrywith
-      ( transl_exp body,
-        id,
-        Matching.for_trywith (Lvar id) (transl_cases_try pat_expr_list) )
+    let handler = Matching.for_trywith (Lvar id) (transl_cases pat_expr_list) in
+    let id, handler = pack_trywith_exn id handler in
+    Ltrywith (transl_exp body, id, handler)
   | Texp_tuple el -> (
     let ll = transl_list el in
     try Lconst (Const_block (Blk_tuple, List.map extract_constant ll))
@@ -1304,17 +1341,6 @@ and transl_guard guard rhs =
 and transl_case {c_lhs; c_guard; c_rhs} = (c_lhs, transl_guard c_guard c_rhs)
 
 and transl_cases cases = List.map transl_case cases
-
-and transl_case_try {c_lhs; c_guard; c_rhs} =
-  match c_lhs.pat_desc with
-  | Tpat_var (id, _) | Tpat_alias (_, id, _) ->
-    Hashtbl.replace try_ids id ();
-    Misc.try_finally
-      (fun () -> (c_lhs, transl_guard c_guard c_rhs))
-      (fun () -> Hashtbl.remove try_ids id)
-  | _ -> (c_lhs, transl_guard c_guard c_rhs)
-
-and transl_cases_try cases = List.map transl_case_try cases
 
 and transl_apply ?(inlined = Default_inline)
     ?(uncurried_partial_application = None) ?(transformed_jsx = false) lam sargs
@@ -1611,14 +1637,13 @@ and transl_record loc env fields repres opt_init_expr =
 and transl_match e arg pat_expr_list exn_pat_expr_list partial =
   let id = Typecore.name_pattern "exn" exn_pat_expr_list
   and cases = transl_cases pat_expr_list
-  and exn_cases = transl_cases_try exn_pat_expr_list in
+  and exn_cases = transl_cases exn_pat_expr_list in
   let static_catch body val_ids handler =
     let static_exception_id = next_negative_raise_count () in
+    let exn_handler = Matching.for_trywith (Lvar id) exn_cases in
+    let id, exn_handler = pack_trywith_exn id exn_handler in
     Lstaticcatch
-      ( Ltrywith
-          ( Lstaticraise (static_exception_id, body),
-            id,
-            Matching.for_trywith (Lvar id) exn_cases ),
+      ( Ltrywith (Lstaticraise (static_exception_id, body), id, exn_handler),
         (static_exception_id, val_ids),
         handler )
   in

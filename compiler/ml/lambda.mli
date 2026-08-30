@@ -162,7 +162,7 @@ type primitive =
   | Pjs_object_get of string
   | Pjs_object_set of string
   (* Exceptions *)
-  | Praise of raise_kind
+  | Praise
   (* object primitives *)
   | Pobjcomp of comparison
   | Pobjorder
@@ -271,7 +271,6 @@ type primitive =
   | Pisnullable
   (* exn *)
   | Pcreate_extension of string
-  | Pextension_slot_eq
   | Pwrap_exn
   (* js *)
   | Pcurry_apply of int
@@ -289,8 +288,6 @@ type primitive =
 and comparison = Ceq | Cneq | Clt | Cgt | Cle | Cge
 
 and value_kind = Pgenval
-
-and raise_kind = Raise_regular | Raise_reraise
 
 type structured_constant =
   | Const_base of constant
@@ -440,5 +437,3 @@ val staticfail : lambda (* Anticipated static failure *)
 (* Check anticipated failure, substitute its final value *)
 val is_guarded : lambda -> bool
 val patch_guarded : lambda -> lambda -> lambda
-
-val raise_kind : raise_kind -> string

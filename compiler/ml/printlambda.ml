@@ -115,7 +115,7 @@ let primitive ppf = function
   | Pjs_object_create _ -> fprintf ppf "js_obj_create"
   | Pjs_object_get name -> fprintf ppf "js_object_get[%s]" name
   | Pjs_object_set name -> fprintf ppf "js_object_set[%s]" name
-  | Praise k -> fprintf ppf "%s" (Lambda.raise_kind k)
+  | Praise -> fprintf ppf "raise"
   | Pobjcomp Ceq -> fprintf ppf "=="
   | Pobjcomp Cneq -> fprintf ppf "!="
   | Pobjcomp Clt -> fprintf ppf "<"
@@ -230,7 +230,6 @@ let primitive ppf = function
   | Pisout -> fprintf ppf "isout"
   | Pisnullable -> fprintf ppf "isnullable"
   | Pcreate_extension s -> fprintf ppf "extension[%s]" s
-  | Pextension_slot_eq -> fprintf ppf "#extension_slot_eq"
   | Pwrap_exn -> fprintf ppf "wrap_exn"
   | Pawait -> fprintf ppf "await"
   | Pimport (Import_module {module_; path}) ->

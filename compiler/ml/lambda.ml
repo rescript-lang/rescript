@@ -196,7 +196,7 @@ type primitive =
   | Pjs_object_get of string
   | Pjs_object_set of string
   (* Exceptions *)
-  | Praise of raise_kind
+  | Praise
   (* object operations *)
   | Pobjcomp of comparison
   | Pobjorder
@@ -305,7 +305,6 @@ type primitive =
   | Pisnullable
   (* exn *)
   | Pcreate_extension of string
-  | Pextension_slot_eq
   | Pwrap_exn
   (* js *)
   | Pcurry_apply of int
@@ -324,8 +323,6 @@ type primitive =
 and comparison = Ceq | Cneq | Clt | Cgt | Cle | Cge
 
 and value_kind = Pgenval
-
-and raise_kind = Raise_regular | Raise_reraise
 
 type pointer_info =
   | Pt_constructor of Variant_runtime.tag
@@ -730,7 +727,3 @@ let bind str var exp body =
   match exp with
   | Lvar var' when Ident.same var var' -> body
   | _ -> Llet (str, Pgenval, var, exp, body)
-
-let raise_kind = function
-  | Raise_regular -> "raise"
-  | Raise_reraise -> "reraise"
