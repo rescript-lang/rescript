@@ -29,7 +29,7 @@ type tag_info =
       runtime: Variant_runtime.block_runtime;
     }
   | Blk_tuple
-  | Blk_poly_var of string
+  | Blk_poly_var
   | Blk_record of {
       fields: (string * bool (* optional *)) array;
       mutable_flag: Asttypes.mutable_flag;
@@ -50,9 +50,8 @@ type tag_info =
 let tag_label_of_tag_info (tag : tag_info) =
   match tag with
   | Blk_constructor {name} | Blk_record_inlined {name} -> name
-  | Blk_tuple | Blk_poly_var _ | Blk_record _ | Blk_module _
-  | Blk_module_export _ | Blk_extension | Blk_some | Blk_some_not_nested
-  | Blk_record_ext _ ->
+  | Blk_tuple | Blk_poly_var | Blk_record _ | Blk_module _ | Blk_module_export _
+  | Blk_extension | Blk_some | Blk_some_not_nested | Blk_record_ext _ ->
     "0"
 
 let mutable_flag_of_tag_info (tag : tag_info) =
@@ -61,7 +60,7 @@ let mutable_flag_of_tag_info (tag : tag_info) =
   | Blk_record {mutable_flag}
   | Blk_record_ext {mutable_flag} ->
     mutable_flag
-  | Blk_tuple | Blk_constructor _ | Blk_poly_var _ | Blk_module _
+  | Blk_tuple | Blk_constructor _ | Blk_poly_var | Blk_module _
   | Blk_module_export _ | Blk_extension | Blk_some_not_nested | Blk_some ->
     Immutable
 
@@ -454,6 +453,13 @@ let const_constructor (tag : Variant_runtime.tag) =
 let const_shape_none = Const_js_undefined {is_unit = false}
 
 let const_polyvar name = Const_pointer (Pt_variant {name})
+
+(* The JS value of a polymorphic variant's name: a numeric-looking name is a
+   number at runtime, anything else is a string. *)
+let const_polyvar_name name =
+  if Ext_string.is_valid_hash_number name then
+    Const_int (Ext_string.hash_number_as_i32_exn name)
+  else Const_string {s = name; delim = None}
 
 let const_module_alias = Const_pointer Pt_module_alias
 

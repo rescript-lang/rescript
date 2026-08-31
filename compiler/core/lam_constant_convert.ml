@@ -53,15 +53,5 @@ let rec convert_constant (const : Lambda.structured_constant) : Lam_constant.t =
     | Blk_some -> Const_some (convert_constant (Ext_list.singleton_exn xs))
     | Blk_constructor _ | Blk_tuple | Blk_record _ | Blk_module _
     | Blk_module_export _ | Blk_extension | Blk_record_inlined _
-    | Blk_record_ext _ ->
-      Const_block (t, Ext_list.map xs convert_constant)
-    | Blk_poly_var s -> (
-      match xs with
-      | [_; value] ->
-        let tag_val : Lam_constant.t =
-          if Ext_string.is_valid_hash_number s then
-            Const_int (Ext_string.hash_number_as_i32_exn s)
-          else Const_string {s; delim = None}
-        in
-        Const_block (t, [tag_val; convert_constant value])
-      | _ -> assert false))
+    | Blk_record_ext _ | Blk_poly_var ->
+      Const_block (t, Ext_list.map xs convert_constant))

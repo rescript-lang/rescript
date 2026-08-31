@@ -40,21 +40,9 @@ let lam_prim ~primitive:(p : Lambda.primitive) ~args loc : Lam.t =
     | Blk_some_not_nested -> prim ~primitive:Psome_not_nest ~args loc
     | Blk_some -> prim ~primitive:Psome ~args loc
     | Blk_constructor _ | Blk_tuple | Blk_record _ | Blk_record_inlined _
-    | Blk_module _ | Blk_module_export _ | Blk_extension | Blk_record_ext _ ->
-      prim ~primitive:(Pmakeblock (info, mutable_flag)) ~args loc
-    | Blk_poly_var s -> (
-      match args with
-      | [_; value] ->
-        let tag_val : Lam_constant.t =
-          if Ext_string.is_valid_hash_number s then
-            Const_int (Ext_string.hash_number_as_i32_exn s)
-          else Const_string {s; delim = None}
-        in
-        prim
-          ~primitive:(Pmakeblock (info, mutable_flag))
-          ~args:[Lam.const tag_val; value]
-          loc
-      | _ -> assert false))
+    | Blk_module _ | Blk_module_export _ | Blk_extension | Blk_record_ext _
+    | Blk_poly_var ->
+      prim ~primitive:(Pmakeblock (info, mutable_flag)) ~args loc)
   | Pfn_arity -> prim ~primitive:Pfn_arity ~args loc
   | Pdebugger -> prim ~primitive:Pdebugger ~args loc
   | Ptypeof -> prim ~primitive:Ptypeof ~args loc

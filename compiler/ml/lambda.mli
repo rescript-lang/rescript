@@ -33,7 +33,7 @@ type tag_info =
       runtime: Variant_runtime.block_runtime;
     }
   | Blk_tuple
-  | Blk_poly_var of string
+  | Blk_poly_var
   | Blk_record of {
       fields: (string * bool (* optional *)) array;
       mutable_flag: mutable_flag;
@@ -419,6 +419,7 @@ val const_unit : structured_constant
 val const_constructor : Variant_runtime.tag -> structured_constant
 val const_shape_none : structured_constant
 val const_polyvar : string -> structured_constant
+val const_polyvar_name : string -> structured_constant
 val const_module_alias : structured_constant
 val lambda_assert_false : lambda
 val lambda_unit : lambda

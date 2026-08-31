@@ -1252,15 +1252,14 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
             e.exp_loc ))
   | Texp_extension_constructor (_, path) -> transl_extension_path e.exp_env path
   | Texp_variant (l, arg) -> (
-    let tag = Btype.hash_variant l in
     match arg with
     | None -> Lconst (const_polyvar l)
     | Some arg -> (
       let lam = transl_exp arg in
-      let tag_info = Blk_poly_var l in
-      try Lconst (Const_block (tag_info, [const_int tag; extract_constant lam]))
+      let name = const_polyvar_name l in
+      try Lconst (Const_block (Blk_poly_var, [name; extract_constant lam]))
       with Not_constant ->
-        Lprim (Pmakeblock tag_info, [Lconst (const_int tag); lam], e.exp_loc)))
+        Lprim (Pmakeblock Blk_poly_var, [Lconst name; lam], e.exp_loc)))
   | Texp_record {fields; representation; extended_expression} ->
     transl_record e.exp_loc e.exp_env fields representation extended_expression
   | Texp_field (arg, _, lbl) -> (
