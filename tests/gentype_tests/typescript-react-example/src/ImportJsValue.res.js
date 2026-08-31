@@ -47,6 +47,24 @@ function useColor(prim) {
   return ImportJsValueGen$1.useColor(prim);
 }
 
+function useEscapedInlineVariant(prim) {
+  return ImportJsValueGen$1.useEscapedInlineVariant((() => {
+    switch (prim) {
+      case "illegalName" :
+        return "Illegal\"Name";
+    }
+  })());
+}
+
+function useUtf8InlineVariant(prim) {
+  return ImportJsValueGen$1.useUtf8InlineVariant((() => {
+    switch (prim) {
+      case "utf8" :
+        return "café\npath\\name";
+    }
+  })());
+}
+
 function higherOrder(prim) {
   return ImportJsValueGen$1.higherOrder(prim);
 }
@@ -74,6 +92,8 @@ export {
   useGetProp,
   useGetAbs,
   useColor,
+  useEscapedInlineVariant,
+  useUtf8InlineVariant,
   higherOrder,
   returnedFromHigherOrder,
   convertVariant,

@@ -13,6 +13,10 @@ import {returnMixedArray as returnMixedArrayNotChecked} from './MyMath';
 
 import {useColor as useColorNotChecked} from './MyMath';
 
+import {useEscapedInlineVariant as useEscapedInlineVariantNotChecked} from './MyMath';
+
+import {useUtf8InlineVariant as useUtf8InlineVariantNotChecked} from './MyMath';
+
 import {higherOrder as higherOrderNotChecked} from './MyMath';
 
 import {convertVariant as convertVariantNotChecked} from './MyMath';
@@ -50,6 +54,18 @@ export const useColorTypeChecked: (_1:color) => number = useColorNotChecked as a
 
 // Export 'useColor' early to allow circular import from the '.bs.js' file.
 export const useColor: unknown = useColorTypeChecked as (_1:color) => number as any;
+
+// In case of type error, check the type of 'useEscapedInlineVariant' in 'ImportJsValue.res' and './MyMath'.
+export const useEscapedInlineVariantTypeChecked: (_1:"Illegal\"Name") => number = useEscapedInlineVariantNotChecked as any;
+
+// Export 'useEscapedInlineVariant' early to allow circular import from the '.bs.js' file.
+export const useEscapedInlineVariant: unknown = useEscapedInlineVariantTypeChecked as (_1:"Illegal\"Name") => number as any;
+
+// In case of type error, check the type of 'useUtf8InlineVariant' in 'ImportJsValue.res' and './MyMath'.
+export const useUtf8InlineVariantTypeChecked: (_1:"café\npath\\name") => number = useUtf8InlineVariantNotChecked as any;
+
+// Export 'useUtf8InlineVariant' early to allow circular import from the '.bs.js' file.
+export const useUtf8InlineVariant: unknown = useUtf8InlineVariantTypeChecked as (_1:"café\npath\\name") => number as any;
 
 // In case of type error, check the type of 'higherOrder' in 'ImportJsValue.res' and './MyMath'.
 export const higherOrderTypeChecked: (_1:((_1:number, _2:number) => number)) => number = higherOrderNotChecked as any;

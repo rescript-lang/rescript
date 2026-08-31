@@ -35,12 +35,14 @@ let create_polyvariant_case (label, attributes) =
       | Some (_, BoolPayload b) -> BoolLabel b
       | Some (_, FloatPayload s) -> FloatLabel s
       | Some (_, IntPayload i) -> IntLabel i
-      | Some (_, StringPayload as_label) -> StringLabel as_label
+      | Some (_, StringPayload as_label) ->
+        StringLabel (Emit_text.escape_string_contents as_label)
       | _ -> if is_number label then IntLabel label else StringLabel label);
   }
 
 let create_variant_case label = function
-  | Some (Variant_runtime.String label) -> {label_js = StringLabel label}
+  | Some (Variant_runtime.String label) ->
+    {label_js = StringLabel (Emit_text.escape_string_contents label)}
   | Some (Variant_runtime.Int label) ->
     {label_js = IntLabel (string_of_int label)}
   | Some (Variant_runtime.Float label) -> {label_js = FloatLabel label}
@@ -62,7 +64,7 @@ let create_variant_case label = function
 let rename_record_field ~attributes ~name =
   attributes |> Annotation.check_unsupported_gentype_as_renaming;
   match attributes |> Annotation.get_as_string with
-  | Some s -> s |> String.escaped
+  | Some s -> Emit_text.escape_string_contents s
   | None -> name |> Ext_ident.unwrap_uppercase_exotic
 
 let traslate_declaration_kind ~config ~loc ~output_file_relative ~resolver

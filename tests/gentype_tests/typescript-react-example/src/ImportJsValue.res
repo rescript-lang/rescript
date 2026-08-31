@@ -57,6 +57,14 @@ type stringFunction
 
 @genType.import("./MyMath") external useColor: color => int = "useColor"
 
+@genType.import("./MyMath")
+external useEscapedInlineVariant: @string [@as("Illegal\"Name") #illegalName] => int =
+  "useEscapedInlineVariant"
+
+@genType.import("./MyMath")
+external useUtf8InlineVariant: @string [@as("café\npath\\name") #utf8] => int =
+  "useUtf8InlineVariant"
+
 @genType.import("./MyMath") external higherOrder: ((int, int) => int) => int = "higherOrder"
 
 @genType let returnedFromHigherOrder = higherOrder(\"+")

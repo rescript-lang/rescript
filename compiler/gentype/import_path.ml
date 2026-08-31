@@ -29,4 +29,24 @@ let to_cmt ~(config : Config.t) ~output_file_relative (dir, s) =
     | Some name -> "-" ^ name)
   ^ ".cmt"
 
-let emit (dir, s) = (dir, s) |> dump
+(* Import paths are emitted inside single-quoted JavaScript/TypeScript string
+   literals. The AST stores their semantic value, so restore source escapes at
+   this final output boundary. *)
+let escape_for_single_quotes s =
+  let buf = Buffer.create (String.length s) in
+  String.iter
+    (function
+      | '\'' -> Buffer.add_string buf "\\'"
+      | '\\' -> Buffer.add_string buf "\\\\"
+      | '\b' -> Buffer.add_string buf "\\b"
+      | '\012' -> Buffer.add_string buf "\\f"
+      | '\n' -> Buffer.add_string buf "\\n"
+      | '\r' -> Buffer.add_string buf "\\r"
+      | '\t' -> Buffer.add_string buf "\\t"
+      | c when Char.code c < 0x20 || Char.code c = 0x7f ->
+        Buffer.add_string buf (Printf.sprintf "\\x%02x" (Char.code c))
+      | c -> Buffer.add_char buf c)
+    s;
+  Buffer.contents buf
+
+let emit path = path |> dump |> escape_for_single_quotes
