@@ -1516,9 +1516,7 @@ let make_array_matching p def ctx = function
     let rec make_args pos =
       if pos >= len then argl
       else
-        ( Lprim
-            (Parrayrefu, [arg; Lconst (Const_base (Const_int pos))], p.pat_loc),
-          StrictOpt )
+        (Lprim (Parrayrefu, [arg; Lconst (const_int pos)], p.pat_loc), StrictOpt)
         :: make_args (pos + 1)
     in
     let def = make_default (matcher_array len) def and ctx = filter_ctx p ctx in
@@ -1597,7 +1595,7 @@ let rec do_tests_fail loc fail tst arg = function
   | [] -> fail
   | (c, act) :: rem ->
     Lifthenelse
-      ( Lprim (tst, [arg; Lconst (Const_base c)], loc),
+      ( Lprim (tst, [arg; Lconst (const_of_typed c)], loc),
         do_tests_fail loc fail tst arg rem,
         act )
 
@@ -1606,7 +1604,7 @@ let rec do_tests_nofail loc tst arg = function
   | [(_, act)] -> act
   | (c, act) :: rem ->
     Lifthenelse
-      ( Lprim (tst, [arg; Lconst (Const_base c)], loc),
+      ( Lprim (tst, [arg; Lconst (const_of_typed c)], loc),
         do_tests_nofail loc tst arg rem,
         act )
 
@@ -1625,7 +1623,7 @@ let make_test_sequence loc fail tst lt_tst arg const_lambda_list =
       cut (List.length const_lambda_list / 2) const_lambda_list
     in
     Lifthenelse
-      ( Lprim (lt_tst, [arg; Lconst (Const_base (fst (List.hd list2)))], loc),
+      ( Lprim (lt_tst, [arg; Lconst (const_of_typed (fst (List.hd list2)))], loc),
         make_test_sequence list1,
         make_test_sequence list2 )
   in
@@ -1658,7 +1656,7 @@ module S_arg = struct
         (newvar, Lvar newvar)
     in
     bind Alias newvar arg (body newarg)
-  let make_const i = Lconst (Const_base (Const_int i))
+  let make_const i = Lconst (const_int i)
   let make_isout h arg = Lprim (Pisout, [h; arg], Location.none)
   let make_isin h arg = Lprim (Pnot, [make_isout h arg], Location.none)
   let make_if cond ifso ifnot = Lifthenelse (cond, ifso, ifnot)
@@ -1954,12 +1952,12 @@ let combine_constant loc arg cst partial ctx def
     (const_lambda_list, total, _pats) =
   let fail, local_jumps = mk_failaction_neg partial ctx def in
   let lambda1 =
-    match cst with
+    match (cst : Asttypes.constant) with
     | Const_int _ ->
       let int_lambda_list =
         List.map
           (function
-            | Const_int n, l -> (n, l)
+            | Asttypes.Const_int n, l -> (n, l)
             | _ -> assert false)
           const_lambda_list
       in
@@ -1968,7 +1966,7 @@ let combine_constant loc arg cst partial ctx def
       let int_lambda_list =
         List.map
           (function
-            | Const_char c, l -> (c, l)
+            | Asttypes.Const_char c, l -> (c, l)
             | _ -> assert false)
           const_lambda_list
       in
@@ -1983,7 +1981,7 @@ let combine_constant loc arg cst partial ctx def
         List.map
           (fun (c, act) ->
             match c with
-            | Const_string (s, _) -> (s, act)
+            | Asttypes.Const_string (s, _) -> (s, act)
             | _ -> assert false)
           const_lambda_list
       in
@@ -1992,8 +1990,6 @@ let combine_constant loc arg cst partial ctx def
     | Const_float _ ->
       make_test_sequence loc fail (Pfloatcomp Cneq) (Pfloatcomp Clt) arg
         const_lambda_list
-    | Const_int32 _ -> assert false
-    | Const_int64 _ -> assert false
     | Const_bigint _ ->
       make_test_sequence loc fail (Pbigintcomp Cneq) (Pbigintcomp Clt) arg
         const_lambda_list
@@ -2076,7 +2072,7 @@ let lower_constructor_matching_plan ~loc ~arg = function
       match test with
       | Is_present_option -> Lprim (Pis_not_none, [arg], loc)
       | Is_nonempty_list ->
-        Lprim (Pjscomp Cneq, [arg; Lconst (Const_base (Const_int 0))], loc)
+        Lprim (Pjscomp Cneq, [arg; Lconst (const_int 0)], loc)
     in
     Lifthenelse (condition, present, absent)
   | Test_boolean_value {if_false; if_true} ->
@@ -2707,9 +2703,7 @@ let partial_function loc () =
                 (Const_block
                    ( Blk_tuple,
                      [
-                       Const_base (Const_string (fname, None));
-                       Const_base (Const_int line);
-                       Const_base (Const_int char);
+                       Const_string (fname, None); const_int line; const_int char;
                      ] ));
             ],
             loc );

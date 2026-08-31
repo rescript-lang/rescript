@@ -50,7 +50,7 @@ let lam_prim ~primitive:(p : Lambda.primitive) ~args loc : Lam.t =
       | [_; value] ->
         let tag_val : Lam_constant.t =
           if Ext_string.is_valid_hash_number s then
-            Const_int {i = Ext_string.hash_number_as_i32_exn s; comment = None}
+            Const_int (Ext_string.hash_number_as_i32_exn s)
           else Const_string {s; delim = None}
         in
         prim

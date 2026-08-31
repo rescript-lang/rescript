@@ -22,16 +22,13 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-type pointer_info = None | Pt_assertfalse | Some of string
-
-val string_of_pointer_info : pointer_info -> string option
-
 type t =
   | Const_js_null
   | Const_js_undefined of {is_unit: bool}
   | Const_js_true
   | Const_js_false
-  | Const_int of {i: int32; comment: pointer_info}
+  | Const_int of int32
+  | Const_assertfalse
   | Const_constructor of Variant_runtime.tag
     (* Constant constructor of a nominal variant, emitted from its
          canonical runtime descriptor rather than an ordinal *)

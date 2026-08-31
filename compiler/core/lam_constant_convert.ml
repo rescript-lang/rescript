@@ -24,15 +24,13 @@
 
 let rec convert_constant (const : Lambda.structured_constant) : Lam_constant.t =
   match const with
-  | Const_base (Const_int i) -> Const_int {i = Int32.of_int i; comment = None}
-  | Const_base (Const_char i) -> Const_char i
-  | Const_base (Const_string (s, opt)) ->
+  | Const_int i -> Const_int i
+  | Const_char i -> Const_char i
+  | Const_string (s, opt) ->
     let delim = Ast_utf8_string_interp.parse_processed_delim opt in
     Const_string {s; delim}
-  | Const_base (Const_float i) -> Const_float i
-  | Const_base (Const_int32 i) -> Const_int {i; comment = None}
-  | Const_base (Const_int64 _) -> assert false
-  | Const_base (Const_bigint (sign, i)) -> Const_bigint (sign, i)
+  | Const_float i -> Const_float i
+  | Const_bigint (sign, i) -> Const_bigint (sign, i)
   | Const_pointer (Pt_constructor {name = "()"}) ->
     Const_js_undefined {is_unit = true}
   | Const_false -> Const_js_false
@@ -41,17 +39,16 @@ let rec convert_constant (const : Lambda.structured_constant) : Lam_constant.t =
     match p with
     | Pt_module_alias -> Const_module_alias
     | Pt_shape_none -> Lam_constant.lam_none
-    | Pt_assertfalse -> Const_int {i = 0l; comment = Pt_assertfalse}
+    | Pt_assertfalse -> Const_assertfalse
     | Pt_constructor {tag_type = Some (Variant_runtime.Int v)} ->
       (* A constructor represented as a number is a genuine number at
          runtime; folding relies on it being an ordinary int constant *)
-      Const_int {i = Int32.of_int v; comment = None}
+      Const_int (Int32.of_int v)
     | Pt_constructor runtime -> Const_constructor runtime
     | Pt_variant {name} ->
       if Ext_string.is_valid_hash_number name then
-        Const_int {i = Ext_string.hash_number_as_i32_exn name; comment = None}
+        Const_int (Ext_string.hash_number_as_i32_exn name)
       else Const_pointer name)
-  | Const_immstring s -> Const_string {s; delim = None}
   | Const_block (t, xs) -> (
     match t with
     | Blk_some_not_nested ->
@@ -66,7 +63,7 @@ let rec convert_constant (const : Lambda.structured_constant) : Lam_constant.t =
       | [_; value] ->
         let tag_val : Lam_constant.t =
           if Ext_string.is_valid_hash_number s then
-            Const_int {i = Ext_string.hash_number_as_i32_exn s; comment = None}
+            Const_int (Ext_string.hash_number_as_i32_exn s)
           else Const_string {s; delim = None}
         in
         Const_block (t, [tag_val; convert_constant value])

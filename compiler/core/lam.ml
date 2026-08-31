@@ -285,7 +285,7 @@ let switch lam (lam_switch : lambda_switch) : t =
           | Switch_int _ | Switch_constructor _ -> None)
     in
     action_or_switch action
-  | Lconst (Const_int {i; comment}) ->
+  | Lconst (Const_int i) ->
     (* Because of inlining and dead code, we might be looking at a value of unexpected type
        e.g. an integer, so the const case might not be found *)
     let i = Int32.to_int i in
@@ -295,7 +295,7 @@ let switch lam (lam_switch : lambda_switch) : t =
           | Lambda.Switch_int ordinal when ordinal = i -> Some action
           | Switch_constructor
               (Constant {tag_type = Some (Variant_runtime.Int value)})
-            when comment = None && value = i ->
+            when value = i ->
             Some action
           | Switch_int _ | Switch_constructor _ -> None)
     in
@@ -360,10 +360,7 @@ let staticcatch a b c : t = Lstaticcatch (a, b, c)
 let staticraise a b : t = Lstaticraise (a, b)
 
 module Lift = struct
-  let int i : t = Lconst (Const_int {i; comment = None})
-
-  (* let int32 i : t =
-     Lconst ((Const_int32 i)) *)
+  let int i : t = Lconst (Const_int i)
 
   let bool b = if b then true_ else false_
 
@@ -377,7 +374,7 @@ let prim ~primitive:(prim : Lam_primitive.t) ~args loc : t =
   match args with
   | [Lconst a] -> (
     match (prim, a) with
-    | Pnegint, Const_int {i} -> Lift.int (Int32.neg i)
+    | Pnegint, Const_int i -> Lift.int (Int32.neg i)
     (* | Pfloatofint, ( (Const_int a)) *)
     (*   -> Lift.float (float_of_int a) *)
     | Pintoffloat, Const_float a ->
@@ -394,7 +391,7 @@ let prim ~primitive:(prim : Lam_primitive.t) ~args loc : t =
   | [Lconst a; Lconst b] -> (
     match (prim, a, b) with
     | Pintcomp cmp, Const_int a, Const_int b ->
-      Lift.bool (Lam_compat.cmp_int32 cmp a.i b.i)
+      Lift.bool (Lam_compat.cmp_int32 cmp a b)
     | Pfloatcomp cmp, Const_float a, Const_float b ->
       (* FIXME: could raise? *)
       Lift.bool
@@ -417,8 +414,8 @@ let prim ~primitive:(prim : Lam_primitive.t) ~args loc : t =
         | _ -> assert false)
     | ( ( Paddint | Psubint | Pmulint | Pdivint | Pmodint | Pandint | Porint
         | Pxorint | Plslint | Plsrint | Pasrint ),
-        Const_int {i = aa},
-        Const_int {i = bb} ) -> (
+        Const_int aa,
+        Const_int bb ) -> (
       (* WE SHOULD keep it as [int], to preserve types *)
       let int_ = Lift.int in
       match prim with
@@ -446,7 +443,7 @@ let prim ~primitive:(prim : Lam_primitive.t) ~args loc : t =
       Lift.string (a ^ b)
     | ( (Pstringrefs | Pstringrefu),
         Const_string {s = a; delim = None},
-        Const_int {i = b} ) -> (
+        Const_int b ) -> (
       try Lift.char (Char.code (String.get a (Int32.to_int b)))
       with _ -> default ())
     | _ -> default ())
@@ -518,7 +515,8 @@ let rec complete_range (sw_consts : (Lambda.switch_key * _) list) ~(start : int)
 
 let rec eval_const_as_bool (v : Lam_constant.t) : bool option =
   match v with
-  | Const_int {i = x} -> Some (x <> 0l)
+  | Const_int x -> Some (x <> 0l)
+  | Const_assertfalse -> Some false
   | Const_char x -> Some (x <> 0)
   | Const_js_false | Const_js_null | Const_module_alias | Const_js_undefined _
     ->
@@ -545,9 +543,9 @@ let if_ (a : t) (b : t) (c : t) : t =
     | None -> Lifthenelse (a, b, c))
   | _ -> (
     match (b, c) with
-    | _, Lconst (Const_int {comment = Pt_assertfalse}) ->
+    | _, Lconst Const_assertfalse ->
       seq a b (* TODO: we could customize more cases *)
-    | Lconst (Const_int {comment = Pt_assertfalse}), _ -> seq a c
+    | Lconst Const_assertfalse, _ -> seq a c
     | Lconst Const_js_true, Lconst Const_js_false ->
       if has_boolean_type a != None then a else Lifthenelse (a, b, c)
     | Lconst Const_js_false, Lconst Const_js_true -> (
@@ -561,10 +559,8 @@ let if_ (a : t) (b : t) (c : t) : t =
     | _ -> (
       match a with
       | Lprim
-          {
-            primitive = Pisout off;
-            args = [Lconst (Const_int {i = range}); Lvar xx];
-          } -> (
+          {primitive = Pisout off; args = [Lconst (Const_int range); Lvar xx]}
+        -> (
         let range = Int32.to_int range in
         match c with
         | Lswitch

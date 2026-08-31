@@ -22,20 +22,13 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-type pointer_info = None | Pt_assertfalse | Some of string
-
-let string_of_pointer_info (x : pointer_info) : string option =
-  match x with
-  | Some name -> Some name
-  | Pt_assertfalse -> Some "assert_false"
-  | None -> None
-
 type t =
   | Const_js_null
   | Const_js_undefined of {is_unit: bool}
   | Const_js_true
   | Const_js_false
-  | Const_int of {i: int32; comment: pointer_info}
+  | Const_int of int32
+  | Const_assertfalse
   | Const_constructor of Variant_runtime.tag
     (* Constant constructor of a nominal variant, emitted from its
          canonical runtime descriptor rather than an ordinal *)
@@ -60,8 +53,9 @@ let rec eq_approx (x : t) (y : t) =
   | Const_js_false -> y = Const_js_false
   | Const_int ix -> (
     match y with
-    | Const_int iy -> ix.i = iy.i
+    | Const_int iy -> ix = iy
     | _ -> false)
+  | Const_assertfalse -> y = Const_assertfalse
   | Const_constructor ix -> (
     match y with
     | Const_constructor iy -> ix = iy
@@ -103,6 +97,7 @@ let rec is_allocating (c : t) : bool =
   | Const_some t -> is_allocating t
   | Const_block _ -> true
   | Const_js_null | Const_js_undefined _ | Const_js_true | Const_js_false
-  | Const_int _ | Const_constructor _ | Const_char _ | Const_string _
-  | Const_float _ | Const_bigint _ | Const_pointer _ | Const_module_alias ->
+  | Const_int _ | Const_assertfalse | Const_constructor _ | Const_char _
+  | Const_string _ | Const_float _ | Const_bigint _ | Const_pointer _
+  | Const_module_alias ->
     false

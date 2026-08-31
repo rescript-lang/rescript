@@ -31,7 +31,7 @@ let id_is_for_sure_true_in_boolean (tbl : Lam_stats.ident_tbl) id =
          (Lconst (Const_js_false | Const_js_null | Const_js_undefined _))) ->
     Eval_false
   | Some (Constant Const_js_true) -> Eval_true
-  | Some (Constant (Const_int {i})) -> if i = 0l then Eval_false else Eval_true
+  | Some (Constant (Const_int i)) -> if i = 0l then Eval_false else Eval_true
   | Some (Constant (Const_js_false | Const_js_null | Const_js_undefined _)) ->
     Eval_false
   | Some

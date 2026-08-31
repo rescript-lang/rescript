@@ -290,10 +290,13 @@ and comparison = Ceq | Cneq | Clt | Cgt | Cle | Cge
 and value_kind = Pgenval
 
 type structured_constant =
-  | Const_base of constant
+  | Const_int of int32
+  | Const_char of int
+  | Const_string of string * string option
+  | Const_float of string
+  | Const_bigint of bool * string
   | Const_pointer of pointer_info
   | Const_block of tag_info * structured_constant list
-  | Const_immstring of string
   | Const_false
   | Const_true
 
@@ -399,6 +402,8 @@ and lambda_switch = lambda switch
 (* Sharing key *)
 val make_key : lambda -> lambda option
 
+val const_int : int -> structured_constant
+val const_of_typed : constant -> structured_constant
 val const_unit : structured_constant
 val lambda_assert_false : lambda
 val lambda_unit : lambda

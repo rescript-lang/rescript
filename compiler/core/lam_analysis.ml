@@ -25,7 +25,8 @@
 (**used in effect analysis, it is sound but not-complete *)
 let not_zero_constant (x : Lam_constant.t) =
   match x with
-  | Const_int {i} -> i <> 0l
+  | Const_int i -> i <> 0l
+  | Const_assertfalse -> false
   | Const_bigint (_, i) -> i <> "0"
   | _ -> false
 
@@ -190,9 +191,10 @@ let rec size (lam : Lam.t) =
 
 and size_constant x =
   match x with
-  | Const_int _ | Const_constructor _ | Const_char _ | Const_float _
-  | Const_bigint _ | Const_pointer _ | Const_js_null | Const_js_undefined _
-  | Const_module_alias | Const_js_true | Const_js_false ->
+  | Const_int _ | Const_assertfalse | Const_constructor _ | Const_char _
+  | Const_float _ | Const_bigint _ | Const_pointer _ | Const_js_null
+  | Const_js_undefined _ | Const_module_alias | Const_js_true | Const_js_false
+    ->
     1
   | Const_string _ -> 1
   | Const_some s -> size_constant s
