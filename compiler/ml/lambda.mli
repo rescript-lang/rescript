@@ -114,11 +114,10 @@ val fld_record_extension_set : Types.label_description -> set_field_dbg_info
 
 type immediate_or_pointer = Immediate | Pointer
 
-type pointer_info =
+type pointer_info = private
   | Pt_constructor of Variant_runtime.tag
   | Pt_variant of {name: string}
   | Pt_module_alias
-  | Pt_shape_none
   | Pt_assertfalse
 
 (* The target of a dynamic [import], resolved at translation: the argument
@@ -143,8 +142,6 @@ type eliminated = Identity | Ignore
 type primitive =
   | Pdebugger
   | Ptypeof
-  | Pnull
-  | Pundefined
   | Pfn_arity
   | Pgetglobal of Ident.t
   (* Operations on heap blocks *)
@@ -300,11 +297,18 @@ type structured_constant =
   | Const_block of tag_info * structured_constant list
   | Const_false
   | Const_true
+  | Const_js_null
+  | Const_js_undefined of {is_unit: bool}
+      (** [is_unit] tells the unit value apart from JS [undefined]; both emit
+          [undefined]. *)
 
 (* What a `%builtin` name in the primitive table means. Only [Primitive]
    reaches the IR: [mk_builtin] erases the other cases at translation, so
    they need no [primitive] constructor to stand in for them. *)
-type builtin = Primitive of primitive | Eliminated of eliminated
+type builtin =
+  | Primitive of primitive
+  | Eliminated of eliminated
+  | Constant of structured_constant
 
 type inline_attribute =
   | Always_inline (* [@inline] or [@inline always] *)
@@ -412,6 +416,10 @@ val const_int : int -> structured_constant
 val const_string : string -> string option -> structured_constant
 val const_of_typed : constant -> structured_constant
 val const_unit : structured_constant
+val const_constructor : Variant_runtime.tag -> structured_constant
+val const_shape_none : structured_constant
+val const_polyvar : string -> structured_constant
+val const_module_alias : structured_constant
 val lambda_assert_false : lambda
 val lambda_unit : lambda
 

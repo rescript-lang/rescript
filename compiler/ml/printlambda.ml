@@ -26,8 +26,10 @@ let rec struct_const ppf = function
   | Const_pointer (Pt_constructor {name}) -> fprintf ppf "`%s" name
   | Const_pointer (Pt_variant {name}) -> fprintf ppf "`%s" name
   | Const_pointer Pt_module_alias -> fprintf ppf "module_alias"
-  | Const_pointer Pt_shape_none -> fprintf ppf "shape_none"
   | Const_pointer Pt_assertfalse -> fprintf ppf "assertfalse"
+  | Const_js_null -> fprintf ppf "null"
+  | Const_js_undefined {is_unit = true} -> fprintf ppf "unit"
+  | Const_js_undefined {is_unit = false} -> fprintf ppf "undefined"
   | Const_block (tag_info, []) ->
     let tag = Lambda.tag_label_of_tag_info tag_info in
     fprintf ppf "[%s]" tag
@@ -94,8 +96,6 @@ let print_taginfo ppf = function
 let primitive ppf = function
   | Pdebugger -> fprintf ppf "debugger"
   | Ptypeof -> fprintf ppf "typeof"
-  | Pnull -> fprintf ppf "null"
-  | Pundefined -> fprintf ppf "undefined"
   | Pfn_arity -> fprintf ppf "fn.length"
   | Pgetglobal id -> fprintf ppf "global %a" Ident.print id
   | Pmakeblock taginfo -> fprintf ppf "makeblock %a" print_taginfo taginfo

@@ -16,10 +16,6 @@ let x7 = [
 
 let x8 = () => {};
 
-let x10 = null;
-
-let x11 = Primitive_option.some(undefined);
-
 let x20 = null;
 
 let x21 = new Date();
@@ -88,6 +84,10 @@ let x4 = "polyvar";
 let x5 = {
   x: 42
 };
+
+let x10 = null;
+
+let x11 = Primitive_option.some(undefined);
 
 let x12 = "test";
 

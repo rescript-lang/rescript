@@ -40,8 +40,7 @@ let init_shape modl =
   let rec init_shape_mod env mty =
     match Mtype.scrape env mty with
     | Mty_ident _ -> raise Not_found
-    | Mty_alias _ ->
-      Const_block (value_tag_info, [Const_pointer Pt_module_alias])
+    | Mty_alias _ -> Const_block (value_tag_info, [const_module_alias])
     | Mty_signature sg ->
       Const_block
         (module_tag_info, [Const_block (Blk_tuple, init_shape_struct env sg)])
@@ -59,9 +58,8 @@ let init_shape modl =
       let init_v =
         match Ctype.expand_head env ty with
         | t when is_function t ->
-          Const_pointer
-            (Pt_constructor
-               (Ast_untagged_variants.constructor_tag ~name:"Function" []))
+          const_constructor
+            (Ast_untagged_variants.constructor_tag ~name:"Function" [])
         | _ -> raise Not_found
       in
       add_name init_v id :: init_shape_struct env rem

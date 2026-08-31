@@ -46,6 +46,4 @@ type t =
 
 val eq_approx : t -> t -> bool
 
-val lam_none : t
-
 val is_allocating : t -> bool

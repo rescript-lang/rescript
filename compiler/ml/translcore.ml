@@ -252,6 +252,11 @@ let erased_builtins : (string * Lambda.builtin) array =
     ("%identity", Eliminated Identity);
     ("%component_identity", Eliminated Identity);
     ("%ignore", Eliminated Ignore);
+    ("%null", Constant Const_js_null);
+    ("%undefined", Constant (Const_js_undefined {is_unit = false}));
+    (* FIXME: Core compatibility *)
+    ("#null", Constant Const_js_null);
+    ("#undefined", Constant (Const_js_undefined {is_unit = false}));
   |]
 
 let primitive_builtins : (string * Lambda.builtin) array =
@@ -381,8 +386,6 @@ let primitive_builtins : (string * Lambda.builtin) array =
       ("%unsafe_le", Pjscomp Cle);
       ("%unsafe_gt", Pjscomp Cgt);
       ("%unsafe_ge", Pjscomp Cge);
-      ("%null", Pnull);
-      ("%undefined", Pundefined);
       ("%is_nullable", Pisnullable);
       ("%null_to_opt", Pnull_to_opt);
       ("%nullable_to_opt", Pnullable_to_opt);
@@ -399,8 +402,6 @@ let primitive_builtins : (string * Lambda.builtin) array =
       ("%unsafe_to_method", Pjs_fn_method);
       (* Compiler internals, never expose to ReScript files *)
       (* FIXME: Core compatibility *)
-      ("#null", Pnull);
-      ("#undefined", Pundefined);
       ("#typeof", Ptypeof);
       ("#is_nullable", Pisnullable);
       ("#null_to_opt", Pnull_to_opt);
@@ -450,8 +451,11 @@ let specialize_primitive p env ty (* ~has_constant_constructor *) =
       | None -> Primitive table.objcomp
     with Not_found -> find_builtin p.prim_name)
 
+(* [is_unit] excluded: unit shares the undefined constant but is not a
+   [%null] / [%undefined] literal, and comparing it never suppressed the
+   warning. *)
 let is_null_undefined_constant = function
-  | Lprim ((Pnull | Pundefined), [], _) -> true
+  | Lconst (Const_js_null | Const_js_undefined {is_unit = false}) -> true
   | _ -> false
 
 let warn_polymorphic_comparison loc (builtin : Lambda.builtin) args =
@@ -1205,13 +1209,12 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
       match cstr.cstr_kind with
       | Ordinary_constructor _ when cstr.cstr_args = [] ->
         Lconst
-          (Const_pointer
-             (if Datarepr.constructor_has_optional_shape cstr then Pt_shape_none
-              else
-                Pt_constructor
-                  (match Datarepr.constructor_case cstr with
-                  | Constant tag -> tag
-                  | Block _ -> assert false)))
+          (if Datarepr.constructor_has_optional_shape cstr then const_shape_none
+           else
+             const_constructor
+               (match Datarepr.constructor_case cstr with
+               | Constant tag -> tag
+               | Block _ -> assert false))
       | Ordinary_constructor _ -> (
         let runtime =
           match Datarepr.constructor_case cstr with
@@ -1251,7 +1254,7 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
   | Texp_variant (l, arg) -> (
     let tag = Btype.hash_variant l in
     match arg with
-    | None -> Lconst (Const_pointer (Pt_variant {name = l}))
+    | None -> Lconst (const_polyvar l)
     | Some arg -> (
       let lam = transl_exp arg in
       let tag_info = Blk_poly_var l in

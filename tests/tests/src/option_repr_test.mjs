@@ -151,14 +151,10 @@ Mocha.describe("Option_repr_test", () => {
     Test_utils.ok("File \"option_repr_test.res\", line 120, characters 7-14", Primitive_object.lessthan(undefined, Primitive_option.some(undefined)));
     Test_utils.ok("File \"option_repr_test.res\", line 121, characters 7-14", Primitive_object.greaterthan(Primitive_option.some(undefined), undefined));
   });
-  Mocha.test("option greater than operations", () => {
-    let xs_0 = gtx(Primitive_option.some(null), Primitive_option.some(undefined));
-    let xs = {
-      hd: xs_0,
-      tl: /* [] */0
-    };
-    Test_utils.ok("File \"option_repr_test.res\", line 125, characters 7-14", Stdlib_List.every(xs, x => x));
-  });
+  Mocha.test("option greater than operations", () => Test_utils.ok("File \"option_repr_test.res\", line 125, characters 7-14", Stdlib_List.every({
+    hd: Primitive_object.greaterthan(null, Primitive_option.some(undefined)) && Primitive_object.lessthan(Primitive_option.some(undefined), null),
+    tl: /* [] */0
+  }, x => x)));
   Mocha.test("option less than operations", () => {
     let xs_0 = Primitive_object.lessthan(Primitive_option.some(undefined), 3) && Primitive_object.greaterthan(3, Primitive_option.some(undefined));
     let xs_1 = {
@@ -176,11 +172,11 @@ Mocha.describe("Option_repr_test", () => {
                 tl: {
                   hd: Primitive_object.lessthan(undefined, Primitive_option.some(undefined)) && Primitive_object.greaterthan(Primitive_option.some(undefined), undefined),
                   tl: {
-                    hd: ltx(undefined, null),
+                    hd: Primitive_object.lessthan(undefined, null) && Primitive_object.greaterthan(null, undefined),
                     tl: {
                       hd: ltx(undefined, x => x),
                       tl: {
-                        hd: ltx(null, 3),
+                        hd: Primitive_object.lessthan(null, 3) && Primitive_object.greaterthan(3, null),
                         tl: /* [] */0
                       }
                     }
@@ -198,9 +194,10 @@ Mocha.describe("Option_repr_test", () => {
     };
     Test_utils.ok("File \"option_repr_test.res\", line 130, characters 6-13", Stdlib_List.every(xs, x => x));
   });
-  Mocha.test("option equality operations", () => {
-    let xs_1 = {
-      hd: neqx(undefined, null),
+  Mocha.test("option equality operations", () => Test_utils.ok("File \"option_repr_test.res\", line 149, characters 6-13", Stdlib_List.every({
+    hd: true,
+    tl: {
+      hd: undefined !== null && null !== undefined,
       tl: {
         hd: Primitive_object.equal(Primitive_option.some(undefined), Primitive_option.some(undefined)) && Primitive_object.equal(Primitive_option.some(undefined), Primitive_option.some(undefined)),
         tl: {
@@ -211,13 +208,8 @@ Mocha.describe("Option_repr_test", () => {
           }
         }
       }
-    };
-    let xs = {
-      hd: true,
-      tl: xs_1
-    };
-    Test_utils.ok("File \"option_repr_test.res\", line 149, characters 6-13", Stdlib_List.every(xs, x => x));
-  });
+    }
+  }, x => x)));
 });
 
 let f7;

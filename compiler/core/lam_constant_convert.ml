@@ -29,14 +29,13 @@ let rec convert_constant (const : Lambda.structured_constant) : Lam_constant.t =
   | Const_string {s; delim} -> Const_string {s; delim}
   | Const_float i -> Const_float i
   | Const_bigint (sign, i) -> Const_bigint (sign, i)
-  | Const_pointer (Pt_constructor {name = "()"}) ->
-    Const_js_undefined {is_unit = true}
+  | Const_js_null -> Const_js_null
+  | Const_js_undefined {is_unit} -> Const_js_undefined {is_unit}
   | Const_false -> Const_js_false
   | Const_true -> Const_js_true
   | Const_pointer p -> (
     match p with
     | Pt_module_alias -> Const_module_alias
-    | Pt_shape_none -> Lam_constant.lam_none
     | Pt_assertfalse -> Const_assertfalse
     | Pt_constructor {tag_type = Some (Variant_runtime.Int v)} ->
       (* A constructor represented as a number is a genuine number at

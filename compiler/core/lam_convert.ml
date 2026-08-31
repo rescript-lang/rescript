@@ -32,8 +32,6 @@ let prim = Lam.prim
 *)
 let lam_prim ~primitive:(p : Lambda.primitive) ~args loc : Lam.t =
   match p with
-  | Pnull -> Lam.const Const_js_null
-  | Pundefined -> Lam.const (Const_js_undefined {is_unit = false})
   | Pcreate_extension s -> prim ~primitive:(Pcreate_extension s) ~args loc
   | Pgetglobal _ -> assert false
   | Pmakeblock info -> (
