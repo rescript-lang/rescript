@@ -240,6 +240,7 @@ Source: [typecore.ml:27](../compiler/ml/typecore.ml).
 | `Break_outside_loop` | ✓ | `break_outside_loop.res`, `break_in_nested_function.res` | |
 | `Continue_outside_loop` | ✓ | `continue_outside_loop.res`, `continue_in_nested_function.res` | |
 | `Literal_overflow` | ✓ | `intoverflow.res` | |
+| `Polyvar_literal_overflow` | ✓ | `polyvar_int_overflow.res`, `polyvar_int_overflow_payload.res`, `polyvar_int_overflow_pattern.res` | |
 | `Unknown_literal` | ✓ | `unknown_literal.res` | |
 | `Illegal_letrec_pat` | ✓ | `illegal_letrec_pat.res` | |
 | `Empty_record_literal` | ✓ | `empty_record_literal.res` | |

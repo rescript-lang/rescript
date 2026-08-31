@@ -1,0 +1,8 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/polyvar_int_overflow_payload.res[0m:[2m1:9-25[0m
+
+  [1;31m1[0m [2m│[0m let x = [1;31m#99999999999("a")[0m
+  2 [2m│[0m 
+
+  Integer literal exceeds int32 range. Use float or BigInt if larger values are required.

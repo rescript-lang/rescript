@@ -113,6 +113,7 @@ type error =
   | Break_outside_loop
   | Continue_outside_loop
   | Literal_overflow of string
+  | Polyvar_literal_overflow
   | Unknown_literal of string * char
   | Illegal_letrec_pat
   | Empty_record_literal
