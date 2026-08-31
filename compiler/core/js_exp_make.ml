@@ -315,7 +315,7 @@ let dummy_obj ?comment (info : Lam_tag_info.t) : t =
   *)
   match info with
   | Blk_record _ | Blk_module _ | Blk_constructor _ | Blk_record_inlined _
-  | Blk_poly_var _ | Blk_extension | Blk_record_ext _ ->
+  | Blk_poly_var | Blk_extension | Blk_record_ext _ ->
     {comment; source_loc = None; expression_desc = Object (None, [])}
   | Blk_tuple | Blk_module_export _ ->
     {comment; source_loc = None; expression_desc = Array []}

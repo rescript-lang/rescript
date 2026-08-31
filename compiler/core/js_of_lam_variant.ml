@@ -64,7 +64,7 @@ let eval (arg : J.expression) (dispatches : (string * string) list) : E.t =
 let eval_as_event (arg : J.expression)
     (dispatches : (string * string) list option) =
   match arg.expression_desc with
-  | Caml_block ([{expression_desc = Str {txt}}; cb], _, Blk_poly_var _)
+  | Caml_block ([{expression_desc = Str {txt}}; cb], _, Blk_poly_var)
     when Js_analyzer.no_side_effect_expression cb ->
     let v =
       match dispatches with

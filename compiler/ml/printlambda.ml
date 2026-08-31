@@ -83,7 +83,7 @@ let print_taginfo ppf = function
   | Blk_tuple -> fprintf ppf "tuple"
   | Blk_constructor {name; num_nonconst} ->
     fprintf ppf "%s/%i" name num_nonconst
-  | Blk_poly_var name -> fprintf ppf "`%s" name
+  | Blk_poly_var -> fprintf ppf "polyvar"
   | Blk_record {fields = ss} ->
     fprintf ppf "[%s]" (String.concat ";" (List.map fst (Array.to_list ss)))
   | Blk_module ss -> fprintf ppf "[%s]" (String.concat ";" ss)

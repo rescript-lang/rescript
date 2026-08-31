@@ -305,7 +305,7 @@ let switch lam (lam_switch : lambda_switch) : t =
       match tag_info with
       | Lambda.Blk_constructor {runtime} | Blk_record_inlined {runtime} ->
         Some runtime
-      | Blk_tuple | Blk_poly_var _ | Blk_record _ | Blk_record_ext _
+      | Blk_tuple | Blk_poly_var | Blk_record _ | Blk_record_ext _
       | Blk_module _ | Blk_module_export _ | Blk_extension | Blk_some
       | Blk_some_not_nested ->
         None

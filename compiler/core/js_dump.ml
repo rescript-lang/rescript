@@ -156,7 +156,7 @@ let rec exp_need_paren ?(arrow = false) (e : J.expression) =
   | Caml_block
       ( _,
         _,
-        ( Blk_record _ | Blk_module _ | Blk_poly_var _ | Blk_extension
+        ( Blk_record _ | Blk_module _ | Blk_poly_var | Blk_extension
         | Blk_record_ext _ | Blk_record_inlined _ | Blk_constructor _ ) )
   | Object _ ->
     true
@@ -943,7 +943,7 @@ and expression_desc cxt ~(level : int) f x : cxt =
             | _ -> Some (Js_op.Lit f, x))
       in
       expression_desc cxt ~level f (Object (None, fields))
-  | Caml_block (el, _, Blk_poly_var _) -> (
+  | Caml_block (el, _, Blk_poly_var) -> (
     match el with
     | [tag; value] ->
       expression_desc cxt ~level f
