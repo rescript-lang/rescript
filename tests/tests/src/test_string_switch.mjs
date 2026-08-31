@@ -35,12 +35,26 @@ function classifyEquivalentEscape(value, selectedCase) {
   }
 }
 
+function classifyEquivalentSurrogateEscape(value, selectedCase) {
+  if (value === "\u{1f600}") {
+    if (selectedCase === 0) {
+      return 0;
+    } else if (selectedCase === 1) {
+      return 1;
+    } else {
+      return 2;
+    }
+  } else {
+    return 3;
+  }
+}
+
 if (classifyEquivalentEscape("a", 0) !== 0) {
   throw {
     RE_EXN_ID: "Assert_failure",
     _1: [
       "test_string_switch.res",
-      21,
+      29,
       2
     ],
     Error: new Error()
@@ -52,7 +66,7 @@ if (classifyEquivalentEscape("a", 1) !== 1) {
     RE_EXN_ID: "Assert_failure",
     _1: [
       "test_string_switch.res",
-      22,
+      30,
       2
     ],
     Error: new Error()
@@ -64,7 +78,7 @@ if (classifyEquivalentEscape("a", 2) !== 2) {
     RE_EXN_ID: "Assert_failure",
     _1: [
       "test_string_switch.res",
-      23,
+      31,
       2
     ],
     Error: new Error()
@@ -76,7 +90,7 @@ if (classifyEquivalentEscape("a", 3) !== 3) {
     RE_EXN_ID: "Assert_failure",
     _1: [
       "test_string_switch.res",
-      24,
+      32,
       2
     ],
     Error: new Error()
@@ -88,7 +102,43 @@ if (classifyEquivalentEscape("a", 4) !== 4) {
     RE_EXN_ID: "Assert_failure",
     _1: [
       "test_string_switch.res",
-      25,
+      33,
+      2
+    ],
+    Error: new Error()
+  };
+}
+
+if (classifyEquivalentSurrogateEscape("😀", 0) !== 0) {
+  throw {
+    RE_EXN_ID: "Assert_failure",
+    _1: [
+      "test_string_switch.res",
+      34,
+      2
+    ],
+    Error: new Error()
+  };
+}
+
+if (classifyEquivalentSurrogateEscape("😀", 1) !== 1) {
+  throw {
+    RE_EXN_ID: "Assert_failure",
+    _1: [
+      "test_string_switch.res",
+      35,
+      2
+    ],
+    Error: new Error()
+  };
+}
+
+if (classifyEquivalentSurrogateEscape("😀", 2) !== 2) {
+  throw {
+    RE_EXN_ID: "Assert_failure",
+    _1: [
+      "test_string_switch.res",
+      36,
       2
     ],
     Error: new Error()
@@ -98,5 +148,6 @@ if (classifyEquivalentEscape("a", 4) !== 4) {
 export {
   version,
   classifyEquivalentEscape,
+  classifyEquivalentSurrogateEscape,
 }
 /* match Not a pure module */

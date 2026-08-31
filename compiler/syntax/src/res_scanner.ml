@@ -346,7 +346,12 @@ let scan_exotic_identifier scanner =
   else Token.Lident name
 
 let scan_string_escape_sequence ~start_pos scanner =
-  let scan ~n ~base ~max =
+  let invalid_unicode_code_point () =
+    let pos = position scanner in
+    let msg = "escape sequence is invalid unicode code point" in
+    scanner.err ~start_pos ~end_pos:pos (Diagnostics.message msg)
+  in
+  let scan_digits ~n ~base =
     let rec loop n x =
       if n == 0 then x
       else
@@ -363,11 +368,11 @@ let scan_string_escape_sequence ~start_pos scanner =
           let () = next scanner in
           loop (n - 1) ((x * base) + d)
     in
-    let x = loop n 0 in
-    if x > max || (0xD800 <= x && x < 0xE000) then
-      let pos = position scanner in
-      let msg = "escape sequence is invalid unicode code point" in
-      scanner.err ~start_pos ~end_pos:pos (Diagnostics.message msg)
+    loop n 0
+  in
+  let scan ~n ~base ~max =
+    let x = scan_digits ~n ~base in
+    if x > max || (0xD800 <= x && x < 0xE000) then invalid_unicode_code_point ()
   in
   match scanner.ch with
   (* \ already consumed *)
@@ -401,7 +406,17 @@ let scan_string_escape_sequence ~start_pos scanner =
       match scanner.ch with
       | '}' -> next scanner
       | _ -> ())
-    | _ -> scan ~n:4 ~base:16 ~max:Res_utf8.max)
+    | _ ->
+      let high = scan_digits ~n:4 ~base:16 in
+      if 0xD800 <= high && high <= 0xDBFF then
+        if scanner.ch = '\\' && peek scanner = 'u' then (
+          next scanner;
+          next scanner;
+          let low = scan_digits ~n:4 ~base:16 in
+          if low < 0xDC00 || low > 0xDFFF then invalid_unicode_code_point ())
+        else invalid_unicode_code_point ()
+      else if high > Res_utf8.max || (0xDC00 <= high && high <= 0xDFFF) then
+        invalid_unicode_code_point ())
   | _ ->
     (* unknown escape sequence
      * TODO: we should warn the user here. Let's not make it a hard error for now, for reason compat *)

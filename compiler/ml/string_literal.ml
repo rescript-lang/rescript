@@ -4,6 +4,12 @@ let hex_value = function
   | 'A' .. 'F' as c -> Char.code c - Char.code 'A' + 10
   | _ -> -1
 
+let is_high_surrogate codepoint = codepoint >= 0xd800 && codepoint <= 0xdbff
+let is_low_surrogate codepoint = codepoint >= 0xdc00 && codepoint <= 0xdfff
+
+let combine_surrogate_pair high low =
+  0x10000 + ((high - 0xd800) lsl 10) + (low - 0xdc00)
+
 let decode_js_escapes s =
   let len = String.length s in
   let buf = Buffer.create len in
@@ -80,6 +86,15 @@ let decode_js_escapes s =
           | Some _ | None -> None)
         | 'u' -> (
           match decode_fixed_hex (index + 2) 4 with
+          | Some high when is_high_surrogate high ->
+            if index + 7 < len && s.[index + 6] = '\\' && s.[index + 7] = 'u'
+            then
+              match decode_fixed_hex (index + 8) 4 with
+              | Some low when is_low_surrogate low ->
+                let codepoint = combine_surrogate_pair high low in
+                if add_codepoint codepoint then loop (index + 12) else None
+              | Some _ | None -> None
+            else None
           | Some codepoint when add_codepoint codepoint -> loop (index + 6)
           | Some _ | None -> None)
         | c ->

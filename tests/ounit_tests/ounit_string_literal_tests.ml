@@ -22,7 +22,8 @@ let suites =
            assert_runtime_value ~encoded:{|\x61\xE9|} ~expected:"aé" () );
          ( "unicode escapes" >:: fun _ ->
            assert_runtime_value ~encoded:{|\u0061\u20AC|} ~expected:"a€" ();
-           assert_runtime_value ~encoded:{|\u{1f600}|} ~expected:"😀" () );
+           assert_runtime_value ~encoded:{|\u{1f600}|} ~expected:"😀" ();
+           assert_runtime_value ~encoded:{|\uD83D\uDE00|} ~expected:"😀" () );
          ( "line continuations" >:: fun _ ->
            assert_runtime_value ~encoded:"a\\\nb" ~expected:"ab" ();
            assert_runtime_value ~encoded:"a\\\rb" ~expected:"ab" ();
@@ -50,10 +51,16 @@ let suites =
                {|\u{}|};
                {|\u{110000}|};
                {|\uD800|};
+               {|\uDC00|};
+               {|\uD800\u0041|};
+               {|\uDC00\uD800|};
              ] );
          ( "comparison uses runtime values" >:: fun _ ->
            assert_same_runtime_value ("a", Some "*j") ({|\x61|}, Some "*j");
            assert_same_runtime_value ("😀", None) ({|\u{1f600}|}, Some "*j");
+           assert_same_runtime_value
+             ({|\uD83D\uDE00|}, Some "*j")
+             ({|\u{1f600}|}, Some "*j");
            assert_same_runtime_value ("a\nb", Some "*j") ({|a\x0ab|}, Some "*j");
            OUnit.assert_bool "comparison should use decoded ordering"
              (String_literal.compare ({|\x62|}, Some "*j") ("a", Some "*j") > 0)
