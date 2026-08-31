@@ -2702,9 +2702,8 @@ let partial_function loc () =
               Lconst
                 (Const_block
                    ( Blk_tuple,
-                     [
-                       Const_string (fname, None); const_int line; const_int char;
-                     ] ));
+                     [const_string fname None; const_int line; const_int char]
+                   ));
             ],
             loc );
       ],

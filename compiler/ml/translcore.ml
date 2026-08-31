@@ -451,20 +451,7 @@ let warn_polymorphic_comparison loc prim args =
 let lambda_of_inline_const (c : External_ffi_types.inline_const) :
     Lambda.structured_constant =
   match c with
-  | Const_str {s; delim} ->
-    (* [Lam_constant_convert] re-parses the delimiter with
-       [Ast_utf8_string_interp.parse_processed_delim]; pick its exact
-       preimage. A parsed [None] (unrecognized delimiter) round-trips
-       through "js", which the processed-delimiter parser does not accept. *)
-    let raw_delim =
-      match delim with
-      | Some DNone -> None
-      | Some DNoQuotes -> Some "json"
-      | Some DStarJ -> Some "*j"
-      | Some DBackQuotes -> Some "bq"
-      | None -> Some "js"
-    in
-    Const_string (s, raw_delim)
+  | Const_str {s; delim} -> Const_string {s; delim}
   | Const_bool true -> Const_true
   | Const_bool false -> Const_false
   | Const_int i -> Const_int i
@@ -742,22 +729,22 @@ let lam_of_loc kind loc =
       (Const_block
          ( Blk_tuple,
            [
-             Const_string (file, None);
+             const_string file None;
              const_int lnum;
              const_int cnum;
              const_int enum;
            ] ))
-  | Loc_FILE -> Lconst (Const_string (file, None))
+  | Loc_FILE -> Lconst (const_string file None)
   | Loc_MODULE ->
     let filename = Filename.basename file in
     let name = Env.get_unit_name () in
     let module_name = if name = "" then "//" ^ filename ^ "//" else name in
-    Lconst (Const_string (module_name, None))
+    Lconst (const_string module_name None)
   | Loc_LOC ->
     let loc =
       Printf.sprintf "File %S, line %d, characters %d-%d" file lnum cnum enum
     in
-    Lconst (Const_string (loc, None))
+    Lconst (const_string loc None)
   | Loc_LINE -> Lconst (const_int lnum)
 
 (* Eta-expand a primitive *)
@@ -916,9 +903,8 @@ let assert_failed exp =
               Lconst
                 (Const_block
                    ( Blk_tuple,
-                     [
-                       Const_string (fname, None); const_int line; const_int char;
-                     ] ));
+                     [const_string fname None; const_int line; const_int char]
+                   ));
             ],
             exp.exp_loc );
       ],
@@ -1144,11 +1130,11 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
           (* an external: expand its FFI spec here; %raw parses and classifies
          its snippet *)
           match (p.prim_name, argl) with
-          | "#raw_expr", [Lconst (Const_string (code, _))] ->
+          | "#raw_expr", [Lconst (Const_string {s = code})] ->
             let kind = Classify_function.classify code in
             wrap
               (Lprim (Praw_js_code {code; code_info = Exp kind}, [], e.exp_loc))
-          | "#raw_stmt", [Lconst (Const_string (code, _))] ->
+          | "#raw_stmt", [Lconst (Const_string {s = code})] ->
             let kind = Classify_function.classify_stmt code in
             wrap
               (Lprim (Praw_js_code {code; code_info = Stmt kind}, [], e.exp_loc))

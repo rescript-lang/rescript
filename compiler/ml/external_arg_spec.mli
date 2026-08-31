@@ -24,6 +24,8 @@
 
 type delim = DNone | DStarJ | DNoQuotes | DBackQuotes
 
+val parse_processed_delim : string option -> delim option
+
 type cst = private Arg_int_lit of int | Arg_string_lit of string * delim
 
 type attr =

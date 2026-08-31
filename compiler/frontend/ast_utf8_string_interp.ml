@@ -271,13 +271,6 @@ let transform_test s =
   List.rev cxt.segments
 
 module Delim = struct
-  let parse_processed = function
-    | None -> Some External_arg_spec.DNone
-    | Some "json" -> Some DNoQuotes
-    | Some "*j" -> Some DStarJ
-    | Some "bq" -> Some DBackQuotes
-    | _ -> None
-
   type interpolation =
     | BackQuotes (* string interpolation *)
     | Js (* simple double quoted string *)
@@ -333,4 +326,4 @@ let transform_pat (p : Parsetree.pattern) s delim : Parsetree.pattern =
     }
   | Unrecognized -> p
 
-let parse_processed_delim = Delim.parse_processed
+let parse_processed_delim = External_arg_spec.parse_processed_delim
