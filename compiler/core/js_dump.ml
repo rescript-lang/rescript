@@ -771,7 +771,6 @@ and expression_desc cxt ~(level : int) f x : cxt =
     *)
     let () =
       match delim with
-      | DStarJ -> P.string f ("\"" ^ txt ^ "\"")
       | DNoQuotes -> P.string f txt
       | DNone -> Js_dump_string.pp_string f txt
       | DBackQuotes -> P.string f ("`" ^ txt ^ "`")

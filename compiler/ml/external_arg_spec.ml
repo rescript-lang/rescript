@@ -24,12 +24,11 @@
 
 (** type definitions for arguments to a function declared external *)
 
-type delim = DNone | DStarJ | DNoQuotes | DBackQuotes
+type delim = DNone | DNoQuotes | DBackQuotes
 
 let parse_processed_delim = function
   | None -> Some DNone
   | Some "json" -> Some DNoQuotes
-  | Some "*j" -> Some DStarJ
   | Some "bq" -> Some DBackQuotes
   | _ -> None
 

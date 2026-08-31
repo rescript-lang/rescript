@@ -79,6 +79,9 @@ let map_opt f = function
 let map_constant = function
   | Pconst_integer (s, suffix) -> Pt.Pconst_integer (s, suffix)
   | Pconst_char c -> Pconst_char c
+  (* The PPX bridge uses parser-form ast0, where template segments are [js]
+     strings distinguished by a template attribute. *)
+  | Pconst_string (s, Some "bq") -> Pconst_string (s, Some "js")
   | Pconst_string (s, q) -> Pconst_string (s, q)
   | Pconst_float (s, suffix) -> Pconst_float (s, suffix)
 

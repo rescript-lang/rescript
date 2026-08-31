@@ -413,7 +413,8 @@ let scan_string_escape_sequence ~start_pos scanner =
           next scanner;
           next scanner;
           let low = scan_digits ~n:4 ~base:16 in
-          if low < 0xDC00 || low > 0xDFFF then invalid_unicode_code_point ())
+          if low >= 0 && (low < 0xDC00 || low > 0xDFFF) then
+            invalid_unicode_code_point ())
         else invalid_unicode_code_point ()
       else if high > Res_utf8.max || (0xDC00 <= high && high <= 0xDFFF) then
         invalid_unicode_code_point ())

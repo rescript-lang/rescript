@@ -14,6 +14,7 @@
 
 #### :boom: Breaking Change
 
+- Reject tagged template literals in patterns. Patterns cannot invoke their tag; previously their raw payload was compiled as a plain string comparison. https://github.com/rescript-lang/rescript/pull/8603
 - Remove runtime APIs that were deprecated for removal in ReScript 13, including the `Char` module, unsafe `Obj` operations, legacy `Pervasives` helpers, and `Array.unsafe_get`. https://github.com/rescript-lang/rescript/pull/8564
 - Remove the deprecated `Js` namespace and its runtime modules. https://github.com/rescript-lang/rescript/pull/8531
 - Move Belt into the separately installed `@rescript/belt` package. Projects using Belt must install the package and list it in their `rescript.json` dependencies. https://github.com/rescript-lang/rescript/pull/8554
@@ -25,6 +26,7 @@
 
 #### :rocket: New Feature
 
+- Support UTF-16 surrogate-pair escapes such as `"\uD83D\uDE00"` in ordinary string literals. https://github.com/rescript-lang/rescript/pull/8603
 - Support dynamic imports of external bindings annotated with `@scope`; the generated import follows the complete property path. These imports were previously rejected. https://github.com/rescript-lang/rescript/pull/8582
 - Add `@res.hoistedFunction` for emitting nested module functions as flat JavaScript exports. https://github.com/rescript-lang/rescript/pull/8402
 - Add source map support with linked, inline, and hidden modes. https://github.com/rescript-lang/rescript/pull/8393

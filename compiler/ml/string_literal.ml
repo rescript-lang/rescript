@@ -108,14 +108,3 @@ let decode_js_escapes s =
         loop (index + 1)
   in
   loop 0
-
-let runtime_value s delim =
-  match delim with
-  | Some ("*j" | "bq") -> (
-    match decode_js_escapes s with
-    | Some decoded -> decoded
-    | None -> s)
-  | None | Some _ -> s
-
-let compare (s1, delim1) (s2, delim2) =
-  String.compare (runtime_value s1 delim1) (runtime_value s2 delim2)

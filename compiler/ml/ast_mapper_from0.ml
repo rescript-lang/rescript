@@ -82,9 +82,23 @@ let map_tuple3 f1 f2 f3 (x, y, z) = (f1 x, f2 y, f3 z)
 let map_opt f = function
   | None -> None
   | Some x -> Some (f x)
-let map_constant = function
+let is_template attrs =
+  Ext_list.exists attrs (fun ({txt}, _) ->
+      match txt with
+      | "res.template" | "res.taggedTemplate" -> true
+      | _ -> false)
+
+let decode_js_string ~loc s =
+  match String_literal.decode_js_escapes s with
+  | Some s -> s
+  | None -> Location.raise_errorf ~loc "Invalid string escape sequence"
+
+let map_constant ~loc ~is_template = function
   | Pconst_integer (s, suffix) -> Pt.Pconst_integer (s, suffix)
   | Pconst_char c -> Pconst_char c
+  | Pconst_string (s, Some "js") when is_template -> Pconst_string (s, Some "bq")
+  | Pconst_string (s, Some ("js" | "*j")) ->
+    Pconst_string (decode_js_string ~loc s, None)
   | Pconst_string (s, q) -> Pconst_string (s, q)
   | Pconst_float (s, suffix) -> Pconst_float (s, suffix)
 
@@ -511,7 +525,9 @@ module E = struct
       let inner = sub.expr sub {e with pexp_attributes = inner_attrs0} in
       await ~loc ~attrs:(sub.attributes sub await_attrs0) inner
     | Pexp_ident x -> ident ~loc ~attrs (map_loc sub x)
-    | Pexp_constant x -> constant ~loc ~attrs (map_constant x)
+    | Pexp_constant x ->
+      constant ~loc ~attrs
+        (map_constant ~loc ~is_template:(is_template attrs) x)
     | Pexp_let (r, vbs, e) ->
       let_ ~loc ~attrs r (List.map (sub.value_binding sub) vbs) (sub.expr sub e)
     | Pexp_fun (lab, def, p, e) ->
@@ -879,9 +895,12 @@ module P = struct
     | Ppat_any -> any ~loc ~attrs ()
     | Ppat_var s -> var ~loc ~attrs (map_loc sub s)
     | Ppat_alias (p, s) -> alias ~loc ~attrs (sub.pat sub p) (map_loc sub s)
-    | Ppat_constant c -> constant ~loc ~attrs (map_constant c)
+    | Ppat_constant c ->
+      constant ~loc ~attrs (map_constant ~loc ~is_template:false c)
     | Ppat_interval (c1, c2) ->
-      interval ~loc ~attrs (map_constant c1) (map_constant c2)
+      interval ~loc ~attrs
+        (map_constant ~loc ~is_template:false c1)
+        (map_constant ~loc ~is_template:false c2)
     | Ppat_tuple pl -> tuple ~loc ~attrs (List.map (sub.pat sub) pl)
     | Ppat_construct (l, p) ->
       construct ~loc ~attrs (map_loc sub l) (map_opt (sub.pat sub) p)

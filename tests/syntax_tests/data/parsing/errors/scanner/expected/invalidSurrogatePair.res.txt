@@ -1,0 +1,12 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/scanner/invalidSurrogatePair.res:1:18-25
+
+  1 │ let malformed = "\uD83D\uZZZZ"
+  2 │ let after = 1
+  3 │ 
+
+  unknown escape sequence
+
+let malformed = {js|\uD83D\uZZZZ|js}
+let after = 1

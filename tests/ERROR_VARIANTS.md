@@ -588,7 +588,8 @@ enabled. Fixtures use `-w +A` (everything on) so default-disabled
 warnings still fire.
 
 Fixtures follow the naming convention `warning_<NN>_<description>.res`
-so coverage gaps stay greppable.
+so coverage gaps stay greppable. Warning 11 (`Unused_match`) is covered by
+`warning_11_equivalent_string_patterns.res`.
 
 ### Removed warnings
 

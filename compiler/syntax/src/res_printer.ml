@@ -2619,6 +2619,13 @@ and print_pattern ~state (p : Parsetree.pattern) cmt_tbl =
     | Ppat_constant c ->
       let template_literal =
         Parsetree_viewer.has_template_literal_attr p.ppat_attributes
+        ||
+        match c with
+        | Pconst_string (_, Some ("js" | "*j" | "INTERNAL_RES_CHAR_CONTENTS"))
+        | Pconst_string (_, None)
+        | Pconst_integer _ | Pconst_char _ | Pconst_float _ ->
+          false
+        | Pconst_string (_, Some _) -> true
       in
       print_constant ~template_literal c
     | Ppat_tuple patterns ->

@@ -12,7 +12,6 @@ let suites =
          ( "processed string delimiters" >:: fun _ ->
            assert_string_constant None (Some DNone);
            assert_string_constant (Some "json") (Some DNoQuotes);
-           assert_string_constant (Some "*j") (Some DStarJ);
            assert_string_constant (Some "bq") (Some DBackQuotes);
            assert_string_constant (Some "js") None );
        ]

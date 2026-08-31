@@ -72,7 +72,7 @@ and exception_ident = ident
 and for_ident = ident
 and for_direction = Js_op.direction_flag
 and property_map = (property_name * expression) list
-and delim = External_arg_spec.delim = DNone | DStarJ | DNoQuotes | DBackQuotes
+and delim = External_arg_spec.delim = DNone | DNoQuotes | DBackQuotes
 
 and record_rest_field = {
   record_rest_label: string;

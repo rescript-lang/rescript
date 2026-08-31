@@ -279,10 +279,15 @@ module Delim = struct
     | "js" -> if is_template then BackQuotes else Js
     | _ -> Unrecognized
 
-  let escaped_j_delimiter = "*j" (* not user level syntax allowed *)
   let some_escaped_back_quote_delimiter = Some "bq"
-  let some_escaped_j_delimiter = Some escaped_j_delimiter
 end
+
+(* Scanner string payloads still contain JavaScript escape spelling. Decode an
+   ordinary string exactly once here, before it reaches typing and matching. *)
+let semantic_string loc s =
+  match String_literal.decode_js_escapes s with
+  | Some decoded -> decoded
+  | None -> Location.raise_errorf ~loc "Invalid string escape sequence"
 
 let transform_exp (e : Parsetree.expression) s delim : Parsetree.expression =
   let is_template =
@@ -293,12 +298,8 @@ let transform_exp (e : Parsetree.expression) s delim : Parsetree.expression =
   in
   match Delim.parse_unprocessed is_template delim with
   | Js ->
-    let js_str = Ast_utf8_string.transform e.pexp_loc s in
-    {
-      e with
-      pexp_desc =
-        Pexp_constant (Pconst_string (js_str, Delim.some_escaped_j_delimiter));
-    }
+    let semantic = semantic_string e.pexp_loc s in
+    {e with pexp_desc = Pexp_constant (Pconst_string (semantic, None))}
   | BackQuotes ->
     {
       e with
@@ -311,16 +312,8 @@ let transform_exp (e : Parsetree.expression) s delim : Parsetree.expression =
 let transform_pat (p : Parsetree.pattern) s delim : Parsetree.pattern =
   match Delim.parse_unprocessed false delim with
   | Js ->
-    let js_str = Ast_utf8_string.transform p.ppat_loc s in
-    (match String_literal.decode_js_escapes js_str with
-    | Some _ -> ()
-    | None ->
-      Location.raise_errorf ~loc:p.ppat_loc "Invalid string escape sequence");
-    {
-      p with
-      ppat_desc =
-        Ppat_constant (Pconst_string (js_str, Delim.some_escaped_j_delimiter));
-    }
+    let semantic = semantic_string p.ppat_loc s in
+    {p with ppat_desc = Ppat_constant (Pconst_string (semantic, None))}
   | BackQuotes ->
     {
       p with
@@ -328,6 +321,7 @@ let transform_pat (p : Parsetree.pattern) s delim : Parsetree.pattern =
         Ppat_constant
           (Pconst_string (s, Delim.some_escaped_back_quote_delimiter));
     }
+  | Unrecognized when delim = "INTERNAL_RES_CHAR_CONTENTS" -> p
   | Unrecognized ->
     Location.raise_errorf ~loc:p.ppat_loc
       "Tagged template literals are not supported in patterns"

@@ -18,7 +18,7 @@ switch (match) {
 }
 
 function classifyEquivalentEscape(value, selectedCase) {
-  if (value === "\x61") {
+  if (value === "a") {
     if (selectedCase === 0) {
       return 0;
     } else if (selectedCase === 1) {
@@ -36,7 +36,7 @@ function classifyEquivalentEscape(value, selectedCase) {
 }
 
 function classifyEquivalentSurrogateEscape(value, selectedCase) {
-  if (value === "\u{1f600}") {
+  if (value === "😀") {
     if (selectedCase === 0) {
       return 0;
     } else if (selectedCase === 1) {

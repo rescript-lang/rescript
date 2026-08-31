@@ -1353,7 +1353,7 @@ let rec float_equal ?comment (e0 : t) (e1 : t) : t =
 let int_equal = float_equal
 
 let tag_type = function
-  | Variant_runtime.String s -> str s ~delim:DStarJ
+  | Variant_runtime.String s -> str s
   | Int i -> small_int i
   | Float f -> float f
   | BigInt i ->
