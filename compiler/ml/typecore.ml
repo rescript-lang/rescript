@@ -80,6 +80,7 @@ type error =
   | Break_outside_loop
   | Continue_outside_loop
   | Literal_overflow of string
+  | Polyvar_literal_overflow
   | Unknown_literal of string * char
   | Illegal_letrec_pat
   | Empty_record_literal
@@ -285,6 +286,15 @@ let constant_or_raise env loc cst =
   match constant cst with
   | Ok c -> c
   | Error err -> raise (Error (loc, env, err))
+
+(* A numeric polymorphic variant name is its own runtime value, so it has to
+   fit the int32 range the name is emitted in. Checked here, where every label
+   position is typed, so that decoding it downstream cannot fail. *)
+let check_polyvar_name env loc name =
+  if Ext_string.is_valid_hash_number name then
+    match Int32.of_string_opt name with
+    | Some _ -> ()
+    | None -> raise (Error (loc, env, Polyvar_literal_overflow))
 
 (* Specific version of type_option, using newty rather than newgenty *)
 
@@ -1465,6 +1475,7 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
             pat_env = !env;
           })
   | Ppat_variant (l, sarg) -> (
+    check_polyvar_name !env loc l;
     let arg_type =
       match sarg with
       | None -> []
@@ -2713,6 +2724,7 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
   | Pexp_construct (lid, sarg) ->
     type_construct ~context env loc lid sarg ty_expected sexp.pexp_attributes
   | Pexp_variant (l, sarg) -> (
+    check_polyvar_name env loc l;
     (* Keep sharing *)
     let ty_expected0 = instance env ty_expected in
     try
@@ -5230,6 +5242,10 @@ let report_error env loc ppf error =
     fprintf ppf
       "Integer literal exceeds the range of representable integers of type %s"
       ty
+  | Polyvar_literal_overflow ->
+    fprintf ppf
+      "Integer literal exceeds int32 range. Use float or BigInt if larger \
+       values are required."
   | Unknown_literal (n, m) ->
     fprintf ppf "Unknown modifier '%c' for literal %s%c" m n m
   | Illegal_letrec_pat ->
