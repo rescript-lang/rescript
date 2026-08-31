@@ -90,8 +90,6 @@ let rec eq_approx (x : t) (y : t) =
     | Const_some iy -> eq_approx ix iy
     | _ -> false)
 
-let lam_none : t = Const_js_undefined {is_unit = false}
-
 let rec is_allocating (c : t) : bool =
   match c with
   | Const_some t -> is_allocating t

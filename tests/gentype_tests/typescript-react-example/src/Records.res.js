@@ -69,16 +69,6 @@ function findAddress2(business) {
   }));
 }
 
-let someBusiness2_owner = null;
-
-let someBusiness2_address2 = null;
-
-let someBusiness2 = {
-  name: "SomeBusiness",
-  owner: someBusiness2_owner,
-  address2: someBusiness2_address2
-};
-
 function computeArea3(o) {
   return (o.x * o.y | 0) * Belt_Option.mapWithDefault(Primitive_option.fromNullable(o.z), 1, n => n) | 0;
 }
@@ -128,6 +118,12 @@ let someBusiness = {
   name: "SomeBusiness",
   owner: undefined,
   address: undefined
+};
+
+let someBusiness2 = {
+  name: "SomeBusiness",
+  owner: null,
+  address2: null
 };
 
 export {

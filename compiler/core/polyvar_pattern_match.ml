@@ -62,9 +62,7 @@ let or_list (arg : lam) (hash_names : (int * string) list) =
   | (hash, name) :: rest ->
     let init : lam =
       Lprim
-        ( Pintcomp Ceq,
-          [arg; Lconst (Const_pointer (Pt_variant {name}))],
-          Location.none )
+        (Pintcomp Ceq, [arg; Lconst (Lambda.const_polyvar name)], Location.none)
     in
     Ext_list.fold_left rest init (fun acc (hash, name) ->
         Lambda.Lprim
@@ -73,7 +71,7 @@ let or_list (arg : lam) (hash_names : (int * string) list) =
               acc;
               Lprim
                 ( Pintcomp Ceq,
-                  [arg; Lconst (Const_pointer (Pt_variant {name}))],
+                  [arg; Lconst (Lambda.const_polyvar name)],
                   Location.none );
             ],
             Location.none ))

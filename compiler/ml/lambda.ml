@@ -177,8 +177,6 @@ type eliminated = Identity | Ignore
 type primitive =
   | Pdebugger
   | Ptypeof
-  | Pnull
-  | Pundefined
   | Pfn_arity
   | Pgetglobal of Ident.t
   (* Operations on heap blocks *)
@@ -329,7 +327,6 @@ type pointer_info =
   | Pt_constructor of Variant_runtime.tag
   | Pt_variant of {name: string}
   | Pt_module_alias
-  | Pt_shape_none
   | Pt_assertfalse
 
 type structured_constant =
@@ -342,11 +339,18 @@ type structured_constant =
   | Const_block of tag_info * structured_constant list
   | Const_false
   | Const_true
+  | Const_js_null
+  | Const_js_undefined of {is_unit: bool}
+      (** [is_unit] tells the unit value apart from JS [undefined]; both emit
+          [undefined]. *)
 
 (* What a `%builtin` name in the primitive table means. Only [Primitive]
    reaches the IR: [mk_builtin] erases the other cases at translation, so
    they need no [primitive] constructor to stand in for them. *)
-type builtin = Primitive of primitive | Eliminated of eliminated
+type builtin =
+  | Primitive of primitive
+  | Eliminated of eliminated
+  | Constant of structured_constant
 
 type inline_attribute =
   | Always_inline (* [@inline] or [@inline always] *)
@@ -439,18 +443,33 @@ let const_of_typed (c : Asttypes.constant) : structured_constant =
   | Asttypes.Const_float f -> Const_float f
   | Asttypes.Const_bigint (sign, i) -> Const_bigint (sign, i)
 
-let const_unit =
-  Const_pointer (Pt_constructor {Variant_runtime.name = "()"; tag_type = None})
+let const_unit = Const_js_undefined {is_unit = true}
+
+(* The JS value of a constant constructor. Unit is the one constructor with a
+   dedicated constant, so producers cannot leave it as a pointer. *)
+let const_constructor (tag : Variant_runtime.tag) =
+  if tag.name = "()" then const_unit else Const_pointer (Pt_constructor tag)
+
+(* A constructor with an optional shape carries no payload when constant. *)
+let const_shape_none = Const_js_undefined {is_unit = false}
+
+let const_polyvar name = Const_pointer (Pt_variant {name})
+
+let const_module_alias = Const_pointer Pt_module_alias
 
 let lambda_assert_false = Lconst (Const_pointer Pt_assertfalse)
 
-let lambda_module_alias = Lconst (Const_pointer Pt_module_alias)
+let lambda_module_alias = Lconst const_module_alias
 
 let lambda_unit = Lconst const_unit
 
 let mk_builtin b args loc =
   match b with
   | Primitive p -> Lprim (p, args, loc)
+  | Constant c -> (
+    match args with
+    | [] -> Lconst c
+    | _ -> assert false)
   | Eliminated Identity -> (
     match args with
     | [arg] -> arg
