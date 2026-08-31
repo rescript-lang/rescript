@@ -33,6 +33,7 @@
 #### :bug: Bug fix
 
 - Object typing errors now describe fields directly: assigning to a field without `@set` reports that the field is not settable and suggests the annotation, and missing-property errors name the field instead of a phantom `"x#="` member. https://github.com/rescript-lang/rescript/pull/8597
+- Fix pattern matching for string literals with equivalent runtime values but different escape spellings, preserving source order and reporting redundant patterns. https://github.com/rescript-lang/rescript/pull/8603
 - Fix signature inclusion rejecting equivalent object externals after type-alias expansion. https://github.com/rescript-lang/rescript/pull/8581
 - Fix externals whose result type is an alias of `unit` so they use the same unit-return behavior as externals declared to return `unit`. https://github.com/rescript-lang/rescript/pull/8581
 - Fix dynamic imports of external bindings that require FFI argument or result conversions, including `@variadic`, `@unwrap`, polymorphic variant encodings, `@as` phantom arguments, optional labeled arguments, and `@return` wrappers. The imported value now applies the same conversions as a direct external call. https://github.com/rescript-lang/rescript/pull/8582
