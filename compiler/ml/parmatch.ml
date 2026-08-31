@@ -157,14 +157,12 @@ let all_coherent column =
       match (c1, c2) with
       | Const_char _, Const_char _
       | Const_int _, Const_int _
-      | Const_int32 _, Const_int32 _
-      | Const_int64 _, Const_int64 _
       | Const_bigint _, Const_bigint _
       | Const_float _, Const_float _
       | Const_string _, Const_string _ ->
         true
-      | ( ( Const_char _ | Const_int _ | Const_int32 _ | Const_int64 _
-          | Const_bigint _ | Const_float _ | Const_string _ ),
+      | ( ( Const_char _ | Const_int _ | Const_bigint _ | Const_float _
+          | Const_string _ ),
           _ ) ->
         false)
     | Tpat_tuple l1, Tpat_tuple l2 -> List.length l1 = List.length l2
@@ -374,8 +372,6 @@ let pretty_const c =
   | Const_char i -> Printf.sprintf "%s" (Pprintast.string_of_int_as_char i)
   | Const_string (s, _) -> Printf.sprintf "%S" s
   | Const_float f -> Printf.sprintf "%s" f
-  | Const_int32 i -> Printf.sprintf "%ldl" i
-  | Const_int64 i -> Printf.sprintf "%LdL" i
   | Const_bigint (sign, i) ->
     Printf.sprintf "%s" (Bigint_utils.to_string sign i)
 
@@ -1072,22 +1068,6 @@ let build_other ext env : Typedtree.pattern =
       (function
         | i -> Tpat_constant (Const_char i))
       0 succ p env
-  | (({pat_desc = Tpat_constant (Const_int32 _)} as p), _) :: _ ->
-    build_other_constant
-      (function
-        | Tpat_constant (Const_int32 i) -> i
-        | _ -> assert false)
-      (function
-        | i -> Tpat_constant (Const_int32 i))
-      0l Int32.succ p env
-  | (({pat_desc = Tpat_constant (Const_int64 _)} as p), _) :: _ ->
-    build_other_constant
-      (function
-        | Tpat_constant (Const_int64 i) -> i
-        | _ -> assert false)
-      (function
-        | i -> Tpat_constant (Const_int64 i))
-      0L Int64.succ p env
   | (({pat_desc = Tpat_constant (Const_bigint _)} as p), _) :: _ ->
     build_other_constant
       (function
@@ -2270,9 +2250,7 @@ let inactive ~partial pat =
       | Tpat_constant c -> (
         match c with
         | Const_string _ -> true (*Config.safe_string*)
-        | Const_int _ | Const_char _ | Const_float _ | Const_int32 _
-        | Const_int64 _ | Const_bigint _ ->
-          true)
+        | Const_int _ | Const_char _ | Const_float _ | Const_bigint _ -> true)
       | Tpat_tuple ps | Tpat_construct (_, _, ps) ->
         List.for_all (fun p -> loop p) ps
       | Tpat_alias (p, _, _) | Tpat_variant (_, Some p, _) -> loop p

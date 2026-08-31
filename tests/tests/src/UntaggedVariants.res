@@ -470,6 +470,9 @@ module OnlyOne = {
 module MergeCases = {
   type obj = {name: string}
 
+  @val external sideEffect: unit => int = "sideEffect"
+  @val external keepGoing: unit => bool = "keepGoing"
+
   @unboxed
   type t =
     | Boolean(bool)
@@ -477,7 +480,8 @@ module MergeCases = {
     | Array(array<int>)
     | Date(Date.t)
 
-  let should_not_merge = x =>
+  // Equivalent string actions can be shared before untagged matching is lowered.
+  let shareEquivalentStringActions = x =>
     switch x {
     | Object(_) => "do not merge"
     | Array(_) => "do not merge"
@@ -491,6 +495,40 @@ module MergeCases = {
     | Array(_) => "do not merge"
     | Date(_) => "do not merge"
     | Boolean(_) => "merge"
+    }
+
+  // The actions are alpha-equivalent, not merely identical constants.
+  let shareAlphaEquivalentStringActions = value =>
+    switch value {
+    | 0 => {
+        let result = sideEffect()
+        (result, "shared")
+      }
+    | 1 => (sideEffect(), "different")
+    | 2 => {
+        let result = sideEffect()
+        (result, "shared")
+      }
+    | _ => (sideEffect(), "fallback")
+    }
+
+  // Keep coverage for late case merging across Array.isArray, instanceof,
+  // and typeof dispatch groups. Lambda.make_key deliberately rejects loops.
+  let preserveDiscriminatorGroups = x =>
+    switch x {
+    | Object(_) =>
+      while keepGoing() {
+        ignore(sideEffect())
+      }
+    | Array(_) =>
+      while keepGoing() {
+        ignore(sideEffect())
+      }
+    | Date(_) =>
+      while keepGoing() {
+        ignore(sideEffect())
+      }
+    | Boolean(_) => ()
     }
 }
 

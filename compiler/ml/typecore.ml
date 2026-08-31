@@ -265,9 +265,7 @@ let type_constant = function
   | Const_char _ -> instance_def Predef.type_char
   | Const_string _ -> instance_def Predef.type_string
   | Const_float _ -> instance_def Predef.type_float
-  | Const_int64 _ -> assert false
   | Const_bigint _ -> instance_def Predef.type_bigint
-  | Const_int32 _ -> assert false
 
 let constant : Parsetree.constant -> (Asttypes.constant, error) result =
   function

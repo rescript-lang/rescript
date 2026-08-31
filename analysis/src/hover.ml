@@ -299,8 +299,6 @@ let new_hover ~state ~full:{file; package} ~supports_markdown_links loc_item =
          | Const_char _ -> "char"
          | Const_string _ -> "string"
          | Const_float _ -> "float"
-         | Const_int32 _ -> "int32"
-         | Const_int64 _ -> "int64"
          | Const_bigint _ -> "bigint"))
   | Typed (_, t, loc_kind) -> (
     let from_type ?docstring ?constructor typ =

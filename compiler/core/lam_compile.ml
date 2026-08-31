@@ -1989,10 +1989,7 @@ let compile output_prefix =
       match (direction, finish) with
       | ( Upto,
           ( Lprim
-              {
-                primitive = Psubint;
-                args = [new_finish; Lconst (Const_int {i = 1l})];
-              }
+              {primitive = Psubint; args = [new_finish; Lconst (Const_int 1l)]}
           | Lprim {primitive = Poffsetint -1; args = [new_finish]} ) ) ->
         compile_for id start new_finish Up body lambda_cxt
       | _ ->

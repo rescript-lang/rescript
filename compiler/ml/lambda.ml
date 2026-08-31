@@ -334,10 +334,13 @@ type pointer_info =
   | Pt_assertfalse
 
 type structured_constant =
-  | Const_base of Asttypes.constant
+  | Const_int of int32
+  | Const_char of int
+  | Const_string of string * string option
+  | Const_float of string
+  | Const_bigint of bool * string
   | Const_pointer of pointer_info
   | Const_block of tag_info * structured_constant list
-  | Const_immstring of string
   | Const_false
   | Const_true
 type inline_attribute =
@@ -418,6 +421,16 @@ and lambda_switch = lambda switch
     not necessary "()", it can be used as a place holder for module
     alias etc.
 *)
+let const_int (i : int) = Const_int (Int32.of_int i)
+
+let const_of_typed (c : Asttypes.constant) : structured_constant =
+  match c with
+  | Asttypes.Const_int i -> Const_int (Int32.of_int i)
+  | Asttypes.Const_char i -> Const_char i
+  | Asttypes.Const_string (s, d) -> Const_string (s, d)
+  | Asttypes.Const_float f -> Const_float f
+  | Asttypes.Const_bigint (sign, i) -> Const_bigint (sign, i)
+
 let const_unit =
   Const_pointer (Pt_constructor {Variant_runtime.name = "()"; tag_type = None})
 
@@ -471,9 +484,6 @@ let make_key e =
     (* Too big ! *)
     match e with
     | Lvar id -> ( try Ident.find_same id env with Not_found -> e)
-    | Lconst (Const_base (Const_string _)) ->
-      (* Mutable constants are not shared *)
-      raise_notrace Not_simple
     | Lconst _ -> e
     | Lapply ap ->
       Lapply

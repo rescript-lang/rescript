@@ -15,15 +15,11 @@ let undefined_location loc =
   Lconst
     (Const_block
        ( Lambda.Blk_tuple,
-         [
-           Const_base (Const_string (fname, None));
-           Const_base (Const_int line);
-           Const_base (Const_int char);
-         ] ))
+         [Const_string (fname, None); const_int line; const_int char] ))
 
 let init_shape modl =
   let add_name x id =
-    Const_block (Blk_tuple, [x; Const_base (Const_string (Ident.name id, None))])
+    Const_block (Blk_tuple, [x; Const_string (Ident.name id, None)])
   in
   let module_tag_info : Lambda.tag_info =
     Blk_constructor

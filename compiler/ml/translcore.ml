@@ -464,13 +464,12 @@ let lambda_of_inline_const (c : External_ffi_types.inline_const) :
       | Some DBackQuotes -> Some "bq"
       | None -> Some "js"
     in
-    Const_base (Const_string (s, raw_delim))
+    Const_string (s, raw_delim)
   | Const_bool true -> Const_true
   | Const_bool false -> Const_false
-  | Const_int i -> Const_base (Const_int32 i)
-  | Const_bigint {negative; digits} ->
-    Const_base (Const_bigint (negative, digits))
-  | Const_float f -> Const_base (Const_float f)
+  | Const_int i -> Const_int i
+  | Const_bigint {negative; digits} -> Const_bigint (negative, digits)
+  | Const_float f -> Const_float f
 
 (* The argument of the dynamic-import primitive is a module reference,
    never an expression: resolve it here, at translation, from the typedtree.
@@ -743,23 +742,23 @@ let lam_of_loc kind loc =
       (Const_block
          ( Blk_tuple,
            [
-             Const_immstring file;
-             Const_base (Const_int lnum);
-             Const_base (Const_int cnum);
-             Const_base (Const_int enum);
+             Const_string (file, None);
+             const_int lnum;
+             const_int cnum;
+             const_int enum;
            ] ))
-  | Loc_FILE -> Lconst (Const_immstring file)
+  | Loc_FILE -> Lconst (Const_string (file, None))
   | Loc_MODULE ->
     let filename = Filename.basename file in
     let name = Env.get_unit_name () in
     let module_name = if name = "" then "//" ^ filename ^ "//" else name in
-    Lconst (Const_immstring module_name)
+    Lconst (Const_string (module_name, None))
   | Loc_LOC ->
     let loc =
       Printf.sprintf "File %S, line %d, characters %d-%d" file lnum cnum enum
     in
-    Lconst (Const_immstring loc)
-  | Loc_LINE -> Lconst (Const_base (Const_int lnum))
+    Lconst (Const_string (loc, None))
+  | Loc_LINE -> Lconst (const_int lnum)
 
 (* Eta-expand a primitive *)
 
@@ -918,9 +917,7 @@ let assert_failed exp =
                 (Const_block
                    ( Blk_tuple,
                      [
-                       Const_base (Const_string (fname, None));
-                       Const_base (Const_int line);
-                       Const_base (Const_int char);
+                       Const_string (fname, None); const_int line; const_int char;
                      ] ));
             ],
             exp.exp_loc );
@@ -1049,7 +1046,7 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
     transl_primitive e.exp_loc p e.exp_env e.exp_type ~val_type:vd.val_type
   | Texp_ident (path, _, {val_kind = Val_reg}) ->
     transl_value_path ~loc:e.exp_loc e.exp_env path
-  | Texp_constant cst -> Lconst (Const_base cst)
+  | Texp_constant cst -> Lconst (const_of_typed cst)
   | Texp_let (rec_flag, pat_expr_list, body) ->
     transl_let ~js_hoist:None rec_flag pat_expr_list (transl_exp body)
   | Texp_function {params = fparams; body; async} ->
@@ -1147,11 +1144,11 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
           (* an external: expand its FFI spec here; %raw parses and classifies
          its snippet *)
           match (p.prim_name, argl) with
-          | "#raw_expr", [Lconst (Const_base (Const_string (code, _)))] ->
+          | "#raw_expr", [Lconst (Const_string (code, _))] ->
             let kind = Classify_function.classify code in
             wrap
               (Lprim (Praw_js_code {code; code_info = Exp kind}, [], e.exp_loc))
-          | "#raw_stmt", [Lconst (Const_base (Const_string (code, _)))] ->
+          | "#raw_stmt", [Lconst (Const_string (code, _))] ->
             let kind = Classify_function.classify_stmt code in
             wrap
               (Lprim (Praw_js_code {code; code_info = Stmt kind}, [], e.exp_loc))
@@ -1254,15 +1251,9 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
     | Some arg -> (
       let lam = transl_exp arg in
       let tag_info = Blk_poly_var l in
-      try
-        Lconst
-          (Const_block
-             (tag_info, [Const_base (Const_int tag); extract_constant lam]))
+      try Lconst (Const_block (tag_info, [const_int tag; extract_constant lam]))
       with Not_constant ->
-        Lprim
-          ( Pmakeblock tag_info,
-            [Lconst (Const_base (Const_int tag)); lam],
-            e.exp_loc )))
+        Lprim (Pmakeblock tag_info, [Lconst (const_int tag); lam], e.exp_loc)))
   | Texp_record {fields; representation; extended_expression} ->
     transl_record e.exp_loc e.exp_env fields representation extended_expression
   | Texp_field (arg, _, lbl) -> (

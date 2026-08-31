@@ -55,8 +55,8 @@ and translate (x : Lam_constant.t) : J.expression =
        except for the list constructor [] which is the number 0 *)
     if name = "[]" then E.int 0l ~comment:"[]" else E.str name
   | Const_constructor {tag_type = Some t} -> E.tag_type t
-  | Const_int {i; comment} ->
-    E.int i ?comment:(Lam_constant.string_of_pointer_info comment)
+  | Const_int i -> E.int i
+  | Const_assertfalse -> E.int 0l ~comment:"assert_false"
   | Const_char i -> Js_of_lam_string.const_char i
   | Const_bigint (sign, i) -> E.bigint sign i
   | Const_float f -> E.float f (* TODO: preserve float *)
