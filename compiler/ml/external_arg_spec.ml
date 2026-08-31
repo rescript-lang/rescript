@@ -26,6 +26,13 @@
 
 type delim = DNone | DStarJ | DNoQuotes | DBackQuotes
 
+let parse_processed_delim = function
+  | None -> Some DNone
+  | Some "json" -> Some DNoQuotes
+  | Some "*j" -> Some DStarJ
+  | Some "bq" -> Some DBackQuotes
+  | _ -> None
+
 type cst = Arg_int_lit of int | Arg_string_lit of string * delim
 
 type label_noname = Arg_label | Arg_empty | Arg_optional

@@ -292,7 +292,7 @@ and value_kind = Pgenval
 type structured_constant =
   | Const_int of int32
   | Const_char of int
-  | Const_string of string * string option
+  | Const_string of {s: string; delim: External_arg_spec.delim option}
   | Const_float of string
   | Const_bigint of bool * string
   | Const_pointer of pointer_info
@@ -403,6 +403,7 @@ and lambda_switch = lambda switch
 val make_key : lambda -> lambda option
 
 val const_int : int -> structured_constant
+val const_string : string -> string option -> structured_constant
 val const_of_typed : constant -> structured_constant
 val const_unit : structured_constant
 val lambda_assert_false : lambda

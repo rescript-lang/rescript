@@ -20,7 +20,7 @@ open Lambda
 let rec struct_const ppf = function
   | Const_int n -> fprintf ppf "%ld" n
   | Const_char i -> fprintf ppf "%s" (Pprintast.string_of_int_as_char i)
-  | Const_string (s, _) -> fprintf ppf "%S" s
+  | Const_string {s} -> fprintf ppf "%S" s
   | Const_float f -> fprintf ppf "%s" f
   | Const_bigint (sign, n) -> fprintf ppf "%sn" (Bigint_utils.to_string sign n)
   | Const_pointer (Pt_constructor {name}) -> fprintf ppf "`%s" name

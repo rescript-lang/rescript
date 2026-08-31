@@ -26,9 +26,7 @@ let rec convert_constant (const : Lambda.structured_constant) : Lam_constant.t =
   match const with
   | Const_int i -> Const_int i
   | Const_char i -> Const_char i
-  | Const_string (s, opt) ->
-    let delim = Ast_utf8_string_interp.parse_processed_delim opt in
-    Const_string {s; delim}
+  | Const_string {s; delim} -> Const_string {s; delim}
   | Const_float i -> Const_float i
   | Const_bigint (sign, i) -> Const_bigint (sign, i)
   | Const_pointer (Pt_constructor {name = "()"}) ->
