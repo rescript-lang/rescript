@@ -19,6 +19,14 @@ let assert_invalid_backquoted_pattern encoded =
   | _ -> OUnit.assert_failure "expected an invalid string escape"
   | exception Location.Error _ -> ()
 
+let assert_invalid_tagged_pattern tag contents =
+  let pattern =
+    Ast_helper.Pat.constant (Parsetree.Pconst_string (contents, Some tag))
+  in
+  match Ast_utf8_string_interp.transform_pat pattern contents tag with
+  | _ -> OUnit.assert_failure "expected a tagged pattern error"
+  | exception Location.Error _ -> ()
+
 let suites =
   __FILE__
   >::: [
@@ -70,6 +78,11 @@ let suites =
          ( "backquoted patterns reject lone surrogate escapes" >:: fun _ ->
            assert_invalid_backquoted_pattern {|\uD800|};
            assert_invalid_backquoted_pattern {|\uDC00|} );
+         ( "patterns reject tagged template literals" >:: fun _ ->
+           (* A tagged pattern cannot invoke its tag. Treating its raw contents as
+              a string made json`\x61` collide with the ordinary "\\x61"
+              pattern during string-switch sorting. *)
+           assert_invalid_tagged_pattern "json" {|\x61|} );
          ( "comparison uses runtime values" >:: fun _ ->
            assert_same_runtime_value ("a", Some "*j") ({|\x61|}, Some "*j");
            assert_same_runtime_value ("😀", None) ({|\u{1f600}|}, Some "*j");

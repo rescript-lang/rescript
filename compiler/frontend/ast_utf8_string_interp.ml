@@ -328,6 +328,8 @@ let transform_pat (p : Parsetree.pattern) s delim : Parsetree.pattern =
         Ppat_constant
           (Pconst_string (s, Delim.some_escaped_back_quote_delimiter));
     }
-  | Unrecognized -> p
+  | Unrecognized ->
+    Location.raise_errorf ~loc:p.ppat_loc
+      "Tagged template literals are not supported in patterns"
 
 let parse_processed_delim = External_arg_spec.parse_processed_delim
