@@ -54,32 +54,40 @@ let transl_extension_constructor env path ext =
 
 (* Translation of primitives *)
 
+let builtin_of_lowering (l : Unified_ops.lowering) : Lambda.builtin =
+  match l with
+  | Lower p -> Primitive p
+  | Pass_through -> Eliminated Identity
+
 (** This is ad-hoc translation for unifying specific primitive operations
      See [Unified_ops] module for detailed explanation.
   *)
 let translate_unified_ops (prim : Primitive.description) (env : Env.t)
-    (lhs_type : type_expr) : Lambda.primitive option =
+    (lhs_type : type_expr) : Lambda.builtin option =
   (* lhs_type is already unified in type-level *)
   let entry = Hashtbl.find_opt Unified_ops.index_by_name prim.prim_name in
-  match entry with
-  | Some {specialization} -> (
-    match specialization with
-    | {int}
-      when is_base_type env lhs_type Predef.path_int
-           || maybe_pointer_type env lhs_type = Immediate ->
-      Some int
-    | {float = Some float} when is_base_type env lhs_type Predef.path_float ->
-      Some float
-    | {bigint = Some bigint} when is_base_type env lhs_type Predef.path_bigint
-      ->
-      Some bigint
-    | {string = Some string} when is_base_type env lhs_type Predef.path_string
-      ->
-      Some string
-    | {bool = Some bool} when is_base_type env lhs_type Predef.path_bool ->
-      Some bool
-    | {int} -> Some int)
-  | _ -> None
+  let lowering =
+    match entry with
+    | Some {specialization} -> (
+      match specialization with
+      | {int}
+        when is_base_type env lhs_type Predef.path_int
+             || maybe_pointer_type env lhs_type = Immediate ->
+        Some int
+      | {float = Some float} when is_base_type env lhs_type Predef.path_float ->
+        Some float
+      | {bigint = Some bigint} when is_base_type env lhs_type Predef.path_bigint
+        ->
+        Some bigint
+      | {string = Some string} when is_base_type env lhs_type Predef.path_string
+        ->
+        Some string
+      | {bool = Some bool} when is_base_type env lhs_type Predef.path_bool ->
+        Some bool
+      | {int} -> Some int)
+    | _ -> None
+  in
+  Option.map builtin_of_lowering lowering
 
 type specialized = {
   objcomp: Lambda.primitive;
@@ -237,12 +245,19 @@ let comparisons_table =
         } );
     |]
 
-let primitives_table =
-  create_hashtable
+(* Builtins with no primitive form: [Lambda.mk_builtin] erases them at
+   translation. *)
+let erased_builtins : (string * Lambda.builtin) array =
+  [|
+    ("%identity", Eliminated Identity);
+    ("%component_identity", Eliminated Identity);
+    ("%ignore", Eliminated Ignore);
+  |]
+
+let primitive_builtins : (string * Lambda.builtin) array =
+  Array.map
+    (fun (name, p) -> (name, Lambda.Primitive p))
     [|
-      ("%identity", Peliminated Identity);
-      ("%component_identity", Peliminated Identity);
-      ("%ignore", Peliminated Ignore);
       (* BEGIN Triples for  ref data type *)
       ("%makeref", Pmakeblock Lambda.ref_tag_info);
       ("%refset", Psetfield (0, Lambda.ref_field_set_info));
@@ -395,7 +410,10 @@ let primitives_table =
       ("%obj_field", Parrayrefu);
     |]
 
-let find_primitive prim_name = Hashtbl.find primitives_table prim_name
+let builtins_table : (string, Lambda.builtin) Hashtbl.t =
+  create_hashtable (Array.append erased_builtins primitive_builtins)
+
+let find_builtin prim_name = Hashtbl.find builtins_table prim_name
 
 let specialize_comparison
     ({objcomp; intcomp; floatcomp; stringcomp; bigintcomp; boolcomp} :
@@ -423,25 +441,25 @@ let specialize_primitive p env ty (* ~has_constant_constructor *) =
     | None -> None
   in
   match unified with
-  | Some primitive -> primitive
+  | Some builtin -> builtin
   | None -> (
     try
       let table = Hashtbl.find comparisons_table p.prim_name in
       match fn_expr with
-      | Some (lhs, _rhs) -> specialize_comparison table env lhs
-      | None -> table.objcomp
-    with Not_found -> find_primitive p.prim_name)
+      | Some (lhs, _rhs) -> Primitive (specialize_comparison table env lhs)
+      | None -> Primitive table.objcomp
+    with Not_found -> find_builtin p.prim_name)
 
 let is_null_undefined_constant = function
   | Lprim ((Pnull | Pundefined), [], _) -> true
   | _ -> false
 
-let warn_polymorphic_comparison loc prim args =
-  match (prim, args) with
-  | Pobjcomp (Ceq | Cneq), [arg1; arg2]
+let warn_polymorphic_comparison loc (builtin : Lambda.builtin) args =
+  match (builtin, args) with
+  | Primitive (Pobjcomp (Ceq | Cneq)), [arg1; arg2]
     when is_null_undefined_constant arg1 || is_null_undefined_constant arg2 ->
     ()
-  | (Pobjcomp _ | Pobjorder | Pobjmin | Pobjmax), _ ->
+  | Primitive (Pobjcomp _ | Pobjorder | Pobjmin | Pobjmax), _ ->
     Location.prerr_warning loc Warnings.Bs_polymorphic_comparison
   | _ -> ()
 
@@ -797,8 +815,8 @@ let transl_primitive loc p env ty ~val_type =
                 (List.map (fun id -> Lvar id) params)
                 ~transformed_jsx:false;
           }
-    | Some prim ->
-      warn_polymorphic_comparison loc prim [];
+    | Some builtin ->
+      warn_polymorphic_comparison loc builtin [];
       let rec make_params n total =
         if n <= 0 then []
         else
@@ -806,7 +824,8 @@ let transl_primitive loc p env ty ~val_type =
           :: make_params (n - 1) total
       in
       let prim_arity = p.prim_arity in
-      if p.prim_from_constructor || prim_arity = 0 then mk_prim prim [] loc
+      if p.prim_from_constructor || prim_arity = 0 then
+        mk_builtin builtin [] loc
       else
         let params =
           if prim_arity = 1 then [Ident.create "prim"]
@@ -817,13 +836,12 @@ let transl_primitive loc p env ty ~val_type =
             params;
             attr = default_function_attribute;
             loc;
-            body = mk_prim prim (List.map (fun id -> Lvar id) params) loc;
+            body = mk_builtin builtin (List.map (fun id -> Lvar id) params) loc;
           })
 
 (* [None] means the primitive is an external whose application must be
    expanded from its FFI spec *)
-let transl_primitive_application loc prim env ty args : Lambda.primitive option
-    =
+let transl_primitive_application loc prim env ty args : Lambda.builtin option =
   let prim_name = prim.prim_name in
   let unified =
     match args with
@@ -831,14 +849,14 @@ let transl_primitive_application loc prim env ty args : Lambda.primitive option
     | _ -> None
   in
   match unified with
-  | Some primitive -> Some primitive
+  | Some builtin -> Some builtin
   | None -> (
     try
       match args with
       | [arg1; _]
         when is_base_type env arg1.exp_type Predef.path_bool
              && Hashtbl.mem comparisons_table prim_name ->
-        Some (Hashtbl.find comparisons_table prim_name).boolcomp
+        Some (Primitive (Hashtbl.find comparisons_table prim_name).boolcomp)
       | _ ->
         let has_constant_constructor =
           match args with
@@ -866,7 +884,7 @@ let transl_primitive_application loc prim env ty args : Lambda.primitive option
         if has_constant_constructor then
           match Hashtbl.find_opt comparisons_table prim_name with
           | Some table when table.simplify_constant_constructor ->
-            Some table.intcomp
+            Some (Primitive table.intcomp)
           | Some _ | None -> Some (specialize_primitive prim env ty)
           (* ~has_constant_constructor*)
         else Some (specialize_primitive prim env ty)
@@ -1143,9 +1161,9 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
             wrap
               (transl_external_application e.exp_loc e.exp_env p
                  ~val_type:prim_vd.val_type argl ~transformed_jsx))
-        | Some prim ->
-          warn_polymorphic_comparison e.exp_loc prim argl;
-          wrap (mk_prim prim argl e.exp_loc))))
+        | Some builtin ->
+          warn_polymorphic_comparison e.exp_loc builtin argl;
+          wrap (mk_builtin builtin argl e.exp_loc))))
   | Texp_apply {funct; args = oargs; partial; transformed_jsx} ->
     let inlined, funct =
       Translattribute.get_and_remove_inlined_attribute funct

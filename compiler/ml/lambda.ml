@@ -170,12 +170,11 @@ type import_source =
              name; [] means the external is the module itself *)
     }
 
-(* Table keys for `%identity` / `%ignore` / unary `+`. [mk_prim] expands
-   these; they must not appear as [Lprim] nodes. *)
+(* `%identity` / `%ignore` / unary `+`: builtins that erase at translation
+   rather than primitives. See [builtin]. *)
 type eliminated = Identity | Ignore
 
 type primitive =
-  | Peliminated of eliminated
   | Pdebugger
   | Ptypeof
   | Pnull
@@ -343,6 +342,12 @@ type structured_constant =
   | Const_block of tag_info * structured_constant list
   | Const_false
   | Const_true
+
+(* What a `%builtin` name in the primitive table means. Only [Primitive]
+   reaches the IR: [mk_builtin] erases the other cases at translation, so
+   they need no [primitive] constructor to stand in for them. *)
+type builtin = Primitive of primitive | Eliminated of eliminated
+
 type inline_attribute =
   | Always_inline (* [@inline] or [@inline always] *)
   | Never_inline (* [@inline never] *)
@@ -443,19 +448,17 @@ let lambda_module_alias = Lconst (Const_pointer Pt_module_alias)
 
 let lambda_unit = Lconst const_unit
 
-let mk_prim p args loc =
-  match p with
-  | Peliminated kind -> (
-    match kind with
-    | Identity -> (
-      match args with
-      | [arg] -> arg
-      | _ -> assert false)
-    | Ignore -> (
-      match args with
-      | [arg] -> Lsequence (arg, lambda_unit)
-      | _ -> assert false))
-  | _ -> Lprim (p, args, loc)
+let mk_builtin b args loc =
+  match b with
+  | Primitive p -> Lprim (p, args, loc)
+  | Eliminated Identity -> (
+    match args with
+    | [arg] -> arg
+    | _ -> assert false)
+  | Eliminated Ignore -> (
+    match args with
+    | [arg] -> Lsequence (arg, lambda_unit)
+    | _ -> assert false)
 
 let default_function_attribute =
   {
@@ -507,7 +510,7 @@ let make_key e =
       let ex = tr_rec env ex in
       let y = make_key x in
       Llet (str, k, y, ex, tr_rec (Ident.add x (Lvar y) env) e)
-    | Lprim (p, es, _) -> mk_prim p (tr_recs env es) Location.none
+    | Lprim (p, es, _) -> Lprim (p, tr_recs env es, Location.none)
     | Lswitch (e, sw, loc) -> Lswitch (tr_rec env e, tr_sw env sw, loc)
     | Lstringswitch (e, sw, d, _) ->
       Lstringswitch
@@ -715,7 +718,7 @@ let subst_lambda s lam =
       Lfunction {params; body = subst body; attr; loc}
     | Llet (str, k, id, arg, body) -> Llet (str, k, id, subst arg, subst body)
     | Lletrec (decl, body) -> Lletrec (List.map subst_decl decl, subst body)
-    | Lprim (p, args, loc) -> mk_prim p (List.map subst args) loc
+    | Lprim (p, args, loc) -> Lprim (p, List.map subst args, loc)
     | Lswitch (arg, sw, loc) ->
       Lswitch
         ( subst arg,

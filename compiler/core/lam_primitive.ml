@@ -27,7 +27,6 @@
 type ident = Ident.t
 
 type t =
-  | Peliminated of Lambda.eliminated
   (* Operations on heap blocks *)
   | Pmakeblock of Lam_tag_info.t * Asttypes.mutable_flag
   | Pfield of int * Lam_compat.field_dbg_info
@@ -188,7 +187,6 @@ let eq_tag_info (x : Lam_tag_info.t) y = x = y
 
 let eq_primitive_approx (lhs : t) (rhs : t) =
   match lhs with
-  | Peliminated _ -> assert false
   | Praise
   (* generic comparison *)
   | Pobjorder | Pobjmin | Pobjmax | Pobjtag | Pobjsize

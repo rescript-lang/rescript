@@ -1641,7 +1641,7 @@ module S_arg = struct
 
   type act = Lambda.lambda
 
-  let make_prim p args = mk_prim p args Location.none
+  let make_prim p args = Lprim (p, args, Location.none)
   let make_offset arg n =
     match n with
     | 0 -> arg

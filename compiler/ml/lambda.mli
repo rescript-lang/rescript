@@ -136,10 +136,11 @@ type import_source =
              name; [] means the external is the module itself *)
     }
 
+(* `%identity` / `%ignore` / unary `+`: builtins that erase at translation
+   rather than primitives. See [builtin]. *)
 type eliminated = Identity | Ignore
 
 type primitive =
-  | Peliminated of eliminated
   | Pdebugger
   | Ptypeof
   | Pnull
@@ -300,6 +301,11 @@ type structured_constant =
   | Const_false
   | Const_true
 
+(* What a `%builtin` name in the primitive table means. Only [Primitive]
+   reaches the IR: [mk_builtin] erases the other cases at translation, so
+   they need no [primitive] constructor to stand in for them. *)
+type builtin = Primitive of primitive | Eliminated of eliminated
+
 type inline_attribute =
   | Always_inline (* [@inline] or [@inline always] *)
   | Never_inline (* [@inline never] *)
@@ -409,8 +415,8 @@ val const_unit : structured_constant
 val lambda_assert_false : lambda
 val lambda_unit : lambda
 
-val mk_prim : primitive -> lambda list -> Location.t -> lambda
-(** Expands [Peliminated] so it never appears as [Lprim]. *)
+val mk_builtin : builtin -> lambda list -> Location.t -> lambda
+(** Expands the non-[Primitive] builtins, which have no IR form. *)
 
 val lambda_module_alias : lambda
 val name_lambda : let_kind -> lambda -> (Ident.t -> lambda) -> lambda
