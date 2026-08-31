@@ -17,7 +17,86 @@ switch (match) {
     version = 3;
 }
 
+function classifyEquivalentEscape(value, selectedCase) {
+  if (value === "\x61") {
+    if (selectedCase === 0) {
+      return 0;
+    } else if (selectedCase === 1) {
+      return 1;
+    } else if (selectedCase === 2) {
+      return 2;
+    } else if (selectedCase === 3) {
+      return 3;
+    } else {
+      return 4;
+    }
+  } else {
+    return 5;
+  }
+}
+
+if (classifyEquivalentEscape("a", 0) !== 0) {
+  throw {
+    RE_EXN_ID: "Assert_failure",
+    _1: [
+      "test_string_switch.res",
+      21,
+      2
+    ],
+    Error: new Error()
+  };
+}
+
+if (classifyEquivalentEscape("a", 1) !== 1) {
+  throw {
+    RE_EXN_ID: "Assert_failure",
+    _1: [
+      "test_string_switch.res",
+      22,
+      2
+    ],
+    Error: new Error()
+  };
+}
+
+if (classifyEquivalentEscape("a", 2) !== 2) {
+  throw {
+    RE_EXN_ID: "Assert_failure",
+    _1: [
+      "test_string_switch.res",
+      23,
+      2
+    ],
+    Error: new Error()
+  };
+}
+
+if (classifyEquivalentEscape("a", 3) !== 3) {
+  throw {
+    RE_EXN_ID: "Assert_failure",
+    _1: [
+      "test_string_switch.res",
+      24,
+      2
+    ],
+    Error: new Error()
+  };
+}
+
+if (classifyEquivalentEscape("a", 4) !== 4) {
+  throw {
+    RE_EXN_ID: "Assert_failure",
+    _1: [
+      "test_string_switch.res",
+      25,
+      2
+    ],
+    Error: new Error()
+  };
+}
+
 export {
   version,
+  classifyEquivalentEscape,
 }
 /* match Not a pure module */

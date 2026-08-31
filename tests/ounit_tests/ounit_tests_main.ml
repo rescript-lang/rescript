@@ -12,6 +12,7 @@ let suites =
       Ounit_map_tests.suites;
       Ounit_hashtbl_tests.suites;
       Ounit_string_tests.suites;
+      Ounit_string_literal_tests.suites;
       Ounit_int_vec_tests.suites;
       Ounit_ident_mask_tests.suites;
       Ounit_lid_of_path_tests.suites;

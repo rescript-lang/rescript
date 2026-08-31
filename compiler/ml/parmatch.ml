@@ -269,7 +269,8 @@ let const_compare x y =
     compare (float_of_string f1) (float_of_string f2)
   | Const_bigint (s1, b1), Const_bigint (s2, b2) ->
     Bigint_utils.compare (s1, b1) (s2, b2)
-  | Const_string (s1, _), Const_string (s2, _) -> String.compare s1 s2
+  | Const_string (s1, delim1), Const_string (s2, delim2) ->
+    String_literal.compare (s1, delim1) (s2, delim2)
   | _, _ -> compare x y
 
 let records_args l1 l2 =
