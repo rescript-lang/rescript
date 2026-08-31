@@ -7,6 +7,18 @@ let assert_runtime_value ?(delim = Some "*j") ~encoded ~expected () =
 let assert_same_runtime_value left right =
   OUnit.assert_equal 0 (String_literal.compare left right)
 
+let assert_invalid_backquoted_pattern encoded =
+  let template_attribute =
+    (Location.mknoloc "res.template", Parsetree.PStr [])
+  in
+  let pattern =
+    Ast_helper.Pat.constant ~attrs:[template_attribute]
+      (Parsetree.Pconst_string (encoded, Some "js"))
+  in
+  match Ast_utf8_string_interp.transform_pat pattern encoded "js" with
+  | _ -> OUnit.assert_failure "expected an invalid string escape"
+  | exception Location.Error _ -> ()
+
 let suites =
   __FILE__
   >::: [
@@ -55,6 +67,9 @@ let suites =
                {|\uD800\u0041|};
                {|\uDC00\uD800|};
              ] );
+         ( "backquoted patterns reject lone surrogate escapes" >:: fun _ ->
+           assert_invalid_backquoted_pattern {|\uD800|};
+           assert_invalid_backquoted_pattern {|\uDC00|} );
          ( "comparison uses runtime values" >:: fun _ ->
            assert_same_runtime_value ("a", Some "*j") ({|\x61|}, Some "*j");
            assert_same_runtime_value ("😀", None) ({|\u{1f600}|}, Some "*j");

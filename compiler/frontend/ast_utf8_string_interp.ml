@@ -312,6 +312,10 @@ let transform_pat (p : Parsetree.pattern) s delim : Parsetree.pattern =
   match Delim.parse_unprocessed false delim with
   | Js ->
     let js_str = Ast_utf8_string.transform p.ppat_loc s in
+    (match String_literal.decode_js_escapes js_str with
+    | Some _ -> ()
+    | None ->
+      Location.raise_errorf ~loc:p.ppat_loc "Invalid string escape sequence");
     {
       p with
       ppat_desc =
