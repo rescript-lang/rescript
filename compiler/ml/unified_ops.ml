@@ -36,13 +36,20 @@ open Misc
 
 type form = Unary | Binary
 
-(* Note: unified op must support int type *)
+(* How an operator lowers for one operand type. *)
+type lowering =
+  | Lower of Lambda.primitive
+  | Pass_through  (** the operand is already the result: unary [+] *)
+
+(* [None] means the operand type is not supported by the operator; the payload
+   says how the supported ones lower.
+   Note: unified op must support int type *)
 type specialization = {
-  int: Lambda.primitive;
-  bool: Lambda.primitive option;
-  float: Lambda.primitive option;
-  bigint: Lambda.primitive option;
-  string: Lambda.primitive option;
+  int: lowering;
+  bool: lowering option;
+  float: lowering option;
+  bigint: lowering option;
+  string: lowering option;
 }
 
 type entry = {
@@ -53,209 +60,215 @@ type entry = {
   specialization: specialization;
 }
 
-let builtin x = Primitive_modules.pervasives ^ "." ^ x
+let pervasives_path x = Primitive_modules.pervasives ^ "." ^ x
 
 let entries =
   [|
     {
-      path = builtin "~+";
+      path = pervasives_path "~+";
       name = "%plus";
       form = Unary;
       specialization =
         {
-          int = Peliminated Identity;
+          int = Pass_through;
           bool = None;
-          float = Some (Peliminated Identity);
-          bigint = Some (Peliminated Identity);
+          float = Some Pass_through;
+          bigint = Some Pass_through;
           string = None;
         };
     };
     {
-      path = builtin "~-";
+      path = pervasives_path "~-";
       name = "%neg";
       form = Unary;
       specialization =
         {
-          int = Pnegint;
+          int = Lower Pnegint;
           bool = None;
-          float = Some Pnegfloat;
-          bigint = Some Pnegbigint;
+          float = Some (Lower Pnegfloat);
+          bigint = Some (Lower Pnegbigint);
           string = None;
         };
     };
     {
-      path = builtin "+";
+      path = pervasives_path "+";
       name = "%add";
       form = Binary;
       specialization =
         {
-          int = Paddint;
+          int = Lower Paddint;
           bool = None;
-          float = Some Paddfloat;
-          bigint = Some Paddbigint;
-          string = Some Pstringadd;
+          float = Some (Lower Paddfloat);
+          bigint = Some (Lower Paddbigint);
+          string = Some (Lower Pstringadd);
         };
     };
     {
-      path = builtin "-";
+      path = pervasives_path "-";
       name = "%sub";
       form = Binary;
       specialization =
         {
-          int = Psubint;
+          int = Lower Psubint;
           bool = None;
-          float = Some Psubfloat;
-          bigint = Some Psubbigint;
+          float = Some (Lower Psubfloat);
+          bigint = Some (Lower Psubbigint);
           string = None;
         };
     };
     {
-      path = builtin "*";
+      path = pervasives_path "*";
       name = "%mul";
       form = Binary;
       specialization =
         {
-          int = Pmulint;
+          int = Lower Pmulint;
           bool = None;
-          float = Some Pmulfloat;
-          bigint = Some Pmulbigint;
+          float = Some (Lower Pmulfloat);
+          bigint = Some (Lower Pmulbigint);
           string = None;
         };
     };
     {
-      path = builtin "/";
+      path = pervasives_path "/";
       name = "%div";
       form = Binary;
       specialization =
         {
-          int = Pdivint;
+          int = Lower Pdivint;
           bool = None;
-          float = Some Pdivfloat;
-          bigint = Some Pdivbigint;
+          float = Some (Lower Pdivfloat);
+          bigint = Some (Lower Pdivbigint);
           string = None;
         };
     };
     {
-      path = builtin "%";
+      path = pervasives_path "%";
       name = "%mod";
       form = Binary;
       specialization =
         {
-          int = Pmodint;
+          int = Lower Pmodint;
           bool = None;
-          float = Some Pmodfloat;
-          bigint = Some Pmodbigint;
+          float = Some (Lower Pmodfloat);
+          bigint = Some (Lower Pmodbigint);
           string = None;
         };
     };
     {
-      path = builtin "<<";
+      path = pervasives_path "<<";
       name = "%lsl";
       form = Binary;
       specialization =
         {
-          int = Plslint;
+          int = Lower Plslint;
           bool = None;
           float = None;
-          bigint = Some Plslbigint;
+          bigint = Some (Lower Plslbigint);
           string = None;
         };
     };
     {
-      path = builtin ">>";
+      path = pervasives_path ">>";
       name = "%asr";
       form = Binary;
       specialization =
         {
-          int = Pasrint;
+          int = Lower Pasrint;
           bool = None;
           float = None;
-          bigint = Some Pasrbigint;
+          bigint = Some (Lower Pasrbigint);
           string = None;
         };
     };
     {
-      path = builtin ">>>";
+      path = pervasives_path ">>>";
       name = "%lsr";
       form = Binary;
       specialization =
-        {int = Plsrint; bool = None; float = None; bigint = None; string = None};
+        {
+          int = Lower Plsrint;
+          bool = None;
+          float = None;
+          bigint = None;
+          string = None;
+        };
     };
     {
-      path = builtin "mod";
+      path = pervasives_path "mod";
       name = "%mod";
       form = Binary;
       specialization =
         {
-          int = Pmodint;
+          int = Lower Pmodint;
           bool = None;
-          float = Some Pmodfloat;
-          bigint = Some Pmodbigint;
+          float = Some (Lower Pmodfloat);
+          bigint = Some (Lower Pmodbigint);
           string = None;
         };
     };
     {
-      path = builtin "**";
+      path = pervasives_path "**";
       name = "%pow";
       form = Binary;
       specialization =
         {
-          int = Ppowint;
+          int = Lower Ppowint;
           bool = None;
-          float = Some Ppowfloat;
-          bigint = Some Ppowbigint;
+          float = Some (Lower Ppowfloat);
+          bigint = Some (Lower Ppowbigint);
           string = None;
         };
     };
     {
-      path = builtin "~~~";
+      path = pervasives_path "~~~";
       name = "%bitnot";
       form = Unary;
       specialization =
         {
-          int = Pnotint;
+          int = Lower Pnotint;
           bool = None;
           float = None;
-          bigint = Some Pnotbigint;
+          bigint = Some (Lower Pnotbigint);
           string = None;
         };
     };
     {
-      path = builtin "|||";
+      path = pervasives_path "|||";
       name = "%bitor";
       form = Binary;
       specialization =
         {
-          int = Porint;
+          int = Lower Porint;
           bool = None;
           float = None;
-          bigint = Some Porbigint;
+          bigint = Some (Lower Porbigint);
           string = None;
         };
     };
     {
-      path = builtin "^^^";
+      path = pervasives_path "^^^";
       name = "%bitxor";
       form = Binary;
       specialization =
         {
-          int = Pxorint;
+          int = Lower Pxorint;
           bool = None;
           float = None;
-          bigint = Some Pxorbigint;
+          bigint = Some (Lower Pxorbigint);
           string = None;
         };
     };
     {
-      path = builtin "&&&";
+      path = pervasives_path "&&&";
       name = "%bitand";
       form = Binary;
       specialization =
         {
-          int = Pandint;
+          int = Lower Pandint;
           bool = None;
           float = None;
-          bigint = Some Pandbigint;
+          bigint = Some (Lower Pandbigint);
           string = None;
         };
     };
