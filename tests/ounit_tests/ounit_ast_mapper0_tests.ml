@@ -255,6 +255,45 @@ let test_string_literals_roundtrip_through_ast0 _ =
   assert_string_expr ~expected:{|{"answer":42}|} ~delim:(Some "json")
     (map_expr0 (map_expr_to0 json_expr))
 
+let assert_raw_extension_payload ~name ~expected expression =
+  match expression.Parsetree.pexp_desc with
+  | Pexp_extension
+      ( {txt},
+        PStr
+          [
+            {
+              pstr_desc =
+                Pstr_eval
+                  ( {pexp_desc = Pexp_constant (Pconst_string (actual, delim))},
+                    _ );
+            };
+          ] ) ->
+    OUnit.assert_equal name txt;
+    OUnit.assert_equal ~printer:(Printf.sprintf "%S") expected actual;
+    OUnit.assert_equal ~printer:Ext_obj.dump (Some "js") delim
+  | _ -> assert_failure "Expected a raw extension string payload"
+
+let test_raw_extension_payloads_roundtrip_through_ast0 _ =
+  let encoded = {|'\\n'|} in
+  List.iter
+    (fun name ->
+      let payload =
+        Parsetree0.PStr
+          [
+            Ast_helper0.Str.eval ~loc
+              (Ast_helper0.Exp.constant ~loc
+                 (Parsetree0.Pconst_string (encoded, Some "js")));
+          ]
+      in
+      let expression0 =
+        Ast_helper0.Exp.extension ~loc (Location.mknoloc name, payload)
+      in
+      let expression = map_expr0 expression0 in
+      assert_raw_extension_payload ~name ~expected:encoded expression;
+      assert_raw_extension_payload ~name ~expected:encoded
+        (map_expr0 (map_expr_to0 expression)))
+    ["raw"; "ffi"; "re"]
+
 (* Function-node attributes such as [@this] must stay node attributes across
    the v0 bridge: the built-in PPX reads decorators from [pexp_attributes],
    so a round trip that moves them into [p_attrs] silently disables them. *)
@@ -314,6 +353,8 @@ let suites =
          >:: test_ast0_strings_convert_to_internal_representation;
          "string_literals_roundtrip_through_ast0"
          >:: test_string_literals_roundtrip_through_ast0;
+         "raw_extension_payloads_roundtrip_through_ast0"
+         >:: test_raw_extension_payloads_roundtrip_through_ast0;
          "malformed_internal_record_rest_attr_fails"
          >:: test_malformed_internal_record_rest_attr_fails;
          "record_rest_roundtrips_through_ast0"

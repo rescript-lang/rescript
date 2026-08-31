@@ -102,6 +102,41 @@ let map_constant ~loc ~is_template = function
   | Pconst_string (s, q) -> Pconst_string (s, q)
   | Pconst_float (s, suffix) -> Pconst_float (s, suffix)
 
+let is_raw_source_extension = function
+  | "raw" | "ffi" | "re" -> true
+  | _ -> false
+
+let map_raw_source_payload sub = function
+  | PStr
+      [
+        {
+          pstr_desc =
+            Pstr_eval
+              ( {
+                  pexp_desc = Pexp_constant (Pconst_string (s, delim));
+                  pexp_loc;
+                  pexp_attributes;
+                },
+                eval_attributes );
+          pstr_loc;
+        };
+      ] ->
+    let expression =
+      Ast_helper.Exp.constant
+        ~loc:(sub.location sub pexp_loc)
+        ~attrs:(sub.attributes sub pexp_attributes)
+        (Pt.Pconst_string (s, delim))
+    in
+    Some
+      (Pt.PStr
+         [
+           Ast_helper.Str.eval
+             ~loc:(sub.location sub pstr_loc)
+             ~attrs:(sub.attributes sub eval_attributes)
+             expression;
+         ])
+  | _ -> None
+
 let for_of_attr_name = "_res.for_of"
 let for_await_of_attr_name = "_res.for_await_of"
 
@@ -1080,7 +1115,16 @@ let default_mapper =
           pc_rhs = this.expr this pc_rhs;
         });
     location = (fun _this l -> l);
-    extension = (fun this (s, e) -> (map_loc this s, this.payload this e));
+    extension =
+      (fun this (s, payload) ->
+        let payload =
+          if is_raw_source_extension s.txt then
+            match map_raw_source_payload this payload with
+            | Some payload -> payload
+            | None -> this.payload this payload
+          else this.payload this payload
+        in
+        (map_loc this s, payload));
     attribute = (fun this (s, e) -> (map_loc this s, this.payload this e));
     attributes = (fun this l -> List.map (this.attribute this) l);
     payload =

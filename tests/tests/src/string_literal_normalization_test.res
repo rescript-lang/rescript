@@ -16,6 +16,14 @@ let constantSwitch = () =>
   | _ => 4
   }
 
+%%raw("const rawBridgeProgramValue = '\\n';")
+
+@val external rawBridgeProgramValue: string = "rawBridgeProgramValue"
+
+let rawBridgeExpression: string = %raw("'\\n'")
+let rawBridgeFunction: unit => string = %ffi("() => '\\n'")
+let rawBridgeRegex = /\\n/
+
 describe(__MODULE__, () => {
   test("ordinary escapes have one semantic representation", () => eq(__LOC__, escaped, "abc"))
 
@@ -29,4 +37,11 @@ describe(__MODULE__, () => {
   })
 
   test("template segments survive the ast0 bridge", () => eq(__LOC__, interpolated, "abc"))
+
+  test("raw extension payloads preserve source spelling through ast0", () => {
+    eq(__LOC__, rawBridgeExpression, "\\n")
+    eq(__LOC__, rawBridgeFunction(), "\\n")
+    eq(__LOC__, rawBridgeProgramValue, "\\n")
+    eq(__LOC__, rawBridgeRegex->RegExp.test("\\n"), true)
+  })
 })

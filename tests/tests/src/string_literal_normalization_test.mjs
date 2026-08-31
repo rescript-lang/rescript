@@ -15,14 +15,29 @@ function constantSwitch() {
   return 1;
 }
 
+const rawBridgeProgramValue = '\\n';
+;
+
+let rawBridgeExpression = '\\n';
+
+let rawBridgeFunction = (() => '\\n');
+
+let rawBridgeRegex = /\\n/;
+
 Mocha.describe("String_literal_normalization_test", () => {
-  Mocha.test("ordinary escapes have one semantic representation", () => Test_utils.eq("File \"string_literal_normalization_test.res\", line 20, characters 69-76", escaped, "abc"));
-  Mocha.test("surrogate-pair escapes have one semantic representation", () => Test_utils.eq("File \"string_literal_normalization_test.res\", line 23, characters 7-14", surrogatePair, "😀"));
+  Mocha.test("ordinary escapes have one semantic representation", () => Test_utils.eq("File \"string_literal_normalization_test.res\", line 28, characters 69-76", escaped, "abc"));
+  Mocha.test("surrogate-pair escapes have one semantic representation", () => Test_utils.eq("File \"string_literal_normalization_test.res\", line 31, characters 7-14", surrogatePair, "😀"));
   Mocha.test("ordinary literals participate in constant folding", () => {
-    Test_utils.eq("File \"string_literal_normalization_test.res\", line 27, characters 7-14", concatenated, "ab");
-    Test_utils.eq("File \"string_literal_normalization_test.res\", line 28, characters 7-14", constantSwitch(), 1);
+    Test_utils.eq("File \"string_literal_normalization_test.res\", line 35, characters 7-14", concatenated, "ab");
+    Test_utils.eq("File \"string_literal_normalization_test.res\", line 36, characters 7-14", constantSwitch(), 1);
   });
-  Mocha.test("template segments survive the ast0 bridge", () => Test_utils.eq("File \"string_literal_normalization_test.res\", line 31, characters 61-68", interpolated, "abc"));
+  Mocha.test("template segments survive the ast0 bridge", () => Test_utils.eq("File \"string_literal_normalization_test.res\", line 39, characters 61-68", interpolated, "abc"));
+  Mocha.test("raw extension payloads preserve source spelling through ast0", () => {
+    Test_utils.eq("File \"string_literal_normalization_test.res\", line 42, characters 7-14", rawBridgeExpression, "\\n");
+    Test_utils.eq("File \"string_literal_normalization_test.res\", line 43, characters 7-14", rawBridgeFunction(), "\\n");
+    Test_utils.eq("File \"string_literal_normalization_test.res\", line 44, characters 7-14", rawBridgeProgramValue, "\\n");
+    Test_utils.eq("File \"string_literal_normalization_test.res\", line 45, characters 7-14", rawBridgeRegex.test("\\n"), true);
+  });
 });
 
 export {
@@ -31,5 +46,8 @@ export {
   concatenated,
   interpolated,
   constantSwitch,
+  rawBridgeExpression,
+  rawBridgeFunction,
+  rawBridgeRegex,
 }
 /*  Not a pure module */
