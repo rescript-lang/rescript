@@ -123,18 +123,25 @@ type shape = t
 
 type binding = Ident.t * (loc * shape) option * t
 
+(* A shape with no fields: the module has nothing to initialize and nothing to
+   patch, so the runtime dummy and its update are both pointless. The right
+   hand side still has to run for its effects. *)
+let shape_is_empty (shape : Lambda.lambda) =
+  match shape with
+  | Lambda.Lconst (Const_block (_, [Const_block (_, [])])) -> true
+  | _ -> false
+
 let eval_rec_bindings_aux (bindings : binding list) (cont : t) : t =
   let rec bind_inits args acc =
     match args with
     | [] -> acc
     | (_id, None, _rhs) :: rem -> bind_inits rem acc
     | (id, Some (loc, shape), _rhs) :: rem ->
-      Lambda.Llet
-        ( Strict,
-          Pgenval,
-          id,
-          Lprim (Pinit_mod, [loc; shape], Location.none),
-          bind_inits rem acc )
+      let init =
+        if shape_is_empty shape then Lambda.lambda_unit
+        else Lambda.Lprim (Pinit_mod, [loc; shape], Location.none)
+      in
+      Lambda.Llet (Strict, Pgenval, id, init, bind_inits rem acc)
   in
   let rec bind_strict args acc =
     match args with
@@ -148,9 +155,11 @@ let eval_rec_bindings_aux (bindings : binding list) (cont : t) : t =
     | [] -> cont
     | (_id, None, _rhs) :: rem -> patch_forwards rem
     | (id, Some (_loc, shape), rhs) :: rem ->
-      Lsequence
-        ( Lprim (Pupdate_mod, [shape; Lvar id; rhs], Location.none),
-          patch_forwards rem )
+      let patch =
+        if shape_is_empty shape then rhs
+        else Lambda.Lprim (Pupdate_mod, [shape; Lvar id; rhs], Location.none)
+      in
+      Lsequence (patch, patch_forwards rem)
   in
   bind_inits bindings (bind_strict bindings (patch_forwards bindings))
 
