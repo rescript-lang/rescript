@@ -92,6 +92,27 @@ Mocha.describe("Rec_module_test", () => {
   Mocha.test("test5", () => Test_utils.eq("File \"rec_module_test.res\", line 91, characters 7-14", false, B.odd(2)));
 });
 
+let effects = {
+  contents: /* [] */0
+};
+
+function record(s) {
+  effects.contents = {
+    hd: s,
+    tl: effects.contents
+  };
+}
+
+record("with field");
+
+let WithField = {
+  n: 1
+};
+
+record("empty signature");
+
+let EmptySig;
+
 export {
   A,
   B,
@@ -99,5 +120,9 @@ export {
   BB,
   Even,
   Odd,
+  effects,
+  record,
+  EmptySig,
+  WithField,
 }
 /*  Not a pure module */

@@ -143,14 +143,8 @@ let lam_prim ~primitive:(p : Lambda.primitive) ~args loc : Lam.t =
   | Pdict_has -> prim ~primitive:Pdict_has ~args loc
   | Pawait -> prim ~primitive:Pawait ~args loc
   | Pimport src -> prim ~primitive:(Pimport src) ~args loc
-  | Pinit_mod -> (
-    match args with
-    | [_loc; Lconst (Const_block (_, [Const_block (_, [])]))] -> Lam.unit
-    | _ -> prim ~primitive:Pinit_mod ~args loc)
-  | Pupdate_mod -> (
-    match args with
-    | [Lconst (Const_block (_, [Const_block (_, [])])); _; _] -> Lam.unit
-    | _ -> prim ~primitive:Pupdate_mod ~args loc)
+  | Pinit_mod -> prim ~primitive:Pinit_mod ~args loc
+  | Pupdate_mod -> prim ~primitive:Pupdate_mod ~args loc
   | Phash -> prim ~primitive:Phash ~args loc
   | Phash_mixint -> prim ~primitive:Phash_mixint ~args loc
   | Phash_mixstring -> prim ~primitive:Phash_mixstring ~args loc

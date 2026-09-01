@@ -91,3 +91,18 @@ describe(__MODULE__, () => {
     eq(__LOC__, false, B.odd(2))
   })
 })
+
+/* A recursive module whose signature has no fields still has to run its right
+   hand side: the shape is empty, so no runtime dummy is created and nothing is
+   patched, but the effects must survive. Both calls below have to appear in the
+   generated output. */
+let effects = ref(list{})
+let record = s => effects := list{s, ...effects.contents}
+
+module rec EmptySig: {} = {
+  let () = record("empty signature")
+}
+and WithField: {let n: int} = {
+  let () = record("with field")
+  let n = 1
+}
