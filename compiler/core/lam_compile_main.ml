@@ -316,7 +316,7 @@ let compile (output_prefix : string) export_idents hoisted (lam : Lambda.lambda)
     (* |> Lam_group_pass.scc_pass
        |> d "scc" *)
     |> Lam_pass_exits.simplify_exits
-    |> d "simplify_lets"
+    |> Lam_pass_guard_raises.guard_raises |> d "simplify_lets"
     |> fun lam ->
     if debug_ir then
       Ext_log.dwarn ~__POS__ "Before coercion: %a@." Lam_stats.print meta;

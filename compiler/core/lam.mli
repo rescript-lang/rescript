@@ -154,4 +154,9 @@ val for_await_of : ident -> t -> t -> t
 
 (**************************************************************)
 
+val shallow_map_sharing : (t -> t) -> t -> t
+(** Rewrite a node's immediate children, rebuilding through the smart
+    constructors. A node whose children are all physically unchanged is
+    returned as-is, so a traversal that rewrites nothing allocates nothing. *)
+
 val eq_approx : t -> t -> bool
