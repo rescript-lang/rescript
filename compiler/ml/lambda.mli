@@ -436,8 +436,37 @@ val const_module_alias : structured_constant
 val lambda_assert_false : lambda
 val lambda_unit : lambda
 
+val eq_primitive_approx : primitive -> primitive -> bool
+
+val const_eq_approx : structured_constant -> structured_constant -> bool
+
+val cmp_int32 : comparison -> int32 -> int32 -> bool
+
+val cmp_float : comparison -> float -> float -> bool
+
 (* Constructors. [lambda] is private, so every term outside this module is
-   built through one of these. *)
+   built through one of these.
+
+   Most are plain wrappers. Six normalize as they build, and are the only
+   place that normalization happens - a pass cannot bypass it by writing a
+   constructor directly:
+
+   - [prim] folds an operation whose arguments are already constants, and
+     collapses a module record rebuilt field-by-field from another module
+     back to that module.
+   - [if_] resolves a constant condition, collapses a branch that asserts
+     false, turns boolean branches into the condition or its negation, and
+     recognizes a few [Pisint] shapes.
+   - [switch] and [stringswitch] pick the matching case when the scrutinee
+     is constant.
+   - [not_] rewrites a negated inequality into an equality.
+   - [seq] drops a first operand that only allocates.
+   - [apply] eta-reduces a function whose body is a single primitive call on
+     its own parameters.
+
+   These fire when a term is rebuilt with new children, which in practice
+   means during the optimizer's passes rather than at production: the
+   frontend has no constants in operand position yet. *)
 
 val var : Ident.t -> lambda
 
@@ -488,6 +517,18 @@ val for_of : Ident.t -> lambda -> lambda -> lambda
 val for_await_of : Ident.t -> lambda -> lambda -> lambda
 
 val assign : Ident.t -> lambda -> lambda
+
+val not_ : Location.t -> lambda -> lambda
+
+val sequor : lambda -> lambda -> lambda
+
+val sequand : lambda -> lambda -> lambda
+
+val lambda_true : lambda
+
+val lambda_false : lambda
+
+val eq_approx : lambda -> lambda -> bool
 
 val mk_builtin : builtin -> lambda list -> Location.t -> lambda
 (** Expands the non-[Primitive] builtins, which have no IR form. *)

@@ -44,51 +44,7 @@ type t = Lambda.structured_constant =
   | Const_some of t
   | Const_js_undefined of {is_unit: bool}
 
-let rec eq_approx (x : t) (y : t) =
-  match x with
-  | Const_module_alias -> y = Const_module_alias
-  | Const_js_null -> y = Const_js_null
-  | Const_js_undefined b -> y = Const_js_undefined b
-  | Const_js_true -> y = Const_js_true
-  | Const_js_false -> y = Const_js_false
-  | Const_int ix -> (
-    match y with
-    | Const_int iy -> ix = iy
-    | _ -> false)
-  | Const_assertfalse -> y = Const_assertfalse
-  | Const_constructor ix -> (
-    match y with
-    | Const_constructor iy -> ix = iy
-    | _ -> false)
-  | Const_char ix -> (
-    match y with
-    | Const_char iy -> ix = iy
-    | _ -> false)
-  | Const_string {s = sx; delim = ux} -> (
-    match y with
-    | Const_string {s = sy; delim = uy} -> sx = sy && ux = uy
-    | _ -> false)
-  | Const_float ix -> (
-    match y with
-    | Const_float iy -> ix = iy
-    | _ -> false)
-  | Const_bigint (sx, ix) -> (
-    match y with
-    | Const_bigint (sy, iy) -> sx = sy && ix = iy
-    | _ -> false)
-  | Const_polyvar ix -> (
-    match y with
-    | Const_polyvar iy -> ix = iy
-    | _ -> false)
-  | Const_block (ix, ixs) -> (
-    match y with
-    | Const_block (iy, iys) ->
-      ix = iy && Ext_list.for_all2_no_exn ixs iys eq_approx
-    | _ -> false)
-  | Const_some ix -> (
-    match y with
-    | Const_some iy -> eq_approx ix iy
-    | _ -> false)
+let eq_approx = Lambda.const_eq_approx
 
 let rec is_allocating (c : t) : bool =
   match c with

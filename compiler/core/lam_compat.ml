@@ -33,23 +33,8 @@ let eq_comparison (p : comparison) (p1 : comparison) =
   | Ceq -> p1 = Ceq
   | Cneq -> p1 = Cneq
 
-let cmp_int32 (cmp : comparison) (a : int32) b : bool =
-  match cmp with
-  | Ceq -> a = b
-  | Cneq -> a <> b
-  | Cgt -> a > b
-  | Cle -> a <= b
-  | Clt -> a < b
-  | Cge -> a >= b
-
-let cmp_float (cmp : comparison) (a : float) b : bool =
-  match cmp with
-  | Ceq -> a = b
-  | Cneq -> a <> b
-  | Cgt -> a > b
-  | Cle -> a <= b
-  | Clt -> a < b
-  | Cge -> a >= b
+let cmp_int32 = Lambda.cmp_int32
+let cmp_float = Lambda.cmp_float
 
 type let_kind = Lambda.let_kind = Strict | Alias | StrictOpt | Variable
 
