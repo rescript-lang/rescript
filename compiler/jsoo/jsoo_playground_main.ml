@@ -547,8 +547,7 @@ module Compile = struct
           Printer.to_string Printtyped.implementation_with_coercion typed_tree
         in
         let lambda_output = Printer.to_string Printlambda.lambda lambda in
-        let lam = Lam_convert.convert lambda in
-        let lam = Lam_print.lambda_to_string lam in
+        let lam = Lam_print.lambda_to_string lambda in
         let debug_attrs =
           Js.Unsafe.
             [|

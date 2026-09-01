@@ -26,8 +26,3 @@ val required_modules : Lambda.lambda -> Lam_module_ident.Hash_set.t
 (** The other compilation units this one refers to, read off the Lambda term.
     A reference the optimizer deletes still has to be imported when the module
     it names is impure. *)
-
-val convert : Lambda.lambda -> Lam.t
-(** [convert lam] translates Lambda to Lam. [let x = y] aliases are left for
-    {!Lam_pass_collapse_var_aliases}; unused lets are left for
-    {!Lam_pass_lets_dce}. *)

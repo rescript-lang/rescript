@@ -230,7 +230,7 @@ let destruct_pattern (body : Lam.t) params args =
   match body with
   | Lswitch (Lvar v, switch) -> (
     match aux v params args with
-    | Some (Lam.Lconst _ as lam) ->
+    | Some (Lambda.Lconst _ as lam) ->
       size (Lam.switch lam switch) < small_inline_size
     | Some _ | None -> false)
   | Lifthenelse (Lvar v, then_, else_) -> (
