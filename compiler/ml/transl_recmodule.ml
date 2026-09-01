@@ -139,7 +139,9 @@ let eval_rec_bindings_aux (bindings : binding list) (cont : t) : t =
     | (id, Some (loc, shape), _rhs) :: rem ->
       let init =
         if shape_is_empty shape then Lambda.lambda_unit
-        else Lambda.Lprim (Pinit_mod, [loc; shape], Location.none)
+        else
+          Lambda.Lprim
+            {primitive = Pinit_mod; args = [loc; shape]; loc = Location.none}
       in
       Lambda.Llet (Strict, id, init, bind_inits rem acc)
   in
@@ -157,7 +159,13 @@ let eval_rec_bindings_aux (bindings : binding list) (cont : t) : t =
     | (id, Some (_loc, shape), rhs) :: rem ->
       let patch =
         if shape_is_empty shape then rhs
-        else Lambda.Lprim (Pupdate_mod, [shape; Lvar id; rhs], Location.none)
+        else
+          Lambda.Lprim
+            {
+              primitive = Pupdate_mod;
+              args = [shape; Lvar id; rhs];
+              loc = Location.none;
+            }
       in
       Lsequence (patch, patch_forwards rem)
   in
@@ -169,7 +177,7 @@ let eval_rec_bindings_aux (bindings : binding list) (cont : t) : t =
 *)
 let rec is_function_or_const_block (lam : Lambda.lambda) acc =
   match lam with
-  | Lprim (Pmakeblock _, args, _) ->
+  | Lprim {primitive = Pmakeblock _; args; loc = _} ->
     Ext_list.for_all args (fun x ->
         match x with
         | Lvar id -> Set_ident.mem acc id

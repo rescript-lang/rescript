@@ -49,7 +49,7 @@ let transl_extension_constructor env path ext =
   in
   let loc = ext.ext_loc in
   match ext.ext_kind with
-  | Text_decl _ -> Lprim (Pcreate_extension name, [], loc)
+  | Text_decl _ -> Lprim {primitive = Pcreate_extension name; args = []; loc}
   | Text_rebind (path, _lid) -> transl_extension_path ~loc env path
 
 (* Translation of primitives *)
@@ -557,8 +557,9 @@ let external_result_wrap loc (result_type : External_ffi_types.return_wrapper)
     ~returns_unit result =
   match result_type with
   | Return_unset when returns_unit -> Lsequence (result, Lconst const_unit)
-  | Return_null_to_opt -> Lprim (Pnull_to_opt, [result], loc)
-  | Return_null_undefined_to_opt -> Lprim (Pnull_undefined_to_opt, [result], loc)
+  | Return_null_to_opt -> Lprim {primitive = Pnull_to_opt; args = [result]; loc}
+  | Return_null_undefined_to_opt ->
+    Lprim {primitive = Pnull_undefined_to_opt; args = [result]; loc}
   | Return_unset | Return_identity -> result
 
 (* Does importing this external as a value require the FFI adaptation a
@@ -598,22 +599,25 @@ let transl_adapted_external_import loc env
   let returns_unit = external_returns_unit env p val_type in
   let send_call receiver args (kind : External_ffi_types.decl_kind) =
     Lprim
-      ( Pjs_call
-          {
-            prim_name = name;
-            arg_types = External_arg_spec.dummy :: arg_types;
-            ffi =
-              {
-                kind;
-                module_ = None;
-                scopes;
-                variadic;
-                effective_arity = List.length arg_types + 1;
-              };
-            transformed_jsx = false;
-          },
-        receiver :: args,
-        loc )
+      {
+        primitive =
+          Pjs_call
+            {
+              prim_name = name;
+              arg_types = External_arg_spec.dummy :: arg_types;
+              ffi =
+                {
+                  kind;
+                  module_ = None;
+                  scopes;
+                  variadic;
+                  effective_arity = List.length arg_types + 1;
+                };
+              transformed_jsx = false;
+            };
+        args = receiver :: args;
+        loc;
+      }
   in
   let m = Ident.create "m" in
   let adapted_value =
@@ -647,25 +651,34 @@ let transl_adapted_external_import loc env
       }
   in
   Lprim
-    ( Pjs_call
-        {
-          prim_name = "then";
-          arg_types = [External_arg_spec.dummy; External_arg_spec.dummy];
-          ffi =
+    {
+      primitive =
+        Pjs_call
+          {
+            prim_name = "then";
+            arg_types = [External_arg_spec.dummy; External_arg_spec.dummy];
+            ffi =
+              {
+                kind = Decl_send {name = "then"};
+                module_ = None;
+                scopes = [];
+                variadic = false;
+                effective_arity = 2;
+              };
+            transformed_jsx = false;
+          };
+      args =
+        [
+          Lprim
             {
-              kind = Decl_send {name = "then"};
-              module_ = None;
-              scopes = [];
-              variadic = false;
-              effective_arity = 2;
+              primitive = Pimport (Import_external {module_ = emn; path = []});
+              args = [];
+              loc;
             };
-          transformed_jsx = false;
-        },
-      [
-        Lprim (Pimport (Import_external {module_ = emn; path = []}), [], loc);
-        callback;
-      ],
-      loc )
+          callback;
+        ];
+      loc;
+    }
 
 let transl_dynamic_import loc (arg : Typedtree.expression) : Lambda.lambda =
   match arg.exp_desc with
@@ -694,22 +707,25 @@ let transl_dynamic_import loc (arg : Typedtree.expression) : Lambda.lambda =
     when external_import_needs_adaptation arg_types decl return_wrapper ->
     transl_adapted_external_import loc arg.exp_env ~emn ~name ~scopes ~variadic
       ~arg_types ~return_wrapper p val_type
-  | _ -> Lprim (Pimport (import_source_of_arg arg), [], loc)
+  | _ -> Lprim {primitive = Pimport (import_source_of_arg arg); args = []; loc}
 
 let transl_external_application loc env (p : Primitive.description)
     ~(val_type : type_expr) argl ~transformed_jsx : Lambda.lambda =
   match p.prim_kind with
   | Kind_inline_const c -> Lconst (lambda_of_inline_const c)
   | Kind_external (Ffi_obj_create labels) ->
-    Lprim (Pjs_object_create labels, argl, loc)
+    Lprim {primitive = Pjs_object_create labels; args = argl; loc}
   | Kind_external (Ffi_bs (arg_types, result_type, decl)) ->
     external_result_wrap loc result_type
       ~returns_unit:(external_returns_unit env p val_type)
       (Lprim
-         ( Pjs_call
-             {prim_name = p.prim_name; arg_types; ffi = decl; transformed_jsx},
-           argl,
-           loc ))
+         {
+           primitive =
+             Pjs_call
+               {prim_name = p.prim_name; arg_types; ffi = decl; transformed_jsx};
+           args = argl;
+           loc;
+         })
   | Kind_intrinsic ->
     Location.raise_errorf ~loc
       "@{<error>Error:@} internal error, using unrecognized primitive %s"
@@ -774,7 +790,9 @@ let transl_primitive loc p env ty ~val_type =
           params = [param];
           attr = default_function_attribute;
           loc;
-          body = Lprim (Pmakeblock Blk_tuple, [lam; Lvar param], loc);
+          body =
+            Lprim
+              {primitive = Pmakeblock Blk_tuple; args = [lam; Lvar param]; loc};
         }
     | _ -> assert false)
   | None -> (
@@ -905,21 +923,30 @@ let assert_failed exp =
   in
   let fname = Filename.basename fname in
   Lprim
-    ( Praise,
-      [
-        Lprim
-          ( Pmakeblock Blk_extension,
-            [
-              transl_normal_path Predef.path_assert_failure;
-              Lconst
-                (Const_block
-                   ( Blk_tuple,
-                     [const_string fname None; const_int line; const_int char]
-                   ));
-            ],
-            exp.exp_loc );
-      ],
-      exp.exp_loc )
+    {
+      primitive = Praise;
+      args =
+        [
+          Lprim
+            {
+              primitive = Pmakeblock Blk_extension;
+              args =
+                [
+                  transl_normal_path Predef.path_assert_failure;
+                  Lconst
+                    (Const_block
+                       ( Blk_tuple,
+                         [
+                           const_string fname None;
+                           const_int line;
+                           const_int char;
+                         ] ));
+                ];
+              loc = exp.exp_loc;
+            };
+        ];
+      loc = exp.exp_loc;
+    }
 
 let rec cut n l =
   if n = 0 then ([], l)
@@ -941,12 +968,15 @@ let wrap_exn loc arg =
     {
       ap_func =
         Lprim
-          ( Pfield (0, Fld_module {name = "internalToException"}),
-            [
-              Lglobal_module
-                (Ident.create_persistent Primitive_modules.exceptions);
-            ],
-            loc );
+          {
+            primitive = Pfield (0, Fld_module {name = "internalToException"});
+            args =
+              [
+                Lglobal_module
+                  (Ident.create_persistent Primitive_modules.exceptions);
+              ];
+            loc;
+          };
       ap_args = [arg];
       ap_loc = loc;
       ap_inlined = Default_inline;
@@ -961,8 +991,8 @@ let exception_id_destructed (l : lambda) (fv : Ident.t) : bool =
   and hit_list xs = Ext_list.exists xs hit
   and hit (l : lambda) =
     match l with
-    | Lprim (Praise, [Lvar _], _) -> false
-    | Lprim (_, args, _) -> hit_list args
+    | Lprim {primitive = Praise; args = [Lvar _]; loc = _} -> false
+    | Lprim {primitive = _; args; loc = _} -> hit_list args
     | Lvar id -> Ident.same id fv
     | Lassign (id, e) -> Ident.same id fv || hit e
     | Lstaticcatch (e1, _, e2) -> hit e1 || hit e2
@@ -1083,9 +1113,11 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
       | _ -> assert false
     in
     Lprim
-      ( Ptagged_template,
-        [transl_exp funct; transl_exp strings; transl_exp values],
-        e.exp_loc )
+      {
+        primitive = Ptagged_template;
+        args = [transl_exp funct; transl_exp strings; transl_exp values];
+        loc = e.exp_loc;
+      }
   | Texp_apply
       {
         funct =
@@ -1125,7 +1157,13 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
         | [] -> wrap (lam_of_loc kind e.exp_loc)
         | [arg1] ->
           let lam = lam_of_loc kind arg1.exp_loc in
-          wrap (Lprim (Pmakeblock Blk_tuple, lam :: argl, e.exp_loc))
+          wrap
+            (Lprim
+               {
+                 primitive = Pmakeblock Blk_tuple;
+                 args = lam :: argl;
+                 loc = e.exp_loc;
+               })
         | _ -> assert false)
       | None -> (
         match
@@ -1138,11 +1176,21 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
           | "#raw_expr", [Lconst (Const_string {s = code})] ->
             let kind = Classify_function.classify code in
             wrap
-              (Lprim (Praw_js_code {code; code_info = Exp kind}, [], e.exp_loc))
+              (Lprim
+                 {
+                   primitive = Praw_js_code {code; code_info = Exp kind};
+                   args = [];
+                   loc = e.exp_loc;
+                 })
           | "#raw_stmt", [Lconst (Const_string {s = code})] ->
             let kind = Classify_function.classify_stmt code in
             wrap
-              (Lprim (Praw_js_code {code; code_info = Stmt kind}, [], e.exp_loc))
+              (Lprim
+                 {
+                   primitive = Praw_js_code {code; code_info = Stmt kind};
+                   args = [];
+                   loc = e.exp_loc;
+                 })
           | ("#raw_expr" | "#raw_stmt"), _ -> assert false
           | _ ->
             wrap
@@ -1179,7 +1227,8 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
   | Texp_tuple el -> (
     let ll = transl_list el in
     try Lconst (Const_block (Blk_tuple, List.map extract_constant ll))
-    with Not_constant -> Lprim (Pmakeblock Blk_tuple, ll, e.exp_loc))
+    with Not_constant ->
+      Lprim {primitive = Pmakeblock Blk_tuple; args = ll; loc = e.exp_loc})
   | Texp_construct ({txt = Lident "false"}, _, []) -> Lconst Const_js_false
   | Texp_construct ({txt = Lident "true"}, _, []) -> Lconst Const_js_true
   | Texp_construct (_, cstr, args) -> (
@@ -1223,7 +1272,7 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
             | _ -> Psome
           in
           try Lconst (Const_some (extract_constant value))
-          with Not_constant -> Lprim (primitive, ll, e.exp_loc)
+          with Not_constant -> Lprim {primitive; args = ll; loc = e.exp_loc}
         else
           let tag_info : Lambda.tag_info =
             Blk_constructor
@@ -1234,12 +1283,15 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
               }
           in
           try Lconst (Const_block (tag_info, List.map extract_constant ll))
-          with Not_constant -> Lprim (Pmakeblock tag_info, ll, e.exp_loc))
+          with Not_constant ->
+            Lprim {primitive = Pmakeblock tag_info; args = ll; loc = e.exp_loc})
       | Extension_constructor path ->
         Lprim
-          ( Pmakeblock Blk_extension,
-            transl_extension_path e.exp_env path :: ll,
-            e.exp_loc ))
+          {
+            primitive = Pmakeblock Blk_extension;
+            args = transl_extension_path e.exp_env path :: ll;
+            loc = e.exp_loc;
+          })
   | Texp_extension_constructor (_, path) -> transl_extension_path e.exp_env path
   | Texp_variant (l, arg) -> (
     match arg with
@@ -1249,7 +1301,12 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
       let name = const_polyvar_name l in
       try Lconst (Const_block (Blk_poly_var, [name; extract_constant lam]))
       with Not_constant ->
-        Lprim (Pmakeblock Blk_poly_var, [Lconst name; lam], e.exp_loc)))
+        Lprim
+          {
+            primitive = Pmakeblock Blk_poly_var;
+            args = [Lconst name; lam];
+            loc = e.exp_loc;
+          }))
   | Texp_record {fields; representation; extended_expression} ->
     transl_record e.exp_loc e.exp_env fields representation extended_expression
   | Texp_field (arg, _, lbl) -> (
@@ -1257,16 +1314,27 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
     match lbl.lbl_repres with
     | Record_float_unused -> assert false
     | Record_regular ->
-      Lprim (Pfield (lbl.lbl_pos, Lambda.fld_record lbl), [targ], e.exp_loc)
+      Lprim
+        {
+          primitive = Pfield (lbl.lbl_pos, Lambda.fld_record lbl);
+          args = [targ];
+          loc = e.exp_loc;
+        }
     | Record_inlined _ ->
       Lprim
-        (Pfield (lbl.lbl_pos, Lambda.fld_record_inline lbl), [targ], e.exp_loc)
+        {
+          primitive = Pfield (lbl.lbl_pos, Lambda.fld_record_inline lbl);
+          args = [targ];
+          loc = e.exp_loc;
+        }
     | Record_unboxed _ -> targ
     | Record_extension ->
       Lprim
-        ( Pfield (lbl.lbl_pos + 1, Lambda.fld_record_extension lbl),
-          [targ],
-          e.exp_loc ))
+        {
+          primitive = Pfield (lbl.lbl_pos + 1, Lambda.fld_record_extension lbl);
+          args = [targ];
+          loc = e.exp_loc;
+        })
   | Texp_setfield (arg, _, lbl, newval) ->
     let access =
       match lbl.lbl_repres with
@@ -1278,10 +1346,15 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
       | Record_extension ->
         Psetfield (lbl.lbl_pos + 1, Lambda.fld_record_extension_set lbl)
     in
-    Lprim (access, [transl_exp arg; transl_exp newval], e.exp_loc)
+    Lprim
+      {
+        primitive = access;
+        args = [transl_exp arg; transl_exp newval];
+        loc = e.exp_loc;
+      }
   | Texp_array expr_list ->
     let ll = transl_list expr_list in
-    Lprim (Pmakearray, ll, e.exp_loc)
+    Lprim {primitive = Pmakearray; args = ll; loc = e.exp_loc}
   | Texp_ifthenelse (cond, ifso, Some ifnot) ->
     Lifthenelse (transl_exp cond, transl_exp ifso, transl_exp ifnot)
   | Texp_ifthenelse (cond, ifso, None) ->
@@ -1308,13 +1381,25 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
         fields
     in
     Lprim
-      ( Pjs_object_create labels,
-        List.map (fun (_, field) -> transl_exp field) fields,
-        e.exp_loc )
+      {
+        primitive = Pjs_object_create labels;
+        args = List.map (fun (_, field) -> transl_exp field) fields;
+        loc = e.exp_loc;
+      }
   | Texp_object_get (expr, nm) ->
-    Lprim (Pjs_object_get nm.txt, [transl_exp expr], e.exp_loc)
+    Lprim
+      {
+        primitive = Pjs_object_get nm.txt;
+        args = [transl_exp expr];
+        loc = e.exp_loc;
+      }
   | Texp_object_set (expr, nm, value) ->
-    Lprim (Pjs_object_set nm.txt, [transl_exp expr; transl_exp value], e.exp_loc)
+    Lprim
+      {
+        primitive = Pjs_object_set nm.txt;
+        args = [transl_exp expr; transl_exp value];
+        loc = e.exp_loc;
+      }
   | Texp_letmodule (id, _loc, modl, body) ->
     let defining_expr = !transl_module Tcoerce_none None modl in
     Llet (Strict, id, defining_expr, transl_exp body)
@@ -1526,7 +1611,7 @@ and transl_record loc env fields repres opt_init_expr =
                 | Record_extension ->
                   Pfield (i + 1, Lambda.fld_record_extension lbl)
               in
-              Lprim (access, [Lvar init_id], loc)
+              Lprim {primitive = access; args = [Lvar init_id]; loc}
             | Overridden (_lid, expr) -> transl_exp expr)
           fields
       in
@@ -1568,7 +1653,12 @@ and transl_record loc env fields repres opt_init_expr =
         with Not_constant -> (
           match repres with
           | Record_regular ->
-            Lprim (Pmakeblock (Lambda.blk_record fields mut), ll, loc)
+            Lprim
+              {
+                primitive = Pmakeblock (Lambda.blk_record fields mut);
+                args = ll;
+                loc;
+              }
           | Record_float_unused -> assert false
           | Record_inlined {name; representation} ->
             let runtime =
@@ -1581,11 +1671,14 @@ and transl_record loc env fields repres opt_init_expr =
                 (Variant_runtime.get_layout representation.variant)
             in
             Lprim
-              ( Pmakeblock
-                  (Lambda.blk_record_inlined fields name num_nonconsts ~runtime
-                     mut),
-                ll,
-                loc )
+              {
+                primitive =
+                  Pmakeblock
+                    (Lambda.blk_record_inlined fields name num_nonconsts
+                       ~runtime mut);
+                args = ll;
+                loc;
+              }
           | Record_unboxed _ -> (
             match ll with
             | [v] -> v
@@ -1599,7 +1692,11 @@ and transl_record loc env fields repres opt_init_expr =
             in
             let slot = transl_extension_path env path in
             Lprim
-              (Pmakeblock (Lambda.blk_record_ext fields mut), slot :: ll, loc))
+              {
+                primitive = Pmakeblock (Lambda.blk_record_ext fields mut);
+                args = slot :: ll;
+                loc;
+              })
       in
       match opt_init_expr with
       | None -> lam
@@ -1623,7 +1720,10 @@ and transl_record loc env fields repres opt_init_expr =
             | Record_extension ->
               Psetfield (lbl.lbl_pos + 1, Lambda.fld_record_extension_set lbl)
           in
-          Lsequence (Lprim (upd, [Lvar copy_id; transl_exp expr], loc), cont)
+          Lsequence
+            ( Lprim
+                {primitive = upd; args = [Lvar copy_id; transl_exp expr]; loc},
+              cont )
       in
       match opt_init_expr with
       | None -> assert false
@@ -1631,7 +1731,7 @@ and transl_record loc env fields repres opt_init_expr =
         Llet
           ( Strict,
             copy_id,
-            Lprim (Pduprecord, [transl_exp init_expr], loc),
+            Lprim {primitive = Pduprecord; args = [transl_exp init_expr]; loc},
             Array.fold_left update_field (Lvar copy_id) fields ))
 
 and transl_match e arg pat_expr_list exn_pat_expr_list partial =
