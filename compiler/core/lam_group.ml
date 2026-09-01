@@ -51,11 +51,11 @@ let pp_group fmt (x : t) =
   match x with
   | Single (kind, id, lam) ->
     Format.fprintf fmt "@[let@ %a@ =%s@ @[<hv>%a@]@ @]" Ident.print id
-      (str_of_kind kind) Lam_print.lambda lam
+      (str_of_kind kind) Printlambda.lambda lam
   | Recursive lst ->
     List.iter
       (fun (id, lam) ->
         Format.fprintf fmt "@[let %a@ =r@ %a@ @]" Ident.print id
-          Lam_print.lambda lam)
+          Printlambda.lambda lam)
       lst
-  | Nop lam -> Lam_print.lambda fmt lam
+  | Nop lam -> Printlambda.lambda fmt lam

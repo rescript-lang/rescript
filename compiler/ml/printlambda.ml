@@ -23,7 +23,7 @@ let rec struct_const ppf = function
   | Const_string {s} -> fprintf ppf "%S" s
   | Const_float f -> fprintf ppf "%s" f
   | Const_bigint (sign, n) -> fprintf ppf "%sn" (Bigint_utils.to_string sign n)
-  | Const_constructor {name} -> fprintf ppf "`%s" name
+  | Const_constructor {name} -> fprintf ppf "%s" name
   | Const_polyvar name -> fprintf ppf "`%s" name
   | Const_module_alias -> fprintf ppf "module_alias"
   | Const_assertfalse -> fprintf ppf "assertfalse"
@@ -89,12 +89,31 @@ let print_taginfo ppf = function
   | Blk_record_inlined {fields = ss} ->
     fprintf ppf "[%s]" (String.concat ";" (List.map fst (Array.to_list ss)))
 
+(* Every comparison prints its operand kind, so [Pintcomp], [Pjscomp],
+   [Pstringcomp] and friends stay distinguishable. *)
+let comparison ppf kind (cmp : Lambda.comparison) =
+  let op =
+    match cmp with
+    | Ceq -> "=="
+    | Cneq -> "!="
+    | Clt -> "<"
+    | Cle -> "<="
+    | Cgt -> ">"
+    | Cge -> ">="
+  in
+  fprintf ppf "%s[%s]" op kind
+
 let primitive ppf = function
   | Pdebugger -> fprintf ppf "debugger"
   | Ptypeof -> fprintf ppf "typeof"
   | Psome -> fprintf ppf "some"
   | Psome_not_nest -> fprintf ppf "some_not_nest"
-  | Pmakeblock taginfo -> fprintf ppf "makeblock %a" print_taginfo taginfo
+  | Pmakeblock taginfo ->
+    let what =
+      if Lambda.mutable_flag_of_tag_info taginfo = Immutable then "makeblock"
+      else "makemutable"
+    in
+    fprintf ppf "%s %a" what print_taginfo taginfo
   | Pfield (n, fld) -> fprintf ppf "field:%s/%i" (str_of_field_info fld) n
   | Psetfield (n, _) -> fprintf ppf "setfield %i" n
   | Pduprecord -> fprintf ppf "duprecord"
@@ -105,12 +124,7 @@ let primitive ppf = function
   | Pjs_object_get name -> fprintf ppf "js_object_get[%s]" name
   | Pjs_object_set name -> fprintf ppf "js_object_set[%s]" name
   | Praise -> fprintf ppf "raise"
-  | Pobjcomp Ceq -> fprintf ppf "=="
-  | Pobjcomp Cneq -> fprintf ppf "!="
-  | Pobjcomp Clt -> fprintf ppf "<"
-  | Pobjcomp Cle -> fprintf ppf "<="
-  | Pobjcomp Cgt -> fprintf ppf ">"
-  | Pobjcomp Cge -> fprintf ppf ">="
+  | Pobjcomp cmp -> comparison ppf "obj" cmp
   | Pobjorder -> fprintf ppf "compare"
   | Pobjmin -> fprintf ppf "min"
   | Pobjmax -> fprintf ppf "max"
@@ -119,12 +133,7 @@ let primitive ppf = function
   | Psequand -> fprintf ppf "&&"
   | Psequor -> fprintf ppf "||"
   | Pnot -> fprintf ppf "not"
-  | Pboolcomp Ceq -> fprintf ppf "=="
-  | Pboolcomp Cneq -> fprintf ppf "!="
-  | Pboolcomp Clt -> fprintf ppf "<"
-  | Pboolcomp Cle -> fprintf ppf "<="
-  | Pboolcomp Cgt -> fprintf ppf ">"
-  | Pboolcomp Cge -> fprintf ppf ">="
+  | Pboolcomp cmp -> comparison ppf "bool" cmp
   | Pboolorder -> fprintf ppf "compare"
   | Pboolmin -> fprintf ppf "min"
   | Pboolmax -> fprintf ppf "max"
@@ -142,12 +151,7 @@ let primitive ppf = function
   | Plslint -> fprintf ppf "lsl"
   | Plsrint -> fprintf ppf "lsr"
   | Pasrint -> fprintf ppf "asr"
-  | Pintcomp Ceq -> fprintf ppf "=="
-  | Pintcomp Cneq -> fprintf ppf "!="
-  | Pintcomp Clt -> fprintf ppf "<"
-  | Pintcomp Cle -> fprintf ppf "<="
-  | Pintcomp Cgt -> fprintf ppf ">"
-  | Pintcomp Cge -> fprintf ppf ">="
+  | Pintcomp cmp -> comparison ppf "int" cmp
   | Pintorder -> fprintf ppf "compare"
   | Pintmin -> fprintf ppf "min"
   | Pintmax -> fprintf ppf "max"
@@ -160,12 +164,7 @@ let primitive ppf = function
   | Pdivfloat -> fprintf ppf "/."
   | Pmodfloat -> fprintf ppf "mod"
   | Ppowfloat -> fprintf ppf "**"
-  | Pfloatcomp Ceq -> fprintf ppf "==."
-  | Pfloatcomp Cneq -> fprintf ppf "!=."
-  | Pfloatcomp Clt -> fprintf ppf "<."
-  | Pfloatcomp Cle -> fprintf ppf "<=."
-  | Pfloatcomp Cgt -> fprintf ppf ">."
-  | Pfloatcomp Cge -> fprintf ppf ">=."
+  | Pfloatcomp cmp -> comparison ppf "float" cmp
   | Pfloatorder -> fprintf ppf "compare"
   | Pfloatmin -> fprintf ppf "min"
   | Pfloatmax -> fprintf ppf "max"
@@ -182,24 +181,14 @@ let primitive ppf = function
   | Pasrbigint -> fprintf ppf "asr"
   | Pdivbigint -> fprintf ppf "/"
   | Pmodbigint -> fprintf ppf "mod"
-  | Pbigintcomp Ceq -> fprintf ppf "==,"
-  | Pbigintcomp Cneq -> fprintf ppf "!=,"
-  | Pbigintcomp Clt -> fprintf ppf "<,"
-  | Pbigintcomp Cle -> fprintf ppf "<=,"
-  | Pbigintcomp Cgt -> fprintf ppf ">,"
-  | Pbigintcomp Cge -> fprintf ppf ">=,"
+  | Pbigintcomp cmp -> comparison ppf "bigint" cmp
   | Pbigintorder -> fprintf ppf "compare"
   | Pbigintmin -> fprintf ppf "min"
   | Pbigintmax -> fprintf ppf "max"
   | Pstringlength -> fprintf ppf "string.length"
   | Pstringrefu -> fprintf ppf "string.unsafe_get"
   | Pstringrefs -> fprintf ppf "string.get"
-  | Pstringcomp Ceq -> fprintf ppf "=="
-  | Pstringcomp Cneq -> fprintf ppf "!="
-  | Pstringcomp Clt -> fprintf ppf "<"
-  | Pstringcomp Cle -> fprintf ppf "<="
-  | Pstringcomp Cgt -> fprintf ppf ">"
-  | Pstringcomp Cge -> fprintf ppf ">="
+  | Pstringcomp cmp -> comparison ppf "string" cmp
   | Pstringorder -> fprintf ppf "compare"
   | Pstringmin -> fprintf ppf "min"
   | Pstringmax -> fprintf ppf "max"
@@ -229,12 +218,7 @@ let primitive ppf = function
   | Phash_mixint -> fprintf ppf "hash_mix_int"
   | Phash_mixstring -> fprintf ppf "hash_mix_string"
   | Phash_finalmix -> fprintf ppf "hash_final_mix"
-  | Pjscomp Ceq -> fprintf ppf "=="
-  | Pjscomp Cneq -> fprintf ppf "!="
-  | Pjscomp Clt -> fprintf ppf "<"
-  | Pjscomp Cle -> fprintf ppf "<="
-  | Pjscomp Cgt -> fprintf ppf ">"
-  | Pjscomp Cge -> fprintf ppf ">="
+  | Pjscomp cmp -> comparison ppf "js" cmp
   | Pnull_to_opt -> fprintf ppf "null_to_opt"
   | Pnull_undefined_to_opt -> fprintf ppf "nullable_to_opt"
   | Pis_not_none -> fprintf ppf "#is_not_none"
@@ -395,3 +379,15 @@ and sequence ppf = function
 let structured_constant = struct_const
 
 let lambda = lam
+
+let serialize (filename : string) (l : Lambda.t) : unit =
+  let ou = open_out filename in
+  let old = Format.get_margin () in
+  Format.set_margin 10000;
+  let fmt = Format.formatter_of_out_channel ou in
+  lambda fmt l;
+  Format.pp_print_flush fmt ();
+  close_out ou;
+  Format.set_margin old
+
+let lambda_to_string = Format.asprintf "%a" lambda

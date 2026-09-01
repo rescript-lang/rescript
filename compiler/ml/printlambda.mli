@@ -19,3 +19,10 @@ open Format
 
 val structured_constant : formatter -> structured_constant -> unit
 val lambda : formatter -> Lambda.t -> unit
+
+val primitive : formatter -> Lambda.primitive -> unit
+
+val serialize : string -> Lambda.t -> unit
+(** Print a term to a file, unwrapped: used for the -debug-ir dumps. *)
+
+val lambda_to_string : Lambda.t -> string

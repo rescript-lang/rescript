@@ -30,7 +30,7 @@ let next_path diagnostics ~kind ~pass ~extension =
 let dump_lam diagnostics ~pass lam =
   let path = next_path diagnostics ~kind:"lam" ~pass ~extension:".lam" in
   Ext_log.dwarn ~__POS__ "Dumping pass %s to %s" pass path;
-  Lam_print.serialize path lam
+  Printlambda.serialize path lam
 
 let dump_groups diagnostics groups =
   let path =
