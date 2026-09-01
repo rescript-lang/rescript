@@ -92,8 +92,8 @@ let rec no_side_effects (lam : Lam.t) : bool =
       true
     (* A tagged template invokes its tag at runtime, so it always has side
        effects. *)
-    | Ptagged_template | Pjs_apply | Pjs_call _ | Pinit_mod | Pupdate_mod
-    | Pjs_object_get _ | Pjs_object_set _ | Pdebugger | Pjs_fn_method
+    | Ptagged_template | Pjs_call _ | Pinit_mod | Pupdate_mod | Pjs_object_get _
+    | Pjs_object_set _ | Pdebugger | Pjs_fn_method
     (* Await promise *)
     | Pawait
     (* TODO *)
