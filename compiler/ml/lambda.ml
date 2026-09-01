@@ -1412,26 +1412,24 @@ let iter f lam =
          false)
        lam)
 
-module Ident_set = Set.Make (Ident)
-
 let free_ids get l =
-  let fv = ref Ident_set.empty in
+  let fv = ref Set_ident.empty in
   let rec free l =
     iter free l;
-    fv := List.fold_right Ident_set.add (get l) !fv;
+    fv := List.fold_left Set_ident.add !fv (get l);
     match l with
     | Lfunction {params} ->
-      List.iter (fun param -> fv := Ident_set.remove param !fv) params
-    | Llet (_str, id, _arg, _body) -> fv := Ident_set.remove id !fv
+      List.iter (fun param -> fv := Set_ident.remove !fv param) params
+    | Llet (_str, id, _arg, _body) -> fv := Set_ident.remove !fv id
     | Lletrec (decl, _body) ->
-      List.iter (fun (id, _exp) -> fv := Ident_set.remove id !fv) decl
+      List.iter (fun (id, _exp) -> fv := Set_ident.remove !fv id) decl
     | Lstaticcatch (_e1, (_, vars), _e2) ->
-      List.iter (fun id -> fv := Ident_set.remove id !fv) vars
-    | Ltrywith (_e1, exn, _e2) -> fv := Ident_set.remove exn !fv
-    | Lfor (v, _e1, _e2, _dir, _e3) -> fv := Ident_set.remove v !fv
+      List.iter (fun id -> fv := Set_ident.remove !fv id) vars
+    | Ltrywith (_e1, exn, _e2) -> fv := Set_ident.remove !fv exn
+    | Lfor (v, _e1, _e2, _dir, _e3) -> fv := Set_ident.remove !fv v
     | Lfor_of (v, _e1, _e2) | Lfor_await_of (v, _e1, _e2) ->
-      fv := Ident_set.remove v !fv
-    | Lassign (id, _e) -> fv := Ident_set.add id !fv
+      fv := Set_ident.remove !fv v
+    | Lassign (id, _e) -> fv := Set_ident.add !fv id
     | Lvar _ | Lglobal_module _ | Lconst _ | Lapply _ | Lprim _ | Lswitch _
     | Lstringswitch _ | Lstaticraise _ | Lifthenelse _ | Lsequence _ | Lbreak
     | Lcontinue | Lwhile _ ->
