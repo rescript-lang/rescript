@@ -239,9 +239,27 @@ let js_hoisted_aliases (export_ids : Ident.t list)
              | None -> missing_path ())
            | [] -> missing_path ()))
 
+(* The other compilation units this one refers to. Conversion used to drop
+   [Lglobal_module] references and have module analysis add them back (see
+   #3852); they are read off the Lambda term instead. A reference the
+   optimizer deletes still has to be imported when the module it names is
+   impure. *)
+
 (** Actually simplify_lets is kind of global optimization since it requires you to know whether
     it's used or not
 *)
+let required_modules (lam : Lambda.t) : Lam_module_ident.Hash_set.t =
+  let required = Lam_module_ident.Hash_set.create 0 in
+  let rec collect (lam : Lambda.t) =
+    (match lam with
+    | Lglobal_module id ->
+      Lam_module_ident.Hash_set.add required (Lam_module_ident.of_ml id)
+    | _ -> ());
+    Lambda.iter collect lam
+  in
+  collect lam;
+  required
+
 let compile (output_prefix : string) export_idents hoisted (lam : Lambda.t) =
   let debug_ir = !Js_config.debug_ir in
   let diagnostics =
@@ -271,7 +289,7 @@ let compile (output_prefix : string) export_idents hoisted (lam : Lambda.t) =
           Ext_log.dwarn ~__POS__ "export idents: %s/%d" id.name id.stamp);
     Lam_compile_env.reset ()
   in
-  let may_required_modules = Lam_convert.required_modules lam in
+  let may_required_modules = required_modules lam in
   let lam =
     Lam_pass_collapse_var_aliases.collapse ~exports:export_ident_sets lam
   in
