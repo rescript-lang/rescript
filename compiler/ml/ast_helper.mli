@@ -36,7 +36,7 @@ val with_default_loc : loc -> (unit -> 'a) -> 'a
 
 module Const : sig
   val char : char -> constant
-  val string : ?quotation_delimiter:string -> string -> constant
+  val string : string -> constant
   val integer : ?suffix:char -> string -> constant
   val int : ?suffix:char -> int -> constant
   val int32 : ?suffix:char -> int32 -> constant
@@ -212,6 +212,9 @@ module Exp : sig
 
   val object_literal :
     ?loc:loc -> ?attrs:attrs -> (str * expression) list -> expression
+
+  val template :
+    ?loc:loc -> ?attrs:attrs -> string list -> expression list -> expression
   val letmodule :
     ?loc:loc -> ?attrs:attrs -> str -> module_expr -> expression -> expression
   val letexception :
@@ -225,6 +228,13 @@ module Exp : sig
   val open_ :
     ?loc:loc -> ?attrs:attrs -> override_flag -> lid -> expression -> expression
   val extension : ?loc:loc -> ?attrs:attrs -> extension -> expression
+  val tagged_template :
+    ?loc:loc ->
+    ?attrs:attrs ->
+    expression ->
+    string list ->
+    expression list ->
+    expression
   val jsx_fragment :
     ?loc:loc ->
     ?attrs:attrs ->

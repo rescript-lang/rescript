@@ -286,6 +286,10 @@ end = struct
     | Texp_for_await_of (_id, _, exp1, exp2) ->
       iter_expression exp1;
       iter_expression exp2
+    | Texp_template {values} -> List.iter iter_expression values
+    | Texp_tagged_template {tag; values} ->
+      iter_expression tag;
+      List.iter iter_expression values
     | Texp_object_get (exp, _) -> iter_expression exp
     | Texp_object_set (exp, _, v) ->
       iter_expression exp;

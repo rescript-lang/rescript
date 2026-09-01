@@ -629,21 +629,11 @@ let extract_embedded ~extension_points ~filename =
   let append item = content := item :: !content in
   let extension (iterator : Ast_iterator.iterator) (ext : Parsetree.extension) =
     (match ext with
-    | ( {txt},
-        PStr
-          [
-            {
-              pstr_desc =
-                Pstr_eval
-                  ( {
-                      pexp_loc;
-                      pexp_desc = Pexp_constant (Pconst_string (contents, _));
-                    },
-                    _ );
-            };
-          ] )
+    | {txt}, PStr [{pstr_desc = Pstr_eval (({pexp_loc; _} as expression), _)}]
       when extension_points |> List.exists (fun v -> v = txt) ->
-      append (pexp_loc, txt, contents)
+      Option.iter
+        (fun contents -> append (pexp_loc, txt, contents))
+        (Ast_payload.semantic_string_of_expression expression)
     | _ -> ());
     Ast_iterator.default_iterator.extension iterator ext
   in
@@ -871,25 +861,28 @@ module Format_codeblocks = struct
         Ast_mapper.default_mapper with
         attribute =
           (fun mapper ((name, payload) as attr) ->
-            match (name, Ast_payload.is_single_string payload, payload) with
-            | ( {txt = "res.doc"},
-                Some (contents, None),
-                PStr [{pstr_desc = Pstr_eval ({pexp_loc}, _)}] ) ->
-              let formatted_contents, had_code_blocks =
-                format_rescript_code_blocks ~transform_assert_equal ~add_error
-                  ~display_filename
-                  ~markdown_block_start_line:pexp_loc.loc_start.pos_lnum
-                  contents
-              in
-              if had_code_blocks && formatted_contents <> contents then
-                ( name,
-                  PStr
-                    [
-                      Ast_helper.Str.eval
-                        (Ast_helper.Exp.constant
-                           (Pconst_string (formatted_contents, None)));
-                    ] )
-              else attr
+            match (name, payload) with
+            | {txt = "res.doc"}, PStr [{pstr_desc = Pstr_eval ({pexp_loc}, _)}]
+              -> (
+              Ast_payload.reject_json_literal_payload payload;
+              match Ast_payload.semantic_string_of_payload payload with
+              | Some contents ->
+                let formatted_contents, had_code_blocks =
+                  format_rescript_code_blocks ~transform_assert_equal ~add_error
+                    ~display_filename
+                    ~markdown_block_start_line:pexp_loc.loc_start.pos_lnum
+                    contents
+                in
+                if had_code_blocks && formatted_contents <> contents then
+                  ( name,
+                    PStr
+                      [
+                        Ast_helper.Str.eval
+                          (Ast_helper.Exp.constant
+                             (Ast_helper.Const.string formatted_contents));
+                      ] )
+                else attr
+              | None -> Ast_mapper.default_mapper.attribute mapper attr)
             | _ -> Ast_mapper.default_mapper.attribute mapper attr);
       }
     in

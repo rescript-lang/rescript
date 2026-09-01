@@ -8,15 +8,15 @@ let H = Inline_const.N1({});
 
 let f = "hello";
 
-let f1 = `a`;
+let f1 = "a";
 
-let f2 = `中文`;
+let f2 = "中文";
 
-let f3 = `中文`;
+let f3 = "中文";
 
-let f4 = `中文`;
+let f4 = "中文";
 
-let escapedValue = `\x61\n\uD83D\uDE00`;
+let escapedValue = "a\n😀";
 
 Mocha.describe("File \"inline_const_test.res\", line 11, characters 9-16", () => {
   Mocha.test("inline const test", () => {

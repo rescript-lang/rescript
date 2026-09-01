@@ -24,6 +24,28 @@
 
 let unsafe_mapper = Bs_builtin_ppx.mapper
 
+(* [json] payloads are syntax-level expressions until built-in FFI processing
+   consumes valid [@as(json`...`)] occurrences. Reject anything left only
+   after that processing, so generic attributes and ordinary expressions
+   cannot reinterpret them as strings. *)
+let unconsumed_json_iterator =
+  let default = Ast_iterator.default_iterator in
+  {
+    default with
+    expr =
+      (fun self expression ->
+        match expression.pexp_desc with
+        | Pexp_constant (Pconst_json _) ->
+          Ast_payload.reject_json_literal ~loc:expression.pexp_loc
+        | _ -> default.expr self expression);
+    pat =
+      (fun self pattern ->
+        match pattern.ppat_desc with
+        | Ppat_constant (Pconst_json _) ->
+          Ast_payload.reject_json_literal ~loc:pattern.ppat_loc
+        | _ -> default.pat self pattern);
+  }
+
 let rewrite_signature (ast : Parsetree.signature) : Parsetree.signature =
   Bs_ast_invariant.iter_warnings_on_sigi ast;
   Ast_config.process_sig ast;
@@ -39,6 +61,7 @@ let rewrite_signature (ast : Parsetree.signature) : Parsetree.signature =
   if !Js_config.no_builtin_ppx then ast
   else
     let result = unsafe_mapper.signature unsafe_mapper ast in
+    unconsumed_json_iterator.signature unconsumed_json_iterator result;
     (* Keep this check, since the check is not inexpensive*)
     Bs_ast_invariant.emit_external_warnings_on_signature result;
     result
@@ -58,6 +81,7 @@ let rewrite_implementation (ast : Parsetree.structure) : Parsetree.structure =
   if !Js_config.no_builtin_ppx then ast
   else
     let result = unsafe_mapper.structure unsafe_mapper ast in
+    unconsumed_json_iterator.structure unconsumed_json_iterator result;
     (* Keep this check since it is not inexpensive*)
     Bs_ast_invariant.emit_external_warnings_on_structure result;
     result

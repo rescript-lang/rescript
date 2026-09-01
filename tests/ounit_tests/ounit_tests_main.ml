@@ -12,11 +12,11 @@ let suites =
       Ounit_map_tests.suites;
       Ounit_hashtbl_tests.suites;
       Ounit_string_tests.suites;
+      Ounit_string_literal_tests.suites;
       Ounit_int_vec_tests.suites;
       Ounit_ident_mask_tests.suites;
       Ounit_lid_of_path_tests.suites;
       Ounit_utf8_test.suites;
-      Ounit_unicode_tests.suites;
       Ounit_util_tests.suites;
       Ounit_rec_check_tests.suites;
       Ounit_lambda_constant_tests.suites;
@@ -29,6 +29,7 @@ let suites =
       Ounit_analysis_config_tests.suites;
       Ounit_analysis_references_tests.suites;
       Ounit_ffi_inclusion_tests.suites;
+      Ounit_gentype_tests.suites;
     ]
 
 let _ = OUnit.run_test_tt_main suites

@@ -16,3 +16,22 @@ let classifyEquivalentEscape = (value, selectedCase) =>
   | "\x61" => 4
   | _ => 5
   }
+
+let classifyEquivalentSurrogateEscape = (value, selectedCase) =>
+  switch value {
+  | "😀" if selectedCase == 0 => 0
+  | "\uD83D\uDE00" if selectedCase == 1 => 1
+  | "\u{1f600}" => 2
+  | _ => 3
+  }
+
+let () = {
+  assert(classifyEquivalentEscape("a", 0) == 0)
+  assert(classifyEquivalentEscape("a", 1) == 1)
+  assert(classifyEquivalentEscape("a", 2) == 2)
+  assert(classifyEquivalentEscape("a", 3) == 3)
+  assert(classifyEquivalentEscape("a", 4) == 4)
+  assert(classifyEquivalentSurrogateEscape("😀", 0) == 0)
+  assert(classifyEquivalentSurrogateEscape("😀", 1) == 1)
+  assert(classifyEquivalentSurrogateEscape("😀", 2) == 2)
+}

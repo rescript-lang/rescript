@@ -78,9 +78,17 @@ let map_opt f = function
   | Some x -> Some (f x)
 let map_constant = function
   | Pconst_integer (s, suffix) -> Pt.Pconst_integer (s, suffix)
-  | Pconst_char c -> Pconst_char c
-  | Pconst_string (s, q) -> Pconst_string (s, q)
+  | Pconst_char {semantic} -> Pconst_char semantic
+  | Pconst_string {source} -> Pconst_string (source, Some "js")
+  | Pconst_raw_source s -> Pconst_string (s, Some "js")
+  | Pconst_json s -> Pconst_string (s, Some "json")
   | Pconst_float (s, suffix) -> Pconst_float (s, suffix)
+
+let template_attr = (Location.mknoloc "res.template", Pt.PStr [])
+
+let add_template_attr attrs =
+  if Ext_list.exists attrs (fun ({txt}, _) -> txt = "res.template") then attrs
+  else template_attr :: attrs
 
 let for_of_attr_name = "_res.for_of"
 let for_await_of_attr_name = "_res.for_await_of"
@@ -588,6 +596,48 @@ module E = struct
         ~attrs:(for_await_of_attr :: attrs)
         (sub.pat sub pat) start_expr end_expr Asttypes.Upto
         (sub.expr sub body_expr)
+    | Pexp_template {source_segments; values} ->
+      let segments =
+        List.map
+          (fun source ->
+            Ast_helper0.Exp.constant ~loc ~attrs:[template_attr]
+              (Pt.Pconst_string (source, Some "js")))
+          source_segments
+      in
+      let rec interleave acc segments values =
+        match (segments, values) with
+        | [segment], [] -> List.rev (segment :: acc)
+        | segment :: segments, value :: values ->
+          interleave (sub.expr sub value :: segment :: acc) segments values
+        | _ -> assert false
+      in
+      let parts = interleave [] segments values in
+      let concat lhs rhs =
+        apply ~loc ~attrs:[template_attr]
+          (Ast_helper0.Exp.ident ~loc (Location.mknoloc (Longident.Lident "^")))
+          [(Asttypes.Noloc.Nolabel, lhs); (Asttypes.Noloc.Nolabel, rhs)]
+      in
+      let expression =
+        match parts with
+        | first :: rest -> List.fold_left concat first rest
+        | [] -> assert false
+      in
+      {expression with pexp_attributes = add_template_attr attrs}
+    | Pexp_tagged_template {tag; raw_sources; values} ->
+      let segments =
+        List.map
+          (fun source ->
+            Ast_helper0.Exp.constant ~loc ~attrs:[template_attr]
+              (Pt.Pconst_string (source, Some "js")))
+          raw_sources
+      in
+      let tagged_attr = (Location.mknoloc "res.taggedTemplate", Pt.PStr []) in
+      apply ~loc ~attrs:(tagged_attr :: attrs) (sub.expr sub tag)
+        [
+          (Asttypes.Noloc.Nolabel, Ast_helper0.Exp.array ~loc segments);
+          ( Asttypes.Noloc.Nolabel,
+            Ast_helper0.Exp.array ~loc (List.map (sub.expr sub) values) );
+        ]
     | Pexp_coerce (e, (), t2) ->
       coerce ~loc ~attrs (sub.expr sub e) (sub.typ sub t2)
     | Pexp_constraint (e, t) ->

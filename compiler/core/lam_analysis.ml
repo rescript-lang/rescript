@@ -84,15 +84,16 @@ let rec no_side_effects (lam : Lambda.t) : bool =
     (* Test if the (integer) argument is outside an interval *)
     (* Operations on big arrays: (unsafe, #dimensions, kind, layout) *)
     (* Compile time constants *)
-    | Pstringadd | Phash | Phash_mixstring | Phash_mixint | Phash_finalmix
+    | Pstringadd | Ptemplate _ | Phash | Phash_mixstring | Phash_mixint
+    | Phash_finalmix
     | Praw_js_code
         {code_info = Exp (Js_function _ | Js_literal _) | Stmt Js_stmt_comment}
       ->
       true
     (* A tagged template invokes its tag at runtime, so it always has side
        effects. *)
-    | Ptagged_template | Pjs_call _ | Pinit_mod | Pupdate_mod | Pjs_object_get _
-    | Pjs_object_set _ | Pdebugger | Pjs_fn_method
+    | Ptagged_template _ | Pjs_call _ | Pinit_mod | Pupdate_mod
+    | Pjs_object_get _ | Pjs_object_set _ | Pdebugger | Pjs_fn_method
     (* Await promise *)
     | Pawait
     (* TODO *)

@@ -30,7 +30,7 @@ let get_label str =
   | Nolabel -> ""
 
 let constant_string ~loc str =
-  Ast_helper.Exp.constant ~loc (Pconst_string (str, None))
+  Ast_helper.Exp.constant ~loc (Ast_helper.Const.string str)
 
 let unit_expr ~loc = Exp.construct ~loc (Location.mkloc (Lident "()") loc) None
 

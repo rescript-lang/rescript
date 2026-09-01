@@ -677,7 +677,7 @@ module Add_doc_template = struct
     let doc_content = ["\n"; "\n"] in
     let expression =
       Ast_helper.Exp.constant
-        (Parsetree.Pconst_string (String.concat "" doc_content, None))
+        (Ast_helper.Const.string (String.concat "" doc_content))
     in
     let structure_item_desc = Parsetree.Pstr_eval (expression, []) in
     let structure_item = Ast_helper.Str.mk structure_item_desc in

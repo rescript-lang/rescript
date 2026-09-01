@@ -21,7 +21,7 @@ function shouldNotFail(objectMode, name) {
 
 let x = somescope.somefn({foo:true});
 
-let y = somescope.stringfn(`\x61\u0062`);
+let y = somescope.stringfn("ab");
 
 export {
   mo,

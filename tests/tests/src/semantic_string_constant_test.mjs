@@ -4,7 +4,7 @@ import * as Mocha from "mocha";
 import * as Test_utils from "./test_utils.mjs";
 
 Mocha.describe("Semantic_string_constant_test", () => {
-  Mocha.test("constant length uses JavaScript string semantics", () => Test_utils.eq("File \"semantic_string_constant_test.res\", line 17, characters 7-14", 4, 4));
+  Mocha.test("constant length uses JavaScript string semantics", () => Test_utils.eq("File \"semantic_string_constant_test.res\", line 14, characters 7-14", 2, 2));
 });
 
 /*  Not a pure module */

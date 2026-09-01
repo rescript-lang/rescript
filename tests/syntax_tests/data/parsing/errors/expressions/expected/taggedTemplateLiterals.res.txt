@@ -7,4 +7,4 @@
 
   Tagged template literals are currently restricted to names like: myTagFunction`foo ${bar}`.
 
-;;(({js|null|js})[@res.template ])
+;;`null`

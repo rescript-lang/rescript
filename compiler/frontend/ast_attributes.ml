@@ -139,9 +139,9 @@ let iter_process_bs_string_as (attrs : t) : string option =
       match txt with
       | "as" ->
         if !st = None then (
-          match Ast_payload.is_single_string payload with
+          match Ast_payload.semantic_string_of_payload payload with
           | None -> Bs_syntaxerr.err loc Expect_string_literal
-          | Some (v, _dec) ->
+          | Some v ->
             Used_attributes.mark_used_attribute attr;
             st := Some v)
         else raise (Ast_untagged_variants.Error (loc, Duplicated_bs_as))
@@ -176,7 +176,7 @@ let iter_process_bs_int_as (attrs : t) =
       | _ -> ());
   !st
 
-type as_const_payload = Int of int | Str of string * External_arg_spec.delim
+type as_const_payload = Int of int | Str of string | Json of string
 
 let iter_process_bs_string_or_int_as (attrs : Parsetree.attributes) =
   let st = ref None in
@@ -186,43 +186,40 @@ let iter_process_bs_string_or_int_as (attrs : Parsetree.attributes) =
         if !st = None then (
           Used_attributes.mark_used_attribute attr;
           match Ast_payload.is_single_int payload with
+          | Some v -> st := Some (Int v)
           | None -> (
-            match payload with
-            | PStr
-                [
-                  {
-                    pstr_desc =
-                      Pstr_eval
-                        ( {
-                            pexp_desc = Pexp_constant (Pconst_string (s, delim_));
-                            pexp_loc;
-                            _;
-                          },
-                          _ );
-                    _;
-                  };
-                ]
-              when Ast_utf8_string_interp.parse_processed_delim delim_ <> None
-              -> (
-              let delim =
-                match Ast_utf8_string_interp.parse_processed_delim delim_ with
-                | None -> assert false
-                | Some delim -> delim
-              in
-              st := Some (Str (s, delim));
-              if delim = DNoQuotes then
-                (* check that it is a valid object literal *)
+            match Ast_payload.semantic_string_of_payload payload with
+            | Some s -> st := Some (Str s)
+            | None -> (
+              match payload with
+              | PStr
+                  [
+                    {
+                      pstr_desc =
+                        Pstr_eval
+                          ( {
+                              pexp_desc = Pexp_constant (Pconst_json s);
+                              pexp_loc;
+                              _;
+                            },
+                            _ );
+                      _;
+                    };
+                  ] -> (
+                st := Some (Json s);
+                (* Check that it is a valid object literal. *)
                 match
                   Classify_function.classify
-                    ~check:(pexp_loc, Bs_flow_ast_utils.flow_deli_offset delim_)
+                    ~check:
+                      ( pexp_loc,
+                        Bs_flow_ast_utils.flow_deli_offset (Some "json") )
                     s
                 with
                 | Js_literal _ -> ()
                 | _ ->
                   Location.raise_errorf ~loc:pexp_loc
                     "an object literal expected")
-            | _ -> Bs_syntaxerr.err loc Expect_int_or_string_or_json_literal)
-          | Some v -> st := Some (Int v))
+              | _ -> Bs_syntaxerr.err loc Expect_int_or_string_or_json_literal)))
         else raise (Ast_untagged_variants.Error (loc, Duplicated_bs_as))
       | _ -> ());
   !st

@@ -26,19 +26,13 @@ type label = Types.label_description
 
 let find_name = Lambda.find_name
 
-let find_name_with_loc (attr : Parsetree.attribute) : string Asttypes.loc option
-    =
-  match attr with
-  | ( {txt = "as"; loc},
-      PStr
-        [
-          {
-            pstr_desc =
-              Pstr_eval ({pexp_desc = Pexp_constant (Pconst_string (s, _))}, _);
-          };
-        ] ) ->
-    Some {txt = s; loc}
-  | _ -> None
+let find_name_with_loc (({txt; loc}, payload) : Parsetree.attribute) :
+    string Asttypes.loc option =
+  if txt = "as" then
+    Option.map
+      (fun txt -> {Asttypes.txt; loc})
+      (Ast_payload.semantic_string_of_payload payload)
+  else None
 
 let check_bs_attributes_inclusion (attrs1 : Parsetree.attributes)
     (attrs2 : Parsetree.attributes) lbl_name =

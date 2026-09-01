@@ -20,18 +20,14 @@ let get_jsx_config_by_key ~key ~type_ record_fields =
   let values =
     List.filter_map
       (fun ({lid; x = expr} : expression record_element) ->
-        match (type_, lid, expr) with
-        | ( Int,
-            {txt = Lident k},
-            {pexp_desc = Pexp_constant (Pconst_integer (value, None))} )
-          when k = key ->
-          Some value
-        | ( String,
-            {txt = Lident k},
-            (* accept both normal strings and "js" strings *)
-            {pexp_desc = Pexp_constant (Pconst_string (value, _))} )
-          when k = key ->
-          Some value
+        match lid with
+        | {txt = Lident k} when k = key -> (
+          match type_ with
+          | Int -> (
+            match expr.pexp_desc with
+            | Pexp_constant (Pconst_integer (value, None)) -> Some value
+            | _ -> None)
+          | String -> Ast_payload.semantic_string_of_expression expr)
         | _ -> None)
       record_fields
   in

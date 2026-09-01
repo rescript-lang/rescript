@@ -1911,7 +1911,7 @@ let combine_constant loc arg cst partial ctx def
         List.map
           (fun (c, act) ->
             match c with
-            | Asttypes.Const_string (s, _) -> (s, act)
+            | Asttypes.Const_string s -> (s, act)
             | _ -> assert false)
           const_lambda_list
       in

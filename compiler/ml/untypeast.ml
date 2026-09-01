@@ -17,8 +17,9 @@ open Asttypes
 open Parsetree
 
 let constant = function
-  | Const_char c -> Pconst_char c
-  | Const_string (s, d) -> Pconst_string (s, d)
+  | Const_char semantic ->
+    Pconst_char {source = String_literal.encode_char_source semantic; semantic}
+  | Const_string semantic -> Ast_helper.Const.string semantic
   | Const_int i -> Pconst_integer (string_of_int i, None)
   | Const_bigint (sign, i) ->
     Pconst_integer (Bigint_utils.to_string sign i, Some 'n')

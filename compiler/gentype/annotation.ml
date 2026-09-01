@@ -42,29 +42,32 @@ let tag_is_intern_local s = s = "internal.local"
 
 let rec get_attribute_payload check_text (attributes : Typedtree.attributes) =
   let rec from_expr (expr : Parsetree.expression) =
-    match expr with
-    | {pexp_desc = Pexp_constant (Pconst_string (s, _))} ->
-      Some (StringPayload s)
-    | {pexp_desc = Pexp_constant (Pconst_integer (n, _))} -> Some (IntPayload n)
-    | {pexp_desc = Pexp_constant (Pconst_float (s, _))} -> Some (FloatPayload s)
-    | {
-     pexp_desc = Pexp_construct ({txt = Lident (("true" | "false") as s)}, _);
-     _;
-    } ->
-      Some (BoolPayload (s = "true"))
-    | {pexp_desc = Pexp_tuple exprs} ->
-      let payloads =
-        exprs |> List.rev
-        |> List.fold_left
-             (fun payloads expr ->
-               match expr |> from_expr with
-               | Some payload -> payload :: payloads
-               | None -> payloads)
-             []
-      in
-      Some (TuplePayload payloads)
-    | {pexp_desc = Pexp_ident {txt}} -> Some (IdentPayload txt)
-    | _ -> None
+    match Ast_payload.semantic_string_of_expression expr with
+    | Some s -> Some (StringPayload s)
+    | None -> (
+      match expr with
+      | {pexp_desc = Pexp_constant (Pconst_integer (n, _))} ->
+        Some (IntPayload n)
+      | {pexp_desc = Pexp_constant (Pconst_float (s, _))} ->
+        Some (FloatPayload s)
+      | {
+       pexp_desc = Pexp_construct ({txt = Lident (("true" | "false") as s)}, _);
+       _;
+      } ->
+        Some (BoolPayload (s = "true"))
+      | {pexp_desc = Pexp_tuple exprs} ->
+        let payloads =
+          exprs |> List.rev
+          |> List.fold_left
+               (fun payloads expr ->
+                 match expr |> from_expr with
+                 | Some payload -> payload :: payloads
+                 | None -> payloads)
+               []
+        in
+        Some (TuplePayload payloads)
+      | {pexp_desc = Pexp_ident {txt}} -> Some (IdentPayload txt)
+      | _ -> None)
   in
   match attributes with
   | [] -> None

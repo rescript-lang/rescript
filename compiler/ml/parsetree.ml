@@ -24,12 +24,40 @@ type constant =
      Suffixes [g-z][G-Z] are accepted by the parser.
      Suffixes except 'l', 'L' are rejected by the typechecker
   *)
-  | Pconst_char of int
-  (* 'c' *)
-  | Pconst_string of string * string option
-  (* "constant"
-     {delim|other constant|delim}
-  *)
+  | Pconst_char of {source: string; semantic: int}
+  (* An ordinary character literal.
+
+     [source] is the text between the single quotes, as produced by the scanner,
+     and is retained for printing. [semantic] is the decoded Unicode code point
+     used by typing and matching. For example, ['\u{1F600}'] produces
+     [{source = "\\u{1F600}"; semantic = 0x1F600}].
+
+     Compiler-created literals use [String_literal.encode_char_source] to derive
+     a canonical [source] from [semantic]. *)
+  | Pconst_string of {source: string; semantic: string}
+  (* An ordinary double-quoted string literal.
+
+     [source] is the text between the quotes, as produced by the scanner, and is
+     retained for printing. [semantic] is the decoded runtime string used by
+     typing, matching, and optimizations. For example, ["a\\n"] produces
+     [{source = "a\\n"; semantic = "a\n"}], where the second field contains an
+     actual newline.
+
+     The scanner preserves user-written escape spelling except that it rewrites
+     legacy three-digit decimal escapes to hexadecimal escapes. Compiler-created
+     strings use [String_literal.encode_js_string] to derive a canonical
+     [source] from [semantic]. *)
+  | Pconst_json of string
+  (* The JavaScript source inside a non-interpolated [json`...`] literal. For
+     example, [@as(json`{"ok": true}`)] stores ["{\"ok\": true}"]. Built-in
+     FFI processing consumes this form in supported external attributes;
+     otherwise the frontend rejects it. The string is JavaScript source, not a
+     decoded ReScript string value. *)
+  | Pconst_raw_source of string
+  (* JavaScript source carried by a compiler extension such as [raw], [ffi], or
+     [re]. For example, [%raw("x + 1")] stores ["x + 1"]. The extension
+     interprets the string as JavaScript source rather than as a ReScript
+     runtime string value. *)
   | Pconst_float of string * char option
 (* 3.4 2e5 1.4e-4
 
@@ -331,7 +359,25 @@ and expression_desc =
   | Pexp_for_of of pattern * expression * expression
     (* for pattern of array_expr do body_expr *)
   | Pexp_for_await_of of pattern * expression * expression
-(* for await pattern of iterable_expr do body_expr *)
+  (* for await pattern of iterable_expr do body_expr *)
+  | Pexp_template of {source_segments: string list; values: expression list}
+  (* An ordinary backquoted expression. [source_segments] contains the validated
+     text between and around the interpolations, including escape spelling;
+     [values] contains the interpolated expressions. For example, [`plain`]
+     produces [{source_segments = ["plain"]; values = []}], while
+     [`hello ${name}!`] produces
+     [{source_segments = ["hello "; "!"]; values = [name]}]. There is always
+     one more source segment than value. *)
+  | Pexp_tagged_template of {
+      tag: expression;
+      raw_sources: string list;
+      values: expression list;
+    }
+(* A JavaScript tagged template. For example, [sql`id = ${id}`] produces the
+   expression [sql] as [tag], [raw_sources = ["id = "; ""]], and [values =
+   [id]]. There is always one more raw source than value. Each raw source keeps
+   its exact escape spelling and may contain an invalid escape, as JavaScript
+   permits for tagged templates. *)
 
 (* an element of a record pattern or expression *)
 and 'a record_element = {lid: Longident.t loc; x: 'a; opt: bool (* optional *)}

@@ -5,10 +5,10 @@ import * as Test_utils from "./test_utils.mjs";
 
 function f(x) {
   switch (x) {
-    case "xx'''" :
-      return 0;
     case "xx\"" :
       return 1;
+    case "xx'''" :
+      return 0;
     case "xx\\\"" :
       return 2;
     case "xx\\\"\"" :

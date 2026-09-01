@@ -199,6 +199,10 @@ let expr sub {exp_extra; exp_desc; exp_env; _} =
   | Texp_for_await_of (_, _, exp1, exp2) ->
     sub.expr sub exp1;
     sub.expr sub exp2
+  | Texp_template {values} -> List.iter (sub.expr sub) values
+  | Texp_tagged_template {tag; values} ->
+    sub.expr sub tag;
+    List.iter (sub.expr sub) values
   | Texp_object_get (exp, _) -> sub.expr sub exp
   | Texp_object_set (exp, _, v) ->
     sub.expr sub exp;

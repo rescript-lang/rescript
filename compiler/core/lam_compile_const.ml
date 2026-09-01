@@ -60,8 +60,7 @@ and translate (x : Lambda.structured_constant) : J.expression =
   | Const_char i -> Js_of_lam_string.const_char i
   | Const_bigint (sign, i) -> E.bigint sign i
   | Const_float f -> E.float f (* TODO: preserve float *)
-  | Const_string {s; delim = None | Some DNoQuotes} -> E.str s
-  | Const_string {s; delim = Some delim} -> E.str ~delim s
+  | Const_string s -> E.str s
   | Const_polyvar name -> E.str name
   | Const_block (tag_info, xs) ->
     Js_of_lam_block.make_block NA tag_info (Ext_list.map xs translate)
@@ -77,4 +76,5 @@ and translate (x : Lambda.structured_constant) : J.expression =
 let translate_arg_cst (cst : External_arg_spec.cst) =
   match cst with
   | Arg_int_lit i -> E.int (Int32.of_int i)
-  | Arg_string_lit (s, delim) -> E.str s ~delim
+  | Arg_string_lit s -> E.str s
+  | Arg_json_lit s -> E.json_literal s

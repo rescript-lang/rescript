@@ -42,14 +42,13 @@ let print_attributes attributes =
 let print_constant const =
   match const with
   | Parsetree.Pconst_integer (s, _) -> "Pconst_integer(" ^ s ^ ")"
-  | Pconst_char c -> "Pconst_char(" ^ String.make 1 (Char.chr c) ^ ")"
-  | Pconst_string (s, delim) ->
-    let delim =
-      match delim with
-      | None -> ""
-      | Some delim -> delim ^ " "
-    in
-    "Pconst_string(" ^ delim ^ s ^ delim ^ ")"
+  | Pconst_char {source; semantic} ->
+    "Pconst_char(source=" ^ source ^ ", semantic=" ^ string_of_int semantic
+    ^ ")"
+  | Pconst_string {source; semantic} ->
+    "Pconst_string(source=" ^ source ^ ", semantic=" ^ semantic ^ ")"
+  | Pconst_json source -> "Pconst_json(" ^ source ^ ")"
+  | Pconst_raw_source source -> "Pconst_raw_source(" ^ source ^ ")"
   | Pconst_float (s, _) -> "Pconst_float(" ^ s ^ ")"
 
 let print_core_type typ ~pos =
@@ -264,6 +263,21 @@ and print_expr_item expr ~pos ~indentation =
     ^ ")"
   | Pexp_extension (({txt} as loc), _) ->
     "Pexp_extension(%" ^ (loc |> print_loc_denominator_loc ~pos) ^ txt ^ ")"
+  | Pexp_template {source_segments; values} ->
+    "Pexp_template(source_segments=["
+    ^ String.concat ", " source_segments
+    ^ "], values=["
+    ^ String.concat ", "
+        (List.map (fun value -> print_expr_item value ~pos ~indentation) values)
+    ^ "])"
+  | Pexp_tagged_template {tag; raw_sources; values} ->
+    "Pexp_tagged_template(tag="
+    ^ print_expr_item tag ~pos ~indentation
+    ^ ", sources="
+    ^ string_of_int (List.length raw_sources)
+    ^ ", values="
+    ^ string_of_int (List.length values)
+    ^ ")"
   | Pexp_assert expr ->
     "Pexp_assert(" ^ print_expr_item expr ~pos ~indentation ^ ")"
   | Pexp_field (exp, loc) ->

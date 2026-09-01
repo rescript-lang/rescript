@@ -3,7 +3,7 @@
 /* eslint-disable */
 /* tslint:disable */
 
-import {round as roundNotChecked} from './MyM\x61th';
+import {round as roundNotChecked} from './MyMath';
 
 import {round2 as round2NotChecked} from './MyMath';
 
@@ -25,7 +25,7 @@ import {polymorphic as polymorphicNotChecked} from './MyMath';
 
 import {default as defaultNotChecked} from './MyMath';
 
-// In case of type error, check the type of 'round' in 'ImportJsValue.res' and './MyM\x61th'.
+// In case of type error, check the type of 'round' in 'ImportJsValue.res' and './MyMath'.
 export const roundTypeChecked: (_1:number) => number = roundNotChecked as any;
 
 // Export 'round' early to allow circular import from the '.bs.js' file.

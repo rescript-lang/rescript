@@ -18,38 +18,136 @@ switch (match) {
 }
 
 function classifyEquivalentEscape(value, selectedCase) {
-  switch (value) {
-    case "\u0061" :
-      if (selectedCase === 2) {
-        return 2;
-      } else {
-        return 5;
-      }
-    case "\u{61}" :
-      if (selectedCase === 3) {
-        return 3;
-      } else {
-        return 5;
-      }
-    case "\x61" :
-      if (selectedCase === 1) {
-        return 1;
-      } else {
-        return 4;
-      }
-    case "a" :
-      if (selectedCase === 0) {
-        return 0;
-      } else {
-        return 5;
-      }
-    default:
-      return 5;
+  if (value === "a") {
+    if (selectedCase === 0) {
+      return 0;
+    } else if (selectedCase === 1) {
+      return 1;
+    } else if (selectedCase === 2) {
+      return 2;
+    } else if (selectedCase === 3) {
+      return 3;
+    } else {
+      return 4;
+    }
+  } else {
+    return 5;
   }
+}
+
+function classifyEquivalentSurrogateEscape(value, selectedCase) {
+  if (value === "😀") {
+    if (selectedCase === 0) {
+      return 0;
+    } else if (selectedCase === 1) {
+      return 1;
+    } else {
+      return 2;
+    }
+  } else {
+    return 3;
+  }
+}
+
+if (classifyEquivalentEscape("a", 0) !== 0) {
+  throw {
+    RE_EXN_ID: "Assert_failure",
+    _1: [
+      "test_string_switch.res",
+      29,
+      2
+    ],
+    Error: new Error()
+  };
+}
+
+if (classifyEquivalentEscape("a", 1) !== 1) {
+  throw {
+    RE_EXN_ID: "Assert_failure",
+    _1: [
+      "test_string_switch.res",
+      30,
+      2
+    ],
+    Error: new Error()
+  };
+}
+
+if (classifyEquivalentEscape("a", 2) !== 2) {
+  throw {
+    RE_EXN_ID: "Assert_failure",
+    _1: [
+      "test_string_switch.res",
+      31,
+      2
+    ],
+    Error: new Error()
+  };
+}
+
+if (classifyEquivalentEscape("a", 3) !== 3) {
+  throw {
+    RE_EXN_ID: "Assert_failure",
+    _1: [
+      "test_string_switch.res",
+      32,
+      2
+    ],
+    Error: new Error()
+  };
+}
+
+if (classifyEquivalentEscape("a", 4) !== 4) {
+  throw {
+    RE_EXN_ID: "Assert_failure",
+    _1: [
+      "test_string_switch.res",
+      33,
+      2
+    ],
+    Error: new Error()
+  };
+}
+
+if (classifyEquivalentSurrogateEscape("😀", 0) !== 0) {
+  throw {
+    RE_EXN_ID: "Assert_failure",
+    _1: [
+      "test_string_switch.res",
+      34,
+      2
+    ],
+    Error: new Error()
+  };
+}
+
+if (classifyEquivalentSurrogateEscape("😀", 1) !== 1) {
+  throw {
+    RE_EXN_ID: "Assert_failure",
+    _1: [
+      "test_string_switch.res",
+      35,
+      2
+    ],
+    Error: new Error()
+  };
+}
+
+if (classifyEquivalentSurrogateEscape("😀", 2) !== 2) {
+  throw {
+    RE_EXN_ID: "Assert_failure",
+    _1: [
+      "test_string_switch.res",
+      36,
+      2
+    ],
+    Error: new Error()
+  };
 }
 
 export {
   version,
   classifyEquivalentEscape,
+  classifyEquivalentSurrogateEscape,
 }
 /* match Not a pure module */

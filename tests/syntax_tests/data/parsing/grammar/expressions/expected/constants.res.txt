@@ -3,12 +3,11 @@ let y = false
 let txt = {js|a string|js}
 let txtWithEscapedChar = {js|foo\nbar|js}
 let number = 1
-let template = (({js|amazing
+let template = `amazing
   multine
   template
      string
-|js})
-  [@res.template ])
+`
 let complexNumber = 1.6
 let x = 0b0000_0001
 let int32 = 42l
@@ -46,7 +45,7 @@ let x = '\t'
 let x = '\b'
 let x = '\r'
 let x = ' '
-let x = '\170'
+let x = '\xAA'
 let () = ((getResult (); (-10))[@res.braces ])
 let x = {js|foo\0bar|js}
 let x = {js|foo\x0Abar|js}

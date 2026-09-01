@@ -269,7 +269,7 @@ let const_compare x y =
     compare (float_of_string f1) (float_of_string f2)
   | Const_bigint (s1, b1), Const_bigint (s2, b2) ->
     Bigint_utils.compare (s1, b1) (s2, b2)
-  | Const_string (s1, _), Const_string (s2, _) -> String.compare s1 s2
+  | Const_string s1, Const_string s2 -> String.compare s1 s2
   | _, _ -> compare x y
 
 let records_args l1 l2 =
@@ -370,7 +370,7 @@ let pretty_const c =
   match c with
   | Const_int i -> Printf.sprintf "%d" i
   | Const_char i -> Printf.sprintf "%s" (Pprintast.string_of_int_as_char i)
-  | Const_string (s, _) -> Printf.sprintf "%S" s
+  | Const_string s -> Printf.sprintf "%S" s
   | Const_float f -> Printf.sprintf "%s" f
   | Const_bigint (sign, i) ->
     Printf.sprintf "%s" (Bigint_utils.to_string sign i)
@@ -1080,10 +1080,10 @@ let build_other ext env : Typedtree.pattern =
   | (({pat_desc = Tpat_constant (Const_string _)} as p), _) :: _ ->
     build_other_constant
       (function
-        | Tpat_constant (Const_string (s, _)) -> String.length s
+        | Tpat_constant (Const_string s) -> String_literal.utf16_length s
         | _ -> assert false)
       (function
-        | i -> Tpat_constant (Const_string (String.make i '*', None)))
+        | i -> Tpat_constant (Const_string (String.make i '*')))
       0 succ p env
   | (({pat_desc = Tpat_constant (Const_float _)} as p), _) :: _ ->
     build_other_constant

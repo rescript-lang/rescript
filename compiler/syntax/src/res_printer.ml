@@ -564,45 +564,36 @@ let print_string_contents txt =
   let lines = String.split_on_char '\n' txt in
   Doc.join ~sep:Doc.literal_line (List.map Doc.text lines)
 
-let print_constant ?(template_literal = false) c =
+let raw_source_fits_double_quotes source =
+  let rec loop index =
+    if index >= String.length source then true
+    else
+      match String.unsafe_get source index with
+      | '"' -> false
+      | '\\' -> index + 1 < String.length source && loop (index + 2)
+      | _ -> loop (index + 1)
+  in
+  loop 0
+
+let print_constant c =
   match c with
   | Parsetree.Pconst_integer (s, suffix) -> (
     match suffix with
     | Some c -> Doc.text (s ^ Char.escaped c)
     | None -> Doc.text s)
-  | Pconst_string (txt, None) ->
-    Doc.concat [Doc.text "\""; print_string_contents txt; Doc.text "\""]
-  | Pconst_string (txt, Some prefix) ->
-    if prefix = "INTERNAL_RES_CHAR_CONTENTS" then
-      Doc.concat [Doc.text "'"; Doc.text txt; Doc.text "'"]
-    else
-      let lquote, rquote =
-        if template_literal then ("`", "`") else ("\"", "\"")
-      in
-      Doc.concat
-        [
-          (if prefix = "js" then Doc.nil else Doc.text prefix);
-          Doc.text lquote;
-          print_string_contents txt;
-          Doc.text rquote;
-        ]
-  | Pconst_float (s, _) -> Doc.text s
-  | Pconst_char c ->
-    let str =
-      match Char.unsafe_chr c with
-      | '\'' -> "\\'"
-      | '\\' -> "\\\\"
-      | '\n' -> "\\n"
-      | '\t' -> "\\t"
-      | '\r' -> "\\r"
-      | '\b' -> "\\b"
-      | ' ' .. '~' as c ->
-        let s = (Bytes.create [@doesNotRaise]) 1 in
-        Bytes.unsafe_set s 0 c;
-        Bytes.unsafe_to_string s
-      | _ -> Res_utf8.encode_code_point c
+  | Pconst_string {source} ->
+    Doc.concat [Doc.text "\""; print_string_contents source; Doc.text "\""]
+  | Pconst_json source ->
+    Doc.concat [Doc.text "json`"; print_string_contents source; Doc.text "`"]
+  | Pconst_raw_source source ->
+    let delimiter =
+      if raw_source_fits_double_quotes source then "\"" else "`"
     in
-    Doc.text ("'" ^ str ^ "'")
+    Doc.concat
+      [Doc.text delimiter; print_string_contents source; Doc.text delimiter]
+  | Pconst_char {source} ->
+    Doc.concat [Doc.text "'"; Doc.text source; Doc.text "'"]
+  | Pconst_float (s, _) -> Doc.text s
 
 module State = struct
   let custom_layout_threshold = 2
@@ -1640,7 +1631,11 @@ and collect_literal_dict_rows (e : Parsetree.expression) =
      pexp_desc =
        Pexp_tuple
          [
-           {pexp_desc = Pexp_constant (Pconst_string (name, _)); pexp_loc}; value;
+           {
+             pexp_desc = Pexp_constant (Pconst_string {semantic = name});
+             pexp_loc;
+           };
+           value;
          ];
     } ->
       Some ((Location.mkloc (Longident.Lident name) pexp_loc, value), e)
@@ -2524,8 +2519,7 @@ and print_value_binding ~state ~rec_flag (vb : Parsetree.value_binding) cmt_tbl
           } ->
             Parsetree_viewer.is_binary_expression if_expr
             || Parsetree_viewer.has_attributes if_expr.pexp_attributes
-          | {pexp_attributes = [({Location.txt = "res.taggedTemplate"}, _)]} ->
-            false
+          | {pexp_desc = Pexp_tagged_template _} -> false
           | {pexp_desc = Pexp_jsx_element _} -> true
           | e ->
             Parsetree_viewer.has_attributes e.pexp_attributes
@@ -2616,11 +2610,7 @@ and print_pattern ~state (p : Parsetree.pattern) cmt_tbl =
     match p.ppat_desc with
     | Ppat_any -> Doc.text "_"
     | Ppat_var var -> print_ident_like var.txt
-    | Ppat_constant c ->
-      let template_literal =
-        Parsetree_viewer.has_template_literal_attr p.ppat_attributes
-      in
-      print_constant ~template_literal c
+    | Ppat_constant c -> print_constant c
     | Ppat_tuple patterns ->
       Doc.group
         (Doc.concat
@@ -3274,10 +3264,7 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
         (Parsetree_viewer.rewrite_underscore_apply e)
         cmt_tbl
     | Pexp_fun _ -> print_arrow e
-    | Parsetree.Pexp_constant c ->
-      print_constant
-        ~template_literal:(Parsetree_viewer.is_template_literal e)
-        c
+    | Parsetree.Pexp_constant c -> print_constant c
     | Pexp_jsx_element
         (Jsx_fragment
            {
@@ -3658,12 +3645,16 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
               {
                 pstr_desc =
                   Pstr_eval
-                    ({pexp_desc = Pexp_constant (Pconst_string (expr, _))}, []);
+                    ({pexp_desc = Pexp_constant (Pconst_raw_source expr)}, []);
               };
             ] ) ->
         Doc.text expr
       | extension ->
         print_extension ~state ~at_module_lvl:false extension cmt_tbl)
+    | Pexp_template {source_segments; values} ->
+      print_template_literal ~state ~source_segments ~values cmt_tbl
+    | Pexp_tagged_template {tag; raw_sources; values} ->
+      print_tagged_template_literal ~state ~tag ~raw_sources ~values cmt_tbl
     | Pexp_apply
         {funct = e; args = [(Nolabel, {pexp_desc = Pexp_array sub_lists})]}
       when Parsetree_viewer.is_spread_array e ->
@@ -3672,13 +3663,9 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
         {funct = e; args = [(Nolabel, {pexp_desc = Pexp_array sub_lists})]}
       when Parsetree_viewer.is_spread_list e ->
       print_list_spread_apply ~state sub_lists cmt_tbl
-    | Pexp_apply {funct = call_expr; args} ->
+    | Pexp_apply _ ->
       if Parsetree_viewer.is_unary_expression e then
         print_unary_expression ~state e cmt_tbl
-      else if Parsetree_viewer.is_template_literal e then
-        print_template_literal ~state e cmt_tbl
-      else if Parsetree_viewer.is_tagged_template_literal e then
-        print_tagged_template_literal ~state call_expr args cmt_tbl
       else if Parsetree_viewer.is_binary_expression e then
         print_binary_expression ~state e cmt_tbl
       else print_pexp_apply ~state e cmt_tbl
@@ -4079,62 +4066,33 @@ and print_set_field_expr ~state attrs lhs longident_loc rhs loc cmt_tbl =
   in
   print_comments doc cmt_tbl loc
 
-and print_template_literal ~state expr cmt_tbl =
-  let tag = ref "js" in
-  let rec walk_expr expr =
-    let open Parsetree in
-    match expr.pexp_desc with
-    | Pexp_apply
-        {
-          funct = {pexp_desc = Pexp_ident {txt = Longident.Lident "++"}};
-          args = [(Nolabel, arg1); (Nolabel, arg2)];
-        } ->
-      let lhs = walk_expr arg1 in
-      let rhs = walk_expr arg2 in
-      Doc.concat [lhs; rhs]
-    | Pexp_constant (Pconst_string (txt, Some prefix)) ->
-      tag := prefix;
-      print_string_contents txt
-    | _ ->
-      let doc = print_expression_with_comments ~state expr cmt_tbl in
-      let doc =
-        match Parens.expr expr with
-        | Parens.Parenthesized -> add_parens doc
-        | Braced braces -> print_braces doc expr braces
-        | Nothing -> doc
-      in
-      Doc.group (Doc.concat [Doc.text "${"; Doc.indent doc; Doc.rbrace])
+and print_template_literal ~state ~source_segments ~values cmt_tbl =
+  let strings = List.map print_string_contents source_segments in
+  let values =
+    List.map
+      (fun expr ->
+        let doc = print_expression_with_comments ~state expr cmt_tbl in
+        let doc =
+          match Parens.expr expr with
+          | Parens.Parenthesized -> add_parens doc
+          | Braced braces -> print_braces doc expr braces
+          | Nothing -> doc
+        in
+        Doc.group (Doc.concat [Doc.text "${"; Doc.indent doc; Doc.rbrace]))
+      values
   in
-  let content = walk_expr expr in
-  Doc.concat
-    [
-      (if !tag = "js" then Doc.nil else Doc.text !tag);
-      Doc.text "`";
-      content;
-      Doc.text "`";
-    ]
-
-and print_tagged_template_literal ~state call_expr args cmt_tbl =
-  let strings_list, values_list =
-    match args with
-    | [
-     (_, {Parsetree.pexp_desc = Pexp_array strings});
-     (_, {Parsetree.pexp_desc = Pexp_array values});
-    ] ->
-      (strings, values)
+  let rec interleave acc strings values =
+    match (strings, values) with
+    | [source], [] -> Doc.concat [acc; source]
+    | source :: sources, value :: values ->
+      interleave (Doc.concat [acc; source; value]) sources values
     | _ -> assert false
   in
+  let content = interleave Doc.nil strings values in
+  Doc.concat [Doc.text "`"; content; Doc.text "`"]
 
-  let strings =
-    List.map
-      (fun x ->
-        match x with
-        | {Parsetree.pexp_desc = Pexp_constant (Pconst_string (txt, _))} ->
-          print_string_contents txt
-        | _ -> assert false)
-      strings_list
-  in
-
+and print_tagged_template_literal ~state ~tag ~raw_sources ~values cmt_tbl =
+  let strings = List.map print_string_contents raw_sources in
   let values =
     List.map
       (fun x ->
@@ -4144,7 +4102,7 @@ and print_tagged_template_literal ~state call_expr args cmt_tbl =
             print_expression_with_comments ~state x cmt_tbl;
             Doc.text "}";
           ])
-      values_list
+      values
   in
 
   let process strings values =
@@ -4158,8 +4116,8 @@ and print_tagged_template_literal ~state call_expr args cmt_tbl =
 
   let content : Doc.t = process strings values in
 
-  let tag = print_expression_with_comments ~state call_expr cmt_tbl in
-  Doc.concat [tag; Doc.text "`"; content; Doc.text "`"]
+  let tag_doc = print_expression_with_comments ~state tag cmt_tbl in
+  Doc.concat [tag_doc; Doc.text "`"; content; Doc.text "`"]
 
 and print_unary_expression ~state expr cmt_tbl =
   let print_unary_operator op =
@@ -4313,14 +4271,6 @@ and print_binary_expression ~state (expr : Parsetree.expression) cmt_tbl =
         | _ -> assert false
       else
         match expr.pexp_desc with
-        | Pexp_apply
-            {
-              funct = {pexp_desc = Pexp_ident {txt = Longident.Lident "++"; loc}};
-              args = [(Nolabel, _); (Nolabel, _)];
-            }
-          when loc.loc_ghost ->
-          let doc = print_template_literal ~state expr cmt_tbl in
-          print_comments doc cmt_tbl expr.Parsetree.pexp_loc
         | Pexp_setfield (lhs, field, rhs) ->
           let doc =
             print_set_field_expr ~state expr.pexp_attributes lhs field rhs
@@ -6121,7 +6071,8 @@ and print_attribute ?(standalone = false) ~state
         [
           {
             pstr_desc =
-              Pstr_eval ({pexp_desc = Pexp_constant (Pconst_string (txt, _))}, _);
+              Pstr_eval
+                ({pexp_desc = Pexp_constant (Pconst_string {semantic = txt})}, _);
           };
         ] ) ->
     ( Doc.concat

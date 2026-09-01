@@ -136,6 +136,23 @@ and expression_desc =
      breaks analysis when it reads CMTs produced by older compiler versions. *)
   | Texp_for_of of Ident.t * Parsetree.pattern * expression * expression
   | Texp_for_await_of of Ident.t * Parsetree.pattern * expression * expression
+  (* A typed JavaScript tagged template. For example, [sql`id = ${id}`] stores
+     the typed [sql] expression in [tag], [raw_sources = ["id = "; ""]], and
+     the typed [id] expression in [values]. Raw sources retain their exact
+     spelling and may contain invalid escapes, as JavaScript permits for tagged
+     templates. There is always one more raw source than value. *)
+  | Texp_tagged_template of {
+      tag: expression;
+      raw_sources: string list;
+      values: expression list;
+    }
+  (* A typed ordinary backquoted template. Each segment contains both its
+     validated source spelling and decoded semantic value; [values] contains
+     the typed interpolated expressions. For example, [`a ${value}\n`] has two
+     segments, with the final one represented as
+     [{source = "\\n"; semantic = "\n"}]. There is always one more segment
+     than value. *)
+  | Texp_template of {segments: template_segment list; values: expression list}
 
 and case = {c_lhs: pattern; c_guard: expression option; c_rhs: expression}
 

@@ -79,7 +79,11 @@ val runtime_call :
   (* args *)
   t
 
-val str : ?delim:J.delim -> ?comment:string -> string -> t
+val str : ?comment:string -> string -> t
+
+val template_literal : ?comment:string -> semantic:string -> string -> t
+
+val json_literal : ?comment:string -> string -> t
 
 val record_rest : ?comment:string -> J.record_rest_field list -> t -> t
 
@@ -250,7 +254,10 @@ val not : t -> t
 
 val call : ?comment:string -> info:Js_call_info.t -> t -> t list -> t
 
-val tagged_template : ?comment:string -> t -> t list -> t list -> t
+val tagged_template : ?comment:string -> t -> string list -> t list -> t
+
+val interpolated_template :
+  ?comment:string -> Asttypes.template_segment list -> t list -> t
 
 val new_ : ?comment:string -> J.expression -> J.expression list -> t
 

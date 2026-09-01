@@ -1,0 +1,8 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/json_literal_outside_external.res[0m:[2m1:17-29[0m
+
+  [1;31m1[0m [2m│[0m let value = json[1;31m`{answer: 42}[0m`
+  2 [2m│[0m 
+
+  A `json` literal can only be used in an external attribute such as `@as`

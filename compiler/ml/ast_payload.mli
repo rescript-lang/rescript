@@ -31,7 +31,17 @@ type lid = string Asttypes.loc
 
 type action = lid * Parsetree.expression option
 
-val is_single_string : t -> (string * string option) option
+val json_literal_outside_external_message : string
+val reject_json_literal : loc:Location.t -> 'a
+val reject_json_literal_payload : t -> unit
+
+val semantic_string_of_expression : Parsetree.expression -> string option
+(** Return the decoded value when the expression is an ordinary string or a
+    non-interpolated backquoted string. *)
+
+val semantic_string_of_payload : t -> string option
+(** Return the decoded value of an ordinary or non-interpolated backquoted string.
+    Other prefixed literals, such as [json], are not semantic strings. *)
 
 val is_single_int : t -> int option
 

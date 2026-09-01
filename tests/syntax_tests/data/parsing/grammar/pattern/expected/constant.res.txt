@@ -69,29 +69,17 @@ let (-1)..(-1.) = x
   | exception 19.34 -> true
   | _ -> false
 ;;match literal with
-  | (({js|literal|js})[@res.template ]) -> true
-  | ((({js|literal1|js})[@res.template ]),
-     (({js|literal2|js})[@res.template ])) -> true
-  | [|(({js|literal1|js})[@res.template ]);(({js|literal2|js})[@res.template
-                                                                ])|]
-      -> true
-  | (({js|literal1|js})[@res.template ])::(({js|literal2|js})[@res.template ])::[]
-      -> true
-  | { x = (({js|literal1|js})[@res.template ]);
-      y = (({js|literal2|js})[@res.template ]) } -> true
-  | Constructor
-      ((({js|literal1|js})[@res.template ]),
-       (({js|literal2|js})[@res.template ]))
-      -> true
-  | `Constuctor
-      ((({js|literal1|js})[@res.template ]),
-       (({js|literal2|js})[@res.template ]))
-      -> true
-  | (({js|literal|js})[@res.template ]) as x -> true
-  | (({js|literal|js})[@res.template ])|(({js|literal|js})[@res.template ])
-      -> true
-  | ((({js|literal|js})[@res.template ]) : string) -> true
-  | exception (({js|literal|js})[@res.template ]) -> true
+  | {js|literal|js} -> true
+  | ({js|literal1|js}, {js|literal2|js}) -> true
+  | [|{js|literal1|js};{js|literal2|js}|] -> true
+  | {js|literal1|js}::{js|literal2|js}::[] -> true
+  | { x = {js|literal1|js}; y = {js|literal2|js} } -> true
+  | Constructor ({js|literal1|js}, {js|literal2|js}) -> true
+  | `Constuctor ({js|literal1|js}, {js|literal2|js}) -> true
+  | {js|literal|js} as x -> true
+  | {js|literal|js}|{js|literal|js} -> true
+  | ({js|literal|js} : string) -> true
+  | exception {js|literal|js} -> true
   | _ -> false
-let (({js|literal constant|js})[@res.template ]) = x
-;;for (({js|literal constant|js})[@res.template ]) = 0 to 10 do () done
+let {js|literal constant|js} = x
+;;for {js|literal constant|js} = 0 to 10 do () done

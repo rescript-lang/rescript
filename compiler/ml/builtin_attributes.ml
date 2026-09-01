@@ -16,14 +16,9 @@
 open Asttypes
 open Parsetree
 
-let string_of_cst = function
-  | Pconst_string (s, _) -> Some s
-  | _ -> None
-
-let string_of_payload = function
-  | PStr [{pstr_desc = Pstr_eval ({pexp_desc = Pexp_constant c}, _)}] ->
-    string_of_cst c
-  | _ -> None
+let string_of_payload payload =
+  Ast_payload.reject_json_literal_payload payload;
+  Ast_payload.semantic_string_of_payload payload
 
 let string_of_opt_payload p =
   match string_of_payload p with
@@ -45,26 +40,17 @@ let rec error_of_extension ext =
     in
     match p with
     | PStr [] -> raise Location.Already_displayed_error
-    | PStr
-        ({
-           pstr_desc =
-             Pstr_eval ({pexp_desc = Pexp_constant (Pconst_string (msg, _))}, _);
-         }
-        :: {
-             pstr_desc =
-               Pstr_eval
-                 ( {pexp_desc = Pexp_constant (Pconst_string (if_highlight, _))},
-                   _ );
-           }
-        :: inner) ->
-      Location.error ~loc ~if_highlight ~sub:(sub_from inner) msg
-    | PStr
-        ({
-           pstr_desc =
-             Pstr_eval ({pexp_desc = Pexp_constant (Pconst_string (msg, _))}, _);
-         }
-        :: inner) ->
-      Location.error ~loc ~sub:(sub_from inner) msg
+    | PStr ({pstr_desc = Pstr_eval (message, _)} :: inner) -> (
+      match Ast_payload.semantic_string_of_expression message with
+      | Some msg -> (
+        match inner with
+        | {pstr_desc = Pstr_eval (highlight, _)} :: rest -> (
+          match Ast_payload.semantic_string_of_expression highlight with
+          | Some if_highlight ->
+            Location.error ~loc ~if_highlight ~sub:(sub_from rest) msg
+          | None -> Location.error ~loc ~sub:(sub_from inner) msg)
+        | _ -> Location.error ~loc ~sub:(sub_from inner) msg)
+      | None -> Location.errorf ~loc "Invalid syntax for extension '%s'." txt)
     | _ -> Location.errorf ~loc "Invalid syntax for extension '%s'." txt)
   | {txt; loc}, _ -> Location.errorf ~loc "Uninterpreted extension '%s'." txt
 
@@ -89,11 +75,8 @@ let rec deprecated_of_attrs_with_migrate = function
       fields
       |> List.find_map (fun field ->
           match field with
-          | {
-           lid = {txt = Lident "reason"};
-           x = {pexp_desc = Pexp_constant (Pconst_string (reason, _))};
-          } ->
-            Some reason
+          | {lid = {txt = Lident "reason"}; x} ->
+            Ast_payload.semantic_string_of_expression x
           | _ -> None)
     in
     let migration_template =
@@ -199,17 +182,11 @@ let warning_attribute ?(ppwarning = true) =
     process loc txt false payload
   | {txt = ("ocaml.warnerror" | "warnerror") as txt; loc}, payload ->
     process loc txt true payload
-  | ( {txt = "ocaml.ppwarning" | "ppwarning"},
-      PStr
-        [
-          {
-            pstr_desc =
-              Pstr_eval ({pexp_desc = Pexp_constant (Pconst_string (s, _))}, _);
-            pstr_loc;
-          };
-        ] )
-    when ppwarning ->
-    Location.prerr_warning pstr_loc (Warnings.Preprocessor s)
+  | {txt = "ocaml.ppwarning" | "ppwarning"}, (PStr [{pstr_loc; _}] as payload)
+    when ppwarning -> (
+    match string_of_payload payload with
+    | Some s -> Location.prerr_warning pstr_loc (Warnings.Preprocessor s)
+    | None -> ())
   | _ -> ()
 
 let warning_scope ?ppwarning attrs f =

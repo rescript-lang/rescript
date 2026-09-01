@@ -66,8 +66,6 @@ let Pipe = {
   z: 3
 };
 
-let concat = "ab";
-
 async function test() {
   return 12;
 }
@@ -81,6 +79,8 @@ let a = "A";
 let b = "B";
 
 let vv = 10;
+
+let concat = "ab";
 
 let neq = false;
 

@@ -223,6 +223,9 @@ module Error_messages = struct
   let string_interpolation_in_pattern =
     "String interpolation is not supported in pattern matching."
 
+  let tagged_template_in_pattern =
+    "Tagged template literals are not supported in patterns"
+
   let object_quoted_field_name name =
     "An object type declaration needs quoted field names. Did you mean \""
     ^ name ^ "\"?"
@@ -271,15 +274,11 @@ let suppress_fragile_match_warning_attr =
     Parsetree.PStr
       [
         Ast_helper.Str.eval
-          (Ast_helper.Exp.constant (Pconst_string ("-4", None)));
+          (Ast_helper.Exp.constant (Ast_helper.Const.string "-4"));
       ] )
 let make_braces_attr loc = (Location.mkloc "res.braces" loc, Parsetree.PStr [])
-let template_literal_attr = (Location.mknoloc "res.template", Parsetree.PStr [])
 let make_pat_variant_spread_attr =
   (Location.mknoloc "res.patVariantSpread", Parsetree.PStr [])
-
-let tagged_template_literal_attr =
-  (Location.mknoloc "res.taggedTemplate", Parsetree.PStr [])
 
 let spread_attr = (Location.mknoloc "res.spread", Parsetree.PStr [])
 let dict_spread_attr = (Location.mknoloc "res.dictSpread", Parsetree.PStr [])
@@ -1001,6 +1000,15 @@ let parse_open_description ~attrs p =
 (* constant	::=	integer-literal   *)
 (* ∣	 float-literal   *)
 (* ∣	 string-literal   *)
+let parse_string_constant (p : Parser.t) ~start_pos ~end_pos source =
+  match String_literal.decode_js_escapes source with
+  | Some semantic -> Parsetree.Pconst_string {source; semantic}
+  | None ->
+    if p.diagnostics = [] then
+      Parser.err ~start_pos ~end_pos p
+        (Diagnostics.message "Invalid string escape sequence");
+    Parsetree.Pconst_string {source; semantic = ""}
+
 let parse_constant p =
   let is_negative =
     match p.Parser.token with
@@ -1026,30 +1034,35 @@ let parse_constant p =
     | Float {f; suffix} ->
       let float_txt = if is_negative then "-" ^ f else f in
       Parsetree.Pconst_float (float_txt, suffix)
-    | String s ->
-      Pconst_string (s, if p.mode = ParseForTypeChecker then Some "js" else None)
-    | Codepoint {c; original} ->
-      if p.mode = ParseForTypeChecker then Pconst_char c
-      else
-        (* Pconst_char char does not have enough information for formatting.
-         * When parsing for the printer, we encode the char contents as a string
-         * with a special prefix. *)
-        Pconst_string (original, Some "INTERNAL_RES_CHAR_CONTENTS")
+    | String source ->
+      parse_string_constant p ~start_pos:p.start_pos ~end_pos:p.end_pos source
+    | Codepoint {c; original} -> Pconst_char {source = original; semantic = c}
     | token ->
       Parser.err p (Diagnostics.unexpected token p.breadcrumbs);
-      Pconst_string ("", None)
+      Ast_helper.Const.string ""
   in
   Parser.next_unsafe p;
   constant
 
-let parse_template_constant ~prefix (p : Parser.t) =
+let parse_template_constant ~start_pos ~prefix (p : Parser.t) =
   (* Arrived at the ` char *)
-  let start_pos = p.start_pos in
   Parser.next_template_literal_token p;
   match p.token with
-  | TemplateTail (txt, _) ->
+  | TemplateTail (txt, _) -> (
     Parser.next p;
-    Parsetree.Pconst_string (txt, prefix)
+    match prefix with
+    | None -> (
+      match String_literal.decode_js_template_escapes txt with
+      | Some semantic -> Ast_helper.Const.string semantic
+      | None ->
+        if p.diagnostics = [] then
+          Parser.err ~start_pos ~end_pos:p.prev_end_pos p
+            (Diagnostics.message "Invalid string escape sequence");
+        Ast_helper.Const.string "")
+    | Some _ ->
+      Parser.err ~start_pos ~end_pos:p.prev_end_pos p
+        (Diagnostics.message Error_messages.tagged_template_in_pattern);
+      Ast_helper.Const.string txt)
   | _ ->
     let rec skip_tokens () =
       if p.token <> Eof then (
@@ -1063,7 +1076,7 @@ let parse_template_constant ~prefix (p : Parser.t) =
     skip_tokens ();
     Parser.err ~start_pos ~end_pos:p.prev_end_pos p
       (Diagnostics.message Error_messages.string_interpolation_in_pattern);
-    Pconst_string ("", None)
+    Ast_helper.Const.string ""
 
 let parse_comma_delimited_region p ~grammar ~closing ~f =
   Parser.leave_breadcrumb p grammar;
@@ -1233,10 +1246,8 @@ let rec parse_pattern ?(alias = true) ?(or_ = true) p =
         Ast_helper.Pat.interval ~loc:(mk_loc start_pos p.prev_end_pos) c c2
       | _ -> Ast_helper.Pat.constant ~loc:(mk_loc start_pos p.prev_end_pos) c)
     | Backtick ->
-      let constant = parse_template_constant ~prefix:(Some "js") p in
-      Ast_helper.Pat.constant ~attrs:[template_literal_attr]
-        ~loc:(mk_loc start_pos p.prev_end_pos)
-        constant
+      let constant = parse_template_constant ~start_pos ~prefix:None p in
+      Ast_helper.Pat.constant ~loc:(mk_loc start_pos p.prev_end_pos) constant
     | Lparen -> (
       Parser.next p;
       match p.token with
@@ -1272,7 +1283,9 @@ let rec parse_pattern ?(alias = true) ?(or_ = true) p =
       Parser.next p;
       match p.token with
       | Backtick ->
-        let constant = parse_template_constant ~prefix:(Some ident) p in
+        let constant =
+          parse_template_constant ~start_pos ~prefix:(Some ident) p
+        in
         Ast_helper.Pat.constant ~loc:(mk_loc start_pos p.prev_end_pos) constant
       | _ -> Ast_helper.Pat.var ~loc ~attrs (Location.mkloc ident loc))
     | Uident _ -> (
@@ -2083,9 +2096,7 @@ and parse_regex ~start_pos p pattern flags =
       [
         Ast_helper.Str.eval ~loc
           (Ast_helper.Exp.constant ~loc
-             (Pconst_string
-                ( "/" ^ pattern ^ "/" ^ flags,
-                  if p.mode = ParseForTypeChecker then Some "js" else None )));
+             (Pconst_raw_source ("/" ^ pattern ^ "/" ^ flags)));
       ]
   in
   Ast_helper.Exp.extension (Location.mkloc "re" loc, payload)
@@ -2496,14 +2507,6 @@ and parse_binary_expr ?(context = OrdinaryExpr) ?a p prec =
 (* ) *)
 
 and parse_template_expr ?prefix p =
-  let part_prefix =
-    (* we could stop treating json prefix as something special
-       but we would first need to remove @as(json`true`) feature *)
-    match prefix with
-    | Some {txt = Longident.Lident ("json" as prefix); _} -> Some prefix
-    | _ -> Some "js"
-  in
-
   let parse_parts p =
     let rec aux acc =
       let start_pos = p.Parser.start_pos in
@@ -2512,20 +2515,12 @@ and parse_template_expr ?prefix p =
       | TemplateTail (txt, last_pos) ->
         Parser.next p;
         let loc = mk_loc start_pos last_pos in
-        let str =
-          Ast_helper.Exp.constant ~attrs:[template_literal_attr] ~loc
-            (Pconst_string (txt, part_prefix))
-        in
-        List.rev ((str, None) :: acc)
+        List.rev ((txt, loc, None) :: acc)
       | TemplatePart (txt, last_pos) ->
         Parser.next p;
         let loc = mk_loc start_pos last_pos in
         let expr = parse_expr_block p in
-        let str =
-          Ast_helper.Exp.constant ~attrs:[template_literal_attr] ~loc
-            (Pconst_string (txt, part_prefix))
-        in
-        aux ((str, Some expr) :: acc)
+        aux ((txt, loc, Some expr) :: acc)
       | token ->
         Parser.err p (Diagnostics.unexpected token p.breadcrumbs);
         []
@@ -2533,59 +2528,31 @@ and parse_template_expr ?prefix p =
     aux []
   in
   let parts = parse_parts p in
-  let strings = List.map fst parts in
-  let values = Ext_list.filter_map parts snd in
-
-  let gen_tagged_template_call (lident_loc : Longident.t Location.loc) =
+  let sources = List.map (fun (source, _, _) -> source) parts in
+  let values = Ext_list.filter_map parts (fun (_, _, value) -> value) in
+  let template_loc =
+    let _, first_loc, _ = List.hd parts in
+    let _, last_loc, _ = Ext_list.last parts in
+    mk_loc first_loc.loc_start last_loc.loc_end
+  in
+  let gen_tagged_template (lident_loc : Longident.t Location.loc) =
     let ident = Ast_helper.Exp.ident ~attrs:[] ~loc:lident_loc.loc lident_loc in
-    let strings_array =
-      Ast_helper.Exp.array ~attrs:[] ~loc:Location.none strings
-    in
-    let values_array =
-      Ast_helper.Exp.array ~attrs:[] ~loc:Location.none values
-    in
-    Ast_helper.Exp.apply
-      ~attrs:[tagged_template_literal_attr]
-      ~loc:lident_loc.loc ident
-      [(Nolabel, strings_array); (Nolabel, values_array)]
-  in
-
-  let hidden_operator =
-    let op = Location.mknoloc (Longident.Lident "++") in
-    Ast_helper.Exp.ident op
-  in
-  let concat (e1 : Parsetree.expression) (e2 : Parsetree.expression) =
-    let loc = mk_loc e1.pexp_loc.loc_start e2.pexp_loc.loc_end in
-    Ast_helper.Exp.apply ~attrs:[template_literal_attr] ~loc hidden_operator
-      [(Nolabel, e1); (Nolabel, e2)]
-  in
-  let gen_interpolated_string () =
-    let subparts =
-      List.flatten
-        (List.map
-           (fun part ->
-             match part with
-             | s, Some v -> [s; v]
-             | s, None -> [s])
-           parts)
-    in
-    let expr_option =
-      List.fold_left
-        (fun acc subpart ->
-          Some
-            (match acc with
-            | Some expr -> concat expr subpart
-            | None -> subpart))
-        None subparts
-    in
-    match expr_option with
-    | Some expr -> expr
-    | None -> Ast_helper.Exp.constant (Pconst_string ("", None))
+    Ast_helper.Exp.tagged_template ~loc:lident_loc.loc ident sources values
   in
 
   match prefix with
-  | Some {txt = Longident.Lident "json"; _} | None -> gen_interpolated_string ()
-  | Some lident_loc -> gen_tagged_template_call lident_loc
+  | Some {txt = Longident.Lident "json"; _} -> (
+    match (parts, values) with
+    | [(source, loc, None)], [] ->
+      Ast_helper.Exp.constant ~loc (Pconst_json source)
+    | (source, loc, _) :: _, _ ->
+      Parser.err ~start_pos:template_loc.loc_start ~end_pos:template_loc.loc_end
+        p
+        (Diagnostics.message "`json` literals do not support interpolation");
+      Ast_helper.Exp.constant ~loc (Pconst_json source)
+    | [], _ -> assert false)
+  | None -> Ast_helper.Exp.template ~loc:template_loc sources values
+  | Some lident_loc -> gen_tagged_template lident_loc
 
 (* Overparse: let f = a : int => a + 1, is it (a : int) => or (a): int =>
  * Also overparse constraints:
@@ -3172,10 +3139,10 @@ and parse_braced_or_record_expr p =
       Parser.expect Rbrace p;
       expr
     | _ -> (
-      let tag = if p.mode = ParseForTypeChecker then Some "js" else None in
       let constant =
         Ast_helper.Exp.constant ~loc:field.loc
-          (Parsetree.Pconst_string (s, tag))
+          (parse_string_constant p ~start_pos:field.loc.loc_start
+             ~end_pos:field.loc.loc_end s)
       in
       let a = parse_primary_expr ~operand:constant p in
       let e = parse_binary_expr ~a p 1 in
@@ -4411,7 +4378,7 @@ and parse_dict_expr ~start_pos p =
         (Ast_helper.Exp.tuple
            ~loc:(mk_loc key_loc.loc_start value_loc.loc_end)
            [
-             Ast_helper.Exp.constant ~loc:key_loc (Pconst_string (key, None));
+             Ast_helper.Exp.constant ~loc:key_loc (Ast_helper.Const.string key);
              value_expr;
            ])
     | _ -> None
@@ -6723,7 +6690,7 @@ and parse_structure_item_region pending_structure_items p =
              PStr
                [
                  Ast_helper.Str.eval ~loc
-                   (Ast_helper.Exp.constant ~loc (Pconst_string (s, None)));
+                   (Ast_helper.Exp.constant ~loc (Ast_helper.Const.string s));
                ] ))
     | AtAt ->
       let attr = parse_standalone_attribute p in
@@ -7409,7 +7376,7 @@ and parse_signature_item_region pending_signature_items p =
              PStr
                [
                  Ast_helper.Str.eval ~loc
-                   (Ast_helper.Exp.constant ~loc (Pconst_string (s, None)));
+                   (Ast_helper.Exp.constant ~loc (Ast_helper.Const.string s));
                ] ))
     | PercentPercent ->
       let extension = parse_extension ~module_language:true p in
@@ -7636,7 +7603,7 @@ and doc_comment_to_attribute loc s : Parsetree.attribute =
     PStr
       [
         Ast_helper.Str.eval ~loc
-          (Ast_helper.Exp.constant ~loc (Pconst_string (s, None)));
+          (Ast_helper.Exp.constant ~loc (Ast_helper.Const.string s));
       ] )
 
 and parse_attributes p =
@@ -7693,6 +7660,34 @@ and parse_extension ?(module_language = false) p =
   else Parser.expect Percent p;
   let attr_id = parse_attribute_id ~start_pos p in
   let payload = parse_payload p in
+  let payload =
+    match (attr_id.txt, payload) with
+    | ( ("raw" | "ffi" | "re"),
+        Parsetree.PStr
+          [
+            ({
+               pstr_desc =
+                 Pstr_eval
+                   ( ({pexp_desc = Pexp_constant (Pconst_string {source})} as
+                      expression),
+                     eval_attrs );
+             } as item);
+          ] ) ->
+      Parsetree.PStr
+        [
+          {
+            item with
+            pstr_desc =
+              Pstr_eval
+                ( {
+                    expression with
+                    pexp_desc = Pexp_constant (Pconst_raw_source source);
+                  },
+                  eval_attrs );
+          };
+        ]
+    | _ -> payload
+  in
   (attr_id, payload)
 
 (* module signature on the file level *)

@@ -251,10 +251,13 @@ let print_quoted_string_with_byte_width f s =
   print_string_with_byte_width f quoted
 
 let constant f = function
-  | Pconst_char i -> pp f "%s" (string_of_int_as_char i)
-  | Pconst_string (i, None) -> print_quoted_string_with_byte_width f i
-  | Pconst_string (i, Some delim) ->
-    pp f "{%s|%a|%s}" delim print_string_with_byte_width i delim
+  | Pconst_char {source} -> pp f "'%s'" source
+  | Pconst_string {source} ->
+    pp f "{js|%a|js}" print_string_with_byte_width source
+  | Pconst_json source ->
+    pp f "{json|%a|json}" print_string_with_byte_width source
+  | Pconst_raw_source source ->
+    pp f "{js|%a|js}" print_string_with_byte_width source
   | Pconst_integer (i, None) -> paren (i.[0] = '-') (fun f -> pp f "%s") f i
   | Pconst_integer (i, Some m) ->
     paren (i.[0] = '-') (fun f (i, m) -> pp f "%s%c" i m) f (i, m)
@@ -757,6 +760,25 @@ and expression ctxt f x =
     | Pexp_variant (l, Some eo) -> pp f "@[<2>`%s@;%a@]" l (simple_expr ctxt) eo
     | Pexp_extension e -> extension ctxt f e
     | Pexp_await e -> pp f "@[<hov2>await@ %a@]" (simple_expr ctxt) e
+    | Pexp_template {source_segments; values} ->
+      let rec parts f (source_segments, values) =
+        match (source_segments, values) with
+        | [source], [] -> pp f "%s" source
+        | source :: source_segments, value :: values ->
+          pp f "%s${%a}%a" source (expression ctxt) value parts
+            (source_segments, values)
+        | _ -> assert false
+      in
+      pp f "`%a`" parts (source_segments, values)
+    | Pexp_tagged_template {tag; raw_sources; values} ->
+      let rec parts f (sources, values) =
+        match (sources, values) with
+        | [source], [] -> pp f "%s" source
+        | source :: sources, value :: values ->
+          pp f "%s${%a}%a" source (expression ctxt) value parts (sources, values)
+        | _ -> assert false
+      in
+      pp f "%a`%a`" (simple_expr ctxt) tag parts (raw_sources, values)
     | _ -> expression1 ctxt f x
 
 and expression1 ctxt f x =

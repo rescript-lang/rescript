@@ -183,7 +183,8 @@ and translateCoreType_ ~config ~type_vars_gen
             let label_js =
               if as_string then
                 match attributes |> Annotation.get_as_string with
-                | Some label_renamed -> StringLabel label_renamed
+                | Some label_renamed ->
+                  StringLabel (Emit_text.escape_string_contents label_renamed)
                 | None ->
                   if is_number label then IntLabel label else StringLabel label
               else if as_int then (

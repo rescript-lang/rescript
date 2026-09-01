@@ -18,9 +18,22 @@
 type constant =
   | Const_int of int
   | Const_char of int
-  | Const_string of string * string option
+      (** The decoded Unicode code point of a character literal. For example,
+          ['\u{1F600}'] is represented as [Const_char 0x1F600]. Source spelling
+          has been discarded after type checking. *)
+  | Const_string of string
+      (** The decoded runtime value of an ordinary string literal. For example,
+          ["a\\n"] is represented by a string containing an actual newline.
+          Source spelling has been discarded after type checking. *)
   | Const_float of string
   | Const_bigint of bool * string
+
+type template_segment = {source: string; semantic: string}
+(** A segment of an ordinary backquoted template after validation. [source]
+    preserves its spelling for JavaScript output; [semantic] is its decoded
+    runtime string value. For example, the final segment of [`a ${value}\n`]
+    is [{source = "\\n"; semantic = "\n"}], where [semantic] contains an
+    actual newline. *)
 
 type rec_flag = Nonrecursive | Recursive
 

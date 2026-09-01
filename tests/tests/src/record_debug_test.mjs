@@ -71,11 +71,13 @@ let c = [
 
 console.log(a, c);
 
+let a$1 = [
+  ``,
+  `a`
+];
+
 Mocha.describe("record_debug_test.res", () => {
-  Mocha.test("private attribute test", () => Test_utils.eq("File \"record_debug_test.res\", line 57, characters 7-14", [
-    ``,
-    `a`
-  ], [
+  Mocha.test("private attribute test", () => Test_utils.eq("File \"record_debug_test.res\", line 57, characters 7-14", a$1, [
     "",
     "a"
   ]));

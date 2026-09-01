@@ -303,7 +303,7 @@ let is_regexp_jsx_heuristic_expr expr =
             {
               pstr_desc =
                 Pstr_eval
-                  ({pexp_desc = Pexp_constant (Pconst_string ("//", _))}, _);
+                  ({pexp_desc = Pexp_constant (Pconst_raw_source "//")}, _);
             };
           ] )
     when expr.pexp_loc |> Loc.end_ = (Location.none |> Loc.end_) ->

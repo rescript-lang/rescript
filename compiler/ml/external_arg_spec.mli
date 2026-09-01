@@ -22,11 +22,10 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-type delim = DNone | DStarJ | DNoQuotes | DBackQuotes
-
-val parse_processed_delim : string option -> delim option
-
-type cst = private Arg_int_lit of int | Arg_string_lit of string * delim
+type cst = private
+  | Arg_int_lit of int
+  | Arg_string_lit of string
+  | Arg_json_lit of string
 
 type attr =
   | Poly_var_string of {descr: (string * string) list}
@@ -57,7 +56,8 @@ type params = param list
 
 val cst_int : int -> cst
 
-val cst_string : string -> delim -> cst
+val cst_string : string -> cst
+val cst_json : string -> cst
 
 val empty_label : label
 

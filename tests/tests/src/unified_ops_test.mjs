@@ -3,8 +3,6 @@
 
 let float = 1 + 2;
 
-let string = "12";
-
 let bigint = 1n + 2n;
 
 function unknown(a, b) {
@@ -104,6 +102,8 @@ let bigintShiftLeft = (1n << 2n);
 let bigintShiftRight = (8n >> 2n);
 
 let int = 3;
+
+let string = "12";
 
 let intShiftLeft = 4;
 

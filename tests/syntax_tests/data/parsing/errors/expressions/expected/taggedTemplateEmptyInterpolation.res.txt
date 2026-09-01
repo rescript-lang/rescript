@@ -6,8 +6,4 @@
 
   It seems that this expression block is empty
 
-let q =
-  ((sql
-      [|(({js|SELECT * FROM |js})[@res.template ]);(({js||js})
-        [@res.template ])|] [|([%rescript.exprhole ])|])
-  [@res.taggedTemplate ])
+let q = sql`SELECT * FROM ${[%rescript.exprhole ]}`

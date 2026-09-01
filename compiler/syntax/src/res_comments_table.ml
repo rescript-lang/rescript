@@ -1521,6 +1521,10 @@ and walk_expression expr t comments =
       }
     when Res_parsetree_viewer.is_tuple_array key_values ->
     walk_list [Expression key_values] t comments
+  | Pexp_tagged_template {tag; values} ->
+    walk_list (List.map (fun e -> Expression e) (tag :: values)) t comments
+  | Pexp_template {values} ->
+    walk_list (List.map (fun e -> Expression e) values) t comments
   | Pexp_apply {funct = call_expr; args = arguments} -> (
     (* Special handling for array spread - treat it like an array *)
     match call_expr.pexp_desc with

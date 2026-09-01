@@ -116,9 +116,9 @@ let process_tag_type (attrs : Parsetree.attributes) =
       match txt with
       | "as" ->
         if !st = None then (
-          (match Ast_payload.is_single_string payload with
+          (match Ast_payload.semantic_string_of_payload payload with
           | None -> ()
-          | Some (s, _dec) -> st := Some (String s));
+          | Some s -> st := Some (String s));
           (match Ast_payload.is_single_int payload with
           | None -> ()
           | Some i -> st := Some (Int i));
@@ -197,9 +197,10 @@ let process_tag_name (attrs : Parsetree.attributes) =
       match txt with
       | "tag" ->
         if !st = None then (
-          (match Ast_payload.is_single_string payload with
+          Ast_payload.reject_json_literal_payload payload;
+          (match Ast_payload.semantic_string_of_payload payload with
           | None -> ()
-          | Some (s, _dec) -> st := Some s);
+          | Some s -> st := Some s);
           if !st = None then raise (Error (loc, InvalidVariantTagAnnotation)))
         else raise (Error (loc, Duplicated_bs_as))
       | _ -> ());

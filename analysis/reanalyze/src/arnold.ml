@@ -535,7 +535,8 @@ module Find_functions_called = struct
     let super = Tast_mapper.default in
     let expr (self : Tast_mapper.mapper) (e : Typedtree.expression) =
       (match e.exp_desc with
-      | Texp_apply {funct = {exp_desc = Texp_ident (callee, _, _)}} ->
+      | Texp_apply {funct = {exp_desc = Texp_ident (callee, _, _)}}
+      | Texp_tagged_template {tag = {exp_desc = Texp_ident (callee, _, _)}} ->
         let function_name = Path.name callee in
         callees := !callees |> String_set.add function_name
       | _ -> ());
@@ -867,6 +868,13 @@ module Compile = struct
         | None -> expr |> expression ~ctx |> eval_args ~args ~ctx)
     | Texp_apply {funct = expr; args} ->
       expr |> expression ~ctx |> eval_args ~args ~ctx
+    | Texp_tagged_template {tag; values} ->
+      let args =
+        List.map (fun value -> (Asttypes.Nolabel, Some value)) values
+      in
+      tag |> expression ~ctx |> eval_args ~args ~ctx
+    | Texp_template {values} ->
+      values |> List.map (expression ~ctx) |> Command.sequence
     | Texp_let
         ( Recursive,
           [{vb_pat = {pat_desc = Tpat_var (id, _); pat_loc}; vb_expr}],

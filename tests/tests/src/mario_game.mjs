@@ -3230,7 +3230,7 @@ let loadCount = {
 function load(param) {
   let canvas_id = "canvas";
   let el = document.getElementById(canvas_id);
-  let canvas = el !== null ? el : (console.log("cant find canvas " + canvas_id), Pervasives.failwith("fail"));
+  let canvas = el !== null ? el : (console.log("cant find canvas canvas"), Pervasives.failwith("fail"));
   let context = canvas.getContext("2d");
   document.addEventListener("keydown", keydown, true);
   document.addEventListener("keyup", keyup, true);
