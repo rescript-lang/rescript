@@ -26,17 +26,20 @@
 
 type ident = Ident.t
 
-type t =
+type t = Lambda.primitive =
+  | Pdebugger
+  | Ptypeof
+  | Psome
+  | Psome_not_nest
+      (** [Some x] where [x] cannot itself be [undefined], so no wrapping is
+          needed. *)
   (* Operations on heap blocks *)
   | Pmakeblock of Lam_tag_info.t
-  | Pfield of int * Lam_compat.field_dbg_info
-  | Psetfield of int * Lam_compat.set_field_dbg_info
-  (* could have field info at least for record *)
+  | Pfield of int * Lambda.field_dbg_info
+  | Psetfield of int * Lambda.set_field_dbg_info
   | Pduprecord
-  (* Tagged template literal: [tag; strings_array; values_array] *)
-  | Ptagged_template
-  | Precord_rest of string list
-  (* External call *)
+  | Precord_rest of string list (* excluded runtime field names *)
+  (* JS FFI calls, expanded from the external's spec at translation *)
   | Pjs_call of {
       prim_name: string;
       arg_types: External_arg_spec.params;
@@ -44,6 +47,8 @@ type t =
       transformed_jsx: bool;
     }
   | Pjs_object_create of External_arg_spec.obj_params
+  | Pjs_object_get of string
+  | Pjs_object_set of string
   (* Exceptions *)
   | Praise
   (* object primitives *)
@@ -53,7 +58,7 @@ type t =
   | Pobjmax
   | Pobjtag
   | Pobjsize
-  (* Boolean primitives *)
+  (* Boolean operations *)
   | Psequand
   | Psequor
   | Pnot
@@ -61,8 +66,7 @@ type t =
   | Pboolorder
   | Pboolmin
   | Pboolmax
-  (* Integer primitives *)
-  | Pisint
+  (* Integer operations *)
   | Pnegint
   | Paddint
   | Psubint
@@ -81,15 +85,15 @@ type t =
   | Pintorder
   | Pintmin
   | Pintmax
-  (* Float primitives *)
+  (* Float operations *)
   | Pintoffloat
   | Pfloatofint
   | Pnegfloat
+  | Pmodfloat
   | Paddfloat
   | Psubfloat
   | Pmulfloat
   | Pdivfloat
-  | Pmodfloat
   | Ppowfloat
   | Pfloatcomp of Lam_compat.comparison
   | Pfloatorder
@@ -99,10 +103,10 @@ type t =
   | Pnegbigint
   | Paddbigint
   | Psubbigint
+  | Ppowbigint
   | Pmulbigint
   | Pdivbigint
   | Pmodbigint
-  | Ppowbigint
   | Pandbigint
   | Porbigint
   | Pxorbigint
@@ -113,16 +117,16 @@ type t =
   | Pbigintorder
   | Pbigintmin
   | Pbigintmax
-  (* String primitives *)
+  (* String operations *)
   | Pstringlength
   | Pstringrefu
   | Pstringrefs
-  | Pstringadd
   | Pstringcomp of Lam_compat.comparison
   | Pstringorder
   | Pstringmin
   | Pstringmax
-  (* Array primitives *)
+  | Pstringadd
+  (* Array operations *)
   | Pmakearray
   | Parraylength
   | Parrayrefu
@@ -136,37 +140,36 @@ type t =
   | Pdict_has
   (* promise *)
   | Pawait
-  (* etc or deprecated *)
-  | Pis_poly_var_block
-  | Pjscomp of Lam_compat.comparison
-  | Pdebugger
-  | Pjs_object_get of string
-  | Pjs_object_set of string
+  (* modules *)
+  | Pimport of Lambda.import_source
   | Pinit_mod
   | Pupdate_mod
-  | Praw_js_code of Js_raw_info.t
-  (* we wrap it when do the conversion to prevent
-     accendential optimization
-     play safe first
-  *)
-  | Pjs_fn_method
+  (* hash *)
+  | Phash
+  | Phash_mixint
+  | Phash_mixstring
+  | Phash_finalmix
+  (* Test if the argument is a block or an immediate integer *)
+  | Pisint
+  (* Test if the (integer) argument is outside an interval *)
+  (* Test if the argument is null or undefined *)
+  | Pis_null_undefined
+  (* exn *)
+  | Pcreate_extension of string
+  (* js *)
+  | Pjscomp of Lam_compat.comparison
   | Pnull_to_opt
   | Pnull_undefined_to_opt
+  (* Produced by Lam_pass_remove_alias, not by translation *)
   | Pis_null
   | Pis_undefined
-  | Pis_null_undefined
-  | Pimport of Lambda.import_source
-  | Ptypeof
-  | Pcreate_extension of string
-  | Pis_not_none (* no info about its type *)
+  | Pis_not_none
   | Pval_from_option
   | Pval_from_option_not_nest
-  | Psome
-  | Psome_not_nest
-  | Phash
-  | Phash_mixstring
-  | Phash_mixint
-  | Phash_finalmix
+  | Pis_poly_var_block
+  | Praw_js_code of Js_raw_info.t
+  | Pjs_fn_method
+  | Ptagged_template
 
 let eq_field_dbg_info (x : Lam_compat.field_dbg_info)
     (y : Lam_compat.field_dbg_info) =

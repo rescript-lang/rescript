@@ -22,144 +22,9 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-let prim = Lam.prim
-
-(* type required_modules = Lam_module_ident.Hash_set.t *)
-
-(** drop Lseq (List! ) etc 
-    see #3852, we drop all these required global modules
-    but added it back based on our own module analysis
-*)
-let lam_prim ~primitive:(p : Lambda.primitive) ~args loc : Lam.t =
-  match p with
-  | Pcreate_extension s -> prim ~primitive:(Pcreate_extension s) ~args loc
-  | Pmakeblock info -> prim ~primitive:(Pmakeblock info) ~args loc
-  | Pdebugger -> prim ~primitive:Pdebugger ~args loc
-  | Psome -> prim ~primitive:Psome ~args loc
-  | Psome_not_nest -> prim ~primitive:Psome_not_nest ~args loc
-  | Ptypeof -> prim ~primitive:Ptypeof ~args loc
-  | Pis_null_undefined -> prim ~primitive:Pis_null_undefined ~args loc
-  | Pnull_to_opt -> prim ~primitive:Pnull_to_opt ~args loc
-  | Pis_null -> prim ~primitive:Pis_null ~args loc
-  | Pis_undefined -> prim ~primitive:Pis_undefined ~args loc
-  | Pnull_undefined_to_opt -> prim ~primitive:Pnull_undefined_to_opt ~args loc
-  | Pis_not_none -> prim ~primitive:Pis_not_none ~args loc
-  | Pval_from_option -> prim ~primitive:Pval_from_option ~args loc
-  | Pval_from_option_not_nest ->
-    prim ~primitive:Pval_from_option_not_nest ~args loc
-  | Pjscomp x -> prim ~primitive:(Pjscomp x) ~args loc
-  | Pfield (id, info) -> prim ~primitive:(Pfield (id, info)) ~args loc
-  | Psetfield (id, info) -> prim ~primitive:(Psetfield (id, info)) ~args loc
-  | Pduprecord -> prim ~primitive:Pduprecord ~args loc
-  | Ptagged_template -> prim ~primitive:Ptagged_template ~args loc
-  | Precord_rest excluded -> prim ~primitive:(Precord_rest excluded) ~args loc
-  | Praise -> prim ~primitive:Praise ~args loc
-  | Pobjcomp x -> prim ~primitive:(Pobjcomp x) ~args loc
-  | Pobjorder -> prim ~primitive:Pobjorder ~args loc
-  | Pobjmin -> prim ~primitive:Pobjmin ~args loc
-  | Pobjmax -> prim ~primitive:Pobjmax ~args loc
-  | Pobjtag -> prim ~primitive:Pobjtag ~args loc
-  | Pobjsize -> prim ~primitive:Pobjsize ~args loc
-  | Psequand -> prim ~primitive:Psequand ~args loc
-  | Psequor -> prim ~primitive:Psequor ~args loc
-  | Pnot -> prim ~primitive:Pnot ~args loc
-  | Pboolcomp x -> prim ~primitive:(Pboolcomp x) ~args loc
-  | Pboolorder -> prim ~primitive:Pboolorder ~args loc
-  | Pboolmin -> prim ~primitive:Pboolmin ~args loc
-  | Pboolmax -> prim ~primitive:Pboolmax ~args loc
-  | Pnegint -> prim ~primitive:Pnegint ~args loc
-  | Paddint -> prim ~primitive:Paddint ~args loc
-  | Psubint -> prim ~primitive:Psubint ~args loc
-  | Pmulint -> prim ~primitive:Pmulint ~args loc
-  | Pdivint -> prim ~primitive:Pdivint ~args loc
-  | Pmodint -> prim ~primitive:Pmodint ~args loc
-  | Ppowint -> prim ~primitive:Ppowint ~args loc
-  | Pandint -> prim ~primitive:Pandint ~args loc
-  | Porint -> prim ~primitive:Porint ~args loc
-  | Pxorint -> prim ~primitive:Pxorint ~args loc
-  | Pnotint -> prim ~primitive:Pnotint ~args loc
-  | Plslint -> prim ~primitive:Plslint ~args loc
-  | Plsrint -> prim ~primitive:Plsrint ~args loc
-  | Pasrint -> prim ~primitive:Pasrint ~args loc
-  | Pintorder -> prim ~primitive:Pintorder ~args loc
-  | Pintmin -> prim ~primitive:Pintmin ~args loc
-  | Pintmax -> prim ~primitive:Pintmax ~args loc
-  | Pstringlength -> prim ~primitive:Pstringlength ~args loc
-  | Pstringrefu -> prim ~primitive:Pstringrefu ~args loc
-  | Pstringcomp x -> prim ~primitive:(Pstringcomp x) ~args loc
-  | Pstringorder -> prim ~primitive:Pstringorder ~args loc
-  | Pstringmin -> prim ~primitive:Pstringmin ~args loc
-  | Pstringmax -> prim ~primitive:Pstringmax ~args loc
-  | Pstringadd -> prim ~primitive:Pstringadd ~args loc
-  | Pstringrefs -> prim ~primitive:Pstringrefs ~args loc
-  | Pisint -> prim ~primitive:Pisint ~args loc
-  | Pintoffloat -> prim ~primitive:Pintoffloat ~args loc
-  | Pfloatofint -> prim ~primitive:Pfloatofint ~args loc
-  | Pnegfloat -> prim ~primitive:Pnegfloat ~args loc
-  | Paddfloat -> prim ~primitive:Paddfloat ~args loc
-  | Psubfloat -> prim ~primitive:Psubfloat ~args loc
-  | Pmulfloat -> prim ~primitive:Pmulfloat ~args loc
-  | Pdivfloat -> prim ~primitive:Pdivfloat ~args loc
-  | Pmodfloat -> prim ~primitive:Pmodfloat ~args loc
-  | Ppowfloat -> prim ~primitive:Ppowfloat ~args loc
-  | Pfloatorder -> prim ~primitive:Pfloatorder ~args loc
-  | Pfloatmin -> prim ~primitive:Pfloatmin ~args loc
-  | Pfloatmax -> prim ~primitive:Pfloatmax ~args loc
-  | Pnegbigint -> prim ~primitive:Pnegbigint ~args loc
-  | Paddbigint -> prim ~primitive:Paddbigint ~args loc
-  | Psubbigint -> prim ~primitive:Psubbigint ~args loc
-  | Pmulbigint -> prim ~primitive:Pmulbigint ~args loc
-  | Pdivbigint -> prim ~primitive:Pdivbigint ~args loc
-  | Pmodbigint -> prim ~primitive:Pmodbigint ~args loc
-  | Ppowbigint -> prim ~primitive:Ppowbigint ~args loc
-  | Pandbigint -> prim ~primitive:Pandbigint ~args loc
-  | Porbigint -> prim ~primitive:Porbigint ~args loc
-  | Pxorbigint -> prim ~primitive:Pxorbigint ~args loc
-  | Pnotbigint -> prim ~primitive:Pnotbigint ~args loc
-  | Plslbigint -> prim ~primitive:Plslbigint ~args loc
-  | Pasrbigint -> prim ~primitive:Pasrbigint ~args loc
-  | Pbigintcomp x -> prim ~primitive:(Pbigintcomp x) ~args loc
-  | Pbigintorder -> prim ~primitive:Pbigintorder ~args loc
-  | Pbigintmin -> prim ~primitive:Pbigintmin ~args loc
-  | Pbigintmax -> prim ~primitive:Pbigintmax ~args loc
-  | Pintcomp x -> prim ~primitive:(Pintcomp x) ~args loc
-  | Pfloatcomp x -> prim ~primitive:(Pfloatcomp x) ~args loc
-  | Pmakearray -> prim ~primitive:Pmakearray ~args loc
-  | Parraylength -> prim ~primitive:Parraylength ~args loc
-  | Parrayrefu -> prim ~primitive:Parrayrefu ~args loc
-  | Parraysetu -> prim ~primitive:Parraysetu ~args loc
-  | Parrayrefs -> prim ~primitive:Parrayrefs ~args loc
-  | Parraysets -> prim ~primitive:Parraysets ~args loc
-  | Pmakelist -> prim ~primitive:Pmakelist ~args loc
-  | Pmakedict -> prim ~primitive:Pmakedict ~args loc
-  | Pdict_has -> prim ~primitive:Pdict_has ~args loc
-  | Pawait -> prim ~primitive:Pawait ~args loc
-  | Pimport src -> prim ~primitive:(Pimport src) ~args loc
-  | Pinit_mod -> prim ~primitive:Pinit_mod ~args loc
-  | Pupdate_mod -> prim ~primitive:Pupdate_mod ~args loc
-  | Phash -> prim ~primitive:Phash ~args loc
-  | Phash_mixint -> prim ~primitive:Phash_mixint ~args loc
-  | Phash_mixstring -> prim ~primitive:Phash_mixstring ~args loc
-  | Phash_finalmix -> prim ~primitive:Phash_finalmix ~args loc
-  | Pis_poly_var_block -> prim ~primitive:Pis_poly_var_block ~args loc
-  | Pjs_call {prim_name; arg_types; ffi; transformed_jsx} ->
-    prim
-      ~primitive:(Pjs_call {prim_name; arg_types; ffi; transformed_jsx})
-      ~args loc
-  | Pjs_object_create labels ->
-    prim ~primitive:(Pjs_object_create labels) ~args loc
-  | Pjs_object_get name -> prim ~primitive:(Pjs_object_get name) ~args loc
-  | Pjs_object_set name -> prim ~primitive:(Pjs_object_set name) ~args loc
-  | Praw_js_code info -> prim ~primitive:(Praw_js_code info) ~args loc
-  | Pjs_fn_method -> prim ~primitive:Pjs_fn_method ~args loc
-
-(* Does not exist since we compile array in js backend unlike native backend *)
-
-(* Which other compilation units this one refers to. A reference that later
-   passes delete still has to be imported when the module it names is impure,
-   so the answer is taken from the term as written (see #3852). Read off the
-   Lambda term rather than accumulated while translating it, so that
-   translation stays a function of its input. *)
+(** Global modules a unit depends on. Convert used to drop [Lglobal_module]
+    references and have them added back by module analysis (see #3852); they
+    are collected here instead, from the Lambda term directly. *)
 let required_modules (lam : Lambda.lambda) : Lam_module_ident.Hash_set.t =
   let required = Lam_module_ident.Hash_set.create 0 in
   let rec collect (lam : Lambda.lambda) =
@@ -190,8 +55,8 @@ let convert (lam : Lambda.lambda) : Lam.t =
       Lam.letrec (Ext_list.map_snd bindings convert_aux) (convert_aux body)
     | Lglobal_module id -> Lam.global_module id
     | Lprim {primitive; args; loc} ->
-      let args = Ext_list.map args convert_aux in
-      lam_prim ~primitive ~args loc
+      (* [Lam_primitive.t] is [Lambda.primitive]: nothing to translate. *)
+      Lam.prim ~primitive ~args:(Ext_list.map args convert_aux) loc
     | Lswitch (e, s) -> convert_switch e s
     | Lstringswitch (e, cases, default) ->
       Lam.stringswitch (convert_aux e)
