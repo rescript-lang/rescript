@@ -6,5 +6,5 @@ let suites =
   __FILE__
   >::: [
          ( "typed string constants" >:: fun _ ->
-           Lambda.const_string "value" None =~ Lambda.Const_string "value" );
+           Lambda.const_string "value" =~ Lambda.Const_string "value" );
        ]

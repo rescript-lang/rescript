@@ -440,7 +440,7 @@ and lambda_switch = t switch
 *)
 let const_int (i : int) = Const_int (Int32.of_int i)
 
-let const_string s _delim = Const_string s
+let const_string s = Const_string s
 
 let const_of_typed (c : Asttypes.constant) : structured_constant =
   match c with
@@ -1476,8 +1476,7 @@ let rec transl_normal_path = function
   | Path.Pident id ->
     (* A predefined exception is its own name at runtime, so the reference is
        that string rather than a module. *)
-    if Ident.is_predef_exn id then
-      Lconst (Const_string id.name)
+    if Ident.is_predef_exn id then Lconst (Const_string id.name)
     else if Ident.global id then Lglobal_module id
     else Lvar id
   | Pdot (p, s, pos) ->

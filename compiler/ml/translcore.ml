@@ -734,23 +734,19 @@ let lam_of_loc kind loc =
     const
       (Const_block
          ( Blk_tuple,
-           [
-             const_string file None;
-             const_int lnum;
-             const_int cnum;
-             const_int enum;
-           ] ))
-  | Loc_FILE -> const (const_string file None)
+           [const_string file; const_int lnum; const_int cnum; const_int enum]
+         ))
+  | Loc_FILE -> const (const_string file)
   | Loc_MODULE ->
     let filename = Filename.basename file in
     let name = Env.get_unit_name () in
     let module_name = if name = "" then "//" ^ filename ^ "//" else name in
-    const (const_string module_name None)
+    const (const_string module_name)
   | Loc_LOC ->
     let loc =
       Printf.sprintf "File %S, line %d, characters %d-%d" file lnum cnum enum
     in
-    const (const_string loc None)
+    const (const_string loc)
   | Loc_LINE -> const (const_int lnum)
 
 (* Eta-expand a primitive *)
@@ -895,8 +891,7 @@ let assert_failed exp =
               const
                 (Const_block
                    ( Blk_tuple,
-                     [const_string fname None; const_int line; const_int char]
-                   ));
+                     [const_string fname; const_int line; const_int char] ));
             ]
           exp.exp_loc;
       ]
@@ -1043,7 +1038,8 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.t =
     function_ ~loc ~attr ~params ~body:lbody
   | Texp_tagged_template {tag; raw_sources; values} ->
     prim ~primitive:(Ptagged_template raw_sources)
-      ~args:(transl_exp tag :: transl_list values) e.exp_loc
+      ~args:(transl_exp tag :: transl_list values)
+      e.exp_loc
   | Texp_template {segments; values} ->
     prim ~primitive:(Ptemplate segments) ~args:(transl_list values) e.exp_loc
   | Texp_apply

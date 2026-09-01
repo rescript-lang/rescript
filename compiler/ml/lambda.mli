@@ -436,7 +436,7 @@ and lambda_switch = t switch
 val make_key : t -> t option
 
 val const_int : int -> structured_constant
-val const_string : string -> string option -> structured_constant
+val const_string : string -> structured_constant
 val const_of_typed : constant -> structured_constant
 val const_unit : structured_constant
 val const_constructor : Variant_runtime.tag -> structured_constant

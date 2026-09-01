@@ -216,8 +216,7 @@ let assert_lam_int expected = function
   | _ -> OUnit.assert_failure "expected a folded Lambda integer"
 
 let assert_lam_char expected = function
-  | Lambda.Lconst (Lambda.Const_char actual) ->
-    assert_int_equal expected actual
+  | Lambda.Lconst (Lambda.Const_char actual) -> assert_int_equal expected actual
   | _ -> OUnit.assert_failure "expected a folded Lambda character"
 
 let typed_string s =
@@ -246,10 +245,8 @@ let assert_typed_template ~source_segments ~expected_semantics =
   end;
   match Translcore.transl_exp typed with
   | Lprim
-      {
-        primitive = Ptemplate segments;
-        args = [Lconst (Const_string "value")];
-      } ->
+      {primitive = Ptemplate segments; args = [Lconst (Const_string "value")]}
+    ->
     OUnit.assert_equal ~printer:Ext_obj.dump source_segments
       (List.map (fun ({source} : Asttypes.template_segment) -> source) segments);
     OUnit.assert_equal ~printer:Ext_obj.dump expected_semantics
@@ -497,8 +494,8 @@ let suites =
            let semantic =
              convert_typed_constant (Asttypes.Const_string "a\n😀")
            in
-           OUnit.assert_equal ~printer:Ext_obj.dump
-             (Lambda.Const_string "a\n😀") semantic );
+           OUnit.assert_equal ~printer:Ext_obj.dump (Lambda.Const_string "a\n😀")
+             semantic );
          ( "JavaScript IR distinguishes strings and template literals"
          >:: fun _ ->
            assert_js_string ~expected:"a\n😀" (Lambda.Const_string "a\n😀");
