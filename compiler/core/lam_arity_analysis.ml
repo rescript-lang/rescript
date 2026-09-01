@@ -96,7 +96,8 @@ let rec get_arity (meta : Lam_stats.t) (lam : Lam.t) : Lam_arity.t =
         *)
       in
       take xs (List.length args))
-  | Lfunction {arity; body} -> Lam_arity.merge arity (get_arity meta body)
+  | Lfunction {params; body} ->
+    Lam_arity.merge (List.length params) (get_arity meta body)
   | Lswitch
       ( _,
         {

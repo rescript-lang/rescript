@@ -305,7 +305,7 @@ let rec lam ppf = function
   | Lprim (prim, largs, _) ->
     let lams ppf largs = List.iter (fun l -> fprintf ppf "@ %a" lam l) largs in
     fprintf ppf "@[<2>(%a%a)@]" primitive prim lams largs
-  | Lswitch (larg, sw, _loc) ->
+  | Lswitch (larg, sw) ->
     let switch ppf sw =
       let spc = ref false in
       List.iter
@@ -339,7 +339,7 @@ let rec lam ppf = function
       | None -> "switch*"
       | _ -> "switch")
       lam larg switch sw
-  | Lstringswitch (arg, cases, default, _) ->
+  | Lstringswitch (arg, cases, default) ->
     let switch ppf cases =
       let spc = ref false in
       List.iter

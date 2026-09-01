@@ -29,7 +29,6 @@ module Types = struct
   type lambda_switch = t Lambda.switch
 
   and lfunction = {
-    arity: int;
     params: ident list;
     body: t;
     attr: Lambda.function_attribute;
@@ -338,8 +337,7 @@ let var id : t = Lvar id
 let global_module id = Lglobal_module id
 let const ct : t = Lconst ct
 
-let function_ ~loc ~attr ~arity ~params ~body : t =
-  Lfunction {arity; params; body; attr; loc}
+let function_ ~loc ~attr ~params ~body : t = Lfunction {params; body; attr; loc}
 
 let let_ kind id e body : t = Llet (kind, id, e, body)
 let letrec bindings body : t = Lletrec (bindings, body)

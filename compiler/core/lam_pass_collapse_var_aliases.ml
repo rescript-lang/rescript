@@ -19,8 +19,8 @@ let collapse ~exports (lam : Lam.t) : Lam.t =
     | Lapply {ap_func; ap_args; ap_info; ap_transformed_jsx} ->
       Lam.apply (go ap_func) (Ext_list.map ap_args go) ap_info
         ~ap_transformed_jsx
-    | Lfunction {arity; params; body; attr; loc} ->
-      Lam.function_ ~loc ~attr ~arity ~params ~body:(go body)
+    | Lfunction {params; body; attr; loc} ->
+      Lam.function_ ~loc ~attr ~params ~body:(go body)
     | Llet (Alias, id, Lvar u, body) ->
       let u = resolve tbl u in
       Hash_ident.add tbl id u;

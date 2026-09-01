@@ -36,7 +36,6 @@ and apply = private {
 }
 
 and lfunction = {
-  arity: int;
   params: ident list;
   body: t;
   attr: Lambda.function_attribute;
@@ -92,7 +91,6 @@ val apply : ?ap_transformed_jsx:bool -> t -> t list -> ap_info -> t
 val function_ :
   loc:Location.t ->
   attr:Lambda.function_attribute ->
-  arity:int ->
   params:ident list ->
   body:t ->
   t
