@@ -304,17 +304,11 @@ let compile (output_prefix : string) export_idents hoisted (lam : Lambda.lambda)
     let lam = Lam_pass_remove_alias.simplify_alias meta lam in
     let lam = Lam_pass_deep_flatten.deep_flatten lam in
     let () = Lam_pass_collect.collect_info meta lam in
-    let lam =
-      lam |> d "apply_arity_before"
-      |> Lam_pass_apply_arity.normalize meta
-      |> d "apply_arity_after" |> Lam_pass_exits.simplify_exits
-    in
+    let lam = lam |> Lam_pass_exits.simplify_exits in
     let () = Lam_pass_collect.collect_info meta lam in
 
     lam |> d "simplify_alias_before"
     |> Lam_pass_remove_alias.simplify_alias meta
-    |> d "apply_arity_before2"
-    |> Lam_pass_apply_arity.normalize meta
     |> d "before-simplify_lets"
     (* we should investigate a better way to put different passes : )*)
     |> Lam_pass_lets_dce.simplify_lets
