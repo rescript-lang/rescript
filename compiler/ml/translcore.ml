@@ -288,8 +288,6 @@ let primitive_builtins : (string * Lambda.builtin) array =
       (* int primitives *)
       ("%obj_is_int", Pisint);
       ("%negint", Pnegint);
-      ("%succint", Poffsetint 1);
-      ("%predint", Poffsetint (-1));
       ("%addint", Paddint);
       ("%subint", Psubint);
       ("%mulint", Pmulint);

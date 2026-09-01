@@ -367,7 +367,6 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
     | _ -> assert false)
   | Pfloatofint -> Ext_list.singleton_exn args
   | Pnot -> E.not (Ext_list.singleton_exn args)
-  | Poffsetint n -> E.offset (Ext_list.singleton_exn args) n
   | Psequand -> (
     (* TODO: rhs is possibly a tail call *)
     match args with

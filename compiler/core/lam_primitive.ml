@@ -77,7 +77,6 @@ type t =
   | Plslint
   | Plsrint
   | Pasrint
-  | Poffsetint of int
   | Pintcomp of Lam_compat.comparison
   | Pintorder
   | Pintmin
@@ -279,10 +278,6 @@ let eq_primitive_approx (lhs : t) (rhs : t) =
   | Pjscomp comparison -> (
     match rhs with
     | Pjscomp comparison1 -> Lam_compat.eq_comparison comparison comparison1
-    | _ -> false)
-  | Poffsetint i0 -> (
-    match rhs with
-    | Poffsetint i1 -> i0 = i1
     | _ -> false)
   | Pjs_object_get name -> (
     match rhs with
