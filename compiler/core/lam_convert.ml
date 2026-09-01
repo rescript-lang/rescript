@@ -154,11 +154,24 @@ let lam_prim ~primitive:(p : Lambda.primitive) ~args loc : Lam.t =
 
 (* Does not exist since we compile array in js backend unlike native backend *)
 
-let may_depend = Lam_module_ident.Hash_set.add
+(* Which other compilation units this one refers to. A reference that later
+   passes delete still has to be imported when the module it names is impure,
+   so the answer is taken from the term as written (see #3852). Read off the
+   Lambda term rather than accumulated while translating it, so that
+   translation stays a function of its input. *)
+let required_modules (lam : Lambda.lambda) : Lam_module_ident.Hash_set.t =
+  let required = Lam_module_ident.Hash_set.create 0 in
+  let rec collect (lam : Lambda.lambda) =
+    (match lam with
+    | Lglobal_module id ->
+      Lam_module_ident.Hash_set.add required (Lam_module_ident.of_ml id)
+    | _ -> ());
+    Lambda.iter collect lam
+  in
+  collect lam;
+  required
 
-let convert (lam : Lambda.lambda) : Lam.t * Lam_module_ident.Hash_set.t =
-  let may_depends = Lam_module_ident.Hash_set.create 0 in
-
+let convert (lam : Lambda.lambda) : Lam.t =
   let rec convert_aux (lam : Lambda.lambda) : Lam.t =
     match lam with
     | Lvar x -> Lam.var x
@@ -182,9 +195,7 @@ let convert (lam : Lambda.lambda) : Lam.t * Lam_module_ident.Hash_set.t =
       Lam.let_ kind id (convert_aux e) (convert_aux body)
     | Lletrec (bindings, body) ->
       Lam.letrec (Ext_list.map_snd bindings convert_aux) (convert_aux body)
-    | Lglobal_module id ->
-      may_depend may_depends (Lam_module_ident.of_ml id);
-      Lam.global_module id
+    | Lglobal_module id -> Lam.global_module id
     | Lprim (primitive, args, loc) ->
       let args = Ext_list.map args convert_aux in
       lam_prim ~primitive ~args loc
@@ -223,4 +234,4 @@ let convert (lam : Lambda.lambda) : Lam.t * Lam_module_ident.Hash_set.t =
         sw_dispatch = s.sw_dispatch;
       }
   in
-  (convert_aux lam, may_depends)
+  convert_aux lam
