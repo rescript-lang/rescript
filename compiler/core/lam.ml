@@ -442,7 +442,7 @@ let prim ~primitive:(prim : Lam_primitive.t) ~args loc : t =
     | _ -> default ())
   | _ -> (
     match prim with
-    | Pmakeblock (Blk_module fields, _) -> (
+    | Pmakeblock (Blk_module fields) -> (
       let rec aux fields args (var : Ident.t) i =
         match (fields, args) with
         | [], [] -> true

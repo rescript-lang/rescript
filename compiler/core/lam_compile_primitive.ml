@@ -187,7 +187,8 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
       E.optional_not_nest_block arg
     | _ -> E.optional_block arg)
   | Psome_not_nest -> E.optional_not_nest_block (Ext_list.singleton_exn args)
-  | Pmakeblock (tag_info, mutable_flag) ->
+  | Pmakeblock tag_info ->
+    let mutable_flag = Lambda.mutable_flag_of_tag_info tag_info in
     (* RUNTIME *)
     Js_of_lam_block.make_block
       (Js_op_util.of_lam_mutable_flag mutable_flag)

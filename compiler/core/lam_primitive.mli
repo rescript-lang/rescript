@@ -25,7 +25,7 @@
 type ident = Ident.t
 
 type t =
-  | Pmakeblock of Lam_tag_info.t * Asttypes.mutable_flag
+  | Pmakeblock of Lam_tag_info.t
   | Pfield of int * Lambda.field_dbg_info
   | Psetfield of int * Lambda.set_field_dbg_info
   | Pduprecord
@@ -161,5 +161,7 @@ type t =
   | Phash_mixstring
   | Phash_mixint
   | Phash_finalmix
+
+val is_immutable_block : Lam_tag_info.t -> bool
 
 val eq_primitive_approx : t -> t -> bool

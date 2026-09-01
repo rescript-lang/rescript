@@ -64,9 +64,9 @@ let primitive ppf (prim : Lam_primitive.t) =
   | Pis_undefined -> fprintf ppf "[?undefined]"
   | Pis_null_undefined -> fprintf ppf "[?null?undefined]"
   | Pimport _ -> fprintf ppf "[import]"
-  | Pmakeblock (i, Immutable) ->
+  | Pmakeblock i when Lambda.mutable_flag_of_tag_info i = Immutable ->
     fprintf ppf "makeblock %s" (Lambda.tag_label_of_tag_info i)
-  | Pmakeblock (i, Mutable) ->
+  | Pmakeblock i ->
     fprintf ppf "makemutable %s" (Lambda.tag_label_of_tag_info i)
   | Pfield (n, field_info) -> (
     match Lam_compat.str_of_field_info field_info with
