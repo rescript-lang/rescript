@@ -90,7 +90,7 @@ let add_inline_attribute (expr : Lambda.lambda) loc attributes =
     | Always_inline | Never_inline ->
       Location.prerr_warning loc (Warnings.Duplicated_attribute "inline"));
     let attr = {attr with inline} in
-    Lfunction {funct with attr}
+    Lambda.function_ ~loc:funct.loc ~attr ~params:funct.params ~body:funct.body
   | expr, Always_inline ->
     Location.prerr_warning loc (Warnings.Misplaced_attribute "inline");
     expr

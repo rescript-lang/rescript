@@ -99,7 +99,7 @@ let ltint = Pintcomp Clt
 let geint = Pintcomp Cge
 let gtint = Pintcomp Cgt
 
-let prim p args : lambda = Lprim {primitive = p; args; loc = Location.none}
+let prim p args : lambda = prim ~primitive:p ~args Location.none
 
 (* [covers_range cases ~start ~finish] holds when [cases] is exactly the
    contiguous integer keys [start .. finish], in order. *)
@@ -113,7 +113,7 @@ let rec covers_range (cases : (switch_key * lambda) list) ~start ~finish =
 (* [arg] is outside [lo .. hi]. A two-value range reads better as a pair of
    equality tests than as a pair of comparisons. *)
 let out_of_range arg ~lo ~hi =
-  let test cmp k = prim (Pintcomp cmp) [arg; Lconst (const_int k)] in
+  let test cmp k = prim (Pintcomp cmp) [arg; const (const_int k)] in
   if hi = lo + 1 then prim Pnot [prim Psequor [test Ceq lo; test Ceq hi]]
   else prim Psequor [test Cgt hi; test Clt lo]
 
@@ -134,28 +134,27 @@ let emit_if_out ~offset ~range arg ifso ifno =
              sw_failaction = None;
            } as sw) ) )
     when Ident.same x y && covers_range sw_consts ~start:lo ~finish:hi ->
-    Lswitch (sarg, {sw with sw_failaction = Some ifso; sw_consts_full = false})
-  | _ -> Lifthenelse (out_of_range arg ~lo ~hi, ifso, ifno)
+    switch sarg {sw with sw_failaction = Some ifso; sw_consts_full = false}
+  | _ -> if_ (out_of_range arg ~lo ~hi) ifso ifno
 
 let emit_if_in ~offset ~range arg ifso ifno =
   let lo = -offset and hi = range - offset in
-  Lifthenelse (prim Pnot [out_of_range arg ~lo ~hi], ifso, ifno)
+  if_ (prim Pnot [out_of_range arg ~lo ~hi]) ifso ifno
 
 let emit_switch arg cases acts ~offset : lambda =
   let l = ref [] in
   for i = Array.length cases - 1 downto 0 do
     l := (Switch_int (offset + i), acts.(cases.(i))) :: !l
   done;
-  Lswitch
-    ( arg,
-      {
-        sw_consts_full = true;
-        sw_consts = !l;
-        sw_blocks_full = true;
-        sw_blocks = [];
-        sw_failaction = None;
-        sw_dispatch = Switch_direct;
-      } )
+  switch arg
+    {
+      sw_consts_full = true;
+      sw_consts = !l;
+      sw_blocks_full = true;
+      sw_blocks = [];
+      sw_failaction = None;
+      sw_dispatch = Switch_direct;
+    }
 
 (* The module will ``produce good code for the case statement'' *)
 (*
@@ -514,7 +513,7 @@ and enum top cases =
   (!r, !rc)
 
 let make_if_test test arg i ifso ifnot =
-  Lifthenelse (prim test [arg; Lconst (const_int i)], ifso, ifnot)
+  if_ (prim test [arg; const (const_int i)]) ifso ifnot
 
 let make_if_lt arg i ifso ifnot =
   match i with

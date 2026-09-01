@@ -88,12 +88,12 @@ let preprocess_deps (groups : bindings) : _ * Ident.t array * Vec_int.t array =
 let bind_rec (groups : bindings) (body : lambda) : lambda =
   match groups with
   | [(id, bind)] ->
-    if exists_var (Ident.same id) bind then Lletrec (groups, body)
-    else Llet (Strict, id, bind, body)
+    if exists_var (Ident.same id) bind then letrec groups body
+    else let_ Strict id bind body
   | _ ->
     let domain, int_mapping, node_vec = preprocess_deps groups in
     let clusters = Ext_scc.graph node_vec in
-    if Int_vec_vec.length clusters <= 1 then Lletrec (groups, body)
+    if Int_vec_vec.length clusters <= 1 then letrec groups body
     else
       Int_vec_vec.fold_right
         (fun (v : Vec_int.t) acc ->
@@ -109,7 +109,7 @@ let bind_rec (groups : bindings) (body : lambda) : lambda =
           | [(id, lam)] ->
             let base_key = Ordered_hash_map_local_ident.rank domain id in
             if Int_vec_util.mem base_key node_vec.(base_key) then
-              Lletrec (bindings, acc)
-            else Llet (Strict, id, lam, acc)
-          | _ -> Lletrec (bindings, acc))
+              letrec bindings acc
+            else let_ Strict id lam acc
+          | _ -> letrec bindings acc)
         clusters body
