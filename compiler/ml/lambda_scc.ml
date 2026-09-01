@@ -58,6 +58,7 @@ let exists_var (p : Ident.t -> bool) (l : lambda) : bool =
       || hit_opt sw.sw_failaction
     | Lstringswitch (arg, cases, default, _) ->
       hit arg || hit_list_snd cases || hit_opt default
+    | Lglobal_module _ -> false
   in
   hit l
 

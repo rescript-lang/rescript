@@ -137,7 +137,6 @@ type primitive =
   | Psome_not_nest
       (** [Some x] where [x] cannot itself be [undefined], so no wrapping is
           needed. *)
-  | Pgetglobal of Ident.t
   (* Operations on heap blocks *)
   | Pmakeblock of tag_info
   | Pfield of int * field_dbg_info
@@ -340,6 +339,9 @@ type function_attribute = {
 
 type lambda =
   | Lvar of Ident.t
+  | Lglobal_module of Ident.t
+      (** A reference to another compilation unit: a name the module system
+          resolves, not a value this one computes. *)
   | Lconst of structured_constant
   | Lapply of lambda_apply
   | Lfunction of lfunction

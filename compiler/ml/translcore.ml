@@ -943,11 +943,8 @@ let wrap_exn loc arg =
         Lprim
           ( Pfield (0, Fld_module {name = "internalToException"}),
             [
-              Lprim
-                ( Pgetglobal
-                    (Ident.create_persistent Primitive_modules.exceptions),
-                  [],
-                  loc );
+              Lglobal_module
+                (Ident.create_persistent Primitive_modules.exceptions);
             ],
             loc );
       ap_args = [arg];
@@ -975,7 +972,7 @@ let exception_id_destructed (l : lambda) (fv : Ident.t) : bool =
     | Lletrec (decl, body) -> hit body || hit_list_snd decl
     | Lfor (_, e1, e2, _, e3) -> hit e1 || hit e2 || hit e3
     | Lfor_of (_, e1, e2) | Lfor_await_of (_, e1, e2) -> hit e1 || hit e2
-    | Lconst _ -> false
+    | Lglobal_module _ | Lconst _ -> false
     | Lapply {ap_func; ap_args} -> hit ap_func || hit_list ap_args
     | Lswitch (arg, sw, _) ->
       hit arg || hit_list_snd sw.sw_consts || hit_list_snd sw.sw_blocks
