@@ -141,13 +141,13 @@ let eval_rec_bindings_aux (bindings : binding list) (cont : t) : t =
         if shape_is_empty shape then Lambda.lambda_unit
         else Lambda.Lprim (Pinit_mod, [loc; shape], Location.none)
       in
-      Lambda.Llet (Strict, Pgenval, id, init, bind_inits rem acc)
+      Lambda.Llet (Strict, id, init, bind_inits rem acc)
   in
   let rec bind_strict args acc =
     match args with
     | [] -> acc
     | (id, None, rhs) :: rem ->
-      Lambda.Llet (Strict, Pgenval, id, rhs, bind_strict rem acc)
+      Lambda.Llet (Strict, id, rhs, bind_strict rem acc)
     | (_id, Some _, _rhs) :: rem -> bind_strict rem acc
   in
   let rec patch_forwards args =
@@ -175,7 +175,7 @@ let rec is_function_or_const_block (lam : Lambda.lambda) acc =
         | Lvar id -> Set_ident.mem acc id
         | Lfunction _ | Lconst _ -> true
         | _ -> false)
-  | Llet (_, _, id, Lfunction _, cont) ->
+  | Llet (_, id, Lfunction _, cont) ->
     is_function_or_const_block cont (Set_ident.add acc id)
   | Lletrec (bindings, cont) -> (
     let rec aux_bindings bindings acc =
@@ -188,8 +188,8 @@ let rec is_function_or_const_block (lam : Lambda.lambda) acc =
     match aux_bindings bindings acc with
     | None -> false
     | Some acc -> is_function_or_const_block cont acc)
-  | Llet (_, _, _, Lconst _, cont) -> is_function_or_const_block cont acc
-  | Llet (_, _, id1, Lvar id2, cont) when Set_ident.mem acc id2 ->
+  | Llet (_, _, Lconst _, cont) -> is_function_or_const_block cont acc
+  | Llet (_, id1, Lvar id2, cont) when Set_ident.mem acc id2 ->
     is_function_or_const_block cont (Set_ident.add acc id1)
   | _ -> false
 

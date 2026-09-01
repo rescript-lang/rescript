@@ -193,7 +193,7 @@ let convert (lam : Lambda.lambda) : Lam.t =
     | Lfunction {params; body; attr; loc} ->
       Lam.function_ ~loc ~attr ~arity:(List.length params) ~params
         ~body:(convert_aux body)
-    | Llet (kind, Pgenval, id, e, body) ->
+    | Llet (kind, id, e, body) ->
       Lam.let_ kind id (convert_aux e) (convert_aux body)
     | Lletrec (bindings, body) ->
       Lam.letrec (Ext_list.map_snd bindings convert_aux) (convert_aux body)

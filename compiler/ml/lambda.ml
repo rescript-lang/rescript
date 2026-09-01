@@ -319,8 +319,6 @@ type primitive =
 
 and comparison = Ceq | Cneq | Clt | Cgt | Cle | Cge
 
-and value_kind = Pgenval
-
 type structured_constant =
   | Const_int of int32
   | Const_char of int
@@ -378,7 +376,7 @@ type lambda =
   | Lconst of structured_constant
   | Lapply of lambda_apply
   | Lfunction of lfunction
-  | Llet of let_kind * value_kind * Ident.t * lambda * lambda
+  | Llet of let_kind * Ident.t * lambda * lambda
   | Lletrec of (Ident.t * lambda) list * lambda
   | Lprim of primitive * lambda list * Location.t
   | Lswitch of lambda * lambda_switch * Location.t
@@ -506,7 +504,7 @@ let offset_ref ~delta r loc =
   | Lvar _ -> assign r
   | _ ->
     let id = Ident.create "ref" in
-    Llet (Strict, Pgenval, id, r, assign (Lvar id))
+    Llet (Strict, id, r, assign (Lvar id))
 
 let mk_builtin b args loc =
   match b with
@@ -567,17 +565,17 @@ let make_key e =
           ap_args = tr_recs env ap.ap_args;
           ap_loc = Location.none;
         }
-    | Llet (Alias, _k, x, ex, e) ->
+    | Llet (Alias, x, ex, e) ->
       (* Ignore aliases -> substitute *)
       let ex = tr_rec env ex in
       tr_rec (Ident.add x ex env) e
-    | Llet ((Strict | StrictOpt), _k, x, ex, Lvar v) when Ident.same v x ->
+    | Llet ((Strict | StrictOpt), x, ex, Lvar v) when Ident.same v x ->
       tr_rec env ex
-    | Llet (str, k, x, ex, e) ->
+    | Llet (str, x, ex, e) ->
       (* Because of side effects, keep other lets with normalized names *)
       let ex = tr_rec env ex in
       let y = make_key x in
-      Llet (str, k, y, ex, tr_rec (Ident.add x (Lvar y) env) e)
+      Llet (str, y, ex, tr_rec (Ident.add x (Lvar y) env) e)
     | Lprim (p, es, _) -> Lprim (p, tr_recs env es, Location.none)
     | Lswitch (e, sw, loc) -> Lswitch (tr_rec env e, tr_sw env sw, loc)
     | Lstringswitch (e, sw, d, _) ->
@@ -621,7 +619,7 @@ let name_lambda strict arg fn =
   | Lvar id -> fn id
   | _ ->
     let id = Ident.create "let" in
-    Llet (strict, Pgenval, id, arg, fn id)
+    Llet (strict, id, arg, fn id)
 
 let iter_opt f = function
   | None -> ()
@@ -633,7 +631,7 @@ let iter f = function
     f fn;
     List.iter f args
   | Lfunction {body} -> f body
-  | Llet (_str, _k, _id, arg, body) ->
+  | Llet (_str, _id, arg, body) ->
     f arg;
     f body
   | Lletrec (decl, body) ->
@@ -689,7 +687,7 @@ let free_ids get l =
     match l with
     | Lfunction {params} ->
       List.iter (fun param -> fv := Ident_set.remove param !fv) params
-    | Llet (_str, _k, id, _arg, _body) -> fv := Ident_set.remove id !fv
+    | Llet (_str, id, _arg, _body) -> fv := Ident_set.remove id !fv
     | Lletrec (decl, _body) ->
       List.iter (fun (id, _exp) -> fv := Ident_set.remove id !fv) decl
     | Lstaticcatch (_e1, (_, vars), _e2) ->
@@ -732,14 +730,13 @@ let staticfail = Lstaticraise (0, [])
 
 let rec is_guarded = function
   | Lifthenelse (_cond, _body, Lstaticraise (0, [])) -> true
-  | Llet (_str, _k, _id, _lam, body) -> is_guarded body
+  | Llet (_str, _id, _lam, body) -> is_guarded body
   | _ -> false
 
 let rec patch_guarded patch = function
   | Lifthenelse (cond, body, Lstaticraise (0, [])) ->
     Lifthenelse (cond, body, patch)
-  | Llet (str, k, id, lam, body) ->
-    Llet (str, k, id, lam, patch_guarded patch body)
+  | Llet (str, id, lam, body) -> Llet (str, id, lam, patch_guarded patch body)
   | _ -> assert false
 
 (* Translate an access path *)
@@ -789,7 +786,7 @@ let subst_lambda s lam =
         }
     | Lfunction {params; body; attr; loc} ->
       Lfunction {params; body = subst body; attr; loc}
-    | Llet (str, k, id, arg, body) -> Llet (str, k, id, subst arg, subst body)
+    | Llet (str, id, arg, body) -> Llet (str, id, subst arg, subst body)
     | Lletrec (decl, body) -> Lletrec (List.map subst_decl decl, subst body)
     | Lprim (p, args, loc) -> Lprim (p, List.map subst args, loc)
     | Lswitch (arg, sw, loc) ->
@@ -831,4 +828,4 @@ let subst_lambda s lam =
 let bind str var exp body =
   match exp with
   | Lvar var' when Ident.same var var' -> body
-  | _ -> Llet (str, Pgenval, var, exp, body)
+  | _ -> Llet (str, var, exp, body)

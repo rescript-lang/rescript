@@ -968,7 +968,7 @@ let exception_id_destructed (l : lambda) (fv : Ident.t) : bool =
     | Lstaticcatch (e1, _, e2) -> hit e1 || hit e2
     | Ltrywith (e1, _, e2) -> hit e1 || hit e2
     | Lfunction {body} -> hit body
-    | Llet (_, _, _, arg, body) -> hit arg || hit body
+    | Llet (_, _, arg, body) -> hit arg || hit body
     | Lletrec (decl, body) -> hit body || hit_list_snd decl
     | Lfor (_, e1, e2, _, e3) -> hit e1 || hit e2 || hit e3
     | Lfor_of (_, e1, e2) | Lfor_await_of (_, e1, e2) -> hit e1 || hit e2
@@ -990,10 +990,7 @@ let exception_id_destructed (l : lambda) (fv : Ident.t) : bool =
 let pack_trywith_exn id handler =
   if exception_id_destructed handler id then
     let raw_id = Ident.create ("raw_" ^ id.name) in
-    ( raw_id,
-      Llet
-        (StrictOpt, Pgenval, id, wrap_exn Location.none (Lvar raw_id), handler)
-    )
+    (raw_id, Llet (StrictOpt, id, wrap_exn Location.none (Lvar raw_id), handler))
   else (id, handler)
 
 let extract_directive_for_fn exp =
@@ -1320,11 +1317,10 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
     Lprim (Pjs_object_set nm.txt, [transl_exp expr; transl_exp value], e.exp_loc)
   | Texp_letmodule (id, _loc, modl, body) ->
     let defining_expr = !transl_module Tcoerce_none None modl in
-    Llet (Strict, Pgenval, id, defining_expr, transl_exp body)
+    Llet (Strict, id, defining_expr, transl_exp body)
   | Texp_letexception (cd, body) ->
     Llet
       ( Strict,
-        Pgenval,
         cd.ext_id,
         transl_extension_constructor e.exp_env None cd,
         transl_exp body )
@@ -1394,7 +1390,7 @@ and transl_apply ?(inlined = Default_inline)
             }
       in
       List.fold_left
-        (fun body (id, lam) -> Llet (Strict, Pgenval, id, lam, body))
+        (fun body (id, lam) -> Llet (Strict, id, lam, body))
         body !defs
     | (Some arg, optional) :: l -> build_apply lam ((arg, optional) :: args) l
     | [] -> lapply lam (List.rev_map fst args)
@@ -1607,8 +1603,7 @@ and transl_record loc env fields repres opt_init_expr =
       in
       match opt_init_expr with
       | None -> lam
-      | Some init_expr ->
-        Llet (Strict, Pgenval, init_id, transl_exp init_expr, lam)
+      | Some init_expr -> Llet (Strict, init_id, transl_exp init_expr, lam)
     else
       (* Take a shallow copy of the init record, then mutate the fields
          of the copy *)
@@ -1635,7 +1630,6 @@ and transl_record loc env fields repres opt_init_expr =
       | Some init_expr ->
         Llet
           ( Strict,
-            Pgenval,
             copy_id,
             Lprim (Pduprecord, [transl_exp init_expr], loc),
             Array.fold_left update_field (Lvar copy_id) fields ))
