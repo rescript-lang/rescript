@@ -284,7 +284,6 @@ let compile (output_prefix : string) export_idents hoisted (lam : Lambda.lambda)
   let lam = Lam_pass_deep_flatten.deep_flatten lam in
   let lam = d "flatten0" lam in
   let meta : Lam_stats.t = Lam_stats.make ~export_idents ~export_ident_sets in
-  let () = Lam_pass_collect.collect_info meta lam in
   let lam =
     let lam =
       lam |> d "flatten1" |> Lam_pass_exits.simplify_exits |> d "simplify_exits"
@@ -303,7 +302,6 @@ let compile (output_prefix : string) export_idents hoisted (lam : Lambda.lambda)
     let () = Lam_pass_collect.collect_info meta lam in
     let lam = Lam_pass_remove_alias.simplify_alias meta lam in
     let lam = Lam_pass_deep_flatten.deep_flatten lam in
-    let () = Lam_pass_collect.collect_info meta lam in
     let lam = lam |> Lam_pass_exits.simplify_exits in
     let () = Lam_pass_collect.collect_info meta lam in
 
