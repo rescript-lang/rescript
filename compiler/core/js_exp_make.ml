@@ -319,7 +319,6 @@ let dummy_obj ?comment (info : Lam_tag_info.t) : t =
     {comment; source_loc = None; expression_desc = Object (None, [])}
   | Blk_tuple | Blk_module_export _ ->
     {comment; source_loc = None; expression_desc = Array []}
-  | Blk_some | Blk_some_not_nested -> assert false
 
 (* TODO: complete
     pure ...

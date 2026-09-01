@@ -474,8 +474,8 @@ let lambda_of_inline_const (c : External_ffi_types.inline_const) :
     Lambda.structured_constant =
   match c with
   | Const_str {s; delim} -> Const_string {s; delim}
-  | Const_bool true -> Const_true
-  | Const_bool false -> Const_false
+  | Const_bool true -> Const_js_true
+  | Const_bool false -> Const_js_false
   | Const_int i -> Const_int i
   | Const_bigint {negative; digits} -> Const_bigint (negative, digits)
   | Const_float f -> Const_float f
@@ -1197,8 +1197,8 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
     let ll = transl_list el in
     try Lconst (Const_block (Blk_tuple, List.map extract_constant ll))
     with Not_constant -> Lprim (Pmakeblock Blk_tuple, ll, e.exp_loc))
-  | Texp_construct ({txt = Lident "false"}, _, []) -> Lconst Const_false
-  | Texp_construct ({txt = Lident "true"}, _, []) -> Lconst Const_true
+  | Texp_construct ({txt = Lident "false"}, _, []) -> Lconst Const_js_false
+  | Texp_construct ({txt = Lident "true"}, _, []) -> Lconst Const_js_true
   | Texp_construct (_, cstr, args) -> (
     let ll = transl_list args in
     if cstr.cstr_inlined <> None then
@@ -1225,23 +1225,30 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
           match ll with
           | [value] -> value
           | _ -> assert false
+        else if Datarepr.constructor_has_optional_shape cstr then
+          let value =
+            match ll with
+            | [value] -> value
+            | _ -> assert false
+          in
+          let primitive : Lambda.primitive =
+            match args with
+            | [arg]
+              when Typeopt.type_cannot_contain_undefined arg.exp_type
+                     arg.exp_env ->
+              Psome_not_nest
+            | _ -> Psome
+          in
+          try Lconst (Const_some (extract_constant value))
+          with Not_constant -> Lprim (primitive, ll, e.exp_loc)
         else
           let tag_info : Lambda.tag_info =
-            if Datarepr.constructor_has_optional_shape cstr then
-              match args with
-              | [arg]
-                when Typeopt.type_cannot_contain_undefined arg.exp_type
-                       arg.exp_env ->
-                (* Format.fprintf Format.err_formatter "@[special boxingl@]@."; *)
-                Blk_some_not_nested
-              | _ -> Blk_some
-            else
-              Blk_constructor
-                {
-                  name = cstr.cstr_name;
-                  num_nonconst = num_nonconst_constructors cstr;
-                  runtime;
-                }
+            Blk_constructor
+              {
+                name = cstr.cstr_name;
+                num_nonconst = num_nonconst_constructors cstr;
+                runtime;
+              }
           in
           try Lconst (Const_block (tag_info, List.map extract_constant ll))
           with Not_constant -> Lprim (Pmakeblock tag_info, ll, e.exp_loc))

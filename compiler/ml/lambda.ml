@@ -37,9 +37,6 @@ type tag_info =
   | Blk_module of string list
   | Blk_module_export of Ident.t list
   | Blk_extension
-  | Blk_some
-  | Blk_some_not_nested
-    (* ['a option] where ['a] can not inhabit a non-like value *)
   | Blk_record_ext of {
       fields: string array;
       mutable_flag: Asttypes.mutable_flag;
@@ -51,7 +48,7 @@ let tag_label_of_tag_info (tag : tag_info) =
   match tag with
   | Blk_constructor {name} | Blk_record_inlined {name} -> name
   | Blk_tuple | Blk_poly_var | Blk_record _ | Blk_module _ | Blk_module_export _
-  | Blk_extension | Blk_some | Blk_some_not_nested | Blk_record_ext _ ->
+  | Blk_extension | Blk_record_ext _ ->
     "0"
 
 let mutable_flag_of_tag_info (tag : tag_info) =
@@ -61,7 +58,7 @@ let mutable_flag_of_tag_info (tag : tag_info) =
   | Blk_record_ext {mutable_flag} ->
     mutable_flag
   | Blk_tuple | Blk_constructor _ | Blk_poly_var | Blk_module _
-  | Blk_module_export _ | Blk_extension | Blk_some_not_nested | Blk_some ->
+  | Blk_module_export _ | Blk_extension ->
     Immutable
 
 type label = Types.label_description
@@ -176,6 +173,10 @@ type eliminated = Identity | Ignore
 type primitive =
   | Pdebugger
   | Ptypeof
+  | Psome
+  | Psome_not_nest
+      (** [Some x] where [x] cannot itself be [undefined], so no wrapping is
+          needed. *)
   | Pfn_arity
   | Pgetglobal of Ident.t
   (* Operations on heap blocks *)
@@ -322,23 +323,24 @@ and comparison = Ceq | Cneq | Clt | Cgt | Cle | Cge
 
 and value_kind = Pgenval
 
-type pointer_info =
-  | Pt_constructor of Variant_runtime.tag
-  | Pt_variant of {name: string}
-  | Pt_module_alias
-  | Pt_assertfalse
-
 type structured_constant =
   | Const_int of int32
   | Const_char of int
   | Const_string of {s: string; delim: External_arg_spec.delim option}
   | Const_float of string
   | Const_bigint of bool * string
-  | Const_pointer of pointer_info
   | Const_block of tag_info * structured_constant list
-  | Const_false
-  | Const_true
+  | Const_constructor of Variant_runtime.tag
+      (** Constant constructor of a nominal variant, from its canonical
+          runtime descriptor. Integer-represented ones are [Const_int]. *)
+  | Const_polyvar of string
+      (** Tagless polymorphic variant; numeric-looking names are [Const_int]. *)
+  | Const_assertfalse
+  | Const_module_alias
+  | Const_js_false
+  | Const_js_true
   | Const_js_null
+  | Const_some of structured_constant
   | Const_js_undefined of {is_unit: bool}
       (** [is_unit] tells the unit value apart from JS [undefined]; both emit
           [undefined]. *)
@@ -444,26 +446,35 @@ let const_of_typed (c : Asttypes.constant) : structured_constant =
 
 let const_unit = Const_js_undefined {is_unit = true}
 
-(* The JS value of a constant constructor. Unit is the one constructor with a
-   dedicated constant, so producers cannot leave it as a pointer. *)
+(* The JS value of a constant constructor: unit has its own constant, and a
+   constructor represented as a number is a genuine number at runtime, so
+   folding sees it as an ordinary integer. *)
 let const_constructor (tag : Variant_runtime.tag) =
-  if tag.name = "()" then const_unit else Const_pointer (Pt_constructor tag)
+  if tag.name = "()" then const_unit
+  else
+    match tag.tag_type with
+    | Some (Variant_runtime.Int v) -> Const_int (Int32.of_int v)
+    | _ -> Const_constructor tag
 
 (* A constructor with an optional shape carries no payload when constant. *)
 let const_shape_none = Const_js_undefined {is_unit = false}
 
-let const_polyvar name = Const_pointer (Pt_variant {name})
-
 (* The JS value of a polymorphic variant's name: a numeric-looking name is a
-   number at runtime, anything else is a string. *)
-let const_polyvar_name name =
+   number at runtime, anything else is a string. Used both for a tagless
+   variant and for the name field of one carrying a payload. *)
+let const_polyvar name =
   if Ext_string.is_valid_hash_number name then
     Const_int (Ext_string.hash_number_as_i32_exn name)
-  else Const_string {s = name; delim = None}
+  else Const_polyvar name
 
-let const_module_alias = Const_pointer Pt_module_alias
+let const_polyvar_name name =
+  match const_polyvar name with
+  | Const_polyvar s -> Const_string {s; delim = None}
+  | c -> c
 
-let lambda_assert_false = Lconst (Const_pointer Pt_assertfalse)
+let const_module_alias = Const_module_alias
+
+let lambda_assert_false = Lconst Const_assertfalse
 
 let lambda_module_alias = Lconst const_module_alias
 

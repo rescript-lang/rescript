@@ -44,7 +44,6 @@ let id_is_for_sure_true_in_boolean (tbl : Lam_stats.ident_tbl) id =
 let is_const_some (cst : Lam_constant.t) : bool =
   match cst with
   | Const_some _ -> true
-  | Const_block ((Lambda.Blk_some | Lambda.Blk_some_not_nested), _) -> true
   | _ -> false
 
 let simplify_alias (meta : Lam_stats.t) (lam : Lam.t) : Lam.t =

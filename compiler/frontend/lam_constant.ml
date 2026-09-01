@@ -22,27 +22,27 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-type t =
-  | Const_js_null
-  | Const_js_undefined of {is_unit: bool}
-  | Const_js_true
-  | Const_js_false
+(* The constant representation is owned by [Lambda]; this module is the
+   operations on it. *)
+type t = Lambda.structured_constant =
   | Const_int of int32
-  | Const_assertfalse
-  | Const_constructor of Variant_runtime.tag
-    (* Constant constructor of a nominal variant, emitted from its
-         canonical runtime descriptor rather than an ordinal *)
   | Const_char of int
   | Const_string of {s: string; delim: External_arg_spec.delim option}
   | Const_float of string
   | Const_bigint of bool * string
-  | Const_pointer of string
   | Const_block of Lambda.tag_info * t list
-  | Const_some of t
+  | Const_constructor of Variant_runtime.tag
+      (** Constant constructor of a nominal variant, from its canonical
+          runtime descriptor. Integer-represented ones are [Const_int]. *)
+  | Const_polyvar of string
+      (** Tagless polymorphic variant; numeric-looking names are [Const_int]. *)
+  | Const_assertfalse
   | Const_module_alias
-(* eventually we can remove it, since we know
-   [constant] is [undefined] or not
-*)
+  | Const_js_false
+  | Const_js_true
+  | Const_js_null
+  | Const_some of t
+  | Const_js_undefined of {is_unit: bool}
 
 let rec eq_approx (x : t) (y : t) =
   match x with
@@ -76,9 +76,9 @@ let rec eq_approx (x : t) (y : t) =
     match y with
     | Const_bigint (sy, iy) -> sx = sy && ix = iy
     | _ -> false)
-  | Const_pointer ix -> (
+  | Const_polyvar ix -> (
     match y with
-    | Const_pointer iy -> ix = iy
+    | Const_polyvar iy -> ix = iy
     | _ -> false)
   | Const_block (ix, ixs) -> (
     match y with
@@ -96,6 +96,6 @@ let rec is_allocating (c : t) : bool =
   | Const_block _ -> true
   | Const_js_null | Const_js_undefined _ | Const_js_true | Const_js_false
   | Const_int _ | Const_assertfalse | Const_constructor _ | Const_char _
-  | Const_string _ | Const_float _ | Const_bigint _ | Const_pointer _
+  | Const_string _ | Const_float _ | Const_bigint _ | Const_polyvar _
   | Const_module_alias ->
     false

@@ -50,9 +50,6 @@ type tag_info =
          [A, x, y]
        ]}
     *)
-  | Blk_some
-  | Blk_some_not_nested
-    (* ['a option] where ['a] can not inhabit a non-like value *)
   | Blk_record_ext of {fields: string array; mutable_flag: mutable_flag}
 
 val find_name : Parsetree.attribute -> Asttypes.label option
@@ -114,12 +111,6 @@ val fld_record_extension_set : Types.label_description -> set_field_dbg_info
 
 type immediate_or_pointer = Immediate | Pointer
 
-type pointer_info = private
-  | Pt_constructor of Variant_runtime.tag
-  | Pt_variant of {name: string}
-  | Pt_module_alias
-  | Pt_assertfalse
-
 (* The target of a dynamic [import], resolved at translation: the argument
    of the import primitive is a module reference, never an expression. *)
 type import_source =
@@ -142,6 +133,10 @@ type eliminated = Identity | Ignore
 type primitive =
   | Pdebugger
   | Ptypeof
+  | Psome
+  | Psome_not_nest
+      (** [Some x] where [x] cannot itself be [undefined], so no wrapping is
+          needed. *)
   | Pfn_arity
   | Pgetglobal of Ident.t
   (* Operations on heap blocks *)
@@ -293,11 +288,18 @@ type structured_constant =
   | Const_string of {s: string; delim: External_arg_spec.delim option}
   | Const_float of string
   | Const_bigint of bool * string
-  | Const_pointer of pointer_info
   | Const_block of tag_info * structured_constant list
-  | Const_false
-  | Const_true
+  | Const_constructor of Variant_runtime.tag
+      (** Constant constructor of a nominal variant, from its canonical
+          runtime descriptor. Integer-represented ones are [Const_int]. *)
+  | Const_polyvar of string
+      (** Tagless polymorphic variant; numeric-looking names are [Const_int]. *)
+  | Const_assertfalse
+  | Const_module_alias
+  | Const_js_false
+  | Const_js_true
   | Const_js_null
+  | Const_some of structured_constant
   | Const_js_undefined of {is_unit: bool}
       (** [is_unit] tells the unit value apart from JS [undefined]; both emit
           [undefined]. *)

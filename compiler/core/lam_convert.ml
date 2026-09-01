@@ -37,14 +37,14 @@ let lam_prim ~primitive:(p : Lambda.primitive) ~args loc : Lam.t =
   | Pmakeblock info -> (
     let mutable_flag = Lambda.mutable_flag_of_tag_info info in
     match info with
-    | Blk_some_not_nested -> prim ~primitive:Psome_not_nest ~args loc
-    | Blk_some -> prim ~primitive:Psome ~args loc
     | Blk_constructor _ | Blk_tuple | Blk_record _ | Blk_record_inlined _
     | Blk_module _ | Blk_module_export _ | Blk_extension | Blk_record_ext _
     | Blk_poly_var ->
       prim ~primitive:(Pmakeblock (info, mutable_flag)) ~args loc)
   | Pfn_arity -> prim ~primitive:Pfn_arity ~args loc
   | Pdebugger -> prim ~primitive:Pdebugger ~args loc
+  | Psome -> prim ~primitive:Psome ~args loc
+  | Psome_not_nest -> prim ~primitive:Psome_not_nest ~args loc
   | Ptypeof -> prim ~primitive:Ptypeof ~args loc
   | Pisnullable -> prim ~primitive:Pis_null_undefined ~args loc
   | Pnull_to_opt -> prim ~primitive:Pnull_to_opt ~args loc
@@ -183,7 +183,7 @@ let convert (lam : Lambda.lambda) : Lam.t * Lam_module_ident.Hash_set.t =
   let rec convert_aux (lam : Lambda.lambda) : Lam.t =
     match lam with
     | Lvar x -> Lam.var x
-    | Lconst x -> Lam.const (Lam_constant_convert.convert_constant x)
+    | Lconst x -> Lam.const x
     | Lapply
         {
           ap_func = fn;

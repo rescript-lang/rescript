@@ -1014,8 +1014,7 @@ and expression_desc cxt ~(level : int) f x : cxt =
       | _ -> J.Object (None, objs)
     in
     expression_desc cxt ~level f exp
-  | Caml_block (_, _, (Blk_module_export _ | Blk_some | Blk_some_not_nested)) ->
-    assert false
+  | Caml_block (_, _, Blk_module_export _) -> assert false
   | Caml_block (el, _, Blk_tuple) -> expression_desc cxt ~level f (Array el)
   | Caml_block_tag (e, tag) ->
     P.group f 1 (fun _ ->
