@@ -89,12 +89,23 @@ let args_either_function_or_const (args : Lam.t list) =
       | Lfunction _ | Lconst _ -> true
       | _ -> false)
 
-let call_info_of_ap_status call_transformed_jsx (ap_status : Lam.apply_status) :
-    Js_call_info.t =
-  (* XXX *)
-  match ap_status with
-  | App_infer_full -> {call_info = Call_ml; call_transformed_jsx}
-  | App_uncurry -> {call_info = Call_na; call_transformed_jsx}
+(* Whether the callee's arity is known and this call saturates it. The printer
+   uses it to decide whether a wrapper around the call may be eta reduced,
+   which is only sound for a ReScript value of exactly that arity - never for
+   an FFI name, whose wrapper carries argument adaptation. Looked up here
+   rather than stamped on the application by an earlier pass. *)
+let call_info_of_apply (meta : Lam_stats.t) call_transformed_jsx
+    (appinfo : Lam.apply) : Js_call_info.t =
+  let saturated =
+    match
+      Lam_arity.extract_arity
+        (Lam_arity_analysis.get_arity meta appinfo.ap_func)
+    with
+    | x :: _ -> x = List.length appinfo.ap_args
+    | [] -> false
+  in
+  if saturated then {call_info = Call_ml; call_transformed_jsx}
+  else {call_info = Call_na; call_transformed_jsx}
 
 let change_tail_type_in_try (x : Lam_compile_context.tail_type) :
     Lam_compile_context.tail_type =
@@ -346,8 +357,8 @@ let compile output_prefix =
       let expression =
         E.call
           ~info:
-            (call_info_of_ap_status appinfo.ap_transformed_jsx
-               appinfo.ap_info.ap_status)
+            (call_info_of_apply lambda_cxt.meta appinfo.ap_transformed_jsx
+               appinfo)
           fn args
       in
       let expression = with_source_loc appinfo.ap_info.ap_loc expression in
@@ -1602,8 +1613,8 @@ let compile output_prefix =
           (with_source_loc appinfo.ap_info.ap_loc
              (E.call
                 ~info:
-                  (call_info_of_ap_status appinfo.ap_transformed_jsx
-                     appinfo.ap_info.ap_status)
+                  (call_info_of_apply lambda_cxt.meta appinfo.ap_transformed_jsx
+                     appinfo)
                 fn_code args)))
   and compile_prim (prim_info : Lam.prim_info)
       (lambda_cxt : Lam_compile_context.t) =

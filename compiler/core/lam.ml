@@ -23,13 +23,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
 type ident = Ident.t
-type apply_status = App_infer_full | App_uncurry
-
-type ap_info = {
-  ap_loc: Location.t;
-  ap_inlined: Lambda.inline_attribute;
-  ap_status: apply_status;
-}
+type ap_info = {ap_loc: Location.t; ap_inlined: Lambda.inline_attribute}
 
 module Types = struct
   type lambda_switch = t Lambda.switch

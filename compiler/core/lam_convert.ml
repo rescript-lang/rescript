@@ -193,8 +193,7 @@ let convert (lam : Lambda.lambda) : Lam.t * Lam_module_ident.Hash_set.t =
       (* we need do this eargly in case [aux fn] add some wrapper *)
       Lam.apply (convert_aux fn)
         (Ext_list.map args convert_aux)
-        {ap_loc = loc; ap_inlined; ap_status = App_uncurry}
-        ~ap_transformed_jsx
+        {ap_loc = loc; ap_inlined} ~ap_transformed_jsx
     | Lfunction {params; body; attr; loc} ->
       Lam.function_ ~loc ~attr ~arity:(List.length params) ~params
         ~body:(convert_aux body)
