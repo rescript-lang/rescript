@@ -378,7 +378,7 @@ type lambda =
   | Lfunction of lfunction
   | Llet of let_kind * Ident.t * lambda * lambda
   | Lletrec of (Ident.t * lambda) list * lambda
-  | Lprim of primitive * lambda list * Location.t
+  | Lprim of prim_info
   | Lswitch of lambda * lambda_switch
   | Lstringswitch of lambda * (string * lambda) list * lambda option
   | Lstaticraise of int * lambda list
@@ -400,6 +400,8 @@ and lfunction = {
   attr: function_attribute; (* specified with [@inline] attribute *)
   loc: Location.t;
 }
+
+and prim_info = {primitive: primitive; args: lambda list; loc: Location.t}
 
 and lambda_apply = {
   ap_func: lambda;
@@ -486,18 +488,25 @@ let lambda_unit = Lconst const_unit
 let offset_ref ~delta r loc =
   let assign r =
     Lprim
-      ( Psetfield (0, ref_field_set_info),
-        [
-          r;
-          Lprim
-            ( Paddint,
-              [
-                Lprim (Pfield (0, ref_field_info), [r], loc);
-                Lconst (const_int delta);
-              ],
-              loc );
-        ],
-        loc )
+      {
+        primitive = Psetfield (0, ref_field_set_info);
+        args =
+          [
+            r;
+            Lprim
+              {
+                primitive = Paddint;
+                args =
+                  [
+                    Lprim
+                      {primitive = Pfield (0, ref_field_info); args = [r]; loc};
+                    Lconst (const_int delta);
+                  ];
+                loc;
+              };
+          ];
+        loc;
+      }
   in
   match r with
   | Lvar _ -> assign r
@@ -507,7 +516,7 @@ let offset_ref ~delta r loc =
 
 let mk_builtin b args loc =
   match b with
-  | Primitive p -> Lprim (p, args, loc)
+  | Primitive p -> Lprim {primitive = p; args; loc}
   | Constant c -> (
     match args with
     | [] -> Lconst c
@@ -575,7 +584,8 @@ let make_key e =
       let ex = tr_rec env ex in
       let y = make_key x in
       Llet (str, y, ex, tr_rec (Ident.add x (Lvar y) env) e)
-    | Lprim (p, es, _) -> Lprim (p, tr_recs env es, Location.none)
+    | Lprim {primitive = p; args = es; loc = _} ->
+      Lprim {primitive = p; args = tr_recs env es; loc = Location.none}
     | Lswitch (e, sw) -> Lswitch (tr_rec env e, tr_sw env sw)
     | Lstringswitch (e, sw, d) ->
       Lstringswitch
@@ -635,7 +645,7 @@ let iter f = function
   | Lletrec (decl, body) ->
     f body;
     List.iter (fun (_id, exp) -> f exp) decl
-  | Lprim (_p, args, _loc) -> List.iter f args
+  | Lprim {primitive = _p; args; loc = _loc} -> List.iter f args
   | Lswitch (arg, sw) ->
     f arg;
     List.iter (fun (_key, case) -> f case) sw.sw_consts;
@@ -749,9 +759,11 @@ let rec transl_normal_path = function
     else Lvar id
   | Pdot (p, s, pos) ->
     Lprim
-      ( Pfield (pos, Fld_module {name = s}),
-        [transl_normal_path p],
-        Location.none )
+      {
+        primitive = Pfield (pos, Fld_module {name = s});
+        args = [transl_normal_path p];
+        loc = Location.none;
+      }
   | Papply _ -> assert false
 
 (* Translation of identifiers *)
@@ -786,7 +798,8 @@ let subst_lambda s lam =
       Lfunction {params; body = subst body; attr; loc}
     | Llet (str, id, arg, body) -> Llet (str, id, subst arg, subst body)
     | Lletrec (decl, body) -> Lletrec (List.map subst_decl decl, subst body)
-    | Lprim (p, args, loc) -> Lprim (p, List.map subst args, loc)
+    | Lprim {primitive = p; args; loc} ->
+      Lprim {primitive = p; args = List.map subst args; loc}
     | Lswitch (arg, sw) ->
       Lswitch
         ( subst arg,

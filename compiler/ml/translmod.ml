@@ -76,15 +76,24 @@ let rec apply_coercion loc strict (restr : Typedtree.module_coercion) arg =
   | Tcoerce_structure (pos_cc_list, id_pos_list, runtime_fields) ->
     Lambda.name_lambda strict arg (fun id ->
         let get_field_name name pos =
-          Lambda.Lprim (Pfield (pos, Fld_module {name}), [Lvar id], loc)
+          Lambda.Lprim
+            {primitive = Pfield (pos, Fld_module {name}); args = [Lvar id]; loc}
         in
         let lam =
           Lambda.Lprim
-            ( Pmakeblock (Blk_module runtime_fields),
-              Ext_list.map2 pos_cc_list runtime_fields (fun (pos, cc) name ->
-                  apply_coercion loc Alias cc
-                    (Lprim (Pfield (pos, Fld_module {name}), [Lvar id], loc))),
-              loc )
+            {
+              primitive = Pmakeblock (Blk_module runtime_fields);
+              args =
+                Ext_list.map2 pos_cc_list runtime_fields (fun (pos, cc) name ->
+                    apply_coercion loc Alias cc
+                      (Lprim
+                         {
+                           primitive = Pfield (pos, Fld_module {name});
+                           args = [Lvar id];
+                           loc;
+                         }));
+              loc;
+            }
         in
         wrap_id_pos_list loc id_pos_list get_field_name lam)
   | Tcoerce_functor (cc_arg, cc_res) ->
@@ -322,11 +331,14 @@ and transl_structure loc fields cc rootpath final_env = function
           [] fields
       in
       ( Lambda.Lprim
-          ( Pmakeblock
-              (if is_top_root_path then Blk_module_export !export_identifiers
-               else Blk_module (List.rev_map (fun id -> id.Ident.name) fields)),
-            block_fields,
-            loc ),
+          {
+            primitive =
+              Pmakeblock
+                (if is_top_root_path then Blk_module_export !export_identifiers
+                 else Blk_module (List.rev_map (fun id -> id.Ident.name) fields));
+            args = block_fields;
+            loc;
+          },
         List.length fields )
     | Tcoerce_structure (pos_cc_list, id_pos_list, runtime_fields) ->
       (* Do not ignore id_pos_list ! *)
@@ -359,11 +371,14 @@ and transl_structure loc fields cc rootpath final_env = function
       in
       let lam =
         Lambda.Lprim
-          ( Pmakeblock
-              (if is_top_root_path then Blk_module_export !export_identifiers
-               else Blk_module runtime_fields),
-            result,
-            loc )
+          {
+            primitive =
+              Pmakeblock
+                (if is_top_root_path then Blk_module_export !export_identifiers
+                 else Blk_module runtime_fields);
+            args = result;
+            loc;
+          }
       and id_pos_list =
         Ext_list.filter id_pos_list (fun (id, _, _) ->
             not (Lambda.Ident_set.mem id ids))
@@ -455,9 +470,11 @@ and transl_structure loc fields cc rootpath final_env = function
               ( Alias,
                 id,
                 Lprim
-                  ( Pfield (pos, Fld_module {name = Ident.name id}),
-                    [Lvar mid],
-                    incl.incl_loc ),
+                  {
+                    primitive = Pfield (pos, Fld_module {name = Ident.name id});
+                    args = [Lvar mid];
+                    loc = incl.incl_loc;
+                  },
                 body ),
             size )
       in

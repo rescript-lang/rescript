@@ -348,7 +348,7 @@ type lambda =
   | Lfunction of lfunction
   | Llet of let_kind * Ident.t * lambda * lambda
   | Lletrec of (Ident.t * lambda) list * lambda
-  | Lprim of primitive * lambda list * Location.t
+  | Lprim of prim_info
   | Lswitch of lambda * lambda_switch
   (* switch on strings, clauses are sorted by string order,
      strings are pairwise distinct *)
@@ -372,6 +372,8 @@ and lfunction = {
   attr: function_attribute; (* specified with [@inline] attribute *)
   loc: Location.t;
 }
+
+and prim_info = {primitive: primitive; args: lambda list; loc: Location.t}
 
 and lambda_apply = {
   ap_func: lambda;

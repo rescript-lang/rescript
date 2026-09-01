@@ -197,7 +197,7 @@ let convert (lam : Lambda.lambda) : Lam.t =
     | Lletrec (bindings, body) ->
       Lam.letrec (Ext_list.map_snd bindings convert_aux) (convert_aux body)
     | Lglobal_module id -> Lam.global_module id
-    | Lprim (primitive, args, loc) ->
+    | Lprim {primitive; args; loc} ->
       let args = Ext_list.map args convert_aux in
       lam_prim ~primitive ~args loc
     | Lswitch (e, s) -> convert_switch e s

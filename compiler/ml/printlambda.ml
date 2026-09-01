@@ -302,7 +302,7 @@ let rec lam ppf = function
     in
     fprintf ppf "@[<2>(letrec@ (@[<hv 1>%a@])@ %a)@]" bindings id_arg_list lam
       body
-  | Lprim (prim, largs, _) ->
+  | Lprim {primitive = prim; args = largs; loc = _} ->
     let lams ppf largs = List.iter (fun l -> fprintf ppf "@ %a" lam l) largs in
     fprintf ppf "@[<2>(%a%a)@]" primitive prim lams largs
   | Lswitch (larg, sw) ->
