@@ -10,9 +10,9 @@ let rec resolve tbl id =
   | None -> id
   | Some id' -> resolve tbl id'
 
-let collapse ~exports (lam : Lambda.lambda) : Lambda.lambda =
+let collapse ~exports (lam : Lambda.t) : Lambda.t =
   let tbl = Hash_ident.create 64 in
-  let rec go (lam : Lambda.lambda) : Lambda.lambda =
+  let rec go (lam : Lambda.t) : Lambda.t =
     match lam with
     | Lvar x -> Lambda.var (resolve tbl x)
     | Lglobal_module _ | Lconst _ | Lbreak | Lcontinue -> lam

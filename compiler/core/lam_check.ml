@@ -47,9 +47,9 @@ let check ~file ~pass lam =
   in
   let rec check_list xs (cxt : Set_int.t) =
     Ext_list.iter xs (fun x -> check_staticfails x cxt)
-  and check_list_snd : 'a. ('a * Lambda.lambda) list -> _ -> unit =
+  and check_list_snd : 'a. ('a * Lambda.t) list -> _ -> unit =
    fun xs cxt -> Ext_list.iter_snd xs (fun x -> check_staticfails x cxt)
-  and check_staticfails (l : Lambda.lambda) (cxt : Set_int.t) =
+  and check_staticfails (l : Lambda.t) (cxt : Set_int.t) =
     match l with
     | Lvar _ | Lconst _ | Lglobal_module _ -> ()
     | Lprim {args; _} -> check_list args cxt
@@ -98,9 +98,9 @@ let check ~file ~pass lam =
     | Lassign (_id, e) -> check_staticfails e cxt
   in
   let rec iter_list xs = Ext_list.iter xs iter
-  and iter_list_snd : 'a. ('a * Lambda.lambda) list -> unit =
+  and iter_list_snd : 'a. ('a * Lambda.t) list -> unit =
    fun xs -> Ext_list.iter_snd xs iter
-  and iter (l : Lambda.lambda) =
+  and iter (l : Lambda.t) =
     match l with
     | Lvar id -> use id
     | Lglobal_module _ -> ()

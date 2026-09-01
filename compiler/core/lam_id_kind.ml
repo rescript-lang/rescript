@@ -31,13 +31,13 @@ type rec_flag = Lam_rec | Lam_non_rec | Lam_self_rec
    recursive function
 *)
 
-type element = NA | SimpleForm of Lambda.lambda
+type element = NA | SimpleForm of Lambda.t
 
 type boxed_nullable = Undefined | Null | Null_undefined
 
 type t =
-  | Normal_optional of Lambda.lambda (* Some [x] *)
-  | OptionalBlock of Lambda.lambda * boxed_nullable
+  | Normal_optional of Lambda.t (* Some [x] *)
+  | OptionalBlock of Lambda.t * boxed_nullable
   | ImmutableBlock of element array
   | MutableBlock of element array
   | Constant of Lambda.structured_constant
@@ -47,7 +47,7 @@ type t =
       (* TODO: This may contain some closure environment,
          check how it will interact with dead code elimination
       *)
-      lambda: (Lambda.lambda * rec_flag) option;
+      lambda: (Lambda.t * rec_flag) option;
     }
   | Exception
   | Parameter

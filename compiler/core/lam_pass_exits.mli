@@ -15,4 +15,4 @@
     [simplif] module
 *)
 
-val simplify_exits : Lambda.lambda -> Lambda.lambda
+val simplify_exits : Lambda.t -> Lambda.t

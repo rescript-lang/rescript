@@ -346,8 +346,8 @@ let jumps_map f env = List.map (fun (i, pss) -> (i, f pss)) env
 (* Pattern matching before any compilation *)
 
 type pattern_matching = {
-  mutable cases: (pattern list * lambda) list;
-  args: (lambda * let_kind) list;
+  mutable cases: (pattern list * Lambda.t) list;
+  args: (Lambda.t * let_kind) list;
   default: (matrix * int) list;
 }
 
@@ -365,7 +365,7 @@ type pm_half_compiled =
   | PmVar of pm_var_compiled
   | Pm of pattern_matching
 
-and pm_var_compiled = {inside: pm_half_compiled; var_arg: lambda}
+and pm_var_compiled = {inside: pm_half_compiled; var_arg: Lambda.t}
 
 type pm_half_compiled_info = {
   me: pm_half_compiled;
@@ -440,8 +440,8 @@ let pretty_precompiled_res first nexts =
 *)
 
 module Store_exp = Switch.Store (struct
-  type t = lambda
-  type key = lambda
+  type t = Lambda.t
+  type key = Lambda.t
   let compare_key = compare
   let make_key = Lambda.make_key
 end)
@@ -1981,16 +1981,16 @@ let constructor_switch_key (cstr : Types.constructor_description) =
 type payload_presence_test = Is_present_option | Is_nonempty_list
 
 type constructor_matching_plan =
-  | Use_constructor_action of Lambda.lambda
+  | Use_constructor_action of Lambda.t
       (** Every possible constructor reaches the same action. *)
   | Test_payload_presence of {
       test: payload_presence_test;
-      absent: Lambda.lambda;
-      present: Lambda.lambda;
+      absent: Lambda.t;
+      present: Lambda.t;
     }
       (** A two-constructor representation whose runtime value directly
           reveals whether the payload constructor is present. *)
-  | Test_boolean_value of {if_false: Lambda.lambda; if_true: Lambda.lambda}
+  | Test_boolean_value of {if_false: Lambda.t; if_true: Lambda.t}
       (** The predefined boolean constructors are JavaScript booleans. *)
   | Switch_on_constructors of Lambda.lambda_switch
       (** General nominal and untagged variant matching. *)
@@ -2144,27 +2144,27 @@ let call_switcher_variant_constr loc fail arg int_lambda_list =
        (List.map (fun (a, (_, c)) -> (a, c)) int_lambda_list))
 
 let call_switcher_variant_constant :
-    (Lambda.lambda option ->
-    Lambda.lambda ->
-    (int * (string * Lambda.lambda)) list ->
-    Lambda.lambda)
+    (Lambda.t option ->
+    Lambda.t ->
+    (int * (string * Lambda.t)) list ->
+    Lambda.t)
     ref =
   ref call_switcher_variant_constant
 
 let call_switcher_variant_constr :
     (Location.t ->
-    Lambda.lambda option ->
-    Lambda.lambda ->
-    (int * (string * Lambda.lambda)) list ->
-    Lambda.lambda)
+    Lambda.t option ->
+    Lambda.t ->
+    (int * (string * Lambda.t)) list ->
+    Lambda.t)
     ref =
   ref call_switcher_variant_constr
 
 let make_test_sequence_variant_constant :
-    (Lambda.lambda option ->
-    Lambda.lambda ->
-    (int * (string * Lambda.lambda)) list ->
-    Lambda.lambda)
+    (Lambda.t option ->
+    Lambda.t ->
+    (int * (string * Lambda.t)) list ->
+    Lambda.t)
     ref =
   ref make_test_sequence_variant_constant
 

@@ -68,5 +68,5 @@
       -
 *)
 
-val collect_info : Lam_stats.t -> Lambda.lambda -> unit
+val collect_info : Lam_stats.t -> Lambda.t -> unit
 (** Modify existing [meta] *)

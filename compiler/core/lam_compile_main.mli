@@ -31,7 +31,7 @@ val compile :
   string ->
   Ident.t list ->
   Lambda.hoisted_function list ->
-  Lambda.lambda ->
+  Lambda.t ->
   J.deps_program
 (** For toplevel, [filename] is [""] which is the same as
     {!Env.get_unit_name ()}

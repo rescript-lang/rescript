@@ -22,7 +22,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-type t = Lambda.lambda
+type t = Lambda.t
 
 let hit_variables (fv : Set_ident.t) (l : t) : bool =
   let rec hit_opt (x : t option) =

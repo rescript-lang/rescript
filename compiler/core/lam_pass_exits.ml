@@ -21,7 +21,7 @@
 *)
 let rec no_list args = Ext_list.for_all args no_bounded_variables
 
-and no_list_snd : 'a. ('a * Lambda.lambda) list -> bool =
+and no_list_snd : 'a. ('a * Lambda.t) list -> bool =
  fun args -> Ext_list.for_all_snd args no_bounded_variables
 
 and no_opt x =
@@ -29,7 +29,7 @@ and no_opt x =
   | None -> true
   | Some a -> no_bounded_variables a
 
-and no_bounded_variables (l : Lambda.lambda) =
+and no_bounded_variables (l : Lambda.t) =
   match l with
   | Lvar _ -> true
   | Lconst _ -> true
@@ -82,8 +82,8 @@ and no_bounded_variables (l : Lambda.lambda) =
     when do the substitution, if its occurence is > 1,
     we should refresh
 *)
-type lam_subst = Id of Lambda.lambda [@@unboxed]
-(* | Refresh of Lambda.lambda *)
+type lam_subst = Id of Lambda.t [@@unboxed]
+(* | Refresh of Lambda.t *)
 
 type subst_tbl = (Ident.t list * lam_subst) Hash_int.t
 
@@ -152,9 +152,9 @@ let to_lam x =
        the j is not very indicative                
 *)
 
-let subst_helper (subst : subst_tbl) (query : int -> int) (lam : Lambda.lambda)
-    : Lambda.lambda =
-  let rec simplif (lam : Lambda.lambda) =
+let subst_helper (subst : subst_tbl) (query : int -> int) (lam : Lambda.t) :
+    Lambda.t =
+  let rec simplif (lam : Lambda.t) =
     match lam with
     | Lstaticcatch (l1, (i, xs), l2) -> (
       let i_occur = query i in
@@ -246,7 +246,7 @@ let subst_helper (subst : subst_tbl) (query : int -> int) (lam : Lambda.lambda)
   in
   simplif lam
 
-let simplify_exits (lam : Lambda.lambda) =
+let simplify_exits (lam : Lambda.t) =
   let exits = Lam_exit_count.count_helper lam in
   subst_helper (Hash_int.create 17) (Lam_exit_count.count_exit exits) lam
 

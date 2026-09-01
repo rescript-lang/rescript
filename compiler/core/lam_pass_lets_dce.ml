@@ -11,12 +11,12 @@
 (***********************************************************************)
 (* Adapted for Javascript backend : Hongbo Zhang,  *)
 
-let lets_helper (count_var : Ident.t -> Lam_pass_count.used_info) lam :
-    Lambda.lambda =
-  let subst : Lambda.lambda Hash_ident.t = Hash_ident.create 32 in
+let lets_helper (count_var : Ident.t -> Lam_pass_count.used_info) lam : Lambda.t
+    =
+  let subst : Lambda.t Hash_ident.t = Hash_ident.create 32 in
   let string_table : string Hash_ident.t = Hash_ident.create 32 in
   let used v = (count_var v).times > 0 in
-  let rec simplif (lam : Lambda.lambda) =
+  let rec simplif (lam : Lambda.t) =
     match lam with
     | Lvar v -> Hash_ident.find_default subst v lam
     | Llet ((Strict | Alias | StrictOpt), v, Lvar w, l2) ->
@@ -213,6 +213,6 @@ let apply_lets occ lambda =
   in
   lets_helper count_var lambda
 
-let simplify_lets (lam : Lambda.lambda) : Lambda.lambda =
+let simplify_lets (lam : Lambda.t) : Lambda.t =
   let occ = Lam_pass_count.collect_occurs lam in
   apply_lets occ lam

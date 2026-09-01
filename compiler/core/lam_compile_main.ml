@@ -242,8 +242,7 @@ let js_hoisted_aliases (export_ids : Ident.t list)
 (** Actually simplify_lets is kind of global optimization since it requires you to know whether
     it's used or not
 *)
-let compile (output_prefix : string) export_idents hoisted (lam : Lambda.lambda)
-    =
+let compile (output_prefix : string) export_idents hoisted (lam : Lambda.t) =
   let debug_ir = !Js_config.debug_ir in
   let diagnostics =
     if debug_ir then Some (Ir_diagnostics.create ~output_prefix) else None

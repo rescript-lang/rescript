@@ -57,7 +57,7 @@ let field_path path field : Path.t option =
 (* Compile type extensions *)
 
 let transl_type_extension env rootpath (tyext : Typedtree.type_extension) body :
-    Lambda.lambda =
+    Lambda.t =
   List.fold_right
     (fun ext body ->
       let lam =
@@ -461,7 +461,7 @@ let _ = Translcore.transl_module := transl_module
 (* Compile an implementation *)
 
 type implementation = {
-  lambda: Lambda.lambda;
+  lambda: Lambda.t;
   exports: Ident.t list;
   hoisted_functions: Lambda.hoisted_function list;
 }

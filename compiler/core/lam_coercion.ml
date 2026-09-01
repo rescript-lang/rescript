@@ -72,14 +72,14 @@
 type t = {
   export_list: Ident.t list;
   export_set: Set_ident.t;
-  export_map: Lambda.lambda Map_ident.t;
+  export_map: Lambda.t Map_ident.t;
       (** not used in code generation, mostly used
       for store some information in cmj files *)
   groups: Lam_group.t list;
       (* all code to be compiled later = original code + rebound coercions *)
 }
 
-let handle_exports (meta : Lam_stats.t) (lambda_exports : Lambda.lambda list)
+let handle_exports (meta : Lam_stats.t) (lambda_exports : Lambda.t list)
     (reverse_input : Lam_group.t list) =
   let (original_exports : Ident.t list) = meta.exports in
   let (original_export_set : Set_ident.t) = meta.export_idents in
@@ -92,7 +92,7 @@ let handle_exports (meta : Lam_stats.t) (lambda_exports : Lambda.lambda list)
         export_set = original_export_set;
         export_map = Map_ident.empty;
         groups = [];
-      } (fun (original_export_id : Ident.t) (lam : Lambda.lambda) (acc : t) ->
+      } (fun (original_export_id : Ident.t) (lam : Lambda.t) (acc : t) ->
         let original_name = original_export_id.name in
         if not @@ Hash_set_string.check_add tbl original_name then
           Bs_exception.error (Bs_duplicate_exports original_name);
@@ -176,8 +176,8 @@ let handle_exports (meta : Lam_stats.t) (lambda_exports : Lambda.lambda list)
     - [compile_group] and [compile] become mutually recursive function
 *)
 
-let rec flatten (acc : Lam_group.t list) (lam : Lambda.lambda) :
-    Lambda.lambda * Lam_group.t list =
+let rec flatten (acc : Lam_group.t list) (lam : Lambda.t) :
+    Lambda.t * Lam_group.t list =
   match lam with
   | Llet (str, id, arg, body) ->
     let res, l = flatten acc arg in

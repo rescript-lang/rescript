@@ -24,4 +24,4 @@
 
 (** Utilities for lambda analysis *)
 
-val get_arity : Lam_stats.t -> Lambda.lambda -> Lam_arity.t
+val get_arity : Lam_stats.t -> Lambda.t -> Lam_arity.t

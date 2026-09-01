@@ -24,6 +24,6 @@
 
 type collection
 
-val count_helper : Lambda.lambda -> collection
+val count_helper : Lambda.t -> collection
 
 val count_exit : collection -> int -> int

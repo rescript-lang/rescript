@@ -31,7 +31,7 @@
        other wise the evaluation order is tricky (make sure eval order is correct)
 *)
 
-type value = {mutable used: bool; lambda: Lambda.lambda}
+type value = {mutable used: bool; lambda: Lambda.t}
 
 let param_hash : _ Hash_ident.t = Hash_ident.create 20
 
@@ -44,7 +44,7 @@ let param_hash : _ Hash_ident.t = Hash_ident.create 20
    {[
      when Ext_list.for_all2_no_exn
          (fun p a ->
-            match (a : Lambda.lambda) with
+            match (a : Lambda.t) with
             | Lvar a -> Ident.same p a
             | _ -> false ) params args'
    ]}
@@ -58,14 +58,14 @@ let simple_beta_reduce params body args =
       exp.lambda
     | None -> opt
   in
-  let rec aux_exn acc (us : Lambda.lambda list) =
+  let rec aux_exn acc (us : Lambda.t list) =
     match us with
     | [] -> List.rev acc
     | (Lvar x as a) :: rest -> aux_exn (find_param_exn x a :: acc) rest
     | (Lconst _ as u) :: rest -> aux_exn (u :: acc) rest
     | _ :: _ -> raise_notrace Not_simple_apply
   in
-  match (body : Lambda.lambda) with
+  match (body : Lambda.t) with
   | Lprim {primitive; args = ap_args; loc = ap_loc}
   (* There is no lambda in primitive *) -> (
     (* catch a special case of primitives *)

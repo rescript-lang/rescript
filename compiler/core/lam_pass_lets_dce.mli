@@ -11,7 +11,7 @@
 (***********************************************************************)
 (* Adapted for Javascript backend: Hongbo Zhang                        *)
 
-val simplify_lets : Lambda.lambda -> Lambda.lambda
+val simplify_lets : Lambda.t -> Lambda.t
 (**
    This pass would do beta reduction, and dead code elimination (adapted from compiler's built-in [Simplif] module )
 

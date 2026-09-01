@@ -32,7 +32,7 @@ exception Error of Location.t * error
 let transl_module =
   ref
     (fun _cc _rootpath _modl -> assert false
-      : module_coercion -> Path.t option -> module_expr -> lambda)
+      : module_coercion -> Path.t option -> module_expr -> Lambda.t)
 
 (* Number of payload-carrying constructors of the variant declaring
    [cstr]; part of the runtime representation of its blocks *)
@@ -595,7 +595,7 @@ let external_import_needs_adaptation (arg_types : External_arg_spec.params)
 let transl_adapted_external_import loc env
     ~(emn : External_ffi_types.external_module_name) ~name ~scopes ~variadic
     ~(arg_types : External_arg_spec.params) ~return_wrapper
-    (p : Primitive.description) (val_type : type_expr) : Lambda.lambda =
+    (p : Primitive.description) (val_type : type_expr) : Lambda.t =
   let returns_unit = external_returns_unit env p val_type in
   let send_call receiver args (kind : External_ffi_types.decl_kind) =
     prim
@@ -662,7 +662,7 @@ let transl_adapted_external_import loc env
       ]
     loc
 
-let transl_dynamic_import loc (arg : Typedtree.expression) : Lambda.lambda =
+let transl_dynamic_import loc (arg : Typedtree.expression) : Lambda.t =
   match arg.exp_desc with
   | Texp_ident
       ( _,
@@ -692,7 +692,7 @@ let transl_dynamic_import loc (arg : Typedtree.expression) : Lambda.lambda =
   | _ -> prim ~primitive:(Pimport (import_source_of_arg arg)) ~args:[] loc
 
 let transl_external_application loc env (p : Primitive.description)
-    ~(val_type : type_expr) argl ~transformed_jsx : Lambda.lambda =
+    ~(val_type : type_expr) argl ~transformed_jsx : Lambda.t =
   match p.prim_kind with
   | Kind_inline_const c -> const (lambda_of_inline_const c)
   | Kind_external (Ffi_obj_create labels) ->
@@ -926,14 +926,14 @@ let wrap_exn loc arg =
        loc)
     [arg]
     {ap_loc = loc; ap_inlined = Default_inline}
-let exception_id_destructed (l : lambda) (fv : Ident.t) : bool =
+let exception_id_destructed (l : Lambda.t) (fv : Ident.t) : bool =
   let rec hit_opt = function
     | None -> false
     | Some a -> hit a
   and hit_list_snd : 'a. ('a * _) list -> bool =
    fun x -> Ext_list.exists_snd x hit
   and hit_list xs = Ext_list.exists xs hit
-  and hit (l : lambda) =
+  and hit (l : Lambda.t) =
     match l with
     | Lprim {primitive = Praise; args = [Lvar _]; loc = _} -> false
     | Lprim {primitive = _; args; loc = _} -> hit_list args
@@ -1005,7 +1005,7 @@ let rec transl_exp e =
       List.iter (Translattribute.check_attribute e) e.exp_attributes;
       transl_exp0 e)
 
-and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
+and transl_exp0 (e : Typedtree.expression) : Lambda.t =
   match e.exp_desc with
   | Texp_ident (_, _, ({val_kind = Val_prim p} as vd)) ->
     transl_primitive e.exp_loc p e.exp_env e.exp_type ~val_type:vd.val_type
@@ -1393,7 +1393,7 @@ and transl_apply ?(inlined = Default_inline)
        (List.map
           (fun (l, x) -> (may_map transl_exp x, Btype.is_optional l))
           sargs)
-      : Lambda.lambda)
+      : Lambda.t)
 
 and transl_function loc (params : function_param list) body =
   match params with

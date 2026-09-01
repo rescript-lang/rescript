@@ -17,7 +17,7 @@
    for the module language *)
 
 type implementation = {
-  lambda: Lambda.lambda;
+  lambda: Lambda.t;
   exports: Ident.t list;
   hoisted_functions: Lambda.hoisted_function list;
 }

@@ -113,7 +113,7 @@ let reorder_rec_bindings bindings =
   done;
   List.rev !res
 
-type t = Lambda.lambda
+type t = Lambda.t
 
 (* Utilities for compiling "module rec" definitions *)
 
@@ -126,7 +126,7 @@ type binding = Ident.t * (loc * shape) option * t
 (* A shape with no fields: the module has nothing to initialize and nothing to
    patch, so the runtime dummy and its update are both pointless. The right
    hand side still has to run for its effects. *)
-let shape_is_empty (shape : Lambda.lambda) =
+let shape_is_empty (shape : Lambda.t) =
   match shape with
   | Lambda.Lconst (Const_block (_, [Const_block (_, [])])) -> true
   | _ -> false
@@ -169,7 +169,7 @@ let eval_rec_bindings_aux (bindings : binding list) (cont : t) : t =
     if the module creation is just a set of function declarations and consts,
     it is good
 *)
-let rec is_function_or_const_block (lam : Lambda.lambda) acc =
+let rec is_function_or_const_block (lam : Lambda.t) acc =
   match lam with
   | Lprim {primitive = Pmakeblock _; args; loc = _} ->
     Ext_list.for_all args (fun x ->

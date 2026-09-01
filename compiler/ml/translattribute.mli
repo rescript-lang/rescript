@@ -19,7 +19,7 @@ val check_attribute_on_module :
   Typedtree.module_expr -> Parsetree.attribute -> unit
 
 val add_inline_attribute :
-  Lambda.lambda -> Location.t -> Parsetree.attributes -> Lambda.lambda
+  Lambda.t -> Location.t -> Parsetree.attributes -> Lambda.t
 
 val get_inline_attribute : Parsetree.attributes -> Lambda.inline_attribute
 

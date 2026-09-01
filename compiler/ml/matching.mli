@@ -16,42 +16,39 @@
 (* Compilation of pattern-matching *)
 
 open Typedtree
-open Lambda
 
 val call_switcher_variant_constant :
-  (Lambda.lambda option ->
-  Lambda.lambda ->
-  (int * (string * Lambda.lambda)) list ->
-  Lambda.lambda)
+  (Lambda.t option -> Lambda.t -> (int * (string * Lambda.t)) list -> Lambda.t)
   ref
 
 val call_switcher_variant_constr :
   (Location.t ->
-  Lambda.lambda option ->
-  Lambda.lambda ->
-  (int * (string * Lambda.lambda)) list ->
-  Lambda.lambda)
+  Lambda.t option ->
+  Lambda.t ->
+  (int * (string * Lambda.t)) list ->
+  Lambda.t)
   ref
 
 val make_test_sequence_variant_constant :
-  (Lambda.lambda option ->
-  Lambda.lambda ->
-  (int * (string * Lambda.lambda)) list ->
-  Lambda.lambda)
+  (Lambda.t option -> Lambda.t -> (int * (string * Lambda.t)) list -> Lambda.t)
   ref
 
 (* Entry points to match compiler *)
 val for_function :
   Location.t ->
   int ref option ->
-  lambda ->
-  (pattern * lambda) list ->
+  Lambda.t ->
+  (pattern * Lambda.t) list ->
   partial ->
-  lambda
-val for_trywith : lambda -> (pattern * lambda) list -> lambda
-val for_let : Location.t -> lambda -> pattern -> lambda -> lambda
+  Lambda.t
+val for_trywith : Lambda.t -> (pattern * Lambda.t) list -> Lambda.t
+val for_let : Location.t -> Lambda.t -> pattern -> Lambda.t -> Lambda.t
 val for_multiple_match :
-  Location.t -> lambda list -> (pattern * lambda) list -> partial -> lambda
+  Location.t ->
+  Lambda.t list ->
+  (pattern * Lambda.t) list ->
+  partial ->
+  Lambda.t
 
 exception Cannot_flatten
 
