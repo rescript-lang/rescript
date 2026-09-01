@@ -408,10 +408,10 @@ let command_line_flags : (string * Bsc_args.spec * string) array =
       "*internal* Disable cross module inlining(experimental)" );
     ( "-debug-ir",
       set Js_config.debug_ir,
-      "*internal* Dump compiler IR and enable Lam invariant checks" );
+      "*internal* Dump compiler IR and enable Lambda invariant checks" );
     ( "-check-lam",
       set Js_config.check_lam,
-      "*internal* Check Lam invariants after optimization passes" );
+      "*internal* Check Lambda invariants after optimization passes" );
     ( "-bs-no-check-div-by-zero",
       clear Js_config.check_div_by_zero,
       "*internal* unsafe mode, don't check div by zero and mod by zero" );

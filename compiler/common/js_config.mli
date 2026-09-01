@@ -53,7 +53,7 @@ val debug_ir : bool ref
 (** dump intermediate representations and related diagnostics *)
 
 val check_lam : bool ref
-(** check Lam invariants after optimization passes *)
+(** check Lambda invariants after optimization passes *)
 
 val no_builtin_ppx : bool ref
 (** options for builtin ppx *)

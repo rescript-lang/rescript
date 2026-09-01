@@ -29,14 +29,14 @@ let next_path diagnostics ~kind ~pass ~extension =
 
 let dump_lam diagnostics ~pass lam =
   let path = next_path diagnostics ~kind:"lam" ~pass ~extension:".lam" in
-  Ext_log.dwarn ~__POS__ "Dumping Lam pass %s to %s" pass path;
+  Ext_log.dwarn ~__POS__ "Dumping pass %s to %s" pass path;
   Lam_print.serialize path lam
 
 let dump_groups diagnostics groups =
   let path =
     next_path diagnostics ~kind:"lam" ~pass:"groups" ~extension:".lambda"
   in
-  Ext_log.dwarn ~__POS__ "Dumping Lam groups to %s" path;
+  Ext_log.dwarn ~__POS__ "Dumping groups to %s" path;
   Ext_fmt.with_file_as_pp path (fun fmt ->
       Format.pp_print_list ~pp_sep:Format.pp_print_newline Lam_group.pp_group
         fmt groups)

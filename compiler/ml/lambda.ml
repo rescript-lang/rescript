@@ -1142,8 +1142,8 @@ let if_ (a : t) (b : t) (c : t) : t =
     (* [if a then raise e else c] could become [(if a then raise e else ()); c],
        but that is code motion, not normalization: it changes the shape that
        matching's own exit bookkeeping inspects after the term is assembled,
-       and doing it here leaves static raises without their catch. It stays a
-       Lam-side rewrite until it can be expressed as a pass. *)
+       and doing it here leaves static raises without their catch. It is
+       {!Lam_pass_guard_raises} instead. *)
     | _ -> (
       match a with
       | Lprim {primitive = Pisint; args = [Lvar i]; _} -> (
