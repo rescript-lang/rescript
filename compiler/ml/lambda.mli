@@ -265,6 +265,9 @@ type primitive =
   | Pjscomp of comparison
   | Pnull_to_opt
   | Pnull_undefined_to_opt
+  (* Produced by Lam_pass_remove_alias, not by translation *)
+  | Pis_null
+  | Pis_undefined
   | Pis_not_none
   | Pval_from_option
   | Pval_from_option_not_nest

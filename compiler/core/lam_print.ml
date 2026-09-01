@@ -44,7 +44,6 @@ let primitive ppf (prim : Lam_primitive.t) =
   | Pcreate_extension s -> fprintf ppf "[ext-create]%S" s
   | Pinit_mod -> fprintf ppf "init_mod!"
   | Pupdate_mod -> fprintf ppf "update_mod!"
-  | Pjs_apply -> fprintf ppf "#apply"
   (* Debug-only dump, exercised solely under -drawlambda/-dlambda. *)
   | Ptagged_template -> fprintf ppf "#tagged_template" [@coverage off]
   | Pjs_object_get name -> fprintf ppf "js_object_get[%s]" name

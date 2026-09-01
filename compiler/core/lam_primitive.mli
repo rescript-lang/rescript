@@ -134,7 +134,6 @@ type t =
   | Pis_poly_var_block
   | Pisout of int
   | Pjscomp of Lam_compat.comparison
-  | Pjs_apply (*[f;arg0;arg1; arg2; ... argN]*)
   | Pdebugger
   | Pjs_object_get of string
   | Pjs_object_set of string

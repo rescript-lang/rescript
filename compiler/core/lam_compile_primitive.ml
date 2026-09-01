@@ -80,10 +80,6 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
      trim can not be done before syntax checking
      otherwise location is incorrect
   *)
-  | Pjs_apply -> (
-    match args with
-    | fn :: rest -> E.call ~info:call_info fn rest
-    | _ -> assert false)
   | Ptagged_template -> (
     (* [tag; strings_array; values_array] -> tag`...` *)
     match args with
