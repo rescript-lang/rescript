@@ -24,16 +24,16 @@
 
 (** This is not a recursive type definition *)
 type t =
-  | Single of Lambda.let_kind * Ident.t * Lam.t
-  | Recursive of (Ident.t * Lam.t) list
-  | Nop of Lam.t
+  | Single of Lambda.let_kind * Ident.t * Lambda.lambda
+  | Recursive of (Ident.t * Lambda.lambda) list
+  | Nop of Lambda.lambda
 
-let single (kind : Lambda.let_kind) id (body : Lam.t) =
+let single (kind : Lambda.let_kind) id (body : Lambda.lambda) =
   match (kind, body) with
   | (Strict | StrictOpt), (Lvar _ | Lconst _) -> Single (Alias, id, body)
   | _ -> Single (kind, id, body)
 
-let nop_cons (x : Lam.t) acc =
+let nop_cons (x : Lambda.lambda) acc =
   match x with
   | Lvar _ | Lconst _ | Lfunction _ -> acc
   | _ -> Nop x :: acc

@@ -715,7 +715,7 @@ let cmp_float (cmp : comparison) (a : float) b : bool =
 
 (* Constructors. The type is private outside this module, so every term is
    built through one of these. They are plain for now; the normalizations that
-   Lam.prim / Lam.if_ / Lam.switch perform will move here when the two layers
+   Lambda.prim / Lambda.if_ / Lambda.switch perform will move here when the two layers
    become one type. *)
 
 let var id : lambda = Lvar id

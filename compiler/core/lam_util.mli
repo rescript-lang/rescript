@@ -22,15 +22,15 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-val kind_of_lambda_block : Lam.t list -> Lam_id_kind.t
+val kind_of_lambda_block : Lambda.lambda list -> Lam_id_kind.t
 
 val field_flatten_get :
-  (unit -> Lam.t) ->
+  (unit -> Lambda.lambda) ->
   Ident.t ->
   int ->
   Lambda.field_dbg_info ->
   Lam_stats.ident_tbl ->
-  Lam.t
+  Lambda.lambda
 (** [field_flattern_get cb v i tbl]
     try to remove the indirection of [v.(i)] by inlining when [v]
     is a known block, 
@@ -52,8 +52,13 @@ val field_flatten_get :
 val alias_ident_or_global :
   Lam_stats.t -> Ident.t -> Ident.t -> Lam_id_kind.t -> unit
 
-val refine_let : kind:Lambda.let_kind -> Ident.t -> Lam.t -> Lam.t -> Lam.t
+val refine_let :
+  kind:Lambda.let_kind ->
+  Ident.t ->
+  Lambda.lambda ->
+  Lambda.lambda ->
+  Lambda.lambda
 
-val not_function : Lam.t -> bool
+val not_function : Lambda.lambda -> bool
 
-val is_function : Lam.t -> bool
+val is_function : Lambda.lambda -> bool

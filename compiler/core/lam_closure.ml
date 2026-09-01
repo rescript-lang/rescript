@@ -52,7 +52,7 @@ let sink_pos = Lam_var_stats.sink
    An enriched version of [free_varaibles] in {!Lam_free_variables}
 *)
 let free_variables (export_idents : Set_ident.t) (params : stats Map_ident.t)
-    (lam : Lam.t) : stats Map_ident.t =
+    (lam : Lambda.lambda) : stats Map_ident.t =
   let fv = ref params in
   let local_set = ref export_idents in
   let local_add k = local_set := Set_ident.add !local_set k in
@@ -65,7 +65,7 @@ let free_variables (export_idents : Set_ident.t) (params : stats Map_ident.t)
     if not (Set_ident.mem !local_set v) then fv := adjust !fv cur_pos v
   in
 
-  let rec iter (top : position) (lam : Lam.t) =
+  let rec iter (top : position) (lam : Lambda.lambda) =
     match lam with
     | Lvar v -> used top v
     | Lconst _ -> ()
@@ -150,7 +150,7 @@ let free_variables (export_idents : Set_ident.t) (params : stats Map_ident.t)
   iter Lam_var_stats.fresh_env lam;
   !fv
 
-(* let is_closed_by (set : Set_ident.t) (lam : Lam.t) : bool =
+(* let is_closed_by (set : Set_ident.t) (lam : Lambda.lambda) : bool =
    Map_ident.is_empty (free_variables set (Map_ident.empty ) lam   ) *)
 
 (** A bit consverative , it should be empty *)
@@ -159,7 +159,7 @@ let is_closed lam =
     (fun k _ -> Ident.global k)
 
 let is_closed_with_map (exports : Set_ident.t) (params : Ident.t list)
-    (body : Lam.t) : bool * stats Map_ident.t =
+    (body : Lambda.lambda) : bool * stats Map_ident.t =
   let param_map = free_variables exports (param_map_of_list params) body in
   let old_count = List.length params in
   let new_count = Map_ident.cardinal param_map in

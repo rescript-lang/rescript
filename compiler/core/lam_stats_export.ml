@@ -26,7 +26,8 @@
 
 let single_na = Js_cmj_format.single_na
 
-let values_of_export (meta : Lam_stats.t) (export_map : Lam.t Map_ident.t) :
+let values_of_export (meta : Lam_stats.t)
+    (export_map : Lambda.lambda Map_ident.t) :
     Js_cmj_format.cmj_value Map_string.t =
   Ext_list.fold_left meta.exports Map_string.empty (fun acc x ->
       let arity : Js_cmj_format.arity =

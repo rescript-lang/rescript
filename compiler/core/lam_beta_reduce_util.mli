@@ -22,4 +22,5 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-val simple_beta_reduce : Ident.t list -> Lam.t -> Lam.t list -> Lam.t option
+val simple_beta_reduce :
+  Ident.t list -> Lambda.lambda -> Lambda.lambda list -> Lambda.lambda option

@@ -25,8 +25,9 @@
 type t = {
   export_list: Ident.t list;
   export_set: Set_ident.t;
-  export_map: Lam.t Map_ident.t;
+  export_map: Lambda.lambda Map_ident.t;
   groups: Lam_group.t list;
 }
 
-val coerce_and_group_big_lambda : Lam_stats.t -> Lam.t -> t * Lam_stats.t
+val coerce_and_group_big_lambda :
+  Lam_stats.t -> Lambda.lambda -> t * Lam_stats.t

@@ -1,10 +1,10 @@
-val guard_raises : Lam.t -> Lam.t
+val guard_raises : Lambda.lambda -> Lambda.lambda
 (** Rewrite [if a then raise e else c] into [(if a then raise e else ()); c],
     so the continuation stops being nested inside a branch - the guard clause
     idiom in the emitted JavaScript.
 
     This is code motion rather than normalization: it changes the shape that
-    surrounding code matches on, so it cannot live in [Lam.if_]. Matching
+    surrounding code matches on, so it cannot live in [Lambda.if_]. Matching
     inspects the terms it has built after the fact, and rewriting them as they
     are constructed leaves static raises without their catch.
 

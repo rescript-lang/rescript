@@ -24,4 +24,4 @@
 
 exception Real_reference
 
-val eliminate_ref : Ident.t -> Lam.t -> Lam.t
+val eliminate_ref : Ident.t -> Lambda.lambda -> Lambda.lambda

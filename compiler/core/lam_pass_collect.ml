@@ -42,8 +42,8 @@ let annotate (meta : Lam_stats.t) rec_flag (k : Ident.t) (arity : Lam_arity.t)
     function definition,
     alias propgation - and toplevel identifiers, this needs to be exported
 *)
-let collect_info (meta : Lam_stats.t) (lam : Lam.t) =
-  let rec collect_bind rec_flag (ident : Ident.t) (lam : Lam.t) =
+let collect_info (meta : Lam_stats.t) (lam : Lambda.lambda) =
+  let rec collect_bind rec_flag (ident : Ident.t) (lam : Lambda.lambda) =
     match lam with
     | Lconst v -> Hash_ident.replace meta.ident_tbl ident (Constant v)
     | Lprim {primitive = Pmakeblock info; args = ls}
@@ -79,7 +79,7 @@ let collect_info (meta : Lam_stats.t) (lam : Lam.t) =
       collect x;
       if Set_ident.mem meta.export_idents ident then
         annotate meta rec_flag ident (Lam_arity_analysis.get_arity meta x) lam
-  and collect (lam : Lam.t) =
+  and collect (lam : Lambda.lambda) =
     match lam with
     | Lconst _ -> ()
     | Lvar _ -> ()

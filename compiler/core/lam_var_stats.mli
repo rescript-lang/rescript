@@ -34,7 +34,7 @@ val sink : position
 
 val fresh_env : position
 
-val new_position_after_lam : Lam.t -> position -> position
+val new_position_after_lam : Lambda.lambda -> position -> position
 
 val update : stats -> position -> stats
 (** The variable used stats update depend 
