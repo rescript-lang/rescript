@@ -495,18 +495,6 @@ let has_boolean_type (x : t) =
     Some loc
   | _ -> None
 
-(** [complete_range sw_consts 0 7]
-    is complete with [0,1,.. 7]
-*)
-let rec complete_range (sw_consts : (Lambda.switch_key * _) list) ~(start : int)
-    ~finish =
-  match sw_consts with
-  | [] -> finish < start
-  | (Switch_int i, _) :: rest ->
-    start <= finish && i = start
-    && complete_range rest ~start:(start + 1) ~finish
-  | (Switch_constructor _, _) :: _ -> false
-
 let rec eval_const_as_bool (v : Lam_constant.t) : bool option =
   match v with
   | Const_int x -> Some (x <> 0l)
@@ -552,27 +540,6 @@ let if_ (a : t) (b : t) (c : t) : t =
       | _ -> seq (Lifthenelse (a, b, unit)) c)
     | _ -> (
       match a with
-      | Lprim
-          {primitive = Pisout off; args = [Lconst (Const_int range); Lvar xx]}
-        -> (
-        let range = Int32.to_int range in
-        match c with
-        | Lswitch
-            ( (Lvar yy as switch_arg),
-              ({
-                 sw_blocks = [];
-                 sw_blocks_full = true;
-                 sw_consts;
-                 sw_consts_full = _;
-                 sw_failaction = None;
-               } as body) )
-          when Ident.same xx yy
-               && complete_range sw_consts ~start:(-off) ~finish:(range - off)
-          ->
-          Lswitch
-            ( switch_arg,
-              {body with sw_failaction = Some b; sw_consts_full = false} )
-        | _ -> Lifthenelse (a, b, c))
       | Lprim {primitive = Pisint; args = [Lvar i]; _} -> (
         match b with
         | Lifthenelse

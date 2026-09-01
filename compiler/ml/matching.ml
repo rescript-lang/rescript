@@ -1693,7 +1693,37 @@ module S_arg = struct
   let make_isin h arg ~offset =
     Lprim
       {primitive = Pnot; args = [make_isout h arg ~offset]; loc = Location.none}
-  let make_if cond ifso ifnot = Lifthenelse (cond, ifso, ifnot)
+
+  (* [covers_range cases ~start ~finish] holds when [cases] is exactly the
+     contiguous integer keys [start .. finish], in order. *)
+  let rec covers_range (cases : (Lambda.switch_key * act) list) ~start ~finish =
+    match cases with
+    | [] -> finish < start
+    | (Switch_int i, _) :: rest ->
+      start <= finish && i = start
+      && covers_range rest ~start:(start + 1) ~finish
+    | (Switch_constructor _, _) :: _ -> false
+
+  let make_if cond ifso ifnot =
+    match (cond, ifnot) with
+    (* The switcher guards a jump table with a range test, because on a machine
+       target that beats a table carrying a default. A JS [switch] has a native
+       [default], so when the table already covers the whole guarded range the
+       guard is pure overhead: drop it and make its action the failaction. *)
+    | ( Lprim {primitive = Pisout off; args = [Lconst (Const_int range); Lvar x]},
+        Lswitch
+          ( (Lvar y as arg),
+            ({
+               sw_blocks = [];
+               sw_blocks_full = true;
+               sw_consts;
+               sw_failaction = None;
+             } as sw) ) )
+      when Ident.same x y
+           && covers_range sw_consts ~start:(-off)
+                ~finish:(Int32.to_int range - off) ->
+      Lswitch (arg, {sw with sw_failaction = Some ifso; sw_consts_full = false})
+    | _ -> Lifthenelse (cond, ifso, ifnot)
   let make_switch _loc arg cases acts ~offset =
     let l = ref [] in
     for i = Array.length cases - 1 downto 0 do
