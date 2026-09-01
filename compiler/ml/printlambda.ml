@@ -156,7 +156,6 @@ let primitive ppf = function
   | Pintmin -> fprintf ppf "min"
   | Pintmax -> fprintf ppf "max"
   | Poffsetint n -> fprintf ppf "%i+" n
-  | Poffsetref n -> fprintf ppf "+:=%i" n
   | Pintoffloat -> fprintf ppf "int_of_float"
   | Pfloatofint -> fprintf ppf "float_of_int"
   | Pnegfloat -> fprintf ppf "~-."

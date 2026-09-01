@@ -368,13 +368,6 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
   | Pfloatofint -> Ext_list.singleton_exn args
   | Pnot -> E.not (Ext_list.singleton_exn args)
   | Poffsetint n -> E.offset (Ext_list.singleton_exn args) n
-  | Poffsetref n ->
-    let v =
-      Js_of_lam_block.field Lambda.ref_field_info
-        (Ext_list.singleton_exn args)
-        0l
-    in
-    E.seq (E.assign v (E.offset v n)) E.unit
   | Psequand -> (
     (* TODO: rhs is possibly a tail call *)
     match args with
