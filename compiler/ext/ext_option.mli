@@ -26,6 +26,10 @@
 
 val map : 'a option -> ('a -> 'b) -> 'b option
 
+val map_sharing : 'a option -> ('a -> 'a) -> 'a option
+(** [map] that returns the option itself when the value is physically
+    unchanged, so it allocates nothing. *)
+
 val iter : 'a option -> ('a -> unit) -> unit
 
 val exists : 'a option -> ('a -> bool) -> bool

@@ -136,6 +136,22 @@ let rec map_snd l f =
     let y5 = f x5 in
     (v1, y1) :: (v2, y2) :: (v3, y3) :: (v4, y4) :: (v5, y5) :: map_snd tail f
 
+let rec map_sharing l f =
+  match l with
+  | [] -> l
+  | x :: xs ->
+    let x' = f x in
+    let xs' = map_sharing xs f in
+    if x' == x && xs' == xs then l else x' :: xs'
+
+let rec map_snd_sharing l f =
+  match l with
+  | [] -> l
+  | (k, x) :: xs ->
+    let x' = f x in
+    let xs' = map_snd_sharing xs f in
+    if x' == x && xs' == xs then l else (k, x') :: xs'
+
 let rec map_last l f =
   match l with
   | [] -> []

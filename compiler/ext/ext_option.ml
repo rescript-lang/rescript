@@ -27,6 +27,13 @@ let map v f =
   | None -> None
   | Some x -> Some (f x)
 
+let map_sharing v f =
+  match v with
+  | None -> v
+  | Some x ->
+    let x' = f x in
+    if x' == x then v else Some x'
+
 let iter v f =
   match v with
   | None -> ()
