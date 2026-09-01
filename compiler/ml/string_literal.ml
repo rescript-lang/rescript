@@ -44,6 +44,19 @@ let decode_js_escapes s =
     in
     loop start 0 false
   in
+  let copy_utf8 index =
+    match Ext_utf8.classify s.[index] with
+    | Single _ ->
+      Buffer.add_char buf s.[index];
+      Some (index + 1)
+    | Leading (remaining, _) ->
+      let last = Ext_utf8.next s ~remaining index in
+      if last < 0 then None
+      else (
+        Buffer.add_substring buf s index (last - index + 1);
+        Some (last + 1))
+    | Cont _ | Invalid -> None
+  in
   let rec loop index =
     if index = len then Some (Buffer.contents buf)
     else
@@ -97,14 +110,16 @@ let decode_js_escapes s =
             else None
           | Some codepoint when add_codepoint codepoint -> loop (index + 6)
           | Some _ | None -> None)
-        | c ->
+        | _ -> (
           (* JavaScript non-escape characters, such as [\a], evaluate to the
              character following the backslash. This also handles escaped
              quotes, backslashes, dollars, backticks, and spaces. *)
-          Buffer.add_char buf c;
-          loop (index + 2))
-      | c ->
-        Buffer.add_char buf c;
-        loop (index + 1)
+          match copy_utf8 (index + 1) with
+          | Some next -> loop next
+          | None -> None))
+      | _ -> (
+        match copy_utf8 index with
+        | Some next -> loop next
+        | None -> None)
   in
   loop 0

@@ -55,7 +55,8 @@ let suites =
            assert_decoded ~encoded:{|\b\f\n\r\t\v\0|}
              ~expected:"\b\012\n\r\t\011\000" );
          ( "escaped punctuation and non-escapes" >:: fun _ ->
-           assert_decoded ~encoded:{|\\\"\'\ \$\`\a|} ~expected:{|\"' $`a|} );
+           assert_decoded ~encoded:{|\\\"\'\ \$\`\a|} ~expected:{|\"' $`a|};
+           assert_decoded ~encoded:"\\é" ~expected:"é" );
          ( "hex escapes" >:: fun _ ->
            assert_decoded ~encoded:{|\x61\xE9|} ~expected:"aé" );
          ( "unicode escapes" >:: fun _ ->
@@ -103,6 +104,10 @@ let suites =
                {|\uDC00|};
                {|\uD800\u0041|};
                {|\uDC00\uD800|};
+               "\128";
+               "\195";
+               "\195A";
+               "\\\195";
              ] );
          ( "backquoted patterns reject lone surrogate escapes" >:: fun _ ->
            assert_invalid_backquoted_pattern {|\uD800|};
