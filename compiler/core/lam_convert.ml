@@ -33,7 +33,6 @@ let prim = Lam.prim
 let lam_prim ~primitive:(p : Lambda.primitive) ~args loc : Lam.t =
   match p with
   | Pcreate_extension s -> prim ~primitive:(Pcreate_extension s) ~args loc
-  | Pgetglobal _ -> assert false
   | Pmakeblock info -> prim ~primitive:(Pmakeblock info) ~args loc
   | Pdebugger -> prim ~primitive:Pdebugger ~args loc
   | Psome -> prim ~primitive:Psome ~args loc
@@ -183,14 +182,9 @@ let convert (lam : Lambda.lambda) : Lam.t * Lam_module_ident.Hash_set.t =
       Lam.let_ kind id (convert_aux e) (convert_aux body)
     | Lletrec (bindings, body) ->
       Lam.letrec (Ext_list.map_snd bindings convert_aux) (convert_aux body)
-    | Lprim (Pgetglobal id, args, _) ->
-      let args = Ext_list.map args convert_aux in
-      if Ident.is_predef_exn id then
-        Lam.const (Const_string {s = id.name; delim = None})
-      else (
-        may_depend may_depends (Lam_module_ident.of_ml id);
-        assert (args = []);
-        Lam.global_module id)
+    | Lglobal_module id ->
+      may_depend may_depends (Lam_module_ident.of_ml id);
+      Lam.global_module id
     | Lprim (primitive, args, loc) ->
       let args = Ext_list.map args convert_aux in
       lam_prim ~primitive ~args loc

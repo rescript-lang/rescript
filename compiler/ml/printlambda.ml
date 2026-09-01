@@ -97,7 +97,6 @@ let primitive ppf = function
   | Ptypeof -> fprintf ppf "typeof"
   | Psome -> fprintf ppf "some"
   | Psome_not_nest -> fprintf ppf "some_not_nest"
-  | Pgetglobal id -> fprintf ppf "global %a" Ident.print id
   | Pmakeblock taginfo -> fprintf ppf "makeblock %a" print_taginfo taginfo
   | Pfield (n, fld) -> fprintf ppf "field:%s/%i" (str_of_field_info fld) n
   | Psetfield (n, _) -> fprintf ppf "setfield %i" n
@@ -264,6 +263,7 @@ let apply_inlined_attribute ppf = function
 
 let rec lam ppf = function
   | Lvar id -> Ident.print ppf id
+  | Lglobal_module id -> fprintf ppf "global %a" Ident.print id
   | Lconst cst -> struct_const ppf cst
   | Lapply ap ->
     let lams ppf largs = List.iter (fun l -> fprintf ppf "@ %a" lam l) largs in

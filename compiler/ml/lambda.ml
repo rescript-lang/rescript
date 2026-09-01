@@ -177,7 +177,6 @@ type primitive =
   | Psome_not_nest
       (** [Some x] where [x] cannot itself be [undefined], so no wrapping is
           needed. *)
-  | Pgetglobal of Ident.t
   (* Operations on heap blocks *)
   | Pmakeblock of tag_info
   | Pfield of int * field_dbg_info
@@ -370,6 +369,9 @@ type function_attribute = {
 
 type lambda =
   | Lvar of Ident.t
+  | Lglobal_module of Ident.t
+      (** A reference to another compilation unit: a name the module system
+          resolves, not a value this one computes. *)
   | Lconst of structured_constant
   | Lapply of lambda_apply
   | Lfunction of lfunction
@@ -553,7 +555,7 @@ let make_key e =
     (* Too big ! *)
     match e with
     | Lvar id -> ( try Ident.find_same id env with Not_found -> e)
-    | Lconst _ -> e
+    | Lglobal_module _ | Lconst _ -> e
     | Lapply ap ->
       Lapply
         {
@@ -623,7 +625,7 @@ let iter_opt f = function
   | Some e -> f e
 
 let iter f = function
-  | Lvar _ | Lconst _ -> ()
+  | Lvar _ | Lglobal_module _ | Lconst _ -> ()
   | Lapply {ap_func = fn; ap_args = args} ->
     f fn;
     List.iter f args
@@ -694,9 +696,9 @@ let free_ids get l =
     | Lfor_of (v, _e1, _e2) | Lfor_await_of (v, _e1, _e2) ->
       fv := Ident_set.remove v !fv
     | Lassign (id, _e) -> fv := Ident_set.add id !fv
-    | Lvar _ | Lconst _ | Lapply _ | Lprim _ | Lswitch _ | Lstringswitch _
-    | Lstaticraise _ | Lifthenelse _ | Lsequence _ | Lbreak | Lcontinue
-    | Lwhile _ ->
+    | Lvar _ | Lglobal_module _ | Lconst _ | Lapply _ | Lprim _ | Lswitch _
+    | Lstringswitch _ | Lstaticraise _ | Lifthenelse _ | Lsequence _ | Lbreak
+    | Lcontinue | Lwhile _ ->
       ()
   in
   free l;
@@ -741,7 +743,11 @@ let rec patch_guarded patch = function
 
 let rec transl_normal_path = function
   | Path.Pident id ->
-    if Ident.global id then Lprim (Pgetglobal id, [], Location.none)
+    (* A predefined exception is its own name at runtime, so the reference is
+       that string rather than a module. *)
+    if Ident.is_predef_exn id then
+      Lconst (Const_string {s = id.name; delim = None})
+    else if Ident.global id then Lglobal_module id
     else Lvar id
   | Pdot (p, s, pos) ->
     Lprim
@@ -769,6 +775,7 @@ let transl_extension_path = transl_value_path
 let subst_lambda s lam =
   let rec subst = function
     | Lvar id as l -> ( try Ident.find_same id s with Not_found -> l)
+    | Lglobal_module _ as l -> l
     | Lconst _ as l -> l
     | Lapply ap ->
       Lapply
