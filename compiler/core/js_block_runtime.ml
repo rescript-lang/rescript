@@ -24,10 +24,7 @@
 
 let option_id = Ident.create_persistent Primitive_modules.option
 
-let curry_id = Ident.create_persistent Primitive_modules.curry
-
 let check_additional_id (x : J.expression) : Ident.t option =
   match x.expression_desc with
   | Optional_block (_, false) -> Some option_id
-  | Call (_, _, {arity = NA}) -> Some curry_id
   | _ -> None

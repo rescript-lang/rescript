@@ -48,8 +48,7 @@ let get_module_system () =
   | [module_system] -> module_system
   | _ -> Commonjs
 
-let call_info =
-  {Js_call_info.arity = Full; call_info = Call_na; call_transformed_jsx = false}
+let call_info = {Js_call_info.call_info = Call_na; call_transformed_jsx = false}
 
 let import_of_path path =
   E.call ~info:call_info (E.js_global "import") [E.str path]

@@ -266,7 +266,6 @@ type primitive =
   (* exn *)
   | Pcreate_extension of string
   (* js *)
-  | Pcurry_apply of int
   | Pjscomp of comparison
   | Pnull_to_opt
   | Pnullable_to_opt

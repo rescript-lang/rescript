@@ -390,14 +390,6 @@ let primitive_builtins : (string * Lambda.builtin) array =
       ("%null_to_opt", Pnull_to_opt);
       ("%nullable_to_opt", Pnullable_to_opt);
       ("%function_arity", Pfn_arity);
-      ("%curry_apply1", Pcurry_apply 1);
-      ("%curry_apply2", Pcurry_apply 2);
-      ("%curry_apply3", Pcurry_apply 3);
-      ("%curry_apply4", Pcurry_apply 4);
-      ("%curry_apply5", Pcurry_apply 5);
-      ("%curry_apply6", Pcurry_apply 6);
-      ("%curry_apply7", Pcurry_apply 7);
-      ("%curry_apply8", Pcurry_apply 8);
       ("%makemutablelist", Pmakelist);
       ("%unsafe_to_method", Pjs_fn_method);
       (* Compiler internals, never expose to ReScript files *)
