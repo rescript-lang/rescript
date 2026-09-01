@@ -337,7 +337,7 @@ type function_attribute = {
   one_unit_arg: bool;
 }
 
-type lambda =
+type lambda = private
   | Lvar of Ident.t
   | Lglobal_module of Ident.t
       (** A reference to another compilation unit: a name the module system
@@ -372,14 +372,18 @@ and lfunction = {
   loc: Location.t;
 }
 
-and prim_info = {primitive: primitive; args: lambda list; loc: Location.t}
+and prim_info = private {
+  primitive: primitive;
+  args: lambda list;
+  loc: Location.t;
+}
 
 and ap_info = {
   ap_loc: Location.t;
   ap_inlined: inline_attribute; (* specified with the [@inlined] attribute *)
 }
 
-and lambda_apply = {
+and lambda_apply = private {
   ap_func: lambda;
   ap_args: lambda list;
   ap_info: ap_info;
@@ -431,6 +435,59 @@ val const_polyvar_name : string -> structured_constant
 val const_module_alias : structured_constant
 val lambda_assert_false : lambda
 val lambda_unit : lambda
+
+(* Constructors. [lambda] is private, so every term outside this module is
+   built through one of these. *)
+
+val var : Ident.t -> lambda
+
+val global_module : Ident.t -> lambda
+
+val const : structured_constant -> lambda
+
+val apply :
+  ?ap_transformed_jsx:bool -> lambda -> lambda list -> ap_info -> lambda
+
+val function_ :
+  loc:Location.t ->
+  attr:function_attribute ->
+  params:Ident.t list ->
+  body:lambda ->
+  lambda
+
+val let_ : let_kind -> Ident.t -> lambda -> lambda -> lambda
+
+val letrec : (Ident.t * lambda) list -> lambda -> lambda
+
+val prim : primitive:primitive -> args:lambda list -> Location.t -> lambda
+
+val switch : lambda -> lambda_switch -> lambda
+
+val stringswitch : lambda -> (string * lambda) list -> lambda option -> lambda
+
+val staticraise : int -> lambda list -> lambda
+
+val staticcatch : lambda -> int * Ident.t list -> lambda -> lambda
+
+val try_ : lambda -> Ident.t -> lambda -> lambda
+
+val if_ : lambda -> lambda -> lambda -> lambda
+
+val seq : lambda -> lambda -> lambda
+
+val break : lambda
+
+val continue : lambda
+
+val while_ : lambda -> lambda -> lambda
+
+val for_ : Ident.t -> lambda -> lambda -> direction_flag -> lambda -> lambda
+
+val for_of : Ident.t -> lambda -> lambda -> lambda
+
+val for_await_of : Ident.t -> lambda -> lambda -> lambda
+
+val assign : Ident.t -> lambda -> lambda
 
 val mk_builtin : builtin -> lambda list -> Location.t -> lambda
 (** Expands the non-[Primitive] builtins, which have no IR form. *)

@@ -61,29 +61,20 @@ let or_list (arg : lam) (hash_names : (int * string) list) =
   match hash_names with
   | (hash, name) :: rest ->
     let init : lam =
-      Lprim
-        {
-          primitive = Pintcomp Ceq;
-          args = [arg; Lconst (Lambda.const_polyvar name)];
-          loc = Location.none;
-        }
+      Lambda.prim ~primitive:(Pintcomp Ceq)
+        ~args:[arg; Lambda.const (Lambda.const_polyvar name)]
+        Location.none
     in
     Ext_list.fold_left rest init (fun acc (hash, name) ->
-        Lambda.Lprim
-          {
-            primitive = Psequor;
-            args =
-              [
-                acc;
-                Lprim
-                  {
-                    primitive = Pintcomp Ceq;
-                    args = [arg; Lconst (Lambda.const_polyvar name)];
-                    loc = Location.none;
-                  };
-              ];
-            loc = Location.none;
-          })
+        Lambda.prim ~primitive:Psequor
+          ~args:
+            [
+              acc;
+              Lambda.prim ~primitive:(Pintcomp Ceq)
+                ~args:[arg; Lambda.const (Lambda.const_polyvar name)]
+                Location.none;
+            ]
+          Location.none)
   | _ -> assert false
 
 let make_test_sequence_variant_constant (fail : lam option) (arg : lam)
@@ -95,7 +86,7 @@ let make_test_sequence_variant_constant (fail : lam option) (arg : lam)
   | (_, act) :: rest, None | rest, Some act ->
     Ext_list.fold_right rest act (fun (hash_names, act1) acc ->
         let predicate : lam = or_list arg hash_names in
-        Lifthenelse (predicate, act1, acc))
+        Lambda.if_ predicate act1 acc)
   | [], None -> assert false
 
 let call_switcher_variant_constant (fail : lam option) (arg : lam)
@@ -105,14 +96,12 @@ let call_switcher_variant_constant (fail : lam option) (arg : lam)
   | (_, act) :: rest, None | rest, Some act ->
     Ext_list.fold_right rest act (fun (hash_names, act1) acc ->
         let predicate = or_list arg hash_names in
-        Lifthenelse (predicate, act1, acc))
+        Lambda.if_ predicate act1 acc)
   | [], None -> assert false
 
 let call_switcher_variant_constr (loc : Location.t) (fail : lam option)
     (arg : lam) int_lambda_list : lam =
   let v = Ident.create "variant" in
-  Llet
-    ( Alias,
-      v,
-      Lprim {primitive = Pfield (0, Fld_poly_var_tag); args = [arg]; loc},
-      call_switcher_variant_constant fail (Lvar v) int_lambda_list )
+  Lambda.let_ Alias v
+    (Lambda.prim ~primitive:(Pfield (0, Fld_poly_var_tag)) ~args:[arg] loc)
+    (call_switcher_variant_constant fail (Lambda.var v) int_lambda_list)

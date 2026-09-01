@@ -12,7 +12,7 @@ exception Error of Location.t * error
 let undefined_location loc =
   let fname, line, char = Location.get_pos_info loc.Location.loc_start in
   let fname = Filename.basename fname in
-  Lconst
+  const
     (Const_block
        ( Lambda.Blk_tuple,
          [const_string fname None; const_int line; const_int char] ))
@@ -78,7 +78,7 @@ let init_shape modl =
   try
     Some
       ( undefined_location modl.mod_loc,
-        Lconst (init_shape_mod modl.mod_env modl.mod_type) )
+        const (init_shape_mod modl.mod_env modl.mod_type) )
   with Not_found -> None
 
 type binding_status = Undefined | Inprogress | Defined
@@ -139,17 +139,14 @@ let eval_rec_bindings_aux (bindings : binding list) (cont : t) : t =
     | (id, Some (loc, shape), _rhs) :: rem ->
       let init =
         if shape_is_empty shape then Lambda.lambda_unit
-        else
-          Lambda.Lprim
-            {primitive = Pinit_mod; args = [loc; shape]; loc = Location.none}
+        else Lambda.prim ~primitive:Pinit_mod ~args:[loc; shape] Location.none
       in
-      Lambda.Llet (Strict, id, init, bind_inits rem acc)
+      Lambda.let_ Strict id init (bind_inits rem acc)
   in
   let rec bind_strict args acc =
     match args with
     | [] -> acc
-    | (id, None, rhs) :: rem ->
-      Lambda.Llet (Strict, id, rhs, bind_strict rem acc)
+    | (id, None, rhs) :: rem -> Lambda.let_ Strict id rhs (bind_strict rem acc)
     | (_id, Some _, _rhs) :: rem -> bind_strict rem acc
   in
   let rec patch_forwards args =
@@ -160,14 +157,11 @@ let eval_rec_bindings_aux (bindings : binding list) (cont : t) : t =
       let patch =
         if shape_is_empty shape then rhs
         else
-          Lambda.Lprim
-            {
-              primitive = Pupdate_mod;
-              args = [shape; Lvar id; rhs];
-              loc = Location.none;
-            }
+          Lambda.prim ~primitive:Pupdate_mod
+            ~args:[shape; var id; rhs]
+            Location.none
       in
-      Lsequence (patch, patch_forwards rem)
+      seq patch (patch_forwards rem)
   in
   bind_inits bindings (bind_strict bindings (patch_forwards bindings))
 

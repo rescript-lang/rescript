@@ -514,6 +514,43 @@ let offset_ref ~delta r loc =
     let id = Ident.create "ref" in
     Llet (Strict, id, r, assign (Lvar id))
 
+(* Constructors. The type is private outside this module, so every term is
+   built through one of these. They are plain for now; the normalizations that
+   Lam.prim / Lam.if_ / Lam.switch perform will move here when the two layers
+   become one type. *)
+
+let var id : lambda = Lvar id
+let global_module id : lambda = Lglobal_module id
+let const ct : lambda = Lconst ct
+
+let apply ?(ap_transformed_jsx = false) ap_func ap_args ap_info : lambda =
+  Lapply {ap_func; ap_args; ap_info; ap_transformed_jsx}
+
+let function_ ~loc ~attr ~params ~body : lambda =
+  Lfunction {params; body; attr; loc}
+
+let let_ kind id e body : lambda = Llet (kind, id, e, body)
+let letrec bindings body : lambda = Lletrec (bindings, body)
+let prim ~primitive ~args loc : lambda = Lprim {primitive; args; loc}
+let switch lam sw : lambda = Lswitch (lam, sw)
+
+let stringswitch lam cases default : lambda = Lstringswitch (lam, cases, default)
+
+let staticraise i args : lambda = Lstaticraise (i, args)
+let staticcatch body catch handler : lambda = Lstaticcatch (body, catch, handler)
+let try_ body id handler : lambda = Ltrywith (body, id, handler)
+let if_ a b c : lambda = Lifthenelse (a, b, c)
+let seq a b : lambda = Lsequence (a, b)
+let break : lambda = Lbreak
+let continue : lambda = Lcontinue
+let while_ cond body : lambda = Lwhile (cond, body)
+let for_ id from_ to_ dir body : lambda = Lfor (id, from_, to_, dir, body)
+let for_of id iterable body : lambda = Lfor_of (id, iterable, body)
+
+let for_await_of id iterable body : lambda = Lfor_await_of (id, iterable, body)
+
+let assign id body : lambda = Lassign (id, body)
+
 let mk_builtin b args loc =
   match b with
   | Primitive p -> Lprim {primitive = p; args; loc}
