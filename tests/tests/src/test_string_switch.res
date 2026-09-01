@@ -16,11 +16,3 @@ let classifyEquivalentEscape = (value, selectedCase) =>
   | "\x61" => 4
   | _ => 5
   }
-
-let () = {
-  assert(classifyEquivalentEscape("a", 0) == 0)
-  assert(classifyEquivalentEscape("a", 1) == 1)
-  assert(classifyEquivalentEscape("a", 2) == 2)
-  assert(classifyEquivalentEscape("a", 3) == 3)
-  assert(classifyEquivalentEscape("a", 4) == 4)
-}

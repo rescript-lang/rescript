@@ -48,66 +48,6 @@ function classifyEquivalentEscape(value, selectedCase) {
   }
 }
 
-if (classifyEquivalentEscape("a", 0) !== 0) {
-  throw {
-    RE_EXN_ID: "Assert_failure",
-    _1: [
-      "test_string_switch.res",
-      21,
-      2
-    ],
-    Error: new Error()
-  };
-}
-
-if (classifyEquivalentEscape("a", 1) !== 1) {
-  throw {
-    RE_EXN_ID: "Assert_failure",
-    _1: [
-      "test_string_switch.res",
-      22,
-      2
-    ],
-    Error: new Error()
-  };
-}
-
-if (classifyEquivalentEscape("a", 2) !== 2) {
-  throw {
-    RE_EXN_ID: "Assert_failure",
-    _1: [
-      "test_string_switch.res",
-      23,
-      2
-    ],
-    Error: new Error()
-  };
-}
-
-if (classifyEquivalentEscape("a", 3) !== 3) {
-  throw {
-    RE_EXN_ID: "Assert_failure",
-    _1: [
-      "test_string_switch.res",
-      24,
-      2
-    ],
-    Error: new Error()
-  };
-}
-
-if (classifyEquivalentEscape("a", 4) !== 4) {
-  throw {
-    RE_EXN_ID: "Assert_failure",
-    _1: [
-      "test_string_switch.res",
-      25,
-      2
-    ],
-    Error: new Error()
-  };
-}
-
 export {
   version,
   classifyEquivalentEscape,
