@@ -128,7 +128,7 @@ let js_hoisted_aliases (export_ids : Ident.t list)
       | [] -> base
       | (pos, name) :: fields ->
         access loc
-          (Lam.prim
+          (Lambda.prim
              ~primitive:(Lambda.Pfield (pos, Lambda.Fld_module {name}))
              ~args:[base] loc)
           fields
@@ -226,7 +226,7 @@ let js_hoisted_aliases (export_ids : Ident.t list)
                        name
                    else
                      let alias_id = Ident.create name in
-                     let alias = access loc (Lam.var top_id) access_path in
+                     let alias = access loc (Lambda.var top_id) access_path in
                      ( ( Lam_group.Single (Alias, alias_id, alias),
                          alias_id,
                          alias,

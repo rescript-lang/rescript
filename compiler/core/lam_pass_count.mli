@@ -25,4 +25,4 @@ type occ_tbl = used_info Hash_ident.t
 
 val dummy_info : unit -> used_info
 
-val collect_occurs : Lam.t -> occ_tbl
+val collect_occurs : Lambda.lambda -> occ_tbl

@@ -46,8 +46,8 @@ let is_const_some (cst : Lambda.structured_constant) : bool =
   | Const_some _ -> true
   | _ -> false
 
-let simplify_alias (meta : Lam_stats.t) (lam : Lam.t) : Lam.t =
-  let rec simpl (lam : Lam.t) : Lam.t =
+let simplify_alias (meta : Lam_stats.t) (lam : Lambda.lambda) : Lambda.lambda =
+  let rec simpl (lam : Lambda.lambda) : Lambda.lambda =
     match lam with
     | Lvar _ -> lam
     (* 7432: prevent optimization in JSX preserve mode *)
@@ -58,16 +58,16 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lam.t) : Lam.t =
           loc;
         }
       when !Js_config.jsx_preserve ->
-      Lam.prim ~primitive ~args:(field_arg :: Ext_list.map rest simpl) loc
+      Lambda.prim ~primitive ~args:(field_arg :: Ext_list.map rest simpl) loc
     | Lprim {primitive = Pfield (i, info) as primitive; args = [arg]; loc} -> (
       (* ATTENTION:
          Main use case, we should detect inline all immutable block .. *)
       match simpl arg with
       | Lvar v as l ->
         Lam_util.field_flatten_get
-          (fun _ -> Lam.prim ~primitive ~args:[l] loc)
+          (fun _ -> Lambda.prim ~primitive ~args:[l] loc)
           v i info meta.ident_tbl
-      | l -> Lam.prim ~primitive ~args:[l] loc)
+      | l -> Lambda.prim ~primitive ~args:[l] loc)
     | Lprim
         {
           primitive = (Pval_from_option | Pval_from_option_not_nest) as p;
@@ -78,7 +78,7 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lam.t) : Lam.t =
       | _ -> if p = Pval_from_option_not_nest then lvar else x)
     | Lglobal_module _ -> lam
     | Lprim {primitive; args; loc} ->
-      Lam.prim ~primitive ~args:(Ext_list.map args simpl) loc
+      Lambda.prim ~primitive ~args:(Ext_list.map args simpl) loc
     | Lifthenelse
         ((Lprim {primitive = Pis_not_none; args = [Lvar id]} as l1), l2, l3)
       -> (
@@ -86,21 +86,21 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lam.t) : Lam.t =
       | Some (Constant c) when is_const_some c -> simpl l2
       | Some (ImmutableBlock _ | MutableBlock _ | Normal_optional _) -> simpl l2
       | Some (OptionalBlock (l, Null)) ->
-        Lam.if_
-          (Lam.not_ Location.none
-             (Lam.prim ~primitive:Pis_null ~args:[l] Location.none))
+        Lambda.if_
+          (Lambda.not_ Location.none
+             (Lambda.prim ~primitive:Pis_null ~args:[l] Location.none))
           (simpl l2) (simpl l3)
       | Some (OptionalBlock (l, Undefined)) ->
-        Lam.if_
-          (Lam.not_ Location.none
-             (Lam.prim ~primitive:Pis_undefined ~args:[l] Location.none))
+        Lambda.if_
+          (Lambda.not_ Location.none
+             (Lambda.prim ~primitive:Pis_undefined ~args:[l] Location.none))
           (simpl l2) (simpl l3)
       | Some (OptionalBlock (l, Null_undefined)) ->
-        Lam.if_
-          (Lam.not_ Location.none
-             (Lam.prim ~primitive:Pis_null_undefined ~args:[l] Location.none))
+        Lambda.if_
+          (Lambda.not_ Location.none
+             (Lambda.prim ~primitive:Pis_null_undefined ~args:[l] Location.none))
           (simpl l2) (simpl l3)
-      | Some _ | None -> Lam.if_ l1 (simpl l2) (simpl l3))
+      | Some _ | None -> Lambda.if_ l1 (simpl l2) (simpl l3))
     (* could be the code path
        {[ match x with
          | h::hs ->
@@ -112,13 +112,13 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lam.t) : Lam.t =
         match id_is_for_sure_true_in_boolean meta.ident_tbl id with
         | Eval_true -> simpl l2
         | Eval_false -> simpl l3
-        | Eval_unknown -> Lam.if_ (simpl l1) (simpl l2) (simpl l3))
-      | _ -> Lam.if_ (simpl l1) (simpl l2) (simpl l3))
+        | Eval_unknown -> Lambda.if_ (simpl l1) (simpl l2) (simpl l3))
+      | _ -> Lambda.if_ (simpl l1) (simpl l2) (simpl l3))
     | Lconst _ -> lam
-    | Llet (str, v, l1, l2) -> Lam.let_ str v (simpl l1) (simpl l2)
+    | Llet (str, v, l1, l2) -> Lambda.let_ str v (simpl l1) (simpl l2)
     | Lletrec (bindings, body) ->
       let bindings = Ext_list.map_snd bindings simpl in
-      Lam.letrec bindings (simpl body)
+      Lambda.letrec bindings (simpl body)
     (* complicated
            1. inline this function
            2. ...
@@ -155,7 +155,7 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lam.t) : Lam.t =
              && Lam_analysis.lfunction_can_be_inlined lfunction ->
         simpl (Lam_beta_reduce.propagate_beta_reduce meta params body args)
       | _ ->
-        Lam.apply (simpl l1) (Ext_list.map args simpl) ap_info
+        Lambda.apply (simpl l1) (Ext_list.map args simpl) ap_info
           ?ap_transformed_jsx:None)
     (* Function inlining interact with other optimizations...
 
@@ -169,7 +169,7 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lam.t) : Lam.t =
       (* Ext_log.dwarn __LOC__ "%s/%d" v.name v.stamp;     *)
       let ap_args = Ext_list.map ap_args simpl in
       let[@local] normal () =
-        Lam.apply (simpl fn) ap_args ap_info ~ap_transformed_jsx
+        Lambda.apply (simpl fn) ap_args ap_info ~ap_transformed_jsx
       in
       match Hash_ident.find_opt meta.ident_tbl v with
       | Some
@@ -240,9 +240,10 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lam.t) : Lam.t =
     (*   when  Ext_list.same_length params args -> *)
     (*   simpl (Lam_beta_reduce.propogate_beta_reduce meta params body args) *)
     | Lapply {ap_func = l1; ap_args = ll; ap_info; ap_transformed_jsx} ->
-      Lam.apply (simpl l1) (Ext_list.map ll simpl) ap_info ~ap_transformed_jsx
+      Lambda.apply (simpl l1) (Ext_list.map ll simpl) ap_info
+        ~ap_transformed_jsx
     | Lfunction {params; body; attr; loc} ->
-      Lam.function_ ~loc ~params ~body:(simpl body) ~attr
+      Lambda.function_ ~loc ~params ~body:(simpl body) ~attr
     | Lswitch
         ( l,
           {
@@ -253,7 +254,7 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lam.t) : Lam.t =
             sw_consts_full;
             sw_dispatch;
           } ) ->
-      Lam.switch (simpl l)
+      Lambda.switch (simpl l)
         {
           sw_consts = Ext_list.map_snd sw_consts simpl;
           sw_blocks = Ext_list.map_snd sw_blocks simpl;
@@ -267,26 +268,26 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lam.t) : Lam.t =
         match l with
         | Lvar s -> (
           match Hash_ident.find_opt meta.ident_tbl s with
-          | Some (Constant s) -> Lam.const s
+          | Some (Constant s) -> Lambda.const s
           | Some _ | None -> simpl l)
         | _ -> simpl l
       in
-      Lam.stringswitch l (Ext_list.map_snd sw simpl) (Ext_option.map d simpl)
-    | Lstaticraise (i, ls) -> Lam.staticraise i (Ext_list.map ls simpl)
-    | Lstaticcatch (l1, ids, l2) -> Lam.staticcatch (simpl l1) ids (simpl l2)
-    | Ltrywith (l1, v, l2) -> Lam.try_ (simpl l1) v (simpl l2)
-    | Lsequence (l1, l2) -> Lam.seq (simpl l1) (simpl l2)
-    | Lbreak -> Lam.break
-    | Lcontinue -> Lam.continue
-    | Lwhile (l1, l2) -> Lam.while_ (simpl l1) (simpl l2)
+      Lambda.stringswitch l (Ext_list.map_snd sw simpl) (Ext_option.map d simpl)
+    | Lstaticraise (i, ls) -> Lambda.staticraise i (Ext_list.map ls simpl)
+    | Lstaticcatch (l1, ids, l2) -> Lambda.staticcatch (simpl l1) ids (simpl l2)
+    | Ltrywith (l1, v, l2) -> Lambda.try_ (simpl l1) v (simpl l2)
+    | Lsequence (l1, l2) -> Lambda.seq (simpl l1) (simpl l2)
+    | Lbreak -> Lambda.break
+    | Lcontinue -> Lambda.continue
+    | Lwhile (l1, l2) -> Lambda.while_ (simpl l1) (simpl l2)
     | Lfor (flag, l1, l2, dir, l3) ->
-      Lam.for_ flag (simpl l1) (simpl l2) dir (simpl l3)
-    | Lfor_of (flag, l1, l2) -> Lam.for_of flag (simpl l1) (simpl l2)
+      Lambda.for_ flag (simpl l1) (simpl l2) dir (simpl l3)
+    | Lfor_of (flag, l1, l2) -> Lambda.for_of flag (simpl l1) (simpl l2)
     | Lfor_await_of (flag, l1, l2) ->
-      Lam.for_await_of flag (simpl l1) (simpl l2)
+      Lambda.for_await_of flag (simpl l1) (simpl l2)
     | Lassign (v, l) ->
       (* Lalias-bound variables are never assigned, so don't increase
          v's refsimpl *)
-      Lam.assign v (simpl l)
+      Lambda.assign v (simpl l)
   in
   simpl lam

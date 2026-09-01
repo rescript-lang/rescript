@@ -82,13 +82,21 @@ val enter_switch : t -> t
 val push_loop : t -> t * loop_frame
 val ensure_loop_label : t -> loop_frame -> J.label
 
-type handler = {label: jbl_label; handler: Lam.t; bindings: Ident.t list}
+type handler = {
+  label: jbl_label;
+  handler: Lambda.lambda;
+  bindings: Ident.t list;
+}
 
 val no_static_raise_in_handler : handler -> bool
 
 val add_jmps :
-  jmp_table -> Ident.t -> handler list -> jmp_table * (jbl_label * Lam.t) list
+  jmp_table ->
+  Ident.t ->
+  handler list ->
+  jmp_table * (jbl_label * Lambda.lambda) list
 
-val add_pseudo_jmp : jmp_table -> Ident.t -> handler -> jmp_table * Lam.t
+val add_pseudo_jmp :
+  jmp_table -> Ident.t -> handler -> jmp_table * Lambda.lambda
 
 val find_exn : t -> jbl_label -> value

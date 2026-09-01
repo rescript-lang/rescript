@@ -27,8 +27,8 @@
 val compile_recursive_lets :
   output_prefix:string ->
   Lam_compile_context.t ->
-  (Ident.t * Lam.t) list ->
+  (Ident.t * Lambda.lambda) list ->
   Js_output.t
 
 val compile_lambda :
-  output_prefix:string -> Lam_compile_context.t -> Lam.t -> Js_output.t
+  output_prefix:string -> Lam_compile_context.t -> Lambda.lambda -> Js_output.t

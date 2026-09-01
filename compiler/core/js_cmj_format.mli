@@ -49,7 +49,8 @@ type arity = Single of Lam_arity.t | Submodule of Lam_arity.t array
 
 type cmj_value = {
   arity: arity;
-  persistent_closed_lambda: Lam.t option; (* Either constant or closed functor *)
+  persistent_closed_lambda: Lambda.lambda option;
+      (* Either constant or closed functor *)
 }
 
 type effect_ = string option
@@ -57,7 +58,7 @@ type effect_ = string option
 type keyed_cmj_value = {
   name: string;
   arity: arity;
-  persistent_closed_lambda: Lam.t option;
+  persistent_closed_lambda: Lambda.lambda option;
 }
 
 type hoisted_export = {

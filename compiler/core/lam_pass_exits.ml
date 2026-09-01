@@ -21,7 +21,7 @@
 *)
 let rec no_list args = Ext_list.for_all args no_bounded_variables
 
-and no_list_snd : 'a. ('a * Lam.t) list -> bool =
+and no_list_snd : 'a. ('a * Lambda.lambda) list -> bool =
  fun args -> Ext_list.for_all_snd args no_bounded_variables
 
 and no_opt x =
@@ -29,7 +29,7 @@ and no_opt x =
   | None -> true
   | Some a -> no_bounded_variables a
 
-and no_bounded_variables (l : Lam.t) =
+and no_bounded_variables (l : Lambda.lambda) =
   match l with
   | Lvar _ -> true
   | Lconst _ -> true
@@ -82,8 +82,8 @@ and no_bounded_variables (l : Lam.t) =
     when do the substitution, if its occurence is > 1,
     we should refresh
 *)
-type lam_subst = Id of Lam.t [@@unboxed]
-(* | Refresh of Lam.t *)
+type lam_subst = Id of Lambda.lambda [@@unboxed]
+(* | Refresh of Lambda.lambda *)
 
 type subst_tbl = (Ident.t list * lam_subst) Hash_int.t
 
@@ -152,9 +152,9 @@ let to_lam x =
        the j is not very indicative                
 *)
 
-let subst_helper (subst : subst_tbl) (query : int -> int) (lam : Lam.t) : Lam.t
-    =
-  let rec simplif (lam : Lam.t) =
+let subst_helper (subst : subst_tbl) (query : int -> int) (lam : Lambda.lambda)
+    : Lambda.lambda =
+  let rec simplif (lam : Lambda.lambda) =
     match lam with
     | Lstaticcatch (l1, (i, xs), l2) -> (
       let i_occur = query i in
@@ -182,7 +182,7 @@ let subst_helper (subst : subst_tbl) (query : int -> int) (lam : Lam.t) : Lam.t
         if ok_to_inline then (
           Hash_int.add subst i (xs, Id l2);
           simplif l1)
-        else Lam.staticcatch (simplif l1) (i, xs) l2)
+        else Lambda.staticcatch (simplif l1) (i, xs) l2)
     | Lstaticraise (i, []) -> (
       match Hash_int.find_opt subst i with
       | Some (_, handler) -> to_lam handler
@@ -195,31 +195,31 @@ let subst_helper (subst : subst_tbl) (query : int -> int) (lam : Lam.t) : Lam.t
         let ys = Ext_list.map xs Ident.rename in
         let env =
           Ext_list.fold_right2 xs ys Ident.empty (fun x y t ->
-              Ident.add x (Lam.var y) t)
+              Ident.add x (Lambda.var y) t)
         in
         Ext_list.fold_right2 ys ls (Lambda.subst_lambda env handler)
-          (fun y l r -> Lam.let_ Strict y l r)
-      | None -> Lam.staticraise i ls)
+          (fun y l r -> Lambda.let_ Strict y l r)
+      | None -> Lambda.staticraise i ls)
     | Lvar _ | Lconst _ -> lam
     | Lapply {ap_func; ap_args; ap_info; ap_transformed_jsx} ->
-      Lam.apply (simplif ap_func)
+      Lambda.apply (simplif ap_func)
         (Ext_list.map ap_args simplif)
         ap_info ~ap_transformed_jsx
     | Lfunction {params; body; attr; loc} ->
-      Lam.function_ ~loc ~params ~body:(simplif body) ~attr
-    | Llet (kind, v, l1, l2) -> Lam.let_ kind v (simplif l1) (simplif l2)
+      Lambda.function_ ~loc ~params ~body:(simplif body) ~attr
+    | Llet (kind, v, l1, l2) -> Lambda.let_ kind v (simplif l1) (simplif l2)
     | Lletrec (bindings, body) ->
-      Lam.letrec (Ext_list.map_snd bindings simplif) (simplif body)
+      Lambda.letrec (Ext_list.map_snd bindings simplif) (simplif body)
     | Lglobal_module _ -> lam
     | Lprim {primitive; args; loc} ->
       let args = Ext_list.map args simplif in
-      Lam.prim ~primitive ~args loc
+      Lambda.prim ~primitive ~args loc
     | Lswitch (l, sw) ->
       let new_l = simplif l in
       let new_consts = Ext_list.map_snd sw.sw_consts simplif in
       let new_blocks = Ext_list.map_snd sw.sw_blocks simplif in
       let new_fail = Ext_option.map sw.sw_failaction simplif in
-      Lam.switch new_l
+      Lambda.switch new_l
         {
           sw with
           sw_consts = new_consts;
@@ -227,24 +227,26 @@ let subst_helper (subst : subst_tbl) (query : int -> int) (lam : Lam.t) : Lam.t
           sw_failaction = new_fail;
         }
     | Lstringswitch (l, sw, d) ->
-      Lam.stringswitch (simplif l)
+      Lambda.stringswitch (simplif l)
         (Ext_list.map_snd sw simplif)
         (Ext_option.map d simplif)
-    | Ltrywith (l1, v, l2) -> Lam.try_ (simplif l1) v (simplif l2)
-    | Lifthenelse (l1, l2, l3) -> Lam.if_ (simplif l1) (simplif l2) (simplif l3)
-    | Lsequence (l1, l2) -> Lam.seq (simplif l1) (simplif l2)
-    | Lbreak -> Lam.break
-    | Lcontinue -> Lam.continue
-    | Lwhile (l1, l2) -> Lam.while_ (simplif l1) (simplif l2)
+    | Ltrywith (l1, v, l2) -> Lambda.try_ (simplif l1) v (simplif l2)
+    | Lifthenelse (l1, l2, l3) ->
+      Lambda.if_ (simplif l1) (simplif l2) (simplif l3)
+    | Lsequence (l1, l2) -> Lambda.seq (simplif l1) (simplif l2)
+    | Lbreak -> Lambda.break
+    | Lcontinue -> Lambda.continue
+    | Lwhile (l1, l2) -> Lambda.while_ (simplif l1) (simplif l2)
     | Lfor (v, l1, l2, dir, l3) ->
-      Lam.for_ v (simplif l1) (simplif l2) dir (simplif l3)
-    | Lfor_of (v, l1, l2) -> Lam.for_of v (simplif l1) (simplif l2)
-    | Lfor_await_of (v, l1, l2) -> Lam.for_await_of v (simplif l1) (simplif l2)
-    | Lassign (v, l) -> Lam.assign v (simplif l)
+      Lambda.for_ v (simplif l1) (simplif l2) dir (simplif l3)
+    | Lfor_of (v, l1, l2) -> Lambda.for_of v (simplif l1) (simplif l2)
+    | Lfor_await_of (v, l1, l2) ->
+      Lambda.for_await_of v (simplif l1) (simplif l2)
+    | Lassign (v, l) -> Lambda.assign v (simplif l)
   in
   simplif lam
 
-let simplify_exits (lam : Lam.t) =
+let simplify_exits (lam : Lambda.lambda) =
   let exits = Lam_exit_count.count_helper lam in
   subst_helper (Hash_int.create 17) (Lam_exit_count.count_exit exits) lam
 

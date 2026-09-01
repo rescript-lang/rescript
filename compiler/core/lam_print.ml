@@ -218,7 +218,8 @@ let to_print_kind (k : Lambda.let_kind) : print_kind =
   | StrictOpt -> StrictOpt
   | Variable -> Variable
 
-let rec aux (acc : (print_kind * Ident.t * Lam.t) list) (lam : Lam.t) =
+let rec aux (acc : (print_kind * Ident.t * Lambda.lambda) list)
+    (lam : Lambda.lambda) =
   match lam with
   | Llet (str3, id3, arg3, body3) ->
     aux ((to_print_kind str3, id3, arg3) :: acc) body3
@@ -238,7 +239,8 @@ let rec aux (acc : (print_kind * Ident.t * Lam.t) list) (lam : Lam.t) =
    | Id of left_var *)
 (* | Nop *)
 
-let flatten (lam : Lam.t) : (print_kind * Ident.t * Lam.t) list * Lam.t =
+let flatten (lam : Lambda.lambda) :
+    (print_kind * Ident.t * Lambda.lambda) list * Lambda.lambda =
   match lam with
   | Llet (str, id, arg, body) -> aux [(to_print_kind str, id, arg)] body
   | Lletrec (bind_args, body) ->
@@ -246,7 +248,7 @@ let flatten (lam : Lam.t) : (print_kind * Ident.t * Lam.t) list * Lam.t =
   | _ -> assert false
 
 let lambda ppf v =
-  let rec lam ppf (l : Lam.t) =
+  let rec lam ppf (l : Lambda.lambda) =
     match l with
     | Lvar id -> Ident.print ppf id
     | Lglobal_module id -> fprintf ppf "global %a" Ident.print id
@@ -297,7 +299,7 @@ let lambda ppf v =
       in
       fprintf ppf "@[<2>(%a%a)@]" primitive prim lams largs
     | Lswitch (larg, sw) ->
-      let switch ppf (sw : Lam.lambda_switch) =
+      let switch ppf (sw : Lambda.lambda_switch) =
         let spc = ref false in
         List.iter
           (fun (key, l) ->
@@ -390,7 +392,7 @@ let lambda ppf v =
 
 (* let structured_constant = struct_const *)
 
-(* let rec flatten_seq acc (lam : Lam.t) =
+(* let rec flatten_seq acc (lam : Lambda.lambda) =
    match lam with
    | Lsequence(l1,l2) ->
     flatten_seq (flatten_seq acc l1) l2
@@ -398,7 +400,7 @@ let lambda ppf v =
 
 (* exception Not_a_module *)
 
-(* let rec flat (acc : (left * Lam.t) list ) (lam : Lam.t) =
+(* let rec flat (acc : (left * Lambda.lambda) list ) (lam : Lambda.lambda) =
    match lam with
    | Llet (str,id,arg,body) ->
     flat ( (Id {kind = to_print_kind str;  id}, arg) :: acc) body
@@ -411,7 +413,7 @@ let lambda ppf v =
     flat (flat acc l) r
    | x -> (Nop, x) :: acc *)
 
-(* let lambda_as_module env  ppf (lam : Lam.t) =
+(* let lambda_as_module env  ppf (lam : Lambda.lambda) =
    try
     (* match lam with *)
     (* | Lprim {primitive = Psetglobal id ; args =  [biglambda]; _} *)
@@ -442,7 +444,7 @@ let lambda ppf v =
     lambda ppf lam;
     fprintf ppf "; lambda-failure" *)
 
-let serialize (filename : string) (lam : Lam.t) : unit =
+let serialize (filename : string) (lam : Lambda.lambda) : unit =
   let ou = open_out filename in
   let old = Format.get_margin () in
   let () = Format.set_margin 10000 in

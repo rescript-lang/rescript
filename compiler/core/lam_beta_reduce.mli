@@ -24,7 +24,8 @@
 
 (** Beta reduction of lambda IR *)
 
-val no_names_beta_reduce : Ident.t list -> Lam.t -> Lam.t list -> Lam.t
+val no_names_beta_reduce :
+  Ident.t list -> Lambda.lambda -> Lambda.lambda list -> Lambda.lambda
 (* Compile-time beta-reduction of functions immediately applied:
       Lapply(Lfunction(Curried, params, body), args, loc) ->
         let paramN = argN in ... let param1 = arg1 in body
@@ -43,15 +44,19 @@ val no_names_beta_reduce : Ident.t list -> Lam.t -> Lam.t list -> Lam.t
  *)
 
 val propagate_beta_reduce :
-  Lam_stats.t -> Ident.t list -> Lam.t -> Lam.t list -> Lam.t
+  Lam_stats.t ->
+  Ident.t list ->
+  Lambda.lambda ->
+  Lambda.lambda list ->
+  Lambda.lambda
 
 val propagate_beta_reduce_with_map :
   Lam_stats.t ->
   Lam_var_stats.stats Map_ident.t ->
   Ident.t list ->
-  Lam.t ->
-  Lam.t list ->
-  Lam.t
+  Lambda.lambda ->
+  Lambda.lambda list ->
+  Lambda.lambda
 (** 
    {[ Lam_beta_reduce.propogate_beta_reduce_with_map 
        meta param_map

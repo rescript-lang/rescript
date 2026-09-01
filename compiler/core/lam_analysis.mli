@@ -24,17 +24,17 @@
 
 (** A module which provides some basic analysis over lambda expression *)
 
-val no_side_effects : Lam.t -> bool
+val no_side_effects : Lambda.lambda -> bool
 (** No side effect, but it might depend on data store *)
 
-val size : Lam.t -> int
+val size : Lambda.lambda -> int
 
-val lfunction_can_be_inlined : Lam.lfunction -> bool
+val lfunction_can_be_inlined : Lambda.lfunction -> bool
 
-val ok_to_inline_fun_when_app : Lam.lfunction -> Lam.t list -> bool
+val ok_to_inline_fun_when_app : Lambda.lfunction -> Lambda.lambda list -> bool
 
 val small_inline_size : int
 
 val exit_inline_size : int
 
-val safe_to_inline : Lam.t -> bool
+val safe_to_inline : Lambda.lambda -> bool

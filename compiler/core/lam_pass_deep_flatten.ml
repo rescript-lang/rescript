@@ -26,7 +26,7 @@
    |  Not_eliminatable
    | *)
 
-let rec eliminate_tuple (id : Ident.t) (lam : Lam.t) acc =
+let rec eliminate_tuple (id : Ident.t) (lam : Lambda.lambda) acc =
   match lam with
   | Llet (Alias, v, Lprim {primitive = Pfield (i, _); args = [Lvar tuple]}, e2)
     when Ident.same tuple id ->
@@ -100,13 +100,13 @@ let rec eliminate_tuple (id : Ident.t) (lam : Lam.t) acc =
                     - also for function compilation, flattening should be done first
                     - [compile_group] and [compile] become mutually recursive function
                 *)
-let lambda_of_groups ~(rev_bindings : Lam_group.t list) (result : Lam.t) : Lam.t
-    =
+let lambda_of_groups ~(rev_bindings : Lam_group.t list) (result : Lambda.lambda)
+    : Lambda.lambda =
   Ext_list.fold_left rev_bindings result (fun acc x ->
       match x with
-      | Nop l -> Lam.seq l acc
+      | Nop l -> Lambda.seq l acc
       | Single (kind, ident, lam) -> Lam_util.refine_let ~kind ident lam acc
-      | Recursive bindings -> Lam.letrec bindings acc)
+      | Recursive bindings -> Lambda.letrec bindings acc)
 
 (* TODO:
     refine effectful [ket_kind] to be pure or not
@@ -114,7 +114,7 @@ let lambda_of_groups ~(rev_bindings : Lam_group.t list) (result : Lam.t) : Lam.t
 *)
 (* The shape [let x = <immutable block> in ... in apply f args]: the residue
    left by beta reduction of an immediately applied function. *)
-let rec rhs_is_beta_residue (lam : Lam.t) =
+let rec rhs_is_beta_residue (lam : Lambda.lambda) =
   match lam with
   | Llet
       ( (Alias | Strict | StrictOpt),
@@ -128,9 +128,9 @@ let rec rhs_is_beta_residue (lam : Lam.t) =
   | Lapply _ -> true
   | _ -> false
 
-let deep_flatten (lam : Lam.t) : Lam.t =
-  let rec flatten (acc : Lam_group.t list) (lam : Lam.t) :
-      Lam.t * Lam_group.t list =
+let deep_flatten (lam : Lambda.lambda) : Lambda.lambda =
+  let rec flatten (acc : Lam_group.t list) (lam : Lambda.lambda) :
+      Lambda.lambda * Lam_group.t list =
     match lam with
     | Llet
         ( str,
@@ -153,10 +153,10 @@ let deep_flatten (lam : Lam.t) : Lam.t =
           body ) ->
       let new_id = Ident.rename id in
       flatten acc
-        (Lam.let_ str new_id arg
-           (Lam.let_ Alias id
-              (Lam.prim ~primitive
-                 ~args:[Lam.var new_id]
+        (Lambda.let_ str new_id arg
+           (Lambda.let_ Alias id
+              (Lambda.prim ~primitive
+                 ~args:[Lambda.var new_id]
                  Location.none (* FIXME*))
               body))
     | Llet (str, id, arg, body) when rhs_is_beta_residue arg ->
@@ -196,7 +196,7 @@ let deep_flatten (lam : Lam.t) : Lam.t =
       let res, l = flatten acc l in
       flatten (Lam_group.nop_cons res l) r
     | x -> (aux x, acc)
-  and aux (lam : Lam.t) : Lam.t =
+  and aux (lam : Lambda.lambda) : Lambda.lambda =
     match lam with
     | Llet _ ->
       let res, groups = flatten [] lam in
@@ -231,8 +231,8 @@ let deep_flatten (lam : Lam.t) : Lam.t =
       in
       lambda_of_groups
         ~rev_bindings:rev_wrap (* These bindings are extracted from [letrec] *)
-        (Lam.letrec (List.rev rev_bindings) (aux body))
-    | Lsequence (l, r) -> Lam.seq (aux l) (aux r)
+        (Lambda.letrec (List.rev rev_bindings) (aux body))
+    | Lsequence (l, r) -> Lambda.seq (aux l) (aux r)
     | Lconst _ -> lam
     | Lvar _ -> lam
     (* | Lapply(Lfunction(Curried, params, body), args, _) *)
@@ -244,15 +244,15 @@ let deep_flatten (lam : Lam.t) : Lam.t =
     (*   when  List.length params = List.length args -> *)
     (*       aux (beta_reduce params body args) *)
     | Lapply {ap_func = l1; ap_args = ll; ap_info; ap_transformed_jsx} ->
-      Lam.apply (aux l1) (Ext_list.map ll aux) ap_info ~ap_transformed_jsx
+      Lambda.apply (aux l1) (Ext_list.map ll aux) ap_info ~ap_transformed_jsx
     (* This kind of simple optimizations should be done each time
        and as early as possible *)
     | Lglobal_module _ -> lam
     | Lprim {primitive; args; loc} ->
       let args = Ext_list.map args aux in
-      Lam.prim ~primitive ~args loc
+      Lambda.prim ~primitive ~args loc
     | Lfunction {params; body; attr; loc} ->
-      Lam.function_ ~loc ~params ~body:(aux body) ~attr
+      Lambda.function_ ~loc ~params ~body:(aux body) ~attr
     | Lswitch
         ( l,
           {
@@ -263,7 +263,7 @@ let deep_flatten (lam : Lam.t) : Lam.t =
             sw_consts_full;
             sw_dispatch;
           } ) ->
-      Lam.switch (aux l)
+      Lambda.switch (aux l)
         {
           sw_consts = Ext_list.map_snd sw_consts aux;
           sw_blocks = Ext_list.map_snd sw_blocks aux;
@@ -273,21 +273,22 @@ let deep_flatten (lam : Lam.t) : Lam.t =
           sw_dispatch;
         }
     | Lstringswitch (l, sw, d) ->
-      Lam.stringswitch (aux l) (Ext_list.map_snd sw aux) (Ext_option.map d aux)
-    | Lstaticraise (i, ls) -> Lam.staticraise i (Ext_list.map ls aux)
-    | Lstaticcatch (l1, ids, l2) -> Lam.staticcatch (aux l1) ids (aux l2)
-    | Ltrywith (l1, v, l2) -> Lam.try_ (aux l1) v (aux l2)
-    | Lifthenelse (l1, l2, l3) -> Lam.if_ (aux l1) (aux l2) (aux l3)
-    | Lbreak -> Lam.break
-    | Lcontinue -> Lam.continue
-    | Lwhile (l1, l2) -> Lam.while_ (aux l1) (aux l2)
+      Lambda.stringswitch (aux l) (Ext_list.map_snd sw aux)
+        (Ext_option.map d aux)
+    | Lstaticraise (i, ls) -> Lambda.staticraise i (Ext_list.map ls aux)
+    | Lstaticcatch (l1, ids, l2) -> Lambda.staticcatch (aux l1) ids (aux l2)
+    | Ltrywith (l1, v, l2) -> Lambda.try_ (aux l1) v (aux l2)
+    | Lifthenelse (l1, l2, l3) -> Lambda.if_ (aux l1) (aux l2) (aux l3)
+    | Lbreak -> Lambda.break
+    | Lcontinue -> Lambda.continue
+    | Lwhile (l1, l2) -> Lambda.while_ (aux l1) (aux l2)
     | Lfor (flag, l1, l2, dir, l3) ->
-      Lam.for_ flag (aux l1) (aux l2) dir (aux l3)
-    | Lfor_of (flag, l1, l2) -> Lam.for_of flag (aux l1) (aux l2)
-    | Lfor_await_of (flag, l1, l2) -> Lam.for_await_of flag (aux l1) (aux l2)
+      Lambda.for_ flag (aux l1) (aux l2) dir (aux l3)
+    | Lfor_of (flag, l1, l2) -> Lambda.for_of flag (aux l1) (aux l2)
+    | Lfor_await_of (flag, l1, l2) -> Lambda.for_await_of flag (aux l1) (aux l2)
     | Lassign (v, l) ->
       (* Lalias-bound variables are never assigned, so don't increase
          v's refaux *)
-      Lam.assign v (aux l)
+      Lambda.assign v (aux l)
   in
   aux lam

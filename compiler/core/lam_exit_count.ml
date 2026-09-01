@@ -48,9 +48,9 @@ let incr_exit (exits : collection) i =
    For Lswitch, if it is not exhuastive pattern match, default will be counted twice.
    Since for pattern match,  we will  test whether it is  an integer or block, both have default cases predicate: [sw_consts_full] vs nconsts
 *)
-let count_helper (lam : Lam.t) : collection =
+let count_helper (lam : Lambda.lambda) : collection =
   let exits : collection = Hash_int.create 17 in
-  let rec count (lam : Lam.t) =
+  let rec count (lam : Lambda.lambda) =
     match lam with
     | Lstaticraise (i, ls) ->
       incr_exit exits i;

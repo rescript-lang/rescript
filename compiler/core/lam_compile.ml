@@ -32,7 +32,7 @@ let with_source_loc loc (exp : J.expression) =
   | Some source_loc, None -> {exp with source_loc = Some source_loc}
   | _ -> exp
 
-let rec source_loc_of_lam (lam : Lam.t) =
+let rec source_loc_of_lam (lam : Lambda.lambda) =
   match lam with
   | Lapply {ap_info = {ap_loc}} -> Some ap_loc
   | Lprim {loc} | Lfunction {loc} -> Some loc
@@ -83,7 +83,7 @@ let with_block_source_loc lam block =
   | stmt :: rest ->
     with_statement_source_loc (source_map_loc_of_lam lam) stmt :: rest
 
-let args_either_function_or_const (args : Lam.t list) =
+let args_either_function_or_const (args : Lambda.lambda list) =
   Ext_list.for_all args (fun x ->
       match x with
       | Lfunction _ | Lconst _ -> true
@@ -95,7 +95,7 @@ let args_either_function_or_const (args : Lam.t list) =
    an FFI name, whose wrapper carries argument adaptation. Looked up here
    rather than stamped on the application by an earlier pass. *)
 let call_info_of_apply (meta : Lam_stats.t) call_transformed_jsx
-    (appinfo : Lam.apply) : Js_call_info.t =
+    (appinfo : Lambda.lambda_apply) : Js_call_info.t =
   let saturated =
     match
       Lam_arity.extract_arity
@@ -131,8 +131,8 @@ let in_staticcatch (x : Lam_compile_context.tail_type) :
     -> x *)
 
 (* assume outer is [Lstaticcatch] *)
-let rec flat_catches (acc : Lam_compile_context.handler list) (x : Lam.t) :
-    Lam_compile_context.handler list * Lam.t =
+let rec flat_catches (acc : Lam_compile_context.handler list)
+    (x : Lambda.lambda) : Lam_compile_context.handler list * Lambda.lambda =
   match x with
   | Lstaticcatch (l, (label, bindings), handler)
     when acc = []
@@ -143,8 +143,8 @@ let rec flat_catches (acc : Lam_compile_context.handler list) (x : Lam.t) :
     flat_catches ({label; handler; bindings} :: acc) l
   | _ -> (acc, x)
 
-let flatten_nested_caches (x : Lam.t) : Lam_compile_context.handler list * Lam.t
-    =
+let flatten_nested_caches (x : Lambda.lambda) :
+    Lam_compile_context.handler list * Lambda.lambda =
   flat_catches [] x
 
 let morph_declare_to_assign (cxt : Lam_compile_context.t) k =
@@ -156,7 +156,7 @@ let morph_declare_to_assign (cxt : Lam_compile_context.t) k =
 let group_apply ~merge_cases cases callback =
   Ext_list.flat_map
     (Ext_list.stable_group cases (fun (tag1, lam) (tag2, lam1) ->
-         merge_cases tag1 tag2 && Lam.eq_approx lam lam1))
+         merge_cases tag1 tag2 && Lambda.eq_approx lam lam1))
     (fun group -> Ext_list.map_last group callback)
 (* TODO:
     for expression generation,
@@ -164,7 +164,7 @@ let group_apply ~merge_cases cases callback =
     only jmp_table and env needed
 *)
 
-type default_case = Default of Lam.t | Complete | NonComplete
+type default_case = Default of Lambda.lambda | Complete | NonComplete
 
 let default_action ~saturated failaction =
   match failaction with
@@ -239,7 +239,7 @@ type initialization = J.block
 
 (* Semantic SCC already ran in [Lambda_scc.bind_rec]. JS still wants
    functions before values so dummy / updateDummy init is well-ordered. *)
-let functions_before_values (group : (Ident.t * Lam.t) list) =
+let functions_before_values (group : (Ident.t * Lambda.lambda) list) =
   if
     Ext_list.for_all group (fun (_, x) ->
         match x with
@@ -249,7 +249,7 @@ let functions_before_values (group : (Ident.t * Lam.t) list) =
   else
     List.sort
       (fun (_, lama) (_, lamb) ->
-        match ((lama : Lam.t), (lamb : Lam.t)) with
+        match ((lama : Lambda.lambda), (lamb : Lambda.lambda)) with
         | Lfunction _, Lfunction _ -> 0
         | Lfunction _, _ -> -1
         | _, Lfunction _ -> 1
@@ -323,8 +323,9 @@ let compile output_prefix =
       for the function, generative module or functor can be a function,
       however it can not be global -- global can only module
   *)
-  and compile_external_field_apply (appinfo : Lam.apply) (module_id : Ident.t)
-      (field_name : string) (lambda_cxt : Lam_compile_context.t) : Js_output.t =
+  and compile_external_field_apply (appinfo : Lambda.lambda_apply)
+      (module_id : Ident.t) (field_name : string)
+      (lambda_cxt : Lam_compile_context.t) : Js_output.t =
     let ident_info =
       Lam_compile_env.query_external_id_info module_id field_name
     in
@@ -373,7 +374,7 @@ let compile output_prefix =
 
 *)
   and compile_recursive_let ~all_bindings (cxt : Lam_compile_context.t)
-      (id : Ident.t) (arg : Lam.t) : Js_output.t * initialization =
+      (id : Ident.t) (arg : Lambda.lambda) : Js_output.t * initialization =
     match arg with
     | Lfunction
         {
@@ -537,8 +538,8 @@ let compile output_prefix =
          ]}
       *)
       (compile_lambda {cxt with continuation = Declare (Alias, id)} arg, [])
-  and compile_recursive_lets_aux cxt (id_args : (Ident.t * Lam.t) list) :
-      Js_output.t =
+  and compile_recursive_lets_aux cxt (id_args : (Ident.t * Lambda.lambda) list)
+      : Js_output.t =
     (* #1716 *)
     let output_code, ids =
       Ext_list.fold_right id_args (Js_output.dummy, [])
@@ -570,7 +571,7 @@ let compile output_prefix =
       switch_exp:J.expression ->
       default:default_case ->
       ?merge_cases:('a -> 'a -> bool) ->
-      ('a * Lam.t) list ->
+      ('a * Lambda.lambda) list ->
       J.block =
    fun (type a) ~(make_exp : a -> J.expression)
        ~(eq_exp :
@@ -582,7 +583,7 @@ let compile output_prefix =
           _ ->
           (a * J.case_clause) list ->
           J.statement) ~(switch_exp : J.expression) ~(default : default_case)
-       ?(merge_cases = fun _ _ -> true) (cases : (a * Lam.t) list) ->
+       ?(merge_cases = fun _ _ -> true) (cases : (a * Lambda.lambda) list) ->
     let output_block_with_source_loc cxt lam =
       compile_lambda cxt lam |> Js_output.output_as_block
       |> with_block_source_loc lam
@@ -638,7 +639,9 @@ let compile output_prefix =
           let cases =
             match default with
             | Default lam ->
-              List.filter (fun (_, lam1) -> not (Lam.eq_approx lam lam1)) cases
+              List.filter
+                (fun (_, lam1) -> not (Lambda.eq_approx lam lam1))
+                cases
             | _ -> cases
           in
           let switch_cxt = Lam_compile_context.enter_switch cxt in
@@ -726,7 +729,7 @@ let compile output_prefix =
                     | Switch_constructor _ -> assert false)
                   clauses))
            ~switch_exp ~default
-  and compile_switch (switch_arg : Lam.t) (sw : Lam.lambda_switch)
+  and compile_switch (switch_arg : Lambda.lambda) (sw : Lambda.lambda_switch)
       (lambda_cxt : Lam_compile_context.t) =
     (* TODO: if default is None, we can do some optimizations
         Use switch vs if/then/else
@@ -743,7 +746,7 @@ let compile output_prefix =
            sw_failaction;
            sw_dispatch;
          }
-          : Lam.lambda_switch) =
+          : Lambda.lambda_switch) =
       sw
     in
     let sw_num_default =
@@ -780,7 +783,7 @@ let compile output_prefix =
             in
             let eq_default d1 d2 =
               match (d1, d2) with
-              | Default lam1, Default lam2 -> Lam.eq_approx lam1 lam2
+              | Default lam1, Default lam2 -> Lambda.eq_approx lam1 lam2
               | Complete, Complete -> true
               | NonComplete, NonComplete -> true
               | _ -> false
@@ -971,7 +974,7 @@ let compile output_prefix =
          default: (exit 1))
          with (1) 2))
       *)
-  and compile_staticraise i (largs : Lam.t list)
+  and compile_staticraise i (largs : Lambda.lambda list)
       (lambda_cxt : Lam_compile_context.t) =
     (* [i] is the jump table, [largs] is the arguments passed to [Lstaticcatch]*)
     match Lam_compile_context.find_exn lambda_cxt i with
@@ -1018,7 +1021,8 @@ let compile output_prefix =
 
      ]}
   *)
-  and compile_staticcatch (lam : Lam.t) (lambda_cxt : Lam_compile_context.t) =
+  and compile_staticcatch (lam : Lambda.lambda)
+      (lambda_cxt : Lam_compile_context.t) =
     let code_table, body = flatten_nested_caches lam in
     let exit_id = Ext_ident.create_tmp ~name:"exit" () in
     match (lambda_cxt.continuation, code_table) with
@@ -1104,10 +1108,10 @@ let compile output_prefix =
           (Js_output.append_output lbody
              (Js_output.make
                 (compile_cases ~cxt:new_cxt ~switch_exp:exit_expr handlers))))
-  and compile_sequand (l : Lam.t) (r : Lam.t)
+  and compile_sequand (l : Lambda.lambda) (r : Lambda.lambda)
       (lambda_cxt : Lam_compile_context.t) =
     if Lam_compile_context.continuation_is_return lambda_cxt.continuation then
-      compile_lambda lambda_cxt (Lam.sequand l r)
+      compile_lambda lambda_cxt (Lambda.sequand l r)
     else
       let new_cxt = {lambda_cxt with continuation = NeedValue Not_tail} in
       match compile_lambda new_cxt l with
@@ -1143,10 +1147,10 @@ let compile output_prefix =
               ((S.define_variable ~kind:Variable v E.false_ :: l_block)
               @ [S.if_ l_expr (r_block @ [S.assign v r_expr])])
               ~value:(E.var v)))
-  and compile_sequor (l : Lam.t) (r : Lam.t)
+  and compile_sequor (l : Lambda.lambda) (r : Lambda.lambda)
       (lambda_cxt : Lam_compile_context.t) =
     if Lam_compile_context.continuation_is_return lambda_cxt.continuation then
-      compile_lambda lambda_cxt (Lam.sequor l r)
+      compile_lambda lambda_cxt (Lambda.sequor l r)
     else
       let new_cxt = {lambda_cxt with continuation = NeedValue Not_tail} in
       match compile_lambda new_cxt l with
@@ -1190,7 +1194,7 @@ let compile output_prefix =
               while expression, here we generate for statement, leave optimization later.
               (Sine OCaml expression can be really complex..)
   *)
-  and compile_while (predicate : Lam.t) (body : Lam.t)
+  and compile_while (predicate : Lambda.lambda) (body : Lambda.lambda)
       (lambda_cxt : Lam_compile_context.t) =
     match
       compile_lambda
@@ -1228,9 +1232,9 @@ let compile output_prefix =
       for(var i =  0 ; i < (console.log(i),10); ++i){console.log('hi')}
       print i each time, so they are different semantics...
   *)
-  and compile_for (id : J.for_ident) (start : Lam.t) (finish : Lam.t)
-      (direction : Js_op.direction_flag) (body : Lam.t)
-      (lambda_cxt : Lam_compile_context.t) =
+  and compile_for (id : J.for_ident) (start : Lambda.lambda)
+      (finish : Lambda.lambda) (direction : Js_op.direction_flag)
+      (body : Lambda.lambda) (lambda_cxt : Lam_compile_context.t) =
     let new_cxt = {lambda_cxt with continuation = NeedValue Not_tail} in
     let block =
       match (compile_lambda new_cxt start, compile_lambda new_cxt finish) with
@@ -1275,8 +1279,8 @@ let compile output_prefix =
     in
     Js_output.output_of_block_and_expression lambda_cxt.continuation block
       E.unit
-  and compile_for_of (id : J.for_ident) (iterable : Lam.t) (body : Lam.t)
-      (lambda_cxt : Lam_compile_context.t) =
+  and compile_for_of (id : J.for_ident) (iterable : Lambda.lambda)
+      (body : Lambda.lambda) (lambda_cxt : Lam_compile_context.t) =
     let new_cxt = {lambda_cxt with continuation = NeedValue Not_tail} in
     let emitted_id =
       if Lambda.Ident_set.mem id (Lambda.free_variables body) then id
@@ -1298,8 +1302,8 @@ let compile output_prefix =
     in
     Js_output.output_of_block_and_expression lambda_cxt.continuation block
       E.unit
-  and compile_for_await_of (id : J.for_ident) (iterable : Lam.t) (body : Lam.t)
-      (lambda_cxt : Lam_compile_context.t) =
+  and compile_for_await_of (id : J.for_ident) (iterable : Lambda.lambda)
+      (body : Lambda.lambda) (lambda_cxt : Lam_compile_context.t) =
     let new_cxt = {lambda_cxt with continuation = NeedValue Not_tail} in
     let emitted_id =
       if Lambda.Ident_set.mem id (Lambda.free_variables body) then id
@@ -1321,7 +1325,8 @@ let compile output_prefix =
     in
     Js_output.output_of_block_and_expression lambda_cxt.continuation block
       E.unit
-  and compile_assign id (lambda : Lam.t) (lambda_cxt : Lam_compile_context.t) =
+  and compile_assign id (lambda : Lambda.lambda)
+      (lambda_cxt : Lam_compile_context.t) =
     let block =
       match lambda with
       | _ -> (
@@ -1379,8 +1384,8 @@ let compile output_prefix =
         Js_output.make
           (aux lambda_cxt
              {lambda_cxt with continuation = EffectCall new_return_type})
-  and compile_ifthenelse (predicate : Lam.t) (t_branch : Lam.t)
-      (f_branch : Lam.t) (lambda_cxt : Lam_compile_context.t) =
+  and compile_ifthenelse (predicate : Lambda.lambda) (t_branch : Lambda.lambda)
+      (f_branch : Lambda.lambda) (lambda_cxt : Lam_compile_context.t) =
     match
       compile_lambda
         {lambda_cxt with continuation = NeedValue Not_tail}
@@ -1527,7 +1532,8 @@ let compile output_prefix =
           in
           Js_output.make
             (Ext_list.append_one b (S.if_ e then_output ~else_:else_output))))
-  and compile_apply (appinfo : Lam.apply) (lambda_cxt : Lam_compile_context.t) =
+  and compile_apply (appinfo : Lambda.lambda_apply)
+      (lambda_cxt : Lam_compile_context.t) =
     match appinfo with
     (* External function call: it can not be tailcall in this case*)
     | {
@@ -1612,7 +1618,7 @@ let compile output_prefix =
                   (call_info_of_apply lambda_cxt.meta appinfo.ap_transformed_jsx
                      appinfo)
                 fn_code args)))
-  and compile_prim (prim_info : Lam.prim_info)
+  and compile_prim (prim_info : Lambda.prim_info)
       (lambda_cxt : Lam_compile_context.t) =
     let compile_primitive_default primitive args loc =
       let args_block, args_expr =
@@ -1761,9 +1767,9 @@ let compile output_prefix =
         (Ext_list.concat_append args_block block)
         exp
     | {primitive; args; loc} -> compile_primitive_default primitive args loc
-  and collect_dup_overrides (copy_id : Ident.t) (lam : Lam.t)
-      (acc : (Lambda.set_field_dbg_info * Lam.t) list) :
-      (Lambda.set_field_dbg_info * Lam.t) list option =
+  and collect_dup_overrides (copy_id : Ident.t) (lam : Lambda.lambda)
+      (acc : (Lambda.set_field_dbg_info * Lambda.lambda) list) :
+      (Lambda.set_field_dbg_info * Lambda.lambda) list option =
     match lam with
     | Lsequence
         ( Lprim
@@ -1774,7 +1780,8 @@ let compile output_prefix =
     | Lvar id' when Ident.same id' copy_id -> Some acc
     | _ -> None
   and try_compile_record_spread (lambda_cxt : Lam_compile_context.t)
-      (id : Ident.t) (arg : Lam.t) (body : Lam.t) : Js_output.t option =
+      (id : Ident.t) (arg : Lambda.lambda) (body : Lambda.lambda) :
+      Js_output.t option =
     match arg with
     | Lprim {primitive = Pduprecord; args = [init]; loc} -> (
       match collect_dup_overrides id body [] with
@@ -1814,8 +1821,8 @@ let compile output_prefix =
              blocks
              (with_source_loc loc (E.obj ~dup:init_val props))))
     | _ -> None
-  and compile_lambda (lambda_cxt : Lam_compile_context.t) (cur_lam : Lam.t) :
-      Js_output.t =
+  and compile_lambda (lambda_cxt : Lam_compile_context.t)
+      (cur_lam : Lambda.lambda) : Js_output.t =
     match cur_lam with
     | Lfunction
         {

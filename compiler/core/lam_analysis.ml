@@ -30,7 +30,7 @@ let not_zero_constant (x : Lambda.structured_constant) =
   | Const_bigint (_, i) -> i <> "0"
   | _ -> false
 
-let rec no_side_effects (lam : Lam.t) : bool =
+let rec no_side_effects (lam : Lambda.lambda) : bool =
   match lam with
   | Lvar _ | Lconst _ | Lfunction _ -> true
   | Lglobal_module _ -> true
@@ -141,7 +141,7 @@ let really_big () = raise_notrace Too_big_to_inline
 
 (* let big_lambda = 1000 *)
 
-let rec size (lam : Lam.t) =
+let rec size (lam : Lambda.lambda) =
   try
     match lam with
     | Lvar _ -> 1
@@ -198,10 +198,10 @@ and size_constant x =
   | Const_block (_, str) ->
     Ext_list.fold_left str 0 (fun acc x -> acc + size_constant x)
 
-and size_lams acc (lams : Lam.t list) =
+and size_lams acc (lams : Lambda.lambda list) =
   Ext_list.fold_left lams acc (fun acc l -> acc + size l)
 
-let args_all_const (args : Lam.t list) =
+let args_all_const (args : Lambda.lambda list) =
   Ext_list.for_all args (fun x ->
       match x with
       | Lconst _ -> true
@@ -220,7 +220,7 @@ let small_inline_size = 5
     ideally we should also evaluate its size after inlining, 
     since after partial evaluation, it might still be *very big*
 *)
-let destruct_pattern (body : Lam.t) params args =
+let destruct_pattern (body : Lambda.lambda) params args =
   let rec aux v params args =
     match (params, args) with
     | x :: xs, b :: bs -> if Ident.same x v then Some b else aux v xs bs
@@ -231,22 +231,23 @@ let destruct_pattern (body : Lam.t) params args =
   | Lswitch (Lvar v, switch) -> (
     match aux v params args with
     | Some (Lambda.Lconst _ as lam) ->
-      size (Lam.switch lam switch) < small_inline_size
+      size (Lambda.switch lam switch) < small_inline_size
     | Some _ | None -> false)
   | Lifthenelse (Lvar v, then_, else_) -> (
     (* -FIXME *)
     match aux v params args with
     | Some (Lconst _ as lam) ->
-      size (Lam.if_ lam then_ else_) < small_inline_size
+      size (Lambda.if_ lam then_ else_) < small_inline_size
     | Some _ | None -> false)
   | _ -> false
 
 (* Async functions cannot be beta reduced *)
-let lfunction_can_be_inlined (lfunction : Lam.lfunction) =
+let lfunction_can_be_inlined (lfunction : Lambda.lfunction) =
   (not lfunction.attr.async) && lfunction.attr.directive = None
 
 (** Hints to inlining *)
-let ok_to_inline_fun_when_app (m : Lam.lfunction) (args : Lam.t list) =
+let ok_to_inline_fun_when_app (m : Lambda.lfunction) (args : Lambda.lambda list)
+    =
   match m.attr.inline with
   | Always_inline -> true
   | Never_inline -> false
@@ -261,7 +262,7 @@ let ok_to_inline_fun_when_app (m : Lam.lfunction) (args : Lam.t list) =
 (* TODO:  We can relax this a bit later,
     but decide whether to inline it later in the call site
 *)
-let safe_to_inline (lam : Lam.t) =
+let safe_to_inline (lam : Lambda.lambda) =
   match lam with
   | Lfunction _ -> true
   | Lconst

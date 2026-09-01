@@ -55,7 +55,8 @@ let add_required_modules ( x : Ident.t list) (meta : Lam_stats.t) =
    Falling through keeps the original binding.  Only the Alias clause changes
    evaluation strategy downstream, so we keep its predicate intentionally
    syntactic and narrow. *)
-let refine_let ~kind param (arg : Lam.t) (l : Lam.t) : Lam.t =
+let refine_let ~kind param (arg : Lambda.lambda) (l : Lambda.lambda) :
+    Lambda.lambda =
   let is_block_constructor = function
     | Lambda.Pmakeblock _ -> true
     | _ -> false
@@ -66,7 +67,7 @@ let refine_let ~kind param (arg : Lam.t) (l : Lam.t) : Lam.t =
      to inline [e] at every use site or drop `const x = e` entirely, so every
      clause below must ensure that duplicate evaluation of [e] is equivalent to
      the single eager evaluation promised by [Strict]/[StrictOpt]. *)
-  let rec is_safe_to_alias (lam : Lam.t) =
+  let rec is_safe_to_alias (lam : Lambda.lambda) =
     match lam with
     | Lvar _ | Lconst _ ->
       (* var/const --> emitting multiple `const` reads is identical to the
@@ -103,33 +104,33 @@ let refine_let ~kind param (arg : Lam.t) (l : Lam.t) : Lam.t =
          `{ let x = value; Array.length(x) }`, we inline the primitive call
          with `value`. This only happens for primitives that are pure and do not
          allocate new blocks, so evaluation order and side effects stay the same. *)
-    Lam.prim ~primitive ~args:[arg] loc
+    Lambda.prim ~primitive ~args:[arg] loc
   | _, _, Lapply {ap_func = fn; ap_args = [Lvar w]; ap_info; ap_transformed_jsx}
     when Ident.same w param && not (Lam_hit.hit_variable param fn) ->
     (* For a function call such as `{ let x = value; someFn(x) }`, we can
          rewrite to `someFn(value)` as long as the callee does not capture `x`.
          This removes the temporary binding while preserving the call semantics. *)
-    Lam.apply fn [arg] ap_info ~ap_transformed_jsx
+    Lambda.apply fn [arg] ap_info ~ap_transformed_jsx
   | (Strict | StrictOpt), arg, _ when is_safe_to_alias arg ->
     (* `Strict` and `StrictOpt` bindings both evaluate the RHS immediately
          (with `StrictOpt` allowing later elimination if unused). When that RHS
          is pure — `{ let x = Some(value); ... }`, `{ let x = 3; ... }`, or a module
          field read — we mark it as an alias so downstream passes can inline the
          original expression and drop the temporary. *)
-    Lam.let_ Alias param arg l
+    Lambda.let_ Alias param arg l
   | Strict, Lfunction _, _ ->
     (* If we eagerly evaluate a function binding such as
          `{ let makeGreeting = () => "hi"; ... }`, we end up allocating the
          closure immediately. Downgrading `Strict` to `StrictOpt` preserves the
          original laziness while still letting later passes inline when safe. *)
-    Lam.let_ StrictOpt param arg l
+    Lambda.let_ StrictOpt param arg l
   | Strict, _, _ when Lam_analysis.no_side_effects arg ->
     (* A strict binding whose expression has no side effects — think
          `{ let x = computePure(); use(x); }` — can be relaxed to `StrictOpt`.
          This keeps the original semantics yet allows downstream passes to skip
          evaluating `x` when it turns out to be unused. *)
-    Lam.let_ StrictOpt param arg l
-  | kind, _, _ -> Lam.let_ kind param arg l
+    Lambda.let_ StrictOpt param arg l
+  | kind, _, _ -> Lambda.let_ kind param arg l
 
 let alias_ident_or_global (meta : Lam_stats.t) (k : Ident.t) (v : Ident.t)
     (v_kind : Lam_id_kind.t) =
@@ -173,7 +174,7 @@ let alias_ident_or_global (meta : Lam_stats.t) (k : Ident.t) (v : Ident.t)
        mutable fields are explicit, since wen can not inline an mutable block access
 *)
 
-let element_of_lambda (lam : Lam.t) : Lam_id_kind.element =
+let element_of_lambda (lam : Lambda.lambda) : Lam_id_kind.element =
   match lam with
   | Lvar _ | Lconst _
   | Lprim
@@ -186,15 +187,16 @@ let element_of_lambda (lam : Lam.t) : Lam_id_kind.element =
   (* | Lfunction _  *)
   | _ -> NA
 
-let kind_of_lambda_block (xs : Lam.t list) : Lam_id_kind.t =
+let kind_of_lambda_block (xs : Lambda.lambda list) : Lam_id_kind.t =
   ImmutableBlock (Ext_array.of_list_map xs (fun x -> element_of_lambda x))
 
-let field_flatten_get lam v i info (tbl : Lam_id_kind.t Hash_ident.t) : Lam.t =
+let field_flatten_get lam v i info (tbl : Lam_id_kind.t Hash_ident.t) :
+    Lambda.lambda =
   match Hash_ident.find_opt tbl v with
   | Some (Module g) ->
-    Lam.prim
+    Lambda.prim
       ~primitive:(Pfield (i, info))
-      ~args:[Lam.global_module g]
+      ~args:[Lambda.global_module g]
       Location.none
   | Some (ImmutableBlock arr) -> (
     match arr.(i) with
@@ -209,27 +211,27 @@ let field_flatten_get lam v i info (tbl : Lam_id_kind.t Hash_ident.t) : Lam.t =
         if fst fields.(i) = name then found := Ext_list.nth_opt ls i
       done;
       match !found with
-      | Some c when not (Lambda.const_is_allocating c) -> Lam.const c
+      | Some c when not (Lambda.const_is_allocating c) -> Lambda.const c
       | _ -> lam ())
     | _ -> lam ())
   | Some (Constant (Const_block (_, ls))) -> (
     match Ext_list.nth_opt ls i with
     | None -> lam ()
-    | Some x when not (Lambda.const_is_allocating x) -> Lam.const x
+    | Some x when not (Lambda.const_is_allocating x) -> Lambda.const x
     | Some _ -> lam ())
   | Some _ | None -> lam ()
 
-let is_function (lam : Lam.t) =
+let is_function (lam : Lambda.lambda) =
   match lam with
   | Lfunction _ -> true
   | _ -> false
 
-let not_function (lam : Lam.t) =
+let not_function (lam : Lambda.lambda) =
   match lam with
   | Lfunction _ -> false
   | _ -> true
 (* 
-let is_var (lam : Lam.t) id =   
+let is_var (lam : Lambda.lambda) id =   
   match lam with 
   | Lvar id0 -> Ident.same id0 id 
   | _ -> false *)

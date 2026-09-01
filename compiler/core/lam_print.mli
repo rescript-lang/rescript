@@ -22,10 +22,10 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-val lambda : Format.formatter -> Lam.t -> unit
+val lambda : Format.formatter -> Lambda.lambda -> unit
 
 val primitive : Format.formatter -> Lambda.primitive -> unit
 
-val serialize : string -> Lam.t -> unit
+val serialize : string -> Lambda.lambda -> unit
 
-val lambda_to_string : Lam.t -> string
+val lambda_to_string : Lambda.lambda -> string

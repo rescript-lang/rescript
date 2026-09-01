@@ -13,12 +13,12 @@
 
 exception Real_reference
 
-let rec eliminate_ref id (lam : Lam.t) =
+let rec eliminate_ref id (lam : Lambda.lambda) =
   match lam with
   (* we can do better escape analysis in Javascript backend *)
   | Lvar v -> if Ident.same v id then raise_notrace Real_reference else lam
   | Lprim {primitive = Pfield (0, _); args = [Lvar v]} when Ident.same v id ->
-    Lam.var id
+    Lambda.var id
   | Lfunction _ ->
     if Lam_hit.hit_variable id lam then raise_notrace Real_reference else lam
   (* In Javascript backend, its okay, we can reify it later
@@ -46,23 +46,23 @@ let rec eliminate_ref id (lam : Lam.t) =
   (* Lfunction(kind, params, eliminate_ref id body) *)
   | Lprim {primitive = Psetfield (0, _); args = [Lvar v; e]}
     when Ident.same v id ->
-    Lam.assign id (eliminate_ref id e)
+    Lambda.assign id (eliminate_ref id e)
   | Lconst _ -> lam
   | Lapply {ap_func = e1; ap_args = el; ap_info; ap_transformed_jsx} ->
-    Lam.apply ~ap_transformed_jsx (eliminate_ref id e1)
+    Lambda.apply ~ap_transformed_jsx (eliminate_ref id e1)
       (Ext_list.map el (eliminate_ref id))
       ap_info
   | Llet (str, v, e1, e2) ->
-    Lam.let_ str v (eliminate_ref id e1) (eliminate_ref id e2)
+    Lambda.let_ str v (eliminate_ref id e1) (eliminate_ref id e2)
   | Lletrec (idel, e2) ->
-    Lam.letrec
+    Lambda.letrec
       (Ext_list.map idel (fun (v, e) -> (v, eliminate_ref id e)))
       (eliminate_ref id e2)
   | Lglobal_module _ -> lam
   | Lprim {primitive; args; loc} ->
-    Lam.prim ~primitive ~args:(Ext_list.map args (eliminate_ref id)) loc
+    Lambda.prim ~primitive ~args:(Ext_list.map args (eliminate_ref id)) loc
   | Lswitch (e, sw) ->
-    Lam.switch (eliminate_ref id e)
+    Lambda.switch (eliminate_ref id e)
       {
         sw_consts_full = sw.sw_consts_full;
         sw_consts =
@@ -77,28 +77,28 @@ let rec eliminate_ref id (lam : Lam.t) =
         sw_dispatch = sw.sw_dispatch;
       }
   | Lstringswitch (e, sw, default) ->
-    Lam.stringswitch (eliminate_ref id e)
+    Lambda.stringswitch (eliminate_ref id e)
       (Ext_list.map sw (fun (s, e) -> (s, eliminate_ref id e)))
       (match default with
       | None -> None
       | Some x -> Some (eliminate_ref id x))
   | Lstaticraise (i, args) ->
-    Lam.staticraise i (Ext_list.map args (eliminate_ref id))
+    Lambda.staticraise i (Ext_list.map args (eliminate_ref id))
   | Lstaticcatch (e1, i, e2) ->
-    Lam.staticcatch (eliminate_ref id e1) i (eliminate_ref id e2)
+    Lambda.staticcatch (eliminate_ref id e1) i (eliminate_ref id e2)
   | Ltrywith (e1, v, e2) ->
-    Lam.try_ (eliminate_ref id e1) v (eliminate_ref id e2)
+    Lambda.try_ (eliminate_ref id e1) v (eliminate_ref id e2)
   | Lifthenelse (e1, e2, e3) ->
-    Lam.if_ (eliminate_ref id e1) (eliminate_ref id e2) (eliminate_ref id e3)
-  | Lsequence (e1, e2) -> Lam.seq (eliminate_ref id e1) (eliminate_ref id e2)
-  | Lbreak -> Lam.break
-  | Lcontinue -> Lam.continue
-  | Lwhile (e1, e2) -> Lam.while_ (eliminate_ref id e1) (eliminate_ref id e2)
+    Lambda.if_ (eliminate_ref id e1) (eliminate_ref id e2) (eliminate_ref id e3)
+  | Lsequence (e1, e2) -> Lambda.seq (eliminate_ref id e1) (eliminate_ref id e2)
+  | Lbreak -> Lambda.break
+  | Lcontinue -> Lambda.continue
+  | Lwhile (e1, e2) -> Lambda.while_ (eliminate_ref id e1) (eliminate_ref id e2)
   | Lfor (v, e1, e2, dir, e3) ->
-    Lam.for_ v (eliminate_ref id e1) (eliminate_ref id e2) dir
+    Lambda.for_ v (eliminate_ref id e1) (eliminate_ref id e2) dir
       (eliminate_ref id e3)
   | Lfor_of (v, e1, e2) ->
-    Lam.for_of v (eliminate_ref id e1) (eliminate_ref id e2)
+    Lambda.for_of v (eliminate_ref id e1) (eliminate_ref id e2)
   | Lfor_await_of (v, e1, e2) ->
-    Lam.for_await_of v (eliminate_ref id e1) (eliminate_ref id e2)
-  | Lassign (v, e) -> Lam.assign v (eliminate_ref id e)
+    Lambda.for_await_of v (eliminate_ref id e1) (eliminate_ref id e2)
+  | Lassign (v, e) -> Lambda.assign v (eliminate_ref id e)
