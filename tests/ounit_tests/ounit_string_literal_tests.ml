@@ -21,6 +21,19 @@ let assert_invalid_backquoted_pattern encoded =
   in
   OUnit.assert_bool "expected an invalid string escape" result.invalid
 
+let assert_invalid_backquoted_pattern_after_diagnostic () =
+  let source =
+    {|
+let invalidBigint = 0x1n
+let f = value => switch value { | `\uD800` => 1 }
+|}
+  in
+  let result =
+    Res_driver.parse_implementation_from_source ~for_printer:false
+      ~display_filename:"StringLiteralTest.res" ~source
+  in
+  OUnit.assert_equal ~printer:string_of_int 2 (List.length result.diagnostics)
+
 let assert_invalid_tagged_template_pattern tag =
   let source =
     "let f = value => switch value { | " ^ tag ^ "`literal` => 1 }"
@@ -383,6 +396,8 @@ let suites =
          ( "backquoted patterns reject lone surrogate escapes" >:: fun _ ->
            assert_invalid_backquoted_pattern {|\uD800|};
            assert_invalid_backquoted_pattern {|\uDC00|} );
+         ( "invalid backquoted pattern after an earlier diagnostic" >:: fun _ ->
+           assert_invalid_backquoted_pattern_after_diagnostic () );
          ( "character literals retain source and semantic forms" >:: fun _ ->
            assert_parsed_char ~for_printer:false ~source:{|\u{61}|}
              ~expected_semantic:0x61;

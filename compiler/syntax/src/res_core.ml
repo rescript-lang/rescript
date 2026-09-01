@@ -1055,9 +1055,8 @@ let parse_template_constant ~start_pos ~prefix (p : Parser.t) =
       match String_literal.decode_js_template_escapes txt with
       | Some semantic -> Ast_helper.Const.string semantic
       | None ->
-        if p.diagnostics = [] then
-          Parser.err ~start_pos ~end_pos:p.prev_end_pos p
-            (Diagnostics.message "Invalid string escape sequence");
+        Parser.err ~start_pos ~end_pos:p.prev_end_pos p
+          (Diagnostics.message "Invalid string escape sequence");
         Ast_helper.Const.string "")
     | Some _ ->
       Parser.err ~start_pos ~end_pos:p.prev_end_pos p
