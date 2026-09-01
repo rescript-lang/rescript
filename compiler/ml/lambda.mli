@@ -451,7 +451,7 @@ val cmp_float : comparison -> float -> float -> bool
 (* Constructors. [t] is private, so every term outside this module is
    built through one of these.
 
-   Most are plain wrappers. Six normalize as they build, and are the only
+   Most are plain wrappers. Seven normalize as they build, and are the only
    place that normalization happens - a pass cannot bypass it by writing a
    constructor directly:
 
