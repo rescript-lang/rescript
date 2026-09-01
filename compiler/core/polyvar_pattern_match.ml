@@ -98,8 +98,8 @@ let make_test_sequence_variant_constant (fail : lam option) (arg : lam)
         Lifthenelse (predicate, act1, acc))
   | [], None -> assert false
 
-let call_switcher_variant_constant (_loc : Location.t) (fail : lam option)
-    (arg : lam) (int_lambda_list : (int * (string * lam)) list) =
+let call_switcher_variant_constant (fail : lam option) (arg : lam)
+    (int_lambda_list : (int * (string * lam)) list) =
   let int_lambda_list = convert int_lambda_list in
   match (int_lambda_list, fail) with
   | (_, act) :: rest, None | rest, Some act ->
@@ -115,4 +115,4 @@ let call_switcher_variant_constr (loc : Location.t) (fail : lam option)
     ( Alias,
       v,
       Lprim {primitive = Pfield (0, Fld_poly_var_tag); args = [arg]; loc},
-      call_switcher_variant_constant loc fail (Lvar v) int_lambda_list )
+      call_switcher_variant_constant fail (Lvar v) int_lambda_list )

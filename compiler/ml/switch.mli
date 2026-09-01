@@ -37,8 +37,6 @@ type 'a t_store = {
   act_store_shared: 'a -> int;
 }
 
-exception Not_simple
-
 module type Stored = sig
   type t
   type key
@@ -50,51 +48,8 @@ module Store (A : Stored) : sig
   val mk_store : unit -> A.t t_store
 end
 
-(* Arguments to the Make functor *)
-module type S = sig
-  (* type of basic tests *)
-  type primitive
-
-  (* basic tests themselves *)
-  val eqint : primitive
-  val neint : primitive
-  val leint : primitive
-  val ltint : primitive
-  val geint : primitive
-  val gtint : primitive
-
-  (* type of actions *)
-  type act
-
-  (* Various constructors, for making a binder,
-      adding one integer, etc. *)
-  val bind : act -> (act -> act) -> act
-  val make_const : int -> act
-  val make_prim : primitive -> act list -> act
-
-  (* [make_if_out ~offset ~range arg ifso ifno] runs [ifso] when [arg] lies
-     outside [-offset .. range - offset] and [ifno] when it lies inside. The
-     producer chooses how to test that, because only it knows what the target
-     can express. *)
-  val make_if_out : offset:int -> range:int -> act -> act -> act -> act
-
-  (* Dual of [make_if_out]: [ifso] runs when [arg] lies inside the range. *)
-  val make_if_in : offset:int -> range:int -> act -> act -> act -> act
-  val make_if : act -> act -> act -> act
-
-  (* construct an actual switch :
-     make_switch arg cases acts
-     NB:  cases is in the value form *)
-  val make_switch :
-    Location.t -> act -> int array -> act array -> offset:int -> act
-
-  (* Build last minute sharing of action stuff *)
-  val make_catch : act -> int * (act -> act)
-  val make_exit : int -> act
-end
-
 (*
-  Make.zyva arg low high cases actions where
+  zyva (low, high) arg cases actions where
     - arg is the argument of the switch.
     - low, high are the interval limits.
     - cases is a list of sub-interval and action indices
@@ -103,17 +58,15 @@ end
   All these arguments specify a switch construct and zyva
   returns an action that performs the switch.
 *)
-module Make : functor (Arg : S) -> sig
-  (* Standard entry point, sharing is tracked *)
-  val zyva :
-    Location.t ->
-    int * int ->
-    Arg.act ->
-    (int * int * int) array ->
-    Arg.act t_store ->
-    Arg.act
+val zyva :
+  int * int ->
+  Lambda.lambda ->
+  (int * int * int) array ->
+  Lambda.lambda t_store ->
+  Lambda.lambda
 
-  (* Output test sequence, sharing tracked *)
-  val test_sequence :
-    Arg.act -> (int * int * int) array -> Arg.act t_store -> Arg.act
-end
+val test_sequence :
+  Lambda.lambda ->
+  (int * int * int) array ->
+  Lambda.lambda t_store ->
+  Lambda.lambda

@@ -459,6 +459,13 @@ val default_function_attribute : function_attribute
 
 (* Get a new static failure ident *)
 val next_raise_count : unit -> int
+
+val make_exit : int -> lambda
+
+val as_simple_exit : lambda -> int option
+
+(* Exit number to raise to, and a wrapper that puts the catch around a body. *)
+val make_catch_delayed : lambda -> int * (lambda -> lambda)
 val next_negative_raise_count : unit -> int
 (* Negative raise counts are used to compile 'match ... with
    exception x -> ...'.  This disabled some simplifications
