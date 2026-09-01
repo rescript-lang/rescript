@@ -386,17 +386,17 @@ let primitive_builtins : (string * Lambda.builtin) array =
       ("%unsafe_le", Pjscomp Cle);
       ("%unsafe_gt", Pjscomp Cgt);
       ("%unsafe_ge", Pjscomp Cge);
-      ("%is_nullable", Pisnullable);
+      ("%is_nullable", Pis_null_undefined);
       ("%null_to_opt", Pnull_to_opt);
-      ("%nullable_to_opt", Pnullable_to_opt);
+      ("%nullable_to_opt", Pnull_undefined_to_opt);
       ("%makemutablelist", Pmakelist);
       ("%unsafe_to_method", Pjs_fn_method);
       (* Compiler internals, never expose to ReScript files *)
       (* FIXME: Core compatibility *)
       ("#typeof", Ptypeof);
-      ("#is_nullable", Pisnullable);
+      ("#is_nullable", Pis_null_undefined);
       ("#null_to_opt", Pnull_to_opt);
-      ("#nullable_to_opt", Pnullable_to_opt);
+      ("#nullable_to_opt", Pnull_undefined_to_opt);
       ("#makemutablelist", Pmakelist);
       (* FIXME: Deprecated *)
       ("%obj_field", Parrayrefu);
@@ -560,7 +560,7 @@ let external_result_wrap loc (result_type : External_ffi_types.return_wrapper)
   match result_type with
   | Return_unset when returns_unit -> Lsequence (result, Lconst const_unit)
   | Return_null_to_opt -> Lprim (Pnull_to_opt, [result], loc)
-  | Return_null_undefined_to_opt -> Lprim (Pnullable_to_opt, [result], loc)
+  | Return_null_undefined_to_opt -> Lprim (Pnull_undefined_to_opt, [result], loc)
   | Return_unset | Return_identity -> result
 
 (* Does importing this external as a value require the FFI adaptation a
