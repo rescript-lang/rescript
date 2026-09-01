@@ -549,8 +549,7 @@ val shallow_exists : (t -> bool) -> t -> bool
 (** Does any immediate child satisfy the predicate? Short-circuits. *)
 
 val iter : (t -> unit) -> t -> unit
-module Ident_set : Set.S with type elt = Ident.t
-val free_variables : t -> Ident_set.t
+val free_variables : t -> Set_ident.t
 
 val transl_normal_path : Path.t -> t (* Path.t is already normal *)
 

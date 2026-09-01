@@ -600,14 +600,14 @@ let default_compat p def =
 (* Or-pattern expansion, variables are a complication w.r.t. the article *)
 let rec extract_vars r p =
   match p.pat_desc with
-  | Tpat_var (id, _) -> Ident_set.add id r
-  | Tpat_alias (p, id, _) -> extract_vars (Ident_set.add id r) p
+  | Tpat_var (id, _) -> Set_ident.add r id
+  | Tpat_alias (p, id, _) -> extract_vars (Set_ident.add r id) p
   | Tpat_tuple pats -> List.fold_left extract_vars r pats
   | Tpat_record (lpats, _, rest) -> (
     let r = List.fold_left (fun r (_, _, p, _) -> extract_vars r p) r lpats in
     match rest with
     | None -> r
-    | Some rest -> Ident_set.add rest.rest_ident r)
+    | Some rest -> Set_ident.add r rest.rest_ident)
   | Tpat_construct (_, _, pats) -> List.fold_left extract_vars r pats
   | Tpat_array pats -> List.fold_left extract_vars r pats
   | Tpat_variant (_, Some p, _) -> extract_vars r p
@@ -643,8 +643,8 @@ let rec explode_or_pat arg patl mk_action rem vars aliases = function
 
 let pm_free_variables {cases} =
   List.fold_right
-    (fun (_, act) r -> Ident_set.union (free_variables act) r)
-    cases Ident_set.empty
+    (fun (_, act) r -> Set_ident.union (free_variables act) r)
+    cases Set_ident.empty
 
 (* Basic grouping predicates *)
 let pat_as_constr = function
@@ -726,8 +726,8 @@ let insert_or_append p ps act ors no =
       if is_or q then
         if may_compat p q then
           if
-            Ident_set.is_empty (extract_vars Ident_set.empty p)
-            && Ident_set.is_empty (extract_vars Ident_set.empty q)
+            Set_ident.is_empty (extract_vars Set_ident.empty p)
+            && Set_ident.is_empty (extract_vars Set_ident.empty q)
             && equiv_pat p q
           then
             (* attempt insert, for equivalent orpats with no variables *)
@@ -1037,9 +1037,9 @@ and precompile_or argo cls ors args def k =
           }
         in
         let vars =
-          Ident_set.elements
-            (Ident_set.inter
-               (extract_vars Ident_set.empty orp)
+          Set_ident.elements
+            (Set_ident.inter
+               (extract_vars Set_ident.empty orp)
                (pm_free_variables orpm))
         in
         let or_num = next_raise_count () in
