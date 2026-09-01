@@ -26,7 +26,7 @@ let rec struct_const ppf (cst : Lam_constant.t) =
   | Const_string {s} -> fprintf ppf "%S" s
   | Const_float f -> fprintf ppf "%s" f
   | Const_bigint (sign, i) -> fprintf ppf "%sn" (Bigint_utils.to_string sign i)
-  | Const_pointer name -> fprintf ppf "`%s" name
+  | Const_polyvar name -> fprintf ppf "`%s" name
   | Const_constructor {name} -> fprintf ppf "`%s" name
   | Const_some n -> fprintf ppf "[some-c]%a" struct_const n
   | Const_block (i, []) -> fprintf ppf "[%s]" (Lambda.tag_label_of_tag_info i)

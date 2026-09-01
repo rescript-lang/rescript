@@ -23,11 +23,12 @@ let rec struct_const ppf = function
   | Const_string {s} -> fprintf ppf "%S" s
   | Const_float f -> fprintf ppf "%s" f
   | Const_bigint (sign, n) -> fprintf ppf "%sn" (Bigint_utils.to_string sign n)
-  | Const_pointer (Pt_constructor {name}) -> fprintf ppf "`%s" name
-  | Const_pointer (Pt_variant {name}) -> fprintf ppf "`%s" name
-  | Const_pointer Pt_module_alias -> fprintf ppf "module_alias"
-  | Const_pointer Pt_assertfalse -> fprintf ppf "assertfalse"
+  | Const_constructor {name} -> fprintf ppf "`%s" name
+  | Const_polyvar name -> fprintf ppf "`%s" name
+  | Const_module_alias -> fprintf ppf "module_alias"
+  | Const_assertfalse -> fprintf ppf "assertfalse"
   | Const_js_null -> fprintf ppf "null"
+  | Const_some c -> fprintf ppf "some(%a)" struct_const c
   | Const_js_undefined {is_unit = true} -> fprintf ppf "unit"
   | Const_js_undefined {is_unit = false} -> fprintf ppf "undefined"
   | Const_block (tag_info, []) ->
@@ -39,8 +40,8 @@ let rec struct_const ppf = function
       List.iter (fun sc -> fprintf ppf "@ %a" struct_const sc) scl
     in
     fprintf ppf "@[<1>[%s:@ @[%a%a@]]@]" tag struct_const sc1 sconsts scl
-  | Const_false -> fprintf ppf "false"
-  | Const_true -> fprintf ppf "true"
+  | Const_js_false -> fprintf ppf "false"
+  | Const_js_true -> fprintf ppf "true"
 
 let value_kind = function
   | Pgenval -> ""
@@ -87,8 +88,6 @@ let print_taginfo ppf = function
   | Blk_record {fields = ss} ->
     fprintf ppf "[%s]" (String.concat ";" (List.map fst (Array.to_list ss)))
   | Blk_module ss -> fprintf ppf "[%s]" (String.concat ";" ss)
-  | Blk_some -> fprintf ppf "some"
-  | Blk_some_not_nested -> fprintf ppf "some_not_nested"
   | Blk_module_export _ -> fprintf ppf "module/exports"
   | Blk_record_inlined {fields = ss} ->
     fprintf ppf "[%s]" (String.concat ";" (List.map fst (Array.to_list ss)))
@@ -96,6 +95,8 @@ let print_taginfo ppf = function
 let primitive ppf = function
   | Pdebugger -> fprintf ppf "debugger"
   | Ptypeof -> fprintf ppf "typeof"
+  | Psome -> fprintf ppf "some"
+  | Psome_not_nest -> fprintf ppf "some_not_nest"
   | Pfn_arity -> fprintf ppf "fn.length"
   | Pgetglobal id -> fprintf ppf "global %a" Ident.print id
   | Pmakeblock taginfo -> fprintf ppf "makeblock %a" print_taginfo taginfo
