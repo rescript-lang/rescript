@@ -528,6 +528,12 @@ val lambda_true : lambda
 
 val lambda_false : lambda
 
+val shallow_map_sharing : (lambda -> lambda) -> lambda -> lambda
+(** Rewrite a node's immediate children, rebuilding through the constructors
+    so the result is normalized. A node whose children are all physically
+    unchanged is returned as-is, so a traversal that rewrites nothing
+    allocates nothing. *)
+
 val eq_approx : lambda -> lambda -> bool
 
 val mk_builtin : builtin -> lambda list -> Location.t -> lambda

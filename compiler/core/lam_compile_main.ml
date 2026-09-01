@@ -135,21 +135,22 @@ let js_hoisted_aliases (export_ids : Ident.t list)
           fields
     in
     let rec resolve_binding seen = function
-      | Lam.Lvar id as lam -> (
+      | Lambda.Lvar id as lam -> (
         if Set_ident.mem seen id then (lam, Some id)
         else
           match Map_ident.find_opt group_map id with
           | Some
-              ((Lam.Lvar _ | Lam.Lprim {primitive = Lam_primitive.Pfield _; _})
-               as alias) ->
+              (( Lambda.Lvar _
+               | Lambda.Lprim {primitive = Lam_primitive.Pfield _; _} ) as alias)
+            ->
             resolve_binding (Set_ident.add seen id) alias
           | Some resolved -> (resolved, Some id)
           | None -> (lam, Some id))
-      | Lam.Lprim {primitive = Lam_primitive.Pfield (pos, _); args = [base]} as
-        lam -> (
+      | Lambda.Lprim {primitive = Lam_primitive.Pfield (pos, _); args = [base]}
+        as lam -> (
         match fst (resolve_binding seen base) with
-        | Lam.Lprim {primitive = Lam_primitive.Pmakeblock (Blk_module _); args}
-          -> (
+        | Lambda.Lprim
+            {primitive = Lam_primitive.Pmakeblock (Blk_module _); args} -> (
           match List.nth_opt args pos with
           | Some field -> resolve_binding seen field
           | None -> (lam, None))
@@ -171,7 +172,7 @@ let js_hoisted_aliases (export_ids : Ident.t list)
         Some (List.rev positions, binding_id, target)
       | field :: fields -> (
         match resolve Set_ident.empty lam with
-        | Lam.Lprim
+        | Lambda.Lprim
             {primitive = Lam_primitive.Pmakeblock (Blk_module names); args} -> (
           match find_field field 0 names args with
           | Some (pos, arg) -> find_path arg fields ((pos, field) :: positions)
@@ -219,7 +220,7 @@ let js_hoisted_aliases (export_ids : Ident.t list)
                    if Set_string.mem occupied_names js_name then
                      let error_loc =
                        match target with
-                       | Lam.Lfunction {loc} -> loc
+                       | Lambda.Lfunction {loc} -> loc
                        | _ -> loc
                      in
                      Location.raise_errorf ~loc:error_loc
@@ -275,7 +276,6 @@ let compile (output_prefix : string) export_idents hoisted (lam : Lambda.lambda)
     Lam_compile_env.reset ()
   in
   let may_required_modules = Lam_convert.required_modules lam in
-  let lam = Lam_convert.convert lam in
   let lam =
     Lam_pass_collapse_var_aliases.collapse ~exports:export_ident_sets lam
   in

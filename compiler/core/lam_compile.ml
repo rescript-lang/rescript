@@ -275,9 +275,9 @@ let compile output_prefix =
   let rec extract_field_path segments primitive args =
     match (primitive, args) with
     | ( Lam_primitive.Pfield (_, Fld_module {name}),
-        [Lam.Lprim {primitive; args; _}] ) ->
+        [Lambda.Lprim {primitive; args; _}] ) ->
       extract_field_path (name :: segments) primitive args
-    | Lam_primitive.Pfield (_, Fld_module {name}), [Lam.Lglobal_module id] ->
+    | Lam_primitive.Pfield (_, Fld_module {name}), [Lambda.Lglobal_module id] ->
       Some (id, name :: segments)
     | _ -> None
   in

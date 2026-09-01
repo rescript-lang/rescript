@@ -29,61 +29,22 @@ type ap_info = Lambda.ap_info = {
 
 type ident = Ident.t
 
-type lambda_switch = t Lambda.switch
+type lambda_switch = Lambda.lambda_switch
 
-and apply = private {
-  ap_func: t;
-  ap_args: t list;
-  ap_info: ap_info;
-  ap_transformed_jsx: bool;
-}
+type apply = Lambda.lambda_apply
 
-and lfunction = {
-  params: ident list;
-  body: t;
-  attr: Lambda.function_attribute;
-  loc: Location.t;
-}
+type lfunction = Lambda.lfunction
 
-and prim_info = private {
-  primitive: Lam_primitive.t;
-  args: t list;
-  loc: Location.t;
-}
+type prim_info = Lambda.prim_info
 
-and t = private
-  | Lvar of ident
-  | Lglobal_module of ident
-  | Lconst of Lam_constant.t
-  | Lapply of apply
-  | Lfunction of lfunction
-  | Llet of Lam_compat.let_kind * ident * t * t
-  | Lletrec of (ident * t) list * t
-  | Lprim of prim_info
-  | Lswitch of t * lambda_switch
-  | Lstringswitch of t * (string * t) list * t option
-  | Lstaticraise of int * t list
-  | Lstaticcatch of t * (int * ident list) * t
-  | Ltrywith of t * ident * t
-  | Lifthenelse of t * t * t
-  | Lsequence of t * t
-  | Lbreak
-  | Lcontinue
-  | Lwhile of t * t
-  | Lfor of ident * t * t * Asttypes.direction_flag * t
-  | Lfor_of of ident * t * t
-  | Lfor_await_of of ident * t * t
-  | Lassign of ident * t
-
-(* | Levent of t * Lambda.lambda_event
-   [Levent] in the branch hurt pattern match,
-   we should use record for trivial debugger info
-*)
+type t = Lambda.lambda
+(** The optimizer's name for {!Lambda.lambda}. It is the same type: the
+    constructors, their normalizations and the traversals live in Lambda, and
+    the type is private there, so a term can only be built through them. *)
 
 (**************************************************************)
 
 val var : ident -> t
-(** Smart constructors *)
 
 val global_module : ident -> t
 
@@ -103,30 +64,22 @@ val let_ : Lam_compat.let_kind -> ident -> t -> t -> t
 val letrec : (ident * t) list -> t -> t
 
 val if_ : t -> t -> t -> t
-(**  constant folding *)
 
 val switch : t -> lambda_switch -> t
-(** constant folding*)
 
 val stringswitch : t -> (string * t) list -> t option -> t
-(** constant folding*)
 
-(* val true_ : t  *)
 val false_ : t
 
 val unit : t
 
 val sequor : t -> t -> t
-(** convert [l || r] to [if l then true else r]*)
 
 val sequand : t -> t -> t
-(** convert [l && r] to [if l then r else false *)
 
 val not_ : Location.t -> t -> t
-(** constant folding *)
 
 val seq : t -> t -> t
-(** drop unused block *)
 
 val break : t
 
@@ -134,13 +87,11 @@ val continue : t
 
 val while_ : t -> t -> t
 
-(* val event : t -> Lambda.lambda_event -> t   *)
 val try_ : t -> ident -> t -> t
 
 val assign : ident -> t -> t
 
 val prim : primitive:Lam_primitive.t -> args:t list -> Location.t -> t
-(** constant folding *)
 
 val staticcatch : t -> int * ident list -> t -> t
 
@@ -155,8 +106,5 @@ val for_await_of : ident -> t -> t -> t
 (**************************************************************)
 
 val shallow_map_sharing : (t -> t) -> t -> t
-(** Rewrite a node's immediate children, rebuilding through the smart
-    constructors. A node whose children are all physically unchanged is
-    returned as-is, so a traversal that rewrites nothing allocates nothing. *)
 
 val eq_approx : t -> t -> bool
