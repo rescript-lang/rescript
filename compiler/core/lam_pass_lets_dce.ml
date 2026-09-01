@@ -24,13 +24,9 @@ let lets_helper (count_var : Ident.t -> Lam_pass_count.used_info) lam : Lam.t =
     | Llet
         ( (Strict as kind),
           v,
-          Lprim
-            {
-              primitive = Pmakeblock (_, Mutable) as primitive;
-              args = [linit];
-              loc;
-            },
-          lbody ) -> (
+          Lprim {primitive = Pmakeblock info as primitive; args = [linit]; loc},
+          lbody )
+      when not (Lam_primitive.is_immutable_block info) -> (
       let slinit = simplif linit in
       let slbody = simplif lbody in
       try
@@ -93,12 +89,8 @@ let lets_helper (count_var : Ident.t -> Lam_pass_count.used_info) lam : Lam.t =
       then simplif lbody (* GPR #1476 *)
       else
         match l1 with
-        | Lprim
-            {
-              primitive = Pmakeblock (_, Mutable) as primitive;
-              args = [linit];
-              loc;
-            } -> (
+        | Lprim {primitive = Pmakeblock info as primitive; args = [linit]; loc}
+          when not (Lam_primitive.is_immutable_block info) -> (
           let slinit = simplif linit in
           let slbody = simplif lbody in
           try

@@ -119,8 +119,11 @@ let rec rhs_is_beta_residue (lam : Lam.t) =
   | Llet
       ( (Alias | Strict | StrictOpt),
         _,
-        (Lprim {primitive = Pmakeblock (_, Immutable)} | Lvar _),
-        rest ) ->
+        Lprim {primitive = Pmakeblock info},
+        rest )
+    when Lam_primitive.is_immutable_block info ->
+    rhs_is_beta_residue rest
+  | Llet ((Alias | Strict | StrictOpt), _, Lvar _, rest) ->
     rhs_is_beta_residue rest
   | Lapply _ -> true
   | _ -> false
@@ -175,7 +178,8 @@ let deep_flatten (lam : Lam.t) : Lam.t =
       match (id.name, str, res) with
       | ( ("match" | "include" | "param"),
           (Alias | Strict | StrictOpt),
-          Lprim {primitive = Pmakeblock (_, Immutable); args} ) -> (
+          Lprim {primitive = Pmakeblock info; args} )
+        when Lam_primitive.is_immutable_block info -> (
         match eliminate_tuple id body Map_int.empty with
         | Some (tuple_mapping, body) ->
           flatten

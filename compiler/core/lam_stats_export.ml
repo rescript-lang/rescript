@@ -41,7 +41,8 @@ let values_of_export (meta : Lam_stats.t) (export_map : Lam.t Map_ident.t) :
                  | SimpleForm lam -> Lam_arity_analysis.get_arity meta lam))
         | Some _ | None -> (
           match Map_ident.find_opt export_map x with
-          | Some (Lprim {primitive = Pmakeblock (_, Immutable); args}) ->
+          | Some (Lprim {primitive = Pmakeblock info; args})
+            when Lam_primitive.is_immutable_block info ->
             Submodule
               (Ext_array.of_list_map args (fun lam ->
                    Lam_arity_analysis.get_arity meta lam))

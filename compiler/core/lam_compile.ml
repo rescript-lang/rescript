@@ -444,7 +444,7 @@ let compile output_prefix =
           result
           ~no_effects:(lazy (Lam_analysis.no_side_effects arg)),
         [] )
-    | Lprim {primitive = Pmakeblock (_, _); args}
+    | Lprim {primitive = Pmakeblock _; args}
       when args_either_function_or_const args ->
       (compile_lambda {cxt with continuation = Declare (Alias, id)} arg, [])
     (* case of lazy blocks, treat it as usual *)
@@ -452,10 +452,9 @@ let compile output_prefix =
         {
           primitive =
             Pmakeblock
-              ( (( Blk_record _
-                 | Blk_constructor {num_nonconst = 1}
-                 | Blk_record_inlined {num_nonconst = 1} ) as tag_info),
-                _ );
+              (( Blk_record _
+               | Blk_constructor {num_nonconst = 1}
+               | Blk_record_inlined {num_nonconst = 1} ) as tag_info);
           args = ls;
         }
       when Ext_list.for_all ls (fun x ->
@@ -496,7 +495,7 @@ let compile output_prefix =
                    | Lconst x -> Lam_compile_const.translate x
                    | _ -> assert false)))),
         [] )
-    | Lprim {primitive = Pmakeblock (tag_info, _)} -> (
+    | Lprim {primitive = Pmakeblock tag_info} -> (
       (* Lconst should not appear here if we do [scc]
          optimization, since it's faked recursive value,
          however it would affect scope issues, we have to declare it first
