@@ -24,4 +24,4 @@
 
 (** alpha conversion based on arity *)
 
-val alpha_conversion : Lam_stats.t -> Lam.t -> Lam.t
+val normalize : Lam_stats.t -> Lam.t -> Lam.t

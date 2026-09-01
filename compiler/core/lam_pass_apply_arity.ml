@@ -22,7 +22,11 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-let alpha_conversion (meta : Lam_stats.t) (lam : Lam.t) : Lam.t =
+(* Normalize applications against the callee's arity: saturate an
+   under-supplied call by eta expansion, split an over-supplied one, and record
+   on the rest that the arity is known. Despite its former name this pass
+   renames nothing. *)
+let normalize (meta : Lam_stats.t) (lam : Lam.t) : Lam.t =
   let rec populate_apply_info ?(ap_transformed_jsx = false)
       (args_arity : int list) (len : int) (fn : Lam.t) (args : Lam.t list)
       ap_info : Lam.t =
