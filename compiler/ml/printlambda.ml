@@ -220,8 +220,8 @@ let primitive ppf = function
   | Pmakedict -> fprintf ppf "makedict"
   | Pdict_has -> fprintf ppf "dict.has"
   | Pisint -> fprintf ppf "isint"
-  | Pisout -> fprintf ppf "isout"
-  | Pisnullable -> fprintf ppf "isnullable"
+  | Pisout i -> fprintf ppf "isout %d" i
+  | Pis_null_undefined -> fprintf ppf "isnullable"
   | Pcreate_extension s -> fprintf ppf "extension[%s]" s
   | Pawait -> fprintf ppf "await"
   | Pimport (Import_module {module_; path}) ->
@@ -241,7 +241,7 @@ let primitive ppf = function
   | Pjscomp Cgt -> fprintf ppf ">"
   | Pjscomp Cge -> fprintf ppf ">="
   | Pnull_to_opt -> fprintf ppf "null_to_opt"
-  | Pnullable_to_opt -> fprintf ppf "nullable_to_opt"
+  | Pnull_undefined_to_opt -> fprintf ppf "nullable_to_opt"
   | Pis_not_none -> fprintf ppf "#is_not_none"
   | Pval_from_option -> fprintf ppf "#val_from_option"
   | Pval_from_option_not_nest -> fprintf ppf "#val_from_option_not_nest"

@@ -259,15 +259,15 @@ type primitive =
   (* Test if the argument is a block or an immediate integer *)
   | Pisint
   (* Test if the (integer) argument is outside an interval *)
-  | Pisout
+  | Pisout of int
   (* Test if the argument is null or undefined *)
-  | Pisnullable
+  | Pis_null_undefined
   (* exn *)
   | Pcreate_extension of string
   (* js *)
   | Pjscomp of comparison
   | Pnull_to_opt
-  | Pnullable_to_opt
+  | Pnull_undefined_to_opt
   | Pis_not_none
   | Pval_from_option
   | Pval_from_option_not_nest

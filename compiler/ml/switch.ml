@@ -99,10 +99,9 @@ module type S = sig
 
   val bind : act -> (act -> act) -> act
   val make_const : int -> act
-  val make_offset : act -> int -> act
   val make_prim : primitive -> act list -> act
-  val make_isout : act -> act -> act
-  val make_isin : act -> act -> act
+  val make_isout : act -> act -> offset:int -> act
+  val make_isin : act -> act -> offset:int -> act
   val make_if : act -> act -> act -> act
   val make_switch :
     Location.t -> act -> int array -> act array -> offset:int -> act
@@ -480,27 +479,19 @@ let rec pkey chan  = function
 
   and make_if_ne arg i ifso ifnot = make_if_test Arg.neint arg i ifso ifnot
 
-  let do_make_if_out h arg ifso ifno =
-    Arg.make_if (Arg.make_isout h arg) ifso ifno
+  let do_make_if_out h arg ~offset ifso ifno =
+    Arg.make_if (Arg.make_isout h arg ~offset) ifso ifno
 
   let make_if_out ctx l d mk_ifso mk_ifno =
-    match l with
-    | 0 -> do_make_if_out (Arg.make_const d) ctx.arg (mk_ifso ctx) (mk_ifno ctx)
-    | _ ->
-      do_make_if_out (Arg.make_const d)
-        (Arg.make_offset ctx.arg (-l))
-        (mk_ifso ctx) (mk_ifno ctx)
+    do_make_if_out (Arg.make_const d) ctx.arg ~offset:(-l) (mk_ifso ctx)
+      (mk_ifno ctx)
 
-  let do_make_if_in h arg ifso ifno =
-    Arg.make_if (Arg.make_isin h arg) ifso ifno
+  let do_make_if_in h arg ~offset ifso ifno =
+    Arg.make_if (Arg.make_isin h arg ~offset) ifso ifno
 
   let make_if_in ctx l d mk_ifso mk_ifno =
-    match l with
-    | 0 -> do_make_if_in (Arg.make_const d) ctx.arg (mk_ifso ctx) (mk_ifno ctx)
-    | _ ->
-      do_make_if_in (Arg.make_const d)
-        (Arg.make_offset ctx.arg (-l))
-        (mk_ifso ctx) (mk_ifno ctx)
+    do_make_if_in (Arg.make_const d) ctx.arg ~offset:(-l) (mk_ifso ctx)
+      (mk_ifno ctx)
 
   let rec c_test ctx ({cases; actions} as s) =
     let lcases = Array.length cases in

@@ -70,10 +70,9 @@ module type S = sig
       adding one integer, etc. *)
   val bind : act -> (act -> act) -> act
   val make_const : int -> act
-  val make_offset : act -> int -> act
   val make_prim : primitive -> act list -> act
-  val make_isout : act -> act -> act
-  val make_isin : act -> act -> act
+  val make_isout : act -> act -> offset:int -> act
+  val make_isin : act -> act -> offset:int -> act
   val make_if : act -> act -> act -> act
 
   (* construct an actual switch :

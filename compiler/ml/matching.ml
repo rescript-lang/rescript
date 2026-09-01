@@ -1642,10 +1642,6 @@ module S_arg = struct
   type act = Lambda.lambda
 
   let make_prim p args = Lprim (p, args, Location.none)
-  let make_offset arg n =
-    match n with
-    | 0 -> arg
-    | _ -> Lprim (Poffsetint n, [arg], Location.none)
 
   let bind arg body =
     let newvar, newarg =
@@ -1657,8 +1653,9 @@ module S_arg = struct
     in
     bind Alias newvar arg (body newarg)
   let make_const i = Lconst (const_int i)
-  let make_isout h arg = Lprim (Pisout, [h; arg], Location.none)
-  let make_isin h arg = Lprim (Pnot, [make_isout h arg], Location.none)
+  let make_isout h arg ~offset = Lprim (Pisout offset, [h; arg], Location.none)
+  let make_isin h arg ~offset =
+    Lprim (Pnot, [make_isout h arg ~offset], Location.none)
   let make_if cond ifso ifnot = Lifthenelse (cond, ifso, ifnot)
   let make_switch loc arg cases acts ~offset =
     let l = ref [] in

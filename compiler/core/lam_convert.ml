@@ -45,9 +45,9 @@ let lam_prim ~primitive:(p : Lambda.primitive) ~args loc : Lam.t =
   | Psome -> prim ~primitive:Psome ~args loc
   | Psome_not_nest -> prim ~primitive:Psome_not_nest ~args loc
   | Ptypeof -> prim ~primitive:Ptypeof ~args loc
-  | Pisnullable -> prim ~primitive:Pis_null_undefined ~args loc
+  | Pis_null_undefined -> prim ~primitive:Pis_null_undefined ~args loc
   | Pnull_to_opt -> prim ~primitive:Pnull_to_opt ~args loc
-  | Pnullable_to_opt -> prim ~primitive:Pnull_undefined_to_opt ~args loc
+  | Pnull_undefined_to_opt -> prim ~primitive:Pnull_undefined_to_opt ~args loc
   | Pis_not_none -> prim ~primitive:Pis_not_none ~args loc
   | Pval_from_option -> prim ~primitive:Pval_from_option ~args loc
   | Pval_from_option_not_nest ->
@@ -98,11 +98,7 @@ let lam_prim ~primitive:(p : Lambda.primitive) ~args loc : Lam.t =
   | Pstringadd -> prim ~primitive:Pstringadd ~args loc
   | Pstringrefs -> prim ~primitive:Pstringrefs ~args loc
   | Pisint -> prim ~primitive:Pisint ~args loc
-  | Pisout -> (
-    match args with
-    | [range; Lprim {primitive = Poffsetint i; args = [x]}] ->
-      prim ~primitive:(Pisout i) ~args:[range; x] loc
-    | _ -> prim ~primitive:(Pisout 0) ~args loc)
+  | Pisout i -> prim ~primitive:(Pisout i) ~args loc
   | Pintoffloat -> prim ~primitive:Pintoffloat ~args loc
   | Pfloatofint -> prim ~primitive:Pfloatofint ~args loc
   | Pnegfloat -> prim ~primitive:Pnegfloat ~args loc
