@@ -194,11 +194,11 @@ let subst_helper (subst : subst_tbl) (query : int -> int) (lam : Lam.t) : Lam.t
         let handler = to_lam handler in
         let ys = Ext_list.map xs Ident.rename in
         let env =
-          Ext_list.fold_right2 xs ys Map_ident.empty (fun x y t ->
-              Map_ident.add t x (Lam.var y))
+          Ext_list.fold_right2 xs ys Ident.empty (fun x y t ->
+              Ident.add x (Lam.var y) t)
         in
-        Ext_list.fold_right2 ys ls (Lam_subst.subst env handler) (fun y l r ->
-            Lam.let_ Strict y l r)
+        Ext_list.fold_right2 ys ls (Lambda.subst_lambda env handler)
+          (fun y l r -> Lam.let_ Strict y l r)
       | None -> Lam.staticraise i ls)
     | Lvar _ | Lconst _ -> lam
     | Lapply {ap_func; ap_args; ap_info; ap_transformed_jsx} ->
