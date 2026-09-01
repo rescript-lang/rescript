@@ -623,6 +623,32 @@ let eq_primitive_approx (lhs : primitive) (rhs : primitive) =
   | Praw_js_code _ -> false
 (* TOO lazy, here comparison is only approximation*)
 
+(* The source-level name a field access carries, when it has one. *)
+let str_of_field_info (x : field_dbg_info) : string option =
+  match x with
+  | Fld_extension | Fld_variant | Fld_cons | Fld_poly_var_tag
+  | Fld_poly_var_content | Fld_tuple ->
+    None
+  | Fld_record {name}
+  | Fld_module {name}
+  | Fld_record_inline {name}
+  | Fld_record_extension {name} ->
+    Some name
+
+let is_immutable_block (info : tag_info) =
+  mutable_flag_of_tag_info info = Immutable
+
+(* A constant that has to be built at run time rather than shared. *)
+let rec const_is_allocating (c : structured_constant) : bool =
+  match c with
+  | Const_some t -> const_is_allocating t
+  | Const_block _ -> true
+  | Const_js_null | Const_js_undefined _ | Const_js_true | Const_js_false
+  | Const_int _ | Const_assertfalse | Const_constructor _ | Const_char _
+  | Const_string _ | Const_float _ | Const_bigint _ | Const_polyvar _
+  | Const_module_alias ->
+    false
+
 let rec const_eq_approx (x : structured_constant) (y : structured_constant) =
   match x with
   | Const_module_alias -> y = Const_module_alias

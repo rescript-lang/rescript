@@ -26,7 +26,7 @@ let lets_helper (count_var : Ident.t -> Lam_pass_count.used_info) lam : Lam.t =
           v,
           Lprim {primitive = Pmakeblock info as primitive; args = [linit]; loc},
           lbody )
-      when not (Lam_primitive.is_immutable_block info) -> (
+      when not (Lambda.is_immutable_block info) -> (
       let slinit = simplif linit in
       let slbody = simplif lbody in
       try
@@ -90,7 +90,7 @@ let lets_helper (count_var : Ident.t -> Lam_pass_count.used_info) lam : Lam.t =
       else
         match l1 with
         | Lprim {primitive = Pmakeblock info as primitive; args = [linit]; loc}
-          when not (Lam_primitive.is_immutable_block info) -> (
+          when not (Lambda.is_immutable_block info) -> (
           let slinit = simplif linit in
           let slbody = simplif lbody in
           try

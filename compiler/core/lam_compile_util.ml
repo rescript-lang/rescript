@@ -22,7 +22,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-let jsop_of_comp (cmp : Lam_compat.comparison) : Js_op.binop =
+let jsop_of_comp (cmp : Lambda.comparison) : Js_op.binop =
   match cmp with
   | Ceq -> EqEqEq (* comparison*)
   | Cneq -> NotEqEq
@@ -31,7 +31,7 @@ let jsop_of_comp (cmp : Lam_compat.comparison) : Js_op.binop =
   | Cle -> Le
   | Cge -> Ge
 
-let runtime_of_comp (cmp : Lam_compat.comparison) : string =
+let runtime_of_comp (cmp : Lambda.comparison) : string =
   match cmp with
   | Ceq -> "equal"
   | Cneq -> "notequal"

@@ -28,7 +28,10 @@ type ident = Ident.t
 
 let inner_exists (l : t) (f : t -> bool) : bool =
   match l with
-  | Lvar (_ : ident) | Lglobal_module _ | Lconst (_ : Lam_constant.t) -> false
+  | Lvar (_ : ident)
+  | Lglobal_module _
+  | Lconst (_ : Lambda.structured_constant) ->
+    false
   | Lapply {ap_func; ap_args; ap_info = _} ->
     f ap_func || Ext_list.exists ap_args f
   | Lfunction {body; params = _} -> f body

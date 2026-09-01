@@ -230,21 +230,21 @@ val float_mod : ?comment:string -> t -> t -> t
 
 val float_pow : ?comment:string -> t -> t -> t
 
-val int_comp : Lam_compat.comparison -> ?comment:string -> t -> t -> t
+val int_comp : Lambda.comparison -> ?comment:string -> t -> t -> t
 
-val bool_comp : Lam_compat.comparison -> ?comment:string -> t -> t -> t
+val bool_comp : Lambda.comparison -> ?comment:string -> t -> t -> t
 
-val string_comp : Lam_compat.comparison -> ?comment:string -> t -> t -> t
+val string_comp : Lambda.comparison -> ?comment:string -> t -> t -> t
 
 val bigint_op : ?comment:string -> Js_op.binop -> t -> t -> t
 
-val bigint_comp : Lam_compat.comparison -> ?comment:string -> t -> t -> t
+val bigint_comp : Lambda.comparison -> ?comment:string -> t -> t -> t
 
 val bigint_div : checked:bool -> ?comment:string -> t -> t -> t
 
 val bigint_mod : checked:bool -> ?comment:string -> t -> t -> t
 
-val js_comp : Lam_compat.comparison -> ?comment:string -> t -> t -> t
+val js_comp : Lambda.comparison -> ?comment:string -> t -> t -> t
 
 val not : t -> t
 
@@ -302,7 +302,7 @@ val in_ : t -> t -> t
 
 (** we don't expose a general interface, since a general interface is generally not safe *)
 
-val dummy_obj : ?comment:string -> Lam_tag_info.t -> t
+val dummy_obj : ?comment:string -> Lambda.tag_info -> t
 (** used combined with [caml_update_dummy]*)
 
 val of_block : ?comment:string -> ?e:J.expression -> J.statement list -> t

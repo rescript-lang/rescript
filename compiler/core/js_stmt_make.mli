@@ -30,7 +30,7 @@ val throw_stmt : ?comment:string -> J.expression -> t
 
 val if_ :
   ?comment:string ->
-  ?declaration:Lam_compat.let_kind * Ident.t ->
+  ?declaration:Lambda.let_kind * Ident.t ->
   (* when it's not None, we also need make a variable declaration in the
      begininnig, however, we can optmize such case
   *)
@@ -47,7 +47,7 @@ val block : ?comment:string -> J.block -> t
 
 val int_switch :
   ?comment:string ->
-  ?declaration:Lam_compat.let_kind * Ident.t ->
+  ?declaration:Lambda.let_kind * Ident.t ->
   ?default:J.block ->
   J.expression ->
   (int * J.case_clause) list ->
@@ -70,7 +70,7 @@ val int_switch :
 
 val string_switch :
   ?comment:string ->
-  ?declaration:Lam_compat.let_kind * Ident.t ->
+  ?declaration:Lambda.let_kind * Ident.t ->
   ?default:J.block ->
   J.expression ->
   (Variant_runtime.tag_type * J.case_clause) list ->
@@ -79,7 +79,7 @@ val string_switch :
 val declare_variable :
   ?comment:string ->
   ?ident_info:J.ident_info ->
-  kind:Lam_compat.let_kind ->
+  kind:Lambda.let_kind ->
   Ident.t ->
   t
 (** Just declaration without initialization *)
@@ -88,7 +88,7 @@ val declare_variable :
 val define_variable :
   ?comment:string ->
   ?ident_info:J.ident_info ->
-  kind:Lam_compat.let_kind ->
+  kind:Lambda.let_kind ->
   Ident.t ->
   J.expression ->
   t

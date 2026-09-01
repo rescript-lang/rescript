@@ -274,10 +274,10 @@ let compile output_prefix =
      table. *)
   let rec extract_field_path segments primitive args =
     match (primitive, args) with
-    | ( Lam_primitive.Pfield (_, Fld_module {name}),
-        [Lambda.Lprim {primitive; args; _}] ) ->
+    | Lambda.Pfield (_, Fld_module {name}), [Lambda.Lprim {primitive; args; _}]
+      ->
       extract_field_path (name :: segments) primitive args
-    | Lam_primitive.Pfield (_, Fld_module {name}), [Lambda.Lglobal_module id] ->
+    | Lambda.Pfield (_, Fld_module {name}), [Lambda.Lglobal_module id] ->
       Some (id, name :: segments)
     | _ -> None
   in
@@ -563,7 +563,7 @@ let compile output_prefix =
       cxt:Lam_compile_context.t ->
       switch:
         (?default:J.block ->
-        ?declaration:Lam_compat.let_kind * Ident.t ->
+        ?declaration:Lambda.let_kind * Ident.t ->
         _ ->
         ('a * J.case_clause) list ->
         J.statement) ->
@@ -578,7 +578,7 @@ let compile output_prefix =
        ~(cxt : Lam_compile_context.t)
        ~(switch :
           ?default:J.block ->
-          ?declaration:Lam_compat.let_kind * Ident.t ->
+          ?declaration:Lambda.let_kind * Ident.t ->
           _ ->
           (a * J.case_clause) list ->
           J.statement) ~(switch_exp : J.expression) ~(default : default_case)
@@ -1762,8 +1762,8 @@ let compile output_prefix =
         exp
     | {primitive; args; loc} -> compile_primitive_default primitive args loc
   and collect_dup_overrides (copy_id : Ident.t) (lam : Lam.t)
-      (acc : (Lam_compat.set_field_dbg_info * Lam.t) list) :
-      (Lam_compat.set_field_dbg_info * Lam.t) list option =
+      (acc : (Lambda.set_field_dbg_info * Lam.t) list) :
+      (Lambda.set_field_dbg_info * Lam.t) list option =
     match lam with
     | Lsequence
         ( Lprim
@@ -1792,7 +1792,7 @@ let compile output_prefix =
         let blocks, props =
           List.fold_left
             (fun (blocks, props)
-                 ((fld_info : Lam_compat.set_field_dbg_info), value_lam) ->
+                 ((fld_info : Lambda.set_field_dbg_info), value_lam) ->
               let val_output = compile_lambda need_value_cxt value_lam in
               let val_val =
                 match val_output.value with

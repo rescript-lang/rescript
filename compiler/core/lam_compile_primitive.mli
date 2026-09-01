@@ -32,6 +32,6 @@ val translate :
   string ->
   Location.t ->
   Lam_compile_context.t ->
-  Lam_primitive.t ->
+  Lambda.primitive ->
   J.expression list ->
   J.expression

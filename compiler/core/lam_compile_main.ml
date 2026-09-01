@@ -129,8 +129,7 @@ let js_hoisted_aliases (export_ids : Ident.t list)
       | (pos, name) :: fields ->
         access loc
           (Lam.prim
-             ~primitive:
-               (Lam_primitive.Pfield (pos, Lam_compat.Fld_module {name}))
+             ~primitive:(Lambda.Pfield (pos, Lambda.Fld_module {name}))
              ~args:[base] loc)
           fields
     in
@@ -140,17 +139,15 @@ let js_hoisted_aliases (export_ids : Ident.t list)
         else
           match Map_ident.find_opt group_map id with
           | Some
-              (( Lambda.Lvar _
-               | Lambda.Lprim {primitive = Lam_primitive.Pfield _; _} ) as alias)
-            ->
+              ((Lambda.Lvar _ | Lambda.Lprim {primitive = Lambda.Pfield _; _})
+               as alias) ->
             resolve_binding (Set_ident.add seen id) alias
           | Some resolved -> (resolved, Some id)
           | None -> (lam, Some id))
-      | Lambda.Lprim {primitive = Lam_primitive.Pfield (pos, _); args = [base]}
-        as lam -> (
+      | Lambda.Lprim {primitive = Lambda.Pfield (pos, _); args = [base]} as lam
+        -> (
         match fst (resolve_binding seen base) with
-        | Lambda.Lprim
-            {primitive = Lam_primitive.Pmakeblock (Blk_module _); args} -> (
+        | Lambda.Lprim {primitive = Lambda.Pmakeblock (Blk_module _); args} -> (
           match List.nth_opt args pos with
           | Some field -> resolve_binding seen field
           | None -> (lam, None))
@@ -172,8 +169,8 @@ let js_hoisted_aliases (export_ids : Ident.t list)
         Some (List.rev positions, binding_id, target)
       | field :: fields -> (
         match resolve Set_ident.empty lam with
-        | Lambda.Lprim
-            {primitive = Lam_primitive.Pmakeblock (Blk_module names); args} -> (
+        | Lambda.Lprim {primitive = Lambda.Pmakeblock (Blk_module names); args}
+          -> (
           match find_field field 0 names args with
           | Some (pos, arg) -> find_path arg fields ((pos, field) :: positions)
           | None -> None)

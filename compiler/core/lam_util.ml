@@ -57,7 +57,7 @@ let add_required_modules ( x : Ident.t list) (meta : Lam_stats.t) =
    syntactic and narrow. *)
 let refine_let ~kind param (arg : Lam.t) (l : Lam.t) : Lam.t =
   let is_block_constructor = function
-    | Lam_primitive.Pmakeblock _ -> true
+    | Lambda.Pmakeblock _ -> true
     | _ -> false
   in
   (* SafeAlias is the predicate that justifies the (Alias) rewrite
@@ -91,7 +91,7 @@ let refine_let ~kind param (arg : Lam.t) (l : Lam.t) : Lam.t =
       is_safe_to_alias inner
     | _ -> false
   in
-  match ((kind : Lam_compat.let_kind), arg, l) with
+  match ((kind : Lambda.let_kind), arg, l) with
   | _, _, Lvar w when Ident.same w param ->
     (* If the body immediately returns the binding (e.g. `{ let x = value; x }`),
          we skip creating `x` and keep `value`. There is no `rec`, so `value`
@@ -209,13 +209,13 @@ let field_flatten_get lam v i info (tbl : Lam_id_kind.t Hash_ident.t) : Lam.t =
         if fst fields.(i) = name then found := Ext_list.nth_opt ls i
       done;
       match !found with
-      | Some c when not (Lam_constant.is_allocating c) -> Lam.const c
+      | Some c when not (Lambda.const_is_allocating c) -> Lam.const c
       | _ -> lam ())
     | _ -> lam ())
   | Some (Constant (Const_block (_, ls))) -> (
     match Ext_list.nth_opt ls i with
     | None -> lam ()
-    | Some x when not (Lam_constant.is_allocating x) -> Lam.const x
+    | Some x when not (Lambda.const_is_allocating x) -> Lam.const x
     | Some _ -> lam ())
   | Some _ | None -> lam ()
 
