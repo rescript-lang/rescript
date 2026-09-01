@@ -178,18 +178,11 @@ let convert (lam : Lambda.lambda) : Lam.t =
     match lam with
     | Lvar x -> Lam.var x
     | Lconst x -> Lam.const x
-    | Lapply
-        {
-          ap_func = fn;
-          ap_args = args;
-          ap_loc = loc;
-          ap_inlined;
-          ap_transformed_jsx;
-        } ->
+    | Lapply {ap_func = fn; ap_args = args; ap_info; ap_transformed_jsx} ->
       (* we need do this eargly in case [aux fn] add some wrapper *)
       Lam.apply (convert_aux fn)
         (Ext_list.map args convert_aux)
-        {ap_loc = loc; ap_inlined} ~ap_transformed_jsx
+        ap_info ~ap_transformed_jsx
     | Lfunction {params; body; attr; loc} ->
       Lam.function_ ~loc ~attr ~params ~body:(convert_aux body)
     | Llet (kind, id, e, body) ->

@@ -22,7 +22,10 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-type ap_info = {ap_loc: Location.t; ap_inlined: Lambda.inline_attribute}
+type ap_info = Lambda.ap_info = {
+  ap_loc: Location.t;
+  ap_inlined: Lambda.inline_attribute;
+}
 
 type ident = Ident.t
 

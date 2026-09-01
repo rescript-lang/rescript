@@ -117,10 +117,9 @@ and apply_coercion_result loc strict funct param arg cc_res =
             apply_coercion loc Strict cc_res
               (Lapply
                  {
-                   ap_loc = loc;
                    ap_func = Lvar id;
                    ap_args = [arg];
-                   ap_inlined = Default_inline;
+                   ap_info = {ap_loc = loc; ap_inlined = Default_inline};
                    ap_transformed_jsx = false;
                  });
         })
@@ -302,10 +301,9 @@ and transl_module cc rootpath mexp =
       apply_coercion loc Strict cc
         (Lapply
            {
-             ap_loc = loc;
              ap_func = transl_module Tcoerce_none None funct;
              ap_args = [transl_module ccarg None arg];
-             ap_inlined = inlined_attribute;
+             ap_info = {ap_loc = loc; ap_inlined = inlined_attribute};
              ap_transformed_jsx = false;
            })
     | Tmod_constraint (arg, _, _, ccarg) ->
