@@ -196,7 +196,6 @@ let primitive ppf (prim : Lam_primitive.t) =
   | Parraysets -> fprintf ppf "array.set"
   | Pisint -> fprintf ppf "isint"
   | Pis_poly_var_block -> fprintf ppf "#is_poly_var_block"
-  | Pisout i -> fprintf ppf "isout %d" i
   | Pawait -> fprintf ppf "await"
   | Phash -> fprintf ppf "hash"
   | Phash_mixint -> fprintf ppf "hash_mix_int"

@@ -1545,60 +1545,6 @@ let rec int32_lsr ?comment (e1 : J.expression) (e2 : J.expression) :
    we can apply a more general optimization here,
    do some algebraic rewerite rules to rewrite [triple_equal]
 *)
-let rec is_out ?comment (e : t) (range : t) : t =
-  match (range.expression_desc, e.expression_desc) with
-  | Number (Int {i = 1l}), Var _ ->
-    not (or_ (triple_equal e zero_int_literal) (triple_equal e one_int_literal))
-  | ( Number (Int {i = 1l}),
-      ( Bin
-          ( Plus,
-            {expression_desc = Number (Int {i; _})},
-            ({expression_desc = Var _; _} as x) )
-      | Bin
-          ( Plus,
-            ({expression_desc = Var _; _} as x),
-            {expression_desc = Number (Int {i; _})} ) ) ) ->
-    not
-      (or_
-         (triple_equal x (int (Int32.neg i)))
-         (triple_equal x (int (Int32.sub Int32.one i))))
-  | ( Number (Int {i = 1l}),
-      Bin
-        ( Minus,
-          ({expression_desc = Var _; _} as x),
-          {expression_desc = Number (Int {i; _})} ) ) ->
-    not (or_ (triple_equal x (int (Int32.add i 1l))) (triple_equal x (int i)))
-  (* (x - i >>> 0 ) > k *)
-  | ( Number (Int {i = k}),
-      Bin
-        ( Minus,
-          ({expression_desc = Var _; _} as x),
-          {expression_desc = Number (Int {i; _})} ) ) ->
-    or_ (int_comp Cgt x (int (Int32.add i k))) (int_comp Clt x (int i))
-  | Number (Int {i = k}), Var _ ->
-    (* Note that js support [ 1 < x < 3],
-       we can optimize it into [ not ( 0<= x <=  k)]
-    *)
-    or_ (int_comp Cgt e (int k)) (int_comp Clt e zero_int_literal)
-  | ( _,
-      Bin
-        ( Bor,
-          ({
-             expression_desc =
-               ( Bin
-                   ( (Plus | Minus),
-                     {expression_desc = Number (Int {i = _; _})},
-                     {expression_desc = Var _; _} )
-               | Bin
-                   ( (Plus | Minus),
-                     {expression_desc = Var _; _},
-                     {expression_desc = Number (Int {i = _; _})} ) );
-           } as e),
-          {expression_desc = Number (Int {i = 0l}); _} ) ) ->
-    (* TODO: check correctness *)
-    is_out ?comment e range
-  | _, _ -> int_comp ?comment Cgt e range
-
 let rec float_add ?comment (e1 : t) (e2 : t) =
   match (e1.expression_desc, e2.expression_desc) with
   | Number (Int {i; _}), Number (Int {i = j; _}) -> int ?comment (Int32.add i j)

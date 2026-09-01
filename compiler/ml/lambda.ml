@@ -296,7 +296,6 @@ type primitive =
   (* Test if the argument is a block or an immediate integer *)
   | Pisint
   (* Test if the (integer) argument is outside an interval *)
-  | Pisout of int
   (* Test if the argument is null or undefined *)
   | Pis_null_undefined
   (* exn *)

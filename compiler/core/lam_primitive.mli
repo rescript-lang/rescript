@@ -132,7 +132,6 @@ type t =
   | Pawait
   (* etc or deprecated *)
   | Pis_poly_var_block
-  | Pisout of int
   | Pjscomp of Lam_compat.comparison
   | Pdebugger
   | Pjs_object_get of string

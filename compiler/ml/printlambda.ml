@@ -214,7 +214,6 @@ let primitive ppf = function
   | Pmakedict -> fprintf ppf "makedict"
   | Pdict_has -> fprintf ppf "dict.has"
   | Pisint -> fprintf ppf "isint"
-  | Pisout i -> fprintf ppf "isout %d" i
   | Pis_null -> fprintf ppf "is_null"
   | Pis_undefined -> fprintf ppf "is_undefined"
   | Pis_null_undefined -> fprintf ppf "isnullable"

@@ -373,20 +373,6 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
     match args with
     | [e1; e2] -> E.or_ e1 e2
     | _ -> assert false)
-  | Pisout off -> (
-    match args with
-    (* predicate: [x > range  or x < 0 ]
-       can be simplified if x is positive , x > range
-       if x is negative, fine, its uint is for sure larger than range,
-       the output is not readable, we might change it back.
-
-       Note that if range is small like [1], then the negative of
-       it can be more precise (given integer)
-       a normal case of the compiler is  that it will do a shift
-       in the first step [ (x - 1) > 1 or ( x - 1 ) < 0 ]
-    *)
-    | [range; e] -> E.is_out (E.offset e off) range
-    | _ -> assert false)
   | Pstringlength -> E.string_length (Ext_list.singleton_exn args)
   | Pstringrefs | Pstringrefu -> (
     match args with

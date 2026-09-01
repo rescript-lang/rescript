@@ -138,7 +138,6 @@ type t =
   | Pawait
   (* etc or deprecated *)
   | Pis_poly_var_block
-  | Pisout of int
   | Pjscomp of Lam_compat.comparison
   | Pdebugger
   | Pjs_object_get of string
@@ -227,10 +226,6 @@ let eq_primitive_approx (lhs : t) (rhs : t) =
   | Pcreate_extension a -> (
     match rhs with
     | Pcreate_extension b -> a = (b : string)
-    | _ -> false)
-  | Pisout l -> (
-    match rhs with
-    | Pisout r -> l = r
     | _ -> false)
   (* | Pcaml_obj_set_length -> rhs = Pcaml_obj_set_length *)
   | Pfield (n0, info0) -> (

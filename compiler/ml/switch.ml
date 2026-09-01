@@ -100,8 +100,15 @@ module type S = sig
   val bind : act -> (act -> act) -> act
   val make_const : int -> act
   val make_prim : primitive -> act list -> act
-  val make_isout : act -> act -> offset:int -> act
-  val make_isin : act -> act -> offset:int -> act
+
+  (* [make_if_out ~offset ~range arg ifso ifno] runs [ifso] when [arg] lies
+     outside [-offset .. range - offset] and [ifno] when it lies inside. The
+     producer chooses how to test that, because only it knows what the target
+     can express. *)
+  val make_if_out : offset:int -> range:int -> act -> act -> act -> act
+
+  (* Dual of [make_if_out]: [ifso] runs when [arg] lies inside the range. *)
+  val make_if_in : offset:int -> range:int -> act -> act -> act -> act
   val make_if : act -> act -> act -> act
   val make_switch :
     Location.t -> act -> int array -> act array -> offset:int -> act
@@ -479,19 +486,11 @@ let rec pkey chan  = function
 
   and make_if_ne arg i ifso ifnot = make_if_test Arg.neint arg i ifso ifnot
 
-  let do_make_if_out h arg ~offset ifso ifno =
-    Arg.make_if (Arg.make_isout h arg ~offset) ifso ifno
-
   let make_if_out ctx l d mk_ifso mk_ifno =
-    do_make_if_out (Arg.make_const d) ctx.arg ~offset:(-l) (mk_ifso ctx)
-      (mk_ifno ctx)
-
-  let do_make_if_in h arg ~offset ifso ifno =
-    Arg.make_if (Arg.make_isin h arg ~offset) ifso ifno
+    Arg.make_if_out ~offset:(-l) ~range:d ctx.arg (mk_ifso ctx) (mk_ifno ctx)
 
   let make_if_in ctx l d mk_ifso mk_ifno =
-    do_make_if_in (Arg.make_const d) ctx.arg ~offset:(-l) (mk_ifso ctx)
-      (mk_ifno ctx)
+    Arg.make_if_in ~offset:(-l) ~range:d ctx.arg (mk_ifso ctx) (mk_ifno ctx)
 
   let rec c_test ctx ({cases; actions} as s) =
     let lcases = Array.length cases in
