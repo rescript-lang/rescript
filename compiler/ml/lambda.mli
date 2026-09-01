@@ -349,11 +349,10 @@ type lambda =
   | Llet of let_kind * Ident.t * lambda * lambda
   | Lletrec of (Ident.t * lambda) list * lambda
   | Lprim of primitive * lambda list * Location.t
-  | Lswitch of lambda * lambda_switch * Location.t
+  | Lswitch of lambda * lambda_switch
   (* switch on strings, clauses are sorted by string order,
      strings are pairwise distinct *)
-  | Lstringswitch of
-      lambda * (string * lambda) list * lambda option * Location.t
+  | Lstringswitch of lambda * (string * lambda) list * lambda option
   | Lstaticraise of int * lambda list
   | Lstaticcatch of lambda * (int * Ident.t list) * lambda
   | Ltrywith of lambda * Ident.t * lambda

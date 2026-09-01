@@ -1878,58 +1878,42 @@ function process_collision(dir, c1, c2, state) {
           }
           if (exit$4 === 4) {
             let exit$5 = 0;
-            let typ$2;
             switch (t1) {
               case "GKoopaShell" :
-                if (typeof t2$3 !== "object") {
-                  if (t2$3 === "Brick") {
-                    dec_health(o2$6);
-                    reverse_left_right(o1$4);
-                    return [
-                      undefined,
-                      undefined
-                    ];
-                  }
-                  exit$5 = 5;
-                } else {
-                  typ$2 = t2$3._0;
-                  exit$5 = 6;
-                }
-                break;
               case "RKoopaShell" :
-                if (typeof t2$3 !== "object") {
-                  if (t2$3 === "Brick") {
-                    dec_health(o2$6);
-                    reverse_left_right(o1$4);
-                    return [
-                      undefined,
-                      undefined
-                    ];
-                  }
-                  exit$5 = 5;
-                } else {
-                  typ$2 = t2$3._0;
-                  exit$5 = 6;
-                }
+                exit$5 = 5;
                 break;
               default:
-                exit$5 = 5;
-            }
-            switch (exit$5) {
-              case 5 :
                 rev_dir(o1$4, t1, s1$3);
                 return [
                   undefined,
                   undefined
                 ];
-              case 6 :
+            }
+            if (exit$5 === 5) {
+              if (typeof t2$3 !== "object") {
+                if (t2$3 === "Brick") {
+                  dec_health(o2$6);
+                  reverse_left_right(o1$4);
+                  return [
+                    undefined,
+                    undefined
+                  ];
+                }
+                rev_dir(o1$4, t1, s1$3);
+                return [
+                  undefined,
+                  undefined
+                ];
+              } else {
                 let updated_block$1 = evolve_block(o2$6, context);
-                let spawned_item$1 = spawn_above(o1$4.dir, o2$6, typ$2, context);
+                let spawned_item$1 = spawn_above(o1$4.dir, o2$6, t2$3._0, context);
                 rev_dir(o1$4, t1, s1$3);
                 return [
                   updated_block$1,
                   spawned_item$1
                 ];
+              }
             }
           }
           break;

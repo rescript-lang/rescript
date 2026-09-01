@@ -53,10 +53,10 @@ let exists_var (p : Ident.t -> bool) (l : lambda) : bool =
     | Lconst _ | Lbreak | Lcontinue -> false
     | Lapply {ap_func; ap_args} -> hit ap_func || hit_list ap_args
     | Lprim (_, args, _) | Lstaticraise (_, args) -> hit_list args
-    | Lswitch (arg, sw, _) ->
+    | Lswitch (arg, sw) ->
       hit arg || hit_list_snd sw.sw_consts || hit_list_snd sw.sw_blocks
       || hit_opt sw.sw_failaction
-    | Lstringswitch (arg, cases, default, _) ->
+    | Lstringswitch (arg, cases, default) ->
       hit arg || hit_list_snd cases || hit_opt default
     | Lglobal_module _ -> false
   in

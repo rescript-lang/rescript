@@ -1656,7 +1656,7 @@ module S_arg = struct
   let make_isin h arg ~offset =
     Lprim (Pnot, [make_isout h arg ~offset], Location.none)
   let make_if cond ifso ifnot = Lifthenelse (cond, ifso, ifnot)
-  let make_switch loc arg cases acts ~offset =
+  let make_switch _loc arg cases acts ~offset =
     let l = ref [] in
     for i = Array.length cases - 1 downto 0 do
       l := (Switch_int (offset + i), acts.(cases.(i))) :: !l
@@ -1670,8 +1670,7 @@ module S_arg = struct
           sw_blocks = [];
           sw_failaction = None;
           sw_dispatch = Switch_direct;
-        },
-        loc )
+        } )
   let make_catch = make_catch_delayed
   let make_exit = make_exit
 end
@@ -1982,7 +1981,7 @@ let combine_constant loc arg cst partial ctx def
           const_lambda_list
       in
       let hs, sw, fail = share_actions_tree sw fail in
-      hs (Lstringswitch (arg, sw, fail, loc))
+      hs (Lstringswitch (arg, sw, fail))
     | Const_float _ ->
       make_test_sequence loc fail (Pfloatcomp Cneq) (Pfloatcomp Clt) arg
         const_lambda_list
@@ -2076,7 +2075,7 @@ let lower_constructor_matching_plan ~loc ~arg = function
   | Switch_on_constructors sw ->
     let hs, sw = share_actions_sw sw in
     let sw = reintroduce_fail sw in
-    hs (Lswitch (arg, sw, loc))
+    hs (Lswitch (arg, sw))
 
 let make_constructor_matching_plan ~cstr ~(layout : Variant_runtime.layout)
     ~fail_opt ~num_consts ~num_nonconsts ~tag_lambda_list ~consts ~nonconsts =
@@ -2396,12 +2395,12 @@ let rec lower_bind v arg lam =
     | false, true, false -> Lifthenelse (cond, lower_bind v arg ifso, ifnot)
     | false, false, true -> Lifthenelse (cond, ifso, lower_bind v arg ifnot)
     | _, _, _ -> bind Alias v arg lam)
-  | Lswitch (ls, ({sw_consts = [(i, act)]; sw_blocks = []} as sw), loc)
+  | Lswitch (ls, ({sw_consts = [(i, act)]; sw_blocks = []} as sw))
     when not (approx_present v ls) ->
-    Lswitch (ls, {sw with sw_consts = [(i, lower_bind v arg act)]}, loc)
-  | Lswitch (ls, ({sw_consts = []; sw_blocks = [(i, act)]} as sw), loc)
+    Lswitch (ls, {sw with sw_consts = [(i, lower_bind v arg act)]})
+  | Lswitch (ls, ({sw_consts = []; sw_blocks = [(i, act)]} as sw))
     when not (approx_present v ls) ->
-    Lswitch (ls, {sw with sw_blocks = [(i, lower_bind v arg act)]}, loc)
+    Lswitch (ls, {sw with sw_blocks = [(i, lower_bind v arg act)]})
   | Llet (Alias, vv, lv, l) ->
     if approx_present v lv then bind Alias v arg lam
     else Llet (Alias, vv, lv, lower_bind v arg l)

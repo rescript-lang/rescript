@@ -379,9 +379,8 @@ type lambda =
   | Llet of let_kind * Ident.t * lambda * lambda
   | Lletrec of (Ident.t * lambda) list * lambda
   | Lprim of primitive * lambda list * Location.t
-  | Lswitch of lambda * lambda_switch * Location.t
-  | Lstringswitch of
-      lambda * (string * lambda) list * lambda option * Location.t
+  | Lswitch of lambda * lambda_switch
+  | Lstringswitch of lambda * (string * lambda) list * lambda option
   | Lstaticraise of int * lambda list
   | Lstaticcatch of lambda * (int * Ident.t list) * lambda
   | Ltrywith of lambda * Ident.t * lambda
@@ -577,13 +576,12 @@ let make_key e =
       let y = make_key x in
       Llet (str, y, ex, tr_rec (Ident.add x (Lvar y) env) e)
     | Lprim (p, es, _) -> Lprim (p, tr_recs env es, Location.none)
-    | Lswitch (e, sw, loc) -> Lswitch (tr_rec env e, tr_sw env sw, loc)
-    | Lstringswitch (e, sw, d, _) ->
+    | Lswitch (e, sw) -> Lswitch (tr_rec env e, tr_sw env sw)
+    | Lstringswitch (e, sw, d) ->
       Lstringswitch
         ( tr_rec env e,
           List.map (fun (s, e) -> (s, tr_rec env e)) sw,
-          tr_opt env d,
-          Location.none )
+          tr_opt env d )
     | Lstaticraise (i, es) -> Lstaticraise (i, tr_recs env es)
     | Lstaticcatch (e1, xs, e2) ->
       Lstaticcatch (tr_rec env e1, xs, tr_rec env e2)
@@ -638,12 +636,12 @@ let iter f = function
     f body;
     List.iter (fun (_id, exp) -> f exp) decl
   | Lprim (_p, args, _loc) -> List.iter f args
-  | Lswitch (arg, sw, _) ->
+  | Lswitch (arg, sw) ->
     f arg;
     List.iter (fun (_key, case) -> f case) sw.sw_consts;
     List.iter (fun (_key, case) -> f case) sw.sw_blocks;
     iter_opt f sw.sw_failaction
-  | Lstringswitch (arg, cases, default, _) ->
+  | Lstringswitch (arg, cases, default) ->
     f arg;
     List.iter (fun (_, act) -> f act) cases;
     iter_opt f default
@@ -789,7 +787,7 @@ let subst_lambda s lam =
     | Llet (str, id, arg, body) -> Llet (str, id, subst arg, subst body)
     | Lletrec (decl, body) -> Lletrec (List.map subst_decl decl, subst body)
     | Lprim (p, args, loc) -> Lprim (p, List.map subst args, loc)
-    | Lswitch (arg, sw, loc) ->
+    | Lswitch (arg, sw) ->
       Lswitch
         ( subst arg,
           {
@@ -797,11 +795,9 @@ let subst_lambda s lam =
             sw_consts = List.map subst_case sw.sw_consts;
             sw_blocks = List.map subst_case sw.sw_blocks;
             sw_failaction = subst_opt sw.sw_failaction;
-          },
-          loc )
-    | Lstringswitch (arg, cases, default, loc) ->
-      Lstringswitch
-        (subst arg, List.map subst_strcase cases, subst_opt default, loc)
+          } )
+    | Lstringswitch (arg, cases, default) ->
+      Lstringswitch (subst arg, List.map subst_strcase cases, subst_opt default)
     | Lstaticraise (i, args) -> Lstaticraise (i, List.map subst args)
     | Lstaticcatch (e1, io, e2) -> Lstaticcatch (subst e1, io, subst e2)
     | Ltrywith (e1, exn, e2) -> Ltrywith (subst e1, exn, subst e2)

@@ -31,7 +31,7 @@ let inner_exists (l : t) (f : t -> bool) : bool =
   | Lvar (_ : ident) | Lglobal_module _ | Lconst (_ : Lam_constant.t) -> false
   | Lapply {ap_func; ap_args; ap_info = _} ->
     f ap_func || Ext_list.exists ap_args f
-  | Lfunction {body; arity = _; params = _} -> f body
+  | Lfunction {body; params = _} -> f body
   | Llet (_str, _id, arg, body) -> f arg || f body
   | Lletrec (decl, body) -> f body || Ext_list.exists_snd decl f
   | Lswitch

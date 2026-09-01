@@ -974,10 +974,10 @@ let exception_id_destructed (l : lambda) (fv : Ident.t) : bool =
     | Lfor_of (_, e1, e2) | Lfor_await_of (_, e1, e2) -> hit e1 || hit e2
     | Lglobal_module _ | Lconst _ -> false
     | Lapply {ap_func; ap_args} -> hit ap_func || hit_list ap_args
-    | Lswitch (arg, sw, _) ->
+    | Lswitch (arg, sw) ->
       hit arg || hit_list_snd sw.sw_consts || hit_list_snd sw.sw_blocks
       || hit_opt sw.sw_failaction
-    | Lstringswitch (arg, cases, default, _) ->
+    | Lstringswitch (arg, cases, default) ->
       hit arg || hit_list_snd cases || hit_opt default
     | Lstaticraise (_, args) -> hit_list args
     | Lifthenelse (e1, e2, e3) -> hit e1 || hit e2 || hit e3

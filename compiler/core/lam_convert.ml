@@ -191,8 +191,7 @@ let convert (lam : Lambda.lambda) : Lam.t =
         (Ext_list.map args convert_aux)
         {ap_loc = loc; ap_inlined} ~ap_transformed_jsx
     | Lfunction {params; body; attr; loc} ->
-      Lam.function_ ~loc ~attr ~arity:(List.length params) ~params
-        ~body:(convert_aux body)
+      Lam.function_ ~loc ~attr ~params ~body:(convert_aux body)
     | Llet (kind, id, e, body) ->
       Lam.let_ kind id (convert_aux e) (convert_aux body)
     | Lletrec (bindings, body) ->
@@ -201,8 +200,8 @@ let convert (lam : Lambda.lambda) : Lam.t =
     | Lprim (primitive, args, loc) ->
       let args = Ext_list.map args convert_aux in
       lam_prim ~primitive ~args loc
-    | Lswitch (e, s, _loc) -> convert_switch e s
-    | Lstringswitch (e, cases, default, _) ->
+    | Lswitch (e, s) -> convert_switch e s
+    | Lstringswitch (e, cases, default) ->
       Lam.stringswitch (convert_aux e)
         (Ext_list.map_snd cases convert_aux)
         (Ext_option.map default convert_aux)
