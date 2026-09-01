@@ -30,5 +30,6 @@ module O = {
 }
 
 let zzz = 11
+let templateString = `hello ${zzz->Int.toString}`
 
 //^doc

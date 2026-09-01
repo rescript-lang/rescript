@@ -6,6 +6,8 @@ let x: bool
 
 @inline(`中文`) let f2: string
 
+@inline(`\x61\n\uD83D\uDE00`) let escapedValue: string
+
 module N: {
   @inline(`中文`) let f3: string
 }

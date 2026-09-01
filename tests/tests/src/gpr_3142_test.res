@@ -7,6 +7,8 @@ type t = [
   | @as("hi") #u
   | @as(`你`) #b
   | @as(`我`) #c
+  | @as(`\x64`) #d
+  | @as(`\u0065`) #e
 ]
 
 let (v, u) = (tToJs, tFromJs)
@@ -19,11 +21,15 @@ describe(__MODULE__, () => {
     eq(__LOC__, v(#u), "hi")
     eq(__LOC__, v(#b), `你`)
     eq(__LOC__, v(#c), `我`)
+    eq(__LOC__, v(#d), "d")
+    eq(__LOC__, v(#e), "e")
 
     eq(__LOC__, u("x"), Some(#a))
     eq(__LOC__, u("hi"), Some(#u))
     eq(__LOC__, u(`你`), Some(#b))
     eq(__LOC__, u(`我`), Some(#c))
+    eq(__LOC__, u("d"), Some(#d))
+    eq(__LOC__, u("e"), Some(#e))
     eq(__LOC__, u("xx"), None)
   })
 })

@@ -1,6 +1,18 @@
 DocumentSymbol src/DocumentSymbol.res
 [
   {
+    "kind": 13,
+    "name": "templateString",
+    "range": {
+      "end": { "character": 49, "line": 32 },
+      "start": { "character": 0, "line": 32 }
+    },
+    "selectionRange": {
+      "end": { "character": 49, "line": 32 },
+      "start": { "character": 0, "line": 32 }
+    }
+  },
+  {
     "kind": 16,
     "name": "zzz",
     "range": {
