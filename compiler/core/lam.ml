@@ -533,10 +533,6 @@ let if_ (a : t) (b : t) (c : t) : t =
       match has_boolean_type a with
       | Some loc -> not_ loc a
       | None -> Lifthenelse (a, b, c))
-    | Lprim {primitive = Praise}, _ -> (
-      match c with
-      | Lconst _ -> Lifthenelse (a, b, c)
-      | _ -> seq (Lifthenelse (a, b, unit)) c)
     | _ -> (
       match a with
       | Lprim {primitive = Pisint; args = [Lvar i]; _} -> (
@@ -582,3 +578,76 @@ let sequor l r = if_ l true_ r
 
 (** [l && r ] *)
 let sequand l r = if_ l r false_
+
+(** [shallow_map_sharing f lam] rewrites [lam]'s immediate children with [f]
+    and rebuilds the node through its smart constructor, so the result is
+    normalized. A node whose children all come back physically unchanged is
+    returned as-is, so a traversal that rewrites nothing allocates nothing. *)
+let shallow_map_sharing (f : t -> t) (lam : t) : t =
+  match lam with
+  | Lvar _ | Lglobal_module _ | Lconst _ | Lbreak | Lcontinue -> lam
+  | Lapply ap ->
+    let fn = f ap.ap_func in
+    let args = Ext_list.map_sharing ap.ap_args f in
+    if fn == ap.ap_func && args == ap.ap_args then lam
+    else apply fn args ap.ap_info ~ap_transformed_jsx:ap.ap_transformed_jsx
+  | Lfunction {params; body; attr; loc} ->
+    let body' = f body in
+    if body' == body then lam else function_ ~loc ~attr ~params ~body:body'
+  | Llet (k, id, e, b) ->
+    let e' = f e and b' = f b in
+    if e' == e && b' == b then lam else let_ k id e' b'
+  | Lletrec (bs, b) ->
+    let bs' = Ext_list.map_snd_sharing bs f and b' = f b in
+    if bs' == bs && b' == b then lam else letrec bs' b'
+  | Lprim {primitive; args; loc} ->
+    let args' = Ext_list.map_sharing args f in
+    if args' == args then lam else prim ~primitive ~args:args' loc
+  | Lswitch (e, sw) ->
+    let e' = f e in
+    let consts = Ext_list.map_snd_sharing sw.sw_consts f in
+    let blocks = Ext_list.map_snd_sharing sw.sw_blocks f in
+    let fail = Ext_option.map_sharing sw.sw_failaction f in
+    if
+      e' == e && consts == sw.sw_consts && blocks == sw.sw_blocks
+      && fail == sw.sw_failaction
+    then lam
+    else
+      switch e'
+        {sw with sw_consts = consts; sw_blocks = blocks; sw_failaction = fail}
+  | Lstringswitch (e, cases, d) ->
+    let e' = f e in
+    let cases' = Ext_list.map_snd_sharing cases f in
+    let d' = Ext_option.map_sharing d f in
+    if e' == e && cases' == cases && d' == d then lam
+    else stringswitch e' cases' d'
+  | Lstaticraise (i, args) ->
+    let args' = Ext_list.map_sharing args f in
+    if args' == args then lam else staticraise i args'
+  | Lstaticcatch (b, h, hd) ->
+    let b' = f b and hd' = f hd in
+    if b' == b && hd' == hd then lam else staticcatch b' h hd'
+  | Ltrywith (b, id, h) ->
+    let b' = f b and h' = f h in
+    if b' == b && h' == h then lam else try_ b' id h'
+  | Lifthenelse (a, b, c) ->
+    let a' = f a and b' = f b and c' = f c in
+    if a' == a && b' == b && c' == c then lam else if_ a' b' c'
+  | Lsequence (a, b) ->
+    let a' = f a and b' = f b in
+    if a' == a && b' == b then lam else seq a' b'
+  | Lwhile (a, b) ->
+    let a' = f a and b' = f b in
+    if a' == a && b' == b then lam else while_ a' b'
+  | Lfor (id, a, b, d, c) ->
+    let a' = f a and b' = f b and c' = f c in
+    if a' == a && b' == b && c' == c then lam else for_ id a' b' d c'
+  | Lfor_of (id, a, b) ->
+    let a' = f a and b' = f b in
+    if a' == a && b' == b then lam else for_of id a' b'
+  | Lfor_await_of (id, a, b) ->
+    let a' = f a and b' = f b in
+    if a' == a && b' == b then lam else for_await_of id a' b'
+  | Lassign (id, b) ->
+    let b' = f b in
+    if b' == b then lam else assign id b'
