@@ -832,6 +832,27 @@ let subst_lambda s lam =
   in
   subst lam
 
+let make_exit i = Lstaticraise (i, [])
+
+let rec as_simple_exit = function
+  | Lstaticraise (i, []) -> Some i
+  | Llet (Alias, _, _, e) -> as_simple_exit e
+  | _ -> None
+
+(* Introduce a catch around [handler], if worth it. Returns the exit number to
+   raise to, and a function wrapping a body in the catch - a body that turns
+   out to be exactly that raise gets the handler itself instead. *)
+let make_catch_delayed handler =
+  match as_simple_exit handler with
+  | Some i -> (i, fun act -> act)
+  | None -> (
+    let i = next_raise_count () in
+    ( i,
+      fun body ->
+        match body with
+        | Lstaticraise (j, _) -> if i = j then handler else body
+        | _ -> Lstaticcatch (body, (i, []), handler) ))
+
 (* To let-bind expressions to variables *)
 
 let bind str var exp body =

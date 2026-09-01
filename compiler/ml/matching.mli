@@ -19,8 +19,7 @@ open Typedtree
 open Lambda
 
 val call_switcher_variant_constant :
-  (Location.t ->
-  Lambda.lambda option ->
+  (Lambda.lambda option ->
   Lambda.lambda ->
   (int * (string * Lambda.lambda)) list ->
   Lambda.lambda)

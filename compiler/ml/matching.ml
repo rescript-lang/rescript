@@ -446,28 +446,6 @@ module Store_exp = Switch.Store (struct
   let make_key = Lambda.make_key
 end)
 
-let make_exit i = Lstaticraise (i, [])
-
-(* Introduce a catch, if worth it, delayed version *)
-let rec as_simple_exit = function
-  | Lstaticraise (i, []) -> Some i
-  | Llet (Alias, _, _, e) -> as_simple_exit e
-  | _ -> None
-
-let make_catch_delayed handler =
-  match as_simple_exit handler with
-  | Some i -> (i, fun act -> act)
-  | None -> (
-    let i = next_raise_count () in
-    (*
-    Printf.eprintf "SHARE LAMBDA: %i\n%s\n" i (string_of_lam handler);
-*)
-    ( i,
-      fun body ->
-        match body with
-        | Lstaticraise (j, _) -> if i = j then handler else body
-        | _ -> Lstaticcatch (body, (i, []), handler) ))
-
 let raw_action l =
   match make_key l with
   | Some l -> l
@@ -1664,111 +1642,6 @@ let make_test_sequence loc fail tst lt_tst arg const_lambda_list =
   in
   hs (make_test_sequence const_lambda_list)
 
-module S_arg = struct
-  type primitive = Lambda.primitive
-
-  let eqint = Pintcomp Ceq
-  let neint = Pintcomp Cneq
-  let leint = Pintcomp Cle
-  let ltint = Pintcomp Clt
-  let geint = Pintcomp Cge
-  let gtint = Pintcomp Cgt
-
-  type act = Lambda.lambda
-
-  let make_prim p args = Lprim {primitive = p; args; loc = Location.none}
-
-  let bind arg body =
-    let newvar, newarg =
-      match arg with
-      | Lvar v -> (v, arg)
-      | _ ->
-        let newvar = Ident.create "switcher" in
-        (newvar, Lvar newvar)
-    in
-    bind Alias newvar arg (body newarg)
-  let make_const i = Lconst (const_int i)
-  let make_if cond ifso ifnot = Lifthenelse (cond, ifso, ifnot)
-
-  (* [covers_range cases ~start ~finish] holds when [cases] is exactly the
-     contiguous integer keys [start .. finish], in order. *)
-  let rec covers_range (cases : (Lambda.switch_key * act) list) ~start ~finish =
-    match cases with
-    | [] -> finish < start
-    | (Switch_int i, _) :: rest ->
-      start <= finish && i = start
-      && covers_range rest ~start:(start + 1) ~finish
-    | (Switch_constructor _, _) :: _ -> false
-
-  (* [arg] is outside [lo .. hi]. A two-value range reads better as a pair of
-     equality tests than as a pair of comparisons. *)
-  let out_of_range arg ~lo ~hi =
-    let loc = Location.none in
-    let test cmp k =
-      Lprim {primitive = Pintcomp cmp; args = [arg; Lconst (const_int k)]; loc}
-    in
-    if hi = lo + 1 then
-      Lprim
-        {
-          primitive = Pnot;
-          args =
-            [
-              Lprim {primitive = Psequor; args = [test Ceq lo; test Ceq hi]; loc};
-            ];
-          loc;
-        }
-    else Lprim {primitive = Psequor; args = [test Cgt hi; test Clt lo]; loc}
-
-  let make_if_out ~offset ~range arg ifso ifno =
-    let lo = -offset and hi = range - offset in
-    match (arg, ifno) with
-    (* The switcher guards a jump table with a range test, because on a machine
-       target that beats a table carrying a default. A JS [switch] has a native
-       [default], so when the table already covers the whole guarded range the
-       guard is pure overhead: drop it and make its action the failaction. *)
-    | ( Lvar x,
-        Lswitch
-          ( (Lvar y as sarg),
-            ({
-               sw_blocks = [];
-               sw_blocks_full = true;
-               sw_consts;
-               sw_failaction = None;
-             } as sw) ) )
-      when Ident.same x y && covers_range sw_consts ~start:lo ~finish:hi ->
-      Lswitch (sarg, {sw with sw_failaction = Some ifso; sw_consts_full = false})
-    | _ -> Lifthenelse (out_of_range arg ~lo ~hi, ifso, ifno)
-
-  let make_if_in ~offset ~range arg ifso ifno =
-    let lo = -offset and hi = range - offset in
-    let cond =
-      Lprim
-        {
-          primitive = Pnot;
-          args = [out_of_range arg ~lo ~hi];
-          loc = Location.none;
-        }
-    in
-    Lifthenelse (cond, ifso, ifno)
-  let make_switch _loc arg cases acts ~offset =
-    let l = ref [] in
-    for i = Array.length cases - 1 downto 0 do
-      l := (Switch_int (offset + i), acts.(cases.(i))) :: !l
-    done;
-    Lswitch
-      ( arg,
-        {
-          sw_consts_full = true;
-          sw_consts = !l;
-          sw_blocks_full = true;
-          sw_blocks = [];
-          sw_failaction = None;
-          sw_dispatch = Switch_direct;
-        } )
-  let make_catch = make_catch_delayed
-  let make_exit = make_exit
-end
-
 (* Action sharing for Lswitch argument *)
 let share_actions_sw sw =
   (* Attempt sharing on all actions *)
@@ -1850,7 +1723,6 @@ let reintroduce_fail sw =
     else sw
   | Some _ -> sw
 
-module Switcher = Switch.Make (S_arg)
 open Switch
 
 let rec last def = function
@@ -1956,9 +1828,9 @@ let as_interval fail low high l =
     | None -> as_interval_nofail l
     | Some act -> as_interval_canfail act low high l )
 
-let call_switcher loc fail arg low high int_lambda_list =
+let call_switcher fail arg low high int_lambda_list =
   let edges, (cases, actions) = as_interval fail low high int_lambda_list in
-  Switcher.zyva loc edges arg cases actions
+  Switch.zyva edges arg cases actions
 
 let rec list_as_pat = function
   | [] -> fatal_error "Matching.list_as_pat"
@@ -2050,7 +1922,7 @@ let combine_constant loc arg cst partial ctx def
             | _ -> assert false)
           const_lambda_list
       in
-      call_switcher loc fail arg min_int max_int int_lambda_list
+      call_switcher fail arg min_int max_int int_lambda_list
     | Const_char _ ->
       let int_lambda_list =
         List.map
@@ -2059,7 +1931,7 @@ let combine_constant loc arg cst partial ctx def
             | _ -> assert false)
           const_lambda_list
       in
-      call_switcher loc fail arg 0 max_int int_lambda_list
+      call_switcher fail arg 0 max_int int_lambda_list
     | Const_string _ ->
       (* Note as the bytecode compiler may resort to dichotomic search,
          the clauses of stringswitch  are sorted with duplicates removed.
@@ -2298,10 +2170,10 @@ let make_test_sequence_variant_constant fail arg int_lambda_list =
     as_interval fail min_int max_int
       (List.map (fun (a, (_, c)) -> (a, c)) int_lambda_list)
   in
-  Switcher.test_sequence arg cases actions
+  Switch.test_sequence arg cases actions
 
-let call_switcher_variant_constant loc fail arg int_lambda_list =
-  call_switcher loc fail arg min_int max_int
+let call_switcher_variant_constant fail arg int_lambda_list =
+  call_switcher fail arg min_int max_int
     (List.map (fun (a, (_, c)) -> (a, c)) int_lambda_list)
 
 let call_switcher_variant_constr loc fail arg int_lambda_list =
@@ -2310,12 +2182,11 @@ let call_switcher_variant_constr loc fail arg int_lambda_list =
     ( Alias,
       v,
       Lprim {primitive = Pfield (0, Fld_poly_var_tag); args = [arg]; loc},
-      call_switcher loc fail (Lvar v) min_int max_int
+      call_switcher fail (Lvar v) min_int max_int
         (List.map (fun (a, (_, c)) -> (a, c)) int_lambda_list) )
 
 let call_switcher_variant_constant :
-    (Location.t ->
-    Lambda.lambda option ->
+    (Lambda.lambda option ->
     Lambda.lambda ->
     (int * (string * Lambda.lambda)) list ->
     Lambda.lambda)
@@ -2388,7 +2259,7 @@ let combine_variant loc row arg partial ctx def (tag_lambda_list, total1, _pats)
         | None -> lam
         | Some fail -> test_int_or_block arg fail lam)
       | _, _ ->
-        let lam_const = !call_switcher_variant_constant loc fail arg consts
+        let lam_const = !call_switcher_variant_constant fail arg consts
         and lam_nonconst =
           !call_switcher_variant_constr loc fail arg nonconsts
         in
@@ -2400,9 +2271,7 @@ let combine_array loc arg partial ctx def (len_lambda_list, total1, _pats) =
   let fail, local_jumps = mk_failaction_neg partial ctx def in
   let lambda1 =
     let newvar = Ident.create "len" in
-    let switch =
-      call_switcher loc fail (Lvar newvar) 0 max_int len_lambda_list
-    in
+    let switch = call_switcher fail (Lvar newvar) 0 max_int len_lambda_list in
     bind Alias newvar
       (Lprim {primitive = Parraylength; args = [arg]; loc})
       switch
