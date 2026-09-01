@@ -43,9 +43,6 @@ let rec struct_const ppf = function
   | Const_js_false -> fprintf ppf "false"
   | Const_js_true -> fprintf ppf "true"
 
-let value_kind = function
-  | Pgenval -> ""
-
 (* let field_kind = function
    | Pgenval -> "*"
    | Pintval -> "int"
@@ -277,7 +274,7 @@ let rec lam ppf = function
     in
     fprintf ppf "@[<2>(function%a@ %a%a)@]" pr_params params function_attribute
       attr lam body
-  | Llet (str, k, id, arg, body) ->
+  | Llet (str, id, arg, body) ->
     let kind = function
       | Alias -> "a"
       | Strict -> ""
@@ -285,14 +282,13 @@ let rec lam ppf = function
       | Variable -> "v"
     in
     let rec letbody = function
-      | Llet (str, k, id, arg, body) ->
-        fprintf ppf "@ @[<2>%a =%s%s@ %a@]" Ident.print id (kind str)
-          (value_kind k) lam arg;
+      | Llet (str, id, arg, body) ->
+        fprintf ppf "@ @[<2>%a =%s@ %a@]" Ident.print id (kind str) lam arg;
         letbody body
       | expr -> expr
     in
-    fprintf ppf "@[<2>(let@ @[<hv 1>(@[<2>%a =%s%s@ %a@]" Ident.print id
-      (kind str) (value_kind k) lam arg;
+    fprintf ppf "@[<2>(let@ @[<hv 1>(@[<2>%a =%s@ %a@]" Ident.print id
+      (kind str) lam arg;
     let expr = letbody body in
     fprintf ppf ")@]@ %a)@]" lam expr
   | Lletrec (id_arg_list, body) ->

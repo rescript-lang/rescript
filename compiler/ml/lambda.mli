@@ -278,8 +278,6 @@ type primitive =
 
 and comparison = Ceq | Cneq | Clt | Cgt | Cle | Cge
 
-and value_kind = Pgenval
-
 type structured_constant =
   | Const_int of int32
   | Const_char of int
@@ -348,7 +346,7 @@ type lambda =
   | Lconst of structured_constant
   | Lapply of lambda_apply
   | Lfunction of lfunction
-  | Llet of let_kind * value_kind * Ident.t * lambda * lambda
+  | Llet of let_kind * Ident.t * lambda * lambda
   | Lletrec of (Ident.t * lambda) list * lambda
   | Lprim of primitive * lambda list * Location.t
   | Lswitch of lambda * lambda_switch * Location.t

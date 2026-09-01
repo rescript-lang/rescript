@@ -46,7 +46,7 @@ let exists_var (p : Ident.t -> bool) (l : lambda) : bool =
     | Lfor_await_of (_, e1, e2) ->
       hit e1 || hit e2
     | Lfunction {body} -> hit body
-    | Llet (_, _, _, arg, body) -> hit arg || hit body
+    | Llet (_, _, arg, body) -> hit arg || hit body
     | Lletrec (decl, body) -> hit body || hit_list_snd decl
     | Lfor (_, e1, e2, _, e3) | Lifthenelse (e1, e2, e3) ->
       hit e1 || hit e2 || hit e3
@@ -88,7 +88,7 @@ let bind_rec (groups : bindings) (body : lambda) : lambda =
   match groups with
   | [(id, bind)] ->
     if exists_var (Ident.same id) bind then Lletrec (groups, body)
-    else Llet (Strict, Pgenval, id, bind, body)
+    else Llet (Strict, id, bind, body)
   | _ ->
     let domain, int_mapping, node_vec = preprocess_deps groups in
     let clusters = Ext_scc.graph node_vec in
@@ -109,6 +109,6 @@ let bind_rec (groups : bindings) (body : lambda) : lambda =
             let base_key = Ordered_hash_map_local_ident.rank domain id in
             if Int_vec_util.mem base_key node_vec.(base_key) then
               Lletrec (bindings, acc)
-            else Llet (Strict, Pgenval, id, lam, acc)
+            else Llet (Strict, id, lam, acc)
           | _ -> Lletrec (bindings, acc))
         clusters body

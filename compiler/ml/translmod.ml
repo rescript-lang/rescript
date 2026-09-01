@@ -65,7 +65,7 @@ let transl_type_extension env rootpath (tyext : Typedtree.type_extension) body :
           (field_path rootpath ext.ext_id)
           ext
       in
-      Lambda.Llet (Strict, Pgenval, ext.ext_id, lam, body))
+      Lambda.Llet (Strict, ext.ext_id, lam, body))
     tyext.tyext_constructors body
 
 (* Compile a coercion *)
@@ -128,7 +128,6 @@ and wrap_id_pos_list loc id_pos_list get_field lam =
           let id'' = Ident.create (Ident.name id') in
           ( Lambda.Llet
               ( Alias,
-                Pgenval,
                 id'',
                 apply_coercion loc Alias c (get_field (Ident.name id') pos),
                 lam ),
@@ -255,8 +254,7 @@ let rec compile_functor mexp coercion root_path loc =
   let param' = Ident.rename param in
   let arg = apply_coercion loc_ Alias arg_coercion (Lvar param') in
   let body =
-    Lambda.Llet
-      (Alias, Pgenval, param, arg, transl_module res_coercion body_path body)
+    Lambda.Llet (Alias, param, arg, transl_module res_coercion body_path body)
   in
   Lambda.Lfunction
     {
@@ -411,7 +409,6 @@ and transl_structure loc fields cc rootpath final_env = function
       in
       ( Llet
           ( Strict,
-            Pgenval,
             id,
             Translcore.transl_extension_constructor item.str_env path ext,
             body ),
@@ -431,7 +428,7 @@ and transl_structure loc fields cc rootpath final_env = function
         Translattribute.add_inline_attribute module_body mb.mb_loc
           mb.mb_attributes
       in
-      (Llet (pure_module mb.mb_expr, Pgenval, id, module_body, body), size)
+      (Llet (pure_module mb.mb_expr, id, module_body, body), size)
     | Tstr_recmodule bindings ->
       let ext_fields =
         List.rev_append (List.map (fun mb -> mb.mb_id) bindings) fields
@@ -456,7 +453,6 @@ and transl_structure loc fields cc rootpath final_env = function
           let body, size = rebind_idents (pos + 1) (id :: newfields) ids in
           ( Llet
               ( Alias,
-                Pgenval,
                 id,
                 Lprim
                   ( Pfield (pos, Fld_module {name = Ident.name id}),
@@ -466,12 +462,7 @@ and transl_structure loc fields cc rootpath final_env = function
             size )
       in
       let body, size = rebind_idents 0 fields ids in
-      ( Llet
-          ( pure_module modl,
-            Pgenval,
-            mid,
-            transl_module Tcoerce_none None modl,
-            body ),
+      ( Llet (pure_module modl, mid, transl_module Tcoerce_none None modl, body),
         size )
     | Tstr_primitive _ | Tstr_type _ | Tstr_modtype _ | Tstr_open _
     | Tstr_attribute _ ->
