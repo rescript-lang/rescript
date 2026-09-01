@@ -1380,61 +1380,39 @@ let name_lambda strict arg fn =
     let id = Ident.create "let" in
     Llet (strict, id, arg, fn id)
 
-let iter_opt f = function
-  | None -> ()
-  | Some e -> f e
-
-let iter f = function
-  | Lvar _ | Lglobal_module _ | Lconst _ -> ()
-  | Lapply {ap_func = fn; ap_args = args} ->
-    f fn;
-    List.iter f args
+(* Does any immediate child satisfy [f]? Short-circuits. *)
+let shallow_exists (f : lambda -> bool) (lam : lambda) : bool =
+  match lam with
+  | Lvar _ | Lglobal_module _ | Lconst _ | Lbreak | Lcontinue -> false
+  | Lapply {ap_func; ap_args} -> f ap_func || Ext_list.exists ap_args f
   | Lfunction {body} -> f body
-  | Llet (_str, _id, arg, body) ->
-    f arg;
-    f body
-  | Lletrec (decl, body) ->
-    f body;
-    List.iter (fun (_id, exp) -> f exp) decl
-  | Lprim {primitive = _p; args; loc = _loc} -> List.iter f args
-  | Lswitch (arg, sw) ->
-    f arg;
-    List.iter (fun (_key, case) -> f case) sw.sw_consts;
-    List.iter (fun (_key, case) -> f case) sw.sw_blocks;
-    iter_opt f sw.sw_failaction
+  | Llet (_, _, arg, body) -> f arg || f body
+  | Lletrec (decl, body) -> f body || Ext_list.exists_snd decl f
+  | Lprim {args} -> Ext_list.exists args f
+  | Lswitch (arg, {sw_consts; sw_blocks; sw_failaction}) ->
+    f arg
+    || Ext_list.exists_snd sw_consts f
+    || Ext_list.exists_snd sw_blocks f
+    || Ext_option.exists sw_failaction f
   | Lstringswitch (arg, cases, default) ->
-    f arg;
-    List.iter (fun (_, act) -> f act) cases;
-    iter_opt f default
-  | Lstaticraise (_, args) -> List.iter f args
-  | Lstaticcatch (e1, _, e2) ->
-    f e1;
-    f e2
-  | Ltrywith (e1, _, e2) ->
-    f e1;
-    f e2
-  | Lifthenelse (e1, e2, e3) ->
-    f e1;
-    f e2;
-    f e3
-  | Lsequence (e1, e2) ->
-    f e1;
-    f e2
-  | Lbreak | Lcontinue -> ()
-  | Lwhile (e1, e2) ->
-    f e1;
-    f e2
-  | Lfor (_v, e1, e2, _dir, e3) ->
-    f e1;
-    f e2;
-    f e3
-  | Lfor_of (_v, e1, e2) ->
-    f e1;
-    f e2
-  | Lfor_await_of (_v, e1, e2) ->
-    f e1;
-    f e2
+    f arg || Ext_list.exists_snd cases f || Ext_option.exists default f
+  | Lstaticraise (_, args) -> Ext_list.exists args f
+  | Lstaticcatch (e1, _, e2) -> f e1 || f e2
+  | Ltrywith (e1, _, e2) -> f e1 || f e2
+  | Lifthenelse (e1, e2, e3) -> f e1 || f e2 || f e3
+  | Lsequence (e1, e2) -> f e1 || f e2
+  | Lwhile (e1, e2) -> f e1 || f e2
+  | Lfor (_, e1, e2, _, e3) -> f e1 || f e2 || f e3
+  | Lfor_of (_, e1, e2) | Lfor_await_of (_, e1, e2) -> f e1 || f e2
   | Lassign (_, e) -> f e
+
+let iter f lam =
+  ignore
+    (shallow_exists
+       (fun x ->
+         f x;
+         false)
+       lam)
 
 module Ident_set = Set.Make (Ident)
 
