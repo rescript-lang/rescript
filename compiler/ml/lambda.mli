@@ -550,6 +550,9 @@ val mk_builtin : builtin -> lambda list -> Location.t -> lambda
 val lambda_module_alias : lambda
 val name_lambda : let_kind -> lambda -> (Ident.t -> lambda) -> lambda
 
+val shallow_exists : (lambda -> bool) -> lambda -> bool
+(** Does any immediate child satisfy the predicate? Short-circuits. *)
+
 val iter : (lambda -> unit) -> lambda -> unit
 module Ident_set : Set.S with type elt = Ident.t
 val free_variables : lambda -> Ident_set.t

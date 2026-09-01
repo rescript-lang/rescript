@@ -28,7 +28,7 @@ let has_exit_code lam exits =
     | Lfunction _ -> false
     (* static exit can not cross function boundary *)
     | Lstaticraise (p, _) when exits p -> true
-    | _ -> Lam_iter.inner_exists lam aux
+    | _ -> Lambda.shallow_exists aux lam
   in
   aux lam
 
@@ -36,4 +36,4 @@ let rec has_exit (lam : Lam.t) =
   match lam with
   | Lfunction _ -> false
   | Lstaticraise (_, _) -> true
-  | _ -> Lam_iter.inner_exists lam has_exit
+  | _ -> Lambda.shallow_exists has_exit lam
