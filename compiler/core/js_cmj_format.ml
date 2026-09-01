@@ -29,7 +29,7 @@ type arity = Single of Lam_arity.t | Submodule of Lam_arity.t array
 (* TODO: add a magic number *)
 type cmj_value = {
   arity: arity;
-  persistent_closed_lambda: Lambda.lambda option;
+  persistent_closed_lambda: Lambda.t option;
       (** Either constant or closed functor *)
 }
 
@@ -40,7 +40,7 @@ let single_na = Single Lam_arity.na
 type keyed_cmj_value = {
   name: string;
   arity: arity;
-  persistent_closed_lambda: Lambda.lambda option;
+  persistent_closed_lambda: Lambda.t option;
 }
 
 type keyed_cmj_values = keyed_cmj_value array

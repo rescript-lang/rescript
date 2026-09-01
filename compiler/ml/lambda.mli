@@ -337,7 +337,7 @@ type function_attribute = {
   one_unit_arg: bool;
 }
 
-type lambda = private
+type t = private
   | Lvar of Ident.t
   | Lglobal_module of Ident.t
       (** A reference to another compilation unit: a name the module system
@@ -345,38 +345,34 @@ type lambda = private
   | Lconst of structured_constant
   | Lapply of lambda_apply
   | Lfunction of lfunction
-  | Llet of let_kind * Ident.t * lambda * lambda
-  | Lletrec of (Ident.t * lambda) list * lambda
+  | Llet of let_kind * Ident.t * t * t
+  | Lletrec of (Ident.t * t) list * t
   | Lprim of prim_info
-  | Lswitch of lambda * lambda_switch
+  | Lswitch of t * lambda_switch
   (* switch on strings, clauses are sorted by string order,
      strings are pairwise distinct *)
-  | Lstringswitch of lambda * (string * lambda) list * lambda option
-  | Lstaticraise of int * lambda list
-  | Lstaticcatch of lambda * (int * Ident.t list) * lambda
-  | Ltrywith of lambda * Ident.t * lambda
-  | Lifthenelse of lambda * lambda * lambda
-  | Lsequence of lambda * lambda
+  | Lstringswitch of t * (string * t) list * t option
+  | Lstaticraise of int * t list
+  | Lstaticcatch of t * (int * Ident.t list) * t
+  | Ltrywith of t * Ident.t * t
+  | Lifthenelse of t * t * t
+  | Lsequence of t * t
   | Lbreak
   | Lcontinue
-  | Lwhile of lambda * lambda
-  | Lfor of Ident.t * lambda * lambda * direction_flag * lambda
-  | Lfor_of of Ident.t * lambda * lambda
-  | Lfor_await_of of Ident.t * lambda * lambda
-  | Lassign of Ident.t * lambda
+  | Lwhile of t * t
+  | Lfor of Ident.t * t * t * direction_flag * t
+  | Lfor_of of Ident.t * t * t
+  | Lfor_await_of of Ident.t * t * t
+  | Lassign of Ident.t * t
 
 and lfunction = {
   params: Ident.t list;
-  body: lambda;
+  body: t;
   attr: function_attribute; (* specified with [@inline] attribute *)
   loc: Location.t;
 }
 
-and prim_info = private {
-  primitive: primitive;
-  args: lambda list;
-  loc: Location.t;
-}
+and prim_info = private {primitive: primitive; args: t list; loc: Location.t}
 
 and ap_info = {
   ap_loc: Location.t;
@@ -384,8 +380,8 @@ and ap_info = {
 }
 
 and lambda_apply = private {
-  ap_func: lambda;
-  ap_args: lambda list;
+  ap_func: t;
+  ap_args: t list;
   ap_info: ap_info;
   ap_transformed_jsx: bool;
 }
@@ -407,7 +403,7 @@ and 'a switch = {
   sw_dispatch: switch_dispatch;
 }
 
-and lambda_switch = lambda switch
+and lambda_switch = t switch
 
 (* Lambda code for the middle-end.
    * In the closure case the code is a sequence of assignments to a
@@ -422,7 +418,7 @@ and lambda_switch = lambda switch
 *)
 
 (* Sharing key *)
-val make_key : lambda -> lambda option
+val make_key : t -> t option
 
 val const_int : int -> structured_constant
 val const_string : string -> string option -> structured_constant
@@ -433,8 +429,8 @@ val const_shape_none : structured_constant
 val const_polyvar : string -> structured_constant
 val const_polyvar_name : string -> structured_constant
 val const_module_alias : structured_constant
-val lambda_assert_false : lambda
-val lambda_unit : lambda
+val lambda_assert_false : t
+val lambda_unit : t
 
 val eq_primitive_approx : primitive -> primitive -> bool
 
@@ -452,7 +448,7 @@ val cmp_int32 : comparison -> int32 -> int32 -> bool
 
 val cmp_float : comparison -> float -> float -> bool
 
-(* Constructors. [lambda] is private, so every term outside this module is
+(* Constructors. [t] is private, so every term outside this module is
    built through one of these.
 
    Most are plain wrappers. Six normalize as they build, and are the only
@@ -476,95 +472,94 @@ val cmp_float : comparison -> float -> float -> bool
    means during the optimizer's passes rather than at production: the
    frontend has no constants in operand position yet. *)
 
-val var : Ident.t -> lambda
+val var : Ident.t -> t
 
-val global_module : Ident.t -> lambda
+val global_module : Ident.t -> t
 
-val const : structured_constant -> lambda
+val const : structured_constant -> t
 
-val apply :
-  ?ap_transformed_jsx:bool -> lambda -> lambda list -> ap_info -> lambda
+val apply : ?ap_transformed_jsx:bool -> t -> t list -> ap_info -> t
 
 val function_ :
   loc:Location.t ->
   attr:function_attribute ->
   params:Ident.t list ->
-  body:lambda ->
-  lambda
+  body:t ->
+  t
 
-val let_ : let_kind -> Ident.t -> lambda -> lambda -> lambda
+val let_ : let_kind -> Ident.t -> t -> t -> t
 
-val letrec : (Ident.t * lambda) list -> lambda -> lambda
+val letrec : (Ident.t * t) list -> t -> t
 
-val prim : primitive:primitive -> args:lambda list -> Location.t -> lambda
+val prim : primitive:primitive -> args:t list -> Location.t -> t
 
-val switch : lambda -> lambda_switch -> lambda
+val switch : t -> lambda_switch -> t
 
-val stringswitch : lambda -> (string * lambda) list -> lambda option -> lambda
+val stringswitch : t -> (string * t) list -> t option -> t
 
-val staticraise : int -> lambda list -> lambda
+val staticraise : int -> t list -> t
 
-val staticcatch : lambda -> int * Ident.t list -> lambda -> lambda
+val staticcatch : t -> int * Ident.t list -> t -> t
 
-val try_ : lambda -> Ident.t -> lambda -> lambda
+val try_ : t -> Ident.t -> t -> t
 
-val if_ : lambda -> lambda -> lambda -> lambda
+val if_ : t -> t -> t -> t
 
-val seq : lambda -> lambda -> lambda
+val seq : t -> t -> t
 
-val break : lambda
+val break : t
 
-val continue : lambda
+val continue : t
 
-val while_ : lambda -> lambda -> lambda
+val while_ : t -> t -> t
 
-val for_ : Ident.t -> lambda -> lambda -> direction_flag -> lambda -> lambda
+val for_ : Ident.t -> t -> t -> direction_flag -> t -> t
 
-val for_of : Ident.t -> lambda -> lambda -> lambda
+val for_of : Ident.t -> t -> t -> t
 
-val for_await_of : Ident.t -> lambda -> lambda -> lambda
+val for_await_of : Ident.t -> t -> t -> t
 
-val assign : Ident.t -> lambda -> lambda
+val assign : Ident.t -> t -> t
 
-val not_ : Location.t -> lambda -> lambda
+val not_ : Location.t -> t -> t
 
-val sequor : lambda -> lambda -> lambda
+val sequor : t -> t -> t
 
-val sequand : lambda -> lambda -> lambda
+val sequand : t -> t -> t
 
-val lambda_true : lambda
+val lambda_true : t
 
-val lambda_false : lambda
+val lambda_false : t
 
-val shallow_map_sharing : (lambda -> lambda) -> lambda -> lambda
+val shallow_map_sharing : (t -> t) -> t -> t
 (** Rewrite a node's immediate children, rebuilding through the constructors
     so the result is normalized. A node whose children are all physically
     unchanged is returned as-is, so a traversal that rewrites nothing
     allocates nothing. *)
 
-val eq_approx : lambda -> lambda -> bool
+val eq_approx : t -> t -> bool
 
-val mk_builtin : builtin -> lambda list -> Location.t -> lambda
+val mk_builtin : builtin -> t list -> Location.t -> t
 (** Expands the non-[Primitive] builtins, which have no IR form. *)
 
-val lambda_module_alias : lambda
-val name_lambda : let_kind -> lambda -> (Ident.t -> lambda) -> lambda
+val lambda_module_alias : t
+val name_lambda : let_kind -> t -> (Ident.t -> t) -> t
 
-val shallow_exists : (lambda -> bool) -> lambda -> bool
+val shallow_exists : (t -> bool) -> t -> bool
 (** Does any immediate child satisfy the predicate? Short-circuits. *)
 
-val iter : (lambda -> unit) -> lambda -> unit
+val iter : (t -> unit) -> t -> unit
 module Ident_set : Set.S with type elt = Ident.t
-val free_variables : lambda -> Ident_set.t
+val free_variables : t -> Ident_set.t
 
-val transl_normal_path : Path.t -> lambda (* Path.t is already normal *)
+val transl_normal_path : Path.t -> t (* Path.t is already normal *)
 
-val transl_module_path : ?loc:Location.t -> Env.t -> Path.t -> lambda
-val transl_value_path : ?loc:Location.t -> Env.t -> Path.t -> lambda
-val transl_extension_path : ?loc:Location.t -> Env.t -> Path.t -> lambda
+val transl_module_path : ?loc:Location.t -> Env.t -> Path.t -> t
+val transl_value_path : ?loc:Location.t -> Env.t -> Path.t -> t
+val transl_extension_path : ?loc:Location.t -> Env.t -> Path.t -> t
 
-val subst_lambda : lambda Ident.tbl -> lambda -> lambda
-val bind : let_kind -> Ident.t -> lambda -> lambda -> lambda
+val subst_lambda : t Ident.tbl -> t -> t
+val bind : let_kind -> Ident.t -> t -> t -> t
 
 val default_function_attribute : function_attribute
 
@@ -575,20 +570,20 @@ val default_function_attribute : function_attribute
 (* Get a new static failure ident *)
 val next_raise_count : unit -> int
 
-val make_exit : int -> lambda
+val make_exit : int -> t
 
-val as_simple_exit : lambda -> int option
+val as_simple_exit : t -> int option
 
 (* Exit number to raise to, and a wrapper that puts the catch around a body. *)
-val make_catch_delayed : lambda -> int * (lambda -> lambda)
+val make_catch_delayed : t -> int * (t -> t)
 val next_negative_raise_count : unit -> int
 (* Negative raise counts are used to compile 'match ... with
    exception x -> ...'.  This disabled some simplifications
    performed by the Simplif module that assume that static raises
    are in tail position in their handler. *)
 
-val staticfail : lambda (* Anticipated static failure *)
+val staticfail : t (* Anticipated static failure *)
 
 (* Check anticipated failure, substitute its final value *)
-val is_guarded : lambda -> bool
-val patch_guarded : lambda -> lambda -> lambda
+val is_guarded : t -> bool
+val patch_guarded : t -> t -> t

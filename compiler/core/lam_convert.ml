@@ -25,9 +25,9 @@
 (** Global modules a unit depends on. Convert used to drop [Lglobal_module]
     references and have them added back by module analysis (see #3852); they
     are collected here instead, from the Lambda term directly. *)
-let required_modules (lam : Lambda.lambda) : Lam_module_ident.Hash_set.t =
+let required_modules (lam : Lambda.t) : Lam_module_ident.Hash_set.t =
   let required = Lam_module_ident.Hash_set.create 0 in
-  let rec collect (lam : Lambda.lambda) =
+  let rec collect (lam : Lambda.t) =
     (match lam with
     | Lglobal_module id ->
       Lam_module_ident.Hash_set.add required (Lam_module_ident.of_ml id)

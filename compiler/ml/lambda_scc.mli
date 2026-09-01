@@ -22,6 +22,6 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-val bind_rec : (Ident.t * Lambda.lambda) list -> Lambda.lambda -> Lambda.lambda
+val bind_rec : (Ident.t * Lambda.t) list -> Lambda.t -> Lambda.t
 (** Split a syntactic [let rec] group into the actual recursive clusters
     and demote bindings that are not recursive. *)

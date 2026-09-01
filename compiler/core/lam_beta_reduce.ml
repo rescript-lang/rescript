@@ -45,7 +45,7 @@
     we can bound [x] to [100] in a single step
 *)
 let propagate_beta_reduce (meta : Lam_stats.t) (params : Ident.t list)
-    (body : Lambda.lambda) (args : Lambda.lambda list) =
+    (body : Lambda.t) (args : Lambda.t list) =
   match Lam_beta_reduce_util.simple_beta_reduce params body args with
   | Some x -> x
   | None ->
@@ -110,7 +110,7 @@ let propagate_beta_reduce_with_map (meta : Lam_stats.t)
     in
     (* See above: fold left so arguments evaluate in call order. *)
     Ext_list.fold_left rest_bindings new_body
-      (fun l (param, (arg : Lambda.lambda)) ->
+      (fun l (param, (arg : Lambda.t)) ->
         (match arg with
         | Lprim {primitive = Pmakeblock info; args}
           when Lambda.is_immutable_block info ->

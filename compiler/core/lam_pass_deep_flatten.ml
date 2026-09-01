@@ -26,7 +26,7 @@
    |  Not_eliminatable
    | *)
 
-let rec eliminate_tuple (id : Ident.t) (lam : Lambda.lambda) acc =
+let rec eliminate_tuple (id : Ident.t) (lam : Lambda.t) acc =
   match lam with
   | Llet (Alias, v, Lprim {primitive = Pfield (i, _); args = [Lvar tuple]}, e2)
     when Ident.same tuple id ->
@@ -100,8 +100,8 @@ let rec eliminate_tuple (id : Ident.t) (lam : Lambda.lambda) acc =
                     - also for function compilation, flattening should be done first
                     - [compile_group] and [compile] become mutually recursive function
                 *)
-let lambda_of_groups ~(rev_bindings : Lam_group.t list) (result : Lambda.lambda)
-    : Lambda.lambda =
+let lambda_of_groups ~(rev_bindings : Lam_group.t list) (result : Lambda.t) :
+    Lambda.t =
   Ext_list.fold_left rev_bindings result (fun acc x ->
       match x with
       | Nop l -> Lambda.seq l acc
@@ -114,7 +114,7 @@ let lambda_of_groups ~(rev_bindings : Lam_group.t list) (result : Lambda.lambda)
 *)
 (* The shape [let x = <immutable block> in ... in apply f args]: the residue
    left by beta reduction of an immediately applied function. *)
-let rec rhs_is_beta_residue (lam : Lambda.lambda) =
+let rec rhs_is_beta_residue (lam : Lambda.t) =
   match lam with
   | Llet
       ( (Alias | Strict | StrictOpt),
@@ -128,9 +128,9 @@ let rec rhs_is_beta_residue (lam : Lambda.lambda) =
   | Lapply _ -> true
   | _ -> false
 
-let deep_flatten (lam : Lambda.lambda) : Lambda.lambda =
-  let rec flatten (acc : Lam_group.t list) (lam : Lambda.lambda) :
-      Lambda.lambda * Lam_group.t list =
+let deep_flatten (lam : Lambda.t) : Lambda.t =
+  let rec flatten (acc : Lam_group.t list) (lam : Lambda.t) :
+      Lambda.t * Lam_group.t list =
     match lam with
     | Llet
         ( str,
@@ -196,7 +196,7 @@ let deep_flatten (lam : Lambda.lambda) : Lambda.lambda =
       let res, l = flatten acc l in
       flatten (Lam_group.nop_cons res l) r
     | x -> (aux x, acc)
-  and aux (lam : Lambda.lambda) : Lambda.lambda =
+  and aux (lam : Lambda.t) : Lambda.t =
     match lam with
     | Llet _ ->
       let res, groups = flatten [] lam in

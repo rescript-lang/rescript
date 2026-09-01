@@ -92,7 +92,7 @@ let collect_occurs lam : occ_tbl =
         ())
   in
 
-  let rec count (bv : local_tbl) (lam : Lambda.lambda) =
+  let rec count (bv : local_tbl) (lam : Lambda.t) =
     match lam with
     | Lfunction {body = l} -> count Map_ident.empty l
     (* when entering a function local [bv]

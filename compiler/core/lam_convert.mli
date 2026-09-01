@@ -22,7 +22,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-val required_modules : Lambda.lambda -> Lam_module_ident.Hash_set.t
+val required_modules : Lambda.t -> Lam_module_ident.Hash_set.t
 (** The other compilation units this one refers to, read off the Lambda term.
     A reference the optimizer deletes still has to be imported when the module
     it names is impure. *)

@@ -28,7 +28,7 @@ val get_dependent_module_effect :
 val export_to_cmj :
   Lam_stats.t ->
   Js_cmj_format.effect_ ->
-  Lambda.lambda Map_ident.t ->
+  Lambda.t Map_ident.t ->
   Js_cmj_format.hoisted_export list ->
   Ext_js_file_kind.case ->
   Js_cmj_format.t

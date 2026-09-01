@@ -367,7 +367,7 @@ type function_attribute = {
   one_unit_arg: bool;
 }
 
-type lambda =
+type t =
   | Lvar of Ident.t
   | Lglobal_module of Ident.t
       (** A reference to another compilation unit: a name the module system
@@ -375,38 +375,38 @@ type lambda =
   | Lconst of structured_constant
   | Lapply of lambda_apply
   | Lfunction of lfunction
-  | Llet of let_kind * Ident.t * lambda * lambda
-  | Lletrec of (Ident.t * lambda) list * lambda
+  | Llet of let_kind * Ident.t * t * t
+  | Lletrec of (Ident.t * t) list * t
   | Lprim of prim_info
-  | Lswitch of lambda * lambda_switch
-  | Lstringswitch of lambda * (string * lambda) list * lambda option
-  | Lstaticraise of int * lambda list
-  | Lstaticcatch of lambda * (int * Ident.t list) * lambda
-  | Ltrywith of lambda * Ident.t * lambda
-  | Lifthenelse of lambda * lambda * lambda
-  | Lsequence of lambda * lambda
+  | Lswitch of t * lambda_switch
+  | Lstringswitch of t * (string * t) list * t option
+  | Lstaticraise of int * t list
+  | Lstaticcatch of t * (int * Ident.t list) * t
+  | Ltrywith of t * Ident.t * t
+  | Lifthenelse of t * t * t
+  | Lsequence of t * t
   | Lbreak
   | Lcontinue
-  | Lwhile of lambda * lambda
-  | Lfor of Ident.t * lambda * lambda * Asttypes.direction_flag * lambda
-  | Lfor_of of Ident.t * lambda * lambda
-  | Lfor_await_of of Ident.t * lambda * lambda
-  | Lassign of Ident.t * lambda
+  | Lwhile of t * t
+  | Lfor of Ident.t * t * t * Asttypes.direction_flag * t
+  | Lfor_of of Ident.t * t * t
+  | Lfor_await_of of Ident.t * t * t
+  | Lassign of Ident.t * t
 
 and lfunction = {
   params: Ident.t list;
-  body: lambda;
+  body: t;
   attr: function_attribute; (* specified with [@inline] attribute *)
   loc: Location.t;
 }
 
-and prim_info = {primitive: primitive; args: lambda list; loc: Location.t}
+and prim_info = {primitive: primitive; args: t list; loc: Location.t}
 
 and ap_info = {ap_loc: Location.t; ap_inlined: inline_attribute}
 
 and lambda_apply = {
-  ap_func: lambda;
-  ap_args: lambda list;
+  ap_func: t;
+  ap_args: t list;
   ap_info: ap_info;
   ap_transformed_jsx: bool;
 }
@@ -428,7 +428,7 @@ and 'a switch = {
   sw_dispatch: switch_dispatch;
 }
 
-and lambda_switch = lambda switch
+and lambda_switch = t switch
 
 (* This is actually a dummy value
     not necessary "()", it can be used as a place holder for module
@@ -718,28 +718,27 @@ let cmp_float (cmp : comparison) (a : float) b : bool =
    Lambda.prim / Lambda.if_ / Lambda.switch perform will move here when the two layers
    become one type. *)
 
-let var id : lambda = Lvar id
-let global_module id : lambda = Lglobal_module id
-let const ct : lambda = Lconst ct
+let var id : t = Lvar id
+let global_module id : t = Lglobal_module id
+let const ct : t = Lconst ct
 
-let function_ ~loc ~attr ~params ~body : lambda =
-  Lfunction {params; body; attr; loc}
+let function_ ~loc ~attr ~params ~body : t = Lfunction {params; body; attr; loc}
 
-let let_ kind id e body : lambda = Llet (kind, id, e, body)
-let letrec bindings body : lambda = Lletrec (bindings, body)
+let let_ kind id e body : t = Llet (kind, id, e, body)
+let letrec bindings body : t = Lletrec (bindings, body)
 
-let staticraise i args : lambda = Lstaticraise (i, args)
-let staticcatch body catch handler : lambda = Lstaticcatch (body, catch, handler)
-let try_ body id handler : lambda = Ltrywith (body, id, handler)
-let break : lambda = Lbreak
-let continue : lambda = Lcontinue
-let while_ cond body : lambda = Lwhile (cond, body)
-let for_ id from_ to_ dir body : lambda = Lfor (id, from_, to_, dir, body)
-let for_of id iterable body : lambda = Lfor_of (id, iterable, body)
+let staticraise i args : t = Lstaticraise (i, args)
+let staticcatch body catch handler : t = Lstaticcatch (body, catch, handler)
+let try_ body id handler : t = Ltrywith (body, id, handler)
+let break : t = Lbreak
+let continue : t = Lcontinue
+let while_ cond body : t = Lwhile (cond, body)
+let for_ id from_ to_ dir body : t = Lfor (id, from_, to_, dir, body)
+let for_of id iterable body : t = Lfor_of (id, iterable, body)
 
-let for_await_of id iterable body : lambda = Lfor_await_of (id, iterable, body)
+let for_await_of id iterable body : t = Lfor_await_of (id, iterable, body)
 
-let assign id body : lambda = Lassign (id, body)
+let assign id body : t = Lassign (id, body)
 
 exception Not_simple_form
 
@@ -760,15 +759,14 @@ exception Not_simple_form
     is applied though since `[@variadic]` needs such guarantee.
     Since `[@variadic] is the tail position
 *)
-let rec is_eta_conversion_exn params inner_args outer_args : lambda list =
+let rec is_eta_conversion_exn params inner_args outer_args : t list =
   match (params, inner_args, outer_args) with
   | x :: xs, Lvar y :: ys, r :: rest when Ident.same x y ->
     r :: is_eta_conversion_exn xs ys rest
   | [], [], [] -> []
   | _, _, _ -> raise_notrace Not_simple_form
 
-let rec apply ?(ap_transformed_jsx = false) fn args (ap_info : ap_info) : lambda
-    =
+let rec apply ?(ap_transformed_jsx = false) fn args (ap_info : ap_info) : t =
   match fn with
   | Lfunction
       {
@@ -823,7 +821,7 @@ let rec apply ?(ap_transformed_jsx = false) fn args (ap_info : ap_info) : lambda
      Llet(kind0,id0,e0,Llet (kind, id, e, apply fn args loc status)) *)
   | _ -> Lapply {ap_func = fn; ap_args = args; ap_info; ap_transformed_jsx}
 
-let rec eq_approx (l1 : lambda) (l2 : lambda) =
+let rec eq_approx (l1 : t) (l2 : t) =
   match l1 with
   | Lglobal_module i1 -> (
     match l2 with
@@ -897,7 +895,7 @@ and eq_option l1 l2 =
 
 and eq_approx_list ls ls1 = Ext_list.for_all2_no_exn ls ls1 eq_approx
 
-let switch lam (lam_switch : lambda_switch) : lambda =
+let switch lam (lam_switch : lambda_switch) : t =
   let action_or_switch = function
     | Some action -> action
     | None -> (
@@ -949,13 +947,13 @@ let switch lam (lam_switch : lambda_switch) : lambda =
     action_or_switch action
   | _ -> Lswitch (lam, lam_switch)
 
-let stringswitch (lam : lambda) cases default : lambda =
+let stringswitch (lam : t) cases default : t =
   match lam with
   | Lconst (Const_string {s; delim = None | Some DNoQuotes}) ->
     Ext_list.assoc_by_string cases s default
   | _ -> Lstringswitch (lam, cases, default)
 
-let rec seq (a : lambda) b : lambda =
+let rec seq (a : t) b : t =
   match a with
   | Lprim {primitive = Pmakeblock _; args = x :: xs} ->
     seq (Ext_list.fold_left xs x seq) b
@@ -964,17 +962,17 @@ let rec seq (a : lambda) b : lambda =
   | _ -> Lsequence (a, b)
 
 module Lift = struct
-  let int i : lambda = Lconst (Const_int i)
+  let int i : t = Lconst (Const_int i)
 
   let bool b = if b then lambda_true else lambda_false
 
-  let string s : lambda = Lconst (Const_string {s; delim = None})
+  let string s : t = Lconst (Const_string {s; delim = None})
 
-  let char b : lambda = Lconst (Const_char b)
+  let char b : t = Lconst (Const_char b)
 end
 
-let prim ~primitive:(prim : primitive) ~args loc : lambda =
-  let default () : lambda = Lprim {primitive = prim; args; loc} in
+let prim ~primitive:(prim : primitive) ~args loc : t =
+  let default () : t = Lprim {primitive = prim; args; loc} in
   match args with
   | [Lconst a] -> (
     match (prim, a) with
@@ -1084,13 +1082,13 @@ let prim ~primitive:(prim : primitive) ~args loc : lambda =
     *)
     | _ -> default ())
 
-let not_ loc x : lambda =
+let not_ loc x : t =
   match x with
   | Lprim ({primitive = Pintcomp Cneq} as prim) ->
     Lprim {prim with primitive = Pintcomp Ceq}
   | _ -> prim ~primitive:Pnot ~args:[x] loc
 
-let has_boolean_type (x : lambda) =
+let has_boolean_type (x : t) =
   match x with
   | Lprim
       {
@@ -1124,7 +1122,7 @@ let rec eval_const_as_bool (v : structured_constant) : bool option =
     | Some Null | Some Undefined -> Some false
     | Some (Float _ | BigInt _ | Untagged _) -> None)
 
-let if_ (a : lambda) (b : lambda) (c : lambda) : lambda =
+let if_ (a : t) (b : t) (c : t) : t =
   match a with
   | Lconst v -> (
     match eval_const_as_bool v with
@@ -1189,7 +1187,7 @@ let if_ (a : lambda) (b : lambda) (c : lambda) : lambda =
     and rebuilds the node through its smart constructor, so the result is
     normalized. A node whose children all come back physically unchanged is
     returned as-is, so a traversal that rewrites nothing allocates nothing. *)
-let shallow_map_sharing (f : lambda -> lambda) (lam : lambda) : lambda =
+let shallow_map_sharing (f : t -> t) (lam : t) : t =
   match lam with
   | Lvar _ | Lglobal_module _ | Lconst _ | Lbreak | Lcontinue -> lam
   | Lapply ap ->
@@ -1381,7 +1379,7 @@ let name_lambda strict arg fn =
     Llet (strict, id, arg, fn id)
 
 (* Does any immediate child satisfy [f]? Short-circuits. *)
-let shallow_exists (f : lambda -> bool) (lam : lambda) : bool =
+let shallow_exists (f : t -> bool) (lam : t) : bool =
   match lam with
   | Lvar _ | Lglobal_module _ | Lconst _ | Lbreak | Lcontinue -> false
   | Lapply {ap_func; ap_args} -> f ap_func || Ext_list.exists ap_args f

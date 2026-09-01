@@ -22,12 +22,12 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-val rewrite : Lambda.lambda Hash_ident.t -> Lambda.lambda -> Lambda.lambda
+val rewrite : Lambda.t Hash_ident.t -> Lambda.t -> Lambda.t
 (** [rewrite tbl lam] 
     Given a [tbl] to rewrite all bounded variables in [lam] 
 *)
 
 (** refresh lambda to replace all bounded vars for new ones *)
 (* val refresh :
-   Lambda.lambda ->
-   Lambda.lambda *)
+   Lambda.t ->
+   Lambda.t *)

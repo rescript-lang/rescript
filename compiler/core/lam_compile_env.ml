@@ -32,7 +32,7 @@ type env_value =
 type ident_info = Js_cmj_format.keyed_cmj_value = {
   name: string;
   arity: Js_cmj_format.arity;
-  persistent_closed_lambda: Lambda.lambda option;
+  persistent_closed_lambda: Lambda.t option;
 }
 
 (*

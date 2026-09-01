@@ -60,13 +60,10 @@ end
 *)
 val zyva :
   int * int ->
-  Lambda.lambda ->
+  Lambda.t ->
   (int * int * int) array ->
-  Lambda.lambda t_store ->
-  Lambda.lambda
+  Lambda.t t_store ->
+  Lambda.t
 
 val test_sequence :
-  Lambda.lambda ->
-  (int * int * int) array ->
-  Lambda.lambda t_store ->
-  Lambda.lambda
+  Lambda.t -> (int * int * int) array -> Lambda.t t_store -> Lambda.t

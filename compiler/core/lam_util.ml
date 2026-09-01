@@ -55,8 +55,7 @@ let add_required_modules ( x : Ident.t list) (meta : Lam_stats.t) =
    Falling through keeps the original binding.  Only the Alias clause changes
    evaluation strategy downstream, so we keep its predicate intentionally
    syntactic and narrow. *)
-let refine_let ~kind param (arg : Lambda.lambda) (l : Lambda.lambda) :
-    Lambda.lambda =
+let refine_let ~kind param (arg : Lambda.t) (l : Lambda.t) : Lambda.t =
   let is_block_constructor = function
     | Lambda.Pmakeblock _ -> true
     | _ -> false
@@ -67,7 +66,7 @@ let refine_let ~kind param (arg : Lambda.lambda) (l : Lambda.lambda) :
      to inline [e] at every use site or drop `const x = e` entirely, so every
      clause below must ensure that duplicate evaluation of [e] is equivalent to
      the single eager evaluation promised by [Strict]/[StrictOpt]. *)
-  let rec is_safe_to_alias (lam : Lambda.lambda) =
+  let rec is_safe_to_alias (lam : Lambda.t) =
     match lam with
     | Lvar _ | Lconst _ ->
       (* var/const --> emitting multiple `const` reads is identical to the
@@ -174,7 +173,7 @@ let alias_ident_or_global (meta : Lam_stats.t) (k : Ident.t) (v : Ident.t)
        mutable fields are explicit, since wen can not inline an mutable block access
 *)
 
-let element_of_lambda (lam : Lambda.lambda) : Lam_id_kind.element =
+let element_of_lambda (lam : Lambda.t) : Lam_id_kind.element =
   match lam with
   | Lvar _ | Lconst _
   | Lprim
@@ -187,11 +186,11 @@ let element_of_lambda (lam : Lambda.lambda) : Lam_id_kind.element =
   (* | Lfunction _  *)
   | _ -> NA
 
-let kind_of_lambda_block (xs : Lambda.lambda list) : Lam_id_kind.t =
+let kind_of_lambda_block (xs : Lambda.t list) : Lam_id_kind.t =
   ImmutableBlock (Ext_array.of_list_map xs (fun x -> element_of_lambda x))
 
-let field_flatten_get lam v i info (tbl : Lam_id_kind.t Hash_ident.t) :
-    Lambda.lambda =
+let field_flatten_get lam v i info (tbl : Lam_id_kind.t Hash_ident.t) : Lambda.t
+    =
   match Hash_ident.find_opt tbl v with
   | Some (Module g) ->
     Lambda.prim
@@ -221,17 +220,17 @@ let field_flatten_get lam v i info (tbl : Lam_id_kind.t Hash_ident.t) :
     | Some _ -> lam ())
   | Some _ | None -> lam ()
 
-let is_function (lam : Lambda.lambda) =
+let is_function (lam : Lambda.t) =
   match lam with
   | Lfunction _ -> true
   | _ -> false
 
-let not_function (lam : Lambda.lambda) =
+let not_function (lam : Lambda.t) =
   match lam with
   | Lfunction _ -> false
   | _ -> true
 (* 
-let is_var (lam : Lambda.lambda) id =   
+let is_var (lam : Lambda.t) id =   
   match lam with 
   | Lvar id0 -> Ident.same id0 id 
   | _ -> false *)

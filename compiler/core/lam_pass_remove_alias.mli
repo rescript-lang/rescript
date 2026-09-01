@@ -35,4 +35,4 @@
     This pass does not change meta  data
 *)
 
-val simplify_alias : Lam_stats.t -> Lambda.lambda -> Lambda.lambda
+val simplify_alias : Lam_stats.t -> Lambda.t -> Lambda.t

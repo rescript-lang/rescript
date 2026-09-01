@@ -46,8 +46,8 @@ let is_const_some (cst : Lambda.structured_constant) : bool =
   | Const_some _ -> true
   | _ -> false
 
-let simplify_alias (meta : Lam_stats.t) (lam : Lambda.lambda) : Lambda.lambda =
-  let rec simpl (lam : Lambda.lambda) : Lambda.lambda =
+let simplify_alias (meta : Lam_stats.t) (lam : Lambda.t) : Lambda.t =
+  let rec simpl (lam : Lambda.t) : Lambda.t =
     match lam with
     | Lvar _ -> lam
     (* 7432: prevent optimization in JSX preserve mode *)

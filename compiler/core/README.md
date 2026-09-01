@@ -1,8 +1,8 @@
-# Lambda, Lam, and JavaScript generation
+# Lambda optimization and JavaScript generation
 
 This directory contains the compiler backend after typedtree translation. It
-owns ReScript's Lam representation, Lam optimization passes, JavaScript IR,
-and JavaScript output.
+owns the Lambda optimization passes, the JavaScript IR, and JavaScript output.
+Lambda itself is defined in [`../ml/lambda.mli`](../ml/lambda.mli).
 
 ## Pipeline and code map
 
@@ -11,16 +11,16 @@ Typedtree translation in `compiler/ml/translcore.ml` and
 `compiler/ml/lambda.mli`.
 
 [`lam_convert.ml`](lam_convert.ml)
-: Converts `Lambda.lambda` to the ReScript-specific [`Lam.t`](lam.mli),
-  normalizes aliases, and collects potential module dependencies.
+: Collects the modules a compilation unit depends on, read off the Lambda
+  term.
 
 `lam_pass_*.ml` and the other `lam_*.ml` modules
-: Analyze and transform Lam. [`lam_compile_main.ml`](lam_compile_main.ml)
+: Analyze and transform Lambda. [`lam_compile_main.ml`](lam_compile_main.ml)
   coordinates the backend pass sequence; read it before inserting or
   reordering a pass.
 
 [`lam_compile.ml`](lam_compile.ml)
-: Lowers Lam to JavaScript IR. Primitive-specific and FFI lowering is split
+: Lowers Lambda to JavaScript IR. Primitive-specific and FFI lowering is split
   into `lam_compile_primitive.ml`, `lam_compile_external_call.ml`, and related
   modules.
 
@@ -34,12 +34,14 @@ Typedtree translation in `compiler/ml/translcore.ml` and
 
 ## Changing a representation
 
-`Lambda` and `Lam` have similarly named constructors but are distinct IRs.
-When adding or changing one, search every producer, traversal, optimizer,
-printer, serializer, and consumer of that specific type. Do not assume a match
-on the other representation covers it.
+`Lambda.t` is private: every term is built through the constructors in
+[`../ml/lambda.mli`](../ml/lambda.mli), six of which normalize as they build.
+A constructor may replace a node with an equivalent one, but may not move code
+between branches - that is what a pass is for. When adding or changing a
+constructor, search every producer, traversal, optimizer, printer, serializer,
+and consumer.
 
-Check persistence boundaries as part of the change. `Lam.t` can be stored in
+Check persistence boundaries as part of the change. `Lambda.t` can be stored in
 `.cmj` data through `js_cmj_format`; a constructor or payload change therefore
 changes cached compiler data even when generated JavaScript is unchanged.
 
@@ -65,5 +67,5 @@ compiler flags below to compare intermediate forms for a small source file:
 ./cli/bsc.js -drawlambda example.res
 ```
 
-For Lam-specific debugging, use [`lam_print.ml`](lam_print.ml) at the relevant
+For backend debugging, use [`lam_print.ml`](lam_print.ml) at the relevant
 pass boundary and remove temporary output before committing.

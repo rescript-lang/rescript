@@ -24,17 +24,17 @@
 
 open Lambda
 
-type bindings = (Ident.t * lambda) list
+type bindings = (Ident.t * Lambda.t) list
 
 (* [p] may have side effects (masking). Returning true stops the walk. *)
-let exists_var (p : Ident.t -> bool) (l : lambda) : bool =
+let exists_var (p : Ident.t -> bool) (l : Lambda.t) : bool =
   let rec hit_opt = function
     | None -> false
     | Some a -> hit a
-  and hit_list_snd : 'a. ('a * lambda) list -> bool =
+  and hit_list_snd : 'a. ('a * Lambda.t) list -> bool =
    fun x -> Ext_list.exists_snd x hit
   and hit_list xs = Ext_list.exists xs hit
-  and hit (l : lambda) =
+  and hit (l : Lambda.t) =
     match l with
     | Lvar id -> p id
     | Lassign (id, e) -> p id || hit e
@@ -85,7 +85,7 @@ let preprocess_deps (groups : bindings) : _ * Ident.t array * Vec_int.t array =
             Vec_int.push base_key key));
   (domain, int_mapping, node_vec)
 
-let bind_rec (groups : bindings) (body : lambda) : lambda =
+let bind_rec (groups : bindings) (body : Lambda.t) : Lambda.t =
   match groups with
   | [(id, bind)] ->
     if exists_var (Ident.same id) bind then letrec groups body

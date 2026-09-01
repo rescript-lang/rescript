@@ -47,8 +47,6 @@ The Makefile’s targets build on each other in this order:
 
 - **Don't use unit `()` with mandatory labeled arguments** - When a function has a mandatory labeled argument (like `~config`), don't add a trailing `()` parameter. The labeled argument already prevents accidental partial application. Only use `()` when all parameters are optional and you need to force evaluation. Example: `let forceDelayedItems ~config = ...` not `let forceDelayedItems ~config () = ...`
 
-- **Be careful with similar constructor names across different IRs** - Note that `Lam` (Lambda IR) and `Lambda` (typed lambda) have variants with similar constructor names like `Ltrywith`, but they represent different things in different compilation phases.
-
 - **Avoid warning suppressions** - Never use `[@@warning "..."]` to silence warnings. Instead, fix the underlying issue properly
 - **Skip trailing `; _` in record patterns** - The warning it targets is disabled in this codebase, so prefer `{field = x}` over `{field = x; _}`.
 
@@ -116,8 +114,8 @@ Read the area guide before changing a compiler subsystem:
   printing, and JSX transformation
 - [`compiler/ml/README.md`](compiler/ml/README.md) for the type checker and
   typed tree
-- [`compiler/core/README.md`](compiler/core/README.md) for Lambda, Lam, and
-  JavaScript generation
+- [`compiler/core/README.md`](compiler/core/README.md) for Lambda
+  optimization and JavaScript generation
 - [`analysis/README.md`](analysis/README.md) for editor analysis
 - [`rewatch/README.md`](rewatch/README.md) for the build system
 - [`tools/README.md`](tools/README.md) for `rescript-tools`

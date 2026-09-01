@@ -1,4 +1,4 @@
-let rec guard_raises (lam : Lambda.lambda) : Lambda.lambda =
+let rec guard_raises (lam : Lambda.t) : Lambda.t =
   match lam with
   | Lifthenelse (a, (Lprim {primitive = Praise} as b), c) -> (
     match c with

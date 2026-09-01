@@ -218,8 +218,7 @@ let to_print_kind (k : Lambda.let_kind) : print_kind =
   | StrictOpt -> StrictOpt
   | Variable -> Variable
 
-let rec aux (acc : (print_kind * Ident.t * Lambda.lambda) list)
-    (lam : Lambda.lambda) =
+let rec aux (acc : (print_kind * Ident.t * Lambda.t) list) (lam : Lambda.t) =
   match lam with
   | Llet (str3, id3, arg3, body3) ->
     aux ((to_print_kind str3, id3, arg3) :: acc) body3
@@ -239,8 +238,8 @@ let rec aux (acc : (print_kind * Ident.t * Lambda.lambda) list)
    | Id of left_var *)
 (* | Nop *)
 
-let flatten (lam : Lambda.lambda) :
-    (print_kind * Ident.t * Lambda.lambda) list * Lambda.lambda =
+let flatten (lam : Lambda.t) : (print_kind * Ident.t * Lambda.t) list * Lambda.t
+    =
   match lam with
   | Llet (str, id, arg, body) -> aux [(to_print_kind str, id, arg)] body
   | Lletrec (bind_args, body) ->
@@ -248,7 +247,7 @@ let flatten (lam : Lambda.lambda) :
   | _ -> assert false
 
 let lambda ppf v =
-  let rec lam ppf (l : Lambda.lambda) =
+  let rec lam ppf (l : Lambda.t) =
     match l with
     | Lvar id -> Ident.print ppf id
     | Lglobal_module id -> fprintf ppf "global %a" Ident.print id
@@ -392,7 +391,7 @@ let lambda ppf v =
 
 (* let structured_constant = struct_const *)
 
-(* let rec flatten_seq acc (lam : Lambda.lambda) =
+(* let rec flatten_seq acc (lam : Lambda.t) =
    match lam with
    | Lsequence(l1,l2) ->
     flatten_seq (flatten_seq acc l1) l2
@@ -400,7 +399,7 @@ let lambda ppf v =
 
 (* exception Not_a_module *)
 
-(* let rec flat (acc : (left * Lambda.lambda) list ) (lam : Lambda.lambda) =
+(* let rec flat (acc : (left * Lambda.t) list ) (lam : Lambda.t) =
    match lam with
    | Llet (str,id,arg,body) ->
     flat ( (Id {kind = to_print_kind str;  id}, arg) :: acc) body
@@ -413,7 +412,7 @@ let lambda ppf v =
     flat (flat acc l) r
    | x -> (Nop, x) :: acc *)
 
-(* let lambda_as_module env  ppf (lam : Lambda.lambda) =
+(* let lambda_as_module env  ppf (lam : Lambda.t) =
    try
     (* match lam with *)
     (* | Lprim {primitive = Psetglobal id ; args =  [biglambda]; _} *)
@@ -444,7 +443,7 @@ let lambda ppf v =
     lambda ppf lam;
     fprintf ppf "; lambda-failure" *)
 
-let serialize (filename : string) (lam : Lambda.lambda) : unit =
+let serialize (filename : string) (lam : Lambda.t) : unit =
   let ou = open_out filename in
   let old = Format.get_margin () in
   let () = Format.set_margin 10000 in

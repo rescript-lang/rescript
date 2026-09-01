@@ -10,4 +10,4 @@
     before collect keeps [ident_tbl] from re-recording the same alias.
     Exported names are kept so coercion can still see them. *)
 
-val collapse : exports:Set_ident.t -> Lambda.lambda -> Lambda.lambda
+val collapse : exports:Set_ident.t -> Lambda.t -> Lambda.t

@@ -23,4 +23,4 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
 val simple_beta_reduce :
-  Ident.t list -> Lambda.lambda -> Lambda.lambda list -> Lambda.lambda option
+  Ident.t list -> Lambda.t -> Lambda.t list -> Lambda.t option

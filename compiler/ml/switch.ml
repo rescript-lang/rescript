@@ -99,11 +99,11 @@ let ltint = Pintcomp Clt
 let geint = Pintcomp Cge
 let gtint = Pintcomp Cgt
 
-let prim p args : lambda = prim ~primitive:p ~args Location.none
+let prim p args : Lambda.t = prim ~primitive:p ~args Location.none
 
 (* [covers_range cases ~start ~finish] holds when [cases] is exactly the
    contiguous integer keys [start .. finish], in order. *)
-let rec covers_range (cases : (switch_key * lambda) list) ~start ~finish =
+let rec covers_range (cases : (switch_key * Lambda.t) list) ~start ~finish =
   match cases with
   | [] -> finish < start
   | (Switch_int i, _) :: rest ->
@@ -141,7 +141,7 @@ let emit_if_in ~offset ~range arg ifso ifno =
   let lo = -offset and hi = range - offset in
   if_ (prim Pnot [out_of_range arg ~lo ~hi]) ifso ifno
 
-let emit_switch arg cases acts ~offset : lambda =
+let emit_switch arg cases acts ~offset : Lambda.t =
   let l = ref [] in
   for i = Array.length cases - 1 downto 0 do
     l := (Switch_int (offset + i), acts.(cases.(i))) :: !l
@@ -179,10 +179,10 @@ let emit_switch arg cases acts ~offset : lambda =
 *)
 
 (* [actions] is instantiated both at [lambda] (the original actions) and at
-   [t_ctx -> lambda] (cluster actions, which still need a context). *)
+   [t_ctx -> Lambda.t] (cluster actions, which still need a context). *)
 type 'a inter = {cases: (int * int * int) array; actions: 'a array}
 
-type t_ctx = {off: int; arg: lambda}
+type t_ctx = {off: int; arg: Lambda.t}
 
 let cut = ref 8
 

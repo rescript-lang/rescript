@@ -61,7 +61,7 @@
     2. number of invoked times
     3. arguments are const or not
 *)
-let rewrite (map : _ Hash_ident.t) (lam : Lambda.lambda) : Lambda.lambda =
+let rewrite (map : _ Hash_ident.t) (lam : Lambda.t) : Lambda.t =
   let rebind i =
     let i' = Ident.rename i in
     Hash_ident.add map i (Lambda.var i');
@@ -72,7 +72,7 @@ let rewrite (map : _ Hash_ident.t) (lam : Lambda.lambda) : Lambda.lambda =
     match op with
     | None -> None
     | Some x -> Some (aux x)
-  and aux (lam : Lambda.lambda) : Lambda.lambda =
+  and aux (lam : Lambda.t) : Lambda.t =
     match lam with
     | Lvar v -> Hash_ident.find_default map v lam
     | Llet (str, v, l1, l2) ->
@@ -170,4 +170,4 @@ let rewrite (map : _ Hash_ident.t) (lam : Lambda.lambda) : Lambda.lambda =
   in
   aux lam
 
-(* let refresh lam = rewrite (Hash_ident.create 17 : Lambda.lambda Hash_ident.t ) lam *)
+(* let refresh lam = rewrite (Hash_ident.create 17 : Lambda.t Hash_ident.t ) lam *)

@@ -13,7 +13,7 @@
 
 exception Real_reference
 
-let rec eliminate_ref id (lam : Lambda.lambda) =
+let rec eliminate_ref id (lam : Lambda.t) =
   match lam with
   (* we can do better escape analysis in Javascript backend *)
   | Lvar v -> if Ident.same v id then raise_notrace Real_reference else lam

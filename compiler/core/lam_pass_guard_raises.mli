@@ -1,4 +1,4 @@
-val guard_raises : Lambda.lambda -> Lambda.lambda
+val guard_raises : Lambda.t -> Lambda.t
 (** Rewrite [if a then raise e else c] into [(if a then raise e else ()); c],
     so the continuation stops being nested inside a branch - the guard clause
     idiom in the emitted JavaScript.
