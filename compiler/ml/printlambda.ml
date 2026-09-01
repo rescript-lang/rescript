@@ -97,7 +97,6 @@ let primitive ppf = function
   | Ptypeof -> fprintf ppf "typeof"
   | Psome -> fprintf ppf "some"
   | Psome_not_nest -> fprintf ppf "some_not_nest"
-  | Pfn_arity -> fprintf ppf "fn.length"
   | Pgetglobal id -> fprintf ppf "global %a" Ident.print id
   | Pmakeblock taginfo -> fprintf ppf "makeblock %a" print_taginfo taginfo
   | Pfield (n, fld) -> fprintf ppf "field:%s/%i" (str_of_field_info fld) n

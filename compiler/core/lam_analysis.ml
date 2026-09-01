@@ -85,8 +85,8 @@ let rec no_side_effects (lam : Lam.t) : bool =
     | Pisout _
     (* Operations on big arrays: (unsafe, #dimensions, kind, layout) *)
     (* Compile time constants *)
-    | Poffsetint _ | Pstringadd | Pfn_arity | Phash | Phash_mixstring
-    | Phash_mixint | Phash_finalmix
+    | Poffsetint _ | Pstringadd | Phash | Phash_mixstring | Phash_mixint
+    | Phash_finalmix
     | Praw_js_code
         {code_info = Exp (Js_function _ | Js_literal _) | Stmt Js_stmt_comment}
       ->

@@ -389,7 +389,6 @@ let primitive_builtins : (string * Lambda.builtin) array =
       ("%is_nullable", Pisnullable);
       ("%null_to_opt", Pnull_to_opt);
       ("%nullable_to_opt", Pnullable_to_opt);
-      ("%function_arity", Pfn_arity);
       ("%makemutablelist", Pmakelist);
       ("%unsafe_to_method", Pjs_fn_method);
       (* Compiler internals, never expose to ReScript files *)

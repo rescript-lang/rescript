@@ -177,7 +177,6 @@ type primitive =
   | Psome_not_nest
       (** [Some x] where [x] cannot itself be [undefined], so no wrapping is
           needed. *)
-  | Pfn_arity
   | Pgetglobal of Ident.t
   (* Operations on heap blocks *)
   | Pmakeblock of tag_info

@@ -41,7 +41,6 @@ let lam_prim ~primitive:(p : Lambda.primitive) ~args loc : Lam.t =
     | Blk_module _ | Blk_module_export _ | Blk_extension | Blk_record_ext _
     | Blk_poly_var ->
       prim ~primitive:(Pmakeblock (info, mutable_flag)) ~args loc)
-  | Pfn_arity -> prim ~primitive:Pfn_arity ~args loc
   | Pdebugger -> prim ~primitive:Pdebugger ~args loc
   | Psome -> prim ~primitive:Psome ~args loc
   | Psome_not_nest -> prim ~primitive:Psome_not_nest ~args loc

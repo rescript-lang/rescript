@@ -639,14 +639,6 @@ let string_length ?comment (e : t) : t =
   (* No optimization for {j||j}*)
   | _ -> {expression_desc = Length e; comment; source_loc = None}
 
-let function_length ?comment (e : t) : t =
-  match e.expression_desc with
-  | Fun {is_method; params} ->
-    let params_length = List.length params in
-    int ?comment
-      (Int32.of_int (if is_method then params_length - 1 else params_length))
-  | _ -> {expression_desc = Length e; comment; source_loc = None}
-
 let rec string_append ?comment (e : t) (el : t) : t =
   let concat a b ~delim = {e with expression_desc = Str {txt = a ^ b; delim}} in
   match (e.expression_desc, el.expression_desc) with
