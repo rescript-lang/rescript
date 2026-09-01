@@ -160,7 +160,6 @@ let lam_prim ~primitive:(p : Lambda.primitive) ~args loc : Lam.t =
   | Phash_mixint -> prim ~primitive:Phash_mixint ~args loc
   | Phash_mixstring -> prim ~primitive:Phash_mixstring ~args loc
   | Phash_finalmix -> prim ~primitive:Phash_finalmix ~args loc
-  | Pcurry_apply _ -> prim ~primitive:Pjs_apply ~args loc
   | Pis_poly_var_block -> prim ~primitive:Pis_poly_var_block ~args loc
   | Pjs_call {prim_name; arg_types; ffi; transformed_jsx} ->
     prim

@@ -22,8 +22,6 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-type arity = Full | NA
-
 type call_info =
   | Call_ml (* called by plain ocaml expression *)
   | Call_builtin_runtime (* built-in externals *)
@@ -33,15 +31,12 @@ type call_info =
    {[ fun x y -> (f x y) === f ]} when [f] is an atom
 *)
 
-type t = {call_info: call_info; arity: arity; call_transformed_jsx: bool}
-
-let dummy = {arity = NA; call_info = Call_na; call_transformed_jsx = false}
+type t = {call_info: call_info; call_transformed_jsx: bool}
 
 let builtin_runtime_call =
-  {arity = Full; call_info = Call_builtin_runtime; call_transformed_jsx = false}
+  {call_info = Call_builtin_runtime; call_transformed_jsx = false}
 
-let ml_full_call =
-  {arity = Full; call_info = Call_ml; call_transformed_jsx = false}
+let ml_full_call = {call_info = Call_ml; call_transformed_jsx = false}
 
 let na_full_call transformed_jsx =
-  {arity = Full; call_info = Call_na; call_transformed_jsx = transformed_jsx}
+  {call_info = Call_na; call_transformed_jsx = transformed_jsx}

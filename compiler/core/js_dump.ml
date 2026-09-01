@@ -56,7 +56,6 @@ module S = Js_stmt_make
 module L = Js_dump_lit
 
 (* There modules are dynamically inserted in the last stage
-   {Caml_curry}
    {Caml_option}
 
    They can appear anywhere so even if you have a module
@@ -71,26 +70,6 @@ module L = Js_dump_lit
    conservative here.
    (our call Js_fun_env.get_unbounded env) is not precise
 *)
-
-module Curry_gen = struct
-  let pp_curry_dot f =
-    P.string f Primitive_modules.curry;
-    P.string f L.dot
-
-  let pp_optimize_curry (f : P.t) (len : int) =
-    pp_curry_dot f;
-    P.string f "__";
-    P.string f (Printf.sprintf "%d" len)
-
-  let pp_app_any (f : P.t) =
-    pp_curry_dot f;
-    P.string f "app"
-
-  let pp_app (f : P.t) (len : int) =
-    pp_curry_dot f;
-    P.string f "_";
-    P.string f (Printf.sprintf "%d" len)
-end
 
 type cxt = Ext_pp_scope.t
 
@@ -279,12 +258,6 @@ f/122 -->
              else check last bumped id, increase it and register
 *)
 
-(**
-   Turn [function f (x,y) { return a (x,y)} ] into [Curry.__2(a)],
-   The idea is that [Curry.__2] will guess the arity of [a], if it does
-   hit, then there is no cost when passed
-*)
-
 let is_var (b : J.expression) a =
   match b.expression_desc with
   | Var (Id i) -> Ident.same i a
@@ -313,11 +286,7 @@ let default_fn_exp_state = No_name {single_arg = false}
 (* TODO: refactoring
    Note that {!pp_function} could print both statement and expression when [No_name] is given
 *)
-let rec try_optimize_curry cxt f len function_id =
-  Curry_gen.pp_optimize_curry f len;
-  P.paren_group f 1 (fun _ -> expression ~level:1 cxt f function_id)
-
-and pp_function ~return_unit ~async ~is_method ?directive cxt (f : P.t)
+let rec pp_function ~return_unit ~async ~is_method ?directive cxt (f : P.t)
     ~fn_state (l : Ident.t list) (b : J.block) (env : Js_fun_env.t) : cxt =
   match b with
   | [
@@ -327,35 +296,28 @@ and pp_function ~return_unit ~async ~is_method ?directive cxt (f : P.t)
          {
            expression_desc =
              Call
-               ( ({expression_desc = Var v; _} as function_id),
+               ( {expression_desc = Var v; _},
                  ls,
-                 {
-                   arity = (Full | NA) as arity (* see #234*);
-                   (* TODO: need a case to justify it*)
-                   call_info = Call_builtin_runtime | Call_ml;
-                 } );
+                 {call_info = Call_builtin_runtime | Call_ml} );
          };
    };
   ]
-    when (* match such case:
-            {[ function(x,y){ return u(x,y) } ]}
-            it can be optimized in to either [u] or [Curry.__n(u)]
-         *)
+    when (* Eta reduce a wrapper around a saturated call:
+            {[ function(x,y){ return u(x,y) } ]} prints as [u].
+            Only for a ReScript callee of exactly this arity: [Call_na] is an
+            FFI name, where the wrapper truncates extra arguments the JS callee
+            would otherwise see, defers the name's resolution to call time, and
+            keeps it from capturing a local of the same name. *)
          (not is_method) && params_match_call l ls v -> (
-    let optimize len ~p cxt f v =
-      if p then try_optimize_curry cxt f len function_id else vident cxt f v
-    in
-    let len = List.length l in
-    (* length *)
     match fn_state with
     | Name_top i | Name_non_top i ->
       let cxt = pp_var_assign cxt f i in
-      let cxt = optimize len ~p:(arity = NA && len <= 8) cxt f v in
+      let cxt = vident cxt f v in
       semi f;
       cxt
     | Is_return | No_name _ ->
       if fn_state = Is_return then return_sp f;
-      optimize len ~p:(arity = NA && len <= 8) cxt f v)
+      vident cxt f v)
   | _ ->
     let set_env : Set_ident.t =
       (* identifiers will be printed following*)
@@ -685,61 +647,46 @@ and expression_desc cxt ~(level : int) f x : cxt =
     | _ ->
       (* This should not happen, we fallback to the general case *)
       expression_desc cxt ~level f
-        (Call
-           ( e,
-             el,
-             {call_transformed_jsx = false; arity = Full; call_info = Call_ml}
-           )))
-  | Call (e, el, info) ->
+        (Call (e, el, {call_transformed_jsx = false; call_info = Call_ml})))
+  | Call (e, el, _info) ->
     P.cond_paren_group f (level > 15) (fun _ ->
         P.group f 0 (fun _ ->
-            match (info, el) with
-            | {arity = Full}, _ | _, [] ->
-              let cxt =
-                P.cond_paren_group f
-                  (match e.expression_desc with
-                  | Fun _ -> true
-                  | _ -> false)
-                  (fun () -> expression ~level:15 cxt f e)
-              in
-              P.paren_group f 0 (fun _ ->
-                  match el with
-                  | [
-                   {
-                     expression_desc =
-                       Fun
-                         {
-                           is_method;
-                           params;
-                           body;
-                           env;
-                           return_unit;
-                           async;
-                           directive;
-                         };
-                   };
-                  ] ->
-                    pp_function ?directive ~is_method ~return_unit ~async
-                      ~fn_state:(No_name {single_arg = true})
-                      cxt f params body env
-                  | _ ->
-                    let el =
-                      match el with
-                      | [e] when e.expression_desc = Undefined {is_unit = true}
-                        ->
-                        (* omit passing undefined when the call is f() *)
-                        []
-                      | _ -> el
-                    in
-                    arguments cxt f el)
-            | _, _ ->
-              let len = List.length el in
-              if 1 <= len && len <= 8 then (
-                Curry_gen.pp_app f len;
-                P.paren_group f 0 (fun _ -> arguments cxt f (e :: el)))
-              else (
-                Curry_gen.pp_app_any f;
-                P.paren_group f 0 (fun _ -> arguments cxt f [e; E.array el]))))
+            let cxt =
+              P.cond_paren_group f
+                (match e.expression_desc with
+                | Fun _ -> true
+                | _ -> false)
+                (fun () -> expression ~level:15 cxt f e)
+            in
+            P.paren_group f 0 (fun _ ->
+                match el with
+                | [
+                 {
+                   expression_desc =
+                     Fun
+                       {
+                         is_method;
+                         params;
+                         body;
+                         env;
+                         return_unit;
+                         async;
+                         directive;
+                       };
+                 };
+                ] ->
+                  pp_function ?directive ~is_method ~return_unit ~async
+                    ~fn_state:(No_name {single_arg = true})
+                    cxt f params body env
+                | _ ->
+                  let el =
+                    match el with
+                    | [e] when e.expression_desc = Undefined {is_unit = true} ->
+                      (* omit passing undefined when the call is f() *)
+                      []
+                    | _ -> el
+                  in
+                  arguments cxt f el)))
   | Tagged_template (call_expr, string_args, value_args) ->
     let cxt = expression cxt ~level f call_expr in
     P.string f "`";

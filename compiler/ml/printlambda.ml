@@ -235,7 +235,6 @@ let primitive ppf = function
   | Phash_mixint -> fprintf ppf "hash_mix_int"
   | Phash_mixstring -> fprintf ppf "hash_mix_string"
   | Phash_finalmix -> fprintf ppf "hash_final_mix"
-  | Pcurry_apply i -> fprintf ppf "apply[%d]" i
   | Pjscomp Ceq -> fprintf ppf "=="
   | Pjscomp Cneq -> fprintf ppf "!="
   | Pjscomp Clt -> fprintf ppf "<"
