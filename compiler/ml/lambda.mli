@@ -309,6 +309,9 @@ type builtin =
   | Primitive of primitive
   | Eliminated of eliminated
   | Constant of structured_constant
+  | Offset_ref of int
+      (** [%incr] / [%decr]: an assignment through the reference, expanded here
+          so the caller's own IR carries the form its escape analysis reads. *)
 
 type inline_attribute =
   | Always_inline (* [@inline] or [@inline always] *)
