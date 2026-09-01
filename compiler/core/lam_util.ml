@@ -140,8 +140,8 @@ let alias_ident_or_global (meta : Lam_stats.t) (k : Ident.t) (v : Ident.t)
   | NA -> (
     match Hash_ident.find_opt meta.ident_tbl v with
     | None -> ()
-    | Some ident_info -> Hash_ident.add meta.ident_tbl k ident_info)
-  | ident_info -> Hash_ident.add meta.ident_tbl k ident_info
+    | Some ident_info -> Hash_ident.replace meta.ident_tbl k ident_info)
+  | ident_info -> Hash_ident.replace meta.ident_tbl k ident_info
 
 (* share -- it is safe to share most properties,
     for arity, we might be careful, only [Alias] can share,
