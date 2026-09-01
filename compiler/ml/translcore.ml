@@ -978,8 +978,7 @@ let wrap_exn loc arg =
             loc;
           };
       ap_args = [arg];
-      ap_loc = loc;
-      ap_inlined = Default_inline;
+      ap_info = {ap_loc = loc; ap_inlined = Default_inline};
       ap_transformed_jsx = false;
     }
 let exception_id_destructed (l : lambda) (fv : Ident.t) : bool =
@@ -1435,10 +1434,9 @@ and transl_apply ?(inlined = Default_inline)
   let lapply ap_func ap_args =
     Lapply
       {
-        ap_loc = loc;
         ap_func;
         ap_args;
-        ap_inlined = inlined;
+        ap_info = {ap_loc = loc; ap_inlined = inlined};
         ap_transformed_jsx = transformed_jsx;
       }
   in
@@ -1502,8 +1500,7 @@ and transl_apply ?(inlined = Default_inline)
         {
           ap_func = lam;
           ap_args;
-          ap_inlined = inlined;
-          ap_loc = loc;
+          ap_info = {ap_loc = loc; ap_inlined = inlined};
           ap_transformed_jsx = transformed_jsx;
         }
     in

@@ -403,11 +403,12 @@ and lfunction = {
 
 and prim_info = {primitive: primitive; args: lambda list; loc: Location.t}
 
+and ap_info = {ap_loc: Location.t; ap_inlined: inline_attribute}
+
 and lambda_apply = {
   ap_func: lambda;
   ap_args: lambda list;
-  ap_loc: Location.t;
-  ap_inlined: inline_attribute;
+  ap_info: ap_info;
   ap_transformed_jsx: bool;
 }
 
@@ -571,7 +572,7 @@ let make_key e =
           ap with
           ap_func = tr_rec env ap.ap_func;
           ap_args = tr_recs env ap.ap_args;
-          ap_loc = Location.none;
+          ap_info = {ap.ap_info with ap_loc = Location.none};
         }
     | Llet (Alias, x, ex, e) ->
       (* Ignore aliases -> substitute *)

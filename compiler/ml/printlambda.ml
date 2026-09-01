@@ -267,7 +267,7 @@ let rec lam ppf = function
   | Lapply ap ->
     let lams ppf largs = List.iter (fun l -> fprintf ppf "@ %a" lam l) largs in
     fprintf ppf "@[<2>(apply@ %a%a%a)@]" lam ap.ap_func lams ap.ap_args
-      apply_inlined_attribute ap.ap_inlined
+      apply_inlined_attribute ap.ap_info.ap_inlined
   | Lfunction {params; body; attr} ->
     let pr_params ppf params =
       List.iter (fun param -> fprintf ppf "@ %a" Ident.print param) params

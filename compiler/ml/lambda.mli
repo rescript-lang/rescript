@@ -375,11 +375,15 @@ and lfunction = {
 
 and prim_info = {primitive: primitive; args: lambda list; loc: Location.t}
 
+and ap_info = {
+  ap_loc: Location.t;
+  ap_inlined: inline_attribute; (* specified with the [@inlined] attribute *)
+}
+
 and lambda_apply = {
   ap_func: lambda;
   ap_args: lambda list;
-  ap_loc: Location.t;
-  ap_inlined: inline_attribute; (* specified with the [@inlined] attribute *)
+  ap_info: ap_info;
   ap_transformed_jsx: bool;
 }
 
