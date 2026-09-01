@@ -586,7 +586,10 @@ module Ppx_context = struct
 
   let lid name = {txt = Lident name; loc = Location.none}
 
-  let make_string x = Exp.constant (Const.string x)
+  let make_string x =
+    Exp.constant
+      ~attrs:[(Location.mknoloc "_res.ppx_context_string", Parsetree.PStr [])]
+      (Const.string x)
 
   let make_bool x =
     if x then Exp.construct (lid "true") None

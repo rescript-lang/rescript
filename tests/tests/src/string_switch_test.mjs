@@ -5,23 +5,23 @@ import * as Test_string_switch from "./test_string_switch.mjs";
 
 Mocha.describe("String_switch_test", () => {
   Mocha.test("equivalent string escape spellings in switch cases", () => {
-    if (Test_string_switch.classifyEquivalentEscape("a", 0) !== 5) {
+    if (Test_string_switch.classifyEquivalentEscape("a", 0) !== 0) {
       throw {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "string_switch_test.res",
-          7,
+          5,
           4
         ],
         Error: new Error()
       };
     }
-    if (Test_string_switch.classifyEquivalentEscape("a", 1) !== 5) {
+    if (Test_string_switch.classifyEquivalentEscape("a", 1) !== 1) {
       throw {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "string_switch_test.res",
-          8,
+          6,
           4
         ],
         Error: new Error()
@@ -32,31 +32,67 @@ Mocha.describe("String_switch_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "string_switch_test.res",
-          9,
+          7,
           4
         ],
         Error: new Error()
       };
     }
-    if (Test_string_switch.classifyEquivalentEscape("a", 3) !== 5) {
+    if (Test_string_switch.classifyEquivalentEscape("a", 3) !== 3) {
       throw {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "string_switch_test.res",
-          10,
+          8,
           4
         ],
         Error: new Error()
       };
     }
-    if (Test_string_switch.classifyEquivalentEscape("a", 4) === 5) {
+    if (Test_string_switch.classifyEquivalentEscape("a", 4) === 4) {
       return;
     }
     throw {
       RE_EXN_ID: "Assert_failure",
       _1: [
         "string_switch_test.res",
-        11,
+        9,
+        4
+      ],
+      Error: new Error()
+    };
+  });
+  Mocha.test("equivalent surrogate-pair escape spellings in switch cases", () => {
+    if (Test_string_switch.classifyEquivalentSurrogateEscape("😀", 0) !== 0) {
+      throw {
+        RE_EXN_ID: "Assert_failure",
+        _1: [
+          "string_switch_test.res",
+          13,
+          4
+        ],
+        Error: new Error()
+      };
+    }
+    if (Test_string_switch.classifyEquivalentSurrogateEscape("😀", 1) !== 1) {
+      throw {
+        RE_EXN_ID: "Assert_failure",
+        _1: [
+          "string_switch_test.res",
+          14,
+          4
+        ],
+        Error: new Error()
+      };
+    }
+    if (Test_string_switch.classifyEquivalentSurrogateEscape("😀", 2) === 2) {
+      return;
+    }
+    throw {
+      RE_EXN_ID: "Assert_failure",
+      _1: [
+        "string_switch_test.res",
+        15,
         4
       ],
       Error: new Error()

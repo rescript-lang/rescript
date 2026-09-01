@@ -92,6 +92,15 @@ let add_template_attr attrs =
 
 let for_of_attr_name = "_res.for_of"
 let for_await_of_attr_name = "_res.for_await_of"
+let ppx_context_string_attr_name = "_res.ppx_context_string"
+
+let has_ppx_context_string_attr attrs =
+  Ext_list.exists attrs (fun ({txt}, _) -> txt = ppx_context_string_attr_name)
+
+let remove_ppx_context_string_attr attrs =
+  List.filter
+    (fun ({Location.txt}, _) -> txt <> ppx_context_string_attr_name)
+    attrs
 
 let map_loc sub {loc; txt} = {loc = sub.location sub loc; txt}
 
@@ -406,9 +415,15 @@ module E = struct
   let map sub {pexp_loc = loc; pexp_desc = desc; pexp_attributes = attrs} =
     let open Exp in
     let loc = sub.location sub loc in
-    let attrs = sub.attributes sub attrs in
+    let is_ppx_context_string = has_ppx_context_string_attr attrs in
+    let attrs = sub.attributes sub (remove_ppx_context_string_attr attrs) in
     match desc with
     | Pexp_ident x -> ident ~loc ~attrs (map_loc sub x)
+    | Pexp_constant (Pconst_string {semantic}) when is_ppx_context_string ->
+      (* The PPX protocol predates source-preserving strings. Existing PPXs
+         require compiler-generated context fields to be ordinary semantic
+         ast0 strings rather than quotation-delimited source strings. *)
+      constant ~loc ~attrs (Pt.Pconst_string (semantic, None))
     | Pexp_constant x -> constant ~loc ~attrs (map_constant x)
     | Pexp_let (r, vbs, e) ->
       let_ ~loc ~attrs r (List.map (sub.value_binding sub) vbs) (sub.expr sub e)
