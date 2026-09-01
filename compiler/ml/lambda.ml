@@ -1533,53 +1533,13 @@ let transl_extension_path = transl_value_path
    Assumes that the image of the substitution is out of reach
    of the bound variables of the lambda-term (no capture). *)
 
+(* Substitution rebuilds through [shallow_map_sharing], so the result is
+   normalized and an untouched subterm is returned physically unchanged. *)
 let subst_lambda s lam =
-  let rec subst = function
-    | Lvar id as l -> ( try Ident.find_same id s with Not_found -> l)
-    | Lglobal_module _ as l -> l
-    | Lconst _ as l -> l
-    | Lapply ap ->
-      Lapply
-        {
-          ap with
-          ap_func = subst ap.ap_func;
-          ap_args = List.map subst ap.ap_args;
-        }
-    | Lfunction {params; body; attr; loc} ->
-      Lfunction {params; body = subst body; attr; loc}
-    | Llet (str, id, arg, body) -> Llet (str, id, subst arg, subst body)
-    | Lletrec (decl, body) -> Lletrec (List.map subst_decl decl, subst body)
-    | Lprim {primitive = p; args; loc} ->
-      Lprim {primitive = p; args = List.map subst args; loc}
-    | Lswitch (arg, sw) ->
-      Lswitch
-        ( subst arg,
-          {
-            sw with
-            sw_consts = List.map subst_case sw.sw_consts;
-            sw_blocks = List.map subst_case sw.sw_blocks;
-            sw_failaction = subst_opt sw.sw_failaction;
-          } )
-    | Lstringswitch (arg, cases, default) ->
-      Lstringswitch (subst arg, List.map subst_strcase cases, subst_opt default)
-    | Lstaticraise (i, args) -> Lstaticraise (i, List.map subst args)
-    | Lstaticcatch (e1, io, e2) -> Lstaticcatch (subst e1, io, subst e2)
-    | Ltrywith (e1, exn, e2) -> Ltrywith (subst e1, exn, subst e2)
-    | Lifthenelse (e1, e2, e3) -> Lifthenelse (subst e1, subst e2, subst e3)
-    | Lsequence (e1, e2) -> Lsequence (subst e1, subst e2)
-    | Lbreak -> Lbreak
-    | Lcontinue -> Lcontinue
-    | Lwhile (e1, e2) -> Lwhile (subst e1, subst e2)
-    | Lfor (v, e1, e2, dir, e3) -> Lfor (v, subst e1, subst e2, dir, subst e3)
-    | Lfor_of (v, e1, e2) -> Lfor_of (v, subst e1, subst e2)
-    | Lfor_await_of (v, e1, e2) -> Lfor_await_of (v, subst e1, subst e2)
-    | Lassign (id, e) -> Lassign (id, subst e)
-  and subst_decl (id, exp) = (id, subst exp)
-  and subst_case (key, case) = (key, subst case)
-  and subst_strcase (key, case) = (key, subst case)
-  and subst_opt = function
-    | None -> None
-    | Some e -> Some (subst e)
+  let rec subst l =
+    match l with
+    | Lvar id -> ( try Ident.find_same id s with Not_found -> l)
+    | _ -> shallow_map_sharing subst l
   in
   subst lam
 
