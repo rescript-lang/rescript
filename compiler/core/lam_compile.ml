@@ -1324,9 +1324,6 @@ let compile output_prefix =
   and compile_assign id (lambda : Lam.t) (lambda_cxt : Lam_compile_context.t) =
     let block =
       match lambda with
-      | Lprim {primitive = Poffsetint v; args = [Lvar bid]}
-        when Ident.same id bid ->
-        [S.exp (E.assign (E.var id) (E.int32_add (E.var id) (E.small_int v)))]
       | _ -> (
         match
           compile_lambda
@@ -1938,9 +1935,9 @@ let compile output_prefix =
     | Lfor (id, start, finish, direction, body) -> (
       match (direction, finish) with
       | ( Upto,
-          ( Lprim
-              {primitive = Psubint; args = [new_finish; Lconst (Const_int 1l)]}
-          | Lprim {primitive = Poffsetint -1; args = [new_finish]} ) ) ->
+          Lprim
+            {primitive = Psubint; args = [new_finish; Lconst (Const_int 1l)]} )
+        ->
         compile_for id start new_finish Up body lambda_cxt
       | _ ->
         compile_for id start finish

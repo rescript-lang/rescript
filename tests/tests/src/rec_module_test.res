@@ -102,7 +102,9 @@ let record = s => effects := list{s, ...effects.contents}
 module rec EmptySig: {} = {
   let () = record("empty signature")
 }
-and WithField: {let n: int} = {
+and WithField: {
+  let n: int
+} = {
   let () = record("with field")
   let n = 1
 }

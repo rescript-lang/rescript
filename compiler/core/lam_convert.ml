@@ -123,7 +123,6 @@ let lam_prim ~primitive:(p : Lambda.primitive) ~args loc : Lam.t =
   | Pbigintmin -> prim ~primitive:Pbigintmin ~args loc
   | Pbigintmax -> prim ~primitive:Pbigintmax ~args loc
   | Pintcomp x -> prim ~primitive:(Pintcomp x) ~args loc
-  | Poffsetint x -> prim ~primitive:(Poffsetint x) ~args loc
   | Pfloatcomp x -> prim ~primitive:(Pfloatcomp x) ~args loc
   | Pmakearray -> prim ~primitive:Pmakearray ~args loc
   | Parraylength -> prim ~primitive:Parraylength ~args loc

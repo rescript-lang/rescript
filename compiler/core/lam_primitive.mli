@@ -71,7 +71,6 @@ type t =
   | Plslint
   | Plsrint
   | Pasrint
-  | Poffsetint of int
   | Pintcomp of Lam_compat.comparison
   | Pintorder
   | Pintmin

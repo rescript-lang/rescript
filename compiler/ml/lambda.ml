@@ -230,7 +230,6 @@ type primitive =
   | Pintorder
   | Pintmin
   | Pintmax
-  | Poffsetint of int
   (* Float operations *)
   | Pintoffloat
   | Pfloatofint
