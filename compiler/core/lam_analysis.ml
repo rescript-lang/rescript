@@ -82,7 +82,6 @@ let rec no_side_effects (lam : Lam.t) : bool =
     (* Test if the argument is a block or an immediate integer *)
     | Pisint | Pis_poly_var_block
     (* Test if the (integer) argument is outside an interval *)
-    | Pisout _
     (* Operations on big arrays: (unsafe, #dimensions, kind, layout) *)
     (* Compile time constants *)
     | Pstringadd | Phash | Phash_mixstring | Phash_mixint | Phash_finalmix

@@ -1688,11 +1688,7 @@ module S_arg = struct
     in
     bind Alias newvar arg (body newarg)
   let make_const i = Lconst (const_int i)
-  let make_isout h arg ~offset =
-    Lprim {primitive = Pisout offset; args = [h; arg]; loc = Location.none}
-  let make_isin h arg ~offset =
-    Lprim
-      {primitive = Pnot; args = [make_isout h arg ~offset]; loc = Location.none}
+  let make_if cond ifso ifnot = Lifthenelse (cond, ifso, ifnot)
 
   (* [covers_range cases ~start ~finish] holds when [cases] is exactly the
      contiguous integer keys [start .. finish], in order. *)
@@ -1704,26 +1700,56 @@ module S_arg = struct
       && covers_range rest ~start:(start + 1) ~finish
     | (Switch_constructor _, _) :: _ -> false
 
-  let make_if cond ifso ifnot =
-    match (cond, ifnot) with
+  (* [arg] is outside [lo .. hi]. A two-value range reads better as a pair of
+     equality tests than as a pair of comparisons. *)
+  let out_of_range arg ~lo ~hi =
+    let loc = Location.none in
+    let test cmp k =
+      Lprim {primitive = Pintcomp cmp; args = [arg; Lconst (const_int k)]; loc}
+    in
+    if hi = lo + 1 then
+      Lprim
+        {
+          primitive = Pnot;
+          args =
+            [
+              Lprim {primitive = Psequor; args = [test Ceq lo; test Ceq hi]; loc};
+            ];
+          loc;
+        }
+    else Lprim {primitive = Psequor; args = [test Cgt hi; test Clt lo]; loc}
+
+  let make_if_out ~offset ~range arg ifso ifno =
+    let lo = -offset and hi = range - offset in
+    match (arg, ifno) with
     (* The switcher guards a jump table with a range test, because on a machine
        target that beats a table carrying a default. A JS [switch] has a native
        [default], so when the table already covers the whole guarded range the
        guard is pure overhead: drop it and make its action the failaction. *)
-    | ( Lprim {primitive = Pisout off; args = [Lconst (Const_int range); Lvar x]},
+    | ( Lvar x,
         Lswitch
-          ( (Lvar y as arg),
+          ( (Lvar y as sarg),
             ({
                sw_blocks = [];
                sw_blocks_full = true;
                sw_consts;
                sw_failaction = None;
              } as sw) ) )
-      when Ident.same x y
-           && covers_range sw_consts ~start:(-off)
-                ~finish:(Int32.to_int range - off) ->
-      Lswitch (arg, {sw with sw_failaction = Some ifso; sw_consts_full = false})
-    | _ -> Lifthenelse (cond, ifso, ifnot)
+      when Ident.same x y && covers_range sw_consts ~start:lo ~finish:hi ->
+      Lswitch (sarg, {sw with sw_failaction = Some ifso; sw_consts_full = false})
+    | _ -> Lifthenelse (out_of_range arg ~lo ~hi, ifso, ifno)
+
+  let make_if_in ~offset ~range arg ifso ifno =
+    let lo = -offset and hi = range - offset in
+    let cond =
+      Lprim
+        {
+          primitive = Pnot;
+          args = [out_of_range arg ~lo ~hi];
+          loc = Location.none;
+        }
+    in
+    Lifthenelse (cond, ifso, ifno)
   let make_switch _loc arg cases acts ~offset =
     let l = ref [] in
     for i = Array.length cases - 1 downto 0 do

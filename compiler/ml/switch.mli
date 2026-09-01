@@ -71,8 +71,15 @@ module type S = sig
   val bind : act -> (act -> act) -> act
   val make_const : int -> act
   val make_prim : primitive -> act list -> act
-  val make_isout : act -> act -> offset:int -> act
-  val make_isin : act -> act -> offset:int -> act
+
+  (* [make_if_out ~offset ~range arg ifso ifno] runs [ifso] when [arg] lies
+     outside [-offset .. range - offset] and [ifno] when it lies inside. The
+     producer chooses how to test that, because only it knows what the target
+     can express. *)
+  val make_if_out : offset:int -> range:int -> act -> act -> act -> act
+
+  (* Dual of [make_if_out]: [ifso] runs when [arg] lies inside the range. *)
+  val make_if_in : offset:int -> range:int -> act -> act -> act -> act
   val make_if : act -> act -> act -> act
 
   (* construct an actual switch :

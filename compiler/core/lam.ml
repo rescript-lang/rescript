@@ -487,9 +487,8 @@ let has_boolean_type (x : t) =
   | Lprim
       {
         primitive =
-          ( Pnot | Psequand | Psequor | Pisout _ | Pis_not_none | Pobjcomp _
-          | Pboolcomp _ | Pintcomp _ | Pfloatcomp _ | Pbigintcomp _
-          | Pstringcomp _ );
+          ( Pnot | Psequand | Psequor | Pis_not_none | Pobjcomp _ | Pboolcomp _
+          | Pintcomp _ | Pfloatcomp _ | Pbigintcomp _ | Pstringcomp _ );
         loc;
       } ->
     Some loc

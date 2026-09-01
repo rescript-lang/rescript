@@ -119,11 +119,6 @@ val zero_float_lit : t
 
 val zero_bigint_literal : t
 
-val is_out : ?comment:string -> t -> t -> t
-(** [is_out e range] is equivalent to [e > range or e <0]
-
-*)
-
 val dot : ?comment:string -> t -> string -> t
 
 val module_access : t -> string -> int32 -> t
