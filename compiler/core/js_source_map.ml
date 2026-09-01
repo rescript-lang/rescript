@@ -130,7 +130,7 @@ let make ~source_contents ~generated_file ~source_root ~sources_content =
 let load_content builder filename =
   match Hashtbl.find_opt builder.provided_source_contents filename with
   | Some content -> Some content
-  | None -> (try Some (Ext_io.load_file filename) with _ -> None)
+  | None -> ( try Some (Ext_io.load_file filename) with _ -> None)
 
 let add_source builder filename =
   let filename =

@@ -192,9 +192,11 @@ let offsetForPosition = (source, position: SourceMapNavigation.position) => {
   let col = ref(0)
   let length = source->String.length
 
-  while index.contents < length &&
-    (line.contents < position.line ||
-    (line.contents === position.line && col.contents < position.col)) {
+  while (
+    index.contents < length &&
+      (line.contents < position.line ||
+        (line.contents === position.line && col.contents < position.col))
+  ) {
     if source->String.charAt(index.contents) === "\n" {
       line := line.contents + 1
       col := 0
@@ -320,9 +322,8 @@ let mappedJavaScriptNode = (
             let className = isSelected
               ? "source-map-mapped-segment source-map-mapped-segment-active"
               : "source-map-mapped-segment"
-            let title = `${original.source}:${original.position.line->Int.toString}:${(
-                original.position.col + 1
-              )->Int.toString} — click to reveal in source`
+            let title = `${original.source}:${original.position.line->Int.toString}:${(original.position.col + 1)
+                ->Int.toString} — click to reveal in source`
             nodes->Array.push(
               <span
                 id={isSelected ? "generated-map-selection" : ""}
@@ -726,8 +727,7 @@ module App = {
     let scrollToGeneratedMapping = () =>
       Window.requestAnimationFrame(() =>
         switch Document.current->Document.getElementById("generated-map-selection") {
-        | Some(element) =>
-          element->Element.scrollIntoView({block: "center", inline: "nearest"})
+        | Some(element) => element->Element.scrollIntoView({block: "center", inline: "nearest"})
         | None => ()
         }
       )
@@ -765,10 +765,13 @@ module App = {
       switch Signal.peek(compileResult) {
       | Some(Ok({sourceMap: Some(sourceMap)})) => {
           let mappings = SourceMapNavigation.decode(sourceMap)
-          switch SourceMapNavigation.generatedForOriginal(mappings, {
-            line: position.line,
-            col: position.col,
-          }) {
+          switch SourceMapNavigation.generatedForOriginal(
+            mappings,
+            {
+              line: position.line,
+              col: position.col,
+            },
+          ) {
           | Some(mapping) => {
               Signal.set(mappedSourcePosition, Some({line: position.line, col: position.col}))
               Signal.set(mappedGeneratedPosition, Some(mapping.generated))

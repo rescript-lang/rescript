@@ -33,7 +33,9 @@ module RawMapping = {
 let decode = sourceMap => {
   let mappings: array<mapping> = []
   try {
-    sourceMap->makeTraceMap->eachMapping(rawMapping => {
+    sourceMap
+    ->makeTraceMap
+    ->eachMapping(rawMapping => {
       let original = switch (
         rawMapping->RawMapping.source,
         rawMapping->RawMapping.originalLine,

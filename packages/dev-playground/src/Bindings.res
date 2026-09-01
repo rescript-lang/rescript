@@ -169,8 +169,7 @@ module Element = {
   @send external removeChild: (Dom.element, Dom.element) => unit = "removeChild"
   @send external focus: Dom.element => unit = "focus"
   @send
-  external scrollIntoView: (Dom.element, scrollIntoViewOptions) => unit =
-    "scrollIntoView"
+  external scrollIntoView: (Dom.element, scrollIntoViewOptions) => unit = "scrollIntoView"
   @get external style: Dom.element => CssStyle.t = "style"
   @get @return(nullable)
   external getScrollHandler: Dom.element => option<Dom.event => unit> =

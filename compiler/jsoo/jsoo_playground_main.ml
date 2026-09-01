@@ -539,6 +539,7 @@ module Compile = struct
           platform_lib = "rescript";
           project_root;
           bsb_project_root = project_root;
+          suffix = Literals.suffix_js;
         }
       in
       let source_file = sourcefile in
@@ -557,7 +558,7 @@ module Compile = struct
         |> Emit_js.emit_translation_as_string ~config ~file_name
              ~output_file_relative ~resolver
              ~input_cmt_translate_type_declarations:
-                Gentype_main.input_cmt_translate_type_declarations
+               Gentype_main.input_cmt_translate_type_declarations
       in
       Emit_type.file_header ~source_file:(Filename.basename source_file)
       ^ "\n" ^ code_text ^ "\n"
@@ -576,13 +577,15 @@ module Compile = struct
       | Js_config.No_source_map -> None
       | Linked | Inline | Hidden ->
         Some
-          (Js_source_map.make ~source_contents:[(filename, source)] ~generated_file
-             ~source_root:source_map_root
+          (Js_source_map.make
+             ~source_contents:[(filename, source)]
+             ~generated_file ~source_root:source_map_root
              ~sources_content:source_map_sources_content)
     in
     let print_javascript () =
       Js_dump_program.pp_deps_program ~output_prefix:"" module_system
-        lambda_output (Ext_pp.from_buffer buffer)
+        lambda_output
+        (Ext_pp.from_buffer buffer)
     in
     (match source_map_builder with
     | None -> print_javascript ()
@@ -891,59 +894,56 @@ module Export = struct
           ( "setJsxPreserveMode",
             inject
             @@ Js.wrap_meth_callback (fun _ value ->
-                   Js.bool (set_jsx_preserve_mode (Js.to_bool value))) );
+                Js.bool (set_jsx_preserve_mode (Js.to_bool value))) );
           ( "setGentypeEnabled",
             inject
             @@ Js.wrap_meth_callback (fun _ value ->
-                   Js.bool (set_gentype_enabled (Js.to_bool value))) );
+                Js.bool (set_gentype_enabled (Js.to_bool value))) );
           ( "setSourceMapMode",
             inject
             @@ Js.wrap_meth_callback (fun _ value ->
-                   Js.bool (set_source_map_mode (Js.to_string value))) );
+                Js.bool (set_source_map_mode (Js.to_string value))) );
           ( "setSourceMapSourcesContent",
             inject
             @@ Js.wrap_meth_callback (fun _ value ->
-                   Js.bool
-                     (set_source_map_sources_content (Js.to_bool value))) );
+                Js.bool (set_source_map_sources_content (Js.to_bool value))) );
           ( "setSourceMapRoot",
             inject
             @@ Js.wrap_meth_callback (fun _ value ->
-                   Js.bool (set_source_map_root (Js.to_string value))) );
+                Js.bool (set_source_map_root (Js.to_string value))) );
           ( "getConfig",
             inject
             @@ Js.wrap_meth_callback (fun _ ->
-                   Js.Unsafe.(
-                     obj
-                       [|
-                         ( "module_system",
-                           inject
-                           @@ (config.module_system
-                             |> Bundle_config.string_of_module_system
-                             |> Js.string) );
-                         ("warn_flags", inject @@ Js.string config.warn_flags);
-                         ( "jsx_preserve_mode",
-                           inject @@ (config.jsx_preserve_mode |> Js.bool) );
-                         ( "gentype_enabled",
-                           inject @@ (config.gentype_enabled |> Js.bool) );
-                         ( "source_map_mode",
-                           inject
-                           @@ (config.source_map_mode
-                             |> Bundle_config.string_of_source_map |> Js.string)
-                         );
-                         ( "source_map_sources_content",
-                           inject
-                           @@ (config.source_map_sources_content |> Js.bool) );
-                         ( "source_map_root",
-                           inject @@ Js.string config.source_map_root );
-                         ( "experimental_features",
-                           inject
-                           @@ (config.experimental_features |> Array.of_list
-                             |> Js.array) );
-                         ( "open_modules",
-                           inject
-                           @@ (config.open_modules |> Array.of_list |> Js.array)
-                         );
-                       |])) );
+                Js.Unsafe.(
+                  obj
+                    [|
+                      ( "module_system",
+                        inject
+                        @@ (config.module_system
+                          |> Bundle_config.string_of_module_system |> Js.string
+                           ) );
+                      ("warn_flags", inject @@ Js.string config.warn_flags);
+                      ( "jsx_preserve_mode",
+                        inject @@ (config.jsx_preserve_mode |> Js.bool) );
+                      ( "gentype_enabled",
+                        inject @@ (config.gentype_enabled |> Js.bool) );
+                      ( "source_map_mode",
+                        inject
+                        @@ (config.source_map_mode
+                          |> Bundle_config.string_of_source_map |> Js.string) );
+                      ( "source_map_sources_content",
+                        inject @@ (config.source_map_sources_content |> Js.bool)
+                      );
+                      ( "source_map_root",
+                        inject @@ Js.string config.source_map_root );
+                      ( "experimental_features",
+                        inject
+                        @@ (config.experimental_features |> Array.of_list
+                          |> Js.array) );
+                      ( "open_modules",
+                        inject
+                        @@ (config.open_modules |> Array.of_list |> Js.array) );
+                    |])) );
         |])
 end
 
