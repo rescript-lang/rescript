@@ -27,27 +27,15 @@
     how about guarantee that [Lassign] only check the local ref
     and we track which ids are [Lassign]ed
 *)
-(**
-   might not be the same due to refinement
-   assert (old.arity = v) 
-*)
+(* An update, not a new binding: the arity is refined on each collect round,
+   and the recorded lambda has to be replaced because an older one may mention
+   identifiers that later passes removed (see #3609). [add] would leave the
+   stale row underneath - invisible to [find_opt], which reads the newest, but
+   never reclaimed, since nothing removes from this table. *)
 let annotate (meta : Lam_stats.t) rec_flag (k : Ident.t) (arity : Lam_arity.t)
     lambda =
-  Hash_ident.add meta.ident_tbl k
+  Hash_ident.replace meta.ident_tbl k
     (FunctionId {arity; lambda = Some (lambda, rec_flag)})
-(* see #3609
-   we have to update since bounded function lambda
-   may contain stale unbounded varaibles
-*)
-(* match Hash_ident.find_opt  meta.ident_tbl k  with
-   | None -> (** FIXME: need do a sanity check of arity is NA or Determin(_,[],_) *)
-
-   |  Some (FunctionId old)  ->
-   Hash_ident.add meta.ident_tbl k
-    (FunctionId {arity; lambda = Some (lambda, rec_flag) })
-   (* old.arity <- arity   *)
-   (* due to we keep refining arity analysis after each round*)
-   | _ -> assert false *)
 (* TODO -- avoid exception *)
 
 (** it only make senses recording arities for 
