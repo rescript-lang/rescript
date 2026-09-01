@@ -1977,7 +1977,7 @@ let constructor_switch_key (cstr : Types.constructor_description) =
 (* An occurrence-specific plan for one constructor decision-tree node. It is
    deliberately local to pattern matching: [lower_constructor_matching_plan]
    immediately expresses the decision with existing Lambda control-flow
-   nodes, so Lambda and Lam do not acquire another expression language. *)
+   nodes, so Lambda does not acquire another expression language. *)
 type payload_presence_test = Is_present_option | Is_nonempty_list
 
 type constructor_matching_plan =
