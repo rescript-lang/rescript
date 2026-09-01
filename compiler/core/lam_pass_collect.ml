@@ -47,7 +47,7 @@ let collect_info (meta : Lam_stats.t) (lam : Lam.t) =
     match lam with
     | Lconst v -> Hash_ident.replace meta.ident_tbl ident (Constant v)
     | Lprim {primitive = Pmakeblock info; args = ls}
-      when Lam_primitive.is_immutable_block info ->
+      when Lambda.is_immutable_block info ->
       Hash_ident.replace meta.ident_tbl ident (Lam_util.kind_of_lambda_block ls);
       List.iter collect ls
     | Lprim {primitive = Psome | Psome_not_nest; args = [v]} ->

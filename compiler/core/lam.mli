@@ -48,7 +48,7 @@ val var : ident -> t
 
 val global_module : ident -> t
 
-val const : Lam_constant.t -> t
+val const : Lambda.structured_constant -> t
 
 val apply : ?ap_transformed_jsx:bool -> t -> t list -> ap_info -> t
 
@@ -59,7 +59,7 @@ val function_ :
   body:t ->
   t
 
-val let_ : Lam_compat.let_kind -> ident -> t -> t -> t
+val let_ : Lambda.let_kind -> ident -> t -> t -> t
 
 val letrec : (ident * t) list -> t -> t
 
@@ -91,7 +91,7 @@ val try_ : t -> ident -> t -> t
 
 val assign : ident -> t -> t
 
-val prim : primitive:Lam_primitive.t -> args:t list -> Location.t -> t
+val prim : primitive:Lambda.primitive -> args:t list -> Location.t -> t
 
 val staticcatch : t -> int * ident list -> t -> t
 

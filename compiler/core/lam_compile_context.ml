@@ -54,7 +54,7 @@ type tail_type = Not_tail | Maybe_tail_is_return of maybe_tail
 (* have a mutable field to notifiy it's actually triggered *)
 (* anonoymous function does not have identifier *)
 
-type let_kind = Lam_compat.let_kind
+type let_kind = Lambda.let_kind
 type loop_frame = {mutable label: J.label option}
 
 type continuation =

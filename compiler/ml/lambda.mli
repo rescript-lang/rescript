@@ -438,6 +438,14 @@ val lambda_unit : lambda
 
 val eq_primitive_approx : primitive -> primitive -> bool
 
+val str_of_field_info : field_dbg_info -> string option
+
+val eq_comparison : comparison -> comparison -> bool
+
+val is_immutable_block : tag_info -> bool
+
+val const_is_allocating : structured_constant -> bool
+
 val const_eq_approx : structured_constant -> structured_constant -> bool
 
 val cmp_int32 : comparison -> int32 -> int32 -> bool

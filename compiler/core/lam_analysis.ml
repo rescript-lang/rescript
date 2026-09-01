@@ -23,7 +23,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
 (**used in effect analysis, it is sound but not-complete *)
-let not_zero_constant (x : Lam_constant.t) =
+let not_zero_constant (x : Lambda.structured_constant) =
   match x with
   | Const_int i -> i <> 0l
   | Const_assertfalse -> false

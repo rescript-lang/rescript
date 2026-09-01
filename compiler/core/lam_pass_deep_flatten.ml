@@ -121,7 +121,7 @@ let rec rhs_is_beta_residue (lam : Lam.t) =
         _,
         Lprim {primitive = Pmakeblock info},
         rest )
-    when Lam_primitive.is_immutable_block info ->
+    when Lambda.is_immutable_block info ->
     rhs_is_beta_residue rest
   | Llet ((Alias | Strict | StrictOpt), _, Lvar _, rest) ->
     rhs_is_beta_residue rest
@@ -179,7 +179,7 @@ let deep_flatten (lam : Lam.t) : Lam.t =
       | ( ("match" | "include" | "param"),
           (Alias | Strict | StrictOpt),
           Lprim {primitive = Pmakeblock info; args} )
-        when Lam_primitive.is_immutable_block info -> (
+        when Lambda.is_immutable_block info -> (
         match eliminate_tuple id body Map_int.empty with
         | Some (tuple_mapping, body) ->
           flatten

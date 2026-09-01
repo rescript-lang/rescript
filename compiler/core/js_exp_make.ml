@@ -308,7 +308,7 @@ let method_ ?comment ?immutable_mask ~async ~return_unit params body : t =
   }
 
 (** ATTENTION: This is coupuled with {!Caml_obj.caml_update_dummy} *)
-let dummy_obj ?comment (info : Lam_tag_info.t) : t =
+let dummy_obj ?comment (info : Lambda.tag_info) : t =
   (* TODO:
      for record it is [{}]
      for other it is [[]]
@@ -1443,7 +1443,7 @@ let to_int32 ?comment (e : J.expression) : J.expression =
   int32_bor ?comment e zero_int_literal
 (* TODO: if we already know the input is int32, [x|0] can be reduced into [x] *)
 
-let string_comp (cmp : Lam_compat.comparison) ?comment (e0 : t) (e1 : t) =
+let string_comp (cmp : Lambda.comparison) ?comment (e0 : t) (e1 : t) =
   match (e0.expression_desc, e1.expression_desc) with
   | Str {txt = a0; delim = d0}, Str {txt = a1; delim = d1} -> (
     match (cmp, str_equal a0 d0 a1 d1) with
@@ -1462,7 +1462,7 @@ let is_type_object (e : t) : t = string_equal (typeof e) (str "object")
 let obj_length ?comment e : t =
   to_int32 {expression_desc = Length e; comment; source_loc = None}
 
-let compare_int_aux (cmp : Lam_compat.comparison) (l : int) r =
+let compare_int_aux (cmp : Lambda.comparison) (l : int) r =
   match cmp with
   | Ceq -> l = r
   | Cneq -> l <> r
@@ -1471,7 +1471,7 @@ let compare_int_aux (cmp : Lam_compat.comparison) (l : int) r =
   | Cle -> l <= r
   | Cge -> l >= r
 
-let rec int_comp (cmp : Lam_compat.comparison) ?comment (e0 : t) (e1 : t) =
+let rec int_comp (cmp : Lambda.comparison) ?comment (e0 : t) (e1 : t) =
   match (cmp, e0.expression_desc, e1.expression_desc) with
   | _, Number (Int {i = l}), Number (Int {i = r}) ->
     let l = Ext_int.int32_unsigned_to_int l in
@@ -1499,7 +1499,7 @@ let rec int_comp (cmp : Lam_compat.comparison) ?comment (e0 : t) (e1 : t) =
     true_
   | _ -> bin ?comment (Lam_compile_util.jsop_of_comp cmp) e0 e1
 
-let bool_comp (cmp : Lam_compat.comparison) ?comment (e0 : t) (e1 : t) =
+let bool_comp (cmp : Lambda.comparison) ?comment (e0 : t) (e1 : t) =
   match (e0, e1) with
   | {expression_desc = Bool l}, {expression_desc = Bool r} ->
     bool
@@ -1669,7 +1669,7 @@ let rec int32_band ?comment (e1 : J.expression) (e2 : J.expression) :
 
 let bigint_op ?comment op (e1 : t) (e2 : t) = bin ?comment op e1 e2
 
-let bigint_comp (cmp : Lam_compat.comparison) ?comment (e0 : t) (e1 : t) =
+let bigint_comp (cmp : Lambda.comparison) ?comment (e0 : t) (e1 : t) =
   let normalize s =
     let len = String.length s in
     let buf = Buffer.create len in

@@ -30,7 +30,7 @@ let for_await_of_statement =
   }
 
 let record_rest_statement ~source ~field ~rest =
-  Js_stmt_make.define_variable ~kind:Lam_compat.Strict rest
+  Js_stmt_make.define_variable ~kind:Lambda.Strict rest
     (record_rest_expression source field)
 
 let function_expression param body =
@@ -56,7 +56,7 @@ let transform_expression expression =
     Js_pass_record_rest.program
       {
         J.block =
-          [Js_stmt_make.define_variable ~kind:Lam_compat.Strict fn expression];
+          [Js_stmt_make.define_variable ~kind:Lambda.Strict fn expression];
         exports = [];
         export_set = Set_ident.empty;
       }
@@ -169,7 +169,7 @@ let suites =
                {
                  J.block =
                    [
-                     Js_stmt_make.define_variable ~kind:Lam_compat.Strict rest
+                     Js_stmt_make.define_variable ~kind:Lambda.Strict rest
                        (Js_exp_make.record_rest
                           [
                             {

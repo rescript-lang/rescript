@@ -41,7 +41,7 @@ let id_is_for_sure_true_in_boolean (tbl : Lam_stats.ident_tbl) id =
   | None ->
     Eval_unknown
 
-let is_const_some (cst : Lam_constant.t) : bool =
+let is_const_some (cst : Lambda.structured_constant) : bool =
   match cst with
   | Const_some _ -> true
   | _ -> false

@@ -13,7 +13,7 @@
 open Format
 open Asttypes
 
-let rec struct_const ppf (cst : Lam_constant.t) =
+let rec struct_const ppf (cst : Lambda.structured_constant) =
   match cst with
   | Const_js_true -> fprintf ppf "#true"
   | Const_js_false -> fprintf ppf "#false"
@@ -38,7 +38,7 @@ let rec struct_const ppf (cst : Lam_constant.t) =
       (Lambda.tag_label_of_tag_info i)
       struct_const sc1 sconsts scl
 
-let primitive ppf (prim : Lam_primitive.t) =
+let primitive ppf (prim : Lambda.primitive) =
   match prim with
   (* | Pcreate_exception s -> fprintf ppf "[exn-create]%S" s  *)
   | Pcreate_extension s -> fprintf ppf "[ext-create]%S" s
@@ -68,7 +68,7 @@ let primitive ppf (prim : Lam_primitive.t) =
   | Pmakeblock i ->
     fprintf ppf "makemutable %s" (Lambda.tag_label_of_tag_info i)
   | Pfield (n, field_info) -> (
-    match Lam_compat.str_of_field_info field_info with
+    match Lambda.str_of_field_info field_info with
     | None -> fprintf ppf "field %i" n
     | Some s -> fprintf ppf "field %s/%i" s n)
   | Psetfield (n, _) ->
@@ -211,7 +211,7 @@ let kind = function
   | Variable -> "v"
   | Recursive -> "r"
 
-let to_print_kind (k : Lam_compat.let_kind) : print_kind =
+let to_print_kind (k : Lambda.let_kind) : print_kind =
   match k with
   | Alias -> Alias
   | Strict -> Strict

@@ -61,7 +61,7 @@ type kind =
       import_attributes: External_ffi_types.import_attributes option;
     }
 
-type property = Lam_compat.let_kind = Strict | Alias | StrictOpt | Variable
+type property = Lambda.let_kind = Strict | Alias | StrictOpt | Variable
 
 type property_name = Lit of string | Symbol_name
 
@@ -113,4 +113,4 @@ type ident_info = {mutable used_stats: used_stats}
 
 type exports = Ident.t list
 
-type tag_info = Lam_tag_info.t
+type tag_info = Lambda.tag_info

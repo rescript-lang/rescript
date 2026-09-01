@@ -52,7 +52,7 @@ type t =
   | OptionalBlock of Lam.t * boxed_nullable
   | ImmutableBlock of element array
   | MutableBlock of element array
-  | Constant of Lam_constant.t
+  | Constant of Lambda.structured_constant
   | Module of Ident.t  (** TODO: static module vs first class module *)
   | FunctionId of {
       mutable arity: Lam_arity.t;
