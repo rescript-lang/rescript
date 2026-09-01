@@ -151,7 +151,6 @@ type t =
   | Pis_null_undefined
   | Pimport of Lambda.import_source
   | Ptypeof
-  | Pfn_arity
   | Pcreate_extension of string
   | Pis_not_none
   | Pval_from_option
