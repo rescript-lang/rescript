@@ -39,6 +39,13 @@ val mapi_append : 'a list -> (int -> 'a -> 'b) -> 'b list -> 'b list
 
 val map_snd : ('a * 'b) list -> ('b -> 'c) -> ('a * 'c) list
 
+val map_sharing : 'a list -> ('a -> 'a) -> 'a list
+(** [map_sharing l f] is [map l f], but returns [l] itself when every element
+    maps to a physically equal value, so an unchanged list allocates nothing. *)
+
+val map_snd_sharing : ('a * 'b) list -> ('b -> 'b) -> ('a * 'b) list
+(** [map_snd] with the sharing of {!map_sharing}. *)
+
 val map_last : 'a list -> (bool -> 'a -> 'b) -> 'b list
 (** [map_last f xs ]
     will pass [true] to [f] for the last element, 
