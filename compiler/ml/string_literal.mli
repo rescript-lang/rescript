@@ -15,6 +15,10 @@ val encode_js_string : string -> string
 (** Encode a semantic UTF-8 string as a canonical JavaScript string-literal
     body. *)
 
+val encode_js_template : string -> string
+(** Encode a semantic UTF-8 string as a canonical JavaScript template-segment
+    body. *)
+
 val encode_char_source : int -> string
 (** Encode an integer as a canonical character-literal body. Non-scalar values
     use braced Unicode escape spelling so compiler-generated ghost patterns and

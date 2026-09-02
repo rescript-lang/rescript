@@ -590,19 +590,15 @@ let suites =
            (match
               (Js_exp_make.string_append semantic template).expression_desc
             with
-           | String_append _ -> ()
-           | _ ->
-             OUnit.assert_failure
-               "expected semantic strings and template segments not to fold");
+           | Str "aa" -> ()
+           | _ -> OUnit.assert_failure "expected string literals to fold");
            (match
               (Js_exp_make.string_append template
                  (Js_exp_make.template_literal ~semantic:"b" "b"))
                 .expression_desc
             with
-           | String_append _ -> ()
-           | _ ->
-             OUnit.assert_failure
-               "expected template literals not to merge their source text");
+           | Str "ab" -> ()
+           | _ -> OUnit.assert_failure "expected template literals to fold");
            let tagged =
              Js_exp_make.tagged_template
                (Js_exp_make.js_global "tag")
@@ -661,7 +657,36 @@ let suites =
                "expected an explicit JavaScript IR interpolation");
            OUnit.assert_equal ~printer:(Printf.sprintf "%S")
              {|`head\n\${literal}\`${left + right}tail`|}
-             (Js_dump.string_of_expression template) );
+             (Js_dump.string_of_expression template);
+           let nested_literal =
+             Js_exp_make.template_literal ~semantic:"${nested}`"
+               {e|\${nested}\`|e}
+           in
+           let flattened =
+             Js_exp_make.interpolated_template
+               [
+                 {source = "head"; semantic = "head"};
+                 {source = "tail"; semantic = "tail"};
+               ]
+               [nested_literal]
+           in
+           OUnit.assert_equal ~printer:(Printf.sprintf "%S")
+             {e|`head\${nested}\`tail`|e}
+             (Js_dump.string_of_expression flattened);
+           let escaped_literal =
+             Js_exp_make.template_literal ~semantic:"a" {e|\x61|e}
+           in
+           let source_preserving =
+             Js_exp_make.interpolated_template
+               [
+                 {source = "head"; semantic = "head"};
+                 {source = "tail"; semantic = "tail"};
+               ]
+               [escaped_literal]
+           in
+           OUnit.assert_equal ~printer:(Printf.sprintf "%S")
+             {e|`head\x61tail`|e}
+             (Js_dump.string_of_expression source_preserving) );
          ( "JavaScript references are not encoded as strings" >:: fun _ ->
            let value = Js_exp_make.var (Ext_ident.create "value") in
            (match (Js_exp_make.is_array value).expression_desc with

@@ -179,6 +179,25 @@ let encode_js_string s =
     s;
   Buffer.contents buf
 
+let encode_js_template s =
+  let buf = Buffer.create (String.length s) in
+  String.iter
+    (function
+      | '\b' -> Buffer.add_string buf {e|\b|e}
+      | '\012' -> Buffer.add_string buf {e|\f|e}
+      | '\n' -> Buffer.add_string buf {e|\n|e}
+      | '\r' -> Buffer.add_string buf {e|\r|e}
+      | '\t' -> Buffer.add_string buf {e|\t|e}
+      | '\011' -> Buffer.add_string buf {e|\v|e}
+      | '`' -> Buffer.add_string buf {e|\`|e}
+      | '$' -> Buffer.add_string buf {e|\$|e}
+      | '\\' -> Buffer.add_string buf {e|\\|e}
+      | ('\000' .. '\031' | '\127') as c ->
+        Buffer.add_string buf (Printf.sprintf {e|\x%02X|e} (Char.code c))
+      | c -> Buffer.add_char buf c)
+    s;
+  Buffer.contents buf
+
 let encode_char_source codepoint =
   match codepoint with
   | 0x08 -> {e|\b|e}

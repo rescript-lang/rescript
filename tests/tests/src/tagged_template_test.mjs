@@ -93,7 +93,7 @@ Mocha.describe("tagged templates", () => {
     ]);
   });
   Mocha.test("with a ReScript tag lifted via TaggedTemplate.make, it should return the correct interpolation", () => Test_utils.eq("File \"tagged_template_test.res\", line 133, characters 13-20", greeting, "hello Ada you're 36 years old!"));
-  Mocha.test("a regular string interpolation should continue working", () => Test_utils.eq("File \"tagged_template_test.res\", line 137, characters 7-14", `some random ${"string"} interpolation`, "some random string interpolation"));
+  Mocha.test("a regular string interpolation should continue working", () => Test_utils.eq("File \"tagged_template_test.res\", line 137, characters 7-14", `some random string interpolation`, "some random string interpolation"));
   Mocha.test("ordinary interpolation evaluates values once from left to right", () => {
     let calls = [];
     let record = value => {

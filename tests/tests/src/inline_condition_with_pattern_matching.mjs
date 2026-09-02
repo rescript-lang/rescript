@@ -29,7 +29,7 @@ let person2 = {
 let message$1;
 
 if (person2.TAG === "Teacher") {
-  message$1 = `Hello ${"Jane"}.`;
+  message$1 = `Hello Jane.`;
 } else {
   let name = "Jane";
   let match = person2.reportCard;

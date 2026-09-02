@@ -77,11 +77,45 @@ let tagged_template ?comment call_expr string_args value_args : t =
   }
 
 let interpolated_template ?comment segments values : t =
-  {
-    expression_desc = Interpolated_template {segments; values};
-    comment;
-    source_loc = None;
-  }
+  let literal_segment (value : t) =
+    if value.comment <> None then None
+    else
+      match value.expression_desc with
+      | Str semantic ->
+        Some
+          ({source = String_literal.encode_js_template semantic; semantic}
+            : Asttypes.template_segment)
+      | Template_literal {source; semantic} ->
+        Some ({source; semantic} : Asttypes.template_segment)
+      | _ -> None
+  in
+  let rec merge rev_segments rev_values
+      (segments : Asttypes.template_segment list) values =
+    match (segments, values) with
+    | [segment], [] -> (List.rev (segment :: rev_segments), List.rev rev_values)
+    | segment :: next_segment :: rest, value :: values -> (
+      match literal_segment value with
+      | Some literal ->
+        let merged : Asttypes.template_segment =
+          {
+            source = segment.source ^ literal.source ^ next_segment.source;
+            semantic =
+              segment.semantic ^ literal.semantic ^ next_segment.semantic;
+          }
+        in
+        merge rev_segments rev_values (merged :: rest) values
+      | None ->
+        merge (segment :: rev_segments) (value :: rev_values)
+          (next_segment :: rest) values)
+    | _ -> assert false
+  in
+  let segments, values = merge [] [] segments values in
+  let expression_desc =
+    match (segments, values) with
+    | [{source; semantic}], [] -> J.Template_literal {source; semantic}
+    | _ -> J.Interpolated_template {segments; values}
+  in
+  {expression_desc; comment; source_loc = None}
 
 let runtime_var_dot ?comment (x : string) (e1 : string) : J.expression =
   {
@@ -676,7 +710,10 @@ let string_literal_is_empty = function
 let concat_string_literals first second =
   match (first, second) with
   | Semantic_string a, Semantic_string b -> Some (J.Str (a ^ b))
-  | _ -> None
+  | Semantic_string a, Backquoted_literal {semantic = b}
+  | Backquoted_literal {semantic = a}, Semantic_string b
+  | Backquoted_literal {semantic = a}, Backquoted_literal {semantic = b} ->
+    Some (J.Str (a ^ b))
 
 let rec string_append ?comment (e : t) (el : t) : t =
   let concat (base : t) a b =
