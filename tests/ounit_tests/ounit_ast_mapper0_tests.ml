@@ -409,6 +409,28 @@ let test_tagged_templates_roundtrip_through_ast0 _ =
       (attr_names (map_expr0 expression0).pexp_attributes)
   | _ -> assert_failure "Expected an explicit tagged template after roundtrip"
 
+let test_ppx_rewritten_tagged_template_segments _ =
+  let semantic = "${value}`\\" in
+  let segment =
+    Ast_helper0.Exp.constant ~loc (Ast_helper0.Const.string semantic)
+  in
+  let tag =
+    Ast_helper0.Exp.ident ~loc (Location.mknoloc (Longident.Lident "tag"))
+  in
+  let expression0 =
+    Ast_helper0.Exp.apply ~loc
+      ~attrs:[attr "res.taggedTemplate" (Parsetree0.PStr [])]
+      tag
+      [
+        (Nolabel, Ast_helper0.Exp.array ~loc [segment]);
+        (Nolabel, Ast_helper0.Exp.array ~loc []);
+      ]
+  in
+  match (map_expr0 expression0).pexp_desc with
+  | Pexp_tagged_template {raw_sources = [{txt}]} ->
+    OUnit.assert_equal ~printer:(Printf.sprintf "%S") {e|\${value}\`\\|e} txt
+  | _ -> assert_failure "Expected a rewritten tagged template after roundtrip"
+
 let test_interpolated_templates_roundtrip_through_ast0 _ =
   let head_loc = source_loc 1 8 in
   let tail_loc = source_loc 12 16 in
@@ -607,6 +629,8 @@ let suites =
          >:: test_raw_extension_payloads_roundtrip_through_ast0;
          "tagged_templates_roundtrip_through_ast0"
          >:: test_tagged_templates_roundtrip_through_ast0;
+         "ppx_rewritten_tagged_template_segments"
+         >:: test_ppx_rewritten_tagged_template_segments;
          "interpolated_templates_roundtrip_through_ast0"
          >:: test_interpolated_templates_roundtrip_through_ast0;
          "ast0_json_interpolation_is_rejected"

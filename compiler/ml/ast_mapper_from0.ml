@@ -693,8 +693,13 @@ module E = struct
         List.map
           (fun (segment : Parsetree0.expression) ->
             match segment.pexp_desc with
-            | Pexp_constant (Pconst_string (txt, Some "js")) ->
+            | Pexp_constant (Pconst_string (txt, Some ("js" | "*j"))) ->
               {Location.txt; loc = sub.location sub segment.pexp_loc}
+            | Pexp_constant (Pconst_string (semantic, _)) ->
+              {
+                Location.txt = String_literal.encode_js_template semantic;
+                loc = sub.location sub segment.pexp_loc;
+              }
             | _ -> assert false)
           segments
       in
