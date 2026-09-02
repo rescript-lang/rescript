@@ -33,11 +33,10 @@ let decode_js_escapes_with ~normalize_template_line_endings s =
   let len = String.length s in
   let buf = Buffer.create len in
   let add_codepoint codepoint =
-    if codepoint > 0x10ffff || (codepoint >= 0xd800 && codepoint <= 0xdfff) then
-      false
-    else (
+    if Uchar.is_valid codepoint then (
       Buffer.add_utf_8_uchar buf (Uchar.of_int codepoint);
       true)
+    else false
   in
   let decode_fixed_hex start count =
     let rec loop index remaining value =
@@ -220,9 +219,7 @@ let encode_char_source codepoint =
 
 let decode_utf8_uchar_exn s index =
   let decoded = String.get_utf_8_uchar s index in
-  if Uchar.utf_decode_is_valid decoded then
-    ( Uchar.to_int (Uchar.utf_decode_uchar decoded),
-      Uchar.utf_decode_length decoded )
+  if Uchar.utf_decode_is_valid decoded then decoded
   else raise (Ext_utf8.Invalid_utf8 "Invalid UTF-8 sequence")
 
 let utf16_length s =
@@ -230,8 +227,11 @@ let utf16_length s =
   let rec loop length index =
     if index = len then length
     else
-      let codepoint, width = decode_utf8_uchar_exn s index in
-      loop (length + if codepoint > 0xffff then 2 else 1) (index + width)
+      let decoded = decode_utf8_uchar_exn s index in
+      let codepoint = Uchar.to_int (Uchar.utf_decode_uchar decoded) in
+      loop
+        (length + if codepoint > 0xffff then 2 else 1)
+        (index + Uchar.utf_decode_length decoded)
   in
   loop 0 0
 
@@ -242,13 +242,14 @@ let code_point_at_utf16_index s index =
     let rec loop utf16_index byte_index =
       if byte_index = len then None
       else
-        let codepoint, width = decode_utf8_uchar_exn s byte_index in
+        let decoded = decode_utf8_uchar_exn s byte_index in
+        let codepoint = Uchar.to_int (Uchar.utf_decode_uchar decoded) in
         if utf16_index = index then Some codepoint
         else if codepoint > 0xffff && utf16_index + 1 = index then
           Some (0xdc00 + ((codepoint - 0x10000) land 0x3ff))
         else
           loop
             (utf16_index + if codepoint > 0xffff then 2 else 1)
-            (byte_index + width)
+            (byte_index + Uchar.utf_decode_length decoded)
     in
     loop 0 0
