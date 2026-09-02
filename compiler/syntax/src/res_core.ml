@@ -1004,9 +1004,20 @@ let parse_string_constant (p : Parser.t) ~start_pos ~end_pos source =
   match String_literal.decode_js_escapes source with
   | Some semantic -> Parsetree.Pconst_string {source; semantic}
   | None ->
-    if p.diagnostics = [] then
+    let has_literal_diagnostic =
+      List.exists
+        (fun diagnostic ->
+          let diagnostic_start = Diagnostics.get_start_pos diagnostic in
+          diagnostic_start.Lexing.pos_cnum >= start_pos.Lexing.pos_cnum
+          && diagnostic_start.Lexing.pos_cnum <= end_pos.Lexing.pos_cnum)
+        p.diagnostics
+    in
+    if not has_literal_diagnostic then
       Parser.err ~start_pos ~end_pos p
-        (Diagnostics.message "Invalid string escape sequence");
+        (Diagnostics.message
+           (if String_literal.is_valid_utf8 source then
+              "Invalid string escape sequence"
+            else "Invalid code point"));
     Parsetree.Pconst_string {source; semantic = ""}
 
 let parse_constant p =

@@ -81,6 +81,19 @@ let assert_parsed_string ~source ~expected_semantic =
       actual.semantic
   | _ -> OUnit.assert_failure "expected a parsed string literal"
 
+let assert_invalid_utf8_after_diagnostic () =
+  let source = "let x = (1,\nlet value = \"bad " ^ "\xff" ^ " byte\"" in
+  let result =
+    Res_driver.parse_implementation_from_source ~for_printer:false
+      ~display_filename:"StringLiteralTest.res" ~source
+  in
+  OUnit.assert_equal ~printer:string_of_int 2 (List.length result.diagnostics);
+  OUnit.assert_bool "expected an invalid-code-point diagnostic"
+    (List.exists
+       (fun diagnostic ->
+         Res_diagnostics.explain diagnostic = "Invalid code point")
+       result.diagnostics)
+
 let assert_parsed_char ~for_printer ~source ~expected_semantic =
   let result =
     Res_driver.parse_implementation_from_source ~for_printer
@@ -423,6 +436,8 @@ let suites =
                "\195A";
                "\\\195";
              ] );
+         ( "invalid UTF-8 is reported after an earlier diagnostic" >:: fun _ ->
+           assert_invalid_utf8_after_diagnostic () );
          ( "scanner rejects invalid braced Unicode escapes" >:: fun _ ->
            assert_invalid_string {|\u{}|};
            assert_invalid_string {|\u{110000}|} );
