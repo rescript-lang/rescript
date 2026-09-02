@@ -1264,7 +1264,7 @@ let sequand l r = if_ l r lambda_false
 
 let mk_builtin b args loc =
   match b with
-  | Primitive p -> Lprim {primitive = p; args; loc}
+  | Primitive p -> prim ~primitive:p ~args loc
   | Constant c -> (
     match args with
     | [] -> Lconst c
