@@ -33,22 +33,27 @@ val make_test_sequence_variant_constant :
   (Lambda.t option -> Lambda.t -> (int * (string * Lambda.t)) list -> Lambda.t)
   ref
 
+(* A case's right-hand side. The guard is kept apart from the body until the
+   match compiler knows what it falls through to; it is not encoded as a term
+   to be recognized by shape later. *)
+type action
+
+val unguarded : Lambda.t -> action
+
+val guarded : guard:Lambda.t -> Lambda.t -> action
+
 (* Entry points to match compiler *)
 val for_function :
   Location.t ->
   int ref option ->
   Lambda.t ->
-  (pattern * Lambda.t) list ->
+  (pattern * action) list ->
   partial ->
   Lambda.t
-val for_trywith : Lambda.t -> (pattern * Lambda.t) list -> Lambda.t
+val for_trywith : Lambda.t -> (pattern * action) list -> Lambda.t
 val for_let : Location.t -> Lambda.t -> pattern -> Lambda.t -> Lambda.t
 val for_multiple_match :
-  Location.t ->
-  Lambda.t list ->
-  (pattern * Lambda.t) list ->
-  partial ->
-  Lambda.t
+  Location.t -> Lambda.t list -> (pattern * action) list -> partial -> Lambda.t
 
 exception Cannot_flatten
 

@@ -599,9 +599,3 @@ val next_negative_raise_count : unit -> int
    exception x -> ...'.  This disabled some simplifications
    performed by the Simplif module that assume that static raises
    are in tail position in their handler. *)
-
-val staticfail : t (* Anticipated static failure *)
-
-(* Check anticipated failure, substitute its final value *)
-val is_guarded : t -> bool
-val patch_guarded : t -> t -> t

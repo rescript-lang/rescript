@@ -1300,10 +1300,10 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.t =
 and transl_list expr_list = List.map transl_exp expr_list
 
 and transl_guard guard rhs =
-  let expr = transl_exp rhs in
+  let body = transl_exp rhs in
   match guard with
-  | None -> expr
-  | Some cond -> if_ (transl_exp cond) expr staticfail
+  | None -> Matching.unguarded body
+  | Some cond -> Matching.guarded ~guard:(transl_exp cond) body
 
 and transl_case {c_lhs; c_guard; c_rhs} = (c_lhs, transl_guard c_guard c_rhs)
 
@@ -1384,13 +1384,15 @@ and transl_function loc (params : function_param list) body =
   | [{fp_param; fp_pat; fp_partial}] ->
     ( [fp_param],
       Matching.for_function loc None (var fp_param)
-        [(fp_pat, transl_exp body)]
+        [(fp_pat, Matching.unguarded (transl_exp body))]
         fp_partial,
       is_base_type body.exp_env body.exp_type Predef.path_unit )
   | {fp_param; fp_pat; fp_partial} :: rest ->
     let lparams, lbody, return_unit = transl_function loc rest body in
     ( fp_param :: lparams,
-      Matching.for_function loc None (var fp_param) [(fp_pat, lbody)] fp_partial,
+      Matching.for_function loc None (var fp_param)
+        [(fp_pat, Matching.unguarded lbody)]
+        fp_partial,
       return_unit )
 
 and transl_let ~js_hoist rec_flag pat_expr_list body =
