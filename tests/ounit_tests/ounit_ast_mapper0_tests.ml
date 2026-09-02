@@ -3,6 +3,15 @@ let assert_failure = OUnit.assert_failure
 
 let loc = Location.none
 
+let located_string ?(loc = loc) txt = {Location.txt; loc}
+
+let source_loc start_cnum end_cnum =
+  {
+    Location.loc_start = {Lexing.dummy_pos with pos_cnum = start_cnum};
+    loc_end = {Lexing.dummy_pos with pos_cnum = end_cnum};
+    loc_ghost = false;
+  }
+
 let attr name payload = ({Location.txt = name; loc}, payload)
 
 let has_attr name attrs =
@@ -197,7 +206,7 @@ let assert_string_pat ~expected_source ~expected_semantic pat =
 let assert_template_expr ~expected expr =
   match expr.Parsetree.pexp_desc with
   | Pexp_template {source_segments = [actual]; values = []} ->
-    OUnit.assert_equal ~printer:(Printf.sprintf "%S") expected actual
+    OUnit.assert_equal ~printer:(Printf.sprintf "%S") expected actual.txt
   | _ -> assert_failure "Expected a template expression"
 
 let test_ast0_strings_convert_to_internal_representation _ =
@@ -261,7 +270,9 @@ let test_string_literals_roundtrip_through_ast0 _ =
   assert_string_expr ~expected_source:{|a\n😀|} ~expected_semantic:semantic
     (map_expr0 (map_expr_to0 expr));
   let encoded = {|a\n\uD83D\uDE00|} in
-  let template_expr = Ast_helper.Exp.template ~loc [encoded] [] in
+  let template_expr =
+    Ast_helper.Exp.template ~loc [located_string encoded] []
+  in
   let template_expr0 = map_expr_to0 template_expr in
   (match template_expr0.Parsetree0.pexp_desc with
   | Pexp_constant (Pconst_string (actual, Some "js")) ->
@@ -354,6 +365,8 @@ let test_raw_extension_payloads_roundtrip_through_ast0 _ =
     ["raw"; "ffi"; "re"]
 
 let test_tagged_templates_roundtrip_through_ast0 _ =
+  let head_loc = source_loc 4 16 in
+  let tail_loc = source_loc 20 25 in
   let tag =
     Ast_helper.Exp.ident ~loc (Location.mknoloc (Longident.Lident "tag"))
   in
@@ -361,11 +374,26 @@ let test_tagged_templates_roundtrip_through_ast0 _ =
   let expression =
     Ast_helper.Exp.tagged_template ~loc
       ~attrs:[attr "keep" (Parsetree.PStr [])]
-      tag [{|raw\unicode|}; " tail"] [value]
+      tag
+      [
+        located_string ~loc:head_loc {|raw\unicode|};
+        located_string ~loc:tail_loc " tail";
+      ]
+      [value]
   in
   let expression0 = map_expr_to0 expression in
   OUnit.assert_bool "the frozen AST uses the tagged-template marker"
     (List.mem "res.taggedTemplate" (attr_names expression0.pexp_attributes));
+  (match expression0.pexp_desc with
+  | Pexp_apply
+      ( _,
+        [
+          (_, {pexp_desc = Pexp_array [head; tail]});
+          (_, {pexp_desc = Pexp_array [_]});
+        ] ) ->
+    OUnit.assert_equal ~printer:Ext_obj.dump [head_loc; tail_loc]
+      [head.pexp_loc; tail.pexp_loc]
+  | _ -> assert_failure "Expected frozen-AST tagged-template arrays");
   match (map_expr0 expression0).pexp_desc with
   | Pexp_tagged_template
       {
@@ -374,17 +402,25 @@ let test_tagged_templates_roundtrip_through_ast0 _ =
         values = [{pexp_desc = Pexp_constant (Pconst_integer ("1", None))}];
       } ->
     OUnit.assert_equal ~printer:Ext_obj.dump [{|raw\unicode|}; " tail"]
-      raw_sources;
+      (List.map (fun {Location.txt} -> txt) raw_sources);
+    OUnit.assert_equal ~printer:Ext_obj.dump [head_loc; tail_loc]
+      (List.map (fun (source : string Location.loc) -> source.loc) raw_sources);
     OUnit.assert_equal ["keep"]
       (attr_names (map_expr0 expression0).pexp_attributes)
   | _ -> assert_failure "Expected an explicit tagged template after roundtrip"
 
 let test_interpolated_templates_roundtrip_through_ast0 _ =
+  let head_loc = source_loc 1 8 in
+  let tail_loc = source_loc 12 16 in
   let value = Ast_helper.Exp.constant ~loc (Ast_helper.Const.integer "1") in
   let expression =
     Ast_helper.Exp.template ~loc
       ~attrs:[attr "keep" (Parsetree.PStr [])]
-      [{|head\n|}; "tail"] [value]
+      [
+        located_string ~loc:head_loc {|head\n|};
+        located_string ~loc:tail_loc "tail";
+      ]
+      [value]
   in
   let expression0 = map_expr_to0 expression in
   OUnit.assert_bool "the frozen AST uses the template marker"
@@ -398,6 +434,15 @@ let test_interpolated_templates_roundtrip_through_ast0 _ =
     | _ -> assert_failure "Expected a frozen-AST template segment"
   in
   first_segment expression0;
+  let rec segment_locations (expression : Parsetree0.expression) =
+    match expression.pexp_desc with
+    | Pexp_apply (_, [(_, lhs); (_, rhs)]) ->
+      segment_locations lhs @ segment_locations rhs
+    | Pexp_constant (Pconst_string (_, Some "js")) -> [expression.pexp_loc]
+    | _ -> []
+  in
+  OUnit.assert_equal ~printer:Ext_obj.dump [head_loc; tail_loc]
+    (segment_locations expression0);
   match map_expr0 expression0 with
   | {
    pexp_desc =
@@ -409,7 +454,11 @@ let test_interpolated_templates_roundtrip_through_ast0 _ =
    pexp_attributes;
   } ->
     OUnit.assert_equal ~printer:Ext_obj.dump [{|head\n|}; "tail"]
-      source_segments;
+      (List.map (fun {Location.txt} -> txt) source_segments);
+    OUnit.assert_equal ~printer:Ext_obj.dump [head_loc; tail_loc]
+      (List.map
+         (fun (source : string Location.loc) -> source.loc)
+         source_segments);
     OUnit.assert_equal ["keep"] (attr_names pexp_attributes)
   | _ -> assert_failure "Expected an explicit template after roundtrip"
 
@@ -505,7 +554,8 @@ let test_fun_param_attrs_roundtrip_through_ast0 _ =
 
 let test_error_extension_backquoted_strings _ =
   let backquoted_string value =
-    Ast_helper.Str.eval ~loc (Ast_helper.Exp.template ~loc [value] [])
+    Ast_helper.Str.eval ~loc
+      (Ast_helper.Exp.template ~loc [located_string value] [])
   in
   let extension =
     ( Location.mknoloc "error",

@@ -614,9 +614,11 @@ module E = struct
     | Pexp_template {source_segments; values} ->
       let segments =
         List.map
-          (fun source ->
-            Ast_helper0.Exp.constant ~loc ~attrs:[template_attr]
-              (Pt.Pconst_string (source, Some "js")))
+          (fun (source : string Location.loc) ->
+            Ast_helper0.Exp.constant
+              ~loc:(sub.location sub source.loc)
+              ~attrs:[template_attr]
+              (Pt.Pconst_string (source.txt, Some "js")))
           source_segments
       in
       let rec interleave acc segments values =
@@ -641,9 +643,11 @@ module E = struct
     | Pexp_tagged_template {tag; raw_sources; values} ->
       let segments =
         List.map
-          (fun source ->
-            Ast_helper0.Exp.constant ~loc ~attrs:[template_attr]
-              (Pt.Pconst_string (source, Some "js")))
+          (fun (source : string Location.loc) ->
+            Ast_helper0.Exp.constant
+              ~loc:(sub.location sub source.loc)
+              ~attrs:[template_attr]
+              (Pt.Pconst_string (source.txt, Some "js")))
           raw_sources
       in
       let tagged_attr = (Location.mknoloc "res.taggedTemplate", Pt.PStr []) in

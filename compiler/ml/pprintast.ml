@@ -763,8 +763,8 @@ and expression ctxt f x =
     | Pexp_template {source_segments; values} ->
       let rec parts f (source_segments, values) =
         match (source_segments, values) with
-        | [source], [] -> pp f "%s" source
-        | source :: source_segments, value :: values ->
+        | [{txt = source}], [] -> pp f "%s" source
+        | {txt = source} :: source_segments, value :: values ->
           pp f "%s${%a}%a" source (expression ctxt) value parts
             (source_segments, values)
         | _ -> assert false
@@ -773,8 +773,8 @@ and expression ctxt f x =
     | Pexp_tagged_template {tag; raw_sources; values} ->
       let rec parts f (sources, values) =
         match (sources, values) with
-        | [source], [] -> pp f "%s" source
-        | source :: sources, value :: values ->
+        | [{txt = source}], [] -> pp f "%s" source
+        | {txt = source} :: sources, value :: values ->
           pp f "%s${%a}%a" source (expression ctxt) value parts (sources, values)
         | _ -> assert false
       in

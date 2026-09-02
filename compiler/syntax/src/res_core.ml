@@ -2527,7 +2527,7 @@ and parse_template_expr ?prefix p =
     aux []
   in
   let parts = parse_parts p in
-  let sources = List.map (fun (source, _, _) -> source) parts in
+  let sources = List.map (fun (txt, loc, _) -> {Location.txt; loc}) parts in
   let values = Ext_list.filter_map parts (fun (_, _, value) -> value) in
   let template_loc =
     let _, first_loc, _ = List.hd parts in

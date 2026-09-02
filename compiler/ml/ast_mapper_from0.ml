@@ -580,7 +580,7 @@ module E = struct
     | Pexp_constant (Pconst_string (source, Some "js"))
       when has_template_attr attrs ->
       let attrs = remove_template_attr attrs in
-      template ~loc ~attrs [source] []
+      template ~loc ~attrs [{txt = source; loc}] []
     | Pexp_constant x ->
       let template = has_template_attr attrs in
       let attrs = if template then remove_template_attr attrs else attrs in
@@ -693,7 +693,8 @@ module E = struct
         List.map
           (fun (segment : Parsetree0.expression) ->
             match segment.pexp_desc with
-            | Pexp_constant (Pconst_string (source, Some "js")) -> source
+            | Pexp_constant (Pconst_string (txt, Some "js")) ->
+              {Location.txt; loc = sub.location sub segment.pexp_loc}
             | _ -> assert false)
           segments
       in
@@ -720,13 +721,23 @@ module E = struct
           "`json` literals do not support interpolation"
       in
       let rec collect sources values = function
-        | [{pexp_desc = Pexp_constant (Pconst_string (source, Some "js"))}] ->
-          Some (List.rev (source :: sources), List.rev values)
+        | [
+            {
+              pexp_desc = Pexp_constant (Pconst_string (txt, Some "js"));
+              pexp_loc;
+            };
+          ] ->
+          Some
+            ( List.rev
+                ({Location.txt; loc = sub.location sub pexp_loc} :: sources),
+              List.rev values )
         | [{pexp_desc = Pexp_constant (Pconst_string (_, Some "json"))}] ->
           reject_json_interpolation ()
-        | {pexp_desc = Pexp_constant (Pconst_string (source, Some "js"))}
+        | {pexp_desc = Pexp_constant (Pconst_string (txt, Some "js")); pexp_loc}
           :: value :: rest ->
-          collect (source :: sources) (value :: values) rest
+          collect
+            ({Location.txt; loc = sub.location sub pexp_loc} :: sources)
+            (value :: values) rest
         | {pexp_desc = Pexp_constant (Pconst_string (_, Some "json"))}
           :: _value :: _rest ->
           reject_json_interpolation ()

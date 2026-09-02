@@ -50,7 +50,7 @@ let semantic_string_of_expression (expression : Parsetree.expression) =
    pexp_desc = Pexp_template {source_segments = [source]; values = []};
    pexp_loc;
   } -> (
-    match String_literal.decode_js_template_escapes source with
+    match String_literal.decode_js_template_escapes source.txt with
     | Some semantic -> Some semantic
     | None ->
       Location.raise_errorf ~loc:pexp_loc "Invalid string escape sequence")
@@ -150,7 +150,8 @@ let raw_as_string_exp_exn ~(kind : Js_raw_info.raw_kind) ?is_function (x : t) :
                   _ );
           };
         ] ->
-      Some (source, Bs_flow_ast_utils.flow_deli_offset (Some "js"), expression)
+      Some
+        (source.txt, Bs_flow_ast_utils.flow_deli_offset (Some "js"), expression)
     | PStr
         [
           {

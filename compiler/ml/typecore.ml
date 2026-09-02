@@ -2542,10 +2542,11 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
     begin_def ();
     let segments : Asttypes.template_segment list =
       List.map
-        (fun source ->
+        (fun {Asttypes.txt = source; loc = source_loc} ->
           match String_literal.decode_js_template_escapes source with
           | Some semantic -> {source; semantic}
-          | None -> raise (Error (loc, env, Invalid_string_escape_sequence)))
+          | None ->
+            raise (Error (source_loc, env, Invalid_string_escape_sequence)))
         source_segments
     in
     let values =
@@ -2587,7 +2588,13 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
     end_def ();
     rue
       {
-        exp_desc = Texp_tagged_template {tag; raw_sources; values};
+        exp_desc =
+          Texp_tagged_template
+            {
+              tag;
+              raw_sources = List.map (fun {Asttypes.txt} -> txt) raw_sources;
+              values;
+            };
         exp_loc = loc;
         exp_extra = [];
         exp_type = output_ty;

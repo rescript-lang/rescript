@@ -382,12 +382,16 @@ and expression i ppf x =
     payload i ppf arg
   | Pexp_template {source_segments; values} ->
     line i ppf "Pexp_template\n";
-    List.iter (line (i + 1) ppf "source_segment %S\n") source_segments;
+    List.iter
+      (fun {Asttypes.txt} -> line (i + 1) ppf "source_segment %S\n" txt)
+      source_segments;
     List.iter (expression (i + 1) ppf) values
   | Pexp_tagged_template {tag; raw_sources; values} ->
     line i ppf "Pexp_tagged_template\n";
     expression (i + 1) ppf tag;
-    List.iter (line (i + 1) ppf "raw_source %S\n") raw_sources;
+    List.iter
+      (fun {Asttypes.txt} -> line (i + 1) ppf "raw_source %S\n" txt)
+      raw_sources;
     List.iter (expression (i + 1) ppf) values
   | Pexp_await e ->
     line i ppf "Pexp_await\n";

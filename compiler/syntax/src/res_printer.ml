@@ -4067,7 +4067,9 @@ and print_set_field_expr ~state attrs lhs longident_loc rhs loc cmt_tbl =
   print_comments doc cmt_tbl loc
 
 and print_template_literal ~state ~source_segments ~values cmt_tbl =
-  let strings = List.map print_string_contents source_segments in
+  let strings =
+    List.map (fun {Asttypes.txt} -> print_string_contents txt) source_segments
+  in
   let values =
     List.map
       (fun expr ->
@@ -4092,7 +4094,9 @@ and print_template_literal ~state ~source_segments ~values cmt_tbl =
   Doc.concat [Doc.text "`"; content; Doc.text "`"]
 
 and print_tagged_template_literal ~state ~tag ~raw_sources ~values cmt_tbl =
-  let strings = List.map print_string_contents raw_sources in
+  let strings =
+    List.map (fun {Asttypes.txt} -> print_string_contents txt) raw_sources
+  in
   let values =
     List.map
       (fun x ->

@@ -1,5 +1,7 @@
 let ( >:: ), ( >::: ) = OUnit.(( >:: ), ( >::: ))
 
+let located_string txt = Location.mknoloc txt
+
 let assert_decoded ~encoded ~expected =
   OUnit.assert_equal ~printer:Ext_obj.dump (Some expected)
     (String_literal.decode_js_escapes encoded)
@@ -123,7 +125,7 @@ let assert_parsed_template_literal ~source =
            ] );
    };
   ] ->
-    OUnit.assert_equal ~printer:(Printf.sprintf "%S") source actual
+    OUnit.assert_equal ~printer:(Printf.sprintf "%S") source actual.txt
   | _ -> OUnit.assert_failure "expected an explicit template expression"
 
 let assert_parsed_template_pattern ~source ~expected_semantic =
@@ -188,7 +190,7 @@ let assert_parsed_template () =
    };
   ] ->
     OUnit.assert_equal ~printer:Ext_obj.dump [{|head\n|}; "tail"]
-      source_segments
+      (List.map (fun {Location.txt} -> txt) source_segments)
   | _ -> OUnit.assert_failure "expected an explicit parsed template"
 
 let assert_invalid_json_interpolation () =
@@ -226,7 +228,9 @@ let typed_string s =
 
 let assert_typed_template ~source_segments ~expected_semantics =
   let value = Ast_helper.Exp.constant (Ast_helper.Const.string "value") in
-  let expression = Ast_helper.Exp.template source_segments [value] in
+  let expression =
+    Ast_helper.Exp.template (List.map located_string source_segments) [value]
+  in
   let typed =
     Typecore.type_exp Env.initial_safe_string expression
       ~context:(Some Error_message_utils.StringConcat)
@@ -291,7 +295,8 @@ let string_payload constant =
   Parsetree.PStr [Ast_helper.Str.eval (Ast_helper.Exp.constant constant)]
 
 let template_payload source =
-  Parsetree.PStr [Ast_helper.Str.eval (Ast_helper.Exp.template [source] [])]
+  Parsetree.PStr
+    [Ast_helper.Str.eval (Ast_helper.Exp.template [located_string source] [])]
 
 let suites =
   __FILE__
@@ -344,13 +349,16 @@ let suites =
            let encoded = {|\x61|} in
            assert_parsed_template_literal ~source:encoded;
            assert_parsed_template_pattern ~source:encoded ~expected_semantic:"a";
-           let expression = Ast_helper.Exp.template [encoded] [] in
+           let expression =
+             Ast_helper.Exp.template [located_string encoded] []
+           in
            match
              (Bs_builtin_ppx.mapper.expr Bs_builtin_ppx.mapper expression)
                .pexp_desc
            with
            | Pexp_template {source_segments = [actual]; values = []} ->
-             OUnit.assert_equal ~printer:(Printf.sprintf "%S") encoded actual
+             OUnit.assert_equal ~printer:(Printf.sprintf "%S") encoded
+               actual.txt
            | _ -> OUnit.assert_failure "expected a template expression" );
          ( "tagged templates are rejected in patterns" >:: fun _ ->
            assert_invalid_tagged_template_pattern "json";
@@ -366,7 +374,9 @@ let suites =
            assert_typed_template ~source_segments:["head\r\n"; "tail\r"]
              ~expected_semantics:["head\n"; "tail\n"] );
          ( "constant templates remain nonexpansive" >:: fun _ ->
-           let expression = Ast_helper.Exp.template ["literal"] [] in
+           let expression =
+             Ast_helper.Exp.template [located_string "literal"] []
+           in
            let typed =
              Typecore.type_exp Env.initial_safe_string expression ~context:None
            in
@@ -464,9 +474,13 @@ let suites =
                Parsetree.PStr
                  [
                    Ast_helper.Str.eval
-                     (Ast_helper.Exp.template [{|plain\nmessage|}] []);
+                     (Ast_helper.Exp.template
+                        [located_string {|plain\nmessage|}]
+                        []);
                    Ast_helper.Str.eval
-                     (Ast_helper.Exp.template [{|highlighted\nmessage|}] []);
+                     (Ast_helper.Exp.template
+                        [located_string {|highlighted\nmessage|}]
+                        []);
                  ] )
            in
            let error =

@@ -766,7 +766,8 @@ module Sexp_ast = struct
         Sexp.list
           [
             Sexp.atom "Pexp_template";
-            Sexp.list (List.map string source_segments);
+            Sexp.list
+              (List.map (fun {Asttypes.txt} -> string txt) source_segments);
             Sexp.list (List.map expression values);
           ]
       | Pexp_tagged_template {tag; raw_sources; values} ->
@@ -774,7 +775,7 @@ module Sexp_ast = struct
           [
             Sexp.atom "Pexp_tagged_template";
             expression tag;
-            Sexp.list (List.map string raw_sources);
+            Sexp.list (List.map (fun {Asttypes.txt} -> string txt) raw_sources);
             Sexp.list (List.map expression values);
           ]
       | Pexp_await e -> Sexp.list [Sexp.atom "Pexp_await"; expression e]

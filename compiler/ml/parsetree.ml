@@ -360,24 +360,25 @@ and expression_desc =
     (* for pattern of array_expr do body_expr *)
   | Pexp_for_await_of of pattern * expression * expression
   (* for await pattern of iterable_expr do body_expr *)
-  | Pexp_template of {source_segments: string list; values: expression list}
+  | Pexp_template of {source_segments: string loc list; values: expression list}
   (* An ordinary backquoted expression. [source_segments] contains the validated
      text between and around the interpolations, including escape spelling;
      [values] contains the interpolated expressions. For example, [`plain`]
-     produces [{source_segments = ["plain"]; values = []}], while
+     produces [{source_segments = [{txt = "plain"; loc}]; values = []}], while
      [`hello ${name}!`] produces
-     [{source_segments = ["hello "; "!"]; values = [name]}]. There is always
-     one more source segment than value. *)
+     [{source_segments = [{txt = "hello "; loc}; {txt = "!"; loc}]; values =
+     [name]}]. Each segment retains its source location, and there is always one
+     more source segment than value. *)
   | Pexp_tagged_template of {
       tag: expression;
-      raw_sources: string list;
+      raw_sources: string loc list;
       values: expression list;
     }
 (* A JavaScript tagged template. For example, [sql`id = ${id}`] produces the
-   expression [sql] as [tag], [raw_sources = ["id = "; ""]], and [values =
-   [id]]. There is always one more raw source than value. Each raw source keeps
-   its exact escape spelling and may contain an invalid escape, as JavaScript
-   permits for tagged templates. *)
+   expression [sql] as [tag], located strings ["id = "; ""] as [raw_sources],
+   and [values = [id]]. There is always one more raw source than value. Each raw
+   source keeps its exact escape spelling and source location, and may contain
+   an invalid escape, as JavaScript permits for tagged templates. *)
 
 (* an element of a record pattern or expression *)
 and 'a record_element = {lid: Longident.t loc; x: 'a; opt: bool (* optional *)}

@@ -265,7 +265,7 @@ and print_expr_item expr ~pos ~indentation =
     "Pexp_extension(%" ^ (loc |> print_loc_denominator_loc ~pos) ^ txt ^ ")"
   | Pexp_template {source_segments; values} ->
     "Pexp_template(source_segments=["
-    ^ String.concat ", " source_segments
+    ^ String.concat ", " (List.map (fun {Asttypes.txt} -> txt) source_segments)
     ^ "], values=["
     ^ String.concat ", "
         (List.map (fun value -> print_expr_item value ~pos ~indentation) values)
