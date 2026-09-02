@@ -2547,7 +2547,8 @@ and parse_template_expr ?prefix p =
   in
   let gen_tagged_template (lident_loc : Longident.t Location.loc) =
     let ident = Ast_helper.Exp.ident ~attrs:[] ~loc:lident_loc.loc lident_loc in
-    Ast_helper.Exp.tagged_template ~loc:lident_loc.loc ident sources values
+    let loc = mk_loc lident_loc.loc.loc_start p.prev_end_pos in
+    Ast_helper.Exp.tagged_template ~loc ident sources values
   in
 
   match prefix with

@@ -214,6 +214,27 @@ let assert_parsed_template () =
       (List.map (fun {Location.txt} -> txt) source_segments)
   | _ -> OUnit.assert_failure "expected an explicit parsed template"
 
+let assert_tagged_template_location () =
+  let prefix = "let value = " in
+  let source = prefix ^ "tag`head${item}tail`" in
+  let result =
+    Res_driver.parse_implementation_from_source ~for_printer:false
+      ~display_filename:"StringLiteralTest.res" ~source
+  in
+  match result.parsetree with
+  | [
+   {
+     pstr_desc =
+       Pstr_value
+         (_, [{pvb_expr = {pexp_desc = Pexp_tagged_template _; pexp_loc}}]);
+   };
+  ] ->
+    OUnit.assert_equal ~printer:string_of_int (String.length prefix)
+      pexp_loc.loc_start.pos_cnum;
+    OUnit.assert_equal ~printer:string_of_int (String.length source)
+      pexp_loc.loc_end.pos_cnum
+  | _ -> OUnit.assert_failure "expected a parsed tagged template"
+
 let assert_invalid_json_interpolation () =
   let result =
     Res_driver.parse_implementation_from_source ~for_printer:false
@@ -394,6 +415,7 @@ let suites =
          ( "interpolated templates have an explicit parser representation"
          >:: fun _ ->
            assert_parsed_template ();
+           assert_tagged_template_location ();
            assert_invalid_json_interpolation () );
          ( "template expression escapes are parser diagnostics" >:: fun _ ->
            List.iter assert_invalid_template_expression
