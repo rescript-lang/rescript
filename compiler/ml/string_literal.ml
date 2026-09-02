@@ -10,17 +10,7 @@ let is_low_surrogate codepoint = codepoint >= 0xdc00 && codepoint <= 0xdfff
 let combine_surrogate_pair high low =
   0x10000 + ((high - 0xd800) lsl 10) + (low - 0xdc00)
 
-let is_valid_utf8 s =
-  let len = String.length s in
-  let rec loop index =
-    if index = len then true
-    else
-      let decoded = String.get_utf_8_uchar s index in
-      if Uchar.utf_decode_is_valid decoded then
-        loop (index + Uchar.utf_decode_length decoded)
-      else false
-  in
-  loop 0
+let is_valid_utf8 = String.is_valid_utf_8
 
 let replace_invalid_utf8 s =
   let len = String.length s in
@@ -46,7 +36,7 @@ let decode_js_escapes_with ~normalize_template_line_endings s =
     if codepoint > 0x10ffff || (codepoint >= 0xd800 && codepoint <= 0xdfff) then
       false
     else (
-      Buffer.add_string buf (Ext_utf8.encode_codepoint codepoint);
+      Buffer.add_utf_8_uchar buf (Uchar.of_int codepoint);
       true)
   in
   let decode_fixed_hex start count =
@@ -178,7 +168,9 @@ let decode_js_escapes =
 let decode_js_template_escapes =
   decode_js_escapes_with ~normalize_template_line_endings:true
 
-let encode_js_string s =
+type encode_js_mode = String | Template
+
+let encode_js mode s =
   let buf = Buffer.create (String.length s) in
   String.iter
     (function
@@ -188,32 +180,26 @@ let encode_js_string s =
       | '\r' -> Buffer.add_string buf {e|\r|e}
       | '\t' -> Buffer.add_string buf {e|\t|e}
       | '\011' -> Buffer.add_string buf {e|\v|e}
-      | '"' -> Buffer.add_string buf {e|\"|e}
       | '\\' -> Buffer.add_string buf {e|\\|e}
       | ('\000' .. '\031' | '\127') as c ->
         Buffer.add_string buf (Printf.sprintf {e|\x%02X|e} (Char.code c))
+      | '"' as c -> (
+        match mode with
+        | String -> Buffer.add_string buf {e|\"|e}
+        | Template -> Buffer.add_char buf c)
+      | ('`' | '$') as c -> (
+        match mode with
+        | String -> Buffer.add_char buf c
+        | Template ->
+          Buffer.add_char buf '\\';
+          Buffer.add_char buf c)
       | c -> Buffer.add_char buf c)
     s;
   Buffer.contents buf
 
-let encode_js_template s =
-  let buf = Buffer.create (String.length s) in
-  String.iter
-    (function
-      | '\b' -> Buffer.add_string buf {e|\b|e}
-      | '\012' -> Buffer.add_string buf {e|\f|e}
-      | '\n' -> Buffer.add_string buf {e|\n|e}
-      | '\r' -> Buffer.add_string buf {e|\r|e}
-      | '\t' -> Buffer.add_string buf {e|\t|e}
-      | '\011' -> Buffer.add_string buf {e|\v|e}
-      | '`' -> Buffer.add_string buf {e|\`|e}
-      | '$' -> Buffer.add_string buf {e|\$|e}
-      | '\\' -> Buffer.add_string buf {e|\\|e}
-      | ('\000' .. '\031' | '\127') as c ->
-        Buffer.add_string buf (Printf.sprintf {e|\x%02X|e} (Char.code c))
-      | c -> Buffer.add_char buf c)
-    s;
-  Buffer.contents buf
+let encode_js_string = encode_js String
+
+let encode_js_template = encode_js Template
 
 let encode_char_source codepoint =
   match codepoint with
@@ -232,21 +218,37 @@ let encode_char_source codepoint =
     Ext_utf8.encode_codepoint codepoint
   | codepoint -> Printf.sprintf {e|\u{%X}|e} codepoint
 
+let decode_utf8_uchar_exn s index =
+  let decoded = String.get_utf_8_uchar s index in
+  if Uchar.utf_decode_is_valid decoded then
+    ( Uchar.to_int (Uchar.utf_decode_uchar decoded),
+      Uchar.utf_decode_length decoded )
+  else raise (Ext_utf8.Invalid_utf8 "Invalid UTF-8 sequence")
+
 let utf16_length s =
-  Ext_utf8.decode_utf8_string s
-  |> List.fold_left
-       (fun length codepoint -> length + if codepoint > 0xffff then 2 else 1)
-       0
+  let len = String.length s in
+  let rec loop length index =
+    if index = len then length
+    else
+      let codepoint, width = decode_utf8_uchar_exn s index in
+      loop (length + if codepoint > 0xffff then 2 else 1) (index + width)
+  in
+  loop 0 0
 
 let code_point_at_utf16_index s index =
   if index < 0 then None
   else
-    let rec loop utf16_index = function
-      | [] -> None
-      | codepoint :: rest ->
+    let len = String.length s in
+    let rec loop utf16_index byte_index =
+      if byte_index = len then None
+      else
+        let codepoint, width = decode_utf8_uchar_exn s byte_index in
         if utf16_index = index then Some codepoint
         else if codepoint > 0xffff && utf16_index + 1 = index then
           Some (0xdc00 + ((codepoint - 0x10000) land 0x3ff))
-        else loop (utf16_index + if codepoint > 0xffff then 2 else 1) rest
+        else
+          loop
+            (utf16_index + if codepoint > 0xffff then 2 else 1)
+            (byte_index + width)
     in
-    loop 0 (Ext_utf8.decode_utf8_string s)
+    loop 0 0

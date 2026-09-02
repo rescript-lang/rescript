@@ -564,6 +564,16 @@ let print_string_contents txt =
   let lines = String.split_on_char '\n' txt in
   Doc.join ~sep:Doc.literal_line (List.map Doc.text lines)
 
+let interleave_template_parts sources values =
+  let rec loop acc sources values =
+    match (sources, values) with
+    | [source], [] -> Doc.concat [acc; source]
+    | source :: sources, value :: values ->
+      loop (Doc.concat [acc; source; value]) sources values
+    | _ -> assert false
+  in
+  loop Doc.nil sources values
+
 let raw_source_fits_double_quotes source =
   let rec loop index =
     if index >= String.length source then true
@@ -4083,14 +4093,7 @@ and print_template_literal ~state ~source_segments ~values cmt_tbl =
         Doc.group (Doc.concat [Doc.text "${"; Doc.indent doc; Doc.rbrace]))
       values
   in
-  let rec interleave acc strings values =
-    match (strings, values) with
-    | [source], [] -> Doc.concat [acc; source]
-    | source :: sources, value :: values ->
-      interleave (Doc.concat [acc; source; value]) sources values
-    | _ -> assert false
-  in
-  let content = interleave Doc.nil strings values in
+  let content = interleave_template_parts strings values in
   Doc.concat [Doc.text "`"; content; Doc.text "`"]
 
 and print_tagged_template_literal ~state ~tag ~raw_sources ~values cmt_tbl =
@@ -4109,16 +4112,7 @@ and print_tagged_template_literal ~state ~tag ~raw_sources ~values cmt_tbl =
       values
   in
 
-  let process strings values =
-    let rec aux acc = function
-      | [], [] -> acc
-      | a_head :: a_rest, b -> aux (Doc.concat [acc; a_head]) (b, a_rest)
-      | _ -> assert false
-    in
-    aux Doc.nil (strings, values)
-  in
-
-  let content : Doc.t = process strings values in
+  let content = interleave_template_parts strings values in
 
   let tag_doc = print_expression_with_comments ~state tag cmt_tbl in
   Doc.concat [tag_doc; Doc.text "`"; content; Doc.text "`"]

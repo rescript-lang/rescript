@@ -685,81 +685,44 @@ let array_length ?comment (e : t) : t =
     int ?comment (Int32.of_int (List.length l))
   | _ -> {expression_desc = Length e; comment; source_loc = None}
 
-let string_length ?comment (e : t) : t =
+let string_literal_semantic (e : t) =
   match e.expression_desc with
-  | Str txt -> int ?comment (Int32.of_int (String_literal.utf16_length txt))
-  | Template_literal {semantic = txt} ->
-    int ?comment (Int32.of_int (String_literal.utf16_length txt))
-  | _ -> {expression_desc = Length e; comment; source_loc = None}
-
-type string_literal =
-  | Semantic_string of string
-  | Backquoted_literal of {source: string; semantic: string}
-
-let as_string_literal (e : t) =
-  match e.expression_desc with
-  | Str txt -> Some (Semantic_string txt)
-  | Template_literal {source; semantic} ->
-    Some (Backquoted_literal {source; semantic})
+  | Str semantic | Template_literal {semantic} -> Some semantic
   | _ -> None
 
-let string_literal_is_empty = function
-  | Semantic_string "" | Backquoted_literal {semantic = ""} -> true
-  | _ -> false
-
-let concat_string_literals first second =
-  match (first, second) with
-  | Semantic_string a, Semantic_string b -> Some (J.Str (a ^ b))
-  | Semantic_string a, Backquoted_literal {semantic = b}
-  | Backquoted_literal {semantic = a}, Semantic_string b
-  | Backquoted_literal {semantic = a}, Backquoted_literal {semantic = b} ->
-    Some (J.Str (a ^ b))
+let string_length ?comment (e : t) : t =
+  match string_literal_semantic e with
+  | Some semantic ->
+    int ?comment (Int32.of_int (String_literal.utf16_length semantic))
+  | None -> {expression_desc = Length e; comment; source_loc = None}
 
 let rec string_append ?comment (e : t) (el : t) : t =
-  let concat (base : t) a b =
-    match concat_string_literals a b with
-    | Some expression_desc -> Some {base with expression_desc}
-    | None -> None
+  let append () : t =
+    {comment; source_loc = None; expression_desc = String_append (e, el)}
   in
-  match (as_string_literal e, as_string_literal el) with
-  | Some literal, _ when string_literal_is_empty literal -> el
-  | _, Some literal when string_literal_is_empty literal -> e
-  | Some a, Some b -> (
-    match concat e a b with
-    | Some result -> {result with comment; source_loc = None}
-    | None ->
-      {comment; source_loc = None; expression_desc = String_append (e, el)})
+  let concat (base : t) a b = {base with expression_desc = Str (a ^ b)} in
+  match (string_literal_semantic e, string_literal_semantic el) with
+  | Some "", _ -> el
+  | _, Some "" -> e
+  | Some a, Some b -> {(concat e a b) with comment; source_loc = None}
   | _ -> (
     match (e.expression_desc, el.expression_desc) with
     | String_append (a, b_expr), String_append (c_expr, d) -> (
-      match (as_string_literal b_expr, as_string_literal c_expr) with
-      | Some b, Some c -> (
-        match concat b_expr b c with
-        | Some combined -> string_append ?comment (string_append a combined) d
-        | None ->
-          {comment; source_loc = None; expression_desc = String_append (e, el)})
-      | _ ->
-        {comment; source_loc = None; expression_desc = String_append (e, el)})
+      match
+        (string_literal_semantic b_expr, string_literal_semantic c_expr)
+      with
+      | Some b, Some c ->
+        string_append ?comment (string_append a (concat b_expr b c)) d
+      | _ -> append ())
     | _, String_append (b, c) -> (
-      match (as_string_literal e, as_string_literal b) with
-      | Some a, Some b -> (
-        match concat e a b with
-        | Some combined -> string_append ?comment combined c
-        | None ->
-          {comment; source_loc = None; expression_desc = String_append (e, el)})
-      | _ ->
-        {comment; source_loc = None; expression_desc = String_append (e, el)})
+      match (string_literal_semantic e, string_literal_semantic b) with
+      | Some a, Some b -> string_append ?comment (concat e a b) c
+      | _ -> append ())
     | String_append (c, b_expr), _ -> (
-      match (as_string_literal b_expr, as_string_literal el) with
-      | Some b, Some a -> (
-        match concat b_expr b a with
-        | Some combined -> string_append ?comment c combined
-        | None ->
-          {comment; source_loc = None; expression_desc = String_append (e, el)})
-      | _ ->
-        {comment; source_loc = None; expression_desc = String_append (e, el)})
-    | _ -> {comment; source_loc = None; expression_desc = String_append (e, el)}
-    )
+      match (string_literal_semantic b_expr, string_literal_semantic el) with
+      | Some b, Some a -> string_append ?comment c (concat b_expr b a)
+      | _ -> append ())
+    | _ -> append ())
 
 let obj ?comment ?dup properties : t =
   {expression_desc = Object (dup, properties); comment; source_loc = None}
@@ -1533,11 +1496,8 @@ let to_int32 ?comment (e : J.expression) : J.expression =
 (* TODO: if we already know the input is int32, [x|0] can be reduced into [x] *)
 
 let string_comp (cmp : Lambda.comparison) ?comment (e0 : t) (e1 : t) =
-  match (e0.expression_desc, e1.expression_desc) with
-  | Str a0, Str a1
-  | Str a0, Template_literal {semantic = a1}
-  | Template_literal {semantic = a0}, Str a1
-  | Template_literal {semantic = a0}, Template_literal {semantic = a1} -> (
+  match (string_literal_semantic e0, string_literal_semantic e1) with
+  | Some a0, Some a1 -> (
     let equal = Ext_string.equal a0 a1 in
     match cmp with
     | Ceq -> bool equal

@@ -20,6 +20,6 @@ let suites =
            let escape = Emit_text.escape_string_contents in
            assert_equal "é" (escape "é");
            assert_equal "a\\\"b\\\\c" (escape "a\"b\\c");
-           assert_equal "\\b\\f\\n\\r\\t\\x0b\\x7f"
+           assert_equal "\\b\\f\\n\\r\\t\\v\\x7F"
              (escape "\b\012\n\r\t\011\127") );
        ]
