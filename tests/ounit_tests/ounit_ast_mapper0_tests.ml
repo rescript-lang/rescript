@@ -506,6 +506,26 @@ let slash = "\\"|}
   in
   OUnit.assert_equal ~printer:(Printf.sprintf "%S") (source ^ "\n") reprinted
 
+let test_invalid_utf8_doc_comment_roundtrips_through_ast0 _ =
+  let source = "/** doc " ^ "\xff" ^ " byte */\nlet value = 1" in
+  let parsed =
+    Res_driver.parse_implementation_from_source ~for_printer:false
+      ~display_filename:"InvalidDocComment.res" ~source
+  in
+  OUnit.assert_bool "expected invalid UTF-8 to be diagnosed" parsed.invalid;
+  OUnit.assert_bool "expected an invalid-code-point diagnostic"
+    (List.exists
+       (fun diagnostic ->
+         Res_diagnostics.explain diagnostic = "Invalid code point")
+       parsed.diagnostics);
+  let structure0 =
+    Ast_mapper_to0.default_mapper.structure Ast_mapper_to0.default_mapper
+      parsed.parsetree
+  in
+  ignore
+    (Ast_mapper_from0.default_mapper.structure Ast_mapper_from0.default_mapper
+       structure0)
+
 (* Function-node attributes such as [@this] must stay node attributes across
    the v0 bridge: the built-in PPX reads decorators from [pexp_attributes],
    so a round trip that moves them into [p_attrs] silently disables them. *)
@@ -593,6 +613,8 @@ let suites =
          >:: test_ast0_json_interpolation_is_rejected;
          "string_source_reprints_after_ast0_roundtrip"
          >:: test_string_source_reprints_after_ast0_roundtrip;
+         "invalid_utf8_doc_comment_roundtrips_through_ast0"
+         >:: test_invalid_utf8_doc_comment_roundtrips_through_ast0;
          "malformed_internal_record_rest_attr_fails"
          >:: test_malformed_internal_record_rest_attr_fails;
          "record_rest_roundtrips_through_ast0"

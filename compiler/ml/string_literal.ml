@@ -22,6 +22,23 @@ let is_valid_utf8 s =
   in
   loop 0
 
+let replace_invalid_utf8 s =
+  let len = String.length s in
+  let buf = Buffer.create len in
+  let rec loop index =
+    if index < len then
+      let decoded = String.get_utf_8_uchar s index in
+      let decoded_len = Uchar.utf_decode_length decoded in
+      if Uchar.utf_decode_is_valid decoded then (
+        Buffer.add_substring buf s index decoded_len;
+        loop (index + decoded_len))
+      else (
+        Buffer.add_utf_8_uchar buf Uchar.rep;
+        loop (index + decoded_len))
+  in
+  loop 0;
+  Buffer.contents buf
+
 let decode_js_escapes_with ~normalize_template_line_endings s =
   let len = String.length s in
   let buf = Buffer.create len in
