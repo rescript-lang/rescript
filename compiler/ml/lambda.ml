@@ -1457,19 +1457,6 @@ let next_negative_raise_count () =
   !negative_raise_count
 
 (* Anticipated staticraise, for guards *)
-let staticfail = Lstaticraise (0, [])
-
-let rec is_guarded = function
-  | Lifthenelse (_cond, _body, Lstaticraise (0, [])) -> true
-  | Llet (_str, _id, _lam, body) -> is_guarded body
-  | _ -> false
-
-let rec patch_guarded patch = function
-  | Lifthenelse (cond, body, Lstaticraise (0, [])) ->
-    Lifthenelse (cond, body, patch)
-  | Llet (str, id, lam, body) -> Llet (str, id, lam, patch_guarded patch body)
-  | _ -> assert false
-
 (* Translate an access path *)
 
 let rec transl_normal_path = function

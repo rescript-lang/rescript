@@ -345,8 +345,56 @@ let jumps_map f env = List.map (fun (i, pss) -> (i, f pss)) env
 
 (* Pattern matching before any compilation *)
 
+(* A case's right-hand side, kept as data until the fallthrough it may need
+   is known. Encoding the guard as a term and recognizing it by shape
+   afterwards would let normalization erase it: a guard that folds to false
+   is not a missing guard. Simplification brings pattern variables into
+   scope with lets, which must cover the guard as well as the body, so those
+   accumulate here too, outermost first. *)
+type action = {
+  binds: (let_kind * Ident.t * Lambda.t) list;
+  guard: Lambda.t option;
+  body: Lambda.t;
+}
+
+let unguarded body = {binds = []; guard = None; body}
+let guarded ~guard body = {binds = []; guard = Some guard; body}
+
+(* Bring [id = e] into scope over the whole right-hand side. Like
+   [Lambda.bind], an alias of a variable to itself is dropped. *)
+let bind_action kind id e (a : action) =
+  match e with
+  | Lvar v when Ident.same v id -> a
+  | _ -> {a with binds = (kind, id, e) :: a.binds}
+
+let action_body_with ~fail {binds; guard; body} =
+  let core =
+    match guard with
+    | None -> body
+    | Some g -> if_ g body fail
+  in
+  List.fold_right (fun (k, id, e) acc -> let_ k id e acc) binds core
+
+(* For comparing actions by key. The stand-in for the fallthrough is a fresh
+   variable, shared by both sides so the keys stay comparable, and impossible
+   for a real action to mention. A constant such as unit would not do: it
+   would make [when g => e] and [_ => if g then e else ()] compare equal, and
+   merging those loses one evaluation of [g]. *)
+let action_key_term ~fail a = action_body_with ~fail a
+
+let action_free_variables {binds; guard; body} =
+  let inner =
+    match guard with
+    | None -> free_variables body
+    | Some g -> Set_ident.union (free_variables body) (free_variables g)
+  in
+  List.fold_right
+    (fun (_, id, e) acc ->
+      Set_ident.union (free_variables e) (Set_ident.remove acc id))
+    binds inner
+
 type pattern_matching = {
-  mutable cases: (pattern list * Lambda.t) list;
+  mutable cases: (pattern list * action) list;
   args: (Lambda.t * let_kind) list;
   default: (matrix * int) list;
 }
@@ -471,10 +519,9 @@ let same_actions = function
 
 (* Test for swapping two clauses *)
 
-let up_ok_action act1 act2 =
-  try
-    let raw1 = tr_raw act1 and raw2 = tr_raw act2 in
-    raw1 = raw2
+let up_ok_action (a1 : action) (a2 : action) =
+  let fail = Lambda.var (Ident.create "fallthrough") in
+  try tr_raw (action_key_term ~fail a1) = tr_raw (action_key_term ~fail a2)
   with Exit -> false
 
 let up_ok (ps, act_p) l =
@@ -514,7 +561,7 @@ let simplify_or p =
   try simpl_rec p with Var p -> p
 
 let bind_record_rest loc arg rest action =
-  let_ Strict rest.rest_ident
+  bind_action Strict rest.rest_ident
     (prim ~primitive:(Precord_rest rest.excluded_runtime_labels) ~args:[arg] loc)
     action
 
@@ -527,10 +574,10 @@ let simplify_cases args cls =
       | ((pat :: patl, action) as cl) :: rem -> (
         match pat.pat_desc with
         | Tpat_var (id, _) ->
-          (omega :: patl, bind Alias id arg action) :: simplify rem
+          (omega :: patl, bind_action Alias id arg action) :: simplify rem
         | Tpat_any -> cl :: simplify rem
         | Tpat_alias (p, id, _) ->
-          simplify ((p :: patl, bind Alias id arg action) :: rem)
+          simplify ((p :: patl, bind_action Alias id arg action) :: rem)
         | Tpat_record ([], _, rest) ->
           let action =
             match rest with
@@ -643,7 +690,7 @@ let rec explode_or_pat arg patl mk_action rem vars aliases = function
 
 let pm_free_variables {cases} =
   List.fold_right
-    (fun (_, act) r -> Set_ident.union (free_variables act) r)
+    (fun (_, act) r -> Set_ident.union (action_free_variables act) r)
     cases Set_ident.empty
 
 (* Basic grouping predicates *)
@@ -698,7 +745,7 @@ let is_or p =
 (* Conditions for appending to the Or matrix *)
 let conda p q = not (may_compat p q)
 
-and condb act ps qs = (not (is_guarded act)) && Parmatch.le_pats qs ps
+and condb (act : action) ps qs = act.guard = None && Parmatch.le_pats qs ps
 
 let or_ok p ps l =
   List.for_all
@@ -1046,7 +1093,7 @@ and precompile_or argo cls ors args def k =
         let new_patl = Parmatch.omega_list patl in
 
         let mk_new_action vs =
-          staticraise or_num (List.map (fun v -> var v) vs)
+          unguarded (staticraise or_num (List.map (fun v -> var v) vs))
         in
 
         let body, handlers = do_cases rem in
@@ -2416,11 +2463,15 @@ let arg_to_var arg cls =
 let rec compile_match repr partial ctx m =
   match m with
   | {cases = []; args = []} -> comp_exit ctx m
-  | {cases = ([], action) :: rem} ->
-    if is_guarded action then
-      let lambda, total = compile_match None partial ctx {m with cases = rem} in
-      (patch_guarded lambda action, total)
-    else (action, jumps_empty)
+  | {cases = ([], action) :: rem} -> (
+    (* The row matches. An unguarded action is the result; a guarded one
+       falls through to the remaining rows when the guard fails, so those
+       are compiled first and become the alternative. *)
+    match action.guard with
+    | None -> (action_body_with ~fail:lambda_unit action, jumps_empty)
+    | Some _ ->
+      let fail, total = compile_match None partial ctx {m with cases = rem} in
+      (action_body_with ~fail action, total))
   | {args = (arg, str) :: argl} ->
     let v, newarg = arg_to_var arg m.cases in
     let first_match, rem =
@@ -2568,7 +2619,7 @@ let check_partial is_mutable pat_act_list = function
       ||
       (* allow empty case list *)
       List.exists
-        (fun (pats, lam) -> is_mutable pats && is_guarded lam)
+        (fun (pats, (act : action)) -> is_mutable pats && act.guard <> None)
         pat_act_list
     then Partial
     else Total
@@ -2641,7 +2692,9 @@ let for_trywith param pat_act_list =
     param pat_act_list Partial
 
 let simple_for_let loc param pat body =
-  compile_matching None (partial_function loc) param [(pat, body)] Partial
+  compile_matching None (partial_function loc) param
+    [(pat, unguarded body)]
+    Partial
 
 (* Optimize binding of immediate tuples
 
