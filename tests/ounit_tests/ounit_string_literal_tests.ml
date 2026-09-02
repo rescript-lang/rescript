@@ -676,7 +676,7 @@ let suites =
            let escaped_literal =
              Js_exp_make.template_literal ~semantic:"a" {e|\x61|e}
            in
-           let source_preserving =
+           let canonicalized =
              Js_exp_make.interpolated_template
                [
                  {source = "head"; semantic = "head"};
@@ -686,7 +686,24 @@ let suites =
            in
            OUnit.assert_equal ~printer:(Printf.sprintf "%S")
              {e|`head\x61tail`|e}
-             (Js_dump.string_of_expression source_preserving) );
+             (Js_dump.string_of_expression canonicalized);
+           let boundary =
+             Js_exp_make.interpolated_template
+               [{source = "$"; semantic = "$"}; {source = ""; semantic = ""}]
+               [Js_exp_make.template_literal ~semantic:"{x}" "{x}"]
+           in
+           OUnit.assert_equal ~printer:(Printf.sprintf "%S") {e|`\${x}`|e}
+             (Js_dump.string_of_expression boundary);
+           let already_escaped_boundary =
+             Js_exp_make.interpolated_template
+               [
+                 {source = {e|\$|e}; semantic = "$"};
+                 {source = ""; semantic = ""};
+               ]
+               [Js_exp_make.template_literal ~semantic:"{x}" "{x}"]
+           in
+           OUnit.assert_equal ~printer:(Printf.sprintf "%S") {e|`\${x}`|e}
+             (Js_dump.string_of_expression already_escaped_boundary) );
          ( "JavaScript references are not encoded as strings" >:: fun _ ->
            let value = Js_exp_make.var (Ext_ident.create "value") in
            (match (Js_exp_make.is_array value).expression_desc with
