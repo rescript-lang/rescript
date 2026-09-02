@@ -421,7 +421,9 @@ let suites =
            OUnit.assert_equal ~printer:(Printf.sprintf "%S") {e|\x00|e}
              (String_literal.encode_char_source 0x00);
            OUnit.assert_equal ~printer:(Printf.sprintf "%S") "😀"
-             (String_literal.encode_char_source 0x1f600) );
+             (String_literal.encode_char_source 0x1f600);
+           OUnit.assert_equal ~printer:(Printf.sprintf "%S") {|\u{D800}|}
+             (String_literal.encode_char_source 0xd800) );
          ( "character patterns are not tagged templates" >:: fun _ ->
            let pattern =
              Ast_helper.Pat.constant

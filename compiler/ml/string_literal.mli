@@ -13,7 +13,9 @@ val encode_js_string : string -> string
     body. *)
 
 val encode_char_source : int -> string
-(** Encode a Unicode code point as a canonical character-literal body. *)
+(** Encode an integer as a canonical character-literal body. Non-scalar values
+    use braced Unicode escape spelling so compiler-generated ghost patterns and
+    legacy PPX output remain printable. *)
 
 val utf16_length : string -> int
 (** Return the number of UTF-16 code units in a semantic UTF-8 string, matching

@@ -173,7 +173,9 @@ let encode_char_source codepoint =
     Printf.sprintf {e|\x%02X|e} codepoint
   | codepoint when codepoint >= 0x20 && codepoint <= 0x7e ->
     String.make 1 (Char.unsafe_chr codepoint)
-  | _ -> Ext_utf8.encode_codepoint codepoint
+  | codepoint when Uchar.is_valid codepoint ->
+    Ext_utf8.encode_codepoint codepoint
+  | codepoint -> Printf.sprintf {e|\u{%X}|e} codepoint
 
 let utf16_length s =
   Ext_utf8.decode_utf8_string s
