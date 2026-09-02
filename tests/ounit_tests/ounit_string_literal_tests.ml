@@ -313,6 +313,14 @@ let suites =
            assert_decoded ~encoded:{|\u0061\u20AC|} ~expected:"a€";
            assert_decoded ~encoded:{|\u{1f600}|} ~expected:"😀";
            assert_decoded ~encoded:{|\uD83D\uDE00|} ~expected:"😀" );
+         ( "malformed UTF-8 is rejected" >:: fun _ ->
+           List.iter
+             (fun encoded ->
+               OUnit.assert_equal ~printer:Ext_obj.dump None
+                 (String_literal.decode_js_escapes encoded);
+               OUnit.assert_equal ~printer:Ext_obj.dump None
+                 (String_literal.decode_js_template_escapes encoded))
+             ["\xc0\x80"; "\xed\xa0\x80"; "\xf4\x90\x80\x80"] );
          ( "line continuations" >:: fun _ ->
            assert_decoded ~encoded:"a\\\nb" ~expected:"ab";
            assert_decoded ~encoded:"a\\\rb" ~expected:"ab";

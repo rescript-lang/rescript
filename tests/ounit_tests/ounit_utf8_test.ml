@@ -30,6 +30,17 @@ let suites =
                 105;
               ] );
          (__LOC__ >:: fun _ -> Ext_utf8.decode_utf8_string "" =~ []);
+         ( "reject malformed UTF-8" >:: fun _ ->
+           List.iter
+             (fun input ->
+               OUnit.assert_raises
+                 (Ext_utf8.Invalid_utf8 "Invalid UTF-8 sequence") (fun () ->
+                   ignore (Ext_utf8.decode_utf8_string input)))
+             ["\xc0\x80"; "\xed\xa0\x80"; "\xf4\x90\x80\x80"] );
+         ( "escape malformed UTF-8 in JavaScript strings" >:: fun _ ->
+           Js_dump_string.escape_to_string
+             "\xc0\x80\xed\xa0\x80\xf4\x90\x80\x80"
+           =~ {|"\xc0\x80\xed\xa0\x80\xf4\x90\x80\x80"|} );
          ( __LOC__ >:: fun _ ->
            Code_frame.break_long_line 4 "abc—def" =~ ["abc—"; "def"] );
        ]

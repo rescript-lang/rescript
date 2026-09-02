@@ -45,17 +45,12 @@ let decode_js_escapes_with ~normalize_template_line_endings s =
     loop start 0 false
   in
   let copy_utf8 index =
-    match Ext_utf8.classify s.[index] with
-    | Single _ ->
-      Buffer.add_char buf s.[index];
-      Some (index + 1)
-    | Leading (remaining, _) ->
-      let last = Ext_utf8.next s ~remaining index in
-      if last < 0 then None
-      else (
-        Buffer.add_substring buf s index (last - index + 1);
-        Some (last + 1))
-    | Cont _ | Invalid -> None
+    let decoded = String.get_utf_8_uchar s index in
+    if Uchar.utf_decode_is_valid decoded then (
+      let length = Uchar.utf_decode_length decoded in
+      Buffer.add_substring buf s index length;
+      Some (index + length))
+    else None
   in
   let rec loop index =
     if index = len then Some (Buffer.contents buf)

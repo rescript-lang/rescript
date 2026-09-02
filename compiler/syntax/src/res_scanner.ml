@@ -89,10 +89,16 @@ let _printDebug ~start_pos ~end_pos scanner token =
 let next scanner =
   let next_offset = scanner.offset + 1 in
   let utf16len =
-    match Ext_utf8.classify scanner.ch with
-    | Single _ | Invalid -> 1
-    | Leading (n, _) -> ( (((n + 1) / 2) [@doesNotRaise]))
-    | Cont _ -> 0
+    let byte = Char.code scanner.ch in
+    if byte land 0xc0 = 0x80 then 0
+    else if byte < 0x80 then 1
+    else
+      let decoded = String.get_utf_8_uchar scanner.src scanner.offset in
+      if
+        Uchar.utf_decode_is_valid decoded
+        && Uchar.to_int (Uchar.utf_decode_uchar decoded) > 0xffff
+      then 2
+      else 1
   in
   let newline =
     scanner.ch = '\n'
