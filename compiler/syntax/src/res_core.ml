@@ -2550,7 +2550,17 @@ and parse_template_expr ?prefix p =
         (Diagnostics.message "`json` literals do not support interpolation");
       Ast_helper.Exp.constant ~loc (Pconst_json source)
     | [], _ -> assert false)
-  | None -> Ast_helper.Exp.template ~loc:template_loc sources values
+  | None ->
+    List.iter
+      (fun ({Location.txt = source; loc} : string Location.loc) ->
+        if String_literal.decode_js_template_escapes source = None then
+          Parser.err ~start_pos:loc.loc_start ~end_pos:loc.loc_end p
+            (Diagnostics.message
+               (if String_literal.is_valid_utf8 source then
+                  "Invalid string escape sequence"
+                else "Invalid code point")))
+      sources;
+    Ast_helper.Exp.template ~loc:template_loc sources values
   | Some lident_loc -> gen_tagged_template lident_loc
 
 (* Overparse: let f = a : int => a + 1, is it (a : int) => or (a): int =>

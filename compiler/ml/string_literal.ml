@@ -10,6 +10,18 @@ let is_low_surrogate codepoint = codepoint >= 0xdc00 && codepoint <= 0xdfff
 let combine_surrogate_pair high low =
   0x10000 + ((high - 0xd800) lsl 10) + (low - 0xdc00)
 
+let is_valid_utf8 s =
+  let len = String.length s in
+  let rec loop index =
+    if index = len then true
+    else
+      let decoded = String.get_utf_8_uchar s index in
+      if Uchar.utf_decode_is_valid decoded then
+        loop (index + Uchar.utf_decode_length decoded)
+      else false
+  in
+  loop 0
+
 let decode_js_escapes_with ~normalize_template_line_endings s =
   let len = String.length s in
   let buf = Buffer.create len in

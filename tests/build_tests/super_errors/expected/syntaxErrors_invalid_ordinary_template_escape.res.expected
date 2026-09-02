@@ -1,6 +1,6 @@
 
-  [1;31mWe've found a bug for you![0m
-  [36m/.../fixtures/invalid_ordinary_template_escape.res[0m:[2m2:15-23[0m
+  [1;31mSyntax error![0m
+  [36m/.../fixtures/syntaxErrors_invalid_ordinary_template_escape.res[0m:[2m2:15-23[0m
 
   1 [2m│[0m let before = "ok"
   [1;31m2[0m [2m│[0m let invalid = [1;31m`\unicode[0m`

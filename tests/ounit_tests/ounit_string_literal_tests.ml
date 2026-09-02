@@ -54,6 +54,14 @@ let assert_invalid_string encoded =
   in
   OUnit.assert_bool "expected an invalid string escape" result.invalid
 
+let assert_invalid_template_expression source =
+  let result =
+    Res_driver.parse_implementation_from_source ~for_printer:false
+      ~display_filename:"StringLiteralTest.res"
+      ~source:("let value = `" ^ source ^ "`")
+  in
+  OUnit.assert_bool "expected an invalid template escape" result.invalid
+
 let assert_parsed_string ~source ~expected_semantic =
   let result =
     Res_driver.parse_implementation_from_source ~for_printer:false
@@ -374,6 +382,9 @@ let suites =
          >:: fun _ ->
            assert_parsed_template ();
            assert_invalid_json_interpolation () );
+         ( "template expression escapes are parser diagnostics" >:: fun _ ->
+           List.iter assert_invalid_template_expression
+             [{|bad \xZZ escape|}; {|a\1b|}; {|a\01b|}; {|a\8b|}] );
          ( "interpolated templates have an explicit typed representation"
          >:: fun _ ->
            assert_typed_template ~source_segments:[{|head\n|}; {|\u0061|}]

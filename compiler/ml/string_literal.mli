@@ -1,3 +1,6 @@
+val is_valid_utf8 : string -> bool
+(** Whether a string consists entirely of valid UTF-8 scalar sequences. *)
+
 val decode_js_escapes : string -> string option
 (** Decode the escape sequences in a JavaScript string-literal body into its
     semantic UTF-8 value. Returns [None] for malformed input or unpaired

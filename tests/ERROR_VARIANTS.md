@@ -242,7 +242,7 @@ Source: [typecore.ml:27](../compiler/ml/typecore.ml).
 | `Literal_overflow` | ✓ | `intoverflow.res` | |
 | `Polyvar_literal_overflow` | ✓ | `polyvar_int_overflow.res`, `polyvar_int_overflow_payload.res`, `polyvar_int_overflow_pattern.res` | |
 | `Unknown_literal` | ✓ | `unknown_literal.res` | |
-| `Invalid_string_escape_sequence` | ✓ | `invalid_ordinary_template_escape.res` | |
+| `Invalid_string_escape_sequence` | ☐ | — | Regular source is rejected by the parser; the typer check remains defensive for malformed AST produced by a PPX. `syntaxErrors_invalid_ordinary_template_escape.res` covers the parser diagnostic. |
 | `Json_literal_outside_external` | ✓ | `json_literal_outside_external.res` | Constant `json` payloads are reserved for external attributes such as `@as`. |
 | `Illegal_letrec_pat` | ✓ | `illegal_letrec_pat.res` | |
 | `Empty_record_literal` | ✓ | `empty_record_literal.res` | |
