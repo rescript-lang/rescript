@@ -68,6 +68,7 @@
 
 #### :house: Internal
 
+- Normalize Lambda terms where they are built: a match guard stays structured data until its fallthrough is known, and `apply` and `mk_builtin` go through the folding constructors. https://github.com/rescript-lang/rescript/pull/8615
 - Merge the duplicate Lam intermediate representation into Lambda, removing the conversion layer and obsolete supporting infrastructure. Lambda is now a single private, normalized representation, with generated JavaScript remaining semantically unchanged. https://github.com/rescript-lang/rescript/pull/8608
 - Add genType and source map controls and output to the developer playground. https://github.com/rescript-lang/rescript/pull/8448
 - Rework the object-type representation end to end: object rows are plain field chains carrying a per-field mutability state (no phantom setter members), object literals are typed directly and property access and assignment are first-class AST and Lambda nodes shared between the Lambda and JS pipelines, and dead class-system remnants (the field-presence lattice, the class-abbreviation memo on object types, method-send typing) are removed. https://github.com/rescript-lang/rescript/pull/8597
