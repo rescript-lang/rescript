@@ -342,6 +342,13 @@ let suites =
            assert_template_decoded ~encoded:"a\rb" ~expected:"a\nb";
            assert_template_decoded ~encoded:"a\r\nb" ~expected:"a\nb";
            assert_template_decoded ~encoded:"a\\r\\nb" ~expected:"a\r\nb" );
+         ( "templates reject legacy octal and decimal escapes" >:: fun _ ->
+           assert_template_decoded ~encoded:{|a\0b|} ~expected:"a\000b";
+           List.iter
+             (fun encoded ->
+               OUnit.assert_equal ~printer:Ext_obj.dump None
+                 (String_literal.decode_js_template_escapes encoded))
+             [{|a\1b|}; {|a\01b|}; {|a\8b|}] );
          ( "ordinary literals become semantic strings" >:: fun _ ->
            assert_parsed_string ~source:{|\x61\n\uD83D\uDE00|}
              ~expected_semantic:"a\n😀" );

@@ -86,9 +86,16 @@ let decode_js_escapes_with ~normalize_template_line_endings s =
         | 'v' ->
           Buffer.add_char buf '\011';
           loop (index + 2)
+        | '0'
+          when normalize_template_line_endings
+               && index + 2 < len
+               && s.[index + 2] >= '0'
+               && s.[index + 2] <= '9' ->
+          None
         | '0' ->
           Buffer.add_char buf '\000';
           loop (index + 2)
+        | '1' .. '9' when normalize_template_line_endings -> None
         | '\n' -> loop (index + 2)
         | '\r' ->
           if index + 2 < len && s.[index + 2] = '\n' then loop (index + 3)
