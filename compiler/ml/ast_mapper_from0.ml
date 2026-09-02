@@ -93,7 +93,30 @@ let decode_js_string ~loc s =
   | Some s -> s
   | None -> Location.raise_errorf ~loc "Invalid string escape sequence"
 
+let normalize_ppx_semantic_string semantic =
+  let length = String.length semantic in
+  let buffer = Buffer.create length in
+  let rec loop index =
+    if index < length then
+      let decoded = String.get_utf_8_uchar semantic index in
+      if Uchar.utf_decode_is_valid decoded then (
+        let decoded_length = Uchar.utf_decode_length decoded in
+        Buffer.add_substring buffer semantic index decoded_length;
+        loop (index + decoded_length))
+      else (
+        (* Before semantic strings were required to be valid UTF-8, the JS
+           dumper emitted an invalid byte as [\xHH]. Preserve that runtime
+           value by interpreting each such byte as U+00HH. *)
+        Buffer.add_string buffer
+          (Ext_utf8.encode_codepoint
+             (Char.code (String.unsafe_get semantic index)));
+        loop (index + 1))
+  in
+  loop 0;
+  Buffer.contents buffer
+
 let semantic_string semantic =
+  let semantic = normalize_ppx_semantic_string semantic in
   Pt.Pconst_string {source = String_literal.encode_js_string semantic; semantic}
 
 let source_string ~loc source =
@@ -697,7 +720,9 @@ module E = struct
               {Location.txt; loc = sub.location sub segment.pexp_loc}
             | Pexp_constant (Pconst_string (semantic, _)) ->
               {
-                Location.txt = String_literal.encode_js_template semantic;
+                Location.txt =
+                  String_literal.encode_js_template
+                    (normalize_ppx_semantic_string semantic);
                 loc = sub.location sub segment.pexp_loc;
               }
             | _ -> assert false)

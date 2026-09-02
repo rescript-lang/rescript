@@ -264,6 +264,19 @@ let test_ast0_strings_convert_to_internal_representation _ =
   | _ -> assert_failure "Expected an invalid ast0 string escape"
   | exception Location.Error _ -> ()
 
+let test_ppx_byte_strings_convert_to_valid_utf8 _ =
+  let byte_string = "a\xff\xc3\xa9" in
+  let expression0 =
+    Ast_helper0.Exp.constant ~loc (Ast_helper0.Const.string byte_string)
+  in
+  match (map_expr0 expression0).pexp_desc with
+  | Pexp_constant (Pconst_string {source; semantic}) ->
+    OUnit.assert_equal ~printer:(Printf.sprintf "%S") "aÿé" source;
+    OUnit.assert_equal ~printer:(Printf.sprintf "%S") "aÿé" semantic;
+    OUnit.assert_equal ~printer:string_of_int 3
+      (String_literal.utf16_length semantic)
+  | _ -> assert_failure "Expected a normalized PPX string"
+
 let test_string_literals_roundtrip_through_ast0 _ =
   let semantic = "a\n😀" in
   let expr = Ast_helper.Exp.constant ~loc (Ast_helper.Const.string semantic) in
@@ -623,6 +636,8 @@ let suites =
          >:: test_fun_param_attrs_roundtrip_through_ast0;
          "ast0_strings_convert_to_internal_representation"
          >:: test_ast0_strings_convert_to_internal_representation;
+         "ppx_byte_strings_convert_to_valid_utf8"
+         >:: test_ppx_byte_strings_convert_to_valid_utf8;
          "string_literals_roundtrip_through_ast0"
          >:: test_string_literals_roundtrip_through_ast0;
          "raw_extension_payloads_roundtrip_through_ast0"
