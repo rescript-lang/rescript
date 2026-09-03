@@ -47,7 +47,9 @@ let rec analyze block uses (lam : Lambda.t) =
     else false
   | _ ->
     not
-      (Lambda.shallow_exists (fun child -> not (analyze block uses child)) lam)
+      (Lambda_traverse.shallow_exists
+         (fun child -> not (analyze block uses child))
+         lam)
 
 let discard_value value body =
   if Lam_analysis.no_side_effects value then body else Lambda.seq value body
@@ -68,7 +70,7 @@ let rec rewrite block fields uses (lam : Lambda.t) =
      loudly instead of silently losing the write. *)
   | Lvar id when Ident.same id block -> assert false
   | Lassign (id, _) when Ident.same id block -> assert false
-  | _ -> Lambda.shallow_map_sharing (rewrite block fields uses) lam
+  | _ -> Lambda_traverse.shallow_map_sharing (rewrite block fields uses) lam
 
 let fields_for_block block info field_count =
   let fallback () =
@@ -141,4 +143,4 @@ let rec simplify (lam : Lambda.t) =
     | _ ->
       if init' == init && body' == body then lam
       else Lambda.let_ kind block init' body')
-  | _ -> Lambda.shallow_map_sharing simplify lam
+  | _ -> Lambda_traverse.shallow_map_sharing simplify lam

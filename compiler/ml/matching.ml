@@ -385,12 +385,17 @@ let action_key_term ~fail a = action_body_with ~fail a
 let action_free_variables {binds; guard; body} =
   let inner =
     match guard with
-    | None -> free_variables body
-    | Some g -> Set_ident.union (free_variables body) (free_variables g)
+    | None -> Lambda_traverse.free_variables body
+    | Some g ->
+      Set_ident.union
+        (Lambda_traverse.free_variables body)
+        (Lambda_traverse.free_variables g)
   in
   List.fold_right
     (fun (_, id, e) acc ->
-      Set_ident.union (free_variables e) (Set_ident.remove acc id))
+      Set_ident.union
+        (Lambda_traverse.free_variables e)
+        (Set_ident.remove acc id))
     binds inner
 
 type pattern_matching = {
@@ -491,11 +496,11 @@ module Store_exp = Switch.Store (struct
   type t = Lambda.t
   type key = Lambda.t
   let compare_key = compare
-  let make_key = Lambda.make_key
+  let make_key = Lambda_traverse.make_key
 end)
 
 let tr_raw act =
-  match make_key act with
+  match Lambda_traverse.make_key act with
   | Some act -> act
   | None -> raise Exit
 
@@ -865,7 +870,7 @@ let rec split_or argo cls args def =
       let {me = next; matrix; top_default = def}, nexts =
         do_split [] [] [] rem
       in
-      let idef = next_raise_count () in
+      let idef = Lambda_exits.next_raise_count () in
       precompile_or argo yes yesor args
         (cons_default matrix idef def)
         ((idef, next) :: nexts)
@@ -895,7 +900,7 @@ and split_naive cls args def k =
           let {me = next; matrix; top_default = def}, nexts =
             split_exc cstr [cl] rem
           in
-          let idef = next_raise_count () in
+          let idef = Lambda_exits.next_raise_count () in
           let def = cons_default matrix idef def in
           ( {
               me = Pm {cases = yes; args; default = def};
@@ -908,7 +913,7 @@ and split_naive cls args def k =
         let {me = next; matrix; top_default = def}, nexts =
           split_noexc [cl] rem
         in
-        let idef = next_raise_count () in
+        let idef = Lambda_exits.next_raise_count () in
         let def = cons_default matrix idef def in
         ( {
             me = Pm {cases = yes; args; default = def};
@@ -925,7 +930,7 @@ and split_naive cls args def k =
         let {me = next; matrix; top_default = def}, nexts =
           split_exc (pat_as_constr p) [cl] rem
         in
-        let idef = next_raise_count () in
+        let idef = Lambda_exits.next_raise_count () in
         precompile_var args yes
           (cons_default matrix idef def)
           ((idef, next) :: nexts)
@@ -969,7 +974,7 @@ and split_constr cls args def k =
             let {me = next; matrix; top_default = def}, nexts =
               split_noex [cl] [] rem
             in
-            let idef = next_raise_count () in
+            let idef = Lambda_exits.next_raise_count () in
             let def = cons_default matrix idef def in
             ( {
                 me = Pm {cases = yes; args; default = def};
@@ -990,7 +995,7 @@ and split_constr cls args def k =
           let {me = next; matrix; top_default = def}, nexts =
             split_ex [cl] [] rem
           in
-          let idef = next_raise_count () in
+          let idef = Lambda_exits.next_raise_count () in
           precompile_var args yes
             (cons_default matrix idef def)
             ((idef, next) :: nexts))
@@ -1084,7 +1089,7 @@ and precompile_or argo cls ors args def k =
                (extract_vars Set_ident.empty orp)
                (pm_free_variables orpm))
         in
-        let or_num = next_raise_count () in
+        let or_num = Lambda_exits.next_raise_count () in
         let new_patl = Parmatch.omega_list patl in
 
         let mk_new_action vs =
@@ -1560,10 +1565,10 @@ let handle_shared () =
     match act with
     | Switch.Single act -> act
     | Switch.Shared act ->
-      let i, h = make_catch_delayed act in
+      let i, h = Lambda_exits.make_catch_delayed act in
       let ohs = !hs in
       (hs := fun act -> h (ohs act));
-      make_exit i
+      Lambda_exits.make_exit i
   in
   (hs, handle_shared)
 
@@ -1694,7 +1699,7 @@ let reintroduce_fail sw =
   | None ->
     let t = Hashtbl.create 17 in
     let seen (_, l) =
-      match as_simple_exit l with
+      match Lambda_exits.as_simple_exit l with
       | Some i ->
         let old = try Hashtbl.find t i with Not_found -> 0 in
         Hashtbl.replace t i (old + 1)
@@ -1716,7 +1721,7 @@ let reintroduce_fail sw =
       let default = !i_max in
       let remove ls =
         Ext_list.filter ls (fun (_, lam) ->
-            match as_simple_exit lam with
+            match Lambda_exits.as_simple_exit lam with
             | Some j -> j <> default
             | None -> true)
       in
@@ -1730,7 +1735,7 @@ let reintroduce_fail sw =
         sw_blocks_full =
           sw.sw_blocks_full && List.length sw_blocks = List.length sw.sw_blocks;
         sw_blocks;
-        sw_failaction = Some (make_exit default);
+        sw_failaction = Some (Lambda_exits.make_exit default);
       }
     else sw
   | Some _ -> sw
@@ -2125,7 +2130,7 @@ let combine_constructor loc arg ex_pat cstr partial ctx def
         let tests =
           List.fold_right
             (fun (path, act) rem ->
-              let ext = transl_extension_path ex_pat.pat_env path in
+              let ext = Transl_path.transl_extension_path ex_pat.pat_env path in
               if_
                 (prim ~primitive:(Pstringcomp Ceq)
                    ~args:
@@ -2313,7 +2318,7 @@ let compile_list compile_fun division =
 (* Is [lam] a jump to a static exit, once alias bindings are seen through?
    Those bindings are dropped along with [lam], so they are substituted into
    the raise's arguments rather than left dangling. Recognising this from the
-   term itself keeps make_key's output where it belongs - in comparisons. *)
+   term itself keeps Lambda_traverse.make_key's output where it belongs - in comparisons. *)
 let as_exit_call lam =
   let rec go env lam =
     match lam with
@@ -2321,9 +2326,9 @@ let as_exit_call lam =
       Some
         ( i,
           if env == Ident.empty then args
-          else Ext_list.map args (Lambda.subst_lambda env) )
+          else Ext_list.map args (Lambda_traverse.subst_lambda env) )
     | Llet (Alias, x, ex, body) ->
-      go (Ident.add x (Lambda.subst_lambda env ex) env) body
+      go (Ident.add x (Lambda_traverse.subst_lambda env ex) env) body
     | _ -> None
   in
   go Ident.empty lam
@@ -2651,7 +2656,7 @@ let compile_matching repr handler_fun arg pat_act_list partial =
   let partial = check_partial pat_act_list partial in
   match partial with
   | Partial -> (
-    let raise_num = next_raise_count () in
+    let raise_num = Lambda_exits.next_raise_count () in
     let pm =
       {
         cases = List.map (fun (pat, act) -> ([pat], act)) pat_act_list;
@@ -2685,7 +2690,7 @@ let partial_function loc () =
         prim ~primitive:(Pmakeblock Blk_extension)
           ~args:
             [
-              transl_normal_path Predef.path_match_failure;
+              Transl_path.transl_normal_path Predef.path_match_failure;
               const
                 (Const_block
                    ( Blk_tuple,
@@ -2848,7 +2853,7 @@ let do_for_multiple_match loc paraml pat_act_list partial =
   let raise_num, pm1 =
     match partial with
     | Partial ->
-      let raise_num = next_raise_count () in
+      let raise_num = Lambda_exits.next_raise_count () in
       ( raise_num,
         {
           cases = List.map (fun (pat, act) -> ([pat], act)) pat_act_list;

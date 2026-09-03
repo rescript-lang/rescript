@@ -45,7 +45,7 @@ let convert (xs : input) : output =
   let os : value list ref = ref [] in
   xs
   |> List.iteri (fun i (hash, (name, act)) ->
-      match Lambda.make_key act with
+      match Lambda_traverse.make_key act with
       | None -> os := {stamp = i; hash_names_act = ([(hash, name)], act)} :: !os
       | Some key ->
         Coll.add_or_update coll key

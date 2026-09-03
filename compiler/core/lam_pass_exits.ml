@@ -197,7 +197,7 @@ let subst_helper (subst : subst_tbl) (query : int -> int) (lam : Lambda.t) :
           Ext_list.fold_right2 xs ys Ident.empty (fun x y t ->
               Ident.add x (Lambda.var y) t)
         in
-        Ext_list.fold_right2 ys ls (Lambda.subst_lambda env handler)
+        Ext_list.fold_right2 ys ls (Lambda_traverse.subst_lambda env handler)
           (fun y l r -> Lambda.let_ Strict y l r)
       | None -> Lambda.staticraise i ls)
     | Lvar _ | Lconst _ -> lam

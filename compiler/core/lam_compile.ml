@@ -1283,7 +1283,7 @@ let compile output_prefix =
       (lambda_cxt : Lam_compile_context.t) =
     let new_cxt = {lambda_cxt with continuation = NeedValue Not_tail} in
     let emitted_id =
-      if Set_ident.mem (Lambda.free_variables body) id then id
+      if Set_ident.mem (Lambda_traverse.free_variables body) id then id
       else Ext_ident.create_tmp ~name:"_for_of" ()
     in
     let block =
@@ -1306,7 +1306,7 @@ let compile output_prefix =
       (body : Lambda.t) (lambda_cxt : Lam_compile_context.t) =
     let new_cxt = {lambda_cxt with continuation = NeedValue Not_tail} in
     let emitted_id =
-      if Set_ident.mem (Lambda.free_variables body) id then id
+      if Set_ident.mem (Lambda_traverse.free_variables body) id then id
       else Ext_ident.create_tmp ~name:"_for_await_of" ()
     in
     let block =

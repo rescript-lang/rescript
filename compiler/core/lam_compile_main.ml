@@ -255,7 +255,7 @@ let required_modules (lam : Lambda.t) : Lam_module_ident.Hash_set.t =
     | Lglobal_module id ->
       Lam_module_ident.Hash_set.add required (Lam_module_ident.of_ml id)
     | _ -> ());
-    Lambda.iter collect lam
+    Lambda_traverse.iter collect lam
   in
   collect lam;
   required
