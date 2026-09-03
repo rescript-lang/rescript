@@ -1167,7 +1167,7 @@ and walk_expression expr t comments =
       walk_list (List.map (fun expr -> Expression expr) exprs) t rest
     | [] -> attach t.trailing longident.loc trailing)
   | Pexp_variant (_label, args) ->
-    List.iter (fun e -> walk_expression e t comments) args
+    walk_list (List.map (fun expr -> Expression expr) args) t comments
   | Pexp_array exprs | Pexp_tuple exprs ->
     walk_list (exprs |> List.map (fun e -> Expression e)) t comments
   | Pexp_record (rows, spread_expr) ->
@@ -2079,7 +2079,7 @@ and walk_pattern pat t comments =
     attach t.trailing constr.loc after_constructor;
     walk_list (List.map (fun pat -> Pattern pat) pats) t rest
   | Ppat_variant (_label, args) ->
-    List.iter (fun p -> walk_pattern p t comments) args
+    walk_list (List.map (fun pat -> Pattern pat) args) t comments
   | Ppat_type _ -> ()
   | Ppat_record (record_rows, _, rest) ->
     let nodes =
