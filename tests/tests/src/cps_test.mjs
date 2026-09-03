@@ -5,9 +5,7 @@ import * as Test_utils from "./test_utils.mjs";
 import * as Stdlib_Array from "@rescript/runtime/lib/es6/Stdlib_Array.mjs";
 
 function test_sum() {
-  let v = {
-    contents: 0
-  };
+  let v = 0;
   let f = (_n, _acc) => {
     while (true) {
       let acc = _acc;
@@ -16,7 +14,7 @@ function test_sum() {
         return acc();
       }
       _acc = () => {
-        v.contents = v.contents + n | 0;
+        v = v + n | 0;
         return acc();
       };
       _n = n - 1 | 0;
@@ -24,36 +22,32 @@ function test_sum() {
     };
   };
   f(10, () => {});
-  return v.contents;
+  return v;
 }
 
 function test_closure() {
-  let v = {
-    contents: 0
-  };
+  let v = 0;
   let arr = Stdlib_Array.make(6, x => x);
   for (let i = 0; i <= 5; ++i) {
     arr[i] = param => i;
   }
   arr.forEach(i => {
-    v.contents = v.contents + i(0) | 0;
+    v = v + i(0) | 0;
   });
-  return v.contents;
+  return v;
 }
 
 function test_closure2() {
-  let v = {
-    contents: 0
-  };
+  let v = 0;
   let arr = Stdlib_Array.make(6, x => x);
   for (let i = 0; i <= 5; ++i) {
     let j = i + i | 0;
     arr[i] = param => j;
   }
   arr.forEach(i => {
-    v.contents = v.contents + i(0) | 0;
+    v = v + i(0) | 0;
   });
-  return v.contents;
+  return v;
 }
 
 Mocha.describe("Cps_test", () => {

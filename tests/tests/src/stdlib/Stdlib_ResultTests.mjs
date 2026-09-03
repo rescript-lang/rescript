@@ -7,14 +7,12 @@ import * as Primitive_object from "@rescript/runtime/lib/es6/Primitive_object.mj
 let eq = Primitive_object.equal;
 
 function forEachIfOkCallFunction() {
-  let called = {
-    contents: []
-  };
+  let called = [];
   Stdlib_Result.forEach({
     TAG: "Ok",
     _0: 3
   }, i => {
-    called.contents.push(i);
+    called.push(i);
   });
   Test.run([
     [
@@ -24,20 +22,18 @@ function forEachIfOkCallFunction() {
       72
     ],
     "forEach: if ok, call function with ok value once"
-  ], called.contents, eq, [3]);
+  ], called, eq, [3]);
 }
 
 forEachIfOkCallFunction();
 
 function forEachIfErrorDoNotCallFunction() {
-  let called = {
-    contents: []
-  };
+  let called = [];
   Stdlib_Result.forEach({
     TAG: "Error",
     _0: 3
   }, i => {
-    called.contents.push(i);
+    called.push(i);
   });
   Test.run([
     [
@@ -47,7 +43,7 @@ function forEachIfErrorDoNotCallFunction() {
       63
     ],
     "forEach: if error, do not call function"
-  ], called.contents, eq, []);
+  ], called, eq, []);
 }
 
 forEachIfErrorDoNotCallFunction();

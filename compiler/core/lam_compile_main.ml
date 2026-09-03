@@ -324,6 +324,7 @@ let compile (output_prefix : string) export_idents hoisted (lam : Lambda.t) =
     |> d "before-simplify_lets"
     (* we should investigate a better way to put different passes : )*)
     |> Lam_pass_lets_dce.simplify_lets
+    |> d "simplify_lets" |> Lam_pass_sroa.simplify |> d "sroa"
     |> d "before-simplify-exits"
     (* |> (fun lam -> Lam_pass_collect.collect_info meta lam
        ; Lam_pass_remove_alias.simplify_alias meta lam) *)

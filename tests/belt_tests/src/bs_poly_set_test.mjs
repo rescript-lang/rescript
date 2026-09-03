@@ -15,29 +15,25 @@ import * as Primitive_object from "@rescript/runtime/lib/es6/Primitive_object.mj
 let IntCmp = Belt_Id.comparable(Primitive_int.compare);
 
 function testIterToList(xs) {
-  let v = {
-    contents: /* [] */0
-  };
+  let v = /* [] */0;
   Belt_Set.forEach(xs, x => {
-    v.contents = {
+    v = {
       hd: x,
-      tl: v.contents
+      tl: v
     };
   });
-  return Belt_List.reverse(v.contents);
+  return Belt_List.reverse(v);
 }
 
 function testIterToList2(xs) {
-  let v = {
-    contents: /* [] */0
-  };
+  let v = /* [] */0;
   Belt_SetDict.forEach(Belt_Set.getData(xs), x => {
-    v.contents = {
+    v = {
       hd: x,
-      tl: v.contents
+      tl: v
     };
   });
-  return Belt_List.reverse(v.contents);
+  return Belt_List.reverse(v);
 }
 
 Mocha.describe("Bs_poly_set_test", () => {

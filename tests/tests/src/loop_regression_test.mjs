@@ -4,19 +4,15 @@ import * as Mocha from "mocha";
 import * as Test_utils from "./test_utils.mjs";
 
 function f() {
-  let v = {
-    contents: 0
-  };
-  let acc = {
-    contents: 0
-  };
+  let v = 0;
+  let acc = 0;
   let n = 10;
   while (true) {
-    if (v.contents > n) {
-      return acc.contents;
+    if (v > n) {
+      return acc;
     }
-    acc.contents = acc.contents + v.contents | 0;
-    v.contents = v.contents + 1 | 0;
+    acc = acc + v | 0;
+    v = v + 1 | 0;
     continue;
   };
 }

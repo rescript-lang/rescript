@@ -626,11 +626,9 @@ Mocha.describe("Bs_queue_test", () => {
     for (let i = 1; i <= 10; ++i) {
       Belt_MutableQueue.add(q, i);
     }
-    let i$1 = {
-      contents: 1
-    };
+    let i$1 = 1;
     Belt_MutableQueue.forEach(q, j => {
-      if (i$1.contents !== j) {
+      if (i$1 !== j) {
         throw {
           RE_EXN_ID: "Assert_failure",
           _1: [
@@ -641,7 +639,7 @@ Mocha.describe("Bs_queue_test", () => {
           Error: new Error()
         };
       }
-      i$1.contents = i$1.contents + 1 | 0;
+      i$1 = i$1 + 1 | 0;
     });
   });
   Mocha.test("queue transfer operations - empty to empty", () => {
