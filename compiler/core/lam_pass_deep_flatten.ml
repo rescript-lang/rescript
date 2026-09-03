@@ -232,63 +232,6 @@ let deep_flatten (lam : Lambda.t) : Lambda.t =
       lambda_of_groups
         ~rev_bindings:rev_wrap (* These bindings are extracted from [letrec] *)
         (Lambda.letrec (List.rev rev_bindings) (aux body))
-    | Lsequence (l, r) -> Lambda.seq (aux l) (aux r)
-    | Lconst _ -> lam
-    | Lvar _ -> lam
-    (* | Lapply(Lfunction(Curried, params, body), args, _) *)
-    (*   when  List.length params = List.length args -> *)
-    (*     aux (beta_reduce  params body args) *)
-    (* | Lapply(Lfunction(Tupled, params, body), [Lprim(Pmakeblock _, args)], _) *)
-    (*     (\** TODO: keep track of this parameter in ocaml trunk, *)
-    (*           can we switch to the tupled backend? *\) *)
-    (*   when  List.length params = List.length args -> *)
-    (*       aux (beta_reduce params body args) *)
-    | Lapply {ap_func = l1; ap_args = ll; ap_info; ap_transformed_jsx} ->
-      Lambda.apply (aux l1) (Ext_list.map ll aux) ap_info ~ap_transformed_jsx
-    (* This kind of simple optimizations should be done each time
-       and as early as possible *)
-    | Lglobal_module _ -> lam
-    | Lprim {primitive; args; loc} ->
-      let args = Ext_list.map args aux in
-      Lambda.prim ~primitive ~args loc
-    | Lfunction {params; body; attr; loc} ->
-      Lambda.function_ ~loc ~params ~body:(aux body) ~attr
-    | Lswitch
-        ( l,
-          {
-            sw_failaction;
-            sw_consts;
-            sw_blocks;
-            sw_blocks_full;
-            sw_consts_full;
-            sw_dispatch;
-          } ) ->
-      Lambda.switch (aux l)
-        {
-          sw_consts = Ext_list.map_snd sw_consts aux;
-          sw_blocks = Ext_list.map_snd sw_blocks aux;
-          sw_consts_full;
-          sw_blocks_full;
-          sw_failaction = Ext_option.map sw_failaction aux;
-          sw_dispatch;
-        }
-    | Lstringswitch (l, sw, d) ->
-      Lambda.stringswitch (aux l) (Ext_list.map_snd sw aux)
-        (Ext_option.map d aux)
-    | Lstaticraise (i, ls) -> Lambda.staticraise i (Ext_list.map ls aux)
-    | Lstaticcatch (l1, ids, l2) -> Lambda.staticcatch (aux l1) ids (aux l2)
-    | Ltrywith (l1, v, l2) -> Lambda.try_ (aux l1) v (aux l2)
-    | Lifthenelse (l1, l2, l3) -> Lambda.if_ (aux l1) (aux l2) (aux l3)
-    | Lbreak -> Lambda.break
-    | Lcontinue -> Lambda.continue
-    | Lwhile (l1, l2) -> Lambda.while_ (aux l1) (aux l2)
-    | Lfor (flag, l1, l2, dir, l3) ->
-      Lambda.for_ flag (aux l1) (aux l2) dir (aux l3)
-    | Lfor_of (flag, l1, l2) -> Lambda.for_of flag (aux l1) (aux l2)
-    | Lfor_await_of (flag, l1, l2) -> Lambda.for_await_of flag (aux l1) (aux l2)
-    | Lassign (v, l) ->
-      (* Lalias-bound variables are never assigned, so don't increase
-         v's refaux *)
-      Lambda.assign v (aux l)
+    | _ -> Lambda_traverse.shallow_map_sharing aux lam
   in
   aux lam

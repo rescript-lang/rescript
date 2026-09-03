@@ -94,7 +94,6 @@ let lets_helper (count_var : Ident.t -> Lam_pass_count.used_info) lam : Lambda.t
           Hash_ident.add string_table v s;
           Lambda.let_ Alias v l1 (simplif l2)
         | _ -> Lam_util.refine_let ~kind v l1 (simplif l2))
-    | Lsequence (l1, l2) -> Lambda.seq (simplif l1) (simplif l2)
     | Lapply
         {ap_func = Lfunction ({params; body} as lfunction); ap_args = args; _}
       when Ext_list.same_length params args
@@ -107,14 +106,6 @@ let lets_helper (count_var : Ident.t -> Lam_pass_count.used_info) lam : Lambda.t
       (*   *\) *)
       (*   when  Ext_list.same_length params  args -> *)
       (*   simplif (Lam_beta_reduce.beta_reduce params body args) *)
-    | Lapply {ap_func = l1; ap_args = ll; ap_info; ap_transformed_jsx} ->
-      Lambda.apply (simplif l1) (Ext_list.map ll simplif) ap_info
-        ~ap_transformed_jsx
-    | Lfunction {params; body; attr; loc} ->
-      Lambda.function_ ~loc ~params ~body:(simplif body) ~attr
-    | Lconst _ -> lam
-    | Lletrec (bindings, body) ->
-      Lambda.letrec (Ext_list.map_snd bindings simplif) (simplif body)
     | Lprim {primitive = Pstringadd; args = [l; r]; loc} -> (
       let l' = simplif l in
       let r' = simplif r in
@@ -136,40 +127,7 @@ let lets_helper (count_var : Ident.t -> Lam_pass_count.used_info) lam : Lambda.t
         match opt_r with
         | None -> Lambda.prim ~primitive:Pstringadd ~args:[l'; r'] loc
         | Some r_s -> Lambda.const (Const_string (l_s ^ r_s))))
-    | Lglobal_module _ -> lam
-    | Lprim {primitive; args; loc} ->
-      Lambda.prim ~primitive ~args:(Ext_list.map args simplif) loc
-    | Lswitch (l, sw) ->
-      let new_l = simplif l
-      and new_consts = Ext_list.map_snd sw.sw_consts simplif
-      and new_blocks = Ext_list.map_snd sw.sw_blocks simplif
-      and new_fail = Ext_option.map sw.sw_failaction simplif in
-      Lambda.switch new_l
-        {
-          sw with
-          sw_consts = new_consts;
-          sw_blocks = new_blocks;
-          sw_failaction = new_fail;
-        }
-    | Lstringswitch (l, sw, d) ->
-      Lambda.stringswitch (simplif l)
-        (Ext_list.map_snd sw simplif)
-        (Ext_option.map d simplif)
-    | Lstaticraise (i, ls) -> Lambda.staticraise i (Ext_list.map ls simplif)
-    | Lstaticcatch (l1, (i, args), l2) ->
-      Lambda.staticcatch (simplif l1) (i, args) (simplif l2)
-    | Ltrywith (l1, v, l2) -> Lambda.try_ (simplif l1) v (simplif l2)
-    | Lifthenelse (l1, l2, l3) ->
-      Lambda.if_ (simplif l1) (simplif l2) (simplif l3)
-    | Lbreak -> Lambda.break
-    | Lcontinue -> Lambda.continue
-    | Lwhile (l1, l2) -> Lambda.while_ (simplif l1) (simplif l2)
-    | Lfor (v, l1, l2, dir, l3) ->
-      Lambda.for_ v (simplif l1) (simplif l2) dir (simplif l3)
-    | Lfor_of (v, l1, l2) -> Lambda.for_of v (simplif l1) (simplif l2)
-    | Lfor_await_of (v, l1, l2) ->
-      Lambda.for_await_of v (simplif l1) (simplif l2)
-    | Lassign (v, l) -> Lambda.assign v (simplif l)
+    | _ -> Lambda_traverse.shallow_map_sharing simplif lam
   in
   simplif lam
 

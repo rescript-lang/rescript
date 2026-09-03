@@ -11,51 +11,20 @@ let rec resolve tbl id =
   | Some id' -> resolve tbl id'
 
 let collapse ~exports (lam : Lambda.t) : Lambda.t =
-  let tbl = Hash_ident.create 64 in
+  let tbl = Hash_ident.create 16 in
   let rec go (lam : Lambda.t) : Lambda.t =
     match lam with
-    | Lvar x -> Lambda.var (resolve tbl x)
-    | Lglobal_module _ | Lconst _ | Lbreak | Lcontinue -> lam
-    | Lapply {ap_func; ap_args; ap_info; ap_transformed_jsx} ->
-      Lambda.apply (go ap_func) (Ext_list.map ap_args go) ap_info
-        ~ap_transformed_jsx
-    | Lfunction {params; body; attr; loc} ->
-      Lambda.function_ ~loc ~attr ~params ~body:(go body)
+    | Lvar x ->
+      let x' = resolve tbl x in
+      if x' == x then lam else Lambda.var x'
     | Llet (Alias, id, Lvar u, body) ->
       let u = resolve tbl u in
       Hash_ident.add tbl id u;
+      (* The binding is dropped unless the name is exported, in which case it
+         has to survive under its own name. *)
       if Set_ident.mem exports id then
         Lambda.let_ Alias id (Lambda.var u) (go body)
       else go body
-    | Llet (kind, id, arg, body) -> Lambda.let_ kind id (go arg) (go body)
-    | Lletrec (bindings, body) ->
-      Lambda.letrec (Ext_list.map_snd bindings go) (go body)
-    | Lprim {primitive; args; loc} ->
-      Lambda.prim ~primitive ~args:(Ext_list.map args go) loc
-    | Lswitch (arg, sw) ->
-      Lambda.switch (go arg)
-        {
-          sw with
-          sw_consts = Ext_list.map_snd sw.sw_consts go;
-          sw_blocks = Ext_list.map_snd sw.sw_blocks go;
-          sw_failaction = Ext_option.map sw.sw_failaction go;
-        }
-    | Lstringswitch (arg, cases, default) ->
-      Lambda.stringswitch (go arg)
-        (Ext_list.map_snd cases go)
-        (Ext_option.map default go)
-    | Lstaticraise (i, args) -> Lambda.staticraise i (Ext_list.map args go)
-    | Lstaticcatch (body, ids, handler) ->
-      Lambda.staticcatch (go body) ids (go handler)
-    | Ltrywith (body, id, handler) -> Lambda.try_ (go body) id (go handler)
-    | Lifthenelse (b, t, e) -> Lambda.if_ (go b) (go t) (go e)
-    | Lsequence (a, b) -> Lambda.seq (go a) (go b)
-    | Lwhile (b, body) -> Lambda.while_ (go b) (go body)
-    | Lfor (id, lo, hi, dir, body) ->
-      Lambda.for_ id (go lo) (go hi) dir (go body)
-    | Lfor_of (id, iterable, body) -> Lambda.for_of id (go iterable) (go body)
-    | Lfor_await_of (id, iterable, body) ->
-      Lambda.for_await_of id (go iterable) (go body)
-    | Lassign (id, e) -> Lambda.assign id (go e)
+    | _ -> Lambda_traverse.shallow_map_sharing go lam
   in
   go lam
