@@ -444,6 +444,39 @@ let test_ppx_rewritten_tagged_template_segments _ =
     OUnit.assert_equal ~printer:(Printf.sprintf "%S") {e|\${value}\`\\|e} txt
   | _ -> assert_failure "Expected a rewritten tagged template after roundtrip"
 
+let test_ppx_rewritten_template_segments _ =
+  let template_attr = attr "res.template" (Parsetree0.PStr []) in
+  let semantic = "${value}`\\" in
+  let uninterpolated =
+    Ast_helper0.Exp.constant ~loc ~attrs:[template_attr]
+      (Ast_helper0.Const.string semantic)
+  in
+  assert_template_expr ~expected:{e|\${value}\`\\|e} (map_expr0 uninterpolated);
+  let segment semantic =
+    Ast_helper0.Exp.constant ~loc ~attrs:[template_attr]
+      (Ast_helper0.Const.string semantic)
+  in
+  let concat lhs rhs =
+    Ast_helper0.Exp.apply ~loc ~attrs:[template_attr]
+      (Ast_helper0.Exp.ident ~loc (Location.mknoloc (Longident.Lident "^")))
+      [(Asttypes.Noloc.Nolabel, lhs); (Asttypes.Noloc.Nolabel, rhs)]
+  in
+  let value =
+    Ast_helper0.Exp.ident ~loc (Location.mknoloc (Longident.Lident "value"))
+  in
+  let interpolated =
+    concat (concat (segment "${head}") value) (segment "`\\")
+  in
+  match (map_expr0 interpolated).pexp_desc with
+  | Pexp_template
+      {
+        source_segments = [{txt = head}; {txt = tail}];
+        values = [{pexp_desc = Pexp_ident {txt = Longident.Lident "value"}}];
+      } ->
+    OUnit.assert_equal ~printer:(Printf.sprintf "%S") {e|\${head}|e} head;
+    OUnit.assert_equal ~printer:(Printf.sprintf "%S") {e|\`\\|e} tail
+  | _ -> assert_failure "Expected a rewritten template after roundtrip"
+
 let test_interpolated_templates_roundtrip_through_ast0 _ =
   let head_loc = source_loc 1 8 in
   let tail_loc = source_loc 12 16 in
@@ -646,6 +679,8 @@ let suites =
          >:: test_tagged_templates_roundtrip_through_ast0;
          "ppx_rewritten_tagged_template_segments"
          >:: test_ppx_rewritten_tagged_template_segments;
+         "ppx_rewritten_template_segments"
+         >:: test_ppx_rewritten_template_segments;
          "interpolated_templates_roundtrip_through_ast0"
          >:: test_interpolated_templates_roundtrip_through_ast0;
          "ast0_json_interpolation_is_rejected"

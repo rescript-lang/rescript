@@ -122,6 +122,11 @@ let semantic_string semantic =
 let source_string ~loc source =
   Pt.Pconst_string {source; semantic = decode_js_string ~loc source}
 
+let template_source_from0 = function
+  | source, Some ("js" | "*j") -> source
+  | semantic, _ ->
+    String_literal.encode_js_template (normalize_ppx_semantic_string semantic)
+
 let map_constant ~loc = function
   | Pconst_integer (s, suffix) -> Pt.Pconst_integer (s, suffix)
   | Pconst_char semantic ->
@@ -600,9 +605,10 @@ module E = struct
       let inner = sub.expr sub {e with pexp_attributes = inner_attrs0} in
       await ~loc ~attrs:(sub.attributes sub await_attrs0) inner
     | Pexp_ident x -> ident ~loc ~attrs (map_loc sub x)
-    | Pexp_constant (Pconst_string (source, Some "js"))
-      when has_template_attr attrs ->
+    | Pexp_constant (Pconst_string (text, delimiter))
+      when has_template_attr attrs && delimiter <> Some "json" ->
       let attrs = remove_template_attr attrs in
+      let source = template_source_from0 (text, delimiter) in
       template ~loc ~attrs [{txt = source; loc}] []
     | Pexp_constant x ->
       let template = has_template_attr attrs in
@@ -751,26 +757,31 @@ module E = struct
           "`json` literals do not support interpolation"
       in
       let rec collect sources values = function
+        | [{pexp_desc = Pexp_constant (Pconst_string (_, Some "json"))}] ->
+          reject_json_interpolation ()
         | [
             {
-              pexp_desc = Pexp_constant (Pconst_string (txt, Some "js"));
+              pexp_desc = Pexp_constant (Pconst_string (text, delimiter));
               pexp_loc;
             };
           ] ->
+          let txt = template_source_from0 (text, delimiter) in
           Some
             ( List.rev
                 ({Location.txt; loc = sub.location sub pexp_loc} :: sources),
               List.rev values )
-        | [{pexp_desc = Pexp_constant (Pconst_string (_, Some "json"))}] ->
-          reject_json_interpolation ()
-        | {pexp_desc = Pexp_constant (Pconst_string (txt, Some "js")); pexp_loc}
-          :: value :: rest ->
-          collect
-            ({Location.txt; loc = sub.location sub pexp_loc} :: sources)
-            (value :: values) rest
         | {pexp_desc = Pexp_constant (Pconst_string (_, Some "json"))}
           :: _value :: _rest ->
           reject_json_interpolation ()
+        | {
+            pexp_desc = Pexp_constant (Pconst_string (text, delimiter));
+            pexp_loc;
+          }
+          :: value :: rest ->
+          let txt = template_source_from0 (text, delimiter) in
+          collect
+            ({Location.txt; loc = sub.location sub pexp_loc} :: sources)
+            (value :: values) rest
         | _ -> None
       in
       begin match collect [] [] parts with
