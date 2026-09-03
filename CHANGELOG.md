@@ -14,6 +14,7 @@
 
 #### :boom: Breaking Change
 
+- Distinguish multiple constructor arguments from a tuple passed as a single argument. Constructors with one tuple payload must now use nested parentheses, for example `Some((x, y))`; `Some(x, y)` now reports an arity mismatch. This makes constructor arity explicit in the parsetree and removes the separate parser modes for printing and type checking. https://github.com/rescript-lang/rescript/pull/8610
 - Reject malformed UTF-8 in documentation comments and invalid string or template literal escapes that were previously accepted, including empty or out-of-range braced Unicode escapes (`\u{}`, `\u{110000}`) and legacy decimal or octal escapes in templates (`\1`, `\01`, `\8`). These inputs now produce syntax diagnostics instead of compiling to invalid or inconsistent JavaScript. https://github.com/rescript-lang/rescript/pull/8606
 - Reject tagged template literals in patterns. Patterns cannot invoke their tag; previously their raw payload was compiled as a plain string comparison. https://github.com/rescript-lang/rescript/pull/8606
 - Remove runtime APIs that were deprecated for removal in ReScript 13, including the `Char` module, unsafe `Obj` operations, legacy `Pervasives` helpers, and `Array.unsafe_get`. https://github.com/rescript-lang/rescript/pull/8564
