@@ -1,0 +1,24 @@
+Xform src/XformTemplate.res 2:5
+posCursor:[2:3] posNoWhite:[2:1] Found expr:[2:0->7:1]
+Completable: Cpath Value[value]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[value]
+Path value
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+Hit: Replace with switch
+
+TextDocumentEdit: XformTemplate.res
+{
+  "end": { "character": 1, "line": 7 },
+  "start": { "character": 0, "line": 2 }
+}
+newText:
+<--here
+switch value {
+| "foo" => // ^xfm
+  ()
+| _ => ()
+}
+

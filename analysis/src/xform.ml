@@ -66,6 +66,11 @@ module If_then_else = struct
       | None -> None
       | Some p1 -> Some (mk_pat (Ppat_variant (label, Some p1))))
     | Pexp_constant c -> Some (mk_pat (Ppat_constant c))
+    | Pexp_template {source_segments = [{txt = source}]; values = []} -> (
+      match String_literal.decode_js_template_escapes source with
+      | Some semantic ->
+        Some (mk_pat (Ppat_constant (Ast_helper.Const.string semantic)))
+      | None -> None)
     | Pexp_tuple e_list -> (
       match list_to_pat ~item_to_pat:exp_to_pat e_list with
       | None -> None
