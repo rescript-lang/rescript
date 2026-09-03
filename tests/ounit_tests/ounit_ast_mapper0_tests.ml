@@ -323,7 +323,12 @@ let test_constructor_args_roundtrip_through_ast0 _ =
   let expr0 = map_expr_to0 expr in
   OUnit.assert_bool "a single tuple argument does not carry bridge metadata"
     (not (has_attr "_res.constructor_args" expr0.pexp_attributes));
-  (match (map_expr0 expr0).pexp_desc with
+  OUnit.assert_bool "a single tuple argument records its v0 shape"
+    (has_attr "_res.constructor_tuple_arg" expr0.pexp_attributes);
+  let expr = map_expr0 expr0 in
+  OUnit.assert_bool "a known tuple argument is not marked as legacy"
+    (not (has_attr "_res.legacy_constructor_payload" expr.pexp_attributes));
+  (match expr.pexp_desc with
   | Parsetree.Pexp_construct (_, [{pexp_desc = Pexp_tuple [_; _]}]) -> ()
   | _ -> assert_failure "Expected one tuple argument after roundtrip");
   let pat = Ast_helper.Pat.construct ~loc lid [int_pat "1"; int_pat "2"] in
@@ -350,6 +355,62 @@ let test_ast0_explicit_arity_becomes_constructor_args _ =
   match (map_expr0 expr0).pexp_desc with
   | Parsetree.Pexp_construct (_, [_; _]) -> ()
   | _ -> assert_failure "Expected explicit-arity v0 payload to become arguments"
+
+let test_fresh_ast0_constructor_tuple_defers_arity_to_typechecker _ =
+  let int_expr value =
+    Ast_helper0.Exp.constant ~loc (Parsetree0.Pconst_integer (value, None))
+  in
+  let int_pat value =
+    Ast_helper0.Pat.constant ~loc (Parsetree0.Pconst_integer (value, None))
+  in
+  let lid = Location.mknoloc (Longident.Lident "FreshPairForAst0") in
+  let expr =
+    map_expr0
+      (Ast_helper0.Exp.construct ~loc lid
+         (Some (Ast_helper0.Exp.tuple ~loc [int_expr "1"; int_expr "2"])))
+  in
+  let pat =
+    map_pat0
+      (Ast_helper0.Pat.construct ~loc lid
+         (Some (Ast_helper0.Pat.tuple ~loc [int_pat "1"; int_pat "2"])))
+  in
+  OUnit.assert_bool "fresh v0 expression carries deferred-arity metadata"
+    (has_attr "_res.legacy_constructor_payload" expr.pexp_attributes);
+  OUnit.assert_bool "fresh v0 pattern carries deferred-arity metadata"
+    (has_attr "_res.legacy_constructor_payload" pat.ppat_attributes);
+  let parsed =
+    Res_driver.parse_implementation_from_source
+      ~display_filename:"Ast0ConstructorArgsTest.res"
+      ~source:
+        "type freshPairForAst0 = FreshPairForAst0(int, int)\n\
+         let value = FreshPairForAst0(1, 2)\n\
+         let FreshPairForAst0(a, b) = value"
+  in
+  let structure =
+    match parsed.parsetree with
+    | [type_item; value_item; pattern_item] ->
+      let value_item =
+        match value_item.pstr_desc with
+        | Pstr_value (rec_flag, [binding]) ->
+          {
+            value_item with
+            pstr_desc = Pstr_value (rec_flag, [{binding with pvb_expr = expr}]);
+          }
+        | _ -> assert_failure "Expected value binding"
+      in
+      let pattern_item =
+        match pattern_item.pstr_desc with
+        | Pstr_value (rec_flag, [binding]) ->
+          {
+            pattern_item with
+            pstr_desc = Pstr_value (rec_flag, [{binding with pvb_pat = pat}]);
+          }
+        | _ -> assert_failure "Expected pattern binding"
+      in
+      [type_item; value_item; pattern_item]
+    | _ -> assert_failure "Expected type declaration and two value bindings"
+  in
+  ignore (Typemod.type_structure Env.initial_safe_string structure loc)
 
 let test_polyvariant_args_roundtrip_through_ast0 _ =
   let int_expr value =
@@ -929,6 +990,8 @@ let suites =
          >:: test_constructor_args_roundtrip_through_ast0;
          "ast0_explicit_arity_becomes_constructor_args"
          >:: test_ast0_explicit_arity_becomes_constructor_args;
+         "fresh_ast0_constructor_tuple_defers_arity_to_typechecker"
+         >:: test_fresh_ast0_constructor_tuple_defers_arity_to_typechecker;
          "polyvariant_args_roundtrip_through_ast0"
          >:: test_polyvariant_args_roundtrip_through_ast0;
          "value_constraint_roundtrips_through_ast0"
