@@ -50,7 +50,12 @@ let lets_helper (count_var : Ident.t -> Lam_pass_count.used_info) lam : Lambda.t
         Lambda.let_ Alias v l1 (simplif l2)
       (* we need move [simplif l2] later, since adding Hash does have side effect *)
       | _ ->
-        Lambda.let_ Alias v (simplif l1) (simplif l2)
+        (* [simplif] records substitutions as it goes, and the body was
+           already being simplified before the bound expression here, so keep
+           that order explicit. *)
+        let l2' = simplif l2 in
+        let l1' = simplif l1 in
+        if l1' == l1 && l2' == l2 then lam else Lambda.let_ Alias v l1' l2'
         (* for Alias, in most cases [l1] is already simplified *))
     | Llet ((StrictOpt as kind), v, l1, lbody) -> (
       if
@@ -79,7 +84,7 @@ let lets_helper (count_var : Ident.t -> Lam_pass_count.used_info) lam : Lambda.t
           Hash_ident.add string_table v s;
           (* we need move [simplif lbody] later, since adding Hash does have side effect *)
           Lambda.let_ Alias v l1 (simplif lbody)
-        | _ -> Lam_util.refine_let ~kind v l1 (simplif lbody)
+        | _ -> Lam_util.refine_let ~original:lam ~kind v l1 (simplif lbody)
         (* TODO: check if it is correct rollback to [StrictOpt]? *))
     | Llet (((Strict | Variable) as kind), v, l1, l2) -> (
       if not (used v) then
@@ -93,7 +98,7 @@ let lets_helper (count_var : Ident.t -> Lam_pass_count.used_info) lam : Lambda.t
         | Strict, Lconst (Const_string s) ->
           Hash_ident.add string_table v s;
           Lambda.let_ Alias v l1 (simplif l2)
-        | _ -> Lam_util.refine_let ~kind v l1 (simplif l2))
+        | _ -> Lam_util.refine_let ~original:lam ~kind v l1 (simplif l2))
     | Lapply
         {ap_func = Lfunction ({params; body} as lfunction); ap_args = args; _}
       when Ext_list.same_length params args
