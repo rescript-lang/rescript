@@ -137,3 +137,59 @@ Path
   }
 ]
 
+Complete src/CompletionTaggedTemplate.res 21:19
+posCursor:[21:19] posNoWhite:[21:18] Found expr:[19:28->24:3]
+posCursor:[21:19] posNoWhite:[21:18] Found expr:[20:2->23:20]
+posCursor:[21:19] posNoWhite:[21:18] Found expr:[21:5->23:20]
+Pexp_apply ...[21:5->23:17] (...[23:18->23:19])
+posCursor:[21:19] posNoWhite:[21:18] Found expr:[21:5->23:17]
+Pexp_ident LocalOrdinary.:[21:5->23:17]
+Completable: Cpath Value[LocalOrdinary, ""]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[LocalOrdinary, ""]
+Path LocalOrdinary.
+[
+  {
+    "detail": "type t",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\ntype t = promise<string>\n```"
+    },
+    "kind": 22,
+    "label": "t",
+    "tags": []
+  },
+  { "detail": "t => int", "kind": 12, "label": "a", "tags": [] },
+  { "detail": "t => string", "kind": 12, "label": "b", "tags": [] },
+  { "detail": "(t, int) => int", "kind": 12, "label": "xyz", "tags": [] }
+]
+
+Complete src/CompletionTaggedTemplate.res 28:17
+posCursor:[28:17] posNoWhite:[28:16] Found expr:[26:26->31:3]
+posCursor:[28:17] posNoWhite:[28:16] Found expr:[27:2->30:18]
+posCursor:[28:17] posNoWhite:[28:16] Found expr:[28:5->30:18]
+Pexp_apply ...[28:5->30:15] (...[30:16->30:17])
+posCursor:[28:17] posNoWhite:[28:16] Found expr:[28:5->30:15]
+Pexp_ident LocalTagged.:[28:5->30:15]
+Completable: Cpath Value[LocalTagged, ""]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[LocalTagged, ""]
+Path LocalTagged.
+[
+  {
+    "detail": "type t",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\ntype t = promise<string>\n```"
+    },
+    "kind": 22,
+    "label": "t",
+    "tags": []
+  },
+  { "detail": "t => int", "kind": 12, "label": "a", "tags": [] },
+  { "detail": "t => string", "kind": 12, "label": "b", "tags": [] },
+  { "detail": "(t, int) => int", "kind": 12, "label": "xyz", "tags": [] }
+]
+
