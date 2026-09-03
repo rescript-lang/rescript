@@ -769,61 +769,6 @@ let rec is_eta_conversion_exn params inner_args outer_args : t list =
   | [], [], [] -> []
   | _, _, _ -> raise_notrace Not_simple_form
 
-let rec apply ?(ap_transformed_jsx = false) fn args (ap_info : ap_info) : t =
-  match fn with
-  | Lfunction
-      {
-        params;
-        body =
-          Lprim
-            {
-              primitive =
-                ( Pnull_to_opt | Pnull_undefined_to_opt | Pis_null
-                | Pis_null_undefined | Ptypeof ) as wrap;
-              args =
-                [Lprim ({primitive = _; args = inner_args} as primitive_call)];
-            };
-      } -> (
-    match is_eta_conversion_exn params inner_args args with
-    | args ->
-      let loc = ap_info.ap_loc in
-      Lprim
-        {primitive = wrap; args = [Lprim {primitive_call with args; loc}]; loc}
-    | exception Not_simple_form ->
-      Lapply {ap_func = fn; ap_args = args; ap_info; ap_transformed_jsx})
-  | Lfunction
-      {
-        params;
-        body = Lprim ({primitive = _; args = inner_args} as primitive_call);
-      } -> (
-    match is_eta_conversion_exn params inner_args args with
-    | args -> Lprim {primitive_call with args; loc = ap_info.ap_loc}
-    | exception _ ->
-      Lapply {ap_func = fn; ap_args = args; ap_info; ap_transformed_jsx})
-  | Lfunction
-      {
-        params;
-        body =
-          Lsequence
-            ( Lprim ({primitive = _; args = inner_args} as primitive_call),
-              (Lconst _ as const) );
-      } -> (
-    match is_eta_conversion_exn params inner_args args with
-    | args ->
-      Lsequence (Lprim {primitive_call with args; loc = ap_info.ap_loc}, const)
-    | exception _ ->
-      Lapply {ap_func = fn; ap_args = args; ap_info; ap_transformed_jsx}
-      (* | Lfunction {params;body} when Ext_list.same_length params args ->
-          Ext_list.fold_right2 (fun p arg acc ->
-            Llet(Strict,p,arg,acc)
-          ) params args body *)
-      (* TODO: more rigirous analysis on [let_kind] *))
-  | Llet (kind, id, e, (Lfunction _ as fn)) ->
-    Llet (kind, id, e, apply fn args ap_info ~ap_transformed_jsx)
-  (* | Llet (kind0, id0, e0, Llet (kind,id, e, (Lfunction _ as fn))) ->
-     Llet(kind0,id0,e0,Llet (kind, id, e, apply fn args loc status)) *)
-  | _ -> Lapply {ap_func = fn; ap_args = args; ap_info; ap_transformed_jsx}
-
 let rec eq_approx (l1 : t) (l2 : t) =
   match l1 with
   | Lglobal_module i1 -> (
@@ -1079,6 +1024,61 @@ let prim ~primitive:(prim : primitive) ~args loc : t =
        such module x can indeed be replaced by module y
     *)
     | _ -> default ())
+
+let rec apply ?(ap_transformed_jsx = false) fn args (ap_info : ap_info) : t =
+  match fn with
+  | Lfunction
+      {
+        params;
+        body =
+          Lprim
+            {
+              primitive =
+                ( Pnull_to_opt | Pnull_undefined_to_opt | Pis_null
+                | Pis_null_undefined | Ptypeof ) as wrap;
+              args =
+                [Lprim ({primitive = _; args = inner_args} as primitive_call)];
+            };
+      } -> (
+    match is_eta_conversion_exn params inner_args args with
+    | args ->
+      let loc = ap_info.ap_loc in
+      Lprim
+        {primitive = wrap; args = [Lprim {primitive_call with args; loc}]; loc}
+    | exception Not_simple_form ->
+      Lapply {ap_func = fn; ap_args = args; ap_info; ap_transformed_jsx})
+  | Lfunction
+      {
+        params;
+        body = Lprim ({primitive = _; args = inner_args} as primitive_call);
+      } -> (
+    match is_eta_conversion_exn params inner_args args with
+    | args -> Lprim {primitive_call with args; loc = ap_info.ap_loc}
+    | exception _ ->
+      Lapply {ap_func = fn; ap_args = args; ap_info; ap_transformed_jsx})
+  | Lfunction
+      {
+        params;
+        body =
+          Lsequence
+            ( Lprim ({primitive = _; args = inner_args} as primitive_call),
+              (Lconst _ as const) );
+      } -> (
+    match is_eta_conversion_exn params inner_args args with
+    | args ->
+      Lsequence (Lprim {primitive_call with args; loc = ap_info.ap_loc}, const)
+    | exception _ ->
+      Lapply {ap_func = fn; ap_args = args; ap_info; ap_transformed_jsx}
+      (* | Lfunction {params;body} when Ext_list.same_length params args ->
+          Ext_list.fold_right2 (fun p arg acc ->
+            Llet(Strict,p,arg,acc)
+          ) params args body *)
+      (* TODO: more rigirous analysis on [let_kind] *))
+  | Llet (kind, id, e, (Lfunction _ as fn)) ->
+    Llet (kind, id, e, apply fn args ap_info ~ap_transformed_jsx)
+  (* | Llet (kind0, id0, e0, Llet (kind,id, e, (Lfunction _ as fn))) ->
+     Llet(kind0,id0,e0,Llet (kind, id, e, apply fn args loc status)) *)
+  | _ -> Lapply {ap_func = fn; ap_args = args; ap_info; ap_transformed_jsx}
 
 let not_ loc x : t =
   match x with
