@@ -295,3 +295,23 @@ Resolved opens 1 Stdlib
   }
 ]
 
+Complete src/CompletionAttributes.res 42:23
+Attribute id:as:[42:20->42:23] label:as
+Completable: Cdecorator(as)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+[
+  {
+    "detail": "",
+    "documentation": {
+      "kind": "markdown",
+      "value": "The `@as` decorator is commonly used on record types to alias record field names to a different JavaScript attribute name.\n\nThis is useful to map to JavaScript attribute names that cannot be expressed in ReScript (such as keywords).\n\nIt is also possible to map a ReScript record to a JavaScript array by passing indices to the `@as` decorator.\n\n[Read more and see examples in the documentation](https://rescript-lang.org/syntax-lookup#as-decorator)."
+    },
+    "insertText": "as(\"$0\")",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "as",
+    "tags": []
+  }
+]
+

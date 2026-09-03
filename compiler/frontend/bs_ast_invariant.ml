@@ -101,10 +101,7 @@ let emit_external_warnings : iterator =
         super.label_declaration self lbl);
     constructor_declaration =
       (fun self ({pcd_name = {txt; loc}} as ctr) ->
-        let _ =
-          Ast_untagged_variants.process_tag_type
-            ctr.pcd_attributes (* mark @as used in variant cases *)
-        in
+        ignore (Ast_untagged_variants.process_constructor_tag ctr);
         (match txt with
         | "false" | "true" | "()" ->
           Location.raise_errorf ~loc "%s can not be redefined " txt

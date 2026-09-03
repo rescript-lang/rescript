@@ -50,13 +50,8 @@ val semantic_string_of_payload : t -> string option
 
 val is_single_int : t -> int option
 
-val is_single_float : t -> string option
-
-val is_single_bigint : t -> string option
-
-val is_single_bool : t -> bool option
-
-val is_single_ident : t -> Longident.t option
+val constructor_tag_of_payload : t -> Parsetree.constructor_tag option
+(** The literal denoted by a valid variant-constructor [@as] payload. *)
 
 val raw_as_string_exp_exn :
   kind:Js_raw_info.raw_kind ->

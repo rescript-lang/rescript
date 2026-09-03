@@ -13,6 +13,7 @@ type untagged_error =
   | ConstructorMoreThanOneArg of string
 type error =
   | InvalidVariantAsAnnotation
+  | VariantAsIntegerOutOfRange of string
   | Duplicated_bs_as
   | InvalidVariantTagAnnotation
   | InvalidUntaggedVariantDefinition of untagged_error
@@ -26,6 +27,10 @@ let report_error ppf =
     fprintf ppf
       "A variant case annotation @as(...) must be a string, integer, boolean, \
        null, or undefined."
+  | VariantAsIntegerOutOfRange value ->
+    fprintf ppf
+      "The integer %s in this variant case's @as annotation is out of range."
+      value
   | Duplicated_bs_as ->
     fprintf ppf "Duplicate @as annotation; only one @as is allowed here."
   | InvalidVariantTagAnnotation ->
@@ -110,37 +115,42 @@ let process_untagged (attrs : Parsetree.attributes) =
       | _ -> ());
   !st
 
-let process_tag_type (attrs : Parsetree.attributes) =
-  let st : tag_type option ref = ref None in
-  Ext_list.iter attrs (fun (({txt; loc}, payload) as attr) ->
-      match txt with
-      | "as" ->
-        if !st = None then (
-          (match Ast_payload.semantic_string_of_payload payload with
-          | None -> ()
-          | Some s -> st := Some (String s));
-          (match Ast_payload.is_single_int payload with
-          | None -> ()
-          | Some i -> st := Some (Int i));
-          (match Ast_payload.is_single_float payload with
-          | None -> ()
-          | Some f -> st := Some (Float f));
-          (match Ast_payload.is_single_bigint payload with
-          | None -> ()
-          | Some i -> st := Some (BigInt i));
-          (match Ast_payload.is_single_bool payload with
-          | None -> ()
-          | Some b -> st := Some (Bool b));
-          (match Ast_payload.is_single_ident payload with
-          | None -> ()
-          | Some (Lident "null") -> st := Some Null
-          | Some (Lident "undefined") -> st := Some Undefined
-          | Some _ -> raise (Error (loc, InvalidVariantAsAnnotation)));
-          if !st = None then raise (Error (loc, InvalidVariantAsAnnotation))
-          else Used_attributes.mark_used_attribute attr)
-        else raise (Error (loc, Duplicated_bs_as))
-      | _ -> ());
-  !st
+let runtime_tag_of_parsetree ~loc = function
+  | Parsetree.Pct_string s -> Declared_string (String_literal.string_semantic s)
+  | Pct_int source -> (
+    match int_of_string_opt source with
+    | Some i -> Declared_int i
+    | None -> raise (Error (loc, VariantAsIntegerOutOfRange source)))
+  | Pct_float f -> Declared_float f
+  | Pct_bigint i -> Declared_bigint i
+  | Pct_bool b -> Declared_bool b
+  | Pct_null -> Declared_null
+  | Pct_undefined -> Declared_undefined
+
+let parsetree_tag_of_runtime = function
+  | Declared_string s ->
+    Parsetree.Pct_string (String_literal.string_from_semantic s)
+  | Declared_int i -> Pct_int (string_of_int i)
+  | Declared_float f -> Pct_float f
+  | Declared_bigint i -> Pct_bigint i
+  | Declared_bool b -> Pct_bool b
+  | Declared_null -> Pct_null
+  | Declared_undefined -> Pct_undefined
+
+(* An [@as] left in the attributes did not name the constructor: either its
+   payload is not a tag, or an earlier [@as] already named it. *)
+let reject_leftover_as (attrs : Parsetree.attributes) err =
+  Ext_list.iter attrs (fun (({txt; loc}, _) : Parsetree.attribute) ->
+      if txt = "as" then raise (Error (loc, err)))
+
+let process_constructor_tag (cstr : Parsetree.constructor_declaration) =
+  match cstr.pcd_runtime_tag with
+  | None ->
+    reject_leftover_as cstr.pcd_attributes InvalidVariantAsAnnotation;
+    None
+  | Some {txt; loc} ->
+    reject_leftover_as cstr.pcd_attributes Duplicated_bs_as;
+    Some (runtime_tag_of_parsetree ~loc txt)
 
 let () =
   Location.register_error_of_exn (function
@@ -209,14 +219,11 @@ let process_tag_name (attrs : Parsetree.attributes) =
 let get_tag_name (cstr : Types.constructor_declaration) =
   process_tag_name cstr.cd_attributes
 
-let constructor_tag ~name attrs = {name; tag_type = process_tag_type attrs}
+(* A constructor the compiler generates itself carries no annotations. *)
+let generated_tag ~name = {name; tag_type = None}
 
-let block_runtime ~name attrs =
-  {
-    tag = constructor_tag ~name attrs;
-    tag_name = process_tag_name attrs;
-    untagged = process_untagged attrs;
-  }
+let generated_block_runtime ~name =
+  {tag = generated_tag ~name; tag_name = None; untagged = false}
 
 let is_nullary_variant (x : Types.constructor_arguments) =
   match x with
@@ -323,7 +330,11 @@ let check_invariant ~is_untagged_def ~(consts : (Location.t * tag) list)
         check_literal ~is_const:false ~loc block.runtime.tag)
 
 let get_cstr_loc_tag (cstr : Types.constructor_declaration) =
-  (cstr.cd_loc, constructor_tag ~name:(Ident.name cstr.cd_id) cstr.cd_attributes)
+  ( cstr.cd_loc,
+    {
+      name = Ident.name cstr.cd_id;
+      tag_type = Option.map tag_type_of_declared cstr.cd_runtime_tag;
+    } )
 
 let check_tag_field_conflicts (cstrs : Types.constructor_declaration list) =
   List.iter
@@ -350,8 +361,6 @@ let check_tag_field_conflicts (cstrs : Types.constructor_declaration list) =
           fields
       | _ -> ())
     cstrs
-
-let has_undefined_literal attrs = process_tag_type attrs = Some Undefined
 
 module Dynamic_checks = struct
   type op = EqEqEq | NotEqEq | Or | And
