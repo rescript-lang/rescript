@@ -1278,13 +1278,9 @@ let make_key e =
     | Lvar id -> ( try Ident.find_same id env with Not_found -> e)
     | Lglobal_module _ | Lconst _ -> e
     | Lapply ap ->
-      Lapply
-        {
-          ap with
-          ap_func = tr_rec env ap.ap_func;
-          ap_args = tr_recs env ap.ap_args;
-          ap_info = {ap.ap_info with ap_loc = Location.none};
-        }
+      apply ~ap_transformed_jsx:ap.ap_transformed_jsx (tr_rec env ap.ap_func)
+        (tr_recs env ap.ap_args)
+        {ap.ap_info with ap_loc = Location.none}
     | Llet (Alias, x, ex, e) ->
       (* Ignore aliases -> substitute *)
       let ex = tr_rec env ex in
@@ -1295,25 +1291,24 @@ let make_key e =
       (* Because of side effects, keep other lets with normalized names *)
       let ex = tr_rec env ex in
       let y = make_key x in
-      Llet (str, y, ex, tr_rec (Ident.add x (Lvar y) env) e)
+      let_ str y ex (tr_rec (Ident.add x (var y) env) e)
     | Lprim {primitive = p; args = es; loc = _} ->
-      Lprim {primitive = p; args = tr_recs env es; loc = Location.none}
-    | Lswitch (e, sw) -> Lswitch (tr_rec env e, tr_sw env sw)
+      prim ~primitive:p ~args:(tr_recs env es) Location.none
+    | Lswitch (e, sw) -> switch (tr_rec env e) (tr_sw env sw)
     | Lstringswitch (e, sw, d) ->
-      Lstringswitch
-        ( tr_rec env e,
-          List.map (fun (s, e) -> (s, tr_rec env e)) sw,
-          tr_opt env d )
-    | Lstaticraise (i, es) -> Lstaticraise (i, tr_recs env es)
+      stringswitch (tr_rec env e)
+        (List.map (fun (s, e) -> (s, tr_rec env e)) sw)
+        (tr_opt env d)
+    | Lstaticraise (i, es) -> staticraise i (tr_recs env es)
     | Lstaticcatch (e1, xs, e2) ->
-      Lstaticcatch (tr_rec env e1, xs, tr_rec env e2)
-    | Ltrywith (e1, x, e2) -> Ltrywith (tr_rec env e1, x, tr_rec env e2)
+      staticcatch (tr_rec env e1) xs (tr_rec env e2)
+    | Ltrywith (e1, x, e2) -> try_ (tr_rec env e1) x (tr_rec env e2)
     | Lifthenelse (cond, ifso, ifnot) ->
-      Lifthenelse (tr_rec env cond, tr_rec env ifso, tr_rec env ifnot)
-    | Lsequence (e1, e2) -> Lsequence (tr_rec env e1, tr_rec env e2)
-    | Lbreak -> Lbreak
-    | Lcontinue -> Lcontinue
-    | Lassign (x, e) -> Lassign (x, tr_rec env e)
+      if_ (tr_rec env cond) (tr_rec env ifso) (tr_rec env ifnot)
+    | Lsequence (e1, e2) -> seq (tr_rec env e1) (tr_rec env e2)
+    | Lbreak -> break
+    | Lcontinue -> continue
+    | Lassign (x, e) -> assign x (tr_rec env e)
     | Lletrec _ | Lfunction _ | Lfor _ | Lfor_of _ | Lfor_await_of _ | Lwhile _
       ->
       raise_notrace Not_simple
