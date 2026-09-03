@@ -28,7 +28,7 @@ let map_row_fields_into_ints ptyp_loc (row_fields : Parsetree.row_field list) =
         match rtag with
         | Rtag ({txt}, attrs, true, []) ->
           let i =
-            match Ast_attributes.iter_process_bs_int_as attrs with
+            match Ast_attributes.as_int attrs with
             | Some i -> i
             | None -> i
           in
@@ -49,7 +49,7 @@ let map_row_fields_into_strings ptyp_loc (row_fields : Parsetree.row_field list)
         match (nullary, tag) with
         | (`Nothing | `Null), Rtag ({txt}, attrs, true, []) ->
           let name =
-            match Ast_attributes.iter_process_bs_string_as attrs with
+            match Ast_attributes.as_string attrs with
             | Some name ->
               has_bs_as := true;
               name
@@ -58,7 +58,7 @@ let map_row_fields_into_strings ptyp_loc (row_fields : Parsetree.row_field list)
           (`Null, (txt, name) :: acc)
         | (`Nothing | `NonNull), Rtag ({txt}, attrs, false, [_]) ->
           let name =
-            match Ast_attributes.iter_process_bs_string_as attrs with
+            match Ast_attributes.as_string attrs with
             | Some name ->
               has_bs_as := true;
               name

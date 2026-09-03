@@ -38,16 +38,16 @@ type derive_attr = {bs_deriving: Ast_payload.action list option} [@@unboxed]
 val iter_process_bs_string_int_unwrap_uncurry :
   t -> [`Nothing | `String | `Int | `Ignore | `Unwrap]
 
-val iter_process_bs_string_as : t -> string option
+val as_string : t -> string option
 
 val has_bs_optional : t -> bool
 
 val has_unwrap_attr : t -> bool
 
-val iter_process_bs_int_as : t -> int option
+val as_int : t -> int option
 
 type as_const_payload = Int of int | Str of string | Json of string
-val iter_process_bs_string_or_int_as : t -> as_const_payload option
+val as_const : t -> as_const_payload option
 
 val process_derive_type : t -> derive_attr * t
 
