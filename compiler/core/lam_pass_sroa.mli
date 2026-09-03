@@ -29,9 +29,11 @@ val replace :
   Lambda.t ->
   Lambda.t option
 (** [replace ~block ~info ~initializers body] replaces a non-escaping local
-    block with one mutable binding per field. The initializer order is
-    preserved. Returns [None] when the block is used other than by direct field
-    access. *)
+    block with independent scalar values. Fields that are never read need no
+    storage, but effects from their initializers and writes are preserved in
+    order. Read-only fields use immutable bindings; fields that are both read
+    and written use mutable bindings. Returns [None] when the block is used
+    other than by direct field access. *)
 
 val simplify : Lambda.t -> Lambda.t
 (** Scalar-replace eligible local mutable blocks throughout a Lambda term. *)

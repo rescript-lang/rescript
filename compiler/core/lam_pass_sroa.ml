@@ -19,41 +19,56 @@
    eligible. Analysis is kept separate from rewriting so a failed eligibility
    check cannot partially transform the term. *)
 
-let valid_field field_count index = index >= 0 && index < field_count
+type field_use = {mutable read: bool; mutable written: bool}
 
-(* Does the block appear anywhere other than as a direct, in-range field read
-   or write? [escapes] and [rewrite] below are a matched pair: [rewrite] handles
-   exactly the occurrences [escapes] accepts, and asserts on the rest. Extending
-   one without the other is a compiler crash rather than a type error, so keep
-   their cases in step. *)
-let rec escapes block field_count (lam : Lambda.t) =
+let valid_field uses index = index >= 0 && index < Array.length uses
+
+(* Does the block appear only as direct, in-range field reads and writes? While
+   answering, record how every field is used. [analyze] and [rewrite] below are
+   a matched pair: [rewrite] handles exactly the occurrences [analyze] accepts,
+   and asserts on the rest. Extending one without the other is a compiler crash
+   rather than a type error, so keep their cases in step. *)
+let rec analyze block uses (lam : Lambda.t) =
   match lam with
-  | Lvar id -> Ident.same id block
+  | Lvar id -> not (Ident.same id block)
   | Lassign (id, value) ->
-    Ident.same id block || escapes block field_count value
+    (not (Ident.same id block)) && analyze block uses value
   | Lprim {primitive = Pfield (index, _); args = [Lvar id]}
     when Ident.same id block ->
-    not (valid_field field_count index)
+    if valid_field uses index then (
+      uses.(index).read <- true;
+      true)
+    else false
   | Lprim {primitive = Psetfield (index, _); args = [Lvar id; value]}
     when Ident.same id block ->
-    (not (valid_field field_count index)) || escapes block field_count value
-  | _ -> Lambda.shallow_exists (escapes block field_count) lam
+    if valid_field uses index then (
+      uses.(index).written <- true;
+      analyze block uses value)
+    else false
+  | _ ->
+    not
+      (Lambda.shallow_exists (fun child -> not (analyze block uses child)) lam)
 
-let rec rewrite block fields (lam : Lambda.t) =
+let discard_value value body =
+  if Lam_analysis.no_side_effects value then body else Lambda.seq value body
+
+let rec rewrite block fields uses (lam : Lambda.t) =
   match lam with
   | Lprim {primitive = Pfield (index, _); args = [Lvar id]}
     when Ident.same id block ->
     Lambda.var fields.(index)
   | Lprim {primitive = Psetfield (index, _); args = [Lvar id; value]}
     when Ident.same id block ->
-    Lambda.assign fields.(index) (rewrite block fields value)
-  (* Unreachable: [escapes] rejected the block for both of these, so [replace]
+    let value = rewrite block fields uses value in
+    if not uses.(index).read then discard_value value Lambda.lambda_unit
+    else Lambda.assign fields.(index) value
+  (* Unreachable: [analyze] rejected the block for both of these, so [replace]
      never reaches the rewrite. They are kept as assertions rather than dropped
-     so that a future occurrence form added to [escapes] but not here fails
+     so that a future occurrence form added to [analyze] but not here fails
      loudly instead of silently losing the write. *)
   | Lvar id when Ident.same id block -> assert false
   | Lassign (id, _) when Ident.same id block -> assert false
-  | _ -> Lambda.shallow_map_sharing (rewrite block fields) lam
+  | _ -> Lambda.shallow_map_sharing (rewrite block fields uses) lam
 
 let fields_for_block block info field_count =
   let fallback () =
@@ -85,13 +100,29 @@ let replace ~block ~info ~initializers body =
   | [] -> None
   | _ ->
     let field_count = List.length initializers in
-    if escapes block field_count body then None
+    let uses =
+      Array.init field_count (fun _ -> {read = false; written = false})
+    in
+    if not (analyze block uses body) then None
     else
       let fields = fields_for_block block info field_count in
-      let body = rewrite block fields body in
-      Some
-        (Ext_list.fold_right2 (Array.to_list fields) initializers body
-           (fun field init body -> Lambda.let_ Variable field init body))
+      let body = rewrite block fields uses body in
+      let rec bind_fields index initializers body =
+        match initializers with
+        | [] -> body
+        | init :: rest ->
+          let body = bind_fields (index + 1) rest body in
+          let use = uses.(index) in
+          (* A never-read field needs no storage; its initializer and writes are
+             retained only when they have effects. A read-only field can use a
+             normal refined let, while a field that is both read and written
+             still needs a mutable scalar binding. *)
+          if not use.read then discard_value init body
+          else if not use.written then
+            Lam_util.refine_let ~kind:Strict fields.(index) init body
+          else Lambda.let_ Variable fields.(index) init body
+      in
+      Some (bind_fields 0 initializers body)
 
 let rec simplify (lam : Lambda.t) =
   match lam with
