@@ -166,6 +166,13 @@ let map_loc sub {loc; txt} = {loc = sub.location sub loc; txt}
 let record_rest_attr_name = "_res.record_rest"
 let constructor_args_attr_name = "_res.constructor_args"
 
+let has_explicit_arity_attr (attrs : Pt.attributes) =
+  List.exists
+    (function
+      | {txt = "ocaml.explicit_arity" | "explicit_arity"}, _ -> true
+      | _ -> false)
+    attrs
+
 let remove_constructor_args_attr (attrs : Pt.attributes) =
   let rec loop rev_attrs = function
     | ({Location.txt; _}, Pt.PStr []) :: attrs
@@ -876,7 +883,7 @@ module E = struct
             | _ -> None)
           ~split_tuple:
             (has_constructor_args
-            || Builtin_attributes.explicit_arity attrs
+            || has_explicit_arity_attr attrs
             || lid.txt = Longident.Lident "::")
           arg
       in
@@ -1124,7 +1131,7 @@ module P = struct
             | _ -> None)
           ~split_tuple:
             (has_constructor_args
-            || Builtin_attributes.explicit_arity attrs
+            || has_explicit_arity_attr attrs
             || l.txt = Longident.Lident "::")
           arg
       in
