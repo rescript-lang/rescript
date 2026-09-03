@@ -831,13 +831,11 @@ Mocha.describe("Bs_array_test", () => {
     ]);
   });
   let sumUsingForEach = xs => {
-    let v = {
-      contents: 0
-    };
+    let v = 0;
     Belt_Array.forEach(xs, x => {
-      v.contents = v.contents + x | 0;
+      v = v + x | 0;
     });
-    return v.contents;
+    return v;
   };
   Mocha.test("bs_array_test_iteration_functions", () => {
     Test_utils.eq("File \"bs_array_test.res\", line 280, characters 7-14", sumUsingForEach([
@@ -869,16 +867,14 @@ Mocha.describe("Bs_array_test", () => {
       0,
       1
     ], [1], (prim0, prim1) => prim0 === prim1));
-    let c = {
-      contents: 0
-    };
+    let c = 0;
     Test_utils.ok("File \"bs_array_test.res\", line 286, characters 6-13", (Belt_Array.forEachWithIndex([
       1,
       1,
       1
     ], (i, v) => {
-      c.contents = (c.contents + i | 0) + v | 0;
-    }), c.contents === 6));
+      c = (c + i | 0) + v | 0;
+    }), c === 6));
   });
   let id = (loc, x) => {
     let u = x.slice(0);

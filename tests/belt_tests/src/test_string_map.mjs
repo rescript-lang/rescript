@@ -9,17 +9,15 @@ function timing(label, f) {
 }
 
 function assertion_test() {
-  let m = {
-    contents: undefined
-  };
+  let m;
   timing("building", () => {
     for (let i = 0; i <= 1000000; ++i) {
-      m.contents = Belt_MapString.set(m.contents, i.toString(), i.toString());
+      m = Belt_MapString.set(m, i.toString(), i.toString());
     }
   });
   timing("querying", () => {
     for (let i = 0; i <= 1000000; ++i) {
-      Belt_MapString.get(m.contents, i.toString());
+      Belt_MapString.get(m, i.toString());
     }
   });
 }

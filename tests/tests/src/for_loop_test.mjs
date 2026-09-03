@@ -8,90 +8,76 @@ import * as Stdlib_Array from "@rescript/runtime/lib/es6/Stdlib_Array.mjs";
 Mocha.describe("For_loop_test", () => {
   Mocha.test("for_loop_test_3", () => {
     let for_3 = x => {
-      let v = {
-        contents: 0
-      };
+      let v = 0;
       let arr = x.map(param => (() => {}));
       for (let i = 0, i_finish = x.length; i < i_finish; ++i) {
         let j = (i << 1);
         arr[i] = () => {
-          v.contents = v.contents + j | 0;
+          v = v + j | 0;
         };
       }
       arr.forEach(x => x());
-      return v.contents;
+      return v;
     };
     Test_utils.eq("File \"for_loop_test.res\", line 16, characters 7-14", 90, for_3(Stdlib_Array.make(10, 2)));
   });
   Mocha.test("for_loop_test_4", () => {
     let for_4 = x => {
-      let v = {
-        contents: 0
-      };
+      let v = 0;
       let arr = x.map(param => (() => {}));
       for (let i = 0, i_finish = x.length; i < i_finish; ++i) {
         let j = (i << 1);
         let k = (j << 1);
         arr[i] = () => {
-          v.contents = v.contents + k | 0;
+          v = v + k | 0;
         };
       }
       arr.forEach(x => x());
-      return v.contents;
+      return v;
     };
     Test_utils.eq("File \"for_loop_test.res\", line 31, characters 7-14", 180, for_4(Stdlib_Array.make(10, 2)));
   });
   Mocha.test("for_loop_test_5", () => {
     let for_5 = (x, u) => {
-      let v = {
-        contents: 0
-      };
+      let v = 0;
       let arr = x.map(param => (() => {}));
       for (let i = 0, i_finish = x.length; i < i_finish; ++i) {
         let k = (u << 1) * u | 0;
         arr[i] = () => {
-          v.contents = v.contents + k | 0;
+          v = v + k | 0;
         };
       }
       arr.forEach(x => x());
-      return v.contents;
+      return v;
     };
     Test_utils.eq("File \"for_loop_test.res\", line 46, characters 7-14", 2420, for_5(Stdlib_Array.make(10, 2), 11));
   });
   Mocha.test("for_loop_test_6", () => {
     let for_6 = (x, u) => {
-      let v = {
-        contents: 0
-      };
+      let v = 0;
       let arr = x.map(param => (() => {}));
-      let v4 = {
-        contents: 0
-      };
-      let v5 = {
-        contents: 0
-      };
+      let v4 = 0;
+      let v5 = 0;
       let inspect_3 = -1;
-      v4.contents = v4.contents + 1 | 0;
+      v4 = v4 + 1 | 0;
       for (let j = 0; j <= 1; ++j) {
-        v5.contents = v5.contents + 1 | 0;
-        let v2 = {
-          contents: 0
-        };
+        v5 = v5 + 1 | 0;
+        let v2 = 0;
         for (let i = 0, i_finish = x.length; i < i_finish; ++i) {
           let k = (u << 1) * u | 0;
-          let h = (v5.contents << 1);
-          v2.contents = v2.contents + 1 | 0;
+          let h = (v5 << 1);
+          v2 = v2 + 1 | 0;
           arr[i] = () => {
-            v.contents = (((((v.contents + k | 0) + v2.contents | 0) + v4.contents | 0) + v5.contents | 0) + h | 0) + u | 0;
+            v = (((((v + k | 0) + v2 | 0) + v4 | 0) + v5 | 0) + h | 0) + u | 0;
           };
         }
-        inspect_3 = v2.contents;
+        inspect_3 = v2;
       }
       arr.forEach(x => x());
       return [
-        v.contents,
-        v4.contents,
-        v5.contents,
+        v,
+        v4,
+        v5,
         inspect_3
       ];
     };
@@ -104,83 +90,71 @@ Mocha.describe("For_loop_test", () => {
   });
   Mocha.test("for_loop_test_7", () => {
     let for_7 = () => {
-      let v = {
-        contents: 0
-      };
+      let v = 0;
       let arr = Stdlib_Array.make(21, () => {});
       for (let i = 0; i <= 6; ++i) {
         for (let j = 0; j <= 2; ++j) {
           arr[(i * 3 | 0) + j | 0] = () => {
-            v.contents = (v.contents + i | 0) + j | 0;
+            v = (v + i | 0) + j | 0;
           };
         }
       }
       arr.forEach(f => f());
-      return v.contents;
+      return v;
     };
     Test_utils.eq("File \"for_loop_test.res\", line 91, characters 7-14", 84, for_7());
   });
   Mocha.test("for_loop_test_8", () => {
     let for_8 = () => {
-      let v = {
-        contents: 0
-      };
+      let v = 0;
       let arr = Stdlib_Array.make(21, () => {});
       for (let i = 0; i <= 6; ++i) {
         let k = (i << 1);
         for (let j = 0; j <= 2; ++j) {
           let h = i + j | 0;
           arr[(i * 3 | 0) + j | 0] = () => {
-            v.contents = (((v.contents + i | 0) + j | 0) + h | 0) + k | 0;
+            v = (((v + i | 0) + j | 0) + h | 0) + k | 0;
           };
         }
       }
       arr.forEach(f => f());
-      return v.contents;
+      return v;
     };
     Test_utils.eq("File \"for_loop_test.res\", line 110, characters 7-14", 294, for_8());
   });
   Mocha.test("for_loop_test_9", () => {
     let for_9 = () => {
-      let v = {
-        contents: /* [] */0
-      };
+      let v = /* [] */0;
       let collect = x => {
-        v.contents = {
+        v = {
           hd: x,
-          tl: v.contents
+          tl: v
         };
       };
-      let vv = {
-        contents: 0
-      };
-      let vv2 = {
-        contents: 0
-      };
+      let vv = 0;
+      let vv2 = 0;
       let arr = Stdlib_Array.make(4, () => {});
       let arr2 = Stdlib_Array.make(2, () => {});
       for (let i = 0; i <= 1; ++i) {
-        let v$1 = {
-          contents: 0
-        };
-        v$1.contents = v$1.contents + i | 0;
+        let v$1 = 0;
+        v$1 = v$1 + i | 0;
         for (let j = 0; j <= 1; ++j) {
-          v$1.contents = v$1.contents + 1 | 0;
-          collect(v$1.contents);
+          v$1 = v$1 + 1 | 0;
+          collect(v$1);
           arr[(i << 1) + j | 0] = () => {
-            vv.contents = vv.contents + v$1.contents | 0;
+            vv = vv + v$1 | 0;
           };
         }
         arr2[i] = () => {
-          vv2.contents = vv2.contents + v$1.contents | 0;
+          vv2 = vv2 + v$1 | 0;
         };
       }
       arr.forEach(f => f());
       arr2.forEach(f => f());
       return [[
-          vv.contents,
-          Stdlib_List.toArray(Stdlib_List.reverse(v.contents)),
-          vv2.contents
+          vv,
+          Stdlib_List.toArray(Stdlib_List.reverse(v)),
+          vv2
         ]];
     };
     Test_utils.eq("File \"for_loop_test.res\", line 158, characters 7-14", [[

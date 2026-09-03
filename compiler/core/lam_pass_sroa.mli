@@ -1,5 +1,5 @@
 (* Copyright (C) 2015-2016 Bloomberg Finance L.P.
- * Copyright (C) 2017 - Hongbo Zhang, Authors of ReScript 
+ * Copyright (C) 2017 - Hongbo Zhang, Authors of ReScript
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -17,11 +17,21 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-exception Real_reference
+val replace :
+  block:Ident.t ->
+  info:Lambda.tag_info ->
+  initializers:Lambda.t list ->
+  Lambda.t ->
+  Lambda.t option
+(** [replace ~block ~info ~initializers body] replaces a non-escaping local
+    block with one mutable binding per field. The initializer order is
+    preserved. Returns [None] when the block is used other than by direct field
+    access. *)
 
-val eliminate_ref : Ident.t -> Lambda.t -> Lambda.t
+val simplify : Lambda.t -> Lambda.t
+(** Scalar-replace eligible local mutable blocks throughout a Lambda term. *)

@@ -262,20 +262,19 @@ if (!Primitive_object.equal(dfs2({
 }
 
 function dfs3(nodes, graph) {
-  let visited = {
-    contents: /* [] */0
-  };
+  let visited = /* [] */0;
   let aux = (node, graph) => {
-    if (!Stdlib_List.has(visited.contents, node, (prim0, prim1) => prim0 === prim1)) {
-      visited.contents = {
-        hd: node,
-        tl: visited.contents
-      };
-      return Stdlib_List.forEach(nexts(node, graph), x => aux(x, graph));
+    if (Stdlib_List.has(visited, node, (prim0, prim1) => prim0 === prim1)) {
+      return;
     }
+    visited = {
+      hd: node,
+      tl: visited
+    };
+    Stdlib_List.forEach(nexts(node, graph), x => aux(x, graph));
   };
   Stdlib_List.forEach(nodes, node => aux(node, graph));
-  return Stdlib_List.reverse(visited.contents);
+  return Stdlib_List.reverse(visited);
 }
 
 if (!Primitive_object.equal(dfs3({
@@ -389,22 +388,20 @@ let grwork = {
 };
 
 function unsafe_topsort(graph) {
-  let visited = {
-    contents: /* [] */0
-  };
+  let visited = /* [] */0;
   let sort_node = node => {
-    if (Stdlib_List.has(visited.contents, node, (prim0, prim1) => prim0 === prim1)) {
+    if (Stdlib_List.has(visited, node, (prim0, prim1) => prim0 === prim1)) {
       return;
     }
     let nodes = nexts(node, graph);
     Stdlib_List.forEach(nodes, sort_node);
-    visited.contents = {
+    visited = {
       hd: node,
-      tl: visited.contents
+      tl: visited
     };
   };
   Stdlib_List.forEach(graph, param => sort_node(param[0]));
-  return visited.contents;
+  return visited;
 }
 
 if (!Primitive_object.equal(unsafe_topsort(grwork), {
@@ -440,9 +437,7 @@ if (!Primitive_object.equal(unsafe_topsort(grwork), {
 let Cycle = /* @__PURE__ */Primitive_exceptions.create("Topsort_test.Cycle");
 
 function pathsort(graph) {
-  let visited = {
-    contents: /* [] */0
-  };
+  let visited = /* [] */0;
   let $plus$great = (node, path) => {
     if (Stdlib_List.has(path, node, (prim0, prim1) => prim0 === prim1)) {
       throw {
@@ -461,17 +456,17 @@ function pathsort(graph) {
   };
   let sort_nodes = (path, nodes) => Stdlib_List.forEach(nodes, node => sort_node(path, node));
   let sort_node = (path, node) => {
-    if (!Stdlib_List.has(visited.contents, node, (prim0, prim1) => prim0 === prim1)) {
-      sort_nodes($plus$great(node, path), nexts(node, graph));
-      visited.contents = {
-        hd: node,
-        tl: visited.contents
-      };
+    if (Stdlib_List.has(visited, node, (prim0, prim1) => prim0 === prim1)) {
       return;
     }
+    sort_nodes($plus$great(node, path), nexts(node, graph));
+    visited = {
+      hd: node,
+      tl: visited
+    };
   };
   Stdlib_List.forEach(graph, param => sort_node(/* [] */0, param[0]));
-  return visited.contents;
+  return visited;
 }
 
 if (!Primitive_object.equal(pathsort(grwork), {

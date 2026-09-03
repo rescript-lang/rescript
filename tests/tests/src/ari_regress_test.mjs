@@ -3,13 +3,11 @@
 import * as Mocha from "mocha";
 import * as Test_utils from "./test_utils.mjs";
 
-let h = {
-  contents: 0
-};
+let h = 0;
 
 function g1(x, y) {
   let u = x + y | 0;
-  h.contents = h.contents + 1 | 0;
+  h = h + 1 | 0;
   return (xx, yy) => (xx + yy | 0) + u | 0;
 }
 
@@ -23,7 +21,7 @@ Mocha.describe("Ari_regress_test", () => {
   Mocha.test("curry", () => Test_utils.eq("File \"ari_regress_test.res\", line 25, characters 7-14", 7, 7));
   Mocha.test("curry2", () => Test_utils.eq("File \"ari_regress_test.res\", line 30, characters 6-13", 14, (v(1), v(1))));
   Mocha.test("curry3", () => Test_utils.eq("File \"ari_regress_test.res\", line 40, characters 7-14", x, 14));
-  Mocha.test("ref count", () => Test_utils.eq("File \"ari_regress_test.res\", line 44, characters 7-14", h.contents, 2));
+  Mocha.test("ref count", () => Test_utils.eq("File \"ari_regress_test.res\", line 44, characters 7-14", h, 2));
 });
 
 /*  Not a pure module */

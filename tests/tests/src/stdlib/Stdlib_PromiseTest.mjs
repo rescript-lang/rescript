@@ -225,14 +225,12 @@ function thenAfterCatch() {
 }
 
 function testCatchFinally() {
-  let wasCalled = {
-    contents: false
-  };
+  let wasCalled = false;
   Stdlib_Promise.$$catch(Promise.resolve(5).then(param => Promise.reject({
     RE_EXN_ID: TestError,
     _1: "test"
   })).then(v => Promise.resolve(v)), param => Promise.resolve()).finally(() => {
-    wasCalled.contents = true;
+    wasCalled = true;
   }).then(v => {
     Test.run([
       [
@@ -251,17 +249,15 @@ function testCatchFinally() {
         59
       ],
       "finally should have been called"
-    ], wasCalled.contents, equal, true);
+    ], wasCalled, equal, true);
     return Promise.resolve();
   });
 }
 
 function testResolveFinally() {
-  let wasCalled = {
-    contents: false
-  };
+  let wasCalled = false;
   Promise.resolve(5).then(v => Promise.resolve(v + 5 | 0)).finally(() => {
-    wasCalled.contents = true;
+    wasCalled = true;
   }).then(v => {
     Test.run([
       [
@@ -280,7 +276,7 @@ function testResolveFinally() {
         59
       ],
       "finally should have been called"
-    ], wasCalled.contents, equal, true);
+    ], wasCalled, equal, true);
     return Promise.resolve();
   });
 }
@@ -306,14 +302,12 @@ let Catching = {
 };
 
 function testParallel() {
-  let place = {
-    contents: 0
-  };
+  let place = 0;
   let delayedMsg = (ms, msg) => new Promise((resolve, param) => {
     setTimeout(() => {
-      place.contents = place.contents + 1 | 0;
+      place = place + 1 | 0;
       resolve([
-        place.contents,
+        place,
         msg
       ]);
     }, ms);
@@ -377,14 +371,12 @@ function testRace() {
 }
 
 function testParallel2() {
-  let place = {
-    contents: 0
-  };
+  let place = 0;
   let delayedMsg = (ms, msg) => new Promise((resolve, param) => {
     setTimeout(() => {
-      place.contents = place.contents + 1 | 0;
+      place = place + 1 | 0;
       resolve([
-        place.contents,
+        place,
         msg
       ]);
     }, ms);
@@ -418,14 +410,12 @@ function testParallel2() {
 }
 
 function testParallel3() {
-  let place = {
-    contents: 0
-  };
+  let place = 0;
   let delayedMsg = (ms, msg) => new Promise((resolve, param) => {
     setTimeout(() => {
-      place.contents = place.contents + 1 | 0;
+      place = place + 1 | 0;
       resolve([
-        place.contents,
+        place,
         msg
       ]);
     }, ms);
@@ -465,14 +455,12 @@ function testParallel3() {
 }
 
 function testParallel4() {
-  let place = {
-    contents: 0
-  };
+  let place = 0;
   let delayedMsg = (ms, msg) => new Promise((resolve, param) => {
     setTimeout(() => {
-      place.contents = place.contents + 1 | 0;
+      place = place + 1 | 0;
       resolve([
-        place.contents,
+        place,
         msg
       ]);
     }, ms);
@@ -518,14 +506,12 @@ function testParallel4() {
 }
 
 function testParallel5() {
-  let place = {
-    contents: 0
-  };
+  let place = 0;
   let delayedMsg = (ms, msg) => new Promise((resolve, param) => {
     setTimeout(() => {
-      place.contents = place.contents + 1 | 0;
+      place = place + 1 | 0;
       resolve([
-        place.contents,
+        place,
         msg
       ]);
     }, ms);
@@ -577,14 +563,12 @@ function testParallel5() {
 }
 
 function testParallel6() {
-  let place = {
-    contents: 0
-  };
+  let place = 0;
   let delayedMsg = (ms, msg) => new Promise((resolve, param) => {
     setTimeout(() => {
-      place.contents = place.contents + 1 | 0;
+      place = place + 1 | 0;
       resolve([
-        place.contents,
+        place,
         msg
       ]);
     }, ms);

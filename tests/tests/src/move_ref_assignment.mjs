@@ -3,15 +3,13 @@
 
 let j = 1;
 
-let k = {
-  c: 1
-};
+let k = 1;
 
 function upd() {
-  k.c = 3;
+  k = 3;
 }
 
-if (k.c === 1) {
+if (k === 1) {
   upd();
   j = j + 2 | 0;
   console.log("correct");

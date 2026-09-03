@@ -263,13 +263,11 @@ Test.run([
   "Iterator next with omitted done"
 ], omittedDoneResult.contents, eq, "yield");
 
-let current = {
-  contents: 0
-};
+let current = 0;
 
 let createdIterator = Stdlib_Iterator.make(() => {
-  let value = current.contents;
-  current.contents = value + 1 | 0;
+  let value = current;
+  current = value + 1 | 0;
   if (value >= 2) {
     return Stdlib_Iterator.doneWithValue("done");
   } else {
@@ -301,13 +299,11 @@ Test.run([
   "Creating your own iterator"
 ], createdProtocolResult.contents, eq, "protocol");
 
-let current$1 = {
-  contents: 0
-};
+let current$1 = 0;
 
 let createdIterableIterator = Stdlib_IterableIterator.make(() => {
-  let value = current$1.contents;
-  current$1.contents = value + 1 | 0;
+  let value = current$1;
+  current$1 = value + 1 | 0;
   if (value >= 2) {
     return Stdlib_Iterator.doneWithValue("done");
   } else {
@@ -512,25 +508,17 @@ Test.run([
   "Async forEach"
 ], asyncResult.contents, eq, "second");
 
-let asyncResult$1 = {
-  contents: undefined
-};
+let asyncResult$1;
 
-let count = {
-  contents: 0
-};
+let count = 0;
 
-let asyncIterableIteratorResult = {
-  contents: undefined
-};
+let asyncIterableIteratorResult;
 
-let asyncIterableIteratorCount = {
-  contents: 0
-};
+let asyncIterableIteratorCount = 0;
 
 let asyncIterator = Stdlib_AsyncIterator.make(async () => {
-  let currentCount = count.contents;
-  count.contents = currentCount + 1 | 0;
+  let currentCount = count;
+  count = currentCount + 1 | 0;
   if (currentCount === 3) {
     return Stdlib_AsyncIterator.doneWithValue(currentCount);
   } else {
@@ -539,10 +527,10 @@ let asyncIterator = Stdlib_AsyncIterator.make(async () => {
 });
 
 await Stdlib_AsyncIterator.forEach(asyncIterator, value => {
-  if (value === 2) {
-    asyncResult$1.contents = "done";
+  if (value !== 2) {
     return;
   }
+  asyncResult$1 = "done";
 });
 
 Test.run([
@@ -553,7 +541,7 @@ Test.run([
     54
   ],
   "Creating your own async iterator"
-], asyncResult$1.contents, eq, "done");
+], asyncResult$1, eq, "done");
 
 let asyncOmittedDoneValues = {
   contents: []
@@ -812,8 +800,8 @@ Test.run([
 ], asyncGeneratorThrowErrorResult.contents, eq, "throwError");
 
 let createdAsyncIterableIterator = Stdlib_AsyncIterableIterator.make(async () => {
-  let currentCount = asyncIterableIteratorCount.contents;
-  asyncIterableIteratorCount.contents = currentCount + 1 | 0;
+  let currentCount = asyncIterableIteratorCount;
+  asyncIterableIteratorCount = currentCount + 1 | 0;
   if (currentCount === 2) {
     return Stdlib_AsyncIterator.done();
   } else {
@@ -822,10 +810,10 @@ let createdAsyncIterableIterator = Stdlib_AsyncIterableIterator.make(async () =>
 });
 
 await Stdlib_AsyncIterableIterator.forEach(createdAsyncIterableIterator, value => {
-  if (value === 1) {
-    asyncIterableIteratorResult.contents = "iterable";
+  if (value !== 1) {
     return;
   }
+  asyncIterableIteratorResult = "iterable";
 });
 
 Test.run([
@@ -836,7 +824,7 @@ Test.run([
     56
   ],
   "Creating your own async iterable iterator"
-], asyncIterableIteratorResult.contents, eq, "iterable");
+], asyncIterableIteratorResult, eq, "iterable");
 
 export {
   eq,

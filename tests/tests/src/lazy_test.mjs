@@ -4,18 +4,16 @@ import * as Mocha from "mocha";
 import * as Test_utils from "./test_utils.mjs";
 import * as Stdlib_Lazy from "@rescript/runtime/lib/es6/Stdlib_Lazy.mjs";
 
-let u = {
-  contents: 3
-};
+let u = 3;
 
 let v = Stdlib_Lazy.make(() => {
-  u.contents = 32;
+  u = 32;
 });
 
 function lazy_test() {
-  let h = u.contents;
+  let h = u;
   Stdlib_Lazy.get(v);
-  let g = u.contents;
+  let g = u;
   return [
     h,
     g

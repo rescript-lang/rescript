@@ -22,22 +22,6 @@ let lets_helper (count_var : Ident.t -> Lam_pass_count.used_info) lam : Lambda.t
     | Llet ((Strict | Alias | StrictOpt), v, Lvar w, l2) ->
       Hash_ident.add subst v (simplif (Lambda.var w));
       simplif l2
-    | Llet
-        ( (Strict as kind),
-          v,
-          Lprim {primitive = Pmakeblock info as primitive; args = [linit]; loc},
-          lbody )
-      when not (Lambda.is_immutable_block info) -> (
-      let slinit = simplif linit in
-      let slbody = simplif lbody in
-      try
-        (* TODO: record all references variables *)
-        Lam_util.refine_let ~kind:Variable v slinit
-          (Lam_pass_eliminate_ref.eliminate_ref v slbody)
-      with Lam_pass_eliminate_ref.Real_reference ->
-        Lam_util.refine_let ~kind v
-          (Lambda.prim ~primitive ~args:[slinit] loc)
-          slbody)
     | Llet (Alias, v, l1, l2) -> (
       (* For alias, [l1] is pure, we can always inline,
           when captured, we should avoid recomputation
@@ -89,27 +73,13 @@ let lets_helper (count_var : Ident.t -> Lam_pass_count.used_info) lam : Lambda.t
         not (used v)
       then simplif lbody (* GPR #1476 *)
       else
+        let l1 = simplif l1 in
         match l1 with
-        | Lprim {primitive = Pmakeblock info as primitive; args = [linit]; loc}
-          when not (Lambda.is_immutable_block info) -> (
-          let slinit = simplif linit in
-          let slbody = simplif lbody in
-          try
-            (* TODO: record all references variables *)
-            Lam_util.refine_let ~kind:Variable v slinit
-              (Lam_pass_eliminate_ref.eliminate_ref v slbody)
-          with Lam_pass_eliminate_ref.Real_reference ->
-            Lam_util.refine_let ~kind v
-              (Lambda.prim ~primitive ~args:[slinit] loc)
-              slbody)
-        | _ -> (
-          let l1 = simplif l1 in
-          match l1 with
-          | Lconst (Const_string s) ->
-            Hash_ident.add string_table v s;
-            (* we need move [simplif lbody] later, since adding Hash does have side effect *)
-            Lambda.let_ Alias v l1 (simplif lbody)
-          | _ -> Lam_util.refine_let ~kind v l1 (simplif lbody))
+        | Lconst (Const_string s) ->
+          Hash_ident.add string_table v s;
+          (* we need move [simplif lbody] later, since adding Hash does have side effect *)
+          Lambda.let_ Alias v l1 (simplif lbody)
+        | _ -> Lam_util.refine_let ~kind v l1 (simplif lbody)
         (* TODO: check if it is correct rollback to [StrictOpt]? *))
     | Llet (((Strict | Variable) as kind), v, l1, l2) -> (
       if not (used v) then
