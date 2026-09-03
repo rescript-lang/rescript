@@ -708,7 +708,7 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
             let constructor_name = Ident.name cd.cd_id in
             let runtime_repr =
               match Variant_runtime.constructor_tag layout position with
-              | Some (String s) -> Some s (* @as("string_value") *)
+              | Some (Literal (String s)) -> Some s (* @as("string_value") *)
               | Some _ -> None (* @as with non-string values *)
               | None -> Some constructor_name (* No @as, use constructor name *)
             in

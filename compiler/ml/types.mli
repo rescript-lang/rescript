@@ -281,7 +281,7 @@ and label_declaration = {
 
 and constructor_declaration = {
   cd_id: Ident.t;
-  cd_runtime_tag: Variant_runtime.declared_tag option;
+  cd_runtime_tag: Variant_runtime.literal_tag option;
       (* The decoded [@as] value of the constructor. *)
   cd_args: constructor_arguments;
   cd_res: type_expr option;

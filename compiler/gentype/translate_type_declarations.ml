@@ -41,15 +41,16 @@ let create_polyvariant_case (label, attributes) =
   }
 
 let create_variant_case label = function
-  | Some (Variant_runtime.String label) ->
-    {label_js = StringLabel (Emit_text.escape_string_contents label)}
-  | Some (Variant_runtime.Int label) ->
-    {label_js = IntLabel (string_of_int label)}
-  | Some (Variant_runtime.Float label) -> {label_js = FloatLabel label}
-  | Some (Variant_runtime.BigInt label) -> {label_js = IntLabel label}
-  | Some (Variant_runtime.Bool label) -> {label_js = BoolLabel label}
-  | Some Variant_runtime.Null -> {label_js = NullLabel}
-  | Some Variant_runtime.Undefined -> {label_js = UndefinedLabel}
+  | Some (Variant_runtime.Literal declared) -> (
+    match declared with
+    | String label ->
+      {label_js = StringLabel (Emit_text.escape_string_contents label)}
+    | Int label -> {label_js = IntLabel (string_of_int label)}
+    | Float label -> {label_js = FloatLabel label}
+    | BigInt label -> {label_js = IntLabel label}
+    | Bool label -> {label_js = BoolLabel label}
+    | Null -> {label_js = NullLabel}
+    | Undefined -> {label_js = UndefinedLabel})
   | Some (Variant_runtime.Untagged _) | None -> {label_js = StringLabel label}
 
 (**

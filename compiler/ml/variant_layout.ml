@@ -69,7 +69,8 @@ let layout_from_type_variant ~(configuration : configuration) ~env
             {
               name = Ident.name cstr.cd_id;
               tag_type =
-                Option.map Variant_runtime.tag_type_of_declared
+                Option.map
+                  (fun d -> Variant_runtime.Literal d)
                   cstr.cd_runtime_tag;
             };
           tag_name = process_tag_name cstr.cd_attributes;

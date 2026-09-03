@@ -649,15 +649,15 @@ and core_type_x_core_type_x_location i ppf (ct1, ct2, l) =
   core_type (i + 1) ppf ct1;
   core_type (i + 1) ppf ct2
 
-and fmt_runtime_tag f (tag : Variant_runtime.declared_tag) =
+and fmt_runtime_tag f (tag : Variant_runtime.literal_tag) =
   match tag with
-  | Declared_string s -> fprintf f "String %S" s
-  | Declared_int i -> fprintf f "Int %d" i
-  | Declared_float s -> fprintf f "Float %s" s
-  | Declared_bigint s -> fprintf f "BigInt %s" s
-  | Declared_bool b -> fprintf f "Bool %b" b
-  | Declared_null -> fprintf f "Null"
-  | Declared_undefined -> fprintf f "Undefined"
+  | String s -> fprintf f "String %S" s
+  | Int i -> fprintf f "Int %d" i
+  | Float s -> fprintf f "Float %s" s
+  | BigInt s -> fprintf f "BigInt %s" s
+  | Bool b -> fprintf f "Bool %b" b
+  | Null -> fprintf f "Null"
+  | Undefined -> fprintf f "Undefined"
 
 and constructor_decl i ppf
     {cd_id; cd_name = _; cd_runtime_tag; cd_args; cd_res; cd_loc; cd_attributes}
