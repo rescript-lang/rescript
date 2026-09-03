@@ -43,7 +43,7 @@ function runQuery(tag) {
   return tag`SELECT id = ${id}`;
 }
 
-let paramQuery = runQuery(sql);
+let paramQuery = sql`SELECT id = ${id}`;
 
 let s = Stdlib_TaggedTemplate.make((strings, parameters) => Stdlib_Array.reduceWithIndex(parameters, strings[0], (acc, param, i) => {
   let suffix = strings[i + 1 | 0];
@@ -93,24 +93,23 @@ Mocha.describe("tagged templates", () => {
     ]);
   });
   Mocha.test("with a ReScript tag lifted via TaggedTemplate.make, it should return the correct interpolation", () => Test_utils.eq("File \"tagged_template_test.res\", line 133, characters 13-20", greeting, "hello Ada you're 36 years old!"));
-  Mocha.test("json interpolation is treated as ordinary string interpolation", () => Test_utils.eq("File \"tagged_template_test.res\", line 139, characters 7-14", "some random " + "string", "some random string"));
-  Mocha.test("a regular string interpolation should continue working", () => Test_utils.eq("File \"tagged_template_test.res\", line 143, characters 7-14", `some random ` + "string" + ` interpolation`, "some random string interpolation"));
+  Mocha.test("a regular string interpolation should continue working", () => Test_utils.eq("File \"tagged_template_test.res\", line 137, characters 7-14", `some random string interpolation`, "some random string interpolation"));
   Mocha.test("ordinary interpolation evaluates values once from left to right", () => {
     let calls = [];
     let record = value => {
       calls.push(value);
       return value;
     };
-    let result = `start ` + record("first") + ` middle ` + record("second") + ` end`;
-    Test_utils.eq("File \"tagged_template_test.res\", line 153, characters 7-14", result, "start first middle second end");
-    Test_utils.eq("File \"tagged_template_test.res\", line 154, characters 7-14", calls, [
+    let result = `start ${record("first")} middle ${record("second")} end`;
+    Test_utils.eq("File \"tagged_template_test.res\", line 147, characters 7-14", result, "start first middle second end");
+    Test_utils.eq("File \"tagged_template_test.res\", line 148, characters 7-14", calls, [
       "first",
       "second"
     ]);
   });
   Mocha.test("invalid escapes remain valid in tagged-template segments", () => {
     let result = rawTag`\unicode`;
-    Test_utils.eq("File \"tagged_template_test.res\", line 159, characters 7-14", result.raw, ["\\unicode"]);
+    Test_utils.eq("File \"tagged_template_test.res\", line 153, characters 7-14", result.raw, ["\\unicode"]);
   });
 });
 

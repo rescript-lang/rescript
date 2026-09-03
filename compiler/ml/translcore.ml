@@ -462,7 +462,7 @@ let warn_polymorphic_comparison loc (builtin : Lambda.builtin) args =
 let lambda_of_inline_const (c : External_ffi_types.inline_const) :
     Lambda.structured_constant =
   match c with
-  | Const_str {s; delim} -> Const_string {s; delim}
+  | External_ffi_types.Const_string s -> Const_string s
   | Const_bool true -> Const_js_true
   | Const_bool false -> Const_js_false
   | Const_int i -> Const_int i
@@ -734,23 +734,19 @@ let lam_of_loc kind loc =
     const
       (Const_block
          ( Blk_tuple,
-           [
-             const_string file None;
-             const_int lnum;
-             const_int cnum;
-             const_int enum;
-           ] ))
-  | Loc_FILE -> const (const_string file None)
+           [const_string file; const_int lnum; const_int cnum; const_int enum]
+         ))
+  | Loc_FILE -> const (const_string file)
   | Loc_MODULE ->
     let filename = Filename.basename file in
     let name = Env.get_unit_name () in
     let module_name = if name = "" then "//" ^ filename ^ "//" else name in
-    const (const_string module_name None)
+    const (const_string module_name)
   | Loc_LOC ->
     let loc =
       Printf.sprintf "File %S, line %d, characters %d-%d" file lnum cnum enum
     in
-    const (const_string loc None)
+    const (const_string loc)
   | Loc_LINE -> const (const_int lnum)
 
 (* Eta-expand a primitive *)
@@ -895,8 +891,7 @@ let assert_failed exp =
               const
                 (Const_block
                    ( Blk_tuple,
-                     [const_string fname None; const_int line; const_int char]
-                   ));
+                     [const_string fname; const_int line; const_int char] ));
             ]
           exp.exp_loc;
       ]
@@ -970,7 +965,10 @@ let pack_trywith_exn id handler =
 let extract_directive_for_fn exp =
   exp.exp_attributes
   |> List.find_map (fun ({txt}, payload) ->
-      if txt = "directive" then Ast_payload.is_single_string payload else None)
+      if txt = "directive" then (
+        Ast_payload.reject_json_literal_payload payload;
+        Ast_payload.semantic_string_of_payload payload)
+      else None)
 
 let hoisted_function_attr_name = "res.hoistedFunction"
 
@@ -1015,11 +1013,7 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.t =
   | Texp_let (rec_flag, pat_expr_list, body) ->
     transl_let ~js_hoist:None rec_flag pat_expr_list (transl_exp body)
   | Texp_function {params = fparams; body; async} ->
-    let directive =
-      match extract_directive_for_fn e with
-      | None -> None
-      | Some (directive, _) -> Some directive
-    in
+    let directive = extract_directive_for_fn e in
     let params, lbody, return_unit = transl_function e.exp_loc fparams body in
     let one_unit_arg =
       match (fparams, (Ctype.expand_head e.exp_env e.exp_type).desc) with
@@ -1042,23 +1036,12 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.t =
     in
     let loc = e.exp_loc in
     function_ ~loc ~attr ~params ~body:lbody
-  | Texp_apply {funct; args = oargs}
-    when List.exists
-           (fun (attr, _) -> attr.txt = "res.taggedTemplate")
-           e.exp_attributes ->
-    (* Backtick tagged-template syntax on a value of the builtin
-       [taggedTemplate<'param, 'output>] type. Typecore has already checked the
-       tag's type, so here we just emit a real JS tagged-template literal,
-       regardless of how the tag value was obtained (external, let-binding,
-       function parameter, factory result, cross-module). *)
-    let strings, values =
-      match oargs with
-      | [(_, Some strings); (_, Some values)] -> (strings, values)
-      | _ -> assert false
-    in
-    prim ~primitive:Ptagged_template
-      ~args:[transl_exp funct; transl_exp strings; transl_exp values]
+  | Texp_tagged_template {tag; raw_sources; values} ->
+    prim ~primitive:(Ptagged_template raw_sources)
+      ~args:(transl_exp tag :: transl_list values)
       e.exp_loc
+  | Texp_template {segments; values} ->
+    prim ~primitive:(Ptemplate segments) ~args:(transl_list values) e.exp_loc
   | Texp_apply
       {
         funct =
@@ -1110,13 +1093,13 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.t =
           (* an external: expand its FFI spec here; %raw parses and classifies
          its snippet *)
           match (p.prim_name, argl) with
-          | "#raw_expr", [Lconst (Const_string {s = code})] ->
+          | "#raw_expr", [Lconst (Const_string code)] ->
             let kind = Classify_function.classify code in
             wrap
               (prim
                  ~primitive:(Praw_js_code {code; code_info = Exp kind})
                  ~args:[] e.exp_loc)
-          | "#raw_stmt", [Lconst (Const_string {s = code})] ->
+          | "#raw_stmt", [Lconst (Const_string code)] ->
             let kind = Classify_function.classify_stmt code in
             wrap
               (prim

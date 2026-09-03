@@ -242,6 +242,8 @@ Source: [typecore.ml:27](../compiler/ml/typecore.ml).
 | `Literal_overflow` | ✓ | `intoverflow.res` | |
 | `Polyvar_literal_overflow` | ✓ | `polyvar_int_overflow.res`, `polyvar_int_overflow_payload.res`, `polyvar_int_overflow_pattern.res` | |
 | `Unknown_literal` | ✓ | `unknown_literal.res` | |
+| `Invalid_string_escape_sequence` | ☐ | — | Regular source is rejected by the parser; the typer check remains defensive for malformed AST produced by a PPX. `syntaxErrors_invalid_ordinary_template_escape.res` covers the parser diagnostic. |
+| `Json_literal_outside_external` | ✓ | `json_literal_outside_external.res` | Constant `json` payloads are reserved for external attributes such as `@as`. |
 | `Illegal_letrec_pat` | ✓ | `illegal_letrec_pat.res` | |
 | `Empty_record_literal` | ✓ | `empty_record_literal.res` | |
 | `Uncurried_arity_mismatch` | ✓ | `arity_mismatch3.res` etc. | |
@@ -532,43 +534,6 @@ multi-file harnesses, which never set `-ppx`.
 | `compiler/ext/bsc_args.ml` | `Unknown` | ☐ (needs CLI harness) | — | bsc_args.ml:45. Reachable trivially via `bsc --bogus`, but the `super_errors{,_multi}` runners only pass `bsc` a fixed flag list plus the source file — they can't exercise CLI-level errors. |
 | `compiler/ext/bsc_args.ml` | `Missing` | ☐ (needs CLI harness) | — | Same as above: `bsc -o` (no following filename). Needs a harness that invokes `bsc` with crafted argv. |
 
----
-
-## `compiler/frontend/ast_utf8_string.ml` (retained defensive family)
-
-Source: [ast_utf8_string.ml:25](../compiler/frontend/ast_utf8_string.ml). Re-validation found these are source-unreachable for regular ReScript, but not completely dead: `transform_test` and the defensive string-transform path still raise them, and the OUnit unicode tests assert their offsets. Retained.
-
-| Variant | Status |
-|---|---|
-| `Invalid_code_point` | ? (source-unreachable, retained defensive/test helper) |
-| `Unterminated_backslash` | ? (source-unreachable, retained defensive/test helper) |
-| `Invalid_hex_escape` | ? (source-unreachable, retained defensive/test helper) |
-| `Invalid_unicode_escape` | ? (source-unreachable, retained defensive/test helper) |
-| `Invalid_unicode_codepoint_escape` | ? (source-unreachable, retained defensive/test helper) |
-
-## `compiler/frontend/ast_utf8_string_interp.ml` (retained test family)
-
-Source: [ast_utf8_string_interp.ml:25](../compiler/frontend/ast_utf8_string_interp.ml).
-
-`pos_error` is reached through `transform_test`, which is intentionally
-used by OUnit tests. Modern ReScript backtick templates take the
-`BackQuotes` branch of `transform_exp` and skip the interpolation parser,
-so these are source-unreachable for regular ReScript, but not completely
-dead. Retained.
-
-| Variant | Status |
-|---|---|
-| `Invalid_code_point` | ? (source-unreachable, retained test helper) |
-| `Unterminated_backslash` | ? (source-unreachable, retained test helper) |
-| `Invalid_escape_code` | ? (source-unreachable, retained test helper) |
-| `Invalid_hex_escape` | ? (source-unreachable, retained test helper) |
-| `Invalid_unicode_escape` | ? (source-unreachable, retained test helper) |
-| `Unterminated_variable` | ? (source-unreachable, retained test helper) |
-| `Unmatched_paren` | ? (source-unreachable, retained test helper) |
-| `Invalid_syntax_of_var` | ? (source-unreachable, retained test helper) |
-
----
-
 ## Removal audit notes
 
 All variants that were confirmed completely dead in this pass are listed
@@ -589,7 +554,8 @@ enabled. Fixtures use `-w +A` (everything on) so default-disabled
 warnings still fire.
 
 Fixtures follow the naming convention `warning_<NN>_<description>.res`
-so coverage gaps stay greppable.
+so coverage gaps stay greppable. Warning 11 (`Unused_match`) is covered by
+`warning_11_equivalent_string_patterns.res`.
 
 ### Removed warnings
 

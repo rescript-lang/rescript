@@ -16,3 +16,17 @@ let w = meh``
 
 // let x = meh`foo`.
 //                  ^com
+
+let ordinaryInterpolation = `value: ${{
+  module LocalOrdinary = M
+  // LocalOrdinary.
+  //               ^com
+  LocalOrdinary.b(w)
+}}`
+
+let taggedInterpolation = meh`value: ${{
+  module LocalTagged = M
+  // LocalTagged.
+  //             ^com
+  LocalTagged.b(w)
+}}`

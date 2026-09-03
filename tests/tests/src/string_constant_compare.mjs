@@ -5,9 +5,9 @@ let a1 = true;
 
 let a2 = false;
 
-let a3 = "'" === "\'";
+let a3 = true;
 
-let a4 = "'" !== "\'";
+let a4 = false;
 
 export {
   a1,

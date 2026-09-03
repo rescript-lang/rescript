@@ -49,14 +49,21 @@ let end_region p =
   | [] -> ()
   | _ :: rest -> p.regions <- rest
 
-let doc_comment_to_attribute_token comment =
+let comment_text_for_attribute p comment =
   let txt = Comment.txt comment in
   let loc = Comment.loc comment in
+  if String_literal.is_valid_utf8 txt then (loc, txt)
+  else (
+    p.scanner.err ~start_pos:loc.loc_start ~end_pos:loc.loc_end
+      (Diagnostics.message "Invalid code point");
+    (loc, String_literal.replace_invalid_utf8 txt))
+
+let doc_comment_to_attribute_token p comment =
+  let loc, txt = comment_text_for_attribute p comment in
   Token.DocComment (loc, txt)
 
-let module_comment_to_attribute_token comment =
-  let txt = Comment.txt comment in
-  let loc = Comment.loc comment in
+let module_comment_to_attribute_token p comment =
+  let loc, txt = comment_text_for_attribute p comment in
   Token.ModuleComment (loc, txt)
 
 (* Advance to the next non-comment token and store any encountered comment
@@ -73,12 +80,12 @@ let rec next ?prev_end_pos p =
   match token with
   | Comment c ->
     if Comment.is_doc_comment c then (
-      p.token <- doc_comment_to_attribute_token c;
+      p.token <- doc_comment_to_attribute_token p c;
       p.prev_end_pos <- prev_end_pos;
       p.start_pos <- start_pos;
       p.end_pos <- end_pos)
     else if Comment.is_module_comment c then (
-      p.token <- module_comment_to_attribute_token c;
+      p.token <- module_comment_to_attribute_token p c;
       p.prev_end_pos <- prev_end_pos;
       p.start_pos <- start_pos;
       p.end_pos <- end_pos)

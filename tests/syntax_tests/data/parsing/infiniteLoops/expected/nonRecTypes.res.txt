@@ -71,7 +71,7 @@ include
           mutable size: int ;
           mutable root: 'value node option ;
           compare: [ [%rescript.typehole ]] Function.fn }
-        ;;(({js|Arity_2('value, 'value)], int),
+        ;;`Arity_2('value, 'value)], int),
                       };
                     }: {
 
@@ -82,8 +82,7 @@ include
             (
               ~size: int,
               ~root: option(node('value)),
-              ~compare: Function.fn([ | |js})
-          [@res.template ])
+              ~compare: Function.fn([ | `
         ;;Arity_2 (value, value)
         ;;int
         ;;(t value) = {js||js}
@@ -109,12 +108,11 @@ include
             [@ocaml.deprecated ])|]
         external compare :
           'value t -> [ [%rescript.typehole ]] Function.fn (a:1)
-        ;;(({js|Arity_2('value, 'value)], int) =
+        ;;`Arity_2('value, 'value)], int) =
             ""
             "BS:6.0.1\x84\x95\xa6\xbe\0\0\0\x13\0\0\0\x07\0\0\0\x14\0\0\0\x13\xb0\xa0\xa0A\x91@@A\x98\xa0'compare@";
           external compareGet:
-            t('value) => Function.fn([ | |js})
-          [@res.template ])
+            t('value) => Function.fn([ | `
         ;;Arity_2 (value, value)
         ;;int
         ;;{js||js}

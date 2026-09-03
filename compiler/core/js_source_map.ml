@@ -154,16 +154,19 @@ let utf16_units_in_utf8_slice s start stop =
     else
       match String.unsafe_get s i with
       | '\n' -> loop (i + 1) 0
-      | c ->
-        let byte = Char.code c in
-        if byte < 0x80 then loop (i + 1) (count + 1)
-        else if byte land 0xE0 = 0xC0 && i + 1 < stop then
-          loop (i + 2) (count + 1)
-        else if byte land 0xF0 = 0xE0 && i + 2 < stop then
-          loop (i + 3) (count + 1)
-        else if byte land 0xF8 = 0xF0 && i + 3 < stop then
-          loop (i + 4) (count + 2)
-        else loop (i + 1) (count + 1)
+      | _ ->
+        let decoded = String.get_utf_8_uchar s i in
+        let width = Uchar.utf_decode_length decoded in
+        if i + width > stop then loop (i + 1) (count + 1)
+        else
+          let utf16_units =
+            if
+              Uchar.utf_decode_is_valid decoded
+              && Uchar.to_int (Uchar.utf_decode_uchar decoded) > 0xffff
+            then 2
+            else 1
+          in
+          loop (i + width) (count + utf16_units)
   in
   loop (max 0 start) 0
 

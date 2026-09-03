@@ -47,8 +47,8 @@ Source:
   expr:
     Pexp_record(
       fields:
-        name: Pexp_constant(Pconst_string(v))
-        version: Pexp_constant(Pconst_string(1))
+        name: Pexp_constant(Pconst_string(source=v, semantic=v))
+        version: Pexp_constant(Pconst_string(source=1, semantic=1))
     )
 )
 

@@ -228,9 +228,8 @@ let filter_parsing_attrs attrs =
       | ( {
             Location.txt =
               ( "res.braces" | "ns.braces" | "res.iflet" | "res.ternary"
-              | "res.await" | "res.template" | "res.taggedTemplate"
-              | "res.patVariantSpread" | "res.dictPattern" | "res.dictSpread"
-              | "res.inlineRecordDefinition" );
+              | "res.await" | "res.patVariantSpread" | "res.dictPattern"
+              | "res.dictSpread" | "res.inlineRecordDefinition" );
           },
           _ ) ->
         false
@@ -265,13 +264,18 @@ let is_multiline_text txt =
 let is_huggable_expression expr =
   match expr.pexp_desc with
   | Pexp_array _ | Pexp_tuple _
-  | Pexp_constant (Pconst_string (_, Some _))
+  | Pexp_constant (Pconst_json _ | Pconst_char _)
+  | Pexp_template {values = []}
   | Pexp_construct ({txt = Longident.Lident ("::" | "[]")}, _)
   | Pexp_object_literal _ | Pexp_record _ ->
     true
   | _ when is_block_expr expr -> true
   | _ when is_braced_expr expr -> true
-  | Pexp_constant (Pconst_string (txt, None)) when is_multiline_text txt -> true
+  | Pexp_constant (Pconst_string payload)
+    when is_multiline_text (String_literal.string_source payload) ->
+    true
+  | Pexp_constant (Pconst_raw_source source) when is_multiline_text source ->
+    true
   | _ -> false
 
 let is_huggable_rhs expr =
@@ -384,7 +388,7 @@ let has_attributes attrs =
       | ( {
             Location.txt =
               ( "res.braces" | "ns.braces" | "res.iflet" | "res.ternary"
-              | "res.await" | "res.template" | "res.inlineRecordDefinition" );
+              | "res.await" | "res.inlineRecordDefinition" );
           },
           _ ) ->
         false
@@ -395,10 +399,11 @@ let has_attributes attrs =
               {
                 pstr_desc =
                   Pstr_eval
-                    ({pexp_desc = Pexp_constant (Pconst_string ("-4", None))}, _);
+                    ({pexp_desc = Pexp_constant (Pconst_string payload)}, _);
               };
             ] ) ->
-        not (has_if_let_attribute attrs)
+        String_literal.string_semantic payload <> "-4"
+        || not (has_if_let_attribute attrs)
       | _ -> true)
     attrs
 
@@ -509,10 +514,10 @@ let filter_fragile_match_attributes attrs =
               {
                 pstr_desc =
                   Pstr_eval
-                    ({pexp_desc = Pexp_constant (Pconst_string ("-4", _))}, _);
+                    ({pexp_desc = Pexp_constant (Pconst_string payload)}, _);
               };
             ] ) ->
-        false
+        String_literal.string_semantic payload <> "-4"
       | _ -> true)
     attrs
 
@@ -560,8 +565,7 @@ let is_printable_attribute attr =
   | ( {
         Location.txt =
           ( "res.iflet" | "res.braces" | "ns.braces" | "JSX" | "res.await"
-          | "res.template" | "res.taggedTemplate" | "res.ternary"
-          | "res.inlineRecordDefinition" | "res.dictSpread" );
+          | "res.ternary" | "res.inlineRecordDefinition" | "res.dictSpread" );
       },
       _ ) ->
     false
@@ -583,8 +587,7 @@ let partition_doc_comment_attributes attrs =
             [
               {
                 pstr_desc =
-                  Pstr_eval
-                    ({pexp_desc = Pexp_constant (Pconst_string (_, _))}, _);
+                  Pstr_eval ({pexp_desc = Pexp_constant (Pconst_string _)}, _);
               };
             ] ) ->
         true
@@ -648,39 +651,14 @@ let rec collect_patterns_from_list_construct acc pattern =
     collect_patterns_from_list_construct (pat :: acc) rest
   | _ -> (List.rev acc, pattern)
 
-let has_template_literal_attr attrs =
-  List.exists
-    (fun attr ->
-      match attr with
-      | {Location.txt = "res.template"}, _ -> true
-      | _ -> false)
-    attrs
-
-let has_tagged_template_literal_attr attrs =
-  List.exists
-    (fun attr ->
-      match attr with
-      | {Location.txt = "res.taggedTemplate"}, _ -> true
-      | _ -> false)
-    attrs
-
 let is_template_literal expr =
   match expr.pexp_desc with
-  | Pexp_apply
-      {
-        funct = {pexp_desc = Pexp_ident {txt = Longident.Lident "++"}};
-        args = [(Nolabel, _); (Nolabel, _)];
-      }
-    when has_template_literal_attr expr.pexp_attributes ->
-    true
-  | Pexp_constant (Pconst_string (_, Some "")) -> true
-  | Pexp_constant _ when has_template_literal_attr expr.pexp_attributes -> true
+  | Pexp_template _ -> true
   | _ -> false
 
 let is_tagged_template_literal expr =
-  match expr with
-  | {pexp_desc = Pexp_apply _; pexp_attributes = attrs} ->
-    has_tagged_template_literal_attr attrs
+  match expr.pexp_desc with
+  | Pexp_tagged_template _ -> true
   | _ -> false
 
 let has_spread_attr attrs =

@@ -60,7 +60,7 @@ let lets_helper (count_var : Ident.t -> Lam_pass_count.used_info) lam : Lambda.t
         ->
         Hash_ident.add subst v (simplif l1);
         simplif l2
-      | _, Lconst (Const_string {s; delim = None}) ->
+      | _, Lconst (Const_string s) ->
         (* only "" added for later inlining *)
         Hash_ident.add string_table v s;
         Lambda.let_ Alias v l1 (simplif l2)
@@ -105,7 +105,7 @@ let lets_helper (count_var : Ident.t -> Lam_pass_count.used_info) lam : Lambda.t
         | _ -> (
           let l1 = simplif l1 in
           match l1 with
-          | Lconst (Const_string {s; delim = None}) ->
+          | Lconst (Const_string s) ->
             Hash_ident.add string_table v s;
             (* we need move [simplif lbody] later, since adding Hash does have side effect *)
             Lambda.let_ Alias v l1 (simplif lbody)
@@ -120,7 +120,7 @@ let lets_helper (count_var : Ident.t -> Lam_pass_count.used_info) lam : Lambda.t
         let l1 = simplif l1 in
 
         match (kind, l1) with
-        | Strict, Lconst (Const_string {s; delim = None}) ->
+        | Strict, Lconst (Const_string s) ->
           Hash_ident.add string_table v s;
           Lambda.let_ Alias v l1 (simplif l2)
         | _ -> Lam_util.refine_let ~kind v l1 (simplif l2))
@@ -150,7 +150,7 @@ let lets_helper (count_var : Ident.t -> Lam_pass_count.used_info) lam : Lambda.t
       let r' = simplif r in
       let opt_l =
         match l' with
-        | Lconst (Const_string {s = ls; delim = None}) -> Some ls
+        | Lconst (Const_string ls) -> Some ls
         | Lvar i -> Hash_ident.find_opt string_table i
         | _ -> None
       in
@@ -159,14 +159,13 @@ let lets_helper (count_var : Ident.t -> Lam_pass_count.used_info) lam : Lambda.t
       | Some l_s -> (
         let opt_r =
           match r' with
-          | Lconst (Const_string {s = rs; delim = None}) -> Some rs
+          | Lconst (Const_string rs) -> Some rs
           | Lvar i -> Hash_ident.find_opt string_table i
           | _ -> None
         in
         match opt_r with
         | None -> Lambda.prim ~primitive:Pstringadd ~args:[l'; r'] loc
-        | Some r_s -> Lambda.const (Const_string {s = l_s ^ r_s; delim = None}))
-      )
+        | Some r_s -> Lambda.const (Const_string (l_s ^ r_s))))
     | Lglobal_module _ -> lam
     | Lprim {primitive; args; loc} ->
       Lambda.prim ~primitive ~args:(Ext_list.map args simplif) loc

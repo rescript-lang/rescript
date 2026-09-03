@@ -63,18 +63,8 @@ let mutable_flag_of_tag_info (tag : tag_info) =
 
 type label = Types.label_description
 
-let find_name (attr : Parsetree.attribute) =
-  match attr with
-  | ( {txt = "as"},
-      PStr
-        [
-          {
-            pstr_desc =
-              Pstr_eval ({pexp_desc = Pexp_constant (Pconst_string (s, _))}, _);
-          };
-        ] ) ->
-    Some s
-  | _ -> None
+let find_name (({txt}, payload) : Parsetree.attribute) =
+  if txt = "as" then Ast_payload.semantic_string_of_payload payload else None
 
 let blk_record (fields : (label * _ * _) array) mut =
   let all_labels_info =
@@ -311,17 +301,31 @@ type primitive =
   | Pval_from_option
   | Pval_from_option_not_nest
   | Pis_poly_var_block
+  (* Validated JavaScript source from [raw], [ffi], or [re], together with its
+     expression/program kind. For example, [%raw("x + 1")] carries ["x + 1"]
+     as code, not as a decoded runtime string. *)
   | Praw_js_code of Js_raw_info.t
   | Pjs_fn_method
-  (* Tagged template literal: [tag; strings_array; values_array] *)
-  | Ptagged_template
+  (* A JavaScript tagged template operation. For [sql`id = ${id}`], the payload
+     is ["id = "; ""] and the primitive arguments are [sql; id]. Segment text
+     remains raw and may contain invalid escapes. *)
+  | Ptagged_template of string list
+  (* An ordinary backquoted-template operation. For [`a ${value}\n`], the
+     payload contains the source and semantic forms of ["a "] and ["\\n"],
+     and the primitive arguments contain [value]. The source forms are retained
+     for JavaScript output; semantic forms are used by optimizations. *)
+  | Ptemplate of Asttypes.template_segment list
 
 and comparison = Ceq | Cneq | Clt | Cgt | Cle | Cge
 
 type structured_constant =
   | Const_int of int32
   | Const_char of int
-  | Const_string of {s: string; delim: External_arg_spec.delim option}
+    (* The decoded Unicode code point; literal source spelling is no longer
+       present at this layer. *)
+  | Const_string of string
+    (* A decoded runtime string value; literal source spelling is no longer
+       present at this layer. *)
   | Const_float of string
   | Const_bigint of bool * string
   | Const_block of tag_info * structured_constant list
@@ -436,14 +440,13 @@ and lambda_switch = t switch
 *)
 let const_int (i : int) = Const_int (Int32.of_int i)
 
-let const_string s delim =
-  Const_string {s; delim = External_arg_spec.parse_processed_delim delim}
+let const_string s = Const_string (String_literal.normalize_semantic s)
 
 let const_of_typed (c : Asttypes.constant) : structured_constant =
   match c with
   | Asttypes.Const_int i -> Const_int (Int32.of_int i)
   | Asttypes.Const_char i -> Const_char i
-  | Asttypes.Const_string (s, d) -> const_string s d
+  | Asttypes.Const_string s -> Const_string s
   | Asttypes.Const_float f -> Const_float f
   | Asttypes.Const_bigint (sign, i) -> Const_bigint (sign, i)
 
@@ -472,7 +475,7 @@ let const_polyvar name =
 
 let const_polyvar_name name =
   match const_polyvar name with
-  | Const_polyvar s -> Const_string {s; delim = None}
+  | Const_polyvar s -> Const_string s
   | c -> c
 
 let const_module_alias = Const_module_alias
@@ -560,8 +563,8 @@ let eq_primitive_approx (lhs : primitive) (rhs : primitive) =
   | Phash_mixstring | Phash_mixint | Phash_finalmix | Precord_rest _ ->
     rhs = lhs
   (* Reachable only via the optimizer's term-equality comparison, which the
-     test suite doesn't exercise for tagged templates. *)
-  | Ptagged_template -> ( ((rhs = lhs) [@coverage off]))
+     test suite doesn't exercise for template primitives. *)
+  | Ptagged_template _ | Ptemplate _ -> ( ((rhs = lhs) [@coverage off]))
   | Pcreate_extension a -> (
     match rhs with
     | Pcreate_extension b -> a = (b : string)
@@ -669,9 +672,9 @@ let rec const_eq_approx (x : structured_constant) (y : structured_constant) =
     match y with
     | Const_char iy -> ix = iy
     | _ -> false)
-  | Const_string {s = sx; delim = ux} -> (
+  | Const_string sx -> (
     match y with
-    | Const_string {s = sy; delim = uy} -> sx = sy && ux = uy
+    | Const_string sy -> sx = sy
     | _ -> false)
   | Const_float ix -> (
     match y with
@@ -949,8 +952,7 @@ let switch lam (lam_switch : lambda_switch) : t =
 
 let stringswitch (lam : t) cases default : t =
   match lam with
-  | Lconst (Const_string {s; delim = None | Some DNoQuotes}) ->
-    Ext_list.assoc_by_string cases s default
+  | Lconst (Const_string s) -> Ext_list.assoc_by_string cases s default
   | _ -> Lstringswitch (lam, cases, default)
 
 let rec seq (a : t) b : t =
@@ -966,7 +968,7 @@ module Lift = struct
 
   let bool b = if b then lambda_true else lambda_false
 
-  let string s : t = Lconst (Const_string {s; delim = None})
+  let string s : t = Lconst (Const_string s)
 
   let char b : t = Lconst (Const_char b)
 end
@@ -982,8 +984,8 @@ let prim ~primitive:(prim : primitive) ~args loc : t =
     | Pintoffloat, Const_float a ->
       Lift.int (Int32.of_float (float_of_string a))
     (* | Pnegfloat -> Lift.float (-. a) *)
-    | Pstringlength, Const_string {s; delim = None} ->
-      Lift.int (Int32.of_int (String.length s))
+    | Pstringlength, Const_string s ->
+      Lift.int (Int32.of_int (String_literal.utf16_length s))
     (* | Pnegbint Pnativeint, ( (Const_nativeint i)) *)
     (*   ->   *)
     (*   Lift.nativeint (Nativeint.neg i) *)
@@ -1037,15 +1039,11 @@ let prim ~primitive:(prim : primitive) ~args loc : t =
     | Psequor, Const_js_true, (Const_js_true | Const_js_false) -> lambda_true
     | Psequor, Const_js_false, Const_js_true -> lambda_true
     | Psequor, Const_js_false, Const_js_false -> lambda_false
-    | ( Pstringadd,
-        Const_string {s = a; delim = None},
-        Const_string {s = b; delim = None} ) ->
-      Lift.string (a ^ b)
-    | ( (Pstringrefs | Pstringrefu),
-        Const_string {s = a; delim = None},
-        Const_int b ) -> (
-      try Lift.char (Char.code (String.get a (Int32.to_int b)))
-      with _ -> default ())
+    | Pstringadd, Const_string a, Const_string b -> Lift.string (a ^ b)
+    | (Pstringrefs | Pstringrefu), Const_string a, Const_int b -> (
+      match String_literal.code_point_at_utf16_index a (Int32.to_int b) with
+      | Some codepoint -> Lift.char codepoint
+      | None -> default ())
     | _ -> default ())
   | _ -> (
     match prim with
@@ -1478,8 +1476,7 @@ let rec transl_normal_path = function
   | Path.Pident id ->
     (* A predefined exception is its own name at runtime, so the reference is
        that string rather than a module. *)
-    if Ident.is_predef_exn id then
-      Lconst (Const_string {s = id.name; delim = None})
+    if Ident.is_predef_exn id then Lconst (Const_string id.name)
     else if Ident.global id then Lglobal_module id
     else Lvar id
   | Pdot (p, s, pos) ->

@@ -27,9 +27,10 @@ let handle_extension e (_self : Ast_mapper.mapper)
     (({txt; loc}, payload) : Parsetree.extension) =
   match txt with
   | "todo" ->
+    Ast_payload.reject_json_literal_payload payload;
     let todo_message =
-      match Ast_payload.is_single_string payload with
-      | Some (s, _) -> Some s
+      match Ast_payload.semantic_string_of_payload payload with
+      | Some s -> Some s
       | None -> None
     in
     Location.prerr_warning e.Parsetree.pexp_loc (Bs_todo todo_message);
@@ -47,13 +48,12 @@ let handle_extension e (_self : Ast_mapper.mapper)
       [
         ( Nolabel,
           Exp.constant ~loc
-            (Pconst_string
-               ( (pretext
-                 ^
-                 match todo_message with
-                 | None -> " - Todo"
-                 | Some msg -> " - Todo: " ^ msg),
-                 None )) );
+            (Ast_helper.Const.string
+               (pretext
+               ^
+               match todo_message with
+               | None -> " - Todo"
+               | Some msg -> " - Todo: " ^ msg)) );
       ]
   | "ffi" -> Ast_exp_handle_external.handle_ffi ~loc ~payload
   | "raw" -> Ast_exp_handle_external.handle_raw ~kind:Raw_exp loc payload

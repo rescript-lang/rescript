@@ -224,7 +224,7 @@ let record_scope_pass =
                       TODO:
                   *)
                      match x.expression_desc with
-                     | Fun _ | Number _ | Str _ -> state
+                     | Fun _ | Number _ | Str _ | Template_literal _ -> state
                      | _ ->
                        (* if Set_ident.(is_empty @@ *)
                        (*   inter self#get_mutable_values  *)

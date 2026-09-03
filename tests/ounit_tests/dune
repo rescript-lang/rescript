@@ -13,4 +13,4 @@
   (backend bisect_ppx))
  (flags
   (:standard -w +a-4-9-30-40-41-42-48-70))
- (libraries core ounit2 analysis))
+ (libraries core gentype ounit2 analysis))

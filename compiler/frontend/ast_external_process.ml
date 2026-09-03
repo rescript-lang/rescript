@@ -89,7 +89,8 @@ let refine_arg_type ~(nolabel : bool) (ptyp : Ast_core_type.t) :
       | Int i ->
         (* This type is used in obj only to construct obj type*)
         Arg_cst (External_arg_spec.cst_int i)
-      | Str (i, delim) -> Arg_cst (External_arg_spec.cst_string i delim))
+      | Str s -> Arg_cst (External_arg_spec.cst_string s)
+      | Json s -> Arg_cst (External_arg_spec.cst_json s))
   else (* ([`a|`b] [@string]) *)
     spec_of_ptyp nolabel ptyp
 
@@ -109,9 +110,10 @@ let refine_obj_arg_type ~(nolabel : bool) (ptyp : Ast_core_type.t) :
       (* @as(24) *)
       (* This type is used in obj only to construct obj type *)
       Arg_cst (External_arg_spec.cst_int i)
-    | Some (Str (s, delim)) ->
+    | Some (Str s) ->
       (* @as("foo") *)
-      Arg_cst (External_arg_spec.cst_string s delim))
+      Arg_cst (External_arg_spec.cst_string s)
+    | Some (Json s) -> Arg_cst (External_arg_spec.cst_json s))
   else (* ([`a|`b] [@string]) *)
     spec_of_ptyp nolabel ptyp
 
@@ -208,8 +210,9 @@ let parse_external_attributes (no_arguments : bool) (prim_name_check : string)
     | PStr [] -> prim_name_or_pval_prim
     (* It is okay to have [@@val] without payload *)
     | _ -> (
-      match Ast_payload.is_single_string payload with
-      | Some (val_name, _) -> {name = val_name; source = Payload}
+      Ast_payload.reject_json_literal_payload payload;
+      match Ast_payload.semantic_string_of_payload payload with
+      | Some val_name -> {name = val_name; source = Payload}
       | None -> Location.raise_errorf ~loc "Invalid payload")
   in
 
@@ -258,12 +261,15 @@ let parse_external_attributes (no_arguments : bool) (prim_name_check : string)
               let from_name = ref None in
               let with_ = ref None in
               Ext_list.iter fields (fun {lid = l; x = exp} ->
-                  match (l, exp.pexp_desc) with
-                  | {txt = Lident "from"}, Pexp_constant (Pconst_string (s, _))
-                    ->
-                    from_name := Some s
-                  | {txt = Lident "with"}, Pexp_record (fields, _) ->
-                    with_ := Some fields
+                  match l with
+                  | {txt = Lident "from"} -> (
+                    match Ast_payload.semantic_string_of_expression exp with
+                    | Some name -> from_name := Some name
+                    | None -> ())
+                  | {txt = Lident "with"} -> (
+                    match exp.pexp_desc with
+                    | Pexp_record (fields, _) -> with_ := Some fields
+                    | _ -> ())
                   | _ -> ());
               match (!from_name, !with_) with
               | None, _ ->
@@ -280,8 +286,8 @@ let parse_external_attributes (no_arguments : bool) (prim_name_check : string)
               | Some from_name, Some with_fields ->
                 let import_attributes_from_record =
                   Ext_list.filter_map with_fields (fun {lid = l; x = exp} ->
-                      match exp.pexp_desc with
-                      | Pexp_constant (Pconst_string (s, _)) -> (
+                      match Ast_payload.semantic_string_of_expression exp with
+                      | Some s -> (
                         match l.txt with
                         | Longident.Lident "type_" -> Some ("type", s)
                         | Longident.Lident txt -> Some (txt, s)

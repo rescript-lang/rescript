@@ -484,11 +484,7 @@ let print_string_literal_doc s = Doc.text ("\"" ^ String.escaped s ^ "\"")
 
 let print_inline_const_doc (c : External_ffi_types.inline_const) =
   match c with
-  | Const_str {s; delim = None | Some DNone | Some DStarJ} ->
-    (* DStarJ is the processed form of an ordinary double-quoted string *)
-    print_string_literal_doc s
-  | Const_str {s; delim = Some DBackQuotes} -> Doc.text ("`" ^ s ^ "`")
-  | Const_str {s; delim = Some DNoQuotes} -> Doc.text ("json`" ^ s ^ "`")
+  | Const_string s -> print_string_literal_doc s
   | Const_bool b -> Doc.text (if b then "true" else "false")
   | Const_int i -> Doc.text (Int32.to_string i)
   | Const_bigint {negative; digits} ->

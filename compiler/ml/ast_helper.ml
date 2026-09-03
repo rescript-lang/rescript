@@ -43,8 +43,11 @@ module Const = struct
   let int64 ?(suffix = 'L') i = integer ~suffix (Int64.to_string i)
   let nativeint ?(suffix = 'n') i = integer ~suffix (Nativeint.to_string i)
   let float ?suffix f = Pconst_float (f, suffix)
-  let char c = Pconst_char (Char.code c)
-  let string ?quotation_delimiter s = Pconst_string (s, quotation_delimiter)
+  let char c =
+    let semantic = Char.code c in
+    Pconst_char {source = String_literal.encode_char_source semantic; semantic}
+  let string semantic =
+    Pconst_string (String_literal.string_from_semantic semantic)
 end
 
 module Typ = struct
@@ -196,6 +199,10 @@ module Exp = struct
   let pack ?loc ?attrs a = mk ?loc ?attrs (Pexp_pack a)
   let open_ ?loc ?attrs a b c = mk ?loc ?attrs (Pexp_open (a, b, c))
   let extension ?loc ?attrs a = mk ?loc ?attrs (Pexp_extension a)
+  let template ?loc ?attrs source_segments values =
+    mk ?loc ?attrs (Pexp_template {source_segments; values})
+  let tagged_template ?loc ?attrs tag raw_sources values =
+    mk ?loc ?attrs (Pexp_tagged_template {tag; raw_sources; values})
   let await ?loc ?attrs a = mk ?loc ?attrs (Pexp_await a)
   let jsx_fragment ?loc ?attrs a b c =
     mk ?loc ?attrs

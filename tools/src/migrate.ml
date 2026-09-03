@@ -26,18 +26,15 @@ module Insert_ext = struct
   let placeholder_of_expr = function
     | {
         Parsetree.pexp_desc =
-          Pexp_extension
-            ( {txt},
-              PStr [{pstr_desc = Pstr_eval ({pexp_desc = Pexp_constant c}, _)}]
-            );
+          Pexp_extension ({txt}, PStr [{pstr_desc = Pstr_eval (expression, _)}]);
       } ->
       if txt = ext_labelled then
-        match c with
-        | Pconst_string (name, _) -> Some (Labelled name)
-        | _ -> None
+        Option.map
+          (fun name -> Labelled name)
+          (Ast_payload.semantic_string_of_expression expression)
       else if txt = ext_unlabelled then
-        match c with
-        | Pconst_integer (s, _) -> (
+        match expression.pexp_desc with
+        | Pexp_constant (Pconst_integer (s, _)) -> (
           match int_of_string_opt s with
           | Some i -> Some (Unlabelled i)
           | None -> None)
@@ -83,11 +80,7 @@ module Mapper_utils = struct
           [
             {pstr_desc = Parsetree.Pstr_eval ({pexp_desc = Pexp_array elems}, _)};
           ] ->
-        elems
-        |> List.filter_map (fun (e : Parsetree.expression) ->
-            match e.pexp_desc with
-            | Pexp_constant (Pconst_string (s, _)) -> Some s
-            | _ -> None)
+        elems |> List.filter_map Ast_payload.semantic_string_of_expression
       | _ -> []
 
     let apply_names (names : string list) (e : Parsetree.expression) :

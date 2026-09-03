@@ -76,7 +76,10 @@ type return_wrapper =
 (* An external declared as an inline constant is only ever a literal; the
    frontend parses delimiters and bigint signs before constructing this. *)
 type inline_const =
-  | Const_str of {s: string; delim: External_arg_spec.delim option}
+  | Const_string of string
+      (** A decoded runtime string value. For example, an inline external
+          declared with ["a\\n"] stores a string containing an actual newline;
+          source spelling is not needed after FFI processing. *)
   | Const_bool of bool
   | Const_int of int32
   | Const_bigint of {negative: bool; digits: string}

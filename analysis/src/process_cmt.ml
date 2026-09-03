@@ -688,57 +688,21 @@ and for_module ~env mod_desc module_name =
   scope lookups match precisely.
 *)
 and scan_let_modules ~env (e : Typedtree.expression) =
-  match e.exp_desc with
-  | Texp_letmodule (id, name, mexpr, body) ->
-    let stamp = Ident.binding_time id in
-    let item = for_module ~env mexpr.mod_desc name.txt in
-    let declared =
-      Process_attributes.new_declared ~item ~extent:name.loc ~name ~stamp
-        ~module_path:NotVisible false []
-    in
-    Stamps.add_module env.stamps stamp declared;
-    scan_let_modules ~env body
-  | Texp_let (_rf, bindings, body) ->
-    List.iter
-      (fun {Typedtree.vb_expr} -> scan_let_modules ~env vb_expr)
-      bindings;
-    scan_let_modules ~env body
-  | Texp_apply {funct; args; _} ->
-    scan_let_modules ~env funct;
-    args
-    |> List.iter (function
-      | _, Some e -> scan_let_modules ~env e
-      | _, None -> ())
-  | Texp_tuple exprs -> List.iter (scan_let_modules ~env) exprs
-  | Texp_sequence (e1, e2) ->
-    scan_let_modules ~env e1;
-    scan_let_modules ~env e2
-  | Texp_match (e, cases, exn_cases, _) ->
-    scan_let_modules ~env e;
-    let scan_case {Typedtree.c_lhs = _; c_guard; c_rhs} =
-      (match c_guard with
-      | Some g -> scan_let_modules ~env g
-      | None -> ());
-      scan_let_modules ~env c_rhs
-    in
-    List.iter scan_case cases;
-    List.iter scan_case exn_cases
-  | Texp_function {body; _} -> scan_let_modules ~env body
-  | Texp_try (e, cases) ->
-    scan_let_modules ~env e;
-    cases
-    |> List.iter (fun {Typedtree.c_lhs = _; c_guard; c_rhs} ->
-        (match c_guard with
-        | Some g -> scan_let_modules ~env g
-        | None -> ());
-        scan_let_modules ~env c_rhs)
-  | Texp_ifthenelse (e1, e2, e3_opt) -> (
-    scan_let_modules ~env e1;
-    scan_let_modules ~env e2;
-    match e3_opt with
-    | Some e3 -> scan_let_modules ~env e3
-    | None -> ())
-  | _ -> ()
+  let expr iterator (expression : Typedtree.expression) =
+    (match expression.exp_desc with
+    | Texp_letmodule (id, name, mexpr, _body) ->
+      let stamp = Ident.binding_time id in
+      let item = for_module ~env mexpr.mod_desc name.txt in
+      let declared =
+        Process_attributes.new_declared ~item ~extent:name.loc ~name ~stamp
+          ~module_path:NotVisible false []
+      in
+      Stamps.add_module env.stamps stamp declared
+    | _ -> ());
+    Tast_iterator.default_iterator.expr iterator expression
+  in
+  let iterator = {Tast_iterator.default_iterator with expr} in
+  iterator.expr iterator e
 
 and for_structure ~name ~env str_items =
   let exported = Exported.init () in

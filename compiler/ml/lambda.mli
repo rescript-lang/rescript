@@ -271,16 +271,31 @@ type primitive =
   | Pval_from_option
   | Pval_from_option_not_nest
   | Pis_poly_var_block
+  (* Validated JavaScript source from [raw], [ffi], or [re], together with its
+     expression/program kind. For example, [%raw("x + 1")] carries ["x + 1"]
+     as code, not as a decoded runtime string. *)
   | Praw_js_code of Js_raw_info.t
   | Pjs_fn_method
-  | Ptagged_template
+  (* A JavaScript tagged template operation. For [sql`id = ${id}`], the payload
+     is ["id = "; ""] and the primitive arguments are [sql; id]. Segment text
+     remains raw and may contain invalid escapes. *)
+  | Ptagged_template of string list
+  (* An ordinary backquoted-template operation. For [`a ${value}\n`], the
+     payload contains the source and semantic forms of ["a "] and ["\\n"],
+     and the primitive arguments contain [value]. The source forms are retained
+     for JavaScript output; semantic forms are used by optimizations. *)
+  | Ptemplate of template_segment list
 
 and comparison = Ceq | Cneq | Clt | Cgt | Cle | Cge
 
 type structured_constant =
   | Const_int of int32
   | Const_char of int
-  | Const_string of {s: string; delim: External_arg_spec.delim option}
+    (* The decoded Unicode code point; literal source spelling is no longer
+       present at this layer. *)
+  | Const_string of string
+    (* A decoded runtime string value; literal source spelling is no longer
+       present at this layer. *)
   | Const_float of string
   | Const_bigint of bool * string
   | Const_block of tag_info * structured_constant list
@@ -421,7 +436,11 @@ and lambda_switch = t switch
 val make_key : t -> t option
 
 val const_int : int -> structured_constant
-val const_string : string -> string option -> structured_constant
+
+val const_string : string -> structured_constant
+(** Construct a compiler-generated semantic string constant, normalizing any
+    malformed filesystem or legacy bytes to their historical JavaScript value. *)
+
 val const_of_typed : constant -> structured_constant
 val const_unit : structured_constant
 val const_constructor : Variant_runtime.tag -> structured_constant

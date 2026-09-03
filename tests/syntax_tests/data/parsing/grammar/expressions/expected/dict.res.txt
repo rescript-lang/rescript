@@ -1,19 +1,22 @@
 let x = Primitive_dict.make [||]
-let x = Primitive_dict.make [|("foo", {js|bar|js})|]
-let x = Primitive_dict.make [|("foo", {js|bar|js});("bar", {js|baz|js})|]
+let x = Primitive_dict.make [|({js|foo|js}, {js|bar|js})|]
+let x =
+  Primitive_dict.make
+    [|({js|foo|js}, {js|bar|js});({js|bar|js}, {js|baz|js})|]
 let baz = {js|foo|js}
 let x =
   Primitive_dict.make
-    [|("foo", {js|bar|js});("bar", {js|baz|js});("baz", baz)|]
-let foo = Primitive_dict.make [|("a", 1)|]
-let qux = Primitive_dict.make [|("c", 3)|]
+    [|({js|foo|js}, {js|bar|js});({js|bar|js}, {js|baz|js});({js|baz|js},
+                                                              baz)|]
+let foo = Primitive_dict.make [|({js|a|js}, 1)|]
+let qux = Primitive_dict.make [|({js|c|js}, 3)|]
 let x =
   ((Primitive_dict.spread)[@res.dictSpread ]) (Primitive_dict.make [||])
-    [|foo;(Primitive_dict.make [|("bar", 2)|]);qux|]
+    [|foo;(Primitive_dict.make [|({js|bar|js}, 2)|]);qux|]
 let x =
   ((Primitive_dict.spread)[@res.dictSpread ])
-    (Primitive_dict.make [|("before", 1)|])
-    [|foo;(Primitive_dict.make [|("after", 2)|])|]
+    (Primitive_dict.make [|({js|before|js}, 1)|])
+    [|foo;(Primitive_dict.make [|({js|after|js}, 2)|])|]
 let x =
   ((Primitive_dict.spread)[@res.dictSpread ]) (Primitive_dict.make [||])
     [|foo|]

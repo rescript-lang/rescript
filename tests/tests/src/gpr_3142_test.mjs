@@ -3,9 +3,9 @@
 import * as Mocha from "mocha";
 import * as Test_utils from "./test_utils.mjs";
 
-let _map = {"a":"x","u":"hi","b":"你","c":"我","d":"\x64","e":"\u0065"};
+let _map = {"a":"x","u":"hi","b":"你","c":"我","d":"d","e":"e"};
 
-let _revMap = {"x":"a","hi":"u","你":"b","我":"c","\x64":"d","\u0065":"e"};
+let _revMap = {"x":"a","hi":"u","你":"b","我":"c","d":"d","e":"e"};
 
 function tToJs(param) {
   return _map[param];

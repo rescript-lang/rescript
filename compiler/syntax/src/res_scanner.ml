@@ -89,10 +89,16 @@ let _printDebug ~start_pos ~end_pos scanner token =
 let next scanner =
   let next_offset = scanner.offset + 1 in
   let utf16len =
-    match Ext_utf8.classify scanner.ch with
-    | Single _ | Invalid -> 1
-    | Leading (n, _) -> ( (((n + 1) / 2) [@doesNotRaise]))
-    | Cont _ -> 0
+    let byte = Char.code scanner.ch in
+    if byte land 0xc0 = 0x80 then 0
+    else if byte < 0x80 then 1
+    else
+      let decoded = String.get_utf_8_uchar scanner.src scanner.offset in
+      if
+        Uchar.utf_decode_is_valid decoded
+        && Uchar.to_int (Uchar.utf_decode_uchar decoded) > 0xffff
+      then 2
+      else 1
   in
   let newline =
     scanner.ch = '\n'
@@ -346,7 +352,12 @@ let scan_exotic_identifier scanner =
   else Token.Lident name
 
 let scan_string_escape_sequence ~start_pos scanner =
-  let scan ~n ~base ~max =
+  let invalid_unicode_code_point () =
+    let pos = position scanner in
+    let msg = "escape sequence is invalid unicode code point" in
+    scanner.err ~start_pos ~end_pos:pos (Diagnostics.message msg)
+  in
+  let scan_digits ~n ~base =
     let rec loop n x =
       if n == 0 then x
       else
@@ -363,11 +374,11 @@ let scan_string_escape_sequence ~start_pos scanner =
           let () = next scanner in
           loop (n - 1) ((x * base) + d)
     in
-    let x = loop n 0 in
-    if x > max || (0xD800 <= x && x < 0xE000) then
-      let pos = position scanner in
-      let msg = "escape sequence is invalid unicode code point" in
-      scanner.err ~start_pos ~end_pos:pos (Diagnostics.message msg)
+    loop n 0
+  in
+  let scan ~n ~base ~max =
+    let x = scan_digits ~n ~base in
+    if x > max || (0xD800 <= x && x < 0xE000) then invalid_unicode_code_point ()
   in
   match scanner.ch with
   (* \ already consumed *)
@@ -389,19 +400,38 @@ let scan_string_escape_sequence ~start_pos scanner =
       (* unicode code point escape sequence: '\u{7A}', one or more hex digits *)
       next scanner;
       let x = ref 0 in
+      let has_digit = ref false in
       while
         match scanner.ch with
         | '0' .. '9' | 'a' .. 'f' | 'A' .. 'F' -> true
         | _ -> false
       do
-        x := (!x * 16) + digit_value scanner.ch;
+        has_digit := true;
+        let digit = digit_value scanner.ch in
+        x :=
+          if !x > (Res_utf8.max - digit) / 16 then Res_utf8.max + 1
+          else (!x * 16) + digit;
         next scanner
       done;
       (* consume '}' in '\u{7A}' *)
       match scanner.ch with
-      | '}' -> next scanner
-      | _ -> ())
-    | _ -> scan ~n:4 ~base:16 ~max:Res_utf8.max)
+      | '}' ->
+        if (not !has_digit) || !x > Res_utf8.max || (0xD800 <= !x && !x < 0xE000)
+        then invalid_unicode_code_point ();
+        next scanner
+      | _ -> invalid_unicode_code_point ())
+    | _ ->
+      let high = scan_digits ~n:4 ~base:16 in
+      if 0xD800 <= high && high <= 0xDBFF then
+        if scanner.ch = '\\' && peek scanner = 'u' then (
+          next scanner;
+          next scanner;
+          let low = scan_digits ~n:4 ~base:16 in
+          if low >= 0 && (low < 0xDC00 || low > 0xDFFF) then
+            invalid_unicode_code_point ())
+        else invalid_unicode_code_point ()
+      else if high > Res_utf8.max || (0xDC00 <= high && high <= 0xDFFF) then
+        invalid_unicode_code_point ())
   | _ ->
     (* unknown escape sequence
      * TODO: we should warn the user here. Let's not make it a hard error for now, for reason compat *)

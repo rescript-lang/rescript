@@ -18,38 +18,40 @@ switch (match) {
 }
 
 function classifyEquivalentEscape(value, selectedCase) {
-  switch (value) {
-    case "\u0061" :
-      if (selectedCase === 2) {
-        return 2;
-      } else {
-        return 5;
-      }
-    case "\u{61}" :
-      if (selectedCase === 3) {
-        return 3;
-      } else {
-        return 5;
-      }
-    case "\x61" :
-      if (selectedCase === 1) {
-        return 1;
-      } else {
-        return 4;
-      }
-    case "a" :
-      if (selectedCase === 0) {
-        return 0;
-      } else {
-        return 5;
-      }
-    default:
-      return 5;
+  if (value === "a") {
+    if (selectedCase === 0) {
+      return 0;
+    } else if (selectedCase === 1) {
+      return 1;
+    } else if (selectedCase === 2) {
+      return 2;
+    } else if (selectedCase === 3) {
+      return 3;
+    } else {
+      return 4;
+    }
+  } else {
+    return 5;
+  }
+}
+
+function classifyEquivalentSurrogateEscape(value, selectedCase) {
+  if (value === "😀") {
+    if (selectedCase === 0) {
+      return 0;
+    } else if (selectedCase === 1) {
+      return 1;
+    } else {
+      return 2;
+    }
+  } else {
+    return 3;
   }
 }
 
 export {
   version,
   classifyEquivalentEscape,
+  classifyEquivalentSurrogateEscape,
 }
 /* match Not a pure module */

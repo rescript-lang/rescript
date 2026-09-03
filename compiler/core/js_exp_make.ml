@@ -35,7 +35,8 @@ type t = J.expression
  *)
 let rec remove_pure_sub_exp (x : t) : t option =
   match x.expression_desc with
-  | Var _ | Str _ | Number _ -> None (* Can be refined later *)
+  | Var _ | Str _ | Template_literal _ | Json_literal _ | Number _ ->
+    None (* Can be refined later *)
   | Array_index (a, b) ->
     if is_pure_sub_exp a && is_pure_sub_exp b then None else Some x
   | Array xs -> if Ext_list.for_all xs is_pure_sub_exp then None else Some x
@@ -74,6 +75,44 @@ let tagged_template ?comment call_expr string_args value_args : t =
     comment;
     source_loc = None;
   }
+
+let interpolated_template ?comment segments values : t =
+  let literal_segment (value : t) =
+    if value.comment <> None then None
+    else
+      match value.expression_desc with
+      | Str semantic -> Some (String_literal.template_from_semantic semantic)
+      | Template_literal segment -> Some segment
+      | _ -> None
+  in
+  let rec merge rev_segments rev_values rev_parts segments values =
+    match (segments, values) with
+    | [], [] ->
+      let segment = String_literal.concat_template (List.rev rev_parts) in
+      (List.rev (segment :: rev_segments), List.rev rev_values)
+    | next_segment :: rest, value :: values -> (
+      match literal_segment value with
+      | Some literal ->
+        merge rev_segments rev_values
+          (next_segment :: literal :: rev_parts)
+          rest values
+      | None ->
+        let segment = String_literal.concat_template (List.rev rev_parts) in
+        merge (segment :: rev_segments) (value :: rev_values) [next_segment]
+          rest values)
+    | _ -> assert false
+  in
+  let segments, values =
+    match segments with
+    | segment :: segments -> merge [] [] [segment] segments values
+    | [] -> assert false
+  in
+  let expression_desc =
+    match (segments, values) with
+    | [segment], [] -> J.Template_literal segment
+    | _ -> J.Interpolated_template {segments; values}
+  in
+  {expression_desc; comment; source_loc = None}
 
 let runtime_var_dot ?comment (x : string) (e1 : string) : J.expression =
   {
@@ -156,8 +195,14 @@ let pure_runtime_call module_name fn_name args =
     (runtime_var_dot module_name fn_name)
     args
 
-let str ?(delim = J.DNone) ?comment txt : t =
-  {expression_desc = Str {txt; delim}; comment; source_loc = None}
+let str ?comment txt : t =
+  {expression_desc = Str txt; comment; source_loc = None}
+
+let template_literal ?comment segment : t =
+  {expression_desc = Template_literal segment; comment; source_loc = None}
+
+let json_literal ?comment source : t =
+  {expression_desc = Json_literal source; comment; source_loc = None}
 
 let raw_js_code ?comment info s : t =
   {
@@ -227,7 +272,7 @@ module L = Literals
 let typeof ?comment (e : t) : t =
   match e.expression_desc with
   | Number _ | Length _ -> str ?comment L.js_type_number
-  | Str _ -> str ?comment L.js_type_string
+  | Str _ | Template_literal _ -> str ?comment L.js_type_string
   | Array _ -> str ?comment L.js_type_object
   | Bool _ -> str ?comment L.js_type_boolean
   | _ -> {expression_desc = Typeof e; comment; source_loc = None}
@@ -236,7 +281,7 @@ let instanceof ?comment (e0 : t) (e1 : t) : t =
   {expression_desc = Bin (InstanceOf, e0, e1); comment; source_loc = None}
 
 let is_array (e0 : t) : t =
-  let f = str "Array.isArray" ~delim:DNoQuotes in
+  let f = dot (js_global "Array") "isArray" in
   {
     expression_desc = Call (f, [e0], Js_call_info.ml_full_call);
     comment = None;
@@ -633,46 +678,48 @@ let array_length ?comment (e : t) : t =
     int ?comment (Int32.of_int (List.length l))
   | _ -> {expression_desc = Length e; comment; source_loc = None}
 
-let string_length ?comment (e : t) : t =
+let string_literal_semantic (e : t) =
   match e.expression_desc with
-  | Str {txt; delim = DNone} -> int ?comment (Int32.of_int (String.length txt))
-  (* No optimization for {j||j}*)
-  | _ -> {expression_desc = Length e; comment; source_loc = None}
+  | Str semantic -> Some semantic
+  | Template_literal segment -> Some (String_literal.template_semantic segment)
+  | _ -> None
+
+let string_length ?comment (e : t) : t =
+  match string_literal_semantic e with
+  | Some semantic ->
+    int ?comment (Int32.of_int (String_literal.utf16_length semantic))
+  | None -> {expression_desc = Length e; comment; source_loc = None}
 
 let rec string_append ?comment (e : t) (el : t) : t =
-  let concat a b ~delim = {e with expression_desc = Str {txt = a ^ b; delim}} in
-  match (e.expression_desc, el.expression_desc) with
-  | Str {txt = ""}, _ -> el
-  | _, Str {txt = ""} -> e
-  | ( Str {txt = a; delim},
-      String_append ({expression_desc = Str {txt = b; delim = delim_}}, c) )
-    when delim = delim_ ->
-    string_append ?comment (concat a b ~delim) c
-  | ( String_append (c, {expression_desc = Str {txt = b; delim}}),
-      Str {txt = a; delim = delim_} )
-    when delim = delim_ ->
-    string_append ?comment c (concat b a ~delim)
-  | ( String_append (a, {expression_desc = Str {txt = b; delim}}),
-      String_append ({expression_desc = Str {txt = c; delim = delim_}}, d) )
-    when delim = delim_ ->
-    string_append ?comment (string_append a (concat b c ~delim)) d
-  | Str {txt = a; delim}, Str {txt = b; delim = delim_} when delim = delim_ ->
-    {(concat a b ~delim) with comment; source_loc = None}
-  | _, _ ->
+  let append () : t =
     {comment; source_loc = None; expression_desc = String_append (e, el)}
+  in
+  let concat (base : t) a b = {base with expression_desc = Str (a ^ b)} in
+  match (string_literal_semantic e, string_literal_semantic el) with
+  | Some "", _ -> el
+  | _, Some "" -> e
+  | Some a, Some b -> {(concat e a b) with comment; source_loc = None}
+  | _ -> (
+    match (e.expression_desc, el.expression_desc) with
+    | String_append (a, b_expr), String_append (c_expr, d) -> (
+      match
+        (string_literal_semantic b_expr, string_literal_semantic c_expr)
+      with
+      | Some b, Some c ->
+        string_append ?comment (string_append a (concat b_expr b c)) d
+      | _ -> append ())
+    | _, String_append (b, c) -> (
+      match (string_literal_semantic e, string_literal_semantic b) with
+      | Some a, Some b -> string_append ?comment (concat e a b) c
+      | _ -> append ())
+    | String_append (c, b_expr), _ -> (
+      match (string_literal_semantic b_expr, string_literal_semantic el) with
+      | Some b, Some a -> string_append ?comment c (concat b_expr b a)
+      | _ -> append ())
+    | _ -> append ())
 
 let obj ?comment ?dup properties : t =
   {expression_desc = Object (dup, properties); comment; source_loc = None}
-
-let str_equal (txt0 : string) (delim0 : External_arg_spec.delim) txt1 delim1 =
-  if delim0 = delim1 then
-    if Ext_string.equal txt0 txt1 then Some true
-    else if
-      Ast_utf8_string.simple_comparison txt0
-      && Ast_utf8_string.simple_comparison txt1
-    then Some false
-    else None
-  else None
 
 let rec triple_equal ?comment (e0 : t) (e1 : t) : t =
   match (e0.expression_desc, e1.expression_desc) with
@@ -875,7 +922,7 @@ let rec simplify_and_ ~n (e1 : t) (e2 : t) : t option =
       | ( Bin
             ( EqEqEq,
               {expression_desc = Typeof {expression_desc = Var ia}},
-              {expression_desc = Str {txt = "boolean"}} ),
+              {expression_desc = Str "boolean"} ),
           (Bin (EqEqEq, {expression_desc = Var ib}, {expression_desc = Bool _})
            as b) )
       | ( (Bin (EqEqEq, {expression_desc = Var ib}, {expression_desc = Bool _})
@@ -883,13 +930,13 @@ let rec simplify_and_ ~n (e1 : t) (e2 : t) : t option =
           Bin
             ( EqEqEq,
               {expression_desc = Typeof {expression_desc = Var ia}},
-              {expression_desc = Str {txt = "boolean"}} ) )
+              {expression_desc = Str "boolean"} ) )
         when Js_op_util.same_vident ia ib ->
         Some {expression_desc = b; comment = None; source_loc = None}
       | ( Bin
             ( EqEqEq,
               {expression_desc = Typeof {expression_desc = Var ia}},
-              {expression_desc = Str {txt = "string"}} ),
+              {expression_desc = Str "string"} ),
           (Bin (EqEqEq, {expression_desc = Var ib}, {expression_desc = Str _})
            as s) )
       | ( (Bin (EqEqEq, {expression_desc = Var ib}, {expression_desc = Str _})
@@ -897,13 +944,13 @@ let rec simplify_and_ ~n (e1 : t) (e2 : t) : t option =
           Bin
             ( EqEqEq,
               {expression_desc = Typeof {expression_desc = Var ia}},
-              {expression_desc = Str {txt = "string"}} ) )
+              {expression_desc = Str "string"} ) )
         when Js_op_util.same_vident ia ib ->
         Some {expression_desc = s; comment = None; source_loc = None}
       | ( Bin
             ( EqEqEq,
               {expression_desc = Typeof {expression_desc = Var ia}},
-              {expression_desc = Str {txt = "number"}} ),
+              {expression_desc = Str "number"} ),
           (Bin (EqEqEq, {expression_desc = Var ib}, {expression_desc = Number _})
            as i) )
       | ( (Bin (EqEqEq, {expression_desc = Var ib}, {expression_desc = Number _})
@@ -911,13 +958,13 @@ let rec simplify_and_ ~n (e1 : t) (e2 : t) : t option =
           Bin
             ( EqEqEq,
               {expression_desc = Typeof {expression_desc = Var ia}},
-              {expression_desc = Str {txt = "number"}} ) )
+              {expression_desc = Str "number"} ) )
         when Js_op_util.same_vident ia ib ->
         Some {expression_desc = i; comment = None; source_loc = None}
       | ( Bin
             ( EqEqEq,
               {expression_desc = Typeof {expression_desc = Var ia}},
-              {expression_desc = Str {txt = "boolean" | "string" | "number"}} ),
+              {expression_desc = Str ("boolean" | "string" | "number")} ),
           Bin
             ( EqEqEq,
               {expression_desc = Var ib},
@@ -931,13 +978,12 @@ let rec simplify_and_ ~n (e1 : t) (e2 : t) : t option =
           Bin
             ( EqEqEq,
               {expression_desc = Typeof {expression_desc = Var ia}},
-              {expression_desc = Str {txt = "boolean" | "string" | "number"}} )
-        )
+              {expression_desc = Str ("boolean" | "string" | "number")} ) )
         when Js_op_util.same_vident ia ib ->
         (* Note: cases boolean / Bool _, number / Number _, string / Str _ are handled above *)
         Some false_
       | ( Call
-            ( {expression_desc = Str {txt = "Array.isArray"}},
+            ( ({expression_desc = Static_index _} as fn),
               [{expression_desc = Var ia}],
               _ ),
           Bin
@@ -951,21 +997,21 @@ let rec simplify_and_ ~n (e1 : t) (e2 : t) : t option =
               {expression_desc = Bool _ | Null | Undefined _ | Number _ | Str _}
             ),
           Call
-            ( {expression_desc = Str {txt = "Array.isArray"}},
+            ( ({expression_desc = Static_index _} as fn),
               [{expression_desc = Var ia}],
               _ ) )
-        when Js_op_util.same_vident ia ib ->
+        when Js_analyzer.is_array_function fn && Js_op_util.same_vident ia ib ->
         Some false_
       | ( Bin
             ( EqEqEq,
               {expression_desc = Typeof {expression_desc = Var ia}},
-              {expression_desc = Str {txt = "boolean"}} ),
+              {expression_desc = Str "boolean"} ),
           Var ib )
       | ( Var ib,
           Bin
             ( EqEqEq,
               {expression_desc = Typeof {expression_desc = Var ia}},
-              {expression_desc = Str {txt = "boolean"}} ) )
+              {expression_desc = Str "boolean"} ) )
         when Js_op_util.same_vident ia ib ->
         Some
           {
@@ -980,13 +1026,13 @@ let rec simplify_and_ ~n (e1 : t) (e2 : t) : t option =
       | ( Bin
             ( EqEqEq,
               {expression_desc = Typeof {expression_desc = Var ia}},
-              {expression_desc = Str {txt = "boolean"}} ),
+              {expression_desc = Str "boolean"} ),
           Js_not {expression_desc = Var ib} )
       | ( Js_not {expression_desc = Var ib},
           Bin
             ( EqEqEq,
               {expression_desc = Typeof {expression_desc = Var ia}},
-              {expression_desc = Str {txt = "boolean"}} ) )
+              {expression_desc = Str "boolean"} ) )
         when Js_op_util.same_vident ia ib ->
         Some
           {
@@ -1001,51 +1047,51 @@ let rec simplify_and_ ~n (e1 : t) (e2 : t) : t option =
       | ( Bin
             ( EqEqEq,
               {expression_desc = Typeof {expression_desc = Var ia}},
-              {expression_desc = Str {txt = "boolean"}} ),
+              {expression_desc = Str "boolean"} ),
           Bin (NotEqEq, {expression_desc = Var ib}, {expression_desc = Bool b})
         )
       | ( Bin (NotEqEq, {expression_desc = Var ib}, {expression_desc = Bool b}),
           Bin
             ( EqEqEq,
               {expression_desc = Typeof {expression_desc = Var ia}},
-              {expression_desc = Str {txt = "boolean"}} ) )
+              {expression_desc = Str "boolean"} ) )
         when Js_op_util.same_vident ia ib ->
         Some {expression_desc = Bool (not b); comment = None; source_loc = None}
       | ( Bin
             ( EqEqEq,
               {expression_desc = Typeof {expression_desc = Var ia}},
-              {expression_desc = Str {txt = "string"}} ),
+              {expression_desc = Str "string"} ),
           Bin (NotEqEq, {expression_desc = Var ib}, {expression_desc = Str _}) )
       | ( Bin (NotEqEq, {expression_desc = Var ib}, {expression_desc = Str _}),
           Bin
             ( EqEqEq,
               {expression_desc = Typeof {expression_desc = Var ia}},
-              {expression_desc = Str {txt = "string"}} ) )
+              {expression_desc = Str "string"} ) )
         when Js_op_util.same_vident ia ib ->
         None
       | ( Bin
             ( EqEqEq,
               {expression_desc = Typeof {expression_desc = Var ia}},
-              {expression_desc = Str {txt = "number"}} ),
+              {expression_desc = Str "number"} ),
           Bin (NotEqEq, {expression_desc = Var ib}, {expression_desc = Number _})
         )
       | ( Bin (NotEqEq, {expression_desc = Var ib}, {expression_desc = Number _}),
           Bin
             ( EqEqEq,
               {expression_desc = Typeof {expression_desc = Var ia}},
-              {expression_desc = Str {txt = "number"}} ) )
+              {expression_desc = Str "number"} ) )
         when Js_op_util.same_vident ia ib ->
         None
       | ( Bin
             ( EqEqEq,
               {expression_desc = Typeof {expression_desc = Var ia}},
-              {expression_desc = Str {txt = "object"}} ),
+              {expression_desc = Str "object"} ),
           Bin (NotEqEq, {expression_desc = Var ib}, {expression_desc = Null}) )
       | ( Bin (NotEqEq, {expression_desc = Var ib}, {expression_desc = Null}),
           Bin
             ( EqEqEq,
               {expression_desc = Typeof {expression_desc = Var ia}},
-              {expression_desc = Str {txt = "object"}} ) )
+              {expression_desc = Str "object"} ) )
         when Js_op_util.same_vident ia ib ->
         None
       | ( (Bin
@@ -1053,7 +1099,7 @@ let rec simplify_and_ ~n (e1 : t) (e2 : t) : t option =
                {expression_desc = Typeof {expression_desc = Var ia}},
                {
                  expression_desc =
-                   Str {txt = "boolean" | "string" | "number" | "object"};
+                   Str ("boolean" | "string" | "number" | "object");
                } ) as typeof),
           Bin
             ( NotEqEq,
@@ -1069,13 +1115,13 @@ let rec simplify_and_ ~n (e1 : t) (e2 : t) : t option =
                {expression_desc = Typeof {expression_desc = Var ia}},
                {
                  expression_desc =
-                   Str {txt = "boolean" | "string" | "number" | "object"};
+                   Str ("boolean" | "string" | "number" | "object");
                } ) as typeof) )
         when Js_op_util.same_vident ia ib ->
         (* Note: cases boolean / Bool _, number / Number _, string / Str _, object / Null are handled above *)
         Some {expression_desc = typeof; comment = None; source_loc = None}
       | ( (Call
-             ( {expression_desc = Str {txt = "Array.isArray"}},
+             ( ({expression_desc = Static_index _} as fn),
                [{expression_desc = Var ia}],
                _ ) as is_array),
           Bin
@@ -1089,10 +1135,10 @@ let rec simplify_and_ ~n (e1 : t) (e2 : t) : t option =
               {expression_desc = Bool _ | Null | Undefined _ | Number _ | Str _}
             ),
           (Call
-             ( {expression_desc = Str {txt = "Array.isArray"}},
+             ( ({expression_desc = Static_index _} as fn),
                [{expression_desc = Var ia}],
                _ ) as is_array) )
-        when Js_op_util.same_vident ia ib ->
+        when Js_analyzer.is_array_function fn && Js_op_util.same_vident ia ib ->
         Some {expression_desc = is_array; comment = None; source_loc = None}
       | _ when Js_analyzer.eq_expression e1 e2 -> Some e1
       | ( Bin
@@ -1344,7 +1390,7 @@ let rec float_equal ?comment (e0 : t) (e1 : t) : t =
 let int_equal = float_equal
 
 let tag_type = function
-  | Variant_runtime.String s -> str s ~delim:DStarJ
+  | Variant_runtime.String s -> str s
   | Int i -> small_int i
   | Float f -> float f
   | BigInt i ->
@@ -1360,7 +1406,7 @@ let tag_type = function
   | Untagged FunctionType -> str "function"
   | Untagged StringType -> str "string"
   | Untagged (InstanceType i) ->
-    str (Variant_runtime.Instance.to_string i) ~delim:DNoQuotes
+    js_global (Variant_runtime.Instance.to_string i)
   | Untagged ObjectType -> str "object"
   | Untagged UnknownType ->
     (* TODO: this should not happen *)
@@ -1382,7 +1428,7 @@ let rec emit_check (check : t Ast_untagged_variants.Dynamic_checks.t) =
   | IsInstanceOf (Array, x) -> is_array (emit_check x)
   | IsInstanceOf (instance, x) ->
     let instance_name = Variant_runtime.Instance.to_string instance in
-    instanceof (emit_check x) (str instance_name ~delim:DNoQuotes)
+    instanceof (emit_check x) (js_global instance_name)
   | Not x -> not (emit_check x)
   | Expr x -> x
 
@@ -1444,11 +1490,12 @@ let to_int32 ?comment (e : J.expression) : J.expression =
 (* TODO: if we already know the input is int32, [x|0] can be reduced into [x] *)
 
 let string_comp (cmp : Lambda.comparison) ?comment (e0 : t) (e1 : t) =
-  match (e0.expression_desc, e1.expression_desc) with
-  | Str {txt = a0; delim = d0}, Str {txt = a1; delim = d1} -> (
-    match (cmp, str_equal a0 d0 a1 d1) with
-    | Ceq, Some b -> bool b
-    | Cneq, Some b -> bool (b = false)
+  match (string_literal_semantic e0, string_literal_semantic e1) with
+  | Some a0, Some a1 -> (
+    let equal = Ext_string.equal a0 a1 in
+    match cmp with
+    | Ceq -> bool equal
+    | Cneq -> bool (Stdlib.not equal)
     | _ -> bin ?comment (Lam_compile_util.jsop_of_comp cmp) e0 e1)
   | _ -> bin ?comment (Lam_compile_util.jsop_of_comp cmp) e0 e1
 

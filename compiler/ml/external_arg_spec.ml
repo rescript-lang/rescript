@@ -24,16 +24,10 @@
 
 (** type definitions for arguments to a function declared external *)
 
-type delim = DNone | DStarJ | DNoQuotes | DBackQuotes
-
-let parse_processed_delim = function
-  | None -> Some DNone
-  | Some "json" -> Some DNoQuotes
-  | Some "*j" -> Some DStarJ
-  | Some "bq" -> Some DBackQuotes
-  | _ -> None
-
-type cst = Arg_int_lit of int | Arg_string_lit of string * delim
+type cst =
+  | Arg_int_lit of int
+  | Arg_string_lit of string
+  | Arg_json_lit of string
 
 type label_noname = Arg_label | Arg_empty | Arg_optional
 
@@ -77,7 +71,8 @@ type params = param list
 
 let cst_int i = Arg_int_lit i
 
-let cst_string s delim = Arg_string_lit (s, delim)
+let cst_string s = Arg_string_lit s
+let cst_json s = Arg_json_lit s
 
 let empty_label = Obj_empty
 

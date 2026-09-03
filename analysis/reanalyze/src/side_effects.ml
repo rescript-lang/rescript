@@ -64,7 +64,8 @@ let rec expr_no_side_effects (expr : Typedtree.expression) =
   | Texp_for (_id, _pat, e1, e2, _dir, e3) ->
     e1 |> expr_no_side_effects && e2 |> expr_no_side_effects
     && e3 |> expr_no_side_effects
-  | Texp_for_of _ | Texp_for_await_of _ -> false
+  | Texp_template {values} -> values |> List.for_all expr_no_side_effects
+  | Texp_for_of _ | Texp_for_await_of _ | Texp_tagged_template _ -> false
   | Texp_object_literal fields ->
     fields |> List.for_all (fun (_name, e) -> e |> expr_no_side_effects)
   | Texp_object_get _ -> false

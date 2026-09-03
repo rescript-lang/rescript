@@ -21,15 +21,26 @@ function f(x) {
   }
 }
 
+function spanningSurrogateBlock(x) {
+  if (x > 57345 || x < 55294) {
+    return 0;
+  } else {
+    return 1;
+  }
+}
+
 Mocha.describe("String_unicode_test", () => {
   Mocha.test("switch", () => {
-    Test_utils.eq("File \"string_unicode_test.res\", line 19, characters 7-14", f(/* '{' */123), 0);
-    Test_utils.eq("File \"string_unicode_test.res\", line 20, characters 7-14", f(/* 'ō' */333), 2);
-    Test_utils.eq("File \"string_unicode_test.res\", line 21, characters 7-14", f(/* 'Ƽ' */444), 3);
+    Test_utils.eq("File \"string_unicode_test.res\", line 25, characters 7-14", f(/* '{' */123), 0);
+    Test_utils.eq("File \"string_unicode_test.res\", line 26, characters 7-14", f(/* 'ō' */333), 2);
+    Test_utils.eq("File \"string_unicode_test.res\", line 27, characters 7-14", f(/* 'Ƽ' */444), 3);
+    Test_utils.eq("File \"string_unicode_test.res\", line 28, characters 7-14", spanningSurrogateBlock(/* '퟾' */55294), 1);
+    Test_utils.eq("File \"string_unicode_test.res\", line 29, characters 7-14", spanningSurrogateBlock(/* '' */57345), 1);
   });
 });
 
 export {
   f,
+  spanningSurrogateBlock,
 }
 /*  Not a pure module */

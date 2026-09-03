@@ -35,7 +35,4 @@
   String interpolation is not supported in pattern matching.
 
 let zeroCoord = {js|0.0|js}
-;;match l with
-  | (("")[@res.template ]) -> ()
-  | (("")[@res.template ]) -> ()
-  | _ -> ()
+;;match l with | {js||js} -> () | {js||js} -> () | _ -> ()

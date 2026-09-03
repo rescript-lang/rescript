@@ -1,7 +1,7 @@
 DocumentSymbol src/DocumentSymbol.res
 [
   {
-    "kind": 13,
+    "kind": 15,
     "name": "templateString",
     "range": {
       "end": { "character": 49, "line": 32 },

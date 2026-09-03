@@ -14,6 +14,8 @@
 
 #### :boom: Breaking Change
 
+- Reject malformed UTF-8 in documentation comments and invalid string or template literal escapes that were previously accepted, including empty or out-of-range braced Unicode escapes (`\u{}`, `\u{110000}`) and legacy decimal or octal escapes in templates (`\1`, `\01`, `\8`). These inputs now produce syntax diagnostics instead of compiling to invalid or inconsistent JavaScript. https://github.com/rescript-lang/rescript/pull/8606
+- Reject tagged template literals in patterns. Patterns cannot invoke their tag; previously their raw payload was compiled as a plain string comparison. https://github.com/rescript-lang/rescript/pull/8606
 - Remove runtime APIs that were deprecated for removal in ReScript 13, including the `Char` module, unsafe `Obj` operations, legacy `Pervasives` helpers, and `Array.unsafe_get`. https://github.com/rescript-lang/rescript/pull/8564
 - Remove the deprecated `Js` namespace and its runtime modules. https://github.com/rescript-lang/rescript/pull/8531
 - Move Belt into the separately installed `@rescript/belt` package. Projects using Belt must install the package and list it in their `rescript.json` dependencies. https://github.com/rescript-lang/rescript/pull/8554
@@ -25,6 +27,7 @@
 
 #### :rocket: New Feature
 
+- Support UTF-16 surrogate-pair escapes such as `"\uD83D\uDE00"` in ordinary string literals. https://github.com/rescript-lang/rescript/pull/8606
 - Support dynamic imports of external bindings annotated with `@scope`; the generated import follows the complete property path. These imports were previously rejected. https://github.com/rescript-lang/rescript/pull/8582
 - Add `@res.hoistedFunction` for emitting nested module functions as flat JavaScript exports. https://github.com/rescript-lang/rescript/pull/8402
 - Add source map support with linked, inline, and hidden modes. https://github.com/rescript-lang/rescript/pull/8393
@@ -36,6 +39,7 @@
 - Fix `Int.Ref.increment` and `Int.Ref.decrement` evaluating their argument twice: `Int.Ref.increment(mkRef())` emitted `mkRef().contents = mkRef().contents + 1 | 0`. The `%incr` and `%decr` builtins lowered to an assignment that repeated the argument expression; they now bind the reference before the read-modify-write. Inlining decisions around an increment are taken on the code it stands for rather than on a single primitive node. https://github.com/rescript-lang/rescript/pull/8608
 - Fix a compiler crash on a polymorphic variant whose numeric name exceeds the `int32` range. `#99999999999("a")` and the same name in a pattern failed with `Failure("Int32.of_string")` and no location, because the range check ran in the frontend AST pass and matched only payload-free expressions. It now runs in `Typecore`, next to the integer literal decoding whose overflow error it mirrors, and covers both label positions. A bare `type t = [#99999999999]` still compiles, since nothing decodes a row field name. https://github.com/rescript-lang/rescript/pull/8608
 - Object typing errors now describe fields directly: assigning to a field without `@set` reports that the field is not settable and suggests the annotation, and missing-property errors name the field instead of a phantom `"x#="` member. https://github.com/rescript-lang/rescript/pull/8597
+- Fix pattern matching for string literals with equivalent runtime values but different escape spellings, preserving source order and reporting redundant patterns. https://github.com/rescript-lang/rescript/pull/8606
 - Fix signature inclusion rejecting equivalent object externals after type-alias expansion. https://github.com/rescript-lang/rescript/pull/8581
 - Fix externals whose result type is an alias of `unit` so they use the same unit-return behavior as externals declared to return `unit`. https://github.com/rescript-lang/rescript/pull/8581
 - Fix dynamic imports of external bindings that require FFI argument or result conversions, including `@variadic`, `@unwrap`, polymorphic variant encodings, `@as` phantom arguments, optional labeled arguments, and `@return` wrappers. The imported value now applies the same conversions as a direct external call. https://github.com/rescript-lang/rescript/pull/8582

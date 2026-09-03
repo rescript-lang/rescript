@@ -51,7 +51,7 @@ function useEscapedInlineVariant(prim) {
   return ImportJsValueGen$1.useEscapedInlineVariant((() => {
     switch (prim) {
       case "illegalName" :
-        return "Illegal\\\"Name";
+        return "Illegal\"Name";
     }
   })());
 }
@@ -60,7 +60,7 @@ function useUtf8InlineVariant(prim) {
   return ImportJsValueGen$1.useUtf8InlineVariant((() => {
     switch (prim) {
       case "utf8" :
-        return "café\\npath\\\\name";
+        return "café\npath\\name";
     }
   })());
 }

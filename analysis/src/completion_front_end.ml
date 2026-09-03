@@ -209,7 +209,17 @@ let find_arg_completables ~(args : arg list) ~end_pos ~pos_before_cursor
 let rec expr_to_context_path_inner ~(in_jsx_context : bool)
     (e : Parsetree.expression) =
   match e.pexp_desc with
-  | Pexp_constant (Pconst_string _) -> Some Completable.CPString
+  | Pexp_constant (Pconst_string _ | Pconst_json _ | Pconst_raw_source _) ->
+    Some Completable.CPString
+  | Pexp_template _ -> Some Completable.CPString
+  | Pexp_tagged_template {tag} -> (
+    match expr_to_context_path ~in_jsx_context tag with
+    | Some context_path ->
+      (* Tagged templates are typed like a call of the tag with the template
+         strings and interpolation values. Preserve that application context
+         now that the parser no longer represents it as [Pexp_apply]. *)
+      Some (CPApply (context_path, [Nolabel; Nolabel]))
+    | None -> None)
   | Pexp_constant (Pconst_integer _) -> Some CPInt
   | Pexp_constant (Pconst_float _) -> Some CPFloat
   | Pexp_construct ({txt = Lident ("true" | "false")}, None) -> Some CPBool
@@ -934,14 +944,22 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
              {
                pstr_desc =
                  Pstr_eval
-                   ( {pexp_loc; pexp_desc = Pexp_constant (Pconst_string (s, _))},
+                   ( ({
+                        pexp_loc;
+                        pexp_desc =
+                          ( Pexp_constant (Pconst_string _)
+                          | Pexp_template {source_segments = [_]; values = []} );
+                      } as expression),
                      _ );
              };
            ]
-         when loc_has_cursor pexp_loc ->
-         if Debug.verbose () then
-           print_endline "[decoratorCompletion] Found @module";
-         set_result (Completable.CdecoratorPayload (Module s))
+         when loc_has_cursor pexp_loc -> (
+         match Ast_payload.semantic_string_of_expression expression with
+         | Some s ->
+           if Debug.verbose () then
+             print_endline "[decoratorCompletion] Found @module";
+           set_result (Completable.CdecoratorPayload (Module s))
+         | None -> ())
        | PStr
            [
              {
@@ -968,11 +986,14 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
              Completion_expressions.is_expr_hole from_expr,
              from_expr )
          with
-         | true, _, _, {pexp_desc = Pexp_constant (Pconst_string (s, _))} ->
-           if Debug.verbose () then
-             print_endline
-               "[decoratorCompletion] @module `from` payload was string";
-           set_result (Completable.CdecoratorPayload (Module s))
+         | true, _, _, from_expr -> (
+           match Ast_payload.semantic_string_of_expression from_expr with
+           | Some s ->
+             if Debug.verbose () then
+               print_endline
+                 "[decoratorCompletion] @module `from` payload was string";
+             set_result (Completable.CdecoratorPayload (Module s))
+           | None -> ())
          | false, true, true, _ ->
            if Debug.verbose () then
              print_endline
@@ -1176,7 +1197,7 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
           args =
             [
               (* sh`echo "meh"` *)
-              (_, ({pexp_desc = Pexp_apply _} as inner_expr));
+              (_, ({pexp_desc = Pexp_tagged_template _} as inner_expr));
               (* recovery inserted node *)
               (_, {pexp_desc = Pexp_extension ({txt = "rescript.exprhole"}, _)});
             ];
@@ -1206,7 +1227,7 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
           args =
             [
               (*  sh`echo "meh"` *)
-              (_, ({pexp_desc = Pexp_apply _} as inner_expr));
+              (_, ({pexp_desc = Pexp_tagged_template _} as inner_expr));
               (* foo *)
               (_, {pexp_desc = Pexp_ident {txt = Lident field_name}});
             ];

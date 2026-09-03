@@ -2,17 +2,19 @@ open OUnit
 
 let ( =~ ) = OUnit.assert_equal
 
-let assert_string_constant raw_delim expected_delim =
-  Lambda.const_string "value" raw_delim
-  =~ Lambda.Const_string {s = "value"; delim = expected_delim}
-
 let suites =
   __FILE__
   >::: [
-         ( "processed string delimiters" >:: fun _ ->
-           assert_string_constant None (Some DNone);
-           assert_string_constant (Some "json") (Some DNoQuotes);
-           assert_string_constant (Some "*j") (Some DStarJ);
-           assert_string_constant (Some "bq") (Some DBackQuotes);
-           assert_string_constant (Some "js") None );
+         ( "typed string constants" >:: fun _ ->
+           Lambda.const_string "value" =~ Lambda.Const_string "value" );
+         ( "compiler-generated strings normalize malformed bytes" >:: fun _ ->
+           let constant = Lambda.const_string "a\xffé" in
+           constant =~ Lambda.Const_string "aÿé";
+           match
+             Lambda.prim ~primitive:Lambda.Pstringlength
+               ~args:[Lambda.const constant]
+               Location.none
+           with
+           | Lambda.Lconst (Lambda.Const_int length) -> 3l =~ length
+           | _ -> OUnit.assert_failure "expected a folded string length" );
        ]

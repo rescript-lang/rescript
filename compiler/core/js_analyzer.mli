@@ -31,6 +31,8 @@ val free_variables_of_statement : J.statement -> Set_ident.t
 
 val free_variables_of_expression : J.expression -> Set_ident.t
 
+val is_array_function : J.expression -> bool
+
 (* val no_side_effect_expression_desc :
    J.expression_desc -> bool *)
 

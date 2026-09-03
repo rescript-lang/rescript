@@ -501,8 +501,8 @@ let file_level_flags_handler (e : Parsetree.expression option) =
     let args =
       Array.of_list
         (Ext_list.map args (fun e ->
-             match e.pexp_desc with
-             | Pexp_constant (Pconst_string (name, _)) -> name
+             match Ast_payload.semantic_string_of_expression e with
+             | Some name -> name
              | _ ->
                Location.raise_errorf ~loc:e.pexp_loc "string literal expected"))
     in

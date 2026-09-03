@@ -1911,7 +1911,7 @@ let combine_constant loc arg cst partial ctx def
         List.map
           (fun (c, act) ->
             match c with
-            | Asttypes.Const_string (s, _) -> (s, act)
+            | Asttypes.Const_string s -> (s, act)
             | _ -> assert false)
           const_lambda_list
       in
@@ -2625,8 +2625,7 @@ let partial_function loc () =
               const
                 (Const_block
                    ( Blk_tuple,
-                     [const_string fname None; const_int line; const_int char]
-                   ));
+                     [const_string fname; const_int line; const_int char] ));
             ]
           loc;
       ]

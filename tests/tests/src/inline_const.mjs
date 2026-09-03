@@ -3,8 +3,6 @@
 
 let N = {};
 
-let hh = "hellohello";
-
 console.log([
   3e-6,
   3e-6
@@ -17,6 +15,8 @@ function N1(funarg) {
 }
 
 let h = "hello";
+
+let hh = "hellohello";
 
 export {
   x,

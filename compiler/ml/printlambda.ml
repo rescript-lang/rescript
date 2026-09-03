@@ -20,7 +20,7 @@ open Lambda
 let rec struct_const ppf = function
   | Const_int n -> fprintf ppf "%ld" n
   | Const_char i -> fprintf ppf "%s" (Pprintast.string_of_int_as_char i)
-  | Const_string {s} -> fprintf ppf "%S" s
+  | Const_string s -> fprintf ppf "%S" s
   | Const_float f -> fprintf ppf "%s" f
   | Const_bigint (sign, n) -> fprintf ppf "%sn" (Bigint_utils.to_string sign n)
   | Const_constructor {name} -> fprintf ppf "%s" name
@@ -228,7 +228,8 @@ let primitive ppf = function
   | Praw_js_code _ -> fprintf ppf "raw_js_code"
   | Pjs_fn_method -> fprintf ppf "#fn_method"
   (* Debug-only dump, exercised solely under -drawlambda/-dlambda. *)
-  | Ptagged_template -> fprintf ppf "#tagged_template" [@coverage off]
+  | Ptagged_template _ -> fprintf ppf "#tagged_template" [@coverage off]
+  | Ptemplate _ -> fprintf ppf "#template" [@coverage off]
 
 let function_attribute ppf {inline; is_a_functor; return_unit} =
   if is_a_functor then fprintf ppf "is_a_functor@ ";

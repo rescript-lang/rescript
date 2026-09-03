@@ -144,7 +144,7 @@ let string_switch ?(comment : string option)
     (e : J.expression)
     (clauses : (Variant_runtime.tag_type * J.case_clause) list) : t =
   match e.expression_desc with
-  | Str {txt} -> (
+  | Str txt -> (
     let continuation =
       match
         Ext_list.find_opt clauses (fun (switch_case, x) ->

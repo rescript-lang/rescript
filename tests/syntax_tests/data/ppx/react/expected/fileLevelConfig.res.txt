@@ -6,10 +6,10 @@ module V4A = {
     msg: 'msg,
   }
 
-  let make = ({msg, _}: props<_>): Pre\x61ct.element => {
-    Pre\x61ct.Elements.jsx("div", {children: ?Pre\x61ct.Elements.someElement({msg->React.string})})
+  let make = ({msg, _}: props<_>): Preact.element => {
+    Preact.Elements.jsx("div", {children: ?Preact.Elements.someElement({msg->React.string})})
   }
-  let make = Pre\x61ct.component({
+  let make = Preact.component({
     let \"FileLevelConfig$V4A" = (props: props<_>) => make(props)
 
     \"FileLevelConfig$V4A"

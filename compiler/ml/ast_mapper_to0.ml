@@ -78,12 +78,30 @@ let map_opt f = function
   | Some x -> Some (f x)
 let map_constant = function
   | Pconst_integer (s, suffix) -> Pt.Pconst_integer (s, suffix)
-  | Pconst_char c -> Pconst_char c
-  | Pconst_string (s, q) -> Pconst_string (s, q)
+  | Pconst_char {semantic} -> Pconst_char semantic
+  | Pconst_string payload ->
+    Pconst_string (String_literal.string_source payload, Some "js")
+  | Pconst_raw_source s -> Pconst_string (s, Some "js")
+  | Pconst_json s -> Pconst_string (s, Some "json")
   | Pconst_float (s, suffix) -> Pconst_float (s, suffix)
+
+let template_attr = (Location.mknoloc "res.template", Pt.PStr [])
+
+let add_template_attr attrs =
+  if Ext_list.exists attrs (fun ({txt}, _) -> txt = "res.template") then attrs
+  else template_attr :: attrs
 
 let for_of_attr_name = "_res.for_of"
 let for_await_of_attr_name = "_res.for_await_of"
+let ppx_context_string_attr_name = "_res.ppx_context_string"
+
+let has_ppx_context_string_attr attrs =
+  Ext_list.exists attrs (fun ({txt}, _) -> txt = ppx_context_string_attr_name)
+
+let remove_ppx_context_string_attr attrs =
+  List.filter
+    (fun ({Location.txt}, _) -> txt <> ppx_context_string_attr_name)
+    attrs
 
 let map_loc sub {loc; txt} = {loc = sub.location sub loc; txt}
 
@@ -398,9 +416,16 @@ module E = struct
   let map sub {pexp_loc = loc; pexp_desc = desc; pexp_attributes = attrs} =
     let open Exp in
     let loc = sub.location sub loc in
-    let attrs = sub.attributes sub attrs in
+    let is_ppx_context_string = has_ppx_context_string_attr attrs in
+    let attrs = sub.attributes sub (remove_ppx_context_string_attr attrs) in
     match desc with
     | Pexp_ident x -> ident ~loc ~attrs (map_loc sub x)
+    | Pexp_constant (Pconst_string payload) when is_ppx_context_string ->
+      (* The PPX protocol predates source-preserving strings. Existing PPXs
+         require compiler-generated context fields to be ordinary semantic
+         ast0 strings rather than quotation-delimited source strings. *)
+      constant ~loc ~attrs
+        (Pt.Pconst_string (String_literal.string_semantic payload, None))
     | Pexp_constant x -> constant ~loc ~attrs (map_constant x)
     | Pexp_let (r, vbs, e) ->
       let_ ~loc ~attrs r (List.map (sub.value_binding sub) vbs) (sub.expr sub e)
@@ -588,6 +613,52 @@ module E = struct
         ~attrs:(for_await_of_attr :: attrs)
         (sub.pat sub pat) start_expr end_expr Asttypes.Upto
         (sub.expr sub body_expr)
+    | Pexp_template {source_segments; values} ->
+      let segments =
+        List.map
+          (fun (source : string Location.loc) ->
+            Ast_helper0.Exp.constant
+              ~loc:(sub.location sub source.loc)
+              ~attrs:[template_attr]
+              (Pt.Pconst_string (source.txt, Some "js")))
+          source_segments
+      in
+      let rec interleave acc segments values =
+        match (segments, values) with
+        | [segment], [] -> List.rev (segment :: acc)
+        | segment :: segments, value :: values ->
+          interleave (sub.expr sub value :: segment :: acc) segments values
+        | _ -> assert false
+      in
+      let parts = interleave [] segments values in
+      let concat lhs rhs =
+        apply ~loc ~attrs:[template_attr]
+          (Ast_helper0.Exp.ident ~loc (Location.mknoloc (Longident.Lident "^")))
+          [(Asttypes.Noloc.Nolabel, lhs); (Asttypes.Noloc.Nolabel, rhs)]
+      in
+      let expression =
+        match parts with
+        | first :: rest -> List.fold_left concat first rest
+        | [] -> assert false
+      in
+      {expression with pexp_attributes = add_template_attr attrs}
+    | Pexp_tagged_template {tag; raw_sources; values} ->
+      let segments =
+        List.map
+          (fun (source : string Location.loc) ->
+            Ast_helper0.Exp.constant
+              ~loc:(sub.location sub source.loc)
+              ~attrs:[template_attr]
+              (Pt.Pconst_string (source.txt, Some "js")))
+          raw_sources
+      in
+      let tagged_attr = (Location.mknoloc "res.taggedTemplate", Pt.PStr []) in
+      apply ~loc ~attrs:(tagged_attr :: attrs) (sub.expr sub tag)
+        [
+          (Asttypes.Noloc.Nolabel, Ast_helper0.Exp.array ~loc segments);
+          ( Asttypes.Noloc.Nolabel,
+            Ast_helper0.Exp.array ~loc (List.map (sub.expr sub) values) );
+        ]
     | Pexp_coerce (e, (), t2) ->
       coerce ~loc ~attrs (sub.expr sub e) (sub.typ sub t2)
     | Pexp_constraint (e, t) ->

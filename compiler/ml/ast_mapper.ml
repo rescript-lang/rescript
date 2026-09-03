@@ -344,6 +344,14 @@ module E = struct
     | Pexp_for_await_of (p, e1, e2) ->
       Exp.mk ~loc ~attrs
         (Pexp_for_await_of (sub.pat sub p, sub.expr sub e1, sub.expr sub e2))
+    | Pexp_template {source_segments; values} ->
+      Exp.template ~loc ~attrs
+        (List.map (map_loc sub) source_segments)
+        (List.map (sub.expr sub) values)
+    | Pexp_tagged_template {tag; raw_sources; values} ->
+      Exp.tagged_template ~loc ~attrs (sub.expr sub tag)
+        (List.map (map_loc sub) raw_sources)
+        (List.map (sub.expr sub) values)
     | Pexp_coerce (e, (), t2) ->
       coerce ~loc ~attrs (sub.expr sub e) (sub.typ sub t2)
     | Pexp_constraint (e, t) ->
@@ -558,8 +566,8 @@ let rec extension_of_error {loc; msg; if_highlight; sub} =
   ( {loc; txt = "ocaml.error"},
     PStr
       ([
-         Str.eval (Exp.constant (Pconst_string (msg, None)));
-         Str.eval (Exp.constant (Pconst_string (if_highlight, None)));
+         Str.eval (Exp.constant (Const.string msg));
+         Str.eval (Exp.constant (Const.string if_highlight));
        ]
       @ List.map (fun ext -> Str.extension (extension_of_error ext)) sub) )
 
@@ -581,7 +589,10 @@ module Ppx_context = struct
 
   let lid name = {txt = Lident name; loc = Location.none}
 
-  let make_string x = Exp.constant (Pconst_string (x, None))
+  let make_string x =
+    Exp.constant
+      ~attrs:[(Location.mknoloc "_res.ppx_context_string", Parsetree.PStr [])]
+      (Const.string x)
 
   let make_bool x =
     if x then Exp.construct (lid "true") None
@@ -644,7 +655,8 @@ module Ppx_context = struct
   let restore fields =
     let field name payload =
       let rec get_string = function
-        | {pexp_desc = Pexp_constant (Pconst_string (str, None))} -> str
+        | {pexp_desc = Pexp_constant (Pconst_string payload)} ->
+          String_literal.string_semantic payload
         | _ ->
           raise_errorf
             "Internal error: invalid [@@@ocaml.ppx.context { %s }] string \

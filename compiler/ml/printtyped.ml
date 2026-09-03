@@ -51,9 +51,7 @@ let fmt_constant f x =
   match x with
   | Const_int i -> fprintf f "Const_int %d" i
   | Const_char c -> fprintf f "Const_char %02x" c
-  | Const_string (s, None) -> fprintf f "Const_string(%S,None)" s
-  | Const_string (s, Some delim) ->
-    fprintf f "Const_string (%S,Some %S)" s delim
+  | Const_string s -> fprintf f "Const_string(%S)" s
   | Const_float s -> fprintf f "Const_float %s" s
   | Const_bigint (sign, i) ->
     fprintf f "Const_bigint %s" (Bigint_utils.to_string sign i)
@@ -362,6 +360,24 @@ and expression i ppf x =
     line i ppf "Texp_for_await_of \"%a\"\n" fmt_ident s;
     expression i ppf e1;
     expression i ppf e2
+  | Texp_template {segments; values} ->
+    line i ppf "Texp_template segments=%a\n"
+      (Format.pp_print_list
+         ~pp_sep:(fun ppf () -> Format.fprintf ppf ", ")
+         (fun ppf segment ->
+           Format.fprintf ppf "{source=%S; semantic=%S}"
+             (String_literal.template_source segment)
+             (String_literal.template_semantic segment)))
+      segments;
+    List.iter (expression i ppf) values
+  | Texp_tagged_template {tag; raw_sources; values} ->
+    line i ppf "Texp_tagged_template raw_sources=%a\n"
+      (Format.pp_print_list
+         ~pp_sep:(fun ppf () -> Format.fprintf ppf ", ")
+         (fun ppf source -> Format.fprintf ppf "%S" source))
+      raw_sources;
+    expression i ppf tag;
+    List.iter (expression i ppf) values
   | Texp_object_get (e, s) ->
     line i ppf "Texp_object_get \"%s\"\n" s.txt;
     expression i ppf e

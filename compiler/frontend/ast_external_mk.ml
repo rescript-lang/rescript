@@ -48,10 +48,7 @@ let inline_const (c : External_ffi_types.inline_const) :
     Parsetree.primitive_repr =
   Prim_inline_const c
 
-let inline_string (s : string) (delim_raw : string option) =
-  inline_const
-    (Const_str
-       {s; delim = Ast_utf8_string_interp.parse_processed_delim delim_raw})
+let inline_string semantic = inline_const (Const_string semantic)
 
 let inline_bool b = inline_const (Const_bool b)
 

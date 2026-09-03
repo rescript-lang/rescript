@@ -72,6 +72,10 @@ let refine_let ~kind param (arg : Lambda.t) (l : Lambda.t) : Lambda.t =
       (* var/const --> emitting multiple `const` reads is identical to the
            original eager evaluation, so codegen may inline them freely. *)
       true
+    | Lprim {primitive = Ptemplate [_]; args = []; _} ->
+      (* A template without interpolations is a JavaScript literal. Repeating
+         it preserves both its runtime value and its source spelling. *)
+      true
     | Lprim
         {
           primitive = Pfield (_, Fld_module _);

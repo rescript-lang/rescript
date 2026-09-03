@@ -82,11 +82,80 @@ let map_tuple3 f1 f2 f3 (x, y, z) = (f1 x, f2 y, f3 z)
 let map_opt f = function
   | None -> None
   | Some x -> Some (f x)
-let map_constant = function
+let has_template_attr attrs =
+  Ext_list.exists attrs (fun ({txt}, _) -> txt = "res.template")
+
+let remove_template_attr attrs =
+  List.filter (fun ({Location.txt}, _) -> txt <> "res.template") attrs
+
+let semantic_string semantic =
+  Pt.Pconst_string (String_literal.string_from_semantic semantic)
+
+let source_string ~loc source =
+  match String_literal.string_from_source source with
+  | Some payload -> Pt.Pconst_string payload
+  | None -> Location.raise_errorf ~loc "Invalid string escape sequence"
+
+let template_source_from0 = function
+  | source, Some ("js" | "*j") -> source
+  | semantic, _ ->
+    String_literal.template_source
+      (String_literal.template_from_semantic semantic)
+
+let map_constant ~loc = function
   | Pconst_integer (s, suffix) -> Pt.Pconst_integer (s, suffix)
-  | Pconst_char c -> Pconst_char c
-  | Pconst_string (s, q) -> Pconst_string (s, q)
+  | Pconst_char semantic ->
+    (* Ast0 stores only the code point, so source spelling cannot survive the
+       PPX bridge. Reconstruct a valid canonical spelling on the way back. *)
+    Pconst_char {source = String_literal.encode_char_source semantic; semantic}
+  | Pconst_string (s, Some ("js" | "*j")) -> source_string ~loc s
+  | Pconst_string (s, None) -> semantic_string s
+  | Pconst_string (s, Some "json") -> Pconst_json s
+  (* Other v0 quotation delimiters are syntax, not part of the string value.
+     Tagged ReScript templates are represented as applications before PPX. *)
+  | Pconst_string (semantic, Some _) -> semantic_string semantic
   | Pconst_float (s, suffix) -> Pconst_float (s, suffix)
+
+let map_pattern_constant ~loc = function
+  | Pconst_string (_, Some tag) when tag <> "js" && tag <> "*j" ->
+    Location.raise_errorf ~loc
+      "Tagged template literals are not supported in patterns"
+  | constant -> map_constant ~loc constant
+
+let is_raw_source_extension = function
+  | "raw" | "ffi" | "re" -> true
+  | _ -> false
+
+let map_raw_source_payload sub = function
+  | PStr
+      [
+        {
+          pstr_desc =
+            Pstr_eval
+              ( {
+                  pexp_desc = Pexp_constant (Pconst_string (s, _));
+                  pexp_loc;
+                  pexp_attributes;
+                },
+                eval_attributes );
+          pstr_loc;
+        };
+      ] ->
+    let expression =
+      Ast_helper.Exp.constant
+        ~loc:(sub.location sub pexp_loc)
+        ~attrs:(sub.attributes sub pexp_attributes)
+        (Pt.Pconst_raw_source s)
+    in
+    Some
+      (Pt.PStr
+         [
+           Ast_helper.Str.eval
+             ~loc:(sub.location sub pstr_loc)
+             ~attrs:(sub.attributes sub eval_attributes)
+             expression;
+         ])
+  | _ -> None
 
 let for_of_attr_name = "_res.for_of"
 let for_await_of_attr_name = "_res.for_await_of"
@@ -511,7 +580,15 @@ module E = struct
       let inner = sub.expr sub {e with pexp_attributes = inner_attrs0} in
       await ~loc ~attrs:(sub.attributes sub await_attrs0) inner
     | Pexp_ident x -> ident ~loc ~attrs (map_loc sub x)
-    | Pexp_constant x -> constant ~loc ~attrs (map_constant x)
+    | Pexp_constant (Pconst_string (text, delimiter))
+      when has_template_attr attrs && delimiter <> Some "json" ->
+      let attrs = remove_template_attr attrs in
+      let source = template_source_from0 (text, delimiter) in
+      template ~loc ~attrs [{txt = source; loc}] []
+    | Pexp_constant x ->
+      let template = has_template_attr attrs in
+      let attrs = if template then remove_template_attr attrs else attrs in
+      constant ~loc ~attrs (map_constant ~loc x)
     | Pexp_let (r, vbs, e) ->
       let_ ~loc ~attrs r (List.map (sub.value_binding sub) vbs) (sub.expr sub e)
     | Pexp_fun (lab, def, p, e) ->
@@ -607,6 +684,104 @@ module E = struct
         in
         jsx_container_element ~loc ~attrs jsx_tag_name props Lexing.dummy_pos
           children (Some closing_tag))
+    | Pexp_apply
+        ( tag,
+          [
+            (Nolabel, {pexp_desc = Pexp_array segments});
+            (Nolabel, {pexp_desc = Pexp_array values});
+          ] )
+      when List.exists
+             (fun ({Location.txt}, _) -> txt = "res.taggedTemplate")
+             attrs ->
+      let raw_sources =
+        List.map
+          (fun (segment : Parsetree0.expression) ->
+            match segment.pexp_desc with
+            | Pexp_constant (Pconst_string (txt, Some ("js" | "*j"))) ->
+              {Location.txt; loc = sub.location sub segment.pexp_loc}
+            | Pexp_constant (Pconst_string (semantic, _)) ->
+              {
+                Location.txt = template_source_from0 (semantic, None);
+                loc = sub.location sub segment.pexp_loc;
+              }
+            | _ -> assert false)
+          segments
+      in
+      let attrs =
+        List.filter
+          (fun ({Location.txt}, _) -> txt <> "res.taggedTemplate")
+          attrs
+      in
+      tagged_template ~loc ~attrs (sub.expr sub tag) raw_sources
+        (List.map (sub.expr sub) values)
+    | Pexp_apply _ as application when has_template_attr attrs ->
+      let rec flatten acc (expression : Parsetree0.expression) =
+        match expression.pexp_desc with
+        | Pexp_apply
+            ( {pexp_desc = Pexp_ident {txt = Longident.Lident "^"}},
+              [(Nolabel, lhs); (Nolabel, rhs)] )
+          when has_template_attr expression.pexp_attributes ->
+          flatten (rhs :: acc) lhs
+        | _ -> expression :: acc
+      in
+      let parts = flatten [] {e with pexp_desc = application} in
+      let reject_json_interpolation () =
+        Location.raise_errorf ~loc
+          "`json` literals do not support interpolation"
+      in
+      let rec collect sources values = function
+        | [{pexp_desc = Pexp_constant (Pconst_string (_, Some "json"))}] ->
+          reject_json_interpolation ()
+        | [
+            {
+              pexp_desc = Pexp_constant (Pconst_string (text, delimiter));
+              pexp_loc;
+            };
+          ] ->
+          let txt = template_source_from0 (text, delimiter) in
+          Some
+            ( List.rev
+                ({Location.txt; loc = sub.location sub pexp_loc} :: sources),
+              List.rev values )
+        | {pexp_desc = Pexp_constant (Pconst_string (_, Some "json"))}
+          :: _value :: _rest ->
+          reject_json_interpolation ()
+        | {
+            pexp_desc = Pexp_constant (Pconst_string (text, delimiter));
+            pexp_loc;
+          }
+          :: value :: rest ->
+          let txt = template_source_from0 (text, delimiter) in
+          collect
+            ({Location.txt; loc = sub.location sub pexp_loc} :: sources)
+            (value :: values) rest
+        | _ -> None
+      in
+      begin match collect [] [] parts with
+      | Some (sources, values) ->
+        let attrs = remove_template_attr attrs in
+        template ~loc ~attrs sources (List.map (sub.expr sub) values)
+      | None ->
+        let attrs = remove_template_attr attrs in
+        begin match application with
+        | Pexp_apply (e, l) ->
+          let e =
+            match (e.pexp_desc, l) with
+            | ( Pexp_ident ({txt = Longident.Lident "^"} as lid),
+                [(Nolabel, _); (Nolabel, _)] ) ->
+              {
+                e with
+                pexp_desc = Pexp_ident {lid with txt = Longident.Lident "++"};
+              }
+            | _ -> e
+          in
+          apply ~loc ~attrs (sub.expr sub e)
+            (List.map
+               (fun (lbl, e) -> (Asttypes.to_arg_label lbl, sub.expr sub e))
+               l)
+        | _ -> assert false
+        end
+      end
     | Pexp_apply (e, l) ->
       let e =
         match (e.pexp_desc, l) with
@@ -879,9 +1054,14 @@ module P = struct
     | Ppat_any -> any ~loc ~attrs ()
     | Ppat_var s -> var ~loc ~attrs (map_loc sub s)
     | Ppat_alias (p, s) -> alias ~loc ~attrs (sub.pat sub p) (map_loc sub s)
-    | Ppat_constant c -> constant ~loc ~attrs (map_constant c)
+    | Ppat_constant c ->
+      let template = has_template_attr attrs in
+      let attrs = if template then remove_template_attr attrs else attrs in
+      constant ~loc ~attrs (map_pattern_constant ~loc c)
     | Ppat_interval (c1, c2) ->
-      interval ~loc ~attrs (map_constant c1) (map_constant c2)
+      interval ~loc ~attrs
+        (map_pattern_constant ~loc c1)
+        (map_pattern_constant ~loc c2)
     | Ppat_tuple pl -> tuple ~loc ~attrs (List.map (sub.pat sub) pl)
     | Ppat_construct (l, p) ->
       construct ~loc ~attrs (map_loc sub l) (map_opt (sub.pat sub) p)
@@ -1061,7 +1241,16 @@ let default_mapper =
           pc_rhs = this.expr this pc_rhs;
         });
     location = (fun _this l -> l);
-    extension = (fun this (s, e) -> (map_loc this s, this.payload this e));
+    extension =
+      (fun this (s, payload) ->
+        let payload =
+          if is_raw_source_extension s.txt then
+            match map_raw_source_payload this payload with
+            | Some payload -> payload
+            | None -> this.payload this payload
+          else this.payload this payload
+        in
+        (map_loc this s, payload));
     attribute = (fun this (s, e) -> (map_loc this s, this.payload this e));
     attributes = (fun this l -> List.map (this.attribute this) l);
     payload =

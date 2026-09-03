@@ -136,8 +136,6 @@ val is_block_expr : Parsetree.expression -> bool
 
 val is_template_literal : Parsetree.expression -> bool
 val is_tagged_template_literal : Parsetree.expression -> bool
-val has_template_literal_attr : Parsetree.attributes -> bool
-
 val is_spread_list : Parsetree.expression -> bool
 
 val is_spread_array : Parsetree.expression -> bool

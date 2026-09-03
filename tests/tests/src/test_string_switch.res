@@ -16,3 +16,11 @@ let classifyEquivalentEscape = (value, selectedCase) =>
   | "\x61" => 4
   | _ => 5
   }
+
+let classifyEquivalentSurrogateEscape = (value, selectedCase) =>
+  switch value {
+  | "😀" if selectedCase == 0 => 0
+  | "\uD83D\uDE00" if selectedCase == 1 => 1
+  | "\u{1f600}" => 2
+  | _ => 3
+  }

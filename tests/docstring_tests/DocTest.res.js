@@ -50,7 +50,7 @@ async function extractDocFromFile(file) {
     let e = Primitive_exceptions.internalToException(raw_e);
     if (e.RE_EXN_ID === "JsExn") {
       console.error(e._1);
-      return Stdlib_JsError.panic(`Failed to extract code blocks from ` + file);
+      return Stdlib_JsError.panic(`Failed to extract code blocks from ${file}`);
     }
     throw e;
   }
@@ -78,7 +78,7 @@ async function extractExamples() {
       }
     }).map(f => Nodepath.join(docPath, f));
   });
-  console.log(`Extracting examples from ` + docFiles.length.toString() + ` runtime and Belt files...`);
+  console.log(`Extracting examples from ${docFiles.length.toString()} runtime and Belt files...`);
   let examples = [];
   await ArrayUtils.forEachAsyncInBatches(docFiles, batchSize, async file => {
     let doc = await extractDocFromFile(file);
@@ -110,23 +110,23 @@ async function main() {
         }
       });
       if (ignoreExample) {
-        console.warn(`Ignoring ` + example.id + ` tests. Not supported by Node ` + nodeVersion.toString());
+        console.warn(`Ignoring ${example.id} tests. Not supported by Node ${nodeVersion.toString()}`);
         return;
       }
       let code = example.code;
       if (code.length === 0) {
         return;
       } else if (code.includes("await")) {
-        return `testAsync("` + example.name + `", async () => {
+        return `testAsync("${example.name}", async () => {
   module Test = {
-    ` + code + `
+    ${code}
   }
   ()
 })`;
       } else {
-        return `test("` + example.name + `", () => {
+        return `test("${example.name}", () => {
   module Test = {
-    ` + code + `
+    ${code}
   }
   ()
 })`;
@@ -135,8 +135,8 @@ async function main() {
     if (codeExamples.length === 0) {
       return;
     }
-    let content = `describe("` + key + `", () => {
-` + codeExamples.join("\n") + `
+    let content = `describe("${key}", () => {
+${codeExamples.join("\n")}
  })`;
     output.push(content);
   });
@@ -145,7 +145,7 @@ async function main() {
   let fileContent = `open Mocha
 @@warning("-32-34-60-37-109-3-44")
 
-` + output.join("\n");
+${output.join("\n")}`;
   return await Promises.writeFile(filepath, fileContent);
 }
 

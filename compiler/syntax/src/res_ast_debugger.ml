@@ -126,18 +126,23 @@ module Sexp_ast = struct
       match c with
       | Pconst_integer (txt, tag) ->
         Sexp.list [Sexp.atom "Pconst_integer"; string txt; opt_char tag]
-      | Pconst_char _ -> Sexp.list [Sexp.atom "Pconst_char"]
-      | Pconst_string (_, Some "INTERNAL_RES_CHAR_CONTENTS") ->
-        Sexp.list [Sexp.atom "Pconst_char"]
-      | Pconst_string (txt, tag) ->
+      | Pconst_char {source; semantic} ->
+        Sexp.list
+          [
+            Sexp.atom "Pconst_char";
+            string source;
+            Sexp.atom (string_of_int semantic);
+          ]
+      | Pconst_string payload ->
         Sexp.list
           [
             Sexp.atom "Pconst_string";
-            string txt;
-            (match tag with
-            | Some txt -> Sexp.list [Sexp.atom "Some"; string txt]
-            | None -> Sexp.atom "None");
+            string (String_literal.string_source payload);
+            string (String_literal.string_semantic payload);
           ]
+      | Pconst_json source -> Sexp.list [Sexp.atom "Pconst_json"; string source]
+      | Pconst_raw_source source ->
+        Sexp.list [Sexp.atom "Pconst_raw_source"; string source]
       | Pconst_float (txt, tag) ->
         Sexp.list [Sexp.atom "Pconst_float"; string txt; opt_char tag]
     in
@@ -762,6 +767,22 @@ module Sexp_ast = struct
           ]
       | Pexp_extension ext ->
         Sexp.list [Sexp.atom "Pexp_extension"; extension ext]
+      | Pexp_template {source_segments; values} ->
+        Sexp.list
+          [
+            Sexp.atom "Pexp_template";
+            Sexp.list
+              (List.map (fun {Asttypes.txt} -> string txt) source_segments);
+            Sexp.list (List.map expression values);
+          ]
+      | Pexp_tagged_template {tag; raw_sources; values} ->
+        Sexp.list
+          [
+            Sexp.atom "Pexp_tagged_template";
+            expression tag;
+            Sexp.list (List.map (fun {Asttypes.txt} -> string txt) raw_sources);
+            Sexp.list (List.map expression values);
+          ]
       | Pexp_await e -> Sexp.list [Sexp.atom "Pexp_await"; expression e]
       | Pexp_jsx_element (Jsx_fragment {jsx_fragment_children = xs}) ->
         Sexp.list

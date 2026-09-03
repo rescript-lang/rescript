@@ -47,27 +47,18 @@ let update_position t s =
         t.line <- t.line + 1;
         t.column <- 0;
         loop (i + 1)
-      | c ->
-        let byte = Char.code c in
-        (* Source map columns are counted in UTF-16 code units, while OCaml
-           strings are UTF-8 bytes. Decode only enough UTF-8 structure to
-           advance the generated column correctly: 1-3 byte sequences are one
-           UTF-16 code unit, and 4-byte sequences are surrogate pairs. *)
-        if byte < 0x80 then (
-          t.column <- t.column + 1;
-          loop (i + 1))
-        else if byte land 0xE0 = 0xC0 && i + 1 < len then (
-          t.column <- t.column + 1;
-          loop (i + 2))
-        else if byte land 0xF0 = 0xE0 && i + 2 < len then (
-          t.column <- t.column + 1;
-          loop (i + 3))
-        else if byte land 0xF8 = 0xF0 && i + 3 < len then (
-          t.column <- t.column + 2;
-          loop (i + 4))
-        else (
-          t.column <- t.column + 1;
-          loop (i + 1))
+      | _ ->
+        let decoded = String.get_utf_8_uchar s i in
+        let width = Uchar.utf_decode_length decoded in
+        let utf16_units =
+          if
+            Uchar.utf_decode_is_valid decoded
+            && Uchar.to_int (Uchar.utf_decode_uchar decoded) > 0xffff
+          then 2
+          else 1
+        in
+        t.column <- t.column + utf16_units;
+        loop (i + width)
   in
   loop 0
 

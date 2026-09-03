@@ -36,10 +36,12 @@ let utf8_code_point_tests =
     {codepoint = 0xFFFD; str = "\xef\xbf\xbd"; size = 3};
   |]
 
-let surrogate_range =
+let invalid_utf8 =
   [|
+    {codepoint = 0xFFFD; str = "\xc0\x80"; size = 1};
     {codepoint = 0xFFFD; str = "\xed\xa0\x80"; size = 1};
     {codepoint = 0xFFFD; str = "\xed\xbf\xbf"; size = 1};
+    {codepoint = 0xFFFD; str = "\xf4\x90\x80\x80"; size = 1};
   |]
 
 let test_decode () =
@@ -51,14 +53,14 @@ let test_decode () =
       assert (size = t.size))
     utf8_code_point_tests
 
-let test_decode_surrogate_range () =
+let test_decode_invalid_utf8 () =
   Array.iter
     (fun t ->
       let len = String.length t.str in
       let codepoint, size = Res_utf8.decode_code_point 0 t.str len in
       assert (codepoint = t.codepoint);
       assert (size = t.size))
-    surrogate_range
+    invalid_utf8
 
 let test_encode () =
   Array.iter
@@ -88,7 +90,7 @@ let test_is_valid_code_point () =
 
 let run () =
   test_decode ();
-  test_decode_surrogate_range ();
+  test_decode_invalid_utf8 ();
   test_encode ();
   test_is_valid_code_point ();
   print_endline "✅ utf8 tests"

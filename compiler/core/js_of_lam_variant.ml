@@ -32,7 +32,7 @@ let eval (arg : J.expression) (dispatches : (string * string) list) : E.t =
   if arg == E.undefined then E.undefined
   else
     match arg.expression_desc with
-    | Str {txt} ->
+    | Str txt ->
       let s = Ext_list.assoc_by_string dispatches txt None in
       E.str s
     | _ ->
@@ -64,7 +64,7 @@ let eval (arg : J.expression) (dispatches : (string * string) list) : E.t =
 let eval_as_event (arg : J.expression)
     (dispatches : (string * string) list option) =
   match arg.expression_desc with
-  | Caml_block ([{expression_desc = Str {txt}}; cb], _, Blk_poly_var)
+  | Caml_block ([{expression_desc = Str txt}; cb], _, Blk_poly_var)
     when Js_analyzer.no_side_effect_expression cb ->
     let v =
       match dispatches with
@@ -103,7 +103,7 @@ let eval_as_int (arg : J.expression) (dispatches : (string * int) list) : E.t =
   if arg == E.undefined then E.undefined
   else
     match arg.expression_desc with
-    | Str {txt} ->
+    | Str txt ->
       E.int (Int32.of_int (Ext_list.assoc_by_string dispatches txt None))
     | _ ->
       E.of_block

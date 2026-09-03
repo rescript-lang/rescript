@@ -139,16 +139,17 @@ let rec exp_need_paren ?(arrow = false) (e : J.expression) =
         | Blk_record_ext _ | Blk_record_inlined _ | Blk_constructor _ ) )
   | Object _ ->
     true
+  | Json_literal _ -> true
   | Raw_js_code {code_info = Stmt _}
   | Length _ | Call _ | Caml_block_tag _ | Seq _ | Static_index _ | Cond _
   | Bin _ | Is_null_or_undefined _ | String_index _ | Array_index _
-  | String_append _ | Var _ | Undefined _ | Null | Str _ | Array _
-  | Caml_block _ | Typeof _ | Number _ | Js_not _ | Js_bnot _ | In _ | Bool _
-  | New _ ->
+  | String_append _ | Var _ | Undefined _ | Null | Str _ | Template_literal _
+  | Array _ | Caml_block _ | Typeof _ | Number _ | Js_not _ | Js_bnot _ | In _
+  | Bool _ | New _ ->
     false
   | Await _ -> false
   | Spread _ -> false
-  | Tagged_template _ -> false
+  | Tagged_template _ | Interpolated_template _ -> false
   | Record_rest _ -> false
   | Optional_block (e, true) when arrow -> exp_need_paren ~arrow e
   | Optional_block _ -> false
@@ -693,9 +694,9 @@ and expression_desc cxt ~(level : int) f x : cxt =
     let rec aux cxt xs ys =
       match (xs, ys) with
       | [], [] -> ()
-      | [{J.expression_desc = Str {txt; _}}], [] -> P.string f txt
-      | {J.expression_desc = Str {txt; _}} :: x_rest, y :: y_rest ->
-        P.string f txt;
+      | [source], [] -> P.string f source
+      | source :: x_rest, y :: y_rest ->
+        P.string f source;
         P.string f "${";
         let cxt = expression cxt ~level f y in
         P.string f "}";
@@ -705,6 +706,24 @@ and expression_desc cxt ~(level : int) f x : cxt =
     aux cxt string_args value_args;
     P.string f "`";
     cxt
+  | Interpolated_template {segments; values} ->
+    P.string f "`";
+    let rec print_segments cxt segments values =
+      match (segments, values) with
+      | [segment], [] ->
+        P.string f (String_literal.template_source segment);
+        cxt
+      | segment :: segments, value :: values ->
+        P.string f (String_literal.template_source segment);
+        P.string f "${";
+        let cxt = expression cxt ~level:0 f value in
+        P.string f "}";
+        print_segments cxt segments values
+      | _ -> assert false
+    in
+    let cxt = print_segments cxt segments values in
+    P.string f "`";
+    cxt
   | String_index (a, b) ->
     P.group f 1 (fun _ ->
         let cxt = expression ~level:15 cxt f a in
@@ -712,17 +731,14 @@ and expression_desc cxt ~(level : int) f x : cxt =
         P.string f L.code_point_at;
         (* FIXME: use code_point_at *)
         P.paren_group f 1 (fun _ -> expression ~level:0 cxt f b))
-  | Str {delim; txt} ->
-    (*TODO --
-       when utf8-> it will not escape '\\' which is definitely not we want
-    *)
-    let () =
-      match delim with
-      | DStarJ -> P.string f ("\"" ^ txt ^ "\"")
-      | DNoQuotes -> P.string f txt
-      | DNone -> Js_dump_string.pp_string f txt
-      | DBackQuotes -> P.string f ("`" ^ txt ^ "`")
-    in
+  | Str txt ->
+    Js_dump_string.pp_string f txt;
+    cxt
+  | Template_literal segment ->
+    P.string f ("`" ^ String_literal.template_source segment ^ "`");
+    cxt
+  | Json_literal source ->
+    P.string f source;
     cxt
   | Raw_js_code {code = s; code_info = info} -> (
     match info with
@@ -1094,7 +1110,7 @@ and print_jsx cxt ?(spread_props : J.expression option)
   let print_tag cxt =
     match tag.expression_desc with
     (* "div" or any other primitive tag *)
-    | J.Str {txt} ->
+    | J.Str txt ->
       P.string f txt;
       cxt
     (* fragment *)
@@ -1347,7 +1363,7 @@ and statement_desc top cxt f (s : J.statement_desc) : cxt =
       | Some s -> P.string f s
       | None -> ());
       cxt
-    | Str _ -> cxt
+    | Str _ | Template_literal _ | Json_literal _ -> cxt
     | _ ->
       let cxt =
         (if exp_need_paren e then P.paren_group f 1 else P.group f 0) (fun _ ->

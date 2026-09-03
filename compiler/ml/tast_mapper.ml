@@ -253,6 +253,15 @@ let expr sub x =
       Texp_for_of (id, p, sub.expr sub exp1, sub.expr sub exp2)
     | Texp_for_await_of (id, p, exp1, exp2) ->
       Texp_for_await_of (id, p, sub.expr sub exp1, sub.expr sub exp2)
+    | Texp_template {segments; values} ->
+      Texp_template {segments; values = List.map (sub.expr sub) values}
+    | Texp_tagged_template {tag; raw_sources; values} ->
+      Texp_tagged_template
+        {
+          tag = sub.expr sub tag;
+          raw_sources;
+          values = List.map (sub.expr sub) values;
+        }
     | Texp_object_get (exp, name) -> Texp_object_get (sub.expr sub exp, name)
     | Texp_object_set (exp, name, v) ->
       Texp_object_set (sub.expr sub exp, name, sub.expr sub v)
