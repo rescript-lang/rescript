@@ -88,11 +88,6 @@ let has_template_attr attrs =
 let remove_template_attr attrs =
   List.filter (fun ({Location.txt}, _) -> txt <> "res.template") attrs
 
-let decode_js_string ~loc s =
-  match String_literal.decode_js_escapes s with
-  | Some s -> s
-  | None -> Location.raise_errorf ~loc "Invalid string escape sequence"
-
 let normalize_ppx_semantic_string semantic =
   let length = String.length semantic in
   let buffer = Buffer.create length in

@@ -3,7 +3,9 @@ type template_kind
 type 'kind payload
 
 type string_literal = string_kind payload
-(** A validated ordinary JavaScript string body and its semantic value. *)
+(** An ordinary JavaScript string body and its semantic value. Parser error
+    recovery may retain an invalid source spelling with an empty placeholder
+    semantic value. *)
 
 type template_segment = template_kind payload
 (** A validated JavaScript template segment and its semantic value. *)
@@ -51,10 +53,6 @@ val template_from_source : string -> template_segment option
 
 val template_from_semantic : string -> template_segment
 (** Construct a template segment with canonical source spelling. *)
-
-val string_as_template : string_literal -> template_segment
-(** Convert an ordinary string payload to a template segment, preserving its
-    source spelling when that spelling has the same template semantics. *)
 
 val concat_template : template_segment list -> template_segment
 (** Concatenate template segments, preserving their combined source spelling

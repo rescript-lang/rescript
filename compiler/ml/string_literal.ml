@@ -240,14 +240,6 @@ let template_from_source source : template_segment option =
 let template_from_semantic semantic : template_segment =
   Valid {source = encode_js_template semantic; semantic}
 
-let string_as_template (literal : string_literal) : template_segment =
-  match literal with
-  | Valid {source; semantic} -> (
-    match decode_js_template_escapes source with
-    | Some decoded when decoded = semantic -> Valid {source; semantic}
-    | _ -> template_from_semantic semantic)
-  | Invalid_source _ -> template_from_semantic ""
-
 let concat_template segments =
   let source = String.concat "" (List.map source segments) in
   let semantic = String.concat "" (List.map semantic segments) in

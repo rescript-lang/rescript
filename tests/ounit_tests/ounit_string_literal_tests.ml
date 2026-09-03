@@ -407,19 +407,6 @@ let suites =
          ( "template segments reject interpolation openers" >:: fun _ ->
            assert_invalid_template "${value}";
            assert_template_decoded ~encoded:"\\${value}" ~expected:"${value}" );
-         ( "ordinary strings convert safely to template segments" >:: fun _ ->
-           let preserved =
-             String_literal.string_from_source {|\x61|}
-             |> Option.get |> String_literal.string_as_template
-           in
-           OUnit.assert_equal ~printer:(Printf.sprintf "%S") {|\x61|}
-             (String_literal.source preserved);
-           let escaped_interpolation =
-             String_literal.string_from_source "${value}"
-             |> Option.get |> String_literal.string_as_template
-           in
-           OUnit.assert_equal ~printer:(Printf.sprintf "%S") "\\${value}"
-             (String_literal.source escaped_interpolation) );
          ( "ordinary literals become semantic strings" >:: fun _ ->
            assert_parsed_string ~source:{|\x61\n\uD83D\uDE00|}
              ~expected_semantic:"a\n😀" );
