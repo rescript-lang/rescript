@@ -29,7 +29,7 @@ let count_debuggers lam =
     | Lprim {primitive = Pdebugger} -> incr count
     | _ -> ());
     ignore
-      (Lambda.shallow_exists
+      (Lambda_traverse.shallow_exists
          (fun child ->
            loop child;
            false)
@@ -42,7 +42,7 @@ let contains_bigint_power lam =
   let rec loop (lam : Lambda.t) =
     match lam with
     | Lprim {primitive = Ppowbigint} -> true
-    | _ -> Lambda.shallow_exists loop lam
+    | _ -> Lambda_traverse.shallow_exists loop lam
   in
   loop lam
 
@@ -50,7 +50,7 @@ let contains_storage lam =
   let rec loop (lam : Lambda.t) =
     match lam with
     | Llet _ | Lassign _ -> true
-    | _ -> Lambda.shallow_exists loop lam
+    | _ -> Lambda_traverse.shallow_exists loop lam
   in
   loop lam
 

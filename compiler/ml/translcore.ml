@@ -50,7 +50,7 @@ let transl_extension_constructor env path ext =
   let loc = ext.ext_loc in
   match ext.ext_kind with
   | Text_decl _ -> prim ~primitive:(Pcreate_extension name) ~args:[] loc
-  | Text_rebind (path, _lid) -> transl_extension_path ~loc env path
+  | Text_rebind (path, _lid) -> Transl_path.transl_extension_path ~loc env path
 
 (* Translation of primitives *)
 
@@ -480,7 +480,7 @@ let import_source_of_arg (arg : Typedtree.expression) : Lambda.import_source =
       Lambda.import_source =
     (* a module path is normalized fully (resolving a final alias hop such
        as a namespace's [module List = Stdlib_List]); a value path
-       normalizes its module prefix, like [transl_value_path] *)
+       normalizes its module prefix, like [Transl_path.transl_value_path] *)
     let path =
       if is_module then Env.normalize_path (Some loc) env path
       else Env.normalize_path_prefix (Some loc) env path
@@ -884,7 +884,7 @@ let assert_failed exp =
         prim ~primitive:(Pmakeblock Blk_extension)
           ~args:
             [
-              transl_normal_path Predef.path_assert_failure;
+              Transl_path.transl_normal_path Predef.path_assert_failure;
               const
                 (Const_block
                    ( Blk_tuple,
@@ -1005,7 +1005,7 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.t =
   | Texp_ident (_, _, ({val_kind = Val_prim p} as vd)) ->
     transl_primitive e.exp_loc p e.exp_env e.exp_type ~val_type:vd.val_type
   | Texp_ident (path, _, {val_kind = Val_reg}) ->
-    transl_value_path ~loc:e.exp_loc e.exp_env path
+    Transl_path.transl_value_path ~loc:e.exp_loc e.exp_env path
   | Texp_constant cst -> const (const_of_typed cst)
   | Texp_let (rec_flag, pat_expr_list, body) ->
     transl_let ~js_hoist:None rec_flag pat_expr_list (transl_exp body)
@@ -1198,9 +1198,10 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.t =
             prim ~primitive:(Pmakeblock tag_info) ~args:ll e.exp_loc)
       | Extension_constructor path ->
         prim ~primitive:(Pmakeblock Blk_extension)
-          ~args:(transl_extension_path e.exp_env path :: ll)
+          ~args:(Transl_path.transl_extension_path e.exp_env path :: ll)
           e.exp_loc)
-  | Texp_extension_constructor (_, path) -> transl_extension_path e.exp_env path
+  | Texp_extension_constructor (_, path) ->
+    Transl_path.transl_extension_path e.exp_env path
   | Texp_variant (l, arg) -> (
     match arg with
     | None -> const (const_polyvar l)
@@ -1538,7 +1539,7 @@ and transl_record loc env fields repres opt_init_expr =
               | Tconstr (p, _, _) -> p
               | _ -> assert false
             in
-            let slot = transl_extension_path env path in
+            let slot = Transl_path.transl_extension_path env path in
             prim
               ~primitive:(Pmakeblock (Lambda.blk_record_ext fields mut))
               ~args:(slot :: ll) loc)
@@ -1581,7 +1582,7 @@ and transl_match e arg pat_expr_list exn_pat_expr_list partial =
   and cases = transl_cases pat_expr_list
   and exn_cases = transl_cases exn_pat_expr_list in
   let static_catch body val_ids handler =
-    let static_exception_id = next_negative_raise_count () in
+    let static_exception_id = Lambda_exits.next_negative_raise_count () in
     let exn_handler = Matching.for_trywith (var id) exn_cases in
     let id, exn_handler = pack_trywith_exn id exn_handler in
     staticcatch

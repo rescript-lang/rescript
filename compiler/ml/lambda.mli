@@ -430,7 +430,6 @@ and lambda_switch = t switch
 *)
 
 (* Sharing key *)
-val make_key : t -> t option
 
 val const_int : int -> structured_constant
 
@@ -448,21 +447,11 @@ val const_module_alias : structured_constant
 val lambda_assert_false : t
 val lambda_unit : t
 
-val eq_primitive_approx : primitive -> primitive -> bool
-
 val str_of_field_info : field_dbg_info -> string option
-
-val eq_comparison : comparison -> comparison -> bool
 
 val is_immutable_block : tag_info -> bool
 
 val const_is_allocating : structured_constant -> bool
-
-val const_eq_approx : structured_constant -> structured_constant -> bool
-
-val cmp_int32 : comparison -> int32 -> int32 -> bool
-
-val cmp_float : comparison -> float -> float -> bool
 
 (* Constructors. [t] is private, so every term outside this module is
    built through one of these.
@@ -547,12 +536,6 @@ val lambda_true : t
 
 val lambda_false : t
 
-val shallow_map_sharing : (t -> t) -> t -> t
-(** Rewrite a node's immediate children, rebuilding through the constructors
-    so the result is normalized. A node whose children are all physically
-    unchanged is returned as-is, so a traversal that rewrites nothing
-    allocates nothing. *)
-
 val eq_approx : t -> t -> bool
 
 val mk_builtin : builtin -> t list -> Location.t -> t
@@ -561,38 +544,6 @@ val mk_builtin : builtin -> t list -> Location.t -> t
 val lambda_module_alias : t
 val name_lambda : let_kind -> t -> (Ident.t -> t) -> t
 
-val shallow_exists : (t -> bool) -> t -> bool
-(** Does any immediate child satisfy the predicate? Short-circuits. *)
-
-val iter : (t -> unit) -> t -> unit
-val free_variables : t -> Set_ident.t
-
-val transl_normal_path : Path.t -> t (* Path.t is already normal *)
-
-val transl_module_path : ?loc:Location.t -> Env.t -> Path.t -> t
-val transl_value_path : ?loc:Location.t -> Env.t -> Path.t -> t
-val transl_extension_path : ?loc:Location.t -> Env.t -> Path.t -> t
-
-val subst_lambda : t Ident.tbl -> t -> t
 val bind : let_kind -> Ident.t -> t -> t -> t
 
 val default_function_attribute : function_attribute
-
-(***********************)
-(* For static failures *)
-(***********************)
-
-(* Get a new static failure ident *)
-val next_raise_count : unit -> int
-
-val make_exit : int -> t
-
-val as_simple_exit : t -> int option
-
-(* Exit number to raise to, and a wrapper that puts the catch around a body. *)
-val make_catch_delayed : t -> int * (t -> t)
-val next_negative_raise_count : unit -> int
-(* Negative raise counts are used to compile 'match ... with
-   exception x -> ...'.  This disabled some simplifications
-   performed by the Simplif module that assume that static raises
-   are in tail position in their handler. *)
