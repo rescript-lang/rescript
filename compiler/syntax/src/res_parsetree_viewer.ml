@@ -227,7 +227,8 @@ let filter_parsing_attrs attrs =
             Location.txt =
               ( "res.braces" | "ns.braces" | "res.iflet" | "res.ternary"
               | "res.await" | "res.patVariantSpread" | "res.dictPattern"
-              | "res.dictSpread" | "res.inlineRecordDefinition" );
+              | "res.dictSpread" | "res.inlineRecordDefinition"
+              | "_res.legacy_constructor_payload" );
           },
           _ ) ->
         false

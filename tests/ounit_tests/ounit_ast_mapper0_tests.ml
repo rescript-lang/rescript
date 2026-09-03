@@ -342,6 +342,95 @@ let test_constructor_args_roundtrip_through_ast0 _ =
   | Parsetree.Ppat_construct (_, [_; _]) -> ()
   | _ -> assert_failure "Expected two pattern arguments after roundtrip"
 
+let test_constructor_args_keep_parentheses_location_in_ast0 _ =
+  let source = "let Pair(a, b) = Pair(1, 2)" in
+  let parsed =
+    Res_driver.parse_implementation_from_source
+      ~display_filename:"ConstructorArgsLocation.res" ~source
+  in
+  let pat, expr =
+    match parsed.parsetree with
+    | [{pstr_desc = Pstr_value (_, [{pvb_pat; pvb_expr}])}] ->
+      (pvb_pat, pvb_expr)
+    | _ -> assert_failure "Expected one constructor value binding"
+  in
+  let assert_payload_loc ~expected_start ~expected_end
+      {Location.loc_start; loc_end} =
+    OUnit.assert_equal expected_start loc_start.pos_cnum;
+    OUnit.assert_equal expected_end loc_end.pos_cnum
+  in
+  let pattern_lparen = String.index source '(' in
+  let pattern_rparen = String.index_from source pattern_lparen ')' in
+  let expression_lparen = String.index_from source (pattern_rparen + 1) '(' in
+  let expression_rparen = String.index_from source expression_lparen ')' in
+  (match (map_pat_to0 pat).ppat_desc with
+  | Ppat_construct (_, Some {ppat_desc = Ppat_tuple _; ppat_loc}) ->
+    assert_payload_loc ~expected_start:pattern_lparen
+      ~expected_end:(pattern_rparen + 1) ppat_loc
+  | _ -> assert_failure "Expected a tuple-encoded constructor pattern");
+  match (map_expr_to0 expr).pexp_desc with
+  | Pexp_construct (_, Some {pexp_desc = Pexp_tuple _; pexp_loc}) ->
+    assert_payload_loc ~expected_start:expression_lparen
+      ~expected_end:(expression_rparen + 1) pexp_loc
+  | _ -> assert_failure "Expected a tuple-encoded constructor expression"
+
+let test_fresh_ast0_constructor_tuple_reprints_without_internal_metadata _ =
+  let int_expr value =
+    Ast_helper0.Exp.constant ~loc (Parsetree0.Pconst_integer (value, None))
+  in
+  let expr =
+    map_expr0
+      (Ast_helper0.Exp.construct ~loc
+         (Location.mknoloc (Longident.Lident "Pair"))
+         (Some (Ast_helper0.Exp.tuple ~loc [int_expr "1"; int_expr "2"])))
+  in
+  let pat =
+    map_pat0
+      (Ast_helper0.Pat.construct ~loc
+         (Location.mknoloc (Longident.Lident "Pair"))
+         (Some
+            (Ast_helper0.Pat.tuple ~loc
+               [
+                 Ast_helper0.Pat.var ~loc (Location.mknoloc "a");
+                 Ast_helper0.Pat.var ~loc (Location.mknoloc "b");
+               ])))
+  in
+  List.iter
+    (fun width ->
+      let printed =
+        Res_printer.print_implementation
+          [
+            Ast_helper.Str.value ~loc Nonrecursive
+              [Ast_helper.Vb.mk ~loc pat expr];
+          ]
+          ~comments:[] ~width
+      in
+      OUnit.assert_bool "internal deferred-arity metadata is not printed"
+        (not
+           (Ext_string.contain_substring printed
+              "_res.legacy_constructor_payload"));
+      let parsed =
+        Res_driver.parse_implementation_from_source
+          ~display_filename:"FreshAst0Constructor.res" ~source:printed
+      in
+      match parsed.parsetree with
+      | [
+       {
+         pstr_desc =
+           Pstr_value
+             ( _,
+               [
+                 {
+                   pvb_pat = {ppat_desc = Ppat_construct (_, [_; _])};
+                   pvb_expr = {pexp_desc = Pexp_construct (_, [_; _])};
+                 };
+               ] );
+       };
+      ] ->
+        ()
+      | _ -> assert_failure "Expected two printed constructor arguments")
+    [10; 80]
+
 let test_ast0_explicit_arity_becomes_constructor_args _ =
   let arg value =
     Ast_helper0.Exp.constant ~loc (Parsetree0.Pconst_integer (value, None))
@@ -988,6 +1077,10 @@ let suites =
          >:: test_record_rest_roundtrips_through_ast0;
          "constructor_args_roundtrip_through_ast0"
          >:: test_constructor_args_roundtrip_through_ast0;
+         "constructor_args_keep_parentheses_location_in_ast0"
+         >:: test_constructor_args_keep_parentheses_location_in_ast0;
+         "fresh_ast0_constructor_tuple_reprints_without_internal_metadata"
+         >:: test_fresh_ast0_constructor_tuple_reprints_without_internal_metadata;
          "ast0_explicit_arity_becomes_constructor_args"
          >:: test_ast0_explicit_arity_becomes_constructor_args;
          "fresh_ast0_constructor_tuple_defers_arity_to_typechecker"

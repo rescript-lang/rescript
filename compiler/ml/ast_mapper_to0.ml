@@ -582,6 +582,11 @@ module E = struct
     | Pexp_try (e, pel) -> try_ ~loc ~attrs (sub.expr sub e) (sub.cases sub pel)
     | Pexp_tuple el -> tuple ~loc ~attrs (List.map (sub.expr sub) el)
     | Pexp_construct (lid, args) ->
+      let lid = map_loc sub lid in
+      let args_loc =
+        if lid.loc.loc_ghost then loc
+        else {loc with loc_start = lid.loc.loc_end}
+      in
       let arg, attrs =
         encode_args ~map:(sub.expr sub)
           ~is_tuple:(fun arg ->
@@ -589,9 +594,9 @@ module E = struct
             | Pexp_tuple _ -> true
             | _ -> false)
           ~tuple:(fun ~loc args -> Ast_helper0.Exp.tuple ~loc args)
-          ~loc ~attrs args
+          ~loc:args_loc ~attrs args
       in
-      construct ~loc ~attrs (map_loc sub lid) arg
+      construct ~loc ~attrs lid arg
     | Pexp_variant (lab, args) ->
       let arg, attrs =
         encode_args ~map:(sub.expr sub)
@@ -837,6 +842,10 @@ module P = struct
       interval ~loc ~attrs (map_constant c1) (map_constant c2)
     | Ppat_tuple pl -> tuple ~loc ~attrs (List.map (sub.pat sub) pl)
     | Ppat_construct (l, args) ->
+      let l = map_loc sub l in
+      let args_loc =
+        if l.loc.loc_ghost then loc else {loc with loc_start = l.loc.loc_end}
+      in
       let arg, attrs =
         encode_args ~map:(sub.pat sub)
           ~is_tuple:(fun arg ->
@@ -844,9 +853,9 @@ module P = struct
             | Ppat_tuple _ -> true
             | _ -> false)
           ~tuple:(fun ~loc args -> Ast_helper0.Pat.tuple ~loc args)
-          ~loc ~attrs args
+          ~loc:args_loc ~attrs args
       in
-      construct ~loc ~attrs (map_loc sub l) arg
+      construct ~loc ~attrs l arg
     | Ppat_variant (l, args) ->
       let arg, attrs =
         encode_args ~map:(sub.pat sub)

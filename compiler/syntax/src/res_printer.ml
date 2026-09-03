@@ -2622,6 +2622,16 @@ and print_extension ~state ~at_module_lvl (string_loc, payload) cmt_tbl =
   in
   Doc.group (Doc.concat [ext_name; print_payload ~state payload cmt_tbl])
 
+and remove_legacy_constructor_payload_attr attrs =
+  let rec loop rev_attrs = function
+    | ({Location.txt = "_res.legacy_constructor_payload"}, Parsetree.PStr [])
+      :: attrs ->
+      (true, List.rev_append rev_attrs attrs)
+    | attr :: attrs -> loop (attr :: rev_attrs) attrs
+    | [] -> (false, List.rev rev_attrs)
+  in
+  loop [] attrs
+
 and print_pattern_args ~state (patterns : Parsetree.pattern list) cmt_tbl =
   match patterns with
   | [] -> Doc.nil
@@ -2666,6 +2676,15 @@ and print_pattern_args ~state (patterns : Parsetree.pattern list) cmt_tbl =
       ]
 
 and print_pattern ~state (p : Parsetree.pattern) cmt_tbl =
+  let has_legacy_constructor_payload, ppat_attributes =
+    remove_legacy_constructor_payload_attr p.ppat_attributes
+  in
+  let p =
+    match (has_legacy_constructor_payload, p.ppat_desc) with
+    | true, Ppat_construct (constr, [{ppat_desc = Ppat_tuple args}]) ->
+      {p with ppat_desc = Ppat_construct (constr, args); ppat_attributes}
+    | _ -> {p with ppat_attributes}
+  in
   let pattern_without_attributes =
     match p.ppat_desc with
     | Ppat_any -> Doc.text "_"
@@ -3182,6 +3201,15 @@ and print_object_get_doc ~state parent_expr (label : string Location.loc)
   Doc.group (Doc.concat [parent_doc; Doc.lbracket; member; Doc.rbracket])
 
 and print_expression ~state (e : Parsetree.expression) cmt_tbl =
+  let has_legacy_constructor_payload, pexp_attributes =
+    remove_legacy_constructor_payload_attr e.pexp_attributes
+  in
+  let e =
+    match (has_legacy_constructor_payload, e.pexp_desc) with
+    | true, Pexp_construct (constr, [{pexp_desc = Pexp_tuple args}]) ->
+      {e with pexp_desc = Pexp_construct (constr, args); pexp_attributes}
+    | _ -> {e with pexp_attributes}
+  in
   let printed_expression =
     match e.pexp_desc with
     | Pexp_fun
