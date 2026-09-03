@@ -1043,8 +1043,9 @@ let rec apply ?(ap_transformed_jsx = false) fn args (ap_info : ap_info) : t =
     match is_eta_conversion_exn params inner_args args with
     | args ->
       let loc = ap_info.ap_loc in
-      Lprim
-        {primitive = wrap; args = [Lprim {primitive_call with args; loc}]; loc}
+      prim ~primitive:wrap
+        ~args:[prim ~primitive:primitive_call.primitive ~args loc]
+        loc
     | exception Not_simple_form ->
       Lapply {ap_func = fn; ap_args = args; ap_info; ap_transformed_jsx})
   | Lfunction
@@ -1053,7 +1054,7 @@ let rec apply ?(ap_transformed_jsx = false) fn args (ap_info : ap_info) : t =
         body = Lprim ({primitive = _; args = inner_args} as primitive_call);
       } -> (
     match is_eta_conversion_exn params inner_args args with
-    | args -> Lprim {primitive_call with args; loc = ap_info.ap_loc}
+    | args -> prim ~primitive:primitive_call.primitive ~args ap_info.ap_loc
     | exception _ ->
       Lapply {ap_func = fn; ap_args = args; ap_info; ap_transformed_jsx})
   | Lfunction
@@ -1066,7 +1067,7 @@ let rec apply ?(ap_transformed_jsx = false) fn args (ap_info : ap_info) : t =
       } -> (
     match is_eta_conversion_exn params inner_args args with
     | args ->
-      Lsequence (Lprim {primitive_call with args; loc = ap_info.ap_loc}, const)
+      seq (prim ~primitive:primitive_call.primitive ~args ap_info.ap_loc) const
     | exception _ ->
       Lapply {ap_func = fn; ap_args = args; ap_info; ap_transformed_jsx}
       (* | Lfunction {params;body} when Ext_list.same_length params args ->
@@ -1075,7 +1076,7 @@ let rec apply ?(ap_transformed_jsx = false) fn args (ap_info : ap_info) : t =
           ) params args body *)
       (* TODO: more rigirous analysis on [let_kind] *))
   | Llet (kind, id, e, (Lfunction _ as fn)) ->
-    Llet (kind, id, e, apply fn args ap_info ~ap_transformed_jsx)
+    let_ kind id e (apply fn args ap_info ~ap_transformed_jsx)
   (* | Llet (kind0, id0, e0, Llet (kind,id, e, (Lfunction _ as fn))) ->
      Llet(kind0,id0,e0,Llet (kind, id, e, apply fn args loc status)) *)
   | _ -> Lapply {ap_func = fn; ap_args = args; ap_info; ap_transformed_jsx}
