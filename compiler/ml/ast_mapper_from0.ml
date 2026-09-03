@@ -88,30 +88,7 @@ let has_template_attr attrs =
 let remove_template_attr attrs =
   List.filter (fun ({Location.txt}, _) -> txt <> "res.template") attrs
 
-let normalize_ppx_semantic_string semantic =
-  let length = String.length semantic in
-  let buffer = Buffer.create length in
-  let rec loop index =
-    if index < length then
-      let decoded = String.get_utf_8_uchar semantic index in
-      if Uchar.utf_decode_is_valid decoded then (
-        let decoded_length = Uchar.utf_decode_length decoded in
-        Buffer.add_substring buffer semantic index decoded_length;
-        loop (index + decoded_length))
-      else (
-        (* Before semantic strings were required to be valid UTF-8, the JS
-           dumper emitted an invalid byte as [\xHH]. Preserve that runtime
-           value by interpreting each such byte as U+00HH. *)
-        Buffer.add_string buffer
-          (Ext_utf8.encode_codepoint
-             (Char.code (String.unsafe_get semantic index)));
-        loop (index + 1))
-  in
-  loop 0;
-  Buffer.contents buffer
-
 let semantic_string semantic =
-  let semantic = normalize_ppx_semantic_string semantic in
   Pt.Pconst_string (String_literal.string_from_semantic semantic)
 
 let source_string ~loc source =
@@ -122,7 +99,7 @@ let source_string ~loc source =
 let template_source_from0 = function
   | source, Some ("js" | "*j") -> source
   | semantic, _ ->
-    String_literal.encode_js_template (normalize_ppx_semantic_string semantic)
+    String_literal.source (String_literal.template_from_semantic semantic)
 
 let map_constant ~loc = function
   | Pconst_integer (s, suffix) -> Pt.Pconst_integer (s, suffix)
@@ -723,9 +700,7 @@ module E = struct
               {Location.txt; loc = sub.location sub segment.pexp_loc}
             | Pexp_constant (Pconst_string (semantic, _)) ->
               {
-                Location.txt =
-                  String_literal.encode_js_template
-                    (normalize_ppx_semantic_string semantic);
+                Location.txt = template_source_from0 (semantic, None);
                 loc = sub.location sub segment.pexp_loc;
               }
             | _ -> assert false)

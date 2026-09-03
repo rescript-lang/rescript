@@ -440,7 +440,7 @@ and lambda_switch = t switch
 *)
 let const_int (i : int) = Const_int (Int32.of_int i)
 
-let const_string s = Const_string s
+let const_string s = Const_string (String_literal.normalize_semantic s)
 
 let const_of_typed (c : Asttypes.constant) : structured_constant =
   match c with

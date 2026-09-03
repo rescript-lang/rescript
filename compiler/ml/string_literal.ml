@@ -1,5 +1,9 @@
 type string_kind
 type template_kind
+
+(* [source] is the original literal body and [semantic] is exactly what
+   JavaScript evaluates that body to. [Invalid_source] is confined by the
+   interface to ordinary-string parser recovery. *)
 type 'kind payload =
   | Valid of {source: string; semantic: string}
   | Invalid_source of string
@@ -42,6 +46,30 @@ let replace_invalid_utf8 s =
   in
   loop 0;
   Buffer.contents buf
+
+let normalize_semantic semantic =
+  (* Valid compiler-generated strings need no copy. For malformed input, map
+     each byte independently to preserve the value previously emitted as a
+     JavaScript [\xHH] escape. *)
+  if is_valid_utf8 semantic then semantic
+  else
+    let length = String.length semantic in
+    let buffer = Buffer.create length in
+    let rec loop index =
+      if index < length then
+        let decoded = String.get_utf_8_uchar semantic index in
+        if Uchar.utf_decode_is_valid decoded then (
+          let decoded_length = Uchar.utf_decode_length decoded in
+          Buffer.add_substring buffer semantic index decoded_length;
+          loop (index + decoded_length))
+        else (
+          Buffer.add_string buffer
+            (Ext_utf8.encode_codepoint
+               (Char.code (String.unsafe_get semantic index)));
+          loop (index + 1))
+    in
+    loop 0;
+    Buffer.contents buffer
 
 let decode_js_escapes_with ~normalize_template_line_endings s =
   let len = String.length s in
@@ -228,6 +256,7 @@ let string_from_source source : string_literal option =
   | None -> None
 
 let string_from_semantic semantic : string_literal =
+  let semantic = normalize_semantic semantic in
   Valid {source = encode_js_string semantic; semantic}
 
 let invalid_string_for_recovery source : string_literal = Invalid_source source
@@ -238,11 +267,15 @@ let template_from_source source : template_segment option =
   | None -> None
 
 let template_from_semantic semantic : template_segment =
+  let semantic = normalize_semantic semantic in
   Valid {source = encode_js_template semantic; semantic}
 
 let concat_template segments =
   let source = String.concat "" (List.map source segments) in
   let semantic = String.concat "" (List.map semantic segments) in
+  (* Joining individually valid sources can change their interpretation at a
+     boundary, most notably by creating an unescaped [${]. Preserve the joined
+     spelling only if decoding it still produces the joined semantic value. *)
   match decode_js_template_escapes source with
   | Some decoded when decoded = semantic -> Valid {source; semantic}
   | _ -> template_from_semantic semantic
