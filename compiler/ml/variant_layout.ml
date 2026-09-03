@@ -65,14 +65,7 @@ let layout_from_type_variant ~(configuration : configuration) ~env
     {
       runtime =
         {
-          tag =
-            {
-              name = Ident.name cstr.cd_id;
-              tag_type =
-                Option.map
-                  (fun d -> Variant_runtime.Literal d)
-                  cstr.cd_runtime_tag;
-            };
+          tag = {name = Ident.name cstr.cd_id; literal = cstr.cd_runtime_tag};
           tag_name = process_tag_name cstr.cd_attributes;
           untagged = process_untagged cstr.cd_attributes;
         };

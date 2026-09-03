@@ -88,7 +88,12 @@ type tag_type =
   | Literal of literal_tag (* literal or tagged block *)
   | Untagged of block_type (* untagged block *)
 
-type tag = {name: string; tag_type: tag_type option}
+type tag = {name: string; literal: literal_tag option}
+(** A constructor's name and optional explicitly declared runtime literal. *)
+
+type matchable_tag = {name: string; tag_type: tag_type option}
+(** A constructor tag widened for matching, where an untagged payload shape
+    can participate alongside declared literals. *)
 
 type block_runtime = {tag: tag; tag_name: string option; untagged: bool}
 (** Runtime information shared by construction and pattern matching for a
@@ -97,6 +102,11 @@ type block_runtime = {tag: tag; tag_name: string option; untagged: bool}
     how the value itself is constructed. *)
 
 type block = {runtime: block_runtime; block_type: block_type option}
+
+(* Matching compares against a wider notion of tag than a declaration can
+   state, so a stored tag widens on its way into a check. *)
+let to_matchable_tag ({name; literal} : tag) : matchable_tag =
+  {name; tag_type = Option.map (fun literal -> Literal literal) literal}
 
 type constructor_case = Constant of tag | Block of block
 
@@ -109,7 +119,7 @@ type matching_facts = {
   block_types: block_type list;
       (** Runtime shapes of constructors represented directly by their
           payload. Tagged object constructors do not appear here. *)
-  literal_tags: tag_type list;
+  literal_tags: literal_tag list;
       (** Runtime values of all nullary constructors. *)
   has_null: bool;
   has_undefined: bool;
@@ -151,8 +161,8 @@ let constructor_at (layout : layout) position = layout.constructors.(position)
 
 let constructor_tag layout position =
   match constructor_at layout position with
-  | Constant tag -> tag.tag_type
-  | Block {runtime = {tag}} -> tag.tag_type
+  | Constant tag -> tag.literal
+  | Block {runtime = {tag}} -> tag.literal
 
 let constructor_is_untagged layout position =
   match constructor_at layout position with
@@ -189,17 +199,19 @@ let compute_matching_facts ~tag_name (constructors : constructor_case array) :
   let has_other_literal = ref false in
   Array.iter
     (function
-      | Constant {name; tag_type} -> (
-        let tag =
-          match tag_type with
-          | Some tag -> tag
-          | None -> Literal (String name)
+      | Constant {name; literal} -> (
+        (* Without an [@as], a nullary constructor is its own name. *)
+        let literal =
+          match literal with
+          | Some literal -> literal
+          | None -> String name
         in
-        literal_tags := tag :: !literal_tags;
-        match tag with
-        | Literal Null -> has_null := true
-        | Literal Undefined -> has_undefined := true
-        | Literal _ | Untagged _ -> has_other_literal := true)
+        literal_tags := literal :: !literal_tags;
+        match literal with
+        | Null -> has_null := true
+        | Undefined -> has_undefined := true
+        | String _ | Int _ | Float _ | BigInt _ | Bool _ ->
+          has_other_literal := true)
       | Block {block_type} -> (
         match block_type with
         | Some block_type -> block_types := block_type :: !block_types
@@ -244,10 +256,10 @@ let plain_layout (cases : (string * bool (* has payload *)) list) : layout_ref =
       Block
         {
           runtime =
-            {tag = {name; tag_type = None}; tag_name = None; untagged = false};
+            {tag = {name; literal = None}; tag_name = None; untagged = false};
           block_type = None;
         }
-    else Constant {name; tag_type = None}
+    else Constant {name; literal = None}
   in
   ref
     (Complete

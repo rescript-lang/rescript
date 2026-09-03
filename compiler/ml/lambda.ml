@@ -418,8 +418,8 @@ let const_unit = Const_js_undefined {is_unit = true}
 let const_constructor (tag : Variant_runtime.tag) =
   if tag.name = "()" then const_unit
   else
-    match tag.tag_type with
-    | Some (Variant_runtime.Literal (Int v)) -> Const_int (Int32.of_int v)
+    match tag.literal with
+    | Some (Variant_runtime.Int v) -> Const_int (Int32.of_int v)
     | _ -> Const_constructor tag
 
 (* A constructor with an optional shape carries no payload when constant. *)
@@ -800,7 +800,7 @@ let switch lam (lam_switch : lambda_switch) : t =
           match key with
           | Switch_int ordinal when ordinal = i -> Some action
           | Switch_constructor
-              (Constant {tag_type = Some (Variant_runtime.Literal (Int value))})
+              (Constant {literal = Some (Variant_runtime.Int value)})
             when value = i ->
             Some action
           | Switch_int _ | Switch_constructor _ -> None)
@@ -881,8 +881,8 @@ let prim ~primitive:(prim : primitive) ~args loc : t =
         | Cneq -> a <> b
         | _ -> assert false)
     | ( Pintcomp ((Ceq | Cneq) as op),
-        Const_constructor {name = a; tag_type = None},
-        Const_constructor {name = b; tag_type = None} ) ->
+        Const_constructor {name = a; literal = None},
+        Const_constructor {name = b; literal = None} ) ->
       (* Both runtime representations are the constructor names *)
       Lift.bool
         (match op with
@@ -1041,18 +1041,15 @@ let rec eval_const_as_bool (v : structured_constant) : bool option =
   | Const_bigint _ | Const_block _ ->
     Some true
   | Const_some b -> eval_const_as_bool b
-  | Const_constructor {name; tag_type} -> (
+  | Const_constructor {name; literal} -> (
     (* Truthiness of the canonical runtime representation *)
-    match tag_type with
+    match literal with
     | None -> Some (name <> "[]") (* the name string; [] is the number 0 *)
-    | Some (Untagged _) -> None
-    | Some (Literal d) -> (
-      match d with
-      | String s -> Some (s <> "")
-      | Int i -> Some (i <> 0)
-      | Bool b -> Some b
-      | Null | Undefined -> Some false
-      | Float _ | BigInt _ -> None))
+    | Some (String s) -> Some (s <> "")
+    | Some (Int i) -> Some (i <> 0)
+    | Some (Bool b) -> Some b
+    | Some (Null | Undefined) -> Some false
+    | Some (Float _ | BigInt _) -> None)
 
 let if_ (a : t) (b : t) (c : t) : t =
   match a with

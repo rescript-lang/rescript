@@ -173,7 +173,8 @@ let default_action ~saturated failaction =
 
 let tag_of_switch_key = function
   | Lambda.Switch_int _ -> None
-  | Switch_constructor (Constant tag) -> Some tag
+  | Switch_constructor (Constant tag) ->
+    Some (Variant_runtime.to_matchable_tag tag)
   | Switch_constructor
       (Block
          {
@@ -181,7 +182,8 @@ let tag_of_switch_key = function
            block_type = Some block_type;
          }) ->
     Some {name; tag_type = Some (Untagged block_type)}
-  | Switch_constructor (Block {runtime = {untagged = false; tag}}) -> Some tag
+  | Switch_constructor (Block {runtime = {untagged = false; tag}}) ->
+    Some (Variant_runtime.to_matchable_tag tag)
   | Switch_constructor (Block {runtime = {untagged = true}; block_type = None})
     ->
     assert false
@@ -793,9 +795,7 @@ let compile output_prefix =
               && List.length sw_consts = 0
               && eq_default sw_num_default sw_blocks_default
             then
-              let has_null_case =
-                List.mem (Variant_runtime.Literal Null) literal_cases
-              in
+              let has_null_case = List.mem Variant_runtime.Null literal_cases in
               compile_cases ~untagged ~cxt
                 ~switch_exp:(if untagged then e else E.tag ~name:tag_name e)
                 ~block_cases ~has_null_case ~default:sw_blocks_default sw_blocks
