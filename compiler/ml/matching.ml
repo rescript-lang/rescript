@@ -494,11 +494,6 @@ module Store_exp = Switch.Store (struct
   let make_key = Lambda.make_key
 end)
 
-let raw_action l =
-  match make_key l with
-  | Some l -> l
-  | None -> l
-
 let tr_raw act =
   match make_key act with
   | Some act -> act
@@ -2315,6 +2310,24 @@ let compile_list compile_fun division =
   in
   c_rec [] division
 
+(* Is [lam] a jump to a static exit, once alias bindings are seen through?
+   Those bindings are dropped along with [lam], so they are substituted into
+   the raise's arguments rather than left dangling. Recognising this from the
+   term itself keeps make_key's output where it belongs - in comparisons. *)
+let as_exit_call lam =
+  let rec go env lam =
+    match lam with
+    | Lstaticraise (i, args) ->
+      Some
+        ( i,
+          if env == Ident.empty then args
+          else Ext_list.map args (Lambda.subst_lambda env) )
+    | Llet (Alias, x, ex, body) ->
+      go (Ident.add x (Lambda.subst_lambda env ex) env) body
+    | _ -> None
+  in
+  go Ident.empty lam
+
 let compile_orhandlers compile_fun lambda1 total1 ctx to_catch =
   let rec do_rec r total_r = function
     | [] -> (r, total_r)
@@ -2322,13 +2335,13 @@ let compile_orhandlers compile_fun lambda1 total1 ctx to_catch =
       try
         let ctx = select_columns mat ctx in
         let handler_i, total_i = compile_fun ctx pm in
-        match raw_action r with
-        | Lstaticraise (j, args) ->
+        match as_exit_call r with
+        | Some (j, args) ->
           if i = j then
             ( List.fold_right2 (bind Alias) vars args handler_i,
               jumps_map (ctx_rshift_num (ncols mat)) total_i )
           else do_rec r total_r rem
-        | _ ->
+        | None ->
           do_rec
             (staticcatch r (i, vars) handler_i)
             (jumps_union (jumps_remove i total_r)
