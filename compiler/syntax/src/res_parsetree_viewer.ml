@@ -271,7 +271,9 @@ let is_huggable_expression expr =
     true
   | _ when is_block_expr expr -> true
   | _ when is_braced_expr expr -> true
-  | Pexp_constant (Pconst_string {source}) when is_multiline_text source -> true
+  | Pexp_constant (Pconst_string payload)
+    when is_multiline_text (String_literal.source payload) ->
+    true
   | Pexp_constant (Pconst_raw_source source) when is_multiline_text source ->
     true
   | _ -> false
@@ -397,14 +399,11 @@ let has_attributes attrs =
               {
                 pstr_desc =
                   Pstr_eval
-                    ( {
-                        pexp_desc =
-                          Pexp_constant (Pconst_string {semantic = "-4"});
-                      },
-                      _ );
+                    ({pexp_desc = Pexp_constant (Pconst_string payload)}, _);
               };
             ] ) ->
-        not (has_if_let_attribute attrs)
+        String_literal.semantic payload <> "-4"
+        || not (has_if_let_attribute attrs)
       | _ -> true)
     attrs
 
@@ -515,14 +514,10 @@ let filter_fragile_match_attributes attrs =
               {
                 pstr_desc =
                   Pstr_eval
-                    ( {
-                        pexp_desc =
-                          Pexp_constant (Pconst_string {semantic = "-4"});
-                      },
-                      _ );
+                    ({pexp_desc = Pexp_constant (Pconst_string payload)}, _);
               };
             ] ) ->
-        false
+        String_literal.semantic payload <> "-4"
       | _ -> true)
     attrs
 

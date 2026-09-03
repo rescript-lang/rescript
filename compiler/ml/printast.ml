@@ -62,8 +62,10 @@ let fmt_constant f x =
   | Pconst_integer (i, m) -> fprintf f "PConst_int (%s,%a)" i fmt_char_option m
   | Pconst_char {source; semantic} ->
     fprintf f "PConst_char(source=%S, semantic=%02x)" source semantic
-  | Pconst_string {source; semantic} ->
-    fprintf f "PConst_string (source=%S, semantic=%S)" source semantic
+  | Pconst_string payload ->
+    fprintf f "PConst_string (source=%S, semantic=%S)"
+      (String_literal.source payload)
+      (String_literal.semantic payload)
   | Pconst_json source -> fprintf f "PConst_json %S" source
   | Pconst_raw_source source -> fprintf f "PConst_raw_source %S" source
   | Pconst_float (s, m) -> fprintf f "PConst_float (%s,%a)" s fmt_char_option m

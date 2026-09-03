@@ -655,7 +655,8 @@ module Ppx_context = struct
   let restore fields =
     let field name payload =
       let rec get_string = function
-        | {pexp_desc = Pexp_constant (Pconst_string {semantic})} -> semantic
+        | {pexp_desc = Pexp_constant (Pconst_string payload)} ->
+          String_literal.semantic payload
         | _ ->
           raise_errorf
             "Internal error: invalid [@@@ocaml.ppx.context { %s }] string \

@@ -28,12 +28,12 @@ type constant =
   | Const_float of string
   | Const_bigint of bool * string
 
-type template_segment = {source: string; semantic: string}
+type template_segment = String_literal.template_segment
 (** A segment of an ordinary backquoted template after validation. [source]
     preserves its spelling for JavaScript output; [semantic] is its decoded
     runtime string value. For example, the final segment of [`a ${value}\n`]
-    is [{source = "\\n"; semantic = "\n"}], where [semantic] contains an
-    actual newline. *)
+    preserves ["\\n"] as its source and contains an actual newline as its
+    semantic value. Construct segments through [String_literal]. *)
 
 type rec_flag = Nonrecursive | Recursive
 

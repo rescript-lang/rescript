@@ -364,8 +364,10 @@ and expression i ppf x =
     line i ppf "Texp_template segments=%a\n"
       (Format.pp_print_list
          ~pp_sep:(fun ppf () -> Format.fprintf ppf ", ")
-         (fun ppf ({source; semantic} : Asttypes.template_segment) ->
-           Format.fprintf ppf "{source=%S; semantic=%S}" source semantic))
+         (fun ppf segment ->
+           Format.fprintf ppf "{source=%S; semantic=%S}"
+             (String_literal.source segment)
+             (String_literal.semantic segment)))
       segments;
     List.iter (expression i ppf) values
   | Texp_tagged_template {tag; raw_sources; values} ->

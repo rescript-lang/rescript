@@ -79,7 +79,8 @@ let map_opt f = function
 let map_constant = function
   | Pconst_integer (s, suffix) -> Pt.Pconst_integer (s, suffix)
   | Pconst_char {semantic} -> Pconst_char semantic
-  | Pconst_string {source} -> Pconst_string (source, Some "js")
+  | Pconst_string payload ->
+    Pconst_string (String_literal.source payload, Some "js")
   | Pconst_raw_source s -> Pconst_string (s, Some "js")
   | Pconst_json s -> Pconst_string (s, Some "json")
   | Pconst_float (s, suffix) -> Pconst_float (s, suffix)
@@ -419,11 +420,12 @@ module E = struct
     let attrs = sub.attributes sub (remove_ppx_context_string_attr attrs) in
     match desc with
     | Pexp_ident x -> ident ~loc ~attrs (map_loc sub x)
-    | Pexp_constant (Pconst_string {semantic}) when is_ppx_context_string ->
+    | Pexp_constant (Pconst_string payload) when is_ppx_context_string ->
       (* The PPX protocol predates source-preserving strings. Existing PPXs
          require compiler-generated context fields to be ordinary semantic
          ast0 strings rather than quotation-delimited source strings. *)
-      constant ~loc ~attrs (Pt.Pconst_string (semantic, None))
+      constant ~loc ~attrs
+        (Pt.Pconst_string (String_literal.semantic payload, None))
     | Pexp_constant x -> constant ~loc ~attrs (map_constant x)
     | Pexp_let (r, vbs, e) ->
       let_ ~loc ~attrs r (List.map (sub.value_binding sub) vbs) (sub.expr sub e)

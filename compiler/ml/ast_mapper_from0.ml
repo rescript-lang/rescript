@@ -117,10 +117,12 @@ let normalize_ppx_semantic_string semantic =
 
 let semantic_string semantic =
   let semantic = normalize_ppx_semantic_string semantic in
-  Pt.Pconst_string {source = String_literal.encode_js_string semantic; semantic}
+  Pt.Pconst_string (String_literal.string_from_semantic semantic)
 
 let source_string ~loc source =
-  Pt.Pconst_string {source; semantic = decode_js_string ~loc source}
+  match String_literal.string_from_source source with
+  | Some payload -> Pt.Pconst_string payload
+  | None -> Location.raise_errorf ~loc "Invalid string escape sequence"
 
 let template_source_from0 = function
   | source, Some ("js" | "*j") -> source

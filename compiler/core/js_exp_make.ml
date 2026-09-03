@@ -81,43 +81,35 @@ let interpolated_template ?comment segments values : t =
     if value.comment <> None then None
     else
       match value.expression_desc with
-      | Str semantic ->
-        Some
-          ({source = String_literal.encode_js_template semantic; semantic}
-            : Asttypes.template_segment)
-      | Template_literal {source; semantic} ->
-        Some ({source; semantic} : Asttypes.template_segment)
+      | Str semantic -> Some (String_literal.template_from_semantic semantic)
+      | Template_literal segment -> Some segment
       | _ -> None
   in
-  let rec merge rev_segments rev_values
-      (segments : Asttypes.template_segment list) values =
+  let rec merge rev_segments rev_values rev_parts segments values =
     match (segments, values) with
-    | [segment], [] -> (List.rev (segment :: rev_segments), List.rev rev_values)
-    | segment :: next_segment :: rest, value :: values -> (
+    | [], [] ->
+      let segment = String_literal.concat_template (List.rev rev_parts) in
+      (List.rev (segment :: rev_segments), List.rev rev_values)
+    | next_segment :: rest, value :: values -> (
       match literal_segment value with
       | Some literal ->
-        let semantic =
-          segment.semantic ^ literal.semantic ^ next_segment.semantic
-        in
-        let preserved_source =
-          segment.source ^ literal.source ^ next_segment.source
-        in
-        let source =
-          match String_literal.decode_js_template_escapes preserved_source with
-          | Some decoded when decoded = semantic -> preserved_source
-          | _ -> String_literal.encode_js_template semantic
-        in
-        let merged : Asttypes.template_segment = {source; semantic} in
-        merge rev_segments rev_values (merged :: rest) values
+        merge rev_segments rev_values
+          (next_segment :: literal :: rev_parts)
+          rest values
       | None ->
-        merge (segment :: rev_segments) (value :: rev_values)
-          (next_segment :: rest) values)
+        let segment = String_literal.concat_template (List.rev rev_parts) in
+        merge (segment :: rev_segments) (value :: rev_values) [next_segment]
+          rest values)
     | _ -> assert false
   in
-  let segments, values = merge [] [] segments values in
+  let segments, values =
+    match segments with
+    | segment :: segments -> merge [] [] [segment] segments values
+    | [] -> assert false
+  in
   let expression_desc =
     match (segments, values) with
-    | [{source; semantic}], [] -> J.Template_literal {source; semantic}
+    | [segment], [] -> J.Template_literal segment
     | _ -> J.Interpolated_template {segments; values}
   in
   {expression_desc; comment; source_loc = None}
@@ -206,12 +198,8 @@ let pure_runtime_call module_name fn_name args =
 let str ?comment txt : t =
   {expression_desc = Str txt; comment; source_loc = None}
 
-let template_literal ?comment ~semantic source : t =
-  {
-    expression_desc = Template_literal {source; semantic};
-    comment;
-    source_loc = None;
-  }
+let template_literal ?comment segment : t =
+  {expression_desc = Template_literal segment; comment; source_loc = None}
 
 let json_literal ?comment source : t =
   {expression_desc = Json_literal source; comment; source_loc = None}
@@ -692,7 +680,8 @@ let array_length ?comment (e : t) : t =
 
 let string_literal_semantic (e : t) =
   match e.expression_desc with
-  | Str semantic | Template_literal {semantic} -> Some semantic
+  | Str semantic -> Some semantic
+  | Template_literal segment -> Some (String_literal.semantic segment)
   | _ -> None
 
 let string_length ?comment (e : t) : t =

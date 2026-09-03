@@ -1,3 +1,17 @@
+type string_kind
+type template_kind
+type 'kind payload =
+  | Valid of {source: string; semantic: string}
+  | Invalid_source of string
+type string_literal = string_kind payload
+type template_segment = template_kind payload
+
+let source = function
+  | Valid {source} | Invalid_source source -> source
+let semantic = function
+  | Valid {semantic} -> semantic
+  | Invalid_source _ -> ""
+
 let hex_value = function
   | '0' .. '9' as c -> Char.code c - Char.code '0'
   | 'a' .. 'f' as c -> Char.code c - Char.code 'a' + 10
@@ -207,6 +221,39 @@ let encode_js mode s =
 let encode_js_string = encode_js String
 
 let encode_js_template = encode_js Template
+
+let string_from_source source : string_literal option =
+  match decode_js_escapes source with
+  | Some semantic -> Some (Valid {source; semantic})
+  | None -> None
+
+let string_from_semantic semantic : string_literal =
+  Valid {source = encode_js_string semantic; semantic}
+
+let invalid_string_for_recovery source : string_literal = Invalid_source source
+
+let template_from_source source : template_segment option =
+  match decode_js_template_escapes source with
+  | Some semantic -> Some (Valid {source; semantic})
+  | None -> None
+
+let template_from_semantic semantic : template_segment =
+  Valid {source = encode_js_template semantic; semantic}
+
+let string_as_template (literal : string_literal) : template_segment =
+  match literal with
+  | Valid {source; semantic} -> (
+    match decode_js_template_escapes source with
+    | Some decoded when decoded = semantic -> Valid {source; semantic}
+    | _ -> template_from_semantic semantic)
+  | Invalid_source _ -> template_from_semantic ""
+
+let concat_template segments =
+  let source = String.concat "" (List.map source segments) in
+  let semantic = String.concat "" (List.map semantic segments) in
+  match decode_js_template_escapes source with
+  | Some decoded when decoded = semantic -> Valid {source; semantic}
+  | _ -> template_from_semantic semantic
 
 let encode_char_source codepoint =
   match codepoint with

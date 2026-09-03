@@ -229,10 +229,9 @@ let rec eq_expression ({expression_desc = x0} : J.expression)
     match y0 with
     | Str a1 -> a0 = a1
     | _ -> false)
-  | Template_literal {source = source0; semantic = semantic0} -> (
+  | Template_literal segment0 -> (
     match y0 with
-    | Template_literal {source = source1; semantic = semantic1} ->
-      source0 = source1 && semantic0 = semantic1
+    | Template_literal segment1 -> segment0 = segment1
     | _ -> false)
   | Static_index (e0, p0, off0) -> (
     match y0 with

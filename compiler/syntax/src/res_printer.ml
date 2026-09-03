@@ -591,8 +591,13 @@ let print_constant c =
     match suffix with
     | Some c -> Doc.text (s ^ Char.escaped c)
     | None -> Doc.text s)
-  | Pconst_string {source} ->
-    Doc.concat [Doc.text "\""; print_string_contents source; Doc.text "\""]
+  | Pconst_string payload ->
+    Doc.concat
+      [
+        Doc.text "\"";
+        print_string_contents (String_literal.source payload);
+        Doc.text "\"";
+      ]
   | Pconst_json source ->
     Doc.concat [Doc.text "json`"; print_string_contents source; Doc.text "`"]
   | Pconst_raw_source source ->
@@ -1640,14 +1645,9 @@ and collect_literal_dict_rows (e : Parsetree.expression) =
     | {
      pexp_desc =
        Pexp_tuple
-         [
-           {
-             pexp_desc = Pexp_constant (Pconst_string {semantic = name});
-             pexp_loc;
-           };
-           value;
-         ];
+         [{pexp_desc = Pexp_constant (Pconst_string payload); pexp_loc}; value];
     } ->
+      let name = String_literal.semantic payload in
       Some ((Location.mkloc (Longident.Lident name) pexp_loc, value), e)
     | _ -> None
   in
@@ -6069,14 +6069,13 @@ and print_attribute ?(standalone = false) ~state
         [
           {
             pstr_desc =
-              Pstr_eval
-                ({pexp_desc = Pexp_constant (Pconst_string {semantic = txt})}, _);
+              Pstr_eval ({pexp_desc = Pexp_constant (Pconst_string payload)}, _);
           };
         ] ) ->
     ( Doc.concat
         [
           Doc.text (if standalone then "/***" else "/**");
-          Doc.text txt;
+          Doc.text (String_literal.semantic payload);
           Doc.text "*/";
         ],
       Doc.hard_line )

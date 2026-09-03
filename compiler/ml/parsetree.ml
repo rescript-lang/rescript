@@ -34,19 +34,19 @@ type constant =
 
      Compiler-created literals use [String_literal.encode_char_source] to derive
      a canonical [source] from [semantic]. *)
-  | Pconst_string of {source: string; semantic: string}
+  | Pconst_string of String_literal.string_literal
   (* An ordinary double-quoted string literal.
 
      [source] is the text between the quotes, as produced by the scanner, and is
      retained for printing. [semantic] is the decoded runtime string used by
      typing, matching, and optimizations. For example, ["a\\n"] produces
-     [{source = "a\\n"; semantic = "a\n"}], where the second field contains an
+     a payload whose source is ["a\\n"] and whose semantic value contains an
      actual newline.
 
      The scanner preserves user-written escape spelling except that it rewrites
      legacy three-digit decimal escapes to hexadecimal escapes. Compiler-created
-     strings use [String_literal.encode_js_string] to derive a canonical
-     [source] from [semantic]. *)
+     Payloads are constructed through [String_literal], which validates this
+     relationship. *)
   | Pconst_json of string
   (* The JavaScript source inside a non-interpolated [json`...`] literal. For
      example, [@as(json`{"ok": true}`)] stores ["{\"ok\": true}"]. Built-in

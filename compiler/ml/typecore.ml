@@ -284,7 +284,7 @@ let constant : Parsetree.constant -> (Asttypes.constant, error) result =
     Ok (Const_bigint (sign, i))
   | Pconst_integer (i, Some c) -> Error (Unknown_literal (i, c))
   | Pconst_char {semantic} -> Ok (Const_char semantic)
-  | Pconst_string {semantic} -> Ok (Const_string semantic)
+  | Pconst_string payload -> Ok (Const_string (String_literal.semantic payload))
   | Pconst_json _ -> Error Json_literal_outside_external
   | Pconst_raw_source s -> Ok (Const_string s)
   | Pconst_float (f, None) -> Ok (Const_float f)
@@ -2543,8 +2543,8 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
     let segments : Asttypes.template_segment list =
       List.map
         (fun {Asttypes.txt = source; loc = source_loc} ->
-          match String_literal.decode_js_template_escapes source with
-          | Some semantic -> {source; semantic}
+          match String_literal.template_from_source source with
+          | Some segment -> segment
           | None ->
             raise (Error (source_loc, env, Invalid_string_escape_sequence)))
         source_segments

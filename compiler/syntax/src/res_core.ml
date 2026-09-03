@@ -1001,8 +1001,8 @@ let parse_open_description ~attrs p =
 (* ∣	 float-literal   *)
 (* ∣	 string-literal   *)
 let parse_string_constant (p : Parser.t) ~start_pos ~end_pos source =
-  match String_literal.decode_js_escapes source with
-  | Some semantic -> Parsetree.Pconst_string {source; semantic}
+  match String_literal.string_from_source source with
+  | Some payload -> Parsetree.Pconst_string payload
   | None ->
     let has_literal_diagnostic =
       List.exists
@@ -1018,7 +1018,7 @@ let parse_string_constant (p : Parser.t) ~start_pos ~end_pos source =
            (if String_literal.is_valid_utf8 source then
               "Invalid string escape sequence"
             else "Invalid code point"));
-    Parsetree.Pconst_string {source; semantic = ""}
+    Parsetree.Pconst_string (String_literal.invalid_string_for_recovery source)
 
 let parse_constant p =
   let is_negative =
@@ -7689,7 +7689,7 @@ and parse_extension ?(module_language = false) p =
             ({
                pstr_desc =
                  Pstr_eval
-                   ( ({pexp_desc = Pexp_constant (Pconst_string {source})} as
+                   ( ({pexp_desc = Pexp_constant (Pconst_string payload)} as
                       expression),
                      eval_attrs );
              } as item);
@@ -7702,7 +7702,9 @@ and parse_extension ?(module_language = false) p =
               Pstr_eval
                 ( {
                     expression with
-                    pexp_desc = Pexp_constant (Pconst_raw_source source);
+                    pexp_desc =
+                      Pexp_constant
+                        (Pconst_raw_source (String_literal.source payload));
                   },
                   eval_attrs );
           };

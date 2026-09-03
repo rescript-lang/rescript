@@ -80,9 +80,10 @@ let assert_parsed_string ~source ~expected_semantic =
          (_, [{pvb_expr = {pexp_desc = Pexp_constant (Pconst_string actual)}}]);
    };
   ] ->
-    OUnit.assert_equal ~printer:(Printf.sprintf "%S") source actual.source;
+    OUnit.assert_equal ~printer:(Printf.sprintf "%S") source
+      (String_literal.source actual);
     OUnit.assert_equal ~printer:(Printf.sprintf "%S") expected_semantic
-      actual.semantic
+      (String_literal.semantic actual)
   | _ -> OUnit.assert_failure "expected a parsed string literal"
 
 let assert_invalid_utf8_after_diagnostic () =
@@ -166,8 +167,12 @@ let assert_parsed_template_pattern ~source ~expected_semantic =
       pat =
         (fun self pattern ->
           (match pattern.ppat_desc with
-          | Ppat_constant (Pconst_string {source; semantic}) ->
-            actual := Some (source, semantic, pattern.ppat_attributes)
+          | Ppat_constant (Pconst_string payload) ->
+            actual :=
+              Some
+                ( String_literal.source payload,
+                  String_literal.semantic payload,
+                  pattern.ppat_attributes )
           | _ -> ());
           Ast_mapper.default_mapper.pat self pattern);
     }
@@ -256,6 +261,14 @@ let assert_code_point_at string index expected =
 
 let semantic_string s = Lambda.const (Lambda.Const_string s)
 
+let template_segment source =
+  match String_literal.template_from_source source with
+  | Some segment -> segment
+  | None -> OUnit.assert_failure "expected a valid template segment"
+
+let template_literal source =
+  Js_exp_make.template_literal (template_segment source)
+
 let lam_int i = Lambda.const (Lambda.Const_int (Int32.of_int i))
 
 let assert_lam_int expected = function
@@ -286,11 +299,9 @@ let assert_typed_template ~source_segments ~expected_semantics =
       {segments; values = [{exp_desc = Texp_constant (Const_string "value")}]}
     ->
     OUnit.assert_equal ~printer:Ext_obj.dump source_segments
-      (List.map (fun ({source} : Asttypes.template_segment) -> source) segments);
+      (List.map String_literal.source segments);
     OUnit.assert_equal ~printer:Ext_obj.dump expected_semantics
-      (List.map
-         (fun ({semantic} : Asttypes.template_segment) -> semantic)
-         segments)
+      (List.map String_literal.semantic segments)
   | _ -> OUnit.assert_failure "expected an explicit typed template"
   end;
   match Translcore.transl_exp typed with
@@ -298,11 +309,9 @@ let assert_typed_template ~source_segments ~expected_semantics =
       {primitive = Ptemplate segments; args = [Lconst (Const_string "value")]}
     ->
     OUnit.assert_equal ~printer:Ext_obj.dump source_segments
-      (List.map (fun ({source} : Asttypes.template_segment) -> source) segments);
+      (List.map String_literal.source segments);
     OUnit.assert_equal ~printer:Ext_obj.dump expected_semantics
-      (List.map
-         (fun ({semantic} : Asttypes.template_segment) -> semantic)
-         segments)
+      (List.map String_literal.semantic segments)
   | _ -> OUnit.assert_failure "expected an explicit Lambda template"
 
 let convert_typed_constant constant = Lambda.const_of_typed constant
@@ -398,6 +407,19 @@ let suites =
          ( "template segments reject interpolation openers" >:: fun _ ->
            assert_invalid_template "${value}";
            assert_template_decoded ~encoded:"\\${value}" ~expected:"${value}" );
+         ( "ordinary strings convert safely to template segments" >:: fun _ ->
+           let preserved =
+             String_literal.string_from_source {|\x61|}
+             |> Option.get |> String_literal.string_as_template
+           in
+           OUnit.assert_equal ~printer:(Printf.sprintf "%S") {|\x61|}
+             (String_literal.source preserved);
+           let escaped_interpolation =
+             String_literal.string_from_source "${value}"
+             |> Option.get |> String_literal.string_as_template
+           in
+           OUnit.assert_equal ~printer:(Printf.sprintf "%S") "\\${value}"
+             (String_literal.source escaped_interpolation) );
          ( "ordinary literals become semantic strings" >:: fun _ ->
            assert_parsed_string ~source:{|\x61\n\uD83D\uDE00|}
              ~expected_semantic:"a\n😀" );
@@ -586,7 +608,7 @@ let suites =
          >:: fun _ ->
            assert_js_string ~expected:"a\n😀" (Lambda.Const_string "a\n😀");
            let semantic = Js_exp_make.str "a" in
-           let template = Js_exp_make.template_literal ~semantic:"a" {|\x61|} in
+           let template = template_literal {|\x61|} in
            OUnit.assert_equal ~printer:(Printf.sprintf "%S") {|`\x61`|}
              (Js_dump.string_of_expression template);
            (match (Js_exp_make.string_length template).expression_desc with
@@ -600,8 +622,7 @@ let suites =
            | Str "aa" -> ()
            | _ -> OUnit.assert_failure "expected string literals to fold");
            (match
-              (Js_exp_make.string_append template
-                 (Js_exp_make.template_literal ~semantic:"b" "b"))
+              (Js_exp_make.string_append template (template_literal "b"))
                 .expression_desc
             with
            | Str "ab" -> ()
@@ -622,12 +643,7 @@ let suites =
              (Js_dump.string_of_expression tagged) );
          ( "template line-ending semantics drive constant folding" >:: fun _ ->
            let source = "a\r\nb" in
-           let semantic =
-             match String_literal.decode_js_template_escapes source with
-             | Some semantic -> semantic
-             | None -> OUnit.assert_failure "expected a valid template segment"
-           in
-           let template = Js_exp_make.template_literal ~semantic source in
+           let template = template_literal source in
            OUnit.assert_equal ~printer:(Printf.sprintf "%S") "`a\r\nb`"
              (Js_dump.string_of_expression template);
            (match (Js_exp_make.string_length template).expression_desc with
@@ -644,11 +660,8 @@ let suites =
              OUnit.assert_failure
                "expected template equality to use normalized line endings" );
          ( "interpolated templates remain explicit in JavaScript IR" >:: fun _ ->
-           let segments : Asttypes.template_segment list =
-             [
-               {source = {|head\n\${literal}\`|}; semantic = "head\n${literal}`"};
-               {source = "tail"; semantic = "tail"};
-             ]
+           let segments =
+             [template_segment {|head\n\${literal}\`|}; template_segment "tail"]
            in
            let value =
              Js_exp_make.string_append
@@ -665,30 +678,19 @@ let suites =
            OUnit.assert_equal ~printer:(Printf.sprintf "%S")
              {|`head\n\${literal}\`${left + right}tail`|}
              (Js_dump.string_of_expression template);
-           let nested_literal =
-             Js_exp_make.template_literal ~semantic:"${nested}`"
-               {e|\${nested}\`|e}
-           in
+           let nested_literal = template_literal {e|\${nested}\`|e} in
            let flattened =
              Js_exp_make.interpolated_template
-               [
-                 {source = "head"; semantic = "head"};
-                 {source = "tail"; semantic = "tail"};
-               ]
+               [template_segment "head"; template_segment "tail"]
                [nested_literal]
            in
            OUnit.assert_equal ~printer:(Printf.sprintf "%S")
              {e|`head\${nested}\`tail`|e}
              (Js_dump.string_of_expression flattened);
-           let escaped_literal =
-             Js_exp_make.template_literal ~semantic:"a" {e|\x61|e}
-           in
+           let escaped_literal = template_literal {e|\x61|e} in
            let canonicalized =
              Js_exp_make.interpolated_template
-               [
-                 {source = "head"; semantic = "head"};
-                 {source = "tail"; semantic = "tail"};
-               ]
+               [template_segment "head"; template_segment "tail"]
                [escaped_literal]
            in
            OUnit.assert_equal ~printer:(Printf.sprintf "%S")
@@ -696,45 +698,36 @@ let suites =
              (Js_dump.string_of_expression canonicalized);
            let boundary =
              Js_exp_make.interpolated_template
-               [{source = "$"; semantic = "$"}; {source = ""; semantic = ""}]
-               [Js_exp_make.template_literal ~semantic:"{x}" "{x}"]
+               [template_segment "$"; template_segment ""]
+               [template_literal "{x}"]
            in
            OUnit.assert_equal ~printer:(Printf.sprintf "%S") {e|`\${x}`|e}
              (Js_dump.string_of_expression boundary);
            let already_escaped_boundary =
              Js_exp_make.interpolated_template
-               [{source = "\\$"; semantic = "$"}; {source = ""; semantic = ""}]
-               [Js_exp_make.template_literal ~semantic:"{x}" "{x}"]
+               [template_segment "\\$"; template_segment ""]
+               [template_literal "{x}"]
            in
            OUnit.assert_equal ~printer:(Printf.sprintf "%S") {e|`\${x}`|e}
              (Js_dump.string_of_expression already_escaped_boundary);
            let null_digit_boundary =
              Js_exp_make.interpolated_template
-               [
-                 {source = "\\0"; semantic = "\000"};
-                 {source = ""; semantic = ""};
-               ]
-               [Js_exp_make.template_literal ~semantic:"1" "1"]
+               [template_segment "\\0"; template_segment ""]
+               [template_literal "1"]
            in
            OUnit.assert_equal ~printer:(Printf.sprintf "%S") {e|`\x001`|e}
              (Js_dump.string_of_expression null_digit_boundary);
            let escaped_slash_null_boundary =
              Js_exp_make.interpolated_template
-               [
-                 {source = "\\\\0"; semantic = "\\0"};
-                 {source = ""; semantic = ""};
-               ]
-               [Js_exp_make.template_literal ~semantic:"1" "1"]
+               [template_segment "\\\\0"; template_segment ""]
+               [template_literal "1"]
            in
            OUnit.assert_equal ~printer:(Printf.sprintf "%S") {e|`\\01`|e}
              (Js_dump.string_of_expression escaped_slash_null_boundary);
            let line_ending_boundary =
              Js_exp_make.interpolated_template
-               [
-                 {source = "a\r"; semantic = "a\n"};
-                 {source = "\nb"; semantic = "\nb"};
-               ]
-               [Js_exp_make.template_literal ~semantic:"" ""]
+               [template_segment "a\r"; template_segment "\nb"]
+               [template_literal ""]
            in
            OUnit.assert_equal ~printer:(Printf.sprintf "%S") {e|`a\n\nb`|e}
              (Js_dump.string_of_expression line_ending_boundary) );
@@ -780,7 +773,7 @@ let suites =
              (Js_exp_make.str "a\n😀");
            assert_equal_result false (Js_exp_make.str "a") (Js_exp_make.str "é");
            assert_equal_result true (Js_exp_make.str "a")
-             (Js_exp_make.template_literal ~semantic:"a" {|\x61|}) );
+             (template_literal {|\x61|}) );
          ( "UTF-16 length" >:: fun _ ->
            assert_int_equal 0 (String_literal.utf16_length "");
            assert_int_equal 3 (String_literal.utf16_length "abc");

@@ -226,12 +226,11 @@ let extract_string_constant text =
   | ( [
         {
           Parsetree.pstr_desc =
-            Pstr_eval
-              ({pexp_desc = Pexp_constant (Pconst_string {semantic = s})}, _);
+            Pstr_eval ({pexp_desc = Pexp_constant (Pconst_string payload)}, _);
         };
       ],
       _ ) ->
-    Some s
+    Some (String_literal.semantic payload)
   | _ -> None
 
 let print_object_vs_record_hint ppf ~loc =
@@ -672,8 +671,13 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
       let reprinted =
         Parser.reprint_expr_at_loc loc ~mapper:(fun exp ->
             match exp.Parsetree.pexp_desc with
-            | Pexp_constant (Pconst_string {semantic = s}) ->
-              Some {exp with Parsetree.pexp_desc = Pexp_variant (s, None)}
+            | Pexp_constant (Pconst_string payload) ->
+              Some
+                {
+                  exp with
+                  Parsetree.pexp_desc =
+                    Pexp_variant (String_literal.semantic payload, None);
+                }
             | _ -> None)
       in
       match (reprinted, List.mem string_value variant_constructors) with

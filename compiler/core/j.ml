@@ -149,7 +149,7 @@ and expression_desc =
           longer needs to be preserved. For example, ["a\\n"] is stored with
           an actual newline and is emitted using the compiler's chosen quoting
           and escaping. *)
-  | Template_literal of {source: string; semantic: string}
+  | Template_literal of Asttypes.template_segment
       (** A non-interpolated ordinary backquoted literal. For [`a\n`], [source]
           is ["a\\n"] and [semantic] contains an actual newline. [source] is
           used for JavaScript emission; [semantic] is used for comparisons and

@@ -47,7 +47,7 @@ module Const = struct
     let semantic = Char.code c in
     Pconst_char {source = String_literal.encode_char_source semantic; semantic}
   let string semantic =
-    Pconst_string {source = String_literal.encode_js_string semantic; semantic}
+    Pconst_string (String_literal.string_from_semantic semantic)
 end
 
 module Typ = struct

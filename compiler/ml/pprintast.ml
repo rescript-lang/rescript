@@ -252,8 +252,9 @@ let print_quoted_string_with_byte_width f s =
 
 let constant f = function
   | Pconst_char {source} -> pp f "'%s'" source
-  | Pconst_string {source} ->
-    pp f "{js|%a|js}" print_string_with_byte_width source
+  | Pconst_string payload ->
+    pp f "{js|%a|js}" print_string_with_byte_width
+      (String_literal.source payload)
   | Pconst_json source ->
     pp f "{json|%a|json}" print_string_with_byte_width source
   | Pconst_raw_source source ->

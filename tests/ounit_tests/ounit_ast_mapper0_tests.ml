@@ -191,16 +191,20 @@ let attr_names attrs = List.map (fun ({Location.txt}, _) -> txt) attrs
 
 let assert_string_expr ~expected_source ~expected_semantic expr =
   match expr.Parsetree.pexp_desc with
-  | Pexp_constant (Pconst_string {source; semantic}) ->
-    OUnit.assert_equal ~printer:(Printf.sprintf "%S") expected_source source;
-    OUnit.assert_equal ~printer:(Printf.sprintf "%S") expected_semantic semantic
+  | Pexp_constant (Pconst_string payload) ->
+    OUnit.assert_equal ~printer:(Printf.sprintf "%S") expected_source
+      (String_literal.source payload);
+    OUnit.assert_equal ~printer:(Printf.sprintf "%S") expected_semantic
+      (String_literal.semantic payload)
   | _ -> assert_failure "Expected a string expression"
 
 let assert_string_pat ~expected_source ~expected_semantic pat =
   match pat.Parsetree.ppat_desc with
-  | Ppat_constant (Pconst_string {source; semantic}) ->
-    OUnit.assert_equal ~printer:(Printf.sprintf "%S") expected_source source;
-    OUnit.assert_equal ~printer:(Printf.sprintf "%S") expected_semantic semantic
+  | Ppat_constant (Pconst_string payload) ->
+    OUnit.assert_equal ~printer:(Printf.sprintf "%S") expected_source
+      (String_literal.source payload);
+    OUnit.assert_equal ~printer:(Printf.sprintf "%S") expected_semantic
+      (String_literal.semantic payload)
   | _ -> assert_failure "Expected a string pattern"
 
 let assert_template_expr ~expected expr =
@@ -270,7 +274,9 @@ let test_ppx_byte_strings_convert_to_valid_utf8 _ =
     Ast_helper0.Exp.constant ~loc (Ast_helper0.Const.string byte_string)
   in
   match (map_expr0 expression0).pexp_desc with
-  | Pexp_constant (Pconst_string {source; semantic}) ->
+  | Pexp_constant (Pconst_string payload) ->
+    let source = String_literal.source payload in
+    let semantic = String_literal.semantic payload in
     OUnit.assert_equal ~printer:(Printf.sprintf "%S") "aÿé" source;
     OUnit.assert_equal ~printer:(Printf.sprintf "%S") "aÿé" semantic;
     OUnit.assert_equal ~printer:string_of_int 3
@@ -307,8 +313,9 @@ let test_string_literals_roundtrip_through_ast0 _ =
     (not (List.mem "res.template" (attr_names template_pat0.ppat_attributes)));
   let template_pat = map_pat0 template_pat0 in
   (match template_pat.ppat_desc with
-  | Ppat_constant (Pconst_string {semantic; _}) ->
-    OUnit.assert_equal ~printer:(Printf.sprintf "%S") "a\n😀" semantic
+  | Ppat_constant (Pconst_string payload) ->
+    OUnit.assert_equal ~printer:(Printf.sprintf "%S") "a\n😀"
+      (String_literal.semantic payload)
   | _ -> assert_failure "Expected a string pattern after ast0 roundtrip");
   let json_expr =
     Ast_helper.Exp.constant ~loc (Parsetree.Pconst_json {|{"answer":42}|})
@@ -335,7 +342,10 @@ let test_string_literals_roundtrip_through_ast0 _ =
   | _ -> assert_failure "Expected a character literal after ast0 roundtrip");
   let source_string =
     Ast_helper.Exp.constant ~loc
-      (Parsetree.Pconst_string {source = {|\x61|}; semantic = "a"})
+      (Parsetree.Pconst_string
+         (match String_literal.string_from_source {|\x61|} with
+         | Some payload -> payload
+         | None -> assert_failure "Expected a valid source string"))
   in
   assert_string_expr ~expected_source:{|\x61|} ~expected_semantic:"a"
     (map_expr0 (map_expr_to0 source_string))
