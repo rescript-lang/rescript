@@ -57,7 +57,9 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lambda.t) : Lambda.t =
           loc;
         }
       when !Js_config.jsx_preserve ->
-      Lambda.prim ~primitive ~args:(field_arg :: Ext_list.map rest simpl) loc
+      let rest' = Ext_list.map_sharing rest simpl in
+      if rest' == rest then lam
+      else Lambda.prim ~primitive ~args:(field_arg :: rest') loc
     | Lprim {primitive = Pfield (i, info) as primitive; args = [arg]; loc} -> (
       (* ATTENTION:
          Main use case, we should detect inline all immutable block .. *)
@@ -146,21 +148,25 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lambda.t) : Lambda.t =
              && Lam_analysis.lfunction_can_be_inlined lfunction ->
         simpl (Lam_beta_reduce.propagate_beta_reduce meta params body args)
       | _ ->
-        Lambda.apply (simpl l1) (Ext_list.map args simpl) ap_info
-          ?ap_transformed_jsx:None)
+        let fn = simpl l1 in
+        let args' = Ext_list.map_sharing args simpl in
+        if fn == l1 && args' == args then lam
+        else Lambda.apply fn args' ap_info ?ap_transformed_jsx:None)
     (* Function inlining interact with other optimizations...
 
        - parameter attributes
        - scope issues
        - code bloat
     *)
-    | Lapply {ap_func = Lvar v as fn; ap_args; ap_info; ap_transformed_jsx} -> (
+    | Lapply
+        {ap_func = Lvar v as fn; ap_args = args; ap_info; ap_transformed_jsx}
+      -> (
       (* Check info for always inlining *)
-
-      (* Ext_log.dwarn __LOC__ "%s/%d" v.name v.stamp;     *)
-      let ap_args = Ext_list.map ap_args simpl in
+      let ap_args = Ext_list.map_sharing args simpl in
       let[@local] normal () =
-        Lambda.apply (simpl fn) ap_args ap_info ~ap_transformed_jsx
+        let fn' = simpl fn in
+        if fn' == fn && ap_args == args then lam
+        else Lambda.apply fn' ap_args ap_info ~ap_transformed_jsx
       in
       match Hash_ident.find_opt meta.ident_tbl v with
       | Some
