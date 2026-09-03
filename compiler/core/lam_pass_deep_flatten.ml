@@ -128,6 +128,26 @@ let rec rhs_is_beta_residue (lam : Lambda.t) =
   | Lapply _ -> true
   | _ -> false
 
+(* [flatten] restructures a binding only when it hoists something out of the
+   right hand side, splits a null conversion, or eliminates a tuple. Every
+   other binding comes back as the same binding, so it can be rebuilt in place
+   and shared instead of taken apart and reassembled. *)
+let regroups_binding (str : Lambda.let_kind) (id : Ident.t) (arg : Lambda.t) =
+  if rhs_is_beta_residue arg then false
+  else
+    match arg with
+    | Lambda.Llet _ | Lsequence _ | Lletrec _ -> true
+    | Lprim {primitive = Pnull_to_opt | Pnull_undefined_to_opt; args = [Lvar _]}
+      ->
+      false
+    | Lprim {primitive = Pnull_to_opt | Pnull_undefined_to_opt} -> true
+    | Lprim {primitive = Pmakeblock info} ->
+      (match (id.name, str) with
+        | ("match" | "include" | "param"), (Alias | Strict | StrictOpt) -> true
+        | _ -> false)
+      && Lambda.is_immutable_block info
+    | _ -> false
+
 let deep_flatten (lam : Lambda.t) : Lambda.t =
   let rec flatten (acc : Lam_group.t list) (lam : Lambda.t) :
       Lambda.t * Lam_group.t list =
@@ -198,6 +218,8 @@ let deep_flatten (lam : Lambda.t) : Lambda.t =
     | x -> (aux x, acc)
   and aux (lam : Lambda.t) : Lambda.t =
     match lam with
+    | Llet (str, id, arg, body) when not (regroups_binding str id arg) ->
+      Lam_util.refine_let ~original:lam ~kind:str id (aux arg) (aux body)
     | Llet _ ->
       let res, groups = flatten [] lam in
       lambda_of_groups res ~rev_bindings:groups
