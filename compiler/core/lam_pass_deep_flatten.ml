@@ -223,15 +223,15 @@ let deep_flatten (lam : Lambda.t) : Lambda.t =
     | Llet _ ->
       let res, groups = flatten [] lam in
       lambda_of_groups res ~rev_bindings:groups
-    | Lletrec (bind_args, body) ->
+    | Lletrec (bind_args, body) as original -> (
       (* Attention: don't mess up with internal {let rec} *)
-      let rec iter bind_args groups set =
-        match bind_args with
-        | [] -> (List.rev groups, set)
-        | (id, arg) :: rest ->
-          iter rest ((id, aux arg) :: groups) (Set_ident.add set id)
+      (* Keep the mapped list so a group from which nothing can be extracted
+         remains physically shared when neither its bindings nor body change. *)
+      let groups = Ext_list.map_snd_sharing bind_args aux in
+      let collections =
+        Ext_list.fold_left groups Set_ident.empty (fun set (id, _) ->
+            Set_ident.add set id)
       in
-      let groups, collections = iter bind_args [] Set_ident.empty in
       (* Try to extract some value definitions from recursive values as [wrap],
          it will stop whenever it find it could not move forward
          {[
@@ -241,19 +241,23 @@ let deep_flatten (lam : Lambda.t) : Lambda.t =
              ...
          ]}
       *)
-      let rev_bindings, rev_wrap, _ =
-        Ext_list.fold_left groups ([], [], false)
-          (fun (inner_recursive_bindings, wrap, stop) (id, lam) ->
-            if stop || Lam_hit.hit_variables collections lam then
-              ((id, lam) :: inner_recursive_bindings, wrap, true)
-            else
-              ( inner_recursive_bindings,
-                Lam_group.Single (Strict, id, lam) :: wrap,
-                false ))
+      let rec extract rev_wrap = function
+        | [] -> (rev_wrap, [])
+        | (_, binding) :: _ as bindings
+          when Lam_hit.hit_variables collections binding ->
+          (rev_wrap, bindings)
+        | (id, binding) :: rest ->
+          extract (Lam_group.Single (Strict, id, binding) :: rev_wrap) rest
       in
-      lambda_of_groups
-        ~rev_bindings:rev_wrap (* These bindings are extracted from [letrec] *)
-        (Lambda.letrec (List.rev rev_bindings) (aux body))
+      let rev_wrap, recursive_bindings = extract [] groups in
+      let body' = aux body in
+      match rev_wrap with
+      | [] when groups == bind_args && body' == body -> original
+      | [] -> Lambda.letrec groups body'
+      | _ ->
+        lambda_of_groups
+          ~rev_bindings:rev_wrap (* Extracted bindings from [letrec]. *)
+          (Lambda.letrec recursive_bindings body'))
     | _ -> Lambda_traverse.shallow_map_sharing aux lam
   in
   aux lam
