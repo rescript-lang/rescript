@@ -252,8 +252,6 @@ let erased_builtins : (string * Lambda.builtin) array =
     ("%identity", Eliminated Identity);
     ("%component_identity", Eliminated Identity);
     ("%ignore", Eliminated Ignore);
-    ("%incr", Offset_ref 1);
-    ("%decr", Offset_ref (-1));
     ("%null", Constant Const_js_null);
     ("%undefined", Constant (Const_js_undefined {is_unit = false}));
     (* FIXME: Core compatibility *)
@@ -268,7 +266,6 @@ let primitive_builtins : (string * Lambda.builtin) array =
       (* BEGIN Triples for  ref data type *)
       ("%makeref", Pmakeblock Lambda.ref_tag_info);
       ("%refset", Psetfield (0, Lambda.ref_field_set_info));
-      ("%refget", Pfield (0, Lambda.ref_field_info));
       (* Finish Triples for  ref data type *)
       ("%field0", Pfield (0, Fld_tuple));
       ("%field1", Pfield (1, Fld_tuple));

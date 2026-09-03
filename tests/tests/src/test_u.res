@@ -3,7 +3,7 @@ let f = x => {
   let sum = ref(0)
   while v.contents > 0 {
     sum := sum.contents + v.contents
-    Int.Ref.decrement(v)
+    v.contents = v.contents - 1
   }
   sum.contents
 }

@@ -53,16 +53,16 @@ describe(__MODULE__, () => {
       let v4 = ref(0)
       let v5 = ref(0)
       let inspect_3 = ref(-1)
-      Int.Ref.increment(v4)
+      v4.contents = v4.contents + 1
       for j in 0 to 1 {
-        Int.Ref.increment(v5)
+        v5.contents = v5.contents + 1
         let v2 = ref(0)
         let v3 = u
         for i in 0 to Array.length(x) - 1 {
           let _j = i * 2
           let k = 2 * u * u
           let h = 2 * v5.contents
-          Int.Ref.increment(v2)
+          v2.contents = v2.contents + 1
           arr[i] = _ => v := v.contents + k + v2.contents + v4.contents + v5.contents + h + v3
           /* v2 should not be captured */
         }
@@ -128,7 +128,7 @@ describe(__MODULE__, () => {
         /* incr v ; */
         v := v.contents + i
         for j in 0 to j_len - 1 {
-          Int.Ref.increment(v)
+          v.contents = v.contents + 1
           collect(v.contents)
           arr[i * j_len + j] = _ => vv := vv.contents + v.contents
           /* v should not be captured inside, 

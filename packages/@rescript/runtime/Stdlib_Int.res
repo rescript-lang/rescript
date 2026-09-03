@@ -127,10 +127,3 @@ module Bitwise = {
 }
 
 external ignore: int => unit = "%ignore"
-
-module Ref = {
-  type t = ref<int>
-
-  external increment: ref<int> => unit = "%incr"
-  external decrement: ref<int> => unit = "%decr"
-}

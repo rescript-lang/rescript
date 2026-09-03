@@ -22,18 +22,18 @@ let v = ref(0)
 
 module Make = (U: S) => {
   let () = {
-    Int.Ref.increment(v)
-    Int.Ref.increment(v)
-    Int.Ref.increment(v)
+    v.contents = v.contents + 1
+    v.contents = v.contents + 1
+    v.contents = v.contents + 1
   }
   include U
 }
 
 let f = () => {
   let () = {
-    Int.Ref.increment(v)
-    Int.Ref.increment(v)
-    Int.Ref.increment(v)
+    v.contents = v.contents + 1
+    v.contents = v.contents + 1
+    v.contents = v.contents + 1
   }
   module G = F /* local module is not module alias */
   module H = G

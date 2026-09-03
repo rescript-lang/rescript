@@ -20,7 +20,7 @@ let ff = c =>
   switch {
     let a = 1
     let b = 1
-    Int.Ref.increment(c)
+    c.contents = c.contents + 1
     a + c.contents + b
   } {
   | (0 | 1 | 2 | 3) as n => n + 1

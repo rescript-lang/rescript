@@ -52,16 +52,16 @@ let for_6 = (x, u) => {
   let arr = x->Array.map(_ => _ => ())
   let v4 = ref(0)
   let v5 = ref(0)
-  Int.Ref.increment(v4)
+  v4.contents = v4.contents + 1
   for j in 0 to 1 {
-    Int.Ref.increment(v5)
+    v5.contents = v5.contents + 1
     let v2 = ref(0)
     let v3 = u
     for i in 0 to Array.length(x) {
       let _j = i * 2
       let k = 2 * u * u
       let h = 2 * v5.contents
-      Int.Ref.increment(v2)
+      v2.contents = v2.contents + 1
       arr[i] = _ => v := v.contents + k + v2.contents + v3 + v4.contents + v5.contents + h
     }
   }
