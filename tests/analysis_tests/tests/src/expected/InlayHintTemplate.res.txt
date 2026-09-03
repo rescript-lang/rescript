@@ -1,0 +1,25 @@
+Inlay Hint src/InlayHintTemplate.res 1:34
+[
+  {
+    "kind": 1,
+    "label": ": string",
+    "paddingLeft": true,
+    "paddingRight": false,
+    "position": { "character": 10, "line": 5 }
+  },
+  {
+    "kind": 1,
+    "label": ": string",
+    "paddingLeft": true,
+    "paddingRight": false,
+    "position": { "character": 12, "line": 4 }
+  },
+  {
+    "kind": 1,
+    "label": ": string",
+    "paddingLeft": true,
+    "paddingRight": false,
+    "position": { "character": 9, "line": 3 }
+  }
+]
+
