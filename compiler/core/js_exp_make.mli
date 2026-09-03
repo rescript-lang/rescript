@@ -83,7 +83,7 @@ val str : ?comment:string -> string -> t
 
 val template_literal : ?comment:string -> Asttypes.template_segment -> t
 
-val json_literal : ?comment:string -> string -> t
+val fixed_literal : ?comment:string -> string -> t
 
 val record_rest : ?comment:string -> J.record_rest_field list -> t -> t
 

@@ -28,7 +28,7 @@ let handle_debugger loc (payload : Ast_payload.t) =
     Ast_external_mk.local_external_apply loc ~pval_prim:(Prim_name "%debugger")
       ~pval_type:
         (Ast_helper.Typ.arrow
-           [{attrs = []; lbl = Nolabel; typ = Ast_helper.Typ.any ()}]
+           [Parg_type {attrs = []; lbl = Nolabel; typ = Ast_helper.Typ.any ()}]
            (Ast_literal.type_unit ()))
       [Ast_literal.val_unit ~loc ()]
   | _ ->
@@ -49,7 +49,10 @@ let handle_raw loc payload =
           ~pval_prim:(Prim_name "#raw_expr")
           ~pval_type:
             (Ast_helper.Typ.arrow
-               [{attrs = []; lbl = Nolabel; typ = Ast_helper.Typ.any ()}]
+               [
+                 Parg_type
+                   {attrs = []; lbl = Nolabel; typ = Ast_helper.Typ.any ()};
+               ]
                (Ast_helper.Typ.any ()))
           [exp];
       pexp_attributes =
@@ -79,7 +82,7 @@ let handle_ffi ~loc ~payload =
         let effective_arity = if arity = 0 then 1 else arity in
         let args =
           Ext_list.init effective_arity (fun _ ->
-              ({attrs = []; lbl = Nolabel; typ = any} : Parsetree.arg))
+              Parsetree.Parg_type {attrs = []; lbl = Nolabel; typ = any})
         in
         Ast_helper.Typ.arrow ~loc args any
       in
@@ -95,7 +98,10 @@ let handle_ffi ~loc ~payload =
             ~pval_prim:(Prim_name "#raw_expr")
             ~pval_type:
               (Ast_helper.Typ.arrow
-                 [{attrs = []; lbl = Nolabel; typ = Ast_helper.Typ.any ()}]
+                 [
+                   Parg_type
+                     {attrs = []; lbl = Nolabel; typ = Ast_helper.Typ.any ()};
+                 ]
                  (Ast_helper.Typ.any ()))
             [exp];
         pexp_attributes =
@@ -115,7 +121,10 @@ let handle_raw_structure loc payload =
             ~pval_prim:(Prim_name "#raw_stmt")
             ~pval_type:
               (Ast_helper.Typ.arrow
-                 [{attrs = []; lbl = Nolabel; typ = Ast_helper.Typ.any ()}]
+                 [
+                   Parg_type
+                     {attrs = []; lbl = Nolabel; typ = Ast_helper.Typ.any ()};
+                 ]
                  (Ast_helper.Typ.any ()))
             [exp];
       }

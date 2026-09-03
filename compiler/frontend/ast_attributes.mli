@@ -43,7 +43,7 @@ val has_unwrap_attr : t -> bool
 
 val as_int : t -> int option
 
-type as_const_payload = Int of int | Str of string | Json of string
+type as_const_payload = Fixed of string
 val as_const : t -> as_const_payload option
 
 val process_derive_type : t -> derive_attr * t

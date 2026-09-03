@@ -1,0 +1,10 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/typexpr/fixedExternalTyped.res:1:26-29
+
+  1 │ external typedArgument: (%raw(1), int) => unit = "typedArgument"
+  2 │ 
+
+  The %raw extension can only be applied to a string
+
+external typedArgument : [%raw 1] -> int -> unit (a:2) = "typedArgument"

@@ -13,6 +13,13 @@ let id = "5"
 
 let queryWithModule = Pg.sql`SELECT * FROM ${table} WHERE id = ${id}`
 
+// `json` is not reserved: outside the legacy fixed-external parameter shape,
+// it behaves exactly like every other tagged-template identifier.
+@module("./tagged_template_lib.js")
+external json: taggedTemplate<string, string> = "sql"
+
+let jsonTaggedQuery = json`SELECT * FROM ${table}`
+
 // The tag still emits backticks when used through `open` (i.e. once it has
 // crossed the module boundary as a value of the `taggedTemplate` type).
 open Pg
@@ -99,6 +106,10 @@ describe("tagged templates", () => {
   test(
     "with module scoped externals, it should also return a string with the correct interpolations",
     () => eq(__LOC__, queryWithModule, "SELECT * FROM 'users' WHERE id = '5'"),
+  )
+
+  test("a tag named json remains an ordinary tagged template", () =>
+    eq(__LOC__, jsonTaggedQuery, "SELECT * FROM 'users'")
   )
 
   test("with externals, it should return the result of the function", () => eq(__LOC__, length, 52))

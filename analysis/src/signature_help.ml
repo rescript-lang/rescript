@@ -114,33 +114,38 @@ let extract_parameters ~signature ~type_str_for_parser ~label_prefix_len =
        Psig_value {pval_type = {ptyp_desc = Ptyp_arrow {params = args}}};
    };
   ] ->
-    List.map
-      (fun (arg : Parsetree.arg) ->
-        let start_loc =
-          (* For a labeled argument the label precedes the type. *)
-          match arg.lbl with
-          | Asttypes.Labelled {loc} | Optional {loc} -> loc |> Loc.start
-          | Nolabel -> arg.typ.ptyp_loc |> Loc.start
-        in
-        let start_offset =
-          start_loc |> Pos.position_to_offset type_str_for_parser |> Option.get
-        in
-        let end_offset =
-          arg.typ.ptyp_loc |> Loc.end_
-          |> Pos.position_to_offset type_str_for_parser
-          |> Option.get
-        in
-        (* The AST locations does not account for "=?" of optional arguments, so add that to the offset here if needed. *)
-        let end_offset =
-          match arg.lbl with
-          | Asttypes.Optional _ -> end_offset + 2
-          | _ -> end_offset
-        in
-        ( arg.lbl,
-          (* Remove the label prefix offset here, since we're not
-             showing that to the end user. *)
-          start_offset - label_prefix_len,
-          end_offset - label_prefix_len ))
+    List.filter_map
+      (function
+        | Parsetree.Parg_fixed _ -> None
+        | Parsetree.Parg_type {lbl; typ; _} ->
+          let start_loc =
+            (* For a labeled argument the label precedes the type. *)
+            match lbl with
+            | Asttypes.Labelled {loc} | Optional {loc} -> loc |> Loc.start
+            | Nolabel -> typ.ptyp_loc |> Loc.start
+          in
+          let start_offset =
+            start_loc
+            |> Pos.position_to_offset type_str_for_parser
+            |> Option.get
+          in
+          let end_offset =
+            typ.ptyp_loc |> Loc.end_
+            |> Pos.position_to_offset type_str_for_parser
+            |> Option.get
+          in
+          (* The AST locations does not account for "=?" of optional arguments, so add that to the offset here if needed. *)
+          let end_offset =
+            match lbl with
+            | Asttypes.Optional _ -> end_offset + 2
+            | _ -> end_offset
+          in
+          Some
+            ( lbl,
+              (* Remove the label prefix offset here, since we're not
+               showing that to the end user. *)
+              start_offset - label_prefix_len,
+              end_offset - label_prefix_len ))
       args
   | _ -> []
 

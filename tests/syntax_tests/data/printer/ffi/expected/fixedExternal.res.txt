@@ -1,0 +1,38 @@
+
+  Warning number 3
+  syntax_tests/data/printer/ffi/fixedExternal.res:11:25-27
+
+   9 │ 
+  10 │ @val
+  11 │ external legacyObject: (@as(json`{foo: true}`) _, int) => int = "Object
+     │ .assign"
+  12 │ 
+  13 │ @val
+
+  deprecated: The fixed-value `@as(...) _` external argument syntax is deprecated. Use `%raw(...)` instead.
+
+
+  Warning number 3
+  syntax_tests/data/printer/ffi/fixedExternal.res:14:25-27
+
+  12 │ 
+  13 │ @val
+  14 │ external legacyString: (@as("img") _, int) => int = "f"
+  15 │ 
+
+  deprecated: The fixed-value `@as(...) _` external argument syntax is deprecated. Use `%raw(...)` instead.
+
+@val
+external unsafeAddStyle: (%raw("{}"), t, {..}) => t = "Object.assign"
+
+@module("react")
+external useEffect0: (unit => option<unit => unit>, %raw("[]")) => unit = "useEffect"
+
+@val
+external stringValue: (%raw(`"img"`), int) => int = "f"
+
+@val
+external legacyObject: (%raw("{foo: true}"), int) => int = "Object.assign"
+
+@val
+external legacyString: (%raw(`"img"`), int) => int = "f"

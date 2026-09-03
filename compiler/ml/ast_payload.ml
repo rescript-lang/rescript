@@ -36,25 +36,6 @@ let unwrap_payload_expression (payload : t) =
       [{item with pstr_desc = Pstr_eval (unwrap_braces expression, attrs)}]
   | payload -> payload
 
-let json_literal_outside_external_message =
-  "A `json` literal can only be used in an external attribute such as `@as`"
-
-let reject_json_literal ~loc =
-  Location.raise_errorf ~loc "%s" json_literal_outside_external_message
-
-let reject_json_literal_payload (payload : t) =
-  match unwrap_payload_expression payload with
-  | PStr
-      [
-        {
-          pstr_desc =
-            Pstr_eval
-              ({pexp_desc = Pexp_constant (Pconst_json _); pexp_loc; _}, _);
-        };
-      ] ->
-    reject_json_literal ~loc:pexp_loc
-  | _ -> ()
-
 let semantic_string_of_expression (expression : Parsetree.expression) =
   match unwrap_braces expression with
   | {pexp_desc = Pexp_constant (Pconst_string payload); _} ->
@@ -93,6 +74,78 @@ let semantic_string_of_payload (x : t) =
   | PStr [{pstr_desc = Pstr_eval (expression, _); _}] ->
     semantic_string_of_expression expression
   | _ -> None
+
+let quote_js_string semantic =
+  "\"" ^ String_literal.encode_js_string semantic ^ "\""
+
+let rec fixed_source_of_expression (expression : Parsetree.expression) =
+  let map_all f values =
+    let rec loop acc = function
+      | [] -> Some (List.rev acc)
+      | value :: rest -> (
+        match f value with
+        | Some mapped -> loop (mapped :: acc) rest
+        | None -> None)
+    in
+    loop [] values
+  in
+  match (unwrap_braces expression).pexp_desc with
+  | Pexp_constant (Pconst_string payload) ->
+    Some (quote_js_string (String_literal.string_semantic payload))
+  | Pexp_template {source_segments = [{txt = source}]; values = []} -> (
+    match String_literal.decode_js_template_escapes source with
+    | Some semantic -> Some (quote_js_string semantic)
+    | None -> None)
+  | Pexp_constant (Pconst_integer (source, None)) -> Some source
+  | Pexp_constant (Pconst_integer (source, Some 'n')) -> Some (source ^ "n")
+  | Pexp_constant (Pconst_float (source, None)) -> Some source
+  | Pexp_tagged_template
+      {
+        tag = {pexp_desc = Pexp_ident {txt = Lident "json"}};
+        raw_sources = [{txt = source}];
+        values = [];
+      } ->
+    Some source
+  | Pexp_construct ({txt = Lident "true"}, {txt = []}) -> Some "true"
+  | Pexp_construct ({txt = Lident "false"}, {txt = []}) -> Some "false"
+  | Pexp_ident {txt = Lident "null"} -> Some "null"
+  | Pexp_ident {txt = Lident "undefined"} -> Some "undefined"
+  | Pexp_array values -> (
+    match map_all fixed_source_of_expression values with
+    | Some values -> Some ("[" ^ String.concat "," values ^ "]")
+    | None -> None)
+  | Pexp_object_literal fields ->
+    let field_source
+        (({txt = name}, value) : string Location.loc * Parsetree.expression) =
+      match fixed_source_of_expression value with
+      | Some value -> Some (quote_js_string name ^ ":" ^ value)
+      | None -> None
+    in
+    begin match map_all field_source fields with
+    | Some fields -> Some ("{" ^ String.concat "," fields ^ "}")
+    | None -> None
+    end
+  | Pexp_record (fields, None) ->
+    let field_source
+        ({lid; x = value; opt} : Parsetree.expression Parsetree.record_element)
+        =
+      if opt then None
+      else
+        match (lid.txt, fixed_source_of_expression value) with
+        | Lident name, Some value -> Some (quote_js_string name ^ ":" ^ value)
+        | Ldot _, _ | _, None -> None
+    in
+    begin match map_all field_source fields with
+    | Some fields -> Some ("{" ^ String.concat "," fields ^ "}")
+    | None -> None
+    end
+  | _ -> None
+
+let fixed_source_of_payload (payload : t) =
+  match payload with
+  | PStr [{pstr_desc = Pstr_eval (expression, _); _}] ->
+    fixed_source_of_expression expression
+  | PStr _ | PSig _ | PTyp _ | PPat _ -> None
 
 let single_int_source (x : t) =
   match unwrap_payload_expression x with

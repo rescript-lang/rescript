@@ -47,12 +47,12 @@ type t
 
 @get_index external getGADTI2: (t, @ignore kind<'a>, @ignore kind<'b>, int) => ('a, 'b) = ""
 
-@get_index external getGADTI3: (t, @ignore kind<'a>, @ignore kind<'b>, @as(3) _) => ('a, 'b) = ""
+@get_index external getGADTI3: (t, @ignore kind<'a>, @ignore kind<'b>, %raw("3")) => ('a, 'b) = ""
 
 @set_index external setGADTI2: (t, @ignore kind<'a>, @ignore kind<'b>, int, ('a, 'b)) => unit = ""
 
 @set_index
-external setGADTI3: (t, @ignore kind<'a>, @ignore kind<'b>, @as(3) _, ('a, 'b)) => unit = ""
+external setGADTI3: (t, @ignore kind<'a>, @ignore kind<'b>, %raw("3"), ('a, 'b)) => unit = ""
 
 describe(__MODULE__, () => {
   test("higher_order function", () => eq(__LOC__, 6, higher_order(1)(2, 3)))

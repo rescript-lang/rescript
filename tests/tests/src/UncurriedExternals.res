@@ -15,7 +15,7 @@ module StandardNotation = {
   @get_index external get: (array<string>, int) => option<'a> = ""
   let tg = arr => arr->get(0)
 
-  @val external copy: (@as(json`{}`) _, string) => string = "Object.assign"
+  @val external copy: (%raw("{}"), string) => string = "Object.assign"
   let tc = copy("abc")
 
   external toException: exn => exn = "%identity"

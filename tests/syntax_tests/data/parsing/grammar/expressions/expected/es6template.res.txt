@@ -32,7 +32,7 @@ let s =
   :)
 `
 let s = `$dollar without $braces $interpolation`
-let s = {json|null|json}
+let s = json`null`
 let x = `foo\`bar\$\\foo`
 let x = `foo\`bar\$\\foo${a} \` ${b} \` xx`
 let thisIsFine = `$something`

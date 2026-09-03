@@ -64,8 +64,8 @@ type t6 = {
 }
 /* allow this case */
 
-@obj external ff: (~x: int, ~h: @as(3) _) => _ = ""
-@obj external ff2: (~x: int, ~h: @as(3) _) => {"x": int} = ""
+@obj external ff: (~x: int, ~h: %raw("3")) => _ = ""
+@obj external ff2: (~x: int, ~h: %raw("3")) => {"x": int} = ""
 let u = () => {
   ignore(ff(~x=3))
   ff2(~x=22)
