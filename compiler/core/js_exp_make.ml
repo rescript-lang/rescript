@@ -89,21 +89,6 @@ let interpolated_template ?comment segments values : t =
         Some ({source; semantic} : Asttypes.template_segment)
       | _ -> None
   in
-  let append_source left right =
-    let left_length = String.length left in
-    let rec count_backslashes index count =
-      if index >= 0 && String.unsafe_get left index = '\\' then
-        count_backslashes (index - 1) (count + 1)
-      else count
-    in
-    if
-      left_length > 0 && right <> ""
-      && String.unsafe_get left (left_length - 1) = '$'
-      && String.unsafe_get right 0 = '{'
-      && count_backslashes (left_length - 2) 0 mod 2 = 0
-    then String.sub left 0 (left_length - 1) ^ {e|\$|e} ^ right
-    else left ^ right
-  in
   let rec merge rev_segments rev_values
       (segments : Asttypes.template_segment list) values =
     match (segments, values) with
@@ -111,16 +96,18 @@ let interpolated_template ?comment segments values : t =
     | segment :: next_segment :: rest, value :: values -> (
       match literal_segment value with
       | Some literal ->
-        let merged : Asttypes.template_segment =
-          {
-            source =
-              append_source
-                (append_source segment.source literal.source)
-                next_segment.source;
-            semantic =
-              segment.semantic ^ literal.semantic ^ next_segment.semantic;
-          }
+        let semantic =
+          segment.semantic ^ literal.semantic ^ next_segment.semantic
         in
+        let preserved_source =
+          segment.source ^ literal.source ^ next_segment.source
+        in
+        let source =
+          match String_literal.decode_js_template_escapes preserved_source with
+          | Some decoded when decoded = semantic -> preserved_source
+          | _ -> String_literal.encode_js_template semantic
+        in
+        let merged : Asttypes.template_segment = {source; semantic} in
         merge rev_segments rev_values (merged :: rest) values
       | None ->
         merge (segment :: rev_segments) (value :: rev_values)

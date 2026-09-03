@@ -154,6 +154,14 @@ let decode_js_escapes_with ~normalize_template_line_endings s =
         Buffer.add_char buf '\n';
         if index + 1 < len && s.[index + 1] = '\n' then loop (index + 2)
         else loop (index + 1)
+      | '$'
+        when normalize_template_line_endings
+             && index + 1 < len
+             && s.[index + 1] = '{' ->
+        (* An unescaped interpolation opener cannot occur inside one template
+           segment. Treat it as invalid so callers can safely validate joined
+           segment sources with this decoder. *)
+        None
       | _ -> (
         match copy_utf8 index with
         | Some next -> loop next

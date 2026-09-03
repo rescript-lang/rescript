@@ -10,6 +10,10 @@ let assert_template_decoded ~encoded ~expected =
   OUnit.assert_equal ~printer:Ext_obj.dump (Some expected)
     (String_literal.decode_js_template_escapes encoded)
 
+let assert_invalid_template encoded =
+  OUnit.assert_equal ~printer:Ext_obj.dump None
+    (String_literal.decode_js_template_escapes encoded)
+
 let assert_encoded ~semantic ~expected =
   let encoded = String_literal.encode_js_string semantic in
   OUnit.assert_equal ~printer:(Printf.sprintf "%S") expected encoded;
@@ -391,6 +395,9 @@ let suites =
                OUnit.assert_equal ~printer:Ext_obj.dump None
                  (String_literal.decode_js_template_escapes encoded))
              [{|a\1b|}; {|a\01b|}; {|a\8b|}] );
+         ( "template segments reject interpolation openers" >:: fun _ ->
+           assert_invalid_template "${value}";
+           assert_template_decoded ~encoded:"\\${value}" ~expected:"${value}" );
          ( "ordinary literals become semantic strings" >:: fun _ ->
            assert_parsed_string ~source:{|\x61\n\uD83D\uDE00|}
              ~expected_semantic:"a\n😀" );
@@ -696,14 +703,41 @@ let suites =
              (Js_dump.string_of_expression boundary);
            let already_escaped_boundary =
              Js_exp_make.interpolated_template
-               [
-                 {source = {e|\$|e}; semantic = "$"};
-                 {source = ""; semantic = ""};
-               ]
+               [{source = "\\$"; semantic = "$"}; {source = ""; semantic = ""}]
                [Js_exp_make.template_literal ~semantic:"{x}" "{x}"]
            in
            OUnit.assert_equal ~printer:(Printf.sprintf "%S") {e|`\${x}`|e}
-             (Js_dump.string_of_expression already_escaped_boundary) );
+             (Js_dump.string_of_expression already_escaped_boundary);
+           let null_digit_boundary =
+             Js_exp_make.interpolated_template
+               [
+                 {source = "\\0"; semantic = "\000"};
+                 {source = ""; semantic = ""};
+               ]
+               [Js_exp_make.template_literal ~semantic:"1" "1"]
+           in
+           OUnit.assert_equal ~printer:(Printf.sprintf "%S") {e|`\x001`|e}
+             (Js_dump.string_of_expression null_digit_boundary);
+           let escaped_slash_null_boundary =
+             Js_exp_make.interpolated_template
+               [
+                 {source = "\\\\0"; semantic = "\\0"};
+                 {source = ""; semantic = ""};
+               ]
+               [Js_exp_make.template_literal ~semantic:"1" "1"]
+           in
+           OUnit.assert_equal ~printer:(Printf.sprintf "%S") {e|`\\01`|e}
+             (Js_dump.string_of_expression escaped_slash_null_boundary);
+           let line_ending_boundary =
+             Js_exp_make.interpolated_template
+               [
+                 {source = "a\r"; semantic = "a\n"};
+                 {source = "\nb"; semantic = "\nb"};
+               ]
+               [Js_exp_make.template_literal ~semantic:"" ""]
+           in
+           OUnit.assert_equal ~printer:(Printf.sprintf "%S") {e|`a\n\nb`|e}
+             (Js_dump.string_of_expression line_ending_boundary) );
          ( "JavaScript references are not encoded as strings" >:: fun _ ->
            let value = Js_exp_make.var (Ext_ident.create "value") in
            (match (Js_exp_make.is_array value).expression_desc with
