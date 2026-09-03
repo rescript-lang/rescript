@@ -676,7 +676,7 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
                 {
                   exp with
                   Parsetree.pexp_desc =
-                    Pexp_variant (String_literal.string_semantic payload, None);
+                    Pexp_variant (String_literal.string_semantic payload, []);
                 }
             | _ -> None)
       in
@@ -734,8 +734,7 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
                     exp with
                     Parsetree.pexp_desc =
                       Pexp_construct
-                        ( {txt = Lident constructor_name; loc = exp.pexp_loc},
-                          None );
+                        ({txt = Lident constructor_name; loc = exp.pexp_loc}, []);
                   }
               | _ -> None)
         in

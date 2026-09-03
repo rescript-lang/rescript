@@ -427,7 +427,6 @@ Path z
 Complete src/CompletionPattern.res 96:27
 posCursor:[96:27] posNoWhite:[96:26] Found pattern:[96:16->96:28]
 Ppat_construct Three:[96:16->96:21]
-posCursor:[96:27] posNoWhite:[96:26] Found pattern:[96:21->96:29]
 posCursor:[96:27] posNoWhite:[96:26] Found pattern:[96:26->96:27]
 Completable: Cpattern Value[z]=t->variantPayload::Three($1)
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -513,7 +512,6 @@ Path b
 
 Complete src/CompletionPattern.res 112:28
 posCursor:[112:28] posNoWhite:[112:27] Found pattern:[112:16->112:29]
-posCursor:[112:28] posNoWhite:[112:27] Found pattern:[112:22->112:29]
 posCursor:[112:28] posNoWhite:[112:27] Found pattern:[112:27->112:28]
 Completable: Cpattern Value[b]=t->polyvariantPayload::three($1)
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -584,7 +582,6 @@ Path p
 Complete src/CompletionPattern.res 137:29
 posCursor:[137:29] posNoWhite:[137:28] Found pattern:[137:16->137:31]
 Ppat_construct Test:[137:16->137:20]
-posCursor:[137:29] posNoWhite:[137:28] Found pattern:[137:20->137:32]
 Completable: Cpattern Value[p]->variantPayload::Test($2)
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -607,7 +604,6 @@ Path p
 Complete src/CompletionPattern.res 140:23
 posCursor:[140:23] posNoWhite:[140:22] Found pattern:[140:16->140:31]
 Ppat_construct Test:[140:16->140:20]
-posCursor:[140:23] posNoWhite:[140:22] Found pattern:[140:20->140:32]
 Completable: Cpattern Value[p]->variantPayload::Test($1)
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -621,7 +617,6 @@ Path p
 Complete src/CompletionPattern.res 143:35
 posCursor:[143:35] posNoWhite:[143:34] Found pattern:[143:16->143:37]
 Ppat_construct Test:[143:16->143:20]
-posCursor:[143:35] posNoWhite:[143:34] Found pattern:[143:20->143:38]
 Completable: Cpattern Value[p]->variantPayload::Test($3)
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -653,7 +648,6 @@ Path v
 
 Complete src/CompletionPattern.res 153:30
 posCursor:[153:30] posNoWhite:[153:29] Found pattern:[153:16->153:32]
-posCursor:[153:30] posNoWhite:[153:29] Found pattern:[153:21->153:32]
 Completable: Cpattern Value[v]->polyvariantPayload::test($2)
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -675,7 +669,6 @@ Path v
 
 Complete src/CompletionPattern.res 156:24
 posCursor:[156:24] posNoWhite:[156:23] Found pattern:[156:16->156:32]
-posCursor:[156:24] posNoWhite:[156:23] Found pattern:[156:21->156:32]
 Completable: Cpattern Value[v]->polyvariantPayload::test($1)
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -688,7 +681,6 @@ Path v
 
 Complete src/CompletionPattern.res 159:36
 posCursor:[159:36] posNoWhite:[159:35] Found pattern:[159:16->159:38]
-posCursor:[159:36] posNoWhite:[159:35] Found pattern:[159:21->159:38]
 Completable: Cpattern Value[v]->polyvariantPayload::test($3)
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -864,7 +856,6 @@ Complete src/CompletionPattern.res 185:48
 posCursor:[185:48] posNoWhite:[185:47] Found pattern:[185:16->185:50]
 posCursor:[185:48] posNoWhite:[185:47] Found pattern:[185:22->185:50]
 Ppat_construct Three:[185:22->185:27]
-posCursor:[185:48] posNoWhite:[185:47] Found pattern:[185:27->185:53]
 Completable: Cpattern Value[z]->variantPayload::Three($1)
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -891,7 +882,6 @@ Path b
 Complete src/CompletionPattern.res 191:50
 posCursor:[191:50] posNoWhite:[191:49] Found pattern:[191:16->191:52]
 posCursor:[191:50] posNoWhite:[191:49] Found pattern:[191:23->191:52]
-posCursor:[191:50] posNoWhite:[191:49] Found pattern:[191:29->191:52]
 Completable: Cpattern Value[b]->polyvariantPayload::three($1)
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib

@@ -57,14 +57,12 @@ type print_engine = {
     unit;
 }
 
-let setup ~filename ~for_printer () =
+let setup ~filename ~for_printer:_ () =
   let src = IO.read_file ~filename in
-  let mode = if for_printer then Res_parser.Default else ParseForTypeChecker in
-  Res_parser.make ~mode src filename
+  Res_parser.make src filename
 
-let setup_from_source ~display_filename ~source ~for_printer () =
-  let mode = if for_printer then Res_parser.Default else ParseForTypeChecker in
-  Res_parser.make ~mode source display_filename
+let setup_from_source ~display_filename ~source ~for_printer:_ () =
+  Res_parser.make source display_filename
 
 let parsing_engine =
   {

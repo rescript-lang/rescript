@@ -164,6 +164,17 @@ let map_loc sub {loc; txt} = {loc = sub.location sub loc; txt}
 
 (* Internal Parsetree0 bridge metadata; public res.* attributes pass through. *)
 let record_rest_attr_name = "_res.record_rest"
+let constructor_args_attr_name = "_res.constructor_args"
+
+let remove_constructor_args_attr (attrs : Pt.attributes) =
+  let rec loop rev_attrs = function
+    | ({Location.txt; _}, Pt.PStr []) :: attrs
+      when txt = constructor_args_attr_name ->
+      (true, List.rev_append rev_attrs attrs)
+    | attr :: attrs -> loop (attr :: rev_attrs) attrs
+    | [] -> (false, List.rev rev_attrs)
+  in
+  loop [] attrs
 
 let record_rest_of_pattern (rest : Pt.pattern) =
   match rest.Pt.ppat_desc with
@@ -192,9 +203,21 @@ module T = struct
   (* Type expressions for the core language *)
 
   let row_field sub = function
-    | Rtag (l, attrs, b, tl) ->
+    | Rtag (l, attrs, b, types) ->
+      let map_group typ =
+        let typ = sub.typ sub typ in
+        let has_constructor_args, attrs =
+          remove_constructor_args_attr typ.ptyp_attributes
+        in
+        let txt =
+          match typ.ptyp_desc with
+          | Ptyp_tuple args when has_constructor_args -> args
+          | _ -> [{typ with ptyp_attributes = attrs}]
+        in
+        {loc = typ.ptyp_loc; txt}
+      in
       Pt.Rtag
-        (map_loc sub l, sub.attributes sub attrs, b, List.map (sub.typ sub) tl)
+        (map_loc sub l, sub.attributes sub attrs, b, List.map map_group types)
     | Rinherit t -> Rinherit (sub.typ sub t)
 
   let object_field sub = function
@@ -837,8 +860,18 @@ module E = struct
         loc.loc_end
     | Pexp_construct (lid, arg) -> (
       let lid1 = map_loc sub lid in
-      let arg1 = map_opt (sub.expr sub) arg in
-      let exp1 = construct ~loc ~attrs lid1 arg1 in
+      let has_constructor_args, attrs = remove_constructor_args_attr attrs in
+      let args =
+        match arg with
+        | None -> []
+        | Some {pexp_desc = Pexp_tuple args}
+          when has_constructor_args
+               || Builtin_attributes.explicit_arity attrs
+               || lid.txt = Longident.Lident "::" ->
+          List.map (sub.expr sub) args
+        | Some arg -> [sub.expr sub arg]
+      in
+      let exp1 = construct ~loc ~attrs lid1 args in
       match lid.txt with
       | Lident "Function$" -> (
         let rec attributes_to_arity (attrs : Parsetree.attributes) =
@@ -858,8 +891,8 @@ module E = struct
           | _ :: rest -> attributes_to_arity rest
           | [] -> assert false
         in
-        match arg1 with
-        | Some ({pexp_desc = Pexp_fun f} as e1) -> (
+        match args with
+        | [({pexp_desc = Pexp_fun f} as e1)] -> (
           let arity = attributes_to_arity attrs in
           (* Gather [arity] parameters from the converted chain of unary
              functions into one n-ary node. Nested first-class functions are
@@ -895,8 +928,16 @@ module E = struct
             })
         | _ -> exp1)
       | _ -> exp1)
-    | Pexp_variant (lab, eo) ->
-      variant ~loc ~attrs lab (map_opt (sub.expr sub) eo)
+    | Pexp_variant (lab, arg) ->
+      let has_constructor_args, attrs = remove_constructor_args_attr attrs in
+      let args =
+        match arg with
+        | None -> []
+        | Some {pexp_desc = Pexp_tuple args} when has_constructor_args ->
+          List.map (sub.expr sub) args
+        | Some arg -> [sub.expr sub arg]
+      in
+      variant ~loc ~attrs lab args
     | Pexp_record (l, eo) ->
       record ~loc ~attrs
         (Ext_list.map l (fun (lid, e) ->
@@ -1063,9 +1104,29 @@ module P = struct
         (map_pattern_constant ~loc c1)
         (map_pattern_constant ~loc c2)
     | Ppat_tuple pl -> tuple ~loc ~attrs (List.map (sub.pat sub) pl)
-    | Ppat_construct (l, p) ->
-      construct ~loc ~attrs (map_loc sub l) (map_opt (sub.pat sub) p)
-    | Ppat_variant (l, p) -> variant ~loc ~attrs l (map_opt (sub.pat sub) p)
+    | Ppat_construct (l, arg) ->
+      let has_constructor_args, attrs = remove_constructor_args_attr attrs in
+      let args =
+        match arg with
+        | None -> []
+        | Some {ppat_desc = Ppat_tuple args}
+          when has_constructor_args
+               || Builtin_attributes.explicit_arity attrs
+               || l.txt = Longident.Lident "::" ->
+          List.map (sub.pat sub) args
+        | Some arg -> [sub.pat sub arg]
+      in
+      construct ~loc ~attrs (map_loc sub l) args
+    | Ppat_variant (l, arg) ->
+      let has_constructor_args, attrs = remove_constructor_args_attr attrs in
+      let args =
+        match arg with
+        | None -> []
+        | Some {ppat_desc = Ppat_tuple args} when has_constructor_args ->
+          List.map (sub.pat sub) args
+        | Some arg -> [sub.pat sub arg]
+      in
+      variant ~loc ~attrs l args
     | Ppat_record (lpl, cf) ->
       let rest, attrs = get_record_rest_attr attrs in
       record ~loc ~attrs ?rest

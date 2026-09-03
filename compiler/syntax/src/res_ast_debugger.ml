@@ -633,23 +633,19 @@ module Sexp_ast = struct
       | Pexp_tuple exprs ->
         Sexp.list
           [Sexp.atom "Pexp_tuple"; Sexp.list (map_empty ~f:expression exprs)]
-      | Pexp_construct (longident_loc, expr_opt) ->
+      | Pexp_construct (longident_loc, exprs) ->
         Sexp.list
           [
             Sexp.atom "Pexp_construct";
             longident longident_loc.Asttypes.txt;
-            (match expr_opt with
-            | None -> Sexp.atom "None"
-            | Some expr -> Sexp.list [Sexp.atom "Some"; expression expr]);
+            Sexp.list (map_empty ~f:expression exprs);
           ]
-      | Pexp_variant (lbl, expr_opt) ->
+      | Pexp_variant (lbl, exprs) ->
         Sexp.list
           [
             Sexp.atom "Pexp_variant";
             string lbl;
-            (match expr_opt with
-            | None -> Sexp.atom "None"
-            | Some expr -> Sexp.list [Sexp.atom "Some"; expression expr]);
+            Sexp.list (map_empty ~f:expression exprs);
           ]
       | Pexp_record (rows, opt_expr) ->
         Sexp.list
@@ -846,23 +842,19 @@ module Sexp_ast = struct
       | Ppat_tuple patterns ->
         Sexp.list
           [Sexp.atom "Ppat_tuple"; Sexp.list (map_empty ~f:pattern patterns)]
-      | Ppat_construct (longident_loc, opt_pattern) ->
+      | Ppat_construct (longident_loc, patterns) ->
         Sexp.list
           [
             Sexp.atom "Ppat_construct";
             longident longident_loc.Location.txt;
-            (match opt_pattern with
-            | None -> Sexp.atom "None"
-            | Some p -> Sexp.list [Sexp.atom "some"; pattern p]);
+            Sexp.list (map_empty ~f:pattern patterns);
           ]
-      | Ppat_variant (lbl, opt_pattern) ->
+      | Ppat_variant (lbl, patterns) ->
         Sexp.list
           [
             Sexp.atom "Ppat_variant";
             string lbl;
-            (match opt_pattern with
-            | None -> Sexp.atom "None"
-            | Some p -> Sexp.list [Sexp.atom "Some"; pattern p]);
+            Sexp.list (map_empty ~f:pattern patterns);
           ]
       | Ppat_record (rows, flag, rest) ->
         Sexp.list
@@ -935,7 +927,11 @@ module Sexp_ast = struct
           string label_loc.txt;
           attributes attrs;
           Sexp.atom (if truth then "true" else "false");
-          Sexp.list (map_empty ~f:core_type types);
+          Sexp.list
+            (map_empty
+               ~f:(fun {Location.txt = types} ->
+                 Sexp.list (map_empty ~f:core_type types))
+               types);
         ]
     | Rinherit typexpr -> Sexp.list [Sexp.atom "Rinherit"; core_type typexpr]
 

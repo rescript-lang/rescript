@@ -42,7 +42,7 @@ let drop_unit_arguments_in_apply (e : Parsetree.expression) :
   (* Drop only unlabelled unit arguments from an application expression. *)
   let is_unit_expr (e : Parsetree.expression) =
     match e.pexp_desc with
-    | Pexp_construct ({txt = Lident "()"}, None) -> true
+    | Pexp_construct ({txt = Lident "()"}, []) -> true
     | _ -> false
   in
   match e.pexp_desc with

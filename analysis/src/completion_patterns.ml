@@ -86,14 +86,14 @@ and traverse_pattern (pat : Parsetree.pattern) ~pattern_path ~loc_has_cursor
        lot. *)
     some_if_has_cursor ("", pattern_path) "Ppat_any"
   | Ppat_var {txt} -> some_if_has_cursor (txt, pattern_path) "Ppat_var"
-  | Ppat_construct ({txt = Lident "()"}, None) ->
+  | Ppat_construct ({txt = Lident "()"}, []) ->
     (* switch s { | (<com>) }*)
     some_if_has_cursor
       ("", pattern_path @ [Completable.NTupleItem {item_num = 0}])
       "Ppat_construct()"
-  | Ppat_construct ({txt = Lident prefix}, None) ->
+  | Ppat_construct ({txt = Lident prefix}, []) ->
     some_if_has_cursor (prefix, pattern_path) "Ppat_construct(Lident)"
-  | Ppat_variant (prefix, None) ->
+  | Ppat_variant (prefix, []) ->
     some_if_has_cursor ("#" ^ prefix, pattern_path) "Ppat_variant"
   | Ppat_array array_patterns ->
     let next_pattern_path = [Completable.NArray] @ pattern_path in
@@ -179,8 +179,7 @@ and traverse_pattern (pat : Parsetree.pattern) ~pattern_path ~loc_has_cursor
           "firstCharBeforeCursorNoWhite:,"
       | _ -> None))
   | Ppat_construct
-      ( {txt},
-        Some {ppat_loc; ppat_desc = Ppat_construct ({txt = Lident "()"}, _)} )
+      ({txt}, [{ppat_loc; ppat_desc = Ppat_construct ({txt = Lident "()"}, _)}])
     when loc_has_cursor ppat_loc ->
     (* Empty payload with cursor, like: Test(<com>) *)
     Some
@@ -190,21 +189,24 @@ and traverse_pattern (pat : Parsetree.pattern) ~pattern_path ~loc_has_cursor
             {constructor_name = Utils.get_unqualified_name txt; item_num = 0};
         ]
         @ pattern_path )
-  | Ppat_construct ({txt}, Some pat)
-    when pos_before_cursor >= (pat.ppat_loc |> Loc.end_)
+  | Ppat_construct ({txt}, patterns)
+    when patterns <> []
+         && pos_before_cursor >= ((Ext_list.last patterns).ppat_loc |> Loc.end_)
          && first_char_before_cursor_no_white = Some ','
-         && is_pattern_tuple pat = false ->
+         && is_pattern_tuple (Ext_list.last patterns) = false ->
     (* Empty payload with trailing ',', like: Test(true, <com>) *)
     Some
       ( "",
         [
           Completable.NVariantPayload
-            {constructor_name = Utils.get_unqualified_name txt; item_num = 1};
+            {
+              constructor_name = Utils.get_unqualified_name txt;
+              item_num = List.length patterns;
+            };
         ]
         @ pattern_path )
-  | Ppat_construct ({txt}, Some {ppat_loc; ppat_desc = Ppat_tuple tuple_items})
-    when loc_has_cursor ppat_loc ->
-    tuple_items
+  | Ppat_construct ({txt}, patterns) when loc_has_cursor pat.ppat_loc ->
+    patterns
     |> traverse_tuple_items ~loc_has_cursor ~first_char_before_cursor_no_white
          ~pos_before_cursor
          ~next_pattern_path:(fun item_num ->
@@ -222,39 +224,16 @@ and traverse_pattern (pat : Parsetree.pattern) ~pattern_path ~loc_has_cursor
                };
            ]
            @ pattern_path)
-  | Ppat_construct ({txt}, Some p) when loc_has_cursor pat.ppat_loc ->
-    p
-    |> traverse_pattern ~loc_has_cursor ~first_char_before_cursor_no_white
-         ~pos_before_cursor
-         ~pattern_path:
-           ([
-              Completable.NVariantPayload
-                {
-                  constructor_name = Utils.get_unqualified_name txt;
-                  item_num = 0;
-                };
-            ]
-           @ pattern_path)
   | Ppat_variant
-      (txt, Some {ppat_loc; ppat_desc = Ppat_construct ({txt = Lident "()"}, _)})
+      (txt, [{ppat_loc; ppat_desc = Ppat_construct ({txt = Lident "()"}, _)}])
     when loc_has_cursor ppat_loc ->
     (* Empty payload with cursor, like: #test(<com>) *)
     Some
       ( "",
         [Completable.NPolyvariantPayload {constructor_name = txt; item_num = 0}]
         @ pattern_path )
-  | Ppat_variant (txt, Some pat)
-    when pos_before_cursor >= (pat.ppat_loc |> Loc.end_)
-         && first_char_before_cursor_no_white = Some ','
-         && is_pattern_tuple pat = false ->
-    (* Empty payload with trailing ',', like: #test(true, <com>) *)
-    Some
-      ( "",
-        [Completable.NPolyvariantPayload {constructor_name = txt; item_num = 1}]
-        @ pattern_path )
-  | Ppat_variant (txt, Some {ppat_loc; ppat_desc = Ppat_tuple tuple_items})
-    when loc_has_cursor ppat_loc ->
-    tuple_items
+  | Ppat_variant (txt, patterns) when loc_has_cursor pat.ppat_loc ->
+    patterns
     |> traverse_tuple_items ~loc_has_cursor ~first_char_before_cursor_no_white
          ~pos_before_cursor
          ~next_pattern_path:(fun item_num ->
@@ -265,15 +244,5 @@ and traverse_pattern (pat : Parsetree.pattern) ~pattern_path ~loc_has_cursor
              Completable.NPolyvariantPayload
                {constructor_name = txt; item_num = item_num + 1};
            ]
-           @ pattern_path)
-  | Ppat_variant (txt, Some p) when loc_has_cursor pat.ppat_loc ->
-    p
-    |> traverse_pattern ~loc_has_cursor ~first_char_before_cursor_no_white
-         ~pos_before_cursor
-         ~pattern_path:
-           ([
-              Completable.NPolyvariantPayload
-                {constructor_name = txt; item_num = 0};
-            ]
            @ pattern_path)
   | _ -> None

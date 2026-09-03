@@ -97,8 +97,8 @@ module Pat : sig
   val constant : ?loc:loc -> ?attrs:attrs -> constant -> pattern
   val interval : ?loc:loc -> ?attrs:attrs -> constant -> constant -> pattern
   val tuple : ?loc:loc -> ?attrs:attrs -> pattern list -> pattern
-  val construct : ?loc:loc -> ?attrs:attrs -> lid -> pattern option -> pattern
-  val variant : ?loc:loc -> ?attrs:attrs -> label -> pattern option -> pattern
+  val construct : ?loc:loc -> ?attrs:attrs -> lid -> pattern list -> pattern
+  val variant : ?loc:loc -> ?attrs:attrs -> label -> pattern list -> pattern
   val record :
     ?loc:loc ->
     ?attrs:attrs ->
@@ -153,9 +153,9 @@ module Exp : sig
   val try_ : ?loc:loc -> ?attrs:attrs -> expression -> case list -> expression
   val tuple : ?loc:loc -> ?attrs:attrs -> expression list -> expression
   val construct :
-    ?loc:loc -> ?attrs:attrs -> lid -> expression option -> expression
+    ?loc:loc -> ?attrs:attrs -> lid -> expression list -> expression
   val variant :
-    ?loc:loc -> ?attrs:attrs -> label -> expression option -> expression
+    ?loc:loc -> ?attrs:attrs -> label -> expression list -> expression
   val record :
     ?loc:loc ->
     ?attrs:attrs ->

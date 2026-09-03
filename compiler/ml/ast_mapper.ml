@@ -75,9 +75,15 @@ module T = struct
   (* Type expressions for the core language *)
 
   let row_field sub = function
-    | Rtag (l, attrs, b, tl) ->
+    | Rtag (l, attrs, b, groups) ->
       Rtag
-        (map_loc sub l, sub.attributes sub attrs, b, List.map (sub.typ sub) tl)
+        ( map_loc sub l,
+          sub.attributes sub attrs,
+          b,
+          List.map
+            (fun {loc; txt} ->
+              {loc = sub.location sub loc; txt = List.map (sub.typ sub) txt})
+            groups )
     | Rinherit t -> Rinherit (sub.typ sub t)
 
   let object_field sub = function
@@ -311,9 +317,9 @@ module E = struct
     | Pexp_try (e, pel) -> try_ ~loc ~attrs (sub.expr sub e) (sub.cases sub pel)
     | Pexp_tuple el -> tuple ~loc ~attrs (List.map (sub.expr sub) el)
     | Pexp_construct (lid, arg) ->
-      construct ~loc ~attrs (map_loc sub lid) (map_opt (sub.expr sub) arg)
-    | Pexp_variant (lab, eo) ->
-      variant ~loc ~attrs lab (map_opt (sub.expr sub) eo)
+      construct ~loc ~attrs (map_loc sub lid) (List.map (sub.expr sub) arg)
+    | Pexp_variant (lab, args) ->
+      variant ~loc ~attrs lab (List.map (sub.expr sub) args)
     | Pexp_record (l, eo) ->
       record ~loc ~attrs
         (List.map
@@ -419,8 +425,9 @@ module P = struct
     | Ppat_interval (c1, c2) -> interval ~loc ~attrs c1 c2
     | Ppat_tuple pl -> tuple ~loc ~attrs (List.map (sub.pat sub) pl)
     | Ppat_construct (l, p) ->
-      construct ~loc ~attrs (map_loc sub l) (map_opt (sub.pat sub) p)
-    | Ppat_variant (l, p) -> variant ~loc ~attrs l (map_opt (sub.pat sub) p)
+      construct ~loc ~attrs (map_loc sub l) (List.map (sub.pat sub) p)
+    | Ppat_variant (l, args) ->
+      variant ~loc ~attrs l (List.map (sub.pat sub) args)
     | Ppat_record (lpl, cf, rest) ->
       record ~loc ~attrs
         ?rest:
@@ -597,14 +604,12 @@ module Ppx_context = struct
       (Const.string x)
 
   let make_bool x =
-    if x then Exp.construct (lid "true") None
-    else Exp.construct (lid "false") None
+    if x then Exp.construct (lid "true") [] else Exp.construct (lid "false") []
 
   let rec make_list f lst =
     match lst with
-    | x :: rest ->
-      Exp.construct (lid "::") (Some (Exp.tuple [f x; make_list f rest]))
-    | [] -> Exp.construct (lid "[]") None
+    | x :: rest -> Exp.construct (lid "::") [f x; make_list f rest]
+    | [] -> Exp.construct (lid "[]") []
 
   let make_pair f1 f2 (x1, x2) = Exp.tuple [f1 x1; f2 x2]
 
@@ -666,11 +671,9 @@ module Ppx_context = struct
             name
       and get_bool pexp =
         match pexp with
-        | {pexp_desc = Pexp_construct ({txt = Longident.Lident "true"}, None)}
-          ->
+        | {pexp_desc = Pexp_construct ({txt = Longident.Lident "true"}, [])} ->
           true
-        | {pexp_desc = Pexp_construct ({txt = Longident.Lident "false"}, None)}
-          ->
+        | {pexp_desc = Pexp_construct ({txt = Longident.Lident "false"}, [])} ->
           false
         | _ ->
           raise_errorf
@@ -679,13 +682,10 @@ module Ppx_context = struct
       and get_list elem = function
         | {
             pexp_desc =
-              Pexp_construct
-                ( {txt = Longident.Lident "::"},
-                  Some {pexp_desc = Pexp_tuple [exp; rest]} );
+              Pexp_construct ({txt = Longident.Lident "::"}, [exp; rest]);
           } ->
           elem exp :: get_list elem rest
-        | {pexp_desc = Pexp_construct ({txt = Longident.Lident "[]"}, None)} ->
-          []
+        | {pexp_desc = Pexp_construct ({txt = Longident.Lident "[]"}, [])} -> []
         | _ ->
           raise_errorf
             "Internal error: invalid [@@@ocaml.ppx.context { %s }] list syntax"

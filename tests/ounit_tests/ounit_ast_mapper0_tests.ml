@@ -292,7 +292,124 @@ let test_function_cases_desugar_to_fun_match _ =
 let map_expr_to0 e =
   Ast_mapper_to0.default_mapper.expr Ast_mapper_to0.default_mapper e
 
+let map_pat_to0 p =
+  Ast_mapper_to0.default_mapper.pat Ast_mapper_to0.default_mapper p
+
 let attr_names attrs = List.map (fun ({Location.txt}, _) -> txt) attrs
+
+let test_constructor_args_roundtrip_through_ast0 _ =
+  let int_expr value =
+    Ast_helper.Exp.constant ~loc (Parsetree.Pconst_integer (value, None))
+  in
+  let int_pat value =
+    Ast_helper.Pat.constant ~loc (Parsetree.Pconst_integer (value, None))
+  in
+  let lid = Location.mknoloc (Longident.Lident "Pair") in
+  let expr = Ast_helper.Exp.construct ~loc lid [int_expr "1"; int_expr "2"] in
+  let expr0 = map_expr_to0 expr in
+  (match expr0.pexp_desc with
+  | Parsetree0.Pexp_construct (_, Some {pexp_desc = Pexp_tuple [_; _]}) ->
+    OUnit.assert_bool "multiple arguments carry bridge metadata"
+      (has_attr "_res.constructor_args" expr0.pexp_attributes)
+  | _ -> assert_failure "Expected a tuple-encoded v0 constructor payload");
+  let expr = map_expr0 expr0 in
+  (match expr.pexp_desc with
+  | Parsetree.Pexp_construct (_, [_; _]) ->
+    OUnit.assert_bool "bridge metadata is removed"
+      (not (has_attr "_res.constructor_args" expr.pexp_attributes))
+  | _ -> assert_failure "Expected two constructor arguments after roundtrip");
+  let tuple_expr = Ast_helper.Exp.tuple ~loc [int_expr "1"; int_expr "2"] in
+  let expr = Ast_helper.Exp.construct ~loc lid [tuple_expr] in
+  let expr0 = map_expr_to0 expr in
+  OUnit.assert_bool "a single tuple argument does not carry bridge metadata"
+    (not (has_attr "_res.constructor_args" expr0.pexp_attributes));
+  (match (map_expr0 expr0).pexp_desc with
+  | Parsetree.Pexp_construct (_, [{pexp_desc = Pexp_tuple [_; _]}]) -> ()
+  | _ -> assert_failure "Expected one tuple argument after roundtrip");
+  let pat = Ast_helper.Pat.construct ~loc lid [int_pat "1"; int_pat "2"] in
+  let pat0 = map_pat_to0 pat in
+  (match pat0.ppat_desc with
+  | Parsetree0.Ppat_construct (_, Some {ppat_desc = Ppat_tuple [_; _]}) ->
+    OUnit.assert_bool "pattern arguments carry bridge metadata"
+      (has_attr "_res.constructor_args" pat0.ppat_attributes)
+  | _ -> assert_failure "Expected a tuple-encoded v0 constructor pattern");
+  match (map_pat0 pat0).ppat_desc with
+  | Parsetree.Ppat_construct (_, [_; _]) -> ()
+  | _ -> assert_failure "Expected two pattern arguments after roundtrip"
+
+let test_ast0_explicit_arity_becomes_constructor_args _ =
+  let arg value =
+    Ast_helper0.Exp.constant ~loc (Parsetree0.Pconst_integer (value, None))
+  in
+  let expr0 =
+    Ast_helper0.Exp.construct ~loc
+      ~attrs:[attr "ocaml.explicit_arity" (Parsetree0.PStr [])]
+      (Location.mknoloc (Longident.Lident "Pair"))
+      (Some (Ast_helper0.Exp.tuple ~loc [arg "1"; arg "2"]))
+  in
+  match (map_expr0 expr0).pexp_desc with
+  | Parsetree.Pexp_construct (_, [_; _]) -> ()
+  | _ -> assert_failure "Expected explicit-arity v0 payload to become arguments"
+
+let test_polyvariant_args_roundtrip_through_ast0 _ =
+  let int_expr value =
+    Ast_helper.Exp.constant ~loc (Parsetree.Pconst_integer (value, None))
+  in
+  let int_pat value =
+    Ast_helper.Pat.constant ~loc (Parsetree.Pconst_integer (value, None))
+  in
+  let expr = Ast_helper.Exp.variant ~loc "Pair" [int_expr "1"; int_expr "2"] in
+  let expr0 = map_expr_to0 expr in
+  (match expr0.pexp_desc with
+  | Parsetree0.Pexp_variant ("Pair", Some {pexp_desc = Pexp_tuple [_; _]}) ->
+    OUnit.assert_bool "polymorphic variant arguments carry bridge metadata"
+      (has_attr "_res.constructor_args" expr0.pexp_attributes)
+  | _ -> assert_failure "Expected tuple-encoded v0 polymorphic variant payload");
+  (match (map_expr0 expr0).pexp_desc with
+  | Parsetree.Pexp_variant ("Pair", [_; _]) -> ()
+  | _ -> assert_failure "Expected two polymorphic variant arguments");
+  let pat = Ast_helper.Pat.variant ~loc "Pair" [int_pat "1"; int_pat "2"] in
+  let pat0 = map_pat_to0 pat in
+  (match pat0.ppat_desc with
+  | Parsetree0.Ppat_variant ("Pair", Some {ppat_desc = Ppat_tuple [_; _]}) ->
+    OUnit.assert_bool "polymorphic variant pattern arguments carry metadata"
+      (has_attr "_res.constructor_args" pat0.ppat_attributes)
+  | _ -> assert_failure "Expected tuple-encoded v0 polymorphic variant pattern");
+  (match (map_pat0 pat0).ppat_desc with
+  | Parsetree.Ppat_variant ("Pair", [_; _]) -> ()
+  | _ -> assert_failure "Expected two polymorphic variant pattern arguments");
+  let int_type =
+    Ast_helper.Typ.constr ~loc (Location.mknoloc (Longident.Lident "int")) []
+  in
+  let typ =
+    Ast_helper.Typ.variant ~loc
+      [
+        Parsetree.Rtag
+          ( Location.mknoloc "Pair",
+            [],
+            false,
+            [Location.mkloc [int_type; int_type] loc] );
+      ]
+      Closed None
+  in
+  let typ0 =
+    Ast_mapper_to0.default_mapper.typ Ast_mapper_to0.default_mapper typ
+  in
+  (match typ0.ptyp_desc with
+  | Parsetree0.Ptyp_variant
+      ( [Rtag ({txt = "Pair"}, _, false, [{ptyp_desc = Ptyp_tuple [_; _]}])],
+        _,
+        _ ) ->
+    ()
+  | _ -> assert_failure "Expected tuple-encoded v0 polymorphic variant type");
+  let typ =
+    Ast_mapper_from0.default_mapper.typ Ast_mapper_from0.default_mapper typ0
+  in
+  match typ.ptyp_desc with
+  | Parsetree.Ptyp_variant
+      ([Rtag ({txt = "Pair"}, _, false, [{txt = [_; _]}])], _, _) ->
+    ()
+  | _ -> assert_failure "Expected two polymorphic variant type arguments"
 
 let assert_string_expr ~expected_source ~expected_semantic expr =
   match expr.Parsetree.pexp_desc with
@@ -808,6 +925,12 @@ let suites =
          >:: test_malformed_internal_record_rest_attr_fails;
          "record_rest_roundtrips_through_ast0"
          >:: test_record_rest_roundtrips_through_ast0;
+         "constructor_args_roundtrip_through_ast0"
+         >:: test_constructor_args_roundtrip_through_ast0;
+         "ast0_explicit_arity_becomes_constructor_args"
+         >:: test_ast0_explicit_arity_becomes_constructor_args;
+         "polyvariant_args_roundtrip_through_ast0"
+         >:: test_polyvariant_args_roundtrip_through_ast0;
          "value_constraint_roundtrips_through_ast0"
          >:: test_value_constraint_roundtrips_through_ast0;
          "function_cases_desugar_to_fun_match"

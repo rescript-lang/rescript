@@ -69,7 +69,7 @@ let rec find_editor_complete_from_attribute ?(module_paths = []) attributes =
       items
       |> List.filter_map (fun item ->
           match item.Parsetree.pexp_desc with
-          | Pexp_construct ({txt = path}, None) ->
+          | Pexp_construct ({txt = path}, []) ->
             Some (Utils.flatten_long_ident path)
           | _ -> None)
     in

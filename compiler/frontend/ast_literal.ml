@@ -65,7 +65,7 @@ end
 module No_loc = struct
   let loc = Location.none
 
-  let val_unit = Ast_helper.Exp.construct {txt = Lid.val_unit; loc} None
+  let val_unit = Ast_helper.Exp.construct {txt = Lid.val_unit; loc} []
 
   let type_unit =
     Ast_helper.Typ.mk (Ptyp_constr ({txt = Lid.type_unit; loc}, []))
@@ -86,7 +86,7 @@ module No_loc = struct
 
   let type_any = Ast_helper.Typ.any ()
 
-  let pat_unit = Pat.construct {txt = Lid.val_unit; loc} None
+  let pat_unit = Pat.construct {txt = Lid.val_unit; loc} []
 end
 
 type 'a lit = ?loc:Location.t -> unit -> 'a
@@ -100,7 +100,7 @@ type pattern_lit = Parsetree.pattern lit
 let val_unit ?loc () =
   match loc with
   | None -> No_loc.val_unit
-  | Some loc -> Ast_helper.Exp.construct {txt = Lid.val_unit; loc} None
+  | Some loc -> Ast_helper.Exp.construct {txt = Lid.val_unit; loc} []
 
 let type_unit ?loc () =
   match loc with
@@ -150,4 +150,4 @@ let type_any ?loc () =
 let pat_unit ?loc () =
   match loc with
   | None -> No_loc.pat_unit
-  | Some loc -> Pat.construct ~loc {txt = Lid.val_unit; loc} None
+  | Some loc -> Pat.construct ~loc {txt = Lid.val_unit; loc} []

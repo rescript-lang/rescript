@@ -400,21 +400,27 @@ let signature_help ~debug ~source ~kind_file ~pos
           in
           set_result
             (exp.pexp_loc, `FunctionCall (arg_at_cursor, exp, extracted_args))
-        | {pexp_desc = Pexp_construct (lid, Some payload_exp); pexp_loc}
-          when loc_has_cursor payload_exp.pexp_loc
-               || Completion_expressions.is_expr_hole payload_exp
-                  && loc_has_cursor pexp_loc ->
+        | {pexp_desc = Pexp_construct (lid, payload_exps); pexp_loc}
+          when List.exists
+                 (fun (payload_exp : Parsetree.expression) ->
+                   loc_has_cursor payload_exp.pexp_loc
+                   || Completion_expressions.is_expr_hole payload_exp
+                      && loc_has_cursor pexp_loc)
+                 payload_exps ->
           (* Constructor payloads *)
-          set_result (lid.loc, `ConstructorExpr (lid, payload_exp))
+          set_result (lid.loc, `ConstructorExpr (lid, payload_exps))
         | _ -> ());
         Ast_iterator.default_iterator.expr iterator expr
       in
       let pat (iterator : Ast_iterator.iterator) (pat : Parsetree.pattern) =
         (match pat with
-        | {ppat_desc = Ppat_construct (lid, Some payload_pat)}
-          when loc_has_cursor payload_pat.ppat_loc ->
+        | {ppat_desc = Ppat_construct (lid, payload_pats)}
+          when List.exists
+                 (fun (payload_pat : Parsetree.pattern) ->
+                   loc_has_cursor payload_pat.ppat_loc)
+                 payload_pats ->
           (* Constructor payloads *)
-          set_result (lid.loc, `ConstructorPat (lid, payload_pat))
+          set_result (lid.loc, `ConstructorPat (lid, payload_pats))
         | _ -> ());
         Ast_iterator.default_iterator.pat iterator pat
       in
@@ -623,7 +629,7 @@ let signature_help ~debug ~source ~kind_file ~pos
             in
             let active_parameter =
               match cs with
-              | `ConstructorExpr (_, {pexp_desc = Pexp_tuple items}) -> (
+              | `ConstructorExpr (_, items) when List.length items > 1 -> (
                 let idx = ref 0 in
                 let tuple_item_with_cursor =
                   items
@@ -636,7 +642,8 @@ let signature_help ~debug ~source ~kind_file ~pos
                 match tuple_item_with_cursor with
                 | None -> -1
                 | Some i -> i)
-              | `ConstructorExpr (_, {pexp_desc = Pexp_record (fields, _)}) -> (
+              | `ConstructorExpr (_, [{pexp_desc = Pexp_record (fields, _)}])
+                -> (
                 let field_name_with_cursor =
                   fields
                   |> List.find_map
@@ -664,9 +671,10 @@ let signature_help ~debug ~source ~kind_file ~pos
                       else ());
                   !field_index
                 | _ -> -1)
-              | `ConstructorExpr (_, expr) when loc_has_cursor expr.pexp_loc ->
+              | `ConstructorExpr (_, [expr]) when loc_has_cursor expr.pexp_loc
+                ->
                 0
-              | `ConstructorPat (_, {ppat_desc = Ppat_tuple items}) -> (
+              | `ConstructorPat (_, items) when List.length items > 1 -> (
                 let idx = ref 0 in
                 let tuple_item_with_cursor =
                   items
@@ -679,8 +687,8 @@ let signature_help ~debug ~source ~kind_file ~pos
                 match tuple_item_with_cursor with
                 | None -> -1
                 | Some i -> i)
-              | `ConstructorPat (_, {ppat_desc = Ppat_record (fields, _, _rest)})
-                -> (
+              | `ConstructorPat
+                  (_, [{ppat_desc = Ppat_record (fields, _, _rest)}]) -> (
                 let field_name_with_cursor =
                   fields
                   |> List.find_map
@@ -708,7 +716,7 @@ let signature_help ~debug ~source ~kind_file ~pos
                       else ());
                   !field_index
                 | _ -> -1)
-              | `ConstructorPat (_, pat) when loc_has_cursor pat.ppat_loc -> 0
+              | `ConstructorPat (_, [pat]) when loc_has_cursor pat.ppat_loc -> 0
               | _ -> -1
             in
 

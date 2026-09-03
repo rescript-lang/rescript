@@ -185,7 +185,8 @@ let iter_expression f e =
       expr e;
       List.iter case pel
     | Pexp_array el | Pexp_tuple el -> List.iter expr el
-    | Pexp_construct (_, eo) | Pexp_variant (_, eo) -> may expr eo
+    | Pexp_construct (_, el) -> List.iter expr el
+    | Pexp_variant (_, args) -> List.iter expr args
     | Pexp_record (iel, eo) ->
       may expr eo;
       List.iter (fun {x = e} -> expr e) iel
@@ -678,8 +679,8 @@ let build_ppat_or_for_variant_spread pat env expected_ty =
                    (Longident.Lident (Ident.name c.cd_id))
                    lident.loc,
                  match c.cd_args with
-                 | Cstr_tuple [] -> None
-                 | _ -> Some (Ast_helper.Pat.any ()) )))
+                 | Cstr_tuple [] -> []
+                 | _ -> [Ast_helper.Pat.any ()] )))
       |> List.rev
     in
     let pat =
@@ -1425,17 +1426,12 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
     if constr.cstr_generalized then unify_head_only loc !env expected_ty constr;
     let sargs =
       match sarg with
-      | None -> []
-      | Some {ppat_desc = Ppat_tuple spl}
-        when constr.cstr_arity > 1
-             || Builtin_attributes.explicit_arity sp.ppat_attributes ->
-        spl
-      | Some ({ppat_desc = Ppat_any} as sp) when constr.cstr_arity <> 1 ->
+      | [({ppat_desc = Ppat_any} as sp)] when constr.cstr_arity <> 1 ->
         if constr.cstr_arity = 0 then
           Location.prerr_warning sp.ppat_loc
             Warnings.Wildcard_arg_to_constant_constr;
         replicate_list sp constr.cstr_arity
-      | Some sp -> [sp]
+      | sargs -> sargs
     in
     (match sargs with
     | [({ppat_desc = Ppat_constant _} as sp)]
@@ -1487,8 +1483,14 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
             pat_attributes = sp.ppat_attributes;
             pat_env = !env;
           })
-  | Ppat_variant (l, sarg) -> (
+  | Ppat_variant (l, sargs) -> (
     check_polyvar_name !env loc l;
+    let sarg =
+      match sargs with
+      | [] -> None
+      | [sarg] -> Some sarg
+      | sargs -> Some (Ast_helper.Pat.tuple ~loc sargs)
+    in
     let arg_type =
       match sarg with
       | None -> []
@@ -1554,7 +1556,7 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
       if label_is_optional ld && (not exp_optional_attr) && not is_from_pamatch
       then
         let lid = mknoloc Longident.(Ldot (Lident "*predef*", "Some")) in
-        Ast_helper.Pat.construct ~loc:pat.ppat_loc lid (Some pat)
+        Ast_helper.Pat.construct ~loc:pat.ppat_loc lid [pat]
       else pat
     in
     let type_label_pat (label_lid, label, sarg, opt) k =
@@ -2172,7 +2174,8 @@ let iter_ppat f p =
   | Ppat_or (p1, p2) ->
     f p1;
     f p2
-  | Ppat_variant (_, arg) | Ppat_construct (_, arg) -> may f arg
+  | Ppat_construct (_, args) -> List.iter f args
+  | Ppat_variant (_, args) -> List.iter f args
   | Ppat_tuple lst -> List.iter f lst
   | Ppat_exception p
   | Ppat_alias (p, _)
@@ -2427,7 +2430,7 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
     let exp_optional_attr = check_optional_attr env ld opt e.pexp_loc in
     if label_is_optional ld && not exp_optional_attr then
       let lid = mknoloc Longident.(Ldot (Lident "*predef*", "Some")) in
-      let e = Ast_helper.Exp.construct ~loc:e.pexp_loc lid (Some e) in
+      let e = Ast_helper.Exp.construct ~loc:e.pexp_loc lid [e] in
       (id, ld, e, opt)
     else (id, ld, e, opt)
   in
@@ -2740,8 +2743,14 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
       }
   | Pexp_construct (lid, sarg) ->
     type_construct ~context env loc lid sarg ty_expected sexp.pexp_attributes
-  | Pexp_variant (l, sarg) -> (
+  | Pexp_variant (l, sargs) -> (
     check_polyvar_name env loc l;
+    let sarg =
+      match sargs with
+      | [] -> None
+      | [sarg] -> Some sarg
+      | sargs -> Some (Ast_helper.Exp.tuple ~loc sargs)
+    in
     (* Keep sharing *)
     let ty_expected0 = instance env ty_expected in
     try
@@ -3551,12 +3560,8 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
         payload ) -> (
     match payload with
     | PStr
-        [
-          {
-            pstr_desc =
-              Pstr_eval ({pexp_desc = Pexp_construct (lid, None); _}, _);
-          };
-        ] ->
+        [{pstr_desc = Pstr_eval ({pexp_desc = Pexp_construct (lid, []); _}, _)}]
+      ->
       let path =
         match (Typetexp.find_constructor env lid.loc lid.txt).cstr_kind with
         | Extension_constructor path -> path
@@ -3663,13 +3668,13 @@ and type_function ~async loc attrs env ty_expected_
               Exp.case
                 (Pat.construct ~loc:default_loc
                    (mknoloc Longident.(Ldot (Lident "*predef*", "Some")))
-                   (Some (Pat.var ~loc:default_loc (mknoloc "*sth*"))))
+                   [Pat.var ~loc:default_loc (mknoloc "*sth*")])
                 (Exp.ident ~loc:default_loc
                    (mknoloc (Longident.Lident "*sth*")));
               Exp.case
                 (Pat.construct ~loc:default_loc
                    (mknoloc Longident.(Ldot (Lident "*predef*", "None")))
-                   None)
+                   [])
                 default;
             ]
           in
@@ -4341,7 +4346,7 @@ and type_application ~context total_app env funct (sargs : sargs) :
       (* Leftover syntactic arguments *)
       (match !remaining with
       | [] -> ()
-      | [(Nolabel, {pexp_desc = Pexp_construct ({txt = Lident "()"}, None)})]
+      | [(Nolabel, {pexp_desc = Pexp_construct ({txt = Lident "()"}, [])})]
         when total_app && !omitted = [] && !rev_args <> []
              && List.length !rev_args = List.length !ignored ->
         (* foo() treated as empty application if all args are optional
@@ -4405,7 +4410,7 @@ and type_application ~context total_app env funct (sargs : sargs) :
              env,
              Apply_non_function (expand_head env funct.exp_type) )))
 
-and type_construct ~context env loc lid sarg ty_expected attrs =
+and type_construct ~context env loc lid sargs ty_expected attrs =
   let opath =
     try
       let p0, p, _ = extract_concrete_variant env ty_expected in
@@ -4421,14 +4426,6 @@ and type_construct ~context env loc lid sarg ty_expected attrs =
   Env.mark_constructor Env.Positive env (Longident.last lid.txt) constr;
   Builtin_attributes.check_deprecated loc constr.cstr_attributes
     constr.cstr_name;
-  let sargs =
-    match sarg with
-    | None -> []
-    | Some {pexp_desc = Pexp_tuple sel}
-      when constr.cstr_arity > 1 || Builtin_attributes.explicit_arity attrs ->
-      sel
-    | Some se -> [se]
-  in
   if List.length sargs <> constr.cstr_arity then
     raise
       (Error

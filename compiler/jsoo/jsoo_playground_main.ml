@@ -255,11 +255,7 @@ module Res_driver = struct
   open Res_driver
 
   (* adds ~src parameter *)
-  let setup ~src ~filename ~for_printer () =
-    let mode =
-      if for_printer then Res_parser.Default else ParseForTypeChecker
-    in
-    Res_parser.make ~mode src filename
+  let setup ~src ~filename ~for_printer:_ () = Res_parser.make src filename
 
   (* get full super error message *)
   let diagnostic_to_string ~(src : string) (d : Res_diagnostics.t) =

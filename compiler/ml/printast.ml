@@ -205,10 +205,10 @@ and pattern i ppf x =
     list i pattern ppf l
   | Ppat_construct (li, po) ->
     line i ppf "Ppat_construct %a\n" fmt_longident_loc li;
-    option i pattern ppf po
-  | Ppat_variant (l, po) ->
+    list i pattern ppf po
+  | Ppat_variant (l, args) ->
     line i ppf "Ppat_variant \"%s\"\n" l;
-    option i pattern ppf po
+    list i pattern ppf args
   | Ppat_record (l, c, rest) -> (
     line i ppf "Ppat_record %a\n" fmt_closed_flag c;
     list i longident_x_pattern ppf l;
@@ -296,10 +296,10 @@ and expression i ppf x =
     list i expression ppf l
   | Pexp_construct (li, eo) ->
     line i ppf "Pexp_construct %a\n" fmt_longident_loc li;
-    option i expression ppf eo
-  | Pexp_variant (l, eo) ->
+    list i expression ppf eo
+  | Pexp_variant (l, args) ->
     line i ppf "Pexp_variant \"%s\"\n" l;
-    option i expression ppf eo
+    list i expression ppf args
   | Pexp_record (l, eo) ->
     line i ppf "Pexp_record\n";
     list i longident_x_expression ppf l;
@@ -776,10 +776,12 @@ and label_x_expression i ppf (l, e) =
 
 and label_x_bool_x_core_type_list i ppf x =
   match x with
-  | Rtag (l, attrs, b, ctl) ->
+  | Rtag (l, attrs, b, groups) ->
     line i ppf "Rtag \"%s\" %s\n" l.txt (string_of_bool b);
     attributes (i + 1) ppf attrs;
-    list (i + 1) core_type ppf ctl
+    list (i + 1)
+      (fun i ppf {txt = types} -> list i core_type ppf types)
+      ppf groups
   | Rinherit ct ->
     line i ppf "Rinherit\n";
     core_type (i + 1) ppf ct

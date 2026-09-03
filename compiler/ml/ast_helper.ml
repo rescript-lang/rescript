@@ -119,8 +119,14 @@ module Typ = struct
       in
       {t with ptyp_desc = desc}
     and loop_row_field = function
-      | Rtag (label, attrs, flag, lst) ->
-        Rtag (label, attrs, flag, List.map loop lst)
+      | Rtag (label, attrs, flag, groups) ->
+        Rtag
+          ( label,
+            attrs,
+            flag,
+            List.map
+              (fun ({txt} as group) -> {group with txt = List.map loop txt})
+              groups )
       | Rinherit t -> Rinherit (loop t)
     and loop_object_field = function
       | Otag (label, attrs, t) -> Otag (label, attrs, loop t)
@@ -242,7 +248,7 @@ module Exp = struct
         | None ->
           let loc = {loc with Location.loc_ghost = true} in
           let nil = Location.mkloc (Longident.Lident "[]") loc in
-          construct ~loc nil None)
+          construct ~loc nil [])
       | e1 :: el ->
         let exp_el = handle_seq el in
         let loc =
@@ -253,8 +259,7 @@ module Exp = struct
               loc_ghost = false;
             }
         in
-        let arg = tuple ~loc [e1; exp_el] in
-        construct ~loc (Location.mkloc (Longident.Lident "::") loc) (Some arg)
+        construct ~loc (Location.mkloc (Longident.Lident "::") loc) [e1; exp_el]
     in
     let expr = handle_seq seq in
     {expr with pexp_loc = loc}

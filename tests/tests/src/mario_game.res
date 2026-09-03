@@ -1123,17 +1123,17 @@ module Object: {
       BigM
     }
     if !prev_jumping && player.jumping {
-      Some(pl_typ, Sprite.make(SPlayer(pl_typ, Jumping), player.dir, context))
+      Some((pl_typ, Sprite.make(SPlayer(pl_typ, Jumping), player.dir, context)))
     } else if (
       prev_dir != player.dir || (prev_vx == 0. && Math.abs(player.vel.x) > 0. && !player.jumping)
     ) {
-      Some(pl_typ, Sprite.make(SPlayer(pl_typ, Running), player.dir, context))
+      Some((pl_typ, Sprite.make(SPlayer(pl_typ, Running), player.dir, context)))
     } else if prev_dir != player.dir && (player.jumping && prev_jumping) {
-      Some(pl_typ, Sprite.make(SPlayer(pl_typ, Jumping), player.dir, context))
+      Some((pl_typ, Sprite.make(SPlayer(pl_typ, Jumping), player.dir, context)))
     } else if player.vel.y == 0. && player.crouch {
-      Some(pl_typ, Sprite.make(SPlayer(pl_typ, Crouching), player.dir, context))
+      Some((pl_typ, Sprite.make(SPlayer(pl_typ, Crouching), player.dir, context)))
     } else if player.vel.y == 0. && player.vel.x == 0. {
-      Some(pl_typ, Sprite.make(SPlayer(pl_typ, Standing), player.dir, context))
+      Some((pl_typ, Sprite.make(SPlayer(pl_typ, Standing), player.dir, context)))
     } else {
       None
     }
@@ -2020,7 +2020,7 @@ module Director: {
       o.crouch = false
       let player = switch Object.update_player(o, keys, state.ctx) {
       | None => p
-      | Some(new_typ, new_spr) =>
+      | Some((new_typ, new_spr)) =>
         Object.normalize_pos(o.pos, s.params, new_spr.params)
         Player(new_typ, new_spr, o)
       }

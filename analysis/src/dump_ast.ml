@@ -98,19 +98,19 @@ let rec print_pattern pattern ~pos ~indentation =
   | Ppat_var ({txt} as loc) ->
     "Ppat_var(" ^ (loc |> print_loc_denominator_loc ~pos) ^ txt ^ ")"
   | Ppat_constant const -> "Ppat_constant(" ^ print_constant const ^ ")"
-  | Ppat_construct (({txt} as loc), maybe_pat) ->
+  | Ppat_construct (({txt} as loc), patterns) ->
     "Ppat_construct("
     ^ (loc |> print_loc_denominator_loc ~pos)
     ^ (Utils.flatten_long_ident txt |> ident |> str)
-    ^ (match maybe_pat with
-      | None -> ""
-      | Some pat -> "," ^ print_pattern pat ~pos ~indentation)
+    ^ (patterns
+      |> List.map (fun pat -> "," ^ print_pattern pat ~pos ~indentation)
+      |> String.concat "")
     ^ ")"
-  | Ppat_variant (label, maybe_pat) ->
+  | Ppat_variant (label, patterns) ->
     "Ppat_variant(" ^ str label
-    ^ (match maybe_pat with
-      | None -> ""
-      | Some pat -> "," ^ print_pattern pat ~pos ~indentation)
+    ^ (patterns
+      |> List.map (fun pat -> "," ^ print_pattern pat ~pos ~indentation)
+      |> String.concat "")
     ^ ")"
   | Ppat_record (fields, _, rest) ->
     "Ppat_record(\n"
@@ -231,19 +231,19 @@ and print_expr_item expr ~pos ~indentation =
     ^ add_indentation indentation
     ^ ")"
   | Pexp_constant constant -> "Pexp_constant(" ^ print_constant constant ^ ")"
-  | Pexp_construct (({txt} as loc), maybe_expr) ->
+  | Pexp_construct (({txt} as loc), exprs) ->
     "Pexp_construct("
     ^ (loc |> print_loc_denominator_loc ~pos)
     ^ (Utils.flatten_long_ident txt |> ident |> str)
-    ^ (match maybe_expr with
-      | None -> ""
-      | Some expr -> ", " ^ print_expr_item expr ~pos ~indentation)
+    ^ (exprs
+      |> List.map (fun expr -> ", " ^ print_expr_item expr ~pos ~indentation)
+      |> String.concat "")
     ^ ")"
-  | Pexp_variant (label, maybe_expr) ->
+  | Pexp_variant (label, exprs) ->
     "Pexp_variant(" ^ str label
-    ^ (match maybe_expr with
-      | None -> ""
-      | Some expr -> "," ^ print_expr_item expr ~pos ~indentation)
+    ^ (exprs
+      |> List.map (fun expr -> "," ^ print_expr_item expr ~pos ~indentation)
+      |> String.concat "")
     ^ ")"
   | Pexp_fun {params = {p_lbl = arg; p_pat = pattern} :: _; body = next_expr} ->
     "Pexp_fun(\n"

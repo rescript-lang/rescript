@@ -47,7 +47,7 @@ let[@warning "-4"] rec classify_optional_field_state pat =
   | _ -> Field_normal
 
 let none_pattern =
-  mkpat (Ppat_construct (mknoloc (Longident.Lident "None"), None))
+  mkpat (Ppat_construct (mknoloc (Longident.Lident "None"), []))
 
 let[@warning "-4"] strip_synthetic_some pat =
   match pat.pat_desc with
@@ -71,16 +71,14 @@ let untype typed =
     | Tpat_tuple lst -> mkpat (Ppat_tuple (List.map loop lst))
     | Tpat_construct (cstr_lid, cstr, lst) ->
       let lid = {cstr_lid with txt = Longident.Lident cstr.cstr_name} in
-      let arg =
-        match List.map loop lst with
-        | [] -> None
-        | [p] -> Some p
-        | lst -> Some (mkpat (Ppat_tuple lst))
-      in
-      mkpat (Ppat_construct (lid, arg))
+      mkpat (Ppat_construct (lid, List.map loop lst))
     | Tpat_variant (label, p_opt, _row_desc) ->
-      let arg = Option.map loop p_opt in
-      mkpat (Ppat_variant (label, arg))
+      let args =
+        match p_opt with
+        | None -> []
+        | Some p -> [loop p]
+      in
+      mkpat (Ppat_variant (label, args))
     | Tpat_record (subpatterns, closed_flag, rest) ->
       let fields, saw_optional_rewrite =
         List.fold_right

@@ -55,16 +55,14 @@ module If_then_else = struct
       Ast_helper.Pat.mk ~loc:exp.pexp_loc ~attrs:exp.pexp_attributes ppat_desc
     in
     match exp.pexp_desc with
-    | Pexp_construct (lid, None) -> Some (mk_pat (Ppat_construct (lid, None)))
-    | Pexp_construct (lid, Some e1) -> (
-      match exp_to_pat e1 with
+    | Pexp_construct (lid, exprs) -> (
+      match list_to_pat ~item_to_pat:exp_to_pat exprs with
       | None -> None
-      | Some p1 -> Some (mk_pat (Ppat_construct (lid, Some p1))))
-    | Pexp_variant (label, None) -> Some (mk_pat (Ppat_variant (label, None)))
-    | Pexp_variant (label, Some e1) -> (
-      match exp_to_pat e1 with
+      | Some patterns -> Some (mk_pat (Ppat_construct (lid, patterns))))
+    | Pexp_variant (label, exprs) -> (
+      match list_to_pat ~item_to_pat:exp_to_pat exprs with
       | None -> None
-      | Some p1 -> Some (mk_pat (Ppat_variant (label, Some p1))))
+      | Some patterns -> Some (mk_pat (Ppat_variant (label, patterns))))
     | Pexp_constant c -> Some (mk_pat (Ppat_constant c))
     | Pexp_template {source_segments = [{txt = source}]; values = []} -> (
       match String_literal.decode_js_template_escapes source with
@@ -408,8 +406,8 @@ module Expand_catch_all_for_variants = struct
           ?(mode : [`option | `default] = `default) ?(constructor_names = [])
           (p : Parsetree.pattern) =
         match p.ppat_desc with
-        | Ppat_construct ({txt = Lident "Some"}, Some payload)
-          when mode = `option ->
+        | Ppat_construct ({txt = Lident "Some"}, [payload]) when mode = `option
+          ->
           find_all_constructor_names ~mode ~constructor_names payload
         | Ppat_construct ({txt}, _) -> Longident.last txt :: constructor_names
         | Ppat_variant (name, _) -> name :: constructor_names

@@ -80,9 +80,13 @@ module T = struct
   (* Type expressions for the core language *)
 
   let row_field sub = function
-    | Rtag (_, attrs, _, tl) ->
+    | Rtag (_, attrs, _, groups) ->
       sub.attributes sub attrs;
-      List.iter (sub.typ sub) tl
+      List.iter
+        (fun {loc; txt} ->
+          sub.location sub loc;
+          List.iter (sub.typ sub) txt)
+        groups
     | Rinherit t -> sub.typ sub t
 
   let object_field sub = function
@@ -313,8 +317,8 @@ module E = struct
     | Pexp_tuple el -> List.iter (sub.expr sub) el
     | Pexp_construct (lid, arg) ->
       iter_loc sub lid;
-      iter_opt (sub.expr sub) arg
-    | Pexp_variant (_lab, eo) -> iter_opt (sub.expr sub) eo
+      List.iter (sub.expr sub) arg
+    | Pexp_variant (_lab, args) -> List.iter (sub.expr sub) args
     | Pexp_record (l, eo) ->
       List.iter
         (fun {lid; x = exp} ->
@@ -425,8 +429,8 @@ module P = struct
     | Ppat_tuple pl -> List.iter (sub.pat sub) pl
     | Ppat_construct (l, p) ->
       iter_loc sub l;
-      iter_opt (sub.pat sub) p
-    | Ppat_variant (_l, p) -> iter_opt (sub.pat sub) p
+      List.iter (sub.pat sub) p
+    | Ppat_variant (_l, args) -> List.iter (sub.pat sub) args
     | Ppat_record (lpl, _cf, rest) ->
       List.iter
         (fun {lid; x = pat} ->
