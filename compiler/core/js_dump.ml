@@ -936,16 +936,16 @@ and expression_desc cxt ~(level : int) f x : cxt =
       else
         ( Js_op.Lit tag_name,
           (* TAG:xx for inline records *)
-          match tag.tag_type with
+          match tag.literal with
           | None -> E.str p.name
-          | Some t -> E.tag_type t )
+          | Some t -> E.literal_tag t )
         :: tails
     in
     expression_desc cxt ~level f (Object (None, objs))
   | Caml_block (el, _, Blk_constructor p) ->
     let not_is_cons = p.name <> Literals.cons in
     let {Variant_runtime.tag; tag_name; untagged} = p.runtime in
-    let tag_type = tag.tag_type in
+    let literal = tag.literal in
     let tag_name = Option.value tag_name ~default:L.tag in
     let objs =
       let tails =
@@ -964,9 +964,9 @@ and expression_desc cxt ~(level : int) f x : cxt =
       else
         ( Js_op.Lit tag_name,
           (* TAG:xx *)
-          match tag_type with
+          match literal with
           | None -> E.str p.name
-          | Some t -> E.tag_type t )
+          | Some t -> E.literal_tag t )
         :: tails
     in
     let exp =

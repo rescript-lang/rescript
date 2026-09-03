@@ -79,7 +79,7 @@ let block_type_to_user_visible_string = function
   Can be a literal (case with no payload), or a block (case with payload).
   In the case of block it can be tagged or untagged.
 *)
-let declared_tag_to_user_visible_string = function
+let literal_tag_to_user_visible_string = function
   | String _ -> "string"
   | Int _ -> "int"
   | Float _ -> "float"
@@ -88,10 +88,6 @@ let declared_tag_to_user_visible_string = function
   | Null -> "null"
   | Undefined -> "undefined"
 
-let tag_type_to_user_visible_string = function
-  | Literal d -> declared_tag_to_user_visible_string d
-  | Untagged block_type -> block_type_to_user_visible_string block_type
-
 let untagged = "unboxed"
 
 let block_type_can_be_undefined = function
@@ -99,13 +95,6 @@ let block_type_can_be_undefined = function
   | FunctionType | ObjectType ->
     false
   | UnknownType -> true
-
-let tag_can_be_undefined tag =
-  match tag.tag_type with
-  | None -> false
-  | Some (Literal Undefined) -> true
-  | Some (Literal _) -> false
-  | Some (Untagged block_type) -> block_type_can_be_undefined block_type
 
 let has_untagged (attrs : Parsetree.attributes) =
   Ext_list.exists attrs (function {txt}, _ -> txt = untagged)
@@ -218,11 +207,8 @@ let process_tag_name (attrs : Parsetree.attributes) =
       | _ -> ());
   !st
 
-let get_tag_name (cstr : Types.constructor_declaration) =
-  process_tag_name cstr.cd_attributes
-
 (* A constructor the compiler generates itself carries no annotations. *)
-let generated_tag ~name = {name; tag_type = None}
+let generated_tag ~name = {name; literal = None}
 
 let generated_block_runtime ~name =
   {tag = generated_tag ~name; tag_name = None; untagged = false}
@@ -292,20 +278,17 @@ let check_invariant ~is_untagged_def ~(consts : (Location.t * tag) list)
     then raise (Error (loc, InvalidUntaggedVariantDefinition AtMostOneBoolean));
     ()
   in
-  let check_literal ~is_const ~loc (literal : tag) =
-    match literal.tag_type with
-    | None -> add_string_literal ~is_const ~loc literal.name
-    | Some (Untagged _) -> ()
-    | Some (Literal d) -> (
-      match d with
-      | String s -> add_string_literal ~is_const ~loc s
-      | Int i -> add_nonstring_literal ~is_const ~loc (string_of_int i)
-      | Float f -> add_nonstring_literal ~is_const ~loc f
-      | BigInt i -> add_nonstring_literal ~is_const ~loc i
-      | Bool b ->
-        add_nonstring_literal ~is_const ~loc (if b then "true" else "false")
-      | Null -> add_nonstring_literal ~is_const ~loc "null"
-      | Undefined -> add_nonstring_literal ~is_const ~loc "undefined")
+  let check_literal ~is_const ~loc (tag : tag) =
+    match tag.literal with
+    | None -> add_string_literal ~is_const ~loc tag.name
+    | Some (String s) -> add_string_literal ~is_const ~loc s
+    | Some (Int i) -> add_nonstring_literal ~is_const ~loc (string_of_int i)
+    | Some (Float f) -> add_nonstring_literal ~is_const ~loc f
+    | Some (BigInt i) -> add_nonstring_literal ~is_const ~loc i
+    | Some (Bool b) ->
+      add_nonstring_literal ~is_const ~loc (if b then "true" else "false")
+    | Some Null -> add_nonstring_literal ~is_const ~loc "null"
+    | Some Undefined -> add_nonstring_literal ~is_const ~loc "undefined"
   in
 
   Ext_list.rev_iter consts (fun (loc, literal) ->
@@ -334,11 +317,7 @@ let check_invariant ~is_untagged_def ~(consts : (Location.t * tag) list)
         check_literal ~is_const:false ~loc block.runtime.tag)
 
 let get_cstr_loc_tag (cstr : Types.constructor_declaration) =
-  ( cstr.cd_loc,
-    {
-      name = Ident.name cstr.cd_id;
-      tag_type = Option.map (fun d -> Literal d) cstr.cd_runtime_tag;
-    } )
+  (cstr.cd_loc, {name = Ident.name cstr.cd_id; literal = cstr.cd_runtime_tag})
 
 let check_tag_field_conflicts (cstrs : Types.constructor_declaration list) =
   List.iter
@@ -407,13 +386,9 @@ module Dynamic_checks = struct
   let ( ||| ) x y = bin Or x y
   let ( &&& ) x y = bin And x y
 
-  let rec is_a_literal_case ~(literal_cases : tag_type list) ~block_cases
+  let rec is_a_literal_case ~(literal_cases : literal_tag list) ~block_cases
       ~list_literal_cases (e : _ t) =
-    let overlaps p =
-      Ext_list.exists literal_cases (function
-        | Literal d -> p d
-        | Untagged _ -> false)
-    in
+    let overlaps p = Ext_list.exists literal_cases p in
     let literals_overlaps_with_string () =
       overlaps (function
         | String _ -> true
@@ -439,7 +414,7 @@ module Dynamic_checks = struct
         | Null -> true
         | _ -> false)
     in
-    let is_literal_case (t : tag_type) : _ t = e == tag_type t in
+    let is_literal_case (t : literal_tag) : _ t = e == tag_type (Literal t) in
     let is_not_block_case (c : block_type) : _ t =
       match c with
       | StringType

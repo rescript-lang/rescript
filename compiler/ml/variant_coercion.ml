@@ -6,12 +6,12 @@ type variant_runtime_representation_issue =
   | Mismatched_as_payload of {
       constructor_name: string;
       expected_typename: Path.t;
-      as_payload: Variant_runtime.tag_type option;
+      as_payload: Variant_runtime.literal_tag option;
     }
   | As_payload_not_elgible_for_coercion of {
       constructor_name: string;
       expected_typename: Path.t;
-      as_payload: Variant_runtime.tag_type;
+      as_payload: Variant_runtime.literal_tag;
     }
   | Inline_record_cannot_be_coerced of {constructor_name: string}
   | Cannot_coerce_non_unboxed_with_payload of {
@@ -76,14 +76,11 @@ let variant_has_same_runtime_representation_as_target ~(target_path : Path.t)
          with no such type cannot be coerced at all. *)
       let coercion =
         match as_payload with
-        | None -> `Coerces_to Predef.path_string
-        | Some (Literal (String _)) -> `Coerces_to Predef.path_string
-        | Some (Literal (Int _)) -> `Coerces_to Predef.path_int
-        | Some (Literal (Float _)) -> `Coerces_to Predef.path_float
-        | Some (Literal (BigInt _)) -> `Coerces_to Predef.path_bigint
-        | Some ((Literal (Null | Undefined | Bool _) | Untagged _) as payload)
-          ->
-          `Not_eligible payload
+        | None | Some (String _) -> `Coerces_to Predef.path_string
+        | Some (Int _) -> `Coerces_to Predef.path_int
+        | Some (Float _) -> `Coerces_to Predef.path_float
+        | Some (BigInt _) -> `Coerces_to Predef.path_bigint
+        | Some ((Null | Undefined | Bool _) as payload) -> `Not_eligible payload
       in
       match coercion with
       | `Coerces_to path when Path.same target_path path -> None
@@ -254,7 +251,7 @@ let can_coerce_polyvariant_to_variant ~row_fields ~variant_constructors ~layout
         |> List.mapi (fun position (c : Types.constructor_declaration) ->
             let constructor_name = Ident.name c.cd_id in
             match Variant_runtime.constructor_tag layout position with
-            | Some (Literal (String as_runtime_string)) ->
+            | Some (String as_runtime_string) ->
               (* `@as("")`, does the configured string match the polyvariant value? *)
               as_runtime_string = polyvariant_value
             | Some _ ->

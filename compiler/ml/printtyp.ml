@@ -891,8 +891,8 @@ and tree_of_constructor ?printing_context ~layout ~position cd =
         | BigInt s -> Printf.sprintf "@as(%sn)" s
       in
       match Variant_runtime.constructor_tag layout position with
-      | Some (Literal d) -> Some (as_annotation d)
-      | Some (Untagged _) (* should never happen *) | None -> None
+      | Some d -> Some (as_annotation d)
+      | None -> None
   in
   let arg () = tree_of_constructor_arguments ?printing_context cd.cd_args in
   match cd.cd_res with
@@ -1556,7 +1556,7 @@ let print_variant_runtime_representation_issue ppf variant_name
        @{<info>@as@} payload that has a runtime representation of \
        @{<info>%s@}, which is not compatible with the expected @{<info>%s@}."
       constructor_name (Path.name variant_name)
-      (Ast_untagged_variants.tag_type_to_user_visible_string as_payload)
+      (Ast_untagged_variants.literal_tag_to_user_visible_string as_payload)
       (Path.name expected_typename)
   | Mismatched_unboxed_payload _ -> ()
   | Mismatched_as_payload {constructor_name; expected_typename; as_payload} ->
@@ -1571,7 +1571,7 @@ let print_variant_runtime_representation_issue ppf variant_name
       fprintf ppf
         "an @{<info>@as@} payload that gives it the runtime type of \
          @{<info>%s@}."
-        (Ast_untagged_variants.tag_type_to_user_visible_string payload));
+        (Ast_untagged_variants.literal_tag_to_user_visible_string payload));
     fprintf ppf
       "@ That runtime representation is not compatible with the expected \
        runtime representation of @{<info>%s@}."

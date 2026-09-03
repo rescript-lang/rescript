@@ -161,6 +161,7 @@ val extension_assign : t -> int32 -> string -> t -> t
 
 val assign : ?comment:string -> t -> t -> t
 
+val literal_tag : Variant_runtime.literal_tag -> t
 val tag_type : Variant_runtime.tag_type -> t
 
 val emit_check : t Ast_untagged_variants.Dynamic_checks.t -> t
@@ -183,7 +184,7 @@ val is_type_number : ?comment:string -> t -> t
 val is_int_tag : ?has_null_undefined_other:bool * bool * bool -> t -> t
 
 val is_a_literal_case :
-  literal_cases:Variant_runtime.tag_type list ->
+  literal_cases:Variant_runtime.literal_tag list ->
   block_cases:Variant_runtime.block_type list ->
   t ->
   t
