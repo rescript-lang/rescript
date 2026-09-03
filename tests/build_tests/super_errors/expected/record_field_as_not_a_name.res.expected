@@ -1,0 +1,13 @@
+
+  [1;31mWarning number 101[0m (configured as error) 
+  [36m/.../fixtures/record_field_as_not_a_name.res[0m:[2m3:11-13[0m
+
+  1 [2m│[0m /* An @as that does not name the field renames nothing. Nothing else rep
+    [2m│[0m orts
+  2 [2m│[0m  it, so it warns as the unused attribute it is. */
+  [1;31m3[0m [2m│[0m type t = {[1;31m@as[0m(42) a: int}
+  4 [2m│[0m 
+
+  Unused attribute: @as
+This attribute has no effect here.
+For example, some attributes are only meaningful in externals.

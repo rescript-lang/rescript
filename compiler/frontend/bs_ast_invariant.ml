@@ -94,10 +94,17 @@ let emit_external_warnings : iterator =
         | _ -> super.expr self a);
     label_declaration =
       (fun self lbl ->
-        Ext_list.iter lbl.pld_attributes (fun attr ->
-            match attr with
-            | {txt = "as"}, _ -> Used_attributes.mark_used_attribute attr
-            | _ -> ());
+        (* A field's [@as] is taken out of its attributes when it names the
+           field, so one still here is either a second one, which the type
+           checker rejects, or a payload that is not a name. The first is
+           reported already; the second is reported by nothing else, so let it
+           warn as the unused attribute it is. *)
+        Ext_list.iter lbl.pld_attributes
+          (fun (({txt}, payload) as attr : Parsetree.attribute) ->
+            if
+              txt = "as"
+              && Ast_payload.string_literal_of_payload payload <> None
+            then Used_attributes.mark_used_attribute attr);
         super.label_declaration self lbl);
     constructor_declaration =
       (fun self ({pcd_name = {txt; loc}} as ctr) ->
