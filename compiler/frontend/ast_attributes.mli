@@ -35,8 +35,9 @@ val has_await_payload : t -> bool
 
 type derive_attr = {bs_deriving: Ast_payload.action list option} [@@unboxed]
 
-val iter_process_bs_string_int_unwrap_uncurry :
-  t -> [`Nothing | `String | `Int | `Ignore | `Unwrap]
+val arg_encoding : t -> [`Nothing | `String | `Int | `Ignore | `Unwrap]
+(** How an external's argument is encoded, from the one of [@string], [@int],
+    [@ignore] and [@unwrap] it carries. *)
 
 val as_string : t -> string option
 

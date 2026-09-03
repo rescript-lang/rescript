@@ -105,8 +105,10 @@ let process_derive_type (attrs : t) : derive_attr * t =
         | Some _ -> Bs_syntaxerr.err loc Duplicated_bs_deriving)
       | _ -> (st, attr :: acc))
 
-(* duplicated attributes not allowed *)
-let iter_process_bs_string_int_unwrap_uncurry (attrs : t) =
+(* How an external's argument is encoded, from the one of [@string], [@int],
+   [@ignore] and [@unwrap] it carries. They are alternatives, so more than one
+   is a conflict. *)
+let arg_encoding (attrs : t) =
   let attr_name = function
     | `String -> "string"
     | `Int -> "int"

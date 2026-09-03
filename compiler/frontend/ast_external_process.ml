@@ -39,10 +39,7 @@ let variant_unwrap (row_fields : Parsetree.row_field list) : bool =
 let spec_of_ptyp (nolabel : bool) (ptyp : Parsetree.core_type) :
     External_arg_spec.attr =
   let ptyp_desc = ptyp.ptyp_desc in
-  match
-    Ast_attributes.iter_process_bs_string_int_unwrap_uncurry
-      ptyp.ptyp_attributes
-  with
+  match Ast_attributes.arg_encoding ptyp.ptyp_attributes with
   | `String -> (
     match ptyp_desc with
     | Ptyp_variant (row_fields, Closed, None) ->
