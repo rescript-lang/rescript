@@ -21,10 +21,13 @@ function shouldNotFail(objectMode, name) {
 
 let x = somescope.somefn({foo:true});
 
+let y = somescope.stringfn(`\x61\u0062`);
+
 export {
   mo,
   options,
   shouldNotFail,
   x,
+  y,
 }
 /* x Not a pure module */

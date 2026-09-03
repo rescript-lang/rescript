@@ -5,6 +5,8 @@
 @inline let f1 = `a`
 
 @inline let f2 = `中文`
+
+@inline let escapedValue = `\x61\n\uD83D\uDE00`
 /* Do we need fix 
   let f2 : string = blabla
 */

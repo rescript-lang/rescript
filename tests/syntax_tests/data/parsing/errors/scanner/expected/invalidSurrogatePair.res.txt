@@ -1,0 +1,53 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/scanner/invalidSurrogatePair.res:3:35-40
+
+  1 │ /* Known bug: this valid JavaScript surrogate pair is rejected as two in
+    │ valid
+  2 │    standalone surrogate escapes. */
+  3 │ let validPairCurrentlyRejected = "\uD83D\uDE00"
+  4 │ 
+  5 │ let malformed = "\uD83D\uZZZZ"
+
+  escape sequence is invalid unicode code point
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/scanner/invalidSurrogatePair.res:3:41-46
+
+  1 │ /* Known bug: this valid JavaScript surrogate pair is rejected as two in
+    │ valid
+  2 │    standalone surrogate escapes. */
+  3 │ let validPairCurrentlyRejected = "\uD83D\uDE00"
+  4 │ 
+  5 │ let malformed = "\uD83D\uZZZZ"
+
+  escape sequence is invalid unicode code point
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/scanner/invalidSurrogatePair.res:5:18-23
+
+  3 │ let validPairCurrentlyRejected = "\uD83D\uDE00"
+  4 │ 
+  5 │ let malformed = "\uD83D\uZZZZ"
+  6 │ let after = 1
+  7 │ 
+
+  escape sequence is invalid unicode code point
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/scanner/invalidSurrogatePair.res:5:24-25
+
+  3 │ let validPairCurrentlyRejected = "\uD83D\uDE00"
+  4 │ 
+  5 │ let malformed = "\uD83D\uZZZZ"
+  6 │ let after = 1
+  7 │ 
+
+  unknown escape sequence
+
+let validPairCurrentlyRejected = {js|\uD83D\uDE00|js}
+let malformed = {js|\uD83D\uZZZZ|js}
+let after = 1

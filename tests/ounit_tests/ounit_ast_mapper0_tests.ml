@@ -226,6 +226,27 @@ let test_fun_param_attrs_roundtrip_through_ast0 _ =
       (attr_names p_attrs)
   | _ -> assert_failure "Expected a function after ast0 roundtrip"
 
+let test_error_extension_encoded_strings _ =
+  let encoded_string value =
+    Ast_helper.Str.eval ~loc
+      (Ast_helper.Exp.constant ~loc
+         (Parsetree.Pconst_string (value, Some "js")))
+  in
+  let extension =
+    ( Location.mknoloc "error",
+      Parsetree.PStr
+        [
+          encoded_string {|plain\nmessage|};
+          encoded_string {|highlighted\nmessage|};
+        ] )
+  in
+  let error = Builtin_attributes.error_of_extension extension in
+  (* Known bug: these are encoded string bodies, but error extensions expose
+     their source spelling instead of their decoded semantic values. *)
+  OUnit.assert_equal ~printer:(Printf.sprintf "%S") {|plain\nmessage|} error.msg;
+  OUnit.assert_equal ~printer:(Printf.sprintf "%S") {|highlighted\nmessage|}
+    error.if_highlight
+
 let suites =
   __FILE__
   >::: [
@@ -243,4 +264,6 @@ let suites =
          >:: test_value_constraint_roundtrips_through_ast0;
          "function_cases_desugar_to_fun_match"
          >:: test_function_cases_desugar_to_fun_match;
+         "error_extensions_expose_encoded_strings"
+         >:: test_error_extension_encoded_strings;
        ]

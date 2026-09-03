@@ -18,3 +18,8 @@ let shouldNotFail: (~objectMode: _, ~name: string) => int = (~objectMode, ~name)
 external constantArgOnly: @as(json`{foo:true}`) _ => string = "somefn"
 
 let x = constantArgOnly()
+
+@scope("somescope")
+external semanticStringArg: @as(`\x61\u0062`) _ => string = "stringfn"
+
+let y = semanticStringArg()

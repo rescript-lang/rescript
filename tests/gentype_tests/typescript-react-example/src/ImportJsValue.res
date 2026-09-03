@@ -1,7 +1,7 @@
 @ocaml.doc("
   * Wrap JS values to be used from Reason
   ")
-@genType.import("./MyMath")
+@genType.import(`./MyM\x61th`)
 external /* This is the module to import from. */
 /* Name and type of the JS value to bind to. */
 round: float => float = "round"
@@ -56,6 +56,14 @@ type stringFunction
 @genType type color = [#tomato | #gray]
 
 @genType.import("./MyMath") external useColor: color => int = "useColor"
+
+@genType.import("./MyMath")
+external useEscapedInlineVariant: @string [@as("Illegal\"Name") #illegalName] => int =
+  "useEscapedInlineVariant"
+
+@genType.import("./MyMath")
+external useUtf8InlineVariant: @string [@as("café\npath\\name") #utf8] => int =
+  "useUtf8InlineVariant"
 
 @genType.import("./MyMath") external higherOrder: ((int, int) => int) => int = "higherOrder"
 

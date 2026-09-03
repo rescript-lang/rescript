@@ -5,7 +5,7 @@
 
 import * as EscapedNamesJS from './EscapedNames.res.js';
 
-export type variant = "Illegal\"Name";
+export type variant = "Illegal\"Name" | "café\npath\\name";
 
 export type UppercaseVariant = "Illegal\"Name";
 

@@ -1,5 +1,7 @@
 @genType
-type variant = | @as("Illegal\"Name") IllegalName
+type variant =
+  | @as("Illegal\"Name") IllegalName
+  | @as("café\npath\\name") Utf8
 
 @genType
 type \"UppercaseVariant" = | @as("Illegal\"Name") IllegalName
