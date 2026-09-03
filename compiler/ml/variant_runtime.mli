@@ -38,18 +38,10 @@ type block_type =
   | ObjectType
   | UnknownType
 
-(** A runtime tag written explicitly with [@as]. Unlike [tag_type], this can
-    never describe an inferred untagged payload shape. *)
-type declared_tag =
-  | Declared_string of string
-  | Declared_int of int
-  | Declared_float of string
-  | Declared_bigint of string
-  | Declared_bool of bool
-  | Declared_null
-  | Declared_undefined
-
-type tag_type =
+(** The literal value a constructor is represented by: what [@as] states, or
+    the constructor's own name when it states nothing. Unlike [tag_type], this
+    can never describe an inferred untagged payload shape. *)
+type literal_tag =
   | String of string
   | Int of int
   | Float of string
@@ -57,9 +49,8 @@ type tag_type =
   | Bool of bool
   | Null
   | Undefined
-  | Untagged of block_type
 
-val tag_type_of_declared : declared_tag -> tag_type
+type tag_type = Literal of literal_tag | Untagged of block_type
 
 type tag = {name: string; tag_type: tag_type option}
 type block_runtime = {tag: tag; tag_name: string option; untagged: bool}

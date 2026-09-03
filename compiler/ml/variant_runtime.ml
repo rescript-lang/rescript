@@ -67,16 +67,17 @@ type block_type =
   | ObjectType
   | UnknownType
 
-(* A runtime tag written explicitly with [@as]. Unlike [tag_type], this can
-   never describe an inferred untagged payload shape. *)
-type declared_tag =
-  | Declared_string of string
-  | Declared_int of int
-  | Declared_float of string
-  | Declared_bigint of string
-  | Declared_bool of bool
-  | Declared_null
-  | Declared_undefined
+(* The literal value a constructor is represented by: what [@as] states, or
+   the constructor's own name when it states nothing. Unlike [tag_type], this
+   can never describe an inferred untagged payload shape. *)
+type literal_tag =
+  | String of string
+  | Int of int
+  | Float of string
+  | BigInt of string
+  | Bool of bool
+  | Null
+  | Undefined
 
 (*
   Type of the runtime representation of a tag.
@@ -84,23 +85,8 @@ type declared_tag =
   In the case of block it can be tagged or untagged.
 *)
 type tag_type =
-  | String of string
-  | Int of int
-  | Float of string
-  | BigInt of string
-  | Bool of bool
-  | Null
-  | Undefined (* literal or tagged block *)
+  | Literal of literal_tag (* literal or tagged block *)
   | Untagged of block_type (* untagged block *)
-
-let tag_type_of_declared = function
-  | Declared_string s -> String s
-  | Declared_int i -> Int i
-  | Declared_float f -> Float f
-  | Declared_bigint i -> BigInt i
-  | Declared_bool b -> Bool b
-  | Declared_null -> Null
-  | Declared_undefined -> Undefined
 
 type tag = {name: string; tag_type: tag_type option}
 
@@ -207,14 +193,13 @@ let compute_matching_facts ~tag_name (constructors : constructor_case array) :
         let tag =
           match tag_type with
           | Some tag -> tag
-          | None -> String name
+          | None -> Literal (String name)
         in
         literal_tags := tag :: !literal_tags;
         match tag with
-        | Null -> has_null := true
-        | Undefined -> has_undefined := true
-        | String _ | Int _ | Float _ | BigInt _ | Bool _ | Untagged _ ->
-          has_other_literal := true)
+        | Literal Null -> has_null := true
+        | Literal Undefined -> has_undefined := true
+        | Literal _ | Untagged _ -> has_other_literal := true)
       | Block {block_type} -> (
         match block_type with
         | Some block_type -> block_types := block_type :: !block_types

@@ -881,14 +881,17 @@ and tree_of_constructor ?printing_context ~layout ~position cd =
   let repr =
     if not nullary then None
     else
+      let as_annotation = function
+        | Variant_runtime.Null -> "@as(null)"
+        | Undefined -> "@as(undefined)"
+        | String s -> Printf.sprintf "@as(%S)" s
+        | Int i -> Printf.sprintf "@as(%d)" i
+        | Float f -> Printf.sprintf "@as(%s)" f
+        | Bool b -> Printf.sprintf "@as(%b)" b
+        | BigInt s -> Printf.sprintf "@as(%sn)" s
+      in
       match Variant_runtime.constructor_tag layout position with
-      | Some Null -> Some "@as(null)"
-      | Some Undefined -> Some "@as(undefined)"
-      | Some (String s) -> Some (Printf.sprintf "@as(%S)" s)
-      | Some (Int i) -> Some (Printf.sprintf "@as(%d)" i)
-      | Some (Float f) -> Some (Printf.sprintf "@as(%s)" f)
-      | Some (Bool b) -> Some (Printf.sprintf "@as(%b)" b)
-      | Some (BigInt s) -> Some (Printf.sprintf "@as(%sn)" s)
+      | Some (Literal d) -> Some (as_annotation d)
       | Some (Untagged _) (* should never happen *) | None -> None
   in
   let arg () = tree_of_constructor_arguments ?printing_context cd.cd_args in

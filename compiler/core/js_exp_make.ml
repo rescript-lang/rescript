@@ -1389,7 +1389,8 @@ let rec float_equal ?comment (e0 : t) (e1 : t) : t =
 
 let int_equal = float_equal
 
-let tag_type = function
+(* The JS value a declared tag stands for. *)
+let literal_tag = function
   | Variant_runtime.String s -> str s
   | Int i -> small_int i
   | Float f -> float f
@@ -1399,18 +1400,23 @@ let tag_type = function
   | Bool b -> bool b
   | Null -> nil
   | Undefined -> undefined
-  | Untagged IntType -> str "number"
-  | Untagged FloatType -> str "number"
-  | Untagged BigintType -> str "bigint"
-  | Untagged BooleanType -> str "boolean"
-  | Untagged FunctionType -> str "function"
-  | Untagged StringType -> str "string"
-  | Untagged (InstanceType i) ->
-    js_global (Variant_runtime.Instance.to_string i)
-  | Untagged ObjectType -> str "object"
-  | Untagged UnknownType ->
+
+(* The [typeof] string an untagged payload answers to. *)
+let block_type_name = function
+  | Variant_runtime.IntType | FloatType -> str "number"
+  | BigintType -> str "bigint"
+  | BooleanType -> str "boolean"
+  | FunctionType -> str "function"
+  | StringType -> str "string"
+  | InstanceType i -> js_global (Variant_runtime.Instance.to_string i)
+  | ObjectType -> str "object"
+  | UnknownType ->
     (* TODO: this should not happen *)
     assert false
+
+let tag_type = function
+  | Variant_runtime.Literal d -> literal_tag d
+  | Untagged b -> block_type_name b
 
 let rec emit_check (check : t Ast_untagged_variants.Dynamic_checks.t) =
   match check with

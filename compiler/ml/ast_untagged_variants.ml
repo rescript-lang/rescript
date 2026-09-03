@@ -79,7 +79,7 @@ let block_type_to_user_visible_string = function
   Can be a literal (case with no payload), or a block (case with payload).
   In the case of block it can be tagged or untagged.
 *)
-let tag_type_to_user_visible_string = function
+let declared_tag_to_user_visible_string = function
   | String _ -> "string"
   | Int _ -> "int"
   | Float _ -> "float"
@@ -87,6 +87,9 @@ let tag_type_to_user_visible_string = function
   | Bool _ -> "bool"
   | Null -> "null"
   | Undefined -> "undefined"
+
+let tag_type_to_user_visible_string = function
+  | Literal d -> declared_tag_to_user_visible_string d
   | Untagged block_type -> block_type_to_user_visible_string block_type
 
 let untagged = "unboxed"
@@ -100,9 +103,9 @@ let block_type_can_be_undefined = function
 let tag_can_be_undefined tag =
   match tag.tag_type with
   | None -> false
-  | Some (String _ | Int _ | Float _ | BigInt _ | Bool _ | Null) -> false
+  | Some (Literal Undefined) -> true
+  | Some (Literal _) -> false
   | Some (Untagged block_type) -> block_type_can_be_undefined block_type
-  | Some Undefined -> true
 
 let has_untagged (attrs : Parsetree.attributes) =
   Ext_list.exists attrs (function {txt}, _ -> txt = untagged)
@@ -116,26 +119,25 @@ let process_untagged (attrs : Parsetree.attributes) =
   !st
 
 let runtime_tag_of_parsetree ~loc = function
-  | Parsetree.Pct_string s -> Declared_string (String_literal.string_semantic s)
+  | Parsetree.Pct_string s -> String (String_literal.string_semantic s)
   | Pct_int source -> (
     match int_of_string_opt source with
-    | Some i -> Declared_int i
+    | Some i -> Int i
     | None -> raise (Error (loc, VariantAsIntegerOutOfRange source)))
-  | Pct_float f -> Declared_float f
-  | Pct_bigint i -> Declared_bigint i
-  | Pct_bool b -> Declared_bool b
-  | Pct_null -> Declared_null
-  | Pct_undefined -> Declared_undefined
+  | Pct_float f -> Float f
+  | Pct_bigint i -> BigInt i
+  | Pct_bool b -> Bool b
+  | Pct_null -> Null
+  | Pct_undefined -> Undefined
 
 let parsetree_tag_of_runtime = function
-  | Declared_string s ->
-    Parsetree.Pct_string (String_literal.string_from_semantic s)
-  | Declared_int i -> Pct_int (string_of_int i)
-  | Declared_float f -> Pct_float f
-  | Declared_bigint i -> Pct_bigint i
-  | Declared_bool b -> Pct_bool b
-  | Declared_null -> Pct_null
-  | Declared_undefined -> Pct_undefined
+  | String s -> Parsetree.Pct_string (String_literal.string_from_semantic s)
+  | Int i -> Pct_int (string_of_int i)
+  | Float f -> Pct_float f
+  | BigInt i -> Pct_bigint i
+  | Bool b -> Pct_bool b
+  | Null -> Pct_null
+  | Undefined -> Pct_undefined
 
 (* An [@as] left in the attributes did not name the constructor: either its
    payload is not a tag, or an earlier [@as] already named it. *)
@@ -292,16 +294,18 @@ let check_invariant ~is_untagged_def ~(consts : (Location.t * tag) list)
   in
   let check_literal ~is_const ~loc (literal : tag) =
     match literal.tag_type with
-    | Some (String s) -> add_string_literal ~is_const ~loc s
-    | Some (Int i) -> add_nonstring_literal ~is_const ~loc (string_of_int i)
-    | Some (Float f) -> add_nonstring_literal ~is_const ~loc f
-    | Some (BigInt i) -> add_nonstring_literal ~is_const ~loc i
-    | Some Null -> add_nonstring_literal ~is_const ~loc "null"
-    | Some Undefined -> add_nonstring_literal ~is_const ~loc "undefined"
-    | Some (Bool b) ->
-      add_nonstring_literal ~is_const ~loc (if b then "true" else "false")
-    | Some (Untagged _) -> ()
     | None -> add_string_literal ~is_const ~loc literal.name
+    | Some (Untagged _) -> ()
+    | Some (Literal d) -> (
+      match d with
+      | String s -> add_string_literal ~is_const ~loc s
+      | Int i -> add_nonstring_literal ~is_const ~loc (string_of_int i)
+      | Float f -> add_nonstring_literal ~is_const ~loc f
+      | BigInt i -> add_nonstring_literal ~is_const ~loc i
+      | Bool b ->
+        add_nonstring_literal ~is_const ~loc (if b then "true" else "false")
+      | Null -> add_nonstring_literal ~is_const ~loc "null"
+      | Undefined -> add_nonstring_literal ~is_const ~loc "undefined")
   in
 
   Ext_list.rev_iter consts (fun (loc, literal) ->
@@ -333,7 +337,7 @@ let get_cstr_loc_tag (cstr : Types.constructor_declaration) =
   ( cstr.cd_loc,
     {
       name = Ident.name cstr.cd_id;
-      tag_type = Option.map tag_type_of_declared cstr.cd_runtime_tag;
+      tag_type = Option.map (fun d -> Literal d) cstr.cd_runtime_tag;
     } )
 
 let check_tag_field_conflicts (cstrs : Types.constructor_declaration list) =
@@ -383,11 +387,11 @@ module Dynamic_checks = struct
   let bin op x y = BinOp (op, x, y)
   let tag_type t = TagType t
   let typeof x = TypeOf x
-  let str s = String s |> tag_type
+  let str s = Literal (String s) |> tag_type
   let is_instance i x = IsInstanceOf (i, x)
   let not x = Not x
-  let nil = Null |> tag_type
-  let undefined = Undefined |> tag_type
+  let nil = Literal Null |> tag_type
+  let undefined = Literal Undefined |> tag_type
   let object_ = Untagged ObjectType |> tag_type
 
   let function_ = Untagged FunctionType |> tag_type
@@ -405,28 +409,33 @@ module Dynamic_checks = struct
 
   let rec is_a_literal_case ~(literal_cases : tag_type list) ~block_cases
       ~list_literal_cases (e : _ t) =
-    let literals_overlaps_with_string () =
+    let overlaps p =
       Ext_list.exists literal_cases (function
+        | Literal d -> p d
+        | Untagged _ -> false)
+    in
+    let literals_overlaps_with_string () =
+      overlaps (function
         | String _ -> true
         | _ -> false)
     in
     let literals_overlaps_with_number () =
-      Ext_list.exists literal_cases (function
+      overlaps (function
         | Int _ | Float _ -> true
         | _ -> false)
     in
     let literals_overlaps_with_bigint () =
-      Ext_list.exists literal_cases (function
+      overlaps (function
         | BigInt _ -> true
         | _ -> false)
     in
     let literals_overlaps_with_boolean () =
-      Ext_list.exists literal_cases (function
+      overlaps (function
         | Bool _ -> true
         | _ -> false)
     in
     let literals_overlaps_with_object () =
-      Ext_list.exists literal_cases (function
+      overlaps (function
         | Null -> true
         | _ -> false)
     in
@@ -539,5 +548,5 @@ module Dynamic_checks = struct
     | Untagged UnknownType ->
       (* This should not happen because unknown must be the only non-literal case *)
       assert false
-    | Bool _ | Float _ | Int _ | BigInt _ | String _ | Null | Undefined -> x
+    | Literal _ -> x
 end

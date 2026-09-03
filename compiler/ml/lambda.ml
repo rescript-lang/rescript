@@ -419,7 +419,7 @@ let const_constructor (tag : Variant_runtime.tag) =
   if tag.name = "()" then const_unit
   else
     match tag.tag_type with
-    | Some (Variant_runtime.Int v) -> Const_int (Int32.of_int v)
+    | Some (Variant_runtime.Literal (Int v)) -> Const_int (Int32.of_int v)
     | _ -> Const_constructor tag
 
 (* A constructor with an optional shape carries no payload when constant. *)
@@ -800,7 +800,7 @@ let switch lam (lam_switch : lambda_switch) : t =
           match key with
           | Switch_int ordinal when ordinal = i -> Some action
           | Switch_constructor
-              (Constant {tag_type = Some (Variant_runtime.Int value)})
+              (Constant {tag_type = Some (Variant_runtime.Literal (Int value))})
             when value = i ->
             Some action
           | Switch_int _ | Switch_constructor _ -> None)
@@ -1045,11 +1045,14 @@ let rec eval_const_as_bool (v : structured_constant) : bool option =
     (* Truthiness of the canonical runtime representation *)
     match tag_type with
     | None -> Some (name <> "[]") (* the name string; [] is the number 0 *)
-    | Some (String s) -> Some (s <> "")
-    | Some (Int i) -> Some (i <> 0)
-    | Some (Bool b) -> Some b
-    | Some Null | Some Undefined -> Some false
-    | Some (Float _ | BigInt _ | Untagged _) -> None)
+    | Some (Untagged _) -> None
+    | Some (Literal d) -> (
+      match d with
+      | String s -> Some (s <> "")
+      | Int i -> Some (i <> 0)
+      | Bool b -> Some b
+      | Null | Undefined -> Some false
+      | Float _ | BigInt _ -> None))
 
 let if_ (a : t) (b : t) (c : t) : t =
   match a with

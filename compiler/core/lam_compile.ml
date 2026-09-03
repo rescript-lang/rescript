@@ -700,7 +700,7 @@ let compile output_prefix =
         | Some {Variant_runtime.tag_type = Some t}, Some string_table ->
           Some ((t, lam) :: string_table)
         | Some {name; tag_type = None}, Some string_table ->
-          Some ((String name, lam) :: string_table)
+          Some ((Literal (String name), lam) :: string_table)
         | _, _ -> None)
       table (Some [])
   and compile_cases ?(untagged = false) ?(has_null_case = false) ~cxt
@@ -793,7 +793,9 @@ let compile output_prefix =
               && List.length sw_consts = 0
               && eq_default sw_num_default sw_blocks_default
             then
-              let has_null_case = List.mem Variant_runtime.Null literal_cases in
+              let has_null_case =
+                List.mem (Variant_runtime.Literal Null) literal_cases
+              in
               compile_cases ~untagged ~cxt
                 ~switch_exp:(if untagged then e else E.tag ~name:tag_name e)
                 ~block_cases ~has_null_case ~default:sw_blocks_default sw_blocks
@@ -935,7 +937,7 @@ let compile output_prefix =
         The [gen] can be elimiated when number of [cases] is less than 3
     *)
     let cases =
-      cases |> List.map (fun (s, l) -> (Variant_runtime.String s, l))
+      cases |> List.map (fun (s, l) -> (Variant_runtime.Literal (String s), l))
     in
     match
       compile_lambda {lambda_cxt with continuation = NeedValue Not_tail} l
