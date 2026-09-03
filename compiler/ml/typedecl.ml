@@ -487,6 +487,7 @@ let transl_declaration ~type_record_as_object env sdecl id =
       let constructors_from_variant_spreads = Hashtbl.create 10 in
       let make_cstr scstr =
         let name = Ident.create scstr.pcd_name.txt in
+        let runtime_tag = Ast_untagged_variants.process_constructor_tag scstr in
         let targs, tret_type, args, ret_type, _cstr_params =
           make_constructor env (Path.Pident id) params scstr.pcd_args
             scstr.pcd_res
@@ -523,6 +524,7 @@ let transl_declaration ~type_record_as_object env sdecl id =
                 {
                   cd_id = name;
                   cd_name = scstr.pcd_name;
+                  cd_runtime_tag = runtime_tag;
                   cd_args =
                     (match cstr.cd_args with
                     | Cstr_tuple args ->
@@ -577,6 +579,7 @@ let transl_declaration ~type_record_as_object env sdecl id =
                 {
                   cd_id = name;
                   cd_name = scstr.pcd_name;
+                  cd_runtime_tag = runtime_tag;
                   cd_args = targs;
                   cd_res = tret_type;
                   cd_loc = scstr.pcd_loc;
@@ -587,6 +590,7 @@ let transl_declaration ~type_record_as_object env sdecl id =
               let cstr =
                 {
                   Types.cd_id = name;
+                  cd_runtime_tag = runtime_tag;
                   cd_args = args;
                   cd_res = ret_type;
                   cd_loc = scstr.pcd_loc;

@@ -199,6 +199,7 @@ let decl_abstr_imm = {decl_abstr with type_immediate = true}
 let cstr id args =
   {
     cd_id = id;
+    cd_runtime_tag = None;
     cd_args = Cstr_tuple args;
     cd_res = None;
     cd_loc = Location.none;
@@ -345,6 +346,7 @@ let common_initial_env add_type add_extension empty_env =
           [
             {
               cd_id = ident_ctor_unknown;
+              cd_runtime_tag = None;
               cd_args = Cstr_tuple [tvar];
               cd_res = Some type_unknown;
               cd_loc = Location.none;

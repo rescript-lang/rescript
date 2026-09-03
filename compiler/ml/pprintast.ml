@@ -1336,7 +1336,10 @@ and type_declaration ctxt f x =
   let constructor_declaration f pcd =
     pp f "|@;";
     constructor_declaration ctxt f
-      (pcd.pcd_name.txt, pcd.pcd_args, pcd.pcd_res, pcd.pcd_attributes)
+      ( pcd.pcd_name.txt,
+        pcd.pcd_args,
+        pcd.pcd_res,
+        Ast_helper.Type.constructor_attributes pcd )
   in
   let repr f =
     let intro f = if x.ptype_manifest = None then () else pp f "@;=" in

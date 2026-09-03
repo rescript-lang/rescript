@@ -540,11 +540,24 @@ and label_declaration = {
 *)
 and constructor_declaration = {
   pcd_name: string loc;
+  pcd_runtime_tag: constructor_tag loc option;
+      (* The [@as(...)] runtime tag, taken out of the attributes when the
+         constructor is built. The literal retains the source information
+         needed to print the attribute back where it was written. *)
   pcd_args: constructor_arguments;
   pcd_res: core_type option;
   pcd_loc: Location.t;
   pcd_attributes: attributes; (* C of ... [@id1] [@id2] *)
 }
+
+and constructor_tag =
+  | Pct_string of String_literal.string_literal
+  | Pct_int of string
+  | Pct_float of string
+  | Pct_bigint of string
+  | Pct_bool of bool
+  | Pct_null
+  | Pct_undefined
 
 and constructor_arguments =
   | Pcstr_tuple of core_type list

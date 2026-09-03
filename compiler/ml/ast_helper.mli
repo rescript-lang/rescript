@@ -295,8 +295,14 @@ module Type : sig
     ?attrs:attrs ->
     ?args:constructor_arguments ->
     ?res:core_type ->
+    ?runtime_tag:constructor_tag ->
     str ->
     constructor_declaration
+  (** A valid first [@as] in [attrs] is taken out and becomes the runtime tag,
+      unless one is given explicitly. *)
+
+  val constructor_attributes : constructor_declaration -> attrs
+  (** The attributes as written, with the constructor [@as] put back. *)
 
   val field :
     ?loc:loc ->

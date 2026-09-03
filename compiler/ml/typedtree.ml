@@ -412,6 +412,7 @@ and label_declaration = {
 and constructor_declaration = {
   cd_id: Ident.t;
   cd_name: string loc;
+  cd_runtime_tag: Variant_runtime.declared_tag option;
   cd_args: constructor_arguments;
   cd_res: core_type option;
   cd_loc: Location.t;

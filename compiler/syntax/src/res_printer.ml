@@ -1768,8 +1768,9 @@ and print_constructor_declarations ~state ~private_flag
 
 and print_constructor_declaration2 ~state i
     (cd : Parsetree.constructor_declaration) cmt_tbl =
+  let all_attrs = Ast_helper.Type.constructor_attributes cd in
   let comment_attrs, attrs =
-    Parsetree_viewer.partition_doc_comment_attributes cd.pcd_attributes
+    Parsetree_viewer.partition_doc_comment_attributes all_attrs
   in
   let comment_doc =
     match comment_attrs with
@@ -1780,7 +1781,7 @@ and print_constructor_declaration2 ~state i
   let attrs = print_attributes ~state attrs cmt_tbl in
   let is_dot_dot_dot = cd.pcd_name.txt = "..." in
   let bar =
-    if i > 0 || cd.pcd_attributes <> [] || is_dot_dot_dot then Doc.text "| "
+    if i > 0 || all_attrs <> [] || is_dot_dot_dot then Doc.text "| "
     else Doc.if_breaks (Doc.text "| ") Doc.nil
   in
   let constr_name =

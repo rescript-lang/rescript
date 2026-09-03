@@ -160,6 +160,27 @@ let test_field_runtime_name_keeps_its_place_on_the_wire _ =
        (fun (({txt} : string Asttypes.loc), _) -> txt)
        field0.pld_attributes)
 
+let test_constructor_runtime_tag_reaches_ast0_as_an_attribute _ =
+  let as_attr =
+    attr "as"
+      (Parsetree.PStr
+         [
+           Ast_helper.Str.eval
+             (Ast_helper.Exp.constant (Pconst_integer ("7", None)));
+         ])
+  in
+  let constructor =
+    Ast_helper.Type.constructor ~loc ~attrs:[as_attr] (located_string "Seven")
+  in
+  OUnit.assert_bool "Expected the @as attribute to become the runtime tag"
+    (constructor.pcd_runtime_tag <> None);
+  let constructor0 =
+    Ast_mapper_to0.default_mapper.constructor_declaration
+      Ast_mapper_to0.default_mapper constructor
+  in
+  OUnit.assert_bool "Expected a plain @as attribute on the ast0 wire"
+    (has_attr "as" constructor0.pcd_attributes)
+
 let map_expr0 e =
   Ast_mapper_from0.default_mapper.expr Ast_mapper_from0.default_mapper e
 
@@ -799,4 +820,6 @@ let suites =
          >:: test_field_runtime_name_keeps_its_place_on_the_wire;
          "field_runtime_name_keeps_ppx_order_on_the_wire"
          >:: test_field_runtime_name_keeps_ppx_order_on_the_wire;
+         "constructor_runtime_tag_reaches_ast0_as_an_attribute"
+         >:: test_constructor_runtime_tag_reaches_ast0_as_an_attribute;
        ]

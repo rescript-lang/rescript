@@ -457,6 +457,7 @@ Untagged-variant validation errors. Source: [ast_untagged_variants.ml:52](../com
 | Variant | Status | Fixture | Notes |
 |---|---|---|---|
 | `InvalidVariantAsAnnotation` | ✓ | `UntaggedInvalidVariantAsAnnotation.res` | `@as(foo)` with a non-`null` / non-`undefined` identifier payload. |
+| `VariantAsIntegerOutOfRange` | ✓ | `VariantAsIntegerOutOfRange.res` | Integer literal in a constructor `@as` annotation exceeds the compiler's integer range. |
 | `Duplicated_bs_as` | ✓ | `UntaggedDuplicatedBsAs.res` | Two `@as("...")` attributes on the same constructor. |
 | `InvalidVariantTagAnnotation` | ✓ | `UntaggedInvalidVariantTagAnnotation.res` | `@tag(123)` (non-string payload). |
 | `InvalidUntaggedVariantDefinition` | ✓ | `UntaggedUnknown.res`, `UntaggedNonUnary*.res`, `UntaggedTupleAndArray.res`, `UntaggedImplIntf.res`, etc. | |

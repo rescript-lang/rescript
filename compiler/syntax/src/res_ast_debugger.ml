@@ -541,7 +541,7 @@ module Sexp_ast = struct
             | None -> Sexp.atom "None"
             | Some typ -> Sexp.list [Sexp.atom "Some"; core_type typ]);
           ];
-        attributes cd.pcd_attributes;
+        attributes (Ast_helper.Type.constructor_attributes cd);
       ]
 
   and constructor_arguments args =

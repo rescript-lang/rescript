@@ -924,12 +924,13 @@ let default_mapper =
         in
         Vb.mk pvb_pat pvb_expr ~loc ~attrs:(this.attributes this pvb_attributes));
     constructor_declaration =
-      (fun this {pcd_name; pcd_args; pcd_res; pcd_loc; pcd_attributes} ->
+      (fun this ({pcd_name; pcd_args; pcd_res; pcd_loc} as cd) ->
         Type.constructor (map_loc this pcd_name)
           ~args:(T.map_constructor_arguments this pcd_args)
           ?res:(map_opt (this.typ this) pcd_res)
           ~loc:(this.location this pcd_loc)
-          ~attrs:(this.attributes this pcd_attributes));
+          ~attrs:
+            (this.attributes this (Ast_helper.Type.constructor_attributes cd)));
     label_declaration =
       (fun this
         ({pld_name; pld_type; pld_loc; pld_mutable; pld_optional} as ld)

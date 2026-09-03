@@ -252,6 +252,7 @@ let constructor_arguments s = function
 let constructor_declaration s c =
   {
     cd_id = c.cd_id;
+    cd_runtime_tag = c.cd_runtime_tag;
     cd_args = constructor_arguments s c.cd_args;
     cd_res = may_map (typexp_rec s) c.cd_res;
     cd_loc = loc s c.cd_loc;

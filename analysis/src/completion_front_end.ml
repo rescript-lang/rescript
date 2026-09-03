@@ -1860,10 +1860,21 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
     Ast_iterator.default_iterator.label_declaration iterator ld
   in
 
+  let constructor_declaration (iterator : Ast_iterator.iterator)
+      (cd : Parsetree.constructor_declaration) =
+    (match cd.pcd_runtime_tag with
+    | Some {loc}
+      when (not loc.loc_ghost) && Loc.has_pos loc ~pos:pos_before_cursor ->
+      decorator_at ~id_txt:"as" loc
+    | _ -> ());
+    Ast_iterator.default_iterator.constructor_declaration iterator cd
+  in
+
   let iterator =
     {
       Ast_iterator.default_iterator with
       attribute;
+      constructor_declaration;
       expr;
       label_declaration;
       location;

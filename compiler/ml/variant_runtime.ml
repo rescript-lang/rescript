@@ -67,6 +67,17 @@ type block_type =
   | ObjectType
   | UnknownType
 
+(* A runtime tag written explicitly with [@as]. Unlike [tag_type], this can
+   never describe an inferred untagged payload shape. *)
+type declared_tag =
+  | Declared_string of string
+  | Declared_int of int
+  | Declared_float of string
+  | Declared_bigint of string
+  | Declared_bool of bool
+  | Declared_null
+  | Declared_undefined
+
 (*
   Type of the runtime representation of a tag.
   Can be a literal (case with no payload), or a block (case with payload).
@@ -81,6 +92,16 @@ type tag_type =
   | Null
   | Undefined (* literal or tagged block *)
   | Untagged of block_type (* untagged block *)
+
+let tag_type_of_declared = function
+  | Declared_string s -> String s
+  | Declared_int i -> Int i
+  | Declared_float f -> Float f
+  | Declared_bigint i -> BigInt i
+  | Declared_bool b -> Bool b
+  | Declared_null -> Null
+  | Declared_undefined -> Undefined
+
 type tag = {name: string; tag_type: tag_type option}
 
 type block_runtime = {tag: tag; tag_name: string option; untagged: bool}

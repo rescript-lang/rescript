@@ -86,6 +86,15 @@ let map_constructors ~(sdecl : Parsetree.type_declaration) ~all_constructors env
                     pcd_attributes =
                       mk_constructor_comes_from_spread_attr ()
                       :: cstr.cd_attributes;
+                    pcd_runtime_tag =
+                      Option.map
+                        (fun txt ->
+                          {
+                            Asttypes.txt =
+                              Ast_untagged_variants.parsetree_tag_of_runtime txt;
+                            loc = cstr.cd_loc;
+                          })
+                        cstr.cd_runtime_tag;
                     pcd_loc = cstr.cd_loc;
                     pcd_res = None;
                     (* It's important that we _don't_ fill in pcd_args here, since we have no way to produce
