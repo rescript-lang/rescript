@@ -13,8 +13,8 @@
 
 let lets_helper (count_var : Ident.t -> Lam_pass_count.used_info) lam : Lambda.t
     =
-  let subst : Lambda.t Hash_ident.t = Hash_ident.create 32 in
-  let string_table : string Hash_ident.t = Hash_ident.create 32 in
+  let subst : Lambda.t Hash_ident.t = Hash_ident.create 16 in
+  let string_table : string Hash_ident.t = Hash_ident.create 16 in
   let used v = (count_var v).times > 0 in
   let rec simplif (lam : Lambda.t) =
     match lam with

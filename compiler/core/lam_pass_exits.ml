@@ -205,8 +205,10 @@ let subst_helper (subst : subst_tbl) (query : int -> int) (lam : Lambda.t) :
   simplif lam
 
 let simplify_exits (lam : Lambda.t) =
-  let exits = Lam_exit_count.count_helper lam in
-  subst_helper (Hash_int.create 17) (Lam_exit_count.count_exit exits) lam
+  match Lam_exit_count.count_helper lam with
+  | None -> lam
+  | Some exits ->
+    subst_helper (Hash_int.create 17) (Lam_exit_count.count_exit exits) lam
 
 (* Compile-time beta-reduction of functions immediately applied:
       Lapply(Lfunction(Curried, params, body), args, loc) ->
