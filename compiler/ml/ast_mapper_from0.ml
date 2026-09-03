@@ -175,25 +175,20 @@ let has_explicit_arity_attr (attrs : Pt.attributes) =
       | _ -> false)
     attrs
 
-let remove_constructor_args_attr (attrs : Pt.attributes) =
+let remove_internal_marker_attr ~name (attrs : Pt.attributes) =
   let rec loop rev_attrs = function
-    | ({Location.txt; _}, Pt.PStr []) :: attrs
-      when txt = constructor_args_attr_name ->
+    | ({Location.txt}, Pt.PStr []) :: attrs when txt = name ->
       (true, List.rev_append rev_attrs attrs)
     | attr :: attrs -> loop (attr :: rev_attrs) attrs
     | [] -> (false, List.rev rev_attrs)
   in
   loop [] attrs
 
-let remove_constructor_tuple_arg_attr (attrs : Pt.attributes) =
-  let rec loop rev_attrs = function
-    | ({Location.txt; _}, Pt.PStr []) :: attrs
-      when txt = constructor_tuple_arg_attr_name ->
-      (true, List.rev_append rev_attrs attrs)
-    | attr :: attrs -> loop (attr :: rev_attrs) attrs
-    | [] -> (false, List.rev rev_attrs)
-  in
-  loop [] attrs
+let remove_constructor_args_attr attrs =
+  remove_internal_marker_attr ~name:constructor_args_attr_name attrs
+
+let remove_constructor_tuple_arg_attr attrs =
+  remove_internal_marker_attr ~name:constructor_tuple_arg_attr_name attrs
 
 let add_legacy_constructor_payload_attr attrs =
   (Location.mknoloc legacy_constructor_payload_attr_name, Pt.PStr []) :: attrs
