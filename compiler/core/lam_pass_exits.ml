@@ -200,49 +200,7 @@ let subst_helper (subst : subst_tbl) (query : int -> int) (lam : Lambda.t) :
         Ext_list.fold_right2 ys ls (Lambda_traverse.subst_lambda env handler)
           (fun y l r -> Lambda.let_ Strict y l r)
       | None -> Lambda.staticraise i ls)
-    | Lvar _ | Lconst _ -> lam
-    | Lapply {ap_func; ap_args; ap_info; ap_transformed_jsx} ->
-      Lambda.apply (simplif ap_func)
-        (Ext_list.map ap_args simplif)
-        ap_info ~ap_transformed_jsx
-    | Lfunction {params; body; attr; loc} ->
-      Lambda.function_ ~loc ~params ~body:(simplif body) ~attr
-    | Llet (kind, v, l1, l2) -> Lambda.let_ kind v (simplif l1) (simplif l2)
-    | Lletrec (bindings, body) ->
-      Lambda.letrec (Ext_list.map_snd bindings simplif) (simplif body)
-    | Lglobal_module _ -> lam
-    | Lprim {primitive; args; loc} ->
-      let args = Ext_list.map args simplif in
-      Lambda.prim ~primitive ~args loc
-    | Lswitch (l, sw) ->
-      let new_l = simplif l in
-      let new_consts = Ext_list.map_snd sw.sw_consts simplif in
-      let new_blocks = Ext_list.map_snd sw.sw_blocks simplif in
-      let new_fail = Ext_option.map sw.sw_failaction simplif in
-      Lambda.switch new_l
-        {
-          sw with
-          sw_consts = new_consts;
-          sw_blocks = new_blocks;
-          sw_failaction = new_fail;
-        }
-    | Lstringswitch (l, sw, d) ->
-      Lambda.stringswitch (simplif l)
-        (Ext_list.map_snd sw simplif)
-        (Ext_option.map d simplif)
-    | Ltrywith (l1, v, l2) -> Lambda.try_ (simplif l1) v (simplif l2)
-    | Lifthenelse (l1, l2, l3) ->
-      Lambda.if_ (simplif l1) (simplif l2) (simplif l3)
-    | Lsequence (l1, l2) -> Lambda.seq (simplif l1) (simplif l2)
-    | Lbreak -> Lambda.break
-    | Lcontinue -> Lambda.continue
-    | Lwhile (l1, l2) -> Lambda.while_ (simplif l1) (simplif l2)
-    | Lfor (v, l1, l2, dir, l3) ->
-      Lambda.for_ v (simplif l1) (simplif l2) dir (simplif l3)
-    | Lfor_of (v, l1, l2) -> Lambda.for_of v (simplif l1) (simplif l2)
-    | Lfor_await_of (v, l1, l2) ->
-      Lambda.for_await_of v (simplif l1) (simplif l2)
-    | Lassign (v, l) -> Lambda.assign v (simplif l)
+    | _ -> Lambda_traverse.shallow_map_sharing simplif lam
   in
   simplif lam
 
