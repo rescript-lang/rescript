@@ -520,33 +520,3 @@ module Bitwise: {
   without having to store or process it further.
 */
 external ignore: int => unit = "%ignore"
-
-module Ref: {
-  type t = ref<int>
-
-  /**
-  `increment(intRef)` increments the value of the provided reference by 1.
-
-  ## Examples
-
-  ```rescript
-  let myRef = ref(4)
-  Int.Ref.increment(myRef)
-  myRef.contents == 5
-  ```
-  */
-  external increment: ref<int> => unit = "%incr"
-
-  /**
-  `decrement(intRef)` decrements the value of the provided reference by 1.
-
-  ## Examples
-
-  ```rescript
-  let myRef = ref(4)
-  Int.Ref.decrement(myRef)
-  myRef.contents == 3
-  ```
-  */
-  external decrement: ref<int> => unit = "%decr"
-}

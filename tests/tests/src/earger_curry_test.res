@@ -96,11 +96,11 @@ let f = x =>
   /* let u = */ add5(
     x,
     {
-      Int.Ref.increment(v)
+      v.contents = v.contents + 1
       1
     },
     {
-      Int.Ref.increment(v)
+      v.contents = v.contents + 1
       2
     },
     ...
@@ -113,11 +113,11 @@ let g = x => {
     add5(
       x,
       {
-        Int.Ref.increment(v)
+        v.contents = v.contents + 1
         1
       },
       {
-        Int.Ref.increment(v)
+        v.contents = v.contents + 1
         2
       },
       a,

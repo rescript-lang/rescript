@@ -70,7 +70,7 @@ describe(__MODULE__, () => {
     let u = ref(3)
     let side_effect_config = config(
       ~kind={
-        Int.Ref.increment(u)
+        u.contents = u.contents + 1
         Int
       },
       ~hi=3,

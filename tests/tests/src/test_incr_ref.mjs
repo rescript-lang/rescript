@@ -7,13 +7,7 @@ u = u + 1 | 0;
 
 let v;
 
-function onExpression() {
-  let ref = mkRef();
-  ref.contents = ref.contents + 1 | 0;
-}
-
 export {
   v,
-  onExpression,
 }
 /* v Not a pure module */

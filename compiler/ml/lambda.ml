@@ -351,9 +351,6 @@ type builtin =
   | Primitive of primitive
   | Eliminated of eliminated
   | Constant of structured_constant
-  | Offset_ref of int
-      (** [%incr] / [%decr]: an assignment through the reference, expanded here
-          so the caller's own IR carries the form its escape analysis reads. *)
 
 type inline_attribute =
   | Always_inline (* [@inline] or [@inline always] *)
@@ -490,35 +487,6 @@ let lambda_false = Lconst Const_js_false
 
 (* [r := r.contents + delta]. The reference is mentioned twice, so bind it
    unless it is already a variable. *)
-let offset_ref ~delta r loc =
-  let assign r =
-    Lprim
-      {
-        primitive = Psetfield (0, ref_field_set_info);
-        args =
-          [
-            r;
-            Lprim
-              {
-                primitive = Paddint;
-                args =
-                  [
-                    Lprim
-                      {primitive = Pfield (0, ref_field_info); args = [r]; loc};
-                    Lconst (const_int delta);
-                  ];
-                loc;
-              };
-          ];
-        loc;
-      }
-  in
-  match r with
-  | Lvar _ -> assign r
-  | _ ->
-    let id = Ident.create "ref" in
-    Llet (Strict, id, r, assign (Lvar id))
-
 let eq_comparison (p : comparison) (p1 : comparison) = p = p1
 
 let eq_field_dbg_info (x : field_dbg_info) (y : field_dbg_info) = x = y
@@ -1268,10 +1236,6 @@ let mk_builtin b args loc =
   | Constant c -> (
     match args with
     | [] -> Lconst c
-    | _ -> assert false)
-  | Offset_ref delta -> (
-    match args with
-    | [r] -> offset_ref ~delta r loc
     | _ -> assert false)
   | Eliminated Identity -> (
     match args with

@@ -13,7 +13,7 @@ let gg = (x, y) => {
 
 let g1 = (x, y) => {
   let u = x + y
-  let () = Int.Ref.increment(h)
+  let () = h.contents = h.contents + 1
   (xx, yy) => xx + yy + u
 }
 let x = gg(3, 5)(6)

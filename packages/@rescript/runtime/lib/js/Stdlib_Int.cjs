@@ -75,8 +75,6 @@ let Bitwise = {
   lnot: lnot
 };
 
-let Ref = {};
-
 let Constants = {
   minValue: -2147483648,
   maxValue: 2147483647
@@ -88,5 +86,4 @@ exports.range = range;
 exports.rangeWithOptions = rangeWithOptions;
 exports.clamp = clamp;
 exports.Bitwise = Bitwise;
-exports.Ref = Ref;
 /* No side effect */

@@ -71,7 +71,7 @@ let resize = newSize => {
 let rec insert = (idl, idh, v, ind, bucket, newNode) =>
   if n_items.contents <= sz_1.contents {
     htab.contents->Array.setUnsafe(ind, list{newNode, ...bucket})
-    Int.Ref.increment(n_items)
+    n_items.contents = n_items.contents + 1
   } else {
     resize(sz_1.contents + sz_1.contents + 2)
     let ind = Int.bitwiseAnd(hashVal(idl, idh, v), sz_1.contents)
@@ -102,7 +102,7 @@ let mkNode = (low, v, high) => {
           low,
           v,
           {
-            Int.Ref.increment(nodeC)
+            nodeC.contents = nodeC.contents + 1
             nodeC.contents
           },
           high,
@@ -276,7 +276,7 @@ let test_hwb = (bdd, vars) => {
   let ntrue = ref(0)
   for i in 0 to Array.length(vars) - 1 {
     if vars->Array.getUnsafe(i) {
-      Int.Ref.increment(ntrue)
+      ntrue.contents = ntrue.contents + 1
     }
   }
   bool_equal(
