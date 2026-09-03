@@ -63,22 +63,17 @@ let mutable_flag_of_tag_info (tag : tag_info) =
 
 type label = Types.label_description
 
-let find_name (({txt}, payload) : Parsetree.attribute) =
-  if txt = "as" then Ast_payload.semantic_string_of_payload payload else None
-
 let blk_record (fields : (label * _ * _) array) mut =
   let all_labels_info =
     Ext_array.map fields (fun (lbl, _, _) ->
-        ( Ext_list.find_def lbl.lbl_attributes find_name lbl.lbl_name,
-          lbl.lbl_optional ))
+        (Record_runtime.label_name lbl, lbl.lbl_optional))
   in
   Blk_record {fields = all_labels_info; mutable_flag = mut}
 
 let blk_record_ext fields mutable_flag =
   let all_labels_info =
     Array.map
-      (fun ((lbl : label), _, _) ->
-        Ext_list.find_def lbl.Types.lbl_attributes find_name lbl.lbl_name)
+      (fun ((lbl : label), _, _) -> Record_runtime.label_name lbl)
       fields
   in
   Blk_record_ext {fields = all_labels_info; mutable_flag}
@@ -87,8 +82,7 @@ let blk_record_inlined fields name num_nonconst ~runtime mutable_flag =
   let fields =
     Array.map
       (fun ((lbl : label), _, _) ->
-        ( Ext_list.find_def lbl.lbl_attributes find_name lbl.lbl_name,
-          lbl.lbl_optional ))
+        (Record_runtime.label_name lbl, lbl.lbl_optional))
       fields
   in
   Blk_record_inlined {fields; name; num_nonconst; mutable_flag; runtime}
@@ -108,13 +102,10 @@ type field_dbg_info =
   | Fld_variant
   | Fld_cons
 
-let fld_record (lbl : label) =
-  Fld_record
-    {name = Ext_list.find_def lbl.lbl_attributes find_name lbl.lbl_name}
+let fld_record (lbl : label) = Fld_record {name = Record_runtime.label_name lbl}
 
 let fld_record_extension (lbl : label) =
-  Fld_record_extension
-    {name = Ext_list.find_def lbl.lbl_attributes find_name lbl.lbl_name}
+  Fld_record_extension {name = Record_runtime.label_name lbl}
 
 let ref_field_info : field_dbg_info = Fld_record {name = "contents"}
 
@@ -125,19 +116,16 @@ type set_field_dbg_info =
 
 let ref_field_set_info : set_field_dbg_info = Fld_record_set "contents"
 let fld_record_set (lbl : label) =
-  Fld_record_set (Ext_list.find_def lbl.lbl_attributes find_name lbl.lbl_name)
+  Fld_record_set (Record_runtime.label_name lbl)
 
 let fld_record_inline (lbl : label) =
-  Fld_record_inline
-    {name = Ext_list.find_def lbl.lbl_attributes find_name lbl.lbl_name}
+  Fld_record_inline {name = Record_runtime.label_name lbl}
 
 let fld_record_inline_set (lbl : label) =
-  Fld_record_inline_set
-    (Ext_list.find_def lbl.lbl_attributes find_name lbl.lbl_name)
+  Fld_record_inline_set (Record_runtime.label_name lbl)
 
 let fld_record_extension_set (lbl : label) =
-  Fld_record_extension_set
-    (Ext_list.find_def lbl.lbl_attributes find_name lbl.lbl_name)
+  Fld_record_extension_set (Record_runtime.label_name lbl)
 
 type immediate_or_pointer = Immediate | Pointer
 

@@ -52,8 +52,6 @@ type tag_info =
     *)
   | Blk_record_ext of {fields: string array; mutable_flag: mutable_flag}
 
-val find_name : Parsetree.attribute -> Asttypes.label option
-
 val tag_label_of_tag_info : tag_info -> string
 val mutable_flag_of_tag_info : tag_info -> mutable_flag
 val blk_record :

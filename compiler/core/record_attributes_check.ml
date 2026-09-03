@@ -24,7 +24,7 @@
 
 type label = Types.label_description
 
-let find_name = Lambda.find_name
+let find_name = Record_runtime.as_name
 
 let find_name_with_loc (({txt; loc}, payload) : Parsetree.attribute) :
     string Asttypes.loc option =
