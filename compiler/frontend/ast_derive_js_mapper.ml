@@ -118,7 +118,7 @@ let build_map (row_fields : Parsetree.row_field list) =
         (match tag with
         | Rtag ({txt}, attrs, _, []) ->
           let name : string =
-            match Ast_attributes.iter_process_bs_string_as attrs with
+            match Ast_attributes.as_string attrs with
             | Some name ->
               has_bs_as := true;
               name
