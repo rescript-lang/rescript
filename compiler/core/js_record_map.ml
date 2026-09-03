@@ -161,7 +161,7 @@ let expression_desc : expression_desc fn =
     Fun {fun_ with params; body}
   | Str _ as v -> v
   | Template_literal _ as v -> v
-  | Json_literal _ as v -> v
+  | Fixed_literal _ as v -> v
   | Raw_js_code _ as v -> v
   | Array _x0 ->
     let _x0 = list _self.expression _self _x0 in

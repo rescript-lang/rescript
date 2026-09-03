@@ -1,5 +1,5 @@
 type t
-@set external clearNodeValue: (t, @as(json`null`) _) => unit = "nodeValue"
+@set external clearNodeValue: (t, %raw("null")) => unit = "nodeValue"
 
 /* TODO: more test cases */
 /* external clearNodeValue2 : */

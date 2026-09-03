@@ -66,7 +66,6 @@ let fmt_constant f x =
     fprintf f "PConst_string (source=%S, semantic=%S)"
       (String_literal.string_source payload)
       (String_literal.string_semantic payload)
-  | Pconst_json source -> fprintf f "PConst_json %S" source
   | Pconst_raw_source source -> fprintf f "PConst_raw_source %S" source
   | Pconst_float (s, m) -> fprintf f "PConst_float (%s,%a)" s fmt_char_option m
 
@@ -139,10 +138,15 @@ let rec core_type i ppf x =
     line i ppf "Ptyp_arrow\n";
     line i ppf "arity = %d\n" (List.length params);
     List.iter
-      (fun (arg : Parsetree.arg) ->
-        arg_label_loc i ppf arg.lbl;
-        attributes i ppf arg.attrs;
-        core_type i ppf arg.typ)
+      (function
+        | Parsetree.Parg_type {attrs; lbl; typ} ->
+          arg_label_loc i ppf lbl;
+          attributes i ppf attrs;
+          core_type i ppf typ
+        | Parsetree.Parg_fixed {attrs; lbl; value} ->
+          line i ppf "Parg_fixed %S\n" value.txt;
+          arg_label_loc i ppf lbl;
+          attributes i ppf attrs)
       params;
     core_type i ppf ret
   | Ptyp_tuple l ->

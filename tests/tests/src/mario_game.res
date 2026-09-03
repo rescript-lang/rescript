@@ -160,7 +160,7 @@ module Dom_html = {
   @val external window: Dom.window = "window"
 
   /* external createImg: (_ [@as "img"]) -> document -> imageElement = "createElement" [@@send] */
-  @send external createImg: (Dom.document, @as("img") _) => imageElement = "createElement"
+  @send external createImg: (Dom.document, %raw(`"img"`)) => imageElement = "createElement"
   @val external requestAnimationFrame: (float => unit) => unit = "requestAnimationFrame"
   @return(null_to_opt) @send
   external getElementById: (Dom.document, string) => option<Dom.element> = "getElementById"

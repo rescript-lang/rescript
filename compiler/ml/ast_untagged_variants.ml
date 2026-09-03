@@ -197,7 +197,6 @@ let process_tag_name (attrs : Parsetree.attributes) =
       match txt with
       | "tag" ->
         if !st = None then (
-          Ast_payload.reject_json_literal_payload payload;
           (match Ast_payload.semantic_string_of_payload payload with
           | None -> ()
           | Some s -> st := Some s);

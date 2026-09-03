@@ -100,7 +100,11 @@ let rec add_type bv ty =
   | Ptyp_any -> ()
   | Ptyp_var _ -> ()
   | Ptyp_arrow {params; ret} ->
-    List.iter (fun arg -> add_type bv arg.typ) params;
+    List.iter
+      (function
+        | Parg_type {typ} -> add_type bv typ
+        | Parg_fixed _ -> ())
+      params;
     add_type bv ret
   | Ptyp_tuple tl -> List.iter (add_type bv) tl
   | Ptyp_constr (c, tl) ->

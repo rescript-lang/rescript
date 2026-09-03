@@ -140,7 +140,6 @@ module Sexp_ast = struct
             string (String_literal.string_source payload);
             string (String_literal.string_semantic payload);
           ]
-      | Pconst_json source -> Sexp.list [Sexp.atom "Pconst_json"; string source]
       | Pconst_raw_source source ->
         Sexp.list [Sexp.atom "Pconst_raw_source"; string source]
       | Pconst_float (txt, tag) ->
@@ -963,8 +962,16 @@ module Sexp_ast = struct
             Sexp.atom "Ptyp_arrow";
             Sexp.list
               (map_empty
-                 ~f:(fun (p : Parsetree.arg) ->
-                   Sexp.list [arg_label_loc p.lbl; core_type p.typ])
+                 ~f:(function
+                   | Parsetree.Parg_type {lbl; typ} ->
+                     Sexp.list [arg_label_loc lbl; core_type typ]
+                   | Parsetree.Parg_fixed {lbl; value} ->
+                     Sexp.list
+                       [
+                         Sexp.atom "Parg_fixed";
+                         arg_label_loc lbl;
+                         string value.txt;
+                       ])
                  params);
             core_type ret;
           ]

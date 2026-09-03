@@ -931,7 +931,7 @@ let rec collect_prop_types types {ptyp_desc} =
     in
     let rec go types = function
       | [] -> if ret_is_arrow then collect_prop_types types ret else types
-      | ({lbl; attrs; typ} : Parsetree.arg) :: rest
+      | Parsetree.Parg_type {lbl; attrs; typ} :: rest
         when is_labelled lbl || is_optional lbl ->
         let loc =
           match (rest, ret_is_arrow) with
@@ -939,7 +939,8 @@ let rec collect_prop_types types {ptyp_desc} =
           | _ -> typ.ptyp_loc
         in
         go ((lbl, attrs, loc, typ) :: types) rest
-      | _ :: rest -> go types rest
+      | (Parsetree.Parg_type _ | Parsetree.Parg_fixed _) :: rest ->
+        go types rest
     in
     go types params
   | _ -> types

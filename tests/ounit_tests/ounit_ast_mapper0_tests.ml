@@ -318,12 +318,20 @@ let test_string_literals_roundtrip_through_ast0 _ =
       (String_literal.string_semantic payload)
   | _ -> assert_failure "Expected a string pattern after ast0 roundtrip");
   let json_expr =
-    Ast_helper.Exp.constant ~loc (Parsetree.Pconst_json {|{"answer":42}|})
+    Ast_helper.Exp.tagged_template ~loc
+      (Ast_helper.Exp.ident ~loc (Location.mkloc (Longident.Lident "json") loc))
+      [located_string {|{"answer":42}|}]
+      []
   in
   (match (map_expr0 (map_expr_to0 json_expr)).pexp_desc with
-  | Pexp_constant (Pconst_json actual) ->
+  | Pexp_tagged_template
+      {
+        tag = {pexp_desc = Pexp_ident {txt = Lident "json"}};
+        raw_sources = [{txt = actual}];
+        values = [];
+      } ->
     OUnit.assert_equal ~printer:(Printf.sprintf "%S") {|{"answer":42}|} actual
-  | _ -> assert_failure "Expected a JSON literal");
+  | _ -> assert_failure "Expected a legacy json tagged template");
   let char_pattern =
     Ast_helper.Pat.constant ~loc
       (Parsetree.Pconst_char {source = {|\u{61}|}; semantic = 0x61})

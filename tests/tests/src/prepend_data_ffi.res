@@ -1,30 +1,30 @@
 type config1_expect = {"v": int}
-@obj external config1: (~stdio: @as("inherit") _, ~v: int, unit) => _ = ""
+@obj external config1: (~stdio: %raw(`"inherit"`), ~v: int, unit) => _ = ""
 
 let v1: config1_expect = config1(~v=3, ())
 
 type config2_expect = {"v": int}
 
-@obj external config2: (~stdio: @as(1) _, ~v: int, unit) => _ = ""
+@obj external config2: (~stdio: %raw("1"), ~v: int, unit) => _ = ""
 let v2: config2_expect = config2(~v=2, ())
 
-@val external on_exit: (@as("exit") _, int => string) => unit = "process.on"
+@val external on_exit: (%raw(`"exit"`), int => string) => unit = "process.on"
 
 let () = on_exit(exit_code => Int.toString(exit_code))
 
-@val external on_exit_int: (@as(1) _, int => unit) => unit = "process.on"
+@val external on_exit_int: (%raw("1"), int => unit) => unit = "process.on"
 
 let () = on_exit_int(_ => ())
 
-@val external on_exit3: (int => string, @as("exit") _) => unit = "process.on"
+@val external on_exit3: (int => string, %raw(`"exit"`)) => unit = "process.on"
 
 let () = on_exit3(i => Int.toString(i))
 
-@val external on_exit4: (int => string, @as(1) _) => unit = "process.on"
+@val external on_exit4: (int => string, %raw("1")) => unit = "process.on"
 
 let () = on_exit4(i => Int.toString(i))
 
-@val @variadic external on_exit_slice: (int, @as(3) _, @as("xxx") _, array<string>) => unit = "xx"
+@val @variadic external on_exit_slice: (int, %raw("3"), %raw(`"xxx"`), array<string>) => unit = "xx"
 
 let () = on_exit_slice(3, ["a", "b"])
 
@@ -32,16 +32,17 @@ type t
 
 @send external on_exit_slice1: (t, int, array<int>) => unit = "xx"
 
-@send external on_exit_slice2: (t, int, @as(3) _, @as("xxx") _, array<int>) => unit = "xx"
+@send external on_exit_slice2: (t, int, %raw("3"), %raw(`"xxx"`), array<int>) => unit = "xx"
 
-@send @variadic external on_exit_slice3: (t, int, @as(3) _, @as("xxx") _, array<int>) => unit = "xx"
+@send @variadic
+external on_exit_slice3: (t, int, %raw("3"), %raw(`"xxx"`), array<int>) => unit = "xx"
 
 @send @variadic
 external on_exit_slice4: (
   t,
   int,
-  @as(3) _,
-  @as("xxx") _,
+  %raw("3"),
+  %raw(`"xxx"`),
   @int [#a | #b | #c],
   [#a | #b | #c],
   array<int>,
@@ -51,16 +52,16 @@ external on_exit_slice4: (
 external on_exit_slice5: (
   t,
   int,
-  @as(3) _,
-  @as(json`true`) _,
-  @as(json`false`) _,
-  @as(json`"你好"`) _,
-  @as(json` ["你好",1,2,3] `) _,
-  @as(json` [{ "arr" : ["你好",1,2,3], "encoding" : "utf8"}] `) _,
-  @as(json` [{ "arr" : ["你好",1,2,3], "encoding" : "utf8"}] `) _,
-  @as("xxx") _,
+  %raw("3"),
+  %raw("true"),
+  %raw("false"),
+  %raw(`"你好"`),
+  %raw(`["你好",1,2,3]`),
+  %raw(`[{"arr":["你好",1,2,3],"encoding":"utf8"}]`),
+  %raw(`[{"arr":["你好",1,2,3],"encoding":"utf8"}]`),
+  %raw(`"xxx"`),
   @int [#a | #b | #c],
-  @as("yyy") _,
+  %raw(`"yyy"`),
   [#a | #b | #c],
   array<int>,
 ) => unit = "xx"
@@ -76,15 +77,15 @@ let f = (x: t) => {
   x->on_exit_slice5(__LINE__, #a, #b, [1, 2, 3, 4, 5])
 }
 
-@val external process_on_exit: (@as("exit") _, int => unit) => unit = "process.on"
+@val external process_on_exit: (%raw(`"exit"`), int => unit) => unit = "process.on"
 
 let () = process_on_exit(exit_code => Console.log2("error code: %d", exit_code))
 
 type process
 
-@send external on_exit: (process, @as("exit") _, int => unit) => unit = "on"
+@send external on_exit: (process, %raw(`"exit"`), int => unit) => unit = "on"
 let register = (p: process) => p->on_exit(i => Console.log(i))
 
-@obj external io_config: (~stdio: @as("inherit") _, ~cwd: string, unit) => _ = ""
+@obj external io_config: (~stdio: %raw(`"inherit"`), ~cwd: string, unit) => _ = ""
 
 let config = io_config(~cwd=".", ())

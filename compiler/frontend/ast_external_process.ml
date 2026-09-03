@@ -86,11 +86,7 @@ let refine_arg_type ~(nolabel : bool) (ptyp : Ast_core_type.t) :
       *)
       Bs_ast_invariant.warn_discarded_unused_attributes ptyp_attrs;
       match cst with
-      | Int i ->
-        (* This type is used in obj only to construct obj type*)
-        Arg_cst (External_arg_spec.cst_int i)
-      | Str s -> Arg_cst (External_arg_spec.cst_string s)
-      | Json s -> Arg_cst (External_arg_spec.cst_json s))
+      | Fixed source -> Arg_cst (External_arg_spec.cst_fixed source))
   else (* ([`a|`b] [@string]) *)
     spec_of_ptyp nolabel ptyp
 
@@ -106,14 +102,7 @@ let refine_obj_arg_type ~(nolabel : bool) (ptyp : Ast_core_type.t) :
     Bs_ast_invariant.warn_discarded_unused_attributes ptyp_attrs;
     match payload with
     | None -> Bs_syntaxerr.err ptyp.ptyp_loc Invalid_underscore_type_in_external
-    | Some (Int i) ->
-      (* @as(24) *)
-      (* This type is used in obj only to construct obj type *)
-      Arg_cst (External_arg_spec.cst_int i)
-    | Some (Str s) ->
-      (* @as("foo") *)
-      Arg_cst (External_arg_spec.cst_string s)
-    | Some (Json s) -> Arg_cst (External_arg_spec.cst_json s))
+    | Some (Fixed source) -> Arg_cst (External_arg_spec.cst_fixed source))
   else (* ([`a|`b] [@string]) *)
     spec_of_ptyp nolabel ptyp
 
@@ -210,7 +199,6 @@ let parse_external_attributes (no_arguments : bool) (prim_name_check : string)
     | PStr [] -> prim_name_or_pval_prim
     (* It is okay to have [@@val] without payload *)
     | _ -> (
-      Ast_payload.reject_json_literal_payload payload;
       match Ast_payload.semantic_string_of_payload payload with
       | Some val_name -> {name = val_name; source = Payload}
       | None -> Location.raise_errorf ~loc "Invalid payload")
@@ -406,6 +394,13 @@ type response = {
   no_inline_cross_module: bool;
 }
 
+let fixed_arg_type ({txt = source; loc} : Parsetree.fixed_value) =
+  match Classify_function.classify source with
+  | Js_literal _ ->
+    External_arg_spec.Arg_cst (External_arg_spec.cst_fixed source)
+  | _ ->
+    Location.raise_errorf ~loc "The %%raw payload must be a JavaScript literal"
+
 let process_obj (loc : Location.t) (st : external_desc) (prim_name : string)
     (arg_types_ty : Parsetree.arg list) (result_type : Ast_core_type.t) :
     int * Parsetree.core_type * External_ffi_types.t =
@@ -437,8 +432,12 @@ let process_obj (loc : Location.t) (st : external_desc) (prim_name : string)
           param_type
           (arg_labels, (arg_types : Parsetree.arg list), result_types)
         ->
-          let arg_label = param_type.lbl in
-          let ty = param_type.typ in
+          let arg_label, param_attrs, ty, fixed =
+            match param_type with
+            | Parsetree.Parg_type {attrs; lbl; typ} -> (lbl, attrs, typ, None)
+            | Parsetree.Parg_fixed {attrs; lbl; value} ->
+              (lbl, attrs, Ast_helper.Typ.any ~loc:value.loc (), Some value)
+          in
           let new_arg_label, new_arg_types, output_tys =
             match arg_label with
             | Nolabel -> (
@@ -452,13 +451,15 @@ let process_obj (loc : Location.t) (st : external_desc) (prim_name : string)
                   "expect label, optional, or unit here")
             | Labelled {txt = label} -> (
               let field_name =
-                match
-                  Ast_attributes.iter_process_bs_string_as param_type.attrs
-                with
+                match Ast_attributes.iter_process_bs_string_as param_attrs with
                 | Some alias -> alias
                 | None -> label
               in
-              let obj_arg_type = refine_obj_arg_type ~nolabel:false ty in
+              let obj_arg_type =
+                match fixed with
+                | Some value -> fixed_arg_type value
+                | None -> refine_obj_arg_type ~nolabel:false ty
+              in
               match obj_arg_type with
               | Ignore ->
                 ( External_arg_spec.empty_kind obj_arg_type,
@@ -511,13 +512,15 @@ let process_obj (loc : Location.t) (st : external_desc) (prim_name : string)
                   "%@obj label %s does not support %@unwrap arguments" label)
             | Optional {txt = label} -> (
               let field_name =
-                match
-                  Ast_attributes.iter_process_bs_string_as param_type.attrs
-                with
+                match Ast_attributes.iter_process_bs_string_as param_attrs with
                 | Some alias -> alias
                 | None -> label
               in
-              let obj_arg_type = get_opt_arg_type ~nolabel:false ty in
+              let obj_arg_type =
+                match fixed with
+                | Some value -> fixed_arg_type value
+                | None -> get_opt_arg_type ~nolabel:false ty
+              in
               match obj_arg_type with
               | Ignore ->
                 ( External_arg_spec.empty_kind obj_arg_type,
@@ -921,14 +924,21 @@ let handle_attributes (loc : Bs_loc.t) (type_annotation : Parsetree.core_type)
       Ext_list.fold_right arg_types_ty
         (([], [], 0) : External_arg_spec.params * Parsetree.arg list * int)
         (fun param_type (arg_type_specs, arg_types, i) ->
-          let arg_label = param_type.lbl in
-          let ty = param_type.typ in
+          let arg_label, ty, fixed =
+            match param_type with
+            | Parsetree.Parg_type {lbl; typ} -> (lbl, typ, None)
+            | Parsetree.Parg_fixed {lbl; value} ->
+              (lbl, Ast_helper.Typ.any ~loc:value.loc (), Some value)
+          in
           (if i = 0 && splice then
-             match arg_label with
-             | Optional _ ->
+             match (arg_label, fixed) with
+             | _, Some value ->
+               Location.raise_errorf ~loc:value.loc
+                 "%@variadic expect the last type to be an array"
+             | Optional _, None ->
                Location.raise_errorf ~loc
                  "%@variadic expect the last type to be a non optional"
-             | Labelled _ | Nolabel -> (
+             | (Labelled _ | Nolabel), None -> (
                if ty.ptyp_desc = Ptyp_any then
                  Location.raise_errorf ~loc
                    "%@variadic expect the last type to be an array";
@@ -945,7 +955,11 @@ let handle_attributes (loc : Bs_loc.t) (type_annotation : Parsetree.core_type)
                 new_arg_types ) =
             match arg_label with
             | Optional {txt = s} -> (
-              let arg_type = get_opt_arg_type ~nolabel:false ty in
+              let arg_type =
+                match fixed with
+                | Some value -> fixed_arg_type value
+                | None -> get_opt_arg_type ~nolabel:false ty
+              in
               match arg_type with
               | Poly_var _ ->
                 (* ?x:([`x of int ] [@string]) does not make sense *)
@@ -955,14 +969,22 @@ let handle_attributes (loc : Bs_loc.t) (type_annotation : Parsetree.core_type)
                   s
               | _ -> (Arg_optional, arg_type, param_type :: arg_types))
             | Labelled _ -> (
-              let arg_type = refine_arg_type ~nolabel:false ty in
+              let arg_type =
+                match fixed with
+                | Some value -> fixed_arg_type value
+                | None -> refine_arg_type ~nolabel:false ty
+              in
               ( Arg_label,
                 arg_type,
                 match arg_type with
                 | Arg_cst _ -> arg_types
                 | _ -> param_type :: arg_types ))
             | Nolabel -> (
-              let arg_type = refine_arg_type ~nolabel:true ty in
+              let arg_type =
+                match fixed with
+                | Some value -> fixed_arg_type value
+                | None -> refine_arg_type ~nolabel:true ty
+              in
               ( Arg_empty,
                 arg_type,
                 match arg_type with
@@ -984,7 +1006,9 @@ let handle_attributes (loc : Bs_loc.t) (type_annotation : Parsetree.core_type)
             (Location.mkloc (Longident.Lident "unit") loc)
             []
         in
-        let unit_arg = {Parsetree.attrs = []; lbl = Nolabel; typ = unit_type} in
+        let unit_arg =
+          Parsetree.Parg_type {attrs = []; lbl = Nolabel; typ = unit_type}
+        in
         ( [unit_arg],
           arg_type_specs
           @ [{External_arg_spec.arg_label = Arg_empty; arg_type = Extern_unit}]

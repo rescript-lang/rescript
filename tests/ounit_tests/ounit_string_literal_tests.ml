@@ -244,13 +244,36 @@ let assert_tagged_template_location () =
       pexp_loc.loc_end.pos_cnum
   | _ -> OUnit.assert_failure "expected a parsed tagged template"
 
-let assert_invalid_json_interpolation () =
+let assert_json_interpolation_is_a_tagged_template () =
   let result =
     Res_driver.parse_implementation_from_source ~for_printer:false
       ~display_filename:"StringLiteralTest.res"
       ~source:{|let value = json`head${item}tail`|}
   in
-  OUnit.assert_bool "expected JSON interpolation to be rejected" result.invalid
+  match result.parsetree with
+  | [
+   {
+     pstr_desc =
+       Pstr_value
+         ( _,
+           [
+             {
+               pvb_expr =
+                 {
+                   pexp_desc =
+                     Pexp_tagged_template
+                       {
+                         tag = {pexp_desc = Pexp_ident {txt = Lident "json"}};
+                         raw_sources = [_; _];
+                         values = [_];
+                       };
+                 };
+             };
+           ] );
+   };
+  ] ->
+    ()
+  | _ -> OUnit.assert_failure "expected an ordinary tagged template"
 
 let assert_int_equal expected actual =
   OUnit.assert_equal ~printer:string_of_int expected actual
@@ -322,17 +345,11 @@ let assert_js_string ~expected constant =
     OUnit.assert_equal ~printer:(Printf.sprintf "%S") expected actual
   | _ -> OUnit.assert_failure "expected a JavaScript string expression"
 
-let assert_external_js_string ~expected constant =
+let assert_external_fixed_literal ~expected constant =
   match (Lam_compile_const.translate_arg_cst constant).J.expression_desc with
-  | Str actual ->
+  | Fixed_literal actual ->
     OUnit.assert_equal ~printer:(Printf.sprintf "%S") expected actual
-  | _ -> OUnit.assert_failure "expected a JavaScript string expression"
-
-let assert_external_json_literal ~expected constant =
-  match (Lam_compile_const.translate_arg_cst constant).J.expression_desc with
-  | Json_literal actual ->
-    OUnit.assert_equal ~printer:(Printf.sprintf "%S") expected actual
-  | _ -> OUnit.assert_failure "expected a JavaScript JSON literal expression"
+  | _ -> OUnit.assert_failure "expected a fixed JavaScript literal expression"
 
 let inline_string semantic =
   match Ast_external_mk.inline_string semantic with
@@ -352,6 +369,14 @@ let string_payload constant =
 let template_payload source =
   Parsetree.PStr
     [Ast_helper.Str.eval (Ast_helper.Exp.template [located_string source] [])]
+
+let tagged_payload tag source =
+  let tag = Ast_helper.Exp.ident (Location.mknoloc (Longident.Lident tag)) in
+  Parsetree.PStr
+    [
+      Ast_helper.Str.eval
+        (Ast_helper.Exp.tagged_template tag [located_string source] []);
+    ]
 
 let suites =
   __FILE__
@@ -432,7 +457,7 @@ let suites =
          >:: fun _ ->
            assert_parsed_template ();
            assert_tagged_template_location ();
-           assert_invalid_json_interpolation () );
+           assert_json_interpolation_is_a_tagged_template () );
          ( "template expression escapes are parser diagnostics" >:: fun _ ->
            List.iter assert_invalid_template_expression
              [{|bad \xZZ escape|}; {|a\1b|}; {|a\01b|}; {|a\8b|}] );
@@ -512,9 +537,7 @@ let suites =
            OUnit.assert_equal ~printer:Ext_obj.dump
              (Ast_helper.Const.string "a\n😀")
              (Untypeast.constant semantic);
-           OUnit.assert_equal ~printer:Ext_obj.dump
-             (Error Typecore.Json_literal_outside_external)
-             (Typecore.constant (Parsetree.Pconst_json {|{"answer":42}|})) );
+           () );
          ( "constant backquoted attribute strings become semantic" >:: fun _ ->
            OUnit.assert_equal ~printer:Ext_obj.dump (Some "a\n😀")
              (Ast_payload.semantic_string_of_payload
@@ -527,7 +550,7 @@ let suites =
                 ]);
            OUnit.assert_equal ~printer:Ext_obj.dump None
              (Ast_payload.semantic_string_of_payload
-                (string_payload (Pconst_json {|{"answer":42}|})));
+                (tagged_payload "json" {|{"answer":42}|}));
            match
              Ast_payload.semantic_string_of_payload
                (template_payload {|\uD800|})
@@ -564,27 +587,28 @@ let suites =
          ( "external string constants have explicit representations" >:: fun _ ->
            OUnit.assert_equal ~printer:Ext_obj.dump
              (External_ffi_types.Const_string "a\n😀") (inline_string "a\n😀");
-           assert_external_js_string ~expected:{|\x61|}
-             (External_arg_spec.cst_string {|\x61|});
-           assert_external_json_literal ~expected:{|{"answer":42}|}
-             (External_arg_spec.cst_json {|{"answer":42}|});
-           let json = Js_exp_make.json_literal {| {answer: 42} |} in
-           OUnit.assert_bool "expected JSON literals to be side-effect free"
-             (Js_analyzer.no_side_effect_expression json);
+           assert_external_fixed_literal ~expected:{|"a"|}
+             (External_arg_spec.cst_fixed {|"a"|});
+           assert_external_fixed_literal ~expected:{|{"answer":42}|}
+             (External_arg_spec.cst_fixed {|{"answer":42}|});
+           let fixed = Js_exp_make.fixed_literal {| {answer: 42} |} in
+           OUnit.assert_bool "expected fixed literals to be side-effect free"
+             (Js_analyzer.no_side_effect_expression fixed);
            OUnit.assert_bool
-             "expected allocating JSON literals not to duplicate"
-             (not (Js_analyzer.is_okay_to_duplicate json));
-           OUnit.assert_bool "expected JSON literals not to compare as strings"
+             "expected allocating fixed literals not to duplicate"
+             (not (Js_analyzer.is_okay_to_duplicate fixed));
+           OUnit.assert_bool "expected fixed literals not to compare as strings"
              (not
-                (Js_analyzer.eq_expression json
-                   (Js_exp_make.json_literal {| {answer: 42} |})));
-           (match (Js_exp_make.typeof json).expression_desc with
+                (Js_analyzer.eq_expression fixed
+                   (Js_exp_make.fixed_literal {| {answer: 42} |})));
+           (match (Js_exp_make.typeof fixed).expression_desc with
            | Typeof argument ->
-             OUnit.assert_bool "expected typeof to preserve the JSON expression"
-               (json == argument)
+             OUnit.assert_bool
+               "expected typeof to preserve the fixed literal expression"
+               (fixed == argument)
            | _ -> OUnit.assert_failure "expected a runtime typeof expression");
            OUnit.assert_equal ~printer:(Printf.sprintf "%S") {| {answer: 42} |}
-             (Js_dump.string_of_expression json) );
+             (Js_dump.string_of_expression fixed) );
          ( "Lambda constants contain semantic strings" >:: fun _ ->
            let semantic =
              convert_typed_constant (Asttypes.Const_string "a\n😀")

@@ -176,50 +176,58 @@ let iter_process_bs_int_as (attrs : t) =
       | _ -> ());
   !st
 
-type as_const_payload = Int of int | Str of string | Json of string
+type as_const_payload = Fixed of string
 
 let iter_process_bs_string_or_int_as (attrs : Parsetree.attributes) =
   let st = ref None in
   Ext_list.iter attrs (fun (({txt; loc}, payload) as attr) ->
+      let set_fixed source =
+        match Classify_function.classify source with
+        | Js_literal _ -> st := Some (Fixed source)
+        | _ ->
+          Location.raise_errorf ~loc
+            "The fixed-value @as payload must be a JavaScript literal"
+      in
       match txt with
       | "as" ->
         if !st = None then (
           Used_attributes.mark_used_attribute attr;
-          match Ast_payload.is_single_int payload with
-          | Some v -> st := Some (Int v)
-          | None -> (
-            match Ast_payload.semantic_string_of_payload payload with
-            | Some s -> st := Some (Str s)
-            | None -> (
-              match payload with
-              | PStr
-                  [
-                    {
-                      pstr_desc =
-                        Pstr_eval
-                          ( {
-                              pexp_desc = Pexp_constant (Pconst_json s);
-                              pexp_loc;
-                              _;
-                            },
-                            _ );
-                      _;
-                    };
-                  ] -> (
-                st := Some (Json s);
-                (* Check that it is a valid object literal. *)
-                match
-                  Classify_function.classify
-                    ~check:
-                      ( pexp_loc,
-                        Bs_flow_ast_utils.flow_deli_offset (Some "json") )
-                    s
-                with
-                | Js_literal _ -> ()
-                | _ ->
-                  Location.raise_errorf ~loc:pexp_loc
-                    "an object literal expected")
-              | _ -> Bs_syntaxerr.err loc Expect_int_or_string_or_json_literal)))
+          let is_fixed_value_payload =
+            Ast_payload.is_single_int payload <> None
+            || Ast_payload.semantic_string_of_payload payload <> None
+            ||
+            match payload with
+            | PStr
+                [
+                  {
+                    pstr_desc =
+                      Pstr_eval
+                        ( {
+                            pexp_desc =
+                              Pexp_tagged_template
+                                {
+                                  tag =
+                                    {
+                                      pexp_desc =
+                                        Pexp_ident {txt = Lident "json"};
+                                    };
+                                  raw_sources = [_];
+                                  values = [];
+                                };
+                            _;
+                          },
+                          _ );
+                    _;
+                  };
+                ] ->
+              true
+            | _ -> false
+          in
+          if not is_fixed_value_payload then
+            Bs_syntaxerr.err loc Expect_int_or_string_or_json_literal;
+          match Ast_payload.fixed_source_of_payload payload with
+          | Some source -> set_fixed source
+          | None -> Bs_syntaxerr.err loc Expect_int_or_string_or_json_literal)
         else raise (Ast_untagged_variants.Error (loc, Duplicated_bs_as))
       | _ -> ());
   !st

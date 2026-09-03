@@ -305,6 +305,206 @@ type type_parameter = {
   start_pos: Lexing.position;
 }
 
+let is_fixed_value_payload (payload : Parsetree.payload) =
+  match payload with
+  | PStr
+      [
+        {
+          pstr_desc =
+            Pstr_eval
+              ( {
+                  pexp_desc =
+                    Pexp_constant (Pconst_integer (_, None) | Pconst_string _);
+                  _;
+                },
+                _ );
+          _;
+        };
+      ] ->
+    true
+  | PStr
+      [
+        {
+          pstr_desc =
+            Pstr_eval
+              ( {
+                  pexp_desc = Pexp_template {source_segments = [_]; values = []};
+                  _;
+                },
+                _ );
+          _;
+        };
+      ] ->
+    true
+  | PStr
+      [
+        {
+          pstr_desc =
+            Pstr_eval
+              ( {
+                  pexp_desc =
+                    Pexp_tagged_template
+                      {
+                        tag = {pexp_desc = Pexp_ident {txt = Lident "json"}};
+                        raw_sources = [_];
+                        values = [];
+                      };
+                  _;
+                },
+                _ );
+          _;
+        };
+      ] ->
+    true
+  | _ -> false
+
+let source_of_raw_payload (payload : Parsetree.payload) =
+  match payload with
+  | PStr
+      [
+        {
+          pstr_desc =
+            Pstr_eval
+              ( {
+                  pexp_desc = Pexp_constant (Pconst_raw_source source);
+                  pexp_loc;
+                  _;
+                },
+                _ );
+          _;
+        };
+      ] ->
+    Some (source, pexp_loc)
+  | PStr
+      [
+        {
+          pstr_desc =
+            Pstr_eval
+              ( {
+                  pexp_desc =
+                    Pexp_template
+                      {source_segments = [{txt = source}]; values = []};
+                  pexp_loc;
+                  _;
+                },
+                _ );
+          _;
+        };
+      ] ->
+    Some (source, pexp_loc)
+  | PStr _ | PSig _ | PTyp _ | PPat _ -> None
+
+let reject_raw_fixed_extensions p (typ : Parsetree.core_type) =
+  let super = Ast_iterator.default_iterator in
+  let iterator =
+    {
+      super with
+      typ =
+        (fun self typ ->
+          (match typ.ptyp_desc with
+          | Ptyp_extension ({txt = "raw"; loc}, _) ->
+            Parser.err ~start_pos:loc.loc_start ~end_pos:loc.loc_end p
+              (Diagnostics.message
+                 "%raw is only allowed as a direct external function argument")
+          | _ -> ());
+          super.typ self typ);
+    }
+  in
+  iterator.typ iterator typ
+
+let normalize_external_fixed_parameters p (typ : Parsetree.core_type) =
+  let typ =
+    match typ.ptyp_desc with
+    | Ptyp_arrow {params; ret} ->
+      let params =
+        List.map
+          (fun (arg : Parsetree.arg) ->
+            match arg with
+            | Parg_fixed _ -> arg
+            | Parg_type
+                ({
+                   typ =
+                     {
+                       ptyp_desc =
+                         Ptyp_extension (({txt = "raw"} as id), payload);
+                       _;
+                     } as arg_typ;
+                   _;
+                 } as typed_arg) -> (
+              match source_of_raw_payload payload with
+              | Some (source, loc) ->
+                Parg_fixed
+                  {
+                    attrs = typed_arg.attrs @ arg_typ.ptyp_attributes;
+                    lbl = typed_arg.lbl;
+                    value = {txt = source; loc};
+                  }
+              | None ->
+                Parser.err ~start_pos:id.loc.loc_start ~end_pos:id.loc.loc_end p
+                  (Diagnostics.message
+                     "The %raw extension can only be applied to a string");
+                arg)
+            | Parg_type
+                ({typ = {ptyp_desc = Ptyp_any} as arg_typ; _} as typed_arg) ->
+              let rec find_fixed found rev_attrs = function
+                | [] ->
+                  Option.map
+                    (fun (id, payload) -> (id, payload, List.rev rev_attrs))
+                    found
+                | (((id : string Location.loc), payload) as attribute) :: rest
+                  ->
+                  if id.txt = "as" && is_fixed_value_payload payload then (
+                    match found with
+                    | None -> find_fixed (Some (id, payload)) rev_attrs rest
+                    | Some _ ->
+                      Parser.err ~start_pos:id.loc.loc_start
+                        ~end_pos:id.loc.loc_end p
+                        (Diagnostics.message
+                           "A fixed argument can only have one fixed-value @as \
+                            annotation");
+                      find_fixed found rev_attrs rest)
+                  else find_fixed found (attribute :: rev_attrs) rest
+              in
+              begin match find_fixed None [] arg_typ.ptyp_attributes with
+              | None -> arg
+              | Some (id, payload, remaining_attrs) -> (
+                Location.prerr_warning id.loc
+                  (Warnings.Deprecated
+                     ( "The fixed-value `@as(...) _` external argument syntax \
+                        is deprecated. Use `%raw(...)` instead.",
+                       id.loc,
+                       id.loc,
+                       false ));
+                let fixed_source =
+                  match Ast_payload.fixed_source_of_payload payload with
+                  | Some source -> Some (source, id.loc)
+                  | None -> None
+                in
+                match fixed_source with
+                | Some (source, loc) ->
+                  Parg_fixed
+                    {
+                      attrs = typed_arg.attrs @ remaining_attrs;
+                      lbl = typed_arg.lbl;
+                      value = {txt = source; loc};
+                    }
+                | None ->
+                  Parser.err ~start_pos:id.loc.loc_start ~end_pos:id.loc.loc_end
+                    p
+                    (Diagnostics.message
+                       "The fixed-value @as payload must be a JavaScript \
+                        literal");
+                  arg)
+              end
+            | Parg_type _ -> arg)
+          params
+      in
+      {typ with ptyp_desc = Ptyp_arrow {params; ret}}
+    | _ -> typ
+  in
+  reject_raw_fixed_extensions p typ;
+  typ
+
 type typ_def_or_ext =
   | TypeDef of {
       rec_flag: Asttypes.rec_flag;
@@ -2552,16 +2752,6 @@ and parse_template_expr ?prefix p =
   in
 
   match prefix with
-  | Some {txt = Longident.Lident "json"; _} -> (
-    match (parts, values) with
-    | [(source, loc, None)], [] ->
-      Ast_helper.Exp.constant ~loc (Pconst_json source)
-    | (source, loc, _) :: _, _ ->
-      Parser.err ~start_pos:template_loc.loc_start ~end_pos:template_loc.loc_end
-        p
-        (Diagnostics.message "`json` literals do not support interpolation");
-      Ast_helper.Exp.constant ~loc (Pconst_json source)
-    | [], _ -> assert false)
   | None ->
     List.iter
       (fun ({Location.txt = source; loc} : string Location.loc) ->
@@ -4551,7 +4741,9 @@ and parse_poly_type_expr ?current_type_name_path ?inline_types_context p =
         let typ = Ast_helper.Typ.var ~loc:var.loc var.txt in
         let return_type = parse_typ_expr ~alias:false p in
         let loc = mk_loc typ.Parsetree.ptyp_loc.loc_start p.prev_end_pos in
-        Ast_helper.Typ.arrow ~loc [{attrs = []; lbl = Nolabel; typ}] return_type
+        Ast_helper.Typ.arrow ~loc
+          [Parg_type {attrs = []; lbl = Nolabel; typ}]
+          return_type
       | _ -> Ast_helper.Typ.var ~loc:var.loc var.txt)
     | _ -> assert false)
   | _ -> parse_typ_expr ?current_type_name_path ?inline_types_context p
@@ -4973,7 +5165,7 @@ and parse_es6_arrow_type ?current_type_name_path ?inline_types_context ~attrs p
        arrow, exactly like its parenthesized form [(~x: t) => u]; it must
        carry the same arity or the two spellings produce types that print
        identically but do not unify. *)
-    Ast_helper.Typ.arrow ~loc [{attrs; lbl; typ}] return_type
+    Ast_helper.Typ.arrow ~loc [Parg_type {attrs; lbl; typ}] return_type
   | DocComment _ -> assert false
   | _ -> (
     let parameters =
@@ -4991,7 +5183,7 @@ and parse_es6_arrow_type ?current_type_name_path ?inline_types_context ~attrs p
     let params =
       List.map
         (fun {attrs; label = arg_lbl; typ; start_pos = _} ->
-          {Parsetree.attrs; lbl = arg_lbl; typ})
+          Parsetree.Parg_type {attrs; lbl = arg_lbl; typ})
         parameters
     in
     let loc = mk_loc start_pos p.prev_end_pos in
@@ -5066,7 +5258,9 @@ and parse_arrow_type_rest ?current_type_name_path ?inline_types_context
         ?inline_types_context p
     in
     let loc = mk_loc start_pos p.prev_end_pos in
-    Ast_helper.Typ.arrow ~loc [{attrs = []; lbl = Nolabel; typ}] return_type
+    Ast_helper.Typ.arrow ~loc
+      [Parg_type {attrs = []; lbl = Nolabel; typ}]
+      return_type
   | _ -> typ
 
 and parse_typ_expr_region p =
@@ -5843,7 +6037,7 @@ and parse_type_equation_or_constr_decl p =
         let loc = mk_loc uident_start_pos p.prev_end_pos in
         let arrow_type =
           Ast_helper.Typ.arrow ~loc
-            [{attrs = []; lbl = Nolabel; typ}]
+            [Parg_type {attrs = []; lbl = Nolabel; typ}]
             return_type
         in
         let typ = parse_type_alias p arrow_type in
@@ -6546,6 +6740,7 @@ and parse_external_def ~attrs ~start_pos p =
       in
       let typ_expr =
         parse_external_type_expr ~current_type_name_path ~inline_types_context p
+        |> normalize_external_fixed_parameters p
       in
       let equal_start = p.start_pos in
       let equal_end = p.end_pos in

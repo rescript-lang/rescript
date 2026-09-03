@@ -22,10 +22,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-type cst = private
-  | Arg_int_lit of int
-  | Arg_string_lit of string
-  | Arg_json_lit of string
+type cst = private Arg_fixed_lit of string
 
 type attr =
   | Poly_var_string of {descr: (string * string) list}
@@ -54,10 +51,7 @@ type obj_params = obj_param list
 
 type params = param list
 
-val cst_int : int -> cst
-
-val cst_string : string -> cst
-val cst_json : string -> cst
+val cst_fixed : string -> cst
 
 val empty_label : label
 

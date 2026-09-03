@@ -91,7 +91,10 @@ module Typ = struct
             {
               params =
                 List.map
-                  (fun (arg : Parsetree.arg) -> {arg with typ = loop arg.typ})
+                  (function
+                    | Parsetree.Parg_type arg ->
+                      Parsetree.Parg_type {arg with typ = loop arg.typ}
+                    | Parsetree.Parg_fixed _ as arg -> arg)
                   params;
               ret = loop ret;
             }

@@ -21,9 +21,9 @@ let xs = map([(1, 2), (1, 2), (2, 1)], ((x, y)) => y + x + 1)
 
 @val external ff: (int, @ignore int, (int, int) => int) => int = "ff"
 
-@val external ff1: (int, @as(3) _, (int, int) => int) => int = "ff1"
+@val external ff1: (int, %raw("3"), (int, int) => int) => int = "ff1"
 
-@val external ff2: (int, @as("3") _, (int, int) => int) => int = "ff2"
+@val external ff2: (int, %raw(`"3"`), (int, int) => int) => int = "ff2"
 
 @val external hi: (unit => unit) => int = "hi"
 

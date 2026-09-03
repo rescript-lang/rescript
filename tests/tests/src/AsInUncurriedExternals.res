@@ -2,9 +2,9 @@
 
 @obj
 external makeOptions: (
-  ~objectMode: @as(json`false`) _,
+  ~objectMode: %raw("false"),
   ~name: string,
-  ~someOther: @as(json`true`) _,
+  ~someOther: %raw("true"),
   unit,
 ) => int = ""
 
@@ -15,11 +15,18 @@ let options = mo(~name="foo", ())
 let shouldNotFail: (~objectMode: _, ~name: string) => int = (~objectMode, ~name) => 3
 
 @scope("somescope")
-external constantArgOnly: @as(json`{foo:true}`) _ => string = "somefn"
+external constantArgOnly: (%raw(`{"foo":true}`)) => string = "somefn"
 
 let x = constantArgOnly()
 
 @scope("somescope")
-external semanticStringArg: @as(`\x61\u0062`) _ => string = "stringfn"
+external semanticStringArg: (%raw(`"ab"`)) => string = "stringfn"
 
 let y = semanticStringArg()
+
+type t = {"color": string}
+
+@val
+external unsafeAddStyle: (%raw("{}"), t, {..}) => t = "Object.assign"
+
+let style = unsafeAddStyle({"color": "red"}, {"display": "flex"})

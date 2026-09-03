@@ -110,7 +110,7 @@ let map_constant ~loc = function
     Pconst_char {source = String_literal.encode_char_source semantic; semantic}
   | Pconst_string (s, Some ("js" | "*j")) -> source_string ~loc s
   | Pconst_string (s, None) -> semantic_string s
-  | Pconst_string (s, Some "json") -> Pconst_json s
+  | Pconst_string (s, Some "json") -> Pconst_raw_source s
   (* Other v0 quotation delimiters are syntax, not part of the string value.
      Tagged ReScript templates are represented as applications before PPX. *)
   | Pconst_string (semantic, Some _) -> semantic_string semantic
@@ -226,9 +226,30 @@ module T = struct
         | Some (node_attrs, arg_attrs) -> (node_attrs, arg_attrs)
         | None -> ([], attrs)
       in
-      Typ.arrow ~loc ~attrs:node_attrs
-        [{attrs = arg_attrs; lbl; typ = sub.typ sub t1}]
-        (sub.typ sub t2)
+      let mapped_t1 = sub.typ sub t1 in
+      let rec extract_fixed rev_attrs = function
+        | [] -> None
+        | (({txt = "as"; loc}, payload) as attr) :: rest -> (
+          match
+            (mapped_t1.ptyp_desc, Ast_payload.fixed_source_of_payload payload)
+          with
+          | Ptyp_any, Some source ->
+            Some
+              (Pt.Parg_fixed
+                 {
+                   attrs = List.rev_append rev_attrs rest;
+                   lbl;
+                   value = {txt = source; loc};
+                 })
+          | _ -> extract_fixed (attr :: rev_attrs) rest)
+        | attr :: rest -> extract_fixed (attr :: rev_attrs) rest
+      in
+      let arg =
+        match extract_fixed [] arg_attrs with
+        | Some arg -> arg
+        | None -> Pt.Parg_type {attrs = arg_attrs; lbl; typ = mapped_t1}
+      in
+      Typ.arrow ~loc ~attrs:node_attrs [arg] (sub.typ sub t2)
     | Ptyp_tuple tyl -> Typ.tuple ~loc ~attrs (List.map (sub.typ sub) tyl)
     | Ptyp_constr (lid, tl) -> (
       let typ0 =
@@ -580,8 +601,11 @@ module E = struct
       let inner = sub.expr sub {e with pexp_attributes = inner_attrs0} in
       await ~loc ~attrs:(sub.attributes sub await_attrs0) inner
     | Pexp_ident x -> ident ~loc ~attrs (map_loc sub x)
+    | Pexp_constant (Pconst_string (source, Some "json")) ->
+      let tag = ident ~loc (Location.mkloc (Longident.Lident "json") loc) in
+      tagged_template ~loc ~attrs tag [{txt = source; loc}] []
     | Pexp_constant (Pconst_string (text, delimiter))
-      when has_template_attr attrs && delimiter <> Some "json" ->
+      when has_template_attr attrs ->
       let attrs = remove_template_attr attrs in
       let source = template_source_from0 (text, delimiter) in
       template ~loc ~attrs [{txt = source; loc}] []

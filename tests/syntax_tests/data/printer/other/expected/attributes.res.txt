@@ -1,3 +1,75 @@
+
+  Warning number 3
+  syntax_tests/data/printer/other/attributes.res:29:42-44
+
+  27 │ @obj external ff: (~x: int, ~g: int, ~h: int) => _ = ""
+  28 │ 
+  29 │ @obj external ff: (~x: int, ~g: int, ~h: @as(3) _) => _ = ""
+  30 │ 
+  31 │ @obj external ff: (~x: int) => (~h: @as(3) _) => _ = ""
+
+  deprecated: The fixed-value `@as(...) _` external argument syntax is deprecated. Use `%raw(...)` instead.
+
+
+  Warning number 3
+  syntax_tests/data/printer/other/attributes.res:35:8-10
+
+  33 │ @obj
+  34 │ external ff: (
+  35 │   ~lo: @as(3) _,
+  36 │   ~mid: @as(3) _,
+  37 │   ~hi: int,
+
+  deprecated: The fixed-value `@as(...) _` external argument syntax is deprecated. Use `%raw(...)` instead.
+
+
+  Warning number 3
+  syntax_tests/data/printer/other/attributes.res:36:9-11
+
+  34 │ external ff: (
+  35 │   ~lo: @as(3) _,
+  36 │   ~mid: @as(3) _,
+  37 │   ~hi: int,
+  38 │ ) => _ = ""
+
+  deprecated: The fixed-value `@as(...) _` external argument syntax is deprecated. Use `%raw(...)` instead.
+
+
+  Warning number 3
+  syntax_tests/data/printer/other/attributes.res:44:8-10
+
+  42 │ external ff: (
+  43 │   ~hi: int,
+  44 │   ~lo: @as(3) _
+  45 │ ) => _ = ""
+  46 │ 
+
+  deprecated: The fixed-value `@as(...) _` external argument syntax is deprecated. Use `%raw(...)` instead.
+
+
+  Warning number 3
+  syntax_tests/data/printer/other/attributes.res:50:9-11
+
+  48 │ external ff: (
+  49 │   ~hi: int,
+  50 │   ~mid: @as(3) _,
+  51 │   ~lo: @as(3) _
+  52 │ ) => _ = ""
+
+  deprecated: The fixed-value `@as(...) _` external argument syntax is deprecated. Use `%raw(...)` instead.
+
+
+  Warning number 3
+  syntax_tests/data/printer/other/attributes.res:51:8-10
+
+  49 │   ~hi: int,
+  50 │   ~mid: @as(3) _,
+  51 │   ~lo: @as(3) _
+  52 │ ) => _ = ""
+  53 │ 
+
+  deprecated: The fixed-value `@as(...) _` external argument syntax is deprecated. Use `%raw(...)` instead.
+
 @attr(: int)
 let x = 1
 
@@ -25,15 +97,15 @@ let x = 1
 
 @obj external ff: (~x: int, ~g: int, ~h: int) => _ = ""
 
-@obj external ff: (~x: int, ~g: int, ~h: @as(3) _) => _ = ""
+@obj external ff: (~x: int, ~g: int, ~h: %raw("3")) => _ = ""
 
 @obj external ff: (~x: int) => (~h: @as(3) _) => _ = ""
 
 @obj
-external ff: (~lo: @as(3) _, ~mid: @as(3) _, ~hi: int) => _ = ""
+external ff: (~lo: %raw("3"), ~mid: %raw("3"), ~hi: int) => _ = ""
 
 @obj
-external ff: (~hi: int, ~lo: @as(3) _) => _ = ""
+external ff: (~hi: int, ~lo: %raw("3")) => _ = ""
 
 @obj
-external ff: (~hi: int, ~mid: @as(3) _, ~lo: @as(3) _) => _ = ""
+external ff: (~hi: int, ~mid: %raw("3"), ~lo: %raw("3")) => _ = ""

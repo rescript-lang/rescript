@@ -94,9 +94,6 @@ let pat_mapper (self : mapper) (p : Parsetree.pattern) =
   match p.ppat_desc with
   | Ppat_constant (Pconst_integer (s, Some 'l')) ->
     {p with ppat_desc = Ppat_constant (Pconst_integer (s, None))}
-  | Ppat_constant (Pconst_json _) ->
-    Location.raise_errorf ~loc:p.ppat_loc
-      "Tagged template literals are not supported in patterns"
   | _ -> default_pat_mapper self p
 
 (* Unpack requires core_type package for type inference:
@@ -562,9 +559,6 @@ let structure_item_mapper (self : mapper) (str : Parsetree.structure_item) :
     let has_inline_property =
       Ast_attributes.has_inline_payload pvb_attributes
     in
-    Option.iter
-      (fun (_, payload) -> Ast_payload.reject_json_literal_payload payload)
-      has_inline_property;
     match (has_inline_property, pvb_expr.pexp_desc) with
     | ( Some attr,
         ( Pexp_constant (Pconst_string _)

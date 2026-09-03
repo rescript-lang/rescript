@@ -20,6 +20,10 @@ let id = "5";
 
 let queryWithModule = sql`SELECT * FROM ${table} WHERE id = ${id}`;
 
+let json = Tagged_template_libJs.sql;
+
+let jsonTaggedQuery = json`SELECT * FROM ${table}`;
+
 let query = sql`
 " SELECT * FROM ${table} WHERE id = ${id}`;
 
@@ -67,33 +71,34 @@ let rawTag = Tagged_template_libJs.rawTag;
 let rawResult = rawTag`a ${1} b ${2} c`;
 
 Mocha.describe("tagged templates", () => {
-  Mocha.test("with externals, it should return a string with the correct interpolations", () => Test_utils.eq("File \"tagged_template_test.res\", line 92, characters 6-13", query, `
+  Mocha.test("with externals, it should return a string with the correct interpolations", () => Test_utils.eq("File \"tagged_template_test.res\", line 99, characters 6-13", query, `
 " SELECT * FROM 'users' WHERE id = '5'`));
-  Mocha.test("with module scoped externals, it should also return a string with the correct interpolations", () => Test_utils.eq("File \"tagged_template_test.res\", line 101, characters 13-20", queryWithModule, "SELECT * FROM 'users' WHERE id = '5'"));
-  Mocha.test("with externals, it should return the result of the function", () => Test_utils.eq("File \"tagged_template_test.res\", line 104, characters 79-86", length$1, 52));
-  Mocha.test("with a runtime-constructed tag (factory), it should emit tagged-template syntax", () => Test_utils.eq("File \"tagged_template_test.res\", line 107, characters 7-14", factoryQuery, "PREFIX SELECT * FROM 'users'"));
-  Mocha.test("with a tag from a bare package import, it should emit tagged-template syntax", () => Test_utils.eq("File \"tagged_template_test.res\", line 113, characters 7-14", bareImportQuery, "PG: SELECT * FROM 'users'"));
-  Mocha.test("with a tag passed as a function argument, it should emit tagged-template syntax", () => Test_utils.eq("File \"tagged_template_test.res\", line 117, characters 7-14", paramQuery, "SELECT id = '5'"));
-  Mocha.test("with a tag imported from another module, it should emit tagged-template syntax", () => Test_utils.eq("File \"tagged_template_test.res\", line 121, characters 7-14", crossModuleQuery, "X: SELECT * FROM 'users'"));
+  Mocha.test("with module scoped externals, it should also return a string with the correct interpolations", () => Test_utils.eq("File \"tagged_template_test.res\", line 108, characters 13-20", queryWithModule, "SELECT * FROM 'users' WHERE id = '5'"));
+  Mocha.test("a tag named json remains an ordinary tagged template", () => Test_utils.eq("File \"tagged_template_test.res\", line 112, characters 7-14", jsonTaggedQuery, "SELECT * FROM 'users'"));
+  Mocha.test("with externals, it should return the result of the function", () => Test_utils.eq("File \"tagged_template_test.res\", line 115, characters 79-86", length$1, 52));
+  Mocha.test("with a runtime-constructed tag (factory), it should emit tagged-template syntax", () => Test_utils.eq("File \"tagged_template_test.res\", line 118, characters 7-14", factoryQuery, "PREFIX SELECT * FROM 'users'"));
+  Mocha.test("with a tag from a bare package import, it should emit tagged-template syntax", () => Test_utils.eq("File \"tagged_template_test.res\", line 124, characters 7-14", bareImportQuery, "PG: SELECT * FROM 'users'"));
+  Mocha.test("with a tag passed as a function argument, it should emit tagged-template syntax", () => Test_utils.eq("File \"tagged_template_test.res\", line 128, characters 7-14", paramQuery, "SELECT id = '5'"));
+  Mocha.test("with a tag imported from another module, it should emit tagged-template syntax", () => Test_utils.eq("File \"tagged_template_test.res\", line 132, characters 7-14", crossModuleQuery, "X: SELECT * FROM 'users'"));
   Mocha.test("it should call the tag as a real tagged template (TemplateStringsArray with .raw)", () => {
-    Test_utils.eq("File \"tagged_template_test.res\", line 125, characters 7-14", rawResult.hasRaw, true);
-    Test_utils.eq("File \"tagged_template_test.res\", line 126, characters 7-14", rawResult.cooked, [
+    Test_utils.eq("File \"tagged_template_test.res\", line 136, characters 7-14", rawResult.hasRaw, true);
+    Test_utils.eq("File \"tagged_template_test.res\", line 137, characters 7-14", rawResult.cooked, [
       "a ",
       " b ",
       " c"
     ]);
-    Test_utils.eq("File \"tagged_template_test.res\", line 127, characters 7-14", rawResult.raw, [
+    Test_utils.eq("File \"tagged_template_test.res\", line 138, characters 7-14", rawResult.raw, [
       "a ",
       " b ",
       " c"
     ]);
-    Test_utils.eq("File \"tagged_template_test.res\", line 128, characters 7-14", rawResult.values, [
+    Test_utils.eq("File \"tagged_template_test.res\", line 139, characters 7-14", rawResult.values, [
       1,
       2
     ]);
   });
-  Mocha.test("with a ReScript tag lifted via TaggedTemplate.make, it should return the correct interpolation", () => Test_utils.eq("File \"tagged_template_test.res\", line 133, characters 13-20", greeting, "hello Ada you're 36 years old!"));
-  Mocha.test("a regular string interpolation should continue working", () => Test_utils.eq("File \"tagged_template_test.res\", line 137, characters 7-14", `some random string interpolation`, "some random string interpolation"));
+  Mocha.test("with a ReScript tag lifted via TaggedTemplate.make, it should return the correct interpolation", () => Test_utils.eq("File \"tagged_template_test.res\", line 144, characters 13-20", greeting, "hello Ada you're 36 years old!"));
+  Mocha.test("a regular string interpolation should continue working", () => Test_utils.eq("File \"tagged_template_test.res\", line 148, characters 7-14", `some random string interpolation`, "some random string interpolation"));
   Mocha.test("ordinary interpolation evaluates values once from left to right", () => {
     let calls = [];
     let record = value => {
@@ -101,15 +106,15 @@ Mocha.describe("tagged templates", () => {
       return value;
     };
     let result = `start ${record("first")} middle ${record("second")} end`;
-    Test_utils.eq("File \"tagged_template_test.res\", line 147, characters 7-14", result, "start first middle second end");
-    Test_utils.eq("File \"tagged_template_test.res\", line 148, characters 7-14", calls, [
+    Test_utils.eq("File \"tagged_template_test.res\", line 158, characters 7-14", result, "start first middle second end");
+    Test_utils.eq("File \"tagged_template_test.res\", line 159, characters 7-14", calls, [
       "first",
       "second"
     ]);
   });
   Mocha.test("invalid escapes remain valid in tagged-template segments", () => {
     let result = rawTag`\unicode`;
-    Test_utils.eq("File \"tagged_template_test.res\", line 153, characters 7-14", result.raw, ["\\unicode"]);
+    Test_utils.eq("File \"tagged_template_test.res\", line 164, characters 7-14", result.raw, ["\\unicode"]);
   });
 });
 
@@ -120,6 +125,8 @@ export {
   table,
   id,
   queryWithModule,
+  json,
+  jsonTaggedQuery,
   query,
   extraLength,
   length$1 as length,

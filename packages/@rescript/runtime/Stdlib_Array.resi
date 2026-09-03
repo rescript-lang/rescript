@@ -485,7 +485,7 @@ array2 == ["Hello", "Good bye"] // Removes the item at index 1
 ```
  */
 @send
-external removeInPlace: (array<'a>, int, @as(1) _) => unit = "splice"
+external removeInPlace: (array<'a>, int, %raw("1")) => unit = "splice"
 
 /**
 `with(array, index, value)` returns a copy of `array` where the element at `index` is replaced with `value`.

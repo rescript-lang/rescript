@@ -24,10 +24,7 @@
 
 (** type definitions for arguments to a function declared external *)
 
-type cst =
-  | Arg_int_lit of int
-  | Arg_string_lit of string
-  | Arg_json_lit of string
+type cst = Arg_fixed_lit of string
 
 type label_noname = Arg_label | Arg_empty | Arg_optional
 
@@ -69,10 +66,7 @@ type obj_params = obj_param list
 
 type params = param list
 
-let cst_int i = Arg_int_lit i
-
-let cst_string s = Arg_string_lit s
-let cst_json s = Arg_json_lit s
+let cst_fixed source = Arg_fixed_lit source
 
 let empty_label = Obj_empty
 

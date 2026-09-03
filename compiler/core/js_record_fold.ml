@@ -156,7 +156,7 @@ let expression_desc : 'a. ('a, expression_desc) fn =
     st
   | Str _ -> st
   | Template_literal _ -> st
-  | Json_literal _ -> st
+  | Fixed_literal _ -> st
   | Raw_js_code _ -> st
   | Array _x0 -> list _self.expression _self st _x0
   | Optional_block (_x0, _x1) ->

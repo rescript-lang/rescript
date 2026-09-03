@@ -156,10 +156,9 @@ and expression_desc =
           optimizations. Both are required because preserving backquoted
           spelling is an output design goal. Tagged-template segments use
           [Tagged_template] instead because their escapes need not be valid. *)
-  | Json_literal of string
-      (** Validated JavaScript literal source from a supported external
-          [json`...`] payload. For [json`{"ok": true}`], the string contains
-          [{"ok": true}] as JavaScript source, not as a decoded ReScript
+  | Fixed_literal of string
+      (** Validated JavaScript literal source supplied by a fixed external
+          argument. The string is JavaScript source, not a decoded ReScript
           string. *)
   | Raw_js_code of Js_raw_info.t
       (** JavaScript source originating from [raw], [ffi], or [re]. For example,

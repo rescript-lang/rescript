@@ -1,0 +1,11 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/typexpr/fixedExternalPosition.res:1:28-31
+
+  1 │ external nestedArgument: ((%raw("1")) => int) => unit = "nestedArgument"
+  2 │ 
+
+  %raw is only allowed as a direct external function argument
+
+external nestedArgument :
+  ([%raw {js|1|js}] -> int (a:1)) -> unit (a:1) = "nestedArgument"

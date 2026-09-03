@@ -85,7 +85,7 @@ let obj = Object.createWithNull()
 obj->Object.get("toString") == None
 ```
 */
-@val external createWithNull: (@as(json`null`) _, unit) => {..} = "Object.create"
+@val external createWithNull: (%raw("null"), unit) => {..} = "Object.create"
 
 /**
 `createWithNullAndProperties(descriptors)` creates an object with a `null` prototype and defines properties using descriptor objects.
@@ -100,7 +100,7 @@ obj->Object.get("name") == Some("banana")
 obj->Object.get("toString") == None
 ```
 */
-@val external createWithNullAndProperties: (@as(json`null`) _, {..}) => {..} = "Object.create"
+@val external createWithNullAndProperties: (%raw("null"), {..}) => {..} = "Object.create"
 
 /**
 `assign(target, source)` copies enumerable own properties from the source to the target, overwriting properties with the same name. It returns the modified target object. A deep clone is not created; properties are copied by reference.
@@ -144,7 +144,7 @@ cloned->Object.get("name") == Some("banana")
 Object.is(original, cloned) == false
 ```
 */
-@val external copy: (@as(json`{}`) _, {..} as 'a) => 'a = "Object.assign"
+@val external copy: (%raw("{}"), {..} as 'a) => 'a = "Object.assign"
 
 /**
 `get` gets the value of a property by name. Returns `None` if the property does not exist or has the value `undefined`. Otherwise returns `Some`, including if the value is `null`.
