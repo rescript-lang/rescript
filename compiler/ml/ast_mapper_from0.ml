@@ -176,6 +176,13 @@ let remove_constructor_args_attr (attrs : Pt.attributes) =
   in
   loop [] attrs
 
+let decode_args ~map ~tuple_args ~split_tuple = function
+  | None -> []
+  | Some arg -> (
+    match tuple_args arg with
+    | Some args when split_tuple -> List.map map args
+    | _ -> [map arg])
+
 let record_rest_of_pattern (rest : Pt.pattern) =
   match rest.Pt.ppat_desc with
   | Pt.Ppat_constraint ({ppat_desc = Pt.Ppat_var rest_name; _}, rest_type) ->
@@ -862,14 +869,16 @@ module E = struct
       let lid1 = map_loc sub lid in
       let has_constructor_args, attrs = remove_constructor_args_attr attrs in
       let args =
-        match arg with
-        | None -> []
-        | Some {pexp_desc = Pexp_tuple args}
-          when has_constructor_args
-               || Builtin_attributes.explicit_arity attrs
-               || lid.txt = Longident.Lident "::" ->
-          List.map (sub.expr sub) args
-        | Some arg -> [sub.expr sub arg]
+        decode_args ~map:(sub.expr sub)
+          ~tuple_args:(fun arg ->
+            match arg.pexp_desc with
+            | Pexp_tuple args -> Some args
+            | _ -> None)
+          ~split_tuple:
+            (has_constructor_args
+            || Builtin_attributes.explicit_arity attrs
+            || lid.txt = Longident.Lident "::")
+          arg
       in
       let exp1 = construct ~loc ~attrs lid1 args in
       match lid.txt with
@@ -931,11 +940,12 @@ module E = struct
     | Pexp_variant (lab, arg) ->
       let has_constructor_args, attrs = remove_constructor_args_attr attrs in
       let args =
-        match arg with
-        | None -> []
-        | Some {pexp_desc = Pexp_tuple args} when has_constructor_args ->
-          List.map (sub.expr sub) args
-        | Some arg -> [sub.expr sub arg]
+        decode_args ~map:(sub.expr sub)
+          ~tuple_args:(fun arg ->
+            match arg.pexp_desc with
+            | Pexp_tuple args -> Some args
+            | _ -> None)
+          ~split_tuple:has_constructor_args arg
       in
       variant ~loc ~attrs lab args
     | Pexp_record (l, eo) ->
@@ -1107,24 +1117,27 @@ module P = struct
     | Ppat_construct (l, arg) ->
       let has_constructor_args, attrs = remove_constructor_args_attr attrs in
       let args =
-        match arg with
-        | None -> []
-        | Some {ppat_desc = Ppat_tuple args}
-          when has_constructor_args
-               || Builtin_attributes.explicit_arity attrs
-               || l.txt = Longident.Lident "::" ->
-          List.map (sub.pat sub) args
-        | Some arg -> [sub.pat sub arg]
+        decode_args ~map:(sub.pat sub)
+          ~tuple_args:(fun arg ->
+            match arg.ppat_desc with
+            | Ppat_tuple args -> Some args
+            | _ -> None)
+          ~split_tuple:
+            (has_constructor_args
+            || Builtin_attributes.explicit_arity attrs
+            || l.txt = Longident.Lident "::")
+          arg
       in
       construct ~loc ~attrs (map_loc sub l) args
     | Ppat_variant (l, arg) ->
       let has_constructor_args, attrs = remove_constructor_args_attr attrs in
       let args =
-        match arg with
-        | None -> []
-        | Some {ppat_desc = Ppat_tuple args} when has_constructor_args ->
-          List.map (sub.pat sub) args
-        | Some arg -> [sub.pat sub arg]
+        decode_args ~map:(sub.pat sub)
+          ~tuple_args:(fun arg ->
+            match arg.ppat_desc with
+            | Ppat_tuple args -> Some args
+            | _ -> None)
+          ~split_tuple:has_constructor_args arg
       in
       variant ~loc ~attrs l args
     | Ppat_record (lpl, cf) ->

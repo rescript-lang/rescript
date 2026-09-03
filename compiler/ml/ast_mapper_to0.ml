@@ -112,6 +112,12 @@ let constructor_args_attr_name = "_res.constructor_args"
 let add_constructor_args_attr attrs =
   (Location.mknoloc constructor_args_attr_name, Pt.PStr []) :: attrs
 
+let encode_args ~map ~tuple ~loc ~attrs args =
+  match List.map map args with
+  | [] -> (None, attrs)
+  | [arg] -> (Some arg, attrs)
+  | args -> (Some (tuple ~loc args), add_constructor_args_attr attrs)
+
 let add_record_rest_attr ~rest attrs =
   (Location.mknoloc record_rest_attr_name, Pt.PPat (rest, None)) :: attrs
 
@@ -571,25 +577,17 @@ module E = struct
     | Pexp_try (e, pel) -> try_ ~loc ~attrs (sub.expr sub e) (sub.cases sub pel)
     | Pexp_tuple el -> tuple ~loc ~attrs (List.map (sub.expr sub) el)
     | Pexp_construct (lid, args) ->
-      let args = List.map (sub.expr sub) args in
       let arg, attrs =
-        match args with
-        | [] -> (None, attrs)
-        | [arg] -> (Some arg, attrs)
-        | args ->
-          ( Some (Ast_helper0.Exp.tuple ~loc args),
-            add_constructor_args_attr attrs )
+        encode_args ~map:(sub.expr sub)
+          ~tuple:(fun ~loc args -> Ast_helper0.Exp.tuple ~loc args)
+          ~loc ~attrs args
       in
       construct ~loc ~attrs (map_loc sub lid) arg
     | Pexp_variant (lab, args) ->
-      let args = List.map (sub.expr sub) args in
       let arg, attrs =
-        match args with
-        | [] -> (None, attrs)
-        | [arg] -> (Some arg, attrs)
-        | args ->
-          ( Some (Ast_helper0.Exp.tuple ~loc args),
-            add_constructor_args_attr attrs )
+        encode_args ~map:(sub.expr sub)
+          ~tuple:(fun ~loc args -> Ast_helper0.Exp.tuple ~loc args)
+          ~loc ~attrs args
       in
       variant ~loc ~attrs lab arg
     | Pexp_record (l, eo) ->
@@ -826,25 +824,17 @@ module P = struct
       interval ~loc ~attrs (map_constant c1) (map_constant c2)
     | Ppat_tuple pl -> tuple ~loc ~attrs (List.map (sub.pat sub) pl)
     | Ppat_construct (l, args) ->
-      let args = List.map (sub.pat sub) args in
       let arg, attrs =
-        match args with
-        | [] -> (None, attrs)
-        | [arg] -> (Some arg, attrs)
-        | args ->
-          ( Some (Ast_helper0.Pat.tuple ~loc args),
-            add_constructor_args_attr attrs )
+        encode_args ~map:(sub.pat sub)
+          ~tuple:(fun ~loc args -> Ast_helper0.Pat.tuple ~loc args)
+          ~loc ~attrs args
       in
       construct ~loc ~attrs (map_loc sub l) arg
     | Ppat_variant (l, args) ->
-      let args = List.map (sub.pat sub) args in
       let arg, attrs =
-        match args with
-        | [] -> (None, attrs)
-        | [arg] -> (Some arg, attrs)
-        | args ->
-          ( Some (Ast_helper0.Pat.tuple ~loc args),
-            add_constructor_args_attr attrs )
+        encode_args ~map:(sub.pat sub)
+          ~tuple:(fun ~loc args -> Ast_helper0.Pat.tuple ~loc args)
+          ~loc ~attrs args
       in
       variant ~loc ~attrs l arg
     | Ppat_record (lpl, cf, rest) ->
