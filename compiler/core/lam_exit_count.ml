@@ -30,6 +30,9 @@ let count_exit (exits : collection) i = Hash_int.find_default exits i 0
 let incr_exit (exits : collection) i =
   Hash_int.add_or_update exits i 1 ~update:succ
 
+(* [None] when the term holds no static exit at all. A caller that only
+   rewrites raises and catches can then skip its own traversal. *)
+
 (** 
    This funcition counts how each [exit] is used, it will affect how the following optimizations performed.
 
@@ -48,14 +51,24 @@ let incr_exit (exits : collection) i =
    For Lswitch, if it is not exhuastive pattern match, default will be counted twice.
    Since for pattern match,  we will  test whether it is  an integer or block, both have default cases predicate: [sw_consts_full] vs nconsts
 *)
-let count_helper (lam : Lambda.t) : collection =
-  let exits : collection = Hash_int.create 17 in
+let count_helper (lam : Lambda.t) : collection option =
+  let exits = ref None in
+  let table () =
+    match !exits with
+    | Some tbl -> tbl
+    | None ->
+      let tbl : collection = Hash_int.create 17 in
+      exits := Some tbl;
+      tbl
+  in
   let rec count (lam : Lambda.t) =
     match lam with
     | Lstaticraise (i, ls) ->
-      incr_exit exits i;
+      incr_exit (table ()) i;
       Ext_list.iter ls count
     | Lstaticcatch (l1, (i, _), l2) ->
+      (* A catch is work even when nothing raises to it: the pass drops it. *)
+      let exits = table () in
       count l1;
       if count_exit exits i > 0 then count l2
     | Lstringswitch (l, sw, d) ->
@@ -114,4 +127,4 @@ let count_helper (lam : Lambda.t) : collection =
       else count al
   in
   count lam;
-  exits
+  !exits

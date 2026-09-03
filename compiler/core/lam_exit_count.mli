@@ -24,6 +24,7 @@
 
 type collection
 
-val count_helper : Lambda.t -> collection
+val count_helper : Lambda.t -> collection option
+(** [None] when the term holds no static exit, so nothing needs rewriting. *)
 
 val count_exit : collection -> int -> int

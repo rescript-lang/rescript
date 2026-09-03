@@ -42,7 +42,7 @@ let absorb_info (x : used_info) (y : used_info) =
    so uses of outer bindings are marked as captured. The optimizer uses the
    captured flag to restrict inlining without inflating the occurrence count. *)
 let collect_occurs lam : occ_tbl =
-  let occ : occ_tbl = Hash_ident.create 83 in
+  let occ : occ_tbl = Hash_ident.create 16 in
 
   (* Current use count of a variable. *)
   let used v =
