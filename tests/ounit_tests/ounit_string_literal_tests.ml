@@ -81,9 +81,9 @@ let assert_parsed_string ~source ~expected_semantic =
    };
   ] ->
     OUnit.assert_equal ~printer:(Printf.sprintf "%S") source
-      (String_literal.source actual);
+      (String_literal.string_source actual);
     OUnit.assert_equal ~printer:(Printf.sprintf "%S") expected_semantic
-      (String_literal.semantic actual)
+      (String_literal.string_semantic actual)
   | _ -> OUnit.assert_failure "expected a parsed string literal"
 
 let assert_invalid_utf8_after_diagnostic () =
@@ -170,8 +170,8 @@ let assert_parsed_template_pattern ~source ~expected_semantic =
           | Ppat_constant (Pconst_string payload) ->
             actual :=
               Some
-                ( String_literal.source payload,
-                  String_literal.semantic payload,
+                ( String_literal.string_source payload,
+                  String_literal.string_semantic payload,
                   pattern.ppat_attributes )
           | _ -> ());
           Ast_mapper.default_mapper.pat self pattern);
@@ -299,9 +299,9 @@ let assert_typed_template ~source_segments ~expected_semantics =
       {segments; values = [{exp_desc = Texp_constant (Const_string "value")}]}
     ->
     OUnit.assert_equal ~printer:Ext_obj.dump source_segments
-      (List.map String_literal.source segments);
+      (List.map String_literal.template_source segments);
     OUnit.assert_equal ~printer:Ext_obj.dump expected_semantics
-      (List.map String_literal.semantic segments)
+      (List.map String_literal.template_semantic segments)
   | _ -> OUnit.assert_failure "expected an explicit typed template"
   end;
   match Translcore.transl_exp typed with
@@ -309,9 +309,9 @@ let assert_typed_template ~source_segments ~expected_semantics =
       {primitive = Ptemplate segments; args = [Lconst (Const_string "value")]}
     ->
     OUnit.assert_equal ~printer:Ext_obj.dump source_segments
-      (List.map String_literal.source segments);
+      (List.map String_literal.template_source segments);
     OUnit.assert_equal ~printer:Ext_obj.dump expected_semantics
-      (List.map String_literal.semantic segments)
+      (List.map String_literal.template_semantic segments)
   | _ -> OUnit.assert_failure "expected an explicit Lambda template"
 
 let convert_typed_constant constant = Lambda.const_of_typed constant

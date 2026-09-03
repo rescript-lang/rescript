@@ -366,8 +366,8 @@ and expression i ppf x =
          ~pp_sep:(fun ppf () -> Format.fprintf ppf ", ")
          (fun ppf segment ->
            Format.fprintf ppf "{source=%S; semantic=%S}"
-             (String_literal.source segment)
-             (String_literal.semantic segment)))
+             (String_literal.template_source segment)
+             (String_literal.template_semantic segment)))
       segments;
     List.iter (expression i ppf) values
   | Texp_tagged_template {tag; raw_sources; values} ->

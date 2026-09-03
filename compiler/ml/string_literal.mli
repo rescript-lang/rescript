@@ -6,36 +6,30 @@
     prevents compiler passes from accidentally treating source spelling as a
     runtime value, or from emitting a semantic value without escaping it.
 
-    Ordinary quoted strings and template segments have different grammars.
-    The phantom kind on [payload] makes them share the representation without
-    allowing the two forms to be mixed implicitly. Values should be created
-    through the constructors below so the source/semantic invariant holds. *)
+    Ordinary quoted strings and template segments have different grammars, so
+    they are distinct abstract types. Values should be created through the
+    constructors below so the source/semantic invariant holds. *)
 
-type string_kind
-(** Phantom kind for ordinary quoted strings. *)
-
-type template_kind
-(** Phantom kind for JavaScript template segments. *)
-
-type 'kind payload
-(** A source spelling paired with the semantic value it decodes to. The
-    representation is abstract so callers cannot construct inconsistent
-    pairs. *)
-
-type string_literal = string_kind payload
+type string_literal
 (** An ordinary JavaScript string body and its semantic value. Parser error
     recovery may retain an invalid source spelling with an empty placeholder
     semantic value. *)
 
-type template_segment = template_kind payload
+type template_segment
 (** A validated JavaScript template segment and its semantic value. *)
 
-val source : 'kind payload -> string
+val string_source : string_literal -> string
 (** Return the source text between the literal's delimiters. *)
 
-val semantic : 'kind payload -> string
+val string_semantic : string_literal -> string
 (** Return the decoded runtime value. Invalid ordinary strings retained solely
     for parser recovery return the empty placeholder value. *)
+
+val template_source : template_segment -> string
+(** Return the source text between the template delimiters or interpolations. *)
+
+val template_semantic : template_segment -> string
+(** Return the decoded runtime value of a template segment. *)
 
 val is_valid_utf8 : string -> bool
 (** Whether a string consists entirely of valid UTF-8 scalar sequences. *)

@@ -1,20 +1,22 @@
-type string_kind
-type template_kind
-
 (* [source] is the original literal body and [semantic] is exactly what
    JavaScript evaluates that body to. [Invalid_source] is confined by the
    interface to ordinary-string parser recovery. *)
-type 'kind payload =
+type payload =
   | Valid of {source: string; semantic: string}
   | Invalid_source of string
-type string_literal = string_kind payload
-type template_segment = template_kind payload
+type string_literal = payload
+type template_segment = payload
 
-let source = function
+let payload_source = function
   | Valid {source} | Invalid_source source -> source
-let semantic = function
+let payload_semantic = function
   | Valid {semantic} -> semantic
   | Invalid_source _ -> ""
+
+let string_source (literal : string_literal) = payload_source literal
+let string_semantic (literal : string_literal) = payload_semantic literal
+let template_source (segment : template_segment) = payload_source segment
+let template_semantic (segment : template_segment) = payload_semantic segment
 
 let hex_value = function
   | '0' .. '9' as c -> Char.code c - Char.code '0'
@@ -271,8 +273,8 @@ let template_from_semantic semantic : template_segment =
   Valid {source = encode_js_template semantic; semantic}
 
 let concat_template segments =
-  let source = String.concat "" (List.map source segments) in
-  let semantic = String.concat "" (List.map semantic segments) in
+  let source = String.concat "" (List.map template_source segments) in
+  let semantic = String.concat "" (List.map template_semantic segments) in
   (* Joining individually valid sources can change their interpretation at a
      boundary, most notably by creating an unescaped [${]. Preserve the joined
      spelling only if decoding it still produces the joined semantic value. *)

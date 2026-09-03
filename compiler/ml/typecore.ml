@@ -284,7 +284,8 @@ let constant : Parsetree.constant -> (Asttypes.constant, error) result =
     Ok (Const_bigint (sign, i))
   | Pconst_integer (i, Some c) -> Error (Unknown_literal (i, c))
   | Pconst_char {semantic} -> Ok (Const_char semantic)
-  | Pconst_string payload -> Ok (Const_string (String_literal.semantic payload))
+  | Pconst_string payload ->
+    Ok (Const_string (String_literal.string_semantic payload))
   | Pconst_json _ -> Error Json_literal_outside_external
   | Pconst_raw_source s -> Ok (Const_string s)
   | Pconst_float (f, None) -> Ok (Const_float f)

@@ -99,7 +99,8 @@ let source_string ~loc source =
 let template_source_from0 = function
   | source, Some ("js" | "*j") -> source
   | semantic, _ ->
-    String_literal.source (String_literal.template_from_semantic semantic)
+    String_literal.template_source
+      (String_literal.template_from_semantic semantic)
 
 let map_constant ~loc = function
   | Pconst_integer (s, suffix) -> Pt.Pconst_integer (s, suffix)

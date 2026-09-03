@@ -7704,7 +7704,8 @@ and parse_extension ?(module_language = false) p =
                     expression with
                     pexp_desc =
                       Pexp_constant
-                        (Pconst_raw_source (String_literal.source payload));
+                        (Pconst_raw_source
+                           (String_literal.string_source payload));
                   },
                   eval_attrs );
           };

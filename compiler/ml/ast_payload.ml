@@ -46,7 +46,7 @@ let reject_json_literal_payload (payload : t) =
 let semantic_string_of_expression (expression : Parsetree.expression) =
   match expression with
   | {pexp_desc = Pexp_constant (Pconst_string payload); _} ->
-    Some (String_literal.semantic payload)
+    Some (String_literal.string_semantic payload)
   | {
    pexp_desc = Pexp_template {source_segments = [source]; values = []};
    pexp_loc;
@@ -166,7 +166,7 @@ let raw_as_string_exp_exn ~(kind : Js_raw_info.raw_kind) ?is_function (x : t) :
       | Pconst_raw_source source ->
         Some (source, Bs_flow_ast_utils.flow_deli_offset (Some "js"), expression)
       | Pconst_string payload ->
-        Some (String_literal.semantic payload, 0, expression)
+        Some (String_literal.string_semantic payload, 0, expression)
       | _ -> None)
     | _ -> None
   in

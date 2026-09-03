@@ -193,18 +193,18 @@ let assert_string_expr ~expected_source ~expected_semantic expr =
   match expr.Parsetree.pexp_desc with
   | Pexp_constant (Pconst_string payload) ->
     OUnit.assert_equal ~printer:(Printf.sprintf "%S") expected_source
-      (String_literal.source payload);
+      (String_literal.string_source payload);
     OUnit.assert_equal ~printer:(Printf.sprintf "%S") expected_semantic
-      (String_literal.semantic payload)
+      (String_literal.string_semantic payload)
   | _ -> assert_failure "Expected a string expression"
 
 let assert_string_pat ~expected_source ~expected_semantic pat =
   match pat.Parsetree.ppat_desc with
   | Ppat_constant (Pconst_string payload) ->
     OUnit.assert_equal ~printer:(Printf.sprintf "%S") expected_source
-      (String_literal.source payload);
+      (String_literal.string_source payload);
     OUnit.assert_equal ~printer:(Printf.sprintf "%S") expected_semantic
-      (String_literal.semantic payload)
+      (String_literal.string_semantic payload)
   | _ -> assert_failure "Expected a string pattern"
 
 let assert_template_expr ~expected expr =
@@ -275,8 +275,8 @@ let test_ppx_byte_strings_convert_to_valid_utf8 _ =
   in
   match (map_expr0 expression0).pexp_desc with
   | Pexp_constant (Pconst_string payload) ->
-    let source = String_literal.source payload in
-    let semantic = String_literal.semantic payload in
+    let source = String_literal.string_source payload in
+    let semantic = String_literal.string_semantic payload in
     OUnit.assert_equal ~printer:(Printf.sprintf "%S") "aÿé" source;
     OUnit.assert_equal ~printer:(Printf.sprintf "%S") "aÿé" semantic;
     OUnit.assert_equal ~printer:string_of_int 3
@@ -315,7 +315,7 @@ let test_string_literals_roundtrip_through_ast0 _ =
   (match template_pat.ppat_desc with
   | Ppat_constant (Pconst_string payload) ->
     OUnit.assert_equal ~printer:(Printf.sprintf "%S") "a\n😀"
-      (String_literal.semantic payload)
+      (String_literal.string_semantic payload)
   | _ -> assert_failure "Expected a string pattern after ast0 roundtrip");
   let json_expr =
     Ast_helper.Exp.constant ~loc (Parsetree.Pconst_json {|{"answer":42}|})

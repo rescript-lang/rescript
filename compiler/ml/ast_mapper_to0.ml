@@ -80,7 +80,7 @@ let map_constant = function
   | Pconst_integer (s, suffix) -> Pt.Pconst_integer (s, suffix)
   | Pconst_char {semantic} -> Pconst_char semantic
   | Pconst_string payload ->
-    Pconst_string (String_literal.source payload, Some "js")
+    Pconst_string (String_literal.string_source payload, Some "js")
   | Pconst_raw_source s -> Pconst_string (s, Some "js")
   | Pconst_json s -> Pconst_string (s, Some "json")
   | Pconst_float (s, suffix) -> Pconst_float (s, suffix)
@@ -425,7 +425,7 @@ module E = struct
          require compiler-generated context fields to be ordinary semantic
          ast0 strings rather than quotation-delimited source strings. *)
       constant ~loc ~attrs
-        (Pt.Pconst_string (String_literal.semantic payload, None))
+        (Pt.Pconst_string (String_literal.string_semantic payload, None))
     | Pexp_constant x -> constant ~loc ~attrs (map_constant x)
     | Pexp_let (r, vbs, e) ->
       let_ ~loc ~attrs r (List.map (sub.value_binding sub) vbs) (sub.expr sub e)

@@ -711,10 +711,10 @@ and expression_desc cxt ~(level : int) f x : cxt =
     let rec print_segments cxt segments values =
       match (segments, values) with
       | [segment], [] ->
-        P.string f (String_literal.source segment);
+        P.string f (String_literal.template_source segment);
         cxt
       | segment :: segments, value :: values ->
-        P.string f (String_literal.source segment);
+        P.string f (String_literal.template_source segment);
         P.string f "${";
         let cxt = expression cxt ~level:0 f value in
         P.string f "}";
@@ -735,7 +735,7 @@ and expression_desc cxt ~(level : int) f x : cxt =
     Js_dump_string.pp_string f txt;
     cxt
   | Template_literal segment ->
-    P.string f ("`" ^ String_literal.source segment ^ "`");
+    P.string f ("`" ^ String_literal.template_source segment ^ "`");
     cxt
   | Json_literal source ->
     P.string f source;

@@ -595,7 +595,7 @@ let print_constant c =
     Doc.concat
       [
         Doc.text "\"";
-        print_string_contents (String_literal.source payload);
+        print_string_contents (String_literal.string_source payload);
         Doc.text "\"";
       ]
   | Pconst_json source ->
@@ -1647,7 +1647,7 @@ and collect_literal_dict_rows (e : Parsetree.expression) =
        Pexp_tuple
          [{pexp_desc = Pexp_constant (Pconst_string payload); pexp_loc}; value];
     } ->
-      let name = String_literal.semantic payload in
+      let name = String_literal.string_semantic payload in
       Some ((Location.mkloc (Longident.Lident name) pexp_loc, value), e)
     | _ -> None
   in
@@ -6075,7 +6075,7 @@ and print_attribute ?(standalone = false) ~state
     ( Doc.concat
         [
           Doc.text (if standalone then "/***" else "/**");
-          Doc.text (String_literal.semantic payload);
+          Doc.text (String_literal.string_semantic payload);
           Doc.text "*/";
         ],
       Doc.hard_line )

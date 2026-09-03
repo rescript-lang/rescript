@@ -230,7 +230,7 @@ let extract_string_constant text =
         };
       ],
       _ ) ->
-    Some (String_literal.semantic payload)
+    Some (String_literal.string_semantic payload)
   | _ -> None
 
 let print_object_vs_record_hint ppf ~loc =
@@ -676,7 +676,7 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
                 {
                   exp with
                   Parsetree.pexp_desc =
-                    Pexp_variant (String_literal.semantic payload, None);
+                    Pexp_variant (String_literal.string_semantic payload, None);
                 }
             | _ -> None)
       in

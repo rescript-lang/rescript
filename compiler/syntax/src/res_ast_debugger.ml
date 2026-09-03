@@ -137,8 +137,8 @@ module Sexp_ast = struct
         Sexp.list
           [
             Sexp.atom "Pconst_string";
-            string (String_literal.source payload);
-            string (String_literal.semantic payload);
+            string (String_literal.string_source payload);
+            string (String_literal.string_semantic payload);
           ]
       | Pconst_json source -> Sexp.list [Sexp.atom "Pconst_json"; string source]
       | Pconst_raw_source source ->

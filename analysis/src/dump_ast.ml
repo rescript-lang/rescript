@@ -47,9 +47,9 @@ let print_constant const =
     ^ ")"
   | Pconst_string payload ->
     "Pconst_string(source="
-    ^ String_literal.source payload
+    ^ String_literal.string_source payload
     ^ ", semantic="
-    ^ String_literal.semantic payload
+    ^ String_literal.string_semantic payload
     ^ ")"
   | Pconst_json source -> "Pconst_json(" ^ source ^ ")"
   | Pconst_raw_source source -> "Pconst_raw_source(" ^ source ^ ")"

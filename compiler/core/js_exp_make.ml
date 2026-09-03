@@ -681,7 +681,7 @@ let array_length ?comment (e : t) : t =
 let string_literal_semantic (e : t) =
   match e.expression_desc with
   | Str semantic -> Some semantic
-  | Template_literal segment -> Some (String_literal.semantic segment)
+  | Template_literal segment -> Some (String_literal.template_semantic segment)
   | _ -> None
 
 let string_length ?comment (e : t) : t =
