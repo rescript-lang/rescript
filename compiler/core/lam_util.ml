@@ -55,7 +55,10 @@ let add_required_modules ( x : Ident.t list) (meta : Lam_stats.t) =
    Falling through keeps the original binding.  Only the Alias clause changes
    evaluation strategy downstream, so we keep its predicate intentionally
    syntactic and narrow. *)
-let refine_let ~kind param (arg : Lambda.t) (l : Lambda.t) : Lambda.t =
+(* [original] is the binding this one was taken apart from, if any. When
+   nothing is refined it is handed back untouched rather than rebuilt. *)
+let refine_let ?original ~kind param (arg : Lambda.t) (l : Lambda.t) : Lambda.t
+    =
   let is_block_constructor = function
     | Lambda.Pmakeblock _ -> true
     | _ -> false
@@ -133,7 +136,12 @@ let refine_let ~kind param (arg : Lambda.t) (l : Lambda.t) : Lambda.t =
          This keeps the original semantics yet allows downstream passes to skip
          evaluating `x` when it turns out to be unused. *)
     Lambda.let_ StrictOpt param arg l
-  | kind, _, _ -> Lambda.let_ kind param arg l
+  | kind, _, _ -> (
+    match original with
+    | Some (Lambda.Llet (kind', param', arg', l') as o)
+      when kind' = kind && Ident.same param' param && arg' == arg && l' == l ->
+      o
+    | _ -> Lambda.let_ kind param arg l)
 
 let alias_ident_or_global (meta : Lam_stats.t) (k : Ident.t) (v : Ident.t)
     (v_kind : Lam_id_kind.t) =
