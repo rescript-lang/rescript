@@ -1738,7 +1738,7 @@ and parse_array_pattern ~attrs p =
   let loc = mk_loc start_pos p.prev_end_pos in
   Ast_helper.Pat.array ~loc ~attrs patterns
 
-and parse_constructor_pattern_args p constr start_pos attrs =
+and parse_pattern_args (p : Parser.t) =
   let lparen = p.start_pos in
   Parser.expect Lparen p;
   let args =
@@ -1746,40 +1746,24 @@ and parse_constructor_pattern_args p constr start_pos attrs =
       ~f:parse_constrained_pattern_region
   in
   Parser.expect Rparen p;
-  let args =
-    match args with
-    | [] ->
-      let loc = mk_loc lparen p.prev_end_pos in
-      [
-        Ast_helper.Pat.construct ~loc
-          (Location.mkloc (Longident.Lident "()") loc)
-          [];
-      ]
-    | patterns -> patterns
-  in
+  match args with
+  | [] ->
+    let loc = mk_loc lparen p.prev_end_pos in
+    [
+      Ast_helper.Pat.construct ~loc
+        (Location.mkloc (Longident.Lident "()") loc)
+        [];
+    ]
+  | patterns -> patterns
+
+and parse_constructor_pattern_args p constr start_pos attrs =
+  let args = parse_pattern_args p in
   Ast_helper.Pat.construct
     ~loc:(mk_loc start_pos p.prev_end_pos)
     ~attrs constr args
 
 and parse_variant_pattern_args p ident start_pos attrs =
-  let lparen = p.start_pos in
-  Parser.expect Lparen p;
-  let patterns =
-    parse_comma_delimited_region p ~grammar:Grammar.PatternList ~closing:Rparen
-      ~f:parse_constrained_pattern_region
-  in
-  let args =
-    match patterns with
-    | [] ->
-      let loc = mk_loc lparen p.prev_end_pos in
-      [
-        Ast_helper.Pat.construct ~loc
-          (Location.mkloc (Longident.Lident "()") loc)
-          [];
-      ]
-    | patterns -> patterns
-  in
-  Parser.expect Rparen p;
+  let args = parse_pattern_args p in
   Ast_helper.Pat.variant
     ~loc:(mk_loc start_pos p.prev_end_pos)
     ~attrs ident args

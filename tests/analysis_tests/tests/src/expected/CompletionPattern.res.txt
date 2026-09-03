@@ -437,8 +437,8 @@ Path z
 
 Complete src/CompletionPattern.res 103:21
 posCursor:[103:21] posNoWhite:[103:20] Found pattern:[103:16->103:22]
-posCursor:[103:21] posNoWhite:[103:20] Found pattern:[103:20->103:21]
-Ppat_construct ():[103:20->103:21]
+posCursor:[103:21] posNoWhite:[103:20] Found pattern:[103:20->103:22]
+Ppat_construct ():[103:20->103:22]
 Completable: Cpattern Value[b]->polyvariantPayload::two($0)
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
