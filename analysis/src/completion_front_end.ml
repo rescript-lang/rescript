@@ -1884,10 +1884,7 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
   in
 
   if kind_file = Files.Res then (
-    let parser =
-      Res_driver.parsing_engine.parse_implementation_from_source
-        ~for_printer:false
-    in
+    let parser = Res_driver.parsing_engine.parse_implementation_from_source in
     let {Res_driver.parsetree = str} = parser ~source:text in
     iterator.structure iterator str |> ignore;
     if blank_after_cursor = Some ' ' || blank_after_cursor = Some '\n' then (
@@ -1898,9 +1895,7 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
     if !found = false then if debug then Printf.printf "XXX Not found!\n";
     !result)
   else if kind_file = Resi then (
-    let parser =
-      Res_driver.parsing_engine.parse_interface_from_source ~for_printer:false
-    in
+    let parser = Res_driver.parsing_engine.parse_interface_from_source in
     let {Res_driver.parsetree = signature} = parser ~source:text in
     iterator.signature iterator signature |> ignore;
     if blank_after_cursor = Some ' ' || blank_after_cursor = Some '\n' then (

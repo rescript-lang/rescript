@@ -741,9 +741,7 @@ let migrate ~entry_point_file ~output_mode =
   let state = Shared_types.create_state () in
   let result =
     if Filename.check_suffix path ".res" then
-      let parser =
-        Res_driver.parsing_engine.parse_implementation ~for_printer:true
-      in
+      let parser = Res_driver.parsing_engine.parse_implementation in
       let {Res_driver.parsetree; comments; source} = parser ~filename:path in
       match Cmt.load_cmt_infos_from_path ~state ~path with
       | None ->
@@ -771,9 +769,7 @@ let migrate ~entry_point_file ~output_mode =
               ~width:Res_printer.default_print_width ast_transformed ~comments,
             source )
     else if Filename.check_suffix path ".resi" then
-      let parser =
-        Res_driver.parsing_engine.parse_interface ~for_printer:true
-      in
+      let parser = Res_driver.parsing_engine.parse_interface in
       let {Res_driver.parsetree = signature; comments; source} =
         parser ~filename:path
       in

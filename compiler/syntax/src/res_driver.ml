@@ -11,21 +11,13 @@ type ('ast, 'diagnostics) parse_result = {
 
 type 'diagnostics parsing_engine = {
   parse_implementation:
-    for_printer:bool ->
-    filename:string ->
-    (Parsetree.structure, 'diagnostics) parse_result;
+    filename:string -> (Parsetree.structure, 'diagnostics) parse_result;
   parse_implementation_from_source:
-    for_printer:bool ->
-    source:string ->
-    (Parsetree.structure, 'diagnostics) parse_result;
+    source:string -> (Parsetree.structure, 'diagnostics) parse_result;
   parse_interface:
-    for_printer:bool ->
-    filename:string ->
-    (Parsetree.signature, 'diagnostics) parse_result;
+    filename:string -> (Parsetree.signature, 'diagnostics) parse_result;
   parse_interface_from_source:
-    for_printer:bool ->
-    source:string ->
-    (Parsetree.signature, 'diagnostics) parse_result;
+    source:string -> (Parsetree.signature, 'diagnostics) parse_result;
   string_of_diagnostics:
     source:string -> filename:string -> 'diagnostics -> unit;
 }
@@ -57,18 +49,18 @@ type print_engine = {
     unit;
 }
 
-let setup ~filename ~for_printer:_ () =
+let setup ~filename =
   let src = IO.read_file ~filename in
   Res_parser.make src filename
 
-let setup_from_source ~display_filename ~source ~for_printer:_ () =
+let setup_from_source ~display_filename ~source =
   Res_parser.make source display_filename
 
 let parsing_engine =
   {
     parse_implementation =
-      (fun ~for_printer ~filename ->
-        let engine = setup ~filename ~for_printer () in
+      (fun ~filename ->
+        let engine = setup ~filename in
         let structure = Res_core.parse_implementation engine in
         let invalid, diagnostics =
           match engine.diagnostics with
@@ -84,10 +76,8 @@ let parsing_engine =
           comments = List.rev engine.comments;
         });
     parse_implementation_from_source =
-      (fun ~for_printer ~source ->
-        let engine =
-          setup_from_source ~source ~for_printer ~display_filename:"source" ()
-        in
+      (fun ~source ->
+        let engine = setup_from_source ~source ~display_filename:"source" in
         let structure = Res_core.parse_implementation engine in
         let invalid, diagnostics =
           match engine.diagnostics with
@@ -103,8 +93,8 @@ let parsing_engine =
           comments = List.rev engine.comments;
         });
     parse_interface =
-      (fun ~for_printer ~filename ->
-        let engine = setup ~filename ~for_printer () in
+      (fun ~filename ->
+        let engine = setup ~filename in
         let signature = Res_core.parse_specification engine in
         let invalid, diagnostics =
           match engine.diagnostics with
@@ -120,10 +110,8 @@ let parsing_engine =
           comments = List.rev engine.comments;
         });
     parse_interface_from_source =
-      (fun ~for_printer ~source ->
-        let engine =
-          setup_from_source ~source ~display_filename:"<source>" ~for_printer ()
-        in
+      (fun ~source ->
+        let engine = setup_from_source ~source ~display_filename:"<source>" in
         let signature = Res_core.parse_specification engine in
         let invalid, diagnostics =
           match engine.diagnostics with
@@ -143,8 +131,8 @@ let parsing_engine =
         Res_diagnostics.print_report diagnostics source);
   }
 
-let parse_implementation_from_source ~for_printer ~display_filename ~source =
-  let engine = setup_from_source ~display_filename ~source ~for_printer () in
+let parse_implementation_from_source ~display_filename ~source =
+  let engine = setup_from_source ~display_filename ~source in
   let structure = Res_core.parse_implementation engine in
   let invalid, diagnostics =
     match engine.diagnostics with
@@ -160,8 +148,8 @@ let parse_implementation_from_source ~for_printer ~display_filename ~source =
     comments = List.rev engine.comments;
   }
 
-let parse_interface_from_source ~for_printer ~display_filename ~source =
-  let engine = setup_from_source ~display_filename ~source ~for_printer () in
+let parse_interface_from_source ~display_filename ~source =
+  let engine = setup_from_source ~display_filename ~source in
   let signature = Res_core.parse_specification engine in
   let invalid, diagnostics =
     match engine.diagnostics with
@@ -197,9 +185,7 @@ let print_engine =
 
 let parse_implementation ?(ignore_parse_errors = false) sourcefile =
   Location.input_name := sourcefile;
-  let parse_result =
-    parsing_engine.parse_implementation ~for_printer:false ~filename:sourcefile
-  in
+  let parse_result = parsing_engine.parse_implementation ~filename:sourcefile in
   if parse_result.invalid then (
     Res_diagnostics.print_report parse_result.diagnostics parse_result.source;
     if not ignore_parse_errors then exit 1);
@@ -208,9 +194,7 @@ let parse_implementation ?(ignore_parse_errors = false) sourcefile =
 
 let parse_interface ?(ignore_parse_errors = false) sourcefile =
   Location.input_name := sourcefile;
-  let parse_result =
-    parsing_engine.parse_interface ~for_printer:false ~filename:sourcefile
-  in
+  let parse_result = parsing_engine.parse_interface ~filename:sourcefile in
   if parse_result.invalid then (
     Res_diagnostics.print_report parse_result.diagnostics parse_result.source;
     if not ignore_parse_errors then exit 1);

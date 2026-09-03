@@ -425,10 +425,7 @@ let signature_help ~debug ~source ~kind_file ~pos
         Ast_iterator.default_iterator.pat iterator pat
       in
       let iterator = {Ast_iterator.default_iterator with expr; pat} in
-      let parser =
-        Res_driver.parsing_engine.parse_implementation_from_source
-          ~for_printer:false
-      in
+      let parser = Res_driver.parsing_engine.parse_implementation_from_source in
       let {Res_driver.parsetree = structure} = parser ~source in
       iterator.structure iterator structure |> ignore;
       (* Handle function application, if found *)
@@ -458,7 +455,7 @@ let signature_help ~debug ~source ~kind_file ~pos
           let fn_type_str = Shared.type_to_string type_expr in
           let type_str_for_parser = label_prefix ^ fn_type_str in
           let {Res_driver.parsetree = signature} =
-            Res_driver.parse_interface_from_source ~for_printer:false
+            Res_driver.parse_interface_from_source
               ~display_filename:"<missing-file>" ~source:type_str_for_parser
           in
 

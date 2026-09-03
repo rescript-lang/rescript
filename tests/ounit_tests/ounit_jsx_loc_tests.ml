@@ -3,8 +3,8 @@ let assert_equal = OUnit.assert_equal
 let assert_failure = OUnit.assert_failure
 
 let parse_structure source =
-  Res_driver.parse_implementation_from_source ~for_printer:false
-    ~display_filename:"JsxLocTest.res" ~source
+  Res_driver.parse_implementation_from_source ~display_filename:"JsxLocTest.res"
+    ~source
   |> fun result -> result.parsetree
 
 let roundtrip_structure source =

@@ -498,19 +498,14 @@ let command ~debug ~emitter ~source ~kind_file =
   in
 
   if kind_file = Files.Res then (
-    let parser =
-      Res_driver.parsing_engine.parse_implementation_from_source
-        ~for_printer:false
-    in
+    let parser = Res_driver.parsing_engine.parse_implementation_from_source in
     let {Res_driver.parsetree = structure; diagnostics} = parser ~source in
     if debug then
       Printf.printf "structure items:%d diagnostics:%d\n"
         (List.length structure) (List.length diagnostics);
     iterator.structure iterator structure |> ignore)
   else
-    let parser =
-      Res_driver.parsing_engine.parse_interface_from_source ~for_printer:false
-    in
+    let parser = Res_driver.parsing_engine.parse_interface_from_source in
     let {Res_driver.parsetree = signature; diagnostics} = parser ~source in
     if debug then
       Printf.printf "signature items:%d diagnostics:%d\n"

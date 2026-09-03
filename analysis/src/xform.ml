@@ -865,8 +865,7 @@ end
 
 let parse_implementation ~source =
   let {Res_driver.parsetree = structure; comments} =
-    Res_driver.parsing_engine.parse_implementation_from_source
-      ~for_printer:false ~source
+    Res_driver.parsing_engine.parse_implementation_from_source ~source
   in
   let filter_comments ~loc comments =
     (* Relevant comments in the range of the expression *)
@@ -899,8 +898,7 @@ let parse_implementation ~source =
 
 let parse_interface ~source =
   let {Res_driver.parsetree = structure; comments} =
-    Res_driver.parsing_engine.parse_interface_from_source ~for_printer:false
-      ~source
+    Res_driver.parsing_engine.parse_interface_from_source ~source
   in
   let filter_comments ~loc comments =
     (* Relevant comments in the range of the expression *)

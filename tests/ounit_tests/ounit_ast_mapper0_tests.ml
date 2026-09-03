@@ -789,7 +789,7 @@ let quote = "\""
 let slash = "\\"|}
   in
   let parsed =
-    Res_driver.parse_implementation_from_source ~for_printer:false
+    Res_driver.parse_implementation_from_source
       ~display_filename:"StringReprintTest.res" ~source
   in
   OUnit.assert_bool "expected valid ReScript source" (not parsed.invalid);
@@ -809,7 +809,7 @@ let slash = "\\"|}
 let test_invalid_utf8_doc_comment_roundtrips_through_ast0 _ =
   let source = "/** doc " ^ "\xff" ^ " byte */\nlet value = 1" in
   let parsed =
-    Res_driver.parse_implementation_from_source ~for_printer:false
+    Res_driver.parse_implementation_from_source
       ~display_filename:"InvalidDocComment.res" ~source
   in
   OUnit.assert_bool "expected invalid UTF-8 to be diagnosed" parsed.invalid;

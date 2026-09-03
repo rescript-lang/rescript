@@ -383,8 +383,7 @@ let print_struct_item struct_item ~pos ~source =
 
 let dump ~current_file ~pos =
   let {Res_driver.parsetree = structure; source} =
-    Res_driver.parsing_engine.parse_implementation ~for_printer:true
-      ~filename:current_file
+    Res_driver.parsing_engine.parse_implementation ~filename:current_file
   in
 
   print_endline
