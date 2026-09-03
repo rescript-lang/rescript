@@ -1390,7 +1390,7 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
             pat_attributes = sp.ppat_attributes;
             pat_env = !env;
           })
-  | Ppat_construct (lid, sarg) ->
+  | Ppat_construct (lid, sargs) ->
     let opath =
       try
         let p0, p, _ = extract_concrete_variant !env expected_ty in
@@ -1425,7 +1425,7 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
        correct head *)
     if constr.cstr_generalized then unify_head_only loc !env expected_ty constr;
     let sargs =
-      match sarg with
+      match sargs with
       | [({ppat_desc = Ppat_any} as sp)] when constr.cstr_arity <> 1 ->
         if constr.cstr_arity = 0 then
           Location.prerr_warning sp.ppat_loc
@@ -2741,8 +2741,8 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
         exp_attributes = sexp.pexp_attributes;
         exp_env = env;
       }
-  | Pexp_construct (lid, sarg) ->
-    type_construct ~context env loc lid sarg ty_expected sexp.pexp_attributes
+  | Pexp_construct (lid, sargs) ->
+    type_construct ~context env loc lid sargs ty_expected sexp.pexp_attributes
   | Pexp_variant (l, sargs) -> (
     check_polyvar_name env loc l;
     let sarg =
