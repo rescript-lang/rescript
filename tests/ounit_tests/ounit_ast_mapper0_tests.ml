@@ -374,6 +374,50 @@ let test_constructor_args_keep_parentheses_location_in_ast0 _ =
       ~expected_end:(expression_rparen + 1) pexp_loc
   | _ -> assert_failure "Expected a tuple-encoded constructor expression"
 
+let test_polyvariant_args_keep_parentheses_location_in_ast0 _ =
+  List.iter
+    (fun source ->
+      let parsed =
+        Res_driver.parse_implementation_from_source
+          ~display_filename:"VariantArgsLocation.res" ~source
+      in
+      let pat, expr =
+        match parsed.parsetree with
+        | [{pstr_desc = Pstr_value (_, [{pvb_pat; pvb_expr}])}] ->
+          (pvb_pat, pvb_expr)
+        | _ -> assert_failure "Expected one polymorphic variant binding"
+      in
+      let pattern_start = String.index source '(' in
+      let pattern_end = 1 + String.index_from source pattern_start ')' in
+      let expression_start = String.index_from source pattern_end '(' in
+      let expression_end = 1 + String.index_from source expression_start ')' in
+      let assert_loc start finish {Location.loc_start; loc_end} =
+        OUnit.assert_equal start loc_start.pos_cnum;
+        OUnit.assert_equal finish loc_end.pos_cnum
+      in
+      let check pat expr =
+        OUnit.assert_bool "parser location metadata stays out of v0"
+          ((not (has_attr "res.variantArgs" pat.Parsetree0.ppat_attributes))
+          && not (has_attr "res.variantArgs" expr.Parsetree0.pexp_attributes));
+        (match pat.ppat_desc with
+        | Ppat_variant (_, Some {ppat_desc = Ppat_tuple _; ppat_loc}) ->
+          assert_loc pattern_start pattern_end ppat_loc
+        | _ -> assert_failure "Expected v0 polymorphic variant pattern tuple");
+        match expr.pexp_desc with
+        | Pexp_variant (_, Some {pexp_desc = Pexp_tuple _; pexp_loc}) ->
+          assert_loc expression_start expression_end pexp_loc
+        | _ -> assert_failure "Expected v0 polymorphic variant expression tuple"
+      in
+      let pat0 = map_pat_to0 pat in
+      let expr0 = map_expr_to0 expr in
+      check pat0 expr0;
+      check (map_pat_to0 (map_pat0 pat0)) (map_expr_to0 (map_expr0 expr0)))
+    [
+      "let #Pair(a, b) = #Pair(1, 2)";
+      "let #Pair /* pattern */ (a, b) = #Pair /* expression */ (1, 2)";
+      "let #\"quoted label\"(a,\n b) = #\"quoted label\"(1,\n 2)";
+    ]
+
 let test_fresh_ast0_constructor_tuple_reprints_without_internal_metadata _ =
   let int_expr value =
     Ast_helper0.Exp.constant ~loc (Parsetree0.Pconst_integer (value, None))
@@ -1087,6 +1131,8 @@ let suites =
          >:: test_fresh_ast0_constructor_tuple_defers_arity_to_typechecker;
          "polyvariant_args_roundtrip_through_ast0"
          >:: test_polyvariant_args_roundtrip_through_ast0;
+         "polyvariant_args_keep_parentheses_location_in_ast0"
+         >:: test_polyvariant_args_keep_parentheses_location_in_ast0;
          "value_constraint_roundtrips_through_ast0"
          >:: test_value_constraint_roundtrips_through_ast0;
          "function_cases_desugar_to_fun_match"

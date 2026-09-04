@@ -1763,7 +1763,16 @@ and parse_constructor_pattern_args p constr start_pos attrs =
     ~attrs constr args
 
 and parse_variant_pattern_args p ident start_pos attrs =
+  let args_start = p.Parser.start_pos in
   let args = parse_pattern_args p in
+  let attrs =
+    match args with
+    | _ :: _ :: _ ->
+      ( Location.mkloc "res.variantArgs" (mk_loc args_start p.prev_end_pos),
+        Parsetree.PStr [] )
+      :: attrs
+    | _ -> attrs
+  in
   Ast_helper.Pat.variant
     ~loc:(mk_loc start_pos p.prev_end_pos)
     ~attrs ident args
@@ -4216,9 +4225,19 @@ and parse_poly_variant_expr p =
   let ident, _loc = parse_hash_ident ~start_pos p in
   match p.Parser.token with
   | Lparen when p.prev_end_pos.pos_lnum == p.start_pos.pos_lnum ->
+    let args_start = p.start_pos in
     let args = parse_constructor_args p in
     let loc = mk_loc start_pos p.prev_end_pos in
-    Ast_helper.Exp.variant ~loc ident args
+    let attrs =
+      match args with
+      | _ :: _ :: _ ->
+        [
+          ( Location.mkloc "res.variantArgs" (mk_loc args_start p.prev_end_pos),
+            Parsetree.PStr [] );
+        ]
+      | _ -> []
+    in
+    Ast_helper.Exp.variant ~loc ~attrs ident args
   | _ ->
     let loc = mk_loc start_pos p.prev_end_pos in
     Ast_helper.Exp.variant ~loc ident []

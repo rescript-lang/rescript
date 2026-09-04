@@ -228,7 +228,7 @@ let filter_parsing_attrs attrs =
               ( "res.braces" | "ns.braces" | "res.iflet" | "res.ternary"
               | "res.await" | "res.patVariantSpread" | "res.dictPattern"
               | "res.dictSpread" | "res.inlineRecordDefinition"
-              | "_res.legacy_constructor_payload" );
+              | "res.variantArgs" | "_res.legacy_constructor_payload" );
           },
           _ ) ->
         false
@@ -387,7 +387,7 @@ let has_attributes attrs =
       | ( {
             Location.txt =
               ( "res.braces" | "ns.braces" | "res.iflet" | "res.ternary"
-              | "res.await" | "res.inlineRecordDefinition" );
+              | "res.await" | "res.inlineRecordDefinition" | "res.variantArgs" );
           },
           _ ) ->
         false
@@ -563,7 +563,8 @@ let is_printable_attribute attr =
   | ( {
         Location.txt =
           ( "res.iflet" | "res.braces" | "ns.braces" | "JSX" | "res.await"
-          | "res.ternary" | "res.inlineRecordDefinition" | "res.dictSpread" );
+          | "res.ternary" | "res.inlineRecordDefinition" | "res.dictSpread"
+          | "res.variantArgs" );
       },
       _ ) ->
     false

@@ -65,9 +65,10 @@ let x =
     ((fun [arity:1]_ -> copyChecklistItemCB ()),
       (fun [arity:1]_ -> copyChecklistItemCB ()))
 let y =
-  `Constructore
-    ((fun [arity:1]_ -> copyChecklistItemCB ()),
-      (fun [arity:1]_ -> copyChecklistItemCB ()))
+  ((`Constructore
+      ((fun [arity:1]_ -> copyChecklistItemCB ()),
+        (fun [arity:1]_ -> copyChecklistItemCB ())))
+  [@res.variantArgs ])
 let f [arity:1]list = list + 1
 let foo = (() : unit)
 type nonrec u = unit

@@ -123,6 +123,17 @@ let encode_args ~map ~is_tuple ~tuple ~loc ~attrs args =
   | [arg] -> (Some arg, attrs)
   | args -> (Some (tuple ~loc args), add_constructor_args_attr attrs)
 
+(* The argument list no longer has a tuple node to carry its parentheses span.
+   Consume the parser's location metadata when rebuilding that v0 node. *)
+let variant_args_loc ~loc attrs =
+  let rec loop rev_attrs = function
+    | ({Location.txt = "res.variantArgs"; loc}, Pt.PStr []) :: attrs ->
+      (loc, List.rev_append rev_attrs attrs)
+    | attr :: attrs -> loop (attr :: rev_attrs) attrs
+    | [] -> (loc, List.rev rev_attrs)
+  in
+  loop [] attrs
+
 let add_record_rest_attr ~rest attrs =
   (Location.mknoloc record_rest_attr_name, Pt.PPat (rest, None)) :: attrs
 
@@ -598,6 +609,7 @@ module E = struct
       in
       construct ~loc ~attrs lid arg
     | Pexp_variant (lab, args) ->
+      let args_loc, attrs = variant_args_loc ~loc attrs in
       let arg, attrs =
         encode_args ~map:(sub.expr sub)
           ~is_tuple:(fun arg ->
@@ -605,7 +617,7 @@ module E = struct
             | Pexp_tuple _ -> true
             | _ -> false)
           ~tuple:(fun ~loc args -> Ast_helper0.Exp.tuple ~loc args)
-          ~loc ~attrs args
+          ~loc:args_loc ~attrs args
       in
       variant ~loc ~attrs lab arg
     | Pexp_record (l, eo) ->
@@ -857,6 +869,7 @@ module P = struct
       in
       construct ~loc ~attrs l arg
     | Ppat_variant (l, args) ->
+      let args_loc, attrs = variant_args_loc ~loc attrs in
       let arg, attrs =
         encode_args ~map:(sub.pat sub)
           ~is_tuple:(fun arg ->
@@ -864,7 +877,7 @@ module P = struct
             | Ppat_tuple _ -> true
             | _ -> false)
           ~tuple:(fun ~loc args -> Ast_helper0.Pat.tuple ~loc args)
-          ~loc ~attrs args
+          ~loc:args_loc ~attrs args
       in
       variant ~loc ~attrs l arg
     | Ppat_record (lpl, cf, rest) ->

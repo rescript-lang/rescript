@@ -966,6 +966,14 @@ module E = struct
       | _ -> exp1)
     | Pexp_variant (lab, arg) ->
       let has_constructor_args, attrs = remove_constructor_args_attr attrs in
+      let attrs =
+        match arg with
+        | Some {pexp_desc = Pexp_tuple _; pexp_loc} when has_constructor_args ->
+          ( Location.mkloc "res.variantArgs" (sub.location sub pexp_loc),
+            Pt.PStr [] )
+          :: attrs
+        | _ -> attrs
+      in
       let has_constructor_tuple_arg, attrs =
         remove_constructor_tuple_arg_attr attrs
       in
@@ -1170,6 +1178,14 @@ module P = struct
       construct ~loc ~attrs (map_loc sub l) args
     | Ppat_variant (l, arg) ->
       let has_constructor_args, attrs = remove_constructor_args_attr attrs in
+      let attrs =
+        match arg with
+        | Some {ppat_desc = Ppat_tuple _; ppat_loc} when has_constructor_args ->
+          ( Location.mkloc "res.variantArgs" (sub.location sub ppat_loc),
+            Pt.PStr [] )
+          :: attrs
+        | _ -> attrs
+      in
       let has_constructor_tuple_arg, attrs =
         remove_constructor_tuple_arg_attr attrs
       in
