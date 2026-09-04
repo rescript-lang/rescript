@@ -22,6 +22,4 @@ val field_name : string -> Parsetree.attributes -> string
 (** The runtime name of a field declared as [declared_name] with [attributes]:
     the [@as] payload when there is one, otherwise the declared name. *)
 
-val label_name : Types.label_description -> string
-
 val declaration_name : Types.label_declaration -> string

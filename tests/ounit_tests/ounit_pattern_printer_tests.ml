@@ -42,6 +42,7 @@ let count_label =
   let label =
     {
       Types.lbl_name = "count";
+      lbl_runtime_name = "count";
       lbl_res = record_type;
       lbl_arg = Predef.type_int;
       lbl_mut = Asttypes.Immutable;

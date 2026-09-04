@@ -61,30 +61,10 @@ let mutable_flag_of_tag_info (tag : tag_info) =
   | Blk_module_export _ | Blk_extension ->
     Immutable
 
-type label = Types.label_description
-
-let blk_record (fields : (label * _ * _) array) mut =
-  let all_labels_info =
-    Ext_array.map fields (fun (lbl, _, _) ->
-        (Record_runtime.label_name lbl, lbl.lbl_optional))
-  in
-  Blk_record {fields = all_labels_info; mutable_flag = mut}
-
-let blk_record_ext fields mutable_flag =
-  let all_labels_info =
-    Array.map
-      (fun ((lbl : label), _, _) -> Record_runtime.label_name lbl)
-      fields
-  in
-  Blk_record_ext {fields = all_labels_info; mutable_flag}
+let blk_record fields mutable_flag = Blk_record {fields; mutable_flag}
+let blk_record_ext fields mutable_flag = Blk_record_ext {fields; mutable_flag}
 
 let blk_record_inlined fields name num_nonconst ~runtime mutable_flag =
-  let fields =
-    Array.map
-      (fun ((lbl : label), _, _) ->
-        (Record_runtime.label_name lbl, lbl.lbl_optional))
-      fields
-  in
   Blk_record_inlined {fields; name; num_nonconst; mutable_flag; runtime}
 
 let ref_tag_info : tag_info =
@@ -102,10 +82,9 @@ type field_dbg_info =
   | Fld_variant
   | Fld_cons
 
-let fld_record (lbl : label) = Fld_record {name = Record_runtime.label_name lbl}
+let fld_record name = Fld_record {name}
 
-let fld_record_extension (lbl : label) =
-  Fld_record_extension {name = Record_runtime.label_name lbl}
+let fld_record_extension name = Fld_record_extension {name}
 
 let ref_field_info : field_dbg_info = Fld_record {name = "contents"}
 
@@ -115,17 +94,13 @@ type set_field_dbg_info =
   | Fld_record_extension_set of string
 
 let ref_field_set_info : set_field_dbg_info = Fld_record_set "contents"
-let fld_record_set (lbl : label) =
-  Fld_record_set (Record_runtime.label_name lbl)
+let fld_record_set name = Fld_record_set name
 
-let fld_record_inline (lbl : label) =
-  Fld_record_inline {name = Record_runtime.label_name lbl}
+let fld_record_inline name = Fld_record_inline {name}
 
-let fld_record_inline_set (lbl : label) =
-  Fld_record_inline_set (Record_runtime.label_name lbl)
+let fld_record_inline_set name = Fld_record_inline_set name
 
-let fld_record_extension_set (lbl : label) =
-  Fld_record_extension_set (Record_runtime.label_name lbl)
+let fld_record_extension_set name = Fld_record_extension_set name
 
 type immediate_or_pointer = Immediate | Pointer
 

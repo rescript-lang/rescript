@@ -1489,17 +1489,22 @@ let make_record_matching loc all_labels def = function
           | Record_float_unused -> assert false
           | Record_regular ->
             prim
-              ~primitive:(Pfield (lbl.lbl_pos, Lambda.fld_record lbl))
+              ~primitive:
+                (Pfield (lbl.lbl_pos, Lambda.fld_record lbl.lbl_runtime_name))
               ~args:[arg] loc
           | Record_inlined _ ->
             prim
-              ~primitive:(Pfield (lbl.lbl_pos, Lambda.fld_record_inline lbl))
+              ~primitive:
+                (Pfield
+                   (lbl.lbl_pos, Lambda.fld_record_inline lbl.lbl_runtime_name))
               ~args:[arg] loc
           | Record_unboxed _ -> arg
           | Record_extension ->
             prim
               ~primitive:
-                (Pfield (lbl.lbl_pos + 1, Lambda.fld_record_extension lbl))
+                (Pfield
+                   ( lbl.lbl_pos + 1,
+                     Lambda.fld_record_extension lbl.lbl_runtime_name ))
               ~args:[arg] loc
         in
         let str =

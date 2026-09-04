@@ -23,8 +23,5 @@ let as_name (({txt}, payload) : Parsetree.attribute) =
 let field_name declared_name attributes =
   Ext_list.find_def attributes as_name declared_name
 
-let label_name (lbl : Types.label_description) =
-  field_name lbl.lbl_name lbl.lbl_attributes
-
 let declaration_name (lbl : Types.label_declaration) =
   field_name (Ident.name lbl.ld_id) lbl.ld_attributes

@@ -54,18 +54,12 @@ type tag_info =
 
 val tag_label_of_tag_info : tag_info -> string
 val mutable_flag_of_tag_info : tag_info -> mutable_flag
-val blk_record :
-  (Types.label_description * Typedtree.record_label_definition * bool) array ->
-  mutable_flag ->
-  tag_info
+val blk_record : (string * bool) array -> mutable_flag -> tag_info
 
-val blk_record_ext :
-  (Types.label_description * Typedtree.record_label_definition * bool) array ->
-  mutable_flag ->
-  tag_info
+val blk_record_ext : string array -> mutable_flag -> tag_info
 
 val blk_record_inlined :
-  (Types.label_description * Typedtree.record_label_definition * bool) array ->
+  (string * bool) array ->
   string ->
   int ->
   runtime:Variant_runtime.block_runtime ->
@@ -86,11 +80,11 @@ type field_dbg_info =
   | Fld_variant
   | Fld_cons
 
-val fld_record : Types.label_description -> field_dbg_info
+val fld_record : string -> field_dbg_info
 
-val fld_record_inline : Types.label_description -> field_dbg_info
+val fld_record_inline : string -> field_dbg_info
 
-val fld_record_extension : Types.label_description -> field_dbg_info
+val fld_record_extension : string -> field_dbg_info
 
 val ref_field_info : field_dbg_info
 
@@ -101,11 +95,11 @@ type set_field_dbg_info =
 
 val ref_field_set_info : set_field_dbg_info
 
-val fld_record_set : Types.label_description -> set_field_dbg_info
+val fld_record_set : string -> set_field_dbg_info
 
-val fld_record_inline_set : Types.label_description -> set_field_dbg_info
+val fld_record_inline_set : string -> set_field_dbg_info
 
-val fld_record_extension_set : Types.label_description -> set_field_dbg_info
+val fld_record_extension_set : string -> set_field_dbg_info
 
 type immediate_or_pointer = Immediate | Pointer
 
