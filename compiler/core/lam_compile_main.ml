@@ -290,17 +290,17 @@ let compile (output_prefix : string) export_idents hoisted (lam : Lambda.t) =
     Lam_compile_env.reset ()
   in
   let may_required_modules = required_modules lam in
+  let lam = d "initial" lam in
   let lam =
     Lam_pass_collapse_var_aliases.collapse ~exports:export_ident_sets lam
   in
-
-  let lam = d "initial" lam in
+  let lam = d "collapse_var_aliases" lam in
   let lam = Lam_pass_deep_flatten.deep_flatten lam in
-  let lam = d "flatten0" lam in
+  let lam = d "deep_flatten 1" lam in
   let meta : Lam_stats.t = Lam_stats.make ~export_idents ~export_ident_sets in
   let lam =
     let lam =
-      lam |> d "flatten1" |> Lam_pass_exits.simplify_exits |> d "simplify_exits"
+      lam |> Lam_pass_exits.simplify_exits |> d "simplify_exits 1"
       |> (fun lam ->
       Lam_pass_collect.collect_info meta lam;
       if debug_ir then
@@ -308,30 +308,26 @@ let compile (output_prefix : string) export_idents hoisted (lam : Lambda.t) =
           meta;
       lam)
       |> Lam_pass_remove_alias.simplify_alias meta
-      |> d "simplify_alias" |> Lam_pass_deep_flatten.deep_flatten
-      |> d "flatten2"
+      |> d "simplify_alias 1" |> Lam_pass_deep_flatten.deep_flatten
+      |> d "deep_flatten 2"
     in
-    (* Inling happens*)
-
+    (* Inlining happens *)
     let () = Lam_pass_collect.collect_info meta lam in
     let lam = Lam_pass_remove_alias.simplify_alias meta lam in
+    let lam = d "simplify_alias 2" lam in
     let lam = Lam_pass_deep_flatten.deep_flatten lam in
+    let lam = d "deep_flatten 3" lam in
     let lam = lam |> Lam_pass_exits.simplify_exits in
     let () = Lam_pass_collect.collect_info meta lam in
 
-    lam |> d "simplify_alias_before"
+    lam |> d "simplify_exits 2"
     |> Lam_pass_remove_alias.simplify_alias meta
-    |> d "before-simplify_lets"
+    |> d "simplify_alias 3"
     (* we should investigate a better way to put different passes : )*)
     |> Lam_pass_lets_dce.simplify_lets
     |> d "simplify_lets" |> Lam_pass_sroa.simplify |> d "sroa"
-    |> d "before-simplify-exits"
-    (* |> (fun lam -> Lam_pass_collect.collect_info meta lam
-       ; Lam_pass_remove_alias.simplify_alias meta lam) *)
-    (* |> Lam_group_pass.scc_pass
-       |> d "scc" *)
-    |> Lam_pass_exits.simplify_exits
-    |> Lam_pass_guard_raises.guard_raises |> d "simplify_lets"
+    |> Lam_pass_exits.simplify_exits |> d "simplify_exits 3"
+    |> Lam_pass_guard_raises.guard_raises |> d "guard_raises"
     |> fun lam ->
     if debug_ir then
       Ext_log.dwarn ~__POS__ "Before coercion: %a@." Lam_stats.print meta;
