@@ -3189,83 +3189,6 @@ and print_object_get_doc ~state ~expr_loc parent_expr
   Doc.group (Doc.concat [parent_doc; Doc.lbracket; member; Doc.rbracket])
 
 and print_expression ~state (e : Parsetree.expression) cmt_tbl =
-  let print_arrow e =
-    let async, parameters, return_expr = Parsetree_viewer.fun_expr e in
-    let attrs_on_arrow = e.pexp_attributes in
-    let return_expr, typ_constraint =
-      match return_expr.pexp_desc with
-      | Pexp_constraint (expr, typ) ->
-        ( {
-            expr with
-            pexp_attributes =
-              List.concat [expr.pexp_attributes; return_expr.pexp_attributes];
-          },
-          Some typ )
-      | _ -> (return_expr, None)
-    in
-    let has_constraint =
-      match typ_constraint with
-      | Some _ -> true
-      | None -> false
-    in
-    let parameters_doc =
-      print_expr_fun_parameters ~state ~in_callback:NoCallback ~async
-        ~has_constraint parameters cmt_tbl
-    in
-    let return_expr_doc =
-      let opt_braces, _ = Parsetree_viewer.process_braces_attr return_expr in
-      let should_inline =
-        match (return_expr.pexp_desc, opt_braces) with
-        | _, Some _ -> true
-        | ( ( Pexp_array _ | Pexp_tuple _
-            | Pexp_construct (_, Some _)
-            | Pexp_record _ ),
-            _ ) ->
-          true
-        | _ -> false
-      in
-      let should_indent =
-        match return_expr.pexp_desc with
-        | Pexp_sequence _ | Pexp_let _ | Pexp_letmodule _ | Pexp_letexception _
-        | Pexp_open _
-        | Pexp_jsx_element (Jsx_fragment _) ->
-          false
-        | _ -> true
-      in
-      let return_doc =
-        let doc = print_expression_with_comments ~state return_expr cmt_tbl in
-        match Parens.expr return_expr with
-        | Parens.Parenthesized -> add_parens doc
-        | Braced braces -> print_braces doc return_expr braces
-        | Nothing -> doc
-      in
-      if should_inline then Doc.concat [Doc.space; return_doc]
-      else
-        Doc.group
-          (if should_indent then Doc.indent (Doc.concat [Doc.line; return_doc])
-           else Doc.concat [Doc.space; return_doc])
-    in
-    let typ_constraint_doc =
-      match typ_constraint with
-      | Some typ ->
-        let typ_doc =
-          let doc = print_typ_expr ~state typ cmt_tbl in
-          if Parens.arrow_return_typ_expr typ then add_parens doc else doc
-        in
-        Doc.concat [Doc.text ": "; typ_doc]
-      | _ -> Doc.nil
-    in
-    let attrs = print_attributes ~state ~inline:true attrs_on_arrow cmt_tbl in
-    Doc.group
-      (Doc.concat
-         [
-           attrs;
-           parameters_doc;
-           typ_constraint_doc;
-           Doc.text " =>";
-           return_expr_doc;
-         ])
-  in
   let printed_expression =
     match e.pexp_desc with
     | Pexp_fun
@@ -3284,7 +3207,7 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
       print_expression_with_comments ~state
         (Parsetree_viewer.rewrite_underscore_apply e)
         cmt_tbl
-    | Pexp_fun _ -> print_arrow e
+    | Pexp_fun _ -> print_pexp_fun ~state ~in_callback:NoCallback e cmt_tbl
     | Parsetree.Pexp_constant c -> print_constant c
     | Pexp_jsx_element
         (Jsx_fragment
@@ -3993,7 +3916,8 @@ and print_pexp_fun ~state ~in_callback e cmt_tbl =
   let return_should_indent =
     match return_expr.pexp_desc with
     | Pexp_sequence _ | Pexp_let _ | Pexp_letmodule _ | Pexp_letexception _
-    | Pexp_open _ ->
+    | Pexp_open _
+    | Pexp_jsx_element (Jsx_fragment _) ->
       false
     | _ -> true
   in
@@ -4031,17 +3955,27 @@ and print_pexp_fun ~state ~in_callback e cmt_tbl =
   in
   let typ_constraint_doc =
     match typ_constraint with
-    | Some typ -> Doc.concat [Doc.text ": "; print_typ_expr ~state typ cmt_tbl]
+    | Some typ ->
+      let typ_doc =
+        let doc = print_typ_expr ~state typ cmt_tbl in
+        if Parens.arrow_return_typ_expr typ then add_parens doc else doc
+      in
+      Doc.concat [Doc.text ": "; typ_doc]
     | _ -> Doc.nil
   in
-  Doc.concat
-    [
-      print_attributes ~state ~inline:true attrs_on_arrow cmt_tbl;
-      parameters_doc;
-      typ_constraint_doc;
-      Doc.text " =>";
-      return_expr_doc;
-    ]
+  let doc =
+    Doc.concat
+      [
+        print_attributes ~state ~inline:true attrs_on_arrow cmt_tbl;
+        parameters_doc;
+        typ_constraint_doc;
+        Doc.text " =>";
+        return_expr_doc;
+      ]
+  in
+  match in_callback with
+  | NoCallback -> Doc.group doc
+  | FitsOnOneLine | ArgumentsFitOnOneLine -> doc
 
 and print_ternary_operand ~state expr cmt_tbl =
   let doc = print_expression_with_comments ~state expr cmt_tbl in
