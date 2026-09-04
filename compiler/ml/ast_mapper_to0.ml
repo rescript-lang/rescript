@@ -112,6 +112,7 @@ let constructor_args_attr_name = "_res.constructor_args"
 let add_constructor_args_attr attrs =
   (Location.mknoloc constructor_args_attr_name, Pt.PStr []) :: attrs
 
+(* See the constructor argument bridge contract at Ast_mapper_from0.decode_args. *)
 let encode_args ~map ~tuple ~loc ~attrs args =
   match List.map map args with
   | [] -> (None, attrs)

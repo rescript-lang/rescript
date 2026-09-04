@@ -183,8 +183,25 @@ let remove_constructor_args_attr (attrs : Pt.attributes) =
   in
   loop [] attrs
 
-(* Unmarked v0 tuples remain a single syntactic payload. Typecore resolves
-   semantic argument grouping after it knows the constructor declaration. *)
+(* Constructor argument bridge contract (shared with Ast_mapper_to0):
+
+   The current parsetree records source argument lists, not declaration arity.
+   Frozen v0 has only an optional payload, so encoding multiple arguments
+   packs them into a tuple and adds [_res.constructor_args] to the constructor.
+   A single tuple argument needs no marker. Polymorphic variant type payload
+   groups use the same encoding, with the marker on the tuple type itself.
+
+   Decoding consumes the internal marker and restores the source list.
+   Ordinary constructors also accept PPX-produced [explicit_arity] and
+   [ocaml.explicit_arity] attributes, and always split the list constructor
+   [::]. Other unmarked v0 tuples remain a single syntactic payload; Typecore
+   resolves semantic grouping once it knows the constructor declaration.
+
+   The tuple used to encode multiple arguments carries the argument-list
+   location, preserving its parentheses span. For a single argument, v0
+   cannot store both the payload and outer argument-list locations: decoding
+   falls back to the payload location. Nullary constructors use the enclosing
+   node location. No location-only attributes are needed. *)
 let decode_args ~map ~tuple_args ~split_tuple = function
   | None -> []
   | Some arg -> (
