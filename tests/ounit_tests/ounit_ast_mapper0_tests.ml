@@ -325,8 +325,8 @@ let test_constructor_args_roundtrip_through_ast0 _ =
     ~msg:"a single tuple argument does not carry bridge metadata" []
     expr0.pexp_attributes;
   let expr = map_expr0 expr0 in
-  OUnit.assert_bool "a known tuple argument is not marked as legacy"
-    (not (has_attr "_res.legacy_constructor_payload" expr.pexp_attributes));
+  OUnit.assert_equal ~msg:"tuple roundtrip preserves empty attributes" []
+    expr.pexp_attributes;
   (match expr.pexp_desc with
   | Parsetree.Pexp_construct (_, [{pexp_desc = Pexp_tuple [_; _]}]) -> ()
   | _ -> assert_failure "Expected one tuple argument after roundtrip");
@@ -438,6 +438,10 @@ let test_fresh_ast0_constructor_tuple_reprints_without_internal_metadata _ =
                  Ast_helper0.Pat.var ~loc (Location.mknoloc "b");
                ])))
   in
+  OUnit.assert_equal ~msg:"fresh v0 expression needs no internal metadata" []
+    expr.pexp_attributes;
+  OUnit.assert_equal ~msg:"fresh v0 pattern needs no internal metadata" []
+    pat.ppat_attributes;
   List.iter
     (fun width ->
       let printed =
@@ -448,10 +452,6 @@ let test_fresh_ast0_constructor_tuple_reprints_without_internal_metadata _ =
           ]
           ~comments:[] ~width
       in
-      OUnit.assert_bool "internal deferred-arity metadata is not printed"
-        (not
-           (Ext_string.contain_substring printed
-              "_res.legacy_constructor_payload"));
       let parsed =
         Res_driver.parse_implementation_from_source
           ~display_filename:"FreshAst0Constructor.res" ~source:printed

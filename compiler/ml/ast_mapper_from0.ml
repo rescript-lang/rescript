@@ -173,17 +173,15 @@ let has_explicit_arity_attr (attrs : Pt.attributes) =
       | _ -> false)
     attrs
 
-let remove_internal_marker_attr ~name (attrs : Pt.attributes) =
+let remove_constructor_args_attr (attrs : Pt.attributes) =
   let rec loop rev_attrs = function
-    | ({Location.txt}, Pt.PStr []) :: attrs when txt = name ->
+    | ({Location.txt}, Pt.PStr []) :: attrs
+      when txt = constructor_args_attr_name ->
       (true, List.rev_append rev_attrs attrs)
     | attr :: attrs -> loop (attr :: rev_attrs) attrs
     | [] -> (false, List.rev rev_attrs)
   in
   loop [] attrs
-
-let remove_constructor_args_attr attrs =
-  remove_internal_marker_attr ~name:constructor_args_attr_name attrs
 
 (* Unmarked v0 tuples remain a single syntactic payload. Typecore resolves
    semantic argument grouping after it knows the constructor declaration. *)
