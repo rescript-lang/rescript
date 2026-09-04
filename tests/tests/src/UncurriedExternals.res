@@ -44,8 +44,7 @@ module AsyncMethod = {
   type p = {watch: @this (pluginContext, string, changeEvent) => promise<unit>}
 
   let p1 = {
-    watch: @this
-    async (pc, name, ev) => {
+    watch: @this async (pc, name, ev) => {
       Console.log(pc)
     },
   }

@@ -47,8 +47,7 @@ module C6 = {
 module C7 = {
   @react.component
   let make =
-    @directive("'use memo'")
-    (~count, ~username=?) => {
+    @directive("'use memo'") (~count, ~username=?) => {
       let times = switch count {
       | 1 => "once"
       | 2 => "twice"
@@ -70,8 +69,7 @@ module C8 = {
 
   @react.componentWithProps
   let make =
-    @directive("'use memo'")
-    props => {
+    @directive("'use memo'") props => {
       React.int(props.count)
     }
 }
