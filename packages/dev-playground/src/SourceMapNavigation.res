@@ -65,6 +65,26 @@ let isCollapsedSelection = (selectionStart, selectionEnd) => selectionStart === 
 let decodeForSource = (sourceMap, compiledSource, currentSource) =>
   isCurrentSource(compiledSource, currentSource) ? decode(sourceMap) : []
 
+let groupByGeneratedLine = (mappings, lineCount) => {
+  let mappingsByLine: array<array<mapping>> = []
+  let lineIndex = ref(0)
+
+  while lineIndex.contents < lineCount {
+    mappingsByLine->Array.push([])
+    lineIndex := lineIndex.contents + 1
+  }
+
+  mappings->Array.forEach(mapping => {
+    let mappingLineIndex = mapping.generated.line - 1
+    switch mappingsByLine->Array.get(mappingLineIndex) {
+    | Some(lineMappings) => lineMappings->Array.push(mapping)
+    | None => ()
+    }
+  })
+
+  mappingsByLine
+}
+
 let distance = (left: position, right: position) => {
   let lineDistance = left.line - right.line
   let colDistance = left.col - right.col

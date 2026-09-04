@@ -294,10 +294,13 @@ let mappedJavaScriptNode = (
 ): View.node => {
   let nodes: array<View.node> = []
   let lines = output->String.split("\n")
+  let mappingsByLine = SourceMapNavigation.groupByGeneratedLine(mappings, lines->Array.length)
   lines->Array.forEachWithIndex((lineText, lineIndex) => {
-    let lineNumber = lineIndex + 1
     let lineLength = lineText->String.length
-    let lineMappings = mappings->Array.filter(mapping => mapping.generated.line === lineNumber)
+    let lineMappings = switch mappingsByLine->Array.get(lineIndex) {
+    | Some(lineMappings) => lineMappings
+    | None => []
+    }
     let cursor = ref(0)
 
     lineMappings->Array.forEachWithIndex((mapping, mappingIndex) => {

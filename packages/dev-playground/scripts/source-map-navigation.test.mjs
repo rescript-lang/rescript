@@ -5,6 +5,7 @@ import {
   decode,
   decodeForSource,
   generatedForOriginal,
+  groupByGeneratedLine,
   isCollapsedSelection,
   isCurrentSource,
 } from "../src/SourceMapNavigation.res.mjs";
@@ -57,6 +58,18 @@ test("disables mappings when the result belongs to stale source", () => {
 test("navigates only when the source selection is collapsed", () => {
   assert.equal(isCollapsedSelection(4, 4), true);
   assert.equal(isCollapsedSelection(4, 12), false);
+});
+
+test("groups ordered mappings by generated line in one pass", () => {
+  const first = { generated: { line: 1, col: 0 } };
+  const second = { generated: { line: 1, col: 8 } };
+  const third = { generated: { line: 3, col: 2 } };
+
+  assert.deepEqual(groupByGeneratedLine([first, second, third], 3), [
+    [first, second],
+    [],
+    [third],
+  ]);
 });
 
 test("does not carry a generated position onto an unmapped source line", () => {

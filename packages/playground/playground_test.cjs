@@ -123,13 +123,18 @@ assert.deepEqual(
 
 const linkedResult = compiler.rescript.compile(sourceMapSource);
 assert.equal(linkedResult.type, "success");
-assert.match(linkedResult.js_code, /\/\/# sourceMappingURL=Playground\.js\.map\n$/);
+assert.match(
+  linkedResult.js_code,
+  /\/\/# sourceMappingURL=Playground\.js\.map\n$/,
+);
 
 const sourceMap = JSON.parse(linkedResult.source_map);
 assert.equal(sourceMap.version, 3);
 assert.equal(sourceMap.file, "Playground.js");
 assert.equal(sourceMap.sourceRoot, "rescript://playground/");
-assert.ok(sourceMap.sources.some(source => source.endsWith("Playground.res")));
+assert.ok(
+  sourceMap.sources.some((source) => source.endsWith("Playground.res")),
+);
 assert.ok(sourceMap.sourcesContent.includes(sourceMapSource));
 assert.ok(sourceMap.mappings.length > 0);
 
