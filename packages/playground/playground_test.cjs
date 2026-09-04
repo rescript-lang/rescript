@@ -78,15 +78,28 @@ if (result.js_code !== "") {
   console.log("-- Playground test complete --");
 }
 
-compiler.setFilename("Playground.res");
 assert.equal(compiler.setGentypeEnabled(true), true);
-const gentypeResult = compiler.rescript.compileWithDebug("@genType let answer = 42\n");
-assert.equal(gentypeResult.type, "success");
-assert.match(gentypeResult.gentype, /require\(['"]\.\/Playground\.js['"]\)/);
-assert.doesNotMatch(gentypeResult.gentype, /Playground\.bs\.js/);
-assert.equal(compiler.setGentypeEnabled(false), true);
+const defaultGentypeResult = compiler.rescript.compileWithDebug(
+  "@genType let answer = 42\n",
+);
+assert.equal(defaultGentypeResult.type, "success");
+assert.match(
+  defaultGentypeResult.gentype,
+  /require\(['"]\.\/playground\.js['"]\)/,
+);
+assert.doesNotMatch(defaultGentypeResult.gentype, /playground\.bs\.js/);
 
-console.log("-- Playground gentype suffix test complete --");
+compiler.setFilename("Foo.res");
+const customGentypeResult = compiler.rescript.compileWithDebug(
+  "@genType let answer = 42\n",
+);
+assert.equal(customGentypeResult.type, "success");
+assert.match(customGentypeResult.gentype, /require\(['"]\.\/Foo\.js['"]\)/);
+assert.doesNotMatch(customGentypeResult.gentype, /Playground\.js/);
+assert.equal(compiler.setGentypeEnabled(false), true);
+compiler.setFilename("Playground.res");
+
+console.log("-- Playground gentype filename test complete --");
 
 const sourceMapSource = `let double = value => value * 2
 let result = double(21)

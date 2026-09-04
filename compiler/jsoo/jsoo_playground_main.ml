@@ -546,7 +546,10 @@ module Compile = struct
       let output_file_relative =
         source_file |> Paths.get_output_file_relative ~config
       in
-      let file_name = modulename |> Module_name.from_string_unsafe in
+      let file_name =
+        sourcefile |> Filename.basename |> Filename.remove_extension
+        |> Module_name.from_string_unsafe
+      in
       let resolver =
         Module_resolver.create_lazy_resolver ~config
           ~extensions:[".res"; ".shim.ts"] ~exclude_file:(fun _ -> false)
