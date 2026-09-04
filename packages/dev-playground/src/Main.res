@@ -4,7 +4,6 @@ type tab =
   | Parsetree
   | Typedtree
   | Lambda
-  | Lam
   | JavaScript
   | GenType
   | SourceMap
@@ -26,7 +25,7 @@ type compileSnapshot = {
   result: CompilerApi.compileResult,
 }
 
-let baseTabs: array<tab> = [Parsetree, Typedtree, Lambda, Lam, JavaScript]
+let baseTabs: array<tab> = [Parsetree, Typedtree, Lambda, JavaScript]
 let moduleSystems: array<moduleSystem> = [Esmodule, Commonjs]
 let sourceMapModes: array<sourceMapMode> = [Disabled, Linked, Inline, Hidden]
 
@@ -34,7 +33,7 @@ let tabIsVisible = (config: PlaygroundConfig.t, tab) =>
   switch tab {
   | GenType => config.gentypeEnabled
   | SourceMap => config.sourceMapMode !== Disabled
-  | Parsetree | Typedtree | Lambda | Lam | JavaScript | Settings => true
+  | Parsetree | Typedtree | Lambda | JavaScript | Settings => true
   }
 
 let tabsForConfig = (config: PlaygroundConfig.t) => {
@@ -63,7 +62,6 @@ let tabLabel = tab =>
   | Parsetree => "parsetree"
   | Typedtree => "typedtree"
   | Lambda => "lambda"
-  | Lam => "lam"
   | JavaScript => "js"
   | GenType => "gentype"
   | SourceMap => "source map"
@@ -225,7 +223,6 @@ let selectedOutput = (snapshot: option<compileSnapshot>, activeTab: tab) =>
     | Parsetree => result.parsetree
     | Typedtree => result.typedtree
     | Lambda => result.lambda
-    | Lam => result.lam
     | JavaScript => result.jsCode
     | GenType =>
       optionalOutput(result.gentype, "This compiler bundle does not expose gentype output yet.")
