@@ -3244,7 +3244,7 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
         Doc.concat [Doc.text ": "; typ_doc]
       | _ -> Doc.nil
     in
-    let attrs = print_attributes ~state attrs_on_arrow cmt_tbl in
+    let attrs = print_attributes ~state ~inline:true attrs_on_arrow cmt_tbl in
     Doc.group
       (Doc.concat
          [
@@ -4025,7 +4025,7 @@ and print_pexp_fun ~state ~in_callback e cmt_tbl =
   in
   Doc.concat
     [
-      print_attributes ~state attrs_on_arrow cmt_tbl;
+      print_attributes ~state ~inline:true attrs_on_arrow cmt_tbl;
       parameters_doc;
       typ_constraint_doc;
       Doc.text " =>";
@@ -4304,7 +4304,13 @@ and print_binary_expression ~state (expr : Parsetree.expression) cmt_tbl =
           if is_lhs then add_parens doc else doc
         | _ -> (
           let doc = print_expression_with_comments ~state expr cmt_tbl in
-          match Parens.binary_expr_operand ~is_lhs expr with
+          let parens =
+            match expr.pexp_desc with
+            | Pexp_fun _ when parent_operator = ":=" && not is_lhs ->
+              Parens.set_field_expr_rhs expr
+            | _ -> Parens.binary_expr_operand ~is_lhs expr
+          in
+          match parens with
           | Parens.Parenthesized -> add_parens doc
           | Braced braces -> print_braces doc expr braces
           | Nothing -> doc)
@@ -4350,6 +4356,11 @@ and print_binary_expression ~state (expr : Parsetree.expression) cmt_tbl =
       lhs.pexp_loc.loc_start.pos_lnum < rhs.pexp_loc.loc_start.pos_lnum
     in
 
+    let is_function_assignment =
+      match rhs.pexp_desc with
+      | Pexp_fun _ -> operator = ":="
+      | _ -> false
+    in
     let right =
       let operator_with_rhs =
         let rhs_doc =
@@ -4360,13 +4371,17 @@ and print_binary_expression ~state (expr : Parsetree.expression) cmt_tbl =
         Doc.concat
           [
             print_binary_operator
-              ~inline_rhs:(Parsetree_viewer.should_inline_rhs_binary_expr rhs)
+              ~inline_rhs:
+                (Parsetree_viewer.should_inline_rhs_binary_expr rhs
+                || is_function_assignment)
               operator;
             rhs_doc;
           ]
       in
-      if Parsetree_viewer.should_indent_binary_expr expr then
-        Doc.group (Doc.indent operator_with_rhs)
+      if
+        Parsetree_viewer.should_indent_binary_expr expr
+        && not is_function_assignment
+      then Doc.group (Doc.indent operator_with_rhs)
       else operator_with_rhs
     in
     let doc =
