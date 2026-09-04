@@ -380,6 +380,10 @@ val may_equal_constr :
 
 type label_description = {
   lbl_name: string; (* Short name *)
+  lbl_runtime_name: string;
+      (* The name the field has at run time: its [@as] payload when it has
+         one, otherwise [lbl_name]. Decided once when the declaration is
+         typed, so no consumer re-reads the attribute. *)
   lbl_res: type_expr; (* Type of the result *)
   lbl_arg: type_expr; (* Type of the argument *)
   lbl_mut: mutable_flag; (* Is this a mutable field? *)

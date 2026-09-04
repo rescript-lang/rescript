@@ -1221,27 +1221,34 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.t =
     | Record_float_unused -> assert false
     | Record_regular ->
       prim
-        ~primitive:(Pfield (lbl.lbl_pos, Lambda.fld_record lbl))
+        ~primitive:
+          (Pfield (lbl.lbl_pos, Lambda.fld_record lbl.lbl_runtime_name))
         ~args:[targ] e.exp_loc
     | Record_inlined _ ->
       prim
-        ~primitive:(Pfield (lbl.lbl_pos, Lambda.fld_record_inline lbl))
+        ~primitive:
+          (Pfield (lbl.lbl_pos, Lambda.fld_record_inline lbl.lbl_runtime_name))
         ~args:[targ] e.exp_loc
     | Record_unboxed _ -> targ
     | Record_extension ->
       prim
-        ~primitive:(Pfield (lbl.lbl_pos + 1, Lambda.fld_record_extension lbl))
+        ~primitive:
+          (Pfield
+             (lbl.lbl_pos + 1, Lambda.fld_record_extension lbl.lbl_runtime_name))
         ~args:[targ] e.exp_loc)
   | Texp_setfield (arg, _, lbl, newval) ->
     let access =
       match lbl.lbl_repres with
       | Record_float_unused -> assert false
-      | Record_regular -> Psetfield (lbl.lbl_pos, Lambda.fld_record_set lbl)
+      | Record_regular ->
+        Psetfield (lbl.lbl_pos, Lambda.fld_record_set lbl.lbl_runtime_name)
       | Record_inlined _ ->
-        Psetfield (lbl.lbl_pos, Lambda.fld_record_inline_set lbl)
+        Psetfield
+          (lbl.lbl_pos, Lambda.fld_record_inline_set lbl.lbl_runtime_name)
       | Record_unboxed _ -> assert false
       | Record_extension ->
-        Psetfield (lbl.lbl_pos + 1, Lambda.fld_record_extension_set lbl)
+        Psetfield
+          (lbl.lbl_pos + 1, Lambda.fld_record_extension_set lbl.lbl_runtime_name)
     in
     prim ~primitive:access ~args:[transl_exp arg; transl_exp newval] e.exp_loc
   | Texp_array expr_list ->
@@ -1430,6 +1437,16 @@ and transl_let ~js_hoist rec_flag pat_expr_list body =
     Lambda_scc.bind_rec (Ext_list.map pat_expr_list transl_case) body
 
 and transl_record loc env fields repres opt_init_expr =
+  (* The runtime shape of the record: each field's runtime name, and whether
+     it is optional. *)
+  let field_shape () =
+    Ext_array.map fields (fun ((lbl : Types.label_description), _, _) ->
+        (lbl.lbl_runtime_name, lbl.lbl_optional))
+  in
+  let field_names () =
+    Ext_array.map fields (fun ((lbl : Types.label_description), _, _) ->
+        lbl.lbl_runtime_name)
+  in
   match (opt_init_expr, repres, fields) with
   | _ -> (
     let size = Array.length fields in
@@ -1460,11 +1477,14 @@ and transl_record loc env fields repres opt_init_expr =
               let access =
                 match repres with
                 | Record_float_unused -> assert false
-                | Record_regular -> Pfield (i, Lambda.fld_record lbl)
-                | Record_inlined _ -> Pfield (i, Lambda.fld_record_inline lbl)
+                | Record_regular ->
+                  Pfield (i, Lambda.fld_record lbl.lbl_runtime_name)
+                | Record_inlined _ ->
+                  Pfield (i, Lambda.fld_record_inline lbl.lbl_runtime_name)
                 | Record_unboxed _ -> assert false
                 | Record_extension ->
-                  Pfield (i + 1, Lambda.fld_record_extension lbl)
+                  Pfield
+                    (i + 1, Lambda.fld_record_extension lbl.lbl_runtime_name)
               in
               prim ~primitive:access ~args:[var init_id] loc
             | Overridden (_lid, expr) -> transl_exp expr)
@@ -1483,7 +1503,7 @@ and transl_record loc env fields repres opt_init_expr =
           match repres with
           | Record_float_unused -> assert false
           | Record_regular ->
-            const (Const_block (Lambda.blk_record fields mut, cl))
+            const (Const_block (Lambda.blk_record (field_shape ()) mut, cl))
           | Record_inlined {name; representation} ->
             let runtime =
               match Variant_runtime.representation representation with
@@ -1496,8 +1516,8 @@ and transl_record loc env fields repres opt_init_expr =
             in
             const
               (Const_block
-                 ( Lambda.blk_record_inlined fields name num_nonconsts ~runtime
-                     mut,
+                 ( Lambda.blk_record_inlined (field_shape ()) name num_nonconsts
+                     ~runtime mut,
                    cl ))
           | Record_unboxed _ ->
             const
@@ -1509,7 +1529,7 @@ and transl_record loc env fields repres opt_init_expr =
           match repres with
           | Record_regular ->
             prim
-              ~primitive:(Pmakeblock (Lambda.blk_record fields mut))
+              ~primitive:(Pmakeblock (Lambda.blk_record (field_shape ()) mut))
               ~args:ll loc
           | Record_float_unused -> assert false
           | Record_inlined {name; representation} ->
@@ -1525,8 +1545,8 @@ and transl_record loc env fields repres opt_init_expr =
             prim
               ~primitive:
                 (Pmakeblock
-                   (Lambda.blk_record_inlined fields name num_nonconsts ~runtime
-                      mut))
+                   (Lambda.blk_record_inlined (field_shape ()) name
+                      num_nonconsts ~runtime mut))
               ~args:ll loc
           | Record_unboxed _ -> (
             match ll with
@@ -1541,7 +1561,8 @@ and transl_record loc env fields repres opt_init_expr =
             in
             let slot = Transl_path.transl_extension_path env path in
             prim
-              ~primitive:(Pmakeblock (Lambda.blk_record_ext fields mut))
+              ~primitive:
+                (Pmakeblock (Lambda.blk_record_ext (field_names ()) mut))
               ~args:(slot :: ll) loc)
       in
       match opt_init_expr with
@@ -1559,12 +1580,15 @@ and transl_record loc env fields repres opt_init_expr =
             match repres with
             | Record_float_unused -> assert false
             | Record_regular ->
-              Psetfield (lbl.lbl_pos, Lambda.fld_record_set lbl)
+              Psetfield (lbl.lbl_pos, Lambda.fld_record_set lbl.lbl_runtime_name)
             | Record_inlined _ ->
-              Psetfield (lbl.lbl_pos, Lambda.fld_record_inline_set lbl)
+              Psetfield
+                (lbl.lbl_pos, Lambda.fld_record_inline_set lbl.lbl_runtime_name)
             | Record_unboxed _ -> assert false
             | Record_extension ->
-              Psetfield (lbl.lbl_pos + 1, Lambda.fld_record_extension_set lbl)
+              Psetfield
+                ( lbl.lbl_pos + 1,
+                  Lambda.fld_record_extension_set lbl.lbl_runtime_name )
           in
           seq
             (prim ~primitive:upd ~args:[var copy_id; transl_exp expr] loc)
