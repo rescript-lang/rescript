@@ -1,7 +1,7 @@
 module Parsetree_viewer = Res_parsetree_viewer
 type kind = Parenthesized | Braced of Location.t | Nothing
 
-let expr expr =
+let expr ?(allow_coercion = false) expr =
   let opt_braces, _ = Parsetree_viewer.process_braces_attr expr in
   match opt_braces with
   | Some ({Location.loc = braces_loc}, _) -> Braced braces_loc
@@ -12,8 +12,16 @@ let expr expr =
        Pexp_constraint ({pexp_desc = Pexp_pack _}, {ptyp_desc = Ptyp_package _});
     } ->
       Nothing
-    | {pexp_desc = Pexp_constraint _} -> Parenthesized
+    | {pexp_desc = Pexp_coerce _} when allow_coercion -> Nothing
+    | {pexp_desc = Pexp_constraint _ | Pexp_coerce _} -> Parenthesized
     | _ -> Nothing)
+
+(* A source annotation may precede :> directly, but nested coercions need
+   grouping. Preserve explicit braces through the normal expression rule. *)
+let coerce_expr_operand expression =
+  match (expr expression, expression.Parsetree.pexp_desc) with
+  | Parenthesized, Pexp_constraint _ -> Nothing
+  | kind, _ -> kind
 
 let expr_record_row_rhs ~optional e =
   let kind = expr e in
@@ -50,9 +58,9 @@ let call_expr expr =
       Nothing
     | {
      pexp_desc =
-       ( Pexp_assert _ | Pexp_fun _ | Pexp_constraint _ | Pexp_setfield _
-       | Pexp_match _ | Pexp_try _ | Pexp_while _ | Pexp_for _ | Pexp_for_of _
-       | Pexp_for_await_of _ | Pexp_ifthenelse _ );
+       ( Pexp_assert _ | Pexp_fun _ | Pexp_constraint _ | Pexp_coerce _
+       | Pexp_setfield _ | Pexp_match _ | Pexp_try _ | Pexp_while _ | Pexp_for _
+       | Pexp_for_of _ | Pexp_for_await_of _ | Pexp_ifthenelse _ );
     } ->
       Parenthesized
     | _ when Parsetree_viewer.expr_is_await expr -> Parenthesized
@@ -72,7 +80,7 @@ let structure_expr expr =
        Pexp_constraint ({pexp_desc = Pexp_pack _}, {ptyp_desc = Ptyp_package _});
     } ->
       Nothing
-    | {pexp_desc = Pexp_constraint _} -> Parenthesized
+    | {pexp_desc = Pexp_constraint _ | Pexp_coerce _} -> Parenthesized
     | _ -> Nothing)
 
 let unary_expr_operand expr =
@@ -100,8 +108,8 @@ let unary_expr_operand expr =
       Nothing
     | {
      pexp_desc =
-       ( Pexp_assert _ | Pexp_fun _ | Pexp_constraint _ | Pexp_setfield _
-       | Pexp_extension _ (* readability? maybe remove *)
+       ( Pexp_assert _ | Pexp_fun _ | Pexp_constraint _ | Pexp_coerce _
+       | Pexp_setfield _ | Pexp_extension _ (* readability? maybe remove *)
        | Pexp_object_literal _ (* ({"a": 1})["a"] *)
        | Pexp_object_set _ (* (o["x"] = v)["y"] *) | Pexp_match _ | Pexp_try _
        | Pexp_while _ | Pexp_for _ | Pexp_for_of _ | Pexp_for_await_of _
@@ -125,7 +133,8 @@ let binary_expr_operand ~is_lhs expr =
     | {pexp_desc = Pexp_fun _}
       when Parsetree_viewer.is_underscore_apply_sugar expr ->
       Nothing
-    | {pexp_desc = Pexp_constraint _ | Pexp_fun _} -> Parenthesized
+    | {pexp_desc = Pexp_constraint _ | Pexp_coerce _ | Pexp_fun _} ->
+      Parenthesized
     | expr when Parsetree_viewer.is_binary_expression expr -> Parenthesized
     | expr when Parsetree_viewer.is_ternary_expr expr -> Parenthesized
     | {pexp_desc = Pexp_assert _} when is_lhs -> Parenthesized
@@ -182,7 +191,7 @@ let flatten_operand_rhs parent_operator rhs =
     false
   | Pexp_fun {params = {p_pat = {ppat_desc = Ppat_var {txt = "__x"}}} :: _} ->
     false
-  | Pexp_fun _ | Pexp_setfield _ | Pexp_constraint _ -> true
+  | Pexp_fun _ | Pexp_setfield _ | Pexp_constraint _ | Pexp_coerce _ -> true
   | _ when Parsetree_viewer.is_ternary_expr rhs -> true
   | _ -> false
 
@@ -220,9 +229,9 @@ let assert_or_await_expr_rhs ?(in_await = false) expr =
       Nothing
     | {
      pexp_desc =
-       ( Pexp_assert _ | Pexp_fun _ | Pexp_constraint _ | Pexp_setfield _
-       | Pexp_match _ | Pexp_try _ | Pexp_while _ | Pexp_for _ | Pexp_for_of _
-       | Pexp_for_await_of _ | Pexp_ifthenelse _ );
+       ( Pexp_assert _ | Pexp_fun _ | Pexp_constraint _ | Pexp_coerce _
+       | Pexp_setfield _ | Pexp_match _ | Pexp_try _ | Pexp_while _ | Pexp_for _
+       | Pexp_for_of _ | Pexp_for_await_of _ | Pexp_ifthenelse _ );
     } ->
       Parenthesized
     | _ when (not in_await) && Parsetree_viewer.expr_is_await expr ->
@@ -267,9 +276,9 @@ let field_expr expr =
      pexp_desc =
        ( Pexp_assert _ | Pexp_extension _ (* %extension.x vs (%extension).x *)
        | Pexp_object_literal _ (* ({"a": 1})["a"] *) | Pexp_fun _
-       | Pexp_constraint _ | Pexp_setfield _ | Pexp_match _ | Pexp_try _
-       | Pexp_while _ | Pexp_for _ | Pexp_for_of _ | Pexp_for_await_of _
-       | Pexp_ifthenelse _ );
+       | Pexp_constraint _ | Pexp_coerce _ | Pexp_setfield _ | Pexp_match _
+       | Pexp_try _ | Pexp_while _ | Pexp_for _ | Pexp_for_of _
+       | Pexp_for_await_of _ | Pexp_ifthenelse _ );
     } ->
       Parenthesized
     | _ when Parsetree_viewer.expr_is_await expr -> Parenthesized
@@ -286,11 +295,11 @@ let ternary_operand expr =
        Pexp_constraint ({pexp_desc = Pexp_pack _}, {ptyp_desc = Ptyp_package _});
     } ->
       Nothing
-    | {pexp_desc = Pexp_constraint _} -> Parenthesized
+    | {pexp_desc = Pexp_constraint _ | Pexp_coerce _} -> Parenthesized
     | _ when Res_parsetree_viewer.is_fun_expr expr -> (
       let _, _parameters, return_expr = Parsetree_viewer.fun_expr expr in
       match return_expr.pexp_desc with
-      | Pexp_constraint _ -> Parenthesized
+      | Pexp_constraint _ | Pexp_coerce _ -> Parenthesized
       | _ -> Nothing)
     | _ -> Nothing)
 
