@@ -131,7 +131,13 @@ let rec rhs_is_beta_residue (lam : Lambda.t) =
 (* [flatten] restructures a binding only when it hoists something out of the
    right hand side, splits a null conversion, or eliminates a tuple. Every
    other binding comes back as the same binding, so it can be rebuilt in place
-   and shared instead of taken apart and reassembled. *)
+   and shared instead of taken apart and reassembled.
+
+   This mirrors [flatten]'s own cases one for one, including why a null
+   conversion of a variable is left alone while any other one is split, so a
+   case added there that restructures has to be added here too. Drifting apart
+   costs the flattening, silently: the binding takes the fast path and is never
+   handed to [flatten] at all. *)
 let regroups_binding (str : Lambda.let_kind) (id : Ident.t) (arg : Lambda.t) =
   if rhs_is_beta_residue arg then false
   else
@@ -223,7 +229,7 @@ let deep_flatten (lam : Lambda.t) : Lambda.t =
     | Llet _ ->
       let res, groups = flatten [] lam in
       lambda_of_groups res ~rev_bindings:groups
-    | Lletrec (bind_args, body) as original -> (
+    | Lletrec (bind_args, body) -> (
       (* Attention: don't mess up with internal {let rec} *)
       (* Keep the mapped list so a group from which nothing can be extracted
          remains physically shared when neither its bindings nor body change. *)
@@ -252,7 +258,7 @@ let deep_flatten (lam : Lambda.t) : Lambda.t =
       let rev_wrap, recursive_bindings = extract [] groups in
       let body' = aux body in
       match rev_wrap with
-      | [] when groups == bind_args && body' == body -> original
+      | [] when groups == bind_args && body' == body -> lam
       | [] -> Lambda.letrec groups body'
       | _ ->
         lambda_of_groups
