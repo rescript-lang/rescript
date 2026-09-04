@@ -1,6 +1,6 @@
 open Mocha
 open Test_utils
-open Constructor_explicit_arity
+open Constructor_arguments
 
 describe("constructor payload compatibility", () => {
   test("accepts both unary tuple spellings", () => {
