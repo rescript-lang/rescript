@@ -1,0 +1,14 @@
+{
+  "name": "jsx-preserve-external",
+  "sources": ["src"],
+  "package-specs": {
+    "module": "esmodule",
+    "in-source": true,
+    "suffix": ".jsx"
+  },
+  "jsx": {
+    "module": "Preact",
+    "preserve": true
+  },
+  "compiler-flags": ["-check-lam"]
+}
