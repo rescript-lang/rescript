@@ -156,7 +156,7 @@ let subst_helper (subst : subst_tbl) (query : int -> int) (lam : Lambda.t) :
     Lambda.t =
   let rec simplif (lam : Lambda.t) =
     match lam with
-    | Lstaticcatch (l1, (i, xs), l2) -> (
+    | Lstaticcatch (l1, (i, xs), l2) as original -> (
       let i_occur = query i in
       match (i_occur, l2) with
       | 0, _ -> simplif l1
@@ -168,27 +168,30 @@ let subst_helper (subst : subst_tbl) (query : int -> int) (lam : Lambda.t) :
         Hash_int.add subst i (xs, Id (simplif l2));
         simplif l1 (* l1 will inline *)
       | _ ->
-        let l2 = simplif l2 in
+        let l2' = simplif l2 in
         (* we only inline when [l2] does not contain bound variables
            no need to refresh
         *)
         let ok_to_inline =
-          i >= 0 && no_bounded_variables l2
+          i >= 0 && no_bounded_variables l2'
           &&
-          let lam_size = Lam_analysis.size l2 in
+          let lam_size = Lam_analysis.size l2' in
           (i_occur <= 2 && lam_size < Lam_analysis.exit_inline_size)
           || lam_size < 5
         in
         if ok_to_inline then (
-          Hash_int.add subst i (xs, Id l2);
+          Hash_int.add subst i (xs, Id l2');
           simplif l1)
-        else Lambda.staticcatch (simplif l1) (i, xs) l2)
+        else
+          let l1' = simplif l1 in
+          if l1' == l1 && l2' == l2 then original
+          else Lambda.staticcatch l1' (i, xs) l2')
     | Lstaticraise (i, []) -> (
       match Hash_int.find_opt subst i with
       | Some (_, handler) -> to_lam handler
       | None -> lam)
     | Lstaticraise (i, ls) -> (
-      let ls = Ext_list.map ls simplif in
+      let ls' = Ext_list.map_sharing ls simplif in
       match Hash_int.find_opt subst i with
       | Some (xs, handler) ->
         let handler = to_lam handler in
@@ -197,9 +200,9 @@ let subst_helper (subst : subst_tbl) (query : int -> int) (lam : Lambda.t) :
           Ext_list.fold_right2 xs ys Ident.empty (fun x y t ->
               Ident.add x (Lambda.var y) t)
         in
-        Ext_list.fold_right2 ys ls (Lambda_traverse.subst_lambda env handler)
+        Ext_list.fold_right2 ys ls' (Lambda_traverse.subst_lambda env handler)
           (fun y l r -> Lambda.let_ Strict y l r)
-      | None -> Lambda.staticraise i ls)
+      | None -> if ls' == ls then lam else Lambda.staticraise i ls')
     | _ -> Lambda_traverse.shallow_map_sharing simplif lam
   in
   simplif lam
