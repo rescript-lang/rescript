@@ -463,7 +463,7 @@ button {
 .output-panel {
   min-height: 0;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) minmax(116px, 22vh);
+  grid-template-rows: auto minmax(40px, 1fr) minmax(0, max(116px, 22vh));
   overflow: hidden;
   background: var(--playground-panel);
 }
@@ -541,6 +541,7 @@ button {
   min-height: 0;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
   border-top: 1px solid var(--playground-border-soft);
   background: var(--playground-panel);
 }
