@@ -166,7 +166,6 @@ let map_loc sub {loc; txt} = {loc = sub.location sub loc; txt}
 let record_rest_attr_name = "_res.record_rest"
 let constructor_args_attr_name = "_res.constructor_args"
 let constructor_tuple_arg_attr_name = "_res.constructor_tuple_arg"
-let legacy_constructor_payload_attr_name = "_res.legacy_constructor_payload"
 
 let has_explicit_arity_attr (attrs : Pt.attributes) =
   List.exists
@@ -190,17 +189,14 @@ let remove_constructor_args_attr attrs =
 let remove_constructor_tuple_arg_attr attrs =
   remove_internal_marker_attr ~name:constructor_tuple_arg_attr_name attrs
 
-let add_legacy_constructor_payload_attr attrs =
-  (Location.mknoloc legacy_constructor_payload_attr_name, Pt.PStr []) :: attrs
-
-let decode_args ~map ~tuple_args ~split_tuple ~known_tuple_arg = function
-  | None -> ([], false)
+(* Unmarked v0 tuples remain a single syntactic payload. Typecore resolves
+   semantic argument grouping after it knows the constructor declaration. *)
+let decode_args ~map ~tuple_args ~split_tuple = function
+  | None -> []
   | Some arg -> (
     match tuple_args arg with
-    | Some args when split_tuple -> (List.map map args, false)
-    | Some _ when known_tuple_arg -> ([map arg], false)
-    | Some _ -> ([map arg], true)
-    | None -> ([map arg], false))
+    | Some args when split_tuple -> List.map map args
+    | _ -> [map arg])
 
 let record_rest_of_pattern (rest : Pt.pattern) =
   match rest.Pt.ppat_desc with
@@ -887,10 +883,8 @@ module E = struct
     | Pexp_construct (lid, arg) -> (
       let lid1 = map_loc sub lid in
       let has_constructor_args, attrs = remove_constructor_args_attr attrs in
-      let has_constructor_tuple_arg, attrs =
-        remove_constructor_tuple_arg_attr attrs
-      in
-      let args, has_legacy_constructor_payload =
+      let _, attrs = remove_constructor_tuple_arg_attr attrs in
+      let args =
         decode_args ~map:(sub.expr sub)
           ~tuple_args:(fun arg ->
             match arg.pexp_desc with
@@ -900,12 +894,7 @@ module E = struct
             (has_constructor_args
             || has_explicit_arity_attr attrs
             || lid.txt = Longident.Lident "::")
-          ~known_tuple_arg:has_constructor_tuple_arg arg
-      in
-      let attrs =
-        if has_legacy_constructor_payload then
-          add_legacy_constructor_payload_attr attrs
-        else attrs
+          arg
       in
       let exp1 = construct ~loc ~attrs lid1 args in
       match lid.txt with
@@ -974,17 +963,14 @@ module E = struct
           :: attrs
         | _ -> attrs
       in
-      let has_constructor_tuple_arg, attrs =
-        remove_constructor_tuple_arg_attr attrs
-      in
-      let args, _ =
+      let _, attrs = remove_constructor_tuple_arg_attr attrs in
+      let args =
         decode_args ~map:(sub.expr sub)
           ~tuple_args:(fun arg ->
             match arg.pexp_desc with
             | Pexp_tuple args -> Some args
             | _ -> None)
-          ~split_tuple:has_constructor_args
-          ~known_tuple_arg:has_constructor_tuple_arg arg
+          ~split_tuple:has_constructor_args arg
       in
       variant ~loc ~attrs lab args
     | Pexp_record (l, eo) ->
@@ -1155,10 +1141,8 @@ module P = struct
     | Ppat_tuple pl -> tuple ~loc ~attrs (List.map (sub.pat sub) pl)
     | Ppat_construct (l, arg) ->
       let has_constructor_args, attrs = remove_constructor_args_attr attrs in
-      let has_constructor_tuple_arg, attrs =
-        remove_constructor_tuple_arg_attr attrs
-      in
-      let args, has_legacy_constructor_payload =
+      let _, attrs = remove_constructor_tuple_arg_attr attrs in
+      let args =
         decode_args ~map:(sub.pat sub)
           ~tuple_args:(fun arg ->
             match arg.ppat_desc with
@@ -1168,12 +1152,7 @@ module P = struct
             (has_constructor_args
             || has_explicit_arity_attr attrs
             || l.txt = Longident.Lident "::")
-          ~known_tuple_arg:has_constructor_tuple_arg arg
-      in
-      let attrs =
-        if has_legacy_constructor_payload then
-          add_legacy_constructor_payload_attr attrs
-        else attrs
+          arg
       in
       construct ~loc ~attrs (map_loc sub l) args
     | Ppat_variant (l, arg) ->
@@ -1186,17 +1165,14 @@ module P = struct
           :: attrs
         | _ -> attrs
       in
-      let has_constructor_tuple_arg, attrs =
-        remove_constructor_tuple_arg_attr attrs
-      in
-      let args, _ =
+      let _, attrs = remove_constructor_tuple_arg_attr attrs in
+      let args =
         decode_args ~map:(sub.pat sub)
           ~tuple_args:(fun arg ->
             match arg.ppat_desc with
             | Ppat_tuple args -> Some args
             | _ -> None)
-          ~split_tuple:has_constructor_args
-          ~known_tuple_arg:has_constructor_tuple_arg arg
+          ~split_tuple:has_constructor_args arg
       in
       variant ~loc ~attrs l args
     | Ppat_record (lpl, cf) ->

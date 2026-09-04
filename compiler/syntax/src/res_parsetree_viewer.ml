@@ -228,7 +228,7 @@ let filter_parsing_attrs attrs =
               ( "res.braces" | "ns.braces" | "res.iflet" | "res.ternary"
               | "res.await" | "res.patVariantSpread" | "res.dictPattern"
               | "res.dictSpread" | "res.inlineRecordDefinition"
-              | "res.variantArgs" | "_res.legacy_constructor_payload" );
+              | "res.variantArgs" );
           },
           _ ) ->
         false

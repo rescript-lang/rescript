@@ -1,3 +1,3 @@
-type unary = Unary((int, int))
+type binary = Binary(int, int)
 
-let invalid = Unary(1, 2)
+let invalid = Binary((1, 2, 3))

@@ -1,10 +1,10 @@
 
   [1;31mWe've found a bug for you![0m
-  [36m/.../fixtures/constructor_tuple_arity_mismatch.res[0m:[2m3:15-25[0m
+  [36m/.../fixtures/constructor_tuple_arity_mismatch.res[0m:[2m3:15-31[0m
 
-  1 [2m│[0m type unary = Unary((int, int))
+  1 [2m│[0m type binary = Binary(int, int)
   2 [2m│[0m 
-  [1;31m3[0m [2m│[0m let invalid = [1;31mUnary(1, 2)[0m
+  [1;31m3[0m [2m│[0m let invalid = [1;31mBinary((1, 2, 3))[0m
   4 [2m│[0m 
 
-  This variant constructor [1;33mUnary[0m expects 1 argument, but it's being passed 2.
+  This variant constructor [1;33mBinary[0m expects 2 arguments, but it's being passed 3.

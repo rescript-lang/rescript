@@ -10,6 +10,23 @@ function readBinary(value) {
   return value._0 + value._1 | 0;
 }
 
+function readUnaryUnparenthesized(value) {
+  let match = value._0;
+  return match[0] + match[1] | 0;
+}
+
+function readBinaryParenthesized(value) {
+  return value._0 + value._1 | 0;
+}
+
+function readOptionUnparenthesized(value) {
+  if (value !== undefined) {
+    return value[0] + value[1] | 0;
+  } else {
+    return 0;
+  }
+}
+
 function readPoly(value) {
   return value.VAL[0] + value.VAL[1] | 0;
 }
@@ -27,6 +44,25 @@ let binary = {
   _0: 1,
   _1: 2
 };
+
+let unaryUnparenthesized = {
+  TAG: "Unary",
+  _0: [
+    1,
+    2
+  ]
+};
+
+let binaryParenthesized = {
+  TAG: "Binary",
+  _0: 1,
+  _1: 2
+};
+
+let optionUnparenthesized = [
+  1,
+  2
+];
 
 let polyUnary = {
   NAME: "UnaryTuple",
@@ -47,8 +83,14 @@ let polyBinary = {
 export {
   unary,
   binary,
+  unaryUnparenthesized,
+  binaryParenthesized,
+  optionUnparenthesized,
   readUnary,
   readBinary,
+  readUnaryUnparenthesized,
+  readBinaryParenthesized,
+  readOptionUnparenthesized,
   polyUnary,
   polyBinary,
   readPoly,

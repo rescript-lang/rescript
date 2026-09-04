@@ -220,6 +220,9 @@ and pattern_desc =
        C(P)               [P]
        C(P1, ..., Pn)     [P1; ...; Pn]
        C((P1, ..., Pn))   [Ppat_tuple [P1; ...; Pn]]
+
+       This list preserves syntax, not the declared constructor arity.
+       Type checking normalizes tuple grouping using the resolved constructor.
     *)
   | Ppat_variant of label * pattern list
     (* #A                  []
@@ -312,6 +315,9 @@ and expression_desc =
        C(E)               [E]
        C(E1, ..., En)     [E1; ...; En]
        C((E1, ..., En))   [Pexp_tuple [E1; ...; En]]
+
+       This list preserves syntax, not the declared constructor arity.
+       Type checking normalizes tuple grouping using the resolved constructor.
     *)
   | Pexp_variant of label * expression list
     (* #A                  []

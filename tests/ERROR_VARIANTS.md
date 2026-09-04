@@ -201,7 +201,7 @@ Source: [typecore.ml:27](../compiler/ml/typecore.ml).
 | Variant | Status | Fixture | Notes |
 |---|---|---|---|
 | `Polymorphic_label` | ✓ | `polymorphic_label.res` | Pattern that instantiates a polymorphic record field: `({f: (f: int => int)}: t) =>` constrains the universal `'a` of `f: 'a. 'a => 'a` to `int => int`. |
-| `Constructor_arity_mismatch` | ✓ | `constructor_arity_mismatch.res`, `constructor_arity_mismatch_pattern.res`, `constructor_tuple_arity_mismatch.res`, `constructor_tuple_arity_mismatch_pattern.res`, `arity_mismatch*.res` | Triggers in both expression and pattern paths, including the distinction between multiple arguments and one tuple argument. |
+| `Constructor_arity_mismatch` | ✓ | `constructor_arity_mismatch.res`, `constructor_arity_mismatch_pattern.res`, `constructor_tuple_arity_mismatch.res`, `constructor_tuple_arity_mismatch_pattern.res`, `arity_mismatch*.res` | Triggers in both expression and pattern paths, after semantic argument normalization. |
 | `Label_mismatch` | ✓ | `label_mismatch_record_literal.res` | Record literal without expected type mixing fields from two different record types — disambiguation picks one type per label, and the cross-type unify fails inside `type_label_exp`. |
 | `Pattern_type_clash` | ✓ | many `*_pattern_type_clash.res` etc. | Most-fired pattern error. Sub-case fixtures: `pattern_matching_on_option_but_value_not_option.res` and `pattern_matching_on_value_but_is_option.res` (option-vs-non-option trace), `pattern_type_clash_polyvariant.res` (polyvariant tag against concrete type), `pattern_type_clash_tuple_arity.res` (tuple arity mismatch). |
 | `Or_pattern_type_clash` | ✓ | `or_pattern_type_clash.res` | |

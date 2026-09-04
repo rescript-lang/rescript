@@ -6,4 +6,4 @@
   [1;31m1[0m [2m│[0m let v = [1;31mDefs.Pair(1, 2)[0m
   2 [2m│[0m 
 
-  This variant constructor [1;33mDefs.Pair[0m expects an inline record as payload.
+  This constructor expects an inlined record argument.

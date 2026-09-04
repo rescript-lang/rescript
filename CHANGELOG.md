@@ -14,7 +14,6 @@
 
 #### :boom: Breaking Change
 
-- Distinguish multiple constructor arguments from a tuple passed as a single argument. Constructors with one tuple payload must now use nested parentheses, for example `Some((x, y))`; `Some(x, y)` now reports an arity mismatch. This makes constructor arity explicit in the parsetree and removes the separate parser modes for printing and type checking. https://github.com/rescript-lang/rescript/pull/8610
 - Reject malformed UTF-8 in documentation comments and invalid string or template literal escapes that were previously accepted, including empty or out-of-range braced Unicode escapes (`\u{}`, `\u{110000}`) and legacy decimal or octal escapes in templates (`\1`, `\01`, `\8`). These inputs now produce syntax diagnostics instead of compiling to invalid or inconsistent JavaScript. https://github.com/rescript-lang/rescript/pull/8606
 - Reject tagged template literals in patterns. Patterns cannot invoke their tag; previously their raw payload was compiled as a plain string comparison. https://github.com/rescript-lang/rescript/pull/8606
 - Remove runtime APIs that were deprecated for removal in ReScript 13, including the `Char` module, unsafe `Obj` operations, legacy `Pervasives` helpers, and `Array.unsafe_get`. https://github.com/rescript-lang/rescript/pull/8564
@@ -80,6 +79,7 @@
 - Record a record field's `@as` rename on the declaration instead of re-reading the attribute, so every place that needs the runtime name reads one field. https://github.com/rescript-lang/rescript/pull/8619
 - Record a variant constructor's `@as` tag on the declaration instead of re-interpreting its attributes, keeping the source spelling for printing. https://github.com/rescript-lang/rescript/pull/8619
 - Optimization passes now return the term they were given when they change nothing, rather than rebuilding an identical one. https://github.com/rescript-lang/rescript/pull/8620
+- Remove separate parser modes for printing and type checking by preserving syntactic constructor arguments in the parsetree and resolving their semantic grouping during type checking. Existing constructor spellings and legacy PPX output remain supported. https://github.com/rescript-lang/rescript/pull/8610
 - Merge the duplicate Lam intermediate representation into Lambda, removing the conversion layer and obsolete supporting infrastructure. Lambda is now a single private, normalized representation, with generated JavaScript remaining semantically unchanged. https://github.com/rescript-lang/rescript/pull/8608
 - Add genType and source map controls and output to the developer playground. https://github.com/rescript-lang/rescript/pull/8448
 - Rework the object-type representation end to end: object rows are plain field chains carrying a per-field mutability state (no phantom setter members), object literals are typed directly and property access and assignment are first-class AST and Lambda nodes shared between the Lambda and JS pipelines, and dead class-system remnants (the field-presence lattice, the class-abbreviation memo on object types, method-send typing) are removed. https://github.com/rescript-lang/rescript/pull/8597

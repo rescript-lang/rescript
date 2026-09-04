@@ -465,14 +465,22 @@ let test_fresh_ast0_constructor_tuple_reprints_without_internal_metadata _ =
              ( _,
                [
                  {
-                   pvb_pat = {ppat_desc = Ppat_construct (_, [_; _])};
-                   pvb_expr = {pexp_desc = Pexp_construct (_, [_; _])};
+                   pvb_pat =
+                     {
+                       ppat_desc =
+                         Ppat_construct (_, [{ppat_desc = Ppat_tuple [_; _]}]);
+                     };
+                   pvb_expr =
+                     {
+                       pexp_desc =
+                         Pexp_construct (_, [{pexp_desc = Pexp_tuple [_; _]}]);
+                     };
                  };
                ] );
        };
       ] ->
         ()
-      | _ -> assert_failure "Expected two printed constructor arguments")
+      | _ -> assert_failure "Expected a printed tuple payload")
     [10; 80]
 
 let test_ast0_explicit_arity_becomes_constructor_args _ =
@@ -507,43 +515,47 @@ let test_fresh_ast0_constructor_tuple_defers_arity_to_typechecker _ =
       (Ast_helper0.Pat.construct ~loc lid
          (Some (Ast_helper0.Pat.tuple ~loc [int_pat "1"; int_pat "2"])))
   in
-  OUnit.assert_bool "fresh v0 expression carries deferred-arity metadata"
-    (has_attr "_res.legacy_constructor_payload" expr.pexp_attributes);
-  OUnit.assert_bool "fresh v0 pattern carries deferred-arity metadata"
-    (has_attr "_res.legacy_constructor_payload" pat.ppat_attributes);
-  let parsed =
-    Res_driver.parse_implementation_from_source
-      ~display_filename:"Ast0ConstructorArgsTest.res"
-      ~source:
-        "type freshPairForAst0 = FreshPairForAst0(int, int)\n\
-         let value = FreshPairForAst0(1, 2)\n\
-         let FreshPairForAst0(a, b) = value"
-  in
-  let structure =
-    match parsed.parsetree with
-    | [type_item; value_item; pattern_item] ->
-      let value_item =
-        match value_item.pstr_desc with
-        | Pstr_value (rec_flag, [binding]) ->
-          {
-            value_item with
-            pstr_desc = Pstr_value (rec_flag, [{binding with pvb_expr = expr}]);
-          }
-        | _ -> assert_failure "Expected value binding"
+  OUnit.assert_equal [] expr.pexp_attributes;
+  OUnit.assert_equal [] pat.ppat_attributes;
+  List.iter
+    (fun payload_type ->
+      let parsed =
+        Res_driver.parse_implementation_from_source
+          ~display_filename:"Ast0ConstructorArgsTest.res"
+          ~source:
+            (Printf.sprintf
+               "type freshPairForAst0 = FreshPairForAst0(%s)\n\
+                let value = FreshPairForAst0(1, 2)\n\
+                let FreshPairForAst0(a, b) = value"
+               payload_type)
       in
-      let pattern_item =
-        match pattern_item.pstr_desc with
-        | Pstr_value (rec_flag, [binding]) ->
-          {
-            pattern_item with
-            pstr_desc = Pstr_value (rec_flag, [{binding with pvb_pat = pat}]);
-          }
-        | _ -> assert_failure "Expected pattern binding"
+      let structure =
+        match parsed.parsetree with
+        | [type_item; value_item; pattern_item] ->
+          let value_item =
+            match value_item.pstr_desc with
+            | Pstr_value (rec_flag, [binding]) ->
+              {
+                value_item with
+                pstr_desc =
+                  Pstr_value (rec_flag, [{binding with pvb_expr = expr}]);
+              }
+            | _ -> assert_failure "Expected value binding"
+          in
+          let pattern_item =
+            match pattern_item.pstr_desc with
+            | Pstr_value (rec_flag, [binding]) ->
+              {
+                pattern_item with
+                pstr_desc = Pstr_value (rec_flag, [{binding with pvb_pat = pat}]);
+              }
+            | _ -> assert_failure "Expected pattern binding"
+          in
+          [type_item; value_item; pattern_item]
+        | _ -> assert_failure "Expected type declaration and two value bindings"
       in
-      [type_item; value_item; pattern_item]
-    | _ -> assert_failure "Expected type declaration and two value bindings"
-  in
-  ignore (Typemod.type_structure Env.initial_safe_string structure loc)
+      ignore (Typemod.type_structure Env.initial_safe_string structure loc))
+    ["int, int"; "(int, int)"]
 
 let test_polyvariant_args_roundtrip_through_ast0 _ =
   let int_expr value =

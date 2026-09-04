@@ -1213,23 +1213,32 @@ type type_pat_mode =
 
 exception Need_backtrack
 
+(* The parser preserves syntactic arguments for printing. Resolve their semantic
+   grouping only after constructor disambiguation, retaining the historical
+   equivalence of C(a, b) and C((a, b)), including for legacy PPX output. *)
+let constructor_args_of_exp_payload ~arity sargs =
+  match sargs with
+  | [{pexp_desc = Pexp_tuple args}] when arity > 1 -> args
+  | {pexp_loc = first_loc} :: (_ :: _ as rest) when arity = 1 ->
+    let last = Ext_list.last rest in
+    let loc = Location.{first_loc with loc_end = last.pexp_loc.loc_end} in
+    [Ast_helper.Exp.tuple ~loc sargs]
+  | sargs -> sargs
+
+let constructor_args_of_pat_payload ~arity sargs =
+  match sargs with
+  | [{ppat_desc = Ppat_tuple args}] when arity > 1 -> args
+  | {ppat_loc = first_loc} :: (_ :: _ as rest) when arity = 1 ->
+    let last = Ext_list.last rest in
+    let loc = Location.{first_loc with loc_end = last.ppat_loc.loc_end} in
+    [Ast_helper.Pat.tuple ~loc sargs]
+  | sargs -> sargs
+
 (* type_pat propagates the expected type as well as maps for
    constructors and labels.
    Unification may update the typing environment. *)
 (* constrs <> None => called from parmatch: backtrack on or-patterns
    explode > 0 => explode Ppat_any for gadts *)
-let legacy_constructor_payload_attr_name = "_res.legacy_constructor_payload"
-
-let remove_legacy_constructor_payload_attr attrs =
-  let rec loop rev_attrs = function
-    | ({Location.txt; _}, PStr []) :: attrs
-      when txt = legacy_constructor_payload_attr_name ->
-      (true, List.rev_append rev_attrs attrs)
-    | attr :: attrs -> loop (attr :: rev_attrs) attrs
-    | [] -> (false, List.rev rev_attrs)
-  in
-  loop [] attrs
-
 let rec type_pat ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
     expected_ty k =
   Builtin_attributes.warning_scope sp.ppat_attributes (fun () ->
@@ -1403,10 +1412,6 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
             pat_env = !env;
           })
   | Ppat_construct (lid, sargs) ->
-    let has_legacy_constructor_payload, ppat_attributes =
-      remove_legacy_constructor_payload_attr sp.ppat_attributes
-    in
-    let sp = {sp with ppat_attributes} in
     let opath =
       try
         let p0, p, _ = extract_concrete_variant !env expected_ty in
@@ -1441,10 +1446,7 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
        correct head *)
     if constr.cstr_generalized then unify_head_only loc !env expected_ty constr;
     let sargs =
-      match sargs with
-      | [{ppat_desc = Ppat_tuple sargs}]
-        when has_legacy_constructor_payload && constr.cstr_arity > 1 ->
-        sargs
+      match constructor_args_of_pat_payload ~arity:constr.cstr_arity sargs with
       | [({ppat_desc = Ppat_any} as sp)] when constr.cstr_arity <> 1 ->
         if constr.cstr_arity = 0 then
           Location.prerr_warning sp.ppat_loc
@@ -4430,9 +4432,6 @@ and type_application ~context total_app env funct (sargs : sargs) :
              Apply_non_function (expand_head env funct.exp_type) )))
 
 and type_construct ~context env loc lid sargs ty_expected attrs =
-  let has_legacy_constructor_payload, attrs =
-    remove_legacy_constructor_payload_attr attrs
-  in
   let opath =
     try
       let p0, p, _ = extract_concrete_variant env ty_expected in
@@ -4448,13 +4447,7 @@ and type_construct ~context env loc lid sargs ty_expected attrs =
   Env.mark_constructor Env.Positive env (Longident.last lid.txt) constr;
   Builtin_attributes.check_deprecated loc constr.cstr_attributes
     constr.cstr_name;
-  let sargs =
-    match sargs with
-    | [{pexp_desc = Pexp_tuple sargs}]
-      when has_legacy_constructor_payload && constr.cstr_arity > 1 ->
-      sargs
-    | sargs -> sargs
-  in
+  let sargs = constructor_args_of_exp_payload ~arity:constr.cstr_arity sargs in
   if List.length sargs <> constr.cstr_arity then
     raise
       (Error
