@@ -1577,7 +1577,8 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
       if label_is_optional ld && (not exp_optional_attr) && not is_from_pamatch
       then
         let lid = mknoloc Longident.(Ldot (Lident "*predef*", "Some")) in
-        Ast_helper.Pat.construct ~loc:pat.ppat_loc lid [pat]
+        Ast_helper.Pat.construct ~loc:pat.ppat_loc lid
+          (Location.mkloc [pat] pat.ppat_loc)
       else pat
     in
     let type_label_pat (label_lid, label, sarg, opt) k =
@@ -2451,7 +2452,10 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
     let exp_optional_attr = check_optional_attr env ld opt e.pexp_loc in
     if label_is_optional ld && not exp_optional_attr then
       let lid = mknoloc Longident.(Ldot (Lident "*predef*", "Some")) in
-      let e = Ast_helper.Exp.construct ~loc:e.pexp_loc lid [e] in
+      let e =
+        Ast_helper.Exp.construct ~loc:e.pexp_loc lid
+          (Location.mkloc [e] e.pexp_loc)
+      in
       (id, ld, e, opt)
     else (id, ld, e, opt)
   in
@@ -3693,13 +3697,15 @@ and type_function ~async loc attrs env ty_expected_
               Exp.case
                 (Pat.construct ~loc:default_loc
                    (mknoloc Longident.(Ldot (Lident "*predef*", "Some")))
-                   [Pat.var ~loc:default_loc (mknoloc "*sth*")])
+                   (Location.mkloc
+                      [Pat.var ~loc:default_loc (mknoloc "*sth*")]
+                      default_loc))
                 (Exp.ident ~loc:default_loc
                    (mknoloc (Longident.Lident "*sth*")));
               Exp.case
                 (Pat.construct ~loc:default_loc
                    (mknoloc Longident.(Ldot (Lident "*predef*", "None")))
-                   [])
+                   (Location.mkloc [] default_loc))
                 default;
             ]
           in

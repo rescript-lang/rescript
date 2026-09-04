@@ -32,7 +32,8 @@ let get_label str =
 let constant_string ~loc str =
   Ast_helper.Exp.constant ~loc (Ast_helper.Const.string str)
 
-let unit_expr ~loc = Exp.construct ~loc (Location.mkloc (Lident "()") loc) []
+let unit_expr ~loc =
+  Exp.construct ~loc (Location.mkloc (Lident "()") loc) (Location.mkloc [] loc)
 
 let safe_type_from_value value_str =
   let value_str = get_label value_str in
@@ -513,10 +514,14 @@ let vb_match ~expr (name, default, pattern, _alias, loc, _) =
              Exp.case
                (Pat.construct
                   (Location.mknoloc @@ Lident "Some")
-                  [Pat.var (Location.mknoloc label)])
+                  (Location.mkloc
+                     [Pat.var (Location.mknoloc label)]
+                     !Ast_helper.default_loc))
                (Exp.ident (Location.mknoloc @@ Lident label));
              Exp.case
-               (Pat.construct (Location.mknoloc @@ Lident "None") [])
+               (Pat.construct
+                  (Location.mknoloc @@ Lident "None")
+                  (Location.mkloc [] !Ast_helper.default_loc))
                default;
            ])
     in

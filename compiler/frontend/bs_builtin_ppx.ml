@@ -265,7 +265,7 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
               Ast_helper.Pat.alias
                 (Ast_helper.Pat.construct ~loc
                    {txt = Lident "Error"; loc}
-                   [Ast_helper.Pat.any ~loc ()])
+                   (Location.mkloc [Ast_helper.Pat.any ~loc ()] loc))
                 {txt = var_name; loc};
             pc_guard = None;
             pc_rhs = Ast_helper.Exp.ident ~loc {txt = Lident var_name; loc};
@@ -277,7 +277,7 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
             pc_lhs =
               Ast_helper.Pat.alias
                 (Ast_helper.Pat.construct ~loc {txt = Lident "Ok"; loc}
-                   [Ast_helper.Pat.any ~loc ()])
+                   (Location.mkloc [Ast_helper.Pat.any ~loc ()] loc))
                 {txt = var_name; loc};
             pc_guard = None;
             pc_rhs = Ast_helper.Exp.ident ~loc {txt = Lident var_name; loc};
@@ -288,7 +288,8 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
             Parsetree.pc_bar = None;
             pc_lhs =
               Ast_helper.Pat.alias
-                (Ast_helper.Pat.construct ~loc {txt = Lident "None"; loc} [])
+                (Ast_helper.Pat.construct ~loc {txt = Lident "None"; loc}
+                   (Location.mkloc [] loc))
                 {txt = var_name; loc};
             pc_guard = None;
             pc_rhs = Ast_helper.Exp.ident ~loc {txt = Lident var_name; loc};
@@ -300,7 +301,7 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
             pc_lhs =
               Ast_helper.Pat.alias
                 (Ast_helper.Pat.construct ~loc {txt = Lident "Some"; loc}
-                   [Ast_helper.Pat.any ~loc ()])
+                   (Location.mkloc [Ast_helper.Pat.any ~loc ()] loc))
                 {txt = var_name; loc};
             pc_guard = None;
             pc_rhs = Ast_helper.Exp.ident ~loc {txt = Lident var_name; loc};

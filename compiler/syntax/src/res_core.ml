@@ -590,7 +590,7 @@ let make_list_pattern loc seq ext_opt =
         | None ->
           let loc = {loc with Location.loc_ghost = true} in
           let nil = {Location.txt = Longident.Lident "[]"; loc} in
-          Ast_helper.Pat.construct ~loc nil []
+          Ast_helper.Pat.construct ~loc nil (Location.mkloc [] loc)
       in
       base_case
     | p1 :: pl ->
@@ -1247,7 +1247,7 @@ let rec parse_pattern ?(alias = true) ?(or_ = true) p =
       let loc = mk_loc start_pos end_pos in
       Ast_helper.Pat.construct ~loc
         (Location.mkloc (Longident.Lident (Token.to_string token)) loc)
-        []
+        (Location.mkloc [] loc)
     | Int _ | String _ | Float _ | Codepoint _ | Minus | Plus -> (
       let c = parse_constant p in
       match p.token with
@@ -1266,7 +1266,7 @@ let rec parse_pattern ?(alias = true) ?(or_ = true) p =
         Parser.next p;
         let loc = mk_loc start_pos p.prev_end_pos in
         let lid = Location.mkloc (Longident.Lident "()") loc in
-        Ast_helper.Pat.construct ~loc lid []
+        Ast_helper.Pat.construct ~loc lid (Location.mkloc [] loc)
       | _ -> (
         let pat = parse_constrained_pattern p in
         match p.token with
@@ -1303,7 +1303,9 @@ let rec parse_pattern ?(alias = true) ?(or_ = true) p =
       let constr = parse_module_long_ident ~lowercase:false p in
       match p.Parser.token with
       | Lparen -> parse_constructor_pattern_args p constr start_pos attrs
-      | _ -> Ast_helper.Pat.construct ~loc:constr.loc ~attrs constr [])
+      | _ ->
+        Ast_helper.Pat.construct ~loc:constr.loc ~attrs constr
+          (Location.mkloc [] constr.loc))
     | DotDotDot ->
       Parser.next p;
       let ident = parse_value_path p in
@@ -1343,7 +1345,7 @@ let rec parse_pattern ?(alias = true) ?(or_ = true) p =
         in
         match p.Parser.token with
         | Lparen -> parse_variant_pattern_args p ident start_pos attrs
-        | _ -> Ast_helper.Pat.variant ~loc ~attrs ident [])
+        | _ -> Ast_helper.Pat.variant ~loc ~attrs ident (Location.mkloc [] loc))
     | Exception ->
       Parser.next p;
       let pat = parse_pattern ~alias:false ~or_:false p in
@@ -1754,23 +1756,23 @@ and parse_pattern_args (p : Parser.t) =
       [
         Ast_helper.Pat.construct ~loc
           (Location.mkloc (Longident.Lident "()") loc)
-          [];
+          (Location.mkloc [] loc);
       ]
     | patterns -> patterns
   in
   Location.mkloc args loc
 
 and parse_constructor_pattern_args p constr start_pos attrs =
-  let {Location.txt = args; loc = args_loc} = parse_pattern_args p in
+  let args = parse_pattern_args p in
   Ast_helper.Pat.construct
     ~loc:(mk_loc start_pos p.prev_end_pos)
-    ~args_loc ~attrs constr args
+    ~attrs constr args
 
 and parse_variant_pattern_args p ident start_pos attrs =
-  let {Location.txt = args; loc = args_loc} = parse_pattern_args p in
+  let args = parse_pattern_args p in
   Ast_helper.Pat.variant
     ~loc:(mk_loc start_pos p.prev_end_pos)
-    ~args_loc ~attrs ident args
+    ~attrs ident args
 
 and parse_expr ?(context = OrdinaryExpr) p =
   let expr = parse_operand_expr ~context p in
@@ -1992,7 +1994,7 @@ and parse_parameters p : fundef_type_param list * fundef_term_param list =
     let unit_pattern =
       Ast_helper.Pat.construct ~loc
         (Location.mkloc (Longident.Lident "()") loc)
-        []
+        (Location.mkloc [] loc)
     in
     {p_label = Asttypes.Nolabel; expr = None; pat = unit_pattern}
   in
@@ -2096,7 +2098,7 @@ and parse_atomic_expr p =
       let loc = mk_loc start_pos p.prev_end_pos in
       Ast_helper.Exp.construct ~loc
         (Location.mkloc (Longident.Lident (Token.to_string token)) loc)
-        []
+        (Location.mkloc [] loc)
     | Int _ | String _ | Float _ | Codepoint _ ->
       let c = parse_constant p in
       let loc = mk_loc start_pos p.prev_end_pos in
@@ -2114,7 +2116,7 @@ and parse_atomic_expr p =
         let loc = mk_loc start_pos p.prev_end_pos in
         Ast_helper.Exp.construct ~loc
           (Location.mkloc (Longident.Lident "()") loc)
-          []
+          (Location.mkloc [] loc)
       | _t -> (
         let expr = parse_constrained_or_coerced_expr p in
         match p.token with
@@ -2575,7 +2577,9 @@ and over_parse_constrained_or_coerced_or_arrow_expression p expr =
                  longident.loc),
             false )
         | Pexp_construct (({txt = Longident.Lident "()"} as lid), {txt = []}) ->
-          (Ast_helper.Pat.construct ~loc:expr.pexp_loc lid [], true)
+          ( Ast_helper.Pat.construct ~loc:expr.pexp_loc lid
+              (Location.mkloc [] expr.pexp_loc),
+            true )
         (* TODO: can we convert more expressions to patterns?*)
         | _ ->
           ( Ast_helper.Pat.var ~loc:expr.pexp_loc
@@ -3599,7 +3603,7 @@ and parse_expr_block_item p =
         let loc = mk_loc p.start_pos p.end_pos in
         Ast_helper.Exp.construct ~loc
           (Location.mkloc (Longident.Lident "()") loc)
-          []
+          (Location.mkloc [] loc)
     in
     let loc = mk_loc start_pos p.prev_end_pos in
     Ast_helper.Exp.let_ ~loc rec_flag let_bindings next
@@ -3752,7 +3756,7 @@ and parse_if_let_expr start_pos p =
       let loc = mk_loc start_pos p.prev_end_pos in
       Ast_helper.Exp.construct ~loc
         (Location.mkloc (Longident.Lident "()") loc)
-        []
+        (Location.mkloc [] loc)
   in
   let loc = mk_loc start_pos p.prev_end_pos in
   Ast_helper.Exp.match_
@@ -3858,7 +3862,8 @@ and parse_for_expression p =
         let unit_pattern =
           let loc = mk_loc lparen p.prev_end_pos in
           let lid = Location.mkloc (Longident.Lident "()") loc in
-          Ast_helper.Pat.construct lid []
+          Ast_helper.Pat.construct lid
+            (Location.mkloc [] !Ast_helper.default_loc)
         in
         parse_for_rest false ~await:false
           (parse_alias_pattern ~attrs:[] unit_pattern p)
@@ -3888,7 +3893,8 @@ and parse_for_expression p =
           let unit_pattern =
             let loc = mk_loc lparen p.prev_end_pos in
             let lid = Location.mkloc (Longident.Lident "()") loc in
-            Ast_helper.Pat.construct lid []
+            Ast_helper.Pat.construct lid
+              (Location.mkloc [] !Ast_helper.default_loc)
           in
           parse_for_rest false ~await:true
             (parse_alias_pattern ~attrs:[] unit_pattern p)
@@ -4020,7 +4026,9 @@ and parse_argument p : argument option =
       (* apply(.) — legacy uncurried unit call *)
       | Rparen ->
         let unit_expr =
-          Ast_helper.Exp.construct (Location.mknoloc (Longident.Lident "()")) []
+          Ast_helper.Exp.construct
+            (Location.mknoloc (Longident.Lident "()"))
+            (Location.mkloc [] !Ast_helper.default_loc)
         in
         Some {label = Asttypes.Nolabel; expr = unit_expr}
       | _ -> parse_argument2 p)
@@ -4152,7 +4160,7 @@ and parse_call_expr p fun_expr =
           expr =
             Ast_helper.Exp.construct ~loc
               (Location.mkloc (Longident.Lident "()") loc)
-              [];
+              (Location.mkloc [] loc);
         };
       ]
     | args -> args
@@ -4188,17 +4196,17 @@ and parse_value_or_constructor p =
         Parser.next p;
         aux p (ident :: acc)
       | Lparen when p.prev_end_pos.pos_lnum == p.start_pos.pos_lnum ->
-        let {Location.txt = args; loc = args_loc} = parse_constructor_args p in
+        let args = parse_constructor_args p in
         let lident = build_longident (ident :: acc) in
         let loc = mk_loc start_pos p.prev_end_pos in
         let ident_loc = mk_loc start_pos end_pos_lident in
-        Ast_helper.Exp.construct ~loc ~args_loc
-          (Location.mkloc lident ident_loc)
-          args
+        Ast_helper.Exp.construct ~loc (Location.mkloc lident ident_loc) args
       | _ ->
         let loc = mk_loc start_pos p.prev_end_pos in
         let lident = build_longident (ident :: acc) in
-        Ast_helper.Exp.construct ~loc (Location.mkloc lident loc) [])
+        Ast_helper.Exp.construct ~loc
+          (Location.mkloc lident loc)
+          (Location.mkloc [] loc))
     | Lident ident ->
       Parser.next p;
       let loc = mk_loc start_pos p.prev_end_pos in
@@ -4222,12 +4230,12 @@ and parse_poly_variant_expr p =
   let ident, _loc = parse_hash_ident ~start_pos p in
   match p.Parser.token with
   | Lparen when p.prev_end_pos.pos_lnum == p.start_pos.pos_lnum ->
-    let {Location.txt = args; loc = args_loc} = parse_constructor_args p in
+    let args = parse_constructor_args p in
     let loc = mk_loc start_pos p.prev_end_pos in
-    Ast_helper.Exp.variant ~loc ~args_loc ident args
+    Ast_helper.Exp.variant ~loc ident args
   | _ ->
     let loc = mk_loc start_pos p.prev_end_pos in
-    Ast_helper.Exp.variant ~loc ident []
+    Ast_helper.Exp.variant ~loc ident (Location.mkloc [] loc)
 
 and parse_constructor_args p =
   let lparen = p.Parser.start_pos in
@@ -4244,7 +4252,7 @@ and parse_constructor_args p =
       [
         Ast_helper.Exp.construct ~loc
           (Location.mkloc (Longident.Lident "()") loc)
-          [];
+          (Location.mkloc [] loc);
       ]
     | args -> args
   in

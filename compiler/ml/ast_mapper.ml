@@ -317,15 +317,11 @@ module E = struct
     | Pexp_try (e, pel) -> try_ ~loc ~attrs (sub.expr sub e) (sub.cases sub pel)
     | Pexp_tuple el -> tuple ~loc ~attrs (List.map (sub.expr sub) el)
     | Pexp_construct (lid, {txt = args; loc = args_loc}) ->
-      construct ~loc ~attrs
-        ~args_loc:(sub.location sub args_loc)
-        (map_loc sub lid)
-        (List.map (sub.expr sub) args)
+      construct ~loc ~attrs (map_loc sub lid)
+        {txt = List.map (sub.expr sub) args; loc = sub.location sub args_loc}
     | Pexp_variant (lab, {txt = args; loc = args_loc}) ->
-      variant ~loc ~attrs
-        ~args_loc:(sub.location sub args_loc)
-        lab
-        (List.map (sub.expr sub) args)
+      variant ~loc ~attrs lab
+        {txt = List.map (sub.expr sub) args; loc = sub.location sub args_loc}
     | Pexp_record (l, eo) ->
       record ~loc ~attrs
         (List.map
@@ -431,15 +427,11 @@ module P = struct
     | Ppat_interval (c1, c2) -> interval ~loc ~attrs c1 c2
     | Ppat_tuple pl -> tuple ~loc ~attrs (List.map (sub.pat sub) pl)
     | Ppat_construct (l, {txt = args; loc = args_loc}) ->
-      construct ~loc ~attrs
-        ~args_loc:(sub.location sub args_loc)
-        (map_loc sub l)
-        (List.map (sub.pat sub) args)
+      construct ~loc ~attrs (map_loc sub l)
+        {txt = List.map (sub.pat sub) args; loc = sub.location sub args_loc}
     | Ppat_variant (l, {txt = args; loc = args_loc}) ->
-      variant ~loc ~attrs
-        ~args_loc:(sub.location sub args_loc)
-        l
-        (List.map (sub.pat sub) args)
+      variant ~loc ~attrs l
+        {txt = List.map (sub.pat sub) args; loc = sub.location sub args_loc}
     | Ppat_record (lpl, cf, rest) ->
       record ~loc ~attrs
         ?rest:
@@ -616,12 +608,16 @@ module Ppx_context = struct
       (Const.string x)
 
   let make_bool x =
-    if x then Exp.construct (lid "true") [] else Exp.construct (lid "false") []
+    if x then
+      Exp.construct (lid "true") (Location.mkloc [] !Ast_helper.default_loc)
+    else Exp.construct (lid "false") (Location.mkloc [] !Ast_helper.default_loc)
 
   let rec make_list f lst =
     match lst with
-    | x :: rest -> Exp.construct (lid "::") [f x; make_list f rest]
-    | [] -> Exp.construct (lid "[]") []
+    | x :: rest ->
+      Exp.construct (lid "::")
+        (Location.mkloc [f x; make_list f rest] !Ast_helper.default_loc)
+    | [] -> Exp.construct (lid "[]") (Location.mkloc [] !Ast_helper.default_loc)
 
   let make_pair f1 f2 (x1, x2) = Exp.tuple [f1 x1; f2 x2]
 

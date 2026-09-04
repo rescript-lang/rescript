@@ -98,17 +98,12 @@ module Pat : sig
   val interval : ?loc:loc -> ?attrs:attrs -> constant -> constant -> pattern
   val tuple : ?loc:loc -> ?attrs:attrs -> pattern list -> pattern
 
-  (* [args_loc] spans the argument parentheses. It defaults to [loc] for
-      generated nodes or constructors without an argument list. *)
+  (* Argument lists carry their own locations. Generated nodes must supply
+     an explicit fallback location; see the parsetree location contract. *)
   val construct :
-    ?loc:loc -> ?attrs:attrs -> ?args_loc:loc -> lid -> pattern list -> pattern
+    ?loc:loc -> ?attrs:attrs -> lid -> pattern list Location.loc -> pattern
   val variant :
-    ?loc:loc ->
-    ?attrs:attrs ->
-    ?args_loc:loc ->
-    label ->
-    pattern list ->
-    pattern
+    ?loc:loc -> ?attrs:attrs -> label -> pattern list Location.loc -> pattern
   val record :
     ?loc:loc ->
     ?attrs:attrs ->
@@ -165,16 +160,14 @@ module Exp : sig
   val construct :
     ?loc:loc ->
     ?attrs:attrs ->
-    ?args_loc:loc ->
     lid ->
-    expression list ->
+    expression list Location.loc ->
     expression
   val variant :
     ?loc:loc ->
     ?attrs:attrs ->
-    ?args_loc:loc ->
     label ->
-    expression list ->
+    expression list Location.loc ->
     expression
   val record :
     ?loc:loc ->

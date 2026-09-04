@@ -894,7 +894,7 @@ module E = struct
             || lid.txt = Longident.Lident "::")
           arg
       in
-      let exp1 = construct ~loc ~attrs ~args_loc lid1 args in
+      let exp1 = construct ~loc ~attrs lid1 {txt = args; loc = args_loc} in
       match lid.txt with
       | Lident "Function$" -> (
         let rec attributes_to_arity (attrs : Parsetree.attributes) =
@@ -966,7 +966,7 @@ module E = struct
             | _ -> None)
           ~split_tuple:has_constructor_args arg
       in
-      variant ~loc ~attrs ~args_loc lab args
+      variant ~loc ~attrs lab {txt = args; loc = args_loc}
     | Pexp_record (l, eo) ->
       record ~loc ~attrs
         (Ext_list.map l (fun (lid, e) ->
@@ -1152,7 +1152,7 @@ module P = struct
             || l.txt = Longident.Lident "::")
           arg
       in
-      construct ~loc ~attrs ~args_loc (map_loc sub l) args
+      construct ~loc ~attrs (map_loc sub l) {txt = args; loc = args_loc}
     | Ppat_variant (l, arg) ->
       let has_constructor_args, attrs = remove_constructor_args_attr attrs in
       let args_loc =
@@ -1168,7 +1168,7 @@ module P = struct
             | _ -> None)
           ~split_tuple:has_constructor_args arg
       in
-      variant ~loc ~attrs ~args_loc l args
+      variant ~loc ~attrs l {txt = args; loc = args_loc}
     | Ppat_record (lpl, cf) ->
       let rest, attrs = get_record_rest_attr attrs in
       record ~loc ~attrs ?rest

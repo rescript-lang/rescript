@@ -305,7 +305,10 @@ let test_constructor_args_roundtrip_through_ast0 _ =
     Ast_helper.Pat.constant ~loc (Parsetree.Pconst_integer (value, None))
   in
   let lid = Location.mknoloc (Longident.Lident "Pair") in
-  let expr = Ast_helper.Exp.construct ~loc lid [int_expr "1"; int_expr "2"] in
+  let expr =
+    Ast_helper.Exp.construct ~loc lid
+      (Location.mkloc [int_expr "1"; int_expr "2"] loc)
+  in
   let expr0 = map_expr_to0 expr in
   (match expr0.pexp_desc with
   | Parsetree0.Pexp_construct (_, Some {pexp_desc = Pexp_tuple [_; _]}) ->
@@ -319,7 +322,9 @@ let test_constructor_args_roundtrip_through_ast0 _ =
       (not (has_attr "_res.constructor_args" expr.pexp_attributes))
   | _ -> assert_failure "Expected two constructor arguments after roundtrip");
   let tuple_expr = Ast_helper.Exp.tuple ~loc [int_expr "1"; int_expr "2"] in
-  let expr = Ast_helper.Exp.construct ~loc lid [tuple_expr] in
+  let expr =
+    Ast_helper.Exp.construct ~loc lid (Location.mkloc [tuple_expr] loc)
+  in
   let expr0 = map_expr_to0 expr in
   OUnit.assert_equal
     ~msg:"a single tuple argument does not carry bridge metadata" []
@@ -331,7 +336,10 @@ let test_constructor_args_roundtrip_through_ast0 _ =
   | Parsetree.Pexp_construct (_, {txt = [{pexp_desc = Pexp_tuple [_; _]}]}) ->
     ()
   | _ -> assert_failure "Expected one tuple argument after roundtrip");
-  let pat = Ast_helper.Pat.construct ~loc lid [int_pat "1"; int_pat "2"] in
+  let pat =
+    Ast_helper.Pat.construct ~loc lid
+      (Location.mkloc [int_pat "1"; int_pat "2"] loc)
+  in
   let pat0 = map_pat_to0 pat in
   (match pat0.ppat_desc with
   | Parsetree0.Ppat_construct (_, Some {ppat_desc = Ppat_tuple [_; _]}) ->
@@ -777,7 +785,10 @@ let test_polyvariant_args_roundtrip_through_ast0 _ =
   let int_pat value =
     Ast_helper.Pat.constant ~loc (Parsetree.Pconst_integer (value, None))
   in
-  let expr = Ast_helper.Exp.variant ~loc "Pair" [int_expr "1"; int_expr "2"] in
+  let expr =
+    Ast_helper.Exp.variant ~loc "Pair"
+      (Location.mkloc [int_expr "1"; int_expr "2"] loc)
+  in
   let expr0 = map_expr_to0 expr in
   (match expr0.pexp_desc with
   | Parsetree0.Pexp_variant ("Pair", Some {pexp_desc = Pexp_tuple [_; _]}) ->
@@ -787,7 +798,10 @@ let test_polyvariant_args_roundtrip_through_ast0 _ =
   (match (map_expr0 expr0).pexp_desc with
   | Parsetree.Pexp_variant ("Pair", {txt = [_; _]}) -> ()
   | _ -> assert_failure "Expected two polymorphic variant arguments");
-  let pat = Ast_helper.Pat.variant ~loc "Pair" [int_pat "1"; int_pat "2"] in
+  let pat =
+    Ast_helper.Pat.variant ~loc "Pair"
+      (Location.mkloc [int_pat "1"; int_pat "2"] loc)
+  in
   let pat0 = map_pat_to0 pat in
   (match pat0.ppat_desc with
   | Parsetree0.Ppat_variant ("Pair", Some {ppat_desc = Ppat_tuple [_; _]}) ->

@@ -146,10 +146,8 @@ module Pat = struct
   let constant ?loc ?attrs a = mk ?loc ?attrs (Ppat_constant a)
   let interval ?loc ?attrs a b = mk ?loc ?attrs (Ppat_interval (a, b))
   let tuple ?loc ?attrs a = mk ?loc ?attrs (Ppat_tuple a)
-  let construct ?(loc = !default_loc) ?attrs ?(args_loc = loc) a b =
-    mk ~loc ?attrs (Ppat_construct (a, {txt = b; loc = args_loc}))
-  let variant ?(loc = !default_loc) ?attrs ?(args_loc = loc) a b =
-    mk ~loc ?attrs (Ppat_variant (a, {txt = b; loc = args_loc}))
+  let construct ?loc ?attrs a b = mk ?loc ?attrs (Ppat_construct (a, b))
+  let variant ?loc ?attrs a b = mk ?loc ?attrs (Ppat_variant (a, b))
   let record ?loc ?attrs ?rest a b = mk ?loc ?attrs (Ppat_record (a, b, rest))
   let array ?loc ?attrs a = mk ?loc ?attrs (Ppat_array a)
   let or_ ?loc ?attrs a b = mk ?loc ?attrs (Ppat_or (a, b))
@@ -181,10 +179,8 @@ module Exp = struct
   let match_ ?loc ?attrs a b = mk ?loc ?attrs (Pexp_match (a, b))
   let try_ ?loc ?attrs a b = mk ?loc ?attrs (Pexp_try (a, b))
   let tuple ?loc ?attrs a = mk ?loc ?attrs (Pexp_tuple a)
-  let construct ?(loc = !default_loc) ?attrs ?(args_loc = loc) a b =
-    mk ~loc ?attrs (Pexp_construct (a, {txt = b; loc = args_loc}))
-  let variant ?(loc = !default_loc) ?attrs ?(args_loc = loc) a b =
-    mk ~loc ?attrs (Pexp_variant (a, {txt = b; loc = args_loc}))
+  let construct ?loc ?attrs a b = mk ?loc ?attrs (Pexp_construct (a, b))
+  let variant ?loc ?attrs a b = mk ?loc ?attrs (Pexp_variant (a, b))
   let record ?loc ?attrs a b = mk ?loc ?attrs (Pexp_record (a, b))
   let field ?loc ?attrs a b = mk ?loc ?attrs (Pexp_field (a, b))
   let setfield ?loc ?attrs a b c = mk ?loc ?attrs (Pexp_setfield (a, b, c))
@@ -252,7 +248,7 @@ module Exp = struct
         | None ->
           let loc = {loc with Location.loc_ghost = true} in
           let nil = Location.mkloc (Longident.Lident "[]") loc in
-          construct ~loc nil [])
+          construct ~loc nil (Location.mkloc [] loc))
       | e1 :: el ->
         let exp_el = handle_seq el in
         let loc =
@@ -263,7 +259,9 @@ module Exp = struct
               loc_ghost = false;
             }
         in
-        construct ~loc (Location.mkloc (Longident.Lident "::") loc) [e1; exp_el]
+        construct ~loc
+          (Location.mkloc (Longident.Lident "::") loc)
+          (Location.mkloc [e1; exp_el] loc)
     in
     let expr = handle_seq seq in
     {expr with pexp_loc = loc}
