@@ -15,8 +15,6 @@ val assert_or_await_expr_rhs : ?in_await:bool -> Parsetree.expression -> kind
 
 val field_expr : Parsetree.expression -> kind
 
-val set_field_expr_rhs : Parsetree.expression -> kind
-
 val ternary_operand : Parsetree.expression -> kind
 
 val jsx_prop_expr : Parsetree.expression -> kind

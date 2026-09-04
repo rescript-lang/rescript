@@ -547,8 +547,7 @@ let should_indent_binary_expr expr =
   }
     when is_binary_operator operator ->
     is_equality_operator operator
-    || (not (same_precedence_sub_expression operator lhs))
-    || operator = ":="
+    || not (same_precedence_sub_expression operator lhs)
   | _ -> false
 
 let should_inline_rhs_binary_expr rhs =

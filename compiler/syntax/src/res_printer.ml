@@ -3152,8 +3152,7 @@ and print_assignment_rhs ~operator rhs rhs_doc =
        else Doc.concat [Doc.space; rhs_doc]);
     ]
 
-and print_object_set_expr ~state (expr : Parsetree.expression) obj member rhs
-    cmt_tbl =
+and print_object_set_expr ~state obj member rhs cmt_tbl =
   let rhs_doc =
     let doc = print_expression_with_comments ~state rhs cmt_tbl in
     match Parens.expr rhs with
@@ -3161,19 +3160,15 @@ and print_object_set_expr ~state (expr : Parsetree.expression) obj member rhs
     | Braced braces -> print_braces doc rhs braces
     | Nothing -> doc
   in
-  let doc =
-    Doc.group
-      (Doc.concat
-         [
-           print_object_get_doc ~state ~expr_loc:expr.pexp_loc obj member cmt_tbl;
-           print_assignment_rhs ~operator:" =" rhs rhs_doc;
-         ])
-  in
-  ignore expr;
-  doc
+  Doc.group
+    (Doc.concat
+       [
+         print_object_get_doc ~state obj member cmt_tbl;
+         print_assignment_rhs ~operator:" =" rhs rhs_doc;
+       ])
 
-and print_object_get_doc ~state ~expr_loc parent_expr
-    (label : string Location.loc) cmt_tbl =
+and print_object_get_doc ~state parent_expr (label : string Location.loc)
+    cmt_tbl =
   let parent_doc =
     let doc = print_expression_with_comments ~state parent_expr cmt_tbl in
     match Parens.unary_expr_operand parent_expr with
@@ -3181,7 +3176,6 @@ and print_object_get_doc ~state ~expr_loc parent_expr
     | Braced braces -> print_braces doc parent_expr braces
     | Nothing -> doc
   in
-  ignore expr_loc;
   let member =
     let member_doc = print_comments (Doc.text label.txt) cmt_tbl label.loc in
     Doc.concat [Doc.text "\""; member_doc; Doc.text "\""]
@@ -3851,9 +3845,9 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
       let doc_typ = print_typ_expr ~state typ cmt_tbl in
       Doc.concat [Doc.lparen; doc_expr; Doc.text " :> "; doc_typ; Doc.rparen]
     | Pexp_object_get (parent_expr, label) ->
-      print_object_get_doc ~state ~expr_loc:e.pexp_loc parent_expr label cmt_tbl
+      print_object_get_doc ~state parent_expr label cmt_tbl
     | Pexp_object_set (obj, member, rhs) ->
-      print_object_set_expr ~state e obj member rhs cmt_tbl
+      print_object_set_expr ~state obj member rhs cmt_tbl
     | Pexp_await e ->
       let printed_expression =
         print_expression_with_comments ~state e cmt_tbl
@@ -3987,7 +3981,7 @@ and print_ternary_operand ~state expr cmt_tbl =
 and print_set_field_expr ~state attrs lhs longident_loc rhs loc cmt_tbl =
   let rhs_doc =
     let doc = print_expression_with_comments ~state rhs cmt_tbl in
-    match Parens.set_field_expr_rhs rhs with
+    match Parens.expr rhs with
     | Parens.Parenthesized -> add_parens doc
     | Braced braces -> print_braces doc rhs braces
     | Nothing -> doc
@@ -4217,7 +4211,7 @@ and print_binary_expression ~state (expr : Parsetree.expression) cmt_tbl =
           in
           if is_lhs then add_parens doc else doc
         | Pexp_object_set (obj, member, rhs) ->
-          let doc = print_object_set_expr ~state expr obj member rhs cmt_tbl in
+          let doc = print_object_set_expr ~state obj member rhs cmt_tbl in
           let doc =
             match expr.pexp_attributes with
             | [] -> doc
@@ -4231,7 +4225,7 @@ and print_binary_expression ~state (expr : Parsetree.expression) cmt_tbl =
           let parens =
             match expr.pexp_desc with
             | Pexp_fun _ when parent_operator = ":=" && not is_lhs ->
-              Parens.set_field_expr_rhs expr
+              Parens.expr expr
             | _ -> Parens.binary_expr_operand ~is_lhs expr
           in
           match parens with

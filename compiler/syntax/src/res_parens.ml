@@ -275,20 +275,6 @@ let field_expr expr =
     | _ when Parsetree_viewer.expr_is_await expr -> Parenthesized
     | _ -> Nothing)
 
-let set_field_expr_rhs expr =
-  let opt_braces, _ = Parsetree_viewer.process_braces_attr expr in
-  match opt_braces with
-  | Some ({Location.loc = braces_loc}, _) -> Braced braces_loc
-  | None -> (
-    match expr with
-    | {
-     Parsetree.pexp_desc =
-       Pexp_constraint ({pexp_desc = Pexp_pack _}, {ptyp_desc = Ptyp_package _});
-    } ->
-      Nothing
-    | {pexp_desc = Pexp_constraint _} -> Parenthesized
-    | _ -> Nothing)
-
 let ternary_operand expr =
   let opt_braces, _ = Parsetree_viewer.process_braces_attr expr in
   match opt_braces with
