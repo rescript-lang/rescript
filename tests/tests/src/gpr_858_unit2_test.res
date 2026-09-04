@@ -6,12 +6,12 @@ let () = {
       | 0 => assert(i == n)
       | j =>
         delayed := {
-            let prev = delayed.contents
-            () => {
-              prev()
-              f(n + 1 + i - i, j - 1)
-            }
+          let prev = delayed.contents
+          () => {
+            prev()
+            f(n + 1 + i - i, j - 1)
           }
+        }
       }
     f(0, i)
   }

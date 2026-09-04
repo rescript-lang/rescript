@@ -706,7 +706,7 @@ loop_0: for await (let value$1 of asyncIterableForAwaitLoopControl) {
 Test.run([
   [
     "Stdlib_IteratorTests.res",
-    506,
+    508,
     13,
     44
   ],
@@ -739,7 +739,7 @@ let startupLogs = ((async function* () {
 Test.run([
   [
     "Stdlib_IteratorTests.res",
-    540,
+    542,
     13,
     54
   ],
@@ -773,7 +773,7 @@ if (match$19.done !== false && match$19.value === "stopped") {
 Test.run([
   [
     "Stdlib_IteratorTests.res",
-    569,
+    571,
     13,
     41
   ],
@@ -804,7 +804,7 @@ if (match$21.done !== false) {
 Test.run([
   [
     "Stdlib_IteratorTests.res",
-    598,
+    600,
     13,
     40
   ],
@@ -831,7 +831,7 @@ await Stdlib_AsyncIterableIterator.forEach(createdAsyncIterableIterator, value =
 Test.run([
   [
     "Stdlib_IteratorTests.res",
-    622,
+    624,
     13,
     56
   ],

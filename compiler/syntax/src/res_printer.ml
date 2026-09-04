@@ -3133,8 +3133,26 @@ and print_if_chain ~state pexp_attributes ifs else_expr cmt_tbl =
   in
   Doc.concat [print_attributes ~state attrs cmt_tbl; if_docs; else_doc]
 
-and print_object_set_expr ~state (expr : Parsetree.expression) obj member rhs
-    cmt_tbl =
+and print_assignment_rhs ~operator rhs rhs_doc =
+  (* Delimited expressions handle their own indentation. Binary expressions
+     and switches can break after the assignment operator. *)
+  let should_indent =
+    (not (Parsetree_viewer.is_braced_expr rhs))
+    && (Parsetree_viewer.is_binary_expression rhs
+       ||
+       match rhs.pexp_desc with
+       | Pexp_match _ -> not (Parsetree_viewer.is_if_let_expr rhs)
+       | _ -> false)
+  in
+  Doc.concat
+    [
+      Doc.text operator;
+      (if should_indent then
+         Doc.group (Doc.indent (Doc.concat [Doc.line; rhs_doc]))
+       else Doc.concat [Doc.space; rhs_doc]);
+    ]
+
+and print_object_set_expr ~state obj member rhs cmt_tbl =
   let rhs_doc =
     let doc = print_expression_with_comments ~state rhs cmt_tbl in
     match Parens.expr rhs with
@@ -3142,27 +3160,15 @@ and print_object_set_expr ~state (expr : Parsetree.expression) obj member rhs
     | Braced braces -> print_braces doc rhs braces
     | Nothing -> doc
   in
-  (* TODO: unify indentation of "=" *)
-  let should_indent =
-    (not (Parsetree_viewer.is_braced_expr rhs))
-    && Parsetree_viewer.is_binary_expression rhs
-  in
-  let doc =
-    Doc.group
-      (Doc.concat
-         [
-           print_object_get_doc ~state ~expr_loc:expr.pexp_loc obj member cmt_tbl;
-           Doc.text " =";
-           (if should_indent then
-              Doc.group (Doc.indent (Doc.concat [Doc.line; rhs_doc]))
-            else Doc.concat [Doc.space; rhs_doc]);
-         ])
-  in
-  ignore expr;
-  doc
+  Doc.group
+    (Doc.concat
+       [
+         print_object_get_doc ~state obj member cmt_tbl;
+         print_assignment_rhs ~operator:" =" rhs rhs_doc;
+       ])
 
-and print_object_get_doc ~state ~expr_loc parent_expr
-    (label : string Location.loc) cmt_tbl =
+and print_object_get_doc ~state parent_expr (label : string Location.loc)
+    cmt_tbl =
   let parent_doc =
     let doc = print_expression_with_comments ~state parent_expr cmt_tbl in
     match Parens.unary_expr_operand parent_expr with
@@ -3170,7 +3176,6 @@ and print_object_get_doc ~state ~expr_loc parent_expr
     | Braced braces -> print_braces doc parent_expr braces
     | Nothing -> doc
   in
-  ignore expr_loc;
   let member =
     let member_doc = print_comments (Doc.text label.txt) cmt_tbl label.loc in
     Doc.concat [Doc.text "\""; member_doc; Doc.text "\""]
@@ -3178,83 +3183,6 @@ and print_object_get_doc ~state ~expr_loc parent_expr
   Doc.group (Doc.concat [parent_doc; Doc.lbracket; member; Doc.rbracket])
 
 and print_expression ~state (e : Parsetree.expression) cmt_tbl =
-  let print_arrow e =
-    let async, parameters, return_expr = Parsetree_viewer.fun_expr e in
-    let attrs_on_arrow = e.pexp_attributes in
-    let return_expr, typ_constraint =
-      match return_expr.pexp_desc with
-      | Pexp_constraint (expr, typ) ->
-        ( {
-            expr with
-            pexp_attributes =
-              List.concat [expr.pexp_attributes; return_expr.pexp_attributes];
-          },
-          Some typ )
-      | _ -> (return_expr, None)
-    in
-    let has_constraint =
-      match typ_constraint with
-      | Some _ -> true
-      | None -> false
-    in
-    let parameters_doc =
-      print_expr_fun_parameters ~state ~in_callback:NoCallback ~async
-        ~has_constraint parameters cmt_tbl
-    in
-    let return_expr_doc =
-      let opt_braces, _ = Parsetree_viewer.process_braces_attr return_expr in
-      let should_inline =
-        match (return_expr.pexp_desc, opt_braces) with
-        | _, Some _ -> true
-        | ( ( Pexp_array _ | Pexp_tuple _
-            | Pexp_construct (_, Some _)
-            | Pexp_record _ ),
-            _ ) ->
-          true
-        | _ -> false
-      in
-      let should_indent =
-        match return_expr.pexp_desc with
-        | Pexp_sequence _ | Pexp_let _ | Pexp_letmodule _ | Pexp_letexception _
-        | Pexp_open _
-        | Pexp_jsx_element (Jsx_fragment _) ->
-          false
-        | _ -> true
-      in
-      let return_doc =
-        let doc = print_expression_with_comments ~state return_expr cmt_tbl in
-        match Parens.expr return_expr with
-        | Parens.Parenthesized -> add_parens doc
-        | Braced braces -> print_braces doc return_expr braces
-        | Nothing -> doc
-      in
-      if should_inline then Doc.concat [Doc.space; return_doc]
-      else
-        Doc.group
-          (if should_indent then Doc.indent (Doc.concat [Doc.line; return_doc])
-           else Doc.concat [Doc.space; return_doc])
-    in
-    let typ_constraint_doc =
-      match typ_constraint with
-      | Some typ ->
-        let typ_doc =
-          let doc = print_typ_expr ~state typ cmt_tbl in
-          if Parens.arrow_return_typ_expr typ then add_parens doc else doc
-        in
-        Doc.concat [Doc.text ": "; typ_doc]
-      | _ -> Doc.nil
-    in
-    let attrs = print_attributes ~state attrs_on_arrow cmt_tbl in
-    Doc.group
-      (Doc.concat
-         [
-           attrs;
-           parameters_doc;
-           typ_constraint_doc;
-           Doc.text " =>";
-           return_expr_doc;
-         ])
-  in
   let printed_expression =
     match e.pexp_desc with
     | Pexp_fun
@@ -3273,7 +3201,7 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
       print_expression_with_comments ~state
         (Parsetree_viewer.rewrite_underscore_apply e)
         cmt_tbl
-    | Pexp_fun _ -> print_arrow e
+    | Pexp_fun _ -> print_pexp_fun ~state ~in_callback:NoCallback e cmt_tbl
     | Parsetree.Pexp_constant c -> print_constant c
     | Pexp_jsx_element
         (Jsx_fragment
@@ -3917,9 +3845,9 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
       let doc_typ = print_typ_expr ~state typ cmt_tbl in
       Doc.concat [Doc.lparen; doc_expr; Doc.text " :> "; doc_typ; Doc.rparen]
     | Pexp_object_get (parent_expr, label) ->
-      print_object_get_doc ~state ~expr_loc:e.pexp_loc parent_expr label cmt_tbl
+      print_object_get_doc ~state parent_expr label cmt_tbl
     | Pexp_object_set (obj, member, rhs) ->
-      print_object_set_expr ~state e obj member rhs cmt_tbl
+      print_object_set_expr ~state obj member rhs cmt_tbl
     | Pexp_await e ->
       let printed_expression =
         print_expression_with_comments ~state e cmt_tbl
@@ -3982,7 +3910,8 @@ and print_pexp_fun ~state ~in_callback e cmt_tbl =
   let return_should_indent =
     match return_expr.pexp_desc with
     | Pexp_sequence _ | Pexp_let _ | Pexp_letmodule _ | Pexp_letexception _
-    | Pexp_open _ ->
+    | Pexp_open _
+    | Pexp_jsx_element (Jsx_fragment _) ->
       false
     | _ -> true
   in
@@ -4020,17 +3949,27 @@ and print_pexp_fun ~state ~in_callback e cmt_tbl =
   in
   let typ_constraint_doc =
     match typ_constraint with
-    | Some typ -> Doc.concat [Doc.text ": "; print_typ_expr ~state typ cmt_tbl]
+    | Some typ ->
+      let typ_doc =
+        let doc = print_typ_expr ~state typ cmt_tbl in
+        if Parens.arrow_return_typ_expr typ then add_parens doc else doc
+      in
+      Doc.concat [Doc.text ": "; typ_doc]
     | _ -> Doc.nil
   in
-  Doc.concat
-    [
-      print_attributes ~state attrs_on_arrow cmt_tbl;
-      parameters_doc;
-      typ_constraint_doc;
-      Doc.text " =>";
-      return_expr_doc;
-    ]
+  let doc =
+    Doc.concat
+      [
+        print_attributes ~state ~inline:true attrs_on_arrow cmt_tbl;
+        parameters_doc;
+        typ_constraint_doc;
+        Doc.text " =>";
+        return_expr_doc;
+      ]
+  in
+  match in_callback with
+  | NoCallback -> Doc.group doc
+  | FitsOnOneLine | ArgumentsFitOnOneLine -> doc
 
 and print_ternary_operand ~state expr cmt_tbl =
   let doc = print_expression_with_comments ~state expr cmt_tbl in
@@ -4042,7 +3981,7 @@ and print_ternary_operand ~state expr cmt_tbl =
 and print_set_field_expr ~state attrs lhs longident_loc rhs loc cmt_tbl =
   let rhs_doc =
     let doc = print_expression_with_comments ~state rhs cmt_tbl in
-    match Parens.set_field_expr_rhs rhs with
+    match Parens.expr rhs with
     | Parens.Parenthesized -> add_parens doc
     | Braced braces -> print_braces doc rhs braces
     | Nothing -> doc
@@ -4054,7 +3993,6 @@ and print_set_field_expr ~state attrs lhs longident_loc rhs loc cmt_tbl =
     | Braced braces -> print_braces doc lhs braces
     | Nothing -> doc
   in
-  let should_indent = Parsetree_viewer.is_binary_expression rhs in
   let doc =
     Doc.group
       (Doc.concat
@@ -4062,10 +4000,7 @@ and print_set_field_expr ~state attrs lhs longident_loc rhs loc cmt_tbl =
            lhs_doc;
            Doc.dot;
            print_lident_path longident_loc cmt_tbl;
-           Doc.text " =";
-           (if should_indent then
-              Doc.group (Doc.indent (Doc.concat [Doc.line; rhs_doc]))
-            else Doc.concat [Doc.space; rhs_doc]);
+           print_assignment_rhs ~operator:" =" rhs rhs_doc;
          ])
   in
   let doc =
@@ -4276,24 +4211,7 @@ and print_binary_expression ~state (expr : Parsetree.expression) cmt_tbl =
           in
           if is_lhs then add_parens doc else doc
         | Pexp_object_set (obj, member, rhs) ->
-          let rhs_doc = print_expression_with_comments ~state rhs cmt_tbl in
-          let lhs_doc =
-            print_object_get_doc ~state ~expr_loc:expr.pexp_loc obj member
-              cmt_tbl
-          in
-          (* TODO: unify indentation of "=" *)
-          let should_indent = Parsetree_viewer.is_binary_expression rhs in
-          let doc =
-            Doc.group
-              (Doc.concat
-                 [
-                   lhs_doc;
-                   Doc.text " =";
-                   (if should_indent then
-                      Doc.group (Doc.indent (Doc.concat [Doc.line; rhs_doc]))
-                    else Doc.concat [Doc.space; rhs_doc]);
-                 ])
-          in
+          let doc = print_object_set_expr ~state obj member rhs cmt_tbl in
           let doc =
             match expr.pexp_attributes with
             | [] -> doc
@@ -4304,12 +4222,27 @@ and print_binary_expression ~state (expr : Parsetree.expression) cmt_tbl =
           if is_lhs then add_parens doc else doc
         | _ -> (
           let doc = print_expression_with_comments ~state expr cmt_tbl in
-          match Parens.binary_expr_operand ~is_lhs expr with
+          let parens =
+            match expr.pexp_desc with
+            | Pexp_fun _ when parent_operator = ":=" && not is_lhs ->
+              Parens.expr expr
+            | _ -> Parens.binary_expr_operand ~is_lhs expr
+          in
+          match parens with
           | Parens.Parenthesized -> add_parens doc
           | Braced braces -> print_braces doc expr braces
           | Nothing -> doc)
     in
-    flatten ~is_lhs ~is_multiline expr parent_operator
+    if
+      parent_operator = ":=" && (not is_lhs)
+      && Parsetree_viewer.is_braced_expr expr
+    then
+      let doc = print_expression_with_comments ~state expr cmt_tbl in
+      match Parens.expr expr with
+      | Braced braces -> print_braces doc expr braces
+      | Parenthesized -> add_parens doc
+      | Nothing -> doc
+    else flatten ~is_lhs ~is_multiline expr parent_operator
   in
   match expr.pexp_desc with
   | Pexp_apply
@@ -4351,23 +4284,25 @@ and print_binary_expression ~state (expr : Parsetree.expression) cmt_tbl =
     in
 
     let right =
-      let operator_with_rhs =
-        let rhs_doc =
-          print_operand
-            ~is_lhs:(Parsetree_viewer.is_rhs_binary_operator operator)
-            ~is_multiline rhs operator
-        in
-        Doc.concat
-          [
-            print_binary_operator
-              ~inline_rhs:(Parsetree_viewer.should_inline_rhs_binary_expr rhs)
-              operator;
-            rhs_doc;
-          ]
+      let rhs_doc =
+        print_operand
+          ~is_lhs:(Parsetree_viewer.is_rhs_binary_operator operator)
+          ~is_multiline rhs operator
       in
-      if Parsetree_viewer.should_indent_binary_expr expr then
-        Doc.group (Doc.indent operator_with_rhs)
-      else operator_with_rhs
+      if operator = ":=" then print_assignment_rhs ~operator:" :=" rhs rhs_doc
+      else
+        let operator_with_rhs =
+          Doc.concat
+            [
+              print_binary_operator
+                ~inline_rhs:(Parsetree_viewer.should_inline_rhs_binary_expr rhs)
+                operator;
+              rhs_doc;
+            ]
+        in
+        if Parsetree_viewer.should_indent_binary_expr expr then
+          Doc.group (Doc.indent operator_with_rhs)
+        else operator_with_rhs
     in
     let doc =
       Doc.group

@@ -2608,10 +2608,10 @@ module Reporting = {
       | Invalid_argument(_) => ""
       }
       reportDoc := {
-          open TerminalDoc
-          let ix = startLine + i
-          group(~break_=Always, append(reportDoc.contents, renderLine(line, ix)))
-        }
+        open TerminalDoc
+        let ix = startLine + i
+        group(~break_=Always, append(reportDoc.contents, renderLine(line, ix)))
+      }
     }
 
     TerminalDoc.toString(reportDoc.contents)
