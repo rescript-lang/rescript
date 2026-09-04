@@ -156,7 +156,7 @@ let subst_helper (subst : subst_tbl) (query : int -> int) (lam : Lambda.t) :
     Lambda.t =
   let rec simplif (lam : Lambda.t) =
     match lam with
-    | Lstaticcatch (l1, (i, xs), l2) as original -> (
+    | Lstaticcatch (l1, (i, xs), l2) -> (
       let i_occur = query i in
       match (i_occur, l2) with
       | 0, _ -> simplif l1
@@ -184,7 +184,7 @@ let subst_helper (subst : subst_tbl) (query : int -> int) (lam : Lambda.t) :
           simplif l1)
         else
           let l1' = simplif l1 in
-          if l1' == l1 && l2' == l2 then original
+          if l1' == l1 && l2' == l2 then lam
           else Lambda.staticcatch l1' (i, xs) l2')
     | Lstaticraise (i, []) -> (
       match Hash_int.find_opt subst i with

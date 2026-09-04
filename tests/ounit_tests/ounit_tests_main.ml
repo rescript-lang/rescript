@@ -20,6 +20,7 @@ let suites =
       Ounit_util_tests.suites;
       Ounit_rec_check_tests.suites;
       Ounit_lambda_constant_tests.suites;
+      Ounit_lambda_traverse_tests.suites;
       Ounit_deep_flatten_tests.suites;
       Ounit_exits_tests.suites;
       Ounit_sroa_tests.suites;

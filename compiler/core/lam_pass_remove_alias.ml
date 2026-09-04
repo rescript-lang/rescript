@@ -236,17 +236,22 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lambda.t) : Lambda.t =
     (*   *\) *)
     (*   when  Ext_list.same_length params args -> *)
     (*   simpl (Lam_beta_reduce.propogate_beta_reduce meta params body args) *)
-    | Lstringswitch (Lvar s, sw, d)
-      when match Hash_ident.find_opt meta.ident_tbl s with
-           | Some (Constant _) -> true
-           | Some _ | None -> false -> (
-      (* The scrutinee is a known constant, so switch on it directly. *)
-      match Hash_ident.find_opt meta.ident_tbl s with
-      | Some (Constant c) ->
+    | Lstringswitch (l, sw, d) -> (
+      let known_constant =
+        match l with
+        | Lvar s -> (
+          match Hash_ident.find_opt meta.ident_tbl s with
+          | Some (Constant c) -> Some c
+          | Some _ | None -> None)
+        | _ -> None
+      in
+      match known_constant with
+      | Some c ->
+        (* Switch on the constant the scrutinee is bound to. *)
         Lambda.stringswitch (Lambda.const c)
           (Ext_list.map_snd sw simpl)
           (Ext_option.map d simpl)
-      | Some _ | None -> Lambda_traverse.shallow_map_sharing simpl lam)
+      | None -> Lambda_traverse.shallow_map_sharing simpl lam)
     | _ -> Lambda_traverse.shallow_map_sharing simpl lam
   in
   simpl lam
