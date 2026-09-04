@@ -108,7 +108,6 @@ let configureSourceEditor = (scrollHandler: Dom.event => unit): unit =>
     switch Document.current->Document.getElementById("source-editor") {
     | None => ()
     | Some(editor) =>
-      editor->Element.setAttribute("wrap", "off")
       switch editor->Element.getScrollHandler {
       | Some(existingHandler) if existingHandler === scrollHandler => ()
       | existingHandler =>
@@ -121,13 +120,6 @@ let configureSourceEditor = (scrollHandler: Dom.event => unit): unit =>
       }
     }
   )
-
-let lineNumbersText = source => {
-  let lineCount = source->String.split("\n")->Array.length
-  Array.make(~length=lineCount, 0)
-  ->Array.mapWithIndex((_, index) => (index + 1)->Int.toString)
-  ->Array.join("\n")
-}
 
 let cursorPositionForOffset = (source, offset): sourcePosition => {
   let sourceLength = String.length(source)
@@ -164,11 +156,27 @@ let keyMovesCursor = key =>
   | _ => false
   }
 
-let editorShellStyle = (activeLine, scrollTop, scrollLeft) => {
-  let activeLineIndex = activeLine <= 1 ? 0 : activeLine - 1
-  let activeLineTop = 18 + activeLineIndex * 22 - scrollTop
-  `--active-line-top: ${activeLineTop->Int.toString}px; --editor-scroll-y: -${scrollTop->Int.toString}px; --editor-scroll-x: -${scrollLeft->Int.toString}px;`
-}
+let editorShellStyle = scrollTop => `--editor-scroll-y: -${scrollTop->Int.toString}px;`
+
+let updateActiveSourceLine = (editor, line) =>
+  Window.requestAnimationFrame(() =>
+    switch editor->Element.parentElement {
+    | Some(editorShell) => {
+        switch editorShell->Element.querySelector(".syntax-line-current") {
+        | Some(currentLine) =>
+          currentLine->Element.classList->ClassList.remove("syntax-line-current")
+        | None => ()
+        }
+        switch editorShell->Element.querySelector(
+          `.syntax-line[data-line="${line->Int.toString}"]`,
+        ) {
+        | Some(activeLine) => activeLine->Element.classList->ClassList.add("syntax-line-current")
+        | None => ()
+        }
+      }
+    | None => ()
+    }
+  )
 
 let hasFeature = (features: array<experimentalFeature>, feature: experimentalFeature) =>
   features->Array.includes(feature)
@@ -684,6 +692,124 @@ module StatusBadge = {
   }
 }
 
+module PaneSeparator = {
+  let minSourceColumn = 360.0
+  let minResultColumn = 420.0
+  let minSourceRow = 180.0
+  let minResultRow = 180.0
+
+  let metrics = (orientation, rect: boundingRect) =>
+    switch orientation {
+    | PaneLayout.Columns => (rect.width, minSourceColumn, minResultColumn)
+    | PaneLayout.Rows => (rect.height, minSourceRow, minResultRow)
+    }
+
+  let position = (orientation, event, rect: boundingRect) =>
+    switch orientation {
+    | PaneLayout.Columns => event->Event.clientX -. rect.left
+    | PaneLayout.Rows => event->Event.clientY -. rect.top
+    }
+
+  let withContainer = (event, callback) =>
+    switch event->Event.currentTarget->Element.parentElement {
+    | Some(container) => callback(event->Event.currentTarget, container)
+    | None => ()
+    }
+
+  @jsx.component
+  let make = (~layout: PaneLayout.t) => {
+    let beginDrag = event =>
+      if event->Event.button === 0 {
+        withContainer(event, (separator, container) => {
+          let rect = container->Element.getBoundingClientRect
+          let orientation = PaneLayout.orientationForWidth(rect.width)
+          let (size, minFirst, minSecond) = metrics(orientation, rect)
+          let pointerId = event->Event.pointerId
+
+          PaneLayout.setOrientation(layout, orientation)
+          separator->Element.setPointerCapture(pointerId)
+          PaneLayout.startDrag(
+            layout,
+            ~pointerId,
+            ~position=position(orientation, event, rect),
+            ~size,
+            ~minFirst,
+            ~minSecond,
+          )
+          event->Event.preventDefault
+        })
+      }
+
+    let moveDrag = event =>
+      withContainer(event, (_, container) => {
+        let rect = container->Element.getBoundingClientRect
+        let orientation = PaneLayout.current(layout).orientation
+        PaneLayout.moveDrag(
+          layout,
+          ~pointerId=event->Event.pointerId,
+          ~position=position(orientation, event, rect),
+        )
+      })
+
+    let finishDrag = event => {
+      let separator = event->Event.currentTarget
+      let pointerId = event->Event.pointerId
+      if separator->Element.hasPointerCapture(pointerId) {
+        separator->Element.releasePointerCapture(pointerId)
+      }
+      PaneLayout.finishDrag(layout, ~pointerId)
+    }
+
+    let handleKeyDown = event =>
+      withContainer(event, (_, container) => {
+        let rect = container->Element.getBoundingClientRect
+        let orientation = PaneLayout.orientationForWidth(rect.width)
+        let delta = switch (orientation, event->Event.key) {
+        | (PaneLayout.Columns, "ArrowLeft") | (PaneLayout.Rows, "ArrowUp") =>
+          Some(-.PaneLayout.keyboardStep)
+        | (PaneLayout.Columns, "ArrowRight") | (PaneLayout.Rows, "ArrowDown") =>
+          Some(PaneLayout.keyboardStep)
+        | _ => None
+        }
+
+        switch delta {
+        | Some(delta) => {
+            let (size, minFirst, minSecond) = metrics(orientation, rect)
+            PaneLayout.setOrientation(layout, orientation)
+            PaneLayout.nudge(layout, delta, ~size, ~minFirst, ~minSecond)
+            event->Event.preventDefault
+          }
+        | None => ()
+        }
+      })
+
+    <div
+      class="pane-separator"
+      role="separator"
+      tabIndex=0
+      ariaLabel="Resize source and output panes"
+      attrs={[
+        ("aria-orientation", () => PaneLayout.ariaOrientation(Signal.get(layout.state))),
+        ("aria-valuemin", () => "0"),
+        ("aria-valuemax", () => "100"),
+        ("aria-valuenow", () => PaneLayout.ariaValueNow(Signal.get(layout.state))),
+      ]}
+      onPointerDown={beginDrag}
+      onPointerMove={moveDrag}
+      onPointerUp={finishDrag}
+      onPointerCancel={finishDrag}
+      onLostPointerCapture={event =>
+        PaneLayout.finishDrag(layout, ~pointerId=event->Event.pointerId)}
+      onClick={event =>
+        if event->Event.detail === 2 {
+          PaneLayout.reset(layout)
+          event->Event.preventDefault
+        }}
+      onKeyDown={handleKeyDown}
+    />
+  }
+}
+
 module App = {
   @jsx.component
   let make = () => {
@@ -704,9 +830,10 @@ module App = {
     )
     let activeLine = Signal.make(1)
     let editorScrollTop = Signal.make(0)
-    let editorScrollLeft = Signal.make(0)
     let highlightedSource: Signal.t<array<View.node>> = Obj.magic(
-      Computed.make(() => SourceHighlight.render(Signal.get(source))),
+      Computed.make(() =>
+        SourceHighlight.render(Signal.get(source), ~activeLine=Signal.peek(activeLine))
+      ),
     )
     let timerId: ref<option<int>> = ref(None)
     let urlTimerId: ref<option<int>> = ref(None)
@@ -715,6 +842,7 @@ module App = {
     let compilerLoadSequence = ref(0)
     let compileSequence = ref(0)
     let shareToast: Signal.t<option<string>> = Signal.make(None)
+    let paneLayout = PaneLayout.make()
 
     let clearMappedPositions = () => {
       Signal.set(mappedSourcePosition, None)
@@ -726,13 +854,12 @@ module App = {
       let cursorPosition = cursorPositionForOffset(currentSource, Event.selectionStart(event))
 
       Signal.set(editorScrollTop, Event.scrollTop(event))
-      Signal.set(editorScrollLeft, Event.scrollLeft(event))
       Signal.set(activeLine, cursorPosition.line)
+      updateActiveSourceLine(event->Event.currentTarget, cursorPosition.line)
     }
 
     let syncEditorScroll = event => {
       Signal.set(editorScrollTop, Event.scrollTop(event))
-      Signal.set(editorScrollLeft, Event.scrollLeft(event))
     }
 
     let scrollToGeneratedMapping = () =>
@@ -759,14 +886,29 @@ module App = {
                   editor->TextAreaElement.setSelectionRange(offset, offset)
                   editor->Element.focus
                   Signal.set(activeLine, original.position.line)
-                  let scrollTop = Math.Int.max(
-                    0,
-                    18 +
-                    (original.position.line - 1) * 22 -
-                    editor->TextAreaElement.clientHeight / 2,
-                  )
-                  editor->TextAreaElement.setScrollTop(scrollTop)
-                  Signal.set(editorScrollTop, editor->TextAreaElement.scrollTop)
+                  updateActiveSourceLine(editor, original.position.line)
+                  switch editor->Element.parentElement {
+                  | Some(editorShell) =>
+                    switch editorShell->Element.querySelector(
+                      `.syntax-line[data-line="${original.position.line->Int.toString}"]`,
+                    ) {
+                    | Some(line) => {
+                        let editorRect = editor->Element.getBoundingClientRect
+                        let lineRect = line->Element.getBoundingClientRect
+                        let centeredScrollTop =
+                          Signal.peek(editorScrollTop)->Int.toFloat +.
+                          lineRect.top -.
+                          editorRect.top -.
+                          (editor->TextAreaElement.clientHeight->Int.toFloat -.
+                            lineRect.height) /. 2.0
+                        let scrollTop = Math.Int.max(0, centeredScrollTop->Math.round->Float.toInt)
+                        editor->TextAreaElement.setScrollTop(scrollTop)
+                        Signal.set(editorScrollTop, editor->TextAreaElement.scrollTop)
+                      }
+                    | None => ()
+                    }
+                  | None => ()
+                  }
                 }
               | None => ()
               }
@@ -882,11 +1024,10 @@ module App = {
             | Ok(formattedSource) =>
               if sequence === compileSequence.contents {
                 if Signal.peek(source) === sourceBeforeFormat {
+                  Signal.set(activeLine, 1)
                   Signal.set(source, formattedSource)
                   clearMappedPositions()
-                  Signal.set(activeLine, 1)
                   Signal.set(editorScrollTop, 0)
-                  Signal.set(editorScrollLeft, 0)
                   scheduleUrlSync()
                   Signal.set(status, Ready)
                   compileNow()
@@ -1005,11 +1146,10 @@ module App = {
     Effect.run(() => {
       let start = async () => {
         let urlState = await UrlState.init(~defaultSource)
+        Signal.set(activeLine, 1)
         Signal.set(source, urlState.source)
         Signal.set(config, urlState.config)
-        Signal.set(activeLine, 1)
         Signal.set(editorScrollTop, 0)
-        Signal.set(editorScrollLeft, 0)
         firstLoadConfig := Some(urlState.config)
         loadCompiler(urlState.config.compilerVersion, true)
       }
@@ -1023,6 +1163,50 @@ module App = {
       None
     })
 
+    Effect.run(() => {
+      let disposed = ref(false)
+      let observer: ref<option<resizeObserver>> = ref(None)
+
+      Window.requestAnimationFrame(() =>
+        if !disposed.contents {
+          switch Document.current->Document.getElementById(paneLayout.containerId) {
+          | Some(container) => {
+              let updateOrientation = width =>
+                PaneLayout.setOrientation(paneLayout, PaneLayout.orientationForWidth(width))
+
+              updateOrientation((container->Element.getBoundingClientRect).width)
+              switch ResizeObserver.supported {
+              | Some(_) => {
+                  let nextObserver = ResizeObserver.make(
+                    entries =>
+                      switch entries->Array.get(0) {
+                      | Some(entry) =>
+                        updateOrientation((entry->ResizeObserverEntry.contentRect).width)
+                      | None => ()
+                      },
+                  )
+                  observer := Some(nextObserver)
+                  nextObserver->ResizeObserver.observe(container)
+                }
+              | None => ()
+              }
+            }
+          | None => ()
+          }
+        }
+      )
+
+      Some(
+        () => {
+          disposed := true
+          switch observer.contents {
+          | Some(observer) => observer->ResizeObserver.disconnect
+          | None => ()
+          }
+        },
+      )
+    })
+
     <main class="app-shell">
       <header class="topbar">
         <div>
@@ -1030,7 +1214,11 @@ module App = {
         </div>
         <StatusBadge status />
       </header>
-      <section class="workspace">
+      <section
+        id={paneLayout.containerId}
+        class={() => PaneLayout.workspaceClass(Signal.get(paneLayout.state))}
+        style={() => PaneLayout.workspaceStyle(Signal.get(paneLayout.state))}
+      >
         <div class="source-column">
           <div class="column-header">
             <h2> {View.text("Source")} </h2>
@@ -1041,11 +1229,10 @@ module App = {
               <button
                 class="secondary-action"
                 onClick={_ => {
+                  Signal.set(activeLine, 1)
                   Signal.set(source, defaultSource)
                   clearMappedPositions()
-                  Signal.set(activeLine, 1)
                   Signal.set(editorScrollTop, 0)
-                  Signal.set(editorScrollLeft, 0)
                   scheduleUrlSync()
                   scheduleCompile()
                 }}
@@ -1063,19 +1250,9 @@ module App = {
               | Some(_) => "editor-shell source-map-source-active"
               | None => "editor-shell"
               }}
-            style={() =>
-              editorShellStyle(
-                Signal.get(activeLine),
-                Signal.get(editorScrollTop),
-                Signal.get(editorScrollLeft),
-              )}
+            style={() => editorShellStyle(Signal.get(editorScrollTop))}
           >
-            <div class="active-line" ariaHidden=true />
-            <div class="line-number-gutter" ariaHidden=true>
-              <pre class="line-numbers">
-                {View.signalText(() => lineNumbersText(Signal.get(source)))}
-              </pre>
-            </div>
+            <div class="line-number-gutter" ariaHidden=true />
             <pre class="syntax-layer" ariaHidden=true>
               {View.signalFragment(highlightedSource)}
             </pre>
@@ -1084,6 +1261,7 @@ module App = {
               class="editor"
               value={MaybeSignal.reactive(source)}
               spellcheck=false
+              attrs={[("wrap", "soft")]}
               onInput={event => {
                 Signal.set(source, Event.value(event))
                 clearMappedPositions()
@@ -1114,6 +1292,7 @@ module App = {
             />
           </div>
         </div>
+        <PaneSeparator layout={paneLayout} />
         <div class="result-column">
           <div class="tabs"> {View.signalFragment(visibleTabNodes)} </div>
           <div

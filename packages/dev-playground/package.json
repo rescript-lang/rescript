@@ -9,7 +9,7 @@
     "prepare-pages-site": "node scripts/prepare-pages-site.mjs",
     "res:build": "rescript",
     "res:watch": "rescript -w",
-    "test": "rescript && node --test scripts/source-map-navigation.test.mjs",
+    "test": "rescript && node --test scripts/source-map-navigation.test.mjs scripts/pane-layout.test.mjs",
     "dev": "vite --host 127.0.0.1",
     "build": "rescript && vite build",
     "preview": "vite preview --host 127.0.0.1"
