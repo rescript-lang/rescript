@@ -151,6 +151,7 @@ module EventTarget = {
 module CssStyle = {
   type t
 
+  @send external setProperty: (t, string, string) => unit = "setProperty"
   @set external setPosition: (t, string) => unit = "position"
   @set external setTop: (t, string) => unit = "top"
   @set external setLeft: (t, string) => unit = "left"
@@ -231,6 +232,7 @@ module TextAreaElement = {
   @send external select: Dom.element => unit = "select"
   @send external setSelectionRange: (Dom.element, int, int) => unit = "setSelectionRange"
   @get external clientHeight: Dom.element => int = "clientHeight"
+  @get external clientWidth: Dom.element => int = "clientWidth"
   @get external scrollTop: Dom.element => int = "scrollTop"
   @set external setScrollTop: (Dom.element, int) => unit = "scrollTop"
 }

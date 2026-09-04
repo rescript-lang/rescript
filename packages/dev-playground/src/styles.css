@@ -300,7 +300,7 @@ button {
   align-self: start;
   z-index: 1;
   min-width: 0;
-  width: 100%;
+  width: var(--editor-overlay-width, 100%);
   height: max-content;
   min-height: max-content;
   margin: 0;

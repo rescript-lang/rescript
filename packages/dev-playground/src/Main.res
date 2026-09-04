@@ -103,9 +103,9 @@ let insertTabIndent = (event: Dom.event): option<string> =>
     Some(nextValue)
   }
 
-let configureSourceEditor = (scrollHandler: Dom.event => unit): unit =>
+let configureSourceEditor = (editorId, scrollHandler: Dom.event => unit): unit =>
   Window.requestAnimationFrame(() =>
-    switch Document.current->Document.getElementById("source-editor") {
+    switch Document.current->Document.getElementById(editorId) {
     | None => ()
     | Some(editor) =>
       switch editor->Element.getScrollHandler {
@@ -157,6 +157,21 @@ let keyMovesCursor = key =>
   }
 
 let editorShellStyle = scrollTop => `--editor-scroll-y: -${scrollTop->Int.toString}px;`
+
+let syncSourceOverlayWidth = editor =>
+  switch editor->Element.parentElement {
+  | Some(editorShell) =>
+    editorShell
+    ->Element.style
+    ->CssStyle.setProperty(
+      "--editor-overlay-width",
+      `${editor->TextAreaElement.clientWidth->Int.toString}px`,
+    )
+  | None => ()
+  }
+
+let scheduleSourceOverlayWidthSync = editor =>
+  Window.requestAnimationFrame(() => syncSourceOverlayWidth(editor))
 
 let updateActiveSourceLine = (editor, line) =>
   Window.requestAnimationFrame(() =>
@@ -843,6 +858,7 @@ module App = {
     let compileSequence = ref(0)
     let shareToast: Signal.t<option<string>> = Signal.make(None)
     let paneLayout = PaneLayout.make()
+    let sourceEditorId = paneLayout.containerId ++ "-source-editor"
 
     let clearMappedPositions = () => {
       Signal.set(mappedSourcePosition, None)
@@ -880,7 +896,7 @@ module App = {
             Signal.set(mappedGeneratedPosition, Some(mapping.generated))
             Signal.set(activeLine, original.position.line)
             Window.requestAnimationFrame(() =>
-              switch Document.current->Document.getElementById("source-editor") {
+              switch Document.current->Document.getElementById(sourceEditorId) {
               | Some(editor) => {
                   let offset = offsetForPosition(Signal.peek(source), original.position)
                   editor->TextAreaElement.setSelectionRange(offset, offset)
@@ -1159,8 +1175,42 @@ module App = {
     })
 
     Effect.run(() => {
-      configureSourceEditor(syncEditorScroll)
+      configureSourceEditor(sourceEditorId, syncEditorScroll)
       None
+    })
+
+    Effect.run(() => {
+      let disposed = ref(false)
+      let observer: ref<option<resizeObserver>> = ref(None)
+
+      Window.requestAnimationFrame(() =>
+        if !disposed.contents {
+          switch Document.current->Document.getElementById(sourceEditorId) {
+          | Some(editor) => {
+              syncSourceOverlayWidth(editor)
+              switch ResizeObserver.supported {
+              | Some(_) => {
+                  let nextObserver = ResizeObserver.make(_ => syncSourceOverlayWidth(editor))
+                  observer := Some(nextObserver)
+                  nextObserver->ResizeObserver.observe(editor)
+                }
+              | None => ()
+              }
+            }
+          | None => ()
+          }
+        }
+      )
+
+      Some(
+        () => {
+          disposed := true
+          switch observer.contents {
+          | Some(observer) => observer->ResizeObserver.disconnect
+          | None => ()
+          }
+        },
+      )
     })
 
     Effect.run(() => {
@@ -1257,12 +1307,13 @@ module App = {
               {View.signalFragment(highlightedSource)}
             </pre>
             <textarea
-              id="source-editor"
+              id={sourceEditorId}
               class="editor"
               value={MaybeSignal.reactive(source)}
               spellcheck=false
               attrs={[("wrap", "soft")]}
               onInput={event => {
+                scheduleSourceOverlayWidthSync(event->Event.currentTarget)
                 Signal.set(source, Event.value(event))
                 clearMappedPositions()
                 syncEditorState(event)
