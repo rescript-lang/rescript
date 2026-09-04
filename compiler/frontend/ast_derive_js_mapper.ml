@@ -50,7 +50,7 @@ let handle_config (config : Parsetree.expression option) =
                 {
                   pexp_desc =
                     ( Pexp_construct
-                        ({txt = Lident (("true" | "false") as x)}, [])
+                        ({txt = Lident (("true" | "false") as x)}, {txt = []})
                     | Pexp_ident {txt = Lident ("newType" as x)} );
                 };
             };

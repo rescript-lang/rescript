@@ -314,7 +314,7 @@ let test_constructor_args_roundtrip_through_ast0 _ =
   | _ -> assert_failure "Expected a tuple-encoded v0 constructor payload");
   let expr = map_expr0 expr0 in
   (match expr.pexp_desc with
-  | Parsetree.Pexp_construct (_, [_; _]) ->
+  | Parsetree.Pexp_construct (_, {txt = [_; _]}) ->
     OUnit.assert_bool "bridge metadata is removed"
       (not (has_attr "_res.constructor_args" expr.pexp_attributes))
   | _ -> assert_failure "Expected two constructor arguments after roundtrip");
@@ -328,7 +328,8 @@ let test_constructor_args_roundtrip_through_ast0 _ =
   OUnit.assert_equal ~msg:"tuple roundtrip preserves empty attributes" []
     expr.pexp_attributes;
   (match expr.pexp_desc with
-  | Parsetree.Pexp_construct (_, [{pexp_desc = Pexp_tuple [_; _]}]) -> ()
+  | Parsetree.Pexp_construct (_, {txt = [{pexp_desc = Pexp_tuple [_; _]}]}) ->
+    ()
   | _ -> assert_failure "Expected one tuple argument after roundtrip");
   let pat = Ast_helper.Pat.construct ~loc lid [int_pat "1"; int_pat "2"] in
   let pat0 = map_pat_to0 pat in
@@ -338,42 +339,10 @@ let test_constructor_args_roundtrip_through_ast0 _ =
       (has_attr "_res.constructor_args" pat0.ppat_attributes)
   | _ -> assert_failure "Expected a tuple-encoded v0 constructor pattern");
   match (map_pat0 pat0).ppat_desc with
-  | Parsetree.Ppat_construct (_, [_; _]) -> ()
+  | Parsetree.Ppat_construct (_, {txt = [_; _]}) -> ()
   | _ -> assert_failure "Expected two pattern arguments after roundtrip"
 
-let test_constructor_args_keep_parentheses_location_in_ast0 _ =
-  let source = "let Pair(a, b) = Pair(1, 2)" in
-  let parsed =
-    Res_driver.parse_implementation_from_source
-      ~display_filename:"ConstructorArgsLocation.res" ~source
-  in
-  let pat, expr =
-    match parsed.parsetree with
-    | [{pstr_desc = Pstr_value (_, [{pvb_pat; pvb_expr}])}] ->
-      (pvb_pat, pvb_expr)
-    | _ -> assert_failure "Expected one constructor value binding"
-  in
-  let assert_payload_loc ~expected_start ~expected_end
-      {Location.loc_start; loc_end} =
-    OUnit.assert_equal expected_start loc_start.pos_cnum;
-    OUnit.assert_equal expected_end loc_end.pos_cnum
-  in
-  let pattern_lparen = String.index source '(' in
-  let pattern_rparen = String.index_from source pattern_lparen ')' in
-  let expression_lparen = String.index_from source (pattern_rparen + 1) '(' in
-  let expression_rparen = String.index_from source expression_lparen ')' in
-  (match (map_pat_to0 pat).ppat_desc with
-  | Ppat_construct (_, Some {ppat_desc = Ppat_tuple _; ppat_loc}) ->
-    assert_payload_loc ~expected_start:pattern_lparen
-      ~expected_end:(pattern_rparen + 1) ppat_loc
-  | _ -> assert_failure "Expected a tuple-encoded constructor pattern");
-  match (map_expr_to0 expr).pexp_desc with
-  | Pexp_construct (_, Some {pexp_desc = Pexp_tuple _; pexp_loc}) ->
-    assert_payload_loc ~expected_start:expression_lparen
-      ~expected_end:(expression_rparen + 1) pexp_loc
-  | _ -> assert_failure "Expected a tuple-encoded constructor expression"
-
-let test_polyvariant_args_keep_parentheses_location_in_ast0 _ =
+let check_args_keep_parentheses_location_in_ast0 sources =
   List.iter
     (fun source ->
       let parsed =
@@ -384,37 +353,168 @@ let test_polyvariant_args_keep_parentheses_location_in_ast0 _ =
         match parsed.parsetree with
         | [{pstr_desc = Pstr_value (_, [{pvb_pat; pvb_expr}])}] ->
           (pvb_pat, pvb_expr)
-        | _ -> assert_failure "Expected one polymorphic variant binding"
+        | _ -> assert_failure "Expected one constructor binding"
       in
       let pattern_start = String.index source '(' in
       let pattern_end = 1 + String.index_from source pattern_start ')' in
       let expression_start = String.index_from source pattern_end '(' in
       let expression_end = 1 + String.index_from source expression_start ')' in
-      let assert_loc start finish {Location.loc_start; loc_end} =
-        OUnit.assert_equal start loc_start.pos_cnum;
-        OUnit.assert_equal finish loc_end.pos_cnum
-      in
-      let check pat expr =
-        OUnit.assert_bool "parser location metadata stays out of v0"
-          ((not (has_attr "res.variantArgs" pat.Parsetree0.ppat_attributes))
-          && not (has_attr "res.variantArgs" expr.Parsetree0.pexp_attributes));
+      OUnit.assert_equal [] pat.ppat_attributes;
+      OUnit.assert_equal [] expr.pexp_attributes;
+      let check ?(offset = 0) (pat : Parsetree0.pattern)
+          (expr : Parsetree0.expression) =
+        let assert_loc start finish {Location.loc_start; loc_end} =
+          OUnit.assert_equal (start + offset) loc_start.pos_cnum;
+          OUnit.assert_equal (finish + offset) loc_end.pos_cnum
+        in
         (match pat.ppat_desc with
+        | Ppat_construct (_, Some {ppat_desc = Ppat_tuple _; ppat_loc})
         | Ppat_variant (_, Some {ppat_desc = Ppat_tuple _; ppat_loc}) ->
           assert_loc pattern_start pattern_end ppat_loc
-        | _ -> assert_failure "Expected v0 polymorphic variant pattern tuple");
+        | _ -> assert_failure "Expected v0 constructor pattern tuple");
         match expr.pexp_desc with
+        | Pexp_construct (_, Some {pexp_desc = Pexp_tuple _; pexp_loc})
         | Pexp_variant (_, Some {pexp_desc = Pexp_tuple _; pexp_loc}) ->
           assert_loc expression_start expression_end pexp_loc
-        | _ -> assert_failure "Expected v0 polymorphic variant expression tuple"
+        | _ -> assert_failure "Expected v0 constructor expression tuple"
       in
       let pat0 = map_pat_to0 pat in
       let expr0 = map_expr_to0 expr in
       check pat0 expr0;
-      check (map_pat_to0 (map_pat0 pat0)) (map_expr_to0 (map_expr0 expr0)))
+      check (map_pat_to0 (map_pat0 pat0)) (map_expr_to0 (map_expr0 expr0));
+      let shift_loc _ (loc : Location.t) =
+        {
+          loc with
+          loc_start =
+            {loc.loc_start with pos_cnum = loc.loc_start.pos_cnum + 100};
+          loc_end = {loc.loc_end with pos_cnum = loc.loc_end.pos_cnum + 100};
+        }
+      in
+      let to0 = {Ast_mapper_to0.default_mapper with location = shift_loc} in
+      check ~offset:100 (to0.pat to0 pat) (to0.expr to0 expr);
+      let from0 = {Ast_mapper_from0.default_mapper with location = shift_loc} in
+      check ~offset:100
+        (map_pat_to0 (from0.pat from0 pat0))
+        (map_expr_to0 (from0.expr from0 expr0)))
+    sources
+
+let test_constructor_args_keep_parentheses_location_in_ast0 _ =
+  check_args_keep_parentheses_location_in_ast0
+    [
+      "let Pair(a, b) = Pair(1, 2)";
+      "let Pair  (a, b) = Pair  (1, 2)";
+      "let Pair /* pattern */ (a, b) = Pair /* expression */ (1, 2)";
+      "let Module.Pair(a,\n b) = Module.Pair(1,\n 2)";
+    ]
+
+let test_polyvariant_args_keep_parentheses_location_in_ast0 _ =
+  check_args_keep_parentheses_location_in_ast0
     [
       "let #Pair(a, b) = #Pair(1, 2)";
       "let #Pair /* pattern */ (a, b) = #Pair /* expression */ (1, 2)";
       "let #\"quoted label\"(a,\n b) = #\"quoted label\"(1,\n 2)";
+    ]
+
+let test_constructor_argument_locations _ =
+  let pattern_args_loc (pat : Parsetree.pattern) =
+    match pat.ppat_desc with
+    | Ppat_construct (_, {loc}) | Ppat_variant (_, {loc}) -> loc
+    | _ -> assert_failure "Expected a constructor pattern"
+  in
+  let expression_args_loc (expr : Parsetree.expression) =
+    match expr.pexp_desc with
+    | Pexp_construct (_, {loc}) | Pexp_variant (_, {loc}) -> loc
+    | _ -> assert_failure "Expected a constructor expression"
+  in
+  let shift_loc _ (loc : Location.t) =
+    {
+      loc with
+      loc_start = {loc.loc_start with pos_cnum = loc.loc_start.pos_cnum + 100};
+      loc_end = {loc.loc_end with pos_cnum = loc.loc_end.pos_cnum + 100};
+    }
+  in
+  List.iter
+    (fun source ->
+      let parsed =
+        Res_driver.parse_implementation_from_source
+          ~display_filename:"ArgumentLocations.res" ~source
+      in
+      OUnit.assert_bool "source parses" (not parsed.invalid);
+      let pat, expr =
+        match parsed.parsetree with
+        | [{pstr_desc = Pstr_value (_, [{pvb_pat; pvb_expr}])}] ->
+          (pvb_pat, pvb_expr)
+        | _ -> assert_failure "Expected a constructor binding"
+      in
+      let pat_loc = pattern_args_loc pat in
+      let expr_loc = expression_args_loc expr in
+      let expected_pat_bridge_loc =
+        match pat.ppat_desc with
+        | Ppat_construct (_, {txt = [arg]}) | Ppat_variant (_, {txt = [arg]}) ->
+          arg.ppat_loc
+        | _ -> pat_loc
+      in
+      let expected_expr_bridge_loc =
+        match expr.pexp_desc with
+        | Pexp_construct (_, {txt = [arg]}) | Pexp_variant (_, {txt = [arg]}) ->
+          arg.pexp_loc
+        | _ -> expr_loc
+      in
+      OUnit.assert_equal ~msg:"v0 uses the payload span for a single argument"
+        expected_pat_bridge_loc
+        (pattern_args_loc (map_pat0 (map_pat_to0 pat)));
+      OUnit.assert_equal ~msg:"v0 uses the payload span for a single argument"
+        expected_expr_bridge_loc
+        (expression_args_loc (map_expr0 (map_expr_to0 expr)));
+      let equals = String.index source '=' in
+      let assert_span start finish (loc : Location.t) =
+        OUnit.assert_equal start loc.loc_start.pos_cnum;
+        OUnit.assert_equal finish loc.loc_end.pos_cnum
+      in
+      if String.contains source '(' then (
+        assert_span (String.index source '(')
+          (1 + String.rindex_from source equals ')')
+          pat_loc;
+        assert_span
+          (String.index_from source equals '(')
+          (1 + String.rindex source ')')
+          expr_loc)
+      else (
+        OUnit.assert_equal pat.ppat_loc pat_loc;
+        OUnit.assert_equal expr.pexp_loc expr_loc);
+      let mapper = Ast_mapper.default_mapper in
+      OUnit.assert_equal pat (mapper.pat mapper pat);
+      OUnit.assert_equal expr (mapper.expr mapper expr);
+      let mapper = {mapper with location = shift_loc} in
+      OUnit.assert_equal (shift_loc () pat_loc)
+        (pattern_args_loc (mapper.pat mapper pat));
+      OUnit.assert_equal (shift_loc () expr_loc)
+        (expression_args_loc (mapper.expr mapper expr));
+      let visited = ref [] in
+      let iterator =
+        {
+          Ast_iterator.default_iterator with
+          location = (fun _ loc -> visited := loc :: !visited);
+        }
+      in
+      iterator.pat iterator pat;
+      OUnit.assert_bool "iterator visits pattern argument span"
+        (List.mem pat_loc !visited);
+      visited := [];
+      iterator.expr iterator expr;
+      OUnit.assert_bool "iterator visits expression argument span"
+        (List.mem expr_loc !visited))
+    [
+      "let Pair /* pattern */ (a, b) = Pair /* expression */ (1, 2)";
+      "let Pair((a, b)) = Pair((1, 2))";
+      "let Single(a) = Single(1)";
+      "let Unit() = Unit()";
+      "let Empty = Empty";
+      "let #Pair /* pattern */ (a, b) = #Pair /* expression */ (1, 2)";
+      "let #Pair((a, b)) = #Pair((1, 2))";
+      "let #Single(a) = #Single(1)";
+      "let #Unit() = #Unit()";
+      "let #Empty = #Empty";
     ]
 
 let test_fresh_ast0_constructor_tuple_reprints_without_internal_metadata _ =
@@ -467,12 +567,14 @@ let test_fresh_ast0_constructor_tuple_reprints_without_internal_metadata _ =
                    pvb_pat =
                      {
                        ppat_desc =
-                         Ppat_construct (_, [{ppat_desc = Ppat_tuple [_; _]}]);
+                         Ppat_construct
+                           (_, {txt = [{ppat_desc = Ppat_tuple [_; _]}]});
                      };
                    pvb_expr =
                      {
                        pexp_desc =
-                         Pexp_construct (_, [{pexp_desc = Pexp_tuple [_; _]}]);
+                         Pexp_construct
+                           (_, {txt = [{pexp_desc = Pexp_tuple [_; _]}]});
                      };
                  };
                ] );
@@ -493,7 +595,7 @@ let test_ast0_explicit_arity_becomes_constructor_args _ =
       (Some (Ast_helper0.Exp.tuple ~loc [arg "1"; arg "2"]))
   in
   match (map_expr0 expr0).pexp_desc with
-  | Parsetree.Pexp_construct (_, [_; _]) -> ()
+  | Parsetree.Pexp_construct (_, {txt = [_; _]}) -> ()
   | _ -> assert_failure "Expected explicit-arity v0 payload to become arguments"
 
 let test_fresh_ast0_constructor_tuple_defers_arity_to_typechecker _ =
@@ -571,7 +673,7 @@ let test_polyvariant_args_roundtrip_through_ast0 _ =
       (has_attr "_res.constructor_args" expr0.pexp_attributes)
   | _ -> assert_failure "Expected tuple-encoded v0 polymorphic variant payload");
   (match (map_expr0 expr0).pexp_desc with
-  | Parsetree.Pexp_variant ("Pair", [_; _]) -> ()
+  | Parsetree.Pexp_variant ("Pair", {txt = [_; _]}) -> ()
   | _ -> assert_failure "Expected two polymorphic variant arguments");
   let pat = Ast_helper.Pat.variant ~loc "Pair" [int_pat "1"; int_pat "2"] in
   let pat0 = map_pat_to0 pat in
@@ -581,7 +683,7 @@ let test_polyvariant_args_roundtrip_through_ast0 _ =
       (has_attr "_res.constructor_args" pat0.ppat_attributes)
   | _ -> assert_failure "Expected tuple-encoded v0 polymorphic variant pattern");
   (match (map_pat0 pat0).ppat_desc with
-  | Parsetree.Ppat_variant ("Pair", [_; _]) -> ()
+  | Parsetree.Ppat_variant ("Pair", {txt = [_; _]}) -> ()
   | _ -> assert_failure "Expected two polymorphic variant pattern arguments");
   let int_type =
     Ast_helper.Typ.constr ~loc (Location.mknoloc (Longident.Lident "int")) []
@@ -1134,6 +1236,8 @@ let suites =
          >:: test_constructor_args_roundtrip_through_ast0;
          "constructor_args_keep_parentheses_location_in_ast0"
          >:: test_constructor_args_keep_parentheses_location_in_ast0;
+         "constructor_argument_locations"
+         >:: test_constructor_argument_locations;
          "fresh_ast0_constructor_tuple_reprints_without_internal_metadata"
          >:: test_fresh_ast0_constructor_tuple_reprints_without_internal_metadata;
          "ast0_explicit_arity_becomes_constructor_args"

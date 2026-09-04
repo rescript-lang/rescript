@@ -600,7 +600,8 @@ let make_list_pattern loc seq ext_opt =
       in
       Ast_helper.Pat.mk ~loc
         (Ppat_construct
-           (Location.mkloc (Longident.Lident "::") loc, [p1; pat_pl]))
+           ( Location.mkloc (Longident.Lident "::") loc,
+             {txt = [p1; pat_pl]; loc} ))
   in
   handle_seq seq
 
@@ -1757,24 +1758,19 @@ and parse_pattern_args (p : Parser.t) =
   | patterns -> patterns
 
 and parse_constructor_pattern_args p constr start_pos attrs =
+  let args_start = p.Parser.start_pos in
   let args = parse_pattern_args p in
   Ast_helper.Pat.construct
     ~loc:(mk_loc start_pos p.prev_end_pos)
+    ~args_loc:(mk_loc args_start p.prev_end_pos)
     ~attrs constr args
 
 and parse_variant_pattern_args p ident start_pos attrs =
   let args_start = p.Parser.start_pos in
   let args = parse_pattern_args p in
-  let attrs =
-    match args with
-    | _ :: _ :: _ ->
-      ( Location.mkloc "res.variantArgs" (mk_loc args_start p.prev_end_pos),
-        Parsetree.PStr [] )
-      :: attrs
-    | _ -> attrs
-  in
   Ast_helper.Pat.variant
     ~loc:(mk_loc start_pos p.prev_end_pos)
+    ~args_loc:(mk_loc args_start p.prev_end_pos)
     ~attrs ident args
 
 and parse_expr ?(context = OrdinaryExpr) p =
@@ -2579,7 +2575,7 @@ and over_parse_constrained_or_coerced_or_arrow_expression p expr =
                  (Longident.flatten longident.txt |> String.concat ".")
                  longident.loc),
             false )
-        | Pexp_construct (({txt = Longident.Lident "()"} as lid), []) ->
+        | Pexp_construct (({txt = Longident.Lident "()"} as lid), {txt = []}) ->
           (Ast_helper.Pat.construct ~loc:expr.pexp_loc lid [], true)
         (* TODO: can we convert more expressions to patterns?*)
         | _ ->
@@ -4193,11 +4189,15 @@ and parse_value_or_constructor p =
         Parser.next p;
         aux p (ident :: acc)
       | Lparen when p.prev_end_pos.pos_lnum == p.start_pos.pos_lnum ->
+        let args_start = p.start_pos in
         let args = parse_constructor_args p in
         let lident = build_longident (ident :: acc) in
         let loc = mk_loc start_pos p.prev_end_pos in
         let ident_loc = mk_loc start_pos end_pos_lident in
-        Ast_helper.Exp.construct ~loc (Location.mkloc lident ident_loc) args
+        Ast_helper.Exp.construct ~loc
+          ~args_loc:(mk_loc args_start p.prev_end_pos)
+          (Location.mkloc lident ident_loc)
+          args
       | _ ->
         let loc = mk_loc start_pos p.prev_end_pos in
         let lident = build_longident (ident :: acc) in
@@ -4228,16 +4228,9 @@ and parse_poly_variant_expr p =
     let args_start = p.start_pos in
     let args = parse_constructor_args p in
     let loc = mk_loc start_pos p.prev_end_pos in
-    let attrs =
-      match args with
-      | _ :: _ :: _ ->
-        [
-          ( Location.mkloc "res.variantArgs" (mk_loc args_start p.prev_end_pos),
-            Parsetree.PStr [] );
-        ]
-      | _ -> []
-    in
-    Ast_helper.Exp.variant ~loc ~attrs ident args
+    Ast_helper.Exp.variant ~loc
+      ~args_loc:(mk_loc args_start p.prev_end_pos)
+      ident args
   | _ ->
     let loc = mk_loc start_pos p.prev_end_pos in
     Ast_helper.Exp.variant ~loc ident []

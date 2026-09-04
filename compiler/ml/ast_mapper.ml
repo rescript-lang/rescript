@@ -316,10 +316,16 @@ module E = struct
       match_ ~loc ~attrs (sub.expr sub e) (sub.cases sub pel)
     | Pexp_try (e, pel) -> try_ ~loc ~attrs (sub.expr sub e) (sub.cases sub pel)
     | Pexp_tuple el -> tuple ~loc ~attrs (List.map (sub.expr sub) el)
-    | Pexp_construct (lid, args) ->
-      construct ~loc ~attrs (map_loc sub lid) (List.map (sub.expr sub) args)
-    | Pexp_variant (lab, args) ->
-      variant ~loc ~attrs lab (List.map (sub.expr sub) args)
+    | Pexp_construct (lid, {txt = args; loc = args_loc}) ->
+      construct ~loc ~attrs
+        ~args_loc:(sub.location sub args_loc)
+        (map_loc sub lid)
+        (List.map (sub.expr sub) args)
+    | Pexp_variant (lab, {txt = args; loc = args_loc}) ->
+      variant ~loc ~attrs
+        ~args_loc:(sub.location sub args_loc)
+        lab
+        (List.map (sub.expr sub) args)
     | Pexp_record (l, eo) ->
       record ~loc ~attrs
         (List.map
@@ -424,10 +430,16 @@ module P = struct
     | Ppat_constant c -> constant ~loc ~attrs c
     | Ppat_interval (c1, c2) -> interval ~loc ~attrs c1 c2
     | Ppat_tuple pl -> tuple ~loc ~attrs (List.map (sub.pat sub) pl)
-    | Ppat_construct (l, args) ->
-      construct ~loc ~attrs (map_loc sub l) (List.map (sub.pat sub) args)
-    | Ppat_variant (l, args) ->
-      variant ~loc ~attrs l (List.map (sub.pat sub) args)
+    | Ppat_construct (l, {txt = args; loc = args_loc}) ->
+      construct ~loc ~attrs
+        ~args_loc:(sub.location sub args_loc)
+        (map_loc sub l)
+        (List.map (sub.pat sub) args)
+    | Ppat_variant (l, {txt = args; loc = args_loc}) ->
+      variant ~loc ~attrs
+        ~args_loc:(sub.location sub args_loc)
+        l
+        (List.map (sub.pat sub) args)
     | Ppat_record (lpl, cf, rest) ->
       record ~loc ~attrs
         ?rest:
@@ -671,9 +683,14 @@ module Ppx_context = struct
             name
       and get_bool pexp =
         match pexp with
-        | {pexp_desc = Pexp_construct ({txt = Longident.Lident "true"}, [])} ->
+        | {
+         pexp_desc = Pexp_construct ({txt = Longident.Lident "true"}, {txt = []});
+        } ->
           true
-        | {pexp_desc = Pexp_construct ({txt = Longident.Lident "false"}, [])} ->
+        | {
+         pexp_desc =
+           Pexp_construct ({txt = Longident.Lident "false"}, {txt = []});
+        } ->
           false
         | _ ->
           raise_errorf
@@ -682,10 +699,14 @@ module Ppx_context = struct
       and get_list elem = function
         | {
             pexp_desc =
-              Pexp_construct ({txt = Longident.Lident "::"}, [exp; rest]);
+              Pexp_construct ({txt = Longident.Lident "::"}, {txt = [exp; rest]});
           } ->
           elem exp :: get_list elem rest
-        | {pexp_desc = Pexp_construct ({txt = Longident.Lident "[]"}, [])} -> []
+        | {
+            pexp_desc =
+              Pexp_construct ({txt = Longident.Lident "[]"}, {txt = []});
+          } ->
+          []
         | _ ->
           raise_errorf
             "Internal error: invalid [@@@ocaml.ppx.context { %s }] list syntax"

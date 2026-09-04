@@ -186,8 +186,8 @@ let iter_expression f e =
       List.iter case pel
     | Pexp_array args
     | Pexp_tuple args
-    | Pexp_construct (_, args)
-    | Pexp_variant (_, args) ->
+    | Pexp_construct (_, {txt = args})
+    | Pexp_variant (_, {txt = args}) ->
       List.iter expr args
     | Pexp_record (iel, eo) ->
       may expr eo;
@@ -680,9 +680,13 @@ let build_ppat_or_for_variant_spread pat env expected_ty =
                ( Location.mkloc
                    (Longident.Lident (Ident.name c.cd_id))
                    lident.loc,
-                 match c.cd_args with
-                 | Cstr_tuple [] -> []
-                 | _ -> [Ast_helper.Pat.any ()] )))
+                 {
+                   loc = lident.loc;
+                   txt =
+                     (match c.cd_args with
+                     | Cstr_tuple [] -> []
+                     | _ -> [Ast_helper.Pat.any ()]);
+                 } )))
       |> List.rev
     in
     let pat =
@@ -1413,7 +1417,7 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
             pat_attributes = sp.ppat_attributes;
             pat_env = !env;
           })
-  | Ppat_construct (lid, sargs) ->
+  | Ppat_construct (lid, {txt = sargs}) ->
     let opath =
       try
         let p0, p, _ = extract_concrete_variant !env expected_ty in
@@ -1506,7 +1510,7 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
             pat_attributes = sp.ppat_attributes;
             pat_env = !env;
           })
-  | Ppat_variant (l, sargs) -> (
+  | Ppat_variant (l, {txt = sargs}) -> (
     check_polyvar_name !env loc l;
     let sarg =
       match sargs with
@@ -2197,8 +2201,8 @@ let iter_ppat f p =
   | Ppat_or (p1, p2) ->
     f p1;
     f p2
-  | Ppat_construct (_, args) -> List.iter f args
-  | Ppat_variant (_, args) -> List.iter f args
+  | Ppat_construct (_, {txt = args}) -> List.iter f args
+  | Ppat_variant (_, {txt = args}) -> List.iter f args
   | Ppat_tuple lst -> List.iter f lst
   | Ppat_exception p
   | Ppat_alias (p, _)
@@ -2764,9 +2768,9 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
         exp_attributes = sexp.pexp_attributes;
         exp_env = env;
       }
-  | Pexp_construct (lid, sargs) ->
+  | Pexp_construct (lid, {txt = sargs}) ->
     type_construct ~context env loc lid sargs ty_expected sexp.pexp_attributes
-  | Pexp_variant (l, sargs) -> (
+  | Pexp_variant (l, {txt = sargs}) -> (
     check_polyvar_name env loc l;
     let sarg =
       match sargs with
@@ -3583,8 +3587,12 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
         payload ) -> (
     match payload with
     | PStr
-        [{pstr_desc = Pstr_eval ({pexp_desc = Pexp_construct (lid, []); _}, _)}]
-      ->
+        [
+          {
+            pstr_desc =
+              Pstr_eval ({pexp_desc = Pexp_construct (lid, {txt = []}); _}, _);
+          };
+        ] ->
       let path =
         match (Typetexp.find_constructor env lid.loc lid.txt).cstr_kind with
         | Extension_constructor path -> path
@@ -4369,7 +4377,9 @@ and type_application ~context total_app env funct (sargs : sargs) :
       (* Leftover syntactic arguments *)
       (match !remaining with
       | [] -> ()
-      | [(Nolabel, {pexp_desc = Pexp_construct ({txt = Lident "()"}, [])})]
+      | [
+       (Nolabel, {pexp_desc = Pexp_construct ({txt = Lident "()"}, {txt = []})});
+      ]
         when total_app && !omitted = [] && !rev_args <> []
              && List.length !rev_args = List.length !ignored ->
         (* foo() treated as empty application if all args are optional

@@ -86,14 +86,14 @@ and traverse_pattern (pat : Parsetree.pattern) ~pattern_path ~loc_has_cursor
        lot. *)
     some_if_has_cursor ("", pattern_path) "Ppat_any"
   | Ppat_var {txt} -> some_if_has_cursor (txt, pattern_path) "Ppat_var"
-  | Ppat_construct ({txt = Lident "()"}, []) ->
+  | Ppat_construct ({txt = Lident "()"}, {txt = []}) ->
     (* switch s { | (<com>) }*)
     some_if_has_cursor
       ("", pattern_path @ [Completable.NTupleItem {item_num = 0}])
       "Ppat_construct()"
-  | Ppat_construct ({txt = Lident prefix}, []) ->
+  | Ppat_construct ({txt = Lident prefix}, {txt = []}) ->
     some_if_has_cursor (prefix, pattern_path) "Ppat_construct(Lident)"
-  | Ppat_variant (prefix, []) ->
+  | Ppat_variant (prefix, {txt = []}) ->
     some_if_has_cursor ("#" ^ prefix, pattern_path) "Ppat_variant"
   | Ppat_array array_patterns ->
     let next_pattern_path = [Completable.NArray] @ pattern_path in
@@ -179,7 +179,10 @@ and traverse_pattern (pat : Parsetree.pattern) ~pattern_path ~loc_has_cursor
           "firstCharBeforeCursorNoWhite:,"
       | _ -> None))
   | Ppat_construct
-      ({txt}, [{ppat_loc; ppat_desc = Ppat_construct ({txt = Lident "()"}, _)}])
+      ( {txt},
+        {
+          txt = [{ppat_loc; ppat_desc = Ppat_construct ({txt = Lident "()"}, _)}];
+        } )
     when loc_has_cursor ppat_loc ->
     (* Empty payload with cursor, like: Test(<com>) *)
     Some
@@ -189,7 +192,7 @@ and traverse_pattern (pat : Parsetree.pattern) ~pattern_path ~loc_has_cursor
             {constructor_name = Utils.get_unqualified_name txt; item_num = 0};
         ]
         @ pattern_path )
-  | Ppat_construct ({txt}, patterns)
+  | Ppat_construct ({txt}, {txt = patterns})
     when patterns <> []
          && pos_before_cursor >= ((Ext_list.last patterns).ppat_loc |> Loc.end_)
          && first_char_before_cursor_no_white = Some ','
@@ -205,7 +208,7 @@ and traverse_pattern (pat : Parsetree.pattern) ~pattern_path ~loc_has_cursor
             };
         ]
         @ pattern_path )
-  | Ppat_construct ({txt}, patterns) when loc_has_cursor pat.ppat_loc ->
+  | Ppat_construct ({txt}, {txt = patterns}) when loc_has_cursor pat.ppat_loc ->
     patterns
     |> traverse_tuple_items ~loc_has_cursor ~first_char_before_cursor_no_white
          ~pos_before_cursor
@@ -225,14 +228,17 @@ and traverse_pattern (pat : Parsetree.pattern) ~pattern_path ~loc_has_cursor
            ]
            @ pattern_path)
   | Ppat_variant
-      (txt, [{ppat_loc; ppat_desc = Ppat_construct ({txt = Lident "()"}, _)}])
+      ( txt,
+        {
+          txt = [{ppat_loc; ppat_desc = Ppat_construct ({txt = Lident "()"}, _)}];
+        } )
     when loc_has_cursor ppat_loc ->
     (* Empty payload with cursor, like: #test(<com>) *)
     Some
       ( "",
         [Completable.NPolyvariantPayload {constructor_name = txt; item_num = 0}]
         @ pattern_path )
-  | Ppat_variant (txt, patterns) when loc_has_cursor pat.ppat_loc ->
+  | Ppat_variant (txt, {txt = patterns}) when loc_has_cursor pat.ppat_loc ->
     patterns
     |> traverse_tuple_items ~loc_has_cursor ~first_char_before_cursor_no_white
          ~pos_before_cursor

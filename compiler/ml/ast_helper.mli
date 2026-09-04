@@ -97,8 +97,18 @@ module Pat : sig
   val constant : ?loc:loc -> ?attrs:attrs -> constant -> pattern
   val interval : ?loc:loc -> ?attrs:attrs -> constant -> constant -> pattern
   val tuple : ?loc:loc -> ?attrs:attrs -> pattern list -> pattern
-  val construct : ?loc:loc -> ?attrs:attrs -> lid -> pattern list -> pattern
-  val variant : ?loc:loc -> ?attrs:attrs -> label -> pattern list -> pattern
+
+  (* [args_loc] spans the argument parentheses. It defaults to [loc] for
+      generated nodes or constructors without an argument list. *)
+  val construct :
+    ?loc:loc -> ?attrs:attrs -> ?args_loc:loc -> lid -> pattern list -> pattern
+  val variant :
+    ?loc:loc ->
+    ?attrs:attrs ->
+    ?args_loc:loc ->
+    label ->
+    pattern list ->
+    pattern
   val record :
     ?loc:loc ->
     ?attrs:attrs ->
@@ -153,9 +163,19 @@ module Exp : sig
   val try_ : ?loc:loc -> ?attrs:attrs -> expression -> case list -> expression
   val tuple : ?loc:loc -> ?attrs:attrs -> expression list -> expression
   val construct :
-    ?loc:loc -> ?attrs:attrs -> lid -> expression list -> expression
+    ?loc:loc ->
+    ?attrs:attrs ->
+    ?args_loc:loc ->
+    lid ->
+    expression list ->
+    expression
   val variant :
-    ?loc:loc -> ?attrs:attrs -> label -> expression list -> expression
+    ?loc:loc ->
+    ?attrs:attrs ->
+    ?args_loc:loc ->
+    label ->
+    expression list ->
+    expression
   val record :
     ?loc:loc ->
     ?attrs:attrs ->

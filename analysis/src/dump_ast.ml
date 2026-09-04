@@ -98,7 +98,7 @@ let rec print_pattern pattern ~pos ~indentation =
   | Ppat_var ({txt} as loc) ->
     "Ppat_var(" ^ (loc |> print_loc_denominator_loc ~pos) ^ txt ^ ")"
   | Ppat_constant const -> "Ppat_constant(" ^ print_constant const ^ ")"
-  | Ppat_construct (({txt} as loc), patterns) ->
+  | Ppat_construct (({txt} as loc), {txt = patterns}) ->
     "Ppat_construct("
     ^ (loc |> print_loc_denominator_loc ~pos)
     ^ (Utils.flatten_long_ident txt |> ident |> str)
@@ -106,7 +106,7 @@ let rec print_pattern pattern ~pos ~indentation =
       |> List.map (fun pat -> "," ^ print_pattern pat ~pos ~indentation)
       |> String.concat "")
     ^ ")"
-  | Ppat_variant (label, patterns) ->
+  | Ppat_variant (label, {txt = patterns}) ->
     "Ppat_variant(" ^ str label
     ^ (patterns
       |> List.map (fun pat -> "," ^ print_pattern pat ~pos ~indentation)
@@ -231,7 +231,7 @@ and print_expr_item expr ~pos ~indentation =
     ^ add_indentation indentation
     ^ ")"
   | Pexp_constant constant -> "Pexp_constant(" ^ print_constant constant ^ ")"
-  | Pexp_construct (({txt} as loc), exprs) ->
+  | Pexp_construct (({txt} as loc), {txt = exprs}) ->
     "Pexp_construct("
     ^ (loc |> print_loc_denominator_loc ~pos)
     ^ (Utils.flatten_long_ident txt |> ident |> str)
@@ -239,7 +239,7 @@ and print_expr_item expr ~pos ~indentation =
       |> List.map (fun expr -> ", " ^ print_expr_item expr ~pos ~indentation)
       |> String.concat "")
     ^ ")"
-  | Pexp_variant (label, exprs) ->
+  | Pexp_variant (label, {txt = exprs}) ->
     "Pexp_variant(" ^ str label
     ^ (exprs
       |> List.map (fun expr -> "," ^ print_expr_item expr ~pos ~indentation)

@@ -215,20 +215,27 @@ and pattern_desc =
 
        Invariant: n >= 2
     *)
-  | Ppat_construct of Longident.t loc * pattern list
+  | Ppat_construct of Longident.t loc * pattern list loc
     (* C                  []
        C(P)               [P]
        C(P1, ..., Pn)     [P1; ...; Pn]
        C((P1, ..., Pn))   [Ppat_tuple [P1; ...; Pn]]
 
+       The list's location spans the argument parentheses, including both
+       delimiters. For constructors without parentheses or generated nodes,
+       use the enclosing node's location. The v0 bridge uses the payload's
+       location when the original parentheses span is unavailable.
+
        This list preserves syntax, not the declared constructor arity.
        Type checking normalizes tuple grouping using the resolved constructor.
     *)
-  | Ppat_variant of label * pattern list
+  | Ppat_variant of label * pattern list loc
     (* #A                  []
        #A(P)               [P]
        #A(P1, ..., Pn)     [P1; ...; Pn]
        #A((P1, ..., Pn))   [Ppat_tuple [P1; ...; Pn]]
+
+       Argument locations follow Ppat_construct.
     *)
   | Ppat_record of
       pattern record_element list * closed_flag * record_pat_rest option
@@ -310,20 +317,24 @@ and expression_desc =
 
        Invariant: n >= 2
     *)
-  | Pexp_construct of Longident.t loc * expression list
+  | Pexp_construct of Longident.t loc * expression list loc
     (* C                  []
        C(E)               [E]
        C(E1, ..., En)     [E1; ...; En]
        C((E1, ..., En))   [Pexp_tuple [E1; ...; En]]
 
+       Argument locations follow Ppat_construct.
+
        This list preserves syntax, not the declared constructor arity.
        Type checking normalizes tuple grouping using the resolved constructor.
     *)
-  | Pexp_variant of label * expression list
+  | Pexp_variant of label * expression list loc
     (* #A                  []
        #A(E)               [E]
        #A(E1, ..., En)     [E1; ...; En]
        #A((E1, ..., En))   [Pexp_tuple [E1; ...; En]]
+
+       Argument locations follow Ppat_construct.
     *)
   | Pexp_record of expression record_element list * expression option
     (* { l1=P1; ...; ln=Pn }     (None)

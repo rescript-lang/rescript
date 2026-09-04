@@ -315,10 +315,13 @@ module E = struct
       sub.expr sub e;
       sub.cases sub pel
     | Pexp_tuple el -> List.iter (sub.expr sub) el
-    | Pexp_construct (lid, args) ->
+    | Pexp_construct (lid, {txt = args; loc = args_loc}) ->
       iter_loc sub lid;
+      sub.location sub args_loc;
       List.iter (sub.expr sub) args
-    | Pexp_variant (_lab, args) -> List.iter (sub.expr sub) args
+    | Pexp_variant (_lab, {txt = args; loc = args_loc}) ->
+      sub.location sub args_loc;
+      List.iter (sub.expr sub) args
     | Pexp_record (l, eo) ->
       List.iter
         (fun {lid; x = exp} ->
@@ -427,10 +430,13 @@ module P = struct
     | Ppat_constant _ -> ()
     | Ppat_interval _ -> ()
     | Ppat_tuple pl -> List.iter (sub.pat sub) pl
-    | Ppat_construct (l, args) ->
+    | Ppat_construct (l, {txt = args; loc = args_loc}) ->
       iter_loc sub l;
+      sub.location sub args_loc;
       List.iter (sub.pat sub) args
-    | Ppat_variant (_l, args) -> List.iter (sub.pat sub) args
+    | Ppat_variant (_l, {txt = args; loc = args_loc}) ->
+      sub.location sub args_loc;
+      List.iter (sub.pat sub) args
     | Ppat_record (lpl, _cf, rest) ->
       List.iter
         (fun {lid; x = pat} ->

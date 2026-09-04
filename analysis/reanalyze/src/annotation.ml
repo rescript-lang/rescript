@@ -30,9 +30,12 @@ let rec get_attribute_payload check_text (attributes : Typedtree.attributes) =
        _;
       } ->
         Some (BoolPayload (s = "true"))
-      | {pexp_desc = Pexp_construct ({txt = Longident.Lident "[]"}, [])} -> None
+      | {pexp_desc = Pexp_construct ({txt = Longident.Lident "[]"}, {txt = []})}
+        ->
+        None
       | {
-       pexp_desc = Pexp_construct ({txt = Longident.Lident "::"}, [head; tail]);
+       pexp_desc =
+         Pexp_construct ({txt = Longident.Lident "::"}, {txt = [head; tail]});
       } ->
         from_expr {expr with pexp_desc = Pexp_tuple [head; tail]}
       | {pexp_desc = Pexp_construct ({txt}, _); _} ->

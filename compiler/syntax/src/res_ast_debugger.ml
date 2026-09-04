@@ -633,14 +633,14 @@ module Sexp_ast = struct
       | Pexp_tuple exprs ->
         Sexp.list
           [Sexp.atom "Pexp_tuple"; Sexp.list (map_empty ~f:expression exprs)]
-      | Pexp_construct (longident_loc, exprs) ->
+      | Pexp_construct (longident_loc, {txt = exprs}) ->
         Sexp.list
           [
             Sexp.atom "Pexp_construct";
             longident longident_loc.Asttypes.txt;
             Sexp.list (map_empty ~f:expression exprs);
           ]
-      | Pexp_variant (lbl, exprs) ->
+      | Pexp_variant (lbl, {txt = exprs}) ->
         Sexp.list
           [
             Sexp.atom "Pexp_variant";
@@ -842,14 +842,14 @@ module Sexp_ast = struct
       | Ppat_tuple patterns ->
         Sexp.list
           [Sexp.atom "Ppat_tuple"; Sexp.list (map_empty ~f:pattern patterns)]
-      | Ppat_construct (longident_loc, patterns) ->
+      | Ppat_construct (longident_loc, {txt = patterns}) ->
         Sexp.list
           [
             Sexp.atom "Ppat_construct";
             longident longident_loc.Location.txt;
             Sexp.list (map_empty ~f:pattern patterns);
           ]
-      | Ppat_variant (lbl, patterns) ->
+      | Ppat_variant (lbl, {txt = patterns}) ->
         Sexp.list
           [
             Sexp.atom "Ppat_variant";

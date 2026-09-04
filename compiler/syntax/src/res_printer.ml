@@ -2760,11 +2760,11 @@ and print_pattern ~state (p : Parsetree.pattern) cmt_tbl =
                   ]);
              Doc.rbrace;
            ])
-    | Ppat_construct (constr_name, constructor_args) ->
+    | Ppat_construct (constr_name, {txt = constructor_args}) ->
       let constr_name = print_longident_location constr_name cmt_tbl in
       let args_doc = print_pattern_args ~state constructor_args cmt_tbl in
       Doc.group (Doc.concat [constr_name; args_doc])
-    | Ppat_variant (label, variant_args) ->
+    | Ppat_variant (label, {txt = variant_args}) ->
       let variant_name =
         Doc.concat [Doc.text "#"; print_poly_var_ident label]
       in
@@ -3276,7 +3276,7 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
              Doc.soft_line;
              Doc.rbrace;
            ])
-    | Pexp_construct (longident_loc, args) ->
+    | Pexp_construct (longident_loc, {txt = args}) ->
       let constr = print_longident_location longident_loc cmt_tbl in
       let args = print_expression_args ~state args cmt_tbl in
       Doc.group (Doc.concat [constr; args])
@@ -3336,7 +3336,7 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
              Doc.soft_line;
              Doc.rbracket;
            ])
-    | Pexp_variant (label, args) ->
+    | Pexp_variant (label, {txt = args}) ->
       let variant_name =
         Doc.concat [Doc.text "#"; print_poly_var_ident label]
       in
@@ -3790,7 +3790,7 @@ and print_pexp_fun ~state ~in_callback e cmt_tbl =
       match (return_expr.pexp_desc, opt_braces) with
       | _, Some _ -> true
       | ( ( Pexp_array _ | Pexp_tuple _
-          | Pexp_construct (_, _ :: _)
+          | Pexp_construct (_, {txt = _ :: _})
           | Pexp_record _ ),
           _ ) ->
         true
@@ -5364,7 +5364,10 @@ and print_expr_fun_parameters ~state ~in_callback ~async ~has_constraint
        lbl = Nolabel;
        default_expr = None;
        pat =
-         {ppat_desc = Ppat_construct ({txt = Longident.Lident "()"; loc}, [])};
+         {
+           ppat_desc =
+             Ppat_construct ({txt = Longident.Lident "()"; loc}, {txt = []});
+         };
      };
   ] ->
     let doc =

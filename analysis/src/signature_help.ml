@@ -416,7 +416,7 @@ let signature_help ~debug ~source ~kind_file ~pos
           in
           set_result
             (exp.pexp_loc, `FunctionCall (arg_at_cursor, exp, extracted_args))
-        | {pexp_desc = Pexp_construct (lid, payload_exps); pexp_loc}
+        | {pexp_desc = Pexp_construct (lid, {txt = payload_exps}); pexp_loc}
           when payload_exps <> [] && constructor_has_cursor lid.loc pexp_loc ->
           (* Constructor payloads *)
           set_result (lid.loc, `ConstructorExpr (lid, payload_exps))
@@ -425,7 +425,7 @@ let signature_help ~debug ~source ~kind_file ~pos
       in
       let pat (iterator : Ast_iterator.iterator) (pat : Parsetree.pattern) =
         (match pat with
-        | {ppat_desc = Ppat_construct (lid, payload_pats); ppat_loc}
+        | {ppat_desc = Ppat_construct (lid, {txt = payload_pats}); ppat_loc}
           when payload_pats <> [] && constructor_has_cursor lid.loc ppat_loc ->
           (* Constructor payloads *)
           set_result (lid.loc, `ConstructorPat (lid, payload_pats))

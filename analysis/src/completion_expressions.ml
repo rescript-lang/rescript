@@ -24,9 +24,10 @@ let rec traverse_expr (exp : Parsetree.expression) ~expr_path ~pos
       (txt, [Completable.NRecordBody {seen_fields = []}] @ expr_path)
   | Pexp_ident {txt = Lident txt} -> some_if_has_cursor (txt, expr_path)
   | Pexp_construct ({txt = Lident "()"}, _) -> some_if_has_cursor ("", expr_path)
-  | Pexp_construct ({txt = Lident txt}, []) ->
+  | Pexp_construct ({txt = Lident txt}, {txt = []}) ->
     some_if_has_cursor (txt, expr_path)
-  | Pexp_variant (label, []) -> some_if_has_cursor ("#" ^ label, expr_path)
+  | Pexp_variant (label, {txt = []}) ->
+    some_if_has_cursor ("#" ^ label, expr_path)
   | Pexp_array array_patterns -> (
     let next_expr_path = [Completable.NArray] @ expr_path in
     (* No fields but still has cursor = empty completion *)
@@ -121,7 +122,10 @@ let rec traverse_expr (exp : Parsetree.expression) ~expr_path ~pos
           ("", [Completable.NRecordBody {seen_fields}] @ expr_path)
       | _ -> None))
   | Pexp_construct
-      ({txt}, [{pexp_loc; pexp_desc = Pexp_construct ({txt = Lident "()"}, _)}])
+      ( {txt},
+        {
+          txt = [{pexp_loc; pexp_desc = Pexp_construct ({txt = Lident "()"}, _)}];
+        } )
     when loc_has_cursor pexp_loc ->
     (* Empty payload with cursor, like: Test(<com>) *)
     Some
@@ -131,7 +135,7 @@ let rec traverse_expr (exp : Parsetree.expression) ~expr_path ~pos
             {constructor_name = Utils.get_unqualified_name txt; item_num = 0};
         ]
         @ expr_path )
-  | Pexp_construct ({txt}, args)
+  | Pexp_construct ({txt}, {txt = args})
     when args <> []
          && pos >= ((Ext_list.last args).pexp_loc |> Loc.end_)
          && first_char_before_cursor_no_white = Some ','
@@ -147,7 +151,7 @@ let rec traverse_expr (exp : Parsetree.expression) ~expr_path ~pos
             };
         ]
         @ expr_path )
-  | Pexp_construct ({txt}, args) when loc_has_cursor exp.pexp_loc ->
+  | Pexp_construct ({txt}, {txt = args}) when loc_has_cursor exp.pexp_loc ->
     args
     |> traverse_expr_tuple_items ~first_char_before_cursor_no_white ~pos
          ~next_expr_path:(fun item_num ->
@@ -166,14 +170,17 @@ let rec traverse_expr (exp : Parsetree.expression) ~expr_path ~pos
            ]
            @ expr_path)
   | Pexp_variant
-      (txt, [{pexp_loc; pexp_desc = Pexp_construct ({txt = Lident "()"}, _)}])
+      ( txt,
+        {
+          txt = [{pexp_loc; pexp_desc = Pexp_construct ({txt = Lident "()"}, _)}];
+        } )
     when loc_has_cursor pexp_loc ->
     (* Empty payload with cursor, like: #test(<com>) *)
     Some
       ( "",
         [Completable.NPolyvariantPayload {constructor_name = txt; item_num = 0}]
         @ expr_path )
-  | Pexp_variant (txt, args) when loc_has_cursor exp.pexp_loc ->
+  | Pexp_variant (txt, {txt = args}) when loc_has_cursor exp.pexp_loc ->
     args
     |> traverse_expr_tuple_items ~first_char_before_cursor_no_white ~pos
          ~next_expr_path:(fun item_num ->

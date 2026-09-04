@@ -222,7 +222,8 @@ let rec expr_to_context_path_inner ~(in_jsx_context : bool)
     | None -> None)
   | Pexp_constant (Pconst_integer _) -> Some CPInt
   | Pexp_constant (Pconst_float _) -> Some CPFloat
-  | Pexp_construct ({txt = Lident ("true" | "false")}, []) -> Some CPBool
+  | Pexp_construct ({txt = Lident ("true" | "false")}, {txt = []}) ->
+    Some CPBool
   | Pexp_array exprs ->
     Some
       (CPArray
@@ -492,8 +493,8 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
           scope_pattern p
             ~pattern_path:(NTupleItem {item_num = index} :: pattern_path)
             ?context_path)
-    | Ppat_construct (_, []) -> ()
-    | Ppat_construct ({txt}, patterns) ->
+    | Ppat_construct (_, {txt = []}) -> ()
+    | Ppat_construct ({txt}, {txt = patterns}) ->
       patterns
       |> List.iteri (fun index p ->
           scope_pattern p
@@ -505,8 +506,8 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
                  }
               :: pattern_path)
             ?context_path)
-    | Ppat_variant (_, []) -> ()
-    | Ppat_variant (txt, patterns) ->
+    | Ppat_variant (_, {txt = []}) -> ()
+    | Ppat_variant (txt, {txt = patterns}) ->
       patterns
       |> List.iteri (fun index p ->
           scope_pattern p
@@ -1036,7 +1037,7 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
                  Pstr_eval
                    ( {
                        pexp_loc;
-                       pexp_desc = Pexp_construct ({txt = path; loc}, []);
+                       pexp_desc = Pexp_construct ({txt = path; loc}, {txt = []});
                      },
                      _ );
              };
@@ -1276,7 +1277,7 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
                          then ValueOrField
                          else Value);
                     }))
-        | Pexp_construct (lid, args) ->
+        | Pexp_construct (lid, {txt = args}) ->
           let lid_path = flatten_lid_check_dot lid in
           if debug then
             Printf.printf "Pexp_construct %s:%s %s\n"

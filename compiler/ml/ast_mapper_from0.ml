@@ -875,6 +875,11 @@ module E = struct
       jsx_fragment ~loc ~attrs loc.loc_start (map_jsx_children sub e)
         loc.loc_end
     | Pexp_construct (lid, arg) -> (
+      let args_loc =
+        match arg with
+        | Some arg -> sub.location sub arg.pexp_loc
+        | None -> loc
+      in
       let lid1 = map_loc sub lid in
       let has_constructor_args, attrs = remove_constructor_args_attr attrs in
       let args =
@@ -889,7 +894,7 @@ module E = struct
             || lid.txt = Longident.Lident "::")
           arg
       in
-      let exp1 = construct ~loc ~attrs lid1 args in
+      let exp1 = construct ~loc ~attrs ~args_loc lid1 args in
       match lid.txt with
       | Lident "Function$" -> (
         let rec attributes_to_arity (attrs : Parsetree.attributes) =
@@ -948,13 +953,10 @@ module E = struct
       | _ -> exp1)
     | Pexp_variant (lab, arg) ->
       let has_constructor_args, attrs = remove_constructor_args_attr attrs in
-      let attrs =
+      let args_loc =
         match arg with
-        | Some {pexp_desc = Pexp_tuple _; pexp_loc} when has_constructor_args ->
-          ( Location.mkloc "res.variantArgs" (sub.location sub pexp_loc),
-            Pt.PStr [] )
-          :: attrs
-        | _ -> attrs
+        | Some arg -> sub.location sub arg.pexp_loc
+        | None -> loc
       in
       let args =
         decode_args ~map:(sub.expr sub)
@@ -964,7 +966,7 @@ module E = struct
             | _ -> None)
           ~split_tuple:has_constructor_args arg
       in
-      variant ~loc ~attrs lab args
+      variant ~loc ~attrs ~args_loc lab args
     | Pexp_record (l, eo) ->
       record ~loc ~attrs
         (Ext_list.map l (fun (lid, e) ->
@@ -1132,6 +1134,11 @@ module P = struct
         (map_pattern_constant ~loc c2)
     | Ppat_tuple pl -> tuple ~loc ~attrs (List.map (sub.pat sub) pl)
     | Ppat_construct (l, arg) ->
+      let args_loc =
+        match arg with
+        | Some arg -> sub.location sub arg.ppat_loc
+        | None -> loc
+      in
       let has_constructor_args, attrs = remove_constructor_args_attr attrs in
       let args =
         decode_args ~map:(sub.pat sub)
@@ -1145,16 +1152,13 @@ module P = struct
             || l.txt = Longident.Lident "::")
           arg
       in
-      construct ~loc ~attrs (map_loc sub l) args
+      construct ~loc ~attrs ~args_loc (map_loc sub l) args
     | Ppat_variant (l, arg) ->
       let has_constructor_args, attrs = remove_constructor_args_attr attrs in
-      let attrs =
+      let args_loc =
         match arg with
-        | Some {ppat_desc = Ppat_tuple _; ppat_loc} when has_constructor_args ->
-          ( Location.mkloc "res.variantArgs" (sub.location sub ppat_loc),
-            Pt.PStr [] )
-          :: attrs
-        | _ -> attrs
+        | Some arg -> sub.location sub arg.ppat_loc
+        | None -> loc
       in
       let args =
         decode_args ~map:(sub.pat sub)
@@ -1164,7 +1168,7 @@ module P = struct
             | _ -> None)
           ~split_tuple:has_constructor_args arg
       in
-      variant ~loc ~attrs l args
+      variant ~loc ~attrs ~args_loc l args
     | Ppat_record (lpl, cf) ->
       let rest, attrs = get_record_rest_attr attrs in
       record ~loc ~attrs ?rest

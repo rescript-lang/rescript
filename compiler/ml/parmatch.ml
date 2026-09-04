@@ -1955,14 +1955,14 @@ module Conv = struct
         let id = fresh cstr.cstr_name in
         let lid = {cstr_lid with txt = Longident.Lident id} in
         Hashtbl.add constrs id cstr;
-        mkpat (Ppat_construct (lid, List.map loop lst))
+        mkpat (Ppat_construct (lid, Location.mknoloc (List.map loop lst)))
       | Tpat_variant (label, p_opt, _row_desc) ->
         let args =
           match p_opt with
           | None -> []
           | Some p -> [loop p]
         in
-        mkpat (Ppat_variant (label, args))
+        mkpat (Ppat_variant (label, Location.mknoloc args))
       | Tpat_record (subpatterns, _closed_flag, rest) ->
         let fields =
           List.map

@@ -164,12 +164,14 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
       ( b,
         [
           {
-            pc_lhs = {ppat_desc = Ppat_construct ({txt = Lident "true"}, [])};
+            pc_lhs =
+              {ppat_desc = Ppat_construct ({txt = Lident "true"}, {txt = []})};
             pc_guard = None;
             pc_rhs = t_exp;
           };
           {
-            pc_lhs = {ppat_desc = Ppat_construct ({txt = Lident "false"}, [])};
+            pc_lhs =
+              {ppat_desc = Ppat_construct ({txt = Lident "false"}, {txt = []})};
             pc_guard = None;
             pc_rhs = f_exp;
           };
@@ -178,12 +180,14 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
       ( b,
         [
           {
-            pc_lhs = {ppat_desc = Ppat_construct ({txt = Lident "false"}, [])};
+            pc_lhs =
+              {ppat_desc = Ppat_construct ({txt = Lident "false"}, {txt = []})};
             pc_guard = None;
             pc_rhs = f_exp;
           };
           {
-            pc_lhs = {ppat_desc = Ppat_construct ({txt = Lident "true"}, [])};
+            pc_lhs =
+              {ppat_desc = Ppat_construct ({txt = Lident "true"}, {txt = []})};
             pc_guard = None;
             pc_rhs = t_exp;
           };
@@ -204,13 +208,13 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
               {
                 ppat_desc =
                   ( Ppat_construct
-                      ({txt = Lident ("Ok" as variant_name)}, _ :: _)
+                      ({txt = Lident ("Ok" as variant_name)}, {txt = _ :: _})
                   | Ppat_construct
-                      ({txt = Lident ("Error" as variant_name)}, _ :: _)
+                      ({txt = Lident ("Error" as variant_name)}, {txt = _ :: _})
                   | Ppat_construct
-                      ({txt = Lident ("Some" as variant_name)}, _ :: _)
-                  | Ppat_construct ({txt = Lident ("None" as variant_name)}, [])
-                    );
+                      ({txt = Lident ("Some" as variant_name)}, {txt = _ :: _})
+                  | Ppat_construct
+                      ({txt = Lident ("None" as variant_name)}, {txt = []}) );
               } as pvb_pat;
             pvb_expr;
             pvb_constraint = None;
@@ -245,7 +249,7 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
       (* Extract the variable name from the pattern (e.g., myVar from Some(myVar)) *)
       let var_name =
         match pvb_pat.ppat_desc with
-        | Ppat_construct (_, [inner_pat]) -> (
+        | Ppat_construct (_, {txt = [inner_pat]}) -> (
           match Ast_pat.is_single_variable_pattern_conservative inner_pat with
           | Some name when name <> "" -> name
           | _ -> "x")
@@ -501,7 +505,8 @@ let signature_item_mapper (self : mapper) (sigi : Parsetree.signature_item) :
                   pval_attributes = [];
                 };
           }
-        | Pexp_construct ({txt = Lident (("true" | "false") as txt)}, []) ->
+        | Pexp_construct ({txt = Lident (("true" | "false") as txt)}, {txt = []})
+          ->
           succeed attr pval_attributes;
           {
             sigi with
@@ -616,8 +621,9 @@ let structure_item_mapper (self : mapper) (str : Parsetree.structure_item) :
               pval_prim = Some (Ast_external_mk.inline_float s);
             };
       }
-    | Some attr, Pexp_construct ({txt = Lident (("true" | "false") as txt)}, [])
-      ->
+    | ( Some attr,
+        Pexp_construct ({txt = Lident (("true" | "false") as txt)}, {txt = []})
+      ) ->
       succeed attr pvb_attributes;
       {
         str with
@@ -797,7 +803,7 @@ let rec structure_mapper ~await_context (self : mapper) (stru : Ast_structure.t)
             | Pexp_let (_, vbs, expr) -> aux expr @ spelunk_vbs acc vbs
             | Pexp_ifthenelse (_, then_expr, Some else_expr) ->
               aux then_expr @ aux else_expr
-            | Pexp_construct (_, [expr]) -> aux expr
+            | Pexp_construct (_, {txt = [expr]}) -> aux expr
             | Pexp_fun {body = expr} -> aux expr
             | Pexp_constraint (expr, _) -> aux expr
             | Pexp_match (expr, cases) ->

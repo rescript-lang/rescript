@@ -175,7 +175,7 @@ let rec add_pattern bv pat =
   | Ppat_alias (p, _) -> add_pattern bv p
   | Ppat_interval _ | Ppat_constant _ -> ()
   | Ppat_tuple pl -> List.iter (add_pattern bv) pl
-  | Ppat_construct (c, args) ->
+  | Ppat_construct (c, {txt = args}) ->
     add bv c;
     List.iter (add_pattern bv) args
   | Ppat_record (pl, _, rest) ->
@@ -192,7 +192,7 @@ let rec add_pattern bv pat =
   | Ppat_constraint (p, ty) ->
     add_pattern bv p;
     add_type bv ty
-  | Ppat_variant (_, args) -> List.iter (add_pattern bv) args
+  | Ppat_variant (_, {txt = args}) -> List.iter (add_pattern bv) args
   | Ppat_type li -> add bv li
   | Ppat_unpack id -> pattern_bv := String_map.add id.txt bound !pattern_bv
   | Ppat_open (m, p) ->
@@ -236,10 +236,10 @@ let rec add_expr bv exp =
     add_expr bv e;
     add_cases bv pel
   | Pexp_tuple el -> List.iter (add_expr bv) el
-  | Pexp_construct (c, args) ->
+  | Pexp_construct (c, {txt = args}) ->
     add bv c;
     List.iter (add_expr bv) args
-  | Pexp_variant (_, args) -> List.iter (add_expr bv) args
+  | Pexp_variant (_, {txt = args}) -> List.iter (add_expr bv) args
   | Pexp_record (lblel, opte) ->
     List.iter
       (fun {lid = lbl; x = e} ->
@@ -302,7 +302,7 @@ let rec add_expr bv exp =
       (( {txt = "ocaml.extension_constructor" | "extension_constructor"; _},
          PStr [item] ) as e) -> (
     match item.pstr_desc with
-    | Pstr_eval ({pexp_desc = Pexp_construct (c, [])}, _) -> add bv c
+    | Pstr_eval ({pexp_desc = Pexp_construct (c, {txt = []})}, _) -> add bv c
     | _ -> handle_extension e)
   | Pexp_extension e -> handle_extension e
   | Pexp_await e -> add_expr bv e

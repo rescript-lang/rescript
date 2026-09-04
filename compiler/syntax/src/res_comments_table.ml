@@ -296,15 +296,15 @@ let partition_between_lines start_line end_line comments =
 let rec collect_list_patterns acc pattern =
   let open Parsetree in
   match pattern.ppat_desc with
-  | Ppat_construct ({txt = Longident.Lident "::"}, [pat; rest]) ->
+  | Ppat_construct ({txt = Longident.Lident "::"}, {txt = [pat; rest]}) ->
     collect_list_patterns (pat :: acc) rest
-  | Ppat_construct ({txt = Longident.Lident "[]"}, []) -> List.rev acc
+  | Ppat_construct ({txt = Longident.Lident "[]"}, {txt = []}) -> List.rev acc
   | _ -> List.rev (pattern :: acc)
 
 let rec collect_list_exprs acc expr =
   let open Parsetree in
   match expr.pexp_desc with
-  | Pexp_construct ({txt = Longident.Lident "::"}, [expr; rest]) ->
+  | Pexp_construct ({txt = Longident.Lident "::"}, {txt = [expr; rest]}) ->
     collect_list_exprs (expr :: acc) rest
   | Pexp_construct ({txt = Longident.Lident "[]"}, _) -> List.rev acc
   | _ -> List.rev (expr :: acc)
@@ -1003,7 +1003,8 @@ and walk_expression expr t comments =
   | Pexp_let
       ( _recFlag,
         value_bindings,
-        {pexp_desc = Pexp_construct ({txt = Longident.Lident "()"}, [])} ) ->
+        {pexp_desc = Pexp_construct ({txt = Longident.Lident "()"}, {txt = []})}
+      ) ->
     walk_value_bindings value_bindings t comments
   | Pexp_let (_recFlag, value_bindings, expr2) ->
     let comments =
@@ -1155,7 +1156,7 @@ and walk_expression expr t comments =
     walk_list
       (collect_list_exprs [] expr |> List.map (fun e -> Expression e))
       t comments
-  | Pexp_construct (longident, args) -> (
+  | Pexp_construct (longident, {txt = args}) -> (
     let leading, trailing = partition_leading_trailing comments longident.loc in
     attach t.leading longident.loc leading;
     match args with
@@ -1166,7 +1167,7 @@ and walk_expression expr t comments =
       attach t.trailing longident.loc after_longident;
       walk_list (List.map (fun expr -> Expression expr) exprs) t rest
     | [] -> attach t.trailing longident.loc trailing)
-  | Pexp_variant (_label, args) ->
+  | Pexp_variant (_label, {txt = args}) ->
     walk_list (List.map (fun expr -> Expression expr) args) t comments
   | Pexp_array exprs | Pexp_tuple exprs ->
     walk_list (exprs |> List.map (fun e -> Expression e)) t comments
@@ -2053,13 +2054,13 @@ and walk_pattern pat t comments =
     walk_list
       (collect_list_patterns [] pat |> List.map (fun p -> Pattern p))
       t comments
-  | Ppat_construct (constr, []) ->
+  | Ppat_construct (constr, {txt = []}) ->
     let before_constr, after_constr =
       partition_leading_trailing comments constr.loc
     in
     attach t.leading constr.loc before_constr;
     attach t.trailing constr.loc after_constr
-  | Ppat_construct (constr, [pat]) ->
+  | Ppat_construct (constr, {txt = [pat]}) ->
     let leading, trailing = partition_leading_trailing comments constr.loc in
     attach t.leading constr.loc leading;
     let after_constructor, rest =
@@ -2070,7 +2071,7 @@ and walk_pattern pat t comments =
     attach t.leading pat.ppat_loc leading;
     walk_pattern pat t inside;
     attach t.trailing pat.ppat_loc trailing
-  | Ppat_construct (constr, pats) ->
+  | Ppat_construct (constr, {txt = pats}) ->
     let leading, trailing = partition_leading_trailing comments constr.loc in
     attach t.leading constr.loc leading;
     let after_constructor, rest =
@@ -2078,7 +2079,7 @@ and walk_pattern pat t comments =
     in
     attach t.trailing constr.loc after_constructor;
     walk_list (List.map (fun pat -> Pattern pat) pats) t rest
-  | Ppat_variant (_label, args) ->
+  | Ppat_variant (_label, {txt = args}) ->
     walk_list (List.map (fun pat -> Pattern pat) args) t comments
   | Ppat_type _ -> ()
   | Ppat_record (record_rows, _, rest) ->

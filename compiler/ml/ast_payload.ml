@@ -321,8 +321,8 @@ let assert_strings loc (x : t) : string list =
 
 let assert_bool_lit (e : Parsetree.expression) =
   match e.pexp_desc with
-  | Pexp_construct ({txt = Lident "true"}, []) -> true
-  | Pexp_construct ({txt = Lident "false"}, []) -> false
+  | Pexp_construct ({txt = Lident "true"}, {txt = []}) -> true
+  | Pexp_construct ({txt = Lident "false"}, {txt = []}) -> false
   | _ ->
     Location.raise_errorf ~loc:e.pexp_loc
       "expect `true` or `false` in this field"

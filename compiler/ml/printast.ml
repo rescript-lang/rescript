@@ -203,10 +203,10 @@ and pattern i ppf x =
   | Ppat_tuple l ->
     line i ppf "Ppat_tuple\n";
     list i pattern ppf l
-  | Ppat_construct (li, po) ->
+  | Ppat_construct (li, {txt = po}) ->
     line i ppf "Ppat_construct %a\n" fmt_longident_loc li;
     list i pattern ppf po
-  | Ppat_variant (l, args) ->
+  | Ppat_variant (l, {txt = args}) ->
     line i ppf "Ppat_variant \"%s\"\n" l;
     list i pattern ppf args
   | Ppat_record (l, c, rest) -> (
@@ -294,10 +294,10 @@ and expression i ppf x =
   | Pexp_tuple l ->
     line i ppf "Pexp_tuple\n";
     list i expression ppf l
-  | Pexp_construct (li, args) ->
+  | Pexp_construct (li, {txt = args}) ->
     line i ppf "Pexp_construct %a\n" fmt_longident_loc li;
     list i expression ppf args
-  | Pexp_variant (l, args) ->
+  | Pexp_variant (l, {txt = args}) ->
     line i ppf "Pexp_variant \"%s\"\n" l;
     list i expression ppf args
   | Pexp_record (l, eo) ->

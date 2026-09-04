@@ -118,17 +118,6 @@ let encode_args ~map ~tuple ~loc ~attrs args =
   | [arg] -> (Some arg, attrs)
   | args -> (Some (tuple ~loc args), add_constructor_args_attr attrs)
 
-(* The argument list no longer has a tuple node to carry its parentheses span.
-   Consume the parser's location metadata when rebuilding that v0 node. *)
-let variant_args_loc ~loc attrs =
-  let rec loop rev_attrs = function
-    | ({Location.txt = "res.variantArgs"; loc}, Pt.PStr []) :: attrs ->
-      (loc, List.rev_append rev_attrs attrs)
-    | attr :: attrs -> loop (attr :: rev_attrs) attrs
-    | [] -> (loc, List.rev rev_attrs)
-  in
-  loop [] attrs
-
 let add_record_rest_attr ~rest attrs =
   (Location.mknoloc record_rest_attr_name, Pt.PPat (rest, None)) :: attrs
 
@@ -587,20 +576,17 @@ module E = struct
       match_ ~loc ~attrs (sub.expr sub e) (sub.cases sub pel)
     | Pexp_try (e, pel) -> try_ ~loc ~attrs (sub.expr sub e) (sub.cases sub pel)
     | Pexp_tuple el -> tuple ~loc ~attrs (List.map (sub.expr sub) el)
-    | Pexp_construct (lid, args) ->
+    | Pexp_construct (lid, {txt = args; loc = args_loc}) ->
       let lid = map_loc sub lid in
-      let args_loc =
-        if lid.loc.loc_ghost then loc
-        else {loc with loc_start = lid.loc.loc_end}
-      in
+      let args_loc = sub.location sub args_loc in
       let arg, attrs =
         encode_args ~map:(sub.expr sub)
           ~tuple:(fun ~loc args -> Ast_helper0.Exp.tuple ~loc args)
           ~loc:args_loc ~attrs args
       in
       construct ~loc ~attrs lid arg
-    | Pexp_variant (lab, args) ->
-      let args_loc, attrs = variant_args_loc ~loc attrs in
+    | Pexp_variant (lab, {txt = args; loc = args_loc}) ->
+      let args_loc = sub.location sub args_loc in
       let arg, attrs =
         encode_args ~map:(sub.expr sub)
           ~tuple:(fun ~loc args -> Ast_helper0.Exp.tuple ~loc args)
@@ -840,19 +826,17 @@ module P = struct
     | Ppat_interval (c1, c2) ->
       interval ~loc ~attrs (map_constant c1) (map_constant c2)
     | Ppat_tuple pl -> tuple ~loc ~attrs (List.map (sub.pat sub) pl)
-    | Ppat_construct (l, args) ->
+    | Ppat_construct (l, {txt = args; loc = args_loc}) ->
       let l = map_loc sub l in
-      let args_loc =
-        if l.loc.loc_ghost then loc else {loc with loc_start = l.loc.loc_end}
-      in
+      let args_loc = sub.location sub args_loc in
       let arg, attrs =
         encode_args ~map:(sub.pat sub)
           ~tuple:(fun ~loc args -> Ast_helper0.Pat.tuple ~loc args)
           ~loc:args_loc ~attrs args
       in
       construct ~loc ~attrs l arg
-    | Ppat_variant (l, args) ->
-      let args_loc, attrs = variant_args_loc ~loc attrs in
+    | Ppat_variant (l, {txt = args; loc = args_loc}) ->
+      let args_loc = sub.location sub args_loc in
       let arg, attrs =
         encode_args ~map:(sub.pat sub)
           ~tuple:(fun ~loc args -> Ast_helper0.Pat.tuple ~loc args)

@@ -62,7 +62,7 @@ let (-1)..(-1.) = x
   | 1.12::(-3.13)::[] -> true
   | { x = 1.12; y = (-3.13) } -> true
   | Constructor (1.12, (-2.45)) -> true
-  | ((`Constuctor (1.12, (-2.45)))[@res.variantArgs ]) -> true
+  | `Constuctor (1.12, (-2.45)) -> true
   | (-4.15) as x -> true
   | (-4.15)|4.15 -> true
   | ((-3.14) : float) -> true
@@ -75,8 +75,7 @@ let (-1)..(-1.) = x
   | {js|literal1|js}::{js|literal2|js}::[] -> true
   | { x = {js|literal1|js}; y = {js|literal2|js} } -> true
   | Constructor ({js|literal1|js}, {js|literal2|js}) -> true
-  | ((`Constuctor ({js|literal1|js}, {js|literal2|js}))[@res.variantArgs ])
-      -> true
+  | `Constuctor ({js|literal1|js}, {js|literal2|js}) -> true
   | {js|literal|js} as x -> true
   | {js|literal|js}|{js|literal|js} -> true
   | ({js|literal|js} : string) -> true
