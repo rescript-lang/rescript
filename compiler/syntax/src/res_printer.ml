@@ -2473,7 +2473,7 @@ and print_value_binding ~state ~rec_flag (vb : Parsetree.value_binding) cmt_tbl
     let opt_braces, expr = Parsetree_viewer.process_braces_attr vb.pvb_expr in
     let printed_expr =
       let doc = print_expression_with_comments ~state vb.pvb_expr cmt_tbl in
-      match Parens.expr ~allow_coercion:true vb.pvb_expr with
+      match Parens.expr vb.pvb_expr with
       | Parens.Parenthesized -> add_parens doc
       | Braced braces -> print_braces doc expr braces
       | Nothing -> doc
@@ -3844,7 +3844,7 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
       let doc_expr = print_expression_with_comments ~state expr cmt_tbl in
       let doc_typ = print_typ_expr ~state typ cmt_tbl in
       let doc_expr =
-        match Parens.coerce_expr_operand expr with
+        match Parens.expr expr with
         | Parens.Parenthesized -> add_parens doc_expr
         | Braced braces -> print_braces doc_expr expr braces
         | Nothing -> doc_expr

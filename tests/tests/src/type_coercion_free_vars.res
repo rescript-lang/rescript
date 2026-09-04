@@ -5,7 +5,7 @@ module NoFreeVars = {
 
   let g = (y: t) => ()
 
-  let h = x => (g(x), (x :> int))
+  let h = x => (g(x), x :> int)
 
   //  let h2 = x => ((x :> int), g(x))
 }

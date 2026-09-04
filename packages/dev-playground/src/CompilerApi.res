@@ -218,7 +218,7 @@ let applyConfig = (
   ~experimentalFeatures: array<PlaygroundConfig.experimentalFeature>,
 ) => {
   if hasFunction(instance, "setModuleSystem") {
-    instance->Instance.setModuleSystem((moduleSystem :> string))
+    instance->Instance.setModuleSystem(moduleSystem :> string)
   }
   if hasFunction(instance, "setWarnFlags") {
     instance->Instance.setWarnFlags(warnFlags === "" ? defaultConfig.warnFlags : warnFlags)

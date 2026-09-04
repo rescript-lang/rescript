@@ -1,8 +1,8 @@
 type kind = Parenthesized | Braced of Location.t | Nothing
 
 (* Set [allow_coercion] to [true] only in grammar positions accepting a trailing
-   coercion without parentheses, such as call arguments and binding right-hand
-   sides. Arrow bodies require parentheses. *)
+   coercion without parentheses, such as call arguments and collection elements.
+   Bindings and arrow bodies require parentheses. *)
 val expr : ?allow_coercion:bool -> Parsetree.expression -> kind
 val structure_expr : Parsetree.expression -> kind
 
@@ -40,5 +40,3 @@ val arrow_return_typ_expr : Parsetree.core_type -> bool
 val pattern_record_row_rhs : Parsetree.pattern -> bool
 
 val expr_record_row_rhs : optional:bool -> Parsetree.expression -> kind
-
-val coerce_expr_operand : Parsetree.expression -> kind

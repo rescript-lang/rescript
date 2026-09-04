@@ -1,31 +1,31 @@
-let z = x :> int
+let z = (x :> int)
 
-let z2 = x :> int
+let z2 = (x :> int)
 
 let foo = (x: int) => (x :> int)
 
 let foo2 = (x: int) => (x :> int)
 
-let bar = x => (x: t :> int)
+let bar = x => ((x: t) :> int)
 
-let bar2 = x => (x: t :> int)
+let bar2 = x => ((x: t) :> int)
 
-call(~x=y :> int, ~z=w: int :> int, ~a, ~b)
+call(~x=y :> int, ~z=(w: int) :> int, ~a, ~b)
 
 let foo = (~a=3: int, b) => 34
 
 let foo = (~a=3 :> int, b) => 34
 
-let foo = (~a=3: int :> int, b) => 34
+let foo = (~a=(3: int) :> int, b) => 34
 
 // THESE SHOULD NOT PARSE: no magic in the syntax
 // let x: int :> string = y
 // let x :> string = y
 // let x : int1 :> int2 = 3 :> int3
 
-let x = /* c0 */ x /* c1 */ :> /* c2 */ int /* c3 */
+let x = (/* c0 */ x /* c1 */ :> /* c2 */ int /* c3 */)
 
-// Delimited arguments and binding right-hand sides need no extra parentheses.
+// Delimited arguments need no extra parentheses.
 foo(v :> b)
 foo(v :> b)
 foo(~arg=v :> b, ~optional=?v :> b)
@@ -41,7 +41,7 @@ let variant = #Value(v :> b)
 // Preserve grouping when the surrounding expression needs it.
 let result = x => (x :> b)
 let callback = foo(x => (x :> b))
-let coercedFunction = x => x :> a => b
+let coercedFunction = (x => x :> a => b)
 let call = (f :> a => b)(v)
 let field = (v :> b).name
 let objectField = (v :> b)["name"]
@@ -49,7 +49,7 @@ let equalLeft = (v :> b) == w
 let equalRight = v == (w :> b)
 let unary = !(v :> b)
 let awaited = await (v :> b)
-let nested = (v :> b) :> c
+let nested = ((v :> b) :> c)
 let record = {field: (v :> b)}
 let conditional = condition ? (v :> b) : (w :> b)
 let block = {v :> b}
@@ -59,14 +59,14 @@ let jsx = <Component value={v :> b}> {v :> b} </Component>
 // Comments must stay attached when parentheses disappear.
 foo(/* before */ v /* operand */ :> /* type */ b /* after */)
 foo(v :> b) // trailing line comment
-let attributed = @foo v :> b
-let coercionAttribute = @foo (v :> b)
+let attributed = (@foo v :> b)
+let coercionAttribute = (@foo (v :> b))
 let long = functionWithAVeryLongName(valueWithAVeryLongName :> typeWithAVeryLongName)
 
 let arrayIndex = values[index :> int]
 values[index :> int] = (value :> b)
 let recordSpread = {...value :> b, field: value}
-let bracedOperand = {value} :> b
+let bracedOperand = ({value} :> b)
 let blockSequence = {
   {
     foo()
@@ -86,3 +86,15 @@ let blockHead = {
   foo()
 }
 let dictSpread = dict{...value :> dict<b>, "field": value}
+
+// A constrained operand needs parentheses when the coercion is a binding RHS.
+let constrainedOperand = ((x: t) :> u)
+let constrainedChain = (((x: t) :> u) :> v)
+let constrainedBlock = {(x: t) :> u}
+call((x: t) :> u)
+
+// A following JSX element must not be read as coercion type arguments.
+let beforeJsx = () => {
+  let value = (x :> string)
+  <option value />
+}
