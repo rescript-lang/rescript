@@ -338,7 +338,7 @@ let splitAt = (lst, n) =>
   if n < 0 {
     None
   } else if n == 0 {
-    Some((list{}, lst))
+    Some(list{}, lst)
   } else {
     switch lst {
     | list{} => None
@@ -346,7 +346,7 @@ let splitAt = (lst, n) =>
       let cell = mutableCell(x, list{})
       let rest = splitAtAux(n - 1, xs, cell)
       switch rest {
-      | Some(rest) => Some((cell, rest))
+      | Some(rest) => Some(cell, rest)
       | None => None
       }
     }

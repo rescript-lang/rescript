@@ -203,7 +203,7 @@ let rec findFirstBy = (n, p) =>
       let {key: v, value: d} = n
       let pvd = p(v, d)
       if pvd {
-        Some((v, d))
+        Some(v, d)
       } else {
         let right = findFirstBy(n.right, p)
         if right != None {

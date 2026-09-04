@@ -9,7 +9,7 @@ let b = B(34)
 
 let c = C(4, 2)
 
-let d = D((4, 2))
+let d = D(4, 2)
 
 let foo = x =>
   switch x {
@@ -17,7 +17,7 @@ let foo = x =>
   | A2 => 2
   | B(n) => n
   | C(n, m) => n + m
-  | D((n, m)) => n + m
+  | D(n, m) => n + m
   }
 
 let fooA1 = x =>
@@ -83,5 +83,5 @@ let fooExn = f =>
   | EA2 => 2
   | EB(n) => n
   | EC(n, m) => n + m
-  | ED((n, m)) => n + m
+  | ED(n, m) => n + m
   }
