@@ -376,7 +376,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@jridgewell/trace-mapping@npm:^0.3.24, @jridgewell/trace-mapping@npm:^0.3.28":
+"@jridgewell/trace-mapping@npm:^0.3.24, @jridgewell/trace-mapping@npm:^0.3.28, @jridgewell/trace-mapping@npm:^0.3.31":
   version: 0.3.31
   resolution: "@jridgewell/trace-mapping@npm:0.3.31"
   dependencies:
@@ -1420,6 +1420,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "dev-playground@workspace:packages/dev-playground"
   dependencies:
+    "@jridgewell/trace-mapping": "npm:^0.3.31"
     "@rescript/runtime": "npm:12.3.0"
     rescript: "npm:12.3.0"
     vite: "npm:^8.0.14"

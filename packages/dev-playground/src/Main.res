@@ -6,6 +6,8 @@ type tab =
   | Lambda
   | Lam
   | JavaScript
+  | GenType
+  | SourceMap
   | Settings
 
 type compilerStatus =
@@ -19,8 +21,28 @@ type sourcePosition = {
   col: int,
 }
 
-let tabs: array<tab> = [Parsetree, Typedtree, Lambda, Lam, JavaScript, Settings]
+type compileSnapshot = {
+  source: string,
+  result: CompilerApi.compileResult,
+}
+
+let baseTabs: array<tab> = [Parsetree, Typedtree, Lambda, Lam, JavaScript]
 let moduleSystems: array<moduleSystem> = [Esmodule, Commonjs]
+let sourceMapModes: array<sourceMapMode> = [Disabled, Linked, Inline, Hidden]
+
+let tabIsVisible = (config: PlaygroundConfig.t, tab) =>
+  switch tab {
+  | GenType => config.gentypeEnabled
+  | SourceMap => config.sourceMapMode !== Disabled
+  | Parsetree | Typedtree | Lambda | Lam | JavaScript | Settings => true
+  }
+
+let tabsForConfig = (config: PlaygroundConfig.t) => {
+  let withGentype = config.gentypeEnabled ? Array.concat(baseTabs, [GenType]) : baseTabs
+  let withSourceMap =
+    config.sourceMapMode !== Disabled ? Array.concat(withGentype, [SourceMap]) : withGentype
+  Array.concat(withSourceMap, [Settings])
+}
 
 let defaultSource = `type person = {
   name: string,
@@ -43,6 +65,8 @@ let tabLabel = tab =>
   | Lambda => "lambda"
   | Lam => "lam"
   | JavaScript => "js"
+  | GenType => "gentype"
+  | SourceMap => "source map"
   | Settings => "settings"
   }
 
@@ -127,6 +151,19 @@ let cursorPositionForOffset = (source, offset): sourcePosition => {
   walk(0, 1, 0)
 }
 
+let keyMovesCursor = key =>
+  switch key {
+  | "ArrowDown"
+  | "ArrowLeft"
+  | "ArrowRight"
+  | "ArrowUp"
+  | "End"
+  | "Home"
+  | "PageDown"
+  | "PageUp" => true
+  | _ => false
+  }
+
 let editorShellStyle = (activeLine, scrollTop, scrollLeft) => {
   let activeLineIndex = activeLine <= 1 ? 0 : activeLine - 1
   let activeLineTop = 18 + activeLineIndex * 22 - scrollTop
@@ -141,31 +178,229 @@ let toggleFeature = (features: array<experimentalFeature>, feature: experimental
     ? features->Array.filter(item => item !== feature)
     : Array.concat(features, [feature])
 
-let selectedOutput = (result: option<CompilerApi.compileResult>, activeTab: tab) =>
-  switch result {
+let optionalOutput = (output, fallback) =>
+  switch output {
+  | Some(output) => output
+  | None => fallback
+  }
+
+let prettyPrintJson = value =>
+  try value->JSON.parseOrThrow->JSON.stringify(~space=2) catch {
+  | _ => value
+  }
+
+let sourceMapDirective = "//# sourceMappingURL="
+
+let offsetForPosition = (source, position: SourceMapNavigation.position) => {
+  let index = ref(0)
+  let line = ref(1)
+  let col = ref(0)
+  let length = source->String.length
+
+  while (
+    index.contents < length &&
+      (line.contents < position.line ||
+        (line.contents === position.line && col.contents < position.col))
+  ) {
+    if source->String.charAt(index.contents) === "\n" {
+      line := line.contents + 1
+      col := 0
+    } else {
+      col := col.contents + 1
+    }
+    index := index.contents + 1
+  }
+
+  index.contents
+}
+
+let selectedOutput = (snapshot: option<compileSnapshot>, activeTab: tab) =>
+  switch snapshot {
   | None => "The compiler is loading. Results will appear here after the first compile."
-  | Some(Error(result)) =>
+  | Some({result: Error(result)}) =>
     let errors = result.errors->Array.join("\n")
     errors === "" ? result.message : errors
-  | Some(Ok(result)) =>
+  | Some({result: Ok(result)}) =>
     switch activeTab {
     | Parsetree => result.parsetree
     | Typedtree => result.typedtree
     | Lambda => result.lambda
     | Lam => result.lam
     | JavaScript => result.jsCode
+    | GenType =>
+      optionalOutput(result.gentype, "This compiler bundle does not expose gentype output yet.")
+    | SourceMap =>
+      result.sourceMap
+      ->optionalOutput("This compiler bundle does not expose source map output yet.")
+      ->prettyPrintJson
     | Settings => ""
     }
   }
 
-let resultSummary = (result: option<CompilerApi.compileResult>) =>
-  switch result {
+let outputNode = (output, activeTab, onSourceMapSelect): View.node => {
+  let directiveIndex = output->String.indexOf(sourceMapDirective)
+  if activeTab !== JavaScript || directiveIndex < 0 {
+    View.text(output)
+  } else {
+    let directiveEnd = directiveIndex + sourceMapDirective->String.length
+    View.fragment([
+      View.text(output->String.slice(~start=0, ~end=directiveIndex)),
+      <a
+        class="source-map-output-link"
+        href="#source-map"
+        title="View decoded source map"
+        onClick={event => {
+          event->Event.preventDefault
+          onSourceMapSelect()
+        }}
+      >
+        {View.text(sourceMapDirective)}
+      </a>,
+      View.text(output->String.slice(~start=directiveEnd)),
+    ])
+  }
+}
+
+let pushOutputText = (nodes: array<View.node>, text, onSourceMapSelect) => {
+  let directiveIndex = text->String.indexOf(sourceMapDirective)
+  if directiveIndex < 0 {
+    nodes->Array.push(View.text(text))
+  } else {
+    let directiveEnd = directiveIndex + sourceMapDirective->String.length
+    nodes->Array.push(View.text(text->String.slice(~start=0, ~end=directiveIndex)))
+    nodes->Array.push(
+      <a
+        class="source-map-output-link"
+        href="#source-map"
+        title="View decoded source map"
+        onClick={event => {
+          event->Event.preventDefault
+          onSourceMapSelect()
+        }}
+      >
+        {View.text(sourceMapDirective)}
+      </a>,
+    )
+    nodes->Array.push(View.text(text->String.slice(~start=directiveEnd)))
+  }
+}
+
+let mappedJavaScriptNode = (
+  output,
+  mappings: array<SourceMapNavigation.mapping>,
+  selectedPosition: option<SourceMapNavigation.position>,
+  onMappingSelect,
+  onSourceMapSelect,
+): View.node => {
+  let nodes: array<View.node> = []
+  let lines = output->String.split("\n")
+  let mappingsByLine = SourceMapNavigation.groupByGeneratedLine(mappings, lines->Array.length)
+  lines->Array.forEachWithIndex((lineText, lineIndex) => {
+    let lineLength = lineText->String.length
+    let lineMappings = switch mappingsByLine->Array.get(lineIndex) {
+    | Some(lineMappings) => lineMappings
+    | None => []
+    }
+    let cursor = ref(0)
+
+    lineMappings->Array.forEachWithIndex((mapping, mappingIndex) => {
+      let start = Math.Int.max(0, Math.Int.min(mapping.generated.col, lineLength))
+      if start > cursor.contents {
+        pushOutputText(
+          nodes,
+          lineText->String.slice(~start=cursor.contents, ~end=start),
+          onSourceMapSelect,
+        )
+      }
+
+      let nextColumn = switch lineMappings->Array.get(mappingIndex + 1) {
+      | Some(nextMapping) => nextMapping.generated.col
+      | None => lineLength
+      }
+      let end_ = Math.Int.max(start, Math.Int.min(nextColumn, lineLength))
+      if end_ > start {
+        let text = lineText->String.slice(~start, ~end=end_)
+        switch mapping.original {
+        | Some(original) => {
+            let isSelected = switch selectedPosition {
+            | Some(position) =>
+              position.line === mapping.generated.line && position.col === mapping.generated.col
+            | None => false
+            }
+            let className = isSelected
+              ? "source-map-mapped-segment source-map-mapped-segment-active"
+              : "source-map-mapped-segment"
+            let title = `${original.source}:${original.position.line->Int.toString}:${(original.position.col + 1)
+                ->Int.toString} — click to reveal in source`
+            nodes->Array.push(
+              <span
+                id={isSelected ? "generated-map-selection" : ""}
+                class={className}
+                title
+                onClick={_ => {
+                  let shouldNavigate = switch WindowSelection.get() {
+                  | Some(selection) => selection->WindowSelection.isCollapsed
+                  | None => true
+                  }
+                  if shouldNavigate {
+                    onMappingSelect(mapping)
+                  }
+                }}
+              >
+                {View.text(text)}
+              </span>,
+            )
+          }
+        | None => pushOutputText(nodes, text, onSourceMapSelect)
+        }
+      }
+      cursor := Math.Int.max(cursor.contents, end_)
+    })
+
+    if cursor.contents < lineLength {
+      pushOutputText(nodes, lineText->String.slice(~start=cursor.contents), onSourceMapSelect)
+    }
+    if lineIndex < lines->Array.length - 1 {
+      nodes->Array.push(View.text("\n"))
+    }
+  })
+  View.fragment(nodes)
+}
+
+let interactiveOutputNode = (
+  snapshot: option<compileSnapshot>,
+  currentSource,
+  activeTab,
+  selectedPosition,
+  onMappingSelect,
+  onSourceMapSelect,
+) => {
+  let output = selectedOutput(snapshot, activeTab)
+  switch (snapshot, activeTab) {
+  | (Some({source: compiledSource, result: Ok({sourceMap: Some(sourceMap)})}), JavaScript) => {
+      let mappings = SourceMapNavigation.decodeForSource(sourceMap, compiledSource, currentSource)
+      mappings->Array.length > 0
+        ? mappedJavaScriptNode(
+            output,
+            mappings,
+            selectedPosition,
+            onMappingSelect,
+            onSourceMapSelect,
+          )
+        : outputNode(output, activeTab, onSourceMapSelect)
+    }
+  | _ => outputNode(output, activeTab, onSourceMapSelect)
+  }
+}
+
+let resultSummary = (snapshot: option<compileSnapshot>) =>
+  switch snapshot {
   | None => "No compile result yet"
-  | Some(Ok(result)) =>
+  | Some({result: Ok(result)}) =>
     let warningCount = result.warnings->Array.length
     let warningText = warningCount === 0 ? "no warnings" : `${warningCount->Int.toString} warnings`
     `Compiled in ${result.time->Float.toFixed(~digits=1)}ms with ${warningText}`
-  | Some(Error(result)) => result.message
+  | Some({result: Error(result)}) => result.message
   }
 
 module TabButton = {
@@ -182,16 +417,18 @@ module TabButton = {
 
 module Problems = {
   @jsx.component
-  let make = (~compileResult: Signal.t<option<CompilerApi.compileResult>>) => {
+  let make = (~compileResult: Signal.t<option<compileSnapshot>>) => {
     <div class="problems">
       <div class="problems-title"> {View.text("Problems")} </div>
       <pre class="problems-output">
         {View.signalText(() =>
           switch Signal.get(compileResult) {
-          | Some(Ok({warnings})) if warnings->Array.length > 0 => warnings->Array.join("\n")
-          | Some(Error({warnings})) if warnings->Array.length > 0 => warnings->Array.join("\n")
-          | Some(Error({errors})) if errors->Array.length > 0 => errors->Array.join("\n")
-          | Some(Error({message})) => message
+          | Some({result: Ok({warnings})}) if warnings->Array.length > 0 =>
+            warnings->Array.join("\n")
+          | Some({result: Error({warnings})}) if warnings->Array.length > 0 =>
+            warnings->Array.join("\n")
+          | Some({result: Error({errors})}) if errors->Array.length > 0 => errors->Array.join("\n")
+          | Some({result: Error({message})}) => message
           | _ => "No problems reported."
           }
         )}
@@ -211,7 +448,20 @@ module SettingsPanel = {
     ~scheduleCompile: unit => unit,
     ~scheduleUrlSync: unit => unit,
   ) => {
-    let updateConfig = f => Signal.update(config, f)
+    let updateConfig = f => {
+      let nextConfig = f(Signal.peek(config))
+      Signal.set(config, nextConfig)
+      if !tabIsVisible(nextConfig, Signal.peek(activeTab)) {
+        Signal.set(activeTab, JavaScript)
+      }
+    }
+    let compilerVersionOptions: Signal.t<array<View.node>> = Obj.magic(
+      Computed.make(() =>
+        CompilerApi.selectableCompilerVersions(
+          Signal.get(config).compilerVersion,
+        )->Array.map(version => <option value=version.id> {View.text(version.label)} </option>)
+      ),
+    )
 
     <div
       class={() =>
@@ -230,11 +480,7 @@ module SettingsPanel = {
             switchCompiler(nextVersion)
           }}
         >
-          {View.fragment(
-            CompilerApi.selectableCompilerVersions(
-              Signal.get(config).compilerVersion,
-            )->Array.map(version => <option value=version.id> {View.text(version.label)} </option>),
-          )}
+          {View.signalFragment(compilerVersionOptions)}
         </select>
       </section>
       <section class="settings-section">
@@ -309,6 +555,85 @@ module SettingsPanel = {
       </section>
       <section class="settings-section setting-row">
         <input
+          id="gentype-enabled"
+          type_="checkbox"
+          checked={() => Signal.get(config).gentypeEnabled}
+          onChange={event => {
+            updateConfig(config => {...config, gentypeEnabled: Event.checked(event)})
+            scheduleUrlSync()
+            compileNow()
+          }}
+        />
+        <label for_="gentype-enabled"> {View.text("gentype")} </label>
+      </section>
+      <section class="settings-section source-map-settings">
+        <div class="setting-label"> {View.text("Source Map")} </div>
+        <div class="source-map-controls">
+          <div class="source-map-control">
+            <label for_="source-map-mode"> {View.text("Mode")} </label>
+            <select
+              id="source-map-mode"
+              value={() => (Signal.get(config).sourceMapMode :> string)}
+              onChange={event => {
+                switch event->Event.value->parseSourceMapMode {
+                | Some(nextSourceMapMode) =>
+                  updateConfig(config => {...config, sourceMapMode: nextSourceMapMode})
+                  scheduleUrlSync()
+                  compileNow()
+                | None => ()
+                }
+              }}
+            >
+              {View.fragment(
+                sourceMapModes->Array.map(sourceMapMode => {
+                  let value = (sourceMapMode :> string)
+                  <option value> {View.text(value)} </option>
+                }),
+              )}
+            </select>
+          </div>
+          <div
+            class={() =>
+              Signal.get(config).sourceMapMode === Disabled
+                ? "source-map-options source-map-options-disabled"
+                : "source-map-options"}
+          >
+            <label class="source-map-checkbox" for_="source-map-sources-content">
+              <input
+                id="source-map-sources-content"
+                type_="checkbox"
+                disabled={() => Signal.get(config).sourceMapMode === Disabled}
+                checked={() => Signal.get(config).sourceMapSourcesContent}
+                onChange={event => {
+                  updateConfig(config => {
+                    ...config,
+                    sourceMapSourcesContent: Event.checked(event),
+                  })
+                  scheduleUrlSync()
+                  compileNow()
+                }}
+              />
+              {View.text("Include sources content")}
+            </label>
+            <div class="source-map-control">
+              <label for_="source-map-root"> {View.text("Source Root")} </label>
+              <input
+                id="source-map-root"
+                disabled={() => Signal.get(config).sourceMapMode === Disabled}
+                value={() => Signal.get(config).sourceMapRoot}
+                spellcheck=false
+                onInput={event => {
+                  updateConfig(config => {...config, sourceMapRoot: Event.value(event)})
+                  scheduleUrlSync()
+                  scheduleCompile()
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+      <section class="settings-section setting-row">
+        <input
           id="feature-let-unwrap"
           type_="checkbox"
           checked={() => Signal.get(config).experimentalFeatures->hasFeature(LetUnwrap)}
@@ -364,10 +689,19 @@ module App = {
   let make = () => {
     let source = Signal.make(defaultSource)
     let activeTab = Signal.make(JavaScript)
+    let mappedSourcePosition: Signal.t<option<SourceMapNavigation.position>> = Signal.make(None)
+    let mappedGeneratedPosition: Signal.t<option<SourceMapNavigation.position>> = Signal.make(None)
     let status = Signal.make(Loading)
     let compilerInfo: Signal.t<option<CompilerApi.info>> = Signal.make(None)
-    let compileResult: Signal.t<option<CompilerApi.compileResult>> = Signal.make(None)
+    let compileResult: Signal.t<option<compileSnapshot>> = Signal.make(None)
     let config = Signal.make(CompilerApi.defaultConfig)
+    let visibleTabNodes: Signal.t<array<View.node>> = Obj.magic(
+      Computed.make(() =>
+        tabsForConfig(Signal.get(config))->Array.map(tab =>
+          <TabButton tab activeTab onSelect={tab => Signal.set(activeTab, tab)} />
+        )
+      ),
+    )
     let activeLine = Signal.make(1)
     let editorScrollTop = Signal.make(0)
     let editorScrollLeft = Signal.make(0)
@@ -381,6 +715,11 @@ module App = {
     let compilerLoadSequence = ref(0)
     let compileSequence = ref(0)
     let shareToast: Signal.t<option<string>> = Signal.make(None)
+
+    let clearMappedPositions = () => {
+      Signal.set(mappedSourcePosition, None)
+      Signal.set(mappedGeneratedPosition, None)
+    }
 
     let syncEditorState = event => {
       let currentSource = Event.value(event)
@@ -396,9 +735,88 @@ module App = {
       Signal.set(editorScrollLeft, Event.scrollLeft(event))
     }
 
+    let scrollToGeneratedMapping = () =>
+      Window.requestAnimationFrame(() =>
+        switch Document.current->Document.getElementById("generated-map-selection") {
+        | Some(element) => element->Element.scrollIntoView({block: "center", inline: "nearest"})
+        | None => ()
+        }
+      )
+
+    let revealOriginalMapping = (mapping: SourceMapNavigation.mapping) =>
+      switch Signal.peek(compileResult) {
+      | Some({source: compiledSource})
+        if SourceMapNavigation.isCurrentSource(compiledSource, Signal.peek(source)) =>
+        switch mapping.original {
+        | Some(original) => {
+            Signal.set(mappedSourcePosition, Some(original.position))
+            Signal.set(mappedGeneratedPosition, Some(mapping.generated))
+            Signal.set(activeLine, original.position.line)
+            Window.requestAnimationFrame(() =>
+              switch Document.current->Document.getElementById("source-editor") {
+              | Some(editor) => {
+                  let offset = offsetForPosition(Signal.peek(source), original.position)
+                  editor->TextAreaElement.setSelectionRange(offset, offset)
+                  editor->Element.focus
+                  Signal.set(activeLine, original.position.line)
+                  let scrollTop = Math.Int.max(
+                    0,
+                    18 +
+                    (original.position.line - 1) * 22 -
+                    editor->TextAreaElement.clientHeight / 2,
+                  )
+                  editor->TextAreaElement.setScrollTop(scrollTop)
+                  Signal.set(editorScrollTop, editor->TextAreaElement.scrollTop)
+                }
+              | None => ()
+              }
+            )
+          }
+        | None => ()
+        }
+      | _ => clearMappedPositions()
+      }
+
+    let navigateFromSource = event => {
+      syncEditorState(event)
+      let selectionStart = Event.selectionStart(event)
+      if !SourceMapNavigation.isCollapsedSelection(selectionStart, Event.selectionEnd(event)) {
+        clearMappedPositions()
+      } else {
+        let currentSource = Event.value(event)
+        let position = cursorPositionForOffset(currentSource, selectionStart)
+        switch Signal.peek(compileResult) {
+        | Some({source: compiledSource, result: Ok({sourceMap: Some(sourceMap)})}) => {
+            let mappings = SourceMapNavigation.decodeForSource(
+              sourceMap,
+              compiledSource,
+              currentSource,
+            )
+            switch SourceMapNavigation.generatedForOriginal(
+              mappings,
+              {
+                line: position.line,
+                col: position.col,
+              },
+            ) {
+            | Some(mapping) => {
+                Signal.set(mappedSourcePosition, Some({line: position.line, col: position.col}))
+                Signal.set(mappedGeneratedPosition, Some(mapping.generated))
+                Signal.set(activeTab, JavaScript)
+                scrollToGeneratedMapping()
+              }
+            | None => clearMappedPositions()
+            }
+          }
+        | _ => clearMappedPositions()
+        }
+      }
+    }
+
     let compileNow = () => {
       compileSequence := compileSequence.contents + 1
       let sequence = compileSequence.contents
+      let sourceToCompile = Signal.peek(source)
 
       let run = async () => {
         switch Signal.peek(status) {
@@ -407,9 +825,10 @@ module App = {
         | Ready | Compiling =>
           Signal.set(status, Compiling)
           try {
-            let result = await CompilerApi.compile(Signal.peek(source), Signal.peek(config))
+            let result = await CompilerApi.compile(sourceToCompile, Signal.peek(config))
             if sequence === compileSequence.contents {
-              Signal.set(compileResult, Some(result))
+              clearMappedPositions()
+              Signal.set(compileResult, Some({source: sourceToCompile, result}))
               Signal.set(status, Ready)
             }
           } catch {
@@ -464,6 +883,7 @@ module App = {
               if sequence === compileSequence.contents {
                 if Signal.peek(source) === sourceBeforeFormat {
                   Signal.set(source, formattedSource)
+                  clearMappedPositions()
                   Signal.set(activeLine, 1)
                   Signal.set(editorScrollTop, 0)
                   Signal.set(editorScrollLeft, 0)
@@ -476,7 +896,10 @@ module App = {
               }
             | Error(failure) =>
               if sequence === compileSequence.contents {
-                Signal.set(compileResult, Some(Error(failure)))
+                Signal.set(
+                  compileResult,
+                  Some({source: sourceBeforeFormat, result: Error(failure)}),
+                )
                 Signal.set(status, Ready)
               }
             }
@@ -542,10 +965,17 @@ module App = {
                 warnFlags: info.warnFlags,
                 jsxPreserveMode: info.jsxPreserveMode,
                 experimentalFeatures: info.experimentalFeatures,
+                gentypeEnabled: info.gentypeEnabled,
+                sourceMapMode: info.sourceMapMode,
+                sourceMapSourcesContent: info.sourceMapSourcesContent,
+                sourceMapRoot: info.sourceMapRoot,
               }
             }
             Signal.set(compilerInfo, Some(info))
             Signal.set(config, nextConfig)
+            if !tabIsVisible(nextConfig, Signal.peek(activeTab)) {
+              Signal.set(activeTab, JavaScript)
+            }
             Signal.set(status, Ready)
             switch firstLoadConfigValue {
             | Some(_) => ()
@@ -612,6 +1042,7 @@ module App = {
                 class="secondary-action"
                 onClick={_ => {
                   Signal.set(source, defaultSource)
+                  clearMappedPositions()
                   Signal.set(activeLine, 1)
                   Signal.set(editorScrollTop, 0)
                   Signal.set(editorScrollLeft, 0)
@@ -627,7 +1058,11 @@ module App = {
             </div>
           </div>
           <div
-            class="editor-shell"
+            class={() =>
+              switch Signal.get(mappedSourcePosition) {
+              | Some(_) => "editor-shell source-map-source-active"
+              | None => "editor-shell"
+              }}
             style={() =>
               editorShellStyle(
                 Signal.get(activeLine),
@@ -651,18 +1086,26 @@ module App = {
               spellcheck=false
               onInput={event => {
                 Signal.set(source, Event.value(event))
+                clearMappedPositions()
                 syncEditorState(event)
                 scheduleUrlSync()
                 scheduleCompile()
               }}
-              onClick={syncEditorState}
+              onClick={navigateFromSource}
               onMouseUp={syncEditorState}
-              onKeyUp={syncEditorState}
+              onKeyUp={event => {
+                if event->Event.key->keyMovesCursor {
+                  navigateFromSource(event)
+                } else {
+                  syncEditorState(event)
+                }
+              }}
               onFocus={syncEditorState}
               onKeyDown={event =>
                 switch insertTabIndent(event) {
                 | Some(nextSource) =>
                   Signal.set(source, nextSource)
+                  clearMappedPositions()
                   syncEditorState(event)
                   scheduleUrlSync()
                   scheduleCompile()
@@ -672,13 +1115,7 @@ module App = {
           </div>
         </div>
         <div class="result-column">
-          <div class="tabs">
-            {View.fragment(
-              tabs->Array.map(tab =>
-                <TabButton tab activeTab onSelect={tab => Signal.set(activeTab, tab)} />
-              ),
-            )}
-          </div>
+          <div class="tabs"> {View.signalFragment(visibleTabNodes)} </div>
           <div
             class={() =>
               Signal.get(activeTab) === Settings ? "output-panel hidden-panel" : "output-panel"}
@@ -688,9 +1125,17 @@ module App = {
             </div>
             <div class="output-shell">
               <pre class="output">
-                {View.signalText(() =>
-                  selectedOutput(Signal.get(compileResult), Signal.get(activeTab))
-                )}
+                {View.tracked(() => {
+                  let selectedTab = Signal.get(activeTab)
+                  interactiveOutputNode(
+                    Signal.get(compileResult),
+                    Signal.get(source),
+                    selectedTab,
+                    Signal.get(mappedGeneratedPosition),
+                    revealOriginalMapping,
+                    () => Signal.set(activeTab, SourceMap),
+                  )
+                })}
               </pre>
             </div>
             <Problems compileResult />

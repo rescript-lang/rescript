@@ -52,8 +52,9 @@
  * v5: Removed .ml support.
  * v6: Added `config.experimental_features` and `config.jsx_preserve_mode` to the BundleConfig.
  * v7: Added debug dump output APIs for developer playground tooling.
+ * v8: Added genType and source map configuration and compilation outputs.
  * *)
-let api_version = "7"
+let api_version = "8"
 
 module Js = Js_of_ocaml.Js
 
@@ -78,6 +79,10 @@ module Bundle_config = struct
     mutable open_modules: string list;
     mutable experimental_features: string list;
     mutable jsx_preserve_mode: bool;
+    mutable gentype_enabled: bool;
+    mutable source_map_mode: Js_config.source_map;
+    mutable source_map_sources_content: bool;
+    mutable source_map_root: string;
   }
 
   let make () =
@@ -88,6 +93,10 @@ module Bundle_config = struct
       open_modules = [];
       experimental_features = [];
       jsx_preserve_mode = false;
+      gentype_enabled = false;
+      source_map_mode = No_source_map;
+      source_map_sources_content = false;
+      source_map_root = "";
     }
 
   let default_filename (lang : Lang.t) = "playground." ^ Lang.to_string lang
@@ -96,6 +105,21 @@ module Bundle_config = struct
     match m with
     | Ext_module_system.Commonjs -> "commonjs"
     | Esmodule -> "esmodule"
+
+  let source_map_of_string value =
+    match String.lowercase_ascii value with
+    | "linked" -> Some Js_config.Linked
+    | "inline" -> Some Inline
+    | "hidden" -> Some Hidden
+    | "false" | "none" | "disabled" -> Some No_source_map
+    | _ -> None
+
+  let string_of_source_map mode =
+    match mode with
+    | Js_config.Linked -> "linked"
+    | Inline -> "inline"
+    | Hidden -> "hidden"
+    | No_source_map -> "false"
 end
 
 type loc_err_info = {
@@ -473,6 +497,127 @@ module Compile = struct
     List.iter Iter.iter_structure_item structure.str_items;
     Js.array (!acc |> Array.of_list)
 
+  let gentype_output ~module_system ~modulename ~sourcefile structure env =
+    let cmt_annots = Cmt_format.Implementation structure in
+    let input_cmt =
+      {
+        Cmt_format.cmt_modname = modulename;
+        cmt_annots;
+        cmt_value_dependencies = [];
+        cmt_comments = [];
+        cmt_args = [||];
+        cmt_sourcefile = Some sourcefile;
+        cmt_builddir = Sys.getcwd ();
+        cmt_loadpath = !Config.load_path;
+        cmt_source_digest = None;
+        cmt_initial_env = env;
+        cmt_imports = [];
+        cmt_interface_digest = None;
+        cmt_use_summaries = false;
+        cmt_extra_info = {Cmt_utils.deprecated_used = []};
+      }
+    in
+    let has_gentype_annotations =
+      Gentype_main.cmt_check_annotations input_cmt
+        ~check_annotation:(fun ~loc:_ attributes ->
+          attributes
+          |> Annotation.get_attribute_payload
+               Annotation.tag_is_one_of_the_gentype_annotations
+          <> None)
+    in
+    if has_gentype_annotations then
+      let module_ =
+        match module_system with
+        | Ext_module_system.Commonjs -> Gentype_config.CommonJS
+        | Esmodule -> ESModule
+      in
+      let project_root = Sys.getcwd () in
+      let config =
+        {
+          Gentype_config.default with
+          module_;
+          platform_lib = "rescript";
+          project_root;
+          bsb_project_root = project_root;
+          suffix = Literals.suffix_js;
+        }
+      in
+      let source_file = sourcefile in
+      let output_file_relative =
+        source_file |> Paths.get_output_file_relative ~config
+      in
+      let file_name =
+        sourcefile |> Filename.basename |> Filename.remove_extension
+        |> Module_name.from_string_unsafe
+      in
+      let resolver =
+        Module_resolver.create_lazy_resolver ~config
+          ~extensions:[".res"; ".shim.ts"] ~exclude_file:(fun _ -> false)
+      in
+      let code_text =
+        input_cmt
+        |> Gentype_main.translate_cmt ~config ~output_file_relative ~resolver
+        |> Emit_js.emit_translation_as_string ~config ~file_name
+             ~output_file_relative ~resolver
+             ~input_cmt_translate_type_declarations:
+               Gentype_main.input_cmt_translate_type_declarations
+      in
+      Emit_type.file_header ~source_file:(Filename.basename source_file)
+      ^ "\n" ^ code_text ^ "\n"
+    else "No @gentype annotations found."
+
+  let render_javascript ~module_system ~filename ~source ~source_map_mode
+      ~source_map_sources_content ~source_map_root lambda_output =
+    let buffer = Buffer.create 1000 in
+    let generated_file =
+      Filename.concat (Sys.getcwd ())
+        (Filename.remove_extension (Filename.basename filename)
+        ^ Literals.suffix_js)
+    in
+    let source_map_builder =
+      match source_map_mode with
+      | Js_config.No_source_map -> None
+      | Linked | Inline | Hidden ->
+        Some
+          (Js_source_map.make ~generated_file ~source_root:source_map_root
+             ~sources_content:source_map_sources_content)
+    in
+    let print_javascript () =
+      Js_dump_program.pp_deps_program ~output_prefix:"" module_system
+        lambda_output
+        (Ext_pp.from_buffer buffer)
+    in
+    (match source_map_builder with
+    | None -> print_javascript ()
+    | Some builder ->
+      let source_file =
+        if Filename.is_relative filename then
+          Filename.concat (Sys.getcwd ()) filename
+        else filename
+      in
+      let source_dir = Filename.dirname source_file in
+      Js_of_ocaml.Sys_js.mount ~path:source_dir (fun ~prefix:_ ~path ->
+          if path = Filename.basename source_file then Some source else None);
+      Ext_pervasives.finally ()
+        ~clean:(fun () -> Js_of_ocaml.Sys_js.unmount ~path:source_dir)
+        (fun () -> Js_source_map.with_builder builder print_javascript));
+    let source_map =
+      match source_map_builder with
+      | None -> None
+      | Some builder ->
+        let json = Js_source_map.json builder in
+        (match source_map_mode with
+        | Linked ->
+          Buffer.add_string buffer
+            (Js_source_map.linked_comment ~map_file:(generated_file ^ ".map"))
+        | Inline ->
+          Buffer.add_string buffer (Js_source_map.inline_comment ~json)
+        | Hidden -> ()
+        | No_source_map -> assert false);
+        Some json
+    in
+    (Buffer.contents buffer, source_map)
+
   let implementation ?(include_debug_outputs = false)
       ~(config : Bundle_config.t) ~lang str =
     let {
@@ -481,6 +626,10 @@ module Compile = struct
       open_modules;
       experimental_features;
       jsx_preserve_mode;
+      gentype_enabled;
+      source_map_mode;
+      source_map_sources_content;
+      source_map_root;
     } =
       config
     in
@@ -502,6 +651,9 @@ module Compile = struct
       let types_signature = ref [] in
       Js_config.jsx_version := Some Js_config.Jsx_v4;
       Js_config.jsx_preserve := jsx_preserve_mode;
+      Js_config.source_map := source_map_mode;
+      Js_config.source_map_sources_content := source_map_sources_content;
+      Js_config.source_map_root := source_map_root;
       experimental_features
       |> List.iter Experimental_features.enable_from_string;
       (* default *)
@@ -519,27 +671,34 @@ module Compile = struct
       let {Translmod.lambda; exports; hoisted_functions} =
         Translmod.transl_implementation modulename typed_tree
       in
-      let buffer = Buffer.create 1000 in
-      let () =
-        Js_dump_program.pp_deps_program ~output_prefix:""
-          (* does not matter here *) module_system
-          (Lam_compile_main.compile "" exports hoisted_functions lambda)
-          (Ext_pp.from_buffer buffer)
+      let lambda_output =
+        Lam_compile_main.compile "" exports hoisted_functions lambda
       in
-      let v = Buffer.contents buffer in
+      let js_code, source_map =
+        render_javascript ~module_system ~filename ~source:str ~source_map_mode
+          ~source_map_sources_content ~source_map_root lambda_output
+      in
       let type_hints = collect_type_hints typed_tree in
+      let source_map_attrs =
+        match source_map with
+        | None -> [||]
+        | Some source_map ->
+          Js.Unsafe.[|("source_map", inject @@ Js.string source_map)|]
+      in
       let attrs =
-        Js.Unsafe.
-          [|
-            ("js_code", inject @@ Js.string v);
-            ( "warnings",
-              inject
-              @@ (!warning_infos
-                 |> Array.map Error_ret.make_warning
-                 |> Js.array |> inject) );
-            ("type_hints", inject @@ type_hints);
-            ("type", inject @@ Js.string "success");
-          |]
+        Array.append
+          Js.Unsafe.
+            [|
+              ("js_code", inject @@ Js.string js_code);
+              ( "warnings",
+                inject
+                @@ (!warning_infos
+                   |> Array.map Error_ret.make_warning
+                   |> Js.array |> inject) );
+              ("type_hints", inject @@ type_hints);
+              ("type", inject @@ Js.string "success");
+            |]
+          source_map_attrs
       in
       if include_debug_outputs then
         let parsetree = Printer.to_string Printast.implementation ast in
@@ -548,6 +707,19 @@ module Compile = struct
         in
         let lambda_output = Printer.to_string Printlambda.lambda lambda in
         let lam = Printlambda.lambda_to_string lambda in
+        let gentype_attrs =
+          if gentype_enabled then
+            let structure, _ = typed_tree in
+            Js.Unsafe.
+              [|
+                ( "gentype",
+                  inject
+                  @@ Js.string
+                       (gentype_output ~module_system ~modulename
+                          ~sourcefile:filename structure env) );
+              |]
+          else [||]
+        in
         let debug_attrs =
           Js.Unsafe.
             [|
@@ -557,7 +729,7 @@ module Compile = struct
               ("lam", inject @@ Js.string lam);
             |]
         in
-        Js.Unsafe.obj (Array.append attrs debug_attrs)
+        Js.Unsafe.obj (Array.concat [attrs; debug_attrs; gentype_attrs])
       else Js.Unsafe.obj attrs
     with e -> (
       match e with
@@ -658,6 +830,25 @@ module Export = struct
       config.jsx_preserve_mode <- value;
       true
     in
+    let set_gentype_enabled value =
+      config.gentype_enabled <- value;
+      true
+    in
+    let set_source_map_mode value =
+      match Bundle_config.source_map_of_string value with
+      | Some source_map_mode ->
+        config.source_map_mode <- source_map_mode;
+        true
+      | None -> false
+    in
+    let set_source_map_sources_content value =
+      config.source_map_sources_content <- value;
+      true
+    in
+    let set_source_map_root value =
+      config.source_map_root <- value;
+      true
+    in
     let convert_syntax ~(from_lang : string) ~(to_lang : string) (src : string)
         =
       let open Lang in
@@ -716,6 +907,22 @@ module Export = struct
             inject
             @@ Js.wrap_meth_callback (fun _ value ->
                 Js.bool (set_jsx_preserve_mode (Js.to_bool value))) );
+          ( "setGentypeEnabled",
+            inject
+            @@ Js.wrap_meth_callback (fun _ value ->
+                Js.bool (set_gentype_enabled (Js.to_bool value))) );
+          ( "setSourceMapMode",
+            inject
+            @@ Js.wrap_meth_callback (fun _ value ->
+                Js.bool (set_source_map_mode (Js.to_string value))) );
+          ( "setSourceMapSourcesContent",
+            inject
+            @@ Js.wrap_meth_callback (fun _ value ->
+                Js.bool (set_source_map_sources_content (Js.to_bool value))) );
+          ( "setSourceMapRoot",
+            inject
+            @@ Js.wrap_meth_callback (fun _ value ->
+                Js.bool (set_source_map_root (Js.to_string value))) );
           ( "getConfig",
             inject
             @@ Js.wrap_meth_callback (fun _ ->
@@ -730,6 +937,17 @@ module Export = struct
                       ("warn_flags", inject @@ Js.string config.warn_flags);
                       ( "jsx_preserve_mode",
                         inject @@ (config.jsx_preserve_mode |> Js.bool) );
+                      ( "gentype_enabled",
+                        inject @@ (config.gentype_enabled |> Js.bool) );
+                      ( "source_map_mode",
+                        inject
+                        @@ (config.source_map_mode
+                          |> Bundle_config.string_of_source_map |> Js.string) );
+                      ( "source_map_sources_content",
+                        inject @@ (config.source_map_sources_content |> Js.bool)
+                      );
+                      ( "source_map_root",
+                        inject @@ Js.string config.source_map_root );
                       ( "experimental_features",
                         inject
                         @@ (config.experimental_features |> Array.of_list
