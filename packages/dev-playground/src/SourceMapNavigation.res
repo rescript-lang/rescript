@@ -58,6 +58,11 @@ let decode = sourceMap => {
   }
 }
 
+let isCurrentSource = (compiledSource, currentSource) => compiledSource === currentSource
+
+let decodeForSource = (sourceMap, compiledSource, currentSource) =>
+  isCurrentSource(compiledSource, currentSource) ? decode(sourceMap) : []
+
 let distance = (left: position, right: position) => {
   let lineDistance = left.line - right.line
   let colDistance = left.col - right.col

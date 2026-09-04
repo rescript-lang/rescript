@@ -3,7 +3,9 @@ import test from "node:test";
 
 import {
   decode,
+  decodeForSource,
   generatedForOriginal,
+  isCurrentSource,
 } from "../src/SourceMapNavigation.res.mjs";
 
 const sourceMap = JSON.stringify({
@@ -37,6 +39,18 @@ test("finds the closest generated position for a source position", () => {
   const mapping = generatedForOriginal(decode(sourceMap), { line: 2, col: 5 });
 
   assert.deepEqual(mapping?.generated, { line: 2, col: 0 });
+});
+
+test("disables mappings when the result belongs to stale source", () => {
+  assert.equal(isCurrentSource("let value = 1", "let value = 2"), false);
+  assert.deepEqual(
+    decodeForSource(sourceMap, "let value = 1", "let value = 2"),
+    [],
+  );
+  assert.deepEqual(
+    decodeForSource(sourceMap, "let value = 2", "let value = 2"),
+    decode(sourceMap),
+  );
 });
 
 test("does not carry a generated position onto an unmapped source line", () => {

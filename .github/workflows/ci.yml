@@ -260,6 +260,10 @@ jobs:
         if: matrix.build_playground
         run: yarn workspace playground test
 
+      - name: Test dev playground
+        if: matrix.build_playground
+        run: yarn workspace dev-playground test
+
       - name: Stage PR dev playground compiler bundle
         if: ${{ matrix.build_playground && github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'master' && github.event.pull_request.head.repo.full_name == github.repository }}
         env:

@@ -21,6 +21,11 @@ type sourcePosition = {
   col: int,
 }
 
+type compileSnapshot = {
+  source: string,
+  result: CompilerApi.compileResult,
+}
+
 let baseTabs: array<tab> = [Parsetree, Typedtree, Lambda, Lam, JavaScript]
 let moduleSystems: array<moduleSystem> = [Esmodule, Commonjs]
 let sourceMapModes: array<sourceMapMode> = [Disabled, Linked, Inline, Hidden]
@@ -209,13 +214,13 @@ let offsetForPosition = (source, position: SourceMapNavigation.position) => {
   index.contents
 }
 
-let selectedOutput = (result: option<CompilerApi.compileResult>, activeTab: tab) =>
-  switch result {
+let selectedOutput = (snapshot: option<compileSnapshot>, activeTab: tab) =>
+  switch snapshot {
   | None => "The compiler is loading. Results will appear here after the first compile."
-  | Some(Error(result)) =>
+  | Some({result: Error(result)}) =>
     let errors = result.errors->Array.join("\n")
     errors === "" ? result.message : errors
-  | Some(Ok(result)) =>
+  | Some({result: Ok(result)}) =>
     switch activeTab {
     | Parsetree => result.parsetree
     | Typedtree => result.typedtree
@@ -360,16 +365,17 @@ let mappedJavaScriptNode = (
 }
 
 let interactiveOutputNode = (
-  result: option<CompilerApi.compileResult>,
+  snapshot: option<compileSnapshot>,
+  currentSource,
   activeTab,
   selectedPosition,
   onMappingSelect,
   onSourceMapSelect,
 ) => {
-  let output = selectedOutput(result, activeTab)
-  switch (result, activeTab) {
-  | (Some(Ok({sourceMap: Some(sourceMap)})), JavaScript) => {
-      let mappings = SourceMapNavigation.decode(sourceMap)
+  let output = selectedOutput(snapshot, activeTab)
+  switch (snapshot, activeTab) {
+  | (Some({source: compiledSource, result: Ok({sourceMap: Some(sourceMap)})}), JavaScript) => {
+      let mappings = SourceMapNavigation.decodeForSource(sourceMap, compiledSource, currentSource)
       mappings->Array.length > 0
         ? mappedJavaScriptNode(
             output,
@@ -384,14 +390,14 @@ let interactiveOutputNode = (
   }
 }
 
-let resultSummary = (result: option<CompilerApi.compileResult>) =>
-  switch result {
+let resultSummary = (snapshot: option<compileSnapshot>) =>
+  switch snapshot {
   | None => "No compile result yet"
-  | Some(Ok(result)) =>
+  | Some({result: Ok(result)}) =>
     let warningCount = result.warnings->Array.length
     let warningText = warningCount === 0 ? "no warnings" : `${warningCount->Int.toString} warnings`
     `Compiled in ${result.time->Float.toFixed(~digits=1)}ms with ${warningText}`
-  | Some(Error(result)) => result.message
+  | Some({result: Error(result)}) => result.message
   }
 
 module TabButton = {
@@ -408,16 +414,18 @@ module TabButton = {
 
 module Problems = {
   @jsx.component
-  let make = (~compileResult: Signal.t<option<CompilerApi.compileResult>>) => {
+  let make = (~compileResult: Signal.t<option<compileSnapshot>>) => {
     <div class="problems">
       <div class="problems-title"> {View.text("Problems")} </div>
       <pre class="problems-output">
         {View.signalText(() =>
           switch Signal.get(compileResult) {
-          | Some(Ok({warnings})) if warnings->Array.length > 0 => warnings->Array.join("\n")
-          | Some(Error({warnings})) if warnings->Array.length > 0 => warnings->Array.join("\n")
-          | Some(Error({errors})) if errors->Array.length > 0 => errors->Array.join("\n")
-          | Some(Error({message})) => message
+          | Some({result: Ok({warnings})}) if warnings->Array.length > 0 =>
+            warnings->Array.join("\n")
+          | Some({result: Error({warnings})}) if warnings->Array.length > 0 =>
+            warnings->Array.join("\n")
+          | Some({result: Error({errors})}) if errors->Array.length > 0 => errors->Array.join("\n")
+          | Some({result: Error({message})}) => message
           | _ => "No problems reported."
           }
         )}
@@ -682,7 +690,7 @@ module App = {
     let mappedGeneratedPosition: Signal.t<option<SourceMapNavigation.position>> = Signal.make(None)
     let status = Signal.make(Loading)
     let compilerInfo: Signal.t<option<CompilerApi.info>> = Signal.make(None)
-    let compileResult: Signal.t<option<CompilerApi.compileResult>> = Signal.make(None)
+    let compileResult: Signal.t<option<compileSnapshot>> = Signal.make(None)
     let config = Signal.make(CompilerApi.defaultConfig)
     let visibleTabNodes: Signal.t<array<View.node>> = Obj.magic(
       Computed.make(() =>
@@ -733,38 +741,50 @@ module App = {
       )
 
     let revealOriginalMapping = (mapping: SourceMapNavigation.mapping) =>
-      switch mapping.original {
-      | Some(original) => {
-          Signal.set(mappedSourcePosition, Some(original.position))
-          Signal.set(mappedGeneratedPosition, Some(mapping.generated))
-          Signal.set(activeLine, original.position.line)
-          Window.requestAnimationFrame(() =>
-            switch Document.current->Document.getElementById("source-editor") {
-            | Some(editor) => {
-                let offset = offsetForPosition(Signal.peek(source), original.position)
-                editor->TextAreaElement.setSelectionRange(offset, offset)
-                editor->Element.focus
-                Signal.set(activeLine, original.position.line)
-                let scrollTop = Math.Int.max(
-                  0,
-                  18 + (original.position.line - 1) * 22 - editor->TextAreaElement.clientHeight / 2,
-                )
-                editor->TextAreaElement.setScrollTop(scrollTop)
-                Signal.set(editorScrollTop, editor->TextAreaElement.scrollTop)
+      switch Signal.peek(compileResult) {
+      | Some({source: compiledSource})
+        if SourceMapNavigation.isCurrentSource(compiledSource, Signal.peek(source)) =>
+        switch mapping.original {
+        | Some(original) => {
+            Signal.set(mappedSourcePosition, Some(original.position))
+            Signal.set(mappedGeneratedPosition, Some(mapping.generated))
+            Signal.set(activeLine, original.position.line)
+            Window.requestAnimationFrame(() =>
+              switch Document.current->Document.getElementById("source-editor") {
+              | Some(editor) => {
+                  let offset = offsetForPosition(Signal.peek(source), original.position)
+                  editor->TextAreaElement.setSelectionRange(offset, offset)
+                  editor->Element.focus
+                  Signal.set(activeLine, original.position.line)
+                  let scrollTop = Math.Int.max(
+                    0,
+                    18 +
+                    (original.position.line - 1) * 22 -
+                    editor->TextAreaElement.clientHeight / 2,
+                  )
+                  editor->TextAreaElement.setScrollTop(scrollTop)
+                  Signal.set(editorScrollTop, editor->TextAreaElement.scrollTop)
+                }
+              | None => ()
               }
-            | None => ()
-            }
-          )
+            )
+          }
+        | None => ()
         }
-      | None => ()
+      | _ => clearMappedPositions()
       }
 
     let navigateFromSource = event => {
       syncEditorState(event)
-      let position = cursorPositionForOffset(Event.value(event), Event.selectionStart(event))
+      let currentSource = Event.value(event)
+      let position = cursorPositionForOffset(currentSource, Event.selectionStart(event))
       switch Signal.peek(compileResult) {
-      | Some(Ok({sourceMap: Some(sourceMap)})) => {
-          let mappings = SourceMapNavigation.decode(sourceMap)
+      | Some({source: compiledSource, result: Ok({sourceMap: Some(sourceMap)})}) => {
+          let mappings = SourceMapNavigation.decodeForSource(
+            sourceMap,
+            compiledSource,
+            currentSource,
+          )
           switch SourceMapNavigation.generatedForOriginal(
             mappings,
             {
@@ -788,6 +808,7 @@ module App = {
     let compileNow = () => {
       compileSequence := compileSequence.contents + 1
       let sequence = compileSequence.contents
+      let sourceToCompile = Signal.peek(source)
 
       let run = async () => {
         switch Signal.peek(status) {
@@ -796,10 +817,10 @@ module App = {
         | Ready | Compiling =>
           Signal.set(status, Compiling)
           try {
-            let result = await CompilerApi.compile(Signal.peek(source), Signal.peek(config))
+            let result = await CompilerApi.compile(sourceToCompile, Signal.peek(config))
             if sequence === compileSequence.contents {
               clearMappedPositions()
-              Signal.set(compileResult, Some(result))
+              Signal.set(compileResult, Some({source: sourceToCompile, result}))
               Signal.set(status, Ready)
             }
           } catch {
@@ -867,7 +888,10 @@ module App = {
               }
             | Error(failure) =>
               if sequence === compileSequence.contents {
-                Signal.set(compileResult, Some(Error(failure)))
+                Signal.set(
+                  compileResult,
+                  Some({source: sourceBeforeFormat, result: Error(failure)}),
+                )
                 Signal.set(status, Ready)
               }
             }
@@ -1073,6 +1097,7 @@ module App = {
                 switch insertTabIndent(event) {
                 | Some(nextSource) =>
                   Signal.set(source, nextSource)
+                  clearMappedPositions()
                   syncEditorState(event)
                   scheduleUrlSync()
                   scheduleCompile()
@@ -1096,6 +1121,7 @@ module App = {
                   let selectedTab = Signal.get(activeTab)
                   interactiveOutputNode(
                     Signal.get(compileResult),
+                    Signal.get(source),
                     selectedTab,
                     Signal.get(mappedGeneratedPosition),
                     revealOriginalMapping,
