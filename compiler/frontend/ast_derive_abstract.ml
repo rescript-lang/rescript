@@ -85,8 +85,8 @@ let handle_tdcl light (tdcl : Parsetree.type_declaration) :
           (if has_optional_field then
              (* start with the implicit unit argument *)
              [
-               ({attrs = []; lbl = Nolabel; typ = Ast_literal.type_unit ()}
-                 : Parsetree.arg);
+               Parsetree.Parg_type
+                 {attrs = []; lbl = Nolabel; typ = Ast_literal.type_unit ()};
              ]
            else []),
           [] )
@@ -111,11 +111,11 @@ let handle_tdcl light (tdcl : Parsetree.type_declaration) :
           (* build the argument representing this field *)
           let field_arg =
             if is_optional then
-              ({attrs = []; lbl = Asttypes.Optional pld_name; typ = pld_type}
-                : Parsetree.arg)
+              Parsetree.Parg_type
+                {attrs = []; lbl = Asttypes.Optional pld_name; typ = pld_type}
             else
-              ({attrs = []; lbl = Asttypes.Labelled pld_name; typ = pld_type}
-                : Parsetree.arg)
+              Parsetree.Parg_type
+                {attrs = []; lbl = Asttypes.Labelled pld_name; typ = pld_type}
           in
 
           (* prepend to the maker argument list *)
@@ -126,11 +126,11 @@ let handle_tdcl light (tdcl : Parsetree.type_declaration) :
             if is_optional then
               let optional_type = Ast_core_type.lift_option_type pld_type in
               Ast_helper.Typ.arrow ~loc
-                [{attrs = []; lbl = Nolabel; typ = core_type}]
+                [Parg_type {attrs = []; lbl = Nolabel; typ = core_type}]
                 optional_type
             else
               Ast_helper.Typ.arrow ~loc
-                [{attrs = []; lbl = Nolabel; typ = core_type}]
+                [Parg_type {attrs = []; lbl = Nolabel; typ = core_type}]
                 pld_type
           in
           let accessor_prim =
@@ -172,10 +172,10 @@ let handle_tdcl light (tdcl : Parsetree.type_declaration) :
               let setter_type =
                 Ast_helper.Typ.arrow ~loc:pld_loc
                   [
-                    ({attrs = []; lbl = Nolabel; typ = core_type}
-                      : Parsetree.arg);
-                    ({attrs = []; lbl = Nolabel; typ = pld_type}
-                      : Parsetree.arg);
+                    Parsetree.Parg_type
+                      {attrs = []; lbl = Nolabel; typ = core_type};
+                    Parsetree.Parg_type
+                      {attrs = []; lbl = Nolabel; typ = pld_type};
                   ]
                   (Ast_literal.type_unit ())
               in

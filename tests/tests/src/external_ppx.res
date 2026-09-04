@@ -21,10 +21,10 @@ let renamed = renamed_make(~_type="123", ~normal=12.)
 @obj
 external ff: (
   ~hi: int,
-  ~lo: @as(3) _,
-  ~lo2: @as(json`{hi:-3 }`) _,
-  ~lo3: @as(-1) _,
-  ~lo4: @as(json`-3`) _,
+  ~lo: %raw("3"),
+  ~lo2: %raw("{hi: -3}"),
+  ~lo3: %raw("-1"),
+  ~lo4: %raw("-3"),
 ) => _ = ""
 
 let u = ff(~hi=2)

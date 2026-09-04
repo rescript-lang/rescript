@@ -116,7 +116,6 @@ type error =
   | Polyvar_literal_overflow
   | Unknown_literal of string * char
   | Invalid_string_escape_sequence
-  | Json_literal_outside_external
   | Illegal_letrec_pat
   | Empty_record_literal
   | Uncurried_arity_mismatch of {

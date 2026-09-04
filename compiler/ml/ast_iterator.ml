@@ -97,7 +97,11 @@ module T = struct
     match desc with
     | Ptyp_any | Ptyp_var _ -> ()
     | Ptyp_arrow {params; ret} ->
-      List.iter (fun (arg : Parsetree.arg) -> sub.typ sub arg.typ) params;
+      List.iter
+        (function
+          | Parsetree.Parg_type {typ} -> sub.typ sub typ
+          | Parsetree.Parg_fixed _ -> ())
+        params;
       sub.typ sub ret
     | Ptyp_tuple tyl -> List.iter (sub.typ sub) tyl
     | Ptyp_constr (lid, tl) ->

@@ -1,8 +1,8 @@
 
-  [1;31mSyntax error![0m
-  [36m/.../fixtures/syntaxErrors_json_interpolation.res[0m:[2m1:17-35[0m
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/syntaxErrors_json_interpolation.res[0m:[2m1:13-16[0m
 
-  [1;31m1[0m [2m│[0m let value = json[1;31m`head${"value"}tail[0m`
+  [1;31m1[0m [2m│[0m let value = [1;31mjson[0m`head${"value"}tail`
   2 [2m│[0m 
 
-  `json` literals do not support interpolation
+  The value json can't be found

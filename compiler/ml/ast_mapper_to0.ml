@@ -82,7 +82,6 @@ let map_constant = function
   | Pconst_string payload ->
     Pconst_string (String_literal.string_source payload, Some "js")
   | Pconst_raw_source s -> Pconst_string (s, Some "js")
-  | Pconst_json s -> Pconst_string (s, Some "json")
   | Pconst_float (s, suffix) -> Pconst_float (s, suffix)
 
 let template_attr = (Location.mknoloc "res.template", Pt.PStr [])
@@ -153,9 +152,29 @@ module T = struct
       let rec build (params : Parsetree.arg list) =
         match params with
         | [] -> sub.typ sub ret
-        | (arg : Parsetree.arg) :: rest ->
-          let lbl = Asttypes.to_noloc arg.lbl in
-          let arg_attrs = sub.attributes sub arg.attrs in
+        | arg :: rest ->
+          let lbl, arg_attrs, arg_type, arg_loc =
+            match arg with
+            | Parg_type {attrs; lbl; typ} ->
+              ( Asttypes.to_noloc lbl,
+                sub.attributes sub attrs,
+                sub.typ sub typ,
+                typ.ptyp_loc )
+            | Parg_fixed {attrs; lbl; value} ->
+              let payload =
+                Pt.PStr
+                  [
+                    Ast_helper0.Str.eval ~loc:value.loc
+                      (Ast_helper0.Exp.constant ~loc:value.loc
+                         (Pt.Pconst_string (value.txt, Some "json")));
+                  ]
+              in
+              ( Asttypes.to_noloc lbl,
+                sub.attributes sub attrs
+                @ [({txt = "as"; loc = value.loc}, payload)],
+                Ast_helper0.Typ.any ~loc:value.loc (),
+                value.loc )
+          in
           let is_head = List.length rest = arity - 1 in
           let merged_attrs =
             if is_head && attrs <> [] then
@@ -166,11 +185,9 @@ module T = struct
             else arg_attrs
           in
           let arrow_loc =
-            if is_head then loc
-            else {loc with loc_start = arg.typ.ptyp_loc.loc_start}
+            if is_head then loc else {loc with loc_start = arg_loc.loc_start}
           in
-          arrow ~loc:arrow_loc ~attrs:merged_attrs lbl (sub.typ sub arg.typ)
-            (build rest)
+          arrow ~loc:arrow_loc ~attrs:merged_attrs lbl arg_type (build rest)
       in
       let typ0 = build params in
       let arity_string = "Has_arity" ^ string_of_int arity in

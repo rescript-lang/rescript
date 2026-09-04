@@ -107,7 +107,7 @@ let rec no_side_effect_expression_desc (x : J.expression_desc) =
   | Undefined _ | Null | Bool _ | Var _ -> true
   | Fun _ -> true
   | Number _ -> true (* Can be refined later *)
-  | Json_literal _ -> true
+  | Fixed_literal _ -> true
   | Static_index (obj, (_name : string), (_pos : int32 option)) ->
     no_side_effect obj
   | String_index (a, b) | Array_index (a, b) ->
@@ -256,7 +256,7 @@ let rec eq_expression ({expression_desc = x0} : J.expression)
       eq_expression_list ls0 ls1 && flag0 = flag1 && info0 = info1
     | _ -> false)
   | Length _ | Is_null_or_undefined _ | String_append _ | Typeof _ | Js_not _
-  | Js_bnot _ | In _ | Cond _ | New _ | Fun _ | Json_literal _ | Raw_js_code _
+  | Js_bnot _ | In _ | Cond _ | New _ | Fun _ | Fixed_literal _ | Raw_js_code _
   | Array _ | Caml_block_tag _ | Object _ | Tagged_template _
   | Interpolated_template _ | Await _ | Record_rest _ ->
     false

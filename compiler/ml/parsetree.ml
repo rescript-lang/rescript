@@ -47,12 +47,6 @@ type constant =
      legacy three-digit decimal escapes to hexadecimal escapes. Compiler-created
      Payloads are constructed through [String_literal], which validates this
      relationship. *)
-  | Pconst_json of string
-  (* The JavaScript source inside a non-interpolated [json`...`] literal. For
-     example, [@as(json`{"ok": true}`)] stores ["{\"ok\": true}"]. Built-in
-     FFI processing consumes this form in supported external attributes;
-     otherwise the frontend rejects it. The string is JavaScript source, not a
-     decoded ReScript string value. *)
   | Pconst_raw_source of string
   (* JavaScript source carried by a compiler extension such as [raw], [ffi], or
      [re]. For example, [%raw("x + 1")] stores ["x + 1"]. The extension
@@ -101,7 +95,11 @@ and core_type = {
   ptyp_attributes: attributes; (* ... [@id1] [@id2] *)
 }
 
-and arg = {attrs: attributes; lbl: arg_label; typ: core_type}
+and fixed_value = string loc
+
+and arg =
+  | Parg_type of {attrs: attributes; lbl: arg_label; typ: core_type}
+  | Parg_fixed of {attrs: attributes; lbl: arg_label; value: fixed_value}
 
 and core_type_desc =
   | Ptyp_any (*  _ *)

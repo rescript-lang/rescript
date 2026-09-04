@@ -22,9 +22,10 @@ success "Watcher Started"
 # Trigger a recompilation
 echo 'Console.log("added-by-test")' >> ./packages/main/src/Main.res
 
-# Wait for the compiled JS to show up (can be slow in CI)
+# A cold build of the test repo can exceed 20 seconds on Intel macOS CI.
+# Poll so faster machines can continue as soon as the output is ready.
 target=./packages/main/src/Main.mjs
-if ! wait_for_file "$target" 20; then
+if ! wait_for_file "$target" 60; then
   error "Expected output not found: $target"
   ls -la ./packages/main/src || true
   tail -n 200 rewatch.log || true

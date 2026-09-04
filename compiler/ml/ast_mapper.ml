@@ -94,7 +94,11 @@ module T = struct
     | Ptyp_arrow {params; ret} ->
       Typ.arrow ~loc ~attrs
         (List.map
-           (fun (arg : Parsetree.arg) -> {arg with typ = sub.typ sub arg.typ})
+           (function
+             | Parsetree.Parg_type arg ->
+               Parsetree.Parg_type {arg with typ = sub.typ sub arg.typ}
+             | Parsetree.Parg_fixed arg ->
+               Parsetree.Parg_fixed {arg with value = map_loc sub arg.value})
            params)
         (sub.typ sub ret)
     | Ptyp_tuple tyl -> Typ.tuple ~loc ~attrs (List.map (sub.typ sub) tyl)

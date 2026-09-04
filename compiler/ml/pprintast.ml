@@ -255,8 +255,6 @@ let constant f = function
   | Pconst_string payload ->
     pp f "{js|%a|js}" print_string_with_byte_width
       (String_literal.string_source payload)
-  | Pconst_json source ->
-    pp f "{json|%a|json}" print_string_with_byte_width source
   | Pconst_raw_source source ->
     pp f "{js|%a|js}" print_string_with_byte_width source
   | Pconst_integer (i, None) -> paren (i.[0] = '-') (fun f -> pp f "%s") f i
@@ -297,14 +295,23 @@ let tyvar_loc f str = pp f "'%s" str.txt
 let string_quot f x = pp f "`%s" x
 
 let rec type_with_label ctxt f arg =
-  match arg.lbl with
-  | Nolabel ->
-    pp f "%a%a" (core_type1 ctxt) arg.typ (attributes ctxt) arg.attrs
-    (* otherwise parenthesize *)
-  | Labelled {txt = s} ->
-    pp f "%s:%a%a" s (core_type1 ctxt) arg.typ (attributes ctxt) arg.attrs
-  | Optional {txt = s} ->
-    pp f "?%s:%a%a" s (core_type1 ctxt) arg.typ (attributes ctxt) arg.attrs
+  match arg with
+  | Parg_fixed {attrs; lbl; value} ->
+    let label =
+      match lbl with
+      | Nolabel -> ""
+      | Labelled {txt = s} -> s ^ ":"
+      | Optional {txt = s} -> "?" ^ s ^ ":"
+    in
+    pp f "%s%%raw(%a)%a" label print_quoted_string_with_byte_width value.txt
+      (attributes ctxt) attrs
+  | Parg_type {attrs; lbl; typ} -> (
+    match lbl with
+    | Nolabel -> pp f "%a%a" (core_type1 ctxt) typ (attributes ctxt) attrs
+    | Labelled {txt = s} ->
+      pp f "%s:%a%a" s (core_type1 ctxt) typ (attributes ctxt) attrs
+    | Optional {txt = s} ->
+      pp f "?%s:%a%a" s (core_type1 ctxt) typ (attributes ctxt) attrs)
 
 and core_type ctxt f x =
   if x.ptyp_attributes <> [] then

@@ -167,8 +167,8 @@ module Document = {
   @val external current: {..} = "document"
   @get external head: {..} => Dom.element = "head"
   @get external body: {..} => Dom.element = "body"
-  @send external createScriptElement: ({..}, @as("script") _) => Dom.element = "createElement"
-  @send external createTextAreaElement: ({..}, @as("textarea") _) => Dom.element = "createElement"
+  @send external createScriptElement: ({..}, %raw(`"script"`)) => Dom.element = "createElement"
+  @send external createTextAreaElement: ({..}, %raw(`"textarea"`)) => Dom.element = "createElement"
   @send @return(nullable)
   external getElementById: ({..}, string) => option<Dom.element> = "getElementById"
   @send external execCommand: ({..}, string) => bool = "execCommand"
@@ -194,7 +194,7 @@ module Location = {
 
 module History = {
   @val @scope(("window", "history"))
-  external replaceState: (@as(json`null`) _, @as("") _, string) => unit = "replaceState"
+  external replaceState: (%raw("null"), %raw(`""`), string) => unit = "replaceState"
 }
 
 module Performance = {

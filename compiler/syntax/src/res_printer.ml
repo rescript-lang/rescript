@@ -598,8 +598,6 @@ let print_constant c =
         print_string_contents (String_literal.string_source payload);
         Doc.text "\"";
       ]
-  | Pconst_json source ->
-    Doc.concat [Doc.text "json`"; print_string_contents source; Doc.text "`"]
   | Pconst_raw_source source ->
     let delimiter =
       if raw_source_fits_double_quotes source then "\"" else "`"
@@ -1913,7 +1911,7 @@ and print_typ_expr ?inline_record_definitions ~(state : State.t)
     in
     match args with
     | [] -> Doc.nil
-    | [{attrs = []; lbl = Nolabel; typ}] ->
+    | [Parg_type {attrs = []; lbl = Nolabel; typ}] ->
       let has_attrs_before = not (attrs_before = []) in
       let attrs =
         if has_attrs_before then
@@ -2316,8 +2314,26 @@ and print_object_field ~state (field : Parsetree.object_field) cmt_tbl =
 (* es6 arrow type arg
  * type t = (~foo: string, ~bar: float=?, unit) => unit
  * i.e. ~foo: string, ~bar: float *)
-and print_type_parameter ?inline_record_definitions ~state {attrs; lbl; typ}
-    cmt_tbl =
+and print_type_parameter ?inline_record_definitions ~state parameter cmt_tbl =
+  let attrs, lbl, value_doc, end_loc =
+    match parameter with
+    | Parsetree.Parg_type {attrs; lbl; typ} ->
+      ( attrs,
+        lbl,
+        print_typ_expr ?inline_record_definitions ~state typ cmt_tbl,
+        typ.ptyp_loc )
+    | Parsetree.Parg_fixed {attrs; lbl; value} ->
+      ( attrs,
+        lbl,
+        Doc.group
+          (Doc.concat
+             [
+               Doc.text "%raw(";
+               print_constant (Pconst_raw_source value.txt);
+               Doc.rparen;
+             ]),
+        value.loc )
+  in
   (* Converting .ml code to .res requires processing uncurried attributes *)
   let attrs = print_attributes ~state attrs cmt_tbl in
   let label =
@@ -2333,16 +2349,9 @@ and print_type_parameter ?inline_record_definitions ~state {attrs; lbl; typ}
     | Nolabel | Labelled _ -> Doc.nil
     | Optional _ -> Doc.text "=?"
   in
-  let loc = {(Asttypes.get_lbl_loc lbl) with loc_end = typ.ptyp_loc.loc_end} in
+  let loc = {(Asttypes.get_lbl_loc lbl) with loc_end = end_loc.loc_end} in
   let doc =
-    Doc.group
-      (Doc.concat
-         [
-           attrs;
-           label;
-           print_typ_expr ?inline_record_definitions ~state typ cmt_tbl;
-           optional_indicator;
-         ])
+    Doc.group (Doc.concat [attrs; label; value_doc; optional_indicator])
   in
   print_comments doc cmt_tbl loc
 

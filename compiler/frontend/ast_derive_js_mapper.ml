@@ -75,7 +75,9 @@ let erase_type_str =
   Str.primitive
     (Val.mk ~prim:(Parsetree.Prim_name "%identity")
        {loc = noloc; txt = erase_type_lit}
-       (Ast_helper.Typ.arrow [{attrs = []; lbl = Nolabel; typ = any}] any))
+       (Ast_helper.Typ.arrow
+          [Parg_type {attrs = []; lbl = Nolabel; typ = any}]
+          any))
 
 let unsafe_index = "_index"
 
@@ -87,8 +89,8 @@ let unsafe_index_get =
        ~attrs:[Ast_attributes.get_index]
        (Ast_helper.Typ.arrow
           [
-            {attrs = []; lbl = Nolabel; typ = any};
-            {attrs = []; lbl = Nolabel; typ = any};
+            Parg_type {attrs = []; lbl = Nolabel; typ = any};
+            Parg_type {attrs = []; lbl = Nolabel; typ = any};
           ]
           any))
 
@@ -137,7 +139,8 @@ let build_map (row_fields : Parsetree.row_field list) =
   in
   (data, rev_data, !has_bs_as)
 
-let ( ->~ ) a b = Ast_helper.Typ.arrow [{attrs = []; lbl = Nolabel; typ = a}] b
+let ( ->~ ) a b =
+  Ast_helper.Typ.arrow [Parg_type {attrs = []; lbl = Nolabel; typ = a}] b
 
 let raise_when_not_found_ident =
   Longident.Ldot (Lident Primitive_modules.util, "raiseWhenNotFound")
@@ -293,7 +296,7 @@ let init () =
               let to_js_type result =
                 Ast_comb.single_non_rec_val pat_to_js
                   (Ast_helper.Typ.arrow
-                     [{attrs = []; lbl = Nolabel; typ = core_type}]
+                     [Parg_type {attrs = []; lbl = Nolabel; typ = core_type}]
                      result)
               in
               let new_type, new_tdcl =

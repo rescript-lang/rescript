@@ -217,7 +217,7 @@ JSON.stringifyWithIndent(json, 2)
 ```
 */
 @deprecated("Use `stringify` with optional parameter instead") @val
-external stringifyWithIndent: (t, @as(json`null`) _, int) => string = "JSON.stringify"
+external stringifyWithIndent: (t, %raw("null"), int) => string = "JSON.stringify"
 
 /** 
 `stringifyWithReplacer(json, replacer)`
@@ -442,7 +442,7 @@ switch BigInt.fromInt(0)->JSON.stringifyAny {
 - Throws a TypeError if the value contains `BigInt`s.
 */
 @deprecated("Use `stringifyAny` with optional parameter instead") @val
-external stringifyAnyWithIndent: ('a, @as(json`null`) _, int) => option<string> = "JSON.stringify"
+external stringifyAnyWithIndent: ('a, %raw("null"), int) => option<string> = "JSON.stringify"
 
 /** 
 `stringifyAnyWithReplacer(json, replacer)`

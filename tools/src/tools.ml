@@ -864,7 +864,6 @@ module Format_codeblocks = struct
             match (name, payload) with
             | {txt = "res.doc"}, PStr [{pstr_desc = Pstr_eval ({pexp_loc}, _)}]
               -> (
-              Ast_payload.reject_json_literal_payload payload;
               match Ast_payload.semantic_string_of_payload payload with
               | Some contents ->
                 let formatted_contents, had_code_blocks =

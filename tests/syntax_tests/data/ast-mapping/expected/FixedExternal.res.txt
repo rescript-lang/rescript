@@ -1,0 +1,17 @@
+
+  Warning number 3
+  syntax_tests/data/ast-mapping/FixedExternal.res:5:25-27
+
+  3 │ 
+  4 │ @val
+  5 │ external legacyObject: (@as(json`{foo: true}`) _, int) => int = "Object.
+    │ assign"
+  6 │ 
+
+  deprecated: The fixed-value `@as(...) _` external argument syntax is deprecated. Use `%raw(...)` instead.
+
+@val
+external unsafeAddStyle: (%raw("{}"), t, {..}) => t = "Object.assign"
+
+@val
+external legacyObject: (%raw("{foo: true}"), int) => int = "Object.assign"

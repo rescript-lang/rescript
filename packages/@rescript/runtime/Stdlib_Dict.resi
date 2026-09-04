@@ -280,7 +280,7 @@ merged == dict{"firstKey": 2, "someKey": 3}
 ```
 */
 @val
-external concat: (@as(json`{}`) _, dict<'a>, dict<'a>) => dict<'a> = "Object.assign"
+external concat: (%raw("{}"), dict<'a>, dict<'a>) => dict<'a> = "Object.assign"
 
 /**
 `concatMany(target, sources)` [shallowly](https://developer.mozilla.org/en-US/docs/Glossary/Shallow_copy) merges `target` and each dictionary in `sources` into a fresh dictionary, and returns the new dictionary.
@@ -301,7 +301,7 @@ merged == dict{"firstKey": 1, "someKey": 3, "someKey2": 4}
 ```
 */
 @variadic @val
-external concatMany: (@as(json`{}`) _, dict<'a>, array<dict<'a>>) => dict<'a> = "Object.assign"
+external concatMany: (%raw("{}"), dict<'a>, array<dict<'a>>) => dict<'a> = "Object.assign"
 
 /**
 `concatAll(dictionaries)` [shallowly](https://developer.mozilla.org/en-US/docs/Glossary/Shallow_copy) merges all dictionaries in `dictionaries` into a fresh dictionary, and returns the new dictionary.
@@ -322,7 +322,7 @@ merged == dict{"firstKey": 1, "someKey": 3, "someKey2": 4}
 ```
 */
 @variadic @val
-external concatAll: (@as(json`{}`) _, array<dict<'a>>) => dict<'a> = "Object.assign"
+external concatAll: (%raw("{}"), array<dict<'a>>) => dict<'a> = "Object.assign"
 
 /**
 `copy(dictionary)` [shallowly copies](https://developer.mozilla.org/en-US/docs/Glossary/Shallow_copy) the provided dictionary to a new dictionary.
@@ -337,7 +337,7 @@ Console.log2(dict->Dict.keysToArray, dict2->Dict.keysToArray)
 ```
 */
 @val
-external copy: (@as(json`{}`) _, dict<'a>) => dict<'a> = "Object.assign"
+external copy: (%raw("{}"), dict<'a>) => dict<'a> = "Object.assign"
 
 /**
 `forEach(dictionary, f)` iterates through all values of the dict.

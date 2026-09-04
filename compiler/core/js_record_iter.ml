@@ -124,7 +124,7 @@ let expression_desc : expression_desc fn =
     _self.block _self body
   | Str _ -> ()
   | Template_literal _ -> ()
-  | Json_literal _ -> ()
+  | Fixed_literal _ -> ()
   | Raw_js_code _ -> ()
   | Array _x0 -> list _self.expression _self _x0
   | Optional_block (_x0, _x1) -> _self.expression _self _x0

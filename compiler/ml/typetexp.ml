@@ -307,31 +307,31 @@ and transl_type_aux env policy styp =
   | Ptyp_arrow {params; ret} ->
     let cparams =
       List.map
-        (fun (arg : Parsetree.arg) ->
-          let cty = transl_type env policy arg.typ in
-          let ty =
-            if Btype.is_optional arg.lbl then
-              newty (Tconstr (Predef.path_option, [cty.ctyp_type], ref Mnil))
-            else cty.ctyp_type
-          in
-          (arg, cty, ty))
+        (function
+          | Parsetree.Parg_type {attrs; lbl; typ} ->
+            let cty = transl_type env policy typ in
+            let ty =
+              if Btype.is_optional lbl then
+                newty (Tconstr (Predef.path_option, [cty.ctyp_type], ref Mnil))
+              else cty.ctyp_type
+            in
+            (attrs, lbl, cty, ty)
+          | Parsetree.Parg_fixed {value} ->
+            Location.raise_errorf ~loc:value.loc
+              "%%raw fixed arguments are only allowed on external functions")
         params
     in
     let cty2 = transl_type env policy ret in
     let ty =
       newty
         (Tarrow
-           ( List.map
-               (fun ((arg : Parsetree.arg), _, ty1) ->
-                 {Types.lbl = arg.lbl; typ = ty1})
-               cparams,
+           ( List.map (fun (_, lbl, _, ty1) -> {Types.lbl; typ = ty1}) cparams,
              cty2.ctyp_type ))
     in
     ctyp
       (Ttyp_arrow
          ( List.map
-             (fun ((arg : Parsetree.arg), cty1, _) ->
-               {Typedtree.attrs = arg.attrs; lbl = arg.lbl; typ = cty1})
+             (fun (attrs, lbl, cty1, _) -> {Typedtree.attrs; lbl; typ = cty1})
              cparams,
            cty2 ))
       ty

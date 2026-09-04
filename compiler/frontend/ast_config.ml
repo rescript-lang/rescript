@@ -47,7 +47,6 @@ let process_directives str =
   |> List.iter (fun (item : Parsetree.structure_item) ->
       match item.pstr_desc with
       | Pstr_attribute ({txt = "directive"}, payload) -> (
-        Ast_payload.reject_json_literal_payload payload;
         match Ast_payload.semantic_string_of_payload payload with
         | Some d -> Js_config.directives := !Js_config.directives @ [d]
         | None -> Bs_syntaxerr.err item.pstr_loc Expect_string_literal)

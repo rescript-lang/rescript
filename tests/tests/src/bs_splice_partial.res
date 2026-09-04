@@ -5,7 +5,7 @@
 
 type t
 @send @variadic
-external on_exit_slice3: (t, int, ~h: @as(3) _, @as("xxx") _, array<int>) => unit = "xx"
+external on_exit_slice3: (t, int, ~h: %raw("3"), %raw(`"xxx"`), array<int>) => unit = "xx"
 
 let test = g => on_exit_slice3(g, __LINE__, [1, 2, 3])
 
@@ -46,6 +46,6 @@ type u = int => int
 
 let f = x => ignore(v(x))
 
-@val external fff0: (int, int, @as(json`[undefined,undefined]`) _) => int = "say"
+@val external fff0: (int, int, %raw("[undefined,undefined]")) => int = "say"
 
 let testUndefined = () => fff0(1, 2)

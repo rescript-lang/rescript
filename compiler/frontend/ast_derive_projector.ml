@@ -134,7 +134,9 @@ let init () =
                 Ext_list.map label_declarations (fun {pld_name; pld_type} ->
                     Ast_comb.single_non_rec_val ?attrs:gentype_attrs pld_name
                       (Ast_helper.Typ.arrow
-                         [{attrs = []; lbl = Nolabel; typ = core_type}]
+                         [
+                           Parg_type {attrs = []; lbl = Nolabel; typ = core_type};
+                         ]
                          pld_type
                          (*arity will alwys be 1 since these are single param functions*)))
               | Ptype_variant constructor_declarations ->
@@ -162,8 +164,8 @@ let init () =
                       {loc; txt = Ext_string.uncapitalize_ascii con_name}
                       (match
                          Ext_list.map pcd_args (fun x ->
-                             ({attrs = []; lbl = Nolabel; typ = x}
-                               : Parsetree.arg))
+                             Parsetree.Parg_type
+                               {attrs = []; lbl = Nolabel; typ = x})
                        with
                       | [] ->
                         (* zero-argument constructor: the accessor is a value *)

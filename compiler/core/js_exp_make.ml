@@ -35,7 +35,7 @@ type t = J.expression
  *)
 let rec remove_pure_sub_exp (x : t) : t option =
   match x.expression_desc with
-  | Var _ | Str _ | Template_literal _ | Json_literal _ | Number _ ->
+  | Var _ | Str _ | Template_literal _ | Fixed_literal _ | Number _ ->
     None (* Can be refined later *)
   | Array_index (a, b) ->
     if is_pure_sub_exp a && is_pure_sub_exp b then None else Some x
@@ -201,8 +201,8 @@ let str ?comment txt : t =
 let template_literal ?comment segment : t =
   {expression_desc = Template_literal segment; comment; source_loc = None}
 
-let json_literal ?comment source : t =
-  {expression_desc = Json_literal source; comment; source_loc = None}
+let fixed_literal ?comment source : t =
+  {expression_desc = Fixed_literal source; comment; source_loc = None}
 
 let raw_js_code ?comment info s : t =
   {

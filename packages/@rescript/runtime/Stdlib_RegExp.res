@@ -3,8 +3,8 @@ type t
 
 module Result = {
   type t = array<option<string>>
-  @get_index external fullMatch: (t, @as(0) _) => string = ""
-  @send external matches: (t, @as(1) _) => array<option<string>> = "slice"
+  @get_index external fullMatch: (t, %raw("0")) => string = ""
+  @send external matches: (t, %raw("1")) => array<option<string>> = "slice"
   @get external index: t => int = "index"
   @get external input: t => string = "input"
 }

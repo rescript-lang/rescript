@@ -325,7 +325,7 @@ let sliceToEnd: (t<'a>, int) => t<'a>
 elements as `a`.
 */
 @send
-external copy: (t<'a>, @as(0) _) => t<'a> = "slice"
+external copy: (t<'a>, %raw("0")) => t<'a> = "slice"
 
 /**
 `fill(arr, ~offset, ~len, x)` modifies `arr` in place, storing `x` in elements

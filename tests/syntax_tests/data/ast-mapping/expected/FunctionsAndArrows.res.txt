@@ -1,3 +1,16 @@
+
+  Warning number 3
+  syntax_tests/data/ast-mapping/FunctionsAndArrows.res:47:29-31
+
+  45 │ // phantom @as arguments: written arity differs from lowered call arity
+  46 │ @val
+  47 │ external phantom: (~a: int, @as(json`false`) _, ~c: string) => unit = "
+     │ phantom"
+  48 │ 
+  49 │ // external with uncurried callback argument
+
+  deprecated: The fixed-value `@as(...) _` external argument syntax is deprecated. Use `%raw(...)` instead.
+
 // Round-trip coverage for functions and arrow types through the
 // Parsetree0 bridge (ast_mapper_to0 / ast_mapper_from0).
 
@@ -44,7 +57,7 @@ type argAttr = (@as("x") ~foo: string, int) => int
 
 // phantom @as arguments: written arity differs from lowered call arity
 @val
-external phantom: (~a: int, @as(json`false`) _, ~c: string) => unit = "phantom"
+external phantom: (~a: int, %raw("false"), ~c: string) => unit = "phantom"
 
 // external with uncurried callback argument
 @val external onEvent: (string, (~event: string) => unit) => unit = "on"

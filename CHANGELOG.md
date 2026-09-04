@@ -27,6 +27,7 @@
 
 #### :rocket: New Feature
 
+- Add `%raw(...)` arguments for externals, for example `external assign: (%raw("{}"), t) => t = "Object.assign"`. The string contains the raw JavaScript value supplied by the binding, and the argument is omitted at call sites. The legacy `` @as(json`...`) _ ``, `@as("...") _`, and `@as(1) _` forms now emit a deprecation warning and are formatted as `%raw(...)`. https://github.com/rescript-lang/rescript/pull/8606
 - Support UTF-16 surrogate-pair escapes such as `"\uD83D\uDE00"` in ordinary string literals. https://github.com/rescript-lang/rescript/pull/8606
 - Support dynamic imports of external bindings annotated with `@scope`; the generated import follows the complete property path. These imports were previously rejected. https://github.com/rescript-lang/rescript/pull/8582
 - Add `@res.hoistedFunction` for emitting nested module functions as flat JavaScript exports. https://github.com/rescript-lang/rescript/pull/8402
