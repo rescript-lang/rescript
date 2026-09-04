@@ -1222,22 +1222,16 @@ exception Need_backtrack
 (* The parser preserves syntactic arguments for printing. Resolve their semantic
    grouping only after constructor disambiguation, retaining the historical
    equivalence of C(a, b) and C((a, b)), including for legacy PPX output. *)
-let normalize_constructor_expr_args ~arity sargs =
+let normalize_constructor_expr_args ~arity {Location.txt = sargs; loc} =
   match sargs with
   | [{pexp_desc = Pexp_tuple args}] when arity > 1 -> args
-  | {pexp_loc = first_loc} :: (_ :: _ as rest) when arity = 1 ->
-    let last = Ext_list.last rest in
-    let loc = Location.{first_loc with loc_end = last.pexp_loc.loc_end} in
-    [Ast_helper.Exp.tuple ~loc sargs]
+  | _ :: _ :: _ when arity = 1 -> [Ast_helper.Exp.tuple ~loc sargs]
   | sargs -> sargs
 
-let normalize_constructor_pat_args ~arity sargs =
+let normalize_constructor_pat_args ~arity {Location.txt = sargs; loc} =
   match sargs with
   | [{ppat_desc = Ppat_tuple args}] when arity > 1 -> args
-  | {ppat_loc = first_loc} :: (_ :: _ as rest) when arity = 1 ->
-    let last = Ext_list.last rest in
-    let loc = Location.{first_loc with loc_end = last.ppat_loc.loc_end} in
-    [Ast_helper.Pat.tuple ~loc sargs]
+  | _ :: _ :: _ when arity = 1 -> [Ast_helper.Pat.tuple ~loc sargs]
   | sargs -> sargs
 
 (* type_pat propagates the expected type as well as maps for
@@ -1417,7 +1411,7 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
             pat_attributes = sp.ppat_attributes;
             pat_env = !env;
           })
-  | Ppat_construct (lid, {txt = sargs}) ->
+  | Ppat_construct (lid, sargs) ->
     let opath =
       try
         let p0, p, _ = extract_concrete_variant !env expected_ty in
@@ -1510,13 +1504,13 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
             pat_attributes = sp.ppat_attributes;
             pat_env = !env;
           })
-  | Ppat_variant (l, {txt = sargs}) -> (
+  | Ppat_variant (l, {txt = sargs; loc = args_loc}) -> (
     check_polyvar_name !env loc l;
     let sarg =
       match sargs with
       | [] -> None
       | [sarg] -> Some sarg
-      | sargs -> Some (Ast_helper.Pat.tuple ~loc sargs)
+      | sargs -> Some (Ast_helper.Pat.tuple ~loc:args_loc sargs)
     in
     let arg_type =
       match sarg with
@@ -2768,15 +2762,15 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
         exp_attributes = sexp.pexp_attributes;
         exp_env = env;
       }
-  | Pexp_construct (lid, {txt = sargs}) ->
+  | Pexp_construct (lid, sargs) ->
     type_construct ~context env loc lid sargs ty_expected sexp.pexp_attributes
-  | Pexp_variant (l, {txt = sargs}) -> (
+  | Pexp_variant (l, {txt = sargs; loc = args_loc}) -> (
     check_polyvar_name env loc l;
     let sarg =
       match sargs with
       | [] -> None
       | [sarg] -> Some sarg
-      | sargs -> Some (Ast_helper.Exp.tuple ~loc sargs)
+      | sargs -> Some (Ast_helper.Exp.tuple ~loc:args_loc sargs)
     in
     (* Keep sharing *)
     let ty_expected0 = instance env ty_expected in
