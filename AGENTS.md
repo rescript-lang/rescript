@@ -292,11 +292,15 @@ The compiler is designed for fast feedback loops and scales to large codebases:
 
 ### Stacked pull requests
 
-When a PR depends on another unmerged PR, create a native GitHub stack with
-`gh stack` rather than only targeting the preceding feature branch. Keep the
-branches linear and in the same repository, and list branches or PRs from
-bottom to top. For existing PRs, use `gh stack link BOTTOM_PR [NEXT_PR...]`,
-then verify that GitHub reports stack metadata and runs CI for every PR.
+When a PR depends on another unmerged PR, make a native GitHub stack. Keep the
+branches linear and in the same repository, then run `gh stack link BOTTOM
+[NEXT...]`, listing the stack bottom to top. Each argument is a branch name or
+a PR number: the command pushes each branch, reuses the PR that already exists
+for it, and opens one where there is none, so branches alone are enough. Open
+the PRs yourself first if you want to write their titles and descriptions.
+
+Linking sets each PR's base to the branch below it, leaving only the bottom PR
+on `master`. CI runs on every PR in the stack.
 
 ### Code Quality
 
