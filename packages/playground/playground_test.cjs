@@ -108,7 +108,7 @@ assert.deepEqual(
   },
 );
 
-const linkedResult = compiler.rescript.compileWithDebug(sourceMapSource);
+const linkedResult = compiler.rescript.compile(sourceMapSource);
 assert.equal(linkedResult.type, "success");
 assert.match(linkedResult.js_code, /\/\/# sourceMappingURL=Playground\.js\.map\n$/);
 
@@ -121,7 +121,7 @@ assert.ok(sourceMap.sourcesContent.includes(sourceMapSource));
 assert.ok(sourceMap.mappings.length > 0);
 
 assert.equal(compiler.setSourceMapMode("inline"), true);
-const inlineResult = compiler.rescript.compileWithDebug(sourceMapSource);
+const inlineResult = compiler.rescript.compile(sourceMapSource);
 assert.equal(inlineResult.type, "success");
 assert.match(
   inlineResult.js_code,
@@ -130,7 +130,7 @@ assert.match(
 assert.deepEqual(JSON.parse(inlineResult.source_map), sourceMap);
 
 assert.equal(compiler.setSourceMapMode("hidden"), true);
-const hiddenResult = compiler.rescript.compileWithDebug(sourceMapSource);
+const hiddenResult = compiler.rescript.compile(sourceMapSource);
 assert.equal(hiddenResult.type, "success");
 assert.doesNotMatch(hiddenResult.js_code, /\/\/# sourceMappingURL=/);
 assert.deepEqual(JSON.parse(hiddenResult.source_map), sourceMap);
@@ -139,7 +139,7 @@ assert.equal(compiler.setSourceMapMode("unsupported"), false);
 assert.equal(compiler.getConfig().source_map_mode, "hidden");
 
 assert.equal(compiler.setSourceMapMode("false"), true);
-const disabledResult = compiler.rescript.compileWithDebug(sourceMapSource);
+const disabledResult = compiler.rescript.compile(sourceMapSource);
 assert.equal(disabledResult.type, "success");
 assert.equal(disabledResult.source_map, undefined);
 assert.doesNotMatch(disabledResult.js_code, /\/\/# sourceMappingURL=/);

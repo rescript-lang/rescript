@@ -676,18 +676,26 @@ module Compile = struct
           ~source_map_sources_content ~source_map_root lambda_output
       in
       let type_hints = collect_type_hints typed_tree in
+      let source_map_attrs =
+        match source_map with
+        | None -> [||]
+        | Some source_map ->
+          Js.Unsafe.[|("source_map", inject @@ Js.string source_map)|]
+      in
       let attrs =
-        Js.Unsafe.
-          [|
-            ("js_code", inject @@ Js.string js_code);
-            ( "warnings",
-              inject
-              @@ (!warning_infos
-                 |> Array.map Error_ret.make_warning
-                 |> Js.array |> inject) );
-            ("type_hints", inject @@ type_hints);
-            ("type", inject @@ Js.string "success");
-          |]
+        Array.append
+          Js.Unsafe.
+            [|
+              ("js_code", inject @@ Js.string js_code);
+              ( "warnings",
+                inject
+                @@ (!warning_infos
+                   |> Array.map Error_ret.make_warning
+                   |> Js.array |> inject) );
+              ("type_hints", inject @@ type_hints);
+              ("type", inject @@ Js.string "success");
+            |]
+          source_map_attrs
       in
       if include_debug_outputs then
         let parsetree = Printer.to_string Printast.implementation ast in
@@ -709,12 +717,6 @@ module Compile = struct
               |]
           else [||]
         in
-        let source_map_attrs =
-          match source_map with
-          | None -> [||]
-          | Some source_map ->
-            Js.Unsafe.[|("source_map", inject @@ Js.string source_map)|]
-        in
         let debug_attrs =
           Js.Unsafe.
             [|
@@ -724,8 +726,7 @@ module Compile = struct
               ("lam", inject @@ Js.string lam);
             |]
         in
-        Js.Unsafe.obj
-          (Array.concat [attrs; debug_attrs; gentype_attrs; source_map_attrs])
+        Js.Unsafe.obj (Array.concat [attrs; debug_attrs; gentype_attrs])
       else Js.Unsafe.obj attrs
     with e -> (
       match e with
