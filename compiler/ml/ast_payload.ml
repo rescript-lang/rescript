@@ -57,6 +57,25 @@ let semantic_string_of_expression (expression : Parsetree.expression) =
       Location.raise_errorf ~loc:pexp_loc "Invalid string escape sequence")
   | _ -> None
 
+let string_literal_of_expression (expression : Parsetree.expression) =
+  match expression with
+  | {pexp_desc = Pexp_constant (Pconst_string payload); _} -> Some payload
+  | {
+   pexp_desc = Pexp_template {source_segments = [source]; values = []};
+   pexp_loc;
+  } -> (
+    match String_literal.decode_js_template_escapes source.txt with
+    | Some semantic -> Some (String_literal.string_from_semantic semantic)
+    | None ->
+      Location.raise_errorf ~loc:pexp_loc "Invalid string escape sequence")
+  | _ -> None
+
+let string_literal_of_payload (x : t) =
+  match x with
+  | PStr [{pstr_desc = Pstr_eval (expression, _); _}] ->
+    string_literal_of_expression expression
+  | _ -> None
+
 let semantic_string_of_payload (x : t) =
   match x with
   | PStr [{pstr_desc = Pstr_eval (expression, _); _}] ->

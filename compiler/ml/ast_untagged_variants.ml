@@ -339,12 +339,7 @@ let check_tag_field_conflicts (cstrs : Types.constructor_declaration list) =
         List.iter
           (fun (field : Types.label_declaration) ->
             let field_name = Ident.name field.ld_id in
-            let effective_field_name =
-              match process_tag_type field.ld_attributes with
-              | Some (String as_name) -> as_name
-              (* @as payload types other than string have no effect on record fields *)
-              | Some _ | None -> field_name
-            in
+            let effective_field_name = Record_runtime.declaration_name field in
             (* Check if effective field name conflicts with tag *)
             if effective_field_name = effective_tag_name then
               raise

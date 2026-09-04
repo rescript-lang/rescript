@@ -147,10 +147,6 @@ let check_deprecated_mutable_inclusion ~def ~use loc attrs1 attrs2 s =
     Location.deprecated ~def ~use loc
       (Printf.sprintf "mutating field %s" (cat s txt))
 
-let check_bs_attributes_inclusion = ref (fun _attrs1 _attrs2 _s -> None)
-
-let check_duplicated_labels : (_ -> _ option) ref = ref (fun _lbls -> None)
-
 let rec deprecated_of_sig = function
   | {psig_desc = Psig_attribute a} :: tl -> (
     match deprecated_of_attrs [a] with

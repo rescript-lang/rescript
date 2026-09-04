@@ -237,6 +237,7 @@ let typexp = type_expr
 let label_declaration s l =
   {
     ld_id = l.ld_id;
+    ld_runtime_name = l.ld_runtime_name;
     ld_mutable = l.ld_mutable;
     ld_optional = l.ld_optional;
     ld_type = typexp_rec s l.ld_type;

@@ -66,12 +66,14 @@
 - Print external declarations in signatures and type errors with their processed attributes instead of the `"#rescript-external"` placeholder, and print inline constants using `@inline` syntax. https://github.com/rescript-lang/rescript/pull/8581
 - Improve diagnostics for dynamic imports of local values and attempts to use `import` as a first-class value. https://github.com/rescript-lang/rescript/pull/8582
 - Allow inferred labeled functions to be called with labels in any order by removing legacy curried-arrow commutation locks. https://github.com/rescript-lang/rescript/pull/8547
+- Format a record field's `@as` rename written as a backquoted string with ordinary quotes, since it names the same field either way. https://github.com/rescript-lang/rescript/pull/NNNN
 
 #### :house: Internal
 
 - Normalize Lambda terms where they are built: a match guard stays structured data until its fallthrough is known, and `apply` and `mk_builtin` go through the folding constructors. https://github.com/rescript-lang/rescript/pull/8615
 - Replace non-escaping local mutable blocks with scalar bindings when all uses are direct field accesses, generalizing reference unboxing to multi-field records and references captured by JavaScript closures. https://github.com/rescript-lang/rescript/pull/8617
 - Split `lambda.ml` into the IR and its traversals, static exits and path translation, so the module defining `Lambda.t` no longer reaches into `Env` or `Path`. https://github.com/rescript-lang/rescript/pull/8618
+- Record a record field's `@as` rename on the declaration instead of re-reading the attribute, so every place that needs the runtime name reads one field. https://github.com/rescript-lang/rescript/pull/8619
 - Merge the duplicate Lam intermediate representation into Lambda, removing the conversion layer and obsolete supporting infrastructure. Lambda is now a single private, normalized representation, with generated JavaScript remaining semantically unchanged. https://github.com/rescript-lang/rescript/pull/8608
 - Add genType and source map controls and output to the developer playground. https://github.com/rescript-lang/rescript/pull/8448
 - Rework the object-type representation end to end: object rows are plain field chains carrying a per-field mutability state (no phantom setter members), object literals are typed directly and property access and assignment are first-class AST and Lambda nodes shared between the Lambda and JS pipelines, and dead class-system remnants (the field-presence lattice, the class-abbreviation memo on object types, method-send typing) are removed. https://github.com/rescript-lang/rescript/pull/8597

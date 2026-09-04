@@ -892,51 +892,57 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
     if not !processed then
       Ast_iterator.default_iterator.signature_item iterator item
   in
+  (* A decorator whose name spans the cursor completes decorator names. The
+     label is taken from the source text under the location, since the
+     parser's location can run past the name: [@foo. let x] gives [@foo.let].
+     A field's [@as] is a field of the declaration rather than an attribute,
+     so [label_declaration] below reports its location here too. *)
+  let decorator_at ~id_txt (id_loc : Location.t) =
+    let pos_start, pos_end = Loc.range id_loc in
+    match
+      ( Pos.position_to_offset text pos_start,
+        Pos.position_to_offset text pos_end )
+    with
+    | Some offset_start, Some offset_end
+      when offset_start >= 0 && offset_end >= offset_start ->
+      let label =
+        let raw_label =
+          String.sub text offset_start (offset_end - offset_start)
+        in
+        let ( ++ ) x y =
+          match (x, y) with
+          | Some i1, Some i2 -> Some (min i1 i2)
+          | Some _, None -> x
+          | None, _ -> y
+        in
+        let label =
+          match
+            String.index_opt raw_label ' '
+            ++ String.index_opt raw_label '\t'
+            ++ String.index_opt raw_label '\r'
+            ++ String.index_opt raw_label '\n'
+          with
+          | None -> raw_label
+          | Some i -> String.sub raw_label 0 i
+        in
+        if label <> "" && label.[0] = '@' then
+          String.sub label 1 (String.length label - 1)
+        else label
+      in
+      found := true;
+      if debug then
+        Printf.printf "Attribute id:%s:%s label:%s\n" id_txt
+          (Loc.to_string id_loc) label;
+      set_result (Completable.Cdecorator label)
+    | _ -> ()
+  in
   let attribute (iterator : Ast_iterator.iterator)
       ((id, payload) : Parsetree.attribute) =
     (if String.length id.txt >= 4 && String.sub id.txt 0 4 = "res." then
        (* skip: internal parser attribute *) ()
      else if id.loc.loc_ghost then ()
      else if id.loc |> Loc.has_pos ~pos:pos_before_cursor then
-       let pos_start, pos_end = Loc.range id.loc in
-       match
-         ( Pos.position_to_offset text pos_start,
-           Pos.position_to_offset text pos_end )
-       with
-       | Some offset_start, Some offset_end
-         when offset_start >= 0 && offset_end >= offset_start ->
-         (* Can't trust the parser's location
-            E.g. @foo. let x... gives as label @foo.let *)
-         let label =
-           let raw_label =
-             String.sub text offset_start (offset_end - offset_start)
-           in
-           let ( ++ ) x y =
-             match (x, y) with
-             | Some i1, Some i2 -> Some (min i1 i2)
-             | Some _, None -> x
-             | None, _ -> y
-           in
-           let label =
-             match
-               String.index_opt raw_label ' '
-               ++ String.index_opt raw_label '\t'
-               ++ String.index_opt raw_label '\r'
-               ++ String.index_opt raw_label '\n'
-             with
-             | None -> raw_label
-             | Some i -> String.sub raw_label 0 i
-           in
-           if label <> "" && label.[0] = '@' then
-             String.sub label 1 (String.length label - 1)
-           else label
-         in
-         found := true;
-         if debug then
-           Printf.printf "Attribute id:%s:%s label:%s\n" id.txt
-             (Loc.to_string id.loc) label;
-         set_result (Completable.Cdecorator label)
-       | _ -> ()
+       decorator_at ~id_txt:id.txt id.loc
      else if id.txt = "module" then
        match payload with
        | PStr
@@ -1844,11 +1850,22 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
     if Loc.end_ loc <= pos_cursor then last_scope_before_cursor := !scope
   in
 
+  let label_declaration (iterator : Ast_iterator.iterator)
+      (ld : Parsetree.label_declaration) =
+    (match ld.pld_runtime_name with
+    | Some {loc}
+      when (not loc.loc_ghost) && Loc.has_pos loc ~pos:pos_before_cursor ->
+      decorator_at ~id_txt:"as" loc
+    | _ -> ());
+    Ast_iterator.default_iterator.label_declaration iterator ld
+  in
+
   let iterator =
     {
       Ast_iterator.default_iterator with
       attribute;
       expr;
+      label_declaration;
       location;
       module_expr;
       module_type;

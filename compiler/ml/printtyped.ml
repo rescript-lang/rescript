@@ -662,9 +662,22 @@ and constructor_arguments i ppf = function
   | Cstr_record l -> list i label_decl ppf l
 
 and label_decl i ppf
-    {ld_id; ld_name = _; ld_mutable; ld_type; ld_loc; ld_attributes} =
+    {
+      ld_id;
+      ld_name = _;
+      ld_runtime_name;
+      ld_mutable;
+      ld_type;
+      ld_loc;
+      ld_attributes;
+    } =
   line i ppf "%a\n" fmt_location ld_loc;
   attributes i ppf ld_attributes;
+  (* The rename is a field rather than an attribute, so print it as one: the
+     dump would otherwise show a renamed field exactly like a plain one. *)
+  (match ld_runtime_name with
+  | Some name -> line (i + 1) ppf "runtime_name %S\n" name
+  | None -> ());
   line (i + 1) ppf "%a\n" fmt_mutable_flag ld_mutable;
   line (i + 1) ppf "%a" fmt_ident ld_id;
   core_type (i + 1) ppf ld_type
