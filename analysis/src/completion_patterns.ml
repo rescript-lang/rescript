@@ -189,7 +189,11 @@ and traverse_pattern (pat : Parsetree.pattern) ~pattern_path ~loc_has_cursor
       ( "",
         [
           Completable.NVariantPayload
-            {constructor_name = Utils.get_unqualified_name txt; item_num = 0};
+            {
+              constructor_name = Utils.get_unqualified_name txt;
+              item_num = 0;
+              source_arity = 1;
+            };
         ]
         @ pattern_path )
   | Ppat_construct ({txt}, {txt = patterns})
@@ -205,6 +209,7 @@ and traverse_pattern (pat : Parsetree.pattern) ~pattern_path ~loc_has_cursor
             {
               constructor_name = Utils.get_unqualified_name txt;
               item_num = List.length patterns;
+              source_arity = List.length patterns;
             };
         ]
         @ pattern_path )
@@ -215,7 +220,11 @@ and traverse_pattern (pat : Parsetree.pattern) ~pattern_path ~loc_has_cursor
          ~next_pattern_path:(fun item_num ->
            [
              Completable.NVariantPayload
-               {constructor_name = Utils.get_unqualified_name txt; item_num};
+               {
+                 constructor_name = Utils.get_unqualified_name txt;
+                 item_num;
+                 source_arity = List.length patterns;
+               };
            ]
            @ pattern_path)
          ~result_from_found_item_num:(fun item_num ->
@@ -224,6 +233,7 @@ and traverse_pattern (pat : Parsetree.pattern) ~pattern_path ~loc_has_cursor
                {
                  constructor_name = Utils.get_unqualified_name txt;
                  item_num = item_num + 1;
+                 source_arity = List.length patterns;
                };
            ]
            @ pattern_path)

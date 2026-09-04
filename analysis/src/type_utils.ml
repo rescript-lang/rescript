@@ -603,10 +603,13 @@ let extract_type_from_resolved_type (typ : Type.t) ~env ~full ~state =
 (** The context we just came from as we resolve the nested structure. *)
 type ctx = Rfield of string  (** A record field of name *)
 
-let normalize_constructor_payload_path ~argument_count ~item_num ~nested =
+(* Only a sole syntactic argument can be a tuple wrapping all constructor
+   arguments. A tuple within a multi-argument application is a real payload. *)
+let normalize_constructor_payload_path ~argument_count ~source_arity ~item_num
+    ~nested =
   match nested with
   | Completable.NTupleItem {item_num = tuple_item_num} :: nested
-    when item_num = 0 && argument_count > 1 ->
+    when source_arity = 1 && item_num = 0 && argument_count > 1 ->
     (tuple_item_num, nested)
   | _ -> (item_num, nested)
 
@@ -728,8 +731,8 @@ let rec resolve_nested ?type_arg_context ~env ~full ~state ~nested ?ctx
       |> extract_type ~env ~state ~package:full.package
       |> Utils.Option.flat_map (fun (t, type_arg_context) ->
           t |> resolve_nested ?type_arg_context ~env ~state ~full ~nested)
-    | NVariantPayload {constructor_name; item_num}, Tvariant {env; constructors}
-      -> (
+    | ( NVariantPayload {constructor_name; item_num; source_arity},
+        Tvariant {env; constructors} ) -> (
       if Debug.verbose () then
         Printf.printf
           "[nested]--> trying to move into variant payload $%i of constructor \
@@ -745,7 +748,7 @@ let rec resolve_nested ?type_arg_context ~env ~full ~state ~nested ?ctx
           print_endline "[nested]--> found constructor (Args type)";
         let item_num, nested =
           normalize_constructor_payload_path ~argument_count:(List.length args)
-            ~item_num ~nested
+            ~source_arity ~item_num ~nested
         in
         match List.nth_opt args item_num with
         | None ->
@@ -915,7 +918,7 @@ let rec resolve_nested_pattern_path (typ : inner_type) ~env ~full ~state ~nested
           |> Utils.Option.flat_map (fun typ ->
               ExtractedType typ
               |> resolve_nested_pattern_path ~env ~state ~full ~nested))
-      | ( NVariantPayload {constructor_name; item_num},
+      | ( NVariantPayload {constructor_name; item_num; source_arity},
           Tvariant {env; constructors} ) -> (
         match
           constructors
@@ -925,7 +928,7 @@ let rec resolve_nested_pattern_path (typ : inner_type) ~env ~full ~state ~nested
         | Some {args = Args args} -> (
           let item_num, nested =
             normalize_constructor_payload_path
-              ~argument_count:(List.length args) ~item_num ~nested
+              ~argument_count:(List.length args) ~source_arity ~item_num ~nested
           in
           match List.nth_opt args item_num with
           | Some (typ, _) ->

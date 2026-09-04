@@ -502,6 +502,7 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
               (NVariantPayload
                  {
                    item_num = index;
+                   source_arity = List.length patterns;
                    constructor_name = Utils.get_unqualified_name txt;
                  }
               :: pattern_path)
@@ -1305,7 +1306,7 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
                   match
                     Completion_expressions.complete_constructor_payload
                       ~pos_before_cursor ~first_char_before_cursor_no_white
-                      ~item_num lid e
+                      ~item_num ~source_arity:(List.length args) lid e
                   with
                   | Some result ->
                     (* Check if anything else more important completes before setting this completion. *)

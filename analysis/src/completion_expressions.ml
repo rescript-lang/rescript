@@ -132,7 +132,11 @@ let rec traverse_expr (exp : Parsetree.expression) ~expr_path ~pos
       ( "",
         [
           Completable.NVariantPayload
-            {constructor_name = Utils.get_unqualified_name txt; item_num = 0};
+            {
+              constructor_name = Utils.get_unqualified_name txt;
+              item_num = 0;
+              source_arity = 1;
+            };
         ]
         @ expr_path )
   | Pexp_construct ({txt}, {txt = args})
@@ -148,6 +152,7 @@ let rec traverse_expr (exp : Parsetree.expression) ~expr_path ~pos
             {
               constructor_name = Utils.get_unqualified_name txt;
               item_num = List.length args;
+              source_arity = List.length args;
             };
         ]
         @ expr_path )
@@ -157,7 +162,11 @@ let rec traverse_expr (exp : Parsetree.expression) ~expr_path ~pos
          ~next_expr_path:(fun item_num ->
            [
              Completable.NVariantPayload
-               {constructor_name = Utils.get_unqualified_name txt; item_num};
+               {
+                 constructor_name = Utils.get_unqualified_name txt;
+                 item_num;
+                 source_arity = List.length args;
+               };
            ]
            @ expr_path)
          ~result_from_found_item_num:(fun item_num ->
@@ -166,6 +175,7 @@ let rec traverse_expr (exp : Parsetree.expression) ~expr_path ~pos
                {
                  constructor_name = Utils.get_unqualified_name txt;
                  item_num = item_num + 1;
+                 source_arity = List.length args;
                };
            ]
            @ expr_path)
@@ -258,7 +268,7 @@ let pretty_print_fn_template_arg_name ?current_index ~env ~state ~full
     | _ -> default_var_name)
 
 let complete_constructor_payload ~pos_before_cursor
-    ~first_char_before_cursor_no_white ~item_num
+    ~first_char_before_cursor_no_white ~item_num ~source_arity
     (constructor_lid : Longident.t Location.loc) expr =
   match
     traverse_expr expr ~expr_path:[] ~pos:pos_before_cursor
@@ -268,7 +278,11 @@ let complete_constructor_payload ~pos_before_cursor
   | Some (prefix, nested) ->
     let nested =
       Completable.NVariantPayload
-        {constructor_name = Longident.last constructor_lid.txt; item_num}
+        {
+          constructor_name = Longident.last constructor_lid.txt;
+          item_num;
+          source_arity;
+        }
       :: List.rev nested
     in
     let variant_ctx_path =

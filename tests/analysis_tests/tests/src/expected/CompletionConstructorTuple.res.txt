@@ -63,3 +63,134 @@ Path value
   }
 ]
 
+Complete src/CompletionConstructorTuple.res 17:23
+posCursor:[17:23] posNoWhite:[17:22] Found expr:[17:3->17:31]
+Pexp_apply ...[17:3->17:10] (...[17:11->17:30])
+Completable: Cexpression CArgument Value[consume]($0)->variantPayload::Nested($0), tuple($1), recordBody
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath CArgument Value[consume]($0)
+ContextPath Value[consume]
+Path consume
+[
+  {
+    "detail": "string",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nname: string\n```\n\n```rescript\ntype payload = {name: string, enabled: bool}\n```"
+    },
+    "kind": 5,
+    "label": "name",
+    "tags": []
+  },
+  {
+    "detail": "bool",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nenabled: bool\n```\n\n```rescript\ntype payload = {name: string, enabled: bool}\n```"
+    },
+    "kind": 5,
+    "label": "enabled",
+    "tags": []
+  }
+]
+
+Complete src/CompletionConstructorTuple.res 20:32
+posCursor:[20:32] posNoWhite:[20:31] Found pattern:[20:20->20:38]
+Ppat_construct Nested:[20:20->20:26]
+posCursor:[20:32] posNoWhite:[20:31] Found pattern:[20:27->20:34]
+posCursor:[20:32] posNoWhite:[20:31] Found pattern:[20:31->20:33]
+Completable: Cpattern Value[value]->variantPayload::Nested($0), tuple($1), recordBody
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[value]
+Path value
+[
+  {
+    "detail": "string",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nname: string\n```\n\n```rescript\ntype payload = {name: string, enabled: bool}\n```"
+    },
+    "kind": 5,
+    "label": "name",
+    "tags": []
+  },
+  {
+    "detail": "bool",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nenabled: bool\n```\n\n```rescript\ntype payload = {name: string, enabled: bool}\n```"
+    },
+    "kind": 5,
+    "label": "enabled",
+    "tags": []
+  }
+]
+
+Complete src/CompletionConstructorTuple.res 23:24
+posCursor:[23:24] posNoWhite:[23:23] Found expr:[23:3->23:33]
+Pexp_apply ...[23:3->23:10] (...[23:11->23:32])
+Completable: Cexpression CArgument Value[consume]($0)->variantPayload::Nested($0), tuple($0), tuple($1), recordBody
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath CArgument Value[consume]($0)
+ContextPath Value[consume]
+Path consume
+[
+  {
+    "detail": "string",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nname: string\n```\n\n```rescript\ntype payload = {name: string, enabled: bool}\n```"
+    },
+    "kind": 5,
+    "label": "name",
+    "tags": []
+  },
+  {
+    "detail": "bool",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nenabled: bool\n```\n\n```rescript\ntype payload = {name: string, enabled: bool}\n```"
+    },
+    "kind": 5,
+    "label": "enabled",
+    "tags": []
+  }
+]
+
+Complete src/CompletionConstructorTuple.res 26:33
+posCursor:[26:33] posNoWhite:[26:32] Found pattern:[26:20->26:40]
+Ppat_construct Nested:[26:20->26:26]
+posCursor:[26:33] posNoWhite:[26:32] Found pattern:[26:27->26:39]
+posCursor:[26:33] posNoWhite:[26:32] Found pattern:[26:28->26:35]
+posCursor:[26:33] posNoWhite:[26:32] Found pattern:[26:32->26:34]
+Completable: Cpattern Value[value]->variantPayload::Nested($0), tuple($0), tuple($1), recordBody
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[value]
+Path value
+[
+  {
+    "detail": "string",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nname: string\n```\n\n```rescript\ntype payload = {name: string, enabled: bool}\n```"
+    },
+    "kind": 5,
+    "label": "name",
+    "tags": []
+  },
+  {
+    "detail": "bool",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nenabled: bool\n```\n\n```rescript\ntype payload = {name: string, enabled: bool}\n```"
+    },
+    "kind": 5,
+    "label": "enabled",
+    "tags": []
+  }
+]
+

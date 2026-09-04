@@ -3,7 +3,7 @@ type payload = {
   enabled: bool,
 }
 
-type t = Pair(int, payload)
+type t = Pair(int, payload) | Nested((int, payload), string)
 
 let consume = (value: t) => ignore(value)
 
@@ -14,3 +14,15 @@ let value = Pair(1, {name: "test", enabled: true})
 
 // switch value { | Pair((_, {}))}
 //                            ^com
+
+// consume(Nested((1, {}), ""))
+//                     ^com
+
+// switch value { | Nested((_, {}), _) => ()}
+//                              ^com
+
+// consume(Nested(((1, {}), "")))
+//                      ^com
+
+// switch value { | Nested(((_, {}), _)) => ()}
+//                               ^com
