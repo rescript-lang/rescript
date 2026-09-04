@@ -1,11 +1,7 @@
 type t
 
 val make :
-  source_contents:(string * string) list ->
-  generated_file:string ->
-  source_root:string ->
-  sources_content:bool ->
-  t
+  generated_file:string -> source_root:string -> sources_content:bool -> t
 
 val with_builder : t -> (unit -> 'a) -> 'a
 

@@ -549,8 +549,7 @@ module Compile = struct
       let file_name = modulename |> Module_name.from_string_unsafe in
       let resolver =
         Module_resolver.create_lazy_resolver ~config
-          ~extensions:[".res"; ".shim.ts"] ~exclude_file:(fun fname ->
-            fname = "React.res" || fname = "ReasonReact.res")
+          ~extensions:[".res"; ".shim.ts"] ~exclude_file:(fun _ -> false)
       in
       let code_text =
         input_cmt
@@ -577,9 +576,7 @@ module Compile = struct
       | Js_config.No_source_map -> None
       | Linked | Inline | Hidden ->
         Some
-          (Js_source_map.make
-             ~source_contents:[(filename, source)]
-             ~generated_file ~source_root:source_map_root
+          (Js_source_map.make ~generated_file ~source_root:source_map_root
              ~sources_content:source_map_sources_content)
     in
     let print_javascript () =
@@ -589,7 +586,18 @@ module Compile = struct
     in
     (match source_map_builder with
     | None -> print_javascript ()
-    | Some builder -> Js_source_map.with_builder builder print_javascript);
+    | Some builder ->
+      let source_file =
+        if Filename.is_relative filename then
+          Filename.concat (Sys.getcwd ()) filename
+        else filename
+      in
+      let source_dir = Filename.dirname source_file in
+      Js_of_ocaml.Sys_js.mount ~path:source_dir (fun ~prefix:_ ~path ->
+          if path = Filename.basename source_file then Some source else None);
+      Ext_pervasives.finally ()
+        ~clean:(fun () -> Js_of_ocaml.Sys_js.unmount ~path:source_dir)
+        (fun () -> Js_source_map.with_builder builder print_javascript));
     let source_map =
       match source_map_builder with
       | None -> None
