@@ -603,6 +603,13 @@ let extract_type_from_resolved_type (typ : Type.t) ~env ~full ~state =
 (** The context we just came from as we resolve the nested structure. *)
 type ctx = Rfield of string  (** A record field of name *)
 
+let normalize_constructor_payload_path ~argument_count ~item_num ~nested =
+  match nested with
+  | Completable.NTupleItem {item_num = tuple_item_num} :: nested
+    when item_num = 0 && argument_count > 1 ->
+    (tuple_item_num, nested)
+  | _ -> (item_num, nested)
+
 let rec resolve_nested ?type_arg_context ~env ~full ~state ~nested ?ctx
     (typ : completion_type) =
   let extract_type = extract_type ?type_arg_context in
@@ -736,6 +743,10 @@ let rec resolve_nested ?type_arg_context ~env ~full ~state ~nested ?ctx
       | Some {args = Args args} -> (
         if Debug.verbose () then
           print_endline "[nested]--> found constructor (Args type)";
+        let item_num, nested =
+          normalize_constructor_payload_path ~argument_count:(List.length args)
+            ~item_num ~nested
+        in
         match List.nth_opt args item_num with
         | None ->
           if Debug.verbose () then
@@ -908,11 +919,28 @@ let rec resolve_nested_pattern_path (typ : inner_type) ~env ~full ~state ~nested
           Tvariant {env; constructors} ) -> (
         match
           constructors
-          |> find_type_of_constructor_arg ~constructor_name
-               ~payload_num:item_num ~env
+          |> List.find_opt (fun (constructor : Constructor.t) ->
+              constructor.cname.txt = constructor_name)
         with
-        | Some typ ->
-          typ |> resolve_nested_pattern_path ~env ~state ~full ~nested
+        | Some {args = Args args} -> (
+          let item_num, nested =
+            normalize_constructor_payload_path
+              ~argument_count:(List.length args) ~item_num ~nested
+          in
+          match List.nth_opt args item_num with
+          | Some (typ, _) ->
+            TypeExpr typ
+            |> resolve_nested_pattern_path ~env ~state ~full ~nested
+          | None -> None)
+        | Some {args = InlineRecord _} -> (
+          match
+            constructors
+            |> find_type_of_constructor_arg ~constructor_name
+                 ~payload_num:item_num ~env
+          with
+          | Some typ ->
+            typ |> resolve_nested_pattern_path ~env ~state ~full ~nested
+          | None -> None)
         | None -> None)
       | ( NPolyvariantPayload {constructor_name; item_num},
           Tpolyvariant {env; constructors} ) -> (

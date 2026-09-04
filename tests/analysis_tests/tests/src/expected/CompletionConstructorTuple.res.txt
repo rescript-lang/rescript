@@ -1,0 +1,65 @@
+Complete src/CompletionConstructorTuple.res 9:22
+posCursor:[9:22] posNoWhite:[9:21] Found expr:[9:3->9:25]
+Pexp_apply ...[9:3->9:10] (...[9:11->9:24])
+Completable: Cexpression CArgument Value[consume]($0)->variantPayload::Pair($0), tuple($1), recordBody
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath CArgument Value[consume]($0)
+ContextPath Value[consume]
+Path consume
+[
+  {
+    "detail": "string",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nname: string\n```\n\n```rescript\ntype payload = {name: string, enabled: bool}\n```"
+    },
+    "kind": 5,
+    "label": "name",
+    "tags": []
+  },
+  {
+    "detail": "bool",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nenabled: bool\n```\n\n```rescript\ntype payload = {name: string, enabled: bool}\n```"
+    },
+    "kind": 5,
+    "label": "enabled",
+    "tags": []
+  }
+]
+
+Complete src/CompletionConstructorTuple.res 14:30
+posCursor:[14:30] posNoWhite:[14:29] Found pattern:[14:20->14:33]
+Ppat_construct Pair:[14:20->14:24]
+posCursor:[14:30] posNoWhite:[14:29] Found pattern:[14:25->14:32]
+posCursor:[14:30] posNoWhite:[14:29] Found pattern:[14:29->14:31]
+Completable: Cpattern Value[value]->variantPayload::Pair($0), tuple($1), recordBody
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[value]
+Path value
+[
+  {
+    "detail": "string",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nname: string\n```\n\n```rescript\ntype payload = {name: string, enabled: bool}\n```"
+    },
+    "kind": 5,
+    "label": "name",
+    "tags": []
+  },
+  {
+    "detail": "bool",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nenabled: bool\n```\n\n```rescript\ntype payload = {name: string, enabled: bool}\n```"
+    },
+    "kind": 5,
+    "label": "enabled",
+    "tags": []
+  }
+]
+
