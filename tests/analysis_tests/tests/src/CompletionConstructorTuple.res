@@ -26,3 +26,31 @@ let value = Pair(1, {name: "test", enabled: true})
 
 // switch value { | Nested(((_, {}), _)) => ()}
 //                               ^com
+
+type gap = Gap(bool, bool, bool) | TupleGap((bool, bool), bool)
+let consumeGap = (value: gap) => ignore(value)
+let gap = Gap(true, false, true)
+
+// consumeGap(Gap(true, , false))
+//                      ^com
+
+// consumeGap(Gap(true, false, ))
+//                             ^com
+
+// consumeGap(TupleGap((true, false), ))
+//                                    ^com
+
+// consumeGap(TupleGap((true, ), false))
+//                            ^com
+
+// switch gap { | Gap(true, , false) => ()}
+//                          ^com
+
+// switch gap { | Gap(true, false, ) => ()}
+//                                 ^com
+
+// switch gap { | TupleGap((true, false), ) => ()}
+//                                        ^com
+
+// switch gap { | TupleGap((true, ), _) => ()}
+//                                ^com

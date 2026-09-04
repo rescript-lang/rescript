@@ -194,3 +194,112 @@ Path value
   }
 ]
 
+Complete src/CompletionConstructorTuple.res 33:24
+posCursor:[33:24] posNoWhite:[33:22] Found expr:[33:3->33:33]
+Pexp_apply ...[33:3->33:13] (...[33:14->33:32])
+Completable: Cexpression CArgument Value[consumeGap]($0)->variantPayload::Gap($1)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath CArgument Value[consumeGap]($0)
+ContextPath Value[consumeGap]
+Path consumeGap
+[
+  { "detail": "bool", "kind": 4, "label": "true", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "false", "tags": [] }
+]
+
+Complete src/CompletionConstructorTuple.res 36:31
+posCursor:[36:31] posNoWhite:[36:29] Found expr:[36:3->36:33]
+Pexp_apply ...[36:3->36:13] (...[36:14->36:32])
+Completable: Cexpression CArgument Value[consumeGap]($0)->variantPayload::Gap($2)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath CArgument Value[consumeGap]($0)
+ContextPath Value[consumeGap]
+Path consumeGap
+[
+  { "detail": "bool", "kind": 4, "label": "true", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "false", "tags": [] }
+]
+
+Complete src/CompletionConstructorTuple.res 39:38
+posCursor:[39:38] posNoWhite:[39:36] Found expr:[39:3->39:40]
+Pexp_apply ...[39:3->39:13] (...[39:14->39:39])
+Completable: Cexpression CArgument Value[consumeGap]($0)->variantPayload::TupleGap($1)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath CArgument Value[consumeGap]($0)
+ContextPath Value[consumeGap]
+Path consumeGap
+[
+  { "detail": "bool", "kind": 4, "label": "true", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "false", "tags": [] }
+]
+
+Complete src/CompletionConstructorTuple.res 42:30
+posCursor:[42:30] posNoWhite:[42:28] Found expr:[42:3->42:40]
+Pexp_apply ...[42:3->42:13] (...[42:14->42:39])
+Completable: Cexpression CArgument Value[consumeGap]($0)->variantPayload::TupleGap($0), tuple($1)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath CArgument Value[consumeGap]($0)
+ContextPath Value[consumeGap]
+Path consumeGap
+[
+  { "detail": "bool", "kind": 4, "label": "true", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "false", "tags": [] }
+]
+
+Complete src/CompletionConstructorTuple.res 45:28
+posCursor:[45:28] posNoWhite:[45:26] Found pattern:[45:18->45:36]
+Ppat_construct Gap:[45:18->45:21]
+Completable: Cpattern Value[gap]->variantPayload::Gap($1)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[gap]
+Path gap
+[
+  { "detail": "bool", "kind": 4, "label": "true", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "false", "tags": [] }
+]
+
+Complete src/CompletionConstructorTuple.res 48:35
+posCursor:[48:35] posNoWhite:[48:33] Found pattern:[48:18->48:36]
+Ppat_construct Gap:[48:18->48:21]
+Completable: Cpattern Value[gap]->variantPayload::Gap($2)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[gap]
+Path gap
+[
+  { "detail": "bool", "kind": 4, "label": "true", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "false", "tags": [] }
+]
+
+Complete src/CompletionConstructorTuple.res 51:42
+posCursor:[51:42] posNoWhite:[51:40] Found pattern:[51:18->51:43]
+Ppat_construct TupleGap:[51:18->51:26]
+Completable: Cpattern Value[gap]->variantPayload::TupleGap($1)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[gap]
+Path gap
+[
+  { "detail": "bool", "kind": 4, "label": "true", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "false", "tags": [] }
+]
+
+Complete src/CompletionConstructorTuple.res 54:34
+posCursor:[54:34] posNoWhite:[54:32] Found pattern:[54:18->54:39]
+Ppat_construct TupleGap:[54:18->54:26]
+posCursor:[54:34] posNoWhite:[54:32] Found pattern:[54:27->54:35]
+Completable: Cpattern Value[gap]->variantPayload::TupleGap($0), tuple($1)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[gap]
+Path gap
+[
+  { "detail": "bool", "kind": 4, "label": "true", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "false", "tags": [] }
+]
+

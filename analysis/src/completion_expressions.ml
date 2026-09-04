@@ -5,11 +5,6 @@ let is_expr_hole exp =
   | Pexp_extension ({txt = "rescript.exprhole"}, _) -> true
   | _ -> false
 
-let is_expr_tuple expr =
-  match expr.Parsetree.pexp_desc with
-  | Pexp_tuple _ -> true
-  | _ -> false
-
 let rec traverse_expr (exp : Parsetree.expression) ~expr_path ~pos
     ~first_char_before_cursor_no_white =
   let loc_has_cursor loc = loc |> Cursor_position.loc_has_cursor ~pos in
@@ -136,23 +131,6 @@ let rec traverse_expr (exp : Parsetree.expression) ~expr_path ~pos
               constructor_name = Utils.get_unqualified_name txt;
               item_num = 0;
               source_arity = 1;
-            };
-        ]
-        @ expr_path )
-  | Pexp_construct ({txt}, {txt = args})
-    when args <> []
-         && pos >= ((Ext_list.last args).pexp_loc |> Loc.end_)
-         && first_char_before_cursor_no_white = Some ','
-         && is_expr_tuple (Ext_list.last args) = false ->
-    (* Empty payload with trailing ',', like: Test(true, <com>) *)
-    Some
-      ( "",
-        [
-          Completable.NVariantPayload
-            {
-              constructor_name = Utils.get_unqualified_name txt;
-              item_num = List.length args;
-              source_arity = List.length args;
             };
         ]
         @ expr_path )
