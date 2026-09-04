@@ -175,9 +175,9 @@ let rec add_pattern bv pat =
   | Ppat_alias (p, _) -> add_pattern bv p
   | Ppat_interval _ | Ppat_constant _ -> ()
   | Ppat_tuple pl -> List.iter (add_pattern bv) pl
-  | Ppat_construct (c, op) ->
+  | Ppat_construct (c, args) ->
     add bv c;
-    List.iter (add_pattern bv) op
+    List.iter (add_pattern bv) args
   | Ppat_record (pl, _, rest) ->
     List.iter
       (fun {lid = lbl; x = p} ->
@@ -236,9 +236,9 @@ let rec add_expr bv exp =
     add_expr bv e;
     add_cases bv pel
   | Pexp_tuple el -> List.iter (add_expr bv) el
-  | Pexp_construct (c, opte) ->
+  | Pexp_construct (c, args) ->
     add bv c;
-    List.iter (add_expr bv) opte
+    List.iter (add_expr bv) args
   | Pexp_variant (_, args) -> List.iter (add_expr bv) args
   | Pexp_record (lblel, opte) ->
     List.iter

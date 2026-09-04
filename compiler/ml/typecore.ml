@@ -184,9 +184,11 @@ let iter_expression f e =
     | Pexp_match (e, pel) | Pexp_try (e, pel) ->
       expr e;
       List.iter case pel
-    | Pexp_array el | Pexp_tuple el -> List.iter expr el
-    | Pexp_construct (_, el) -> List.iter expr el
-    | Pexp_variant (_, args) -> List.iter expr args
+    | Pexp_array args
+    | Pexp_tuple args
+    | Pexp_construct (_, args)
+    | Pexp_variant (_, args) ->
+      List.iter expr args
     | Pexp_record (iel, eo) ->
       may expr eo;
       List.iter (fun {x = e} -> expr e) iel
@@ -1216,7 +1218,7 @@ exception Need_backtrack
 (* The parser preserves syntactic arguments for printing. Resolve their semantic
    grouping only after constructor disambiguation, retaining the historical
    equivalence of C(a, b) and C((a, b)), including for legacy PPX output. *)
-let constructor_args_of_exp_payload ~arity sargs =
+let normalize_constructor_expr_args ~arity sargs =
   match sargs with
   | [{pexp_desc = Pexp_tuple args}] when arity > 1 -> args
   | {pexp_loc = first_loc} :: (_ :: _ as rest) when arity = 1 ->
@@ -1225,7 +1227,7 @@ let constructor_args_of_exp_payload ~arity sargs =
     [Ast_helper.Exp.tuple ~loc sargs]
   | sargs -> sargs
 
-let constructor_args_of_pat_payload ~arity sargs =
+let normalize_constructor_pat_args ~arity sargs =
   match sargs with
   | [{ppat_desc = Ppat_tuple args}] when arity > 1 -> args
   | {ppat_loc = first_loc} :: (_ :: _ as rest) when arity = 1 ->
@@ -1446,7 +1448,7 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
        correct head *)
     if constr.cstr_generalized then unify_head_only loc !env expected_ty constr;
     let sargs =
-      match constructor_args_of_pat_payload ~arity:constr.cstr_arity sargs with
+      match normalize_constructor_pat_args ~arity:constr.cstr_arity sargs with
       | [({ppat_desc = Ppat_any} as sp)] when constr.cstr_arity <> 1 ->
         if constr.cstr_arity = 0 then
           Location.prerr_warning sp.ppat_loc
@@ -4447,7 +4449,7 @@ and type_construct ~context env loc lid sargs ty_expected attrs =
   Env.mark_constructor Env.Positive env (Longident.last lid.txt) constr;
   Builtin_attributes.check_deprecated loc constr.cstr_attributes
     constr.cstr_name;
-  let sargs = constructor_args_of_exp_payload ~arity:constr.cstr_arity sargs in
+  let sargs = normalize_constructor_expr_args ~arity:constr.cstr_arity sargs in
   if List.length sargs <> constr.cstr_arity then
     raise
       (Error

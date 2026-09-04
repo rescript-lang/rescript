@@ -316,8 +316,8 @@ module E = struct
       match_ ~loc ~attrs (sub.expr sub e) (sub.cases sub pel)
     | Pexp_try (e, pel) -> try_ ~loc ~attrs (sub.expr sub e) (sub.cases sub pel)
     | Pexp_tuple el -> tuple ~loc ~attrs (List.map (sub.expr sub) el)
-    | Pexp_construct (lid, arg) ->
-      construct ~loc ~attrs (map_loc sub lid) (List.map (sub.expr sub) arg)
+    | Pexp_construct (lid, args) ->
+      construct ~loc ~attrs (map_loc sub lid) (List.map (sub.expr sub) args)
     | Pexp_variant (lab, args) ->
       variant ~loc ~attrs lab (List.map (sub.expr sub) args)
     | Pexp_record (l, eo) ->
@@ -424,8 +424,8 @@ module P = struct
     | Ppat_constant c -> constant ~loc ~attrs c
     | Ppat_interval (c1, c2) -> interval ~loc ~attrs c1 c2
     | Ppat_tuple pl -> tuple ~loc ~attrs (List.map (sub.pat sub) pl)
-    | Ppat_construct (l, p) ->
-      construct ~loc ~attrs (map_loc sub l) (List.map (sub.pat sub) p)
+    | Ppat_construct (l, args) ->
+      construct ~loc ~attrs (map_loc sub l) (List.map (sub.pat sub) args)
     | Ppat_variant (l, args) ->
       variant ~loc ~attrs l (List.map (sub.pat sub) args)
     | Ppat_record (lpl, cf, rest) ->
