@@ -35,6 +35,8 @@
 
 #### :bug: Bug fix
 
+- Fix unstable formatting of trailing comments in nested callbacks. https://github.com/rescript-lang/rescript/issues/6976
+
 - Fix excessive parentheses and indentation in function assignments to refs, align record and array assignment formatting across refs and fields, and preserve function return-type parentheses and consistent JSX fragment layout in callbacks. https://github.com/rescript-lang/rescript/pull/8611
 - Fix a recursive module with an empty signature discarding its right-hand side. Lambda-to-Lam conversion rewrote `Pupdate_mod` to unit when the module's shape had no fields, dropping the primitive's arguments - one of which is the right-hand side - so `module rec M: {} = { let () = Console.log("effect") }` emitted nothing for `M`. The elision now happens where the bindings are produced, with the right-hand side still in hand. https://github.com/rescript-lang/rescript/pull/8608
 - Fix `Int.Ref.increment` and `Int.Ref.decrement` evaluating their argument twice: `Int.Ref.increment(mkRef())` emitted `mkRef().contents = mkRef().contents + 1 | 0`. The `%incr` and `%decr` builtins lowered to an assignment that repeated the argument expression; they now bind the reference before the read-modify-write. Inlining decisions around an increment are taken on the code it stands for rather than on a single primitive node. https://github.com/rescript-lang/rescript/pull/8608

@@ -4657,14 +4657,28 @@ and print_pexp_apply ~state expr cmt_tbl =
       | Braced braces -> print_braces doc call_expr braces
       | Nothing -> doc
     in
-    if Parsetree_viewer.requires_special_callback_printing_first_arg args then
+    (* Use the regular argument layout for trailing comments. Compact callback
+     * layouts can detach comments from the body when it breaks, making
+     * subsequent formatting unstable. *)
+    let args_have_trailing_comments =
+      List.exists
+        (fun (_, (arg : Parsetree.expression)) ->
+          has_trailing_comments cmt_tbl arg.pexp_loc)
+        args
+    in
+    if
+      (not args_have_trailing_comments)
+      && Parsetree_viewer.requires_special_callback_printing_first_arg args
+    then
       let args_doc =
         print_arguments_with_callback_in_first_position ~state ~partial args
           cmt_tbl
       in
       Doc.concat
         [print_attributes ~state attrs cmt_tbl; call_expr_doc; args_doc]
-    else if Parsetree_viewer.requires_special_callback_printing_last_arg args
+    else if
+      (not args_have_trailing_comments)
+      && Parsetree_viewer.requires_special_callback_printing_last_arg args
     then
       let args_doc =
         print_arguments_with_callback_in_last_position ~state ~partial args
