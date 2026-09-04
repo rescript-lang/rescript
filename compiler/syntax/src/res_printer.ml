@@ -1862,7 +1862,7 @@ and print_constructor_arguments ?(is_dot_dot_dot = false) ~state ~indent
           Doc.rparen;
         ]
     in
-    if indent then Doc.indent args else args
+    Doc.group (if indent then Doc.indent args else args)
 
 and print_label_declaration ?inline_record_definitions ~state
     (ld : Parsetree.label_declaration) cmt_tbl =
