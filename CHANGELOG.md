@@ -62,6 +62,7 @@
 
 #### :nail_care: Polish
 
+- Omit unnecessary parentheses around coercions in call arguments, bindings, and collection elements while preserving expression grouping. https://github.com/rescript-lang/rescript/issues/6254
 - Print external declarations in signatures and type errors with their processed attributes instead of the `"#rescript-external"` placeholder, and print inline constants using `@inline` syntax. https://github.com/rescript-lang/rescript/pull/8581
 - Improve diagnostics for dynamic imports of local values and attempts to use `import` as a first-class value. https://github.com/rescript-lang/rescript/pull/8582
 - Allow inferred labeled functions to be called with labels in any order by removing legacy curried-arrow commutation locks. https://github.com/rescript-lang/rescript/pull/8547
