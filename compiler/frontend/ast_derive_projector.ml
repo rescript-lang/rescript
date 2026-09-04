@@ -83,7 +83,7 @@ let init () =
                          Exp.constraint_
                            (Exp.construct
                               {loc; txt = Longident.Lident con_name}
-                              (Location.mkloc [] !Ast_helper.default_loc))
+                              {txt = []; loc})
                            annotate_type
                        else
                          let vars =
@@ -94,10 +94,12 @@ let init () =
                            Exp.constraint_
                              (Exp.construct
                                 {loc; txt = Longident.Lident con_name}
-                                (Location.mkloc
-                                   (Ext_list.map vars (fun x ->
-                                        Exp.ident {loc; txt = Lident x}))
-                                   !Ast_helper.default_loc))
+                                {
+                                  txt =
+                                    Ext_list.map vars (fun x ->
+                                        Exp.ident {loc; txt = Lident x});
+                                  loc;
+                                })
                              annotate_type
                          in
                          Ast_helper.Exp.fun_

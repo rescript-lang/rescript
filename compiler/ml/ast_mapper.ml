@@ -608,16 +608,14 @@ module Ppx_context = struct
       (Const.string x)
 
   let make_bool x =
-    if x then
-      Exp.construct (lid "true") (Location.mkloc [] !Ast_helper.default_loc)
-    else Exp.construct (lid "false") (Location.mkloc [] !Ast_helper.default_loc)
+    if x then Exp.construct (lid "true") (Location.mknoloc [])
+    else Exp.construct (lid "false") (Location.mknoloc [])
 
   let rec make_list f lst =
     match lst with
     | x :: rest ->
-      Exp.construct (lid "::")
-        (Location.mkloc [f x; make_list f rest] !Ast_helper.default_loc)
-    | [] -> Exp.construct (lid "[]") (Location.mkloc [] !Ast_helper.default_loc)
+      Exp.construct (lid "::") (Location.mknoloc [f x; make_list f rest])
+    | [] -> Exp.construct (lid "[]") (Location.mknoloc [])
 
   let make_pair f1 f2 (x1, x2) = Exp.tuple [f1 x1; f2 x2]
 

@@ -514,14 +514,12 @@ let vb_match ~expr (name, default, pattern, _alias, loc, _) =
              Exp.case
                (Pat.construct
                   (Location.mknoloc @@ Lident "Some")
-                  (Location.mkloc
-                     [Pat.var (Location.mknoloc label)]
-                     !Ast_helper.default_loc))
+                  (Location.mknoloc [Pat.var (Location.mknoloc label)]))
                (Exp.ident (Location.mknoloc @@ Lident label));
              Exp.case
                (Pat.construct
                   (Location.mknoloc @@ Lident "None")
-                  (Location.mkloc [] !Ast_helper.default_loc))
+                  (Location.mknoloc []))
                default;
            ])
     in

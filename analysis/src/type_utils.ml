@@ -1014,19 +1014,17 @@ module Codegen = struct
   let mk_construct_pat ?payload name =
     Ast_helper.Pat.construct
       {Asttypes.txt = Longident.Lident name; loc = Location.none}
-      (Location.mkloc
+      (Location.mknoloc
          (match payload with
          | None -> []
-         | Some payload -> [payload])
-         !Ast_helper.default_loc)
+         | Some payload -> [payload]))
 
   let mk_tag_pat ?payload name =
     Ast_helper.Pat.variant name
-      (Location.mkloc
+      (Location.mknoloc
          (match payload with
          | None -> []
-         | Some payload -> [payload])
-         !Ast_helper.default_loc)
+         | Some payload -> [payload]))
 
   let any () = Ast_helper.Pat.any ()
 

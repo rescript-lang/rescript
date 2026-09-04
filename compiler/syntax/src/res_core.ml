@@ -3862,8 +3862,7 @@ and parse_for_expression p =
         let unit_pattern =
           let loc = mk_loc lparen p.prev_end_pos in
           let lid = Location.mkloc (Longident.Lident "()") loc in
-          Ast_helper.Pat.construct lid
-            (Location.mkloc [] !Ast_helper.default_loc)
+          Ast_helper.Pat.construct lid {txt = []; loc}
         in
         parse_for_rest false ~await:false
           (parse_alias_pattern ~attrs:[] unit_pattern p)
@@ -3893,8 +3892,7 @@ and parse_for_expression p =
           let unit_pattern =
             let loc = mk_loc lparen p.prev_end_pos in
             let lid = Location.mkloc (Longident.Lident "()") loc in
-            Ast_helper.Pat.construct lid
-              (Location.mkloc [] !Ast_helper.default_loc)
+            Ast_helper.Pat.construct lid {txt = []; loc}
           in
           parse_for_rest false ~await:true
             (parse_alias_pattern ~attrs:[] unit_pattern p)
@@ -4028,7 +4026,7 @@ and parse_argument p : argument option =
         let unit_expr =
           Ast_helper.Exp.construct
             (Location.mknoloc (Longident.Lident "()"))
-            (Location.mkloc [] !Ast_helper.default_loc)
+            (Location.mknoloc [])
         in
         Some {label = Asttypes.Nolabel; expr = unit_expr}
       | _ -> parse_argument2 p)
