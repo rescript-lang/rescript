@@ -165,7 +165,6 @@ let map_loc sub {loc; txt} = {loc = sub.location sub loc; txt}
 (* Internal Parsetree0 bridge metadata; public res.* attributes pass through. *)
 let record_rest_attr_name = "_res.record_rest"
 let constructor_args_attr_name = "_res.constructor_args"
-let constructor_tuple_arg_attr_name = "_res.constructor_tuple_arg"
 
 let has_explicit_arity_attr (attrs : Pt.attributes) =
   List.exists
@@ -185,9 +184,6 @@ let remove_internal_marker_attr ~name (attrs : Pt.attributes) =
 
 let remove_constructor_args_attr attrs =
   remove_internal_marker_attr ~name:constructor_args_attr_name attrs
-
-let remove_constructor_tuple_arg_attr attrs =
-  remove_internal_marker_attr ~name:constructor_tuple_arg_attr_name attrs
 
 (* Unmarked v0 tuples remain a single syntactic payload. Typecore resolves
    semantic argument grouping after it knows the constructor declaration. *)
@@ -883,7 +879,6 @@ module E = struct
     | Pexp_construct (lid, arg) -> (
       let lid1 = map_loc sub lid in
       let has_constructor_args, attrs = remove_constructor_args_attr attrs in
-      let _, attrs = remove_constructor_tuple_arg_attr attrs in
       let args =
         decode_args ~map:(sub.expr sub)
           ~tuple_args:(fun arg ->
@@ -963,7 +958,6 @@ module E = struct
           :: attrs
         | _ -> attrs
       in
-      let _, attrs = remove_constructor_tuple_arg_attr attrs in
       let args =
         decode_args ~map:(sub.expr sub)
           ~tuple_args:(fun arg ->
@@ -1141,7 +1135,6 @@ module P = struct
     | Ppat_tuple pl -> tuple ~loc ~attrs (List.map (sub.pat sub) pl)
     | Ppat_construct (l, arg) ->
       let has_constructor_args, attrs = remove_constructor_args_attr attrs in
-      let _, attrs = remove_constructor_tuple_arg_attr attrs in
       let args =
         decode_args ~map:(sub.pat sub)
           ~tuple_args:(fun arg ->
@@ -1165,7 +1158,6 @@ module P = struct
           :: attrs
         | _ -> attrs
       in
-      let _, attrs = remove_constructor_tuple_arg_attr attrs in
       let args =
         decode_args ~map:(sub.pat sub)
           ~tuple_args:(fun arg ->

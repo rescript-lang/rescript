@@ -321,10 +321,9 @@ let test_constructor_args_roundtrip_through_ast0 _ =
   let tuple_expr = Ast_helper.Exp.tuple ~loc [int_expr "1"; int_expr "2"] in
   let expr = Ast_helper.Exp.construct ~loc lid [tuple_expr] in
   let expr0 = map_expr_to0 expr in
-  OUnit.assert_bool "a single tuple argument does not carry bridge metadata"
-    (not (has_attr "_res.constructor_args" expr0.pexp_attributes));
-  OUnit.assert_bool "a single tuple argument records its v0 shape"
-    (has_attr "_res.constructor_tuple_arg" expr0.pexp_attributes);
+  OUnit.assert_equal
+    ~msg:"a single tuple argument does not carry bridge metadata" []
+    expr0.pexp_attributes;
   let expr = map_expr0 expr0 in
   OUnit.assert_bool "a known tuple argument is not marked as legacy"
     (not (has_attr "_res.legacy_constructor_payload" expr.pexp_attributes));

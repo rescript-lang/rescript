@@ -108,18 +108,13 @@ let map_loc sub {loc; txt} = {loc = sub.location sub loc; txt}
 (* Internal Parsetree0 bridge metadata; public res.* attributes pass through. *)
 let record_rest_attr_name = "_res.record_rest"
 let constructor_args_attr_name = "_res.constructor_args"
-let constructor_tuple_arg_attr_name = "_res.constructor_tuple_arg"
 
 let add_constructor_args_attr attrs =
   (Location.mknoloc constructor_args_attr_name, Pt.PStr []) :: attrs
 
-let add_constructor_tuple_arg_attr attrs =
-  (Location.mknoloc constructor_tuple_arg_attr_name, Pt.PStr []) :: attrs
-
-let encode_args ~map ~is_tuple ~tuple ~loc ~attrs args =
+let encode_args ~map ~tuple ~loc ~attrs args =
   match List.map map args with
   | [] -> (None, attrs)
-  | [arg] when is_tuple arg -> (Some arg, add_constructor_tuple_arg_attr attrs)
   | [arg] -> (Some arg, attrs)
   | args -> (Some (tuple ~loc args), add_constructor_args_attr attrs)
 
@@ -600,10 +595,6 @@ module E = struct
       in
       let arg, attrs =
         encode_args ~map:(sub.expr sub)
-          ~is_tuple:(fun arg ->
-            match arg.pexp_desc with
-            | Pexp_tuple _ -> true
-            | _ -> false)
           ~tuple:(fun ~loc args -> Ast_helper0.Exp.tuple ~loc args)
           ~loc:args_loc ~attrs args
       in
@@ -612,10 +603,6 @@ module E = struct
       let args_loc, attrs = variant_args_loc ~loc attrs in
       let arg, attrs =
         encode_args ~map:(sub.expr sub)
-          ~is_tuple:(fun arg ->
-            match arg.pexp_desc with
-            | Pexp_tuple _ -> true
-            | _ -> false)
           ~tuple:(fun ~loc args -> Ast_helper0.Exp.tuple ~loc args)
           ~loc:args_loc ~attrs args
       in
@@ -860,10 +847,6 @@ module P = struct
       in
       let arg, attrs =
         encode_args ~map:(sub.pat sub)
-          ~is_tuple:(fun arg ->
-            match arg.ppat_desc with
-            | Ppat_tuple _ -> true
-            | _ -> false)
           ~tuple:(fun ~loc args -> Ast_helper0.Pat.tuple ~loc args)
           ~loc:args_loc ~attrs args
       in
@@ -872,10 +855,6 @@ module P = struct
       let args_loc, attrs = variant_args_loc ~loc attrs in
       let arg, attrs =
         encode_args ~map:(sub.pat sub)
-          ~is_tuple:(fun arg ->
-            match arg.ppat_desc with
-            | Ppat_tuple _ -> true
-            | _ -> false)
           ~tuple:(fun ~loc args -> Ast_helper0.Pat.tuple ~loc args)
           ~loc:args_loc ~attrs args
       in
