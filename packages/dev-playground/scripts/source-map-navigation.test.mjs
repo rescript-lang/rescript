@@ -5,6 +5,7 @@ import {
   decode,
   decodeForSource,
   generatedForOriginal,
+  isCollapsedSelection,
   isCurrentSource,
 } from "../src/SourceMapNavigation.res.mjs";
 
@@ -51,6 +52,11 @@ test("disables mappings when the result belongs to stale source", () => {
     decodeForSource(sourceMap, "let value = 2", "let value = 2"),
     decode(sourceMap),
   );
+});
+
+test("navigates only when the source selection is collapsed", () => {
+  assert.equal(isCollapsedSelection(4, 4), true);
+  assert.equal(isCollapsedSelection(4, 12), false);
 });
 
 test("does not carry a generated position onto an unmapped source line", () => {

@@ -123,6 +123,8 @@ module Event = {
 
   let selectionStart = (event: Dom.event): int => (event->target)["selectionStart"]
 
+  let selectionEnd = (event: Dom.event): int => (event->target)["selectionEnd"]
+
   let scrollTop = (event: Dom.event): int => {
     let scrollTop: float = (event->target)["scrollTop"]
     scrollTop->Math.round->Float.toInt

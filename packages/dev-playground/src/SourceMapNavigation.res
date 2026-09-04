@@ -60,6 +60,8 @@ let decode = sourceMap => {
 
 let isCurrentSource = (compiledSource, currentSource) => compiledSource === currentSource
 
+let isCollapsedSelection = (selectionStart, selectionEnd) => selectionStart === selectionEnd
+
 let decodeForSource = (sourceMap, compiledSource, currentSource) =>
   isCurrentSource(compiledSource, currentSource) ? decode(sourceMap) : []
 

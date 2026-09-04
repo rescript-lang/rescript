@@ -776,32 +776,37 @@ module App = {
 
     let navigateFromSource = event => {
       syncEditorState(event)
-      let currentSource = Event.value(event)
-      let position = cursorPositionForOffset(currentSource, Event.selectionStart(event))
-      switch Signal.peek(compileResult) {
-      | Some({source: compiledSource, result: Ok({sourceMap: Some(sourceMap)})}) => {
-          let mappings = SourceMapNavigation.decodeForSource(
-            sourceMap,
-            compiledSource,
-            currentSource,
-          )
-          switch SourceMapNavigation.generatedForOriginal(
-            mappings,
-            {
-              line: position.line,
-              col: position.col,
-            },
-          ) {
-          | Some(mapping) => {
-              Signal.set(mappedSourcePosition, Some({line: position.line, col: position.col}))
-              Signal.set(mappedGeneratedPosition, Some(mapping.generated))
-              Signal.set(activeTab, JavaScript)
-              scrollToGeneratedMapping()
+      let selectionStart = Event.selectionStart(event)
+      if !SourceMapNavigation.isCollapsedSelection(selectionStart, Event.selectionEnd(event)) {
+        clearMappedPositions()
+      } else {
+        let currentSource = Event.value(event)
+        let position = cursorPositionForOffset(currentSource, selectionStart)
+        switch Signal.peek(compileResult) {
+        | Some({source: compiledSource, result: Ok({sourceMap: Some(sourceMap)})}) => {
+            let mappings = SourceMapNavigation.decodeForSource(
+              sourceMap,
+              compiledSource,
+              currentSource,
+            )
+            switch SourceMapNavigation.generatedForOriginal(
+              mappings,
+              {
+                line: position.line,
+                col: position.col,
+              },
+            ) {
+            | Some(mapping) => {
+                Signal.set(mappedSourcePosition, Some({line: position.line, col: position.col}))
+                Signal.set(mappedGeneratedPosition, Some(mapping.generated))
+                Signal.set(activeTab, JavaScript)
+                scrollToGeneratedMapping()
+              }
+            | None => clearMappedPositions()
             }
-          | None => clearMappedPositions()
           }
+        | _ => clearMappedPositions()
         }
-      | _ => clearMappedPositions()
       }
     }
 
