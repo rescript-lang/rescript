@@ -16,13 +16,6 @@ let expr ?(allow_coercion = false) expr =
     | {pexp_desc = Pexp_constraint _ | Pexp_coerce _} -> Parenthesized
     | _ -> Nothing)
 
-(* A source annotation may precede :> directly, but nested coercions need
-   grouping. Preserve explicit braces through the normal expression rule. *)
-let coerce_expr_operand expression =
-  match (expr expression, expression.Parsetree.pexp_desc) with
-  | Parenthesized, Pexp_constraint _ -> Nothing
-  | kind, _ -> kind
-
 let expr_record_row_rhs ~optional e =
   let kind = expr e in
   match kind with

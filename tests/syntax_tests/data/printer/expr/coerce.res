@@ -25,7 +25,7 @@ let foo = (~a=(3:int:>int), b) => 34
 
 let x = (/* c0 */ x /* c1 */ :> /* c2 */ int /* c3 */)
 
-// Delimited arguments and binding right-hand sides need no extra parentheses.
+// Delimited arguments need no extra parentheses.
 foo(v :> b)
 foo((v :> b))
 foo(~arg=(v :> b), ~optional=?(v :> b))
@@ -76,3 +76,15 @@ let piped = (value :> b)->foo
 let blockTail = {foo(); (value :> b)}
 let blockHead = {(value :> b); foo()}
 let dictSpread = dict{...(value :> dict<b>), "field": value}
+
+// A constrained operand needs parentheses when the coercion is a binding RHS.
+let constrainedOperand = (x: t) :> u
+let constrainedChain = ((x: t) :> u) :> v
+let constrainedBlock = {(x: t) :> u}
+call((x: t) :> u)
+
+// A following JSX element must not be read as coercion type arguments.
+let beforeJsx = () => {
+  let value = (x :> string)
+  <option value />
+}
