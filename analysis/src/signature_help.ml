@@ -633,8 +633,19 @@ let signature_help ~debug ~source ~kind_file ~pos
                   |> String.concat ", ")
               ^ ")"
             in
+            let constructor_has_multiple_args =
+              match arg_parts with
+              | Some (`TupleArg (_ :: _ :: _)) -> true
+              | _ -> false
+            in
             let active_parameter =
               match cs with
+              | `ConstructorExpr (_, [{pexp_desc = Pexp_tuple tuple_items}])
+                when constructor_has_multiple_args ->
+                constructor_arg_index
+                  (List.map
+                     (fun (item : Parsetree.expression) -> item.pexp_loc)
+                     tuple_items)
               | `ConstructorExpr (_, items) when List.length items > 1 ->
                 constructor_arg_index
                   (List.map
@@ -670,6 +681,12 @@ let signature_help ~debug ~source ~kind_file ~pos
                   !field_index
                 | _ -> -1)
               | `ConstructorExpr (_, [_]) -> 0
+              | `ConstructorPat (_, [{ppat_desc = Ppat_tuple tuple_items}])
+                when constructor_has_multiple_args ->
+                constructor_arg_index
+                  (List.map
+                     (fun (item : Parsetree.pattern) -> item.ppat_loc)
+                     tuple_items)
               | `ConstructorPat (_, items) when List.length items > 1 ->
                 constructor_arg_index
                   (List.map

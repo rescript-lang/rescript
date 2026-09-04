@@ -1,0 +1,44 @@
+Signature help src/SignatureHelpConstructorTuple.res 2:23
+{
+  "activeParameter": 1,
+  "activeSignature": 0,
+  "signatures": [
+    {
+      "activeParameter": 1,
+      "label": "Pair(int, string)",
+      "parameters": [
+        {
+          "documentation": { "kind": "markdown", "value": "" },
+          "label": [ 5, 8 ]
+        },
+        {
+          "documentation": { "kind": "markdown", "value": "" },
+          "label": [ 10, 16 ]
+        }
+      ]
+    }
+  ]
+}
+
+Signature help src/SignatureHelpConstructorTuple.res 6:15
+{
+  "activeParameter": 1,
+  "activeSignature": 0,
+  "signatures": [
+    {
+      "activeParameter": 1,
+      "label": "Pair(int, string)",
+      "parameters": [
+        {
+          "documentation": { "kind": "markdown", "value": "" },
+          "label": [ 5, 8 ]
+        },
+        {
+          "documentation": { "kind": "markdown", "value": "" },
+          "label": [ 10, 16 ]
+        }
+      ]
+    }
+  ]
+}
+
