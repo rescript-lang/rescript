@@ -935,16 +935,10 @@ let rec resolve_nested_pattern_path (typ : inner_type) ~env ~full ~state ~nested
             TypeExpr typ
             |> resolve_nested_pattern_path ~env ~state ~full ~nested
           | None -> None)
-        | Some {args = InlineRecord _} -> (
-          match
-            constructors
-            |> find_type_of_constructor_arg ~constructor_name
-                 ~payload_num:item_num ~env
-          with
-          | Some typ ->
-            typ |> resolve_nested_pattern_path ~env ~state ~full ~nested
-          | None -> None)
-        | None -> None)
+        | Some {args = InlineRecord fields} when item_num = 0 ->
+          ExtractedType (TinlineRecord {env; fields})
+          |> resolve_nested_pattern_path ~env ~state ~full ~nested
+        | Some {args = InlineRecord _} | None -> None)
       | ( NPolyvariantPayload {constructor_name; item_num},
           Tpolyvariant {env; constructors} ) -> (
         match

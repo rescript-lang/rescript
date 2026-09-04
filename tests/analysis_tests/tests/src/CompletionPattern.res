@@ -254,3 +254,12 @@ let callWithTwoParams = (fn: (firstParamVariant, secondParamVariant) => bool) =>
 // must be completed; the first parameter's comma recovery must not shadow it.
 // callWithTwoParams((One(x), Blah(a, )) => true)
 //                                    ^com
+
+type inlineRecord = Inline({enabled: bool, nested: nestedRecord})
+let inlineRecord = Inline({enabled: true, nested: {nested: false}})
+
+// switch inlineRecord { | Inline({}) => ()}
+//                                 ^com
+
+// switch inlineRecord { | Inline({nested: {}}) => ()}
+//                                          ^com

@@ -1173,3 +1173,58 @@ Path callWithTwoParams
   { "detail": "bool", "kind": 4, "label": "false", "tags": [] }
 ]
 
+Complete src/CompletionPattern.res 260:35
+posCursor:[260:35] posNoWhite:[260:34] Found pattern:[260:27->260:37]
+Ppat_construct Inline:[260:27->260:33]
+posCursor:[260:35] posNoWhite:[260:34] Found pattern:[260:34->260:36]
+Completable: Cpattern Value[inlineRecord]->variantPayload::Inline($0), recordBody
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[inlineRecord]
+Path inlineRecord
+[
+  {
+    "detail": "bool",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nenabled: bool\n```\n\n```rescript\n{enabled: bool, nested: nestedRecord}\n```"
+    },
+    "kind": 5,
+    "label": "enabled",
+    "tags": []
+  },
+  {
+    "detail": "nestedRecord",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nnested: nestedRecord\n```\n\n```rescript\n{enabled: bool, nested: nestedRecord}\n```"
+    },
+    "kind": 5,
+    "label": "nested",
+    "tags": []
+  }
+]
+
+Complete src/CompletionPattern.res 263:44
+posCursor:[263:44] posNoWhite:[263:43] Found pattern:[263:27->263:47]
+Ppat_construct Inline:[263:27->263:33]
+posCursor:[263:44] posNoWhite:[263:43] Found pattern:[263:34->263:46]
+posCursor:[263:44] posNoWhite:[263:43] Found pattern:[263:43->263:45]
+Completable: Cpattern Value[inlineRecord]->variantPayload::Inline($0), recordField(nested), recordBody
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[inlineRecord]
+Path inlineRecord
+[
+  {
+    "detail": "bool",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nnested: bool\n```\n\n```rescript\ntype nestedRecord = {nested: bool}\n```"
+    },
+    "kind": 5,
+    "label": "nested",
+    "tags": []
+  }
+]
+
