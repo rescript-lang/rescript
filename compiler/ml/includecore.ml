@@ -301,13 +301,11 @@ and compare_records ~loc env params1_ params2_ n_
         Builtin_attributes.check_deprecated_mutable_inclusion ~def:ld1.ld_loc
           ~use:ld2.ld_loc loc ld1.ld_attributes ld2.ld_attributes
           (Ident.name ld1.ld_id);
-        let field_mismatch =
-          !Builtin_attributes.check_bs_attributes_inclusion
-            ld1.ld_attributes ld2.ld_attributes (Ident.name ld1.ld_id)
-        in
-        match field_mismatch with
-        | Some (a, b) -> [Field_names (n, a, b)]
-        | None ->
+        let name1 = Record_runtime.declaration_name ld1 in
+        let name2 = Record_runtime.declaration_name ld2 in
+        match name1 <> name2 with
+        | true -> [Field_names (n, name1, name2)]
+        | false ->
           let current_field_consistent =
             if fast then true
             else

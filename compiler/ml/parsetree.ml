@@ -520,6 +520,12 @@ and type_kind =
 
 and label_declaration = {
   pld_name: string loc;
+  pld_runtime_name: String_literal.string_literal loc option;
+      (* The [@as("...")] rename, taken out of the attributes when the field is
+         built. The attribute is the surface syntax; this is what it means.
+         The literal keeps its source spelling, and the location is the
+         attribute's own, so the printer can put it back exactly as it was
+         written. *)
   pld_mutable: mutable_flag;
   pld_optional: bool;
   pld_type: core_type;

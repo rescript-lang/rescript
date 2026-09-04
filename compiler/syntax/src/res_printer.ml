@@ -1867,7 +1867,11 @@ and print_constructor_arguments ?(is_dot_dot_dot = false) ~state ~indent
 and print_label_declaration ?inline_record_definitions ~state
     (ld : Parsetree.label_declaration) cmt_tbl =
   let attrs =
-    print_attributes ~state ~loc:ld.pld_name.loc ld.pld_attributes cmt_tbl
+    (* The runtime name is held as a field rather than an attribute, so put its
+       surface syntax back. *)
+    print_attributes ~state ~loc:ld.pld_name.loc
+      (Ast_helper.Type.field_attributes ld)
+      cmt_tbl
   in
   let mutable_flag =
     match ld.pld_mutable with

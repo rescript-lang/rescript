@@ -76,6 +76,90 @@ let test_record_rest_roundtrips_through_ast0 _ =
     ()
   | _ -> assert_failure "Expected record rest after ast0 roundtrip"
 
+(* The ast-mapping fixtures show that a field's [@as] survives the roundtrip.
+   What they cannot show is the shape it travels in: an external ppx reads the
+   frozen AST, so the runtime name has to reach it as an ordinary [@as]
+   attribute and not under some name of the bridge's own choosing. *)
+let test_field_runtime_name_reaches_ast0_as_an_attribute _ =
+  let as_attr =
+    attr "as"
+      (Parsetree.PStr
+         [
+           Ast_helper.Str.eval
+             (Ast_helper.Exp.constant
+                (Pconst_string (String_literal.string_from_semantic "renamed")));
+         ])
+  in
+  let field =
+    Ast_helper.Type.field ~loc ~attrs:[as_attr] (located_string "a")
+      (Ast_helper.Typ.constr ~loc (located_string (Longident.Lident "int")) [])
+  in
+  OUnit.assert_bool "Expected the @as attribute to become the field"
+    (field.pld_runtime_name <> None);
+  let field0 =
+    Ast_mapper_to0.default_mapper.label_declaration
+      Ast_mapper_to0.default_mapper field
+  in
+  OUnit.assert_bool "Expected a plain @as attribute on the ast0 wire"
+    (has_attr "as" field0.pld_attributes)
+
+(* A ppx reads the attribute list in order, so the one taken out has to go back
+   where it was written rather than at the front. *)
+(* Ppx output carries no source position, so every attribute ties. The rename
+   goes back last among them, the order a ppx writing [@dead @as("x")] gave. *)
+let test_field_runtime_name_keeps_ppx_order_on_the_wire _ =
+  let field =
+    Ast_helper.Type.field ~loc:Location.none
+      ~attrs:
+        [
+          (Location.mknoloc "dead", Parsetree.PStr []);
+          ( Location.mknoloc "as",
+            Parsetree.PStr
+              [
+                Ast_helper.Str.eval
+                  (Ast_helper.Exp.constant
+                     (Pconst_string (String_literal.string_from_semantic "wire")));
+              ] );
+        ]
+      (Location.mknoloc "a")
+      (Ast_helper.Typ.constr (Location.mknoloc (Longident.Lident "int")) [])
+  in
+  let field0 =
+    Ast_mapper_to0.default_mapper.label_declaration
+      Ast_mapper_to0.default_mapper field
+  in
+  OUnit.assert_equal ~printer:(String.concat ", ") ["dead"; "as"]
+    (List.map
+       (fun (({txt} : string Asttypes.loc), _) -> txt)
+       field0.pld_attributes)
+
+let test_field_runtime_name_keeps_its_place_on_the_wire _ =
+  let earlier = source_loc 10 20 and as_loc = source_loc 30 40 in
+  let field =
+    Ast_helper.Type.field ~loc
+      ~attrs:
+        [
+          (located_string ~loc:earlier "dead", Parsetree.PStr []);
+          ( located_string ~loc:as_loc "as",
+            Parsetree.PStr
+              [
+                Ast_helper.Str.eval
+                  (Ast_helper.Exp.constant
+                     (Pconst_string (String_literal.string_from_semantic "wire")));
+              ] );
+        ]
+      (located_string "a")
+      (Ast_helper.Typ.constr ~loc (located_string (Longident.Lident "int")) [])
+  in
+  let field0 =
+    Ast_mapper_to0.default_mapper.label_declaration
+      Ast_mapper_to0.default_mapper field
+  in
+  OUnit.assert_equal ~printer:(String.concat ", ") ["dead"; "as"]
+    (List.map
+       (fun (({txt} : string Asttypes.loc), _) -> txt)
+       field0.pld_attributes)
+
 let map_expr0 e =
   Ast_mapper_from0.default_mapper.expr Ast_mapper_from0.default_mapper e
 
@@ -709,4 +793,10 @@ let suites =
          >:: test_function_cases_desugar_to_fun_match;
          "error_extensions_accept_backquoted_strings"
          >:: test_error_extension_backquoted_strings;
+         "field_runtime_name_reaches_ast0_as_an_attribute"
+         >:: test_field_runtime_name_reaches_ast0_as_an_attribute;
+         "field_runtime_name_keeps_its_place_on_the_wire"
+         >:: test_field_runtime_name_keeps_its_place_on_the_wire;
+         "field_runtime_name_keeps_ppx_order_on_the_wire"
+         >:: test_field_runtime_name_keeps_ppx_order_on_the_wire;
        ]

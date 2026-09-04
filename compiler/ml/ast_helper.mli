@@ -297,14 +297,22 @@ module Type : sig
     ?res:core_type ->
     str ->
     constructor_declaration
+
   val field :
     ?loc:loc ->
     ?attrs:attrs ->
     ?mut:mutable_flag ->
     ?optional:bool ->
+    ?runtime_name:string ->
     str ->
     core_type ->
     label_declaration
+  (** [@as("x")] in [attrs] is taken out and becomes the runtime name, unless
+      one is given explicitly. *)
+
+  val field_attributes : label_declaration -> attrs
+  (** The attributes as written, with the [@as] taken out by [field] put back.
+      For printers, which must reproduce the source. *)
 end
 
 (** Type extensions *)

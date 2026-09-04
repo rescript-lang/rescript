@@ -263,6 +263,15 @@ and record_representation =
 
 and label_declaration = {
   ld_id: Ident.t;
+  ld_runtime_name: string option;
+      (* The name the field has at run time, when it differs from [ld_id].
+         Comes from [@as] on the declaration, as its decoded value: two
+         spellings of one name are one name, so this compares by [=] and is
+         stable in the cmi. Note the asymmetry with [ld_attributes] below,
+         which still carries whole parsetree attributes, source spelling
+         included. That is safe only because every reader of an attribute
+         payload goes through a semantic accessor; anything comparing
+         attributes structurally would be comparing keystrokes. *)
   ld_mutable: mutable_flag;
   ld_optional: bool;
   ld_type: type_expr;

@@ -15,11 +15,12 @@
 
 (* How a record field is named at run time. *)
 
-val as_name : Parsetree.attribute -> string option
-(** The string an [@as("...")] attribute carries, if this is one. *)
-
-val field_name : string -> Parsetree.attributes -> string
-(** The runtime name of a field declared as [declared_name] with [attributes]:
-    the [@as] payload when there is one, otherwise the declared name. *)
-
 val declaration_name : Types.label_declaration -> string
+
+val extra_as_attribute : Parsetree.label_declaration -> Location.t option
+(** The location of a second [@as] naming the field, which is one too many. *)
+
+val check_duplicated_labels :
+  Parsetree.label_declaration list -> string Asttypes.loc option
+(** The first field that collides with an earlier one, by declared or by
+    runtime name. *)

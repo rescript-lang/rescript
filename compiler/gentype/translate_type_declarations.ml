@@ -67,6 +67,14 @@ let rename_record_field ~attributes ~name =
   | Some s -> Emit_text.escape_string_contents s
   | None -> name |> Ext_ident.unwrap_uppercase_exotic
 
+(* A declared field carries its runtime name; only the renaming that reaches
+   gentype through an expression's attributes still has to be read off one. *)
+let declared_field_name (ld : Types.label_declaration) =
+  ld.ld_attributes |> Annotation.check_unsupported_gentype_as_renaming;
+  match ld.ld_runtime_name with
+  | Some s -> Emit_text.escape_string_contents s
+  | None -> Ident.name ld.ld_id |> Ext_ident.unwrap_uppercase_exotic
+
 let traslate_declaration_kind ~config ~loc ~output_file_relative ~resolver
     ~type_attributes ~type_env ~type_name ~type_vars declaration_kind :
     Code_item.type_declaration list =
@@ -106,11 +114,8 @@ let traslate_declaration_kind ~config ~loc ~output_file_relative ~resolver
       label_declarations
       |> List.map
            (fun
-             {Types.ld_id; ld_mutable; ld_optional; ld_type; ld_attributes} ->
-             let name =
-               rename_record_field ~attributes:ld_attributes
-                 ~name:(ld_id |> Ident.name)
-             in
+             ({Types.ld_mutable; ld_optional; ld_type; ld_attributes} as ld) ->
+             let name = declared_field_name ld in
              let mutability =
                match ld_mutable = Mutable with
                | true -> Mutable

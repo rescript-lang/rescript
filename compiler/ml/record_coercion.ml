@@ -29,27 +29,16 @@ let check_record_fields (fields1 : Types.label_declaration list)
                left_optional = ld1.ld_optional;
                right_optional = ld2.ld_optional;
              });
-      let get_as (({txt}, payload) : Parsetree.attribute) =
-        if txt = "as" then Ast_payload.semantic_string_of_payload payload
-        else None
-      in
-      let get_as_name (ld : Types.label_declaration) =
-        match Ext_list.filter_map ld.ld_attributes get_as with
-        | [] -> None
-        | s :: _ -> Some s
-      in
-      let get_label_runtime_name (ld : Types.label_declaration) =
-        match get_as_name ld with
-        | None -> ld.ld_id.name
-        | Some s -> s
-      in
-      if get_label_runtime_name ld1 <> get_label_runtime_name ld2 then
+      if
+        Record_runtime.declaration_name ld1
+        <> Record_runtime.declaration_name ld2
+      then
         add_violation
           (Field_runtime_name_mismatch
              {
                label = ld1.ld_id.name;
-               left_as = get_as_name ld1;
-               right_as = get_as_name ld2;
+               left_as = ld1.ld_runtime_name;
+               right_as = ld2.ld_runtime_name;
              });
       (ld1.ld_type :: acc1, ld2.ld_type :: acc2)
     | None ->

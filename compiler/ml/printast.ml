@@ -729,10 +729,9 @@ and constructor_arguments i ppf = function
   | Pcstr_tuple l -> list i core_type ppf l
   | Pcstr_record l -> list i label_decl ppf l
 
-and label_decl i ppf {pld_name; pld_mutable; pld_type; pld_loc; pld_attributes}
-    =
+and label_decl i ppf ({pld_name; pld_mutable; pld_type; pld_loc} as ld) =
   line i ppf "%a\n" fmt_location pld_loc;
-  attributes i ppf pld_attributes;
+  attributes i ppf (Ast_helper.Type.field_attributes ld);
   line (i + 1) ppf "%a\n" fmt_mutable_flag pld_mutable;
   line (i + 1) ppf "%a" fmt_string_loc pld_name;
   core_type (i + 1) ppf pld_type

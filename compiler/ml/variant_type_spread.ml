@@ -174,6 +174,7 @@ let expand_dummy_constructor_args (sdecl_list : Parsetree.type_declaration list)
                               |> List.map (fun (l : Types.label_declaration) ->
                                   {
                                     Parsetree.pld_name = c.pcd_name;
+                                    pld_runtime_name = None;
                                     pld_mutable = l.ld_mutable;
                                     pld_loc = l.ld_loc;
                                     pld_attributes = [];
