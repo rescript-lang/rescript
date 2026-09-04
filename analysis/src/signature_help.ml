@@ -257,9 +257,6 @@ let signature_help ~debug ~source ~kind_file ~pos
       let loc_has_cursor loc =
         loc |> Cursor_position.loc_has_cursor ~pos:pos_before_cursor
       in
-      let constructor_has_cursor lid_loc loc =
-        loc_has_cursor loc && pos_before_cursor >= Loc.end_ lid_loc
-      in
       let constructor_arg_index locations =
         let rec loop index = function
           | [] -> -1
@@ -416,8 +413,10 @@ let signature_help ~debug ~source ~kind_file ~pos
           in
           set_result
             (exp.pexp_loc, `FunctionCall (arg_at_cursor, exp, extracted_args))
-        | {pexp_desc = Pexp_construct (lid, {txt = payload_exps}); pexp_loc}
-          when payload_exps <> [] && constructor_has_cursor lid.loc pexp_loc ->
+        | {
+         pexp_desc = Pexp_construct (lid, {txt = payload_exps; loc = args_loc});
+        }
+          when payload_exps <> [] && loc_has_cursor args_loc ->
           (* Constructor payloads *)
           set_result (lid.loc, `ConstructorExpr (lid, payload_exps))
         | _ -> ());
@@ -425,8 +424,10 @@ let signature_help ~debug ~source ~kind_file ~pos
       in
       let pat (iterator : Ast_iterator.iterator) (pat : Parsetree.pattern) =
         (match pat with
-        | {ppat_desc = Ppat_construct (lid, {txt = payload_pats}); ppat_loc}
-          when payload_pats <> [] && constructor_has_cursor lid.loc ppat_loc ->
+        | {
+         ppat_desc = Ppat_construct (lid, {txt = payload_pats; loc = args_loc});
+        }
+          when payload_pats <> [] && loc_has_cursor args_loc ->
           (* Constructor payloads *)
           set_result (lid.loc, `ConstructorPat (lid, payload_pats))
         | _ -> ());
