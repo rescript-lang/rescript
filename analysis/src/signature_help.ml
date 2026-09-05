@@ -646,7 +646,8 @@ let signature_help ~debug ~source ~kind_file ~pos
                   (List.map
                      (fun (item : Parsetree.expression) -> item.pexp_loc)
                      tuple_items)
-              | `ConstructorExpr (_, items) when List.length items > 1 ->
+              | `ConstructorExpr (_, items) when constructor_has_multiple_args
+                ->
                 constructor_arg_index
                   (List.map
                      (fun (item : Parsetree.expression) -> item.pexp_loc)
@@ -680,14 +681,14 @@ let signature_help ~debug ~source ~kind_file ~pos
                       else ());
                   !field_index
                 | _ -> -1)
-              | `ConstructorExpr (_, [_]) -> 0
+              | `ConstructorExpr (_, _ :: _) -> 0
               | `ConstructorPat (_, [{ppat_desc = Ppat_tuple tuple_items}])
                 when constructor_has_multiple_args ->
                 constructor_arg_index
                   (List.map
                      (fun (item : Parsetree.pattern) -> item.ppat_loc)
                      tuple_items)
-              | `ConstructorPat (_, items) when List.length items > 1 ->
+              | `ConstructorPat (_, items) when constructor_has_multiple_args ->
                 constructor_arg_index
                   (List.map
                      (fun (item : Parsetree.pattern) -> item.ppat_loc)
@@ -721,7 +722,7 @@ let signature_help ~debug ~source ~kind_file ~pos
                       else ());
                   !field_index
                 | _ -> -1)
-              | `ConstructorPat (_, [_]) -> 0
+              | `ConstructorPat (_, _ :: _) -> 0
               | _ -> -1
             in
 

@@ -1,4 +1,40 @@
-Signature help src/SignatureHelpConstructorTuple.res 2:23
+Signature help src/SignatureHelpConstructorTuple.res 4:22
+{
+  "activeParameter": 0,
+  "activeSignature": 0,
+  "signatures": [
+    {
+      "activeParameter": 0,
+      "label": "Unary((int, string))",
+      "parameters": [
+        {
+          "documentation": { "kind": "markdown", "value": "" },
+          "label": [ 6, 19 ]
+        }
+      ]
+    }
+  ]
+}
+
+Signature help src/SignatureHelpConstructorTuple.res 8:17
+{
+  "activeParameter": 0,
+  "activeSignature": 0,
+  "signatures": [
+    {
+      "activeParameter": 0,
+      "label": "Unary((int, string))",
+      "parameters": [
+        {
+          "documentation": { "kind": "markdown", "value": "" },
+          "label": [ 6, 19 ]
+        }
+      ]
+    }
+  ]
+}
+
+Signature help src/SignatureHelpConstructorTuple.res 12:23
 {
   "activeParameter": 1,
   "activeSignature": 0,
@@ -20,7 +56,7 @@ Signature help src/SignatureHelpConstructorTuple.res 2:23
   ]
 }
 
-Signature help src/SignatureHelpConstructorTuple.res 6:15
+Signature help src/SignatureHelpConstructorTuple.res 16:15
 {
   "activeParameter": 1,
   "activeSignature": 0,
