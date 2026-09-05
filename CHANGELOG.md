@@ -36,7 +36,7 @@
 
 #### :bug: Bug fix
 
-- Fix escaped backticks and interpolation openers in backquoted `%raw`, `%ffi`, and `%re` payloads leaking into emitted JavaScript. https://github.com/rescript-lang/rescript/issues/6236
+- Fix escaped backticks and interpolation openers in backquoted `%raw`, `%ffi`, and `%re` payloads leaking into emitted JavaScript. https://github.com/rescript-lang/rescript/pull/8630
 - Fix the side-effect analysis treating bigint exponentiation and bounds-checked array and string reads as pure, which let dead-code elimination drop an unused one that throws: `let _ = 2n ** -1n` no longer raised. https://github.com/rescript-lang/rescript/pull/8617
 - Preserve record field `@as` annotations when formatting object types containing spreads. https://github.com/rescript-lang/rescript/pull/8619
 - Fix excessive parentheses and indentation in function assignments to refs, align record and array assignment formatting across refs and fields, and preserve function return-type parentheses and consistent JSX fragment layout in callbacks. https://github.com/rescript-lang/rescript/pull/8611
