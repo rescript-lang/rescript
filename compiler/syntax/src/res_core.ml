@@ -2126,8 +2126,7 @@ and parse_atomic_expr p =
       Parser.next_regex_token p;
       match Parser.peek p with
       | Regex (pattern, flags) -> parse_regex ~start_pos p pattern flags
-      | _ -> Ast_helper.Exp.extension (Location.mknoloc "re", Parsetree.PStr [])
-      )
+      | _ -> assert false (* next_regex_token always returns Regex. *))
     | token -> (
       let err_pos = Parser.position p in
       Parser.err ~start_pos:err_pos p
@@ -7550,9 +7549,14 @@ and parse_extension ?(module_language = false) p =
   else Parser.expect Percent p;
   let attr_id = parse_attribute_id ~start_pos p in
   let payload = parse_payload p in
+  if attr_id.txt = "re" then
+    Parser.err ~start_pos:attr_id.loc.loc_start ~end_pos:attr_id.loc.loc_end p
+      (Diagnostics.message
+         "The %re extension has been removed. Use a regexp literal such as \
+          /abc/i.");
   let payload =
     match (attr_id.txt, payload) with
-    | ( ("raw" | "ffi" | "re"),
+    | ( ("raw" | "ffi"),
         Parsetree.PStr
           [
             ({

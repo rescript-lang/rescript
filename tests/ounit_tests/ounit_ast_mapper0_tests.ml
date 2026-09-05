@@ -1057,6 +1057,22 @@ let test_raw_extension_payloads_roundtrip_through_ast0 _ =
         (map_expr0 (map_expr_to0 expression)))
     ["raw"; "ffi"]
 
+let test_removed_regexp_extension _ =
+  List.iter
+    (fun source ->
+      let result =
+        Res_driver.parse_implementation_from_source
+          ~display_filename:"Regexp.res" ~source
+      in
+      OUnit.assert_bool "legacy regexp syntax is rejected" result.invalid;
+      OUnit.assert_equal
+        [
+          "The %re extension has been removed. Use a regexp literal such as \
+           /abc/i.";
+        ]
+        (List.map Res_diagnostics.explain result.diagnostics))
+    ["let re = %re(\"/abc/i\")"; "let re = %re(`/abc/i`)"; "%%re(\"/abc/i\")"]
+
 let test_regexp_parser_locations _ =
   let source = "let re = /a/g" in
   let result =
@@ -1487,6 +1503,7 @@ let suites =
          >:: test_ppx_byte_strings_convert_to_valid_utf8;
          "string_literals_roundtrip_through_ast0"
          >:: test_string_literals_roundtrip_through_ast0;
+         "removed_regexp_extension" >:: test_removed_regexp_extension;
          "regexp_parser_locations" >:: test_regexp_parser_locations;
          "regexp_roundtrip_through_ast0" >:: test_regexp_roundtrip_through_ast0;
          "ppx_regexp_payloads" >:: test_ppx_regexp_payloads;

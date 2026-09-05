@@ -54,8 +54,8 @@ type constant =
      otherwise the frontend rejects it. The string is JavaScript source, not a
      decoded ReScript string value. *)
   | Pconst_raw_source of string
-  (* JavaScript source carried by a compiler extension such as [raw], [ffi], or
-     [re]. For example, [%raw("x + 1")] stores ["x + 1"]. The extension
+  (* JavaScript source carried by a compiler extension such as [raw] or [ffi].
+     For example, [%raw("x + 1")] stores ["x + 1"]. The extension
      interprets the string as JavaScript source rather than as a ReScript
      runtime string value. *)
   | Pconst_float of string * char option

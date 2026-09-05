@@ -653,6 +653,7 @@ module E = struct
         (sub.pat sub pat) start_expr end_expr Asttypes.Upto
         (sub.expr sub body_expr)
     | Pexp_regexp {pattern; flags} ->
+      (* %re is only a frozen PPX wire encoding, not source syntax. *)
       extension ~loc ~attrs
         ( Location.mkloc "re" loc,
           Pt.PStr
