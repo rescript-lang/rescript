@@ -62,7 +62,6 @@ type success = {
   parsetree: string,
   typedtree: string,
   lambda: string,
-  lam: string,
   gentype: option<string>,
   sourceMap: option<string>,
   warnings: array<string>,
@@ -403,9 +402,8 @@ let normalize = (compileOutput, elapsedMs): compileResult => {
     compileOutput->CompileResult.parsetree,
     compileOutput->CompileResult.typedtree,
     compileOutput->CompileResult.lambda,
-    compileOutput->CompileResult.lam,
   ) {
-  | (Some(parsetree), Some(typedtree), Some(lambda), Some(lam)) =>
+  | (Some(parsetree), Some(typedtree), Some(lambda)) =>
     let warnings = switch compileOutput->CompileResult.warnings {
     | Some(warnings) => warnings->Array.map(warningToText)
     | None => []
@@ -419,7 +417,7 @@ let normalize = (compileOutput, elapsedMs): compileResult => {
     let gentype = compileOutput->CompileResult.gentype
     let sourceMap = compileOutput->CompileResult.sourceMap
 
-    Ok({jsCode, parsetree, typedtree, lambda, lam, gentype, sourceMap, warnings, time: elapsedMs})
+    Ok({jsCode, parsetree, typedtree, lambda, gentype, sourceMap, warnings, time: elapsedMs})
 
   | _ => Error(failureFromCompileOutput(compileOutput, elapsedMs))
   }
