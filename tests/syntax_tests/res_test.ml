@@ -28,6 +28,36 @@ let x: int
 
 let () = print_endline "✅ multi printer api tests"
 
+let () =
+  let filename =
+    Filename.concat data_dir "printer/comments/callbackTrailing.res"
+  in
+  let source = IO.read_file ~filename in
+  let format ~width source =
+    let result =
+      Res_driver.parse_implementation_from_source ~for_printer:true
+        ~display_filename:filename ~source
+    in
+    assert (not result.invalid);
+    Res_printer.print_implementation ~width result.parsetree
+      ~comments:result.comments
+  in
+  List.iter
+    (fun width ->
+      let printed = format ~width source in
+      let reprinted = format ~width printed in
+      if printed <> reprinted then
+        failwith
+          (Printf.sprintf
+             "Callback comment formatting is unstable at width %d.\n\
+              First pass:\n\
+              %s\n\
+              Second pass:\n\
+              %s"
+             width printed reprinted))
+    [20; 40; 80; 100; 120];
+  print_endline "✅ callback trailing comments are stable at multiple widths"
+
 module Outcome_printer_tests = struct
   let signature_to_outcome structure =
     Lazy.force Res_outcome_printer.setup;
