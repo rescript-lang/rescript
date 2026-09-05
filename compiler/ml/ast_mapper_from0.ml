@@ -248,7 +248,9 @@ module T = struct
         in
         let txt =
           match typ.ptyp_desc with
-          | Ptyp_tuple args when has_constructor_args -> args
+          | Ptyp_tuple args when has_constructor_args && attrs = [] -> args
+          (* A PPX may annotate the synthesized tuple. Keep its wrapper when
+             consuming the marker so those attributes retain their owner. *)
           | _ -> [{typ with ptyp_attributes = attrs}]
         in
         {loc = typ.ptyp_loc; txt}

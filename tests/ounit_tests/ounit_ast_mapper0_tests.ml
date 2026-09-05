@@ -751,6 +751,56 @@ let test_polyvariant_args_roundtrip_through_ast0 _ =
     ()
   | _ -> assert_failure "Expected two polymorphic variant type arguments"
 
+let test_polyvariant_type_payload_attributes_through_ast0 _ =
+  let payload_loc = source_loc 10 30 in
+  let marker = attr "_res.constructor_args" (Parsetree0.PStr []) in
+  let before = attr "ppx.before" (Parsetree0.PStr []) in
+  let after = attr "ppx.after" (Parsetree0.PStr []) in
+  let item =
+    Ast_helper0.Typ.constr ~loc:(source_loc 12 15)
+      ~attrs:[attr "ppx.child" (Parsetree0.PStr [])]
+      (Location.mknoloc (Longident.Lident "int"))
+      []
+  in
+  let make_variant payload =
+    Ast_helper0.Typ.variant ~loc:(source_loc 0 32)
+      [Parsetree0.Rtag (located_string "Pair", [before], false, [payload])]
+      Closed None
+  in
+  List.iter
+    (fun payload_attrs ->
+      let payload =
+        Ast_helper0.Typ.tuple ~loc:payload_loc ~attrs:payload_attrs [item; item]
+      in
+      let from0 = Ast_mapper_from0.default_mapper in
+      let to0 = Ast_mapper_to0.default_mapper in
+      let decoded = from0.typ from0 (make_variant payload) in
+      let remaining_attrs =
+        List.filter (fun attribute -> attribute <> marker) payload_attrs
+      in
+      (match decoded.ptyp_desc with
+      | Ptyp_variant ([Rtag (_, _, false, [{loc; txt}])], _, _) -> (
+        OUnit.assert_equal payload_loc loc;
+        match (remaining_attrs, txt) with
+        | [], [_; _] -> ()
+        | _ :: _, [{ptyp_desc = Ptyp_tuple [_; _]; ptyp_attributes}] ->
+          OUnit.assert_bool "bridge marker is consumed"
+            (not (has_attr "_res.constructor_args" ptyp_attributes))
+        | _ -> assert_failure "Expected attributed tuple wrapper to survive")
+      | _ -> assert_failure "Expected a polymorphic variant type");
+      let expected_payload =
+        if remaining_attrs = [] then payload
+        else {payload with ptyp_attributes = remaining_attrs}
+      in
+      let encoded = to0.typ to0 decoded in
+      OUnit.assert_equal
+        ~msg:"preserve payload attributes, children and locations"
+        (make_variant expected_payload)
+        encoded;
+      OUnit.assert_equal ~msg:"a second bridge roundtrip is stable" encoded
+        (to0.typ to0 (from0.typ from0 encoded)))
+    [[marker]; [before; marker]; [marker; after]; [before; marker; after]]
+
 let assert_string_expr ~expected_source ~expected_semantic expr =
   match expr.Parsetree.pexp_desc with
   | Pexp_constant (Pconst_string payload) ->
@@ -1280,6 +1330,8 @@ let suites =
          >:: test_fresh_ast0_constructor_tuple_defers_arity_to_typechecker;
          "polyvariant_args_roundtrip_through_ast0"
          >:: test_polyvariant_args_roundtrip_through_ast0;
+         "polyvariant_type_payload_attributes_through_ast0"
+         >:: test_polyvariant_type_payload_attributes_through_ast0;
          "polyvariant_args_keep_parentheses_location_in_ast0"
          >:: test_polyvariant_args_keep_parentheses_location_in_ast0;
          "value_constraint_roundtrips_through_ast0"
