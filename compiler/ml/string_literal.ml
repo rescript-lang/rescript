@@ -219,6 +219,39 @@ let decode_js_escapes =
 let decode_js_template_escapes =
   decode_js_escapes_with ~normalize_template_line_endings:true
 
+let decode_raw_template_source source =
+  let length = String.length source in
+  let buffer = Buffer.create length in
+  let rec loop index =
+    if index < length then
+      match String.unsafe_get source index with
+      | '\\' when index + 1 < length -> (
+        match String.unsafe_get source (index + 1) with
+        | ('\\' | '$' | '`') as escaped ->
+          Buffer.add_char buffer escaped;
+          loop (index + 2)
+        | '\n' -> loop (index + 2)
+        | '\r' ->
+          if index + 2 < length && String.unsafe_get source (index + 2) = '\n'
+          then loop (index + 3)
+          else loop (index + 2)
+        | '\226'
+          when index + 3 < length
+               && String.unsafe_get source (index + 2) = '\128'
+               && (String.unsafe_get source (index + 3) = '\168'
+                  || String.unsafe_get source (index + 3) = '\169') ->
+          loop (index + 4)
+        | escaped ->
+          Buffer.add_char buffer '\\';
+          Buffer.add_char buffer escaped;
+          loop (index + 2))
+      | character ->
+        Buffer.add_char buffer character;
+        loop (index + 1)
+  in
+  loop 0;
+  Buffer.contents buffer
+
 type encode_js_mode = String | Template
 
 let encode_js mode s =

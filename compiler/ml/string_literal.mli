@@ -55,6 +55,12 @@ val decode_js_template_escapes : string -> string option
     as required by JavaScript template-literal semantics. Returns [None] for
     malformed escapes, malformed UTF-8, or an unescaped interpolation opener. *)
 
+val decode_raw_template_source : string -> string
+(** Remove the escapes that protect the surrounding ReScript template syntax
+    from JavaScript source embedded in a [raw], [ffi], or [re] extension.
+    Backslashes belonging to the embedded JavaScript, such as [\\n], are
+    preserved. *)
+
 val encode_js_string : string -> string
 (** Encode a semantic UTF-8 string as a canonical JavaScript string-literal
     body. *)
