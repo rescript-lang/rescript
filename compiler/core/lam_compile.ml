@@ -173,7 +173,8 @@ let default_action ~saturated failaction =
 
 let tag_of_switch_key = function
   | Lambda.Switch_int _ -> None
-  | Switch_constructor (Constant tag) -> Some tag
+  | Switch_constructor (Constant tag) ->
+    Some (Variant_runtime.to_matchable_tag tag)
   | Switch_constructor
       (Block
          {
@@ -181,7 +182,8 @@ let tag_of_switch_key = function
            block_type = Some block_type;
          }) ->
     Some {name; tag_type = Some (Untagged block_type)}
-  | Switch_constructor (Block {runtime = {untagged = false; tag}}) -> Some tag
+  | Switch_constructor (Block {runtime = {untagged = false; tag}}) ->
+    Some (Variant_runtime.to_matchable_tag tag)
   | Switch_constructor (Block {runtime = {untagged = true}; block_type = None})
     ->
     assert false
@@ -700,7 +702,7 @@ let compile output_prefix =
         | Some {Variant_runtime.tag_type = Some t}, Some string_table ->
           Some ((t, lam) :: string_table)
         | Some {name; tag_type = None}, Some string_table ->
-          Some ((String name, lam) :: string_table)
+          Some ((Literal (String name), lam) :: string_table)
         | _, _ -> None)
       table (Some [])
   and compile_cases ?(untagged = false) ?(has_null_case = false) ~cxt
@@ -935,7 +937,7 @@ let compile output_prefix =
         The [gen] can be elimiated when number of [cases] is less than 3
     *)
     let cases =
-      cases |> List.map (fun (s, l) -> (Variant_runtime.String s, l))
+      cases |> List.map (fun (s, l) -> (Variant_runtime.Literal (String s), l))
     in
     match
       compile_lambda {lambda_cxt with continuation = NeedValue Not_tail} l
@@ -1283,7 +1285,7 @@ let compile output_prefix =
       (lambda_cxt : Lam_compile_context.t) =
     let new_cxt = {lambda_cxt with continuation = NeedValue Not_tail} in
     let emitted_id =
-      if Set_ident.mem (Lambda.free_variables body) id then id
+      if Set_ident.mem (Lambda_traverse.free_variables body) id then id
       else Ext_ident.create_tmp ~name:"_for_of" ()
     in
     let block =
@@ -1306,7 +1308,7 @@ let compile output_prefix =
       (body : Lambda.t) (lambda_cxt : Lam_compile_context.t) =
     let new_cxt = {lambda_cxt with continuation = NeedValue Not_tail} in
     let emitted_id =
-      if Set_ident.mem (Lambda.free_variables body) id then id
+      if Set_ident.mem (Lambda_traverse.free_variables body) id then id
       else Ext_ident.create_tmp ~name:"_for_await_of" ()
     in
     let block =

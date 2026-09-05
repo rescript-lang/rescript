@@ -114,6 +114,7 @@ let expand_labels_with_type_spreads (env : Env.t)
       {
         ld_id = l.ld_id;
         ld_name = {txt = Ident.name l.ld_id; loc = l.ld_loc};
+        ld_runtime_name = l.ld_runtime_name;
         ld_mutable = l.ld_mutable;
         ld_optional = l.ld_optional;
         ld_type =

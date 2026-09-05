@@ -79,7 +79,7 @@ let rec type_cannot_contain_undefined (typ : Types.type_expr) (env : Env.t) =
               | Variant_runtime.Block {runtime = {tag; untagged}} ->
                 (tag, untagged)
             in
-            tag.tag_type <> Some Variant_runtime.Undefined
+            tag.literal <> Some Variant_runtime.Undefined
             && ((not payload_is_unboxed)
                ||
                match cd.cd_args with

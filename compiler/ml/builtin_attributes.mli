@@ -56,15 +56,6 @@ val check_deprecated_mutable_inclusion :
   string ->
   unit
 
-val check_bs_attributes_inclusion :
-  (Parsetree.attributes ->
-  Parsetree.attributes ->
-  string ->
-  (string * string) option)
-  ref
-
-val check_duplicated_labels :
-  (Parsetree.label_declaration list -> string Asttypes.loc option) ref
 val error_of_extension : Parsetree.extension -> Location.error
 
 val warning_attribute : ?ppwarning:bool -> Parsetree.attribute -> unit

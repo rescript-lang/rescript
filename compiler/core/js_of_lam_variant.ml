@@ -40,7 +40,7 @@ let eval (arg : J.expression) (dispatches : (string * string) list) : E.t =
         [
           S.string_switch arg
             (Ext_list.map dispatches (fun (s, r) ->
-                 ( Variant_runtime.String s,
+                 ( Variant_runtime.Literal (String s),
                    J.
                      {
                        switch_body = [S.return_stmt (E.str r)];
@@ -81,7 +81,7 @@ let eval_as_event (arg : J.expression)
               S.string_switch
                 (E.poly_var_tag_access arg)
                 (Ext_list.map dispatches (fun (s, r) ->
-                     ( Variant_runtime.String s,
+                     ( Variant_runtime.Literal (String s),
                        J.
                          {
                            switch_body = [S.return_stmt (E.str r)];
@@ -110,7 +110,7 @@ let eval_as_int (arg : J.expression) (dispatches : (string * int) list) : E.t =
         [
           S.string_switch arg
             (Ext_list.map dispatches (fun (s, r) ->
-                 ( Variant_runtime.String s,
+                 ( Variant_runtime.Literal (String s),
                    J.
                      {
                        switch_body = [S.return_stmt (E.int (Int32.of_int r))];

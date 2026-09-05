@@ -108,9 +108,7 @@ function eqBy(_xs, _ys, fn) {
 }
 
 function takeWhile(t, fn) {
-  let a = {
-    contents: []
-  };
+  let a = [];
   let maxLength = t.length - 1 | 0;
   let iter = _idx => {
     while (true) {
@@ -122,13 +120,13 @@ function takeWhile(t, fn) {
       if (!fn(item)) {
         return;
       }
-      a.contents = Belt_Array.concat(a.contents, [item]);
+      a = Belt_Array.concat(a, [item]);
       _idx = idx + 1 | 0;
       continue;
     };
   };
   iter(0);
-  return a.contents;
+  return a;
 }
 
 function distinct(t, eq) {

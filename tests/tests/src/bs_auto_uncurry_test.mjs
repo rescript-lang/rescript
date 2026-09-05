@@ -12,22 +12,20 @@ function hi (cb){
 
 Mocha.describe("Bs_auto_uncurry_test", () => {
   Mocha.test("callback_test", () => {
-    let xs = {
-      contents: /* [] */0
-    };
+    let xs = /* [] */0;
     hi(x => {
-      xs.contents = {
+      xs = {
         hd: x,
-        tl: xs.contents
+        tl: xs
       };
     });
     hi(x => {
-      xs.contents = {
+      xs = {
         hd: x,
-        tl: xs.contents
+        tl: xs
       };
     });
-    Test_utils.eq("File \"bs_auto_uncurry_test.res\", line 20, characters 7-14", xs.contents, {
+    Test_utils.eq("File \"bs_auto_uncurry_test.res\", line 20, characters 7-14", xs, {
       hd: undefined,
       tl: {
         hd: undefined,

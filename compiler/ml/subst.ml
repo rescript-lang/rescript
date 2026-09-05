@@ -237,6 +237,7 @@ let typexp = type_expr
 let label_declaration s l =
   {
     ld_id = l.ld_id;
+    ld_runtime_name = l.ld_runtime_name;
     ld_mutable = l.ld_mutable;
     ld_optional = l.ld_optional;
     ld_type = typexp_rec s l.ld_type;
@@ -251,6 +252,7 @@ let constructor_arguments s = function
 let constructor_declaration s c =
   {
     cd_id = c.cd_id;
+    cd_runtime_tag = c.cd_runtime_tag;
     cd_args = constructor_arguments s c.cd_args;
     cd_res = may_map (typexp_rec s) c.cd_res;
     cd_loc = loc s c.cd_loc;

@@ -732,10 +732,10 @@ let abstract_shared actions =
         match act with
         | Single act -> act
         | Shared act ->
-          let i, h = make_catch_delayed act in
+          let i, h = Lambda_exits.make_catch_delayed act in
           let oh = !handlers in
           (handlers := fun act -> h (oh act));
-          make_exit i)
+          Lambda_exits.make_exit i)
       actions
   in
   (!handlers, actions)

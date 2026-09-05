@@ -391,25 +391,134 @@ module Type = struct
     }
 
   let constructor ?(loc = !default_loc) ?(attrs = []) ?(args = Pcstr_tuple [])
-      ?res name =
+      ?res ?runtime_tag name =
+    let runtime_tag, attrs =
+      match runtime_tag with
+      | Some tag -> (Some {Asttypes.txt = tag; loc = name.loc}, attrs)
+      | None -> (
+        (* Only the first [@as] can name the constructor. Leave an invalid
+           first annotation, and everything after it, for the type checker so
+           formatting an invalid file does not change its diagnostics. *)
+        let rec take seen (attrs : Parsetree.attributes) =
+          match attrs with
+          | [] -> (None, [])
+          | (({txt = "as"; loc}, payload) : Parsetree.attribute) :: rest -> (
+            match Ast_payload.constructor_tag_of_payload payload with
+            | Some txt -> (Some {Asttypes.txt; loc}, List.rev_append seen rest)
+            | None -> (None, attrs))
+          | attr :: rest -> take (attr :: seen) rest
+        in
+        match take [] attrs with
+        | None, _ -> (None, attrs)
+        | found -> found)
+    in
     {
       pcd_name = name;
+      pcd_runtime_tag = runtime_tag;
       pcd_args = args;
       pcd_res = res;
       pcd_loc = loc;
       pcd_attributes = attrs;
     }
 
+  let constructor_attributes (cd : Parsetree.constructor_declaration) =
+    match cd.pcd_runtime_tag with
+    | None -> cd.pcd_attributes
+    | Some {txt = tag; loc} ->
+      let expression =
+        match tag with
+        | Pct_string s -> Exp.constant ~loc (Pconst_string s)
+        | Pct_int i -> Exp.constant ~loc (Pconst_integer (i, None))
+        | Pct_float f -> Exp.constant ~loc (Pconst_float (f, None))
+        | Pct_bigint i -> Exp.constant ~loc (Pconst_integer (i, Some 'n'))
+        | Pct_bool b ->
+          Exp.construct ~loc
+            (Location.mkloc
+               (Longident.Lident (if b then "true" else "false"))
+               loc)
+            None
+        | Pct_null ->
+          Exp.ident ~loc (Location.mkloc (Longident.Lident "null") loc)
+        | Pct_undefined ->
+          Exp.ident ~loc (Location.mkloc (Longident.Lident "undefined") loc)
+      in
+      let payload = Parsetree.PStr [Str.eval ~loc expression] in
+      (* Back where it was written, so attributes print in source order. Ppx
+         output has no source position and ties, as for a field's rename
+         above; the tag goes last among the tied. *)
+      let written_earlier (({loc = other}, _) : Parsetree.attribute) =
+        other.loc_start.pos_cnum <= loc.loc_start.pos_cnum
+      in
+      let earlier, later = List.partition written_earlier cd.pcd_attributes in
+      earlier @ ((Location.mkloc "as" loc, payload) :: later)
+
+  (* [@as("x")] on a record field renames it at run time. It is taken out of
+     the attributes here, so every producer - the parser, a ppx, the frozen
+     AST bridge - agrees on what the field is called without re-reading the
+     payload. *)
   let field ?(loc = !default_loc) ?(attrs = []) ?(mut = Immutable)
-      ?(optional = false) name typ =
+      ?(optional = false) ?runtime_name name typ =
+    let runtime_name, attrs =
+      match runtime_name with
+      | Some txt ->
+        ( Some
+            {
+              txt = String_literal.string_from_semantic txt;
+              loc = name.Asttypes.loc;
+            },
+          attrs )
+      | None -> (
+        (* Take out the first [@as] that denotes a name. One whose payload is
+           not a name is left alone: it does not rename the field, and dropping
+           it here would make the printer delete it from the source. *)
+        let rec take seen (attrs : Parsetree.attributes) =
+          match attrs with
+          | [] -> (None, [])
+          | ((({txt = "as"; loc}, payload) : Parsetree.attribute) as attr)
+            :: rest -> (
+            match Ast_payload.string_literal_of_payload payload with
+            | Some txt ->
+              (* A second [@as] is left in the attributes for the type checker
+                 to reject, so that an invalid file can still be printed. *)
+              (Some {Asttypes.txt; loc}, List.rev_append seen rest)
+            | None -> take (attr :: seen) rest)
+          | attr :: rest -> take (attr :: seen) rest
+        in
+        match take [] attrs with
+        | None, _ -> (None, attrs)
+        | found -> found)
+    in
     {
       pld_name = name;
+      pld_runtime_name = runtime_name;
       pld_mutable = mut;
       pld_optional = optional;
       pld_type = typ;
       pld_loc = loc;
       pld_attributes = attrs;
     }
+
+  (* The attributes as they were written, with the runtime name put back.
+     Inverse of the extraction in [field], for printers. *)
+  let field_attributes (ld : Parsetree.label_declaration) =
+    match ld.pld_runtime_name with
+    | None -> ld.pld_attributes
+    | Some {txt; loc} ->
+      let payload =
+        Parsetree.PStr [Str.eval ~loc (Exp.constant ~loc (Pconst_string txt))]
+      in
+      (* Back where it was written: attributes print in source order, so a
+         field declared [@optional @as("x")] must not come out reordered.
+         Ppx output has no source position, so all of it ties on
+         [Location.none]; the rename then goes last among the tied, which is
+         the order a ppx writing [@dead @as("x")] gave. Where it sat exactly
+         is not recoverable without storing an index, which is not worth a
+         field in the AST. *)
+      let written_earlier (({loc = other}, _) : Parsetree.attribute) =
+        other.loc_start.pos_cnum <= loc.loc_start.pos_cnum
+      in
+      let earlier, later = List.partition written_earlier ld.pld_attributes in
+      earlier @ ((Location.mkloc "as" loc, payload) :: later)
 end
 
 (** Type extensions *)

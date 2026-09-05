@@ -116,7 +116,7 @@ describe(__MODULE__, () => {
       q,
       j => {
         assert(i.contents == j)
-        Stdlib.Int.Ref.increment(i)
+        i.contents = i.contents + 1
       },
     )
   })

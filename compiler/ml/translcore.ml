@@ -50,7 +50,7 @@ let transl_extension_constructor env path ext =
   let loc = ext.ext_loc in
   match ext.ext_kind with
   | Text_decl _ -> prim ~primitive:(Pcreate_extension name) ~args:[] loc
-  | Text_rebind (path, _lid) -> transl_extension_path ~loc env path
+  | Text_rebind (path, _lid) -> Transl_path.transl_extension_path ~loc env path
 
 (* Translation of primitives *)
 
@@ -252,8 +252,6 @@ let erased_builtins : (string * Lambda.builtin) array =
     ("%identity", Eliminated Identity);
     ("%component_identity", Eliminated Identity);
     ("%ignore", Eliminated Ignore);
-    ("%incr", Offset_ref 1);
-    ("%decr", Offset_ref (-1));
     ("%null", Constant Const_js_null);
     ("%undefined", Constant (Const_js_undefined {is_unit = false}));
     (* FIXME: Core compatibility *)
@@ -268,7 +266,6 @@ let primitive_builtins : (string * Lambda.builtin) array =
       (* BEGIN Triples for  ref data type *)
       ("%makeref", Pmakeblock Lambda.ref_tag_info);
       ("%refset", Psetfield (0, Lambda.ref_field_set_info));
-      ("%refget", Pfield (0, Lambda.ref_field_info));
       (* Finish Triples for  ref data type *)
       ("%field0", Pfield (0, Fld_tuple));
       ("%field1", Pfield (1, Fld_tuple));
@@ -483,7 +480,7 @@ let import_source_of_arg (arg : Typedtree.expression) : Lambda.import_source =
       Lambda.import_source =
     (* a module path is normalized fully (resolving a final alias hop such
        as a namespace's [module List = Stdlib_List]); a value path
-       normalizes its module prefix, like [transl_value_path] *)
+       normalizes its module prefix, like [Transl_path.transl_value_path] *)
     let path =
       if is_module then Env.normalize_path (Some loc) env path
       else Env.normalize_path_prefix (Some loc) env path
@@ -887,7 +884,7 @@ let assert_failed exp =
         prim ~primitive:(Pmakeblock Blk_extension)
           ~args:
             [
-              transl_normal_path Predef.path_assert_failure;
+              Transl_path.transl_normal_path Predef.path_assert_failure;
               const
                 (Const_block
                    ( Blk_tuple,
@@ -1008,7 +1005,7 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.t =
   | Texp_ident (_, _, ({val_kind = Val_prim p} as vd)) ->
     transl_primitive e.exp_loc p e.exp_env e.exp_type ~val_type:vd.val_type
   | Texp_ident (path, _, {val_kind = Val_reg}) ->
-    transl_value_path ~loc:e.exp_loc e.exp_env path
+    Transl_path.transl_value_path ~loc:e.exp_loc e.exp_env path
   | Texp_constant cst -> const (const_of_typed cst)
   | Texp_let (rec_flag, pat_expr_list, body) ->
     transl_let ~js_hoist:None rec_flag pat_expr_list (transl_exp body)
@@ -1201,9 +1198,10 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.t =
             prim ~primitive:(Pmakeblock tag_info) ~args:ll e.exp_loc)
       | Extension_constructor path ->
         prim ~primitive:(Pmakeblock Blk_extension)
-          ~args:(transl_extension_path e.exp_env path :: ll)
+          ~args:(Transl_path.transl_extension_path e.exp_env path :: ll)
           e.exp_loc)
-  | Texp_extension_constructor (_, path) -> transl_extension_path e.exp_env path
+  | Texp_extension_constructor (_, path) ->
+    Transl_path.transl_extension_path e.exp_env path
   | Texp_variant (l, arg) -> (
     match arg with
     | None -> const (const_polyvar l)
@@ -1223,27 +1221,34 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.t =
     | Record_float_unused -> assert false
     | Record_regular ->
       prim
-        ~primitive:(Pfield (lbl.lbl_pos, Lambda.fld_record lbl))
+        ~primitive:
+          (Pfield (lbl.lbl_pos, Lambda.fld_record lbl.lbl_runtime_name))
         ~args:[targ] e.exp_loc
     | Record_inlined _ ->
       prim
-        ~primitive:(Pfield (lbl.lbl_pos, Lambda.fld_record_inline lbl))
+        ~primitive:
+          (Pfield (lbl.lbl_pos, Lambda.fld_record_inline lbl.lbl_runtime_name))
         ~args:[targ] e.exp_loc
     | Record_unboxed _ -> targ
     | Record_extension ->
       prim
-        ~primitive:(Pfield (lbl.lbl_pos + 1, Lambda.fld_record_extension lbl))
+        ~primitive:
+          (Pfield
+             (lbl.lbl_pos + 1, Lambda.fld_record_extension lbl.lbl_runtime_name))
         ~args:[targ] e.exp_loc)
   | Texp_setfield (arg, _, lbl, newval) ->
     let access =
       match lbl.lbl_repres with
       | Record_float_unused -> assert false
-      | Record_regular -> Psetfield (lbl.lbl_pos, Lambda.fld_record_set lbl)
+      | Record_regular ->
+        Psetfield (lbl.lbl_pos, Lambda.fld_record_set lbl.lbl_runtime_name)
       | Record_inlined _ ->
-        Psetfield (lbl.lbl_pos, Lambda.fld_record_inline_set lbl)
+        Psetfield
+          (lbl.lbl_pos, Lambda.fld_record_inline_set lbl.lbl_runtime_name)
       | Record_unboxed _ -> assert false
       | Record_extension ->
-        Psetfield (lbl.lbl_pos + 1, Lambda.fld_record_extension_set lbl)
+        Psetfield
+          (lbl.lbl_pos + 1, Lambda.fld_record_extension_set lbl.lbl_runtime_name)
     in
     prim ~primitive:access ~args:[transl_exp arg; transl_exp newval] e.exp_loc
   | Texp_array expr_list ->
@@ -1300,10 +1305,10 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.t =
 and transl_list expr_list = List.map transl_exp expr_list
 
 and transl_guard guard rhs =
-  let expr = transl_exp rhs in
+  let body = transl_exp rhs in
   match guard with
-  | None -> expr
-  | Some cond -> if_ (transl_exp cond) expr staticfail
+  | None -> Matching.unguarded body
+  | Some cond -> Matching.guarded ~guard:(transl_exp cond) body
 
 and transl_case {c_lhs; c_guard; c_rhs} = (c_lhs, transl_guard c_guard c_rhs)
 
@@ -1384,13 +1389,15 @@ and transl_function loc (params : function_param list) body =
   | [{fp_param; fp_pat; fp_partial}] ->
     ( [fp_param],
       Matching.for_function loc None (var fp_param)
-        [(fp_pat, transl_exp body)]
+        [(fp_pat, Matching.unguarded (transl_exp body))]
         fp_partial,
       is_base_type body.exp_env body.exp_type Predef.path_unit )
   | {fp_param; fp_pat; fp_partial} :: rest ->
     let lparams, lbody, return_unit = transl_function loc rest body in
     ( fp_param :: lparams,
-      Matching.for_function loc None (var fp_param) [(fp_pat, lbody)] fp_partial,
+      Matching.for_function loc None (var fp_param)
+        [(fp_pat, Matching.unguarded lbody)]
+        fp_partial,
       return_unit )
 
 and transl_let ~js_hoist rec_flag pat_expr_list body =
@@ -1430,6 +1437,16 @@ and transl_let ~js_hoist rec_flag pat_expr_list body =
     Lambda_scc.bind_rec (Ext_list.map pat_expr_list transl_case) body
 
 and transl_record loc env fields repres opt_init_expr =
+  (* The runtime shape of the record: each field's runtime name, and whether
+     it is optional. *)
+  let field_shape () =
+    Ext_array.map fields (fun ((lbl : Types.label_description), _, _) ->
+        (lbl.lbl_runtime_name, lbl.lbl_optional))
+  in
+  let field_names () =
+    Ext_array.map fields (fun ((lbl : Types.label_description), _, _) ->
+        lbl.lbl_runtime_name)
+  in
   match (opt_init_expr, repres, fields) with
   | _ -> (
     let size = Array.length fields in
@@ -1460,11 +1477,14 @@ and transl_record loc env fields repres opt_init_expr =
               let access =
                 match repres with
                 | Record_float_unused -> assert false
-                | Record_regular -> Pfield (i, Lambda.fld_record lbl)
-                | Record_inlined _ -> Pfield (i, Lambda.fld_record_inline lbl)
+                | Record_regular ->
+                  Pfield (i, Lambda.fld_record lbl.lbl_runtime_name)
+                | Record_inlined _ ->
+                  Pfield (i, Lambda.fld_record_inline lbl.lbl_runtime_name)
                 | Record_unboxed _ -> assert false
                 | Record_extension ->
-                  Pfield (i + 1, Lambda.fld_record_extension lbl)
+                  Pfield
+                    (i + 1, Lambda.fld_record_extension lbl.lbl_runtime_name)
               in
               prim ~primitive:access ~args:[var init_id] loc
             | Overridden (_lid, expr) -> transl_exp expr)
@@ -1483,7 +1503,7 @@ and transl_record loc env fields repres opt_init_expr =
           match repres with
           | Record_float_unused -> assert false
           | Record_regular ->
-            const (Const_block (Lambda.blk_record fields mut, cl))
+            const (Const_block (Lambda.blk_record (field_shape ()) mut, cl))
           | Record_inlined {name; representation} ->
             let runtime =
               match Variant_runtime.representation representation with
@@ -1496,8 +1516,8 @@ and transl_record loc env fields repres opt_init_expr =
             in
             const
               (Const_block
-                 ( Lambda.blk_record_inlined fields name num_nonconsts ~runtime
-                     mut,
+                 ( Lambda.blk_record_inlined (field_shape ()) name num_nonconsts
+                     ~runtime mut,
                    cl ))
           | Record_unboxed _ ->
             const
@@ -1509,7 +1529,7 @@ and transl_record loc env fields repres opt_init_expr =
           match repres with
           | Record_regular ->
             prim
-              ~primitive:(Pmakeblock (Lambda.blk_record fields mut))
+              ~primitive:(Pmakeblock (Lambda.blk_record (field_shape ()) mut))
               ~args:ll loc
           | Record_float_unused -> assert false
           | Record_inlined {name; representation} ->
@@ -1525,8 +1545,8 @@ and transl_record loc env fields repres opt_init_expr =
             prim
               ~primitive:
                 (Pmakeblock
-                   (Lambda.blk_record_inlined fields name num_nonconsts ~runtime
-                      mut))
+                   (Lambda.blk_record_inlined (field_shape ()) name
+                      num_nonconsts ~runtime mut))
               ~args:ll loc
           | Record_unboxed _ -> (
             match ll with
@@ -1539,9 +1559,10 @@ and transl_record loc env fields repres opt_init_expr =
               | Tconstr (p, _, _) -> p
               | _ -> assert false
             in
-            let slot = transl_extension_path env path in
+            let slot = Transl_path.transl_extension_path env path in
             prim
-              ~primitive:(Pmakeblock (Lambda.blk_record_ext fields mut))
+              ~primitive:
+                (Pmakeblock (Lambda.blk_record_ext (field_names ()) mut))
               ~args:(slot :: ll) loc)
       in
       match opt_init_expr with
@@ -1559,12 +1580,15 @@ and transl_record loc env fields repres opt_init_expr =
             match repres with
             | Record_float_unused -> assert false
             | Record_regular ->
-              Psetfield (lbl.lbl_pos, Lambda.fld_record_set lbl)
+              Psetfield (lbl.lbl_pos, Lambda.fld_record_set lbl.lbl_runtime_name)
             | Record_inlined _ ->
-              Psetfield (lbl.lbl_pos, Lambda.fld_record_inline_set lbl)
+              Psetfield
+                (lbl.lbl_pos, Lambda.fld_record_inline_set lbl.lbl_runtime_name)
             | Record_unboxed _ -> assert false
             | Record_extension ->
-              Psetfield (lbl.lbl_pos + 1, Lambda.fld_record_extension_set lbl)
+              Psetfield
+                ( lbl.lbl_pos + 1,
+                  Lambda.fld_record_extension_set lbl.lbl_runtime_name )
           in
           seq
             (prim ~primitive:upd ~args:[var copy_id; transl_exp expr] loc)
@@ -1582,7 +1606,7 @@ and transl_match e arg pat_expr_list exn_pat_expr_list partial =
   and cases = transl_cases pat_expr_list
   and exn_cases = transl_cases exn_pat_expr_list in
   let static_catch body val_ids handler =
-    let static_exception_id = next_negative_raise_count () in
+    let static_exception_id = Lambda_exits.next_negative_raise_count () in
     let exn_handler = Matching.for_trywith (var id) exn_cases in
     let id, exn_handler = pack_trywith_exn id exn_handler in
     staticcatch

@@ -239,6 +239,7 @@ let none = {desc = Ttuple []; level = -1; id = -1}
 let dummy_label =
   {
     lbl_name = "";
+    lbl_runtime_name = "";
     lbl_res = none;
     lbl_arg = none;
     lbl_mut = Immutable;
@@ -259,6 +260,7 @@ let label_descrs ty_res lbls repres priv =
       let lbl =
         {
           lbl_name = Ident.name l.ld_id;
+          lbl_runtime_name = Record_runtime.declaration_name l;
           lbl_res = ty_res;
           lbl_arg = l.ld_type;
           lbl_mut = l.ld_mutable;

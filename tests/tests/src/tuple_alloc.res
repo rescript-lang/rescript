@@ -1,10 +1,10 @@
 let v = ref(0)
 
-let (reset, incr) = (_ => v := 0, _ => Int.Ref.increment(v))
+let (reset, incr) = (_ => v := 0, _ => v.contents = v.contents + 1)
 
 let (reset2, incr2) = {
   let vv = ref(0)
-  (() => vv := 0, () => Int.Ref.increment(vv))
+  (() => vv := 0, () => vv.contents = vv.contents + 1)
 }
 
 let f = (a, b, d, e) => {

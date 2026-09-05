@@ -401,6 +401,7 @@ and type_kind =
 and label_declaration = {
   ld_id: Ident.t;
   ld_name: string loc;
+  ld_runtime_name: string option;
   ld_mutable: mutable_flag;
   ld_optional: bool;
   ld_type: core_type;
@@ -411,6 +412,7 @@ and label_declaration = {
 and constructor_declaration = {
   cd_id: Ident.t;
   cd_name: string loc;
+  cd_runtime_tag: Variant_runtime.literal_tag option;
   cd_args: constructor_arguments;
   cd_res: core_type option;
   cd_loc: Location.t;

@@ -153,7 +153,7 @@ let () = {
   again4(~y=(), __LINE__, ())
   again4(
     ~x={
-      Int.Ref.increment(side_effect)
+      side_effect.contents = side_effect.contents + 1
       ()
     },
     ~y=(),
@@ -162,11 +162,11 @@ let () = {
   )
   again4(
     ~x={
-      Int.Ref.increment(side_effect)
+      side_effect.contents = side_effect.contents + 1
       ()
     },
     ~y={
-      Int.Ref.decrement(side_effect)
+      side_effect.contents = side_effect.contents - 1
       ()
     },
     __LINE__,
@@ -174,13 +174,13 @@ let () = {
   )
   again4(
     ~y={
-      Int.Ref.decrement(side_effect)
+      side_effect.contents = side_effect.contents - 1
       ()
     },
     __LINE__,
     (),
   )
-  again4(~x=Int.Ref.increment(side_effect), ~y=(), __LINE__, ())
+  again4(~x=side_effect.contents = side_effect.contents + 1, ~y=(), __LINE__, ())
 }
 
 /* external again5 : ?x__ignore:([`a of unit -> int | `b of string -> int ] [@string]) */

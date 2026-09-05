@@ -527,20 +527,22 @@ let default_mapper =
           ~loc:(this.location this pvb_loc)
           ~attrs:(this.attributes this pvb_attributes));
     constructor_declaration =
-      (fun this {pcd_name; pcd_args; pcd_res; pcd_loc; pcd_attributes} ->
+      (fun this ({pcd_name; pcd_args; pcd_res; pcd_loc} as cd) ->
         Type.constructor (map_loc this pcd_name)
           ~args:(T.map_constructor_arguments this pcd_args)
           ?res:(map_opt (this.typ this) pcd_res)
           ~loc:(this.location this pcd_loc)
-          ~attrs:(this.attributes this pcd_attributes));
+          ~attrs:(this.attributes this (Type.constructor_attributes cd)));
     label_declaration =
       (fun this
-        {pld_name; pld_type; pld_loc; pld_mutable; pld_optional; pld_attributes}
+        ({pld_name; pld_type; pld_loc; pld_mutable; pld_optional} as ld)
       ->
+        (* The runtime name goes back into the attributes so that a mapper sees
+           [@as] where it has always been, and [field] takes it out again. *)
         Type.field (map_loc this pld_name) (this.typ this pld_type)
           ~mut:pld_mutable ~optional:pld_optional
           ~loc:(this.location this pld_loc)
-          ~attrs:(this.attributes this pld_attributes));
+          ~attrs:(this.attributes this (Type.field_attributes ld)));
     cases = (fun this l -> List.map (this.case this) l);
     case =
       (fun this {pc_bar; pc_lhs; pc_guard; pc_rhs} ->

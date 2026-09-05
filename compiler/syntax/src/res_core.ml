@@ -5220,9 +5220,13 @@ and parse_string_field_declaration p =
 (* field-decl	::=
  *  | [mutable] field-name : poly-typexpr
  *  | attributes field-decl *)
-and parse_field_declaration ?current_type_name_path ?inline_types_context p =
+and parse_field_declaration ?current_type_name_path ?inline_types_context
+    ?(extra_attrs = []) p =
   let start_pos = p.Parser.start_pos in
-  let attrs = parse_attributes p in
+  (* [extra_attrs] are the attributes of the first field, already consumed by
+     the caller before it knew a record was coming. They go through the same
+     constructor as the rest so that [@as] is interpreted in one place. *)
+  let attrs = extra_attrs @ parse_attributes p in
   let mut =
     if Parser.optional p Token.Mutable then Asttypes.Mutable
     else Asttypes.Immutable
@@ -5508,10 +5512,7 @@ and parse_constr_decl_args p =
                 parse_comma_delimited_region ~grammar:Grammar.FieldDeclarations
                   ~closing:Rbrace ~f:parse_field_declaration_region p
               | attrs ->
-                let first =
-                  let field = parse_field_declaration p in
-                  {field with Parsetree.pld_attributes = attrs}
-                in
+                let first = parse_field_declaration ~extra_attrs:attrs p in
                 if p.token = Rbrace then [first]
                 else (
                   Parser.expect Comma p;
@@ -5891,13 +5892,13 @@ and parse_spread_tail_classified ?current_type_name_path ?inline_types_context
       (* Object-style: build an object type that inherits the spread *)
       let obj_fields =
         let convert (ld : Parsetree.label_declaration) =
-          let ({Parsetree.pld_name; pld_type; pld_attributes; _}
-                : Parsetree.label_declaration) =
+          let ({Parsetree.pld_name; pld_type; _} : Parsetree.label_declaration)
+              =
             ld
           in
           match pld_name.txt with
           | "..." -> Parsetree.Oinherit pld_type
-          | _ -> Otag (pld_name, pld_attributes, pld_type)
+          | _ -> Otag (pld_name, Ast_helper.Type.field_attributes ld, pld_type)
         in
         Parsetree.Oinherit spread_typ :: List.map convert fields
       in
@@ -5978,7 +5979,9 @@ and parse_record_or_object_decl ?current_type_name_path ?inline_types_context p
           Ext_list.map fields (fun ld ->
               match ld.pld_name.txt with
               | "..." -> Parsetree.Oinherit ld.pld_type
-              | _ -> Otag (ld.pld_name, ld.pld_attributes, ld.pld_type))
+              | _ ->
+                Otag
+                  (ld.pld_name, Ast_helper.Type.field_attributes ld, ld.pld_type))
         in
         let dot_field = Parsetree.Oinherit typ in
         let typ_obj = Ast_helper.Typ.object_ (dot_field :: fields) Closed in
@@ -6049,17 +6052,13 @@ and parse_record_or_object_decl ?current_type_name_path ?inline_types_context p
           let first =
             let field =
               parse_field_declaration ?current_type_name_path
-                ?inline_types_context p
+                ?inline_types_context ~extra_attrs:attrs p
             in
             Parser.optional p Comma |> ignore;
             {
               field with
-              Parsetree.pld_attributes = attrs;
-              pld_loc =
-                {
-                  field.Parsetree.pld_loc with
-                  loc_start = (attr |> fst).loc.loc_start;
-                };
+              Parsetree.pld_loc =
+                {field.pld_loc with loc_start = (attr |> fst).loc.loc_start};
             }
           in
           first

@@ -13,6 +13,7 @@ type untagged_error =
   | ConstructorMoreThanOneArg of string
 type error =
   | InvalidVariantAsAnnotation
+  | VariantAsIntegerOutOfRange of string
   | Duplicated_bs_as
   | InvalidVariantTagAnnotation
   | InvalidUntaggedVariantDefinition of untagged_error
@@ -26,6 +27,10 @@ let report_error ppf =
     fprintf ppf
       "A variant case annotation @as(...) must be a string, integer, boolean, \
        null, or undefined."
+  | VariantAsIntegerOutOfRange value ->
+    fprintf ppf
+      "The integer %s in this variant case's @as annotation is out of range."
+      value
   | Duplicated_bs_as ->
     fprintf ppf "Duplicate @as annotation; only one @as is allowed here."
   | InvalidVariantTagAnnotation ->
@@ -74,7 +79,7 @@ let block_type_to_user_visible_string = function
   Can be a literal (case with no payload), or a block (case with payload).
   In the case of block it can be tagged or untagged.
 *)
-let tag_type_to_user_visible_string = function
+let literal_tag_to_user_visible_string = function
   | String _ -> "string"
   | Int _ -> "int"
   | Float _ -> "float"
@@ -82,7 +87,6 @@ let tag_type_to_user_visible_string = function
   | Bool _ -> "bool"
   | Null -> "null"
   | Undefined -> "undefined"
-  | Untagged block_type -> block_type_to_user_visible_string block_type
 
 let untagged = "unboxed"
 
@@ -91,13 +95,6 @@ let block_type_can_be_undefined = function
   | FunctionType | ObjectType ->
     false
   | UnknownType -> true
-
-let tag_can_be_undefined tag =
-  match tag.tag_type with
-  | None -> false
-  | Some (String _ | Int _ | Float _ | BigInt _ | Bool _ | Null) -> false
-  | Some (Untagged block_type) -> block_type_can_be_undefined block_type
-  | Some Undefined -> true
 
 let has_untagged (attrs : Parsetree.attributes) =
   Ext_list.exists attrs (function {txt}, _ -> txt = untagged)
@@ -110,37 +107,41 @@ let process_untagged (attrs : Parsetree.attributes) =
       | _ -> ());
   !st
 
-let process_tag_type (attrs : Parsetree.attributes) =
-  let st : tag_type option ref = ref None in
-  Ext_list.iter attrs (fun (({txt; loc}, payload) as attr) ->
-      match txt with
-      | "as" ->
-        if !st = None then (
-          (match Ast_payload.semantic_string_of_payload payload with
-          | None -> ()
-          | Some s -> st := Some (String s));
-          (match Ast_payload.is_single_int payload with
-          | None -> ()
-          | Some i -> st := Some (Int i));
-          (match Ast_payload.is_single_float payload with
-          | None -> ()
-          | Some f -> st := Some (Float f));
-          (match Ast_payload.is_single_bigint payload with
-          | None -> ()
-          | Some i -> st := Some (BigInt i));
-          (match Ast_payload.is_single_bool payload with
-          | None -> ()
-          | Some b -> st := Some (Bool b));
-          (match Ast_payload.is_single_ident payload with
-          | None -> ()
-          | Some (Lident "null") -> st := Some Null
-          | Some (Lident "undefined") -> st := Some Undefined
-          | Some _ -> raise (Error (loc, InvalidVariantAsAnnotation)));
-          if !st = None then raise (Error (loc, InvalidVariantAsAnnotation))
-          else Used_attributes.mark_used_attribute attr)
-        else raise (Error (loc, Duplicated_bs_as))
-      | _ -> ());
-  !st
+let runtime_tag_of_parsetree ~loc = function
+  | Parsetree.Pct_string s -> String (String_literal.string_semantic s)
+  | Pct_int source -> (
+    match int_of_string_opt source with
+    | Some i -> Int i
+    | None -> raise (Error (loc, VariantAsIntegerOutOfRange source)))
+  | Pct_float f -> Float f
+  | Pct_bigint i -> BigInt i
+  | Pct_bool b -> Bool b
+  | Pct_null -> Null
+  | Pct_undefined -> Undefined
+
+let parsetree_tag_of_runtime = function
+  | String s -> Parsetree.Pct_string (String_literal.string_from_semantic s)
+  | Int i -> Pct_int (string_of_int i)
+  | Float f -> Pct_float f
+  | BigInt i -> Pct_bigint i
+  | Bool b -> Pct_bool b
+  | Null -> Pct_null
+  | Undefined -> Pct_undefined
+
+(* An [@as] left in the attributes did not name the constructor: either its
+   payload is not a tag, or an earlier [@as] already named it. *)
+let reject_leftover_as (attrs : Parsetree.attributes) err =
+  Ext_list.iter attrs (fun (({txt; loc}, _) : Parsetree.attribute) ->
+      if txt = "as" then raise (Error (loc, err)))
+
+let process_constructor_tag (cstr : Parsetree.constructor_declaration) =
+  match cstr.pcd_runtime_tag with
+  | None ->
+    reject_leftover_as cstr.pcd_attributes InvalidVariantAsAnnotation;
+    None
+  | Some {txt; loc} ->
+    reject_leftover_as cstr.pcd_attributes Duplicated_bs_as;
+    Some (runtime_tag_of_parsetree ~loc txt)
 
 let () =
   Location.register_error_of_exn (function
@@ -206,17 +207,11 @@ let process_tag_name (attrs : Parsetree.attributes) =
       | _ -> ());
   !st
 
-let get_tag_name (cstr : Types.constructor_declaration) =
-  process_tag_name cstr.cd_attributes
+(* A constructor the compiler generates itself carries no annotations. *)
+let generated_tag ~name = {name; literal = None}
 
-let constructor_tag ~name attrs = {name; tag_type = process_tag_type attrs}
-
-let block_runtime ~name attrs =
-  {
-    tag = constructor_tag ~name attrs;
-    tag_name = process_tag_name attrs;
-    untagged = process_untagged attrs;
-  }
+let generated_block_runtime ~name =
+  {tag = generated_tag ~name; tag_name = None; untagged = false}
 
 let is_nullary_variant (x : Types.constructor_arguments) =
   match x with
@@ -283,18 +278,17 @@ let check_invariant ~is_untagged_def ~(consts : (Location.t * tag) list)
     then raise (Error (loc, InvalidUntaggedVariantDefinition AtMostOneBoolean));
     ()
   in
-  let check_literal ~is_const ~loc (literal : tag) =
-    match literal.tag_type with
+  let check_literal ~is_const ~loc (tag : tag) =
+    match tag.literal with
+    | None -> add_string_literal ~is_const ~loc tag.name
     | Some (String s) -> add_string_literal ~is_const ~loc s
     | Some (Int i) -> add_nonstring_literal ~is_const ~loc (string_of_int i)
     | Some (Float f) -> add_nonstring_literal ~is_const ~loc f
     | Some (BigInt i) -> add_nonstring_literal ~is_const ~loc i
-    | Some Null -> add_nonstring_literal ~is_const ~loc "null"
-    | Some Undefined -> add_nonstring_literal ~is_const ~loc "undefined"
     | Some (Bool b) ->
       add_nonstring_literal ~is_const ~loc (if b then "true" else "false")
-    | Some (Untagged _) -> ()
-    | None -> add_string_literal ~is_const ~loc literal.name
+    | Some Null -> add_nonstring_literal ~is_const ~loc "null"
+    | Some Undefined -> add_nonstring_literal ~is_const ~loc "undefined"
   in
 
   Ext_list.rev_iter consts (fun (loc, literal) ->
@@ -323,7 +317,7 @@ let check_invariant ~is_untagged_def ~(consts : (Location.t * tag) list)
         check_literal ~is_const:false ~loc block.runtime.tag)
 
 let get_cstr_loc_tag (cstr : Types.constructor_declaration) =
-  (cstr.cd_loc, constructor_tag ~name:(Ident.name cstr.cd_id) cstr.cd_attributes)
+  (cstr.cd_loc, {name = Ident.name cstr.cd_id; literal = cstr.cd_runtime_tag})
 
 let check_tag_field_conflicts (cstrs : Types.constructor_declaration list) =
   List.iter
@@ -339,12 +333,7 @@ let check_tag_field_conflicts (cstrs : Types.constructor_declaration list) =
         List.iter
           (fun (field : Types.label_declaration) ->
             let field_name = Ident.name field.ld_id in
-            let effective_field_name =
-              match process_tag_type field.ld_attributes with
-              | Some (String as_name) -> as_name
-              (* @as payload types other than string have no effect on record fields *)
-              | Some _ | None -> field_name
-            in
+            let effective_field_name = Record_runtime.declaration_name field in
             (* Check if effective field name conflicts with tag *)
             if effective_field_name = effective_tag_name then
               raise
@@ -355,8 +344,6 @@ let check_tag_field_conflicts (cstrs : Types.constructor_declaration list) =
           fields
       | _ -> ())
     cstrs
-
-let has_undefined_literal attrs = process_tag_type attrs = Some Undefined
 
 module Dynamic_checks = struct
   type op = EqEqEq | NotEqEq | Or | And
@@ -379,11 +366,11 @@ module Dynamic_checks = struct
   let bin op x y = BinOp (op, x, y)
   let tag_type t = TagType t
   let typeof x = TypeOf x
-  let str s = String s |> tag_type
+  let str s = Literal (String s) |> tag_type
   let is_instance i x = IsInstanceOf (i, x)
   let not x = Not x
-  let nil = Null |> tag_type
-  let undefined = Undefined |> tag_type
+  let nil = Literal Null |> tag_type
+  let undefined = Literal Undefined |> tag_type
   let object_ = Untagged ObjectType |> tag_type
 
   let function_ = Untagged FunctionType |> tag_type
@@ -399,34 +386,35 @@ module Dynamic_checks = struct
   let ( ||| ) x y = bin Or x y
   let ( &&& ) x y = bin And x y
 
-  let rec is_a_literal_case ~(literal_cases : tag_type list) ~block_cases
+  let rec is_a_literal_case ~(literal_cases : literal_tag list) ~block_cases
       ~list_literal_cases (e : _ t) =
+    let overlaps p = Ext_list.exists literal_cases p in
     let literals_overlaps_with_string () =
-      Ext_list.exists literal_cases (function
+      overlaps (function
         | String _ -> true
         | _ -> false)
     in
     let literals_overlaps_with_number () =
-      Ext_list.exists literal_cases (function
+      overlaps (function
         | Int _ | Float _ -> true
         | _ -> false)
     in
     let literals_overlaps_with_bigint () =
-      Ext_list.exists literal_cases (function
+      overlaps (function
         | BigInt _ -> true
         | _ -> false)
     in
     let literals_overlaps_with_boolean () =
-      Ext_list.exists literal_cases (function
+      overlaps (function
         | Bool _ -> true
         | _ -> false)
     in
     let literals_overlaps_with_object () =
-      Ext_list.exists literal_cases (function
+      overlaps (function
         | Null -> true
         | _ -> false)
     in
-    let is_literal_case (t : tag_type) : _ t = e == tag_type t in
+    let is_literal_case (t : literal_tag) : _ t = e == tag_type (Literal t) in
     let is_not_block_case (c : block_type) : _ t =
       match c with
       | StringType
@@ -535,5 +523,5 @@ module Dynamic_checks = struct
     | Untagged UnknownType ->
       (* This should not happen because unknown must be the only non-literal case *)
       assert false
-    | Bool _ | Float _ | Int _ | BigInt _ | String _ | Null | Undefined -> x
+    | Literal _ -> x
 end

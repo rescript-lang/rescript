@@ -25,7 +25,7 @@ let init_shape modl =
       {
         name = "Module";
         num_nonconst = 2;
-        runtime = Ast_untagged_variants.block_runtime ~name:"Module" [];
+        runtime = Ast_untagged_variants.generated_block_runtime ~name:"Module";
       }
   in
   let value_tag_info : Lambda.tag_info =
@@ -33,7 +33,7 @@ let init_shape modl =
       {
         name = "value";
         num_nonconst = 2;
-        runtime = Ast_untagged_variants.block_runtime ~name:"value" [];
+        runtime = Ast_untagged_variants.generated_block_runtime ~name:"value";
       }
   in
   let rec init_shape_mod env mty =
@@ -58,7 +58,7 @@ let init_shape modl =
         match Ctype.expand_head env ty with
         | t when is_function t ->
           const_constructor
-            (Ast_untagged_variants.constructor_tag ~name:"Function" [])
+            (Ast_untagged_variants.generated_tag ~name:"Function")
         | _ -> raise Not_found
       in
       add_name init_v id :: init_shape_struct env rem
@@ -87,7 +87,7 @@ let reorder_rec_bindings bindings =
   and loc = Array.of_list (List.map (fun (_, loc, _, _) -> loc) bindings)
   and init = Array.of_list (List.map (fun (_, _, init, _) -> init) bindings)
   and rhs = Array.of_list (List.map (fun (_, _, _, rhs) -> rhs) bindings) in
-  let fv = Array.map Lambda.free_variables rhs in
+  let fv = Array.map Lambda_traverse.free_variables rhs in
   let num_bindings = Array.length id in
   let status = Array.make num_bindings Undefined in
   let res = ref [] in

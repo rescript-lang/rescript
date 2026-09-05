@@ -13,13 +13,11 @@ function add(x, y) {
 }
 
 function sum2(h) {
-  let v = {
-    contents: 0
-  };
+  let v = 0;
   Belt_HashSetInt.forEach(h, x => {
-    v.contents = v.contents + x | 0;
+    v = v + x | 0;
   });
-  return v.contents;
+  return v;
 }
 
 Mocha.describe("Belt_hashset_int_test", () => {

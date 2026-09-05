@@ -45,6 +45,12 @@ let rec no_side_effects (lam : Lambda.t) : bool =
       match args with
       | [_; Lconst cst] -> not_zero_constant cst
       | _ -> false)
+    | Ppowbigint -> (
+      (* Raises on a negative exponent, so pure only when the exponent is a
+         nonnegative constant. *)
+      match args with
+      | [_; Lconst (Const_bigint (true, _))] -> true
+      | _ -> false)
     | Pcreate_extension _ | Ptypeof | Pis_null | Pis_not_none | Psome
     | Psome_not_nest | Pis_undefined | Pis_null_undefined | Pnull_to_opt
     | Pnull_undefined_to_opt | Pjs_object_create _ | Pimport _
@@ -67,14 +73,13 @@ let rec no_side_effects (lam : Lambda.t) : bool =
     | Ppowfloat | Pdivfloat | Pmodfloat | Pfloatcomp _ | Pjscomp _ | Pfloatorder
     | Pfloatmin | Pfloatmax
     (* bigint primitives *)
-    | Pnegbigint | Paddbigint | Psubbigint | Pmulbigint | Ppowbigint
-    | Pnotbigint | Pandbigint | Porbigint | Pxorbigint | Plslbigint | Pasrbigint
+    | Pnegbigint | Paddbigint | Psubbigint | Pmulbigint | Pnotbigint
+    | Pandbigint | Porbigint | Pxorbigint | Plslbigint | Pasrbigint
     | Pbigintcomp _ | Pbigintorder | Pbigintmin | Pbigintmax
     (* string primitives *)
-    | Pstringlength | Pstringrefu | Pstringrefs | Pstringcomp _ | Pstringorder
-    | Pstringmin | Pstringmax
+    | Pstringlength | Pstringcomp _ | Pstringorder | Pstringmin | Pstringmax
     (* array primitives *)
-    | Pmakearray | Parraylength | Parrayrefu | Parrayrefs
+    | Pmakearray | Parraylength | Parrayrefu
     (* list primitives *)
     | Pmakelist
     (* dict primitives *)
@@ -99,7 +104,9 @@ let rec no_side_effects (lam : Lambda.t) : bool =
     (* TODO *)
     | Praw_js_code _
     (* byte swap *)
-    | Parraysets | Parraysetu | Praise | Psetfield _ ->
+    | Parraysets | Parraysetu | Praise | Psetfield _
+    (* bounds-checked reads throw when the index is out of range *)
+    | Parrayrefs | Pstringrefs | Pstringrefu ->
       false)
   | Llet (_, _, arg, body) -> no_side_effects arg && no_side_effects body
   | Lswitch (_, _) -> false

@@ -24,7 +24,7 @@ let vv = 3
 let v = ref(1)
 
 let a = {
-  let () = Int.Ref.increment(v)
+  let () = v.contents = v.contents + 1
   v.contents
 }
 

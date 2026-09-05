@@ -263,6 +263,15 @@ and record_representation =
 
 and label_declaration = {
   ld_id: Ident.t;
+  ld_runtime_name: string option;
+      (* The name the field has at run time, when it differs from [ld_id].
+         Comes from [@as] on the declaration, as its decoded value: two
+         spellings of one name are one name, so this compares by [=] and is
+         stable in the cmi. Note the asymmetry with [ld_attributes] below,
+         which still carries whole parsetree attributes, source spelling
+         included. That is safe only because every reader of an attribute
+         payload goes through a semantic accessor; anything comparing
+         attributes structurally would be comparing keystrokes. *)
   ld_mutable: mutable_flag;
   ld_optional: bool;
   ld_type: type_expr;
@@ -272,6 +281,8 @@ and label_declaration = {
 
 and constructor_declaration = {
   cd_id: Ident.t;
+  cd_runtime_tag: Variant_runtime.literal_tag option;
+      (* The decoded [@as] value of the constructor. *)
   cd_args: constructor_arguments;
   cd_res: type_expr option;
   cd_loc: Location.t;
@@ -380,6 +391,10 @@ val may_equal_constr :
 
 type label_description = {
   lbl_name: string; (* Short name *)
+  lbl_runtime_name: string;
+      (* The name the field has at run time: its [@as] payload when it has
+         one, otherwise [lbl_name]. Decided once when the declaration is
+         typed, so no consumer re-reads the attribute. *)
   lbl_res: type_expr; (* Type of the result *)
   lbl_arg: type_expr; (* Type of the argument *)
   lbl_mut: mutable_flag; (* Is this a mutable field? *)

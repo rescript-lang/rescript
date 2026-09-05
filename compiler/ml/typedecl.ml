@@ -207,25 +207,36 @@ let make_params env params =
   List.map make_param params
 
 let transl_labels ?record_name env closed lbls =
-  (match !Builtin_attributes.check_duplicated_labels lbls with
+  (match Record_runtime.check_duplicated_labels lbls with
   | None -> ()
   | Some {loc; txt = name} ->
     raise (Error (loc, Duplicate_label (name, record_name))));
   let mk
-      {
-        pld_name = name;
-        pld_mutable = mut;
-        pld_optional = optional;
-        pld_type = arg;
-        pld_loc = loc;
-        pld_attributes = attrs;
-      } =
+      ({
+         pld_name = name;
+         pld_mutable = mut;
+         pld_optional = optional;
+         pld_type = arg;
+         pld_loc = loc;
+         pld_attributes = attrs;
+         pld_runtime_name = runtime_name;
+       } as lbl) =
+    (match Record_runtime.extra_as_attribute lbl with
+    | Some loc ->
+      raise
+        (Ast_untagged_variants.Error
+           (loc, Ast_untagged_variants.Duplicated_bs_as))
+    | None -> ());
     Builtin_attributes.warning_scope attrs (fun () ->
         let arg = Ast_helper.Typ.force_poly arg in
         let cty = transl_simple_type env closed arg in
         {
           ld_id = Ident.create name.txt;
           ld_name = name;
+          ld_runtime_name =
+            (match runtime_name with
+            | None -> None
+            | Some {txt} -> Some (String_literal.string_semantic txt));
           ld_mutable = mut;
           ld_optional = optional;
           ld_type = cty;
@@ -245,6 +256,7 @@ let transl_labels ?record_name env closed lbls =
         in
         {
           Types.ld_id = ld.ld_id;
+          ld_runtime_name = ld.ld_runtime_name;
           ld_mutable = ld.ld_mutable;
           ld_optional = ld.ld_optional;
           ld_type = ty;
@@ -475,6 +487,7 @@ let transl_declaration ~type_record_as_object env sdecl id =
       let constructors_from_variant_spreads = Hashtbl.create 10 in
       let make_cstr scstr =
         let name = Ident.create scstr.pcd_name.txt in
+        let runtime_tag = Ast_untagged_variants.process_constructor_tag scstr in
         let targs, tret_type, args, ret_type, _cstr_params =
           make_constructor env (Path.Pident id) params scstr.pcd_args
             scstr.pcd_res
@@ -511,6 +524,7 @@ let transl_declaration ~type_record_as_object env sdecl id =
                 {
                   cd_id = name;
                   cd_name = scstr.pcd_name;
+                  cd_runtime_tag = runtime_tag;
                   cd_args =
                     (match cstr.cd_args with
                     | Cstr_tuple args ->
@@ -538,6 +552,7 @@ let transl_declaration ~type_record_as_object env sdecl id =
                                  ld_id = l.ld_id;
                                  ld_name =
                                    Location.mkloc (Ident.name l.ld_id) l.ld_loc;
+                                 ld_runtime_name = l.ld_runtime_name;
                                  ld_mutable = l.ld_mutable;
                                  ld_optional = l.ld_optional;
                                  ld_type =
@@ -564,6 +579,7 @@ let transl_declaration ~type_record_as_object env sdecl id =
                 {
                   cd_id = name;
                   cd_name = scstr.pcd_name;
+                  cd_runtime_tag = runtime_tag;
                   cd_args = targs;
                   cd_res = tret_type;
                   cd_loc = scstr.pcd_loc;
@@ -574,6 +590,7 @@ let transl_declaration ~type_record_as_object env sdecl id =
               let cstr =
                 {
                   Types.cd_id = name;
+                  cd_runtime_tag = runtime_tag;
                   cd_args = args;
                   cd_res = ret_type;
                   cd_loc = scstr.pcd_loc;

@@ -149,10 +149,8 @@ let string_switch ?(comment : string option)
       match
         Ext_list.find_opt clauses (fun (switch_case, x) ->
             match switch_case with
-            | String s -> if s = txt then Some x.switch_body else None
-            | Int _ | Float _ | BigInt _ | Bool _ | Null | Undefined
-            | Untagged _ ->
-              None)
+            | Literal (String s) -> if s = txt then Some x.switch_body else None
+            | Literal _ | Untagged _ -> None)
       with
       | Some case -> case
       | None -> (

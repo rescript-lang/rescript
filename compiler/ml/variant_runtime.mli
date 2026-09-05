@@ -38,7 +38,10 @@ type block_type =
   | ObjectType
   | UnknownType
 
-type tag_type =
+(** The literal value a constructor is represented by: what [@as] states, or
+    the constructor's own name when it states nothing. Unlike [tag_type], this
+    can never describe an inferred untagged payload shape. *)
+type literal_tag =
   | String of string
   | Int of int
   | Float of string
@@ -46,12 +49,25 @@ type tag_type =
   | Bool of bool
   | Null
   | Undefined
-  | Untagged of block_type
 
-type tag = {name: string; tag_type: tag_type option}
+type tag_type = Literal of literal_tag | Untagged of block_type
+
+type tag = {name: string; literal: literal_tag option}
+(** A constructor's name and optional explicitly declared runtime literal. *)
+
+type matchable_tag = {name: string; tag_type: tag_type option}
+(** A constructor tag widened for matching, where an untagged payload shape
+    can participate alongside declared literals. *)
+
 type block_runtime = {tag: tag; tag_name: string option; untagged: bool}
+
 type block = {runtime: block_runtime; block_type: block_type option}
 type constructor_case = Constant of tag | Block of block
+
+val to_matchable_tag : tag -> matchable_tag
+(** Widen a tag as stated by a declaration into one a match can compare
+    against, which also covers an untagged payload's shape. *)
+
 type configuration = {
   unboxed: bool;
       (** Whether the declaration carries [@unboxed]. This is retained even
@@ -65,7 +81,7 @@ type configuration = {
 type matching_facts = {
   tag_name: string option;
   block_types: block_type list;
-  literal_tags: tag_type list;
+  literal_tags: literal_tag list;
   has_null: bool;
   has_undefined: bool;
   has_other_literal: bool;
@@ -84,7 +100,7 @@ val get_layout : layout_ref -> layout
 val matching_facts : layout -> matching_facts
 val configuration : layout -> configuration
 val constructor_at : layout -> int -> constructor_case
-val constructor_tag : layout -> int -> tag_type option
+val constructor_tag : layout -> int -> literal_tag option
 val constructor_is_untagged : layout -> int -> bool
 val representation : constructor_reference -> constructor_case
 val length : layout -> int

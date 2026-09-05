@@ -63,7 +63,12 @@ let layout_from_type_variant ~(configuration : configuration) ~env
     (cstrs : Types.constructor_declaration list) : Variant_runtime.layout =
   let get_block (cstr : Types.constructor_declaration) : block =
     {
-      runtime = block_runtime ~name:(Ident.name cstr.cd_id) cstr.cd_attributes;
+      runtime =
+        {
+          tag = {name = Ident.name cstr.cd_id; literal = cstr.cd_runtime_tag};
+          tag_name = process_tag_name cstr.cd_attributes;
+          untagged = process_untagged cstr.cd_attributes;
+        };
       block_type = get_block_type ~env cstr;
     }
   in

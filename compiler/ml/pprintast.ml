@@ -1312,7 +1312,8 @@ and record_declaration ctxt f lbls =
   let type_record_field f pld =
     pp f "@[<2>%a%s%a:@;%a@;%a@]" mutable_flag pld.pld_mutable pld.pld_name.txt
       optional_flag pld.pld_optional (core_type ctxt) pld.pld_type
-      (attributes ctxt) pld.pld_attributes
+      (attributes ctxt)
+      (Ast_helper.Type.field_attributes pld)
   in
   pp f "{@\n%a}" (list type_record_field ~sep:";@\n") lbls
 
@@ -1335,7 +1336,10 @@ and type_declaration ctxt f x =
   let constructor_declaration f pcd =
     pp f "|@;";
     constructor_declaration ctxt f
-      (pcd.pcd_name.txt, pcd.pcd_args, pcd.pcd_res, pcd.pcd_attributes)
+      ( pcd.pcd_name.txt,
+        pcd.pcd_args,
+        pcd.pcd_res,
+        Ast_helper.Type.constructor_attributes pcd )
   in
   let repr f =
     let intro f = if x.ptype_manifest = None then () else pp f "@;=" in

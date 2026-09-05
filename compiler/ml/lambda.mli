@@ -52,22 +52,14 @@ type tag_info =
     *)
   | Blk_record_ext of {fields: string array; mutable_flag: mutable_flag}
 
-val find_name : Parsetree.attribute -> Asttypes.label option
-
 val tag_label_of_tag_info : tag_info -> string
 val mutable_flag_of_tag_info : tag_info -> mutable_flag
-val blk_record :
-  (Types.label_description * Typedtree.record_label_definition * bool) array ->
-  mutable_flag ->
-  tag_info
+val blk_record : (string * bool) array -> mutable_flag -> tag_info
 
-val blk_record_ext :
-  (Types.label_description * Typedtree.record_label_definition * bool) array ->
-  mutable_flag ->
-  tag_info
+val blk_record_ext : string array -> mutable_flag -> tag_info
 
 val blk_record_inlined :
-  (Types.label_description * Typedtree.record_label_definition * bool) array ->
+  (string * bool) array ->
   string ->
   int ->
   runtime:Variant_runtime.block_runtime ->
@@ -88,11 +80,11 @@ type field_dbg_info =
   | Fld_variant
   | Fld_cons
 
-val fld_record : Types.label_description -> field_dbg_info
+val fld_record : string -> field_dbg_info
 
-val fld_record_inline : Types.label_description -> field_dbg_info
+val fld_record_inline : string -> field_dbg_info
 
-val fld_record_extension : Types.label_description -> field_dbg_info
+val fld_record_extension : string -> field_dbg_info
 
 val ref_field_info : field_dbg_info
 
@@ -103,11 +95,11 @@ type set_field_dbg_info =
 
 val ref_field_set_info : set_field_dbg_info
 
-val fld_record_set : Types.label_description -> set_field_dbg_info
+val fld_record_set : string -> set_field_dbg_info
 
-val fld_record_inline_set : Types.label_description -> set_field_dbg_info
+val fld_record_inline_set : string -> set_field_dbg_info
 
-val fld_record_extension_set : Types.label_description -> set_field_dbg_info
+val fld_record_extension_set : string -> set_field_dbg_info
 
 type immediate_or_pointer = Immediate | Pointer
 
@@ -321,9 +313,6 @@ type builtin =
   | Primitive of primitive
   | Eliminated of eliminated
   | Constant of structured_constant
-  | Offset_ref of int
-      (** [%incr] / [%decr]: an assignment through the reference, expanded here
-          so the caller's own IR carries the form its escape analysis reads. *)
 
 type inline_attribute =
   | Always_inline (* [@inline] or [@inline always] *)
@@ -433,7 +422,6 @@ and lambda_switch = t switch
 *)
 
 (* Sharing key *)
-val make_key : t -> t option
 
 val const_int : int -> structured_constant
 
@@ -451,21 +439,11 @@ val const_module_alias : structured_constant
 val lambda_assert_false : t
 val lambda_unit : t
 
-val eq_primitive_approx : primitive -> primitive -> bool
-
 val str_of_field_info : field_dbg_info -> string option
-
-val eq_comparison : comparison -> comparison -> bool
 
 val is_immutable_block : tag_info -> bool
 
 val const_is_allocating : structured_constant -> bool
-
-val const_eq_approx : structured_constant -> structured_constant -> bool
-
-val cmp_int32 : comparison -> int32 -> int32 -> bool
-
-val cmp_float : comparison -> float -> float -> bool
 
 (* Constructors. [t] is private, so every term outside this module is
    built through one of these.
@@ -550,12 +528,6 @@ val lambda_true : t
 
 val lambda_false : t
 
-val shallow_map_sharing : (t -> t) -> t -> t
-(** Rewrite a node's immediate children, rebuilding through the constructors
-    so the result is normalized. A node whose children are all physically
-    unchanged is returned as-is, so a traversal that rewrites nothing
-    allocates nothing. *)
-
 val eq_approx : t -> t -> bool
 
 val mk_builtin : builtin -> t list -> Location.t -> t
@@ -564,44 +536,6 @@ val mk_builtin : builtin -> t list -> Location.t -> t
 val lambda_module_alias : t
 val name_lambda : let_kind -> t -> (Ident.t -> t) -> t
 
-val shallow_exists : (t -> bool) -> t -> bool
-(** Does any immediate child satisfy the predicate? Short-circuits. *)
-
-val iter : (t -> unit) -> t -> unit
-val free_variables : t -> Set_ident.t
-
-val transl_normal_path : Path.t -> t (* Path.t is already normal *)
-
-val transl_module_path : ?loc:Location.t -> Env.t -> Path.t -> t
-val transl_value_path : ?loc:Location.t -> Env.t -> Path.t -> t
-val transl_extension_path : ?loc:Location.t -> Env.t -> Path.t -> t
-
-val subst_lambda : t Ident.tbl -> t -> t
 val bind : let_kind -> Ident.t -> t -> t -> t
 
 val default_function_attribute : function_attribute
-
-(***********************)
-(* For static failures *)
-(***********************)
-
-(* Get a new static failure ident *)
-val next_raise_count : unit -> int
-
-val make_exit : int -> t
-
-val as_simple_exit : t -> int option
-
-(* Exit number to raise to, and a wrapper that puts the catch around a body. *)
-val make_catch_delayed : t -> int * (t -> t)
-val next_negative_raise_count : unit -> int
-(* Negative raise counts are used to compile 'match ... with
-   exception x -> ...'.  This disabled some simplifications
-   performed by the Simplif module that assume that static raises
-   are in tail position in their handler. *)
-
-val staticfail : t (* Anticipated static failure *)
-
-(* Check anticipated failure, substitute its final value *)
-val is_guarded : t -> bool
-val patch_guarded : t -> t -> t

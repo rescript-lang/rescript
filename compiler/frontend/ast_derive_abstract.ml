@@ -92,6 +92,7 @@ let handle_tdcl light (tdcl : Parsetree.type_declaration) :
           [] )
         (fun ({
                 pld_name = {txt = label_name; loc = label_loc} as pld_name;
+                pld_runtime_name;
                 pld_type;
                 pld_mutable;
                 pld_attributes;
@@ -101,9 +102,11 @@ let handle_tdcl light (tdcl : Parsetree.type_declaration) :
              (acc, maker, labels)
            ->
           let prim_as_name, new_label =
-            match Ast_attributes.iter_process_bs_string_as pld_attributes with
+            match pld_runtime_name with
             | None -> (label_name, pld_name)
-            | Some new_name -> (new_name, {pld_name with txt = new_name})
+            | Some {txt} ->
+              let new_name = String_literal.string_semantic txt in
+              (new_name, {pld_name with txt = new_name})
           in
           let prim = Parsetree.Prim_name prim_as_name in
           let is_optional = Ast_attributes.has_bs_optional pld_attributes in

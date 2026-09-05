@@ -649,11 +649,26 @@ and core_type_x_core_type_x_location i ppf (ct1, ct2, l) =
   core_type (i + 1) ppf ct1;
   core_type (i + 1) ppf ct2
 
+and fmt_runtime_tag f (tag : Variant_runtime.literal_tag) =
+  match tag with
+  | String s -> fprintf f "String %S" s
+  | Int i -> fprintf f "Int %d" i
+  | Float s -> fprintf f "Float %s" s
+  | BigInt s -> fprintf f "BigInt %s" s
+  | Bool b -> fprintf f "Bool %b" b
+  | Null -> fprintf f "Null"
+  | Undefined -> fprintf f "Undefined"
+
 and constructor_decl i ppf
-    {cd_id; cd_name = _; cd_args; cd_res; cd_loc; cd_attributes} =
+    {cd_id; cd_name = _; cd_runtime_tag; cd_args; cd_res; cd_loc; cd_attributes}
+    =
   line i ppf "%a\n" fmt_location cd_loc;
   line (i + 1) ppf "%a\n" fmt_ident cd_id;
   attributes i ppf cd_attributes;
+  (* As for a field's rename above: a field, so printed as one. *)
+  (match cd_runtime_tag with
+  | Some tag -> line (i + 1) ppf "runtime_tag %a\n" fmt_runtime_tag tag
+  | None -> ());
   constructor_arguments (i + 1) ppf cd_args;
   option (i + 1) core_type ppf cd_res
 
@@ -662,9 +677,22 @@ and constructor_arguments i ppf = function
   | Cstr_record l -> list i label_decl ppf l
 
 and label_decl i ppf
-    {ld_id; ld_name = _; ld_mutable; ld_type; ld_loc; ld_attributes} =
+    {
+      ld_id;
+      ld_name = _;
+      ld_runtime_name;
+      ld_mutable;
+      ld_type;
+      ld_loc;
+      ld_attributes;
+    } =
   line i ppf "%a\n" fmt_location ld_loc;
   attributes i ppf ld_attributes;
+  (* The rename is a field rather than an attribute, so print it as one: the
+     dump would otherwise show a renamed field exactly like a plain one. *)
+  (match ld_runtime_name with
+  | Some name -> line (i + 1) ppf "runtime_name %S\n" name
+  | None -> ());
   line (i + 1) ppf "%a\n" fmt_mutable_flag ld_mutable;
   line (i + 1) ppf "%a" fmt_ident ld_id;
   core_type (i + 1) ppf ld_type

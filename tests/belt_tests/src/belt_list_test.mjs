@@ -8,23 +8,19 @@ import * as Primitive_int from "@rescript/runtime/lib/es6/Primitive_int.mjs";
 import * as Primitive_object from "@rescript/runtime/lib/es6/Primitive_object.mjs";
 
 function sum(xs) {
-  let v = {
-    contents: 0
-  };
+  let v = 0;
   Belt_List.forEach(xs, x => {
-    v.contents = v.contents + x | 0;
+    v = v + x | 0;
   });
-  return v.contents;
+  return v;
 }
 
 function sum2(xs, ys) {
-  let v = {
-    contents: 0
-  };
+  let v = 0;
   Belt_List.forEach2(xs, ys, (x, y) => {
-    v.contents = (v.contents + x | 0) + y | 0;
+    v = (v + x | 0) + y | 0;
   });
-  return v.contents;
+  return v;
 }
 
 Mocha.describe("Belt_list_test", () => {

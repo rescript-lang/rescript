@@ -49,7 +49,6 @@ let is_const_some (cst : Lambda.structured_constant) : bool =
 let simplify_alias (meta : Lam_stats.t) (lam : Lambda.t) : Lambda.t =
   let rec simpl (lam : Lambda.t) : Lambda.t =
     match lam with
-    | Lvar _ -> lam
     (* 7432: prevent optimization in JSX preserve mode *)
     | Lprim
         {
@@ -58,16 +57,19 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lambda.t) : Lambda.t =
           loc;
         }
       when !Js_config.jsx_preserve ->
-      Lambda.prim ~primitive ~args:(field_arg :: Ext_list.map rest simpl) loc
+      let rest' = Ext_list.map_sharing rest simpl in
+      if rest' == rest then lam
+      else Lambda.prim ~primitive ~args:(field_arg :: rest') loc
     | Lprim {primitive = Pfield (i, info) as primitive; args = [arg]; loc} -> (
       (* ATTENTION:
          Main use case, we should detect inline all immutable block .. *)
       match simpl arg with
       | Lvar v as l ->
         Lam_util.field_flatten_get
-          (fun _ -> Lambda.prim ~primitive ~args:[l] loc)
+          (fun _ ->
+            if l == arg then lam else Lambda.prim ~primitive ~args:[l] loc)
           v i info meta.ident_tbl
-      | l -> Lambda.prim ~primitive ~args:[l] loc)
+      | l -> if l == arg then lam else Lambda.prim ~primitive ~args:[l] loc)
     | Lprim
         {
           primitive = (Pval_from_option | Pval_from_option_not_nest) as p;
@@ -76,11 +78,7 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lambda.t) : Lambda.t =
       match Hash_ident.find_opt meta.ident_tbl v with
       | Some (OptionalBlock (l, _)) -> l
       | _ -> if p = Pval_from_option_not_nest then lvar else x)
-    | Lglobal_module _ -> lam
-    | Lprim {primitive; args; loc} ->
-      Lambda.prim ~primitive ~args:(Ext_list.map args simpl) loc
-    | Lifthenelse
-        ((Lprim {primitive = Pis_not_none; args = [Lvar id]} as l1), l2, l3)
+    | Lifthenelse (Lprim {primitive = Pis_not_none; args = [Lvar id]}, l2, l3)
       -> (
       match Hash_ident.find_opt meta.ident_tbl id with
       | Some (Constant c) when is_const_some c -> simpl l2
@@ -100,7 +98,7 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lambda.t) : Lambda.t =
           (Lambda.not_ Location.none
              (Lambda.prim ~primitive:Pis_null_undefined ~args:[l] Location.none))
           (simpl l2) (simpl l3)
-      | Some _ | None -> Lambda.if_ l1 (simpl l2) (simpl l3))
+      | Some _ | None -> Lambda_traverse.shallow_map_sharing simpl lam)
     (* could be the code path
        {[ match x with
          | h::hs ->
@@ -112,13 +110,8 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lambda.t) : Lambda.t =
         match id_is_for_sure_true_in_boolean meta.ident_tbl id with
         | Eval_true -> simpl l2
         | Eval_false -> simpl l3
-        | Eval_unknown -> Lambda.if_ (simpl l1) (simpl l2) (simpl l3))
-      | _ -> Lambda.if_ (simpl l1) (simpl l2) (simpl l3))
-    | Lconst _ -> lam
-    | Llet (str, v, l1, l2) -> Lambda.let_ str v (simpl l1) (simpl l2)
-    | Lletrec (bindings, body) ->
-      let bindings = Ext_list.map_snd bindings simpl in
-      Lambda.letrec bindings (simpl body)
+        | Eval_unknown -> Lambda_traverse.shallow_map_sharing simpl lam)
+      | _ -> Lambda_traverse.shallow_map_sharing simpl lam)
     (* complicated
            1. inline this function
            2. ...
@@ -155,21 +148,25 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lambda.t) : Lambda.t =
              && Lam_analysis.lfunction_can_be_inlined lfunction ->
         simpl (Lam_beta_reduce.propagate_beta_reduce meta params body args)
       | _ ->
-        Lambda.apply (simpl l1) (Ext_list.map args simpl) ap_info
-          ?ap_transformed_jsx:None)
+        let fn = simpl l1 in
+        let args' = Ext_list.map_sharing args simpl in
+        if fn == l1 && args' == args then lam
+        else Lambda.apply fn args' ap_info ?ap_transformed_jsx:None)
     (* Function inlining interact with other optimizations...
 
        - parameter attributes
        - scope issues
        - code bloat
     *)
-    | Lapply {ap_func = Lvar v as fn; ap_args; ap_info; ap_transformed_jsx} -> (
+    | Lapply
+        {ap_func = Lvar v as fn; ap_args = args; ap_info; ap_transformed_jsx}
+      -> (
       (* Check info for always inlining *)
-
-      (* Ext_log.dwarn __LOC__ "%s/%d" v.name v.stamp;     *)
-      let ap_args = Ext_list.map ap_args simpl in
+      let ap_args = Ext_list.map_sharing args simpl in
       let[@local] normal () =
-        Lambda.apply (simpl fn) ap_args ap_info ~ap_transformed_jsx
+        let fn' = simpl fn in
+        if fn' == fn && ap_args == args then lam
+        else Lambda.apply fn' ap_args ap_info ~ap_transformed_jsx
       in
       match Hash_ident.find_opt meta.ident_tbl v with
       | Some
@@ -239,55 +236,22 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lambda.t) : Lambda.t =
     (*   *\) *)
     (*   when  Ext_list.same_length params args -> *)
     (*   simpl (Lam_beta_reduce.propogate_beta_reduce meta params body args) *)
-    | Lapply {ap_func = l1; ap_args = ll; ap_info; ap_transformed_jsx} ->
-      Lambda.apply (simpl l1) (Ext_list.map ll simpl) ap_info
-        ~ap_transformed_jsx
-    | Lfunction {params; body; attr; loc} ->
-      Lambda.function_ ~loc ~params ~body:(simpl body) ~attr
-    | Lswitch
-        ( l,
-          {
-            sw_failaction;
-            sw_consts;
-            sw_blocks;
-            sw_blocks_full;
-            sw_consts_full;
-            sw_dispatch;
-          } ) ->
-      Lambda.switch (simpl l)
-        {
-          sw_consts = Ext_list.map_snd sw_consts simpl;
-          sw_blocks = Ext_list.map_snd sw_blocks simpl;
-          sw_consts_full;
-          sw_blocks_full;
-          sw_failaction = Ext_option.map sw_failaction simpl;
-          sw_dispatch;
-        }
-    | Lstringswitch (l, sw, d) ->
-      let l =
+    | Lstringswitch (l, sw, d) -> (
+      let known_constant =
         match l with
         | Lvar s -> (
           match Hash_ident.find_opt meta.ident_tbl s with
-          | Some (Constant s) -> Lambda.const s
-          | Some _ | None -> simpl l)
-        | _ -> simpl l
+          | Some (Constant c) -> Some c
+          | Some _ | None -> None)
+        | _ -> None
       in
-      Lambda.stringswitch l (Ext_list.map_snd sw simpl) (Ext_option.map d simpl)
-    | Lstaticraise (i, ls) -> Lambda.staticraise i (Ext_list.map ls simpl)
-    | Lstaticcatch (l1, ids, l2) -> Lambda.staticcatch (simpl l1) ids (simpl l2)
-    | Ltrywith (l1, v, l2) -> Lambda.try_ (simpl l1) v (simpl l2)
-    | Lsequence (l1, l2) -> Lambda.seq (simpl l1) (simpl l2)
-    | Lbreak -> Lambda.break
-    | Lcontinue -> Lambda.continue
-    | Lwhile (l1, l2) -> Lambda.while_ (simpl l1) (simpl l2)
-    | Lfor (flag, l1, l2, dir, l3) ->
-      Lambda.for_ flag (simpl l1) (simpl l2) dir (simpl l3)
-    | Lfor_of (flag, l1, l2) -> Lambda.for_of flag (simpl l1) (simpl l2)
-    | Lfor_await_of (flag, l1, l2) ->
-      Lambda.for_await_of flag (simpl l1) (simpl l2)
-    | Lassign (v, l) ->
-      (* Lalias-bound variables are never assigned, so don't increase
-         v's refsimpl *)
-      Lambda.assign v (simpl l)
+      match known_constant with
+      | Some c ->
+        (* Switch on the constant the scrutinee is bound to. *)
+        Lambda.stringswitch (Lambda.const c)
+          (Ext_list.map_snd sw simpl)
+          (Ext_option.map d simpl)
+      | None -> Lambda_traverse.shallow_map_sharing simpl lam)
+    | _ -> Lambda_traverse.shallow_map_sharing simpl lam
   in
   simpl lam

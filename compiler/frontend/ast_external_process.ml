@@ -39,10 +39,7 @@ let variant_unwrap (row_fields : Parsetree.row_field list) : bool =
 let spec_of_ptyp (nolabel : bool) (ptyp : Parsetree.core_type) :
     External_arg_spec.attr =
   let ptyp_desc = ptyp.ptyp_desc in
-  match
-    Ast_attributes.iter_process_bs_string_int_unwrap_uncurry
-      ptyp.ptyp_attributes
-  with
+  match Ast_attributes.arg_encoding ptyp.ptyp_attributes with
   | `String -> (
     match ptyp_desc with
     | Ptyp_variant (row_fields, Closed, None) ->
@@ -75,7 +72,7 @@ let refine_arg_type ~(nolabel : bool) (ptyp : Ast_core_type.t) :
     External_arg_spec.attr =
   if ptyp.ptyp_desc = Ptyp_any then
     let ptyp_attrs = ptyp.ptyp_attributes in
-    let payload = Ast_attributes.iter_process_bs_string_or_int_as ptyp_attrs in
+    let payload = Ast_attributes.as_const ptyp_attrs in
     match payload with
     | None -> spec_of_ptyp nolabel ptyp
     | Some cst -> (
@@ -98,7 +95,7 @@ let refine_obj_arg_type ~(nolabel : bool) (ptyp : Ast_core_type.t) :
     External_arg_spec.attr =
   if ptyp.ptyp_desc = Ptyp_any then (
     let ptyp_attrs = ptyp.ptyp_attributes in
-    let payload = Ast_attributes.iter_process_bs_string_or_int_as ptyp_attrs in
+    let payload = Ast_attributes.as_const ptyp_attrs in
     (* when ppx start dropping attributes
        we should warn, there is a trade off whether
        we should warn dropped non bs attribute or not
@@ -452,9 +449,7 @@ let process_obj (loc : Location.t) (st : external_desc) (prim_name : string)
                   "expect label, optional, or unit here")
             | Labelled {txt = label} -> (
               let field_name =
-                match
-                  Ast_attributes.iter_process_bs_string_as param_type.attrs
-                with
+                match Ast_attributes.as_string param_type.attrs with
                 | Some alias -> alias
                 | None -> label
               in
@@ -511,9 +506,7 @@ let process_obj (loc : Location.t) (st : external_desc) (prim_name : string)
                   "%@obj label %s does not support %@unwrap arguments" label)
             | Optional {txt = label} -> (
               let field_name =
-                match
-                  Ast_attributes.iter_process_bs_string_as param_type.attrs
-                with
+                match Ast_attributes.as_string param_type.attrs with
                 | Some alias -> alias
                 | None -> label
               in

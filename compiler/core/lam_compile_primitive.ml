@@ -567,7 +567,7 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
          {
            name = "::";
            num_nonconst = 1;
-           runtime = Ast_untagged_variants.block_runtime ~name:"::" [];
+           runtime = Ast_untagged_variants.generated_block_runtime ~name:"::";
          })
       args
   | Pmakedict -> (

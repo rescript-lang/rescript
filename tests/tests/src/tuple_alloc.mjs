@@ -13,16 +13,14 @@ function incr(param) {
   v.contents = v.contents + 1 | 0;
 }
 
-let vv = {
-  contents: 0
-};
+let vv = 0;
 
 function reset2() {
-  vv.contents = 0;
+  vv = 0;
 }
 
 function incr2() {
-  vv.contents = vv.contents + 1 | 0;
+  vv = vv + 1 | 0;
 }
 
 function f(a, b, d, e) {

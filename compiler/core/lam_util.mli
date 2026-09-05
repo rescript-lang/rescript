@@ -53,7 +53,14 @@ val alias_ident_or_global :
   Lam_stats.t -> Ident.t -> Ident.t -> Lam_id_kind.t -> unit
 
 val refine_let :
-  kind:Lambda.let_kind -> Ident.t -> Lambda.t -> Lambda.t -> Lambda.t
+  ?original:Lambda.t ->
+  kind:Lambda.let_kind ->
+  Ident.t ->
+  Lambda.t ->
+  Lambda.t ->
+  Lambda.t
+(** [original] is the binding being rebuilt, when there is one. It is returned
+    unchanged if no refinement applies. *)
 
 val not_function : Lambda.t -> bool
 

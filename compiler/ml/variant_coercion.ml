@@ -6,12 +6,12 @@ type variant_runtime_representation_issue =
   | Mismatched_as_payload of {
       constructor_name: string;
       expected_typename: Path.t;
-      as_payload: Variant_runtime.tag_type option;
+      as_payload: Variant_runtime.literal_tag option;
     }
   | As_payload_not_elgible_for_coercion of {
       constructor_name: string;
       expected_typename: Path.t;
-      as_payload: Variant_runtime.tag_type;
+      as_payload: Variant_runtime.literal_tag;
     }
   | Inline_record_cannot_be_coerced of {constructor_name: string}
   | Cannot_coerce_non_unboxed_with_payload of {
@@ -72,48 +72,27 @@ let variant_has_same_runtime_representation_as_target ~(target_path : Path.t)
     | Cstr_tuple [] -> (
       (* Check that @as payloads match with the target path to coerce to.
            No @as means the default encoding, which is string *)
-      match as_payload with
-      | None | Some (String _) ->
-        if Path.same target_path Predef.path_string then None
-        else
-          Some
-            (Mismatched_as_payload
-               {
-                 constructor_name = Ident.name c.cd_id;
-                 expected_typename = target_path;
-                 as_payload;
-               })
-      | Some (Int _) ->
-        if Path.same target_path Predef.path_int then None
-        else
-          Some
-            (Mismatched_as_payload
-               {
-                 constructor_name = Ident.name c.cd_id;
-                 expected_typename = target_path;
-                 as_payload;
-               })
-      | Some (Float _) ->
-        if Path.same target_path Predef.path_float then None
-        else
-          Some
-            (Mismatched_as_payload
-               {
-                 constructor_name = Ident.name c.cd_id;
-                 expected_typename = target_path;
-                 as_payload;
-               })
-      | Some (BigInt _) ->
-        if Path.same target_path Predef.path_bigint then None
-        else
-          Some
-            (Mismatched_as_payload
-               {
-                 constructor_name = Ident.name c.cd_id;
-                 expected_typename = target_path;
-                 as_payload;
-               })
-      | Some ((Null | Undefined | Bool _ | Untagged _) as as_payload) ->
+      (* Each literal kind coerces to exactly one predefined type; the kinds
+         with no such type cannot be coerced at all. *)
+      let coercion =
+        match as_payload with
+        | None | Some (String _) -> `Coerces_to Predef.path_string
+        | Some (Int _) -> `Coerces_to Predef.path_int
+        | Some (Float _) -> `Coerces_to Predef.path_float
+        | Some (BigInt _) -> `Coerces_to Predef.path_bigint
+        | Some ((Null | Undefined | Bool _) as payload) -> `Not_eligible payload
+      in
+      match coercion with
+      | `Coerces_to path when Path.same target_path path -> None
+      | `Coerces_to _ ->
+        Some
+          (Mismatched_as_payload
+             {
+               constructor_name = Ident.name c.cd_id;
+               expected_typename = target_path;
+               as_payload;
+             })
+      | `Not_eligible as_payload ->
         Some
           (As_payload_not_elgible_for_coercion
              {

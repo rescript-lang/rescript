@@ -30,6 +30,14 @@ let count_exit (exits : collection) i = Hash_int.find_default exits i 0
 let incr_exit (exits : collection) i =
   Hash_int.add_or_update exits i 1 ~update:succ
 
+(* Whether [Lam_pass_exits] could rewrite anything here. It names the two
+   nodes that pass touches, so a new case there that rewrites something else
+   has to be added here too, or the pass will silently stop firing. *)
+let rec has_static_exit (lam : Lambda.t) =
+  match lam with
+  | Lstaticraise _ | Lstaticcatch _ -> true
+  | _ -> Lambda_traverse.shallow_exists has_static_exit lam
+
 (** 
    This funcition counts how each [exit] is used, it will affect how the following optimizations performed.
 
@@ -48,70 +56,72 @@ let incr_exit (exits : collection) i =
    For Lswitch, if it is not exhuastive pattern match, default will be counted twice.
    Since for pattern match,  we will  test whether it is  an integer or block, both have default cases predicate: [sw_consts_full] vs nconsts
 *)
-let count_helper (lam : Lambda.t) : collection =
-  let exits : collection = Hash_int.create 17 in
-  let rec count (lam : Lambda.t) =
-    match lam with
-    | Lstaticraise (i, ls) ->
-      incr_exit exits i;
-      Ext_list.iter ls count
-    | Lstaticcatch (l1, (i, _), l2) ->
-      count l1;
-      if count_exit exits i > 0 then count l2
-    | Lstringswitch (l, sw, d) ->
-      count l;
-      Ext_list.iter_snd sw count;
-      Ext_option.iter d count
-    | Lglobal_module _ | Lvar _ | Lconst _ -> ()
-    | Lapply {ap_func; ap_args; _} ->
-      count ap_func;
-      Ext_list.iter ap_args count
-    | Lfunction {body} -> count body
-    | Llet (_, _, l1, l2) ->
-      count l2;
-      count l1
-    | Lletrec (bindings, body) ->
-      Ext_list.iter_snd bindings count;
-      count body
-    | Lprim {args; _} -> List.iter count args
-    | Lswitch (l, sw) ->
-      count_default sw;
-      count l;
-      Ext_list.iter_snd sw.sw_consts count;
-      Ext_list.iter_snd sw.sw_blocks count
-    | Ltrywith (l1, _v, l2) ->
-      count l1;
-      count l2
-    | Lifthenelse (l1, l2, l3) ->
-      count l1;
-      count l2;
-      count l3
-    | Lsequence (l1, l2) ->
-      count l1;
-      count l2
-    | Lbreak | Lcontinue -> ()
-    | Lwhile (l1, l2) ->
-      count l1;
-      count l2
-    | Lfor (_, l1, l2, _dir, l3) ->
-      count l1;
-      count l2;
-      count l3
-    | Lfor_of (_, l1, l2) ->
-      count l1;
-      count l2
-    | Lfor_await_of (_, l1, l2) ->
-      count l1;
-      count l2
-    | Lassign (_, l) -> count l
-  and count_default sw =
-    match sw.sw_failaction with
-    | None -> ()
-    | Some al ->
-      if (not sw.sw_consts_full) && not sw.sw_blocks_full then (
-        count al;
-        count al)
-      else count al
-  in
-  count lam;
-  exits
+let count_helper (lam : Lambda.t) : collection option =
+  if not (has_static_exit lam) then None
+  else
+    let exits : collection = Hash_int.create 17 in
+    let rec count (lam : Lambda.t) =
+      match lam with
+      | Lstaticraise (i, ls) ->
+        incr_exit exits i;
+        Ext_list.iter ls count
+      | Lstaticcatch (l1, (i, _), l2) ->
+        count l1;
+        if count_exit exits i > 0 then count l2
+      | Lstringswitch (l, sw, d) ->
+        count l;
+        Ext_list.iter_snd sw count;
+        Ext_option.iter d count
+      | Lglobal_module _ | Lvar _ | Lconst _ -> ()
+      | Lapply {ap_func; ap_args; _} ->
+        count ap_func;
+        Ext_list.iter ap_args count
+      | Lfunction {body} -> count body
+      | Llet (_, _, l1, l2) ->
+        count l2;
+        count l1
+      | Lletrec (bindings, body) ->
+        Ext_list.iter_snd bindings count;
+        count body
+      | Lprim {args; _} -> List.iter count args
+      | Lswitch (l, sw) ->
+        count_default sw;
+        count l;
+        Ext_list.iter_snd sw.sw_consts count;
+        Ext_list.iter_snd sw.sw_blocks count
+      | Ltrywith (l1, _v, l2) ->
+        count l1;
+        count l2
+      | Lifthenelse (l1, l2, l3) ->
+        count l1;
+        count l2;
+        count l3
+      | Lsequence (l1, l2) ->
+        count l1;
+        count l2
+      | Lbreak | Lcontinue -> ()
+      | Lwhile (l1, l2) ->
+        count l1;
+        count l2
+      | Lfor (_, l1, l2, _dir, l3) ->
+        count l1;
+        count l2;
+        count l3
+      | Lfor_of (_, l1, l2) ->
+        count l1;
+        count l2
+      | Lfor_await_of (_, l1, l2) ->
+        count l1;
+        count l2
+      | Lassign (_, l) -> count l
+    and count_default sw =
+      match sw.sw_failaction with
+      | None -> ()
+      | Some al ->
+        if (not sw.sw_consts_full) && not sw.sw_blocks_full then (
+          count al;
+          count al)
+        else count al
+    in
+    count lam;
+    Some exits

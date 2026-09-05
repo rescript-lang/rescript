@@ -155,7 +155,4 @@ external snd: (('a, 'b)) => 'b = "%field1"
 
 type ref<'a> = {mutable contents: 'a}
 external ref: 'a => ref<'a> = "%makeref"
-external \"!": ref<'a> => 'a = "%refget"
 external \":=": (ref<'a>, 'a) => unit = "%refset"
-external incr: ref<int> => unit = "%incr"
-external decr: ref<int> => unit = "%decr"

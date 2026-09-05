@@ -987,6 +987,7 @@ module Label = Name_choice (struct
       {
         lbl with
         lbl_name = name;
+        lbl_runtime_name = name;
         lbl_pos = Array.length lbl.lbl_all;
         lbl_repres = Record_regular;
       }

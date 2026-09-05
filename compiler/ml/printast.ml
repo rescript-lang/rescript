@@ -717,11 +717,10 @@ and core_type_x_core_type_x_location i ppf (ct1, ct2, l) =
   core_type (i + 1) ppf ct1;
   core_type (i + 1) ppf ct2
 
-and constructor_decl i ppf
-    {pcd_name; pcd_args; pcd_res; pcd_loc; pcd_attributes} =
+and constructor_decl i ppf ({pcd_name; pcd_args; pcd_res; pcd_loc} as cd) =
   line i ppf "%a\n" fmt_location pcd_loc;
   line (i + 1) ppf "%a\n" fmt_string_loc pcd_name;
-  attributes i ppf pcd_attributes;
+  attributes i ppf (Ast_helper.Type.constructor_attributes cd);
   constructor_arguments (i + 1) ppf pcd_args;
   option (i + 1) core_type ppf pcd_res
 
@@ -729,10 +728,9 @@ and constructor_arguments i ppf = function
   | Pcstr_tuple l -> list i core_type ppf l
   | Pcstr_record l -> list i label_decl ppf l
 
-and label_decl i ppf {pld_name; pld_mutable; pld_type; pld_loc; pld_attributes}
-    =
+and label_decl i ppf ({pld_name; pld_mutable; pld_type; pld_loc} as ld) =
   line i ppf "%a\n" fmt_location pld_loc;
-  attributes i ppf pld_attributes;
+  attributes i ppf (Ast_helper.Type.field_attributes ld);
   line (i + 1) ppf "%a\n" fmt_mutable_flag pld_mutable;
   line (i + 1) ppf "%a" fmt_string_loc pld_name;
   core_type (i + 1) ppf pld_type

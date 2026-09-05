@@ -101,7 +101,7 @@ let rec apply_coercion loc strict (restr : Typedtree.module_coercion) arg =
     Translcore.transl_primitive pc_loc pc_desc pc_env pc_type ~val_type:pc_type
   | Tcoerce_alias (path, cc) ->
     Lambda.name_lambda strict arg (fun _ ->
-        apply_coercion loc Alias cc (Lambda.transl_normal_path path))
+        apply_coercion loc Alias cc (Transl_path.transl_normal_path path))
 
 and apply_coercion_result loc strict funct param arg cc_res =
   Lambda.name_lambda strict funct (fun id ->
@@ -114,7 +114,7 @@ and apply_coercion_result loc strict funct param arg cc_res =
                 {ap_loc = loc; ap_inlined = Default_inline})))
 
 and wrap_id_pos_list loc id_pos_list get_field lam =
-  let fv = Lambda.free_variables lam in
+  let fv = Lambda_traverse.free_variables lam in
   (*Format.eprintf "%a@." Printlambda.lambda lam;
     IdentSet.iter (fun id -> Format.eprintf "%a " Ident.print id) fv;
     Format.eprintf "@.";*)
@@ -130,7 +130,7 @@ and wrap_id_pos_list loc id_pos_list get_field lam =
         else (lam, s))
       (lam, Ident.empty) id_pos_list
   in
-  if s == Ident.empty then lam else Lambda.subst_lambda s lam
+  if s == Ident.empty then lam else Lambda_traverse.subst_lambda s lam
 
 (* Compose two coercions
    apply_coercion c1 (apply_coercion c2 e) behaves like
@@ -274,7 +274,7 @@ and transl_module cc rootpath mexp =
     match mexp.mod_desc with
     | Tmod_ident (path, _) ->
       apply_coercion loc Strict cc
-        (Lambda.transl_module_path ~loc mexp.mod_env path)
+        (Transl_path.transl_module_path ~loc mexp.mod_env path)
     | Tmod_structure str -> fst (transl_struct loc [] cc rootpath str)
     | Tmod_functor _ -> compile_functor mexp cc rootpath loc
     | Tmod_apply (funct, arg, ccarg) ->

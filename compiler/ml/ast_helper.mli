@@ -295,16 +295,30 @@ module Type : sig
     ?attrs:attrs ->
     ?args:constructor_arguments ->
     ?res:core_type ->
+    ?runtime_tag:constructor_tag ->
     str ->
     constructor_declaration
+  (** A valid first [@as] in [attrs] is taken out and becomes the runtime tag,
+      unless one is given explicitly. *)
+
+  val constructor_attributes : constructor_declaration -> attrs
+  (** The attributes as written, with the constructor [@as] put back. *)
+
   val field :
     ?loc:loc ->
     ?attrs:attrs ->
     ?mut:mutable_flag ->
     ?optional:bool ->
+    ?runtime_name:string ->
     str ->
     core_type ->
     label_declaration
+  (** [@as("x")] in [attrs] is taken out and becomes the runtime name, unless
+      one is given explicitly. *)
+
+  val field_attributes : label_declaration -> attrs
+  (** The attributes as written, with the [@as] taken out by [field] put back.
+      For printers, which must reproduce the source. *)
 end
 
 (** Type extensions *)

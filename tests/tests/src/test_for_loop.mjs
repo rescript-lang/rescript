@@ -14,79 +14,65 @@ function for_2(x) {
 }
 
 function for_3(x) {
-  let v = {
-    contents: 0
-  };
+  let v = 0;
   let arr = x.map(param => (() => {}));
   for (let i = 0, i_finish = x.length; i <= i_finish; ++i) {
     let j = (i << 1);
     arr[i] = () => {
-      v.contents = v.contents + j | 0;
+      v = v + j | 0;
     };
   }
   arr.forEach(x => x());
-  return v.contents;
+  return v;
 }
 
 function for_4(x) {
-  let v = {
-    contents: 0
-  };
+  let v = 0;
   let arr = x.map(param => (() => {}));
   for (let i = 0, i_finish = x.length; i <= i_finish; ++i) {
     let j = (i << 1);
     let k = (j << 1);
     arr[i] = () => {
-      v.contents = v.contents + k | 0;
+      v = v + k | 0;
     };
   }
   arr.forEach(x => x());
-  return v.contents;
+  return v;
 }
 
 function for_5(x, u) {
-  let v = {
-    contents: 0
-  };
+  let v = 0;
   let arr = x.map(param => (() => {}));
   for (let i = 0, i_finish = x.length; i <= i_finish; ++i) {
     let k = (u << 1) * u | 0;
     arr[i] = () => {
-      v.contents = v.contents + k | 0;
+      v = v + k | 0;
     };
   }
   arr.forEach(x => x());
-  return v.contents;
+  return v;
 }
 
 function for_6(x, u) {
-  let v = {
-    contents: 0
-  };
+  let v = 0;
   let arr = x.map(param => (() => {}));
-  let v4 = {
-    contents: 0
-  };
-  let v5 = {
-    contents: 0
-  };
-  v4.contents = v4.contents + 1 | 0;
+  let v4 = 0;
+  let v5 = 0;
+  v4 = v4 + 1 | 0;
   for (let j = 0; j <= 1; ++j) {
-    v5.contents = v5.contents + 1 | 0;
-    let v2 = {
-      contents: 0
-    };
+    v5 = v5 + 1 | 0;
+    let v2 = 0;
     for (let i = 0, i_finish = x.length; i <= i_finish; ++i) {
       let k = (u << 1) * u | 0;
-      let h = (v5.contents << 1);
-      v2.contents = v2.contents + 1 | 0;
+      let h = (v5 << 1);
+      v2 = v2 + 1 | 0;
       arr[i] = () => {
-        v.contents = (((((v.contents + k | 0) + v2.contents | 0) + u | 0) + v4.contents | 0) + v5.contents | 0) + h | 0;
+        v = (((((v + k | 0) + v2 | 0) + u | 0) + v4 | 0) + v5 | 0) + h | 0;
       };
     }
   }
   arr.forEach(x => x());
-  return v.contents;
+  return v;
 }
 
 export {

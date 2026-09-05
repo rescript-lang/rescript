@@ -57,13 +57,32 @@ let semantic_string_of_expression (expression : Parsetree.expression) =
       Location.raise_errorf ~loc:pexp_loc "Invalid string escape sequence")
   | _ -> None
 
+let string_literal_of_expression (expression : Parsetree.expression) =
+  match expression with
+  | {pexp_desc = Pexp_constant (Pconst_string payload); _} -> Some payload
+  | {
+   pexp_desc = Pexp_template {source_segments = [source]; values = []};
+   pexp_loc;
+  } -> (
+    match String_literal.decode_js_template_escapes source.txt with
+    | Some semantic -> Some (String_literal.string_from_semantic semantic)
+    | None ->
+      Location.raise_errorf ~loc:pexp_loc "Invalid string escape sequence")
+  | _ -> None
+
+let string_literal_of_payload (x : t) =
+  match x with
+  | PStr [{pstr_desc = Pstr_eval (expression, _); _}] ->
+    string_literal_of_expression expression
+  | _ -> None
+
 let semantic_string_of_payload (x : t) =
   match x with
   | PStr [{pstr_desc = Pstr_eval (expression, _); _}] ->
     semantic_string_of_expression expression
   | _ -> None
 
-let is_single_int (x : t) : int option =
+let single_int_source (x : t) =
   match x with
   | PStr
       [
@@ -77,8 +96,10 @@ let is_single_int (x : t) : int option =
     when match char with
          | Some n when n = 'n' -> false
          | _ -> true ->
-    Some (int_of_string name)
+    Some name
   | _ -> None
+
+let is_single_int x = Option.map int_of_string (single_int_source x)
 
 let is_single_float (x : t) : string option =
   match x with
@@ -133,6 +154,27 @@ let is_single_ident (x : t) =
   | PStr [{pstr_desc = Pstr_eval ({pexp_desc = Pexp_ident lid}, _); _}] ->
     Some lid.txt
   | _ -> None
+
+let constructor_tag_of_payload payload =
+  match string_literal_of_payload payload with
+  | Some s -> Some (Parsetree.Pct_string s)
+  | None -> (
+    match single_int_source payload with
+    | Some i -> Some (Pct_int i)
+    | None -> (
+      match is_single_float payload with
+      | Some f -> Some (Pct_float f)
+      | None -> (
+        match is_single_bigint payload with
+        | Some i -> Some (Pct_bigint i)
+        | None -> (
+          match is_single_bool payload with
+          | Some b -> Some (Pct_bool b)
+          | None -> (
+            match is_single_ident payload with
+            | Some (Lident "null") -> Some Pct_null
+            | Some (Lident "undefined") -> Some Pct_undefined
+            | Some _ | None -> None)))))
 
 let raw_as_string_exp_exn ~(kind : Js_raw_info.raw_kind) ?is_function (x : t) :
     Parsetree.expression option =

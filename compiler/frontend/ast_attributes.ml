@@ -105,8 +105,10 @@ let process_derive_type (attrs : t) : derive_attr * t =
         | Some _ -> Bs_syntaxerr.err loc Duplicated_bs_deriving)
       | _ -> (st, attr :: acc))
 
-(* duplicated attributes not allowed *)
-let iter_process_bs_string_int_unwrap_uncurry (attrs : t) =
+(* How an external's argument is encoded, from the one of [@string], [@int],
+   [@ignore] and [@unwrap] it carries. They are alternatives, so more than one
+   is a conflict. *)
+let arg_encoding (attrs : t) =
   let attr_name = function
     | `String -> "string"
     | `Int -> "int"
@@ -133,20 +135,26 @@ let iter_process_bs_string_int_unwrap_uncurry (attrs : t) =
     Bs_syntaxerr.err loc
       (Conflict_attributes (List.map (fun (v, _) -> attr_name v) conflicting))
 
-let iter_process_bs_string_as (attrs : t) : string option =
+(* The one [@as] an item may carry, read with the payload the caller expects.
+   The first is decoded before a second is looked at, so a malformed payload is
+   reported ahead of the duplicate it precedes. *)
+let single_as ~decode (attrs : t) =
   let st = ref None in
   Ext_list.iter attrs (fun (({txt; loc}, payload) as attr) ->
-      match txt with
-      | "as" ->
+      if txt = "as" then
         if !st = None then (
-          match Ast_payload.semantic_string_of_payload payload with
-          | None -> Bs_syntaxerr.err loc Expect_string_literal
-          | Some v ->
-            Used_attributes.mark_used_attribute attr;
-            st := Some v)
-        else raise (Ast_untagged_variants.Error (loc, Duplicated_bs_as))
-      | _ -> ());
+          let value = decode ~loc payload in
+          Used_attributes.mark_used_attribute attr;
+          st := Some value)
+        else raise (Ast_untagged_variants.Error (loc, Duplicated_bs_as)));
   !st
+
+let as_string (attrs : t) : string option =
+  single_as attrs ~decode:(fun ~loc payload ->
+      match Ast_payload.semantic_string_of_payload payload with
+      | None -> Bs_syntaxerr.err loc Expect_string_literal
+      | Some v -> v)
+
 let has_bs_optional (attrs : t) : bool =
   Ext_list.exists attrs (fun (({txt}, _) as attr) ->
       match txt with
@@ -161,68 +169,42 @@ let has_unwrap_attr (attrs : t) : bool =
       | "let.unwrap" -> true
       | _ -> false)
 
-let iter_process_bs_int_as (attrs : t) =
-  let st = ref None in
-  Ext_list.iter attrs (fun (({txt; loc}, payload) as attr) ->
-      match txt with
-      | "as" ->
-        if !st = None then (
-          match Ast_payload.is_single_int payload with
-          | None -> Bs_syntaxerr.err loc Expect_int_literal
-          | Some _ as v ->
-            Used_attributes.mark_used_attribute attr;
-            st := v)
-        else raise (Ast_untagged_variants.Error (loc, Duplicated_bs_as))
-      | _ -> ());
-  !st
+let as_int (attrs : t) =
+  single_as attrs ~decode:(fun ~loc payload ->
+      match Ast_payload.is_single_int payload with
+      | None -> Bs_syntaxerr.err loc Expect_int_literal
+      | Some v -> v)
 
 type as_const_payload = Int of int | Str of string | Json of string
 
-let iter_process_bs_string_or_int_as (attrs : Parsetree.attributes) =
-  let st = ref None in
-  Ext_list.iter attrs (fun (({txt; loc}, payload) as attr) ->
-      match txt with
-      | "as" ->
-        if !st = None then (
-          Used_attributes.mark_used_attribute attr;
-          match Ast_payload.is_single_int payload with
-          | Some v -> st := Some (Int v)
-          | None -> (
-            match Ast_payload.semantic_string_of_payload payload with
-            | Some s -> st := Some (Str s)
-            | None -> (
-              match payload with
-              | PStr
-                  [
-                    {
-                      pstr_desc =
-                        Pstr_eval
-                          ( {
-                              pexp_desc = Pexp_constant (Pconst_json s);
-                              pexp_loc;
-                              _;
-                            },
-                            _ );
-                      _;
-                    };
-                  ] -> (
-                st := Some (Json s);
-                (* Check that it is a valid object literal. *)
-                match
-                  Classify_function.classify
-                    ~check:
-                      ( pexp_loc,
-                        Bs_flow_ast_utils.flow_deli_offset (Some "json") )
-                    s
-                with
-                | Js_literal _ -> ()
-                | _ ->
-                  Location.raise_errorf ~loc:pexp_loc
-                    "an object literal expected")
-              | _ -> Bs_syntaxerr.err loc Expect_int_or_string_or_json_literal)))
-        else raise (Ast_untagged_variants.Error (loc, Duplicated_bs_as))
-      | _ -> ());
-  !st
+let as_const (attrs : t) =
+  single_as attrs ~decode:(fun ~loc payload ->
+      match Ast_payload.is_single_int payload with
+      | Some v -> Int v
+      | None -> (
+        match Ast_payload.semantic_string_of_payload payload with
+        | Some s -> Str s
+        | None -> (
+          match payload with
+          | PStr
+              [
+                {
+                  pstr_desc =
+                    Pstr_eval
+                      ({pexp_desc = Pexp_constant (Pconst_json s); pexp_loc}, _);
+                };
+              ] -> (
+            (* Check that it is a valid object literal. *)
+            match
+              Classify_function.classify
+                ~check:
+                  (pexp_loc, Bs_flow_ast_utils.flow_deli_offset (Some "json"))
+                s
+            with
+            | Js_literal _ -> Json s
+            | _ ->
+              Location.raise_errorf ~loc:pexp_loc "an object literal expected")
+          | _ -> Bs_syntaxerr.err loc Expect_int_or_string_or_json_literal)))
 
 let locg = Location.none
 

@@ -27,14 +27,7 @@ type source_field = {
 
 let raise_error loc env err = raise (Error (loc, env, err))
 
-let runtime_label_name name attrs =
-  Ext_list.find_def attrs Lambda.find_name name
-
-let runtime_label_description_name (lbl : label_description) =
-  runtime_label_name lbl.lbl_name lbl.lbl_attributes
-
-let runtime_label_declaration_name (lbl : label_declaration) =
-  runtime_label_name (Ident.name lbl.ld_id) lbl.ld_attributes
+let runtime_label_declaration_name = Record_runtime.declaration_name
 
 let extract_instantiated_concrete_typedecl ~unify_pat_types env loc ty =
   let _, _, decl = Ctype.extract_concrete_typedecl env ty in
@@ -167,7 +160,8 @@ let type_record_pat_rest ~env ~pattern_force ~loc ~record_ty ~lbl_pat_list ~rest
   in
   let explicit_runtime_labels =
     List.map
-      (fun (_, label, _, _) -> runtime_label_description_name label)
+      (fun (_, (label : Types.label_description), _, _) ->
+        label.lbl_runtime_name)
       lbl_pat_list
   in
   let explicit_optional_fields =
