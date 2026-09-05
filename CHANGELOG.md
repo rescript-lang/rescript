@@ -37,6 +37,7 @@
 #### :bug: Bug fix
 
 - Fix the side-effect analysis treating bigint exponentiation and bounds-checked array and string reads as pure, which let dead-code elimination drop an unused one that throws: `let _ = 2n ** -1n` no longer raised. https://github.com/rescript-lang/rescript/pull/8617
+- Preserve record field `@as` annotations when formatting object types containing spreads. https://github.com/rescript-lang/rescript/pull/8619
 - Fix excessive parentheses and indentation in function assignments to refs, align record and array assignment formatting across refs and fields, and preserve function return-type parentheses and consistent JSX fragment layout in callbacks. https://github.com/rescript-lang/rescript/pull/8611
 - Report an error instead of crashing when an integer in a variant constructor's `@as` annotation exceeds the compiler's integer range. https://github.com/rescript-lang/rescript/pull/8619
 - Warn about an `@as` on a record field whose payload does not name the field, such as `@as(42)`. It renamed nothing and was silently accepted. https://github.com/rescript-lang/rescript/pull/8619
