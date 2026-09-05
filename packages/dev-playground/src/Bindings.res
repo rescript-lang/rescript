@@ -113,7 +113,13 @@ module Url = {
 
 module Event = {
   @get external target: Dom.event => {..} = "target"
+  @get external currentTarget: Dom.event => Dom.element = "currentTarget"
   @get external key: Dom.event => string = "key"
+  @get external button: Dom.event => int = "button"
+  @get external clientX: Dom.event => float = "clientX"
+  @get external clientY: Dom.event => float = "clientY"
+  @get external pointerId: Dom.event => int = "pointerId"
+  @get external detail: Dom.event => int = "detail"
   @send external preventDefault: Dom.event => unit = "preventDefault"
 
   let value = (event: Dom.event): string => (event->target)["value"]
@@ -127,11 +133,6 @@ module Event = {
   let scrollTop = (event: Dom.event): int => {
     let scrollTop: float = (event->target)["scrollTop"]
     scrollTop->Math.round->Float.toInt
-  }
-
-  let scrollLeft = (event: Dom.event): int => {
-    let scrollLeft: float = (event->target)["scrollLeft"]
-    scrollLeft->Math.round->Float.toInt
   }
 }
 
@@ -149,6 +150,7 @@ module EventTarget = {
 module CssStyle = {
   type t
 
+  @send external setProperty: (t, string, string) => unit = "setProperty"
   @set external setPosition: (t, string) => unit = "position"
   @set external setTop: (t, string) => unit = "top"
   @set external setLeft: (t, string) => unit = "left"
@@ -157,6 +159,20 @@ module CssStyle = {
 type scrollIntoViewOptions = {
   block: string,
   inline: string,
+}
+
+type boundingRect = {
+  left: float,
+  top: float,
+  width: float,
+  height: float,
+}
+
+type classList
+
+module ClassList = {
+  @send external add: (classList, string) => unit = "add"
+  @send external remove: (classList, string) => unit = "remove"
 }
 
 module Element = {
@@ -169,6 +185,15 @@ module Element = {
   @send external appendChild: (Dom.element, Dom.element) => unit = "appendChild"
   @send external removeChild: (Dom.element, Dom.element) => unit = "removeChild"
   @send external focus: Dom.element => unit = "focus"
+  @send external setPointerCapture: (Dom.element, int) => unit = "setPointerCapture"
+  @send external releasePointerCapture: (Dom.element, int) => unit = "releasePointerCapture"
+  @send external hasPointerCapture: (Dom.element, int) => bool = "hasPointerCapture"
+  @send external getBoundingClientRect: Dom.element => boundingRect = "getBoundingClientRect"
+  @get external classList: Dom.element => classList = "classList"
+  @send @return(nullable)
+  external querySelector: (Dom.element, string) => option<Dom.element> = "querySelector"
+  @get @return(nullable)
+  external parentElement: Dom.element => option<Dom.element> = "parentElement"
   @send
   external scrollIntoView: (Dom.element, scrollIntoViewOptions) => unit = "scrollIntoView"
   @get external style: Dom.element => CssStyle.t = "style"
@@ -178,6 +203,20 @@ module Element = {
   @set
   external setScrollHandler: (Dom.element, Dom.event => unit) => unit =
     "__devPlaygroundScrollHandler"
+}
+
+type resizeObserver
+type resizeObserverEntry
+
+module ResizeObserverEntry = {
+  @get external contentRect: resizeObserverEntry => boundingRect = "contentRect"
+}
+
+module ResizeObserver = {
+  @val external supported: option<unknown> = "globalThis.ResizeObserver"
+  @new external make: (array<resizeObserverEntry> => unit) => resizeObserver = "ResizeObserver"
+  @send external observe: (resizeObserver, Dom.element) => unit = "observe"
+  @send external disconnect: resizeObserver => unit = "disconnect"
 }
 
 module ScriptElement = {
@@ -192,6 +231,7 @@ module TextAreaElement = {
   @send external select: Dom.element => unit = "select"
   @send external setSelectionRange: (Dom.element, int, int) => unit = "setSelectionRange"
   @get external clientHeight: Dom.element => int = "clientHeight"
+  @get external clientWidth: Dom.element => int = "clientWidth"
   @get external scrollTop: Dom.element => int = "scrollTop"
   @set external setScrollTop: (Dom.element, int) => unit = "scrollTop"
 }

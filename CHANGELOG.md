@@ -73,6 +73,7 @@
 
 #### :house: Internal
 
+- Developer playground: Make panes resizable with wrapping text. https://github.com/rescript-lang/rescript/pull/8628
 - Normalize Lambda terms where they are built: a match guard stays structured data until its fallthrough is known, and `apply` and `mk_builtin` go through the folding constructors. https://github.com/rescript-lang/rescript/pull/8615
 - Replace non-escaping local mutable blocks with scalar bindings when all uses are direct field accesses, generalizing reference unboxing to multi-field records and references captured by JavaScript closures. https://github.com/rescript-lang/rescript/pull/8617
 - Split `lambda.ml` into the IR and its traversals, static exits and path translation, so the module defining `Lambda.t` no longer reaches into `Env` or `Path`. https://github.com/rescript-lang/rescript/pull/8618

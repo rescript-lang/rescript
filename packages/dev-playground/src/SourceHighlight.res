@@ -225,7 +225,41 @@ let tokenClass = kind =>
   | TokenOperator => "syntax-token syntax-operator"
   }
 
-let render = source =>
-  tokenize(source)->Array.map(token =>
-    <span class={tokenClass(token.kind)}> {View.text(token.text)} </span>
-  )
+let tokensByLine = tokens => {
+  let lines: array<array<token>> = [[]]
+
+  tokens->Array.forEach(token => {
+    let pieces = token.text->String.split("\n")
+    pieces->Array.forEachWithIndex((text, index) => {
+      if text !== "" {
+        switch lines->Array.get(lines->Array.length - 1) {
+        | Some(line) => line->Array.push({...token, text})
+        | None => ()
+        }
+      }
+      if index < pieces->Array.length - 1 {
+        lines->Array.push([])
+      }
+    })
+  })
+
+  lines
+}
+
+let render = (source, ~activeLine) =>
+  source
+  ->tokenize
+  ->tokensByLine
+  ->Array.mapWithIndex((tokens, index) => {
+    let line = index + 1
+    <span
+      class={activeLine === line ? "syntax-line syntax-line-current" : "syntax-line"}
+      attrs={[("data-line", line->Int.toString)]}
+    >
+      {View.fragment(
+        tokens->Array.map(token =>
+          <span class={tokenClass(token.kind)}> {View.text(token.text)} </span>
+        ),
+      )}
+    </span>
+  })
