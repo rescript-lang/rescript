@@ -297,6 +297,48 @@ let map_pat_to0 p =
 
 let attr_names attrs = List.map (fun ({Location.txt}, _) -> txt) attrs
 
+let test_list_constructor_wire_shape _ =
+  let lid name = Location.mknoloc (Longident.Lident name) in
+  List.iter
+    (fun attrs ->
+      let expr0 =
+        List.fold_right
+          (fun value tail ->
+            Ast_helper0.Exp.construct ~loc ~attrs (lid "::")
+              (Some
+                 (Ast_helper0.Exp.tuple ~loc
+                    [
+                      Ast_helper0.Exp.constant ~loc
+                        (Parsetree0.Pconst_integer (value, None));
+                      tail;
+                    ])))
+          ["1"; "2"]
+          (Ast_helper0.Exp.construct ~loc (lid "[]") None)
+      in
+      let pat0 =
+        List.fold_right
+          (fun name tail ->
+            Ast_helper0.Pat.construct ~loc ~attrs (lid "::")
+              (Some
+                 (Ast_helper0.Pat.tuple ~loc
+                    [Ast_helper0.Pat.var ~loc (Location.mknoloc name); tail])))
+          ["head"; "next"]
+          (Ast_helper0.Pat.construct ~loc (lid "[]") None)
+      in
+      let expr = map_expr0 expr0 in
+      let pat = map_pat0 pat0 in
+      (match (expr.pexp_desc, pat.ppat_desc) with
+      | Pexp_construct (_, {txt = [_; _]}), Ppat_construct (_, {txt = [_; _]})
+        ->
+        ()
+      | _ ->
+        assert_failure "Unmarked cons payloads must decode to two arguments");
+      OUnit.assert_equal ~msg:"list expression wire shape and attributes" expr0
+        (map_expr_to0 expr);
+      OUnit.assert_equal ~msg:"list pattern wire shape and attributes" pat0
+        (map_pat_to0 pat))
+    [[]; [attr "public_attr" (Parsetree0.PStr [])]]
+
 let test_constructor_args_roundtrip_through_ast0 _ =
   let int_expr value =
     Ast_helper.Exp.constant ~loc (Parsetree.Pconst_integer (value, None))
@@ -1203,6 +1245,7 @@ let suites =
          >:: test_record_rest_roundtrips_through_ast0;
          "constructor_args_roundtrip_through_ast0"
          >:: test_constructor_args_roundtrip_through_ast0;
+         "list_constructor_wire_shape" >:: test_list_constructor_wire_shape;
          "constructor_args_keep_parentheses_location_in_ast0"
          >:: test_constructor_args_keep_parentheses_location_in_ast0;
          "constructor_argument_locations_through_ast0"

@@ -188,8 +188,10 @@ let remove_constructor_args_attr (attrs : Pt.attributes) =
    The current parsetree records source argument lists, not declaration arity.
    Frozen v0 has only an optional payload, so encoding multiple arguments
    packs them into a tuple and adds [_res.constructor_args] to the constructor.
-   A single tuple argument needs no marker. Polymorphic variant type payload
-   groups use the same encoding, with the marker on the tuple type itself.
+   A single tuple argument needs no marker. List cons nodes also need none:
+   their tuple payload always means head and tail, preserving the v0 wire shape.
+   Polymorphic variant type payload groups use the same encoding, with the
+   marker on the tuple type itself.
 
    Decoding consumes the internal marker and restores the source list.
    Ordinary constructors also accept PPX-produced [explicit_arity] and
