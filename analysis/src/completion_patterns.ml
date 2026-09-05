@@ -224,19 +224,33 @@ and traverse_pattern (pat : Parsetree.pattern) ~pattern_path ~loc_has_cursor
     (* Empty payload with cursor, like: #test(<com>) *)
     Some
       ( "",
-        [Completable.NPolyvariantPayload {constructor_name = txt; item_num = 0}]
+        [
+          Completable.NPolyvariantPayload
+            {constructor_name = txt; item_num = 0; source_arity = 1};
+        ]
         @ pattern_path )
   | Ppat_variant (txt, {txt = patterns}) when loc_has_cursor pat.ppat_loc ->
     patterns
     |> traverse_tuple_items ~loc_has_cursor ~first_char_before_cursor_no_white
          ~pos_before_cursor
          ~next_pattern_path:(fun item_num ->
-           [Completable.NPolyvariantPayload {constructor_name = txt; item_num}]
+           [
+             Completable.NPolyvariantPayload
+               {
+                 constructor_name = txt;
+                 item_num;
+                 source_arity = List.length patterns;
+               };
+           ]
            @ pattern_path)
          ~result_from_found_item_num:(fun item_num ->
            [
              Completable.NPolyvariantPayload
-               {constructor_name = txt; item_num = item_num + 1};
+               {
+                 constructor_name = txt;
+                 item_num = item_num + 1;
+                 source_arity = List.length patterns;
+               };
            ]
            @ pattern_path)
   | _ -> None

@@ -166,18 +166,32 @@ let rec traverse_expr (exp : Parsetree.expression) ~expr_path ~pos
     (* Empty payload with cursor, like: #test(<com>) *)
     Some
       ( "",
-        [Completable.NPolyvariantPayload {constructor_name = txt; item_num = 0}]
+        [
+          Completable.NPolyvariantPayload
+            {constructor_name = txt; item_num = 0; source_arity = 1};
+        ]
         @ expr_path )
   | Pexp_variant (txt, {txt = args}) when loc_has_cursor exp.pexp_loc ->
     args
     |> traverse_expr_tuple_items ~first_char_before_cursor_no_white ~pos
          ~next_expr_path:(fun item_num ->
-           [Completable.NPolyvariantPayload {constructor_name = txt; item_num}]
+           [
+             Completable.NPolyvariantPayload
+               {
+                 constructor_name = txt;
+                 item_num;
+                 source_arity = List.length args;
+               };
+           ]
            @ expr_path)
          ~result_from_found_item_num:(fun item_num ->
            [
              Completable.NPolyvariantPayload
-               {constructor_name = txt; item_num = item_num + 1};
+               {
+                 constructor_name = txt;
+                 item_num = item_num + 1;
+                 source_arity = List.length args;
+               };
            ]
            @ expr_path)
   | _ -> None

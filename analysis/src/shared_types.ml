@@ -610,7 +610,11 @@ module Completable = struct
         item_num: int;
         source_arity: int;
       }
-    | NPolyvariantPayload of {constructor_name: string; item_num: int}
+    | NPolyvariantPayload of {
+        constructor_name: string;
+        item_num: int;
+        source_arity: int;
+      }
     | NArray
 
   let nested_path_to_string p =

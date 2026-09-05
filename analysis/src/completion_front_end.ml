@@ -513,7 +513,12 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
       |> List.iteri (fun index p ->
           scope_pattern p
             ~pattern_path:
-              (NPolyvariantPayload {item_num = index; constructor_name = txt}
+              (NPolyvariantPayload
+                 {
+                   item_num = index;
+                   constructor_name = txt;
+                   source_arity = List.length patterns;
+                 }
               :: pattern_path)
             ?context_path)
     | Ppat_record (fields, _, rest) -> (
