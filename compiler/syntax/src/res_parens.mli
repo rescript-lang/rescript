@@ -1,6 +1,9 @@
 type kind = Parenthesized | Braced of Location.t | Nothing
 
-val expr : Parsetree.expression -> kind
+(* Set [allow_coercion] to [true] only in grammar positions accepting a trailing
+   coercion without parentheses, such as call arguments and collection elements.
+   Bindings and arrow bodies require parentheses. *)
+val expr : ?allow_coercion:bool -> Parsetree.expression -> kind
 val structure_expr : Parsetree.expression -> kind
 
 val unary_expr_operand : Parsetree.expression -> kind

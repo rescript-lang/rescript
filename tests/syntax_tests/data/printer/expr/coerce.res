@@ -24,3 +24,67 @@ let foo = (~a=(3:int:>int), b) => 34
 // let x : int1 :> int2 = 3 :> int3
 
 let x = (/* c0 */ x /* c1 */ :> /* c2 */ int /* c3 */)
+
+// Delimited arguments need no extra parentheses.
+foo(v :> b)
+foo((v :> b))
+foo(~arg=(v :> b), ~optional=?(v :> b))
+foo((v :> b), x => x)
+foo(x => x, (v :> b))
+let tuple = ((v :> b), (w :> c))
+let array = [(v :> b), (w :> c)]
+let spreadArray = [...(vs :> array<b>), (w :> b)]
+let list = list{(v :> b), ...(vs :> list<b>)}
+let constructor = Some((v :> b))
+let variant = #Value((v :> b))
+
+// Preserve grouping when the surrounding expression needs it.
+let result = x => (x :> b)
+let callback = foo(x => (x :> b))
+let coercedFunction = (x => x) :> (a => b)
+let call = (f :> (a => b))(v)
+let field = (v :> b).name
+let objectField = (v :> b)["name"]
+let equalLeft = (v :> b) == w
+let equalRight = v == (w :> b)
+let unary = !(v :> b)
+let awaited = await (v :> b)
+let nested = (v :> b) :> c
+let record = {field: (v :> b)}
+let conditional = condition ? (v :> b) : (w :> b)
+let block = {v :> b}
+let default = (~arg=(v :> b)) => arg
+let jsx = <Component value={(v :> b)}> {(v :> b)} </Component>
+
+// Comments must stay attached when parentheses disappear.
+foo(/* before */ (v /* operand */ :> /* type */ b) /* after */)
+foo((v :> b) // trailing line comment
+)
+let attributed = (@foo v) :> b
+let coercionAttribute = @foo (v :> b)
+let long = functionWithAVeryLongName((valueWithAVeryLongName :> typeWithAVeryLongName))
+
+let arrayIndex = values[(index :> int)]
+values[(index :> int)] = (value :> b)
+let recordSpread = {...(value :> b), field: value}
+let bracedOperand = {value} :> b
+let blockSequence = {foo(); value :> b}
+let checked = assert(value :> bool)
+(value :> b)
+let ternaryCallback = condition ? (x => (x :> b)) : other
+let piped = (value :> b)->foo
+let blockTail = {foo(); (value :> b)}
+let blockHead = {(value :> b); foo()}
+let dictSpread = dict{...(value :> dict<b>), "field": value}
+
+// A constrained operand needs parentheses when the coercion is a binding RHS.
+let constrainedOperand = (x: t) :> u
+let constrainedChain = ((x: t) :> u) :> v
+let constrainedBlock = {(x: t) :> u}
+call((x: t) :> u)
+
+// A following JSX element must not be read as coercion type arguments.
+let beforeJsx = () => {
+  let value = (x :> string)
+  <option value />
+}
