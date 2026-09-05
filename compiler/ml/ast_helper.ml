@@ -443,7 +443,7 @@ module Type = struct
             (Location.mkloc
                (Longident.Lident (if b then "true" else "false"))
                loc)
-            None
+            (Location.mkloc [] loc)
         | Pct_null ->
           Exp.ident ~loc (Location.mkloc (Longident.Lident "null") loc)
         | Pct_undefined ->
