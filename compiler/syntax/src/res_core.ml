@@ -5892,13 +5892,13 @@ and parse_spread_tail_classified ?current_type_name_path ?inline_types_context
       (* Object-style: build an object type that inherits the spread *)
       let obj_fields =
         let convert (ld : Parsetree.label_declaration) =
-          let ({Parsetree.pld_name; pld_type; pld_attributes; _}
-                : Parsetree.label_declaration) =
+          let ({Parsetree.pld_name; pld_type; _} : Parsetree.label_declaration)
+              =
             ld
           in
           match pld_name.txt with
           | "..." -> Parsetree.Oinherit pld_type
-          | _ -> Otag (pld_name, pld_attributes, pld_type)
+          | _ -> Otag (pld_name, Ast_helper.Type.field_attributes ld, pld_type)
         in
         Parsetree.Oinherit spread_typ :: List.map convert fields
       in
@@ -5979,7 +5979,9 @@ and parse_record_or_object_decl ?current_type_name_path ?inline_types_context p
           Ext_list.map fields (fun ld ->
               match ld.pld_name.txt with
               | "..." -> Parsetree.Oinherit ld.pld_type
-              | _ -> Otag (ld.pld_name, ld.pld_attributes, ld.pld_type))
+              | _ ->
+                Otag
+                  (ld.pld_name, Ast_helper.Type.field_attributes ld, ld.pld_type))
         in
         let dot_field = Parsetree.Oinherit typ in
         let typ_obj = Ast_helper.Typ.object_ (dot_field :: fields) Closed in
