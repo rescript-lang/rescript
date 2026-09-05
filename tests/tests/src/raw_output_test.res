@@ -12,3 +12,9 @@ let mk = fn => fn()
 mk(%raw(`(_)=> console.log('should works')`))
 
 Console.log((() => 1)())
+
+// GitHub issue #6236: escapes needed for the surrounding ReScript template
+// must not survive in the emitted raw JavaScript.
+%%raw(`
+var issue6236 = \`\${"hello"}\`;
+`)

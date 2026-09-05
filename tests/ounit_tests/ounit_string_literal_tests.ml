@@ -407,6 +407,14 @@ let suites =
          ( "template segments reject interpolation openers" >:: fun _ ->
            assert_invalid_template "${value}";
            assert_template_decoded ~encoded:"\\${value}" ~expected:"${value}" );
+         ( "raw templates decode only their surrounding syntax escapes"
+         >:: fun _ ->
+           OUnit.assert_equal ~printer:(Printf.sprintf "%S")
+             {e|`${"hello"}` with \n and \t|e}
+             (String_literal.decode_raw_template_source
+                {e|\`\${"hello"}\` with \n and \t|e});
+           OUnit.assert_equal ~printer:(Printf.sprintf "%S") "continued"
+             (String_literal.decode_raw_template_source "con\\\r\ntinued") );
          ( "ordinary literals become semantic strings" >:: fun _ ->
            assert_parsed_string ~source:{|\x61\n\uD83D\uDE00|}
              ~expected_semantic:"a\n😀" );

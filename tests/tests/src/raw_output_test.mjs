@@ -9,6 +9,9 @@ function mk(fn) {
 
 console.log(1);
 
+var issue6236 = `${"hello"}`;
+;
+
 export {
   mk,
 }
