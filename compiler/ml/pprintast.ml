@@ -110,19 +110,16 @@ let view_expr x =
   match x.pexp_desc with
   | Pexp_construct ({txt = Lident "()"; _}, _) -> `tuple
   | Pexp_construct ({txt = Lident "[]"; _}, _) -> `nil
-  | Pexp_construct ({txt = Lident "::"; _}, Some _) ->
+  | Pexp_construct ({txt = Lident "::"; _}, {txt = [_; _]}) ->
     let rec loop exp acc =
       match exp with
       | {
-       pexp_desc = Pexp_construct ({txt = Lident "[]"; _}, _);
+       pexp_desc = Pexp_construct ({txt = Lident "[]"; _}, {txt = []});
        pexp_attributes = [];
       } ->
         (List.rev acc, true)
       | {
-       pexp_desc =
-         Pexp_construct
-           ( {txt = Lident "::"; _},
-             Some {pexp_desc = Pexp_tuple [e1; e2]; pexp_attributes = []} );
+       pexp_desc = Pexp_construct ({txt = Lident "::"; _}, {txt = [e1; e2]});
        pexp_attributes = [];
       } ->
         loop e2 (e1 :: acc)
@@ -130,7 +127,7 @@ let view_expr x =
     in
     let ls, b = loop x [] in
     if b then `list ls else `cons ls
-  | Pexp_construct (x, None) -> `simple x.txt
+  | Pexp_construct (x, {txt = []}) -> `simple x.txt
   | _ -> `normal
 
 let is_simple_construct : construct -> bool = function
@@ -355,7 +352,15 @@ and core_type1 ctxt f x =
     | Ptyp_variant (l, closed, low) ->
       let type_variant_helper f x =
         match x with
-        | Rtag (l, attrs, _, ctl) ->
+        | Rtag (l, attrs, _, groups) ->
+          let ctl =
+            List.map
+              (fun {loc; txt = args} ->
+                match args with
+                | [arg] -> arg
+                | args -> Ast_helper.Typ.tuple ~loc args)
+              groups
+          in
           pp f "@[<2>%a%a@;%a@]" string_quot l.txt
             (fun f l ->
               match l with
@@ -441,10 +446,7 @@ and pattern ctxt f x =
 and pattern1 ctxt (f : Format.formatter) (x : pattern) : unit =
   let rec pattern_list_helper f = function
     | {
-        ppat_desc =
-          Ppat_construct
-            ( {txt = Lident "::"; _},
-              Some {ppat_desc = Ppat_tuple [pat1; pat2]; _} );
+        ppat_desc = Ppat_construct ({txt = Lident "::"; _}, {txt = [pat1; pat2]});
         ppat_attributes = [];
       } ->
       pp f "%a::%a" (simple_pattern ctxt) pat1 pattern_list_helper pat2 (*RA*)
@@ -453,19 +455,25 @@ and pattern1 ctxt (f : Format.formatter) (x : pattern) : unit =
   if x.ppat_attributes <> [] then pattern ctxt f x
   else
     match x.ppat_desc with
-    | Ppat_variant (l, Some p) ->
-      pp f "@[<2>`%s@;%a@]" l (simple_pattern ctxt) p
+    | Ppat_variant (l, {txt = args}) when args <> [] ->
+      let payload =
+        match args with
+        | [arg] -> arg
+        | args -> Ast_helper.Pat.tuple ~loc:x.ppat_loc args
+      in
+      pp f "@[<2>`%s@;%a@]" l (simple_pattern ctxt) payload
     | Ppat_construct ({txt = Lident ("()" | "[]"); _}, _) ->
       simple_pattern ctxt f x
-    | Ppat_construct (({txt; _} as li), po) -> (
-      if
-        (* FIXME The third field always false *)
-        txt = Lident "::"
-      then pp f "%a" pattern_list_helper x
+    | Ppat_construct (({txt; _} as li), {txt = po}) -> (
+      if txt = Lident "::" && List.length po = 2 then
+        pp f "%a" pattern_list_helper x
       else
         match po with
-        | Some x -> pp f "%a@;%a" longident_loc li (simple_pattern ctxt) x
-        | None -> pp f "%a" longident_loc li)
+        | [] -> pp f "%a" longident_loc li
+        | [x] -> pp f "%a@;%a" longident_loc li (simple_pattern ctxt) x
+        | patterns ->
+          let tuple = Ast_helper.Pat.tuple ~loc:x.ppat_loc patterns in
+          pp f "%a@;%a" longident_loc li (simple_pattern ctxt) tuple)
     | _ -> simple_pattern ctxt f x
 
 and simple_pattern ctxt (f : Format.formatter) (x : pattern) : unit =
@@ -507,7 +515,7 @@ and simple_pattern ctxt (f : Format.formatter) (x : pattern) : unit =
       pp f "@[<1>(%a)@]" (list ~sep:",@;" (pattern1 ctxt)) l (* level1*)
     | Ppat_constant c -> pp f "%a" constant c
     | Ppat_interval (c1, c2) -> pp f "%a..%a" constant c1 constant c2
-    | Ppat_variant (l, None) -> pp f "`%s" l
+    | Ppat_variant (l, {txt = []}) -> pp f "`%s" l
     | Ppat_constraint (p, ct) ->
       pp f "@[<2>(%a@;:@;%a)@]" (pattern1 ctxt) p (core_type ctxt) ct
     | Ppat_exception p -> pp f "@[<2>exception@;%a@]" (pattern1 ctxt) p
@@ -717,12 +725,18 @@ and expression ctxt f x =
               (* reset here only because [function,match,try,sequence]
                  are lower priority *)
             (e, l) partial_str)
-    | Pexp_construct (li, Some eo) when not (is_simple_construct (view_expr x))
-      -> (
+    | Pexp_construct (li, {txt = args})
+      when args <> [] && not (is_simple_construct (view_expr x)) -> (
       (* Not efficient FIXME*)
       match view_expr x with
       | `cons ls -> list (simple_expr ctxt) f ls ~sep:"@;::@;"
-      | `normal -> pp f "@[<2>%a@;%a@]" longident_loc li (simple_expr ctxt) eo
+      | `normal ->
+        let arg =
+          match args with
+          | [arg] -> arg
+          | args -> Ast_helper.Exp.tuple ~loc:x.pexp_loc args
+        in
+        pp f "@[<2>%a@;%a@]" longident_loc li (simple_expr ctxt) arg
       | _ -> assert false)
     | Pexp_setfield (e1, li, e2) ->
       pp f "@[<2>%a.%a@ <-@ %a@]" (simple_expr ctxt) e1 longident_loc li
@@ -758,7 +772,13 @@ and expression ctxt f x =
     | Pexp_open (ovf, lid, e) ->
       pp f "@[<2>let open%s %a in@;%a@]" (override ovf) longident_loc lid
         (expression ctxt) e
-    | Pexp_variant (l, Some eo) -> pp f "@[<2>`%s@;%a@]" l (simple_expr ctxt) eo
+    | Pexp_variant (l, {txt = args}) when args <> [] ->
+      let payload =
+        match args with
+        | [arg] -> arg
+        | args -> Ast_helper.Exp.tuple ~loc:x.pexp_loc args
+      in
+      pp f "@[<2>`%s@;%a@]" l (simple_expr ctxt) payload
     | Pexp_extension e -> extension ctxt f e
     | Pexp_await e -> pp f "@[<hov2>await@ %a@]" (simple_expr ctxt) e
     | Pexp_template {source_segments; values} ->
@@ -828,7 +848,7 @@ and simple_expr ctxt f x =
       pp f "(%a : %a)" (expression ctxt) e (core_type ctxt) ct
     | Pexp_coerce (e, (), ct) ->
       pp f "(%a :> %a)" (expression ctxt) e (core_type ctxt) ct
-    | Pexp_variant (l, None) -> pp f "`%s" l
+    | Pexp_variant (l, {txt = []}) -> pp f "`%s" l
     | Pexp_record (l, eo) ->
       let longident_x_expression f {lid = li; x = e; opt} =
         let opt_str = if opt then "?" else "" in

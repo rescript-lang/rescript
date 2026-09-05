@@ -164,6 +164,54 @@ let map_loc sub {loc; txt} = {loc = sub.location sub loc; txt}
 
 (* Internal Parsetree0 bridge metadata; public res.* attributes pass through. *)
 let record_rest_attr_name = "_res.record_rest"
+let constructor_args_attr_name = "_res.constructor_args"
+
+let has_explicit_arity_attr (attrs : Pt.attributes) =
+  List.exists
+    (function
+      | {txt = "ocaml.explicit_arity" | "explicit_arity"}, _ -> true
+      | _ -> false)
+    attrs
+
+let remove_constructor_args_attr (attrs : Pt.attributes) =
+  let rec loop rev_attrs = function
+    | ({Location.txt}, Pt.PStr []) :: attrs
+      when txt = constructor_args_attr_name ->
+      (true, List.rev_append rev_attrs attrs)
+    | attr :: attrs -> loop (attr :: rev_attrs) attrs
+    | [] -> (false, List.rev rev_attrs)
+  in
+  loop [] attrs
+
+(* Constructor argument bridge contract (shared with Ast_mapper_to0):
+
+   The current parsetree records source argument lists, not declaration arity.
+   Frozen v0 has only an optional payload, so encoding multiple arguments
+   packs them into a tuple and adds [_res.constructor_args] to the constructor.
+   A single tuple argument needs no marker. List cons nodes also need none:
+   their tuple payload always means head and tail, preserving the v0 wire shape.
+   Polymorphic variant type payload groups use the same encoding, with the
+   marker on the tuple type itself.
+
+   Decoding consumes the internal marker and restores the source list.
+   Ordinary constructors also accept PPX-produced [explicit_arity] and
+   [ocaml.explicit_arity] attributes, and split the list constructor [::] when
+   its tuple has no attributes. Attributed cons tuples remain one payload so
+   their attributes survive another v0 conversion. Other unmarked v0 tuples
+   also remain a single syntactic payload; Typecore resolves semantic grouping
+   once it knows the constructor declaration.
+
+   The tuple used to encode multiple arguments carries the argument-list
+   location, preserving its parentheses span. For a single argument, v0
+   cannot store both the payload and outer argument-list locations: decoding
+   falls back to the payload location. Nullary constructors use the enclosing
+   node location. No location-only attributes are needed. *)
+let decode_args ~map ~tuple_args ~split_tuple = function
+  | None -> []
+  | Some arg -> (
+    match tuple_args arg with
+    | Some args when split_tuple -> List.map map args
+    | _ -> [map arg])
 
 let record_rest_of_pattern (rest : Pt.pattern) =
   match rest.Pt.ppat_desc with
@@ -192,9 +240,23 @@ module T = struct
   (* Type expressions for the core language *)
 
   let row_field sub = function
-    | Rtag (l, attrs, b, tl) ->
+    | Rtag (l, attrs, b, types) ->
+      let map_group typ =
+        let typ = sub.typ sub typ in
+        let has_constructor_args, attrs =
+          remove_constructor_args_attr typ.ptyp_attributes
+        in
+        let txt =
+          match typ.ptyp_desc with
+          | Ptyp_tuple args when has_constructor_args && attrs = [] -> args
+          (* A PPX may annotate the synthesized tuple. Keep its wrapper when
+             consuming the marker so those attributes retain their owner. *)
+          | _ -> [{typ with ptyp_attributes = attrs}]
+        in
+        {loc = typ.ptyp_loc; txt}
+      in
       Pt.Rtag
-        (map_loc sub l, sub.attributes sub attrs, b, List.map (sub.typ sub) tl)
+        (map_loc sub l, sub.attributes sub attrs, b, List.map map_group types)
     | Rinherit t -> Rinherit (sub.typ sub t)
 
   let object_field sub = function
@@ -836,9 +898,30 @@ module E = struct
       jsx_fragment ~loc ~attrs loc.loc_start (map_jsx_children sub e)
         loc.loc_end
     | Pexp_construct (lid, arg) -> (
+      let args_loc =
+        match arg with
+        | Some arg -> sub.location sub arg.pexp_loc
+        | None -> loc
+      in
       let lid1 = map_loc sub lid in
-      let arg1 = map_opt (sub.expr sub) arg in
-      let exp1 = construct ~loc ~attrs lid1 arg1 in
+      let has_constructor_args, attrs = remove_constructor_args_attr attrs in
+      let args =
+        decode_args ~map:(sub.expr sub)
+          ~tuple_args:(fun arg ->
+            match arg.pexp_desc with
+            | Pexp_tuple _
+              when lid.txt = Longident.Lident "::" && arg.pexp_attributes <> []
+              ->
+              None
+            | Pexp_tuple args -> Some args
+            | _ -> None)
+          ~split_tuple:
+            (has_constructor_args
+            || has_explicit_arity_attr attrs
+            || lid.txt = Longident.Lident "::")
+          arg
+      in
+      let exp1 = construct ~loc ~attrs lid1 {txt = args; loc = args_loc} in
       match lid.txt with
       | Lident "Function$" -> (
         let rec attributes_to_arity (attrs : Parsetree.attributes) =
@@ -858,8 +941,8 @@ module E = struct
           | _ :: rest -> attributes_to_arity rest
           | [] -> assert false
         in
-        match arg1 with
-        | Some ({pexp_desc = Pexp_fun f} as e1) -> (
+        match args with
+        | [({pexp_desc = Pexp_fun f} as e1)] -> (
           let arity = attributes_to_arity attrs in
           (* Gather [arity] parameters from the converted chain of unary
              functions into one n-ary node. Nested first-class functions are
@@ -895,8 +978,22 @@ module E = struct
             })
         | _ -> exp1)
       | _ -> exp1)
-    | Pexp_variant (lab, eo) ->
-      variant ~loc ~attrs lab (map_opt (sub.expr sub) eo)
+    | Pexp_variant (lab, arg) ->
+      let has_constructor_args, attrs = remove_constructor_args_attr attrs in
+      let args_loc =
+        match arg with
+        | Some arg -> sub.location sub arg.pexp_loc
+        | None -> loc
+      in
+      let args =
+        decode_args ~map:(sub.expr sub)
+          ~tuple_args:(fun arg ->
+            match arg.pexp_desc with
+            | Pexp_tuple args -> Some args
+            | _ -> None)
+          ~split_tuple:has_constructor_args arg
+      in
+      variant ~loc ~attrs lab {txt = args; loc = args_loc}
     | Pexp_record (l, eo) ->
       record ~loc ~attrs
         (Ext_list.map l (fun (lid, e) ->
@@ -1063,9 +1160,45 @@ module P = struct
         (map_pattern_constant ~loc c1)
         (map_pattern_constant ~loc c2)
     | Ppat_tuple pl -> tuple ~loc ~attrs (List.map (sub.pat sub) pl)
-    | Ppat_construct (l, p) ->
-      construct ~loc ~attrs (map_loc sub l) (map_opt (sub.pat sub) p)
-    | Ppat_variant (l, p) -> variant ~loc ~attrs l (map_opt (sub.pat sub) p)
+    | Ppat_construct (l, arg) ->
+      let args_loc =
+        match arg with
+        | Some arg -> sub.location sub arg.ppat_loc
+        | None -> loc
+      in
+      let has_constructor_args, attrs = remove_constructor_args_attr attrs in
+      let args =
+        decode_args ~map:(sub.pat sub)
+          ~tuple_args:(fun arg ->
+            match arg.ppat_desc with
+            | Ppat_tuple _
+              when l.txt = Longident.Lident "::" && arg.ppat_attributes <> [] ->
+              None
+            | Ppat_tuple args -> Some args
+            | _ -> None)
+          ~split_tuple:
+            (has_constructor_args
+            || has_explicit_arity_attr attrs
+            || l.txt = Longident.Lident "::")
+          arg
+      in
+      construct ~loc ~attrs (map_loc sub l) {txt = args; loc = args_loc}
+    | Ppat_variant (l, arg) ->
+      let has_constructor_args, attrs = remove_constructor_args_attr attrs in
+      let args_loc =
+        match arg with
+        | Some arg -> sub.location sub arg.ppat_loc
+        | None -> loc
+      in
+      let args =
+        decode_args ~map:(sub.pat sub)
+          ~tuple_args:(fun arg ->
+            match arg.ppat_desc with
+            | Ppat_tuple args -> Some args
+            | _ -> None)
+          ~split_tuple:has_constructor_args arg
+      in
+      variant ~loc ~attrs l {txt = args; loc = args_loc}
     | Ppat_record (lpl, cf) ->
       let rest, attrs = get_record_rest_attr attrs in
       record ~loc ~attrs ?rest

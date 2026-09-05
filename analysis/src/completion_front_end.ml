@@ -222,7 +222,8 @@ let rec expr_to_context_path_inner ~(in_jsx_context : bool)
     | None -> None)
   | Pexp_constant (Pconst_integer _) -> Some CPInt
   | Pexp_constant (Pconst_float _) -> Some CPFloat
-  | Pexp_construct ({txt = Lident ("true" | "false")}, None) -> Some CPBool
+  | Pexp_construct ({txt = Lident ("true" | "false")}, {txt = []}) ->
+    Some CPBool
   | Pexp_array exprs ->
     Some
       (CPArray
@@ -492,41 +493,34 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
           scope_pattern p
             ~pattern_path:(NTupleItem {item_num = index} :: pattern_path)
             ?context_path)
-    | Ppat_construct (_, None) -> ()
-    | Ppat_construct ({txt}, Some {ppat_desc = Ppat_tuple pl}) ->
-      pl
+    | Ppat_construct (_, {txt = []}) -> ()
+    | Ppat_construct ({txt}, {txt = patterns}) ->
+      patterns
       |> List.iteri (fun index p ->
           scope_pattern p
             ~pattern_path:
               (NVariantPayload
                  {
                    item_num = index;
+                   source_arity = List.length patterns;
                    constructor_name = Utils.get_unqualified_name txt;
                  }
               :: pattern_path)
             ?context_path)
-    | Ppat_construct ({txt}, Some p) ->
-      scope_pattern
-        ~pattern_path:
-          (NVariantPayload
-             {item_num = 0; constructor_name = Utils.get_unqualified_name txt}
-          :: pattern_path)
-        ?context_path p
-    | Ppat_variant (_, None) -> ()
-    | Ppat_variant (txt, Some {ppat_desc = Ppat_tuple pl}) ->
-      pl
+    | Ppat_variant (_, {txt = []}) -> ()
+    | Ppat_variant (txt, {txt = patterns}) ->
+      patterns
       |> List.iteri (fun index p ->
           scope_pattern p
             ~pattern_path:
-              (NPolyvariantPayload {item_num = index; constructor_name = txt}
+              (NPolyvariantPayload
+                 {
+                   item_num = index;
+                   constructor_name = txt;
+                   source_arity = List.length patterns;
+                 }
               :: pattern_path)
             ?context_path)
-    | Ppat_variant (txt, Some p) ->
-      scope_pattern
-        ~pattern_path:
-          (NPolyvariantPayload {item_num = 0; constructor_name = txt}
-          :: pattern_path)
-        ?context_path p
     | Ppat_record (fields, _, rest) -> (
       Ext_list.iter fields (fun {lid = fname; x = p} ->
           match fname with
@@ -1049,7 +1043,7 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
                  Pstr_eval
                    ( {
                        pexp_loc;
-                       pexp_desc = Pexp_construct ({txt = path; loc}, None);
+                       pexp_desc = Pexp_construct ({txt = path; loc}, {txt = []});
                      },
                      _ );
              };
@@ -1289,17 +1283,21 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
                          then ValueOrField
                          else Value);
                     }))
-        | Pexp_construct (lid, e_opt) -> (
+        | Pexp_construct (lid, {txt = args}) ->
           let lid_path = flatten_lid_check_dot lid in
           if debug then
             Printf.printf "Pexp_construct %s:%s %s\n"
               (lid_path |> String.concat "\n")
               (Loc.to_string lid.loc)
-              (match e_opt with
-              | None -> "None"
-              | Some e -> Loc.to_string e.pexp_loc);
+              (match args with
+              | [] -> "None"
+              | args ->
+                args
+                |> List.map (fun (e : Parsetree.expression) ->
+                    Loc.to_string e.pexp_loc)
+                |> String.concat ", ");
           if
-            e_opt = None && (not lid.loc.loc_ghost)
+            args = [] && (not lid.loc.loc_ghost)
             && lid.loc |> Loc.has_pos ~pos:pos_before_cursor
           then
             set_result
@@ -1307,18 +1305,19 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
                  (CPId
                     {loc = lid.loc; path = lid_path; completion_context = Value}))
           else
-            match e_opt with
-            | Some e when loc_has_cursor e.pexp_loc -> (
-              match
-                Completion_expressions.complete_constructor_payload
-                  ~pos_before_cursor ~first_char_before_cursor_no_white lid e
-              with
-              | Some result ->
-                (* Check if anything else more important completes before setting this completion. *)
-                Ast_iterator.default_iterator.expr iterator e;
-                set_result result
-              | None -> ())
-            | _ -> ())
+            args
+            |> List.iteri (fun item_num (e : Parsetree.expression) ->
+                if loc_has_cursor e.pexp_loc then
+                  match
+                    Completion_expressions.complete_constructor_payload
+                      ~pos_before_cursor ~first_char_before_cursor_no_white
+                      ~item_num ~source_arity:(List.length args) lid e
+                  with
+                  | Some result ->
+                    (* Check if anything else more important completes before setting this completion. *)
+                    Ast_iterator.default_iterator.expr iterator e;
+                    set_result result
+                  | None -> ())
         | Pexp_field (e, field_name) -> (
           if debug then
             Printf.printf "Pexp_field %s %s:%s\n" (Loc.to_string e.pexp_loc)
@@ -1892,10 +1891,7 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
   in
 
   if kind_file = Files.Res then (
-    let parser =
-      Res_driver.parsing_engine.parse_implementation_from_source
-        ~for_printer:false
-    in
+    let parser = Res_driver.parsing_engine.parse_implementation_from_source in
     let {Res_driver.parsetree = str} = parser ~source:text in
     iterator.structure iterator str |> ignore;
     if blank_after_cursor = Some ' ' || blank_after_cursor = Some '\n' then (
@@ -1906,9 +1902,7 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
     if !found = false then if debug then Printf.printf "XXX Not found!\n";
     !result)
   else if kind_file = Resi then (
-    let parser =
-      Res_driver.parsing_engine.parse_interface_from_source ~for_printer:false
-    in
+    let parser = Res_driver.parsing_engine.parse_interface_from_source in
     let {Res_driver.parsetree = signature} = parser ~source:text in
     iterator.signature iterator signature |> ignore;
     if blank_after_cursor = Some ' ' || blank_after_cursor = Some '\n' then (

@@ -80,10 +80,18 @@ let app_exp_mapper (e : exp) (self : Ast_mapper.mapper) : exp =
     let a = self.expr self a_ in
     let f = self.expr self f_ in
     match f.pexp_desc with
-    | Pexp_variant (label, None) ->
-      {f with pexp_desc = Pexp_variant (label, Some a); pexp_loc = e.pexp_loc}
-    | Pexp_construct (ctor, None) ->
-      {f with pexp_desc = Pexp_construct (ctor, Some a); pexp_loc = e.pexp_loc}
+    | Pexp_variant (label, {txt = []}) ->
+      {
+        f with
+        pexp_desc = Pexp_variant (label, {txt = [a]; loc = a.pexp_loc});
+        pexp_loc = e.pexp_loc;
+      }
+    | Pexp_construct (ctor, {txt = []}) ->
+      {
+        f with
+        pexp_desc = Pexp_construct (ctor, {txt = [a]; loc = a.pexp_loc});
+        pexp_loc = e.pexp_loc;
+      }
     | Pexp_apply {funct = fn1; args; partial; transformed_jsx} ->
       Bs_ast_invariant.warn_discarded_unused_attributes fn1.pexp_attributes;
       {
@@ -100,10 +108,16 @@ let app_exp_mapper (e : exp) (self : Ast_mapper.mapper) : exp =
               Pexp_tuple
                 (Ext_list.map xs (fun fn ->
                      match fn.pexp_desc with
-                     | Pexp_construct (ctor, None) ->
+                     | Pexp_construct (ctor, {txt = []}) ->
                        {
                          fn with
-                         pexp_desc = Pexp_construct (ctor, Some bounded_obj_arg);
+                         pexp_desc =
+                           Pexp_construct
+                             ( ctor,
+                               {
+                                 txt = [bounded_obj_arg];
+                                 loc = bounded_obj_arg.pexp_loc;
+                               } );
                        }
                      | Pexp_apply {funct = fn; args; transformed_jsx} ->
                        Bs_ast_invariant.warn_discarded_unused_attributes

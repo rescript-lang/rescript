@@ -8,7 +8,7 @@ module Int_set = Set.Make (Int)
 
 let is_unit_expr (e : Parsetree.expression) =
   match e.pexp_desc with
-  | Pexp_construct ({txt = Lident "()"}, None) -> true
+  | Pexp_construct ({txt = Lident "()"}, {txt = []}) -> true
   | _ -> false
 
 module Insert_ext = struct
@@ -54,7 +54,7 @@ module Expr_utils = struct
     match e.pexp_desc with
     | Pexp_apply {funct = {pexp_desc = Pexp_ident {txt = Lident "->"}}; _} ->
       true
-    | Pexp_construct (_, Some e)
+    | Pexp_construct (_, {txt = [e]})
     | Pexp_constraint (e, _)
     | Pexp_coerce (e, _, _)
     | Pexp_let (_, _, e)
@@ -677,7 +677,12 @@ let make_mapper (deprecated_used : Cmt_utils.deprecated_used list) =
           | {pexp_desc = Pexp_construct (lid, arg); pexp_loc} -> (
             match find_constructor_target ~loc:pexp_loc ~lid_loc:lid.loc with
             | Some {Constructor_replace.lid; attrs} ->
-              let arg = Option.map (mapper.expr mapper) arg in
+              let arg =
+                {
+                  Location.txt = List.map (mapper.expr mapper) arg.txt;
+                  loc = mapper.location mapper arg.loc;
+                }
+              in
               let replaced = {exp with pexp_desc = Pexp_construct (lid, arg)} in
               Mapper_utils.Apply_transforms.attach_to_replacement ~attrs
                 replaced
@@ -723,7 +728,12 @@ let make_mapper (deprecated_used : Cmt_utils.deprecated_used list) =
           | {ppat_desc = Ppat_construct (lid, arg); ppat_loc} -> (
             match find_constructor_target ~loc:ppat_loc ~lid_loc:lid.loc with
             | Some {Constructor_replace.lid; attrs} ->
-              let arg = Option.map (mapper.pat mapper) arg in
+              let arg =
+                {
+                  Location.txt = List.map (mapper.pat mapper) arg.txt;
+                  loc = mapper.location mapper arg.loc;
+                }
+              in
               let replaced = {pat with ppat_desc = Ppat_construct (lid, arg)} in
               Mapper_utils.Apply_transforms.attach_attrs_to_pat ~attrs replaced
             | None -> Ast_mapper.default_mapper.pat mapper pat)
@@ -741,9 +751,7 @@ let migrate ~entry_point_file ~output_mode =
   let state = Shared_types.create_state () in
   let result =
     if Filename.check_suffix path ".res" then
-      let parser =
-        Res_driver.parsing_engine.parse_implementation ~for_printer:true
-      in
+      let parser = Res_driver.parsing_engine.parse_implementation in
       let {Res_driver.parsetree; comments; source} = parser ~filename:path in
       match Cmt.load_cmt_infos_from_path ~state ~path with
       | None ->
@@ -771,9 +779,7 @@ let migrate ~entry_point_file ~output_mode =
               ~width:Res_printer.default_print_width ast_transformed ~comments,
             source )
     else if Filename.check_suffix path ".resi" then
-      let parser =
-        Res_driver.parsing_engine.parse_interface ~for_printer:true
-      in
+      let parser = Res_driver.parsing_engine.parse_interface in
       let {Res_driver.parsetree = signature; comments; source} =
         parser ~filename:path
       in

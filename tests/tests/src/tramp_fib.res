@@ -16,14 +16,13 @@ let rec fib = (n, k) =>
     k(1)
   | _ =>
     Suspend(
-      () =>
-        fib(n - 1, v0 => fib(n - 2, v1 => k(v0 + v1))),
-        /* match v0,v1 with
-         | Continue v0, Continue v1 -> */
-        /* k (Continue (v0 + v1)) [@bs] */
-        /* Suspend (fun [@bs]() -> k (Continue (v0 + v1)) [@bs]) */
-        /* | _ -> assert false */
-        /* FIXME: this branch completly gone */
+      () => fib(n - 1, v0 => fib(n - 2, v1 => k(v0 + v1))),
+      /* match v0,v1 with
+       | Continue v0, Continue v1 -> */
+      /* k (Continue (v0 + v1)) [@bs] */
+      /* Suspend (fun [@bs]() -> k (Continue (v0 + v1)) [@bs]) */
+      /* | _ -> assert false */
+      /* FIXME: this branch completly gone */
     )
   }
 

@@ -107,6 +107,19 @@ let map_loc sub {loc; txt} = {loc = sub.location sub loc; txt}
 
 (* Internal Parsetree0 bridge metadata; public res.* attributes pass through. *)
 let record_rest_attr_name = "_res.record_rest"
+let constructor_args_attr_name = "_res.constructor_args"
+
+let add_constructor_args_attr attrs =
+  (Location.mknoloc constructor_args_attr_name, Pt.PStr []) :: attrs
+
+(* See the constructor argument bridge contract at Ast_mapper_from0.decode_args. *)
+let encode_args ~map ~tuple ~attrs ~mark_args args =
+  match List.map map args with
+  | [] -> (None, attrs)
+  | [arg] -> (Some arg, attrs)
+  | args ->
+    let attrs = if mark_args then add_constructor_args_attr attrs else attrs in
+    (Some (tuple args), attrs)
 
 let add_record_rest_attr ~rest attrs =
   (Location.mknoloc record_rest_attr_name, Pt.PPat (rest, None)) :: attrs
@@ -123,9 +136,20 @@ module T = struct
   (* Type expressions for the core language *)
 
   let row_field sub = function
-    | Rtag (l, attrs, b, tl) ->
+    | Rtag (l, attrs, b, groups) ->
+      let map_group {loc; txt = args} =
+        let loc = sub.location sub loc in
+        match List.map (sub.typ sub) args with
+        | [arg] -> arg
+        | args ->
+          let typ = Ast_helper0.Typ.tuple ~loc args in
+          {
+            typ with
+            ptyp_attributes = add_constructor_args_attr typ.ptyp_attributes;
+          }
+      in
       Pt.Rtag
-        (map_loc sub l, sub.attributes sub attrs, b, List.map (sub.typ sub) tl)
+        (map_loc sub l, sub.attributes sub attrs, b, List.map map_group groups)
     | Rinherit t -> Rinherit (sub.typ sub t)
 
   let object_field sub = function
@@ -555,10 +579,25 @@ module E = struct
       match_ ~loc ~attrs (sub.expr sub e) (sub.cases sub pel)
     | Pexp_try (e, pel) -> try_ ~loc ~attrs (sub.expr sub e) (sub.cases sub pel)
     | Pexp_tuple el -> tuple ~loc ~attrs (List.map (sub.expr sub) el)
-    | Pexp_construct (lid, arg) ->
-      construct ~loc ~attrs (map_loc sub lid) (map_opt (sub.expr sub) arg)
-    | Pexp_variant (lab, eo) ->
-      variant ~loc ~attrs lab (map_opt (sub.expr sub) eo)
+    | Pexp_construct (lid, {txt = args; loc = args_loc}) ->
+      let lid = map_loc sub lid in
+      let args_loc = sub.location sub args_loc in
+      let arg, attrs =
+        encode_args ~map:(sub.expr sub)
+          ~tuple:(fun args -> Ast_helper0.Exp.tuple ~loc:args_loc args)
+          ~attrs
+          ~mark_args:(lid.txt <> Longident.Lident "::")
+          args
+      in
+      construct ~loc ~attrs lid arg
+    | Pexp_variant (lab, {txt = args; loc = args_loc}) ->
+      let args_loc = sub.location sub args_loc in
+      let arg, attrs =
+        encode_args ~map:(sub.expr sub)
+          ~tuple:(fun args -> Ast_helper0.Exp.tuple ~loc:args_loc args)
+          ~attrs ~mark_args:true args
+      in
+      variant ~loc ~attrs lab arg
     | Pexp_record (l, eo) ->
       record ~loc ~attrs
         (Ext_list.map l (fun {lid; x = e; opt = optional} ->
@@ -792,9 +831,25 @@ module P = struct
     | Ppat_interval (c1, c2) ->
       interval ~loc ~attrs (map_constant c1) (map_constant c2)
     | Ppat_tuple pl -> tuple ~loc ~attrs (List.map (sub.pat sub) pl)
-    | Ppat_construct (l, p) ->
-      construct ~loc ~attrs (map_loc sub l) (map_opt (sub.pat sub) p)
-    | Ppat_variant (l, p) -> variant ~loc ~attrs l (map_opt (sub.pat sub) p)
+    | Ppat_construct (l, {txt = args; loc = args_loc}) ->
+      let l = map_loc sub l in
+      let args_loc = sub.location sub args_loc in
+      let arg, attrs =
+        encode_args ~map:(sub.pat sub)
+          ~tuple:(fun args -> Ast_helper0.Pat.tuple ~loc:args_loc args)
+          ~attrs
+          ~mark_args:(l.txt <> Longident.Lident "::")
+          args
+      in
+      construct ~loc ~attrs l arg
+    | Ppat_variant (l, {txt = args; loc = args_loc}) ->
+      let args_loc = sub.location sub args_loc in
+      let arg, attrs =
+        encode_args ~map:(sub.pat sub)
+          ~tuple:(fun args -> Ast_helper0.Pat.tuple ~loc:args_loc args)
+          ~attrs ~mark_args:true args
+      in
+      variant ~loc ~attrs l arg
     | Ppat_record (lpl, cf, rest) ->
       let attrs =
         match rest with

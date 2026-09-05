@@ -73,10 +73,7 @@ let inlay ~source ~kind_file ~pos ~max_length ~full ~state ~debug =
   in
   let iterator = {Ast_iterator.default_iterator with value_binding} in
   (if kind_file = Files.Res then
-     let parser =
-       Res_driver.parsing_engine.parse_implementation_from_source
-         ~for_printer:false
-     in
+     let parser = Res_driver.parsing_engine.parse_implementation_from_source in
      let {Res_driver.parsetree = structure} = parser ~source in
      iterator.structure iterator structure |> ignore);
   match full with
@@ -136,10 +133,7 @@ let code_lens ~source ~kind_file ~full ~debug =
   (* We only print code lenses in implementation files. This is because they'd be redundant in interface files,
      where the definition itself will be the same thing as what would've been printed in the code lens. *)
   (if kind_file = Files.Res then
-     let parser =
-       Res_driver.parsing_engine.parse_implementation_from_source
-         ~for_printer:false
-     in
+     let parser = Res_driver.parsing_engine.parse_implementation_from_source in
      let {Res_driver.parsetree = structure} = parser ~source in
      iterator.structure iterator structure |> ignore);
   match full with

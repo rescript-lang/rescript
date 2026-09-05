@@ -1,0 +1,131 @@
+Signature help src/SignatureHelpConstructorBoundaries.res 3:14
+null
+
+Signature help src/SignatureHelpConstructorBoundaries.res 7:13
+null
+
+Signature help src/SignatureHelpConstructorBoundaries.res 11:18
+null
+
+Signature help src/SignatureHelpConstructorBoundaries.res 15:24
+{
+  "activeParameter": 0,
+  "activeSignature": 0,
+  "signatures": [
+    {
+      "activeParameter": 0,
+      "label": "Pair(int, int)",
+      "parameters": [
+        {
+          "documentation": { "kind": "markdown", "value": "" },
+          "label": [ 5, 8 ]
+        },
+        {
+          "documentation": { "kind": "markdown", "value": "" },
+          "label": [ 10, 13 ]
+        }
+      ]
+    }
+  ]
+}
+
+Signature help src/SignatureHelpConstructorBoundaries.res 19:15
+{
+  "activeParameter": 1,
+  "activeSignature": 0,
+  "signatures": [
+    {
+      "activeParameter": 1,
+      "label": "Pair(int, int)",
+      "parameters": [
+        {
+          "documentation": { "kind": "markdown", "value": "" },
+          "label": [ 5, 8 ]
+        },
+        {
+          "documentation": { "kind": "markdown", "value": "" },
+          "label": [ 10, 13 ]
+        }
+      ]
+    }
+  ]
+}
+
+Signature help src/SignatureHelpConstructorBoundaries.res 23:18
+{
+  "activeParameter": 1,
+  "activeSignature": 0,
+  "signatures": [
+    {
+      "activeParameter": 1,
+      "label": "Pair(int, int)",
+      "parameters": [
+        {
+          "documentation": { "kind": "markdown", "value": "" },
+          "label": [ 5, 8 ]
+        },
+        {
+          "documentation": { "kind": "markdown", "value": "" },
+          "label": [ 10, 13 ]
+        }
+      ]
+    }
+  ]
+}
+
+Signature help src/SignatureHelpConstructorBoundaries.res 27:19
+null
+
+Signature help src/SignatureHelpConstructorBoundaries.res 31:43
+null
+
+Signature help src/SignatureHelpConstructorBoundaries.res 35:47
+null
+
+Signature help src/SignatureHelpConstructorBoundaries.res 39:53
+{
+  "activeParameter": 0,
+  "activeSignature": 0,
+  "signatures": [
+    {
+      "activeParameter": 0,
+      "label": "Pair(int, int)",
+      "parameters": [
+        {
+          "documentation": { "kind": "markdown", "value": "" },
+          "label": [ 5, 8 ]
+        },
+        {
+          "documentation": { "kind": "markdown", "value": "" },
+          "label": [ 10, 13 ]
+        }
+      ]
+    }
+  ]
+}
+
+Signature help src/SignatureHelpConstructorBoundaries.res 43:44
+{
+  "activeParameter": 1,
+  "activeSignature": 0,
+  "signatures": [
+    {
+      "activeParameter": 1,
+      "label": "Pair(int, int)",
+      "parameters": [
+        {
+          "documentation": { "kind": "markdown", "value": "" },
+          "label": [ 5, 8 ]
+        },
+        {
+          "documentation": { "kind": "markdown", "value": "" },
+          "label": [ 10, 13 ]
+        }
+      ]
+    }
+  ]
+}
+
+Signature help src/SignatureHelpConstructorBoundaries.res 47:48
+null
+

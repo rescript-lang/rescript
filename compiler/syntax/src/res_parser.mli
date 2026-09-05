@@ -5,12 +5,9 @@ module Reporting = Res_reporting
 module Diagnostics = Res_diagnostics
 module Comment = Res_comment
 
-type mode = ParseForTypeChecker | Default
-
 type region_status = Report | Silent
 
 type t = {
-  mode: mode;
   mutable scanner: Scanner.t;
   mutable token: Token.t;
   mutable start_pos: Lexing.position;
@@ -23,7 +20,7 @@ type t = {
   mutable regions: region_status ref list;
 }
 
-val make : ?mode:mode -> string -> string -> t
+val make : string -> string -> t
 
 val expect : ?grammar:Grammar.t -> Token.t -> t -> unit
 val optional : t -> Token.t -> bool

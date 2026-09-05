@@ -97,8 +97,13 @@ module Pat : sig
   val constant : ?loc:loc -> ?attrs:attrs -> constant -> pattern
   val interval : ?loc:loc -> ?attrs:attrs -> constant -> constant -> pattern
   val tuple : ?loc:loc -> ?attrs:attrs -> pattern list -> pattern
-  val construct : ?loc:loc -> ?attrs:attrs -> lid -> pattern option -> pattern
-  val variant : ?loc:loc -> ?attrs:attrs -> label -> pattern option -> pattern
+
+  (* Argument lists carry their own locations. Generated nodes must supply
+     an explicit fallback location; see the parsetree location contract. *)
+  val construct :
+    ?loc:loc -> ?attrs:attrs -> lid -> pattern list Location.loc -> pattern
+  val variant :
+    ?loc:loc -> ?attrs:attrs -> label -> pattern list Location.loc -> pattern
   val record :
     ?loc:loc ->
     ?attrs:attrs ->
@@ -153,9 +158,17 @@ module Exp : sig
   val try_ : ?loc:loc -> ?attrs:attrs -> expression -> case list -> expression
   val tuple : ?loc:loc -> ?attrs:attrs -> expression list -> expression
   val construct :
-    ?loc:loc -> ?attrs:attrs -> lid -> expression option -> expression
+    ?loc:loc ->
+    ?attrs:attrs ->
+    lid ->
+    expression list Location.loc ->
+    expression
   val variant :
-    ?loc:loc -> ?attrs:attrs -> label -> expression option -> expression
+    ?loc:loc ->
+    ?attrs:attrs ->
+    label ->
+    expression list Location.loc ->
+    expression
   val record :
     ?loc:loc ->
     ?attrs:attrs ->

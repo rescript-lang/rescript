@@ -605,8 +605,16 @@ module Completable = struct
     | NTupleItem of {item_num: int}
     | NFollowRecordField of {field_name: string}
     | NRecordBody of {seen_fields: string list}
-    | NVariantPayload of {constructor_name: string; item_num: int}
-    | NPolyvariantPayload of {constructor_name: string; item_num: int}
+    | NVariantPayload of {
+        constructor_name: string;
+        item_num: int;
+        source_arity: int;
+      }
+    | NPolyvariantPayload of {
+        constructor_name: string;
+        item_num: int;
+        source_arity: int;
+      }
     | NArray
 
   let nested_path_to_string p =

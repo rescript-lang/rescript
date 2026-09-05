@@ -22,7 +22,7 @@ module Error_message_utils_support = struct
     (Error_message_utils.Parser.parse_source :=
        fun source ->
          let res =
-           Res_driver.parse_implementation_from_source ~for_printer:false
+           Res_driver.parse_implementation_from_source
              ~display_filename:"<none>" ~source
          in
          (res.parsetree, res.comments |> List.map to_comment));
@@ -108,8 +108,7 @@ let reprint_source_file sourcefile =
     match kind with
     | Res ->
       let parse_result =
-        Res_driver.parsing_engine.parse_implementation ~for_printer:true
-          ~filename:sourcefile
+        Res_driver.parsing_engine.parse_implementation ~filename:sourcefile
       in
       if parse_result.invalid then (
         Res_diagnostics.print_report parse_result.diagnostics
@@ -125,8 +124,7 @@ let reprint_source_file sourcefile =
       |> print_endline
     | Resi ->
       let parse_result =
-        Res_driver.parsing_engine.parse_interface ~for_printer:true
-          ~filename:sourcefile
+        Res_driver.parsing_engine.parse_interface ~filename:sourcefile
       in
       if parse_result.invalid then (
         Res_diagnostics.print_report parse_result.diagnostics

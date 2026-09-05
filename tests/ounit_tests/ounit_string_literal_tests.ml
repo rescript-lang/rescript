@@ -22,7 +22,7 @@ let assert_encoded ~semantic ~expected =
 let assert_invalid_backquoted_pattern encoded =
   let source = "let f = value => switch value { | `" ^ encoded ^ "` => 1 }" in
   let result =
-    Res_driver.parse_implementation_from_source ~for_printer:false
+    Res_driver.parse_implementation_from_source
       ~display_filename:"StringLiteralTest.res" ~source
   in
   OUnit.assert_bool "expected an invalid string escape" result.invalid
@@ -35,7 +35,7 @@ let f = value => switch value { | `\uD800` => 1 }
 |}
   in
   let result =
-    Res_driver.parse_implementation_from_source ~for_printer:false
+    Res_driver.parse_implementation_from_source
       ~display_filename:"StringLiteralTest.res" ~source
   in
   OUnit.assert_equal ~printer:string_of_int 2 (List.length result.diagnostics)
@@ -45,14 +45,14 @@ let assert_invalid_tagged_template_pattern tag =
     "let f = value => switch value { | " ^ tag ^ "`literal` => 1 }"
   in
   let result =
-    Res_driver.parse_implementation_from_source ~for_printer:false
+    Res_driver.parse_implementation_from_source
       ~display_filename:"StringLiteralTest.res" ~source
   in
   OUnit.assert_bool "expected a tagged template pattern error" result.invalid
 
 let assert_invalid_string encoded =
   let result =
-    Res_driver.parse_implementation_from_source ~for_printer:false
+    Res_driver.parse_implementation_from_source
       ~display_filename:"StringLiteralTest.res"
       ~source:("let value = \"" ^ encoded ^ "\"")
   in
@@ -60,7 +60,7 @@ let assert_invalid_string encoded =
 
 let assert_invalid_template_expression source =
   let result =
-    Res_driver.parse_implementation_from_source ~for_printer:false
+    Res_driver.parse_implementation_from_source
       ~display_filename:"StringLiteralTest.res"
       ~source:("let value = `" ^ source ^ "`")
   in
@@ -68,7 +68,7 @@ let assert_invalid_template_expression source =
 
 let assert_parsed_string ~source ~expected_semantic =
   let result =
-    Res_driver.parse_implementation_from_source ~for_printer:false
+    Res_driver.parse_implementation_from_source
       ~display_filename:"StringLiteralTest.res"
       ~source:("let value = \"" ^ source ^ "\"")
   in
@@ -89,7 +89,7 @@ let assert_parsed_string ~source ~expected_semantic =
 let assert_invalid_utf8_after_diagnostic () =
   let source = "let x = (1,\nlet value = \"bad " ^ "\xff" ^ " byte\"" in
   let result =
-    Res_driver.parse_implementation_from_source ~for_printer:false
+    Res_driver.parse_implementation_from_source
       ~display_filename:"StringLiteralTest.res" ~source
   in
   OUnit.assert_equal ~printer:string_of_int 2 (List.length result.diagnostics);
@@ -99,9 +99,9 @@ let assert_invalid_utf8_after_diagnostic () =
          Res_diagnostics.explain diagnostic = "Invalid code point")
        result.diagnostics)
 
-let assert_parsed_char ~for_printer ~source ~expected_semantic =
+let assert_parsed_char ~source ~expected_semantic =
   let result =
-    Res_driver.parse_implementation_from_source ~for_printer
+    Res_driver.parse_implementation_from_source
       ~display_filename:"StringLiteralTest.res"
       ~source:("let value = '" ^ source ^ "'")
   in
@@ -129,7 +129,7 @@ let assert_parsed_char ~for_printer ~source ~expected_semantic =
 
 let assert_parsed_template_literal ~source =
   let result =
-    Res_driver.parse_implementation_from_source ~for_printer:false
+    Res_driver.parse_implementation_from_source
       ~display_filename:"StringLiteralTest.res"
       ~source:("let value = `" ^ source ^ "`")
   in
@@ -156,7 +156,7 @@ let assert_parsed_template_literal ~source =
 
 let assert_parsed_template_pattern ~source ~expected_semantic =
   let result =
-    Res_driver.parse_implementation_from_source ~for_printer:false
+    Res_driver.parse_implementation_from_source
       ~display_filename:"StringLiteralTest.res"
       ~source:("let f = value => switch value { | `" ^ source ^ "` => 1 }")
   in
@@ -188,7 +188,7 @@ let assert_parsed_template_pattern ~source ~expected_semantic =
 
 let assert_parsed_template () =
   let result =
-    Res_driver.parse_implementation_from_source ~for_printer:false
+    Res_driver.parse_implementation_from_source
       ~display_filename:"StringLiteralTest.res"
       ~source:"let value = `head\\n${item}tail`"
   in
@@ -227,7 +227,7 @@ let assert_tagged_template_location () =
   let prefix = "let value = " in
   let source = prefix ^ "tag`head${item}tail`" in
   let result =
-    Res_driver.parse_implementation_from_source ~for_printer:false
+    Res_driver.parse_implementation_from_source
       ~display_filename:"StringLiteralTest.res" ~source
   in
   match result.parsetree with
@@ -246,7 +246,7 @@ let assert_tagged_template_location () =
 
 let assert_invalid_json_interpolation () =
   let result =
-    Res_driver.parse_implementation_from_source ~for_printer:false
+    Res_driver.parse_implementation_from_source
       ~display_filename:"StringLiteralTest.res"
       ~source:{|let value = json`head${item}tail`|}
   in
@@ -485,10 +485,7 @@ let suites =
          ( "invalid backquoted pattern after an earlier diagnostic" >:: fun _ ->
            assert_invalid_backquoted_pattern_after_diagnostic () );
          ( "character literals retain source and semantic forms" >:: fun _ ->
-           assert_parsed_char ~for_printer:false ~source:{|\u{61}|}
-             ~expected_semantic:0x61;
-           assert_parsed_char ~for_printer:true ~source:{|\u{61}|}
-             ~expected_semantic:0x61;
+           assert_parsed_char ~source:{|\u{61}|} ~expected_semantic:0x61;
            OUnit.assert_equal ~printer:(Printf.sprintf "%S") {e|\x00|e}
              (String_literal.encode_char_source 0x00);
            OUnit.assert_equal ~printer:(Printf.sprintf "%S") "😀"

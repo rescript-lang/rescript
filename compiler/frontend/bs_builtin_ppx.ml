@@ -164,12 +164,14 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
       ( b,
         [
           {
-            pc_lhs = {ppat_desc = Ppat_construct ({txt = Lident "true"}, None)};
+            pc_lhs =
+              {ppat_desc = Ppat_construct ({txt = Lident "true"}, {txt = []})};
             pc_guard = None;
             pc_rhs = t_exp;
           };
           {
-            pc_lhs = {ppat_desc = Ppat_construct ({txt = Lident "false"}, None)};
+            pc_lhs =
+              {ppat_desc = Ppat_construct ({txt = Lident "false"}, {txt = []})};
             pc_guard = None;
             pc_rhs = f_exp;
           };
@@ -178,12 +180,14 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
       ( b,
         [
           {
-            pc_lhs = {ppat_desc = Ppat_construct ({txt = Lident "false"}, None)};
+            pc_lhs =
+              {ppat_desc = Ppat_construct ({txt = Lident "false"}, {txt = []})};
             pc_guard = None;
             pc_rhs = f_exp;
           };
           {
-            pc_lhs = {ppat_desc = Ppat_construct ({txt = Lident "true"}, None)};
+            pc_lhs =
+              {ppat_desc = Ppat_construct ({txt = Lident "true"}, {txt = []})};
             pc_guard = None;
             pc_rhs = t_exp;
           };
@@ -204,13 +208,13 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
               {
                 ppat_desc =
                   ( Ppat_construct
-                      ({txt = Lident ("Ok" as variant_name)}, Some _)
+                      ({txt = Lident ("Ok" as variant_name)}, {txt = _ :: _})
                   | Ppat_construct
-                      ({txt = Lident ("Error" as variant_name)}, Some _)
+                      ({txt = Lident ("Error" as variant_name)}, {txt = _ :: _})
                   | Ppat_construct
-                      ({txt = Lident ("Some" as variant_name)}, Some _)
+                      ({txt = Lident ("Some" as variant_name)}, {txt = _ :: _})
                   | Ppat_construct
-                      ({txt = Lident ("None" as variant_name)}, None) );
+                      ({txt = Lident ("None" as variant_name)}, {txt = []}) );
               } as pvb_pat;
             pvb_expr;
             pvb_constraint = None;
@@ -245,7 +249,7 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
       (* Extract the variable name from the pattern (e.g., myVar from Some(myVar)) *)
       let var_name =
         match pvb_pat.ppat_desc with
-        | Ppat_construct (_, Some inner_pat) -> (
+        | Ppat_construct (_, {txt = [inner_pat]}) -> (
           match Ast_pat.is_single_variable_pattern_conservative inner_pat with
           | Some name when name <> "" -> name
           | _ -> "x")
@@ -261,7 +265,7 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
               Ast_helper.Pat.alias
                 (Ast_helper.Pat.construct ~loc
                    {txt = Lident "Error"; loc}
-                   (Some (Ast_helper.Pat.any ~loc ())))
+                   (Location.mkloc [Ast_helper.Pat.any ~loc ()] loc))
                 {txt = var_name; loc};
             pc_guard = None;
             pc_rhs = Ast_helper.Exp.ident ~loc {txt = Lident var_name; loc};
@@ -273,7 +277,7 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
             pc_lhs =
               Ast_helper.Pat.alias
                 (Ast_helper.Pat.construct ~loc {txt = Lident "Ok"; loc}
-                   (Some (Ast_helper.Pat.any ~loc ())))
+                   (Location.mkloc [Ast_helper.Pat.any ~loc ()] loc))
                 {txt = var_name; loc};
             pc_guard = None;
             pc_rhs = Ast_helper.Exp.ident ~loc {txt = Lident var_name; loc};
@@ -284,7 +288,8 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
             Parsetree.pc_bar = None;
             pc_lhs =
               Ast_helper.Pat.alias
-                (Ast_helper.Pat.construct ~loc {txt = Lident "None"; loc} None)
+                (Ast_helper.Pat.construct ~loc {txt = Lident "None"; loc}
+                   (Location.mkloc [] loc))
                 {txt = var_name; loc};
             pc_guard = None;
             pc_rhs = Ast_helper.Exp.ident ~loc {txt = Lident var_name; loc};
@@ -296,7 +301,7 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
             pc_lhs =
               Ast_helper.Pat.alias
                 (Ast_helper.Pat.construct ~loc {txt = Lident "Some"; loc}
-                   (Some (Ast_helper.Pat.any ~loc ())))
+                   (Location.mkloc [Ast_helper.Pat.any ~loc ()] loc))
                 {txt = var_name; loc};
             pc_guard = None;
             pc_rhs = Ast_helper.Exp.ident ~loc {txt = Lident var_name; loc};
@@ -501,7 +506,8 @@ let signature_item_mapper (self : mapper) (sigi : Parsetree.signature_item) :
                   pval_attributes = [];
                 };
           }
-        | Pexp_construct ({txt = Lident (("true" | "false") as txt)}, None) ->
+        | Pexp_construct ({txt = Lident (("true" | "false") as txt)}, {txt = []})
+          ->
           succeed attr pval_attributes;
           {
             sigi with
@@ -617,7 +623,8 @@ let structure_item_mapper (self : mapper) (str : Parsetree.structure_item) :
             };
       }
     | ( Some attr,
-        Pexp_construct ({txt = Lident (("true" | "false") as txt)}, None) ) ->
+        Pexp_construct ({txt = Lident (("true" | "false") as txt)}, {txt = []})
+      ) ->
       succeed attr pvb_attributes;
       {
         str with
@@ -797,7 +804,7 @@ let rec structure_mapper ~await_context (self : mapper) (stru : Ast_structure.t)
             | Pexp_let (_, vbs, expr) -> aux expr @ spelunk_vbs acc vbs
             | Pexp_ifthenelse (_, then_expr, Some else_expr) ->
               aux then_expr @ aux else_expr
-            | Pexp_construct (_, Some expr) -> aux expr
+            | Pexp_construct (_, {txt = [expr]}) -> aux expr
             | Pexp_fun {body = expr} -> aux expr
             | Pexp_constraint (expr, _) -> aux expr
             | Pexp_match (expr, cases) ->

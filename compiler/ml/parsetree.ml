@@ -162,21 +162,27 @@ and package_type = Longident.t loc * (Longident.t loc * core_type) list
        *)
 
 and row_field =
-  | Rtag of label loc * attributes * bool * core_type list
+  | Rtag of label loc * attributes * bool * variant_type_args list
     (* [`A]                   ( true,  [] )
-        [`A of T]              ( false, [T] )
-        [`A of T1 & .. & Tn]   ( false, [T1;...Tn] )
-        [`A of & T1 & .. & Tn] ( true,  [T1;...Tn] )
+        [`A of T]              ( false, [{txt = [T]}] )
+        [`A of T1 & .. & Tn]   ( false, [{txt = [T1]};...;{txt = [Tn]}] )
+        [`A of & T1 & .. & Tn] ( true,  [{txt = [T1]};...;{txt = [Tn]}] )
+
+       Each inner list records the syntactic arity of one payload group:
+       #A(T1, ..., Tn)         [T1; ...; Tn]
+       #A((T1, ..., Tn))       [Ptyp_tuple [T1; ...; Tn]]
 
        - The 2nd field is true if the tag contains a
          constant (empty) constructor.
        - '&' occurs when several types are used for the same constructor
          (see 4.2 in the manual)
 
-       - TODO: switch to a record representation, and keep location
+       - TODO: switch to a record representation
     *)
   | Rinherit of core_type
 (* [ T ] *)
+
+and variant_type_args = core_type list loc
 
 and object_field =
   | Otag of label loc * attributes * core_type
@@ -209,14 +215,27 @@ and pattern_desc =
 
        Invariant: n >= 2
     *)
-  | Ppat_construct of Longident.t loc * pattern option
-    (* C                None
-       C P              Some P
-       C (P1, ..., Pn)  Some (Ppat_tuple [P1; ...; Pn])
+  | Ppat_construct of Longident.t loc * pattern list loc
+    (* C                  []
+       C(P)               [P]
+       C(P1, ..., Pn)     [P1; ...; Pn]
+       C((P1, ..., Pn))   [Ppat_tuple [P1; ...; Pn]]
+
+       The list's location spans the argument parentheses, including both
+       delimiters. For constructors without parentheses or generated nodes,
+       use the enclosing node's location. The v0 bridge uses the payload's
+       location when the original parentheses span is unavailable.
+
+       This list preserves syntax, not the declared constructor arity.
+       Type checking normalizes tuple grouping using the resolved constructor.
     *)
-  | Ppat_variant of label * pattern option
-    (* `A             (None)
-       `A P           (Some P)
+  | Ppat_variant of label * pattern list loc
+    (* #A                  []
+       #A(P)               [P]
+       #A(P1, ..., Pn)     [P1; ...; Pn]
+       #A((P1, ..., Pn))   [Ppat_tuple [P1; ...; Pn]]
+
+       Argument locations follow Ppat_construct.
     *)
   | Ppat_record of
       pattern record_element list * closed_flag * record_pat_rest option
@@ -298,14 +317,24 @@ and expression_desc =
 
        Invariant: n >= 2
     *)
-  | Pexp_construct of Longident.t loc * expression option
-    (* C                None
-       C E              Some E
-       C (E1, ..., En)  Some (Pexp_tuple[E1;...;En])
+  | Pexp_construct of Longident.t loc * expression list loc
+    (* C                  []
+       C(E)               [E]
+       C(E1, ..., En)     [E1; ...; En]
+       C((E1, ..., En))   [Pexp_tuple [E1; ...; En]]
+
+       Argument locations follow Ppat_construct.
+
+       This list preserves syntax, not the declared constructor arity.
+       Type checking normalizes tuple grouping using the resolved constructor.
     *)
-  | Pexp_variant of label * expression option
-    (* `A             (None)
-       `A E           (Some E)
+  | Pexp_variant of label * expression list loc
+    (* #A                  []
+       #A(E)               [E]
+       #A(E1, ..., En)     [E1; ...; En]
+       #A((E1, ..., En))   [Pexp_tuple [E1; ...; En]]
+
+       Argument locations follow Ppat_construct.
     *)
   | Pexp_record of expression record_element list * expression option
     (* { l1=P1; ...; ln=Pn }     (None)

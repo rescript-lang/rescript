@@ -623,7 +623,7 @@ let extract_docs ~entry_point_file ~debug =
 
 let extract_embedded ~extension_points ~filename =
   let {Res_driver.parsetree = structure} =
-    Res_driver.parsing_engine.parse_implementation ~for_printer:false ~filename
+    Res_driver.parsing_engine.parse_implementation ~filename
   in
   let content = ref [] in
   let append item = content := item :: !content in
@@ -801,8 +801,8 @@ module Format_codeblocks = struct
           let formatted_code =
             if lang |> String.split_on_char ' ' |> List.hd = "resi" then
               let {Res_driver.parsetree; comments; invalid; diagnostics} =
-                Res_driver.parse_interface_from_source ~for_printer:true
-                  ~display_filename ~source:code_with_offset
+                Res_driver.parse_interface_from_source ~display_filename
+                  ~source:code_with_offset
               in
               if invalid then (
                 report_parse_error diagnostics;
@@ -812,8 +812,8 @@ module Format_codeblocks = struct
                 |> String.trim |> Cmarkit.Block_line.list_of_string
             else
               let {Res_driver.parsetree; comments; invalid; diagnostics} =
-                Res_driver.parse_implementation_from_source ~for_printer:true
-                  ~display_filename ~source:code_with_offset
+                Res_driver.parse_implementation_from_source ~display_filename
+                  ~source:code_with_offset
               in
               if invalid then (
                 report_parse_error diagnostics;
@@ -898,9 +898,7 @@ module Format_codeblocks = struct
           Ok (formatted_contents, content)
         else Ok (content, content)
       else if Filename.check_suffix path ".res" then
-        let parser =
-          Res_driver.parsing_engine.parse_implementation ~for_printer:true
-        in
+        let parser = Res_driver.parsing_engine.parse_implementation in
         let {Res_driver.parsetree = structure; comments; source; filename} =
           parser ~filename:path
         in
@@ -911,9 +909,7 @@ module Format_codeblocks = struct
         let ast_mapped = mapper.structure mapper structure in
         Ok (Res_printer.print_implementation ast_mapped ~comments, source)
       else if Filename.check_suffix path ".resi" then
-        let parser =
-          Res_driver.parsing_engine.parse_interface ~for_printer:true
-        in
+        let parser = Res_driver.parsing_engine.parse_interface in
         let {Res_driver.parsetree = signature; comments; source; filename} =
           parser ~filename:path
         in
@@ -1157,8 +1153,8 @@ module Extract_codeblocks = struct
           let mapped_code =
             if lang |> String.split_on_char ' ' |> List.hd = "resi" then
               let {Res_driver.parsetree; comments; invalid; diagnostics} =
-                Res_driver.parse_interface_from_source ~for_printer:true
-                  ~display_filename ~source:code_with_offset
+                Res_driver.parse_interface_from_source ~display_filename
+                  ~source:code_with_offset
               in
               if invalid then (
                 report_parse_error diagnostics;
@@ -1167,8 +1163,8 @@ module Extract_codeblocks = struct
                 Res_printer.print_interface parsetree ~comments |> String.trim
             else
               let {Res_driver.parsetree; comments; invalid; diagnostics} =
-                Res_driver.parse_implementation_from_source ~for_printer:true
-                  ~display_filename ~source:code_with_offset
+                Res_driver.parse_implementation_from_source ~display_filename
+                  ~source:code_with_offset
               in
               if invalid then (
                 report_parse_error diagnostics;

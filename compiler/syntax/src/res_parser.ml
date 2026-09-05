@@ -6,12 +6,9 @@ module Reporting = Res_reporting
 
 module Comment = Res_comment
 
-type mode = ParseForTypeChecker | Default
-
 type region_status = Report | Silent
 
 type t = {
-  mode: mode;
   mutable scanner: Scanner.t;
   mutable token: Token.t;
   mutable start_pos: Lexing.position;
@@ -122,11 +119,10 @@ let next_regex_token p =
 let check_progress ~prev_end_pos ~result p =
   if p.end_pos == prev_end_pos then None else Some result
 
-let make ?(mode = ParseForTypeChecker) src filename =
+let make src filename =
   let scanner = Scanner.make ~filename src in
   let parser_state =
     {
-      mode;
       scanner;
       token = Token.Semicolon;
       start_pos = Lexing.dummy_pos;
