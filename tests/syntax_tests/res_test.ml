@@ -45,7 +45,16 @@ let () =
   List.iter
     (fun width ->
       let printed = format ~width source in
-      assert (printed = format ~width printed))
+      let reprinted = format ~width printed in
+      if printed <> reprinted then
+        failwith
+          (Printf.sprintf
+             "Callback comment formatting is unstable at width %d.\n\
+              First pass:\n\
+              %s\n\
+              Second pass:\n\
+              %s"
+             width printed reprinted))
     [20; 40; 80; 100; 120];
   print_endline "✅ callback trailing comments are stable at multiple widths"
 
