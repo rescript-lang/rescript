@@ -40,7 +40,7 @@ Mocha.describe("Exponentiation_test", () => {
     Test_utils.eq("File \"exponentiation_test.res\", line 32, characters 7-14", 2 ** (0 / 10000), 1);
     Test_utils.eq("File \"exponentiation_test.res\", line 33, characters 7-14", 2 ** (3 * 4), 4096);
     Test_utils.eq("File \"exponentiation_test.res\", line 34, characters 7-14", 2 ** (5 % 3), 4);
-    Test_utils.eq("File \"exponentiation_test.res\", line 35, characters 7-14", 2n ** (3n * 2n), 64n);
+    Test_utils.eq("File \"exponentiation_test.res\", line 35, characters 7-14", bigintPowMul(2n, 3n, 2n), 64n);
   });
 });
 

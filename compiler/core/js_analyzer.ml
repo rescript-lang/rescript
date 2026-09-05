@@ -130,7 +130,21 @@ let rec no_side_effect_expression_desc (x : J.expression_desc) =
     && Ext_list.for_all_snd kvs no_side_effect
   | String_append (a, b) | Seq (a, b) -> no_side_effect a && no_side_effect b
   | Length e | Caml_block_tag (e, _) | Typeof e -> no_side_effect e
-  | Bin (op, a, b) -> op <> Eq && no_side_effect a && no_side_effect b
+  | Bin (Eq, _, _) -> false
+  | Bin (((Pow | Div | Mod) as op), a, b) ->
+    (* On BigInt operands these throw: [**] on a negative exponent, [/] and
+       [%] on a zero divisor. The operand types are not known here, so only a
+       literal right operand that cannot throw is taken as pure. *)
+    let safe_literal =
+      match b.expression_desc with
+      | Number (BigInt {positive; value}) ->
+        if op = Pow then positive else value <> "0"
+      | Number (Int {i}) -> op = Pow || i <> 0l
+      | Number (Float _) -> true
+      | _ -> false
+    in
+    safe_literal && no_side_effect a
+  | Bin (_, a, b) -> no_side_effect a && no_side_effect b
   | Tagged_template (call_expr, _, values) ->
     no_side_effect call_expr && Ext_list.for_all values no_side_effect
   | Js_not e | Js_bnot e -> no_side_effect e

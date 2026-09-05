@@ -16,6 +16,12 @@ let write block index value =
 
 let debugger = Lambda.prim ~primitive:Pdebugger ~args:[] loc
 
+let bigint_power =
+  Lambda.prim ~primitive:Ppowbigint
+    ~args:
+      [Lambda.var (Ident.create "base"); Lambda.var (Ident.create "exponent")]
+    loc
+
 let count_debuggers lam =
   let count = ref 0 in
   let rec loop (lam : Lambda.t) =
@@ -31,6 +37,14 @@ let count_debuggers lam =
   in
   loop lam;
   !count
+
+let contains_bigint_power lam =
+  let rec loop (lam : Lambda.t) =
+    match lam with
+    | Lprim {primitive = Ppowbigint} -> true
+    | _ -> Lambda.shallow_exists loop lam
+  in
+  loop lam
 
 let contains_storage lam =
   let rec loop (lam : Lambda.t) =
@@ -170,6 +184,18 @@ let suites =
              assert_bool "write-only fields have no scalar storage"
                (not (contains_storage replacement))
            | None -> assert_failure "expected write-only fields to scalarize" );
+         ( "keeps a throwing write value as an effect" >:: fun _ ->
+           let block = Ident.create "cell" in
+           match
+             Lam_pass_sroa.replace ~block ~info:Lambda.ref_tag_info
+               ~initializers:[Lambda.const (Lambda.Const_bigint (true, "0"))]
+               (write block 0 bigint_power)
+           with
+           | Some replacement ->
+             assert_bool "the value that may raise is still evaluated"
+               (contains_bigint_power replacement)
+           | None -> assert_failure "expected the write-only field to scalarize"
+         );
          ( "removes write-only storage captured by a closure" >:: fun _ ->
            let block = Ident.create "cell" in
            let closure =
