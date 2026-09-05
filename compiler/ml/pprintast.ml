@@ -465,10 +465,8 @@ and pattern1 ctxt (f : Format.formatter) (x : pattern) : unit =
     | Ppat_construct ({txt = Lident ("()" | "[]"); _}, _) ->
       simple_pattern ctxt f x
     | Ppat_construct (({txt; _} as li), {txt = po}) -> (
-      if
-        (* FIXME The third field always false *)
-        txt = Lident "::"
-      then pp f "%a" pattern_list_helper x
+      if txt = Lident "::" && List.length po = 2 then
+        pp f "%a" pattern_list_helper x
       else
         match po with
         | [] -> pp f "%a" longident_loc li

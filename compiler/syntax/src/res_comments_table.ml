@@ -296,7 +296,10 @@ let partition_between_lines start_line end_line comments =
 let rec collect_list_patterns acc pattern =
   let open Parsetree in
   match pattern.ppat_desc with
-  | Ppat_construct ({txt = Longident.Lident "::"}, {txt = [pat; rest]}) ->
+  | Ppat_construct ({txt = Longident.Lident "::"}, {txt = [pat; rest]})
+  | Ppat_construct
+      ( {txt = Longident.Lident "::"},
+        {txt = [{ppat_desc = Ppat_tuple [pat; rest]}]} ) ->
     collect_list_patterns (pat :: acc) rest
   | Ppat_construct ({txt = Longident.Lident "[]"}, {txt = []}) -> List.rev acc
   | _ -> List.rev (pattern :: acc)
@@ -304,7 +307,10 @@ let rec collect_list_patterns acc pattern =
 let rec collect_list_exprs acc expr =
   let open Parsetree in
   match expr.pexp_desc with
-  | Pexp_construct ({txt = Longident.Lident "::"}, {txt = [expr; rest]}) ->
+  | Pexp_construct ({txt = Longident.Lident "::"}, {txt = [expr; rest]})
+  | Pexp_construct
+      ( {txt = Longident.Lident "::"},
+        {txt = [{pexp_desc = Pexp_tuple [expr; rest]}]} ) ->
     collect_list_exprs (expr :: acc) rest
   | Pexp_construct ({txt = Longident.Lident "[]"}, _) -> List.rev acc
   | _ -> List.rev (expr :: acc)

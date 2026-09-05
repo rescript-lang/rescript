@@ -300,13 +300,13 @@ let attr_names attrs = List.map (fun ({Location.txt}, _) -> txt) attrs
 let test_list_constructor_wire_shape _ =
   let lid name = Location.mknoloc (Longident.Lident name) in
   List.iter
-    (fun attrs ->
+    (fun (attrs, payload_attrs) ->
       let expr0 =
         List.fold_right
           (fun value tail ->
             Ast_helper0.Exp.construct ~loc ~attrs (lid "::")
               (Some
-                 (Ast_helper0.Exp.tuple ~loc
+                 (Ast_helper0.Exp.tuple ~loc ~attrs:payload_attrs
                     [
                       Ast_helper0.Exp.constant ~loc
                         (Parsetree0.Pconst_integer (value, None));
@@ -320,24 +320,46 @@ let test_list_constructor_wire_shape _ =
           (fun name tail ->
             Ast_helper0.Pat.construct ~loc ~attrs (lid "::")
               (Some
-                 (Ast_helper0.Pat.tuple ~loc
+                 (Ast_helper0.Pat.tuple ~loc ~attrs:payload_attrs
                     [Ast_helper0.Pat.var ~loc (Location.mknoloc name); tail])))
           ["head"; "next"]
           (Ast_helper0.Pat.construct ~loc (lid "[]") None)
       in
       let expr = map_expr0 expr0 in
       let pat = map_pat0 pat0 in
-      (match (expr.pexp_desc, pat.ppat_desc) with
-      | Pexp_construct (_, {txt = [_; _]}), Ppat_construct (_, {txt = [_; _]})
-        ->
+      (match (payload_attrs, expr.pexp_desc, pat.ppat_desc) with
+      | ( [],
+          Pexp_construct (_, {txt = [_; _]}),
+          Ppat_construct (_, {txt = [_; _]}) ) ->
+        ()
+      | ( _ :: _,
+          Pexp_construct (_, {txt = [{pexp_desc = Pexp_tuple [_; _]}]}),
+          Ppat_construct (_, {txt = [{ppat_desc = Ppat_tuple [_; _]}]}) ) ->
         ()
       | _ ->
-        assert_failure "Unmarked cons payloads must decode to two arguments");
+        assert_failure "Attributed cons payloads must retain their tuple node");
       OUnit.assert_equal ~msg:"list expression wire shape and attributes" expr0
         (map_expr_to0 expr);
       OUnit.assert_equal ~msg:"list pattern wire shape and attributes" pat0
-        (map_pat_to0 pat))
-    [[]; [attr "public_attr" (Parsetree0.PStr [])]]
+        (map_pat_to0 pat);
+      let structure =
+        [
+          Ast_helper.Str.value ~loc Nonrecursive [Ast_helper.Vb.mk ~loc pat expr];
+        ]
+      in
+      ignore (Typemod.type_structure Env.initial_safe_string structure loc);
+      let printed =
+        Res_printer.print_implementation structure ~comments:[] ~width:80
+      in
+      let parsed =
+        Res_driver.parse_implementation_from_source
+          ~display_filename:"ListPayloadAttributes.res" ~source:printed
+      in
+      OUnit.assert_bool "attributed list payloads remain printable"
+        (not parsed.invalid);
+      ignore (Format.asprintf "%a" Pprintast.structure structure))
+    (let attrs = [attr "public_attr" (Parsetree0.PStr [])] in
+     [([], []); (attrs, []); ([], attrs); (attrs, attrs)])
 
 let test_constructor_args_roundtrip_through_ast0 _ =
   let int_expr value =
