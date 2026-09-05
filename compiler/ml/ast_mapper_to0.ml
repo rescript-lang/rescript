@@ -113,13 +113,13 @@ let add_constructor_args_attr attrs =
   (Location.mknoloc constructor_args_attr_name, Pt.PStr []) :: attrs
 
 (* See the constructor argument bridge contract at Ast_mapper_from0.decode_args. *)
-let encode_args ~map ~tuple ~loc ~attrs ~mark_args args =
+let encode_args ~map ~tuple ~attrs ~mark_args args =
   match List.map map args with
   | [] -> (None, attrs)
   | [arg] -> (Some arg, attrs)
   | args ->
     let attrs = if mark_args then add_constructor_args_attr attrs else attrs in
-    (Some (tuple ~loc args), attrs)
+    (Some (tuple args), attrs)
 
 let add_record_rest_attr ~rest attrs =
   (Location.mknoloc record_rest_attr_name, Pt.PPat (rest, None)) :: attrs
@@ -584,8 +584,8 @@ module E = struct
       let args_loc = sub.location sub args_loc in
       let arg, attrs =
         encode_args ~map:(sub.expr sub)
-          ~tuple:(fun ~loc args -> Ast_helper0.Exp.tuple ~loc args)
-          ~loc:args_loc ~attrs
+          ~tuple:(fun args -> Ast_helper0.Exp.tuple ~loc:args_loc args)
+          ~attrs
           ~mark_args:(lid.txt <> Longident.Lident "::")
           args
       in
@@ -594,8 +594,8 @@ module E = struct
       let args_loc = sub.location sub args_loc in
       let arg, attrs =
         encode_args ~map:(sub.expr sub)
-          ~tuple:(fun ~loc args -> Ast_helper0.Exp.tuple ~loc args)
-          ~loc:args_loc ~attrs ~mark_args:true args
+          ~tuple:(fun args -> Ast_helper0.Exp.tuple ~loc:args_loc args)
+          ~attrs ~mark_args:true args
       in
       variant ~loc ~attrs lab arg
     | Pexp_record (l, eo) ->
@@ -836,8 +836,8 @@ module P = struct
       let args_loc = sub.location sub args_loc in
       let arg, attrs =
         encode_args ~map:(sub.pat sub)
-          ~tuple:(fun ~loc args -> Ast_helper0.Pat.tuple ~loc args)
-          ~loc:args_loc ~attrs
+          ~tuple:(fun args -> Ast_helper0.Pat.tuple ~loc:args_loc args)
+          ~attrs
           ~mark_args:(l.txt <> Longident.Lident "::")
           args
       in
@@ -846,8 +846,8 @@ module P = struct
       let args_loc = sub.location sub args_loc in
       let arg, attrs =
         encode_args ~map:(sub.pat sub)
-          ~tuple:(fun ~loc args -> Ast_helper0.Pat.tuple ~loc args)
-          ~loc:args_loc ~attrs ~mark_args:true args
+          ~tuple:(fun args -> Ast_helper0.Pat.tuple ~loc:args_loc args)
+          ~attrs ~mark_args:true args
       in
       variant ~loc ~attrs l arg
     | Ppat_record (lpl, cf, rest) ->
