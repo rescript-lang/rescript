@@ -352,6 +352,7 @@ module E = struct
     | Pexp_for_await_of (p, e1, e2) ->
       Exp.mk ~loc ~attrs
         (Pexp_for_await_of (sub.pat sub p, sub.expr sub e1, sub.expr sub e2))
+    | Pexp_regexp {pattern; flags} -> regexp ~loc ~attrs pattern flags
     | Pexp_template {source_segments; values} ->
       Exp.template ~loc ~attrs
         (List.map (map_loc sub) source_segments)

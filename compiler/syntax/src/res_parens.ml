@@ -327,11 +327,11 @@ let jsx_prop_expr expr =
       | _ when Parsetree_viewer.expr_is_await expr -> Parenthesized
       | {
        Parsetree.pexp_desc =
-         ( Pexp_ident _ | Pexp_constant _ | Pexp_field _ | Pexp_construct _
-         | Pexp_variant _ | Pexp_array _ | Pexp_pack _ | Pexp_record _
-         | Pexp_object_literal _ | Pexp_extension _ | Pexp_letmodule _
-         | Pexp_letexception _ | Pexp_open _ | Pexp_sequence _ | Pexp_let _
-         | Pexp_tuple _ );
+         ( Pexp_ident _ | Pexp_constant _ | Pexp_regexp _ | Pexp_field _
+         | Pexp_construct _ | Pexp_variant _ | Pexp_array _ | Pexp_pack _
+         | Pexp_record _ | Pexp_object_literal _ | Pexp_extension _
+         | Pexp_letmodule _ | Pexp_letexception _ | Pexp_open _
+         | Pexp_sequence _ | Pexp_let _ | Pexp_tuple _ );
        pexp_attributes = [];
       } ->
         Nothing
@@ -365,11 +365,11 @@ let jsx_child_expr expr =
       | _ when Parsetree_viewer.expr_is_await expr -> Parenthesized
       | {
        Parsetree.pexp_desc =
-         ( Pexp_ident _ | Pexp_constant _ | Pexp_field _ | Pexp_construct _
-         | Pexp_variant _ | Pexp_array _ | Pexp_pack _ | Pexp_record _
-         | Pexp_object_literal _ | Pexp_extension _ | Pexp_letmodule _
-         | Pexp_letexception _ | Pexp_open _ | Pexp_sequence _ | Pexp_let _
-         | Pexp_jsx_element _ );
+         ( Pexp_ident _ | Pexp_constant _ | Pexp_regexp _ | Pexp_field _
+         | Pexp_construct _ | Pexp_variant _ | Pexp_array _ | Pexp_pack _
+         | Pexp_record _ | Pexp_object_literal _ | Pexp_extension _
+         | Pexp_letmodule _ | Pexp_letexception _ | Pexp_open _
+         | Pexp_sequence _ | Pexp_let _ | Pexp_jsx_element _ );
        pexp_attributes = [];
       } ->
         Nothing

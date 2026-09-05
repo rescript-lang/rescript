@@ -123,7 +123,7 @@ let map_pattern_constant ~loc = function
   | constant -> map_constant ~loc constant
 
 let is_raw_source_extension = function
-  | "raw" | "ffi" | "re" -> true
+  | "raw" | "ffi" -> true
   | _ -> false
 
 let map_raw_source_payload sub = function
@@ -1132,6 +1132,49 @@ module E = struct
     | Pexp_pack me -> pack ~loc ~attrs (sub.module_expr sub me)
     | Pexp_open (ovf, lid, e) ->
       open_ ~loc ~attrs ovf (map_loc sub lid) (sub.expr sub e)
+    | Pexp_extension ({txt = "re"}, payload) -> (
+      let malformed ~loc =
+        Location.raise_errorf ~loc
+          "A PPX returned a malformed regexp payload. Expected a string \
+           containing one regexp literal."
+      in
+      match payload with
+      | PStr
+          [
+            {
+              pstr_desc =
+                Pstr_eval
+                  ( {
+                      pexp_desc = Pexp_constant (Pconst_string (source, _));
+                      pexp_loc = source_loc;
+                      pexp_attributes = source_attrs;
+                    },
+                    eval_attrs );
+            };
+          ] -> (
+        let env = Parser_env.init_env None source in
+        let (_, expression), errors =
+          Parser_flow.do_parse env Parser_flow.Parse.expression false
+        in
+        match expression with
+        | Flow_ast.Expression.RegExpLiteral {pattern; raw}
+          when errors = [] && Parser_env.Peek.token env = Token.T_EOF ->
+          (* Flow filters unknown flags in its [flags] field. Keep the raw
+             spelling so the bridge never silently changes a PPX's regexp. *)
+          let flags_start = String.length pattern + 2 in
+          let flags =
+            String.sub raw flags_start (String.length raw - flags_start)
+          in
+          (* Payload wrappers disappear at this boundary. Keep the expression's
+             location and transfer both levels of payload attributes to it. *)
+          regexp ~loc
+            ~attrs:
+              (attrs
+              @ sub.attributes sub eval_attrs
+              @ sub.attributes sub source_attrs)
+            pattern flags
+        | _ -> malformed ~loc:(sub.location sub source_loc))
+      | _ -> malformed ~loc)
     | Pexp_extension x -> extension ~loc ~attrs (sub.extension sub x)
     | Pexp_unreachable -> assert false
 end
@@ -1369,6 +1412,9 @@ let default_mapper =
     location = (fun _this l -> l);
     extension =
       (fun this (s, payload) ->
+        if s.txt = "re" then
+          Location.raise_errorf ~loc:(this.location this s.loc)
+            "A PPX returned a regexp extension outside an expression.";
         let payload =
           if is_raw_source_extension s.txt then
             match map_raw_source_payload this payload with

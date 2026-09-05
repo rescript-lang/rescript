@@ -2048,15 +2048,7 @@ and parse_constrained_expr_region p =
 and parse_regex ~start_pos p pattern flags =
   Parser.next p;
   let loc = mk_loc start_pos (Parser.position p) in
-  let payload =
-    Parsetree.PStr
-      [
-        Ast_helper.Str.eval ~loc
-          (Ast_helper.Exp.constant ~loc
-             (Pconst_raw_source ("/" ^ pattern ^ "/" ^ flags)));
-      ]
-  in
-  Ast_helper.Exp.extension (Location.mkloc "re" loc, payload)
+  Ast_helper.Exp.regexp ~loc pattern flags
 
 (* Atomic expressions represent unambiguous expressions.
  * This means that regardless of the context, these expressions

@@ -191,6 +191,53 @@ let suites =
   __FILE__
   >::: switch_tests
        @ [
+           ( "regexp literals lower to raw JavaScript" >:: fun _ ->
+             let expression = Ast_helper.Exp.regexp {|a\/b\d|} "ig" in
+             let lowered =
+               Bs_builtin_ppx.mapper.expr Bs_builtin_ppx.mapper expression
+             in
+             let raw =
+               match lowered.Parsetree.pexp_desc with
+               | Pexp_constraint
+                   ( raw,
+                     {
+                       ptyp_desc =
+                         Ptyp_constr
+                           ( {txt = Longident.Ldot (Lident "Stdlib_RegExp", "t")},
+                             [] );
+                     } ) ->
+                 raw
+               | _ -> OUnit.assert_failure "expected the regexp type constraint"
+             in
+             let structure =
+               [
+                 Ast_helper.Str.value Asttypes.Nonrecursive
+                   [
+                     Ast_helper.Vb.mk
+                       (Ast_helper.Pat.var (Location.mknoloc "regexp"))
+                       raw;
+                   ];
+               ]
+             in
+             let typed, _, _ =
+               Typemod.type_structure Env.initial_safe_string structure
+                 Location.none
+             in
+             let implementation =
+               Translmod.transl_implementation "RegexpTest"
+                 (typed, Typedtree.Tcoerce_none)
+             in
+             let sources = ref [] in
+             let rec collect lambda =
+               (match lambda with
+               | Lambda.Lprim {primitive = Praw_js_code {code}; args = []} ->
+                 sources := code :: !sources
+               | _ -> ());
+               Lambda_traverse.iter collect lambda
+             in
+             collect implementation.lambda;
+             OUnit.assert_equal ~printer:Ext_obj.dump [{|/a\/b\d/ig|}] !sources
+           );
            ( "typed string constants" >:: fun _ ->
              Lambda.const_string "value" =~ Lambda.Const_string "value" );
            ( "compiler-generated strings normalize malformed bytes" >:: fun _ ->

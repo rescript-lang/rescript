@@ -763,6 +763,8 @@ module Sexp_ast = struct
           ]
       | Pexp_extension ext ->
         Sexp.list [Sexp.atom "Pexp_extension"; extension ext]
+      | Pexp_regexp {pattern; flags} ->
+        Sexp.list [Sexp.atom "Pexp_regexp"; string pattern; string flags]
       | Pexp_template {source_segments; values} ->
         Sexp.list
           [

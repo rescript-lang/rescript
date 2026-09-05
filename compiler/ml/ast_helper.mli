@@ -226,6 +226,8 @@ module Exp : sig
   val object_literal :
     ?loc:loc -> ?attrs:attrs -> (str * expression) list -> expression
 
+  val regexp : ?loc:loc -> ?attrs:attrs -> string -> string -> expression
+
   val template :
     ?loc:loc -> ?attrs:attrs -> str list -> expression list -> expression
   val letmodule :

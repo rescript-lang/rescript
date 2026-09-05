@@ -1055,7 +1055,141 @@ let test_raw_extension_payloads_roundtrip_through_ast0 _ =
       assert_raw_extension_payload ~name ~expected:encoded expression;
       assert_raw_extension_payload ~name ~expected:encoded
         (map_expr0 (map_expr_to0 expression)))
-    ["raw"; "ffi"; "re"]
+    ["raw"; "ffi"]
+
+let test_regexp_parser_locations _ =
+  let source = "let re = /a/g" in
+  let result =
+    Res_driver.parse_implementation_from_source ~display_filename:"Regexp.res"
+      ~source
+  in
+  OUnit.assert_bool "valid regexp" (not result.invalid);
+  match result.parsetree with
+  | [
+   {
+     Parsetree.pstr_desc =
+       Pstr_value
+         ( _,
+           [
+             {
+               pvb_expr =
+                 {
+                   pexp_desc = Pexp_regexp {pattern = "a"; flags = "g"};
+                   pexp_loc;
+                 };
+             };
+           ] );
+   };
+  ] ->
+    OUnit.assert_equal 9 pexp_loc.loc_start.pos_cnum;
+    OUnit.assert_equal 13 pexp_loc.loc_end.pos_cnum
+  | _ -> assert_failure "Expected a located regexp expression"
+
+let test_regexp_roundtrip_through_ast0 _ =
+  let loc = source_loc 10 31 in
+  let attrs = [attr "test.regexp" (Parsetree.PStr [])] in
+  let expression = Ast_helper.Exp.regexp ~loc ~attrs {|a\/[/]\d|} "ig" in
+  let expression0 = map_expr_to0 expression in
+  (match expression0.pexp_desc with
+  | Pexp_extension
+      ( {txt = "re"; loc = name_loc},
+        PStr
+          [
+            {
+              pstr_desc =
+                Pstr_eval
+                  ( {
+                      pexp_desc =
+                        Pexp_constant (Pconst_string (source, Some "js"));
+                      pexp_loc;
+                      pexp_attributes = [];
+                    },
+                    [] );
+              pstr_loc;
+            };
+          ] ) ->
+    OUnit.assert_equal {|/a\/[/]\d/ig|} source;
+    OUnit.assert_equal loc name_loc;
+    OUnit.assert_equal loc pexp_loc;
+    OUnit.assert_equal loc pstr_loc
+  | _ -> assert_failure "Expected the legacy regexp extension wire shape");
+  OUnit.assert_equal expression (map_expr0 expression0)
+
+let regexp_payload0 ?(delimiter = Some "js") source =
+  let outer_loc = source_loc 10 50 in
+  Ast_helper0.Exp.extension ~loc:outer_loc
+    ~attrs:[attr "test.outer" (Parsetree0.PStr [])]
+    ( Location.mkloc "re" (source_loc 11 13),
+      Parsetree0.PStr
+        [
+          Ast_helper0.Str.eval ~loc:(source_loc 14 49)
+            ~attrs:[attr "test.eval" (Parsetree0.PStr [])]
+            (Ast_helper0.Exp.constant ~loc:(source_loc 15 48)
+               ~attrs:[attr "test.payload" (Parsetree0.PStr [])]
+               (Parsetree0.Pconst_string (source, delimiter)));
+        ] )
+
+let test_ppx_regexp_payloads _ =
+  List.iter
+    (fun delimiter ->
+      let expression =
+        map_expr0 (regexp_payload0 ~delimiter {| /a\/[/]\d/ig |})
+      in
+      let expected =
+        Ast_helper.Exp.regexp ~loc:(source_loc 10 50)
+          ~attrs:
+            (List.map
+               (fun name -> attr name (Parsetree.PStr []))
+               ["test.outer"; "test.eval"; "test.payload"])
+          {|a\/[/]\d|} "ig"
+      in
+      OUnit.assert_equal expected expression;
+      OUnit.assert_equal expected (map_expr0 (map_expr_to0 expression)))
+    [None; Some "js"; Some "*j"; Some "quoted"];
+  (* The JS parser's filtered flags must not silently change PPX output. *)
+  match (map_expr0 (regexp_payload0 "/a/zig")).pexp_desc with
+  | Pexp_regexp {pattern = "a"; flags = "zig"} -> ()
+  | _ -> assert_failure "Expected the original regexp flags"
+
+let test_malformed_ppx_regexp_payloads _ =
+  let reject expression0 expected_loc =
+    match map_expr0 expression0 with
+    | _ ->
+      assert_failure
+        "Expected malformed PPX regexp to be rejected at the bridge"
+    | exception Location.Error error ->
+      OUnit.assert_equal expected_loc error.loc;
+      OUnit.assert_equal
+        "A PPX returned a malformed regexp payload. Expected a string \
+         containing one regexp literal."
+        error.msg
+  in
+  List.iter
+    (fun source -> reject (regexp_payload0 source) (source_loc 15 48))
+    ["not a literal"; ""; "/a"; "/[/"; "/a/; other()"; "/a/ + /b/"];
+  reject
+    (Ast_helper0.Exp.extension ~loc (Location.mknoloc "re", Parsetree0.PStr []))
+    loc;
+  reject
+    (Ast_helper0.Exp.extension ~loc
+       ( Location.mknoloc "re",
+         Parsetree0.PStr
+           [
+             Ast_helper0.Str.eval
+               (Ast_helper0.Exp.constant
+                  (Parsetree0.Pconst_integer ("1", None)));
+           ] ))
+    loc;
+  match
+    Ast_mapper_from0.default_mapper.extension Ast_mapper_from0.default_mapper
+      (Location.mkloc "re" (source_loc 1 3), Parsetree0.PStr [])
+  with
+  | _ ->
+    assert_failure "Expected non-expression regexp extension to be rejected"
+  | exception Location.Error error ->
+    OUnit.assert_equal (source_loc 1 3) error.loc;
+    OUnit.assert_equal
+      "A PPX returned a regexp extension outside an expression." error.msg
 
 let test_tagged_templates_roundtrip_through_ast0 _ =
   let head_loc = source_loc 4 16 in
@@ -1353,6 +1487,10 @@ let suites =
          >:: test_ppx_byte_strings_convert_to_valid_utf8;
          "string_literals_roundtrip_through_ast0"
          >:: test_string_literals_roundtrip_through_ast0;
+         "regexp_parser_locations" >:: test_regexp_parser_locations;
+         "regexp_roundtrip_through_ast0" >:: test_regexp_roundtrip_through_ast0;
+         "ppx_regexp_payloads" >:: test_ppx_regexp_payloads;
+         "malformed_ppx_regexp_payloads" >:: test_malformed_ppx_regexp_payloads;
          "raw_extension_payloads_roundtrip_through_ast0"
          >:: test_raw_extension_payloads_roundtrip_through_ast0;
          "tagged_templates_roundtrip_through_ast0"

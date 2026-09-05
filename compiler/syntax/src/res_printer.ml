@@ -3485,6 +3485,7 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
         Doc.text expr
       | extension ->
         print_extension ~state ~at_module_lvl:false extension cmt_tbl)
+    | Pexp_regexp {pattern; flags} -> Doc.text ("/" ^ pattern ^ "/" ^ flags)
     | Pexp_template {source_segments; values} ->
       print_template_literal ~state ~source_segments ~values cmt_tbl
     | Pexp_tagged_template {tag; raw_sources; values} ->

@@ -390,6 +390,7 @@ module E = struct
       iter_loc sub lid;
       sub.expr sub e
     | Pexp_extension x -> sub.extension sub x
+    | Pexp_regexp _ -> ()
     | Pexp_template {values} -> List.iter (sub.expr sub) values
     | Pexp_tagged_template {tag; values} ->
       sub.expr sub tag;

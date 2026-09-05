@@ -652,6 +652,15 @@ module E = struct
         ~attrs:(for_await_of_attr :: attrs)
         (sub.pat sub pat) start_expr end_expr Asttypes.Upto
         (sub.expr sub body_expr)
+    | Pexp_regexp {pattern; flags} ->
+      extension ~loc ~attrs
+        ( Location.mkloc "re" loc,
+          Pt.PStr
+            [
+              Ast_helper0.Str.eval ~loc
+                (Ast_helper0.Exp.constant ~loc
+                   (Pt.Pconst_string ("/" ^ pattern ^ "/" ^ flags, Some "js")));
+            ] )
     | Pexp_template {source_segments; values} ->
       let segments =
         List.map

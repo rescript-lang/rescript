@@ -389,6 +389,9 @@ and expression_desc =
     (* for pattern of array_expr do body_expr *)
   | Pexp_for_await_of of pattern * expression * expression
   (* for await pattern of iterable_expr do body_expr *)
+  | Pexp_regexp of {pattern: string; flags: string}
+  (* Literal source without delimiters; escapes and flag order are preserved.
+     Validation happens during frontend lowering, not AST construction. *)
   | Pexp_template of {source_segments: string loc list; values: expression list}
   (* An ordinary backquoted expression. [source_segments] contains the validated
      text between and around the interpolations, including escape spelling;

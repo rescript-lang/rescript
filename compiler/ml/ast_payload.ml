@@ -176,6 +176,31 @@ let constructor_tag_of_payload payload =
             | Some (Lident "undefined") -> Some Pct_undefined
             | Some _ | None -> None)))))
 
+let validate_raw_source ~(kind : Js_raw_info.raw_kind) ?is_function ~loc ~offset
+    str =
+  Bs_flow_ast_utils.check_flow_errors ~loc ~offset
+    (match kind with
+    | Raw_re | Raw_exp ->
+      let ((_loc, expression) as program), errors =
+        let open Parser_flow in
+        let env = Parser_env.init_env None str in
+        do_parse env Parse.expression false
+      in
+      (if kind = Raw_re then
+         match expression with
+         | RegExpLiteral _ -> ()
+         | _ ->
+           Location.raise_errorf ~loc
+             "Syntax error: a valid JS regex literal expected");
+      (match is_function with
+      | Some is_function -> (
+        match Classify_function.classify_exp program with
+        | Js_function {arity; _} -> is_function := Some arity
+        | _ -> ())
+      | None -> ());
+      errors
+    | Raw_program -> snd (Parser_flow.parse_program false None str))
+
 let raw_as_string_exp_exn ~(kind : Js_raw_info.raw_kind) ?is_function (x : t) :
     Parsetree.expression option =
   let string_expression =
@@ -214,28 +239,7 @@ let raw_as_string_exp_exn ~(kind : Js_raw_info.raw_kind) ?is_function (x : t) :
   in
   match string_expression with
   | Some (str, offset, ({pexp_loc = loc} as expression)) ->
-    Bs_flow_ast_utils.check_flow_errors ~loc ~offset
-      (match kind with
-      | Raw_re | Raw_exp ->
-        let ((_loc, expression) as program), errors =
-          let open Parser_flow in
-          let env = Parser_env.init_env None str in
-          do_parse env Parse.expression false
-        in
-        (if kind = Raw_re then
-           match expression with
-           | RegExpLiteral _ -> ()
-           | _ ->
-             Location.raise_errorf ~loc
-               "Syntax error: a valid JS regex literal expected");
-        (match is_function with
-        | Some is_function -> (
-          match Classify_function.classify_exp program with
-          | Js_function {arity; _} -> is_function := Some arity
-          | _ -> ())
-        | None -> ());
-        errors
-      | Raw_program -> snd (Parser_flow.parse_program false None str));
+    validate_raw_source ~kind ?is_function ~loc ~offset str;
     Some {expression with pexp_desc = Pexp_constant (Pconst_raw_source str)}
   | None -> None
 

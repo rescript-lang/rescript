@@ -112,6 +112,23 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
   in_function_def := false;
   match e.pexp_desc with
   (* Its output should not be rewritten anymore *)
+  | Pexp_regexp {pattern; flags} ->
+    let loc = e.pexp_loc in
+    let source = "/" ^ pattern ^ "/" ^ flags in
+    Ast_payload.validate_raw_source ~kind:Raw_re ~loc ~offset:0 source;
+    let raw =
+      Ast_external_mk.local_external_apply loc
+        ~pval_prim:(Prim_name "#raw_expr")
+        ~pval_type:
+          (Ast_helper.Typ.arrow
+             [{attrs = []; lbl = Nolabel; typ = Ast_helper.Typ.any ()}]
+             (Ast_helper.Typ.any ()))
+        [Ast_helper.Exp.constant ~loc (Pconst_raw_source source)]
+    in
+    Ast_helper.Exp.constraint_ ~loc
+      ~attrs:(self.attributes self e.pexp_attributes)
+      {e with pexp_desc = raw; pexp_attributes = []}
+      (Ast_comb.to_regexp_type loc)
   | Pexp_extension extension ->
     Ast_exp_extension.handle_extension e self extension
   | Pexp_constant (Pconst_integer (s, Some 'l')) ->

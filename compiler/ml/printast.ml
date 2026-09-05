@@ -382,6 +382,8 @@ and expression i ppf x =
   | Pexp_extension (s, arg) ->
     line i ppf "Pexp_extension \"%s\"\n" s.txt;
     payload i ppf arg
+  | Pexp_regexp {pattern; flags} ->
+    line i ppf "Pexp_regexp %S %S\n" pattern flags
   | Pexp_template {source_segments; values} ->
     line i ppf "Pexp_template\n";
     List.iter
