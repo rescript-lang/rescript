@@ -16,6 +16,8 @@ type fieldUses = {
 
 type cell = {mutable value: int}
 
+type bigintCell = {mutable dead: bigint, mutable live: int}
+
 let localPair = () => {
   let pair = {left: 10, right: 20}
   pair.left = pair.left + 1
@@ -111,6 +113,12 @@ let readOnlyFieldSnapshotsInitializer = () => {
   cell.value
 }
 
+let writeOnlyFieldStillRaises = () => {
+  let cell = {dead: 0n, live: 42}
+  cell.dead = 2n ** -1n
+  cell.live
+}
+
 describe(__MODULE__, () => {
   test("scalarizes a local mutable record", () => eq(__LOC__, 42, localPair()))
   test("shares scalar fields with closures", () => eq(__LOC__, 32, capturedPair()))
@@ -130,5 +138,8 @@ describe(__MODULE__, () => {
   )
   test("read-only fields snapshot their initializer", () =>
     eq(__LOC__, 1, readOnlyFieldSnapshotsInitializer())
+  )
+  test("preserves exceptions from write-only field values", () =>
+    throws(__LOC__, writeOnlyFieldStillRaises)
   )
 })

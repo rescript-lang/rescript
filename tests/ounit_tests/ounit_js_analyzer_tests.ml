@@ -79,6 +79,29 @@ let suites =
            OUnit.assert_bool __LOC__
              (not (Js_analyzer.no_side_effect_statement for_of_statement)) );
          ( __LOC__ >:: fun _ ->
+           (* [2n ** -1n] throws *)
+           OUnit.assert_bool __LOC__
+             (not
+                (Js_analyzer.no_side_effect_expression
+                   (Js_exp_make.bigint_op Js_op.Pow
+                      (Js_exp_make.bigint true "2")
+                      (Js_exp_make.bigint false "1")))) );
+         ( __LOC__ >:: fun _ ->
+           (* an unknown divisor may be a zero BigInt *)
+           OUnit.assert_bool __LOC__
+             (not
+                (Js_analyzer.no_side_effect_expression
+                   (Js_exp_make.bigint_op Js_op.Div
+                      (Js_exp_make.var (Ident.create "a"))
+                      (Js_exp_make.var (Ident.create "b"))))) );
+         ( __LOC__ >:: fun _ ->
+           (* a literal right operand that cannot throw keeps it pure *)
+           OUnit.assert_bool __LOC__
+             (Js_analyzer.no_side_effect_expression
+                (Js_exp_make.bigint_op Js_op.Mod
+                   (Js_exp_make.var (Ident.create "a"))
+                   (Js_exp_make.int 2l))) );
+         ( __LOC__ >:: fun _ ->
            OUnit.assert_bool __LOC__
              (not (Js_analyzer.no_side_effect_statement for_await_of_statement))
          );
