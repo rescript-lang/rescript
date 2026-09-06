@@ -98,3 +98,13 @@ let beforeJsx = () => {
   let value = (x :> string)
   <option value />
 }
+
+// These grammar positions don't parse a bare trailing coercion.
+let locallyAbstract: type a. a = (value :> a)
+let guarded = switch value {
+| _ if (flag :> bool) => value
+}
+let jsxSpread = <Component {...(props :> propsType)} />
+
+@attr(? value if (flag :> bool))
+let attributeGuard = value
