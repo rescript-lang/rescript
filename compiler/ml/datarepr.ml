@@ -121,7 +121,7 @@ let constructor_payload_is_unboxed (cstr : constructor_description) =
   match cstr.cstr_kind with
   | Ordinary_constructor representation -> (
     match Variant_runtime.representation representation with
-    | Block {runtime = {untagged = true}} -> true
+    | Block (Untagged _) -> true
     | Constant _ | Block _ -> false)
   | Extension_constructor _ -> false
 

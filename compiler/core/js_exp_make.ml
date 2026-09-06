@@ -1416,7 +1416,7 @@ let block_type_name = function
 
 let tag_type = function
   | Variant_runtime.Literal d -> literal_tag d
-  | Untagged b -> block_type_name b
+  | Payload_shape b -> block_type_name b
 
 let rec emit_check (check : t Ast_untagged_variants.Dynamic_checks.t) =
   match check with

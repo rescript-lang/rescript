@@ -116,7 +116,8 @@ let rec add_type bv ty =
   | Ptyp_variant (fl, _, _) ->
     List.iter
       (function
-        | Rtag (_, _, _, stl) -> List.iter (add_type bv) stl
+        | Rtag (_, _, _, groups) ->
+          List.iter (fun {txt} -> List.iter (add_type bv) txt) groups
         | Rinherit sty -> add_type bv sty)
       fl
   | Ptyp_poly (_, t) -> add_type bv t
@@ -174,9 +175,9 @@ let rec add_pattern bv pat =
   | Ppat_alias (p, _) -> add_pattern bv p
   | Ppat_interval _ | Ppat_constant _ -> ()
   | Ppat_tuple pl -> List.iter (add_pattern bv) pl
-  | Ppat_construct (c, op) ->
+  | Ppat_construct (c, {txt = args}) ->
     add bv c;
-    add_opt add_pattern bv op
+    List.iter (add_pattern bv) args
   | Ppat_record (pl, _, rest) ->
     List.iter
       (fun {lid = lbl; x = p} ->
@@ -191,7 +192,7 @@ let rec add_pattern bv pat =
   | Ppat_constraint (p, ty) ->
     add_pattern bv p;
     add_type bv ty
-  | Ppat_variant (_, op) -> add_opt add_pattern bv op
+  | Ppat_variant (_, {txt = args}) -> List.iter (add_pattern bv) args
   | Ppat_type li -> add bv li
   | Ppat_unpack id -> pattern_bv := String_map.add id.txt bound !pattern_bv
   | Ppat_open (m, p) ->
@@ -235,10 +236,10 @@ let rec add_expr bv exp =
     add_expr bv e;
     add_cases bv pel
   | Pexp_tuple el -> List.iter (add_expr bv) el
-  | Pexp_construct (c, opte) ->
+  | Pexp_construct (c, {txt = args}) ->
     add bv c;
-    add_opt add_expr bv opte
-  | Pexp_variant (_, opte) -> add_opt add_expr bv opte
+    List.iter (add_expr bv) args
+  | Pexp_variant (_, {txt = args}) -> List.iter (add_expr bv) args
   | Pexp_record (lblel, opte) ->
     List.iter
       (fun {lid = lbl; x = e} ->
@@ -301,7 +302,7 @@ let rec add_expr bv exp =
       (( {txt = "ocaml.extension_constructor" | "extension_constructor"; _},
          PStr [item] ) as e) -> (
     match item.pstr_desc with
-    | Pstr_eval ({pexp_desc = Pexp_construct (c, None)}, _) -> add bv c
+    | Pstr_eval ({pexp_desc = Pexp_construct (c, {txt = []})}, _) -> add bv c
     | _ -> handle_extension e)
   | Pexp_extension e -> handle_extension e
   | Pexp_await e -> add_expr bv e

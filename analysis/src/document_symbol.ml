@@ -118,16 +118,11 @@ let get_symbols ~source ~kind_file =
   in
 
   (if kind_file = Files.Res then
-     let parser =
-       Res_driver.parsing_engine.parse_implementation_from_source
-         ~for_printer:false
-     in
+     let parser = Res_driver.parsing_engine.parse_implementation_from_source in
      let {Res_driver.parsetree = structure} = parser ~source in
      iterator.structure iterator structure |> ignore
    else
-     let parser =
-       Res_driver.parsing_engine.parse_interface_from_source ~for_printer:false
-     in
+     let parser = Res_driver.parsing_engine.parse_interface_from_source in
      let {Res_driver.parsetree = signature} = parser ~source in
      iterator.signature iterator signature |> ignore);
   let is_inside

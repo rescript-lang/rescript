@@ -304,8 +304,7 @@ let format ~source ~kind_file =
     match kind_file with
     | Files.Res -> (
       let {Res_driver.parsetree = structure; comments; diagnostics} =
-        Res_driver.parsing_engine.parse_implementation_from_source
-          ~for_printer:true ~source
+        Res_driver.parsing_engine.parse_implementation_from_source ~source
       in
       match List.length diagnostics > 0 with
       | true -> Error "Document has syntax errors"
@@ -314,8 +313,7 @@ let format ~source ~kind_file =
       )
     | Resi -> (
       let {Res_driver.parsetree = signature; comments; diagnostics} =
-        Res_driver.parsing_engine.parse_interface_from_source ~for_printer:true
-          ~source
+        Res_driver.parsing_engine.parse_interface_from_source ~source
       in
       match List.length diagnostics > 0 with
       | true -> Error "Document has syntax errors"

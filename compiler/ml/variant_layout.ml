@@ -37,40 +37,33 @@ let get_block_type_from_typ ~env (t : Types.type_expr) : block_type option =
     | {desc = Ttuple _} -> Some (InstanceType Array)
     | _ -> None)
 
-let get_block_type ~env (cstr : Types.constructor_declaration) :
-    block_type option =
-  match (process_untagged cstr.cd_attributes, cstr.cd_args) with
-  | false, _ -> None
-  | true, Cstr_tuple [t] when get_block_type_from_typ ~env t |> Option.is_some
-    ->
-    get_block_type_from_typ ~env t
-  | true, Cstr_tuple [ty] -> (
-    let default = Some UnknownType in
-    match Ctype.extract_concrete_typedecl env ty with
-    | _, _, {type_kind = Type_record (_, Record_unboxed _)} -> default
-    | _, _, {type_kind = Type_record (_, _)} -> Some ObjectType
-    | _ -> default
-    | exception _ -> default)
-  | true, Cstr_tuple (_ :: _ :: _) ->
-    (* C(_, _) with at least 2 args is an object *)
-    Some ObjectType
-  | true, Cstr_record _ ->
-    (* inline record is an object *)
-    Some ObjectType
-  | true, _ -> None (* TODO: add restrictions here *)
+let get_block_type ~env (cstr : Types.constructor_declaration) : block_type =
+  match cstr.cd_args with
+  | Cstr_tuple [ty] -> (
+    match get_block_type_from_typ ~env ty with
+    | Some shape -> shape
+    | None -> (
+      match Ctype.extract_concrete_typedecl env ty with
+      | _, _, {type_kind = Type_record (_, Record_unboxed _)} -> UnknownType
+      | _, _, {type_kind = Type_record (_, _)} -> ObjectType
+      | _ -> UnknownType
+      | exception _ -> UnknownType))
+  | Cstr_tuple (_ :: _ :: _) ->
+    report_constructor_more_than_one_arg ~loc:cstr.cd_loc
+      ~name:(Ident.name cstr.cd_id)
+  | Cstr_record _ -> ObjectType
+  | Cstr_tuple [] ->
+    (* Nullary constructors are handled before computing a payload shape. *)
+    assert false
 
 let layout_from_type_variant ~(configuration : configuration) ~env
     (cstrs : Types.constructor_declaration list) : Variant_runtime.layout =
   let get_block (cstr : Types.constructor_declaration) : block =
-    {
-      runtime =
-        {
-          tag = {name = Ident.name cstr.cd_id; literal = cstr.cd_runtime_tag};
-          tag_name = process_tag_name cstr.cd_attributes;
-          untagged = process_untagged cstr.cd_attributes;
-        };
-      block_type = get_block_type ~env cstr;
-    }
+    let tag = {name = Ident.name cstr.cd_id; literal = cstr.cd_runtime_tag} in
+    let tag_name = process_tag_name cstr.cd_attributes in
+    if process_untagged cstr.cd_attributes then
+      Untagged {tag; block_type = get_block_type ~env cstr}
+    else Tagged {tag; tag_name}
   in
   let located_constructors =
     List.map

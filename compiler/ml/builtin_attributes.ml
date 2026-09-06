@@ -203,11 +203,6 @@ let warn_on_literal_pattern =
       true
     | _ -> false)
 
-let explicit_arity =
-  List.exists (function
-    | {txt = "ocaml.explicit_arity" | "explicit_arity"; _}, _ -> true
-    | _ -> false)
-
 let immediate =
   List.exists (function
     | {txt = "ocaml.immediate" | "immediate"; _}, _ -> true
