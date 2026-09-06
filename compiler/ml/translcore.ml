@@ -1193,7 +1193,7 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.t =
                 runtime;
               }
           in
-          try const (Const_block (tag_info, List.map extract_constant ll))
+          try const (Lambda.const_block tag_info (List.map extract_constant ll))
           with Not_constant ->
             prim ~primitive:(Pmakeblock tag_info) ~args:ll e.exp_loc)
       | Extension_constructor path ->

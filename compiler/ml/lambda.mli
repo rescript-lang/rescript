@@ -432,6 +432,12 @@ val const_string : string -> structured_constant
 val const_of_typed : constant -> structured_constant
 val const_unit : structured_constant
 val const_constructor : Variant_runtime.tag -> structured_constant
+
+val const_block : tag_info -> structured_constant list -> structured_constant
+(** Build a constant block, erasing the wrapper of an untagged constructor:
+    its payload alone is the runtime value. Inline records remain blocks,
+    since their fields form a runtime object. *)
+
 val const_shape_none : structured_constant
 val const_polyvar : string -> structured_constant
 val const_polyvar_name : string -> structured_constant
