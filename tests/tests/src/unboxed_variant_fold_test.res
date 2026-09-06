@@ -133,7 +133,23 @@ let wideName = value =>
 
 @inline(never) let id = x => x
 
+// Nonconstant scalar payloads are passed through; inline records remain objects.
+@inline(never) let makeColor = name => Color(name)
+@inline(never) let makeRecord = value => R({y: value})
+
 describe(__MODULE__, () => {
+  test("constructors preserve dynamic payloads and effects", () => {
+    eq(__LOC__, colorName(makeColor("primary")), "not Color")
+    eq(__LOC__, colorName(makeColor("blue")), "blue")
+    eq(__LOC__, recName(makeRecord(1)), "rec")
+    let calls = ref(0)
+    let value = Color({
+      calls.contents = calls.contents + 1
+      "primary"
+    })
+    eq(__LOC__, colorName(value), "not Color")
+    eq(__LOC__, calls.contents, 1)
+  })
   test("folding agrees with runtime dispatch", () => {
     eq(__LOC__, colorName(Color("primary")), colorName(id(Color("primary"))))
     eq(__LOC__, colorName(Color("secondary")), colorName(id(Color("secondary"))))

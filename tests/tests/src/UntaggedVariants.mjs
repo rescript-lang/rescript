@@ -363,7 +363,9 @@ function classify$9(v) {
   }
 }
 
-let ff = x => x + 1 | 0;
+function ff(x) {
+  return x + 1 | 0;
+}
 
 let TestFunctionCase = {
   classify: classify$9,

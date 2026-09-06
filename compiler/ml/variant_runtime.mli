@@ -59,9 +59,14 @@ type matchable_tag = {name: string; tag_type: tag_type option}
 (** A constructor tag widened for matching, where an untagged payload shape
     can participate alongside declared literals. *)
 
-type block_runtime = {tag: tag; tag_name: string option; untagged: bool}
+type tagged_block = {tag: tag; tag_name: string option}
 
-type block = {runtime: block_runtime; block_type: block_type option}
+(** An untagged payload always carries the runtime shape used for dispatch.
+    Only tagged blocks have an emitted tag field. *)
+type block =
+  | Tagged of tagged_block
+  | Untagged of {tag: tag; block_type: block_type}
+
 type constructor_case = Constant of tag | Block of block
 
 val to_matchable_tag : tag -> matchable_tag

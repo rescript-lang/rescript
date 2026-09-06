@@ -2,18 +2,17 @@ open OUnit
 
 let ( =~ ) = OUnit.assert_equal
 
-let runtime ~untagged name : Variant_runtime.block_runtime =
-  {tag = {name; literal = None}; tag_name = None; untagged}
+let runtime name : Variant_runtime.tagged_block =
+  {tag = {name; literal = None}; tag_name = None}
 
-let constructor ~untagged name =
-  Lambda.Blk_constructor
-    {name; num_nonconst = 1; runtime = runtime ~untagged name}
+let constructor name =
+  Lambda.Blk_constructor {name; num_nonconst = 1; runtime = runtime name}
 
 let literal name value : Variant_runtime.constructor_case =
   Constant {name; literal = Some value}
 
 let block name shape : Variant_runtime.constructor_case =
-  Block {runtime = runtime ~untagged:true name; block_type = Some shape}
+  Block (Untagged {tag = {name; literal = None}; block_type = shape})
 
 let action s = Lambda.const (Const_string s)
 
@@ -61,36 +60,29 @@ let switch_tests =
       ~default:None
   in
   [
-    ( "untagged constants expose their payload" >:: fun _ ->
-      let tag = constructor ~untagged:true "Color" in
-      Lambda.Const_string "primary"
-      =~ Lambda.const_block tag [Const_string "primary"];
-      Lambda.Const_string "primary"
-      =~ Lambda.const_block tag
-           [Lambda.const_block tag [Const_string "primary"]] );
-    ( "boxed constants retain their fields" >:: fun _ ->
-      let tag = constructor ~untagged:false "Color" in
-      let fields = [Lambda.Const_string "primary"] in
-      Lambda.Const_block (tag, fields) =~ Lambda.const_block tag fields );
     ( "inline records remain objects" >:: fun _ ->
+      let record = block "Record" ObjectType in
+      let runtime =
+        match record with
+        | Block runtime -> runtime
+        | Constant _ -> assert false
+      in
       let tag =
         Lambda.blk_record_inlined
           [|("x", false)|]
-          "Record" 1
-          ~runtime:(runtime ~untagged:true "Record")
-          Asttypes.Immutable
+          "Record" 1 ~runtime Asttypes.Immutable
       in
-      let fields = [Lambda.Const_int 1l] in
-      Lambda.Const_block (tag, fields) =~ Lambda.const_block tag fields );
+      let sw =
+        variant_switch ~constructors:[primary; record]
+          ~cases:[(primary, "literal"); (record, "record")]
+          ~default:None
+      in
+      assert_fold sw (Const_block (tag, [Const_int 1l])) "record" );
     ( "literal values precede payload shapes" >:: fun _ ->
       assert_fold color_switch (Const_string "primary") "literal";
       assert_fold color_switch (Const_string "blue") "payload";
       assert_fold color_switch
         (Const_constructor {name = "Alias"; literal = Some (String "primary")})
-        "literal";
-      assert_fold color_switch
-        (Const_block
-           (constructor ~untagged:true "Color", [Const_string "primary"]))
         "literal" );
     ( "declaration literals missing from match select default" >:: fun _ ->
       let sw =
@@ -172,16 +164,15 @@ let switch_tests =
           Const_some (Const_int 1l);
         ] );
     ( "tagged switch still folds by constructor" >:: fun _ ->
-      let runtime = runtime ~untagged:false "Color" in
-      let case = Variant_runtime.Block {runtime; block_type = None} in
+      let runtime = runtime "Color" in
+      let case = Variant_runtime.Block (Tagged runtime) in
       let sw =
         variant_switch ~constructors:[primary; case]
           ~cases:[(primary, "literal"); (case, "payload")]
           ~default:None
       in
       assert_fold sw
-        (Const_block
-           (constructor ~untagged:false "Color", [Const_string "primary"]))
+        (Const_block (constructor "Color", [Const_string "primary"]))
         "payload";
       let sw =
         {
@@ -192,8 +183,7 @@ let switch_tests =
         }
       in
       assert_fold sw
-        (Const_block
-           (constructor ~untagged:false "Color", [Const_string "primary"]))
+        (Const_block (constructor "Color", [Const_string "primary"]))
         "default" );
   ]
 

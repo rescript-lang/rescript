@@ -175,18 +175,10 @@ let tag_of_switch_key = function
   | Lambda.Switch_int _ -> None
   | Switch_constructor (Constant tag) ->
     Some (Variant_runtime.to_matchable_tag tag)
-  | Switch_constructor
-      (Block
-         {
-           runtime = {tag = {name}; untagged = true};
-           block_type = Some block_type;
-         }) ->
+  | Switch_constructor (Block (Untagged {tag = {name}; block_type})) ->
     Some {name; tag_type = Some (Untagged block_type)}
-  | Switch_constructor (Block {runtime = {untagged = false; tag}}) ->
+  | Switch_constructor (Block (Tagged {tag})) ->
     Some (Variant_runtime.to_matchable_tag tag)
-  | Switch_constructor (Block {runtime = {untagged = true}; block_type = None})
-    ->
-    assert false
 
 let dispatch_info = function
   | Lambda.Switch_direct -> (Js_dump_lit.tag, [], [], (false, false, false))
@@ -858,7 +850,8 @@ let compile output_prefix =
       in
       E.emit_check check
     in
-    let tag_is_not_typeof = function
+    let tag_is_not_typeof (tag : Variant_runtime.tag_type) =
+      match tag with
       | Variant_runtime.Untagged (InstanceType _) -> true
       | _ -> false
     in
@@ -870,14 +863,19 @@ let compile output_prefix =
       let has_object_typeof =
         List.exists
           (function
-            | Variant_runtime.Untagged ObjectType, _ -> true
+            | ( (Variant_runtime.Untagged ObjectType : Variant_runtime.tag_type),
+                _ ) ->
+              true
             | _ -> false)
           typeof_clauses
       in
       let clauses_have_array_case =
         List.exists
           (function
-            | Variant_runtime.Untagged (InstanceType Array), _ -> true
+            | ( (Variant_runtime.Untagged (InstanceType Array) :
+                  Variant_runtime.tag_type),
+                _ ) ->
+              true
             | _ -> false)
           not_typeof_clauses
       in
@@ -895,7 +893,8 @@ let compile output_prefix =
       let needs_array_guard =
         has_object_typeof && type_has_array_case && not clauses_have_array_case
       in
-      let rec build_if_chain remaining_clauses =
+      let rec build_if_chain
+          (remaining_clauses : (Variant_runtime.tag_type * _) list) =
         match remaining_clauses with
         | ( Variant_runtime.Untagged (InstanceType instance_type),
             {J.switch_body} )

@@ -19,14 +19,14 @@ type tag_info =
   | Blk_constructor of {
       name: string;
       num_nonconst: int;
-      runtime: Variant_runtime.block_runtime;
+      runtime: Variant_runtime.tagged_block;
     }
   | Blk_record_inlined of {
       name: string;
       num_nonconst: int;
       fields: (string * bool (* optional *)) array;
       mutable_flag: Asttypes.mutable_flag;
-      runtime: Variant_runtime.block_runtime;
+      runtime: Variant_runtime.block;
     }
   | Blk_tuple
   | Blk_poly_var
@@ -422,14 +422,6 @@ let const_constructor (tag : Variant_runtime.tag) =
     | Some (Variant_runtime.Int v) -> Const_int (Int32.of_int v)
     | _ -> Const_constructor tag
 
-(* An untagged constructor has no runtime existence: [Color("primary")] is the
-   string "primary", exactly as [Primary] is. Erasing the wrapper lets folding
-   inspect the payload rather than a constructor the runtime cannot see. *)
-let const_block (tag_info : tag_info) (args : structured_constant list) =
-  match (tag_info, args) with
-  | Blk_constructor {runtime = {untagged = true}}, [payload] -> payload
-  | _ -> Const_block (tag_info, args)
-
 (* A constructor with an optional shape carries no payload when constant. *)
 let const_shape_none = Const_js_undefined {is_unit = false}
 
@@ -790,7 +782,7 @@ type value_kind =
   | Is_array
   | Unknown_value
 
-let rec runtime_value_kind (c : structured_constant) =
+let runtime_value_kind (c : structured_constant) =
   match c with
   | Const_string s -> Is_literal (String s)
   | Const_int i -> Is_literal (Int (Int32.to_int i))
@@ -804,11 +796,6 @@ let rec runtime_value_kind (c : structured_constant) =
   | Const_constructor {name; literal = None} -> Is_literal (String name)
   | Const_constructor {literal = Some (BigInt _)} -> Unknown_value
   | Const_constructor {literal = Some literal} -> Is_literal literal
-  | Const_block (Blk_constructor {runtime = {untagged = true}}, args) -> (
-    (* Also handle wrappers in constants read from existing compiler data. *)
-    match args with
-    | [payload] -> runtime_value_kind payload
-    | _ -> Unknown_value)
   | Const_block (Blk_tuple, _) -> Is_array
   | Const_block (Blk_record {fields}, _) ->
     if
@@ -902,9 +889,8 @@ let switch lam (lam_switch : lambda_switch) : t =
       (* Not a declared literal, so the payload's runtime shape decides. *)
       if Ext_list.exists facts.block_types (matches_block kind) then
         find_in lam_switch.sw_blocks (function
-          | Block {block_type = Some block_type} ->
-            matches_block kind block_type
-          | Constant _ | Block {block_type = None} -> false)
+          | Block (Untagged {block_type}) -> matches_block kind block_type
+          | Constant _ | Block (Tagged _) -> false)
       else `Undecided
   in
   match (lam, lam_switch.sw_dispatch) with
@@ -939,7 +925,8 @@ let switch lam (lam_switch : lambda_switch) : t =
   | Lconst (Const_block (tag_info, _)), _ ->
     let runtime =
       match tag_info with
-      | Blk_constructor {runtime} | Blk_record_inlined {runtime} -> Some runtime
+      | Blk_constructor {runtime} -> Some (Variant_runtime.Tagged runtime)
+      | Blk_record_inlined {runtime} -> Some runtime
       | Blk_tuple | Blk_poly_var | Blk_record _ | Blk_record_ext _
       | Blk_module _ | Blk_module_export _ | Blk_extension ->
         None
@@ -947,7 +934,7 @@ let switch lam (lam_switch : lambda_switch) : t =
     let action =
       Ext_list.find_opt lam_switch.sw_blocks (fun (key, action) ->
           match key with
-          | Switch_constructor (Block {runtime = case_runtime})
+          | Switch_constructor (Block case_runtime)
             when runtime = Some case_runtime ->
             Some action
           | Switch_int _ | Switch_constructor _ -> None)
