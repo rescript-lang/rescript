@@ -747,7 +747,7 @@ let suites =
            let date = Variant_runtime.Instance.Date in
            assert_js_global ~expected:"Date"
              (Js_exp_make.emit_check
-                (TagType (Variant_runtime.Untagged (InstanceType date))));
+                (TagType (Variant_runtime.Payload_shape (InstanceType date))));
            match Js_exp_make.emit_check (IsInstanceOf (date, Expr value)) with
            | {expression_desc = Bin (InstanceOf, argument, constructor)} ->
              OUnit.assert_bool "expected the original argument"

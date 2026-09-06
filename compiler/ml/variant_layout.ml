@@ -52,7 +52,9 @@ let get_block_type ~env (cstr : Types.constructor_declaration) : block_type =
     report_constructor_more_than_one_arg ~loc:cstr.cd_loc
       ~name:(Ident.name cstr.cd_id)
   | Cstr_record _ -> ObjectType
-  | Cstr_tuple [] -> UnknownType
+  | Cstr_tuple [] ->
+    (* Nullary constructors are handled before computing a payload shape. *)
+    assert false
 
 let layout_from_type_variant ~(configuration : configuration) ~env
     (cstrs : Types.constructor_declaration list) : Variant_runtime.layout =

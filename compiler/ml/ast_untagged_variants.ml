@@ -374,15 +374,15 @@ module Dynamic_checks = struct
   let not x = Not x
   let nil = Literal Null |> tag_type
   let undefined = Literal Undefined |> tag_type
-  let object_ = Untagged ObjectType |> tag_type
+  let object_ = Payload_shape ObjectType |> tag_type
 
-  let function_ = Untagged FunctionType |> tag_type
-  let string = Untagged StringType |> tag_type
-  let number = Untagged IntType |> tag_type
+  let function_ = Payload_shape FunctionType |> tag_type
+  let string = Payload_shape StringType |> tag_type
+  let number = Payload_shape IntType |> tag_type
 
-  let bigint = Untagged BigintType |> tag_type
+  let bigint = Payload_shape BigintType |> tag_type
 
-  let boolean = Untagged BooleanType |> tag_type
+  let boolean = Payload_shape BooleanType |> tag_type
 
   let ( == ) x y = bin EqEqEq x y
   let ( != ) x y = bin NotEqEq x y
@@ -499,7 +499,7 @@ module Dynamic_checks = struct
     else (* (undefiled + other) || other *)
       typeof e != object_
 
-  let add_runtime_type_check ~(tag_type : tag_type) ~has_null_case
+  let add_runtime_type_check ~tag_type ~has_null_case
       ~(block_cases : block_type list) x y =
     let instances =
       Ext_list.filter_map block_cases (function
@@ -507,11 +507,11 @@ module Dynamic_checks = struct
         | _ -> None)
     in
     match tag_type with
-    | Untagged
+    | Payload_shape
         ( IntType | StringType | FloatType | BigintType | BooleanType
         | FunctionType ) ->
       typeof y == x
-    | Untagged ObjectType ->
+    | Payload_shape ObjectType ->
       let object_case =
         if has_null_case then typeof y == x &&& (y != nil) else typeof y == x
       in
@@ -522,8 +522,8 @@ module Dynamic_checks = struct
         in
         not_one_of_the_instances
       else object_case
-    | Untagged (InstanceType i) -> is_instance i y
-    | Untagged UnknownType ->
+    | Payload_shape (InstanceType i) -> is_instance i y
+    | Payload_shape UnknownType ->
       (* This should not happen because unknown must be the only non-literal case *)
       assert false
     | Literal _ -> x

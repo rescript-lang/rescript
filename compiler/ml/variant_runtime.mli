@@ -50,7 +50,10 @@ type literal_tag =
   | Null
   | Undefined
 
-type tag_type = Literal of literal_tag | Untagged of block_type
+(** Information used to recognize a constructor during matching. A literal
+    identifies a constant or an object's tag; a payload shape identifies a
+    value represented directly by its payload. *)
+type tag_type = Literal of literal_tag | Payload_shape of block_type
 
 type tag = {name: string; literal: literal_tag option}
 (** A constructor's name and optional explicitly declared runtime literal. *)

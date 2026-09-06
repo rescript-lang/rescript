@@ -150,7 +150,7 @@ let string_switch ?(comment : string option)
         Ext_list.find_opt clauses (fun (switch_case, x) ->
             match switch_case with
             | Literal (String s) -> if s = txt then Some x.switch_body else None
-            | Literal _ | Untagged _ -> None)
+            | Literal _ | Payload_shape _ -> None)
       with
       | Some case -> case
       | None -> (

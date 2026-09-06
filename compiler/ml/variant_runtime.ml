@@ -79,14 +79,10 @@ type literal_tag =
   | Null
   | Undefined
 
-(*
-  Type of the runtime representation of a tag.
-  Can be a literal (case with no payload), or a block (case with payload).
-  In the case of block it can be tagged or untagged.
-*)
-type tag_type =
-  | Literal of literal_tag (* literal or tagged block *)
-  | Untagged of block_type (* untagged block *)
+(** Information used to recognize a constructor during matching. A literal
+    identifies a constant or an object's tag; a payload shape identifies a
+    value represented directly by its payload. *)
+type tag_type = Literal of literal_tag | Payload_shape of block_type
 
 type tag = {name: string; literal: literal_tag option}
 (** A constructor's name and optional explicitly declared runtime literal. *)
