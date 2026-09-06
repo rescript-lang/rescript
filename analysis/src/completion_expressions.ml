@@ -128,7 +128,7 @@ let rec traverse_expr (exp : Parsetree.expression) ~expr_path ~pos
         [
           Completable.NVariantPayload
             {
-              constructor_name = Utils.get_unqualified_name txt;
+              constructor_name = Longident.last txt;
               item_num = 0;
               source_arity = 1;
             };
@@ -141,7 +141,7 @@ let rec traverse_expr (exp : Parsetree.expression) ~expr_path ~pos
            [
              Completable.NVariantPayload
                {
-                 constructor_name = Utils.get_unqualified_name txt;
+                 constructor_name = Longident.last txt;
                  item_num;
                  source_arity = List.length args;
                };
@@ -151,7 +151,7 @@ let rec traverse_expr (exp : Parsetree.expression) ~expr_path ~pos
            [
              Completable.NVariantPayload
                {
-                 constructor_name = Utils.get_unqualified_name txt;
+                 constructor_name = Longident.last txt;
                  item_num = item_num + 1;
                  source_arity = List.length args;
                };
@@ -260,7 +260,7 @@ let pretty_print_fn_template_arg_name ?current_index ~env ~state ~full
     | _ -> default_var_name)
 
 let complete_constructor_payload ~pos_before_cursor
-    ~first_char_before_cursor_no_white ~item_num ~source_arity
+    ~first_char_before_cursor_no_white
     (constructor_lid : Longident.t Location.loc) expr =
   match
     traverse_expr expr ~expr_path:[] ~pos:pos_before_cursor
@@ -268,15 +268,7 @@ let complete_constructor_payload ~pos_before_cursor
   with
   | None -> None
   | Some (prefix, nested) ->
-    let nested =
-      Completable.NVariantPayload
-        {
-          constructor_name = Longident.last constructor_lid.txt;
-          item_num;
-          source_arity;
-        }
-      :: List.rev nested
-    in
+    let nested = List.rev nested in
     let variant_ctx_path =
       Completable.CTypeAtPos
         {constructor_lid.loc with loc_start = constructor_lid.loc.loc_end}

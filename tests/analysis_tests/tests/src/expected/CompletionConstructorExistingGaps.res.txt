@@ -1,0 +1,60 @@
+Complete src/CompletionConstructorExistingGaps.res 2:27
+XXX Not found!
+Completable: Cexpression Type[gap]->variantPayload::Gap($1)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Type[gap]
+Path gap
+[
+  { "detail": "bool", "kind": 4, "label": "true", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "false", "tags": [] }
+]
+
+Complete src/CompletionConstructorExistingGaps.res 5:35
+XXX Not found!
+Completable: Cexpression Type[gap]->variantPayload::Gap($2)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Type[gap]
+Path gap
+[
+  { "detail": "bool", "kind": 4, "label": "true", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "false", "tags": [] }
+]
+
+Complete src/CompletionConstructorExistingGaps.res 8:25
+posCursor:[8:25] posNoWhite:[8:23] Found expr:[8:15->8:38]
+Pexp_construct Gap:[8:15->8:18] [8:19->8:23], [8:26->8:31], [8:33->8:37]
+Completable: Cexpression CTypeAtPos()->variantPayload::Gap($1)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath CTypeAtPos()
+[
+  { "detail": "bool", "kind": 4, "label": "true", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "false", "tags": [] }
+]
+
+Complete src/CompletionConstructorExistingGaps.res 11:29
+XXX Not found!
+Completable: Cexpression Type[gap]->variantPayload::Unary($1)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Type[gap]
+Path gap
+[
+  { "detail": "bool", "kind": 4, "label": "true", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "false", "tags": [] }
+]
+
+Complete src/CompletionConstructorExistingGaps.res 14:29
+XXX Not found!
+Completable: Cexpression Type[gap]->variantPayload::Gap($0), tuple($1)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Type[gap]
+Path gap
+[
+  { "detail": "bool", "kind": 4, "label": "true", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "false", "tags": [] }
+]
+

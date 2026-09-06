@@ -1283,7 +1283,7 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
                          then ValueOrField
                          else Value);
                     }))
-        | Pexp_construct (lid, {txt = args}) ->
+        | Pexp_construct (lid, {txt = args; loc = args_loc}) -> (
           let lid_path = flatten_lid_check_dot lid in
           if debug then
             Printf.printf "Pexp_construct %s:%s %s\n"
@@ -1304,20 +1304,20 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
               (Cpath
                  (CPId
                     {loc = lid.loc; path = lid_path; completion_context = Value}))
-          else
-            args
-            |> List.iteri (fun item_num (e : Parsetree.expression) ->
-                if loc_has_cursor e.pexp_loc then
-                  match
-                    Completion_expressions.complete_constructor_payload
-                      ~pos_before_cursor ~first_char_before_cursor_no_white
-                      ~item_num ~source_arity:(List.length args) lid e
-                  with
-                  | Some result ->
-                    (* Check if anything else more important completes before setting this completion. *)
-                    Ast_iterator.default_iterator.expr iterator e;
-                    set_result result
-                  | None -> ())
+          else if loc_has_cursor args_loc then
+            match
+              Completion_expressions.complete_constructor_payload
+                ~pos_before_cursor ~first_char_before_cursor_no_white lid expr
+            with
+            | Some result ->
+              (* Prefer more specific completions inside an argument. *)
+              List.iter
+                (fun (e : Parsetree.expression) ->
+                  if loc_has_cursor e.pexp_loc then
+                    Ast_iterator.default_iterator.expr iterator e)
+                args;
+              set_result result
+            | None -> ())
         | Pexp_field (e, field_name) -> (
           if debug then
             Printf.printf "Pexp_field %s %s:%s\n" (Loc.to_string e.pexp_loc)
