@@ -23,14 +23,16 @@ type tag_info =
   | Blk_constructor of {
       name: string;
       num_nonconst: int;
-      runtime: Variant_runtime.block_runtime;
+      runtime: Variant_runtime.tagged_block;
+          (** Untagged scalar constructors are erased during typedtree
+              translation; they cannot form Lambda or JavaScript blocks. *)
     }
   | Blk_record_inlined of {
       name: string;
       num_nonconst: int;
       fields: (string * bool (* optional *)) array;
       mutable_flag: mutable_flag;
-      runtime: Variant_runtime.block_runtime;
+      runtime: Variant_runtime.block;
     }
   | Blk_tuple
   | Blk_poly_var
@@ -62,7 +64,7 @@ val blk_record_inlined :
   (string * bool) array ->
   string ->
   int ->
-  runtime:Variant_runtime.block_runtime ->
+  runtime:Variant_runtime.block ->
   mutable_flag ->
   tag_info
 

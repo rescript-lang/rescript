@@ -450,7 +450,7 @@ Untagged-variant validation errors. Source: [ast_untagged_variants.ml:52](../com
 | `AtMostOneBigint` | ✓ | `UntaggedAtMostOneBigint.res` | Two bigint payloads. |
 | `AtMostOneBoolean` | ✓ | `UntaggedAtMostOneBoolean.res` | Two boolean payloads. |
 | `DuplicateLiteral` | ✓ | `UntaggedDuplicateLiteral.res` | `@as("x")` on two different constructors. |
-| `ConstructorMoreThanOneArg` | ✓ | `UntaggedConstructorMoreThanOneArg.res` | `A(int, int)` payload in an untagged variant. |
+| `ConstructorMoreThanOneArg` | ✓ | `UntaggedConstructorMoreThanOneArg.res`, `UntaggedConstructorAttributeMoreThanOneArg.res` | Multiple payload arguments with type-level or constructor-level `@unboxed`. |
 
 ### `error`
 

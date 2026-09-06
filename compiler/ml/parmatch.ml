@@ -560,7 +560,7 @@ let all_record_args lbls =
             | Extension_constructor _ -> x
             | Ordinary_constructor representation -> (
               match Variant_runtime.representation representation with
-              | Block {block_type = Some block_type}
+              | Block (Untagged {block_type})
                 when not
                        (Ast_untagged_variants.block_type_can_be_undefined
                           block_type) ->
