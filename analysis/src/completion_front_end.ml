@@ -1310,11 +1310,15 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
                 ~pos_before_cursor ~first_char_before_cursor_no_white lid expr
             with
             | Some result ->
-              (* Prefer more specific completions inside an argument. *)
+              (* Let nested constructors resolve their own payloads, but keep
+                 leaf lookups from overriding the expected-type completion. *)
               List.iter
                 (fun (e : Parsetree.expression) ->
                   if loc_has_cursor e.pexp_loc then
-                    Ast_iterator.default_iterator.expr iterator e)
+                    match e.pexp_desc with
+                    | Pexp_construct (_, {txt = _ :: _}) ->
+                      iterator.expr iterator e
+                    | _ -> Ast_iterator.default_iterator.expr iterator e)
                 args;
               set_result result
             | None -> ())
