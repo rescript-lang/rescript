@@ -32,3 +32,14 @@ let nested = call(value, x => call(value, y => y
 ))
 
 let blocks = call(value, x => x /* inline block */)
+
+let labeled = call(~fn=x => x /* keep labeled */)
+let optional = call(~fn=?x => x /* keep optional */)
+let labeledFirst = call(~fn=x => x /* keep first */, value)
+let optionalLast = call(value, ~fn=?x => x /* keep last */)
+let labeledBelow = call(~fn=x => x
+  /* keep below */
+)
+let optionalLine = call(~fn=?x => x // keep line
+)
+let labeledNested = call(~fn=x => call(~fn=y => y /* keep nested */))

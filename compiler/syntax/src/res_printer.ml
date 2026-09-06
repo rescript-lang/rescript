@@ -4667,8 +4667,16 @@ and print_pexp_apply ~state expr cmt_tbl =
      * subsequent formatting unstable. *)
     let args_have_trailing_comments =
       List.exists
-        (fun (_, (arg : Parsetree.expression)) ->
-          has_trailing_comments cmt_tbl arg.pexp_loc)
+        (fun (lbl, (arg : Parsetree.expression)) ->
+          (* Match the full argument location used by comment attachment. *)
+          let loc =
+            match lbl with
+            | Asttypes.Labelled {loc} | Optional {loc} ->
+              {loc with loc_end = arg.pexp_loc.loc_end}
+            | Nolabel -> arg.pexp_loc
+          in
+          has_trailing_comments cmt_tbl loc
+          || has_trailing_comments cmt_tbl arg.pexp_loc)
         args
     in
     let args_doc, maybe_break_parent =
