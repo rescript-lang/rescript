@@ -40,6 +40,7 @@
 - Fix escaped backticks and interpolation openers in backquoted `%raw`, `%ffi`, and `%re` payloads leaking into emitted JavaScript. https://github.com/rescript-lang/rescript/pull/8630
 - Fix the side-effect analysis treating bigint exponentiation and bounds-checked array and string reads as pure, which let dead-code elimination drop an unused one that throws: `let _ = 2n ** -1n` no longer raised. https://github.com/rescript-lang/rescript/pull/8617
 - Preserve record field `@as` annotations when formatting object types containing spreads. https://github.com/rescript-lang/rescript/pull/8619
+- Fix lost leading comments on labeled callbacks and unstable formatting of trailing callback comments. https://github.com/rescript-lang/rescript/pull/8627
 - Fix record-field completion inside constructor tuple payloads and for their destructured bindings, including both supported tuple spellings and polymorphic variants. https://github.com/rescript-lang/rescript/pull/8610
 - Limit constructor signature help to the argument parentheses, excluding whitespace and comments between the constructor name and its arguments, and keep unary tuple payloads on parameter zero. https://github.com/rescript-lang/rescript/pull/8610
 - Fix excessive parentheses and indentation in function assignments to refs, align record and array assignment formatting across refs and fields, and preserve function return-type parentheses and consistent JSX fragment layout in callbacks. https://github.com/rescript-lang/rescript/pull/8611

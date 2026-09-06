@@ -98,6 +98,24 @@ let has_leading_comments tbl loc =
   | None -> false
   | _ -> true
 
+(* Compact layouts print expression comments but not comments on the full
+ * labeled argument. For unlabeled arguments, leading expression comments
+ * already work in the compact layout; forcing a different layout can make
+ * comments exposed by removing parameter parentheses unstable. *)
+let argument_requires_regular_layout cmt_tbl ((lbl, arg) as argument) =
+  let loc = Parsetree_viewer.argument_loc argument in
+  let has_leading_label_comments =
+    match lbl with
+    | Asttypes.Nolabel -> false
+    | Labelled _ | Optional _ ->
+      has_leading_comments cmt_tbl loc
+      || has_leading_comments cmt_tbl arg.Parsetree.pexp_loc
+  in
+  (* Trailing comments can escape compact layouts when the body breaks. *)
+  has_leading_label_comments
+  || has_trailing_comments cmt_tbl loc
+  || has_trailing_comments cmt_tbl arg.pexp_loc
+
 let print_multiline_comment_content txt =
   (* Turns
    *         |* first line
@@ -4526,47 +4544,41 @@ and print_pexp_apply ~state expr cmt_tbl =
       | Braced braces -> print_braces doc call_expr braces
       | Nothing -> doc
     in
-    if Parsetree_viewer.requires_special_callback_printing_first_arg args then
-      let args_doc =
-        print_arguments_with_callback_in_first_position ~state ~partial args
-          cmt_tbl
-      in
-      Doc.concat
-        [print_attributes ~state attrs cmt_tbl; call_expr_doc; args_doc]
-    else if Parsetree_viewer.requires_special_callback_printing_last_arg args
-    then
-      let args_doc =
-        print_arguments_with_callback_in_last_position ~state ~partial args
-          cmt_tbl
-      in
-      (*
-       * Fixes the following layout (the `[` and `]` should break):
-       *   [fn(x => {
-       *     let _ = x
-       *   }), fn(y => {
-       *     let _ = y
-       *   }), fn(z => {
-       *     let _ = z
-       *   })]
-       * See `Doc.willBreak documentation in interface file for more context.
-       * Context:
-       *  https://github.com/rescript-lang/syntax/issues/111
-       *  https://github.com/rescript-lang/syntax/issues/166
-       *)
-      let maybe_break_parent =
-        if Doc.will_break args_doc then Doc.break_parent else Doc.nil
-      in
-      Doc.concat
-        [
-          maybe_break_parent;
-          print_attributes ~state attrs cmt_tbl;
-          call_expr_doc;
-          args_doc;
-        ]
-    else
-      let args_doc = print_arguments ~state ~partial args cmt_tbl in
-      Doc.concat
-        [print_attributes ~state attrs cmt_tbl; call_expr_doc; args_doc]
+    let requires_regular_layout =
+      List.exists (argument_requires_regular_layout cmt_tbl) args
+    in
+    let args_doc, maybe_break_parent =
+      if
+        (not requires_regular_layout)
+        && Parsetree_viewer.requires_special_callback_printing_first_arg args
+      then
+        ( print_arguments_with_callback_in_first_position ~state ~partial args
+            cmt_tbl,
+          Doc.nil )
+      else if
+        (not requires_regular_layout)
+        && Parsetree_viewer.requires_special_callback_printing_last_arg args
+      then
+        let args_doc =
+          print_arguments_with_callback_in_last_position ~state ~partial args
+            cmt_tbl
+        in
+        (* Propagate breaks from the callback layout to enclosing groups, such
+         * as an array containing multiline calls. See Doc.will_break and
+         * https://github.com/rescript-lang/syntax/issues/111. *)
+        let maybe_break_parent =
+          if Doc.will_break args_doc then Doc.break_parent else Doc.nil
+        in
+        (args_doc, maybe_break_parent)
+      else (print_arguments ~state ~partial args cmt_tbl, Doc.nil)
+    in
+    Doc.concat
+      [
+        maybe_break_parent;
+        print_attributes ~state attrs cmt_tbl;
+        call_expr_doc;
+        args_doc;
+      ]
   | _ -> assert false
 
 and print_jsx_unary_tag ~state tag_name props expr_loc cmt_tbl =
@@ -4903,24 +4915,23 @@ and print_jsx_name (tag_name : Parsetree.jsx_tag_name) =
     let printed = segs |> List.map (print_ident_like ~allow_uident:true) in
     Doc.join ~sep:Doc.dot printed
 
+and print_callback_label = function
+  | Asttypes.Nolabel -> Doc.nil
+  | Asttypes.Labelled {txt} ->
+    Doc.concat [Doc.tilde; print_ident_like txt; Doc.equal]
+  | Asttypes.Optional {txt} ->
+    Doc.concat [Doc.tilde; print_ident_like txt; Doc.equal; Doc.question]
+
 and print_arguments_with_callback_in_first_position ~state ~partial args cmt_tbl
     =
-  (* Because the same subtree gets printed twice, we need to copy the cmt_tbl.
-   * consumed comments need to be marked not-consumed and reprinted…
-   * Cheng's different comment algorithm will solve this. *)
+  (* Printing consumes comments from the table. Each alternative layout needs
+   * its own copy so it can print the same subtree with all its comments. *)
   let state = State.next_custom_layout state in
   let cmt_tbl_copy = Comment_table.copy cmt_tbl in
   let callback, printed_args =
     match args with
     | (lbl, expr) :: args ->
-      let lbl_doc =
-        match lbl with
-        | Asttypes.Nolabel -> Doc.nil
-        | Asttypes.Labelled {txt} ->
-          Doc.concat [Doc.tilde; print_ident_like txt; Doc.equal]
-        | Asttypes.Optional {txt} ->
-          Doc.concat [Doc.tilde; print_ident_like txt; Doc.equal; Doc.question]
-      in
+      let lbl_doc = print_callback_label lbl in
       let callback =
         Doc.concat
           [
@@ -4991,9 +5002,8 @@ and print_arguments_with_callback_in_first_position ~state ~partial args cmt_tbl
 
 and print_arguments_with_callback_in_last_position ~state ~partial args cmt_tbl
     =
-  (* Because the same subtree gets printed twice, we need to copy the cmt_tbl.
-   * consumed comments need to be marked not-consumed and reprinted…
-   * Cheng's different comment algorithm will solve this. *)
+  (* Printing consumes comments from the table. Each alternative layout needs
+   * its own copy so it can print the same subtree with all its comments. *)
   let state = state |> State.next_custom_layout in
   let cmt_tbl_copy = Comment_table.copy cmt_tbl in
   let cmt_tbl_copy2 = Comment_table.copy cmt_tbl in
@@ -5001,14 +5011,7 @@ and print_arguments_with_callback_in_last_position ~state ~partial args cmt_tbl
     match args with
     | [] -> (lazy Doc.nil, lazy Doc.nil, lazy Doc.nil)
     | [(lbl, expr)] ->
-      let lbl_doc =
-        match lbl with
-        | Asttypes.Nolabel -> Doc.nil
-        | Asttypes.Labelled {txt} ->
-          Doc.concat [Doc.tilde; print_ident_like txt; Doc.equal]
-        | Asttypes.Optional {txt} ->
-          Doc.concat [Doc.tilde; print_ident_like txt; Doc.equal; Doc.question]
-      in
+      let lbl_doc = print_callback_label lbl in
       let callback_fits_on_one_line =
         lazy
           (let pexp_fun_doc =
@@ -5046,7 +5049,7 @@ and print_arguments_with_callback_in_last_position ~state ~partial args cmt_tbl
    *   MyModuleBlah.toList(argument)
    * )
    *)
-  let arugments_fit_on_one_line =
+  let arguments_fit_on_one_line =
     lazy
       (Doc.concat
          [
@@ -5090,7 +5093,7 @@ and print_arguments_with_callback_in_last_position ~state ~partial args cmt_tbl
     Doc.custom_layout
       [
         Lazy.force fits_on_one_line;
-        Lazy.force arugments_fit_on_one_line;
+        Lazy.force arguments_fit_on_one_line;
         Lazy.force break_all_args;
       ]
 
@@ -5123,11 +5126,22 @@ and print_arguments ~state ~partial
     in
     Doc.concat [Doc.lparen; arg_doc; Doc.rparen]
   | args ->
+    (* Flush a callback's line comment before closing the argument list, so
+     * reparsing cannot attach it to an enclosing call instead. *)
+    let force_break =
+      List.exists
+        (fun ((_, arg) as argument) ->
+          Parsetree_viewer.is_fun_expr arg
+          && (has_any_trailing_line_comment cmt_tbl
+                (Parsetree_viewer.argument_loc argument)
+             || has_any_trailing_line_comment cmt_tbl arg.pexp_loc))
+        args
+    in
     (* Avoid printing trailing comma when there is ... in function application *)
     let printed_args =
       List.map (fun arg -> print_argument ~state arg cmt_tbl) args
     in
-    Doc.group
+    Doc.breakable_group ~force_break
       (Doc.concat
          [
            Doc.lparen;
