@@ -806,6 +806,14 @@ let switch lam (lam_switch : lambda_switch) : t =
           | Switch_int _ | Switch_constructor _ -> None)
     in
     action_or_switch action
+  | Lconst
+      (Const_block
+         ( ( Blk_constructor {runtime = {untagged = true}}
+           | Blk_record_inlined {runtime = {untagged = true}} ),
+           _ )) ->
+    (* An untagged payload can have the same runtime value as a literal
+       constructor. Its source constructor does not determine the match. *)
+    Lswitch (lam, lam_switch)
   | Lconst (Const_block (tag_info, _)) ->
     let runtime =
       match tag_info with
