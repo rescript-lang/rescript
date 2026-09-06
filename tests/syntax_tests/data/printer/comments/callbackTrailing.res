@@ -43,3 +43,17 @@ let labeledBelow = call(~fn=x => x
 let optionalLine = call(~fn=?x => x // keep line
 )
 let labeledNested = call(~fn=x => call(~fn=y => y /* keep nested */))
+
+let leadingLabeled = call(/* keep leading label */ ~fn=x => x)
+let leadingOptional = call(/* keep leading optional */ ~fn=?x => x)
+let leadingFirst = call(/* keep leading first */ ~fn=x => x, value)
+let leadingLast = call(value, /* keep leading last */ ~fn=?x => x)
+let afterLabel = call(~fn=/* keep after label */ x => x)
+let leadingNested = call(~fn=x => call(/* keep leading nested */ ~fn=y => y))
+
+outer(x => call(x => x // keep nested line
+))
+outer(x => call(~fn=x => x // keep nested labeled line
+))
+outer(x => call(~fn=?x => x // keep nested optional line
+))

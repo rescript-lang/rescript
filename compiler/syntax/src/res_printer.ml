@@ -93,6 +93,13 @@ let has_trailing_comments tbl loc =
   | None -> false
   | _ -> true
 
+(* Match the full argument location used by comment attachment. *)
+let argument_loc (lbl, (arg : Parsetree.expression)) =
+  match lbl with
+  | Asttypes.Labelled {loc} | Optional {loc} ->
+    {loc with loc_end = arg.pexp_loc.loc_end}
+  | Nolabel -> arg.pexp_loc
+
 let has_leading_comments tbl loc =
   match Hashtbl.find_opt tbl.Comment_table.leading loc with
   | None -> false
@@ -4662,33 +4669,35 @@ and print_pexp_apply ~state expr cmt_tbl =
       | Braced braces -> print_braces doc call_expr braces
       | Nothing -> doc
     in
-    (* Use the regular argument layout for trailing comments. Compact callback
-     * layouts can detach comments from the body when it breaks, making
-     * subsequent formatting unstable. *)
-    let args_have_trailing_comments =
+    (* Use the regular layout for comments attached to arguments. Compact
+     * callback layouts can detach trailing comments when the body breaks and
+     * skip leading comments attached to the full labeled argument. *)
+    let args_have_comments =
       List.exists
         (fun (lbl, (arg : Parsetree.expression)) ->
-          (* Match the full argument location used by comment attachment. *)
-          let loc =
+          let loc = argument_loc (lbl, arg) in
+          let has_leading_label_comments =
             match lbl with
-            | Asttypes.Labelled {loc} | Optional {loc} ->
-              {loc with loc_end = arg.pexp_loc.loc_end}
-            | Nolabel -> arg.pexp_loc
+            | Asttypes.Nolabel -> false
+            | Labelled _ | Optional _ ->
+              has_leading_comments cmt_tbl loc
+              || has_leading_comments cmt_tbl arg.pexp_loc
           in
-          has_trailing_comments cmt_tbl loc
+          has_leading_label_comments
+          || has_trailing_comments cmt_tbl loc
           || has_trailing_comments cmt_tbl arg.pexp_loc)
         args
     in
     let args_doc, maybe_break_parent =
       if
-        (not args_have_trailing_comments)
+        (not args_have_comments)
         && Parsetree_viewer.requires_special_callback_printing_first_arg args
       then
         ( print_arguments_with_callback_in_first_position ~state ~partial args
             cmt_tbl,
           Doc.nil )
       else if
-        (not args_have_trailing_comments)
+        (not args_have_comments)
         && Parsetree_viewer.requires_special_callback_printing_last_arg args
       then
         let args_doc =
@@ -5258,11 +5267,21 @@ and print_arguments ~state ~partial
     in
     Doc.concat [Doc.lparen; arg_doc; Doc.rparen]
   | args ->
+    (* Flush a callback's line comment before closing the argument list, so
+     * reparsing cannot attach it to an enclosing call instead. *)
+    let force_break =
+      List.exists
+        (fun ((_, arg) as argument) ->
+          Parsetree_viewer.is_fun_expr arg
+          && (has_any_trailing_line_comment cmt_tbl (argument_loc argument)
+             || has_any_trailing_line_comment cmt_tbl arg.pexp_loc))
+        args
+    in
     (* Avoid printing trailing comma when there is ... in function application *)
     let printed_args =
       List.map (fun arg -> print_argument ~state arg cmt_tbl) args
     in
-    Doc.group
+    Doc.breakable_group ~force_break
       (Doc.concat
          [
            Doc.lparen;

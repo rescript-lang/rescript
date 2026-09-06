@@ -39,8 +39,28 @@ let () =
         ~display_filename:filename ~source
     in
     assert (not result.invalid);
-    Res_printer.print_implementation ~width result.parsetree
-      ~comments:result.comments
+    let printed =
+      Res_printer.print_implementation ~width result.parsetree
+        ~comments:result.comments
+    in
+    let reparsed =
+      Res_driver.parse_implementation_from_source ~for_printer:true
+        ~display_filename:filename ~source:printed
+    in
+    assert (not reparsed.invalid);
+    let comment_texts comments =
+      List.map (fun comment -> String.trim (Res_comment.txt comment)) comments
+    in
+    if comment_texts result.comments <> comment_texts reparsed.comments then
+      failwith
+        (Printf.sprintf
+           "Callback formatting changed comments at width %d.\n\
+            Source:\n\
+            %s\n\
+            Printed:\n\
+            %s"
+           width source printed);
+    printed
   in
   List.iter
     (fun width ->
