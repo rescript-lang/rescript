@@ -422,6 +422,15 @@ let const_constructor (tag : Variant_runtime.tag) =
     | Some (Variant_runtime.Int v) -> Const_int (Int32.of_int v)
     | _ -> Const_constructor tag
 
+(* An untagged constructor has no runtime existence: [Color("primary")] is the
+   string "primary", exactly as [Primary] is. Erasing the wrapper here gives a
+   runtime value exactly one constant, so no pass can decide a match from a
+   constructor the runtime cannot see. *)
+let const_block (tag_info : tag_info) (args : structured_constant list) =
+  match (tag_info, args) with
+  | Blk_constructor {runtime = {untagged = true}}, [payload] -> payload
+  | _ -> Const_block (tag_info, args)
+
 (* A constructor with an optional shape carries no payload when constant. *)
 let const_shape_none = Const_js_undefined {is_unit = false}
 
@@ -773,6 +782,80 @@ and eq_option l1 l2 =
 
 and eq_approx_list ls ls1 = Ext_list.for_all2_no_exn ls ls1 eq_approx
 
+(* --- Untagged dispatch on a known value ---------------------------------
+
+   An untagged variant has no tag to read: matching tests the value itself,
+   declared literals first and only then the payload's runtime type. For a
+   constant scrutinee the answer is known outright, so these decide it
+   directly. They answer what [Ast_untagged_variants.Dynamic_checks] emits code
+   to ask at runtime, and must keep agreeing with it. *)
+
+type value_kind =
+  | Is_literal of Variant_runtime.literal_tag
+      (** The constant is this scalar at runtime, so it may be a declared
+          literal. *)
+  | Not_a_literal
+      (** The constant is an object at runtime. No literal can be one, so the
+          payload's shape decides. *)
+  | Unknown_value
+      (** This layer cannot name the runtime value, so nothing may be
+          concluded and the switch has to stay. *)
+
+let runtime_value_kind (c : structured_constant) =
+  match c with
+  | Const_string s -> Is_literal (String s)
+  | Const_int i -> Is_literal (Int (Int32.to_int i))
+  | Const_float f -> Is_literal (Float f)
+  | Const_js_true -> Is_literal (Bool true)
+  | Const_js_false -> Is_literal (Bool false)
+  | Const_js_null -> Is_literal Null
+  | Const_js_undefined _ -> Is_literal Undefined
+  | Const_polyvar name -> Is_literal (String name)
+  | Const_constructor {name; literal = None} -> Is_literal (String name)
+  | Const_constructor {literal = Some literal} -> Is_literal literal
+  | Const_block _ -> Not_a_literal
+  | Const_char _ | Const_bigint _ | Const_some _ | Const_module_alias
+  | Const_assertfalse ->
+    Unknown_value
+
+(* Runtime equality of two literals, which is not equality of their tags:
+   [@as(1)] and [@as(1.0)] are the same JavaScript number. *)
+let literal_denotes_same (a : Variant_runtime.literal_tag)
+    (b : Variant_runtime.literal_tag) =
+  match (a, b) with
+  | String x, String y -> x = y
+  | Int x, Int y -> x = y
+  | Float x, Float y -> float_of_string x = float_of_string y
+  | Int x, Float y | Float y, Int x -> float_of_int x = float_of_string y
+  | Bool x, Bool y -> x = y
+  | BigInt x, BigInt y -> x = y
+  | Null, Null | Undefined, Undefined -> true
+  | (String _ | Int _ | Float _ | Bool _ | BigInt _ | Null | Undefined), _ ->
+    false
+
+(* Whether a value known not to be a declared literal answers to an untagged
+   payload's runtime shape. A number satisfies both [IntType] and [FloatType]:
+   they are one [typeof]. *)
+let value_has_block_type (kind : value_kind)
+    (block_type : Variant_runtime.block_type) =
+  match (block_type, kind) with
+  | (IntType | FloatType), Is_literal (Int _ | Float _) -> true
+  | StringType, Is_literal (String _) -> true
+  | BooleanType, Is_literal (Bool _) -> true
+  | ObjectType, Not_a_literal -> true
+  | UnknownType, (Is_literal _ | Not_a_literal) ->
+    (* The catch-all payload: a declaration may carry at most one, and only
+       when it is the sole block, so everything not a literal lands here. *)
+    true
+  | UnknownType, Unknown_value ->
+    (* Even the catch-all needs the value to be known not to be a literal. *)
+    false
+  | (BigintType | FunctionType | InstanceType _), _ ->
+    (* No constant is a function or an instance, and bigint constants are not
+       decided here. *)
+    false
+  | (IntType | FloatType | StringType | BooleanType | ObjectType), _ -> false
+
 let switch lam (lam_switch : lambda_switch) : t =
   let action_or_switch = function
     | Some action -> action
@@ -781,8 +864,48 @@ let switch lam (lam_switch : lambda_switch) : t =
       | Some action -> action
       | None -> Lswitch (lam, lam_switch))
   in
-  match lam with
-  | Lconst (Const_constructor cstr_name) ->
+  (* An untagged variant is dispatched on the value, so a constant scrutinee is
+     decided here rather than by the constructor it was written with - which
+     has no runtime existence and may be shared with a literal constructor.
+     [`Undecided] means this layer cannot name the constant's runtime shape, so
+     the switch has to stay; it is not the same as "no case matches". *)
+  let untagged_action (facts : Variant_runtime.matching_facts) cst =
+    let find_in cases matches =
+      `Case
+        (Ext_list.find_opt cases (fun (key, action) ->
+             match key with
+             | Switch_constructor case when matches case -> Some action
+             | Switch_int _ | Switch_constructor _ -> None))
+    in
+    let literal_of_tag (tag : Variant_runtime.tag) =
+      match tag.literal with
+      | Some literal -> literal
+      | None -> Variant_runtime.String tag.name
+    in
+    let kind = runtime_value_kind cst in
+    match kind with
+    | Unknown_value -> `Undecided
+    | Is_literal literal
+      when Ext_list.exists facts.literal_tags (literal_denotes_same literal) ->
+      (* The literal side wins, exactly as it does at runtime. *)
+      find_in lam_switch.sw_consts (function
+        | Constant tag -> literal_denotes_same literal (literal_of_tag tag)
+        | Block _ -> false)
+    | Is_literal _ | Not_a_literal ->
+      (* Not a declared literal, so the payload's runtime shape decides. *)
+      if Ext_list.exists facts.block_types (value_has_block_type kind) then
+        find_in lam_switch.sw_blocks (function
+          | Block {block_type = Some block_type} ->
+            value_has_block_type kind block_type
+          | Constant _ | Block {block_type = None} -> false)
+      else `Undecided
+  in
+  match (lam, lam_switch.sw_dispatch) with
+  | Lconst cst, Switch_variant ({block_types = _ :: _} as facts) -> (
+    match untagged_action facts cst with
+    | `Case action -> action_or_switch action
+    | `Undecided -> Lswitch (lam, lam_switch))
+  | Lconst (Const_constructor cstr_name), _ ->
     let action =
       Ext_list.find_opt lam_switch.sw_consts (fun (key, action) ->
           match key with
@@ -791,7 +914,7 @@ let switch lam (lam_switch : lambda_switch) : t =
           | Switch_int _ | Switch_constructor _ -> None)
     in
     action_or_switch action
-  | Lconst (Const_int i) ->
+  | Lconst (Const_int i), _ ->
     (* Because of inlining and dead code, we might be looking at a value of unexpected type
        e.g. an integer, so the const case might not be found *)
     let i = Int32.to_int i in
@@ -806,7 +929,7 @@ let switch lam (lam_switch : lambda_switch) : t =
           | Switch_int _ | Switch_constructor _ -> None)
     in
     action_or_switch action
-  | Lconst (Const_block (tag_info, _)) ->
+  | Lconst (Const_block (tag_info, _)), _ ->
     let runtime =
       match tag_info with
       | Blk_constructor {runtime} | Blk_record_inlined {runtime} -> Some runtime
