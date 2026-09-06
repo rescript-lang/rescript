@@ -185,7 +185,7 @@ and traverse_pattern (pat : Parsetree.pattern) ~pattern_path ~loc_has_cursor
         [
           Completable.NVariantPayload
             {
-              constructor_name = Utils.get_unqualified_name txt;
+              constructor_name = Longident.last txt;
               item_num = 0;
               source_arity = 1;
             };
@@ -199,7 +199,7 @@ and traverse_pattern (pat : Parsetree.pattern) ~pattern_path ~loc_has_cursor
            [
              Completable.NVariantPayload
                {
-                 constructor_name = Utils.get_unqualified_name txt;
+                 constructor_name = Longident.last txt;
                  item_num;
                  source_arity = List.length patterns;
                };
@@ -209,7 +209,7 @@ and traverse_pattern (pat : Parsetree.pattern) ~pattern_path ~loc_has_cursor
            [
              Completable.NVariantPayload
                {
-                 constructor_name = Utils.get_unqualified_name txt;
+                 constructor_name = Longident.last txt;
                  item_num = item_num + 1;
                  source_arity = List.length patterns;
                };

@@ -503,7 +503,7 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
                  {
                    item_num = index;
                    source_arity = List.length patterns;
-                   constructor_name = Utils.get_unqualified_name txt;
+                   constructor_name = Longident.last txt;
                  }
               :: pattern_path)
             ?context_path)
