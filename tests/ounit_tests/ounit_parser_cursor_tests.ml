@@ -1,7 +1,7 @@
 let ( >:: ), ( >::: ) = OUnit.(( >:: ), ( >::: ))
 
 let parse source =
-  Res_driver.parse_implementation_from_source ~for_printer:false
+  Res_driver.parse_implementation_from_source
     ~display_filename:"ParserCursor.res" ~source
 
 let suites =

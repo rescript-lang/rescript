@@ -103,7 +103,7 @@ let runtime_excluded_labels ~explicit_runtime_labels source_repr =
   match source_repr with
   | Record_inlined {representation; _} -> (
     match Variant_runtime.representation representation with
-    | Block {runtime = {untagged = false; tag_name}} ->
+    | Block (Tagged {tag_name}) ->
       let tag_name = Option.value tag_name ~default:"TAG" in
       if List.mem tag_name explicit_runtime_labels then explicit_runtime_labels
       else tag_name :: explicit_runtime_labels

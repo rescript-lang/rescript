@@ -152,7 +152,6 @@ module Benchmarks : sig
 end = struct
   let num_iterations = ref 150
   let parse_manifest = ref None
-  let for_printer = ref false
 
   type action = Parse | Print
 
@@ -213,10 +212,7 @@ end = struct
     let parse () =
       List.iter
         (fun (filename, source) ->
-          let mode =
-            if !for_printer then Parser.Default else Parser.ParseForTypeChecker
-          in
-          let p = Parser.make ~mode source filename in
+          let p = Parser.make source filename in
           if Filename.check_suffix filename ".resi" then
             ignore (Sys.opaque_identity (Res_core.parse_specification p))
           else ignore (Sys.opaque_identity (Res_core.parse_implementation p));
@@ -238,9 +234,6 @@ end = struct
         ( "--iterations",
           Arg.Set_int num_iterations,
           "Number of iterations per benchmark (default: 150)" );
-        ( "--for-printer",
-          Arg.Set for_printer,
-          "Use the formatter parser mode for corpus benchmarks" );
       ]
       (fun arg -> raise (Arg.Bad ("Unexpected argument: " ^ arg)))
       "syntax_benchmarks [--parse-manifest FILE] [--iterations N]";

@@ -210,8 +210,7 @@ let process_tag_name (attrs : Parsetree.attributes) =
 (* A constructor the compiler generates itself carries no annotations. *)
 let generated_tag ~name = {name; literal = None}
 
-let generated_block_runtime ~name =
-  {tag = generated_tag ~name; tag_name = None; untagged = false}
+let generated_block_runtime ~name = {tag = generated_tag ~name; tag_name = None}
 
 let is_nullary_variant (x : Types.constructor_arguments) =
   match x with
@@ -295,8 +294,8 @@ let check_invariant ~is_untagged_def ~(consts : (Location.t * tag) list)
       check_literal ~is_const:true ~loc literal);
   if is_untagged_def then
     Ext_list.rev_iter blocks (fun (loc, block) ->
-        match block.block_type with
-        | Some block_type ->
+        match block with
+        | Untagged {tag; block_type} ->
           (match block_type with
           | UnknownType -> incr unknown_types
           | ObjectType -> incr object_types
@@ -310,11 +309,15 @@ let check_invariant ~is_untagged_def ~(consts : (Location.t * tag) list)
           | BigintType -> incr bigint_types
           | BooleanType -> incr boolean_types
           | StringType -> incr string_types);
-          invariant loc block.runtime.tag.name
-        | None -> ())
+          invariant loc tag.name
+        | Tagged _ -> ())
   else
     Ext_list.rev_iter blocks (fun (loc, block) ->
-        check_literal ~is_const:false ~loc block.runtime.tag)
+        let tag =
+          match block with
+          | Tagged {tag} | Untagged {tag} -> tag
+        in
+        check_literal ~is_const:false ~loc tag)
 
 let get_cstr_loc_tag (cstr : Types.constructor_declaration) =
   (cstr.cd_loc, {name = Ident.name cstr.cd_id; literal = cstr.cd_runtime_tag})
@@ -371,15 +374,15 @@ module Dynamic_checks = struct
   let not x = Not x
   let nil = Literal Null |> tag_type
   let undefined = Literal Undefined |> tag_type
-  let object_ = Untagged ObjectType |> tag_type
+  let object_ = Payload_shape ObjectType |> tag_type
 
-  let function_ = Untagged FunctionType |> tag_type
-  let string = Untagged StringType |> tag_type
-  let number = Untagged IntType |> tag_type
+  let function_ = Payload_shape FunctionType |> tag_type
+  let string = Payload_shape StringType |> tag_type
+  let number = Payload_shape IntType |> tag_type
 
-  let bigint = Untagged BigintType |> tag_type
+  let bigint = Payload_shape BigintType |> tag_type
 
-  let boolean = Untagged BooleanType |> tag_type
+  let boolean = Payload_shape BooleanType |> tag_type
 
   let ( == ) x y = bin EqEqEq x y
   let ( != ) x y = bin NotEqEq x y
@@ -504,11 +507,11 @@ module Dynamic_checks = struct
         | _ -> None)
     in
     match tag_type with
-    | Untagged
+    | Payload_shape
         ( IntType | StringType | FloatType | BigintType | BooleanType
         | FunctionType ) ->
       typeof y == x
-    | Untagged ObjectType ->
+    | Payload_shape ObjectType ->
       let object_case =
         if has_null_case then typeof y == x &&& (y != nil) else typeof y == x
       in
@@ -519,8 +522,8 @@ module Dynamic_checks = struct
         in
         not_one_of_the_instances
       else object_case
-    | Untagged (InstanceType i) -> is_instance i y
-    | Untagged UnknownType ->
+    | Payload_shape (InstanceType i) -> is_instance i y
+    | Payload_shape UnknownType ->
       (* This should not happen because unknown must be the only non-literal case *)
       assert false
     | Literal _ -> x

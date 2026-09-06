@@ -7,22 +7,19 @@ let without_locations structure =
   mapper.structure mapper structure
 
 let assert_recovery ~source ~expected =
-  List.iter
-    (fun for_printer ->
-      let parse source =
-        Res_driver.parse_implementation_from_source ~for_printer
-          ~display_filename:"Recovery.res" ~source
-      in
-      let recovered = parse source in
-      let valid = parse expected in
-      OUnit.assert_bool source recovered.invalid;
-      OUnit.assert_bool expected (not valid.invalid);
-      OUnit.assert_equal ~msg:source 1 (List.length recovered.diagnostics);
-      OUnit.assert_equal ~msg:source
-        ~printer:(Format.asprintf "%a" Printast.implementation)
-        (without_locations valid.parsetree)
-        (without_locations recovered.parsetree))
-    [false; true]
+  let parse source =
+    Res_driver.parse_implementation_from_source ~display_filename:"Recovery.res"
+      ~source
+  in
+  let recovered = parse source in
+  let valid = parse expected in
+  OUnit.assert_bool source recovered.invalid;
+  OUnit.assert_bool expected (not valid.invalid);
+  OUnit.assert_equal ~msg:source 1 (List.length recovered.diagnostics);
+  OUnit.assert_equal ~msg:source
+    ~printer:(Format.asprintf "%a" Printast.implementation)
+    (without_locations valid.parsetree)
+    (without_locations recovered.parsetree)
 
 let suites =
   __FILE__
@@ -69,22 +66,18 @@ let suites =
                assert_recovery
                  ~source:(source ^ "\nlet after = 1")
                  ~expected:(expected ^ "\nlet after = 1");
-               List.iter
-                 (fun for_printer ->
-                   let result =
-                     Res_driver.parse_implementation_from_source ~for_printer
-                       ~display_filename:"Recovery.res" ~source
-                   in
-                   match result.diagnostics with
-                   | [diagnostic] ->
-                     OUnit.assert_equal (String.index source '(')
-                       (Res_diagnostics.get_start_pos diagnostic).pos_cnum;
-                     OUnit.assert_equal ~printer:Fun.id
-                       ("Type parameters require angle brackets:\n  " ^ hint)
-                       (Res_diagnostics.explain diagnostic)
-                   | _ ->
-                     OUnit.assert_failure "expected one delimiter diagnostic")
-                 [false; true])
+               let result =
+                 Res_driver.parse_implementation_from_source
+                   ~display_filename:"Recovery.res" ~source
+               in
+               match result.diagnostics with
+               | [diagnostic] ->
+                 OUnit.assert_equal (String.index source '(')
+                   (Res_diagnostics.get_start_pos diagnostic).pos_cnum;
+                 OUnit.assert_equal ~printer:Fun.id
+                   ("Type parameters require angle brackets:\n  " ^ hint)
+                   (Res_diagnostics.explain diagnostic)
+               | _ -> OUnit.assert_failure "expected one delimiter diagnostic")
              [
                ("type t = option(int)", "type t = option<int>", "option<int>");
                ( "type t<'a> = Nullable.t('a)",
@@ -128,7 +121,7 @@ let suites =
              "type a = option(<int>)\ntype b = option(<string>)\nlet after = 1"
            in
            let result =
-             Res_driver.parse_implementation_from_source ~for_printer:false
+             Res_driver.parse_implementation_from_source
                ~display_filename:"Recovery.res" ~source
            in
            OUnit.assert_equal 2 (List.length result.diagnostics);

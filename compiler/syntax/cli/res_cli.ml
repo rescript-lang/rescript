@@ -160,7 +160,6 @@ module Res_clflags : sig
   val interface : bool ref
   val jsx_version : int ref
   val jsx_module : string ref
-  val typechecker : bool ref
   val test_ast_conversion : bool ref
 
   val parse : unit -> unit
@@ -173,7 +172,6 @@ end = struct
   let jsx_version = ref (-1)
   let jsx_module = ref "react"
   let file = ref ""
-  let typechecker = ref false
   let test_ast_conversion = ref false
 
   let usage =
@@ -206,10 +204,6 @@ end = struct
       ( "-jsx-module",
         Arg.String (fun txt -> jsx_module := txt),
         "Specify the jsx module. Default: react" );
-      ( "-typechecker",
-        Arg.Unit (fun () -> typechecker := true),
-        "Parses the ast as it would be passed to the typechecker and not the \
-         printer" );
       ( "-test-ast-conversion",
         Arg.Unit (fun () -> test_ast_conversion := true),
         "Test the ast conversion" );
@@ -223,7 +217,7 @@ module Cli_arg_processor = struct
   [@@unboxed]
 
   let process_file ~is_interface ~width ~recover ~target ~jsx_version
-      ~jsx_module ~typechecker ~test_ast_conversion filename =
+      ~jsx_module ~test_ast_conversion filename =
     let len = String.length filename in
     let process_interface =
       is_interface
@@ -246,12 +240,6 @@ module Cli_arg_processor = struct
         exit 1
     in
 
-    let for_printer =
-      match target with
-      | ("res" | "sexp") when not typechecker -> true
-      | _ -> false
-    in
-
     let (Parser backend) = parsing_engine in
     (* This is the whole purpose of the Color module above *)
     Color.setup None;
@@ -260,7 +248,7 @@ module Cli_arg_processor = struct
     if target = "tokens" then
       print_engine.print_implementation ~width ~filename ~comments:[] []
     else if process_interface then
-      let parse_result = backend.parse_interface ~for_printer ~filename in
+      let parse_result = backend.parse_interface ~filename in
       if parse_result.invalid then (
         backend.string_of_diagnostics ~source:parse_result.source
           ~filename:parse_result.filename parse_result.diagnostics;
@@ -285,7 +273,7 @@ module Cli_arg_processor = struct
         print_engine.print_interface ~width ~filename
           ~comments:parse_result.comments parsetree
     else
-      let parse_result = backend.parse_implementation ~for_printer ~filename in
+      let parse_result = backend.parse_implementation ~filename in
       if parse_result.invalid then (
         backend.string_of_diagnostics ~source:parse_result.source
           ~filename:parse_result.filename parse_result.diagnostics;
@@ -318,7 +306,6 @@ let () =
     Cli_arg_processor.process_file ~is_interface:!Res_clflags.interface
       ~width:!Res_clflags.width ~recover:!Res_clflags.recover
       ~target:!Res_clflags.print ~jsx_version:!Res_clflags.jsx_version
-      ~jsx_module:!Res_clflags.jsx_module ~typechecker:!Res_clflags.typechecker
-      !Res_clflags.file
+      ~jsx_module:!Res_clflags.jsx_module !Res_clflags.file
       ~test_ast_conversion:!Res_clflags.test_ast_conversion)
 [@@raises exit]

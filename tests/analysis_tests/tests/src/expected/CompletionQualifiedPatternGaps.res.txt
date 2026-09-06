@@ -1,0 +1,90 @@
+Complete src/CompletionQualifiedPatternGaps.res 6:38
+posCursor:[6:38] posNoWhite:[6:37] Found pattern:[6:20->6:39]
+Ppat_construct Qualified.Payload:[6:20->6:37]
+posCursor:[6:38] posNoWhite:[6:37] Found pattern:[6:37->6:39]
+Ppat_construct ():[6:37->6:39]
+Completable: Cpattern Value[value]->variantPayload::Payload($0)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[value]
+Path value
+[
+  { "detail": "bool", "kind": 4, "label": "true", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "false", "tags": [] }
+]
+
+Complete src/CompletionQualifiedPatternGaps.res 9:39
+posCursor:[9:39] posNoWhite:[9:38] Found pattern:[9:20->9:40]
+Ppat_construct Qualified.Payload:[9:20->9:37]
+posCursor:[9:39] posNoWhite:[9:38] Found pattern:[9:38->9:39]
+Completable: Cpattern Value[value]=t->variantPayload::Payload($0)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[value]
+Path value
+[ { "detail": "bool", "kind": 4, "label": "true", "tags": [] } ]
+
+Complete src/CompletionQualifiedPatternGaps.res 12:40
+posCursor:[12:40] posNoWhite:[12:38] Found pattern:[12:20->12:47]
+Ppat_construct Qualified.Gap:[12:20->12:33]
+Completable: Cpattern Value[value]->variantPayload::Gap($1)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[value]
+Path value
+[
+  { "detail": "bool", "kind": 4, "label": "true", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "false", "tags": [] }
+]
+
+Complete src/CompletionQualifiedPatternGaps.res 15:66
+posCursor:[15:66] posNoWhite:[15:65] Found pattern:[15:65->15:66]
+Completable: Cpattern Value[bound]=t
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[bound]
+Path bound
+ContextPath CPatternPath(Value[value])->variantPayload::Payload($0)
+ContextPath Value[value]
+Path value
+[ { "detail": "bool", "kind": 4, "label": "true", "tags": [] } ]
+
+Complete src/CompletionQualifiedPatternGaps.res 21:33
+posCursor:[21:33] posNoWhite:[21:31] Found pattern:[21:23->21:40]
+Ppat_construct Gap:[21:23->21:26]
+Completable: Cpattern Value[ordinary]->variantPayload::Gap($1)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[ordinary]
+Path ordinary
+[
+  { "detail": "bool", "kind": 4, "label": "true", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "false", "tags": [] }
+]
+
+Complete src/CompletionQualifiedPatternGaps.res 28:26
+posCursor:[28:26] posNoWhite:[28:24] Found expr:[28:3->28:34]
+Pexp_apply ...[28:3->28:14] (...[28:15->28:33])
+Completable: Cexpression CArgument Value[consumePoly]($0)->polyvariantPayload::gap($1)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath CArgument Value[consumePoly]($0)
+ContextPath Value[consumePoly]
+Path consumePoly
+[
+  { "detail": "bool", "kind": 4, "label": "true", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "false", "tags": [] }
+]
+
+Complete src/CompletionQualifiedPatternGaps.res 31:30
+posCursor:[31:30] posNoWhite:[31:28] Found pattern:[31:19->31:37]
+Completable: Cpattern Value[poly]->polyvariantPayload::gap($1)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[poly]
+Path poly
+[
+  { "detail": "bool", "kind": 4, "label": "true", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "false", "tags": [] }
+]
+

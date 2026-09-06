@@ -5,15 +5,12 @@ module Reporting = Res_reporting
 module Diagnostics = Res_diagnostics
 module Comment = Res_comment
 
-type mode = ParseForTypeChecker | Default
-
 type region_status = Report | Silent
 
 type cursor
 type token_cache
 
 type t = {
-  mode: mode;
   filename: string;
   source: string;
   mutable cursor: cursor;
@@ -27,7 +24,7 @@ type t = {
   mutable warnings: (Location.t * Warnings.t) list;
 }
 
-val make : ?mode:mode -> string -> string -> t
+val make : string -> string -> t
 
 (* Queries never consume a token. At most two tokens are cached. *)
 val peek : t -> Token.t

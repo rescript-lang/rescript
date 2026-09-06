@@ -1161,7 +1161,7 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.t =
       | Ordinary_constructor _ -> (
         let runtime =
           match Datarepr.constructor_case cstr with
-          | Block {runtime} -> runtime
+          | Block runtime -> runtime
           | Constant _ -> assert false
         in
         if Datarepr.constructor_is_unboxed cstr then
@@ -1185,17 +1185,25 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.t =
           try const (Const_some (extract_constant value))
           with Not_constant -> prim ~primitive ~args:ll e.exp_loc
         else
-          let tag_info : Lambda.tag_info =
-            Blk_constructor
-              {
-                name = cstr.cstr_name;
-                num_nonconst = num_nonconst_constructors cstr;
-                runtime;
-              }
-          in
-          try const (Const_block (tag_info, List.map extract_constant ll))
-          with Not_constant ->
-            prim ~primitive:(Pmakeblock tag_info) ~args:ll e.exp_loc)
+          match runtime with
+          | Untagged _ -> (
+            (* Untagged payload constructors have no Lambda or JS block.
+               Their arity has already been validated by the type checker. *)
+            match ll with
+            | [value] -> value
+            | _ -> assert false)
+          | Tagged runtime -> (
+            let tag_info : Lambda.tag_info =
+              Blk_constructor
+                {
+                  name = cstr.cstr_name;
+                  num_nonconst = num_nonconst_constructors cstr;
+                  runtime;
+                }
+            in
+            try const (Const_block (tag_info, List.map extract_constant ll))
+            with Not_constant ->
+              prim ~primitive:(Pmakeblock tag_info) ~args:ll e.exp_loc))
       | Extension_constructor path ->
         prim ~primitive:(Pmakeblock Blk_extension)
           ~args:(Transl_path.transl_extension_path e.exp_env path :: ll)
@@ -1507,7 +1515,7 @@ and transl_record loc env fields repres opt_init_expr =
           | Record_inlined {name; representation} ->
             let runtime =
               match Variant_runtime.representation representation with
-              | Block {runtime} -> runtime
+              | Block runtime -> runtime
               | Constant _ -> assert false
             in
             let num_nonconsts =
@@ -1535,7 +1543,7 @@ and transl_record loc env fields repres opt_init_expr =
           | Record_inlined {name; representation} ->
             let runtime =
               match Variant_runtime.representation representation with
-              | Block {runtime} -> runtime
+              | Block runtime -> runtime
               | Constant _ -> assert false
             in
             let num_nonconsts =

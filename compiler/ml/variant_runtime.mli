@@ -50,7 +50,10 @@ type literal_tag =
   | Null
   | Undefined
 
-type tag_type = Literal of literal_tag | Untagged of block_type
+(** Information used to recognize a constructor during matching. A literal
+    identifies a constant or an object's tag; a payload shape identifies a
+    value represented directly by its payload. *)
+type tag_type = Literal of literal_tag | Payload_shape of block_type
 
 type tag = {name: string; literal: literal_tag option}
 (** A constructor's name and optional explicitly declared runtime literal. *)
@@ -59,9 +62,14 @@ type matchable_tag = {name: string; tag_type: tag_type option}
 (** A constructor tag widened for matching, where an untagged payload shape
     can participate alongside declared literals. *)
 
-type block_runtime = {tag: tag; tag_name: string option; untagged: bool}
+type tagged_block = {tag: tag; tag_name: string option}
 
-type block = {runtime: block_runtime; block_type: block_type option}
+(** An untagged payload always carries the runtime shape used for dispatch.
+    Only tagged blocks have an emitted tag field. *)
+type block =
+  | Tagged of tagged_block
+  | Untagged of {tag: tag; block_type: block_type}
+
 type constructor_case = Constant of tag | Block of block
 
 val to_matchable_tag : tag -> matchable_tag

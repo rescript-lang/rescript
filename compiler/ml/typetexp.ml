@@ -437,8 +437,16 @@ and transl_type_aux env policy styp =
       with Not_found -> Hashtbl.add hfields l (l, f)
     in
     let add_field = function
-      | Rtag (l, attrs, c, stl) ->
+      | Rtag (l, attrs, c, groups) ->
         name := None;
+        let stl =
+          List.map
+            (fun {loc; txt = args} ->
+              match args with
+              | [arg] -> arg
+              | args -> Ast_helper.Typ.tuple ~loc args)
+            groups
+        in
         let tl =
           Builtin_attributes.warning_scope attrs (fun () ->
               List.map (transl_type env policy) stl)

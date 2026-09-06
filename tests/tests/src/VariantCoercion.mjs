@@ -15,16 +15,14 @@ let CoerceVariants = {
 
 let a = "hello";
 
-let c = 100;
-
 let CoerceWithPayload = {
   a: a,
   aa: "First",
   b: a,
   bb: "First",
-  c: c,
+  c: 100,
   cc: 2,
-  d: c,
+  d: 100,
   dd: 2
 };
 
@@ -32,15 +30,15 @@ let a$1 = "hello";
 
 let aa = "First";
 
-let c$1 = "Hi";
+let c = "Hi";
 
 let CoerceFromStringToVariant = {
   a: a$1,
   aa: aa,
   b: a$1,
   bb: aa,
-  c: c$1,
-  cc: c$1
+  c: c,
+  cc: c
 };
 
 let CoerceFromIntToVariant = {

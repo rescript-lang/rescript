@@ -920,21 +920,20 @@ and expression_desc cxt ~(level : int) f x : cxt =
   | Caml_block (el, _, ((Blk_extension | Blk_record_ext _) as ext)) ->
     expression_desc cxt ~level f (exn_block_as_obj ~stack:false el ext)
   | Caml_block (el, _, Blk_record_inlined p) ->
-    let {Variant_runtime.tag; tag_name; untagged} = p.runtime in
     let objs =
       let tails =
         Ext_list.combine_array p.fields el (fun (i, opt) -> (Js_op.Lit i, opt))
       in
-      let tag_name = Option.value tag_name ~default:L.tag in
       let tails =
         Ext_list.filter_map tails (fun ((f, optional), x) ->
             match x.expression_desc with
             | Undefined _ when optional -> None
             | _ -> Some (f, x))
       in
-      if untagged then tails
-      else
-        ( Js_op.Lit tag_name,
+      match p.runtime with
+      | Untagged _ -> tails
+      | Tagged {tag; tag_name} ->
+        ( Js_op.Lit (Option.value tag_name ~default:L.tag),
           (* TAG:xx for inline records *)
           match tag.literal with
           | None -> E.str p.name
@@ -944,7 +943,7 @@ and expression_desc cxt ~(level : int) f x : cxt =
     expression_desc cxt ~level f (Object (None, objs))
   | Caml_block (el, _, Blk_constructor p) ->
     let not_is_cons = p.name <> Literals.cons in
-    let {Variant_runtime.tag; tag_name; untagged} = p.runtime in
+    let {Variant_runtime.tag; tag_name} = p.runtime in
     let literal = tag.literal in
     let tag_name = Option.value tag_name ~default:L.tag in
     let objs =
@@ -956,11 +955,10 @@ and expression_desc cxt ~(level : int) f x : cxt =
               | false, 1 -> Js_op.Lit Literals.tl
               | _ -> Js_op.Lit ("_" ^ string_of_int i)),
               e ))
-          (if !Js_config.debug && (not untagged) && not_is_cons then
-             [(name_symbol, E.str p.name)]
+          (if !Js_config.debug && not_is_cons then [(name_symbol, E.str p.name)]
            else [])
       in
-      if untagged || not_is_cons = false then tails
+      if not_is_cons = false then tails
       else
         ( Js_op.Lit tag_name,
           (* TAG:xx *)
@@ -969,14 +967,7 @@ and expression_desc cxt ~(level : int) f x : cxt =
           | Some t -> E.literal_tag t )
         :: tails
     in
-    let exp =
-      match objs with
-      | [(_, e)] when untagged -> e.expression_desc
-      | _ when untagged -> assert false (* should not happen *)
-      (* TODO: put restriction on the variant definitions allowed, to make sure this never happens. *)
-      | _ -> J.Object (None, objs)
-    in
-    expression_desc cxt ~level f exp
+    expression_desc cxt ~level f (J.Object (None, objs))
   | Caml_block (_, _, Blk_module_export _) -> assert false
   | Caml_block (el, _, Blk_tuple) -> expression_desc cxt ~level f (Array el)
   | Caml_block_tag (e, tag) ->

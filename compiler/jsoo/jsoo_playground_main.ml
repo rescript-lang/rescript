@@ -255,11 +255,7 @@ module Res_driver = struct
   open Res_driver
 
   (* adds ~src parameter *)
-  let setup ~src ~filename ~for_printer () =
-    let mode =
-      if for_printer then Res_parser.Default else ParseForTypeChecker
-    in
-    Res_parser.make ~mode src filename
+  let setup ~src ~filename = Res_parser.make src filename
 
   (* get full super error message *)
   let diagnostic_to_string ~(src : string) (d : Res_diagnostics.t) =
@@ -273,10 +269,10 @@ module Res_driver = struct
     Location.default_error_reporter ~src:(Some src) Format.str_formatter err;
     Format.flush_str_formatter ()
 
-  let parse_implementation ~sourcefile ~for_printer ~src =
+  let parse_implementation ~sourcefile ~src =
     Location.input_name := sourcefile;
     let parse_result =
-      let engine = setup ~filename:sourcefile ~for_printer ~src () in
+      let engine = setup ~filename:sourcefile ~src in
       let structure = Res_core.parse_implementation engine in
       let invalid, diagnostics =
         match engine.diagnostics with
@@ -316,7 +312,7 @@ end
 
 let rescript_parse ~filename src =
   let structure, _ =
-    Res_driver.parse_implementation ~for_printer:false ~sourcefile:filename ~src
+    Res_driver.parse_implementation ~sourcefile:filename ~src
   in
   structure
 
@@ -743,12 +739,9 @@ module Compile = struct
       let code =
         match (from, to_) with
         | Res, Res ->
-          (* Essentially pretty printing.
-           * IMPORTANT: we need forPrinter:true when parsing code here,
-           * otherwise we will loose some information for the ReScript printer *)
+          (* Essentially pretty printing. *)
           let structure, comments =
-            Res_driver.parse_implementation ~for_printer:true
-              ~sourcefile:filename ~src
+            Res_driver.parse_implementation ~sourcefile:filename ~src
           in
           Res_printer.print_implementation ~width:80 structure ~comments
       in

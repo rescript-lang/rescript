@@ -308,7 +308,8 @@ let rec lam ppf = function
           match key with
           | Switch_int ordinal ->
             fprintf ppf "@[<hv 1>case tag %i:@ %a@]" ordinal lam l
-          | Switch_constructor (Block {runtime = {tag = {name}}}) ->
+          | Switch_constructor
+              (Block (Tagged {tag = {name}} | Untagged {tag = {name}})) ->
             fprintf ppf "@[<hv 1>case constructor %S:@ %a@]" name lam l
           | Switch_constructor (Constant _) -> assert false)
         sw.sw_blocks;

@@ -22,14 +22,12 @@ let document_syntax ~source ~kind_file =
   in
   if kind_file = Files.Res then
     let parse_implementation =
-      Res_driver.parsing_engine.parse_implementation_from_source
-        ~for_printer:false ~source
+      Res_driver.parsing_engine.parse_implementation_from_source ~source
     in
     get_diagnostics parse_implementation.diagnostics
   else if kind_file = Files.Resi then
     let parse_interface =
-      Res_driver.parsing_engine.parse_interface_from_source ~for_printer:false
-        ~source
+      Res_driver.parsing_engine.parse_interface_from_source ~source
     in
     get_diagnostics parse_interface.diagnostics
   else []

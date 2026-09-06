@@ -6,8 +6,6 @@ module Reporting = Res_reporting
 
 module Comment = Res_comment
 
-type mode = ParseForTypeChecker | Default
-
 type region_status = Report | Silent
 
 (* Two reusable slots bound lookahead without allocating a scanner per query.
@@ -29,7 +27,6 @@ type token_cache = {
 type cursor = Lexing.position
 
 type t = {
-  mode: mode;
   filename: string;
   source: string;
   mutable cursor: cursor;
@@ -233,9 +230,8 @@ let next_regex_token p =
 let check_progress ~position ~result p =
   if p.cursor.pos_cnum = position.Lexing.pos_cnum then None else Some result
 
-let make ?(mode = ParseForTypeChecker) source filename =
+let make source filename =
   {
-    mode;
     filename;
     source;
     cursor = Lexing.dummy_pos;
