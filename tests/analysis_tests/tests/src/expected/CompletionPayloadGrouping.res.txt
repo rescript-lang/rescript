@@ -1,0 +1,831 @@
+Complete src/CompletionPayloadGrouping.res 10:18
+posCursor:[10:18] posNoWhite:[10:17] Found expr:[10:3->10:25]
+Pexp_apply ...[10:3->10:10] (...[10:11->10:24])
+Completable: Cexpression CArgument Value[consume]($0)->variantPayload::Unary($0), recordBody
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath CArgument Value[consume]($0)
+ContextPath Value[consume]
+Path consume
+[
+  {
+    "detail": "string",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nname: string\n```\n\n```rescript\ntype payload = {name: string, enabled: bool}\n```"
+    },
+    "kind": 5,
+    "label": "name",
+    "tags": []
+  },
+  {
+    "detail": "bool",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nenabled: bool\n```\n\n```rescript\ntype payload = {name: string, enabled: bool}\n```"
+    },
+    "kind": 5,
+    "label": "enabled",
+    "tags": []
+  }
+]
+
+Complete src/CompletionPayloadGrouping.res 13:22
+posCursor:[13:22] posNoWhite:[13:21] Found expr:[13:3->13:25]
+Pexp_apply ...[13:3->13:10] (...[13:11->13:24])
+Completable: Cexpression CArgument Value[consume]($0)->variantPayload::Unary($1), recordBody
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath CArgument Value[consume]($0)
+ContextPath Value[consume]
+Path consume
+[
+  {
+    "detail": "string",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nname: string\n```\n\n```rescript\ntype payload = {name: string, enabled: bool}\n```"
+    },
+    "kind": 5,
+    "label": "name",
+    "tags": []
+  },
+  {
+    "detail": "bool",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nenabled: bool\n```\n\n```rescript\ntype payload = {name: string, enabled: bool}\n```"
+    },
+    "kind": 5,
+    "label": "enabled",
+    "tags": []
+  }
+]
+
+Complete src/CompletionPayloadGrouping.res 16:27
+posCursor:[16:27] posNoWhite:[16:26] Found pattern:[16:20->16:32]
+Ppat_construct Unary:[16:20->16:25]
+posCursor:[16:27] posNoWhite:[16:26] Found pattern:[16:26->16:28]
+Completable: Cpattern Value[value]->variantPayload::Unary($0), recordBody
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[value]
+Path value
+[
+  {
+    "detail": "string",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nname: string\n```\n\n```rescript\ntype payload = {name: string, enabled: bool}\n```"
+    },
+    "kind": 5,
+    "label": "name",
+    "tags": []
+  },
+  {
+    "detail": "bool",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nenabled: bool\n```\n\n```rescript\ntype payload = {name: string, enabled: bool}\n```"
+    },
+    "kind": 5,
+    "label": "enabled",
+    "tags": []
+  }
+]
+
+Complete src/CompletionPayloadGrouping.res 19:30
+posCursor:[19:30] posNoWhite:[19:29] Found pattern:[19:20->19:32]
+Ppat_construct Unary:[19:20->19:25]
+posCursor:[19:30] posNoWhite:[19:29] Found pattern:[19:29->19:31]
+Completable: Cpattern Value[value]->variantPayload::Unary($1), recordBody
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[value]
+Path value
+[
+  {
+    "detail": "string",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nname: string\n```\n\n```rescript\ntype payload = {name: string, enabled: bool}\n```"
+    },
+    "kind": 5,
+    "label": "name",
+    "tags": []
+  },
+  {
+    "detail": "bool",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nenabled: bool\n```\n\n```rescript\ntype payload = {name: string, enabled: bool}\n```"
+    },
+    "kind": 5,
+    "label": "enabled",
+    "tags": []
+  }
+]
+
+Complete src/CompletionPayloadGrouping.res 22:23
+posCursor:[22:23] posNoWhite:[22:22] Found expr:[22:3->22:30]
+Pexp_apply ...[22:3->22:16] (...[22:17->22:29])
+Completable: Cexpression CArgument Value[consumeOption]($0)->variantPayload::Some($0), recordBody
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath CArgument Value[consumeOption]($0)
+ContextPath Value[consumeOption]
+Path consumeOption
+[
+  {
+    "detail": "string",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nname: string\n```\n\n```rescript\ntype payload = {name: string, enabled: bool}\n```"
+    },
+    "kind": 5,
+    "label": "name",
+    "tags": []
+  },
+  {
+    "detail": "bool",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nenabled: bool\n```\n\n```rescript\ntype payload = {name: string, enabled: bool}\n```"
+    },
+    "kind": 5,
+    "label": "enabled",
+    "tags": []
+  }
+]
+
+Complete src/CompletionPayloadGrouping.res 25:27
+posCursor:[25:27] posNoWhite:[25:26] Found expr:[25:3->25:30]
+Pexp_apply ...[25:3->25:16] (...[25:17->25:29])
+Completable: Cexpression CArgument Value[consumeOption]($0)->variantPayload::Some($1), recordBody
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath CArgument Value[consumeOption]($0)
+ContextPath Value[consumeOption]
+Path consumeOption
+[
+  {
+    "detail": "string",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nname: string\n```\n\n```rescript\ntype payload = {name: string, enabled: bool}\n```"
+    },
+    "kind": 5,
+    "label": "name",
+    "tags": []
+  },
+  {
+    "detail": "bool",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nenabled: bool\n```\n\n```rescript\ntype payload = {name: string, enabled: bool}\n```"
+    },
+    "kind": 5,
+    "label": "enabled",
+    "tags": []
+  }
+]
+
+Complete src/CompletionPayloadGrouping.res 28:35
+posCursor:[28:35] posNoWhite:[28:34] Found pattern:[28:26->28:37]
+Ppat_construct Some:[28:26->28:30]
+posCursor:[28:35] posNoWhite:[28:34] Found pattern:[28:34->28:36]
+Completable: Cpattern Value[optionValue]->variantPayload::Some($1), recordBody
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[optionValue]
+Path optionValue
+[
+  {
+    "detail": "string",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nname: string\n```\n\n```rescript\ntype payload = {name: string, enabled: bool}\n```"
+    },
+    "kind": 5,
+    "label": "name",
+    "tags": []
+  },
+  {
+    "detail": "bool",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nenabled: bool\n```\n\n```rescript\ntype payload = {name: string, enabled: bool}\n```"
+    },
+    "kind": 5,
+    "label": "enabled",
+    "tags": []
+  }
+]
+
+Complete src/CompletionPayloadGrouping.res 31:26
+posCursor:[31:26] posNoWhite:[31:25] Found expr:[31:3->31:30]
+Pexp_apply ...[31:3->31:14] (...[31:15->31:29])
+Completable: Cexpression CArgument Value[consumePoly]($0)->polyvariantPayload::Poly($0), tuple($1), recordBody
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath CArgument Value[consumePoly]($0)
+ContextPath Value[consumePoly]
+Path consumePoly
+[
+  {
+    "detail": "string",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nname: string\n```\n\n```rescript\ntype payload = {name: string, enabled: bool}\n```"
+    },
+    "kind": 5,
+    "label": "name",
+    "tags": []
+  },
+  {
+    "detail": "bool",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nenabled: bool\n```\n\n```rescript\ntype payload = {name: string, enabled: bool}\n```"
+    },
+    "kind": 5,
+    "label": "enabled",
+    "tags": []
+  }
+]
+
+Complete src/CompletionPayloadGrouping.res 34:35
+posCursor:[34:35] posNoWhite:[34:34] Found pattern:[34:24->34:38]
+posCursor:[34:35] posNoWhite:[34:34] Found pattern:[34:30->34:37]
+posCursor:[34:35] posNoWhite:[34:34] Found pattern:[34:34->34:36]
+Completable: Cpattern Value[polyValue]->polyvariantPayload::Poly($0), tuple($1), recordBody
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[polyValue]
+Path polyValue
+[
+  {
+    "detail": "string",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nname: string\n```\n\n```rescript\ntype payload = {name: string, enabled: bool}\n```"
+    },
+    "kind": 5,
+    "label": "name",
+    "tags": []
+  },
+  {
+    "detail": "bool",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nenabled: bool\n```\n\n```rescript\ntype payload = {name: string, enabled: bool}\n```"
+    },
+    "kind": 5,
+    "label": "enabled",
+    "tags": []
+  }
+]
+
+Complete src/CompletionPayloadGrouping.res 37:25
+posCursor:[37:25] posNoWhite:[37:24] Found expr:[37:3->37:28]
+Pexp_apply ...[37:3->37:14] (...[37:15->37:27])
+Completable: Cexpression CArgument Value[consumePoly]($0)->polyvariantPayload::Poly($1), recordBody
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath CArgument Value[consumePoly]($0)
+ContextPath Value[consumePoly]
+Path consumePoly
+[
+  {
+    "detail": "string",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nname: string\n```\n\n```rescript\ntype payload = {name: string, enabled: bool}\n```"
+    },
+    "kind": 5,
+    "label": "name",
+    "tags": []
+  },
+  {
+    "detail": "bool",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nenabled: bool\n```\n\n```rescript\ntype payload = {name: string, enabled: bool}\n```"
+    },
+    "kind": 5,
+    "label": "enabled",
+    "tags": []
+  }
+]
+
+Complete src/CompletionPayloadGrouping.res 40:34
+posCursor:[40:34] posNoWhite:[40:33] Found pattern:[40:24->40:36]
+posCursor:[40:34] posNoWhite:[40:33] Found pattern:[40:33->40:35]
+Completable: Cpattern Value[polyValue]->polyvariantPayload::Poly($1), recordBody
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[polyValue]
+Path polyValue
+[
+  {
+    "detail": "string",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nname: string\n```\n\n```rescript\ntype payload = {name: string, enabled: bool}\n```"
+    },
+    "kind": 5,
+    "label": "name",
+    "tags": []
+  },
+  {
+    "detail": "bool",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nenabled: bool\n```\n\n```rescript\ntype payload = {name: string, enabled: bool}\n```"
+    },
+    "kind": 5,
+    "label": "enabled",
+    "tags": []
+  }
+]
+
+Complete src/CompletionPayloadGrouping.res 43:51
+posCursor:[43:51] posNoWhite:[43:50] Found expr:[43:45->43:51]
+Pexp_field [43:45->43:50] _:[43:52->43:51]
+Completable: Cpath Value[first].""
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[first].""
+ContextPath Value[first]
+Path first
+ContextPath CPatternPath(Value[value])->variantPayload::Pair($0)->tuple($0)
+ContextPath Value[value]
+Path value
+ContextPath Value[first]->
+ContextPath Value[first]
+Path first
+ContextPath CPatternPath(Value[value])->variantPayload::Pair($0)->tuple($0)
+ContextPath Value[value]
+Path value
+CPPipe pathFromEnv: found:true
+Path CompletionPayloadGrouping.
+Path 
+[
+  {
+    "detail": "string",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nname: string\n```\n\n```rescript\ntype payload = {name: string, enabled: bool}\n```"
+    },
+    "kind": 5,
+    "label": "name",
+    "tags": []
+  },
+  {
+    "detail": "bool",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nenabled: bool\n```\n\n```rescript\ntype payload = {name: string, enabled: bool}\n```"
+    },
+    "kind": 5,
+    "label": "enabled",
+    "tags": []
+  }
+]
+
+Complete src/CompletionPayloadGrouping.res 46:52
+posCursor:[46:52] posNoWhite:[46:51] Found expr:[46:45->46:52]
+Pexp_field [46:45->46:51] _:[46:53->46:52]
+Completable: Cpath Value[second].""
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[second].""
+ContextPath Value[second]
+Path second
+ContextPath CPatternPath(Value[value])->variantPayload::Pair($0)->tuple($1)
+ContextPath Value[value]
+Path value
+ContextPath Value[second]->
+ContextPath Value[second]
+Path second
+ContextPath CPatternPath(Value[value])->variantPayload::Pair($0)->tuple($1)
+ContextPath Value[value]
+Path value
+CPPipe pathFromEnv: found:true
+Path CompletionPayloadGrouping.
+Path 
+[
+  {
+    "detail": "string",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nname: string\n```\n\n```rescript\ntype payload = {name: string, enabled: bool}\n```"
+    },
+    "kind": 5,
+    "label": "name",
+    "tags": []
+  },
+  {
+    "detail": "bool",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nenabled: bool\n```\n\n```rescript\ntype payload = {name: string, enabled: bool}\n```"
+    },
+    "kind": 5,
+    "label": "enabled",
+    "tags": []
+  }
+]
+
+Complete src/CompletionPayloadGrouping.res 49:50
+posCursor:[49:50] posNoWhite:[49:49] Found expr:[49:44->49:50]
+Pexp_field [49:44->49:49] _:[49:51->49:50]
+Completable: Cpath Value[first].""
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[first].""
+ContextPath Value[first]
+Path first
+ContextPath CPatternPath(Value[value])->variantPayload::Unary($0)
+ContextPath Value[value]
+Path value
+ContextPath Value[first]->
+ContextPath Value[first]
+Path first
+ContextPath CPatternPath(Value[value])->variantPayload::Unary($0)
+ContextPath Value[value]
+Path value
+CPPipe pathFromEnv: found:true
+Path CompletionPayloadGrouping.
+Path 
+[
+  {
+    "detail": "string",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nname: string\n```\n\n```rescript\ntype payload = {name: string, enabled: bool}\n```"
+    },
+    "kind": 5,
+    "label": "name",
+    "tags": []
+  },
+  {
+    "detail": "bool",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nenabled: bool\n```\n\n```rescript\ntype payload = {name: string, enabled: bool}\n```"
+    },
+    "kind": 5,
+    "label": "enabled",
+    "tags": []
+  }
+]
+
+Complete src/CompletionPayloadGrouping.res 52:51
+posCursor:[52:51] posNoWhite:[52:50] Found expr:[52:44->52:51]
+Pexp_field [52:44->52:50] _:[52:52->52:51]
+Completable: Cpath Value[second].""
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[second].""
+ContextPath Value[second]
+Path second
+ContextPath CPatternPath(Value[value])->variantPayload::Unary($1)
+ContextPath Value[value]
+Path value
+ContextPath Value[second]->
+ContextPath Value[second]
+Path second
+ContextPath CPatternPath(Value[value])->variantPayload::Unary($1)
+ContextPath Value[value]
+Path value
+CPPipe pathFromEnv: found:true
+Path CompletionPayloadGrouping.
+Path 
+[
+  {
+    "detail": "string",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nname: string\n```\n\n```rescript\ntype payload = {name: string, enabled: bool}\n```"
+    },
+    "kind": 5,
+    "label": "name",
+    "tags": []
+  },
+  {
+    "detail": "bool",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nenabled: bool\n```\n\n```rescript\ntype payload = {name: string, enabled: bool}\n```"
+    },
+    "kind": 5,
+    "label": "enabled",
+    "tags": []
+  }
+]
+
+Complete src/CompletionPayloadGrouping.res 55:53
+posCursor:[55:53] posNoWhite:[55:52] Found expr:[55:46->55:53]
+Pexp_field [55:46->55:52] _:[55:54->55:53]
+Completable: Cpath Value[record].""
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[record].""
+ContextPath Value[record]
+Path record
+ContextPath CPatternPath(Value[polyValue])->polyvariantPayload::Poly($0)->tuple($1)
+ContextPath Value[polyValue]
+Path polyValue
+ContextPath Value[record]->
+ContextPath Value[record]
+Path record
+ContextPath CPatternPath(Value[polyValue])->polyvariantPayload::Poly($0)->tuple($1)
+ContextPath Value[polyValue]
+Path polyValue
+CPPipe pathFromEnv: found:true
+Path CompletionPayloadGrouping.
+Path 
+[
+  {
+    "detail": "string",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nname: string\n```\n\n```rescript\ntype payload = {name: string, enabled: bool}\n```"
+    },
+    "kind": 5,
+    "label": "name",
+    "tags": []
+  },
+  {
+    "detail": "bool",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nenabled: bool\n```\n\n```rescript\ntype payload = {name: string, enabled: bool}\n```"
+    },
+    "kind": 5,
+    "label": "enabled",
+    "tags": []
+  }
+]
+
+Complete src/CompletionPayloadGrouping.res 58:51
+posCursor:[58:51] posNoWhite:[58:50] Found expr:[58:44->58:51]
+Pexp_field [58:44->58:50] _:[58:52->58:51]
+Completable: Cpath Value[record].""
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[record].""
+ContextPath Value[record]
+Path record
+ContextPath CPatternPath(Value[polyValue])->polyvariantPayload::Poly($1)
+ContextPath Value[polyValue]
+Path polyValue
+ContextPath Value[record]->
+ContextPath Value[record]
+Path record
+ContextPath CPatternPath(Value[polyValue])->polyvariantPayload::Poly($1)
+ContextPath Value[polyValue]
+Path polyValue
+CPPipe pathFromEnv: found:true
+Path CompletionPayloadGrouping.
+Path 
+[
+  {
+    "detail": "string",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nname: string\n```\n\n```rescript\ntype payload = {name: string, enabled: bool}\n```"
+    },
+    "kind": 5,
+    "label": "name",
+    "tags": []
+  },
+  {
+    "detail": "bool",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nenabled: bool\n```\n\n```rescript\ntype payload = {name: string, enabled: bool}\n```"
+    },
+    "kind": 5,
+    "label": "enabled",
+    "tags": []
+  }
+]
+
+Complete src/CompletionPayloadGrouping.res 64:25
+posCursor:[64:25] posNoWhite:[64:24] Found expr:[64:3->64:28]
+Pexp_apply ...[64:3->64:16] (...[64:17->64:27])
+Completable: Cexpression CArgument Value[consumeResult]($0)->variantPayload::Ok($1), recordBody
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath CArgument Value[consumeResult]($0)
+ContextPath Value[consumeResult]
+Path consumeResult
+[
+  {
+    "detail": "string",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nname: string\n```\n\n```rescript\ntype payload = {name: string, enabled: bool}\n```"
+    },
+    "kind": 5,
+    "label": "name",
+    "tags": []
+  },
+  {
+    "detail": "bool",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nenabled: bool\n```\n\n```rescript\ntype payload = {name: string, enabled: bool}\n```"
+    },
+    "kind": 5,
+    "label": "enabled",
+    "tags": []
+  }
+]
+
+Complete src/CompletionPayloadGrouping.res 67:33
+posCursor:[67:33] posNoWhite:[67:32] Found pattern:[67:26->67:35]
+Ppat_construct Ok:[67:26->67:28]
+posCursor:[67:33] posNoWhite:[67:32] Found pattern:[67:32->67:34]
+Completable: Cpattern Value[resultValue]->variantPayload::Ok($1), recordBody
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[resultValue]
+Path resultValue
+[
+  {
+    "detail": "string",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nname: string\n```\n\n```rescript\ntype payload = {name: string, enabled: bool}\n```"
+    },
+    "kind": 5,
+    "label": "name",
+    "tags": []
+  },
+  {
+    "detail": "bool",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nenabled: bool\n```\n\n```rescript\ntype payload = {name: string, enabled: bool}\n```"
+    },
+    "kind": 5,
+    "label": "enabled",
+    "tags": []
+  }
+]
+
+Complete src/CompletionPayloadGrouping.res 70:54
+posCursor:[70:54] posNoWhite:[70:53] Found expr:[70:47->70:54]
+Pexp_field [70:47->70:53] _:[70:55->70:54]
+Completable: Cpath Value[second].""
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[second].""
+ContextPath Value[second]
+Path second
+ContextPath CPatternPath(Value[resultValue])->variantPayload::Ok($1)
+ContextPath Value[resultValue]
+Path resultValue
+ContextPath Value[second]->
+ContextPath Value[second]
+Path second
+ContextPath CPatternPath(Value[resultValue])->variantPayload::Ok($1)
+ContextPath Value[resultValue]
+Path resultValue
+CPPipe pathFromEnv: found:true
+Path CompletionPayloadGrouping.
+Path 
+[
+  {
+    "detail": "string",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nname: string\n```\n\n```rescript\ntype payload = {name: string, enabled: bool}\n```"
+    },
+    "kind": 5,
+    "label": "name",
+    "tags": []
+  },
+  {
+    "detail": "bool",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nenabled: bool\n```\n\n```rescript\ntype payload = {name: string, enabled: bool}\n```"
+    },
+    "kind": 5,
+    "label": "enabled",
+    "tags": []
+  }
+]
+
+Complete src/CompletionPayloadGrouping.res 73:28
+posCursor:[73:28] posNoWhite:[73:27] Found expr:[73:3->73:31]
+Pexp_apply ...[73:3->73:16] (...[73:17->73:30])
+Completable: Cexpression CArgument Value[consumeResult]($0)->variantPayload::Error($1), recordBody
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath CArgument Value[consumeResult]($0)
+ContextPath Value[consumeResult]
+Path consumeResult
+[
+  {
+    "detail": "string",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nname: string\n```\n\n```rescript\ntype payload = {name: string, enabled: bool}\n```"
+    },
+    "kind": 5,
+    "label": "name",
+    "tags": []
+  },
+  {
+    "detail": "bool",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nenabled: bool\n```\n\n```rescript\ntype payload = {name: string, enabled: bool}\n```"
+    },
+    "kind": 5,
+    "label": "enabled",
+    "tags": []
+  }
+]
+
+Complete src/CompletionPayloadGrouping.res 76:36
+posCursor:[76:36] posNoWhite:[76:35] Found pattern:[76:26->76:38]
+Ppat_construct Error:[76:26->76:31]
+posCursor:[76:36] posNoWhite:[76:35] Found pattern:[76:35->76:37]
+Completable: Cpattern Value[resultValue]->variantPayload::Error($1), recordBody
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[resultValue]
+Path resultValue
+[
+  {
+    "detail": "string",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nname: string\n```\n\n```rescript\ntype payload = {name: string, enabled: bool}\n```"
+    },
+    "kind": 5,
+    "label": "name",
+    "tags": []
+  },
+  {
+    "detail": "bool",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nenabled: bool\n```\n\n```rescript\ntype payload = {name: string, enabled: bool}\n```"
+    },
+    "kind": 5,
+    "label": "enabled",
+    "tags": []
+  }
+]
+
+Complete src/CompletionPayloadGrouping.res 79:57
+posCursor:[79:57] posNoWhite:[79:56] Found expr:[79:50->79:57]
+Pexp_field [79:50->79:56] _:[79:58->79:57]
+Completable: Cpath Value[second].""
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[second].""
+ContextPath Value[second]
+Path second
+ContextPath CPatternPath(Value[resultValue])->variantPayload::Error($1)
+ContextPath Value[resultValue]
+Path resultValue
+ContextPath Value[second]->
+ContextPath Value[second]
+Path second
+ContextPath CPatternPath(Value[resultValue])->variantPayload::Error($1)
+ContextPath Value[resultValue]
+Path resultValue
+CPPipe pathFromEnv: found:true
+Path CompletionPayloadGrouping.
+Path 
+[
+  {
+    "detail": "string",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nname: string\n```\n\n```rescript\ntype payload = {name: string, enabled: bool}\n```"
+    },
+    "kind": 5,
+    "label": "name",
+    "tags": []
+  },
+  {
+    "detail": "bool",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nenabled: bool\n```\n\n```rescript\ntype payload = {name: string, enabled: bool}\n```"
+    },
+    "kind": 5,
+    "label": "enabled",
+    "tags": []
+  }
+]
+

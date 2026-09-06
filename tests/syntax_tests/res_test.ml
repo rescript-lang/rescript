@@ -71,10 +71,7 @@ module Outcome_printer_tests = struct
    * and stored in a snapshot `tests/oprint/expected/oprint.resi.txt` *)
   let run () =
     let filename = Filename.concat data_dir "oprint/oprint.res" in
-    let result =
-      Res_driver.parsing_engine.parse_implementation ~for_printer:false
-        ~filename
-    in
+    let result = Res_driver.parsing_engine.parse_implementation ~filename in
     let signature =
       if result.Res_driver.invalid then (
         Res_driver.parsing_engine.string_of_diagnostics ~source:result.source

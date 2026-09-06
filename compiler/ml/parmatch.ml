@@ -1955,16 +1955,14 @@ module Conv = struct
         let id = fresh cstr.cstr_name in
         let lid = {cstr_lid with txt = Longident.Lident id} in
         Hashtbl.add constrs id cstr;
-        let arg =
-          match List.map loop lst with
-          | [] -> None
-          | [p] -> Some p
-          | lst -> Some (mkpat (Ppat_tuple lst))
-        in
-        mkpat (Ppat_construct (lid, arg))
+        mkpat (Ppat_construct (lid, Location.mknoloc (List.map loop lst)))
       | Tpat_variant (label, p_opt, _row_desc) ->
-        let arg = Misc.may_map loop p_opt in
-        mkpat (Ppat_variant (label, arg))
+        let args =
+          match p_opt with
+          | None -> []
+          | Some p -> [loop p]
+        in
+        mkpat (Ppat_variant (label, Location.mknoloc args))
       | Tpat_record (subpatterns, _closed_flag, rest) ->
         let fields =
           List.map

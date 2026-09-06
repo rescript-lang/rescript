@@ -257,6 +257,19 @@ let signature_help ~debug ~source ~kind_file ~pos
       let loc_has_cursor loc =
         loc |> Cursor_position.loc_has_cursor ~pos:pos_before_cursor
       in
+      let constructor_arg_index locations =
+        let rec loop index = function
+          | [] -> -1
+          | [_] -> index
+          | loc :: (next :: _ as rest) ->
+            if pos_before_cursor < Loc.end_ loc then index
+            else if pos_before_cursor < Loc.start next then
+              if first_char_before_cursor_no_white = Some ',' then index + 1
+              else index
+            else loop (index + 1) rest
+        in
+        loop 0 locations
+      in
       let supports_markdown_links = true in
       let result = ref None in
       let print_thing thg =
@@ -400,29 +413,28 @@ let signature_help ~debug ~source ~kind_file ~pos
           in
           set_result
             (exp.pexp_loc, `FunctionCall (arg_at_cursor, exp, extracted_args))
-        | {pexp_desc = Pexp_construct (lid, Some payload_exp); pexp_loc}
-          when loc_has_cursor payload_exp.pexp_loc
-               || Completion_expressions.is_expr_hole payload_exp
-                  && loc_has_cursor pexp_loc ->
+        | {
+         pexp_desc = Pexp_construct (lid, {txt = payload_exps; loc = args_loc});
+        }
+          when payload_exps <> [] && loc_has_cursor args_loc ->
           (* Constructor payloads *)
-          set_result (lid.loc, `ConstructorExpr (lid, payload_exp))
+          set_result (lid.loc, `ConstructorExpr (lid, payload_exps))
         | _ -> ());
         Ast_iterator.default_iterator.expr iterator expr
       in
       let pat (iterator : Ast_iterator.iterator) (pat : Parsetree.pattern) =
         (match pat with
-        | {ppat_desc = Ppat_construct (lid, Some payload_pat)}
-          when loc_has_cursor payload_pat.ppat_loc ->
+        | {
+         ppat_desc = Ppat_construct (lid, {txt = payload_pats; loc = args_loc});
+        }
+          when payload_pats <> [] && loc_has_cursor args_loc ->
           (* Constructor payloads *)
-          set_result (lid.loc, `ConstructorPat (lid, payload_pat))
+          set_result (lid.loc, `ConstructorPat (lid, payload_pats))
         | _ -> ());
         Ast_iterator.default_iterator.pat iterator pat
       in
       let iterator = {Ast_iterator.default_iterator with expr; pat} in
-      let parser =
-        Res_driver.parsing_engine.parse_implementation_from_source
-          ~for_printer:false
-      in
+      let parser = Res_driver.parsing_engine.parse_implementation_from_source in
       let {Res_driver.parsetree = structure} = parser ~source in
       iterator.structure iterator structure |> ignore;
       (* Handle function application, if found *)
@@ -452,7 +464,7 @@ let signature_help ~debug ~source ~kind_file ~pos
           let fn_type_str = Shared.type_to_string type_expr in
           let type_str_for_parser = label_prefix ^ fn_type_str in
           let {Res_driver.parsetree = signature} =
-            Res_driver.parse_interface_from_source ~for_printer:false
+            Res_driver.parse_interface_from_source
               ~display_filename:"<missing-file>" ~source:type_str_for_parser
           in
 
@@ -621,22 +633,27 @@ let signature_help ~debug ~source ~kind_file ~pos
                   |> String.concat ", ")
               ^ ")"
             in
+            let constructor_has_multiple_args =
+              match arg_parts with
+              | Some (`TupleArg (_ :: _ :: _)) -> true
+              | _ -> false
+            in
             let active_parameter =
               match cs with
-              | `ConstructorExpr (_, {pexp_desc = Pexp_tuple items}) -> (
-                let idx = ref 0 in
-                let tuple_item_with_cursor =
-                  items
-                  |> List.find_map (fun (item : Parsetree.expression) ->
-                      let current_index = !idx in
-                      idx := current_index + 1;
-                      if loc_has_cursor item.pexp_loc then Some current_index
-                      else None)
-                in
-                match tuple_item_with_cursor with
-                | None -> -1
-                | Some i -> i)
-              | `ConstructorExpr (_, {pexp_desc = Pexp_record (fields, _)}) -> (
+              | `ConstructorExpr (_, [{pexp_desc = Pexp_tuple tuple_items}])
+                when constructor_has_multiple_args ->
+                constructor_arg_index
+                  (List.map
+                     (fun (item : Parsetree.expression) -> item.pexp_loc)
+                     tuple_items)
+              | `ConstructorExpr (_, items) when constructor_has_multiple_args
+                ->
+                constructor_arg_index
+                  (List.map
+                     (fun (item : Parsetree.expression) -> item.pexp_loc)
+                     items)
+              | `ConstructorExpr (_, [{pexp_desc = Pexp_record (fields, _)}])
+                -> (
                 let field_name_with_cursor =
                   fields
                   |> List.find_map
@@ -664,23 +681,20 @@ let signature_help ~debug ~source ~kind_file ~pos
                       else ());
                   !field_index
                 | _ -> -1)
-              | `ConstructorExpr (_, expr) when loc_has_cursor expr.pexp_loc ->
-                0
-              | `ConstructorPat (_, {ppat_desc = Ppat_tuple items}) -> (
-                let idx = ref 0 in
-                let tuple_item_with_cursor =
-                  items
-                  |> List.find_map (fun (item : Parsetree.pattern) ->
-                      let current_index = !idx in
-                      idx := current_index + 1;
-                      if loc_has_cursor item.ppat_loc then Some current_index
-                      else None)
-                in
-                match tuple_item_with_cursor with
-                | None -> -1
-                | Some i -> i)
-              | `ConstructorPat (_, {ppat_desc = Ppat_record (fields, _, _rest)})
-                -> (
+              | `ConstructorExpr (_, _ :: _) -> 0
+              | `ConstructorPat (_, [{ppat_desc = Ppat_tuple tuple_items}])
+                when constructor_has_multiple_args ->
+                constructor_arg_index
+                  (List.map
+                     (fun (item : Parsetree.pattern) -> item.ppat_loc)
+                     tuple_items)
+              | `ConstructorPat (_, items) when constructor_has_multiple_args ->
+                constructor_arg_index
+                  (List.map
+                     (fun (item : Parsetree.pattern) -> item.ppat_loc)
+                     items)
+              | `ConstructorPat
+                  (_, [{ppat_desc = Ppat_record (fields, _, _rest)}]) -> (
                 let field_name_with_cursor =
                   fields
                   |> List.find_map
@@ -708,7 +722,7 @@ let signature_help ~debug ~source ~kind_file ~pos
                       else ());
                   !field_index
                 | _ -> -1)
-              | `ConstructorPat (_, pat) when loc_has_cursor pat.ppat_loc -> 0
+              | `ConstructorPat (_, _ :: _) -> 0
               | _ -> -1
             in
 

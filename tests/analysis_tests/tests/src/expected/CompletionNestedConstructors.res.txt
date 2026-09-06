@@ -1,0 +1,44 @@
+Complete src/CompletionNestedConstructors.res 3:25
+posCursor:[3:25] posNoWhite:[3:24] Found expr:[3:12->3:44]
+Pexp_construct Outer:[3:12->3:17] [3:18->3:29], [3:31->3:43]
+posCursor:[3:25] posNoWhite:[3:24] Found expr:[3:18->3:29]
+Pexp_construct Inner:[3:18->3:23] [3:24->3:28]
+Completable: Cexpression CTypeAtPos()=true->variantPayload::Inner($0)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath CTypeAtPos()
+[ { "detail": "bool", "kind": 4, "label": "true", "tags": [] } ]
+
+Complete src/CompletionNestedConstructors.res 6:40
+posCursor:[6:40] posNoWhite:[6:39] Found expr:[6:13->6:45]
+Pexp_construct Outer:[6:13->6:18] [6:19->6:31], [6:33->6:44]
+posCursor:[6:40] posNoWhite:[6:39] Found expr:[6:33->6:44]
+Pexp_construct Inner:[6:33->6:38] [6:39->6:43]
+Completable: Cexpression CTypeAtPos()=true->variantPayload::Inner($0)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath CTypeAtPos()
+[ { "detail": "bool", "kind": 4, "label": "true", "tags": [] } ]
+
+Complete src/CompletionNestedConstructors.res 9:25
+posCursor:[9:25] posNoWhite:[9:24] Found expr:[9:12->9:30]
+Pexp_construct Unary:[9:12->9:17] [9:18->9:29]
+posCursor:[9:25] posNoWhite:[9:24] Found expr:[9:18->9:29]
+Pexp_construct Inner:[9:18->9:23] [9:24->9:28]
+Completable: Cexpression CTypeAtPos()=true->variantPayload::Inner($0)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath CTypeAtPos()
+[ { "detail": "bool", "kind": 4, "label": "true", "tags": [] } ]
+
+Complete src/CompletionNestedConstructors.res 12:40
+posCursor:[12:40] posNoWhite:[12:39] Found expr:[12:12->12:46]
+Pexp_construct Outer:[12:12->12:17] [12:18->12:45]
+posCursor:[12:40] posNoWhite:[12:39] Found expr:[12:33->12:44]
+Pexp_construct Inner:[12:33->12:38] [12:39->12:43]
+Completable: Cexpression CTypeAtPos()=true->variantPayload::Inner($0)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath CTypeAtPos()
+[ { "detail": "bool", "kind": 4, "label": "true", "tags": [] } ]
+
