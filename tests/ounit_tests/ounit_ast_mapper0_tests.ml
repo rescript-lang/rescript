@@ -297,6 +297,64 @@ let map_pat_to0 p =
 
 let attr_names attrs = List.map (fun ({Location.txt}, _) -> txt) attrs
 
+let test_attributed_constructor_payloads_through_ast0 _ =
+  let payload_loc = source_loc 10 30 in
+  let payload_attrs = [attr "ppx.payload" (Parsetree0.PStr [])] in
+  let node_attrs = [attr "ppx.node" (Parsetree0.PStr [])] in
+  let expr_payload =
+    Ast_helper0.Exp.tuple ~loc:payload_loc ~attrs:payload_attrs
+      [
+        Ast_helper0.Exp.constant ~loc:(source_loc 12 13)
+          (Parsetree0.Pconst_integer ("1", None));
+        Ast_helper0.Exp.constant ~loc:(source_loc 15 16)
+          (Parsetree0.Pconst_integer ("2", None));
+      ]
+  in
+  let pat_payload =
+    Ast_helper0.Pat.tuple ~loc:payload_loc ~attrs:payload_attrs
+      [
+        Ast_helper0.Pat.var ~loc:(source_loc 12 13) (located_string "x");
+        Ast_helper0.Pat.var ~loc:(source_loc 15 16) (located_string "y");
+      ]
+  in
+  List.iter
+    (fun (polyvariant, marker) ->
+      let attrs = attr marker (Parsetree0.PStr []) :: node_attrs in
+      let expr0, pat0 =
+        if polyvariant then
+          ( Ast_helper0.Exp.variant ~loc ~attrs "Pair" (Some expr_payload),
+            Ast_helper0.Pat.variant ~loc ~attrs "Pair" (Some pat_payload) )
+        else
+          let lid = Location.mknoloc (Longident.Lident "Pair") in
+          ( Ast_helper0.Exp.construct ~loc ~attrs lid (Some expr_payload),
+            Ast_helper0.Pat.construct ~loc ~attrs lid (Some pat_payload) )
+      in
+      let expr = map_expr0 expr0 in
+      let pat = map_pat0 pat0 in
+      (match (expr.pexp_desc, pat.ppat_desc) with
+      | Pexp_construct (_, {txt = [e]; loc}), Ppat_construct (_, {txt = [p]})
+      | Pexp_variant (_, {txt = [e]; loc}), Ppat_variant (_, {txt = [p]}) ->
+        OUnit.assert_equal payload_loc loc;
+        OUnit.assert_equal expr_payload (map_expr_to0 e);
+        OUnit.assert_equal pat_payload (map_pat_to0 p)
+      | _ -> assert_failure "Expected attributed payload tuples to survive");
+      (* Only our bridge marker is consumed; legacy arity attributes remain. *)
+      let attrs =
+        if marker = "_res.constructor_args" then node_attrs else attrs
+      in
+      let encoded_expr = map_expr_to0 expr in
+      let encoded_pat = map_pat_to0 pat in
+      OUnit.assert_equal {expr0 with pexp_attributes = attrs} encoded_expr;
+      OUnit.assert_equal {pat0 with ppat_attributes = attrs} encoded_pat;
+      OUnit.assert_equal encoded_expr (map_expr_to0 (map_expr0 encoded_expr));
+      OUnit.assert_equal encoded_pat (map_pat_to0 (map_pat0 encoded_pat)))
+    [
+      (false, "_res.constructor_args");
+      (true, "_res.constructor_args");
+      (false, "explicit_arity");
+      (false, "ocaml.explicit_arity");
+    ]
+
 let test_list_constructor_wire_shape _ =
   let lid name = Location.mknoloc (Longident.Lident name) in
   List.iter
@@ -1318,6 +1376,8 @@ let suites =
          "constructor_args_roundtrip_through_ast0"
          >:: test_constructor_args_roundtrip_through_ast0;
          "list_constructor_wire_shape" >:: test_list_constructor_wire_shape;
+         "attributed_constructor_payloads_through_ast0"
+         >:: test_attributed_constructor_payloads_through_ast0;
          "constructor_args_keep_parentheses_location_in_ast0"
          >:: test_constructor_args_keep_parentheses_location_in_ast0;
          "constructor_argument_locations_through_ast0"

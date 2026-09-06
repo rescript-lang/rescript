@@ -196,7 +196,7 @@ let remove_constructor_args_attr (attrs : Pt.attributes) =
    Decoding consumes the internal marker and restores the source list.
    Ordinary constructors also accept PPX-produced [explicit_arity] and
    [ocaml.explicit_arity] attributes, and split the list constructor [::] when
-   its tuple has no attributes. Attributed cons tuples remain one payload so
+   its tuple has no attributes. Attributed tuples remain one payload so
    their attributes survive another v0 conversion. Other unmarked v0 tuples
    also remain a single syntactic payload; Typecore resolves semantic grouping
    once it knows the constructor declaration.
@@ -210,7 +210,7 @@ let decode_args ~map ~tuple_args ~split_tuple = function
   | None -> []
   | Some arg -> (
     match tuple_args arg with
-    | Some args when split_tuple -> List.map map args
+    | Some (args, []) when split_tuple -> List.map map args
     | _ -> [map arg])
 
 let record_rest_of_pattern (rest : Pt.pattern) =
@@ -909,11 +909,7 @@ module E = struct
         decode_args ~map:(sub.expr sub)
           ~tuple_args:(fun arg ->
             match arg.pexp_desc with
-            | Pexp_tuple _
-              when lid.txt = Longident.Lident "::" && arg.pexp_attributes <> []
-              ->
-              None
-            | Pexp_tuple args -> Some args
+            | Pexp_tuple args -> Some (args, arg.pexp_attributes)
             | _ -> None)
           ~split_tuple:
             (has_constructor_args
@@ -989,7 +985,7 @@ module E = struct
         decode_args ~map:(sub.expr sub)
           ~tuple_args:(fun arg ->
             match arg.pexp_desc with
-            | Pexp_tuple args -> Some args
+            | Pexp_tuple args -> Some (args, arg.pexp_attributes)
             | _ -> None)
           ~split_tuple:has_constructor_args arg
       in
@@ -1171,10 +1167,7 @@ module P = struct
         decode_args ~map:(sub.pat sub)
           ~tuple_args:(fun arg ->
             match arg.ppat_desc with
-            | Ppat_tuple _
-              when l.txt = Longident.Lident "::" && arg.ppat_attributes <> [] ->
-              None
-            | Ppat_tuple args -> Some args
+            | Ppat_tuple args -> Some (args, arg.ppat_attributes)
             | _ -> None)
           ~split_tuple:
             (has_constructor_args
@@ -1194,7 +1187,7 @@ module P = struct
         decode_args ~map:(sub.pat sub)
           ~tuple_args:(fun arg ->
             match arg.ppat_desc with
-            | Ppat_tuple args -> Some args
+            | Ppat_tuple args -> Some (args, arg.ppat_attributes)
             | _ -> None)
           ~split_tuple:has_constructor_args arg
       in
