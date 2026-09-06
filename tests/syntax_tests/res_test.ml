@@ -33,39 +33,38 @@ let () =
     Filename.concat data_dir "printer/comments/callbackTrailing.res"
   in
   let source = IO.read_file ~filename in
-  let format ~width source =
+  let parse source =
     let result =
-      Res_driver.parse_implementation_from_source ~for_printer:true
-        ~display_filename:filename ~source
+      Res_driver.parse_implementation_from_source ~display_filename:filename
+        ~source
     in
     assert (not result.invalid);
-    let printed =
-      Res_printer.print_implementation ~width result.parsetree
-        ~comments:result.comments
-    in
-    let reparsed =
-      Res_driver.parse_implementation_from_source ~for_printer:true
-        ~display_filename:filename ~source:printed
-    in
-    assert (not reparsed.invalid);
-    let comment_texts comments =
-      List.map (fun comment -> String.trim (Res_comment.txt comment)) comments
-    in
-    if comment_texts result.comments <> comment_texts reparsed.comments then
-      failwith
-        (Printf.sprintf
-           "Callback formatting changed comments at width %d.\n\
-            Source:\n\
-            %s\n\
-            Printed:\n\
-            %s"
-           width source printed);
-    printed
+    result
+  in
+  let format ~width result =
+    Res_printer.print_implementation ~width result.Res_driver.parsetree
+      ~comments:result.comments
+  in
+  let comment_texts result =
+    List.map
+      (fun comment -> String.trim (Res_comment.txt comment))
+      result.Res_driver.comments
   in
   List.iter
     (fun width ->
-      let printed = format ~width source in
-      let reprinted = format ~width printed in
+      let original = parse source in
+      let printed = format ~width original in
+      let reparsed = parse printed in
+      if comment_texts original <> comment_texts reparsed then
+        failwith
+          (Printf.sprintf
+             "Callback formatting changed comments at width %d.\n\
+              Source:\n\
+              %s\n\
+              Printed:\n\
+              %s"
+             width source printed);
+      let reprinted = format ~width reparsed in
       if printed <> reprinted then
         failwith
           (Printf.sprintf

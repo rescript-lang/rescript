@@ -986,13 +986,8 @@ and walk_expression expr t comments =
     attach t.trailing call_expr.Parsetree.pexp_loc after_expr;
     walk_list
       (arguments
-      |> List.map (fun (lbl, expr) ->
-          let loc =
-            match lbl with
-            | Asttypes.Labelled {loc} | Optional {loc} ->
-              {loc with loc_end = expr.Parsetree.pexp_loc.loc_end}
-            | _ -> expr.pexp_loc
-          in
+      |> List.map (fun ((_, expr) as argument) ->
+          let loc = Parsetree_viewer.argument_loc argument in
           ExprArgument {expr; loc}))
       t rest
   in

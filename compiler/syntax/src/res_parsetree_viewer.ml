@@ -1,5 +1,11 @@
 open Parsetree
 
+let argument_loc (lbl, (arg : Parsetree.expression)) =
+  match lbl with
+  | Asttypes.Labelled {loc} | Optional {loc} ->
+    {loc with loc_end = arg.pexp_loc.loc_end}
+  | Nolabel -> arg.pexp_loc
+
 let arrow_type ct =
   match ct with
   | {ptyp_desc = Ptyp_arrow {params; ret}; ptyp_attributes = attrs} ->
