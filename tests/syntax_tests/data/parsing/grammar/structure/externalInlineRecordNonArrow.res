@@ -1,5 +1,5 @@
 @val
-external defaults: {x: int} = "defaults"
+external defaults: {"x": int} = "defaults"
 
 @val
-external maybeDefaults: option<{x: int}> = "defaults"
+external maybeDefaults: option<{"x": int}> = "defaults"

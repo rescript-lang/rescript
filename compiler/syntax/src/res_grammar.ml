@@ -281,7 +281,7 @@ let is_list_element grammar token =
   | StringFieldDeclarations -> is_string_field_decl_start token
   | FieldDeclarations -> is_field_decl_start token
   | RecordDecl -> is_record_decl_start token
-  | TypExprList -> is_typ_expr_start token || token = Token.LessThan
+  | TypExprList -> is_typ_expr_start token
   | TypeParams -> is_type_param_start token
   | FunctorArgs -> is_functor_arg_start token
   | ModExprList -> is_mod_expr_start token

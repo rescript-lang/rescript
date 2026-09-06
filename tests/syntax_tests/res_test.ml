@@ -91,11 +91,15 @@ module Parser_api_test = struct
   let make_default () =
     let src = "   let x = 1\nlet y = 2\nlet z = 3" in
     let parser = Res_parser.make src "test.res" in
-    assert (parser.scanner.lnum == 1);
-    assert (parser.scanner.line_offset == 0);
-    assert (parser.scanner.offset == 6);
-    assert (parser.token = Res_token.Let {unwrap = false});
-    print_endline "✅ Parser make: initializes parser and checking offsets"
+    assert (Res_parser.position parser = Lexing.dummy_pos);
+    assert (Res_parser.peek parser = Res_token.Let {unwrap = false});
+    assert ((Res_parser.start_pos parser).pos_lnum = 1);
+    assert ((Res_parser.start_pos parser).pos_bol = 0);
+    assert ((Res_parser.end_pos parser).pos_cnum = 6);
+    assert (Res_parser.position parser = Lexing.dummy_pos);
+    Res_parser.next parser;
+    assert ((Res_parser.position parser).pos_cnum = 6);
+    print_endline "✅ Parser make: initializes parser and checks positions"
 
   let unix_lf () =
     let src = "let x = 1\nlet y = 2\nlet z = 3" in

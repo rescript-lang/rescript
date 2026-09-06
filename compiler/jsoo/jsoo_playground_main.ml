@@ -284,8 +284,8 @@ module Res_driver = struct
         | _ as diagnostics -> (true, diagnostics)
       in
       {
-        filename = engine.scanner.filename;
-        source = engine.scanner.src;
+        filename = engine.filename;
+        source = engine.source;
         parsetree = structure;
         diagnostics;
         invalid;

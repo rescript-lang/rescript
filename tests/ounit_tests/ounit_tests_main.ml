@@ -30,6 +30,8 @@ let suites =
       Ounit_js_analyzer_tests.suites;
       Ounit_flow_parser_tests.suites;
       Ounit_jsx_loc_tests.suites;
+      Ounit_parser_cursor_tests.suites;
+      Ounit_parser_recovery_tests.suites;
       Ounit_analysis_config_tests.suites;
       Ounit_analysis_references_tests.suites;
       Ounit_ffi_inclusion_tests.suites;

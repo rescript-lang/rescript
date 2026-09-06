@@ -1,6 +1,6 @@
 
   Syntax error!
-  syntax_tests/data/parsing/errors/typexpr/typeConstructorArgs.res:2:21-24
+  syntax_tests/data/parsing/errors/typexpr/typeConstructorArgs.res:2:21
 
   1 │ type node<'a> = {
   2 │   _value: Nullable.t('a)
@@ -12,7 +12,7 @@
 
 
   Syntax error!
-  syntax_tests/data/parsing/errors/typexpr/typeConstructorArgs.res:5:24-27
+  syntax_tests/data/parsing/errors/typexpr/typeConstructorArgs.res:5:24
 
   3 │ }
   4 │ 
@@ -25,7 +25,7 @@
 
 
   Syntax error!
-  syntax_tests/data/parsing/errors/typexpr/typeConstructorArgs.res:6:32-35
+  syntax_tests/data/parsing/errors/typexpr/typeConstructorArgs.res:6:32
 
   4 │ 
   5 │ type t<'a> = Belt.Map.t('a)
@@ -38,7 +38,7 @@
 
 
   Syntax error!
-  syntax_tests/data/parsing/errors/typexpr/typeConstructorArgs.res:8:16-17
+  syntax_tests/data/parsing/errors/typexpr/typeConstructorArgs.res:8:17
 
    6 │ type t<'a> = private Belt.Map.t('a)
    7 │ 
@@ -46,12 +46,23 @@
    9 │ type t = option(<node<int>>)
   10 │ 
 
-  I'm not sure what to parse here when looking at "<<".
+  I'm not sure what to parse here when looking at "<".
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/typexpr/typeConstructorArgs.res:9:16
+
+   7 │ 
+   8 │ type t = option<<node<int>>
+   9 │ type t = option(<node<int>>)
+  10 │ 
+
+  Type parameters require angle brackets:
+  option<node<int>>
 
 type nonrec 'a node = {
   _value: 'a Nullable.t }
 type nonrec 'a t = 'a Belt.Map.t
 type nonrec 'a t = private 'a Belt.Map.t
-type nonrec t = option
-;;node < (int >> ([%rescript.exprhole ]))
+type nonrec t = int node option
 type nonrec t = int node option

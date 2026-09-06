@@ -36,6 +36,8 @@
 
 #### :bug: Bug fix
 
+- Fix speculative parser lookahead suppressing later syntax errors or emitting duplicate deprecation warnings. <!-- Add the PR link when the PR is opened. -->
+- Preserve list elements when recovering from unexpected delimiters, and report invalid type-argument parentheses at their opening. <!-- Add the PR link when the PR is opened. -->
 - Fix escaped backticks and interpolation openers in backquoted `%raw`, `%ffi`, and `%re` payloads leaking into emitted JavaScript. https://github.com/rescript-lang/rescript/pull/8630
 - Fix the side-effect analysis treating bigint exponentiation and bounds-checked array and string reads as pure, which let dead-code elimination drop an unused one that throws: `let _ = 2n ** -1n` no longer raised. https://github.com/rescript-lang/rescript/pull/8617
 - Preserve record field `@as` annotations when formatting object types containing spreads. https://github.com/rescript-lang/rescript/pull/8619

@@ -1,6 +1,6 @@
 
   Syntax error!
-  syntax_tests/data/parsing/recovery/typexpr/typeConstructorArgs.res:2:21-24
+  syntax_tests/data/parsing/recovery/typexpr/typeConstructorArgs.res:2:21
 
   1 │ type node<'a> = {
   2 │   _value: Nullable.t('a)

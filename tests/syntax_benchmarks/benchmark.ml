@@ -150,6 +150,10 @@ end
 module Benchmarks : sig
   val run : unit -> unit
 end = struct
+  let num_iterations = ref 150
+  let parse_manifest = ref None
+  let for_printer = ref false
+
   type action = Parse | Print
 
   let string_of_action action =
@@ -166,7 +170,6 @@ end = struct
     structure
 
   let data_dir = "tests/syntax_benchmarks/data"
-  let num_iterations = 150
 
   let benchmark (filename, action) =
     let path = Filename.concat data_dir filename in
@@ -190,7 +193,7 @@ end = struct
           in
           ()
     in
-    Benchmark.run benchmark_fn ~num_iterations
+    Benchmark.run benchmark_fn ~num_iterations:!num_iterations
 
   let specs =
     [
@@ -203,12 +206,65 @@ end = struct
       ("HeroGraphic.res", Print);
     ]
 
+  let benchmark_corpus files =
+    let sources =
+      List.map (fun filename -> (filename, IO.read_file filename)) files
+    in
+    let parse () =
+      List.iter
+        (fun (filename, source) ->
+          let mode =
+            if !for_printer then Parser.Default else Parser.ParseForTypeChecker
+          in
+          let p = Parser.make ~mode source filename in
+          if Filename.check_suffix filename ".resi" then
+            ignore (Sys.opaque_identity (Res_core.parse_specification p))
+          else ignore (Sys.opaque_identity (Res_core.parse_implementation p));
+          if p.diagnostics <> [] then (
+            Res_diagnostics.print_report p.diagnostics source;
+            failwith ("Invalid benchmark input: " ^ filename)))
+        sources
+    in
+    (* Validate and warm the inputs before measuring. File I/O is excluded. *)
+    parse ();
+    Benchmark.run parse ~num_iterations:!num_iterations
+
   let run () =
-    List.to_seq specs
-    |> Seq.flat_map (fun spec ->
-        let filename, action = spec in
-        let test_name = string_of_action action ^ " " ^ filename in
-        let {Benchmark.ms_per_run; allocs_per_run} = benchmark spec in
+    Arg.parse
+      [
+        ( "--parse-manifest",
+          Arg.String (fun path -> parse_manifest := Some path),
+          "JSON object mapping corpus names to arrays of .res/.resi paths" );
+        ( "--iterations",
+          Arg.Set_int num_iterations,
+          "Number of iterations per benchmark (default: 150)" );
+        ( "--for-printer",
+          Arg.Set for_printer,
+          "Use the formatter parser mode for corpus benchmarks" );
+      ]
+      (fun arg -> raise (Arg.Bad ("Unexpected argument: " ^ arg)))
+      "syntax_benchmarks [--parse-manifest FILE] [--iterations N]";
+    if !num_iterations <= 0 then invalid_arg "--iterations must be positive";
+    let benchmarks =
+      match !parse_manifest with
+      | None ->
+        List.map
+          (fun ((filename, action) as spec) ->
+            (string_of_action action ^ " " ^ filename, fun () -> benchmark spec))
+          specs
+      | Some path ->
+        Yojson.Basic.from_file path
+        |> Yojson.Basic.Util.to_assoc
+        |> List.map (fun (name, files) ->
+            let files =
+              files |> Yojson.Basic.Util.to_list
+              |> List.map Yojson.Basic.Util.to_string
+            in
+            (name, fun () -> benchmark_corpus files))
+    in
+    List.to_seq benchmarks
+    |> Seq.flat_map (fun (test_name, benchmark_fn) ->
+        let {Benchmark.ms_per_run; allocs_per_run} = benchmark_fn () in
         [
           `Assoc
             [
