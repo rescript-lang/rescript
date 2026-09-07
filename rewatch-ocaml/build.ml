@@ -196,6 +196,32 @@ let compile_namespace ~bsc ~runtime ~build_dir ~ocaml_dir namespace modules =
   copy_file (Filename.concat build_dir (namespace ^ ".cmi"))
     (Filename.concat ocaml_dir (namespace ^ ".cmi"))
 
+let dependency_path root name =
+  let rec in_ancestors directory =
+    let candidate = Filename.concat (Filename.concat directory "node_modules") name in
+    if Sys.file_exists candidate then Some candidate
+    else
+      let parent = Filename.dirname directory in
+      if parent = directory then None else in_ancestors parent
+  in
+  match in_ancestors root with
+  | Some path -> Some path
+  | None ->
+    let package_name =
+      match List.rev (String.split_on_char '/' name) with last :: _ -> last | [] -> name
+    in
+    let sibling = Filename.concat (Filename.dirname root) name in
+    let workspace = Filename.concat (Filename.concat root "packages") package_name in
+    List.find_opt Sys.file_exists [sibling; workspace]
+
+let gentype_dependency_args (config : Config.t) =
+  if config.gentype_args = [] then []
+  else
+    config.dependencies |> List.concat_map (fun (dependency : Config.dependency) ->
+      match dependency_path config.root dependency.name with
+      | None -> []
+      | Some path -> ["-bs-gentype-dep-path"; dependency.name ^ "=" ^ path])
+
 let run_post_build (config : Config.t) path =
   match config.js_post_build with
   | None -> ()
@@ -235,6 +261,7 @@ let compile_file ~bsc ~runtime ~build_dir ~ocaml_dir ~watch ~(config : Config.t)
     @ List.concat_map (fun dir -> ["-I"; dir]) dependency_dirs
     @ ["-runtime-path"; runtime]
     @ compiler_flags ~source_maps:true ~watch ~gentype:true config
+    @ gentype_dependency_args config
     @ ["-bs-package-name"; config.name; "-bs-project-root"; config.root]
     @ output_args @ [ast]
   in
@@ -262,6 +289,7 @@ let compile_job ~bsc ~runtime ~build_dir ~watch ~(config : Config.t) ~dependency
   let args = namespace_args @ interface_args @ ["-I"; "../ocaml"]
     @ List.concat_map (fun dir -> ["-I"; dir]) dependency_dirs
     @ ["-runtime-path"; runtime] @ compiler_flags ~source_maps:true ~watch ~gentype:true config
+    @ gentype_dependency_args config
     @ ["-bs-package-name"; config.name; "-bs-project-root"; config.root]
     @ output_args @ [ast]
   in
@@ -294,24 +322,6 @@ let rec remove_tree path =
       Sys.readdir path |> Array.iter (fun name -> remove_tree (Filename.concat path name));
       Unix.rmdir path)
     else Sys.remove path
-
-let dependency_path root name =
-  let rec in_ancestors directory =
-    let candidate = Filename.concat (Filename.concat directory "node_modules") name in
-    if Sys.file_exists candidate then Some candidate
-    else
-      let parent = Filename.dirname directory in
-      if parent = directory then None else in_ancestors parent
-  in
-  match in_ancestors root with
-  | Some path -> Some path
-  | None ->
-    let package_name =
-      match List.rev (String.split_on_char '/' name) with last :: _ -> last | [] -> name
-    in
-    let sibling = Filename.concat (Filename.dirname root) name in
-    let workspace = Filename.concat (Filename.concat root "packages") package_name in
-    List.find_opt Sys.file_exists [sibling; workspace]
 
 let rec clean_internal ~root_config ~seen ~folder ~prod =
   let root = Unix.realpath folder in
@@ -381,6 +391,7 @@ let compiler_args path =
     namespace_args @ interface_args @ ["-I"; "../ocaml"]
     @ List.concat_map (fun dir -> ["-I"; dir]) dependency_dirs
     @ ["-runtime-path"; runtime] @ compiler_flags ~source_maps:true ~watch:false ~gentype:true config
+    @ gentype_dependency_args config
     @ ["-bs-package-name"; config.name; "-bs-project-root"; config.root]
     @ output_args @ [ast]
   in

@@ -40,6 +40,7 @@ sed 's/"module": "esmodule"/"module": "es6"/' "$basic/rescript.json" > "$basic/r
 mv "$basic/rescript.next" "$basic/rescript.json"
 "$port" compiler-args "$basic/src/A.res" | grep '"-9"' >/dev/null
 "$port" compiler-args "$gentype/src/Main.res" | grep '"-bs-gentype-generated-extension"' >/dev/null
+"$port" compiler-args "$gentype/src/Main.res" | grep '"-bs-gentype-dep-path"' >/dev/null
 
 cleanup() {
   rm -rf "$work"
@@ -67,6 +68,7 @@ printf 'let formatted=1\n' | "$port" format --stdin .res | grep 'let formatted =
 rm -rf "$basic/lib" "$cycle/lib" "$failure/lib"
 rm -rf "$features/lib"
 rm -rf "$gentype/lib"
+rm -rf "$gentype/node_modules/dep/lib"
 rm -rf "$dependency/lib" "$dependency/node_modules/dep/lib"
 sed 's/"dependencies"/"bs-dependencies"/' "$dependency/rescript.json" > "$dependency/rescript.next"
 mv "$dependency/rescript.next" "$dependency/rescript.json"
@@ -237,6 +239,7 @@ test -f "$failure/src/Broken.js"
 rm -rf "$basic/lib" "$cycle/lib" "$failure/lib"
 rm -rf "$features/lib"
 rm -rf "$gentype/lib"
+rm -rf "$gentype/node_modules/dep/lib"
 rm -rf "$dependency/lib" "$dependency/node_modules/dep/lib"
 rm -rf "$post_build/lib"
 rm -rf "$out_of_source/lib"

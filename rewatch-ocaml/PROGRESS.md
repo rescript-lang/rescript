@@ -54,7 +54,7 @@ selection, stale artifact cleanup, and compiler artifact publication to
   package-output behavior as their modern spellings.
 - `gentypeconfig` is validated and projected to compile-only `bsc` flags. The
   focused fixture verifies argument projection and a successful GenType-enabled
-  build.
+  build, including resolved local dependency metadata.
 - Workspace packages inherit project-root JSX, source-map, experimental, and
   package-output settings. The dependency fixture verifies root-suffix output
   and cleanup despite a conflicting package-local suffix.
@@ -71,8 +71,6 @@ selection, stale artifact cleanup, and compiler artifact publication to
 - Full monorepo/package graph parity, configuration validation parity, compiler
   argument parity, telemetry, and production-grade filesystem watching remain
   incomplete.
-- GenType dependency-path metadata remains incomplete; the current
-  implementation forwards declared dependency names and source directories.
 - `watch` currently uses conservative polling and has no signal/lock/event
   batching parity with Rust rewatch.
 - Polling watches root and recursively resolved local dependency roots, but it
