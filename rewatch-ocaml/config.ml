@@ -392,19 +392,26 @@ let load path =
     match member "sourceMap" fields with
     | None -> ([], false)
     | Some (`Bool false) -> (["-bs-source-map"; "false"], false)
+    | Some (`Bool true) ->
+      fail path
+        "sourceMap true is unsupported; use an object with enabled and mode fields or false"
     | Some (`Assoc options) ->
-      let mode = match member "mode" options with
-        | None -> "linked"
-        | Some (`String ("linked" | "inline" | "hidden" as value)) -> value
-        | Some _ -> fail path "field \"sourceMap.mode\" is invalid"
+      let mode =
+        match member "mode" options with
+        | Some (`String ("linked" | "inline" | "hidden" as value)) ->
+          value
+        | None -> fail path "sourceMap is missing field \"mode\""
+        | Some _ ->
+          fail path "sourceMap.mode must be one of linked, inline, hidden"
       in
-      let enabled, dev_only = match member "enabled" options with
-        | None | Some (`Bool true) -> (true, false)
-        | Some (`Bool false) -> (false, false)
-        | Some (`String "dev") -> (true, true)
-        | Some _ -> fail path "field \"sourceMap.enabled\" is invalid"
+      let dev_only =
+        match member "enabled" options with
+        | Some (`String "always") -> false
+        | Some (`String "dev") -> true
+        | None -> fail path "sourceMap is missing field \"enabled\""
+        | Some _ ->
+          fail path "sourceMap.enabled must be \"always\" or \"dev\""
       in
-      if not enabled then (["-bs-source-map"; "false"], false) else
       let content = match member "sourcesContent" options with
         | None -> [] | Some (`Bool value) -> ["-bs-source-map-sources-content"; string_of_bool value]
         | Some _ -> fail path "field \"sourceMap.sourcesContent\" must be a boolean" in
