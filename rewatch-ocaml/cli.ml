@@ -2,6 +2,7 @@ type command =
   | Build of build_options
   | Clean of string
   | Watch of build_options
+  | Format of {check: bool; stdin: string option; files: string list}
   | Help | Version
 
 and build_options = {folder: string; prod: bool; features: string list option; warn_error: string option}
@@ -41,6 +42,18 @@ let parse argv =
     in loop None false None None args
   in
   match args with
+  | "format" :: rest ->
+    let rec loop check stdin files = function
+      | [] -> Format {check; stdin; files = List.rev files}
+      | ("-c" | "--check") :: more -> loop true stdin files more
+      | ("-s" | "--stdin") :: extension :: more ->
+        if check then raise (Error "--stdin conflicts with --check");
+        loop check (Some extension) files more
+      | arg :: _ when String.length arg > 0 && arg.[0] = '-' -> raise (Error ("unknown format option " ^ arg))
+      | file :: more ->
+        if Option.is_some stdin then raise (Error "files conflict with --stdin");
+        loop check stdin (file :: files) more
+    in loop false None [] rest
   | "clean" :: rest ->
     (match rest with [] -> Clean "." | [folder] -> Clean folder | _ -> raise (Error "too many folder arguments"))
   | "watch" :: rest -> parse_build ~watch:true rest

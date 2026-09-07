@@ -5,6 +5,7 @@ let () =
     | Cli.Version -> print_endline "rescript-ocaml experimental"
     | Cli.Build {folder; prod; features; warn_error} -> Build.run ~seen:[] ~folder ~prod ~features ~warn_error
     | Cli.Watch {folder; prod; features; warn_error} -> Build.watch ~folder ~prod ~features ~warn_error
+    | Cli.Format {check; stdin; files} -> Format.run ~check ~stdin ~files
     | Cli.Clean folder -> Build.clean ~folder
   with
   | Cli.Error message
@@ -12,6 +13,9 @@ let () =
   | Source.Error message
   | Build.Error message
   | Process.Error message ->
+    prerr_endline message;
+    exit 1
+  | Format.Error message ->
     prerr_endline message;
     exit 1
   | Build.Stop_watch -> exit 0
