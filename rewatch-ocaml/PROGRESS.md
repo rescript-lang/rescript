@@ -204,6 +204,10 @@ an owner PID and can themselves be recovered after an interrupted takeover.
 - GenType now receives `-bs-gentype-suffix` only when the top-level suffix was
   explicitly configured, and inherits the module format from object-form
   `package-specs` when `gentypeconfig.module` is absent.
+- All legacy top-level fields that Rust classifies as known but unsupported
+  (`ignored-dirs`, generators, preprocessor/entry fields, and external include
+  paths) receive the dedicated unsupported-field diagnostic rather than a
+  generic unknown-field warning or silent acceptance.
 
 ## Performance snapshot
 
