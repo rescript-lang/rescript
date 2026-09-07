@@ -276,7 +276,18 @@ let () =
       check
         (contains_adjacent "-bs-gentype-suffix" ".mjs"
            config.gentype_args)
-        "GenType includes an explicitly configured suffix");
+        "GenType includes an explicitly configured suffix";
+      write_file config_path
+        {|{"name":"unsupported","generators":["legacy"]}|};
+      let config = Config.load config_path in
+      check
+        (List.exists
+           (fun message ->
+             Build.contains_text message
+               "field 'generators'"
+             && Build.contains_text message "is not supported")
+           config.diagnostics)
+        "known unsupported config fields are distinguished from unknown fields");
   let dependency_root =
     Filename.temp_file "rewatch-ocaml-allowed-dependents-" ""
   in

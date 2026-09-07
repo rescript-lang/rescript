@@ -182,6 +182,11 @@ let unknown_fields fields =
       "allowed-dependents";
       "features";
       "ignored-dirs";
+      "generators";
+      "cut-generators";
+      "pp-flags";
+      "entries";
+      "bs-external-includes";
       "warnings";
       "ppx-flags";
       "jsx";
@@ -502,6 +507,17 @@ let load path =
     | None -> []
     | Some value -> strings path "ignored-dirs" value
   in
+  let unsupported_fields =
+    [
+      "ignored-dirs";
+      "generators";
+      "cut-generators";
+      "pp-flags";
+      "entries";
+      "bs-external-includes";
+    ]
+    |> List.filter (fun field -> Option.is_some (member field fields))
+  in
   let deprecated =
     (if Filename.basename path = "bsconfig.json" then
        ["  - filename 'bsconfig.json' — rename to 'rescript.json'"]
@@ -538,13 +554,11 @@ let load path =
            name
            (String.concat "\n" deprecated);
        ])
-    @ (if ignored_dirs = [] then []
-       else
-         [
+    @ (unsupported_fields
+      |> List.map (fun field ->
            Printf.sprintf
-             "The field 'ignored-dirs' found in the package config of '%s' is not supported by ReScript 12's new build system."
-             name;
-         ])
+             "The field '%s' found in the package config of '%s' is not supported by ReScript 12's new build system."
+             field name))
     @ (unknown_fields fields
       |> List.map (fun field ->
            Printf.sprintf
