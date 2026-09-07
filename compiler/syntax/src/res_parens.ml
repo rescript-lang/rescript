@@ -1,7 +1,7 @@
 module Parsetree_viewer = Res_parsetree_viewer
 type kind = Parenthesized | Braced of Location.t | Nothing
 
-let expr ?(allow_coercion = false) expr =
+let expr_with_coercion_kind coercion_kind expr =
   let opt_braces, _ = Parsetree_viewer.process_braces_attr expr in
   match opt_braces with
   | Some ({Location.loc = braces_loc}, _) -> Braced braces_loc
@@ -12,9 +12,12 @@ let expr ?(allow_coercion = false) expr =
        Pexp_constraint ({pexp_desc = Pexp_pack _}, {ptyp_desc = Ptyp_package _});
     } ->
       Nothing
-    | {pexp_desc = Pexp_coerce _} when allow_coercion -> Nothing
-    | {pexp_desc = Pexp_constraint _ | Pexp_coerce _} -> Parenthesized
+    | {pexp_desc = Pexp_coerce _} -> coercion_kind
+    | {pexp_desc = Pexp_constraint _} -> Parenthesized
     | _ -> Nothing)
+
+let expr expr = expr_with_coercion_kind Parenthesized expr
+let expr_allowing_coercion expr = expr_with_coercion_kind Nothing expr
 
 let expr_record_row_rhs ~optional e =
   let kind = expr e in

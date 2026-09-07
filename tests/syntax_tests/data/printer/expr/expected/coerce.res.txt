@@ -25,7 +25,7 @@ let foo = (~a=(3: int) :> int, b) => 34
 
 let x = (/* c0 */ x /* c1 */ :> /* c2 */ int /* c3 */)
 
-// Delimited arguments need no extra parentheses.
+// Delimited expression positions need no extra parentheses.
 foo(v :> b)
 foo(v :> b)
 foo(~arg=v :> b, ~optional=?v :> b)
