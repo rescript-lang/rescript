@@ -9,8 +9,8 @@ let read_file path =
     ~finally:(fun () -> close_in_noerr channel)
     (fun () -> really_input_string channel (in_channel_length channel))
 
-let temporary_log ~cwd stream =
-  Filename.temp_file ~temp_dir:cwd (".rewatch-ocaml-" ^ stream ^ "-") ".log"
+let temporary_log ?temp_dir stream =
+  Filename.temp_file ?temp_dir (".rewatch-ocaml-" ^ stream ^ "-") ".log"
 
 let resolve_program ~cwd program =
   if (not (Filename.is_relative program)) || Filename.dirname program <> "."
@@ -88,42 +88,90 @@ let signal_process_tree pid signal =
   let target = if Sys.win32 then pid else -pid in
   try Unix.kill target signal with Unix.Unix_error _ -> ()
 
+let defer_termination_signals () =
+  if not Sys.win32 then
+    let previous =
+      Unix.sigprocmask Unix.SIG_BLOCK [Sys.sigint; Sys.sigterm]
+    in
+    fun () -> ignore (Unix.sigprocmask Unix.SIG_SETMASK previous)
+  else
+    let pending = ref [] in
+    let defer signal =
+      if not (List.mem signal !pending) then pending := signal :: !pending
+    in
+    let previous_int = Sys.signal Sys.sigint (Sys.Signal_handle defer) in
+    let previous_term =
+      try Sys.signal Sys.sigterm (Sys.Signal_handle defer)
+      with exn ->
+        ignore (Sys.signal Sys.sigint previous_int);
+        raise exn
+    in
+    let restored = ref false in
+    let dispatch signal behavior =
+      match behavior with
+      | Sys.Signal_ignore -> ()
+      | Sys.Signal_handle handler -> handler signal
+      | Sys.Signal_default -> raise Sys.Break
+    in
+    fun () ->
+      if not !restored then (
+        restored := true;
+        ignore (Sys.signal Sys.sigint previous_int);
+        ignore (Sys.signal Sys.sigterm previous_term);
+        List.rev !pending
+        |> List.iter (fun signal ->
+             dispatch signal
+               (if signal = Sys.sigint then previous_int else previous_term)))
+
 let run ?env ~cwd program args =
-  let stdout_path = temporary_log ~cwd "stdout" in
-  let stderr_path = temporary_log ~cwd "stderr" in
+  let restore_signals = defer_termination_signals () in
   let child_pid = ref None in
-  let stdout_fd =
-    Unix.openfile stdout_path [Unix.O_WRONLY; Unix.O_TRUNC] 0o600
-  in
-  let stderr_fd =
-    Unix.openfile stderr_path [Unix.O_WRONLY; Unix.O_TRUNC] 0o600
-  in
+  let stdout_path = ref None in
+  let stderr_path = ref None in
+  let stdout_fd = ref None in
+  let stderr_fd = ref None in
+  let close_fd fd = try Unix.close fd with Unix.Unix_error _ -> () in
+  let remove_log path = try Sys.remove path with Sys_error _ -> () in
   let cleanup () =
-    (try Sys.remove stdout_path with Sys_error _ -> ());
-    try Sys.remove stderr_path with Sys_error _ -> ()
+    Option.iter close_fd !stdout_fd;
+    Option.iter close_fd !stderr_fd;
+    stdout_fd := None;
+    stderr_fd := None;
+    Option.iter remove_log !stdout_path;
+    Option.iter remove_log !stderr_path
   in
   try
+    let stdout_log = temporary_log "stdout" in
+    stdout_path := Some stdout_log;
+    let stderr_log = temporary_log "stderr" in
+    stderr_path := Some stderr_log;
+    let out = Unix.openfile stdout_log [Unix.O_WRONLY; Unix.O_TRUNC] 0o600 in
+    stdout_fd := Some out;
+    let err = Unix.openfile stderr_log [Unix.O_WRONLY; Unix.O_TRUNC] 0o600 in
+    stderr_fd := Some err;
     let pid =
-      spawn ~env ~cwd ~program ~args ~stdout:stdout_fd ~stderr:stderr_fd
+      spawn ~env ~cwd ~program ~args ~stdout:out ~stderr:err
     in
     child_pid := Some pid;
-    Unix.close stdout_fd;
-    Unix.close stderr_fd;
+    close_fd out;
+    stdout_fd := None;
+    close_fd err;
+    stderr_fd := None;
+    restore_signals ();
     let _, status = Unix.waitpid [] pid in
     child_pid := None;
-    let stdout = read_file stdout_path in
-    let stderr = read_file stderr_path in
+    let stdout = read_file stdout_log in
+    let stderr = read_file stderr_log in
     cleanup ();
     {status; stdout; stderr}
   with exn ->
-    (try Unix.close stdout_fd with Unix.Unix_error _ -> ());
-    (try Unix.close stderr_fd with Unix.Unix_error _ -> ());
     Option.iter
       (fun pid ->
         signal_process_tree pid Sys.sigkill;
         try ignore (Unix.waitpid [] pid) with Unix.Unix_error _ -> ())
       !child_pid;
     cleanup ();
+    let exn = try restore_signals (); exn with signal_exn -> signal_exn in
     raise exn
 
 let succeeded result = result.status = Unix.WEXITED 0
@@ -138,7 +186,7 @@ let status_string = function
    in input order. *)
 let default_max_jobs = min 32 (max 1 (Domain.recommended_domain_count ()))
 
-let run_parallel ?(max_jobs = default_max_jobs) jobs =
+let run_parallel ?temp_dir ?(max_jobs = default_max_jobs) jobs =
   if max_jobs < 1 then raise (Error "max_jobs must be at least one");
   let indexed = List.mapi (fun index job -> (index, job)) jobs in
   let results = Array.make (List.length jobs) None in
@@ -189,24 +237,15 @@ let run_parallel ?(max_jobs = default_max_jobs) jobs =
     active := []
   in
   let launch (index, job) =
-    let previous_mask =
-      if Sys.win32 then None
-      else
-        Some (Unix.sigprocmask Unix.SIG_BLOCK [Sys.sigint; Sys.sigterm])
-    in
-    let restore_signals () =
-      Option.iter
-        (fun mask -> ignore (Unix.sigprocmask Unix.SIG_SETMASK mask))
-        previous_mask
-    in
+    let restore_signals = defer_termination_signals () in
     let stdout_path = ref None in
     let stderr_path = ref None in
     let stdout_fd = ref None in
     let stderr_fd = ref None in
     try
-      let stdout_log = temporary_log ~cwd:job.cwd "stdout" in
+      let stdout_log = temporary_log ?temp_dir "stdout" in
       stdout_path := Some stdout_log;
-      let stderr_log = temporary_log ~cwd:job.cwd "stderr" in
+      let stderr_log = temporary_log ?temp_dir "stderr" in
       stderr_path := Some stderr_log;
       let out =
         Unix.openfile stdout_log [Unix.O_WRONLY; Unix.O_TRUNC] 0o600
