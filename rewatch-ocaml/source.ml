@@ -19,7 +19,7 @@ let module_name path =
   path |> Filename.basename |> Filename.remove_extension
   |> String.capitalize_ascii
 
-let rec scan_dir ~root ~relative ~recurse ~is_dev acc =
+let rec scan_dir ~root ~relative ~recurse ~is_dev ~ignored_dirs acc =
   let absolute = Filename.concat root relative in
   let entries =
     try Sys.readdir absolute |> Array.to_list |> List.sort String.compare
@@ -30,8 +30,9 @@ let rec scan_dir ~root ~relative ~recurse ~is_dev acc =
       let relative_path = Filename.concat relative name in
       let absolute_path = Filename.concat root relative_path in
       if Sys.is_directory absolute_path then
+        if List.mem name ignored_dirs then acc else
         if recurse then
-          scan_dir ~root ~relative:relative_path ~recurse ~is_dev acc
+          scan_dir ~root ~relative:relative_path ~recurse ~is_dev ~ignored_dirs acc
         else acc
       else
         match source_extension name with
@@ -68,7 +69,8 @@ let discover (config : Config.t) ~prod ~features =
     |> List.fold_left
          (fun acc (source : Config.source) ->
            scan_dir ~root:config.root ~relative:source.dir
-             ~recurse:source.recurse ~is_dev:source.is_dev acc)
+             ~recurse:source.recurse ~is_dev:source.is_dev
+             ~ignored_dirs:config.ignored_dirs acc)
          []
   in
   let table = Hashtbl.create (List.length files) in
