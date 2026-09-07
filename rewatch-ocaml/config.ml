@@ -400,13 +400,23 @@ let load path =
   let experimental_args =
     match member "experimental-features" fields with
     | None -> []
-    | Some (`Assoc features) -> features |> List.concat_map (fun (name, value) ->
-      match value with
-      | `Bool true when name = "LetUnwrap" -> ["-enable-experimental"; name]
-      | `Bool false when name = "LetUnwrap" -> []
-      | `Bool _ -> fail path ("unsupported experimental feature \"" ^ name ^ "\"")
-      | _ -> fail path "experimental feature values must be booleans")
-    | Some _ -> fail path "field \"experimental-features\" must be an object"
+    | Some (`Assoc features) ->
+      features
+      |> List.concat_map (fun (name, value) ->
+           if name <> "LetUnwrap" then
+             fail path
+               (Printf.sprintf
+                  "Unknown experimental feature '%s'. Available features: LetUnwrap"
+                  name);
+           match value with
+           | `Bool true -> ["-enable-experimental"; name]
+           | `Bool false -> []
+           | _ ->
+             fail path
+               "experimental-features: invalid type: feature values must be booleans")
+    | Some _ ->
+      fail path
+        "Could not read rescript.json: experimental-features: invalid type: expected an object"
   in
   let sources = parse_sources path fields in
   let dependencies = dependency_alias path "dependencies" "bs-dependencies" fields in
