@@ -40,7 +40,8 @@ let rec scan_dir ~root ~relative ~recurse ~is_dev ~ignored_dirs acc =
         | Some is_interface -> (relative_path, is_interface, is_dev) :: acc)
     acc entries
 
-let discover (config : Config.t) ~prod ~features ~filter =
+let discover ?(on_orphan = fun _ -> ()) (config : Config.t) ~prod ~features
+    ~filter =
   let matches_filter =
     match filter with
     | None -> fun _ -> true
@@ -109,6 +110,12 @@ let discover (config : Config.t) ~prod ~features ~filter =
         | None ->
           Hashtbl.replace table name (Some path, interface, old_dev || is_dev))
     (List.filter (fun (path, _, _) -> matches_filter path) files);
+  Hashtbl.to_seq table
+  |> Seq.filter_map (fun (_, (implementation, interface, _)) ->
+       match implementation, interface with
+       | None, Some interface -> Some interface
+       | _ -> None)
+  |> List.of_seq |> List.sort String.compare |> List.iter on_orphan;
   Hashtbl.to_seq table
   |> Seq.filter_map (fun (name, (implementation, interface, is_dev)) ->
       match implementation with
