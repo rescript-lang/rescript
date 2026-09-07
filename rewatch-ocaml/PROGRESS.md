@@ -30,6 +30,12 @@ selection, stale artifact cleanup, and compiler artifact publication to
 - `warnings`, `ppx-flags`, JSX v4, source-map, `LetUnwrap` experimental
   features, and `js-post-build` are projected into external compiler/process
   invocations. The post-build fixture verifies its generated-file argument.
+- `format`, `compiler-args`, `--filter`, and `--after-build` are implemented.
+  The test runner covers stdin formatting, compiler-argument JSON, filtering,
+  and an after-build assertion.
+- Namespace packages generate and compile their `.mlmap` before member modules.
+  Out-of-source package output directories are created before compilation and
+  stale output is removed; `clean` also removes in-source JavaScript and maps.
 
 ## Known gaps
 
@@ -39,6 +45,9 @@ selection, stale artifact cleanup, and compiler artifact publication to
   filesystem watching remain incomplete.
 - `watch` currently uses conservative polling and has no signal/lock/event
   batching parity with Rust rewatch.
+- Polling watches root and recursively resolved local dependency roots, but it
+  is not yet a native event backend and has not been exercised against the full
+  Rust watch suite.
 - Local source dependencies under `node_modules` or a sibling package are
   recursively built with dependency feature selections and cycle protection;
   prebuilt packages are accepted through their `lib/ocaml` include path.

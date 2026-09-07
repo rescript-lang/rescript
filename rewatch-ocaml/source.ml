@@ -40,7 +40,14 @@ let rec scan_dir ~root ~relative ~recurse ~is_dev ~ignored_dirs acc =
         | Some is_interface -> (relative_path, is_interface, is_dev) :: acc)
     acc entries
 
-let discover (config : Config.t) ~prod ~features =
+let discover (config : Config.t) ~prod ~features ~filter =
+  let matches_filter =
+    match filter with
+    | None -> fun _ -> true
+    | Some pattern ->
+      let regex = try Str.regexp pattern with Failure _ -> raise (Error ("invalid filter regex: " ^ pattern)) in
+      fun path -> try ignore (Str.search_forward regex path 0); true with Not_found -> false
+  in
   let active_features = Hashtbl.create 16 in
   let rec validate_feature feature visiting =
     if List.mem feature visiting then
@@ -101,7 +108,7 @@ let discover (config : Config.t) ~prod ~features =
                   path))
         | None ->
           Hashtbl.replace table name (Some path, interface, old_dev || is_dev))
-    files;
+    (List.filter (fun (path, _, _) -> matches_filter path) files);
   Hashtbl.to_seq table
   |> Seq.filter_map (fun (name, (implementation, interface, is_dev)) ->
       match implementation with
