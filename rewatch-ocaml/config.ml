@@ -27,6 +27,7 @@ type t = {
   suffix: string;
   namespace: string option;
   features: (string * string list) list;
+  warning_flags: string list;
 }
 
 exception Error of string
@@ -218,6 +219,25 @@ let load path =
     | None -> []
     | Some value -> strings path "compiler-flags" value
   in
+  let warning_flags =
+    match member "warnings" fields with
+    | None -> []
+    | Some (`Assoc warning_fields) ->
+      let number = match member "number" warning_fields with
+        | None -> [] | Some value -> ["-w"; string path "number" value] in
+      let error = match member "error" warning_fields with
+        | Some (`Bool true) -> ["-warn-error"; "A"]
+        | Some (`String value) -> ["-warn-error"; value]
+        | None | Some (`Bool false) -> []
+        | Some _ -> fail path "field \"warnings.error\" must be a boolean or string"
+      in number @ error
+    | Some _ -> fail path "field \"warnings\" must be an object"
+  in
+  let ppx_flags =
+    match member "ppx-flags" fields with
+    | None -> []
+    | Some value -> strings path "ppx-flags" value
+  in
   let features =
     match member "features" fields with
     | None -> []
@@ -234,11 +254,12 @@ let load path =
     sources = parse_sources path fields;
     dependencies = dependencies path "dependencies" fields;
     dev_dependencies = dependencies path "dev-dependencies" fields;
-    compiler_flags;
+    compiler_flags = warning_flags @ ppx_flags @ compiler_flags;
     package_specs;
     suffix;
     namespace;
     features;
+    warning_flags;
   }
 
 let package_spec_suffix (config : t) (spec : package_spec) =
