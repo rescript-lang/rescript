@@ -73,6 +73,11 @@ unit coverage for that invariant.
   use a global module view and match the Rust diagnostic snapshot, duplicate
   modules are rejected with project-relative paths, production sources cannot
   see dev-only dependencies, dev sources can, and package back-edges terminate.
+- Canonical compile tests 14 through 19 also pass unchanged. Builds leave the
+  tracked fixture outputs and snapshots byte-identical, create no unowned files,
+  `--prod` excludes dev dependencies and dev sources, external legacy uncurried
+  syntax remains visible without leaking unrelated external warnings, and UTF-8
+  warning source lines remain intact. This completes the canonical compile group.
 - Incremental builds reuse clean ASTs and compiler outputs, preserve unchanged
   CMI timestamps, recompile dependents after interface changes, avoid dependent
   recompilation after implementation-only changes, and replay local compiler
@@ -175,8 +180,8 @@ unit coverage for that invariant.
 
 ## Next actions
 
-1. Continue canonical compile tests 14 through 18, then the remaining watch,
-   lock, suffix, format, clean, experimental, and compiler-argument groups.
+1. Continue the remaining watch, lock, suffix, format, clean, experimental, and
+   compiler-argument groups.
 2. Replace recursive per-package compilation with scheduling over the global
    cross-package module graph; cycle discovery is global now, but compilation
    batches are still package-local.
