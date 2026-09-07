@@ -40,6 +40,12 @@ selection, stale artifact cleanup, and compiler artifact publication to
 - The integration runner builds a three-package monorepo through relative
   `node_modules` workspace links, including a transitive dependency resolved
   from an ancestor hoist.
+- A project-local copy of `rewatch/testrepo` completes a one-shot build with
+  the OCaml executable. This exercises the existing workspace package graph,
+  including its package-level dependency back-edge and `namespace-entry`.
+- `bsc-flags` is accepted as the Rust-compatible alias for `compiler-flags`;
+  nested compiler flag groups are flattened into direct `bsc` arguments, and
+  `--warn-error` replaces config warning errors.
 - The integration runner starts watch mode, confirms the lock, performs a
   source edit, changes the configured output suffix, observes the resulting
   rebuild and stale-output removal, and confirms lock cleanup after `SIGTERM`.

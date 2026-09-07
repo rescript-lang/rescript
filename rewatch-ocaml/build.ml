@@ -101,7 +101,8 @@ let compiler_flags ~source_maps ~watch (config : Config.t) =
   let source_map_args =
     if source_maps && (watch || not config.source_map_dev) then config.source_map_args else []
   in
-  ppx_args @ config.jsx_args @ source_map_args @ config.experimental_args @ config.compiler_flags
+  ppx_args @ config.jsx_args @ source_map_args @ config.experimental_args
+  @ config.compiler_flags @ config.warning_flags
 
 let parse_file ~bsc ~build_dir ~(config : Config.t) path =
   let ast = Source.ast_path path in
@@ -194,14 +195,16 @@ let run_post_build (config : Config.t) path =
       if result.stdout <> "" then print_string result.stdout;
       if result.stderr <> "" then prerr_string result.stderr) config.package_specs
 
+let namespace_args (config : Config.t) module_name =
+  match config.namespace, config.namespace_entry with
+  | None, _ -> []
+  | Some namespace, Some entry when entry = module_name -> ["-open"; "@" ^ namespace]
+  | Some namespace, _ -> ["-bs-ns"; namespace]
+
 let compile_file ~bsc ~runtime ~build_dir ~ocaml_dir ~watch ~(config : Config.t)
     ~dependency_dirs (module_ : Source.module_) ~is_interface path =
   let ast = Source.ast_path path in
-  let namespace_args =
-    match config.namespace with
-    | None -> []
-    | Some namespace -> ["-bs-ns"; namespace]
-  in
+  let namespace_args = namespace_args config module_.name in
   let interface_args =
     if (not is_interface) && Option.is_some module_.interface then
       ["-bs-read-cmi"]
@@ -241,7 +244,7 @@ let compile_file ~bsc ~runtime ~build_dir ~ocaml_dir ~watch ~(config : Config.t)
 let compile_job ~bsc ~runtime ~build_dir ~watch ~(config : Config.t) ~dependency_dirs
     (module_ : Source.module_) ~is_interface path =
   let ast = Source.ast_path path in
-  let namespace_args = match config.namespace with None -> [] | Some n -> ["-bs-ns"; n] in
+  let namespace_args = namespace_args config module_.name in
   let interface_args = if not is_interface && Option.is_some module_.interface then ["-bs-read-cmi"] else [] in
   let output_args = if is_interface then [] else List.concat_map (fun spec -> ["-bs-package-output"; package_output config path spec]) config.package_specs in
   let args = namespace_args @ interface_args @ ["-I"; "../ocaml"]
@@ -354,7 +357,7 @@ let compiler_args path =
     @ ["-absname"; "-bs-ast"; "-o"; Source.ast_path relative; relative] in
   let compiler_args =
     let ast = Source.ast_path relative in
-    let namespace_args = match config.namespace with None -> [] | Some n -> ["-bs-ns"; n] in
+    let namespace_args = namespace_args config (Source.module_name source) in
     let interface_args = if not is_interface && has_interface then ["-bs-read-cmi"] else [] in
     let output_args = if is_interface then [] else List.concat_map (fun spec -> ["-bs-package-output"; package_output config relative spec]) config.package_specs in
     namespace_args @ interface_args @ ["-I"; "../ocaml"]
@@ -373,7 +376,7 @@ let rec run ~seen ~folder ~prod ~features ~warn_error ~watch ~after_build ~filte
   let config = Config.load (Filename.concat root "rescript.json") in
   let config = match warn_error with
     | None -> config
-    | Some value -> {config with compiler_flags = config.compiler_flags @ ["-warn-error"; value]}
+    | Some value -> {config with warning_flags = ["-warn-error"; value]}
   in
   let dependency_dirs =
     let dependencies : Config.dependency list =
@@ -384,9 +387,9 @@ let rec run ~seen ~folder ~prod ~features ~warn_error ~watch ~after_build ~filte
       let candidate = dependency_path root name in
       let () = match candidate with
         | None -> ()
-        | Some candidate when List.mem candidate seen -> raise (Error ("dependency cycle involving " ^ name))
+        | Some candidate when List.mem candidate (root :: seen) -> ()
         | Some candidate when Sys.file_exists (Filename.concat candidate "rescript.json") ->
-          run ~seen:(candidate :: seen) ~folder:candidate ~prod ~features:dependency.features ~warn_error:None ~watch ~after_build:None ~filter:None
+          run ~seen:(root :: seen) ~folder:candidate ~prod ~features:dependency.features ~warn_error:None ~watch ~after_build:None ~filter:None
         | Some _ -> ()
       in
       match candidate with
