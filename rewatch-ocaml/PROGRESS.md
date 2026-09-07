@@ -46,6 +46,9 @@ selection, stale artifact cleanup, and compiler artifact publication to
 - `bsc-flags` is accepted as the Rust-compatible alias for `compiler-flags`;
   nested compiler flag groups are flattened into direct `bsc` arguments, and
   `--warn-error` replaces config warning errors.
+- `gentypeconfig` is validated and projected to compile-only `bsc` flags. The
+  focused fixture verifies argument projection and a successful GenType-enabled
+  build.
 - The integration runner starts watch mode, confirms the lock, performs a
   source edit, changes the configured output suffix, observes the resulting
   rebuild and stale-output removal, adds then deletes a source module while
@@ -57,6 +60,9 @@ selection, stale artifact cleanup, and compiler artifact publication to
 - Full monorepo/package graph parity, configuration validation parity, compiler
   argument parity, telemetry, and production-grade filesystem watching remain
   incomplete.
+- GenType dependency-path metadata and root-project inheritance remain
+  incomplete; the current implementation forwards declared dependency names and
+  source directories only.
 - `watch` currently uses conservative polling and has no signal/lock/event
   batching parity with Rust rewatch.
 - Polling watches root and recursively resolved local dependency roots, but it

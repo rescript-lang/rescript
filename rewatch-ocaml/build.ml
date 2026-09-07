@@ -88,7 +88,7 @@ let report_failure action path result =
           (Process.status_string result.status)
        output))
 
-let compiler_flags ~source_maps ~watch (config : Config.t) =
+let compiler_flags ~source_maps ~watch ~gentype (config : Config.t) =
   let ppx_args =
     config.ppx_flags |> List.concat_map (function
       | [] -> []
@@ -102,13 +102,14 @@ let compiler_flags ~source_maps ~watch (config : Config.t) =
     if source_maps && (watch || not config.source_map_dev) then config.source_map_args else []
   in
   ppx_args @ config.jsx_args @ source_map_args @ config.experimental_args
+  @ (if gentype then config.gentype_args else [])
   @ config.compiler_flags @ config.warning_flags
 
 let parse_file ~bsc ~build_dir ~(config : Config.t) path =
   let ast = Source.ast_path path in
   ensure_dir (Filename.concat build_dir (Filename.dirname ast));
   let args =
-    compiler_flags ~source_maps:false ~watch:false config
+    compiler_flags ~source_maps:false ~watch:false ~gentype:false config
     @ ["-absname"; "-bs-ast"; "-o"; ast; Filename.concat "../.." path]
   in
   let result = Process.run ~cwd:build_dir bsc args in
@@ -129,7 +130,7 @@ let parse_file ~bsc ~build_dir ~(config : Config.t) path =
 let parse_job ~bsc ~build_dir ~(config : Config.t) path =
   let ast = Source.ast_path path in
   ensure_dir (Filename.concat build_dir (Filename.dirname ast));
-  let args = compiler_flags ~source_maps:false ~watch:false config @ ["-absname"; "-bs-ast"; "-o"; ast; Filename.concat "../.." path] in
+  let args = compiler_flags ~source_maps:false ~watch:false ~gentype:false config @ ["-absname"; "-bs-ast"; "-o"; ast; Filename.concat "../.." path] in
   Process.{program = bsc; args; cwd = build_dir}, ast
 
 let ast_dependencies ~build_dir ast =
@@ -222,7 +223,7 @@ let compile_file ~bsc ~runtime ~build_dir ~ocaml_dir ~watch ~(config : Config.t)
     @ ["-I"; "../ocaml"]
     @ List.concat_map (fun dir -> ["-I"; dir]) dependency_dirs
     @ ["-runtime-path"; runtime]
-    @ compiler_flags ~source_maps:true ~watch config
+    @ compiler_flags ~source_maps:true ~watch ~gentype:true config
     @ ["-bs-package-name"; config.name; "-bs-project-root"; config.root]
     @ output_args @ [ast]
   in
@@ -249,7 +250,7 @@ let compile_job ~bsc ~runtime ~build_dir ~watch ~(config : Config.t) ~dependency
   let output_args = if is_interface then [] else List.concat_map (fun spec -> ["-bs-package-output"; package_output config path spec]) config.package_specs in
   let args = namespace_args @ interface_args @ ["-I"; "../ocaml"]
     @ List.concat_map (fun dir -> ["-I"; dir]) dependency_dirs
-    @ ["-runtime-path"; runtime] @ compiler_flags ~source_maps:true ~watch config
+    @ ["-runtime-path"; runtime] @ compiler_flags ~source_maps:true ~watch ~gentype:true config
     @ ["-bs-package-name"; config.name; "-bs-project-root"; config.root]
     @ output_args @ [ast]
   in
@@ -353,7 +354,7 @@ let compiler_args path =
         if Sys.file_exists ocaml then Some ocaml else None
       | None -> None)
   in
-  let parser_args = compiler_flags ~source_maps:false ~watch:false config
+  let parser_args = compiler_flags ~source_maps:false ~watch:false ~gentype:false config
     @ ["-absname"; "-bs-ast"; "-o"; Source.ast_path relative; relative] in
   let compiler_args =
     let ast = Source.ast_path relative in
@@ -362,7 +363,7 @@ let compiler_args path =
     let output_args = if is_interface then [] else List.concat_map (fun spec -> ["-bs-package-output"; package_output config relative spec]) config.package_specs in
     namespace_args @ interface_args @ ["-I"; "../ocaml"]
     @ List.concat_map (fun dir -> ["-I"; dir]) dependency_dirs
-    @ ["-runtime-path"; runtime] @ compiler_flags ~source_maps:true ~watch:false config
+    @ ["-runtime-path"; runtime] @ compiler_flags ~source_maps:true ~watch:false ~gentype:true config
     @ ["-bs-package-name"; config.name; "-bs-project-root"; config.root]
     @ output_args @ [ast]
   in
