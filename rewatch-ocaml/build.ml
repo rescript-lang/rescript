@@ -318,7 +318,7 @@ let compiler_args path =
     ("parser_args", `List (List.map (fun value -> `String value) parser_args));
   ])
 
-let rec run ~seen ~folder ~prod ~features ~warn_error ~watch =
+let rec run ~seen ~folder ~prod ~features ~warn_error ~watch ~after_build =
   let root = Unix.realpath folder in
   let config = Config.load (Filename.concat root "rescript.json") in
   let config = match warn_error with
@@ -336,7 +336,7 @@ let rec run ~seen ~folder ~prod ~features ~warn_error ~watch =
         | None -> ()
         | Some candidate when List.mem candidate seen -> raise (Error ("dependency cycle involving " ^ name))
         | Some candidate when Sys.file_exists (Filename.concat candidate "rescript.json") ->
-          run ~seen:(candidate :: seen) ~folder:candidate ~prod ~features:dependency.features ~warn_error:None ~watch
+          run ~seen:(candidate :: seen) ~folder:candidate ~prod ~features:dependency.features ~warn_error:None ~watch ~after_build:None
         | Some _ -> ()
       in
       match candidate with
@@ -428,9 +428,16 @@ let rec run ~seen ~folder ~prod ~features ~warn_error ~watch =
       (List.filter_map (fun module_ -> Option.map (fun path -> (module_, true, path)) module_.Source.interface) modules);
     compile_batch ~bsc ~runtime ~build_dir ~ocaml_dir ~watch ~config ~dependency_dirs
       (List.map (fun module_ -> (module_, false, module_.Source.implementation)) modules)) levels;
-  Printf.printf "Finished compilation\n%!"
+  Printf.printf "Finished compilation\n%!";
+  match after_build with
+  | None -> ()
+  | Some command ->
+    let result = Process.run ~cwd:root "/bin/sh" ["-c"; command] in
+    if not (Process.succeeded result) then report_failure "after-build" root result;
+    if result.stdout <> "" then print_string result.stdout;
+    if result.stderr <> "" then prerr_string result.stderr
 
-let watch ~folder ~prod ~features ~warn_error =
+let watch ~folder ~prod ~features ~warn_error ~after_build =
   let root = Unix.realpath folder in
   let lock_dir = Filename.concat root "lib" in
   ensure_dir lock_dir;
@@ -458,10 +465,10 @@ let watch ~folder ~prod ~features ~warn_error =
   in
   let rec loop previous =
     let current = snapshot () in
-    if current <> previous then (try run ~seen:[] ~folder ~prod ~features ~warn_error ~watch:true with Error message -> prerr_endline message);
+    if current <> previous then (try run ~seen:[] ~folder ~prod ~features ~warn_error ~watch:true ~after_build with Error message -> prerr_endline message);
     ignore (Unix.select [] [] [] 0.2);
     loop current
   in
   Fun.protect
-    (fun () -> run ~seen:[] ~folder ~prod ~features ~warn_error ~watch:true; loop (snapshot ()))
+    (fun () -> run ~seen:[] ~folder ~prod ~features ~warn_error ~watch:true ~after_build; loop (snapshot ()))
     ~finally:(fun () -> remove_file lock_path)

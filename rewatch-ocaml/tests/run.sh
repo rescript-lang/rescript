@@ -36,7 +36,7 @@ rm -rf "$dependency/lib" "$dependency/node_modules/dep/lib"
 rm -rf "$post_build/lib"
 rm -f "$basic/src/A.mjs" "$basic/src/B.mjs" "$basic/src/WithInterface.mjs"
 
-"$port" build "$basic"
+"$port" build --after-build 'test -f src/A.mjs' "$basic"
 test -f "$basic/src/A.mjs"
 test -f "$basic/src/B.mjs"
 test -f "$basic/src/WithInterface.mjs"
