@@ -6,7 +6,7 @@ root=$(CDPATH= cd -- "$(dirname "$0")/../.." && pwd)
 : "${RESCRIPT_BSC_EXE:=$root/_build/default/compiler/bsc/rescript_compiler_main.exe}"
 : "${RESCRIPT_RUNTIME:=$root/packages/@rescript/runtime}"
 export RESCRIPT_BSC_EXE RESCRIPT_RUNTIME
-work="${TMPDIR:-/tmp}/rewatch-ocaml-test-$$"
+work="$root/tmp/rewatch-ocaml/test-$$"
 mkdir -p "$work"
 cp -R "$root/rewatch-ocaml/tests/basic" "$work/basic"
 cp -R "$root/rewatch-ocaml/tests/cycle" "$work/cycle"
@@ -17,6 +17,7 @@ cp -R "$root/rewatch-ocaml/tests/post-build" "$work/post-build"
 cp -R "$root/rewatch-ocaml/tests/out-of-source" "$work/out-of-source"
 cp -R "$root/rewatch-ocaml/tests/namespace" "$work/namespace"
 cp -R "$root/rewatch-ocaml/tests/source-map" "$work/source-map"
+cp -R "$root/rewatch-ocaml/tests/monorepo" "$work/monorepo"
 basic="$work/basic"
 cycle="$work/cycle"
 failure="$work/failure"
@@ -26,6 +27,7 @@ post_build="$work/post-build"
 out_of_source="$work/out-of-source"
 namespace="$work/namespace"
 source_map="$work/source-map"
+monorepo="$work/monorepo"
 
 "$port" compiler-args "$basic/src/A.res" | grep '"compiler_args"' >/dev/null
 
@@ -33,6 +35,22 @@ cleanup() {
   rm -rf "$work"
 }
 trap cleanup EXIT
+
+wait_for_count() {
+  file="$1"
+  pattern="$2"
+  expected="$3"
+  attempts=0
+  while [ "$attempts" -lt 100 ]; do
+    count=$(grep -c "$pattern" "$file" 2>/dev/null || true)
+    if [ "$count" -ge "$expected" ]; then
+      return 0
+    fi
+    attempts=$((attempts + 1))
+    sleep 0.1
+  done
+  return 1
+}
 
 printf 'let formatted=1\n' | "$port" format --stdin .res | grep 'let formatted = 1' >/dev/null
 
@@ -43,6 +61,9 @@ rm -rf "$post_build/lib"
 rm -rf "$out_of_source/lib"
 rm -rf "$namespace/lib"
 rm -rf "$source_map/lib"
+mkdir -p "$monorepo/node_modules"
+ln -s ../packages/consumer "$monorepo/node_modules/consumer"
+ln -s ../packages/dep "$monorepo/node_modules/dep"
 rm -f "$basic/src/A.mjs" "$basic/src/B.mjs" "$basic/src/WithInterface.mjs"
 
 "$port" build --filter 'A\.res$' "$basic"
@@ -61,6 +82,28 @@ test -f "$basic/lib/ocaml/WithInterface.cmti"
 test ! -f "$basic/src/A.mjs"
 test ! -d "$basic/lib/bs"
 test ! -d "$basic/lib/ocaml"
+
+watch_basic="$work/watch-basic"
+cp -R "$root/rewatch-ocaml/tests/basic" "$watch_basic"
+rm -rf "$watch_basic/lib"
+rm -f "$watch_basic/src/A.mjs" "$watch_basic/src/B.mjs" "$watch_basic/src/WithInterface.mjs"
+"$port" watch "$watch_basic" >"$watch_basic/watch.log" 2>&1 &
+watch_pid=$!
+if ! wait_for_count "$watch_basic/watch.log" 'Finished compilation' 1; then
+  kill -TERM "$watch_pid" 2>/dev/null || true
+  wait "$watch_pid" 2>/dev/null || true
+  exit 1
+fi
+test -f "$watch_basic/lib/watch.lock"
+printf '// watch edit\n' >> "$watch_basic/src/B.res"
+if ! wait_for_count "$watch_basic/watch.log" 'Finished compilation' 2; then
+  kill -TERM "$watch_pid" 2>/dev/null || true
+  wait "$watch_pid" 2>/dev/null || true
+  exit 1
+fi
+kill -TERM "$watch_pid"
+wait "$watch_pid"
+test ! -f "$watch_basic/lib/watch.lock"
 
 "$port" build --features native "$features"
 test -f "$features/native/Native.js"
@@ -87,6 +130,11 @@ test -f "$namespace/src/B.js"
 
 "$port" build "$source_map"
 test -f "$source_map/src/Main.js.map"
+
+"$port" build "$monorepo"
+test -f "$monorepo/src/Root.js"
+test -f "$monorepo/packages/consumer/src/Consumer.js"
+test -f "$monorepo/packages/dep/src/Dep.js"
 rm -f "$features/native/Native.js"
 "$port" build --features all "$features"
 test -f "$features/native/Native.js"

@@ -4,8 +4,8 @@ Reference Rust implementation: `2e532c7f6587d4201befd00ced516e267c90fe73`.
 
 ## Current milestone
 
-Milestones 1 and the core of milestone 3 are implemented for the experimental
-single-package path. The experimental
+Milestones 1 and 3 are implemented, and milestones 2, 4, and 5 have working
+but incomplete coverage. The experimental
 `rescript_ocaml.exe` currently implements single-package configuration loading,
 recursive source discovery, external `bsc` parsing, AST dependency extraction,
 cycle detection, dependency-ordered compilation, interface-before-implementation
@@ -21,9 +21,10 @@ selection, stale artifact cleanup, and compiler artifact publication to
   cycle diagnostics, compilation failure, and a successful recovery build.
 - Generated JavaScript for the selected successful fixture is produced by the
   same `bsc` invocations and is byte-identical between runners.
-- `build`, `clean`, `watch`, `--prod`, `--features`, `--help`, and `--version`
-  dispatch successfully; `clean` removes only the selected package's build
-  artifact directories.
+- `build`, `clean`, `watch`, `format`, `compiler-args`, `--prod`, `--features`,
+  `--filter`, `--after-build`, `--warn-error`, `--help`, and `--version`
+  dispatch successfully. `clean` removes root and local dependency build
+  artifacts, including in-source JavaScript and maps.
 - Independent parser/compiler jobs are launched in bounded batches (four
   children by default), with private output files and deterministic diagnostic
   collection.
@@ -36,13 +37,18 @@ selection, stale artifact cleanup, and compiler artifact publication to
 - Namespace packages generate and compile their `.mlmap` before member modules.
   Out-of-source package output directories are created before compilation and
   stale output is removed; `clean` also removes in-source JavaScript and maps.
+- The integration runner builds a three-package monorepo through relative
+  `node_modules` workspace links, including a transitive dependency resolved
+  from an ancestor hoist.
+- The integration runner starts watch mode, confirms the lock, performs a
+  source edit, observes a second completed compilation, and confirms lock
+  cleanup after `SIGTERM`.
 
 ## Known gaps
 
-- Package graph construction and recursive dependency builds, namespace maps,
-  full compiler argument parity, configuration validation parity, format and
-  compiler-args commands, incremental state, telemetry, and production-grade
-  filesystem watching remain incomplete.
+- Full monorepo/package graph parity, configuration validation parity, compiler
+  argument parity, telemetry, and production-grade filesystem watching remain
+  incomplete.
 - `watch` currently uses conservative polling and has no signal/lock/event
   batching parity with Rust rewatch.
 - Polling watches root and recursively resolved local dependency roots, but it
@@ -51,11 +57,16 @@ selection, stale artifact cleanup, and compiler artifact publication to
 - Local source dependencies under `node_modules` or a sibling package are
   recursively built with dependency feature selections and cycle protection;
   prebuilt packages are accepted through their `lib/ocaml` include path.
+- Package resolution searches a package's `node_modules` and ancestor hoists,
+  then workspace-sibling locations. A copied `rewatch/testrepo` cannot yet be
+  used for end-to-end verification because its workspace symlinks are relative
+  to the original repository and become broken when copied; the dedicated
+  monorepo fixture preserves those links instead.
 - The initial implementation targets Unix process semantics; supported platform
   parity has not been evaluated.
 
 ## Next actions
 
-1. Address milestone-1 independent review findings and rerun its gate.
-2. Add package discovery and full configuration projection for milestone 2.
-3. Parameterize the existing Rust integration suite for the OCaml executable.
+1. Parameterize applicable Rust integration fixtures for the OCaml executable.
+2. Complete monorepo/package discovery and remaining configuration fields.
+3. Replace polling with a supported event backend and verify applicable watch tests.
