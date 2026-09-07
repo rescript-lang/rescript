@@ -4,17 +4,17 @@ Reference Rust implementation: `2e532c7f6587d4201befd00ced516e267c90fe73`.
 
 ## Current milestone
 
-No milestone is complete against the canonical `rewatch/tests` suite yet. The
-experimental `rescript_ocaml.exe` builds the full `rewatch/testrepo` and now
-implements the first slice of persistent incremental state using existing AST,
-CMI, CMT, and generated-output artifacts. Work remains focused on milestone 4:
-expanding invalidation and diagnostic parity through the canonical edit tests.
+The complete applicable canonical `rewatch/tests` suite now passes with the
+experimental `rescript_ocaml.exe`. Milestone 6 remains open for the broader
+configuration/platform inventory, performance and resource measurements, and
+final whole-port review. Incremental state uses existing AST, CMI, CMT, and
+generated-output artifacts rather than in-process compiler state.
 
 The implementation currently has configuration loading, source and package
 discovery, external `bsc` parsing, AST dependency extraction, cycle detection,
 dependency-ordered compilation, interface-before-implementation compilation,
 bounded concurrent external `bsc` execution, feature selection, artifact
-cleanup, and compiler artifact publication to `lib/ocaml`.
+cleanup, and compiler artifact publication to `lib/bs` and `lib/ocaml`.
 
 ## Source review
 
@@ -168,6 +168,21 @@ an owner PID and can themselves be recovered after an interrupted takeover.
   escape sequences.
 - Unknown top-level configuration fields emit an explicit warning and are
   ignored, matching Rust rewatch's forward-compatible configuration behavior.
+- The canonical suffix test passes. In-source JavaScript, maps, and source
+  files are published to `lib/bs` as compiler assets as well as to their public
+  output locations, and `clean` removes both forms.
+- All four canonical format tests pass. An argument-free format run follows the
+  current project context: direct local packages at a workspace root, or only
+  the selected package when invoked inside one.
+- All four canonical clean tests pass, including scoped package cleaning,
+  dev-dependency and external dependency cleanup, and byte-identical rebuild
+  output after an explicit clean.
+- All experimental and invalid-experimental tests pass. Root experimental
+  options reach both parser and compiler arguments for workspace packages,
+  invalid shapes include configuration context, and unknown keys list the
+  supported feature.
+- Both canonical compiler-argument tests pass, including cwd-invariant output
+  and parser/compiler warning flag parity.
 
 ## Known gaps
 
@@ -176,9 +191,8 @@ an owner PID and can themselves be recovered after an interrupted takeover.
   storage are not yet ported.
 - Packages are deduplicated during recursive traversal, but compilation still
   happens as separate per-package graphs rather than Rust's unified graph.
-- Full monorepo/package graph parity, configuration validation parity, compiler
-  argument parity, locks, telemetry, and production-grade filesystem watching
-  remain incomplete.
+- Full configuration validation parity, telemetry, performance evaluation, and
+  production-grade filesystem watching remain incomplete.
 - `watch` currently uses conservative polling and has no signal/lock/event
   batching parity with Rust rewatch.
 - Polling watches root and recursively resolved local dependency roots, but it
@@ -208,10 +222,12 @@ an owner PID and can themselves be recovered after an interrupted takeover.
 
 ## Next actions
 
-1. Continue the remaining suffix, format, clean, experimental, and
-   compiler-argument groups.
+1. Inventory and close remaining configuration, CLI, telemetry, and supported
+   platform gaps, then produce the clean/unchanged/edit/watch performance and
+   resource comparison required by milestone 6.
 2. Replace recursive per-package compilation with scheduling over the global
    cross-package module graph; cycle discovery is global now, but compilation
    batches are still package-local.
+3. Perform the final two-scope whole-port review and address confirmed findings.
 3. Replace or supplement polling with a production-grade native event backend
    and evaluate supported-platform packaging and behavior.

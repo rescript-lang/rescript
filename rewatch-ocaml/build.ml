@@ -80,6 +80,21 @@ let strip_ansi content =
   loop 0;
   Buffer.contents output
 
+let contains_text value text =
+  try
+    ignore (Str.search_forward (Str.regexp_string text) value 0);
+    true
+  with Not_found -> false
+
+let retain_critical_external_warnings stderr =
+  let marker = "`(. ...)` uncurried syntax" in
+  if not (contains_text stderr marker) then ""
+  else
+    stderr |> Str.global_replace (Str.regexp_string "\r\n") "\n"
+    |> Str.split_delim (Str.regexp_string "\n\n\n")
+    |> List.filter (fun block -> contains_text block marker)
+    |> String.concat "\n\n\n"
+
 let initialize_compiler_log root =
   let path = compiler_log_path root "lib/bs" in
   ensure_dir (Filename.dirname path);
@@ -215,6 +230,11 @@ let generated_js_path (config : Config.t) path (spec : Config.package_spec) =
   Filename.concat config.root
     (Filename.concat output_dir
       (Filename.remove_extension (Filename.basename path) ^ Config.package_spec_suffix config spec))
+
+let generated_build_js_path ~build_dir (config : Config.t) path
+    (spec : Config.package_spec) =
+  Filename.concat build_dir
+    (Filename.remove_extension path ^ Config.package_spec_suffix config spec)
 
 let prepare_watch_output watch_outputs watch_output_paths ~dirty_ast output =
   if
@@ -521,12 +541,15 @@ let compile_job ~bsc ~runtime ~build_dir ~watch ~(config : Config.t) ~dependency
   in
   Process.{program = bsc; args; cwd = build_dir}, (module_, is_interface, path)
 
-let publish_compiled ~build_dir ~ocaml_dir ~watch ~watch_output_paths
+let publish_compiled ~build_dir ~ocaml_dir ~watch ~watch_output_paths ~is_local
     ~(config : Config.t) (module_, is_interface, path) result =
-  if result.Process.stderr <> "" then (
-    append_compiler_log config.root result.stderr);
   if not (Process.succeeded result) then report_failure "Compiling" path result;
-  if result.stderr <> "" then prerr_string result.stderr;
+  let stderr =
+    if is_local then result.Process.stderr
+    else retain_critical_external_warnings result.stderr
+  in
+  if stderr <> "" then append_compiler_log config.root stderr;
+  if stderr <> "" then prerr_string stderr;
   let basename = Source.compiler_basename config module_.Source.name in
   let artifact_dir = Filename.concat build_dir (Filename.dirname path) in
   let extensions = if is_interface then ["cmi"; "cmti"] else ["cmi"; "cmj"; "cmt"] in
@@ -537,7 +560,23 @@ let publish_compiled ~build_dir ~ocaml_dir ~watch ~watch_output_paths
       if extension = "cmi" then copy_file_if_changed source destination
       else copy_file source destination)
     extensions;
+  let source = Filename.concat config.root path in
+  let build_source = Filename.concat build_dir path in
+  ensure_dir (Filename.dirname build_source);
+  copy_file source build_source;
+  copy_file source (Filename.concat ocaml_dir (Filename.basename path));
   if not is_interface then (
+    List.iter
+      (fun spec ->
+        if spec.Config.in_source then (
+          let output = generated_js_path config path spec in
+          let build_output = generated_build_js_path ~build_dir config path spec in
+          ensure_dir (Filename.dirname build_output);
+          if Sys.file_exists output then copy_file output build_output;
+          if Sys.file_exists (output ^ ".map") then
+            copy_file (output ^ ".map") (build_output ^ ".map")
+          else remove_file (build_output ^ ".map")))
+      config.package_specs;
     run_post_build config path;
     if watch then
       List.iter
@@ -551,10 +590,10 @@ let publish_compiled ~build_dir ~ocaml_dir ~watch ~watch_output_paths
               then Unix.rename generated (generated ^ ".rewatch-pending"))
             [output; output ^ ".map"])
         config.package_specs);
-  result.stderr <> ""
+  stderr <> ""
 
 let compile_batch ~bsc ~runtime ~build_dir ~ocaml_dir ~watch ~(config : Config.t)
-    ~dependency_dirs_for ~watch_outputs ~watch_output_paths jobs =
+    ~dependency_dirs_for ~watch_outputs ~watch_output_paths ~is_local jobs =
   List.iter (fun (_, is_interface, path) ->
     if not is_interface then
       List.iter (fun spec ->
@@ -574,8 +613,8 @@ let compile_batch ~bsc ~runtime ~build_dir ~ocaml_dir ~watch ~(config : Config.t
   List.map2
     (fun (_, ((_, _, path) as info)) result ->
       if
-        publish_compiled ~build_dir ~ocaml_dir ~watch ~watch_output_paths ~config
-          info result
+        publish_compiled ~build_dir ~ocaml_dir ~watch ~watch_output_paths
+          ~is_local ~config info result
       then Some path
       else None)
     prepared results
@@ -611,6 +650,7 @@ let rec clean_internal ~(root_config : Config.t) ~seen ~folder ~prod ~is_local =
         | _ -> ()) dependencies;
       let modules =
         Source.discover config ~prod ~features:None ~filter:None
+          ~on_missing:(fun _ -> ())
           ~display_root:root_config.root
       in
       let output_config = with_root_options config root_config in
@@ -655,7 +695,17 @@ let compiler_args path =
   let source = Unix.realpath path in
   if not (Filename.check_suffix source ".res" || Filename.check_suffix source ".resi") then
     raise (Error "compiler-args expects a .res or .resi source file");
-  let config = Config.load (nearest_config (Filename.dirname source)) in
+  let package_config =
+    Config.load (nearest_config (Filename.dirname source))
+  in
+  let root = workspace_lock_root package_config.root in
+  let root_config_path = Filename.concat root "rescript.json" in
+  let root_config =
+    if root <> package_config.root && Sys.file_exists root_config_path then
+      Config.load root_config_path
+    else package_config
+  in
+  let config = with_root_options package_config root_config in
   let relative = relative_to config.root source in
   let runtime = env_path "RESCRIPT_RUNTIME" (Filename.concat (Sys.getcwd ()) "packages/@rescript/runtime") in
   let is_interface = Filename.check_suffix source ".resi" in
@@ -1059,6 +1109,8 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder ~prod ~features
   let modules =
     Source.discover config ~prod ~features ~filter
       ~display_root:root_config.root
+      ~on_missing:(fun path ->
+        if is_local then Printf.eprintf "Could not read folder %s\n%!" path)
       ~on_orphan:(fun path ->
         Printf.eprintf
           "\027[2K\r No implementation file found for interface file (skipping): %s\n%!"
@@ -1129,12 +1181,15 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder ~prod ~features
         Hashtbl.find_opt stats.preparse_stderr absolute_path
         |> Option.value ~default:""
     in
-    if stderr <> "" then append_compiler_log root stderr;
     Option.iter
       (fun result ->
         if not (Process.succeeded result) then
           report_failure "Parsing" path result)
       result;
+    let stderr =
+      if is_local then stderr else retain_critical_external_warnings stderr
+    in
+    if stderr <> "" then append_compiler_log root stderr;
     if stderr <> "" then prerr_string stderr;
     let ast = Source.ast_path path in
     if is_local && stderr <> "" then warning_asts := ast :: !warning_asts;
@@ -1251,7 +1306,7 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder ~prod ~features
     let interface_warning_paths =
       compile_batch ~bsc ~runtime ~build_dir ~ocaml_dir ~watch ~config
         ~dependency_dirs_for ~watch_outputs:stats.watch_outputs
-        ~watch_output_paths:stats.watch_output_paths
+        ~watch_output_paths:stats.watch_output_paths ~is_local
         (List.filter_map
            (fun module_ ->
              Option.map (fun path -> (module_, true, path)) module_.Source.interface)
@@ -1260,7 +1315,7 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder ~prod ~features
     let implementation_warning_paths =
       compile_batch ~bsc ~runtime ~build_dir ~ocaml_dir ~watch ~config
         ~dependency_dirs_for ~watch_outputs:stats.watch_outputs
-        ~watch_output_paths:stats.watch_output_paths
+        ~watch_output_paths:stats.watch_output_paths ~is_local
         (List.map
            (fun module_ -> (module_, false, module_.Source.implementation))
            dirty_modules)
@@ -1438,6 +1493,7 @@ let run ~seen ~folder ~prod ~features ~warn_error ~watch ~after_build ~filter =
 
 let watch ~folder ~prod ~features ~warn_error ~after_build ~filter =
   let root = Unix.realpath folder in
+  ignore (Config.load (Filename.concat root "rescript.json"));
   let lock_dir = Filename.concat root "lib" in
   ensure_dir lock_dir;
   let lock_path = Filename.concat lock_dir "watch.lock" in

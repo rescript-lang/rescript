@@ -19,17 +19,67 @@ let bsc () =
     if Sys.file_exists path then Unix.realpath path
     else raise (Error "could not locate bsc; set RESCRIPT_BSC_EXE")
 
-let source_file path =
-  Filename.check_suffix path ".res" || Filename.check_suffix path ".resi"
-
-let rec sources_under directory =
-  if not (Sys.file_exists directory) then []
-  else if not (Sys.is_directory directory) then if source_file directory then [directory] else []
+let rec nearest_config directory =
+  let path = Filename.concat directory "rescript.json" in
+  if Sys.file_exists path then Some path
   else
-    Sys.readdir directory |> Array.to_list |> List.sort String.compare
-    |> List.concat_map (fun name ->
-      if List.mem name ["node_modules"; "lib"; "_build"; ".git"] then []
-      else sources_under (Filename.concat directory name))
+    let parent = Filename.dirname directory in
+    if parent = directory then None else nearest_config parent
+
+let local_dependency root (dependency : Config.dependency) =
+  let rec find directory =
+    let candidate =
+      Filename.concat (Filename.concat directory "node_modules") dependency.name
+    in
+    if Sys.file_exists candidate then Some (Unix.realpath candidate)
+    else
+      let parent = Filename.dirname directory in
+      if parent = directory then None else find parent
+  in
+  match find root with
+  | None -> None
+  | Some path ->
+    let prefix = root ^ "/" in
+    if String.starts_with ~prefix path then Some path else None
+
+let package_sources (config : Config.t) =
+  Source.discover config ~prod:false ~features:None ~filter:None
+    ~on_missing:(fun _ -> ())
+    ~display_root:config.root
+  |> List.concat_map (fun module_ ->
+       Filename.concat config.root module_.Source.implementation
+       :: (match module_.interface with
+          | None -> []
+          | Some path -> [Filename.concat config.root path]))
+
+let files_in_scope () =
+  let config_path =
+    match nearest_config (Sys.getcwd ()) with
+    | Some path -> path
+    | None -> raise (Error "Could not find a rescript.json parent")
+  in
+  let current = Config.load config_path in
+  let listed_by_parent =
+    match nearest_config (Filename.dirname current.root) with
+    | None -> false
+    | Some path ->
+      let parent = Config.load path in
+      List.exists
+        (fun (dependency : Config.dependency) ->
+          dependency.name = current.name)
+        (parent.dependencies @ parent.dev_dependencies)
+  in
+  let configs =
+    if listed_by_parent then [current]
+    else
+      current
+      :: (current.dependencies @ current.dev_dependencies
+         |> List.filter_map (local_dependency current.root)
+         |> List.filter_map (fun root ->
+              let path = Filename.concat root "rescript.json" in
+              if Sys.file_exists path then Some (Config.load path) else None))
+  in
+  configs |> List.concat_map package_sources |> List.sort_uniq String.compare
 
 let formatted ~bsc path =
   let result = Process.run ~cwd:(Sys.getcwd ()) bsc ["-format"; path] in
@@ -67,4 +117,4 @@ let format_stdin extension =
 let run ~check ~stdin ~files =
   match stdin with
   | Some extension -> format_stdin extension
-  | None -> format_files ~check (if files = [] then sources_under (Sys.getcwd ()) else files)
+  | None -> format_files ~check (if files = [] then files_in_scope () else files)
