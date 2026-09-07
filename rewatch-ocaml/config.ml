@@ -35,6 +35,7 @@ type t = {
   source_map_args: string list;
   source_map_dev: bool;
   experimental_args: string list;
+  gentype_args: string list;
   js_post_build: string option;
 }
 
@@ -78,7 +79,7 @@ let dependency_name path = function
     | None -> fail path "dependency object is missing field \"name\"")
   | _ -> fail path "dependency must be a string or object"
 
-let dependencies path field fields =
+let parse_dependencies path field fields =
   match member field fields with
   | None -> []
   | Some (`List values) -> List.map (dependency_name path) values
@@ -199,6 +200,62 @@ let parse_package_spec path default_suffix = function
     in
     {module_format; in_source; suffix}
   | _ -> fail path "package-specs entries must be strings or objects"
+
+let gentype_args path suffix sources dependencies = function
+  | `Assoc fields ->
+    let module_ =
+      match member "module" fields with
+      | None -> []
+      | Some (`String ("esmodule" | "commonjs" as value)) -> ["-bs-gentype-module"; value]
+      | Some _ -> fail path "field \"gentypeconfig.module\" must be \"esmodule\" or \"commonjs\""
+    in
+    let module_resolution =
+      match member "moduleResolution" fields with
+      | None -> []
+      | Some (`String ("node" | "node16" | "bundler" as value)) ->
+        ["-bs-gentype-module-resolution"; value]
+      | Some _ -> fail path "field \"gentypeconfig.moduleResolution\" is invalid"
+    in
+    let export_interfaces =
+      match member "exportInterfaces" fields with
+      | None | Some (`Bool false) -> []
+      | Some (`Bool true) -> ["-bs-gentype-export-interfaces"]
+      | Some _ -> fail path "field \"gentypeconfig.exportInterfaces\" must be a boolean"
+    in
+    let generated_extension =
+      match member "generatedFileExtension" fields with
+      | None -> []
+      | Some value -> ["-bs-gentype-generated-extension"; string path "gentypeconfig.generatedFileExtension" value]
+    in
+    let shims =
+      match member "shims" fields with
+      | None -> []
+      | Some (`Assoc values) ->
+        values |> List.sort compare |> List.concat_map (fun (from_, target) ->
+          ["-bs-gentype-shim"; from_ ^ "=" ^ string path "gentypeconfig.shims" target])
+      | Some (`List values) ->
+        values |> List.concat_map (fun value ->
+          let value = string path "gentypeconfig.shims" value in
+          if String.contains value '=' then ["-bs-gentype-shim"; value]
+          else fail path "gentypeconfig.shims entries must contain =")
+      | Some _ -> fail path "field \"gentypeconfig.shims\" must be an object or array"
+    in
+    let debug =
+      match member "debug" fields with
+      | None -> []
+      | Some (`Assoc values) ->
+        values |> List.sort compare |> List.concat_map (fun (name, value) ->
+          match value with
+          | `Bool true -> ["-bs-gentype-debug"; name]
+          | `Bool false -> []
+          | _ -> fail path "gentypeconfig.debug values must be booleans")
+      | Some _ -> fail path "field \"gentypeconfig.debug\" must be an object"
+    in
+    ["-bs-gentype"] @ module_ @ module_resolution @ export_interfaces @ generated_extension
+    @ ["-bs-gentype-suffix"; suffix] @ shims @ debug
+    @ List.concat_map (fun (dependency : dependency) -> ["-bs-gentype-dep"; dependency.name]) dependencies
+    @ List.concat_map (fun (source : source) -> ["-bs-gentype-source-dir"; source.dir]) sources
+  | _ -> fail path "field \"gentypeconfig\" must be an object"
 
 let load path =
   let path = Unix.realpath path in
@@ -332,6 +389,14 @@ let load path =
       | _ -> fail path "experimental feature values must be booleans")
     | Some _ -> fail path "field \"experimental-features\" must be an object"
   in
+  let sources = parse_sources path fields in
+  let dependencies = parse_dependencies path "dependencies" fields in
+  let dev_dependencies = parse_dependencies path "dev-dependencies" fields in
+  let gentype_args =
+    match member "gentypeconfig" fields with
+    | None -> []
+    | Some value -> gentype_args path suffix sources dependencies value
+  in
   let js_post_build =
     match member "js-post-build" fields with
     | None -> None
@@ -359,9 +424,9 @@ let load path =
     path;
     root;
     name;
-    sources = parse_sources path fields;
-    dependencies = dependencies path "dependencies" fields;
-    dev_dependencies = dependencies path "dev-dependencies" fields;
+    sources;
+    dependencies;
+    dev_dependencies;
     compiler_flags;
     package_specs;
     suffix;
@@ -375,6 +440,7 @@ let load path =
     source_map_args;
     source_map_dev;
     experimental_args;
+    gentype_args;
     js_post_build;
   }
 
