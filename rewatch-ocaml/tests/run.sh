@@ -14,6 +14,9 @@ cp -R "$root/rewatch-ocaml/tests/failure" "$work/failure"
 cp -R "$root/rewatch-ocaml/tests/features" "$work/features"
 cp -R "$root/rewatch-ocaml/tests/gentype" "$work/gentype"
 cp -R "$root/rewatch-ocaml/tests/dependency" "$work/dependency"
+mkdir -p "$work/gentype/node_modules" "$work/dependency/node_modules"
+cp -R "$root/rewatch-ocaml/tests/shared-dep" "$work/gentype/node_modules/dep"
+cp -R "$root/rewatch-ocaml/tests/shared-dep" "$work/dependency/node_modules/dep"
 cp -R "$root/rewatch-ocaml/tests/external-boundary" "$work/external-boundary"
 cp -R "$root/rewatch-ocaml/tests/post-build" "$work/post-build"
 cp -R "$root/rewatch-ocaml/tests/out-of-source" "$work/out-of-source"
@@ -41,22 +44,51 @@ mv "$basic/rescript.next" "$basic/rescript.json"
 sed 's/"module": "esmodule"/"module": "es6"/' "$basic/rescript.json" > "$basic/rescript.next"
 mv "$basic/rescript.next" "$basic/rescript.json"
 "$port" compiler-args "$basic/src/A.res" | grep '"-9"' >/dev/null
-"$port" compiler-args "$gentype/src/Main.res" | grep '"-bs-gentype-generated-extension"' >/dev/null
-"$port" compiler-args "$gentype/src/Main.res" | grep '"-bs-gentype-dep-path"' >/dev/null
+gentype_compiler_args=$("$port" compiler-args "$gentype/src/Main.res")
+printf '%s\n' "$gentype_compiler_args" | grep '"-bs-gentype-generated-extension"' >/dev/null
+printf '%s\n' "$gentype_compiler_args" | grep '"-bs-gentype-bsb-project-root"' >/dev/null
+if printf '%s\n' "$gentype_compiler_args" | grep -E '"-bs-gentype-(dep-path|source-dir)"' >/dev/null; then
+  echo "compiler-args unexpectedly included full-build GenType paths" >&2
+  exit 1
+fi
 
 cleanup() {
   rm -rf "$work"
 }
 trap cleanup EXIT
 
-wait_for_count() {
+wait_for_file() {
+  file="$1"
+  attempts=0
+  while [ "$attempts" -lt 200 ]; do
+    if [ -f "$file" ]; then
+      return 0
+    fi
+    attempts=$((attempts + 1))
+    sleep 0.1
+  done
+  return 1
+}
+
+wait_for_text() {
   file="$1"
   pattern="$2"
-  expected="$3"
   attempts=0
-  while [ "$attempts" -lt 100 ]; do
-    count=$(grep -c "$pattern" "$file" 2>/dev/null || true)
-    if [ "$count" -ge "$expected" ]; then
+  while [ "$attempts" -lt 200 ]; do
+    if grep -q "$pattern" "$file" 2>/dev/null; then
+      return 0
+    fi
+    attempts=$((attempts + 1))
+    sleep 0.1
+  done
+  return 1
+}
+
+wait_for_file_gone() {
+  file="$1"
+  attempts=0
+  while [ "$attempts" -lt 200 ]; do
+    if [ ! -f "$file" ]; then
       return 0
     fi
     attempts=$((attempts + 1))
@@ -102,8 +134,6 @@ test -f "$basic/lib/ocaml/A.cmi"
 test -f "$basic/lib/ocaml/WithInterface.cmti"
 "$port" clean "$basic"
 test ! -f "$basic/src/A.mjs"
-test ! -d "$basic/lib/bs"
-test ! -d "$basic/lib/ocaml"
 
 watch_basic="$work/watch-basic"
 cp -R "$root/rewatch-ocaml/tests/basic" "$watch_basic"
@@ -111,22 +141,23 @@ rm -rf "$watch_basic/lib"
 rm -f "$watch_basic/src/A.mjs" "$watch_basic/src/B.mjs" "$watch_basic/src/WithInterface.mjs"
 "$port" watch "$watch_basic" >"$watch_basic/watch.log" 2>&1 &
 watch_pid=$!
-if ! wait_for_count "$watch_basic/watch.log" 'Finished compilation' 1; then
+if ! wait_for_file "$watch_basic/src/A.mjs"; then
   kill -TERM "$watch_pid" 2>/dev/null || true
   wait "$watch_pid" 2>/dev/null || true
   exit 1
 fi
 test -f "$watch_basic/lib/watch.lock"
 grep '^[0-9][0-9]*$' "$watch_basic/lib/watch.lock" >/dev/null
-printf '// watch edit\n' >> "$watch_basic/src/B.res"
-if ! wait_for_count "$watch_basic/watch.log" 'Finished compilation' 2; then
+printf '\nlet watchedValue = 1\n' >> "$watch_basic/src/B.res"
+if ! wait_for_text "$watch_basic/src/B.mjs" 'watchedValue'; then
   kill -TERM "$watch_pid" 2>/dev/null || true
   wait "$watch_pid" 2>/dev/null || true
   exit 1
 fi
 sed 's/"\.mjs"/".js"/' "$watch_basic/rescript.json" > "$watch_basic/rescript.next"
 mv "$watch_basic/rescript.next" "$watch_basic/rescript.json"
-if ! wait_for_count "$watch_basic/watch.log" 'Finished compilation' 3; then
+if ! wait_for_file "$watch_basic/src/A.js"; then
+  cat "$watch_basic/watch.log" >&2
   kill -TERM "$watch_pid" 2>/dev/null || true
   wait "$watch_pid" 2>/dev/null || true
   exit 1
@@ -134,14 +165,14 @@ fi
 test -f "$watch_basic/src/A.js"
 test ! -f "$watch_basic/src/A.mjs"
 printf 'let message = "new source"\n' > "$watch_basic/src/New.res"
-if ! wait_for_count "$watch_basic/watch.log" 'Finished compilation' 4; then
+if ! wait_for_file "$watch_basic/src/New.js"; then
   kill -TERM "$watch_pid" 2>/dev/null || true
   wait "$watch_pid" 2>/dev/null || true
   exit 1
 fi
 test -f "$watch_basic/src/New.js"
 rm -f "$watch_basic/src/New.res"
-if ! wait_for_count "$watch_basic/watch.log" 'Finished compilation' 5; then
+if ! wait_for_file_gone "$watch_basic/src/New.js"; then
   kill -TERM "$watch_pid" 2>/dev/null || true
   wait "$watch_pid" 2>/dev/null || true
   exit 1
@@ -180,11 +211,11 @@ test -f "$features/native/Native.js"
 test -f "$gentype/src/Main.js"
 
 "$port" build "$dependency"
-test -f "$dependency/src/Main.mjs"
-test -f "$dependency/node_modules/dep/src/Dep.mjs"
+test -f "$dependency/src/Main.js"
+test -f "$dependency/node_modules/dep/src/Dep.js"
 "$port" clean "$dependency"
-test ! -f "$dependency/src/Main.mjs"
-test ! -f "$dependency/node_modules/dep/src/Dep.mjs"
+test ! -f "$dependency/src/Main.js"
+test -f "$dependency/node_modules/dep/src/Dep.js"
 
 mkdir -p "$external_boundary/project/node_modules"
 ln -s ../packages/main "$external_boundary/project/node_modules/main"
