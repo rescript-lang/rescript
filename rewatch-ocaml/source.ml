@@ -125,5 +125,6 @@ let ast_path path =
 let compiler_basename config module_name =
   match config.Config.namespace, config.namespace_entry with
   | Some _, Some entry when entry = module_name -> module_name
+  | Some namespace, Some _ -> module_name ^ "-@" ^ namespace
   | Some namespace, _ -> module_name ^ "-" ^ namespace
   | None, _ -> module_name
