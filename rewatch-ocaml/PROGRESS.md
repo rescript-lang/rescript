@@ -108,7 +108,9 @@ an owner PID and can themselves be recovered after an interrupted takeover.
   process groups, while Windows uses `CreateProcess` with explicit working
   directories. Bare executables resolve through PATH/PATHEXT, including
   `cmd.exe` dispatch for batch shims; lookup skips directories and non-executable
-  Unix files. Portable self-executable tests cover scheduling without `/bin/sh`.
+  Unix files. Private output-capture files use the operating system's temporary
+  directory rather than the project tree. Portable self-executable tests cover
+  scheduling without `/bin/sh`.
 - `warnings`, `ppx-flags`, JSX v4, source-map, `LetUnwrap` experimental
   features, and `js-post-build` are projected into external compiler/process
   invocations. The post-build fixture verifies its generated-file argument.
@@ -243,8 +245,24 @@ least five interleaved post-warm-up runs with the same compiler/runtime.
 After switching subprocess creation to `spawn`, a quick three-run wall-only
 check (before scheduler wait tuning) measured Rust at 7,306–7,724 ms (7,520 ms
 median) and OCaml at 12,334–12,423 ms (12,416 ms median), or 1.65×. This is not
-an acceptance measurement and currently fails the wall-time gate; it must be
-investigated and followed by the full wall/RSS protocol above.
+an acceptance measurement: it ran in a Docker container on a battery-powered
+Mac, so it is only a strong warning signal and currently fails the wall-time
+gate. The acceptance run must use a stable, plugged-in benchmark or CI host.
+
+An `execve` trace of a copied clean fixture showed that the slower OCaml run
+launched fewer `bsc` processes than Rust, rather than doing more compiler work.
+The OCaml trace begins with repeated small package-local waves while Rust fills
+slots from its unified module graph. This points to idle capacity at package and
+dependency-level barriers, plus repeated discovery/state construction, as the
+primary architectural targets. Project-local output-capture files were also a
+likely Docker bind-mount penalty and now use the OS temporary directory.
+A subsequent single paired diagnostic run compiled the same 472 modules in
+9,852 ms with OCaml and 7,624 ms with Rust (1.29×), supporting that hypothesis.
+It remains a battery-host observation rather than an acceptance result.
+Pipe-based capture remains the intended final backend so successful builds do
+not create transient files. It is deferred until the scheduler lifecycle is
+settled because it requires concurrent draining, bounded memory, and reliable
+descriptor/descendant cleanup on Windows as well as Unix.
 
 ## Known gaps
 

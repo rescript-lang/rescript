@@ -157,7 +157,8 @@ let () =
         }
       in
       let results =
-        Process.run_parallel ~max_jobs:2 [job "first"; job "second"; job "third"]
+        Process.run_parallel ~temp_dir:scheduler_root ~max_jobs:2
+          [job "first"; job "second"; job "third"]
       in
       let _, helper_status = Unix.waitpid [] helper in
       check (helper_status = Unix.WEXITED 0) "scheduler test helper exits";
@@ -172,7 +173,7 @@ let () =
         = ["first"; "second"; "third"])
         "dynamically scheduled results retain input order";
       let failure =
-        Process.run_parallel ~max_jobs:1
+        Process.run_parallel ~temp_dir:scheduler_root ~max_jobs:1
           [
             process_job
               ["--process-result"; "partial"; "diagnostic"; "7"];
