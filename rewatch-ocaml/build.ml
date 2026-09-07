@@ -44,6 +44,17 @@ let generated_js_path (config : Config.t) path (spec : Config.package_spec) =
     (Filename.concat output_dir
       (Filename.remove_extension (Filename.basename path) ^ Config.package_spec_suffix config spec))
 
+let with_root_options (config : Config.t) (root_config : Config.t) =
+  {
+    config with
+    package_specs = root_config.package_specs;
+    suffix = root_config.suffix;
+    jsx_args = root_config.jsx_args;
+    source_map_args = root_config.source_map_args;
+    source_map_dev = root_config.source_map_dev;
+    experimental_args = root_config.experimental_args;
+  }
+
 let cleanup_stale ~root ~ocaml_dir (config : Config.t) modules =
   let expected = Hashtbl.create (List.length modules) in
   List.iter (fun module_ -> Hashtbl.replace expected module_.Source.name ()) modules;
@@ -302,7 +313,7 @@ let dependency_path root name =
     let workspace = Filename.concat (Filename.concat root "packages") package_name in
     List.find_opt Sys.file_exists [sibling; workspace]
 
-let rec clean ~seen ~folder ~prod =
+let rec clean_internal ~root_config ~seen ~folder ~prod =
   let root = Unix.realpath folder in
   if not (List.mem root seen) then (
     let config_path = Filename.concat root "rescript.json" in
@@ -312,16 +323,22 @@ let rec clean ~seen ~folder ~prod =
       List.iter (fun (dependency : Config.dependency) ->
         match dependency_path root dependency.name with
         | Some directory when Sys.file_exists (Filename.concat directory "rescript.json") ->
-          clean ~seen:(root :: seen) ~folder:directory ~prod
+          clean_internal ~root_config ~seen:(root :: seen) ~folder:directory ~prod
         | _ -> ()) dependencies;
       let modules = Source.discover config ~prod ~features:None ~filter:None in
+      let output_config = with_root_options config root_config in
       List.iter (fun module_ ->
         List.iter (fun spec ->
-          let output = generated_js_path config module_.Source.implementation spec in
+          let output = generated_js_path output_config module_.Source.implementation spec in
           remove_file output;
-          remove_file (output ^ ".map")) config.package_specs) modules);
+          remove_file (output ^ ".map")) output_config.package_specs) modules);
     List.iter (fun dir -> remove_tree (Filename.concat root dir))
       ["lib/bs"; "lib/ocaml"; "lib/es6"; "lib/js"])
+
+let clean ~seen ~folder ~prod =
+  let root = Unix.realpath folder in
+  let root_config = Config.load (Filename.concat root "rescript.json") in
+  clean_internal ~root_config ~seen ~folder:root ~prod
 
 let rec nearest_config directory =
   let config = Filename.concat directory "rescript.json" in
@@ -372,7 +389,7 @@ let compiler_args path =
     ("parser_args", `List (List.map (fun value -> `String value) parser_args));
   ])
 
-let rec run ~seen ~folder ~prod ~features ~warn_error ~watch ~after_build ~filter =
+let rec run_internal ~root_config ~seen ~folder ~prod ~features ~warn_error ~watch ~after_build ~filter =
   let root = Unix.realpath folder in
   let config = Config.load (Filename.concat root "rescript.json") in
   let config = match warn_error with
@@ -390,7 +407,7 @@ let rec run ~seen ~folder ~prod ~features ~warn_error ~watch ~after_build ~filte
         | None -> ()
         | Some candidate when List.mem candidate (root :: seen) -> ()
         | Some candidate when Sys.file_exists (Filename.concat candidate "rescript.json") ->
-          run ~seen:(root :: seen) ~folder:candidate ~prod ~features:dependency.features ~warn_error:None ~watch ~after_build:None ~filter:None
+          run_internal ~root_config ~seen:(root :: seen) ~folder:candidate ~prod ~features:dependency.features ~warn_error:None ~watch ~after_build:None ~filter:None
         | Some _ -> ()
       in
       match candidate with
@@ -414,6 +431,7 @@ let rec run ~seen ~folder ~prod ~features ~warn_error ~watch ~after_build ~filte
   ensure_dir build_dir;
   ensure_dir ocaml_dir;
   let modules = Source.discover config ~prod ~features ~filter in
+  let config = with_root_options config root_config in
   cleanup_stale ~root ~ocaml_dir config modules;
   Option.iter (fun namespace -> compile_namespace ~bsc ~runtime ~build_dir ~ocaml_dir namespace modules) config.namespace;
   let names = Hashtbl.create (List.length modules) in
@@ -492,6 +510,11 @@ let rec run ~seen ~folder ~prod ~features ~warn_error ~watch ~after_build ~filte
     if result.stdout <> "" then print_string result.stdout;
     if result.stderr <> "" then prerr_string result.stderr
 
+let run ~seen ~folder ~prod ~features ~warn_error ~watch ~after_build ~filter =
+  let root = Unix.realpath folder in
+  let root_config = Config.load (Filename.concat root "rescript.json") in
+  run_internal ~root_config ~seen ~folder:root ~prod ~features ~warn_error ~watch ~after_build ~filter
+
 let watch ~folder ~prod ~features ~warn_error ~after_build ~filter =
   let root = Unix.realpath folder in
   let lock_dir = Filename.concat root "lib" in
@@ -502,6 +525,8 @@ let watch ~folder ~prod ~features ~warn_error ~after_build ~filter =
     with Unix.Unix_error (Unix.EEXIST, _, _) ->
       raise (Error ("A watcher is already running for " ^ root))
   in
+  let pid = string_of_int (Unix.getpid ()) in
+  ignore (Unix.write_substring lock_fd pid 0 (String.length pid));
   Unix.close lock_fd;
   let stop () = raise Stop_watch in
   Sys.set_signal Sys.sigint (Sys.Signal_handle (fun _ -> stop ()));

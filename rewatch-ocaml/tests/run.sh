@@ -70,6 +70,10 @@ rm -rf "$gentype/lib"
 rm -rf "$dependency/lib" "$dependency/node_modules/dep/lib"
 sed 's/"dependencies"/"bs-dependencies"/' "$dependency/rescript.json" > "$dependency/rescript.next"
 mv "$dependency/rescript.next" "$dependency/rescript.json"
+sed 's/}$/,"suffix":".mjs"}/' "$dependency/rescript.json" > "$dependency/rescript.next"
+mv "$dependency/rescript.next" "$dependency/rescript.json"
+sed 's/}$/,"suffix":".cjs"}/' "$dependency/node_modules/dep/rescript.json" > "$dependency/node_modules/dep/rescript.next"
+mv "$dependency/node_modules/dep/rescript.next" "$dependency/node_modules/dep/rescript.json"
 rm -rf "$post_build/lib"
 rm -rf "$out_of_source/lib"
 rm -rf "$namespace/lib"
@@ -109,6 +113,7 @@ if ! wait_for_count "$watch_basic/watch.log" 'Finished compilation' 1; then
   exit 1
 fi
 test -f "$watch_basic/lib/watch.lock"
+grep '^[0-9][0-9]*$' "$watch_basic/lib/watch.lock" >/dev/null
 printf '// watch edit\n' >> "$watch_basic/src/B.res"
 if ! wait_for_count "$watch_basic/watch.log" 'Finished compilation' 2; then
   kill -TERM "$watch_pid" 2>/dev/null || true
@@ -171,11 +176,11 @@ test -f "$features/native/Native.js"
 test -f "$gentype/src/Main.js"
 
 "$port" build "$dependency"
-test -f "$dependency/src/Main.js"
-test -f "$dependency/node_modules/dep/src/Dep.js"
+test -f "$dependency/src/Main.mjs"
+test -f "$dependency/node_modules/dep/src/Dep.mjs"
 "$port" clean "$dependency"
-test ! -f "$dependency/src/Main.js"
-test ! -f "$dependency/node_modules/dep/src/Dep.js"
+test ! -f "$dependency/src/Main.mjs"
+test ! -f "$dependency/node_modules/dep/src/Dep.mjs"
 
 "$port" build "$post_build"
 test -f "$post_build/src/Main.js"

@@ -55,25 +55,32 @@ selection, stale artifact cleanup, and compiler artifact publication to
 - `gentypeconfig` is validated and projected to compile-only `bsc` flags. The
   focused fixture verifies argument projection and a successful GenType-enabled
   build.
+- Workspace packages inherit project-root JSX, source-map, experimental, and
+  package-output settings. The dependency fixture verifies root-suffix output
+  and cleanup despite a conflicting package-local suffix.
 - The integration runner starts watch mode, confirms the lock, performs a
   source edit, changes the configured output suffix, observes the resulting
   rebuild and stale-output removal, adds then deletes a source module while
   observing its generated output appear and disappear, and confirms lock
   cleanup after `SIGTERM`.
+- `watch.lock` contains the running watch process PID, matching the lock-file
+  protocol used by the existing integration helpers.
 
 ## Known gaps
 
 - Full monorepo/package graph parity, configuration validation parity, compiler
   argument parity, telemetry, and production-grade filesystem watching remain
   incomplete.
-- GenType dependency-path metadata and root-project inheritance remain
-  incomplete; the current implementation forwards declared dependency names and
-  source directories only.
+- GenType dependency-path metadata remains incomplete; the current
+  implementation forwards declared dependency names and source directories.
 - `watch` currently uses conservative polling and has no signal/lock/event
   batching parity with Rust rewatch.
 - Polling watches root and recursively resolved local dependency roots, but it
   is not yet a native event backend and has not been exercised against the full
   Rust watch suite.
+- `watchexec` is available on the current macOS development host and provides
+  a native-event candidate, but it is not bundled with this experimental dune
+  executable; polling remains the portable fallback until packaging is decided.
 - Local source dependencies under `node_modules` or a sibling package are
   recursively built with dependency feature selections and cycle protection;
   prebuilt packages are accepted through their `lib/ocaml` include path.
