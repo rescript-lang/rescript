@@ -116,6 +116,20 @@ if ! wait_for_count "$watch_basic/watch.log" 'Finished compilation' 3; then
 fi
 test -f "$watch_basic/src/A.js"
 test ! -f "$watch_basic/src/A.mjs"
+printf 'let message = "new source"\n' > "$watch_basic/src/New.res"
+if ! wait_for_count "$watch_basic/watch.log" 'Finished compilation' 4; then
+  kill -TERM "$watch_pid" 2>/dev/null || true
+  wait "$watch_pid" 2>/dev/null || true
+  exit 1
+fi
+test -f "$watch_basic/src/New.js"
+rm -f "$watch_basic/src/New.res"
+if ! wait_for_count "$watch_basic/watch.log" 'Finished compilation' 5; then
+  kill -TERM "$watch_pid" 2>/dev/null || true
+  wait "$watch_pid" 2>/dev/null || true
+  exit 1
+fi
+test ! -f "$watch_basic/src/New.js"
 kill -TERM "$watch_pid"
 wait "$watch_pid"
 test ! -f "$watch_basic/lib/watch.lock"
