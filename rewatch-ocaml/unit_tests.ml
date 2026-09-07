@@ -7,6 +7,9 @@ let write_file path contents =
     output_string channel contents)
 
 let () =
+  check
+    (Process.default_max_jobs >= 1 && Process.default_max_jobs <= 32)
+    "parallel subprocess bound follows the available CPUs";
   let node name deps = (name, deps) in
   let nodes = [node "C" ["B"]; node "A" []; node "B" ["A"]] in
   let sorted =

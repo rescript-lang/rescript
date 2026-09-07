@@ -67,7 +67,9 @@ let status_string = function
 
 (* Jobs are launched in bounded batches.  Each child writes to private files, so
    diagnostics cannot interleave and a failed child cannot block its siblings. *)
-let run_parallel ?(max_jobs = 4) jobs =
+let default_max_jobs = min 32 (max 1 (Domain.recommended_domain_count ()))
+
+let run_parallel ?(max_jobs = default_max_jobs) jobs =
   let run_batch batch =
     let children = ref [] in
     let cleanup_children () =
