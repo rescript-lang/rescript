@@ -12,7 +12,83 @@ let read_file path =
 let temporary_log ~cwd stream =
   Filename.temp_file ~temp_dir:cwd (".rewatch-ocaml-" ^ stream ^ "-") ".log"
 
-let run ~cwd program args =
+let resolve_program ~cwd program =
+  if (not (Filename.is_relative program)) || Filename.dirname program <> "."
+  then program
+  else
+    let path_separator = if Sys.win32 then ';' else ':' in
+    let extensions =
+      if not Sys.win32 || Filename.extension program <> "" then [""]
+      else
+        Sys.getenv_opt "PATHEXT"
+        |> Option.value ~default:".COM;.EXE;.BAT;.CMD"
+        |> String.split_on_char ';'
+    in
+    let path_directories =
+      Sys.getenv_opt "PATH" |> Option.value ~default:""
+      |> String.split_on_char path_separator
+    in
+    let directories = if Sys.win32 then cwd :: path_directories else path_directories in
+    directories
+    |> List.find_map (fun directory ->
+         let directory =
+           let directory = String.trim directory in
+           let length = String.length directory in
+           let directory =
+             if
+               length >= 2 && directory.[0] = '"'
+               && directory.[length - 1] = '"'
+             then String.sub directory 1 (length - 2)
+             else directory
+           in
+           if directory = "" then cwd
+           else if Filename.is_relative directory then
+             Filename.concat cwd directory
+           else directory
+         in
+         extensions
+         |> List.find_map (fun extension ->
+              let candidate = Filename.concat directory (program ^ extension) in
+              let runnable =
+                try
+                  (Unix.stat candidate).Unix.st_kind = Unix.S_REG
+                  && (Sys.win32
+                     || try
+                          Unix.access candidate [Unix.X_OK];
+                          true
+                        with Unix.Unix_error _ -> false)
+                with Unix.Unix_error _ -> false
+              in
+              if runnable then Some candidate else None))
+    |> Option.value ~default:program
+
+let spawn ~env ~cwd ~program ~args ~stdout ~stderr =
+  let program = resolve_program ~cwd program in
+  let program, args =
+    if
+      Sys.win32
+      && List.mem
+           (Filename.extension program |> String.lowercase_ascii)
+           [".bat"; ".cmd"]
+    then
+      let command = Filename.quote_command program args in
+      ( resolve_program ~cwd "cmd.exe",
+        ["/D"; "/V:OFF"; "/S"; "/C"; command] )
+    else (program, args)
+  in
+  let arguments = program :: args in
+  if Sys.win32 then
+    Spawn.spawn ?env ~cwd:(Spawn.Working_dir.Path cwd) ~prog:program
+      ~argv:arguments ~stdout ~stderr ()
+  else
+    Spawn.spawn ?env ~cwd:(Spawn.Working_dir.Path cwd) ~prog:program
+      ~argv:arguments ~stdout ~stderr ~setpgid:Spawn.Pgid.new_process_group ()
+
+let signal_process_tree pid signal =
+  let target = if Sys.win32 then pid else -pid in
+  try Unix.kill target signal with Unix.Unix_error _ -> ()
+
+let run ?env ~cwd program args =
   let stdout_path = temporary_log ~cwd "stdout" in
   let stderr_path = temporary_log ~cwd "stderr" in
   let child_pid = ref None in
@@ -27,32 +103,24 @@ let run ~cwd program args =
     try Sys.remove stderr_path with Sys_error _ -> ()
   in
   try
-    match Unix.fork () with
-    | 0 -> (
-      try
-        Unix.chdir cwd;
-        Unix.dup2 stdout_fd Unix.stdout;
-        Unix.dup2 stderr_fd Unix.stderr;
-        Unix.close stdout_fd;
-        Unix.close stderr_fd;
-        Unix.execv program (Array.of_list (program :: args))
-      with _ -> Unix._exit 127)
-    | pid ->
-      child_pid := Some pid;
-      Unix.close stdout_fd;
-      Unix.close stderr_fd;
-      let _, status = Unix.waitpid [] pid in
-      child_pid := None;
-      let stdout = read_file stdout_path in
-      let stderr = read_file stderr_path in
-      cleanup ();
-      {status; stdout; stderr}
+    let pid =
+      spawn ~env ~cwd ~program ~args ~stdout:stdout_fd ~stderr:stderr_fd
+    in
+    child_pid := Some pid;
+    Unix.close stdout_fd;
+    Unix.close stderr_fd;
+    let _, status = Unix.waitpid [] pid in
+    child_pid := None;
+    let stdout = read_file stdout_path in
+    let stderr = read_file stderr_path in
+    cleanup ();
+    {status; stdout; stderr}
   with exn ->
     (try Unix.close stdout_fd with Unix.Unix_error _ -> ());
     (try Unix.close stderr_fd with Unix.Unix_error _ -> ());
     Option.iter
       (fun pid ->
-        (try Unix.kill pid Sys.sigterm with Unix.Unix_error _ -> ());
+        signal_process_tree pid Sys.sigkill;
         try ignore (Unix.waitpid [] pid) with Unix.Unix_error _ -> ())
       !child_pid;
     cleanup ();
@@ -82,10 +150,9 @@ let run_parallel ?(max_jobs = default_max_jobs) jobs =
       remove_log stderr_path
     in
     let children = !active in
-    let signal_group signal (_, pid, _, _) =
-      try Unix.kill (-pid) signal with Unix.Unix_error _ -> ()
-    in
-    List.iter (signal_group Sys.sigterm) children;
+    let signal_group signal (_, pid, _, _) = signal_process_tree pid signal in
+    let graceful_signal = if Sys.win32 then Sys.sigkill else Sys.sigterm in
+    List.iter (signal_group graceful_signal) children;
     let deadline = Unix.gettimeofday () +. 0.25 in
     let rec reap_until_deadline children =
       let remaining =
@@ -123,17 +190,19 @@ let run_parallel ?(max_jobs = default_max_jobs) jobs =
   in
   let launch (index, job) =
     let previous_mask =
-      Unix.sigprocmask Unix.SIG_BLOCK [Sys.sigint; Sys.sigterm]
+      if Sys.win32 then None
+      else
+        Some (Unix.sigprocmask Unix.SIG_BLOCK [Sys.sigint; Sys.sigterm])
     in
     let restore_signals () =
-      ignore (Unix.sigprocmask Unix.SIG_SETMASK previous_mask)
+      Option.iter
+        (fun mask -> ignore (Unix.sigprocmask Unix.SIG_SETMASK mask))
+        previous_mask
     in
     let stdout_path = ref None in
     let stderr_path = ref None in
     let stdout_fd = ref None in
     let stderr_fd = ref None in
-    let ready_read = ref None in
-    let ready_write = ref None in
     try
       let stdout_log = temporary_log ~cwd:job.cwd "stdout" in
       stdout_path := Some stdout_log;
@@ -147,37 +216,16 @@ let run_parallel ?(max_jobs = default_max_jobs) jobs =
         Unix.openfile stderr_log [Unix.O_WRONLY; Unix.O_TRUNC] 0o600
       in
       stderr_fd := Some err;
-      let read_end, write_end = Unix.pipe () in
-      ready_read := Some read_end;
-      ready_write := Some write_end;
-      match Unix.fork () with
-      | 0 -> (
-        try
-          Unix.close read_end;
-          ignore (Unix.setsid ());
-          ignore (Unix.write_substring write_end "1" 0 1);
-          Unix.close write_end;
-          restore_signals ();
-          Unix.chdir job.cwd;
-          Unix.dup2 out Unix.stdout;
-          Unix.dup2 err Unix.stderr;
-          Unix.close out;
-          Unix.close err;
-          Unix.execv job.program (Array.of_list (job.program :: job.args))
-        with _ -> Unix._exit 127)
-      | pid ->
-        active := (index, pid, stdout_log, stderr_log) :: !active;
-        Unix.close write_end;
-        ready_write := None;
-        let ready = Bytes.create 1 in
-        ignore (Unix.read read_end ready 0 1);
-        Unix.close read_end;
-        ready_read := None;
-        (try Unix.close out with Unix.Unix_error _ -> ());
-        stdout_fd := None;
-        (try Unix.close err with Unix.Unix_error _ -> ());
-        stderr_fd := None;
-        restore_signals ()
+      let pid =
+        spawn ~env:None ~cwd:job.cwd ~program:job.program ~args:job.args
+          ~stdout:out ~stderr:err
+      in
+      active := (index, pid, stdout_log, stderr_log) :: !active;
+      (try Unix.close out with Unix.Unix_error _ -> ());
+      stdout_fd := None;
+      (try Unix.close err with Unix.Unix_error _ -> ());
+      stderr_fd := None;
+      restore_signals ()
     with exn ->
       Option.iter
         (fun fd -> try Unix.close fd with Unix.Unix_error _ -> ())
@@ -185,12 +233,6 @@ let run_parallel ?(max_jobs = default_max_jobs) jobs =
       Option.iter
         (fun fd -> try Unix.close fd with Unix.Unix_error _ -> ())
         !stderr_fd;
-      Option.iter
-        (fun fd -> try Unix.close fd with Unix.Unix_error _ -> ())
-        !ready_read;
-      Option.iter
-        (fun fd -> try Unix.close fd with Unix.Unix_error _ -> ())
-        !ready_write;
       Option.iter remove_log !stdout_path;
       Option.iter remove_log !stderr_path;
       let exn = try restore_signals (); exn with signal_exn -> signal_exn in
@@ -212,7 +254,7 @@ let run_parallel ?(max_jobs = default_max_jobs) jobs =
     | _ ->
       let rec wait_for_active = function
         | [] ->
-          ignore (Unix.select [] [] [] 0.005);
+          ignore (Unix.select [] [] [] 0.0005);
           wait_for_active !active
         | ((_, pid, _, _) as child) :: rest -> (
           match Unix.waitpid [Unix.WNOHANG] pid with

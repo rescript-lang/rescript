@@ -32,6 +32,8 @@
    (and :with-test (= 0.29.0)))
   (yojson
    (= 3.0.0))
+  (spawn
+   (>= v0.17.0))
   (ounit2
    (and :with-test (= 2.2.7)))
   (odoc :with-doc)

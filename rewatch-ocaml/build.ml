@@ -2,6 +2,9 @@ exception Error of string
 exception Stop_watch
 exception Build_failure of string
 
+let path_of_parts root parts = List.fold_left Filename.concat root parts
+let lib_path root directory = path_of_parts root ["lib"; directory]
+
 let ensure_dir path =
   let rec loop path =
     if path = "" || path = "." || Sys.file_exists path then ()
@@ -55,7 +58,7 @@ let copy_file_if_changed source destination =
   if not (files_equal source destination) then copy_file source destination
 
 let compiler_log_path root directory =
-  Filename.concat (Filename.concat root directory) ".compiler.log"
+  Filename.concat (lib_path root directory) ".compiler.log"
 
 let strip_ansi content =
   let length = String.length content in
@@ -96,7 +99,7 @@ let retain_critical_external_warnings stderr =
     |> String.concat "\n\n\n"
 
 let initialize_compiler_log root =
-  let path = compiler_log_path root "lib/bs" in
+  let path = compiler_log_path root "bs" in
   ensure_dir (Filename.dirname path);
   let channel = open_out_bin path in
   Fun.protect ~finally:(fun () -> close_out_noerr channel) (fun () ->
@@ -105,7 +108,7 @@ let initialize_compiler_log root =
 let append_compiler_log root content =
   let channel =
     open_out_gen [Open_wronly; Open_append; Open_binary] 0o644
-      (compiler_log_path root "lib/bs")
+      (compiler_log_path root "bs")
   in
   Fun.protect ~finally:(fun () -> close_out_noerr channel) (fun () ->
     output_string channel (strip_ansi content))
@@ -113,8 +116,7 @@ let append_compiler_log root content =
 let finalize_compiler_log root =
   append_compiler_log root
     (Printf.sprintf "#Done(%.6f)\n" (Unix.gettimeofday ()));
-  copy_file (compiler_log_path root "lib/bs")
-    (compiler_log_path root "lib/ocaml")
+  copy_file (compiler_log_path root "bs") (compiler_log_path root "ocaml")
 
 let modification_time path =
   if Sys.file_exists path then Some (Unix.stat path).Unix.st_mtime else None
@@ -128,17 +130,86 @@ let read_lock_owner path =
       Some (input_line channel))
   with Sys_error _ | End_of_file -> None
 
+let parse_windows_csv_line line =
+  let length = String.length line in
+  let rec parse_field fields index =
+    if index >= length || line.[index] <> '"' then None
+    else
+      let buffer = Buffer.create 32 in
+      let rec parse_char index =
+        if index >= length then None
+        else
+          match line.[index] with
+          | '"' when index + 1 < length && line.[index + 1] = '"' ->
+              Buffer.add_char buffer '"';
+              parse_char (index + 2)
+          | '"' ->
+              let fields = Buffer.contents buffer :: fields in
+              let next = index + 1 in
+              if next = length then Some (List.rev fields)
+              else if line.[next] = ',' then parse_field fields (next + 1)
+              else None
+          | character ->
+              Buffer.add_char buffer character;
+              parse_char (index + 1)
+      in
+      parse_char (index + 1)
+  in
+  if length = 0 then None else parse_field [] 0
+
+let windows_tasklist_probe ~pid output =
+  let lines =
+    output |> String.trim |> String.split_on_char '\n'
+    |> List.map String.trim |> List.filter (( <> ) "")
+  in
+  let rows = List.map parse_windows_csv_line lines in
+  let valid_row = function
+    | Some [_image; row_pid; _session; _session_number; _memory] ->
+        Option.is_some (int_of_string_opt row_pid)
+    | Some _ | None -> false
+  in
+  if lines = [] || not (List.for_all valid_row rows) then None
+  else
+    Some
+      (List.exists
+         (function
+           | Some [image; row_pid; _session; _session_number; _memory] ->
+               String.starts_with ~prefix:"rescript"
+                 (String.lowercase_ascii image)
+               && row_pid = string_of_int pid
+           | Some _ | None -> false)
+         rows)
+
+let windows_tasklist_has_process ~pid output =
+  windows_tasklist_probe ~pid output = Some true
+
 let process_is_active value =
   try
     let pid = int_of_string value in
-    Unix.kill pid 0;
-    let executable = Printf.sprintf "/proc/%d/exe" pid in
-    if Sys.file_exists executable then
+    if Sys.win32 then
       (try
-         let basename = Unix.realpath executable |> Filename.basename in
-         String.starts_with ~prefix:"rescript" basename
-       with Unix.Unix_error _ -> true)
-    else true
+         let tasklist =
+           match Sys.getenv_opt "SystemRoot" with
+           | Some root -> path_of_parts root ["System32"; "tasklist.exe"]
+           | None -> "tasklist.exe"
+         in
+         let result =
+           Process.run ~cwd:(Filename.get_temp_dir_name ()) tasklist
+             ["/FO"; "CSV"; "/NH"]
+         in
+         if Process.succeeded result then
+           Option.value (windows_tasklist_probe ~pid result.stdout) ~default:true
+         else true
+       with Unix.Unix_error _ | Sys_error _ -> true)
+    else (
+      Unix.kill pid 0;
+      let executable = Printf.sprintf "/proc/%d/exe" pid in
+      if Sys.file_exists executable then
+        (try
+           let basename = Unix.realpath executable |> Filename.basename in
+           String.starts_with ~prefix:"rescript" basename
+         with Unix.Unix_error _ -> true)
+      else true)
   with
   | Failure _ | Unix.Unix_error (Unix.ESRCH, _, _) -> false
   | Unix.Unix_error (Unix.EPERM, _, _) -> true
@@ -224,7 +295,9 @@ let generated_js_path (config : Config.t) path (spec : Config.package_spec) =
     if spec.in_source then directory
     else
       Filename.concat
-        (match spec.module_format with Config.Esmodule -> "lib/es6" | Config.Commonjs -> "lib/js")
+        (match spec.module_format with
+        | Config.Esmodule -> lib_path "" "es6"
+        | Config.Commonjs -> lib_path "" "js")
         directory
   in
   Filename.concat config.root
@@ -343,7 +416,7 @@ let cleanup_stale ~root ~ocaml_dir (config : Config.t) modules =
       if List.exists (fun suffix -> Filename.check_suffix path suffix) suffixes then
         if owned_output path && not (Hashtbl.mem expected_outputs path) then
           remove_file path));
-  ["lib/es6"; "lib/js"] |> List.iter (fun directory ->
+  [lib_path "" "es6"; lib_path "" "js"] |> List.iter (fun directory ->
     files_under (Filename.concat root directory) |> List.iter (fun path ->
       if List.exists (fun suffix -> Filename.check_suffix path suffix) suffixes then
         if owned_output path && not (Hashtbl.mem expected_outputs path) then
@@ -418,7 +491,15 @@ let parse_file ~bsc ~build_dir ~(config : Config.t) path =
   ensure_dir (Filename.concat build_dir (Filename.dirname ast));
   let args =
     compiler_flags ~source_maps:false ~watch:false ~gentype:false config
-    @ ["-absname"; "-bs-ast"; "-o"; ast; Filename.concat "../.." path]
+    @ [
+        "-absname";
+        "-bs-ast";
+        "-o";
+        ast;
+        Filename.concat
+          (Filename.concat Filename.parent_dir_name Filename.parent_dir_name)
+          path;
+      ]
   in
   let result = Process.run ~cwd:build_dir bsc args in
   if not (Process.succeeded result) then report_failure "Parsing" path result;
@@ -426,19 +507,30 @@ let parse_file ~bsc ~build_dir ~(config : Config.t) path =
   copy_file
     (Filename.concat build_dir ast)
     (Filename.concat
-       (Filename.concat config.root "lib/ocaml")
+       (lib_path config.root "ocaml")
        (Filename.basename ast));
   copy_file
     (Filename.concat config.root path)
     (Filename.concat
-       (Filename.concat config.root "lib/ocaml")
+       (lib_path config.root "ocaml")
        (Filename.basename path));
   ast
 
 let parse_job ~bsc ~build_dir ~(config : Config.t) path =
   let ast = Source.ast_path path in
   ensure_dir (Filename.concat build_dir (Filename.dirname ast));
-  let args = compiler_flags ~source_maps:false ~watch:false ~gentype:false config @ ["-absname"; "-bs-ast"; "-o"; ast; Filename.concat "../.." path] in
+  let args =
+    compiler_flags ~source_maps:false ~watch:false ~gentype:false config
+    @ [
+        "-absname";
+        "-bs-ast";
+        "-o";
+        ast;
+        Filename.concat
+          (Filename.concat Filename.parent_dir_name Filename.parent_dir_name)
+          path;
+      ]
+  in
   Process.{program = bsc; args; cwd = build_dir}, ast
 
 let ast_dependencies ~build_dir ast =
@@ -467,8 +559,8 @@ let package_output (config : Config.t) path (spec : Config.package_spec) =
     else
       Filename.concat
         (match spec.module_format with
-        | Config.Esmodule -> "lib/es6"
-        | Config.Commonjs -> "lib/js")
+        | Config.Esmodule -> lib_path "" "es6"
+        | Config.Commonjs -> lib_path "" "js")
         directory
   in
   Printf.sprintf "%s:%s:%s"
@@ -500,13 +592,26 @@ let compile_namespace ~bsc ~runtime ~build_dir ~ocaml_dir ~entry namespace modul
 let path_is_within ~root path =
   let root = Unix.realpath root in
   let path = Unix.realpath path in
-  path = root || String.starts_with ~prefix:(root ^ "/") path
+  let normalize value =
+    if Sys.win32 then String.lowercase_ascii value else value
+  in
+  let root = normalize root in
+  let path = normalize path in
+  path = root || String.starts_with ~prefix:(Filename.concat root "") path
 
 let is_local_dependency ~workspace path =
+  let equal_component left right =
+    if Sys.win32 then String.lowercase_ascii left = String.lowercase_ascii right
+    else left = right
+  in
+  let rec contains_component path component =
+    if equal_component (Filename.basename path) component then true
+    else
+      let parent = Filename.dirname path in
+      parent <> path && contains_component parent component
+  in
   path_is_within ~root:workspace path
-  && not
-       (String.split_on_char '/' (Unix.realpath path)
-       |> List.exists (( = ) "node_modules"))
+  && not (contains_component (Unix.realpath path) "node_modules")
 
 let gentype_dependency_args (config : Config.t) =
   if config.gentype_args = [] then []
@@ -522,7 +627,31 @@ let run_post_build (config : Config.t) path =
   | Some command ->
     List.iter (fun spec ->
       let output = generated_js_path config path spec in
-      let result = Process.run ~cwd:config.root "/bin/sh" ["-c"; command ^ " " ^ Filename.quote output] in
+      let result =
+        if Sys.win32 then
+          let variable = "REWATCH_JS_POST_BUILD_FILE" in
+          let prefix = String.lowercase_ascii (variable ^ "=") in
+          let environment =
+            Unix.environment () |> Array.to_list
+            |> List.filter (fun entry ->
+                 not
+                   (String.starts_with ~prefix
+                      (String.lowercase_ascii entry)))
+            |> List.cons (variable ^ "=" ^ output)
+            |> Spawn.Env.of_list
+          in
+          Process.run ~env:environment ~cwd:config.root "cmd.exe"
+            [
+              "/D";
+              "/V:OFF";
+              "/S";
+              "/C";
+              command ^ " \"%" ^ variable ^ "%\"";
+            ]
+        else
+          Process.run ~cwd:config.root "/bin/sh"
+            ["-c"; command ^ " " ^ Filename.quote output]
+      in
       if not (Process.succeeded result) then report_failure "js-post-build" output result;
       if result.stdout <> "" then print_string result.stdout;
       if result.stderr <> "" then prerr_string result.stderr) config.package_specs
@@ -540,7 +669,9 @@ let compile_job ~bsc ~runtime ~build_dir ~watch ~(config : Config.t) ~dependency
   let namespace_args = namespace_args config module_.name in
   let interface_args = if not is_interface && Option.is_some module_.interface then ["-bs-read-cmi"] else [] in
   let output_args = if is_interface then [] else List.concat_map (fun spec -> ["-bs-package-output"; package_output config path spec]) config.package_specs in
-  let args = namespace_args @ interface_args @ ["-I"; "../ocaml"]
+  let args =
+    namespace_args @ interface_args
+    @ ["-I"; Filename.concat Filename.parent_dir_name "ocaml"]
     @ List.concat_map (fun dir -> ["-I"; dir]) dependency_dirs
     @ ["-runtime-path"; runtime] @ compiler_flags ~source_maps:true ~watch ~gentype:true config
     @ gentype_dependency_args config
@@ -672,8 +803,8 @@ let rec clean_internal ~(root_config : Config.t) ~seen ~folder ~prod ~is_local =
              remove_file (output ^ ".map.rewatch-pending");
              remove_file (output ^ ".map.rewatch-backup")) output_config.package_specs) modules);
     List.iter (fun dir -> remove_tree (Filename.concat root dir))
-      (["lib/bs"; "lib/ocaml"]
-      @ if is_local then ["lib/es6"; "lib/js"] else []))
+      ([lib_path "" "bs"; lib_path "" "ocaml"]
+      @ if is_local then [lib_path "" "es6"; lib_path "" "js"] else []))
 
 let clean ~seen ~folder ~prod =
   let root = Unix.realpath folder in
@@ -692,9 +823,12 @@ let rec nearest_config directory =
     else nearest_config parent
 
 let relative_to root path =
-  let root = if Filename.check_suffix root "/" then root else root ^ "/" in
-  if String.starts_with ~prefix:root path then
-    String.sub path (String.length root) (String.length path - String.length root)
+  let prefix = Filename.concat root "" in
+  let comparable value =
+    if Sys.win32 then String.lowercase_ascii value else value
+  in
+  if String.starts_with ~prefix:(comparable prefix) (comparable path) then
+    String.sub path (String.length prefix) (String.length path - String.length prefix)
   else raise (Error (path ^ " is not inside " ^ root))
 
 let rec remove_flag_with_value flag = function
@@ -726,14 +860,17 @@ let compiler_args path =
     }
   in
   let relative = relative_to config.root source in
-  let runtime = env_path "RESCRIPT_RUNTIME" (Filename.concat (Sys.getcwd ()) "packages/@rescript/runtime") in
+  let runtime =
+    env_path "RESCRIPT_RUNTIME"
+      (path_of_parts (Sys.getcwd ()) ["packages"; "@rescript"; "runtime"])
+  in
   let is_interface = Filename.check_suffix source ".resi" in
   let has_interface = not is_interface && Sys.file_exists (source ^ "i") in
   let dependency_dirs =
     config.dependencies |> List.filter_map (fun (dependency : Config.dependency) ->
       match dependency_path config.root dependency.name with
       | Some directory ->
-        let ocaml = Filename.concat directory "lib/ocaml" in
+        let ocaml = lib_path directory "ocaml" in
         if Sys.file_exists ocaml then Some ocaml else None
       | None -> None)
   in
@@ -744,7 +881,8 @@ let compiler_args path =
     let namespace_args = namespace_args config (Source.module_name source) in
     let interface_args = if not is_interface && has_interface then ["-bs-read-cmi"] else [] in
     let output_args = if is_interface then [] else List.concat_map (fun spec -> ["-bs-package-output"; package_output config relative spec]) config.package_specs in
-    namespace_args @ interface_args @ ["-I"; "../ocaml"]
+    namespace_args @ interface_args
+    @ ["-I"; Filename.concat Filename.parent_dir_name "ocaml"]
     @ List.concat_map (fun dir -> ["-I"; dir]) dependency_dirs
     @ ["-runtime-path"; runtime] @ compiler_flags ~source_maps:true ~watch:false ~gentype:true config
     @ ["-bs-package-name"; config.name; "-bs-project-root"; config.root]
@@ -840,8 +978,8 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
   let repository_root = Sys.getcwd () in
   let bsc =
     env_path "RESCRIPT_BSC_EXE"
-      (Filename.concat repository_root
-         "_build/default/compiler/bsc/rescript_compiler_main.exe")
+      (path_of_parts repository_root
+         ["_build"; "default"; "compiler"; "bsc"; "rescript_compiler_main.exe"])
   in
   let requested_features = Hashtbl.create 32 in
   let unallowed_dependencies = ref [] in
@@ -944,8 +1082,8 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
           ~display_root:root_config.root
       in
       let compile_config = with_root_options config root_config in
-      let build_dir = Filename.concat root "lib/bs" in
-      let ocaml_dir = Filename.concat root "lib/ocaml" in
+      let build_dir = lib_path root "bs" in
+      let ocaml_dir = lib_path root "ocaml" in
       ensure_dir build_dir;
       let dirty_paths =
         modules
@@ -1120,7 +1258,7 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder ~prod ~features
       match candidate with
       | None -> raise (Error ("Could not resolve dependency " ^ name))
       | Some candidate ->
-      let ocaml = Filename.concat candidate "lib/ocaml" in
+      let ocaml = lib_path candidate "ocaml" in
       if Sys.file_exists ocaml then Some (dependency, ocaml) else None)
   in
   let dependency_dirs = List.map snd dependency_directories in
@@ -1140,15 +1278,15 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder ~prod ~features
   let repository_root = Sys.getcwd () in
   let bsc =
     env_path "RESCRIPT_BSC_EXE"
-      (Filename.concat repository_root
-         "_build/default/compiler/bsc/rescript_compiler_main.exe")
+      (path_of_parts repository_root
+         ["_build"; "default"; "compiler"; "bsc"; "rescript_compiler_main.exe"])
   in
   let runtime =
     env_path "RESCRIPT_RUNTIME"
-      (Filename.concat repository_root "packages/@rescript/runtime")
+      (path_of_parts repository_root ["packages"; "@rescript"; "runtime"])
   in
-  let build_dir = Filename.concat root "lib/bs" in
-  let ocaml_dir = Filename.concat root "lib/ocaml" in
+  let build_dir = lib_path root "bs" in
+  let ocaml_dir = lib_path root "ocaml" in
   ensure_dir build_dir;
   ensure_dir ocaml_dir;
   initialize_compiler_log root;
@@ -1241,9 +1379,9 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder ~prod ~features
     let ast = Source.ast_path path in
     if is_local && stderr <> "" then warning_asts := ast :: !warning_asts;
     copy_file (Filename.concat build_dir ast)
-      (Filename.concat (Filename.concat config.root "lib/ocaml") (Filename.basename ast));
+      (Filename.concat (lib_path config.root "ocaml") (Filename.basename ast));
     copy_file (Filename.concat config.root path)
-      (Filename.concat (Filename.concat config.root "lib/ocaml") (Filename.basename path))) parsed;
+      (Filename.concat (lib_path config.root "ocaml") (Filename.basename path))) parsed;
   let raw_dependencies = Hashtbl.create (List.length modules) in
   let parse_dirty_modules = Hashtbl.create (List.length modules) in
   List.iter
@@ -1523,7 +1661,11 @@ let run ~seen ~folder ~prod ~features ~warn_error ~watch ~after_build ~filter =
           finish_watch_outputs ~success:true;
           finalize_logs ();
           release_build_lock ();
-          let result = Process.run ~cwd:root "/bin/sh" ["-c"; command] in
+          let result =
+            match Str.split (Str.regexp "[ \t\r\n]+") command with
+            | program :: args -> Process.run ~cwd:root program args
+            | [] -> raise (Error "--after-build command cannot be empty")
+          in
           if not (Process.succeeded result) then
             report_failure (result.stderr ^ result.stdout);
           if result.stdout <> "" then print_string result.stdout;

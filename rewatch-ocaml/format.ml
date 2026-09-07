@@ -15,7 +15,10 @@ let bsc () =
   | Some path when Sys.file_exists path -> Unix.realpath path
   | Some path -> raise (Error ("RESCRIPT_BSC_EXE points to missing path " ^ path))
   | None ->
-    let path = Filename.concat (Sys.getcwd ()) "_build/default/compiler/bsc/rescript_compiler_main.exe" in
+    let path =
+      List.fold_left Filename.concat (Sys.getcwd ())
+        ["_build"; "default"; "compiler"; "bsc"; "rescript_compiler_main.exe"]
+    in
     if Sys.file_exists path then Unix.realpath path
     else raise (Error "could not locate bsc; set RESCRIPT_BSC_EXE")
 
@@ -38,8 +41,13 @@ let local_dependency root (dependency : Config.dependency) =
   match find root with
   | None -> None
   | Some path ->
-    let prefix = root ^ "/" in
-    if String.starts_with ~prefix path then Some path else None
+    let prefix = Filename.concat root "" in
+    let comparable value =
+      if Sys.win32 then String.lowercase_ascii value else value
+    in
+    if String.starts_with ~prefix:(comparable prefix) (comparable path) then
+      Some path
+    else None
 
 let package_sources (config : Config.t) =
   Source.discover config ~prod:false ~features:None ~filter:None
