@@ -99,11 +99,11 @@ an owner PID and can themselves be recovered after an interrupted takeover.
   `--filter`, `--after-build`, `--warn-error`, `--help`, and `--version`
   dispatch successfully. `clean` removes root and local dependency build
   artifacts, including in-source JavaScript and maps.
-- Independent parser/compiler jobs are launched in bounded batches (four
-  children by default), with private output files and deterministic diagnostic
-  collection. Their transient logs are created in the owning project/build
-  directory, and interruption terminates and reaps launched children before
-  cleaning those logs.
+- Independent parser/compiler jobs use a CPU-bounded dynamic scheduler that
+  refills each freed slot immediately, with private output files and
+  deterministic input-order diagnostic collection. Their transient logs are
+  created in the owning project/build directory; interruption signals all
+  children, performs a bounded graceful reap, then escalates and cleans logs.
 - `warnings`, `ppx-flags`, JSX v4, source-map, `LetUnwrap` experimental
   features, and `js-post-build` are projected into external compiler/process
   invocations. The post-build fixture verifies its generated-file argument.
@@ -263,17 +263,23 @@ also includes the 200 ms polling interval.
   used for end-to-end verification because its workspace symlinks are relative
   to the original repository and become broken when copied; the dedicated
   monorepo fixture preserves those links instead.
-- The initial implementation targets Unix process semantics; supported platform
-  parity has not been evaluated.
+- Windows support is required before this port can be considered complete. It
+  cannot be executed in the current Linux environment, but it must still be
+  designed and cross-built where possible. The current subprocess backend uses
+  Unix-only `fork`, signal masks, sessions, and process-group termination, and
+  several tests assume `/bin/sh` and symlinks; replacing or splitting those
+  paths behind Windows-capable implementations is a release blocker. Shared
+  filesystem logic must use `Filename` operations rather than embedded `/` or
+  `\\` separators.
 
 ## Next actions
 
-1. Inventory and close remaining configuration, CLI, telemetry, and supported
-   platform gaps, then produce the clean/unchanged/edit/watch performance and
-   resource comparison required by milestone 6.
-2. Replace recursive per-package compilation with scheduling over the global
+1. Inventory and close remaining configuration, CLI, and telemetry gaps.
+2. Add Windows-capable subprocess and watcher backends, audit path handling,
+   and cross-build them; record Windows runtime verification as unavailable here.
+3. Replace recursive per-package compilation with scheduling over the global
    cross-package module graph; cycle discovery is global now, but compilation
    batches are still package-local.
-3. Perform the final two-scope whole-port review and address confirmed findings.
-4. Replace or supplement polling with a production-grade native event backend
+4. Perform the final two-scope whole-port review and address confirmed findings.
+5. Replace or supplement polling with a production-grade native event backend
    and evaluate supported-platform packaging and behavior.

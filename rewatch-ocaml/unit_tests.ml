@@ -15,6 +15,100 @@ let () =
   check
     (Process.default_max_jobs >= 1 && Process.default_max_jobs <= 32)
     "parallel subprocess bound follows the available CPUs";
+  let parallel_results =
+    Process.run_parallel ~max_jobs:2
+      [
+        {Process.program = "/bin/sh"; args = ["-c"; "printf first"]; cwd = Sys.getcwd ()};
+        {Process.program = "/bin/sh"; args = ["-c"; "printf second"]; cwd = Sys.getcwd ()};
+        {Process.program = "/bin/sh"; args = ["-c"; "printf third"]; cwd = Sys.getcwd ()};
+      ]
+  in
+  check
+    (List.map (fun (result : Process.result) -> result.stdout) parallel_results
+    = ["first"; "second"; "third"])
+    "parallel subprocess results retain input order";
+  let invalid_parallel_bound_rejected =
+    try
+      ignore (Process.run_parallel ~max_jobs:0 []);
+      false
+    with Process.Error _ -> true
+  in
+  check invalid_parallel_bound_rejected "parallel subprocess bound is validated";
+  let scheduler_root = Filename.temp_file "rewatch-ocaml-scheduler-" "" in
+  Sys.remove scheduler_root;
+  Unix.mkdir scheduler_root 0o755;
+  Fun.protect
+    ~finally:(fun () -> Build.remove_tree scheduler_root)
+    (fun () ->
+      let marker name = Filename.concat scheduler_root name |> Filename.quote in
+      let poll path =
+        Printf.sprintf
+          {|i=0; while [ ! -f %s ] && [ "$i" -lt 200 ]; do i=$((i + 1)); sleep 0.01; done|}
+          (marker path)
+      in
+      let helper_command =
+        String.concat "; "
+          [
+            poll "first-started";
+            poll "second-started";
+            Printf.sprintf
+              "test \"$(find %s -maxdepth 1 -name '.rewatch-ocaml-*' | wc -l)\" -le 4 || touch %s"
+              (Filename.quote scheduler_root) (marker "limit-exceeded");
+            Printf.sprintf "touch %s" (marker "release");
+          ]
+      in
+      let helper =
+        Unix.create_process "/bin/sh"
+          [|"/bin/sh"; "-c"; helper_command|]
+          Unix.stdin Unix.stdout Unix.stderr
+      in
+      let job command =
+        {Process.program = "/bin/sh"; args = ["-c"; command]; cwd = scheduler_root}
+      in
+      let first =
+        String.concat "; "
+          [
+            "touch first-started";
+            poll "release";
+            poll "third-started";
+            "test -f third-started || touch refill-stalled";
+            "printf first";
+          ]
+      in
+      let second =
+        String.concat "; "
+          ["touch second-started"; poll "release"; "printf second"]
+      in
+      let third = "touch third-started; printf third" in
+      let results =
+        Process.run_parallel ~max_jobs:2 [job first; job second; job third]
+      in
+      let _, helper_status = Unix.waitpid [] helper in
+      check (helper_status = Unix.WEXITED 0) "scheduler test helper exits";
+      check
+        (not (Sys.file_exists (Filename.concat scheduler_root "limit-exceeded")))
+        "parallel subprocesses respect the concurrency bound";
+      check
+        (not (Sys.file_exists (Filename.concat scheduler_root "refill-stalled")))
+        "parallel scheduler refills a completed slot immediately";
+      check
+        (List.map (fun (result : Process.result) -> result.stdout) results
+        = ["first"; "second"; "third"])
+        "dynamically scheduled results retain input order";
+      let failure =
+        Process.run_parallel ~max_jobs:1
+          [job "printf partial; printf diagnostic >&2; exit 7"]
+        |> List.hd
+      in
+      check
+        (failure.status = Unix.WEXITED 7 && failure.stdout = "partial"
+       && failure.stderr = "diagnostic")
+        "parallel subprocess failures preserve status and output";
+      check
+        (Sys.readdir scheduler_root
+        |> Array.for_all (fun name ->
+             not (String.starts_with ~prefix:".rewatch-ocaml-" name)))
+        "parallel subprocess logs are removed after failure");
   let node name deps = (name, deps) in
   let nodes = [node "C" ["B"]; node "A" []; node "B" ["A"]] in
   let sorted =
