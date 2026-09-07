@@ -255,6 +255,7 @@ end = struct
             in
             (name, fun () -> benchmark_corpus files))
     in
+    print_endline "[";
     List.to_seq benchmarks
     |> Seq.flat_map (fun (test_name, benchmark_fn) ->
         let {Benchmark.ms_per_run; allocs_per_run} = benchmark_fn () in
@@ -274,7 +275,7 @@ end = struct
         ]
         |> List.to_seq)
     |> Seq.iteri (fun i json ->
-        print_endline (if i == 0 then "[" else ",");
+        if i > 0 then print_endline ",";
         print_string (Yojson.to_string json));
     print_newline ();
     print_endline "]"
