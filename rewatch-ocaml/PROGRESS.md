@@ -104,6 +104,11 @@ an owner PID and can themselves be recovered after an interrupted takeover.
   deterministic input-order diagnostic collection. Their transient logs are
   created in the owning project/build directory; interruption signals all
   children, performs a bounded graceful reap, then escalates and cleans logs.
+- Subprocess creation uses `spawn >= v0.17.0`: Unix children receive their own
+  process groups, while Windows uses `CreateProcess` with explicit working
+  directories. Bare executables resolve through PATH/PATHEXT, including
+  `cmd.exe` dispatch for batch shims; lookup skips directories and non-executable
+  Unix files. Portable self-executable tests cover scheduling without `/bin/sh`.
 - `warnings`, `ppx-flags`, JSX v4, source-map, `LetUnwrap` experimental
   features, and `js-post-build` are projected into external compiler/process
   invocations. The post-build fixture verifies its generated-file argument.
@@ -230,6 +235,17 @@ build from 14,065 ms to 10,869 ms. The remaining clean/edit gap is consistent
 with reconstructing package/global state on every command, while watch latency
 also includes the 200 ms polling interval.
 
+Clean-build performance is a completion gate, not just a reported metric. The
+provisional acceptance threshold is a median wall time and peak process-tree RSS
+no worse than 1.25× Rust rewatch on the full representative fixture, using at
+least five interleaved post-warm-up runs with the same compiler/runtime.
+
+After switching subprocess creation to `spawn`, a quick three-run wall-only
+check (before scheduler wait tuning) measured Rust at 7,306–7,724 ms (7,520 ms
+median) and OCaml at 12,334–12,423 ms (12,416 ms median), or 1.65×. This is not
+an acceptance measurement and currently fails the wall-time gate; it must be
+investigated and followed by the full wall/RSS protocol above.
+
 ## Known gaps
 
 - Incremental state currently relies on artifact timestamps and byte-identical
@@ -265,18 +281,38 @@ also includes the 200 ms polling interval.
   monorepo fixture preserves those links instead.
 - Windows support is required before this port can be considered complete. It
   cannot be executed in the current Linux environment, but it must still be
-  designed and cross-built where possible. The current subprocess backend uses
-  Unix-only `fork`, signal masks, sessions, and process-group termination, and
-  several tests assume `/bin/sh` and symlinks; replacing or splitting those
-  paths behind Windows-capable implementations is a release blocker. Shared
-  filesystem logic must use `Filename` operations rather than embedded `/` or
-  `\\` separators.
+  designed and cross-built where possible. Subprocess creation now uses the
+  cross-platform `spawn` library (`CreateProcess` on Windows), including child
+  working directories and PATH/PATHEXT resolution. Windows uses direct-process
+  termination while Unix retains process-group cleanup. Watch lock/process
+  probing and polling behavior still need a Windows cross-build and runtime
+  verification. Shared filesystem logic uses `Filename` operations rather than
+  embedded `/` or `\\` separators; Unix-only test cases are being isolated or
+  replaced with portable helpers.
+
+## Dependency decisions
+
+- `spawn` is accepted: it is a narrow, MIT-licensed Jane Street package with
+  explicit Linux, macOS, and Windows support. It replaces bespoke fork/exec/cwd
+  code and materially reduces process-launch risk.
+- `Cmdliner` is the preferred next candidate for replacing the hand-written CLI
+  parser because it is actively maintained, already present in the development
+  switch, and owns help/version/error/`--` conventions. Migration still has to
+  prove exact Rust/clap behavior in the canonical CLI tests.
+- JSON deriving is not currently justified. The config loader must retain raw
+  keys to distinguish deprecated, known-unsupported, and forward-compatible
+  unknown fields; generated codecs would still require substantial custom
+  validation around the derived layer.
+- No watcher binding is accepted yet. A libuv binding could provide native
+  Windows/macOS/Linux events, but it adds a vendored C library plus ctypes
+  dependencies and its current maintenance cadence must be established before
+  adoption. Polling remains the fallback while this is evaluated.
 
 ## Next actions
 
 1. Inventory and close remaining configuration, CLI, and telemetry gaps.
-2. Add Windows-capable subprocess and watcher backends, audit path handling,
-   and cross-build them; record Windows runtime verification as unavailable here.
+2. Finish the Windows watcher/lock backend and path audit, and cross-build it;
+   record Windows runtime verification as unavailable here.
 3. Replace recursive per-package compilation with scheduling over the global
    cross-package module graph; cycle discovery is global now, but compilation
    batches are still package-local.

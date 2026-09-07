@@ -2,7 +2,7 @@
  (name rewatch_ocaml_lib)
  (wrapped false)
  (modules cli config process source graph build format)
- (libraries unix yojson str))
+ (libraries unix yojson str spawn))
 
 (executable
  (name rescript_ocaml)

@@ -52,8 +52,9 @@ remaining compatibility or platform gaps.
 ## Platform status
 
 Windows support is required for completion, even though runtime verification is
-not available in the current Linux development environment. The present
-experimental subprocess and watcher implementation is Unix-only; `PROGRESS.md`
-tracks the portability blockers. Shared path construction must use OCaml's
-`Filename` APIs so Windows separators and drive roots are not hard-coded
-assumptions.
+not available in the current Linux development environment. Subprocesses use
+the cross-platform `spawn` library, which uses `CreateProcess` on Windows; the
+polling watcher and lock lifecycle still require a Windows cross-build and
+runtime verification. `PROGRESS.md` tracks the remaining portability blockers.
+Shared path construction uses OCaml's `Filename` APIs so Windows separators and
+drive roots are not hard-coded assumptions.

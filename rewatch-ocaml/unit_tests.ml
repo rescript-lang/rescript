@@ -11,16 +11,70 @@ let write_file path contents =
   Fun.protect ~finally:(fun () -> close_out_noerr channel) (fun () ->
     output_string channel contents)
 
+let touch_file path = write_file path ""
+
+let wait_for_file path =
+  let rec loop attempts =
+    if Sys.file_exists path then true
+    else if attempts = 0 then false
+    else (
+      ignore (Unix.select [] [] [] 0.01);
+      loop (attempts - 1))
+  in
+  loop 200
+
 let () =
+  let argument index = Sys.argv.(index) in
+  if Array.length Sys.argv >= 2 then
+    match argument 1 with
+    | "--process-result" ->
+      print_string (argument 2);
+      prerr_string (argument 3);
+      exit (int_of_string (argument 4))
+    | "--scheduler-helper" ->
+      let root = argument 2 in
+      ignore (wait_for_file (Filename.concat root "first-started"));
+      ignore (wait_for_file (Filename.concat root "second-started"));
+      let log_count =
+        Sys.readdir root
+        |> Array.fold_left
+             (fun count name ->
+               if String.starts_with ~prefix:".rewatch-ocaml-" name then
+                 count + 1
+               else count)
+             0
+      in
+      if log_count > 4 then touch_file (Filename.concat root "limit-exceeded");
+      touch_file (Filename.concat root "release");
+      exit 0
+    | "--scheduler-job" ->
+      let root = argument 2 in
+      let name = argument 3 in
+      touch_file (Filename.concat root (name ^ "-started"));
+      if name <> "third" then
+        ignore (wait_for_file (Filename.concat root "release"));
+      if name = "first" then (
+        ignore (wait_for_file (Filename.concat root "third-started"));
+        if not (Sys.file_exists (Filename.concat root "third-started")) then
+          touch_file (Filename.concat root "refill-stalled"));
+      print_string name;
+      exit 0
+    | _ -> ()
+
+let () =
+  let test_executable = Unix.realpath Sys.executable_name in
+  let process_job args =
+    {Process.program = test_executable; args; cwd = Sys.getcwd ()}
+  in
   check
     (Process.default_max_jobs >= 1 && Process.default_max_jobs <= 32)
     "parallel subprocess bound follows the available CPUs";
   let parallel_results =
     Process.run_parallel ~max_jobs:2
       [
-        {Process.program = "/bin/sh"; args = ["-c"; "printf first"]; cwd = Sys.getcwd ()};
-        {Process.program = "/bin/sh"; args = ["-c"; "printf second"]; cwd = Sys.getcwd ()};
-        {Process.program = "/bin/sh"; args = ["-c"; "printf third"]; cwd = Sys.getcwd ()};
+        process_job ["--process-result"; "first"; ""; "0"];
+        process_job ["--process-result"; "second"; ""; "0"];
+        process_job ["--process-result"; "third"; ""; "0"];
       ]
   in
   check
@@ -34,54 +88,76 @@ let () =
     with Process.Error _ -> true
   in
   check invalid_parallel_bound_rejected "parallel subprocess bound is validated";
+  let path_root = Filename.temp_file "rewatch-ocaml-path-" "" in
+  Sys.remove path_root;
+  Unix.mkdir path_root 0o755;
+  Fun.protect
+    ~finally:(fun () -> Build.remove_tree path_root)
+    (fun () ->
+      let first = Filename.concat path_root "first" in
+      let second = Filename.concat path_root "second" in
+      Unix.mkdir first 0o755;
+      Unix.mkdir second 0o755;
+      let command = if Sys.win32 then "worker.exe" else "worker" in
+      Unix.mkdir (Filename.concat first command) 0o755;
+      let executable = Filename.concat second command in
+      Build.copy_file test_executable executable;
+      Unix.chmod executable 0o755;
+      let previous_path = Sys.getenv_opt "PATH" in
+      let separator = if Sys.win32 then ";" else ":" in
+      Unix.putenv "PATH" (first ^ separator ^ second);
+      Fun.protect
+        ~finally:(fun () ->
+          Unix.putenv "PATH" (Option.value previous_path ~default:""))
+        (fun () ->
+          let requested = if Sys.win32 then "worker" else command in
+          check
+            (Process.resolve_program ~cwd:path_root requested = executable)
+            "PATH lookup skips directories and applies platform executable suffixes";
+          if Sys.win32 then (
+            let cwd_executable = Filename.concat path_root "current.exe" in
+            Build.copy_file test_executable cwd_executable;
+            check
+              (Process.resolve_program ~cwd:path_root "current" = cwd_executable)
+              "Windows executable lookup searches cwd with PATHEXT")));
+  check
+    (Build.windows_tasklist_has_process ~pid:123
+       {|"rescript.exe","123","Console","1","10,000 K"|})
+    "Windows tasklist output recognizes a matching ReScript process";
+  check
+    (not
+       (Build.windows_tasklist_has_process ~pid:124
+          {|"rescript.exe","123","Console","1","10,000 K"|}))
+    "Windows tasklist output rejects a different process ID";
+  check
+    (Build.windows_tasklist_probe ~pid:123 "tasklist failed" = None)
+    "malformed Windows tasklist output is inconclusive";
+  check
+    (Build.windows_tasklist_probe ~pid:123 {|"tasklist failed"|} = None)
+    "unexpected Windows tasklist CSV schema is inconclusive";
+  check
+    (Build.windows_tasklist_probe ~pid:123 {|"rescript.exe","12|} = None)
+    "truncated Windows tasklist CSV is inconclusive";
   let scheduler_root = Filename.temp_file "rewatch-ocaml-scheduler-" "" in
   Sys.remove scheduler_root;
   Unix.mkdir scheduler_root 0o755;
   Fun.protect
     ~finally:(fun () -> Build.remove_tree scheduler_root)
     (fun () ->
-      let marker name = Filename.concat scheduler_root name |> Filename.quote in
-      let poll path =
-        Printf.sprintf
-          {|i=0; while [ ! -f %s ] && [ "$i" -lt 200 ]; do i=$((i + 1)); sleep 0.01; done|}
-          (marker path)
-      in
-      let helper_command =
-        String.concat "; "
-          [
-            poll "first-started";
-            poll "second-started";
-            Printf.sprintf
-              "test \"$(find %s -maxdepth 1 -name '.rewatch-ocaml-*' | wc -l)\" -le 4 || touch %s"
-              (Filename.quote scheduler_root) (marker "limit-exceeded");
-            Printf.sprintf "touch %s" (marker "release");
-          ]
-      in
       let helper =
-        Unix.create_process "/bin/sh"
-          [|"/bin/sh"; "-c"; helper_command|]
-          Unix.stdin Unix.stdout Unix.stderr
+        Spawn.spawn ~prog:test_executable
+          ~argv:[test_executable; "--scheduler-helper"; scheduler_root]
+          ()
       in
-      let job command =
-        {Process.program = "/bin/sh"; args = ["-c"; command]; cwd = scheduler_root}
+      let job name =
+        {
+          Process.program = test_executable;
+          args = ["--scheduler-job"; scheduler_root; name];
+          cwd = scheduler_root;
+        }
       in
-      let first =
-        String.concat "; "
-          [
-            "touch first-started";
-            poll "release";
-            poll "third-started";
-            "test -f third-started || touch refill-stalled";
-            "printf first";
-          ]
-      in
-      let second =
-        String.concat "; "
-          ["touch second-started"; poll "release"; "printf second"]
-      in
-      let third = "touch third-started; printf third" in
       let results =
-        Process.run_parallel ~max_jobs:2 [job first; job second; job third]
+        Process.run_parallel ~max_jobs:2 [job "first"; job "second"; job "third"]
       in
       let _, helper_status = Unix.waitpid [] helper in
       check (helper_status = Unix.WEXITED 0) "scheduler test helper exits";
@@ -97,7 +173,10 @@ let () =
         "dynamically scheduled results retain input order";
       let failure =
         Process.run_parallel ~max_jobs:1
-          [job "printf partial; printf diagnostic >&2; exit 7"]
+          [
+            process_job
+              ["--process-result"; "partial"; "diagnostic"; "7"];
+          ]
         |> List.hd
       in
       check
@@ -141,26 +220,27 @@ let () =
     "cycle transitive dependents are blocked";
   check (not (List.mem "Unrelated" blocked))
     "cycle-unrelated modules remain schedulable";
-  let temporary = Filename.temp_file "rewatch-ocaml-package-path-" "" in
-  Sys.remove temporary;
-  Unix.mkdir temporary 0o755;
-  let package = Filename.concat temporary "package" in
-  let node_modules = Filename.concat temporary "node_modules" in
-  Unix.mkdir package 0o755;
-  Unix.mkdir node_modules 0o755;
-  Unix.symlink package (Filename.concat node_modules "dependency");
-  Fun.protect
-    ~finally:(fun () ->
-      Sys.remove (Filename.concat node_modules "dependency");
-      Unix.rmdir node_modules;
-      Unix.rmdir package;
-      Unix.rmdir temporary)
-    (fun () ->
-      match Build.dependency_path temporary "dependency" with
-      | Some resolved ->
-        check (resolved = Unix.realpath package)
-          "dependency paths are canonicalized"
-      | None -> failwith "dependency symlink was not resolved");
+  (if not Sys.win32 then
+     let temporary = Filename.temp_file "rewatch-ocaml-package-path-" "" in
+     Sys.remove temporary;
+     Unix.mkdir temporary 0o755;
+     let package = Filename.concat temporary "package" in
+     let node_modules = Filename.concat temporary "node_modules" in
+     Unix.mkdir package 0o755;
+     Unix.mkdir node_modules 0o755;
+     Unix.symlink package (Filename.concat node_modules "dependency");
+     Fun.protect
+       ~finally:(fun () ->
+         Sys.remove (Filename.concat node_modules "dependency");
+         Unix.rmdir node_modules;
+         Unix.rmdir package;
+         Unix.rmdir temporary)
+       (fun () ->
+         match Build.dependency_path temporary "dependency" with
+         | Some resolved ->
+           check (resolved = Unix.realpath package)
+             "dependency paths are canonicalized"
+         | None -> failwith "dependency symlink was not resolved"));
   check
     (Config.namespace_from_package_name "@testrepo/deprecated-config"
     = "TestrepoDeprecatedConfig")
@@ -393,10 +473,10 @@ let () =
       write_file (Filename.concat dependency_root "rescript.json")
         {|{"name":"app","dependencies":["restricted"]}|};
       write_file
-        (Filename.concat dependency_root
-           "node_modules/restricted/rescript.json")
+        (List.fold_left Filename.concat dependency_root
+           ["node_modules"; "restricted"; "rescript.json"])
         {|{"name":"restricted","allowed-dependents":["other"]}|};
-      Unix.putenv "RESCRIPT_BSC_EXE" "/bin/true";
+      Unix.putenv "RESCRIPT_BSC_EXE" test_executable;
       let rejected =
         try
           Build.run ~seen:[] ~folder:dependency_root ~prod:false
