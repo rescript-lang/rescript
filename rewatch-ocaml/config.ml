@@ -37,12 +37,28 @@ type t = {
   experimental_args: string list;
   gentype_args: string list;
   js_post_build: string option;
+  diagnostics: string list;
 }
 
 exception Error of string
 
 let fail path message = raise (Error (Printf.sprintf "%s: %s" path message))
 let member name fields = List.assoc_opt name fields
+
+let namespace_from_package_name name =
+  let buffer = Buffer.create (String.length name) in
+  let capitalize = ref true in
+  String.iter
+    (fun character ->
+      match character with
+      | 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | '_' ->
+        Buffer.add_char buffer
+          (if !capitalize then Char.uppercase_ascii character else character);
+        capitalize := false
+      | '/' | '-' -> capitalize := true
+      | _ -> ())
+    name;
+  Buffer.contents buffer
 
 let string path field = function
   | `String value -> value
@@ -139,7 +155,7 @@ let parse_sources path fields =
     List.concat_map (sources_of_json path "" false None) values
   | Some value -> sources_of_json path "" false None value
 
-let warn_unknown_fields path fields =
+let unknown_fields fields =
   let supported =
     [
       "name";
@@ -168,12 +184,8 @@ let warn_unknown_fields path fields =
     ]
   in
   fields
-  |> List.filter (fun (name, _) -> not (List.mem name supported))
-  |> List.iter (fun (name, _) ->
-    prerr_endline
-      (Printf.sprintf
-         "Unknown field %S found in %s; this option will be ignored."
-         name path))
+  |> List.filter_map (fun (name, _) ->
+       if List.mem name supported then None else Some name)
 
 let parse_package_spec path default_suffix = function
   | `String module_name ->
@@ -276,7 +288,6 @@ let load path =
     | `Assoc fields -> fields
     | _ -> fail path "configuration must be an object"
   in
-  warn_unknown_fields path fields;
   let name =
     match member "name" fields with
     | Some value -> string path "name" value
@@ -296,8 +307,9 @@ let load path =
   let namespace =
     match member "namespace" fields with
     | None | Some (`Bool false) -> None
-    | Some (`Bool true) -> Some name
-    | Some (`String value) -> Some value
+    | Some (`Bool true) -> Some (namespace_from_package_name name)
+    | Some (`String "true") -> Some (namespace_from_package_name name)
+    | Some (`String value) -> Some (namespace_from_package_name value)
     | Some _ -> fail path "field \"namespace\" must be a boolean or string"
   in
   let namespace_entry =
@@ -427,6 +439,40 @@ let load path =
     | None -> []
     | Some value -> strings path "ignored-dirs" value
   in
+  let deprecated =
+    [
+      ("bs-dependencies", "dependencies");
+      ("bs-dev-dependencies", "dev-dependencies");
+      ("bsc-flags", "compiler-flags");
+    ]
+    |> List.filter (fun (field, _) -> Option.is_some (member field fields))
+  in
+  let diagnostics =
+    (if deprecated = [] then []
+     else
+       [
+         Printf.sprintf
+           "\n\nPackage '%s' uses deprecated config (support will be removed in a future version):\n%s"
+           name
+           (deprecated
+           |> List.map (fun (field, replacement) ->
+                Printf.sprintf "  - field '%s' — use '%s' instead" field
+                  replacement)
+           |> String.concat "\n");
+       ])
+    @ (if ignored_dirs = [] then []
+       else
+         [
+           Printf.sprintf
+             "The field 'ignored-dirs' found in the package config of '%s' is not supported by ReScript 12's new build system."
+             name;
+         ])
+    @ (unknown_fields fields
+      |> List.map (fun field ->
+           Printf.sprintf
+             "Unknown field '%s' found in the package config of '%s'. This option will be ignored."
+             field name))
+  in
   {
     path;
     root;
@@ -449,6 +495,7 @@ let load path =
     experimental_args;
     gentype_args;
     js_post_build;
+    diagnostics;
   }
 
 let package_spec_suffix (config : t) (spec : package_spec) =

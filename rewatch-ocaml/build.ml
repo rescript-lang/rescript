@@ -1,5 +1,6 @@
 exception Error of string
 exception Stop_watch
+exception Build_failure of string
 
 let ensure_dir path =
   let rec loop path =
@@ -22,6 +23,39 @@ let copy_file source destination =
       (fun () ->
         really_input_string input (in_channel_length input)
         |> output_string output))
+
+let files_equal first second =
+  if not (Sys.file_exists first && Sys.file_exists second) then false
+  else
+    let first_stat = Unix.stat first in
+    let second_stat = Unix.stat second in
+    first_stat.Unix.st_size = second_stat.Unix.st_size
+    && let first_channel = open_in_bin first in
+       let second_channel = open_in_bin second in
+       Fun.protect
+         ~finally:(fun () ->
+           close_in_noerr first_channel;
+           close_in_noerr second_channel)
+         (fun () ->
+           let buffer_size = 65_536 in
+           let first_buffer = Bytes.create buffer_size in
+           let second_buffer = Bytes.create buffer_size in
+           let rec loop () =
+             let first_count = input first_channel first_buffer 0 buffer_size in
+             let second_count = input second_channel second_buffer 0 buffer_size in
+             first_count = second_count
+             && (first_count = 0
+                || (Bytes.sub first_buffer 0 first_count
+                    = Bytes.sub second_buffer 0 second_count
+                   && loop ()))
+           in
+           loop ())
+
+let copy_file_if_changed source destination =
+  if not (files_equal source destination) then copy_file source destination
+
+let modification_time path =
+  if Sys.file_exists path then Some (Unix.stat path).Unix.st_mtime else None
 
 let remove_file path = if Sys.file_exists path then (try Sys.remove path with Sys_error _ -> ())
 
@@ -56,28 +90,92 @@ let with_root_options (config : Config.t) (root_config : Config.t) =
   }
 
 let cleanup_stale ~root ~ocaml_dir (config : Config.t) modules =
-  let expected = Hashtbl.create (List.length modules) in
-  List.iter (fun module_ -> Hashtbl.replace expected module_.Source.name ()) modules;
+  let expected_artifacts = Hashtbl.create (List.length modules * 8) in
+  let owned_output_names = Hashtbl.create (List.length modules * 2) in
+  let add_expected base extensions =
+    List.iter
+      (fun extension ->
+        Hashtbl.replace expected_artifacts (base ^ extension) ())
+      extensions
+  in
+  let previous_ast_count = ref 0 in
+  files_under ocaml_dir
+  |> List.iter (fun path ->
+       let basename = Filename.basename path in
+       if Filename.check_suffix basename ".ast" then (
+         incr previous_ast_count;
+         Hashtbl.replace owned_output_names
+           (Filename.chop_suffix basename ".ast") ())
+       else if Filename.check_suffix basename ".iast" then (
+         incr previous_ast_count;
+         Hashtbl.replace owned_output_names
+           (Filename.chop_suffix basename ".iast") ());
+     );
+  List.iter
+    (fun module_ ->
+      let source_base =
+        module_.Source.implementation |> Filename.basename
+        |> Filename.remove_extension
+      in
+      let compiler_base =
+        Source.compiler_basename config module_.Source.name
+      in
+      Hashtbl.replace owned_output_names source_base ();
+      add_expected source_base [".ast"; ".res"];
+      if Option.is_some module_.Source.interface then
+        add_expected source_base [".iast"; ".resi"];
+      add_expected compiler_base [".cmi"; ".cmj"; ".cmt"; ".cmti"])
+    modules;
+  Option.iter
+    (fun namespace ->
+      let base =
+        match config.namespace_entry with
+        | Some _ -> "@" ^ namespace
+        | None -> namespace
+      in
+      add_expected base [".cmi"; ".cmj"; ".cmt"; ".mlmap"])
+    config.namespace;
+  let removed_modules = ref [] in
   files_under ocaml_dir |> List.iter (fun path ->
-    let base = Filename.basename path in
-    let name =
-      List.fold_left (fun value extension ->
-        if Filename.check_suffix value extension then Filename.chop_suffix value extension else value)
-        base [".cmi"; ".cmj"; ".cmt"; ".cmti"; ".ast"; ".iast"]
+    let basename = Filename.basename path in
+    let managed =
+      List.exists
+        (Filename.check_suffix basename)
+        [".cmi"; ".cmj"; ".cmt"; ".cmti"; ".ast"; ".iast"; ".res"; ".resi";
+         ".mlmap"]
     in
-    if not (Hashtbl.mem expected name) then remove_file path);
+    if managed && not (Hashtbl.mem expected_artifacts basename) then (
+      if Filename.check_suffix basename ".ast" then
+        removed_modules := Filename.chop_suffix basename ".ast" :: !removed_modules
+      else if Filename.check_suffix basename ".iast" then
+        removed_modules := Filename.chop_suffix basename ".iast" :: !removed_modules;
+      remove_file path));
   let suffixes = [".js"; ".mjs"; ".cjs"; ".bs.js"; ".bs.mjs"; ".bs.cjs"] in
   let expected_outputs = Hashtbl.create (List.length modules * List.length config.package_specs) in
   List.iter (fun module_ -> List.iter (fun spec ->
     Hashtbl.replace expected_outputs (generated_js_path config module_.Source.implementation spec) ()) config.package_specs) modules;
+  let owned_output path =
+    suffixes
+    |> List.find_map (fun suffix ->
+         if Filename.check_suffix path suffix then
+           Some
+             (Filename.basename path |> fun basename ->
+              Filename.chop_suffix basename suffix)
+         else None)
+    |> Option.fold ~none:false
+         ~some:(fun name -> Hashtbl.mem owned_output_names name)
+  in
   config.sources |> List.iter (fun source ->
     files_under (Filename.concat root source.Config.dir) |> List.iter (fun path ->
       if List.exists (fun suffix -> Filename.check_suffix path suffix) suffixes then
-        if not (Hashtbl.mem expected_outputs path) then remove_file path));
+        if owned_output path && not (Hashtbl.mem expected_outputs path) then
+          remove_file path));
   ["lib/es6"; "lib/js"] |> List.iter (fun directory ->
     files_under (Filename.concat root directory) |> List.iter (fun path ->
       if List.exists (fun suffix -> Filename.check_suffix path suffix) suffixes then
-        if not (Hashtbl.mem expected_outputs path) then remove_file path))
+        if owned_output path && not (Hashtbl.mem expected_outputs path) then
+          remove_file path));
+  (!removed_modules, !previous_ast_count)
 
 let env_path name fallback =
   match Sys.getenv_opt name with
@@ -91,22 +189,45 @@ let env_path name fallback =
          (Printf.sprintf "%s is unset and fallback %s does not exist" name
             fallback))
 
+let dependency_path root name =
+  let existing_realpath path =
+    if Sys.file_exists path then Some (Unix.realpath path) else None
+  in
+  let rec in_ancestors directory =
+    let candidate = Filename.concat (Filename.concat directory "node_modules") name in
+    match existing_realpath candidate with
+    | Some path -> Some path
+    | None ->
+      let parent = Filename.dirname directory in
+      if parent = directory then None else in_ancestors parent
+  in
+  match in_ancestors root with
+  | Some path -> Some path
+  | None ->
+    let package_name =
+      match List.rev (String.split_on_char '/' name) with
+      | last :: _ -> last
+      | [] -> name
+    in
+    let sibling = Filename.concat (Filename.dirname root) name in
+    let workspace = Filename.concat (Filename.concat root "packages") package_name in
+    List.find_map existing_realpath [sibling; workspace]
+
 let report_failure action path result =
   let output = result.Process.stderr ^ result.stdout in
-  raise
-    (Error
-       (Printf.sprintf "%s %s failed (%s):\n%s" action path
-          (Process.status_string result.status)
-       output))
+  ignore action;
+  ignore path;
+  raise (Build_failure output)
 
 let compiler_flags ~source_maps ~watch ~gentype (config : Config.t) =
   let ppx_args =
     config.ppx_flags |> List.concat_map (function
       | [] -> []
       | flag :: arguments ->
-      let candidates = [Filename.concat config.root flag; Filename.concat (Filename.concat config.root "node_modules") flag] in
-      let executable = match List.find_opt Sys.file_exists candidates with
-        | Some path -> Unix.realpath path | None -> flag
+      let executable =
+        match dependency_path config.root flag with
+        | Some path -> path
+        | None -> flag
       in ["-ppx"; String.concat " " (executable :: arguments)])
   in
   let source_map_args =
@@ -196,32 +317,20 @@ let compile_namespace ~bsc ~runtime ~build_dir ~ocaml_dir ~entry namespace modul
        "-no-alias-deps"; Filename.basename mlmap]
   in
   if not (Process.succeeded result) then report_failure "Compiling namespace" namespace result;
-  copy_file (Filename.concat build_dir (namespace ^ ".cmi"))
+  copy_file_if_changed (Filename.concat build_dir (namespace ^ ".cmi"))
     (Filename.concat ocaml_dir (namespace ^ ".cmi"));
   copy_file mlmap (Filename.concat ocaml_dir (namespace ^ ".mlmap"))
-
-let dependency_path root name =
-  let rec in_ancestors directory =
-    let candidate = Filename.concat (Filename.concat directory "node_modules") name in
-    if Sys.file_exists candidate then Some candidate
-    else
-      let parent = Filename.dirname directory in
-      if parent = directory then None else in_ancestors parent
-  in
-  match in_ancestors root with
-  | Some path -> Some path
-  | None ->
-    let package_name =
-      match List.rev (String.split_on_char '/' name) with last :: _ -> last | [] -> name
-    in
-    let sibling = Filename.concat (Filename.dirname root) name in
-    let workspace = Filename.concat (Filename.concat root "packages") package_name in
-    List.find_opt Sys.file_exists [sibling; workspace]
 
 let path_is_within ~root path =
   let root = Unix.realpath root in
   let path = Unix.realpath path in
   path = root || String.starts_with ~prefix:(root ^ "/") path
+
+let is_local_dependency ~workspace path =
+  path_is_within ~root:workspace path
+  && not
+       (String.split_on_char '/' (Unix.realpath path)
+       |> List.exists (( = ) "node_modules"))
 
 let gentype_dependency_args (config : Config.t) =
   if config.gentype_args = [] then []
@@ -312,9 +421,15 @@ let publish_compiled ~build_dir ~ocaml_dir ~(config : Config.t)
   let basename = Source.compiler_basename config module_.Source.name in
   let artifact_dir = Filename.concat build_dir (Filename.dirname path) in
   let extensions = if is_interface then ["cmi"; "cmti"] else ["cmi"; "cmj"; "cmt"] in
-  List.iter (fun extension -> copy_file (Filename.concat artifact_dir (basename ^ "." ^ extension))
-    (Filename.concat ocaml_dir (basename ^ "." ^ extension))) extensions;
-  if not is_interface then run_post_build config path
+  List.iter
+    (fun extension ->
+      let source = Filename.concat artifact_dir (basename ^ "." ^ extension) in
+      let destination = Filename.concat ocaml_dir (basename ^ "." ^ extension) in
+      if extension = "cmi" then copy_file_if_changed source destination
+      else copy_file source destination)
+    extensions;
+  if not is_interface then run_post_build config path;
+  result.stderr <> ""
 
 let compile_batch ~bsc ~runtime ~build_dir ~ocaml_dir ~watch ~(config : Config.t)
     ~dependency_dirs jobs =
@@ -324,7 +439,12 @@ let compile_batch ~bsc ~runtime ~build_dir ~ocaml_dir ~watch ~(config : Config.t
   let prepared = List.map (fun (module_, is_interface, path) ->
     compile_job ~bsc ~runtime ~build_dir ~watch ~config ~dependency_dirs module_ ~is_interface path) jobs in
   let results = Process.run_parallel (List.map fst prepared) in
-  List.iter2 (fun (_, info) result -> publish_compiled ~build_dir ~ocaml_dir ~config info result) prepared results
+  List.map2
+    (fun (_, ((_, _, path) as info)) result ->
+      if publish_compiled ~build_dir ~ocaml_dir ~config info result then Some path
+      else None)
+    prepared results
+  |> List.filter_map Fun.id
 
 let rec remove_tree path =
   if Sys.file_exists path then
@@ -333,34 +453,42 @@ let rec remove_tree path =
       Unix.rmdir path)
     else Sys.remove path
 
-let rec clean_internal ~(root_config : Config.t) ~seen ~folder ~prod =
+let rec clean_internal ~(root_config : Config.t) ~seen ~folder ~prod ~is_local =
   let root = Unix.realpath folder in
-  if not (List.mem root seen) then (
+  if not (Hashtbl.mem seen root) then (
+    Hashtbl.add seen root ();
     let config_path = Filename.concat root "rescript.json" in
     if Sys.file_exists config_path then (
       let config = Config.load config_path in
-      let dependencies = config.dependencies @ if prod then [] else config.dev_dependencies in
+      let dependencies =
+        config.dependencies
+        @ if prod || not is_local then [] else config.dev_dependencies
+      in
       List.iter (fun (dependency : Config.dependency) ->
         match dependency_path root dependency.name with
         | Some directory
-          when path_is_within ~root:root_config.root directory
-            && Sys.file_exists (Filename.concat directory "rescript.json") ->
-          clean_internal ~root_config ~seen:(root :: seen) ~folder:directory ~prod
+          when Sys.file_exists (Filename.concat directory "rescript.json") ->
+          clean_internal ~root_config ~seen ~folder:directory ~prod
+            ~is_local:(is_local_dependency ~workspace:root_config.root directory)
         | _ -> ()) dependencies;
       let modules = Source.discover config ~prod ~features:None ~filter:None in
       let output_config = with_root_options config root_config in
-      List.iter (fun module_ ->
-        List.iter (fun spec ->
-          let output = generated_js_path output_config module_.Source.implementation spec in
-          remove_file output;
-          remove_file (output ^ ".map")) output_config.package_specs) modules);
+      if is_local then
+        List.iter (fun module_ ->
+          List.iter (fun spec ->
+            let output = generated_js_path output_config module_.Source.implementation spec in
+            remove_file output;
+            remove_file (output ^ ".map")) output_config.package_specs) modules);
     List.iter (fun dir -> remove_tree (Filename.concat root dir))
-      ["lib/bs"; "lib/ocaml"; "lib/es6"; "lib/js"])
+      (["lib/bs"; "lib/ocaml"]
+      @ if is_local then ["lib/es6"; "lib/js"] else []))
 
 let clean ~seen ~folder ~prod =
   let root = Unix.realpath folder in
   let root_config = Config.load (Filename.concat root "rescript.json") in
-  clean_internal ~root_config ~seen ~folder:root ~prod
+  let visited = Hashtbl.create 32 in
+  List.iter (fun path -> Hashtbl.replace visited (Unix.realpath path) ()) seen;
+  clean_internal ~root_config ~seen:visited ~folder:root ~prod ~is_local:true
 
 let rec nearest_config directory =
   let config = Filename.concat directory "rescript.json" in
@@ -412,27 +540,69 @@ let compiler_args path =
     ("parser_args", `List (List.map (fun value -> `String value) parser_args));
   ])
 
-let rec run_internal ~(root_config : Config.t) ~seen ~folder ~prod ~features ~warn_error ~watch ~after_build ~filter =
+type build_stats = {
+  mutable cleaned: int;
+  mutable previous_asts: int;
+  mutable parsed: int;
+  mutable compiled: int;
+  mutable diagnostics: string list;
+  mutable failure: string option;
+  removed_modules: (string, unit) Hashtbl.t;
+}
+
+let source_is_newer ~source ~artifact =
+  match modification_time source, modification_time artifact with
+  | Some source_time, Some artifact_time -> source_time > artifact_time
+  | Some _, None -> true
+  | None, _ -> false
+
+let dependency_artifact dependency_dirs dependency =
+  let matches path =
+    let basename = Filename.basename path in
+    if not (Filename.check_suffix basename ".cmi") then false
+    else
+      let name = Filename.chop_suffix basename ".cmi" in
+      name = dependency || String.trim name = dependency
+      || (String.starts_with ~prefix:"@" name
+         && String.sub name 1 (String.length name - 1) = dependency)
+  in
+  dependency_dirs
+  |> List.find_map (fun directory ->
+       files_under directory |> List.find_opt matches)
+
+let rec run_internal ~(root_config : Config.t) ~seen ~folder ~prod ~features
+    ~warn_error ~watch ~after_build ~filter ~is_local ~stats =
   let root = Unix.realpath folder in
+  Hashtbl.replace seen root ();
   let config = Config.load (Filename.concat root "rescript.json") in
   let config = match warn_error with
     | None -> config
     | Some value -> {config with warning_flags = ["-warn-error"; value]}
   in
+  if is_local then
+    stats.diagnostics <-
+      List.rev_append config.diagnostics stats.diagnostics;
   let dependency_dirs =
     let dependencies : Config.dependency list =
-      config.dependencies @ if prod then [] else config.dev_dependencies
+      config.dependencies
+      @ if prod || not is_local then [] else config.dev_dependencies
     in
     dependencies |> List.filter_map (fun (dependency : Config.dependency) ->
       let name = dependency.name in
       let candidate = dependency_path root name in
       let () = match candidate with
         | None -> ()
-        | Some candidate when List.mem candidate (root :: seen) -> ()
+        | Some candidate when Hashtbl.mem seen candidate -> ()
         | Some candidate
-          when path_is_within ~root:root_config.root candidate
-            && Sys.file_exists (Filename.concat candidate "rescript.json") ->
-          run_internal ~root_config ~seen:(root :: seen) ~folder:candidate ~prod ~features:dependency.features ~warn_error:None ~watch ~after_build:None ~filter:None
+          when Sys.file_exists (Filename.concat candidate "rescript.json") ->
+          (try
+             run_internal ~root_config ~seen ~folder:candidate ~prod
+               ~features:dependency.features ~warn_error:None ~watch
+               ~after_build:None ~filter:None
+               ~is_local:(is_local_dependency ~workspace:root_config.root candidate)
+               ~stats
+           with Build_failure output ->
+             if Option.is_none stats.failure then stats.failure <- Some output)
         | Some _ -> ()
       in
       match candidate with
@@ -455,9 +625,22 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder ~prod ~features ~wa
   let ocaml_dir = Filename.concat root "lib/ocaml" in
   ensure_dir build_dir;
   ensure_dir ocaml_dir;
-  let modules = Source.discover config ~prod ~features ~filter in
+  let modules =
+    Source.discover config ~prod ~features ~filter
+      ~on_orphan:(fun path ->
+        Printf.eprintf
+          "\027[2K\r No implementation file found for interface file (skipping): %s\n%!"
+          path)
+  in
   let config = with_root_options config root_config in
-  cleanup_stale ~root ~ocaml_dir config modules;
+  let removed_modules, previous_ast_count =
+    cleanup_stale ~root ~ocaml_dir config modules
+  in
+  stats.cleaned <- stats.cleaned + List.length removed_modules;
+  List.iter
+    (fun module_name -> Hashtbl.replace stats.removed_modules module_name ())
+    removed_modules;
+  stats.previous_asts <- stats.previous_asts + previous_ast_count;
   Option.iter
     (fun namespace ->
       let namespace =
@@ -476,18 +659,35 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder ~prod ~features ~wa
     List.concat_map (fun module_ ->
       module_.Source.implementation :: Option.to_list module_.interface) modules
   in
-  let parsed =
-    List.map2 (fun path result -> (path, result)) parse_paths
-      (Process.run_parallel (List.map (fun path -> fst (parse_job ~bsc ~build_dir ~config path)) parse_paths))
+  let dirty_parse_paths =
+    parse_paths
+    |> List.filter (fun path ->
+         let source_base =
+           path |> Filename.basename |> Filename.remove_extension
+         in
+         List.mem source_base removed_modules
+         || source_is_newer ~source:(Filename.concat root path)
+              ~artifact:(Filename.concat build_dir (Source.ast_path path)))
   in
+  let parsed =
+    List.map2 (fun path result -> (path, result)) dirty_parse_paths
+      (Process.run_parallel
+         (List.map
+            (fun path -> fst (parse_job ~bsc ~build_dir ~config path))
+            dirty_parse_paths))
+  in
+  let warning_asts = ref [] in
   List.iter (fun (path, result) ->
     if not (Process.succeeded result) then report_failure "Parsing" path result;
     if result.stderr <> "" then prerr_string result.stderr;
     let ast = Source.ast_path path in
+    if is_local && result.stderr <> "" then warning_asts := ast :: !warning_asts;
     copy_file (Filename.concat build_dir ast)
       (Filename.concat (Filename.concat config.root "lib/ocaml") (Filename.basename ast));
     copy_file (Filename.concat config.root path)
       (Filename.concat (Filename.concat config.root "lib/ocaml") (Filename.basename path))) parsed;
+  let raw_dependencies = Hashtbl.create (List.length modules) in
+  let parse_dirty_modules = Hashtbl.create (List.length modules) in
   List.iter
     (fun module_ ->
       let impl_ast = Source.ast_path module_.Source.implementation in
@@ -497,11 +697,19 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder ~prod ~features ~wa
         | None -> []
         | Some path -> ast_dependencies ~build_dir (Source.ast_path path)
       in
+      let dependencies = List.sort_uniq String.compare (impl_deps @ intf_deps) in
+      Hashtbl.replace raw_dependencies module_.Source.name dependencies;
+      let paths =
+        module_.Source.implementation :: Option.to_list module_.Source.interface
+      in
+      if List.exists (fun path -> List.mem path dirty_parse_paths) paths then
+        Hashtbl.replace parse_dirty_modules module_.Source.name ();
       module_.deps <-
         List.filter
           (fun dep -> dep <> module_.name && Hashtbl.mem names dep)
-          (List.sort_uniq String.compare (impl_deps @ intf_deps)))
+          dependencies)
     modules;
+  stats.parsed <- stats.parsed + Hashtbl.length parse_dirty_modules;
   let ordered =
     try
       Graph.topological_sort modules
@@ -529,13 +737,96 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder ~prod ~features ~wa
       (level, module_ :: existing) :: List.remove_assoc level levels) []
     |> List.sort (fun (a, _) (b, _) -> compare a b)
   in
+  let compile_warning_modules = Hashtbl.create 8 in
+  let module_is_dirty module_ =
+    let compiler_base = Source.compiler_basename config module_.Source.name in
+    let cmt = Filename.concat ocaml_dir (compiler_base ^ ".cmt") in
+    let source_base =
+      module_.Source.implementation |> Filename.basename
+      |> Filename.remove_extension
+    in
+    let outputs_exist =
+      List.for_all
+        (fun spec ->
+          Sys.file_exists
+            (generated_js_path config module_.Source.implementation spec))
+        config.package_specs
+    in
+    let dependencies =
+      Hashtbl.find_opt raw_dependencies module_.Source.name
+      |> Option.value ~default:[]
+    in
+    let dependency_is_newer dependency =
+      let artifact =
+        match Hashtbl.find_opt names dependency with
+        | Some () ->
+          Some
+            (Filename.concat ocaml_dir
+               (Source.compiler_basename config dependency ^ ".cmi"))
+        | None -> dependency_artifact dependency_dirs dependency
+      in
+      match artifact, modification_time cmt with
+      | Some path, Some cmt_time ->
+        Option.fold ~none:false ~some:(fun time -> time > cmt_time)
+          (modification_time path)
+      | _, None -> true
+      | None, Some _ -> false
+    in
+    Hashtbl.mem parse_dirty_modules module_.Source.name
+    || List.mem source_base removed_modules
+    || not (Sys.file_exists cmt && outputs_exist)
+    || List.exists (fun dependency -> List.mem dependency removed_modules)
+         dependencies
+    || List.exists
+         (fun dependency -> Hashtbl.mem stats.removed_modules dependency)
+         dependencies
+    || List.exists dependency_is_newer dependencies
+  in
   List.iter (fun (_, modules) ->
     let modules = List.rev modules in
-    compile_batch ~bsc ~runtime ~build_dir ~ocaml_dir ~watch ~config ~dependency_dirs
-      (List.filter_map (fun module_ -> Option.map (fun path -> (module_, true, path)) module_.Source.interface) modules);
-    compile_batch ~bsc ~runtime ~build_dir ~ocaml_dir ~watch ~config ~dependency_dirs
-      (List.map (fun module_ -> (module_, false, module_.Source.implementation)) modules)) levels;
-  Printf.printf "Finished compilation\n%!";
+    let dirty_modules = List.filter module_is_dirty modules in
+    stats.compiled <- stats.compiled + List.length dirty_modules;
+    let interface_warning_paths =
+      compile_batch ~bsc ~runtime ~build_dir ~ocaml_dir ~watch ~config
+        ~dependency_dirs
+        (List.filter_map
+           (fun module_ ->
+             Option.map (fun path -> (module_, true, path)) module_.Source.interface)
+           dirty_modules)
+    in
+    let implementation_warning_paths =
+      compile_batch ~bsc ~runtime ~build_dir ~ocaml_dir ~watch ~config
+        ~dependency_dirs
+        (List.map
+           (fun module_ -> (module_, false, module_.Source.implementation))
+           dirty_modules)
+    in
+    let warning_paths = interface_warning_paths @ implementation_warning_paths in
+    if is_local then
+      List.iter
+        (fun path ->
+          Hashtbl.replace compile_warning_modules (Source.module_name path) ())
+        warning_paths) levels;
+  Hashtbl.iter
+    (fun module_name () ->
+      match List.find_opt (fun module_ -> module_.Source.name = module_name) modules with
+      | None -> ()
+      | Some module_ ->
+        let paths =
+          module_.Source.implementation :: Option.to_list module_.Source.interface
+        in
+        List.iter
+          (fun path ->
+            let ast = Source.ast_path path in
+            remove_file (Filename.concat build_dir ast);
+            remove_file (Filename.concat ocaml_dir (Filename.basename ast)))
+          paths)
+    compile_warning_modules;
+  List.iter
+    (fun ast ->
+      remove_file (Filename.concat build_dir ast);
+      remove_file (Filename.concat ocaml_dir (Filename.basename ast)))
+    !warning_asts;
   match after_build with
   | None -> ()
   | Some command ->
@@ -547,7 +838,44 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder ~prod ~features ~wa
 let run ~seen ~folder ~prod ~features ~warn_error ~watch ~after_build ~filter =
   let root = Unix.realpath folder in
   let root_config = Config.load (Filename.concat root "rescript.json") in
-  run_internal ~root_config ~seen ~folder:root ~prod ~features ~warn_error ~watch ~after_build ~filter
+  let visited = Hashtbl.create 32 in
+  let stats =
+    {
+      cleaned = 0;
+      previous_asts = 0;
+      parsed = 0;
+      compiled = 0;
+      diagnostics = [];
+      failure = None;
+      removed_modules = Hashtbl.create 16;
+    }
+  in
+  List.iter (fun path -> Hashtbl.replace visited (Unix.realpath path) ()) seen;
+  let report () =
+    if watch then Printf.printf "Finished compilation\n%!"
+    else
+    Printf.printf "Cleaned %d/%d\nParsed %d source files\nCompiled %d modules\n%!"
+      stats.cleaned stats.previous_asts stats.parsed stats.compiled;
+    let diagnostics =
+      stats.diagnostics |> List.rev |> List.sort_uniq String.compare
+    in
+    if diagnostics <> [] then
+      prerr_endline (String.concat "\n\n" diagnostics)
+  in
+  let report_failure output =
+    report ();
+    prerr_string output;
+    prerr_newline ();
+    raise
+      (Error
+         ("Incremental build failed. Error: \027[2K\r  Failed to Compile. "
+        ^ "See Errors Above"))
+  in
+  try
+    run_internal ~root_config ~seen:visited ~folder:root ~prod ~features
+      ~warn_error ~watch ~after_build ~filter ~is_local:true ~stats;
+    match stats.failure with None -> report () | Some output -> report_failure output
+  with Build_failure output -> report_failure output
 
 let watch ~folder ~prod ~features ~warn_error ~after_build ~filter =
   let root = Unix.realpath folder in

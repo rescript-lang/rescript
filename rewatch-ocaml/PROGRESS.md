@@ -4,18 +4,61 @@ Reference Rust implementation: `2e532c7f6587d4201befd00ced516e267c90fe73`.
 
 ## Current milestone
 
-Milestones 1 and 3 are implemented, and milestones 2, 4, and 5 have working
-but incomplete coverage. The experimental
-`rescript_ocaml.exe` currently implements single-package configuration loading,
-recursive source discovery, external `bsc` parsing, AST dependency extraction,
-cycle detection, dependency-ordered compilation, interface-before-implementation
-compilation, bounded concurrent external `bsc` execution, feature-gated source
-selection, stale artifact cleanup, and compiler artifact publication to
-`lib/ocaml`.
+No milestone is complete against the canonical `rewatch/tests` suite yet. The
+experimental `rescript_ocaml.exe` builds the full `rewatch/testrepo` and now
+implements the first slice of persistent incremental state using existing AST,
+CMI, CMT, and generated-output artifacts. Work remains focused on milestone 4:
+expanding invalidation and diagnostic parity through the canonical edit tests.
+
+The implementation currently has configuration loading, source and package
+discovery, external `bsc` parsing, AST dependency extraction, cycle detection,
+dependency-ordered compilation, interface-before-implementation compilation,
+bounded concurrent external `bsc` execution, feature selection, artifact
+cleanup, and compiler artifact publication to `lib/ocaml`.
+
+## Source review
+
+The first comparison pass covered the OCaml configuration, package traversal,
+source discovery, process runner, compile scheduling, cleanup, CLI, formatting,
+and polling watcher against their Rust owners. It found and fixed these blocking
+differences:
+
+- Resolved package paths were not canonical, so workspace symlink cycles could
+  recurse indefinitely.
+- Traversal tracked only the active recursion stack instead of a command-wide
+  package set, rebuilding the same package several times.
+- External packages incorrectly included `dev-dependencies`.
+- `namespace: true` used a scoped package name as a literal filename instead of
+  applying Rust's namespace normalization.
+- PPX resolution did not search hoisted `node_modules`.
+- Stale cleanup treated every JavaScript-looking file as owned output and
+  deleted checked-in legacy files that had no corresponding source or AST.
+- Standalone package builds refused to build dependencies resolved outside the
+  invoked package directory.
+
+The main remaining architectural differences are substantial: Rust constructs
+one unified package/module build state and schedules a single cross-package
+graph. The OCaml port still recurses by package and reconstructs its in-memory
+state for every invocation, although it now derives dirty parse and compile
+nodes from persistent compiler artifacts and propagates CMI/removal changes
+across package boundaries. Rust also has robust build/watch locks, native
+filesystem events, diagnostic persistence, telemetry, and much broader
+configuration and platform handling that are not yet ported.
 
 ## Verified
 
 - `dune runtest rewatch-ocaml` passes graph unit coverage.
+- A clean one-shot build of the installed `rewatch/testrepo` succeeds with the
+  OCaml executable, including workspace packages, external dependencies,
+  namespace entries, and the hoisted PPX executable.
+- The canonical compile tests 01 through 08 pass unchanged with the OCaml
+  executable. This covers clean builds, standalone packages, implementation and
+  interface renames, namespaced dependents, orphan-interface warnings, and
+  cross-package source removal.
+- Incremental builds reuse clean ASTs and compiler outputs, preserve unchanged
+  CMI timestamps, recompile dependents after interface changes, avoid dependent
+  recompilation after implementation-only changes, and replay local compiler
+  warnings using the same artifact behavior as Rust.
 - `rewatch-ocaml/tests/run.sh` passes with both the OCaml executable and the
   Rust reference executable for a three-module fixture, a `.res`/`.resi` pair,
   cycle diagnostics, compilation failure, and a successful recovery build.
@@ -74,9 +117,14 @@ selection, stale artifact cleanup, and compiler artifact publication to
 
 ## Known gaps
 
+- Incremental state currently relies on artifact timestamps and byte-identical
+  CMI publication. Rust's richer persisted compile-state model and diagnostic
+  storage are not yet ported.
+- Packages are deduplicated during recursive traversal, but compilation still
+  happens as separate per-package graphs rather than Rust's unified graph.
 - Full monorepo/package graph parity, configuration validation parity, compiler
-  argument parity, telemetry, and production-grade filesystem watching remain
-  incomplete.
+  argument parity, locks, telemetry, and production-grade filesystem watching
+  remain incomplete.
 - `watch` currently uses conservative polling and has no signal/lock/event
   batching parity with Rust rewatch.
 - Polling watches root and recursively resolved local dependency roots, but it
@@ -98,6 +146,9 @@ selection, stale artifact cleanup, and compiler artifact publication to
 
 ## Next actions
 
-1. Parameterize applicable Rust integration fixtures for the OCaml executable.
-2. Complete monorepo/package discovery and remaining configuration fields.
-3. Replace polling with a supported event backend and verify applicable watch tests.
+1. Continue the canonical compile suite at dependency-cycle reporting, duplicate
+   modules, and dev-dependency visibility.
+2. Replace recursive package scheduling with a unified cross-package module
+   graph as later correctness cases require it.
+3. Continue the remaining canonical groups, then complete configuration and
+   watch parity exposed by them.
