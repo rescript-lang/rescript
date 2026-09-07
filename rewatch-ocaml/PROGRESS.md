@@ -41,8 +41,8 @@ selection, stale artifact cleanup, and compiler artifact publication to
   `node_modules` workspace links, including a transitive dependency resolved
   from an ancestor hoist.
 - The integration runner starts watch mode, confirms the lock, performs a
-  source edit, observes a second completed compilation, and confirms lock
-  cleanup after `SIGTERM`.
+  source edit, changes the configured output suffix, observes the resulting
+  rebuild and stale-output removal, and confirms lock cleanup after `SIGTERM`.
 
 ## Known gaps
 

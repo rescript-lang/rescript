@@ -101,6 +101,15 @@ if ! wait_for_count "$watch_basic/watch.log" 'Finished compilation' 2; then
   wait "$watch_pid" 2>/dev/null || true
   exit 1
 fi
+sed 's/"\.mjs"/".js"/' "$watch_basic/rescript.json" > "$watch_basic/rescript.next"
+mv "$watch_basic/rescript.next" "$watch_basic/rescript.json"
+if ! wait_for_count "$watch_basic/watch.log" 'Finished compilation' 3; then
+  kill -TERM "$watch_pid" 2>/dev/null || true
+  wait "$watch_pid" 2>/dev/null || true
+  exit 1
+fi
+test -f "$watch_basic/src/A.js"
+test ! -f "$watch_basic/src/A.mjs"
 kill -TERM "$watch_pid"
 wait "$watch_pid"
 test ! -f "$watch_basic/lib/watch.lock"
