@@ -139,7 +139,7 @@ let parse_sources path fields =
     List.concat_map (sources_of_json path "" false None) values
   | Some value -> sources_of_json path "" false None value
 
-let validate_supported_fields path fields =
+let warn_unknown_fields path fields =
   let supported =
     [
       "name";
@@ -167,16 +167,13 @@ let validate_supported_fields path fields =
       "sourceMap";
     ]
   in
-  match
-    List.find_opt (fun (name, _) -> not (List.mem name supported)) fields
-  with
-  | None -> ()
-  | Some (name, _) ->
-    fail path
+  fields
+  |> List.filter (fun (name, _) -> not (List.mem name supported))
+  |> List.iter (fun (name, _) ->
+    prerr_endline
       (Printf.sprintf
-         "configuration field %S is not supported by the experimental OCaml \
-          port yet"
-         name)
+         "Unknown field %S found in %s; this option will be ignored."
+         name path))
 
 let parse_package_spec path default_suffix = function
   | `String module_name ->
@@ -279,7 +276,7 @@ let load path =
     | `Assoc fields -> fields
     | _ -> fail path "configuration must be an object"
   in
-  validate_supported_fields path fields;
+  warn_unknown_fields path fields;
   let name =
     match member "name" fields with
     | Some value -> string path "name" value

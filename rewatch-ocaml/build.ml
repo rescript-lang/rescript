@@ -214,6 +214,11 @@ let dependency_path root name =
     let workspace = Filename.concat (Filename.concat root "packages") package_name in
     List.find_opt Sys.file_exists [sibling; workspace]
 
+let path_is_within ~root path =
+  let root = Unix.realpath root in
+  let path = Unix.realpath path in
+  path = root || String.starts_with ~prefix:(root ^ "/") path
+
 let gentype_dependency_args (config : Config.t) =
   if config.gentype_args = [] then []
   else
@@ -332,7 +337,9 @@ let rec clean_internal ~root_config ~seen ~folder ~prod =
       let dependencies = config.dependencies @ if prod then [] else config.dev_dependencies in
       List.iter (fun (dependency : Config.dependency) ->
         match dependency_path root dependency.name with
-        | Some directory when Sys.file_exists (Filename.concat directory "rescript.json") ->
+        | Some directory
+          when path_is_within ~root directory
+            && Sys.file_exists (Filename.concat directory "rescript.json") ->
           clean_internal ~root_config ~seen:(root :: seen) ~folder:directory ~prod
         | _ -> ()) dependencies;
       let modules = Source.discover config ~prod ~features:None ~filter:None in
@@ -417,7 +424,9 @@ let rec run_internal ~root_config ~seen ~folder ~prod ~features ~warn_error ~wat
       let () = match candidate with
         | None -> ()
         | Some candidate when List.mem candidate (root :: seen) -> ()
-        | Some candidate when Sys.file_exists (Filename.concat candidate "rescript.json") ->
+        | Some candidate
+          when path_is_within ~root candidate
+            && Sys.file_exists (Filename.concat candidate "rescript.json") ->
           run_internal ~root_config ~seen:(root :: seen) ~folder:candidate ~prod ~features:dependency.features ~warn_error:None ~watch ~after_build:None ~filter:None
         | Some _ -> ()
       in

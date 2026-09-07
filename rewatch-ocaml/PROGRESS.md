@@ -46,6 +46,11 @@ selection, stale artifact cleanup, and compiler artifact publication to
 - A project-local copy of `rewatch/testrepo` completes a one-shot build with
   the OCaml executable. This exercises the existing workspace package graph,
   including its package-level dependency back-edge and `namespace-entry`.
+- `rewatch-ocaml/tests/testrepo.sh` provides a repeatable project-local
+  build-and-clean check for that fixture, repairing its external runtime and
+  Belt links inside the temporary copy. Recursive build and clean only own
+  dependencies canonically contained by the target workspace, leaving external
+  linked packages untouched.
 - `bsc-flags` is accepted as the Rust-compatible alias for `compiler-flags`;
   nested compiler flag groups are flattened into direct `bsc` arguments, and
   `--warn-error` replaces config warning errors.
@@ -65,6 +70,8 @@ selection, stale artifact cleanup, and compiler artifact publication to
   cleanup after `SIGTERM`.
 - `watch.lock` contains the running watch process PID, matching the lock-file
   protocol used by the existing integration helpers.
+- Unknown top-level configuration fields emit an explicit warning and are
+  ignored, matching Rust rewatch's forward-compatible configuration behavior.
 
 ## Known gaps
 
