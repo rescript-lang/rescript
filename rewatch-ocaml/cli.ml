@@ -12,6 +12,7 @@ and build_options = {
   features: string list option;
   warn_error: string option;
   after_build: string option;
+  filter: string option;
 }
 
 exception Error of string
@@ -21,33 +22,34 @@ let usage = "Usage: rescript-ocaml [build|watch|clean] [OPTIONS] [FOLDER]"
 let parse argv =
   let args = Array.to_list argv |> List.tl in
   let parse_build ~watch args =
-    let rec loop folder prod features warn_error after_build = function
+    let rec loop folder prod features warn_error after_build filter = function
     | [] ->
-      let command = {folder = Option.value folder ~default:"."; prod; features; warn_error; after_build} in
+      let command = {folder = Option.value folder ~default:"."; prod; features; warn_error; after_build; filter} in
       if watch then Watch command else Build command
     | ("-h" | "--help") :: _ -> Help
     | ("-V" | "--version") :: _ -> Version
-    | "--prod" :: rest -> loop folder true features warn_error after_build rest
+    | "--prod" :: rest -> loop folder true features warn_error after_build filter rest
     | "--features" :: value :: rest ->
       let values = String.split_on_char ',' value |> List.filter (fun x -> x <> "") in
       if values = [] then raise (Error "--features requires a non-empty value");
-      loop folder prod (Some values) warn_error after_build rest
+      loop folder prod (Some values) warn_error after_build filter rest
     | arg :: rest when String.starts_with ~prefix:"--features=" arg ->
       let value = String.sub arg 11 (String.length arg - 11) in
       let values = String.split_on_char ',' value |> List.filter (fun x -> x <> "") in
       if values = [] then raise (Error "--features requires a non-empty value");
-      loop folder prod (Some values) warn_error after_build rest
-    | "--warn-error" :: value :: rest -> loop folder prod features (Some value) after_build rest
-    | ("-a" | "--after-build") :: command :: rest -> loop folder prod features warn_error (Some command) rest
+      loop folder prod (Some values) warn_error after_build filter rest
+    | "--warn-error" :: value :: rest -> loop folder prod features (Some value) after_build filter rest
+    | ("-a" | "--after-build") :: command :: rest -> loop folder prod features warn_error (Some command) filter rest
+    | ("-f" | "--filter") :: pattern :: rest -> loop folder prod features warn_error after_build (Some pattern) rest
     | ("-v" | "-vv" | "-q" | "-qq" | "--no-timing") :: rest ->
-      loop folder prod features warn_error after_build rest
+      loop folder prod features warn_error after_build filter rest
     | arg :: _ when String.length arg > 0 && arg.[0] = '-' ->
       raise (Error ("unknown option " ^ arg))
     | arg :: rest -> (
       match folder with
-      | None -> loop (Some arg) prod features warn_error after_build rest
+      | None -> loop (Some arg) prod features warn_error after_build filter rest
       | Some _ -> raise (Error "too many folder arguments"))
-    in loop None false None None None args
+    in loop None false None None None None args
   in
   match args with
   | "compiler-args" :: [path] -> Compiler_args path

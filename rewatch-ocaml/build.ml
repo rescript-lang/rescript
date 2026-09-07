@@ -51,6 +51,15 @@ let cleanup_stale ~root ~ocaml_dir config modules =
             if Filename.check_suffix value suffix then Filename.chop_suffix value suffix else value)
             (Filename.basename path) suffixes
         in
+        if not (Hashtbl.mem expected (String.capitalize_ascii name)) then remove_file path));
+  ["lib/es6"; "lib/js"] |> List.iter (fun directory ->
+    files_under (Filename.concat root directory) |> List.iter (fun path ->
+      if List.exists (fun suffix -> Filename.check_suffix path suffix) suffixes then
+        let name =
+          List.fold_left (fun value suffix ->
+            if Filename.check_suffix value suffix then Filename.chop_suffix value suffix else value)
+            (Filename.basename path) suffixes
+        in
         if not (Hashtbl.mem expected (String.capitalize_ascii name)) then remove_file path))
 
 let env_path name fallback =
@@ -159,6 +168,23 @@ let generated_js_path (config : Config.t) path (spec : Config.package_spec) =
     (Filename.concat output_dir
       (Filename.remove_extension (Filename.basename path) ^ Config.package_spec_suffix config spec))
 
+let compile_namespace ~bsc ~runtime ~build_dir ~ocaml_dir namespace modules =
+  let mlmap = Filename.concat build_dir (namespace ^ ".mlmap") in
+  let channel = open_out_bin mlmap in
+  Fun.protect ~finally:(fun () -> close_out_noerr channel)
+    (fun () ->
+      output_string channel "randjbuildsystem\n";
+      modules |> List.map (fun module_ -> module_.Source.name) |> List.sort String.compare
+      |> List.iter (fun name -> output_string channel name; output_char channel '\n'));
+  let result =
+    Process.run ~cwd:build_dir bsc
+      ["-runtime-path"; runtime; "-w"; "-49"; "-color"; "always";
+       "-no-alias-deps"; Filename.basename mlmap]
+  in
+  if not (Process.succeeded result) then report_failure "Compiling namespace" namespace result;
+  copy_file (Filename.concat build_dir (namespace ^ ".cmi"))
+    (Filename.concat ocaml_dir (namespace ^ ".cmi"))
+
 let run_post_build (config : Config.t) path =
   match config.js_post_build with
   | None -> ()
@@ -241,6 +267,9 @@ let publish_compiled ~build_dir ~ocaml_dir ~(config : Config.t)
 
 let compile_batch ~bsc ~runtime ~build_dir ~ocaml_dir ~watch ~(config : Config.t)
     ~dependency_dirs jobs =
+  List.iter (fun (_, is_interface, path) ->
+    if not is_interface then
+      List.iter (fun spec -> ensure_dir (Filename.dirname (generated_js_path config path spec))) config.package_specs) jobs;
   let prepared = List.map (fun (module_, is_interface, path) ->
     compile_job ~bsc ~runtime ~build_dir ~watch ~config ~dependency_dirs module_ ~is_interface path) jobs in
   let results = Process.run_parallel (List.map fst prepared) in
@@ -255,6 +284,15 @@ let rec remove_tree path =
 
 let clean ~folder =
   let root = Unix.realpath folder in
+  let config_path = Filename.concat root "rescript.json" in
+  if Sys.file_exists config_path then (
+    let config = Config.load config_path in
+    let modules = Source.discover config ~prod:false ~features:None ~filter:None in
+    List.iter (fun module_ ->
+      List.iter (fun spec ->
+        let output = generated_js_path config module_.Source.implementation spec in
+        remove_file output;
+        remove_file (output ^ ".map")) config.package_specs) modules);
   List.iter (fun dir ->
     let path = Filename.concat root dir in
     remove_tree path)
@@ -318,7 +356,7 @@ let compiler_args path =
     ("parser_args", `List (List.map (fun value -> `String value) parser_args));
   ])
 
-let rec run ~seen ~folder ~prod ~features ~warn_error ~watch ~after_build =
+let rec run ~seen ~folder ~prod ~features ~warn_error ~watch ~after_build ~filter =
   let root = Unix.realpath folder in
   let config = Config.load (Filename.concat root "rescript.json") in
   let config = match warn_error with
@@ -336,7 +374,7 @@ let rec run ~seen ~folder ~prod ~features ~warn_error ~watch ~after_build =
         | None -> ()
         | Some candidate when List.mem candidate seen -> raise (Error ("dependency cycle involving " ^ name))
         | Some candidate when Sys.file_exists (Filename.concat candidate "rescript.json") ->
-          run ~seen:(candidate :: seen) ~folder:candidate ~prod ~features:dependency.features ~warn_error:None ~watch ~after_build:None
+          run ~seen:(candidate :: seen) ~folder:candidate ~prod ~features:dependency.features ~warn_error:None ~watch ~after_build:None ~filter:None
         | Some _ -> ()
       in
       match candidate with
@@ -359,8 +397,9 @@ let rec run ~seen ~folder ~prod ~features ~warn_error ~watch ~after_build =
   let ocaml_dir = Filename.concat root "lib/ocaml" in
   ensure_dir build_dir;
   ensure_dir ocaml_dir;
-  let modules = Source.discover config ~prod ~features in
+  let modules = Source.discover config ~prod ~features ~filter in
   cleanup_stale ~root ~ocaml_dir config modules;
+  Option.iter (fun namespace -> compile_namespace ~bsc ~runtime ~build_dir ~ocaml_dir namespace modules) config.namespace;
   let names = Hashtbl.create (List.length modules) in
   List.iter
     (fun module_ -> Hashtbl.replace names module_.Source.name ())
@@ -437,7 +476,7 @@ let rec run ~seen ~folder ~prod ~features ~warn_error ~watch ~after_build =
     if result.stdout <> "" then print_string result.stdout;
     if result.stderr <> "" then prerr_string result.stderr
 
-let watch ~folder ~prod ~features ~warn_error ~after_build =
+let watch ~folder ~prod ~features ~warn_error ~after_build ~filter =
   let root = Unix.realpath folder in
   let lock_dir = Filename.concat root "lib" in
   ensure_dir lock_dir;
@@ -451,24 +490,45 @@ let watch ~folder ~prod ~features ~warn_error ~after_build =
   let stop () = raise Stop_watch in
   Sys.set_signal Sys.sigint (Sys.Signal_handle (fun _ -> stop ()));
   Sys.set_signal Sys.sigterm (Sys.Signal_handle (fun _ -> stop ()));
-  let snapshot () =
+  let rec dependency_roots seen (config : Config.t) =
+    let dependencies = config.dependencies @ if prod then [] else config.dev_dependencies in
+    dependencies |> List.concat_map (fun (dependency : Config.dependency) ->
+      match dependency_path config.root dependency.name with
+      | Some directory when not (List.mem directory seen)
+        && Sys.file_exists (Filename.concat directory "rescript.json") ->
+        let dependency_config = Config.load (Filename.concat directory "rescript.json") in
+        directory :: dependency_roots (directory :: seen) dependency_config
+      | _ -> [])
+  in
+  let watch_roots () =
+    try root :: dependency_roots [root] (Config.load (Filename.concat root "rescript.json"))
+    with Config.Error _ -> [root]
+  in
+  let snapshot roots =
     let rec walk dir acc =
       let entries = try Sys.readdir dir |> Array.to_list with Sys_error _ -> [] in
       List.fold_left (fun acc name ->
         let path = Filename.concat dir name in
-        if Sys.is_directory path then walk path acc
+        if Sys.is_directory path then
+          if List.mem name ["lib"; "node_modules"; ".git"; "_build"] then acc else walk path acc
         else if Filename.extension path = ".res" || Filename.extension path = ".resi"
           || name = "rescript.json" || name = "package.json" then
           let stat = Unix.stat path in (path, stat.Unix.st_mtime) :: acc
         else acc) acc entries
-    in List.sort compare (walk root [])
+    in List.sort compare (List.concat_map (fun directory -> walk directory []) roots)
   in
-  let rec loop previous =
-    let current = snapshot () in
-    if current <> previous then (try run ~seen:[] ~folder ~prod ~features ~warn_error ~watch:true ~after_build with Error message -> prerr_endline message);
+  let rec loop roots previous =
+    let current = snapshot roots in
+    if current <> previous then (
+      (try run ~seen:[] ~folder ~prod ~features ~warn_error ~watch:true ~after_build ~filter with Error message -> prerr_endline message);
+      let roots = watch_roots () in
+      ignore (Unix.select [] [] [] 0.2);
+      loop roots (snapshot roots))
+    else (
     ignore (Unix.select [] [] [] 0.2);
-    loop current
+    loop roots current)
   in
   Fun.protect
-    (fun () -> run ~seen:[] ~folder ~prod ~features ~warn_error ~watch:true ~after_build; loop (snapshot ()))
+    (fun () -> run ~seen:[] ~folder ~prod ~features ~warn_error ~watch:true ~after_build ~filter;
+      let roots = watch_roots () in loop roots (snapshot roots))
     ~finally:(fun () -> remove_file lock_path)
