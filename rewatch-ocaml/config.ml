@@ -26,6 +26,7 @@ type t = {
   package_specs: package_spec list;
   suffix: string;
   namespace: string option;
+  namespace_entry: string option;
   features: (string * string list) list;
   warning_flags: string list;
   ignored_dirs: string list;
@@ -53,6 +54,16 @@ let bool path field = function
 let strings path field = function
   | `List values -> List.map (string path field) values
   | _ -> fail path (Printf.sprintf "field %S must be an array of strings" field)
+
+let compiler_flags path field = function
+  | `List values ->
+    values |> List.concat_map (function
+      | `String value -> String.split_on_char ' ' value |> List.filter ((<>) "")
+      | `List values ->
+        values |> List.concat_map (fun value ->
+          string path field value |> String.split_on_char ' ' |> List.filter ((<>) ""))
+      | _ -> fail path (Printf.sprintf "field %S entries must be strings or arrays" field))
+  | _ -> fail path (Printf.sprintf "field %S must be an array" field)
 
 let dependency_name path = function
   | `String value -> {name = value; features = None}
@@ -127,9 +138,11 @@ let validate_supported_fields path fields =
       "dependencies";
       "dev-dependencies";
       "compiler-flags";
+      "bsc-flags";
       "package-specs";
       "suffix";
       "namespace";
+      "namespace-entry";
       "features";
       "ignored-dirs";
       "warnings";
@@ -223,10 +236,18 @@ let load path =
     | Some (`String value) -> Some value
     | Some _ -> fail path "field \"namespace\" must be a boolean or string"
   in
+  let namespace_entry =
+    match member "namespace-entry" fields, namespace with
+    | None, _ -> None
+    | Some _, None -> fail path "field \"namespace-entry\" requires a namespace"
+    | Some value, Some _ -> Some (string path "namespace-entry" value)
+  in
   let compiler_flags =
-    match member "compiler-flags" fields with
-    | None -> []
-    | Some value -> strings path "compiler-flags" value
+    match member "compiler-flags" fields, member "bsc-flags" fields with
+    | Some _, Some _ -> fail path "fields \"compiler-flags\" and \"bsc-flags\" cannot both be set"
+    | Some value, None -> compiler_flags path "compiler-flags" value
+    | None, Some value -> compiler_flags path "bsc-flags" value
+    | None, None -> []
   in
   let warning_flags =
     match member "warnings" fields with
@@ -341,10 +362,11 @@ let load path =
     sources = parse_sources path fields;
     dependencies = dependencies path "dependencies" fields;
     dev_dependencies = dependencies path "dev-dependencies" fields;
-    compiler_flags = warning_flags @ compiler_flags;
+    compiler_flags;
     package_specs;
     suffix;
     namespace;
+    namespace_entry;
     features;
     warning_flags;
     ignored_dirs;
