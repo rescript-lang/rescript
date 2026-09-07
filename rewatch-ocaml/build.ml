@@ -234,9 +234,13 @@ let dependency_path root name =
   ] in
   List.find_opt Sys.file_exists candidates
 
-let rec run ~seen ~folder ~prod ~features =
+let rec run ~seen ~folder ~prod ~features ~warn_error =
   let root = Unix.realpath folder in
   let config = Config.load (Filename.concat root "rescript.json") in
+  let config = match warn_error with
+    | None -> config
+    | Some value -> {config with compiler_flags = config.compiler_flags @ ["-warn-error"; value]}
+  in
   let dependency_dirs =
     let dependencies : Config.dependency list =
       config.dependencies @ if prod then [] else config.dev_dependencies
@@ -248,7 +252,7 @@ let rec run ~seen ~folder ~prod ~features =
         | None -> ()
         | Some candidate when List.mem candidate seen -> raise (Error ("dependency cycle involving " ^ name))
         | Some candidate when Sys.file_exists (Filename.concat candidate "rescript.json") ->
-          run ~seen:(candidate :: seen) ~folder:candidate ~prod ~features:dependency.features
+          run ~seen:(candidate :: seen) ~folder:candidate ~prod ~features:dependency.features ~warn_error:None
         | Some _ -> ()
       in
       match candidate with
@@ -342,7 +346,7 @@ let rec run ~seen ~folder ~prod ~features =
       (List.map (fun module_ -> (module_, false, module_.Source.implementation)) modules)) levels;
   Printf.printf "Finished compilation\n%!"
 
-let watch ~folder ~prod ~features =
+let watch ~folder ~prod ~features ~warn_error =
   let root = Unix.realpath folder in
   let lock_dir = Filename.concat root "lib" in
   ensure_dir lock_dir;
@@ -370,10 +374,10 @@ let watch ~folder ~prod ~features =
   in
   let rec loop previous =
     let current = snapshot () in
-    if current <> previous then (try run ~seen:[] ~folder ~prod ~features with Error message -> prerr_endline message);
+    if current <> previous then (try run ~seen:[] ~folder ~prod ~features ~warn_error with Error message -> prerr_endline message);
     ignore (Unix.select [] [] [] 0.2);
     loop current
   in
   Fun.protect
-    (fun () -> run ~seen:[] ~folder ~prod ~features; loop (snapshot ()))
+    (fun () -> run ~seen:[] ~folder ~prod ~features ~warn_error; loop (snapshot ()))
     ~finally:(fun () -> remove_file lock_path)
