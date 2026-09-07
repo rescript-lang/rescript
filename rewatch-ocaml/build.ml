@@ -73,7 +73,7 @@ let report_failure action path result =
           (Process.status_string result.status)
        output))
 
-let compiler_flags (config : Config.t) =
+let compiler_flags ~source_maps ~watch (config : Config.t) =
   let ppx_args =
     config.ppx_flags |> List.concat_map (fun flag ->
       let candidates = [Filename.concat config.root flag; Filename.concat (Filename.concat config.root "node_modules") flag] in
@@ -81,13 +81,16 @@ let compiler_flags (config : Config.t) =
         | Some path -> Unix.realpath path | None -> flag
       in ["-ppx"; executable])
   in
-  ppx_args @ config.jsx_args @ config.source_map_args @ config.experimental_args @ config.compiler_flags
+  let source_map_args =
+    if source_maps && (watch || not config.source_map_dev) then config.source_map_args else []
+  in
+  ppx_args @ config.jsx_args @ source_map_args @ config.experimental_args @ config.compiler_flags
 
 let parse_file ~bsc ~build_dir ~(config : Config.t) path =
   let ast = Source.ast_path path in
   ensure_dir (Filename.concat build_dir (Filename.dirname ast));
   let args =
-    compiler_flags config
+    compiler_flags ~source_maps:false ~watch:false config
     @ ["-absname"; "-bs-ast"; "-o"; ast; Filename.concat "../.." path]
   in
   let result = Process.run ~cwd:build_dir bsc args in
@@ -108,7 +111,7 @@ let parse_file ~bsc ~build_dir ~(config : Config.t) path =
 let parse_job ~bsc ~build_dir ~(config : Config.t) path =
   let ast = Source.ast_path path in
   ensure_dir (Filename.concat build_dir (Filename.dirname ast));
-  let args = compiler_flags config @ ["-absname"; "-bs-ast"; "-o"; ast; Filename.concat "../.." path] in
+  let args = compiler_flags ~source_maps:false ~watch:false config @ ["-absname"; "-bs-ast"; "-o"; ast; Filename.concat "../.." path] in
   Process.{program = bsc; args; cwd = build_dir}, ast
 
 let ast_dependencies ~build_dir ast =
@@ -167,7 +170,7 @@ let run_post_build (config : Config.t) path =
       if result.stdout <> "" then print_string result.stdout;
       if result.stderr <> "" then prerr_string result.stderr) config.package_specs
 
-let compile_file ~bsc ~runtime ~build_dir ~ocaml_dir ~(config : Config.t)
+let compile_file ~bsc ~runtime ~build_dir ~ocaml_dir ~watch ~(config : Config.t)
     ~dependency_dirs (module_ : Source.module_) ~is_interface path =
   let ast = Source.ast_path path in
   let namespace_args =
@@ -192,7 +195,7 @@ let compile_file ~bsc ~runtime ~build_dir ~ocaml_dir ~(config : Config.t)
     @ ["-I"; "../ocaml"]
     @ List.concat_map (fun dir -> ["-I"; dir]) dependency_dirs
     @ ["-runtime-path"; runtime]
-    @ compiler_flags config
+    @ compiler_flags ~source_maps:true ~watch config
     @ ["-bs-package-name"; config.name; "-bs-project-root"; config.root]
     @ output_args @ [ast]
   in
@@ -211,7 +214,7 @@ let compile_file ~bsc ~runtime ~build_dir ~ocaml_dir ~(config : Config.t)
         (Filename.concat ocaml_dir (basename ^ "." ^ extension)))
     extensions
 
-let compile_job ~bsc ~runtime ~build_dir ~(config : Config.t) ~dependency_dirs
+let compile_job ~bsc ~runtime ~build_dir ~watch ~(config : Config.t) ~dependency_dirs
     (module_ : Source.module_) ~is_interface path =
   let ast = Source.ast_path path in
   let namespace_args = match config.namespace with None -> [] | Some n -> ["-bs-ns"; n] in
@@ -219,7 +222,7 @@ let compile_job ~bsc ~runtime ~build_dir ~(config : Config.t) ~dependency_dirs
   let output_args = if is_interface then [] else List.concat_map (fun spec -> ["-bs-package-output"; package_output config path spec]) config.package_specs in
   let args = namespace_args @ interface_args @ ["-I"; "../ocaml"]
     @ List.concat_map (fun dir -> ["-I"; dir]) dependency_dirs
-    @ ["-runtime-path"; runtime] @ compiler_flags config
+    @ ["-runtime-path"; runtime] @ compiler_flags ~source_maps:true ~watch config
     @ ["-bs-package-name"; config.name; "-bs-project-root"; config.root]
     @ output_args @ [ast]
   in
@@ -236,10 +239,10 @@ let publish_compiled ~build_dir ~ocaml_dir ~(config : Config.t)
     (Filename.concat ocaml_dir (basename ^ "." ^ extension))) extensions;
   if not is_interface then run_post_build config path
 
-let compile_batch ~bsc ~runtime ~build_dir ~ocaml_dir ~(config : Config.t)
+let compile_batch ~bsc ~runtime ~build_dir ~ocaml_dir ~watch ~(config : Config.t)
     ~dependency_dirs jobs =
   let prepared = List.map (fun (module_, is_interface, path) ->
-    compile_job ~bsc ~runtime ~build_dir ~config ~dependency_dirs module_ ~is_interface path) jobs in
+    compile_job ~bsc ~runtime ~build_dir ~watch ~config ~dependency_dirs module_ ~is_interface path) jobs in
   let results = Process.run_parallel (List.map fst prepared) in
   List.iter2 (fun (_, info) result -> publish_compiled ~build_dir ~ocaml_dir ~config info result) prepared results
 
@@ -266,7 +269,7 @@ let dependency_path root name =
   ] in
   List.find_opt Sys.file_exists candidates
 
-let rec run ~seen ~folder ~prod ~features ~warn_error =
+let rec run ~seen ~folder ~prod ~features ~warn_error ~watch =
   let root = Unix.realpath folder in
   let config = Config.load (Filename.concat root "rescript.json") in
   let config = match warn_error with
@@ -284,7 +287,7 @@ let rec run ~seen ~folder ~prod ~features ~warn_error =
         | None -> ()
         | Some candidate when List.mem candidate seen -> raise (Error ("dependency cycle involving " ^ name))
         | Some candidate when Sys.file_exists (Filename.concat candidate "rescript.json") ->
-          run ~seen:(candidate :: seen) ~folder:candidate ~prod ~features:dependency.features ~warn_error:None
+          run ~seen:(candidate :: seen) ~folder:candidate ~prod ~features:dependency.features ~warn_error:None ~watch
         | Some _ -> ()
       in
       match candidate with
@@ -372,9 +375,9 @@ let rec run ~seen ~folder ~prod ~features ~warn_error =
   in
   List.iter (fun (_, modules) ->
     let modules = List.rev modules in
-    compile_batch ~bsc ~runtime ~build_dir ~ocaml_dir ~config ~dependency_dirs
+    compile_batch ~bsc ~runtime ~build_dir ~ocaml_dir ~watch ~config ~dependency_dirs
       (List.filter_map (fun module_ -> Option.map (fun path -> (module_, true, path)) module_.Source.interface) modules);
-    compile_batch ~bsc ~runtime ~build_dir ~ocaml_dir ~config ~dependency_dirs
+    compile_batch ~bsc ~runtime ~build_dir ~ocaml_dir ~watch ~config ~dependency_dirs
       (List.map (fun module_ -> (module_, false, module_.Source.implementation)) modules)) levels;
   Printf.printf "Finished compilation\n%!"
 
@@ -406,10 +409,10 @@ let watch ~folder ~prod ~features ~warn_error =
   in
   let rec loop previous =
     let current = snapshot () in
-    if current <> previous then (try run ~seen:[] ~folder ~prod ~features ~warn_error with Error message -> prerr_endline message);
+    if current <> previous then (try run ~seen:[] ~folder ~prod ~features ~warn_error ~watch:true with Error message -> prerr_endline message);
     ignore (Unix.select [] [] [] 0.2);
     loop current
   in
   Fun.protect
-    (fun () -> run ~seen:[] ~folder ~prod ~features ~warn_error; loop (snapshot ()))
+    (fun () -> run ~seen:[] ~folder ~prod ~features ~warn_error ~watch:true; loop (snapshot ()))
     ~finally:(fun () -> remove_file lock_path)

@@ -3,7 +3,7 @@ let () =
     match Cli.parse Sys.argv with
     | Cli.Help -> print_endline Cli.usage
     | Cli.Version -> print_endline "rescript-ocaml experimental"
-    | Cli.Build {folder; prod; features; warn_error} -> Build.run ~seen:[] ~folder ~prod ~features ~warn_error
+    | Cli.Build {folder; prod; features; warn_error} -> Build.run ~seen:[] ~folder ~prod ~features ~warn_error ~watch:false
     | Cli.Watch {folder; prod; features; warn_error} -> Build.watch ~folder ~prod ~features ~warn_error
     | Cli.Format {check; stdin; files} -> Format.run ~check ~stdin ~files
     | Cli.Clean folder -> Build.clean ~folder

@@ -32,6 +32,7 @@ type t = {
   ppx_flags: string list;
   jsx_args: string list;
   source_map_args: string list;
+  source_map_dev: bool;
   experimental_args: string list;
   js_post_build: string option;
 }
@@ -269,29 +270,29 @@ let load path =
       in version @ module_ @ mode @ preserve
     | Some _ -> fail path "field \"jsx\" must be an object"
   in
-  let source_map_args =
+  let source_map_args, source_map_dev =
     match member "sourceMap" fields with
-    | None -> []
-    | Some (`Bool false) -> ["-bs-source-map"; "false"]
+    | None -> ([], false)
+    | Some (`Bool false) -> (["-bs-source-map"; "false"], false)
     | Some (`Assoc options) ->
       let mode = match member "mode" options with
         | None -> "linked"
         | Some (`String ("linked" | "inline" | "hidden" as value)) -> value
         | Some _ -> fail path "field \"sourceMap.mode\" is invalid"
       in
-      let enabled = match member "enabled" options with
-        | None | Some (`Bool true) -> true
-        | Some (`Bool false) -> false
-        | Some (`String "dev") -> true
+      let enabled, dev_only = match member "enabled" options with
+        | None | Some (`Bool true) -> (true, false)
+        | Some (`Bool false) -> (false, false)
+        | Some (`String "dev") -> (true, true)
         | Some _ -> fail path "field \"sourceMap.enabled\" is invalid"
       in
-      if not enabled then ["-bs-source-map"; "false"] else
+      if not enabled then (["-bs-source-map"; "false"], false) else
       let content = match member "sourcesContent" options with
         | None -> [] | Some (`Bool value) -> ["-bs-source-map-sources-content"; string_of_bool value]
         | Some _ -> fail path "field \"sourceMap.sourcesContent\" must be a boolean" in
       let root = match member "sourceRoot" options with
         | None -> [] | Some value -> ["-bs-source-map-root"; string path "sourceMap.sourceRoot" value] in
-      ["-bs-source-map"; mode] @ content @ root
+      (["-bs-source-map"; mode] @ content @ root, dev_only)
     | Some _ -> fail path "field \"sourceMap\" must be false or an object"
   in
   let experimental_args =
@@ -345,6 +346,7 @@ let load path =
     ppx_flags;
     jsx_args;
     source_map_args;
+    source_map_dev;
     experimental_args;
     js_post_build;
   }
