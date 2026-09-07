@@ -1,0 +1,15 @@
+(library
+ (name rewatch_ocaml_lib)
+ (wrapped false)
+ (modules cli config process source graph build)
+ (libraries unix yojson))
+
+(executable
+ (name rescript_ocaml)
+ (modules rescript_ocaml)
+ (libraries rewatch_ocaml_lib))
+
+(test
+ (name unit_tests)
+ (modules unit_tests)
+ (libraries rewatch_ocaml_lib))
