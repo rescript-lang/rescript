@@ -1,6 +1,6 @@
 type command =
   | Build of build_options
-  | Clean of string
+  | Clean of {folder: string; prod: bool}
   | Watch of build_options
   | Format of {check: bool; stdin: string option; files: string list}
   | Compiler_args of string
@@ -67,7 +67,15 @@ let parse argv =
         loop check stdin (file :: files) more
     in loop false None [] rest
   | "clean" :: rest ->
-    (match rest with [] -> Clean "." | [folder] -> Clean folder | _ -> raise (Error "too many folder arguments"))
+    let rec loop folder prod = function
+      | [] -> Clean {folder = Option.value folder ~default:"."; prod}
+      | "--prod" :: more -> loop folder true more
+      | arg :: _ when String.length arg > 0 && arg.[0] = '-' -> raise (Error ("unknown clean option " ^ arg))
+      | path :: more ->
+        (match folder with
+        | None -> loop (Some path) prod more
+        | Some _ -> raise (Error "too many folder arguments"))
+    in loop None false rest
   | "watch" :: rest -> parse_build ~watch:true rest
   | "build" :: rest -> parse_build ~watch:false rest
   | rest -> parse_build ~watch:false rest
