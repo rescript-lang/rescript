@@ -28,6 +28,7 @@ type t = {
   namespace: string option;
   features: (string * string list) list;
   warning_flags: string list;
+  ignored_dirs: string list;
 }
 
 exception Error of string
@@ -124,6 +125,7 @@ let validate_supported_fields path fields =
       "suffix";
       "namespace";
       "features";
+      "ignored-dirs";
       "warnings";
       "ppx-flags";
       "jsx";
@@ -247,6 +249,11 @@ let load path =
         values
     | Some _ -> fail path "field \"features\" must be an object"
   in
+  let ignored_dirs =
+    match member "ignored-dirs" fields with
+    | None -> []
+    | Some value -> strings path "ignored-dirs" value
+  in
   {
     path;
     root;
@@ -260,6 +267,7 @@ let load path =
     namespace;
     features;
     warning_flags;
+    ignored_dirs;
   }
 
 let package_spec_suffix (config : t) (spec : package_spec) =
