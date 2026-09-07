@@ -20,7 +20,16 @@ exception Error of string
 let usage = "Usage: rescript-ocaml [build|watch|clean] [OPTIONS] [FOLDER]"
 
 let parse argv =
-  let args = Array.to_list argv |> List.tl in
+  let rec remove_leading_global_options = function
+    | ("-v" | "-vv" | "-vvv" | "-vvvv" | "--verbose" | "-q" | "-qq"
+      | "-qqq" | "-qqqq" | "--quiet")
+      :: rest ->
+      remove_leading_global_options rest
+    | args -> args
+  in
+  let args =
+    Array.to_list argv |> List.tl |> remove_leading_global_options
+  in
   let parse_build ~watch args =
     let rec loop folder prod features warn_error after_build filter = function
     | [] ->
@@ -41,7 +50,13 @@ let parse argv =
     | "--warn-error" :: value :: rest -> loop folder prod features (Some value) after_build filter rest
     | ("-a" | "--after-build") :: command :: rest -> loop folder prod features warn_error (Some command) filter rest
     | ("-f" | "--filter") :: pattern :: rest -> loop folder prod features warn_error after_build (Some pattern) rest
-    | ("-v" | "-vv" | "-q" | "-qq" | "--no-timing") :: rest ->
+    | "--no-timing" :: _ when watch ->
+      raise (Error "unknown option --no-timing")
+    | "--no-timing" :: rest ->
+      loop folder prod features warn_error after_build filter rest
+    | ("-v" | "-vv" | "-vvv" | "-vvvv" | "--verbose" | "-q" | "-qq"
+      | "-qqq" | "-qqqq" | "--quiet")
+      :: rest ->
       loop folder prod features warn_error after_build filter rest
     | arg :: _ when String.length arg > 0 && arg.[0] = '-' ->
       raise (Error ("unknown option " ^ arg))
