@@ -404,7 +404,10 @@ let compiler_flags ~source_maps ~watch ~gentype (config : Config.t) =
       in ["-ppx"; String.concat " " (executable :: arguments)])
   in
   let source_map_args =
-    if source_maps && (watch || not config.source_map_dev) then config.source_map_args else []
+    if not source_maps then []
+    else if config.source_map_dev && not watch then
+      ["-bs-source-map"; "false"]
+    else config.source_map_args
   in
   ppx_args @ config.jsx_args @ source_map_args @ config.experimental_args
   @ (if gentype then config.gentype_args else [])

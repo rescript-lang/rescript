@@ -1,5 +1,10 @@
 let check condition message = if not condition then failwith message
 
+let rec contains_adjacent left right = function
+  | current :: next :: _ when current = left && next = right -> true
+  | _ :: rest -> contains_adjacent left right rest
+  | [] -> false
+
 let write_file path contents =
   Build.ensure_dir (Filename.dirname path);
   let channel = open_out_bin path in
@@ -187,7 +192,56 @@ let () =
         with Config.Error message ->
           Build.contains_text message "Duplicate package-spec suffix"
       in
-      check duplicate_rejected "duplicate package output is rejected");
+      check duplicate_rejected "duplicate package output is rejected";
+      write_file config_path {|{"name":"source-map","sourceMap":true}|};
+      let boolean_source_map_rejected =
+        try
+          ignore (Config.load config_path);
+          false
+        with Config.Error message ->
+          Build.contains_text message "sourceMap true is unsupported"
+      in
+      check boolean_source_map_rejected "sourceMap true is rejected";
+      write_file config_path
+        {|{"name":"source-map","sourceMap":{"mode":"linked"}}|};
+      let missing_source_map_enabled_rejected =
+        try
+          ignore (Config.load config_path);
+          false
+        with Config.Error message ->
+          Build.contains_text message "missing field \"enabled\""
+      in
+      check missing_source_map_enabled_rejected
+        "sourceMap enabled is required";
+      write_file config_path
+        {|{
+          "name": "source-map",
+          "sourceMap": {"enabled": "dev", "mode": "linked"}
+        }|};
+      let config = Config.load config_path in
+      check config.source_map_dev "sourceMap dev mode is parsed";
+      check
+        (contains_adjacent "-bs-source-map" "false"
+           (Build.compiler_flags ~source_maps:true ~watch:false
+              ~gentype:false config))
+        "sourceMap dev mode is disabled for one-shot builds";
+      check
+        (contains_adjacent "-bs-source-map" "linked"
+           (Build.compiler_flags ~source_maps:true ~watch:true
+              ~gentype:false config))
+        "sourceMap dev mode is enabled for watch builds";
+      write_file config_path
+        {|{
+          "name": "source-map",
+          "sourceMap": {"enabled": "always", "mode": "inline"}
+        }|};
+      let config = Config.load config_path in
+      check (not config.source_map_dev) "sourceMap always mode is parsed";
+      check
+        (contains_adjacent "-bs-source-map" "inline"
+           (Build.compiler_flags ~source_maps:true ~watch:false
+              ~gentype:false config))
+        "sourceMap always mode is enabled for one-shot builds");
   let dependency_root =
     Filename.temp_file "rewatch-ocaml-allowed-dependents-" ""
   in
