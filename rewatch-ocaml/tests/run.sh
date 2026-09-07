@@ -36,6 +36,8 @@ monorepo="$work/monorepo"
 "$port" compiler-args "$basic/src/A.res" | grep '"compiler_args"' >/dev/null
 sed 's/"suffix": "\.mjs"/"suffix": "\.mjs", "bsc-flags": ["-w -9"]/' "$basic/rescript.json" > "$basic/rescript.next"
 mv "$basic/rescript.next" "$basic/rescript.json"
+sed 's/"module": "esmodule"/"module": "es6"/' "$basic/rescript.json" > "$basic/rescript.next"
+mv "$basic/rescript.next" "$basic/rescript.json"
 "$port" compiler-args "$basic/src/A.res" | grep '"-9"' >/dev/null
 "$port" compiler-args "$gentype/src/Main.res" | grep '"-bs-gentype-generated-extension"' >/dev/null
 
@@ -66,6 +68,8 @@ rm -rf "$basic/lib" "$cycle/lib" "$failure/lib"
 rm -rf "$features/lib"
 rm -rf "$gentype/lib"
 rm -rf "$dependency/lib" "$dependency/node_modules/dep/lib"
+sed 's/"dependencies"/"bs-dependencies"/' "$dependency/rescript.json" > "$dependency/rescript.next"
+mv "$dependency/rescript.next" "$dependency/rescript.json"
 rm -rf "$post_build/lib"
 rm -rf "$out_of_source/lib"
 rm -rf "$namespace/lib"

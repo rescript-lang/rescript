@@ -49,6 +49,9 @@ selection, stale artifact cleanup, and compiler artifact publication to
 - `bsc-flags` is accepted as the Rust-compatible alias for `compiler-flags`;
   nested compiler flag groups are flattened into direct `bsc` arguments, and
   `--warn-error` replaces config warning errors.
+- Legacy `bs-dependencies`, `bs-dev-dependencies`, `es6`, and `cjs`
+  configuration aliases are accepted with the same effective dependency and
+  package-output behavior as their modern spellings.
 - `gentypeconfig` is validated and projected to compile-only `bsc` flags. The
   focused fixture verifies argument projection and a successful GenType-enabled
   build.
