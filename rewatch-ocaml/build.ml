@@ -31,7 +31,20 @@ let rec files_under directory =
   else Sys.readdir directory |> Array.to_list
     |> List.concat_map (fun name -> files_under (Filename.concat directory name))
 
-let cleanup_stale ~root ~ocaml_dir config modules =
+let generated_js_path (config : Config.t) path (spec : Config.package_spec) =
+  let directory = Filename.dirname path in
+  let output_dir =
+    if spec.in_source then directory
+    else
+      Filename.concat
+        (match spec.module_format with Config.Esmodule -> "lib/es6" | Config.Commonjs -> "lib/js")
+        directory
+  in
+  Filename.concat config.root
+    (Filename.concat output_dir
+      (Filename.remove_extension (Filename.basename path) ^ Config.package_spec_suffix config spec))
+
+let cleanup_stale ~root ~ocaml_dir (config : Config.t) modules =
   let expected = Hashtbl.create (List.length modules) in
   List.iter (fun module_ -> Hashtbl.replace expected module_.Source.name ()) modules;
   files_under ocaml_dir |> List.iter (fun path ->
@@ -42,25 +55,18 @@ let cleanup_stale ~root ~ocaml_dir config modules =
         base [".cmi"; ".cmj"; ".cmt"; ".cmti"; ".ast"; ".iast"]
     in
     if not (Hashtbl.mem expected name) then remove_file path);
-  let suffixes = List.map (Config.package_spec_suffix config) config.package_specs in
+  let suffixes = [".js"; ".mjs"; ".cjs"; ".bs.js"; ".bs.mjs"; ".bs.cjs"] in
+  let expected_outputs = Hashtbl.create (List.length modules * List.length config.package_specs) in
+  List.iter (fun module_ -> List.iter (fun spec ->
+    Hashtbl.replace expected_outputs (generated_js_path config module_.Source.implementation spec) ()) config.package_specs) modules;
   config.sources |> List.iter (fun source ->
     files_under (Filename.concat root source.Config.dir) |> List.iter (fun path ->
       if List.exists (fun suffix -> Filename.check_suffix path suffix) suffixes then
-        let name =
-          List.fold_left (fun value suffix ->
-            if Filename.check_suffix value suffix then Filename.chop_suffix value suffix else value)
-            (Filename.basename path) suffixes
-        in
-        if not (Hashtbl.mem expected (String.capitalize_ascii name)) then remove_file path));
+        if not (Hashtbl.mem expected_outputs path) then remove_file path));
   ["lib/es6"; "lib/js"] |> List.iter (fun directory ->
     files_under (Filename.concat root directory) |> List.iter (fun path ->
       if List.exists (fun suffix -> Filename.check_suffix path suffix) suffixes then
-        let name =
-          List.fold_left (fun value suffix ->
-            if Filename.check_suffix value suffix then Filename.chop_suffix value suffix else value)
-            (Filename.basename path) suffixes
-        in
-        if not (Hashtbl.mem expected (String.capitalize_ascii name)) then remove_file path))
+        if not (Hashtbl.mem expected_outputs path) then remove_file path))
 
 let env_path name fallback =
   match Sys.getenv_opt name with
@@ -159,16 +165,6 @@ let package_output (config : Config.t) path (spec : Config.package_spec) =
     (Config.module_format_name spec.module_format)
     output_dir
     (Config.package_spec_suffix config spec)
-
-let generated_js_path (config : Config.t) path (spec : Config.package_spec) =
-  let directory = Filename.dirname path in
-  let output_dir =
-    if spec.in_source then directory
-    else Filename.concat (match spec.module_format with Config.Esmodule -> "lib/es6" | Config.Commonjs -> "lib/js") directory
-  in
-  Filename.concat config.root
-    (Filename.concat output_dir
-      (Filename.remove_extension (Filename.basename path) ^ Config.package_spec_suffix config spec))
 
 let compile_namespace ~bsc ~runtime ~build_dir ~ocaml_dir namespace modules =
   let mlmap = Filename.concat build_dir (namespace ^ ".mlmap") in
