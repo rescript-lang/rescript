@@ -194,6 +194,27 @@ an owner PID and can themselves be recovered after an interrupted takeover.
   build: `compiler-args` omits unavailable expanded source/dependency paths,
   while builds retain them; both include the workspace project root.
 
+## Performance snapshot
+
+One Linux development-build sample was taken on the current 10-CPU container
+using the full `rewatch/testrepo`, the same external `bsc` and runtime, and a
+10–20 ms `/proc` sampler that sums the live process tree. Times and peak RSS are
+therefore comparative observations, not a benchmark distribution:
+
+| Scenario | Rust | OCaml |
+| --- | ---: | ---: |
+| Clean build | 7,433 ms / 266,964 KiB | 10,869 ms / 287,396 KiB |
+| Unchanged build | 616 ms / 40,056 KiB | 833 ms / 31,600 KiB |
+| Single-module edit | 589 ms / 44,824 KiB | 843 ms / 26,632 KiB |
+| Watch edit visible | 111 ms | 738 ms |
+| Idle watcher | 22,444 KiB / 10 ms CPU per 2 s | 7,568 KiB / 30 ms CPU per 2 s |
+
+The OCaml subprocess bound now follows the detected CPU count, capped at 32;
+raising it from the provisional fixed value of four reduced this sample's clean
+build from 14,065 ms to 10,869 ms. The remaining clean/edit gap is consistent
+with reconstructing package/global state on every command, while watch latency
+also includes the 200 ms polling interval.
+
 ## Known gaps
 
 - Incremental state currently relies on artifact timestamps and byte-identical
@@ -201,7 +222,7 @@ an owner PID and can themselves be recovered after an interrupted takeover.
   storage are not yet ported.
 - Packages are deduplicated during recursive traversal, but compilation still
   happens as separate per-package graphs rather than Rust's unified graph.
-- Full configuration validation parity, telemetry, performance evaluation, and
+- Full configuration validation parity, telemetry, performance parity, and
   production-grade filesystem watching remain incomplete.
 - `watch` currently uses conservative polling and has no signal/lock/event
   batching parity with Rust rewatch.
