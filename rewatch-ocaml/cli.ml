@@ -3,6 +3,7 @@ type command =
   | Clean of string
   | Watch of build_options
   | Format of {check: bool; stdin: string option; files: string list}
+  | Compiler_args of string
   | Help | Version
 
 and build_options = {folder: string; prod: bool; features: string list option; warn_error: string option}
@@ -42,6 +43,8 @@ let parse argv =
     in loop None false None None args
   in
   match args with
+  | "compiler-args" :: [path] -> Compiler_args path
+  | "compiler-args" :: _ -> raise (Error "compiler-args requires exactly one source file")
   | "format" :: rest ->
     let rec loop check stdin files = function
       | [] -> Format {check; stdin; files = List.rev files}

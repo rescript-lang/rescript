@@ -21,6 +21,8 @@ features="$work/features"
 dependency="$work/dependency"
 post_build="$work/post-build"
 
+"$port" compiler-args "$basic/src/A.res" | grep '"compiler_args"' >/dev/null
+
 cleanup() {
   rm -rf "$work"
 }
