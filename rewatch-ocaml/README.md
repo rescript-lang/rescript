@@ -48,3 +48,12 @@ bash rewatch/tests/compile/01-basic-compile.sh
 
 See `PROGRESS.md` for verified coverage, measurements, review results, and
 remaining compatibility or platform gaps.
+
+## Platform status
+
+Windows support is required for completion, even though runtime verification is
+not available in the current Linux development environment. The present
+experimental subprocess and watcher implementation is Unix-only; `PROGRESS.md`
+tracks the portability blockers. Shared path construction must use OCaml's
+`Filename` APIs so Windows separators and drive roots are not hard-coded
+assumptions.
