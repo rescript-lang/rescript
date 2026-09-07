@@ -48,7 +48,9 @@ selection, stale artifact cleanup, and compiler artifact publication to
   `--warn-error` replaces config warning errors.
 - The integration runner starts watch mode, confirms the lock, performs a
   source edit, changes the configured output suffix, observes the resulting
-  rebuild and stale-output removal, and confirms lock cleanup after `SIGTERM`.
+  rebuild and stale-output removal, adds then deletes a source module while
+  observing its generated output appear and disappear, and confirms lock
+  cleanup after `SIGTERM`.
 
 ## Known gaps
 
