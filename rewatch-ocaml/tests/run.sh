@@ -26,6 +26,8 @@ cleanup() {
 }
 trap cleanup EXIT
 
+printf 'let formatted=1\n' | "$port" format --stdin .res | grep 'let formatted = 1' >/dev/null
+
 rm -rf "$basic/lib" "$cycle/lib" "$failure/lib"
 rm -rf "$features/lib"
 rm -rf "$dependency/lib" "$dependency/node_modules/dep/lib"
