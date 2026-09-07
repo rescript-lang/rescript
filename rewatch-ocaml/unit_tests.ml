@@ -1,5 +1,11 @@
 let check condition message = if not condition then failwith message
 
+let write_file path contents =
+  Build.ensure_dir (Filename.dirname path);
+  let channel = open_out_bin path in
+  Fun.protect ~finally:(fun () -> close_out_noerr channel) (fun () ->
+    output_string channel contents)
+
 let () =
   let node name deps = (name, deps) in
   let nodes = [node "C" ["B"]; node "A" []; node "B" ["A"]] in
@@ -76,6 +82,25 @@ let () =
     with Cli.Error _ -> true
   in
   check watch_no_timing_rejected "watch rejects build-only --no-timing";
+  check
+    (match Cli.parse [|"rescript-ocaml"; "watch"; "--clear-screen"|] with
+    | Cli.Watch options -> options.clear_screen
+    | _ -> false)
+    "watch parses --clear-screen";
+  check
+    (match
+       Cli.parse
+         [|"rescript-ocaml"; "build"; "--features"; " native , web "|]
+     with
+    | Cli.Build options -> options.features = Some ["native"; "web"]
+    | _ -> false)
+    "feature names are trimmed";
+  check
+    (Build.dependent_is_allowed (Some ["app"]) "app")
+    "listed dependent is allowed";
+  check
+    (not (Build.dependent_is_allowed (Some ["other"]) "app"))
+    "unlisted dependent is rejected";
   let lock_root = Filename.temp_file "rewatch-ocaml-stale-lock-" "" in
   Sys.remove lock_root;
   Unix.mkdir lock_root 0o755;
@@ -102,4 +127,88 @@ let () =
         (Build.read_lock_owner lock = Some (string_of_int (Unix.getpid ())))
         "stale build lock is replaced";
       check (not (Sys.file_exists takeover)) "stale takeover marker is removed";
-      release ())
+      release ());
+  let config_root = Filename.temp_file "rewatch-ocaml-config-" "" in
+  Sys.remove config_root;
+  Unix.mkdir config_root 0o755;
+  Fun.protect
+    ~finally:(fun () -> Build.remove_tree config_root)
+    (fun () ->
+      let config_path = Filename.concat config_root "rescript.json" in
+      write_file config_path
+        {|{
+          "name": "restricted",
+          "allowed-dependents": ["app"]
+        }|};
+      let config = Config.load config_path in
+      check
+        (config.allowed_dependents = Some ["app"])
+        "allowed-dependents is parsed";
+      write_file config_path {|{"name":"default-output","suffix":".mjs"}|};
+      let config = Config.load config_path in
+      check
+        (match config.package_specs with
+        | [spec] -> Config.package_spec_suffix config spec = ".js"
+        | _ -> false)
+        "package-specs default output suffix is .js";
+      write_file config_path
+        {|{"name":"legacy-output","package-specs":{"module":"cjs"}}|};
+      let config = Config.load config_path in
+      check
+        (List.exists
+           (fun message -> Build.contains_text message "module 'cjs'")
+           config.diagnostics)
+        "legacy package module alias is diagnosed";
+      write_file config_path
+        {|{"name":"missing-module","package-specs":{"in-source":true}}|};
+      let missing_module_rejected =
+        try
+          ignore (Config.load config_path);
+          false
+        with Config.Error message ->
+          Build.contains_text message "missing field \"module\""
+      in
+      check missing_module_rejected "package output module is required";
+      write_file config_path
+        {|{
+          "name": "duplicate-output",
+          "package-specs": [
+            {"module": "esmodule", "suffix": ".js"},
+            {"module": "commonjs", "suffix": ".js"}
+          ]
+        }|};
+      let duplicate_rejected =
+        try
+          ignore (Config.load config_path);
+          false
+        with Config.Error message ->
+          Build.contains_text message "Duplicate package-spec suffix"
+      in
+      check duplicate_rejected "duplicate package output is rejected");
+  let dependency_root =
+    Filename.temp_file "rewatch-ocaml-allowed-dependents-" ""
+  in
+  Sys.remove dependency_root;
+  Unix.mkdir dependency_root 0o755;
+  Fun.protect
+    ~finally:(fun () -> Build.remove_tree dependency_root)
+    (fun () ->
+      write_file (Filename.concat dependency_root "rescript.json")
+        {|{"name":"app","dependencies":["restricted"]}|};
+      write_file
+        (Filename.concat dependency_root
+           "node_modules/restricted/rescript.json")
+        {|{"name":"restricted","allowed-dependents":["other"]}|};
+      Unix.putenv "RESCRIPT_BSC_EXE" "/bin/true";
+      let rejected =
+        try
+          Build.run ~seen:[] ~folder:dependency_root ~prod:false
+            ~features:None ~warn_error:None ~watch:false ~after_build:None
+            ~filter:None;
+          false
+        with Build.Error message ->
+          if Build.contains_text message "app dependencies: restricted" then
+            true
+          else failwith ("unexpected allowed-dependents error: " ^ message)
+      in
+      check rejected "unallowed package dependency is rejected")

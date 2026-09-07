@@ -37,6 +37,7 @@ type t = {
   experimental_args: string list;
   gentype_args: string list;
   js_post_build: string option;
+  allowed_dependents: string list option;
   diagnostics: string list;
 }
 
@@ -170,6 +171,7 @@ let unknown_fields fields =
       "suffix";
       "namespace";
       "namespace-entry";
+      "allowed-dependents";
       "features";
       "ignored-dirs";
       "warnings";
@@ -187,21 +189,13 @@ let unknown_fields fields =
   |> List.filter_map (fun (name, _) ->
        if List.mem name supported then None else Some name)
 
-let parse_package_spec path default_suffix = function
-  | `String module_name ->
-    let module_format =
-      match module_name with
-      | "esmodule" | "es6" -> Esmodule
-      | "commonjs" | "cjs" -> Commonjs
-      | _ ->
-        fail path (Printf.sprintf "unsupported package module %S" module_name)
-    in
-    {module_format; in_source = true; suffix = Some default_suffix}
+let parse_package_spec path = function
   | `Assoc fields ->
     let module_format =
       match member "module" fields with
-      | None | Some (`String ("esmodule" | "es6")) -> Esmodule
+      | Some (`String ("esmodule" | "es6")) -> Esmodule
       | Some (`String ("commonjs" | "cjs")) -> Commonjs
+      | None -> fail path "package-specs entry is missing field \"module\""
       | Some value ->
         fail path
           (Printf.sprintf "unsupported package module %S"
@@ -218,7 +212,17 @@ let parse_package_spec path default_suffix = function
       | Some value -> Some (string path "suffix" value)
     in
     {module_format; in_source; suffix}
-  | _ -> fail path "package-specs entries must be strings or objects"
+  | _ -> fail path "package-specs entries must be objects"
+
+let package_specs_use_alias alias = function
+  | `Assoc fields -> member "module" fields = Some (`String alias)
+  | `List values ->
+    List.exists
+      (function
+        | `Assoc fields -> member "module" fields = Some (`String alias)
+        | _ -> false)
+      values
+  | _ -> false
 
 let gentype_args path suffix sources dependencies = function
   | `Assoc fields ->
@@ -300,10 +304,22 @@ let load path =
   in
   let package_specs =
     match member "package-specs" fields with
-    | None -> [{module_format = Esmodule; in_source = true; suffix = None}]
-    | Some (`List values) -> List.map (parse_package_spec path suffix) values
-    | Some value -> [parse_package_spec path suffix value]
+    | None ->
+      [{module_format = Esmodule; in_source = true; suffix = Some ".js"}]
+    | Some (`List values) -> List.map (parse_package_spec path) values
+    | Some value -> [parse_package_spec path value]
   in
+  let seen_package_outputs = Hashtbl.create (List.length package_specs) in
+  List.iter
+    (fun (spec : package_spec) ->
+      let effective_suffix = Option.value spec.suffix ~default:suffix in
+      let key = (effective_suffix, spec.in_source) in
+      if Hashtbl.mem seen_package_outputs key then
+        fail path
+          (Printf.sprintf "Duplicate package-spec suffix %S is not allowed."
+             effective_suffix);
+      Hashtbl.add seen_package_outputs key ())
+    package_specs;
   let namespace =
     match member "namespace" fields with
     | None | Some (`Bool false) -> None
@@ -435,6 +451,11 @@ let load path =
       | None -> fail path "field \"js-post-build\" is missing \"cmd\"")
     | Some _ -> fail path "field \"js-post-build\" must be an object"
   in
+  let allowed_dependents =
+    match member "allowed-dependents" fields with
+    | None -> None
+    | Some value -> Some (strings path "allowed-dependents" value)
+  in
   let features =
     match member "features" fields with
     | None -> []
@@ -450,12 +471,28 @@ let load path =
     | Some value -> strings path "ignored-dirs" value
   in
   let deprecated =
-    [
-      ("bs-dependencies", "dependencies");
-      ("bs-dev-dependencies", "dev-dependencies");
-      ("bsc-flags", "compiler-flags");
-    ]
-    |> List.filter (fun (field, _) -> Option.is_some (member field fields))
+    ([
+       ("bs-dependencies", "dependencies");
+       ("bs-dev-dependencies", "dev-dependencies");
+       ("bsc-flags", "compiler-flags");
+     ]
+    |> List.filter_map (fun (field, replacement) ->
+         if Option.is_some (member field fields) then
+           Some
+             (Printf.sprintf "  - field '%s' — use '%s' instead" field
+                replacement)
+         else None))
+    @ (match member "package-specs" fields with
+      | Some value ->
+        [
+          ( "cjs",
+            "  - module 'cjs' in package-specs — use 'commonjs' instead" );
+          ( "es6",
+            "  - module 'es6' in package-specs — use 'esmodule' instead" );
+        ]
+        |> List.filter_map (fun (alias, message) ->
+             if package_specs_use_alias alias value then Some message else None)
+      | None -> [])
   in
   let diagnostics =
     (if deprecated = [] then []
@@ -464,11 +501,7 @@ let load path =
          Printf.sprintf
            "\n\nPackage '%s' uses deprecated config (support will be removed in a future version):\n%s"
            name
-           (deprecated
-           |> List.map (fun (field, replacement) ->
-                Printf.sprintf "  - field '%s' — use '%s' instead" field
-                  replacement)
-           |> String.concat "\n");
+           (String.concat "\n" deprecated);
        ])
     @ (if ignored_dirs = [] then []
        else
@@ -505,6 +538,7 @@ let load path =
     experimental_args;
     gentype_args;
     js_post_build;
+    allowed_dependents;
     diagnostics;
   }
 

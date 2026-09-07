@@ -255,6 +255,11 @@ let with_root_options (config : Config.t) (root_config : Config.t) =
     source_map_args = root_config.source_map_args;
     source_map_dev = root_config.source_map_dev;
     experimental_args = root_config.experimental_args;
+    gentype_args =
+      (if config.gentype_args = [] then []
+       else
+         config.gentype_args
+         @ ["-bs-gentype-bsb-project-root"; root_config.root]);
   }
 
 let cleanup_stale ~root ~ocaml_dir (config : Config.t) modules =
@@ -691,6 +696,12 @@ let relative_to root path =
     String.sub path (String.length root) (String.length path - String.length root)
   else raise (Error (path ^ " is not inside " ^ root))
 
+let rec remove_flag_with_value flag = function
+  | current :: _ :: rest when current = flag ->
+    remove_flag_with_value flag rest
+  | value :: rest -> value :: remove_flag_with_value flag rest
+  | [] -> []
+
 let compiler_args path =
   let source = Unix.realpath path in
   if not (Filename.check_suffix source ".res" || Filename.check_suffix source ".resi") then
@@ -706,6 +717,13 @@ let compiler_args path =
     else package_config
   in
   let config = with_root_options package_config root_config in
+  let config =
+    {
+      config with
+      gentype_args =
+        remove_flag_with_value "-bs-gentype-source-dir" config.gentype_args;
+    }
+  in
   let relative = relative_to config.root source in
   let runtime = env_path "RESCRIPT_RUNTIME" (Filename.concat (Sys.getcwd ()) "packages/@rescript/runtime") in
   let is_interface = Filename.check_suffix source ".resi" in
@@ -728,7 +746,6 @@ let compiler_args path =
     namespace_args @ interface_args @ ["-I"; "../ocaml"]
     @ List.concat_map (fun dir -> ["-I"; dir]) dependency_dirs
     @ ["-runtime-path"; runtime] @ compiler_flags ~source_maps:true ~watch:false ~gentype:true config
-    @ gentype_dependency_args config
     @ ["-bs-package-name"; config.name; "-bs-project-root"; config.root]
     @ output_args @ [ast]
   in
@@ -812,6 +829,11 @@ let blocked_dependents graph cycle =
   add_dependents ();
   Hashtbl.to_seq_keys blocked |> List.of_seq
 
+let dependent_is_allowed allowed_dependents dependent =
+  Option.fold ~none:true
+    ~some:(fun allowed -> List.mem dependent allowed)
+    allowed_dependents
+
 let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
     ~filter ~stats =
   let repository_root = Sys.getcwd () in
@@ -821,6 +843,7 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
          "_build/default/compiler/bsc/rescript_compiler_main.exe")
   in
   let requested_features = Hashtbl.create 32 in
+  let unallowed_dependencies = ref [] in
   let add_feature_request root request =
     match Hashtbl.find_opt requested_features root, request with
     | None, request -> Hashtbl.add requested_features root request
@@ -839,14 +862,30 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
       Hashtbl.add collected root ();
       let config = Config.load (Filename.concat root "rescript.json") in
       let dependencies =
-        config.dependencies
-        @ if prod || not is_local then [] else config.dev_dependencies
+        List.map (fun dependency -> ("dependencies", dependency))
+          config.dependencies
+        @ if prod || not is_local then []
+          else
+            List.map
+              (fun dependency -> ("dev-dependencies", dependency))
+              config.dev_dependencies
       in
       List.iter
-        (fun (dependency : Config.dependency) ->
+        (fun (kind, (dependency : Config.dependency)) ->
           match dependency_path root dependency.name with
           | Some directory
             when Sys.file_exists (Filename.concat directory "rescript.json") ->
+            let dependency_config =
+              Config.load (Filename.concat directory "rescript.json")
+            in
+            if
+              not
+                (dependent_is_allowed dependency_config.allowed_dependents
+                   config.name)
+            then
+              unallowed_dependencies :=
+                (config.name, kind, dependency_config.name)
+                :: !unallowed_dependencies;
             collect ~folder:directory ~features:dependency.features
               ~is_local:
                 (is_local_dependency ~workspace:root_config.root directory)
@@ -854,6 +893,18 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
         dependencies)
   in
   collect ~folder:root_config.root ~features ~is_local:true;
+  (if !unallowed_dependencies <> [] then
+    let details =
+      !unallowed_dependencies |> List.sort_uniq compare
+      |> List.map (fun (dependent, kind, dependency) ->
+           Printf.sprintf "%s %s: %s" dependent kind dependency)
+      |> String.concat "\n"
+    in
+    raise
+      (Error
+         ("The following packages use dependencies that do not allow them:\n"
+         ^ details
+         ^ "\nUpdate allowed-dependents in the dependency rescript.json files.")));
   Hashtbl.iter
     (fun root features -> Hashtbl.replace stats.active_features root features)
     requested_features;
@@ -1491,7 +1542,7 @@ let run ~seen ~folder ~prod ~features ~warn_error ~watch ~after_build ~filter =
       release_build_lock ())
     (fun () -> try execute () with Build_failure output -> report_failure output)
 
-let watch ~folder ~prod ~features ~warn_error ~after_build ~filter =
+let watch ~folder ~prod ~features ~warn_error ~after_build ~filter ~clear_screen =
   let root = Unix.realpath folder in
   ignore (Config.load (Filename.concat root "rescript.json"));
   let lock_dir = Filename.concat root "lib" in
@@ -1640,10 +1691,15 @@ let watch ~folder ~prod ~features ~warn_error ~after_build ~filter =
     | (Sys_error _ as exn) | (Unix.Unix_error _ as exn) ->
       prerr_endline (Printexc.to_string exn)
   in
+  let clear_terminal () =
+    if clear_screen && Unix.isatty Unix.stdout then
+      Printf.printf "\027[2J\027[H%!"
+  in
   let rec loop roots previous =
     if lock_is_owned () then (
       let current = snapshot roots in
       if current <> previous then (
+        clear_terminal ();
         run_build ();
         let roots = watch_roots () in
         let after_build = snapshot roots in

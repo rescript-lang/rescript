@@ -89,9 +89,10 @@ an owner PID and can themselves be recovered after an interrupted takeover.
   CMI timestamps, recompile dependents after interface changes, avoid dependent
   recompilation after implementation-only changes, and replay local compiler
   warnings using the same artifact behavior as Rust.
-- `rewatch-ocaml/tests/run.sh` passes with both the OCaml executable and the
-  Rust reference executable for a three-module fixture, a `.res`/`.resi` pair,
-  cycle diagnostics, compilation failure, and a successful recovery build.
+- `rewatch-ocaml/tests/run.sh` passes with the OCaml executable for a
+  three-module fixture, a `.res`/`.resi` pair, cycle diagnostics, compilation
+  failure, and a successful recovery build. Its dependency inputs now come
+  from a tracked fixture rather than an absent ignored `node_modules` tree.
 - Generated JavaScript for the selected successful fixture is produced by the
   same `bsc` invocations and is byte-identical between runners.
 - `build`, `clean`, `watch`, `format`, `compiler-args`, `--prod`, `--features`,
@@ -183,6 +184,15 @@ an owner PID and can themselves be recovered after an interrupted takeover.
   supported feature.
 - Both canonical compiler-argument tests pass, including cwd-invariant output
   and parser/compiler warning flag parity.
+- `allowed-dependents` is parsed and enforced for regular and development
+  dependency edges. Package outputs reject duplicate effective suffix/location
+  pairs and require an explicit module when configured, matching current Rust
+  validation; legacy `cjs`/`es6` values retain their deprecation diagnostics.
+- `watch --clear-screen` is accepted and clears an interactive terminal before
+  rebuilds. Comma-separated feature names are trimmed like the Rust CLI.
+- GenType compiler arguments distinguish single-file inspection from a full
+  build: `compiler-args` omits unavailable expanded source/dependency paths,
+  while builds retain them; both include the workspace project root.
 
 ## Known gaps
 
@@ -229,5 +239,5 @@ an owner PID and can themselves be recovered after an interrupted takeover.
    cross-package module graph; cycle discovery is global now, but compilation
    batches are still package-local.
 3. Perform the final two-scope whole-port review and address confirmed findings.
-3. Replace or supplement polling with a production-grade native event backend
+4. Replace or supplement polling with a production-grade native event backend
    and evaluate supported-platform packaging and behavior.

@@ -1,10 +1,15 @@
 let () =
   try
     match Cli.parse Sys.argv with
-    | Cli.Help -> print_endline Cli.usage
-    | Cli.Version -> print_endline "rescript-ocaml experimental"
-    | Cli.Build {folder; prod; features; warn_error; after_build; filter} -> Build.run ~seen:[] ~folder ~prod ~features ~warn_error ~watch:false ~after_build ~filter
-    | Cli.Watch {folder; prod; features; warn_error; after_build; filter} -> Build.watch ~folder ~prod ~features ~warn_error ~after_build ~filter
+    | Cli.Help command -> print_endline (Cli.command_usage command)
+    | Cli.Version -> Printf.printf "rescript %s\n" Cli.version
+    | Cli.Build
+        {folder; prod; features; warn_error; after_build; filter; clear_screen}
+      ->
+      ignore clear_screen;
+      Build.run ~seen:[] ~folder ~prod ~features ~warn_error ~watch:false
+        ~after_build ~filter
+    | Cli.Watch {folder; prod; features; warn_error; after_build; filter; clear_screen} -> Build.watch ~folder ~prod ~features ~warn_error ~after_build ~filter ~clear_screen
     | Cli.Format {check; stdin; files} -> Format.run ~check ~stdin ~files
     | Cli.Compiler_args path -> print_endline (Build.compiler_args path)
     | Cli.Clean {folder; prod} -> Build.clean ~seen:[] ~folder ~prod
