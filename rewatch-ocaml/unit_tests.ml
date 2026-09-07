@@ -241,7 +241,21 @@ let () =
         (contains_adjacent "-bs-source-map" "inline"
            (Build.compiler_flags ~source_maps:true ~watch:false
               ~gentype:false config))
-        "sourceMap always mode is enabled for one-shot builds");
+        "sourceMap always mode is enabled for one-shot builds";
+      Sys.remove config_path;
+      let legacy_path = Filename.concat config_root "bsconfig.json" in
+      write_file legacy_path {|{"name":"legacy-config"}|};
+      let config = Config.load_root config_root in
+      check (config.path = legacy_path) "bsconfig.json is used as a fallback";
+      check
+        (List.exists
+           (fun message -> Build.contains_text message "filename 'bsconfig.json'")
+           config.diagnostics)
+        "bsconfig.json emits a deprecation diagnostic";
+      write_file config_path {|{"name":"current-config"}|};
+      let config = Config.load_root config_root in
+      check (config.path = config_path)
+        "rescript.json takes precedence over bsconfig.json");
   let dependency_root =
     Filename.temp_file "rewatch-ocaml-allowed-dependents-" ""
   in

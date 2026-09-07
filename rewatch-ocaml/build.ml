@@ -642,8 +642,8 @@ let rec clean_internal ~(root_config : Config.t) ~seen ~folder ~prod ~is_local =
   let root = Unix.realpath folder in
   if not (Hashtbl.mem seen root) then (
     Hashtbl.add seen root ();
-    let config_path = Filename.concat root "rescript.json" in
-    if Sys.file_exists config_path then (
+    let config_path = Config.path_in_root root in
+    if Config.exists_in_root root then (
       let config = Config.load config_path in
       let dependencies =
         config.dependencies
@@ -651,8 +651,7 @@ let rec clean_internal ~(root_config : Config.t) ~seen ~folder ~prod ~is_local =
       in
       List.iter (fun (dependency : Config.dependency) ->
         match dependency_path root dependency.name with
-        | Some directory
-          when Sys.file_exists (Filename.concat directory "rescript.json") ->
+        | Some directory when Config.exists_in_root directory ->
           clean_internal ~root_config ~seen ~folder:directory ~prod
             ~is_local:(is_local_dependency ~workspace:root_config.root directory)
         | _ -> ()) dependencies;
@@ -680,14 +679,13 @@ let clean ~seen ~folder ~prod =
   let root = Unix.realpath folder in
   let release_build_lock = acquire_build_lock (workspace_lock_root root) in
   Fun.protect ~finally:release_build_lock (fun () ->
-    let root_config = Config.load (Filename.concat root "rescript.json") in
+    let root_config = Config.load_root root in
     let visited = Hashtbl.create 32 in
     List.iter (fun path -> Hashtbl.replace visited (Unix.realpath path) ()) seen;
     clean_internal ~root_config ~seen:visited ~folder:root ~prod ~is_local:true)
 
 let rec nearest_config directory =
-  let config = Filename.concat directory "rescript.json" in
-  if Sys.file_exists config then config
+  if Config.exists_in_root directory then Config.path_in_root directory
   else
     let parent = Filename.dirname directory in
     if parent = directory then raise (Error "could not find a rescript.json parent")
@@ -713,9 +711,9 @@ let compiler_args path =
     Config.load (nearest_config (Filename.dirname source))
   in
   let root = workspace_lock_root package_config.root in
-  let root_config_path = Filename.concat root "rescript.json" in
+  let root_config_path = Config.path_in_root root in
   let root_config =
-    if root <> package_config.root && Sys.file_exists root_config_path then
+    if root <> package_config.root && Config.exists_in_root root then
       Config.load root_config_path
     else package_config
   in
@@ -863,7 +861,7 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
       add_feature_request root features;
     if not (Hashtbl.mem collected root) then (
       Hashtbl.add collected root ();
-      let config = Config.load (Filename.concat root "rescript.json") in
+      let config = Config.load_root root in
       let dependencies =
         List.map (fun dependency -> ("dependencies", dependency))
           config.dependencies
@@ -876,11 +874,8 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
       List.iter
         (fun (kind, (dependency : Config.dependency)) ->
           match dependency_path root dependency.name with
-          | Some directory
-            when Sys.file_exists (Filename.concat directory "rescript.json") ->
-            let dependency_config =
-              Config.load (Filename.concat directory "rescript.json")
-            in
+          | Some directory when Config.exists_in_root directory ->
+            let dependency_config = Config.load_root directory in
             if
               not
                 (dependent_is_allowed dependency_config.allowed_dependents
@@ -922,7 +917,7 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
         | Some features -> features
         | None -> features
       in
-      let config = Config.load (Filename.concat root "rescript.json") in
+      let config = Config.load_root root in
       let config =
         match warn_error with
         | None -> config
@@ -936,8 +931,7 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
       List.iter
         (fun (dependency : Config.dependency) ->
           match dependency_path root dependency.name with
-          | Some directory
-            when Sys.file_exists (Filename.concat directory "rescript.json") ->
+          | Some directory when Config.exists_in_root directory ->
             visit ~folder:directory ~features:dependency.features
               ~warn_error:None ~filter:None
               ~is_local:
@@ -1092,7 +1086,7 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder ~prod ~features
     | None -> features
   in
   Hashtbl.replace seen root ();
-  let config = Config.load (Filename.concat root "rescript.json") in
+  let config = Config.load_root root in
   let config = match warn_error with
     | None -> config
     | Some value -> {config with warning_flags = ["-warn-error"; value]}
@@ -1111,8 +1105,7 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder ~prod ~features
       let () = match candidate with
         | None -> ()
         | Some candidate when Hashtbl.mem seen candidate -> ()
-        | Some candidate
-          when Sys.file_exists (Filename.concat candidate "rescript.json") ->
+        | Some candidate when Config.exists_in_root candidate ->
           (try
              run_internal ~root_config ~seen ~folder:candidate ~prod
                ~features:dependency.features ~warn_error:None ~watch
@@ -1404,7 +1397,7 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder ~prod ~features
 
 let run ~seen ~folder ~prod ~features ~warn_error ~watch ~after_build ~filter =
   let root = Unix.realpath folder in
-  let root_config = Config.load (Filename.concat root "rescript.json") in
+  let root_config = Config.load_root root in
   let visited = Hashtbl.create 32 in
   let stats =
     {
@@ -1547,7 +1540,7 @@ let run ~seen ~folder ~prod ~features ~warn_error ~watch ~after_build ~filter =
 
 let watch ~folder ~prod ~features ~warn_error ~after_build ~filter ~clear_screen =
   let root = Unix.realpath folder in
-  ignore (Config.load (Filename.concat root "rescript.json"));
+  ignore (Config.load_root root);
   let lock_dir = Filename.concat root "lib" in
   ensure_dir lock_dir;
   let lock_path = Filename.concat lock_dir "watch.lock" in
@@ -1614,15 +1607,15 @@ let watch ~folder ~prod ~features ~warn_error ~after_build ~filter ~clear_screen
           | Some directory
             when (not (Hashtbl.mem visited directory))
                  && is_local_dependency ~workspace:root directory
-                 && Sys.file_exists (Filename.concat directory "rescript.json") ->
+                 && Config.exists_in_root directory ->
             Hashtbl.add visited directory ();
             roots := directory :: !roots;
-            visit (Config.load (Filename.concat directory "rescript.json"))
+            visit (Config.load_root directory)
           | _ -> ())
         dependencies
     in
     try
-      visit (Config.load (Filename.concat root "rescript.json"));
+      visit (Config.load_root root);
       List.sort String.compare !roots
     with Config.Error _ -> [root]
   in
@@ -1667,7 +1660,8 @@ let watch ~folder ~prod ~features ~warn_error ~after_build ~filter ~clear_screen
                 | Unix.S_REG
                   when Filename.extension path = ".res"
                        || Filename.extension path = ".resi"
-                       || name = "rescript.json" || name = "package.json" ->
+                       || name = "rescript.json" || name = "bsconfig.json"
+                       || name = "package.json" ->
                   let digest = digest path stat in
                   (path, stat.Unix.st_mtime, stat.Unix.st_size, digest) :: acc
                 | _ -> acc

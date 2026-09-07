@@ -46,6 +46,14 @@ exception Error of string
 let fail path message = raise (Error (Printf.sprintf "%s: %s" path message))
 let member name fields = List.assoc_opt name fields
 
+let path_in_root root =
+  let current = Filename.concat root "rescript.json" in
+  if Sys.file_exists current then current else Filename.concat root "bsconfig.json"
+
+let exists_in_root root =
+  Sys.file_exists (Filename.concat root "rescript.json")
+  || Sys.file_exists (Filename.concat root "bsconfig.json")
+
 let namespace_from_package_name name =
   let buffer = Buffer.create (String.length name) in
   let capitalize = ref true in
@@ -478,17 +486,20 @@ let load path =
     | Some value -> strings path "ignored-dirs" value
   in
   let deprecated =
-    ([
-       ("bs-dependencies", "dependencies");
-       ("bs-dev-dependencies", "dev-dependencies");
-       ("bsc-flags", "compiler-flags");
-     ]
-    |> List.filter_map (fun (field, replacement) ->
-         if Option.is_some (member field fields) then
-           Some
-             (Printf.sprintf "  - field '%s' — use '%s' instead" field
-                replacement)
-         else None))
+    (if Filename.basename path = "bsconfig.json" then
+       ["  - filename 'bsconfig.json' — rename to 'rescript.json'"]
+     else [])
+    @ ([
+         ("bs-dependencies", "dependencies");
+         ("bs-dev-dependencies", "dev-dependencies");
+         ("bsc-flags", "compiler-flags");
+       ]
+      |> List.filter_map (fun (field, replacement) ->
+           if Option.is_some (member field fields) then
+             Some
+               (Printf.sprintf "  - field '%s' — use '%s' instead" field
+                  replacement)
+           else None))
     @ (match member "package-specs" fields with
       | Some value ->
         [
@@ -548,6 +559,8 @@ let load path =
     allowed_dependents;
     diagnostics;
   }
+
+let load_root root = load (path_in_root root)
 
 let package_spec_suffix (config : t) (spec : package_spec) =
   Option.value spec.suffix ~default:config.suffix

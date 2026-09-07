@@ -20,8 +20,7 @@ let bsc () =
     else raise (Error "could not locate bsc; set RESCRIPT_BSC_EXE")
 
 let rec nearest_config directory =
-  let path = Filename.concat directory "rescript.json" in
-  if Sys.file_exists path then Some path
+  if Config.exists_in_root directory then Some (Config.path_in_root directory)
   else
     let parent = Filename.dirname directory in
     if parent = directory then None else nearest_config parent
@@ -76,8 +75,8 @@ let files_in_scope () =
       :: (current.dependencies @ current.dev_dependencies
          |> List.filter_map (local_dependency current.root)
          |> List.filter_map (fun root ->
-              let path = Filename.concat root "rescript.json" in
-              if Sys.file_exists path then Some (Config.load path) else None))
+              if Config.exists_in_root root then Some (Config.load_root root)
+              else None))
   in
   configs |> List.concat_map package_sources |> List.sort_uniq String.compare
 

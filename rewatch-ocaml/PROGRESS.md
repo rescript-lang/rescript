@@ -193,6 +193,14 @@ an owner PID and can themselves be recovered after an interrupted takeover.
 - GenType compiler arguments distinguish single-file inspection from a full
   build: `compiler-args` omits unavailable expanded source/dependency paths,
   while builds retain them; both include the workspace project root.
+- Legacy `bsconfig.json` files are discovered for root and dependency packages,
+  formatting, compiler-argument lookup, and watch snapshots. `rescript.json`
+  takes precedence when both exist, and using the legacy filename emits the
+  same migration diagnostic as Rust rewatch.
+- `sourceMap` follows the current object schema (`enabled` is `"always"` or
+  `"dev"`, with an explicit mode). Development-only maps are passed as disabled
+  for one-shot builds and enabled for watch builds; the obsolete boolean `true`
+  form is rejected.
 
 ## Performance snapshot
 
