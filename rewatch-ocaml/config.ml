@@ -232,11 +232,20 @@ let package_specs_use_alias alias = function
       values
   | _ -> false
 
-let gentype_args path suffix sources dependencies = function
+let gentype_args path configured_suffix package_specs_value sources dependencies = function
   | `Assoc fields ->
     let module_ =
       match member "module" fields with
-      | None -> []
+      | None -> (
+        match package_specs_value with
+        | Some (`Assoc package_spec) -> (
+          match member "module" package_spec with
+          | Some (`String ("esmodule" | "es6")) ->
+            ["-bs-gentype-module"; "esmodule"]
+          | Some (`String ("commonjs" | "cjs")) ->
+            ["-bs-gentype-module"; "commonjs"]
+          | _ -> [])
+        | _ -> [])
       | Some (`String ("esmodule" | "commonjs" as value)) -> ["-bs-gentype-module"; value]
       | Some _ -> fail path "field \"gentypeconfig.module\" must be \"esmodule\" or \"commonjs\""
     in
@@ -282,8 +291,13 @@ let gentype_args path suffix sources dependencies = function
           | _ -> fail path "gentypeconfig.debug values must be booleans")
       | Some _ -> fail path "field \"gentypeconfig.debug\" must be an object"
     in
-    ["-bs-gentype"] @ module_ @ module_resolution @ export_interfaces @ generated_extension
-    @ ["-bs-gentype-suffix"; suffix] @ shims @ debug
+    let suffix_args =
+      match configured_suffix with
+      | None -> []
+      | Some suffix -> ["-bs-gentype-suffix"; suffix]
+    in
+    ["-bs-gentype"] @ module_ @ module_resolution @ export_interfaces
+    @ generated_extension @ suffix_args @ shims @ debug
     @ List.concat_map (fun (dependency : dependency) -> ["-bs-gentype-dep"; dependency.name]) dependencies
     @ List.concat_map (fun (source : source) -> ["-bs-gentype-source-dir"; source.dir]) sources
   | _ -> fail path "field \"gentypeconfig\" must be an object"
@@ -305,11 +319,12 @@ let load path =
     | Some value -> string path "name" value
     | None -> fail path "missing required field \"name\""
   in
-  let suffix =
+  let configured_suffix =
     match member "suffix" fields with
-    | None -> ".js"
-    | Some value -> string path "suffix" value
+    | None -> None
+    | Some value -> Some (string path "suffix" value)
   in
+  let suffix = Option.value configured_suffix ~default:".js" in
   let package_specs =
     match member "package-specs" fields with
     | None ->
@@ -455,7 +470,9 @@ let load path =
   let gentype_args =
     match member "gentypeconfig" fields with
     | None -> []
-    | Some value -> gentype_args path suffix sources dependencies value
+    | Some value ->
+      gentype_args path configured_suffix (member "package-specs" fields)
+        sources dependencies value
   in
   let js_post_build =
     match member "js-post-build" fields with
