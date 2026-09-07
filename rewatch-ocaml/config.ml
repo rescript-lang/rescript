@@ -85,6 +85,14 @@ let parse_dependencies path field fields =
   | Some (`List values) -> List.map (dependency_name path) values
   | Some _ -> fail path (Printf.sprintf "field %S must be an array" field)
 
+let dependency_alias path modern legacy fields =
+  match member modern fields, member legacy fields with
+  | Some _, Some _ ->
+    fail path (Printf.sprintf "fields %S and %S cannot both be set" modern legacy)
+  | Some _, None -> parse_dependencies path modern fields
+  | None, Some _ -> parse_dependencies path legacy fields
+  | None, None -> []
+
 let rec sources_of_json path inherited_dir inherited_dev inherited_feature = function
   | `String dir ->
     [
@@ -137,7 +145,9 @@ let validate_supported_fields path fields =
       "name";
       "sources";
       "dependencies";
+      "bs-dependencies";
       "dev-dependencies";
+      "bs-dev-dependencies";
       "compiler-flags";
       "bsc-flags";
       "package-specs";
@@ -172,8 +182,8 @@ let parse_package_spec path default_suffix = function
   | `String module_name ->
     let module_format =
       match module_name with
-      | "esmodule" -> Esmodule
-      | "commonjs" -> Commonjs
+      | "esmodule" | "es6" -> Esmodule
+      | "commonjs" | "cjs" -> Commonjs
       | _ ->
         fail path (Printf.sprintf "unsupported package module %S" module_name)
     in
@@ -181,8 +191,8 @@ let parse_package_spec path default_suffix = function
   | `Assoc fields ->
     let module_format =
       match member "module" fields with
-      | None | Some (`String "esmodule") -> Esmodule
-      | Some (`String "commonjs") -> Commonjs
+      | None | Some (`String ("esmodule" | "es6")) -> Esmodule
+      | Some (`String ("commonjs" | "cjs")) -> Commonjs
       | Some value ->
         fail path
           (Printf.sprintf "unsupported package module %S"
@@ -390,8 +400,8 @@ let load path =
     | Some _ -> fail path "field \"experimental-features\" must be an object"
   in
   let sources = parse_sources path fields in
-  let dependencies = parse_dependencies path "dependencies" fields in
-  let dev_dependencies = parse_dependencies path "dev-dependencies" fields in
+  let dependencies = dependency_alias path "dependencies" "bs-dependencies" fields in
+  let dev_dependencies = dependency_alias path "dev-dependencies" "bs-dev-dependencies" fields in
   let gentype_args =
     match member "gentypeconfig" fields with
     | None -> []
