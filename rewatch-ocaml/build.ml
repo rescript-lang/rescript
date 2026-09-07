@@ -269,6 +269,55 @@ let dependency_path root name =
   ] in
   List.find_opt Sys.file_exists candidates
 
+let rec nearest_config directory =
+  let config = Filename.concat directory "rescript.json" in
+  if Sys.file_exists config then config
+  else
+    let parent = Filename.dirname directory in
+    if parent = directory then raise (Error "could not find a rescript.json parent")
+    else nearest_config parent
+
+let relative_to root path =
+  let root = if Filename.check_suffix root "/" then root else root ^ "/" in
+  if String.starts_with ~prefix:root path then
+    String.sub path (String.length root) (String.length path - String.length root)
+  else raise (Error (path ^ " is not inside " ^ root))
+
+let compiler_args path =
+  let source = Unix.realpath path in
+  if not (Filename.check_suffix source ".res" || Filename.check_suffix source ".resi") then
+    raise (Error "compiler-args expects a .res or .resi source file");
+  let config = Config.load (nearest_config (Filename.dirname source)) in
+  let relative = relative_to config.root source in
+  let runtime = env_path "RESCRIPT_RUNTIME" (Filename.concat (Sys.getcwd ()) "packages/@rescript/runtime") in
+  let is_interface = Filename.check_suffix source ".resi" in
+  let has_interface = not is_interface && Sys.file_exists (source ^ "i") in
+  let dependency_dirs =
+    config.dependencies |> List.filter_map (fun (dependency : Config.dependency) ->
+      match dependency_path config.root dependency.name with
+      | Some directory ->
+        let ocaml = Filename.concat directory "lib/ocaml" in
+        if Sys.file_exists ocaml then Some ocaml else None
+      | None -> None)
+  in
+  let parser_args = compiler_flags ~source_maps:false ~watch:false config
+    @ ["-absname"; "-bs-ast"; "-o"; Source.ast_path relative; relative] in
+  let compiler_args =
+    let ast = Source.ast_path relative in
+    let namespace_args = match config.namespace with None -> [] | Some n -> ["-bs-ns"; n] in
+    let interface_args = if not is_interface && has_interface then ["-bs-read-cmi"] else [] in
+    let output_args = if is_interface then [] else List.concat_map (fun spec -> ["-bs-package-output"; package_output config relative spec]) config.package_specs in
+    namespace_args @ interface_args @ ["-I"; "../ocaml"]
+    @ List.concat_map (fun dir -> ["-I"; dir]) dependency_dirs
+    @ ["-runtime-path"; runtime] @ compiler_flags ~source_maps:true ~watch:false config
+    @ ["-bs-package-name"; config.name; "-bs-project-root"; config.root]
+    @ output_args @ [ast]
+  in
+  Yojson.Safe.pretty_to_string (`Assoc [
+    ("compiler_args", `List (List.map (fun value -> `String value) compiler_args));
+    ("parser_args", `List (List.map (fun value -> `String value) parser_args));
+  ])
+
 let rec run ~seen ~folder ~prod ~features ~warn_error ~watch =
   let root = Unix.realpath folder in
   let config = Config.load (Filename.concat root "rescript.json") in

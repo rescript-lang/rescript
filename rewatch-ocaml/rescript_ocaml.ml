@@ -6,6 +6,7 @@ let () =
     | Cli.Build {folder; prod; features; warn_error} -> Build.run ~seen:[] ~folder ~prod ~features ~warn_error ~watch:false
     | Cli.Watch {folder; prod; features; warn_error} -> Build.watch ~folder ~prod ~features ~warn_error
     | Cli.Format {check; stdin; files} -> Format.run ~check ~stdin ~files
+    | Cli.Compiler_args path -> print_endline (Build.compiler_args path)
     | Cli.Clean folder -> Build.clean ~folder
   with
   | Cli.Error message
