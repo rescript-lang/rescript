@@ -201,6 +201,9 @@ an owner PID and can themselves be recovered after an interrupted takeover.
   `"dev"`, with an explicit mode). Development-only maps are passed as disabled
   for one-shot builds and enabled for watch builds; the obsolete boolean `true`
   form is rejected.
+- GenType now receives `-bs-gentype-suffix` only when the top-level suffix was
+  explicitly configured, and inherits the module format from object-form
+  `package-specs` when `gentypeconfig.module` is absent.
 
 ## Performance snapshot
 

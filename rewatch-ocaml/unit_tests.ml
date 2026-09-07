@@ -255,7 +255,28 @@ let () =
       write_file config_path {|{"name":"current-config"}|};
       let config = Config.load_root config_root in
       check (config.path = config_path)
-        "rescript.json takes precedence over bsconfig.json");
+        "rescript.json takes precedence over bsconfig.json";
+      write_file config_path
+        {|{
+          "name": "gentype-defaults",
+          "package-specs": {"module": "commonjs"},
+          "gentypeconfig": {}
+        }|};
+      let config = Config.load config_path in
+      check
+        (contains_adjacent "-bs-gentype-module" "commonjs"
+           config.gentype_args)
+        "GenType inherits object package module";
+      check
+        (not (List.mem "-bs-gentype-suffix" config.gentype_args))
+        "GenType omits an unconfigured suffix";
+      write_file config_path
+        {|{"name":"gentype-suffix","suffix":".mjs","gentypeconfig":{}}|};
+      let config = Config.load config_path in
+      check
+        (contains_adjacent "-bs-gentype-suffix" ".mjs"
+           config.gentype_args)
+        "GenType includes an explicitly configured suffix");
   let dependency_root =
     Filename.temp_file "rewatch-ocaml-allowed-dependents-" ""
   in
