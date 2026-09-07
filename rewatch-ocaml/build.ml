@@ -285,13 +285,22 @@ let rec remove_tree path =
     else Sys.remove path
 
 let dependency_path root name =
-  let candidates = [
-    Filename.concat (Filename.concat root "node_modules") name;
-    Filename.concat (Filename.dirname root) name;
-    Filename.concat (Filename.concat root "packages")
-      (match List.rev (String.split_on_char '/' name) with last :: _ -> last | [] -> name);
-  ] in
-  List.find_opt Sys.file_exists candidates
+  let rec in_ancestors directory =
+    let candidate = Filename.concat (Filename.concat directory "node_modules") name in
+    if Sys.file_exists candidate then Some candidate
+    else
+      let parent = Filename.dirname directory in
+      if parent = directory then None else in_ancestors parent
+  in
+  match in_ancestors root with
+  | Some path -> Some path
+  | None ->
+    let package_name =
+      match List.rev (String.split_on_char '/' name) with last :: _ -> last | [] -> name
+    in
+    let sibling = Filename.concat (Filename.dirname root) name in
+    let workspace = Filename.concat (Filename.concat root "packages") package_name in
+    List.find_opt Sys.file_exists [sibling; workspace]
 
 let rec clean ~seen ~folder ~prod =
   let root = Unix.realpath folder in
