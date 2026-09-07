@@ -45,6 +45,20 @@ across package boundaries. Rust also has robust build/watch locks, native
 filesystem events, diagnostic persistence, telemetry, and much broader
 configuration and platform handling that are not yet ported.
 
+A fresh review of the compile 09–13 increment found failure-log omissions,
+unsafe deferred watch outputs, first-edge-wins feature selection, dependency
+filter leakage, missing cycle-log diagnostics, ANSI-bearing logs, cwd-dependent
+duplicate paths, and ordinary-namespace display errors. All were addressed;
+the deferred-output mechanism was removed, and the affected compile, feature,
+warning, and atomic-save tests were rerun successfully.
+A focused follow-up found that local cycles bypassed the global diagnostic,
+pre-parsing missed `--warn-error`, completion preceded log finalization, and a
+package back-edge could widen root CLI features. These were also fixed; the
+reviewer-confirmed watch snapshot logic was retained. A final cycle review also
+identified unblocked transitive dependents; the global graph now blocks their
+reverse closure while continuing to compile unrelated modules, with focused
+unit coverage for that invariant.
+
 ## Verified
 
 - `dune runtest rewatch-ocaml` passes graph unit coverage.
@@ -55,6 +69,10 @@ configuration and platform handling that are not yet ported.
   executable. This covers clean builds, standalone packages, implementation and
   interface renames, namespaced dependents, orphan-interface warnings, and
   cross-package source removal.
+- Canonical compile tests 09 through 13 pass unchanged. Cross-package cycles
+  use a global module view and match the Rust diagnostic snapshot, duplicate
+  modules are rejected with project-relative paths, production sources cannot
+  see dev-only dependencies, dev sources can, and package back-edges terminate.
 - Incremental builds reuse clean ASTs and compiler outputs, preserve unchanged
   CMI timestamps, recompile dependents after interface changes, avoid dependent
   recompilation after implementation-only changes, and replay local compiler
@@ -112,6 +130,17 @@ configuration and platform handling that are not yet ported.
   cleanup after `SIGTERM`.
 - `watch.lock` contains the running watch process PID, matching the lock-file
   protocol used by the existing integration helpers.
+- Compiler logs are initialized and finalized for success and failure, contain
+  color-free diagnostics, and receive cross-package cycle errors. The canonical
+  atomic-save warning test passes, including an edit that lands during the
+  initial build and warning persistence in `.compiler.log`.
+- Canonical feature tests 01 through 06 pass. Active features are unioned across
+  all consumers, root `--filter` does not hide dependency modules from the
+  global graph, feature-map cycles use the Rust diagnostic wording, and empty
+  CLI feature selections are rejected compatibly.
+- The canonical UTF-8 warning test passes, and a focused failure check verifies
+  that `.compiler.log` contains the compiler error and `#Done` without ANSI
+  escape sequences.
 - Unknown top-level configuration fields emit an explicit warning and are
   ignored, matching Rust rewatch's forward-compatible configuration behavior.
 
@@ -146,9 +175,10 @@ configuration and platform handling that are not yet ported.
 
 ## Next actions
 
-1. Continue the canonical compile suite at dependency-cycle reporting, duplicate
-   modules, and dev-dependency visibility.
-2. Replace recursive package scheduling with a unified cross-package module
-   graph as later correctness cases require it.
-3. Continue the remaining canonical groups, then complete configuration and
-   watch parity exposed by them.
+1. Continue canonical compile tests 14 through 18, then the remaining watch,
+   lock, suffix, format, clean, experimental, and compiler-argument groups.
+2. Replace recursive per-package compilation with scheduling over the global
+   cross-package module graph; cycle discovery is global now, but compilation
+   batches are still package-local.
+3. Replace or supplement polling with a production-grade native event backend
+   and evaluate supported-platform packaging and behavior.

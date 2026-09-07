@@ -31,12 +31,12 @@ let parse argv =
     | "--prod" :: rest -> loop folder true features warn_error after_build filter rest
     | "--features" :: value :: rest ->
       let values = String.split_on_char ',' value |> List.filter (fun x -> x <> "") in
-      if values = [] then raise (Error "--features requires a non-empty value");
+      if values = [] then raise (Error "--features must not be empty");
       loop folder prod (Some values) warn_error after_build filter rest
     | arg :: rest when String.starts_with ~prefix:"--features=" arg ->
       let value = String.sub arg 11 (String.length arg - 11) in
       let values = String.split_on_char ',' value |> List.filter (fun x -> x <> "") in
-      if values = [] then raise (Error "--features requires a non-empty value");
+      if values = [] then raise (Error "--features must not be empty");
       loop folder prod (Some values) warn_error after_build filter rest
     | "--warn-error" :: value :: rest -> loop folder prod features (Some value) after_build filter rest
     | ("-a" | "--after-build") :: command :: rest -> loop folder prod features warn_error (Some command) filter rest

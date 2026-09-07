@@ -19,6 +19,33 @@ let module_name path =
   path |> Filename.basename |> Filename.remove_extension
   |> String.capitalize_ascii
 
+let display_path ~display_root root path =
+  let absolute =
+    if Filename.is_relative path then Filename.concat root path else path
+  in
+  let display_root = Unix.realpath display_root in
+  let prefix = display_root ^ "/" in
+  if String.starts_with ~prefix absolute then
+    String.sub absolute (String.length prefix)
+      (String.length absolute - String.length prefix)
+  else absolute
+
+let duplicate_error ~display_root root name first second =
+  let first, second =
+    let paths =
+      [
+        display_path ~display_root root first;
+        display_path ~display_root root second;
+      ]
+      |> List.sort String.compare
+    in
+    match paths with [first; second] -> (first, second) | _ -> assert false
+  in
+  Error
+    (Printf.sprintf
+       "Could not initialize build: Duplicate module name: %s. Found in %s and %s. Rename one of these files."
+       name first second)
+
 let rec scan_dir ~root ~relative ~recurse ~is_dev ~ignored_dirs acc =
   let absolute = Filename.concat root relative in
   let entries =
@@ -40,8 +67,8 @@ let rec scan_dir ~root ~relative ~recurse ~is_dev ~ignored_dirs acc =
         | Some is_interface -> (relative_path, is_interface, is_dev) :: acc)
     acc entries
 
-let discover ?(on_orphan = fun _ -> ()) (config : Config.t) ~prod ~features
-    ~filter =
+let discover ?(on_orphan = fun _ -> ()) ?(display_root = Sys.getcwd ())
+    (config : Config.t) ~prod ~features ~filter =
   let matches_filter =
     match filter with
     | None -> fun _ -> true
@@ -50,9 +77,13 @@ let discover ?(on_orphan = fun _ -> ()) (config : Config.t) ~prod ~features
       fun path -> try ignore (Str.search_forward regex path 0); true with Not_found -> false
   in
   let active_features = Hashtbl.create 16 in
+  let raise_feature_cycle feature visiting =
+    let chain = List.rev (feature :: visiting) |> String.concat " -> " in
+    raise (Error ("Cycle detected in `features` map: " ^ chain))
+  in
   let rec validate_feature feature visiting =
     if List.mem feature visiting then
-      raise (Error ("feature cycle involving " ^ feature));
+      raise_feature_cycle feature visiting;
     match List.assoc_opt feature config.features with
     | None -> ()
     | Some implied -> List.iter (fun name -> validate_feature name (feature :: visiting)) implied
@@ -60,7 +91,7 @@ let discover ?(on_orphan = fun _ -> ()) (config : Config.t) ~prod ~features
   List.iter (fun (name, _) -> validate_feature name []) config.features;
   let rec activate feature visiting =
     if List.mem feature visiting then
-      raise (Error ("feature cycle involving " ^ feature));
+      raise_feature_cycle feature visiting;
     if not (Hashtbl.mem active_features feature) then (
       Hashtbl.add active_features feature ();
       match List.assoc_opt feature config.features with
@@ -94,9 +125,7 @@ let discover ?(on_orphan = fun _ -> ()) (config : Config.t) ~prod ~features
         match interface with
         | Some previous ->
           raise
-            (Error
-               (Printf.sprintf "Duplicated interface %s: %s and %s" name
-                  previous path))
+            (duplicate_error ~display_root config.root name previous path)
         | None ->
           Hashtbl.replace table name
             (implementation, Some path, old_dev || is_dev)
@@ -104,9 +133,7 @@ let discover ?(on_orphan = fun _ -> ()) (config : Config.t) ~prod ~features
         match implementation with
         | Some previous ->
           raise
-            (Error
-               (Printf.sprintf "Duplicated module %s: %s and %s" name previous
-                  path))
+            (duplicate_error ~display_root config.root name previous path)
         | None ->
           Hashtbl.replace table name (Some path, interface, old_dev || is_dev))
     (List.filter (fun (path, _, _) -> matches_filter path) files);
