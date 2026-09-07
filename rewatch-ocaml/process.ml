@@ -9,9 +9,13 @@ let read_file path =
     ~finally:(fun () -> close_in_noerr channel)
     (fun () -> really_input_string channel (in_channel_length channel))
 
+let temporary_log ~cwd stream =
+  Filename.temp_file ~temp_dir:cwd (".rewatch-ocaml-" ^ stream ^ "-") ".log"
+
 let run ~cwd program args =
-  let stdout_path = Filename.temp_file "rewatch-ocaml-stdout-" ".log" in
-  let stderr_path = Filename.temp_file "rewatch-ocaml-stderr-" ".log" in
+  let stdout_path = temporary_log ~cwd "stdout" in
+  let stderr_path = temporary_log ~cwd "stderr" in
+  let child_pid = ref None in
   let stdout_fd =
     Unix.openfile stdout_path [Unix.O_WRONLY; Unix.O_TRUNC] 0o600
   in
@@ -34,9 +38,11 @@ let run ~cwd program args =
         Unix.execv program (Array.of_list (program :: args))
       with _ -> Unix._exit 127)
     | pid ->
+      child_pid := Some pid;
       Unix.close stdout_fd;
       Unix.close stderr_fd;
       let _, status = Unix.waitpid [] pid in
+      child_pid := None;
       let stdout = read_file stdout_path in
       let stderr = read_file stderr_path in
       cleanup ();
@@ -44,6 +50,11 @@ let run ~cwd program args =
   with exn ->
     (try Unix.close stdout_fd with Unix.Unix_error _ -> ());
     (try Unix.close stderr_fd with Unix.Unix_error _ -> ());
+    Option.iter
+      (fun pid ->
+        (try Unix.kill pid Sys.sigterm with Unix.Unix_error _ -> ());
+        try ignore (Unix.waitpid [] pid) with Unix.Unix_error _ -> ())
+      !child_pid;
     cleanup ();
     raise exn
 
@@ -58,11 +69,21 @@ let status_string = function
    diagnostics cannot interleave and a failed child cannot block its siblings. *)
 let run_parallel ?(max_jobs = 4) jobs =
   let run_batch batch =
-    let children =
-      List.map
+    let children = ref [] in
+    let cleanup_children () =
+      List.iter
+        (fun (pid, stdout_path, stderr_path) ->
+          (try Unix.kill pid Sys.sigterm with Unix.Unix_error _ -> ());
+          (try ignore (Unix.waitpid [] pid) with Unix.Unix_error _ -> ());
+          (try Sys.remove stdout_path with Sys_error _ -> ());
+          try Sys.remove stderr_path with Sys_error _ -> ())
+        !children
+    in
+    try
+      List.iter
         (fun job ->
-          let stdout_path = Filename.temp_file "rewatch-ocaml-stdout-" ".log" in
-          let stderr_path = Filename.temp_file "rewatch-ocaml-stderr-" ".log" in
+          let stdout_path = temporary_log ~cwd:job.cwd "stdout" in
+          let stderr_path = temporary_log ~cwd:job.cwd "stderr" in
           let stdout_fd = Unix.openfile stdout_path [Unix.O_WRONLY; Unix.O_TRUNC] 0o600 in
           let stderr_fd = Unix.openfile stderr_path [Unix.O_WRONLY; Unix.O_TRUNC] 0o600 in
           match Unix.fork () with
@@ -76,17 +97,18 @@ let run_parallel ?(max_jobs = 4) jobs =
              with _ -> Unix._exit 127)
           | pid ->
             Unix.close stdout_fd; Unix.close stderr_fd;
-            (pid, stdout_path, stderr_path))
-        batch
-    in
-    List.map
-      (fun (pid, stdout_path, stderr_path) ->
+            children := (pid, stdout_path, stderr_path) :: !children)
+        batch;
+      List.rev !children
+      |> List.map (fun (pid, stdout_path, stderr_path) ->
         let _, status = Unix.waitpid [] pid in
         let result = {status; stdout = read_file stdout_path; stderr = read_file stderr_path} in
         (try Sys.remove stdout_path with Sys_error _ -> ());
         (try Sys.remove stderr_path with Sys_error _ -> ());
         result)
-      children
+    with exn ->
+      cleanup_children ();
+      raise exn
   in
   let rec batches acc = function
     | [] -> List.rev acc

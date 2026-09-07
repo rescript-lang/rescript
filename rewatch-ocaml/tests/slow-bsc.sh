@@ -1,0 +1,9 @@
+#!/bin/sh
+set -eu
+
+: "${REWATCH_OCAML_CHILD_STARTED:?}"
+: "${REWATCH_OCAML_REAL_BSC:?}"
+
+: > "$REWATCH_OCAML_CHILD_STARTED"
+sleep 5
+exec "$REWATCH_OCAML_REAL_BSC" "$@"

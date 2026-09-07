@@ -138,6 +138,28 @@ kill -TERM "$watch_pid"
 wait "$watch_pid"
 test ! -f "$watch_basic/lib/watch.lock"
 
+interrupt_basic="$work/interrupt-basic"
+cp -R "$root/rewatch-ocaml/tests/basic" "$interrupt_basic"
+cp "$root/rewatch-ocaml/tests/slow-bsc.sh" "$interrupt_basic/slow-bsc.sh"
+chmod +x "$interrupt_basic/slow-bsc.sh"
+child_marker="$interrupt_basic/child-started"
+REWATCH_OCAML_CHILD_STARTED="$child_marker" \
+REWATCH_OCAML_REAL_BSC="$RESCRIPT_BSC_EXE" \
+RESCRIPT_BSC_EXE="$interrupt_basic/slow-bsc.sh" \
+"$port" watch "$interrupt_basic" >"$interrupt_basic/watch.log" 2>&1 &
+interrupt_pid=$!
+attempts=0
+while [ "$attempts" -lt 100 ] && [ ! -f "$child_marker" ]; do
+  attempts=$((attempts + 1))
+  sleep 0.1
+done
+test -f "$child_marker"
+kill -TERM "$interrupt_pid"
+wait "$interrupt_pid"
+test ! -f "$interrupt_basic/lib/watch.lock"
+test -z "$(pgrep -f "$interrupt_basic/slow-bsc.sh" || true)"
+test -z "$(find "$interrupt_basic" -name '.rewatch-ocaml-*.log' -print)"
+
 "$port" build --features native "$features"
 test -f "$features/native/Native.js"
 
