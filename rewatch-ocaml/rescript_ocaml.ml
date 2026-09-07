@@ -7,7 +7,7 @@ let () =
     | Cli.Watch {folder; prod; features; warn_error; after_build; filter} -> Build.watch ~folder ~prod ~features ~warn_error ~after_build ~filter
     | Cli.Format {check; stdin; files} -> Format.run ~check ~stdin ~files
     | Cli.Compiler_args path -> print_endline (Build.compiler_args path)
-    | Cli.Clean folder -> Build.clean ~folder
+    | Cli.Clean {folder; prod} -> Build.clean ~seen:[] ~folder ~prod
   with
   | Cli.Error message
   | Config.Error message

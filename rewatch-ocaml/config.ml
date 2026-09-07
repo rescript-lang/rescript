@@ -29,7 +29,7 @@ type t = {
   features: (string * string list) list;
   warning_flags: string list;
   ignored_dirs: string list;
-  ppx_flags: string list;
+  ppx_flags: string list list;
   jsx_args: string list;
   source_map_args: string list;
   source_map_dev: bool;
@@ -245,7 +245,12 @@ let load path =
   let ppx_flags =
     match member "ppx-flags" fields with
     | None -> []
-    | Some value -> strings path "ppx-flags" value
+    | Some (`List values) ->
+      List.map (function
+        | `String value -> [value]
+        | `List values -> List.map (string path "ppx-flags") values
+        | _ -> fail path "field \"ppx-flags\" entries must be strings or arrays") values
+    | Some _ -> fail path "field \"ppx-flags\" must be an array"
   in
   let jsx_args =
     match member "jsx" fields with
