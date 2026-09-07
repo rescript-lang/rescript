@@ -179,13 +179,16 @@ let package_output (config : Config.t) path (spec : Config.package_spec) =
     output_dir
     (Config.package_spec_suffix config spec)
 
-let compile_namespace ~bsc ~runtime ~build_dir ~ocaml_dir namespace modules =
+let compile_namespace ~bsc ~runtime ~build_dir ~ocaml_dir ~entry namespace modules =
   let mlmap = Filename.concat build_dir (namespace ^ ".mlmap") in
   let channel = open_out_bin mlmap in
   Fun.protect ~finally:(fun () -> close_out_noerr channel)
     (fun () ->
       output_string channel "randjbuildsystem\n";
-      modules |> List.map (fun module_ -> module_.Source.name) |> List.sort String.compare
+      modules
+      |> List.filter (fun module_ -> Some module_.Source.name <> entry)
+      |> List.map (fun module_ -> module_.Source.name)
+      |> List.sort String.compare
       |> List.iter (fun name -> output_string channel name; output_char channel '\n'));
   let result =
     Process.run ~cwd:build_dir bsc
@@ -194,7 +197,8 @@ let compile_namespace ~bsc ~runtime ~build_dir ~ocaml_dir namespace modules =
   in
   if not (Process.succeeded result) then report_failure "Compiling namespace" namespace result;
   copy_file (Filename.concat build_dir (namespace ^ ".cmi"))
-    (Filename.concat ocaml_dir (namespace ^ ".cmi"))
+    (Filename.concat ocaml_dir (namespace ^ ".cmi"));
+  copy_file mlmap (Filename.concat ocaml_dir (namespace ^ ".mlmap"))
 
 let dependency_path root name =
   let rec in_ancestors directory =
@@ -242,6 +246,7 @@ let namespace_args (config : Config.t) module_name =
   match config.namespace, config.namespace_entry with
   | None, _ -> []
   | Some namespace, Some entry when entry = module_name -> ["-open"; "@" ^ namespace]
+  | Some namespace, Some _ -> ["-bs-ns"; "@" ^ namespace]
   | Some namespace, _ -> ["-bs-ns"; namespace]
 
 let compile_file ~bsc ~runtime ~build_dir ~ocaml_dir ~watch ~(config : Config.t)
@@ -328,7 +333,7 @@ let rec remove_tree path =
       Unix.rmdir path)
     else Sys.remove path
 
-let rec clean_internal ~root_config ~seen ~folder ~prod =
+let rec clean_internal ~(root_config : Config.t) ~seen ~folder ~prod =
   let root = Unix.realpath folder in
   if not (List.mem root seen) then (
     let config_path = Filename.concat root "rescript.json" in
@@ -338,7 +343,7 @@ let rec clean_internal ~root_config ~seen ~folder ~prod =
       List.iter (fun (dependency : Config.dependency) ->
         match dependency_path root dependency.name with
         | Some directory
-          when path_is_within ~root directory
+          when path_is_within ~root:root_config.root directory
             && Sys.file_exists (Filename.concat directory "rescript.json") ->
           clean_internal ~root_config ~seen:(root :: seen) ~folder:directory ~prod
         | _ -> ()) dependencies;
@@ -407,7 +412,7 @@ let compiler_args path =
     ("parser_args", `List (List.map (fun value -> `String value) parser_args));
   ])
 
-let rec run_internal ~root_config ~seen ~folder ~prod ~features ~warn_error ~watch ~after_build ~filter =
+let rec run_internal ~(root_config : Config.t) ~seen ~folder ~prod ~features ~warn_error ~watch ~after_build ~filter =
   let root = Unix.realpath folder in
   let config = Config.load (Filename.concat root "rescript.json") in
   let config = match warn_error with
@@ -425,7 +430,7 @@ let rec run_internal ~root_config ~seen ~folder ~prod ~features ~warn_error ~wat
         | None -> ()
         | Some candidate when List.mem candidate (root :: seen) -> ()
         | Some candidate
-          when path_is_within ~root candidate
+          when path_is_within ~root:root_config.root candidate
             && Sys.file_exists (Filename.concat candidate "rescript.json") ->
           run_internal ~root_config ~seen:(root :: seen) ~folder:candidate ~prod ~features:dependency.features ~warn_error:None ~watch ~after_build:None ~filter:None
         | Some _ -> ()
@@ -453,7 +458,16 @@ let rec run_internal ~root_config ~seen ~folder ~prod ~features ~warn_error ~wat
   let modules = Source.discover config ~prod ~features ~filter in
   let config = with_root_options config root_config in
   cleanup_stale ~root ~ocaml_dir config modules;
-  Option.iter (fun namespace -> compile_namespace ~bsc ~runtime ~build_dir ~ocaml_dir namespace modules) config.namespace;
+  Option.iter
+    (fun namespace ->
+      let namespace =
+        match config.namespace_entry with
+        | Some _ -> "@" ^ namespace
+        | None -> namespace
+      in
+      compile_namespace ~bsc ~runtime ~build_dir ~ocaml_dir
+        ~entry:config.namespace_entry namespace modules)
+    config.namespace;
   let names = Hashtbl.create (List.length modules) in
   List.iter
     (fun module_ -> Hashtbl.replace names module_.Source.name ())
@@ -574,7 +588,8 @@ let watch ~folder ~prod ~features ~warn_error ~after_build ~filter =
           if List.mem name ["lib"; "node_modules"; ".git"; "_build"] then acc else walk path acc
         else if Filename.extension path = ".res" || Filename.extension path = ".resi"
           || name = "rescript.json" || name = "package.json" then
-          let stat = Unix.stat path in (path, stat.Unix.st_mtime) :: acc
+          let stat = Unix.stat path in
+          (path, stat.Unix.st_mtime, stat.Unix.st_size) :: acc
         else acc) acc entries
     in List.sort compare (List.concat_map (fun directory -> walk directory []) roots)
   in
@@ -583,8 +598,12 @@ let watch ~folder ~prod ~features ~warn_error ~after_build ~filter =
     if current <> previous then (
       (try run ~seen:[] ~folder ~prod ~features ~warn_error ~watch:true ~after_build ~filter with Error message -> prerr_endline message);
       let roots = watch_roots () in
+      let after_build = snapshot roots in
       ignore (Unix.select [] [] [] 0.2);
-      loop roots (snapshot roots))
+      (* Keep the snapshot from before the rebuild when another edit lands
+         during compilation. Otherwise that edit would become the new baseline
+         and an atomic configuration rewrite could be missed. *)
+      if after_build <> current then loop roots current else loop roots after_build)
     else (
     ignore (Unix.select [] [] [] 0.2);
     loop roots current)
