@@ -106,11 +106,102 @@ let modification_time path =
 
 let remove_file path = if Sys.file_exists path then (try Sys.remove path with Sys_error _ -> ())
 
+let read_lock_owner path =
+  try
+    let channel = open_in path in
+    Fun.protect ~finally:(fun () -> close_in_noerr channel) (fun () ->
+      Some (input_line channel))
+  with Sys_error _ | End_of_file -> None
+
+let process_is_active value =
+  try
+    let pid = int_of_string value in
+    Unix.kill pid 0;
+    let executable = Printf.sprintf "/proc/%d/exe" pid in
+    if Sys.file_exists executable then
+      (try
+         let basename = Unix.realpath executable |> Filename.basename in
+         String.starts_with ~prefix:"rescript" basename
+       with Unix.Unix_error _ -> true)
+    else true
+  with
+  | Failure _ | Unix.Unix_error (Unix.ESRCH, _, _) -> false
+  | Unix.Unix_error (Unix.EPERM, _, _) -> true
+
+let workspace_lock_root folder =
+  let declares_workspaces directory =
+    let path = Filename.concat directory "package.json" in
+    if not (Sys.file_exists path) then false
+    else
+      try
+        match Yojson.Safe.from_file path with
+        | `Assoc fields -> List.mem_assoc "workspaces" fields
+        | _ -> false
+      with Yojson.Json_error _ | Sys_error _ -> false
+  in
+  let rec loop directory =
+    if declares_workspaces directory then directory
+    else
+    let parent = Filename.dirname directory in
+    if parent = directory then folder else loop parent
+  in
+  loop folder
+
+let acquire_build_lock root =
+  let lock_dir = Filename.concat root "lib" in
+  ensure_dir lock_dir;
+  let path = Filename.concat lock_dir "build.lock" in
+  let pid = string_of_int (Unix.getpid ()) in
+  let candidate = Filename.temp_file ~temp_dir:lock_dir ".build-lock-" ".tmp" in
+  let channel = open_out candidate in
+  output_string channel pid;
+  close_out channel;
+  let clear_stale_lock () =
+    let takeover = path ^ ".takeover" in
+    try
+      Unix.link candidate takeover;
+      Fun.protect
+        ~finally:(fun () -> remove_file takeover)
+        (fun () ->
+          match read_lock_owner path with
+          | Some owner when process_is_active owner -> ()
+          | _ -> remove_file path);
+      true
+    with Unix.Unix_error (Unix.EEXIST, _, _) ->
+      (match read_lock_owner takeover with
+      | Some owner when process_is_active owner -> ()
+      | _ -> remove_file takeover);
+      false
+  in
+  let rec acquire attempts =
+    if attempts = 0 then
+      raise (Error "Timed out waiting for another ReScript build to finish");
+    try Unix.link candidate path
+    with Unix.Unix_error (Unix.EEXIST, _, _) -> (
+      match read_lock_owner path with
+      | Some owner when process_is_active owner ->
+        ignore (Unix.select [] [] [] 0.05);
+        acquire (attempts - 1)
+      | _ ->
+        if not (clear_stale_lock ()) then ignore (Unix.select [] [] [] 0.05);
+        acquire (attempts - 1))
+  in
+  Fun.protect ~finally:(fun () -> remove_file candidate) (fun () -> acquire 1200);
+  let released = ref false in
+  fun () ->
+    if not !released then (
+      if read_lock_owner path = Some pid then remove_file path;
+      released := true)
+
 let rec files_under directory =
-  if not (Sys.file_exists directory) then []
-  else if not (Sys.is_directory directory) then [directory]
-  else Sys.readdir directory |> Array.to_list
-    |> List.concat_map (fun name -> files_under (Filename.concat directory name))
+  try
+    if not (Sys.file_exists directory) then []
+    else if (Unix.lstat directory).Unix.st_kind <> Unix.S_DIR then [directory]
+    else
+      Sys.readdir directory |> Array.to_list
+      |> List.concat_map (fun name ->
+           files_under (Filename.concat directory name))
+  with Sys_error _ | Unix.Unix_error _ -> []
 
 let generated_js_path (config : Config.t) path (spec : Config.package_spec) =
   let directory = Filename.dirname path in
@@ -124,6 +215,16 @@ let generated_js_path (config : Config.t) path (spec : Config.package_spec) =
   Filename.concat config.root
     (Filename.concat output_dir
       (Filename.remove_extension (Filename.basename path) ^ Config.package_spec_suffix config spec))
+
+let prepare_watch_output watch_outputs watch_output_paths ~dirty_ast output =
+  if
+    (not (Sys.file_exists output))
+    && not (Hashtbl.mem watch_output_paths output)
+  then (
+    let pending = output ^ ".rewatch-pending" in
+    remove_file pending;
+    Hashtbl.add watch_output_paths output ();
+    watch_outputs := (output, pending, dirty_ast) :: !watch_outputs)
 
 let with_root_options (config : Config.t) (root_config : Config.t) =
   {
@@ -420,8 +521,8 @@ let compile_job ~bsc ~runtime ~build_dir ~watch ~(config : Config.t) ~dependency
   in
   Process.{program = bsc; args; cwd = build_dir}, (module_, is_interface, path)
 
-let publish_compiled ~build_dir ~ocaml_dir ~(config : Config.t)
-    (module_, is_interface, path) result =
+let publish_compiled ~build_dir ~ocaml_dir ~watch ~watch_output_paths
+    ~(config : Config.t) (module_, is_interface, path) result =
   if result.Process.stderr <> "" then (
     append_compiler_log config.root result.stderr);
   if not (Process.succeeded result) then report_failure "Compiling" path result;
@@ -436,14 +537,35 @@ let publish_compiled ~build_dir ~ocaml_dir ~(config : Config.t)
       if extension = "cmi" then copy_file_if_changed source destination
       else copy_file source destination)
     extensions;
-  if not is_interface then run_post_build config path;
+  if not is_interface then (
+    run_post_build config path;
+    if watch then
+      List.iter
+        (fun spec ->
+          let output = generated_js_path config path spec in
+          List.iter
+            (fun generated ->
+              if
+                Sys.file_exists generated
+                && Hashtbl.mem watch_output_paths generated
+              then Unix.rename generated (generated ^ ".rewatch-pending"))
+            [output; output ^ ".map"])
+        config.package_specs);
   result.stderr <> ""
 
 let compile_batch ~bsc ~runtime ~build_dir ~ocaml_dir ~watch ~(config : Config.t)
-    ~dependency_dirs_for jobs =
+    ~dependency_dirs_for ~watch_outputs ~watch_output_paths jobs =
   List.iter (fun (_, is_interface, path) ->
     if not is_interface then
-      List.iter (fun spec -> ensure_dir (Filename.dirname (generated_js_path config path spec))) config.package_specs) jobs;
+      List.iter (fun spec ->
+        let output = generated_js_path config path spec in
+        let dirty_ast = Filename.concat build_dir (Source.ast_path path) in
+        ensure_dir (Filename.dirname output);
+        if watch then (
+          prepare_watch_output watch_outputs watch_output_paths ~dirty_ast output;
+          prepare_watch_output watch_outputs watch_output_paths ~dirty_ast
+            (output ^ ".map")))
+        config.package_specs) jobs;
   let prepared = List.map (fun (module_, is_interface, path) ->
     compile_job ~bsc ~runtime ~build_dir ~watch ~config
       ~dependency_dirs:(dependency_dirs_for module_)
@@ -451,17 +573,23 @@ let compile_batch ~bsc ~runtime ~build_dir ~ocaml_dir ~watch ~(config : Config.t
   let results = Process.run_parallel (List.map fst prepared) in
   List.map2
     (fun (_, ((_, _, path) as info)) result ->
-      if publish_compiled ~build_dir ~ocaml_dir ~config info result then Some path
+      if
+        publish_compiled ~build_dir ~ocaml_dir ~watch ~watch_output_paths ~config
+          info result
+      then Some path
       else None)
     prepared results
   |> List.filter_map Fun.id
 
 let rec remove_tree path =
   if Sys.file_exists path then
-    if Sys.is_directory path then (
-      Sys.readdir path |> Array.iter (fun name -> remove_tree (Filename.concat path name));
-      Unix.rmdir path)
-    else Sys.remove path
+    try
+      if (Unix.lstat path).Unix.st_kind = Unix.S_DIR then (
+        Sys.readdir path
+        |> Array.iter (fun name -> remove_tree (Filename.concat path name));
+        Unix.rmdir path)
+      else Sys.remove path
+    with Sys_error _ | Unix.Unix_error (Unix.ENOENT, _, _) -> ()
 
 let rec clean_internal ~(root_config : Config.t) ~seen ~folder ~prod ~is_local =
   let root = Unix.realpath folder in
@@ -488,20 +616,26 @@ let rec clean_internal ~(root_config : Config.t) ~seen ~folder ~prod ~is_local =
       let output_config = with_root_options config root_config in
       if is_local then
         List.iter (fun module_ ->
-          List.iter (fun spec ->
-            let output = generated_js_path output_config module_.Source.implementation spec in
-            remove_file output;
-            remove_file (output ^ ".map")) output_config.package_specs) modules);
+           List.iter (fun spec ->
+             let output = generated_js_path output_config module_.Source.implementation spec in
+             remove_file output;
+             remove_file (output ^ ".map");
+             remove_file (output ^ ".rewatch-pending");
+             remove_file (output ^ ".rewatch-backup");
+             remove_file (output ^ ".map.rewatch-pending");
+             remove_file (output ^ ".map.rewatch-backup")) output_config.package_specs) modules);
     List.iter (fun dir -> remove_tree (Filename.concat root dir))
       (["lib/bs"; "lib/ocaml"]
       @ if is_local then ["lib/es6"; "lib/js"] else []))
 
 let clean ~seen ~folder ~prod =
   let root = Unix.realpath folder in
-  let root_config = Config.load (Filename.concat root "rescript.json") in
-  let visited = Hashtbl.create 32 in
-  List.iter (fun path -> Hashtbl.replace visited (Unix.realpath path) ()) seen;
-  clean_internal ~root_config ~seen:visited ~folder:root ~prod ~is_local:true
+  let release_build_lock = acquire_build_lock (workspace_lock_root root) in
+  Fun.protect ~finally:release_build_lock (fun () ->
+    let root_config = Config.load (Filename.concat root "rescript.json") in
+    let visited = Hashtbl.create 32 in
+    List.iter (fun path -> Hashtbl.replace visited (Unix.realpath path) ()) seen;
+    clean_internal ~root_config ~seen:visited ~folder:root ~prod ~is_local:true)
 
 let rec nearest_config directory =
   let config = Filename.concat directory "rescript.json" in
@@ -566,6 +700,8 @@ type build_stats = {
   blocked_modules: (string, unit) Hashtbl.t;
   active_features: (string, string list option) Hashtbl.t;
   initialized_logs: (string, unit) Hashtbl.t;
+  watch_outputs: (string * string * string) list ref;
+  watch_output_paths: (string, unit) Hashtbl.t;
 }
 
 let source_is_newer ~source ~artifact =
@@ -706,6 +842,7 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
         dependencies;
       let modules =
         Source.discover config ~prod ~features ~filter
+          ~on_missing:(fun _ -> ())
           ~display_root:root_config.root
       in
       let compile_config = with_root_options config root_config in
@@ -843,7 +980,7 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
     Some (cycle, blocked, by_key)
 
 let rec run_internal ~(root_config : Config.t) ~seen ~folder ~prod ~features
-    ~warn_error ~watch ~after_build ~filter ~is_local ~stats =
+    ~warn_error ~watch ~filter ~is_local ~stats =
   let root = Unix.realpath folder in
   let features =
     match Hashtbl.find_opt stats.active_features root with
@@ -875,8 +1012,9 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder ~prod ~features
           (try
              run_internal ~root_config ~seen ~folder:candidate ~prod
                ~features:dependency.features ~warn_error:None ~watch
-               ~after_build:None ~filter:None
-               ~is_local:(is_local_dependency ~workspace:root_config.root candidate)
+               ~filter:None
+               ~is_local:
+                 (is_local_dependency ~workspace:root_config.root candidate)
                ~stats
            with Build_failure output ->
              if Option.is_none stats.failure then stats.failure <- Some output)
@@ -1112,7 +1250,8 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder ~prod ~features
     stats.compiled <- stats.compiled + List.length dirty_modules;
     let interface_warning_paths =
       compile_batch ~bsc ~runtime ~build_dir ~ocaml_dir ~watch ~config
-        ~dependency_dirs_for
+        ~dependency_dirs_for ~watch_outputs:stats.watch_outputs
+        ~watch_output_paths:stats.watch_output_paths
         (List.filter_map
            (fun module_ ->
              Option.map (fun path -> (module_, true, path)) module_.Source.interface)
@@ -1120,7 +1259,8 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder ~prod ~features
     in
     let implementation_warning_paths =
       compile_batch ~bsc ~runtime ~build_dir ~ocaml_dir ~watch ~config
-        ~dependency_dirs_for
+        ~dependency_dirs_for ~watch_outputs:stats.watch_outputs
+        ~watch_output_paths:stats.watch_output_paths
         (List.map
            (fun module_ -> (module_, false, module_.Source.implementation))
            dirty_modules)
@@ -1151,13 +1291,7 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder ~prod ~features
       remove_file (Filename.concat build_dir ast);
       remove_file (Filename.concat ocaml_dir (Filename.basename ast)))
     !warning_asts;
-  match after_build with
-  | None -> ()
-  | Some command ->
-    let result = Process.run ~cwd:root "/bin/sh" ["-c"; command] in
-    if not (Process.succeeded result) then report_failure "after-build" root result;
-    if result.stdout <> "" then print_string result.stdout;
-    if result.stderr <> "" then prerr_string result.stderr
+  ()
 
 let run ~seen ~folder ~prod ~features ~warn_error ~watch ~after_build ~filter =
   let root = Unix.realpath folder in
@@ -1177,6 +1311,8 @@ let run ~seen ~folder ~prod ~features ~warn_error ~watch ~after_build ~filter =
       blocked_modules = Hashtbl.create 16;
       active_features = Hashtbl.create 16;
       initialized_logs = Hashtbl.create 16;
+      watch_outputs = ref [];
+      watch_output_paths = Hashtbl.create 16;
     }
   in
   List.iter (fun path -> Hashtbl.replace visited (Unix.realpath path) ()) seen;
@@ -1185,9 +1321,36 @@ let run ~seen ~folder ~prod ~features ~warn_error ~watch ~after_build ~filter =
       stats.initialized_logs;
     Hashtbl.clear stats.initialized_logs
   in
-  let report () =
+  let outputs_finished = ref false in
+  let expose_watch_outputs () =
+    !(stats.watch_outputs)
+    |> List.rev
+    |> List.iter (fun (output, pending, _) ->
+         if Sys.file_exists pending then (
+           remove_file output;
+           Unix.rename pending output))
+  in
+  let finish_watch_outputs ~success =
+    !(stats.watch_outputs)
+    |> List.rev
+    |> List.iter (fun (output, pending, dirty_ast) ->
+         if success then (
+           if Sys.file_exists pending then (
+             remove_file output;
+             Unix.rename pending output))
+         else (
+           remove_file output;
+           remove_file pending;
+           remove_file dirty_ast));
+    stats.watch_outputs := [];
+    Hashtbl.clear stats.watch_output_paths;
+    outputs_finished := true
+  in
+  let report ~success () =
+    finish_watch_outputs ~success;
     finalize_logs ();
-    if watch then Printf.printf "Finished compilation\n%!"
+    if watch then (
+      if success then Printf.printf "Finished compilation\n%!")
     else
     Printf.printf "Cleaned %d/%d\nParsed %d source files\nCompiled %d modules\n%!"
       stats.cleaned stats.previous_asts stats.parsed stats.compiled;
@@ -1198,7 +1361,7 @@ let run ~seen ~folder ~prod ~features ~warn_error ~watch ~after_build ~filter =
       prerr_endline (String.concat "\n\n" diagnostics)
   in
   let report_failure output =
-    report ();
+    report ~success:false ();
     prerr_string output;
     prerr_newline ();
     raise
@@ -1227,6 +1390,7 @@ let run ~seen ~folder ~prod ~features ~warn_error ~watch ~after_build ~filter =
     ^ (cycle |> List.map format_node |> String.concat "\n → ")
     ^ "\nPossible solutions:\n- Extract shared code into a new module both depend on.\n"
   in
+  let release_build_lock = acquire_build_lock (workspace_lock_root root) in
   let execute () =
     let cycle =
       prepare_global_graph ~root_config ~prod ~features ~warn_error ~filter
@@ -1239,7 +1403,7 @@ let run ~seen ~folder ~prod ~features ~warn_error ~watch ~after_build ~filter =
           blocked)
       cycle;
     run_internal ~root_config ~seen:visited ~folder:root ~prod ~features
-      ~warn_error ~watch ~after_build ~filter ~is_local:true ~stats;
+      ~warn_error ~watch ~filter ~is_local:true ~stats;
     (match stats.failure, cycle with
     | Some output, _ -> report_failure output
     | None, Some (names, _, by_key) ->
@@ -1250,63 +1414,181 @@ let run ~seen ~folder ~prod ~features ~warn_error ~watch ~after_build ~filter =
       |> List.sort_uniq String.compare
       |> List.iter (fun package_root -> append_compiler_log package_root output);
       report_failure output
-    | None, None -> report ())
+    | None, None ->
+      Option.iter
+        (fun command ->
+          expose_watch_outputs ();
+          finish_watch_outputs ~success:true;
+          finalize_logs ();
+          release_build_lock ();
+          let result = Process.run ~cwd:root "/bin/sh" ["-c"; command] in
+          if not (Process.succeeded result) then
+            report_failure (result.stderr ^ result.stdout);
+          if result.stdout <> "" then print_string result.stdout;
+          if result.stderr <> "" then prerr_string result.stderr)
+        after_build;
+      report ~success:true ())
   in
-  Fun.protect ~finally:finalize_logs (fun () ->
-    try execute () with Build_failure output -> report_failure output)
+  Fun.protect
+    ~finally:(fun () ->
+      if not !outputs_finished then finish_watch_outputs ~success:false;
+      finalize_logs ();
+      release_build_lock ())
+    (fun () -> try execute () with Build_failure output -> report_failure output)
 
 let watch ~folder ~prod ~features ~warn_error ~after_build ~filter =
   let root = Unix.realpath folder in
   let lock_dir = Filename.concat root "lib" in
   ensure_dir lock_dir;
   let lock_path = Filename.concat lock_dir "watch.lock" in
-  let lock_fd =
-    try Unix.openfile lock_path [Unix.O_CREAT; Unix.O_EXCL; Unix.O_WRONLY] 0o644
-    with Unix.Unix_error (Unix.EEXIST, _, _) ->
-      raise (Error ("A watcher is already running for " ^ root))
-  in
   let pid = string_of_int (Unix.getpid ()) in
-  ignore (Unix.write_substring lock_fd pid 0 (String.length pid));
-  Unix.close lock_fd;
-  let stop () = raise Stop_watch in
+  let read_lock () = read_lock_owner lock_path in
+  let candidate = Filename.temp_file ~temp_dir:lock_dir ".watch-lock-" ".tmp" in
+  let channel = open_out candidate in
+  output_string channel pid;
+  close_out channel;
+  let clear_stale_lock () =
+    let takeover = lock_path ^ ".takeover" in
+    try
+      Unix.link candidate takeover;
+      Fun.protect
+        ~finally:(fun () -> remove_file takeover)
+        (fun () ->
+          match read_lock () with
+          | Some owner when process_is_active owner -> ()
+          | _ -> remove_file lock_path);
+      true
+    with Unix.Unix_error (Unix.EEXIST, _, _) ->
+      (match read_lock_owner takeover with
+      | Some owner when process_is_active owner -> ()
+      | _ -> remove_file takeover);
+      false
+  in
+  let rec create_lock attempts =
+    if attempts = 0 then
+      raise (Error "Timed out recovering a stale ReScript watch lock");
+    try Unix.link candidate lock_path
+    with Unix.Unix_error (Unix.EEXIST, _, _) -> (
+      match read_lock () with
+      | Some owner when process_is_active owner ->
+        raise
+          (Error
+             (Printf.sprintf
+                "Could not start Rescript build: A ReScript build is already running. The process ID (PID) is %s"
+                owner))
+      | _ ->
+        if not (clear_stale_lock ()) then ignore (Unix.select [] [] [] 0.01);
+        create_lock (attempts - 1))
+  in
+  Fun.protect ~finally:(fun () -> remove_file candidate) (fun () -> create_lock 1000);
+  let lock_is_owned () = read_lock () = Some pid in
+  let remove_owned_lock () = if lock_is_owned () then remove_file lock_path in
+  let stop () =
+    Sys.set_signal Sys.sigint Sys.Signal_ignore;
+    Sys.set_signal Sys.sigterm Sys.Signal_ignore;
+    raise Stop_watch
+  in
   Sys.set_signal Sys.sigint (Sys.Signal_handle (fun _ -> stop ()));
   Sys.set_signal Sys.sigterm (Sys.Signal_handle (fun _ -> stop ()));
-  let rec dependency_roots seen (config : Config.t) =
-    let dependencies = config.dependencies @ if prod then [] else config.dev_dependencies in
-    dependencies |> List.concat_map (fun (dependency : Config.dependency) ->
-      match dependency_path config.root dependency.name with
-      | Some directory when not (List.mem directory seen)
-        && Sys.file_exists (Filename.concat directory "rescript.json") ->
-        let dependency_config = Config.load (Filename.concat directory "rescript.json") in
-        directory :: dependency_roots (directory :: seen) dependency_config
-      | _ -> [])
-  in
   let watch_roots () =
-    try root :: dependency_roots [root] (Config.load (Filename.concat root "rescript.json"))
+    let visited = Hashtbl.create 32 in
+    Hashtbl.add visited root ();
+    let roots = ref [root] in
+    let rec visit (config : Config.t) =
+      let dependencies =
+        config.dependencies @ if prod then [] else config.dev_dependencies
+      in
+      List.iter
+        (fun (dependency : Config.dependency) ->
+          match dependency_path config.root dependency.name with
+          | Some directory
+            when (not (Hashtbl.mem visited directory))
+                 && is_local_dependency ~workspace:root directory
+                 && Sys.file_exists (Filename.concat directory "rescript.json") ->
+            Hashtbl.add visited directory ();
+            roots := directory :: !roots;
+            visit (Config.load (Filename.concat directory "rescript.json"))
+          | _ -> ())
+        dependencies
+    in
+    try
+      visit (Config.load (Filename.concat root "rescript.json"));
+      List.sort String.compare !roots
     with Config.Error _ -> [root]
   in
+  let digest_cache = Hashtbl.create 256 in
   let snapshot roots =
+    let visited_directories = Hashtbl.create 64 in
+    let seen_files = Hashtbl.create 256 in
+    let digest path stat =
+      Hashtbl.replace seen_files path ();
+      match Hashtbl.find_opt digest_cache path with
+      | Some (mtime, ctime, size, digest)
+        when mtime = stat.Unix.st_mtime && ctime = stat.Unix.st_ctime
+             && size = stat.Unix.st_size ->
+        digest
+      | _ ->
+        let digest = Digest.file path |> Digest.to_hex in
+        Hashtbl.replace digest_cache path
+          (stat.Unix.st_mtime, stat.Unix.st_ctime, stat.Unix.st_size, digest);
+        digest
+    in
     let rec walk dir acc =
-      let entries = try Sys.readdir dir |> Array.to_list with Sys_error _ -> [] in
-      List.fold_left (fun acc name ->
-        let path = Filename.concat dir name in
-        if Sys.is_directory path then
-          if List.mem name ["lib"; "node_modules"; ".git"; "_build"] then acc else walk path acc
-        else if Filename.extension path = ".res" || Filename.extension path = ".resi"
-          || name = "rescript.json" || name = "package.json" then
-          let stat = Unix.stat path in
-          (path, stat.Unix.st_mtime, stat.Unix.st_size) :: acc
-        else acc) acc entries
-    in List.sort compare (List.concat_map (fun directory -> walk directory []) roots)
+      try
+        let canonical = Unix.realpath dir in
+        if Hashtbl.mem visited_directories canonical then acc
+        else (
+          Hashtbl.add visited_directories canonical ();
+          let entries = Sys.readdir dir |> Array.to_list in
+          List.fold_left
+            (fun acc name ->
+              let path = Filename.concat dir name in
+              try
+                let stat = Unix.lstat path in
+                match stat.Unix.st_kind with
+                | Unix.S_DIR ->
+                  if
+                    List.mem name ["lib"; "node_modules"; ".git"; "_build"]
+                  then acc
+                  else walk path acc
+                | Unix.S_LNK ->
+                  if (Unix.stat path).Unix.st_kind = Unix.S_DIR then walk path acc
+                  else acc
+                | Unix.S_REG
+                  when Filename.extension path = ".res"
+                       || Filename.extension path = ".resi"
+                       || name = "rescript.json" || name = "package.json" ->
+                  let digest = digest path stat in
+                  (path, stat.Unix.st_mtime, stat.Unix.st_size, digest) :: acc
+                | _ -> acc
+              with Sys_error _ | Unix.Unix_error _ -> acc)
+            acc entries)
+      with Sys_error _ | Unix.Unix_error _ -> acc
+    in
+    let result =
+      List.sort compare (List.concat_map (fun directory -> walk directory []) roots)
+    in
+    Hashtbl.filter_map_inplace
+      (fun path value ->
+        if Hashtbl.mem seen_files path then Some value else None)
+      digest_cache;
+    result
+  in
+  let run_build () =
+    try
+      run ~seen:[] ~folder ~prod ~features ~warn_error ~watch:true ~after_build
+        ~filter
+    with
+    | Error message | Config.Error message | Source.Error message
+    | Process.Error message -> prerr_endline message
+    | (Sys_error _ as exn) | (Unix.Unix_error _ as exn) ->
+      prerr_endline (Printexc.to_string exn)
   in
   let rec loop roots previous =
-    if Sys.file_exists lock_path then (
+    if lock_is_owned () then (
       let current = snapshot roots in
       if current <> previous then (
-        (try
-           run ~seen:[] ~folder ~prod ~features ~warn_error ~watch:true
-             ~after_build ~filter
-         with Error message -> prerr_endline message);
+        run_build ();
         let roots = watch_roots () in
         let after_build = snapshot roots in
         ignore (Unix.select [] [] [] 0.2);
@@ -1323,10 +1605,9 @@ let watch ~folder ~prod ~features ~warn_error ~after_build ~filter =
     (fun () ->
       let roots = watch_roots () in
       let before_build = snapshot roots in
-      run ~seen:[] ~folder ~prod ~features ~warn_error ~watch:true ~after_build
-        ~filter;
+      run_build ();
       let roots = watch_roots () in
       let after_build = snapshot roots in
       if after_build <> before_build then loop roots before_build
       else loop roots after_build)
-    ~finally:(fun () -> remove_file lock_path)
+    ~finally:remove_owned_lock

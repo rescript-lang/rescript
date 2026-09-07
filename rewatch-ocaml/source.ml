@@ -46,29 +46,49 @@ let duplicate_error ~display_root root name first second =
        "Could not initialize build: Duplicate module name: %s. Found in %s and %s. Rename one of these files."
        name first second)
 
-let rec scan_dir ~root ~relative ~recurse ~is_dev ~ignored_dirs acc =
+let rec scan_dir ~root ~relative ~recurse ~is_dev ~ignored_dirs ~on_missing
+    ~visited_dirs acc =
   let absolute = Filename.concat root relative in
-  let entries =
-    try Sys.readdir absolute |> Array.to_list |> List.sort String.compare
-    with Sys_error _ -> []
+  let canonical =
+    try Some (Unix.realpath absolute)
+    with Unix.Unix_error _ ->
+      on_missing absolute;
+      None
   in
-  List.fold_left
-    (fun acc name ->
-      let relative_path = Filename.concat relative name in
-      let absolute_path = Filename.concat root relative_path in
-      if Sys.is_directory absolute_path then
-        if List.mem name ignored_dirs then acc else
-        if recurse then
-          scan_dir ~root ~relative:relative_path ~recurse ~is_dev ~ignored_dirs acc
-        else acc
-      else
-        match source_extension name with
-        | None -> acc
-        | Some is_interface -> (relative_path, is_interface, is_dev) :: acc)
-    acc entries
+  match canonical with
+  | None -> acc
+  | Some canonical when Hashtbl.mem visited_dirs canonical -> acc
+  | Some canonical ->
+    Hashtbl.add visited_dirs canonical ();
+    let entries =
+      try Sys.readdir absolute |> Array.to_list |> List.sort String.compare
+      with Sys_error _ ->
+        on_missing absolute;
+        []
+    in
+    List.fold_left
+      (fun acc name ->
+        let relative_path = Filename.concat relative name in
+        let absolute_path = Filename.concat root relative_path in
+        try
+          if Sys.is_directory absolute_path then
+            if List.mem name ignored_dirs then acc
+            else if recurse then
+              scan_dir ~root ~relative:relative_path ~recurse ~is_dev
+                ~ignored_dirs ~on_missing ~visited_dirs acc
+            else acc
+          else
+            match source_extension name with
+            | None -> acc
+            | Some is_interface ->
+              (relative_path, is_interface, is_dev) :: acc
+        with Sys_error _ -> acc)
+      acc entries
 
-let discover ?(on_orphan = fun _ -> ()) ?(display_root = Sys.getcwd ())
-    (config : Config.t) ~prod ~features ~filter =
+let discover ?(on_orphan = fun _ -> ())
+    ?(on_missing = fun path ->
+      Printf.eprintf "Could not read folder %s\n%!" path)
+    ?(display_root = Sys.getcwd ()) (config : Config.t) ~prod ~features ~filter =
   let matches_filter =
     match filter with
     | None -> fun _ -> true
@@ -100,6 +120,7 @@ let discover ?(on_orphan = fun _ -> ()) ?(display_root = Sys.getcwd ())
   in
   List.iter (fun feature -> activate feature []) (Option.value features ~default:[]);
   let all_features = features = None in
+  let visited_dirs = Hashtbl.create 32 in
   let files =
     config.sources
     |> List.filter (fun (source : Config.source) ->
@@ -109,7 +130,7 @@ let discover ?(on_orphan = fun _ -> ()) ?(display_root = Sys.getcwd ())
          (fun acc (source : Config.source) ->
            scan_dir ~root:config.root ~relative:source.dir
              ~recurse:source.recurse ~is_dev:source.is_dev
-             ~ignored_dirs:config.ignored_dirs acc)
+             ~ignored_dirs:config.ignored_dirs ~on_missing ~visited_dirs acc)
          []
   in
   let table = Hashtbl.create (List.length files) in

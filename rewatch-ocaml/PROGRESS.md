@@ -59,6 +59,13 @@ identified unblocked transitive dependents; the global graph now blocks their
 reverse closure while continuing to compile unrelated modules, with focused
 unit coverage for that invariant.
 
+Two independent watch reviews covered behavioral parity and resource/locking
+safety. Their confirmed findings drove absent-output staging (including source
+maps), recoverable initial/rebuild errors, atomic populated lock creation with
+stale-owner takeover, workspace build locks, owned lock removal, race-tolerant
+symlink-aware snapshots, and cached content hashes. Takeover markers also carry
+an owner PID and can themselves be recovered after an interrupted takeover.
+
 ## Verified
 
 - `dune runtest rewatch-ocaml` passes graph unit coverage.
@@ -135,6 +142,19 @@ unit coverage for that invariant.
   cleanup after `SIGTERM`.
 - `watch.lock` contains the running watch process PID, matching the lock-file
   protocol used by the existing integration helpers.
+- Every canonical watch test passes with the polling backend: ordinary and
+  atomic edits, warning replay, new and deleted sources, configuration suffix
+  changes, ignored non-source paths, and missing source folders. Input snapshots
+  are deduplicated to local package roots, tolerate rename races, and include a
+  content digest so same-size edits are not lost to timestamp granularity.
+- Watch publication delays brand-new JavaScript and source maps until the whole
+  build succeeds, while existing outputs remain available during recompilation.
+  Failed staged modules have their AST invalidated so the next edit recompiles
+  them. Global after-build hooks run after publication and outside `build.lock`.
+- The canonical lock test passes. Watch locks validate live PIDs, recover stale
+  owners, and remove only locks still owned by the exiting process. Build and
+  clean commands use a separate PID lock, while an active watch retains its own
+  independent lock.
 - Compiler logs are initialized and finalized for success and failure, contain
   color-free diagnostics, and receive cross-package cycle errors. The canonical
   atomic-save warning test passes, including an edit that lands during the
@@ -162,8 +182,16 @@ unit coverage for that invariant.
 - `watch` currently uses conservative polling and has no signal/lock/event
   batching parity with Rust rewatch.
 - Polling watches root and recursively resolved local dependency roots, but it
-  is not yet a native event backend and has not been exercised against the full
-  Rust watch suite.
+  is not yet a native event backend and has only been verified on Unix.
+- Existing generated outputs are updated as their compiler subprocesses
+  succeed; only previously absent outputs are held until whole-build success.
+  This preserves artifact/output consistency and avoids removing last-known
+  output during compilation, but it is not an all-or-nothing filesystem
+  transaction across an entire incremental build.
+- An interrupted build can leave a staging sidecar for a source that is later
+  deleted. `clean` removes sidecars for discovered generated outputs, but does
+  not sweep suffix-matching files indiscriminately because those may be user
+  assets.
 - `watchexec` is available on the current macOS development host and provides
   a native-event candidate, but it is not bundled with this experimental dune
   executable; polling remains the portable fallback until packaging is decided.
@@ -180,7 +208,7 @@ unit coverage for that invariant.
 
 ## Next actions
 
-1. Continue the remaining watch, lock, suffix, format, clean, experimental, and
+1. Continue the remaining suffix, format, clean, experimental, and
    compiler-argument groups.
 2. Replace recursive per-package compilation with scheduling over the global
    cross-package module graph; cycle discovery is global now, but compilation
