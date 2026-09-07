@@ -71,13 +71,23 @@ let report_failure action path result =
     (Error
        (Printf.sprintf "%s %s failed (%s):\n%s" action path
           (Process.status_string result.status)
-          output))
+       output))
+
+let compiler_flags (config : Config.t) =
+  let ppx_args =
+    config.ppx_flags |> List.concat_map (fun flag ->
+      let candidates = [Filename.concat config.root flag; Filename.concat (Filename.concat config.root "node_modules") flag] in
+      let executable = match List.find_opt Sys.file_exists candidates with
+        | Some path -> Unix.realpath path | None -> flag
+      in ["-ppx"; executable])
+  in
+  ppx_args @ config.jsx_args @ config.source_map_args @ config.experimental_args @ config.compiler_flags
 
 let parse_file ~bsc ~build_dir ~(config : Config.t) path =
   let ast = Source.ast_path path in
   ensure_dir (Filename.concat build_dir (Filename.dirname ast));
   let args =
-    config.compiler_flags
+    compiler_flags config
     @ ["-absname"; "-bs-ast"; "-o"; ast; Filename.concat "../.." path]
   in
   let result = Process.run ~cwd:build_dir bsc args in
@@ -98,7 +108,7 @@ let parse_file ~bsc ~build_dir ~(config : Config.t) path =
 let parse_job ~bsc ~build_dir ~(config : Config.t) path =
   let ast = Source.ast_path path in
   ensure_dir (Filename.concat build_dir (Filename.dirname ast));
-  let args = config.compiler_flags @ ["-absname"; "-bs-ast"; "-o"; ast; Filename.concat "../.." path] in
+  let args = compiler_flags config @ ["-absname"; "-bs-ast"; "-o"; ast; Filename.concat "../.." path] in
   Process.{program = bsc; args; cwd = build_dir}, ast
 
 let ast_dependencies ~build_dir ast =
@@ -136,6 +146,27 @@ let package_output (config : Config.t) path (spec : Config.package_spec) =
     output_dir
     (Config.package_spec_suffix config spec)
 
+let generated_js_path (config : Config.t) path (spec : Config.package_spec) =
+  let directory = Filename.dirname path in
+  let output_dir =
+    if spec.in_source then directory
+    else Filename.concat (match spec.module_format with Config.Esmodule -> "lib/es6" | Config.Commonjs -> "lib/js") directory
+  in
+  Filename.concat config.root
+    (Filename.concat output_dir
+      (Filename.remove_extension (Filename.basename path) ^ Config.package_spec_suffix config spec))
+
+let run_post_build (config : Config.t) path =
+  match config.js_post_build with
+  | None -> ()
+  | Some command ->
+    List.iter (fun spec ->
+      let output = generated_js_path config path spec in
+      let result = Process.run ~cwd:config.root "/bin/sh" ["-c"; command ^ " " ^ Filename.quote output] in
+      if not (Process.succeeded result) then report_failure "js-post-build" output result;
+      if result.stdout <> "" then print_string result.stdout;
+      if result.stderr <> "" then prerr_string result.stderr) config.package_specs
+
 let compile_file ~bsc ~runtime ~build_dir ~ocaml_dir ~(config : Config.t)
     ~dependency_dirs (module_ : Source.module_) ~is_interface path =
   let ast = Source.ast_path path in
@@ -161,7 +192,7 @@ let compile_file ~bsc ~runtime ~build_dir ~ocaml_dir ~(config : Config.t)
     @ ["-I"; "../ocaml"]
     @ List.concat_map (fun dir -> ["-I"; dir]) dependency_dirs
     @ ["-runtime-path"; runtime]
-    @ config.compiler_flags
+    @ compiler_flags config
     @ ["-bs-package-name"; config.name; "-bs-project-root"; config.root]
     @ output_args @ [ast]
   in
@@ -188,7 +219,7 @@ let compile_job ~bsc ~runtime ~build_dir ~(config : Config.t) ~dependency_dirs
   let output_args = if is_interface then [] else List.concat_map (fun spec -> ["-bs-package-output"; package_output config path spec]) config.package_specs in
   let args = namespace_args @ interface_args @ ["-I"; "../ocaml"]
     @ List.concat_map (fun dir -> ["-I"; dir]) dependency_dirs
-    @ ["-runtime-path"; runtime] @ config.compiler_flags
+    @ ["-runtime-path"; runtime] @ compiler_flags config
     @ ["-bs-package-name"; config.name; "-bs-project-root"; config.root]
     @ output_args @ [ast]
   in
@@ -202,7 +233,8 @@ let publish_compiled ~build_dir ~ocaml_dir ~(config : Config.t)
   let artifact_dir = Filename.concat build_dir (Filename.dirname path) in
   let extensions = if is_interface then ["cmi"; "cmti"] else ["cmi"; "cmj"; "cmt"] in
   List.iter (fun extension -> copy_file (Filename.concat artifact_dir (basename ^ "." ^ extension))
-    (Filename.concat ocaml_dir (basename ^ "." ^ extension))) extensions
+    (Filename.concat ocaml_dir (basename ^ "." ^ extension))) extensions;
+  if not is_interface then run_post_build config path
 
 let compile_batch ~bsc ~runtime ~build_dir ~ocaml_dir ~(config : Config.t)
     ~dependency_dirs jobs =

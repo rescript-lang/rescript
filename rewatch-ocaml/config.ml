@@ -29,6 +29,11 @@ type t = {
   features: (string * string list) list;
   warning_flags: string list;
   ignored_dirs: string list;
+  ppx_flags: string list;
+  jsx_args: string list;
+  source_map_args: string list;
+  experimental_args: string list;
+  js_post_build: string option;
 }
 
 exception Error of string
@@ -134,6 +139,7 @@ let validate_supported_fields path fields =
       "editor";
       "experimental-features";
       "js-post-build";
+      "sourceMap";
     ]
   in
   match
@@ -240,6 +246,74 @@ let load path =
     | None -> []
     | Some value -> strings path "ppx-flags" value
   in
+  let jsx_args =
+    match member "jsx" fields with
+    | None -> []
+    | Some (`Assoc jsx) ->
+      let version = match member "version" jsx with
+        | None -> []
+        | Some (`Int 4) -> ["-bs-jsx"; "4"]
+        | Some _ -> fail path "field \"jsx.version\" must be 4"
+      in
+      let module_ = match member "module" jsx with
+        | None -> [] | Some value -> ["-bs-jsx-module"; string path "jsx.module" value] in
+      let mode = match member "mode" jsx with
+        | None -> []
+        | Some (`String ("classic" | "automatic" as value)) -> ["-bs-jsx-mode"; value]
+        | Some _ -> fail path "field \"jsx.mode\" must be \"classic\" or \"automatic\""
+      in
+      let preserve = match member "preserve" jsx with
+        | None | Some (`Bool false) -> []
+        | Some (`Bool true) -> ["-bs-jsx-preserve"]
+        | Some _ -> fail path "field \"jsx.preserve\" must be a boolean"
+      in version @ module_ @ mode @ preserve
+    | Some _ -> fail path "field \"jsx\" must be an object"
+  in
+  let source_map_args =
+    match member "sourceMap" fields with
+    | None -> []
+    | Some (`Bool false) -> ["-bs-source-map"; "false"]
+    | Some (`Assoc options) ->
+      let mode = match member "mode" options with
+        | None -> "linked"
+        | Some (`String ("linked" | "inline" | "hidden" as value)) -> value
+        | Some _ -> fail path "field \"sourceMap.mode\" is invalid"
+      in
+      let enabled = match member "enabled" options with
+        | None | Some (`Bool true) -> true
+        | Some (`Bool false) -> false
+        | Some (`String "dev") -> true
+        | Some _ -> fail path "field \"sourceMap.enabled\" is invalid"
+      in
+      if not enabled then ["-bs-source-map"; "false"] else
+      let content = match member "sourcesContent" options with
+        | None -> [] | Some (`Bool value) -> ["-bs-source-map-sources-content"; string_of_bool value]
+        | Some _ -> fail path "field \"sourceMap.sourcesContent\" must be a boolean" in
+      let root = match member "sourceRoot" options with
+        | None -> [] | Some value -> ["-bs-source-map-root"; string path "sourceMap.sourceRoot" value] in
+      ["-bs-source-map"; mode] @ content @ root
+    | Some _ -> fail path "field \"sourceMap\" must be false or an object"
+  in
+  let experimental_args =
+    match member "experimental-features" fields with
+    | None -> []
+    | Some (`Assoc features) -> features |> List.concat_map (fun (name, value) ->
+      match value with
+      | `Bool true when name = "LetUnwrap" -> ["-enable-experimental"; name]
+      | `Bool false when name = "LetUnwrap" -> []
+      | `Bool _ -> fail path ("unsupported experimental feature \"" ^ name ^ "\"")
+      | _ -> fail path "experimental feature values must be booleans")
+    | Some _ -> fail path "field \"experimental-features\" must be an object"
+  in
+  let js_post_build =
+    match member "js-post-build" fields with
+    | None -> None
+    | Some (`Assoc fields) ->
+      (match member "cmd" fields with
+      | Some value -> Some (string path "js-post-build.cmd" value)
+      | None -> fail path "field \"js-post-build\" is missing \"cmd\"")
+    | Some _ -> fail path "field \"js-post-build\" must be an object"
+  in
   let features =
     match member "features" fields with
     | None -> []
@@ -261,13 +335,18 @@ let load path =
     sources = parse_sources path fields;
     dependencies = dependencies path "dependencies" fields;
     dev_dependencies = dependencies path "dev-dependencies" fields;
-    compiler_flags = warning_flags @ ppx_flags @ compiler_flags;
+    compiler_flags = warning_flags @ compiler_flags;
     package_specs;
     suffix;
     namespace;
     features;
     warning_flags;
     ignored_dirs;
+    ppx_flags;
+    jsx_args;
+    source_map_args;
+    experimental_args;
+    js_post_build;
   }
 
 let package_spec_suffix (config : t) (spec : package_spec) =

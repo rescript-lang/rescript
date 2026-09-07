@@ -27,6 +27,9 @@ selection, stale artifact cleanup, and compiler artifact publication to
 - Independent parser/compiler jobs are launched in bounded batches (four
   children by default), with private output files and deterministic diagnostic
   collection.
+- `warnings`, `ppx-flags`, JSX v4, source-map, `LetUnwrap` experimental
+  features, and `js-post-build` are projected into external compiler/process
+  invocations. The post-build fixture verifies its generated-file argument.
 
 ## Known gaps
 
