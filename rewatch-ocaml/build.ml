@@ -304,24 +304,24 @@ let dependency_path root name =
 
 let rec clean ~seen ~folder ~prod =
   let root = Unix.realpath folder in
-  if List.mem root seen then raise (Error ("dependency cycle involving " ^ root));
-  let config_path = Filename.concat root "rescript.json" in
-  if Sys.file_exists config_path then (
-    let config = Config.load config_path in
-    let dependencies = config.dependencies @ if prod then [] else config.dev_dependencies in
-    List.iter (fun (dependency : Config.dependency) ->
-      match dependency_path root dependency.name with
-      | Some directory when Sys.file_exists (Filename.concat directory "rescript.json") ->
-        clean ~seen:(root :: seen) ~folder:directory ~prod
-      | _ -> ()) dependencies;
-    let modules = Source.discover config ~prod ~features:None ~filter:None in
-    List.iter (fun module_ ->
-      List.iter (fun spec ->
-        let output = generated_js_path config module_.Source.implementation spec in
-        remove_file output;
-        remove_file (output ^ ".map")) config.package_specs) modules);
-  List.iter (fun dir -> remove_tree (Filename.concat root dir))
-    ["lib/bs"; "lib/ocaml"; "lib/es6"; "lib/js"]
+  if not (List.mem root seen) then (
+    let config_path = Filename.concat root "rescript.json" in
+    if Sys.file_exists config_path then (
+      let config = Config.load config_path in
+      let dependencies = config.dependencies @ if prod then [] else config.dev_dependencies in
+      List.iter (fun (dependency : Config.dependency) ->
+        match dependency_path root dependency.name with
+        | Some directory when Sys.file_exists (Filename.concat directory "rescript.json") ->
+          clean ~seen:(root :: seen) ~folder:directory ~prod
+        | _ -> ()) dependencies;
+      let modules = Source.discover config ~prod ~features:None ~filter:None in
+      List.iter (fun module_ ->
+        List.iter (fun spec ->
+          let output = generated_js_path config module_.Source.implementation spec in
+          remove_file output;
+          remove_file (output ^ ".map")) config.package_specs) modules);
+    List.iter (fun dir -> remove_tree (Filename.concat root dir))
+      ["lib/bs"; "lib/ocaml"; "lib/es6"; "lib/js"])
 
 let rec nearest_config directory =
   let config = Filename.concat directory "rescript.json" in

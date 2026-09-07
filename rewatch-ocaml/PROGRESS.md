@@ -41,7 +41,8 @@ selection, stale artifact cleanup, and compiler artifact publication to
   stale output is removed; `clean` also removes in-source JavaScript and maps.
 - The integration runner builds a three-package monorepo through relative
   `node_modules` workspace links, including a transitive dependency resolved
-  from an ancestor hoist.
+  from an ancestor hoist. It also exercises a package-level dependency back
+  edge and verifies that `clean` removes every package's compiler artifacts.
 - A project-local copy of `rewatch/testrepo` completes a one-shot build with
   the OCaml executable. This exercises the existing workspace package graph,
   including its package-level dependency back-edge and `namespace-entry`.
