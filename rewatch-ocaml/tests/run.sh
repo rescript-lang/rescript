@@ -13,6 +13,7 @@ cp -R "$root/rewatch-ocaml/tests/basic" "$work/legacy-config"
 cp -R "$root/rewatch-ocaml/tests/cycle" "$work/cycle"
 cp -R "$root/rewatch-ocaml/tests/failure" "$work/failure"
 cp -R "$root/rewatch-ocaml/tests/features" "$work/features"
+cp -R "$root/rewatch-ocaml/tests/feature-dependencies" "$work/feature-dependencies"
 cp -R "$root/rewatch-ocaml/tests/gentype" "$work/gentype"
 cp -R "$root/rewatch-ocaml/tests/dependency" "$work/dependency"
 mkdir -p "$work/gentype/node_modules" "$work/dependency/node_modules"
@@ -30,6 +31,7 @@ legacy_config="$work/legacy-config"
 cycle="$work/cycle"
 failure="$work/failure"
 features="$work/features"
+feature_dependencies="$work/feature-dependencies"
 gentype="$work/gentype"
 dependency="$work/dependency"
 external_boundary="$work/external-boundary"
@@ -64,8 +66,15 @@ if printf '%s\n' "$gentype_compiler_args" | grep -E '"-bs-gentype-(dep-path|sour
 fi
 
 cleanup() {
+  for pid in $background_pids; do
+    kill -TERM "$pid" 2>/dev/null || true
+  done
+  for pid in $background_pids; do
+    wait "$pid" 2>/dev/null || true
+  done
   rm -rf "$work"
 }
+background_pids=""
 trap cleanup EXIT
 
 wait_for_file() {
@@ -186,6 +195,7 @@ rm -rf "$watch_basic/lib"
 rm -f "$watch_basic/src/A.mjs" "$watch_basic/src/B.mjs" "$watch_basic/src/WithInterface.mjs"
 "$port" watch "$watch_basic" >"$watch_basic/watch.log" 2>&1 &
 watch_pid=$!
+background_pids="$background_pids $watch_pid"
 if ! wait_for_file "$watch_basic/src/A.mjs"; then
   kill -TERM "$watch_pid" 2>/dev/null || true
   wait "$watch_pid" 2>/dev/null || true
@@ -237,6 +247,7 @@ REWATCH_OCAML_REAL_BSC="$RESCRIPT_BSC_EXE" \
 RESCRIPT_BSC_EXE="$interrupt_basic/slow-bsc.sh" \
 "$port" watch "$interrupt_basic" >"$interrupt_basic/watch.log" 2>&1 &
 interrupt_pid=$!
+background_pids="$background_pids $interrupt_pid"
 attempts=0
 while [ "$attempts" -lt 100 ] && [ ! -f "$child_marker" ]; do
   attempts=$((attempts + 1))
@@ -249,8 +260,49 @@ test ! -f "$interrupt_basic/lib/watch.lock"
 test -z "$(pgrep -f "$interrupt_basic/slow-bsc.sh" || true)"
 test -z "$(find "$interrupt_basic" -name '.rewatch-ocaml-*.log' -print)"
 
+lock_basic="$work/lock-basic"
+cp -R "$root/rewatch-ocaml/tests/basic" "$lock_basic"
+cp "$root/rewatch-ocaml/tests/slow-bsc.sh" "$lock_basic/slow-bsc.sh"
+chmod +x "$lock_basic/slow-bsc.sh"
+rm -rf "$lock_basic/lib"
+rm -f "$lock_basic/src/A.mjs" "$lock_basic/src/B.mjs" \
+  "$lock_basic/src/WithInterface.mjs"
+first_marker="$lock_basic/first-child-started"
+release_marker="$lock_basic/release-first-build"
+REWATCH_OCAML_CHILD_STARTED="$first_marker" \
+REWATCH_OCAML_RELEASE_FILE="$release_marker" \
+REWATCH_OCAML_REAL_BSC="$RESCRIPT_BSC_EXE" \
+RESCRIPT_BSC_EXE="$lock_basic/slow-bsc.sh" \
+  "$port" build "$lock_basic" >"$lock_basic/first.log" 2>&1 &
+first_build_pid=$!
+background_pids="$background_pids $first_build_pid"
+wait_for_file "$first_marker"
+workspace_build_lock="$root/lib/build.lock"
+test -f "$workspace_build_lock"
+"$port" build "$lock_basic" >"$lock_basic/second.log" 2>&1 &
+second_build_pid=$!
+background_pids="$background_pids $second_build_pid"
+wait_for_text "$lock_basic/second.log" "Waiting for other build to finish"
+test ! -f "$lock_basic/src/A.mjs"
+touch "$release_marker"
+wait "$first_build_pid"
+wait "$second_build_pid"
+test -f "$lock_basic/src/A.mjs"
+test ! -f "$workspace_build_lock"
+
 "$port" build --features native "$features"
 test -f "$features/native/Native.js"
+
+"$port" build "$feature_dependencies"
+test -f "$feature_dependencies/packages/dep-union/extra/UnionExtra.js"
+test -f "$feature_dependencies/packages/dep-transitive/native/TransitiveNative.js"
+test -f "$feature_dependencies/packages/dep-empty/src/EmptyCommon.js"
+test ! -f "$feature_dependencies/packages/dep-empty/optional/EmptyOptional.js"
+"$port" clean "$feature_dependencies"
+"$port" build --prod "$feature_dependencies"
+test -f "$feature_dependencies/packages/dep-union/native/UnionNative.js"
+test -f "$feature_dependencies/packages/dep-union/web/UnionWeb.js"
+test ! -f "$feature_dependencies/packages/dep-union/extra/UnionExtra.js"
 
 "$port" build "$gentype"
 test -f "$gentype/src/Main.js"
@@ -273,6 +325,7 @@ test -f "$external_boundary/external/src/Sentinel.js"
 test -f "$external_boundary/external/src/Foo.mjs"
 test -f "$external_boundary/external/src/Foo.mjs.map"
 rm "$external_boundary/external/src/Foo.res"
+rm "$external_boundary/external/src/Foo.resi"
 "$port" build "$external_boundary/project"
 test ! -f "$external_boundary/external/src/Foo.mjs"
 test ! -f "$external_boundary/external/src/Foo.mjs.map"
@@ -328,6 +381,7 @@ if "$port" build "$failure" >"$failure/output.log" 2>&1; then
   exit 1
 fi
 grep "expected to have type" "$failure/output.log" >/dev/null
+test ! -f "$root/lib/build.lock"
 
 cp "$failure/Broken.fixed" "$failure/src/Broken.res"
 "$port" build "$failure"

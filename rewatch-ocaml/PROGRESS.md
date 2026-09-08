@@ -183,6 +183,9 @@ the same conservative result Rust intends for an unsuccessful probe.
   all consumers, root `--filter` does not hide dependency modules from the
   global graph, feature-map cycles use the Rust diagnostic wording, and empty
   CLI feature selections are rejected compatibly.
+- The focused feature-dependency monorepo additionally covers per-consumer
+  feature unions, dependency-local transitive expansion, explicit empty
+  selections, and exclusion of dev-only requests under `--prod`.
 - The canonical UTF-8 warning test passes, and a focused failure check verifies
   that `.compiler.log` contains the compiler error and `#Done` without ANSI
   escape sequences.
@@ -383,11 +386,17 @@ rerun it for the final maintainability review alongside maximum module size.
 - Rust unit-test scenario coverage is tracked separately from source guards.
   `tests/check_rust_test_coverage.sh` currently inventories all 136 Rust unit
   tests and validates their exact entries in `tests/rust_test_coverage.tsv`;
-  113 scenarios have been reviewed: 8 expose confirmed gaps and 23 remain
-  `unreviewed`. The confirmed gaps are interactive completion formatting,
-  persisted warning replay, and compiler-info-driven invalidation. Its
-  `--require-complete` mode is a final quality gate and fails for either
+  all 136 scenarios have now been reviewed, with 11 confirmed gaps and none
+  left `unreviewed`. The gaps are interactive completion/PTY coverage,
+  persisted warning replay, compiler-info-driven invalidation, and
+  path-sensitive warning carry-forward. The `--require-complete` mode is a
+  final quality gate and fails for either
   unreviewed scenarios or confirmed coverage gaps.
+- Focused locking tests now hold a compiler behind an explicit release marker,
+  verify that `build.lock` remains present, start a second build, observe it
+  waiting, and then verify both builds complete and release the lock. Failure
+  and interrupt paths also assert cleanup, and the runner terminates registered
+  background processes during test cleanup.
 - Interactive output parity remains open. The OCaml executable currently emits
   plain progress summaries and supports watch clear-screen behavior, but does
   not yet reproduce Rust's TTY-aware parsing/compilation progress, spinner,

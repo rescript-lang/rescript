@@ -135,6 +135,8 @@ let acquire_build_lock root =
     with Unix.Unix_error (Unix.EEXIST, _, _) -> (
       match read_lock_owner path with
       | Some owner when process_is_active owner ->
+        if attempts = 1200 then
+          print_endline "Waiting for other build to finish...";
         ignore (Unix.select [] [] [] 0.05);
         acquire (attempts - 1)
       | _ ->
