@@ -363,6 +363,12 @@ rerun it for the final maintainability review alongside maximum module size.
   `PARITY_CHECKLIST.md`: every user-reachable Rust guard must map to an OCaml
   location and test or to a documented intentional divergence. Existing suite
   coverage alone does not close that gate.
+- Rust unit-test scenario coverage is tracked separately from source guards.
+  `tests/check_rust_test_coverage.sh` currently inventories all 136 Rust unit
+  tests and validates their exact entries in `tests/rust_test_coverage.tsv`;
+  71 scenarios have received an initial evidence review and 65 remain marked
+  `unreviewed`. Its `--require-complete` mode is a final quality gate and fails
+  for either unreviewed scenarios or confirmed coverage gaps.
 - Interactive output parity remains open. The OCaml executable currently emits
   plain progress summaries and supports watch clear-screen behavior, but does
   not yet reproduce Rust's TTY-aware parsing/compilation progress, spinner,
@@ -460,7 +466,8 @@ rerun it for the final maintainability review alongside maximum module size.
 
 ## Next actions
 
-1. Inventory and close remaining configuration and CLI gaps; OpenTelemetry is
+1. Finish the source-level validation inventory and the per-Rust-unit-test
+   coverage review, closing confirmed configuration/CLI gaps; OpenTelemetry is
    an explicitly documented non-goal.
 2. Profile and close the remaining clean-build wall-time gap while preserving
    exact compiler-work and artifact equivalence; retain pipe capture as an

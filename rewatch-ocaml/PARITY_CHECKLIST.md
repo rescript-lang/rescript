@@ -58,6 +58,26 @@ omitted because the Rust and OCaml files are still changing.
 | Post-build command | `config.rs`: `JsPostBuild`; `build/compile.rs` execution | `config.ml`: `js_post_build`; `build.ml`: post-build execution | Canonical post-build tests | Partial; invalid-shape cases remain |
 | Deprecated, unsupported, and unknown fields | `config.rs`: Serde aliases, `get_unknown_fields`, `get_unsupported_fields` | `config.ml`: alias diagnostics, `unknown_fields`, unsupported-field diagnostics | Unit tests; `config_tests.ml` covers Rust's exact nested-decoder warning boundary | Partial; complete alias list audit remains |
 
+## Rust unit-test coverage gate
+
+[`tests/check_rust_test_coverage.sh`](tests/check_rust_test_coverage.sh)
+discovers every `#[test]` and `#[tokio::test]` below `rewatch/src` and compares
+that inventory with [`tests/rust_test_coverage.tsv`](tests/rust_test_coverage.tsv).
+Each Rust test must map to focused OCaml coverage, the shared canonical suite,
+an intentional architectural difference, an explicit project omission, or a
+known gap. New Rust tests and stale mapping rows fail the ordinary check.
+
+Run the stricter final gate with:
+
+```bash
+rewatch-ocaml/tests/check_rust_test_coverage.sh --require-complete
+```
+
+That mode also fails while any scenario is `unreviewed` or `gap`. The initial
+inventory contains 136 Rust tests: 71 have been reviewed and 65 remain
+unreviewed. A mapping is evidence only after its cited OCaml/shared test has
+been inspected; grouping by similarly named functions is not sufficient.
+
 ## Output parity gate
 
 Output is tested in two modes because Rust deliberately changes behavior based
