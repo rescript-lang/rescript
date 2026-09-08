@@ -251,6 +251,9 @@ the same conservative result Rust intends for an unsuccessful probe.
   code. Non-string values remain configuration errors. When explicit `subdirs`
   are flattened, the parent source type is propagated through the subtree just
   as in Rust, rather than allowing nested source types to override it.
+- `source_tests.ml` exercises development-source filtering across exact,
+  shorthand, mixed, and recursive directories, plus tagged and untagged
+  feature selection and leaf features without a declaration map.
 - All legacy top-level fields that Rust classifies as known but unsupported
   (`ignored-dirs`, generators, preprocessor/entry fields, and external include
   paths) receive the dedicated unsupported-field diagnostic rather than a
@@ -380,9 +383,11 @@ rerun it for the final maintainability review alongside maximum module size.
 - Rust unit-test scenario coverage is tracked separately from source guards.
   `tests/check_rust_test_coverage.sh` currently inventories all 136 Rust unit
   tests and validates their exact entries in `tests/rust_test_coverage.tsv`;
-  95 scenarios have received an initial evidence review and 41 remain marked
-  `unreviewed`. Its `--require-complete` mode is a final quality gate and fails
-  for either unreviewed scenarios or confirmed coverage gaps.
+  113 scenarios have been reviewed: 8 expose confirmed gaps and 23 remain
+  `unreviewed`. The confirmed gaps are interactive completion formatting,
+  persisted warning replay, and compiler-info-driven invalidation. Its
+  `--require-complete` mode is a final quality gate and fails for either
+  unreviewed scenarios or confirmed coverage gaps.
 - Interactive output parity remains open. The OCaml executable currently emits
   plain progress summaries and supports watch clear-screen behavior, but does
   not yet reproduce Rust's TTY-aware parsing/compilation progress, spinner,

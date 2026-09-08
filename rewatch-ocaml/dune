@@ -53,3 +53,8 @@
  (name package_metadata_tests)
  (modules package_metadata_tests)
  (libraries rewatch_ocaml_lib))
+
+(test
+ (name source_tests)
+ (modules source_tests)
+ (libraries rewatch_ocaml_lib))
