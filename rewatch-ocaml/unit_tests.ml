@@ -385,6 +385,35 @@ let () =
         | [source] -> not source.is_dev
         | _ -> false)
         "non-dev source type strings are accepted as ordinary sources";
+      write_file config_path
+        {|{
+          "name": "source-type-inheritance",
+          "sources": {
+            "dir": "src",
+            "subdirs": [{"dir": "test", "type": "dev"}]
+          }
+        }|};
+      let config = Config.load config_path in
+      check
+        (match config.sources with
+        | [_parent; child] -> not child.is_dev
+        | _ -> false)
+        "an ordinary parent source overrides a nested dev type";
+      write_file config_path
+        {|{
+          "name": "source-type-inheritance",
+          "sources": {
+            "dir": "src",
+            "type": "dev",
+            "subdirs": [{"dir": "lib", "type": "lib"}]
+          }
+        }|};
+      let config = Config.load config_path in
+      check
+        (match config.sources with
+        | [_parent; child] -> child.is_dev
+        | _ -> false)
+        "a dev parent source overrides a nested non-dev type";
       write_file config_path {|{"name":"default-output","suffix":".mjs"}|};
       let config = Config.load config_path in
       check

@@ -228,7 +228,9 @@ the same conservative result Rust intends for an unsuccessful probe.
   emitted compiler arguments are sorted by source name.
 - Source objects accept arbitrary string values for `type`, as Rust's Serde
   schema does; only the exact value `"dev"` marks the source as development
-  code. Non-string values remain configuration errors.
+  code. Non-string values remain configuration errors. When explicit `subdirs`
+  are flattened, the parent source type is propagated through the subtree just
+  as in Rust, rather than allowing nested source types to override it.
 - All legacy top-level fields that Rust classifies as known but unsupported
   (`ignored-dirs`, generators, preprocessor/entry fields, and external include
   paths) receive the dedicated unsupported-field diagnostic rather than a
