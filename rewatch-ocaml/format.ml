@@ -49,12 +49,15 @@ let package_sources (config : Config.t) =
           | Some path -> [Filename.concat config.root path]))
 
 let files_in_scope () =
-  let config_path =
-    match nearest_config (Sys.getcwd ()) with
-    | Some path -> path
-    | None -> raise (Error "Could not find a rescript.json parent")
+  let current_directory = Sys.getcwd () in
+  let current =
+    try Config.load_root current_directory
+    with Config.Error message ->
+      raise
+        (Error
+           (Printf.sprintf "Could not read rescript.json at %s: %s"
+              current_directory message))
   in
-  let current = Config.load config_path in
   let listed_by_parent =
     match nearest_config (Filename.dirname current.root) with
     | None -> false

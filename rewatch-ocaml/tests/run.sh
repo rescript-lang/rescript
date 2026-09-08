@@ -2,6 +2,8 @@
 set -eu
 
 port="$1"
+port_directory=$(CDPATH= cd -- "$(dirname "$port")" && pwd)
+port="$port_directory/$(basename "$port")"
 root=$(CDPATH= cd -- "$(dirname "$0")/../.." && pwd)
 : "${RESCRIPT_BSC_EXE:=$root/_build/default/compiler/bsc/rescript_compiler_main.exe}"
 : "${RESCRIPT_RUNTIME:=$root/packages/@rescript/runtime}"
@@ -50,7 +52,6 @@ source_map="$work/source-map"
 warning_replay="$work/warning-replay"
 monorepo="$work/monorepo"
 
-port_directory=$(CDPATH= cd -- "$(dirname "$port")" && pwd)
 if [ -x "$port_directory/bsc.exe" ]; then
   env -u RESCRIPT_BSC_EXE "$port" build "$packaged_basic" \
     >"$packaged_basic/build.log"
@@ -196,6 +197,14 @@ grep -F "[format check] $work/unformatted.res" \
 grep -F "The file listed above needs formatting" \
   "$work/format-check.err" >/dev/null
 grep -F "Formatting check failed" "$work/format-check.err" >/dev/null
+
+if (cd "$basic/src" && "$port" format --check) \
+  >"$work/format-nested.out" 2>"$work/format-nested.err"; then
+  echo "format unexpectedly searched above the current directory" >&2
+  exit 1
+fi
+grep -F "Could not read rescript.json at $basic/src" \
+  "$work/format-nested.err" >/dev/null
 
 rm -rf "$basic/lib" "$cycle/lib" "$failure/lib"
 rm -rf "$legacy_config/lib"

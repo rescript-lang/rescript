@@ -155,6 +155,9 @@ applicable.
   formatting invokes `bsc` before reading the original like Rust, and
   `--check` prints the same singular/plural summary before failing. Focused
   unit and integration tests cover the labels, summaries, and exit status.
+  Implicit format scope also matches Rust's project boundary: the current
+  directory itself must contain `rescript.json` or `bsconfig.json`; formatting
+  from an arbitrary descendant does not silently select a parent project.
 - Independent parser/compiler jobs use a CPU-bounded dynamic scheduler that
   refills each freed slot immediately, with private output files and
   deterministic input-order diagnostic collection. Their transient logs are
