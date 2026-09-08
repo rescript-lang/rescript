@@ -25,6 +25,7 @@ cp -R "$root/rewatch-ocaml/tests/out-of-source" "$work/out-of-source"
 cp -R "$root/rewatch-ocaml/tests/namespace" "$work/namespace"
 cp -R "$root/rewatch-ocaml/tests/namespace-entry" "$work/namespace-entry"
 cp -R "$root/rewatch-ocaml/tests/source-map" "$work/source-map"
+cp -R "$root/rewatch-ocaml/tests/warning-replay" "$work/warning-replay"
 cp -R "$root/rewatch-ocaml/tests/monorepo" "$work/monorepo"
 basic="$work/basic"
 legacy_config="$work/legacy-config"
@@ -40,6 +41,7 @@ out_of_source="$work/out-of-source"
 namespace="$work/namespace"
 namespace_entry="$work/namespace-entry"
 source_map="$work/source-map"
+warning_replay="$work/warning-replay"
 monorepo="$work/monorepo"
 
 missing_project="$work/does-not-exist"
@@ -96,6 +98,22 @@ wait_for_text() {
   attempts=0
   while [ "$attempts" -lt 200 ]; do
     if grep -q "$pattern" "$file" 2>/dev/null; then
+      return 0
+    fi
+    attempts=$((attempts + 1))
+    sleep 0.1
+  done
+  return 1
+}
+
+wait_for_count() {
+  file="$1"
+  pattern="$2"
+  expected="$3"
+  attempts=0
+  while [ "$attempts" -lt 200 ]; do
+    count=$(grep -c "$pattern" "$file" 2>/dev/null || true)
+    if [ "$count" -ge "$expected" ]; then
       return 0
     fi
     attempts=$((attempts + 1))
@@ -233,6 +251,30 @@ if ! wait_for_file_gone "$watch_basic/src/New.js"; then
   exit 1
 fi
 test ! -f "$watch_basic/src/New.js"
+
+warning_call_log="$warning_replay/bsc-calls.log"
+warning_watch_log="$warning_replay/watch.log"
+env RESCRIPT_BSC_EXE="$root/rewatch-ocaml/tests/counting-bsc.sh" \
+  REWATCH_REAL_BSC="$RESCRIPT_BSC_EXE" \
+  REWATCH_BSC_CALL_LOG="$warning_call_log" \
+  "$port" watch "$warning_replay" >"$warning_watch_log" 2>&1 &
+warning_watch_pid=$!
+background_pids="$background_pids $warning_watch_pid"
+if ! wait_for_count "$warning_watch_log" 'unused value unusedValue' 1; then
+  cat "$warning_watch_log" >&2
+  exit 1
+fi
+warning_a_calls=$(grep -c 'WarningA.ast' "$warning_call_log" || true)
+test "$warning_a_calls" -gt 0
+printf '\nlet changed = 1\n' >> "$warning_replay/src/B.res"
+if ! wait_for_count "$warning_watch_log" 'unused value unusedValue' 2; then
+  cat "$warning_watch_log" >&2
+  exit 1
+fi
+warning_a_calls_after=$(grep -c 'WarningA.ast' "$warning_call_log" || true)
+test "$warning_a_calls_after" -eq "$warning_a_calls"
+kill -TERM "$warning_watch_pid"
+wait "$warning_watch_pid"
 kill -TERM "$watch_pid"
 wait "$watch_pid"
 test ! -f "$watch_basic/lib/watch.lock"

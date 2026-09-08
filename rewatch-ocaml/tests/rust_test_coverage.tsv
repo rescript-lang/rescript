@@ -8,10 +8,10 @@ build/compile.rs::compiler_output_to_string_handles_invalid_utf8	covered	unit_te
 build/compile.rs::retain_critical_external_warnings_returns_none_without_marker	covered	unit_tests.ml: ordinary external warning suppression
 build/compile.rs::retain_critical_external_warnings_keeps_uncurried_dot_block	covered	unit_tests.ml: critical uncurried warning retention
 build/compile.rs::retain_critical_external_warnings_handles_crlf_line_endings	covered	unit_tests.ml: CRLF warning block normalization
-build/compile.rs::replays_stored_warning_for_module_that_did_not_recompile	gap	watch output persists but OCaml currently recompiles warning modules
-build/compile.rs::replays_stored_warnings_in_module_name_order	gap	persisted per-module warning state is not implemented
-build/compile.rs::appends_fresh_and_stored_warnings_in_shared_module_name_order	gap	fresh/stored warning merge is not implemented
-build/compile.rs::does_not_replay_stored_warning_for_module_that_recompiled	gap	persisted per-module warning state is not implemented
+build/compile.rs::replays_stored_warning_for_module_that_did_not_recompile	covered	focused warning watcher replays output without another WarningA compile call
+build/compile.rs::replays_stored_warnings_in_module_name_order	covered	warning_state_tests.ml: deterministic module-name order
+build/compile.rs::appends_fresh_and_stored_warnings_in_shared_module_name_order	covered	warning_state_tests.ml: fresh/stored shared ordering
+build/compile.rs::does_not_replay_stored_warning_for_module_that_recompiled	covered	warning_state_tests.ml: clean recompile removes stored warning
 build/compiler_info.rs::verify_compiler_info_keeps_package_when_source_map_args_match	covered	compiler_info_tests.ml and focused source-map no-op rebuild retain artifacts
 build/compiler_info.rs::verify_compiler_info_cleans_package_when_source_map_args_change	covered	compiler_info_tests.ml and focused source-map mode change clean and rebuild the package
 build/packages.rs::should_return_false_with_invalid_parents_as_bs_dependencies	covered	unit_tests.ml: disallowed regular dependency rejected end to end
@@ -132,6 +132,6 @@ telemetry.rs::noop_guard_reports_otel_disabled	omitted	OpenTelemetry is an expli
 telemetry.rs::noop_guard_drops_cleanly_without_explicit_shutdown	omitted	OpenTelemetry is an explicit project non-goal
 telemetry.rs::init_telemetry_without_env_is_noop	omitted	OpenTelemetry is an explicit project non-goal
 watcher.rs::clears_screen_only_for_interactive_rebuilds	gap	behavior exists but PTY/non-TTY regression coverage is still open
-watcher.rs::carries_forward_implementation_warnings_for_matching_module_paths	shared	canonical watch warning persistence tests
-watcher.rs::does_not_carry_forward_warnings_when_module_paths_change	gap	persisted warning state and path-sensitive carry-forward are not implemented
-watcher.rs::carries_forward_interface_warnings_for_matching_interface_paths	gap	persisted interface warning state is not implemented
+watcher.rs::carries_forward_implementation_warnings_for_matching_module_paths	covered	canonical warning persistence tests plus focused no-recompile call count
+watcher.rs::does_not_carry_forward_warnings_when_module_paths_change	covered	warning_state_tests.ml: retain_paths drops changed implementation path
+watcher.rs::carries_forward_interface_warnings_for_matching_interface_paths	covered	warning_state_tests.ml: matching interface survives implementation path removal

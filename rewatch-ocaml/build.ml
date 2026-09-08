@@ -612,9 +612,7 @@ let compiler_args path =
 type compile_phase =
   [ `Start | `Interface of string | `Implementation of string | `Done ]
 
-type compile_message =
-  | Compile_warning of string * string
-  | Compile_failure of string * string
+type compile_message = Compile_failure of string * string
 
 type scheduled_module = {
   key: string;
@@ -666,6 +664,7 @@ type build_stats = {
   compile_cleanup: (unit -> unit) list ref;
   mutable compiler_context: Compiler_info.context option;
   mutable compiler_cleaned: bool;
+  warning_state: Warning_state.t;
 }
 
 let source_is_newer ~source ~artifact =
@@ -673,6 +672,11 @@ let source_is_newer ~source ~artifact =
   | Some source_time, Some artifact_time -> source_time > artifact_time
   | Some _, None -> true
   | None, _ -> false
+
+let published_ast_path ~ocaml_dir source_path =
+  (* bsc gives its intermediate AST an epoch mtime. The copy published after a
+     successful parse is the stable freshness marker across build cycles. *)
+  Filename.concat ocaml_dir (Filename.basename (Source.ast_path source_path))
 
 let dependency_artifact dependency_dirs dependency =
   let matches path =
@@ -891,9 +895,16 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
   stats.compiler_context <- Some compiler_context;
   List.iter
     (fun package ->
-      if
-        Compiler_info.verify_package compiler_context package.graph_config
-      then stats.compiler_cleaned <- true;
+      if Compiler_info.needs_clean compiler_context package.graph_config then (
+        ignore
+          (Build_artifacts.cleanup_stale ~root:package.graph_root
+             ~ocaml_dir:package.graph_ocaml_dir
+             ~is_local:
+               (is_local_dependency ~workspace:root_config.root
+                  package.graph_root)
+             package.graph_compile_config package.graph_modules);
+        Compiler_info.clean_package package.graph_config;
+        stats.compiler_cleaned <- true);
       ensure_dir package.graph_build_dir;
       ensure_dir package.graph_ocaml_dir)
     !graph_packages;
@@ -921,7 +932,7 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
               :: Option.to_list module_.Source.interface)
          |> List.filter_map (fun path ->
               let artifact =
-                Filename.concat package.graph_build_dir (Source.ast_path path)
+                published_ast_path ~ocaml_dir:package.graph_ocaml_dir path
               in
               if
                 source_is_newer
@@ -1225,7 +1236,7 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder ~prod ~features
          List.mem (Source.module_name path) removed_modules
          || Hashtbl.mem stats.forced_parse_paths (Filename.concat root path)
          || source_is_newer ~source:(Filename.concat root path)
-              ~artifact:(Filename.concat build_dir (Source.ast_path path)))
+              ~artifact:(published_ast_path ~ocaml_dir path))
   in
   let parse_paths_to_run =
     dirty_parse_paths
@@ -1423,27 +1434,28 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder ~prod ~features
   stats.scheduled_modules := scheduled @ !(stats.scheduled_modules);
   stats.compile_cleanup :=
     (fun () ->
-      Hashtbl.iter
-        (fun module_name () ->
-          match
-            List.find_opt
-              (fun module_ -> module_.Source.name = module_name)
-              modules
-          with
-          | None -> ()
-          | Some module_ ->
-            let paths =
-              module_.Source.implementation
-              :: Option.to_list module_.Source.interface
-            in
-            List.iter
-              (fun path ->
-                let ast = Source.ast_path path in
-                remove_file (Filename.concat build_dir ast);
-                remove_file
-                  (Filename.concat ocaml_dir (Filename.basename ast)))
-              paths)
-        compile_warning_modules;
+      if not watch then
+        Hashtbl.iter
+          (fun module_name () ->
+            match
+              List.find_opt
+                (fun module_ -> module_.Source.name = module_name)
+                modules
+            with
+            | None -> ()
+            | Some module_ ->
+              let paths =
+                module_.Source.implementation
+                :: Option.to_list module_.Source.interface
+              in
+              List.iter
+                (fun path ->
+                  let ast = Source.ast_path path in
+                  remove_file (Filename.concat build_dir ast);
+                  remove_file
+                    (Filename.concat ocaml_dir (Filename.basename ast)))
+                paths)
+          compile_warning_modules;
       List.iter
         (fun ast ->
           remove_file (Filename.concat build_dir ast);
@@ -1453,6 +1465,14 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder ~prod ~features
   ()
 
 let run_scheduled_modules stats =
+  let warning_paths =
+    !(stats.scheduled_modules)
+    |> List.concat_map (fun (scheduled : scheduled_module) ->
+         (scheduled.source.Source.implementation
+         :: Option.to_list scheduled.source.Source.interface)
+         |> List.map (fun path -> Filename.concat scheduled.package_root path))
+  in
+  Warning_state.retain_paths stats.warning_state warning_paths;
   let works =
     !(stats.scheduled_modules)
     |> List.map (fun (scheduled : scheduled_module) ->
@@ -1472,14 +1492,26 @@ let run_scheduled_modules stats =
           if Process.succeeded result then
             try
               match scheduled.publish ~is_interface path result with
-              | "" -> None
-              | warning -> Some (Compile_warning (path, warning))
+              | "" ->
+                Warning_state.remove stats.warning_state
+                  ~package_root:scheduled.package_root ~path;
+                None
+              | warning ->
+                Warning_state.set stats.warning_state
+                  ~module_name:scheduled.key
+                  ~package_root:scheduled.package_root ~path ~output:warning;
+                if scheduled.is_local then scheduled.mark_warning path;
+                None
             with Build_failure output ->
+              Warning_state.remove stats.warning_state
+                ~package_root:scheduled.package_root ~path;
               Some (Compile_failure (path, output))
-          else
+          else (
+            Warning_state.remove stats.warning_state
+              ~package_root:scheduled.package_root ~path;
             Some
               (Compile_failure
-                 (path, result.Process.stderr ^ result.Process.stdout))
+                 (path, result.Process.stderr ^ result.Process.stdout)))
         in
         Option.iter
           (fun message ->
@@ -1515,11 +1547,8 @@ let run_scheduled_modules stats =
               | Some result, `Implementation path ->
                 record_result scheduled ~is_interface:false path result;
                 scheduled.phase := `Done;
-                if
-                  List.exists
-                    (function Compile_failure _ -> true | _ -> false)
-                    !(scheduled.messages)
-                then raise (Scheduled_failure scheduled.key)
+                if !(scheduled.messages) <> [] then
+                  raise (Scheduled_failure scheduled.key)
                 else None
               | None, (`Interface _ | `Implementation _ | `Done)
               | Some _, (`Start | `Done) ->
@@ -1527,23 +1556,19 @@ let run_scheduled_modules stats =
           false
         with Scheduled_failure _ -> true
       in
-      let warnings = ref [] in
       let failures = ref [] in
       !(stats.scheduled_modules)
       |> List.sort (fun (first : scheduled_module) second ->
            String.compare first.key second.key)
       |> List.iter (fun (scheduled : scheduled_module) ->
            !(scheduled.messages) |> List.rev
-           |> List.iter (function
-                | Compile_warning (path, output) ->
-                  warnings := (scheduled, path, output) :: !warnings
-                | Compile_failure (_, output) ->
-                  failures := (scheduled, output) :: !failures));
-      List.rev !warnings
-      |> List.iter (fun ((scheduled : scheduled_module), path, output) ->
-           append_compiler_log scheduled.package_root output;
-           prerr_string output;
-           if scheduled.is_local then scheduled.mark_warning path);
+           |> List.iter (fun (Compile_failure (_, output)) ->
+                failures := (scheduled, output) :: !failures));
+      Warning_state.entries stats.warning_state
+      |> List.iter (fun entry ->
+           append_compiler_log entry.Warning_state.package_root entry.output;
+           prerr_string entry.output);
+      flush stderr;
       let failures = List.rev !failures in
       List.iter
         (fun ((scheduled : scheduled_module), output) ->
@@ -1561,7 +1586,8 @@ let run_namespace_jobs stats =
   let results = Process.run_parallel (List.map fst jobs) in
   List.iter2 (fun (_, finish) result -> finish result) jobs results
 
-let run ~seen ~folder ~prod ~features ~warn_error ~watch ~after_build ~filter =
+let run_with_warning_state ~warning_state ~seen ~folder ~prod ~features
+    ~warn_error ~watch ~after_build ~filter =
   let root = project_root folder in
   let root_config = Config.load_root root in
   let visited = Hashtbl.create 32 in
@@ -1591,6 +1617,7 @@ let run ~seen ~folder ~prod ~features ~warn_error ~watch ~after_build ~filter =
       compile_cleanup = ref [];
       compiler_context = None;
       compiler_cleaned = false;
+      warning_state;
     }
   in
   List.iter (fun path -> Hashtbl.replace visited (Unix.realpath path) ()) seen;
@@ -1732,6 +1759,10 @@ let run ~seen ~folder ~prod ~features ~warn_error ~watch ~after_build ~filter =
       release_build_lock ())
     (fun () -> try execute () with Build_failure output -> report_failure output)
 
+let run ~seen ~folder ~prod ~features ~warn_error ~watch ~after_build ~filter =
+  run_with_warning_state ~warning_state:(Warning_state.create ()) ~seen ~folder
+    ~prod ~features ~warn_error ~watch ~after_build ~filter
+
 let watch ~folder ~prod ~features ~warn_error ~after_build ~filter ~clear_screen =
   let root = project_root folder in
   ignore (Config.load_root root);
@@ -1872,10 +1903,11 @@ let watch ~folder ~prod ~features ~warn_error ~after_build ~filter ~clear_screen
       digest_cache;
     result
   in
+  let warning_state = Warning_state.create () in
   let run_build () =
     try
-      run ~seen:[] ~folder ~prod ~features ~warn_error ~watch:true ~after_build
-        ~filter
+      run_with_warning_state ~warning_state ~seen:[] ~folder ~prod ~features
+        ~warn_error ~watch:true ~after_build ~filter
     with
     | Error message | Config.Error message | Source.Error message
     | Process.Error message -> prerr_endline message
