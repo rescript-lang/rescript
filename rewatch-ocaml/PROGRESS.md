@@ -203,6 +203,12 @@ applicable.
   local and installed packages, including the relative folder, package name,
   and package root. The differential gate compares the installed-package
   diagnostic byte for byte; excluded dev and feature folders remain unscanned.
+- Explicit `clean` no longer recursively deletes the complete local `lib/es6`
+  and `lib/js` trees. It removes configured source-derived JavaScript and maps,
+  plus the wholly owned `lib/bs` and `lib/ocaml` compiler trees, matching Rust
+  while preserving unrelated files (including manual JavaScript) beside
+  out-of-source outputs. A dedicated filesystem test retains this ownership
+  boundary.
 - A retained differential command-validation gate covers valid, missing, and
   non-ReScript `compiler-args` inputs; sources without a project; missing,
   config-less, and malformed build folders; and implicit format from below a
