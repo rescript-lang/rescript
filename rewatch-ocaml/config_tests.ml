@@ -125,6 +125,91 @@ let () =
         with Config.Error message -> contains message "jsx.version"
       in
       check rejected "unsupported JSX versions are rejected without panicking";
+      write_file path
+        {|{"name":"flag-whitespace","compiler-flags":["  -w  +A  "]}|};
+      let config = Config.load path in
+      check
+        (config.compiler_flags = ["-w"; "+A"])
+        "compiler flag whitespace does not create empty subprocess arguments";
+      write_file path
+        {|{
+          "name": "argument-order",
+          "compiler-flags": ["-open Belt"],
+          "warnings": {"number": "+A"},
+          "jsx": {"mode": "automatic"},
+          "sourceMap": {"enabled": "always", "mode": "hidden"},
+          "gentypeconfig": {},
+          "experimental-features": {"LetUnwrap": true}
+        }|};
+      let config = Config.load path in
+      check
+        (Build.compiler_flags ~source_maps:false ~watch:false ~gentype:false
+           config
+        = [
+            "-bs-jsx-mode";
+            "automatic";
+            "-enable-experimental";
+            "LetUnwrap";
+            "-w";
+            "+A";
+            "-open";
+            "Belt";
+          ])
+        "parser arguments follow Rust phase ordering";
+      check
+        (Build.compiler_flags ~source_maps:true ~watch:false ~gentype:true config
+        = [
+            "-bs-jsx-mode";
+            "automatic";
+            "-bs-source-map";
+            "hidden";
+            "-open";
+            "Belt";
+            "-w";
+            "+A";
+            "-bs-gentype";
+            "-enable-experimental";
+            "LetUnwrap";
+          ])
+        "compiler arguments follow Rust phase ordering";
+      let optional_ppx =
+        [
+          ["graphql-ppx"];
+          ["graphql_ppx"];
+          ["spice"];
+          ["rescript-relay"];
+          ["re-formality"];
+          ["bisect_ppx"];
+          ["always"];
+          [];
+        ]
+      in
+      check
+        (Build.filter_ppx_flags ~bisect_enabled:false optional_ppx
+           "let value = 1"
+        = [["always"]])
+        "source-specific and disabled Bisect PPXs are filtered";
+      check
+        (Build.filter_ppx_flags ~bisect_enabled:true optional_ppx
+           "%graphql @spice %relay %form"
+        = [
+            ["graphql-ppx"];
+            ["graphql_ppx"];
+            ["spice"];
+            ["rescript-relay"];
+            ["re-formality"];
+            ["bisect_ppx"];
+            ["always"];
+          ])
+        "source markers and the Bisect environment enable their PPXs";
+      check
+        (match
+           Build.compiler_flags ~ppx_flags:[["tool"; "--arg"]]
+             ~source_maps:false ~watch:false ~gentype:false config
+         with
+        | "-ppx" :: "tool --arg" :: _ -> true
+        | _ -> false)
+        "parser arguments include the filtered PPX command";
       [
         {|{"name":"first","name":"second"}|};
         {|{"name":"duplicate-source","sources":{"dir":"a","dir":"b"}}|};

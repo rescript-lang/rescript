@@ -22,6 +22,7 @@ cp -R "$root/rewatch-ocaml/tests/shared-dep" "$work/dependency/node_modules/dep"
 cp -R "$root/rewatch-ocaml/tests/external-boundary" "$work/external-boundary"
 cp -R "$root/rewatch-ocaml/tests/post-build" "$work/post-build"
 cp -R "$root/rewatch-ocaml/tests/out-of-source" "$work/out-of-source"
+cp -R "$root/rewatch-ocaml/tests/ppx-filter" "$work/ppx-filter"
 cp -R "$root/rewatch-ocaml/tests/namespace" "$work/namespace"
 cp -R "$root/rewatch-ocaml/tests/namespace-entry" "$work/namespace-entry"
 cp -R "$root/rewatch-ocaml/tests/source-map" "$work/source-map"
@@ -38,6 +39,7 @@ dependency="$work/dependency"
 external_boundary="$work/external-boundary"
 post_build="$work/post-build"
 out_of_source="$work/out-of-source"
+ppx_filter="$work/ppx-filter"
 namespace="$work/namespace"
 namespace_entry="$work/namespace-entry"
 source_map="$work/source-map"
@@ -53,7 +55,17 @@ grep -F \
   "Could not start Rescript build: Could not write lockfile because the specified project folder does not exist: $missing_project" \
   "$work/missing-project.log" >/dev/null
 
-"$port" compiler-args "$basic/src/A.res" | grep '"compiler_args"' >/dev/null
+compiler_args_json=$("$port" compiler-args "$basic/src/A.res")
+printf '%s\n' "$compiler_args_json" | grep '"compiler_args"' >/dev/null
+printf '%s\n' "$compiler_args_json" | node -e '
+  const path = require("path");
+  let input = "";
+  process.stdin.on("data", chunk => input += chunk);
+  process.stdin.on("end", () => {
+    const args = JSON.parse(input).parser_args;
+    if (args.at(-1) !== path.join("..", "..", "src", "A.res")) process.exit(1);
+  });
+'
 sed 's/"suffix": "\.mjs"/"suffix": "\.mjs", "bsc-flags": ["-w -9"]/' "$basic/rescript.json" > "$basic/rescript.next"
 mv "$basic/rescript.next" "$basic/rescript.json"
 sed 's/"module": "esmodule"/"module": "es6"/' "$basic/rescript.json" > "$basic/rescript.next"
@@ -62,6 +74,18 @@ mv "$basic/rescript.next" "$basic/rescript.json"
 gentype_compiler_args=$("$port" compiler-args "$gentype/src/Main.res")
 printf '%s\n' "$gentype_compiler_args" | grep '"-bs-gentype-generated-extension"' >/dev/null
 printf '%s\n' "$gentype_compiler_args" | grep '"-bs-gentype-bsb-project-root"' >/dev/null
+printf '%s\n' "$gentype_compiler_args" | node -e '
+  let input = "";
+  process.stdin.on("data", chunk => input += chunk);
+  process.stdin.on("end", () => {
+    const args = JSON.parse(input).compiler_args;
+    const runtime = args.indexOf("-runtime-path");
+    const dependencyInclude = args.indexOf("-I", 2);
+    if (runtime < 0 || (dependencyInclude >= 0 && runtime > dependencyInclude)) {
+      process.exit(1);
+    }
+  });
+'
 if printf '%s\n' "$gentype_compiler_args" | grep -E '"-bs-gentype-(dep-path|source-dir)"' >/dev/null; then
   echo "compiler-args unexpectedly included full-build GenType paths" >&2
   exit 1
@@ -151,6 +175,7 @@ mv "$dependency/rescript.next" "$dependency/rescript.json"
 sed 's/}$/,"suffix":".cjs"}/' "$dependency/node_modules/dep/rescript.json" > "$dependency/node_modules/dep/rescript.next"
 mv "$dependency/node_modules/dep/rescript.next" "$dependency/node_modules/dep/rescript.json"
 rm -rf "$post_build/lib"
+rm -rf "$ppx_filter/lib"
 rm -rf "$out_of_source/lib"
 rm -rf "$namespace/lib"
 rm -rf "$namespace_entry/lib"
@@ -378,6 +403,9 @@ test -f "$external_boundary/external/src/Foo.js"
 
 "$port" build "$post_build"
 test -f "$post_build/src/Main.js"
+
+"$port" build "$ppx_filter"
+test -f "$ppx_filter/src/Main.js"
 
 "$port" build "$out_of_source"
 test -f "$out_of_source/lib/es6/src/Main.js"

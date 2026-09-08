@@ -192,9 +192,33 @@ let report_failure action path result =
   ignore path;
   raise (Build_failure output)
 
-let compiler_flags ~source_maps ~watch ~gentype (config : Config.t) =
+let ppx_is_enabled ~bisect_enabled flag contents =
+  if contains_text flag "bisect" then bisect_enabled
+  else
+    not
+      ((contains_text flag "graphql-ppx" || contains_text flag "graphql_ppx")
+      && not (contains_text contents "%graphql")
+      || (contains_text flag "spice" && not (contains_text contents "@spice"))
+      || (contains_text flag "rescript-relay"
+         && not (contains_text contents "%relay"))
+      || (contains_text flag "re-formality"
+         && not (contains_text contents "%form")))
+
+let filter_ppx_flags ?bisect_enabled flags contents =
+  let bisect_enabled =
+    Option.value bisect_enabled
+      ~default:(Option.is_some (Sys.getenv_opt "BISECT_ENABLE"))
+  in
+  List.filter
+    (function
+      | [] -> false
+      | flag :: _ -> ppx_is_enabled ~bisect_enabled flag contents)
+    flags
+
+let compiler_flags ?(ppx_flags = []) ~source_maps ~watch ~gentype
+    (config : Config.t) =
   let ppx_args =
-    config.ppx_flags |> List.concat_map (function
+    ppx_flags |> List.concat_map (function
       | [] -> []
       | flag :: arguments ->
       let executable =
@@ -209,9 +233,14 @@ let compiler_flags ~source_maps ~watch ~gentype (config : Config.t) =
       ["-bs-source-map"; "false"]
     else config.source_map_args
   in
-  ppx_args @ config.jsx_args @ source_map_args @ config.experimental_args
-  @ (if gentype then config.gentype_args else [])
-  @ config.compiler_flags @ config.warning_flags
+  if source_maps then
+    ppx_args @ config.jsx_args @ source_map_args @ config.compiler_flags
+    @ config.warning_flags
+    @ (if gentype then config.gentype_args else [])
+    @ config.experimental_args
+  else
+    ppx_args @ config.jsx_args @ config.experimental_args @ config.warning_flags
+    @ config.compiler_flags
 
 let with_local_warning_policy ~is_local (config : Config.t) =
   if is_local then config else {config with warning_flags = []}
@@ -232,8 +261,11 @@ let diagnostics_for_package ~is_local (config : Config.t) =
 let parse_file ~bsc ~build_dir ~(config : Config.t) path =
   let ast = Source.ast_path path in
   ensure_dir (Filename.concat build_dir (Filename.dirname ast));
+  let contents = read_file (Filename.concat config.root path) in
   let args =
-    compiler_flags ~source_maps:false ~watch:false ~gentype:false config
+    compiler_flags
+      ~ppx_flags:(filter_ppx_flags config.ppx_flags contents)
+      ~source_maps:false ~watch:false ~gentype:false config
     @ [
         "-absname";
         "-bs-ast";
@@ -262,8 +294,11 @@ let parse_file ~bsc ~build_dir ~(config : Config.t) path =
 let parse_job ~bsc ~build_dir ~(config : Config.t) path =
   let ast = Source.ast_path path in
   ensure_dir (Filename.concat build_dir (Filename.dirname ast));
+  let contents = read_file (Filename.concat config.root path) in
   let args =
-    compiler_flags ~source_maps:false ~watch:false ~gentype:false config
+    compiler_flags
+      ~ppx_flags:(filter_ppx_flags config.ppx_flags contents)
+      ~source_maps:false ~watch:false ~gentype:false config
     @ [
         "-absname";
         "-bs-ast";
@@ -438,8 +473,9 @@ let compile_job ~bsc ~runtime ~build_dir ~watch ~(config : Config.t) ~dependency
   let args =
     namespace_args @ interface_args
     @ ["-I"; Filename.concat Filename.parent_dir_name "ocaml"]
+    @ ["-runtime-path"; runtime]
     @ List.concat_map (fun dir -> ["-I"; dir]) dependency_dirs
-    @ ["-runtime-path"; runtime] @ compiler_flags ~source_maps:true ~watch ~gentype:true config
+    @ compiler_flags ~source_maps:true ~watch ~gentype:true config
     @ gentype_dependency_args config
     @ ["-bs-package-name"; config.name; "-bs-project-root"; config.root]
     @ output_args @ [ast]
@@ -615,8 +651,20 @@ let compiler_args path =
         if Sys.file_exists ocaml then Some ocaml else None
       | None -> None)
   in
-  let parser_args = compiler_flags ~source_maps:false ~watch:false ~gentype:false config
-    @ ["-absname"; "-bs-ast"; "-o"; Source.ast_path relative; relative] in
+  let parser_args =
+    compiler_flags
+      ~ppx_flags:(filter_ppx_flags config.ppx_flags (read_file source))
+      ~source_maps:false ~watch:false ~gentype:false config
+    @ [
+        "-absname";
+        "-bs-ast";
+        "-o";
+        Source.ast_path relative;
+        Filename.concat
+          (Filename.concat Filename.parent_dir_name Filename.parent_dir_name)
+          relative;
+      ]
+  in
   let compiler_args =
     let ast = Source.ast_path relative in
     let namespace_args = namespace_args config (Source.module_name source) in
@@ -624,8 +672,9 @@ let compiler_args path =
     let output_args = if is_interface then [] else List.concat_map (fun spec -> ["-bs-package-output"; package_output config relative spec]) config.package_specs in
     namespace_args @ interface_args
     @ ["-I"; Filename.concat Filename.parent_dir_name "ocaml"]
+    @ ["-runtime-path"; runtime]
     @ List.concat_map (fun dir -> ["-I"; dir]) dependency_dirs
-    @ ["-runtime-path"; runtime] @ compiler_flags ~source_maps:true ~watch:false ~gentype:true config
+    @ compiler_flags ~source_maps:true ~watch:false ~gentype:true config
     @ ["-bs-package-name"; config.name; "-bs-project-root"; config.root]
     @ output_args @ [ast]
   in
