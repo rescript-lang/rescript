@@ -280,7 +280,7 @@ applicable.
   cleanup after `SIGTERM`.
 - `watch.lock` contains the running watch process PID, matching the lock-file
   protocol used by the existing integration helpers.
-- Every canonical watch test passes with the polling backend: ordinary and
+- Every canonical watch test passes with the native libuv backend: ordinary and
   atomic edits, warning replay, new and deleted sources, configuration suffix
   changes, ignored non-source paths, and missing source folders. Input snapshots
   are deduplicated to local package roots, tolerate rename races, and include a
@@ -651,10 +651,13 @@ rerun it for the final maintainability review alongside maximum module size.
   Rust's live parsing/compilation spinner or complete verbosity behavior. Plain
   redirected output and pseudo-terminal output are tracked as distinct gates
   in `PARITY_CHECKLIST.md`.
-- `watch` currently uses conservative polling rather than Rust's native event
-  delivery and batching. Signal handling and lock lifecycle are covered.
-- Polling watches root and recursively resolved local dependency roots, but it
-  is not yet a native event backend and has only been verified on Unix.
+- `watch` now uses long-lived libuv filesystem-event handles for the root and
+  recursively resolved local dependency directories. Native events are treated
+  as wakeups for the established snapshot/diff algorithm, so correctness does
+  not depend on platform-specific rename payloads or event ordering. Handles
+  are retained across builds and only added or closed when directory topology
+  changes; a focused resource test covers stable, added, and removed counts.
+  The former polling loop remains a runtime fallback if native setup fails.
 - Existing generated outputs are updated as their compiler subprocesses
   succeed; only previously absent outputs are held until whole-build success.
   This preserves artifact/output consistency and avoids removing last-known
@@ -665,9 +668,9 @@ rerun it for the final maintainability review alongside maximum module size.
   to tool-specific sidecar suffixes whose underlying path is a recognized
   generated JavaScript or source-map name; unrelated user files with a
   staging-like suffix are preserved and covered by a focused filesystem test.
-- `watchexec` is available on the current macOS development host and provides
-  a native-event candidate, but it is not bundled with this experimental dune
-  executable; polling remains the portable fallback until packaging is decided.
+- The focused integration runner also creates an empty nested source directory,
+  waits for native registration, and then adds a source, covering directory
+  discovery independently of a single coalesced create batch.
 - Local source dependencies under `node_modules` or a sibling package are
   recursively built with dependency feature selections and cycle protection;
   prebuilt packages are accepted through their `lib/ocaml` include path.
@@ -682,7 +685,7 @@ rerun it for the final maintainability review alongside maximum module size.
   working directories and PATH/PATHEXT resolution. Windows cleanup uses
   `taskkill /T` for compiler/helper trees (with a direct-PID fallback), while
   Unix retains process-group cleanup. Watch lock/process
-  probing and polling behavior still need a Windows cross-build and runtime
+  probing and native watcher behavior still need a Windows cross-build and runtime
   verification. Shared filesystem logic uses `Filename` operations rather than
   embedded `/` or `\\` separators; Unix-only test cases are being isolated or
   replaced with portable helpers.
@@ -702,8 +705,10 @@ rerun it for the final maintainability review alongside maximum module size.
   subprocess creation, signal deferral, post-build shell invocation, and path
   comparison are behind that boundary. The unselected Windows implementation
   is also type-checked against the contract in Linux unit builds. Pipe
-  descriptor ownership and a future native watcher backend belong behind the
-  same boundary; actual Windows cross-build/runtime verification remains open.
+  descriptor ownership still belongs behind the same boundary. The cross-platform
+  native watcher has its own narrow interface over libuv rather than duplicating
+  identical Unix and Windows implementations; actual Windows cross-build/runtime
+  verification remains open.
 - Native Windows implementation and runtime validation are deliberately an
   end-stage milestone that can be completed by a separate Codex session inside
   the Windows VM. Until that handoff, every increment must keep Windows in its
@@ -736,32 +741,43 @@ rerun it for the final maintainability review alongside maximum module size.
   keys to distinguish deprecated, known-unsupported, and forward-compatible
   unknown fields; generated codecs would still require substantial custom
   validation around the derived layer.
-- No watcher binding is accepted yet. A libuv binding could provide native
-  Windows/macOS/Linux events, but it adds a vendored C library plus ctypes
-  dependencies and its current maintenance cadence must be established before
-  adoption. Polling remains the fallback while this is evaluated.
+- `luv` 0.5.14 is accepted for native filesystem events. It is a thin
+  MIT-licensed binding that vendors and statically links libuv, supports the
+  required Linux/macOS/Windows targets, and keeps the executable free of a
+  runtime libuv dependency. Its latest release was September 2024, so the
+  binding's cadence is quieter than ideal; the narrow `Native_watcher` boundary
+  keeps replacement or localized vendoring practical if maintenance becomes a
+  problem. The pinned version and upstream status must be reviewed during
+  dependency updates. On Linux ARM64, static inclusion increased the promoted
+  executable from approximately 3.6 MiB to 5.2 MiB; `ldd` still reports only
+  libc and libm. The packaged third-party notices must include Luv and libuv's
+  permissive license notices before general distribution.
 
 ## Next actions
 
-1. Replace or supplement polling with a production-grade native event backend
-   behind the existing platform boundary. Preserve polling as a fallback while
-   validating event batching, resource cleanup, Linux/macOS packaging, and the
-   intended Windows semantics. Live spinner animation is deliberately deferred
-   until after this functional watch milestone.
-2. Finish the source-level validation inventory, closing confirmed
+1. Finish the native watcher milestone by validating macOS packaging and event
+   behavior and the intended Windows semantics in their eventual native runs.
+   Linux event batching, directory refresh, resource cleanup, canonical watch
+   behavior, fallback paths, and static packaging are covered. Live spinner
+   animation is deliberately deferred.
+2. Replace compiler-output capture sidecars with concurrently drained pipes,
+   keeping descriptor ownership and child-tree shutdown portable. Extend the
+   equivalence harness and compare normalized filesystem calls to verify that
+   the change removes transient-file work without changing compiler work,
+   diagnostics, cancellation, or artifacts.
+3. Finish the source-level validation inventory, closing confirmed
    configuration/CLI gaps; the Rust unit-test coverage review is complete and
    OpenTelemetry is an explicitly documented non-goal.
-3. Profile and close the remaining clean-build wall-time gap while preserving
-   exact compiler-work and artifact equivalence; retain pipe capture as an
-   end-stage option.
-4. Continue splitting `build.ml` along stable responsibility boundaries. The
+4. Profile and close the remaining clean-build wall-time gap while preserving
+   exact compiler-work and artifact equivalence.
+5. Continue splitting `build.ml` along stable responsibility boundaries. The
    filesystem and artifact-ownership layer now lives in `build_artifacts.ml`;
    package preparation/scheduling and watch lifecycle remain candidates.
-5. Perform the final two-scope whole-port review and address confirmed findings.
-6. At the final maintainability pass, add comments around ownership,
+6. Perform the final two-scope whole-port review and address confirmed findings.
+7. At the final maintainability pass, add comments around ownership,
    concurrency, platform, and algorithmic invariants that are not apparent from
    the code itself; avoid comments that only paraphrase individual statements.
-7. Prepare the pinned Windows handoff, then finish the Windows watcher/lock
+8. Prepare the pinned Windows handoff, then finish the Windows watcher/lock
    backend and path audit and run the native build, unit, focused, and canonical
    Bash suites in the VM. Address findings there and finish with an x64 Windows
    confidence run where available.

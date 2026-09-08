@@ -25,13 +25,14 @@
   graph
   package_metadata
   build_artifacts
+  native_watcher
   toolchain
   compiler_info
   warning_state
   output
   build
   format)
- (libraries unix yojson str spawn cmdliner))
+ (libraries unix yojson str spawn cmdliner luv))
 
 (executable
  (name rescript_ocaml)
@@ -101,4 +102,9 @@
 (test
  (name clean_tests)
  (modules clean_tests)
+ (libraries rewatch_ocaml_lib))
+
+(test
+ (name native_watcher_tests)
+ (modules native_watcher_tests)
  (libraries rewatch_ocaml_lib))
