@@ -15,6 +15,9 @@ mkdir -p "$work/malformed-parent/child/src" "$work/config-directory/rescript.jso
 mkdir -p "$work/missing-dependency/src"
 mkdir -p "$work/malformed-lock/src" "$work/malformed-lock/lib"
 mkdir -p "$work/interface-mismatch/src"
+mkdir -p "$work/external-dev-source/src" \
+  "$work/external-dev-source/node_modules/dep/src" \
+  "$work/external-dev-source/node_modules/dep/test"
 mkdir -p "$work/mismatched-dependency/src" \
   "$work/mismatched-dependency/node_modules/dep/src"
 mkdir -p "$work/configless-dependency/src" \
@@ -41,6 +44,16 @@ printf '{"name":"interface-mismatch","sources":["src"]}\n' \
   >"$work/interface-mismatch/rescript.json"
 printf 'let value = 1\n' >"$work/interface-mismatch/src/lower.res"
 printf 'let value: int\n' >"$work/interface-mismatch/src/Lower.resi"
+printf '{"name":"external-dev-source","sources":["src"],"dependencies":["dep"]}\n' \
+  >"$work/external-dev-source/rescript.json"
+printf 'let value = DepPublic.value\n' \
+  >"$work/external-dev-source/src/App.res"
+printf '{"name":"dep","sources":["src",{"dir":"test","type":"dev"}]}\n' \
+  >"$work/external-dev-source/node_modules/dep/rescript.json"
+printf 'let value = 1\n' \
+  >"$work/external-dev-source/node_modules/dep/src/DepPublic.res"
+printf 'this is deliberately invalid ReScript\n' \
+  >"$work/external-dev-source/node_modules/dep/test/DevOnly.res"
 printf '{"name":"mismatched-dependency","sources":["src"],"dependencies":["dep"]}\n' \
   >"$work/mismatched-dependency/rescript.json"
 printf 'let value = Dep.value\n' >"$work/mismatched-dependency/src/A.res"
@@ -151,6 +164,8 @@ if ! cmp -s "$work/rust.err" "$work/ocaml.err"; then
   cat "$work/ocaml.err" >&2
   exit 1
 fi
+run_case build-excludes-external-dev-source accept accept build \
+  "$work/external-dev-source"
 run_case build-mismatched-dependency-name panic accept build \
   "$work/mismatched-dependency"
 run_case build-missing-dependency exit2 exit2 build "$work/missing-dependency"

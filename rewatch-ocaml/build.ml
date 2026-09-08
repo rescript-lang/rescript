@@ -455,6 +455,8 @@ let is_local_dependency ~workspace path =
   path_is_within ~root:workspace path
   && not (contains_component (Unix.realpath path) "node_modules")
 
+let source_discovery_prod ~prod ~is_local = prod || not is_local
+
 let gentype_dependency_args (config : Config.t) =
   if config.gentype_args = [] then []
   else
@@ -590,7 +592,9 @@ let rec clean_internal ~(root_config : Config.t) ~seen ~folder ~prod ~is_local =
                   "Could not build package tree for '%s' at path '%s'. Error: %s"
                   dependency.name root_config.root message))) dependencies;
       let modules =
-        Source.discover config ~prod ~features:None ~filter:None
+        Source.discover config
+          ~prod:(source_discovery_prod ~prod ~is_local)
+          ~features:None ~filter:None
           ~on_missing:(fun _ -> ())
           ~display_root:root_config.root
       in
@@ -980,7 +984,9 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
               (is_local_dependency ~workspace:root_config.root directory))
         dependencies;
       let modules =
-        Source.discover config ~prod ~features ~filter
+        Source.discover config
+          ~prod:(source_discovery_prod ~prod ~is_local)
+          ~features ~filter
           ~on_missing:(fun path ->
             if is_local then Printf.eprintf "Could not read folder %s\n%!" path)
           ~on_orphan:(fun path ->
@@ -1315,7 +1321,9 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder ~prod ~features
     match prepared with
     | Some package -> package.graph_modules
     | None ->
-      Source.discover config ~prod ~features ~filter
+      Source.discover config
+        ~prod:(source_discovery_prod ~prod ~is_local)
+        ~features ~filter
         ~display_root:root_config.root
         ~on_missing:(fun path ->
           if is_local then Printf.eprintf "Could not read folder %s\n%!" path)
