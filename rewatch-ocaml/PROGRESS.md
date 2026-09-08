@@ -186,6 +186,10 @@ the same conservative result Rust intends for an unsuccessful probe.
 - The canonical UTF-8 warning test passes, and a focused failure check verifies
   that `.compiler.log` contains the compiler error and `#Done` without ANSI
   escape sequences.
+- Subprocess captures are normalized with lossy UTF-8 decoding before results
+  reach either the sequential or parallel build paths. This matches Rust when
+  a compiler code frame truncates a multi-byte character; direct tests also
+  mirror the critical external-warning filter for LF and Windows CRLF streams.
 - Unknown top-level configuration fields emit an explicit warning and are
   ignored, matching Rust rewatch's forward-compatible configuration behavior.
 - Unknown nested fields now follow Rust's decoder boundaries as well. Fields
@@ -376,7 +380,7 @@ rerun it for the final maintainability review alongside maximum module size.
 - Rust unit-test scenario coverage is tracked separately from source guards.
   `tests/check_rust_test_coverage.sh` currently inventories all 136 Rust unit
   tests and validates their exact entries in `tests/rust_test_coverage.tsv`;
-  91 scenarios have received an initial evidence review and 45 remain marked
+  95 scenarios have received an initial evidence review and 41 remain marked
   `unreviewed`. Its `--require-complete` mode is a final quality gate and fails
   for either unreviewed scenarios or confirmed coverage gaps.
 - Interactive output parity remains open. The OCaml executable currently emits
