@@ -173,6 +173,15 @@ applicable.
   preserving two additional `compiler-args` panic candidates for an upstream
   Rust fix. It also records the deliberate OCaml extension check: Rust accepts
   an existing `.txt` even though the command documents `.res`/`.resi` only.
+- Dependency package validation is shared by OCaml build-graph preparation and
+  clean traversal. Missing packages, existing package directories without a
+  ReScript config, and malformed dependency configs now terminate build and
+  clean with Rust's package-tree exit class 2 instead of being skipped or
+  reported as a generic exit 1; watch startup uses the same path. The command
+  gate now has 17 cases and verifies failed OCaml commands leave neither build
+  nor watch locks. Rust currently calls `process::exit(2)` from package-tree
+  library code; OCaml raises a typed package error to the CLI so cleanup still
+  runs before the matching exit status is returned.
 - Independent parser/compiler jobs use a CPU-bounded dynamic scheduler that
   refills each freed slot immediately, with private output files and
   deterministic input-order diagnostic collection. Their transient logs are

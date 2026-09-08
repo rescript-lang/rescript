@@ -1,4 +1,5 @@
 exception Error of string
+exception Package_error of string
 exception Stop_watch
 exception Build_failure of string
 exception Scheduled_failure of string
@@ -171,6 +172,23 @@ let dependency_path root name =
     let sibling = Filename.concat (Filename.dirname root) name in
     let workspace = Filename.concat (Filename.concat root "packages") package_name in
     List.find_map existing_realpath [sibling; workspace]
+
+let require_dependency_directory ~workspace_root package_root
+    (dependency : Config.dependency) =
+  match dependency_path package_root dependency.name with
+  | None ->
+    raise
+      (Package_error
+         (Printf.sprintf
+            "Could not build package tree reading dependency '%s' at path '%s'. Error: Could not resolve dependency %s"
+            dependency.name workspace_root dependency.name))
+  | Some directory when not (Config.exists_in_root directory) ->
+    raise
+      (Package_error
+         (Printf.sprintf
+            "Could not build package tree for '%s' at path '%s'. Error: no rescript.json or bsconfig.json in %s"
+            dependency.name workspace_root directory))
+  | Some directory -> directory
 
 let bsc_path () =
   try Toolchain.bsc () with Toolchain.Error message -> raise (Error message)
@@ -545,11 +563,19 @@ let rec clean_internal ~(root_config : Config.t) ~seen ~folder ~prod ~is_local =
         @ if prod || not is_local then [] else config.dev_dependencies
       in
       List.iter (fun (dependency : Config.dependency) ->
-        match dependency_path root dependency.name with
-        | Some directory when Config.exists_in_root directory ->
+        let directory =
+          require_dependency_directory ~workspace_root:root_config.root root
+            dependency
+        in
+        try
           clean_internal ~root_config ~seen ~folder:directory ~prod
             ~is_local:(is_local_dependency ~workspace:root_config.root directory)
-        | _ -> ()) dependencies;
+        with Config.Error message ->
+          raise
+            (Package_error
+               (Printf.sprintf
+                  "Could not build package tree for '%s' at path '%s'. Error: %s"
+                  dependency.name root_config.root message))) dependencies;
       let modules =
         Source.discover config ~prod ~features:None ~filter:None
           ~on_missing:(fun _ -> ())
@@ -834,6 +860,22 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
       Hashtbl.add loaded_configs root config;
       config
   in
+  let resolve_dependency package_root (dependency : Config.dependency) =
+    let directory =
+      require_dependency_directory ~workspace_root:root_config.root
+        package_root dependency
+    in
+    let config =
+      try load_config directory
+      with Config.Error message ->
+        raise
+          (Package_error
+             (Printf.sprintf
+                "Could not build package tree for '%s' at path '%s'. Error: %s"
+                dependency.name root_config.root message))
+    in
+    (directory, config)
+  in
   let add_feature_request root request =
     match Hashtbl.find_opt requested_features root, request with
     | None, request -> Hashtbl.add requested_features root request
@@ -862,21 +904,20 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
       in
       List.iter
         (fun (kind, (dependency : Config.dependency)) ->
-          match dependency_path root dependency.name with
-          | Some directory when Config.exists_in_root directory ->
-            let dependency_config = load_config (Unix.realpath directory) in
-            if
-              not
-                (dependent_is_allowed dependency_config.allowed_dependents
-                   config.name)
-            then
-              unallowed_dependencies :=
-                (config.name, kind, dependency_config.name)
-                :: !unallowed_dependencies;
-            collect ~folder:directory ~features:dependency.features
-              ~is_local:
-                (is_local_dependency ~workspace:root_config.root directory)
-          | _ -> ())
+          let directory, dependency_config =
+            resolve_dependency root dependency
+          in
+          if
+            not
+              (dependent_is_allowed dependency_config.allowed_dependents
+                 config.name)
+          then
+            unallowed_dependencies :=
+              (config.name, kind, dependency_config.name)
+              :: !unallowed_dependencies;
+          collect ~folder:directory ~features:dependency.features
+            ~is_local:
+              (is_local_dependency ~workspace:root_config.root directory))
         dependencies)
   in
   collect ~folder:root_config.root ~features ~is_local:true;
@@ -919,13 +960,11 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
       in
       List.iter
         (fun (dependency : Config.dependency) ->
-          match dependency_path root dependency.name with
-          | Some directory when Config.exists_in_root directory ->
-            visit ~folder:directory ~features:dependency.features
-              ~warn_error:None ~filter:None
-              ~is_local:
-                (is_local_dependency ~workspace:root_config.root directory)
-          | _ -> ())
+          let directory, _ = resolve_dependency root dependency in
+          visit ~folder:directory ~features:dependency.features
+            ~warn_error:None ~filter:None
+            ~is_local:
+              (is_local_dependency ~workspace:root_config.root directory))
         dependencies;
       let modules =
         Source.discover config ~prod ~features ~filter
@@ -1216,7 +1255,12 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder ~prod ~features
         | Some _ -> ()
       in
       match candidate with
-      | None -> raise (Error ("Could not resolve dependency " ^ name))
+      | None ->
+        raise
+          (Package_error
+             (Printf.sprintf
+                "Could not build package tree reading dependency '%s' at path '%s'. Error: Could not resolve dependency %s"
+                name root_config.root name))
       | Some candidate ->
       let ocaml = lib_path candidate "ocaml" in
       if Sys.file_exists ocaml then Some (dependency, ocaml) else None)
