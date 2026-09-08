@@ -77,24 +77,32 @@ let files_in_scope () =
   in
   configs |> List.concat_map package_sources |> List.sort_uniq String.compare
 
-let formatted ~bsc path =
+let formatting_error target stderr =
+  Printf.sprintf "Error formatting %s: %s" target stderr
+
+let formatted ~bsc ~target path =
   let result = Process.run ~cwd:(Sys.getcwd ()) bsc ["-format"; path] in
   if not (Process.succeeded result) then
-    raise (Error ("Error formatting " ^ path ^ ":\n" ^ result.stderr));
+    raise (Error (formatting_error target result.stderr));
   result.stdout
+
+let format_check_summary = function
+| 1 -> "The file listed above needs formatting"
+| count -> Printf.sprintf "The %d files listed above need formatting" count
 
 let format_files ~check files =
   let bsc = bsc () in
   let incorrect = ref [] in
   List.iter (fun path ->
+    let replacement = formatted ~bsc ~target:path path in
     let original = read_file path in
-    let replacement = formatted ~bsc path in
     if original <> replacement then
       if check then incorrect := path :: !incorrect else write_file path replacement) files;
   match List.rev !incorrect with
   | [] -> ()
   | paths ->
     List.iter (fun path -> prerr_endline ("[format check] " ^ path)) paths;
+    prerr_endline (format_check_summary (List.length paths));
     raise (Error "Formatting check failed")
 
 let format_stdin extension =
@@ -108,7 +116,7 @@ let format_stdin extension =
       Fun.protect ~finally:(fun () -> close_out_noerr output)
         (fun () ->
           try while true do output_char output (input_char stdin) done with End_of_file -> ());
-      print_string (formatted ~bsc:(bsc ()) temporary))
+      print_string (formatted ~bsc:(bsc ()) ~target:"stdin" temporary))
 
 let run ~check ~stdin ~files =
   match stdin with

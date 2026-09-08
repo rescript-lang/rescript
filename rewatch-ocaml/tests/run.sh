@@ -178,6 +178,24 @@ wait_for_file_gone() {
 }
 
 printf 'let formatted=1\n' | "$port" format --stdin .res | grep 'let formatted = 1' >/dev/null
+if printf 'let =\n' | "$port" format --stdin .res \
+  >"$work/format-invalid.out" 2>"$work/format-invalid.err"; then
+  echo "format stdin unexpectedly accepted invalid syntax" >&2
+  exit 1
+fi
+grep -F "Error formatting stdin:" "$work/format-invalid.err" >/dev/null
+
+printf 'let unformatted=1\n' >"$work/unformatted.res"
+if "$port" format --check "$work/unformatted.res" \
+  >"$work/format-check.out" 2>"$work/format-check.err"; then
+  echo "format check unexpectedly accepted an unformatted file" >&2
+  exit 1
+fi
+grep -F "[format check] $work/unformatted.res" \
+  "$work/format-check.err" >/dev/null
+grep -F "The file listed above needs formatting" \
+  "$work/format-check.err" >/dev/null
+grep -F "Formatting check failed" "$work/format-check.err" >/dev/null
 
 rm -rf "$basic/lib" "$cycle/lib" "$failure/lib"
 rm -rf "$legacy_config/lib"

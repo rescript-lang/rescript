@@ -92,3 +92,8 @@
  (name project_context_tests)
  (modules project_context_tests)
  (libraries rewatch_ocaml_lib))
+
+(test
+ (name format_tests)
+ (modules format_tests)
+ (libraries rewatch_ocaml_lib))

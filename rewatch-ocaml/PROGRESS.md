@@ -150,6 +150,11 @@ applicable.
   `--filter`, `--after-build`, `--warn-error`, `--help`, and `--version`
   dispatch successfully. `clean` removes root and local dependency build
   artifacts, including in-source JavaScript and maps.
+- Format failures now retain Rust's user-facing context: invalid stdin is
+  labeled `stdin` rather than exposing the OCaml temporary filename, file
+  formatting invokes `bsc` before reading the original like Rust, and
+  `--check` prints the same singular/plural summary before failing. Focused
+  unit and integration tests cover the labels, summaries, and exit status.
 - Independent parser/compiler jobs use a CPU-bounded dynamic scheduler that
   refills each freed slot immediately, with private output files and
   deterministic input-order diagnostic collection. Their transient logs are
