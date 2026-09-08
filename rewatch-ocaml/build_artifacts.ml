@@ -137,6 +137,31 @@ let generated_output_owner path =
   generated_output_details path
   |> Option.map (fun (owner, _, _) -> owner)
 
+let watch_sidecar_suffixes = [".rewatch-pending"; ".rewatch-backup"]
+
+let is_watch_output_sidecar path =
+  List.exists
+    (fun sidecar_suffix ->
+      Filename.check_suffix path sidecar_suffix
+      &&
+      let output = Filename.chop_suffix path sidecar_suffix in
+      Option.is_some (generated_output_details output))
+    watch_sidecar_suffixes
+
+let cleanup_watch_output_sidecars ~root (config : Config.t) =
+  let directories =
+    List.map
+      (fun (source : Config.source) -> Filename.concat root source.dir)
+      config.sources
+    @ [Filename.concat root (lib_path "" "es6"); Filename.concat root (lib_path "" "js")]
+    |> List.sort_uniq String.compare
+  in
+  directories
+  |> List.iter (fun directory ->
+       files_under directory
+       |> List.iter (fun path ->
+            if is_watch_output_sidecar path then remove_file path))
+
 let prepare_watch_output watch_outputs watch_output_paths ~dirty_ast output =
   if
     (not (Sys.file_exists output))
@@ -165,6 +190,7 @@ let with_root_options (config : Config.t) (root_config : Config.t) =
 
 let cleanup_stale ~root ~ocaml_dir ~is_local (config : Config.t) modules =
   let build_dir = lib_path root "bs" in
+  cleanup_watch_output_sidecars ~root config;
   let expected_artifacts = Hashtbl.create (List.length modules * 8) in
   let owned_output_names = Hashtbl.create (List.length modules * 2) in
   let add_expected base extensions =
