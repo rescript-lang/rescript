@@ -448,10 +448,10 @@ environment on the plugged-in Mac host:
 
 | Implementation | Median wall time | Median peak tree RSS |
 | --- | ---: | ---: |
-| Rust | 4,662 ms | 799,272 KiB |
-| OCaml | 5,546 ms | 798,172 KiB |
+| Rust | 4,552 ms | 788,972 KiB |
+| OCaml | 5,495 ms | 791,140 KiB |
 
-The post-pipe 1.190× wall-time ratio and 0.999× RSS ratio pass the 1.25× gate.
+The latest 1.207× wall-time ratio and 1.003× RSS ratio pass the 1.25× gate.
 The host was plugged in and otherwise idle for this run. Docker on a Mac is
 still noisier than native Linux or dedicated CI, so final acceptance should
 repeat the distribution on a stable host rather than treating this one passing
@@ -516,10 +516,75 @@ quality metric. Its first post-pipe audit found no `.rewatch-ocaml-stdout` or
 also exposed a separate issue worth profiling: on the benchmark fixture an
 unchanged build made 50,368 OCaml versus 3,368 Rust project-local metadata
 calls, and 798 versus 160 directory scans. Single-edit counts were nearly
-identical to unchanged. These are observational counts rather than a raw-total
-gate, but the repeated artifact probes are strong evidence of superfluous OCaml
-orchestration work and must be investigated before performance parity is
-closed.
+identical to unchanged. The first safe Rust-parity cleanup now reuses resolved
+dependency roots and inventories each cleanup tree once. Attempts to cache
+artifact paths or mtimes more aggressively were rejected: the canonical rename
+and deletion sequences then intermittently emitted a low-level missing-CMI I/O
+error instead of Rust's missing-module diagnostic. The retained changes reduced
+the latest unchanged result to 37,602 metadata calls and 477 directory scans
+(Rust: 3,367 and 160); the edit result was 37,625 and 477 (Rust: 3,385 and 160).
+These are observational counts rather than a raw-total gate, and they include
+compiler process behavior, but the remaining difference is still too large to
+declare the superfluous-work audit closed. A future artifact index needs explicit
+cleanup/publication invalidation semantics and must retain both canonical
+missing-source snapshots.
+
+### Future filesystem-performance work
+
+This is a documented follow-up, not a completion blocker. The aggregate timing,
+memory, compiler-work, artifact, and behavioral gates pass, but Linux tracing
+still proves that the OCaml orchestration does avoidable filesystem work. Rerun
+the evidence with `bench/filesystem_audit.sh`; its prerequisites, isolation,
+normalization, and caveats are in `bench/README.md`.
+
+Rust-parity improvements should be attempted before novel optimizations, in this
+order:
+
+1. Introduce an explicit compile-asset state equivalent to Rust's single
+   per-package scan in `rewatch/src/build/read_compile_state.rs`. OCaml currently
+   rediscovers artifacts through `Build_artifacts.cleanup_stale`,
+   `dependency_artifact`, and repeated `modification_time` calls in
+   `Build.module_is_dirty`. This is the highest-confidence explanation for the
+   repeated popular-CMI probes in unchanged/edit traces.
+2. Share one source-tree inventory between `Source.discover`, stale-output
+   cleanup, watch-sidecar recovery, and GenType source-directory discovery.
+   `files_under` currently performs `lstat` for every entry, and separate
+   consumers still traverse overlapping trees. Preserve symlink handling,
+   recursive-source semantics, generated-output ownership, and Windows path
+   comparison.
+3. Carry canonical package identities and resolved dependency roots throughout
+   the whole build context. This increment caches resolution during graph
+   preparation, but collection, configuration loading, source discovery, and
+   later consumers still cause substantially more `realpath`/`readlinkat` work
+   than Rust.
+
+The asset state must have explicit transitions for discovery, stale cleanup,
+parse publication, interface publication, implementation publication, source
+rename/deletion, failed compilation, and watch rebuilds. Do not cache a missing
+or present artifact independently of those transitions. Earlier path/mtime cache
+prototypes reduced the trace further but failed
+`rewatch/tests/compile/04-rename-file-internal-dep.sh` and
+`rewatch/tests/compile/08-remove-file.sh`, replacing the intended missing-module
+diagnostic with a missing-CMI I/O error. Those two tests, the namespaced rename
+case, the complete canonical suite, compiler-work manifests, and artifact
+manifests are mandatory regression gates for another attempt.
+
+Ideas not present in Rust remain separate hypotheses for after parity:
+
+- retain a validated build inventory across short-lived CLI invocations, with a
+  content/version fingerprint and conservative fallback to discovery;
+- use a persistent pool of compiler workers or eventual in-process compiler
+  integration to reduce process startup, only after pipe parity and with strict
+  isolation of compiler-global state;
+- parallelize independent configuration parsing or directory inventory with
+  OCaml domains if profiling shows CPU saturation rather than I/O latency;
+- use watcher event state to avoid a full rediscovery after quiet periods,
+  retaining overflow/config-change fallbacks to a clean rescan.
+
+For each hypothesis, measure it independently, preserve the 1.25× timing/RSS
+gate and exact work/artifact checks, compare filesystem calls, and include a
+Windows design review. None should be mixed into compatibility work merely to
+improve a headline benchmark.
 
 A post-pipe correctness smoke run of the performance harness retained exact
 compiler work: clean `1031/512/7/512/40/1`, unchanged `4/2/0/2/1/0`, and
@@ -545,8 +610,8 @@ rerun it for the final maintainability review alongside maximum module size.
 - Incremental state currently relies on artifact timestamps, byte-identical CMI
   publication, and in-memory warning state during watch. Rust's richer
   compile-state model is not otherwise ported.
-- Full configuration validation parity, performance parity, and
-  production-grade filesystem watching remain incomplete.
+- Full configuration validation parity, the filesystem-work portion of the
+  performance audit, and native Windows verification remain incomplete.
 - Full validation coverage is now an explicit source-inventory gate in
   `PARITY_CHECKLIST.md`: every user-reachable Rust guard must map to an OCaml
   location and test or to a documented intentional divergence. Existing suite
@@ -776,31 +841,27 @@ rerun it for the final maintainability review alongside maximum module size.
 
 ## Next actions
 
-1. Finish the native watcher milestone by validating macOS packaging and event
-   behavior and the intended Windows semantics in their eventual native runs.
-   Linux event batching, directory refresh, resource cleanup, canonical watch
-   behavior, fallback paths, and static packaging are covered. Live spinner
-   animation is deliberately deferred.
-2. Run the complete performance/equivalence gate and investigate the normalized
-   filesystem-call audit. Confirm that pipe capture removed transient-file work
-   without changing compiler work, diagnostics, cancellation, or artifacts,
-   and close any remaining obvious orchestration overhead.
-3. Make the OCaml executable the branch's default `rescript.exe`, retain Rust
-   as `rescript-rust.exe`, and require the repository's full `make test-all`
-   pipeline to pass through the OCaml implementation.
-4. Finish the source-level validation inventory, closing confirmed
+1. Finish the source-level validation and external-artifact inventory, closing confirmed
    configuration/CLI gaps; the Rust unit-test coverage review is complete and
    OpenTelemetry is an explicitly documented non-goal.
-5. Profile and close the remaining clean-build wall-time gap while preserving
-   exact compiler-work and artifact equivalence.
-6. Continue splitting `build.ml` along stable responsibility boundaries. The
+2. Run the complete repository `make test-all` pipeline from a clean checkpoint
+   with the OCaml default. The pipeline has passed through analysis and tooling,
+   and the canonical rewatch suite now passes separately; retain the final
+   uninterrupted result as release evidence.
+3. Continue splitting `build.ml` along stable responsibility boundaries. The
    filesystem and artifact-ownership layer now lives in `build_artifacts.ml`;
    package preparation/scheduling and watch lifecycle remain candidates.
-7. Perform the final two-scope whole-port review and address confirmed findings.
-8. At the final maintainability pass, add comments around ownership,
+4. Perform the final two-scope whole-port review and address confirmed findings.
+5. At the final maintainability pass, add comments around ownership,
    concurrency, platform, and algorithmic invariants that are not apparent from
-   the code itself; avoid comments that only paraphrase individual statements.
-9. Prepare the pinned Windows handoff, then finish the Windows watcher/lock
+   the code itself; review naming, remove dead code, and document the complete
+   compatibility-oddity, corrected-Rust-behavior, and future-performance lists.
+6. Validate macOS packaging and native event behavior, then prepare the pinned
+   Windows handoff. Finish the Windows watcher/lock
    backend and path audit and run the native build, unit, focused, and canonical
    Bash suites in the VM. Address findings there and finish with an x64 Windows
    confidence run where available.
+
+Live spinner animation and the future filesystem-performance work documented
+above are explicitly deferred and do not block completion of the compatibility
+port.

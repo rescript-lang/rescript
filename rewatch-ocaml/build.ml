@@ -792,6 +792,7 @@ type graph_package = {
   graph_build_dir: string;
   graph_ocaml_dir: string;
   graph_dependencies: Config.dependency list;
+  graph_dependency_directories: (Config.dependency * string) list;
   graph_modules: Source.module_ list;
 }
 
@@ -899,6 +900,7 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
   let requested_features = Hashtbl.create 32 in
   let unallowed_dependencies = ref [] in
   let loaded_configs = Hashtbl.create 32 in
+  let resolved_dependencies = Hashtbl.create 32 in
   let reported_duplicate_packages = Hashtbl.create 8 in
   let load_config root =
     match Hashtbl.find_opt loaded_configs root with
@@ -910,30 +912,37 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
       config
   in
   let resolve_dependency package_root (dependency : Config.dependency) =
-    let directory =
-      require_dependency_directory ~workspace_root:root_config.root
-        package_root dependency
-    in
-    (match dependency_path root_config.root dependency.name with
-    | Some chosen when chosen <> directory ->
-      let warning_key = dependency.name ^ "\000" ^ directory in
-      if not (Hashtbl.mem reported_duplicate_packages warning_key) then (
-        Hashtbl.add reported_duplicate_packages warning_key ();
-        Printf.eprintf "Duplicated package: %s ./%s (chosen) vs ./%s in ./%s\n%!"
-          dependency.name (relative_to root_config.root chosen)
-          (relative_to root_config.root directory)
-          (relative_to root_config.root package_root))
-    | Some _ | None -> ());
-    let config =
-      try load_config directory
-      with Config.Error message ->
-        raise
-          (Package_error
-             (Printf.sprintf
-                "Could not build package tree for '%s' at path '%s'. Error: %s"
-                dependency.name root_config.root message))
-    in
-    (directory, config)
+    let key = package_root ^ "\000" ^ dependency.name in
+    match Hashtbl.find_opt resolved_dependencies key with
+    | Some resolved -> resolved
+    | None ->
+      let directory =
+        require_dependency_directory ~workspace_root:root_config.root
+          package_root dependency
+      in
+      (match dependency_path root_config.root dependency.name with
+      | Some chosen when chosen <> directory ->
+        let warning_key = dependency.name ^ "\000" ^ directory in
+        if not (Hashtbl.mem reported_duplicate_packages warning_key) then (
+          Hashtbl.add reported_duplicate_packages warning_key ();
+          Printf.eprintf
+            "Duplicated package: %s ./%s (chosen) vs ./%s in ./%s\n%!"
+            dependency.name (relative_to root_config.root chosen)
+            (relative_to root_config.root directory)
+            (relative_to root_config.root package_root))
+      | Some _ | None -> ());
+      let config =
+        try load_config directory
+        with Config.Error message ->
+          raise
+            (Package_error
+               (Printf.sprintf
+                  "Could not build package tree for '%s' at path '%s'. Error: %s"
+                  dependency.name root_config.root message))
+      in
+      let resolved = (directory, config) in
+      Hashtbl.add resolved_dependencies key resolved;
+      resolved
   in
   let add_feature_request root request =
     match Hashtbl.find_opt requested_features root, request with
@@ -1017,14 +1026,20 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
         config.dependencies
         @ if prod || not is_local then [] else config.dev_dependencies
       in
+      let dependency_directories =
+        List.map
+          (fun dependency ->
+            let directory, _ = resolve_dependency root dependency in
+            (dependency, directory))
+          dependencies
+      in
       List.iter
-        (fun (dependency : Config.dependency) ->
-          let directory, _ = resolve_dependency root dependency in
+        (fun ((dependency : Config.dependency), directory) ->
           visit ~folder:directory ~features:dependency.features
             ~warn_error:None ~filter:None
             ~is_local:
               (is_local_dependency ~workspace:root_config.root directory))
-        dependencies;
+        dependency_directories;
       let modules =
         Source.discover config
           ~prod:(source_discovery_prod ~prod ~is_local)
@@ -1051,6 +1066,7 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
           graph_build_dir = build_dir;
           graph_ocaml_dir = ocaml_dir;
           graph_dependencies = dependencies;
+          graph_dependency_directories = dependency_directories;
           graph_modules = modules;
         }
       in
@@ -1328,17 +1344,30 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder ~prod ~features
       (diagnostics_for_package ~is_local config)
       stats.diagnostics;
   let dependency_directories =
-    let dependencies : Config.dependency list =
-      config.dependencies
-      @ if prod || not is_local then [] else config.dev_dependencies
+    let candidates =
+      match prepared with
+      | Some package -> package.graph_dependency_directories
+      | None ->
+        let dependencies : Config.dependency list =
+          config.dependencies
+          @ if prod || not is_local then [] else config.dev_dependencies
+        in
+        dependencies
+        |> List.map (fun (dependency : Config.dependency) ->
+             match dependency_path root dependency.name with
+             | Some directory -> (dependency, directory)
+             | None ->
+               raise
+                 (Package_error
+                    (Printf.sprintf
+                       "Could not build package tree reading dependency '%s' at path '%s'. Error: Could not resolve dependency %s"
+                       dependency.name root_config.root dependency.name)))
     in
-    dependencies |> List.filter_map (fun (dependency : Config.dependency) ->
-      let name = dependency.name in
-      let candidate = dependency_path root name in
+    candidates
+    |> List.filter_map (fun ((dependency : Config.dependency), candidate) ->
       let () = match candidate with
-        | None -> ()
-        | Some candidate when Hashtbl.mem seen candidate -> ()
-        | Some candidate when Config.exists_in_root candidate ->
+        | candidate when Hashtbl.mem seen candidate -> ()
+        | candidate when Config.exists_in_root candidate ->
           (try
              run_internal ~root_config ~seen ~folder:candidate ~prod
                ~features:dependency.features ~warn_error:None ~watch
@@ -1348,16 +1377,8 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder ~prod ~features
                ~stats
            with Build_failure output ->
              if Option.is_none stats.failure then stats.failure <- Some output)
-        | Some _ -> ()
+        | _ -> ()
       in
-      match candidate with
-      | None ->
-        raise
-          (Package_error
-             (Printf.sprintf
-                "Could not build package tree reading dependency '%s' at path '%s'. Error: Could not resolve dependency %s"
-                name root_config.root name))
-      | Some candidate ->
       let ocaml = lib_path candidate "ocaml" in
       if Sys.file_exists ocaml then Some (dependency, ocaml) else None)
   in
