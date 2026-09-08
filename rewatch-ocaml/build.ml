@@ -2045,18 +2045,38 @@ let watch ~folder ~prod ~features ~warn_error ~after_build ~filter ~clear_screen
   Fun.protect ~finally:(fun () -> remove_file candidate) (fun () -> create_lock 1000);
   let lock_is_owned () = read_lock () = Some pid in
   let remove_owned_lock () = if lock_is_owned () then remove_file lock_path in
+  let stop_requested = ref false in
+  let waiting_for_native_event = ref false in
   let stop () =
     Sys.set_signal Sys.sigint Sys.Signal_ignore;
     Sys.set_signal Sys.sigterm Sys.Signal_ignore;
-    raise Stop_watch
+    if !waiting_for_native_event then stop_requested := true else raise Stop_watch
   in
   Sys.set_signal Sys.sigint (Sys.Signal_handle (fun _ -> stop ()));
   Sys.set_signal Sys.sigterm (Sys.Signal_handle (fun _ -> stop ()));
-  let watch_roots () =
+  let watch_context () =
     let visited = Hashtbl.create 32 in
     Hashtbl.add visited root ();
     let roots = ref [root] in
+    let paths = ref [] in
+    let add_path directory recursive =
+      paths := Native_watcher.{directory; recursive} :: !paths
+    in
+    let rec nearest_existing_directory package_root directory =
+      if Sys.file_exists directory then directory
+      else
+        let parent = Filename.dirname directory in
+        if parent = directory || directory = package_root then package_root
+        else nearest_existing_directory package_root parent
+    in
     let rec visit (config : Config.t) =
+      add_path config.root false;
+      config.sources
+      |> List.filter (fun source -> (not prod) || not source.Config.is_dev)
+      |> List.iter (fun source ->
+           let directory = Filename.concat config.root source.Config.dir in
+           let existing = nearest_existing_directory config.root directory in
+           add_path existing (existing = directory && source.Config.recurse));
       let dependencies =
         config.dependencies @ if prod then [] else config.dev_dependencies
       in
@@ -2075,8 +2095,9 @@ let watch ~folder ~prod ~features ~warn_error ~after_build ~filter ~clear_screen
     in
     try
       visit (Config.load_root root);
-      List.sort String.compare !roots
-    with Config.Error _ -> [root]
+      List.sort String.compare !roots, !paths
+    with Config.Error _ ->
+      ([root], [Native_watcher.{directory = root; recursive = false}])
   in
   let digest_cache = Hashtbl.create 256 in
   let snapshot roots =
@@ -2161,31 +2182,85 @@ let watch ~folder ~prod ~features ~warn_error ~after_build ~filter ~clear_screen
     then
       Printf.printf "\027[2J\027[H%!"
   in
-  let rec loop roots previous =
-    if lock_is_owned () then (
+  let keep_running () = (not !stop_requested) && lock_is_owned () in
+  let rec polling_loop roots previous =
+    if keep_running () then (
       let current = snapshot roots in
       if current <> previous then (
         clear_terminal ();
         run_build ();
-        let roots = watch_roots () in
+        let roots, _ = watch_context () in
         let after_build = snapshot roots in
         ignore (Unix.select [] [] [] 0.2);
         (* Keep the snapshot from before the rebuild when another edit lands
            during compilation. Otherwise that edit would become the new baseline
            and an atomic configuration rewrite could be missed. *)
-        if after_build <> current then loop roots current
-        else loop roots after_build)
+        if after_build <> current then polling_loop roots current
+        else polling_loop roots after_build)
       else (
         ignore (Unix.select [] [] [] 0.2);
-        loop roots current))
+        polling_loop roots current))
+  in
+  let native_fallback message =
+    prerr_endline
+      ("Native file watching is unavailable (" ^ message
+     ^ "); falling back to polling")
+  in
+  let rec native_loop watcher roots previous =
+    waiting_for_native_event := true;
+    let result =
+      Fun.protect
+        (fun () -> Native_watcher.wait watcher ~keep_running)
+        ~finally:(fun () -> waiting_for_native_event := false)
+    in
+    match result with
+    | Native_watcher.Stopped -> None
+    | Native_watcher.Failed message -> Some (message, roots, previous)
+    | Native_watcher.Changed ->
+      ignore (Unix.select [] [] [] 0.05);
+      native_reconcile watcher roots previous
+  and native_reconcile watcher roots previous =
+    let current = snapshot roots in
+    if current <> previous then (
+      clear_terminal ();
+      run_build ();
+      let roots, paths = watch_context () in
+      match Native_watcher.refresh watcher ~paths with
+      | Error message -> Some (message, roots, current)
+      | Ok () ->
+        let after_build = snapshot roots in
+        if after_build <> current then
+          native_reconcile watcher roots current
+        else native_loop watcher roots after_build)
+    else
+      let _, paths = watch_context () in
+      match Native_watcher.refresh watcher ~paths with
+      | Error message -> Some (message, roots, current)
+      | Ok () ->
+        let after_refresh = snapshot roots in
+        if after_refresh <> current then
+          native_reconcile watcher roots current
+        else native_loop watcher roots after_refresh
   in
   Fun.protect
     (fun () ->
-      let roots = watch_roots () in
+      let roots, _ = watch_context () in
       let before_build = snapshot roots in
       run_build ();
-      let roots = watch_roots () in
-      let after_build = snapshot roots in
-      if after_build <> before_build then loop roots before_build
-      else loop roots after_build)
+      let roots, paths = watch_context () in
+      match Native_watcher.create ~paths with
+      | Error message ->
+        native_fallback message;
+        polling_loop roots before_build
+      | Ok watcher ->
+        let fallback =
+          Fun.protect
+            (fun () -> native_reconcile watcher roots before_build)
+            ~finally:(fun () -> Native_watcher.close watcher)
+        in
+        Option.iter
+          (fun (message, roots, previous) ->
+            native_fallback message;
+            polling_loop roots previous)
+          fallback)
     ~finally:remove_owned_lock
