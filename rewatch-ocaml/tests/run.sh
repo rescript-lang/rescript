@@ -129,16 +129,45 @@ test -f "$legacy_config/src/A.mjs"
 
 "$port" build --filter 'A\.res$' "$basic"
 test -f "$basic/src/A.mjs"
+test -f "$basic/src/Authored.js"
 test ! -f "$basic/src/B.mjs"
 rm -rf "$basic/lib"
 rm -f "$basic/src/A.mjs"
+mkdir -p "$basic/lib/bs/other"
+touch "$basic/lib/bs/other/Authored.js"
 
 "$port" build --after-build 'test -f src/A.mjs' "$basic"
 test -f "$basic/src/A.mjs"
+test -f "$basic/src/Authored.js"
 test -f "$basic/src/B.mjs"
 test -f "$basic/src/WithInterface.mjs"
 test -f "$basic/lib/ocaml/A.cmi"
 test -f "$basic/lib/ocaml/WithInterface.cmti"
+
+# A successful parse must remain compile-dirty when another file aborts the
+# same build before compilation starts.
+cp "$basic/src/B.res" "$basic/src/B.backup"
+printf '\nlet recoveredAfterPeerParseFailure = 42\n' >> "$basic/src/A.res"
+printf 'let broken =\n' > "$basic/src/B.res"
+if "$port" build "$basic" >/dev/null 2>&1; then
+  echo "build with parser error unexpectedly succeeded" >&2
+  exit 1
+fi
+mv "$basic/src/B.backup" "$basic/src/B.res"
+"$port" build "$basic" >/dev/null
+grep 'recoveredAfterPeerParseFailure' "$basic/src/A.mjs" >/dev/null
+
+# Removing an interface from a lowercase-named source must rebuild the
+# implementation before dependents can observe exports hidden by that interface.
+printf 'let visible = 1\nlet hidden = 2\n' > "$basic/src/lower.res"
+printf 'let visible: int\n' > "$basic/src/lower.resi"
+printf 'let value = Lower.visible\n' > "$basic/src/LowerConsumer.res"
+"$port" build "$basic" >/dev/null
+rm "$basic/src/lower.resi"
+printf 'let value = Lower.hidden\n' > "$basic/src/LowerConsumer.res"
+"$port" build "$basic" >/dev/null
+grep 'hidden' "$basic/src/LowerConsumer.mjs" >/dev/null
+
 "$port" clean "$basic"
 test ! -f "$basic/src/A.mjs"
 
@@ -229,8 +258,16 @@ ln -s ../packages/main "$external_boundary/project/node_modules/main"
 ln -s ../../external "$external_boundary/project/node_modules/external"
 "$port" build "$external_boundary/project"
 test -f "$external_boundary/external/src/Sentinel.js"
+test -f "$external_boundary/external/src/Foo.mjs"
+test -f "$external_boundary/external/src/Foo.mjs.map"
+rm "$external_boundary/external/src/Foo.res"
+"$port" build "$external_boundary/project"
+test ! -f "$external_boundary/external/src/Foo.mjs"
+test ! -f "$external_boundary/external/src/Foo.mjs.map"
+test -f "$external_boundary/external/src/Foo.js"
 "$port" clean "$external_boundary/project"
 test -f "$external_boundary/external/src/Sentinel.js"
+test -f "$external_boundary/external/src/Foo.js"
 
 "$port" build "$post_build"
 test -f "$post_build/src/Main.js"

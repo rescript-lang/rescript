@@ -186,3 +186,15 @@ let compiler_basename config module_name =
   | Some namespace, Some _ -> module_name ^ "-@" ^ namespace
   | Some namespace, _ -> module_name ^ "-" ^ namespace
   | None, _ -> module_name
+
+(* Compiler artifacts preserve the source filename's case, while dependency
+   graph module names are capitalized. Keep those two names distinct. *)
+let compiler_asset_basename config path =
+  let basename =
+    path |> Filename.basename |> Filename.remove_extension
+  in
+  match config.Config.namespace, config.namespace_entry with
+  | Some _, Some entry when entry = module_name path -> basename
+  | Some namespace, Some _ -> basename ^ "-@" ^ namespace
+  | Some namespace, _ -> basename ^ "-" ^ namespace
+  | None, _ -> basename
