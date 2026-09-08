@@ -25,6 +25,7 @@
   graph
   package_metadata
   build_artifacts
+  compile_assets
   native_watcher
   toolchain
   compiler_info
@@ -103,6 +104,11 @@
 (test
  (name clean_tests)
  (modules clean_tests)
+ (libraries rewatch_ocaml_lib))
+
+(test
+ (name compile_assets_tests)
+ (modules compile_assets_tests)
  (libraries rewatch_ocaml_lib))
 
 (test

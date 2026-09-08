@@ -192,13 +192,18 @@ let with_root_options (config : Config.t) (root_config : Config.t) =
          @ ["-bs-gentype-bsb-project-root"; root_config.root]);
   }
 
-let cleanup_stale ~root ~ocaml_dir ~is_local (config : Config.t) modules =
+let cleanup_stale ?ocaml_files ~root ~ocaml_dir ~is_local (config : Config.t)
+    modules =
   let build_dir = lib_path root "bs" in
   (* Keep one inventory of each artifact tree. Rewalking these trees for every
      cleanup phase made unchanged builds perform several times Rust's directory
      and metadata work. Paths removed below can safely remain in the inventory:
      later phases only classify their names or call the idempotent remove_file. *)
-  let ocaml_files = files_under ocaml_dir in
+  let ocaml_files =
+    match ocaml_files with
+    | Some files -> files
+    | None -> files_under ocaml_dir
+  in
   let build_files = files_under build_dir in
   let source_files =
     List.map

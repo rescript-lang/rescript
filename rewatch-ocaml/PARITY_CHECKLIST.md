@@ -28,6 +28,20 @@ intentional non-goal for the OCaml executable, and instrumented timings are
 diagnostic rather than benchmark results. Filesystem-call parity is measured
 separately with the retained syscall-audit tooling.
 
+| Rust owner | Responsibility | OCaml owner | Mapping status |
+| --- | --- | --- | --- |
+| `build.rs` | Command build lifecycle and phase orchestration | `build.ml` | Present, but still mixed with phase implementations |
+| `build/build_types.rs` | Packages, modules, dirty flags, dependency edges, and compiled-asset timestamps | `source.ml` and records in `build.ml` | Partial and fragmented; explicit build/module state is the active refactor |
+| `build/packages.rs` | Package resolution and source/module discovery | `build.ml`, `config.ml`, `source.ml`, `project_context.ml` | Behavior is substantially present; ownership still needs consolidation |
+| `build/read_compile_state.rs` | One compile-asset inventory for cleanup and freshness | `compile_assets.ml` | Initial directory inventory is present and shared with cleanup; module-state consumption remains |
+| `build/clean.rs` | Stale and explicit artifact cleanup | `build_artifacts.ml`, with command traversal in `build.ml` | Present; stale cleanup now accepts the shared compile-asset inventory |
+| `build/deps.rs` | Dependency extraction, edges, and invalidation | `graph.ml` and dependency code in `build.ml` | Behavior present; extraction/invalidation still needs a cohesive owner |
+| `build/parse.rs` | Parser jobs and parse-state transitions | Parsing code in `build.ml` | Behavior present; module split and explicit state transitions remain |
+| `build/compile.rs` | Compiler arguments, dirty propagation, scheduling, publication | `process.ml` and compilation code in `build.ml` | Behavior present; Rust-shaped fixed dirty state and CMI-change propagation remain |
+| `watcher.rs` | Watch handles, batching, rebuild lifecycle, and recovery | `native_watcher.ml` and watch code in `build.ml` | Native handles and behavior present; lifecycle ownership remains split |
+| `lock.rs` | Build/watch ownership and stale-process handling | Lock code in `build.ml`, process operations behind `platform.mli` | Behavior present; final module-quality review remains |
+| `telemetry.rs` | Optional OTLP export | No OCaml owner | Intentional project-level omission; Rust traces remain diagnostic tooling |
+
 ## Validation inventory gate
 
 Before the port can replace Rust rewatch, inventory every user-reachable

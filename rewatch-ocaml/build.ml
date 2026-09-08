@@ -821,6 +821,7 @@ type build_stats = {
   scheduled_modules: scheduled_module list ref;
   compile_cleanup: (unit -> unit) list ref;
   mutable compiler_context: Compiler_info.context option;
+  mutable compile_assets: Compile_assets.t option;
   mutable compiler_cleaned: bool;
   warning_state: Warning_state.t;
   mutable had_warnings: bool;
@@ -1089,8 +1090,14 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
   List.iter
     (fun package ->
       if Compiler_info.needs_clean compiler_context package.graph_config then (
+        let compile_assets =
+          Compile_assets.create [package.graph_ocaml_dir]
+        in
         ignore
-          (Build_artifacts.cleanup_stale ~root:package.graph_root
+          (Build_artifacts.cleanup_stale
+             ~ocaml_files:
+               (Compile_assets.files compile_assets package.graph_ocaml_dir)
+             ~root:package.graph_root
              ~ocaml_dir:package.graph_ocaml_dir
              ~is_local:
                (is_local_dependency ~workspace:root_config.root
@@ -1101,10 +1108,18 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
       ensure_dir package.graph_build_dir;
       ensure_dir package.graph_ocaml_dir)
     !graph_packages;
+  let compile_assets =
+    !graph_packages
+    |> List.map (fun package -> package.graph_ocaml_dir)
+    |> Compile_assets.create
+  in
   List.iter
     (fun package ->
       let removed_modules, previous_ast_count =
-        Build_artifacts.cleanup_stale ~root:package.graph_root
+        Build_artifacts.cleanup_stale
+          ~ocaml_files:
+            (Compile_assets.files compile_assets package.graph_ocaml_dir)
+          ~root:package.graph_root
           ~ocaml_dir:package.graph_ocaml_dir
           ~is_local:
             (is_local_dependency ~workspace:root_config.root package.graph_root)
@@ -1118,6 +1133,7 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
         (fun module_name -> Hashtbl.replace stats.removed_modules module_name ())
         removed_modules)
     !graph_packages;
+  stats.compile_assets <- Some compile_assets;
   on_cleanup (Unix.gettimeofday () -. cleanup_started);
   let parse_started = Unix.gettimeofday () in
   let parse_entries =
@@ -1922,6 +1938,7 @@ let run_with_warning_state ~warning_state ~compilation_kind ~no_timing ~seen
       scheduled_modules = ref [];
       compile_cleanup = ref [];
       compiler_context = None;
+      compile_assets = None;
       compiler_cleaned = false;
       warning_state;
       had_warnings = false;
