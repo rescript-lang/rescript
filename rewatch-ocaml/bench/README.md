@@ -60,6 +60,12 @@ rewatch-ocaml/bench/performance_gate.sh \
   5
 ```
 
+By default the harness uses the compiler and runtime selected by
+`rewatch/tests/get_bin_paths.js`. Set both `RESCRIPT_BSC_EXE` and
+`RESCRIPT_RUNTIME` to compare with another local compiler build; the harness
+preserves them only when both are set, so the two implementations still use
+the same inputs.
+
 The authoritative gate requires Linux (`/proc`), `strace`, GNU-compatible
 nanosecond `date`, and a stable plugged-in host with no competing heavy work.
 Set `REWATCH_PERFORMANCE_THRESHOLD_PERCENT` to exercise a proposed threshold
