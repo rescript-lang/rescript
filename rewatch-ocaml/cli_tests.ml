@@ -91,6 +91,8 @@ let () =
     "watch parses features";
   check (rejects ["build"; "--features"; ""])
     "empty features are rejected";
+  check (rejects [String.make 1 (Char.chr 0xff)])
+    "non-UTF-8 arguments are rejected";
   check (watch_options ["watch"; "--clear-screen"]).clear_screen
     "watch parses --clear-screen";
   check (rejects ["build"; "--filter"; "["])

@@ -170,43 +170,69 @@ let parse_sources path fields =
     List.concat_map (sources_of_json path "" None None) values
   | Some value -> sources_of_json path "" None None value
 
+let supported_fields =
+  [
+    "name";
+    "sources";
+    "dependencies";
+    "bs-dependencies";
+    "dev-dependencies";
+    "bs-dev-dependencies";
+    "compiler-flags";
+    "bsc-flags";
+    "package-specs";
+    "suffix";
+    "namespace";
+    "namespace-entry";
+    "allowed-dependents";
+    "features";
+    "ignored-dirs";
+    "generators";
+    "cut-generators";
+    "pp-flags";
+    "entries";
+    "bs-external-includes";
+    "warnings";
+    "ppx-flags";
+    "jsx";
+    "gentypeconfig";
+    "reanalyze";
+    "editor";
+    "experimental-features";
+    "js-post-build";
+    "sourceMap";
+  ]
+
+let nested_unknown_fields parent supported = function
+  | `Assoc fields ->
+    fields
+    |> List.filter_map (fun (name, _) ->
+         if List.mem name supported then None
+         else Some (Printf.sprintf "%s.?.%s" parent name))
+  | _ -> []
+
 let unknown_fields fields =
-  let supported =
-    [
-      "name";
-      "sources";
-      "dependencies";
-      "bs-dependencies";
-      "dev-dependencies";
-      "bs-dev-dependencies";
-      "compiler-flags";
-      "bsc-flags";
-      "package-specs";
-      "suffix";
-      "namespace";
-      "namespace-entry";
-      "allowed-dependents";
-      "features";
-      "ignored-dirs";
-      "generators";
-      "cut-generators";
-      "pp-flags";
-      "entries";
-      "bs-external-includes";
-      "warnings";
-      "ppx-flags";
-      "jsx";
-      "gentypeconfig";
-      "reanalyze";
-      "editor";
-      "experimental-features";
-      "js-post-build";
-      "sourceMap";
-    ]
-  in
   fields
-  |> List.filter_map (fun (name, _) ->
-       if List.mem name supported then None else Some name)
+  |> List.concat_map (fun (name, value) ->
+       match name with
+       | "warnings" -> nested_unknown_fields name ["number"; "error"] value
+       | "jsx" ->
+         nested_unknown_fields name
+           ["version"; "module"; "mode"; "v3-dependencies"; "preserve"]
+           value
+       | "gentypeconfig" ->
+         nested_unknown_fields name
+           [
+             "module";
+             "moduleResolution";
+             "exportInterfaces";
+             "generatedFileExtension";
+             "shims";
+             "debug";
+           ]
+           value
+       | "js-post-build" -> nested_unknown_fields name ["cmd"] value
+       | _ -> if List.mem name supported_fields then [] else [name])
 
 let parse_package_spec path = function
   | `Assoc fields ->

@@ -223,6 +223,8 @@ exception Parse_error of string
 exception Help
 exception Version
 
+let argv_is_utf_8 argv = Array.for_all String.is_valid_utf_8 argv
+
 (* Cmdliner owns option parsing. This adapter only reproduces clap's implicit
    build routing and global help/version placement before Cmdliner sees argv. *)
 let normalize_argv argv =
@@ -304,12 +306,18 @@ let normalize_argv argv =
       (routed |> normalize_short_booleans |> normalize_help)
 
 let eval argv =
-  match Cmd.eval_value ~catch:false ~argv:(normalize_argv argv) root with
-  | Ok (`Ok command) -> Run command
-  | Ok `Help | Ok `Version -> Exit 0
-  | Error _ -> Exit 2
+  if not (argv_is_utf_8 argv) then (
+    prerr_endline "invalid UTF-8 in command-line argument";
+    Exit 2)
+  else
+    match Cmd.eval_value ~catch:false ~argv:(normalize_argv argv) root with
+    | Ok (`Ok command) -> Run command
+    | Ok `Help | Ok `Version -> Exit 0
+    | Error _ -> Exit 2
 
 let parse argv =
+  if not (argv_is_utf_8 argv) then
+    raise (Parse_error "invalid UTF-8 in command-line argument");
   let help_buffer = Buffer.create 256 in
   let error_buffer = Buffer.create 256 in
   let help = Stdlib.Format.formatter_of_buffer help_buffer in

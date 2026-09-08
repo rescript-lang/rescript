@@ -41,6 +41,23 @@ gap. A deliberate difference needs a rationale and regression test in
 No row becomes complete until the Rust source inventory has been performed,
 not merely because the current tests pass.
 
+### Configuration inventory
+
+Symbols below are stable source locations; line numbers are intentionally
+omitted because the Rust and OCaml files are still changing.
+
+| Behavior | Rust location | OCaml location | Evidence | Status |
+| --- | --- | --- | --- | --- |
+| File read, JSON root, required `name`, and legacy filename | `config.rs`: `Config::new`, `Config::new_from_json_string`, `Config::set_path` | `config.ml`: `load`, `load_root` | Unit tests plus focused missing-project/config tests | Partial; exact parse-error inventory remains |
+| Source forms, `dir`, `subdirs`, `type`, feature inheritance | `config.rs`: `Source`, `PackageSource`; `build/packages.rs`: `get_source_dirs` | `config.ml`: `sources_of_json`, `parse_sources` | Unit tests cover non-dev strings and parent type propagation; canonical source/feature tests | Partial; all invalid shapes still need cataloguing |
+| Package module, suffix/location defaults and duplicate outputs | `config.rs`: `PackageSpec`, `validate_package_specs_value` | `config.ml`: `parse_package_spec`, duplicate-output check in `load` | Unit tests and canonical suffix tests | Matched for inventoried checks |
+| Dependency forms, aliases, feature maps and cycles | `config.rs`: `Dependency`, `resolve_active_features`; package traversal | `config.ml`: `dependency_name`, `dependency_alias`; `build.ml` feature resolution | Rust/OCaml unit tests and canonical feature/dependency tests | Partial; diagnostic/source inventory remains |
+| Compiler, warning, and PPX flags | `config.rs`: `flatten_flags`, `flatten_ppx_flags`, `get_warning_args` | `config.ml`: `compiler_flags`, warning/PPX parsing; `build.ml`: `compiler_flags` | Canonical compiler-argument tests | Partial |
+| JSX and source maps | `config.rs`: `JsxSpecs`, `SourceMapConfig`, argument getters | `config.ml`: JSX and `sourceMap` branches in `load` | Unit tests plus canonical JSX/source-map builds | Partial; invalid JSX catalog remains |
+| GenType schema and argument projection | `config.rs`: `GenTypeConfig`, `GenTypeShims`, `get_gentype_args` | `config.ml`: `gentype_args` | Unit tests cover defaults, suffix, normalization, duplicate shims; canonical GenType tests | Partial |
+| Post-build command | `config.rs`: `JsPostBuild`; `build/compile.rs` execution | `config.ml`: `js_post_build`; `build.ml`: post-build execution | Canonical post-build tests | Partial; invalid-shape cases remain |
+| Deprecated, unsupported, and unknown fields | `config.rs`: Serde aliases, `get_unknown_fields`, `get_unsupported_fields` | `config.ml`: alias diagnostics, `unknown_fields`, unsupported-field diagnostics | Unit tests; `config_tests.ml` covers Rust's exact nested-decoder warning boundary | Partial; complete alias list audit remains |
+
 ## Output parity gate
 
 Output is tested in two modes because Rust deliberately changes behavior based
