@@ -40,6 +40,15 @@ namespace_entry="$work/namespace-entry"
 source_map="$work/source-map"
 monorepo="$work/monorepo"
 
+missing_project="$work/does-not-exist"
+if "$port" build "$missing_project" >"$work/missing-project.log" 2>&1; then
+  echo "build unexpectedly accepted a missing project folder" >&2
+  exit 1
+fi
+grep -F \
+  "Could not start Rescript build: Could not write lockfile because the specified project folder does not exist: $missing_project" \
+  "$work/missing-project.log" >/dev/null
+
 "$port" compiler-args "$basic/src/A.res" | grep '"compiler_args"' >/dev/null
 sed 's/"suffix": "\.mjs"/"suffix": "\.mjs", "bsc-flags": ["-w -9"]/' "$basic/rescript.json" > "$basic/rescript.next"
 mv "$basic/rescript.next" "$basic/rescript.json"

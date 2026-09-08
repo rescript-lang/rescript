@@ -498,8 +498,16 @@ let rec clean_internal ~(root_config : Config.t) ~seen ~folder ~prod ~is_local =
       ([lib_path "" "bs"; lib_path "" "ocaml"]
       @ if is_local then [lib_path "" "es6"; lib_path "" "js"] else []))
 
+let project_root folder =
+  if not (Sys.file_exists folder) then
+    raise
+      (Error
+         ("Could not start Rescript build: Could not write lockfile because the specified project folder does not exist: "
+         ^ folder));
+  Unix.realpath folder
+
 let clean ~seen ~folder ~prod =
-  let root = Unix.realpath folder in
+  let root = project_root folder in
   let release_build_lock = acquire_build_lock (workspace_lock_root root) in
   Fun.protect ~finally:release_build_lock (fun () ->
     let root_config = Config.load_root root in
@@ -1506,7 +1514,7 @@ let run_namespace_jobs stats =
   List.iter2 (fun (_, finish) result -> finish result) jobs results
 
 let run ~seen ~folder ~prod ~features ~warn_error ~watch ~after_build ~filter =
-  let root = Unix.realpath folder in
+  let root = project_root folder in
   let root_config = Config.load_root root in
   let visited = Hashtbl.create 32 in
   let stats =
@@ -1666,7 +1674,7 @@ let run ~seen ~folder ~prod ~features ~warn_error ~watch ~after_build ~filter =
     (fun () -> try execute () with Build_failure output -> report_failure output)
 
 let watch ~folder ~prod ~features ~warn_error ~after_build ~filter ~clear_screen =
-  let root = Unix.realpath folder in
+  let root = project_root folder in
   ignore (Config.load_root root);
   let lock_dir = Filename.concat root "lib" in
   ensure_dir lock_dir;

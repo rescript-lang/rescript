@@ -30,7 +30,7 @@ gap. A deliberate difference needs a rationale and regression test in
 
 | Validation area | Current evidence | Status |
 | --- | --- | --- |
-| Missing/non-project folder and config discovery | Focused runner and canonical command failures; full source-location inventory pending | Partial |
+| Missing/non-project folder and config discovery | Missing-folder wording is matched in the focused runner; configuration-context cases pass, but the full source-location inventory remains pending | Partial |
 | Configuration schema and aliases | Unit tests plus canonical config, feature, experimental, warning, suffix, and GenType cases | Partial |
 | Package/dependency graph | Canonical compile/feature cases and graph unit tests | Partial |
 | Compiler/runtime/executable discovery | Focused subprocess tests; platform implementations are type-checked | Partial |

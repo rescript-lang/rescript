@@ -232,6 +232,9 @@ the same conservative result Rust intends for an unsuccessful probe.
   rejection of a version flag after an explicit subcommand, and order-independent
   format input conflicts. Format stdin accepts only `.res` and `.resi`, matching
   Rust's enumerated argument.
+- A missing project folder is rejected before path canonicalization with Rust's
+  user-facing preflight diagnostic instead of leaking an OCaml `Unix_error`;
+  the focused runner checks the complete path-bearing message.
 - Linux and macOS npm platform packages include the experimental executable as
   `rescript-ocaml.exe`, and the root package exposes it through a separate
   `rescript-ocaml` launcher while retaining Rust rewatch as `rescript`. The
