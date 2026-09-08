@@ -376,7 +376,7 @@ rerun it for the final maintainability review alongside maximum module size.
 - Rust unit-test scenario coverage is tracked separately from source guards.
   `tests/check_rust_test_coverage.sh` currently inventories all 136 Rust unit
   tests and validates their exact entries in `tests/rust_test_coverage.tsv`;
-  87 scenarios have received an initial evidence review and 49 remain marked
+  91 scenarios have received an initial evidence review and 45 remain marked
   `unreviewed`. Its `--require-complete` mode is a final quality gate and fails
   for either unreviewed scenarios or confirmed coverage gaps.
 - Interactive output parity remains open. The OCaml executable currently emits
