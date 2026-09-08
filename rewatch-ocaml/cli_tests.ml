@@ -119,4 +119,10 @@ let () =
   check (shows_help ["help"; "build"])
     "the help command displays subcommand help";
   check (rejects ["help"; "unknown"])
-    "the help command rejects unknown topics"
+    "the help command rejects unknown topics";
+  check (rejects ["compiler-args"])
+    "compiler-args requires a source path";
+  check (rejects ["compiler-args"; "A.res"; "B.res"])
+    "compiler-args rejects additional source paths";
+  check (rejects ["build"; "--unknown-option"])
+    "known subcommands reject unknown options"
