@@ -10,6 +10,11 @@ let ensure_dir path =
   in
   loop path
 
+let read_file path =
+  let channel = open_in_bin path in
+  Fun.protect ~finally:(fun () -> close_in_noerr channel) (fun () ->
+    really_input_string channel (in_channel_length channel))
+
 let copy_file source destination =
   if Sys.file_exists source then (
     ensure_dir (Filename.dirname destination);

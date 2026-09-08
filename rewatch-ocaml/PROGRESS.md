@@ -79,6 +79,13 @@ Two configuration validations also intentionally improve Rust failure modes.
 silently ignored. Unsupported JSX versions are rejected as configuration
 errors; Rust accepts them until compiler-argument construction and then panics.
 Focused configuration tests protect both validations.
+Compiler flag strings are also split without retaining empty arguments from
+leading, trailing, or repeated spaces. Rust currently preserves those empty
+argv elements, which can make an otherwise valid `bsc` invocation fail; the
+OCaml behavior is the low-risk normalization intended by a flag-list decoder,
+and a focused configuration test records the difference.
+Likewise, an empty array entry in `ppx-flags` is ignored rather than indexing
+its nonexistent first element and panicking as Rust's source filter does.
 
 ## Verified
 
@@ -457,6 +464,12 @@ rerun it for the final maintainability review alongside maximum module size.
   presented during final reporting, after the build summary and before config
   diagnostics. This matches Rust's deterministic snapshot order without
   delaying failure detection; the complete canonical suite protects it.
+- Parser and compiler arguments now follow Rust's phase-specific ordering, and
+  `compiler-args` reports the parser's actual path relative to `lib/bs`.
+  PPXs are owned by parsing only: known GraphQL, Spice, Relay, Formality, and
+  Bisect PPXs are filtered using the same source markers/environment rule as
+  Rust. Unit tests cover every filter branch, while a focused build proves a
+  filtered missing PPX is not resolved or launched.
 - Interactive completion now uses the Rust status text, warning suffix,
   two-decimal timing, and clean/warning emoji after verifying that both output
   streams are terminals. `--no-timing` is threaded into the build instead of
