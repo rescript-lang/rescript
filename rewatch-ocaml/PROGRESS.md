@@ -74,6 +74,11 @@ or measurement. The first recorded divergence is Windows lock probing: failure
 to launch `tasklist` is treated as inconclusive/live, preserving the lock,
 instead of allowing an internal subprocess-launch exception to escape. This is
 the same conservative result Rust intends for an unsuccessful probe.
+Two configuration validations also intentionally improve Rust failure modes.
+`namespace-entry` without an enabled namespace is rejected instead of being
+silently ignored. Unsupported JSX versions are rejected as configuration
+errors; Rust accepts them until compiler-argument construction and then panics.
+Focused configuration tests protect both validations.
 
 ## Verified
 
@@ -435,6 +440,17 @@ rerun it for the final maintainability review alongside maximum module size.
   outputs epoch mtimes; freshness now uses the published `lib/ocaml` AST copy,
   avoiding a full-project reparse on each watch cycle. Both canonical warning
   persistence tests, including atomic saves, pass with this state.
+- Configuration decoding now mirrors Serde's `Option` treatment of JSON `null`
+  at every optional top-level and nested field audited. A 41-case differential
+  acceptance run found no remaining mismatch, and focused tests retain the
+  covered field inventory. Unsupported `ignored-dirs` is diagnosed but no
+  longer honored, matching Rust rather than silently omitting source files;
+  `jsx.v3-dependencies` is decoded as a string array even though its value is
+  not otherwise used by this build system.
+- Redirected warnings are persisted to compiler logs during scheduling but
+  presented during final reporting, after the build summary and before config
+  diagnostics. This matches Rust's deterministic snapshot order without
+  delaying failure detection; the complete canonical suite protects it.
 - Interactive completion now uses the Rust status text, warning suffix,
   two-decimal timing, and clean/warning emoji after verifying that both output
   streams are terminals. `--no-timing` is threaded into the build instead of

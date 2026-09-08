@@ -29,7 +29,6 @@ type t = {
   namespace_entry: string option;
   features: (string * string list) list;
   warning_flags: string list;
-  ignored_dirs: string list;
   ppx_flags: string list list;
   jsx_args: string list;
   source_map_args: string list;
@@ -46,6 +45,9 @@ exception Error of string
 
 let fail path message = raise (Error (Printf.sprintf "%s: %s" path message))
 let member name fields = List.assoc_opt name fields
+
+let optional_member name fields =
+  match member name fields with None | Some `Null -> None | value -> value
 
 let path_in_root root =
   let current = Filename.concat root "rescript.json" in
@@ -97,7 +99,7 @@ let dependency_name path = function
   | `Assoc fields -> (
     match member "name" fields with
     | Some value ->
-      let features = match member "features" fields with
+      let features = match optional_member "features" fields with
         | None -> None
         | Some value -> Some (strings path "features" value)
       in
@@ -106,7 +108,7 @@ let dependency_name path = function
   | _ -> fail path "dependency must be a string or object"
 
 let parse_dependencies path field fields =
-  match member field fields with
+  match optional_member field fields with
   | None -> []
   | Some (`List values) -> List.map (dependency_name path) values
   | Some _ -> fail path (Printf.sprintf "field %S must be an array" field)
@@ -136,7 +138,7 @@ let rec sources_of_json path inherited_dir forced_dev inherited_feature = functi
       | None -> fail path "source object is missing field \"dir\""
     in
     let declared_dev =
-      match member "type" fields with
+    match optional_member "type" fields with
       | None -> false
       | Some (`String "dev") -> true
       | Some (`String _) -> false
@@ -145,12 +147,12 @@ let rec sources_of_json path inherited_dir forced_dev inherited_feature = functi
     let is_dev = Option.value forced_dev ~default:declared_dev
     in
     let feature =
-      match member "feature" fields with
+      match optional_member "feature" fields with
       | None -> inherited_feature
       | Some value -> Some (string path "feature" value)
     in
     let recurse, children =
-      match member "subdirs" fields with
+      match optional_member "subdirs" fields with
       | None -> (false, [])
       | Some (`Bool value) -> (value, [])
       | Some (`List values) ->
@@ -165,7 +167,7 @@ let rec sources_of_json path inherited_dir forced_dev inherited_feature = functi
   | _ -> fail path "source must be a string or object"
 
 let parse_sources path fields =
-  match member "sources" fields with
+  match optional_member "sources" fields with
   | None -> []
   | Some (`List values) ->
     List.concat_map (sources_of_json path "" None None) values
@@ -253,7 +255,7 @@ let parse_package_spec path = function
       | Some value -> bool path "in-source" value
     in
     let suffix =
-      match member "suffix" fields with
+      match optional_member "suffix" fields with
       | None -> None
       | Some value -> Some (string path "suffix" value)
     in
@@ -273,7 +275,7 @@ let package_specs_use_alias alias = function
 let gentype_args path configured_suffix package_specs_value sources dependencies = function
   | `Assoc fields ->
     let module_ =
-      match member "module" fields with
+      match optional_member "module" fields with
       | None -> (
         match package_specs_value with
         | Some (`Assoc package_spec) -> (
@@ -288,20 +290,20 @@ let gentype_args path configured_suffix package_specs_value sources dependencies
       | Some _ -> fail path "field \"gentypeconfig.module\" must be \"esmodule\" or \"commonjs\""
     in
     let module_resolution =
-      match member "moduleResolution" fields with
+      match optional_member "moduleResolution" fields with
       | None -> []
       | Some (`String ("node" | "node16" | "bundler" as value)) ->
         ["-bs-gentype-module-resolution"; value]
       | Some _ -> fail path "field \"gentypeconfig.moduleResolution\" is invalid"
     in
     let export_interfaces =
-      match member "exportInterfaces" fields with
+      match optional_member "exportInterfaces" fields with
       | None | Some (`Bool false) -> []
       | Some (`Bool true) -> ["-bs-gentype-export-interfaces"]
       | Some _ -> fail path "field \"gentypeconfig.exportInterfaces\" must be a boolean"
     in
     let generated_extension =
-      match member "generatedFileExtension" fields with
+      match optional_member "generatedFileExtension" fields with
       | None -> []
       | Some value -> ["-bs-gentype-generated-extension"; string path "gentypeconfig.generatedFileExtension" value]
     in
@@ -378,13 +380,13 @@ let load path =
     | None -> fail path "missing required field \"name\""
   in
   let configured_suffix =
-    match member "suffix" fields with
+    match optional_member "suffix" fields with
     | None -> None
     | Some value -> Some (string path "suffix" value)
   in
   let suffix = Option.value configured_suffix ~default:".js" in
   let package_specs =
-    match member "package-specs" fields with
+    match optional_member "package-specs" fields with
     | None ->
       [{module_format = Esmodule; in_source = true; suffix = Some ".js"}]
     | Some (`List values) -> List.map (parse_package_spec path) values
@@ -402,7 +404,7 @@ let load path =
       Hashtbl.add seen_package_outputs key ())
     package_specs;
   let namespace =
-    match member "namespace" fields with
+    match optional_member "namespace" fields with
     | None | Some (`Bool false) -> None
     | Some (`Bool true) -> Some (namespace_from_package_name name)
     | Some (`String "true") -> Some (namespace_from_package_name name)
@@ -410,7 +412,7 @@ let load path =
     | Some _ -> fail path "field \"namespace\" must be a boolean or string"
   in
   let namespace_entry =
-    match member "namespace-entry" fields, namespace with
+    match optional_member "namespace-entry" fields, namespace with
     | None, _ -> None
     | Some _, None -> fail path "field \"namespace-entry\" requires a namespace"
     | Some value, Some _ -> Some (string path "namespace-entry" value)
@@ -418,17 +420,18 @@ let load path =
   let compiler_flags =
     match member "compiler-flags" fields, member "bsc-flags" fields with
     | Some _, Some _ -> fail path "fields \"compiler-flags\" and \"bsc-flags\" cannot both be set"
+    | Some `Null, None | None, Some `Null -> []
     | Some value, None -> compiler_flags path "compiler-flags" value
     | None, Some value -> compiler_flags path "bsc-flags" value
     | None, None -> []
   in
   let warning_flags =
-    match member "warnings" fields with
+    match optional_member "warnings" fields with
     | None -> []
     | Some (`Assoc warning_fields) ->
-      let number = match member "number" warning_fields with
+      let number = match optional_member "number" warning_fields with
         | None -> [] | Some value -> ["-w"; string path "number" value] in
-      let error = match member "error" warning_fields with
+      let error = match optional_member "error" warning_fields with
         | Some (`Bool true) -> ["-warn-error"; "A"]
         | Some (`String value) -> ["-warn-error"; value]
         | None | Some (`Bool false) -> []
@@ -437,7 +440,7 @@ let load path =
     | Some _ -> fail path "field \"warnings\" must be an object"
   in
   let ppx_flags =
-    match member "ppx-flags" fields with
+    match optional_member "ppx-flags" fields with
     | None -> []
     | Some (`List values) ->
       List.map (function
@@ -447,30 +450,34 @@ let load path =
     | Some _ -> fail path "field \"ppx-flags\" must be an array"
   in
   let jsx_args =
-    match member "jsx" fields with
+    match optional_member "jsx" fields with
     | None -> []
     | Some (`Assoc jsx) ->
-      let version = match member "version" jsx with
+      let version = match optional_member "version" jsx with
         | None -> []
         | Some (`Int 4) -> ["-bs-jsx"; "4"]
         | Some _ -> fail path "field \"jsx.version\" must be 4"
       in
-      let module_ = match member "module" jsx with
+      let module_ = match optional_member "module" jsx with
         | None -> [] | Some value -> ["-bs-jsx-module"; string path "jsx.module" value] in
-      let mode = match member "mode" jsx with
+      let mode = match optional_member "mode" jsx with
         | None -> []
         | Some (`String ("classic" | "automatic" as value)) -> ["-bs-jsx-mode"; value]
         | Some _ -> fail path "field \"jsx.mode\" must be \"classic\" or \"automatic\""
       in
-      let preserve = match member "preserve" jsx with
+      let preserve = match optional_member "preserve" jsx with
         | None | Some (`Bool false) -> []
         | Some (`Bool true) -> ["-bs-jsx-preserve"]
         | Some _ -> fail path "field \"jsx.preserve\" must be a boolean"
-      in version @ module_ @ mode @ preserve
+      in
+      (match optional_member "v3-dependencies" jsx with
+      | None -> ()
+      | Some value -> ignore (strings path "jsx.v3-dependencies" value));
+      version @ module_ @ mode @ preserve
     | Some _ -> fail path "field \"jsx\" must be an object"
   in
   let source_map_args, source_map_dev =
-    match member "sourceMap" fields with
+    match optional_member "sourceMap" fields with
     | None -> ([], false)
     | Some (`Bool false) -> (["-bs-source-map"; "false"], false)
     | Some (`Bool true) ->
@@ -493,16 +500,16 @@ let load path =
         | Some _ ->
           fail path "sourceMap.enabled must be \"always\" or \"dev\""
       in
-      let content = match member "sourcesContent" options with
+      let content = match optional_member "sourcesContent" options with
         | None -> [] | Some (`Bool value) -> ["-bs-source-map-sources-content"; string_of_bool value]
         | Some _ -> fail path "field \"sourceMap.sourcesContent\" must be a boolean" in
-      let root = match member "sourceRoot" options with
+      let root = match optional_member "sourceRoot" options with
         | None -> [] | Some value -> ["-bs-source-map-root"; string path "sourceMap.sourceRoot" value] in
       (["-bs-source-map"; mode] @ content @ root, dev_only)
     | Some _ -> fail path "field \"sourceMap\" must be false or an object"
   in
   let experimental_args =
-    match member "experimental-features" fields with
+    match optional_member "experimental-features" fields with
     | None -> []
     | Some (`Assoc features) ->
       features
@@ -526,14 +533,14 @@ let load path =
   let dependencies = dependency_alias path "dependencies" "bs-dependencies" fields in
   let dev_dependencies = dependency_alias path "dev-dependencies" "bs-dev-dependencies" fields in
   let gentype_args =
-    match member "gentypeconfig" fields with
+    match optional_member "gentypeconfig" fields with
     | None -> []
     | Some value ->
       gentype_args path configured_suffix (member "package-specs" fields)
         sources dependencies value
   in
   let js_post_build =
-    match member "js-post-build" fields with
+    match optional_member "js-post-build" fields with
     | None -> None
     | Some (`Assoc fields) ->
       (match member "cmd" fields with
@@ -542,23 +549,18 @@ let load path =
     | Some _ -> fail path "field \"js-post-build\" must be an object"
   in
   let allowed_dependents =
-    match member "allowed-dependents" fields with
+    match optional_member "allowed-dependents" fields with
     | None -> None
     | Some value -> Some (strings path "allowed-dependents" value)
   in
   let features =
-    match member "features" fields with
+    match optional_member "features" fields with
     | None -> []
     | Some (`Assoc values) ->
       List.map
         (fun (name, value) -> (name, strings path "features" value))
         values
     | Some _ -> fail path "field \"features\" must be an object"
-  in
-  let ignored_dirs =
-    match member "ignored-dirs" fields with
-    | None -> []
-    | Some value -> strings path "ignored-dirs" value
   in
   let unsupported_fields =
     [
@@ -635,7 +637,6 @@ let load path =
     namespace_entry;
     features;
     warning_flags;
-    ignored_dirs;
     ppx_flags;
     jsx_args;
     source_map_args;

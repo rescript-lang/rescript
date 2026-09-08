@@ -49,4 +49,15 @@ let () =
       check
         (names (discover config ~features:["other"] ())
         = ["Main"; "Nested"; "Test"])
-        "an inactive feature excludes only its tagged source")
+        "an inactive feature excludes only its tagged source";
+      write_file (Filename.concat root "ignored/Nested.res") "let value = 1\n";
+      write_file config_path
+        {|{
+          "name": "unsupported-ignored-dirs",
+          "sources": {"dir": "ignored", "subdirs": true},
+          "ignored-dirs": ["ignored"]
+        }|};
+      let config = Config.load config_path in
+      check
+        (names (discover config ()) = ["Nested"])
+        "unsupported ignored-dirs does not suppress source discovery")

@@ -1602,9 +1602,7 @@ let run_scheduled_modules stats =
                 failures := (scheduled, output) :: !failures));
       Warning_state.entries stats.warning_state
       |> List.iter (fun entry ->
-           append_compiler_log entry.Warning_state.package_root entry.output;
-           prerr_string entry.output);
-      flush stderr;
+           append_compiler_log entry.Warning_state.package_root entry.output);
       let failures = List.rev !failures in
       List.iter
         (fun ((scheduled : scheduled_module), output) ->
@@ -1700,6 +1698,9 @@ let run_with_warning_state ~warning_state ~compilation_kind ~no_timing ~seen
         Printf.printf
           "Cleaned %d/%d\nParsed %d source files\nCompiled %d modules\n%!"
           stats.cleaned stats.previous_asts stats.parsed stats.compiled;
+    Warning_state.entries stats.warning_state
+    |> List.iter (fun entry -> prerr_string entry.Warning_state.output);
+    flush stderr;
     let diagnostics =
       stats.diagnostics |> List.rev |> List.sort_uniq String.compare
     in

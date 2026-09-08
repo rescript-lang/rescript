@@ -88,6 +88,75 @@ let () =
       check (config.gentype_args = [])
         "GenType arguments are absent without gentypeconfig";
       write_file path
+        {|{"name":"ignored-payload","ignored-dirs":true}|};
+      let config = Config.load path in
+      check (has_diagnostic config "ignored-dirs")
+        "unsupported ignored-dirs payloads are diagnosed but not decoded";
+      write_file path
+        {|{"name":"jsx-v3","jsx":{"v3-dependencies":true}}|};
+      let rejected =
+        try
+          ignore (Config.load path);
+          false
+        with Config.Error message -> contains message "jsx.v3-dependencies"
+      in
+      check rejected "jsx.v3-dependencies must be an array of strings";
+      write_file path
+        {|{"name":"namespace-entry-without-namespace","namespace-entry":"Entry"}|};
+      let rejected =
+        try
+          ignore (Config.load path);
+          false
+        with Config.Error message -> contains message "requires a namespace"
+      in
+      check rejected "namespace-entry requires namespace configuration";
+      write_file path {|{"name":"unsupported-jsx","jsx":{"version":3}}|};
+      let rejected =
+        try
+          ignore (Config.load path);
+          false
+        with Config.Error message -> contains message "jsx.version"
+      in
+      check rejected "unsupported JSX versions are rejected without panicking";
+      [
+        "sources";
+        "package-specs";
+        "warnings";
+        "suffix";
+        "dependencies";
+        "bs-dependencies";
+        "dev-dependencies";
+        "bs-dev-dependencies";
+        "features";
+        "ppx-flags";
+        "compiler-flags";
+        "bsc-flags";
+        "namespace";
+        "jsx";
+        "sourceMap";
+        "experimental-features";
+        "gentypeconfig";
+        "js-post-build";
+        "namespace-entry";
+        "allowed-dependents";
+      ]
+      |> List.iter (fun field ->
+           write_file path
+             (Printf.sprintf {|{"name":"null-option","%s":null}|} field);
+           ignore (Config.load path));
+      write_file path
+        {|{
+          "name": "nested-null-options",
+          "sources": {"dir": "src", "subdirs": null, "type": null, "feature": null},
+          "package-specs": {"module": "esmodule", "suffix": null},
+          "warnings": {"number": null, "error": null},
+          "dependencies": [{"name": "dep", "features": null}],
+          "jsx": {"version": null, "module": null, "mode": null, "v3-dependencies": null, "preserve": null},
+          "sourceMap": {"enabled": "always", "mode": "linked", "sourcesContent": null, "sourceRoot": null},
+          "gentypeconfig": {"module": null, "moduleResolution": null, "exportInterfaces": null, "generatedFileExtension": null}
+        }|};
+      ignore (Config.load path);
+      write_file path
         {|{"name":"jsx","jsx":{"module":"Voby.JSX","preserve":true}}|};
       let config = Config.load path in
       check
