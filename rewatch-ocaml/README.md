@@ -29,6 +29,16 @@ _build/default/rewatch-ocaml/rescript_ocaml.exe build path/to/project
 Supported commands are `build` (the default), `watch`, `clean`, `format`, and
 `compiler-args`. Run the executable with `--help` for the current option summary.
 
+The implementation is split by ownership rather than mirroring the Rust source
+layout mechanically. In particular, `build_artifacts.ml` owns filesystem
+primitives, generated-output paths, publication staging, and stale-artifact
+cleanup; `build.ml` retains package preparation and build orchestration.
+Genuinely platform-specific behavior is being consolidated behind a `Platform`
+boundary rather than mixed into those modules. That boundary will own Windows
+versus Unix process-tree/PID handling, executable lookup, pipe descriptors, and
+native watcher setup; portable `Filename`-based path and artifact logic remains
+shared.
+
 ## Test
 
 ```sh

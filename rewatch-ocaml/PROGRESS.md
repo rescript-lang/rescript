@@ -275,6 +275,11 @@ open. Pipe-based capture remains the intended final backend so successful builds
 do not create transient files, but it is deferred until the scheduler lifecycle
 is settled because it requires concurrent draining, bounded memory, and reliable
 descriptor/descendant cleanup on Windows as well as Unix.
+Once pipes are in place, the benchmark plan adds a normalized Linux `%file`
+syscall trace for clean, unchanged, and single-edit builds. It will compare
+fixture-local path/operation multisets and repeated accesses, while reporting
+runtime/loader/toolchain calls separately rather than treating incomparable raw
+process-wide syscall totals as a quality metric.
 
 ## Known gaps
 
@@ -317,6 +322,11 @@ descriptor/descendant cleanup on Windows as well as Unix.
   verification. Shared filesystem logic uses `Filename` operations rather than
   embedded `/` or `\\` separators; Unix-only test cases are being isolated or
   replaced with portable helpers.
+- Platform-specific calls are still split between `process.ml` and `build.ml`.
+  Before pipe/native-watcher work, consolidate process-tree termination, PID
+  probing, executable lookup, descriptor setup, and watcher backend selection
+  behind a common `Platform` interface with Unix and Windows implementations;
+  keep ordinary `Filename`-based artifact paths in shared code.
 
 ## Dependency decisions
 
@@ -339,13 +349,16 @@ descriptor/descendant cleanup on Windows as well as Unix.
 ## Next actions
 
 1. Inventory and close remaining configuration, CLI, and telemetry gaps.
-2. Finish the Windows watcher/lock backend and path audit, and cross-build it;
-   record Windows runtime verification as unavailable here.
+2. Introduce the shared platform interface, move existing Unix/Windows process
+   and PID branches behind it, then finish the Windows watcher/lock backend and
+   path audit and cross-build it; record Windows runtime verification as
+   unavailable here.
 3. Profile and close the remaining clean-build wall-time gap while preserving
    exact compiler-work and artifact equivalence; retain pipe capture as an
    end-stage option.
-4. Split large implementation modules such as `build.ml` along stable
-   responsibility boundaries after the performance checkpoint.
+4. Continue splitting `build.ml` along stable responsibility boundaries. The
+   filesystem and artifact-ownership layer now lives in `build_artifacts.ml`;
+   package preparation/scheduling and watch lifecycle remain candidates.
 5. Perform the final two-scope whole-port review and address confirmed findings.
 6. Replace or supplement polling with a production-grade native event backend
    and evaluate supported-platform packaging and behavior.
