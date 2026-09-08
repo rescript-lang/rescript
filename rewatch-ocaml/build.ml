@@ -69,10 +69,19 @@ let finalize_compiler_log root =
 
 let read_lock_owner path =
   try
-    let channel = open_in path in
+    let channel = open_in_bin path in
     Fun.protect ~finally:(fun () -> close_in_noerr channel) (fun () ->
-      Some (input_line channel))
-  with Sys_error _ | End_of_file -> None
+      Some (really_input_string channel (in_channel_length channel)))
+  with Sys_error _ -> None
+
+let valid_lock_owner value =
+  match Int64.of_string_opt value with
+  | Some pid -> pid >= 0L && pid <= 0xffff_ffffL
+  | None -> false
+
+let malformed_lock_error () =
+  Error
+    "Could not start Rescript build: Could not parse lockfile PID\n  (try removing it and running the command again)"
 
 let process_is_active value =
   Platform.process_is_active value ~run:(fun program args ->
@@ -118,6 +127,8 @@ let acquire_build_lock root =
         ~finally:(fun () -> remove_file takeover)
         (fun () ->
           match read_lock_owner path with
+          | Some owner when not (valid_lock_owner owner) ->
+            raise (malformed_lock_error ())
           | Some owner when process_is_active owner -> ()
           | _ -> remove_file path);
       true
@@ -133,6 +144,8 @@ let acquire_build_lock root =
     try Unix.link candidate path
     with Unix.Unix_error (Unix.EEXIST, _, _) -> (
       match read_lock_owner path with
+      | Some owner when not (valid_lock_owner owner) ->
+        raise (malformed_lock_error ())
       | Some owner when process_is_active owner ->
         if attempts = 1200 then
           print_endline "Waiting for other build to finish...";
@@ -1927,6 +1940,8 @@ let watch ~folder ~prod ~features ~warn_error ~after_build ~filter ~clear_screen
         ~finally:(fun () -> remove_file takeover)
         (fun () ->
           match read_lock () with
+          | Some owner when not (valid_lock_owner owner) ->
+            raise (malformed_lock_error ())
           | Some owner when process_is_active owner -> ()
           | _ -> remove_file lock_path);
       true
@@ -1942,6 +1957,8 @@ let watch ~folder ~prod ~features ~warn_error ~after_build ~filter ~clear_screen
     try Unix.link candidate lock_path
     with Unix.Unix_error (Unix.EEXIST, _, _) -> (
       match read_lock () with
+      | Some owner when not (valid_lock_owner owner) ->
+        raise (malformed_lock_error ())
       | Some owner when process_is_active owner ->
         raise
           (Error
