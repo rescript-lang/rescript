@@ -227,6 +227,11 @@ the same conservative result Rust intends for an unsuccessful probe.
   (`ignored-dirs`, generators, preprocessor/entry fields, and external include
   paths) receive the dedicated unsupported-field diagnostic rather than a
   generic unknown-field warning or silent acceptance.
+- Focused CLI parity covers build-only `-n`/`--no-timing` boolean forms,
+  `--`-delimited option-looking folders, global help for implicit builds,
+  rejection of a version flag after an explicit subcommand, and order-independent
+  format input conflicts. Format stdin accepts only `.res` and `.resi`, matching
+  Rust's enumerated argument.
 - Linux and macOS npm platform packages include the experimental executable as
   `rescript-ocaml.exe`, and the root package exposes it through a separate
   `rescript-ocaml` launcher while retaining Rust rewatch as `rescript`. The
@@ -320,6 +325,16 @@ rerun it for the final maintainability review alongside maximum module size.
   storage are not yet ported.
 - Full configuration validation parity, performance parity, and
   production-grade filesystem watching remain incomplete.
+- Full validation coverage is now an explicit source-inventory gate in
+  `PARITY_CHECKLIST.md`: every user-reachable Rust guard must map to an OCaml
+  location and test or to a documented intentional divergence. Existing suite
+  coverage alone does not close that gate.
+- Interactive output parity remains open. The OCaml executable currently emits
+  plain progress summaries and supports watch clear-screen behavior, but does
+  not yet reproduce Rust's TTY-aware parsing/compilation progress, spinner,
+  timing, color, and symbol/emoji presentation or its complete verbosity
+  behavior. Plain redirected output and pseudo-terminal output are tracked as
+  distinct gates in `PARITY_CHECKLIST.md`.
 - `watch` currently uses conservative polling and has no signal/lock/event
   batching parity with Rust rewatch.
 - Polling watches root and recursively resolved local dependency roots, but it

@@ -331,6 +331,58 @@ let () =
   in
   check watch_no_timing_rejected "watch rejects build-only --no-timing";
   check
+    (match Cli.parse [|"rescript-ocaml"; "build"; "-n=false"; "."|] with
+    | Cli.Build options -> options.folder = "."
+    | _ -> false)
+    "build accepts short no-timing boolean values";
+  check
+    (match Cli.parse [|"rescript-ocaml"; "--"; "-v"|] with
+    | Cli.Build options -> options.folder = "-v"
+    | _ -> false)
+    "double dash preserves option-looking folder";
+  check
+    (match Cli.parse [|"rescript-ocaml"; "some-folder"; "--help"|] with
+    | Cli.Help None -> true
+    | _ -> false)
+    "implicit command folder help uses global help";
+  let explicit_build_version_rejected =
+    try
+      ignore (Cli.parse [|"rescript-ocaml"; "build"; "-V"|]);
+      false
+    with Cli.Error _ -> true
+  in
+  check explicit_build_version_rejected
+    "explicit build rejects a trailing global version flag";
+  let invalid_stdin_extension_rejected =
+    try
+      ignore
+        (Cli.parse [|"rescript-ocaml"; "format"; "--stdin"; ".txt"|]);
+      false
+    with Cli.Error _ -> true
+  in
+  check invalid_stdin_extension_rejected
+    "format stdin validates the source extension";
+  let stdin_after_file_rejected =
+    try
+      ignore
+        (Cli.parse
+           [|"rescript-ocaml"; "format"; "input.res"; "--stdin"; ".res"|]);
+      false
+    with Cli.Error _ -> true
+  in
+  check stdin_after_file_rejected
+    "format stdin conflicts with files regardless of argument order";
+  let check_after_stdin_rejected =
+    try
+      ignore
+        (Cli.parse
+           [|"rescript-ocaml"; "format"; "--stdin"; ".res"; "--check"|]);
+      false
+    with Cli.Error _ -> true
+  in
+  check check_after_stdin_rejected
+    "format check conflicts with stdin regardless of argument order";
+  check
     (match Cli.parse [|"rescript-ocaml"; "watch"; "--clear-screen"|] with
     | Cli.Watch options -> options.clear_screen
     | _ -> false)
