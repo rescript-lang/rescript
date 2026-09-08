@@ -227,11 +227,17 @@ the same conservative result Rust intends for an unsuccessful probe.
   (`ignored-dirs`, generators, preprocessor/entry fields, and external include
   paths) receive the dedicated unsupported-field diagnostic rather than a
   generic unknown-field warning or silent acceptance.
-- Focused CLI parity covers build-only `-n`/`--no-timing` boolean forms,
-  `--`-delimited option-looking folders, global help for implicit builds,
-  rejection of a version flag after an explicit subcommand, and order-independent
-  format input conflicts. Format stdin accepts only `.res` and `.resi`, matching
-  Rust's enumerated argument.
+- The CLI now uses Cmdliner declarations instead of a bespoke option parser.
+  Focused tests, kept in a separate `cli_tests.ml`, cover implicit builds,
+  command and global help/version placement, verbosity placement, build-only
+  `-n`/`--no-timing` boolean forms, `--`-delimited option-looking folders,
+  per-command flags, early regular-expression validation, feature parsing, and
+  order-independent format input conflicts. Format stdin accepts only `.res`
+  and `.resi`, matching Rust's enumerated argument. A small routing adapter is
+  retained because Cmdliner treats a leading positional argument as a
+  subcommand and parses subcommands before options; it inserts the implicit
+  `build` command and preserves clap's global flag behavior without parsing
+  command options itself.
 - A missing project folder is rejected before path canonicalization with Rust's
   user-facing preflight diagnostic instead of leaking an OCaml `Unix_error`;
   the focused runner checks the complete path-bearing message.
@@ -410,10 +416,14 @@ rerun it for the final maintainability review alongside maximum module size.
   decision. Adding an OTLP exporter, span stack, and shutdown lifecycle would
   introduce substantial optional machinery and dependencies; this does not
   relax ordinary verbosity, diagnostic, or exit-status compatibility.
-- `Cmdliner` is the preferred next candidate for replacing the hand-written CLI
-  parser because it is actively maintained, already present in the development
-  switch, and owns help/version/error/`--` conventions. Migration still has to
-  prove exact Rust/clap behavior in the canonical CLI tests.
+- `Cmdliner` is accepted for the CLI. It is actively maintained (2.1.1 was
+  released in April 2026), ISC-licensed, has no runtime package dependencies,
+  supports OCaml 4.08 and newer, and replaces the hand-written option parser.
+  Help rendering intentionally uses Cmdliner's man-page structure rather than
+  reproducing clap's whitespace and headings. This presentation difference is
+  accepted; command and option discoverability, command selection, validation,
+  and exit classes remain compatibility requirements and are tested
+  independently.
 - JSON deriving is not currently justified. The config loader must retain raw
   keys to distinguish deprecated, known-unsupported, and forward-compatible
   unknown fields; generated codecs would still require substantial custom
