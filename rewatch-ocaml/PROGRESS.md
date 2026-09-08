@@ -363,6 +363,16 @@ rerun it for the final maintainability review alongside maximum module size.
   is also type-checked against the contract in Linux unit builds. Pipe
   descriptor ownership and a future native watcher backend belong behind the
   same boundary; actual Windows cross-build/runtime verification remains open.
+- Native Windows implementation and runtime validation are deliberately an
+  end-stage milestone that can be completed by a separate Codex session inside
+  the Windows VM. Until that handoff, every increment must keep Windows in its
+  design constraints: shared code must use `Filename` rather than literal
+  separators, avoid Unix shell/process/signal assumptions, route genuinely
+  platform-specific capabilities through `platform.mli`, retain a type-checked
+  Windows implementation, and accept only dependencies with credible native
+  Windows support. The handoff must identify the exact commit, setup and test
+  commands, expected results, unverified behaviors, and platform-sensitive
+  scenarios so the Windows session can continue without reconstructing history.
 
 ## Dependency decisions
 
@@ -390,18 +400,19 @@ rerun it for the final maintainability review alongside maximum module size.
 
 1. Inventory and close remaining configuration and CLI gaps; OpenTelemetry is
    an explicitly documented non-goal.
-2. Finish the Windows watcher/lock backend and path audit behind the shared
-   `platform.mli` boundary, cross-build it, and record Windows runtime
-   verification as unavailable here.
-3. Profile and close the remaining clean-build wall-time gap while preserving
+2. Profile and close the remaining clean-build wall-time gap while preserving
    exact compiler-work and artifact equivalence; retain pipe capture as an
    end-stage option.
-4. Continue splitting `build.ml` along stable responsibility boundaries. The
+3. Continue splitting `build.ml` along stable responsibility boundaries. The
    filesystem and artifact-ownership layer now lives in `build_artifacts.ml`;
    package preparation/scheduling and watch lifecycle remain candidates.
-5. Perform the final two-scope whole-port review and address confirmed findings.
-6. Replace or supplement polling with a production-grade native event backend
+4. Perform the final two-scope whole-port review and address confirmed findings.
+5. Replace or supplement polling with a production-grade native event backend
    and evaluate supported-platform packaging and behavior.
-7. At the final maintainability pass, add comments around ownership,
+6. At the final maintainability pass, add comments around ownership,
    concurrency, platform, and algorithmic invariants that are not apparent from
    the code itself; avoid comments that only paraphrase individual statements.
+7. Prepare the pinned Windows handoff, then finish the Windows watcher/lock
+   backend and path audit and run the native build, unit, focused, and canonical
+   Bash suites in the VM. Address findings there and finish with an x64 Windows
+   confidence run where available.
