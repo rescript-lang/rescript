@@ -68,3 +68,20 @@ project decision. Set `KEEP_REWATCH_BENCHMARK_WORKDIR=1` to retain traces and ra
 stdout/stderr for investigation. For a quick correctness-only check, an odd run
 count below five is accepted only with `REWATCH_ALLOW_SMOKE_RUN=1`; its timing
 must never be treated as a quality-gate result.
+
+## Planned filesystem-work audit
+
+After pipe-based subprocess capture removes the intentional temporary capture
+files, compare filesystem work as a second orchestration audit. On Linux this
+can use `strace -f -e trace=%file` around isolated clean, unchanged, and
+single-edit builds. Normalize each fixture root, retain operations whose target
+is inside that root, and compare both per-path operation multisets and readable
+categories such as metadata probes, opens, directory scans, creates, renames,
+and removals.
+
+Do not gate on the raw process-wide syscall total: Rust, OCaml, libc, the
+dynamic loader, and subprocess startup legitimately perform different
+toolchain-level accesses. Report those separately, and treat repeated accesses
+to the same project artifact or discovery path as the primary evidence of
+superfluous orchestration work. The existing compiler-work and artifact checks
+must remain enabled so fewer filesystem calls cannot conceal skipped work.

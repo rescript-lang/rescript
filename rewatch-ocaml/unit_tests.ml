@@ -6,7 +6,7 @@ let rec contains_adjacent left right = function
   | [] -> false
 
 let write_file path contents =
-  Build.ensure_dir (Filename.dirname path);
+  Build_artifacts.ensure_dir (Filename.dirname path);
   let channel = open_out_bin path in
   Fun.protect ~finally:(fun () -> close_out_noerr channel) (fun () ->
     output_string channel contents)
@@ -63,13 +63,13 @@ let () =
 
 let () =
   check
-    (Build.generated_output_owner "Foo.bs.js" = Some "Foo")
+    (Build_artifacts.generated_output_owner "Foo.bs.js" = Some "Foo")
     "compound .bs.js outputs retain their module owner";
   check
-    (Build.generated_output_owner "Foo.res.js" = Some "Foo")
+    (Build_artifacts.generated_output_owner "Foo.res.js" = Some "Foo")
     "compound .res.js outputs retain their module owner";
   check
-    (Build.generated_output_owner "Foo.res.js.map" = Some "Foo")
+    (Build_artifacts.generated_output_owner "Foo.res.js.map" = Some "Foo")
     "compound source maps retain their module owner";
   let test_executable = Unix.realpath Sys.executable_name in
   let process_job args =
@@ -161,7 +161,7 @@ let () =
       let command = if Sys.win32 then "worker.exe" else "worker" in
       Unix.mkdir (Filename.concat first command) 0o755;
       let executable = Filename.concat second command in
-      Build.copy_file test_executable executable;
+      Build_artifacts.copy_file test_executable executable;
       Unix.chmod executable 0o755;
       let previous_path = Sys.getenv_opt "PATH" in
       let separator = if Sys.win32 then ";" else ":" in
@@ -176,7 +176,7 @@ let () =
             "PATH lookup skips directories and applies platform executable suffixes";
           if Sys.win32 then (
             let cwd_executable = Filename.concat path_root "current.exe" in
-            Build.copy_file test_executable cwd_executable;
+            Build_artifacts.copy_file test_executable cwd_executable;
             check
               (Process.resolve_program ~cwd:path_root "current" = cwd_executable)
               "Windows executable lookup searches cwd with PATHEXT")));
@@ -360,8 +360,8 @@ let () =
   write_owner takeover "999999999";
   Fun.protect
     ~finally:(fun () ->
-      Build.remove_file takeover;
-      Build.remove_file lock;
+      Build_artifacts.remove_file takeover;
+      Build_artifacts.remove_file lock;
       Unix.rmdir lock_dir;
       Unix.rmdir lock_root)
     (fun () ->

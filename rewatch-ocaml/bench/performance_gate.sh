@@ -260,11 +260,11 @@ else
 fi
 
 failed=0
-if ((ocaml_wall * 100 > rust_wall * threshold_percent)); then
+if ((runs >= 5 && ocaml_wall * 100 > rust_wall * threshold_percent)); then
   echo "FAIL: OCaml median wall time exceeds the threshold." >&2
   failed=1
 fi
-if ((ocaml_rss * 100 > rust_rss * threshold_percent)); then
+if ((runs >= 5 && ocaml_rss * 100 > rust_rss * threshold_percent)); then
   echo "FAIL: OCaml median peak tree RSS exceeds the threshold." >&2
   failed=1
 fi
