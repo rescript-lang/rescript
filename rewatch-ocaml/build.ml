@@ -457,6 +457,18 @@ let is_local_dependency ~workspace path =
 
 let source_discovery_prod ~prod ~is_local = prod || not is_local
 
+let report_missing_source_folder (config : Config.t) path =
+  let prefix = Filename.concat config.root "" in
+  let relative =
+    if String.starts_with ~prefix path then
+      String.sub path (String.length prefix)
+        (String.length path - String.length prefix)
+    else path
+  in
+  Printf.eprintf
+    "ERROR:\nCould not read folder: %S. Specified in dependency: %s, located %S...\n%!"
+    relative config.name config.root
+
 let gentype_dependency_args (config : Config.t) =
   if config.gentype_args = [] then []
   else
@@ -595,7 +607,7 @@ let rec clean_internal ~(root_config : Config.t) ~seen ~folder ~prod ~is_local =
         Source.discover config
           ~prod:(source_discovery_prod ~prod ~is_local)
           ~features:None ~filter:None
-          ~on_missing:(fun _ -> ())
+          ~on_missing:(report_missing_source_folder config)
           ~display_root:root_config.root
       in
       let output_config = with_root_options config root_config in
@@ -987,8 +999,7 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
         Source.discover config
           ~prod:(source_discovery_prod ~prod ~is_local)
           ~features ~filter
-          ~on_missing:(fun path ->
-            if is_local then Printf.eprintf "Could not read folder %s\n%!" path)
+          ~on_missing:(report_missing_source_folder config)
           ~on_orphan:(fun path ->
             Printf.eprintf
               "\027[2K\r No implementation file found for interface file (skipping): %s\n%!"
@@ -1325,8 +1336,7 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder ~prod ~features
         ~prod:(source_discovery_prod ~prod ~is_local)
         ~features ~filter
         ~display_root:root_config.root
-        ~on_missing:(fun path ->
-          if is_local then Printf.eprintf "Could not read folder %s\n%!" path)
+        ~on_missing:(report_missing_source_folder config)
         ~on_orphan:(fun path ->
           Printf.eprintf
             "\027[2K\r No implementation file found for interface file (skipping): %s\n%!"
