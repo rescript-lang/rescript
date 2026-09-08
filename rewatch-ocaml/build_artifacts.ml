@@ -194,7 +194,27 @@ let with_root_options (config : Config.t) (root_config : Config.t) =
 
 let cleanup_stale ~root ~ocaml_dir ~is_local (config : Config.t) modules =
   let build_dir = lib_path root "bs" in
-  cleanup_watch_output_sidecars ~root config;
+  (* Keep one inventory of each artifact tree. Rewalking these trees for every
+     cleanup phase made unchanged builds perform several times Rust's directory
+     and metadata work. Paths removed below can safely remain in the inventory:
+     later phases only classify their names or call the idempotent remove_file. *)
+  let ocaml_files = files_under ocaml_dir in
+  let build_files = files_under build_dir in
+  let source_files =
+    List.map
+      (fun source ->
+        (source, files_under (Filename.concat root source.Config.dir)))
+      config.sources
+  in
+  let output_files =
+    [lib_path "" "es6"; lib_path "" "js"]
+    |> List.map (fun directory ->
+         let output_dir = Filename.concat root directory in
+         (output_dir, files_under output_dir))
+  in
+  (List.concat_map snd source_files @ List.concat_map snd output_files)
+  |> List.iter (fun path ->
+       if is_watch_output_sidecar path then remove_file path);
   let expected_artifacts = Hashtbl.create (List.length modules * 8) in
   let owned_output_names = Hashtbl.create (List.length modules * 2) in
   let add_expected base extensions =
@@ -204,7 +224,7 @@ let cleanup_stale ~root ~ocaml_dir ~is_local (config : Config.t) modules =
       extensions
   in
   let previous_ast_count = ref 0 in
-  files_under ocaml_dir
+  ocaml_files
   |> List.iter (fun path ->
        let basename = Filename.basename path in
        if Filename.check_suffix basename ".ast" then (
@@ -240,7 +260,7 @@ let cleanup_stale ~root ~ocaml_dir ~is_local (config : Config.t) modules =
       add_expected base [".cmi"; ".cmj"; ".cmt"; ".mlmap"])
     config.namespace;
   let removed_modules = ref [] in
-  files_under ocaml_dir
+  ocaml_files
   |> List.iter (fun path ->
        let basename = Filename.basename path in
        let managed =
@@ -264,7 +284,7 @@ let cleanup_stale ~root ~ocaml_dir ~is_local (config : Config.t) modules =
          else if Filename.check_suffix basename ".iast" then
            removed_modules := Source.module_name basename :: !removed_modules;
          remove_file path;
-         files_under build_dir
+         build_files
          |> List.iter (fun build_path ->
               if Filename.basename build_path = basename then
                 remove_file build_path)));
@@ -277,7 +297,7 @@ let cleanup_stale ~root ~ocaml_dir ~is_local (config : Config.t) modules =
       (String.length path - String.length prefix)
   in
   let previously_generated = Hashtbl.create 32 in
-  files_under build_dir
+  build_files
   |> List.iter (fun path ->
        generated_output_details path
        |> Option.iter (fun (_, _, output_path) ->
@@ -315,26 +335,25 @@ let cleanup_stale ~root ~ocaml_dir ~is_local (config : Config.t) modules =
     |> Option.iter (fun _ -> Hashtbl.replace removed_outputs build_relative ());
     remove_file path
   in
-  config.sources
-  |> List.iter (fun source ->
-       files_under (Filename.concat root source.Config.dir)
+  source_files
+  |> List.iter (fun (_, files) ->
+       files
        |> List.iter (fun path ->
             generated_output_details path
             |> Option.iter (fun (_, _, output_path) ->
                  let build_relative = relative_under root output_path in
                  if should_remove_output ~build_relative path then
                    remove_output ~build_relative path)));
-  [lib_path "" "es6"; lib_path "" "js"]
-  |> List.iter (fun directory ->
-       let output_dir = Filename.concat root directory in
-       files_under output_dir
+  output_files
+  |> List.iter (fun (output_dir, files) ->
+       files
        |> List.iter (fun path ->
             generated_output_details path
             |> Option.iter (fun (_, _, output_path) ->
                  let build_relative = relative_under output_dir output_path in
                  if should_remove_output ~build_relative path then
                    remove_output ~build_relative path)));
-  files_under build_dir
+  build_files
   |> List.iter (fun path ->
        generated_output_details path
        |> Option.iter (fun (_, _, output_path) ->
