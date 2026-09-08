@@ -28,6 +28,7 @@
   native_watcher
   toolchain
   compiler_info
+  source_dirs
   warning_state
   output
   build

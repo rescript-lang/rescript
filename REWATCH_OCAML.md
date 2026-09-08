@@ -125,6 +125,18 @@ Produce code that a maintainer can understand and extend:
 - Comments should explain invariants and non-obvious decisions rather than restate the code.
 - Do not suppress warnings or weaken tests to make the port pass.
 - Measure before introducing performance-driven complexity.
+- Treat performance parity as a work-equivalence gate, not only a wall-clock
+  ratio. Inventory the Rust implementation's avoidance strategies (including
+  filesystem traversal, metadata calls, parsing, graph construction, artifact
+  checks, subprocess creation, and output capture), and implement applicable
+  missing strategies before accepting the benchmark. Use syscall or equivalent
+  tracing where available to detect superfluous work.
+- Keep proposed optimizations that are not present in Rust in a separate,
+  prioritized backlog. For each proposal, record whether it addresses a measured
+  bottleneck or is still a hypothesis, its expected benefit, complexity and
+  correctness risk, Windows implications, and the benchmark plus equivalence
+  checks required before adoption. Do not mix speculative improvements into the
+  compatibility port merely to improve headline timings.
 
 ## Review gates
 
@@ -139,6 +151,51 @@ Review both correctness and maintainability. Require concrete findings with affe
 For subprocess scheduling, incremental invalidation, watch mode, and final evaluation, use two independent reviewers with complementary scopes: behavioral correctness, and design/resource/concurrency concerns.
 
 Do not call a milestone complete while confirmed material findings remain unresolved.
+
+### Final code-quality gate
+
+After behavior, work equivalence, and performance gates pass, perform a distinct
+whole-port maintainability pass before release:
+
+- Split modules whose size or mixed responsibilities obstruct review; keep test
+  code and benchmark tooling separate from production implementation.
+- Review module, file, type, function, field, and test names for clear ownership
+  and consistent terminology. Remove misleading Rust-derived names and unclear
+  abbreviations, while keeping established ReScript concepts recognizable.
+- Simplify duplicated control flow and remove dead code, stale compatibility
+  scaffolding, abandoned experiments, and avoidable allocations without
+  regressing measured performance.
+- Add comments for ownership, concurrency, platform, cleanup, and algorithmic
+  invariants that are not evident from the code. Do not add comments that merely
+  paraphrase statements.
+- Document the unit, focused, canonical, full-repository, work-equivalence,
+  performance, filesystem-call, and source-size tooling so future changes can
+  reproduce the gates.
+- Require warning-free builds, formatting, and available linters without warning
+  suppressions.
+- Audit every process, pipe descriptor, watcher handle, lock, and staged or
+  temporary output across success, failure, interruption, and partial-launch
+  paths.
+- Audit the platform boundary for hidden Unix assumptions and type-check both
+  selected and unselected implementations; complete the native Windows run.
+- Review dependency maintenance, licenses/notices, static packaging, and the
+  final npm artifact manifest.
+- Review test isolation and reliability, replacing fragile sleeps with observable
+  polling where possible and retaining tests for every intentional Rust
+  divergence or corrected Rust bug.
+- Recheck public diagnostics, exit classes, redirected/interactive output, and
+  CLI discoverability.
+- Record final production/test/tooling line counts and largest modules as review
+  signals, not optimization targets.
+- Publish separate final inventories of (a) compatibility behavior retained even
+  though it appears odd or inconsistent, (b) documented Rust bugs or simple
+  inefficiencies intentionally corrected by the OCaml port, and (c) possible
+  post-parity performance improvements absent from Rust. Include rationale,
+  coverage, and a future cleanup or validation path for every entry.
+
+**Gate:** The whole-port review has no unresolved material correctness,
+resource, portability, maintainability, documentation, or packaging finding,
+and all behavior/performance gates still pass after cleanup.
 
 ## Models
 

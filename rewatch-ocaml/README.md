@@ -27,16 +27,18 @@ export RESCRIPT_RUNTIME="$PWD/packages/@rescript/runtime"
 _build/default/rewatch-ocaml/rescript_ocaml.exe build path/to/project
 ```
 
-Published ReScript packages on Linux and macOS also expose the experimental
-binary as a separate `rescript-ocaml` command. This leaves the Rust-backed
-`rescript` command unchanged while making side-by-side project testing easy:
+On this experimental branch, published ReScript packages on Linux and macOS use
+the OCaml implementation for the normal `rescript` command. The Rust reference
+implementation remains available for side-by-side testing:
 
 ```sh
-npx rescript-ocaml build
+npx rescript build
+npx rescript-rust build
 ```
 
-The command is intentionally unavailable on Windows until the native Windows
-implementation and runtime test pass are complete.
+The `rescript-ocaml` launcher remains as an alias for existing testers. Windows
+continues to use Rust for `rescript` until the native Windows implementation and
+runtime test pass are complete, and does not yet expose a separate Rust alias.
 
 The packaged executable discovers `bsc.exe` beside itself, like Rust rewatch,
 and the npm launcher supplies the installed runtime path. Direct invocation can

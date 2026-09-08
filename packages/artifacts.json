@@ -14,6 +14,7 @@
     "cli/common/runBuildSystem.js",
     "cli/common/runtime.js",
     "cli/rescript-ocaml.js",
+    "cli/rescript-rust.js",
     "cli/rescript-tools.js",
     "cli/rescript.js",
     "docs/docson/build-schema.json",

@@ -646,7 +646,7 @@ let () =
       Unix.putenv "RESCRIPT_BSC_EXE" test_executable;
       let rejected =
         try
-          Build.run ~seen:[] ~folder:dependency_root ~prod:false
+          Build.run ~seen:[] ~verbosity:0 ~folder:dependency_root ~prod:false
             ~features:None ~warn_error:None ~watch:false ~after_build:None
             ~filter:None ~no_timing:false;
           false
@@ -660,7 +660,7 @@ let () =
         {|{"name":"app","dev-dependencies":["restricted"]}|};
       let rejected =
         try
-          Build.run ~seen:[] ~folder:dependency_root ~prod:false
+          Build.run ~seen:[] ~verbosity:0 ~folder:dependency_root ~prod:false
             ~features:None ~warn_error:None ~watch:false ~after_build:None
             ~filter:None ~no_timing:false;
           false

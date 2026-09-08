@@ -14,7 +14,7 @@ let () =
     (fun () ->
       let bin = Filename.concat root "bin" in
       Unix.mkdir bin 0o755;
-      let executable = Filename.concat bin "rescript-ocaml.exe" in
+      let executable = Filename.concat bin "rescript.exe" in
       write_file executable "test executable";
       check
         (Toolchain.sibling_bsc_candidate ~cwd:root ~executable
@@ -22,7 +22,7 @@ let () =
         "absolute executable paths locate sibling bsc.exe";
       check
         (Toolchain.sibling_bsc_candidate ~cwd:root
-           ~executable:(Filename.concat "bin" "rescript-ocaml.exe")
+           ~executable:(Filename.concat "bin" "rescript.exe")
         = Filename.concat bin "bsc.exe")
         "relative executable paths locate sibling bsc.exe");
   check
