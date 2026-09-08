@@ -347,12 +347,14 @@ rerun it for the final maintainability review alongside maximum module size.
   replaced with portable helpers.
 - The preferred non-CI Windows validation environment is a Windows 11 ARM VM on
   the Apple Silicon development host, with the repository on the guest's local
-  NTFS volume and tests launched from native PowerShell. An occasional native
-  x64 Windows run should remain the release-confidence check. WSL exercises the
-  Unix backend, and Wine does not faithfully validate NTFS events or Windows
-  process-tree behavior. The focused Bash integration driver should eventually
-  gain a dependency-free cross-platform Node counterpart so the same scenarios
-  can run natively on Unix and Windows.
+  NTFS volume. Run the existing Bash suites in the Cygwin environment supplied
+  by the native Windows OCaml/opam toolchain; the canonical helpers already
+  detect Cygwin/MSYS and normalize Windows paths. The smaller OCaml-focused
+  runner may only need explicit `cygpath` conversion for absolute paths passed
+  through custom environment variables. An occasional native x64 Windows run
+  should remain the release-confidence check. WSL exercises the Unix backend,
+  and Wine does not faithfully validate NTFS events or Windows process-tree
+  behavior.
 - A static `platform.mli` now defines the common platform contract, and Dune
   selects either `platform_unix.ml` or `platform_windows.ml` as `platform.ml`
   using `%{os_type}`. Process-tree termination, PID probing, executable lookup,
