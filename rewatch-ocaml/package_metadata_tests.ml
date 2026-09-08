@@ -40,4 +40,18 @@ let () =
         (Some "https://github.com/owner/repo/issues")
         "a GitHub shorthand is expanded";
       check {|{"name":"no-metadata"}|} None
-        "missing issue tracker metadata returns none")
+        "missing issue tracker metadata returns none";
+      write_file package_json {|{"name":"first","name":"last"}|};
+      check_equal (Ok (Some "last"))
+        (Package_metadata.package_name root)
+        "package identity uses JSON map last-key semantics";
+      write_file package_json {|{"name":false}|};
+      check_equal (Ok None) (Package_metadata.package_name root)
+        "a non-string package name falls back to the ReScript config";
+      write_file package_json "{invalid";
+      check_equal true
+        (match Package_metadata.package_name root with
+        | Error message ->
+          String.starts_with ~prefix:"Could not parse package.json:" message
+        | Ok _ -> false)
+        "malformed package metadata is rejected")

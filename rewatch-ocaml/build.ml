@@ -469,6 +469,15 @@ let report_missing_source_folder (config : Config.t) path =
     "ERROR:\nCould not read folder: %S. Specified in dependency: %s, located %S...\n%!"
     relative config.name config.root
 
+let validate_package_metadata (config : Config.t) =
+  match Package_metadata.package_name config.root with
+  | Error message -> raise (Error ("Could not initialize build: " ^ message))
+  | Ok (Some package_name) when package_name <> config.name ->
+    Printf.eprintf
+      "WARN:\n\nPackage name mismatch for %s:\nThe package.json name is %S, while the rescript.json name is %S\nThis inconsistency will cause issues with package resolution.\n\n%!"
+      config.root package_name config.name
+  | Ok (Some _) | Ok None -> ()
+
 let gentype_dependency_args (config : Config.t) =
   if config.gentype_args = [] then []
   else
@@ -585,6 +594,7 @@ let rec clean_internal ~(root_config : Config.t) ~seen ~folder ~prod ~is_local =
     let config_path = Config.path_in_root root in
     if Config.exists_in_root root then (
       let config = Config.load config_path in
+      validate_package_metadata config;
       let dependencies =
         config.dependencies
         @ if prod || not is_local then [] else config.dev_dependencies
@@ -892,6 +902,7 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
     | Some config -> config
     | None ->
       let config = Config.load_root root in
+      validate_package_metadata config;
       Hashtbl.add loaded_configs root config;
       config
   in

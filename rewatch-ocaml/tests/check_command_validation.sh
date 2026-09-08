@@ -20,6 +20,7 @@ mkdir -p "$work/external-dev-source/src" \
   "$work/external-dev-source/node_modules/dep/test"
 mkdir -p "$work/missing-source-folder/src" \
   "$work/missing-source-folder/node_modules/dep"
+mkdir -p "$work/package-name-mismatch/src" "$work/malformed-package-json/src"
 mkdir -p "$work/mismatched-dependency/src" \
   "$work/mismatched-dependency/node_modules/dep/src"
 mkdir -p "$work/configless-dependency/src" \
@@ -61,6 +62,14 @@ printf '{"name":"missing-source-folder","sources":["src"],"dependencies":["dep"]
 printf 'let value = 1\n' >"$work/missing-source-folder/src/App.res"
 printf '{"name":"dep","sources":["missing"]}\n' \
   >"$work/missing-source-folder/node_modules/dep/rescript.json"
+printf '{"name":"config-name","sources":["src"]}\n' \
+  >"$work/package-name-mismatch/rescript.json"
+printf '{"name":"package-name"}\n' >"$work/package-name-mismatch/package.json"
+printf 'let value = 1\n' >"$work/package-name-mismatch/src/A.res"
+printf '{"name":"malformed-package-json","sources":["src"]}\n' \
+  >"$work/malformed-package-json/rescript.json"
+printf '{invalid\n' >"$work/malformed-package-json/package.json"
+printf 'let value = 1\n' >"$work/malformed-package-json/src/A.res"
 printf '{"name":"mismatched-dependency","sources":["src"],"dependencies":["dep"]}\n' \
   >"$work/mismatched-dependency/rescript.json"
 printf 'let value = Dep.value\n' >"$work/mismatched-dependency/src/A.res"
@@ -183,6 +192,18 @@ if ! cmp -s "$work/rust.err" "$work/ocaml.err"; then
   cat "$work/ocaml.err" >&2
   exit 1
 fi
+run_case build-package-name-mismatch accept accept build \
+  "$work/package-name-mismatch"
+if ! cmp -s "$work/rust.err" "$work/ocaml.err"; then
+  echo "Package-name mismatch diagnostics differ" >&2
+  printf '%s\n' '--- Rust output ---' >&2
+  cat "$work/rust.err" >&2
+  printf '%s\n' '--- OCaml output ---' >&2
+  cat "$work/ocaml.err" >&2
+  exit 1
+fi
+run_case build-malformed-package-json reject reject build \
+  "$work/malformed-package-json"
 run_case build-mismatched-dependency-name panic accept build \
   "$work/mismatched-dependency"
 run_case build-missing-dependency exit2 exit2 build "$work/missing-dependency"
