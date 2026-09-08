@@ -222,7 +222,7 @@ applicable.
   ReScript config, and malformed dependency configs now terminate build and
   clean with Rust's package-tree exit class 2 instead of being skipped or
   reported as a generic exit 1; watch startup uses the same path. The command
-  gate now has 24 cases and verifies failed OCaml commands leave neither build
+  gate now has 26 cases and verifies failed OCaml commands leave neither build
   nor watch locks. Rust currently calls `process::exit(2)` from package-tree
   library code; OCaml raises a typed package error to the CLI so cleanup still
   runs before the matching exit status is returned.
