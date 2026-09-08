@@ -9,9 +9,12 @@ implementation therefore cannot warm or remove artifacts used by the other.
 
 The gate performs one warm-up per implementation, at least five interleaved
 clean builds, and reports median wall time plus peak summed process-tree RSS. It
-then traces a clean build with `strace` and requires identical normalized
-package/phase/input multisets as well as identical counts for parser, namespace,
-compiler, interface, and PPX process launches. Finally, both
+then traces clean, unchanged, and single-edit builds with `strace` and requires
+identical normalized package/phase/input multisets as well as identical counts
+for parser, namespace, compiler, interface, and PPX process launches. The edit
+targets the same leaf source in each isolated fixture. This sequence detects
+superfluous incremental parsing or compilation that a clean-only comparison
+cannot expose. Finally, both
 implementations clean and build a third fixture at the same absolute path; the
 gate requires identical generated JavaScript, compiler interfaces (`.cmi`),
 JavaScript IR (`.cmj`), and namespace maps. It deliberately does not treat
@@ -38,9 +41,9 @@ Together these cover three different failure classes:
 
 - the canonical and focused suites check observable command/build/watch
   behavior;
-- the `strace` classification checks that a speed result did not hide skipped
-  or superfluous module/PPX work (argument semantics remain covered by the
-  compiler-argument and integration tests);
+- the three `strace` classifications check that a speed result did not hide
+  skipped or superfluous clean/incremental module or PPX work (argument
+  semantics remain covered by the compiler-argument and integration tests);
 - the fresh-tree manifest comparison checks the selected generated file set and
   byte contents.
 

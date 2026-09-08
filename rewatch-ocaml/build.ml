@@ -311,18 +311,43 @@ let package_output (config : Config.t) path (spec : Config.package_spec) =
     output_dir
     (Config.package_spec_suffix config spec)
 
-let namespace_job ~bsc ~runtime ~build_dir ~ocaml_dir ~entry namespace modules =
+let namespace_job ~bsc ~runtime ~build_dir ~ocaml_dir ~entry ~package_dirty
+    namespace modules =
   let mlmap = Filename.concat build_dir (namespace ^ ".mlmap") in
-  let channel = open_out_bin mlmap in
-  Fun.protect ~finally:(fun () -> close_out_noerr channel)
-    (fun () ->
-      output_string channel "randjbuildsystem\n";
-      modules
-      |> List.filter (fun module_ -> Some module_.Source.name <> entry)
-      |> List.map (fun module_ -> module_.Source.name)
-      |> List.sort String.compare
-      |> List.iter (fun name -> output_string channel name; output_char channel '\n'));
-  ( Process.
+  let contents =
+    let buffer = Buffer.create 128 in
+    Buffer.add_string buffer "randjbuildsystem\n";
+    modules
+    |> List.filter (fun module_ -> Some module_.Source.name <> entry)
+    |> List.map (fun module_ -> module_.Source.name)
+    |> List.sort String.compare
+    |> List.iter (fun name ->
+         Buffer.add_string buffer name;
+         Buffer.add_char buffer '\n');
+    Buffer.contents buffer
+  in
+  let previous_contents =
+    try
+      let channel = open_in_bin mlmap in
+      Fun.protect ~finally:(fun () -> close_in_noerr channel) (fun () ->
+        Some (really_input_string channel (in_channel_length channel)))
+    with Sys_error _ -> None
+  in
+  let mlmap_changed = previous_contents <> Some contents in
+  if mlmap_changed then (
+    let channel = open_out_bin mlmap in
+    Fun.protect ~finally:(fun () -> close_out_noerr channel) (fun () ->
+      output_string channel contents));
+  let outputs_exist =
+    ["cmi"; "cmj"; "cmt"; "mlmap"]
+    |> List.for_all (fun extension ->
+         Sys.file_exists
+           (Filename.concat ocaml_dir (namespace ^ "." ^ extension)))
+  in
+  if not (package_dirty || mlmap_changed || not outputs_exist) then None
+  else
+    Some
+      ( Process.
       {
         program = bsc;
         args =
@@ -993,8 +1018,12 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
           let compiler_base =
             global_module_key package.graph_compile_config module_.Source.name
           in
+          let artifact_base =
+            Source.compiler_asset_basename package.graph_compile_config
+              module_.Source.implementation
+          in
           let cmt =
-            Filename.concat package.graph_ocaml_dir (compiler_base ^ ".cmt")
+            Filename.concat package.graph_ocaml_dir (artifact_base ^ ".cmt")
           in
           if not (Sys.file_exists cmt) then
             Hashtbl.replace stats.forced_parse_paths
@@ -1210,19 +1239,6 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder ~prod ~features
     (fun module_name -> Hashtbl.replace stats.removed_modules module_name ())
     removed_modules;
   stats.previous_asts <- stats.previous_asts + previous_ast_count;
-  Option.iter
-    (fun namespace ->
-      let namespace =
-        match config.namespace_entry with
-        | Some _ -> "@" ^ namespace
-        | None -> namespace
-      in
-      let job =
-        namespace_job ~bsc ~runtime ~build_dir ~ocaml_dir
-          ~entry:config.namespace_entry namespace modules
-      in
-      stats.namespace_jobs := job :: !(stats.namespace_jobs))
-    config.namespace;
   let names = Hashtbl.create (List.length modules) in
   List.iter
     (fun module_ -> Hashtbl.replace names module_.Source.name module_)
@@ -1433,6 +1449,23 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder ~prod ~features
         })
       modules
   in
+  Option.iter
+    (fun namespace ->
+      let namespace =
+        match config.namespace_entry with
+        | Some _ -> "@" ^ namespace
+        | None -> namespace
+      in
+      let package_dirty =
+        List.exists
+          (fun (scheduled : scheduled_module) -> scheduled.is_dirty ())
+          scheduled
+      in
+      Option.iter
+        (fun job -> stats.namespace_jobs := job :: !(stats.namespace_jobs))
+        (namespace_job ~bsc ~runtime ~build_dir ~ocaml_dir
+           ~entry:config.namespace_entry ~package_dirty namespace modules))
+    config.namespace;
   stats.scheduled_modules := scheduled @ !(stats.scheduled_modules);
   stats.compile_cleanup :=
     (fun () ->

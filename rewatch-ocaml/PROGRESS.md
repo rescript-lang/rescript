@@ -294,8 +294,9 @@ clean-build quality gate; [`bench/README.md`](bench/README.md) documents its
 prerequisites, command line, scope, and exclusions. It archives a fully isolated
 fixture for each implementation, warms both implementations, interleaves at
 least five measured builds, samples summed process-tree RSS from `/proc`, and
-records the commit and host. It then uses `strace` to compare the exact
-package/phase/input work multiset and recreates a third fixture at the same
+records the commit and host. It then uses `strace` to compare exact
+package/phase/input work multisets for clean, unchanged, and single-edit builds,
+and recreates a third fixture at the same
 absolute path for each runner before comparing generated JavaScript, `.cmi`,
 `.cmj`, and `.mlmap`
 manifests. Recreating that tree is essential: `clean` alone could leave a
@@ -327,7 +328,23 @@ host rather than treating this single five-run set as universal.
 Both implementations performed exactly 1,031 `bsc` launches: 512 parses, 7
 namespace compilations, and 512 module compilations, of which 40 were interface
 compilations; each also launched the PPX once. This rules out extra compiler
-invocations as the current wall-time source. The hardened fixture-recreation
+invocations on clean builds as the current wall-time source. The extended work
+gate also measures incremental orchestration. Its latest correctness smoke run
+reported identical work in every scenario:
+
+| Scenario | Rust `bsc` launches | OCaml `bsc` launches |
+| --- | ---: | ---: |
+| Clean | 1,031 | 1,031 |
+| Unchanged | 4 | 4 |
+| Single leaf edit | 6 | 6 |
+
+The normalized package/phase/input manifests also match in every row. The first
+extended run exposed seven unconditional OCaml namespace compilations and two
+case-sensitive artifact-name false misses on both incremental paths. Namespace
+maps are now rewritten/compiled only when their contents, package modules, or
+outputs require it, and global graph keys are no longer used as case-sensitive
+on-disk artifact names. The rerun closed both differences. The hardened
+fixture-recreation
 check also passed: both implementations performed the same normalized
 package/phase/input work and produced identical selected artifact sets and
 contents without inheriting files from one another. Its latest one-run timing
