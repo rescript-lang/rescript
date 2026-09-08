@@ -454,6 +454,13 @@ rerun it for the final maintainability review alongside maximum module size.
   longer honored, matching Rust rather than silently omitting source files;
   `jsx.v3-dependencies` is decoded as a string array even though its value is
   not otherwise used by this build system.
+- Source configuration now has a retained 36-case differential acceptance
+  gate. It compares Rust and OCaml for shorthand and qualified sources, nested
+  `subdirs`, nullable optional fields, arbitrary non-`dev` type strings,
+  forward-compatible unknown fields, every invalid JSON kind, and duplicate
+  typed fields. CI runs the table against both promoted executables, while the
+  existing unit and canonical tests cover dev/feature inheritance and source
+  discovery behavior.
 - Configuration path canonicalization and file opening now translate both
   `Sys_error` and `Unix_error` into path-bearing `Config.Error` diagnostics.
   Missing paths and directory-valued config paths are tested, preventing raw
