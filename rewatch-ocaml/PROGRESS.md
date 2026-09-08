@@ -7,8 +7,10 @@ Reference Rust implementation: `2e532c7f6587d4201befd00ced516e267c90fe73`.
 The complete applicable canonical `rewatch/tests` suite now passes with the
 experimental `rescript_ocaml.exe`. Milestone 6 remains open for the broader
 configuration/platform inventory, performance and resource measurements, and
-final whole-port review. Incremental state uses existing AST, CMI, CMT, and
-generated-output artifacts rather than in-process compiler state.
+final whole-port review. OpenTelemetry parity is explicitly excluded by project
+decision; ordinary verbosity and diagnostics remain in scope. Incremental state
+uses existing AST, CMI, CMT, and generated-output artifacts rather than
+in-process compiler state.
 
 The implementation currently has configuration loading, source and package
 discovery, external `bsc` parsing, AST dependency extraction, cycle detection,
@@ -64,6 +66,14 @@ maps), recoverable initial/rebuild errors, atomic populated lock creation with
 stale-owner takeover, workspace build locks, owned lock removal, race-tolerant
 symlink-aware snapshots, and cached content hashes. Takeover markers also carry
 an owner PID and can themselves be recovered after an interrupted takeover.
+
+The pinned Rust algorithms remain the default reference. Confirmed Rust bugs or
+obvious low-risk inefficiencies may be corrected rather than copied, but every
+intentional divergence must be recorded here and backed by a focused regression
+or measurement. The first recorded divergence is Windows lock probing: failure
+to launch `tasklist` is treated as inconclusive/live, preserving the lock,
+instead of allowing an internal subprocess-launch exception to escape. This is
+the same conservative result Rust intends for an unsuccessful probe.
 
 ## Verified
 
@@ -281,12 +291,25 @@ fixture-local path/operation multisets and repeated accesses, while reporting
 runtime/loader/toolchain calls separately rather than treating incomparable raw
 process-wide syscall totals as a quality metric.
 
+The current `cloc` 2.06 source-size snapshot reports 7,818 Rust production
+lines after excluding the intentionally omitted telemetry module and inline
+test-only sections, versus 3,789 OCaml production lines, or 48.5%. Counting
+language-specific tests separately gives 2,773 embedded Rust unit-test lines
+and 975 OCaml test lines (557 unit-test + 418 tracked focused-test harness,
+fixture, and configuration lines); the OCaml benchmark tooling adds another
+314 lines, including the source-size script itself. The shared canonical
+integration suite is deliberately not charged to either side. These figures
+describe maintainability surface, not parity or quality: this port is still
+incomplete, and later comments and tests should increase useful lines.
+[`bench/source_size.sh`](bench/source_size.sh) preserves the scope and command;
+rerun it for the final maintainability review alongside maximum module size.
+
 ## Known gaps
 
 - Incremental state currently relies on artifact timestamps and byte-identical
   CMI publication. Rust's richer persisted compile-state model and diagnostic
   storage are not yet ported.
-- Full configuration validation parity, telemetry, performance parity, and
+- Full configuration validation parity, performance parity, and
   production-grade filesystem watching remain incomplete.
 - `watch` currently uses conservative polling and has no signal/lock/event
   batching parity with Rust rewatch.
@@ -322,17 +345,32 @@ process-wide syscall totals as a quality metric.
   verification. Shared filesystem logic uses `Filename` operations rather than
   embedded `/` or `\\` separators; Unix-only test cases are being isolated or
   replaced with portable helpers.
-- Platform-specific calls are still split between `process.ml` and `build.ml`.
-  Before pipe/native-watcher work, consolidate process-tree termination, PID
-  probing, executable lookup, descriptor setup, and watcher backend selection
-  behind a common `Platform` interface with Unix and Windows implementations;
-  keep ordinary `Filename`-based artifact paths in shared code.
+- The preferred non-CI Windows validation environment is a Windows 11 ARM VM on
+  the Apple Silicon development host, with the repository on the guest's local
+  NTFS volume and tests launched from native PowerShell. An occasional native
+  x64 Windows run should remain the release-confidence check. WSL exercises the
+  Unix backend, and Wine does not faithfully validate NTFS events or Windows
+  process-tree behavior. The focused Bash integration driver should eventually
+  gain a dependency-free cross-platform Node counterpart so the same scenarios
+  can run natively on Unix and Windows.
+- A static `platform.mli` now defines the common platform contract, and Dune
+  selects either `platform_unix.ml` or `platform_windows.ml` as `platform.ml`
+  using `%{os_type}`. Process-tree termination, PID probing, executable lookup,
+  subprocess creation, signal deferral, post-build shell invocation, and path
+  comparison are behind that boundary. The unselected Windows implementation
+  is also type-checked against the contract in Linux unit builds. Pipe
+  descriptor ownership and a future native watcher backend belong behind the
+  same boundary; actual Windows cross-build/runtime verification remains open.
 
 ## Dependency decisions
 
 - `spawn` is accepted: it is a narrow, MIT-licensed Jane Street package with
   explicit Linux, macOS, and Windows support. It replaces bespoke fork/exec/cwd
   code and materially reduces process-launch risk.
+- OpenTelemetry is intentionally omitted from the OCaml port by project
+  decision. Adding an OTLP exporter, span stack, and shutdown lifecycle would
+  introduce substantial optional machinery and dependencies; this does not
+  relax ordinary verbosity, diagnostic, or exit-status compatibility.
 - `Cmdliner` is the preferred next candidate for replacing the hand-written CLI
   parser because it is actively maintained, already present in the development
   switch, and owns help/version/error/`--` conventions. Migration still has to
@@ -348,11 +386,11 @@ process-wide syscall totals as a quality metric.
 
 ## Next actions
 
-1. Inventory and close remaining configuration, CLI, and telemetry gaps.
-2. Introduce the shared platform interface, move existing Unix/Windows process
-   and PID branches behind it, then finish the Windows watcher/lock backend and
-   path audit and cross-build it; record Windows runtime verification as
-   unavailable here.
+1. Inventory and close remaining configuration and CLI gaps; OpenTelemetry is
+   an explicitly documented non-goal.
+2. Finish the Windows watcher/lock backend and path audit behind the shared
+   `platform.mli` boundary, cross-build it, and record Windows runtime
+   verification as unavailable here.
 3. Profile and close the remaining clean-build wall-time gap while preserving
    exact compiler-work and artifact equivalence; retain pipe capture as an
    end-stage option.
@@ -362,3 +400,6 @@ process-wide syscall totals as a quality metric.
 5. Perform the final two-scope whole-port review and address confirmed findings.
 6. Replace or supplement polling with a production-grade native event backend
    and evaluate supported-platform packaging and behavior.
+7. At the final maintainability pass, add comments around ownership,
+   concurrency, platform, and algorithmic invariants that are not apparent from
+   the code itself; avoid comments that only paraphrase individual statements.

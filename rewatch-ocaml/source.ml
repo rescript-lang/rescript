@@ -25,9 +25,7 @@ let display_path ~display_root root path =
   in
   let display_root = Unix.realpath display_root in
   let prefix = Filename.concat display_root "" in
-  let comparable value =
-    if Sys.win32 then String.lowercase_ascii value else value
-  in
+  let comparable = Platform.normalize_path_for_comparison in
   if String.starts_with ~prefix:(comparable prefix) (comparable absolute) then
     String.sub absolute (String.length prefix)
       (String.length absolute - String.length prefix)

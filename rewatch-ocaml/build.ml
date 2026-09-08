@@ -73,89 +73,15 @@ let read_lock_owner path =
       Some (input_line channel))
   with Sys_error _ | End_of_file -> None
 
-let parse_windows_csv_line line =
-  let length = String.length line in
-  let rec parse_field fields index =
-    if index >= length || line.[index] <> '"' then None
-    else
-      let buffer = Buffer.create 32 in
-      let rec parse_char index =
-        if index >= length then None
-        else
-          match line.[index] with
-          | '"' when index + 1 < length && line.[index + 1] = '"' ->
-              Buffer.add_char buffer '"';
-              parse_char (index + 2)
-          | '"' ->
-              let fields = Buffer.contents buffer :: fields in
-              let next = index + 1 in
-              if next = length then Some (List.rev fields)
-              else if line.[next] = ',' then parse_field fields (next + 1)
-              else None
-          | character ->
-              Buffer.add_char buffer character;
-              parse_char (index + 1)
-      in
-      parse_char (index + 1)
-  in
-  if length = 0 then None else parse_field [] 0
-
-let windows_tasklist_probe ~pid output =
-  let lines =
-    output |> String.trim |> String.split_on_char '\n'
-    |> List.map String.trim |> List.filter (( <> ) "")
-  in
-  let rows = List.map parse_windows_csv_line lines in
-  let valid_row = function
-    | Some [_image; row_pid; _session; _session_number; _memory] ->
-        Option.is_some (int_of_string_opt row_pid)
-    | Some _ | None -> false
-  in
-  if lines = [] || not (List.for_all valid_row rows) then None
-  else
-    Some
-      (List.exists
-         (function
-           | Some [image; row_pid; _session; _session_number; _memory] ->
-               String.starts_with ~prefix:"rescript"
-                 (String.lowercase_ascii image)
-               && row_pid = string_of_int pid
-           | Some _ | None -> false)
-         rows)
-
-let windows_tasklist_has_process ~pid output =
-  windows_tasklist_probe ~pid output = Some true
-
 let process_is_active value =
-  try
-    let pid = int_of_string value in
-    if Sys.win32 then
-      (try
-         let tasklist =
-           match Sys.getenv_opt "SystemRoot" with
-           | Some root -> path_of_parts root ["System32"; "tasklist.exe"]
-           | None -> "tasklist.exe"
-         in
-         let result =
-           Process.run ~cwd:(Filename.get_temp_dir_name ()) tasklist
-             ["/FO"; "CSV"; "/NH"]
-         in
-         if Process.succeeded result then
-           Option.value (windows_tasklist_probe ~pid result.stdout) ~default:true
-         else true
-       with Unix.Unix_error _ | Sys_error _ -> true)
-    else (
-      Unix.kill pid 0;
-      let executable = Printf.sprintf "/proc/%d/exe" pid in
-      if Sys.file_exists executable then
-        (try
-           let basename = Unix.realpath executable |> Filename.basename in
-           String.starts_with ~prefix:"rescript" basename
-         with Unix.Unix_error _ -> true)
-      else true)
-  with
-  | Failure _ | Unix.Unix_error (Unix.ESRCH, _, _) -> false
-  | Unix.Unix_error (Unix.EPERM, _, _) -> true
+  Platform.process_is_active value ~run:(fun program args ->
+    try
+      let result =
+        Process.run ~cwd:(Filename.get_temp_dir_name ()) program args
+      in
+      Some (result.Process.status, result.stdout)
+    with
+    | Process.Error _ | Unix.Unix_error _ | Sys_error _ -> None)
 
 let workspace_lock_root folder =
   let declares_workspaces directory =
@@ -408,17 +334,15 @@ let namespace_job ~bsc ~runtime ~build_dir ~ocaml_dir ~entry namespace modules =
 let path_is_within ~root path =
   let root = Unix.realpath root in
   let path = Unix.realpath path in
-  let normalize value =
-    if Sys.win32 then String.lowercase_ascii value else value
-  in
+  let normalize = Platform.normalize_path_for_comparison in
   let root = normalize root in
   let path = normalize path in
   path = root || String.starts_with ~prefix:(Filename.concat root "") path
 
 let is_local_dependency ~workspace path =
   let equal_component left right =
-    if Sys.win32 then String.lowercase_ascii left = String.lowercase_ascii right
-    else left = right
+    Platform.normalize_path_for_comparison left
+    = Platform.normalize_path_for_comparison right
   in
   let rec contains_component path component =
     if equal_component (Filename.basename path) component then true
@@ -443,30 +367,13 @@ let run_post_build (config : Config.t) path =
   | Some command ->
     List.iter (fun spec ->
       let output = generated_js_path config path spec in
+      let env, program, args =
+        Platform.post_build_command ~command ~output
+      in
       let result =
-        if Sys.win32 then
-          let variable = "REWATCH_JS_POST_BUILD_FILE" in
-          let prefix = String.lowercase_ascii (variable ^ "=") in
-          let environment =
-            Unix.environment () |> Array.to_list
-            |> List.filter (fun entry ->
-                 not
-                   (String.starts_with ~prefix
-                      (String.lowercase_ascii entry)))
-            |> List.cons (variable ^ "=" ^ output)
-            |> Spawn.Env.of_list
-          in
-          Process.run ~env:environment ~cwd:config.root "cmd.exe"
-            [
-              "/D";
-              "/V:OFF";
-              "/S";
-              "/C";
-              command ^ " \"%" ^ variable ^ "%\"";
-            ]
-        else
-          Process.run ~cwd:config.root "/bin/sh"
-            ["-c"; command ^ " " ^ Filename.quote output]
+        match env with
+        | None -> Process.run ~cwd:config.root program args
+        | Some env -> Process.run ~env ~cwd:config.root program args
       in
       if not (Process.succeeded result) then report_failure "js-post-build" output result;
       if result.stdout <> "" then print_string result.stdout;
@@ -609,9 +516,7 @@ let rec nearest_config directory =
 
 let relative_to root path =
   let prefix = Filename.concat root "" in
-  let comparable value =
-    if Sys.win32 then String.lowercase_ascii value else value
-  in
+  let comparable = Platform.normalize_path_for_comparison in
   if String.starts_with ~prefix:(comparable prefix) (comparable path) then
     String.sub path (String.length prefix) (String.length path - String.length prefix)
   else raise (Error (path ^ " is not inside " ^ root))

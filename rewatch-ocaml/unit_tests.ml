@@ -1,5 +1,7 @@
 let check condition message = if not condition then failwith message
 
+module Checked_windows_platform : module type of Platform = Platform_windows
+
 let rec contains_adjacent left right = function
   | current :: next :: _ when current = left && next = right -> true
   | _ :: rest -> contains_adjacent left right rest
@@ -172,32 +174,35 @@ let () =
         (fun () ->
           let requested = if Sys.win32 then "worker" else command in
           check
-            (Process.resolve_program ~cwd:path_root requested = executable)
+            (Platform.resolve_program ~cwd:path_root requested = executable)
             "PATH lookup skips directories and applies platform executable suffixes";
           if Sys.win32 then (
             let cwd_executable = Filename.concat path_root "current.exe" in
             Build_artifacts.copy_file test_executable cwd_executable;
             check
-              (Process.resolve_program ~cwd:path_root "current" = cwd_executable)
+              (Platform.resolve_program ~cwd:path_root "current" = cwd_executable)
               "Windows executable lookup searches cwd with PATHEXT")));
   check
-    (Build.windows_tasklist_has_process ~pid:123
+    (Platform_windows.tasklist_has_process ~pid:123
        {|"rescript.exe","123","Console","1","10,000 K"|})
     "Windows tasklist output recognizes a matching ReScript process";
   check
     (not
-       (Build.windows_tasklist_has_process ~pid:124
+       (Platform_windows.tasklist_has_process ~pid:124
           {|"rescript.exe","123","Console","1","10,000 K"|}))
     "Windows tasklist output rejects a different process ID";
   check
-    (Build.windows_tasklist_probe ~pid:123 "tasklist failed" = None)
+    (Platform_windows.tasklist_probe ~pid:123 "tasklist failed" = None)
     "malformed Windows tasklist output is inconclusive";
   check
-    (Build.windows_tasklist_probe ~pid:123 {|"tasklist failed"|} = None)
+    (Platform_windows.tasklist_probe ~pid:123 {|"tasklist failed"|} = None)
     "unexpected Windows tasklist CSV schema is inconclusive";
   check
-    (Build.windows_tasklist_probe ~pid:123 {|"rescript.exe","12|} = None)
+    (Platform_windows.tasklist_probe ~pid:123 {|"rescript.exe","12|} = None)
     "truncated Windows tasklist CSV is inconclusive";
+  check
+    (Platform_windows.process_is_active ~run:(fun _ _ -> None) "123")
+    "a failed Windows tasklist probe conservatively preserves the lock";
   let scheduler_root = Filename.temp_file "rewatch-ocaml-scheduler-" "" in
   Sys.remove scheduler_root;
   Unix.mkdir scheduler_root 0o755;

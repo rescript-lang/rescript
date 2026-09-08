@@ -85,3 +85,21 @@ toolchain-level accesses. Report those separately, and treat repeated accesses
 to the same project artifact or discovery path as the primary evidence of
 superfluous orchestration work. The existing compiler-work and artifact checks
 must remain enabled so fewer filesystem calls cannot conceal skipped work.
+
+## Source-size snapshot
+
+Run `bench/source_size.sh` with `cloc` installed to record a reproducible
+maintainability snapshot. The production comparison excludes Rust's explicitly
+out-of-scope telemetry module and reports its inline `#[cfg(test)]` sections as
+tests rather than implementation. Both OCaml platform backends count because
+both remain maintained production source. All tracked OCaml test harnesses,
+fixtures, and configuration files are reported together but separately from
+implementation; benchmark tooling includes this counting script itself. Record
+the `cloc` version with the result and rerun this at the final maintainability
+review.
+
+Source lines are an observation, not an acceptance threshold. A smaller port
+can indicate less machinery, but missing compatibility, weak tests, compressed
+code, or too few explanatory comments can also reduce the number. Behavioral
+and work equivalence, platform support, performance, module size, and review
+findings remain the actual quality gates.

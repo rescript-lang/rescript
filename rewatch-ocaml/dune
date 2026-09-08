@@ -1,7 +1,31 @@
+(rule
+ (target platform.ml)
+ (enabled_if
+  (= %{os_type} Win32))
+ (action
+  (copy platform_windows.ml platform.ml)))
+
+(rule
+ (target platform.ml)
+ (enabled_if
+  (<> %{os_type} Win32))
+ (action
+  (copy platform_unix.ml platform.ml)))
+
 (library
  (name rewatch_ocaml_lib)
  (wrapped false)
- (modules cli config process source graph build_artifacts build format)
+ (modules
+  cli
+  config
+  platform_common
+  platform
+  process
+  source
+  graph
+  build_artifacts
+  build
+  format)
  (libraries unix yojson str spawn))
 
 (executable
@@ -11,5 +35,5 @@
 
 (test
  (name unit_tests)
- (modules unit_tests)
+ (modules unit_tests platform_windows)
  (libraries rewatch_ocaml_lib))

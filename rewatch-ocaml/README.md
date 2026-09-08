@@ -33,11 +33,12 @@ The implementation is split by ownership rather than mirroring the Rust source
 layout mechanically. In particular, `build_artifacts.ml` owns filesystem
 primitives, generated-output paths, publication staging, and stale-artifact
 cleanup; `build.ml` retains package preparation and build orchestration.
-Genuinely platform-specific behavior is being consolidated behind a `Platform`
-boundary rather than mixed into those modules. That boundary will own Windows
-versus Unix process-tree/PID handling, executable lookup, pipe descriptors, and
-native watcher setup; portable `Filename`-based path and artifact logic remains
-shared.
+Genuinely platform-specific behavior is consolidated behind a `Platform`
+boundary rather than mixed into those modules. Unix and Windows modules now own
+executable lookup, subprocess creation, signal deferral, and process-tree
+termination as well as lock-owner PID probing. Future pipe descriptors and
+native watcher setup are the remaining platform calls to move; portable
+`Filename`-based path and artifact logic remains shared.
 
 ## Test
 
@@ -58,6 +59,11 @@ bash rewatch/tests/compile/01-basic-compile.sh
 
 See `PROGRESS.md` for verified coverage, measurements, review results, and
 remaining compatibility or platform gaps.
+
+OpenTelemetry/OTLP tracing is intentionally not part of this port. This is an
+explicit project scope decision, not a silently ignored configuration feature;
+ordinary command output, verbosity, diagnostics, and exit statuses remain in
+scope.
 
 ## Platform status
 
