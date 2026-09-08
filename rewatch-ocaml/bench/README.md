@@ -78,15 +78,23 @@ stdout/stderr for investigation. For a quick correctness-only check, an odd run
 count below five is accepted only with `REWATCH_ALLOW_SMOKE_RUN=1`; its timing
 must never be treated as a quality-gate result.
 
-## Planned filesystem-work audit
+## Filesystem-work audit
 
-After pipe-based subprocess capture removes the intentional temporary capture
-files, compare filesystem work as a second orchestration audit. On Linux this
-can use `strace -f -e trace=%file` around isolated clean, unchanged, and
-single-edit builds. Normalize each fixture root, retain operations whose target
-is inside that root, and compare both per-path operation multisets and readable
-categories such as metadata probes, opens, directory scans, creates, renames,
-and removals.
+Pipe-based subprocess capture has removed the intentional temporary capture
+files. Run the second orchestration audit on Linux with:
+
+```sh
+rewatch-ocaml/bench/filesystem_audit.sh \
+  rewatch/target/release/rescript \
+  _build/default/rewatch-ocaml/rescript_ocaml.exe
+```
+
+It traces isolated clean, unchanged, and single-edit builds with `strace`,
+normalizes each fixture root, retains operations whose target is inside that
+root, and reports per-path operation multisets plus metadata, open,
+directory-scan, create, rename, remove, and execute categories. Set
+`KEEP_REWATCH_FILESYSTEM_AUDIT=1` to retain normalized manifests and raw traces
+for investigation.
 
 Do not gate on the raw process-wide syscall total: Rust, OCaml, libc, the
 dynamic loader, and subprocess startup legitimately perform different

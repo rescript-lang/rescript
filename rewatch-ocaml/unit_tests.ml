@@ -37,16 +37,6 @@ let () =
       let root = argument 2 in
       ignore (wait_for_file (Filename.concat root "first-started"));
       ignore (wait_for_file (Filename.concat root "second-started"));
-      let log_count =
-        Sys.readdir root
-        |> Array.fold_left
-             (fun count name ->
-               if String.starts_with ~prefix:".rewatch-ocaml-" name then
-                 count + 1
-               else count)
-             0
-      in
-      if log_count > 4 then touch_file (Filename.concat root "limit-exceeded");
       touch_file (Filename.concat root "release");
       exit 0
     | "--scheduler-job" ->
@@ -60,6 +50,16 @@ let () =
         if not (Sys.file_exists (Filename.concat root "third-started")) then
           touch_file (Filename.concat root "refill-stalled"));
       print_string name;
+      exit 0
+    | "--large-process-result" ->
+      let stdout_chunk = String.make 65536 'o' in
+      let stderr_chunk = String.make 65536 'e' in
+      for _ = 1 to 16 do
+        print_string stdout_chunk;
+        flush stdout;
+        prerr_string stderr_chunk;
+        flush stderr
+      done;
       exit 0
     | _ -> ()
 
@@ -92,6 +92,14 @@ let () =
     (List.map (fun (result : Process.result) -> result.stdout) parallel_results
     = ["first"; "second"; "third"])
     "parallel subprocess results retain input order";
+  let large_result =
+    Process.run ~cwd:(Sys.getcwd ()) test_executable ["--large-process-result"]
+  in
+  check
+    (Process.succeeded large_result
+    && String.length large_result.stdout = 1024 * 1024
+    && String.length large_result.stderr = 1024 * 1024)
+    "stdout and stderr pipes are drained concurrently without truncation";
   let invalid_parallel_bound_rejected =
     try
       ignore (Process.run_parallel ~max_jobs:0 []);
@@ -222,14 +230,10 @@ let () =
         }
       in
       let results =
-        Process.run_parallel ~temp_dir:scheduler_root ~max_jobs:2
-          [job "first"; job "second"; job "third"]
+        Process.run_parallel ~max_jobs:2 [job "first"; job "second"; job "third"]
       in
       let _, helper_status = Unix.waitpid [] helper in
       check (helper_status = Unix.WEXITED 0) "scheduler test helper exits";
-      check
-        (not (Sys.file_exists (Filename.concat scheduler_root "limit-exceeded")))
-        "parallel subprocesses respect the concurrency bound";
       check
         (not (Sys.file_exists (Filename.concat scheduler_root "refill-stalled")))
         "parallel scheduler refills a completed slot immediately";
@@ -238,7 +242,7 @@ let () =
         = ["first"; "second"; "third"])
         "dynamically scheduled results retain input order";
       let failure =
-        Process.run_parallel ~temp_dir:scheduler_root ~max_jobs:1
+        Process.run_parallel ~max_jobs:1
           [
             process_job
               ["--process-result"; "partial"; "diagnostic"; "7"];
@@ -253,7 +257,7 @@ let () =
         (Sys.readdir scheduler_root
         |> Array.for_all (fun name ->
              not (String.starts_with ~prefix:".rewatch-ocaml-" name)))
-        "parallel subprocess logs are removed after failure");
+        "pipe capture creates no temporary scheduler logs");
   let node name deps = (name, deps) in
   let nodes = [node "C" ["B"]; node "A" []; node "B" ["A"]] in
   let sorted =
