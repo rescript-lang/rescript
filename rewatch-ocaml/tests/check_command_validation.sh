@@ -83,6 +83,27 @@ run_case compiler-args-source accept accept compiler-args "$project/src/A.res"
 run_case compiler-args-extension accept reject compiler-args "$project/src/A.txt"
 run_case compiler-args-missing panic reject compiler-args "$project/src/Missing.res"
 run_case compiler-args-no-project panic reject compiler-args "$work/orphan/A.res"
+
+set +e
+RESCRIPT_BSC_EXE="$work/missing-bsc" "$rust" build "$project" \
+  >"$work/rust.out" 2>"$work/rust.err"
+rust_status=$?
+RESCRIPT_BSC_EXE="$work/missing-bsc" "$ocaml" build "$project" \
+  >"$work/ocaml.out" 2>"$work/ocaml.err"
+ocaml_status=$?
+set -e
+if [ "$(classify "$rust_status")" != panic ] || \
+  [ "$(classify "$ocaml_status")" != reject ]; then
+  printf 'build-missing-bsc: expected Rust=panic/OCaml=reject, got Rust=%s/OCaml=%s\n' \
+    "$rust_status" "$ocaml_status" >&2
+  printf '%s\n' '--- Rust output ---' >&2
+  cat "$work/rust.out" "$work/rust.err" >&2
+  printf '%s\n' '--- OCaml output ---' >&2
+  cat "$work/ocaml.out" "$work/ocaml.err" >&2
+  exit 1
+fi
+checked=$((checked + 1))
+
 run_case build-missing-folder reject reject build "$work/missing"
 run_case build-existing-folder-without-config reject reject build "$work/empty"
 run_case build-malformed-config reject reject build "$work/malformed"
