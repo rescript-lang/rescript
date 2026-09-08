@@ -214,6 +214,19 @@ let compiler_flags ~source_maps ~watch ~gentype (config : Config.t) =
 let with_local_warning_policy ~is_local (config : Config.t) =
   if is_local then config else {config with warning_flags = []}
 
+let diagnostics_for_package ~is_local (config : Config.t) =
+  if is_local then config.diagnostics
+  else
+    let report_suffix =
+      Package_metadata.issue_tracker_url config.root
+      |> Option.map (fun url ->
+           "\nPlease report this to the package maintainer: " ^ url)
+      |> Option.value ~default:""
+    in
+    List.map
+      (fun diagnostic -> diagnostic ^ report_suffix)
+      config.deprecation_diagnostics
+
 let parse_file ~bsc ~build_dir ~(config : Config.t) path =
   let ast = Source.ast_path path in
   ensure_dir (Filename.concat build_dir (Filename.dirname ast));
@@ -1057,9 +1070,10 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder ~prod ~features
       | None -> config
       | Some value -> {config with warning_flags = ["-warn-error"; value]})
   in
-  if is_local then
-    stats.diagnostics <-
-      List.rev_append config.diagnostics stats.diagnostics;
+  stats.diagnostics <-
+    List.rev_append
+      (diagnostics_for_package ~is_local config)
+      stats.diagnostics;
   let dependency_directories =
     let dependencies : Config.dependency list =
       config.dependencies

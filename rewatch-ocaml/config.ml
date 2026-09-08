@@ -38,6 +38,7 @@ type t = {
   gentype_args: string list;
   js_post_build: string option;
   allowed_dependents: string list option;
+  deprecation_diagnostics: string list;
   diagnostics: string list;
 }
 
@@ -597,15 +598,18 @@ let load path =
              if package_specs_use_alias alias value then Some message else None)
       | None -> [])
   in
-  let diagnostics =
-    (if deprecated = [] then []
+  let deprecation_diagnostics =
+    if deprecated = [] then []
      else
        [
          Printf.sprintf
            "\n\nPackage '%s' uses deprecated config (support will be removed in a future version):\n%s"
            name
            (String.concat "\n" deprecated);
-       ])
+       ]
+  in
+  let diagnostics =
+    deprecation_diagnostics
     @ (unsupported_fields
       |> List.map (fun field ->
            Printf.sprintf
@@ -640,6 +644,7 @@ let load path =
     gentype_args;
     js_post_build;
     allowed_dependents;
+    deprecation_diagnostics;
     diagnostics;
   }
 

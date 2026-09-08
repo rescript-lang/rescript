@@ -265,7 +265,10 @@ test -f "$dependency/node_modules/dep/src/Dep.js"
 mkdir -p "$external_boundary/project/node_modules"
 ln -s ../packages/main "$external_boundary/project/node_modules/main"
 ln -s ../../external "$external_boundary/project/node_modules/external"
-"$port" build --warn-error A "$external_boundary/project"
+"$port" build --warn-error A "$external_boundary/project" \
+  >"$external_boundary/build.log" 2>&1
+grep "Please report this to the package maintainer: https://example.com/external/issues" \
+  "$external_boundary/build.log" >/dev/null
 test -f "$external_boundary/external/src/Sentinel.js"
 test -f "$external_boundary/external/src/Foo.mjs"
 test -f "$external_boundary/external/src/Foo.mjs.map"
