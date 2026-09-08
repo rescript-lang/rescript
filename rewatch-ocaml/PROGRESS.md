@@ -119,6 +119,11 @@ expected non-panicking result:
   which is reachable when `compiler-args` names a missing source below a valid
   project. Rust should propagate the path-bearing I/O error. The differential
   command-validation gate retains exit 101 for Rust and a normal OCaml error.
+- `helpers.rs`: `get_bsc` canonicalizes the selected compiler path with
+  `expect`. A stale or misspelled `RESCRIPT_BSC_EXE` therefore panics before a
+  build starts. Rust should return a normal toolchain-discovery error containing
+  the selected path; the command-validation gate covers the current Rust panic
+  and the port's contextual rejection.
 
 Fixing these in Rust is outside the OCaml-port changes themselves. If they are
 fixed upstream, the differential configuration gate should be tightened from
@@ -178,7 +183,7 @@ applicable.
   ReScript config, and malformed dependency configs now terminate build and
   clean with Rust's package-tree exit class 2 instead of being skipped or
   reported as a generic exit 1; watch startup uses the same path. The command
-  gate now has 17 cases and verifies failed OCaml commands leave neither build
+  gate now has 18 cases and verifies failed OCaml commands leave neither build
   nor watch locks. Rust currently calls `process::exit(2)` from package-tree
   library code; OCaml raises a typed package error to the CLI so cleanup still
   runs before the matching exit status is returned.
