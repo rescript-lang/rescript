@@ -183,6 +183,12 @@ applicable.
   installed packages below `node_modules` are not mistaken for symlink-local
   workspace packages and rewritten; focused filesystem coverage retains this
   boundary.
+- Build and watch lock readers validate the complete serialized owner as a Rust
+  `u32`. Malformed or partially written lock content is no longer classified as
+  a dead owner and deleted: both commands reject it and preserve the file so an
+  operator can resolve unknown ownership safely. The differential command gate
+  covers both lock kinds, while focused unit tests retain the exact numeric
+  boundary.
 - A retained differential command-validation gate covers valid, missing, and
   non-ReScript `compiler-args` inputs; sources without a project; missing,
   config-less, and malformed build folders; and implicit format from below a
@@ -195,7 +201,7 @@ applicable.
   ReScript config, and malformed dependency configs now terminate build and
   clean with Rust's package-tree exit class 2 instead of being skipped or
   reported as a generic exit 1; watch startup uses the same path. The command
-  gate now has 19 cases and verifies failed OCaml commands leave neither build
+  gate now has 21 cases and verifies failed OCaml commands leave neither build
   nor watch locks. Rust currently calls `process::exit(2)` from package-tree
   library code; OCaml raises a typed package error to the CLI so cleanup still
   runs before the matching exit status is returned.

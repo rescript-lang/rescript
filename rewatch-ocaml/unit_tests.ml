@@ -365,6 +365,16 @@ let () =
   check
     (not (Build.dependent_is_allowed (Some ["other"]) "app"))
     "unlisted dependent is rejected";
+  check (Build.valid_lock_owner "0") "zero is a valid serialized u32 owner";
+  check (Build.valid_lock_owner "4294967295")
+    "the maximum u32 is a valid serialized lock owner";
+  check (not (Build.valid_lock_owner "")) "an empty lock owner is malformed";
+  check (not (Build.valid_lock_owner "-1"))
+    "a negative lock owner is malformed";
+  check (not (Build.valid_lock_owner "4294967296"))
+    "a lock owner outside the Rust u32 range is malformed";
+  check (not (Build.valid_lock_owner "123\n"))
+    "trailing data in a lock owner is malformed";
   let lock_root = Filename.temp_file "rewatch-ocaml-stale-lock-" "" in
   Sys.remove lock_root;
   Unix.mkdir lock_root 0o755;

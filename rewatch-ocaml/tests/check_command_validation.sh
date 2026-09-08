@@ -13,6 +13,7 @@ project="$work/project"
 mkdir -p "$project/src" "$work/orphan" "$work/empty" "$work/malformed"
 mkdir -p "$work/malformed-parent/child/src" "$work/config-directory/rescript.json"
 mkdir -p "$work/missing-dependency/src"
+mkdir -p "$work/malformed-lock/src" "$work/malformed-lock/lib"
 mkdir -p "$work/mismatched-dependency/src" \
   "$work/mismatched-dependency/node_modules/dep/src"
 mkdir -p "$work/configless-dependency/src" \
@@ -32,6 +33,9 @@ printf 'let value = 1\n' >"$work/malformed-parent/child/src/A.res"
 printf '{"name":"missing-dependency","sources":["src"],"dependencies":["absent"]}\n' \
   >"$work/missing-dependency/rescript.json"
 printf 'let value = 1\n' >"$work/missing-dependency/src/A.res"
+printf '{"name":"malformed-lock","sources":["src"]}\n' \
+  >"$work/malformed-lock/rescript.json"
+printf 'let value = 1\n' >"$work/malformed-lock/src/A.res"
 printf '{"name":"mismatched-dependency","sources":["src"],"dependencies":["dep"]}\n' \
   >"$work/mismatched-dependency/rescript.json"
 printf 'let value = Dep.value\n' >"$work/mismatched-dependency/src/A.res"
@@ -120,6 +124,18 @@ run_case build-existing-folder-without-config reject reject build "$work/empty"
 run_case build-malformed-config reject reject build "$work/malformed"
 run_case build-malformed-parent reject reject build "$work/malformed-parent/child"
 run_case build-config-path-is-directory reject reject build "$work/config-directory"
+printf 'not-a-pid' >"$work/malformed-lock/lib/build.lock"
+run_case build-malformed-lock reject reject build "$work/malformed-lock"
+if [ "$(cat "$work/malformed-lock/lib/build.lock")" != not-a-pid ]; then
+  echo "OCaml replaced a malformed build lock with unknown ownership" >&2
+  exit 1
+fi
+printf 'not-a-pid' >"$work/malformed-lock/lib/watch.lock"
+run_case watch-malformed-lock reject reject watch "$work/malformed-lock"
+if [ "$(cat "$work/malformed-lock/lib/watch.lock")" != not-a-pid ]; then
+  echo "OCaml replaced a malformed watch lock with unknown ownership" >&2
+  exit 1
+fi
 run_case build-mismatched-dependency-name panic accept build \
   "$work/mismatched-dependency"
 run_case build-missing-dependency exit2 exit2 build "$work/missing-dependency"
