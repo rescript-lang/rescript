@@ -26,6 +26,7 @@
   package_metadata
   build_artifacts
   compiler_info
+  warning_state
   build
   format)
  (libraries unix yojson str spawn cmdliner))
@@ -63,4 +64,9 @@
 (test
  (name compiler_info_tests)
  (modules compiler_info_tests)
+ (libraries rewatch_ocaml_lib))
+
+(test
+ (name warning_state_tests)
+ (modules warning_state_tests)
  (libraries rewatch_ocaml_lib))

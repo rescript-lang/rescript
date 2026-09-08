@@ -374,9 +374,9 @@ rerun it for the final maintainability review alongside maximum module size.
 
 ## Known gaps
 
-- Incremental state currently relies on artifact timestamps and byte-identical
-  CMI publication. Rust's richer persisted compile-state model and diagnostic
-  storage are not yet ported.
+- Incremental state currently relies on artifact timestamps, byte-identical CMI
+  publication, and in-memory warning state during watch. Rust's richer
+  compile-state model is not otherwise ported.
 - Full configuration validation parity, performance parity, and
   production-grade filesystem watching remain incomplete.
 - Full validation coverage is now an explicit source-inventory gate in
@@ -386,10 +386,9 @@ rerun it for the final maintainability review alongside maximum module size.
 - Rust unit-test scenario coverage is tracked separately from source guards.
   `tests/check_rust_test_coverage.sh` currently inventories all 136 Rust unit
   tests and validates their exact entries in `tests/rust_test_coverage.tsv`;
-  all 136 scenarios have now been reviewed, with 9 confirmed gaps and none
-  left `unreviewed`. The gaps are interactive completion/PTY coverage,
-  persisted warning replay and path-sensitive warning carry-forward. The
-  `--require-complete` mode is a
+  all 136 scenarios have now been reviewed, with 3 confirmed gaps and none
+  left `unreviewed`. The remaining gaps are interactive completion formatting
+  and PTY coverage. The `--require-complete` mode is a
   final quality gate and fails for either
   unreviewed scenarios or confirmed coverage gaps.
 - Focused locking tests now hold a compiler behind an explicit release marker,
@@ -405,6 +404,14 @@ rerun it for the final maintainability review alongside maximum module size.
   this is an internal change detector, not a shared cache key. Unlike Rust, an
   unchanged fingerprint is not rewritten on every successful build; focused
   tests cover both this intentional efficiency improvement and invalidation.
+- Watch builds retain compiler warnings in memory by package-relative source
+  path, replay implementation and interface warnings in deterministic module
+  order, and discard entries when a path changes or recompiles cleanly. A
+  compiler-call-count regression proves that editing an unrelated module does
+  not recompile the warning module. That test also exposed that `bsc` gives AST
+  outputs epoch mtimes; freshness now uses the published `lib/ocaml` AST copy,
+  avoiding a full-project reparse on each watch cycle. Both canonical warning
+  persistence tests, including atomic saves, pass with this state.
 - Interactive output parity remains open. The OCaml executable currently emits
   plain progress summaries and supports watch clear-screen behavior, but does
   not yet reproduce Rust's TTY-aware parsing/compilation progress, spinner,

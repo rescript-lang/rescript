@@ -74,8 +74,8 @@ rewatch-ocaml/tests/check_rust_test_coverage.sh --require-complete
 ```
 
 That mode also fails while any scenario is `unreviewed` or `gap`. The initial
-inventory contains 136 Rust tests, all reviewed. Nine expose confirmed
-implementation or test gaps; the other 127 map to focused OCaml tests, the
+inventory contains 136 Rust tests, all reviewed. Three expose confirmed
+implementation or test gaps; the other 133 map to focused OCaml tests, the
 shared suite, accepted architectural equivalents, or the explicit telemetry
 omission. A mapping is evidence only after its cited OCaml/shared test has been
 inspected; grouping by similarly named functions is not sufficient.

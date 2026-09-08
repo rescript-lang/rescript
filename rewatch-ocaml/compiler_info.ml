@@ -41,17 +41,18 @@ let previous_build_exists root =
   Sys.file_exists
     (Build_artifacts.path_of_parts root ["lib"; "ocaml"; ".compiler.log"])
 
-let verify_package context (config : Config.t) =
+let needs_clean context (config : Config.t) =
   let info_path = path config.root in
-  let should_clean =
-    if Sys.file_exists info_path then not (matches context config)
-    else previous_build_exists config.root
-  in
-  if should_clean then (
-    Build_artifacts.remove_tree
-      (Build_artifacts.lib_path config.root "bs");
-    Build_artifacts.remove_tree
-      (Build_artifacts.lib_path config.root "ocaml"));
+  if Sys.file_exists info_path then not (matches context config)
+  else previous_build_exists config.root
+
+let clean_package (config : Config.t) =
+  Build_artifacts.remove_tree (Build_artifacts.lib_path config.root "bs");
+  Build_artifacts.remove_tree (Build_artifacts.lib_path config.root "ocaml")
+
+let verify_package context config =
+  let should_clean = needs_clean context config in
+  if should_clean then clean_package config;
   should_clean
 
 let write_package context (config : Config.t) =
