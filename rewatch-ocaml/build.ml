@@ -608,7 +608,17 @@ let rec remove_flag_with_value flag = function
   | [] -> []
 
 let compiler_args path =
-  let source = Unix.realpath path in
+  let source =
+    try Unix.realpath path
+    with
+    | Sys_error message ->
+      raise (Error (Printf.sprintf "Could not read source file %s: %s" path message))
+    | Unix.Unix_error (error, _, _) ->
+      raise
+        (Error
+           (Printf.sprintf "Could not read source file %s: %s" path
+              (Unix.error_message error)))
+  in
   if not (Filename.check_suffix source ".res" || Filename.check_suffix source ".resi") then
     raise (Error "compiler-args expects a .res or .resi source file");
   let package_config =

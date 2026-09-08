@@ -220,6 +220,9 @@ jobs:
           bash rewatch-ocaml/tests/check_config_acceptance.sh \
             packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe \
             packages/@rescript/${{ matrix.node-target }}/bin/rescript-ocaml.exe
+          bash rewatch-ocaml/tests/check_command_validation.sh \
+            packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe \
+            packages/@rescript/${{ matrix.node-target }}/bin/rescript-ocaml.exe
           opam exec -- dune runtest rewatch-ocaml
           sh rewatch-ocaml/tests/run.sh packages/@rescript/${{ matrix.node-target }}/bin/rescript-ocaml.exe
         shell: bash

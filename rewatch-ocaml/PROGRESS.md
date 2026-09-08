@@ -111,6 +111,14 @@ expected non-panicking result:
   return the same package/dependency context as a normal command error. The
   port retains the existing message context and covers it in
   `compiler_args_tests.ml`; unresolved development dependencies remain optional.
+- `build.rs`: `get_compiler_args` calls `expect("Couldn't find package root")`
+  when a readable source has no ancestor configuration. Rust should return a
+  normal project-discovery error; the differential command-validation gate
+  retains the current panic and the port's non-panicking rejection.
+- `helpers.rs`: `read_file` calls `File::open(...).expect("file not found")`,
+  which is reachable when `compiler-args` names a missing source below a valid
+  project. Rust should propagate the path-bearing I/O error. The differential
+  command-validation gate retains exit 101 for Rust and a normal OCaml error.
 
 Fixing these in Rust is outside the OCaml-port changes themselves. If they are
 fixed upstream, the differential configuration gate should be tightened from
@@ -158,6 +166,13 @@ applicable.
   Implicit format scope also matches Rust's project boundary: the current
   directory itself must contain `rescript.json` or `bsconfig.json`; formatting
   from an arbitrary descendant does not silently select a parent project.
+- A retained differential command-validation gate covers valid, missing, and
+  non-ReScript `compiler-args` inputs; sources without a project; missing,
+  config-less, and malformed build folders; and implicit format from below a
+  project root. It distinguishes ordinary rejection from Rust panic exit 101,
+  preserving two additional `compiler-args` panic candidates for an upstream
+  Rust fix. It also records the deliberate OCaml extension check: Rust accepts
+  an existing `.txt` even though the command documents `.res`/`.resi` only.
 - Independent parser/compiler jobs use a CPU-bounded dynamic scheduler that
   refills each freed slot immediately, with private output files and
   deterministic input-order diagnostic collection. Their transient logs are
