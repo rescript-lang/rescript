@@ -5,7 +5,8 @@ system. It does not replace the Rust `rescript` executable.
 
 ## Build
 
-From the repository root, with OCaml, dune, and yojson installed:
+From the repository root, with the dependencies declared in `rescript.opam`
+installed:
 
 ```sh
 opam exec -- dune build rewatch-ocaml/rescript_ocaml.exe
@@ -38,7 +39,8 @@ The command is intentionally unavailable on Windows until the native Windows
 implementation and runtime test pass are complete.
 
 Supported commands are `build` (the default), `watch`, `clean`, `format`, and
-`compiler-args`. Run the executable with `--help` for the current option summary.
+`compiler-args`. The CLI is declared with Cmdliner; run the executable with
+`--help` for the current option summary.
 
 The implementation is split by ownership rather than mirroring the Rust source
 layout mechanically. In particular, `build_artifacts.ml` owns filesystem

@@ -26,7 +26,7 @@
   build_artifacts
   build
   format)
- (libraries unix yojson str spawn))
+ (libraries unix yojson str spawn cmdliner))
 
 (executable
  (name rescript_ocaml)
@@ -36,4 +36,9 @@
 (test
  (name unit_tests)
  (modules unit_tests platform_windows)
+ (libraries rewatch_ocaml_lib))
+
+(test
+ (name cli_tests)
+ (modules cli_tests)
  (libraries rewatch_ocaml_lib))

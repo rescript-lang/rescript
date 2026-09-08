@@ -36,7 +36,7 @@ gap. A deliberate difference needs a rationale and regression test in
 | Compiler/runtime/executable discovery | Focused subprocess tests; platform implementations are type-checked | Partial |
 | Locks and watcher lifecycle | Canonical lock/watch cases and focused stale-lock tests | Partial |
 | Output ownership and cleanup | Canonical clean/suffix cases and focused artifact tests | Partial |
-| CLI and format input validation | Unit tests and canonical format/compiler-args cases | Partial |
+| CLI and format input validation | Dedicated Cmdliner tests mirror Rust CLI cases; canonical format/compiler-args cases | Partial |
 
 No row becomes complete until the Rust source inventory has been performed,
 not merely because the current tests pass.
@@ -48,7 +48,7 @@ on whether stdout and stderr are terminals.
 
 | Mode | Required comparison | Current status |
 | --- | --- | --- |
-| Redirected/plain output | Success summaries, warnings, errors, ordering, exit status, and absence of terminal control sequences | Canonical snapshots cover important cases; inventory pending |
+| Redirected/plain output | Success summaries, warnings, errors, ordering, exit status, and absence of terminal control sequences; Cmdliner help may use its native man-page headings and layout | Canonical snapshots cover important cases; inventory pending |
 | Interactive build | TTY detection, parsing/compilation progress, spinner lifecycle, timing, colors, symbols/emojis, quiet/verbose behavior, and cleanup on interruption | Open; OCaml currently prints plain summaries |
 | Interactive watch | Initial-build and rebuild progress, clear-screen behavior, persistent warnings, recovery errors, symbols/emojis, and orderly shutdown | Partial; clear-screen and lifecycle are covered, presentation parity is open |
 | Accessibility/terminal fallback | Stable meaningful text when color or richer glyphs are unavailable | Open |

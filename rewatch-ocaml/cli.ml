@@ -4,8 +4,6 @@ type command =
   | Watch of build_options
   | Format of {check: bool; stdin: string option; files: string list}
   | Compiler_args of string
-  | Help of string option
-  | Version
 
 and build_options = {
   folder: string;
@@ -17,189 +15,312 @@ and build_options = {
   clear_screen: bool;
 }
 
-exception Error of string
-
 let version = "13.0.0-alpha.6"
 
-let usage =
-  {|ReScript - Fast, Simple, Fully Typed JavaScript from the Future
+open Cmdliner
+open Cmdliner.Term.Syntax
 
-Usage: rescript [OPTIONS] <COMMAND>
-
-Commands:
-  build          Build the project (default command)
-  watch          Build, then start a watcher
-  clean          Clean the build artifacts
-  format         Format ReScript files
-  compiler-args  Print compiler arguments for a ReScript source file
-  help           Print this message or command help
-
-Options:
-  -v, --verbose...  Increase logging verbosity
-  -q, --quiet...    Decrease logging verbosity
-  -h, --help        Print help
-  -V, --version     Print version|}
-
-let command_usage = function
-  | None -> usage
-  | Some "build" ->
-    "Usage: rescript build [OPTIONS] [FOLDER]\n\nOptions: --filter, --after-build, --warn-error, --features, --no-timing, --prod"
-  | Some "watch" ->
-    "Usage: rescript watch [OPTIONS] [FOLDER]\n\nOptions: --filter, --after-build, --warn-error, --features, --clear-screen, --prod"
-  | Some "clean" -> "Usage: rescript clean [OPTIONS] [FOLDER]\n\nOptions: --prod"
-  | Some "format" ->
-    "Usage: rescript format [OPTIONS] [FILES]...\n\nOptions: --check, --stdin <.res|.resi>"
-  | Some "compiler-args" -> "Usage: rescript compiler-args <PATH>"
-  | Some command -> raise (Error ("unknown command " ^ command))
-
-let option_before_double_dash names args =
-  let rec loop = function
-  | [] | "--" :: _ -> false
-  | arg :: rest -> List.mem arg names || loop rest
+let verbosity =
+  let verbose =
+    Arg.(
+      value & flag_all
+      & info ["v"; "verbose"] ~doc:"Increase logging verbosity.")
   in
-  loop args
+  let quiet =
+    Arg.(
+      value & flag_all
+      & info ["q"; "quiet"] ~doc:"Decrease logging verbosity.")
+  in
+  let+ verbose and+ quiet in
+  List.length verbose - List.length quiet
+
+let folder =
+  Arg.(
+    value
+    & pos 0 string "."
+    & info [] ~docv:"FOLDER"
+        ~doc:"Path to the project or subproject containing rescript.json.")
+
+let prod =
+  Arg.(
+    value & flag
+    & info ["prod"] ~doc:"Skip development dependencies and sources.")
+
+let features =
+  let parse value =
+    let values =
+      String.split_on_char ',' value |> List.map String.trim
+      |> List.filter (fun value -> value <> "")
+    in
+    if values = [] then
+      Error
+        (`Msg
+          "--features must not be empty. Omit the flag to build with all features active.")
+    else Ok values
+  in
+  let print formatter values =
+    Stdlib.Format.pp_print_string formatter (String.concat "," values)
+  in
+  let converter = Arg.conv (parse, print) in
+  Arg.(
+    value
+    & opt (some converter) None
+    & info ["features"] ~docv:"FEATURES"
+        ~doc:"Restrict the current package to comma-separated features.")
+
+let warn_error =
+  Arg.(
+    value
+    & opt (some string) None
+    & info ["warn-error"] ~docv:"WARNINGS"
+        ~doc:"Override warning configuration from rescript.json.")
+
+let after_build =
+  Arg.(
+    value
+    & opt (some string) None
+    & info ["a"; "after-build"] ~docv:"COMMAND"
+        ~doc:"Run an additional command after a successful build.")
+
+let filter =
+  let parse value =
+    try
+      ignore (Str.regexp value);
+      Ok value
+    with Failure message -> Error (`Msg message)
+  in
+  let print = Stdlib.Format.pp_print_string in
+  Arg.(
+    value
+    & opt (some (conv (parse, print))) None
+    & info ["f"; "filter"] ~docv:"REGEX"
+        ~doc:"Filter source files by regular expression.")
+
+let no_timing =
+  Arg.(
+    value
+    & opt ~vopt:true bool false
+    & info ["n"; "no-timing"] ~docv:"BOOL" ~doc:"Disable output timing.")
+
+let clear_screen =
+  Arg.(
+    value & flag
+    & info ["clear-screen"]
+        ~doc:"Clear the terminal before each interactive rebuild.")
+
+let build_term ~watch =
+  let no_timing = if watch then Term.const false else no_timing in
+  let clear_screen = if watch then clear_screen else Term.const false in
+  let+ _verbosity = verbosity
+  and+ folder
+  and+ prod
+  and+ features
+  and+ warn_error
+  and+ after_build
+  and+ filter
+  and+ _no_timing = no_timing
+  and+ clear_screen in
+  let options : build_options =
+    {folder; prod; features; warn_error; after_build; filter; clear_screen}
+  in
+  if watch then Watch options else Build options
+
+let clean_term =
+  let+ _verbosity = verbosity and+ folder and+ prod in
+  Clean {folder; prod}
+
+let format_term =
+  let extension = Arg.enum [(".res", ".res"); (".resi", ".resi")] in
+  let stdin =
+    Arg.(
+      value
+      & opt (some extension) None
+      & info ["s"; "stdin"] ~docv:"EXTENSION"
+          ~doc:"Read stdin and write formatted source to stdout.")
+  in
+  let check =
+    Arg.(
+      value & flag
+      & info ["c"; "check"] ~doc:"Check formatting without modifying files.")
+  in
+  let files = Arg.(value & pos_all string [] & info [] ~docv:"FILES") in
+  Term.term_result
+    (let+ _verbosity = verbosity and+ check and+ stdin and+ files in
+     match (check, stdin, files) with
+     | true, Some _, _ -> Error (`Msg "--stdin conflicts with --check")
+     | _, Some _, _ :: _ -> Error (`Msg "files conflict with --stdin")
+     | _ -> Ok (Format {check; stdin; files}))
+
+let compiler_args_term =
+  let path =
+    Arg.(
+      required
+      & pos 0 (some string) None
+      & info [] ~docv:"PATH" ~doc:"ReScript source file (.res or .resi).")
+  in
+  let+ _verbosity = verbosity and+ path in
+  Compiler_args path
+
+let command_info name doc = Cmd.info name ~doc
+
+let root =
+  let build =
+    Cmd.make (command_info "build" "Build the project.")
+      (build_term ~watch:false)
+  in
+  let watch =
+    Cmd.make (command_info "watch" "Build, then start a watcher.")
+      (build_term ~watch:true)
+  in
+  let clean =
+    Cmd.make (command_info "clean" "Clean build artifacts.") clean_term
+  in
+  let format =
+    Cmd.make (command_info "format" "Format ReScript files.") format_term
+  in
+  let compiler_args =
+    Cmd.make
+      (command_info "compiler-args"
+         "Print compiler arguments for a ReScript source file.")
+      compiler_args_term
+  in
+  let help =
+    let topic =
+      Arg.(value & pos 0 (some string) None & info [] ~docv:"COMMAND")
+    in
+    let help_term =
+      Term.ret
+        (let+ commands = Term.choice_names and+ topic in
+         match topic with
+         | None -> `Help (`Plain, None)
+         | Some command when List.mem command commands ->
+           `Help (`Plain, Some command)
+         | Some command ->
+           `Error (false, Printf.sprintf "unknown command %S" command))
+    in
+    Cmd.make (command_info "help" "Print this message or command help.")
+      help_term
+  in
+  let info =
+    let man =
+      [
+        `S "NOTES";
+        `P
+          "If no command is provided, the $(b,build) command is run by default. See $(b,rescript help build) for more information.";
+        `P
+          "To create a new ReScript project, or to add ReScript to an existing project, use https://github.com/rescript-lang/create-rescript-app.";
+      ]
+    in
+    Cmd.info "rescript" ~version:("rescript " ^ version)
+      ~doc:"Fast, Simple, Fully Typed JavaScript from the Future" ~man
+  in
+  Cmd.group info ~default:(build_term ~watch:false)
+    [build; watch; clean; format; compiler_args; help]
+
+type evaluation = Run of command | Exit of int
+
+exception Parse_error of string
+exception Help
+exception Version
+
+(* Cmdliner owns option parsing. This adapter only reproduces clap's implicit
+   build routing and global help/version placement before Cmdliner sees argv. *)
+let normalize_argv argv =
+  let is_verbosity = function
+  | "-v" | "-vv" | "-vvv" | "-vvvv" | "--verbose" | "-q" | "-qq"
+  | "-qqq" | "-qqqq" | "--quiet" -> true
+  | _ -> false
+  in
+  let is_help = function "-h" | "--help" -> true | _ -> false in
+  let is_version = function "-V" | "--version" -> true | _ -> false in
+  let is_global argument =
+    is_verbosity argument || is_help argument || is_version argument
+  in
+  let is_command = function
+  | "build" | "watch" | "clean" | "format" | "compiler-args" | "help" ->
+    true
+  | _ -> false
+  in
+  let rec normalize_short_booleans = function
+  | [] -> []
+  | "--" :: rest -> "--" :: rest
+  | "-n=true" :: rest -> "--no-timing=true" :: normalize_short_booleans rest
+  | "-n=false" :: rest ->
+    "--no-timing=false" :: normalize_short_booleans rest
+  | argument :: rest -> argument :: normalize_short_booleans rest
+  in
+  let rec normalize_help = function
+  | [] -> []
+  | "--" :: rest -> "--" :: rest
+  | ("-h" | "--help") :: rest -> "--help=plain" :: normalize_help rest
+  | argument :: rest -> argument :: normalize_help rest
+  in
+  let rec split_leading_globals globals = function
+  | argument :: rest when is_global argument ->
+    split_leading_globals (argument :: globals) rest
+  | rest -> (List.rev globals, rest)
+  in
+  let before_double_dash arguments =
+    let rec loop acc = function
+    | [] | "--" :: _ -> List.rev acc
+    | argument :: rest -> loop (argument :: acc) rest
+    in
+    loop [] arguments
+  in
+  let first_non_global arguments =
+    before_double_dash arguments |> List.find_opt (fun arg -> not (is_global arg))
+  in
+  let partition_implicit arguments =
+    let rec loop globals others = function
+    | [] -> (List.rev globals, List.rev others)
+    | "--" :: rest ->
+      (List.rev globals, List.rev_append others ("--" :: rest))
+    | argument :: rest when is_global argument ->
+      loop (argument :: globals) others rest
+    | argument :: rest -> loop globals (argument :: others) rest
+    in
+    loop [] [] arguments
+  in
+  match Array.to_list argv with
+  | [] -> argv
+  | executable :: arguments ->
+    let routed =
+      match first_non_global arguments with
+      | Some command when is_command command ->
+        let globals, command_and_rest = split_leading_globals [] arguments in
+        if List.exists is_help globals then [executable; "--help"]
+        else if List.exists is_version globals then [executable; "--version"]
+        else
+          (match command_and_rest with
+          | command :: rest -> executable :: command :: (globals @ rest)
+          | [] -> assert false)
+      | _ ->
+        let globals, others = partition_implicit arguments in
+        if List.exists is_help globals then [executable; "--help"]
+        else if List.exists is_version globals then [executable; "--version"]
+        else executable :: "build" :: (globals @ others)
+    in
+    Array.of_list
+      (routed |> normalize_short_booleans |> normalize_help)
+
+let eval argv =
+  match Cmd.eval_value ~catch:false ~argv:(normalize_argv argv) root with
+  | Ok (`Ok command) -> Run command
+  | Ok `Help | Ok `Version -> Exit 0
+  | Error _ -> Exit 2
 
 let parse argv =
-  let rec remove_leading_global_options = function
-    | ("-v" | "-vv" | "-vvv" | "-vvvv" | "--verbose" | "-q" | "-qq"
-      | "-qqq" | "-qqqq" | "--quiet")
-      :: rest ->
-      remove_leading_global_options rest
-    | args -> args
+  let help_buffer = Buffer.create 256 in
+  let error_buffer = Buffer.create 256 in
+  let help = Stdlib.Format.formatter_of_buffer help_buffer in
+  let err = Stdlib.Format.formatter_of_buffer error_buffer in
+  let result =
+    Cmd.eval_value ~catch:false ~help ~err ~argv:(normalize_argv argv) root
   in
-  let args =
-    Array.to_list argv |> List.tl |> remove_leading_global_options
-  in
-  let parse_build ~watch ~explicit args =
-    let parse_features value =
-      let values =
-        String.split_on_char ',' value |> List.map String.trim
-        |> List.filter (fun x -> x <> "")
-      in
-      if values = [] then raise (Error "--features must not be empty");
-      values
-    in
-    let parse_no_timing_value value =
-      match value with
-      | "true" | "false" -> ()
-      | _ -> raise (Error ("invalid value for --no-timing: " ^ value))
-    in
-    let rec loop folder prod features warn_error after_build filter clear_screen
-        positional_only = function
-    | [] ->
-      let command = {folder = Option.value folder ~default:"."; prod; features; warn_error; after_build; filter; clear_screen} in
-      if watch then Watch command else Build command
-    | "--" :: rest when not positional_only ->
-      loop folder prod features warn_error after_build filter clear_screen true
-        rest
-    | ("-h" | "--help") :: _ when not positional_only ->
-      Help (Some (if watch then "watch" else "build"))
-    | ("-V" | "--version") :: _ when (not positional_only) && not explicit ->
-      Version
-    | "--prod" :: rest when not positional_only ->
-      loop folder true features warn_error after_build filter clear_screen false
-        rest
-    | "--features" :: value :: rest when not positional_only ->
-      loop folder prod (Some (parse_features value)) warn_error after_build
-        filter clear_screen false rest
-    | arg :: rest
-      when (not positional_only) && String.starts_with ~prefix:"--features=" arg
-      ->
-      let value = String.sub arg 11 (String.length arg - 11) in
-      loop folder prod (Some (parse_features value)) warn_error after_build
-        filter clear_screen false rest
-    | "--warn-error" :: value :: rest when not positional_only ->
-      loop folder prod features (Some value) after_build filter clear_screen
-        false rest
-    | ("-a" | "--after-build") :: command :: rest when not positional_only ->
-      loop folder prod features warn_error (Some command) filter clear_screen
-        false rest
-    | ("-f" | "--filter") :: pattern :: rest when not positional_only ->
-      loop folder prod features warn_error after_build (Some pattern)
-        clear_screen false rest
-    | "--clear-screen" :: rest when watch && not positional_only ->
-      loop folder prod features warn_error after_build filter true false rest
-    | ("-n" | "--no-timing") :: _ when watch && not positional_only ->
-      raise (Error "unknown option --no-timing")
-    | arg :: _
-      when watch && not positional_only
-           && (String.starts_with ~prefix:"-n=" arg
-              || String.starts_with ~prefix:"--no-timing=" arg) ->
-      raise (Error "unknown option --no-timing")
-    | ("-n" | "--no-timing") :: value :: rest
-      when not positional_only && (value = "true" || value = "false") ->
-      parse_no_timing_value value;
-      loop folder prod features warn_error after_build filter clear_screen false
-        rest
-    | ("-n" | "--no-timing") :: rest when not positional_only ->
-      loop folder prod features warn_error after_build filter clear_screen false
-        rest
-    | arg :: rest
-      when (not positional_only)
-           && (String.starts_with ~prefix:"-n=" arg
-              || String.starts_with ~prefix:"--no-timing=" arg) ->
-      let separator = String.index arg '=' in
-      parse_no_timing_value
-        (String.sub arg (separator + 1) (String.length arg - separator - 1));
-      loop folder prod features warn_error after_build filter clear_screen false
-        rest
-    | ("-v" | "-vv" | "-vvv" | "-vvvv" | "--verbose" | "-q" | "-qq"
-      | "-qqq" | "-qqqq" | "--quiet")
-      :: rest
-      when not positional_only ->
-      loop folder prod features warn_error after_build filter clear_screen false
-        rest
-    | arg :: _
-      when (not positional_only) && String.length arg > 0 && arg.[0] = '-' ->
-      raise (Error ("unknown option " ^ arg))
-    | arg :: rest -> (
-      match folder with
-      | None ->
-        loop (Some arg) prod features warn_error after_build filter clear_screen
-          positional_only rest
-      | Some _ -> raise (Error "too many folder arguments"))
-    in
-    loop None false None None None None false false args
-  in
-  match args with
-  | ["help"] | ["-h"] | ["--help"] -> Help None
-  | ["help"; command] -> Help (Some command)
-  | "compiler-args" :: ("-h" | "--help") :: _ ->
-    Help (Some "compiler-args")
-  | "compiler-args" :: [path] -> Compiler_args path
-  | "compiler-args" :: _ -> raise (Error "compiler-args requires exactly one source file")
-  | "format" :: rest ->
-    let rec loop check stdin files = function
-      | [] -> Format {check; stdin; files = List.rev files}
-      | ("-h" | "--help") :: _ -> Help (Some "format")
-      | ("-c" | "--check") :: more ->
-        if Option.is_some stdin then
-          raise (Error "--check conflicts with --stdin");
-        loop true stdin files more
-      | ("-s" | "--stdin") :: extension :: more ->
-        if check then raise (Error "--stdin conflicts with --check");
-        if files <> [] then raise (Error "--stdin conflicts with files");
-        if extension <> ".res" && extension <> ".resi" then
-          raise (Error "--stdin must be either .res or .resi");
-        loop check (Some extension) files more
-      | arg :: _ when String.length arg > 0 && arg.[0] = '-' -> raise (Error ("unknown format option " ^ arg))
-      | file :: more ->
-        if Option.is_some stdin then raise (Error "files conflict with --stdin");
-        loop check stdin (file :: files) more
-    in loop false None [] rest
-  | "clean" :: rest ->
-    let rec loop folder prod = function
-      | [] -> Clean {folder = Option.value folder ~default:"."; prod}
-      | ("-h" | "--help") :: _ -> Help (Some "clean")
-      | "--prod" :: more -> loop folder true more
-      | arg :: _ when String.length arg > 0 && arg.[0] = '-' -> raise (Error ("unknown clean option " ^ arg))
-      | path :: more ->
-        (match folder with
-        | None -> loop (Some path) prod more
-        | Some _ -> raise (Error "too many folder arguments"))
-    in loop None false rest
-  | "watch" :: rest -> parse_build ~watch:true ~explicit:true rest
-  | "build" :: rest -> parse_build ~watch:false ~explicit:true rest
-  | rest when option_before_double_dash ["-h"; "--help"] rest -> Help None
-  | rest when option_before_double_dash ["-V"; "--version"] rest -> Version
-  | rest -> parse_build ~watch:false ~explicit:false rest
+  Stdlib.Format.pp_print_flush help ();
+  Stdlib.Format.pp_print_flush err ();
+  match result with
+  | Ok (`Ok command) -> command
+  | Ok `Help -> raise Help
+  | Ok `Version -> raise Version
+  | Error _ -> raise (Parse_error (Buffer.contents error_buffer))
