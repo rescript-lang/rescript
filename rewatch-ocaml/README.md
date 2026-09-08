@@ -69,7 +69,9 @@ bash rewatch/tests/compile/01-basic-compile.sh
 ```
 
 See `PROGRESS.md` for verified coverage, measurements, review results, and
-remaining compatibility or platform gaps.
+remaining compatibility or platform gaps. `PARITY_CHECKLIST.md` defines the
+separate validation-inventory and interactive-output gates that must be closed
+before replacement.
 
 OpenTelemetry/OTLP tracing is intentionally not part of this port. This is an
 explicit project scope decision, not a silently ignored configuration feature;

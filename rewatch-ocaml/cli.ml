@@ -52,6 +52,13 @@ let command_usage = function
   | Some "compiler-args" -> "Usage: rescript compiler-args <PATH>"
   | Some command -> raise (Error ("unknown command " ^ command))
 
+let option_before_double_dash names args =
+  let rec loop = function
+  | [] | "--" :: _ -> false
+  | arg :: rest -> List.mem arg names || loop rest
+  in
+  loop args
+
 let parse argv =
   let rec remove_leading_global_options = function
     | ("-v" | "-vv" | "-vvv" | "-vvvv" | "--verbose" | "-q" | "-qq"
@@ -63,7 +70,7 @@ let parse argv =
   let args =
     Array.to_list argv |> List.tl |> remove_leading_global_options
   in
-  let parse_build ~watch args =
+  let parse_build ~watch ~explicit args =
     let parse_features value =
       let values =
         String.split_on_char ',' value |> List.map String.trim
@@ -72,38 +79,87 @@ let parse argv =
       if values = [] then raise (Error "--features must not be empty");
       values
     in
-    let rec loop folder prod features warn_error after_build filter clear_screen = function
+    let parse_no_timing_value value =
+      match value with
+      | "true" | "false" -> ()
+      | _ -> raise (Error ("invalid value for --no-timing: " ^ value))
+    in
+    let rec loop folder prod features warn_error after_build filter clear_screen
+        positional_only = function
     | [] ->
       let command = {folder = Option.value folder ~default:"."; prod; features; warn_error; after_build; filter; clear_screen} in
       if watch then Watch command else Build command
-    | ("-h" | "--help") :: _ -> Help (Some (if watch then "watch" else "build"))
-    | ("-V" | "--version") :: _ -> Version
-    | "--prod" :: rest -> loop folder true features warn_error after_build filter clear_screen rest
-    | "--features" :: value :: rest ->
-      loop folder prod (Some (parse_features value)) warn_error after_build filter clear_screen rest
-    | arg :: rest when String.starts_with ~prefix:"--features=" arg ->
+    | "--" :: rest when not positional_only ->
+      loop folder prod features warn_error after_build filter clear_screen true
+        rest
+    | ("-h" | "--help") :: _ when not positional_only ->
+      Help (Some (if watch then "watch" else "build"))
+    | ("-V" | "--version") :: _ when (not positional_only) && not explicit ->
+      Version
+    | "--prod" :: rest when not positional_only ->
+      loop folder true features warn_error after_build filter clear_screen false
+        rest
+    | "--features" :: value :: rest when not positional_only ->
+      loop folder prod (Some (parse_features value)) warn_error after_build
+        filter clear_screen false rest
+    | arg :: rest
+      when (not positional_only) && String.starts_with ~prefix:"--features=" arg
+      ->
       let value = String.sub arg 11 (String.length arg - 11) in
-      loop folder prod (Some (parse_features value)) warn_error after_build filter clear_screen rest
-    | "--warn-error" :: value :: rest -> loop folder prod features (Some value) after_build filter clear_screen rest
-    | ("-a" | "--after-build") :: command :: rest -> loop folder prod features warn_error (Some command) filter clear_screen rest
-    | ("-f" | "--filter") :: pattern :: rest -> loop folder prod features warn_error after_build (Some pattern) clear_screen rest
-    | "--clear-screen" :: rest when watch ->
-      loop folder prod features warn_error after_build filter true rest
-    | "--no-timing" :: _ when watch ->
+      loop folder prod (Some (parse_features value)) warn_error after_build
+        filter clear_screen false rest
+    | "--warn-error" :: value :: rest when not positional_only ->
+      loop folder prod features (Some value) after_build filter clear_screen
+        false rest
+    | ("-a" | "--after-build") :: command :: rest when not positional_only ->
+      loop folder prod features warn_error (Some command) filter clear_screen
+        false rest
+    | ("-f" | "--filter") :: pattern :: rest when not positional_only ->
+      loop folder prod features warn_error after_build (Some pattern)
+        clear_screen false rest
+    | "--clear-screen" :: rest when watch && not positional_only ->
+      loop folder prod features warn_error after_build filter true false rest
+    | ("-n" | "--no-timing") :: _ when watch && not positional_only ->
       raise (Error "unknown option --no-timing")
-    | "--no-timing" :: rest ->
-      loop folder prod features warn_error after_build filter clear_screen rest
+    | arg :: _
+      when watch && not positional_only
+           && (String.starts_with ~prefix:"-n=" arg
+              || String.starts_with ~prefix:"--no-timing=" arg) ->
+      raise (Error "unknown option --no-timing")
+    | ("-n" | "--no-timing") :: value :: rest
+      when not positional_only && (value = "true" || value = "false") ->
+      parse_no_timing_value value;
+      loop folder prod features warn_error after_build filter clear_screen false
+        rest
+    | ("-n" | "--no-timing") :: rest when not positional_only ->
+      loop folder prod features warn_error after_build filter clear_screen false
+        rest
+    | arg :: rest
+      when (not positional_only)
+           && (String.starts_with ~prefix:"-n=" arg
+              || String.starts_with ~prefix:"--no-timing=" arg) ->
+      let separator = String.index arg '=' in
+      parse_no_timing_value
+        (String.sub arg (separator + 1) (String.length arg - separator - 1));
+      loop folder prod features warn_error after_build filter clear_screen false
+        rest
     | ("-v" | "-vv" | "-vvv" | "-vvvv" | "--verbose" | "-q" | "-qq"
       | "-qqq" | "-qqqq" | "--quiet")
-      :: rest ->
-      loop folder prod features warn_error after_build filter clear_screen rest
-    | arg :: _ when String.length arg > 0 && arg.[0] = '-' ->
+      :: rest
+      when not positional_only ->
+      loop folder prod features warn_error after_build filter clear_screen false
+        rest
+    | arg :: _
+      when (not positional_only) && String.length arg > 0 && arg.[0] = '-' ->
       raise (Error ("unknown option " ^ arg))
     | arg :: rest -> (
       match folder with
-      | None -> loop (Some arg) prod features warn_error after_build filter clear_screen rest
+      | None ->
+        loop (Some arg) prod features warn_error after_build filter clear_screen
+          positional_only rest
       | Some _ -> raise (Error "too many folder arguments"))
-    in loop None false None None None None false args
+    in
+    loop None false None None None None false false args
   in
   match args with
   | ["help"] | ["-h"] | ["--help"] -> Help None
@@ -116,9 +172,15 @@ let parse argv =
     let rec loop check stdin files = function
       | [] -> Format {check; stdin; files = List.rev files}
       | ("-h" | "--help") :: _ -> Help (Some "format")
-      | ("-c" | "--check") :: more -> loop true stdin files more
+      | ("-c" | "--check") :: more ->
+        if Option.is_some stdin then
+          raise (Error "--check conflicts with --stdin");
+        loop true stdin files more
       | ("-s" | "--stdin") :: extension :: more ->
         if check then raise (Error "--stdin conflicts with --check");
+        if files <> [] then raise (Error "--stdin conflicts with files");
+        if extension <> ".res" && extension <> ".resi" then
+          raise (Error "--stdin must be either .res or .resi");
         loop check (Some extension) files more
       | arg :: _ when String.length arg > 0 && arg.[0] = '-' -> raise (Error ("unknown format option " ^ arg))
       | file :: more ->
@@ -136,6 +198,8 @@ let parse argv =
         | None -> loop (Some path) prod more
         | Some _ -> raise (Error "too many folder arguments"))
     in loop None false rest
-  | "watch" :: rest -> parse_build ~watch:true rest
-  | "build" :: rest -> parse_build ~watch:false rest
-  | rest -> parse_build ~watch:false rest
+  | "watch" :: rest -> parse_build ~watch:true ~explicit:true rest
+  | "build" :: rest -> parse_build ~watch:false ~explicit:true rest
+  | rest when option_before_double_dash ["-h"; "--help"] rest -> Help None
+  | rest when option_before_double_dash ["-V"; "--version"] rest -> Version
+  | rest -> parse_build ~watch:false ~explicit:false rest
