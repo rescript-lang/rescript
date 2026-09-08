@@ -474,6 +474,14 @@ rerun it for the final maintainability review alongside maximum module size.
   Bisect PPXs are filtered using the same source markers/environment rule as
   Rust. Unit tests cover every filter branch, while a focused build proves a
   filtered missing PPX is not resolved or launched.
+- Toolchain discovery no longer depends on the invoking working directory.
+  Without `RESCRIPT_BSC_EXE`, the promoted OCaml executable canonicalizes its
+  own location and uses the sibling packaged `bsc.exe`, matching Rust. Without
+  `RESCRIPT_RUNTIME`, it resolves `@rescript/runtime` through the project package
+  search. Focused tests remove each override independently, including a build
+  against the actual promoted npm-package layout. Windows canonicalization
+  strips `\\?\` drive and UNC prefixes before paths reach `bsc`; pure tests cover
+  both forms, while native Windows execution remains part of the final VM gate.
 - Interactive completion now uses the Rust status text, warning suffix,
   two-decimal timing, and clean/warning emoji after verifying that both output
   streams are terminals. `--no-timing` is threaded into the build instead of
@@ -577,9 +585,9 @@ rerun it for the final maintainability review alongside maximum module size.
 
 ## Next actions
 
-1. Finish the source-level validation inventory and the per-Rust-unit-test
-   coverage review, closing confirmed configuration/CLI gaps; OpenTelemetry is
-   an explicitly documented non-goal.
+1. Finish the source-level validation inventory, closing confirmed
+   configuration/CLI gaps; the Rust unit-test coverage review is complete and
+   OpenTelemetry is an explicitly documented non-goal.
 2. Profile and close the remaining clean-build wall-time gap while preserving
    exact compiler-work and artifact equivalence; retain pipe capture as an
    end-stage option.

@@ -9,6 +9,8 @@ export RESCRIPT_BSC_EXE RESCRIPT_RUNTIME
 work="$root/tmp/rewatch-ocaml/test-$$"
 mkdir -p "$work"
 cp -R "$root/rewatch-ocaml/tests/basic" "$work/basic"
+cp -R "$root/rewatch-ocaml/tests/basic" "$work/packaged-basic"
+cp -R "$root/rewatch-ocaml/tests/basic" "$work/runtime-discovery"
 cp -R "$root/rewatch-ocaml/tests/basic" "$work/legacy-config"
 cp -R "$root/rewatch-ocaml/tests/cycle" "$work/cycle"
 cp -R "$root/rewatch-ocaml/tests/failure" "$work/failure"
@@ -29,6 +31,8 @@ cp -R "$root/rewatch-ocaml/tests/source-map" "$work/source-map"
 cp -R "$root/rewatch-ocaml/tests/warning-replay" "$work/warning-replay"
 cp -R "$root/rewatch-ocaml/tests/monorepo" "$work/monorepo"
 basic="$work/basic"
+packaged_basic="$work/packaged-basic"
+runtime_discovery="$work/runtime-discovery"
 legacy_config="$work/legacy-config"
 cycle="$work/cycle"
 failure="$work/failure"
@@ -45,6 +49,20 @@ namespace_entry="$work/namespace-entry"
 source_map="$work/source-map"
 warning_replay="$work/warning-replay"
 monorepo="$work/monorepo"
+
+port_directory=$(CDPATH= cd -- "$(dirname "$port")" && pwd)
+if [ -x "$port_directory/bsc.exe" ]; then
+  env -u RESCRIPT_BSC_EXE "$port" build "$packaged_basic" \
+    >"$packaged_basic/build.log"
+  test -f "$packaged_basic/src/A.mjs"
+fi
+
+mkdir -p "$runtime_discovery/node_modules/@rescript/runtime"
+runtime_path=$(CDPATH= cd -- \
+  "$runtime_discovery/node_modules/@rescript/runtime" && pwd)
+runtime_args=$(env -u RESCRIPT_RUNTIME \
+  "$port" compiler-args "$runtime_discovery/src/A.res")
+printf '%s\n' "$runtime_args" | grep -F "\"$runtime_path\"" >/dev/null
 
 missing_project="$work/does-not-exist"
 if "$port" build "$missing_project" >"$work/missing-project.log" 2>&1; then

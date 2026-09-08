@@ -33,7 +33,7 @@ gap. A deliberate difference needs a rationale and regression test in
 | Missing/non-project folder and config discovery | Missing-folder wording is matched in the focused runner; configuration-context cases pass, but the full source-location inventory remains pending | Partial |
 | Configuration schema and aliases | Unit tests plus canonical config, feature, experimental, warning, suffix, and GenType cases; source `type` and legacy GenType shim normalization/map semantics are matched | Partial |
 | Package/dependency graph | Canonical compile/feature cases and graph unit tests | Partial |
-| Compiler/runtime/executable discovery | Focused subprocess tests; platform implementations are type-checked | Partial |
+| Compiler/runtime/executable discovery | Packaged-layout test removes `RESCRIPT_BSC_EXE` and uses sibling `bsc.exe`; focused runtime test removes `RESCRIPT_RUNTIME` and resolves `@rescript/runtime`; platform path tests cover Windows verbatim drive and UNC paths | Matched for discovery and environment precedence; native Windows execution remains pending |
 | Locks and watcher lifecycle | Canonical lock/watch cases and focused stale-lock tests | Partial |
 | Output ownership and cleanup | Canonical clean/suffix cases and focused artifact tests | Partial |
 | CLI and format input validation | Dedicated Cmdliner tests mirror Rust CLI cases; canonical format/compiler-args cases | Partial |

@@ -11,16 +11,7 @@ let write_file path contents =
     (fun () -> output_string channel contents)
 
 let bsc () =
-  match Sys.getenv_opt "RESCRIPT_BSC_EXE" with
-  | Some path when Sys.file_exists path -> Unix.realpath path
-  | Some path -> raise (Error ("RESCRIPT_BSC_EXE points to missing path " ^ path))
-  | None ->
-    let path =
-      List.fold_left Filename.concat (Sys.getcwd ())
-        ["_build"; "default"; "compiler"; "bsc"; "rescript_compiler_main.exe"]
-    in
-    if Sys.file_exists path then Unix.realpath path
-    else raise (Error "could not locate bsc; set RESCRIPT_BSC_EXE")
+  try Toolchain.bsc () with Toolchain.Error message -> raise (Error message)
 
 let rec nearest_config directory =
   if Config.exists_in_root directory then Some (Config.path_in_root directory)

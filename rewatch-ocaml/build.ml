@@ -150,18 +150,6 @@ let acquire_build_lock root =
       if read_lock_owner path = Some pid then remove_file path;
       released := true)
 
-let env_path name fallback =
-  match Sys.getenv_opt name with
-  | Some path when Sys.file_exists path -> Unix.realpath path
-  | Some path ->
-    raise (Error (Printf.sprintf "%s points to missing path %s" name path))
-  | None when Sys.file_exists fallback -> Unix.realpath fallback
-  | None ->
-    raise
-      (Error
-         (Printf.sprintf "%s is unset and fallback %s does not exist" name
-            fallback))
-
 let dependency_path root name =
   let existing_realpath path =
     if Sys.file_exists path then Some (Unix.realpath path) else None
@@ -185,6 +173,13 @@ let dependency_path root name =
     let sibling = Filename.concat (Filename.dirname root) name in
     let workspace = Filename.concat (Filename.concat root "packages") package_name in
     List.find_map existing_realpath [sibling; workspace]
+
+let bsc_path () =
+  try Toolchain.bsc () with Toolchain.Error message -> raise (Error message)
+
+let runtime_path root =
+  try Toolchain.runtime ~find_package:(dependency_path root)
+  with Toolchain.Error message -> raise (Error message)
 
 let report_failure action path result =
   let output = result.Process.stderr ^ result.stdout in
@@ -637,10 +632,7 @@ let compiler_args path =
     }
   in
   let relative = relative_to config.root source in
-  let runtime =
-    env_path "RESCRIPT_RUNTIME"
-      (path_of_parts (Sys.getcwd ()) ["packages"; "@rescript"; "runtime"])
-  in
+  let runtime = runtime_path config.root in
   let is_interface = Filename.check_suffix source ".resi" in
   let has_interface = not is_interface && Sys.file_exists (source ^ "i") in
   let dependency_dirs =
@@ -812,12 +804,7 @@ let dependent_is_allowed allowed_dependents dependent =
 
 let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
     ~filter ~watch ~stats =
-  let repository_root = Sys.getcwd () in
-  let bsc =
-    env_path "RESCRIPT_BSC_EXE"
-      (path_of_parts repository_root
-         ["_build"; "default"; "compiler"; "bsc"; "rescript_compiler_main.exe"])
-  in
+  let bsc = bsc_path () in
   let requested_features = Hashtbl.create 32 in
   let unallowed_dependencies = ref [] in
   let loaded_configs = Hashtbl.create 32 in
@@ -954,10 +941,7 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
       graph_packages := package :: !graph_packages)
   in
   visit ~folder:root_config.root ~features ~warn_error ~filter ~is_local:true;
-  let runtime =
-    env_path "RESCRIPT_RUNTIME"
-      (path_of_parts repository_root ["packages"; "@rescript"; "runtime"])
-  in
+  let runtime = runtime_path root_config.root in
   let source_map_args =
     if root_config.source_map_dev && not watch then
       ["-bs-source-map"; "false"]
@@ -1233,15 +1217,10 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder ~prod ~features
              Some directory
            else None)
   in
-  let repository_root = Sys.getcwd () in
-  let bsc =
-    env_path "RESCRIPT_BSC_EXE"
-      (path_of_parts repository_root
-         ["_build"; "default"; "compiler"; "bsc"; "rescript_compiler_main.exe"])
-  in
-  let runtime =
-    env_path "RESCRIPT_RUNTIME"
-      (path_of_parts repository_root ["packages"; "@rescript"; "runtime"])
+  let bsc, runtime =
+    match stats.compiler_context with
+    | Some context -> (context.bsc_path, context.runtime_path)
+    | None -> raise (Error "Compiler context was not initialized")
   in
   let build_dir =
     match prepared with

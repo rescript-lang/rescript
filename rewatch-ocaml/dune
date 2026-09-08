@@ -25,6 +25,7 @@
   graph
   package_metadata
   build_artifacts
+  toolchain
   compiler_info
   warning_state
   output
@@ -75,4 +76,9 @@
 (test
  (name output_tests)
  (modules output_tests)
+ (libraries rewatch_ocaml_lib))
+
+(test
+ (name toolchain_tests)
+ (modules toolchain_tests platform_windows)
  (libraries rewatch_ocaml_lib))
