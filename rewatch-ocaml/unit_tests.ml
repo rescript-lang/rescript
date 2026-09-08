@@ -374,6 +374,17 @@ let () =
       check
         (config.allowed_dependents = Some ["app"])
         "allowed-dependents is parsed";
+      write_file config_path
+        {|{
+          "name": "source-type",
+          "sources": {"dir": "src", "type": "lib"}
+        }|};
+      let config = Config.load config_path in
+      check
+        (match config.sources with
+        | [source] -> not source.is_dev
+        | _ -> false)
+        "non-dev source type strings are accepted as ordinary sources";
       write_file config_path {|{"name":"default-output","suffix":".mjs"}|};
       let config = Config.load config_path in
       check
@@ -499,6 +510,23 @@ let () =
         (contains_adjacent "-bs-gentype-suffix" ".mjs"
            config.gentype_args)
         "GenType includes an explicitly configured suffix";
+      write_file config_path
+        {|{
+          "name": "gentype-shims",
+          "gentypeconfig": {
+            "shims": [" From = First ", "A=B", "From=Last"]
+          }
+        }|};
+      let config = Config.load config_path in
+      check
+        (contains_adjacent "-bs-gentype-shim" "From=Last"
+           config.gentype_args)
+        "legacy GenType shims are trimmed and later duplicates win";
+      check
+        (List.length
+           (List.filter (( = ) "-bs-gentype-shim") config.gentype_args)
+        = 2)
+        "legacy GenType shims use map semantics";
       write_file config_path
         {|{"name":"unsupported","generators":["legacy"]}|};
       let config = Config.load config_path in

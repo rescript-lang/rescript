@@ -223,6 +223,12 @@ the same conservative result Rust intends for an unsuccessful probe.
 - GenType now receives `-bs-gentype-suffix` only when the top-level suffix was
   explicitly configured, and inherits the module format from object-form
   `package-specs` when `gentypeconfig.module` is absent.
+- Legacy array-form GenType shims now match Rust's map semantics: whitespace
+  around the first `=` is trimmed, later duplicate source names win, and the
+  emitted compiler arguments are sorted by source name.
+- Source objects accept arbitrary string values for `type`, as Rust's Serde
+  schema does; only the exact value `"dev"` marks the source as development
+  code. Non-string values remain configuration errors.
 - All legacy top-level fields that Rust classifies as known but unsupported
   (`ignored-dirs`, generators, preprocessor/entry fields, and external include
   paths) receive the dedicated unsupported-field diagnostic rather than a

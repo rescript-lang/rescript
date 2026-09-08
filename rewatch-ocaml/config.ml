@@ -138,7 +138,8 @@ let rec sources_of_json path inherited_dir inherited_dev inherited_feature = fun
       match member "type" fields with
       | None -> inherited_dev
       | Some (`String "dev") -> true
-      | Some _ -> fail path "source field \"type\" must be \"dev\""
+      | Some (`String _) -> false
+      | Some _ -> fail path "source field \"type\" must be a string"
     in
     let feature =
       match member "feature" fields with
@@ -273,17 +274,37 @@ let gentype_args path configured_suffix package_specs_value sources dependencies
       | Some value -> ["-bs-gentype-generated-extension"; string path "gentypeconfig.generatedFileExtension" value]
     in
     let shims =
-      match member "shims" fields with
-      | None -> []
-      | Some (`Assoc values) ->
-        values |> List.sort compare |> List.concat_map (fun (from_, target) ->
-          ["-bs-gentype-shim"; from_ ^ "=" ^ string path "gentypeconfig.shims" target])
-      | Some (`List values) ->
-        values |> List.concat_map (fun value ->
-          let value = string path "gentypeconfig.shims" value in
-          if String.contains value '=' then ["-bs-gentype-shim"; value]
-          else fail path "gentypeconfig.shims entries must contain =")
-      | Some _ -> fail path "field \"gentypeconfig.shims\" must be an object or array"
+      let pairs =
+        match member "shims" fields with
+        | None -> []
+        | Some (`Assoc values) ->
+          List.map
+            (fun (from_, target) ->
+              (from_, string path "gentypeconfig.shims" target))
+            values
+        | Some (`List values) ->
+          List.map
+            (fun value ->
+              let value = string path "gentypeconfig.shims" value in
+              match String.index_opt value '=' with
+              | Some separator ->
+                let from_ = String.sub value 0 separator |> String.trim in
+                let target =
+                  String.sub value (separator + 1)
+                    (String.length value - separator - 1)
+                  |> String.trim
+                in
+                (from_, target)
+              | None -> fail path "gentypeconfig.shims entries must contain =")
+            values
+        | Some _ ->
+          fail path "field \"gentypeconfig.shims\" must be an object or array"
+      in
+      let by_source = Hashtbl.create (List.length pairs) in
+      List.iter (fun (from_, target) -> Hashtbl.replace by_source from_ target) pairs;
+      Hashtbl.to_seq by_source |> List.of_seq |> List.sort compare
+      |> List.concat_map (fun (from_, target) ->
+           ["-bs-gentype-shim"; from_ ^ "=" ^ target])
     in
     let debug =
       match member "debug" fields with
