@@ -157,13 +157,16 @@ printf 'median Rust:  %6d ms  %8d KiB\n' "$rust_wall" "$rust_rss"
 printf 'median OCaml: %6d ms  %8d KiB\n' "$ocaml_wall" "$ocaml_rss"
 
 trace_and_classify() {
-  local implementation=$1 executable=$2 fixture=$3 manifest=$4
-  local trace_prefix="$work_root/${implementation}.execve"
-  "$executable" clean "$fixture" >/dev/null 2>&1
+  local implementation=$1 scenario=$2 executable=$3 fixture=$4 manifest=$5
+  local clean_first=$6
+  local trace_prefix="$work_root/${implementation}-${scenario}.execve"
+  if [[ "$clean_first" == 1 ]]; then
+    "$executable" clean "$fixture" >/dev/null 2>&1
+  fi
   strace -f -ff -qq -s 4096 -e trace=execve,chdir -o "$trace_prefix" \
     "$executable" build "$fixture" \
-    >"$work_root/${implementation}-trace.out" \
-    2>"$work_root/${implementation}-trace.stderr"
+    >"$work_root/${implementation}-${scenario}-trace.out" \
+    2>"$work_root/${implementation}-${scenario}-trace.stderr"
   local trace_files=("$trace_prefix".*)
   local implementation_root=${fixture%/rewatch/testrepo}
   local trace_file exec_line argv cwd_line cwd phase input identity
@@ -215,15 +218,38 @@ trace_and_classify() {
   echo "$invocations,$parse,$namespace,$compile,$interface,$ppx"
 }
 
-rust_invocations="$work_root/rust-invocations.txt"
-ocaml_invocations="$work_root/ocaml-invocations.txt"
-rust_work=$(trace_and_classify rust "$rust_executable" "$rust_fixture" \
-  "$rust_invocations")
-ocaml_work=$(trace_and_classify ocaml "$ocaml_executable" "$ocaml_fixture" \
-  "$ocaml_invocations")
+rust_clean_invocations="$work_root/rust-clean-invocations.txt"
+ocaml_clean_invocations="$work_root/ocaml-clean-invocations.txt"
+rust_clean_work=$(trace_and_classify rust clean "$rust_executable" \
+  "$rust_fixture" "$rust_clean_invocations" 1)
+ocaml_clean_work=$(trace_and_classify ocaml clean "$ocaml_executable" \
+  "$ocaml_fixture" "$ocaml_clean_invocations" 1)
+
+rust_unchanged_invocations="$work_root/rust-unchanged-invocations.txt"
+ocaml_unchanged_invocations="$work_root/ocaml-unchanged-invocations.txt"
+rust_unchanged_work=$(trace_and_classify rust unchanged "$rust_executable" \
+  "$rust_fixture" "$rust_unchanged_invocations" 0)
+ocaml_unchanged_work=$(trace_and_classify ocaml unchanged "$ocaml_executable" \
+  "$ocaml_fixture" "$ocaml_unchanged_invocations" 0)
+
+printf '\n// benchmark single edit\n' \
+  >>"$rust_fixture/packages/watch-warnings/src/B.res"
+printf '\n// benchmark single edit\n' \
+  >>"$ocaml_fixture/packages/watch-warnings/src/B.res"
+rust_edit_invocations="$work_root/rust-edit-invocations.txt"
+ocaml_edit_invocations="$work_root/ocaml-edit-invocations.txt"
+rust_edit_work=$(trace_and_classify rust edit "$rust_executable" \
+  "$rust_fixture" "$rust_edit_invocations" 0)
+ocaml_edit_work=$(trace_and_classify ocaml edit "$ocaml_executable" \
+  "$ocaml_fixture" "$ocaml_edit_invocations" 0)
+
 echo "work columns: bsc_total,parse,namespace,compile,interfaces,ppx"
-echo "work Rust:  $rust_work"
-echo "work OCaml: $ocaml_work"
+echo "clean Rust:      $rust_clean_work"
+echo "clean OCaml:     $ocaml_clean_work"
+echo "unchanged Rust:  $rust_unchanged_work"
+echo "unchanged OCaml: $ocaml_unchanged_work"
+echo "edit Rust:       $rust_edit_work"
+echo "edit OCaml:      $ocaml_edit_work"
 
 artifact_manifest() {
   local root=$1 output=$2
@@ -270,15 +296,25 @@ if ((runs >= 5 && ocaml_rss * 100 > rust_rss * threshold_percent)); then
   echo "FAIL: OCaml median peak tree RSS exceeds the threshold." >&2
   failed=1
 fi
-if [[ "$rust_work" != "$ocaml_work" ]]; then
-  echo "FAIL: Rust and OCaml performed different compiler work." >&2
-  failed=1
-fi
-if ! cmp -s "$rust_invocations" "$ocaml_invocations"; then
-  echo "FAIL: Rust and OCaml performed different module/PPX work." >&2
-  diff -u "$rust_invocations" "$ocaml_invocations" >&2 || true
-  failed=1
-fi
+for scenario in clean unchanged edit; do
+  rust_work_variable="rust_${scenario}_work"
+  ocaml_work_variable="ocaml_${scenario}_work"
+  rust_manifest_variable="rust_${scenario}_invocations"
+  ocaml_manifest_variable="ocaml_${scenario}_invocations"
+  rust_work_value=${!rust_work_variable}
+  ocaml_work_value=${!ocaml_work_variable}
+  rust_manifest=${!rust_manifest_variable}
+  ocaml_manifest=${!ocaml_manifest_variable}
+  if [[ "$rust_work_value" != "$ocaml_work_value" ]]; then
+    echo "FAIL: Rust and OCaml performed different $scenario compiler work." >&2
+    failed=1
+  fi
+  if ! cmp -s "$rust_manifest" "$ocaml_manifest"; then
+    echo "FAIL: Rust and OCaml performed different $scenario module/PPX work." >&2
+    diff -u "$rust_manifest" "$ocaml_manifest" >&2 || true
+    failed=1
+  fi
+done
 if ((artifact_equivalence == 0)); then
   echo "FAIL: Rust and OCaml generated different artifacts." >&2
   failed=1

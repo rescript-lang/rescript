@@ -385,9 +385,28 @@ rm -f "$out_of_source/src/Main.res"
 "$port" build "$out_of_source"
 test ! -f "$out_of_source/lib/es6/src/Main.js"
 
-"$port" build "$namespace"
+namespace_call_log="$namespace/bsc-calls.log"
+env RESCRIPT_BSC_EXE="$root/rewatch-ocaml/tests/counting-bsc.sh" \
+  REWATCH_REAL_BSC="$RESCRIPT_BSC_EXE" \
+  REWATCH_BSC_CALL_LOG="$namespace_call_log" \
+  "$port" build "$namespace"
 test -f "$namespace/lib/ocaml/A-Widget.cmi"
 test -f "$namespace/src/B.js"
+: > "$namespace_call_log"
+env RESCRIPT_BSC_EXE="$root/rewatch-ocaml/tests/counting-bsc.sh" \
+  REWATCH_REAL_BSC="$RESCRIPT_BSC_EXE" \
+  REWATCH_BSC_CALL_LOG="$namespace_call_log" \
+  "$port" build "$namespace"
+if grep -F 'Widget.mlmap' "$namespace_call_log" >/dev/null; then
+  echo "unchanged build unexpectedly recompiled its namespace" >&2
+  exit 1
+fi
+printf '\nlet changed = 1\n' >> "$namespace/src/B.res"
+env RESCRIPT_BSC_EXE="$root/rewatch-ocaml/tests/counting-bsc.sh" \
+  REWATCH_REAL_BSC="$RESCRIPT_BSC_EXE" \
+  REWATCH_BSC_CALL_LOG="$namespace_call_log" \
+  "$port" build "$namespace"
+grep -F 'Widget.mlmap' "$namespace_call_log" >/dev/null
 
 "$port" build "$namespace_entry"
 test -f "$namespace_entry/src/Entry.mjs"
