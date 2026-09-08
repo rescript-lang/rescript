@@ -82,6 +82,22 @@ similar wording alone is not proof of equivalent behavior. Passing this unit
 inventory does not replace the broader validation-source and interactive-output
 gates in this document.
 
+## Canonical integration-test coverage gate
+
+CI runs the shared [`rewatch/tests/suite.sh`](../rewatch/tests/suite.sh) against
+the packaged OCaml executable. Therefore its scenarios are exercised by the
+port rather than copied into a second suite that could drift. The
+[`tests/check_canonical_test_coverage.sh`](tests/check_canonical_test_coverage.sh)
+guard inventories every test script below `rewatch/tests`, and fails if
+`suite.sh` omits one, references a stale path, or references a test more than
+once. It currently finds 48 canonical integration tests, all referenced
+exactly once.
+
+This establishes shared integration-test inclusion, not exhaustive parity on
+its own. Rust source paths without a test remain the responsibility of the
+validation inventory above, and output modes not exercised by the shell suite
+remain the responsibility of the output gate below.
+
 ## Output parity gate
 
 Output is tested in two modes because Rust deliberately changes behavior based

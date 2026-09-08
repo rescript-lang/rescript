@@ -215,6 +215,8 @@ jobs:
       - name: Run OCaml rewatch unit and focused tests
         if: runner.os != 'Windows'
         run: |
+          bash rewatch-ocaml/tests/check_rust_test_coverage.sh --require-complete
+          bash rewatch-ocaml/tests/check_canonical_test_coverage.sh
           opam exec -- dune runtest rewatch-ocaml
           sh rewatch-ocaml/tests/run.sh packages/@rescript/${{ matrix.node-target }}/bin/rescript-ocaml.exe
         shell: bash
