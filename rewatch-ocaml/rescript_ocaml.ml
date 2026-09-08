@@ -39,6 +39,9 @@ let () =
     | Cli.Run command -> run command
     | Cli.Exit code -> exit code
   with
+  | Build.Package_error message ->
+    prerr_endline message;
+    exit 2
   | Config.Error message
   | Source.Error message
   | Build.Error message
