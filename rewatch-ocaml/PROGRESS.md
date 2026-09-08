@@ -36,13 +36,12 @@ differences:
 - Standalone package builds refused to build dependencies resolved outside the
   invoked package directory.
 
-The main remaining architectural differences are substantial: Rust constructs
-one unified package/module build state and schedules a single cross-package
-graph. The OCaml port still recurses by package and reconstructs its in-memory
-state for every invocation, although it now derives dirty parse and compile
-nodes from persistent compiler artifacts and propagates CMI/removal changes
-across package boundaries. Rust also has robust build/watch locks, native
-filesystem events, diagnostic persistence, telemetry, and much broader
+The clean-build path now prepares all packages before launching compiler work,
+parses dirty sources as one global batch, emits namespaces as one global batch,
+and schedules compilation over one cross-package dependency graph using
+critical-path priorities. It still reconstructs its in-memory state for every
+invocation, while Rust persists richer compile state. Rust also has native
+filesystem events, diagnostic persistence, telemetry, and broader
 configuration and platform handling that are not yet ported.
 
 A fresh review of the compile 09–13 increment found failure-log omissions,
@@ -102,8 +101,9 @@ an owner PID and can themselves be recovered after an interrupted takeover.
 - Independent parser/compiler jobs use a CPU-bounded dynamic scheduler that
   refills each freed slot immediately, with private output files and
   deterministic input-order diagnostic collection. Their transient logs are
-  created in the owning project/build directory; interruption signals all
-  children, performs a bounded graceful reap, then escalates and cleans logs.
+  created in the operating system's temporary directory; interruption signals
+  all children, performs a bounded graceful reap, then escalates and cleans
+  logs.
 - Subprocess creation uses `spawn >= v0.17.0`: Unix children receive their own
   process groups, while Windows uses `CreateProcess` with explicit working
   directories. Bare executables resolve through PATH/PATHEXT, including
@@ -129,8 +129,10 @@ an owner PID and can themselves be recovered after an interrupted takeover.
   including its package-level dependency back-edge and `namespace-entry`.
 - A minimal nested-workspace regression verifies that recursive build and clean
   own only dependencies canonically contained by the workspace root, leaving
-  external linked packages untouched. The full copied fixture still needs a
-  dependency-ownership adapter before it can be a repeatable runner.
+  external linked packages untouched. The benchmark harness creates fully
+  isolated copies of the full fixture, its external Belt/runtime targets, and
+  every installed `node_modules` tree, so the two implementations cannot share
+  or inherit generated artifacts.
 - `bsc-flags` is accepted as the Rust-compatible alias for `compiler-flags`;
   nested compiler flag groups are flattened into direct `bsc` arguments, and
   `--warn-error` replaces config warning errors.
@@ -216,52 +218,62 @@ an owner PID and can themselves be recovered after an interrupted takeover.
   paths) receive the dedicated unsupported-field diagnostic rather than a
   generic unknown-field warning or silent acceptance.
 
-## Performance snapshot
+## Performance and equivalence gate
 
-One Linux development-build sample was taken on the current 10-CPU container
-using the full `rewatch/testrepo`, the same external `bsc` and runtime, and a
-10–20 ms `/proc` sampler that sums the live process tree. Times and peak RSS are
-therefore comparative observations, not a benchmark distribution:
-
-| Scenario | Rust | OCaml |
-| --- | ---: | ---: |
-| Clean build | 7,433 ms / 266,964 KiB | 10,869 ms / 287,396 KiB |
-| Unchanged build | 616 ms / 40,056 KiB | 833 ms / 31,600 KiB |
-| Single-module edit | 589 ms / 44,824 KiB | 843 ms / 26,632 KiB |
-| Watch edit visible | 111 ms | 738 ms |
-| Idle watcher | 22,444 KiB / 10 ms CPU per 2 s | 7,568 KiB / 30 ms CPU per 2 s |
-
-The OCaml subprocess bound now follows the detected CPU count, capped at 32;
-raising it from the provisional fixed value of four reduced this sample's clean
-build from 14,065 ms to 10,869 ms. The remaining clean/edit gap is consistent
-with reconstructing package/global state on every command, while watch latency
-also includes the 200 ms polling interval.
+[`bench/performance_gate.sh`](bench/performance_gate.sh) is the maintained
+clean-build quality gate; [`bench/README.md`](bench/README.md) documents its
+prerequisites, command line, scope, and exclusions. It archives a fully isolated
+fixture for each implementation, warms both implementations, interleaves at
+least five measured builds, samples summed process-tree RSS from `/proc`, and
+records the commit and host. It then uses `strace` to compare the exact
+package/phase/input work multiset and recreates a third fixture at the same
+absolute path for each runner before comparing generated JavaScript, `.cmi`,
+`.cmj`, and `.mlmap`
+manifests. Recreating that tree is essential: `clean` alone could leave a
+Rust-only artifact for the OCaml build to inherit and mask a parity failure.
 
 Clean-build performance is a completion gate, not just a reported metric. The
-provisional acceptance threshold is a median wall time and peak process-tree RSS
-no worse than 1.25× Rust rewatch on the full representative fixture, using at
-least five interleaved post-warm-up runs with the same compiler/runtime.
+current acceptance threshold is a median wall time and peak process-tree RSS no
+worse than 1.25× Rust on the full fixture, using at least five interleaved
+post-warm-up runs with the same compiler and runtime. Passing the ratio is not
+sufficient on its own: the compiler-work tuple and selected artifact manifests
+must also be identical, and the canonical/focused integration tests remain the
+behavioral-equivalence gate.
 
-After switching subprocess creation to `spawn`, a quick three-run wall-only
-check (before scheduler wait tuning) measured Rust at 7,306–7,724 ms (7,520 ms
-median) and OCaml at 12,334–12,423 ms (12,416 ms median), or 1.65×. This is not
-an acceptance measurement: it ran in a Docker container on a battery-powered
-Mac, so it is only a strong warning signal and currently fails the wall-time
-gate. The acceptance run must use a stable, plugged-in benchmark or CI host.
+The latest five-run release-build measurement was made in the Linux Docker
+environment on the plugged-in Mac host:
 
-An `execve` trace of a copied clean fixture showed that the slower OCaml run
-launched fewer `bsc` processes than Rust, rather than doing more compiler work.
-The OCaml trace begins with repeated small package-local waves while Rust fills
-slots from its unified module graph. This points to idle capacity at package and
-dependency-level barriers, plus repeated discovery/state construction, as the
-primary architectural targets. Project-local output-capture files were also a
-likely Docker bind-mount penalty and now use the OS temporary directory.
-A subsequent single paired diagnostic run compiled the same 472 modules in
-9,852 ms with OCaml and 7,624 ms with Rust (1.29×), supporting that hypothesis.
-It remains a battery-host observation rather than an acceptance result.
-Pipe-based capture remains the intended final backend so successful builds do
-not create transient files. It is deferred until the scheduler lifecycle is
-settled because it requires concurrent draining, bounded memory, and reliable
+| Implementation | Median wall time | Median peak tree RSS |
+| --- | ---: | ---: |
+| Rust | 4,454 ms | 600,280 KiB |
+| OCaml | 5,596 ms | 606,244 KiB |
+
+The 1.256× wall-time ratio narrowly fails the 1.25× gate; RSS passes at 1.010×.
+An earlier isolated run was 1.273×, so global scheduling and subprocess-capture
+changes improved the result, but no completion claim is warranted yet. Docker
+on a Mac is still a noisier platform than native Linux or dedicated CI even
+when plugged in, so final acceptance should repeat the distribution on a stable
+host rather than treating this single five-run set as universal.
+
+Both implementations performed exactly 1,031 `bsc` launches: 512 parses, 7
+namespace compilations, and 512 module compilations, of which 40 were interface
+compilations; each also launched the PPX once. This rules out extra compiler
+invocations as the current wall-time source. The hardened fixture-recreation
+check also passed: both implementations performed the same normalized
+package/phase/input work and produced identical selected artifact sets and
+contents without inheriting files from one another. Its latest one-run timing
+sample was 13,932 ms / 621,948 KiB for Rust and 15,851 ms / 645,312 KiB for
+OCaml. That 1.138× sample is useful only as a correctness smoke test and does
+not replace the five-run performance result; its much higher absolute times
+also illustrate why a single run is not an acceptance measurement.
+
+The remaining measured gap is therefore orchestration overhead around the same
+external compiler work: process launch/wait/capture, artifact publication, and
+repeated filesystem/configuration work are the main candidates. Capture files
+are opened once in the OS temporary directory and empty captures avoid a second
+open. Pipe-based capture remains the intended final backend so successful builds
+do not create transient files, but it is deferred until the scheduler lifecycle
+is settled because it requires concurrent draining, bounded memory, and reliable
 descriptor/descendant cleanup on Windows as well as Unix.
 
 ## Known gaps
@@ -269,8 +281,6 @@ descriptor/descendant cleanup on Windows as well as Unix.
 - Incremental state currently relies on artifact timestamps and byte-identical
   CMI publication. Rust's richer persisted compile-state model and diagnostic
   storage are not yet ported.
-- Packages are deduplicated during recursive traversal, but compilation still
-  happens as separate per-package graphs rather than Rust's unified graph.
 - Full configuration validation parity, telemetry, performance parity, and
   production-grade filesystem watching remain incomplete.
 - `watch` currently uses conservative polling and has no signal/lock/event
@@ -293,16 +303,16 @@ descriptor/descendant cleanup on Windows as well as Unix.
   recursively built with dependency feature selections and cycle protection;
   prebuilt packages are accepted through their `lib/ocaml` include path.
 - Package resolution searches a package's `node_modules` and ancestor hoists,
-  then workspace-sibling locations. A copied `rewatch/testrepo` cannot yet be
-  used for end-to-end verification because its workspace symlinks are relative
-  to the original repository and become broken when copied; the dedicated
-  monorepo fixture preserves those links instead.
+  then workspace-sibling locations. The benchmark fixture copier preserves all
+  of those ignored dependency trees in isolated roots; the smaller tracked
+  monorepo fixture remains preferable for ordinary integration tests.
 - Windows support is required before this port can be considered complete. It
   cannot be executed in the current Linux environment, but it must still be
   designed and cross-built where possible. Subprocess creation now uses the
   cross-platform `spawn` library (`CreateProcess` on Windows), including child
-  working directories and PATH/PATHEXT resolution. Windows uses direct-process
-  termination while Unix retains process-group cleanup. Watch lock/process
+  working directories and PATH/PATHEXT resolution. Windows cleanup uses
+  `taskkill /T` for compiler/helper trees (with a direct-PID fallback), while
+  Unix retains process-group cleanup. Watch lock/process
   probing and polling behavior still need a Windows cross-build and runtime
   verification. Shared filesystem logic uses `Filename` operations rather than
   embedded `/` or `\\` separators; Unix-only test cases are being isolated or
@@ -331,9 +341,11 @@ descriptor/descendant cleanup on Windows as well as Unix.
 1. Inventory and close remaining configuration, CLI, and telemetry gaps.
 2. Finish the Windows watcher/lock backend and path audit, and cross-build it;
    record Windows runtime verification as unavailable here.
-3. Replace recursive per-package compilation with scheduling over the global
-   cross-package module graph; cycle discovery is global now, but compilation
-   batches are still package-local.
-4. Perform the final two-scope whole-port review and address confirmed findings.
-5. Replace or supplement polling with a production-grade native event backend
+3. Profile and close the remaining clean-build wall-time gap while preserving
+   exact compiler-work and artifact equivalence; retain pipe capture as an
+   end-stage option.
+4. Split large implementation modules such as `build.ml` along stable
+   responsibility boundaries after the performance checkpoint.
+5. Perform the final two-scope whole-port review and address confirmed findings.
+6. Replace or supplement polling with a production-grade native event backend
    and evaluate supported-platform packaging and behavior.

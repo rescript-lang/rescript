@@ -1,6 +1,7 @@
 exception Error of string
 exception Stop_watch
 exception Build_failure of string
+exception Scheduled_failure of string
 
 let path_of_parts root parts = List.fold_left Filename.concat root parts
 let lib_path root directory = path_of_parts root ["lib"; directory]
@@ -309,6 +310,38 @@ let generated_build_js_path ~build_dir (config : Config.t) path
   Filename.concat build_dir
     (Filename.remove_extension path ^ Config.package_spec_suffix config spec)
 
+let generated_output_suffixes =
+  [
+    ".bs.mjs";
+    ".bs.cjs";
+    ".bs.js";
+    ".res.mjs";
+    ".res.cjs";
+    ".res.js";
+    ".mjs";
+    ".cjs";
+    ".js";
+  ]
+
+let generated_output_details path =
+  let output_path =
+    if Filename.check_suffix path ".map" then Filename.chop_suffix path ".map"
+    else path
+  in
+  generated_output_suffixes
+  |> List.find_map (fun suffix ->
+       if Filename.check_suffix output_path suffix then
+         Some
+           ( (Filename.basename output_path |> fun basename ->
+               Filename.chop_suffix basename suffix),
+             suffix,
+             output_path )
+       else None)
+
+let generated_output_owner path =
+  generated_output_details path
+  |> Option.map (fun (owner, _, _) -> owner)
+
 let prepare_watch_output watch_outputs watch_output_paths ~dirty_ast output =
   if
     (not (Sys.file_exists output))
@@ -335,7 +368,8 @@ let with_root_options (config : Config.t) (root_config : Config.t) =
          @ ["-bs-gentype-bsb-project-root"; root_config.root]);
   }
 
-let cleanup_stale ~root ~ocaml_dir (config : Config.t) modules =
+let cleanup_stale ~root ~ocaml_dir ~is_local (config : Config.t) modules =
+  let build_dir = lib_path root "bs" in
   let expected_artifacts = Hashtbl.create (List.length modules * 8) in
   let owned_output_names = Hashtbl.create (List.length modules * 2) in
   let add_expected base extensions =
@@ -364,7 +398,7 @@ let cleanup_stale ~root ~ocaml_dir (config : Config.t) modules =
         |> Filename.remove_extension
       in
       let compiler_base =
-        Source.compiler_basename config module_.Source.name
+        Source.compiler_asset_basename config module_.Source.implementation
       in
       Hashtbl.replace owned_output_names source_base ();
       add_expected source_base [".ast"; ".res"];
@@ -392,35 +426,76 @@ let cleanup_stale ~root ~ocaml_dir (config : Config.t) modules =
     in
     if managed && not (Hashtbl.mem expected_artifacts basename) then (
       if Filename.check_suffix basename ".ast" then
-        removed_modules := Filename.chop_suffix basename ".ast" :: !removed_modules
+        removed_modules := Source.module_name basename :: !removed_modules
       else if Filename.check_suffix basename ".iast" then
-        removed_modules := Filename.chop_suffix basename ".iast" :: !removed_modules;
-      remove_file path));
-  let suffixes = [".js"; ".mjs"; ".cjs"; ".bs.js"; ".bs.mjs"; ".bs.cjs"] in
+        removed_modules := Source.module_name basename :: !removed_modules;
+      remove_file path;
+      files_under build_dir
+      |> List.iter (fun build_path ->
+           if Filename.basename build_path = basename then
+             remove_file build_path)));
+  let configured_suffixes =
+    List.map (Config.package_spec_suffix config) config.package_specs
+  in
+  let relative_under directory path =
+    let prefix = directory ^ Filename.dir_sep in
+    String.sub path (String.length prefix) (String.length path - String.length prefix)
+  in
+  let previously_generated = Hashtbl.create 32 in
+  files_under build_dir
+  |> List.iter (fun path ->
+       generated_output_details path
+       |> Option.iter (fun (_, _, output_path) ->
+            (* A map alone is not enough provenance to delete a public file. *)
+            if path = output_path then
+              Hashtbl.replace previously_generated
+                (relative_under build_dir output_path) ()));
   let expected_outputs = Hashtbl.create (List.length modules * List.length config.package_specs) in
   List.iter (fun module_ -> List.iter (fun spec ->
     Hashtbl.replace expected_outputs (generated_js_path config module_.Source.implementation spec) ()) config.package_specs) modules;
-  let owned_output path =
-    suffixes
-    |> List.find_map (fun suffix ->
-         if Filename.check_suffix path suffix then
-           Some
-             (Filename.basename path |> fun basename ->
-              Filename.chop_suffix basename suffix)
-         else None)
-    |> Option.fold ~none:false
-         ~some:(fun name -> Hashtbl.mem owned_output_names name)
+  let should_remove_output ~build_relative path =
+    generated_output_details path
+    |> Option.fold ~none:false ~some:(fun (name, suffix, output_path) ->
+         Hashtbl.mem owned_output_names name
+         && not (Hashtbl.mem expected_outputs output_path)
+         &&
+         let removed =
+           List.mem (String.capitalize_ascii name) !removed_modules
+         in
+         (removed && List.mem suffix configured_suffixes
+         || (is_local && Hashtbl.mem previously_generated build_relative)))
+  in
+  let removed_outputs = Hashtbl.create 16 in
+  let remove_output ~build_relative path =
+    generated_output_details path
+    |> Option.iter (fun _ -> Hashtbl.replace removed_outputs build_relative ());
+    remove_file path
   in
   config.sources |> List.iter (fun source ->
-    files_under (Filename.concat root source.Config.dir) |> List.iter (fun path ->
-      if List.exists (fun suffix -> Filename.check_suffix path suffix) suffixes then
-        if owned_output path && not (Hashtbl.mem expected_outputs path) then
-          remove_file path));
+      files_under (Filename.concat root source.Config.dir)
+      |> List.iter (fun path ->
+           generated_output_details path
+           |> Option.iter (fun (_, _, output_path) ->
+                let build_relative = relative_under root output_path in
+                if should_remove_output ~build_relative path then
+                  remove_output ~build_relative path)));
   [lib_path "" "es6"; lib_path "" "js"] |> List.iter (fun directory ->
-    files_under (Filename.concat root directory) |> List.iter (fun path ->
-      if List.exists (fun suffix -> Filename.check_suffix path suffix) suffixes then
-        if owned_output path && not (Hashtbl.mem expected_outputs path) then
-          remove_file path));
+      let output_dir = Filename.concat root directory in
+      files_under output_dir
+      |> List.iter (fun path ->
+           generated_output_details path
+           |> Option.iter (fun (_, _, output_path) ->
+                let build_relative = relative_under output_dir output_path in
+                if should_remove_output ~build_relative path then
+                  remove_output ~build_relative path)));
+  files_under build_dir
+  |> List.iter (fun path ->
+       generated_output_details path
+       |> Option.iter (fun (_, _, output_path) ->
+            if
+              Hashtbl.mem removed_outputs
+                (relative_under build_dir output_path)
+            then remove_file path));
   (!removed_modules, !previous_ast_count)
 
 let env_path name fallback =
@@ -568,7 +643,7 @@ let package_output (config : Config.t) path (spec : Config.package_spec) =
     output_dir
     (Config.package_spec_suffix config spec)
 
-let compile_namespace ~bsc ~runtime ~build_dir ~ocaml_dir ~entry namespace modules =
+let namespace_job ~bsc ~runtime ~build_dir ~ocaml_dir ~entry namespace modules =
   let mlmap = Filename.concat build_dir (namespace ^ ".mlmap") in
   let channel = open_out_bin mlmap in
   Fun.protect ~finally:(fun () -> close_out_noerr channel)
@@ -579,15 +654,32 @@ let compile_namespace ~bsc ~runtime ~build_dir ~ocaml_dir ~entry namespace modul
       |> List.map (fun module_ -> module_.Source.name)
       |> List.sort String.compare
       |> List.iter (fun name -> output_string channel name; output_char channel '\n'));
-  let result =
-    Process.run ~cwd:build_dir bsc
-      ["-runtime-path"; runtime; "-w"; "-49"; "-color"; "always";
-       "-no-alias-deps"; Filename.basename mlmap]
-  in
-  if not (Process.succeeded result) then report_failure "Compiling namespace" namespace result;
-  copy_file_if_changed (Filename.concat build_dir (namespace ^ ".cmi"))
-    (Filename.concat ocaml_dir (namespace ^ ".cmi"));
-  copy_file mlmap (Filename.concat ocaml_dir (namespace ^ ".mlmap"))
+  ( Process.
+      {
+        program = bsc;
+        args =
+          [
+            "-runtime-path";
+            runtime;
+            "-w";
+            "-49";
+            "-color";
+            "always";
+            "-no-alias-deps";
+            Filename.basename mlmap;
+          ];
+        cwd = build_dir;
+      },
+    fun result ->
+      if not (Process.succeeded result) then
+        report_failure "Compiling namespace" namespace result;
+      copy_file_if_changed (Filename.concat build_dir (namespace ^ ".cmi"))
+        (Filename.concat ocaml_dir (namespace ^ ".cmi"));
+      copy_file (Filename.concat build_dir (namespace ^ ".cmj"))
+        (Filename.concat ocaml_dir (namespace ^ ".cmj"));
+      copy_file (Filename.concat build_dir (namespace ^ ".cmt"))
+        (Filename.concat ocaml_dir (namespace ^ ".cmt"));
+      copy_file mlmap (Filename.concat ocaml_dir (namespace ^ ".mlmap")) )
 
 let path_is_within ~root path =
   let root = Unix.realpath root in
@@ -681,15 +773,12 @@ let compile_job ~bsc ~runtime ~build_dir ~watch ~(config : Config.t) ~dependency
   Process.{program = bsc; args; cwd = build_dir}, (module_, is_interface, path)
 
 let publish_compiled ~build_dir ~ocaml_dir ~watch ~watch_output_paths ~is_local
-    ~(config : Config.t) (module_, is_interface, path) result =
-  if not (Process.succeeded result) then report_failure "Compiling" path result;
+    ~(config : Config.t) (_module, is_interface, path) result =
   let stderr =
     if is_local then result.Process.stderr
     else retain_critical_external_warnings result.stderr
   in
-  if stderr <> "" then append_compiler_log config.root stderr;
-  if stderr <> "" then prerr_string stderr;
-  let basename = Source.compiler_basename config module_.Source.name in
+  let basename = Source.compiler_asset_basename config path in
   let artifact_dir = Filename.concat build_dir (Filename.dirname path) in
   let extensions = if is_interface then ["cmi"; "cmti"] else ["cmi"; "cmj"; "cmt"] in
   List.iter
@@ -729,35 +818,7 @@ let publish_compiled ~build_dir ~ocaml_dir ~watch ~watch_output_paths ~is_local
               then Unix.rename generated (generated ^ ".rewatch-pending"))
             [output; output ^ ".map"])
         config.package_specs);
-  stderr <> ""
-
-let compile_batch ~bsc ~runtime ~build_dir ~ocaml_dir ~watch ~(config : Config.t)
-    ~dependency_dirs_for ~watch_outputs ~watch_output_paths ~is_local jobs =
-  List.iter (fun (_, is_interface, path) ->
-    if not is_interface then
-      List.iter (fun spec ->
-        let output = generated_js_path config path spec in
-        let dirty_ast = Filename.concat build_dir (Source.ast_path path) in
-        ensure_dir (Filename.dirname output);
-        if watch then (
-          prepare_watch_output watch_outputs watch_output_paths ~dirty_ast output;
-          prepare_watch_output watch_outputs watch_output_paths ~dirty_ast
-            (output ^ ".map")))
-        config.package_specs) jobs;
-  let prepared = List.map (fun (module_, is_interface, path) ->
-    compile_job ~bsc ~runtime ~build_dir ~watch ~config
-      ~dependency_dirs:(dependency_dirs_for module_)
-      module_ ~is_interface path) jobs in
-  let results = Process.run_parallel (List.map fst prepared) in
-  List.map2
-    (fun (_, ((_, _, path) as info)) result ->
-      if
-        publish_compiled ~build_dir ~ocaml_dir ~watch ~watch_output_paths
-          ~is_local ~config info result
-      then Some path
-      else None)
-    prepared results
-  |> List.filter_map Fun.id
+  stderr
 
 let rec remove_tree path =
   if Sys.file_exists path then
@@ -893,6 +954,38 @@ let compiler_args path =
     ("parser_args", `List (List.map (fun value -> `String value) parser_args));
   ])
 
+type compile_phase =
+  [ `Start | `Interface of string | `Implementation of string | `Done ]
+
+type compile_message =
+  | Compile_warning of string * string
+  | Compile_failure of string * string
+
+type scheduled_module = {
+  key: string;
+  dependencies: string list;
+  source: Source.module_;
+  is_dirty: unit -> bool;
+  prepare: unit -> unit;
+  compile: is_interface:bool -> string -> Process.job;
+  publish: is_interface:bool -> string -> Process.result -> string;
+  package_root: string;
+  is_local: bool;
+  mark_warning: string -> unit;
+  messages: compile_message list ref;
+  phase: compile_phase ref;
+}
+
+type graph_package = {
+  graph_root: string;
+  graph_config: Config.t;
+  graph_compile_config: Config.t;
+  graph_build_dir: string;
+  graph_ocaml_dir: string;
+  graph_dependencies: Config.dependency list;
+  graph_modules: Source.module_ list;
+}
+
 type build_stats = {
   mutable cleaned: int;
   mutable previous_asts: int;
@@ -903,11 +996,19 @@ type build_stats = {
   removed_modules: (string, unit) Hashtbl.t;
   forced_parse_paths: (string, unit) Hashtbl.t;
   preparse_stderr: (string, string) Hashtbl.t;
+  preparse_results: (string, Process.result) Hashtbl.t;
   blocked_modules: (string, unit) Hashtbl.t;
   active_features: (string, string list option) Hashtbl.t;
   initialized_logs: (string, unit) Hashtbl.t;
   watch_outputs: (string * string * string) list ref;
   watch_output_paths: (string, unit) Hashtbl.t;
+  global_dependencies: (string, string list) Hashtbl.t;
+  global_raw_dependencies: (string, string list) Hashtbl.t;
+  graph_packages: (string, graph_package) Hashtbl.t;
+  cleanup_results: (string, string list * int) Hashtbl.t;
+  namespace_jobs: (Process.job * (Process.result -> unit)) list ref;
+  scheduled_modules: scheduled_module list ref;
+  compile_cleanup: (unit -> unit) list ref;
 }
 
 let source_is_newer ~source ~artifact =
@@ -983,6 +1084,15 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
   in
   let requested_features = Hashtbl.create 32 in
   let unallowed_dependencies = ref [] in
+  let loaded_configs = Hashtbl.create 32 in
+  let load_config root =
+    match Hashtbl.find_opt loaded_configs root with
+    | Some config -> config
+    | None ->
+      let config = Config.load_root root in
+      Hashtbl.add loaded_configs root config;
+      config
+  in
   let add_feature_request root request =
     match Hashtbl.find_opt requested_features root, request with
     | None, request -> Hashtbl.add requested_features root request
@@ -999,7 +1109,7 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
       add_feature_request root features;
     if not (Hashtbl.mem collected root) then (
       Hashtbl.add collected root ();
-      let config = Config.load_root root in
+      let config = load_config root in
       let dependencies =
         List.map (fun dependency -> ("dependencies", dependency))
           config.dependencies
@@ -1013,7 +1123,7 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
         (fun (kind, (dependency : Config.dependency)) ->
           match dependency_path root dependency.name with
           | Some directory when Config.exists_in_root directory ->
-            let dependency_config = Config.load_root directory in
+            let dependency_config = load_config (Unix.realpath directory) in
             if
               not
                 (dependent_is_allowed dependency_config.allowed_dependents
@@ -1045,7 +1155,7 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
     (fun root features -> Hashtbl.replace stats.active_features root features)
     requested_features;
   let visited = Hashtbl.create 32 in
-  let nodes = ref [] in
+  let graph_packages = ref [] in
   let rec visit ~folder ~features ~warn_error ~filter ~is_local =
     let root = Unix.realpath folder in
     if not (Hashtbl.mem visited root) then (
@@ -1055,7 +1165,7 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
         | Some features -> features
         | None -> features
       in
-      let config = Config.load_root root in
+      let config = load_config root in
       let config =
         match warn_error with
         | None -> config
@@ -1078,77 +1188,143 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
         dependencies;
       let modules =
         Source.discover config ~prod ~features ~filter
-          ~on_missing:(fun _ -> ())
+          ~on_missing:(fun path ->
+            if is_local then Printf.eprintf "Could not read folder %s\n%!" path)
+          ~on_orphan:(fun path ->
+            Printf.eprintf
+              "\027[2K\r No implementation file found for interface file (skipping): %s\n%!"
+              path)
           ~display_root:root_config.root
       in
       let compile_config = with_root_options config root_config in
       let build_dir = lib_path root "bs" in
       let ocaml_dir = lib_path root "ocaml" in
       ensure_dir build_dir;
-      let dirty_paths =
-        modules
-        |> List.concat_map (fun module_ ->
-             module_.Source.implementation
-             :: Option.to_list module_.Source.interface)
-        |> List.filter (fun path ->
-             source_is_newer ~source:(Filename.concat root path)
-               ~artifact:(Filename.concat build_dir (Source.ast_path path)))
+      let package =
+        {
+          graph_root = root;
+          graph_config = config;
+          graph_compile_config = compile_config;
+          graph_build_dir = build_dir;
+          graph_ocaml_dir = ocaml_dir;
+          graph_dependencies = dependencies;
+          graph_modules = modules;
+        }
       in
-      let results =
-        Process.run_parallel
-          (List.map
-             (fun path ->
-               fst (parse_job ~bsc ~build_dir ~config:compile_config path))
-             dirty_paths)
+      Hashtbl.replace stats.graph_packages root package;
+      graph_packages := package :: !graph_packages)
+  in
+  visit ~folder:root_config.root ~features ~warn_error ~filter ~is_local:true;
+  List.iter
+    (fun package ->
+      let removed_modules, previous_ast_count =
+        cleanup_stale ~root:package.graph_root
+          ~ocaml_dir:package.graph_ocaml_dir
+          ~is_local:
+            (is_local_dependency ~workspace:root_config.root package.graph_root)
+          package.graph_compile_config package.graph_modules
       in
-      List.iter2
-        (fun path result ->
-          if Process.succeeded result then (
-            let absolute_path = Filename.concat root path in
-            Hashtbl.replace stats.forced_parse_paths
-              absolute_path ();
-            if result.stderr <> "" then
-              Hashtbl.replace stats.preparse_stderr absolute_path
-                result.stderr))
-        dirty_paths results;
+      Hashtbl.replace stats.cleanup_results package.graph_root
+        (removed_modules, previous_ast_count);
+      List.iter
+        (fun module_name -> Hashtbl.replace stats.removed_modules module_name ())
+        removed_modules)
+    !graph_packages;
+  let parse_entries =
+    !graph_packages
+    |> List.concat_map (fun package ->
+         package.graph_modules
+         |> List.concat_map (fun module_ ->
+              module_.Source.implementation
+              :: Option.to_list module_.Source.interface)
+         |> List.filter_map (fun path ->
+              let artifact =
+                Filename.concat package.graph_build_dir (Source.ast_path path)
+              in
+              if
+                source_is_newer
+                  ~source:(Filename.concat package.graph_root path)
+                  ~artifact
+              then Some (package, path)
+              else None))
+  in
+  let parse_results =
+    parse_entries
+    |> List.map (fun (package, path) ->
+         fst
+           (parse_job ~bsc ~build_dir:package.graph_build_dir
+              ~config:package.graph_compile_config path))
+    |> Process.run_parallel
+  in
+  let failed_parse_paths = Hashtbl.create 8 in
+  List.iter2
+    (fun (package, path) result ->
+      let absolute_path = Filename.concat package.graph_root path in
+      Hashtbl.replace stats.forced_parse_paths absolute_path ();
+      Hashtbl.replace stats.preparse_results absolute_path result;
+      if Process.succeeded result then (
+        if result.stderr <> "" then
+          Hashtbl.replace stats.preparse_stderr absolute_path result.stderr)
+      else Hashtbl.replace failed_parse_paths absolute_path ())
+    parse_entries parse_results;
+  let nodes = ref [] in
+  List.iter
+    (fun package ->
       List.iter
         (fun module_ ->
           let intf_dependencies =
             match module_.Source.interface with
             | None -> []
-            | Some path -> ast_dependencies ~build_dir (Source.ast_path path)
+            | Some path ->
+              if
+                Hashtbl.mem failed_parse_paths
+                  (Filename.concat package.graph_root path)
+              then []
+              else
+                ast_dependencies ~build_dir:package.graph_build_dir
+                  (Source.ast_path path)
           in
           let raw_dependencies =
             List.sort_uniq String.compare
-              (ast_dependencies ~build_dir
-                 (Source.ast_path module_.Source.implementation)
+              ((if
+                  Hashtbl.mem failed_parse_paths
+                    (Filename.concat package.graph_root
+                       module_.Source.implementation)
+                then []
+                else
+                  ast_dependencies ~build_dir:package.graph_build_dir
+                    (Source.ast_path module_.Source.implementation))
               @ intf_dependencies)
           in
           let compiler_base =
-            global_module_key compile_config module_.Source.name
+            global_module_key package.graph_compile_config module_.Source.name
           in
-          let cmt = Filename.concat ocaml_dir (compiler_base ^ ".cmt") in
+          let cmt =
+            Filename.concat package.graph_ocaml_dir (compiler_base ^ ".cmt")
+          in
           if not (Sys.file_exists cmt) then
             Hashtbl.replace stats.forced_parse_paths
-              (Filename.concat root module_.Source.implementation) ();
+              (Filename.concat package.graph_root module_.Source.implementation)
+              ();
+          Hashtbl.replace stats.global_raw_dependencies compiler_base
+            raw_dependencies;
           nodes :=
             {
               key = compiler_base;
-              package_name = config.name;
-              package_root = root;
+              package_name = package.graph_config.name;
+              package_root = package.graph_root;
               source_path = module_.Source.implementation;
-              namespace = compile_config.namespace;
-              namespace_entry = compile_config.namespace_entry;
+              namespace = package.graph_compile_config.namespace;
+              namespace_entry = package.graph_compile_config.namespace_entry;
               allowed_dependencies =
                 List.map
                   (fun (dependency : Config.dependency) -> dependency.name)
-                  dependencies;
+                  package.graph_dependencies;
               raw_dependencies;
             }
             :: !nodes)
-        modules)
-  in
-  visit ~folder:root_config.root ~features ~warn_error ~filter ~is_local:true;
+        package.graph_modules)
+    !graph_packages;
   let nodes =
     List.sort (fun first second -> String.compare first.key second.key) !nodes
   in
@@ -1201,6 +1377,10 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
           |> List.sort_uniq String.compare ))
       nodes
   in
+  List.iter
+    (fun (node, dependencies) ->
+      Hashtbl.replace stats.global_dependencies node.key dependencies)
+    graph_nodes;
   try
     ignore
       (Graph.topological_sort graph_nodes
@@ -1224,10 +1404,15 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder ~prod ~features
     | None -> features
   in
   Hashtbl.replace seen root ();
-  let config = Config.load_root root in
-  let config = match warn_error with
-    | None -> config
-    | Some value -> {config with warning_flags = ["-warn-error"; value]}
+  let prepared = Hashtbl.find_opt stats.graph_packages root in
+  let config =
+    match prepared with
+    | Some package -> package.graph_config
+    | None ->
+      let config = Config.load_root root in
+      (match warn_error with
+      | None -> config
+      | Some value -> {config with warning_flags = ["-warn-error"; value]})
   in
   if is_local then
     stats.diagnostics <-
@@ -1285,25 +1470,42 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder ~prod ~features
     env_path "RESCRIPT_RUNTIME"
       (path_of_parts repository_root ["packages"; "@rescript"; "runtime"])
   in
-  let build_dir = lib_path root "bs" in
-  let ocaml_dir = lib_path root "ocaml" in
+  let build_dir =
+    match prepared with
+    | Some package -> package.graph_build_dir
+    | None -> lib_path root "bs"
+  in
+  let ocaml_dir =
+    match prepared with
+    | Some package -> package.graph_ocaml_dir
+    | None -> lib_path root "ocaml"
+  in
   ensure_dir build_dir;
   ensure_dir ocaml_dir;
   initialize_compiler_log root;
   Hashtbl.replace stats.initialized_logs root ();
   let modules =
-    Source.discover config ~prod ~features ~filter
-      ~display_root:root_config.root
-      ~on_missing:(fun path ->
-        if is_local then Printf.eprintf "Could not read folder %s\n%!" path)
-      ~on_orphan:(fun path ->
-        Printf.eprintf
-          "\027[2K\r No implementation file found for interface file (skipping): %s\n%!"
-          path)
+    match prepared with
+    | Some package -> package.graph_modules
+    | None ->
+      Source.discover config ~prod ~features ~filter
+        ~display_root:root_config.root
+        ~on_missing:(fun path ->
+          if is_local then Printf.eprintf "Could not read folder %s\n%!" path)
+        ~on_orphan:(fun path ->
+          Printf.eprintf
+            "\027[2K\r No implementation file found for interface file (skipping): %s\n%!"
+            path)
   in
-  let config = with_root_options config root_config in
+  let config =
+    match prepared with
+    | Some package -> package.graph_compile_config
+    | None -> with_root_options config root_config
+  in
   let removed_modules, previous_ast_count =
-    cleanup_stale ~root ~ocaml_dir config modules
+    match Hashtbl.find_opt stats.cleanup_results root with
+    | Some result -> result
+    | None -> cleanup_stale ~root ~ocaml_dir ~is_local config modules
   in
   stats.cleaned <- stats.cleaned + List.length removed_modules;
   List.iter
@@ -1317,12 +1519,15 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder ~prod ~features
         | Some _ -> "@" ^ namespace
         | None -> namespace
       in
-      compile_namespace ~bsc ~runtime ~build_dir ~ocaml_dir
-        ~entry:config.namespace_entry namespace modules)
+      let job =
+        namespace_job ~bsc ~runtime ~build_dir ~ocaml_dir
+          ~entry:config.namespace_entry namespace modules
+      in
+      stats.namespace_jobs := job :: !(stats.namespace_jobs))
     config.namespace;
   let names = Hashtbl.create (List.length modules) in
   List.iter
-    (fun module_ -> Hashtbl.replace names module_.Source.name ())
+    (fun module_ -> Hashtbl.replace names module_.Source.name module_)
     modules;
   let parse_paths =
     List.concat_map (fun module_ ->
@@ -1331,10 +1536,7 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder ~prod ~features
   let dirty_parse_paths =
     parse_paths
     |> List.filter (fun path ->
-         let source_base =
-           path |> Filename.basename |> Filename.remove_extension
-         in
-         List.mem source_base removed_modules
+         List.mem (Source.module_name path) removed_modules
          || Hashtbl.mem stats.forced_parse_paths (Filename.concat root path)
          || source_is_newer ~source:(Filename.concat root path)
               ~artifact:(Filename.concat build_dir (Source.ast_path path)))
@@ -1354,7 +1556,10 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder ~prod ~features
     @ (dirty_parse_paths
       |> List.filter (fun path ->
            Hashtbl.mem stats.forced_parse_paths (Filename.concat root path))
-      |> List.map (fun path -> (path, None)))
+      |> List.map (fun path ->
+           ( path,
+             Hashtbl.find_opt stats.preparse_results
+               (Filename.concat root path) )))
   in
   let warning_asts = ref [] in
   List.iter (fun (path, result) ->
@@ -1386,21 +1591,26 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder ~prod ~features
   let parse_dirty_modules = Hashtbl.create (List.length modules) in
   List.iter
     (fun module_ ->
-      let impl_ast = Source.ast_path module_.Source.implementation in
-      let impl_deps = ast_dependencies ~build_dir impl_ast in
-      let intf_deps =
-        match module_.interface with
-        | None -> []
-        | Some path -> ast_dependencies ~build_dir (Source.ast_path path)
+      let global_key = global_module_key config module_.Source.name in
+      let dependencies =
+        match Hashtbl.find_opt stats.global_raw_dependencies global_key with
+        | Some dependencies -> dependencies
+        | None ->
+          let impl_ast = Source.ast_path module_.Source.implementation in
+          let impl_deps = ast_dependencies ~build_dir impl_ast in
+          let intf_deps =
+            match module_.interface with
+            | None -> []
+            | Some path -> ast_dependencies ~build_dir (Source.ast_path path)
+          in
+          List.sort_uniq String.compare (impl_deps @ intf_deps)
       in
-      let dependencies = List.sort_uniq String.compare (impl_deps @ intf_deps) in
       Hashtbl.replace raw_dependencies module_.Source.name dependencies;
       let paths =
         module_.Source.implementation :: Option.to_list module_.Source.interface
       in
       if List.exists (fun path -> List.mem path dirty_parse_paths) paths then
         Hashtbl.replace parse_dirty_modules module_.Source.name ();
-      let global_key = global_module_key config module_.Source.name in
       module_.deps <-
         if Hashtbl.mem stats.blocked_modules global_key then []
         else
@@ -1409,41 +1619,17 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder ~prod ~features
             dependencies)
     modules;
   stats.parsed <- stats.parsed + Hashtbl.length parse_dirty_modules;
-  let ordered =
-    try
-      Graph.topological_sort modules
-        ~name:(fun module_ -> module_.Source.name)
-        ~deps:(fun module_ -> module_.Source.deps)
-    with Graph.Cycle names ->
-      raise
-        (Error
-           ("Can't continue... Found a circular dependency in your code: "
-           ^ String.concat " -> " names))
-  in
-  let depths = Hashtbl.create (List.length ordered) in
-  let depth module_ =
-    match Hashtbl.find_opt depths module_.Source.name with Some value -> value | None -> 0
-  in
-  List.iter (fun module_ ->
-    let value = 1 + List.fold_left (fun highest dep ->
-      match Hashtbl.find_opt depths dep with Some value -> max highest value | None -> highest)
-      0 module_.Source.deps in
-    Hashtbl.replace depths module_.Source.name value) ordered;
-  let levels =
-    ordered |> List.fold_left (fun levels module_ ->
-      let level = depth module_ in
-      let existing = match List.assoc_opt level levels with Some xs -> xs | None -> [] in
-      (level, module_ :: existing) :: List.remove_assoc level levels) []
-    |> List.sort (fun (a, _) (b, _) -> compare a b)
-  in
   let compile_warning_modules = Hashtbl.create 8 in
   let module_is_dirty module_ =
     let global_key = global_module_key config module_.Source.name in
-    let compiler_base = Source.compiler_basename config module_.Source.name in
+    let compiler_base =
+      Source.compiler_asset_basename config module_.Source.implementation
+    in
     let cmt = Filename.concat ocaml_dir (compiler_base ^ ".cmt") in
-    let source_base =
-      module_.Source.implementation |> Filename.basename
-      |> Filename.remove_extension
+    let module_name = Source.module_name module_.Source.implementation in
+    let ast =
+      Filename.concat build_dir
+        (Source.ast_path module_.Source.implementation)
     in
     let outputs_exist =
       List.for_all
@@ -1459,10 +1645,12 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder ~prod ~features
     let dependency_is_newer dependency =
       let artifact =
         match Hashtbl.find_opt names dependency with
-        | Some () ->
+        | Some dependency_module ->
           Some
             (Filename.concat ocaml_dir
-               (Source.compiler_basename config dependency ^ ".cmi"))
+               (Source.compiler_asset_basename config
+                  dependency_module.Source.implementation
+               ^ ".cmi"))
         | None -> dependency_artifact dependency_dirs dependency
       in
       match artifact, modification_time cmt with
@@ -1475,7 +1663,11 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder ~prod ~features
     not (Hashtbl.mem stats.blocked_modules global_key)
     &&
     (Hashtbl.mem parse_dirty_modules module_.Source.name
-    || List.mem source_base removed_modules
+    || List.mem module_name removed_modules
+    || (match modification_time ast, modification_time cmt with
+       | Some ast_time, Some cmt_time -> ast_time >= cmt_time
+       | Some _, None -> true
+       | None, _ -> false)
     || not (Sys.file_exists cmt && outputs_exist)
     || List.exists (fun dependency -> List.mem dependency removed_modules)
          dependencies
@@ -1484,54 +1676,204 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder ~prod ~features
          dependencies
     || List.exists dependency_is_newer dependencies)
   in
-  List.iter (fun (_, modules) ->
-    let modules = List.rev modules in
-    let dirty_modules = List.filter module_is_dirty modules in
-    stats.compiled <- stats.compiled + List.length dirty_modules;
-    let interface_warning_paths =
-      compile_batch ~bsc ~runtime ~build_dir ~ocaml_dir ~watch ~config
-        ~dependency_dirs_for ~watch_outputs:stats.watch_outputs
-        ~watch_output_paths:stats.watch_output_paths ~is_local
-        (List.filter_map
-           (fun module_ ->
-             Option.map (fun path -> (module_, true, path)) module_.Source.interface)
-           dirty_modules)
-    in
-    let implementation_warning_paths =
-      compile_batch ~bsc ~runtime ~build_dir ~ocaml_dir ~watch ~config
-        ~dependency_dirs_for ~watch_outputs:stats.watch_outputs
-        ~watch_output_paths:stats.watch_output_paths ~is_local
-        (List.map
-           (fun module_ -> (module_, false, module_.Source.implementation))
-           dirty_modules)
-    in
-    let warning_paths = interface_warning_paths @ implementation_warning_paths in
-    if is_local then
-      List.iter
-        (fun path ->
-          Hashtbl.replace compile_warning_modules (Source.module_name path) ())
-        warning_paths) levels;
-  Hashtbl.iter
-    (fun module_name () ->
-      match List.find_opt (fun module_ -> module_.Source.name = module_name) modules with
-      | None -> ()
-      | Some module_ ->
-        let paths =
-          module_.Source.implementation :: Option.to_list module_.Source.interface
+  let prepare_outputs module_ =
+    let path = module_.Source.implementation in
+    List.iter
+      (fun spec ->
+        let output = generated_js_path config path spec in
+        let dirty_ast = Filename.concat build_dir (Source.ast_path path) in
+        ensure_dir (Filename.dirname output);
+        if watch then (
+          prepare_watch_output stats.watch_outputs stats.watch_output_paths
+            ~dirty_ast output;
+          prepare_watch_output stats.watch_outputs stats.watch_output_paths
+            ~dirty_ast (output ^ ".map")))
+      config.package_specs
+  in
+  let compile_process module_ ~is_interface path =
+    fst
+      (compile_job ~bsc ~runtime ~build_dir ~watch ~config
+         ~dependency_dirs:(dependency_dirs_for module_)
+         module_ ~is_interface path)
+  in
+  let publish module_ ~is_interface path result =
+    publish_compiled ~build_dir ~ocaml_dir ~watch
+      ~watch_output_paths:stats.watch_output_paths ~is_local ~config
+      (module_, is_interface, path) result
+  in
+  let scheduled =
+    List.map
+      (fun module_ ->
+        let key = global_module_key config module_.Source.name in
+        let dependencies =
+          if Hashtbl.mem stats.blocked_modules key then []
+          else
+            Hashtbl.find_opt stats.global_dependencies key
+            |> Option.value ~default:[]
         in
-        List.iter
-          (fun path ->
-            let ast = Source.ast_path path in
-            remove_file (Filename.concat build_dir ast);
-            remove_file (Filename.concat ocaml_dir (Filename.basename ast)))
-          paths)
-    compile_warning_modules;
-  List.iter
-    (fun ast ->
-      remove_file (Filename.concat build_dir ast);
-      remove_file (Filename.concat ocaml_dir (Filename.basename ast)))
-    !warning_asts;
+        {
+          key;
+          dependencies;
+          source = module_;
+          is_dirty = (fun () -> module_is_dirty module_);
+          prepare = (fun () -> prepare_outputs module_);
+          compile =
+            (fun ~is_interface path ->
+              compile_process module_ ~is_interface path);
+          publish =
+            (fun ~is_interface path result ->
+              publish module_ ~is_interface path result);
+          package_root = config.root;
+          is_local;
+          mark_warning =
+            (fun path ->
+              Hashtbl.replace compile_warning_modules
+                (Source.module_name path) ());
+          messages = ref [];
+          phase = ref `Start;
+        })
+      modules
+  in
+  stats.scheduled_modules := scheduled @ !(stats.scheduled_modules);
+  stats.compile_cleanup :=
+    (fun () ->
+      Hashtbl.iter
+        (fun module_name () ->
+          match
+            List.find_opt
+              (fun module_ -> module_.Source.name = module_name)
+              modules
+          with
+          | None -> ()
+          | Some module_ ->
+            let paths =
+              module_.Source.implementation
+              :: Option.to_list module_.Source.interface
+            in
+            List.iter
+              (fun path ->
+                let ast = Source.ast_path path in
+                remove_file (Filename.concat build_dir ast);
+                remove_file
+                  (Filename.concat ocaml_dir (Filename.basename ast)))
+              paths)
+        compile_warning_modules;
+      List.iter
+        (fun ast ->
+          remove_file (Filename.concat build_dir ast);
+          remove_file (Filename.concat ocaml_dir (Filename.basename ast)))
+        !warning_asts)
+    :: !(stats.compile_cleanup);
   ()
+
+let run_scheduled_modules stats =
+  let works =
+    !(stats.scheduled_modules)
+    |> List.map (fun (scheduled : scheduled_module) ->
+         Process.
+           {
+             key = scheduled.key;
+             dependencies = scheduled.dependencies;
+             value = scheduled;
+           })
+  in
+  Fun.protect
+    ~finally:(fun () ->
+      List.iter (fun cleanup -> cleanup ()) !(stats.compile_cleanup))
+    (fun () ->
+      let record_result scheduled ~is_interface path result =
+        let message =
+          if Process.succeeded result then
+            try
+              match scheduled.publish ~is_interface path result with
+              | "" -> None
+              | warning -> Some (Compile_warning (path, warning))
+            with Build_failure output ->
+              Some (Compile_failure (path, output))
+          else
+            Some
+              (Compile_failure
+                 (path, result.Process.stderr ^ result.Process.stdout))
+        in
+        Option.iter
+          (fun message ->
+            scheduled.messages := message :: !(scheduled.messages))
+          message
+      in
+      let scheduler_failed =
+        try
+          Process.run_dependency_graph works
+            ~is_fatal:(function Scheduled_failure _ -> false | _ -> true)
+            ~next:(fun scheduled result ->
+              match result, !(scheduled.phase) with
+              | None, `Start ->
+                if scheduled.is_dirty () then (
+                  stats.compiled <- stats.compiled + 1;
+                  scheduled.prepare ();
+                  match scheduled.source.Source.interface with
+                  | Some path ->
+                    scheduled.phase := `Interface path;
+                    Some (scheduled.compile ~is_interface:true path)
+                  | None ->
+                    let path = scheduled.source.Source.implementation in
+                    scheduled.phase := `Implementation path;
+                    Some (scheduled.compile ~is_interface:false path))
+                else (
+                  scheduled.phase := `Done;
+                  None)
+              | Some result, `Interface path ->
+                record_result scheduled ~is_interface:true path result;
+                let path = scheduled.source.Source.implementation in
+                scheduled.phase := `Implementation path;
+                Some (scheduled.compile ~is_interface:false path)
+              | Some result, `Implementation path ->
+                record_result scheduled ~is_interface:false path result;
+                scheduled.phase := `Done;
+                if
+                  List.exists
+                    (function Compile_failure _ -> true | _ -> false)
+                    !(scheduled.messages)
+                then raise (Scheduled_failure scheduled.key)
+                else None
+              | None, (`Interface _ | `Implementation _ | `Done)
+              | Some _, (`Start | `Done) ->
+                raise (Error "invalid compiler scheduler state"));
+          false
+        with Scheduled_failure _ -> true
+      in
+      let warnings = ref [] in
+      let failures = ref [] in
+      !(stats.scheduled_modules)
+      |> List.sort (fun (first : scheduled_module) second ->
+           String.compare first.key second.key)
+      |> List.iter (fun (scheduled : scheduled_module) ->
+           !(scheduled.messages) |> List.rev
+           |> List.iter (function
+                | Compile_warning (path, output) ->
+                  warnings := (scheduled, path, output) :: !warnings
+                | Compile_failure (_, output) ->
+                  failures := (scheduled, output) :: !failures));
+      List.rev !warnings
+      |> List.iter (fun ((scheduled : scheduled_module), path, output) ->
+           append_compiler_log scheduled.package_root output;
+           prerr_string output;
+           if scheduled.is_local then scheduled.mark_warning path);
+      let failures = List.rev !failures in
+      List.iter
+        (fun ((scheduled : scheduled_module), output) ->
+          append_compiler_log scheduled.package_root output)
+        failures;
+      match failures, scheduler_failed with
+      | [], false -> ()
+      | [], true -> raise (Error "compiler scheduler stopped without a diagnostic")
+      | failures, _ ->
+        failures |> List.map snd |> String.concat "" |> fun output ->
+        raise (Build_failure output))
+
+let run_namespace_jobs stats =
+  let jobs = List.rev !(stats.namespace_jobs) in
+  let results = Process.run_parallel (List.map fst jobs) in
+  List.iter2 (fun (_, finish) result -> finish result) jobs results
 
 let run ~seen ~folder ~prod ~features ~warn_error ~watch ~after_build ~filter =
   let root = Unix.realpath folder in
@@ -1548,11 +1890,19 @@ let run ~seen ~folder ~prod ~features ~warn_error ~watch ~after_build ~filter =
       removed_modules = Hashtbl.create 16;
       forced_parse_paths = Hashtbl.create 16;
       preparse_stderr = Hashtbl.create 16;
+      preparse_results = Hashtbl.create 16;
       blocked_modules = Hashtbl.create 16;
       active_features = Hashtbl.create 16;
       initialized_logs = Hashtbl.create 16;
       watch_outputs = ref [];
       watch_output_paths = Hashtbl.create 16;
+      global_dependencies = Hashtbl.create 64;
+      global_raw_dependencies = Hashtbl.create 64;
+      graph_packages = Hashtbl.create 32;
+      cleanup_results = Hashtbl.create 32;
+      namespace_jobs = ref [];
+      scheduled_modules = ref [];
+      compile_cleanup = ref [];
     }
   in
   List.iter (fun path -> Hashtbl.replace visited (Unix.realpath path) ()) seen;
@@ -1644,6 +1994,11 @@ let run ~seen ~folder ~prod ~features ~warn_error ~watch ~after_build ~filter =
       cycle;
     run_internal ~root_config ~seen:visited ~folder:root ~prod ~features
       ~warn_error ~watch ~filter ~is_local:true ~stats;
+    (try
+       run_namespace_jobs stats;
+       run_scheduled_modules stats
+     with Build_failure output ->
+       if Option.is_none stats.failure then stats.failure <- Some output);
     (match stats.failure, cycle with
     | Some output, _ -> report_failure output
     | None, Some (names, _, by_key) ->

@@ -62,6 +62,15 @@ let () =
     | _ -> ()
 
 let () =
+  check
+    (Build.generated_output_owner "Foo.bs.js" = Some "Foo")
+    "compound .bs.js outputs retain their module owner";
+  check
+    (Build.generated_output_owner "Foo.res.js" = Some "Foo")
+    "compound .res.js outputs retain their module owner";
+  check
+    (Build.generated_output_owner "Foo.res.js.map" = Some "Foo")
+    "compound source maps retain their module owner";
   let test_executable = Unix.realpath Sys.executable_name in
   let process_job args =
     {Process.program = test_executable; args; cwd = Sys.getcwd ()}
@@ -88,6 +97,57 @@ let () =
     with Process.Error _ -> true
   in
   check invalid_parallel_bound_rejected "parallel subprocess bound is validated";
+  let graph_completion_order = ref [] in
+  let graph_completed = Hashtbl.create 3 in
+  let graph_work key dependencies =
+    Process.{key; dependencies; value = key}
+  in
+  Process.run_dependency_graph ~max_jobs:1
+    [graph_work "c" []; graph_work "b" ["a"]; graph_work "a" []]
+    ~next:(fun key result ->
+      match result with
+      | None ->
+        if key = "b" then
+          check (Hashtbl.mem graph_completed "a")
+            "dependency work starts only after its prerequisite completes";
+        Some
+          (process_job ["--process-result"; key; ""; "0"])
+      | Some result ->
+        check
+          (Process.succeeded result && result.stdout = key)
+          "dependency scheduler collects subprocess output";
+        Hashtbl.add graph_completed key ();
+        graph_completion_order := key :: !graph_completion_order;
+        None);
+  check
+    (List.rev !graph_completion_order = ["a"; "b"; "c"])
+    "dependency scheduler prioritizes the longest ready path";
+  let graph_cycle_rejected =
+    try
+      Process.run_dependency_graph
+        [graph_work "a" ["b"]; graph_work "b" ["a"]]
+        ~next:(fun _ _ -> None);
+      false
+    with Process.Error _ -> true
+  in
+  check graph_cycle_rejected "subprocess dependency cycles are rejected";
+  let drained_failures = ref 0 in
+  let deterministic_failure =
+    try
+      Process.run_dependency_graph ~max_jobs:2
+        [graph_work "z" []; graph_work "a" []]
+        ~next:(fun key result ->
+          match result with
+          | None -> Some (process_job ["--process-result"; ""; ""; "1"])
+          | Some _ ->
+            incr drained_failures;
+            raise (Failure key));
+      None
+    with Failure key -> Some key
+  in
+  check
+    (!drained_failures = 2 && deterministic_failure = Some "a")
+    "dependency scheduler drains active work and reports errors deterministically";
   let path_root = Filename.temp_file "rewatch-ocaml-path-" "" in
   Sys.remove path_root;
   Unix.mkdir path_root 0o755;
@@ -318,6 +378,13 @@ let () =
     ~finally:(fun () -> Build.remove_tree config_root)
     (fun () ->
       let config_path = Filename.concat config_root "rescript.json" in
+      write_file config_path
+        {|{"name":"file-casing","namespace":"FileCasing"}|};
+      let file_casing_config = Config.load config_path in
+      check
+        (Source.compiler_asset_basename file_casing_config "src/produce.res"
+        = "produce-FileCasing")
+        "compiler artifact basename preserves source filename case";
       write_file config_path
         {|{
           "name": "restricted",
