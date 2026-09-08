@@ -454,6 +454,10 @@ rerun it for the final maintainability review alongside maximum module size.
   longer honored, matching Rust rather than silently omitting source files;
   `jsx.v3-dependencies` is decoded as a string array even though its value is
   not otherwise used by this build system.
+- Configuration path canonicalization and file opening now translate both
+  `Sys_error` and `Unix_error` into path-bearing `Config.Error` diagnostics.
+  Missing paths and directory-valued config paths are tested, preventing raw
+  OCaml exception rendering on these Rust validation paths.
 - Duplicate keys now follow the reference decoder's two distinct rules:
   typed configuration structs reject repeated known fields, while JSON-map
   backed values retain the last occurrence. Differential acceptance covered

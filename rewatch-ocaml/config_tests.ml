@@ -38,6 +38,23 @@ let () =
     ~finally:(fun () -> Build.remove_tree root)
     (fun () ->
       let path = Filename.concat root "rescript.json" in
+      let missing_path = Filename.concat root "missing.json" in
+      check
+        (try
+           ignore (Config.load missing_path);
+           false
+         with Config.Error message ->
+           contains message "Could not read" && contains message missing_path)
+        "missing configuration files produce contextual config errors";
+      let directory_path = Filename.concat root "config-directory" in
+      Unix.mkdir directory_path 0o755;
+      check
+        (try
+           ignore (Config.load directory_path);
+           false
+         with Config.Error message ->
+           contains message "Could not read" && contains message directory_path)
+        "configuration directories produce contextual config errors";
       write_file path
         {|{
           "name": "unknown-fields",
