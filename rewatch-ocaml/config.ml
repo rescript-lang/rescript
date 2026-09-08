@@ -246,6 +246,7 @@ let supported_fields =
     "namespace";
     "namespace-entry";
     "allowed-dependents";
+    "path";
     "features";
     "ignored-dirs";
     "generators";
@@ -481,6 +482,7 @@ let load path =
       "reanalyze";
       "namespace-entry";
       "allowed-dependents";
+      "path";
     ]
     fields;
   let name =
@@ -488,6 +490,9 @@ let load path =
     | Some value -> string path "name" value
     | None -> fail path "missing required field \"name\""
   in
+  (match member "path" fields with
+  | None | Some (`String _) -> ()
+  | Some _ -> fail path "field \"path\" must be a string");
   let configured_suffix =
     match optional_member "suffix" fields with
     | None -> None

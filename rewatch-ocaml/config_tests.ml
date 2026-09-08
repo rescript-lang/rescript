@@ -142,6 +142,13 @@ let () =
         with Config.Error message -> contains message "jsx.version"
       in
       check rejected "unsupported JSX versions are rejected without panicking";
+      write_file path {|{"name":"internal-path","path":"ignored"}|};
+      let config = Config.load path in
+      check (config.path = Unix.realpath path)
+        "the internal path field accepts a string but uses the actual config path";
+      check
+        (rejects path {|{"name":"internal-path","path":false}|} "path")
+        "the internal path field retains Rust's string schema";
       write_file path
         {|{"name":"flag-whitespace","compiler-flags":["  -w  +A  "]}|};
       let config = Config.load path in

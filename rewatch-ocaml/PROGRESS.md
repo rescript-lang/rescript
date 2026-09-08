@@ -497,7 +497,7 @@ rerun it for the final maintainability review alongside maximum module size.
   longer honored, matching Rust rather than silently omitting source files;
   `jsx.v3-dependencies` is decoded as a string array even though its value is
   not otherwise used by this build system.
-- Configuration schema now has a retained 169-case differential acceptance
+- Configuration schema now has a retained 297-case differential acceptance
   gate. Its 36 source cases compare shorthand and qualified sources, nested
   `subdirs`, nullable optional fields, arbitrary non-`dev` type strings,
   forward-compatible unknown fields, every invalid JSON kind, and duplicate
@@ -508,12 +508,27 @@ rerun it for the final maintainability review alongside maximum module size.
   record the reference implementation's current distinction between duplicate
   typed fields (rejected) and source-map object keys decoded through an
   intermediate JSON map (last value wins). This appears to be an incidental
-  decoder consequence, not an intended configuration contract. For
-  every accepted case the gate also deep-compares Rust and OCaml
+  decoder consequence, not an intended configuration contract. Another 128
+  cases cover JSON roots and names, Rust's user-deserializable internal `path`,
+  warnings, compiler and PPX flags, namespaces, experimental features, and the
+  complete GenType schema. For every shared accepted case the gate also
+  deep-compares Rust and OCaml
   parser/compiler argument arrays. CI runs the table against both promoted
   executables; existing unit and canonical tests cover source inheritance,
   feature closure and cycles, dependency permissions, traversal behavior, and
   post-build execution.
+- Four known configuration divergences are first-class gate expectations:
+  unsupported JSX and empty PPX commands expose Rust panics, namespace entries
+  without a namespace are rejected only by OCaml, and compiler-flag whitespace
+  is normalized only by OCaml. Explicit divergence rows skip argument equality
+  but still assert each implementation's expected outcome; all ordinary
+  accepted rows retain exact comparison. Rust panic expectations require exit
+  status 101, so upstream fixes cannot silently weaken the audit.
+- Rust's internal `Config.path` field is currently user-deserializable: a JSON
+  string is accepted and then replaced by the actual configuration filename,
+  while other JSON kinds are rejected. The OCaml decoder now reproduces that
+  schema without trusting or storing the supplied value. A focused unit test
+  and differential cases retain this otherwise easy-to-miss behavior.
 - Configuration path canonicalization and file opening now translate both
   `Sys_error` and `Unix_error` into path-bearing `Config.Error` diagnostics.
   Missing paths and directory-valued config paths are tested, preventing raw
