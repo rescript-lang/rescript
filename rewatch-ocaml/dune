@@ -32,7 +32,7 @@
   output
   build
   format)
- (libraries unix yojson str spawn cmdliner luv))
+ (libraries unix threads yojson str spawn cmdliner luv))
 
 (executable
  (name rescript_ocaml)

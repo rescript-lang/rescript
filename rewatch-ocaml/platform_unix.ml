@@ -26,6 +26,14 @@ let spawn ~env ~cwd ~program ~args ~stdout ~stderr =
     ~argv:(program :: args) ~stdout ~stderr
     ~setpgid:Spawn.Pgid.new_process_group ()
 
+let create_capture_pipes () =
+  let stdout = Spawn.safe_pipe () in
+  try (stdout, Spawn.safe_pipe ())
+  with exn ->
+    Unix.close (fst stdout);
+    Unix.close (snd stdout);
+    raise exn
+
 let signal_process_tree pid signal =
   try Unix.kill (-pid) signal with Unix.Unix_error _ -> ()
 

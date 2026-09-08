@@ -495,17 +495,35 @@ ratios are intentionally not recorded as a replacement gate result.
 
 The remaining measured gap is therefore orchestration overhead around the same
 external compiler work: process launch/wait/capture, artifact publication, and
-repeated filesystem/configuration work are the main candidates. Capture files
-are opened once in the OS temporary directory and empty captures avoid a second
-open. Pipe-based capture remains the intended final backend so successful builds
-do not create transient files, but it is deferred until the scheduler lifecycle
-is settled because it requires concurrent draining, bounded memory, and reliable
-descriptor/descendant cleanup on Windows as well as Unix.
-Once pipes are in place, the benchmark plan adds a normalized Linux `%file`
-syscall trace for clean, unchanged, and single-edit builds. It will compare
-fixture-local path/operation multisets and repeated accesses, while reporting
-runtime/loader/toolchain calls separately rather than treating incomparable raw
-process-wide syscall totals as a quality metric.
+repeated filesystem/configuration work are the main candidates. Compiler output
+capture now uses close-on-exec pipes rather than two temporary files per
+subprocess. A blocking reader thread drains each stream, which avoids
+stdout/stderr pipe-capacity deadlocks and works on Windows without assuming
+that `select` supports anonymous pipes. Capture is intentionally unbounded like
+Rust's `Command::output`; changing diagnostic limits would be a separate
+behavior decision. Descriptor creation stays behind `platform.mli`, and
+termination drains all readers after descendant cleanup. A stress test verifies
+exact capture of 1 MiB on both streams without truncation or deadlock.
+[`bench/filesystem_audit.sh`](bench/filesystem_audit.sh) now preserves a
+normalized Linux `%file` syscall audit for clean, unchanged, and single-edit
+builds. It reports fixture-local path/operation multisets and repeated accesses
+by readable category, while keeping runtime/loader/toolchain calls out of the
+comparison rather than treating incomparable raw process-wide totals as a
+quality metric. Its first post-pipe audit found no `.rewatch-ocaml-stdout` or
+`.rewatch-ocaml-stderr` accesses, confirming that capture sidecars are gone. It
+also exposed a separate issue worth profiling: on the benchmark fixture an
+unchanged build made 50,368 OCaml versus 3,368 Rust project-local metadata
+calls, and 798 versus 160 directory scans. Single-edit counts were nearly
+identical to unchanged. These are observational counts rather than a raw-total
+gate, but the repeated artifact probes are strong evidence of superfluous OCaml
+orchestration work and must be investigated before performance parity is
+closed.
+
+A post-pipe correctness smoke run of the performance harness retained exact
+compiler work: clean `1031/512/7/512/40/1`, unchanged `4/2/0/2/1/0`, and
+single-edit `6/3/0/3/1/0` for total/parser/namespace/compiler/interface/PPX
+launches in both implementations. The selected artifact sets and contents were
+byte-identical. Its one-run timing is deliberately not an acceptance result.
 
 The current `cloc` 2.06 source-size snapshot reports 7,818 Rust production
 lines after excluding the intentionally omitted telemetry module and inline
@@ -705,8 +723,9 @@ rerun it for the final maintainability review alongside maximum module size.
   subprocess creation, signal deferral, post-build shell invocation, and path
   comparison are behind that boundary. The unselected Windows implementation
   is also type-checked against the contract in Linux unit builds. Pipe
-  descriptor ownership still belongs behind the same boundary. The cross-platform
-  native watcher has its own narrow interface over libuv rather than duplicating
+  creation uses `Spawn.safe_pipe` behind that boundary, while portable reader
+  ownership stays in `Process`. The cross-platform native watcher has its own
+  narrow interface over libuv rather than duplicating
   identical Unix and Windows implementations; actual Windows cross-build/runtime
   verification remains open.
 - Native Windows implementation and runtime validation are deliberately an
@@ -760,24 +779,26 @@ rerun it for the final maintainability review alongside maximum module size.
    Linux event batching, directory refresh, resource cleanup, canonical watch
    behavior, fallback paths, and static packaging are covered. Live spinner
    animation is deliberately deferred.
-2. Replace compiler-output capture sidecars with concurrently drained pipes,
-   keeping descriptor ownership and child-tree shutdown portable. Extend the
-   equivalence harness and compare normalized filesystem calls to verify that
-   the change removes transient-file work without changing compiler work,
-   diagnostics, cancellation, or artifacts.
-3. Finish the source-level validation inventory, closing confirmed
+2. Run the complete performance/equivalence gate and investigate the normalized
+   filesystem-call audit. Confirm that pipe capture removed transient-file work
+   without changing compiler work, diagnostics, cancellation, or artifacts,
+   and close any remaining obvious orchestration overhead.
+3. Make the OCaml executable the branch's default `rescript.exe`, retain Rust
+   as `rescript-rust.exe`, and require the repository's full `make test-all`
+   pipeline to pass through the OCaml implementation.
+4. Finish the source-level validation inventory, closing confirmed
    configuration/CLI gaps; the Rust unit-test coverage review is complete and
    OpenTelemetry is an explicitly documented non-goal.
-4. Profile and close the remaining clean-build wall-time gap while preserving
+5. Profile and close the remaining clean-build wall-time gap while preserving
    exact compiler-work and artifact equivalence.
-5. Continue splitting `build.ml` along stable responsibility boundaries. The
+6. Continue splitting `build.ml` along stable responsibility boundaries. The
    filesystem and artifact-ownership layer now lives in `build_artifacts.ml`;
    package preparation/scheduling and watch lifecycle remain candidates.
-6. Perform the final two-scope whole-port review and address confirmed findings.
-7. At the final maintainability pass, add comments around ownership,
+7. Perform the final two-scope whole-port review and address confirmed findings.
+8. At the final maintainability pass, add comments around ownership,
    concurrency, platform, and algorithmic invariants that are not apparent from
    the code itself; avoid comments that only paraphrase individual statements.
-8. Prepare the pinned Windows handoff, then finish the Windows watcher/lock
+9. Prepare the pinned Windows handoff, then finish the Windows watcher/lock
    backend and path audit and run the native build, unit, focused, and canonical
    Bash suites in the VM. Address findings there and finish with an x64 Windows
    confidence run where available.

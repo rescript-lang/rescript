@@ -19,87 +19,6 @@ let decode_utf8_lossy value =
     loop 0;
     Buffer.contents output
 
-let read_file path =
-  if (Unix.stat path).Unix.st_size = 0 then ""
-  else
-    let channel = open_in_bin path in
-    Fun.protect
-      ~finally:(fun () -> close_in_noerr channel)
-      (fun () ->
-        really_input_string channel (in_channel_length channel)
-        |> decode_utf8_lossy)
-
-let open_temporary_log ?temp_dir stream =
-  let path, channel =
-    Filename.open_temp_file ?temp_dir ~mode:[Open_binary]
-      (".rewatch-ocaml-" ^ stream ^ "-") ".log"
-  in
-  (path, channel, Unix.descr_of_out_channel channel)
-
-let run ?env ~cwd program args =
-  let restore_signals = Platform.defer_termination_signals () in
-  let child_pid = ref None in
-  let stdout_path = ref None in
-  let stderr_path = ref None in
-  let stdout_channel = ref None in
-  let stderr_channel = ref None in
-  let close_channel channel = close_out_noerr channel in
-  let remove_log path = try Sys.remove path with Sys_error _ -> () in
-  let cleanup () =
-    Option.iter close_channel !stdout_channel;
-    Option.iter close_channel !stderr_channel;
-    stdout_channel := None;
-    stderr_channel := None;
-    Option.iter remove_log !stdout_path;
-    Option.iter remove_log !stderr_path
-  in
-  try
-    let stdout_log, stdout, out = open_temporary_log "stdout" in
-    stdout_path := Some stdout_log;
-    stdout_channel := Some stdout;
-    let stderr_log, stderr, err = open_temporary_log "stderr" in
-    stderr_path := Some stderr_log;
-    stderr_channel := Some stderr;
-    let pid =
-      Platform.spawn ~env ~cwd ~program ~args ~stdout:out ~stderr:err
-    in
-    child_pid := Some pid;
-    close_channel stdout;
-    stdout_channel := None;
-    close_channel stderr;
-    stderr_channel := None;
-    restore_signals ();
-    let rec wait () =
-      let restore_signals = Platform.defer_termination_signals () in
-      try
-        match Unix.waitpid [Unix.WNOHANG] pid with
-        | 0, _ ->
-          restore_signals ();
-          ignore (Unix.select [] [] [] 0.00001);
-          wait ()
-        | _, status ->
-          child_pid := None;
-          restore_signals ();
-          status
-      with exn ->
-        let exn = try restore_signals (); exn with signal_exn -> signal_exn in
-        raise exn
-    in
-    let status = wait () in
-    let stdout = read_file stdout_log in
-    let stderr = read_file stderr_log in
-    cleanup ();
-    {status; stdout; stderr}
-  with exn ->
-    Option.iter
-      (fun pid ->
-        Platform.signal_process_tree pid Sys.sigkill;
-        try ignore (Unix.waitpid [] pid) with Unix.Unix_error _ -> ())
-      !child_pid;
-    cleanup ();
-    let exn = try restore_signals (); exn with signal_exn -> signal_exn in
-    raise exn
-
 let succeeded result = result.status = Unix.WEXITED 0
 
 let status_string = function
@@ -107,59 +26,97 @@ let status_string = function
   | Unix.WSIGNALED signal -> Printf.sprintf "signal %d" signal
   | Unix.WSTOPPED signal -> Printf.sprintf "stopped by signal %d" signal
 
-(* Each child writes to private files, so diagnostics cannot interleave.  The
-   scheduler refills a slot as soon as any child exits while returning results
-   in input order. *)
+(* Blocking reader threads are portable to Windows, where select cannot wait on
+   anonymous pipes, and prevent either stream from filling while the child is
+   writing to the other one. Scheduling stays single-threaded. *)
 let default_max_jobs = min 32 (max 1 (Domain.recommended_domain_count ()))
+
+type capture = {
+  thread: Thread.t;
+  outcome: (string, exn) Stdlib.result option ref;
+}
 
 type 'a running = {
   payload: 'a;
   pid: int;
-  stdout_path: string;
-  stderr_path: string;
+  stdout_capture: capture;
+  stderr_capture: capture;
 }
 
-let remove_log path = try Sys.remove path with Sys_error _ -> ()
+let close_noerr descriptor =
+  try Unix.close descriptor with Unix.Unix_error _ -> ()
 
-let remove_running_logs child =
-  remove_log child.stdout_path;
-  remove_log child.stderr_path
+let start_capture descriptor =
+  let outcome = ref None in
+  let thread =
+    Thread.create
+      (fun () ->
+        outcome :=
+          Some
+            (try
+               let output = Buffer.create 4096 in
+               let bytes = Bytes.create 65536 in
+               let rec read () =
+                 try
+                   match Unix.read descriptor bytes 0 (Bytes.length bytes) with
+                   | 0 -> ()
+                   | count ->
+                     Buffer.add_subbytes output bytes 0 count;
+                     read ()
+                 with Unix.Unix_error (Unix.EINTR, _, _) -> read ()
+               in
+               Fun.protect ~finally:(fun () -> close_noerr descriptor) read;
+               Ok (Buffer.contents output |> decode_utf8_lossy)
+             with exn ->
+               close_noerr descriptor;
+               Error exn))
+      ()
+  in
+  {thread; outcome}
 
-let launch ?temp_dir payload job =
+let capture_outcome capture =
+  Thread.join capture.thread;
+  match !(capture.outcome) with
+  | Some outcome -> outcome
+  | None -> Error (Failure "subprocess output reader did not finish")
+
+let capture_error exn =
+  Error ("failed to capture subprocess output: " ^ Printexc.to_string exn)
+
+let launch ?env payload job =
+  let (stdout_read, stdout_write), (stderr_read, stderr_write) =
+    Platform.create_capture_pipes ()
+  in
   let restore_signals = Platform.defer_termination_signals () in
-  let stdout_path = ref None in
-  let stderr_path = ref None in
-  let stdout_channel = ref None in
-  let stderr_channel = ref None in
+  let stdout_capture = ref None in
+  let stderr_capture = ref None in
   let child_pid = ref None in
   try
-    let stdout_log, stdout, out = open_temporary_log ?temp_dir "stdout" in
-    stdout_path := Some stdout_log;
-    stdout_channel := Some stdout;
-    let stderr_log, stderr, err = open_temporary_log ?temp_dir "stderr" in
-    stderr_path := Some stderr_log;
-    stderr_channel := Some stderr;
+    let stdout = start_capture stdout_read in
+    stdout_capture := Some stdout;
+    let stderr = start_capture stderr_read in
+    stderr_capture := Some stderr;
     let pid =
-      Platform.spawn ~env:None ~cwd:job.cwd ~program:job.program ~args:job.args
-        ~stdout:out ~stderr:err
+      Platform.spawn ~env ~cwd:job.cwd ~program:job.program ~args:job.args
+        ~stdout:stdout_write ~stderr:stderr_write
     in
     child_pid := Some pid;
-    close_out_noerr stdout;
-    stdout_channel := None;
-    close_out_noerr stderr;
-    stderr_channel := None;
+    close_noerr stdout_write;
+    close_noerr stderr_write;
     restore_signals ();
-    {payload; pid; stdout_path = stdout_log; stderr_path = stderr_log}
+    {payload; pid; stdout_capture = stdout; stderr_capture = stderr}
   with exn ->
-    Option.iter close_out_noerr !stdout_channel;
-    Option.iter close_out_noerr !stderr_channel;
     Option.iter
       (fun pid ->
         Platform.signal_process_tree pid Sys.sigkill;
         try ignore (Unix.waitpid [] pid) with Unix.Unix_error _ -> ())
       !child_pid;
-    Option.iter remove_log !stdout_path;
-    Option.iter remove_log !stderr_path;
+    close_noerr stdout_write;
+    close_noerr stderr_write;
+    if Option.is_none !stdout_capture then close_noerr stdout_read;
+    if Option.is_none !stderr_capture then close_noerr stderr_read;
+    Option.iter (fun capture -> Thread.join capture.thread) !stdout_capture;
+    Option.iter (fun capture -> Thread.join capture.thread) !stderr_capture;
     let exn = try restore_signals (); exn with signal_exn -> signal_exn in
     raise exn
 
@@ -183,14 +140,13 @@ let wait_for_running active =
   wait active
 
 let collect_result child status =
-  Fun.protect
-    ~finally:(fun () -> remove_running_logs child)
-    (fun () ->
-      {
-        status;
-        stdout = read_file child.stdout_path;
-        stderr = read_file child.stderr_path;
-      })
+  let stdout = capture_outcome child.stdout_capture in
+  let stderr = capture_outcome child.stderr_capture in
+  match stdout, stderr with
+  | Ok stdout, Ok stderr -> {status; stdout; stderr}
+  | Error exn, _ | _, Error exn -> raise (capture_error exn)
+
+let discard_capture capture = ignore (capture_outcome capture)
 
 let with_signal_restore restore_signals action =
   try
@@ -214,14 +170,10 @@ let terminate_running children =
             try
               match Unix.waitpid [Unix.WNOHANG] child.pid with
               | 0, _ -> true
-              | _ ->
-                remove_running_logs child;
-                false
+              | _ -> false
             with
             | Unix.Unix_error (Unix.EINTR, _, _) -> true
-            | Unix.Unix_error (Unix.ECHILD, _, _) ->
-              remove_running_logs child;
-              false)
+            | Unix.Unix_error (Unix.ECHILD, _, _) -> false)
           children
       in
       if remaining <> [] && Unix.gettimeofday () < deadline then (
@@ -237,18 +189,20 @@ let terminate_running children =
       List.iter (signal_group Sys.sigkill) children;
     List.iter
       (fun child ->
-        (try ignore (Unix.waitpid [] child.pid) with Unix.Unix_error _ -> ());
-        remove_running_logs child)
-      remaining)
+        try ignore (Unix.waitpid [] child.pid) with Unix.Unix_error _ -> ())
+      remaining;
+    List.iter
+      (fun child ->
+        discard_capture child.stdout_capture;
+        discard_capture child.stderr_capture)
+      children)
 
-let run_parallel ?temp_dir ?(max_jobs = default_max_jobs) jobs =
+let run_parallel ?(max_jobs = default_max_jobs) jobs =
   if max_jobs < 1 then raise (Error "max_jobs must be at least one");
   let indexed = List.mapi (fun index job -> (index, job)) jobs in
   let results = Array.make (List.length jobs) None in
   let active = ref [] in
-  let launch_indexed (index, job) =
-    active := launch ?temp_dir index job :: !active
-  in
+  let launch_indexed (index, job) = active := launch index job :: !active in
   let rec fill slots queued =
     if slots = 0 then queued
     else
@@ -290,7 +244,7 @@ module Work_ready = Set.Make (struct
     if by_priority <> 0 then by_priority else String.compare first_key second_key
 end)
 
-let run_dependency_graph ?temp_dir ?(max_jobs = default_max_jobs)
+let run_dependency_graph ?(max_jobs = default_max_jobs)
     ?(is_fatal = function Sys.Break -> true | _ -> false) works ~next =
   if max_jobs < 1 then raise (Error "max_jobs must be at least one");
   let count = List.length works in
@@ -391,7 +345,7 @@ let run_dependency_graph ?temp_dir ?(max_jobs = default_max_jobs)
         (try
            match next work.value None with
            | None -> complete work
-           | Some job -> active := launch ?temp_dir work job :: !active
+           | Some job -> active := launch work job :: !active
          with exn -> record_error work exn);
         fill ()
   in
@@ -418,7 +372,7 @@ let run_dependency_graph ?temp_dir ?(max_jobs = default_max_jobs)
       (try
          match next child.payload.value (Some result) with
          | Some job ->
-           active := launch ?temp_dir child.payload job :: !active
+           active := launch child.payload job :: !active
          | None -> complete child.payload
        with exn -> record_error child.payload exn);
       schedule ()
@@ -426,4 +380,15 @@ let run_dependency_graph ?temp_dir ?(max_jobs = default_max_jobs)
   try schedule ()
   with exn ->
     terminate_running !active;
+    raise exn
+
+let run ?env ~cwd program args =
+  let child = launch ?env () {program; args; cwd} in
+  let reaped = ref false in
+  try
+    let (child, status), restore_signals = wait_for_running [child] in
+    reaped := true;
+    with_signal_restore restore_signals (fun () -> collect_result child status)
+  with exn ->
+    if not !reaped then terminate_running [child];
     raise exn

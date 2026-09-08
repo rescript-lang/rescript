@@ -14,6 +14,10 @@ val spawn :
   stderr:Unix.file_descr ->
   int
 
+val create_capture_pipes :
+  unit ->
+  (Unix.file_descr * Unix.file_descr) * (Unix.file_descr * Unix.file_descr)
+
 val signal_process_tree : int -> int -> unit
 val defer_termination_signals : unit -> unit -> unit
 val graceful_termination_signal : int

@@ -55,10 +55,9 @@ cleanup; `build.ml` retains package preparation and build orchestration.
 Genuinely platform-specific behavior is consolidated behind a `Platform`
 boundary rather than mixed into those modules. Unix and Windows modules now own
 executable lookup, subprocess creation, signal deferral, and process-tree
-termination as well as lock-owner PID probing. Future pipe descriptor ownership
-is the main remaining platform call to move; the native watcher has a separate,
-narrow cross-platform boundary over libuv, and portable `Filename`-based path
-and artifact logic remains shared.
+termination as well as lock-owner PID probing and capture-pipe creation. The
+native watcher has a separate, narrow cross-platform boundary over libuv, and
+portable `Filename`-based path and artifact logic remains shared.
 
 ## Test
 
@@ -94,10 +93,13 @@ scope.
 
 Windows support is required for completion, even though runtime verification is
 not available in the current Linux development environment. Subprocesses use
-the cross-platform `spawn` library, which uses `CreateProcess` on Windows. Watch
-mode uses long-lived filesystem-event handles through Luv/libuv and retains the
-snapshot-based polling loop only as a runtime fallback. The native watcher and
-lock lifecycle still require a Windows cross-build and runtime verification.
+the cross-platform `spawn` library, which uses `CreateProcess` on Windows.
+Compiler output is captured through close-on-exec pipes drained by blocking
+reader threads, avoiding reliance on Windows `select` support for anonymous
+pipes. Watch mode uses long-lived filesystem-event handles through Luv/libuv
+and retains the snapshot-based polling loop only as a runtime fallback. Pipe
+inheritance/termination, the native watcher, and the lock lifecycle still
+require a Windows cross-build and runtime verification.
 `PROGRESS.md` tracks the remaining portability blockers. Shared path
 construction uses OCaml's `Filename` APIs so Windows separators and drive roots
 are not hard-coded assumptions.

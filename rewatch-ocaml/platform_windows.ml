@@ -58,6 +58,14 @@ let spawn ~env ~cwd ~program ~args ~stdout ~stderr =
   Spawn.spawn ?env ~cwd:(Spawn.Working_dir.Path cwd) ~prog:program
     ~argv:(program :: args) ~stdout ~stderr ()
 
+let create_capture_pipes () =
+  let stdout = Spawn.safe_pipe () in
+  try (stdout, Spawn.safe_pipe ())
+  with exn ->
+    Unix.close (fst stdout);
+    Unix.close (snd stdout);
+    raise exn
+
 let signal_process_tree pid _signal =
   let taskkill =
     match Sys.getenv_opt "SystemRoot" with
