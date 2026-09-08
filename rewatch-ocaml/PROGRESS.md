@@ -640,14 +640,19 @@ rerun it for the final maintainability review alongside maximum module size.
   being parsed and discarded, and the clear-screen predicate is separately
   tested for interactive and redirected output. This closes the Rust unit-test
   inventory; it does not close the broader spinner/phase presentation gate.
+- Interactive builds now also emit Rust-shaped cleanup, parse, and compile
+  completion lines with three-step initial-build numbering, two-step watch
+  rebuild numbering, phase-specific emojis, counts, and two-decimal timing.
+  Redirected output remains unchanged. Live spinner frames and complete
+  verbosity behavior remain separate output-gate work.
 - Interactive output parity remains open. The OCaml executable now selects a
-  TTY-specific final status with timing and emoji and supports watch
-  clear-screen behavior, but does not yet reproduce Rust's phase-by-phase
-  parsing/compilation spinner, progress counts, or complete verbosity behavior.
-  Plain redirected output and pseudo-terminal output are tracked as distinct
-  gates in `PARITY_CHECKLIST.md`.
-- `watch` currently uses conservative polling and has no signal/lock/event
-  batching parity with Rust rewatch.
+  TTY-specific final status with timing and emoji, emits phase completion
+  counts, and supports watch clear-screen behavior, but does not yet reproduce
+  Rust's live parsing/compilation spinner or complete verbosity behavior. Plain
+  redirected output and pseudo-terminal output are tracked as distinct gates
+  in `PARITY_CHECKLIST.md`.
+- `watch` currently uses conservative polling rather than Rust's native event
+  delivery and batching. Signal handling and lock lifecycle are covered.
 - Polling watches root and recursively resolved local dependency roots, but it
   is not yet a native event backend and has only been verified on Unix.
 - Existing generated outputs are updated as their compiler subprocesses
@@ -738,19 +743,21 @@ rerun it for the final maintainability review alongside maximum module size.
 
 ## Next actions
 
-1. Finish the source-level validation inventory, closing confirmed
+1. Replace or supplement polling with a production-grade native event backend
+   behind the existing platform boundary. Preserve polling as a fallback while
+   validating event batching, resource cleanup, Linux/macOS packaging, and the
+   intended Windows semantics. Live spinner animation is deliberately deferred
+   until after this functional watch milestone.
+2. Finish the source-level validation inventory, closing confirmed
    configuration/CLI gaps; the Rust unit-test coverage review is complete and
    OpenTelemetry is an explicitly documented non-goal.
-2. Profile and close the remaining clean-build wall-time gap while preserving
+3. Profile and close the remaining clean-build wall-time gap while preserving
    exact compiler-work and artifact equivalence; retain pipe capture as an
    end-stage option.
-3. Continue splitting `build.ml` along stable responsibility boundaries. The
+4. Continue splitting `build.ml` along stable responsibility boundaries. The
    filesystem and artifact-ownership layer now lives in `build_artifacts.ml`;
    package preparation/scheduling and watch lifecycle remain candidates.
-4. Perform the final two-scope whole-port review and address confirmed findings.
-5. Replace or supplement polling with a production-grade native event backend
-   and evaluate supported-platform behavior. Experimental Linux/macOS package
-   distribution and CI exercise are already in place.
+5. Perform the final two-scope whole-port review and address confirmed findings.
 6. At the final maintainability pass, add comments around ownership,
    concurrency, platform, and algorithmic invariants that are not apparent from
    the code itself; avoid comments that only paraphrase individual statements.

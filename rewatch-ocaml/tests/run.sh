@@ -424,7 +424,7 @@ test -f "$dependency/src/Main.js"
 test -f "$dependency/node_modules/dep/src/Dep.js"
 "$port" clean "$dependency"
 test ! -f "$dependency/src/Main.js"
-test -f "$dependency/node_modules/dep/src/Dep.js"
+test ! -f "$dependency/node_modules/dep/src/Dep.js"
 
 mkdir -p "$external_boundary/project/node_modules"
 ln -s ../packages/main "$external_boundary/project/node_modules/main"
