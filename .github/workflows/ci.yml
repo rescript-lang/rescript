@@ -217,7 +217,7 @@ jobs:
         run: |
           bash rewatch-ocaml/tests/check_rust_test_coverage.sh --require-complete
           bash rewatch-ocaml/tests/check_canonical_test_coverage.sh
-          bash rewatch-ocaml/tests/check_source_config_acceptance.sh \
+          bash rewatch-ocaml/tests/check_config_acceptance.sh \
             packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe \
             packages/@rescript/${{ matrix.node-target }}/bin/rescript-ocaml.exe
           opam exec -- dune runtest rewatch-ocaml

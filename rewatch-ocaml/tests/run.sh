@@ -362,7 +362,7 @@ RESCRIPT_BSC_EXE="$lock_basic/slow-bsc.sh" \
 first_build_pid=$!
 background_pids="$background_pids $first_build_pid"
 wait_for_file "$first_marker"
-workspace_build_lock="$root/lib/build.lock"
+workspace_build_lock="$lock_basic/lib/build.lock"
 test -f "$workspace_build_lock"
 "$port" build "$lock_basic" >"$lock_basic/second.log" 2>&1 &
 second_build_pid=$!

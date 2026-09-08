@@ -82,3 +82,13 @@
  (name toolchain_tests)
  (modules toolchain_tests platform_windows)
  (libraries rewatch_ocaml_lib))
+
+(test
+ (name compiler_args_tests)
+ (modules compiler_args_tests)
+ (libraries rewatch_ocaml_lib))
+
+(test
+ (name project_context_tests)
+ (modules project_context_tests)
+ (libraries rewatch_ocaml_lib))

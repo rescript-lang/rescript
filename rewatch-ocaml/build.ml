@@ -84,23 +84,21 @@ let process_is_active value =
     | Process.Error _ | Unix.Unix_error _ | Sys_error _ -> None)
 
 let workspace_lock_root folder =
-  let declares_workspaces directory =
-    let path = Filename.concat directory "package.json" in
-    if not (Sys.file_exists path) then false
+  let current = Config.load_root folder in
+  let rec nearest_parent directory =
+    if Config.exists_in_root directory then Some (Config.load_root directory)
     else
-      try
-        match Yojson.Safe.from_file path with
-        | `Assoc fields -> List.mem_assoc "workspaces" fields
-        | _ -> false
-      with Yojson.Json_error _ | Sys_error _ -> false
+      let parent = Filename.dirname directory in
+      if parent = directory then None else nearest_parent parent
   in
-  let rec loop directory =
-    if declares_workspaces directory then directory
-    else
-    let parent = Filename.dirname directory in
-    if parent = directory then folder else loop parent
-  in
-  loop folder
+  match nearest_parent (Filename.dirname folder) with
+  | Some parent
+    when List.exists
+           (fun (dependency : Config.dependency) ->
+             dependency.name = current.name)
+           (parent.dependencies @ parent.dev_dependencies) ->
+    parent.root
+  | Some _ | None -> folder
 
 let acquire_build_lock root =
   let lock_dir = Filename.concat root "lib" in
@@ -635,13 +633,23 @@ let compiler_args path =
   let runtime = runtime_path config.root in
   let is_interface = Filename.check_suffix source ".resi" in
   let has_interface = not is_interface && Sys.file_exists (source ^ "i") in
+  let dependencies =
+    (if Config.source_is_dev config relative then
+       List.map (fun dependency -> (false, dependency)) config.dev_dependencies
+     else [])
+    @ List.map (fun dependency -> (true, dependency)) config.dependencies
+  in
   let dependency_dirs =
-    config.dependencies |> List.filter_map (fun (dependency : Config.dependency) ->
-      match dependency_path config.root dependency.name with
-      | Some directory ->
-        let ocaml = lib_path directory "ocaml" in
-        if Sys.file_exists ocaml then Some ocaml else None
-      | None -> None)
+    dependencies
+    |> List.filter_map (fun (required, (dependency : Config.dependency)) ->
+         match dependency_path config.root dependency.name with
+         | Some directory -> Some (lib_path directory "ocaml")
+         | None when not required -> None
+         | None ->
+           raise
+             (Error
+                (Printf.sprintf "Expected to find dependent package %s of %s"
+                   dependency.name config.name)))
   in
   let parser_args =
     compiler_flags

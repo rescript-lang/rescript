@@ -205,6 +205,32 @@ let parse_sources path fields =
     List.concat_map (sources_of_json path "" None None) values
   | Some value -> sources_of_json path "" None None value
 
+let source_is_dev (config : t) relative_path =
+  let canonical path =
+    try Some (Unix.realpath path) with Unix.Unix_error _ | Sys_error _ -> None
+  in
+  let source_parent =
+    Filename.concat config.root relative_path |> Filename.dirname |> canonical
+  in
+  match source_parent with
+  | None -> false
+  | Some source_parent ->
+    let comparable = Platform.normalize_path_for_comparison in
+    List.exists
+      (fun (source : source) ->
+        if not source.is_dev then false
+        else
+          match canonical (Filename.concat config.root source.dir) with
+          | None -> false
+          | Some directory ->
+            comparable source_parent = comparable directory
+            ||
+            (source.recurse
+            && String.starts_with
+                 ~prefix:(Filename.concat directory "" |> comparable)
+                 (comparable source_parent)))
+      config.sources
+
 let supported_fields =
   [
     "name";
