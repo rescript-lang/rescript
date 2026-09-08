@@ -18,155 +18,8 @@ let open_temporary_log ?temp_dir stream =
   in
   (path, channel, Unix.descr_of_out_channel channel)
 
-let resolve_program ~cwd program =
-  if (not (Filename.is_relative program)) || Filename.dirname program <> "."
-  then program
-  else
-    let path_separator = if Sys.win32 then ';' else ':' in
-    let extensions =
-      if not Sys.win32 || Filename.extension program <> "" then [""]
-      else
-        Sys.getenv_opt "PATHEXT"
-        |> Option.value ~default:".COM;.EXE;.BAT;.CMD"
-        |> String.split_on_char ';'
-    in
-    let path_directories =
-      Sys.getenv_opt "PATH" |> Option.value ~default:""
-      |> String.split_on_char path_separator
-    in
-    let directories = if Sys.win32 then cwd :: path_directories else path_directories in
-    directories
-    |> List.find_map (fun directory ->
-         let directory =
-           let directory = String.trim directory in
-           let length = String.length directory in
-           let directory =
-             if
-               length >= 2 && directory.[0] = '"'
-               && directory.[length - 1] = '"'
-             then String.sub directory 1 (length - 2)
-             else directory
-           in
-           if directory = "" then cwd
-           else if Filename.is_relative directory then
-             Filename.concat cwd directory
-           else directory
-         in
-         extensions
-         |> List.find_map (fun extension ->
-              let candidate = Filename.concat directory (program ^ extension) in
-              let runnable =
-                try
-                  (Unix.stat candidate).Unix.st_kind = Unix.S_REG
-                  && (Sys.win32
-                     || try
-                          Unix.access candidate [Unix.X_OK];
-                          true
-                        with Unix.Unix_error _ -> false)
-                with Unix.Unix_error _ -> false
-              in
-              if runnable then Some candidate else None))
-    |> Option.value ~default:program
-
-let spawn ~env ~cwd ~program ~args ~stdout ~stderr =
-  let program = resolve_program ~cwd program in
-  let program, args =
-    if
-      Sys.win32
-      && List.mem
-           (Filename.extension program |> String.lowercase_ascii)
-           [".bat"; ".cmd"]
-    then
-      let command = Filename.quote_command program args in
-      ( resolve_program ~cwd "cmd.exe",
-        ["/D"; "/V:OFF"; "/S"; "/C"; command] )
-    else (program, args)
-  in
-  let arguments = program :: args in
-  if Sys.win32 then
-    Spawn.spawn ?env ~cwd:(Spawn.Working_dir.Path cwd) ~prog:program
-      ~argv:arguments ~stdout ~stderr ()
-  else
-    Spawn.spawn ?env ~cwd:(Spawn.Working_dir.Path cwd) ~prog:program
-      ~argv:arguments ~stdout ~stderr ~setpgid:Spawn.Pgid.new_process_group ()
-
-let signal_process_tree pid signal =
-  if not Sys.win32 then
-    try Unix.kill (-pid) signal with Unix.Unix_error _ -> ()
-  else
-    let taskkill =
-      match Sys.getenv_opt "SystemRoot" with
-      | Some root ->
-        Filename.concat (Filename.concat root "System32") "taskkill.exe"
-      | None -> "taskkill.exe"
-    in
-    let output = ref None in
-    let killer_pid = ref None in
-    let fallback () =
-      try Unix.kill pid Sys.sigkill with Unix.Unix_error _ -> ()
-    in
-    try
-      let null = Unix.openfile Filename.null [Unix.O_WRONLY] 0o600 in
-      output := Some null;
-      let killer =
-        Spawn.spawn ~prog:taskkill
-          ~argv:[taskkill; "/PID"; string_of_int pid; "/T"; "/F"]
-          ~stdout:null ~stderr:null ()
-      in
-      killer_pid := Some killer;
-      Unix.close null;
-      output := None;
-      let _, status = Unix.waitpid [] killer in
-      killer_pid := None;
-      if status <> Unix.WEXITED 0 then fallback ()
-    with _ ->
-      Option.iter
-        (fun fd -> try Unix.close fd with Unix.Unix_error _ -> ())
-        !output;
-      Option.iter
-        (fun killer ->
-          (try Unix.kill killer Sys.sigkill with Unix.Unix_error _ -> ());
-          try ignore (Unix.waitpid [] killer) with Unix.Unix_error _ -> ())
-        !killer_pid;
-      fallback ()
-
-let defer_termination_signals () =
-  if not Sys.win32 then
-    let previous =
-      Unix.sigprocmask Unix.SIG_BLOCK [Sys.sigint; Sys.sigterm]
-    in
-    fun () -> ignore (Unix.sigprocmask Unix.SIG_SETMASK previous)
-  else
-    let pending = ref [] in
-    let defer signal =
-      if not (List.mem signal !pending) then pending := signal :: !pending
-    in
-    let previous_int = Sys.signal Sys.sigint (Sys.Signal_handle defer) in
-    let previous_term =
-      try Sys.signal Sys.sigterm (Sys.Signal_handle defer)
-      with exn ->
-        ignore (Sys.signal Sys.sigint previous_int);
-        raise exn
-    in
-    let restored = ref false in
-    let dispatch signal behavior =
-      match behavior with
-      | Sys.Signal_ignore -> ()
-      | Sys.Signal_handle handler -> handler signal
-      | Sys.Signal_default -> raise Sys.Break
-    in
-    fun () ->
-      if not !restored then (
-        restored := true;
-        ignore (Sys.signal Sys.sigint previous_int);
-        ignore (Sys.signal Sys.sigterm previous_term);
-        List.rev !pending
-        |> List.iter (fun signal ->
-             dispatch signal
-               (if signal = Sys.sigint then previous_int else previous_term)))
-
 let run ?env ~cwd program args =
-  let restore_signals = defer_termination_signals () in
+  let restore_signals = Platform.defer_termination_signals () in
   let child_pid = ref None in
   let stdout_path = ref None in
   let stderr_path = ref None in
@@ -190,7 +43,7 @@ let run ?env ~cwd program args =
     stderr_path := Some stderr_log;
     stderr_channel := Some stderr;
     let pid =
-      spawn ~env ~cwd ~program ~args ~stdout:out ~stderr:err
+      Platform.spawn ~env ~cwd ~program ~args ~stdout:out ~stderr:err
     in
     child_pid := Some pid;
     close_channel stdout;
@@ -199,7 +52,7 @@ let run ?env ~cwd program args =
     stderr_channel := None;
     restore_signals ();
     let rec wait () =
-      let restore_signals = defer_termination_signals () in
+      let restore_signals = Platform.defer_termination_signals () in
       try
         match Unix.waitpid [Unix.WNOHANG] pid with
         | 0, _ ->
@@ -222,7 +75,7 @@ let run ?env ~cwd program args =
   with exn ->
     Option.iter
       (fun pid ->
-        signal_process_tree pid Sys.sigkill;
+        Platform.signal_process_tree pid Sys.sigkill;
         try ignore (Unix.waitpid [] pid) with Unix.Unix_error _ -> ())
       !child_pid;
     cleanup ();
@@ -255,7 +108,7 @@ let remove_running_logs child =
   remove_log child.stderr_path
 
 let launch ?temp_dir payload job =
-  let restore_signals = defer_termination_signals () in
+  let restore_signals = Platform.defer_termination_signals () in
   let stdout_path = ref None in
   let stderr_path = ref None in
   let stdout_channel = ref None in
@@ -269,7 +122,7 @@ let launch ?temp_dir payload job =
     stderr_path := Some stderr_log;
     stderr_channel := Some stderr;
     let pid =
-      spawn ~env:None ~cwd:job.cwd ~program:job.program ~args:job.args
+      Platform.spawn ~env:None ~cwd:job.cwd ~program:job.program ~args:job.args
         ~stdout:out ~stderr:err
     in
     child_pid := Some pid;
@@ -284,7 +137,7 @@ let launch ?temp_dir payload job =
     Option.iter close_out_noerr !stderr_channel;
     Option.iter
       (fun pid ->
-        signal_process_tree pid Sys.sigkill;
+        Platform.signal_process_tree pid Sys.sigkill;
         try ignore (Unix.waitpid [] pid) with Unix.Unix_error _ -> ())
       !child_pid;
     Option.iter remove_log !stdout_path;
@@ -298,7 +151,7 @@ let wait_for_running active =
       ignore (Unix.select [] [] [] 0.00001);
       wait active
     | child :: rest ->
-      let restore_signals = defer_termination_signals () in
+      let restore_signals = Platform.defer_termination_signals () in
       try
         match Unix.waitpid [Unix.WNOHANG] child.pid with
         | 0, _ ->
@@ -332,8 +185,8 @@ let with_signal_restore restore_signals action =
 
 let terminate_running children =
   if children <> [] then (
-    let signal_group signal child = signal_process_tree child.pid signal in
-    let graceful_signal = if Sys.win32 then Sys.sigkill else Sys.sigterm in
+    let signal_group signal child = Platform.signal_process_tree child.pid signal in
+    let graceful_signal = Platform.graceful_termination_signal in
     List.iter (signal_group graceful_signal) children;
     let deadline = Unix.gettimeofday () +. 0.25 in
     let rec reap_until_deadline children =
@@ -362,7 +215,8 @@ let terminate_running children =
     (* A direct child may have exited while a PPX/helper in its process group
        remains alive, so escalate every original group rather than only the
        direct children that still need reaping. *)
-    if not Sys.win32 then List.iter (signal_group Sys.sigkill) children;
+    if Platform.escalate_process_groups then
+      List.iter (signal_group Sys.sigkill) children;
     List.iter
       (fun child ->
         (try ignore (Unix.waitpid [] child.pid) with Unix.Unix_error _ -> ());

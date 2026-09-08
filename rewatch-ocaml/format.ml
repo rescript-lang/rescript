@@ -42,9 +42,7 @@ let local_dependency root (dependency : Config.dependency) =
   | None -> None
   | Some path ->
     let prefix = Filename.concat root "" in
-    let comparable value =
-      if Sys.win32 then String.lowercase_ascii value else value
-    in
+    let comparable = Platform.normalize_path_for_comparison in
     if String.starts_with ~prefix:(comparable prefix) (comparable path) then
       Some path
     else None
