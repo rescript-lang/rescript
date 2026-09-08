@@ -18,6 +18,8 @@ mkdir -p "$work/interface-mismatch/src"
 mkdir -p "$work/external-dev-source/src" \
   "$work/external-dev-source/node_modules/dep/src" \
   "$work/external-dev-source/node_modules/dep/test"
+mkdir -p "$work/missing-source-folder/src" \
+  "$work/missing-source-folder/node_modules/dep"
 mkdir -p "$work/mismatched-dependency/src" \
   "$work/mismatched-dependency/node_modules/dep/src"
 mkdir -p "$work/configless-dependency/src" \
@@ -54,6 +56,11 @@ printf 'let value = 1\n' \
   >"$work/external-dev-source/node_modules/dep/src/DepPublic.res"
 printf 'this is deliberately invalid ReScript\n' \
   >"$work/external-dev-source/node_modules/dep/test/DevOnly.res"
+printf '{"name":"missing-source-folder","sources":["src"],"dependencies":["dep"]}\n' \
+  >"$work/missing-source-folder/rescript.json"
+printf 'let value = 1\n' >"$work/missing-source-folder/src/App.res"
+printf '{"name":"dep","sources":["missing"]}\n' \
+  >"$work/missing-source-folder/node_modules/dep/rescript.json"
 printf '{"name":"mismatched-dependency","sources":["src"],"dependencies":["dep"]}\n' \
   >"$work/mismatched-dependency/rescript.json"
 printf 'let value = Dep.value\n' >"$work/mismatched-dependency/src/A.res"
@@ -166,6 +173,16 @@ if ! cmp -s "$work/rust.err" "$work/ocaml.err"; then
 fi
 run_case build-excludes-external-dev-source accept accept build \
   "$work/external-dev-source"
+run_case build-missing-source-folder accept accept build \
+  "$work/missing-source-folder"
+if ! cmp -s "$work/rust.err" "$work/ocaml.err"; then
+  echo "Missing source-folder diagnostics differ" >&2
+  printf '%s\n' '--- Rust output ---' >&2
+  cat "$work/rust.err" >&2
+  printf '%s\n' '--- OCaml output ---' >&2
+  cat "$work/ocaml.err" >&2
+  exit 1
+fi
 run_case build-mismatched-dependency-name panic accept build \
   "$work/mismatched-dependency"
 run_case build-missing-dependency exit2 exit2 build "$work/missing-dependency"

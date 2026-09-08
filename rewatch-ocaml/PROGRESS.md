@@ -199,6 +199,10 @@ applicable.
   folders even during a normal development build, while root and symlink-local
   packages retain them unless `--prod` is selected. Clean traversal, global
   graph preparation, and fallback compilation share the same predicate.
+- Missing active source folders retain Rust's non-fatal diagnostic for both
+  local and installed packages, including the relative folder, package name,
+  and package root. The differential gate compares the installed-package
+  diagnostic byte for byte; excluded dev and feature folders remain unscanned.
 - A retained differential command-validation gate covers valid, missing, and
   non-ReScript `compiler-args` inputs; sources without a project; missing,
   config-less, and malformed build folders; and implicit format from below a
@@ -211,7 +215,7 @@ applicable.
   ReScript config, and malformed dependency configs now terminate build and
   clean with Rust's package-tree exit class 2 instead of being skipped or
   reported as a generic exit 1; watch startup uses the same path. The command
-  gate now has 23 cases and verifies failed OCaml commands leave neither build
+  gate now has 24 cases and verifies failed OCaml commands leave neither build
   nor watch locks. Rust currently calls `process::exit(2)` from package-tree
   library code; OCaml raises a typed package error to the CLI so cleanup still
   runs before the matching exit status is returned.
