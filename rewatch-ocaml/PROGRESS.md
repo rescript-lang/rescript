@@ -447,6 +447,12 @@ rerun it for the final maintainability review alongside maximum module size.
   longer honored, matching Rust rather than silently omitting source files;
   `jsx.v3-dependencies` is decoded as a string array even though its value is
   not otherwise used by this build system.
+- Duplicate keys now follow the reference decoder's two distinct rules:
+  typed configuration structs reject repeated known fields, while JSON-map
+  backed values retain the last occurrence. Differential acceptance covered
+  15 representative struct/map cases; focused tests also verify last-value
+  semantics for source maps, features, experimental flags, and GenType debug
+  maps. Repeated unknown fields remain accepted, as in Rust.
 - Redirected warnings are persisted to compiler logs during scheduling but
   presented during final reporting, after the build summary and before config
   diagnostics. This matches Rust's deterministic snapshot order without

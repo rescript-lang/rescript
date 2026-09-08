@@ -15,6 +15,13 @@ let contains text fragment =
   in
   fragment_length = 0 || loop 0
 
+let rejects path contents fragment =
+  write_file path contents;
+  try
+    ignore (Config.load path);
+    false
+  with Config.Error message -> contains message fragment
+
 let has_diagnostic config field =
   List.exists (fun message -> contains message ("'" ^ field ^ "'")) config.Config.diagnostics
 
@@ -118,6 +125,41 @@ let () =
         with Config.Error message -> contains message "jsx.version"
       in
       check rejected "unsupported JSX versions are rejected without panicking";
+      [
+        {|{"name":"first","name":"second"}|};
+        {|{"name":"duplicate-source","sources":{"dir":"a","dir":"b"}}|};
+        {|{"name":"duplicate-spec","package-specs":{"module":"esmodule","module":"commonjs"}}|};
+        {|{"name":"duplicate-warning","warnings":{"number":"A","number":"B"}}|};
+        {|{"name":"duplicate-jsx","jsx":{"mode":"classic","mode":"automatic"}}|};
+        {|{"name":"duplicate-gentype","gentypeconfig":{"module":"esmodule","module":"commonjs"}}|};
+        {|{"name":"duplicate-post","js-post-build":{"cmd":"true","cmd":"false"}}|};
+        {|{"name":"duplicate-dependency","dependencies":[{"name":"a","name":"b"}]}|};
+      ]
+      |> List.iter (fun json ->
+           check (rejects path json "duplicate field")
+             "typed configuration objects reject duplicate fields");
+      write_file path
+        {|{
+          "name": "map-duplicates",
+          "future": 1,
+          "future": 2,
+          "sourceMap": {"enabled": "always", "mode": "linked", "mode": "inline"},
+          "features": {"selected": ["first"], "selected": ["last"]},
+          "experimental-features": {"LetUnwrap": true, "LetUnwrap": false},
+          "gentypeconfig": {"debug": {"all": true, "all": false}}
+        }|};
+      let config = Config.load path in
+      check
+        (contains_adjacent "-bs-source-map" "inline" config.source_map_args)
+        "sourceMap map decoding keeps the last duplicate value";
+      check
+        (List.assoc "selected" config.features = ["last"])
+        "feature map decoding keeps the last duplicate value";
+      check (config.experimental_args = [])
+        "experimental feature maps keep the last duplicate value";
+      check
+        (not (List.mem "-bs-gentype-debug" config.gentype_args))
+        "GenType debug maps keep the last duplicate value";
       [
         "sources";
         "package-specs";
