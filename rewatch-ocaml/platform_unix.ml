@@ -1,5 +1,6 @@
 let path_separator = ':'
 let normalize_path_for_comparison value = value
+let canonicalize_path = Unix.realpath
 let executable_extensions ~program:_ = [""]
 let search_directories ~cwd:_ directories = directories
 

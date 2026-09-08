@@ -38,6 +38,12 @@ npx rescript-ocaml build
 The command is intentionally unavailable on Windows until the native Windows
 implementation and runtime test pass are complete.
 
+The packaged executable discovers `bsc.exe` beside itself, like Rust rewatch,
+and the npm launcher supplies the installed runtime path. Direct invocation can
+instead resolve `@rescript/runtime` from the project hierarchy. The environment
+variables above remain useful overrides for the dune development executable;
+they are not required by the normal packaged launcher.
+
 Supported commands are `build` (the default), `watch`, `clean`, `format`, and
 `compiler-args`. The CLI is declared with Cmdliner; run the executable with
 `--help` for the current option summary.

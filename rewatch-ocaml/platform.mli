@@ -1,4 +1,5 @@
 val normalize_path_for_comparison : string -> string
+val canonicalize_path : string -> string
 val resolve_program : cwd:string -> string -> string
 
 val post_build_command :

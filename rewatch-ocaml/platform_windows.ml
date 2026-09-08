@@ -1,6 +1,15 @@
 let path_separator = ';'
 let normalize_path_for_comparison = String.lowercase_ascii
 
+let strip_verbatim_prefix path =
+  if String.starts_with ~prefix:"\\\\?\\UNC\\" path then
+    "\\\\" ^ String.sub path 8 (String.length path - 8)
+  else if String.starts_with ~prefix:"\\\\?\\" path then
+    String.sub path 4 (String.length path - 4)
+  else path
+
+let canonicalize_path path = Unix.realpath path |> strip_verbatim_prefix
+
 let executable_extensions ~program =
   if Filename.extension program <> "" then [""]
   else
