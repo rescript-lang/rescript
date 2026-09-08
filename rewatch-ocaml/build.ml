@@ -211,6 +211,9 @@ let compiler_flags ~source_maps ~watch ~gentype (config : Config.t) =
   @ (if gentype then config.gentype_args else [])
   @ config.compiler_flags @ config.warning_flags
 
+let with_local_warning_policy ~is_local (config : Config.t) =
+  if is_local then config else {config with warning_flags = []}
+
 let parse_file ~bsc ~build_dir ~(config : Config.t) path =
   let ast = Source.ast_path path in
   ensure_dir (Filename.concat build_dir (Filename.dirname ast));
@@ -833,7 +836,10 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
               path)
           ~display_root:root_config.root
       in
-      let compile_config = with_root_options config root_config in
+      let compile_config =
+        with_root_options config root_config
+        |> with_local_warning_policy ~is_local
+      in
       let build_dir = lib_path root "bs" in
       let ocaml_dir = lib_path root "ocaml" in
       ensure_dir build_dir;
@@ -1137,7 +1143,9 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder ~prod ~features
   let config =
     match prepared with
     | Some package -> package.graph_compile_config
-    | None -> with_root_options config root_config
+    | None ->
+      with_root_options config root_config
+      |> with_local_warning_policy ~is_local
   in
   let removed_modules, previous_ast_count =
     match Hashtbl.find_opt stats.cleanup_results root with

@@ -1,1 +1,4 @@
-let value = 1
+let value = {
+  let unused = 2
+  1
+}

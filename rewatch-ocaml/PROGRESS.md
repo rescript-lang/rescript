@@ -209,6 +209,11 @@ the same conservative result Rust intends for an unsuccessful probe.
   supported feature.
 - Both canonical compiler-argument tests pass, including cwd-invariant output
   and parser/compiler warning flag parity.
+- Non-local dependencies now compile without their own warning configuration
+  or the root CLI warning override, matching Rust. This matters for
+  `warnings.error`: suppressing external warning text alone was insufficient,
+  because passing `-warn-error` could still fail the dependency build. The
+  focused external-boundary fixture now exercises this end to end.
 - `allowed-dependents` is parsed and enforced for regular and development
   dependency edges. Package outputs reject duplicate effective suffix/location
   pairs and require an explicit module when configured, matching current Rust
@@ -366,7 +371,7 @@ rerun it for the final maintainability review alongside maximum module size.
 - Rust unit-test scenario coverage is tracked separately from source guards.
   `tests/check_rust_test_coverage.sh` currently inventories all 136 Rust unit
   tests and validates their exact entries in `tests/rust_test_coverage.tsv`;
-  71 scenarios have received an initial evidence review and 65 remain marked
+  81 scenarios have received an initial evidence review and 55 remain marked
   `unreviewed`. Its `--require-complete` mode is a final quality gate and fails
   for either unreviewed scenarios or confirmed coverage gaps.
 - Interactive output parity remains open. The OCaml executable currently emits

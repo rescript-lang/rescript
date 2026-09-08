@@ -18,6 +18,11 @@ let contains text fragment =
 let has_diagnostic config field =
   List.exists (fun message -> contains message ("'" ^ field ^ "'")) config.Config.diagnostics
 
+let rec contains_adjacent left right = function
+  | current :: next :: _ when current = left && next = right -> true
+  | _ :: rest -> contains_adjacent left right rest
+  | [] -> false
+
 let () =
   let root = Filename.temp_file "rewatch-ocaml-config-" "" in
   Sys.remove root;
@@ -65,4 +70,48 @@ let () =
           "sources.?.nested-source-key";
           "package-specs.?.nested-package-key";
           "sourceMap.?.nested-map-key";
-        ])
+        ];
+      write_file path
+        {|{"name":"different-outputs","package-specs":[{"module":"esmodule","in-source":true,"suffix":".js"},{"module":"commonjs","in-source":false,"suffix":".js"}]}|};
+      let config = Config.load path in
+      check (List.length config.package_specs = 2)
+        "the same suffix is allowed in different output locations";
+      write_file path
+        {|{"name":"gentype-precedence","package-specs":{"module":"commonjs"},"gentypeconfig":{"module":"esmodule"}}|};
+      let config = Config.load path in
+      check
+        (contains_adjacent "-bs-gentype-module" "esmodule"
+           config.gentype_args)
+        "an explicit GenType module overrides package-specs";
+      write_file path {|{"name":"no-gentype"}|};
+      let config = Config.load path in
+      check (config.gentype_args = [])
+        "GenType arguments are absent without gentypeconfig";
+      write_file path
+        {|{"name":"jsx","jsx":{"module":"Voby.JSX","preserve":true}}|};
+      let config = Config.load path in
+      check
+        (contains_adjacent "-bs-jsx-module" "Voby.JSX" config.jsx_args)
+        "custom JSX modules are accepted";
+      check (List.mem "-bs-jsx-preserve" config.jsx_args)
+        "JSX preserve is projected to compiler arguments";
+      write_file path {|{"name":"maps-disabled","sourceMap":false}|};
+      let config = Config.load path in
+      check (config.source_map_args = ["-bs-source-map"; "false"])
+        "sourceMap false disables source maps explicitly";
+      write_file path
+        {|{"name":"tooling-config","editor":{"anything":true},"reanalyze":[1,2,3]}|};
+      let config = Config.load path in
+      check
+        (not (has_diagnostic config "editor")
+        && not (has_diagnostic config "reanalyze"))
+        "editor and reanalyze payloads are accepted without validation";
+      write_file path
+        {|{"name":"bad-module","package-specs":{"module":"es6-global"}}|};
+      let rejected =
+        try
+          ignore (Config.load path);
+          false
+        with Config.Error message -> contains message "unsupported package module"
+      in
+      check rejected "unsupported package modules are rejected")
