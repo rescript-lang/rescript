@@ -521,31 +521,41 @@ dependency roots and inventories each cleanup tree once. Attempts to cache
 artifact paths or mtimes more aggressively were rejected: the canonical rename
 and deletion sequences then intermittently emitted a low-level missing-CMI I/O
 error instead of Rust's missing-module diagnostic. The retained changes reduced
-the latest unchanged result to 37,602 metadata calls and 477 directory scans
-(Rust: 3,367 and 160); the edit result was 37,625 and 477 (Rust: 3,385 and 160).
+the unchanged result to 37,602 metadata calls and 477 directory scans (Rust:
+3,367 and 160); the edit result was 37,625 and 477 (Rust: 3,385 and 160).
+The first explicit compile-asset-state slice now scans each flat `lib/ocaml`
+directory once and passes that inventory to stale cleanup. This matches
+`read_compile_state.rs` ownership and avoids a second metadata probe for every
+entry. The latest unchanged result is 35,371 metadata calls and 477 directory
+scans (Rust: 3,369 and 160); the edit result is 35,394 and 477 (Rust: 3,384 and
+160). The directory count is unchanged because the state scan replaces the
+cleanup scan; moving freshness consumers onto explicit module state is what
+should remove the repeated popular-CMI probes.
 These are observational counts rather than a raw-total gate, and they include
 compiler process behavior, but the remaining difference is still too large to
-declare the superfluous-work audit closed. A future artifact index needs explicit
-cleanup/publication invalidation semantics and must retain both canonical
-missing-source snapshots.
+declare the superfluous-work audit closed. The artifact/module state needs
+explicit cleanup/publication invalidation semantics and must retain both
+canonical missing-source snapshots.
 
-### Future filesystem-performance work
+### Active filesystem-performance work
 
-This is a documented follow-up, not a completion blocker. The aggregate timing,
-memory, compiler-work, artifact, and behavioral gates pass, but Linux tracing
-still proves that the OCaml orchestration does avoidable filesystem work. Rerun
+The aggregate timing, memory, compiler-work, artifact, and behavioral gates
+pass, but Linux tracing still proves that the OCaml orchestration does avoidable
+filesystem work. Closing or specifically explaining the material residual is a
+completion gate for the current architecture refactor. Rerun
 the evidence with `bench/filesystem_audit.sh`; its prerequisites, isolation,
 normalization, and caveats are in `bench/README.md`.
 
 Rust-parity improvements should be attempted before novel optimizations, in this
 order:
 
-1. Introduce an explicit compile-asset state equivalent to Rust's single
-   per-package scan in `rewatch/src/build/read_compile_state.rs`. OCaml currently
-   rediscovers artifacts through `Build_artifacts.cleanup_stale`,
-   `dependency_artifact`, and repeated `modification_time` calls in
-   `Build.module_is_dirty`. This is the highest-confidence explanation for the
-   repeated popular-CMI probes in unchanged/edit traces.
+1. Complete the explicit compile-asset and module state equivalent to Rust's
+   `rewatch/src/build/read_compile_state.rs` and `build_types.rs`. The initial
+   per-package scan is now shared with `Build_artifacts.cleanup_stale`; repeated
+   `dependency_artifact` and `modification_time` calls in
+   `Build.module_is_dirty` remain. Replace the changing `is_dirty` closure with
+   fixed pre-scheduling dirty state and Rust-shaped CMI-change propagation
+   before making those consumers use the inventory.
 2. Share one source-tree inventory between `Source.discover`, stale-output
    cleanup, watch-sidecar recovery, and GenType source-directory discovery.
    `files_under` currently performs `lstat` for every entry, and separate
@@ -558,7 +568,7 @@ order:
    later consumers still cause substantially more `realpath`/`readlinkat` work
    than Rust.
 
-The asset state must have explicit transitions for discovery, stale cleanup,
+The asset/module state must have explicit transitions for discovery, stale cleanup,
 parse publication, interface publication, implementation publication, source
 rename/deletion, failed compilation, and watch rebuilds. Do not cache a missing
 or present artifact independently of those transitions. Earlier path/mtime cache
@@ -568,6 +578,11 @@ prototypes reduced the trace further but failed
 diagnostic with a missing-CMI I/O error. Those two tests, the namespaced rename
 case, the complete canonical suite, compiler-work manifests, and artifact
 manifests are mandatory regression gates for another attempt.
+An intermediate attempt that changed freshness consumption and publication in
+one step reproduced the same regression, while retaining only state
+construction and inventory sharing passed the complete canonical suite. The
+next slice therefore introduces explicit per-module dirty state and scheduler
+propagation before replacing live filesystem checks.
 
 Ideas not present in Rust remain separate hypotheses for after parity:
 

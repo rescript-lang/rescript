@@ -1,0 +1,42 @@
+let fail message = raise (Failure message)
+let check condition message = if not condition then fail message
+
+let write path contents =
+  let channel = open_out_bin path in
+  Fun.protect ~finally:(fun () -> close_out_noerr channel) (fun () ->
+    output_string channel contents)
+
+let with_temp_dir run =
+  let path = Filename.temp_file "rewatch-compile-assets-" "" in
+  Sys.remove path;
+  Unix.mkdir path 0o755;
+  Fun.protect ~finally:(fun () -> Build_artifacts.remove_tree path) (fun () ->
+    run path)
+
+let () =
+  with_temp_dir (fun root ->
+    let first = Filename.concat root "Example.cmi" in
+    let second = Filename.concat root "example.cmt" in
+    let unrelated = Filename.concat root "notes.txt" in
+    let nested = Filename.concat root "nested" in
+    write first "cmi";
+    write second "cmt";
+    write unrelated "notes";
+    Unix.mkdir nested 0o755;
+    write (Filename.concat nested "Nested.cmi") "nested";
+    let state = Compile_assets.create [root; root] in
+    check
+      (Compile_assets.files state root
+      |> List.sort String.compare
+      = List.sort String.compare [first; second; unrelated])
+      "one flat package inventory is retained for cleanup";
+    check (Option.is_some (Compile_assets.cmi state "Example"))
+      "CMI entries use compiler module keys";
+    check (Option.is_some (Compile_assets.cmt state "Example"))
+      "CMT entries normalize the first module-name character";
+    check (Option.is_none (Compile_assets.cmi state "Nested"))
+      "the compiler asset directory is scanned non-recursively";
+    Sys.remove first;
+    Compile_assets.refresh_cmi state ~key:"Example" ~path:first;
+    check (Option.is_none (Compile_assets.cmi state "Example"))
+      "refresh removes a deleted CMI")
