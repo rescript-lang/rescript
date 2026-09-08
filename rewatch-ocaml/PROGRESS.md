@@ -470,26 +470,34 @@ rerun it for the final maintainability review alongside maximum module size.
   longer honored, matching Rust rather than silently omitting source files;
   `jsx.v3-dependencies` is decoded as a string array even though its value is
   not otherwise used by this build system.
-- Configuration schema now has a retained 78-case differential acceptance
+- Configuration schema now has a retained 169-case differential acceptance
   gate. Its 36 source cases compare shorthand and qualified sources, nested
   `subdirs`, nullable optional fields, arbitrary non-`dev` type strings,
   forward-compatible unknown fields, every invalid JSON kind, and duplicate
   typed fields. Another 42 cases cover dependency forms, modern/legacy alias
   conflicts, dependency feature requests, feature maps, and
-  `allowed-dependents`. For every accepted case it also deep-compares Rust and
-  OCaml parser/compiler argument arrays. CI runs the table against both promoted
+  `allowed-dependents`. Another 91 cases exhaust package-spec shapes and output
+  conflicts, JSX and source-map fields/modes, and post-build commands. They
+  record the reference implementation's current distinction between duplicate
+  typed fields (rejected) and source-map object keys decoded through an
+  intermediate JSON map (last value wins). This appears to be an incidental
+  decoder consequence, not an intended configuration contract. For
+  every accepted case the gate also deep-compares Rust and OCaml
+  parser/compiler argument arrays. CI runs the table against both promoted
   executables; existing unit and canonical tests cover source inheritance,
-  feature closure and cycles, dependency permissions, and traversal behavior.
+  feature closure and cycles, dependency permissions, traversal behavior, and
+  post-build execution.
 - Configuration path canonicalization and file opening now translate both
   `Sys_error` and `Unix_error` into path-bearing `Config.Error` diagnostics.
   Missing paths and directory-valued config paths are tested, preventing raw
   OCaml exception rendering on these Rust validation paths.
-- Duplicate keys now follow the reference decoder's two distinct rules:
+- Duplicate keys now reproduce the reference decoder's two observed rules:
   typed configuration structs reject repeated known fields, while JSON-map
-  backed values retain the last occurrence. Differential acceptance covered
-  15 representative struct/map cases; focused tests also verify last-value
-  semantics for source maps, features, experimental flags, and GenType debug
-  maps. Repeated unknown fields remain accepted, as in Rust.
+  backed values retain the last occurrence. This is recorded as a compatibility
+  quirk rather than intentional configuration behavior. Differential acceptance
+  covered 15 representative struct/map cases; focused tests also verify
+  last-value semantics for source maps, features, experimental flags, and
+  GenType debug maps. Repeated unknown fields remain accepted, as in Rust.
 - Redirected warnings are persisted to compiler logs during scheduling but
   presented during final reporting, after the build summary and before config
   diagnostics. This matches Rust's deterministic snapshot order without

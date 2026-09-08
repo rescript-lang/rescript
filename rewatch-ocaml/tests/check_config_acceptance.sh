@@ -31,11 +31,16 @@ while IFS=$'\t' read -r area name expected json; do
   set -e
 
   if [[ "$rust_status" -eq 0 ]]; then
-    actual=accept
+    rust_actual=accept
   else
-    actual=reject
+    rust_actual=reject
   fi
-  if [[ "$ocaml_status" -ne "$rust_status" || "$actual" != "$expected" ]]; then
+  if [[ "$ocaml_status" -eq 0 ]]; then
+    ocaml_actual=accept
+  else
+    ocaml_actual=reject
+  fi
+  if [[ "$rust_actual" != "$expected" || "$ocaml_actual" != "$expected" ]]; then
     printf 'Config case %s/%s: expected %s, Rust=%s, OCaml=%s\n' \
       "$area" "$name" "$expected" "$rust_status" "$ocaml_status" >&2
     printf '%s\n' '--- Rust output ---' >&2
@@ -46,7 +51,7 @@ while IFS=$'\t' read -r area name expected json; do
     cat "$work/ocaml.err" >&2
     exit 1
   fi
-  if [[ "$actual" == accept ]] &&
+  if [[ "$expected" == accept ]] &&
     ! node -e '
       const fs = require("fs");
       const assert = require("assert");
