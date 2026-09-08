@@ -1,0 +1,137 @@
+# test	status	evidence
+build.rs::with_build_lock_holds_lock_while_running_work	unreviewed	lock behavior review pending
+build.rs::with_build_lock_drops_lock_after_error_result	unreviewed	lock behavior review pending
+build.rs::build_waits_for_lock_before_initializing	unreviewed	lock behavior review pending
+build.rs::formats_successful_completion_message	unreviewed	output review pending
+build.rs::formats_warning_completion_message	unreviewed	output review pending
+build/compile.rs::compiler_output_to_string_handles_invalid_utf8	unreviewed	diagnostic decoding review pending
+build/compile.rs::retain_critical_external_warnings_returns_none_without_marker	unreviewed	external warning review pending
+build/compile.rs::retain_critical_external_warnings_keeps_uncurried_dot_block	unreviewed	external warning review pending
+build/compile.rs::retain_critical_external_warnings_handles_crlf_line_endings	unreviewed	external warning review pending
+build/compile.rs::replays_stored_warning_for_module_that_did_not_recompile	unreviewed	warning replay review pending
+build/compile.rs::replays_stored_warnings_in_module_name_order	unreviewed	warning replay review pending
+build/compile.rs::appends_fresh_and_stored_warnings_in_shared_module_name_order	unreviewed	warning replay review pending
+build/compile.rs::does_not_replay_stored_warning_for_module_that_recompiled	unreviewed	warning replay review pending
+build/compiler_info.rs::verify_compiler_info_keeps_package_when_source_map_args_match	unreviewed	compiler-info review pending
+build/compiler_info.rs::verify_compiler_info_cleans_package_when_source_map_args_change	unreviewed	compiler-info review pending
+build/packages.rs::should_return_false_with_invalid_parents_as_bs_dependencies	unreviewed	dependency permission review pending
+build/packages.rs::should_return_false_with_invalid_parents_as_dev_dependencies	unreviewed	dependency permission review pending
+build/packages.rs::should_return_true_with_no_invalid_parent	unreviewed	dependency permission review pending
+build/packages.rs::should_report_missing_name_when_package_and_rescript_json_lack_it	unreviewed	package diagnostic review pending
+build/packages.rs::issue_tracker_url_prefers_bugs_url_string	unreviewed	external deprecation URL review pending
+build/packages.rs::issue_tracker_url_prefers_bugs_object_url	unreviewed	external deprecation URL review pending
+build/packages.rs::issue_tracker_url_derives_from_repository_git_url	unreviewed	external deprecation URL review pending
+build/packages.rs::issue_tracker_url_derives_from_repository_object	unreviewed	external deprecation URL review pending
+build/packages.rs::issue_tracker_url_handles_shorthand	unreviewed	external deprecation URL review pending
+build/packages.rs::issue_tracker_url_returns_none_without_hints	unreviewed	external deprecation URL review pending
+build/packages.rs::monorepo_root_marks_transitive_workspace_dependencies_as_local	unreviewed	workspace locality review pending
+build/packages.rs::compute_active_features_returns_all_when_cli_absent	unreviewed	feature review pending
+build/packages.rs::compute_active_features_honours_cli_restriction_and_expands_transitive	unreviewed	feature review pending
+build/packages.rs::compute_active_features_dep_uses_consumer_restriction	unreviewed	feature review pending
+build/packages.rs::compute_active_features_prod_ignores_dev_dependency_feature_requests	unreviewed	feature review pending
+build/packages.rs::compute_active_features_honours_explicit_empty_features_list	unreviewed	feature review pending
+cli.rs::no_subcommand_defaults_to_build	covered	cli_tests.ml: no subcommand defaults to build
+cli.rs::defaults_to_build_with_folder_shortcut	covered	cli_tests.ml: bare folder uses implicit build
+cli.rs::trailing_global_flag_is_treated_as_global	covered	cli_tests.ml: trailing verbosity flag
+cli.rs::double_dash_keeps_following_args_positional	covered	cli_tests.ml: option-looking folder after double dash
+cli.rs::unknown_subcommand_help_uses_global_help	covered	cli_tests.ml: implicit folder help
+cli.rs::build_help_shows_subcommand_help	covered	cli_tests.ml: explicit build help
+cli.rs::build_allows_global_verbose_flag	covered	cli_tests.ml: trailing build verbosity
+cli.rs::build_option_is_parsed_normally	covered	cli_tests.ml: build-only no-timing option
+cli.rs::respects_global_flag_before_subcommand	covered	cli_tests.ml: leading verbosity before watch
+cli.rs::invalid_option_for_subcommand_does_not_fallback	covered	cli_tests.ml: watch rejects build-only option
+cli.rs::version_flag_before_subcommand_displays_version	covered	cli_tests.ml: leading version flag
+cli.rs::version_flag_after_subcommand_is_rejected	covered	cli_tests.ml: explicit build trailing version rejected
+cli.rs::global_help_flag_shows_help	covered	cli_tests.ml: global help
+cli.rs::global_version_flag_shows_version	covered	cli_tests.ml: global version
+cli.rs::build_prod_flag_is_parsed	covered	cli_tests.ml: build prod
+cli.rs::build_prod_flag_defaults_to_false	covered	cli_tests.ml: build prod defaults false
+cli.rs::watch_prod_flag_is_parsed	covered	cli_tests.ml: watch prod
+cli.rs::watch_clear_screen_flag_is_parsed	covered	cli_tests.ml: watch clear-screen
+cli.rs::clean_prod_flag_is_parsed	covered	cli_tests.ml: clean prod
+cli.rs::prod_flag_defaults_to_build_command	covered	cli_tests.ml: implicit prod build
+cli.rs::non_utf_argument_returns_error	covered	cli_tests.ml: invalid UTF-8 byte string
+cli.rs::build_features_flag_is_parsed	covered	cli_tests.ml: build features
+cli.rs::build_features_flag_defaults_to_none	covered	cli_tests.ml: build features default to none
+cli.rs::build_features_flag_rejects_empty_string	covered	cli_tests.ml: empty features rejected
+cli.rs::watch_features_flag_is_parsed	covered	cli_tests.ml: watch features
+cli.rs::features_flag_round_trips_through_build_to_watch_args	covered	cli_tests.ml: build/watch feature conversion agrees
+cli.rs::build_features_flag_strips_whitespace	covered	cli_tests.ml: feature names trimmed
+config.rs::test_getters	unreviewed	configuration getter coverage review pending
+config.rs::test_package_specs_duplicate_suffix_default	covered	unit_tests.ml: duplicate effective output rejected
+config.rs::test_package_specs_duplicate_suffix_explicit	covered	unit_tests.ml: duplicate explicit output rejected
+config.rs::test_package_specs_duplicate_suffix_different_in_source_ok	unreviewed	add explicit different-location assertion
+config.rs::test_sources	unreviewed	source parsing coverage review pending
+config.rs::test_dev_sources_multiple	unreviewed	multiple dev source coverage review pending
+config.rs::test_detect_gentypeconfig	shared	canonical GenType build tests
+config.rs::test_gentype_shims_object_and_array_forms	covered	unit_tests.ml: legacy shim normalization and map semantics
+config.rs::test_gentype_module_falls_back_to_package_specs_module	covered	unit_tests.ml: GenType module fallback
+config.rs::test_gentype_module_explicit_wins_over_package_specs	unreviewed	add explicit precedence assertion
+config.rs::test_gentype_args_without_gentype_config	unreviewed	add explicit absent-config assertion
+config.rs::test_other_jsx_module	unreviewed	JSX module coverage review pending
+config.rs::test_jsx_preserve	unreviewed	JSX preserve coverage review pending
+config.rs::test_source_map_args	covered	unit_tests.ml: always/inline and source-map arguments
+config.rs::test_source_map_dev_args_only_in_watch	covered	unit_tests.ml: dev source maps differ in build/watch
+config.rs::test_source_map_false_args	unreviewed	add explicit false source-map assertion
+config.rs::test_source_map_rejects_true_for_nested_config	covered	unit_tests.ml: sourceMap true rejected
+config.rs::test_source_map_requires_enabled	covered	unit_tests.ml: sourceMap enabled required
+config.rs::test_source_map_inline_args	covered	unit_tests.ml: inline source maps
+config.rs::test_source_map_hidden_args	unreviewed	add hidden source-map assertion
+config.rs::test_source_map_rejects_external_mode	unreviewed	add invalid mode assertion
+config.rs::test_get_suffix	shared	canonical suffix tests
+config.rs::test_dependencies	shared	canonical dependency tests
+config.rs::test_bs_dependencies_alias	shared	canonical dependency alias tests
+config.rs::test_dev_dependencies	shared	canonical development dependency tests
+config.rs::test_bs_dev_dependencies_alias	unreviewed	alias coverage review pending
+config.rs::test_package_specs_es6_global_deprecation	unreviewed	add unsupported module assertion
+config.rs::test_es6_module_alias	covered	unit_tests.ml: es6 deprecation diagnostic
+config.rs::test_unknown_fields_are_collected	covered	config_tests.ml: top-level unknown field
+config.rs::test_unsupported_fields_are_collected	covered	unit_tests.ml: unsupported field classification
+config.rs::test_editor_field_supported	unreviewed	add explicit ignored editor payload assertion
+config.rs::test_compiler_flags	shared	canonical compiler-argument tests
+config.rs::test_cjs_module_alias	covered	unit_tests.ml: cjs deprecation diagnostic
+config.rs::test_bsc_flags_alias	shared	canonical compiler flag alias test
+config.rs::test_find_is_type_dev_for_exact_match	unreviewed	dev path classification review pending
+config.rs::test_find_is_type_dev_for_none_dev	unreviewed	dev path classification review pending
+config.rs::test_find_is_type_dev_for_multiple_sources	unreviewed	dev path classification review pending
+config.rs::test_find_is_type_dev_for_shorthand	unreviewed	dev path classification review pending
+config.rs::test_find_is_type_dev_for_recursive_folder	unreviewed	dev path classification review pending
+config.rs::test_find_is_type_dev_for_sub_folder	covered	unit_tests.ml: parent source type propagation
+config.rs::test_find_is_type_dev_for_sub_folder_shorthand	covered	unit_tests.ml: parent source type propagation
+config.rs::test_get_warning_args_with_override	shared	canonical compiler-argument warning override test
+config.rs::test_get_warning_args_without_override	shared	canonical compiler-argument warning config test
+config.rs::test_get_warning_args_non_local_dep	unreviewed	external dependency warning review pending
+config.rs::test_get_warning_args_override_ignores_config	shared	canonical warning override precedence test
+config.rs::test_get_warning_args_non_local_dep_ignores_override	unreviewed	external dependency warning override review pending
+config.rs::test_new_missing_rescript_json	shared	focused missing-project tests
+config.rs::test_bsconfig_json_filename_deprecation	covered	unit_tests.ml and focused legacy-config test
+config.rs::test_source_with_feature_tag_parses	shared	canonical feature tests
+config.rs::test_features_map_parses	shared	canonical feature tests
+config.rs::test_dependency_qualified_form_parses	shared	canonical feature-restricted dependency tests
+config.rs::test_is_feature_enabled_untagged_is_always_active	unreviewed	feature helper review pending
+config.rs::test_is_feature_enabled_tagged_requires_membership	unreviewed	feature helper review pending
+config.rs::test_resolve_active_features_expands_transitive	shared	canonical transitive feature test
+config.rs::test_resolve_active_features_no_map_is_identity	unreviewed	add explicit identity assertion
+config.rs::test_resolve_active_features_detects_cycle	shared	canonical feature cycle test
+config.rs::test_collect_declared_features_unions_map_and_tags	unreviewed	feature declaration union review pending
+config.rs::test_feature_cascades_to_qualified_subdirs	shared	canonical nested feature source tests
+config.rs::test_feature_cascade_does_not_overwrite_explicit_child	shared	canonical nested feature source tests
+config.rs::test_dependency_helpers_return_name_and_features	unreviewed	dependency helper review pending
+lock.rs::returns_error_when_project_folder_missing	shared	focused missing-project test
+lock.rs::creates_lock_when_project_folder_exists	unreviewed	lock lifecycle review pending
+lock.rs::only_one_concurrent_caller_acquires_lock	unreviewed	lock concurrency review pending
+lock.rs::ignores_stale_lock_for_unrelated_process_name	covered	unit_tests.ml: stale lock replacement
+lock.rs::returns_locked_for_active_watch_lock	unreviewed	active watcher lock review pending
+lock.rs::waits_for_active_build_lock_to_be_removed	unreviewed	build/watch lock wait review pending
+lock.rs::drop_lock_removes_existing_build_lock	unreviewed	lock cleanup review pending
+queue.rs::test_basic_functionalities	intentional	OCaml uses dependency scheduler rather than Rust queue type
+queue.rs::test_queue_thread_safety	intentional	OCaml uses single-domain scheduler state and subprocess concurrency
+queue.rs::test_concurrent_pushes_and_pops	intentional	OCaml uses single-domain scheduler state and subprocess concurrency
+queue.rs::test_concurrent_mixed_operations	intentional	OCaml uses single-domain scheduler state and subprocess concurrency
+telemetry.rs::noop_guard_reports_otel_disabled	omitted	OpenTelemetry is an explicit project non-goal
+telemetry.rs::noop_guard_drops_cleanly_without_explicit_shutdown	omitted	OpenTelemetry is an explicit project non-goal
+telemetry.rs::init_telemetry_without_env_is_noop	omitted	OpenTelemetry is an explicit project non-goal
+watcher.rs::clears_screen_only_for_interactive_rebuilds	unreviewed	PTY output test remains open
+watcher.rs::carries_forward_implementation_warnings_for_matching_module_paths	shared	canonical watch warning persistence tests
+watcher.rs::does_not_carry_forward_warnings_when_module_paths_change	unreviewed	warning path-change case review pending
+watcher.rs::carries_forward_interface_warnings_for_matching_interface_paths	unreviewed	interface warning carry-forward review pending

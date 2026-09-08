@@ -72,6 +72,8 @@ let () =
     "build accepts short no-timing boolean values";
   check (build_options ["build"; "--prod"]).prod
     "build parses --prod";
+  check (not (build_options ["build"]).prod)
+    "build defaults --prod to false";
   check (watch_options ["watch"; "--prod"]).prod
     "watch parses --prod";
   check
@@ -85,10 +87,16 @@ let () =
     ((build_options ["build"; "--features"; " native , web "]).features
     = Some ["native"; "web"])
     "feature names are trimmed";
+  check ((build_options ["build"]).features = None)
+    "build defaults features to none";
   check
     ((watch_options ["watch"; "--features"; "native"]).features
     = Some ["native"])
     "watch parses features";
+  check
+    ((build_options ["build"; "--features"; "native,web"]).features
+    = (watch_options ["watch"; "--features"; "native,web"]).features)
+    "build and watch use the same feature conversion";
   check (rejects ["build"; "--features"; ""])
     "empty features are rejected";
   check (rejects [String.make 1 (Char.chr 0xff)])
