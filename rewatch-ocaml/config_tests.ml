@@ -114,4 +114,40 @@ let () =
           false
         with Config.Error message -> contains message "unsupported package module"
       in
-      check rejected "unsupported package modules are rejected")
+      check rejected "unsupported package modules are rejected";
+      write_file path
+        {|{"name":"hidden-map","sourceMap":{"enabled":"always","mode":"hidden"}}|};
+      let config = Config.load path in
+      check
+        (contains_adjacent "-bs-source-map" "hidden" config.source_map_args)
+        "hidden source maps are accepted";
+      write_file path
+        {|{"name":"bad-map","sourceMap":{"enabled":"always","mode":"external"}}|};
+      let rejected =
+        try
+          ignore (Config.load path);
+          false
+        with Config.Error message -> contains message "sourceMap.mode"
+      in
+      check rejected "unknown source map modes are rejected";
+      write_file path
+        {|{"name":"legacy-dev-deps","bs-dev-dependencies":["dep"]}|};
+      let config = Config.load path in
+      check
+        (match config.dev_dependencies with
+        | [{name = "dep"; features = None}] -> true
+        | _ -> false)
+        "bs-dev-dependencies is accepted";
+      check
+        (List.exists
+           (fun message -> contains message "field 'bs-dev-dependencies'")
+           config.diagnostics)
+        "bs-dev-dependencies emits its deprecation";
+      write_file path {|{"suffix":".mjs"}|};
+      let rejected =
+        try
+          ignore (Config.load path);
+          false
+        with Config.Error message -> contains message "missing required field \"name\""
+      in
+      check rejected "a package config without a name is rejected")
