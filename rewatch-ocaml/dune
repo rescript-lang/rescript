@@ -25,6 +25,7 @@
   graph
   package_metadata
   build_artifacts
+  compiler_info
   build
   format)
  (libraries unix yojson str spawn cmdliner))
@@ -57,4 +58,9 @@
 (test
  (name source_tests)
  (modules source_tests)
+ (libraries rewatch_ocaml_lib))
+
+(test
+ (name compiler_info_tests)
+ (modules compiler_info_tests)
  (libraries rewatch_ocaml_lib))
