@@ -799,6 +799,7 @@ type build_stats = {
   mutable previous_asts: int;
   mutable parsed: int;
   mutable compiled: int;
+  mutable parse_seconds: float;
   mutable diagnostics: string list;
   mutable failure: string option;
   removed_modules: (string, unit) Hashtbl.t;
@@ -892,7 +893,7 @@ let dependent_is_allowed allowed_dependents dependent =
     allowed_dependents
 
 let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
-    ~filter ~watch ~stats =
+    ~filter ~watch ~stats ~on_cleanup =
   let bsc = bsc_path () in
   let requested_features = Hashtbl.create 32 in
   let unallowed_dependencies = ref [] in
@@ -1056,6 +1057,7 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
       ~source_map_args
   in
   stats.compiler_context <- Some compiler_context;
+  let cleanup_started = Unix.gettimeofday () in
   List.iter
     (fun package ->
       if Compiler_info.needs_clean compiler_context package.graph_config then (
@@ -1082,10 +1084,14 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
       in
       Hashtbl.replace stats.cleanup_results package.graph_root
         (removed_modules, previous_ast_count);
+      stats.cleaned <- stats.cleaned + List.length removed_modules;
+      stats.previous_asts <- stats.previous_asts + previous_ast_count;
       List.iter
         (fun module_name -> Hashtbl.replace stats.removed_modules module_name ())
         removed_modules)
     !graph_packages;
+  on_cleanup (Unix.gettimeofday () -. cleanup_started);
+  let parse_started = Unix.gettimeofday () in
   let parse_entries =
     !graph_packages
     |> List.concat_map (fun package ->
@@ -1241,19 +1247,25 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
     (fun (node, dependencies) ->
       Hashtbl.replace stats.global_dependencies node.key dependencies)
     graph_nodes;
-  try
-    ignore
-      (Graph.topological_sort graph_nodes
-         ~name:(fun (node, _) -> node.key)
-         ~deps:snd);
-    None
-  with Graph.Cycle cycle ->
-    let blocked =
-      blocked_dependents
-        (List.map (fun (node, dependencies) -> (node.key, dependencies)) graph_nodes)
-        cycle
-    in
-    Some (cycle, blocked, by_key)
+  let cycle =
+    try
+      ignore
+        (Graph.topological_sort graph_nodes
+           ~name:(fun (node, _) -> node.key)
+           ~deps:snd);
+      None
+    with Graph.Cycle cycle ->
+      let blocked =
+        blocked_dependents
+          (List.map
+             (fun (node, dependencies) -> (node.key, dependencies))
+             graph_nodes)
+          cycle
+      in
+      Some (cycle, blocked, by_key)
+  in
+  stats.parse_seconds <- Unix.gettimeofday () -. parse_started;
+  cycle
 
 let rec run_internal ~(root_config : Config.t) ~seen ~folder ~prod ~features
     ~warn_error ~watch ~filter ~is_local ~stats =
@@ -1366,17 +1378,15 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder ~prod ~features
       with_root_options config root_config
       |> with_local_warning_policy ~is_local
   in
-  let removed_modules, previous_ast_count =
+  let removed_modules, _ =
     match Hashtbl.find_opt stats.cleanup_results root with
     | Some result -> result
     | None ->
       Build_artifacts.cleanup_stale ~root ~ocaml_dir ~is_local config modules
   in
-  stats.cleaned <- stats.cleaned + List.length removed_modules;
   List.iter
     (fun module_name -> Hashtbl.replace stats.removed_modules module_name ())
     removed_modules;
-  stats.previous_asts <- stats.previous_asts + previous_ast_count;
   let names = Hashtbl.create (List.length modules) in
   List.iter
     (fun module_ -> Hashtbl.replace names module_.Source.name module_)
@@ -1771,6 +1781,7 @@ let run_with_warning_state ~warning_state ~compilation_kind ~no_timing ~seen
       previous_asts = 0;
       parsed = 0;
       compiled = 0;
+      parse_seconds = 0.;
       diagnostics = [];
       failure = None;
       removed_modules = Hashtbl.create 16;
@@ -1886,12 +1897,23 @@ let run_with_warning_state ~warning_state ~compilation_kind ~no_timing ~seen
     ^ "\nPossible solutions:\n- Extract shared code into a new module both depend on.\n"
   in
   let release_build_lock = acquire_build_lock (workspace_lock_root root) in
+  let phase_seconds seconds = if no_timing then 0. else seconds in
+  let is_rebuild = Option.is_some compilation_kind in
+  let parse_step = if is_rebuild then "1/2" else "2/3" in
+  let compile_step = if is_rebuild then "2/2" else "3/3" in
   let execute () =
     let cycle =
       prepare_global_graph ~root_config ~prod ~features ~warn_error ~filter
         ~watch ~stats
+        ~on_cleanup:(fun seconds ->
+          if interactive && not is_rebuild then (
+            if stats.compiler_cleaned then
+              print_endline (Output.compiler_cleanup_message ~step:"1/3");
+            print_endline
+              (Output.cleanup_message ~step:"1/3" ~cleaned:stats.cleaned
+                 ~total:stats.previous_asts ~seconds:(phase_seconds seconds))))
     in
-    if stats.compiler_cleaned then
+    if stats.compiler_cleaned && not interactive then
       print_endline "Cleaned previous build due to compiler update";
     Option.iter
       (fun (_, blocked, _) ->
@@ -1901,11 +1923,27 @@ let run_with_warning_state ~warning_state ~compilation_kind ~no_timing ~seen
       cycle;
     run_internal ~root_config ~seen:visited ~folder:root ~prod ~features
       ~warn_error ~watch ~filter ~is_local:true ~stats;
+    if interactive then
+      print_endline
+        (Output.parsing_message ~step:parse_step ~count:stats.parsed
+           ~seconds:(phase_seconds stats.parse_seconds));
+    let compile_started = Unix.gettimeofday () in
     (try
        run_namespace_jobs stats;
        run_scheduled_modules stats
      with Build_failure output ->
        if Option.is_none stats.failure then stats.failure <- Some output);
+    if interactive then (
+      let seconds = phase_seconds (Unix.gettimeofday () -. compile_started) in
+      match stats.failure with
+      | None ->
+        print_endline
+          (Output.compiling_message ~step:compile_step ~count:stats.compiled
+             ~seconds)
+      | Some _ ->
+        prerr_endline
+          (Output.compilation_failed_message ~step:compile_step
+             ~count:stats.compiled ~seconds));
     (match stats.failure, cycle with
     | Some output, _ -> report_failure output
     | None, Some (names, _, by_key) ->

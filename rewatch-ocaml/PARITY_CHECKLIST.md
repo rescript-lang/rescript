@@ -126,8 +126,8 @@ on whether stdout and stderr are terminals.
 | Mode | Required comparison | Current status |
 | --- | --- | --- |
 | Redirected/plain output | Success summaries, warnings, errors, ordering, exit status, and absence of terminal control sequences; Cmdliner help may use its native man-page headings and layout | Canonical snapshots cover important cases; inventory pending |
-| Interactive build | TTY detection, parsing/compilation progress, spinner lifecycle, timing, colors, symbols/emojis, quiet/verbose behavior, and cleanup on interruption | Partial; final status, warning state, timing, and emoji match, while phase progress and verbosity remain open |
-| Interactive watch | Initial-build and rebuild progress, clear-screen behavior, persistent warnings, recovery errors, symbols/emojis, and orderly shutdown | Partial; final status, clear-screen, warning persistence, and lifecycle are covered, while phase presentation remains open |
+| Interactive build | TTY detection, parsing/compilation progress, spinner lifecycle, timing, colors, symbols/emojis, quiet/verbose behavior, and cleanup on interruption | Partial; a retained Linux PTY gate exactly compares normalized cleanup/parse/compile completion lines, step counts, timing, phase emojis, and final status; warning state is covered separately, while live spinner updates and verbosity remain open |
+| Interactive watch | Initial-build and rebuild progress, clear-screen behavior, persistent warnings, recovery errors, symbols/emojis, and orderly shutdown | Partial; initial three-step completion presentation has an exact PTY comparison, rebuilds emit two-step completion presentation, and final status, clear-screen, warning persistence, and lifecycle are covered; an exact rebuild PTY comparison and live spinner updates remain open |
 | Accessibility/terminal fallback | Stable meaningful text when color or richer glyphs are unavailable | Open |
 
 Interactive checks should run both implementations under a pseudo-terminal and
