@@ -74,7 +74,7 @@ rewatch-ocaml/tests/check_rust_test_coverage.sh --require-complete
 ```
 
 That mode also fails while any scenario is `unreviewed` or `gap`. The initial
-inventory contains 136 Rust tests: 81 have been reviewed and 55 remain
+inventory contains 136 Rust tests: 87 have been reviewed and 49 remain
 unreviewed. A mapping is evidence only after its cited OCaml/shared test has
 been inspected; grouping by similarly named functions is not sufficient.
 

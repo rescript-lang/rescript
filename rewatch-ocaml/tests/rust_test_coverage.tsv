@@ -18,12 +18,12 @@ build/packages.rs::should_return_false_with_invalid_parents_as_bs_dependencies	u
 build/packages.rs::should_return_false_with_invalid_parents_as_dev_dependencies	unreviewed	dependency permission review pending
 build/packages.rs::should_return_true_with_no_invalid_parent	unreviewed	dependency permission review pending
 build/packages.rs::should_report_missing_name_when_package_and_rescript_json_lack_it	unreviewed	package diagnostic review pending
-build/packages.rs::issue_tracker_url_prefers_bugs_url_string	unreviewed	external deprecation URL review pending
-build/packages.rs::issue_tracker_url_prefers_bugs_object_url	unreviewed	external deprecation URL review pending
-build/packages.rs::issue_tracker_url_derives_from_repository_git_url	unreviewed	external deprecation URL review pending
-build/packages.rs::issue_tracker_url_derives_from_repository_object	unreviewed	external deprecation URL review pending
-build/packages.rs::issue_tracker_url_handles_shorthand	unreviewed	external deprecation URL review pending
-build/packages.rs::issue_tracker_url_returns_none_without_hints	unreviewed	external deprecation URL review pending
+build/packages.rs::issue_tracker_url_prefers_bugs_url_string	covered	package_metadata_tests.ml: bugs string precedence
+build/packages.rs::issue_tracker_url_prefers_bugs_object_url	covered	package_metadata_tests.ml: bugs object precedence
+build/packages.rs::issue_tracker_url_derives_from_repository_git_url	covered	package_metadata_tests.ml: git+https repository URL
+build/packages.rs::issue_tracker_url_derives_from_repository_object	covered	package_metadata_tests.ml: repository object URL
+build/packages.rs::issue_tracker_url_handles_shorthand	covered	package_metadata_tests.ml: GitHub shorthand
+build/packages.rs::issue_tracker_url_returns_none_without_hints	covered	package_metadata_tests.ml: missing metadata
 build/packages.rs::monorepo_root_marks_transitive_workspace_dependencies_as_local	unreviewed	workspace locality review pending
 build/packages.rs::compute_active_features_returns_all_when_cli_absent	unreviewed	feature review pending
 build/packages.rs::compute_active_features_honours_cli_restriction_and_expands_transitive	unreviewed	feature review pending

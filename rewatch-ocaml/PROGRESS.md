@@ -214,6 +214,11 @@ the same conservative result Rust intends for an unsuccessful probe.
   `warnings.error`: suppressing external warning text alone was insufficient,
   because passing `-warn-error` could still fail the dependency build. The
   focused external-boundary fixture now exercises this end to end.
+- Deprecations in non-local packages are still reported, as in Rust, while
+  unsupported and unknown fields remain local-only. When available, the
+  diagnostic includes the package's `bugs` URL or an issues URL derived from
+  `repository`; the precedence and URL forms have focused tests in
+  `package_metadata_tests.ml`.
 - `allowed-dependents` is parsed and enforced for regular and development
   dependency edges. Package outputs reject duplicate effective suffix/location
   pairs and require an explicit module when configured, matching current Rust
@@ -371,7 +376,7 @@ rerun it for the final maintainability review alongside maximum module size.
 - Rust unit-test scenario coverage is tracked separately from source guards.
   `tests/check_rust_test_coverage.sh` currently inventories all 136 Rust unit
   tests and validates their exact entries in `tests/rust_test_coverage.tsv`;
-  81 scenarios have received an initial evidence review and 55 remain marked
+  87 scenarios have received an initial evidence review and 49 remain marked
   `unreviewed`. Its `--require-complete` mode is a final quality gate and fails
   for either unreviewed scenarios or confirmed coverage gaps.
 - Interactive output parity remains open. The OCaml executable currently emits
