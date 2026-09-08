@@ -49,6 +49,27 @@ let member name fields = List.assoc_opt name fields
 let optional_member name fields =
   match member name fields with None | Some `Null -> None | value -> value
 
+let rec deduplicate_last = function
+  | [] -> []
+  | ((name, _) as field) :: rest ->
+    if List.mem_assoc name rest then deduplicate_last rest
+    else field :: deduplicate_last rest
+
+let last_member name fields = List.assoc_opt name (deduplicate_last fields)
+
+let last_optional_member name fields =
+  match last_member name fields with None | Some `Null -> None | value -> value
+
+let reject_duplicate_fields path context known fields =
+  let seen = Hashtbl.create (List.length fields) in
+  List.iter
+    (fun (name, _) ->
+      if List.mem name known then
+        if Hashtbl.mem seen name then
+          fail path (Printf.sprintf "duplicate field %S in %s" name context)
+        else Hashtbl.add seen name ())
+    fields
+
 let path_in_root root =
   let current = Filename.concat root "rescript.json" in
   if Sys.file_exists current then current else Filename.concat root "bsconfig.json"
@@ -97,6 +118,7 @@ let compiler_flags path field = function
 let dependency_name path = function
   | `String value -> {name = value; features = None}
   | `Assoc fields -> (
+    reject_duplicate_fields path "dependency" ["name"; "features"] fields;
     match member "name" fields with
     | Some value ->
       let features = match optional_member "features" fields with
@@ -132,6 +154,8 @@ let rec sources_of_json path inherited_dir forced_dev inherited_feature = functi
       };
     ]
   | `Assoc fields ->
+    reject_duplicate_fields path "source" ["dir"; "subdirs"; "type"; "feature"]
+      fields;
     let dir =
       match member "dir" fields with
       | Some value -> Filename.concat inherited_dir (string path "dir" value)
@@ -239,6 +263,8 @@ let unknown_fields fields =
 
 let parse_package_spec path = function
   | `Assoc fields ->
+    reject_duplicate_fields path "package-specs entry"
+      ["module"; "in-source"; "suffix"] fields;
     let module_format =
       match member "module" fields with
       | Some (`String ("esmodule" | "es6")) -> Esmodule
@@ -274,6 +300,16 @@ let package_specs_use_alias alias = function
 
 let gentype_args path configured_suffix package_specs_value sources dependencies = function
   | `Assoc fields ->
+    reject_duplicate_fields path "gentypeconfig"
+      [
+        "module";
+        "moduleResolution";
+        "exportInterfaces";
+        "generatedFileExtension";
+        "shims";
+        "debug";
+      ]
+      fields;
     let module_ =
       match optional_member "module" fields with
       | None -> (
@@ -344,7 +380,8 @@ let gentype_args path configured_suffix package_specs_value sources dependencies
       match member "debug" fields with
       | None -> []
       | Some (`Assoc values) ->
-        values |> List.sort compare |> List.concat_map (fun (name, value) ->
+        values |> deduplicate_last |> List.sort compare
+        |> List.concat_map (fun (name, value) ->
           match value with
           | `Bool true -> ["-bs-gentype-debug"; name]
           | `Bool false -> []
@@ -374,6 +411,33 @@ let load path =
     | `Assoc fields -> fields
     | _ -> fail path "configuration must be an object"
   in
+  reject_duplicate_fields path "configuration"
+    [
+      "name";
+      "sources";
+      "package-specs";
+      "warnings";
+      "suffix";
+      "dependencies";
+      "bs-dependencies";
+      "dev-dependencies";
+      "bs-dev-dependencies";
+      "features";
+      "ppx-flags";
+      "compiler-flags";
+      "bsc-flags";
+      "namespace";
+      "jsx";
+      "sourceMap";
+      "experimental-features";
+      "gentypeconfig";
+      "js-post-build";
+      "editor";
+      "reanalyze";
+      "namespace-entry";
+      "allowed-dependents";
+    ]
+    fields;
   let name =
     match member "name" fields with
     | Some value -> string path "name" value
@@ -429,6 +493,8 @@ let load path =
     match optional_member "warnings" fields with
     | None -> []
     | Some (`Assoc warning_fields) ->
+      reject_duplicate_fields path "warnings" ["number"; "error"]
+        warning_fields;
       let number = match optional_member "number" warning_fields with
         | None -> [] | Some value -> ["-w"; string path "number" value] in
       let error = match optional_member "error" warning_fields with
@@ -453,6 +519,9 @@ let load path =
     match optional_member "jsx" fields with
     | None -> []
     | Some (`Assoc jsx) ->
+      reject_duplicate_fields path "jsx"
+        ["version"; "module"; "mode"; "v3-dependencies"; "preserve"]
+        jsx;
       let version = match optional_member "version" jsx with
         | None -> []
         | Some (`Int 4) -> ["-bs-jsx"; "4"]
@@ -485,7 +554,7 @@ let load path =
         "sourceMap true is unsupported; use an object with enabled and mode fields or false"
     | Some (`Assoc options) ->
       let mode =
-        match member "mode" options with
+        match last_member "mode" options with
         | Some (`String ("linked" | "inline" | "hidden" as value)) ->
           value
         | None -> fail path "sourceMap is missing field \"mode\""
@@ -493,17 +562,17 @@ let load path =
           fail path "sourceMap.mode must be one of linked, inline, hidden"
       in
       let dev_only =
-        match member "enabled" options with
+        match last_member "enabled" options with
         | Some (`String "always") -> false
         | Some (`String "dev") -> true
         | None -> fail path "sourceMap is missing field \"enabled\""
         | Some _ ->
           fail path "sourceMap.enabled must be \"always\" or \"dev\""
       in
-      let content = match optional_member "sourcesContent" options with
+      let content = match last_optional_member "sourcesContent" options with
         | None -> [] | Some (`Bool value) -> ["-bs-source-map-sources-content"; string_of_bool value]
         | Some _ -> fail path "field \"sourceMap.sourcesContent\" must be a boolean" in
-      let root = match optional_member "sourceRoot" options with
+      let root = match last_optional_member "sourceRoot" options with
         | None -> [] | Some value -> ["-bs-source-map-root"; string path "sourceMap.sourceRoot" value] in
       (["-bs-source-map"; mode] @ content @ root, dev_only)
     | Some _ -> fail path "field \"sourceMap\" must be false or an object"
@@ -512,7 +581,7 @@ let load path =
     match optional_member "experimental-features" fields with
     | None -> []
     | Some (`Assoc features) ->
-      features
+      features |> deduplicate_last
       |> List.concat_map (fun (name, value) ->
            if name <> "LetUnwrap" then
              fail path
@@ -543,6 +612,7 @@ let load path =
     match optional_member "js-post-build" fields with
     | None -> None
     | Some (`Assoc fields) ->
+      reject_duplicate_fields path "js-post-build" ["cmd"] fields;
       (match member "cmd" fields with
       | Some value -> Some (string path "js-post-build.cmd" value)
       | None -> fail path "field \"js-post-build\" is missing \"cmd\"")
@@ -557,9 +627,8 @@ let load path =
     match optional_member "features" fields with
     | None -> []
     | Some (`Assoc values) ->
-      List.map
+      values |> deduplicate_last |> List.map
         (fun (name, value) -> (name, strings path "features" value))
-        values
     | Some _ -> fail path "field \"features\" must be an object"
   in
   let unsupported_fields =

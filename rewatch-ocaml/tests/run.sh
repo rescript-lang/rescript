@@ -112,7 +112,7 @@ wait_for_count() {
   expected="$3"
   attempts=0
   while [ "$attempts" -lt 200 ]; do
-    count=$(grep -c "$pattern" "$file" 2>/dev/null || true)
+    count=$(grep -c "$pattern" "$file" 2>/dev/null) || count=0
     if [ "$count" -ge "$expected" ]; then
       return 0
     fi
