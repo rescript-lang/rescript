@@ -60,4 +60,44 @@ let () =
       let config = Config.load config_path in
       check
         (names (discover config ()) = ["Nested"])
-        "unsupported ignored-dirs does not suppress source discovery")
+        "unsupported ignored-dirs does not suppress source discovery";
+      write_file (Filename.concat root "case/lower.res") "let value = 1\n";
+      write_file (Filename.concat root "case/Lower.resi") "let value: int\n";
+      write_file config_path
+        {|{"name":"interface-case","sources":["case"]}|};
+      let config = Config.load config_path in
+      let casing_rejected =
+        try
+          ignore (discover config ());
+          false
+        with Source.Error message ->
+          Build.contains_text message
+            "Could not initialize build: Implementation and interface have different path names or different cases: `case/lower.res` vs `case/Lower.resi`"
+      in
+      check casing_rejected
+        "implementation and interface basename casing must match";
+      write_file (Filename.concat root "case/Lower.res") "let value = 1\n";
+      let duplicate_rejected =
+        try
+          ignore (discover config ());
+          false
+        with Source.Error message ->
+          Build.contains_text message "Duplicate module name: Lower"
+      in
+      check duplicate_rejected
+        "adding the exact implementation still exposes the differently-cased duplicate";
+      write_file (Filename.concat root "paths/a/Path.res") "let value = 1\n";
+      write_file (Filename.concat root "paths/b/Path.resi") "let value: int\n";
+      write_file config_path
+        {|{"name":"interface-path","sources":{"dir":"paths","subdirs":true}}|};
+      let config = Config.load config_path in
+      let path_rejected =
+        try
+          ignore (discover config ());
+          false
+        with Source.Error message ->
+          Build.contains_text message
+            "different path names or different cases: `paths/a/Path.res` vs `paths/b/Path.resi`"
+      in
+      check path_rejected
+        "an interface cannot attach to a same-named implementation in another directory")
