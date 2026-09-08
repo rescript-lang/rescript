@@ -150,4 +150,21 @@ let () =
           false
         with Config.Error message -> contains message "missing required field \"name\""
       in
-      check rejected "a package config without a name is rejected")
+      check rejected "a package config without a name is rejected";
+      write_file path
+        {|{"name":"getters","suffix":".mjs","package-specs":{"module":"esmodule"},"dependencies":["plain",{"name":"qualified","features":["native"]}]}|};
+      let config = Config.load path in
+      check (config.name = "getters") "the package name is retained";
+      check
+        (match config.package_specs with
+        | [spec] -> Config.package_spec_suffix config spec = ".mjs"
+        | _ -> false)
+        "the configured suffix applies to package specs";
+      check
+        (match config.dependencies with
+        | [plain; qualified] ->
+          plain.name = "plain" && plain.features = None
+          && qualified.name = "qualified"
+          && qualified.features = Some ["native"]
+        | _ -> false)
+        "shorthand and feature-qualified dependencies retain their data")

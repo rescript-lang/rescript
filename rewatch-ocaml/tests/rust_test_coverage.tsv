@@ -1,7 +1,7 @@
 # test	status	evidence
-build.rs::with_build_lock_holds_lock_while_running_work	unreviewed	lock behavior review pending
-build.rs::with_build_lock_drops_lock_after_error_result	unreviewed	lock behavior review pending
-build.rs::build_waits_for_lock_before_initializing	unreviewed	lock behavior review pending
+build.rs::with_build_lock_holds_lock_while_running_work	covered	focused concurrent-build test observes build.lock during compiler work
+build.rs::with_build_lock_drops_lock_after_error_result	covered	focused failure test verifies lock removal before recovery
+build.rs::build_waits_for_lock_before_initializing	covered	focused concurrent-build test waits and then succeeds
 build.rs::formats_successful_completion_message	gap	interactive completion/timing output is not implemented
 build.rs::formats_warning_completion_message	gap	interactive warning completion output is not implemented
 build/compile.rs::compiler_output_to_string_handles_invalid_utf8	covered	unit_tests.ml: lossy UTF-8 process capture
@@ -14,9 +14,9 @@ build/compile.rs::appends_fresh_and_stored_warnings_in_shared_module_name_order	
 build/compile.rs::does_not_replay_stored_warning_for_module_that_recompiled	gap	persisted per-module warning state is not implemented
 build/compiler_info.rs::verify_compiler_info_keeps_package_when_source_map_args_match	gap	compiler-info fingerprint state is not implemented
 build/compiler_info.rs::verify_compiler_info_cleans_package_when_source_map_args_change	gap	compiler-info-driven configuration cleanup is not implemented
-build/packages.rs::should_return_false_with_invalid_parents_as_bs_dependencies	unreviewed	dependency permission review pending
-build/packages.rs::should_return_false_with_invalid_parents_as_dev_dependencies	unreviewed	dependency permission review pending
-build/packages.rs::should_return_true_with_no_invalid_parent	unreviewed	dependency permission review pending
+build/packages.rs::should_return_false_with_invalid_parents_as_bs_dependencies	covered	unit_tests.ml: disallowed regular dependency rejected end to end
+build/packages.rs::should_return_false_with_invalid_parents_as_dev_dependencies	covered	unit_tests.ml: disallowed dev dependency rejected end to end
+build/packages.rs::should_return_true_with_no_invalid_parent	covered	unit_tests.ml: listed and unrestricted dependents accepted
 build/packages.rs::should_report_missing_name_when_package_and_rescript_json_lack_it	covered	config_tests.ml: package config name is required
 build/packages.rs::issue_tracker_url_prefers_bugs_url_string	covered	package_metadata_tests.ml: bugs string precedence
 build/packages.rs::issue_tracker_url_prefers_bugs_object_url	covered	package_metadata_tests.ml: bugs object precedence
@@ -24,12 +24,12 @@ build/packages.rs::issue_tracker_url_derives_from_repository_git_url	covered	pac
 build/packages.rs::issue_tracker_url_derives_from_repository_object	covered	package_metadata_tests.ml: repository object URL
 build/packages.rs::issue_tracker_url_handles_shorthand	covered	package_metadata_tests.ml: GitHub shorthand
 build/packages.rs::issue_tracker_url_returns_none_without_hints	covered	package_metadata_tests.ml: missing metadata
-build/packages.rs::monorepo_root_marks_transitive_workspace_dependencies_as_local	unreviewed	workspace locality review pending
-build/packages.rs::compute_active_features_returns_all_when_cli_absent	unreviewed	feature review pending
-build/packages.rs::compute_active_features_honours_cli_restriction_and_expands_transitive	unreviewed	feature review pending
-build/packages.rs::compute_active_features_dep_uses_consumer_restriction	unreviewed	feature review pending
-build/packages.rs::compute_active_features_prod_ignores_dev_dependency_feature_requests	unreviewed	feature review pending
-build/packages.rs::compute_active_features_honours_explicit_empty_features_list	unreviewed	feature review pending
+build/packages.rs::monorepo_root_marks_transitive_workspace_dependencies_as_local	covered	feature-dependencies fixture traverses local transitive packages and their dev edges
+build/packages.rs::compute_active_features_returns_all_when_cli_absent	covered	feature-dependencies fixture: unrestricted request enables dep extras
+build/packages.rs::compute_active_features_honours_cli_restriction_and_expands_transitive	shared	canonical feature CLI/transitive expansion tests
+build/packages.rs::compute_active_features_dep_uses_consumer_restriction	covered	feature-dependencies fixture unions native and web consumer requests
+build/packages.rs::compute_active_features_prod_ignores_dev_dependency_feature_requests	covered	feature-dependencies fixture excludes extra under --prod
+build/packages.rs::compute_active_features_honours_explicit_empty_features_list	covered	feature-dependencies fixture builds only untagged source for empty request
 cli.rs::no_subcommand_defaults_to_build	covered	cli_tests.ml: no subcommand defaults to build
 cli.rs::defaults_to_build_with_folder_shortcut	covered	cli_tests.ml: bare folder uses implicit build
 cli.rs::trailing_global_flag_is_treated_as_global	covered	cli_tests.ml: trailing verbosity flag
@@ -57,7 +57,7 @@ cli.rs::build_features_flag_rejects_empty_string	covered	cli_tests.ml: empty fea
 cli.rs::watch_features_flag_is_parsed	covered	cli_tests.ml: watch features
 cli.rs::features_flag_round_trips_through_build_to_watch_args	covered	cli_tests.ml: build/watch feature conversion agrees
 cli.rs::build_features_flag_strips_whitespace	covered	cli_tests.ml: feature names trimmed
-config.rs::test_getters	unreviewed	configuration getter coverage review pending
+config.rs::test_getters	covered	config_tests.ml: package name, suffix, specs, and dependency getters
 config.rs::test_package_specs_duplicate_suffix_default	covered	unit_tests.ml: duplicate effective output rejected
 config.rs::test_package_specs_duplicate_suffix_explicit	covered	unit_tests.ml: duplicate explicit output rejected
 config.rs::test_package_specs_duplicate_suffix_different_in_source_ok	covered	config_tests.ml: same suffix in different output locations
@@ -113,17 +113,17 @@ config.rs::test_is_feature_enabled_tagged_requires_membership	covered	source_tes
 config.rs::test_resolve_active_features_expands_transitive	shared	canonical transitive feature test
 config.rs::test_resolve_active_features_no_map_is_identity	covered	source_tests.ml: leaf feature works without a feature map
 config.rs::test_resolve_active_features_detects_cycle	shared	canonical feature cycle test
-config.rs::test_collect_declared_features_unions_map_and_tags	unreviewed	feature declaration union review pending
+config.rs::test_collect_declared_features_unions_map_and_tags	shared	canonical default-all feature test covers map and tagged source declarations
 config.rs::test_feature_cascades_to_qualified_subdirs	shared	canonical nested feature source tests
 config.rs::test_feature_cascade_does_not_overwrite_explicit_child	shared	canonical nested feature source tests
-config.rs::test_dependency_helpers_return_name_and_features	unreviewed	dependency helper review pending
+config.rs::test_dependency_helpers_return_name_and_features	covered	config_tests.ml: shorthand and qualified dependency data
 lock.rs::returns_error_when_project_folder_missing	shared	focused missing-project test
-lock.rs::creates_lock_when_project_folder_exists	unreviewed	lock lifecycle review pending
-lock.rs::only_one_concurrent_caller_acquires_lock	unreviewed	lock concurrency review pending
+lock.rs::creates_lock_when_project_folder_exists	covered	focused watch/build tests observe PID lock files
+lock.rs::only_one_concurrent_caller_acquires_lock	covered	focused concurrent-build test keeps the second build waiting
 lock.rs::ignores_stale_lock_for_unrelated_process_name	covered	unit_tests.ml: stale lock replacement
-lock.rs::returns_locked_for_active_watch_lock	unreviewed	active watcher lock review pending
-lock.rs::waits_for_active_build_lock_to_be_removed	unreviewed	build/watch lock wait review pending
-lock.rs::drop_lock_removes_existing_build_lock	unreviewed	lock cleanup review pending
+lock.rs::returns_locked_for_active_watch_lock	shared	canonical lock test rejects a second watcher
+lock.rs::waits_for_active_build_lock_to_be_removed	covered	focused concurrent-build test waits for explicit release
+lock.rs::drop_lock_removes_existing_build_lock	covered	focused successful, failed, and interrupted builds remove locks
 queue.rs::test_basic_functionalities	intentional	OCaml uses dependency scheduler rather than Rust queue type
 queue.rs::test_queue_thread_safety	intentional	OCaml uses single-domain scheduler state and subprocess concurrency
 queue.rs::test_concurrent_pushes_and_pops	intentional	OCaml uses single-domain scheduler state and subprocess concurrency
@@ -131,7 +131,7 @@ queue.rs::test_concurrent_mixed_operations	intentional	OCaml uses single-domain 
 telemetry.rs::noop_guard_reports_otel_disabled	omitted	OpenTelemetry is an explicit project non-goal
 telemetry.rs::noop_guard_drops_cleanly_without_explicit_shutdown	omitted	OpenTelemetry is an explicit project non-goal
 telemetry.rs::init_telemetry_without_env_is_noop	omitted	OpenTelemetry is an explicit project non-goal
-watcher.rs::clears_screen_only_for_interactive_rebuilds	unreviewed	PTY output test remains open
+watcher.rs::clears_screen_only_for_interactive_rebuilds	gap	behavior exists but PTY/non-TTY regression coverage is still open
 watcher.rs::carries_forward_implementation_warnings_for_matching_module_paths	shared	canonical watch warning persistence tests
-watcher.rs::does_not_carry_forward_warnings_when_module_paths_change	unreviewed	warning path-change case review pending
-watcher.rs::carries_forward_interface_warnings_for_matching_interface_paths	unreviewed	interface warning carry-forward review pending
+watcher.rs::does_not_carry_forward_warnings_when_module_paths_change	gap	persisted warning state and path-sensitive carry-forward are not implemented
+watcher.rs::carries_forward_interface_warnings_for_matching_interface_paths	gap	persisted interface warning state is not implemented

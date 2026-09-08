@@ -1,0 +1,10 @@
+{
+  "name": "feature-root",
+  "sources": "src",
+  "dependencies": [
+    "consumer",
+    {"name": "dep-union", "features": ["native"]},
+    {"name": "dep-transitive", "features": ["bundle"]},
+    {"name": "dep-empty", "features": []}
+  ]
+}

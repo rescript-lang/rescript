@@ -634,4 +634,16 @@ let () =
             true
           else failwith ("unexpected allowed-dependents error: " ^ message)
       in
-      check rejected "unallowed package dependency is rejected")
+      check rejected "unallowed package dependency is rejected";
+      write_file (Filename.concat dependency_root "rescript.json")
+        {|{"name":"app","dev-dependencies":["restricted"]}|};
+      let rejected =
+        try
+          Build.run ~seen:[] ~folder:dependency_root ~prod:false
+            ~features:None ~warn_error:None ~watch:false ~after_build:None
+            ~filter:None;
+          false
+        with Build.Error message ->
+          Build.contains_text message "app dev-dependencies: restricted"
+      in
+      check rejected "unallowed development dependency is rejected")
