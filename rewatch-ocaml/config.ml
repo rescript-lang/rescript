@@ -118,13 +118,13 @@ let dependency_alias path modern legacy fields =
   | None, Some _ -> parse_dependencies path legacy fields
   | None, None -> []
 
-let rec sources_of_json path inherited_dir inherited_dev inherited_feature = function
+let rec sources_of_json path inherited_dir forced_dev inherited_feature = function
   | `String dir ->
     [
       {
         dir = Filename.concat inherited_dir dir;
         recurse = false;
-        is_dev = inherited_dev;
+        is_dev = Option.value forced_dev ~default:false;
         feature = inherited_feature;
       };
     ]
@@ -134,12 +134,14 @@ let rec sources_of_json path inherited_dir inherited_dev inherited_feature = fun
       | Some value -> Filename.concat inherited_dir (string path "dir" value)
       | None -> fail path "source object is missing field \"dir\""
     in
-    let is_dev =
+    let declared_dev =
       match member "type" fields with
-      | None -> inherited_dev
+      | None -> false
       | Some (`String "dev") -> true
       | Some (`String _) -> false
       | Some _ -> fail path "source field \"type\" must be a string"
+    in
+    let is_dev = Option.value forced_dev ~default:declared_dev
     in
     let feature =
       match member "feature" fields with
@@ -151,7 +153,10 @@ let rec sources_of_json path inherited_dir inherited_dev inherited_feature = fun
       | None -> (false, [])
       | Some (`Bool value) -> (value, [])
       | Some (`List values) ->
-        (false, List.concat_map (sources_of_json path dir is_dev feature) values)
+        ( false,
+          List.concat_map
+            (sources_of_json path dir (Some is_dev) feature)
+            values )
       | Some _ ->
         fail path "source field \"subdirs\" must be a boolean or array"
     in
@@ -162,8 +167,8 @@ let parse_sources path fields =
   match member "sources" fields with
   | None -> []
   | Some (`List values) ->
-    List.concat_map (sources_of_json path "" false None) values
-  | Some value -> sources_of_json path "" false None value
+    List.concat_map (sources_of_json path "" None None) values
+  | Some value -> sources_of_json path "" None None value
 
 let unknown_fields fields =
   let supported =
