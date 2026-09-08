@@ -407,6 +407,13 @@ rerun it for the final maintainability review alongside maximum module size.
   unreviewed entries. The `--require-complete` mode is a
   final quality gate and fails for either
   unreviewed scenarios or confirmed coverage gaps.
+- Canonical integration-test inclusion is mechanically checked as well.
+  `tests/check_canonical_test_coverage.sh` inventories all 48 shell tests below
+  `rewatch/tests` and requires `suite.sh` to reference every one exactly once,
+  without stale entries. CI runs this check and the strict Rust unit-test check
+  before exercising that same shared suite against the packaged OCaml binary.
+  This prevents suite-routing drift; the broader source-validation and output
+  inventories remain separate gates for behavior Rust does not currently test.
 - Focused locking tests now hold a compiler behind an explicit release marker,
   verify that `build.lock` remains present, start a second build, observe it
   waiting, and then verify both builds complete and release the lock. Failure
