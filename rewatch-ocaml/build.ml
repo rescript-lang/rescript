@@ -813,7 +813,6 @@ type build_stats = {
   initialized_logs: (string, unit) Hashtbl.t;
   watch_outputs: (string * string * string) list ref;
   watch_output_paths: (string, unit) Hashtbl.t;
-  global_dependencies: (string, string list) Hashtbl.t;
   global_raw_dependencies: (string, string list) Hashtbl.t;
   graph_packages: (string, graph_package) Hashtbl.t;
   cleanup_results: (string, string list * int) Hashtbl.t;
@@ -822,6 +821,7 @@ type build_stats = {
   compile_cleanup: (unit -> unit) list ref;
   mutable compiler_context: Compiler_info.context option;
   mutable compile_assets: Compile_assets.t option;
+  mutable build_state: Build_state.t option;
   mutable compiler_cleaned: bool;
   warning_state: Warning_state.t;
   mutable had_warnings: bool;
@@ -857,6 +857,7 @@ type global_module = {
   package_name: string;
   package_root: string;
   source_path: string;
+  source: Source.module_;
   namespace: string option;
   namespace_entry: string option;
   allowed_dependencies: string list;
@@ -1224,6 +1225,7 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
               package_name = package.graph_config.name;
               package_root = package.graph_root;
               source_path = module_.Source.implementation;
+              source = module_;
               namespace = package.graph_compile_config.namespace;
               namespace_entry = package.graph_compile_config.namespace_entry;
               allowed_dependencies =
@@ -1312,10 +1314,21 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
           |> List.sort_uniq String.compare ))
       nodes
   in
+  let build_state = Build_state.create (List.length graph_nodes) in
+  let modified = Option.map (fun entry -> entry.Compile_assets.modified) in
+  List.iter
+    (fun (node, _) ->
+      Build_state.add build_state ~key:node.key
+        ~package_name:node.package_name ~package_root:node.package_root
+        ~source:node.source ~raw_dependencies:node.raw_dependencies
+        ~last_compiled_cmi:(Compile_assets.cmi compile_assets node.key |> modified)
+        ~last_compiled_cmt:(Compile_assets.cmt compile_assets node.key |> modified))
+    graph_nodes;
   List.iter
     (fun (node, dependencies) ->
-      Hashtbl.replace stats.global_dependencies node.key dependencies)
+      Build_state.set_dependencies build_state ~key:node.key dependencies)
     graph_nodes;
+  stats.build_state <- Some build_state;
   let cycle =
     try
       ignore
@@ -1416,6 +1429,11 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder ~prod ~features
     match stats.compiler_context with
     | Some context -> (context.bsc_path, context.runtime_path)
     | None -> raise (Error "Compiler context was not initialized")
+  in
+  let build_state =
+    match stats.build_state with
+    | Some state -> state
+    | None -> raise (Error "build state was not initialized")
   in
   let build_dir =
     match prepared with
@@ -1644,9 +1662,7 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder ~prod ~features
         let key = global_module_key config module_.Source.name in
         let dependencies =
           if Hashtbl.mem stats.blocked_modules key then []
-          else
-            Hashtbl.find_opt stats.global_dependencies key
-            |> Option.value ~default:[]
+          else (Build_state.find_exn build_state key).dependencies
         in
         {
           key;
@@ -1930,7 +1946,6 @@ let run_with_warning_state ~warning_state ~compilation_kind ~no_timing ~seen
       initialized_logs = Hashtbl.create 16;
       watch_outputs = ref [];
       watch_output_paths = Hashtbl.create 16;
-      global_dependencies = Hashtbl.create 64;
       global_raw_dependencies = Hashtbl.create 64;
       graph_packages = Hashtbl.create 32;
       cleanup_results = Hashtbl.create 32;
@@ -1939,6 +1954,7 @@ let run_with_warning_state ~warning_state ~compilation_kind ~no_timing ~seen
       compile_cleanup = ref [];
       compiler_context = None;
       compile_assets = None;
+      build_state = None;
       compiler_cleaned = false;
       warning_state;
       had_warnings = false;
