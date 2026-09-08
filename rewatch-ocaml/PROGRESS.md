@@ -188,6 +188,12 @@ the same conservative result Rust intends for an unsuccessful probe.
   escape sequences.
 - Unknown top-level configuration fields emit an explicit warning and are
   ignored, matching Rust rewatch's forward-compatible configuration behavior.
+- Unknown nested fields now follow Rust's decoder boundaries as well. Fields
+  inside `warnings`, `jsx`, `gentypeconfig`, and `js-post-build` use the same
+  `parent.?.field` path form; fields hidden by Rust's untagged/custom decoders
+  (`sources`, `package-specs`, and `sourceMap`) remain silent. These boundaries
+  were confirmed against the pinned Rust executable and have a dedicated
+  `config_tests.ml` regression test.
 - The canonical suffix test passes. In-source JavaScript, maps, and source
   files are published to `lib/bs` as compiler assets as well as to their public
   output locations, and `clean` removes both forms.
@@ -241,7 +247,9 @@ the same conservative result Rust intends for an unsuccessful probe.
   `-n`/`--no-timing` boolean forms, `--`-delimited option-looking folders,
   per-command flags, early regular-expression validation, feature parsing, and
   order-independent format input conflicts. Format stdin accepts only `.res`
-  and `.resi`, matching Rust's enumerated argument. A small routing adapter is
+  and `.resi`, matching Rust's enumerated argument; raw non-UTF-8 arguments are
+  rejected before Cmdliner parsing, matching clap's string-argument
+  validation. A small routing adapter is
   retained because Cmdliner treats a leading positional argument as a
   subcommand and parses subcommands before options; it inserts the implicit
   `build` command and preserves clap's global flag behavior without parsing

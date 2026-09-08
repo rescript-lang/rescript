@@ -42,3 +42,8 @@
  (name cli_tests)
  (modules cli_tests)
  (libraries rewatch_ocaml_lib))
+
+(test
+ (name config_tests)
+ (modules config_tests)
+ (libraries rewatch_ocaml_lib))
