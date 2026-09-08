@@ -408,14 +408,16 @@ applicable.
 - A missing project folder is rejected before path canonicalization with Rust's
   user-facing preflight diagnostic instead of leaking an OCaml `Unix_error`;
   the focused runner checks the complete path-bearing message.
-- Linux and macOS npm platform packages include the experimental executable as
-  `rescript-ocaml.exe`, and the root package exposes it through a separate
-  `rescript-ocaml` launcher while retaining Rust rewatch as `rescript`. The
-  artifact manifest includes the launcher and its shared signal-forwarding
+- On Linux and macOS, Dune promotes the OCaml implementation as the normal
+  `rescript.exe`, while Cargo retains Rust rewatch as `rescript-rust.exe`. The
+  root package exposes `rescript` and `rescript-rust`; `rescript-ocaml` remains
+  an alias for early testers. This makes ordinary workspace builds and the full
+  repository test pipeline exercise OCaml without per-test overrides. The
+  artifact manifest includes both launchers and their shared signal-forwarding
   helper. Non-Windows CI runs the OCaml unit, focused, and complete canonical
-  rewatch suites against the packaged executable and repeats the canonical
-  suite through the installed package. Windows keeps running that suite against
-  Rust until the native OCaml binary is ready rather than publishing an
+  rewatch suites against the default packaged executable and repeats the
+  canonical suite through the installed package. Windows keeps Rust as the
+  default until the native OCaml binary is ready rather than publishing an
   unverified executable.
 
 ## Performance and equivalence gate

@@ -24,7 +24,7 @@ const syncDir = path.join(
 let ok = true;
 const executables = ["bsc", "rescript-editor-analysis", "rescript-tools"];
 if (process.platform !== "win32") {
-  executables.push("rescript-ocaml");
+  executables.push("rescript");
 }
 
 for (const exe of executables) {

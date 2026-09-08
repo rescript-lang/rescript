@@ -786,6 +786,7 @@ type scheduled_module = {
 
 type graph_package = {
   graph_root: string;
+  graph_is_local: bool;
   graph_config: Config.t;
   graph_compile_config: Config.t;
   graph_build_dir: string;
@@ -898,6 +899,7 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
   let requested_features = Hashtbl.create 32 in
   let unallowed_dependencies = ref [] in
   let loaded_configs = Hashtbl.create 32 in
+  let reported_duplicate_packages = Hashtbl.create 8 in
   let load_config root =
     match Hashtbl.find_opt loaded_configs root with
     | Some config -> config
@@ -912,6 +914,16 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
       require_dependency_directory ~workspace_root:root_config.root
         package_root dependency
     in
+    (match dependency_path root_config.root dependency.name with
+    | Some chosen when chosen <> directory ->
+      let warning_key = dependency.name ^ "\000" ^ directory in
+      if not (Hashtbl.mem reported_duplicate_packages warning_key) then (
+        Hashtbl.add reported_duplicate_packages warning_key ();
+        Printf.eprintf "Duplicated package: %s ./%s (chosen) vs ./%s in ./%s\n%!"
+          dependency.name (relative_to root_config.root chosen)
+          (relative_to root_config.root directory)
+          (relative_to root_config.root package_root))
+    | Some _ | None -> ());
     let config =
       try load_config directory
       with Config.Error message ->
@@ -1025,8 +1037,7 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
           ~display_root:root_config.root
       in
       let compile_config =
-        with_root_options config root_config
-        |> with_local_warning_policy ~is_local
+        with_root_options config root_config |> with_local_warning_policy ~is_local
       in
       let build_dir = lib_path root "bs" in
       let ocaml_dir = lib_path root "ocaml" in
@@ -1034,6 +1045,7 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
       let package =
         {
           graph_root = root;
+          graph_is_local = is_local;
           graph_config = config;
           graph_compile_config = compile_config;
           graph_build_dir = build_dir;
@@ -1221,24 +1233,49 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
         | Some _ -> local_name ^ "-@" ^ namespace
         | None -> local_name ^ "-" ^ namespace)
     in
+    let is_visible dependency_node =
+      dependency_node.package_name = node.package_name
+      || List.mem dependency_node.package_name node.allowed_dependencies
+    in
     match Hashtbl.find_opt by_key local_key with
     | Some dependency_node
       when dependency_node.package_name = node.package_name ->
-      Some local_key
+      [local_key]
     | _ ->
       (match Hashtbl.find_opt by_key raw_name with
-      | Some dependency_node
-        when dependency_node.package_name = node.package_name
-             || List.mem dependency_node.package_name node.allowed_dependencies ->
-        Some raw_name
-      | _ -> None)
+      | Some dependency_node when is_visible dependency_node ->
+        [raw_name]
+      | _ ->
+        let explicit_namespaced_module =
+          match String.split_on_char '.' dependency with
+        | namespace :: module_name :: _ ->
+          [module_name ^ "-" ^ namespace; module_name ^ "-@" ^ namespace]
+          |> List.find_opt (fun key ->
+               match Hashtbl.find_opt by_key key with
+               | Some dependency_node
+                 when dependency_node.namespace = Some namespace
+                      && is_visible dependency_node ->
+                 true
+               | Some _ | None -> false)
+        | _ -> None
+        in
+        match explicit_namespaced_module with
+        | Some key -> [key]
+        | None ->
+          nodes
+          |> List.filter_map (fun dependency_node ->
+               if
+                 dependency_node.namespace = Some raw_name
+                 && is_visible dependency_node
+               then Some dependency_node.key
+               else None))
   in
   let graph_nodes =
     List.map
       (fun node ->
         ( node,
           node.raw_dependencies
-          |> List.filter_map (resolve_dependency node)
+          |> List.concat_map (resolve_dependency node)
           |> List.filter (fun dependency -> dependency <> node.key)
           |> List.sort_uniq String.compare ))
       nodes
@@ -1768,12 +1805,75 @@ let run_namespace_jobs stats =
   let results = Process.run_parallel (List.map fst jobs) in
   List.iter2 (fun (_, finish) result -> finish result) jobs results
 
+let write_source_dirs (root_config : Config.t) stats =
+  let packages =
+    Hashtbl.to_seq_values stats.graph_packages |> List.of_seq
+    |> List.sort (fun left right -> String.compare left.graph_root right.graph_root)
+  in
+  packages
+  |> List.iter (fun package ->
+       if package.graph_root <> root_config.root then
+         remove_file
+           (path_of_parts package.graph_root ["lib"; "bs"; ".sourcedirs.json"]));
+  let local_packages = List.filter (fun package -> package.graph_is_local) packages in
+  let source_directories package =
+    package.graph_modules
+    |> List.map (fun module_ -> Filename.dirname module_.Source.implementation)
+    |> List.sort_uniq String.compare
+  in
+  let relative_package_root package =
+    if package.graph_root = root_config.root then ""
+    else relative_to root_config.root package.graph_root
+  in
+  let dirs =
+    local_packages
+    |> List.concat_map (fun package ->
+         let relative_root = relative_package_root package in
+         source_directories package
+         |> List.map (fun directory ->
+              if relative_root = "" then directory
+              else Filename.concat relative_root directory))
+    |> List.sort_uniq String.compare
+  in
+  let package_roots = Hashtbl.create 16 in
+  local_packages
+  |> List.iter (fun package ->
+       package.graph_dependencies
+       |> List.iter (fun (dependency : Config.dependency) ->
+            match dependency_path package.graph_root dependency.name with
+            | Some path -> Hashtbl.replace package_roots dependency.name path
+            | None -> ()));
+  let package_roots =
+    Hashtbl.to_seq package_roots |> List.of_seq
+    |> List.sort (fun (left, _) (right, _) -> String.compare left right)
+  in
+  let scans =
+    local_packages
+    |> List.map (fun package ->
+         let relative_root = relative_package_root package in
+         let build_root =
+           if relative_root = "" then path_of_parts "" ["lib"; "bs"]
+           else path_of_parts relative_root ["lib"; "bs"]
+         in
+         Source_dirs.
+           {
+             build_root;
+             scan_dirs = source_directories package;
+             also_scan_build_root = true;
+           })
+    |> List.sort (fun (left : Source_dirs.scan) right ->
+         String.compare left.build_root right.build_root)
+  in
+  Source_dirs.write ~root:root_config.root ~dirs ~packages:package_roots ~scans
+
 let run_with_warning_state ~warning_state ~compilation_kind ~no_timing ~seen
-    ~folder ~prod ~features ~warn_error ~watch ~after_build ~filter =
+    ~verbosity ~folder ~prod ~features ~warn_error ~watch ~after_build ~filter =
   let started_at = Unix.gettimeofday () in
   let interactive = Unix.isatty Unix.stdout && Unix.isatty Unix.stderr in
   let root = project_root folder in
   let root_config = Config.load_root root in
+  if verbosity > 0 then
+    Printf.printf "Created project context for %S\n%!" root_config.root;
   let visited = Hashtbl.create 32 in
   let stats =
     {
@@ -1962,6 +2062,7 @@ let run_with_warning_state ~warning_state ~compilation_kind ~no_timing ~seen
               Compiler_info.write_package context package.graph_config)
             stats.graph_packages)
         stats.compiler_context;
+      write_source_dirs root_config stats;
       Option.iter
         (fun command ->
           expose_watch_outputs ();
@@ -1987,13 +2088,14 @@ let run_with_warning_state ~warning_state ~compilation_kind ~no_timing ~seen
       release_build_lock ())
     (fun () -> try execute () with Build_failure output -> report_failure output)
 
-let run ~seen ~folder ~prod ~features ~warn_error ~watch ~after_build ~filter
-    ~no_timing =
+let run ~seen ~verbosity ~folder ~prod ~features ~warn_error ~watch ~after_build
+    ~filter ~no_timing =
   run_with_warning_state ~warning_state:(Warning_state.create ())
-    ~compilation_kind:None ~no_timing ~seen ~folder ~prod ~features ~warn_error
-    ~watch ~after_build ~filter
+    ~compilation_kind:None ~no_timing ~seen ~verbosity ~folder ~prod ~features
+    ~warn_error ~watch ~after_build ~filter
 
-let watch ~folder ~prod ~features ~warn_error ~after_build ~filter ~clear_screen =
+let watch ~verbosity ~folder ~prod ~features ~warn_error ~after_build ~filter
+    ~clear_screen =
   let root = project_root folder in
   ignore (Config.load_root root);
   let lock_dir = Filename.concat root "lib" in
@@ -2166,8 +2268,8 @@ let watch ~folder ~prod ~features ~warn_error ~after_build ~filter ~clear_screen
     in
     try
       run_with_warning_state ~warning_state ~compilation_kind ~no_timing:false
-        ~seen:[] ~folder ~prod ~features ~warn_error ~watch:true ~after_build
-        ~filter;
+        ~seen:[] ~verbosity ~folder ~prod ~features ~warn_error ~watch:true
+        ~after_build ~filter;
       initial_build := false
     with
     | Error message | Config.Error message | Source.Error message

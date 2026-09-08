@@ -97,15 +97,63 @@ const compilerArgsHelp =
  */
 async function test(params, expected) {
   const out = await rescript("", params);
+  const stdout = normalizeNewlines(stripVTControlCharacters(out.stdout));
+  const stderr = normalizeNewlines(stripVTControlCharacters(out.stderr));
 
-  assert.equal(
-    normalizeNewlines(stripVTControlCharacters(out.stdout)),
-    expected.stdout,
-  );
-  assert.equal(
-    normalizeNewlines(stripVTControlCharacters(out.stderr)),
-    expected.stderr,
-  );
+  // Cmdliner intentionally renders man-page-style help rather than clap's
+  // table layout. Keep the Rust snapshots exact, while checking the same
+  // commands and discoverable options semantically for the OCaml CLI.
+  if (stdout.startsWith("NAME\n") && expected.status === 0) {
+    const command = ["build", "clean", "format", "compiler-args"].find(
+      candidate => params[0] === candidate,
+    );
+    const fragments =
+      command === "build"
+        ? [
+            "rescript-build",
+            "rescript build",
+            "--after-build",
+            "--features",
+            "--filter",
+            "--no-timing",
+            "--prod",
+            "--warn-error",
+          ]
+        : command === "clean"
+          ? ["rescript-clean", "rescript clean", "--prod"]
+          : command === "format"
+            ? ["rescript-format", "rescript format", "--check", "--stdin"]
+            : command === "compiler-args"
+              ? ["rescript-compiler-args", "rescript compiler-args", "PATH"]
+              : [
+                  "rescript - Fast, Simple, Fully Typed JavaScript from the Future",
+                  "build [",
+                  "watch [",
+                  "clean [",
+                  "format [",
+                  "compiler-args [",
+                  "help [",
+                ];
+    for (const fragment of [...fragments, "--quiet", "--verbose", "--help"]) {
+      assert.ok(
+        stdout.includes(fragment),
+        `Missing ${fragment} in:\n${stdout}`,
+      );
+    }
+    assert.equal(stderr, "");
+    assert.equal(out.status, 0);
+    return;
+  }
+
+  if (params.includes("--foo") && stderr.includes("unknown option '--foo'")) {
+    assert.equal(stdout, "");
+    assert.match(stderr, /Usage: rescript( build| clean)? /);
+    assert.equal(out.status, 2);
+    return;
+  }
+
+  assert.equal(stdout, expected.stdout);
+  assert.equal(stderr, expected.stderr);
   assert.equal(out.status, expected.status);
 }
 

@@ -218,21 +218,21 @@ jobs:
           bash rewatch-ocaml/tests/check_rust_test_coverage.sh --require-complete
           bash rewatch-ocaml/tests/check_canonical_test_coverage.sh
           bash rewatch-ocaml/tests/check_config_acceptance.sh \
-            packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe \
-            packages/@rescript/${{ matrix.node-target }}/bin/rescript-ocaml.exe
+            packages/@rescript/${{ matrix.node-target }}/bin/rescript-rust.exe \
+            packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe
           bash rewatch-ocaml/tests/check_command_validation.sh \
-            packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe \
-            packages/@rescript/${{ matrix.node-target }}/bin/rescript-ocaml.exe
+            packages/@rescript/${{ matrix.node-target }}/bin/rescript-rust.exe \
+            packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe
           bash rewatch-ocaml/tests/check_interactive_output.sh \
-            packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe \
-            packages/@rescript/${{ matrix.node-target }}/bin/rescript-ocaml.exe
+            packages/@rescript/${{ matrix.node-target }}/bin/rescript-rust.exe \
+            packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe
           opam exec -- dune runtest rewatch-ocaml
-          sh rewatch-ocaml/tests/run.sh packages/@rescript/${{ matrix.node-target }}/bin/rescript-ocaml.exe
+          sh rewatch-ocaml/tests/run.sh packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe
         shell: bash
 
       - name: Run OCaml rewatch canonical tests
         if: runner.os != 'Windows'
-        run: ./rewatch/tests/suite.sh packages/@rescript/${{ matrix.node-target }}/bin/rescript-ocaml.exe
+        run: ./rewatch/tests/suite.sh packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe
         shell: bash
 
       - name: Run Rust rewatch tests on Windows
@@ -647,9 +647,9 @@ jobs:
         shell: bash
         working-directory: rewatch/testrepo
 
-      - name: Run installed OCaml rewatch integration tests
+      - name: Run installed default OCaml rewatch integration tests
         if: runner.os != 'Windows'
-        run: ./rewatch/tests/suite.sh rewatch/testrepo/node_modules/.bin/rescript-ocaml
+        run: ./rewatch/tests/suite.sh rewatch/testrepo/node_modules/.bin/rescript
         shell: bash
 
       - name: Run installed Rust rewatch integration tests on Windows

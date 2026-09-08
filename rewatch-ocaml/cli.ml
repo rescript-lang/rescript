@@ -6,6 +6,7 @@ type command =
   | Compiler_args of string
 
 and build_options = {
+  verbosity: int;
   folder: string;
   prod: bool;
   features: string list option;
@@ -112,7 +113,7 @@ let clear_screen =
 let build_term ~watch =
   let no_timing = if watch then Term.const false else no_timing in
   let clear_screen = if watch then clear_screen else Term.const false in
-  let+ _verbosity = verbosity
+  let+ verbosity
   and+ folder
   and+ prod
   and+ features
@@ -123,6 +124,7 @@ let build_term ~watch =
   and+ clear_screen in
   let options : build_options =
     {
+      verbosity;
       folder;
       prod;
       features;

@@ -107,6 +107,18 @@ let () =
         (contains_adjacent "-bs-gentype-module" "esmodule"
            config.gentype_args)
         "an explicit GenType module overrides package-specs";
+      let source_dir = Filename.concat root "src" in
+      let shim_dir = Filename.concat source_dir "shims" in
+      Unix.mkdir source_dir 0o755;
+      Unix.mkdir shim_dir 0o755;
+      write_file path
+        {|{"name":"gentype-subdirs","sources":{"dir":"src","subdirs":true},"gentypeconfig":{}}|};
+      let config = Config.load path in
+      check
+        (contains_adjacent "-bs-gentype-source-dir"
+           (Filename.concat "src" "shims")
+           config.gentype_args)
+        "GenType recursively includes directories that may contain TypeScript shims";
       write_file path {|{"name":"no-gentype"}|};
       let config = Config.load path in
       check (config.gentype_args = [])

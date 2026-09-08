@@ -1,6 +1,7 @@
 let run = function
   | Cli.Build
       {
+        verbosity;
         folder;
         prod;
         features;
@@ -12,10 +13,11 @@ let run = function
       }
     ->
     ignore clear_screen;
-    Build.run ~seen:[] ~folder ~prod ~features ~warn_error ~watch:false
+    Build.run ~seen:[] ~verbosity ~folder ~prod ~features ~warn_error ~watch:false
       ~after_build ~filter ~no_timing
   | Cli.Watch
       {
+        verbosity;
         folder;
         prod;
         features;
@@ -27,7 +29,7 @@ let run = function
       }
     ->
     ignore no_timing;
-    Build.watch ~folder ~prod ~features ~warn_error ~after_build ~filter
+    Build.watch ~verbosity ~folder ~prod ~features ~warn_error ~after_build ~filter
       ~clear_screen
   | Cli.Format {check; stdin; files} -> Format.run ~check ~stdin ~files
   | Cli.Compiler_args path -> print_endline (Build.compiler_args path)

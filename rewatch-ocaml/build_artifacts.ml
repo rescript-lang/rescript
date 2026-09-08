@@ -175,6 +175,10 @@ let prepare_watch_output watch_outputs watch_output_paths ~dirty_ast output =
 let with_root_options (config : Config.t) (root_config : Config.t) =
   {
     config with
+    (* Like the Rust implementation, one invocation compiles every package for
+       the root project's requested module systems and suffixes. Apart from
+       producing consistent output, this ensures dependency CMIs advertise a
+       module system that their dependents can consume. *)
     package_specs = root_config.package_specs;
     suffix = root_config.suffix;
     jsx_args = root_config.jsx_args;
