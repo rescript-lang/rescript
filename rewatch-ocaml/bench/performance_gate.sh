@@ -71,7 +71,9 @@ prepare_fixture "$ocaml_root"
 rust_fixture="$rust_root/rewatch/testrepo"
 ocaml_fixture="$ocaml_root/rewatch/testrepo"
 
-eval "$(cd "$repo_root/rewatch/tests" && node ./get_bin_paths.js)"
+if [[ -z ${RESCRIPT_BSC_EXE:-} || -z ${RESCRIPT_RUNTIME:-} ]]; then
+  eval "$(cd "$repo_root/rewatch/tests" && node ./get_bin_paths.js)"
+fi
 export RESCRIPT_BSC_EXE RESCRIPT_RUNTIME
 
 results="$work_root/results.csv"
@@ -167,8 +169,8 @@ trace_and_classify() {
   local trace_file exec_line argv cwd_line cwd phase input identity
   : >"$manifest.unsorted"
   for trace_file in "${trace_files[@]}"; do
-    exec_line=$(grep -m1 -E \
-      'execve\("[^"]*(bsc\.exe|sury-ppx)' "$trace_file" || true)
+    exec_line=$(grep -m1 -F "execve(\"$RESCRIPT_BSC_EXE\"" "$trace_file" \
+      || grep -m1 -E 'execve\("[^"]*sury-ppx' "$trace_file" || true)
     if [[ -z "$exec_line" ]]; then
       continue
     fi
@@ -177,7 +179,7 @@ trace_and_classify() {
     cwd_line=$(grep -m1 '^chdir("' "$trace_file" || true)
     cwd=${cwd_line#chdir(\"}
     cwd=${cwd%%\"*}
-    if [[ "$exec_line" == *bsc.exe* ]]; then
+    if [[ "$exec_line" == *"execve(\"$RESCRIPT_BSC_EXE\""* ]]; then
       if [[ "$argv" == *'"-bs-ast"'* ]]; then
         phase=parse
       elif [[ "$argv" == *'.mlmap"'* ]]; then
@@ -198,13 +200,13 @@ trace_and_classify() {
   done
   sort "$manifest.unsorted" >"$manifest"
   local invocations parse namespace compile interface ppx
-  invocations=$(grep -hE -c 'execve\("[^"]*bsc\.exe"' "${trace_files[@]}" \
+  invocations=$(grep -hF -c "execve(\"$RESCRIPT_BSC_EXE\"" "${trace_files[@]}" \
     | awk '{ total += $1 } END { print total + 0 }')
-  parse=$(grep -hE 'execve\("[^"]*bsc\.exe"' "${trace_files[@]}" \
+  parse=$(grep -hF "execve(\"$RESCRIPT_BSC_EXE\"" "${trace_files[@]}" \
     | grep -F -c '"-bs-ast"' || true)
-  namespace=$(grep -hE 'execve\("[^"]*bsc\.exe"' "${trace_files[@]}" \
+  namespace=$(grep -hF "execve(\"$RESCRIPT_BSC_EXE\"" "${trace_files[@]}" \
     | grep -E -c '\.mlmap"' || true)
-  interface=$(grep -hE 'execve\("[^"]*bsc\.exe"' "${trace_files[@]}" \
+  interface=$(grep -hF "execve(\"$RESCRIPT_BSC_EXE\"" "${trace_files[@]}" \
     | grep -vF '"-bs-ast"' | grep -vE '\.mlmap"' \
     | grep -E -c '\.iast"' || true)
   compile=$((invocations - parse - namespace))

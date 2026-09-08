@@ -300,6 +300,15 @@ OCaml. That 1.138× sample is useful only as a correctness smoke test and does
 not replace the five-run performance result; its much higher absolute times
 also illustrate why a single run is not an acceptance measurement.
 
+The harness now respects an explicitly paired `RESCRIPT_BSC_EXE` and
+`RESCRIPT_RUNTIME` and classifies compiler work by that exact executable path,
+rather than assuming the binary is named `bsc.exe`. This closed a false-positive
+case where a locally built `rescript_compiler_main.exe` produced matching zero
+counts. A corrected smoke run again measured exactly 1,031 matching compiler
+launches and identical artifacts. Concurrent work on the Docker host made the
+September 8 timing samples too variable for acceptance, so their wall-time
+ratios are intentionally not recorded as a replacement gate result.
+
 The remaining measured gap is therefore orchestration overhead around the same
 external compiler work: process launch/wait/capture, artifact publication, and
 repeated filesystem/configuration work are the main candidates. Capture files
