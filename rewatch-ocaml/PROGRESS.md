@@ -90,6 +90,33 @@ For `compiler-args`, a missing regular dependency is reported as a contextual
 command error instead of triggering Rust's `Expected to find dependent package`
 panic. Missing development dependencies remain optional, matching Rust.
 
+### Rust panic follow-ups
+
+These malformed-input paths should be considered for fixes in the Rust
+implementation as well. The OCaml behavior and focused tests provide the
+expected non-panicking result:
+
+- `config.rs`: `Config::get_jsx_args` explicitly panics for every integer
+  `jsx.version` other than `4`. For example, `{"jsx":{"version":3}}` is
+  accepted by Serde and panics later during argument construction. Rust should
+  reject it as a contextual configuration error; `config_tests.ml` exercises
+  that result in the port.
+- `build/parse.rs`: `filter_ppx_flags` calls `first().unwrap()` for an
+  array-form PPX entry. A configuration such as `{"ppx-flags":[[]]}` therefore
+  panics when a source is filtered. Rust should either reject the empty command
+  during configuration decoding or safely omit it; the port omits it and tests
+  the filter directly in `config_tests.ml`.
+- `build/compile.rs`: `get_dependency_args` explicitly panics when a regular
+  dependency cannot be resolved, including through `compiler-args`. Rust should
+  return the same package/dependency context as a normal command error. The
+  port retains the existing message context and covers it in
+  `compiler_args_tests.ml`; unresolved development dependencies remain optional.
+
+Fixing these in Rust is outside the OCaml-port changes themselves. If they are
+fixed upstream, the differential configuration gate should be tightened from
+semantic rejection to the corresponding normal error exit class where
+applicable.
+
 ## Verified
 
 - `dune runtest rewatch-ocaml` passes graph unit coverage.
