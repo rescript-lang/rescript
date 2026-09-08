@@ -194,6 +194,11 @@ applicable.
   of silently attaching the interface by capitalized module name. Focused tests
   cover both casing and cross-directory mismatches alongside duplicate-module
   handling.
+- Package source discovery now applies Rust's locality rule independently of
+  the root CLI mode: installed dependencies exclude `type: "dev"` source
+  folders even during a normal development build, while root and symlink-local
+  packages retain them unless `--prod` is selected. Clean traversal, global
+  graph preparation, and fallback compilation share the same predicate.
 - A retained differential command-validation gate covers valid, missing, and
   non-ReScript `compiler-args` inputs; sources without a project; missing,
   config-less, and malformed build folders; and implicit format from below a
@@ -206,7 +211,7 @@ applicable.
   ReScript config, and malformed dependency configs now terminate build and
   clean with Rust's package-tree exit class 2 instead of being skipped or
   reported as a generic exit 1; watch startup uses the same path. The command
-  gate now has 22 cases and verifies failed OCaml commands leave neither build
+  gate now has 23 cases and verifies failed OCaml commands leave neither build
   nor watch locks. Rust currently calls `process::exit(2)` from package-tree
   library code; OCaml raises a typed package error to the CLI so cleanup still
   runs before the matching exit status is returned.

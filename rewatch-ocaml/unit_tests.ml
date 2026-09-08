@@ -365,6 +365,13 @@ let () =
   check
     (not (Build.dependent_is_allowed (Some ["other"]) "app"))
     "unlisted dependent is rejected";
+  check
+    (not (Build.source_discovery_prod ~prod:false ~is_local:true))
+    "development sources are enabled for a local development build";
+  check (Build.source_discovery_prod ~prod:true ~is_local:true)
+    "production builds exclude local development sources";
+  check (Build.source_discovery_prod ~prod:false ~is_local:false)
+    "installed dependencies always exclude development sources";
   check (Build.valid_lock_owner "0") "zero is a valid serialized u32 owner";
   check (Build.valid_lock_owner "4294967295")
     "the maximum u32 is a valid serialized lock owner";
