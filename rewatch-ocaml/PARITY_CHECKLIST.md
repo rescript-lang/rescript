@@ -4,6 +4,30 @@ This checklist complements the shared integration suite. A passing suite proves
 the scenarios it exercises; it does not by itself prove that every Rust guard,
 diagnostic, or interactive output path has an OCaml equivalent.
 
+## Architecture mapping gate
+
+The final port must provide a clear mapping from each material Rust
+responsibility, state value, algorithm, and lifecycle transition to its OCaml
+owner. In particular, package discovery, build and compile-asset state,
+dependency extraction and invalidation, parsing, compilation, cleanup, and the
+watcher lifecycle must be traceable across the two implementations. The OCaml
+implementation should perform equivalent work in the corresponding phase and
+consume already-computed state where Rust does, rather than repeatedly using
+the filesystem as an implicit database.
+
+This is not a requirement to reproduce Rust file sizes, function boundaries,
+or control-flow syntax mechanically. Idiomatic OCaml boundaries are preferred.
+A material deviation needs a concrete correctness, portability,
+maintainability, or simple-efficiency reason, and must be documented with its
+behavioral evidence and Windows implications. Deliberate Rust bug fixes remain
+permitted under the same rule.
+
+Rust's existing OpenTelemetry spans may be used to identify phase ownership,
+duration, and overlap while constructing this mapping. OTEL export remains an
+intentional non-goal for the OCaml executable, and instrumented timings are
+diagnostic rather than benchmark results. Filesystem-call parity is measured
+separately with the retained syscall-audit tooling.
+
 ## Validation inventory gate
 
 Before the port can replace Rust rewatch, inventory every user-reachable
