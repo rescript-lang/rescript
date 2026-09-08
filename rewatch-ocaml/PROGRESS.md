@@ -446,15 +446,15 @@ environment on the plugged-in Mac host:
 
 | Implementation | Median wall time | Median peak tree RSS |
 | --- | ---: | ---: |
-| Rust | 4,454 ms | 600,280 KiB |
-| OCaml | 5,596 ms | 606,244 KiB |
+| Rust | 4,662 ms | 799,272 KiB |
+| OCaml | 5,546 ms | 798,172 KiB |
 
-The 1.256× wall-time ratio narrowly fails the 1.25× gate; RSS passes at 1.010×.
-An earlier isolated run was 1.273×, so global scheduling and subprocess-capture
-changes improved the result, but no completion claim is warranted yet. Docker
-on a Mac is still a noisier platform than native Linux or dedicated CI even
-when plugged in, so final acceptance should repeat the distribution on a stable
-host rather than treating this single five-run set as universal.
+The post-pipe 1.190× wall-time ratio and 0.999× RSS ratio pass the 1.25× gate.
+The host was plugged in and otherwise idle for this run. Docker on a Mac is
+still noisier than native Linux or dedicated CI, so final acceptance should
+repeat the distribution on a stable host rather than treating this one passing
+set as universal. Passing this aggregate gate also does not close the excessive
+unchanged-build metadata probes found by the filesystem audit below.
 
 Both implementations performed exactly 1,031 `bsc` launches: 512 parses, 7
 namespace compilations, and 512 module compilations, of which 40 were interface
