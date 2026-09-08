@@ -32,11 +32,7 @@ let local_dependency root (dependency : Config.dependency) =
   match find root with
   | None -> None
   | Some path ->
-    let prefix = Filename.concat root "" in
-    let comparable = Platform.normalize_path_for_comparison in
-    if String.starts_with ~prefix:(comparable prefix) (comparable path) then
-      Some path
-    else None
+    if Build.is_local_dependency ~workspace:root path then Some path else None
 
 let package_sources (config : Config.t) =
   Source.discover config ~prod:false ~features:None ~filter:None

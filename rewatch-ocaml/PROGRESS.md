@@ -179,6 +179,10 @@ applicable.
   Implicit format scope also matches Rust's project boundary: the current
   directory itself must contain `rescript.json` or `bsconfig.json`; formatting
   from an arbitrary descendant does not silently select a parent project.
+  Implicit format also shares the build graph's locality predicate, so ordinary
+  installed packages below `node_modules` are not mistaken for symlink-local
+  workspace packages and rewritten; focused filesystem coverage retains this
+  boundary.
 - A retained differential command-validation gate covers valid, missing, and
   non-ReScript `compiler-args` inputs; sources without a project; missing,
   config-less, and malformed build folders; and implicit format from below a
