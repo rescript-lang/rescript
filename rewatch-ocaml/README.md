@@ -26,6 +26,17 @@ export RESCRIPT_RUNTIME="$PWD/packages/@rescript/runtime"
 _build/default/rewatch-ocaml/rescript_ocaml.exe build path/to/project
 ```
 
+Published ReScript packages on Linux and macOS also expose the experimental
+binary as a separate `rescript-ocaml` command. This leaves the Rust-backed
+`rescript` command unchanged while making side-by-side project testing easy:
+
+```sh
+npx rescript-ocaml build
+```
+
+The command is intentionally unavailable on Windows until the native Windows
+implementation and runtime test pass are complete.
+
 Supported commands are `build` (the default), `watch`, `clean`, `format`, and
 `compiler-args`. Run the executable with `--help` for the current option summary.
 

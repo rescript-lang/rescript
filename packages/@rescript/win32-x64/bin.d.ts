@@ -7,4 +7,5 @@ export type BinaryPaths = {
   rescript_tools_exe: string;
   rescript_editor_analysis_exe: string;
   rescript_exe: string;
+  rescript_ocaml_exe?: string;
 };

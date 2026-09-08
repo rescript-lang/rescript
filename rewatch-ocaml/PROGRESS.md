@@ -227,6 +227,15 @@ the same conservative result Rust intends for an unsuccessful probe.
   (`ignored-dirs`, generators, preprocessor/entry fields, and external include
   paths) receive the dedicated unsupported-field diagnostic rather than a
   generic unknown-field warning or silent acceptance.
+- Linux and macOS npm platform packages include the experimental executable as
+  `rescript-ocaml.exe`, and the root package exposes it through a separate
+  `rescript-ocaml` launcher while retaining Rust rewatch as `rescript`. The
+  artifact manifest includes the launcher and its shared signal-forwarding
+  helper. Non-Windows CI runs the OCaml unit, focused, and complete canonical
+  rewatch suites against the packaged executable and repeats the canonical
+  suite through the installed package. Windows keeps running that suite against
+  Rust until the native OCaml binary is ready rather than publishing an
+  unverified executable.
 
 ## Performance and equivalence gate
 
@@ -408,7 +417,8 @@ rerun it for the final maintainability review alongside maximum module size.
    package preparation/scheduling and watch lifecycle remain candidates.
 4. Perform the final two-scope whole-port review and address confirmed findings.
 5. Replace or supplement polling with a production-grade native event backend
-   and evaluate supported-platform packaging and behavior.
+   and evaluate supported-platform behavior. Experimental Linux/macOS package
+   distribution and CI exercise are already in place.
 6. At the final maintainability pass, add comments around ownership,
    concurrency, platform, and algorithmic invariants that are not apparent from
    the code itself; avoid comments that only paraphrase individual statements.

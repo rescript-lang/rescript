@@ -212,7 +212,20 @@ jobs:
         run: echo "C:\Program Files\Git\bin" >> $GITHUB_PATH
         shell: bash
 
-      - name: Run rewatch tests
+      - name: Run OCaml rewatch unit and focused tests
+        if: runner.os != 'Windows'
+        run: |
+          opam exec -- dune runtest rewatch-ocaml
+          sh rewatch-ocaml/tests/run.sh packages/@rescript/${{ matrix.node-target }}/bin/rescript-ocaml.exe
+        shell: bash
+
+      - name: Run OCaml rewatch canonical tests
+        if: runner.os != 'Windows'
+        run: ./rewatch/tests/suite.sh packages/@rescript/${{ matrix.node-target }}/bin/rescript-ocaml.exe
+        shell: bash
+
+      - name: Run Rust rewatch tests on Windows
+        if: runner.os == 'Windows'
         run: ./rewatch/tests/suite.sh rewatch/target/release/rescript
         shell: bash
 
@@ -623,6 +636,12 @@ jobs:
         shell: bash
         working-directory: rewatch/testrepo
 
-      - name: Run rewatch integration tests
+      - name: Run installed OCaml rewatch integration tests
+        if: runner.os != 'Windows'
+        run: ./rewatch/tests/suite.sh rewatch/testrepo/node_modules/.bin/rescript-ocaml
+        shell: bash
+
+      - name: Run installed Rust rewatch integration tests on Windows
+        if: runner.os == 'Windows'
         run: ./rewatch/tests/suite.sh rewatch/testrepo/node_modules/.bin/rescript
         shell: bash
