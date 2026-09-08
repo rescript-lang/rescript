@@ -665,6 +665,7 @@ type build_stats = {
   mutable compiler_context: Compiler_info.context option;
   mutable compiler_cleaned: bool;
   warning_state: Warning_state.t;
+  mutable had_warnings: bool;
 }
 
 let source_is_newer ~source ~artifact =
@@ -1276,6 +1277,7 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder ~prod ~features
     let stderr =
       if is_local then stderr else retain_critical_external_warnings stderr
     in
+    if stderr <> "" then stats.had_warnings <- true;
     if stderr <> "" then append_compiler_log root stderr;
     if stderr <> "" then prerr_string stderr;
     let ast = Source.ast_path path in
@@ -1497,6 +1499,7 @@ let run_scheduled_modules stats =
                   ~package_root:scheduled.package_root ~path;
                 None
               | warning ->
+                stats.had_warnings <- true;
                 Warning_state.set stats.warning_state
                   ~module_name:scheduled.key
                   ~package_root:scheduled.package_root ~path ~output:warning;
@@ -1586,8 +1589,10 @@ let run_namespace_jobs stats =
   let results = Process.run_parallel (List.map fst jobs) in
   List.iter2 (fun (_, finish) result -> finish result) jobs results
 
-let run_with_warning_state ~warning_state ~seen ~folder ~prod ~features
-    ~warn_error ~watch ~after_build ~filter =
+let run_with_warning_state ~warning_state ~compilation_kind ~no_timing ~seen
+    ~folder ~prod ~features ~warn_error ~watch ~after_build ~filter =
+  let started_at = Unix.gettimeofday () in
+  let interactive = Unix.isatty Unix.stdout && Unix.isatty Unix.stderr in
   let root = project_root folder in
   let root_config = Config.load_root root in
   let visited = Hashtbl.create 32 in
@@ -1618,6 +1623,7 @@ let run_with_warning_state ~warning_state ~seen ~folder ~prod ~features
       compiler_context = None;
       compiler_cleaned = false;
       warning_state;
+      had_warnings = false;
     }
   in
   List.iter (fun path -> Hashtbl.replace visited (Unix.realpath path) ()) seen;
@@ -1654,16 +1660,28 @@ let run_with_warning_state ~warning_state ~seen ~folder ~prod ~features
   let report ~success () =
     finish_watch_outputs ~success;
     finalize_logs ();
-    if watch then (
-      if success then Printf.printf "Finished compilation\n%!")
-    else
-    Printf.printf "Cleaned %d/%d\nParsed %d source files\nCompiled %d modules\n%!"
-      stats.cleaned stats.previous_asts stats.parsed stats.compiled;
+    if not interactive then
+      if watch then (
+        if success then Printf.printf "Finished compilation\n%!")
+      else
+        Printf.printf
+          "Cleaned %d/%d\nParsed %d source files\nCompiled %d modules\n%!"
+          stats.cleaned stats.previous_asts stats.parsed stats.compiled;
     let diagnostics =
       stats.diagnostics |> List.rev |> List.sort_uniq String.compare
     in
     if diagnostics <> [] then
-      prerr_endline (String.concat "\n\n" diagnostics)
+      prerr_endline (String.concat "\n\n" diagnostics);
+    if success && interactive then
+      let seconds =
+        if no_timing then 0. else Unix.gettimeofday () -. started_at
+      in
+      Printf.printf "\n%s\n%!"
+        (Output.finished_compilation_message ~kind:compilation_kind
+           ~warnings:
+             (stats.had_warnings || diagnostics <> []
+             || Warning_state.entries stats.warning_state <> [])
+           ~seconds)
   in
   let report_failure output =
     report ~success:false ();
@@ -1759,9 +1777,11 @@ let run_with_warning_state ~warning_state ~seen ~folder ~prod ~features
       release_build_lock ())
     (fun () -> try execute () with Build_failure output -> report_failure output)
 
-let run ~seen ~folder ~prod ~features ~warn_error ~watch ~after_build ~filter =
-  run_with_warning_state ~warning_state:(Warning_state.create ()) ~seen ~folder
-    ~prod ~features ~warn_error ~watch ~after_build ~filter
+let run ~seen ~folder ~prod ~features ~warn_error ~watch ~after_build ~filter
+    ~no_timing =
+  run_with_warning_state ~warning_state:(Warning_state.create ())
+    ~compilation_kind:None ~no_timing ~seen ~folder ~prod ~features ~warn_error
+    ~watch ~after_build ~filter
 
 let watch ~folder ~prod ~features ~warn_error ~after_build ~filter ~clear_screen =
   let root = project_root folder in
@@ -1904,10 +1924,16 @@ let watch ~folder ~prod ~features ~warn_error ~after_build ~filter ~clear_screen
     result
   in
   let warning_state = Warning_state.create () in
+  let initial_build = ref true in
   let run_build () =
+    let compilation_kind =
+      if !initial_build then None else Some "incremental"
+    in
     try
-      run_with_warning_state ~warning_state ~seen:[] ~folder ~prod ~features
-        ~warn_error ~watch:true ~after_build ~filter
+      run_with_warning_state ~warning_state ~compilation_kind ~no_timing:false
+        ~seen:[] ~folder ~prod ~features ~warn_error ~watch:true ~after_build
+        ~filter;
+      initial_build := false
     with
     | Error message | Config.Error message | Source.Error message
     | Process.Error message -> prerr_endline message
@@ -1915,7 +1941,10 @@ let watch ~folder ~prod ~features ~warn_error ~after_build ~filter ~clear_screen
       prerr_endline (Printexc.to_string exn)
   in
   let clear_terminal () =
-    if clear_screen && Unix.isatty Unix.stdout then
+    if
+      Output.should_clear_screen ~clear_screen
+        ~interactive:(Unix.isatty Unix.stdout && Unix.isatty Unix.stderr)
+    then
       Printf.printf "\027[2J\027[H%!"
   in
   let rec loop roots previous =

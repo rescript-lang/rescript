@@ -386,9 +386,8 @@ rerun it for the final maintainability review alongside maximum module size.
 - Rust unit-test scenario coverage is tracked separately from source guards.
   `tests/check_rust_test_coverage.sh` currently inventories all 136 Rust unit
   tests and validates their exact entries in `tests/rust_test_coverage.tsv`;
-  all 136 scenarios have now been reviewed, with 3 confirmed gaps and none
-  left `unreviewed`. The remaining gaps are interactive completion formatting
-  and PTY coverage. The `--require-complete` mode is a
+  all 136 scenarios have now been reviewed, with no confirmed gaps or
+  unreviewed entries. The `--require-complete` mode is a
   final quality gate and fails for either
   unreviewed scenarios or confirmed coverage gaps.
 - Focused locking tests now hold a compiler behind an explicit release marker,
@@ -412,12 +411,18 @@ rerun it for the final maintainability review alongside maximum module size.
   outputs epoch mtimes; freshness now uses the published `lib/ocaml` AST copy,
   avoiding a full-project reparse on each watch cycle. Both canonical warning
   persistence tests, including atomic saves, pass with this state.
-- Interactive output parity remains open. The OCaml executable currently emits
-  plain progress summaries and supports watch clear-screen behavior, but does
-  not yet reproduce Rust's TTY-aware parsing/compilation progress, spinner,
-  timing, color, and symbol/emoji presentation or its complete verbosity
-  behavior. Plain redirected output and pseudo-terminal output are tracked as
-  distinct gates in `PARITY_CHECKLIST.md`.
+- Interactive completion now uses the Rust status text, warning suffix,
+  two-decimal timing, and clean/warning emoji after verifying that both output
+  streams are terminals. `--no-timing` is threaded into the build instead of
+  being parsed and discarded, and the clear-screen predicate is separately
+  tested for interactive and redirected output. This closes the Rust unit-test
+  inventory; it does not close the broader spinner/phase presentation gate.
+- Interactive output parity remains open. The OCaml executable now selects a
+  TTY-specific final status with timing and emoji and supports watch
+  clear-screen behavior, but does not yet reproduce Rust's phase-by-phase
+  parsing/compilation spinner, progress counts, or complete verbosity behavior.
+  Plain redirected output and pseudo-terminal output are tracked as distinct
+  gates in `PARITY_CHECKLIST.md`.
 - `watch` currently uses conservative polling and has no signal/lock/event
   batching parity with Rust rewatch.
 - Polling watches root and recursively resolved local dependency roots, but it

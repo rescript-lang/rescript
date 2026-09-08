@@ -70,6 +70,9 @@ let () =
   check
     ((build_options ["build"; "-n=false"; "."]).folder = ".")
     "build accepts short no-timing boolean values";
+  check
+    ((build_options ["build"; "--no-timing"; "."]).no_timing)
+    "bare no-timing does not consume the project folder";
   check (build_options ["build"; "--prod"]).prod
     "build parses --prod";
   check (not (build_options ["build"]).prod)

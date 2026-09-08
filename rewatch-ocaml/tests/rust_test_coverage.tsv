@@ -2,8 +2,8 @@
 build.rs::with_build_lock_holds_lock_while_running_work	covered	focused concurrent-build test observes build.lock during compiler work
 build.rs::with_build_lock_drops_lock_after_error_result	covered	focused failure test verifies lock removal before recovery
 build.rs::build_waits_for_lock_before_initializing	covered	focused concurrent-build test waits and then succeeds
-build.rs::formats_successful_completion_message	gap	interactive completion/timing output is not implemented
-build.rs::formats_warning_completion_message	gap	interactive warning completion output is not implemented
+build.rs::formats_successful_completion_message	covered	output_tests.ml: clean status and two-decimal timing format
+build.rs::formats_warning_completion_message	covered	output_tests.ml: incremental warning status and suffix
 build/compile.rs::compiler_output_to_string_handles_invalid_utf8	covered	unit_tests.ml: lossy UTF-8 process capture
 build/compile.rs::retain_critical_external_warnings_returns_none_without_marker	covered	unit_tests.ml: ordinary external warning suppression
 build/compile.rs::retain_critical_external_warnings_keeps_uncurried_dot_block	covered	unit_tests.ml: critical uncurried warning retention
@@ -131,7 +131,7 @@ queue.rs::test_concurrent_mixed_operations	intentional	OCaml uses single-domain 
 telemetry.rs::noop_guard_reports_otel_disabled	omitted	OpenTelemetry is an explicit project non-goal
 telemetry.rs::noop_guard_drops_cleanly_without_explicit_shutdown	omitted	OpenTelemetry is an explicit project non-goal
 telemetry.rs::init_telemetry_without_env_is_noop	omitted	OpenTelemetry is an explicit project non-goal
-watcher.rs::clears_screen_only_for_interactive_rebuilds	gap	behavior exists but PTY/non-TTY regression coverage is still open
+watcher.rs::clears_screen_only_for_interactive_rebuilds	covered	output_tests.ml: clear-screen requires both option and interactive streams
 watcher.rs::carries_forward_implementation_warnings_for_matching_module_paths	covered	canonical warning persistence tests plus focused no-recompile call count
 watcher.rs::does_not_carry_forward_warnings_when_module_paths_change	covered	warning_state_tests.ml: retain_paths drops changed implementation path
 watcher.rs::carries_forward_interface_warnings_for_matching_interface_paths	covered	warning_state_tests.ml: matching interface survives implementation path removal

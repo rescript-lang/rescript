@@ -73,12 +73,14 @@ Run the stricter final gate with:
 rewatch-ocaml/tests/check_rust_test_coverage.sh --require-complete
 ```
 
-That mode also fails while any scenario is `unreviewed` or `gap`. The initial
-inventory contains 136 Rust tests, all reviewed. Three expose confirmed
-implementation or test gaps; the other 133 map to focused OCaml tests, the
-shared suite, accepted architectural equivalents, or the explicit telemetry
-omission. A mapping is evidence only after its cited OCaml/shared test has been
-inspected; grouping by similarly named functions is not sufficient.
+That mode also fails while any scenario is `unreviewed` or `gap`. The inventory
+contains 136 Rust tests, all reviewed, with no remaining entries in either
+category. They map to focused OCaml tests, the shared suite, accepted
+architectural differences, or the explicit telemetry omission. A mapping is
+evidence only after its cited OCaml/shared test has been inspected; grouping by
+similar wording alone is not proof of equivalent behavior. Passing this unit
+inventory does not replace the broader validation-source and interactive-output
+gates in this document.
 
 ## Output parity gate
 
@@ -88,8 +90,8 @@ on whether stdout and stderr are terminals.
 | Mode | Required comparison | Current status |
 | --- | --- | --- |
 | Redirected/plain output | Success summaries, warnings, errors, ordering, exit status, and absence of terminal control sequences; Cmdliner help may use its native man-page headings and layout | Canonical snapshots cover important cases; inventory pending |
-| Interactive build | TTY detection, parsing/compilation progress, spinner lifecycle, timing, colors, symbols/emojis, quiet/verbose behavior, and cleanup on interruption | Open; OCaml currently prints plain summaries |
-| Interactive watch | Initial-build and rebuild progress, clear-screen behavior, persistent warnings, recovery errors, symbols/emojis, and orderly shutdown | Partial; clear-screen and lifecycle are covered, presentation parity is open |
+| Interactive build | TTY detection, parsing/compilation progress, spinner lifecycle, timing, colors, symbols/emojis, quiet/verbose behavior, and cleanup on interruption | Partial; final status, warning state, timing, and emoji match, while phase progress and verbosity remain open |
+| Interactive watch | Initial-build and rebuild progress, clear-screen behavior, persistent warnings, recovery errors, symbols/emojis, and orderly shutdown | Partial; final status, clear-screen, warning persistence, and lifecycle are covered, while phase presentation remains open |
 | Accessibility/terminal fallback | Stable meaningful text when color or richer glyphs are unavailable | Open |
 
 Interactive checks should run both implementations under a pseudo-terminal and

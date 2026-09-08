@@ -1,13 +1,32 @@
 let run = function
   | Cli.Build
-      {folder; prod; features; warn_error; after_build; filter; clear_screen}
+      {
+        folder;
+        prod;
+        features;
+        warn_error;
+        after_build;
+        filter;
+        clear_screen;
+        no_timing;
+      }
     ->
     ignore clear_screen;
     Build.run ~seen:[] ~folder ~prod ~features ~warn_error ~watch:false
-      ~after_build ~filter
+      ~after_build ~filter ~no_timing
   | Cli.Watch
-      {folder; prod; features; warn_error; after_build; filter; clear_screen}
+      {
+        folder;
+        prod;
+        features;
+        warn_error;
+        after_build;
+        filter;
+        clear_screen;
+        no_timing;
+      }
     ->
+    ignore no_timing;
     Build.watch ~folder ~prod ~features ~warn_error ~after_build ~filter
       ~clear_screen
   | Cli.Format {check; stdin; files} -> Format.run ~check ~stdin ~files

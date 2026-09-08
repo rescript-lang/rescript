@@ -13,6 +13,7 @@ and build_options = {
   after_build: string option;
   filter: string option;
   clear_screen: bool;
+  no_timing: bool;
 }
 
 let version = "13.0.0-alpha.6"
@@ -118,10 +119,19 @@ let build_term ~watch =
   and+ warn_error
   and+ after_build
   and+ filter
-  and+ _no_timing = no_timing
+  and+ no_timing
   and+ clear_screen in
   let options : build_options =
-    {folder; prod; features; warn_error; after_build; filter; clear_screen}
+    {
+      folder;
+      prod;
+      features;
+      warn_error;
+      after_build;
+      filter;
+      clear_screen;
+      no_timing;
+    }
   in
   if watch then Watch options else Build options
 
@@ -246,6 +256,10 @@ let normalize_argv argv =
   let rec normalize_short_booleans = function
   | [] -> []
   | "--" :: rest -> "--" :: rest
+  | ("-n" | "--no-timing") :: (("true" | "false") as value) :: rest ->
+    ("--no-timing=" ^ value) :: normalize_short_booleans rest
+  | ("-n" | "--no-timing") :: rest ->
+    "--no-timing=true" :: normalize_short_booleans rest
   | "-n=true" :: rest -> "--no-timing=true" :: normalize_short_booleans rest
   | "-n=false" :: rest ->
     "--no-timing=false" :: normalize_short_booleans rest
