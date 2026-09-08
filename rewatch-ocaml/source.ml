@@ -47,6 +47,12 @@ let duplicate_error ~display_root root name first second =
        "Could not initialize build: Duplicate module name: %s. Found in %s and %s. Rename one of these files."
        name first second)
 
+let interface_mismatch_error implementation interface =
+  Error
+    (Printf.sprintf
+       "Could not initialize build: Implementation and interface have different path names or different cases: `%s` vs `%s`"
+       implementation interface)
+
 let rec scan_dir ~root ~relative ~recurse ~is_dev ~on_missing ~visited_dirs acc =
   let absolute = Filename.concat root relative in
   let canonical =
@@ -157,6 +163,15 @@ let discover ?(on_orphan = fun _ -> ())
         | None ->
           Hashtbl.replace table name (Some path, interface, old_dev || is_dev))
     (List.filter (fun (path, _, _) -> matches_filter path) files);
+  Hashtbl.iter
+    (fun _ (implementation, interface, _) ->
+      match implementation, interface with
+      | Some implementation, Some interface
+        when Filename.remove_extension implementation
+             <> Filename.remove_extension interface ->
+        raise (interface_mismatch_error implementation interface)
+      | _ -> ())
+    table;
   Hashtbl.to_seq table
   |> Seq.filter_map (fun (_, (implementation, interface, _)) ->
        match implementation, interface with

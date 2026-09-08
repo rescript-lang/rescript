@@ -14,6 +14,7 @@ mkdir -p "$project/src" "$work/orphan" "$work/empty" "$work/malformed"
 mkdir -p "$work/malformed-parent/child/src" "$work/config-directory/rescript.json"
 mkdir -p "$work/missing-dependency/src"
 mkdir -p "$work/malformed-lock/src" "$work/malformed-lock/lib"
+mkdir -p "$work/interface-mismatch/src"
 mkdir -p "$work/mismatched-dependency/src" \
   "$work/mismatched-dependency/node_modules/dep/src"
 mkdir -p "$work/configless-dependency/src" \
@@ -36,6 +37,10 @@ printf 'let value = 1\n' >"$work/missing-dependency/src/A.res"
 printf '{"name":"malformed-lock","sources":["src"]}\n' \
   >"$work/malformed-lock/rescript.json"
 printf 'let value = 1\n' >"$work/malformed-lock/src/A.res"
+printf '{"name":"interface-mismatch","sources":["src"]}\n' \
+  >"$work/interface-mismatch/rescript.json"
+printf 'let value = 1\n' >"$work/interface-mismatch/src/lower.res"
+printf 'let value: int\n' >"$work/interface-mismatch/src/Lower.resi"
 printf '{"name":"mismatched-dependency","sources":["src"],"dependencies":["dep"]}\n' \
   >"$work/mismatched-dependency/rescript.json"
 printf 'let value = Dep.value\n' >"$work/mismatched-dependency/src/A.res"
@@ -134,6 +139,16 @@ printf 'not-a-pid' >"$work/malformed-lock/lib/watch.lock"
 run_case watch-malformed-lock reject reject watch "$work/malformed-lock"
 if [ "$(cat "$work/malformed-lock/lib/watch.lock")" != not-a-pid ]; then
   echo "OCaml replaced a malformed watch lock with unknown ownership" >&2
+  exit 1
+fi
+run_case build-interface-path-mismatch reject reject build \
+  "$work/interface-mismatch"
+if ! cmp -s "$work/rust.err" "$work/ocaml.err"; then
+  echo "Implementation/interface mismatch diagnostics differ" >&2
+  printf '%s\n' '--- Rust output ---' >&2
+  cat "$work/rust.err" >&2
+  printf '%s\n' '--- OCaml output ---' >&2
+  cat "$work/ocaml.err" >&2
   exit 1
 fi
 run_case build-mismatched-dependency-name panic accept build \
