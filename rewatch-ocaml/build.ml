@@ -664,6 +664,8 @@ type build_stats = {
   namespace_jobs: (Process.job * (Process.result -> unit)) list ref;
   scheduled_modules: scheduled_module list ref;
   compile_cleanup: (unit -> unit) list ref;
+  mutable compiler_context: Compiler_info.context option;
+  mutable compiler_cleaned: bool;
 }
 
 let source_is_newer ~source ~artifact =
@@ -730,7 +732,7 @@ let dependent_is_allowed allowed_dependents dependent =
     allowed_dependents
 
 let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
-    ~filter ~stats =
+    ~filter ~watch ~stats =
   let repository_root = Sys.getcwd () in
   let bsc =
     env_path "RESCRIPT_BSC_EXE"
@@ -873,6 +875,28 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
       graph_packages := package :: !graph_packages)
   in
   visit ~folder:root_config.root ~features ~warn_error ~filter ~is_local:true;
+  let runtime =
+    env_path "RESCRIPT_RUNTIME"
+      (path_of_parts repository_root ["packages"; "@rescript"; "runtime"])
+  in
+  let source_map_args =
+    if root_config.source_map_dev && not watch then
+      ["-bs-source-map"; "false"]
+    else root_config.source_map_args
+  in
+  let compiler_context =
+    Compiler_info.make_context ~bsc_path:bsc ~runtime_path:runtime
+      ~source_map_args
+  in
+  stats.compiler_context <- Some compiler_context;
+  List.iter
+    (fun package ->
+      if
+        Compiler_info.verify_package compiler_context package.graph_config
+      then stats.compiler_cleaned <- true;
+      ensure_dir package.graph_build_dir;
+      ensure_dir package.graph_ocaml_dir)
+    !graph_packages;
   List.iter
     (fun package ->
       let removed_modules, previous_ast_count =
@@ -1565,6 +1589,8 @@ let run ~seen ~folder ~prod ~features ~warn_error ~watch ~after_build ~filter =
       namespace_jobs = ref [];
       scheduled_modules = ref [];
       compile_cleanup = ref [];
+      compiler_context = None;
+      compiler_cleaned = false;
     }
   in
   List.iter (fun path -> Hashtbl.replace visited (Unix.realpath path) ()) seen;
@@ -1646,8 +1672,10 @@ let run ~seen ~folder ~prod ~features ~warn_error ~watch ~after_build ~filter =
   let execute () =
     let cycle =
       prepare_global_graph ~root_config ~prod ~features ~warn_error ~filter
-        ~stats
+        ~watch ~stats
     in
+    if stats.compiler_cleaned then
+      print_endline "Cleaned previous build due to compiler update";
     Option.iter
       (fun (_, blocked, _) ->
         List.iter
@@ -1672,6 +1700,13 @@ let run ~seen ~folder ~prod ~features ~warn_error ~watch ~after_build ~filter =
       |> List.iter (fun package_root -> append_compiler_log package_root output);
       report_failure output
     | None, None ->
+      Option.iter
+        (fun context ->
+          Hashtbl.iter
+            (fun _ package ->
+              Compiler_info.write_package context package.graph_config)
+            stats.graph_packages)
+        stats.compiler_context;
       Option.iter
         (fun command ->
           expose_watch_outputs ();

@@ -12,8 +12,8 @@ build/compile.rs::replays_stored_warning_for_module_that_did_not_recompile	gap	w
 build/compile.rs::replays_stored_warnings_in_module_name_order	gap	persisted per-module warning state is not implemented
 build/compile.rs::appends_fresh_and_stored_warnings_in_shared_module_name_order	gap	fresh/stored warning merge is not implemented
 build/compile.rs::does_not_replay_stored_warning_for_module_that_recompiled	gap	persisted per-module warning state is not implemented
-build/compiler_info.rs::verify_compiler_info_keeps_package_when_source_map_args_match	gap	compiler-info fingerprint state is not implemented
-build/compiler_info.rs::verify_compiler_info_cleans_package_when_source_map_args_change	gap	compiler-info-driven configuration cleanup is not implemented
+build/compiler_info.rs::verify_compiler_info_keeps_package_when_source_map_args_match	covered	compiler_info_tests.ml and focused source-map no-op rebuild retain artifacts
+build/compiler_info.rs::verify_compiler_info_cleans_package_when_source_map_args_change	covered	compiler_info_tests.ml and focused source-map mode change clean and rebuild the package
 build/packages.rs::should_return_false_with_invalid_parents_as_bs_dependencies	covered	unit_tests.ml: disallowed regular dependency rejected end to end
 build/packages.rs::should_return_false_with_invalid_parents_as_dev_dependencies	covered	unit_tests.ml: disallowed dev dependency rejected end to end
 build/packages.rs::should_return_true_with_no_invalid_parent	covered	unit_tests.ml: listed and unrestricted dependents accepted

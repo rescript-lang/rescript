@@ -59,6 +59,16 @@ let modification_time path =
 let remove_file path =
   if Sys.file_exists path then (try Sys.remove path with Sys_error _ -> ())
 
+let rec remove_tree path =
+  try
+    match (Unix.lstat path).Unix.st_kind with
+    | Unix.S_DIR ->
+      Sys.readdir path
+      |> Array.iter (fun name -> remove_tree (Filename.concat path name));
+      Unix.rmdir path
+    | _ -> Sys.remove path
+  with Sys_error _ | Unix.Unix_error _ -> ()
+
 let rec files_under directory =
   try
     if not (Sys.file_exists directory) then []

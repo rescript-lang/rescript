@@ -354,6 +354,16 @@ test -f "$namespace_entry/lib/ocaml/Entry_alias-@EntryNamespace.cmi"
 
 "$port" build "$source_map"
 test -f "$source_map/src/Main.js.map"
+test -f "$source_map/lib/bs/compiler-info.json"
+"$port" build "$source_map" >"$source_map/unchanged.log"
+grep 'Compiled 0 modules' "$source_map/unchanged.log" >/dev/null
+sed 's/"mode": "linked"/"mode": "hidden"/' "$source_map/rescript.json" \
+  > "$source_map/rescript.next"
+mv "$source_map/rescript.next" "$source_map/rescript.json"
+"$port" build "$source_map" >"$source_map/changed.log"
+grep 'Cleaned previous build due to compiler update' \
+  "$source_map/changed.log" >/dev/null
+grep 'Compiled 1 modules' "$source_map/changed.log" >/dev/null
 
 sed 's/"sources":"src"/"sources":"src","dependencies":["consumer"]/' \
   "$monorepo/packages/dep/rescript.json" > "$monorepo/packages/dep/rescript.next"
@@ -398,6 +408,7 @@ rm -rf "$out_of_source/lib"
 rm -rf "$namespace/lib"
 rm -rf "$namespace_entry/lib"
 rm -rf "$source_map/lib"
+rm -f "$source_map/unchanged.log" "$source_map/changed.log"
 rm -f "$basic/src/A.mjs" "$basic/src/B.mjs" "$basic/src/WithInterface.mjs"
 rm -f "$legacy_config/src/A.mjs" "$legacy_config/src/B.mjs" "$legacy_config/src/WithInterface.mjs"
 rm -f "$cycle/output.log" "$failure/output.log"
