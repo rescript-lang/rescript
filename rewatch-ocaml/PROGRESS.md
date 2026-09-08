@@ -124,6 +124,14 @@ expected non-panicking result:
   build starts. Rust should return a normal toolchain-discovery error containing
   the selected path; the command-validation gate covers the current Rust panic
   and the port's contextual rejection.
+- `build/read_compile_state.rs`: dependency packages are keyed by the requested
+  dependency name, but `make_package` tags their modules with the preferred
+  `package.json.name`. When that metadata name differs from the matching
+  `rescript.json.name`, the later package lookup returns `None` and is
+  unwrapped. Rust should retain one consistent dependency identity after its
+  existing mismatch warning, or reject the mismatch normally. The command gate
+  reproduces the panic; the port consistently uses the ReScript dependency name
+  and successfully compiles the same fixture.
 
 Fixing these in Rust is outside the OCaml-port changes themselves. If they are
 fixed upstream, the differential configuration gate should be tightened from
@@ -183,7 +191,7 @@ applicable.
   ReScript config, and malformed dependency configs now terminate build and
   clean with Rust's package-tree exit class 2 instead of being skipped or
   reported as a generic exit 1; watch startup uses the same path. The command
-  gate now has 18 cases and verifies failed OCaml commands leave neither build
+  gate now has 19 cases and verifies failed OCaml commands leave neither build
   nor watch locks. Rust currently calls `process::exit(2)` from package-tree
   library code; OCaml raises a typed package error to the CLI so cleanup still
   runs before the matching exit status is returned.
