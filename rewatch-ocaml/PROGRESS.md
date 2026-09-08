@@ -655,10 +655,11 @@ rerun it for the final maintainability review alongside maximum module size.
   This preserves artifact/output consistency and avoids removing last-known
   output during compilation, but it is not an all-or-nothing filesystem
   transaction across an entire incremental build.
-- An interrupted build can leave a staging sidecar for a source that is later
-  deleted. `clean` removes sidecars for discovered generated outputs, but does
-  not sweep suffix-matching files indiscriminately because those may be user
-  assets.
+- Ordinary build cleanup and explicit `clean` remove abandoned watch staging
+  sidecars even when their source was subsequently deleted. Sweeping is limited
+  to tool-specific sidecar suffixes whose underlying path is a recognized
+  generated JavaScript or source-map name; unrelated user files with a
+  staging-like suffix are preserved and covered by a focused filesystem test.
 - `watchexec` is available on the current macOS development host and provides
   a native-event candidate, but it is not bundled with this experimental dune
   executable; polling remains the portable fallback until packaging is decided.

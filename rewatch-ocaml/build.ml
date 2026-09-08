@@ -611,6 +611,7 @@ let rec clean_internal ~(root_config : Config.t) ~seen ~folder ~prod ~is_local =
           ~display_root:root_config.root
       in
       let output_config = with_root_options config root_config in
+      cleanup_watch_output_sidecars ~root output_config;
       List.iter
         (fun module_ ->
           List.iter
