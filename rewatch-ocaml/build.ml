@@ -611,16 +611,22 @@ let rec clean_internal ~(root_config : Config.t) ~seen ~folder ~prod ~is_local =
           ~display_root:root_config.root
       in
       let output_config = with_root_options config root_config in
-      if is_local then
-        List.iter (fun module_ ->
-           List.iter (fun spec ->
-             let output = generated_js_path output_config module_.Source.implementation spec in
-             remove_file output;
-             remove_file (output ^ ".map");
-             remove_file (output ^ ".rewatch-pending");
-             remove_file (output ^ ".rewatch-backup");
-             remove_file (output ^ ".map.rewatch-pending");
-             remove_file (output ^ ".map.rewatch-backup")) output_config.package_specs) modules);
+      List.iter
+        (fun module_ ->
+          List.iter
+            (fun spec ->
+              let output =
+                generated_js_path output_config module_.Source.implementation
+                  spec
+              in
+              remove_file output;
+              remove_file (output ^ ".map");
+              remove_file (output ^ ".rewatch-pending");
+              remove_file (output ^ ".rewatch-backup");
+              remove_file (output ^ ".map.rewatch-pending");
+              remove_file (output ^ ".map.rewatch-backup"))
+            output_config.package_specs)
+        modules);
     List.iter (fun dir -> remove_tree (Filename.concat root dir))
       [lib_path "" "bs"; lib_path "" "ocaml"])
 

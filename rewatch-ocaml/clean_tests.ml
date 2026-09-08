@@ -19,16 +19,29 @@ let () =
       {|{
         "name": "clean-ownership",
         "sources": ["src"],
+        "dependencies": ["installed"],
         "package-specs": {"module": "esmodule", "in-source": false}
       }|};
     write_file (Filename.concat root "src/A.res") "let value = 1\n";
+    write_file (Filename.concat root "node_modules/installed/rescript.json")
+      {|{"name":"installed","sources":["src"]}|};
+    write_file (Filename.concat root "node_modules/installed/src/Installed.res")
+      "let value = 2\n";
     let generated = Filename.concat root "lib/es6/src/A.js" in
     let unowned = Filename.concat root "lib/es6/keep.txt" in
     let unowned_javascript = Filename.concat root "lib/es6/src/Manual.js" in
+    let dependency_generated =
+      Filename.concat root "node_modules/installed/lib/es6/src/Installed.js"
+    in
+    let dependency_unowned =
+      Filename.concat root "node_modules/installed/lib/es6/keep.txt"
+    in
     write_file generated "generated\n";
     write_file (generated ^ ".map") "generated map\n";
     write_file unowned "keep\n";
     write_file unowned_javascript "manual\n";
+    write_file dependency_generated "generated dependency\n";
+    write_file dependency_unowned "keep dependency\n";
     write_file (Filename.concat root "lib/bs/compiler-state") "temporary\n";
     write_file (Filename.concat root "lib/ocaml/A.cmj") "temporary\n";
     Build.clean ~seen:[] ~folder:root ~prod:false;
@@ -40,6 +53,10 @@ let () =
       "clean preserves unrelated files in an out-of-source directory";
     check (Sys.file_exists unowned_javascript)
       "clean preserves JavaScript without a matching source module";
+    check (not (Sys.file_exists dependency_generated))
+      "clean removes configured outputs from installed dependencies";
+    check (Sys.file_exists dependency_unowned)
+      "clean preserves unrelated files beside installed dependency outputs";
     check (not (Sys.file_exists (Filename.concat root "lib/bs")))
       "clean removes compiler working artifacts";
     check (not (Sys.file_exists (Filename.concat root "lib/ocaml")))

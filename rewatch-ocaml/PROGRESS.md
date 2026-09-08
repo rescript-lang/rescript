@@ -207,8 +207,9 @@ applicable.
   and `lib/js` trees. It removes configured source-derived JavaScript and maps,
   plus the wholly owned `lib/bs` and `lib/ocaml` compiler trees, matching Rust
   while preserving unrelated files (including manual JavaScript) beside
-  out-of-source outputs. A dedicated filesystem test retains this ownership
-  boundary.
+  out-of-source outputs. Exact configured outputs are removed from resolved
+  installed dependencies as Rust does, but their neighboring unowned files are
+  likewise preserved. A dedicated filesystem test retains both boundaries.
 - A retained differential command-validation gate covers valid, missing, and
   non-ReScript `compiler-args` inputs; sources without a project; missing,
   config-less, and malformed build folders; and implicit format from below a
