@@ -627,7 +627,7 @@ let () =
         try
           Build.run ~seen:[] ~folder:dependency_root ~prod:false
             ~features:None ~warn_error:None ~watch:false ~after_build:None
-            ~filter:None;
+            ~filter:None ~no_timing:false;
           false
         with Build.Error message ->
           if Build.contains_text message "app dependencies: restricted" then
@@ -641,7 +641,7 @@ let () =
         try
           Build.run ~seen:[] ~folder:dependency_root ~prod:false
             ~features:None ~warn_error:None ~watch:false ~after_build:None
-            ~filter:None;
+            ~filter:None ~no_timing:false;
           false
         with Build.Error message ->
           Build.contains_text message "app dev-dependencies: restricted"
