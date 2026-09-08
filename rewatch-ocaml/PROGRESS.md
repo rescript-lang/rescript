@@ -86,6 +86,9 @@ OCaml behavior is the low-risk normalization intended by a flag-list decoder,
 and a focused configuration test records the difference.
 Likewise, an empty array entry in `ppx-flags` is ignored rather than indexing
 its nonexistent first element and panicking as Rust's source filter does.
+For `compiler-args`, a missing regular dependency is reported as a contextual
+command error instead of triggering Rust's `Expected to find dependent package`
+panic. Missing development dependencies remain optional, matching Rust.
 
 ## Verified
 
@@ -247,6 +250,19 @@ its nonexistent first element and panicking as Rust's source filter does.
 - GenType compiler arguments distinguish single-file inspection from a full
   build: `compiler-args` omits unavailable expanded source/dependency paths,
   while builds retain them; both include the workspace project root.
+- `compiler-args` now classifies the inspected source using the configured
+  development-source tree. Development sources receive dev dependency includes
+  before regular dependency includes; ordinary sources receive only regular
+  dependencies. Resolved include directories are emitted even before the
+  dependency has produced `lib/ocaml`, matching Rust's argument construction.
+  Dedicated tests cover ordering, ordinary-source exclusion, and both missing
+  dependency policies.
+- Project context now follows Rust's ReScript-level workspace rule: a child
+  inherits the nearest parent configuration only when that parent lists the
+  child's package name in `dependencies` or `dev-dependencies`. Merely matching
+  an ancestor `package.json` workspace glob no longer changes JSX, package
+  outputs, locks, or cleanup scope. Tests cover regular/dev membership and an
+  unrelated standalone project nested below this repository.
 - Legacy `bsconfig.json` files are discovered for root and dependency packages,
   formatting, compiler-argument lookup, and watch snapshots. `rescript.json`
   takes precedence when both exist, and using the legacy filename emits the
@@ -454,13 +470,16 @@ rerun it for the final maintainability review alongside maximum module size.
   longer honored, matching Rust rather than silently omitting source files;
   `jsx.v3-dependencies` is decoded as a string array even though its value is
   not otherwise used by this build system.
-- Source configuration now has a retained 36-case differential acceptance
-  gate. It compares Rust and OCaml for shorthand and qualified sources, nested
+- Configuration schema now has a retained 78-case differential acceptance
+  gate. Its 36 source cases compare shorthand and qualified sources, nested
   `subdirs`, nullable optional fields, arbitrary non-`dev` type strings,
   forward-compatible unknown fields, every invalid JSON kind, and duplicate
-  typed fields. CI runs the table against both promoted executables, while the
-  existing unit and canonical tests cover dev/feature inheritance and source
-  discovery behavior.
+  typed fields. Another 42 cases cover dependency forms, modern/legacy alias
+  conflicts, dependency feature requests, feature maps, and
+  `allowed-dependents`. For every accepted case it also deep-compares Rust and
+  OCaml parser/compiler argument arrays. CI runs the table against both promoted
+  executables; existing unit and canonical tests cover source inheritance,
+  feature closure and cycles, dependency permissions, and traversal behavior.
 - Configuration path canonicalization and file opening now translate both
   `Sys_error` and `Unix_error` into path-bearing `Config.Error` diagnostics.
   Missing paths and directory-valued config paths are tested, preventing raw

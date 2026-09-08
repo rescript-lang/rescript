@@ -63,7 +63,7 @@ native watcher setup are the remaining platform calls to move; portable
 
 ```sh
 opam exec -- dune runtest rewatch-ocaml
-rewatch-ocaml/tests/check_source_config_acceptance.sh
+rewatch-ocaml/tests/check_config_acceptance.sh
 sh rewatch-ocaml/tests/run.sh \
   "$PWD/_build/default/rewatch-ocaml/rescript_ocaml.exe"
 ```
