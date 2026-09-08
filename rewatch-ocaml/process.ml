@@ -3,13 +3,31 @@ type job = {program: string; args: string list; cwd: string}
 
 exception Error of string
 
+let decode_utf8_lossy value =
+  if String.is_valid_utf_8 value then value
+  else
+    let output = Buffer.create (String.length value) in
+    let rec loop index =
+      if index < String.length value then (
+        let decoded = String.get_utf_8_uchar value index in
+        let length = max 1 (Uchar.utf_decode_length decoded) in
+        if Uchar.utf_decode_is_valid decoded then
+          Buffer.add_substring output value index length
+        else Buffer.add_utf_8_uchar output Uchar.rep;
+        loop (index + length))
+    in
+    loop 0;
+    Buffer.contents output
+
 let read_file path =
   if (Unix.stat path).Unix.st_size = 0 then ""
   else
     let channel = open_in_bin path in
     Fun.protect
       ~finally:(fun () -> close_in_noerr channel)
-      (fun () -> really_input_string channel (in_channel_length channel))
+      (fun () ->
+        really_input_string channel (in_channel_length channel)
+        |> decode_utf8_lossy)
 
 let open_temporary_log ?temp_dir stream =
   let path, channel =

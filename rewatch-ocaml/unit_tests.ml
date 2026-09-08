@@ -318,6 +318,47 @@ let () =
   check
     (Build.strip_ansi "plain \027[1;31mred\027[0m text" = "plain red text")
     "compiler log ANSI stripping";
+  let truncated_utf8 = "Warning " ^ String.make 1 (Char.chr 0xe2) ^ String.make 1 (Char.chr 0x80) in
+  let decoded = Process.decode_utf8_lossy truncated_utf8 in
+  check
+    (String.starts_with ~prefix:"Warning " decoded
+    && String.is_valid_utf_8 decoded)
+    "compiler output is decoded as lossy UTF-8";
+  check
+    (Build.retain_critical_external_warnings
+       "\n  Warning number 26\n  foo.res:1:1\n\n  unused variable x.\n"
+    = "")
+    "ordinary external warnings are suppressed";
+  let critical_marker = "`(. ...)` uncurried syntax" in
+  let mixed_warnings line_ending =
+    String.concat ""
+      [
+        line_ending;
+        "  Warning number 26";
+        line_ending;
+        "  unused variable x.";
+        line_ending;
+        line_ending;
+        line_ending;
+        "  Warning number 3";
+        line_ending;
+        "  deprecated: The ";
+        critical_marker;
+        " is deprecated.";
+        line_ending;
+      ]
+  in
+  List.iter
+    (fun line_ending ->
+      let kept =
+        Build.retain_critical_external_warnings
+          (mixed_warnings line_ending)
+      in
+      check
+        (Build.contains_text kept critical_marker
+        && not (Build.contains_text kept "unused variable"))
+        "critical external warnings are retained without unrelated warnings")
+    ["\n"; "\r\n"];
   check
     (Build.dependent_is_allowed (Some ["app"]) "app")
     "listed dependent is allowed";

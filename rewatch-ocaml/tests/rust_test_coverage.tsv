@@ -4,10 +4,10 @@ build.rs::with_build_lock_drops_lock_after_error_result	unreviewed	lock behavior
 build.rs::build_waits_for_lock_before_initializing	unreviewed	lock behavior review pending
 build.rs::formats_successful_completion_message	unreviewed	output review pending
 build.rs::formats_warning_completion_message	unreviewed	output review pending
-build/compile.rs::compiler_output_to_string_handles_invalid_utf8	unreviewed	diagnostic decoding review pending
-build/compile.rs::retain_critical_external_warnings_returns_none_without_marker	unreviewed	external warning review pending
-build/compile.rs::retain_critical_external_warnings_keeps_uncurried_dot_block	unreviewed	external warning review pending
-build/compile.rs::retain_critical_external_warnings_handles_crlf_line_endings	unreviewed	external warning review pending
+build/compile.rs::compiler_output_to_string_handles_invalid_utf8	covered	unit_tests.ml: lossy UTF-8 process capture
+build/compile.rs::retain_critical_external_warnings_returns_none_without_marker	covered	unit_tests.ml: ordinary external warning suppression
+build/compile.rs::retain_critical_external_warnings_keeps_uncurried_dot_block	covered	unit_tests.ml: critical uncurried warning retention
+build/compile.rs::retain_critical_external_warnings_handles_crlf_line_endings	covered	unit_tests.ml: CRLF warning block normalization
 build/compile.rs::replays_stored_warning_for_module_that_did_not_recompile	unreviewed	warning replay review pending
 build/compile.rs::replays_stored_warnings_in_module_name_order	unreviewed	warning replay review pending
 build/compile.rs::appends_fresh_and_stored_warnings_in_shared_module_name_order	unreviewed	warning replay review pending
