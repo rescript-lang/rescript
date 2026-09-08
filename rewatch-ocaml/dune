@@ -97,3 +97,8 @@
  (name format_tests)
  (modules format_tests)
  (libraries rewatch_ocaml_lib))
+
+(test
+ (name clean_tests)
+ (modules clean_tests)
+ (libraries rewatch_ocaml_lib))

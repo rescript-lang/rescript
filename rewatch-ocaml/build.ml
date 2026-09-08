@@ -622,8 +622,7 @@ let rec clean_internal ~(root_config : Config.t) ~seen ~folder ~prod ~is_local =
              remove_file (output ^ ".map.rewatch-pending");
              remove_file (output ^ ".map.rewatch-backup")) output_config.package_specs) modules);
     List.iter (fun dir -> remove_tree (Filename.concat root dir))
-      ([lib_path "" "bs"; lib_path "" "ocaml"]
-      @ if is_local then [lib_path "" "es6"; lib_path "" "js"] else []))
+      [lib_path "" "bs"; lib_path "" "ocaml"])
 
 let project_root folder =
   if not (Sys.file_exists folder) then
