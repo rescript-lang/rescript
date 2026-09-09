@@ -27,6 +27,10 @@ mkdir -p "$work/configless-dependency/src" \
   "$work/configless-dependency/node_modules/no-config"
 mkdir -p "$work/malformed-dependency/src" \
   "$work/malformed-dependency/node_modules/bad-config"
+mkdir -p "$work/duplicate-dependency/src" \
+  "$work/duplicate-dependency/node_modules/a/src" \
+  "$work/duplicate-dependency/node_modules/shared/src" \
+  "$work/duplicate-dependency/node_modules/a/node_modules/shared/src"
 printf '{"name":"command-validation","sources":["src"]}\n' \
   >"$project/rescript.json"
 printf 'let value = 1\n' >"$project/src/A.res"
@@ -87,6 +91,22 @@ printf '{"name":"malformed-dependency","sources":["src"],"dependencies":["bad-co
 printf 'let value = 1\n' >"$work/malformed-dependency/src/A.res"
 printf '{ invalid json\n' \
   >"$work/malformed-dependency/node_modules/bad-config/rescript.json"
+printf '{"name":"duplicate-dependency","sources":["src"],"dependencies":["shared","a"]}\n' \
+  >"$work/duplicate-dependency/rescript.json"
+printf 'let value = Shared.value + A.value\n' \
+  >"$work/duplicate-dependency/src/Main.res"
+printf '{"name":"a","sources":["src"],"dependencies":["shared"]}\n' \
+  >"$work/duplicate-dependency/node_modules/a/rescript.json"
+printf 'let value = Shared.value\n' \
+  >"$work/duplicate-dependency/node_modules/a/src/A.res"
+printf '{"name":"shared","sources":["src"]}\n' \
+  >"$work/duplicate-dependency/node_modules/shared/rescript.json"
+printf 'let value = 1\n' \
+  >"$work/duplicate-dependency/node_modules/shared/src/Shared.res"
+printf '{"name":"shared","sources":["src"]}\n' \
+  >"$work/duplicate-dependency/node_modules/a/node_modules/shared/rescript.json"
+printf 'let value = 2\n' \
+  >"$work/duplicate-dependency/node_modules/a/node_modules/shared/src/Shared.res"
 
 export RESCRIPT_BSC_EXE=${RESCRIPT_BSC_EXE:-$root/_build/default/compiler/bsc/rescript_compiler_main.exe}
 export RESCRIPT_RUNTIME=${RESCRIPT_RUNTIME:-$root/packages/@rescript/runtime}
@@ -209,6 +229,16 @@ run_case build-mismatched-dependency-name panic accept build \
 run_case build-missing-dependency exit2 exit2 build "$work/missing-dependency"
 run_case build-configless-dependency exit2 exit2 build "$work/configless-dependency"
 run_case build-malformed-dependency exit2 exit2 build "$work/malformed-dependency"
+run_case build-duplicate-dependency accept accept build "$work/duplicate-dependency"
+if ! grep -F "Duplicated package: shared" "$work/rust.err" >/dev/null || \
+  ! grep -F "Duplicated package: shared" "$work/ocaml.err" >/dev/null; then
+  echo "Duplicate dependency warning was not emitted by both implementations" >&2
+  printf '%s\n' '--- Rust output ---' >&2
+  cat "$work/rust.out" "$work/rust.err" >&2
+  printf '%s\n' '--- OCaml output ---' >&2
+  cat "$work/ocaml.out" "$work/ocaml.err" >&2
+  exit 1
+fi
 run_case clean-missing-dependency exit2 exit2 clean "$work/missing-dependency"
 run_case clean-configless-dependency exit2 exit2 clean "$work/configless-dependency"
 run_case clean-malformed-dependency exit2 exit2 clean "$work/malformed-dependency"
