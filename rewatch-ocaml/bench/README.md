@@ -18,11 +18,13 @@ cannot expose. Finally, both implementations clean and build a third fixture at
 the same absolute path. The gate first requires the complete post-build
 file-name sets to match, including auxiliary cache and editor-control files,
 and then requires byte-identical generated JavaScript, compiler interfaces
-(`.cmi`), JavaScript IR (`.cmj`), and namespace maps. It deliberately does not treat
-`.cmt/.cmti`, parser AST caches, compiler logs, `build.ninja`,
-`compiler-info.json`, or `.sourcedirs.json` as byte-stable outputs: those files
-contain diagnostics/debug metadata or implementation-specific incremental
-state and are covered by integration tests instead. The default
+(`.cmi`), JavaScript IR (`.cmj`), parser AST caches, namespace maps, copied
+sources, source-directory metadata, and `build.ninja` markers, including those
+below installed dependency trees. It does not treat typed debug metadata
+(`.cmt`/`.cmti`), compiler logs, or `compiler-info.json` as byte-stable: those
+contain compiler debug data, timestamps, or intentionally
+implementation-specific state and are covered by file-set and integration
+checks instead. The default
 acceptance threshold requires both OCaml medians to be no more than 125% of
 Rust.
 
