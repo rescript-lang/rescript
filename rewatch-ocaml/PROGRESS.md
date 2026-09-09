@@ -100,6 +100,12 @@ Independent behavioral review found no extraction regression; focused resource
 follow-up confirmed the lock, native-handle, signal-restoration, and cleanup
 ordering after the fixes.
 
+The `compiler-args` command implementation now lives in
+`compiler_args_command.ml`. It owns source/config discovery, workspace option
+inheritance, runtime and dependency include resolution, and the final JSON
+projection, while `compiler_args.ml` remains the shared argument-policy owner.
+`Build.compiler_args` is retained as a compatibility alias for existing callers.
+
 ## Source review
 
 The first comparison pass covered the OCaml configuration, package traversal,

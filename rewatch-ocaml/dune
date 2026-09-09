@@ -27,6 +27,7 @@
   graph
   package_metadata
   compiler_args
+  compiler_args_command
   compiler_log
   compiler_scheduler
   build_lock
