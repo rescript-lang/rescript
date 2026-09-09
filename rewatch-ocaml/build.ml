@@ -1,5 +1,5 @@
-exception Error of string
-exception Package_error of string
+exception Error = Project_context.Error
+exception Package_error = Project_context.Package_error
 exception Stop_watch
 exception Build_failure of string
 exception Parse_failure of string
@@ -95,23 +95,6 @@ let process_is_active value =
     with
     | Process.Error _ | Unix.Unix_error _ | Sys_error _ -> None)
 
-let workspace_lock_root folder =
-  let current = Config.load_root folder in
-  let rec nearest_parent directory =
-    if Config.exists_in_root directory then Some (Config.load_root directory)
-    else
-      let parent = Filename.dirname directory in
-      if parent = directory then None else nearest_parent parent
-  in
-  match nearest_parent (Filename.dirname folder) with
-  | Some parent
-    when List.exists
-           (fun (dependency : Config.dependency) ->
-             dependency.name = current.name)
-           (parent.dependencies @ parent.dev_dependencies) ->
-    parent.root
-  | Some _ | None -> folder
-
 let acquire_build_lock root =
   let lock_dir = Filename.concat root "lib" in
   ensure_dir lock_dir;
@@ -164,52 +147,11 @@ let acquire_build_lock root =
       if read_lock_owner path = Some pid then remove_file path;
       released := true)
 
-let dependency_path root name =
-  let existing_realpath path =
-    if Sys.file_exists path then Some (Unix.realpath path) else None
-  in
-  let rec in_ancestors directory =
-    let candidate = Filename.concat (Filename.concat directory "node_modules") name in
-    match existing_realpath candidate with
-    | Some path -> Some path
-    | None ->
-      let parent = Filename.dirname directory in
-      if parent = directory then None else in_ancestors parent
-  in
-  match in_ancestors root with
-  | Some path -> Some path
-  | None ->
-    let package_name =
-      match List.rev (String.split_on_char '/' name) with
-      | last :: _ -> last
-      | [] -> name
-    in
-    let sibling = Filename.concat (Filename.dirname root) name in
-    let workspace = Filename.concat (Filename.concat root "packages") package_name in
-    List.find_map existing_realpath [sibling; workspace]
-
-let require_dependency_directory ~workspace_root package_root
-    (dependency : Config.dependency) =
-  match dependency_path package_root dependency.name with
-  | None ->
-    raise
-      (Package_error
-         (Printf.sprintf
-            "Could not build package tree reading dependency '%s' at path '%s'. Error: Could not resolve dependency %s"
-            dependency.name workspace_root dependency.name))
-  | Some directory when not (Config.exists_in_root directory) ->
-    raise
-      (Package_error
-         (Printf.sprintf
-            "Could not build package tree for '%s' at path '%s'. Error: no rescript.json or bsconfig.json in %s"
-            dependency.name workspace_root directory))
-  | Some directory -> directory
-
 let bsc_path () =
   try Toolchain.bsc () with Toolchain.Error message -> raise (Error message)
 
 let runtime_path root =
-  try Toolchain.runtime ~find_package:(dependency_path root)
+  try Toolchain.runtime ~find_package:(Project_context.dependency_path root)
   with Toolchain.Error message -> raise (Error message)
 
 let report_failure action path result =
@@ -283,7 +225,7 @@ let compiler_flags ?(ppx_flags = []) ~source_maps ~watch ~gentype
       | [] -> []
       | flag :: arguments ->
       let executable =
-        match dependency_path config.root flag with
+        match Project_context.dependency_path config.root flag with
         | Some path -> path
         | None -> flag
       in ["-ppx"; String.concat " " (executable :: arguments)])
@@ -443,33 +385,6 @@ let namespace_job ~bsc ~runtime ~build_dir ~ocaml_dir ~entry ~package_dirty
       copy_existing_file ~ensure_parent:false mlmap
         (Filename.concat ocaml_dir (namespace ^ ".mlmap")) )
 
-let path_is_within_canonical ~root path =
-  let normalize = Platform.normalize_path_for_comparison in
-  let root = normalize root in
-  let path = normalize path in
-  path = root || String.starts_with ~prefix:(Filename.concat root "") path
-
-(* Build graph roots and resolved dependency paths already come from realpath.
-   Keep their locality checks pure so package traversal does not canonicalize
-   the same path at every lifecycle stage. *)
-let is_local_dependency_canonical ~workspace path =
-  let equal_component left right =
-    Platform.normalize_path_for_comparison left
-    = Platform.normalize_path_for_comparison right
-  in
-  let rec contains_component path component =
-    if equal_component (Filename.basename path) component then true
-    else
-      let parent = Filename.dirname path in
-      parent <> path && contains_component parent component
-  in
-  path_is_within_canonical ~root:workspace path
-  && not (contains_component path "node_modules")
-
-let is_local_dependency ~workspace path =
-  is_local_dependency_canonical ~workspace:(Unix.realpath workspace)
-    (Unix.realpath path)
-
 let source_discovery_prod ~prod ~is_local = prod || not is_local
 
 let with_gentype_source_dirs directories (config : Config.t) =
@@ -515,7 +430,7 @@ let gentype_dependency_args (config : Config.t) =
   if config.gentype_args = [] then []
   else
     config.dependencies |> List.concat_map (fun (dependency : Config.dependency) ->
-      match dependency_path config.root dependency.name with
+      match Project_context.dependency_path config.root dependency.name with
       | None -> []
       | Some path -> ["-bs-gentype-dep-path"; dependency.name ^ "=" ^ path])
 
@@ -654,13 +569,13 @@ let rec clean_internal ~(root_config : Config.t) ~seen ~folder:root ~prod
           in
           List.iter (fun (dependency : Config.dependency) ->
             let directory =
-              require_dependency_directory ~workspace_root:root_config.root root
+              Project_context.require_dependency_directory ~workspace_root:root_config.root root
                 dependency
             in
             try
               clean_internal ~root_config ~seen ~folder:directory ~prod
                 ~is_local:
-                  (is_local_dependency_canonical ~workspace:root_config.root
+                  (Project_context.is_local_dependency_canonical ~workspace:root_config.root
                      directory)
                 ~on_clean
             with Config.Error message ->
@@ -721,7 +636,7 @@ let clean ~seen ~verbosity ~folder ~prod =
   let on_clean name =
     if show_plain_progress then Printf.printf "Cleaning %s\n%!" name
   in
-  let release_build_lock = acquire_build_lock (workspace_lock_root root) in
+  let release_build_lock = acquire_build_lock (Project_context.workspace_lock_root root) in
   Fun.protect ~finally:release_build_lock (fun () ->
     let root_config = Config.load_root root in
     let visited = Hashtbl.create 32 in
@@ -735,14 +650,6 @@ let rec nearest_config directory =
     let parent = Filename.dirname directory in
     if parent = directory then raise (Error "could not find a rescript.json parent")
     else nearest_config parent
-
-let relative_to root path =
-  let prefix = Filename.concat root "" in
-  let comparable = Platform.normalize_path_for_comparison in
-  if comparable path = comparable root then "."
-  else if String.starts_with ~prefix:(comparable prefix) (comparable path) then
-    String.sub path (String.length prefix) (String.length path - String.length prefix)
-  else raise (Error (path ^ " is not inside " ^ root))
 
 let compiler_args path =
   let source =
@@ -761,7 +668,7 @@ let compiler_args path =
   let package_config =
     Config.load (nearest_config (Filename.dirname source))
   in
-  let root = workspace_lock_root package_config.root in
+  let root = Project_context.workspace_lock_root package_config.root in
   let root_config_path = Config.path_in_root root in
   let root_config =
     if root <> package_config.root && Config.exists_in_root root then
@@ -769,7 +676,7 @@ let compiler_args path =
     else package_config
   in
   let config = with_root_options package_config root_config in
-  let relative = relative_to config.root source in
+  let relative = Project_context.relative_to config.root source in
   let runtime = runtime_path config.root in
   let is_interface = Filename.check_suffix source ".resi" in
   let has_interface = not is_interface && Sys.file_exists (source ^ "i") in
@@ -782,7 +689,7 @@ let compiler_args path =
   let dependency_dirs =
     dependencies
     |> List.filter_map (fun (required, (dependency : Config.dependency)) ->
-         match dependency_path config.root dependency.name with
+         match Project_context.dependency_path config.root dependency.name with
          | Some directory -> Some (lib_path directory "ocaml")
          | None when not required -> None
          | None ->
@@ -988,7 +895,7 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
     | Some resolved -> resolved
     | None ->
       let directory =
-        require_dependency_directory ~workspace_root:root_config.root
+        Project_context.require_dependency_directory ~workspace_root:root_config.root
           package_root dependency
       in
       let warn_duplicate chosen =
@@ -997,9 +904,9 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
           Hashtbl.add reported_duplicate_packages warning_key ();
           Printf.eprintf
             "Duplicated package: %s ./%s (chosen) vs ./%s in ./%s\n%!"
-            dependency.name (relative_to root_config.root chosen)
-            (relative_to root_config.root directory)
-            (relative_to root_config.root package_root))
+            dependency.name (Project_context.relative_to root_config.root chosen)
+            (Project_context.relative_to root_config.root directory)
+            (Project_context.relative_to root_config.root package_root))
       in
       let resolved =
         match Hashtbl.find_opt resolved_packages dependency.name with
@@ -1069,7 +976,7 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
         (fun ((dependency : Config.dependency), directory) ->
           collect ~folder:directory ~features:dependency.features
             ~is_local:
-              (is_local_dependency_canonical ~workspace:root_config.root
+              (Project_context.is_local_dependency_canonical ~workspace:root_config.root
                  directory))
         resolved_dependencies)
   in
@@ -1123,7 +1030,7 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
           visit ~folder:directory ~features:dependency.features
             ~warn_error:None ~filter:None
             ~is_local:
-              (is_local_dependency_canonical ~workspace:root_config.root
+              (Project_context.is_local_dependency_canonical ~workspace:root_config.root
                  directory))
         dependency_directories;
       let discovery =
@@ -1232,7 +1139,7 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
              ~ocaml_dir:package.graph_ocaml_dir
              ~source_files:package.graph_source_files
              ~is_local:
-               (is_local_dependency_canonical ~workspace:root_config.root
+               (Project_context.is_local_dependency_canonical ~workspace:root_config.root
                   package.graph_root)
              package.graph_compile_config package.graph_modules);
         Compiler_info.clean_package package.graph_config;
@@ -1257,7 +1164,7 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
           ~ocaml_dir:package.graph_ocaml_dir
           ~source_files:package.graph_source_files
           ~is_local:
-            (is_local_dependency_canonical ~workspace:root_config.root
+            (Project_context.is_local_dependency_canonical ~workspace:root_config.root
                package.graph_root)
           package.graph_compile_config package.graph_modules
       in
@@ -1510,7 +1417,7 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder:root ~prod ~feature
         in
         dependencies
         |> List.map (fun (dependency : Config.dependency) ->
-             match dependency_path root dependency.name with
+             match Project_context.dependency_path root dependency.name with
              | Some directory -> (dependency, directory)
              | None ->
                raise
@@ -1529,7 +1436,7 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder:root ~prod ~feature
                ~features:dependency.features ~warn_error:None ~watch
                ~filter:None
                ~is_local:
-                 (is_local_dependency_canonical ~workspace:root_config.root
+                 (Project_context.is_local_dependency_canonical ~workspace:root_config.root
                     candidate)
                ~stats
            with Build_failure output ->
@@ -2060,7 +1967,7 @@ let write_source_dirs (root_config : Config.t) stats =
   in
   let relative_package_root package =
     if package.graph_root = root_config.root then ""
-    else relative_to root_config.root package.graph_root
+    else Project_context.relative_to root_config.root package.graph_root
   in
   let dirs =
     local_packages
@@ -2263,13 +2170,13 @@ let run_with_warning_state ~poll ~warning_state ~compilation_kind ~no_timing
           | _ -> module_name
         in
         Printf.sprintf "%s (%s)" display_name
-          (relative_to root_config.root absolute)
+          (Project_context.relative_to root_config.root absolute)
     in
     "\nCan't continue... Found a circular dependency in your code:\n"
     ^ (cycle |> List.map format_node |> String.concat "\n → ")
     ^ "\nPossible solutions:\n- Extract shared code into a new module both depend on.\n"
   in
-  let release_build_lock = acquire_build_lock (workspace_lock_root root) in
+  let release_build_lock = acquire_build_lock (Project_context.workspace_lock_root root) in
   let phase_seconds seconds = if no_timing then 0. else seconds in
   let parse_step = if is_rebuild then "1/2" else "2/3" in
   let compile_step = if is_rebuild then "2/2" else "3/3" in
@@ -2465,10 +2372,10 @@ let watch ~verbosity ~folder ~prod ~features ~warn_error ~after_build ~filter
       in
       List.iter
         (fun (dependency : Config.dependency) ->
-          match dependency_path config.root dependency.name with
+          match Project_context.dependency_path config.root dependency.name with
           | Some directory
             when (not (Hashtbl.mem visited directory))
-                 && is_local_dependency_canonical ~workspace:root directory
+                 && Project_context.is_local_dependency_canonical ~workspace:root directory
                  && Config.exists_in_root directory ->
             Hashtbl.add visited directory ();
             roots := directory :: !roots;

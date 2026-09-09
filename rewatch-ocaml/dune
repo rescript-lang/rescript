@@ -18,6 +18,7 @@
  (modules
   cli
   config
+  project_context
   platform_common
   platform
   process

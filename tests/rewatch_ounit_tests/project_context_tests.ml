@@ -38,19 +38,20 @@ let tests =
       write_config dev_dependency {|{"name":"dev-dependency"}|};
       write_config unlisted {|{"name":"unlisted"}|};
       check
-        (Build.workspace_lock_root dependency = root)
+        (Project_context.workspace_lock_root dependency = root)
         "listed dependencies inherit the parent workspace context";
       check
-        (Build.workspace_lock_root dev_dependency = root)
+        (Project_context.workspace_lock_root dev_dependency = root)
         "listed dev dependencies inherit the parent workspace context";
       check
-        (Build.workspace_lock_root unlisted = unlisted)
+        (Project_context.workspace_lock_root unlisted = unlisted)
         "package.json workspace globs do not enroll unlisted ReScript packages";
       check
-        (Build.relative_to root root = ".")
+        (Project_context.relative_to root root = ".")
         "a root path is represented by the current-directory component";
       check
-        (Build.relative_to root (Filename.concat root "packages") = "packages")
+        (Project_context.relative_to root (Filename.concat root "packages")
+        = "packages")
         "a child path is represented relative to its root";
       let repository_tmp = Filename.concat (Sys.getcwd ()) "tmp" in
       Build_artifacts.ensure_dir repository_tmp;
@@ -67,7 +68,7 @@ let tests =
           let source = Filename.concat standalone "src/A.res" in
           write_file source "let value = 1\n";
           check
-            (Build.workspace_lock_root standalone = standalone)
+            (Project_context.workspace_lock_root standalone = standalone)
             "an unrelated project below a workspace remains standalone";
           let arguments = Build.compiler_args source in
           check

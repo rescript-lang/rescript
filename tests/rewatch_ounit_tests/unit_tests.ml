@@ -352,17 +352,17 @@ let tests =
     (not (List.mem "Unrelated" blocked))
     "cycle-unrelated modules remain schedulable";
   check
-    (Build.is_local_dependency_canonical ~workspace:"/workspace"
+    (Project_context.is_local_dependency_canonical ~workspace:"/workspace"
        "/workspace/packages/dependency")
     "canonical workspace dependencies are local";
   check
     (not
-       (Build.is_local_dependency_canonical ~workspace:"/workspace"
+       (Project_context.is_local_dependency_canonical ~workspace:"/workspace"
           "/workspace/node_modules/dependency"))
     "node_modules dependencies are external";
   check
     (not
-       (Build.is_local_dependency_canonical ~workspace:"/workspace"
+       (Project_context.is_local_dependency_canonical ~workspace:"/workspace"
           "/workspace-other/dependency"))
     "path-prefix siblings are outside the workspace";
   if not Sys.win32 then (
@@ -381,7 +381,7 @@ let tests =
         Unix.rmdir package;
         Unix.rmdir temporary)
       (fun () ->
-        match Build.dependency_path temporary "dependency" with
+        match Project_context.dependency_path temporary "dependency" with
         | Some resolved ->
           check
             (resolved = Unix.realpath package)
