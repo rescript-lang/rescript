@@ -2000,7 +2000,7 @@ let run_with_warning_state ~warning_state ~compilation_kind ~no_timing ~seen
     ~verbosity ~folder ~prod ~features ~warn_error ~watch ~after_build ~filter =
   let started_at = Unix.gettimeofday () in
   let interactive = Unix.isatty Unix.stdout && Unix.isatty Unix.stderr in
-  let is_rebuild = Option.is_some compilation_kind in
+  let is_rebuild = compilation_kind = Some "incremental" in
   let should_write_build_ninja = (not watch) || is_rebuild in
   let root = project_root folder in
   let root_config = Config.load_root root in
@@ -2406,7 +2406,7 @@ let watch ~verbosity ~folder ~prod ~features ~warn_error ~after_build ~filter
   let initial_build = ref true in
   let run_build () =
     let compilation_kind =
-      if !initial_build then None else Some "incremental"
+      if !initial_build then Some "initial" else Some "incremental"
     in
     try
       run_with_warning_state ~warning_state ~compilation_kind ~no_timing:false

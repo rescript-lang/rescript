@@ -938,8 +938,12 @@ rerun it for the final maintainability review alongside maximum module size.
 - Interactive builds now also emit Rust-shaped cleanup, parse, and compile
   completion lines with three-step initial-build numbering, two-step watch
   rebuild numbering, phase-specific emojis, counts, and two-decimal timing.
-  Redirected output remains unchanged. Live spinner frames and complete
-  verbosity behavior remain separate output-gate work.
+  A retained PTY gate now runs both watchers, changes a source, and exactly
+  compares normalized initial and incremental phase/final-status frames. It
+  exposed and fixed the initial OCaml watch label from generic `Finished
+  compilation` to Rust's `Finished initial compilation`. Redirected output
+  remains unchanged. Live spinner frames and complete verbosity behavior remain
+  separate output-gate work.
 - Interactive output parity remains open. The OCaml executable now selects a
   TTY-specific final status with timing and emoji, emits phase completion
   counts, and supports watch clear-screen behavior, but does not yet reproduce
