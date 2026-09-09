@@ -15,18 +15,21 @@ let read_file path =
   Fun.protect ~finally:(fun () -> close_in_noerr channel) (fun () ->
     really_input_string channel (in_channel_length channel))
 
+(* Compiler publication callers already own both guarantees. Keeping that
+   knowledge explicit avoids two metadata probes per copied artifact. *)
+let copy_existing_file ?(ensure_parent = true) source destination =
+  if ensure_parent then ensure_dir (Filename.dirname destination);
+  let input = open_in_bin source in
+  let output = open_out_bin destination in
+  Fun.protect
+    ~finally:(fun () ->
+      close_in_noerr input;
+      close_out_noerr output)
+    (fun () ->
+      really_input_string input (in_channel_length input) |> output_string output)
+
 let copy_file source destination =
-  if Sys.file_exists source then (
-    ensure_dir (Filename.dirname destination);
-    let input = open_in_bin source in
-    let output = open_out_bin destination in
-    Fun.protect
-      ~finally:(fun () ->
-        close_in_noerr input;
-        close_out_noerr output)
-      (fun () ->
-        really_input_string input (in_channel_length input)
-        |> output_string output))
+  if Sys.file_exists source then copy_existing_file source destination
 
 let stat_opt path =
   try Some (Unix.stat path)
@@ -61,8 +64,10 @@ let files_equal first second =
              in
              loop ()))
 
-let copy_file_if_changed source destination =
-  if not (files_equal source destination) then copy_file source destination
+let copy_file_if_changed ?(ensure_parent = true) source destination =
+  if not (files_equal source destination) then
+    if ensure_parent then copy_file source destination
+    else copy_existing_file ~ensure_parent:false source destination
 
 let modification_time path =
   stat_opt path |> Option.map (fun metadata -> metadata.Unix.st_mtime)

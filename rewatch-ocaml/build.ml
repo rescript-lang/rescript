@@ -65,7 +65,8 @@ let append_compiler_log root content =
 let finalize_compiler_log root =
   append_compiler_log root
     (Printf.sprintf "#Done(%.6f)\n" (Unix.gettimeofday ()));
-  copy_file (compiler_log_path root "bs") (compiler_log_path root "ocaml")
+  copy_existing_file ~ensure_parent:false (compiler_log_path root "bs")
+    (compiler_log_path root "ocaml")
 
 let read_lock_owner path =
   try
@@ -425,13 +426,17 @@ let namespace_job ~bsc ~runtime ~build_dir ~ocaml_dir ~entry ~package_dirty
     fun result ->
       if not (Process.succeeded result) then
         report_failure "Compiling namespace" namespace result;
-      copy_file_if_changed (Filename.concat build_dir (namespace ^ ".cmi"))
+      copy_file_if_changed ~ensure_parent:false
+        (Filename.concat build_dir (namespace ^ ".cmi"))
         (Filename.concat ocaml_dir (namespace ^ ".cmi"));
-      copy_file (Filename.concat build_dir (namespace ^ ".cmj"))
+      copy_existing_file ~ensure_parent:false
+        (Filename.concat build_dir (namespace ^ ".cmj"))
         (Filename.concat ocaml_dir (namespace ^ ".cmj"));
-      copy_file (Filename.concat build_dir (namespace ^ ".cmt"))
+      copy_existing_file ~ensure_parent:false
+        (Filename.concat build_dir (namespace ^ ".cmt"))
         (Filename.concat ocaml_dir (namespace ^ ".cmt"));
-      copy_file mlmap (Filename.concat ocaml_dir (namespace ^ ".mlmap")) )
+      copy_existing_file ~ensure_parent:false mlmap
+        (Filename.concat ocaml_dir (namespace ^ ".mlmap")) )
 
 let path_is_within_canonical ~root path =
   let normalize = Platform.normalize_path_for_comparison in
@@ -559,14 +564,16 @@ let publish_compiled ~build_dir ~ocaml_dir ~watch ~watch_output_paths ~is_local
     (fun extension ->
       let source = Filename.concat artifact_dir (basename ^ "." ^ extension) in
       let destination = Filename.concat ocaml_dir (basename ^ "." ^ extension) in
-      if extension = "cmi" then copy_file_if_changed source destination
-      else copy_file source destination)
+      if extension = "cmi" then
+        copy_file_if_changed ~ensure_parent:false source destination
+      else copy_existing_file ~ensure_parent:false source destination)
     extensions;
   let source = Filename.concat config.root path in
   let build_source = Filename.concat build_dir path in
   ensure_dir (Filename.dirname build_source);
-  copy_file source build_source;
-  copy_file source (Filename.concat ocaml_dir (Filename.basename path));
+  copy_existing_file ~ensure_parent:false source build_source;
+  copy_existing_file ~ensure_parent:false source
+    (Filename.concat ocaml_dir (Filename.basename path));
   if not is_interface then (
     List.iter
       (fun spec ->
@@ -574,9 +581,11 @@ let publish_compiled ~build_dir ~ocaml_dir ~watch ~watch_output_paths ~is_local
           let output = generated_js_path config path spec in
           let build_output = generated_build_js_path ~build_dir config path spec in
           ensure_dir (Filename.dirname build_output);
-          if Sys.file_exists output then copy_file output build_output;
+          if Sys.file_exists output then
+            copy_existing_file ~ensure_parent:false output build_output;
           if Sys.file_exists (output ^ ".map") then
-            copy_file (output ^ ".map") (build_output ^ ".map")
+            copy_existing_file ~ensure_parent:false (output ^ ".map")
+              (build_output ^ ".map")
           else remove_file (build_output ^ ".map")))
       config.package_specs;
     run_post_build config path;
@@ -1598,9 +1607,9 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder:root ~prod ~feature
     if stderr <> "" then prerr_string stderr;
     let ast = Source.ast_path path in
     if is_local && stderr <> "" then warning_asts := ast :: !warning_asts;
-    copy_file (Filename.concat build_dir ast)
+    copy_existing_file ~ensure_parent:false (Filename.concat build_dir ast)
       (Filename.concat (lib_path config.root "ocaml") (Filename.basename ast));
-    copy_file (Filename.concat config.root path)
+    copy_existing_file ~ensure_parent:false (Filename.concat config.root path)
       (Filename.concat (lib_path config.root "ocaml") (Filename.basename path))) parsed;
   let raw_dependencies = Hashtbl.create (List.length modules) in
   let parse_dirty_modules = Hashtbl.create (List.length modules) in
