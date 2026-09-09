@@ -36,6 +36,24 @@ let () =
     check
       (Option.is_none (Build_artifacts.modification_time missing))
       "a missing file should not have a modification time";
+    let optional_copy = Filename.concat root "optional-copy" in
+    Build_artifacts.copy_optional_existing_file first optional_copy;
+    check
+      (Build_artifacts.read_file optional_copy = "same")
+      "an available optional artifact should be copied";
+    Build_artifacts.copy_optional_existing_file missing optional_copy;
+    check
+      (not (Sys.file_exists optional_copy))
+      "a stale optional destination should be removed when its source is absent";
+    let destination_failure_is_reported =
+      try
+        Build_artifacts.copy_optional_existing_file ~ensure_parent:false first
+          (Filename.concat root "absent/optional-copy");
+        false
+      with Sys_error _ | Unix.Unix_error _ -> true
+    in
+    check destination_failure_is_reported
+      "an optional copy must not hide destination failures";
     check
       (List.sort String.compare (Build_artifacts.files_under root)
       = List.sort String.compare [first; second])

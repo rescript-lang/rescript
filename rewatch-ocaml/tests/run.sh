@@ -14,6 +14,11 @@ cp -R "$root/rewatch-ocaml/tests/basic" "$work/basic"
 cp -R "$root/rewatch-ocaml/tests/basic" "$work/cleanup-lifecycle"
 cp -R "$root/rewatch-ocaml/tests/basic" "$work/packaged-basic"
 cp -R "$root/rewatch-ocaml/tests/basic" "$work/runtime-discovery"
+mkdir -p "$work/no-bin-annot/src"
+printf '{"name":"no-bin-annot","sources":["src"]}\n' \
+  >"$work/no-bin-annot/rescript.json"
+printf '@@config({flags: ["-bs-no-bin-annot"]})\nlet value = 1\n' \
+  >"$work/no-bin-annot/src/NoBinAnnot.res"
 cp -R "$root/rewatch-ocaml/tests/basic" "$work/legacy-config"
 cp -R "$root/rewatch-ocaml/tests/cycle" "$work/cycle"
 cp -R "$root/rewatch-ocaml/tests/failure" "$work/failure"
@@ -42,6 +47,7 @@ basic="$work/basic"
 cleanup_lifecycle="$work/cleanup-lifecycle"
 packaged_basic="$work/packaged-basic"
 runtime_discovery="$work/runtime-discovery"
+no_bin_annot="$work/no-bin-annot"
 legacy_config="$work/legacy-config"
 cycle="$work/cycle"
 failure="$work/failure"
@@ -205,6 +211,13 @@ grep -F "[format check] $work/unformatted.res" \
 grep -F "The file listed above needs formatting" \
   "$work/format-check.err" >/dev/null
 grep -F "Formatting check failed" "$work/format-check.err" >/dev/null
+
+"$port" build "$no_bin_annot" >/dev/null
+test -f "$no_bin_annot/lib/bs/src/NoBinAnnot.cmi"
+test -f "$no_bin_annot/lib/bs/src/NoBinAnnot.cmj"
+test -f "$no_bin_annot/src/NoBinAnnot.js"
+test ! -e "$no_bin_annot/lib/bs/src/NoBinAnnot.cmt"
+test ! -e "$no_bin_annot/lib/ocaml/NoBinAnnot.cmt"
 
 if (cd "$basic/src" && "$port" format --check) \
   >"$work/format-nested.out" 2>"$work/format-nested.err"; then

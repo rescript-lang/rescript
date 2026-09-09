@@ -533,6 +533,8 @@ let publish_compiled ~build_dir ~ocaml_dir ~watch ~watch_output_paths ~is_local
       let destination = Filename.concat ocaml_dir (basename ^ "." ^ extension) in
       if extension = "cmi" then
         copy_file_if_changed ~ensure_parent:false source destination
+      else if extension = "cmt" || extension = "cmti" then
+        copy_optional_existing_file ~ensure_parent:false source destination
       else copy_existing_file ~ensure_parent:false source destination)
     extensions;
   let source = Filename.concat config.root path in
