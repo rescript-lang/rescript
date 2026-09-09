@@ -261,6 +261,11 @@ artifact_manifest() {
     | sort -z | xargs -0 sha256sum | sed "s#$root/##" >"$output"
 }
 
+file_set_manifest() {
+  local root=$1 output=$2
+  find "$root" -type f -printf '%P\n' | sort >"$output"
+}
+
 # Use the same absolute path for both builds so paths embedded in binary
 # compiler artifacts are directly comparable byte for byte.
 equivalence_root="$work_root/equivalence"
@@ -268,9 +273,12 @@ prepare_fixture "$equivalence_root"
 equivalence_fixture="$equivalence_root/rewatch/testrepo"
 rust_artifacts="$work_root/rust-artifacts.sha256"
 ocaml_artifacts="$work_root/ocaml-artifacts.sha256"
+rust_files="$work_root/rust-files.txt"
+ocaml_files="$work_root/ocaml-files.txt"
 clean_and_build "$rust_executable" "$equivalence_fixture" \
   "$work_root/rust-equivalence"
 artifact_manifest "$equivalence_root" "$rust_artifacts"
+file_set_manifest "$equivalence_root" "$rust_files"
 # Recreate, rather than clean, the fixture so OCaml cannot inherit an artifact
 # that only Rust produced. Reusing the same pathname keeps embedded paths equal.
 find "$equivalence_root" -depth -delete
@@ -278,6 +286,15 @@ prepare_fixture "$equivalence_root"
 clean_and_build "$ocaml_executable" "$equivalence_fixture" \
   "$work_root/ocaml-equivalence"
 artifact_manifest "$equivalence_root" "$ocaml_artifacts"
+file_set_manifest "$equivalence_root" "$ocaml_files"
+if cmp -s "$rust_files" "$ocaml_files"; then
+  file_set_equivalence=1
+  echo "files: identical complete post-build file sets"
+else
+  file_set_equivalence=0
+  echo "complete post-build file-set diff:" >&2
+  diff -u "$rust_files" "$ocaml_files" >&2 || true
+fi
 if cmp -s "$rust_artifacts" "$ocaml_artifacts"; then
   artifact_equivalence=1
   echo "artifacts: identical generated file sets and contents"
@@ -315,6 +332,10 @@ for scenario in clean unchanged edit; do
     failed=1
   fi
 done
+if ((file_set_equivalence == 0)); then
+  echo "FAIL: Rust and OCaml produced different post-build file sets." >&2
+  failed=1
+fi
 if ((artifact_equivalence == 0)); then
   echo "FAIL: Rust and OCaml generated different artifacts." >&2
   failed=1

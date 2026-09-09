@@ -1743,6 +1743,9 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder:root ~prod ~feature
   stats.scheduled_modules := scheduled @ !(stats.scheduled_modules);
   stats.compile_cleanup :=
     (fun () ->
+      (* The published AST is the freshness marker. Keep bsc's working AST in
+         lib/bs, as Rust does, and remove only the published copy so warnings
+         are replayed without deleting a usable intermediate artifact. *)
       if not watch then
         Hashtbl.iter
           (fun module_name () ->
@@ -1760,14 +1763,12 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder:root ~prod ~feature
               List.iter
                 (fun path ->
                   let ast = Source.ast_path path in
-                  remove_file (Filename.concat build_dir ast);
                   remove_file
                     (Filename.concat ocaml_dir (Filename.basename ast)))
                 paths)
           compile_warning_modules;
       List.iter
         (fun ast ->
-          remove_file (Filename.concat build_dir ast);
           remove_file (Filename.concat ocaml_dir (Filename.basename ast)))
         !warning_asts)
     :: !(stats.compile_cleanup);
