@@ -19,6 +19,7 @@ const traces = fs
 
 const operations = [];
 const categories = new Map();
+const processCategories = new Map();
 
 function decodeQuoted(value) {
   try {
@@ -63,6 +64,12 @@ function pathValues(operation, line) {
 for (const trace of traces) {
   let cwd = fixture;
   const lines = fs.readFileSync(path.join(traceDirectory, trace), "utf8").split("\n");
+  const executable = lines
+    .map((line) => line.match(/^execve\("((?:[^"\\]|\\.)*)"/))
+    .find((match) => match !== null);
+  const processName = executable
+    ? path.basename(decodeQuoted(executable[1]))
+    : "inherited-process";
   for (const line of lines) {
     const call = line.match(/^([a-zA-Z0-9_]+)\(/);
     if (!call) continue;
@@ -75,6 +82,8 @@ for (const trace of traces) {
       operations.push(`${operation}\t${normalized}`);
       const name = category(operation);
       categories.set(name, (categories.get(name) || 0) + 1);
+      const processKey = `${processName}\t${name}`;
+      processCategories.set(processKey, (processCategories.get(processKey) || 0) + 1);
     }
     if (operation === "chdir" && line.endsWith("= 0") && values.length === 1) {
       cwd = path.isAbsolute(values[0])
@@ -96,4 +105,11 @@ fs.writeFileSync(`${outputPrefix}.paths.tsv`, `${counted.join("\n")}\n`);
 fs.writeFileSync(
   `${outputPrefix}.categories.tsv`,
   `${[...categories].sort().map(([name, count]) => `${name}\t${count}`).join("\n")}\n`,
+);
+fs.writeFileSync(
+  `${outputPrefix}.processes.tsv`,
+  `${[...processCategories]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([key, count]) => `${key}\t${count}`)
+    .join("\n")}\n`,
 );
