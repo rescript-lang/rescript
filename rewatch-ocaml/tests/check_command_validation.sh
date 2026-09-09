@@ -35,6 +35,7 @@ mkdir -p "$work/external-dev-permission/src" \
 mkdir -p "$work/active-permission/node_modules/a" \
   "$work/active-permission/node_modules/b"
 mkdir -p "$work/source-path-file"
+mkdir -p "$work/missing-runtime-package"
 mkdir -p "$work/missing-source-folder/src" \
   "$work/missing-source-folder/node_modules/dep"
 mkdir -p "$work/dependency-without-sources/src" \
@@ -127,6 +128,8 @@ printf '{"name":"b","sources":[],"allowed-dependents":["someone-else"]}\n' \
 printf '{"name":"source-path-file","sources":["src"]}\n' \
   >"$work/source-path-file/rescript.json"
 printf 'not a directory\n' >"$work/source-path-file/src"
+printf '{"name":"missing-runtime-package","sources":[]}\n' \
+  >"$work/missing-runtime-package/rescript.json"
 printf '{"name":"missing-source-folder","sources":["src"],"dependencies":["dep"]}\n' \
   >"$work/missing-source-folder/rescript.json"
 printf 'let value = 1\n' >"$work/missing-source-folder/src/App.res"
@@ -462,6 +465,44 @@ run_case compiler-args-no-project panic reject compiler-args "$work/orphan/A.res
 
 run_missing_bsc_case build-missing-bsc build "$project"
 run_missing_bsc_case format-missing-bsc format "$project/src/A.res"
+set +e
+env -u RESCRIPT_RUNTIME "$rust" build "$work/missing-runtime-package" \
+  >"$work/rust.out" 2>"$work/rust.err"
+rust_status=$?
+env -u RESCRIPT_RUNTIME "$ocaml" build "$work/missing-runtime-package" \
+  >"$work/ocaml.out" 2>"$work/ocaml.err"
+ocaml_status=$?
+set -e
+if [ "$rust_status" -eq 0 ] || [ "$ocaml_status" -eq 0 ]; then
+  echo "build-missing-runtime-package: expected both builds to reject" >&2
+  exit 1
+fi
+require_both_errors_contain build-missing-runtime-package \
+  'The rescript runtime package could not be found.'
+require_both_errors_contain build-missing-runtime-package \
+  'Please set RESCRIPT_RUNTIME environment variable'
+checked=$((checked + 1))
+set +e
+RESCRIPT_RUNTIME="$work/missing-runtime" "$rust" build "$project" \
+  >"$work/rust.out" 2>"$work/rust.err"
+rust_status=$?
+RESCRIPT_RUNTIME="$work/missing-runtime" "$ocaml" build "$project" \
+  >"$work/ocaml.out" 2>"$work/ocaml.err"
+ocaml_status=$?
+set -e
+if [ "$rust_status" -eq 0 ] || [ "$ocaml_status" -eq 0 ] || \
+  ! grep -F "RESCRIPT_RUNTIME points to missing path $work/missing-runtime" \
+    "$work/ocaml.err" >/dev/null || \
+  ! grep -F "The module or file Pervasives can't be found." \
+    "$work/rust.err" >/dev/null; then
+  echo "build-stale-runtime: expected contextual OCaml preflight rejection" >&2
+  printf '%s\n' '--- Rust output ---' >&2
+  cat "$work/rust.out" "$work/rust.err" >&2
+  printf '%s\n' '--- OCaml output ---' >&2
+  cat "$work/ocaml.out" "$work/ocaml.err" >&2
+  exit 1
+fi
+checked=$((checked + 1))
 run_case format-missing-file reject reject format "$project/src/Missing.res"
 require_same_output format-missing-file
 run_case format-directory reject reject format "$project/src"

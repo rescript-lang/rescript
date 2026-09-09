@@ -626,6 +626,14 @@ missing control-file names.
   is retained as a documented safety fix, while OCaml reports the stale path
   normally. The command gate shares one missing-compiler probe across build and
   format rather than duplicating its setup.
+- Runtime discovery now has differential failure coverage in addition to its
+  successful package-resolution test. With no `RESCRIPT_RUNTIME` and no
+  installed `@rescript/runtime`, both implementations retain the stable setup
+  guidance. A stale explicit `RESCRIPT_RUNTIME` is deliberately rejected by
+  OCaml before parser or compiler subprocesses are started. Rust currently
+  accepts that missing path, performs avoidable compiler work, and reports
+  repeated misleading `Pervasives` lookup failures. The OCaml preflight is a
+  documented simple Rust bug/inefficiency fix rather than a parity gap.
 - Implicit `format` project discovery now has semantic differential coverage for
   a missing config, malformed JSON, and a directory at `rescript.json`. Both
   implementations must retain the command and path context plus the relevant
