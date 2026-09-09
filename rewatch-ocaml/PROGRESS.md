@@ -1151,6 +1151,15 @@ still incomplete, and later comments and tests should increase useful lines.
 [`bench/source_size.sh`](bench/source_size.sh) preserves the scope and command;
 rerun it for the final maintainability review alongside maximum module size.
 
+The command-cycle accumulator and the prepared-package/global-module records
+now live in `build_types.ml`, including one constructor for their initial
+state. This removes 92 lines of state declaration and initialization from
+`build.ml`, makes the ownership parallel to Rust's `build_types.rs` explicit,
+and leaves the remaining package-graph extraction free to share state without
+duplicating records or introducing callback-heavy interfaces. The extraction
+does not alter filesystem access or build scheduling; all 18 OUnit2 tests and
+the focused build/incremental runner passed afterward.
+
 ## Known gaps
 
 - Incremental state currently relies on artifact timestamps, byte-identical CMI
@@ -1410,8 +1419,9 @@ rerun it for the final maintainability review alongside maximum module size.
 ## Next actions
 
 1. Continue splitting `build.ml` along stable responsibility boundaries. The
-   filesystem and artifact-ownership layer now lives in `build_artifacts.ml`;
-   package preparation/scheduling and watch lifecycle remain candidates.
+   filesystem/artifact, compiler-process, compiler-scheduling, watcher, clean,
+   and command-cycle state owners are now separate; package and dependency
+   graph preparation remains the principal mixed responsibility.
 2. Perform the final two-scope whole-port review and address confirmed findings.
 3. At the final maintainability pass, add comments around ownership,
    concurrency, platform, and algorithmic invariants that are not apparent from

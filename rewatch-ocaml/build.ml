@@ -5,6 +5,7 @@ exception Build_failure = Compiler_scheduler.Build_failure
 exception Parse_failure of string
 
 open Build_artifacts
+open Build_types
 
 let bsc_path () =
   try Toolchain.bsc () with Toolchain.Error message -> raise (Error message)
@@ -90,54 +91,6 @@ let clean ~seen ~verbosity ~folder ~prod =
 
 let compiler_args = Compiler_args_command.run
 
-type graph_package = {
-  graph_root: string;
-  graph_build_owner: string;
-  graph_is_local: bool;
-  graph_config: Config.t;
-  graph_compile_config: Config.t;
-  graph_build_dir: string;
-  graph_ocaml_dir: string;
-  graph_dependencies: Config.dependency list;
-  graph_dependency_directories: (Config.dependency * string) list;
-  graph_modules: Source.module_ list;
-  graph_source_mtimes: (string, float) Hashtbl.t;
-  graph_source_files: string list;
-}
-
-type build_stats = {
-  mutable cleaned: int;
-  mutable previous_asts: int;
-  mutable parsed: int;
-  mutable compiled: int;
-  mutable parse_seconds: float;
-  mutable diagnostics: string list;
-  mutable failure: string option;
-  removed_modules: (string, unit) Hashtbl.t;
-  forced_parse_paths: (string, unit) Hashtbl.t;
-  preparse_stderr: (string, string) Hashtbl.t;
-  preparse_results: (string, Process.result) Hashtbl.t;
-  blocked_modules: (string, unit) Hashtbl.t;
-  active_features: (string, string list option) Hashtbl.t;
-  initialized_logs: (string, unit) Hashtbl.t;
-  watch_outputs: (string * string * string) list ref;
-  watch_output_paths: (string, unit) Hashtbl.t;
-  global_raw_dependencies: (string, string list) Hashtbl.t;
-  graph_packages: (string, graph_package) Hashtbl.t;
-  cleanup_results: (string, Build_artifacts.cleanup_result) Hashtbl.t;
-  deferred_artifact_cleanup: string list ref;
-  namespace_jobs: (Process.job * (Process.result -> unit)) list ref;
-  scheduled_modules: Compiler_scheduler.scheduled_module list ref;
-  compile_cleanup: (unit -> unit) list ref;
-  mutable compiler_context: Compiler_info.context option;
-  mutable compile_assets: Compile_assets.t option;
-  mutable build_state: Build_state.t option;
-  mutable compiler_cleaned: bool;
-  warning_state: Warning_state.t;
-  mutable had_warnings: bool;
-  poll: unit -> unit;
-}
-
 let source_is_newer ~source ~artifact =
   match modification_time source, modification_time artifact with
   | Some source_time, Some artifact_time -> source_time > artifact_time
@@ -161,18 +114,6 @@ let published_ast_path ~ocaml_dir source_path =
   (* bsc gives its intermediate AST an epoch mtime. The copy published after a
      successful parse is the stable freshness marker across build cycles. *)
   Filename.concat ocaml_dir (Filename.basename (Source.ast_path source_path))
-
-type global_module = {
-  key: string;
-  package_name: string;
-  package_root: string;
-  source_path: string;
-  source: Source.module_;
-  namespace: string option;
-  namespace_entry: string option;
-  allowed_dependencies: string list;
-  raw_dependencies: string list;
-}
 
 let global_module_key (config : Config.t) module_name =
   Source.compiler_basename config module_name
@@ -1219,40 +1160,7 @@ let run_with_warning_state ~poll ~warning_state ~compilation_kind ~no_timing
   if verbosity > 0 then
     Printf.printf "Created project context for %S\n%!" root_config.root;
   let visited = Hashtbl.create 32 in
-  let stats =
-    {
-      cleaned = 0;
-      previous_asts = 0;
-      parsed = 0;
-      compiled = 0;
-      parse_seconds = 0.;
-      diagnostics = [];
-      failure = None;
-      removed_modules = Hashtbl.create 16;
-      forced_parse_paths = Hashtbl.create 16;
-      preparse_stderr = Hashtbl.create 16;
-      preparse_results = Hashtbl.create 16;
-      blocked_modules = Hashtbl.create 16;
-      active_features = Hashtbl.create 16;
-      initialized_logs = Hashtbl.create 16;
-      watch_outputs = ref [];
-      watch_output_paths = Hashtbl.create 16;
-      global_raw_dependencies = Hashtbl.create 64;
-      graph_packages = Hashtbl.create 32;
-      cleanup_results = Hashtbl.create 32;
-      deferred_artifact_cleanup = ref [];
-      namespace_jobs = ref [];
-      scheduled_modules = ref [];
-      compile_cleanup = ref [];
-      compiler_context = None;
-      compile_assets = None;
-      build_state = None;
-      compiler_cleaned = false;
-      warning_state;
-      had_warnings = false;
-      poll;
-    }
-  in
+  let stats = Build_types.create ~warning_state ~poll in
   List.iter (fun path -> Hashtbl.replace visited (Unix.realpath path) ()) seen;
   let finalize_logs () =
     Hashtbl.iter (fun package_root () -> Compiler_log.finalize package_root)
