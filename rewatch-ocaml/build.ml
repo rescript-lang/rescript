@@ -631,11 +631,11 @@ let rec remove_tree path =
     with Sys_error _ | Unix.Unix_error (Unix.ENOENT, _, _) -> ()
 
 let rec clean_internal ~(root_config : Config.t) ~seen ~folder:root ~prod
-    ~is_local =
+    ~is_local ~on_clean =
   if not (Hashtbl.mem seen root) then (
     Hashtbl.add seen root ();
     let config_path = Config.path_in_root root in
-    let should_clean =
+    let should_clean, package_name =
       if Config.exists_in_root root then (
         let config = Config.load config_path in
         validate_package_metadata config;
@@ -645,7 +645,7 @@ let rec clean_internal ~(root_config : Config.t) ~seen ~folder:root ~prod
         let owns_outputs =
           root <> root_config.root && Compiler_info.owns_outputs config
         in
-        if owns_outputs then false
+        if owns_outputs then (false, None)
         else (
           let dependencies =
             config.dependencies
@@ -661,6 +661,7 @@ let rec clean_internal ~(root_config : Config.t) ~seen ~folder:root ~prod
                 ~is_local:
                   (is_local_dependency_canonical ~workspace:root_config.root
                      directory)
+                ~on_clean
             with Config.Error message ->
               raise
                 (Package_error
@@ -693,13 +694,14 @@ let rec clean_internal ~(root_config : Config.t) ~seen ~folder:root ~prod
                   remove_file (output ^ ".map.rewatch-backup"))
                 output_config.package_specs)
             discovery.modules;
-          true))
-      else true
+          (true, Some config.name)))
+      else (true, None)
     in
-    if should_clean then
+    if should_clean then (
+      Option.iter on_clean package_name;
       List.iter
         (fun dir -> remove_tree (Filename.concat root dir))
-        [lib_path "" "bs"; lib_path "" "ocaml"])
+        [lib_path "" "bs"; lib_path "" "ocaml"]))
 
 let project_root folder =
   if not (Sys.file_exists folder) then
@@ -709,14 +711,22 @@ let project_root folder =
          ^ folder));
   Unix.realpath folder
 
-let clean ~seen ~folder ~prod =
+let clean ~seen ~verbosity ~folder ~prod =
   let root = project_root folder in
+  let show_plain_progress =
+    verbosity >= 0
+    && not (Unix.isatty Unix.stdout && Unix.isatty Unix.stderr)
+  in
+  let on_clean name =
+    if show_plain_progress then Printf.printf "Cleaning %s\n%!" name
+  in
   let release_build_lock = acquire_build_lock (workspace_lock_root root) in
   Fun.protect ~finally:release_build_lock (fun () ->
     let root_config = Config.load_root root in
     let visited = Hashtbl.create 32 in
     List.iter (fun path -> Hashtbl.replace visited (Unix.realpath path) ()) seen;
-    clean_internal ~root_config ~seen:visited ~folder:root ~prod ~is_local:true)
+    clean_internal ~root_config ~seen:visited ~folder:root ~prod ~is_local:true
+      ~on_clean)
 
 let rec nearest_config directory =
   if Config.exists_in_root directory then Config.path_in_root directory

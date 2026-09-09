@@ -1,6 +1,6 @@
 type command =
   | Build of build_options
-  | Clean of {folder: string; prod: bool}
+  | Clean of {verbosity: int; folder: string; prod: bool}
   | Watch of build_options
   | Format of {check: bool; stdin: string option; files: string list}
   | Compiler_args of string
@@ -138,8 +138,8 @@ let build_term ~watch =
   if watch then Watch options else Build options
 
 let clean_term =
-  let+ _verbosity = verbosity and+ folder and+ prod in
-  Clean {folder; prod}
+  let+ verbosity and+ folder and+ prod in
+  Clean {verbosity; folder; prod}
 
 let format_term =
   let extension = Arg.enum [(".res", ".res"); (".resi", ".resi")] in

@@ -89,9 +89,14 @@ let tests =
   check (watch_options ["watch"; "--prod"]).prod "watch parses --prod";
   check
     (match parse ["clean"; "--prod"] with
-    | Cli.Clean {prod = true; folder = "."} -> true
+    | Cli.Clean {verbosity = 0; prod = true; folder = "."} -> true
     | _ -> false)
     "clean parses --prod";
+  check
+    (match parse ["-q"; "clean"] with
+    | Cli.Clean {verbosity = -1; prod = false; folder = "."} -> true
+    | _ -> false)
+    "clean retains the global quiet level";
   check (build_options ["--prod"]).prod
     "--prod selects the implicit build command";
   check
