@@ -12,6 +12,13 @@ decision; ordinary verbosity and diagnostics remain in scope. Incremental state
 uses existing AST, CMI, CMT, and generated-output artifacts rather than
 in-process compiler state.
 
+At code checkpoint `324112908`, `opam exec -- make test-all` passed
+uninterrupted with the packaged OCaml rewatch binary as the default. This
+covered formatting, 300 OCaml unit tests, compiler/runtime and build integration
+tests, runtime docstrings, both GenType suites, analysis and reanalyze, tools,
+and the complete canonical rewatch suite. The run left no watcher process or
+worktree change behind.
+
 The implementation currently has configuration loading, source and package
 discovery, external `bsc` parsing, AST dependency extraction, cycle detection,
 dependency-ordered compilation, interface-before-implementation compilation,
@@ -1141,22 +1148,18 @@ rerun it for the final maintainability review alongside maximum module size.
 1. Finish the source-level validation and external-artifact inventory, closing confirmed
    configuration/CLI gaps; the Rust unit-test coverage review is complete and
    OpenTelemetry is an explicitly documented non-goal.
-2. Run the complete repository `make test-all` pipeline from a clean checkpoint
-   with the OCaml default. The pipeline has passed through analysis and tooling,
-   and the canonical rewatch suite now passes separately; retain the final
-   uninterrupted result as release evidence.
-3. Continue splitting `build.ml` along stable responsibility boundaries. The
+2. Continue splitting `build.ml` along stable responsibility boundaries. The
    filesystem and artifact-ownership layer now lives in `build_artifacts.ml`;
    package preparation/scheduling and watch lifecycle remain candidates.
-4. Perform the final two-scope whole-port review and address confirmed findings.
-5. At the final maintainability pass, add comments around ownership,
+3. Perform the final two-scope whole-port review and address confirmed findings.
+4. At the final maintainability pass, add comments around ownership,
    concurrency, platform, and algorithmic invariants that are not apparent from
    the code itself; review naming, remove dead code, and document the complete
    compatibility-oddity, corrected-Rust-behavior, and future-performance lists.
-6. Complete the final output-presentation pass: port Rust's semantic `-v`/`-vv`
+5. Complete the final output-presentation pass: port Rust's semantic `-v`/`-vv`
    events with an order-insensitive differential gate, then implement and test
    the live interactive spinner frames.
-7. Validate macOS packaging and native event behavior, then prepare the pinned
+6. Validate macOS packaging and native event behavior, then prepare the pinned
    Windows handoff. Finish the Windows watcher/lock
    backend and path audit and run the native build, unit, focused, and canonical
    Bash suites in the VM. Address findings there and finish with an x64 Windows
