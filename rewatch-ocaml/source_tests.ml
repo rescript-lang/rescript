@@ -12,6 +12,9 @@ let names modules =
 let discover config ?(prod = false) ?features () =
   Source.discover config ~prod ~features ~filter:None
 
+let discover_with_inventory config ?(prod = false) ?features () =
+  Source.discover_with_inventory config ~prod ~features ~filter:None
+
 let () =
   let root = Filename.temp_file "rewatch-ocaml-sources-" "" in
   Sys.remove root;
@@ -20,11 +23,14 @@ let () =
     ~finally:(fun () -> Build.remove_tree root)
     (fun () ->
       write_file (Filename.concat root "src/Main.res") "let value = 1\n";
+      write_file (Filename.concat root "src/nested/NotDiscovered.res")
+        "let value = 1\n";
       write_file (Filename.concat root "test/Test.res") "let value = 1\n";
       write_file (Filename.concat root "test/nested/Nested.res")
         "let value = 1\n";
       write_file (Filename.concat root "native/Native.res")
         "let value = 1\n";
+      write_file (Filename.concat root "native/Native.mjs") "export {}\n";
       let config_path = Filename.concat root "rescript.json" in
       write_file config_path
         {|{
@@ -50,6 +56,39 @@ let () =
         (names (discover config ~features:["other"] ())
         = ["Main"; "Nested"; "Test"])
         "an inactive feature excludes only its tagged source";
+      let discovery = discover_with_inventory config ~features:["other"] () in
+      check
+        (List.mem
+           (Filename.concat root "src/nested/NotDiscovered.res")
+           discovery.inventory_files)
+        "cleanup inventory descends through a non-recursive source";
+      check
+        (List.mem
+           (Filename.concat root "native/Native.mjs")
+           discovery.inventory_files)
+        "cleanup inventory retains non-source files from an inactive feature";
+      check
+        (not (List.mem "NotDiscovered" (names discovery.modules)))
+        "cleanup inventory does not make nested files into source modules";
+      write_file config_path
+        {|{
+          "name": "gentype-source-tests",
+          "sources": [
+            "src",
+            {"dir": "test", "type": "dev", "subdirs": true},
+            {"dir": "native", "feature": "native"}
+          ],
+          "gentypeconfig": {}
+        }|};
+      let discovery =
+        Config.load config_path
+        |> fun config ->
+        discover_with_inventory config ~prod:true ~features:["other"] ()
+      in
+      check
+        (discovery.gentype_dirs
+        = ["src"; "test"; Filename.concat "test" "nested"])
+        "GenType directories use active features but retain dev sources";
       write_file (Filename.concat root "ignored/Nested.res") "let value = 1\n";
       write_file config_path
         {|{
@@ -100,4 +139,20 @@ let () =
             "different path names or different cases: `paths/a/Path.res` vs `paths/b/Path.resi`"
       in
       check path_rejected
-        "an interface cannot attach to a same-named implementation in another directory")
+        "an interface cannot attach to a same-named implementation in another directory";
+      if not Sys.win32 then (
+        write_file (Filename.concat root "linked-target/Linked.res")
+          "let value = 1\n";
+        Unix.symlink (Filename.concat root "linked-target")
+          (Filename.concat root "linked-source");
+        write_file config_path
+          {|{"name":"linked-source","sources":["linked-source"]}|};
+        let discovery =
+          Config.load config_path |> fun config -> discover_with_inventory config ()
+        in
+        check
+          (names discovery.modules = ["Linked"])
+          "source discovery follows a configured directory symlink";
+        check
+          (discovery.inventory_files = [Filename.concat root "linked-source"])
+          "cleanup inventory retains a directory symlink as a leaf"))

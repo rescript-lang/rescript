@@ -333,36 +333,8 @@ let package_specs_use_alias alias = function
       values
   | _ -> false
 
-let gentype_source_dirs root sources =
-  let visited = Hashtbl.create 16 in
-  let rec collect ~recurse relative =
-    let absolute = Filename.concat root relative in
-    try
-      let canonical = Unix.realpath absolute in
-      if Hashtbl.mem visited canonical || not (Sys.is_directory absolute) then []
-      else (
-        Hashtbl.add visited canonical ();
-        relative
-        :: if recurse then
-             Sys.readdir absolute |> Array.to_list |> List.sort String.compare
-             |> List.concat_map (fun name ->
-                  let child = Filename.concat relative name in
-                  let absolute_child = Filename.concat root child in
-                  try
-                    if Sys.is_directory absolute_child then
-                      collect ~recurse:true child
-                    else []
-                  with Sys_error _ -> [])
-           else [])
-    with Sys_error _ | Unix.Unix_error _ -> []
-  in
-  sources
-  |> List.concat_map (fun (source : source) ->
-       collect ~recurse:source.recurse source.dir)
-  |> List.sort_uniq String.compare
-
-let gentype_args path root configured_suffix package_specs_value sources
-    dependencies = function
+let gentype_args path configured_suffix package_specs_value dependencies =
+  function
   | `Assoc fields ->
     reject_duplicate_fields path "gentypeconfig"
       [
@@ -460,9 +432,6 @@ let gentype_args path root configured_suffix package_specs_value sources
     ["-bs-gentype"] @ module_ @ module_resolution @ export_interfaces
     @ generated_extension @ suffix_args @ shims @ debug
     @ List.concat_map (fun (dependency : dependency) -> ["-bs-gentype-dep"; dependency.name]) dependencies
-    @ List.concat_map
-        (fun directory -> ["-bs-gentype-source-dir"; directory])
-        (gentype_source_dirs root sources)
   | _ -> fail path "field \"gentypeconfig\" must be an object"
 
 let load path =
@@ -686,8 +655,8 @@ let load path =
     match optional_member "gentypeconfig" fields with
     | None -> []
     | Some value ->
-      gentype_args path root configured_suffix (member "package-specs" fields)
-        sources dependencies value
+      gentype_args path configured_suffix (member "package-specs" fields)
+        dependencies value
   in
   let js_post_build =
     match optional_member "js-post-build" fields with

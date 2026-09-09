@@ -157,19 +157,23 @@ let is_watch_output_sidecar path =
       Option.is_some (generated_output_details output))
     watch_sidecar_suffixes
 
-let cleanup_watch_output_sidecars ~root (config : Config.t) =
-  let directories =
-    List.map
-      (fun (source : Config.source) -> Filename.concat root source.dir)
+let cleanup_watch_output_sidecars ?source_files ~root (config : Config.t) =
+  let source_files =
+    match source_files with
+    | Some files -> files
+    | None ->
       config.sources
-    @ [Filename.concat root (lib_path "" "es6"); Filename.concat root (lib_path "" "js")]
-    |> List.sort_uniq String.compare
+      |> List.concat_map (fun (source : Config.source) ->
+           files_under (Filename.concat root source.dir))
   in
-  directories
-  |> List.iter (fun directory ->
-       files_under directory
-       |> List.iter (fun path ->
-            if is_watch_output_sidecar path then remove_file path))
+  let output_files =
+    [lib_path "" "es6"; lib_path "" "js"]
+    |> List.concat_map (fun directory ->
+         files_under (Filename.concat root directory))
+  in
+  source_files @ output_files
+  |> List.iter (fun path ->
+       if is_watch_output_sidecar path then remove_file path)
 
 let prepare_watch_output watch_outputs watch_output_paths ~dirty_ast output =
   if
@@ -207,8 +211,8 @@ type cleanup_result = {
   deferred_artifacts: string list;
 }
 
-let cleanup_stale ?ocaml_files ~root ~ocaml_dir ~is_local (config : Config.t)
-    modules =
+let cleanup_stale ?ocaml_files ?source_files ~root ~ocaml_dir ~is_local
+    (config : Config.t) modules =
   let build_dir = lib_path root "bs" in
   (* Keep one inventory of each artifact tree. Rewalking these trees for every
      cleanup phase made unchanged builds perform several times Rust's directory
@@ -221,10 +225,12 @@ let cleanup_stale ?ocaml_files ~root ~ocaml_dir ~is_local (config : Config.t)
   in
   let build_files = files_under build_dir in
   let source_files =
-    List.map
-      (fun source ->
-        (source, files_under (Filename.concat root source.Config.dir)))
+    match source_files with
+    | Some files -> files
+    | None ->
       config.sources
+      |> List.concat_map (fun source ->
+           files_under (Filename.concat root source.Config.dir))
   in
   let output_files =
     [lib_path "" "es6"; lib_path "" "js"]
@@ -232,7 +238,7 @@ let cleanup_stale ?ocaml_files ~root ~ocaml_dir ~is_local (config : Config.t)
          let output_dir = Filename.concat root directory in
          (output_dir, files_under output_dir))
   in
-  (List.concat_map snd source_files @ List.concat_map snd output_files)
+  (source_files @ List.concat_map snd output_files)
   |> List.iter (fun path ->
        if is_watch_output_sidecar path then remove_file path);
   let expected_artifacts = Hashtbl.create (List.length modules * 8) in
@@ -365,14 +371,12 @@ let cleanup_stale ?ocaml_files ~root ~ocaml_dir ~is_local (config : Config.t)
     remove_file path
   in
   source_files
-  |> List.iter (fun (_, files) ->
-       files
-       |> List.iter (fun path ->
-            generated_output_details path
-            |> Option.iter (fun (_, _, output_path) ->
-                 let build_relative = relative_under root output_path in
-                 if should_remove_output ~build_relative path then
-                   remove_output ~build_relative path)));
+  |> List.iter (fun path ->
+       generated_output_details path
+       |> Option.iter (fun (_, _, output_path) ->
+            let build_relative = relative_under root output_path in
+            if should_remove_output ~build_relative path then
+              remove_output ~build_relative path));
   output_files
   |> List.iter (fun (output_dir, files) ->
        files
