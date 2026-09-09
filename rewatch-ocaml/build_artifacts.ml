@@ -28,38 +28,44 @@ let copy_file source destination =
         really_input_string input (in_channel_length input)
         |> output_string output))
 
+let stat_opt path =
+  try Some (Unix.stat path)
+  with Sys_error _ | Unix.Unix_error _ -> None
+
 let files_equal first second =
-  if not (Sys.file_exists first && Sys.file_exists second) then false
-  else
-    let first_stat = Unix.stat first in
-    let second_stat = Unix.stat second in
-    first_stat.Unix.st_size = second_stat.Unix.st_size
-    && let first_channel = open_in_bin first in
-       let second_channel = open_in_bin second in
-       Fun.protect
-         ~finally:(fun () ->
-           close_in_noerr first_channel;
-           close_in_noerr second_channel)
-         (fun () ->
-           let buffer_size = 65_536 in
-           let first_buffer = Bytes.create buffer_size in
-           let second_buffer = Bytes.create buffer_size in
-           let rec loop () =
-             let first_count = input first_channel first_buffer 0 buffer_size in
-             let second_count = input second_channel second_buffer 0 buffer_size in
-             first_count = second_count
-             && (first_count = 0
-                || (Bytes.sub first_buffer 0 first_count
-                    = Bytes.sub second_buffer 0 second_count
-                   && loop ()))
-           in
-           loop ())
+  match stat_opt first with
+  | None -> false
+  | Some first_stat -> (
+    match stat_opt second with
+    | None -> false
+    | Some second_stat ->
+      first_stat.Unix.st_size = second_stat.Unix.st_size
+      && let first_channel = open_in_bin first in
+         let second_channel = open_in_bin second in
+         Fun.protect
+           ~finally:(fun () ->
+             close_in_noerr first_channel;
+             close_in_noerr second_channel)
+           (fun () ->
+             let buffer_size = 65_536 in
+             let first_buffer = Bytes.create buffer_size in
+             let second_buffer = Bytes.create buffer_size in
+             let rec loop () =
+               let first_count = input first_channel first_buffer 0 buffer_size in
+               let second_count = input second_channel second_buffer 0 buffer_size in
+               first_count = second_count
+               && (first_count = 0
+                  || (Bytes.sub first_buffer 0 first_count
+                      = Bytes.sub second_buffer 0 second_count
+                     && loop ()))
+             in
+             loop ()))
 
 let copy_file_if_changed source destination =
   if not (files_equal source destination) then copy_file source destination
 
 let modification_time path =
-  if Sys.file_exists path then Some (Unix.stat path).Unix.st_mtime else None
+  stat_opt path |> Option.map (fun metadata -> metadata.Unix.st_mtime)
 
 let remove_file path =
   if Sys.file_exists path then (try Sys.remove path with Sys_error _ -> ())
@@ -76,12 +82,15 @@ let rec remove_tree path =
 
 let rec files_under directory =
   try
-    if not (Sys.file_exists directory) then []
-    else if (Unix.lstat directory).Unix.st_kind <> Unix.S_DIR then [directory]
-    else
+    match (Unix.lstat directory).Unix.st_kind with
+    | Unix.S_DIR ->
       Sys.readdir directory |> Array.to_list
       |> List.concat_map (fun name ->
            files_under (Filename.concat directory name))
+    (* Preserve Sys.file_exists semantics from the original walk: follow a
+       link only to decide whether it is dangling, but never recurse through it. *)
+    | Unix.S_LNK when not (Sys.file_exists directory) -> []
+    | _ -> [directory]
   with Sys_error _ | Unix.Unix_error _ -> []
 
 let generated_js_path (config : Config.t) path (spec : Config.package_spec) =
