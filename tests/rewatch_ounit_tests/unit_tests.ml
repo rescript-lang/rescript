@@ -396,7 +396,8 @@ let tests =
     = "SomenamespaceName_here")
     "namespace punctuation normalization";
   check
-    (Build.strip_ansi "plain \027[1;31mred\027[0m text" = "plain red text")
+    (Compiler_log.strip_ansi "plain \027[1;31mred\027[0m text"
+    = "plain red text")
     "compiler log ANSI stripping";
   let truncated_utf8 =
     "Warning " ^ String.make 1 (Char.chr 0xe2) ^ String.make 1 (Char.chr 0x80)

@@ -25,6 +25,7 @@
   source
   graph
   package_metadata
+  compiler_log
   build_artifacts
   compile_assets
   build_state
