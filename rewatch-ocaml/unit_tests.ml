@@ -290,6 +290,20 @@ let () =
     "cycle transitive dependents are blocked";
   check (not (List.mem "Unrelated" blocked))
     "cycle-unrelated modules remain schedulable";
+  check
+    (Build.is_local_dependency_canonical ~workspace:"/workspace"
+       "/workspace/packages/dependency")
+    "canonical workspace dependencies are local";
+  check
+    (not
+       (Build.is_local_dependency_canonical ~workspace:"/workspace"
+          "/workspace/node_modules/dependency"))
+    "node_modules dependencies are external";
+  check
+    (not
+       (Build.is_local_dependency_canonical ~workspace:"/workspace"
+          "/workspace-other/dependency"))
+    "path-prefix siblings are outside the workspace";
   (if not Sys.win32 then
      let temporary = Filename.temp_file "rewatch-ocaml-package-path-" "" in
      Sys.remove temporary;

@@ -32,7 +32,7 @@ separately with the retained syscall-audit tooling.
 | --- | --- | --- | --- |
 | `build.rs` | Command build lifecycle and phase orchestration | `build.ml` | Present, but still mixed with phase implementations |
 | `build/build_types.rs` | Packages, modules, dirty flags, dependency edges, and compiled-asset timestamps | `build_state.ml`, `source.ml`, and package records in `build.ml` | Explicit module state now owns resolved/reverse edges, dirty flags, and compiled-asset timestamps; package state and remaining freshness consumers are still split |
-| `build/packages.rs` | Package resolution and source/module discovery | `build.ml`, `config.ml`, `source.ml`, `project_context.ml` | Behavior is substantially present; ownership still needs consolidation |
+| `build/packages.rs` | Package resolution and source/module discovery | `build.ml`, `config.ml`, `source.ml`, `project_context.ml` | Behavior is substantially present and canonical resolved identities now flow through graph/build traversal; ownership and source inventories still need consolidation |
 | `build/read_compile_state.rs` | One compile-asset inventory for cleanup and freshness | `compile_assets.ml` and `build_state.ml` | The shared inventory supplies CMI/CMT presence and timestamps to module/dependency freshness; AST/output freshness still has live filesystem consumers |
 | `build/clean.rs` | Stale and explicit artifact cleanup | `build_artifacts.ml`, with command traversal in `build.ml` | Present; stale cleanup now accepts the shared compile-asset inventory |
 | `build/deps.rs` | Dependency extraction, edges, and invalidation | `graph.ml` and dependency code in `build.ml` | Behavior present; extraction/invalidation still needs a cohesive owner |

@@ -471,10 +471,10 @@ environment on the plugged-in Mac host:
 
 | Implementation | Median wall time | Median peak tree RSS |
 | --- | ---: | ---: |
-| Rust | 4,641 ms | 783,212 KiB |
-| OCaml | 5,454 ms | 799,816 KiB |
+| Rust | 9,670 ms | 802,144 KiB |
+| OCaml | 11,662 ms | 797,384 KiB |
 
-The latest 1.175× wall-time ratio and 1.021× RSS ratio pass the 1.25× gate.
+The latest 1.206× wall-time ratio and 0.994× RSS ratio pass the 1.25× gate.
 The host was plugged in and otherwise idle for this run. Docker on a Mac is
 still noisier than native Linux or dedicated CI, so final acceptance should
 repeat the distribution on a stable host rather than treating this one passing
@@ -571,6 +571,13 @@ artifact searches. The latest unchanged result is 19,093 metadata calls and
 443 directory scans (Rust: 3,367 and 160); the edit result is 19,123 and 443
 (Rust: 3,384 and 160). Clean remains 26,123 and 318 because compiler work, not
 incremental dependency freshness, dominates that trace.
+Reusing canonical package identities through collection, graph visitation,
+build traversal, and internal locality checks reduces unchanged metadata calls
+again to 18,315 and clean calls to 25,345; edit records 18,345. Directory scans
+remain 443 incrementally and 318 clean because this slice removes redundant
+`realpath`/`readlinkat` work rather than directory walks. The public locality
+entry point still canonicalizes arbitrary caller paths, while graph internals
+use the explicitly named canonical-path variant.
 These are observational counts rather than a raw-total gate, and they include
 compiler process behavior, but the remaining difference is still too large to
 declare the superfluous-work audit closed. The artifact/module state needs
@@ -602,9 +609,10 @@ order:
    recursive-source semantics, generated-output ownership, and Windows path
    comparison.
 3. Carry canonical package identities and resolved dependency roots throughout
-   the whole build context. This increment caches resolution during graph
-   preparation, but collection, configuration loading, source discovery, and
-   later consumers still cause substantially more `realpath`/`readlinkat` work
+   the whole build context. Resolution is cached during graph preparation, and
+   collection, graph visitation, build traversal, and locality checks now reuse
+   those identities. Configuration loading, source discovery, dependency
+   lookup, and later consumers still perform more `realpath`/`readlinkat` work
    than Rust.
 
 The asset/module state must retain explicit transitions for discovery, stale

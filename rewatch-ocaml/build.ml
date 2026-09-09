@@ -433,15 +433,16 @@ let namespace_job ~bsc ~runtime ~build_dir ~ocaml_dir ~entry ~package_dirty
         (Filename.concat ocaml_dir (namespace ^ ".cmt"));
       copy_file mlmap (Filename.concat ocaml_dir (namespace ^ ".mlmap")) )
 
-let path_is_within ~root path =
-  let root = Unix.realpath root in
-  let path = Unix.realpath path in
+let path_is_within_canonical ~root path =
   let normalize = Platform.normalize_path_for_comparison in
   let root = normalize root in
   let path = normalize path in
   path = root || String.starts_with ~prefix:(Filename.concat root "") path
 
-let is_local_dependency ~workspace path =
+(* Build graph roots and resolved dependency paths already come from realpath.
+   Keep their locality checks pure so package traversal does not canonicalize
+   the same path at every lifecycle stage. *)
+let is_local_dependency_canonical ~workspace path =
   let equal_component left right =
     Platform.normalize_path_for_comparison left
     = Platform.normalize_path_for_comparison right
@@ -452,8 +453,12 @@ let is_local_dependency ~workspace path =
       let parent = Filename.dirname path in
       parent <> path && contains_component parent component
   in
-  path_is_within ~root:workspace path
-  && not (contains_component (Unix.realpath path) "node_modules")
+  path_is_within_canonical ~root:workspace path
+  && not (contains_component path "node_modules")
+
+let is_local_dependency ~workspace path =
+  is_local_dependency_canonical ~workspace:(Unix.realpath workspace)
+    (Unix.realpath path)
 
 let source_discovery_prod ~prod ~is_local = prod || not is_local
 
@@ -587,8 +592,8 @@ let rec remove_tree path =
       else Sys.remove path
     with Sys_error _ | Unix.Unix_error (Unix.ENOENT, _, _) -> ()
 
-let rec clean_internal ~(root_config : Config.t) ~seen ~folder ~prod ~is_local =
-  let root = Unix.realpath folder in
+let rec clean_internal ~(root_config : Config.t) ~seen ~folder:root ~prod
+    ~is_local =
   if not (Hashtbl.mem seen root) then (
     Hashtbl.add seen root ();
     let config_path = Config.path_in_root root in
@@ -606,7 +611,9 @@ let rec clean_internal ~(root_config : Config.t) ~seen ~folder ~prod ~is_local =
         in
         try
           clean_internal ~root_config ~seen ~folder:directory ~prod
-            ~is_local:(is_local_dependency ~workspace:root_config.root directory)
+            ~is_local:
+              (is_local_dependency_canonical ~workspace:root_config.root
+                 directory)
         with Config.Error message ->
           raise
             (Package_error
@@ -948,8 +955,7 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
         (Some (List.sort_uniq String.compare (current @ requested)))
   in
   let collected = Hashtbl.create 32 in
-  let rec collect ~folder ~features ~is_local =
-    let root = Unix.realpath folder in
+  let rec collect ~folder:root ~features ~is_local =
     if root <> root_config.root || not (Hashtbl.mem requested_features root) then
       add_feature_request root features;
     if not (Hashtbl.mem collected root) then (
@@ -979,7 +985,8 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
               :: !unallowed_dependencies;
           collect ~folder:directory ~features:dependency.features
             ~is_local:
-              (is_local_dependency ~workspace:root_config.root directory))
+              (is_local_dependency_canonical ~workspace:root_config.root
+                 directory))
         dependencies)
   in
   collect ~folder:root_config.root ~features ~is_local:true;
@@ -1000,8 +1007,7 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
     requested_features;
   let visited = Hashtbl.create 32 in
   let graph_packages = ref [] in
-  let rec visit ~folder ~features ~warn_error ~filter ~is_local =
-    let root = Unix.realpath folder in
+  let rec visit ~folder:root ~features ~warn_error ~filter ~is_local =
     if not (Hashtbl.mem visited root) then (
       Hashtbl.add visited root ();
       let features =
@@ -1032,7 +1038,8 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
           visit ~folder:directory ~features:dependency.features
             ~warn_error:None ~filter:None
             ~is_local:
-              (is_local_dependency ~workspace:root_config.root directory))
+              (is_local_dependency_canonical ~workspace:root_config.root
+                 directory))
         dependency_directories;
       let modules =
         Source.discover config
@@ -1093,7 +1100,7 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
              ~root:package.graph_root
              ~ocaml_dir:package.graph_ocaml_dir
              ~is_local:
-               (is_local_dependency ~workspace:root_config.root
+               (is_local_dependency_canonical ~workspace:root_config.root
                   package.graph_root)
              package.graph_compile_config package.graph_modules);
         Compiler_info.clean_package package.graph_config;
@@ -1115,7 +1122,8 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
           ~root:package.graph_root
           ~ocaml_dir:package.graph_ocaml_dir
           ~is_local:
-            (is_local_dependency ~workspace:root_config.root package.graph_root)
+            (is_local_dependency_canonical ~workspace:root_config.root
+               package.graph_root)
           package.graph_compile_config package.graph_modules
       in
       Hashtbl.replace stats.cleanup_results package.graph_root
@@ -1344,9 +1352,8 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
   stats.parse_seconds <- Unix.gettimeofday () -. parse_started;
   cycle
 
-let rec run_internal ~(root_config : Config.t) ~seen ~folder ~prod ~features
+let rec run_internal ~(root_config : Config.t) ~seen ~folder:root ~prod ~features
     ~warn_error ~watch ~filter ~is_local ~stats =
-  let root = Unix.realpath folder in
   let features =
     match Hashtbl.find_opt stats.active_features root with
     | Some features -> features
@@ -1397,7 +1404,8 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder ~prod ~features
                ~features:dependency.features ~warn_error:None ~watch
                ~filter:None
                ~is_local:
-                 (is_local_dependency ~workspace:root_config.root candidate)
+                 (is_local_dependency_canonical ~workspace:root_config.root
+                    candidate)
                ~stats
            with Build_failure output ->
              if Option.is_none stats.failure then stats.failure <- Some output)
@@ -2272,7 +2280,7 @@ let watch ~verbosity ~folder ~prod ~features ~warn_error ~after_build ~filter
           match dependency_path config.root dependency.name with
           | Some directory
             when (not (Hashtbl.mem visited directory))
-                 && is_local_dependency ~workspace:root directory
+                 && is_local_dependency_canonical ~workspace:root directory
                  && Config.exists_in_root directory ->
             Hashtbl.add visited directory ();
             roots := directory :: !roots;
