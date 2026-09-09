@@ -630,6 +630,14 @@ is 5,359 (Rust: 3,384), and clean is 22,089 (Rust: 12,424). Per-process audit
 output confirms identical `bsc` filesystem-call counts in all three scenarios;
 the residual belongs to the build-system drivers. Timings remain deferred while
 the host is busy.
+Source-directory deduplication and symlink-cycle detection now reuse the
+metadata already obtained by traversal on Unix: `(device,inode)` identifies a
+directory without a `realpath` call for every recursive step. The platform
+boundary keeps canonical, case-normalized path identity on Windows, where Unix
+inode emulation is not a dependable cross-volume contract. Existing overlapping
+source-root and directory-symlink coverage remains green. The latest unchanged
+trace is 4,997 metadata calls (Rust: 3,367), edit is 5,030 (Rust: 3,384), and
+clean is 21,760 (Rust: 12,425), with directory scans still within two calls.
 These are observational counts rather than a raw-total gate, and they include
 compiler process behavior. The directory-traversal gap is now explained and
 effectively closed, but the incremental metadata difference remains material

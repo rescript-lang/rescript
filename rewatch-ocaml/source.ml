@@ -72,34 +72,23 @@ let scan_source ~root (source : Config.source) ~discover_modules ~on_missing
     ~visited_dirs ~collect_gentype ~visited_gentype_dirs candidates
     inventory_files gentype_dirs =
   let rec scan_directory ~relative ~collect_inventory ~discover_requested
-      ~collect_gentype =
+      ~collect_gentype ~identity =
     let absolute = Filename.concat root relative in
-    let canonical =
-      if not (discover_requested || collect_gentype) then None
-      else
-        try
-          Some (Unix.realpath absolute)
-        with Sys_error _ | Unix.Unix_error _ ->
-          if discover_requested then on_missing absolute;
-          None
-    in
     let discover_here =
-      match canonical with
-      | Some canonical
-        when discover_requested && not (Hashtbl.mem visited_dirs canonical) ->
-        Hashtbl.add visited_dirs canonical ();
+      if discover_requested && not (Hashtbl.mem visited_dirs identity) then (
+        Hashtbl.add visited_dirs identity ();
         true
-      | None | Some _ -> false
+      ) else false
     in
     let gentype_here =
-      match canonical with
-      | Some canonical
-        when collect_gentype
-             && not (Hashtbl.mem visited_gentype_dirs canonical) ->
-        Hashtbl.add visited_gentype_dirs canonical ();
+      if
+        collect_gentype
+        && not (Hashtbl.mem visited_gentype_dirs identity)
+      then (
+        Hashtbl.add visited_gentype_dirs identity ();
         gentype_dirs := relative :: !gentype_dirs;
         true
-      | None | Some _ -> false
+      ) else false
     in
     let entries =
       try Sys.readdir absolute |> Array.to_list |> List.sort String.compare
@@ -115,9 +104,12 @@ let scan_source ~root (source : Config.source) ~discover_modules ~on_missing
           let metadata = Unix.lstat absolute_path in
           match metadata.Unix.st_kind with
           | Unix.S_DIR ->
+            let identity =
+              Platform.directory_identity ~path:absolute_path metadata
+            in
             scan_directory ~relative:relative_path ~collect_inventory
               ~discover_requested:(discover_here && source.recurse)
-              ~collect_gentype:(gentype_here && source.recurse)
+              ~collect_gentype:(gentype_here && source.recurse) ~identity
           | Unix.S_LNK -> (
             let target_metadata = Unix.stat absolute_path in
             match target_metadata.Unix.st_kind with
@@ -127,9 +119,13 @@ let scan_source ~root (source : Config.source) ~discover_modules ~on_missing
               if
                 (discover_here || gentype_here) && source.recurse
               then
+                let identity =
+                  Platform.directory_identity ~path:absolute_path
+                    target_metadata
+                in
                 scan_directory ~relative:relative_path ~collect_inventory:false
                   ~discover_requested:discover_here
-                  ~collect_gentype:gentype_here
+                  ~collect_gentype:gentype_here ~identity
             | _ ->
               if collect_inventory then
                 inventory_files := absolute_path :: !inventory_files;
@@ -160,18 +156,24 @@ let scan_source ~root (source : Config.source) ~discover_modules ~on_missing
   let relative = source.dir in
   let absolute = Filename.concat root relative in
   try
-    match (Unix.lstat absolute).Unix.st_kind with
+    let metadata = Unix.lstat absolute in
+    match metadata.Unix.st_kind with
     | Unix.S_DIR ->
+      let identity = Platform.directory_identity ~path:absolute metadata in
       scan_directory ~relative ~collect_inventory:true
         ~discover_requested:discover_modules
-        ~collect_gentype
+        ~collect_gentype ~identity
     | Unix.S_LNK -> (
-      match (Unix.stat absolute).Unix.st_kind with
+      let target_metadata = Unix.stat absolute in
+      match target_metadata.Unix.st_kind with
       | Unix.S_DIR ->
         inventory_files := absolute :: !inventory_files;
+        let identity =
+          Platform.directory_identity ~path:absolute target_metadata
+        in
         scan_directory ~relative ~collect_inventory:false
           ~discover_requested:discover_modules
-          ~collect_gentype
+          ~collect_gentype ~identity
       | _ ->
         inventory_files := absolute :: !inventory_files;
         if discover_modules then on_missing absolute)
