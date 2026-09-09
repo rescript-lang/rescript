@@ -844,20 +844,6 @@ let published_ast_path ~ocaml_dir source_path =
      successful parse is the stable freshness marker across build cycles. *)
   Filename.concat ocaml_dir (Filename.basename (Source.ast_path source_path))
 
-let dependency_artifact dependency_dirs dependency =
-  let matches path =
-    let basename = Filename.basename path in
-    if not (Filename.check_suffix basename ".cmi") then false
-    else
-      let name = Filename.chop_suffix basename ".cmi" in
-      name = dependency || String.trim name = dependency
-      || (String.starts_with ~prefix:"@" name
-         && String.sub name 1 (String.length name - 1) = dependency)
-  in
-  dependency_dirs
-  |> List.find_map (fun directory ->
-       files_under directory |> List.find_opt matches)
-
 type global_module = {
   key: string;
   package_name: string;
@@ -1588,12 +1574,8 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder ~prod ~features
     modules;
   stats.parsed <- stats.parsed + Hashtbl.length parse_dirty_modules;
   let compile_warning_modules = Hashtbl.create 8 in
-  let module_is_dirty module_ =
+  let module_is_dirty module_ state =
     let global_key = global_module_key config module_.Source.name in
-    let compiler_base =
-      Source.compiler_asset_basename config module_.Source.implementation
-    in
-    let cmt = Filename.concat ocaml_dir (compiler_base ^ ".cmt") in
     let module_name = Source.module_name module_.Source.implementation in
     let ast =
       Filename.concat build_dir
@@ -1606,43 +1588,30 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder ~prod ~features
             (generated_js_path config module_.Source.implementation spec))
         config.package_specs
     in
-    let dependencies =
+    let raw_dependencies =
       Hashtbl.find_opt raw_dependencies module_.Source.name
       |> Option.value ~default:[]
     in
     let dependency_is_newer dependency =
-      let artifact =
-        match Hashtbl.find_opt names dependency with
-        | Some dependency_module ->
-          Some
-            (Filename.concat ocaml_dir
-               (Source.compiler_asset_basename config
-                  dependency_module.Source.implementation
-               ^ ".cmi"))
-        | None -> dependency_artifact dependency_dirs dependency
-      in
-      match artifact, modification_time cmt with
-      | Some path, Some cmt_time ->
-        Option.fold ~none:false ~some:(fun time -> time > cmt_time)
-          (modification_time path)
-      | _, None -> true
-      | None, Some _ -> false
+      let dependency_state = Build_state.find_exn build_state dependency in
+      Build_state.dependency_compiled_after state dependency_state
     in
     not (Hashtbl.mem stats.blocked_modules global_key)
     &&
     (Hashtbl.mem parse_dirty_modules module_.Source.name
     || List.mem module_name removed_modules
-    || (match modification_time ast, modification_time cmt with
+    || (match modification_time ast, state.last_compiled_cmt with
        | Some ast_time, Some cmt_time -> ast_time >= cmt_time
        | Some _, None -> true
        | None, _ -> false)
-    || not (Sys.file_exists cmt && outputs_exist)
+    || not (Build_state.has_complete_compile_assets state)
+    || not outputs_exist
     || List.exists (fun dependency -> List.mem dependency removed_modules)
-         dependencies
+         raw_dependencies
     || List.exists
          (fun dependency -> Hashtbl.mem stats.removed_modules dependency)
-         dependencies
-    || List.exists dependency_is_newer dependencies)
+         raw_dependencies
+    || List.exists dependency_is_newer state.dependencies)
   in
   let prepare_outputs module_ =
     let path = module_.Source.implementation in
@@ -1677,7 +1646,7 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder ~prod ~features
         (* Rust fixes the initial dirty set before dispatch. Files published by
            concurrently finishing jobs must not change this module's decision;
            only explicit CMI-change propagation may do that. *)
-        state.compile_dirty <- module_is_dirty module_;
+        state.compile_dirty <- module_is_dirty module_ state;
         let dependencies =
           if Hashtbl.mem stats.blocked_modules key then []
           else state.dependencies
