@@ -66,6 +66,21 @@ the build and watch paths. Process probing remains behind `platform.mli`; the
 atomic hard-link primitive is centralized here so native Windows validation can
 either approve it or replace it through the same platform boundary.
 
+Dependency-aware compiler dispatch now lives in `compiler_scheduler.ml`. Its
+abstract scheduled-module type owns the interface-before-implementation phase
+machine, parallel dependency scheduling, deterministic failure aggregation,
+warning persistence, CMI digest comparison, reverse-dependent invalidation,
+and guaranteed phase cleanup. `build.ml` still decides which modules are dirty
+and constructs compilation/publication callbacks, but cannot mutate the
+scheduler's transient phase or message state directly.
+
+The extraction passed the 17 OUnit2 suites, the focused integration runner,
+the 69-case Rust/OCaml command-validation gate, `dune build @all`, and the
+complete canonical suite through its final compiler-argument check. The suite
+left no watcher, lock, or testrepo change behind. An independent review found
+no concrete correctness, exception-identity, cleanup, warning-order,
+invalidation, phase-ordering, API, or portability issue.
+
 ## Source review
 
 The first comparison pass covered the OCaml configuration, package traversal,

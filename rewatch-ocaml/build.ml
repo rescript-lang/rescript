@@ -1,9 +1,8 @@
 exception Error = Project_context.Error
 exception Package_error = Project_context.Package_error
 exception Stop_watch
-exception Build_failure of string
+exception Build_failure = Compiler_scheduler.Build_failure
 exception Parse_failure of string
-exception Scheduled_failure of string
 
 open Build_artifacts
 
@@ -525,28 +524,6 @@ let compiler_args path =
     ("parser_args", `List (List.map (fun value -> `String value) parser_args));
   ])
 
-type compile_phase =
-  [ `Start | `Interface of string | `Implementation of string | `Done ]
-
-type compile_message = Compile_failure of string * string
-
-type scheduled_module = {
-  key: string;
-  dependencies: string list;
-  source: Source.module_;
-  state: Build_state.module_;
-  cmi_path: string;
-  mutable cmi_digest_before: Digest.t option;
-  prepare: unit -> unit;
-  compile: is_interface:bool -> string -> Process.job;
-  publish: is_interface:bool -> string -> Process.result -> string;
-  package_root: string;
-  is_local: bool;
-  mark_warning: string -> unit;
-  messages: compile_message list ref;
-  phase: compile_phase ref;
-}
-
 type graph_package = {
   graph_root: string;
   graph_build_owner: string;
@@ -584,7 +561,7 @@ type build_stats = {
   cleanup_results: (string, Build_artifacts.cleanup_result) Hashtbl.t;
   deferred_artifact_cleanup: string list ref;
   namespace_jobs: (Process.job * (Process.result -> unit)) list ref;
-  scheduled_modules: scheduled_module list ref;
+  scheduled_modules: Compiler_scheduler.scheduled_module list ref;
   compile_cleanup: (unit -> unit) list ref;
   mutable compiler_context: Compiler_info.context option;
   mutable compile_assets: Compile_assets.t option;
@@ -613,9 +590,6 @@ let source_is_not_older_than_ast compile_assets ~root ~source_mtimes path =
     match Compile_assets.ast compile_assets absolute with
     | None -> true
     | Some ast -> source_modified >= ast.modified)
-
-let file_digest path =
-  try Some (Digest.file path) with Sys_error _ | Unix.Unix_error _ -> None
 
 let published_ast_path ~ocaml_dir source_path =
   (* bsc gives its intermediate AST an epoch mtime. The copy published after a
@@ -1512,29 +1486,15 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder:root ~prod ~feature
             (Source.compiler_asset_basename config module_.Source.implementation
             ^ ".cmi")
         in
-        {
-          key;
-          dependencies;
-          source = module_;
-          state;
-          cmi_path;
-          cmi_digest_before = None;
-          prepare = (fun () -> prepare_outputs module_);
-          compile =
-            (fun ~is_interface path ->
-              compile_process module_ ~is_interface path);
-          publish =
-            (fun ~is_interface path result ->
-              publish module_ ~is_interface path result);
-          package_root = config.root;
-          is_local;
-          mark_warning =
-            (fun path ->
-              Hashtbl.replace compile_warning_modules
-                (Source.module_name path) ());
-          messages = ref [];
-          phase = ref `Start;
-        })
+        Compiler_scheduler.create ~key ~dependencies ~source:module_ ~state
+          ~cmi_path ~prepare:(fun () -> prepare_outputs module_)
+          ~compile:(fun ~is_interface path ->
+            compile_process module_ ~is_interface path)
+          ~publish:(fun ~is_interface path result ->
+            publish module_ ~is_interface path result)
+          ~package_root:config.root ~is_local
+          ~mark_warning:(fun path ->
+            Hashtbl.replace compile_warning_modules (Source.module_name path) ()))
       modules
   in
   Option.iter
@@ -1546,7 +1506,7 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder:root ~prod ~feature
       in
       let package_dirty =
         List.exists
-          (fun (scheduled : scheduled_module) -> scheduled.state.compile_dirty)
+          Compiler_scheduler.requires_compile
           scheduled
       in
       Option.iter
@@ -1599,145 +1559,12 @@ let run_scheduled_modules stats =
     | Some state -> state
     | None -> raise (Error "compile asset state was not initialized")
   in
-  let finish_successful_compile scheduled =
-    let cmi_digest_after = file_digest scheduled.cmi_path in
-    let cmi_changed =
-      match scheduled.cmi_digest_before, cmi_digest_after with
-      | Some before, Some after -> before <> after
-      | _ -> true
-    in
-    let cmt_path = Filename.remove_extension scheduled.cmi_path ^ ".cmt" in
-    Compile_assets.refresh_cmi compile_assets ~key:scheduled.key
-      ~path:scheduled.cmi_path;
-    Compile_assets.refresh_cmt compile_assets ~key:scheduled.key ~path:cmt_path;
-    scheduled.state.last_compiled_cmi <-
-      (Compile_assets.cmi compile_assets scheduled.key
-      |> Option.map (fun entry -> entry.Compile_assets.modified));
-    scheduled.state.last_compiled_cmt <-
-      (Compile_assets.cmt compile_assets scheduled.key
-      |> Option.map (fun entry -> entry.Compile_assets.modified));
-    scheduled.state.compile_dirty <- false;
-    if cmi_changed then
-      Build_state.mark_dependents_compile_dirty build_state scheduled.state
-        ~is_blocked:(Hashtbl.mem stats.blocked_modules)
-  in
-  let warning_paths =
-    !(stats.scheduled_modules)
-    |> List.concat_map (fun (scheduled : scheduled_module) ->
-         (scheduled.source.Source.implementation
-         :: Option.to_list scheduled.source.Source.interface)
-         |> List.map (fun path -> Filename.concat scheduled.package_root path))
-  in
-  Warning_state.retain_paths stats.warning_state warning_paths;
-  let works =
-    !(stats.scheduled_modules)
-    |> List.map (fun (scheduled : scheduled_module) ->
-         Process.
-           {
-             key = scheduled.key;
-             dependencies = scheduled.dependencies;
-             value = scheduled;
-           })
-  in
-  Fun.protect
-    ~finally:(fun () ->
-      List.iter (fun cleanup -> cleanup ()) !(stats.compile_cleanup))
-    (fun () ->
-      let record_result scheduled ~is_interface path result =
-        let message =
-          if Process.succeeded result then
-            try
-              match scheduled.publish ~is_interface path result with
-              | "" ->
-                Warning_state.remove stats.warning_state
-                  ~package_root:scheduled.package_root ~path;
-                None
-              | warning ->
-                stats.had_warnings <- true;
-                Warning_state.set stats.warning_state
-                  ~module_name:scheduled.key
-                  ~package_root:scheduled.package_root ~path ~output:warning;
-                if scheduled.is_local then scheduled.mark_warning path;
-                None
-            with Build_failure output ->
-              Warning_state.remove stats.warning_state
-                ~package_root:scheduled.package_root ~path;
-              Some (Compile_failure (path, output))
-          else (
-            Warning_state.remove stats.warning_state
-              ~package_root:scheduled.package_root ~path;
-            Some
-              (Compile_failure
-                 (path, result.Process.stderr ^ result.Process.stdout)))
-        in
-        Option.iter
-          (fun message ->
-            scheduled.messages := message :: !(scheduled.messages))
-          message
-      in
-      let scheduler_failed =
-        try
-          Process.run_dependency_graph ~poll:stats.poll works
-            ~is_fatal:(function Scheduled_failure _ -> false | _ -> true)
-            ~next:(fun scheduled result ->
-              match result, !(scheduled.phase) with
-              | None, `Start ->
-                if scheduled.state.compile_dirty then (
-                  stats.compiled <- stats.compiled + 1;
-                  scheduled.prepare ();
-                  scheduled.cmi_digest_before <- file_digest scheduled.cmi_path;
-                  match scheduled.source.Source.interface with
-                  | Some path ->
-                    scheduled.phase := `Interface path;
-                    Some (scheduled.compile ~is_interface:true path)
-                  | None ->
-                    let path = scheduled.source.Source.implementation in
-                    scheduled.phase := `Implementation path;
-                    Some (scheduled.compile ~is_interface:false path))
-                else (
-                  scheduled.phase := `Done;
-                  None)
-              | Some result, `Interface path ->
-                record_result scheduled ~is_interface:true path result;
-                let path = scheduled.source.Source.implementation in
-                scheduled.phase := `Implementation path;
-                Some (scheduled.compile ~is_interface:false path)
-              | Some result, `Implementation path ->
-                record_result scheduled ~is_interface:false path result;
-                scheduled.phase := `Done;
-                if !(scheduled.messages) <> [] then
-                  raise (Scheduled_failure scheduled.key)
-                else (
-                  finish_successful_compile scheduled;
-                  None)
-              | None, (`Interface _ | `Implementation _ | `Done)
-              | Some _, (`Start | `Done) ->
-                raise (Error "invalid compiler scheduler state"));
-          false
-        with Scheduled_failure _ -> true
-      in
-      let failures = ref [] in
-      !(stats.scheduled_modules)
-      |> List.sort (fun (first : scheduled_module) second ->
-           String.compare first.key second.key)
-      |> List.iter (fun (scheduled : scheduled_module) ->
-           !(scheduled.messages) |> List.rev
-           |> List.iter (fun (Compile_failure (_, output)) ->
-                failures := (scheduled, output) :: !failures));
-      Warning_state.entries stats.warning_state
-      |> List.iter (fun entry ->
-           Compiler_log.append entry.Warning_state.package_root entry.output);
-      let failures = List.rev !failures in
-      List.iter
-        (fun ((scheduled : scheduled_module), output) ->
-          Compiler_log.append scheduled.package_root output)
-        failures;
-      match failures, scheduler_failed with
-      | [], false -> ()
-      | [], true -> raise (Error "compiler scheduler stopped without a diagnostic")
-      | failures, _ ->
-        failures |> List.map snd |> String.concat "" |> fun output ->
-        raise (Build_failure output))
+  Compiler_scheduler.run ~poll:stats.poll ~warning_state:stats.warning_state
+    ~blocked_modules:stats.blocked_modules ~compile_assets ~build_state
+    ~scheduled_modules:!(stats.scheduled_modules)
+    ~compile_cleanup:!(stats.compile_cleanup)
+    ~mark_compiled:(fun () -> stats.compiled <- stats.compiled + 1)
+    ~mark_had_warnings:(fun () -> stats.had_warnings <- true)
 
 let run_namespace_jobs stats =
   let jobs = List.rev !(stats.namespace_jobs) in
