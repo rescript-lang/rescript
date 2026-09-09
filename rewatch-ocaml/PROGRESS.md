@@ -185,6 +185,14 @@ expected non-panicking result:
   Rust watcher. The port reports the parse error and keeps its event loop alive;
   the differential lifecycle gate restores a valid config with a new output
   suffix and requires the OCaml watcher to produce it without restarting.
+- `cmd.rs::run` indexes the first whitespace-split command and unwraps process
+  creation, so an empty `--after-build` value or a missing executable panics.
+  It also waits for a launched hook but discards its exit status, allowing a
+  failing hook to leave `rescript build` successful. The port rejects all three
+  normally, includes the command or exit status and captured output in the
+  diagnostic, and releases the build lock before starting the hook as before.
+  Differential command cases retain Rust's two panics and ignored exit status
+  alongside the intended OCaml outcomes.
 
 Fixing these in Rust is outside the OCaml-port changes themselves. If they are
 fixed upstream, the differential configuration gate should be tightened from
@@ -351,7 +359,10 @@ missing control-file names.
   invocations. The post-build fixture verifies its generated-file argument.
 - `format`, `compiler-args`, `--filter`, and `--after-build` are implemented.
   The test runner covers stdin formatting, compiler-argument JSON, filtering,
-  and an after-build assertion.
+  and a successful after-build assertion. The command-validation gate also
+  covers empty, missing, and nonzero after-build commands; the port reports
+  each as a contextual command error instead of reproducing Rust's panics or
+  ignored failure status.
 - Namespace packages generate and compile their `.mlmap` before member modules.
   Out-of-source package output directories are created before compilation and
   stale output is removed; `clean` also removes in-source JavaScript and maps.

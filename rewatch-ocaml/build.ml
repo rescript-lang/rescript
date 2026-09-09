@@ -217,6 +217,41 @@ let report_failure action path result =
   ignore path;
   raise (Build_failure output)
 
+let run_after_build ~root command =
+  let program, args =
+    match Str.split (Str.regexp "[ \t\r\n]+") command with
+    | program :: args -> (program, args)
+    | [] -> raise (Error "--after-build command cannot be empty")
+  in
+  let result =
+    try Process.run ~cwd:root program args with
+    | Process.Error message ->
+      raise
+        (Error
+           (Printf.sprintf "Could not run --after-build command %S: %s" command
+              message))
+    | Sys_error message ->
+      raise
+        (Error
+           (Printf.sprintf "Could not run --after-build command %S: %s" command
+              message))
+    | Unix.Unix_error (error, operation, argument) ->
+      let target = if argument = "" then program else argument in
+      raise
+        (Error
+           (Printf.sprintf "Could not run --after-build command %S: %s (%s %s)"
+              command (Unix.error_message error) operation target))
+  in
+  if not (Process.succeeded result) then (
+    let output = result.stderr ^ result.stdout in
+    raise
+      (Error
+         (Printf.sprintf "--after-build command failed with %s%s"
+            (Process.status_string result.status)
+            (if output = "" then "" else ":\n" ^ output))));
+  if result.stdout <> "" then print_string result.stdout;
+  if result.stderr <> "" then prerr_string result.stderr
+
 let ppx_is_enabled ~bisect_enabled flag contents =
   if contains_text flag "bisect" then bisect_enabled
   else
@@ -2279,15 +2314,7 @@ let run_with_warning_state ~poll ~warning_state ~compilation_kind ~no_timing
           finish_watch_outputs ~success:true;
           finalize_logs ();
           release_build_lock ();
-          let result =
-            match Str.split (Str.regexp "[ \t\r\n]+") command with
-            | program :: args -> Process.run ~cwd:root program args
-            | [] -> raise (Error "--after-build command cannot be empty")
-          in
-          if not (Process.succeeded result) then
-            report_failure (result.stderr ^ result.stdout);
-          if result.stdout <> "" then print_string result.stdout;
-          if result.stderr <> "" then prerr_string result.stderr)
+          run_after_build ~root command)
         after_build;
       report ~success:true ())
   in
