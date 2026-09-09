@@ -71,6 +71,12 @@ the same inputs.
 
 The authoritative gate requires Linux (`/proc`), `strace`, GNU-compatible
 nanosecond `date`, and a stable plugged-in host with no competing heavy work.
+Keep the isolated fixtures on a case-sensitive Linux filesystem. A Linux
+container backed by a case-insensitive macOS bind mount can transiently report
+that a differently-cased recreated CMI exists to `stat` and then return
+`ENOENT` from the immediately following `open`; that host-filesystem artifact
+is not valid scheduler or benchmark evidence. The harness's default `mktemp`
+workspace normally stays on the container filesystem.
 Set `REWATCH_PERFORMANCE_THRESHOLD_PERCENT` to exercise a proposed threshold
 change; changing the committed 125% completion criterion requires an explicit
 project decision. Set `KEEP_REWATCH_BENCHMARK_WORKDIR=1` to retain traces and raw

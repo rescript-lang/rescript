@@ -27,4 +27,8 @@ let () =
     "compile asset timestamps initialize module state";
   check (a.dependents = ["B"] && b.dependencies = ["A"])
     "setting dependencies creates the reverse edge";
-  check (not b.deps_dirty) "stored dependency state is marked initialized"
+  check (not b.deps_dirty) "stored dependency state is marked initialized";
+  Build_state.mark_dependents_compile_dirty state a ~is_blocked:(fun _ -> true);
+  check (not b.compile_dirty) "CMI changes do not unblock cycle members";
+  Build_state.mark_dependents_compile_dirty state a ~is_blocked:(fun _ -> false);
+  check b.compile_dirty "CMI changes propagate through reverse edges"

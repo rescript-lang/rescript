@@ -773,7 +773,9 @@ type scheduled_module = {
   key: string;
   dependencies: string list;
   source: Source.module_;
-  is_dirty: unit -> bool;
+  state: Build_state.module_;
+  cmi_path: string;
+  mutable cmi_digest_before: Digest.t option;
   prepare: unit -> unit;
   compile: is_interface:bool -> string -> Process.job;
   publish: is_interface:bool -> string -> Process.result -> string;
@@ -815,7 +817,8 @@ type build_stats = {
   watch_output_paths: (string, unit) Hashtbl.t;
   global_raw_dependencies: (string, string list) Hashtbl.t;
   graph_packages: (string, graph_package) Hashtbl.t;
-  cleanup_results: (string, string list * int) Hashtbl.t;
+  cleanup_results: (string, Build_artifacts.cleanup_result) Hashtbl.t;
+  deferred_artifact_cleanup: string list ref;
   namespace_jobs: (Process.job * (Process.result -> unit)) list ref;
   scheduled_modules: scheduled_module list ref;
   compile_cleanup: (unit -> unit) list ref;
@@ -832,6 +835,9 @@ let source_is_newer ~source ~artifact =
   | Some source_time, Some artifact_time -> source_time > artifact_time
   | Some _, None -> true
   | None, _ -> false
+
+let file_digest path =
+  try Some (Digest.file path) with Sys_error _ | Unix.Unix_error _ -> None
 
 let published_ast_path ~ocaml_dir source_path =
   (* bsc gives its intermediate AST an epoch mtime. The copy published after a
@@ -1116,7 +1122,7 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
   in
   List.iter
     (fun package ->
-      let removed_modules, previous_ast_count =
+      let cleanup =
         Build_artifacts.cleanup_stale
           ~ocaml_files:
             (Compile_assets.files compile_assets package.graph_ocaml_dir)
@@ -1127,12 +1133,15 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
           package.graph_compile_config package.graph_modules
       in
       Hashtbl.replace stats.cleanup_results package.graph_root
-        (removed_modules, previous_ast_count);
-      stats.cleaned <- stats.cleaned + List.length removed_modules;
-      stats.previous_asts <- stats.previous_asts + previous_ast_count;
+        cleanup;
+      stats.deferred_artifact_cleanup :=
+        cleanup.deferred_artifacts @ !(stats.deferred_artifact_cleanup);
+      stats.cleaned <- stats.cleaned + List.length cleanup.removed_modules;
+      stats.previous_asts <-
+        stats.previous_asts + cleanup.previous_ast_count;
       List.iter
         (fun module_name -> Hashtbl.replace stats.removed_modules module_name ())
-        removed_modules)
+        cleanup.removed_modules)
     !graph_packages;
   stats.compile_assets <- Some compile_assets;
   on_cleanup (Unix.gettimeofday () -. cleanup_started);
@@ -1470,12 +1479,16 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder ~prod ~features
       with_root_options config root_config
       |> with_local_warning_policy ~is_local
   in
-  let removed_modules, _ =
+  let cleanup =
     match Hashtbl.find_opt stats.cleanup_results root with
     | Some result -> result
     | None ->
       Build_artifacts.cleanup_stale ~root ~ocaml_dir ~is_local config modules
   in
+  let removed_modules = cleanup.removed_modules in
+  if not (Hashtbl.mem stats.cleanup_results root) then
+    stats.deferred_artifact_cleanup :=
+      cleanup.deferred_artifacts @ !(stats.deferred_artifact_cleanup);
   List.iter
     (fun module_name -> Hashtbl.replace stats.removed_modules module_name ())
     removed_modules;
@@ -1660,15 +1673,27 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder ~prod ~features
     List.map
       (fun module_ ->
         let key = global_module_key config module_.Source.name in
+        let state = Build_state.find_exn build_state key in
+        (* Rust fixes the initial dirty set before dispatch. Files published by
+           concurrently finishing jobs must not change this module's decision;
+           only explicit CMI-change propagation may do that. *)
+        state.compile_dirty <- module_is_dirty module_;
         let dependencies =
           if Hashtbl.mem stats.blocked_modules key then []
-          else (Build_state.find_exn build_state key).dependencies
+          else state.dependencies
+        in
+        let cmi_path =
+          Filename.concat ocaml_dir
+            (Source.compiler_asset_basename config module_.Source.implementation
+            ^ ".cmi")
         in
         {
           key;
           dependencies;
           source = module_;
-          is_dirty = (fun () -> module_is_dirty module_);
+          state;
+          cmi_path;
+          cmi_digest_before = file_digest cmi_path;
           prepare = (fun () -> prepare_outputs module_);
           compile =
             (fun ~is_interface path ->
@@ -1696,7 +1721,7 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder ~prod ~features
       in
       let package_dirty =
         List.exists
-          (fun (scheduled : scheduled_module) -> scheduled.is_dirty ())
+          (fun (scheduled : scheduled_module) -> scheduled.state.compile_dirty)
           scheduled
       in
       Option.iter
@@ -1738,6 +1763,38 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder ~prod ~features
   ()
 
 let run_scheduled_modules stats =
+  let build_state =
+    match stats.build_state with
+    | Some state -> state
+    | None -> raise (Error "build state was not initialized")
+  in
+  let compile_assets =
+    match stats.compile_assets with
+    | Some state -> state
+    | None -> raise (Error "compile asset state was not initialized")
+  in
+  let finish_successful_compile scheduled =
+    let cmi_digest_after = file_digest scheduled.cmi_path in
+    let cmi_changed =
+      match scheduled.cmi_digest_before, cmi_digest_after with
+      | Some before, Some after -> before <> after
+      | _ -> true
+    in
+    let cmt_path = Filename.remove_extension scheduled.cmi_path ^ ".cmt" in
+    Compile_assets.refresh_cmi compile_assets ~key:scheduled.key
+      ~path:scheduled.cmi_path;
+    Compile_assets.refresh_cmt compile_assets ~key:scheduled.key ~path:cmt_path;
+    scheduled.state.last_compiled_cmi <-
+      (Compile_assets.cmi compile_assets scheduled.key
+      |> Option.map (fun entry -> entry.Compile_assets.modified));
+    scheduled.state.last_compiled_cmt <-
+      (Compile_assets.cmt compile_assets scheduled.key
+      |> Option.map (fun entry -> entry.Compile_assets.modified));
+    scheduled.state.compile_dirty <- false;
+    if cmi_changed then
+      Build_state.mark_dependents_compile_dirty build_state scheduled.state
+        ~is_blocked:(Hashtbl.mem stats.blocked_modules)
+  in
   let warning_paths =
     !(stats.scheduled_modules)
     |> List.concat_map (fun (scheduled : scheduled_module) ->
@@ -1799,9 +1856,10 @@ let run_scheduled_modules stats =
             ~next:(fun scheduled result ->
               match result, !(scheduled.phase) with
               | None, `Start ->
-                if scheduled.is_dirty () then (
+                if scheduled.state.compile_dirty then (
                   stats.compiled <- stats.compiled + 1;
                   scheduled.prepare ();
+                  scheduled.cmi_digest_before <- file_digest scheduled.cmi_path;
                   match scheduled.source.Source.interface with
                   | Some path ->
                     scheduled.phase := `Interface path;
@@ -1823,7 +1881,9 @@ let run_scheduled_modules stats =
                 scheduled.phase := `Done;
                 if !(scheduled.messages) <> [] then
                   raise (Scheduled_failure scheduled.key)
-                else None
+                else (
+                  finish_successful_compile scheduled;
+                  None)
               | None, (`Interface _ | `Implementation _ | `Done)
               | Some _, (`Start | `Done) ->
                 raise (Error "invalid compiler scheduler state"));
@@ -1949,6 +2009,7 @@ let run_with_warning_state ~warning_state ~compilation_kind ~no_timing ~seen
       global_raw_dependencies = Hashtbl.create 64;
       graph_packages = Hashtbl.create 32;
       cleanup_results = Hashtbl.create 32;
+      deferred_artifact_cleanup = ref [];
       namespace_jobs = ref [];
       scheduled_modules = ref [];
       compile_cleanup = ref [];
@@ -2137,6 +2198,7 @@ let run_with_warning_state ~warning_state ~compilation_kind ~no_timing ~seen
   in
   Fun.protect
     ~finally:(fun () ->
+      List.iter remove_file !(stats.deferred_artifact_cleanup);
       if not !outputs_finished then finish_watch_outputs ~success:false;
       finalize_logs ();
       release_build_lock ())

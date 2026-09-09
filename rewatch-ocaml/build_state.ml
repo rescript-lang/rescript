@@ -49,3 +49,10 @@ let set_dependencies state ~key dependencies =
       let dependency_module = find_exn state dependency in
       dependency_module.dependents <- key :: dependency_module.dependents)
     dependencies
+
+let mark_dependents_compile_dirty state module_ ~is_blocked =
+  List.iter
+    (fun dependent ->
+      if not (is_blocked dependent) then
+        (find_exn state dependent).compile_dirty <- true)
+    module_.dependents
