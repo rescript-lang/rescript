@@ -22,6 +22,13 @@ docstrings, both GenType suites, analysis and reanalyze, tools, and the complete
 canonical rewatch suite. The run left no watcher process or worktree change
 behind.
 
+After the project-context, compiler-log, and compiler-argument module splits at
+checkpoint `d5ed6acc8`, the complete 48-test canonical `rewatch/tests` suite
+passed again with `_build/default/rewatch-ocaml/rescript_ocaml.exe`. The run
+covered clean/build, diagnostics, incremental edits, watcher lifecycle, locks,
+formatting, features, and compiler arguments; it restored `rewatch/testrepo`
+and left no watcher process behind.
+
 The implementation currently has configuration loading, source and package
 discovery, external `bsc` parsing, AST dependency extraction, cycle detection,
 dependency-ordered compilation, interface-before-implementation compilation,
