@@ -156,7 +156,7 @@ let discover_package_graph (current : Config.t) =
        in
        let modules =
          Source.discover config
-           ~prod:(Build.source_discovery_prod ~prod:false ~is_local)
+           ~prod:(Package_graph.source_discovery_prod ~prod:false ~is_local)
            ~features ~filter:None
            ~on_missing:(Package_diagnostics.report_missing_source_folder config)
            ~display_root:current.root

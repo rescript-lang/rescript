@@ -1160,6 +1160,18 @@ duplicating records or introducing callback-heavy interfaces. The extraction
 does not alter filesystem access or build scheduling; all 18 OUnit2 tests and
 the focused build/incremental runner passed afterward.
 
+Package-tree discovery now lives in `package_graph.ml`. It owns the two-pass
+feature-union traversal, command-wide dependency resolution and duplicate
+selection, `allowed-dependents` validation, local/dev classification, source
+inventory, root-only warning/filter overrides, output ownership, and prepared
+package ordering. `build.ml` consumes that prepared list for cleanup, parsing,
+dependency extraction, and compilation instead of mixing package discovery
+into the phase orchestrator. The production/test helper calls moved to the new
+owner, reducing `build.ml` from 1,407 to 1,174 lines without changing path or
+process APIs. The warning-free build, all 18 OUnit2 tests, focused integration
+runner, 69-case command-validation gate, and complete canonical rewatch suite
+passed after the split.
+
 ## Known gaps
 
 - Incremental state currently relies on artifact timestamps, byte-identical CMI
@@ -1420,8 +1432,9 @@ the focused build/incremental runner passed afterward.
 
 1. Continue splitting `build.ml` along stable responsibility boundaries. The
    filesystem/artifact, compiler-process, compiler-scheduling, watcher, clean,
-   and command-cycle state owners are now separate; package and dependency
-   graph preparation remains the principal mixed responsibility.
+   command-cycle state, and package-tree owners are now separate; dependency
+   extraction and dirty-state preparation remain the principal mixed
+   responsibility.
 2. Perform the final two-scope whole-port review and address confirmed findings.
 3. At the final maintainability pass, add comments around ownership,
    concurrency, platform, and algorithmic invariants that are not apparent from

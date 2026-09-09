@@ -145,17 +145,19 @@ let tests =
       write_file path
         {|{"name":"gentype-subdirs","sources":{"dir":"src","subdirs":true},"gentypeconfig":{}}|};
       let config = Config.load path in
-      let discovery =
-        Source.discover_with_inventory config ~prod:false ~features:None
-          ~filter:None
+      let stats =
+        Build_types.create ~warning_state:(Warning_state.create ())
+          ~poll:(fun () -> ())
       in
-      let config =
-        Build.with_gentype_source_dirs discovery.gentype_dirs config
+      let package =
+        Package_graph.discover ~root_config:config ~prod:false ~features:None
+          ~warn_error:None ~filter:None ~stats
+        |> List.hd
       in
       check
         (contains_adjacent "-bs-gentype-source-dir"
            (Filename.concat "src" "shims")
-           config.gentype_args)
+           package.graph_compile_config.gentype_args)
         "GenType recursively includes directories that may contain TypeScript \
          shims";
       write_file path {|{"name":"no-gentype"}|};

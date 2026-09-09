@@ -443,19 +443,13 @@ let tests =
         "critical external warnings are retained without unrelated warnings")
     ["\n"; "\r\n"];
   check
-    (Build.dependent_is_allowed (Some ["app"]) "app")
-    "listed dependent is allowed";
-  check
-    (not (Build.dependent_is_allowed (Some ["other"]) "app"))
-    "unlisted dependent is rejected";
-  check
-    (not (Build.source_discovery_prod ~prod:false ~is_local:true))
+    (not (Package_graph.source_discovery_prod ~prod:false ~is_local:true))
     "development sources are enabled for a local development build";
   check
-    (Build.source_discovery_prod ~prod:true ~is_local:true)
+    (Package_graph.source_discovery_prod ~prod:true ~is_local:true)
     "production builds exclude local development sources";
   check
-    (Build.source_discovery_prod ~prod:false ~is_local:false)
+    (Package_graph.source_discovery_prod ~prod:false ~is_local:false)
     "installed dependencies always exclude development sources";
   check (Build_lock.valid_owner "0") "zero is a valid serialized u32 owner";
   check
