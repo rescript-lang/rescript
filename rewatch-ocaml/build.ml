@@ -7,32 +7,6 @@ exception Scheduled_failure of string
 
 open Build_artifacts
 
-let compiler_log_path root directory =
-  Filename.concat (lib_path root directory) ".compiler.log"
-
-let strip_ansi content =
-  let length = String.length content in
-  let output = Buffer.create length in
-  let rec skip_csi index =
-    if index >= length then index
-    else
-      let code = Char.code content.[index] in
-      if code >= 0x40 && code <= 0x7e then index + 1
-      else skip_csi (index + 1)
-  in
-  let rec loop index =
-    if index < length then
-      if
-        (content.[index] = '\027' || content.[index] = '\155')
-        && index + 1 < length && content.[index + 1] = '['
-      then loop (skip_csi (index + 2))
-      else (
-        Buffer.add_char output content.[index];
-        loop (index + 1))
-  in
-  loop 0;
-  Buffer.contents output
-
 let contains_text value text =
   try
     ignore (Str.search_forward (Str.regexp_string text) value 0);
@@ -47,27 +21,6 @@ let retain_critical_external_warnings stderr =
     |> Str.split_delim (Str.regexp_string "\n\n\n")
     |> List.filter (fun block -> contains_text block marker)
     |> String.concat "\n\n\n"
-
-let initialize_compiler_log root =
-  let path = compiler_log_path root "bs" in
-  ensure_dir (Filename.dirname path);
-  let channel = open_out_bin path in
-  Fun.protect ~finally:(fun () -> close_out_noerr channel) (fun () ->
-    Printf.fprintf channel "#Start(%.6f)\n" (Unix.gettimeofday ()))
-
-let append_compiler_log root content =
-  let channel =
-    open_out_gen [Open_wronly; Open_append; Open_binary] 0o644
-      (compiler_log_path root "bs")
-  in
-  Fun.protect ~finally:(fun () -> close_out_noerr channel) (fun () ->
-    output_string channel (strip_ansi content))
-
-let finalize_compiler_log root =
-  append_compiler_log root
-    (Printf.sprintf "#Done(%.6f)\n" (Unix.gettimeofday ()));
-  copy_existing_file ~ensure_parent:false (compiler_log_path root "bs")
-    (compiler_log_path root "ocaml")
 
 let read_lock_owner path =
   try
@@ -1487,7 +1440,7 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder:root ~prod ~feature
   in
   ensure_dir build_dir;
   ensure_dir ocaml_dir;
-  initialize_compiler_log root;
+  Compiler_log.initialize root;
   Hashtbl.replace stats.initialized_logs root ();
   let modules =
     match prepared with
@@ -1582,14 +1535,14 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder:root ~prod ~feature
             Printf.sprintf "Error in %s:\n%s%s" config.name result.stderr
               result.stdout
           in
-          append_compiler_log root output;
+          Compiler_log.append root output;
           raise (Parse_failure output))
       result;
     let stderr =
       if is_local then stderr else retain_critical_external_warnings stderr
     in
     if stderr <> "" then stats.had_warnings <- true;
-    if stderr <> "" then append_compiler_log root stderr;
+    if stderr <> "" then Compiler_log.append root stderr;
     if stderr <> "" then prerr_string stderr;
     let ast = Source.ast_path path in
     if is_local && stderr <> "" then warning_asts := ast :: !warning_asts;
@@ -1931,11 +1884,11 @@ let run_scheduled_modules stats =
                 failures := (scheduled, output) :: !failures));
       Warning_state.entries stats.warning_state
       |> List.iter (fun entry ->
-           append_compiler_log entry.Warning_state.package_root entry.output);
+           Compiler_log.append entry.Warning_state.package_root entry.output);
       let failures = List.rev !failures in
       List.iter
         (fun ((scheduled : scheduled_module), output) ->
-          append_compiler_log scheduled.package_root output)
+          Compiler_log.append scheduled.package_root output)
         failures;
       match failures, scheduler_failed with
       | [], false -> ()
@@ -2064,7 +2017,7 @@ let run_with_warning_state ~poll ~warning_state ~compilation_kind ~no_timing
   in
   List.iter (fun path -> Hashtbl.replace visited (Unix.realpath path) ()) seen;
   let finalize_logs () =
-    Hashtbl.iter (fun package_root () -> finalize_compiler_log package_root)
+    Hashtbl.iter (fun package_root () -> Compiler_log.finalize package_root)
       stats.initialized_logs;
     Hashtbl.clear stats.initialized_logs
   in
@@ -2234,7 +2187,7 @@ let run_with_warning_state ~poll ~warning_state ~compilation_kind ~no_timing
       |> List.filter_map (Hashtbl.find_opt by_key)
       |> List.map (fun node -> node.package_root)
       |> List.sort_uniq String.compare
-      |> List.iter (fun package_root -> append_compiler_log package_root output);
+      |> List.iter (fun package_root -> Compiler_log.append package_root output);
       report_failure output
     | None, None ->
       Option.iter

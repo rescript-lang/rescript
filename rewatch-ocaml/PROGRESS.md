@@ -37,6 +37,13 @@ and the OUnit2 project-context tests use that owner directly; `Build.Error` and
 existing callers retain their contract. This removes roughly one hundred lines
 from `build.ml` without adding a facade layer or changing filesystem work.
 
+Compiler-log lifecycle now lives in `compiler_log.ml`, matching Rust's
+`build/logs.rs` responsibility. The module owns log paths, initialization,
+append/finalization, ANSI stripping, and publication from `lib/bs` to
+`lib/ocaml`; external-warning selection remains in compilation, where Rust also
+keeps it. This removes another fifty lines from `build.ml` and gives the
+filesystem-writing surface a four-function interface.
+
 ## Source review
 
 The first comparison pass covered the OCaml configuration, package traversal,
