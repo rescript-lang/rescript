@@ -27,6 +27,7 @@
   graph
   package_metadata
   package_diagnostics
+  package_graph
   compiler_args
   compiler_args_command
   compiler_log
