@@ -32,6 +32,9 @@ mkdir -p "$work/external-dev-source/src" \
 mkdir -p "$work/external-dev-permission/src" \
   "$work/external-dev-permission/node_modules/a" \
   "$work/external-dev-permission/node_modules/b"
+mkdir -p "$work/active-permission/node_modules/a" \
+  "$work/active-permission/node_modules/b"
+mkdir -p "$work/source-path-file"
 mkdir -p "$work/missing-source-folder/src" \
   "$work/missing-source-folder/node_modules/dep"
 mkdir -p "$work/dependency-without-sources/src" \
@@ -115,6 +118,15 @@ printf '{"name":"a","sources":[],"dev-dependencies":["b"]}\n' \
   >"$work/external-dev-permission/node_modules/a/rescript.json"
 printf '{"name":"b","sources":[],"allowed-dependents":["root"]}\n' \
   >"$work/external-dev-permission/node_modules/b/rescript.json"
+printf '{"name":"root","sources":[],"dependencies":["a","b"]}\n' \
+  >"$work/active-permission/rescript.json"
+printf '{"name":"a","sources":[],"allowed-dependents":["someone-else"]}\n' \
+  >"$work/active-permission/node_modules/a/rescript.json"
+printf '{"name":"b","sources":[],"allowed-dependents":["someone-else"]}\n' \
+  >"$work/active-permission/node_modules/b/rescript.json"
+printf '{"name":"source-path-file","sources":["src"]}\n' \
+  >"$work/source-path-file/rescript.json"
+printf 'not a directory\n' >"$work/source-path-file/src"
 printf '{"name":"missing-source-folder","sources":["src"],"dependencies":["dep"]}\n' \
   >"$work/missing-source-folder/rescript.json"
 printf 'let value = 1\n' >"$work/missing-source-folder/src/App.res"
@@ -662,6 +674,34 @@ if ! grep -F 'a has the following unallowed dependencies' \
     "$work/rust.err" >/dev/null; then
   echo "Rust dormant external dev-dependency rejection was not reproduced" >&2
   cat "$work/rust.out" "$work/rust.err" >&2
+  exit 1
+fi
+run_case build-reports-all-active-permission-failures reject reject build \
+  "$work/active-permission"
+rust_permission_details=$(grep -Ec '^dependencies dependencies: (a|b)$' \
+  "$work/rust.out" || true)
+if [ "$rust_permission_details" -ne 1 ] || \
+  ! grep -Fx 'root dependencies: a' "$work/ocaml.err" >/dev/null || \
+  ! grep -Fx 'root dependencies: b' "$work/ocaml.err" >/dev/null || \
+  ! grep -F 'unallowed_dependents' "$work/rust.err" >/dev/null || \
+  ! grep -F 'config.json' "$work/rust.err" >/dev/null || \
+  ! grep -F 'Update allowed-dependents in the dependency rescript.json files.' \
+    "$work/ocaml.err" >/dev/null || [ -s "$work/ocaml.out" ]; then
+  echo "Active dependency-permission diagnostics changed unexpectedly" >&2
+  printf '%s\n' '--- Rust output ---' >&2
+  cat "$work/rust.out" "$work/rust.err" >&2
+  printf '%s\n' '--- OCaml output ---' >&2
+  cat "$work/ocaml.out" "$work/ocaml.err" >&2
+  exit 1
+fi
+run_case build-source-path-is-file accept accept build "$work/source-path-file"
+if ! cmp -s "$work/rust.err" "$work/ocaml.err" || \
+  ! grep -F 'Could not read folder: "src"' "$work/ocaml.err" >/dev/null; then
+  echo "Non-directory source diagnostics differ" >&2
+  printf '%s\n' '--- Rust output ---' >&2
+  cat "$work/rust.out" "$work/rust.err" >&2
+  printf '%s\n' '--- OCaml output ---' >&2
+  cat "$work/ocaml.out" "$work/ocaml.err" >&2
   exit 1
 fi
 run_case build-missing-source-folder accept accept build \

@@ -137,6 +137,13 @@ such a dormant edge when the target package happens to be reachable elsewhere.
 That makes the same installed package conditionally break an unrelated root
 build. A differential case retains Rust's rejection and the port's successful
 active-edge-only behavior.
+The same permission pass reports every denied active edge. Rust's helper stops
+after the first denied dependency in each regular/dev class, emits that detail
+at info level on stdout (so `-q` hides it), and recommends the obsolete
+`unallowed_dependents` field in `config.json`. The port keeps the complete
+diagnostic on stderr and names `allowed-dependents` in `rescript.json`; a
+two-dependency differential fixture retains both the Rust behavior and this
+deliberate correction.
 Watch filtering keeps the same positive regex meaning during initial discovery
 and later changes. Rust's package discovery includes matching files, but
 `watcher.rs::matches_filter` negates the regex for events, so an included-file
