@@ -16,6 +16,12 @@ let write_file path contents =
     ~finally:(fun () -> close_out_noerr channel)
     (fun () -> output_string channel contents)
 
+let read_file path =
+  let channel = open_in_bin path in
+  Fun.protect
+    ~finally:(fun () -> close_in_noerr channel)
+    (fun () -> really_input_string channel (in_channel_length channel))
+
 let touch_file path = write_file path ""
 
 let wait_for_file path =
@@ -68,6 +74,19 @@ let () =
       while true do
         ignore (Unix.select [] [] [] 1.)
       done
+    | "-format" -> (
+      match Sys.getenv_opt "REWATCH_FORMAT_TEST_ROOT" with
+      | None -> ()
+      | Some root ->
+        let source = argument 2 in
+        touch_file
+          (Filename.concat root (Filename.basename source ^ ".started"));
+        let first_started = Filename.concat root "First.res.started" in
+        let second_started = Filename.concat root "Second.res.started" in
+        if not (wait_for_file first_started && wait_for_file second_started)
+        then exit 2;
+        print_string (read_file source);
+        exit 0)
     | _ -> ()
 
 let tests =
