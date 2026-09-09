@@ -645,6 +645,12 @@ missing control-file names.
   diagnostic ownership check. This covers 25 invalid shapes, including Rust's
   JSX-version panic, and requires both outputs to identify `jsx` or
   `sourceMap` even though their Serde/Yojson explanations differ.
+- Redirected clean-build output now has the same exact normalized differential
+  coverage as compiler failures, parser failures, and successful warning
+  builds. Together with exact clean output, focused format/compiler-argument
+  checks, and canonical redirected watch scenarios, this closes ordinary plain
+  output; the intentionally deferred `-v`/`-vv` event stream remains part of
+  the final terminal-presentation pass.
 - Implicit `format` project discovery now has semantic differential coverage for
   a missing config, malformed JSON, and a directory at `rescript.json`. Both
   implementations must retain the command and path context plus the relevant
@@ -1039,9 +1045,10 @@ rerun it for the final maintainability review alongside maximum module size.
 - Incremental state currently relies on artifact timestamps, byte-identical CMI
   publication, and in-memory warning state during watch. Rust's richer
   compile-state model is not otherwise ported.
-- The remaining source-level validation inventory, final redirected-output
-  inventory, and native Windows verification remain incomplete. Configuration
-  schema acceptance and argument projection are complete; incremental
+- The remaining source-level validation inventory and native Windows
+  verification remain incomplete. Configuration schema acceptance, argument
+  projection, and ordinary redirected-output inventory are complete; semantic
+  `-v`/`-vv` events stay deferred with terminal presentation. Incremental
   filesystem work is at or below Rust, while the explained clean-build driver
   delta remains documented for future optimization.
 - Full validation coverage is now an explicit source-inventory gate in
@@ -1291,9 +1298,10 @@ rerun it for the final maintainability review alongside maximum module size.
 
 ## Next actions
 
-1. Finish the remaining source-level validation and redirected-output
-   inventories, closing confirmed configuration/CLI/diagnostic gaps. The Rust
-   unit-test coverage and external control-file inventories are complete, and
+1. Finish the remaining source-level validation inventory, including the
+   deterministic evidence that is still practical for audited filesystem race
+   branches. Configuration/CLI diagnostics, ordinary redirected output, Rust
+   unit-test coverage, and external control-file inventories are complete;
    OpenTelemetry is an explicitly documented non-goal.
 2. Continue splitting `build.ml` along stable responsibility boundaries. The
    filesystem and artifact-ownership layer now lives in `build_artifacts.ml`;
