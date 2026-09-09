@@ -456,17 +456,17 @@ let tests =
   check
     (Build.source_discovery_prod ~prod:false ~is_local:false)
     "installed dependencies always exclude development sources";
-  check (Build.valid_lock_owner "0") "zero is a valid serialized u32 owner";
+  check (Build_lock.valid_owner "0") "zero is a valid serialized u32 owner";
   check
-    (Build.valid_lock_owner "4294967295")
+    (Build_lock.valid_owner "4294967295")
     "the maximum u32 is a valid serialized lock owner";
-  check (not (Build.valid_lock_owner "")) "an empty lock owner is malformed";
-  check (not (Build.valid_lock_owner "-1")) "a negative lock owner is malformed";
+  check (not (Build_lock.valid_owner "")) "an empty lock owner is malformed";
+  check (not (Build_lock.valid_owner "-1")) "a negative lock owner is malformed";
   check
-    (not (Build.valid_lock_owner "4294967296"))
+    (not (Build_lock.valid_owner "4294967296"))
     "a lock owner outside the Rust u32 range is malformed";
   check
-    (not (Build.valid_lock_owner "123\n"))
+    (not (Build_lock.valid_owner "123\n"))
     "trailing data in a lock owner is malformed";
   let lock_root = Filename.temp_file "rewatch-ocaml-stale-lock-" "" in
   Sys.remove lock_root;
@@ -490,9 +490,9 @@ let tests =
       Unix.rmdir lock_dir;
       Unix.rmdir lock_root)
     (fun () ->
-      let release = Build.acquire_build_lock lock_root in
+      let release = Build_lock.acquire_build lock_root in
       check
-        (Build.read_lock_owner lock = Some (string_of_int (Unix.getpid ())))
+        (Build_lock.read_owner lock = Some (string_of_int (Unix.getpid ())))
         "stale build lock is replaced";
       check (not (Sys.file_exists takeover)) "stale takeover marker is removed";
       release ());

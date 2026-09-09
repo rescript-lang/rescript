@@ -42,7 +42,7 @@ separately with the retained syscall-audit tooling.
 | `build/parse.rs` | Parser arguments/jobs and parse-state transitions | `compiler_args.ml` and parsing code in `build.ml` | Phase-specific flags and source-dependent PPX policy have an explicit owner; job execution/state transitions remain in `build.ml` |
 | `build/compile.rs` | Compiler arguments, dirty propagation, scheduling, publication | `compiler_args.ml`, `build_state.ml`, `process.ml`, and compilation code in `build.ml` | Package-output, namespace, source-map, GenType, and warning arguments have an explicit owner; Rust-shaped fixed pre-scheduling dirty state and byte-identical CMI-change propagation are present, while publication/freshness ownership remains to be consolidated |
 | `watcher.rs` | Watch handles, batching, rebuild lifecycle, and recovery | `native_watcher.ml` and watch code in `build.ml` | Native handles and behavior present; lifecycle ownership remains split |
-| `lock.rs` | Build/watch ownership and stale-process handling | Lock code in `build.ml`, process operations behind `platform.mli` | Behavior present; final module-quality review remains |
+| `lock.rs` | Build/watch ownership and stale-process handling | `build_lock.ml`, with process operations behind `platform.mli` | Build and watch locks share one owner for PID validation, stale-lock takeover, ownership checks, and release; the hard-link primitive still requires native Windows validation and may move behind the platform interface if necessary |
 | `telemetry.rs` | Optional OTLP export | No OCaml owner | Intentional project-level omission; Rust traces remain diagnostic tooling |
 
 ## Validation inventory gate
