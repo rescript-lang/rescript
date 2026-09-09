@@ -614,6 +614,12 @@ changes, and watch rebuilds. The latest unchanged trace consequently falls to
 is 162 and 7,971 (Rust: 160 and 3,386), and clean is 160 and 22,951 (Rust: 158
 and 12,422). This run intentionally did not update wall-clock measurements
 because unrelated host work made timings unsuitable for comparison.
+Restricting published-artifact metadata reads to the AST/IAST/CMI/CMT entries
+whose timestamps or contents are actually consumed reduces the next unchanged
+trace to 7,046 metadata calls (Rust: 3,367) and edit to 7,077 (Rust: 3,384).
+Cleanup still inventories the names of CMJ/CMTI/copied-source/MLMAP entries, so
+stale removal behavior is unchanged; clean-build counts remain effectively
+unchanged because those directories start empty.
 These are observational counts rather than a raw-total gate, and they include
 compiler process behavior. The directory-traversal gap is now explained and
 effectively closed, but the incremental metadata difference remains material

@@ -25,19 +25,36 @@ let ast_source_location path =
         find ())
   with Sys_error _ | Unix.Unix_error _ -> None
 
+let cleanup_extensions =
+  [".cmi"; ".cmj"; ".cmt"; ".cmti"; ".ast"; ".iast"; ".res"; ".resi"; ".mlmap"]
+
+let state_extension = function
+  | ".ast" | ".iast" | ".cmi" | ".cmt" -> true
+  | _ -> false
+
 let read_directory directory =
-  let entries =
+  let names =
     try Sys.readdir directory |> Array.to_list
     with Unix.Unix_error _ | Sys_error _ -> []
   in
-  entries
-  |> List.filter_map (fun name ->
-       let path = Filename.concat directory name in
-       try
-         let metadata = Unix.stat path in
-         if metadata.Unix.st_kind = Unix.S_DIR then None
-         else Some ({path; modified = metadata.Unix.st_mtime}, name)
-       with Unix.Unix_error _ | Sys_error _ -> None)
+  let files =
+    names
+    |> List.filter (fun name -> List.mem (Filename.extension name) cleanup_extensions)
+    |> List.map (Filename.concat directory)
+  in
+  let state_entries =
+    names
+    |> List.filter_map (fun name ->
+         if not (state_extension (Filename.extension name)) then None
+         else
+           let path = Filename.concat directory name in
+           try
+             let metadata = Unix.stat path in
+             if metadata.Unix.st_kind = Unix.S_DIR then None
+             else Some ({path; modified = metadata.Unix.st_mtime}, name)
+           with Unix.Unix_error _ | Sys_error _ -> None)
+  in
+  (files, state_entries)
 
 let module_key name =
   name |> Filename.remove_extension |> String.capitalize_ascii
@@ -59,18 +76,17 @@ let create directories =
   in
   directories |> List.sort_uniq String.compare
   |> List.iter (fun directory ->
-       let entries = read_directory directory in
-       Hashtbl.replace state.files_by_directory directory
-         (List.map (fun (entry, _) -> entry.path) entries);
+       let files, state_entries = read_directory directory in
+       Hashtbl.replace state.files_by_directory directory files;
        Hashtbl.replace state.ast_sources_by_directory directory
-         (entries
+         (state_entries
          |> List.filter_map (fun (entry, name) ->
               match Filename.extension name with
               | ".ast" | ".iast" ->
                 ast_source_location entry.path
                 |> Option.map (fun source -> (entry.path, source))
               | _ -> None));
-       List.iter (add_module_artifact state) entries);
+       List.iter (add_module_artifact state) state_entries);
   state
 
 let files state directory =

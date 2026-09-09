@@ -18,12 +18,14 @@ let () =
     let first = Filename.concat root "Example.cmi" in
     let second = Filename.concat root "example.cmt" in
     let unrelated = Filename.concat root "notes.txt" in
+    let cleanup_only = Filename.concat root "Example.cmj" in
     let source = Filename.concat root "src/Example.res" in
     let ast = Filename.concat root "Example.ast" in
     let nested = Filename.concat root "nested" in
     write first "cmi";
     write second "cmt";
     write unrelated "notes";
+    write cleanup_only "cmj";
     write ast ("Caml1999X\nDependency\n" ^ source ^ "\nbinary payload");
     Unix.mkdir nested 0o755;
     write (Filename.concat nested "Nested.cmi") "nested";
@@ -31,8 +33,8 @@ let () =
     check
       (Compile_assets.files state root
       |> List.sort String.compare
-      = List.sort String.compare [ast; first; second; unrelated])
-      "one flat package inventory is retained for cleanup";
+      = List.sort String.compare [ast; cleanup_only; first; second])
+      "the flat cleanup inventory retains only managed compiler assets";
     check
       (Compile_assets.ast_sources state root = [(ast, source)])
       "published ASTs retain their encoded absolute source location";
