@@ -33,7 +33,8 @@ let run = function
       ~clear_screen
   | Cli.Format {check; stdin; files} -> Format.run ~check ~stdin ~files
   | Cli.Compiler_args path -> print_endline (Build.compiler_args path)
-  | Cli.Clean {folder; prod} -> Build.clean ~seen:[] ~folder ~prod
+  | Cli.Clean {verbosity; folder; prod} ->
+    Build.clean ~seen:[] ~verbosity ~folder ~prod
 
 let () =
   try

@@ -596,6 +596,13 @@ missing control-file names.
   subcommand and parses subcommands before options; it inserts the implicit
   `build` command and preserves clap's global flag behavior without parsing
   command options itself.
+- Redirected `clean` now emits Rust's `Cleaning <package>` info-level progress
+  for every package whose outputs the command actually owns. The parsed global
+  verbosity is retained by the clean command, so `-q` suppresses this output as
+  it does in Rust. A differential command case compares stdout and stderr
+  exactly at the default level and requires both implementations to stay quiet
+  under `-q`; interactive clean phase rendering remains in the final terminal
+  presentation pass.
 - A missing project folder is rejected before path canonicalization with Rust's
   user-facing preflight diagnostic instead of leaking an OCaml `Unix_error`;
   the focused runner checks the complete path-bearing message.

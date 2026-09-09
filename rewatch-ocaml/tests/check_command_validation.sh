@@ -571,6 +571,41 @@ if ! cmp -s "$work/rust.err" "$work/ocaml.err"; then
   cat "$work/ocaml.err" >&2
   exit 1
 fi
+set +e
+"$rust" clean "$project" >"$work/rust.out" 2>"$work/rust.err"
+rust_status=$?
+"$ocaml" clean "$project" >"$work/ocaml.out" 2>"$work/ocaml.err"
+ocaml_status=$?
+set -e
+if [ "$rust_status" -ne 0 ] || [ "$ocaml_status" -ne 0 ] || \
+  ! cmp -s "$work/rust.out" "$work/ocaml.out" || \
+  ! cmp -s "$work/rust.err" "$work/ocaml.err" || \
+  ! grep -Fx 'Cleaning command-validation' "$work/ocaml.out" >/dev/null; then
+  echo "Redirected clean progress differs" >&2
+  printf '%s\n' '--- Rust output ---' >&2
+  cat "$work/rust.out" "$work/rust.err" >&2
+  printf '%s\n' '--- OCaml output ---' >&2
+  cat "$work/ocaml.out" "$work/ocaml.err" >&2
+  exit 1
+fi
+checked=$((checked + 1))
+set +e
+"$rust" -q clean "$project" >"$work/rust.out" 2>"$work/rust.err"
+rust_status=$?
+"$ocaml" -q clean "$project" >"$work/ocaml.out" 2>"$work/ocaml.err"
+ocaml_status=$?
+set -e
+if [ "$rust_status" -ne 0 ] || [ "$ocaml_status" -ne 0 ] || \
+  [ -s "$work/rust.out" ] || [ -s "$work/rust.err" ] || \
+  [ -s "$work/ocaml.out" ] || [ -s "$work/ocaml.err" ]; then
+  echo "Quiet redirected clean emitted output" >&2
+  printf '%s\n' '--- Rust output ---' >&2
+  cat "$work/rust.out" "$work/rust.err" >&2
+  printf '%s\n' '--- OCaml output ---' >&2
+  cat "$work/ocaml.out" "$work/ocaml.err" >&2
+  exit 1
+fi
+checked=$((checked + 1))
 run_cwd_case format-dependency-without-sources accept accept \
   "$work/dependency-without-sources" format
 if ! cmp -s "$work/rust.err" "$work/ocaml.err"; then
