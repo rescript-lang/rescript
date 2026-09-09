@@ -55,6 +55,14 @@ let () =
          with Config.Error message ->
            contains message "Could not read" && contains message directory_path)
         "configuration directories produce contextual config errors";
+      write_file path {|{"name":"missing-sources"}|};
+      let config = Config.load path in
+      check (not config.sources_defined)
+        "an omitted sources field remains distinguishable for package warnings";
+      write_file path {|{"name":"empty-sources","sources":[]}|};
+      let config = Config.load path in
+      check config.sources_defined
+        "an explicit empty sources field does not trigger the missing-field warning";
       write_file path
         {|{
           "name": "unknown-fields",

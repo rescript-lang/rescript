@@ -458,6 +458,12 @@ let report_missing_source_folder (config : Config.t) path =
     "ERROR:\nCould not read folder: %S. Specified in dependency: %s, located %S...\n%!"
     relative config.name config.root
 
+let report_missing_sources ~is_root (config : Config.t) =
+  if (not is_root) && not config.sources_defined then
+    Printf.eprintf
+      "WARN:\nPackage '%s' has not defined any sources, but is not the root package. This is likely a mistake. It is located: %s\n%!"
+      config.name config.root
+
 let validate_package_metadata (config : Config.t) =
   match Package_metadata.package_name config.root with
   | Error message -> raise (Error ("Could not initialize build: " ^ message))
@@ -591,6 +597,7 @@ let rec clean_internal ~(root_config : Config.t) ~seen ~folder:root ~prod
       if Config.exists_in_root root then (
         let config = Config.load config_path in
         validate_package_metadata config;
+        report_missing_sources ~is_root:(root = root_config.root) config;
         (* A consumer clean owns dependencies previously built in this build
            context, but not an independently built package's published tree. *)
         let owns_outputs =
@@ -1040,6 +1047,7 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
         | None -> features
       in
       let config = load_config root in
+      report_missing_sources ~is_root:(root = root_config.root) config;
       let config =
         match warn_error with
         | None -> config

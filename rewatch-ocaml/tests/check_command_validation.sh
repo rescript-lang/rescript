@@ -28,6 +28,8 @@ mkdir -p "$work/external-dev-source/src" \
   "$work/external-dev-source/node_modules/dep/test"
 mkdir -p "$work/missing-source-folder/src" \
   "$work/missing-source-folder/node_modules/dep"
+mkdir -p "$work/dependency-without-sources/src" \
+  "$work/dependency-without-sources/node_modules/dep"
 mkdir -p "$work/package-name-mismatch/src" "$work/malformed-package-json/src"
 mkdir -p "$work/mismatched-dependency/src" \
   "$work/mismatched-dependency/node_modules/dep/src"
@@ -78,6 +80,13 @@ printf '{"name":"missing-source-folder","sources":["src"],"dependencies":["dep"]
 printf 'let value = 1\n' >"$work/missing-source-folder/src/App.res"
 printf '{"name":"dep","sources":["missing"]}\n' \
   >"$work/missing-source-folder/node_modules/dep/rescript.json"
+printf '{"name":"dependency-without-sources","sources":["src"],"dependencies":["dep"]}\n' \
+  >"$work/dependency-without-sources/rescript.json"
+printf 'let value = 1\n' >"$work/dependency-without-sources/src/App.res"
+printf '{"name":"dep"}\n' \
+  >"$work/dependency-without-sources/node_modules/dep/rescript.json"
+printf '{"name":"dep"}\n' \
+  >"$work/dependency-without-sources/node_modules/dep/package.json"
 printf '{"name":"config-name","sources":["src"]}\n' \
   >"$work/package-name-mismatch/rescript.json"
 printf '{"name":"package-name"}\n' >"$work/package-name-mismatch/package.json"
@@ -160,6 +169,34 @@ run_case() {
   "$rust" "$@" >"$work/rust.out" 2>"$work/rust.err"
   rust_status=$?
   "$ocaml" "$@" >"$work/ocaml.out" 2>"$work/ocaml.err"
+  ocaml_status=$?
+  set -e
+  rust_actual=$(classify "$rust_status")
+  ocaml_actual=$(classify "$ocaml_status")
+  if [ "$rust_actual" != "$rust_expected" ] || \
+    [ "$ocaml_actual" != "$ocaml_expected" ]; then
+    printf '%s: expected Rust=%s/OCaml=%s, got Rust=%s/OCaml=%s\n' \
+      "$name" "$rust_expected" "$ocaml_expected" \
+      "$rust_status" "$ocaml_status" >&2
+    printf '%s\n' '--- Rust output ---' >&2
+    cat "$work/rust.out" "$work/rust.err" >&2
+    printf '%s\n' '--- OCaml output ---' >&2
+    cat "$work/ocaml.out" "$work/ocaml.err" >&2
+    exit 1
+  fi
+  checked=$((checked + 1))
+}
+
+run_cwd_case() {
+  name=$1
+  rust_expected=$2
+  ocaml_expected=$3
+  cwd=$4
+  shift 4
+  set +e
+  (cd "$cwd" && "$rust" "$@") >"$work/rust.out" 2>"$work/rust.err"
+  rust_status=$?
+  (cd "$cwd" && "$ocaml" "$@") >"$work/ocaml.out" 2>"$work/ocaml.err"
   ocaml_status=$?
   set -e
   rust_actual=$(classify "$rust_status")
@@ -274,6 +311,36 @@ if ! cmp -s "$work/rust.err" "$work/ocaml.err"; then
   cat "$work/ocaml.err" >&2
   exit 1
 fi
+run_case build-dependency-without-sources accept accept build \
+  "$work/dependency-without-sources"
+if ! cmp -s "$work/rust.err" "$work/ocaml.err"; then
+  echo "Dependency-without-sources diagnostics differ" >&2
+  printf '%s\n' '--- Rust output ---' >&2
+  cat "$work/rust.err" >&2
+  printf '%s\n' '--- OCaml output ---' >&2
+  cat "$work/ocaml.err" >&2
+  exit 1
+fi
+run_case clean-dependency-without-sources accept accept clean \
+  "$work/dependency-without-sources"
+if ! cmp -s "$work/rust.err" "$work/ocaml.err"; then
+  echo "Clean dependency-without-sources diagnostics differ" >&2
+  printf '%s\n' '--- Rust output ---' >&2
+  cat "$work/rust.err" >&2
+  printf '%s\n' '--- OCaml output ---' >&2
+  cat "$work/ocaml.err" >&2
+  exit 1
+fi
+run_cwd_case format-dependency-without-sources accept accept \
+  "$work/dependency-without-sources" format
+if ! cmp -s "$work/rust.err" "$work/ocaml.err"; then
+  echo "Format dependency-without-sources diagnostics differ" >&2
+  printf '%s\n' '--- Rust output ---' >&2
+  cat "$work/rust.out" "$work/rust.err" >&2
+  printf '%s\n' '--- OCaml output ---' >&2
+  cat "$work/ocaml.out" "$work/ocaml.err" >&2
+  exit 1
+fi
 run_case build-package-name-mismatch accept accept build \
   "$work/package-name-mismatch"
 if ! cmp -s "$work/rust.err" "$work/ocaml.err"; then
@@ -296,6 +363,17 @@ duplicate_warning='Duplicated package: shared ./node_modules/shared (chosen) vs 
 if ! grep -F "$duplicate_warning" "$work/rust.err" >/dev/null || \
   ! grep -F "$duplicate_warning" "$work/ocaml.err" >/dev/null; then
   echo "Duplicate dependency warning was not emitted by both implementations" >&2
+  printf '%s\n' '--- Rust output ---' >&2
+  cat "$work/rust.out" "$work/rust.err" >&2
+  printf '%s\n' '--- OCaml output ---' >&2
+  cat "$work/ocaml.out" "$work/ocaml.err" >&2
+  exit 1
+fi
+run_cwd_case format-duplicate-dependency accept accept \
+  "$work/duplicate-dependency" format
+if ! grep -F "$duplicate_warning" "$work/rust.err" >/dev/null || \
+  ! grep -F "$duplicate_warning" "$work/ocaml.err" >/dev/null; then
+  echo "Format duplicate dependency warning was not emitted by both implementations" >&2
   printf '%s\n' '--- Rust output ---' >&2
   cat "$work/rust.out" "$work/rust.err" >&2
   printf '%s\n' '--- OCaml output ---' >&2
@@ -419,6 +497,12 @@ run_case clean-missing-dependency exit2 exit2 clean "$work/missing-dependency"
 run_case clean-configless-dependency exit2 exit2 clean "$work/configless-dependency"
 run_case clean-malformed-dependency exit2 exit2 clean "$work/malformed-dependency"
 run_case watch-missing-dependency exit2 exit2 watch "$work/missing-dependency"
+run_cwd_case format-missing-dependency exit2 exit2 \
+  "$work/missing-dependency" format
+run_cwd_case format-configless-dependency exit2 exit2 \
+  "$work/configless-dependency" format
+run_cwd_case format-malformed-dependency exit2 exit2 \
+  "$work/malformed-dependency" format
 if [ -e "$work/missing-dependency/lib/build.lock" ] || \
   [ -e "$work/missing-dependency/lib/watch.lock" ]; then
   echo "OCaml dependency failures left a build or watch lock behind" >&2

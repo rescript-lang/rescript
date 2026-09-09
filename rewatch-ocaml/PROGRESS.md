@@ -44,6 +44,12 @@ differences:
   deleted checked-in legacy files that had no corresponding source or AST.
 - Standalone package builds refused to build dependencies resolved outside the
   invoked package directory.
+- Packages without a `sources` field lost Rust's non-root-package warning, and
+  implicit `format` selected the right local files but did not validate the
+  complete dependency graph first. Field presence is now retained separately
+  from an explicit empty source list; build, clean, and format emit the exact
+  warning, while format also rejects missing or malformed dependencies and
+  retains Rust's first-path duplicate-package selection and warning.
 
 The clean-build path now prepares all packages before launching compiler work,
 parses dirty sources as one global batch, emits namespaces as one global batch,
@@ -904,8 +910,11 @@ rerun it for the final maintainability review alongside maximum module size.
 - Incremental state currently relies on artifact timestamps, byte-identical CMI
   publication, and in-memory warning state during watch. Rust's richer
   compile-state model is not otherwise ported.
-- Full configuration validation parity, the filesystem-work portion of the
-  performance audit, and native Windows verification remain incomplete.
+- The remaining source-level validation inventory, final redirected-output
+  inventory, and native Windows verification remain incomplete. Configuration
+  schema acceptance and argument projection are complete; incremental
+  filesystem work is at or below Rust, while the explained clean-build driver
+  delta remains documented for future optimization.
 - Full validation coverage is now an explicit source-inventory gate in
   `PARITY_CHECKLIST.md`: every user-reachable Rust guard must map to an OCaml
   location and test or to a documented intentional divergence. Existing suite
@@ -1145,8 +1154,9 @@ rerun it for the final maintainability review alongside maximum module size.
 
 ## Next actions
 
-1. Finish the source-level validation and external-artifact inventory, closing confirmed
-   configuration/CLI gaps; the Rust unit-test coverage review is complete and
+1. Finish the remaining source-level validation and redirected-output
+   inventories, closing confirmed configuration/CLI/diagnostic gaps. The Rust
+   unit-test coverage and external control-file inventories are complete, and
    OpenTelemetry is an explicitly documented non-goal.
 2. Continue splitting `build.ml` along stable responsibility boundaries. The
    filesystem and artifact-ownership layer now lives in `build_artifacts.ml`;
