@@ -375,6 +375,7 @@ fi
 printf '{"name":"watch-config","sources":["src"],"package-specs":{"module":"esmodule","in-source":true,"suffix":".mjs"}}\n' \
   >"$work/watch-config-ocaml/rescript.json"
 wait_for_file "$work/watch-config-ocaml/src/A.mjs"
+wait_for_file "$work/watch-config-ocaml/lib/bs/build.ninja"
 kill -TERM "$ocaml_watch_pid"
 wait "$ocaml_watch_pid"
 checked=$((checked + 1))

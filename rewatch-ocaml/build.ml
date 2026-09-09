@@ -1988,10 +1988,20 @@ let write_source_dirs (root_config : Config.t) stats =
   in
   Source_dirs.write ~root:root_config.root ~dirs ~packages:package_roots ~scans
 
+let write_build_ninja stats =
+  Hashtbl.iter
+    (fun _ package ->
+      let path = Filename.concat package.graph_build_dir "build.ninja" in
+      let channel = open_out_bin path in
+      close_out channel)
+    stats.graph_packages
+
 let run_with_warning_state ~warning_state ~compilation_kind ~no_timing ~seen
     ~verbosity ~folder ~prod ~features ~warn_error ~watch ~after_build ~filter =
   let started_at = Unix.gettimeofday () in
   let interactive = Unix.isatty Unix.stdout && Unix.isatty Unix.stderr in
+  let is_rebuild = Option.is_some compilation_kind in
+  let should_write_build_ninja = (not watch) || is_rebuild in
   let root = project_root folder in
   let root_config = Config.load_root root in
   if verbosity > 0 then
@@ -2037,6 +2047,12 @@ let run_with_warning_state ~warning_state ~compilation_kind ~no_timing ~seen
     Hashtbl.clear stats.initialized_logs
   in
   let outputs_finished = ref false in
+  let build_ninja_written = ref false in
+  let write_build_ninja_once () =
+    if should_write_build_ninja && not !build_ninja_written then (
+      write_build_ninja stats;
+      build_ninja_written := true)
+  in
   let expose_watch_outputs () =
     !(stats.watch_outputs)
     |> List.rev
@@ -2091,6 +2107,7 @@ let run_with_warning_state ~warning_state ~compilation_kind ~no_timing ~seen
            ~seconds)
   in
   let report_failure output =
+    write_build_ninja_once ();
     report ~success:false ();
     prerr_string output;
     prerr_newline ();
@@ -2122,7 +2139,6 @@ let run_with_warning_state ~warning_state ~compilation_kind ~no_timing ~seen
   in
   let release_build_lock = acquire_build_lock (workspace_lock_root root) in
   let phase_seconds seconds = if no_timing then 0. else seconds in
-  let is_rebuild = Option.is_some compilation_kind in
   let parse_step = if is_rebuild then "1/2" else "2/3" in
   let compile_step = if is_rebuild then "2/2" else "3/3" in
   let execute () =
@@ -2187,6 +2203,7 @@ let run_with_warning_state ~warning_state ~compilation_kind ~no_timing ~seen
             stats.graph_packages)
         stats.compiler_context;
       write_source_dirs root_config stats;
+      write_build_ninja_once ();
       Option.iter
         (fun command ->
           expose_watch_outputs ();
