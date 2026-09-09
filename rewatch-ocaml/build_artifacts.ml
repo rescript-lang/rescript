@@ -211,8 +211,8 @@ type cleanup_result = {
   deferred_artifacts: string list;
 }
 
-let cleanup_stale ?ocaml_files ?source_files ~root ~ocaml_dir ~is_local
-    (config : Config.t) modules =
+let cleanup_stale ?ocaml_files ?ast_sources ?source_files ~root ~ocaml_dir
+    ~is_local (config : Config.t) modules =
   let build_dir = lib_path root "bs" in
   (* Keep one inventory of each artifact tree. Rewalking these trees for every
      cleanup phase made unchanged builds perform several times Rust's directory
@@ -223,7 +223,12 @@ let cleanup_stale ?ocaml_files ?source_files ~root ~ocaml_dir ~is_local
     | Some files -> files
     | None -> files_under ocaml_dir
   in
-  let build_files = files_under build_dir in
+  (* Published ASTs contain the absolute source path used to create them. That
+     is enough to address their working artifacts directly, as Rust does. Keep
+     the recursive walk lazy for malformed or legacy ASTs that cannot be
+     mapped; normal unchanged builds must not inventory the whole lib/bs tree. *)
+  let ast_sources = Option.value ast_sources ~default:[] in
+  let fallback_build_files = lazy (files_under build_dir) in
   let source_files =
     match source_files with
     | Some files -> files
@@ -293,6 +298,46 @@ let cleanup_stale ?ocaml_files ?source_files ~root ~ocaml_dir ~is_local
   let defer_working_cmi_until_after_compile basename =
     Filename.check_suffix basename ".cmi"
   in
+  let relative_to_root path =
+    let normalize = Platform.normalize_path_for_comparison in
+    let prefix = Filename.concat root "" in
+    let normalized_path = normalize path in
+    let normalized_prefix = normalize prefix in
+    if String.starts_with ~prefix:normalized_prefix normalized_path then
+      Some
+        (String.sub path (String.length prefix)
+           (String.length path - String.length prefix))
+    else None
+  in
+  let source_base path =
+    path |> Filename.basename |> Filename.remove_extension
+  in
+  let artifact_belongs_to_source basename source =
+    let artifact = Filename.remove_extension basename in
+    let source = source_base source in
+    artifact = source || String.starts_with ~prefix:(source ^ "-") artifact
+  in
+  let directly_mapped_working_paths basename =
+    let extension = Filename.extension basename in
+    if extension = ".mlmap" then [Filename.concat build_dir basename]
+    else
+      ast_sources
+      |> List.filter_map (fun (_, source) ->
+           if artifact_belongs_to_source basename source then
+             relative_to_root source
+             |> Option.map (fun relative_source ->
+                  Filename.concat build_dir
+                    (Filename.concat (Filename.dirname relative_source) basename))
+           else None)
+      |> List.sort_uniq String.compare
+  in
+  let working_paths basename =
+    match directly_mapped_working_paths basename with
+    | _ :: _ as paths -> paths
+    | [] ->
+      Lazy.force fallback_build_files
+      |> List.filter (fun path -> Filename.basename path = basename)
+  in
   ocaml_files
   |> List.iter (fun path ->
        let basename = Filename.basename path in
@@ -317,12 +362,13 @@ let cleanup_stale ?ocaml_files ?source_files ~root ~ocaml_dir ~is_local
          else if Filename.check_suffix basename ".iast" then
            removed_modules := Source.module_name basename :: !removed_modules;
          remove_file path;
-         build_files
+         working_paths basename
          |> List.iter (fun build_path ->
-              if Filename.basename build_path = basename then
-                if defer_working_cmi_until_after_compile basename then
+              if defer_working_cmi_until_after_compile basename then
+                if Sys.file_exists build_path then
                   deferred_artifacts := build_path :: !deferred_artifacts
-                else remove_file build_path)));
+                else ()
+              else remove_file build_path)));
   let configured_suffixes =
     List.map (Config.package_spec_suffix config) config.package_specs
   in
@@ -331,15 +377,6 @@ let cleanup_stale ?ocaml_files ?source_files ~root ~ocaml_dir ~is_local
     String.sub path (String.length prefix)
       (String.length path - String.length prefix)
   in
-  let previously_generated = Hashtbl.create 32 in
-  build_files
-  |> List.iter (fun path ->
-       generated_output_details path
-       |> Option.iter (fun (_, _, output_path) ->
-            (* A map alone is not enough provenance to delete a public file. *)
-            if path = output_path then
-              Hashtbl.replace previously_generated
-                (relative_under build_dir output_path) ()));
   let expected_outputs =
     Hashtbl.create (List.length modules * List.length config.package_specs)
   in
@@ -362,13 +399,18 @@ let cleanup_stale ?ocaml_files ?source_files ~root ~ocaml_dir ~is_local
            List.mem (String.capitalize_ascii name) !removed_modules
          in
          (removed && List.mem suffix configured_suffixes)
-         || (is_local && Hashtbl.mem previously_generated build_relative))
+         ||
+         (* A map alone is not enough provenance to delete a public file. The
+            mirrored output has the same relative path below lib/bs, so probe
+            that one path instead of scanning the entire working tree. *)
+         (is_local
+         && Sys.file_exists (Filename.concat build_dir build_relative)))
   in
-  let removed_outputs = Hashtbl.create 16 in
   let remove_output ~build_relative path =
-    generated_output_details path
-    |> Option.iter (fun _ -> Hashtbl.replace removed_outputs build_relative ());
-    remove_file path
+    remove_file path;
+    let working_output = Filename.concat build_dir build_relative in
+    remove_file working_output;
+    remove_file (working_output ^ ".map")
   in
   source_files
   |> List.iter (fun path ->
@@ -386,14 +428,6 @@ let cleanup_stale ?ocaml_files ?source_files ~root ~ocaml_dir ~is_local
                  let build_relative = relative_under output_dir output_path in
                  if should_remove_output ~build_relative path then
                    remove_output ~build_relative path)));
-  build_files
-  |> List.iter (fun path ->
-       generated_output_details path
-       |> Option.iter (fun (_, _, output_path) ->
-            if
-              Hashtbl.mem removed_outputs
-                (relative_under build_dir output_path)
-            then remove_file path));
   {
     removed_modules = !removed_modules;
     previous_ast_count = !previous_ast_count;

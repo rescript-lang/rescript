@@ -18,18 +18,24 @@ let () =
     let first = Filename.concat root "Example.cmi" in
     let second = Filename.concat root "example.cmt" in
     let unrelated = Filename.concat root "notes.txt" in
+    let source = Filename.concat root "src/Example.res" in
+    let ast = Filename.concat root "Example.ast" in
     let nested = Filename.concat root "nested" in
     write first "cmi";
     write second "cmt";
     write unrelated "notes";
+    write ast ("Caml1999X\nDependency\n" ^ source ^ "\nbinary payload");
     Unix.mkdir nested 0o755;
     write (Filename.concat nested "Nested.cmi") "nested";
     let state = Compile_assets.create [root; root] in
     check
       (Compile_assets.files state root
       |> List.sort String.compare
-      = List.sort String.compare [first; second; unrelated])
+      = List.sort String.compare [ast; first; second; unrelated])
       "one flat package inventory is retained for cleanup";
+    check
+      (Compile_assets.ast_sources state root = [(ast, source)])
+      "published ASTs retain their encoded absolute source location";
     check (Option.is_some (Compile_assets.cmi state "Example"))
       "CMI entries use compiler module keys";
     check (Option.is_some (Compile_assets.cmt state "Example"))
