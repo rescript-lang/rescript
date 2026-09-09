@@ -219,8 +219,8 @@ let tests =
         }|};
       let config = Config.load path in
       check
-        (Build.compiler_flags ~source_maps:false ~watch:false ~gentype:false
-           config
+        (Compiler_args.compiler_flags ~source_maps:false ~watch:false
+           ~gentype:false config
         = [
             "-bs-jsx-mode";
             "automatic";
@@ -233,8 +233,8 @@ let tests =
           ])
         "parser arguments follow Rust phase ordering";
       check
-        (Build.compiler_flags ~source_maps:true ~watch:false ~gentype:true
-           config
+        (Compiler_args.compiler_flags ~source_maps:true ~watch:false
+           ~gentype:true config
         = [
             "-bs-jsx-mode";
             "automatic";
@@ -262,12 +262,12 @@ let tests =
         ]
       in
       check
-        (Build.filter_ppx_flags ~bisect_enabled:false optional_ppx
+        (Compiler_args.filter_ppx_flags ~bisect_enabled:false optional_ppx
            "let value = 1"
         = [["always"]])
         "source-specific and disabled Bisect PPXs are filtered";
       check
-        (Build.filter_ppx_flags ~bisect_enabled:true optional_ppx
+        (Compiler_args.filter_ppx_flags ~bisect_enabled:true optional_ppx
            "%graphql @spice %relay %form"
         = [
             ["graphql-ppx"];
@@ -281,7 +281,7 @@ let tests =
         "source markers and the Bisect environment enable their PPXs";
       check
         (match
-           Build.compiler_flags
+           Compiler_args.compiler_flags
              ~ppx_flags:[["tool"; "--arg"]]
              ~source_maps:false ~watch:false ~gentype:false config
          with
