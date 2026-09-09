@@ -34,18 +34,31 @@ if ! wait_for_pattern_count rewatch.log "Finished .*compilation" 1 30; then
   exit_watcher
   exit 1
 fi
+completed_builds=$(grep -c "Finished .*compilation" rewatch.log 2>/dev/null || true)
+completed_builds=${completed_builds:-0}
+wait_for_next_build() {
+  completed_builds=$((completed_builds + 1))
+  wait_for_pattern_count rewatch.log "Finished .*compilation" \
+    "$completed_builds" 30
+}
 
 # Change the suffix in rescript.json (same approach as suffix test)
 replace "s/.mjs/.res.mjs/g" rescript.json
+if ! wait_for_next_build; then
+  error "Configuration rebuild did not settle"
+  cat rewatch.log
+  replace "s/.res.mjs/.mjs/g" rescript.json
+  exit_watcher
+  exit 1
+fi
 
 # After a config change, the watcher does a full rebuild. However, a suffix
 # change alone may not recompile files (sources haven't changed). Trigger a
 # source change so the watcher compiles with the new suffix.
-sleep 3
 echo '// config-change-test' >> ./src/Test.res
 
-# Wait for the file with the new suffix to appear
-if wait_for_file "./src/Test.res.mjs" 20; then
+# Wait for the file with the new suffix and the complete source rebuild.
+if wait_for_file "./src/Test.res.mjs" 20 && wait_for_next_build; then
   success "Full rebuild triggered by rescript.json change (new suffix applied)"
 else
   error "No rebuild detected after rescript.json change"
@@ -67,19 +80,25 @@ else
   exit 1
 fi
 
-# Restore rescript.json and source file
-completed_builds=$(grep -c "Finished .*compilation" rewatch.log 2>/dev/null || true)
-completed_builds=${completed_builds:-0}
+# Restore the configuration and source as separate, observable transitions so
+# one build's final marker cannot be mistaken for the next build's completion.
 replace "s/.res.mjs/.mjs/g" rescript.json
-restore_tracked_files ./src/Test.res
-
-# Wait for the complete rebuild, not merely its early stale-output cleanup.
-if wait_for_pattern_count rewatch.log "Finished .*compilation" "$((completed_builds + 1))" 30 \
-  && wait_for_file_gone "./src/Test.res.mjs" 20; then
+if wait_for_next_build && wait_for_file_gone "./src/Test.res.mjs" 20; then
   success "Rebuild after restore removed old suffix files"
 else
-  # Clean up manually if the watcher didn't remove them
+  error "Configuration restore did not settle"
   find . -name "*.res.mjs" -delete 2>/dev/null
+  restore_tracked_files ./src/Test.res
+  exit_watcher
+  exit 1
+fi
+
+restore_tracked_files ./src/Test.res
+if ! wait_for_next_build; then
+  error "Source restore did not settle"
+  cat rewatch.log
+  exit_watcher
+  exit 1
 fi
 
 if ! exit_watcher; then
