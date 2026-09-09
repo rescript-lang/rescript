@@ -32,6 +32,7 @@ let no_version_header = ref false
 
 let directives = ref []
 let cross_module_inline = ref false
+let platform_interface = ref false
 let debug_ir = ref false
 let check_lam = ref false
 

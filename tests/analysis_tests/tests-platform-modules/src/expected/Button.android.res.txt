@@ -1,0 +1,8 @@
+Hover src/Button.android.res 10:3
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\ntoken => string\n```\n\n---\n\n```\n \n```\n```rescript\ntype token = {name: string}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Button.android.res%22%2C0%2C0%5D)\n"
+  }
+}
+

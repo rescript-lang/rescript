@@ -35,9 +35,38 @@ recommended for new projects.
 | entries               | array of Target-Item    |                                                             |     [_]      |
 | bs-external-includes  | array of string         |                                                             |     [_]      |
 | suffix                | Suffix                  |                                                             |     [x]      |
+| platforms             | array of string         | Shared-interface platform modules; see below                |     [x]      |
 | reanalyze             | Reanalyze               | Reanalyze config; ignored by rewatch                        |     [x]      |
 | experimental-features | ExperimentalFeatures    |                                                             |     [x]      |
 | editor                | object                  | VS Code tooling only; ignored by rewatch                    |     [x]      |
+
+### Platform modules
+
+`platforms` enables platform-specific implementations behind one ordinary
+interface. The first entry is the primary implementation used for compiler
+artifacts and editor navigation; generated JavaScript still contains every
+configured variant.
+
+```json
+{"platforms": ["android", "ios"]}
+```
+
+For a module named `Button`, the source layout is:
+
+```text
+Button.resi
+Button.android.res
+Button.ios.res
+```
+
+Every configured implementation is required and checked against `Button.resi`.
+The outputs are `Button.android.js` and `Button.ios.js` (using the configured JS
+suffix), while ordinary consumers emit an extensionless import of `Button` so a
+platform-aware resolver such as Metro can select the implementation. Generic
+fallbacks, `.native.res`, and platform-specific interfaces are not supported.
+
+Platform names must begin with a lowercase ASCII letter and contain only
+lowercase letters, digits, and underscores.
 
 ### Source
 

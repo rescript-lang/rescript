@@ -249,6 +249,9 @@ let command_line_flags : (string * Bsc_args.spec * string) array =
     ( "-bs-read-cmi",
       unit_call (fun _ -> Clflags.assume_no_mli := Mli_exists),
       "*internal* Assume mli always exist " );
+    ( "-bs-platform-interface",
+      set Js_config.platform_interface,
+      "*internal* Emit platform-independent cmj metadata" );
     ( "-ppx",
       string_list_add Clflags.all_ppx,
       "*internal* <command>  Pipe abstract syntax trees through preprocessor \

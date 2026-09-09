@@ -1,0 +1,8 @@
+Hover src/Button.ios.res 10:3
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nint => string\n```"
+  }
+}
+

@@ -125,7 +125,30 @@ pub fn get_compiler_args(rescript_file_path: &Path) -> Result<String> {
         /* warn_error_override */ None,
     )?;
     let is_interface = filename.to_string_lossy().ends_with('i');
-    let has_interface = if is_interface {
+    let platform = project_context
+        .current_config
+        .platforms
+        .as_deref()
+        .and_then(|platforms| helpers::platform_implementation(relative_filename, platforms))
+        .map(|(name, logical_path)| PlatformImplementation {
+            logical_module_name: helpers::file_path_to_module_name(
+                &logical_path,
+                &project_context.current_config.get_namespace(),
+            ),
+            primary: project_context
+                .current_config
+                .platforms
+                .as_ref()
+                .and_then(|platforms| platforms.first())
+                == Some(&name),
+            name,
+            logical_path,
+        });
+    let has_interface = if let Some(platform) = &platform {
+        current_package
+            .join(platform.logical_path.with_extension("resi"))
+            .exists()
+    } else if is_interface {
         true
     } else {
         let mut interface_filename = filename.to_string_lossy().to_string();
@@ -145,6 +168,7 @@ pub fn get_compiler_args(rescript_file_path: &Path) -> Result<String> {
         None, // No warn_error_override for compiler-args command
         SourceMapCommand::Build,
         &[], // Source dirs not available outside full build; gentype falls back to defaults.
+        platform.as_ref(),
     )?;
 
     let result = serde_json::to_string_pretty(&CompilerArgs {
@@ -207,6 +231,7 @@ pub fn initialize_build(
         source_map_command,
     );
     packages::parse_packages(&mut build_state)?;
+    clean::reconcile_platform_outputs(&build_state);
 
     let compile_assets_state = read_compile_state::read(&mut build_state)?;
 
@@ -434,16 +459,21 @@ pub fn incremental_build_without_lock(
         .unwrap(),
     );
 
-    let (compile_errors, compile_warnings, num_compiled_modules) = compile::compile(
+    let compile_result = compile::compile(
         build_state,
         show_progress,
         || pb.inc(1),
         |size| pb.set_length(size),
-    )
-    .map_err(|e| IncrementalBuildError {
-        kind: IncrementalBuildErrorKind::CompileError(Some(e.to_string())),
-        plain_output,
-    })?;
+    );
+    // Compilation may emit some platform files before another module fails.
+    // Persist the current output set for the next build's stale-file cleanup
+    // regardless of this build's outcome.
+    clean::write_platform_outputs(build_state);
+    let (compile_errors, compile_warnings, num_compiled_modules) =
+        compile_result.map_err(|e| IncrementalBuildError {
+            kind: IncrementalBuildErrorKind::CompileError(Some(e.to_string())),
+            plain_output,
+        })?;
 
     let compile_duration = start_compiling.elapsed();
 

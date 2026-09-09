@@ -127,6 +127,11 @@ pub fn get_deps(build_state: &mut BuildState, deleted_modules: &AHashSet<String>
                             build_state,
                         ))
                     }
+                    if let Some(platform) = &source_file.implementation.platform
+                        && !platform.primary
+                    {
+                        deps.insert(platform.logical_module_name.clone());
+                    }
                     match &package.namespace {
                         packages::Namespace::NamespaceWithEntry { namespace: _, entry }
                             if entry == module_name =>

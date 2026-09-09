@@ -25,6 +25,7 @@ Focused documentation:
 - [monorepo discovery and build scope](MonorepoSupport.md)
 - [feature-gated source directories](Features.md)
 - [integration-test workspace](testrepo/README.md)
+- [platform module acceptance tests](tests/platforms/README.md)
 
 The ReScript website owns user-facing configuration documentation. The support
 matrix in this directory records what the current Rewatch implementation

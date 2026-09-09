@@ -210,6 +210,50 @@ fn carry_forward_compile_warnings(previous: &BuildCommandState, next: &mut Build
     }
 }
 
+fn mark_source_path_dirty(build_state: &mut BuildCommandState, source_path: &Path) -> bool {
+    let modified = source_path
+        .metadata()
+        .and_then(|metadata| metadata.modified())
+        .ok();
+    let mut matched = false;
+
+    for (module_name, package_name) in build_state.module_name_package_pairs() {
+        let package_path = build_state
+            .build_state
+            .packages
+            .get(&package_name)
+            .expect("Package not found")
+            .path
+            .clone();
+        let Some(module) = build_state.build_state.modules.get_mut(&module_name) else {
+            continue;
+        };
+        let SourceType::SourceFile(source_file) = &mut module.source_type else {
+            continue;
+        };
+
+        if source_path == package_path.join(&source_file.implementation.path) {
+            if let Some(modified) = modified {
+                source_file.implementation.last_modified = modified;
+            }
+            source_file.implementation.parse_dirty = true;
+            return true;
+        }
+
+        if let Some(interface) = &mut source_file.interface
+            && source_path == package_path.join(&interface.path)
+        {
+            if let Some(modified) = modified {
+                interface.last_modified = modified;
+            }
+            interface.parse_dirty = true;
+            matched = true;
+        }
+    }
+
+    matched
+}
+
 fn should_clear_screen(clear_screen: bool, show_progress: bool, plain_output: bool) -> bool {
     clear_screen && show_progress && !plain_output
 }
@@ -371,51 +415,7 @@ async fn async_watch(
                             .canonicalize()
                             .map(StrippedVerbatimPath::to_stripped_verbatim_path)
                         {
-                            // Collect package names first to avoid borrow checker issues
-                            let module_package_pairs = build_state.module_name_package_pairs();
-
-                            for (module_name, package_name) in module_package_pairs {
-                                let package = build_state
-                                    .build_state
-                                    .packages
-                                    .get(&package_name)
-                                    .expect("Package not found");
-
-                                if let Some(module) = build_state.build_state.modules.get_mut(&module_name) {
-                                    match module.source_type {
-                                        SourceType::SourceFile(ref mut source_file) => {
-                                        let canonicalized_implementation_file =
-                                            package.path.join(&source_file.implementation.path);
-                                        if canonicalized_path_buf == canonicalized_implementation_file {
-                                            if let Ok(modified) =
-                                                canonicalized_path_buf.metadata().and_then(|x| x.modified())
-                                            {
-                                                source_file.implementation.last_modified = modified;
-                                            };
-                                            source_file.implementation.parse_dirty = true;
-                                            break;
-                                        }
-
-                                        // mark the interface file dirty
-                                        if let Some(ref mut interface) = source_file.interface {
-                                            let canonicalized_interface_file =
-                                                package.path.join(&interface.path);
-                                            if canonicalized_path_buf == canonicalized_interface_file {
-                                                if let Ok(modified) = canonicalized_path_buf
-                                                    .metadata()
-                                                    .and_then(|x| x.modified())
-                                                {
-                                                    interface.last_modified = modified;
-                                                }
-                                                interface.parse_dirty = true;
-                                                break;
-                                            }
-                                        }
-                                        }
-                                        SourceType::MlMap(_) => (),
-                                    }
-                                }
-                            }
+                            mark_source_path_dirty(&mut build_state, &canonicalized_path_buf);
                             needs_compile_type = CompileType::Incremental;
                         }
                     }
@@ -768,6 +768,7 @@ mod tests {
             source_type: SourceType::SourceFile(SourceFile {
                 implementation: Implementation {
                     path: PathBuf::from(implementation_path),
+                    platform: None,
                     parse_state: ParseState::Success,
                     compile_state: implementation_compile_state,
                     last_modified: SystemTime::UNIX_EPOCH,
@@ -869,5 +870,31 @@ mod tests {
 
         assert_eq!(interface.compile_warnings.as_deref(), Some("warning: interface"));
         assert_eq!(interface.compile_state, CompileState::Warning);
+    }
+
+    #[test]
+    fn shared_interface_edit_marks_every_platform_implementation_dirty() {
+        let mut state = test_build_state(
+            "Button",
+            test_module("src/Button.android.res", None, Some("src/Button.resi"), None),
+        );
+        state.insert_module(
+            "Button$$platform$ios",
+            test_module("src/Button.ios.res", None, Some("src/Button.resi"), None),
+        );
+
+        assert!(mark_source_path_dirty(
+            &mut state,
+            Path::new("/tmp/rewatch-warning-carry-forward/src/Button.resi")
+        ));
+
+        for module_name in ["Button", "Button$$platform$ios"] {
+            let SourceType::SourceFile(source_file) = &state.get_module(module_name).unwrap().source_type
+            else {
+                panic!("expected source file");
+            };
+            assert!(source_file.interface.as_ref().unwrap().parse_dirty);
+            assert!(!source_file.implementation.parse_dirty);
+        }
     }
 }

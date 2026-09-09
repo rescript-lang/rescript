@@ -676,10 +676,16 @@ fn extend_with_children(
             .into_iter()
             .for_each(|source| map.extend(source));
 
-        let mut modules = AHashSet::from_iter(
-            map.keys()
-                .map(|key| helpers::file_path_to_module_name(key, &package.namespace)),
-        );
+        let mut modules = AHashSet::from_iter(map.keys().map(|key| {
+            let logical_path = package
+                .config
+                .platforms
+                .as_deref()
+                .and_then(|platforms| helpers::platform_implementation(key, platforms))
+                .map(|(_, logical_path)| logical_path)
+                .unwrap_or_else(|| key.to_path_buf());
+            helpers::file_path_to_module_name(&logical_path, &package.namespace)
+        }));
         match package.namespace.to_owned() {
             Namespace::Namespace(namespace) => {
                 let _ = modules.insert(namespace);
@@ -990,11 +996,77 @@ pub fn parse_packages(build_state: &mut BuildState) -> Result<()> {
 
         debug!("Building source file-tree for package: {}", package.name);
         if let Some(source_files) = &package.source_files {
-            for (file, metadata) in source_files.iter() {
+            let platforms = package.config.platforms.as_deref().unwrap_or(&[]);
+            let primary_platform = platforms.first().map(String::as_str);
+
+            for file in source_files.keys() {
+                if let Some((platform, common_interface)) = helpers::platform_interface(file, platforms) {
+                    return Err(anyhow!(
+                        "Platform-specific interface '{}' is not supported. Use the shared interface '{}' for the '{}' implementation.",
+                        file.display(),
+                        common_interface.display(),
+                        platform
+                    ));
+                }
+            }
+
+            for file in source_files
+                .keys()
+                .filter(|file| helpers::platform_implementation(file, platforms).is_some())
+            {
+                let (_, logical_path) = helpers::platform_implementation(file, platforms).unwrap();
+                let interface_path = logical_path.with_extension("resi");
+                if !source_files.contains_key(&interface_path) {
+                    return Err(anyhow!(
+                        "Platform module '{}' requires a shared interface '{}'.",
+                        file.display(),
+                        interface_path.display()
+                    ));
+                }
+                if source_files.contains_key(&logical_path) {
+                    return Err(anyhow!(
+                        "Platform module family '{}' cannot also contain '{}'. Generic fallbacks are not supported yet.",
+                        helpers::file_path_to_module_name(&logical_path, &package.namespace),
+                        logical_path.display()
+                    ));
+                }
+                for platform in platforms {
+                    let expected = logical_path.with_file_name(format!(
+                        "{}.{}.res",
+                        logical_path.file_stem().unwrap().to_string_lossy(),
+                        platform
+                    ));
+                    if !source_files.contains_key(&expected) {
+                        return Err(anyhow!(
+                            "Platform module '{}' is missing implementation '{}'.",
+                            helpers::file_path_to_module_name(&logical_path, &package.namespace),
+                            expected.display()
+                        ));
+                    }
+                }
+            }
+
+            let mut files = source_files.iter().collect::<Vec<_>>();
+            // Platform interfaces must be attached after all their implementation
+            // nodes exist. Ordinary source pairing remains order-independent.
+            files.sort_by_key(|(file, _)| {
+                helpers::is_interface_file(file.extension().unwrap().to_str().unwrap())
+            });
+            for (file, metadata) in files {
                 let namespace = package.namespace.to_owned();
 
                 let extension = file.extension().unwrap().to_str().unwrap();
-                let module_name = helpers::file_path_to_module_name(file, &namespace);
+                let platform_implementation = helpers::platform_implementation(file, platforms);
+                let logical_module_name = platform_implementation
+                    .as_ref()
+                    .map(|(_, logical_path)| helpers::file_path_to_module_name(logical_path, &namespace));
+                let module_name = match (&platform_implementation, &logical_module_name) {
+                    (Some((platform, _)), Some(logical)) if Some(platform.as_str()) != primary_platform => {
+                        format!("{logical}$$platform${platform}")
+                    }
+                    (_, Some(logical)) => logical.clone(),
+                    _ => helpers::file_path_to_module_name(file, &namespace),
+                };
 
                 if helpers::is_implementation_file(extension) {
                     // Store duplicate paths in an Option so we can build the error after the entry borrow ends.
@@ -1020,6 +1092,16 @@ pub fn parse_packages(build_state: &mut BuildState) -> Result<()> {
                                 source_type: SourceType::SourceFile(SourceFile {
                                     implementation: Implementation {
                                         path: file.to_owned(),
+                                        platform: platform_implementation.as_ref().map(
+                                            |(platform, logical_path)| {
+                                                Box::new(PlatformImplementation {
+                                                    name: platform.clone(),
+                                                    logical_path: logical_path.clone(),
+                                                    logical_module_name: logical_module_name.clone().unwrap(),
+                                                    primary: Some(platform.as_str()) == primary_platform,
+                                                })
+                                            },
+                                        ),
                                         parse_state: ParseState::Pending,
                                         compile_state: CompileState::Pending,
                                         last_modified: metadata.modified,
@@ -1064,6 +1146,40 @@ pub fn parse_packages(build_state: &mut BuildState) -> Result<()> {
                     };
                     match source_files.get(&implementation_filename) {
                         None => {
+                            let platform_nodes = build_state
+                                .modules
+                                .iter()
+                                .filter_map(|(name, module)| match &module.source_type {
+                                    SourceType::SourceFile(source_file)
+                                        if module.package_name == package.name
+                                            && source_file.implementation.platform.as_ref().is_some_and(
+                                                |platform| platform.logical_path == implementation_filename,
+                                            ) =>
+                                    {
+                                        Some(name.clone())
+                                    }
+                                    _ => None,
+                                })
+                                .collect::<Vec<_>>();
+                            if !platform_nodes.is_empty() {
+                                for name in platform_nodes {
+                                    if let Some(Module {
+                                        source_type: SourceType::SourceFile(source_file),
+                                        ..
+                                    }) = build_state.modules.get_mut(&name)
+                                    {
+                                        source_file.interface = Some(Interface {
+                                            path: file.to_owned(),
+                                            parse_state: ParseState::Pending,
+                                            compile_state: CompileState::Pending,
+                                            last_modified: metadata.modified,
+                                            parse_dirty: true,
+                                            compile_warnings: None,
+                                        });
+                                    }
+                                }
+                                continue;
+                            }
                             if let Some(implementation_path) = source_files.keys().find(|path| {
                                 let extension = path.extension().and_then(|ext| ext.to_str());
                                 matches!(extension, Some(ext) if helpers::is_implementation_file(ext))
@@ -1106,6 +1222,7 @@ pub fn parse_packages(build_state: &mut BuildState) -> Result<()> {
                                         // this will be overwritten later
                                         implementation: Implementation {
                                             path: implementation_filename,
+                                            platform: None,
                                             parse_state: ParseState::Pending,
                                             compile_state: CompileState::Pending,
                                             last_modified: metadata.modified,
@@ -1247,14 +1364,18 @@ pub fn validate_packages_dependencies(packages: &AHashMap<String, Package>) -> b
 
 #[cfg(test)]
 mod test {
+    use crate::build::build_types::{BuildState, CompilerInfo, SourceType};
     use crate::config;
     use crate::project_context::{MonoRepoContext, ProjectContext};
 
-    use super::{Namespace, Package, read_issue_tracker_url, read_package_name};
+    use super::{
+        Namespace, Package, SourceFileMeta, parse_packages, read_issue_tracker_url, read_package_name,
+    };
     use ahash::{AHashMap, AHashSet};
     use std::fs;
     use std::path::PathBuf;
     use std::sync::RwLock;
+    use std::time::{Duration, SystemTime};
     use tempfile::TempDir;
 
     pub struct CreatePackageArgs {
@@ -1285,6 +1406,101 @@ mod test {
             is_local_dep: false,
         }
     }
+
+    fn platform_package(
+        root: &std::path::Path,
+        name: &str,
+        namespace: &str,
+        modified: SystemTime,
+        is_root: bool,
+    ) -> Package {
+        let path = root.join(name);
+        fs::create_dir_all(path.join("src")).expect("package source directory should be created");
+        let mut config = config::tests::create_config(config::tests::CreateConfigArgs {
+            name: name.to_string(),
+            bs_deps: vec![],
+            build_dev_deps: vec![],
+            allowed_dependents: None,
+            path: path.join("rescript.json"),
+        });
+        config.platforms = Some(vec!["android".to_string(), "ios".to_string()]);
+        let source_files = ["Button.android.res", "Button.ios.res", "Button.resi"]
+            .into_iter()
+            .map(|file| {
+                (
+                    PathBuf::from("src").join(file),
+                    SourceFileMeta {
+                        modified,
+                        is_type_dev: false,
+                    },
+                )
+            })
+            .collect();
+        Package {
+            name: name.to_string(),
+            config,
+            source_folders: AHashSet::new(),
+            source_files: Some(source_files),
+            namespace: Namespace::Namespace(namespace.to_string()),
+            modules: None,
+            path,
+            dirs: None,
+            gentype_dirs: None,
+            is_local_dep: true,
+            is_root,
+        }
+    }
+
+    #[test]
+    fn platform_interfaces_only_attach_to_modules_in_their_package() {
+        let temp_dir = TempDir::new().expect("temp dir should be created");
+        let first_modified = SystemTime::UNIX_EPOCH + Duration::from_secs(1);
+        let second_modified = SystemTime::UNIX_EPOCH + Duration::from_secs(2);
+        let first = platform_package(temp_dir.path(), "first", "First", first_modified, true);
+        let second = platform_package(temp_dir.path(), "second", "Second", second_modified, false);
+        let current_config = first.config.clone();
+        let mut packages = AHashMap::new();
+        packages.insert(first.name.clone(), first);
+        packages.insert(second.name.clone(), second);
+        let project_context = ProjectContext {
+            current_config,
+            monorepo_context: None,
+            node_modules_exist_cache: RwLock::new(AHashMap::new()),
+            packages_cache: RwLock::new(AHashMap::new()),
+        };
+        let compiler = CompilerInfo {
+            bsc_path: temp_dir.path().join("bsc"),
+            bsc_hash: blake3::hash(b"test-bsc"),
+            runtime_path: temp_dir.path().join("runtime"),
+        };
+        let mut build_state = BuildState::new(
+            project_context,
+            packages,
+            compiler,
+            config::SourceMapCommand::Build,
+        );
+
+        parse_packages(&mut build_state).expect("packages should parse");
+
+        for (package_name, expected_modified) in [("first", first_modified), ("second", second_modified)] {
+            let interfaces = build_state
+                .modules
+                .values()
+                .filter(|module| module.package_name == package_name)
+                .filter_map(|module| match &module.source_type {
+                    SourceType::SourceFile(source_file) => source_file.interface.as_ref(),
+                    SourceType::MlMap(_) => None,
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(interfaces.len(), 2);
+            assert!(
+                interfaces
+                    .iter()
+                    .all(|interface| interface.last_modified == expected_modified)
+            );
+        }
+    }
+
     #[test]
     fn should_return_false_with_invalid_parents_as_bs_dependencies() {
         let mut packages: AHashMap<String, Package> = AHashMap::new();

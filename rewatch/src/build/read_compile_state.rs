@@ -13,6 +13,43 @@ pub fn read(build_state: &mut BuildCommandState) -> anyhow::Result<CompileAssets
     let mut cmt_modules: AHashMap<String, SystemTime> = AHashMap::new();
     let mut ast_rescript_file_locations = AHashSet::new();
 
+    let mut source_path_module_names = AHashMap::new();
+    let mut platform_cmt_module_names = AHashMap::new();
+    for (module_name, module) in &build_state.modules {
+        let SourceType::SourceFile(source_file) = &module.source_type else {
+            continue;
+        };
+        let package = build_state.packages.get(&module.package_name).unwrap();
+        source_path_module_names.insert(
+            (
+                module.package_name.clone(),
+                package.path.join(&source_file.implementation.path),
+            ),
+            module_name.clone(),
+        );
+        if source_file
+            .implementation
+            .platform
+            .as_ref()
+            .is_none_or(|platform| platform.primary)
+            && let Some(interface) = &source_file.interface
+        {
+            source_path_module_names.insert(
+                (module.package_name.clone(), package.path.join(&interface.path)),
+                module_name.clone(),
+            );
+        }
+        if let Some(platform) = &source_file.implementation.platform {
+            platform_cmt_module_names.insert(
+                (
+                    module.package_name.clone(),
+                    format!("{}.{}", platform.logical_module_name, platform.name),
+                ),
+                module_name.clone(),
+            );
+        }
+    }
+
     let mut rescript_file_locations = build_state
         .modules
         .values()
@@ -79,9 +116,11 @@ pub fn read(build_state: &mut BuildCommandState) -> anyhow::Result<CompileAssets
         |(path, last_modified, extension, package_name, package_namespace, package_is_root)| {
             match extension.as_str() {
                 "iast" | "ast" => {
-                    let module_name = helpers::file_path_to_module_name(path, package_namespace);
-
                     if let Some(res_file_path_buf) = get_res_path_from_ast(path) {
+                        let module_name = source_path_module_names
+                            .get(&(package_name.clone(), res_file_path_buf.clone()))
+                            .cloned()
+                            .unwrap_or_else(|| helpers::file_path_to_module_name(path, package_namespace));
                         let _ = ast_modules.insert(
                             res_file_path_buf.clone(),
                             AstModule {
@@ -108,12 +147,16 @@ pub fn read(build_state: &mut BuildCommandState) -> anyhow::Result<CompileAssets
                     cmi_modules.insert(module_name, last_modified.to_owned());
                 }
                 "cmt" => {
-                    let module_name = helpers::file_path_to_module_name(
+                    let physical_name = helpers::file_path_to_module_name(
                         path,
                         // we don't want to include a namespace here because the CMI file
                         // already includes a namespace
                         &packages::Namespace::NoNamespace,
                     );
+                    let module_name = platform_cmt_module_names
+                        .get(&(package_name.clone(), physical_name.clone()))
+                        .cloned()
+                        .unwrap_or(physical_name);
                     cmt_modules.insert(module_name, last_modified.to_owned());
                 }
                 _ => {

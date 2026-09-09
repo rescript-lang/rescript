@@ -555,6 +555,9 @@ pub struct Config {
     pub package_specs: Option<OneOrMore<PackageSpec>>,
     pub warnings: Option<Warnings>,
     pub suffix: Option<String>,
+    /// File-name suffixes recognized as platform implementations, for example
+    /// `Button.android.res` and `Button.ios.res`.
+    pub platforms: Option<Vec<String>>,
     #[serde(alias = "bs-dependencies")]
     pub dependencies: Option<Vec<Dependency>>,
     #[serde(rename = "dev-dependencies", alias = "bs-dev-dependencies")]
@@ -772,6 +775,26 @@ impl Config {
         }
 
         config.handle_deprecations()?;
+        if let Some(platforms) = &config.platforms {
+            if platforms.is_empty() {
+                return Err(anyhow!("'platforms' must contain at least one platform"));
+            }
+            let mut seen = std::collections::HashSet::new();
+            for platform in platforms {
+                if platform.is_empty()
+                    || !platform.chars().enumerate().all(|(index, ch)| {
+                        ch.is_ascii_lowercase() || (index > 0 && (ch.is_ascii_digit() || ch == '_'))
+                    })
+                {
+                    return Err(anyhow!(
+                        "Invalid platform '{platform}'. Platform names must start with a lowercase ASCII letter and contain only lowercase letters, digits, and underscores"
+                    ));
+                }
+                if !seen.insert(platform) {
+                    return Err(anyhow!("Duplicate platform '{platform}'"));
+                }
+            }
+        }
         config.unknown_fields = unknown_fields;
 
         Ok(config)
@@ -941,11 +964,14 @@ impl Config {
 
     /// Build the full set of `-bs-gentype-*` CLI flags for a bsc invocation.
     /// `source_dirs` are pre-expanded directories relative to the package root.
+    /// `suffix_override` replaces the configured JavaScript suffix when the
+    /// runtime import needs different resolution semantics.
     pub fn get_gentype_args(
         &self,
         source_dirs: &[PathBuf],
         bsb_project_root: Option<&Path>,
         dep_paths: &[(String, PathBuf)],
+        suffix_override: Option<&str>,
     ) -> Vec<String> {
         let Some(gt) = &self.gentype_config else {
             return vec![];
@@ -978,9 +1004,9 @@ impl Config {
             args.push("-bs-gentype-generated-extension".to_string());
             args.push(ext.clone());
         }
-        if let Some(suffix) = &self.suffix {
+        if let Some(suffix) = suffix_override.or(self.suffix.as_deref()) {
             args.push("-bs-gentype-suffix".to_string());
-            args.push(suffix.clone());
+            args.push(suffix.to_string());
         }
         let mut shims: Vec<(&String, &String)> = gt.shims.0.iter().collect();
         shims.sort_by(|a, b| a.0.cmp(b.0));
@@ -1407,6 +1433,7 @@ pub mod tests {
             package_specs: None,
             warnings: None,
             suffix: None,
+            platforms: None,
             dependencies: Some(args.bs_deps.into_iter().map(Dependency::Shorthand).collect()),
             dev_dependencies: Some(
                 args.build_dev_deps
@@ -1505,6 +1532,28 @@ pub mod tests {
     }
 
     #[test]
+    fn test_platforms_validation() {
+        let config = Config::new_from_json_string(r#"{"name":"platforms","platforms":["android","ios_17"]}"#)
+            .expect("valid platform names");
+        assert_eq!(
+            config.platforms,
+            Some(vec!["android".to_string(), "ios_17".to_string()])
+        );
+
+        for (platforms, expected) in [
+            (r#"[]"#, "at least one platform"),
+            (r#"["ios","ios"]"#, "Duplicate platform 'ios'"),
+            (r#"["i-os"]"#, "Invalid platform 'i-os'"),
+            (r#"["17ios"]"#, "Invalid platform '17ios'"),
+            (r#"["IOS"]"#, "Invalid platform 'IOS'"),
+        ] {
+            let json = format!(r#"{{"name":"platforms","platforms":{platforms}}}"#);
+            let error = Config::new_from_json_string(&json).unwrap_err().to_string();
+            assert!(error.contains(expected), "unexpected error: {error}");
+        }
+    }
+
+    #[test]
     fn test_sources() {
         let json = r#"
         {
@@ -1592,7 +1641,7 @@ pub mod tests {
         assert_eq!(gt.module, Some(GenTypeModule::EsModule));
         assert_eq!(gt.generated_file_extension.as_deref(), Some(".gen.tsx"));
 
-        let args = config.get_gentype_args(&[], None, &[]);
+        let args = config.get_gentype_args(&[], None, &[], None);
         assert!(args.contains(&"-bs-gentype".to_string()));
         assert!(args.contains(&"-bs-gentype-module".to_string()));
         assert!(args.contains(&"esmodule".to_string()));
@@ -1602,6 +1651,13 @@ pub mod tests {
         assert!(args.contains(&".mjs".to_string()));
         assert!(args.contains(&"-bs-gentype-dep".to_string()));
         assert!(args.contains(&"@teamwalnut/app".to_string()));
+
+        let platform_args = config.get_gentype_args(&[], None, &[], Some(""));
+        let suffix_idx = platform_args
+            .iter()
+            .position(|arg| arg == "-bs-gentype-suffix")
+            .unwrap();
+        assert_eq!(platform_args[suffix_idx + 1], "");
     }
 
     #[test]
@@ -1656,7 +1712,7 @@ pub mod tests {
         }
         "#;
         let config = serde_json::from_str::<Config>(json).unwrap();
-        let args = config.get_gentype_args(&[], None, &[]);
+        let args = config.get_gentype_args(&[], None, &[], None);
         let module_idx = args.iter().position(|s| s == "-bs-gentype-module").unwrap();
         assert_eq!(args[module_idx + 1], "commonjs");
     }
@@ -1674,7 +1730,7 @@ pub mod tests {
         }
         "#;
         let config = serde_json::from_str::<Config>(json).unwrap();
-        let args = config.get_gentype_args(&[], None, &[]);
+        let args = config.get_gentype_args(&[], None, &[], None);
         let module_idx = args.iter().position(|s| s == "-bs-gentype-module").unwrap();
         assert_eq!(args[module_idx + 1], "esmodule");
     }
@@ -1688,7 +1744,7 @@ pub mod tests {
         }
         "#;
         let config = serde_json::from_str::<Config>(json).unwrap();
-        assert!(config.get_gentype_args(&[], None, &[]).is_empty());
+        assert!(config.get_gentype_args(&[], None, &[], None).is_empty());
     }
 
     #[test]

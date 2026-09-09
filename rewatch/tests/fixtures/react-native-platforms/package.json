@@ -1,0 +1,21 @@
+{
+  "name": "rescript-react-native-platform-experiment",
+  "private": true,
+  "version": "0.0.0",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node test.mjs",
+    "test:compiler": "node probe-compiler.test.mjs",
+    "bundle": "node bundle.mjs"
+  },
+  "dependencies": {
+    "react": "19.1.0",
+    "react-native": "0.81.5"
+  },
+  "devDependencies": {
+    "@react-native/metro-config": "0.81.5",
+    "@react-native/babel-preset": "0.81.5",
+    "metro": "0.83.8",
+    "metro-resolver": "0.83.8"
+  }
+}

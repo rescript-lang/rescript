@@ -1,0 +1,29 @@
+Complete src/App.res 2:10
+posCursor:[2:10] posNoWhite:[2:9] Found expr:[2:3->2:10]
+Pexp_ident Button.:[2:3->2:10]
+Completable: Cpath Value[Button, ""]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[Button, ""]
+Path Button.
+[
+  { "detail": "token", "kind": 12, "label": "token", "tags": [] },
+  { "detail": "string", "kind": 12, "label": "platform", "tags": [] },
+  {
+    "detail": "token => string",
+    "kind": 12,
+    "label": "describe",
+    "tags": []
+  },
+  { "detail": "module Details", "kind": 9, "label": "Details", "tags": [] }
+]
+
+Definition src/App.res 5:22
+{
+  "range": {
+    "end": { "character": 12, "line": 4 },
+    "start": { "character": 4, "line": 4 }
+  },
+  "uri": "file:///Button.resi"
+}
+

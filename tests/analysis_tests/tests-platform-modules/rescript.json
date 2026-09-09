@@ -1,0 +1,11 @@
+{
+  "name": "@tests/platform-modules",
+  "sources": ["src"],
+  "package-specs": {
+    "module": "commonjs",
+    "in-source": false
+  },
+  "suffix": ".js",
+  "platforms": ["android", "ios"],
+  "public": ["App", "Button"]
+}

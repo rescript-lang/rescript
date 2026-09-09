@@ -248,15 +248,24 @@ fn compile_one(
                 tracing::Span::none().entered()
             };
 
-            let cmi_path = helpers::get_compiler_asset(
-                package,
-                &package.namespace,
-                &source_file.implementation.path,
-                "cmi",
-            );
+            let cmi_source_path = source_file
+                .implementation
+                .platform
+                .as_ref()
+                .map(|platform| platform.logical_path.as_path())
+                .unwrap_or(&source_file.implementation.path);
+            let cmi_path = helpers::get_compiler_asset(package, &package.namespace, cmi_source_path, "cmi");
             let cmi_digest = helpers::compute_file_hash(Path::new(&cmi_path));
 
+            let should_compile_interface = source_file
+                .implementation
+                .platform
+                .as_ref()
+                .is_none_or(|platform| platform.primary);
             let interface_result = source_file.interface.as_ref().map(|iface| {
+                if !should_compile_interface {
+                    return Ok(None);
+                }
                 compile_file(
                     package,
                     &helpers::get_ast_path(&iface.path),
@@ -763,10 +772,14 @@ pub fn compiler_args(
     // Pre-expanded source directories for the current package (used by gentype).
     // Pass an empty slice when unavailable (e.g. the compiler-args CLI command).
     current_package_dirs: &[PathBuf],
+    platform: Option<&PlatformImplementation>,
 ) -> Result<Vec<String>> {
     let bsc_flags = config::flatten_flags(&config.compiler_flags);
     let dependency_paths = get_dependency_paths(config, project_context, packages, is_type_dev);
-    let module_name = helpers::file_path_to_module_name(file_path, &config.get_namespace());
+    let module_path = platform
+        .map(|platform| platform.logical_path.as_path())
+        .unwrap_or(file_path);
+    let module_name = helpers::file_path_to_module_name(module_path, &config.get_namespace());
 
     let namespace_args = match &config.get_namespace() {
         packages::Namespace::NamespaceWithEntry { namespace: _, entry } if &module_name == entry => {
@@ -812,7 +825,12 @@ pub fn compiler_args(
     } else {
         Vec::new()
     };
-    let gentype_arg = config.get_gentype_args(current_package_dirs, Some(bsb_project_root), &dep_paths);
+    let gentype_arg = config.get_gentype_args(
+        current_package_dirs,
+        Some(bsb_project_root),
+        &dep_paths,
+        platform.map(|_| ""),
+    );
     let experimental_args = root_config.get_experimental_features_args();
     let warning_args = config.get_warning_args(is_local_dep, warn_error_override);
 
@@ -857,7 +875,9 @@ pub fn compiler_args(
                                 .unwrap()
                                 .to_string()
                         },
-                        root_config.get_suffix(spec),
+                        platform
+                            .map(|platform| format!(".{}{}", platform.name, root_config.get_suffix(spec)))
+                            .unwrap_or_else(|| root_config.get_suffix(spec)),
                     ),
                 ]
             })
@@ -865,6 +885,30 @@ pub fn compiler_args(
     };
 
     let runtime_path_args = get_runtime_path_args(config, project_context)?;
+
+    let platform_args = if is_interface {
+        vec![]
+    } else {
+        platform
+            .map(|platform| {
+                vec![
+                    "-bs-platform-interface".to_string(),
+                    "-o".to_string(),
+                    Path::new("__platform")
+                        .join(&platform.name)
+                        .join(format!(
+                            "{}.cmj",
+                            helpers::file_path_to_compiler_asset_basename(
+                                &platform.logical_path,
+                                &config.get_namespace()
+                            )
+                        ))
+                        .to_string_lossy()
+                        .to_string(),
+                ]
+            })
+            .unwrap_or_default()
+    };
 
     Ok(vec![
         namespace_args,
@@ -892,6 +936,7 @@ pub fn compiler_args(
         package_name_arg,
         project_root_args,
         implementation_args,
+        platform_args,
         // vec![
         //     "-I".to_string(),
         //     abs_node_modules_path.to_string() + "/rescript/ocaml",
@@ -1011,6 +1056,37 @@ fn compile_file(
     .map_err(|e| anyhow!(e))?;
     let basename =
         helpers::file_path_to_compiler_asset_basename(implementation_file_path, &package.namespace);
+    let platform = match &module.source_type {
+        SourceType::SourceFile(source_file) => source_file.implementation.platform.as_deref(),
+        SourceType::MlMap(_) => None,
+    };
+    let logical_basename = platform
+        .map(|platform| {
+            helpers::file_path_to_compiler_asset_basename(&platform.logical_path, &package.namespace)
+        })
+        .unwrap_or_else(|| basename.clone());
+    if !is_interface && let Some(platform) = platform {
+        let platform_dir = build_path_abs.join("__platform").join(&platform.name);
+        helpers::create_path(&platform_dir);
+        if package.config.gentype_config.is_some()
+            && let Some(interface) = module.get_interface().as_ref()
+        {
+            let interface_dir = interface.path.parent().unwrap();
+            let shared_cmti = build_path_abs
+                .join(interface_dir)
+                .join(format!("{logical_basename}.cmti"));
+            std::fs::copy(
+                &shared_cmti,
+                platform_dir.join(format!("{logical_basename}.cmti")),
+            )
+            .map_err(|error| {
+                anyhow!(
+                    "Could not prepare shared interface '{}' for GenType: {error}",
+                    shared_cmti.display()
+                )
+            })?;
+        }
+    }
     let has_interface = module.get_interface().is_some();
     let is_type_dev = module.is_type_dev;
     // `gentype_dirs` is populated once during package discovery, so we just
@@ -1029,6 +1105,7 @@ fn compile_file(
         warn_error_override,
         build_state.source_map_command,
         current_package_dirs,
+        platform,
     )?;
 
     let to_mjs = Command::new(&compiler_info.bsc_path)
@@ -1055,44 +1132,78 @@ fn compile_file(
             let err = compiler_output_to_string(&x.stderr);
 
             let dir = Path::new(implementation_file_path).parent().unwrap();
-
+            let platform_info = match &module.source_type {
+                SourceType::SourceFile(source_file) => source_file.implementation.platform.as_ref(),
+                SourceType::MlMap(_) => None,
+            };
             // perhaps we can do this copying somewhere else
             if !is_interface {
-                let _ = std::fs::copy(
-                    package
-                        .get_build_path()
-                        .join(dir)
-                        // because editor tooling doesn't support namespace entries yet
-                        // we just remove the @ for now. This makes sure the editor support
-                        // doesn't break
-                        .join(format!("{basename}.cmi")),
-                    ocaml_build_path_abs.join(format!("{basename}.cmi")),
-                );
-                let _ = std::fs::copy(
-                    package.get_build_path().join(dir).join(format!("{basename}.cmj")),
-                    ocaml_build_path_abs.join(format!("{basename}.cmj")),
-                );
-                let _ = std::fs::copy(
-                    package
-                        .get_build_path()
-                        .join(dir)
-                        // because editor tooling doesn't support namespace entries yet
-                        // we just remove the @ for now. This makes sure the editor support
-                        // doesn't break
-                        .join(format!("{basename}.cmt")),
-                    ocaml_build_path_abs.join(format!("{basename}.cmt")),
-                );
+                if let Some(platform) = platform_info {
+                    let platform_dir = package.get_build_path().join("__platform").join(&platform.name);
+                    let platform_cmj = platform_dir.join(format!("{logical_basename}.cmj"));
+                    let platform_cmt = platform_dir.join(format!("{logical_basename}.cmt"));
+                    let _ = std::fs::copy(
+                        &platform_cmj,
+                        ocaml_build_path_abs.join(format!("{logical_basename}.{}.cmj", platform.name)),
+                    );
+                    let _ = std::fs::copy(
+                        &platform_cmt,
+                        ocaml_build_path_abs.join(format!("{logical_basename}.{}.cmt", platform.name)),
+                    );
+                    let physical_basename = helpers::file_path_to_compiler_asset_basename(
+                        implementation_file_path,
+                        &package.namespace,
+                    );
+                    let _ = std::fs::copy(
+                        &platform_cmt,
+                        package
+                            .get_build_path()
+                            .join(dir)
+                            .join(format!("{physical_basename}.cmt")),
+                    );
+                    if platform.primary {
+                        let _ = std::fs::copy(
+                            platform_cmj,
+                            ocaml_build_path_abs.join(format!("{logical_basename}.cmj")),
+                        );
+                        let _ = std::fs::copy(
+                            &platform_cmt,
+                            ocaml_build_path_abs.join(format!("{logical_basename}.cmt")),
+                        );
+                    }
+                } else {
+                    let _ = std::fs::copy(
+                        package.get_build_path().join(dir).join(format!("{basename}.cmi")),
+                        ocaml_build_path_abs.join(format!("{basename}.cmi")),
+                    );
+                    let _ = std::fs::copy(
+                        package.get_build_path().join(dir).join(format!("{basename}.cmj")),
+                        ocaml_build_path_abs.join(format!("{basename}.cmj")),
+                    );
+                    let _ = std::fs::copy(
+                        package.get_build_path().join(dir).join(format!("{basename}.cmt")),
+                        ocaml_build_path_abs.join(format!("{basename}.cmt")),
+                    );
+                }
             } else {
+                let interface_dir = module
+                    .get_interface()
+                    .as_ref()
+                    .and_then(|interface| interface.path.parent())
+                    .unwrap_or(dir);
                 let _ = std::fs::copy(
                     package
                         .get_build_path()
-                        .join(dir)
-                        .join(format!("{basename}.cmti")),
-                    ocaml_build_path_abs.join(format!("{basename}.cmti")),
+                        .join(interface_dir)
+                        .join(format!("{logical_basename}.cmti")),
+                    ocaml_build_path_abs.join(format!("{logical_basename}.cmti")),
                 );
                 let _ = std::fs::copy(
-                    package.get_build_path().join(dir).join(format!("{basename}.cmi")),
-                    ocaml_build_path_abs.join(format!("{basename}.cmi")),
+                    package
+                        .get_build_path()
+                        .join(interface_dir)
+                        .join(format!("{logical_basename}.cmi")),
+                    ocaml_build_path_abs.join(format!("{logical_basename}.cmi")),
                 );
             }
 
@@ -1425,6 +1536,7 @@ mod tests {
             source_type: SourceType::SourceFile(SourceFile {
                 implementation: Implementation {
                     path: PathBuf::from("src/ModuleA.res"),
+                    platform: None,
                     parse_state: ParseState::Success,
                     compile_state: if implementation_warning.is_some() {
                         CompileState::Warning

@@ -50,49 +50,51 @@ let values_of_export (meta : Lam_stats.t) (export_map : Lambda.t Map_ident.t) :
       in
       let persistent_closed_lambda =
         let optlam = Map_ident.find_opt export_map x in
-        match optlam with
-        | Some
-            (Lconst
-               ( Const_js_null | Const_js_undefined _ | Const_js_true
-               | Const_js_false ))
-        | None ->
-          optlam
-        | Some lambda ->
-          if not !Js_config.cross_module_inline then None
-          else if
-            Lam_analysis.safe_to_inline lambda
-            (* when inlning a non function, we have to be very careful,
+        if !Js_config.platform_interface then None
+        else
+          match optlam with
+          | Some
+              (Lconst
+                 ( Const_js_null | Const_js_undefined _ | Const_js_true
+                 | Const_js_false ))
+          | None ->
+            optlam
+          | Some lambda ->
+            if not !Js_config.cross_module_inline then None
+            else if
+              Lam_analysis.safe_to_inline lambda
+              (* when inlning a non function, we have to be very careful,
                only truly immutable values can be inlined
             *)
-          then
-            match lambda with
-            | Lfunction {attr = {inline = Always_inline}}
-            (* FIXME: is_closed lambda is too restrictive
+            then
+              match lambda with
+              | Lfunction {attr = {inline = Always_inline}}
+              (* FIXME: is_closed lambda is too restrictive
                It precludes ues cases
                - inline forEach but not forEachU
             *)
-            | Lfunction {attr = {is_a_functor = true}} ->
-              if Lam_closure.is_closed lambda (* TODO: seriealize more*) then
-                optlam
-              else None
-            | _ ->
-              let lam_size = Lam_analysis.size lambda in
-              (* TODO:
+              | Lfunction {attr = {is_a_functor = true}} ->
+                if Lam_closure.is_closed lambda (* TODO: seriealize more*) then
+                  optlam
+                else None
+              | _ ->
+                let lam_size = Lam_analysis.size lambda in
+                (* TODO:
                  1. global need re-assocate when do the beta reduction
                  2. [lambda_exports] is not precise
               *)
-              let free_variables =
-                Lam_closure.free_variables Set_ident.empty Map_ident.empty
-                  lambda
-              in
-              if
-                lam_size < Lam_analysis.small_inline_size
-                && Map_ident.is_empty free_variables
-              then (
-                Ext_log.dwarn ~__POS__ "%s recorded for inlining @." x.name;
-                optlam)
-              else None
-          else None
+                let free_variables =
+                  Lam_closure.free_variables Set_ident.empty Map_ident.empty
+                    lambda
+                in
+                if
+                  lam_size < Lam_analysis.small_inline_size
+                  && Map_ident.is_empty free_variables
+                then (
+                  Ext_log.dwarn ~__POS__ "%s recorded for inlining @." x.name;
+                  optlam)
+                else None
+            else None
       in
       match (arity, persistent_closed_lambda) with
       | Single Arity_na, (None | Some (Lconst Const_module_alias)) -> acc
@@ -129,10 +131,17 @@ let get_dependent_module_effect (maybe_pure : string option)
 let export_to_cmj (meta : Lam_stats.t) effect_ export_map hoisted_exports case :
     Js_cmj_format.t =
   let values = values_of_export meta export_map in
-
-  Js_cmj_format.make ~values ~hoisted_exports ~effect_
-    ~package_spec:(Js_packages_state.get_packages_info ())
-    ~case
+  let values, hoisted_exports, effect_, package_spec =
+    if !Js_config.platform_interface then
+      ( Map_string.empty,
+        [],
+        Some "platform implementation",
+        Js_packages_state.get_packages_info ()
+        |> Js_packages_info.with_suffix "" )
+    else
+      (values, hoisted_exports, effect_, Js_packages_state.get_packages_info ())
+  in
+  Js_cmj_format.make ~values ~hoisted_exports ~effect_ ~package_spec ~case
 (* FIXME: make sure [-o] would not change its case
    add test for ns/non-ns
 *)
