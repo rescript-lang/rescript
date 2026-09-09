@@ -7,7 +7,15 @@ ocaml=${2:-$root/_build/default/rewatch-ocaml/rescript_ocaml.exe}
 rust=$(realpath "$rust")
 ocaml=$(realpath "$ocaml")
 work=$(mktemp -d "${TMPDIR:-/tmp}/rewatch-command-validation-XXXXXX")
-trap 'rm -rf "$work"' EXIT
+background_pids=""
+cleanup() {
+  for pid in $background_pids; do
+    kill -TERM "$pid" 2>/dev/null || true
+    wait "$pid" 2>/dev/null || true
+  done
+  rm -rf "$work"
+}
+trap cleanup EXIT
 
 project="$work/project"
 mkdir -p "$project/src" "$work/orphan" "$work/empty" "$work/malformed"
@@ -33,6 +41,7 @@ mkdir -p "$work/duplicate-dependency/src" \
   "$work/duplicate-dependency/node_modules/a/node_modules/shared/src"
 mkdir -p "$work/publication-race-rust/src" \
   "$work/publication-race-ocaml/src"
+mkdir -p "$work/watch-config-rust/src" "$work/watch-config-ocaml/src"
 printf '{"name":"command-validation","sources":["src"]}\n' \
   >"$project/rescript.json"
 printf 'let value = 1\n' >"$project/src/A.res"
@@ -116,6 +125,12 @@ cp "$work/publication-race-rust/rescript.json" \
 printf 'let value = 1\n' >"$work/publication-race-rust/src/A.res"
 cp "$work/publication-race-rust/src/A.res" \
   "$work/publication-race-ocaml/src/A.res"
+printf '{"name":"watch-config","sources":["src"]}\n' \
+  >"$work/watch-config-rust/rescript.json"
+cp "$work/watch-config-rust/rescript.json" \
+  "$work/watch-config-ocaml/rescript.json"
+printf 'let value = 1\n' >"$work/watch-config-rust/src/A.res"
+cp "$work/watch-config-rust/src/A.res" "$work/watch-config-ocaml/src/A.res"
 
 export RESCRIPT_BSC_EXE=${RESCRIPT_BSC_EXE:-$root/_build/default/compiler/bsc/rescript_compiler_main.exe}
 export RESCRIPT_RUNTIME=${RESCRIPT_RUNTIME:-$root/packages/@rescript/runtime}
@@ -155,6 +170,38 @@ run_case() {
     exit 1
   fi
   checked=$((checked + 1))
+}
+
+wait_for_file() {
+  path=$1
+  attempts=0
+  while [ "$attempts" -lt 150 ] && [ ! -f "$path" ]; do
+    attempts=$((attempts + 1))
+    sleep 0.1
+  done
+  [ -f "$path" ]
+}
+
+wait_for_text() {
+  path=$1
+  pattern=$2
+  attempts=0
+  while [ "$attempts" -lt 150 ] && \
+    ! grep -F "$pattern" "$path" >/dev/null 2>&1; do
+    attempts=$((attempts + 1))
+    sleep 0.1
+  done
+  grep -F "$pattern" "$path" >/dev/null 2>&1
+}
+
+wait_for_exit() {
+  pid=$1
+  attempts=0
+  while [ "$attempts" -lt 150 ] && kill -0 "$pid" 2>/dev/null; do
+    attempts=$((attempts + 1))
+    sleep 0.1
+  done
+  ! kill -0 "$pid" 2>/dev/null
 }
 
 run_case compiler-args-source accept accept compiler-args "$project/src/A.res"
@@ -290,6 +337,46 @@ if [ "$rust_status" -ne 124 ] || \
   cat "$work/ocaml.out" "$work/ocaml.err" >&2
   exit 1
 fi
+checked=$((checked + 1))
+
+"$rust" watch "$work/watch-config-rust" \
+  >"$work/watch-rust.out" 2>"$work/watch-rust.err" &
+rust_watch_pid=$!
+background_pids="$background_pids $rust_watch_pid"
+wait_for_file "$work/watch-config-rust/src/A.js"
+wait_for_text "$work/watch-config-rust/lib/ocaml/.compiler.log" "#Done("
+printf '{ invalid json\n' >"$work/watch-config-rust/rescript.json"
+wait_for_text "$work/watch-rust.err" "Could not initialize build"
+wait_for_exit "$rust_watch_pid"
+set +e
+wait "$rust_watch_pid"
+rust_watch_status=$?
+set -e
+if [ "$rust_watch_status" -ne 101 ]; then
+  printf 'watch-invalid-config-rebuild: expected Rust panic exit 101, got %s\n' \
+    "$rust_watch_status" >&2
+  cat "$work/watch-rust.out" "$work/watch-rust.err" >&2
+  exit 1
+fi
+
+"$ocaml" watch "$work/watch-config-ocaml" \
+  >"$work/watch-ocaml.out" 2>"$work/watch-ocaml.err" &
+ocaml_watch_pid=$!
+background_pids="$background_pids $ocaml_watch_pid"
+wait_for_file "$work/watch-config-ocaml/src/A.js"
+wait_for_text "$work/watch-config-ocaml/lib/ocaml/.compiler.log" "#Done("
+printf '{ invalid json\n' >"$work/watch-config-ocaml/rescript.json"
+wait_for_text "$work/watch-ocaml.err" "invalid JSON"
+if ! kill -0 "$ocaml_watch_pid" 2>/dev/null; then
+  echo "OCaml watcher exited after a recoverable config error" >&2
+  cat "$work/watch-ocaml.out" "$work/watch-ocaml.err" >&2
+  exit 1
+fi
+printf '{"name":"watch-config","sources":["src"],"package-specs":{"module":"esmodule","in-source":true,"suffix":".mjs"}}\n' \
+  >"$work/watch-config-ocaml/rescript.json"
+wait_for_file "$work/watch-config-ocaml/src/A.mjs"
+kill -TERM "$ocaml_watch_pid"
+wait "$ocaml_watch_pid"
 checked=$((checked + 1))
 
 run_case clean-missing-dependency exit2 exit2 clean "$work/missing-dependency"

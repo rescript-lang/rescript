@@ -141,6 +141,11 @@ expected non-panicking result:
   port's top-level `Sys_error`/`Unix_error` handling provides that failure class;
   the differential command gate deterministically deletes the source through a
   compiler wrapper, bounds the Rust hang, and checks the OCaml error path.
+- `watcher.rs` unwraps `initialize_build` during a full rebuild. An editor save
+  that temporarily makes `rescript.json` invalid therefore panics and exits the
+  Rust watcher. The port reports the parse error and keeps its event loop alive;
+  the differential lifecycle gate restores a valid config with a new output
+  suffix and requires the OCaml watcher to produce it without restarting.
 
 Fixing these in Rust is outside the OCaml-port changes themselves. If they are
 fixed upstream, the differential configuration gate should be tightened from
