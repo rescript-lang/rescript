@@ -51,6 +51,14 @@ The manifest comparison intentionally recreates its fixture between runners.
 Using only each implementation's `clean` command would allow a Rust-only file
 to survive into the OCaml run and could conceal a missing-output bug.
 
+`filesystem_audit.sh` writes normalized `*.categories.tsv`, `*.paths.tsv`, and
+`*.processes.tsv` files when `KEEP_REWATCH_FILESYSTEM_AUDIT=1` is set. The last
+form attributes each path operation category to the executable recorded for
+that traced process, separating driver work from compiler, PPX, and helper
+work. Processes which inherit a trace file without a subsequent `execve` are
+reported as `inherited-process`; do not assume those calls belong to the
+driver without inspecting the raw trace.
+
 Build both release executables and run:
 
 ```sh
