@@ -28,6 +28,14 @@ cp -R "$root/rewatch-ocaml/tests/gentype" "$work/gentype"
 cp -R "$root/rewatch-ocaml/tests/dependency" "$work/dependency"
 cp -R "$root/rewatch-ocaml/tests/package-output-dependency" \
   "$work/package-output-dependency"
+mkdir -p "$work/standalone-output/src" \
+  "$work/standalone-output/node_modules"
+cp -R "$root/rewatch-ocaml/tests/shared-dep" \
+  "$work/standalone-output/node_modules/dep"
+printf '%s\n' \
+  '{"name":"standalone-output","sources":"src","dependencies":["dep"],"package-specs":{"module":"esmodule","in-source":false,"suffix":".mjs"}}' \
+  >"$work/standalone-output/rescript.json"
+printf 'let value = Dep.value\n' >"$work/standalone-output/src/Main.res"
 mkdir -p "$work/gentype/node_modules" "$work/dependency/node_modules" \
   "$work/package-output-dependency/node_modules"
 cp -R "$root/rewatch-ocaml/tests/shared-dep" "$work/gentype/node_modules/dep"
@@ -56,6 +64,7 @@ feature_dependencies="$work/feature-dependencies"
 gentype="$work/gentype"
 dependency="$work/dependency"
 package_output_dependency="$work/package-output-dependency"
+standalone_output="$work/standalone-output"
 external_boundary="$work/external-boundary"
 post_build="$work/post-build"
 out_of_source="$work/out-of-source"
@@ -514,6 +523,24 @@ if [ -f "$package_output_dependency/node_modules/dep/src/Dep.js" ]; then
   echo "dependency output from the previous package spec was retained" >&2
   exit 1
 fi
+
+"$port" build "$standalone_output/node_modules/dep"
+test -f "$standalone_output/node_modules/dep/src/Dep.js"
+"$port" build "$standalone_output"
+test -f "$standalone_output/lib/es6/src/Main.mjs"
+test -f "$standalone_output/node_modules/dep/src/Dep.js"
+test ! -f "$standalone_output/node_modules/dep/lib/es6/src/Dep.mjs"
+node - "$standalone_output/node_modules/dep" <<'EOF'
+const fs = require("fs")
+const path = require("path")
+const dependency = path.resolve(process.argv[2])
+const info = JSON.parse(
+  fs.readFileSync(path.join(dependency, "lib", "bs", "compiler-info.json"), "utf8")
+)
+if (path.resolve(info.build_root) !== dependency) {
+  throw new Error(`standalone dependency ownership changed to ${info.build_root}`)
+}
+EOF
 
 mkdir -p "$external_boundary/project/node_modules"
 ln -s ../packages/main "$external_boundary/project/node_modules/main"

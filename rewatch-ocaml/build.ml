@@ -774,6 +774,7 @@ type scheduled_module = {
 
 type graph_package = {
   graph_root: string;
+  graph_build_owner: string;
   graph_is_local: bool;
   graph_config: Config.t;
   graph_compile_config: Config.t;
@@ -1062,12 +1063,24 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
           ~display_root:root_config.root
       in
       let modules = discovery.modules in
+      let owns_outputs =
+        root <> root_config.root && Compiler_info.owns_outputs config
+      in
       let compile_config =
         let config =
           with_gentype_source_dirs discovery.gentype_dirs config
         in
-        with_root_options config root_config
-        |> with_local_warning_policy ~is_local
+        let inherited = with_root_options config root_config in
+        let output_config =
+          if owns_outputs then
+            {
+              inherited with
+              package_specs = config.package_specs;
+              suffix = config.suffix;
+            }
+          else inherited
+        in
+        output_config |> with_local_warning_policy ~is_local
       in
       let build_dir = lib_path root "bs" in
       let ocaml_dir = lib_path root "ocaml" in
@@ -1079,6 +1092,7 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
           discovery.source_mtimes;
         {
           graph_root = root;
+          graph_build_owner = (if owns_outputs then root else root_config.root);
           graph_is_local = is_local;
           graph_config = config;
           graph_compile_config = compile_config;
@@ -1102,7 +1116,8 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
     else root_config.source_map_args
   in
   let compiler_context =
-    Compiler_info.make_context ~bsc_path:bsc ~runtime_path:runtime
+    Compiler_info.make_context ~build_root:root_config.root ~bsc_path:bsc
+      ~runtime_path:runtime
       ~source_map_args
       ~package_output_specs:(Compiler_info.package_output_specs root_config)
   in
@@ -1110,8 +1125,16 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
   let cleanup_started = Unix.gettimeofday () in
   List.iter
     (fun package ->
-      if Compiler_info.needs_clean compiler_context package.graph_config then (
-        Compiler_info.changed_package_output_specs compiler_context
+      let package_context =
+        {
+          compiler_context with
+          build_root = package.graph_build_owner;
+          package_output_specs =
+            Compiler_info.package_output_specs package.graph_compile_config;
+        }
+      in
+      if Compiler_info.needs_clean package_context package.graph_config then (
+        Compiler_info.changed_package_output_specs package_context
           package.graph_config
         |> Option.iter (fun previous_specs ->
              let previous_config =
@@ -2206,10 +2229,19 @@ let run_with_warning_state ~warning_state ~compilation_kind ~no_timing ~seen
       report_failure output
     | None, None ->
       Option.iter
-        (fun context ->
+        (fun (context : Compiler_info.context) ->
           Hashtbl.iter
             (fun _ package ->
-              Compiler_info.write_package context package.graph_config)
+              let package_context =
+                {
+                  context with
+                  build_root = package.graph_build_owner;
+                  package_output_specs =
+                    Compiler_info.package_output_specs
+                      package.graph_compile_config;
+                }
+              in
+              Compiler_info.write_package package_context package.graph_config)
             stats.graph_packages)
         stats.compiler_context;
       write_source_dirs root_config stats;
