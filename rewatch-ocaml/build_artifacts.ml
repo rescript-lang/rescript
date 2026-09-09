@@ -114,6 +114,19 @@ let generated_build_js_path ~build_dir (config : Config.t) path
   Filename.concat build_dir
     (Filename.remove_extension path ^ Config.package_spec_suffix config spec)
 
+let remove_public_outputs (config : Config.t) modules =
+  List.iter
+    (fun module_ ->
+      List.iter
+        (fun spec ->
+          let output =
+            generated_js_path config module_.Source.implementation spec
+          in
+          remove_file output;
+          remove_file (output ^ ".map"))
+        config.package_specs)
+    modules
+
 let generated_output_suffixes =
   [
     ".bs.mjs";
@@ -209,6 +222,7 @@ type cleanup_result = {
   removed_modules: string list;
   previous_ast_count: int;
   deferred_artifacts: string list;
+  present_public_outputs: (string, unit) Hashtbl.t;
 }
 
 let cleanup_stale ?ocaml_files ?ast_sources ?source_files ~root ~ocaml_dir
@@ -243,6 +257,11 @@ let cleanup_stale ?ocaml_files ?ast_sources ?source_files ~root ~ocaml_dir
          let output_dir = Filename.concat root directory in
          (output_dir, files_under output_dir))
   in
+  let present_public_outputs = Hashtbl.create 64 in
+  source_files @ List.concat_map snd output_files
+  |> List.iter (fun path ->
+       if Option.is_some (generated_output_details path) then
+         Hashtbl.replace present_public_outputs path ());
   (source_files @ List.concat_map snd output_files)
   |> List.iter (fun path ->
        if is_watch_output_sidecar path then remove_file path);
@@ -407,6 +426,7 @@ let cleanup_stale ?ocaml_files ?ast_sources ?source_files ~root ~ocaml_dir
          && Sys.file_exists (Filename.concat build_dir build_relative)))
   in
   let remove_output ~build_relative path =
+    Hashtbl.remove present_public_outputs path;
     remove_file path;
     let working_output = Filename.concat build_dir build_relative in
     remove_file working_output;
@@ -432,4 +452,5 @@ let cleanup_stale ?ocaml_files ?ast_sources ?source_files ~root ~ocaml_dir
     removed_modules = !removed_modules;
     previous_ast_count = !previous_ast_count;
     deferred_artifacts = !deferred_artifacts;
+    present_public_outputs;
   }

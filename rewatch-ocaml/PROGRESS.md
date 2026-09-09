@@ -153,6 +153,20 @@ applicable.
   the canonical internal and namespaced rename snapshots prove the diagnostic
   remains unchanged. Rust should add the missing dot and then make the
   diagnostic dependency explicit rather than relying on the accidental leak.
+- Rust issue [#7728](https://github.com/rescript-lang/rescript/issues/7728)
+  reports that restarting watch does not recreate a manually deleted generated
+  JavaScript file. The port intentionally treats absence from its already
+  collected public-output inventory as compile-dirty state. A focused restart
+  test deletes an otherwise-current output and observes its recreation without
+  adding a per-module filesystem probe.
+- The port includes the package-output invalidation proposed in Rust PR
+  [#8540](https://github.com/rescript-lang/rescript/pull/8540): every package's
+  `compiler-info.json` fingerprints the root project's effective module format,
+  output location, and resolved suffix. A mismatch removes outputs described by
+  the previous fingerprint before rebuilding dependency compiler state. The
+  focused test covers both the PR's changed-path migration and a stricter
+  same-path ES-module-to-CommonJS change, which output existence alone cannot
+  detect.
 
 ## Verified
 
@@ -642,6 +656,20 @@ These are observational counts rather than a raw-total gate, and they include
 compiler process behavior. The directory-traversal gap is now explained and
 effectively closed, but the incremental metadata difference remains material
 and keeps the superfluous-work audit open.
+The remaining AST/CMT freshness and generated-output presence checks now consume
+the compile-asset and cleanup inventories instead of probing each module. This
+preserves the deliberate repair of manually deleted JavaScript while reducing
+the unchanged trace to 3,711 metadata calls and 162 directory scans (Rust:
+3,367 and 160); edit records 3,745 and 162 (Rust: 3,384 and 160), and clean
+records 20,902 and 160 (Rust: 12,423 and 158). The first form still eagerly
+hashed every scheduled module's CMI even when clean. Moving that hash to the
+actual dirty-module dispatch point, matching Rust's `compile.rs`, leaves OCaml
+with fewer incremental opens than Rust: 1,187 versus 1,220 unchanged and 1,215
+versus 1,246 after an edit. The remaining 344 unchanged metadata calls are
+primarily repeated package-path canonicalization (`readlinkat`); compiler
+process calls match and directory traversal is within two calls. Clean-build
+metadata remains dominated by compiler work and is tracked separately from the
+now-near-parity unchanged orchestration path.
 
 ### Active filesystem-performance work
 
@@ -655,13 +683,7 @@ normalization, and caveats are in `bench/README.md`.
 Rust-parity improvements should be attempted before novel optimizations, in this
 order:
 
-1. Complete the explicit compile-asset and module state equivalent to Rust's
-   `rewatch/src/build/read_compile_state.rs` and `build_types.rs`. The initial
-   per-package scan is shared with `Build_artifacts.cleanup_stale`, and CMI/CMT
-   presence, dependency timestamps, fixed dirty state, and CMI-change
-   propagation plus source/AST freshness now use explicit state. Move the
-   remaining generated-output freshness consumers onto explicit transitions.
-2. Carry canonical package identities and resolved dependency roots throughout
+1. Carry canonical package identities and resolved dependency roots throughout
    the whole build context. Resolution is cached during graph preparation, and
    collection, graph visitation, build traversal, and locality checks now reuse
    those identities. Configuration loading, source discovery, dependency

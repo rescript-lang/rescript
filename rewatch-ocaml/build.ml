@@ -1110,12 +1110,22 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
   let compiler_context =
     Compiler_info.make_context ~bsc_path:bsc ~runtime_path:runtime
       ~source_map_args
+      ~package_output_specs:(Compiler_info.package_output_specs root_config)
   in
   stats.compiler_context <- Some compiler_context;
   let cleanup_started = Unix.gettimeofday () in
   List.iter
     (fun package ->
       if Compiler_info.needs_clean compiler_context package.graph_config then (
+        Compiler_info.changed_package_output_specs compiler_context
+          package.graph_config
+        |> Option.iter (fun previous_specs ->
+             let previous_config =
+               Compiler_info.config_with_package_output_specs
+                 package.graph_compile_config previous_specs
+             in
+             Build_artifacts.remove_public_outputs previous_config
+               package.graph_modules);
         let compile_assets =
           Compile_assets.create [package.graph_ocaml_dir]
         in
@@ -1239,14 +1249,7 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
           let compiler_base =
             global_module_key package.graph_compile_config module_.Source.name
           in
-          let artifact_base =
-            Source.compiler_asset_basename package.graph_compile_config
-              module_.Source.implementation
-          in
-          let cmt =
-            Filename.concat package.graph_ocaml_dir (artifact_base ^ ".cmt")
-          in
-          if not (Sys.file_exists cmt) then
+          if Option.is_none (Compile_assets.cmt compile_assets compiler_base) then
             Hashtbl.replace stats.forced_parse_paths
               (Filename.concat package.graph_root module_.Source.implementation)
               ();
@@ -1468,6 +1471,11 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder:root ~prod ~feature
     | Some state -> state
     | None -> raise (Error "build state was not initialized")
   in
+  let compile_assets =
+    match stats.compile_assets with
+    | Some state -> state
+    | None -> raise (Error "compile asset state was not initialized")
+  in
   let build_dir =
     match prepared with
     | Some package -> package.graph_build_dir
@@ -1621,16 +1629,21 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder:root ~prod ~feature
   let module_is_dirty module_ state =
     let global_key = global_module_key config module_.Source.name in
     let module_name = Source.module_name module_.Source.implementation in
-    let ast =
-      Filename.concat build_dir
-        (Source.ast_path module_.Source.implementation)
-    in
+    let source = Filename.concat root module_.Source.implementation in
     let outputs_exist =
-      List.for_all
-        (fun spec ->
-          Sys.file_exists
-            (generated_js_path config module_.Source.implementation spec))
-        config.package_specs
+      match Hashtbl.find_opt stats.cleanup_results root with
+      | Some cleanup ->
+        List.for_all
+          (fun spec ->
+            Hashtbl.mem cleanup.present_public_outputs
+              (generated_js_path config module_.Source.implementation spec))
+          config.package_specs
+      | None ->
+        List.for_all
+          (fun spec ->
+            Sys.file_exists
+              (generated_js_path config module_.Source.implementation spec))
+          config.package_specs
     in
     let raw_dependencies =
       Hashtbl.find_opt raw_dependencies module_.Source.name
@@ -1644,8 +1657,8 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder:root ~prod ~feature
     &&
     (Hashtbl.mem parse_dirty_modules module_.Source.name
     || List.mem module_name removed_modules
-    || (match modification_time ast, state.last_compiled_cmt with
-       | Some ast_time, Some cmt_time -> ast_time >= cmt_time
+    || (match Compile_assets.ast compile_assets source, state.last_compiled_cmt with
+       | Some ast, Some cmt_time -> ast.modified >= cmt_time
        | Some _, None -> true
        | None, _ -> false)
     || not (Build_state.has_complete_compile_assets state)
@@ -1706,7 +1719,7 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder:root ~prod ~feature
           source = module_;
           state;
           cmi_path;
-          cmi_digest_before = file_digest cmi_path;
+          cmi_digest_before = None;
           prepare = (fun () -> prepare_outputs module_);
           compile =
             (fun ~is_interface path ->
