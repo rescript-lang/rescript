@@ -126,6 +126,14 @@ such a dormant edge when the target package happens to be reachable elsewhere.
 That makes the same installed package conditionally break an unrelated root
 build. A differential case retains Rust's rejection and the port's successful
 active-edge-only behavior.
+Watch filtering keeps the same positive regex meaning during initial discovery
+and later changes. Rust's package discovery includes matching files, but
+`watcher.rs::matches_filter` negates the regex for events, so an included-file
+edit is ignored while an excluded-file edit wakes the watcher. A synchronized
+differential watch case uses successful hook markers rather than sleeps: it
+proves Rust completes the excluded-file wakeup with stale included output and
+that OCaml rebuilds the included output directly. The port's consistent
+positive semantics are retained as a Rust bug fix.
 
 ### Rust panic follow-ups
 
