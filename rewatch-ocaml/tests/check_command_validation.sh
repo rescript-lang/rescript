@@ -33,6 +33,11 @@ mkdir -p "$work/dependency-without-sources/src" \
 mkdir -p "$work/default-feature-cycle/src"
 mkdir -p "$work/format-feature-cycle/src" \
   "$work/format-feature-cycle/node_modules/dep/src"
+mkdir -p "$work/format-source-selection/src" \
+  "$work/format-source-selection/node_modules/installed" \
+  "$work/format-source-selection/packages/local/base" \
+  "$work/format-source-selection/packages/local/native" \
+  "$work/format-source-selection/packages/local/other"
 mkdir -p "$work/package-name-mismatch/src" "$work/malformed-package-json/src"
 mkdir -p "$work/mismatched-dependency/src" \
   "$work/mismatched-dependency/node_modules/dep/src"
@@ -102,6 +107,19 @@ printf '{"name":"dep"}\n' \
   >"$work/format-feature-cycle/node_modules/dep/package.json"
 printf 'let value = 1\n' \
   >"$work/format-feature-cycle/node_modules/dep/src/Dep.res"
+printf '{"name":"format-source-selection","sources":["src"],"dependencies":["installed",{"name":"local","features":["native"]}]}\n' \
+  >"$work/format-source-selection/rescript.json"
+printf '{"name":"installed","sources":["missing"]}\n' \
+  >"$work/format-source-selection/node_modules/installed/rescript.json"
+printf '{"name":"local","sources":["base",{"dir":"native","feature":"native"},{"dir":"other","feature":"other"}]}\n' \
+  >"$work/format-source-selection/packages/local/rescript.json"
+printf 'let value=1\n' \
+  >"$work/format-source-selection/packages/local/base/Base.res"
+printf 'let value=2\n' \
+  >"$work/format-source-selection/packages/local/native/Native.res"
+printf 'let value=3\n' \
+  >"$work/format-source-selection/packages/local/other/Other.res"
+ln -s ../packages/local "$work/format-source-selection/node_modules/local"
 printf '{"name":"config-name","sources":["src"]}\n' \
   >"$work/package-name-mismatch/rescript.json"
 printf '{"name":"package-name"}\n' >"$work/package-name-mismatch/package.json"
@@ -342,6 +360,29 @@ run_cwd_case format-requested-feature-cycle reject reject \
   "$work/format-feature-cycle" format
 if ! cmp -s "$work/rust.err" "$work/ocaml.err"; then
   echo "Requested format feature-cycle diagnostics differ" >&2
+  printf '%s\n' '--- Rust output ---' >&2
+  cat "$work/rust.out" "$work/rust.err" >&2
+  printf '%s\n' '--- OCaml output ---' >&2
+  cat "$work/ocaml.out" "$work/ocaml.err" >&2
+  exit 1
+fi
+run_cwd_case format-scans-graph-with-effective-features reject reject \
+  "$work/format-source-selection" format --check
+missing_folder='Could not read folder: "missing". Specified in dependency: installed'
+base_file="[format check] $work/format-source-selection/packages/local/base/Base.res"
+native_file="[format check] $work/format-source-selection/packages/local/native/Native.res"
+other_file="$work/format-source-selection/packages/local/other/Other.res"
+if ! grep -F "$missing_folder" "$work/rust.err" >/dev/null || \
+  ! grep -F "$missing_folder" "$work/ocaml.err" >/dev/null || \
+  ! grep -F "$base_file" "$work/rust.err" >/dev/null || \
+  ! grep -F "$base_file" "$work/ocaml.err" >/dev/null || \
+  ! grep -F "$native_file" "$work/rust.err" >/dev/null || \
+  ! grep -F "$native_file" "$work/ocaml.err" >/dev/null || \
+  grep -F "$other_file" "$work/rust.err" >/dev/null || \
+  grep -F "$other_file" "$work/ocaml.err" >/dev/null || \
+  ! grep -F 'The 2 files listed above need formatting' "$work/rust.err" >/dev/null || \
+  ! grep -F 'The 2 files listed above need formatting' "$work/ocaml.err" >/dev/null; then
+  echo "Implicit format package scanning or feature selection differs" >&2
   printf '%s\n' '--- Rust output ---' >&2
   cat "$work/rust.out" "$work/rust.err" >&2
   printf '%s\n' '--- OCaml output ---' >&2
