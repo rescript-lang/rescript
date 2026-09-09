@@ -1156,16 +1156,16 @@ rerun it for the final maintainability review alongside maximum module size.
    concurrency, platform, and algorithmic invariants that are not apparent from
    the code itself; review naming, remove dead code, and document the complete
    compatibility-oddity, corrected-Rust-behavior, and future-performance lists.
-5. Complete the final output-presentation pass: port Rust's semantic `-v`/`-vv`
-   events with an order-insensitive differential gate, then implement and test
-   the live interactive spinner frames.
-6. Validate macOS packaging and native event behavior, then prepare the pinned
+5. Validate macOS packaging and native event behavior, then prepare the pinned
    Windows handoff. Finish the Windows watcher/lock
    backend and path audit and run the native build, unit, focused, and canonical
    Bash suites in the VM. Address findings there and finish with an x64 Windows
    confidence run where available.
+6. Complete the final output-presentation pass after platform validation: port
+   Rust's semantic `-v`/`-vv` events with an order-insensitive differential
+   gate, then implement and test the live interactive spinner frames.
 
 Live spinner animation and verbose event parity are explicitly deferred until
-the final output-presentation pass before Windows. The future
+the final output-presentation pass after macOS and Windows validation. The future
 filesystem-performance ideas documented above do not block completion of the
 compatibility port.
