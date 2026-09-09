@@ -38,6 +38,11 @@ let () =
         "listed dev dependencies inherit the parent workspace context";
       check (Build.workspace_lock_root unlisted = unlisted)
         "package.json workspace globs do not enroll unlisted ReScript packages";
+      check (Build.relative_to root root = ".")
+        "a root path is represented by the current-directory component";
+      check
+        (Build.relative_to root (Filename.concat root "packages") = "packages")
+        "a child path is represented relative to its root";
       let repository_tmp = Filename.concat (Sys.getcwd ()) "tmp" in
       Build_artifacts.ensure_dir repository_tmp;
       let standalone =
