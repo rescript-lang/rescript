@@ -24,6 +24,8 @@ mkdir -p "$work/missing-dependency/src"
 mkdir -p "$work/malformed-lock/src" "$work/malformed-lock/lib"
 mkdir -p "$work/interface-mismatch/src"
 mkdir -p "$work/exotic-module-rust/src" "$work/exotic-module-ocaml/src"
+mkdir -p "$work/filter-basename-rust/src/nested" \
+  "$work/filter-basename-ocaml/src/nested"
 mkdir -p "$work/external-dev-source/src" \
   "$work/external-dev-source/node_modules/dep/src" \
   "$work/external-dev-source/node_modules/dep/test"
@@ -88,6 +90,10 @@ for implementation in rust ocaml; do
     >"$work/exotic-module-$implementation/src/Main.res"
   printf 'let value = 2\n' \
     >"$work/exotic-module-$implementation/src/foo-bar.res"
+  printf '{"name":"filter-basename","sources":[{"dir":"src","subdirs":true}]}\n' \
+    >"$work/filter-basename-$implementation/rescript.json"
+  printf 'let value = 1\n' \
+    >"$work/filter-basename-$implementation/src/nested/A.res"
 done
 printf '{"name":"external-dev-source","sources":["src"],"dependencies":["dep"]}\n' \
   >"$work/external-dev-source/rescript.json"
@@ -447,6 +453,46 @@ if [ "$(classify "$rust_status")" != accept ] || \
   cat "$work/rust.out" "$work/rust.err" "$rust_mlmap" >&2
   printf '%s\n' '--- OCaml output / namespace map ---' >&2
   cat "$work/ocaml.out" "$work/ocaml.err" "$ocaml_mlmap" >&2
+  exit 1
+fi
+checked=$((checked + 1))
+set +e
+"$rust" build --filter nested "$work/filter-basename-rust" \
+  >"$work/rust.out" 2>"$work/rust.err"
+rust_status=$?
+"$ocaml" build --filter nested "$work/filter-basename-ocaml" \
+  >"$work/ocaml.out" 2>"$work/ocaml.err"
+ocaml_status=$?
+set -e
+if [ "$(classify "$rust_status")" != accept ] || \
+  [ "$(classify "$ocaml_status")" != accept ] || \
+  [ -e "$work/filter-basename-rust/src/nested/A.js" ] || \
+  [ -e "$work/filter-basename-ocaml/src/nested/A.js" ]; then
+  echo "Source filters did not consistently ignore directory-only matches" >&2
+  printf '%s\n' '--- Rust output ---' >&2
+  cat "$work/rust.out" "$work/rust.err" >&2
+  printf '%s\n' '--- OCaml output ---' >&2
+  cat "$work/ocaml.out" "$work/ocaml.err" >&2
+  exit 1
+fi
+checked=$((checked + 1))
+set +e
+"$rust" build --filter 'A\.res$' "$work/filter-basename-rust" \
+  >"$work/rust.out" 2>"$work/rust.err"
+rust_status=$?
+"$ocaml" build --filter 'A\.res$' "$work/filter-basename-ocaml" \
+  >"$work/ocaml.out" 2>"$work/ocaml.err"
+ocaml_status=$?
+set -e
+if [ "$(classify "$rust_status")" != accept ] || \
+  [ "$(classify "$ocaml_status")" != accept ] || \
+  [ ! -e "$work/filter-basename-rust/src/nested/A.js" ] || \
+  [ ! -e "$work/filter-basename-ocaml/src/nested/A.js" ]; then
+  echo "Source filters did not consistently include a basename match" >&2
+  printf '%s\n' '--- Rust output ---' >&2
+  cat "$work/rust.out" "$work/rust.err" >&2
+  printf '%s\n' '--- OCaml output ---' >&2
+  cat "$work/ocaml.out" "$work/ocaml.err" >&2
   exit 1
 fi
 checked=$((checked + 1))

@@ -45,6 +45,11 @@ differences:
   ASCII predicate now excludes them before `.mlmap` generation; a differential
   build compares the complete map while focused unit cases retain accepted,
   punctuated, and empty names.
+- Source filters were applied to package-relative paths rather than basenames,
+  so a directory-only regex selected files that Rust excludes. Discovery now
+  applies the regex to `Filename.basename`; differential builds retain both a
+  directory-only non-match and a basename match, with focused source tests for
+  the same boundary.
 - PPX resolution did not search hoisted `node_modules`.
 - Stale cleanup treated every JavaScript-looking file as owned output and
   deleted checked-in legacy files that had no corresponding source or AST.

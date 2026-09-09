@@ -226,7 +226,11 @@ let discover_with_inventory ?(on_orphan = fun _ -> ())
     | None -> fun _ -> true
     | Some pattern ->
       let regex = try Str.regexp pattern with Failure _ -> raise (Error ("invalid filter regex: " ^ pattern)) in
-      fun path -> try ignore (Str.search_forward regex path 0); true with Not_found -> false
+      fun path ->
+        try
+          ignore (Str.search_forward regex (Filename.basename path) 0);
+          true
+        with Not_found -> false
   in
   let active_features =
     resolve_active_features config (Option.value features ~default:[])
