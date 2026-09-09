@@ -192,6 +192,12 @@ let with_root_options (config : Config.t) (root_config : Config.t) =
          @ ["-bs-gentype-bsb-project-root"; root_config.root]);
   }
 
+type cleanup_result = {
+  removed_modules: string list;
+  previous_ast_count: int;
+  deferred_artifacts: string list;
+}
+
 let cleanup_stale ?ocaml_files ~root ~ocaml_dir ~is_local (config : Config.t)
     modules =
   let build_dir = lib_path root "bs" in
@@ -265,6 +271,13 @@ let cleanup_stale ?ocaml_files ~root ~ocaml_dir ~is_local (config : Config.t)
       add_expected base [".cmi"; ".cmj"; ".cmt"; ".mlmap"])
     config.namespace;
   let removed_modules = ref [] in
+  let deferred_artifacts = ref [] in
+  (* Once the published CMI is removed, bsc still consults the working CMI to
+     produce its source-located missing-module diagnostic. Keep only that copy
+     through compilation; the command finalizer removes every deferred path. *)
+  let defer_working_cmi_until_after_compile basename =
+    Filename.check_suffix basename ".cmi"
+  in
   ocaml_files
   |> List.iter (fun path ->
        let basename = Filename.basename path in
@@ -292,7 +305,9 @@ let cleanup_stale ?ocaml_files ~root ~ocaml_dir ~is_local (config : Config.t)
          build_files
          |> List.iter (fun build_path ->
               if Filename.basename build_path = basename then
-                remove_file build_path)));
+                if defer_working_cmi_until_after_compile basename then
+                  deferred_artifacts := build_path :: !deferred_artifacts
+                else remove_file build_path)));
   let configured_suffixes =
     List.map (Config.package_spec_suffix config) config.package_specs
   in
@@ -366,4 +381,8 @@ let cleanup_stale ?ocaml_files ~root ~ocaml_dir ~is_local (config : Config.t)
               Hashtbl.mem removed_outputs
                 (relative_under build_dir output_path)
             then remove_file path));
-  (!removed_modules, !previous_ast_count)
+  {
+    removed_modules = !removed_modules;
+    previous_ast_count = !previous_ast_count;
+    deferred_artifacts = !deferred_artifacts;
+  }

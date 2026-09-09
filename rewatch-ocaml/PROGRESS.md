@@ -138,6 +138,22 @@ fixed upstream, the differential configuration gate should be tightened from
 semantic rejection to the corresponding normal error exit class where
 applicable.
 
+### Rust cleanup follow-up
+
+- `helpers.rs`: `get_bs_compiler_asset` constructs a working-tree artifact as
+  `format!("{basename}{extension}")`, omitting the dot before `cmi`, `cmj`,
+  `cmt`, or `cmti`. `clean.rs::remove_compile_assets` consequently removes the
+  published `lib/ocaml` artifact but permanently leaves the corresponding
+  `lib/bs` artifact and copied source behind after a rename or deletion. The
+  stale working CMI currently helps `bsc` retain Rust's source-located
+  missing-module diagnostic while the dependent compiles. The OCaml port
+  preserves that artifact shape only for the duration of the command and
+  removes the working CMI in its outer finalizer on both success and failure.
+  `tests/run.sh` asserts that neither working nor published stale CMI survives;
+  the canonical internal and namespaced rename snapshots prove the diagnostic
+  remains unchanged. Rust should add the missing dot and then make the
+  diagnostic dependency explicit rather than relying on the accidental leak.
+
 ## Verified
 
 - `dune runtest rewatch-ocaml` passes graph unit coverage.
@@ -161,6 +177,13 @@ applicable.
   CMI timestamps, recompile dependents after interface changes, avoid dependent
   recompilation after implementation-only changes, and replay local compiler
   warnings using the same artifact behavior as Rust.
+- Compilation now snapshots each module's dirty flag before scheduling, as
+  Rust does, instead of reevaluating filesystem-backed closures while other
+  compiler jobs publish artifacts. A successful compile compares CMI contents,
+  refreshes the shared compile-asset/module state, and dirties reverse
+  dependents only when the CMI changed. Cycle-blocked modules remain blocked.
+  Unit coverage, the focused stale-CMI lifecycle test, and the complete
+  canonical suite cover these transitions.
 - `rewatch-ocaml/tests/run.sh` passes with the OCaml executable for a
   three-module fixture, a `.res`/`.resi` pair, cycle diagnostics, compilation
   failure, and a successful recovery build. Its dependency inputs now come
@@ -448,15 +471,19 @@ environment on the plugged-in Mac host:
 
 | Implementation | Median wall time | Median peak tree RSS |
 | --- | ---: | ---: |
-| Rust | 4,552 ms | 788,972 KiB |
-| OCaml | 5,495 ms | 791,140 KiB |
+| Rust | 4,760 ms | 778,920 KiB |
+| OCaml | 5,473 ms | 791,968 KiB |
 
-The latest 1.207× wall-time ratio and 1.003× RSS ratio pass the 1.25× gate.
+The latest 1.150× wall-time ratio and 1.017× RSS ratio pass the 1.25× gate.
 The host was plugged in and otherwise idle for this run. Docker on a Mac is
 still noisier than native Linux or dedicated CI, so final acceptance should
 repeat the distribution on a stable host rather than treating this one passing
-set as universal. Passing this aggregate gate also does not close the excessive
-unchanged-build metadata probes found by the filesystem audit below.
+set as universal. One non-median OCaml sample also observed a LinuxKit clock
+jump and reported an impossible elapsed time despite completing in seconds;
+the four coherent OCaml samples left the median stable, but reinforce the need
+for a final native/stable-host run. Passing this aggregate gate also does not
+close the excessive unchanged-build metadata probes found by the filesystem
+audit below.
 
 Both implementations performed exactly 1,031 `bsc` launches: 512 parses, 7
 namespace compilations, and 512 module compilations, of which 40 were interface
@@ -531,6 +558,13 @@ scans (Rust: 3,369 and 160); the edit result is 35,394 and 477 (Rust: 3,384 and
 160). The directory count is unchanged because the state scan replaces the
 cleanup scan; moving freshness consumers onto explicit module state is what
 should remove the repeated popular-CMI probes.
+The fixed dirty-state scheduler then reduced repeated readiness-time freshness
+checks without changing compiler work: the current unchanged result is 29,499
+metadata calls and 475 directory scans (Rust: 3,367 and 160), while the edit
+result is 29,524 and 475 (Rust: 3,384 and 160). Its clean trace records 26,123
+metadata calls and 318 scans (Rust: 12,423 and 158). The remaining repeated
+popular-CMI probes and path canonicalization still dominate the incremental
+gap.
 These are observational counts rather than a raw-total gate, and they include
 compiler process behavior, but the remaining difference is still too large to
 declare the superfluous-work audit closed. The artifact/module state needs
@@ -553,9 +587,9 @@ order:
    `rewatch/src/build/read_compile_state.rs` and `build_types.rs`. The initial
    per-package scan is now shared with `Build_artifacts.cleanup_stale`; repeated
    `dependency_artifact` and `modification_time` calls in
-   `Build.module_is_dirty` remain. Replace the changing `is_dirty` closure with
-   fixed pre-scheduling dirty state and Rust-shaped CMI-change propagation
-   before making those consumers use the inventory.
+   `Build.module_is_dirty` remain. The scheduler now has fixed pre-scheduling
+   dirty state and Rust-shaped CMI-change propagation; make the remaining
+   freshness consumers use the inventory and explicit state transitions.
 2. Share one source-tree inventory between `Source.discover`, stale-output
    cleanup, watch-sidecar recovery, and GenType source-directory discovery.
    `files_under` currently performs `lstat` for every entry, and separate
@@ -568,10 +602,12 @@ order:
    later consumers still cause substantially more `realpath`/`readlinkat` work
    than Rust.
 
-The asset/module state must have explicit transitions for discovery, stale cleanup,
-parse publication, interface publication, implementation publication, source
-rename/deletion, failed compilation, and watch rebuilds. Do not cache a missing
-or present artifact independently of those transitions. Earlier path/mtime cache
+The asset/module state must retain explicit transitions for discovery, stale
+cleanup, parse publication, interface publication, implementation publication,
+source rename/deletion, failed compilation, and watch rebuilds. Dirty-state
+snapshotting, CMI-content propagation, successful-publication refresh, and
+failure-preserved state are now explicit. Do not cache a missing or present
+artifact independently of those transitions. Earlier path/mtime cache
 prototypes reduced the trace further but failed
 `rewatch/tests/compile/04-rename-file-internal-dep.sh` and
 `rewatch/tests/compile/08-remove-file.sh`, replacing the intended missing-module
@@ -581,8 +617,9 @@ manifests are mandatory regression gates for another attempt.
 An intermediate attempt that changed freshness consumption and publication in
 one step reproduced the same regression, while retaining only state
 construction and inventory sharing passed the complete canonical suite. The
-next slice therefore introduces explicit per-module dirty state and scheduler
-propagation before replacing live filesystem checks.
+fixed dirty-state and scheduler-propagation slice now also passes the complete
+suite, so the next slice can replace live filesystem freshness checks while
+preserving these transitions.
 
 Ideas not present in Rust remain separate hypotheses for after parity:
 

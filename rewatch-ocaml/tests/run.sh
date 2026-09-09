@@ -11,6 +11,7 @@ export RESCRIPT_BSC_EXE RESCRIPT_RUNTIME
 work="$root/tmp/rewatch-ocaml/test-$$"
 mkdir -p "$work"
 cp -R "$root/rewatch-ocaml/tests/basic" "$work/basic"
+cp -R "$root/rewatch-ocaml/tests/basic" "$work/cleanup-lifecycle"
 cp -R "$root/rewatch-ocaml/tests/basic" "$work/packaged-basic"
 cp -R "$root/rewatch-ocaml/tests/basic" "$work/runtime-discovery"
 cp -R "$root/rewatch-ocaml/tests/basic" "$work/legacy-config"
@@ -33,6 +34,7 @@ cp -R "$root/rewatch-ocaml/tests/source-map" "$work/source-map"
 cp -R "$root/rewatch-ocaml/tests/warning-replay" "$work/warning-replay"
 cp -R "$root/rewatch-ocaml/tests/monorepo" "$work/monorepo"
 basic="$work/basic"
+cleanup_lifecycle="$work/cleanup-lifecycle"
 packaged_basic="$work/packaged-basic"
 runtime_discovery="$work/runtime-discovery"
 legacy_config="$work/legacy-config"
@@ -249,6 +251,17 @@ test -f "$basic/src/B.mjs"
 test -f "$basic/src/WithInterface.mjs"
 test -f "$basic/lib/ocaml/A.cmi"
 test -f "$basic/lib/ocaml/WithInterface.cmti"
+
+# Keep a stale working CMI only while its dependents compile, so bsc can emit
+# its source-level missing-module diagnostic. It must not survive the command.
+"$port" build "$cleanup_lifecycle" >/dev/null
+mv "$cleanup_lifecycle/src/A.res" "$cleanup_lifecycle/src/A2.res"
+if "$port" build "$cleanup_lifecycle" >/dev/null 2>&1; then
+  echo "build after a depended-on rename unexpectedly succeeded" >&2
+  exit 1
+fi
+test ! -f "$cleanup_lifecycle/lib/bs/src/A.cmi"
+test ! -f "$cleanup_lifecycle/lib/ocaml/A.cmi"
 
 # A successful parse must remain compile-dirty when another file aborts the
 # same build before compilation starts.
