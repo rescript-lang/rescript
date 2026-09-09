@@ -392,6 +392,12 @@ missing control-file names.
   cleanup after `SIGTERM`.
 - `watch.lock` contains the running watch process PID, matching the lock-file
   protocol used by the existing integration helpers.
+- Lock removal is also observed while parser, namespace, or compiler children
+  are active. The subprocess schedulers poll the watcher ownership predicate
+  and terminate their active process trees through the platform boundary before
+  unwinding the build. Unit coverage uses a nonterminating child, and the
+  focused integration runner removes `watch.lock` while a deliberately slow
+  compiler child is active and checks both processes disappear.
 - Every canonical watch test passes with the native libuv backend: ordinary and
   atomic edits, warning replay, new and deleted sources, configuration suffix
   changes, ignored non-source paths, and missing source folders. Input snapshots
@@ -812,6 +818,16 @@ bind mount, confirming that this observation is not specific to the OCaml
 driver. The benchmark documentation therefore requires case-sensitive isolated
 fixtures; a bind-mount occurrence is recorded but is not evidence of a
 scheduler regression unless it reproduces there.
+The host-backed worktree also intermittently left an ownerless Git index lock
+during canonical fixture restoration. Shared test helpers now restore requested
+tracked files atomically from their indexed blobs without modifying the index;
+this also respects the suite's temporary Intel-macOS index. Restoration errors
+are fatal instead of allowing later scenarios to run against a partially
+mutated fixture. The configuration-watch case now polls the implementations'
+completion markers before changing or restoring configuration, and verifies
+the watcher process exits after lock removal. The clean/rebuild lifecycle check
+captures output in a temporary file instead of rewriting an otherwise
+unasserted tracked snapshot.
 An intermediate attempt that changed freshness consumption and publication in
 one step reproduced the same regression, while retaining only state
 construction and inventory sharing passed the complete canonical suite. The

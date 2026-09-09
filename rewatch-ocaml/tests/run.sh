@@ -201,6 +201,19 @@ wait_for_file_gone() {
   return 1
 }
 
+wait_for_pid_gone() {
+  pid="$1"
+  attempts=0
+  while [ "$attempts" -lt 50 ]; do
+    if ! kill -0 "$pid" 2>/dev/null; then
+      return 0
+    fi
+    attempts=$((attempts + 1))
+    sleep 0.1
+  done
+  return 1
+}
+
 printf 'let formatted=1\n' | "$port" format --stdin .res | grep 'let formatted = 1' >/dev/null
 if printf 'let =\n' | "$port" format --stdin .res \
   >"$work/format-invalid.out" 2>"$work/format-invalid.err"; then
@@ -438,6 +451,34 @@ wait "$interrupt_pid"
 test ! -f "$interrupt_basic/lib/watch.lock"
 test -z "$(pgrep -f "$interrupt_basic/slow-bsc.sh" || true)"
 test -z "$(find "$interrupt_basic" -name '.rewatch-ocaml-*.log' -print)"
+
+# Removing watch.lock is the shell-suite shutdown protocol. It must interrupt
+# an in-progress compiler batch just as SIGTERM does, rather than waiting for
+# every queued module to finish.
+lock_interrupt_basic="$work/lock-interrupt-basic"
+cp -R "$root/rewatch-ocaml/tests/basic" "$lock_interrupt_basic"
+cp "$root/rewatch-ocaml/tests/slow-bsc.sh" \
+  "$lock_interrupt_basic/slow-bsc.sh"
+chmod +x "$lock_interrupt_basic/slow-bsc.sh"
+lock_child_marker="$lock_interrupt_basic/child-started"
+REWATCH_OCAML_CHILD_STARTED="$lock_child_marker" \
+REWATCH_OCAML_REAL_BSC="$RESCRIPT_BSC_EXE" \
+RESCRIPT_BSC_EXE="$lock_interrupt_basic/slow-bsc.sh" \
+"$port" watch "$lock_interrupt_basic" \
+  >"$lock_interrupt_basic/watch.log" 2>&1 &
+lock_interrupt_pid=$!
+background_pids="$background_pids $lock_interrupt_pid"
+if ! wait_for_file "$lock_child_marker"; then
+  cat "$lock_interrupt_basic/watch.log" >&2
+  exit 1
+fi
+rm -f "$lock_interrupt_basic/lib/watch.lock"
+if ! wait_for_pid_gone "$lock_interrupt_pid"; then
+  echo "watcher did not stop during compiler work after watch.lock removal" >&2
+  exit 1
+fi
+wait "$lock_interrupt_pid"
+test -z "$(pgrep -f "$lock_interrupt_basic/slow-bsc.sh" || true)"
 
 lock_basic="$work/lock-basic"
 cp -R "$root/rewatch-ocaml/tests/basic" "$lock_basic"

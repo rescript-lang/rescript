@@ -120,9 +120,10 @@ let launch ?env payload job =
     let exn = try restore_signals (); exn with signal_exn -> signal_exn in
     raise exn
 
-let wait_for_running active =
+let wait_for_running ?(poll = fun () -> ()) active =
   let rec wait = function
     | [] ->
+      poll ();
       ignore (Unix.select [] [] [] 0.00001);
       wait active
     | child :: rest ->
@@ -197,7 +198,7 @@ let terminate_running children =
         discard_capture child.stderr_capture)
       children)
 
-let run_parallel ?(max_jobs = default_max_jobs) jobs =
+let run_parallel ?(max_jobs = default_max_jobs) ?(poll = fun () -> ()) jobs =
   if max_jobs < 1 then raise (Error "max_jobs must be at least one");
   let indexed = List.mapi (fun index job -> (index, job)) jobs in
   let results = Array.make (List.length jobs) None in
@@ -217,7 +218,7 @@ let run_parallel ?(max_jobs = default_max_jobs) jobs =
     match !active with
     | [] -> ()
     | _ ->
-      let (child, status), restore_signals = wait_for_running !active in
+      let (child, status), restore_signals = wait_for_running ~poll !active in
       with_signal_restore restore_signals (fun () ->
         active :=
           List.filter (fun running -> running.pid <> child.pid) !active;
@@ -245,7 +246,8 @@ module Work_ready = Set.Make (struct
 end)
 
 let run_dependency_graph ?(max_jobs = default_max_jobs)
-    ?(is_fatal = function Sys.Break -> true | _ -> false) works ~next =
+    ?(is_fatal = function Sys.Break -> true | _ -> false)
+    ?(poll = fun () -> ()) works ~next =
   if max_jobs < 1 then raise (Error "max_jobs must be at least one");
   let count = List.length works in
   let by_key = Hashtbl.create count in
@@ -362,7 +364,7 @@ let run_dependency_graph ?(max_jobs = default_max_jobs)
         raise (Error "subprocess dependency graph stalled")
       | [] -> ())
     | _ ->
-      let (child, status), restore_signals = wait_for_running !active in
+      let (child, status), restore_signals = wait_for_running ~poll !active in
       let result =
         with_signal_restore restore_signals (fun () ->
           active :=

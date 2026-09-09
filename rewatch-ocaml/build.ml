@@ -830,6 +830,7 @@ type build_stats = {
   mutable compiler_cleaned: bool;
   warning_state: Warning_state.t;
   mutable had_warnings: bool;
+  poll: unit -> unit;
 }
 
 let source_is_newer ~source ~artifact =
@@ -1234,7 +1235,7 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
          fst
            (parse_job ~bsc ~build_dir:package.graph_build_dir
               ~config:package.graph_compile_config path))
-    |> Process.run_parallel
+    |> Process.run_parallel ~poll:stats.poll
   in
   let failed_parse_paths = Hashtbl.create 8 in
   List.iter2
@@ -1584,7 +1585,7 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder:root ~prod ~feature
   in
   let parsed =
     List.map2 (fun path result -> (path, Some result)) parse_paths_to_run
-      (Process.run_parallel
+      (Process.run_parallel ~poll:stats.poll
          (List.map
             (fun path -> fst (parse_job ~bsc ~build_dir ~config path))
             parse_paths_to_run))
@@ -1908,7 +1909,7 @@ let run_scheduled_modules stats =
       in
       let scheduler_failed =
         try
-          Process.run_dependency_graph works
+          Process.run_dependency_graph ~poll:stats.poll works
             ~is_fatal:(function Scheduled_failure _ -> false | _ -> true)
             ~next:(fun scheduled result ->
               match result, !(scheduled.phase) with
@@ -1972,7 +1973,7 @@ let run_scheduled_modules stats =
 
 let run_namespace_jobs stats =
   let jobs = List.rev !(stats.namespace_jobs) in
-  let results = Process.run_parallel (List.map fst jobs) in
+  let results = Process.run_parallel ~poll:stats.poll (List.map fst jobs) in
   List.iter2 (fun (_, finish) result -> finish result) jobs results
 
 let write_source_dirs (root_config : Config.t) stats =
@@ -2042,8 +2043,9 @@ let write_build_ninja stats =
       close_out channel)
     stats.graph_packages
 
-let run_with_warning_state ~warning_state ~compilation_kind ~no_timing ~seen
-    ~verbosity ~folder ~prod ~features ~warn_error ~watch ~after_build ~filter =
+let run_with_warning_state ~poll ~warning_state ~compilation_kind ~no_timing
+    ~seen ~verbosity ~folder ~prod ~features ~warn_error ~watch ~after_build
+    ~filter =
   let started_at = Unix.gettimeofday () in
   let interactive = Unix.isatty Unix.stdout && Unix.isatty Unix.stderr in
   let is_rebuild = compilation_kind = Some "incremental" in
@@ -2084,6 +2086,7 @@ let run_with_warning_state ~warning_state ~compilation_kind ~no_timing ~seen
       compiler_cleaned = false;
       warning_state;
       had_warnings = false;
+      poll;
     }
   in
   List.iter (fun path -> Hashtbl.replace visited (Unix.realpath path) ()) seen;
@@ -2188,6 +2191,7 @@ let run_with_warning_state ~warning_state ~compilation_kind ~no_timing ~seen
   let parse_step = if is_rebuild then "1/2" else "2/3" in
   let compile_step = if is_rebuild then "2/2" else "3/3" in
   let execute () =
+    poll ();
     let cycle =
       prepare_global_graph ~root_config ~prod ~features ~warn_error ~filter
         ~watch ~stats
@@ -2199,6 +2203,7 @@ let run_with_warning_state ~warning_state ~compilation_kind ~no_timing ~seen
               (Output.cleanup_message ~step:"1/3" ~cleaned:stats.cleaned
                  ~total:stats.previous_asts ~seconds:(phase_seconds seconds))))
     in
+    poll ();
     if stats.compiler_cleaned && not interactive then
       print_endline "Cleaned previous build due to compiler update";
     Option.iter
@@ -2209,6 +2214,7 @@ let run_with_warning_state ~warning_state ~compilation_kind ~no_timing ~seen
       cycle;
     run_internal ~root_config ~seen:visited ~folder:root ~prod ~features
       ~warn_error ~watch ~filter ~is_local:true ~stats;
+    poll ();
     if interactive then
       print_endline
         (Output.parsing_message ~step:parse_step ~count:stats.parsed
@@ -2288,8 +2294,8 @@ let run_with_warning_state ~warning_state ~compilation_kind ~no_timing ~seen
 let run ~seen ~verbosity ~folder ~prod ~features ~warn_error ~watch ~after_build
     ~filter ~no_timing =
   run_with_warning_state ~warning_state:(Warning_state.create ())
-    ~compilation_kind:None ~no_timing ~seen ~verbosity ~folder ~prod ~features
-    ~warn_error ~watch ~after_build ~filter
+    ~poll:(fun () -> ()) ~compilation_kind:None ~no_timing ~seen ~verbosity
+    ~folder ~prod ~features ~warn_error ~watch ~after_build ~filter
 
 let watch ~verbosity ~folder ~prod ~features ~warn_error ~after_build ~filter
     ~clear_screen =
@@ -2459,14 +2465,16 @@ let watch ~verbosity ~folder ~prod ~features ~warn_error ~after_build ~filter
   in
   let warning_state = Warning_state.create () in
   let initial_build = ref true in
+  let keep_running () = (not !stop_requested) && lock_is_owned () in
+  let poll () = if not (keep_running ()) then raise Stop_watch in
   let run_build () =
     let compilation_kind =
       if !initial_build then Some "initial" else Some "incremental"
     in
     try
-      run_with_warning_state ~warning_state ~compilation_kind ~no_timing:false
-        ~seen:[] ~verbosity ~folder ~prod ~features ~warn_error ~watch:true
-        ~after_build ~filter;
+      run_with_warning_state ~poll ~warning_state ~compilation_kind
+        ~no_timing:false ~seen:[] ~verbosity ~folder ~prod ~features ~warn_error
+        ~watch:true ~after_build ~filter;
       initial_build := false
     with
     | Error message | Config.Error message | Source.Error message
@@ -2481,7 +2489,6 @@ let watch ~verbosity ~folder ~prod ~features ~warn_error ~after_build ~filter
     then
       Printf.printf "\027[2J\027[H%!"
   in
-  let keep_running () = (not !stop_requested) && lock_is_owned () in
   let rec polling_loop roots previous =
     if keep_running () then (
       let current = snapshot roots in

@@ -6,6 +6,23 @@ bold() { echo -e "\033[1m$1\033[0m"; }
 rewatch() { RUST_BACKTRACE=1 $REWATCH_EXECUTABLE $@; }
 rewatch_bg() { RUST_BACKTRACE=1 nohup $REWATCH_EXECUTABLE $@; }
 
+restore_tracked_files() {
+  local repo_root path target temporary
+  if ! repo_root=$(git rev-parse --show-toplevel); then
+    error "Could not locate repository while restoring: $*"
+    exit 1
+  fi
+  while IFS= read -r -d '' path; do
+    target="$repo_root/$path"
+    temporary="$target.rewatch-restore-$$"
+    if ! git show ":$path" > "$temporary" || ! mv "$temporary" "$target"; then
+      rm -f "$temporary"
+      error "Could not restore tracked test fixture: $path"
+      exit 1
+    fi
+  done < <(git ls-files --full-name --modified --deleted -z -- "$@")
+}
+
 # Detect if running on Windows
 is_windows() {
   [[ $OSTYPE == 'msys'* || $OSTYPE == 'cygwin'* || $OSTYPE == 'win'* ]];
@@ -84,6 +101,19 @@ wait_for_file() {
   local file="$1"; local timeout="${2:-30}"
   while [ "$timeout" -gt 0 ]; do
     [ -f "$file" ] && return 0
+    sleep 1
+    timeout=$((timeout - 1))
+  done
+  return 1
+}
+
+wait_for_pattern_count() {
+  local file="$1"; local pattern="$2"; local expected="$3"; local timeout="${4:-30}"
+  while [ "$timeout" -gt 0 ]; do
+    local current_count
+    current_count=$(grep -c "$pattern" "$file" 2>/dev/null || true)
+    current_count=${current_count:-0}
+    [ "$current_count" -ge "$expected" ] && return 0
     sleep 1
     timeout=$((timeout - 1))
   done

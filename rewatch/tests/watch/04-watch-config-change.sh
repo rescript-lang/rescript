@@ -28,7 +28,12 @@ if ! wait_for_file "./src/Test.mjs" 20; then
 fi
 success "Initial build completed"
 
-sleep 2
+if ! wait_for_pattern_count rewatch.log "Finished .*compilation" 1 30; then
+  error "Initial build did not settle"
+  cat rewatch.log
+  exit_watcher
+  exit 1
+fi
 
 # Change the suffix in rescript.json (same approach as suffix test)
 replace "s/.mjs/.res.mjs/g" rescript.json
@@ -46,7 +51,7 @@ else
   error "No rebuild detected after rescript.json change"
   cat rewatch.log
   replace "s/.res.mjs/.mjs/g" rescript.json
-  git checkout -- ./src/Test.res
+  restore_tracked_files ./src/Test.res
   exit_watcher
   exit 1
 fi
@@ -58,23 +63,28 @@ else
   error "Watcher crashed after config change"
   cat rewatch.log
   replace "s/.res.mjs/.mjs/g" rescript.json
-  git checkout -- ./src/Test.res
+  restore_tracked_files ./src/Test.res
   exit 1
 fi
 
 # Restore rescript.json and source file
+completed_builds=$(grep -c "Finished .*compilation" rewatch.log 2>/dev/null || true)
+completed_builds=${completed_builds:-0}
 replace "s/.res.mjs/.mjs/g" rescript.json
-git checkout -- ./src/Test.res
+restore_tracked_files ./src/Test.res
 
-# Wait for rebuild with restored suffix (old .res.mjs should go away)
-if wait_for_file_gone "./src/Test.res.mjs" 20; then
+# Wait for the complete rebuild, not merely its early stale-output cleanup.
+if wait_for_pattern_count rewatch.log "Finished .*compilation" "$((completed_builds + 1))" 30 \
+  && wait_for_file_gone "./src/Test.res.mjs" 20; then
   success "Rebuild after restore removed old suffix files"
 else
   # Clean up manually if the watcher didn't remove them
   find . -name "*.res.mjs" -delete 2>/dev/null
 fi
 
-exit_watcher
+if ! exit_watcher; then
+  exit 1
+fi
 
 sleep 2
 rm -f rewatch.log
