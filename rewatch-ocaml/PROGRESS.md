@@ -603,6 +603,20 @@ missing control-file names.
   exactly at the default level and requires both implementations to stay quiet
   under `-q`; interactive clean phase rendering remains in the final terminal
   presentation pass.
+- Redirected build failures now retain Rust's phase and stream boundaries.
+  Compile failures send the `Compiled <n> modules` summary to stderr, while
+  parser failures stop before the parse/compile summaries, prefix the compiler
+  diagnostic with its package, and finish with `Could not parse Source Files`.
+  Standalone warning output also retains Rust's final separator without adding
+  an extra blank line before configuration diagnostics. Three isolated
+  differential builds compare normalized stdout and stderr byte-for-byte for a
+  compiler error, parser error, and successful warning build.
+- Cycle detection now selects a shortest cycle as Rust's compile scheduler does,
+  rather than reporting the first depth-first cycle encountered. Equal shortest
+  cycles and rotations use a deterministic lexical presentation instead of
+  inheriting hash traversal order. Focused graph coverage contains disjoint
+  three-node and two-node cycles and requires the two-node result; the canonical
+  multi-package cycle snapshot remains unchanged.
 - A missing project folder is rejected before path canonicalization with Rust's
   user-facing preflight diagnostic instead of leaking an OCaml `Unix_error`;
   the focused runner checks the complete path-bearing message.

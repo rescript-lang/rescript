@@ -12,6 +12,10 @@ let parsing_message ~step ~count ~seconds =
   Printf.sprintf "%s[%s] 🧱 Parsed %d source files in %.2fs" line_clear step
     count seconds
 
+let parsing_failed_message ~step ~seconds =
+  Printf.sprintf "%s[%s] ❌ Error parsing source files in %.2fs" line_clear step
+    seconds
+
 let compiling_message ~step ~count ~seconds =
   Printf.sprintf "%s[%s] 🤺 Compiled %d modules in %.2fs" line_clear step
     count seconds

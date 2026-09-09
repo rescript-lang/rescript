@@ -2,6 +2,7 @@ exception Error of string
 exception Package_error of string
 exception Stop_watch
 exception Build_failure of string
+exception Parse_failure of string
 exception Scheduled_failure of string
 
 open Build_artifacts
@@ -1670,7 +1671,12 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder:root ~prod ~feature
     Option.iter
       (fun result ->
         if not (Process.succeeded result) then
-          report_failure "Parsing" path result)
+          let output =
+            Printf.sprintf "Error in %s:\n%s%s" config.name result.stderr
+              result.stdout
+          in
+          append_compiler_log root output;
+          raise (Parse_failure output))
       result;
     let stderr =
       if is_local then stderr else retain_critical_external_warnings stderr
@@ -2192,16 +2198,19 @@ let run_with_warning_state ~poll ~warning_state ~compilation_kind ~no_timing
     if not interactive then
       if watch then (
         if success then Printf.printf "Finished compilation\n%!")
-      else
-        Printf.printf
-          "Cleaned %d/%d\nParsed %d source files\nCompiled %d modules\n%!"
-          stats.cleaned stats.previous_asts stats.parsed stats.compiled;
-    Warning_state.entries stats.warning_state
-    |> List.iter (fun entry -> prerr_string entry.Warning_state.output);
-    flush stderr;
+      else (
+        Printf.printf "Cleaned %d/%d\nParsed %d source files\n%!" stats.cleaned
+          stats.previous_asts stats.parsed;
+        if success then Printf.printf "Compiled %d modules\n%!" stats.compiled
+        else Printf.eprintf "Compiled %d modules\n%!" stats.compiled);
     let diagnostics =
       stats.diagnostics |> List.rev |> List.sort_uniq String.compare
     in
+    let warning_entries = Warning_state.entries stats.warning_state in
+    warning_entries
+    |> List.iter (fun entry -> prerr_string entry.Warning_state.output);
+    if warning_entries <> [] && diagnostics = [] then prerr_newline ();
+    flush stderr;
     if diagnostics <> [] then
       prerr_endline (String.concat "\n\n" diagnostics);
     if success && interactive then
@@ -2224,6 +2233,20 @@ let run_with_warning_state ~poll ~warning_state ~compilation_kind ~no_timing
       (Error
         ("Incremental build failed. Error: \027[2K\r  Failed to Compile. "
         ^ "See Errors Above"))
+  in
+  let report_parse_failure output =
+    write_build_ninja_once ();
+    finish_watch_outputs ~success:false;
+    finalize_logs ();
+    if interactive then
+      prerr_endline
+        (Output.parsing_failed_message ~step:(if is_rebuild then "1/2" else "2/3")
+           ~seconds:(if no_timing then 0. else stats.parse_seconds))
+    else Printf.printf "Cleaned %d/%d\n%!" stats.cleaned stats.previous_asts;
+    prerr_endline output;
+    raise
+      (Error
+         "Incremental build failed. Error: \027[2K\r  Could not parse Source Files")
   in
   let format_cycle cycle by_key =
     let format_node name =
@@ -2341,7 +2364,10 @@ let run_with_warning_state ~poll ~warning_state ~compilation_kind ~no_timing
       if not !outputs_finished then finish_watch_outputs ~success:false;
       finalize_logs ();
       release_build_lock ())
-    (fun () -> try execute () with Build_failure output -> report_failure output)
+    (fun () ->
+      try execute () with
+      | Build_failure output -> report_failure output
+      | Parse_failure output -> report_parse_failure output)
 
 let run ~seen ~verbosity ~folder ~prod ~features ~warn_error ~watch ~after_build
     ~filter ~no_timing =
