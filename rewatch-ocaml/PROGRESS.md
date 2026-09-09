@@ -81,6 +81,25 @@ left no watcher, lock, or testrepo change behind. An independent review found
 no concrete correctness, exception-identity, cleanup, warning-order,
 invalidation, phase-ordering, API, or portability issue.
 
+Watch lifecycle now lives in `watcher.ml`, matching the responsibility of
+Rust's `watcher.rs` while retaining `native_watcher.ml` as the narrow libuv
+boundary. It owns local-package watch-root discovery, cached content snapshots,
+native-event reconciliation and handle refresh, polling fallback, edits that
+arrive during a build, terminal clearing, signal deferral, and watch-lock
+cleanup. `build.ml` now supplies only a rebuild callback with the persistent
+warning state and build-specific diagnostic handling.
+
+The watch resource review found two lifecycle bugs that predated the split:
+the lock release protection began only after setup, and process-global signal
+handlers were never restored. Lock ownership is now protected immediately
+after acquisition, while SIGINT/SIGTERM handlers are scoped inside that owner
+and restore their previous dispositions on callback failure, signal exit, and
+normal lock-loss shutdown. A focused OUnit2 lifecycle test covers exceptional
+and normal return, lock cleanup, and both restored signal dispositions.
+Independent behavioral review found no extraction regression; focused resource
+follow-up confirmed the lock, native-handle, signal-restoration, and cleanup
+ordering after the fixes.
+
 ## Source review
 
 The first comparison pass covered the OCaml configuration, package traversal,

@@ -21,4 +21,5 @@ let () =
            Toolchain_tests.tests;
            Unit_tests.tests;
            Warning_state_tests.tests;
+           Watcher_tests.tests;
          ])
