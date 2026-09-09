@@ -577,9 +577,16 @@ chmod 0644 "$work/format-write-rust/A.res" "$work/format-write-ocaml/A.res"
 
 run_case build-missing-folder reject reject build "$work/missing"
 run_case build-existing-folder-without-config reject reject build "$work/empty"
+require_both_errors_contain build-existing-folder-without-config "$work/empty"
 run_case build-malformed-config reject reject build "$work/malformed"
+require_both_errors_contain build-malformed-config \
+  "$work/malformed"
 run_case build-malformed-parent reject reject build "$work/malformed-parent/child"
+require_both_errors_contain build-malformed-parent \
+  "$work/malformed-parent"
 run_case build-config-path-is-directory reject reject build "$work/config-directory"
+require_both_errors_contain build-config-path-is-directory \
+  "$work/config-directory"
 run_case after-build-nonzero-is-not-ignored accept reject build --after-build \
   "node $work/failing-after-build.js" "$project"
 if ! grep -F 'hook failed' "$work/rust.err" >/dev/null || \
@@ -867,11 +874,19 @@ if ! cmp -s "$work/rust.err" "$work/ocaml.err"; then
 fi
 run_case build-malformed-package-json reject reject build \
   "$work/malformed-package-json"
+require_both_errors_contain build-malformed-package-json \
+  'Could not initialize build: Could not parse package.json:'
 run_case build-mismatched-dependency-name panic accept build \
   "$work/mismatched-dependency"
 run_case build-missing-dependency exit2 exit2 build "$work/missing-dependency"
+require_both_errors_contain build-missing-dependency \
+  "Could not build package tree reading dependency 'absent' at path '$work/missing-dependency'. Error:"
 run_case build-configless-dependency exit2 exit2 build "$work/configless-dependency"
+require_both_errors_contain build-configless-dependency \
+  "Could not build package tree for 'no-config' at path '$work/configless-dependency'. Error:"
 run_case build-malformed-dependency exit2 exit2 build "$work/malformed-dependency"
+require_both_errors_contain build-malformed-dependency \
+  "Could not build package tree for 'bad-config' at path '$work/malformed-dependency'. Error:"
 run_case build-duplicate-dependency accept accept build "$work/duplicate-dependency"
 duplicate_warning='Duplicated package: shared ./node_modules/shared (chosen) vs ./node_modules/a/node_modules/shared in ./node_modules/a'
 if ! grep -F "$duplicate_warning" "$work/rust.err" >/dev/null || \
