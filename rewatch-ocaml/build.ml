@@ -283,39 +283,6 @@ let diagnostics_for_package ~is_local (config : Config.t) =
       (fun diagnostic -> diagnostic ^ report_suffix)
       config.deprecation_diagnostics
 
-let parse_file ~bsc ~build_dir ~(config : Config.t) path =
-  let ast = Source.ast_path path in
-  ensure_dir (Filename.concat build_dir (Filename.dirname ast));
-  let contents = read_file (Filename.concat config.root path) in
-  let args =
-    compiler_flags
-      ~ppx_flags:(filter_ppx_flags config.ppx_flags contents)
-      ~source_maps:false ~watch:false ~gentype:false config
-    @ [
-        "-absname";
-        "-bs-ast";
-        "-o";
-        ast;
-        Filename.concat
-          (Filename.concat Filename.parent_dir_name Filename.parent_dir_name)
-          path;
-      ]
-  in
-  let result = Process.run ~cwd:build_dir bsc args in
-  if not (Process.succeeded result) then report_failure "Parsing" path result;
-  if result.stderr <> "" then prerr_string result.stderr;
-  copy_file
-    (Filename.concat build_dir ast)
-    (Filename.concat
-       (lib_path config.root "ocaml")
-       (Filename.basename ast));
-  copy_file
-    (Filename.concat config.root path)
-    (Filename.concat
-       (lib_path config.root "ocaml")
-       (Filename.basename path));
-  ast
-
 let parse_job ~bsc ~build_dir ~(config : Config.t) path =
   let ast = Source.ast_path path in
   ensure_dir (Filename.concat build_dir (Filename.dirname ast));

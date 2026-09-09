@@ -132,6 +132,15 @@ expected non-panicking result:
   existing mismatch warning, or reject the mismatch normally. The command gate
   reproduces the panic; the port consistently uses the ReScript dependency name
   and successfully compiles the same fixture.
+- `build/parse.rs::generate_ast` uses `expect("Error reading file")` when a
+  discovered source disappears before parsing, and `build/compile.rs` uses
+  `expect("copying source file failed")` when a source disappears after `bsc`
+  succeeds but before publication. The latter panic occurs on a worker thread
+  before it sends its completion message, so the Rust scheduler then waits
+  indefinitely. Both races should be ordinary path-bearing build errors. The
+  port's top-level `Sys_error`/`Unix_error` handling provides that failure class;
+  the differential command gate deterministically deletes the source through a
+  compiler wrapper, bounds the Rust hang, and checks the OCaml error path.
 
 Fixing these in Rust is outside the OCaml-port changes themselves. If they are
 fixed upstream, the differential configuration gate should be tightened from
