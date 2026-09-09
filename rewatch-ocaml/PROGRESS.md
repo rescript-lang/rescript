@@ -378,11 +378,13 @@ missing control-file names.
   canonical native paths and compares them through the platform
   path-normalization boundary for Windows compatibility. Focused integration
   coverage exercises both build and clean ownership paths.
-- Generated CommonJS and GenType fixtures now import Belt's actual published
-  `.cjs` and `.mjs` files. Their former hybrid paths combined Belt's output
-  directory with a consumer's suffix and depended on stale dependency CMIs.
-  Treating those paths as compatibility requirements would preserve a build
-  cache accident rather than Rust's intended package-output algorithm.
+- Generated CommonJS, GenType, and canonical rewatch fixtures now import
+  Belt's actual published `.cjs` and `.mjs` files. Their former hybrid or
+  in-source paths combined Belt's output directory with a consumer's suffix,
+  or assumed that a consumer had rewritten the package, and depended on stale
+  dependency CMIs. Treating those paths as compatibility requirements would
+  preserve a build-cache accident rather than Rust's intended package-output
+  algorithm.
 - The integration runner starts watch mode, confirms the lock, performs a
   source edit, changes the configured output suffix, observes the resulting
   rebuild and stale-output removal, adds then deletes a source module while
