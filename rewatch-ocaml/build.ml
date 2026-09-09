@@ -1104,6 +1104,9 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
           (Build_artifacts.cleanup_stale
              ~ocaml_files:
                (Compile_assets.files compile_assets package.graph_ocaml_dir)
+             ~ast_sources:
+               (Compile_assets.ast_sources compile_assets
+                  package.graph_ocaml_dir)
              ~root:package.graph_root
              ~ocaml_dir:package.graph_ocaml_dir
              ~source_files:package.graph_source_files
@@ -1127,6 +1130,8 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
         Build_artifacts.cleanup_stale
           ~ocaml_files:
             (Compile_assets.files compile_assets package.graph_ocaml_dir)
+          ~ast_sources:
+            (Compile_assets.ast_sources compile_assets package.graph_ocaml_dir)
           ~root:package.graph_root
           ~ocaml_dir:package.graph_ocaml_dir
           ~source_files:package.graph_source_files

@@ -2,9 +2,28 @@ type entry = {path: string; modified: float}
 
 type t = {
   files_by_directory: (string, string list) Hashtbl.t;
+  ast_sources_by_directory: (string, (string * string) list) Hashtbl.t;
   cmi_by_module: (string, entry) Hashtbl.t;
   cmt_by_module: (string, entry) Hashtbl.t;
 }
+
+let ast_source_location path =
+  try
+    let channel = open_in_bin path in
+    Fun.protect
+      ~finally:(fun () -> close_in_noerr channel)
+      (fun () ->
+        (try ignore (input_line channel) with End_of_file -> ());
+        let rec find () =
+          match input_line channel with
+          | line ->
+            let line = String.trim line in
+            if line <> "" && not (Filename.is_relative line) then Some line
+            else find ()
+          | exception End_of_file -> None
+        in
+        find ())
+  with Sys_error _ | Unix.Unix_error _ -> None
 
 let read_directory directory =
   let entries =
@@ -33,6 +52,7 @@ let create directories =
   let state =
     {
       files_by_directory = Hashtbl.create (List.length directories);
+      ast_sources_by_directory = Hashtbl.create (List.length directories);
       cmi_by_module = Hashtbl.create 64;
       cmt_by_module = Hashtbl.create 64;
     }
@@ -42,11 +62,23 @@ let create directories =
        let entries = read_directory directory in
        Hashtbl.replace state.files_by_directory directory
          (List.map (fun (entry, _) -> entry.path) entries);
+       Hashtbl.replace state.ast_sources_by_directory directory
+         (entries
+         |> List.filter_map (fun (entry, name) ->
+              match Filename.extension name with
+              | ".ast" | ".iast" ->
+                ast_source_location entry.path
+                |> Option.map (fun source -> (entry.path, source))
+              | _ -> None));
        List.iter (add_module_artifact state) entries);
   state
 
 let files state directory =
   Hashtbl.find_opt state.files_by_directory directory
+  |> Option.value ~default:[]
+
+let ast_sources state directory =
+  Hashtbl.find_opt state.ast_sources_by_directory directory
   |> Option.value ~default:[]
 
 let cmi state key = Hashtbl.find_opt state.cmi_by_module key

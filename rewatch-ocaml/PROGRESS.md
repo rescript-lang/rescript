@@ -600,14 +600,24 @@ directory-scan calls and 10,662 metadata calls (Rust: 160 and 3,367); edit is
 321 and 10,693 (Rust: 160 and 3,386), and clean is 196 and 22,969 (Rust: 158
 and 12,424). Recursive and non-recursive compilation, inactive cleanup trees,
 directory symlinks, and GenType's feature/dev-source rules have focused
-coverage. The remaining directory-scan difference is predominantly the OCaml
-working `lib/bs` inventory, which Rust avoids by carrying source locations in
-its compile-asset state and calculating owned paths directly.
+coverage.
+The compile-asset inventory now reads the absolute source location embedded in
+each published AST, as Rust's `read_compile_state.rs` does. Stale compiler
+artifacts are addressed directly in the corresponding `lib/bs` source
+directory, and a public generated output determines the exact path of its
+working mirror. A recursive `lib/bs` inventory remains as a lazy recovery path
+only when a stale artifact has no usable AST mapping. Focused tests cover the
+direct namespaced/deferred-CMI path and the malformed/legacy fallback, and the
+complete canonical suite covers rename, deletion, suffix changes, feature
+changes, and watch rebuilds. The latest unchanged trace consequently falls to
+162 directory-scan calls and 7,940 metadata calls (Rust: 160 and 3,367); edit
+is 162 and 7,971 (Rust: 160 and 3,386), and clean is 160 and 22,951 (Rust: 158
+and 12,422). This run intentionally did not update wall-clock measurements
+because unrelated host work made timings unsuitable for comparison.
 These are observational counts rather than a raw-total gate, and they include
-compiler process behavior, but the remaining difference is still too large to
-declare the superfluous-work audit closed. The artifact/module state needs
-explicit cleanup/publication invalidation semantics and must retain both
-canonical missing-source snapshots.
+compiler process behavior. The directory-traversal gap is now explained and
+effectively closed, but the incremental metadata difference remains material
+and keeps the superfluous-work audit open.
 
 ### Active filesystem-performance work
 
@@ -627,12 +637,7 @@ order:
    presence, dependency timestamps, fixed dirty state, and CMI-change
    propagation now use explicit state. Move the remaining AST and generated
    output freshness consumers onto the inventory and explicit transitions.
-2. Replace the remaining whole-tree `lib/bs` cleanup inventory with Rust-shaped
-   source-located compile-asset state and directly calculated owned paths.
-   Preserve the source-located missing-module diagnostic, suffix-change cleanup,
-   watch staging, and Windows path comparison; the canonical rename/deletion
-   cases remain mandatory gates.
-3. Carry canonical package identities and resolved dependency roots throughout
+2. Carry canonical package identities and resolved dependency roots throughout
    the whole build context. Resolution is cached during graph preparation, and
    collection, graph visitation, build traversal, and locality checks now reuse
    those identities. Configuration loading, source discovery, dependency
