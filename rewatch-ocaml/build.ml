@@ -22,84 +22,6 @@ let retain_critical_external_warnings stderr =
     |> List.filter (fun block -> contains_text block marker)
     |> String.concat "\n\n\n"
 
-let read_lock_owner path =
-  try
-    let channel = open_in_bin path in
-    Fun.protect ~finally:(fun () -> close_in_noerr channel) (fun () ->
-      Some (really_input_string channel (in_channel_length channel)))
-  with Sys_error _ -> None
-
-let valid_lock_owner value =
-  match Int64.of_string_opt value with
-  | Some pid -> pid >= 0L && pid <= 0xffff_ffffL
-  | None -> false
-
-let malformed_lock_error () =
-  Error
-    "Could not start Rescript build: Could not parse lockfile PID\n  (try removing it and running the command again)"
-
-let process_is_active value =
-  Platform.process_is_active value ~run:(fun program args ->
-    try
-      let result =
-        Process.run ~cwd:(Filename.get_temp_dir_name ()) program args
-      in
-      Some (result.Process.status, result.stdout)
-    with
-    | Process.Error _ | Unix.Unix_error _ | Sys_error _ -> None)
-
-let acquire_build_lock root =
-  let lock_dir = Filename.concat root "lib" in
-  ensure_dir lock_dir;
-  let path = Filename.concat lock_dir "build.lock" in
-  let pid = string_of_int (Unix.getpid ()) in
-  let candidate = Filename.temp_file ~temp_dir:lock_dir ".build-lock-" ".tmp" in
-  let channel = open_out candidate in
-  output_string channel pid;
-  close_out channel;
-  let clear_stale_lock () =
-    let takeover = path ^ ".takeover" in
-    try
-      Unix.link candidate takeover;
-      Fun.protect
-        ~finally:(fun () -> remove_file takeover)
-        (fun () ->
-          match read_lock_owner path with
-          | Some owner when not (valid_lock_owner owner) ->
-            raise (malformed_lock_error ())
-          | Some owner when process_is_active owner -> ()
-          | _ -> remove_file path);
-      true
-    with Unix.Unix_error (Unix.EEXIST, _, _) ->
-      (match read_lock_owner takeover with
-      | Some owner when process_is_active owner -> ()
-      | _ -> remove_file takeover);
-      false
-  in
-  let rec acquire attempts =
-    if attempts = 0 then
-      raise (Error "Timed out waiting for another ReScript build to finish");
-    try Unix.link candidate path
-    with Unix.Unix_error (Unix.EEXIST, _, _) -> (
-      match read_lock_owner path with
-      | Some owner when not (valid_lock_owner owner) ->
-        raise (malformed_lock_error ())
-      | Some owner when process_is_active owner ->
-        if attempts = 1200 then
-          print_endline "Waiting for other build to finish...";
-        ignore (Unix.select [] [] [] 0.05);
-        acquire (attempts - 1)
-      | _ ->
-        if not (clear_stale_lock ()) then ignore (Unix.select [] [] [] 0.05);
-        acquire (attempts - 1))
-  in
-  Fun.protect ~finally:(fun () -> remove_file candidate) (fun () -> acquire 1200);
-  let released = ref false in
-  fun () ->
-    if not !released then (
-      if read_lock_owner path = Some pid then remove_file path;
-      released := true)
-
 let bsc_path () =
   try Toolchain.bsc () with Toolchain.Error message -> raise (Error message)
 
@@ -505,7 +427,9 @@ let clean ~seen ~verbosity ~folder ~prod =
   let on_clean name =
     if show_plain_progress then Printf.printf "Cleaning %s\n%!" name
   in
-  let release_build_lock = acquire_build_lock (Project_context.workspace_lock_root root) in
+  let release_build_lock =
+    Build_lock.acquire_build (Project_context.workspace_lock_root root)
+  in
   Fun.protect ~finally:release_build_lock (fun () ->
     let root_config = Config.load_root root in
     let visited = Hashtbl.create 32 in
@@ -2047,7 +1971,9 @@ let run_with_warning_state ~poll ~warning_state ~compilation_kind ~no_timing
     ^ (cycle |> List.map format_node |> String.concat "\n → ")
     ^ "\nPossible solutions:\n- Extract shared code into a new module both depend on.\n"
   in
-  let release_build_lock = acquire_build_lock (Project_context.workspace_lock_root root) in
+  let release_build_lock =
+    Build_lock.acquire_build (Project_context.workspace_lock_root root)
+  in
   let phase_seconds seconds = if no_timing then 0. else seconds in
   let parse_step = if is_rebuild then "1/2" else "2/3" in
   let compile_step = if is_rebuild then "2/2" else "3/3" in
@@ -2157,55 +2083,7 @@ let watch ~verbosity ~folder ~prod ~features ~warn_error ~after_build ~filter
     ~clear_screen =
   let root = project_root folder in
   ignore (Config.load_root root);
-  let lock_dir = Filename.concat root "lib" in
-  ensure_dir lock_dir;
-  let lock_path = Filename.concat lock_dir "watch.lock" in
-  let pid = string_of_int (Unix.getpid ()) in
-  let read_lock () = read_lock_owner lock_path in
-  let candidate = Filename.temp_file ~temp_dir:lock_dir ".watch-lock-" ".tmp" in
-  let channel = open_out candidate in
-  output_string channel pid;
-  close_out channel;
-  let clear_stale_lock () =
-    let takeover = lock_path ^ ".takeover" in
-    try
-      Unix.link candidate takeover;
-      Fun.protect
-        ~finally:(fun () -> remove_file takeover)
-        (fun () ->
-          match read_lock () with
-          | Some owner when not (valid_lock_owner owner) ->
-            raise (malformed_lock_error ())
-          | Some owner when process_is_active owner -> ()
-          | _ -> remove_file lock_path);
-      true
-    with Unix.Unix_error (Unix.EEXIST, _, _) ->
-      (match read_lock_owner takeover with
-      | Some owner when process_is_active owner -> ()
-      | _ -> remove_file takeover);
-      false
-  in
-  let rec create_lock attempts =
-    if attempts = 0 then
-      raise (Error "Timed out recovering a stale ReScript watch lock");
-    try Unix.link candidate lock_path
-    with Unix.Unix_error (Unix.EEXIST, _, _) -> (
-      match read_lock () with
-      | Some owner when not (valid_lock_owner owner) ->
-        raise (malformed_lock_error ())
-      | Some owner when process_is_active owner ->
-        raise
-          (Error
-             (Printf.sprintf
-                "Could not start Rescript build: A ReScript build is already running. The process ID (PID) is %s"
-                owner))
-      | _ ->
-        if not (clear_stale_lock ()) then ignore (Unix.select [] [] [] 0.01);
-        create_lock (attempts - 1))
-  in
-  Fun.protect ~finally:(fun () -> remove_file candidate) (fun () -> create_lock 1000);
-  let lock_is_owned () = read_lock () = Some pid in
-  let remove_owned_lock () = if lock_is_owned () then remove_file lock_path in
+  let watch_lock = Build_lock.acquire_watch root in
   let stop_requested = ref false in
   let waiting_for_native_event = ref false in
   let stop () =
@@ -2321,7 +2199,9 @@ let watch ~verbosity ~folder ~prod ~features ~warn_error ~after_build ~filter
   in
   let warning_state = Warning_state.create () in
   let initial_build = ref true in
-  let keep_running () = (not !stop_requested) && lock_is_owned () in
+  let keep_running () =
+    (not !stop_requested) && Build_lock.is_owned watch_lock
+  in
   let poll () = if not (keep_running ()) then raise Stop_watch in
   let run_build () =
     let compilation_kind =
@@ -2425,4 +2305,4 @@ let watch ~verbosity ~folder ~prod ~features ~warn_error ~after_build ~filter
             native_fallback message;
             polling_loop roots previous)
           fallback)
-    ~finally:remove_owned_lock
+    ~finally:(fun () -> Build_lock.release watch_lock)

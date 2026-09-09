@@ -27,6 +27,7 @@
   package_metadata
   compiler_args
   compiler_log
+  build_lock
   build_artifacts
   compile_assets
   build_state

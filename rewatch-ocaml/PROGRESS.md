@@ -59,6 +59,13 @@ construction consumes those values but still owns subprocess execution and
 artifact publication. The existing argument-order and PPX tests now target the
 policy module directly.
 
+Build and watch lock lifecycle now lives in `build_lock.ml`, matching Rust's
+`lock.rs` responsibility. PID validation, stale-lock takeover, active-process
+checks, ownership polling, and release no longer have separate copies inside
+the build and watch paths. Process probing remains behind `platform.mli`; the
+atomic hard-link primitive is centralized here so native Windows validation can
+either approve it or replace it through the same platform boundary.
+
 ## Source review
 
 The first comparison pass covered the OCaml configuration, package traversal,
