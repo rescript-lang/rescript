@@ -10,6 +10,9 @@ let strip_verbatim_prefix path =
 
 let canonicalize_path path = Unix.realpath path |> strip_verbatim_prefix
 
+let directory_identity ~path _metadata =
+  canonicalize_path path |> normalize_path_for_comparison
+
 let executable_extensions ~program =
   if Filename.extension program <> "" then [""]
   else
