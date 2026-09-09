@@ -15,7 +15,7 @@ let tests =
   Sys.remove root;
   Unix.mkdir root 0o755;
   Fun.protect
-    ~finally:(fun () -> Build.remove_tree root)
+    ~finally:(fun () -> Build_artifacts.remove_tree root)
     (fun () ->
       let package_json = Filename.concat root "package.json" in
       let check contents expected message =

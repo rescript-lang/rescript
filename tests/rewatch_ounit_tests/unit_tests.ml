@@ -206,7 +206,7 @@ let tests =
   Sys.remove path_root;
   Unix.mkdir path_root 0o755;
   Fun.protect
-    ~finally:(fun () -> Build.remove_tree path_root)
+    ~finally:(fun () -> Build_artifacts.remove_tree path_root)
     (fun () ->
       let first = Filename.concat path_root "first" in
       let second = Filename.concat path_root "second" in
@@ -261,7 +261,7 @@ let tests =
   Sys.remove scheduler_root;
   Unix.mkdir scheduler_root 0o755;
   Fun.protect
-    ~finally:(fun () -> Build.remove_tree scheduler_root)
+    ~finally:(fun () -> Build_artifacts.remove_tree scheduler_root)
     (fun () ->
       let helper =
         Spawn.spawn ~prog:test_executable
@@ -501,7 +501,7 @@ let tests =
   Sys.remove config_root;
   Unix.mkdir config_root 0o755;
   Fun.protect
-    ~finally:(fun () -> Build.remove_tree config_root)
+    ~finally:(fun () -> Build_artifacts.remove_tree config_root)
     (fun () ->
       let config_path = Filename.concat config_root "rescript.json" in
       write_file config_path {|{"name":"file-casing","namespace":"FileCasing"}|};
@@ -714,7 +714,7 @@ let tests =
   Sys.remove dependency_root;
   Unix.mkdir dependency_root 0o755;
   Fun.protect
-    ~finally:(fun () -> Build.remove_tree dependency_root)
+    ~finally:(fun () -> Build_artifacts.remove_tree dependency_root)
     (fun () ->
       write_file
         (Filename.concat dependency_root "rescript.json")

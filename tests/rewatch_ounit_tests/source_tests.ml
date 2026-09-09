@@ -33,7 +33,7 @@ let tests =
   Sys.remove root;
   Unix.mkdir root 0o755;
   Fun.protect
-    ~finally:(fun () -> Build.remove_tree root)
+    ~finally:(fun () -> Build_artifacts.remove_tree root)
     (fun () ->
       write_file (Filename.concat root "src/Main.res") "let value = 1\n";
       write_file
