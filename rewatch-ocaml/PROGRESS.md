@@ -361,6 +361,20 @@ missing control-file names.
 - Workspace packages inherit project-root JSX, source-map, experimental, and
   package-output settings. The dependency fixture verifies root-suffix output
   and cleanup despite a conflicting package-local suffix.
+- Compiler metadata records which project built each package's artifacts.
+  Dependencies built as part of the current project continue to inherit that
+  project's package-output settings and are invalidated when those settings
+  change, including stale-output cleanup and deleted-source handling from Rust
+  PR #8540. An independently built dependency instead retains its published
+  output layout when a consumer requests different output settings. This is a
+  deliberate ownership refinement beyond that Rust patch: applying consumer
+  invalidation unconditionally deleted Belt's `lib/js` and `lib/es6` trees
+  during the repository test suite. The recorded owner selects the same
+  package-output settings for cleanup, freshness repair, compilation, and
+  subsequent metadata writes, including when an independently built package
+  itself needs rebuilding. The metadata stores canonical native paths and
+  compares them through the platform path-normalization boundary for Windows
+  compatibility.
 - The integration runner starts watch mode, confirms the lock, performs a
   source edit, changes the configured output suffix, observes the resulting
   rebuild and stale-output removal, adds then deletes a source module while
