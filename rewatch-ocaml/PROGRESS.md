@@ -356,7 +356,9 @@ missing control-file names.
   scheduling without `/bin/sh`.
 - `warnings`, `ppx-flags`, JSX v4, source-map, `LetUnwrap` experimental
   features, and `js-post-build` are projected into external compiler/process
-  invocations. The post-build fixture verifies its generated-file argument.
+  invocations. The post-build fixture verifies its generated-file argument, and
+  a differential failure case requires both implementations to identify the
+  generated JavaScript path when the configured command exits nonzero.
 - `format`, `compiler-args`, `--filter`, and `--after-build` are implemented.
   The test runner covers stdin formatting, compiler-argument JSON, filtering,
   and a successful after-build assertion. The command-validation gate also

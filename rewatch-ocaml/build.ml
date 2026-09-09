@@ -530,7 +530,12 @@ let run_post_build (config : Config.t) path =
         | None -> Process.run ~cwd:config.root program args
         | Some env -> Process.run ~env ~cwd:config.root program args
       in
-      if not (Process.succeeded result) then report_failure "js-post-build" output result;
+      if not (Process.succeeded result) then (
+        let captured = result.stderr ^ result.stdout in
+        raise
+          (Build_failure
+             (Printf.sprintf "js-post-build command failed for %s%s" output
+                (if captured = "" then "" else "\n" ^ captured))));
       if result.stdout <> "" then print_string result.stdout;
       if result.stderr <> "" then prerr_string result.stderr) config.package_specs
 

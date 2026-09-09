@@ -39,6 +39,7 @@ mkdir -p "$work/format-source-selection/src" \
   "$work/format-source-selection/packages/local/native" \
   "$work/format-source-selection/packages/local/other"
 mkdir -p "$work/package-name-mismatch/src" "$work/malformed-package-json/src"
+mkdir -p "$work/failed-js-post-build/src"
 mkdir -p "$work/mismatched-dependency/src" \
   "$work/mismatched-dependency/node_modules/dep/src"
 mkdir -p "$work/configless-dependency/src" \
@@ -130,6 +131,9 @@ printf '{"name":"malformed-package-json","sources":["src"]}\n' \
   >"$work/malformed-package-json/rescript.json"
 printf '{invalid\n' >"$work/malformed-package-json/package.json"
 printf 'let value = 1\n' >"$work/malformed-package-json/src/A.res"
+printf '{"name":"failed-js-post-build","sources":["src"],"js-post-build":{"cmd":"exit 7"}}\n' \
+  >"$work/failed-js-post-build/rescript.json"
+printf 'let value = 1\n' >"$work/failed-js-post-build/src/A.res"
 printf '{"name":"mismatched-dependency","sources":["src"],"dependencies":["dep"]}\n' \
   >"$work/mismatched-dependency/rescript.json"
 printf 'let value = Dep.value\n' >"$work/mismatched-dependency/src/A.res"
@@ -339,6 +343,17 @@ if ! grep -F 'Could not run --after-build command' \
   ! grep -F 'rewatch-command-that-does-not-exist' \
     "$work/ocaml.err" >/dev/null; then
   echo "Missing --after-build program did not produce a contextual OCaml error" >&2
+  cat "$work/ocaml.out" "$work/ocaml.err" >&2
+  exit 1
+fi
+run_case js-post-build-nonzero reject reject build "$work/failed-js-post-build"
+js_post_build_error="js-post-build command failed for $work/failed-js-post-build/src/A.js"
+if ! grep -F "$js_post_build_error" "$work/rust.err" >/dev/null || \
+  ! grep -F "$js_post_build_error" "$work/ocaml.err" >/dev/null; then
+  echo "js-post-build failure diagnostics differ" >&2
+  printf '%s\n' '--- Rust output ---' >&2
+  cat "$work/rust.out" "$work/rust.err" >&2
+  printf '%s\n' '--- OCaml output ---' >&2
   cat "$work/ocaml.out" "$work/ocaml.err" >&2
   exit 1
 fi
