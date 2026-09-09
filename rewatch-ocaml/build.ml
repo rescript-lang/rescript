@@ -917,6 +917,7 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
   let unallowed_dependencies = ref [] in
   let loaded_configs = Hashtbl.create 32 in
   let resolved_dependencies = Hashtbl.create 32 in
+  let resolved_packages = Hashtbl.create 32 in
   let reported_duplicate_packages = Hashtbl.create 8 in
   let load_config root =
     match Hashtbl.find_opt loaded_configs root with
@@ -936,8 +937,7 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
         require_dependency_directory ~workspace_root:root_config.root
           package_root dependency
       in
-      (match dependency_path root_config.root dependency.name with
-      | Some chosen when chosen <> directory ->
+      let warn_duplicate chosen =
         let warning_key = dependency.name ^ "\000" ^ directory in
         if not (Hashtbl.mem reported_duplicate_packages warning_key) then (
           Hashtbl.add reported_duplicate_packages warning_key ();
@@ -946,17 +946,26 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
             dependency.name (relative_to root_config.root chosen)
             (relative_to root_config.root directory)
             (relative_to root_config.root package_root))
-      | Some _ | None -> ());
-      let config =
-        try load_config directory
-        with Config.Error message ->
-          raise
-            (Package_error
-               (Printf.sprintf
-                  "Could not build package tree for '%s' at path '%s'. Error: %s"
-                  dependency.name root_config.root message))
       in
-      let resolved = (directory, config) in
+      let resolved =
+        match Hashtbl.find_opt resolved_packages dependency.name with
+        | Some ((chosen, _) as resolved) ->
+          if chosen <> directory then warn_duplicate chosen;
+          resolved
+        | None ->
+          let config =
+            try load_config directory
+            with Config.Error message ->
+              raise
+                (Package_error
+                   (Printf.sprintf
+                      "Could not build package tree for '%s' at path '%s'. Error: %s"
+                      dependency.name root_config.root message))
+          in
+          let resolved = (directory, config) in
+          Hashtbl.add resolved_packages dependency.name resolved;
+          resolved
+      in
       Hashtbl.add resolved_dependencies key resolved;
       resolved
   in

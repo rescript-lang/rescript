@@ -298,6 +298,14 @@ applicable.
   isolated copies of the full fixture, its external Belt/runtime targets, and
   every installed `node_modules` tree, so the two implementations cannot share
   or inherit generated artifacts.
+- The package-resolution source audit found that the port emitted Rust's
+  duplicate-package warning but still traversed the later nested path, turning
+  a valid first-path-wins build into a duplicate-module error. Graph preparation
+  now retains one canonical `(root, config)` for each requested dependency name
+  and reuses it after warning, matching `build/packages.rs`. The differential
+  command gate constructs root and nested copies of the same dependency and
+  requires successful builds plus the warning from both implementations. The
+  complete canonical rewatch suite also passes with this resolver change.
 - `bsc-flags` is accepted as the Rust-compatible alias for `compiler-flags`;
   nested compiler flag groups are flattened into direct `bsc` arguments, and
   `--warn-error` replaces config warning errors.
