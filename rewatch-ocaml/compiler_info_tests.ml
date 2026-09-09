@@ -19,18 +19,19 @@ let config root =
   Unix.mkdir (Filename.concat root "src") 0o755;
   Config.load_root root
 
-let context root source_map_args =
+let context root config source_map_args =
   let bsc = Filename.concat root "bsc.exe" in
   let runtime = Filename.concat root "runtime" in
   if not (Sys.file_exists bsc) then write bsc "compiler-v1";
   Build_artifacts.ensure_dir runtime;
   Compiler_info.make_context ~bsc_path:bsc ~runtime_path:runtime
     ~source_map_args
+    ~package_output_specs:(Compiler_info.package_output_specs config)
 
 let () =
   with_temp_dir (fun root ->
     let config = config root in
-    let initial = context root ["-bs-source-map"; "linked"] in
+    let initial = context root config ["-bs-source-map"; "linked"] in
     check (not (Compiler_info.verify_package initial config))
       "a package without an earlier build is not spuriously cleaned";
     Compiler_info.write_package initial config;
@@ -46,21 +47,21 @@ let () =
     Compiler_info.write_package initial config;
     check ((Unix.stat info_path).Unix.st_mtime = 1_000_000_000.)
       "matching compiler information is not rewritten";
-    let changed = context root ["-bs-source-map"; "false"] in
+    let changed = context root config ["-bs-source-map"; "false"] in
     check (Compiler_info.verify_package changed config)
       "changed source-map arguments invalidate artifacts";
     check (not (Sys.file_exists marker)) "mismatched artifacts are removed");
   with_temp_dir (fun root ->
     let config = config root in
-    let initial = context root [] in
+    let initial = context root config [] in
     Compiler_info.write_package initial config;
     write (Filename.concat root "bsc.exe") "compiler-v2";
-    let changed = context root [] in
+    let changed = context root config [] in
     check (Compiler_info.verify_package changed config)
       "changed compiler contents invalidate artifacts");
   with_temp_dir (fun root ->
     let config = config root in
-    let context = context root [] in
+    let context = context root config [] in
     let old_log =
       Build_artifacts.path_of_parts root ["lib"; "ocaml"; ".compiler.log"]
     in
@@ -68,4 +69,33 @@ let () =
     check (Compiler_info.verify_package context config)
       "missing metadata invalidates an existing legacy build";
     check (not (Sys.file_exists old_log))
-      "legacy build artifacts are removed")
+      "legacy build artifacts are removed");
+  with_temp_dir (fun root ->
+    let dependency = config root in
+    let bsc = Filename.concat root "bsc.exe" in
+    let runtime = Filename.concat root "runtime" in
+    write bsc "compiler-v1";
+    Build_artifacts.ensure_dir runtime;
+    let commonjs =
+      [{Compiler_info.module_format = "commonjs"; in_source = true; suffix = ".js"}]
+    in
+    let esmodule =
+      [{Compiler_info.module_format = "esmodule"; in_source = true; suffix = ".js"}]
+    in
+    let initial =
+      Compiler_info.make_context ~bsc_path:bsc ~runtime_path:runtime
+        ~source_map_args:[] ~package_output_specs:commonjs
+    in
+    Compiler_info.write_package initial dependency;
+    let marker =
+      Build_artifacts.path_of_parts root ["lib"; "ocaml"; "marker"]
+    in
+    write marker "keep";
+    let changed =
+      Compiler_info.make_context ~bsc_path:bsc ~runtime_path:runtime
+        ~source_map_args:[] ~package_output_specs:esmodule
+    in
+    check (Compiler_info.verify_package changed dependency)
+      "same-path module-format changes invalidate dependency artifacts";
+    check (not (Sys.file_exists marker))
+      "package-output mismatches remove compiler artifacts")

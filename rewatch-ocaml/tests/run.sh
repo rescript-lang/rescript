@@ -21,9 +21,14 @@ cp -R "$root/rewatch-ocaml/tests/features" "$work/features"
 cp -R "$root/rewatch-ocaml/tests/feature-dependencies" "$work/feature-dependencies"
 cp -R "$root/rewatch-ocaml/tests/gentype" "$work/gentype"
 cp -R "$root/rewatch-ocaml/tests/dependency" "$work/dependency"
-mkdir -p "$work/gentype/node_modules" "$work/dependency/node_modules"
+cp -R "$root/rewatch-ocaml/tests/package-output-dependency" \
+  "$work/package-output-dependency"
+mkdir -p "$work/gentype/node_modules" "$work/dependency/node_modules" \
+  "$work/package-output-dependency/node_modules"
 cp -R "$root/rewatch-ocaml/tests/shared-dep" "$work/gentype/node_modules/dep"
 cp -R "$root/rewatch-ocaml/tests/shared-dep" "$work/dependency/node_modules/dep"
+cp -R "$root/rewatch-ocaml/tests/shared-dep" \
+  "$work/package-output-dependency/node_modules/dep"
 cp -R "$root/rewatch-ocaml/tests/external-boundary" "$work/external-boundary"
 cp -R "$root/rewatch-ocaml/tests/post-build" "$work/post-build"
 cp -R "$root/rewatch-ocaml/tests/out-of-source" "$work/out-of-source"
@@ -44,6 +49,7 @@ features="$work/features"
 feature_dependencies="$work/feature-dependencies"
 gentype="$work/gentype"
 dependency="$work/dependency"
+package_output_dependency="$work/package-output-dependency"
 external_boundary="$work/external-boundary"
 post_build="$work/post-build"
 out_of_source="$work/out-of-source"
@@ -373,6 +379,20 @@ kill -TERM "$watch_pid"
 wait "$watch_pid"
 test ! -f "$watch_basic/lib/watch.lock"
 
+# Watch startup shares normal build initialization, so deleting a public output
+# between sessions must dirty its module even when compiler artifacts are current.
+rm "$watch_basic/src/A.js"
+"$port" watch "$watch_basic" >"$watch_basic/restart.log" 2>&1 &
+watch_restart_pid=$!
+background_pids="$background_pids $watch_restart_pid"
+if ! wait_for_file "$watch_basic/src/A.js"; then
+  cat "$watch_basic/restart.log" >&2
+  exit 1
+fi
+kill -TERM "$watch_restart_pid"
+wait "$watch_restart_pid"
+test ! -f "$watch_basic/lib/watch.lock"
+
 interrupt_basic="$work/interrupt-basic"
 cp -R "$root/rewatch-ocaml/tests/basic" "$interrupt_basic"
 cp "$root/rewatch-ocaml/tests/slow-bsc.sh" "$interrupt_basic/slow-bsc.sh"
@@ -446,9 +466,40 @@ test -f "$gentype/src/Main.js"
 "$port" build "$dependency"
 test -f "$dependency/src/Main.js"
 test -f "$dependency/node_modules/dep/src/Dep.js"
+rm "$dependency/node_modules/dep/src/Dep.js"
+"$port" build "$dependency"
+test -f "$dependency/node_modules/dep/src/Dep.js"
 "$port" clean "$dependency"
 test ! -f "$dependency/src/Main.js"
 test ! -f "$dependency/node_modules/dep/src/Dep.js"
+
+"$port" build "$package_output_dependency"
+grep 'export {' "$package_output_dependency/node_modules/dep/src/Dep.js" >/dev/null
+sed 's/"esmodule"/"commonjs"/' \
+  "$package_output_dependency/rescript.json" \
+  > "$package_output_dependency/rescript.next"
+mv "$package_output_dependency/rescript.next" \
+  "$package_output_dependency/rescript.json"
+"$port" build "$package_output_dependency"
+grep 'exports.value' \
+  "$package_output_dependency/node_modules/dep/src/Dep.js" >/dev/null
+sed -e 's/"commonjs"/"esmodule"/' \
+  -e 's/"in-source": true/"in-source": false/' \
+  -e 's/"suffix": "\.js"/"suffix": "\.mjs"/' \
+  "$package_output_dependency/rescript.json" \
+  > "$package_output_dependency/rescript.next"
+mv "$package_output_dependency/rescript.next" \
+  "$package_output_dependency/rescript.json"
+"$port" build "$package_output_dependency"
+if [ ! -f "$package_output_dependency/node_modules/dep/lib/es6/src/Dep.mjs" ]; then
+  echo "dependency was not rebuilt in its new output location" >&2
+  find "$package_output_dependency/node_modules/dep" -type f -print >&2
+  exit 1
+fi
+if [ -f "$package_output_dependency/node_modules/dep/src/Dep.js" ]; then
+  echo "dependency output from the previous package spec was retained" >&2
+  exit 1
+fi
 
 mkdir -p "$external_boundary/project/node_modules"
 ln -s ../packages/main "$external_boundary/project/node_modules/main"
