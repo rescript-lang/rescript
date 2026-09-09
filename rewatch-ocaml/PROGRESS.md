@@ -611,6 +611,14 @@ missing control-file names.
   an extra blank line before configuration diagnostics. Three isolated
   differential builds compare normalized stdout and stderr byte-for-byte for a
   compiler error, parser error, and successful warning build.
+- Explicit `format` operands now have retained filesystem-validation coverage.
+  Missing files, directories, and unsupported extensions produce byte-identical
+  Rust/OCaml stdout, stderr, and exit classes because both implementations
+  delegate those operands to the same formatter. A missing
+  `RESCRIPT_BSC_EXE` is also exercised for format: Rust's existing helper panic
+  is retained as a documented safety fix, while OCaml reports the stale path
+  normally. The command gate shares one missing-compiler probe across build and
+  format rather than duplicating its setup.
 - Cycle detection now selects a shortest cycle as Rust's compile scheduler does,
   rather than reporting the first depth-first cycle encountered. Equal shortest
   cycles and rotations use a deterministic lexical presentation instead of

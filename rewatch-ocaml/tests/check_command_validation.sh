@@ -293,6 +293,49 @@ run_cwd_case() {
   checked=$((checked + 1))
 }
 
+require_same_output() {
+  name=$1
+  if ! cmp -s "$work/rust.out" "$work/ocaml.out" || \
+    ! cmp -s "$work/rust.err" "$work/ocaml.err"; then
+    echo "$name: Rust and OCaml output differ" >&2
+    printf '%s\n' '--- Rust output ---' >&2
+    cat "$work/rust.out" "$work/rust.err" >&2
+    printf '%s\n' '--- OCaml output ---' >&2
+    cat "$work/ocaml.out" "$work/ocaml.err" >&2
+    exit 1
+  fi
+}
+
+run_missing_bsc_case() {
+  name=$1
+  shift
+  set +e
+  RESCRIPT_BSC_EXE="$work/missing-bsc" "$rust" "$@" \
+    >"$work/rust.out" 2>"$work/rust.err"
+  rust_status=$?
+  RESCRIPT_BSC_EXE="$work/missing-bsc" "$ocaml" "$@" \
+    >"$work/ocaml.out" 2>"$work/ocaml.err"
+  ocaml_status=$?
+  set -e
+  if [ "$(classify "$rust_status")" != panic ] || \
+    [ "$(classify "$ocaml_status")" != reject ]; then
+    printf '%s: expected Rust=panic/OCaml=reject, got Rust=%s/OCaml=%s\n' \
+      "$name" "$rust_status" "$ocaml_status" >&2
+    printf '%s\n' '--- Rust output ---' >&2
+    cat "$work/rust.out" "$work/rust.err" >&2
+    printf '%s\n' '--- OCaml output ---' >&2
+    cat "$work/ocaml.out" "$work/ocaml.err" >&2
+    exit 1
+  fi
+  if ! grep -F 'RESCRIPT_BSC_EXE points to missing path' \
+    "$work/ocaml.err" >/dev/null; then
+    echo "$name: OCaml did not report the stale compiler path" >&2
+    cat "$work/ocaml.out" "$work/ocaml.err" >&2
+    exit 1
+  fi
+  checked=$((checked + 1))
+}
+
 run_redirected_build_case() {
   name=$1
   expected_status=$2
@@ -391,25 +434,14 @@ run_case compiler-args-extension accept reject compiler-args "$project/src/A.txt
 run_case compiler-args-missing panic reject compiler-args "$project/src/Missing.res"
 run_case compiler-args-no-project panic reject compiler-args "$work/orphan/A.res"
 
-set +e
-RESCRIPT_BSC_EXE="$work/missing-bsc" "$rust" build "$project" \
-  >"$work/rust.out" 2>"$work/rust.err"
-rust_status=$?
-RESCRIPT_BSC_EXE="$work/missing-bsc" "$ocaml" build "$project" \
-  >"$work/ocaml.out" 2>"$work/ocaml.err"
-ocaml_status=$?
-set -e
-if [ "$(classify "$rust_status")" != panic ] || \
-  [ "$(classify "$ocaml_status")" != reject ]; then
-  printf 'build-missing-bsc: expected Rust=panic/OCaml=reject, got Rust=%s/OCaml=%s\n' \
-    "$rust_status" "$ocaml_status" >&2
-  printf '%s\n' '--- Rust output ---' >&2
-  cat "$work/rust.out" "$work/rust.err" >&2
-  printf '%s\n' '--- OCaml output ---' >&2
-  cat "$work/ocaml.out" "$work/ocaml.err" >&2
-  exit 1
-fi
-checked=$((checked + 1))
+run_missing_bsc_case build-missing-bsc build "$project"
+run_missing_bsc_case format-missing-bsc format "$project/src/A.res"
+run_case format-missing-file reject reject format "$project/src/Missing.res"
+require_same_output format-missing-file
+run_case format-directory reject reject format "$project/src"
+require_same_output format-directory
+run_case format-unsupported-extension reject reject format "$project/src/A.txt"
+require_same_output format-unsupported-extension
 
 run_case build-missing-folder reject reject build "$work/missing"
 run_case build-existing-folder-without-config reject reject build "$work/empty"
