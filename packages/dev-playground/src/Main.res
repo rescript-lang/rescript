@@ -827,6 +827,7 @@ module App = {
   let make = () => {
     let source = Signal.make(defaultSource)
     let activeTab = Signal.make(JavaScript)
+    let lambdaMode = Signal.make(LambdaView.Before)
     let mappedSourcePosition: Signal.t<option<SourceMapNavigation.position>> = Signal.make(None)
     let mappedGeneratedPosition: Signal.t<option<SourceMapNavigation.position>> = Signal.make(None)
     let status = Signal.make(Loading)
@@ -1351,19 +1352,27 @@ module App = {
               {View.signalText(() => resultSummary(Signal.get(compileResult)))}
             </div>
             <div class="output-shell">
-              <pre class="output">
-                {View.tracked(() => {
-                  let selectedTab = Signal.get(activeTab)
-                  interactiveOutputNode(
-                    Signal.get(compileResult),
-                    Signal.get(source),
-                    selectedTab,
-                    Signal.get(mappedGeneratedPosition),
-                    revealOriginalMapping,
-                    () => Signal.set(activeTab, SourceMap),
-                  )
-                })}
-              </pre>
+              {View.tracked(() => {
+                let selectedTab = Signal.get(activeTab)
+                let snapshot = Signal.get(compileResult)
+                switch (selectedTab, snapshot) {
+                | (Lambda, Some({result: Ok(result)})) =>
+                  <LambdaView
+                    before={result.lambda} after={result.lambdaOptimized} mode={lambdaMode}
+                  />
+                | _ =>
+                  <pre class="output">
+                    {interactiveOutputNode(
+                      snapshot,
+                      Signal.get(source),
+                      selectedTab,
+                      Signal.get(mappedGeneratedPosition),
+                      revealOriginalMapping,
+                      () => Signal.set(activeTab, SourceMap),
+                    )}
+                  </pre>
+                }
+              })}
             </div>
             <Problems compileResult />
           </div>

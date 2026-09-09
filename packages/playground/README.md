@@ -54,3 +54,15 @@ comp.rescript.compile("let a = <div/>");
 ```
 
 The script above will be able to successfully compile code using Belt and React, since both libraries were injected into the compiler's state.
+
+## Lambda debug outputs (API v9)
+
+`comp.rescript.compileWithDebug(source)` returns `lambda` before the backend's
+Lambda optimization passes and `lambda_optimized` after the whole-term passes,
+before export grouping and JavaScript lowering. Both use the same Lambda printer
+so their text can be compared directly. JavaScript lowering performs further
+transformations; this snapshot is not the final JavaScript IR.
+
+Regular `comp.rescript.compile(source)` does not capture these debug outputs.
+Older bundles do not provide `lambda_optimized`; consumers should treat it as
+optional when supporting multiple API versions.

@@ -260,7 +260,8 @@ let required_modules (lam : Lambda.t) : Lam_module_ident.Hash_set.t =
   collect lam;
   required
 
-let compile (output_prefix : string) export_idents hoisted (lam : Lambda.t) =
+let compile ?on_optimized_lambda (output_prefix : string) export_idents hoisted
+    (lam : Lambda.t) =
   let debug_ir = !Js_config.debug_ir in
   let diagnostics =
     if debug_ir then Some (Ir_diagnostics.create ~output_prefix) else None
@@ -334,6 +335,9 @@ let compile (output_prefix : string) export_idents hoisted (lam : Lambda.t) =
     lam
   in
 
+  (* Capture the final whole-term optimization result before export grouping
+     and JavaScript lowering. The callback is absent in normal compilation. *)
+  Option.iter (fun capture -> capture lam) on_optimized_lambda;
   let ({Lam_coercion.groups} as coerced_input), meta =
     Lam_coercion.coerce_and_group_big_lambda meta lam
   in

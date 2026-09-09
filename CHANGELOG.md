@@ -28,6 +28,7 @@
 
 #### :rocket: New Feature
 
+- Add Before optimization, After optimization, and Diff views to the developer playground's Lambda tab, with a dependency-free, work-limited diff, inline highlighting of changed Lambda tokens, and optimized Lambda output in playground API v9. <!-- PR link pending -->
 - Support UTF-16 surrogate-pair escapes such as `"\uD83D\uDE00"` in ordinary string literals. https://github.com/rescript-lang/rescript/pull/8606
 - Support dynamic imports of external bindings annotated with `@scope`; the generated import follows the complete property path. These imports were previously rejected. https://github.com/rescript-lang/rescript/pull/8582
 - Add `@res.hoistedFunction` for emitting nested module functions as flat JavaScript exports. https://github.com/rescript-lang/rescript/pull/8402
