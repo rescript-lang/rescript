@@ -587,57 +587,70 @@ let rec clean_internal ~(root_config : Config.t) ~seen ~folder:root ~prod
   if not (Hashtbl.mem seen root) then (
     Hashtbl.add seen root ();
     let config_path = Config.path_in_root root in
-    if Config.exists_in_root root then (
-      let config = Config.load config_path in
-      validate_package_metadata config;
-      let dependencies =
-        config.dependencies
-        @ if prod || not is_local then [] else config.dev_dependencies
-      in
-      List.iter (fun (dependency : Config.dependency) ->
-        let directory =
-          require_dependency_directory ~workspace_root:root_config.root root
-            dependency
+    let should_clean =
+      if Config.exists_in_root root then (
+        let config = Config.load config_path in
+        validate_package_metadata config;
+        (* A consumer clean owns dependencies previously built in this build
+           context, but not an independently built package's published tree. *)
+        let owns_outputs =
+          root <> root_config.root && Compiler_info.owns_outputs config
         in
-        try
-          clean_internal ~root_config ~seen ~folder:directory ~prod
-            ~is_local:
-              (is_local_dependency_canonical ~workspace:root_config.root
-                 directory)
-        with Config.Error message ->
-          raise
-            (Package_error
-               (Printf.sprintf
-                  "Could not build package tree for '%s' at path '%s'. Error: %s"
-                  dependency.name root_config.root message))) dependencies;
-      let discovery =
-        Source.discover_with_inventory config
-          ~prod:(source_discovery_prod ~prod ~is_local)
-          ~features:None ~filter:None
-          ~on_missing:(report_missing_source_folder config)
-          ~display_root:root_config.root
-      in
-      let output_config = with_root_options config root_config in
-      cleanup_watch_output_sidecars
-        ~source_files:discovery.inventory_files ~root output_config;
-      List.iter
-        (fun module_ ->
+        if owns_outputs then false
+        else (
+          let dependencies =
+            config.dependencies
+            @ if prod || not is_local then [] else config.dev_dependencies
+          in
+          List.iter (fun (dependency : Config.dependency) ->
+            let directory =
+              require_dependency_directory ~workspace_root:root_config.root root
+                dependency
+            in
+            try
+              clean_internal ~root_config ~seen ~folder:directory ~prod
+                ~is_local:
+                  (is_local_dependency_canonical ~workspace:root_config.root
+                     directory)
+            with Config.Error message ->
+              raise
+                (Package_error
+                   (Printf.sprintf
+                      "Could not build package tree for '%s' at path '%s'. Error: %s"
+                      dependency.name root_config.root message))) dependencies;
+          let discovery =
+            Source.discover_with_inventory config
+              ~prod:(source_discovery_prod ~prod ~is_local)
+              ~features:None ~filter:None
+              ~on_missing:(report_missing_source_folder config)
+              ~display_root:root_config.root
+          in
+          let output_config = with_root_options config root_config in
+          cleanup_watch_output_sidecars
+            ~source_files:discovery.inventory_files ~root output_config;
           List.iter
-            (fun spec ->
-              let output =
-                generated_js_path output_config module_.Source.implementation
-                  spec
-              in
-              remove_file output;
-              remove_file (output ^ ".map");
-              remove_file (output ^ ".rewatch-pending");
-              remove_file (output ^ ".rewatch-backup");
-              remove_file (output ^ ".map.rewatch-pending");
-              remove_file (output ^ ".map.rewatch-backup"))
-            output_config.package_specs)
-        discovery.modules);
-    List.iter (fun dir -> remove_tree (Filename.concat root dir))
-      [lib_path "" "bs"; lib_path "" "ocaml"])
+            (fun module_ ->
+              List.iter
+                (fun spec ->
+                  let output =
+                    generated_js_path output_config
+                      module_.Source.implementation spec
+                  in
+                  remove_file output;
+                  remove_file (output ^ ".map");
+                  remove_file (output ^ ".rewatch-pending");
+                  remove_file (output ^ ".rewatch-backup");
+                  remove_file (output ^ ".map.rewatch-pending");
+                  remove_file (output ^ ".map.rewatch-backup"))
+                output_config.package_specs)
+            discovery.modules;
+          true))
+      else true
+    in
+    if should_clean then
+      List.iter
+        (fun dir -> remove_tree (Filename.concat root dir))
+        [lib_path "" "bs"; lib_path "" "ocaml"])
 
 let project_root folder =
   if not (Sys.file_exists folder) then

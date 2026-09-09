@@ -541,6 +541,10 @@ if (path.resolve(info.build_root) !== dependency) {
   throw new Error(`standalone dependency ownership changed to ${info.build_root}`)
 }
 EOF
+"$port" clean "$standalone_output"
+test ! -d "$standalone_output/lib/bs"
+test -f "$standalone_output/node_modules/dep/lib/bs/compiler-info.json"
+test -f "$standalone_output/node_modules/dep/src/Dep.js"
 
 mkdir -p "$external_boundary/project/node_modules"
 ln -s ../packages/main "$external_boundary/project/node_modules/main"
