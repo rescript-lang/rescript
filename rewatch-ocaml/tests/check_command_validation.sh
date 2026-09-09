@@ -30,6 +30,9 @@ mkdir -p "$work/missing-source-folder/src" \
   "$work/missing-source-folder/node_modules/dep"
 mkdir -p "$work/dependency-without-sources/src" \
   "$work/dependency-without-sources/node_modules/dep"
+mkdir -p "$work/default-feature-cycle/src"
+mkdir -p "$work/format-feature-cycle/src" \
+  "$work/format-feature-cycle/node_modules/dep/src"
 mkdir -p "$work/package-name-mismatch/src" "$work/malformed-package-json/src"
 mkdir -p "$work/mismatched-dependency/src" \
   "$work/mismatched-dependency/node_modules/dep/src"
@@ -87,6 +90,18 @@ printf '{"name":"dep"}\n' \
   >"$work/dependency-without-sources/node_modules/dep/rescript.json"
 printf '{"name":"dep"}\n' \
   >"$work/dependency-without-sources/node_modules/dep/package.json"
+printf '{"name":"default-feature-cycle","sources":["src"],"features":{"a":["b"],"b":["a"]}}\n' \
+  >"$work/default-feature-cycle/rescript.json"
+printf 'let value = 1\n' >"$work/default-feature-cycle/src/App.res"
+printf '{"name":"format-feature-cycle","sources":["src"],"dependencies":[{"name":"dep","features":["a"]}]}\n' \
+  >"$work/format-feature-cycle/rescript.json"
+printf 'let value = 1\n' >"$work/format-feature-cycle/src/App.res"
+printf '{"name":"dep","sources":["src"],"features":{"a":["b"],"b":["a"]}}\n' \
+  >"$work/format-feature-cycle/node_modules/dep/rescript.json"
+printf '{"name":"dep"}\n' \
+  >"$work/format-feature-cycle/node_modules/dep/package.json"
+printf 'let value = 1\n' \
+  >"$work/format-feature-cycle/node_modules/dep/src/Dep.res"
 printf '{"name":"config-name","sources":["src"]}\n' \
   >"$work/package-name-mismatch/rescript.json"
 printf '{"name":"package-name"}\n' >"$work/package-name-mismatch/package.json"
@@ -319,6 +334,18 @@ if ! cmp -s "$work/rust.err" "$work/ocaml.err"; then
   cat "$work/rust.err" >&2
   printf '%s\n' '--- OCaml output ---' >&2
   cat "$work/ocaml.err" >&2
+  exit 1
+fi
+run_case build-default-feature-cycle accept accept build \
+  "$work/default-feature-cycle"
+run_cwd_case format-requested-feature-cycle reject reject \
+  "$work/format-feature-cycle" format
+if ! cmp -s "$work/rust.err" "$work/ocaml.err"; then
+  echo "Requested format feature-cycle diagnostics differ" >&2
+  printf '%s\n' '--- Rust output ---' >&2
+  cat "$work/rust.out" "$work/rust.err" >&2
+  printf '%s\n' '--- OCaml output ---' >&2
+  cat "$work/ocaml.out" "$work/ocaml.err" >&2
   exit 1
 fi
 run_case clean-dependency-without-sources accept accept clean \

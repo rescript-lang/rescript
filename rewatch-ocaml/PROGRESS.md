@@ -50,6 +50,13 @@ differences:
   from an explicit empty source list; build, clean, and format emit the exact
   warning, while format also rejects missing or malformed dependencies and
   retains Rust's first-path duplicate-package selection and warning.
+- Feature-map cycle validation ran even when all features were implicitly
+  active, while implicit `format` did not validate specifically requested
+  dependency feature closures at all. Feature implications are now traversed
+  only for restricted selections, as in Rust; format aggregates all applicable
+  consumer requests before deciding between all-features and a restricted
+  union. Differential cases retain both acceptance of an irrelevant cycle and
+  exact rejection of a requested cycle.
 
 The clean-build path now prepares all packages before launching compiler work,
 parses dirty sources as one global batch, emits namespaces as one global batch,
@@ -1179,3 +1186,9 @@ Live spinner animation and verbose event parity are explicitly deferred until
 the final output-presentation pass after macOS and Windows validation. The future
 filesystem-performance ideas documented above do not block completion of the
 compatibility port.
+
+The OCaml unit-test sources will move to `tests/rewatch_ounit_tests` and use the
+repository's existing OUnit2 dependency, leaving production modules in
+`rewatch-ocaml`. Moving the shared shell suite from `rewatch/tests` to a future
+`tests/rewatch_tests` location is intentionally outside this PR because it would
+create unrelated Rust, CI, and tooling path churn.

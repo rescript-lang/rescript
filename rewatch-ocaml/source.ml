@@ -183,6 +183,24 @@ let scan_source ~root (source : Config.source) ~discover_modules ~on_missing
   with Sys_error _ | Unix.Unix_error _ ->
     if discover_modules then on_missing absolute
 
+let resolve_active_features (config : Config.t) requested =
+  let active_features = Hashtbl.create 16 in
+  let raise_feature_cycle feature visiting =
+    let chain = List.rev (feature :: visiting) |> String.concat " -> " in
+    raise (Error ("Cycle detected in `features` map: " ^ chain))
+  in
+  let rec activate feature visiting =
+    if List.mem feature visiting then
+      raise_feature_cycle feature visiting;
+    if not (Hashtbl.mem active_features feature) then (
+      Hashtbl.add active_features feature ();
+      match List.assoc_opt feature config.features with
+      | None -> ()
+      | Some implied -> List.iter (fun name -> activate name (feature :: visiting)) implied)
+  in
+  List.iter (fun feature -> activate feature []) requested;
+  active_features
+
 let discover_with_inventory ?(on_orphan = fun _ -> ())
     ?(on_missing = fun path ->
       Printf.eprintf "Could not read folder %s\n%!" path)
@@ -194,29 +212,9 @@ let discover_with_inventory ?(on_orphan = fun _ -> ())
       let regex = try Str.regexp pattern with Failure _ -> raise (Error ("invalid filter regex: " ^ pattern)) in
       fun path -> try ignore (Str.search_forward regex path 0); true with Not_found -> false
   in
-  let active_features = Hashtbl.create 16 in
-  let raise_feature_cycle feature visiting =
-    let chain = List.rev (feature :: visiting) |> String.concat " -> " in
-    raise (Error ("Cycle detected in `features` map: " ^ chain))
+  let active_features =
+    resolve_active_features config (Option.value features ~default:[])
   in
-  let rec validate_feature feature visiting =
-    if List.mem feature visiting then
-      raise_feature_cycle feature visiting;
-    match List.assoc_opt feature config.features with
-    | None -> ()
-    | Some implied -> List.iter (fun name -> validate_feature name (feature :: visiting)) implied
-  in
-  List.iter (fun (name, _) -> validate_feature name []) config.features;
-  let rec activate feature visiting =
-    if List.mem feature visiting then
-      raise_feature_cycle feature visiting;
-    if not (Hashtbl.mem active_features feature) then (
-      Hashtbl.add active_features feature ();
-      match List.assoc_opt feature config.features with
-      | None -> ()
-      | Some implied -> List.iter (fun name -> activate name (feature :: visiting)) implied)
-  in
-  List.iter (fun feature -> activate feature []) (Option.value features ~default:[]);
   let all_features = features = None in
   let visited_dirs = Hashtbl.create 32 in
   let visited_gentype_dirs = Hashtbl.create 32 in
