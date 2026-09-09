@@ -950,6 +950,12 @@ rerun it for the final maintainability review alongside maximum module size.
   Rust's live parsing/compilation spinner or complete verbosity behavior. Plain
   redirected output and pseudo-terminal output are tracked as distinct gates
   in `PARITY_CHECKLIST.md`.
+- A focused verbosity audit isolates the remaining non-spinner output gap. Rust
+  `-v` reports project context, package discovery, AST generation, and
+  interface/implementation compilation events; OCaml currently reports only
+  its project root. Rust `-vv` also reports the compiled/dirty scheduler
+  universe. The eventual gate should compare normalized event multisets rather
+  than Rayon-dependent ordering. Redirected default output is unaffected.
 - `watch` now uses long-lived libuv filesystem-event handles for the root and
   recursively resolved local dependency directories. Native events are treated
   as wakeups for the established snapshot/diff algorithm, so correctness does
@@ -1070,12 +1076,16 @@ rerun it for the final maintainability review alongside maximum module size.
    concurrency, platform, and algorithmic invariants that are not apparent from
    the code itself; review naming, remove dead code, and document the complete
    compatibility-oddity, corrected-Rust-behavior, and future-performance lists.
-6. Validate macOS packaging and native event behavior, then prepare the pinned
+6. Complete the final output-presentation pass: port Rust's semantic `-v`/`-vv`
+   events with an order-insensitive differential gate, then implement and test
+   the live interactive spinner frames.
+7. Validate macOS packaging and native event behavior, then prepare the pinned
    Windows handoff. Finish the Windows watcher/lock
    backend and path audit and run the native build, unit, focused, and canonical
    Bash suites in the VM. Address findings there and finish with an x64 Windows
    confidence run where available.
 
-Live spinner animation and the future filesystem-performance work documented
-above are explicitly deferred and do not block completion of the compatibility
-port.
+Live spinner animation and verbose event parity are explicitly deferred until
+the final output-presentation pass before Windows. The future
+filesystem-performance ideas documented above do not block completion of the
+compatibility port.

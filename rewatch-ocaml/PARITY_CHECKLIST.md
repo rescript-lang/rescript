@@ -71,7 +71,7 @@ gap. A deliberate difference needs a rationale and regression test in
 | --- | --- | --- |
 | Missing/non-project folder and config discovery | A differential command gate covers missing, config-less, and malformed build folders plus no-project compiler inputs; project-context tests distinguish listed parent dependencies from unrelated packages under a `package.json` workspace | Matched for `ProjectContext::new`, parent-config selection, and root/config discovery; exact diagnostic wording remains in the output inventory |
 | Configuration schema and aliases | A 297-case differential gate covers every typed configuration family and exact arguments for shared accepted behavior; four documented Rust/OCaml divergences are explicit expectations rather than omitted cases | Matched for typed schema and argument projection; parse-error and diagnostic wording inventory remains |
-| Package/dependency graph | Canonical compile/feature cases and graph unit tests; the differential command gate covers missing, config-less, malformed, duplicate-path, metadata-name-mismatched, and malformed-package-metadata cases | Package discovery/resolution guards are inventoried below; remaining parse/compile/cleanup source guards and diagnostics are open |
+| Package/dependency graph | Canonical compile/feature cases and graph unit tests; the differential command gate covers missing, config-less, malformed, duplicate-path, metadata-name-mismatched, and malformed-package-metadata cases; parse/compile/cleanup guards are inventoried below | Matched for graph construction, scheduling, and reachable cleanup states; exact diagnostic wording remains in the output inventory |
 | Compiler/runtime/executable discovery | Packaged-layout test removes `RESCRIPT_BSC_EXE` and uses sibling `bsc.exe`; focused runtime test removes `RESCRIPT_RUNTIME` and resolves `@rescript/runtime`; differential command gate covers a missing explicit compiler; platform path tests cover Windows verbatim drive and UNC paths | Matched for discovery and environment precedence; OCaml reports a stale explicit compiler as a normal contextual error while Rust currently panics; native Windows execution remains pending |
 | Locks and watcher lifecycle | Canonical lock/watch cases, focused atomic/stale-lock tests, and differential malformed build/watch lock cases that preserve unknown ownership | Matched for acquisition, active-owner refusal/waiting, valid stale-owner takeover, malformed-owner refusal, workspace scope, and owned cleanup; native Windows process probing and watcher execution remain pending |
 | Output ownership and cleanup | Canonical clean/suffix/removal cases, focused stale-artifact tests, and `clean_tests.ml` coverage that distinguishes configured outputs from neighboring unowned files in both the root and an installed dependency and removes abandoned watch sidecars | Matched for explicit clean ownership, stale compiler/output cleanup, and interrupted staging cleanup; native platform filesystem behavior remains pending |
@@ -174,7 +174,17 @@ on whether stdout and stderr are terminals.
 | Redirected/plain output | Success summaries, warnings, errors, ordering, exit status, and absence of terminal control sequences; Cmdliner help may use its native man-page headings and layout | Canonical snapshots cover important cases; inventory pending |
 | Interactive build | TTY detection, parsing/compilation progress, spinner lifecycle, timing, colors, symbols/emojis, quiet/verbose behavior, and cleanup on interruption | Partial; a retained Linux PTY gate exactly compares normalized cleanup/parse/compile completion lines, step counts, timing, phase emojis, and final status; warning state is covered separately, while live spinner updates and verbosity remain open |
 | Interactive watch | Initial-build and rebuild progress, clear-screen behavior, persistent warnings, recovery errors, symbols/emojis, and orderly shutdown | Partial; a retained PTY gate exactly compares Rust/OCaml initial three-step and incremental two-step phase lines, counts, symbols, and final status after normalizing timing; clear-screen, warning persistence, recovery, and lifecycle are covered; live spinner updates remain open |
-| Accessibility/terminal fallback | Stable meaningful text when color or richer glyphs are unavailable | Open |
+| Accessibility/terminal fallback | Stable meaningful text when color or richer glyphs are unavailable | Redirected output uses stable text without driver ANSI/glyph decoration and is covered by canonical snapshots; neither implementation probes terminal glyph support, so no richer fallback contract exists to port |
+
+The remaining non-spinner output gap is diagnostic verbosity. A focused
+single-package comparison shows that Rust `-v` prints project-context, package
+discovery, per-module parse, and per-module interface/implementation compile
+events, while OCaml currently prints only its project-root context. Rust `-vv`
+also prints the compiled/dirty scheduler-universe count trace. These events need
+semantic comparison without imposing Rayon completion order on OCaml. Live
+spinner frames and verbosity are deliberately grouped into one final
+output-parity pass immediately before native Windows implementation and
+verification.
 
 Interactive checks should run both implementations under a pseudo-terminal and
 capture normalized frames/events rather than snapshotting spinner timing byte
