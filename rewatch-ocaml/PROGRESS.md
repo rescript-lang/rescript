@@ -5,12 +5,14 @@ Reference Rust implementation: `2e532c7f6587d4201befd00ced516e267c90fe73`.
 ## Current milestone
 
 The complete applicable canonical `rewatch/tests` suite now passes with the
-experimental `rescript_ocaml.exe`. Milestone 6 remains open for the broader
-configuration/platform inventory, performance and resource measurements, and
-final whole-port review. OpenTelemetry parity is explicitly excluded by project
-decision; ordinary verbosity and diagnostics remain in scope. Incremental state
-uses existing AST, CMI, CMT, and generated-output artifacts rather than
-in-process compiler state.
+experimental `rescript_ocaml.exe`. Milestone 6 remains open for native platform
+validation, final performance/resource confirmation, maintainability cleanup,
+and the final whole-port review. The configuration, Rust-source validation,
+Rust-test, control-file, and ordinary redirected-output inventories are
+complete. OpenTelemetry parity is explicitly excluded by project decision;
+ordinary verbosity and diagnostics remain in scope. Incremental state uses
+existing AST, CMI, CMT, and generated-output artifacts rather than in-process
+compiler state.
 
 At code checkpoint `324112908`, `opam exec -- make test-all` passed
 uninterrupted with the packaged OCaml rewatch binary as the default. This
@@ -178,10 +180,12 @@ expected non-panicking result:
   when a readable source has no ancestor configuration. Rust should return a
   normal project-discovery error; the differential command-validation gate
   retains the current panic and the port's non-panicking rejection.
-- `helpers.rs`: `read_file` calls `File::open(...).expect("file not found")`,
-  which is reachable when `compiler-args` names a missing source below a valid
-  project. Rust should propagate the path-bearing I/O error. The differential
-  command-validation gate retains exit 101 for Rust and a normal OCaml error.
+- `helpers.rs`: `read_file` calls `File::open(...).expect("file not found")`.
+  This is reachable both when `compiler-args` names a missing source below a
+  valid project and when a discovered source disappears before its parser
+  worker reads it. Rust should propagate the path-bearing I/O error. The
+  differential command-validation gate retains exit 101 for both Rust paths
+  and normal contextual OCaml errors.
 - `helpers.rs`: `get_bsc` canonicalizes the selected compiler path with
   `expect`. A stale or misspelled `RESCRIPT_BSC_EXE` therefore panics before a
   build starts. Rust should return a normal toolchain-discovery error containing
@@ -195,22 +199,23 @@ expected non-panicking result:
   existing mismatch warning, or reject the mismatch normally. The command gate
   reproduces the panic; the port consistently uses the ReScript dependency name
   and successfully compiles the same fixture.
-- `build/parse.rs::generate_ast` uses `expect("Error reading file")` when a
-  discovered source disappears before parsing, and `build/compile.rs` uses
+- `build/parse.rs::generate_ast` adds a second `expect("Error reading file")`
+  around `helpers::read_file`; a missing file actually panics first at the
+  helper's inner `expect`, while another read error could reach this outer
+  panic. `build/compile.rs` separately uses
   `expect("copying source file failed")` when a source disappears after `bsc`
   succeeds but before publication. The latter panic occurs on a worker thread
   before it sends its completion message, so the Rust scheduler then waits
   indefinitely. Both races should be ordinary path-bearing build errors. The
-  port's top-level `Sys_error`/`Unix_error` handling provides that failure class;
-  the differential command gate deterministically deletes the source through a
-  compiler wrapper, bounds the Rust hang, and checks the OCaml error path.
+  port's top-level `Sys_error`/`Unix_error` and compiler-error handlers provide
+  that failure class; differential compiler wrappers deterministically delete
+  sources before later parse work and during publication, bound the Rust hang,
+  and check the OCaml error paths.
 - `build/deps.rs::get_dep_modules` panics when a successfully generated AST
   disappears before dependency extraction. Rust should propagate an ordinary
   path-bearing build error. A second compiler wrapper deterministically removes
   the AST after `bsc` returns; the command-validation gate retains Rust's exit
-  101 and OCaml's normal rejection. The source-before-parser race above has no
-  equally narrow process boundary and remains source-audited rather than
-  timing-dependent test coverage.
+  101 and OCaml's normal rejection.
 - `build/compile.rs::compile_file` ignores failed CMT/CMTI publication because
   `-bs-no-bin-annot` legitimately suppresses those debug artifacts. OCaml had
   treated every successful implementation compile as requiring a CMT, which
@@ -651,6 +656,12 @@ missing control-file names.
   checks, and canonical redirected watch scenarios, this closes ordinary plain
   output; the intentionally deferred `-v`/`-vv` event stream remains part of
   the final terminal-presentation pass.
+- The pre-parser source-disappearance branch now has deterministic differential
+  coverage. With Rust's Rayon parser constrained to one worker, the first
+  parser subprocess wrapper deletes both discovered fixture sources; Rust then
+  panics on the second unchecked source read. OCaml has already constructed its
+  parse jobs and returns a normal path-bearing parser failure. This closes the
+  last source-race item that was audited but previously lacked a retained gate.
 - Implicit `format` project discovery now has semantic differential coverage for
   a missing config, malformed JSON, and a directory at `rescript.json`. Both
   implementations must retain the command and path context plus the relevant
@@ -1045,12 +1056,12 @@ rerun it for the final maintainability review alongside maximum module size.
 - Incremental state currently relies on artifact timestamps, byte-identical CMI
   publication, and in-memory warning state during watch. Rust's richer
   compile-state model is not otherwise ported.
-- The remaining source-level validation inventory and native Windows
-  verification remain incomplete. Configuration schema acceptance, argument
-  projection, and ordinary redirected-output inventory are complete; semantic
-  `-v`/`-vv` events stay deferred with terminal presentation. Incremental
-  filesystem work is at or below Rust, while the explained clean-build driver
-  delta remains documented for future optimization.
+- Native Windows verification remains incomplete. Configuration schema
+  acceptance, argument projection, source-level validation, and ordinary
+  redirected-output inventory are complete; semantic `-v`/`-vv` events stay
+  deferred with terminal presentation. Incremental filesystem work is at or
+  below Rust, while the explained clean-build driver delta remains documented
+  for future optimization.
 - Full validation coverage is now an explicit source-inventory gate in
   `PARITY_CHECKLIST.md`: every user-reachable Rust guard must map to an OCaml
   location and test or to a documented intentional divergence. Existing suite
@@ -1298,25 +1309,20 @@ rerun it for the final maintainability review alongside maximum module size.
 
 ## Next actions
 
-1. Finish the remaining source-level validation inventory, including the
-   deterministic evidence that is still practical for audited filesystem race
-   branches. Configuration/CLI diagnostics, ordinary redirected output, Rust
-   unit-test coverage, and external control-file inventories are complete;
-   OpenTelemetry is an explicitly documented non-goal.
-2. Continue splitting `build.ml` along stable responsibility boundaries. The
+1. Continue splitting `build.ml` along stable responsibility boundaries. The
    filesystem and artifact-ownership layer now lives in `build_artifacts.ml`;
    package preparation/scheduling and watch lifecycle remain candidates.
-3. Perform the final two-scope whole-port review and address confirmed findings.
-4. At the final maintainability pass, add comments around ownership,
+2. Perform the final two-scope whole-port review and address confirmed findings.
+3. At the final maintainability pass, add comments around ownership,
    concurrency, platform, and algorithmic invariants that are not apparent from
    the code itself; review naming, remove dead code, and document the complete
    compatibility-oddity, corrected-Rust-behavior, and future-performance lists.
-5. Validate macOS packaging and native event behavior, then prepare the pinned
+4. Validate macOS packaging and native event behavior, then prepare the pinned
    Windows handoff. Finish the Windows watcher/lock
    backend and path audit and run the native build, unit, focused, and canonical
    Bash suites in the VM. Address findings there and finish with an x64 Windows
    confidence run where available.
-6. Complete the final output-presentation pass after platform validation: port
+5. Complete the final output-presentation pass after platform validation: port
    Rust's semantic `-v`/`-vv` events with an order-insensitive differential
    gate, then implement and test the live interactive spinner frames.
 

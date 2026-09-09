@@ -63,6 +63,8 @@ mkdir -p "$work/duplicate-dependency/src" \
 mkdir -p "$work/publication-race-rust/src" \
   "$work/publication-race-ocaml/src"
 mkdir -p "$work/ast-race-rust/src" "$work/ast-race-ocaml/src"
+mkdir -p "$work/parse-source-race-rust/src" \
+  "$work/parse-source-race-ocaml/src"
 mkdir -p "$work/watch-config-rust/src" "$work/watch-config-ocaml/src"
 mkdir -p "$work/watch-filter-rust/src" "$work/watch-filter-ocaml/src"
 printf '{"name":"command-validation","sources":["src"]}\n' \
@@ -223,6 +225,16 @@ printf '{"name":"ast-race","sources":["src"]}\n' \
 cp "$work/ast-race-rust/rescript.json" "$work/ast-race-ocaml/rescript.json"
 printf 'let value = 1\n' >"$work/ast-race-rust/src/A.res"
 cp "$work/ast-race-rust/src/A.res" "$work/ast-race-ocaml/src/A.res"
+printf '{"name":"parse-source-race","sources":["src"]}\n' \
+  >"$work/parse-source-race-rust/rescript.json"
+cp "$work/parse-source-race-rust/rescript.json" \
+  "$work/parse-source-race-ocaml/rescript.json"
+for implementation in rust ocaml; do
+  printf 'let value = 1\n' \
+    >"$work/parse-source-race-$implementation/src/A.res"
+  printf 'let value = 2\n' \
+    >"$work/parse-source-race-$implementation/src/B.res"
+done
 printf '{"name":"watch-config","sources":["src"]}\n' \
   >"$work/watch-config-rust/rescript.json"
 cp "$work/watch-config-rust/rescript.json" \
@@ -946,6 +958,40 @@ if [ "$rust_status" -ne 124 ] || \
   [ "$(classify "$ocaml_status")" != reject ] || \
   ! grep -F "A.res" "$work/ocaml.err" >/dev/null; then
   printf 'build-source-disappears-during-publication: expected Rust=worker-panic/timeout and OCaml=path-bearing rejection, got Rust=%s/OCaml=%s\n' \
+    "$rust_status" "$ocaml_status" >&2
+  printf '%s\n' '--- Rust output ---' >&2
+  cat "$work/rust.out" "$work/rust.err" >&2
+  printf '%s\n' '--- OCaml output ---' >&2
+  cat "$work/ocaml.out" "$work/ocaml.err" >&2
+  exit 1
+fi
+checked=$((checked + 1))
+
+set +e
+RAYON_NUM_THREADS=1 \
+REWATCH_REAL_BSC="$RESCRIPT_BSC_EXE" \
+REWATCH_SOURCE_A="$work/parse-source-race-rust/src/A.res" \
+REWATCH_SOURCE_B="$work/parse-source-race-rust/src/B.res" \
+REWATCH_SOURCES_DELETED="$work/parse-source-race-rust/sources-deleted" \
+RESCRIPT_BSC_EXE="$root/rewatch-ocaml/tests/delete-parse-sources-bsc.sh" \
+  "$rust" build "$work/parse-source-race-rust" \
+  >"$work/rust.out" 2>"$work/rust.err"
+rust_status=$?
+REWATCH_REAL_BSC="$RESCRIPT_BSC_EXE" \
+REWATCH_SOURCE_A="$work/parse-source-race-ocaml/src/A.res" \
+REWATCH_SOURCE_B="$work/parse-source-race-ocaml/src/B.res" \
+REWATCH_SOURCES_DELETED="$work/parse-source-race-ocaml/sources-deleted" \
+RESCRIPT_BSC_EXE="$root/rewatch-ocaml/tests/delete-parse-sources-bsc.sh" \
+  "$ocaml" build "$work/parse-source-race-ocaml" \
+  >"$work/ocaml.out" 2>"$work/ocaml.err"
+ocaml_status=$?
+set -e
+if [ "$rust_status" -ne 101 ] || \
+  ! grep -F "file not found" "$work/rust.err" >/dev/null || \
+  [ "$(classify "$ocaml_status")" != reject ] || \
+  ! grep -F "parse-source-race" "$work/ocaml.err" >/dev/null || \
+  ! grep -F ".res" "$work/ocaml.err" >/dev/null; then
+  printf 'build-source-disappears-before-parse-read: expected Rust=panic and OCaml=path-bearing rejection, got Rust=%s/OCaml=%s\n' \
     "$rust_status" "$ocaml_status" >&2
   printf '%s\n' '--- Rust output ---' >&2
   cat "$work/rust.out" "$work/rust.err" >&2
