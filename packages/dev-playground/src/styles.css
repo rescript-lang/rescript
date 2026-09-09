@@ -468,6 +468,106 @@ button {
   background: var(--playground-panel);
 }
 
+.lambda-subtabs {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 8px 16px;
+  background: var(--playground-panel);
+  border-bottom: 1px solid var(--playground-border-soft);
+}
+
+.lambda-subtab {
+  padding: 6px 10px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--playground-text-secondary);
+}
+
+.lambda-subtab:hover,
+.lambda-subtab-active {
+  color: var(--playground-text-primary);
+  background: var(--playground-hover);
+}
+
+.lambda-subtab-active {
+  border-color: var(--fire);
+}
+
+.lambda-subtab:focus-visible {
+  outline: 2px solid var(--fire);
+  outline-offset: 1px;
+}
+
+.lambda-notice {
+  margin: 0;
+  padding: 12px 18px;
+}
+
+.lambda-diff-block {
+  margin: 0;
+  color: var(--playground-text-primary);
+  font: 13px / 1.55 var(--font-mono);
+  tab-size: 2;
+}
+
+.lambda-diff-line {
+  display: grid;
+  grid-template-columns: 5ch 5ch 2ch minmax(0, 1fr);
+}
+
+.lambda-diff-number {
+  color: var(--gray-60);
+  text-align: right;
+  padding-right: 1ch;
+  user-select: none;
+}
+
+.lambda-diff-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.lambda-diff-removed {
+  background: rgba(230, 72, 79, 0.12);
+}
+
+.lambda-diff-added {
+  background: rgba(56, 139, 114, 0.15);
+}
+
+.lambda-diff-token {
+  border-radius: 2px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+.lambda-diff-removed .lambda-diff-token {
+  background: rgba(230, 72, 79, 0.38);
+}
+
+.lambda-diff-added .lambda-diff-token {
+  background: rgba(56, 139, 114, 0.45);
+}
+
+.lambda-diff-removed .lambda-diff-marker {
+  color: var(--fire);
+}
+
+.lambda-diff-added .lambda-diff-marker {
+  color: var(--turtle-dark);
+}
+
+.lambda-diff-context > summary {
+  cursor: pointer;
+  padding: 6px 18px;
+  background: var(--playground-hover);
+}
+
 .result-meta {
   min-height: 36px;
   padding: 9px 16px;
