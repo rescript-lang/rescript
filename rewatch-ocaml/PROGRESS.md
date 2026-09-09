@@ -182,6 +182,19 @@ applicable.
   same-path ES-module-to-CommonJS change, which output existence alone cannot
   detect.
 
+### Compatibility control artifacts
+
+The external control-file inventory found one omitted compatibility artifact:
+Rust writes an empty `lib/bs/build.ninja` to invalidate editor-tooling caches
+after normal and structural builds. The port now writes the same marker after
+successful and compiler-failing normal builds and after post-initial watch
+rebuilds. The current snapshot watcher does not expose native event kinds, so
+it conservatively rewrites the marker after content-only rebuilds too. That is
+a documented over-invalidation and one extra file write, not a missing cache
+invalidation. Focused success/failure builds and the recoverable config-change
+watch case retain the behavior; isolated manifests confirm there are no other
+missing control-file names.
+
 ## Verified
 
 - `dune runtest rewatch-ocaml` passes graph unit coverage.

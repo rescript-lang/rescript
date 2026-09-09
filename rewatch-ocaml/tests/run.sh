@@ -251,6 +251,7 @@ mkdir -p "$basic/lib/bs/other"
 touch "$basic/lib/bs/other/Authored.js"
 
 "$port" build --after-build 'test -f src/A.mjs' "$basic"
+test -f "$basic/lib/bs/build.ninja"
 test -f "$basic/src/A.mjs"
 test -f "$basic/src/Authored.js"
 test -f "$basic/src/B.mjs"
@@ -599,6 +600,7 @@ if "$port" build "$failure" >"$failure/output.log" 2>&1; then
   echo "invalid build unexpectedly succeeded" >&2
   exit 1
 fi
+test -f "$failure/lib/bs/build.ninja"
 grep "expected to have type" "$failure/output.log" >/dev/null
 test ! -f "$root/lib/build.lock"
 
