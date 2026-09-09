@@ -810,8 +810,15 @@ launches in both implementations. The selected artifact sets and contents were
 byte-identical. Its one-run timing is deliberately not an acceptance result.
 The retained gate now also compares the complete fresh-build file-name set,
 including cache and editor-control artifacts. Byte comparison remains limited
-to stable generated artifact classes because compiler logs and implementation
-state contain timestamps or intentionally different internal encodings.
+to stable generated artifact classes because compiler logs and
+`compiler-info.json` contain timestamps or intentionally different internal
+encodings. The stable-content set includes AST, copied-source,
+source-directory, and build-marker files in local and installed dependency
+trees rather than checking only top-level JavaScript/CMI/CMJ outputs. An audit
+that temporarily included `.cmt`/`.cmti` found one differing typed-debug file
+while its CMI, CMJ, AST, JavaScript, and source copy all matched; typed debug
+metadata therefore remains existence-checked but is not a byte-stability
+contract between sequential builds.
 Its first run found that OCaml removed warning-bearing parser outputs from both
 `lib/bs` and `lib/ocaml`, while Rust invalidates only the published
 `lib/ocaml` freshness copy. OCaml now retains the parser's working AST in

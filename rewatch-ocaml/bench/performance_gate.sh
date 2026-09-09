@@ -254,10 +254,12 @@ echo "edit OCaml:      $ocaml_edit_work"
 artifact_manifest() {
   local root=$1 output=$2
   find "$root" -type f \
-    \( -name '*.cmi' -o -name '*.cmj' -o -name '*.mlmap' \
-       -o -name '*.js' -o -name '*.mjs' -o -name '*.cjs' -o -name '*.map' \) \
-    ! -path '*/node_modules/*' ! -name '.compiler.log' \
-    ! -name build.ninja ! -name compiler-info.json -print0 \
+    \( -name '*.ast' -o -name '*.iast' -o -name '*.cmi' -o -name '*.cmj' \
+       -o -name '*.mlmap' \
+       -o -name '*.js' -o -name '*.mjs' -o -name '*.cjs' -o -name '*.map' \
+       -o -name '*.res' -o -name '*.resi' -o -name '.sourcedirs.json' \
+       -o -name build.ninja \) \
+    ! -name '.compiler.log' ! -name compiler-info.json -print0 \
     | sort -z | xargs -0 sha256sum | sed "s#$root/##" >"$output"
 }
 
