@@ -17,6 +17,10 @@ let tests =
     = "\027[2K\r[2/3] 🧱 Parsed 4 source files in 1.50s")
     "interactive parsing phase format";
   check
+    (Output.parsing_failed_message ~step:"2/3" ~seconds:1.5
+    = "\027[2K\r[2/3] ❌ Error parsing source files in 1.50s")
+    "interactive failed parsing phase format";
+  check
     (Output.compiling_message ~step:"3/3" ~count:4 ~seconds:1.5
     = "\027[2K\r[3/3] 🤺 Compiled 4 modules in 1.50s")
     "interactive compilation phase format";

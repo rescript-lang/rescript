@@ -65,6 +65,10 @@ printf '{"name":"command-validation","sources":["src"]}\n' \
   >"$project/rescript.json"
 printf 'let value = 1\n' >"$project/src/A.res"
 printf 'not a ReScript source\n' >"$project/src/A.txt"
+mkdir -p "$work/redirected-parse-fixture/src"
+printf '{"name":"parse-output","sources":["src"]}\n' \
+  >"$work/redirected-parse-fixture/rescript.json"
+printf 'let value =\n' >"$work/redirected-parse-fixture/src/A.res"
 printf 'process.stderr.write("hook failed\\n"); process.exit(7)\n' \
   >"$work/failing-after-build.js"
 printf 'let value = 1\n' >"$work/orphan/A.res"
@@ -289,6 +293,42 @@ run_cwd_case() {
   checked=$((checked + 1))
 }
 
+run_redirected_build_case() {
+  name=$1
+  expected_status=$2
+  fixture=$3
+  rust_project="$work/$name-rust"
+  ocaml_project="$work/$name-ocaml"
+  cp -R "$fixture" "$rust_project"
+  cp -R "$fixture" "$ocaml_project"
+  set +e
+  "$rust" build "$rust_project" >"$work/rust.out" 2>"$work/rust.err"
+  rust_status=$?
+  "$ocaml" build "$ocaml_project" >"$work/ocaml.out" 2>"$work/ocaml.err"
+  ocaml_status=$?
+  set -e
+  sed "s|$rust_project|<ROOT>|g" "$work/rust.out" >"$work/rust.out.norm"
+  sed "s|$rust_project|<ROOT>|g" "$work/rust.err" >"$work/rust.err.norm"
+  sed "s|$ocaml_project|<ROOT>|g" "$work/ocaml.out" >"$work/ocaml.out.norm"
+  sed "s|$ocaml_project|<ROOT>|g" "$work/ocaml.err" >"$work/ocaml.err.norm"
+  if [ "$rust_status" -ne "$expected_status" ] || \
+    [ "$ocaml_status" -ne "$expected_status" ] || \
+    ! cmp -s "$work/rust.out.norm" "$work/ocaml.out.norm" || \
+    ! cmp -s "$work/rust.err.norm" "$work/ocaml.err.norm"; then
+    echo "$name: redirected build output differs" >&2
+    printf '%s\n' '--- Rust stdout ---' >&2
+    cat "$work/rust.out.norm" >&2
+    printf '%s\n' '--- OCaml stdout ---' >&2
+    cat "$work/ocaml.out.norm" >&2
+    printf '%s\n' '--- Rust stderr ---' >&2
+    cat "$work/rust.err.norm" >&2
+    printf '%s\n' '--- OCaml stderr ---' >&2
+    cat "$work/ocaml.err.norm" >&2
+    exit 1
+  fi
+  checked=$((checked + 1))
+}
+
 wait_for_file() {
   path=$1
   attempts=0
@@ -338,6 +378,13 @@ wait_for_line_count() {
   done
   return 1
 }
+
+run_redirected_build_case redirected-compile-error 1 \
+  "$root/rewatch-ocaml/tests/failure"
+run_redirected_build_case redirected-parse-error 1 \
+  "$work/redirected-parse-fixture"
+run_redirected_build_case redirected-warning 0 \
+  "$root/rewatch-ocaml/tests/warning-replay"
 
 run_case compiler-args-source accept accept compiler-args "$project/src/A.res"
 run_case compiler-args-extension accept reject compiler-args "$project/src/A.txt"

@@ -320,6 +320,24 @@ let tests =
     with Graph.Cycle _ -> true
   in
   check cycle_detected "cycle detection";
+  let shortest_cycle =
+    try
+      ignore
+        (Graph.topological_sort
+           [
+             node "LongA" ["LongB"];
+             node "LongB" ["LongC"];
+             node "LongC" ["LongA"];
+             node "ShortA" ["ShortB"];
+             node "ShortB" ["ShortA"];
+           ]
+           ~name:fst ~deps:snd);
+      []
+    with Graph.Cycle cycle -> cycle
+  in
+  check
+    (shortest_cycle = ["ShortA"; "ShortB"; "ShortA"])
+    "cycle diagnostics select the shortest cycle deterministically";
   let blocked =
     Build.blocked_dependents
       [
