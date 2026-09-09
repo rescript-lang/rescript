@@ -57,6 +57,8 @@ printf '{"name":"command-validation","sources":["src"]}\n' \
   >"$project/rescript.json"
 printf 'let value = 1\n' >"$project/src/A.res"
 printf 'not a ReScript source\n' >"$project/src/A.txt"
+printf 'process.stderr.write("hook failed\\n"); process.exit(7)\n' \
+  >"$work/failing-after-build.js"
 printf 'let value = 1\n' >"$work/orphan/A.res"
 printf '{ invalid json\n' >"$work/malformed/rescript.json"
 printf '{ invalid json\n' >"$work/malformed-parent/rescript.json"
@@ -310,6 +312,36 @@ run_case build-existing-folder-without-config reject reject build "$work/empty"
 run_case build-malformed-config reject reject build "$work/malformed"
 run_case build-malformed-parent reject reject build "$work/malformed-parent/child"
 run_case build-config-path-is-directory reject reject build "$work/config-directory"
+run_case after-build-nonzero-is-not-ignored accept reject build --after-build \
+  "node $work/failing-after-build.js" "$project"
+if ! grep -F 'hook failed' "$work/rust.err" >/dev/null || \
+  ! grep -F -- '--after-build command failed with exit code 7' \
+    "$work/ocaml.err" >/dev/null || \
+  ! grep -F 'hook failed' "$work/ocaml.err" >/dev/null; then
+  echo "Nonzero --after-build handling differs from its recorded outcomes" >&2
+  printf '%s\n' '--- Rust output ---' >&2
+  cat "$work/rust.out" "$work/rust.err" >&2
+  printf '%s\n' '--- OCaml output ---' >&2
+  cat "$work/ocaml.out" "$work/ocaml.err" >&2
+  exit 1
+fi
+run_case after-build-empty panic reject build --after-build '' "$project"
+if ! grep -F -- '--after-build command cannot be empty' \
+  "$work/ocaml.err" >/dev/null; then
+  echo "Empty --after-build did not produce a contextual OCaml error" >&2
+  cat "$work/ocaml.out" "$work/ocaml.err" >&2
+  exit 1
+fi
+run_case after-build-missing-program panic reject build --after-build \
+  rewatch-command-that-does-not-exist "$project"
+if ! grep -F 'Could not run --after-build command' \
+    "$work/ocaml.err" >/dev/null || \
+  ! grep -F 'rewatch-command-that-does-not-exist' \
+    "$work/ocaml.err" >/dev/null; then
+  echo "Missing --after-build program did not produce a contextual OCaml error" >&2
+  cat "$work/ocaml.out" "$work/ocaml.err" >&2
+  exit 1
+fi
 printf 'not-a-pid' >"$work/malformed-lock/lib/build.lock"
 run_case build-malformed-lock reject reject build "$work/malformed-lock"
 if [ "$(cat "$work/malformed-lock/lib/build.lock")" != not-a-pid ]; then
