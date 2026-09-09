@@ -619,6 +619,13 @@ missing control-file names.
   is retained as a documented safety fix, while OCaml reports the stale path
   normally. The command gate shares one missing-compiler probe across build and
   format rather than duplicating its setup.
+- Implicit `format` project discovery now has semantic differential coverage for
+  a missing config, malformed JSON, and a directory at `rescript.json`. Both
+  implementations must retain the command and path context plus the relevant
+  failure class; OS error numbers and Serde/Yojson parse locations remain
+  library- and platform-native. The shared OCaml config reader no longer repeats
+  the same filename inside its own `Could not read '<path>'` diagnostic, and
+  unit tests retain that single-path invariant for missing files and directories.
 - Cycle detection now selects a shortest cycle as Rust's compile scheduler does,
   rather than reporting the first depth-first cycle encountered. Equal shortest
   cycles and rotations use a deterministic lexical presentation instead of

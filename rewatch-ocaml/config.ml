@@ -49,9 +49,11 @@ let fail path message = raise (Error (Printf.sprintf "%s: %s" path message))
 let fail_read path message =
   raise (Error (Printf.sprintf "Could not read '%s': %s" path message))
 
-let unix_error_message error operation argument =
-  let target = if argument = "" then operation else argument in
-  Printf.sprintf "%s: %s" target (Unix.error_message error)
+let strip_read_path path message =
+  let prefix = path ^ ": " in
+  if String.starts_with ~prefix message then
+    String.sub message (String.length prefix) (String.length message - String.length prefix)
+  else message
 
 let member name fields = List.assoc_opt name fields
 
@@ -440,18 +442,18 @@ let load path =
   let path =
     try Unix.realpath path
     with
-    | Sys_error message -> fail_read requested_path message
-    | Unix.Unix_error (error, operation, argument) ->
-      fail_read requested_path (unix_error_message error operation argument)
+    | Sys_error message ->
+      fail_read requested_path (strip_read_path requested_path message)
+    | Unix.Unix_error (error, _, _) ->
+      fail_read requested_path (Unix.error_message error)
   in
   let root = Filename.dirname path in
   let json =
     try Yojson.Safe.from_file path
     with
     | Yojson.Json_error message -> fail path ("invalid JSON: " ^ message)
-    | Sys_error message -> fail_read path message
-    | Unix.Unix_error (error, operation, argument) ->
-      fail_read path (unix_error_message error operation argument)
+    | Sys_error message -> fail_read path (strip_read_path path message)
+    | Unix.Unix_error (error, _, _) -> fail_read path (Unix.error_message error)
   in
   let fields =
     match json with
