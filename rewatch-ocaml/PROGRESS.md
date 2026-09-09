@@ -40,6 +40,11 @@ differences:
 - External packages incorrectly included `dev-dependencies`.
 - `namespace: true` used a scoped package name as a literal filename instead of
   applying Rust's namespace normalization.
+- Namespace maps included punctuated/exotic source module names that Rust
+  deliberately filters because they are not valid map identifiers. The shared
+  ASCII predicate now excludes them before `.mlmap` generation; a differential
+  build compares the complete map while focused unit cases retain accepted,
+  punctuated, and empty names.
 - PPX resolution did not search hoisted `node_modules`.
 - Stale cleanup treated every JavaScript-looking file as owned output and
   deleted checked-in legacy files that had no corresponding source or AST.

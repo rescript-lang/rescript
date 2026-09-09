@@ -381,6 +381,8 @@ let namespace_job ~bsc ~runtime ~build_dir ~ocaml_dir ~entry ~package_dirty
     Buffer.add_string buffer "randjbuildsystem\n";
     modules
     |> List.filter (fun module_ -> Some module_.Source.name <> entry)
+    |> List.filter (fun module_ ->
+         Source.is_non_exotic_module_name module_.Source.name)
     |> List.map (fun module_ -> module_.Source.name)
     |> List.sort String.compare
     |> List.iter (fun name ->
