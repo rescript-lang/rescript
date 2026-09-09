@@ -16,6 +16,7 @@
  (name rewatch_ocaml_lib)
  (wrapped false)
  (modules
+  rewatch_version
   cli
   config
   project_context

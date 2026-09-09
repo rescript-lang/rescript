@@ -17,8 +17,6 @@ and build_options = {
   no_timing: bool;
 }
 
-let version = "13.0.0-alpha.6"
-
 open Cmdliner
 open Cmdliner.Term.Syntax
 
@@ -223,7 +221,7 @@ let root =
           "To create a new ReScript project, or to add ReScript to an existing project, use https://github.com/rescript-lang/create-rescript-app.";
       ]
     in
-    Cmd.info "rescript" ~version:("rescript " ^ version)
+    Cmd.info "rescript" ~version:("rescript " ^ Rewatch_version.version)
       ~doc:"Fast, Simple, Fully Typed JavaScript from the Future" ~man
   in
   Cmd.group info ~default:(build_term ~watch:false)
