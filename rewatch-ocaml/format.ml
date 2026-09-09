@@ -34,26 +34,31 @@ let local_dependency root (dependency : Config.dependency) =
   | Some path ->
     if Build.is_local_dependency ~workspace:root path then Some path else None
 
-let package_sources (config : Config.t) =
-  Source.discover config ~prod:false ~features:None ~filter:None
-    ~on_missing:(fun _ -> ())
-    ~display_root:config.root
+type discovered_package = {
+  config: Config.t;
+  modules: Source.module_ list;
+}
+
+let package_sources (package : discovered_package) =
+  package.modules
   |> List.concat_map (fun module_ ->
+       let config = package.config in
        Filename.concat config.root module_.Source.implementation
        :: (match module_.interface with
           | None -> []
           | Some path -> [Filename.concat config.root path]))
 
-(* Rust constructs the complete package graph before selecting the local files
-   that format owns. Retain that validation and its package diagnostics even
-   though installed dependencies are never themselves formatted. *)
-let validate_package_graph (current : Config.t) =
+(* Rust discovers the complete package graph before selecting the local files
+   that format owns. Scan that graph with its effective feature selections so
+   installed-package diagnostics and the eventual local file set cannot drift
+   apart. *)
+let discover_package_graph (current : Config.t) =
   let workspace = Build.workspace_lock_root current.root in
   let resolved_packages = Hashtbl.create 32 in
   let package_configs = Hashtbl.create 32 in
   let feature_requests = Hashtbl.create 32 in
   Build.validate_package_metadata current;
-  Hashtbl.add package_configs current.name current;
+  Hashtbl.add package_configs current.name (current, true);
   let add_feature_request name request =
     let requests =
       Option.value (Hashtbl.find_opt feature_requests name) ~default:[]
@@ -98,30 +103,45 @@ let validate_package_graph (current : Config.t) =
           in
           Build.validate_package_metadata dependency_config;
           Build.report_missing_sources ~is_root:false dependency_config;
-          Hashtbl.replace package_configs dependency.name dependency_config;
-          visit
-            ~is_local:(Build.is_local_dependency ~workspace directory)
-            dependency_config)
+          let dependency_is_local =
+            Build.is_local_dependency ~workspace directory
+          in
+          Hashtbl.replace package_configs dependency.name
+            (dependency_config, dependency_is_local);
+          visit ~is_local:dependency_is_local dependency_config)
       pending
   in
   visit ~is_local:true current;
-  Hashtbl.iter
-    (fun package_name requests ->
-      if not (List.exists Option.is_none requests) then
-        let requested =
-          requests |> List.filter_map Fun.id |> List.concat
-          |> List.sort_uniq String.compare
-        in
-        match Hashtbl.find_opt package_configs package_name with
-        | None -> ()
-        | Some config ->
-          (try ignore (Source.resolve_active_features config requested)
-           with Source.Error message ->
-             raise
-               (Error
-                  (Printf.sprintf "Invalid features for package '%s': %s"
-                     package_name message))))
-    feature_requests
+  Hashtbl.to_seq package_configs
+  |> Seq.map (fun (package_name, ((config : Config.t), is_local)) ->
+       let features =
+         if config.root = current.root then None
+         else
+           match Hashtbl.find_opt feature_requests package_name with
+           | None -> None
+           | Some requests when List.exists Option.is_none requests -> None
+           | Some requests ->
+             let requested =
+               requests |> List.filter_map Fun.id |> List.concat
+               |> List.sort_uniq String.compare
+             in
+             (try ignore (Source.resolve_active_features config requested)
+              with Source.Error message ->
+                raise
+                  (Error
+                     (Printf.sprintf "Invalid features for package '%s': %s"
+                        package_name message)));
+             Some requested
+       in
+       let modules =
+         Source.discover config
+           ~prod:(Build.source_discovery_prod ~prod:false ~is_local)
+           ~features ~filter:None
+           ~on_missing:(Build.report_missing_source_folder config)
+           ~display_root:current.root
+       in
+       {config; modules})
+  |> List.of_seq
 
 let files_in_scope () =
   let current_directory = Sys.getcwd () in
@@ -143,18 +163,18 @@ let files_in_scope () =
           dependency.name = current.name)
         (parent.dependencies @ parent.dev_dependencies)
   in
-  validate_package_graph current;
-  let configs =
-    if listed_by_parent then [current]
+  let packages = discover_package_graph current in
+  let roots_in_scope =
+    if listed_by_parent then [current.root]
     else
-      current
+      current.root
       :: (current.dependencies @ current.dev_dependencies
-         |> List.filter_map (local_dependency current.root)
-         |> List.filter_map (fun root ->
-              if Config.exists_in_root root then Some (Config.load_root root)
-              else None))
+         |> List.filter_map (local_dependency current.root))
   in
-  configs |> List.concat_map package_sources |> List.sort_uniq String.compare
+  packages
+  |> List.filter (fun package ->
+       List.exists (( = ) package.config.root) roots_in_scope)
+  |> List.concat_map package_sources |> List.sort_uniq String.compare
 
 let formatting_error target stderr =
   Printf.sprintf "Error formatting %s: %s" target stderr

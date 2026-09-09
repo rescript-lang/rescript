@@ -56,8 +56,12 @@ differences:
   dependency feature closures at all. Feature implications are now traversed
   only for restricted selections, as in Rust; format aggregates all applicable
   consumer requests before deciding between all-features and a restricted
-  union. Differential cases retain both acceptance of an irrelevant cycle and
-  exact rejection of a requested cycle.
+  union. It then scans that same resolved package graph once, retaining missing
+  source-folder diagnostics from installed dependencies and using the effective
+  dependency features when selecting files from local packages. Differential
+  cases retain acceptance of an irrelevant cycle, exact rejection of a
+  requested cycle, the installed-package diagnostic, and the local-package file
+  set.
 
 The clean-build path now prepares all packages before launching compiler work,
 parses dirty sources as one global batch, emits namespaces as one global batch,
