@@ -28,6 +28,19 @@ let copy_existing_file ?(ensure_parent = true) source destination =
     (fun () ->
       really_input_string input (in_channel_length input) |> output_string output)
 
+let copy_optional_existing_file ?(ensure_parent = true) source destination =
+  try copy_existing_file ~ensure_parent source destination
+  with (Sys_error _ | Unix.Unix_error _) as error ->
+    let source_is_missing =
+      try
+        ignore (Unix.stat source);
+        false
+      with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> true
+    in
+    if source_is_missing then
+      try Sys.remove destination with Sys_error _ -> ()
+    else raise error
+
 let copy_file source destination =
   if Sys.file_exists source then copy_existing_file source destination
 

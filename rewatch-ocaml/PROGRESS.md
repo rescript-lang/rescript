@@ -148,6 +148,13 @@ expected non-panicking result:
   101 and OCaml's normal rejection. The source-before-parser race above has no
   equally narrow process boundary and remains source-audited rather than
   timing-dependent test coverage.
+- `build/compile.rs::compile_file` ignores failed CMT/CMTI publication because
+  `-bs-no-bin-annot` legitimately suppresses those debug artifacts. OCaml had
+  treated every successful implementation compile as requiring a CMT, which
+  broke the repository's `mario_game.res` during `make test-all`. CMT and CMTI
+  publication are now optional while CMI and CMJ remain required. A focused
+  fresh build retains the no-bin-annotation case and the full `tests/tests`
+  package now builds successfully through the packaged OCaml executable.
 - `watcher.rs` unwraps `initialize_build` during a full rebuild. An editor save
   that temporarily makes `rescript.json` invalid therefore panics and exits the
   Rust watcher. The port reports the parse error and keeps its event loop alive;
