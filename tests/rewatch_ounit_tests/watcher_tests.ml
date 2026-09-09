@@ -23,7 +23,7 @@ let tests =
   let restore () =
     ignore (Sys.signal Sys.sigterm original_sigterm);
     ignore (Sys.signal Sys.sigint original_sigint);
-    Build.remove_tree root
+    Build_artifacts.remove_tree root
   in
   Fun.protect ~finally:restore (fun () ->
       let raised =

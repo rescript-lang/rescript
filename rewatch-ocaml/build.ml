@@ -48,19 +48,6 @@ let run_after_build ~root command =
   if result.stdout <> "" then print_string result.stdout;
   if result.stderr <> "" then prerr_string result.stderr
 
-let diagnostics_for_package ~is_local (config : Config.t) =
-  if is_local then config.diagnostics
-  else
-    let report_suffix =
-      Package_metadata.issue_tracker_url config.root
-      |> Option.map (fun url ->
-           "\nPlease report this to the package maintainer: " ^ url)
-      |> Option.value ~default:""
-    in
-    List.map
-      (fun diagnostic -> diagnostic ^ report_suffix)
-      config.deprecation_diagnostics
-
 let source_discovery_prod ~prod ~is_local = prod || not is_local
 
 let with_gentype_source_dirs directories (config : Config.t) =
@@ -74,116 +61,6 @@ let with_gentype_source_dirs directories (config : Config.t) =
             (fun directory -> ["-bs-gentype-source-dir"; directory])
             directories;
     }
-
-let report_missing_source_folder (config : Config.t) path =
-  let prefix = Filename.concat config.root "" in
-  let relative =
-    if String.starts_with ~prefix path then
-      String.sub path (String.length prefix)
-        (String.length path - String.length prefix)
-    else path
-  in
-  Printf.eprintf
-    "ERROR:\nCould not read folder: %S. Specified in dependency: %s, located %S...\n%!"
-    relative config.name config.root
-
-let report_missing_sources ~is_root (config : Config.t) =
-  if (not is_root) && not config.sources_defined then
-    Printf.eprintf
-      "WARN:\nPackage '%s' has not defined any sources, but is not the root package. This is likely a mistake. It is located: %s\n%!"
-      config.name config.root
-
-let validate_package_metadata (config : Config.t) =
-  match Package_metadata.package_name config.root with
-  | Error message -> raise (Error ("Could not initialize build: " ^ message))
-  | Ok (Some package_name) when package_name <> config.name ->
-    Printf.eprintf
-      "WARN:\n\nPackage name mismatch for %s:\nThe package.json name is %S, while the rescript.json name is %S\nThis inconsistency will cause issues with package resolution.\n\n%!"
-      config.root package_name config.name
-  | Ok (Some _) | Ok None -> ()
-
-let rec remove_tree path =
-  if Sys.file_exists path then
-    try
-      if (Unix.lstat path).Unix.st_kind = Unix.S_DIR then (
-        Sys.readdir path
-        |> Array.iter (fun name -> remove_tree (Filename.concat path name));
-        Unix.rmdir path)
-      else Sys.remove path
-    with Sys_error _ | Unix.Unix_error (Unix.ENOENT, _, _) -> ()
-
-let rec clean_internal ~(root_config : Config.t) ~seen ~folder:root ~prod
-    ~is_local ~on_clean =
-  if not (Hashtbl.mem seen root) then (
-    Hashtbl.add seen root ();
-    let config_path = Config.path_in_root root in
-    let should_clean, package_name =
-      if Config.exists_in_root root then (
-        let config = Config.load config_path in
-        validate_package_metadata config;
-        report_missing_sources ~is_root:(root = root_config.root) config;
-        (* A consumer clean owns dependencies previously built in this build
-           context, but not an independently built package's published tree. *)
-        let owns_outputs =
-          root <> root_config.root && Compiler_info.owns_outputs config
-        in
-        if owns_outputs then (false, None)
-        else (
-          let dependencies =
-            config.dependencies
-            @ if prod || not is_local then [] else config.dev_dependencies
-          in
-          List.iter (fun (dependency : Config.dependency) ->
-            let directory =
-              Project_context.require_dependency_directory ~workspace_root:root_config.root root
-                dependency
-            in
-            try
-              clean_internal ~root_config ~seen ~folder:directory ~prod
-                ~is_local:
-                  (Project_context.is_local_dependency_canonical ~workspace:root_config.root
-                     directory)
-                ~on_clean
-            with Config.Error message ->
-              raise
-                (Package_error
-                   (Printf.sprintf
-                      "Could not build package tree for '%s' at path '%s'. Error: %s"
-                      dependency.name root_config.root message))) dependencies;
-          let discovery =
-            Source.discover_with_inventory config
-              ~prod:(source_discovery_prod ~prod ~is_local)
-              ~features:None ~filter:None
-              ~on_missing:(report_missing_source_folder config)
-              ~display_root:root_config.root
-          in
-          let output_config = with_root_options config root_config in
-          cleanup_watch_output_sidecars
-            ~source_files:discovery.inventory_files ~root output_config;
-          List.iter
-            (fun module_ ->
-              List.iter
-                (fun spec ->
-                  let output =
-                    generated_js_path output_config
-                      module_.Source.implementation spec
-                  in
-                  remove_file output;
-                  remove_file (output ^ ".map");
-                  remove_file (output ^ ".rewatch-pending");
-                  remove_file (output ^ ".rewatch-backup");
-                  remove_file (output ^ ".map.rewatch-pending");
-                  remove_file (output ^ ".map.rewatch-backup"))
-                output_config.package_specs)
-            discovery.modules;
-          (true, Some config.name)))
-      else (true, None)
-    in
-    if should_clean then (
-      Option.iter on_clean package_name;
-      List.iter
-        (fun dir -> remove_tree (Filename.concat root dir))
-        [lib_path "" "bs"; lib_path "" "ocaml"]))
 
 let project_root folder =
   if not (Sys.file_exists folder) then
@@ -209,8 +86,7 @@ let clean ~seen ~verbosity ~folder ~prod =
     let root_config = Config.load_root root in
     let visited = Hashtbl.create 32 in
     List.iter (fun path -> Hashtbl.replace visited (Unix.realpath path) ()) seen;
-    clean_internal ~root_config ~seen:visited ~folder:root ~prod ~is_local:true
-      ~on_clean)
+    Clean.run ~root_config ~seen:visited ~root ~prod ~is_local:true ~on_clean)
 
 let compiler_args = Compiler_args_command.run
 
@@ -344,7 +220,7 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
     | Some config -> config
     | None ->
       let config = Config.load_root root in
-      validate_package_metadata config;
+      Package_diagnostics.validate_metadata config;
       Hashtbl.add loaded_configs root config;
       config
   in
@@ -466,7 +342,7 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
         | None -> features
       in
       let config = load_config root in
-      report_missing_sources ~is_root:(root = root_config.root) config;
+      Package_diagnostics.report_missing_sources ~is_root:(root = root_config.root) config;
       let config =
         match warn_error with
         | None -> config
@@ -496,7 +372,7 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
         Source.discover_with_inventory config
           ~prod:(source_discovery_prod ~prod ~is_local)
           ~features ~filter
-          ~on_missing:(report_missing_source_folder config)
+          ~on_missing:(Package_diagnostics.report_missing_source_folder config)
           ~on_orphan:(fun path ->
             Printf.eprintf
               "\027[2K\r No implementation file found for interface file (skipping): %s\n%!"
@@ -864,7 +740,7 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder:root ~prod ~feature
   in
   stats.diagnostics <-
     List.rev_append
-      (diagnostics_for_package ~is_local config)
+      (Package_diagnostics.for_package ~is_local config)
       stats.diagnostics;
   let dependency_directories =
     let candidates =
@@ -957,7 +833,7 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder:root ~prod ~feature
         ~prod:(source_discovery_prod ~prod ~is_local)
         ~features ~filter
         ~display_root:root_config.root
-        ~on_missing:(report_missing_source_folder config)
+        ~on_missing:(Package_diagnostics.report_missing_source_folder config)
         ~on_orphan:(fun path ->
           Printf.eprintf
             "\027[2K\r No implementation file found for interface file (skipping): %s\n%!"

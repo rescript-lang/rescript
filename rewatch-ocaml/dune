@@ -26,6 +26,7 @@
   source
   graph
   package_metadata
+  package_diagnostics
   compiler_args
   compiler_args_command
   compiler_log
@@ -33,6 +34,7 @@
   compiler_scheduler
   build_lock
   build_artifacts
+  clean
   compile_assets
   build_state
   native_watcher

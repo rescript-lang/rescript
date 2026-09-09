@@ -1,0 +1,86 @@
+open Build_artifacts
+
+let rec remove_tree path =
+  if Sys.file_exists path then
+    try
+      if (Unix.lstat path).Unix.st_kind = Unix.S_DIR then (
+        Sys.readdir path
+        |> Array.iter (fun name -> remove_tree (Filename.concat path name));
+        Unix.rmdir path)
+      else Sys.remove path
+    with Sys_error _ | Unix.Unix_error (Unix.ENOENT, _, _) -> ()
+
+let rec run ~(root_config : Config.t) ~seen ~root ~prod ~is_local ~on_clean =
+  if not (Hashtbl.mem seen root) then (
+    Hashtbl.add seen root ();
+    let config_path = Config.path_in_root root in
+    let should_clean, package_name =
+      if Config.exists_in_root root then (
+        let config = Config.load config_path in
+        Package_diagnostics.validate_metadata config;
+        Package_diagnostics.report_missing_sources
+          ~is_root:(root = root_config.root) config;
+        (* A consumer clean owns dependencies previously built in this build
+           context, but not an independently built package's published tree. *)
+        let owns_outputs =
+          root <> root_config.root && Compiler_info.owns_outputs config
+        in
+        if owns_outputs then (false, None)
+        else (
+          let dependencies =
+            config.dependencies
+            @ if prod || not is_local then [] else config.dev_dependencies
+          in
+          List.iter
+            (fun (dependency : Config.dependency) ->
+              let directory =
+                Project_context.require_dependency_directory
+                  ~workspace_root:root_config.root root dependency
+              in
+              try
+                run ~root_config ~seen ~root:directory ~prod
+                  ~is_local:
+                    (Project_context.is_local_dependency_canonical
+                       ~workspace:root_config.root directory)
+                  ~on_clean
+              with Config.Error message ->
+                raise
+                  (Project_context.Package_error
+                     (Printf.sprintf
+                        "Could not build package tree for '%s' at path '%s'. Error: %s"
+                        dependency.name root_config.root message)))
+            dependencies;
+          let discovery =
+            Source.discover_with_inventory config
+              ~prod:(prod || not is_local) ~features:None ~filter:None
+              ~on_missing:
+                (Package_diagnostics.report_missing_source_folder config)
+              ~display_root:root_config.root
+          in
+          let output_config = with_root_options config root_config in
+          cleanup_watch_output_sidecars
+            ~source_files:discovery.inventory_files ~root output_config;
+          List.iter
+            (fun module_ ->
+              List.iter
+                (fun spec ->
+                  let output =
+                    generated_js_path output_config
+                      module_.Source.implementation spec
+                  in
+                  remove_file output;
+                  remove_file (output ^ ".map");
+                  remove_file (output ^ ".rewatch-pending");
+                  remove_file (output ^ ".rewatch-backup");
+                  remove_file (output ^ ".map.rewatch-pending");
+                  remove_file (output ^ ".map.rewatch-backup"))
+                output_config.package_specs)
+            discovery.modules;
+          (true, Some config.name)))
+      else (true, None)
+    in
+    if should_clean then (
+      Option.iter on_clean package_name;
+      List.iter
+        (fun dir -> remove_tree (Filename.concat root dir))
+        [lib_path "" "bs"; lib_path "" "ocaml"]))

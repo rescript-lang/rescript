@@ -116,6 +116,18 @@ moved out of production `Build` into the OUnit2-only `test_support.ml`.
 Independent review found no argument-order, AST-decoding, namespace,
 publication, warning, hook, staging, exception-identity, or API regression.
 
+Recursive explicit cleaning now lives in `clean.ml` over the existing
+`build_artifacts.ml` primitives. It owns package traversal, consumer-versus-
+independent dependency ownership, generated-output and watch-sidecar removal,
+and compiler-tree deletion; `Build.clean` retains only project/lock/progress
+command policy. Shared package warnings, missing-source reporting, and
+package.json-name validation now live in `package_diagnostics.ml` and are used
+consistently by build, clean, and format. Test teardown uses the shared
+`Build_artifacts.remove_tree`; clean's stricter command-local deletion helper
+remains private rather than creating a second ambiguous filesystem API.
+Independent review found no behavior regression; its sole API-ownership finding
+was resolved by making that command-local helper private.
+
 ## Source review
 
 The first comparison pass covered the OCaml configuration, package traversal,

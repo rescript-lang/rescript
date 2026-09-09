@@ -78,7 +78,7 @@ let discover_package_graph (current : Config.t) =
   let resolved_packages = Hashtbl.create 32 in
   let package_configs = Hashtbl.create 32 in
   let feature_requests = Hashtbl.create 32 in
-  Build.validate_package_metadata current;
+  Package_diagnostics.validate_metadata current;
   Hashtbl.add package_configs current.name (current, true);
   let add_feature_request name request =
     let requests =
@@ -122,8 +122,8 @@ let discover_package_graph (current : Config.t) =
                       "Could not build package tree for '%s' at path '%s'. Error: %s"
                       dependency.name current.root message))
           in
-          Build.validate_package_metadata dependency_config;
-          Build.report_missing_sources ~is_root:false dependency_config;
+          Package_diagnostics.validate_metadata dependency_config;
+          Package_diagnostics.report_missing_sources ~is_root:false dependency_config;
           let dependency_is_local =
             Project_context.is_local_dependency ~workspace directory
           in
@@ -158,7 +158,7 @@ let discover_package_graph (current : Config.t) =
          Source.discover config
            ~prod:(Build.source_discovery_prod ~prod:false ~is_local)
            ~features ~filter:None
-           ~on_missing:(Build.report_missing_source_folder config)
+           ~on_missing:(Package_diagnostics.report_missing_source_folder config)
            ~display_root:current.root
        in
        {config; modules})
