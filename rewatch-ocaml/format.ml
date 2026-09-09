@@ -50,7 +50,16 @@ let package_sources (config : Config.t) =
 let validate_package_graph (current : Config.t) =
   let workspace = Build.workspace_lock_root current.root in
   let resolved_packages = Hashtbl.create 32 in
+  let package_configs = Hashtbl.create 32 in
+  let feature_requests = Hashtbl.create 32 in
   Build.validate_package_metadata current;
+  Hashtbl.add package_configs current.name current;
+  let add_feature_request name request =
+    let requests =
+      Option.value (Hashtbl.find_opt feature_requests name) ~default:[]
+    in
+    Hashtbl.replace feature_requests name (request :: requests)
+  in
   let rec visit ~is_local (config : Config.t) =
     let dependencies =
       config.dependencies @ if is_local then config.dev_dependencies else []
@@ -58,6 +67,7 @@ let validate_package_graph (current : Config.t) =
     let pending =
       dependencies
       |> List.filter_map (fun (dependency : Config.dependency) ->
+           add_feature_request dependency.name dependency.features;
            let directory =
              Build.require_dependency_directory ~workspace_root:current.root
                config.root dependency
@@ -88,12 +98,30 @@ let validate_package_graph (current : Config.t) =
           in
           Build.validate_package_metadata dependency_config;
           Build.report_missing_sources ~is_root:false dependency_config;
+          Hashtbl.replace package_configs dependency.name dependency_config;
           visit
             ~is_local:(Build.is_local_dependency ~workspace directory)
             dependency_config)
       pending
   in
-  visit ~is_local:true current
+  visit ~is_local:true current;
+  Hashtbl.iter
+    (fun package_name requests ->
+      if not (List.exists Option.is_none requests) then
+        let requested =
+          requests |> List.filter_map Fun.id |> List.concat
+          |> List.sort_uniq String.compare
+        in
+        match Hashtbl.find_opt package_configs package_name with
+        | None -> ()
+        | Some config ->
+          (try ignore (Source.resolve_active_features config requested)
+           with Source.Error message ->
+             raise
+               (Error
+                  (Printf.sprintf "Invalid features for package '%s': %s"
+                     package_name message))))
+    feature_requests
 
 let files_in_scope () =
   let current_directory = Sys.getcwd () in

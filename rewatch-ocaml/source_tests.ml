@@ -56,6 +56,23 @@ let () =
         (names (discover config ~features:["other"] ())
         = ["Main"; "Nested"; "Test"])
         "an inactive feature excludes only its tagged source";
+      write_file config_path
+        {|{
+          "name": "cyclic-features",
+          "sources": ["src", {"dir": "native", "feature": "a"}],
+          "features": {"a": ["b"], "b": ["a"]}
+        }|};
+      let cyclic_config = Config.load config_path in
+      check
+        (names (discover cyclic_config ()) = ["Main"; "Native"])
+        "an unrestricted feature selection does not traverse implication cycles";
+      check
+        (try
+           ignore (discover cyclic_config ~features:["a"] ());
+           false
+         with Source.Error message ->
+           Build.contains_text message "a -> b -> a")
+        "a restricted feature selection rejects an implication cycle";
       let discovery = discover_with_inventory config ~features:["other"] () in
       check
         (List.mem
