@@ -408,7 +408,7 @@ let tests =
     && String.is_valid_utf_8 decoded)
     "compiler output is decoded as lossy UTF-8";
   check
-    (Build.retain_critical_external_warnings
+    (Compiler_process.retain_critical_external_warnings
        "\n  Warning number 26\n  foo.res:1:1\n\n  unused variable x.\n"
     = "")
     "ordinary external warnings are suppressed";
@@ -434,11 +434,12 @@ let tests =
   List.iter
     (fun line_ending ->
       let kept =
-        Build.retain_critical_external_warnings (mixed_warnings line_ending)
+        Compiler_process.retain_critical_external_warnings
+          (mixed_warnings line_ending)
       in
       check
-        (Build.contains_text kept critical_marker
-        && not (Build.contains_text kept "unused variable"))
+        (Test_support.contains_text kept critical_marker
+        && not (Test_support.contains_text kept "unused variable"))
         "critical external warnings are retained without unrelated warnings")
     ["\n"; "\r\n"];
   check
@@ -570,7 +571,7 @@ let tests =
       let config = Config.load config_path in
       check
         (List.exists
-           (fun message -> Build.contains_text message "module 'cjs'")
+           (fun message -> Test_support.contains_text message "module 'cjs'")
            config.diagnostics)
         "legacy package module alias is diagnosed";
       write_file config_path
@@ -580,7 +581,7 @@ let tests =
           ignore (Config.load config_path);
           false
         with Config.Error message ->
-          Build.contains_text message "missing field \"module\""
+          Test_support.contains_text message "missing field \"module\""
       in
       check missing_module_rejected "package output module is required";
       write_file config_path
@@ -596,7 +597,7 @@ let tests =
           ignore (Config.load config_path);
           false
         with Config.Error message ->
-          Build.contains_text message "Duplicate package-spec suffix"
+          Test_support.contains_text message "Duplicate package-spec suffix"
       in
       check duplicate_rejected "duplicate package output is rejected";
       write_file config_path {|{"name":"source-map","sourceMap":true}|};
@@ -605,7 +606,7 @@ let tests =
           ignore (Config.load config_path);
           false
         with Config.Error message ->
-          Build.contains_text message "sourceMap true is unsupported"
+          Test_support.contains_text message "sourceMap true is unsupported"
       in
       check boolean_source_map_rejected "sourceMap true is rejected";
       write_file config_path
@@ -615,7 +616,7 @@ let tests =
           ignore (Config.load config_path);
           false
         with Config.Error message ->
-          Build.contains_text message "missing field \"enabled\""
+          Test_support.contains_text message "missing field \"enabled\""
       in
       check missing_source_map_enabled_rejected "sourceMap enabled is required";
       write_file config_path
@@ -655,7 +656,7 @@ let tests =
       check
         (List.exists
            (fun message ->
-             Build.contains_text message "filename 'bsconfig.json'")
+             Test_support.contains_text message "filename 'bsconfig.json'")
            config.diagnostics)
         "bsconfig.json emits a deprecation diagnostic";
       write_file config_path {|{"name":"current-config"}|};
@@ -703,8 +704,8 @@ let tests =
       check
         (List.exists
            (fun message ->
-             Build.contains_text message "field 'generators'"
-             && Build.contains_text message "is not supported")
+             Test_support.contains_text message "field 'generators'"
+             && Test_support.contains_text message "is not supported")
            config.diagnostics)
         "known unsupported config fields are distinguished from unknown fields");
   let dependency_root =
@@ -737,8 +738,10 @@ let tests =
                 ~after_build:None ~filter:None ~no_timing:false;
               false
             with Build.Error message ->
-              if Build.contains_text message "app dependencies: restricted" then
-                true
+              if
+                Test_support.contains_text message
+                  "app dependencies: restricted"
+              then true
               else failwith ("unexpected allowed-dependents error: " ^ message)
           in
           check rejected "unallowed package dependency is rejected";
@@ -752,6 +755,7 @@ let tests =
                 ~after_build:None ~filter:None ~no_timing:false;
               false
             with Build.Error message ->
-              Build.contains_text message "app dev-dependencies: restricted"
+              Test_support.contains_text message
+                "app dev-dependencies: restricted"
           in
           check rejected "unallowed development dependency is rejected"))

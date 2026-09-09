@@ -29,6 +29,7 @@
   compiler_args
   compiler_args_command
   compiler_log
+  compiler_process
   compiler_scheduler
   build_lock
   build_artifacts

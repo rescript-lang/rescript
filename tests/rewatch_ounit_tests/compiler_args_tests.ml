@@ -108,7 +108,7 @@ let tests =
            ignore (compiler_args source);
            false
          with Build.Error message ->
-           Build.contains_text message
+           Test_support.contains_text message
              "Expected to find dependent package regular of compiler-args-test")
         "missing regular dependencies produce a contextual error";
       let missing_source = Filename.concat root "src/Missing.res" in
@@ -117,6 +117,6 @@ let tests =
            ignore (Build.compiler_args missing_source);
            false
          with Build.Error message ->
-           Build.contains_text message "Could not read source file"
-           && Build.contains_text message missing_source)
+           Test_support.contains_text message "Could not read source file"
+           && Test_support.contains_text message missing_source)
         "missing compiler-args sources produce a contextual error")
