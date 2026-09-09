@@ -103,7 +103,7 @@ printf '{"name":"malformed-dependency","sources":["src"],"dependencies":["bad-co
 printf 'let value = 1\n' >"$work/malformed-dependency/src/A.res"
 printf '{ invalid json\n' \
   >"$work/malformed-dependency/node_modules/bad-config/rescript.json"
-printf '{"name":"duplicate-dependency","sources":["src"],"dependencies":["shared","a"]}\n' \
+printf '{"name":"duplicate-dependency","sources":["src"],"dependencies":["a","shared"]}\n' \
   >"$work/duplicate-dependency/rescript.json"
 printf 'let value = Shared.value + A.value\n' \
   >"$work/duplicate-dependency/src/Main.res"
@@ -292,8 +292,9 @@ run_case build-missing-dependency exit2 exit2 build "$work/missing-dependency"
 run_case build-configless-dependency exit2 exit2 build "$work/configless-dependency"
 run_case build-malformed-dependency exit2 exit2 build "$work/malformed-dependency"
 run_case build-duplicate-dependency accept accept build "$work/duplicate-dependency"
-if ! grep -F "Duplicated package: shared" "$work/rust.err" >/dev/null || \
-  ! grep -F "Duplicated package: shared" "$work/ocaml.err" >/dev/null; then
+duplicate_warning='Duplicated package: shared ./node_modules/shared (chosen) vs ./node_modules/a/node_modules/shared in ./node_modules/a'
+if ! grep -F "$duplicate_warning" "$work/rust.err" >/dev/null || \
+  ! grep -F "$duplicate_warning" "$work/ocaml.err" >/dev/null; then
   echo "Duplicate dependency warning was not emitted by both implementations" >&2
   printf '%s\n' '--- Rust output ---' >&2
   cat "$work/rust.out" "$work/rust.err" >&2

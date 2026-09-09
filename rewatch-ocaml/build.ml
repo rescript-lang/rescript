@@ -666,7 +666,8 @@ let rec nearest_config directory =
 let relative_to root path =
   let prefix = Filename.concat root "" in
   let comparable = Platform.normalize_path_for_comparison in
-  if String.starts_with ~prefix:(comparable prefix) (comparable path) then
+  if comparable path = comparable root then "."
+  else if String.starts_with ~prefix:(comparable prefix) (comparable path) then
     String.sub path (String.length prefix) (String.length path - String.length prefix)
   else raise (Error (path ^ " is not inside " ^ root))
 
@@ -972,7 +973,8 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
               (fun dependency -> ("dev-dependencies", dependency))
               config.dev_dependencies
       in
-      List.iter
+      let resolved_dependencies =
+        List.map
         (fun (kind, (dependency : Config.dependency)) ->
           let directory, dependency_config =
             resolve_dependency root dependency
@@ -985,11 +987,16 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
             unallowed_dependencies :=
               (config.name, kind, dependency_config.name)
               :: !unallowed_dependencies;
+          (dependency, directory))
+        dependencies
+      in
+      List.iter
+        (fun ((dependency : Config.dependency), directory) ->
           collect ~folder:directory ~features:dependency.features
             ~is_local:
               (is_local_dependency_canonical ~workspace:root_config.root
                  directory))
-        dependencies)
+        resolved_dependencies)
   in
   collect ~folder:root_config.root ~features ~is_local:true;
   (if !unallowed_dependencies <> [] then
