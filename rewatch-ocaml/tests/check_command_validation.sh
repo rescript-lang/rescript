@@ -27,6 +27,9 @@ mkdir -p "$work/exotic-module-rust/src" "$work/exotic-module-ocaml/src"
 mkdir -p "$work/external-dev-source/src" \
   "$work/external-dev-source/node_modules/dep/src" \
   "$work/external-dev-source/node_modules/dep/test"
+mkdir -p "$work/external-dev-permission/src" \
+  "$work/external-dev-permission/node_modules/a" \
+  "$work/external-dev-permission/node_modules/b"
 mkdir -p "$work/missing-source-folder/src" \
   "$work/missing-source-folder/node_modules/dep"
 mkdir -p "$work/dependency-without-sources/src" \
@@ -95,6 +98,12 @@ printf 'let value = 1\n' \
   >"$work/external-dev-source/node_modules/dep/src/DepPublic.res"
 printf 'this is deliberately invalid ReScript\n' \
   >"$work/external-dev-source/node_modules/dep/test/DevOnly.res"
+printf '{"name":"root","sources":["src"],"dependencies":["a","b"]}\n' \
+  >"$work/external-dev-permission/rescript.json"
+printf '{"name":"a","sources":[],"dev-dependencies":["b"]}\n' \
+  >"$work/external-dev-permission/node_modules/a/rescript.json"
+printf '{"name":"b","sources":[],"allowed-dependents":["root"]}\n' \
+  >"$work/external-dev-permission/node_modules/b/rescript.json"
 printf '{"name":"missing-source-folder","sources":["src"],"dependencies":["dep"]}\n' \
   >"$work/missing-source-folder/rescript.json"
 printf 'let value = 1\n' >"$work/missing-source-folder/src/App.res"
@@ -414,6 +423,14 @@ fi
 checked=$((checked + 1))
 run_case build-excludes-external-dev-source accept accept build \
   "$work/external-dev-source"
+run_case build-ignores-dormant-external-dev-permission reject accept build \
+  "$work/external-dev-permission"
+if ! grep -F 'a has the following unallowed dependencies' \
+    "$work/rust.err" >/dev/null; then
+  echo "Rust dormant external dev-dependency rejection was not reproduced" >&2
+  cat "$work/rust.out" "$work/rust.err" >&2
+  exit 1
+fi
 run_case build-missing-source-folder accept accept build \
   "$work/missing-source-folder"
 if ! cmp -s "$work/rust.err" "$work/ocaml.err"; then
