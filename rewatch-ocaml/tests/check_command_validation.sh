@@ -476,6 +476,51 @@ run_cwd_case format-config-directory reject reject "$work/config-directory" form
 require_both_errors_contain format-config-directory \
   "$work/config-directory/rescript.json"
 require_both_errors_contain format-config-directory 'Is a directory'
+set +e
+printf 'let value =\n' | "$rust" format --stdin .res \
+  >"$work/rust.out" 2>"$work/rust.err"
+rust_status=$?
+printf 'let value =\n' | "$ocaml" format --stdin .res \
+  >"$work/ocaml.out" 2>"$work/ocaml.err"
+ocaml_status=$?
+set -e
+if [ "$rust_status" -eq 0 ] || [ "$ocaml_status" -eq 0 ] || \
+  [ -s "$work/rust.out" ] || [ -s "$work/ocaml.out" ]; then
+  echo "format-invalid-stdin: expected both formatters to reject" >&2
+  exit 1
+fi
+require_both_errors_contain format-invalid-stdin 'Error formatting stdin:'
+require_both_errors_contain format-invalid-stdin \
+  'This let-binding misses an expression'
+checked=$((checked + 1))
+mkdir -p "$work/format-write-rust" "$work/format-write-ocaml"
+printf 'let value=1\n' >"$work/format-write-rust/A.res"
+printf 'let value=1\n' >"$work/format-write-ocaml/A.res"
+chmod 0444 "$work/format-write-rust/A.res" "$work/format-write-ocaml/A.res"
+if [ ! -w "$work/format-write-rust/A.res" ] && \
+  [ ! -w "$work/format-write-ocaml/A.res" ]; then
+  set +e
+  "$rust" format "$work/format-write-rust/A.res" \
+    >"$work/rust.out" 2>"$work/rust.err"
+  rust_status=$?
+  "$ocaml" format "$work/format-write-ocaml/A.res" \
+    >"$work/ocaml.out" 2>"$work/ocaml.err"
+  ocaml_status=$?
+  set -e
+  if [ "$rust_status" -eq 0 ] || [ "$ocaml_status" -eq 0 ] || \
+    ! grep -F 'Permission denied' "$work/rust.err" >/dev/null || \
+    ! grep -F "Could not write formatted file $work/format-write-ocaml/A.res" \
+      "$work/ocaml.err" >/dev/null; then
+    echo "format-write-failure: formatter write failures lost context" >&2
+    printf '%s\n' '--- Rust output ---' >&2
+    cat "$work/rust.out" "$work/rust.err" >&2
+    printf '%s\n' '--- OCaml output ---' >&2
+    cat "$work/ocaml.out" "$work/ocaml.err" >&2
+    exit 1
+  fi
+  checked=$((checked + 1))
+fi
+chmod 0644 "$work/format-write-rust/A.res" "$work/format-write-ocaml/A.res"
 
 run_case build-missing-folder reject reject build "$work/missing"
 run_case build-existing-folder-without-config reject reject build "$work/empty"

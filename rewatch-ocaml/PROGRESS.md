@@ -626,6 +626,13 @@ missing control-file names.
   library- and platform-native. The shared OCaml config reader no longer repeats
   the same filename inside its own `Could not read '<path>'` diagnostic, and
   unit tests retain that single-path invariant for missing files and directories.
+- Invalid format stdin now retains the stable `Error formatting stdin` and
+  compiler-diagnostic content without comparing random temporary filenames.
+  Formatter write-back failures no longer escape as an OCaml `Sys_error`
+  constructor: they report the write operation, requested source path, and
+  platform error. Unit coverage forces the contextual branch with a
+  non-directory parent, and the differential runner exercises a read-only file
+  when the host filesystem enforces its permission bits.
 - Cycle detection now selects a shortest cycle as Rust's compile scheduler does,
   rather than reporting the first depth-first cycle encountered. Equal shortest
   cycles and rotations use a deterministic lexical presentation instead of
