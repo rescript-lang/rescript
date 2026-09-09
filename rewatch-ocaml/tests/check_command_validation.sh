@@ -306,6 +306,20 @@ require_same_output() {
   fi
 }
 
+require_both_errors_contain() {
+  name=$1
+  fragment=$2
+  if ! grep -F "$fragment" "$work/rust.err" >/dev/null || \
+    ! grep -F "$fragment" "$work/ocaml.err" >/dev/null; then
+    printf '%s: expected both errors to contain %s\n' "$name" "$fragment" >&2
+    printf '%s\n' '--- Rust output ---' >&2
+    cat "$work/rust.out" "$work/rust.err" >&2
+    printf '%s\n' '--- OCaml output ---' >&2
+    cat "$work/ocaml.out" "$work/ocaml.err" >&2
+    exit 1
+  fi
+}
+
 run_missing_bsc_case() {
   name=$1
   shift
@@ -442,6 +456,26 @@ run_case format-directory reject reject format "$project/src"
 require_same_output format-directory
 run_case format-unsupported-extension reject reject format "$project/src/A.txt"
 require_same_output format-unsupported-extension
+run_cwd_case format-no-config reject reject "$work/empty" format
+require_both_errors_contain format-no-config \
+  "Could not read rescript.json at $work/empty:"
+require_both_errors_contain format-no-config "$work/empty/bsconfig.json"
+run_cwd_case format-malformed-config reject reject "$work/malformed" format
+require_both_errors_contain format-malformed-config \
+  "Could not read rescript.json at $work/malformed:"
+if ! grep -F 'Failed to parse rescript.json' "$work/rust.err" >/dev/null || \
+  ! grep -F 'invalid JSON' "$work/ocaml.err" >/dev/null; then
+  echo "format-malformed-config: JSON parser context was lost" >&2
+  printf '%s\n' '--- Rust output ---' >&2
+  cat "$work/rust.out" "$work/rust.err" >&2
+  printf '%s\n' '--- OCaml output ---' >&2
+  cat "$work/ocaml.out" "$work/ocaml.err" >&2
+  exit 1
+fi
+run_cwd_case format-config-directory reject reject "$work/config-directory" format
+require_both_errors_contain format-config-directory \
+  "$work/config-directory/rescript.json"
+require_both_errors_contain format-config-directory 'Is a directory'
 
 run_case build-missing-folder reject reject build "$work/missing"
 run_case build-existing-folder-without-config reject reject build "$work/empty"

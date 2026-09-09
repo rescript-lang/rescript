@@ -18,6 +18,17 @@ let contains text fragment =
   in
   fragment_length = 0 || loop 0
 
+let count_occurrences text fragment =
+  let text_length = String.length text in
+  let fragment_length = String.length fragment in
+  let rec loop index count =
+    if index + fragment_length > text_length then count
+    else if String.sub text index fragment_length = fragment then
+      loop (index + fragment_length) (count + 1)
+    else loop (index + 1) count
+  in
+  if fragment_length = 0 then 0 else loop 0 0
+
 let rejects path contents fragment =
   write_file path contents;
   try
@@ -50,7 +61,8 @@ let tests =
            ignore (Config.load missing_path);
            false
          with Config.Error message ->
-           contains message "Could not read" && contains message missing_path)
+           contains message "Could not read"
+           && count_occurrences message missing_path = 1)
         "missing configuration files produce contextual config errors";
       let directory_path = Filename.concat root "config-directory" in
       Unix.mkdir directory_path 0o755;
@@ -59,7 +71,8 @@ let tests =
            ignore (Config.load directory_path);
            false
          with Config.Error message ->
-           contains message "Could not read" && contains message directory_path)
+           contains message "Could not read"
+           && count_occurrences message directory_path = 1)
         "configuration directories produce contextual config errors";
       write_file path {|{"name":"missing-sources"}|};
       let config = Config.load path in
