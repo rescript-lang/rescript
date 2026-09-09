@@ -44,6 +44,57 @@ let package_sources (config : Config.t) =
           | None -> []
           | Some path -> [Filename.concat config.root path]))
 
+(* Rust constructs the complete package graph before selecting the local files
+   that format owns. Retain that validation and its package diagnostics even
+   though installed dependencies are never themselves formatted. *)
+let validate_package_graph (current : Config.t) =
+  let workspace = Build.workspace_lock_root current.root in
+  let resolved_packages = Hashtbl.create 32 in
+  Build.validate_package_metadata current;
+  let rec visit ~is_local (config : Config.t) =
+    let dependencies =
+      config.dependencies @ if is_local then config.dev_dependencies else []
+    in
+    let pending =
+      dependencies
+      |> List.filter_map (fun (dependency : Config.dependency) ->
+           let directory =
+             Build.require_dependency_directory ~workspace_root:current.root
+               config.root dependency
+           in
+           match Hashtbl.find_opt resolved_packages dependency.name with
+           | Some chosen ->
+             if chosen <> directory then
+               Printf.eprintf
+                 "Duplicated package: %s ./%s (chosen) vs ./%s in ./%s\n%!"
+                 dependency.name (Build.relative_to current.root chosen)
+                 (Build.relative_to current.root directory)
+                 (Build.relative_to current.root config.root);
+             None
+           | None ->
+             Hashtbl.add resolved_packages dependency.name directory;
+             Some (dependency, directory))
+    in
+    List.iter
+      (fun ((dependency : Config.dependency), directory) ->
+          let dependency_config =
+            try Config.load_root directory
+            with Config.Error message ->
+              raise
+                (Build.Package_error
+                   (Printf.sprintf
+                      "Could not build package tree for '%s' at path '%s'. Error: %s"
+                      dependency.name current.root message))
+          in
+          Build.validate_package_metadata dependency_config;
+          Build.report_missing_sources ~is_root:false dependency_config;
+          visit
+            ~is_local:(Build.is_local_dependency ~workspace directory)
+            dependency_config)
+      pending
+  in
+  visit ~is_local:true current
+
 let files_in_scope () =
   let current_directory = Sys.getcwd () in
   let current =
@@ -64,6 +115,7 @@ let files_in_scope () =
           dependency.name = current.name)
         (parent.dependencies @ parent.dev_dependencies)
   in
+  validate_package_graph current;
   let configs =
     if listed_by_parent then [current]
     else

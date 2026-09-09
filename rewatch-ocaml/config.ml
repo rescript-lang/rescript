@@ -20,6 +20,7 @@ type t = {
   root: string;
   name: string;
   sources: source list;
+  sources_defined: bool;
   dependencies: dependency list;
   dev_dependencies: dependency list;
   compiler_flags: string list;
@@ -648,6 +649,7 @@ let load path =
       fail path
         "Could not read rescript.json: experimental-features: invalid type: expected an object"
   in
+  let sources_defined = Option.is_some (optional_member "sources" fields) in
   let sources = parse_sources path fields in
   let dependencies = dependency_alias path "dependencies" "bs-dependencies" fields in
   let dev_dependencies = dependency_alias path "dev-dependencies" "bs-dev-dependencies" fields in
@@ -747,6 +749,7 @@ let load path =
     root;
     name;
     sources;
+    sources_defined;
     dependencies;
     dev_dependencies;
     compiler_flags;
