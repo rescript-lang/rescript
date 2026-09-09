@@ -12,8 +12,8 @@ let write_file path contents =
 let names modules =
   List.map (fun (module_ : Source.module_) -> module_.name) modules
 
-let discover config ?(prod = false) ?features () =
-  Source.discover config ~prod ~features ~filter:None
+let discover config ?(prod = false) ?features ?filter () =
+  Source.discover config ~prod ~features ~filter
 
 let discover_with_inventory config ?(prod = false) ?features () =
   Source.discover_with_inventory config ~prod ~features ~filter:None
@@ -71,6 +71,12 @@ let tests =
         (names (discover config ~features:["other"] ())
         = ["Main"; "Nested"; "Test"])
         "an inactive feature excludes only its tagged source";
+      check
+        (names (discover config ~filter:"^Nested\\.res$" ()) = ["Nested"])
+        "source filters match file basenames";
+      check
+        (names (discover config ~filter:"test" ()) = [])
+        "source filters do not match directory components";
       write_file config_path
         {|{
           "name": "cyclic-features",
