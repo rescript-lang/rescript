@@ -471,16 +471,16 @@ environment on the plugged-in Mac host:
 
 | Implementation | Median wall time | Median peak tree RSS |
 | --- | ---: | ---: |
-| Rust | 4,760 ms | 778,920 KiB |
-| OCaml | 5,473 ms | 791,968 KiB |
+| Rust | 4,641 ms | 783,212 KiB |
+| OCaml | 5,454 ms | 799,816 KiB |
 
-The latest 1.150× wall-time ratio and 1.017× RSS ratio pass the 1.25× gate.
+The latest 1.175× wall-time ratio and 1.021× RSS ratio pass the 1.25× gate.
 The host was plugged in and otherwise idle for this run. Docker on a Mac is
 still noisier than native Linux or dedicated CI, so final acceptance should
 repeat the distribution on a stable host rather than treating this one passing
-set as universal. One non-median OCaml sample also observed a LinuxKit clock
-jump and reported an impossible elapsed time despite completing in seconds;
-the four coherent OCaml samples left the median stable, but reinforce the need
+set as universal. Repeated runs observed impossible non-median LinuxKit clock
+jumps once for each implementation despite the affected builds completing in
+seconds; the coherent samples left both medians stable, but reinforce the need
 for a final native/stable-host run. Passing this aggregate gate also does not
 close the excessive unchanged-build metadata probes found by the filesystem
 audit below.
@@ -565,6 +565,12 @@ result is 29,524 and 475 (Rust: 3,384 and 160). Its clean trace records 26,123
 metadata calls and 318 scans (Rust: 12,423 and 158). The remaining repeated
 popular-CMI probes and path canonicalization still dominate the incremental
 gap.
+Moving dependency freshness onto resolved `Build_state` edges and the shared
+CMI/CMT inventory removed the popular-CMI probes and recursive dependency
+artifact searches. The latest unchanged result is 19,093 metadata calls and
+443 directory scans (Rust: 3,367 and 160); the edit result is 19,123 and 443
+(Rust: 3,384 and 160). Clean remains 26,123 and 318 because compiler work, not
+incremental dependency freshness, dominates that trace.
 These are observational counts rather than a raw-total gate, and they include
 compiler process behavior, but the remaining difference is still too large to
 declare the superfluous-work audit closed. The artifact/module state needs
@@ -585,11 +591,10 @@ order:
 
 1. Complete the explicit compile-asset and module state equivalent to Rust's
    `rewatch/src/build/read_compile_state.rs` and `build_types.rs`. The initial
-   per-package scan is now shared with `Build_artifacts.cleanup_stale`; repeated
-   `dependency_artifact` and `modification_time` calls in
-   `Build.module_is_dirty` remain. The scheduler now has fixed pre-scheduling
-   dirty state and Rust-shaped CMI-change propagation; make the remaining
-   freshness consumers use the inventory and explicit state transitions.
+   per-package scan is shared with `Build_artifacts.cleanup_stale`, and CMI/CMT
+   presence, dependency timestamps, fixed dirty state, and CMI-change
+   propagation now use explicit state. Move the remaining AST and generated
+   output freshness consumers onto the inventory and explicit transitions.
 2. Share one source-tree inventory between `Source.discover`, stale-output
    cleanup, watch-sidecar recovery, and GenType source-directory discovery.
    `files_under` currently performs `lstat` for every entry, and separate

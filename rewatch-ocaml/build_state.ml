@@ -40,6 +40,15 @@ let find_exn state key =
   | Some module_ -> module_
   | None -> raise (Invalid_argument ("unknown build module " ^ key))
 
+let has_complete_compile_assets module_ =
+  Option.is_some module_.last_compiled_cmi
+  && Option.is_some module_.last_compiled_cmt
+
+let dependency_compiled_after module_ dependency =
+  match dependency.last_compiled_cmi, module_.last_compiled_cmt with
+  | Some dependency_time, Some module_time -> dependency_time > module_time
+  | None, _ | _, None -> false
+
 let set_dependencies state ~key dependencies =
   let module_ = find_exn state key in
   module_.dependencies <- dependencies;
