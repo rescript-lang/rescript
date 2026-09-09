@@ -2,6 +2,16 @@ open OUnit2
 
 let check condition message = assert_bool message condition
 
+let contains text fragment =
+  let text_length = String.length text in
+  let fragment_length = String.length fragment in
+  let rec loop index =
+    if index + fragment_length > text_length then false
+    else if String.sub text index fragment_length = fragment then true
+    else loop (index + 1)
+  in
+  fragment_length = 0 || loop 0
+
 let write_file path contents =
   Build_artifacts.ensure_dir (Filename.dirname path);
   let channel = open_out_bin path in
@@ -33,6 +43,18 @@ let tests =
   check
     (Format.format_check_summary 2 = "The 2 files listed above need formatting")
     "format check uses Rust's plural summary";
+  with_temp_dir (fun root ->
+      let parent = Filename.concat root "not-a-directory" in
+      let path = Filename.concat parent "A.res" in
+      write_file parent "file\n";
+      check
+        (try
+           Format.write_file path "let value = 1\n";
+           false
+         with Format.Error message ->
+           contains message "Could not write formatted file"
+           && contains message path)
+        "formatter write failures retain their operation and source path");
   with_temp_dir (fun root ->
       let first = Filename.concat root "First.res" in
       let second = Filename.concat root "Second.res" in

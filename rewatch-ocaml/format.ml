@@ -1,14 +1,35 @@
 exception Error of string
 
+let strip_path path message =
+  let prefix = path ^ ": " in
+  if String.starts_with ~prefix message then
+    String.sub message (String.length prefix) (String.length message - String.length prefix)
+  else message
+
+let with_file_error ~action path f =
+  try f () with
+  | Sys_error message ->
+    raise
+      (Error
+         (Printf.sprintf "Could not %s %s: %s" action path
+            (strip_path path message)))
+  | Unix.Unix_error (error, _, _) ->
+    raise
+      (Error
+         (Printf.sprintf "Could not %s %s: %s" action path
+            (Unix.error_message error)))
+
 let read_file path =
-  let channel = open_in_bin path in
-  Fun.protect ~finally:(fun () -> close_in_noerr channel)
-    (fun () -> really_input_string channel (in_channel_length channel))
+  with_file_error ~action:"read file" path (fun () ->
+    let channel = open_in_bin path in
+    Fun.protect ~finally:(fun () -> close_in_noerr channel)
+      (fun () -> really_input_string channel (in_channel_length channel)))
 
 let write_file path contents =
-  let channel = open_out_bin path in
-  Fun.protect ~finally:(fun () -> close_out_noerr channel)
-    (fun () -> output_string channel contents)
+  with_file_error ~action:"write formatted file" path (fun () ->
+    let channel = open_out_bin path in
+    Fun.protect ~finally:(fun () -> close_out_noerr channel)
+      (fun () -> output_string channel contents))
 
 let bsc () =
   try Toolchain.bsc () with Toolchain.Error message -> raise (Error message)
