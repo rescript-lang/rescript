@@ -1977,11 +1977,9 @@ let write_source_dirs (root_config : Config.t) stats =
   let package_roots = Hashtbl.create 16 in
   local_packages
   |> List.iter (fun package ->
-       package.graph_dependencies
-       |> List.iter (fun (dependency : Config.dependency) ->
-            match dependency_path package.graph_root dependency.name with
-            | Some path -> Hashtbl.replace package_roots dependency.name path
-            | None -> ()));
+       package.graph_dependency_directories
+       |> List.iter (fun ((dependency : Config.dependency), path) ->
+            Hashtbl.replace package_roots dependency.name path));
   let package_roots =
     Hashtbl.to_seq package_roots |> List.of_seq
     |> List.sort (fun (left, _) (right, _) -> String.compare left right)
