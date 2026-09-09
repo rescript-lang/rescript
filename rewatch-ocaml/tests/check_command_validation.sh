@@ -451,6 +451,8 @@ wait_for_line_count() {
   return 1
 }
 
+run_redirected_build_case redirected-success 0 \
+  "$root/rewatch-ocaml/tests/basic"
 run_redirected_build_case redirected-compile-error 1 \
   "$root/rewatch-ocaml/tests/failure"
 run_redirected_build_case redirected-parse-error 1 \
