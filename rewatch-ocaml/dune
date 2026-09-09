@@ -113,6 +113,11 @@
  (libraries rewatch_ocaml_lib))
 
 (test
+ (name build_artifacts_tests)
+ (modules build_artifacts_tests)
+ (libraries rewatch_ocaml_lib))
+
+(test
  (name build_state_tests)
  (modules build_state_tests)
  (libraries rewatch_ocaml_lib))

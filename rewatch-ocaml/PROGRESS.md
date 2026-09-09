@@ -471,17 +471,18 @@ environment on the plugged-in Mac host:
 
 | Implementation | Median wall time | Median peak tree RSS |
 | --- | ---: | ---: |
-| Rust | 9,670 ms | 802,144 KiB |
-| OCaml | 11,662 ms | 797,384 KiB |
+| Rust | 4,639 ms | 762,408 KiB |
+| OCaml | 5,744 ms | 776,484 KiB |
 
-The latest 1.206× wall-time ratio and 0.994× RSS ratio pass the 1.25× gate.
+The latest 1.238× wall-time ratio and 1.018× RSS ratio pass the 1.25× gate.
 The host was plugged in and otherwise idle for this run. Docker on a Mac is
 still noisier than native Linux or dedicated CI, so final acceptance should
 repeat the distribution on a stable host rather than treating this one passing
 set as universal. Repeated runs observed impossible non-median LinuxKit clock
-jumps once for each implementation despite the affected builds completing in
-seconds; the coherent samples left both medians stable, but reinforce the need
-for a final native/stable-host run. Passing this aggregate gate also does not
+jumps despite the affected builds completing in seconds; the latest run
+reported one OCaml sample as 254 seconds while its surrounding samples were
+5.6–5.8 seconds. The coherent samples left the median stable, but reinforce the
+need for a final native/stable-host run. Passing this aggregate gate also does not
 close the excessive unchanged-build metadata probes found by the filesystem
 audit below.
 
@@ -578,6 +579,18 @@ remain 443 incrementally and 318 clean because this slice removes redundant
 `realpath`/`readlinkat` work rather than directory walks. The public locality
 entry point still canonicalizes arbitrary caller paths, while graph internals
 use the explicitly named canonical-path variant.
+Removing redundant existence probes before `stat`/`lstat` reduced the latest
+unchanged trace to 11,240 metadata calls (Rust: 2,967), the edit trace to 11,271
+(Rust: 2,984), and the clean trace to 23,118 (Rust: 12,022). Directory scans
+remain 443 incrementally and 318 for clean builds: each inventory walk now uses
+one metadata operation per entry, but overlapping consumers still walk the same
+trees. Live symlinks remain leaf entries and dangling symlinks remain omitted,
+with focused coverage that is skipped only at runtime on Windows. An experiment
+that also replaced guarded removal with unconditional best-effort deletion was
+rejected after the canonical watcher observed an output between publication
+states; restoring the guard passed that case and the complete suite. The guard
+therefore remains until output cleanup and publication have a stronger shared
+ownership boundary.
 These are observational counts rather than a raw-total gate, and they include
 compiler process behavior, but the remaining difference is still too large to
 declare the superfluous-work audit closed. The artifact/module state needs
@@ -604,7 +617,7 @@ order:
    output freshness consumers onto the inventory and explicit transitions.
 2. Share one source-tree inventory between `Source.discover`, stale-output
    cleanup, watch-sidecar recovery, and GenType source-directory discovery.
-   `files_under` currently performs `lstat` for every entry, and separate
+   `files_under` now performs only one primary `lstat` per entry, but separate
    consumers still traverse overlapping trees. Preserve symlink handling,
    recursive-source semantics, generated-output ownership, and Windows path
    comparison.
