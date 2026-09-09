@@ -44,6 +44,14 @@ append/finalization, ANSI stripping, and publication from `lib/bs` to
 keeps it. This removes another fifty lines from `build.ml` and gives the
 filesystem-writing surface a four-function interface.
 
+Compiler argument policy now lives in `compiler_args.ml` behind a focused
+interface. It owns source-dependent PPX filtering, parser-versus-compiler flag
+ordering, development source-map selection, external warning policy, namespace
+arguments, package-output encoding, and GenType dependency arguments. Build job
+construction consumes those values but still owns subprocess execution and
+artifact publication. The existing argument-order and PPX tests now target the
+policy module directly.
+
 ## Source review
 
 The first comparison pass covered the OCaml configuration, package traversal,
