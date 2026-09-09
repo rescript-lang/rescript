@@ -634,6 +634,13 @@ missing control-file names.
   accepts that missing path, performs avoidable compiler work, and reports
   repeated misleading `Pervasives` lookup failures. The OCaml preflight is a
   documented simple Rust bug/inefficiency fix rather than a parity gap.
+- Configuration and dependency-discovery failures now retain their stable
+  diagnostic ownership explicitly. Differential command checks require the
+  selected root or parent configuration path, the shared package-tree
+  operation/dependency/workspace prefix, and the shared malformed
+  `package.json` prefix. Serde versus Yojson locations, canonicalization and OS
+  error wording remain intentionally native after that context; comparing
+  those tails byte-for-byte would make the gate platform- and library-specific.
 - Implicit `format` project discovery now has semantic differential coverage for
   a missing config, malformed JSON, and a directory at `rescript.json`. Both
   implementations must retain the command and path context plus the relevant
