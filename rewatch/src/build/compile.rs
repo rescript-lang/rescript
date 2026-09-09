@@ -825,12 +825,19 @@ pub fn compiler_args(
     } else {
         Vec::new()
     };
-    let gentype_arg = config.get_gentype_args(
-        current_package_dirs,
-        Some(bsb_project_root),
-        &dep_paths,
-        platform.map(|_| ""),
-    );
+    // Every platform implementation shares one interface and therefore one
+    // GenType wrapper. Let the primary implementation generate it so separate
+    // compiler processes do not repeatedly read and write the same output.
+    let gentype_arg = if platform.is_some_and(|platform| !platform.primary) {
+        vec![]
+    } else {
+        config.get_gentype_args(
+            current_package_dirs,
+            Some(bsb_project_root),
+            &dep_paths,
+            platform.map(|_| ""),
+        )
+    };
     let experimental_args = root_config.get_experimental_features_args();
     let warning_args = config.get_warning_args(is_local_dep, warn_error_override);
 
@@ -1069,6 +1076,7 @@ fn compile_file(
         let platform_dir = build_path_abs.join("__platform").join(&platform.name);
         helpers::create_path(&platform_dir);
         if package.config.gentype_config.is_some()
+            && platform.primary
             && let Some(interface) = module.get_interface().as_ref()
         {
             let interface_dir = interface.path.parent().unwrap();

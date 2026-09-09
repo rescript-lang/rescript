@@ -49,19 +49,33 @@ function project(t) {
   return root;
 }
 
-function run(root, command = "build", succeeds = true) {
-  const result = spawnSync(executable, [command], {
+function run(root, command = "build", succeeds = true, verbose = false) {
+  const result = spawnSync(executable, verbose ? ["-vv", command] : [command], {
     cwd: root,
     env,
     encoding: "utf8",
     timeout: 30_000,
   });
-  if (result.error) throw result.error;
-  const output = result.stdout + result.stderr;
+  const output = (result.stdout ?? "") + (result.stderr ?? "");
+  if (result.error) {
+    throw new Error(`${result.error.message}\n${output}`, {
+      cause: result.error,
+    });
+  }
   if (succeeds) assert.equal(result.status, 0, output);
   else
     assert.notEqual(result.status, 0, "Expected Rewatch to reject the project");
   return output;
+}
+
+function compilerArgs(root, file) {
+  const result = spawnSync(executable, ["compiler-args", join("src", file)], {
+    cwd: root,
+    env,
+    encoding: "utf8",
+  });
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+  return JSON.parse(result.stdout).compiler_args.map(normalizePaths);
 }
 
 function hasExited(child) {
@@ -376,7 +390,10 @@ test("GenType wrappers import the logical platform module without an extension",
     "@genType\nlet platform: string",
   );
 
-  run(root);
+  assert(compilerArgs(root, "Button.android.res").includes("-bs-gentype"));
+  assert(!compilerArgs(root, "Button.ios.res").includes("-bs-gentype"));
+
+  run(root, "build", true, true);
 
   const wrapper = join(root, "src/Button.gen.tsx");
   assert(existsSync(wrapper), `Missing ${wrapper}`);
@@ -595,22 +612,15 @@ test("a failed build records newly emitted platform outputs for later removal", 
 
 test("compiler-args reports the logical platform compilation", t => {
   const root = project(t);
-  const result = spawnSync(
-    executable,
-    ["compiler-args", join("src", "Button.ios.res")],
-    { cwd: root, env, encoding: "utf8" },
-  );
-  assert.equal(result.status, 0, result.stdout + result.stderr);
-  const { compiler_args: rawCompilerArgs } = JSON.parse(result.stdout);
-  const compilerArgs = rawCompilerArgs.map(normalizePaths);
-  assert(compilerArgs.includes("-bs-platform-interface"));
+  const args = compilerArgs(root, "Button.ios.res");
+  assert(args.includes("-bs-platform-interface"));
   assert(
-    compilerArgs.includes("__platform/ios/Button.cmj"),
-    compilerArgs.join(" "),
+    args.includes("__platform/ios/Button.cmj"),
+    args.join(" "),
   );
   assert(
-    compilerArgs.some(argument => argument.includes("commonjs:lib/js/src:.ios.js")),
-    compilerArgs.join(" "),
+    args.some(argument => argument.includes("commonjs:lib/js/src:.ios.js")),
+    args.join(" "),
   );
-  assert(compilerArgs.includes("-bs-read-cmi"));
+  assert(args.includes("-bs-read-cmi"));
 });
