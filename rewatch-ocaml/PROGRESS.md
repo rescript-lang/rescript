@@ -670,6 +670,13 @@ primarily repeated package-path canonicalization (`readlinkat`); compiler
 process calls match and directory traversal is within two calls. Clean-build
 metadata remains dominated by compiler work and is tracked separately from the
 now-near-parity unchanged orchestration path.
+Generating `.sourcedirs.json` now reuses the canonical dependency roots already
+owned by graph preparation instead of resolving every local package edge again.
+In the latest paired audit this reduces unchanged metadata to 3,134 calls
+(Rust: 2,962) and edit metadata to 3,168 (Rust: 2,979), while directory scans
+remain 162 versus 160 and OCaml retains its lower incremental open counts. The
+remaining metadata delta is 172 calls on the unchanged scenario and continues
+to consist chiefly of repeated canonicalization rather than artifact work.
 
 ### Active filesystem-performance work
 
