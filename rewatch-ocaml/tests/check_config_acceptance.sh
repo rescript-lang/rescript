@@ -19,6 +19,7 @@ export RESCRIPT_RUNTIME=${RESCRIPT_RUNTIME:-$root/packages/@rescript/runtime}
 
 checked=0
 divergences=0
+diagnostic_checks=0
 while IFS=$'\t' read -r area name expected json; do
   if [[ -z "$area" || "$area" == \#* ]]; then
     continue
@@ -64,6 +65,24 @@ while IFS=$'\t' read -r area name expected json; do
     cat "$work/ocaml.err" >&2
     exit 1
   fi
+  diagnostic_fragment=
+  case "$area" in
+    jsx) diagnostic_fragment=jsx ;;
+    source-map) diagnostic_fragment=sourceMap ;;
+  esac
+  if [[ -n "$diagnostic_fragment" && "$rust_expected" != accept ]]; then
+    if ! grep -Fi "$diagnostic_fragment" "$work/rust.err" >/dev/null ||
+      ! grep -Fi "$diagnostic_fragment" "$work/ocaml.err" >/dev/null; then
+      printf 'Config case %s/%s lost the %s diagnostic context\n' \
+        "$area" "$name" "$diagnostic_fragment" >&2
+      printf '%s\n' '--- Rust output ---' >&2
+      cat "$work/rust.out" "$work/rust.err" >&2
+      printf '%s\n' '--- OCaml output ---' >&2
+      cat "$work/ocaml.out" "$work/ocaml.err" >&2
+      exit 1
+    fi
+    diagnostic_checks=$((diagnostic_checks + 1))
+  fi
   if [[ "$compare_arguments" == true && "$rust_expected" == accept ]] &&
     ! node -e '
       const fs = require("fs");
@@ -81,5 +100,5 @@ while IFS=$'\t' read -r area name expected json; do
   checked=$((checked + 1))
 done <"$cases"
 
-printf 'Configuration cases: %d (%d documented divergences); Rust/OCaml expectations and parity arguments matched\n' \
-  "$checked" "$divergences"
+printf 'Configuration cases: %d (%d documented divergences, %d JSX/source-map diagnostic checks); Rust/OCaml expectations and parity arguments matched\n' \
+  "$checked" "$divergences" "$diagnostic_checks"

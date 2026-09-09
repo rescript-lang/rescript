@@ -641,6 +641,10 @@ missing control-file names.
   `package.json` prefix. Serde versus Yojson locations, canonicalization and OS
   error wording remain intentionally native after that context; comparing
   those tails byte-for-byte would make the gate platform- and library-specific.
+- Every rejected JSX and source-map schema case now also has a differential
+  diagnostic ownership check. This covers 25 invalid shapes, including Rust's
+  JSX-version panic, and requires both outputs to identify `jsx` or
+  `sourceMap` even though their Serde/Yojson explanations differ.
 - Implicit `format` project discovery now has semantic differential coverage for
   a missing config, malformed JSON, and a directory at `rescript.json`. Both
   implementations must retain the command and path context plus the relevant
