@@ -119,6 +119,13 @@ its nonexistent first element and panicking as Rust's source filter does.
 For `compiler-args`, a missing regular dependency is reported as a contextual
 command error instead of triggering Rust's `Expected to find dependent package`
 panic. Missing development dependencies remain optional, matching Rust.
+Dependency permission validation also considers only graph edges that are
+actually traversed. Rust correctly omits an installed package's
+`dev-dependencies` from package discovery, but its later permission pass checks
+such a dormant edge when the target package happens to be reachable elsewhere.
+That makes the same installed package conditionally break an unrelated root
+build. A differential case retains Rust's rejection and the port's successful
+active-edge-only behavior.
 
 ### Rust panic follow-ups
 
