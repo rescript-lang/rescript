@@ -28,7 +28,6 @@
 
 #### :rocket: New Feature
 
-- Add Before optimization, After optimization, and Diff views to the developer playground's Lambda tab, with a dependency-free, work-limited diff, inline highlighting of changed Lambda tokens, and optimized Lambda output in playground API v9. <!-- PR link pending -->
 - Support UTF-16 surrogate-pair escapes such as `"\uD83D\uDE00"` in ordinary string literals. https://github.com/rescript-lang/rescript/pull/8606
 - Support dynamic imports of external bindings annotated with `@scope`; the generated import follows the complete property path. These imports were previously rejected. https://github.com/rescript-lang/rescript/pull/8582
 - Add `@res.hoistedFunction` for emitting nested module functions as flat JavaScript exports. https://github.com/rescript-lang/rescript/pull/8402
@@ -62,7 +61,7 @@
 - Preserve trailing comments between the type and `=` in locally abstract value constraints (`let f: type a. t /* comment */ = value`). https://github.com/rescript-lang/rescript/pull/8575
 - Enforce function arity in interface/module inclusion and type coercion. Previously a curried implementation (e.g. `int => int => int`) could satisfy an uncurried interface (`(int, int) => int`) or be coerced to it, which could miscompile calls made through the interface type. Such mismatches are now compile errors with an explanatory hint. https://github.com/rescript-lang/rescript/pull/8559
 - Fix termination-analysis false positives for functions whose progress flows through un-annotated helpers: collecting the callees of a function binding was accidentally disabled in 2024 (the collection guard required a node shape that uncurried code never produces), so helpers calling `@progress` functions were no longer added to the function table. https://github.com/rescript-lang/rescript/pull/8568
-- Fix default values of optional parameters being computed at the wrong time for curried functions: in `(~x=default, y) => (~z=default, w) => ...`, `x`'s default was only computed when the *inner* function was applied. Each default is now computed when its own parameter group is applied. https://github.com/rescript-lang/rescript/pull/8568
+- Fix default values of optional parameters being computed at the wrong time for curried functions: in `(~x=default, y) => (~z=default, w) => ...`, `x`'s default was only computed when the _inner_ function was applied. Each default is now computed when its own parameter group is applied. https://github.com/rescript-lang/rescript/pull/8568
 - Fix bare labeled arrow types (`~x: int => string`) getting no arity: they printed identically to their parenthesized form (`(~x: int) => string`) but did not unify with it. https://github.com/rescript-lang/rescript/pull/8563
 - Fix losses of fidelity when code passes through an external PPX: the internal `@res.async` marker no longer leaks into the program, attributes on an arrow type or on an `await` expression are no longer dropped or relocated (previously this could crash the formatter), JSX elements keep their closing tag, and PPX-emitted OCaml-style `function` is desugared instead of crashing the compiler. https://github.com/rescript-lang/rescript/pull/8561
 - Preserve multibyte characters when wrapping long source lines in compiler code frames. https://github.com/rescript-lang/rescript/pull/8520
@@ -80,6 +79,7 @@
 
 #### :house: Internal
 
+- Add before/after optimization views and inline diffs to the developer playground's Lambda tab, with optimized Lambda output in playground API v9. https://github.com/rescript-lang/rescript/pull/8636
 - Developer playground: Make panes resizable with wrapping text. https://github.com/rescript-lang/rescript/pull/8628
 - Normalize Lambda terms where they are built: a match guard stays structured data until its fallthrough is known, and `apply` and `mk_builtin` go through the folding constructors. https://github.com/rescript-lang/rescript/pull/8615
 - Replace non-escaping local mutable blocks with scalar bindings when all uses are direct field accesses, generalizing reference unboxing to multi-field records and references captured by JavaScript closures. https://github.com/rescript-lang/rescript/pull/8617
