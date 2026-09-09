@@ -42,87 +42,10 @@
  (modules rescript_ocaml)
  (libraries rewatch_ocaml_lib))
 
-(test
- (name unit_tests)
- (modules unit_tests platform_windows)
- (libraries rewatch_ocaml_lib))
+; Keep the former scoped test command useful after moving test-only modules out
+; of this production directory.
 
-(test
- (name cli_tests)
- (modules cli_tests)
- (libraries rewatch_ocaml_lib))
-
-(test
- (name config_tests)
- (modules config_tests)
- (libraries rewatch_ocaml_lib))
-
-(test
- (name package_metadata_tests)
- (modules package_metadata_tests)
- (libraries rewatch_ocaml_lib))
-
-(test
- (name source_tests)
- (modules source_tests)
- (libraries rewatch_ocaml_lib))
-
-(test
- (name compiler_info_tests)
- (modules compiler_info_tests)
- (libraries rewatch_ocaml_lib))
-
-(test
- (name warning_state_tests)
- (modules warning_state_tests)
- (libraries rewatch_ocaml_lib))
-
-(test
- (name output_tests)
- (modules output_tests)
- (libraries rewatch_ocaml_lib))
-
-(test
- (name toolchain_tests)
- (modules toolchain_tests platform_windows)
- (libraries rewatch_ocaml_lib))
-
-(test
- (name compiler_args_tests)
- (modules compiler_args_tests)
- (libraries rewatch_ocaml_lib))
-
-(test
- (name project_context_tests)
- (modules project_context_tests)
- (libraries rewatch_ocaml_lib))
-
-(test
- (name format_tests)
- (modules format_tests)
- (libraries rewatch_ocaml_lib))
-
-(test
- (name clean_tests)
- (modules clean_tests)
- (libraries rewatch_ocaml_lib))
-
-(test
- (name compile_assets_tests)
- (modules compile_assets_tests)
- (libraries rewatch_ocaml_lib))
-
-(test
- (name build_artifacts_tests)
- (modules build_artifacts_tests)
- (libraries rewatch_ocaml_lib))
-
-(test
- (name build_state_tests)
- (modules build_state_tests)
- (libraries rewatch_ocaml_lib))
-
-(test
- (name native_watcher_tests)
- (modules native_watcher_tests)
- (libraries rewatch_ocaml_lib))
+(alias
+ (name runtest)
+ (deps
+  (alias ../tests/rewatch_ounit_tests/runtest)))

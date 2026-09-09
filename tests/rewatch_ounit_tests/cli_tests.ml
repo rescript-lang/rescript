@@ -1,4 +1,6 @@
-let check condition message = if not condition then failwith message
+open OUnit2
+
+let check condition message = assert_bool message condition
 
 let parse arguments = Cli.parse (Array.of_list ("rescript-ocaml" :: arguments))
 
@@ -30,9 +32,12 @@ let watch_options arguments =
   | Cli.Watch options -> options
   | _ -> failwith "expected watch command"
 
-let () =
+let tests =
+  "cli_tests" >:: fun _context ->
   check
-    (match parse [] with Cli.Build _ -> true | _ -> false)
+    (match parse [] with
+    | Cli.Build _ -> true
+    | _ -> false)
     "no subcommand defaults to build";
   check
     ((build_options ["someFolder"]).folder = "someFolder")
@@ -43,42 +48,45 @@ let () =
   check
     ((build_options ["--"; "-v"]).folder = "-v")
     "double dash preserves an option-looking folder";
-  check (shows_help ["some-folder"; "--help"])
-    "implicit command folder help uses global help";
-  check (shows_help ["some-folder"; "-h"])
-    "short implicit command help uses global help";
-  check (shows_help ["build"; "--help"])
-    "explicit build displays command help";
-  check (shows_help ["build"; "-h"])
-    "explicit build accepts short command help";
   check
-    (match parse ["-vvvv"; "watch"] with Cli.Watch _ -> true | _ -> false)
+    (shows_help ["some-folder"; "--help"])
+    "implicit command folder help uses global help";
+  check
+    (shows_help ["some-folder"; "-h"])
+    "short implicit command help uses global help";
+  check (shows_help ["build"; "--help"]) "explicit build displays command help";
+  check (shows_help ["build"; "-h"]) "explicit build accepts short command help";
+  check
+    (match parse ["-vvvv"; "watch"] with
+    | Cli.Watch _ -> true
+    | _ -> false)
     "leading verbosity before watch";
   check
-    (match parse ["build"; "-v"] with Cli.Build _ -> true | _ -> false)
+    (match parse ["build"; "-v"] with
+    | Cli.Build _ -> true
+    | _ -> false)
     "build accepts a trailing verbosity flag";
-  check (shows_version ["-V"; "build"])
+  check
+    (shows_version ["-V"; "build"])
     "a leading short version flag has global precedence";
-  check (shows_version ["some-folder"; "-V"])
+  check
+    (shows_version ["some-folder"; "-V"])
     "implicit build extracts a trailing global version flag";
-  check (shows_version ["--version"])
-    "the long global version flag is accepted";
-  check (rejects ["build"; "-V"])
+  check (shows_version ["--version"]) "the long global version flag is accepted";
+  check
+    (rejects ["build"; "-V"])
     "explicit build rejects a trailing global version flag";
-  check (rejects ["watch"; "--no-timing"])
+  check
+    (rejects ["watch"; "--no-timing"])
     "watch rejects build-only --no-timing";
   check
     ((build_options ["build"; "-n=false"; "."]).folder = ".")
     "build accepts short no-timing boolean values";
-  check
-    ((build_options ["build"; "--no-timing"; "."]).no_timing)
+  check (build_options ["build"; "--no-timing"; "."]).no_timing
     "bare no-timing does not consume the project folder";
-  check (build_options ["build"; "--prod"]).prod
-    "build parses --prod";
-  check (not (build_options ["build"]).prod)
-    "build defaults --prod to false";
-  check (watch_options ["watch"; "--prod"]).prod
-    "watch parses --prod";
+  check (build_options ["build"; "--prod"]).prod "build parses --prod";
+  check (not (build_options ["build"]).prod) "build defaults --prod to false";
+  check (watch_options ["watch"; "--prod"]).prod "watch parses --prod";
   check
     (match parse ["clean"; "--prod"] with
     | Cli.Clean {prod = true; folder = "."} -> true
@@ -90,39 +98,44 @@ let () =
     ((build_options ["build"; "--features"; " native , web "]).features
     = Some ["native"; "web"])
     "feature names are trimmed";
-  check ((build_options ["build"]).features = None)
+  check
+    ((build_options ["build"]).features = None)
     "build defaults features to none";
   check
     ((watch_options ["watch"; "--features"; "native"]).features
-    = Some ["native"])
+   = Some ["native"])
     "watch parses features";
   check
     ((build_options ["build"; "--features"; "native,web"]).features
-    = (watch_options ["watch"; "--features"; "native,web"]).features)
+   = (watch_options ["watch"; "--features"; "native,web"]).features)
     "build and watch use the same feature conversion";
-  check (rejects ["build"; "--features"; ""])
-    "empty features are rejected";
-  check (rejects [String.make 1 (Char.chr 0xff)])
+  check (rejects ["build"; "--features"; ""]) "empty features are rejected";
+  check
+    (rejects [String.make 1 (Char.chr 0xff)])
     "non-UTF-8 arguments are rejected";
   check (watch_options ["watch"; "--clear-screen"]).clear_screen
     "watch parses --clear-screen";
-  check (rejects ["build"; "--filter"; "["])
+  check
+    (rejects ["build"; "--filter"; "["])
     "invalid filter regular expressions are rejected during CLI parsing";
-  check (rejects ["format"; "--stdin"; ".txt"])
+  check
+    (rejects ["format"; "--stdin"; ".txt"])
     "format stdin validates the source extension";
-  check (rejects ["format"; "input.res"; "--stdin"; ".res"])
+  check
+    (rejects ["format"; "input.res"; "--stdin"; ".res"])
     "format stdin conflicts with files regardless of argument order";
-  check (rejects ["format"; "--stdin"; ".res"; "--check"])
+  check
+    (rejects ["format"; "--stdin"; ".res"; "--check"])
     "format check conflicts with stdin regardless of argument order";
-  check (shows_help ["help"])
-    "the help command displays global help";
-  check (shows_help ["help"; "build"])
+  check (shows_help ["help"]) "the help command displays global help";
+  check
+    (shows_help ["help"; "build"])
     "the help command displays subcommand help";
-  check (rejects ["help"; "unknown"])
-    "the help command rejects unknown topics";
-  check (rejects ["compiler-args"])
-    "compiler-args requires a source path";
-  check (rejects ["compiler-args"; "A.res"; "B.res"])
+  check (rejects ["help"; "unknown"]) "the help command rejects unknown topics";
+  check (rejects ["compiler-args"]) "compiler-args requires a source path";
+  check
+    (rejects ["compiler-args"; "A.res"; "B.res"])
     "compiler-args rejects additional source paths";
-  check (rejects ["build"; "--unknown-option"])
+  check
+    (rejects ["build"; "--unknown-option"])
     "known subcommands reject unknown options"

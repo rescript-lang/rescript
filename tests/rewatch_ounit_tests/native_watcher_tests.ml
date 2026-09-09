@@ -1,4 +1,6 @@
-let check condition message = if not condition then failwith message
+open OUnit2
+
+let check condition message = assert_bool message condition
 
 let temporary_directory () =
   let path = Filename.temp_file "rewatch-native-watcher-" "" in
@@ -6,7 +8,8 @@ let temporary_directory () =
   Unix.mkdir path 0o700;
   path
 
-let () =
+let tests =
+  "native_watcher_tests" >:: fun _context ->
   let root = temporary_directory () in
   let source = Filename.concat root "src" in
   let nested = Filename.concat source "nested" in

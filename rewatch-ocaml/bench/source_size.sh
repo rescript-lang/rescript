@@ -23,7 +23,7 @@ while IFS= read -r source; do
   mkdir -p "$(dirname "$destination")"
   mkdir -p "$(dirname "$test_destination")"
   # Rust keeps unit tests beside production code. Stop at the first test-only
-  # module so the production comparison matches OCaml's separate unit file.
+  # module so the production comparison matches OCaml's separate test package.
   awk '/^#\[cfg\(test\)\]/{exit} {print}' "$source" > "$destination"
   awk 'found || /^#\[cfg\(test\)\]/{found = 1; print}' "$source" \
     > "$test_destination"
@@ -31,13 +31,14 @@ done < <(find "$repo_root/rewatch/src" -type f -name '*.rs' \
   ! -name telemetry.rs | sort)
 
 mapfile -t ocaml_production < <(find "$repo_root/rewatch-ocaml" -maxdepth 1 \
-  -type f \( -name '*.ml' -o -name '*.mli' \) \
-  ! -name unit_tests.ml | sort)
-mapfile -t ocaml_test_relative < <(git -C "$repo_root" ls-files \
+  -type f \( -name '*.ml' -o -name '*.mli' \) | sort)
+mapfile -t ocaml_unit_tests < <(find "$repo_root/tests/rewatch_ounit_tests" \
+  -maxdepth 1 -type f -name '*.ml' | sort)
+mapfile -t ocaml_focused_test_relative < <(git -C "$repo_root" ls-files \
   rewatch-ocaml/tests | sort)
-ocaml_tests=()
-for relative in "${ocaml_test_relative[@]}"; do
-  ocaml_tests+=("$repo_root/$relative")
+ocaml_focused_tests=()
+for relative in "${ocaml_focused_test_relative[@]}"; do
+  ocaml_focused_tests+=("$repo_root/$relative")
 done
 
 count() {
@@ -56,7 +57,7 @@ count "Rust unit tests, no telemetry" "$rust_tests"
 count "OCaml production" "${ocaml_production[@]}"
 count "OCaml test code and fixtures" \
   --force-lang=ReScript,fixed --force-lang=ReScript,invalid \
-  "$repo_root/rewatch-ocaml/unit_tests.ml" "${ocaml_tests[@]}"
+  "${ocaml_unit_tests[@]}" "${ocaml_focused_tests[@]}"
 count "OCaml benchmark tooling" \
   "$repo_root/rewatch-ocaml/bench/performance_gate.sh" \
   "$repo_root/rewatch-ocaml/bench/source_size.sh"

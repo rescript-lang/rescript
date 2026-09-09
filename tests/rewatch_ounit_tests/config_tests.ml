@@ -1,9 +1,12 @@
-let check condition message = if not condition then failwith message
+open OUnit2
+
+let check condition message = assert_bool message condition
 
 let write_file path contents =
   let channel = open_out_bin path in
-  Fun.protect ~finally:(fun () -> close_out_noerr channel) (fun () ->
-    output_string channel contents)
+  Fun.protect
+    ~finally:(fun () -> close_out_noerr channel)
+    (fun () -> output_string channel contents)
 
 let contains text fragment =
   let text_length = String.length text in
@@ -23,14 +26,17 @@ let rejects path contents fragment =
   with Config.Error message -> contains message fragment
 
 let has_diagnostic config field =
-  List.exists (fun message -> contains message ("'" ^ field ^ "'")) config.Config.diagnostics
+  List.exists
+    (fun message -> contains message ("'" ^ field ^ "'"))
+    config.Config.diagnostics
 
 let rec contains_adjacent left right = function
   | current :: next :: _ when current = left && next = right -> true
   | _ :: rest -> contains_adjacent left right rest
   | [] -> false
 
-let () =
+let tests =
+  "config_tests" >:: fun _context ->
   let root = Filename.temp_file "rewatch-ocaml-config-" "" in
   Sys.remove root;
   Unix.mkdir root 0o755;
@@ -57,12 +63,14 @@ let () =
         "configuration directories produce contextual config errors";
       write_file path {|{"name":"missing-sources"}|};
       let config = Config.load path in
-      check (not config.sources_defined)
+      check
+        (not config.sources_defined)
         "an omitted sources field remains distinguishable for package warnings";
       write_file path {|{"name":"empty-sources","sources":[]}|};
       let config = Config.load path in
       check config.sources_defined
-        "an explicit empty sources field does not trigger the missing-field warning";
+        "an explicit empty sources field does not trigger the missing-field \
+         warning";
       write_file path
         {|{
           "name": "unknown-fields",
@@ -85,7 +93,8 @@ let () =
       let config = Config.load path in
       List.iter
         (fun field ->
-          check (has_diagnostic config field)
+          check
+            (has_diagnostic config field)
             ("missing unknown-field diagnostic for " ^ field))
         [
           "warnings.?.nested-warning-key";
@@ -96,7 +105,8 @@ let () =
         ];
       List.iter
         (fun field ->
-          check (not (has_diagnostic config field))
+          check
+            (not (has_diagnostic config field))
             ("unexpected unknown-field diagnostic for " ^ field))
         [
           "sources.?.nested-source-key";
@@ -106,14 +116,14 @@ let () =
       write_file path
         {|{"name":"different-outputs","package-specs":[{"module":"esmodule","in-source":true,"suffix":".js"},{"module":"commonjs","in-source":false,"suffix":".js"}]}|};
       let config = Config.load path in
-      check (List.length config.package_specs = 2)
+      check
+        (List.length config.package_specs = 2)
         "the same suffix is allowed in different output locations";
       write_file path
         {|{"name":"gentype-precedence","package-specs":{"module":"commonjs"},"gentypeconfig":{"module":"esmodule"}}|};
       let config = Config.load path in
       check
-        (contains_adjacent "-bs-gentype-module" "esmodule"
-           config.gentype_args)
+        (contains_adjacent "-bs-gentype-module" "esmodule" config.gentype_args)
         "an explicit GenType module overrides package-specs";
       let source_dir = Filename.concat root "src" in
       let shim_dir = Filename.concat source_dir "shims" in
@@ -133,18 +143,18 @@ let () =
         (contains_adjacent "-bs-gentype-source-dir"
            (Filename.concat "src" "shims")
            config.gentype_args)
-        "GenType recursively includes directories that may contain TypeScript shims";
+        "GenType recursively includes directories that may contain TypeScript \
+         shims";
       write_file path {|{"name":"no-gentype"}|};
       let config = Config.load path in
       check (config.gentype_args = [])
         "GenType arguments are absent without gentypeconfig";
-      write_file path
-        {|{"name":"ignored-payload","ignored-dirs":true}|};
+      write_file path {|{"name":"ignored-payload","ignored-dirs":true}|};
       let config = Config.load path in
-      check (has_diagnostic config "ignored-dirs")
+      check
+        (has_diagnostic config "ignored-dirs")
         "unsupported ignored-dirs payloads are diagnosed but not decoded";
-      write_file path
-        {|{"name":"jsx-v3","jsx":{"v3-dependencies":true}}|};
+      write_file path {|{"name":"jsx-v3","jsx":{"v3-dependencies":true}}|};
       let rejected =
         try
           ignore (Config.load path);
@@ -171,8 +181,10 @@ let () =
       check rejected "unsupported JSX versions are rejected without panicking";
       write_file path {|{"name":"internal-path","path":"ignored"}|};
       let config = Config.load path in
-      check (config.path = Unix.realpath path)
-        "the internal path field accepts a string but uses the actual config path";
+      check
+        (config.path = Unix.realpath path)
+        "the internal path field accepts a string but uses the actual config \
+         path";
       check
         (rejects path {|{"name":"internal-path","path":false}|} "path")
         "the internal path field retains Rust's string schema";
@@ -208,7 +220,8 @@ let () =
           ])
         "parser arguments follow Rust phase ordering";
       check
-        (Build.compiler_flags ~source_maps:true ~watch:false ~gentype:true config
+        (Build.compiler_flags ~source_maps:true ~watch:false ~gentype:true
+           config
         = [
             "-bs-jsx-mode";
             "automatic";
@@ -255,7 +268,8 @@ let () =
         "source markers and the Bisect environment enable their PPXs";
       check
         (match
-           Build.compiler_flags ~ppx_flags:[["tool"; "--arg"]]
+           Build.compiler_flags
+             ~ppx_flags:[["tool"; "--arg"]]
              ~source_maps:false ~watch:false ~gentype:false config
          with
         | "-ppx" :: "tool --arg" :: _ -> true
@@ -272,8 +286,9 @@ let () =
         {|{"name":"duplicate-dependency","dependencies":[{"name":"a","name":"b"}]}|};
       ]
       |> List.iter (fun json ->
-           check (rejects path json "duplicate field")
-             "typed configuration objects reject duplicate fields");
+          check
+            (rejects path json "duplicate field")
+            "typed configuration objects reject duplicate fields");
       write_file path
         {|{
           "name": "map-duplicates",
@@ -291,7 +306,8 @@ let () =
       check
         (List.assoc "selected" config.features = ["last"])
         "feature map decoding keeps the last duplicate value";
-      check (config.experimental_args = [])
+      check
+        (config.experimental_args = [])
         "experimental feature maps keep the last duplicate value";
       check
         (not (List.mem "-bs-gentype-debug" config.gentype_args))
@@ -319,9 +335,9 @@ let () =
         "allowed-dependents";
       ]
       |> List.iter (fun field ->
-           write_file path
-             (Printf.sprintf {|{"name":"null-option","%s":null}|} field);
-           ignore (Config.load path));
+          write_file path
+            (Printf.sprintf {|{"name":"null-option","%s":null}|} field);
+          ignore (Config.load path));
       write_file path
         {|{
           "name": "nested-null-options",
@@ -340,17 +356,19 @@ let () =
       check
         (contains_adjacent "-bs-jsx-module" "Voby.JSX" config.jsx_args)
         "custom JSX modules are accepted";
-      check (List.mem "-bs-jsx-preserve" config.jsx_args)
+      check
+        (List.mem "-bs-jsx-preserve" config.jsx_args)
         "JSX preserve is projected to compiler arguments";
       write_file path {|{"name":"maps-disabled","sourceMap":false}|};
       let config = Config.load path in
-      check (config.source_map_args = ["-bs-source-map"; "false"])
+      check
+        (config.source_map_args = ["-bs-source-map"; "false"])
         "sourceMap false disables source maps explicitly";
       write_file path
         {|{"name":"tooling-config","editor":{"anything":true},"reanalyze":[1,2,3]}|};
       let config = Config.load path in
       check
-        (not (has_diagnostic config "editor")
+        ((not (has_diagnostic config "editor"))
         && not (has_diagnostic config "reanalyze"))
         "editor and reanalyze payloads are accepted without validation";
       write_file path
@@ -359,7 +377,8 @@ let () =
         try
           ignore (Config.load path);
           false
-        with Config.Error message -> contains message "unsupported package module"
+        with Config.Error message ->
+          contains message "unsupported package module"
       in
       check rejected "unsupported package modules are rejected";
       write_file path
@@ -395,7 +414,8 @@ let () =
         try
           ignore (Config.load path);
           false
-        with Config.Error message -> contains message "missing required field \"name\""
+        with Config.Error message ->
+          contains message "missing required field \"name\""
       in
       check rejected "a package config without a name is rejected";
       write_file path

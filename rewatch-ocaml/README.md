@@ -64,7 +64,7 @@ portable `Filename`-based path and artifact logic remains shared.
 ## Test
 
 ```sh
-opam exec -- dune runtest rewatch-ocaml
+opam exec -- dune runtest tests/rewatch_ounit_tests
 rewatch-ocaml/tests/check_config_acceptance.sh
 rewatch-ocaml/tests/check_command_validation.sh
 rewatch-ocaml/tests/check_interactive_output.sh

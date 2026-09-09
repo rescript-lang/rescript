@@ -1,10 +1,13 @@
-let check condition message = if not condition then failwith message
+open OUnit2
+
+let check condition message = assert_bool message condition
 
 let write_file path contents =
   Build_artifacts.ensure_dir (Filename.dirname path);
   let channel = open_out_bin path in
-  Fun.protect ~finally:(fun () -> close_out_noerr channel) (fun () ->
-    output_string channel contents)
+  Fun.protect
+    ~finally:(fun () -> close_out_noerr channel)
+    (fun () -> output_string channel contents)
 
 let names modules =
   List.map (fun (module_ : Source.module_) -> module_.name) modules
@@ -15,7 +18,8 @@ let discover config ?(prod = false) ?features () =
 let discover_with_inventory config ?(prod = false) ?features () =
   Source.discover_with_inventory config ~prod ~features ~filter:None
 
-let () =
+let tests =
+  "source_tests" >:: fun _context ->
   let root = Filename.temp_file "rewatch-ocaml-sources-" "" in
   Sys.remove root;
   Unix.mkdir root 0o755;
@@ -23,13 +27,14 @@ let () =
     ~finally:(fun () -> Build.remove_tree root)
     (fun () ->
       write_file (Filename.concat root "src/Main.res") "let value = 1\n";
-      write_file (Filename.concat root "src/nested/NotDiscovered.res")
+      write_file
+        (Filename.concat root "src/nested/NotDiscovered.res")
         "let value = 1\n";
       write_file (Filename.concat root "test/Test.res") "let value = 1\n";
-      write_file (Filename.concat root "test/nested/Nested.res")
+      write_file
+        (Filename.concat root "test/nested/Nested.res")
         "let value = 1\n";
-      write_file (Filename.concat root "native/Native.res")
-        "let value = 1\n";
+      write_file (Filename.concat root "native/Native.res") "let value = 1\n";
       write_file (Filename.concat root "native/Native.mjs") "export {}\n";
       let config_path = Filename.concat root "rescript.json" in
       write_file config_path
@@ -44,7 +49,8 @@ let () =
       let config = Config.load config_path in
       check
         (names (discover config ()) = ["Main"; "Native"; "Nested"; "Test"])
-        "an unrestricted build includes shorthand, dev, recursive, and tagged sources";
+        "an unrestricted build includes shorthand, dev, recursive, and tagged \
+         sources";
       check
         (names (discover config ~prod:true ()) = ["Main"; "Native"])
         "a production build excludes a recursive dev source";
@@ -102,8 +108,7 @@ let () =
           "gentypeconfig": {}
         }|};
       let discovery =
-        Config.load config_path
-        |> fun config ->
+        Config.load config_path |> fun config ->
         discover_with_inventory config ~prod:true ~features:["other"] ()
       in
       check
@@ -123,8 +128,7 @@ let () =
         "unsupported ignored-dirs does not suppress source discovery";
       write_file (Filename.concat root "case/lower.res") "let value = 1\n";
       write_file (Filename.concat root "case/Lower.resi") "let value: int\n";
-      write_file config_path
-        {|{"name":"interface-case","sources":["case"]}|};
+      write_file config_path {|{"name":"interface-case","sources":["case"]}|};
       let config = Config.load config_path in
       let casing_rejected =
         try
@@ -132,7 +136,9 @@ let () =
           false
         with Source.Error message ->
           Build.contains_text message
-            "Could not initialize build: Implementation and interface have different path names or different cases: `case/lower.res` vs `case/Lower.resi`"
+            "Could not initialize build: Implementation and interface have \
+             different path names or different cases: `case/lower.res` vs \
+             `case/Lower.resi`"
       in
       check casing_rejected
         "implementation and interface basename casing must match";
@@ -145,7 +151,8 @@ let () =
           Build.contains_text message "Duplicate module name: Lower"
       in
       check duplicate_rejected
-        "adding the exact implementation still exposes the differently-cased duplicate";
+        "adding the exact implementation still exposes the differently-cased \
+         duplicate";
       write_file (Filename.concat root "paths/a/Path.res") "let value = 1\n";
       write_file (Filename.concat root "paths/b/Path.resi") "let value: int\n";
       write_file config_path
@@ -157,19 +164,24 @@ let () =
           false
         with Source.Error message ->
           Build.contains_text message
-            "different path names or different cases: `paths/a/Path.res` vs `paths/b/Path.resi`"
+            "different path names or different cases: `paths/a/Path.res` vs \
+             `paths/b/Path.resi`"
       in
       check path_rejected
-        "an interface cannot attach to a same-named implementation in another directory";
+        "an interface cannot attach to a same-named implementation in another \
+         directory";
       if not Sys.win32 then (
-        write_file (Filename.concat root "linked-target/Linked.res")
+        write_file
+          (Filename.concat root "linked-target/Linked.res")
           "let value = 1\n";
-        Unix.symlink (Filename.concat root "linked-target")
+        Unix.symlink
+          (Filename.concat root "linked-target")
           (Filename.concat root "linked-source");
         write_file config_path
           {|{"name":"linked-source","sources":["linked-source"]}|};
         let discovery =
-          Config.load config_path |> fun config -> discover_with_inventory config ()
+          Config.load config_path |> fun config ->
+          discover_with_inventory config ()
         in
         check
           (names discovery.modules = ["Linked"])

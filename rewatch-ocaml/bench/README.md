@@ -33,7 +33,7 @@ Before accepting a performance increment, also run the OCaml unit/focused tests
 and the canonical Rust rewatch integration suite against the OCaml executable:
 
 ```sh
-opam exec -- dune runtest rewatch-ocaml
+opam exec -- dune runtest tests/rewatch_ounit_tests
 bash rewatch-ocaml/tests/run.sh \
   _build/default/rewatch-ocaml/rescript_ocaml.exe
 (cd rewatch/tests && \

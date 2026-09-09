@@ -1,0 +1,28 @@
+(rule
+ (target platform_windows.ml)
+ (action
+  (copy ../../rewatch-ocaml/platform_windows.ml %{target})))
+
+(test
+ (name rewatch_ounit_tests_main)
+ (modules
+  rewatch_ounit_tests_main
+  build_artifacts_tests
+  build_state_tests
+  clean_tests
+  cli_tests
+  compile_assets_tests
+  compiler_args_tests
+  compiler_info_tests
+  config_tests
+  format_tests
+  native_watcher_tests
+  output_tests
+  package_metadata_tests
+  platform_windows
+  project_context_tests
+  source_tests
+  toolchain_tests
+  unit_tests
+  warning_state_tests)
+ (libraries rewatch_ocaml_lib ounit2))
