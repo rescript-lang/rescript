@@ -14,10 +14,11 @@ identical normalized package/phase/input multisets as well as identical counts
 for parser, namespace, compiler, interface, and PPX process launches. The edit
 targets the same leaf source in each isolated fixture. This sequence detects
 superfluous incremental parsing or compilation that a clean-only comparison
-cannot expose. Finally, both
-implementations clean and build a third fixture at the same absolute path; the
-gate requires identical generated JavaScript, compiler interfaces (`.cmi`),
-JavaScript IR (`.cmj`), and namespace maps. It deliberately does not treat
+cannot expose. Finally, both implementations clean and build a third fixture at
+the same absolute path. The gate first requires the complete post-build
+file-name sets to match, including auxiliary cache and editor-control files,
+and then requires byte-identical generated JavaScript, compiler interfaces
+(`.cmi`), JavaScript IR (`.cmj`), and namespace maps. It deliberately does not treat
 `.cmt/.cmti`, parser AST caches, compiler logs, `build.ninja`,
 `compiler-info.json`, or `.sourcedirs.json` as byte-stable outputs: those files
 contain diagnostics/debug metadata or implementation-specific incremental
@@ -44,8 +45,8 @@ Together these cover three different failure classes:
 - the three `strace` classifications check that a speed result did not hide
   skipped or superfluous clean/incremental module or PPX work (argument
   semantics remain covered by the compiler-argument and integration tests);
-- the fresh-tree manifest comparison checks the selected generated file set and
-  byte contents.
+- the fresh-tree comparisons check the complete post-build file set plus the
+  byte contents of every stable generated artifact class.
 
 The manifest comparison intentionally recreates its fixture between runners.
 Using only each implementation's `clean` command would allow a Rust-only file

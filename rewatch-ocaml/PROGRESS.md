@@ -808,6 +808,20 @@ compiler work: clean `1031/512/7/512/40/1`, unchanged `4/2/0/2/1/0`, and
 single-edit `6/3/0/3/1/0` for total/parser/namespace/compiler/interface/PPX
 launches in both implementations. The selected artifact sets and contents were
 byte-identical. Its one-run timing is deliberately not an acceptance result.
+The retained gate now also compares the complete fresh-build file-name set,
+including cache and editor-control artifacts. Byte comparison remains limited
+to stable generated artifact classes because compiler logs and implementation
+state contain timestamps or intentionally different internal encodings.
+Its first run found that OCaml removed warning-bearing parser outputs from both
+`lib/bs` and `lib/ocaml`, while Rust invalidates only the published
+`lib/ocaml` freshness copy. OCaml now retains the parser's working AST in
+`lib/bs` as Rust does; removing the published copy still forces the intended
+warning replay on the next build without performing superfluous deletion.
+A follow-up correctness smoke run passed the complete file-set comparison, all
+three exact compiler-work manifests, and the stable artifact-content manifest.
+Its single timing sample was 5.511 seconds for OCaml versus 4.652 seconds for
+Rust (1.185x) with 749,052 versus 739,592 KiB peak tree RSS; those timings are
+observational and do not replace the five-run acceptance result.
 
 The current `cloc` 2.06 source-size snapshot reports 7,818 Rust production
 lines after excluding the intentionally omitted telemetry module and inline
