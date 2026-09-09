@@ -189,20 +189,42 @@ let format_check_summary = function
 | 1 -> "The file listed above needs formatting"
 | count -> Printf.sprintf "The %d files listed above need formatting" count
 
-let format_files ~check files =
-  let bsc = bsc () in
-  let incorrect = ref [] in
-  List.iter (fun path ->
-    let replacement = formatted ~bsc ~target:path path in
+let format_files_with_bsc ?max_jobs ~bsc ~check files =
+  let cwd = Sys.getcwd () in
+  let incorrect = ref 0 in
+  let works =
+    files
+    |> List.mapi (fun index path ->
+         Process.
+           {
+             key = Printf.sprintf "%08d" index;
+             dependencies = [];
+             value = path;
+           })
+  in
+  let next path = function
+  | None -> Some Process.{program = bsc; args = ["-format"; path]; cwd}
+  | Some result ->
+    if not (Process.succeeded result) then
+      raise (Error (formatting_error path result.stderr));
     let original = read_file path in
-    if original <> replacement then
-      if check then incorrect := path :: !incorrect else write_file path replacement) files;
-  match List.rev !incorrect with
-  | [] -> ()
-  | paths ->
-    List.iter (fun path -> prerr_endline ("[format check] " ^ path)) paths;
-    prerr_endline (format_check_summary (List.length paths));
+    if original <> result.stdout then
+      if check then (
+        incr incorrect;
+        prerr_endline ("[format check] " ^ path))
+      else write_file path result.stdout;
+    None
+  in
+  (match max_jobs with
+  | None -> Process.run_dependency_graph works ~next
+  | Some max_jobs -> Process.run_dependency_graph ~max_jobs works ~next);
+  if !incorrect > 0 then (
+    prerr_endline (format_check_summary !incorrect);
     raise (Error "Formatting check failed")
+  )
+
+let format_files ~check files =
+  format_files_with_bsc ~bsc:(bsc ()) ~check files
 
 let format_stdin extension =
   if extension <> ".res" && extension <> ".resi" then

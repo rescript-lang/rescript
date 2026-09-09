@@ -336,7 +336,9 @@ missing control-file names.
   deterministic input-order diagnostic collection. Their transient logs are
   created in the operating system's temporary directory; interruption signals
   all children, performs a bounded graceful reap, then escalates and cleans
-  logs.
+  logs. File formatting now reuses the same bounded scheduler for independent
+  `bsc -format` subprocesses instead of serializing every file; a process-level
+  OUnit regression requires two formatter children to overlap.
 - Subprocess creation uses `spawn >= v0.17.0`: Unix children receive their own
   process groups, while Windows uses `CreateProcess` with explicit working
   directories. Bare executables resolve through PATH/PATHEXT, including

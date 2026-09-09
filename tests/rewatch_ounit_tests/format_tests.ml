@@ -34,6 +34,26 @@ let tests =
     (Format.format_check_summary 2 = "The 2 files listed above need formatting")
     "format check uses Rust's plural summary";
   with_temp_dir (fun root ->
+      let first = Filename.concat root "First.res" in
+      let second = Filename.concat root "Second.res" in
+      write_file first "let first = 1\n";
+      write_file second "let second = 2\n";
+      let previous_root = Sys.getenv_opt "REWATCH_FORMAT_TEST_ROOT" in
+      Unix.putenv "REWATCH_FORMAT_TEST_ROOT" root;
+      Fun.protect
+        ~finally:(fun () ->
+          match previous_root with
+          | Some value -> Unix.putenv "REWATCH_FORMAT_TEST_ROOT" value
+          | None -> Unix.unsetenv "REWATCH_FORMAT_TEST_ROOT")
+        (fun () ->
+          Format.format_files_with_bsc ~max_jobs:2
+            ~bsc:(Unix.realpath Sys.executable_name)
+            ~check:true [first; second]);
+      check
+        (Sys.file_exists (first ^ ".started")
+        && Sys.file_exists (second ^ ".started"))
+        "formatter subprocesses overlap rather than running serially");
+  with_temp_dir (fun root ->
       let root_source = Filename.concat root "src/App.res" in
       let installed_source =
         Filename.concat root "node_modules/installed/src/Installed.res"
