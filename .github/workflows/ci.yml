@@ -226,7 +226,7 @@ jobs:
           bash rewatch-ocaml/tests/check_interactive_output.sh \
             packages/@rescript/${{ matrix.node-target }}/bin/rescript-rust.exe \
             packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe
-          opam exec -- dune runtest rewatch-ocaml
+          opam exec -- dune runtest tests/rewatch_ounit_tests
           sh rewatch-ocaml/tests/run.sh packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe
         shell: bash
 

@@ -14,10 +14,11 @@ in-process compiler state.
 
 At code checkpoint `324112908`, `opam exec -- make test-all` passed
 uninterrupted with the packaged OCaml rewatch binary as the default. This
-covered formatting, 300 OCaml unit tests, compiler/runtime and build integration
-tests, runtime docstrings, both GenType suites, analysis and reanalyze, tools,
-and the complete canonical rewatch suite. The run left no watcher process or
-worktree change behind.
+covered formatting, roughly 300 OCaml unit assertions (now grouped into 17
+OUnit2 suites), compiler/runtime and build integration tests, runtime
+docstrings, both GenType suites, analysis and reanalyze, tools, and the complete
+canonical rewatch suite. The run left no watcher process or worktree change
+behind.
 
 The implementation currently has configuration loading, source and package
 discovery, external `bsc` parsing, AST dependency extraction, cycle detection,
@@ -231,7 +232,9 @@ missing control-file names.
 
 ## Verified
 
-- `dune runtest rewatch-ocaml` passes graph unit coverage.
+- `dune runtest tests/rewatch_ounit_tests` passes all 17 OUnit2 suites; the
+  former `dune runtest rewatch-ocaml` scope forwards to the same suite so it
+  cannot silently run zero tests.
 - A clean one-shot build of the installed `rewatch/testrepo` succeeds with the
   OCaml executable, including workspace packages, external dependencies,
   namespace entries, and the hoisted PPX executable.
@@ -899,16 +902,16 @@ Its single timing sample was 5.511 seconds for OCaml versus 4.652 seconds for
 Rust (1.185x) with 749,052 versus 739,592 KiB peak tree RSS; those timings are
 observational and do not replace the five-run acceptance result.
 
-The current `cloc` 2.06 source-size snapshot reports 7,818 Rust production
+The current `cloc` 2.04 source-size snapshot reports 7,818 Rust production
 lines after excluding the intentionally omitted telemetry module and inline
-test-only sections, versus 3,789 OCaml production lines, or 48.5%. Counting
+test-only sections, versus 5,947 OCaml production lines, or 76.1%. Counting
 language-specific tests separately gives 2,773 embedded Rust unit-test lines
-and 975 OCaml test lines (557 unit-test + 418 tracked focused-test harness,
-fixture, and configuration lines); the OCaml benchmark tooling adds another
-314 lines, including the source-size script itself. The shared canonical
-integration suite is deliberately not charged to either side. These figures
-describe maintainability surface, not parity or quality: this port is still
-incomplete, and later comments and tests should increase useful lines.
+and 4,243 OCaml test lines: 2,480 in the OUnit2 package plus 1,763 in the
+focused shell harness and its fixtures. The OCaml benchmark tooling adds
+another 372 lines, including the source-size script itself. The shared
+canonical integration suite is deliberately not charged to either side. These
+figures describe maintainability surface, not parity or quality: this port is
+still incomplete, and later comments and tests should increase useful lines.
 [`bench/source_size.sh`](bench/source_size.sh) preserves the scope and command;
 rerun it for the final maintainability review alongside maximum module size.
 
@@ -1187,8 +1190,10 @@ the final output-presentation pass after macOS and Windows validation. The futur
 filesystem-performance ideas documented above do not block completion of the
 compatibility port.
 
-The OCaml unit-test sources will move to `tests/rewatch_ounit_tests` and use the
+The OCaml unit-test sources now live in `tests/rewatch_ounit_tests` and use the
 repository's existing OUnit2 dependency, leaving production modules in
-`rewatch-ocaml`. Moving the shared shell suite from `rewatch/tests` to a future
-`tests/rewatch_tests` location is intentionally outside this PR because it would
-create unrelated Rust, CI, and tooling path churn.
+`rewatch-ocaml`. Consolidation exposed and fixed a leaked `RESCRIPT_BSC_EXE`
+mutation that the former per-executable process isolation had hidden. Moving
+the shared shell suite from `rewatch/tests` to a future `tests/rewatch_tests`
+location is intentionally outside this PR because it would create unrelated
+Rust, CI, and tooling path churn.

@@ -1,4 +1,6 @@
-let check condition message = if not condition then failwith message
+open OUnit2
+
+let check condition message = assert_bool message condition
 
 module Checked_windows_platform : module type of Platform = Platform_windows
 
@@ -10,8 +12,9 @@ let rec contains_adjacent left right = function
 let write_file path contents =
   Build_artifacts.ensure_dir (Filename.dirname path);
   let channel = open_out_bin path in
-  Fun.protect ~finally:(fun () -> close_out_noerr channel) (fun () ->
-    output_string channel contents)
+  Fun.protect
+    ~finally:(fun () -> close_out_noerr channel)
+    (fun () -> output_string channel contents)
 
 let touch_file path = write_file path ""
 
@@ -67,7 +70,8 @@ let () =
       done
     | _ -> ()
 
-let () =
+let tests =
+  "unit_tests" >:: fun _context ->
   check
     (Build_artifacts.generated_output_owner "Foo.bs.js" = Some "Foo")
     "compound .bs.js outputs retain their module owner";
@@ -111,9 +115,7 @@ let () =
     with Process.Error _ -> true
   in
   check invalid_parallel_bound_rejected "parallel subprocess bound is validated";
-  let graph_work key dependencies =
-    Process.{key; dependencies; value = key}
-  in
+  let graph_work key dependencies = Process.{key; dependencies; value = key} in
   let cancellation_polls = ref 0 in
   let dependency_graph_cancelled =
     let exception Cancel in
@@ -140,10 +142,10 @@ let () =
       match result with
       | None ->
         if key = "b" then
-          check (Hashtbl.mem graph_completed "a")
+          check
+            (Hashtbl.mem graph_completed "a")
             "dependency work starts only after its prerequisite completes";
-        Some
-          (process_job ["--process-result"; key; ""; "0"])
+        Some (process_job ["--process-result"; key; ""; "0"])
       | Some result ->
         check
           (Process.succeeded result && result.stdout = key)
@@ -179,7 +181,8 @@ let () =
   in
   check
     (!drained_failures = 2 && deterministic_failure = Some "a")
-    "dependency scheduler drains active work and reports errors deterministically";
+    "dependency scheduler drains active work and reports errors \
+     deterministically";
   let path_root = Filename.temp_file "rewatch-ocaml-path-" "" in
   Sys.remove path_root;
   Unix.mkdir path_root 0o755;
@@ -205,12 +208,14 @@ let () =
           let requested = if Sys.win32 then "worker" else command in
           check
             (Platform.resolve_program ~cwd:path_root requested = executable)
-            "PATH lookup skips directories and applies platform executable suffixes";
+            "PATH lookup skips directories and applies platform executable \
+             suffixes";
           if Sys.win32 then (
             let cwd_executable = Filename.concat path_root "current.exe" in
             Build_artifacts.copy_file test_executable cwd_executable;
             check
-              (Platform.resolve_program ~cwd:path_root "current" = cwd_executable)
+              (Platform.resolve_program ~cwd:path_root "current"
+              = cwd_executable)
               "Windows executable lookup searches cwd with PATHEXT")));
   check
     (Platform_windows.tasklist_has_process ~pid:123
@@ -252,12 +257,14 @@ let () =
         }
       in
       let results =
-        Process.run_parallel ~max_jobs:2 [job "first"; job "second"; job "third"]
+        Process.run_parallel ~max_jobs:2
+          [job "first"; job "second"; job "third"]
       in
       let _, helper_status = Unix.waitpid [] helper in
       check (helper_status = Unix.WEXITED 0) "scheduler test helper exits";
       check
-        (not (Sys.file_exists (Filename.concat scheduler_root "refill-stalled")))
+        (not
+           (Sys.file_exists (Filename.concat scheduler_root "refill-stalled")))
         "parallel scheduler refills a completed slot immediately";
       check
         (List.map (fun (result : Process.result) -> result.stdout) results
@@ -265,20 +272,18 @@ let () =
         "dynamically scheduled results retain input order";
       let failure =
         Process.run_parallel ~max_jobs:1
-          [
-            process_job
-              ["--process-result"; "partial"; "diagnostic"; "7"];
-          ]
+          [process_job ["--process-result"; "partial"; "diagnostic"; "7"]]
         |> List.hd
       in
       check
-        (failure.status = Unix.WEXITED 7 && failure.stdout = "partial"
-       && failure.stderr = "diagnostic")
+        (failure.status = Unix.WEXITED 7
+        && failure.stdout = "partial"
+        && failure.stderr = "diagnostic")
         "parallel subprocess failures preserve status and output";
       check
         (Sys.readdir scheduler_root
         |> Array.for_all (fun name ->
-             not (String.starts_with ~prefix:".rewatch-ocaml-" name)))
+            not (String.starts_with ~prefix:".rewatch-ocaml-" name)))
         "pipe capture creates no temporary scheduler logs");
   let node name deps = (name, deps) in
   let nodes = [node "C" ["B"]; node "A" []; node "B" ["A"]] in
@@ -299,18 +304,15 @@ let () =
   let blocked =
     Build.blocked_dependents
       [
-        ("A", ["B"]);
-        ("B", ["A"]);
-        ("C", ["A"]);
-        ("D", ["C"]);
-        ("Unrelated", []);
+        ("A", ["B"]); ("B", ["A"]); ("C", ["A"]); ("D", ["C"]); ("Unrelated", []);
       ]
       ["A"; "B"]
   in
   check
     (List.for_all (fun name -> List.mem name blocked) ["A"; "B"; "C"; "D"])
     "cycle transitive dependents are blocked";
-  check (not (List.mem "Unrelated" blocked))
+  check
+    (not (List.mem "Unrelated" blocked))
     "cycle-unrelated modules remain schedulable";
   check
     (Build.is_local_dependency_canonical ~workspace:"/workspace"
@@ -326,27 +328,28 @@ let () =
        (Build.is_local_dependency_canonical ~workspace:"/workspace"
           "/workspace-other/dependency"))
     "path-prefix siblings are outside the workspace";
-  (if not Sys.win32 then
-     let temporary = Filename.temp_file "rewatch-ocaml-package-path-" "" in
-     Sys.remove temporary;
-     Unix.mkdir temporary 0o755;
-     let package = Filename.concat temporary "package" in
-     let node_modules = Filename.concat temporary "node_modules" in
-     Unix.mkdir package 0o755;
-     Unix.mkdir node_modules 0o755;
-     Unix.symlink package (Filename.concat node_modules "dependency");
-     Fun.protect
-       ~finally:(fun () ->
-         Sys.remove (Filename.concat node_modules "dependency");
-         Unix.rmdir node_modules;
-         Unix.rmdir package;
-         Unix.rmdir temporary)
-       (fun () ->
-         match Build.dependency_path temporary "dependency" with
-         | Some resolved ->
-           check (resolved = Unix.realpath package)
-             "dependency paths are canonicalized"
-         | None -> failwith "dependency symlink was not resolved"));
+  if not Sys.win32 then (
+    let temporary = Filename.temp_file "rewatch-ocaml-package-path-" "" in
+    Sys.remove temporary;
+    Unix.mkdir temporary 0o755;
+    let package = Filename.concat temporary "package" in
+    let node_modules = Filename.concat temporary "node_modules" in
+    Unix.mkdir package 0o755;
+    Unix.mkdir node_modules 0o755;
+    Unix.symlink package (Filename.concat node_modules "dependency");
+    Fun.protect
+      ~finally:(fun () ->
+        Sys.remove (Filename.concat node_modules "dependency");
+        Unix.rmdir node_modules;
+        Unix.rmdir package;
+        Unix.rmdir temporary)
+      (fun () ->
+        match Build.dependency_path temporary "dependency" with
+        | Some resolved ->
+          check
+            (resolved = Unix.realpath package)
+            "dependency paths are canonicalized"
+        | None -> failwith "dependency symlink was not resolved"));
   check
     (Config.namespace_from_package_name "@testrepo/deprecated-config"
     = "TestrepoDeprecatedConfig")
@@ -358,7 +361,9 @@ let () =
   check
     (Build.strip_ansi "plain \027[1;31mred\027[0m text" = "plain red text")
     "compiler log ANSI stripping";
-  let truncated_utf8 = "Warning " ^ String.make 1 (Char.chr 0xe2) ^ String.make 1 (Char.chr 0x80) in
+  let truncated_utf8 =
+    "Warning " ^ String.make 1 (Char.chr 0xe2) ^ String.make 1 (Char.chr 0x80)
+  in
   let decoded = Process.decode_utf8_lossy truncated_utf8 in
   check
     (String.starts_with ~prefix:"Warning " decoded
@@ -391,8 +396,7 @@ let () =
   List.iter
     (fun line_ending ->
       let kept =
-        Build.retain_critical_external_warnings
-          (mixed_warnings line_ending)
+        Build.retain_critical_external_warnings (mixed_warnings line_ending)
       in
       check
         (Build.contains_text kept critical_marker
@@ -408,19 +412,23 @@ let () =
   check
     (not (Build.source_discovery_prod ~prod:false ~is_local:true))
     "development sources are enabled for a local development build";
-  check (Build.source_discovery_prod ~prod:true ~is_local:true)
+  check
+    (Build.source_discovery_prod ~prod:true ~is_local:true)
     "production builds exclude local development sources";
-  check (Build.source_discovery_prod ~prod:false ~is_local:false)
+  check
+    (Build.source_discovery_prod ~prod:false ~is_local:false)
     "installed dependencies always exclude development sources";
   check (Build.valid_lock_owner "0") "zero is a valid serialized u32 owner";
-  check (Build.valid_lock_owner "4294967295")
+  check
+    (Build.valid_lock_owner "4294967295")
     "the maximum u32 is a valid serialized lock owner";
   check (not (Build.valid_lock_owner "")) "an empty lock owner is malformed";
-  check (not (Build.valid_lock_owner "-1"))
-    "a negative lock owner is malformed";
-  check (not (Build.valid_lock_owner "4294967296"))
+  check (not (Build.valid_lock_owner "-1")) "a negative lock owner is malformed";
+  check
+    (not (Build.valid_lock_owner "4294967296"))
     "a lock owner outside the Rust u32 range is malformed";
-  check (not (Build.valid_lock_owner "123\n"))
+  check
+    (not (Build.valid_lock_owner "123\n"))
     "trailing data in a lock owner is malformed";
   let lock_root = Filename.temp_file "rewatch-ocaml-stale-lock-" "" in
   Sys.remove lock_root;
@@ -431,8 +439,9 @@ let () =
   let takeover = lock ^ ".takeover" in
   let write_owner path owner =
     let channel = open_out path in
-    Fun.protect ~finally:(fun () -> close_out_noerr channel) (fun () ->
-      output_string channel owner)
+    Fun.protect
+      ~finally:(fun () -> close_out_noerr channel)
+      (fun () -> output_string channel owner)
   in
   write_owner lock "999999999";
   write_owner takeover "999999999";
@@ -456,8 +465,7 @@ let () =
     ~finally:(fun () -> Build.remove_tree config_root)
     (fun () ->
       let config_path = Filename.concat config_root "rescript.json" in
-      write_file config_path
-        {|{"name":"file-casing","namespace":"FileCasing"}|};
+      write_file config_path {|{"name":"file-casing","namespace":"FileCasing"}|};
       let file_casing_config = Config.load config_path in
       check
         (Source.compiler_asset_basename file_casing_config "src/produce.res"
@@ -571,8 +579,7 @@ let () =
         with Config.Error message ->
           Build.contains_text message "missing field \"enabled\""
       in
-      check missing_source_map_enabled_rejected
-        "sourceMap enabled is required";
+      check missing_source_map_enabled_rejected "sourceMap enabled is required";
       write_file config_path
         {|{
           "name": "source-map",
@@ -582,13 +589,13 @@ let () =
       check config.source_map_dev "sourceMap dev mode is parsed";
       check
         (contains_adjacent "-bs-source-map" "false"
-           (Build.compiler_flags ~source_maps:true ~watch:false
-              ~gentype:false config))
+           (Build.compiler_flags ~source_maps:true ~watch:false ~gentype:false
+              config))
         "sourceMap dev mode is disabled for one-shot builds";
       check
         (contains_adjacent "-bs-source-map" "linked"
-           (Build.compiler_flags ~source_maps:true ~watch:true
-              ~gentype:false config))
+           (Build.compiler_flags ~source_maps:true ~watch:true ~gentype:false
+              config))
         "sourceMap dev mode is enabled for watch builds";
       write_file config_path
         {|{
@@ -599,8 +606,8 @@ let () =
       check (not config.source_map_dev) "sourceMap always mode is parsed";
       check
         (contains_adjacent "-bs-source-map" "inline"
-           (Build.compiler_flags ~source_maps:true ~watch:false
-              ~gentype:false config))
+           (Build.compiler_flags ~source_maps:true ~watch:false ~gentype:false
+              config))
         "sourceMap always mode is enabled for one-shot builds";
       Sys.remove config_path;
       let legacy_path = Filename.concat config_root "bsconfig.json" in
@@ -609,12 +616,14 @@ let () =
       check (config.path = legacy_path) "bsconfig.json is used as a fallback";
       check
         (List.exists
-           (fun message -> Build.contains_text message "filename 'bsconfig.json'")
+           (fun message ->
+             Build.contains_text message "filename 'bsconfig.json'")
            config.diagnostics)
         "bsconfig.json emits a deprecation diagnostic";
       write_file config_path {|{"name":"current-config"}|};
       let config = Config.load_root config_root in
-      check (config.path = config_path)
+      check
+        (config.path = config_path)
         "rescript.json takes precedence over bsconfig.json";
       write_file config_path
         {|{
@@ -624,8 +633,7 @@ let () =
         }|};
       let config = Config.load config_path in
       check
-        (contains_adjacent "-bs-gentype-module" "commonjs"
-           config.gentype_args)
+        (contains_adjacent "-bs-gentype-module" "commonjs" config.gentype_args)
         "GenType inherits object package module";
       check
         (not (List.mem "-bs-gentype-suffix" config.gentype_args))
@@ -634,8 +642,7 @@ let () =
         {|{"name":"gentype-suffix","suffix":".mjs","gentypeconfig":{}}|};
       let config = Config.load config_path in
       check
-        (contains_adjacent "-bs-gentype-suffix" ".mjs"
-           config.gentype_args)
+        (contains_adjacent "-bs-gentype-suffix" ".mjs" config.gentype_args)
         "GenType includes an explicitly configured suffix";
       write_file config_path
         {|{
@@ -646,22 +653,19 @@ let () =
         }|};
       let config = Config.load config_path in
       check
-        (contains_adjacent "-bs-gentype-shim" "From=Last"
-           config.gentype_args)
+        (contains_adjacent "-bs-gentype-shim" "From=Last" config.gentype_args)
         "legacy GenType shims are trimmed and later duplicates win";
       check
         (List.length
            (List.filter (( = ) "-bs-gentype-shim") config.gentype_args)
         = 2)
         "legacy GenType shims use map semantics";
-      write_file config_path
-        {|{"name":"unsupported","generators":["legacy"]}|};
+      write_file config_path {|{"name":"unsupported","generators":["legacy"]}|};
       let config = Config.load config_path in
       check
         (List.exists
            (fun message ->
-             Build.contains_text message
-               "field 'generators'"
+             Build.contains_text message "field 'generators'"
              && Build.contains_text message "is not supported")
            config.diagnostics)
         "known unsupported config fields are distinguished from unknown fields");
@@ -673,34 +677,43 @@ let () =
   Fun.protect
     ~finally:(fun () -> Build.remove_tree dependency_root)
     (fun () ->
-      write_file (Filename.concat dependency_root "rescript.json")
+      write_file
+        (Filename.concat dependency_root "rescript.json")
         {|{"name":"app","dependencies":["restricted"]}|};
       write_file
         (List.fold_left Filename.concat dependency_root
            ["node_modules"; "restricted"; "rescript.json"])
         {|{"name":"restricted","allowed-dependents":["other"]}|};
+      let previous_bsc = Sys.getenv_opt "RESCRIPT_BSC_EXE" in
       Unix.putenv "RESCRIPT_BSC_EXE" test_executable;
-      let rejected =
-        try
-          Build.run ~seen:[] ~verbosity:0 ~folder:dependency_root ~prod:false
-            ~features:None ~warn_error:None ~watch:false ~after_build:None
-            ~filter:None ~no_timing:false;
-          false
-        with Build.Error message ->
-          if Build.contains_text message "app dependencies: restricted" then
-            true
-          else failwith ("unexpected allowed-dependents error: " ^ message)
-      in
-      check rejected "unallowed package dependency is rejected";
-      write_file (Filename.concat dependency_root "rescript.json")
-        {|{"name":"app","dev-dependencies":["restricted"]}|};
-      let rejected =
-        try
-          Build.run ~seen:[] ~verbosity:0 ~folder:dependency_root ~prod:false
-            ~features:None ~warn_error:None ~watch:false ~after_build:None
-            ~filter:None ~no_timing:false;
-          false
-        with Build.Error message ->
-          Build.contains_text message "app dev-dependencies: restricted"
-      in
-      check rejected "unallowed development dependency is rejected")
+      Fun.protect
+        ~finally:(fun () ->
+          match previous_bsc with
+          | Some value -> Unix.putenv "RESCRIPT_BSC_EXE" value
+          | None -> Unix.unsetenv "RESCRIPT_BSC_EXE")
+        (fun () ->
+          let rejected =
+            try
+              Build.run ~seen:[] ~verbosity:0 ~folder:dependency_root
+                ~prod:false ~features:None ~warn_error:None ~watch:false
+                ~after_build:None ~filter:None ~no_timing:false;
+              false
+            with Build.Error message ->
+              if Build.contains_text message "app dependencies: restricted" then
+                true
+              else failwith ("unexpected allowed-dependents error: " ^ message)
+          in
+          check rejected "unallowed package dependency is rejected";
+          write_file
+            (Filename.concat dependency_root "rescript.json")
+            {|{"name":"app","dev-dependencies":["restricted"]}|};
+          let rejected =
+            try
+              Build.run ~seen:[] ~verbosity:0 ~folder:dependency_root
+                ~prod:false ~features:None ~warn_error:None ~watch:false
+                ~after_build:None ~filter:None ~no_timing:false;
+              false
+            with Build.Error message ->
+              Build.contains_text message "app dev-dependencies: restricted"
+          in
+          check rejected "unallowed development dependency is rejected"))

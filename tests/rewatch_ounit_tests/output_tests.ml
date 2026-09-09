@@ -1,6 +1,9 @@
-let check condition message = if not condition then failwith message
+open OUnit2
 
-let () =
+let check condition message = assert_bool message condition
+
+let tests =
+  "output_tests" >:: fun _context ->
   check
     (Output.cleanup_message ~step:"1/3" ~cleaned:2 ~total:5 ~seconds:1.5
     = "\027[2K\r[1/3] 🧹 Cleaned 2/5 in 1.50s")
@@ -22,8 +25,7 @@ let () =
     = "\027[2K\r[2/2] ❌ Compiled 3 modules in 1.50s")
     "interactive failed compilation phase format";
   check
-    (Output.finished_compilation_message ~kind:None ~warnings:false
-       ~seconds:1.5
+    (Output.finished_compilation_message ~kind:None ~warnings:false ~seconds:1.5
     = "\027[2K\r✅ Finished compilation in 1.50s")
     "clean completion format";
   check

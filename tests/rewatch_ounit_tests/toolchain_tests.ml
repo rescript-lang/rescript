@@ -1,11 +1,15 @@
-let check condition message = if not condition then failwith message
+open OUnit2
+
+let check condition message = assert_bool message condition
 
 let write_file path contents =
   let channel = open_out_bin path in
-  Fun.protect ~finally:(fun () -> close_out_noerr channel) (fun () ->
-    output_string channel contents)
+  Fun.protect
+    ~finally:(fun () -> close_out_noerr channel)
+    (fun () -> output_string channel contents)
 
-let () =
+let tests =
+  "toolchain_tests" >:: fun _context ->
   let root = Filename.temp_file "rewatch-ocaml-toolchain-" "" in
   Sys.remove root;
   Unix.mkdir root 0o755;
@@ -26,13 +30,11 @@ let () =
         = Filename.concat bin "bsc.exe")
         "relative executable paths locate sibling bsc.exe");
   check
-    (Platform_windows.strip_verbatim_prefix
-       "\\\\?\\C:\\ReScript\\bin\\bsc.exe"
+    (Platform_windows.strip_verbatim_prefix "\\\\?\\C:\\ReScript\\bin\\bsc.exe"
     = "C:\\ReScript\\bin\\bsc.exe")
     "Windows drive paths drop the verbatim prefix";
   check
-    (Platform_windows.strip_verbatim_prefix
-       "\\\\?\\UNC\\server\\share\\bsc.exe"
+    (Platform_windows.strip_verbatim_prefix "\\\\?\\UNC\\server\\share\\bsc.exe"
     = "\\\\server\\share\\bsc.exe")
     "Windows UNC paths preserve their network root";
   check
