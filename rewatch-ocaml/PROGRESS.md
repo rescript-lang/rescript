@@ -493,10 +493,11 @@ environment on the plugged-in Mac host:
 
 | Implementation | Median wall time | Median peak tree RSS |
 | --- | ---: | ---: |
-| Rust | 4,576 ms | 773,824 KiB |
-| OCaml | 5,546 ms | 782,472 KiB |
+| Rust | 5,489 ms | 759,232 KiB |
+| OCaml | 6,468 ms | 752,496 KiB |
 
-The latest 1.212× wall-time ratio and 1.011× RSS ratio pass the 1.25× gate.
+The latest completed gate's 1.178× wall-time ratio and 0.991× RSS ratio pass
+the 1.25× gate.
 The host was plugged in and otherwise idle for this run. Docker on a Mac is
 still noisier than native Linux or dedicated CI, so final acceptance should
 repeat the distribution on a stable host rather than treating this one passing
@@ -505,15 +506,15 @@ jumps despite the affected builds completing in seconds; the preceding run
 reported one OCaml sample as 254 seconds while its surrounding samples were
 5.6–5.8 seconds. The latest run had five coherent samples for each
 implementation, but a final native/stable-host run remains necessary. Passing
-this aggregate gate also does not close the excessive unchanged-build metadata
-probes found by the filesystem audit below.
+this aggregate gate also does not excuse the clean-build publication probes
+identified by the filesystem audit below.
 
 Both implementations performed exactly 1,031 `bsc` launches: 512 parses, 7
 namespace compilations, and 512 module compilations, of which 40 were interface
 compilations; each also launched the PPX once. This rules out extra compiler
 invocations on clean builds as the current wall-time source. The extended work
-gate also measures incremental orchestration. Its latest correctness smoke run
-reported identical work in every scenario:
+gate also measures incremental orchestration. Its latest five-run acceptance
+run reported identical work in every scenario:
 
 | Scenario | Rust `bsc` launches | OCaml `bsc` launches |
 | --- | ---: | ---: |
@@ -676,34 +677,48 @@ with fewer incremental opens than Rust: 1,187 versus 1,220 unchanged and 1,215
 versus 1,246 after an edit. The remaining 344 unchanged metadata calls are
 primarily repeated package-path canonicalization (`readlinkat`); compiler
 process calls match and directory traversal is within two calls. Clean-build
-metadata remains dominated by compiler work and is tracked separately from the
-now-near-parity unchanged orchestration path.
+metadata still includes the much larger compiler workload, so executable
+attribution below separates compiler and driver behavior.
 Generating `.sourcedirs.json` now reuses the canonical dependency roots already
 owned by graph preparation instead of resolving every local package edge again.
-In the latest paired audit this reduces unchanged metadata to 3,134 calls
-(Rust: 2,962) and edit metadata to 3,168 (Rust: 2,979), while directory scans
-remain 162 versus 160 and OCaml retains its lower incremental open counts. The
-remaining metadata delta is 172 calls on the unchanged scenario and continues
-to consist chiefly of repeated canonicalization rather than artifact work.
+In the latest paired audit, unchanged metadata is 2,916 calls (Rust: 2,962)
+and edit metadata is 2,936 (Rust: 2,979), while directory scans remain 162
+versus 160. OCaml also retains lower incremental open counts: 1,187 versus
+1,220 unchanged and 1,215 versus 1,246 after an edit. Incremental metadata and
+open work are therefore now slightly below Rust despite the two additional
+inventory scans.
+
+The same retained trace attributes every clean-build `bsc` filesystem call
+identically between implementations: 7,123 metadata and 5,371 open calls.
+The first attributed trace showed that the aggregate clean metadata difference
+(20,167 OCaml versus 12,016 Rust) was driver-side, not extra compiler work. Its
+largest OCaml-only groups were repeated `newfstatat` calls on already-created
+`lib/ocaml`, `lib/bs`, and source-directory parents while publishing artifacts;
+the WebAPI `lib/ocaml` directory alone was probed 1,880 times. Publication now
+uses a narrow helper when both the compiler-produced source and package-owned
+destination directory are already known to exist, while the generic defensive
+copy path retains its old missing-source behavior. This removes redundant
+per-artifact source and parent probes without changing the cross-platform file
+APIs. Clean metadata falls to 13,191 calls versus Rust's 12,017; the remaining
+1,174-call delta is mostly per-CMI comparison and case-candidate checks rather
+than directory discovery or extra compilation.
 
 ### Active filesystem-performance work
 
 The aggregate timing, memory, compiler-work, artifact, and behavioral gates
-pass, but Linux tracing still proves that the OCaml orchestration does avoidable
-filesystem work. Closing or specifically explaining the material residual is a
+pass, and incremental filesystem work is now slightly below Rust apart from two
+inventory scans. Clean-build driver metadata remains about 1,174 calls above
+Rust, with a concrete per-CMI comparison/candidate shape rather than repeated
+directory discovery. Closing or specifically documenting that residual is a
 completion gate for the current architecture refactor. Rerun
 the evidence with `bench/filesystem_audit.sh`; its prerequisites, isolation,
 normalization, and caveats are in `bench/README.md`.
 
-Rust-parity improvements should be attempted before novel optimizations, in this
-order:
-
-1. Carry canonical package identities and resolved dependency roots throughout
-   the whole build context. Resolution is cached during graph preparation, and
-   collection, graph visitation, build traversal, and locality checks now reuse
-   those identities. Configuration loading, source discovery, dependency
-   lookup, and later consumers still perform more `realpath`/`readlinkat` work
-   than Rust.
+Rust-parity improvements should be attempted before novel optimizations. The
+remaining candidate is to compare clean-build per-CMI equality and
+case-candidate checks with Rust's compile-state transitions. Incremental
+canonicalization is no longer a material deficit, and publication-parent probes
+have been removed; neither should be redesigned merely to lower a raw total.
 
 The asset/module state must retain explicit transitions for discovery, stale
 cleanup, parse publication, interface publication, implementation publication,
