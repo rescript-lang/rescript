@@ -141,6 +141,13 @@ expected non-panicking result:
   port's top-level `Sys_error`/`Unix_error` handling provides that failure class;
   the differential command gate deterministically deletes the source through a
   compiler wrapper, bounds the Rust hang, and checks the OCaml error path.
+- `build/deps.rs::get_dep_modules` panics when a successfully generated AST
+  disappears before dependency extraction. Rust should propagate an ordinary
+  path-bearing build error. A second compiler wrapper deterministically removes
+  the AST after `bsc` returns; the command-validation gate retains Rust's exit
+  101 and OCaml's normal rejection. The source-before-parser race above has no
+  equally narrow process boundary and remains source-audited rather than
+  timing-dependent test coverage.
 - `watcher.rs` unwraps `initialize_build` during a full rebuild. An editor save
   that temporarily makes `rescript.json` invalid therefore panics and exits the
   Rust watcher. The port reports the parse error and keeps its event loop alive;
