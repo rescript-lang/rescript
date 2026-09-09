@@ -18,24 +18,26 @@ else
   exit 1
 fi
 
-# Rebuild with snapshot output
-snapshot_file=../tests/snapshots/clean-rebuild.txt
-rewatch build &> $snapshot_file
+# Rebuild with captured output. This test checks one lifecycle message; writing
+# into a tracked snapshot made otherwise-correct implementations dirty when
+# their work counts differed.
+output_file=$(mktemp "${TMPDIR:-/tmp}/rewatch-clean-rebuild.XXXXXX")
+trap 'rm -f "$output_file"' EXIT
+rewatch build &> "$output_file"
 build_status=$?
-normalize_paths $snapshot_file
 if [ $build_status -eq 0 ];
 then
   success "Repo Built"
 else
   error "Error Building Repo"
-  cat $snapshot_file >&2
+  cat "$output_file" >&2
   exit 1
 fi
 
 # Verify the undesired message is NOT present
-if grep -q "Cleaned previous build due to compiler update" $snapshot_file; then
+if grep -q "Cleaned previous build due to compiler update" "$output_file"; then
   error "Unexpected compiler-update clean message present in rebuild logs"
-  cat $snapshot_file >&2
+  cat "$output_file" >&2
   exit 1
 else
   success "No compiler-update clean message present after explicit clean"

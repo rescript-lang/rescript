@@ -61,6 +61,10 @@ let () =
         flush stderr
       done;
       exit 0
+    | "--wait-forever" ->
+      while true do
+        ignore (Unix.select [] [] [] 1.)
+      done
     | _ -> ()
 
 let () =
@@ -107,11 +111,29 @@ let () =
     with Process.Error _ -> true
   in
   check invalid_parallel_bound_rejected "parallel subprocess bound is validated";
-  let graph_completion_order = ref [] in
-  let graph_completed = Hashtbl.create 3 in
   let graph_work key dependencies =
     Process.{key; dependencies; value = key}
   in
+  let cancellation_polls = ref 0 in
+  let dependency_graph_cancelled =
+    let exception Cancel in
+    try
+      Process.run_dependency_graph
+        [graph_work "cancel" []]
+        ~poll:(fun () ->
+          incr cancellation_polls;
+          if !cancellation_polls = 2 then raise Cancel)
+        ~next:(fun _ result ->
+          match result with
+          | None -> Some (process_job ["--wait-forever"])
+          | Some _ -> None);
+      false
+    with Cancel -> true
+  in
+  check dependency_graph_cancelled
+    "dependency scheduler cancellation terminates active subprocesses";
+  let graph_completion_order = ref [] in
+  let graph_completed = Hashtbl.create 3 in
   Process.run_dependency_graph ~max_jobs:1
     [graph_work "c" []; graph_work "b" ["a"]; graph_work "a" []]
     ~next:(fun key result ->

@@ -11,7 +11,7 @@ git_diff_file_count=$(git diff --name-only ./ | wc -l | xargs)
 if [ $? -eq 0 ] && [ $git_diff_file_count -eq 8 ];
 then
     success "Test package formatted. Got $git_diff_file_count changed files."
-    git restore .
+    restore_tracked_files .
 else
     error "Error formatting test package"
     echo "Expected 8 files to be changed, got $git_diff_file_count"

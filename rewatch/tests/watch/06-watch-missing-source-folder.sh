@@ -33,7 +33,7 @@ success "Watcher Started"
 if ! wait_for_file "./src/Test.mjs" 20; then
   error "Initial build did not complete"
   cat rewatch.log
-  git checkout "$DEP01_CONFIG"
+  restore_tracked_files "$DEP01_CONFIG"
   exit_watcher
   exit 1
 fi
@@ -45,7 +45,7 @@ if grep -q 'Could not read folder.*nonexistent-folder' rewatch.log; then
 else
   error "Missing source folder error was NOT reported"
   cat rewatch.log
-  git checkout "$DEP01_CONFIG"
+  restore_tracked_files "$DEP01_CONFIG"
   exit_watcher
   exit 1
 fi
@@ -57,7 +57,7 @@ exit_watcher
 sleep 1
 
 # Restore dep01's rescript.json
-git checkout "$DEP01_CONFIG"
+restore_tracked_files "$DEP01_CONFIG"
 
 # Rebuild to regenerate any artifacts that were removed by `rewatch clean`
 # but not rebuilt due to the modified config (e.g. Dep01.mjs).
