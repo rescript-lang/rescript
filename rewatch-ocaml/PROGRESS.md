@@ -106,6 +106,16 @@ inheritance, runtime and dependency include resolution, and the final JSON
 projection, while `compiler_args.ml` remains the shared argument-policy owner.
 `Build.compiler_args` is retained as a compatibility alias for existing callers.
 
+External compiler work now lives in `compiler_process.ml`. It owns parser and
+compiler job construction, AST dependency decoding, namespace map compilation,
+external-warning selection, compiler-artifact publication, watch-output
+staging, and per-output JavaScript post-build hooks. The scheduler remains
+process-agnostic, and `build.ml` supplies package state and callbacks without
+creating unused parse/compile tuple payloads. Generic substring assertions also
+moved out of production `Build` into the OUnit2-only `test_support.ml`.
+Independent review found no argument-order, AST-decoding, namespace,
+publication, warning, hook, staging, exception-identity, or API regression.
+
 ## Source review
 
 The first comparison pass covered the OCaml configuration, package traversal,

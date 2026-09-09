@@ -92,7 +92,7 @@ let tests =
            ignore (discover cyclic_config ~features:["a"] ());
            false
          with Source.Error message ->
-           Build.contains_text message "a -> b -> a")
+           Test_support.contains_text message "a -> b -> a")
         "a restricted feature selection rejects an implication cycle";
       let discovery = discover_with_inventory config ~features:["other"] () in
       check
@@ -150,7 +150,7 @@ let tests =
           ignore (discover config ());
           false
         with Source.Error message ->
-          Build.contains_text message
+          Test_support.contains_text message
             "Could not initialize build: Implementation and interface have \
              different path names or different cases: `case/lower.res` vs \
              `case/Lower.resi`"
@@ -163,7 +163,7 @@ let tests =
           ignore (discover config ());
           false
         with Source.Error message ->
-          Build.contains_text message "Duplicate module name: Lower"
+          Test_support.contains_text message "Duplicate module name: Lower"
       in
       check duplicate_rejected
         "adding the exact implementation still exposes the differently-cased \
@@ -178,7 +178,7 @@ let tests =
           ignore (discover config ());
           false
         with Source.Error message ->
-          Build.contains_text message
+          Test_support.contains_text message
             "different path names or different cases: `paths/a/Path.res` vs \
              `paths/b/Path.resi`"
       in

@@ -72,8 +72,8 @@ let tests =
             "an unrelated project below a workspace remains standalone";
           let arguments = Build.compiler_args source in
           check
-            (not (Build.contains_text arguments "\"-bs-jsx\""))
+            (not (Test_support.contains_text arguments "\"-bs-jsx\""))
             "standalone compiler arguments do not inherit workspace JSX";
           check
-            (Build.contains_text arguments "esmodule:src:.js")
+            (Test_support.contains_text arguments "esmodule:src:.js")
             "standalone compiler arguments retain their default package output"))

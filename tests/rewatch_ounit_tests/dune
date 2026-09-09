@@ -22,6 +22,7 @@
   platform_windows
   project_context_tests
   source_tests
+  test_support
   toolchain_tests
   unit_tests
   warning_state_tests
