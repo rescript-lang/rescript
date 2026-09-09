@@ -24,5 +24,6 @@
   source_tests
   toolchain_tests
   unit_tests
-  warning_state_tests)
+  warning_state_tests
+  watcher_tests)
  (libraries rewatch_ocaml_lib ounit2))

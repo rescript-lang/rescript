@@ -34,6 +34,7 @@
   compile_assets
   build_state
   native_watcher
+  watcher
   toolchain
   compiler_info
   source_dirs
