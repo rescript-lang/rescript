@@ -28,6 +28,15 @@ dependency-ordered compilation, interface-before-implementation compilation,
 bounded concurrent external `bsc` execution, feature selection, artifact
 cleanup, and compiler artifact publication to `lib/bs` and `lib/ocaml`.
 
+Project/workspace path policy now has an explicit `project_context.ml` owner
+instead of remaining embedded in `build.ml`. It owns workspace-root selection,
+ancestor/hoisted/sibling dependency lookup, dependency-config preflight,
+canonical locality classification, and project-relative presentation. `Format`
+and the OUnit2 project-context tests use that owner directly; `Build.Error` and
+`Build.Package_error` remain exception aliases so command exit classes and
+existing callers retain their contract. This removes roughly one hundred lines
+from `build.ml` without adding a facade layer or changing filesystem work.
+
 ## Source review
 
 The first comparison pass covered the OCaml configuration, package traversal,

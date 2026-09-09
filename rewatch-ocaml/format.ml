@@ -53,7 +53,7 @@ let local_dependency root (dependency : Config.dependency) =
   match find root with
   | None -> None
   | Some path ->
-    if Build.is_local_dependency ~workspace:root path then Some path else None
+    if Project_context.is_local_dependency ~workspace:root path then Some path else None
 
 type discovered_package = {
   config: Config.t;
@@ -74,7 +74,7 @@ let package_sources (package : discovered_package) =
    installed-package diagnostics and the eventual local file set cannot drift
    apart. *)
 let discover_package_graph (current : Config.t) =
-  let workspace = Build.workspace_lock_root current.root in
+  let workspace = Project_context.workspace_lock_root current.root in
   let resolved_packages = Hashtbl.create 32 in
   let package_configs = Hashtbl.create 32 in
   let feature_requests = Hashtbl.create 32 in
@@ -95,7 +95,7 @@ let discover_package_graph (current : Config.t) =
       |> List.filter_map (fun (dependency : Config.dependency) ->
            add_feature_request dependency.name dependency.features;
            let directory =
-             Build.require_dependency_directory ~workspace_root:current.root
+             Project_context.require_dependency_directory ~workspace_root:current.root
                config.root dependency
            in
            match Hashtbl.find_opt resolved_packages dependency.name with
@@ -103,9 +103,9 @@ let discover_package_graph (current : Config.t) =
              if chosen <> directory then
                Printf.eprintf
                  "Duplicated package: %s ./%s (chosen) vs ./%s in ./%s\n%!"
-                 dependency.name (Build.relative_to current.root chosen)
-                 (Build.relative_to current.root directory)
-                 (Build.relative_to current.root config.root);
+                 dependency.name (Project_context.relative_to current.root chosen)
+                 (Project_context.relative_to current.root directory)
+                 (Project_context.relative_to current.root config.root);
              None
            | None ->
              Hashtbl.add resolved_packages dependency.name directory;
@@ -117,7 +117,7 @@ let discover_package_graph (current : Config.t) =
             try Config.load_root directory
             with Config.Error message ->
               raise
-                (Build.Package_error
+                (Project_context.Package_error
                    (Printf.sprintf
                       "Could not build package tree for '%s' at path '%s'. Error: %s"
                       dependency.name current.root message))
@@ -125,7 +125,7 @@ let discover_package_graph (current : Config.t) =
           Build.validate_package_metadata dependency_config;
           Build.report_missing_sources ~is_root:false dependency_config;
           let dependency_is_local =
-            Build.is_local_dependency ~workspace directory
+            Project_context.is_local_dependency ~workspace directory
           in
           Hashtbl.replace package_configs dependency.name
             (dependency_config, dependency_is_local);
