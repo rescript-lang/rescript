@@ -58,6 +58,7 @@ mkdir -p "$work/publication-race-rust/src" \
   "$work/publication-race-ocaml/src"
 mkdir -p "$work/ast-race-rust/src" "$work/ast-race-ocaml/src"
 mkdir -p "$work/watch-config-rust/src" "$work/watch-config-ocaml/src"
+mkdir -p "$work/watch-filter-rust/src" "$work/watch-filter-ocaml/src"
 printf '{"name":"command-validation","sources":["src"]}\n' \
   >"$project/rescript.json"
 printf 'let value = 1\n' >"$project/src/A.res"
@@ -203,6 +204,16 @@ cp "$work/watch-config-rust/rescript.json" \
   "$work/watch-config-ocaml/rescript.json"
 printf 'let value = 1\n' >"$work/watch-config-rust/src/A.res"
 cp "$work/watch-config-rust/src/A.res" "$work/watch-config-ocaml/src/A.res"
+for implementation in rust ocaml; do
+  printf '{"name":"watch-filter","sources":["src"]}\n' \
+    >"$work/watch-filter-$implementation/rescript.json"
+  printf 'let value = 1\n' \
+    >"$work/watch-filter-$implementation/src/Include.res"
+  printf 'let value = 10\n' \
+    >"$work/watch-filter-$implementation/src/Exclude.res"
+done
+printf 'require("fs").appendFileSync(process.env.REWATCH_WATCH_FILTER_MARKER, "done\\n")\n' \
+  >"$work/watch-filter-marker.js"
 
 export RESCRIPT_BSC_EXE=${RESCRIPT_BSC_EXE:-$root/_build/default/compiler/bsc/rescript_compiler_main.exe}
 export RESCRIPT_RUNTIME=${RESCRIPT_RUNTIME:-$root/packages/@rescript/runtime}
@@ -302,6 +313,24 @@ wait_for_exit() {
     sleep 0.1
   done
   ! kill -0 "$pid" 2>/dev/null
+}
+
+wait_for_line_count() {
+  path=$1
+  expected=$2
+  attempts=0
+  while [ "$attempts" -lt 150 ]; do
+    actual=0
+    if [ -f "$path" ]; then
+      actual=$(wc -l <"$path" | tr -d ' ')
+    fi
+    if [ "$actual" -ge "$expected" ]; then
+      return 0
+    fi
+    attempts=$((attempts + 1))
+    sleep 0.1
+  done
+  return 1
 }
 
 run_case compiler-args-source accept accept compiler-args "$project/src/A.res"
@@ -656,6 +685,61 @@ wait_for_file "$work/watch-config-ocaml/src/A.mjs"
 wait_for_file "$work/watch-config-ocaml/lib/bs/build.ninja"
 kill -TERM "$ocaml_watch_pid"
 wait "$ocaml_watch_pid"
+checked=$((checked + 1))
+
+rust_filter_marker="$work/watch-filter-rust/after-build.log"
+REWATCH_WATCH_FILTER_MARKER="$rust_filter_marker" \
+  "$rust" watch --filter 'Include\.res$' \
+    --after-build "node $work/watch-filter-marker.js" \
+    "$work/watch-filter-rust" \
+    >"$work/watch-filter-rust.out" 2>"$work/watch-filter-rust.err" &
+rust_filter_pid=$!
+background_pids="$background_pids $rust_filter_pid"
+wait_for_file "$work/watch-filter-rust/src/Include.js"
+wait_for_line_count "$rust_filter_marker" 1
+if [ -e "$work/watch-filter-rust/src/Exclude.js" ]; then
+  echo "Rust filter unexpectedly compiled the excluded source initially" >&2
+  exit 1
+fi
+cp "$work/watch-filter-rust/src/Include.js" "$work/watch-filter-rust-initial.js"
+printf 'let value = 2\n' >"$work/watch-filter-rust/src/Include.res"
+printf 'let value = 11\n' >"$work/watch-filter-rust/src/Exclude.res"
+wait_for_line_count "$rust_filter_marker" 2
+if ! cmp -s "$work/watch-filter-rust-initial.js" \
+    "$work/watch-filter-rust/src/Include.js"; then
+  echo "Rust no longer reproduces the inverted watch-filter event behavior" >&2
+  cat "$work/watch-filter-rust.out" "$work/watch-filter-rust.err" >&2
+  exit 1
+fi
+kill -TERM "$rust_filter_pid"
+wait "$rust_filter_pid"
+
+ocaml_filter_marker="$work/watch-filter-ocaml/after-build.log"
+REWATCH_WATCH_FILTER_MARKER="$ocaml_filter_marker" \
+  "$ocaml" watch --filter 'Include\.res$' \
+    --after-build "node $work/watch-filter-marker.js" \
+    "$work/watch-filter-ocaml" \
+    >"$work/watch-filter-ocaml.out" 2>"$work/watch-filter-ocaml.err" &
+ocaml_filter_pid=$!
+background_pids="$background_pids $ocaml_filter_pid"
+wait_for_file "$work/watch-filter-ocaml/src/Include.js"
+wait_for_line_count "$ocaml_filter_marker" 1
+if [ -e "$work/watch-filter-ocaml/src/Exclude.js" ]; then
+  echo "OCaml filter unexpectedly compiled the excluded source initially" >&2
+  exit 1
+fi
+cp "$work/watch-filter-ocaml/src/Include.js" "$work/watch-filter-ocaml-initial.js"
+printf 'let value = 2\n' >"$work/watch-filter-ocaml/src/Include.res"
+wait_for_line_count "$ocaml_filter_marker" 2
+if cmp -s "$work/watch-filter-ocaml-initial.js" \
+    "$work/watch-filter-ocaml/src/Include.js" || \
+  ! grep -F '2' "$work/watch-filter-ocaml/src/Include.js" >/dev/null; then
+  echo "OCaml watch filter did not rebuild its included source" >&2
+  cat "$work/watch-filter-ocaml.out" "$work/watch-filter-ocaml.err" >&2
+  exit 1
+fi
+kill -TERM "$ocaml_filter_pid"
+wait "$ocaml_filter_pid"
 checked=$((checked + 1))
 
 run_case clean-missing-dependency exit2 exit2 clean "$work/missing-dependency"
