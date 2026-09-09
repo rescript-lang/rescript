@@ -183,8 +183,8 @@ events, while OCaml currently prints only its project-root context. Rust `-vv`
 also prints the compiled/dirty scheduler-universe count trace. These events need
 semantic comparison without imposing Rayon completion order on OCaml. Live
 spinner frames and verbosity are deliberately grouped into one final
-output-parity pass immediately before native Windows implementation and
-verification.
+output-parity pass after native macOS and Windows implementation and
+verification, so platform-specific terminal findings can inform that pass.
 
 Interactive checks should run both implementations under a pseudo-terminal and
 capture normalized frames/events rather than snapshotting spinner timing byte
