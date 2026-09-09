@@ -28,6 +28,22 @@ let module_name path =
   path |> Filename.basename |> Filename.remove_extension
   |> String.capitalize_ascii
 
+let is_non_exotic_module_name name =
+  let is_ascii_uppercase character = character >= 'A' && character <= 'Z' in
+  let is_ascii_alphanumeric character =
+    character >= 'A' && character <= 'Z'
+    || character >= 'a' && character <= 'z'
+    || character >= '0' && character <= '9'
+  in
+  let rec valid_tail index =
+    if index = String.length name then true
+    else
+      let character = name.[index] in
+      (is_ascii_alphanumeric character || character = '_')
+      && valid_tail (index + 1)
+  in
+  String.length name > 0 && is_ascii_uppercase name.[0] && valid_tail 1
+
 let display_path ~display_root root path =
   let absolute =
     if Filename.is_relative path then Filename.concat root path else path

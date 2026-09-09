@@ -23,6 +23,7 @@ mkdir -p "$work/malformed-parent/child/src" "$work/config-directory/rescript.jso
 mkdir -p "$work/missing-dependency/src"
 mkdir -p "$work/malformed-lock/src" "$work/malformed-lock/lib"
 mkdir -p "$work/interface-mismatch/src"
+mkdir -p "$work/exotic-module-rust/src" "$work/exotic-module-ocaml/src"
 mkdir -p "$work/external-dev-source/src" \
   "$work/external-dev-source/node_modules/dep/src" \
   "$work/external-dev-source/node_modules/dep/test"
@@ -76,6 +77,14 @@ printf '{"name":"interface-mismatch","sources":["src"]}\n' \
   >"$work/interface-mismatch/rescript.json"
 printf 'let value = 1\n' >"$work/interface-mismatch/src/lower.res"
 printf 'let value: int\n' >"$work/interface-mismatch/src/Lower.resi"
+for implementation in rust ocaml; do
+  printf '{"name":"exotic-module","namespace":"Ns","sources":["src"]}\n' \
+    >"$work/exotic-module-$implementation/rescript.json"
+  printf 'let value = 1\n' \
+    >"$work/exotic-module-$implementation/src/Main.res"
+  printf 'let value = 2\n' \
+    >"$work/exotic-module-$implementation/src/foo-bar.res"
+done
 printf '{"name":"external-dev-source","sources":["src"],"dependencies":["dep"]}\n' \
   >"$work/external-dev-source/rescript.json"
 printf 'let value = DepPublic.value\n' \
@@ -379,6 +388,30 @@ if ! cmp -s "$work/rust.err" "$work/ocaml.err"; then
   cat "$work/ocaml.err" >&2
   exit 1
 fi
+set +e
+"$rust" build "$work/exotic-module-rust" \
+  >"$work/rust.out" 2>"$work/rust.err"
+rust_status=$?
+"$ocaml" build "$work/exotic-module-ocaml" \
+  >"$work/ocaml.out" 2>"$work/ocaml.err"
+ocaml_status=$?
+set -e
+rust_mlmap="$work/exotic-module-rust/lib/bs/Ns.mlmap"
+ocaml_mlmap="$work/exotic-module-ocaml/lib/bs/Ns.mlmap"
+if [ "$(classify "$rust_status")" != accept ] || \
+  [ "$(classify "$ocaml_status")" != accept ] || \
+  ! cmp -s "$rust_mlmap" "$ocaml_mlmap" || \
+  ! grep -Fx Main "$ocaml_mlmap" >/dev/null || \
+  grep -F 'Foo-bar' "$ocaml_mlmap" >/dev/null; then
+  printf 'namespace-exotic-module: expected matching successful builds, got Rust=%s/OCaml=%s\n' \
+    "$rust_status" "$ocaml_status" >&2
+  printf '%s\n' '--- Rust output / namespace map ---' >&2
+  cat "$work/rust.out" "$work/rust.err" "$rust_mlmap" >&2
+  printf '%s\n' '--- OCaml output / namespace map ---' >&2
+  cat "$work/ocaml.out" "$work/ocaml.err" "$ocaml_mlmap" >&2
+  exit 1
+fi
+checked=$((checked + 1))
 run_case build-excludes-external-dev-source accept accept build \
   "$work/external-dev-source"
 run_case build-missing-source-folder accept accept build \
