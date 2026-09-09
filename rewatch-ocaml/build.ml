@@ -462,6 +462,18 @@ let is_local_dependency ~workspace path =
 
 let source_discovery_prod ~prod ~is_local = prod || not is_local
 
+let with_gentype_source_dirs directories (config : Config.t) =
+  if config.gentype_args = [] then config
+  else
+    {
+      config with
+      gentype_args =
+        config.gentype_args
+        @ List.concat_map
+            (fun directory -> ["-bs-gentype-source-dir"; directory])
+            directories;
+    }
+
 let report_missing_source_folder (config : Config.t) path =
   let prefix = Filename.concat config.root "" in
   let relative =
@@ -620,15 +632,16 @@ let rec clean_internal ~(root_config : Config.t) ~seen ~folder:root ~prod
                (Printf.sprintf
                   "Could not build package tree for '%s' at path '%s'. Error: %s"
                   dependency.name root_config.root message))) dependencies;
-      let modules =
-        Source.discover config
+      let discovery =
+        Source.discover_with_inventory config
           ~prod:(source_discovery_prod ~prod ~is_local)
           ~features:None ~filter:None
           ~on_missing:(report_missing_source_folder config)
           ~display_root:root_config.root
       in
       let output_config = with_root_options config root_config in
-      cleanup_watch_output_sidecars ~root output_config;
+      cleanup_watch_output_sidecars
+        ~source_files:discovery.inventory_files ~root output_config;
       List.iter
         (fun module_ ->
           List.iter
@@ -644,7 +657,7 @@ let rec clean_internal ~(root_config : Config.t) ~seen ~folder:root ~prod
               remove_file (output ^ ".map.rewatch-pending");
               remove_file (output ^ ".map.rewatch-backup"))
             output_config.package_specs)
-        modules);
+        discovery.modules);
     List.iter (fun dir -> remove_tree (Filename.concat root dir))
       [lib_path "" "bs"; lib_path "" "ocaml"])
 
@@ -679,12 +692,6 @@ let relative_to root path =
     String.sub path (String.length prefix) (String.length path - String.length prefix)
   else raise (Error (path ^ " is not inside " ^ root))
 
-let rec remove_flag_with_value flag = function
-  | current :: _ :: rest when current = flag ->
-    remove_flag_with_value flag rest
-  | value :: rest -> value :: remove_flag_with_value flag rest
-  | [] -> []
-
 let compiler_args path =
   let source =
     try Unix.realpath path
@@ -710,13 +717,6 @@ let compiler_args path =
     else package_config
   in
   let config = with_root_options package_config root_config in
-  let config =
-    {
-      config with
-      gentype_args =
-        remove_flag_with_value "-bs-gentype-source-dir" config.gentype_args;
-    }
-  in
   let relative = relative_to config.root source in
   let runtime = runtime_path config.root in
   let is_interface = Filename.check_suffix source ".resi" in
@@ -803,6 +803,7 @@ type graph_package = {
   graph_dependencies: Config.dependency list;
   graph_dependency_directories: (Config.dependency * string) list;
   graph_modules: Source.module_ list;
+  graph_source_files: string list;
 }
 
 type build_stats = {
@@ -1041,8 +1042,8 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
               (is_local_dependency_canonical ~workspace:root_config.root
                  directory))
         dependency_directories;
-      let modules =
-        Source.discover config
+      let discovery =
+        Source.discover_with_inventory config
           ~prod:(source_discovery_prod ~prod ~is_local)
           ~features ~filter
           ~on_missing:(report_missing_source_folder config)
@@ -1052,8 +1053,13 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
               path)
           ~display_root:root_config.root
       in
+      let modules = discovery.modules in
       let compile_config =
-        with_root_options config root_config |> with_local_warning_policy ~is_local
+        let config =
+          with_gentype_source_dirs discovery.gentype_dirs config
+        in
+        with_root_options config root_config
+        |> with_local_warning_policy ~is_local
       in
       let build_dir = lib_path root "bs" in
       let ocaml_dir = lib_path root "ocaml" in
@@ -1069,6 +1075,7 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
           graph_dependencies = dependencies;
           graph_dependency_directories = dependency_directories;
           graph_modules = modules;
+          graph_source_files = discovery.inventory_files;
         }
       in
       Hashtbl.replace stats.graph_packages root package;
@@ -1099,6 +1106,7 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
                (Compile_assets.files compile_assets package.graph_ocaml_dir)
              ~root:package.graph_root
              ~ocaml_dir:package.graph_ocaml_dir
+             ~source_files:package.graph_source_files
              ~is_local:
                (is_local_dependency_canonical ~workspace:root_config.root
                   package.graph_root)
@@ -1121,6 +1129,7 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
             (Compile_assets.files compile_assets package.graph_ocaml_dir)
           ~root:package.graph_root
           ~ocaml_dir:package.graph_ocaml_dir
+          ~source_files:package.graph_source_files
           ~is_local:
             (is_local_dependency_canonical ~workspace:root_config.root
                package.graph_root)

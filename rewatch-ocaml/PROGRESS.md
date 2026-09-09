@@ -471,20 +471,20 @@ environment on the plugged-in Mac host:
 
 | Implementation | Median wall time | Median peak tree RSS |
 | --- | ---: | ---: |
-| Rust | 4,639 ms | 762,408 KiB |
-| OCaml | 5,744 ms | 776,484 KiB |
+| Rust | 4,576 ms | 773,824 KiB |
+| OCaml | 5,546 ms | 782,472 KiB |
 
-The latest 1.238× wall-time ratio and 1.018× RSS ratio pass the 1.25× gate.
+The latest 1.212× wall-time ratio and 1.011× RSS ratio pass the 1.25× gate.
 The host was plugged in and otherwise idle for this run. Docker on a Mac is
 still noisier than native Linux or dedicated CI, so final acceptance should
 repeat the distribution on a stable host rather than treating this one passing
 set as universal. Repeated runs observed impossible non-median LinuxKit clock
-jumps despite the affected builds completing in seconds; the latest run
+jumps despite the affected builds completing in seconds; the preceding run
 reported one OCaml sample as 254 seconds while its surrounding samples were
-5.6–5.8 seconds. The coherent samples left the median stable, but reinforce the
-need for a final native/stable-host run. Passing this aggregate gate also does not
-close the excessive unchanged-build metadata probes found by the filesystem
-audit below.
+5.6–5.8 seconds. The latest run had five coherent samples for each
+implementation, but a final native/stable-host run remains necessary. Passing
+this aggregate gate also does not close the excessive unchanged-build metadata
+probes found by the filesystem audit below.
 
 Both implementations performed exactly 1,031 `bsc` launches: 512 parses, 7
 namespace compilations, and 512 module compilations, of which 40 were interface
@@ -591,6 +591,18 @@ rejected after the canonical watcher observed an output between publication
 states; restoring the guard passed that case and the complete suite. The guard
 therefore remains until output cleanup and publication have a stronger shared
 ownership boundary.
+Package source discovery now retains both the compilation view and a full leaf
+inventory for stale-output and clean-command consumers. It also derives the
+GenType directory list during that same discovery phase, matching Rust's
+package-owned `source_files`/`gentype_dirs` state instead of performing I/O
+during configuration decoding. The latest unchanged trace falls to 321
+directory-scan calls and 10,662 metadata calls (Rust: 160 and 3,367); edit is
+321 and 10,693 (Rust: 160 and 3,386), and clean is 196 and 22,969 (Rust: 158
+and 12,424). Recursive and non-recursive compilation, inactive cleanup trees,
+directory symlinks, and GenType's feature/dev-source rules have focused
+coverage. The remaining directory-scan difference is predominantly the OCaml
+working `lib/bs` inventory, which Rust avoids by carrying source locations in
+its compile-asset state and calculating owned paths directly.
 These are observational counts rather than a raw-total gate, and they include
 compiler process behavior, but the remaining difference is still too large to
 declare the superfluous-work audit closed. The artifact/module state needs
@@ -615,12 +627,11 @@ order:
    presence, dependency timestamps, fixed dirty state, and CMI-change
    propagation now use explicit state. Move the remaining AST and generated
    output freshness consumers onto the inventory and explicit transitions.
-2. Share one source-tree inventory between `Source.discover`, stale-output
-   cleanup, watch-sidecar recovery, and GenType source-directory discovery.
-   `files_under` now performs only one primary `lstat` per entry, but separate
-   consumers still traverse overlapping trees. Preserve symlink handling,
-   recursive-source semantics, generated-output ownership, and Windows path
-   comparison.
+2. Replace the remaining whole-tree `lib/bs` cleanup inventory with Rust-shaped
+   source-located compile-asset state and directly calculated owned paths.
+   Preserve the source-located missing-module diagnostic, suffix-change cleanup,
+   watch staging, and Windows path comparison; the canonical rename/deletion
+   cases remain mandatory gates.
 3. Carry canonical package identities and resolved dependency roots throughout
    the whole build context. Resolution is cached during graph preparation, and
    collection, graph visitation, build traversal, and locality checks now reuse

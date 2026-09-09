@@ -114,6 +114,13 @@ let () =
       write_file path
         {|{"name":"gentype-subdirs","sources":{"dir":"src","subdirs":true},"gentypeconfig":{}}|};
       let config = Config.load path in
+      let discovery =
+        Source.discover_with_inventory config ~prod:false ~features:None
+          ~filter:None
+      in
+      let config =
+        Build.with_gentype_source_dirs discovery.gentype_dirs config
+      in
       check
         (contains_adjacent "-bs-gentype-source-dir"
            (Filename.concat "src" "shims")
