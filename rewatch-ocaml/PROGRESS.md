@@ -49,7 +49,13 @@ differences:
   so a directory-only regex selected files that Rust excludes. Discovery now
   applies the regex to `Filename.basename`; differential builds retain both a
   directory-only non-match and a basename match, with focused source tests for
-  the same boundary.
+  the same boundary. The engines are not otherwise syntax-compatible: Rust
+  uses the `regex` crate, while the port currently uses OCaml's `Str`. Their
+  common basic forms (for example `^Foo.*\.res$`) work, but Rust expressions
+  such as `Foo|Bar`, `\d+`, or `(?:Foo|Bar)` do not have the same meaning in
+  `Str`, whose alternation and grouping operators use its older escaped syntax.
+  This is a documented CLI compatibility gap rather than a new watcher
+  requirement.
 - PPX resolution did not search hoisted `node_modules`.
 - Stale cleanup treated every JavaScript-looking file as owned output and
   deleted checked-in legacy files that had no corresponding source or AST.
@@ -1194,6 +1200,14 @@ rerun it for the final maintainability review alongside maximum module size.
   keys to distinguish deprecated, known-unsupported, and forward-compatible
   unknown fields; generated codecs would still require substantial custom
   validation around the derived layer.
+- No additional regular-expression library is being added at this stage solely
+  for `--filter`. The maintained, pure-OCaml `re` package and its `Re.Perl`
+  frontend are substantially closer to Rust's syntax, but still do not provide
+  exact `regex`-crate compatibility (notably for Unicode property classes).
+  Switching engines would therefore reduce rather than close the documented
+  gap while adding another production dependency. Revisit this during the final
+  CLI audit if real-world filters or a deliberately supported syntax subset
+  justify it; keep filter compilation behind one owner if that change is made.
 - `luv` 0.5.14 is accepted for native filesystem events. It is a thin
   MIT-licensed binding that vendors and statically links libuv, supports the
   required Linux/macOS/Windows targets, and keeps the executable free of a
