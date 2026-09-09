@@ -3,6 +3,7 @@ type entry = {path: string; modified: float}
 type t = {
   files_by_directory: (string, string list) Hashtbl.t;
   ast_sources_by_directory: (string, (string * string) list) Hashtbl.t;
+  ast_by_source: (string, entry) Hashtbl.t;
   cmi_by_module: (string, entry) Hashtbl.t;
   cmt_by_module: (string, entry) Hashtbl.t;
 }
@@ -70,6 +71,7 @@ let create directories =
     {
       files_by_directory = Hashtbl.create (List.length directories);
       ast_sources_by_directory = Hashtbl.create (List.length directories);
+      ast_by_source = Hashtbl.create 64;
       cmi_by_module = Hashtbl.create 64;
       cmt_by_module = Hashtbl.create 64;
     }
@@ -78,14 +80,20 @@ let create directories =
   |> List.iter (fun directory ->
        let files, state_entries = read_directory directory in
        Hashtbl.replace state.files_by_directory directory files;
-       Hashtbl.replace state.ast_sources_by_directory directory
-         (state_entries
+       let ast_sources =
+         state_entries
          |> List.filter_map (fun (entry, name) ->
               match Filename.extension name with
               | ".ast" | ".iast" ->
                 ast_source_location entry.path
-                |> Option.map (fun source -> (entry.path, source))
-              | _ -> None));
+                |> Option.map (fun source -> (entry, source))
+              | _ -> None)
+       in
+       Hashtbl.replace state.ast_sources_by_directory directory
+         (List.map (fun (entry, source) -> (entry.path, source)) ast_sources);
+       List.iter
+         (fun (entry, source) -> Hashtbl.replace state.ast_by_source source entry)
+         ast_sources;
        List.iter (add_module_artifact state) state_entries);
   state
 
@@ -96,6 +104,8 @@ let files state directory =
 let ast_sources state directory =
   Hashtbl.find_opt state.ast_sources_by_directory directory
   |> Option.value ~default:[]
+
+let ast state source = Hashtbl.find_opt state.ast_by_source source
 
 let cmi state key = Hashtbl.find_opt state.cmi_by_module key
 let cmt state key = Hashtbl.find_opt state.cmt_by_module key

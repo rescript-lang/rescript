@@ -38,6 +38,24 @@ let () =
     check
       (Compile_assets.ast_sources state root = [(ast, source)])
       "published ASTs retain their encoded absolute source location";
+    check
+      ((Compile_assets.ast state source
+       |> Option.map (fun entry -> entry.Compile_assets.path))
+      = Some ast)
+      "published AST state is addressable by source path";
+    let source_path = Filename.concat "src" "Example.res" in
+    let ast_modified = (Unix.stat ast).Unix.st_mtime in
+    let source_mtimes = Hashtbl.create 1 in
+    Hashtbl.add source_mtimes source_path ast_modified;
+    check
+      (Build.source_is_not_older_than_ast state ~root ~source_mtimes source_path)
+      "equal source and AST timestamps follow Rust and require parsing";
+    Hashtbl.replace source_mtimes source_path (ast_modified -. 1.);
+    check
+      (not
+         (Build.source_is_not_older_than_ast state ~root ~source_mtimes
+            source_path))
+      "an AST newer than its source is parse-clean";
     check (Option.is_some (Compile_assets.cmi state "Example"))
       "CMI entries use compiler module keys";
     check (Option.is_some (Compile_assets.cmt state "Example"))

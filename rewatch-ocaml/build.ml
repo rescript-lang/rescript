@@ -803,6 +803,7 @@ type graph_package = {
   graph_dependencies: Config.dependency list;
   graph_dependency_directories: (Config.dependency * string) list;
   graph_modules: Source.module_ list;
+  graph_source_mtimes: (string, float) Hashtbl.t;
   graph_source_files: string list;
 }
 
@@ -843,6 +844,19 @@ let source_is_newer ~source ~artifact =
   | Some source_time, Some artifact_time -> source_time > artifact_time
   | Some _, None -> true
   | None, _ -> false
+
+let source_is_not_older_than_ast compile_assets ~root ~source_mtimes path =
+  let absolute = Filename.concat root path in
+  match Hashtbl.find_opt source_mtimes path with
+  | None ->
+    source_is_newer ~source:absolute
+      ~artifact:
+        (Filename.concat (lib_path root "ocaml")
+           (Filename.basename (Source.ast_path path)))
+  | Some source_modified -> (
+    match Compile_assets.ast compile_assets absolute with
+    | None -> true
+    | Some ast -> source_modified >= ast.modified)
 
 let file_digest path =
   try Some (Digest.file path) with Sys_error _ | Unix.Unix_error _ -> None
@@ -1065,6 +1079,10 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
       let ocaml_dir = lib_path root "ocaml" in
       ensure_dir build_dir;
       let package =
+        let source_mtimes = Hashtbl.create (List.length discovery.source_mtimes) in
+        List.iter
+          (fun (path, modified) -> Hashtbl.replace source_mtimes path modified)
+          discovery.source_mtimes;
         {
           graph_root = root;
           graph_is_local = is_local;
@@ -1075,6 +1093,7 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
           graph_dependencies = dependencies;
           graph_dependency_directories = dependency_directories;
           graph_modules = modules;
+          graph_source_mtimes = source_mtimes;
           graph_source_files = discovery.inventory_files;
         }
       in
@@ -1162,14 +1181,11 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
               module_.Source.implementation
               :: Option.to_list module_.Source.interface)
          |> List.filter_map (fun path ->
-              let artifact =
-                published_ast_path ~ocaml_dir:package.graph_ocaml_dir path
-              in
-              if
-                source_is_newer
-                  ~source:(Filename.concat package.graph_root path)
-                  ~artifact
-              then Some (package, path)
+              if source_is_not_older_than_ast compile_assets
+                   ~root:package.graph_root
+                   ~source_mtimes:package.graph_source_mtimes path
+              then
+                Some (package, path)
               else None))
   in
   let parse_results =
@@ -1513,8 +1529,14 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder:root ~prod ~feature
     |> List.filter (fun path ->
          List.mem (Source.module_name path) removed_modules
          || Hashtbl.mem stats.forced_parse_paths (Filename.concat root path)
-         || source_is_newer ~source:(Filename.concat root path)
-              ~artifact:(published_ast_path ~ocaml_dir path))
+         ||
+         match prepared, stats.compile_assets with
+         | Some package, Some compile_assets ->
+           source_is_not_older_than_ast compile_assets ~root
+             ~source_mtimes:package.graph_source_mtimes path
+         | None, _ | _, None ->
+           source_is_newer ~source:(Filename.concat root path)
+             ~artifact:(published_ast_path ~ocaml_dir path))
   in
   let parse_paths_to_run =
     dirty_parse_paths

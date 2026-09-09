@@ -70,6 +70,10 @@ let () =
       check
         (not (List.mem "NotDiscovered" (names discovery.modules)))
         "cleanup inventory does not make nested files into source modules";
+      check
+        (List.assoc (Filename.concat "src" "Main.res") discovery.source_mtimes
+        = (Unix.stat (Filename.concat root "src/Main.res")).Unix.st_mtime)
+        "source discovery retains the metadata used by freshness checks";
       write_file config_path
         {|{
           "name": "gentype-source-tests",

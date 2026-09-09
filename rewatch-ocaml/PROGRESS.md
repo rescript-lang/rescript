@@ -620,6 +620,16 @@ trace to 7,046 metadata calls (Rust: 3,367) and edit to 7,077 (Rust: 3,384).
 Cleanup still inventories the names of CMJ/CMTI/copied-source/MLMAP entries, so
 stale removal behavior is unchanged; clean-build counts remain effectively
 unchanged because those directories start empty.
+Source discovery now retains the source mtimes already read while walking, and
+the compile-asset state indexes published AST mtimes by their encoded source
+locations. Both global parsing and package compilation consume those snapshots
+instead of probing every source and AST again. This also matches Rust's strict
+freshness rule: an AST must be newer than its source, rather than merely not
+older. The latest unchanged trace is 5,326 metadata calls (Rust: 3,367), edit
+is 5,359 (Rust: 3,384), and clean is 22,089 (Rust: 12,424). Per-process audit
+output confirms identical `bsc` filesystem-call counts in all three scenarios;
+the residual belongs to the build-system drivers. Timings remain deferred while
+the host is busy.
 These are observational counts rather than a raw-total gate, and they include
 compiler process behavior. The directory-traversal gap is now explained and
 effectively closed, but the incremental metadata difference remains material
@@ -641,8 +651,8 @@ order:
    `rewatch/src/build/read_compile_state.rs` and `build_types.rs`. The initial
    per-package scan is shared with `Build_artifacts.cleanup_stale`, and CMI/CMT
    presence, dependency timestamps, fixed dirty state, and CMI-change
-   propagation now use explicit state. Move the remaining AST and generated
-   output freshness consumers onto the inventory and explicit transitions.
+   propagation plus source/AST freshness now use explicit state. Move the
+   remaining generated-output freshness consumers onto explicit transitions.
 2. Carry canonical package identities and resolved dependency roots throughout
    the whole build context. Resolution is cached during graph preparation, and
    collection, graph visitation, build traversal, and locality checks now reuse
@@ -662,6 +672,19 @@ prototypes reduced the trace further but failed
 diagnostic with a missing-CMI I/O error. Those two tests, the namespaced rename
 case, the complete canonical suite, compiler-work manifests, and artifact
 manifests are mandatory regression gates for another attempt.
+Do not confuse that deterministic regression with a separately observed Docker
+Desktop/macOS bind-mount anomaly. On the case-insensitive host-backed workspace,
+`bsc` has intermittently seen a differently cased stale-CMI candidate in
+`stat` and then received `ENOENT` from the immediately following `open`, even
+though no build action occurs between those calls. The same canonical command
+can pass on its next invocation without a binary change, and the rename/delete
+scenario consistently emits the source-located diagnostic on the container's
+case-sensitive `/tmp` filesystem. Five consecutive runs against the Rust
+reference binary reproduced the identical lowercase-CMI I/O diagnostic on the
+bind mount, confirming that this observation is not specific to the OCaml
+driver. The benchmark documentation therefore requires case-sensitive isolated
+fixtures; a bind-mount occurrence is recorded but is not evidence of a
+scheduler regression unless it reproduces there.
 An intermediate attempt that changed freshness consumption and publication in
 one step reproduced the same regression, while retaining only state
 construction and inventory sharing passed the complete canonical suite. The

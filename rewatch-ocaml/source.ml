@@ -9,9 +9,12 @@ type module_ = {
 
 type discovery = {
   modules: module_ list;
+  source_mtimes: (string * float) list;
   inventory_files: string list;
   gentype_dirs: string list;
 }
+
+type discovered_file = {path: string; modified: float}
 
 exception Error of string
 
@@ -109,13 +112,15 @@ let scan_source ~root (source : Config.source) ~discover_modules ~on_missing
         let relative_path = Filename.concat relative name in
         let absolute_path = Filename.concat root relative_path in
         try
-          match (Unix.lstat absolute_path).Unix.st_kind with
+          let metadata = Unix.lstat absolute_path in
+          match metadata.Unix.st_kind with
           | Unix.S_DIR ->
             scan_directory ~relative:relative_path ~collect_inventory
               ~discover_requested:(discover_here && source.recurse)
               ~collect_gentype:(gentype_here && source.recurse)
           | Unix.S_LNK -> (
-            match (Unix.stat absolute_path).Unix.st_kind with
+            let target_metadata = Unix.stat absolute_path in
+            match target_metadata.Unix.st_kind with
             | Unix.S_DIR ->
               if collect_inventory then
                 inventory_files := absolute_path :: !inventory_files;
@@ -133,7 +138,10 @@ let scan_source ~root (source : Config.source) ~discover_modules ~on_missing
                 | None -> ()
                 | Some is_interface ->
                   candidates :=
-                    (relative_path, is_interface, source.is_dev) :: !candidates)
+                    ( {path = relative_path; modified = target_metadata.Unix.st_mtime},
+                      is_interface,
+                      source.is_dev )
+                    :: !candidates)
           | _ ->
             if collect_inventory then
               inventory_files := absolute_path :: !inventory_files;
@@ -142,7 +150,10 @@ let scan_source ~root (source : Config.source) ~discover_modules ~on_missing
               | None -> ()
               | Some is_interface ->
                 candidates :=
-                  (relative_path, is_interface, source.is_dev) :: !candidates
+                  ( {path = relative_path; modified = metadata.Unix.st_mtime},
+                    is_interface,
+                    source.is_dev )
+                  :: !candidates
         with Sys_error _ | Unix.Unix_error _ -> ())
       entries
   in
@@ -228,8 +239,8 @@ let discover_with_inventory ?(on_orphan = fun _ -> ())
   let files = !files in
   let table = Hashtbl.create (List.length files) in
   List.iter
-    (fun (path, is_interface, is_dev) ->
-      let name = module_name path in
+    (fun (file, is_interface, is_dev) ->
+      let name = module_name file.path in
       let implementation, interface, old_dev =
         match Hashtbl.find_opt table name with
         | None -> (None, None, is_dev)
@@ -239,31 +250,33 @@ let discover_with_inventory ?(on_orphan = fun _ -> ())
         match interface with
         | Some previous ->
           raise
-            (duplicate_error ~display_root config.root name previous path)
+            (duplicate_error ~display_root config.root name previous.path
+               file.path)
         | None ->
           Hashtbl.replace table name
-            (implementation, Some path, old_dev || is_dev)
+            (implementation, Some file, old_dev || is_dev)
       else
         match implementation with
         | Some previous ->
           raise
-            (duplicate_error ~display_root config.root name previous path)
+            (duplicate_error ~display_root config.root name previous.path
+               file.path)
         | None ->
-          Hashtbl.replace table name (Some path, interface, old_dev || is_dev))
-    (List.filter (fun (path, _, _) -> matches_filter path) files);
+          Hashtbl.replace table name (Some file, interface, old_dev || is_dev))
+    (List.filter (fun (file, _, _) -> matches_filter file.path) files);
   Hashtbl.iter
     (fun _ (implementation, interface, _) ->
       match implementation, interface with
       | Some implementation, Some interface
-        when Filename.remove_extension implementation
-             <> Filename.remove_extension interface ->
-        raise (interface_mismatch_error implementation interface)
+        when Filename.remove_extension implementation.path
+             <> Filename.remove_extension interface.path ->
+        raise (interface_mismatch_error implementation.path interface.path)
       | _ -> ())
     table;
   Hashtbl.to_seq table
   |> Seq.filter_map (fun (_, (implementation, interface, _)) ->
        match implementation, interface with
-       | None, Some interface -> Some interface
+       | None, Some interface -> Some interface.path
        | _ -> None)
   |> List.of_seq |> List.sort String.compare |> List.iter on_orphan;
   let modules =
@@ -273,12 +286,27 @@ let discover_with_inventory ?(on_orphan = fun _ -> ())
          | None -> None
          | Some implementation ->
            Some
-             {name; implementation; interface; is_dev; feature = None; deps = []})
+             {
+               name;
+               implementation = implementation.path;
+               interface = Option.map (fun file -> file.path) interface;
+               is_dev;
+               feature = None;
+               deps = [];
+             })
     |> List.of_seq
     |> List.sort (fun a b -> String.compare a.name b.name)
   in
+  let source_mtimes =
+    Hashtbl.to_seq_values table
+    |> Seq.flat_map (fun (implementation, interface, _) ->
+         List.to_seq (Option.to_list implementation @ Option.to_list interface))
+    |> Seq.map (fun file -> (file.path, file.modified))
+    |> List.of_seq
+  in
   {
     modules;
+    source_mtimes;
     inventory_files = List.sort_uniq String.compare !inventory_files;
     gentype_dirs = List.sort_uniq String.compare !gentype_dirs;
   }
