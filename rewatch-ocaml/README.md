@@ -50,6 +50,11 @@ Supported commands are `build` (the default), `watch`, `clean`, `format`, and
 `compiler-args`. The CLI is declared with Cmdliner; run the executable with
 `--help` for the current option summary.
 
+The binary version has a single OCaml source in `rewatch_version.ml`.
+Repository releases synchronize it with the compiler and Rust rewatch versions
+through `yarn constraints`; `yarn constraints --fix` updates all three from the
+release version declared in `yarn.config.cjs`.
+
 The implementation is split by ownership rather than mirroring the Rust source
 layout mechanically. In particular, `build_artifacts.ml` owns filesystem
 primitives, generated-output paths, publication staging, and stale-artifact
