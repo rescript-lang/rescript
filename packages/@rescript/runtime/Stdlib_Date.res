@@ -19,6 +19,7 @@ type localeOptions = {
 
 @new external make: unit => t = "Date"
 @new external fromString: string => t = "Date"
+@new external fromDate: t => t = "Date"
 @new external fromTime: msSinceEpoch => t = "Date"
 
 @new external makeWithYM: (~year: int, ~month: int) => t = "Date"
