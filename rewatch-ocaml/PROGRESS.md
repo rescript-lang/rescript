@@ -920,6 +920,33 @@ stop cannot interrupt the handoff to the cleanup owner. Failure cleanup closes
 unowned descriptors, terminates and reaps any launched child, then joins reader
 threads after closing their parent-side write ends. A stress test verifies exact
 capture of 1 MiB on both streams without truncation or deadlock.
+
+Child completion now uses one blocking waiter per launched process and a
+condition-variable notification to the single scheduling thread. This removes
+the former 10-microsecond `waitpid(WNOHANG)` scan: a four-source trace fell from
+419 driver `wait4` calls to 10, with no empty `pselect6` polling. The waiter
+publishes a job only after the direct child is reaped and both output readers
+finish, so a descendant-held pipe cannot block the central scheduler or stop
+watch cancellation polling. A 100-node serial `/bin/true` dependency probe took
+0.091 seconds in independent review, down from 0.649 seconds with a fixed
+five-millisecond retry and close to the 0.033-second direct spawn/wait reference.
+The retained regression cancels an exited parent whose descendant holds both
+pipes in under one second on Unix. A single five-millisecond ticker exists only
+for scheduler calls with a watch poll callback; child completion wakes the
+scheduler immediately.
+
+A one-run working-tree performance smoke check measured 5,534 ms / 739,804 KiB
+for OCaml and 4,766 ms / 723,876 KiB for Rust (1.161x wall time and 1.022x RSS).
+It retained identical clean, unchanged, and edit compiler-work manifests,
+including 1,031 clean compiler launches, plus identical complete file sets and
+stable artifact contents. This is useful resource/correctness evidence for the
+bounded waiter threads, but is not the required five-run acceptance result.
+The warning-free build, all 19 OUnit2 groups, focused integration runner,
+74-case differential command validation, and complete 48-test canonical
+rewatch suite pass with the notification scheduler. The canonical run covered
+ordinary and interrupted watch lifecycle, locks, diagnostics, cleanup,
+formatting, features, and compiler arguments and left no watcher or fixture
+change behind.
 [`bench/filesystem_audit.sh`](bench/filesystem_audit.sh) now preserves a
 normalized Linux `%file` syscall audit for clean, unchanged, and single-edit
 builds. It reports fixture-local path/operation multisets and repeated accesses
@@ -1439,7 +1466,16 @@ gate passed after the split.
   cross-platform `spawn` library (`CreateProcess` on Windows), including child
   working directories and PATH/PATHEXT resolution. Windows cleanup uses
   `taskkill /T` for compiler/helper trees (with a direct-PID fallback), while
-  Unix retains process-group cleanup. Watch lock/process
+  Unix retains process-group cleanup. `spawn` exposes only the child PID, not a
+  retained Windows process or job handle. If the direct child exits while a
+  descendant still holds an output pipe, cancellation must not pass that
+  potentially reused PID to `taskkill`; the current safe fallback therefore
+  cannot terminate that descendant and may wait indefinitely for pipe closure.
+  An atomic reaped-state flag narrows but cannot close the check/use race
+  between a waiter reaping the child and `taskkill` opening the PID.
+  The Windows milestone must add retained process/job ownership before native
+  watch cancellation is complete; this is implementation work, not only
+  verification. Watch lock/process
   probing and native watcher behavior still need a Windows cross-build and runtime
   verification. Shared filesystem logic uses `Filename` operations rather than
   embedded `/` or `\\` separators; Unix-only test cases are being isolated or
