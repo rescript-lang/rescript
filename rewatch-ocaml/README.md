@@ -56,7 +56,10 @@ through `yarn constraints`; `yarn constraints --fix` updates all three from the
 release version declared in `yarn.config.cjs`.
 
 The implementation is split by ownership rather than mirroring the Rust source
-layout mechanically. In particular, `build_artifacts.ml` owns filesystem
+layout mechanically. Configuration types and the shared error identity live in
+`config_types.ml`, duplicate-aware JSON primitives and structured field decoders
+in `config_decode.ml`, and `config.ml` retains the top-level loader and
+runtime/path queries. `build_artifacts.ml` owns filesystem
 primitives, generated-output paths, publication staging, and stale-artifact
 cleanup; `package_graph.ml` owns package discovery, `package_build.ml` owns
 per-package parsing, dirty-state preparation, and compiler-job construction,

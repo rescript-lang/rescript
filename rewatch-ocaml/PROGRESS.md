@@ -1140,14 +1140,14 @@ observational and do not replace the five-run acceptance result.
 
 The current `cloc` 2.04 source-size snapshot reports 7,818 Rust production
 lines after excluding the intentionally omitted telemetry module and inline
-test-only sections, versus 5,947 OCaml production lines, or 76.1%. Counting
+test-only sections, versus 6,623 OCaml production lines, or 84.7%. Counting
 language-specific tests separately gives 2,773 embedded Rust unit-test lines
-and 4,243 OCaml test lines: 2,480 in the OUnit2 package plus 1,763 in the
-focused shell harness and its fixtures. The OCaml benchmark tooling adds
-another 372 lines, including the source-size script itself. The shared
+and 5,044 OCaml unit/focused test and fixture lines. The OCaml benchmark tooling
+adds another 372 lines, including the source-size script itself. The shared
 canonical integration suite is deliberately not charged to either side. These
-figures describe maintainability surface, not parity or quality: this port is
-still incomplete, and later comments and tests should increase useful lines.
+figures describe maintainability surface, not parity or quality: explicit
+interfaces and separate test infrastructure add useful lines rather than
+indicating behavioral duplication.
 [`bench/source_size.sh`](bench/source_size.sh) preserves the scope and command;
 rerun it for the final maintainability review alongside maximum module size.
 
@@ -1205,6 +1205,18 @@ it reduces `build.ml` from 781 to 386 lines while leaving the new cohesive owner
 at 405 lines. The warning-free build, all 18 OUnit2 tests, focused integration
 runner, 69-case command-validation gate, and complete canonical rewatch suite
 passed after the extraction.
+
+Configuration ownership is now split without changing the `Config` facade:
+`config_types.ml` owns public records and the shared error constructor,
+`config_decode.ml` owns duplicate-aware JSON primitives and structured field
+decoding, and `config.ml` retains file loading, top-level assembly, and
+runtime/path queries. The implementation is an exact move with explicit narrow
+interfaces; in particular, the intentional raw-map last-value behavior and
+typed-field duplicate rejection are unchanged. `config.ml` falls from 782 to
+383 lines and the extracted decoder is 362 lines. The
+warning-free build, all 18 OUnit2 tests, the dedicated 297-case differential
+configuration gate, focused integration runner, and 69-case command-validation
+gate passed after the split.
 
 ## Known gaps
 
