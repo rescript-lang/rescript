@@ -105,14 +105,3 @@ let builder_to_t (builder : builder) : t =
     optional_arg_value_escapes = builder.optional_arg_value_escapes;
     coercions = builder.coercions;
   }
-
-(** {2 Processing API} *)
-
-let process_exception_refs (t : t) ~refs ~file_deps ~find_exception ~config =
-  t.exception_refs
-  |> List.iter (fun {exception_path; loc_from} ->
-      match find_exception exception_path with
-      | None -> ()
-      | Some loc_to ->
-        Dead_common.add_value_reference ~config ~refs ~file_deps
-          ~binding:Location.none ~add_file_reference:true ~loc_from ~loc_to)

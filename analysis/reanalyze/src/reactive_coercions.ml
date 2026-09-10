@@ -90,14 +90,3 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
       ~merge:Pos_set.union ()
   in
   {labels_by_type_path; resolved_refs; resolved_refs_from}
-
-(** {1 Freezing} *)
-
-(** Add all resolved coercion refs to a References.builder *)
-let add_to_refs_builder (t : t) ~(refs : References.builder) : unit =
-  Reactive.iter
-    (fun pos_to pos_from_set ->
-      Pos_set.iter
-        (fun pos_from -> References.add_type_ref refs ~pos_to ~pos_from)
-        pos_from_set)
-    t.resolved_refs

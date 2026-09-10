@@ -86,17 +86,6 @@ val merge_all : builder list -> t
 val builder_to_t : builder -> t
 (** Convert builder to t for reactive merge *)
 
-(** {2 Processing API - for after merge} *)
-
-val process_exception_refs :
-  t ->
-  refs:References.builder ->
-  file_deps:File_deps.builder ->
-  find_exception:(Dce_path.t -> Location.t option) ->
-  config:Dce_config.t ->
-  unit
-(** Process cross-file exception references. *)
-
 (** {2 Optional Args State} *)
 
 (** Compute final optional args state from calls and function references,

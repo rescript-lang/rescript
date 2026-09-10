@@ -11,9 +11,6 @@
 
 (** {2 Types} *)
 
-type t
-(** Immutable references - for solver (read-only) *)
-
 type builder
 (** Mutable builder - for AST processing *)
 
@@ -27,15 +24,6 @@ val add_value_ref :
 
 val add_type_ref :
   builder -> pos_to:Lexing.position -> pos_from:Lexing.position -> unit
-(** Add a type reference. *)
-
-val merge_into_builder : from:builder -> into:builder -> unit
-(** Merge one builder into another. *)
-
-val merge_all : builder list -> t
-(** Merge all builders into one immutable result. Order doesn't matter. *)
-
-val freeze_builder : builder -> t
 (** Convert builder to immutable t. Builder should not be used after this. *)
 
 (** {2 Builder extraction for reactive merge} *)
@@ -44,23 +32,3 @@ val builder_value_refs_from_list : builder -> (Lexing.position * Pos_set.t) list
 (** Extract value refs (posFrom -> targets) *)
 
 val builder_type_refs_from_list : builder -> (Lexing.position * Pos_set.t) list
-(** Extract type refs (posFrom -> targets) *)
-
-val create :
-  value_refs_from:Pos_set.t Pos_hash.t ->
-  type_refs_from:Pos_set.t Pos_hash.t ->
-  t
-(** Create a References.t from hashtables *)
-
-(** {2 Read-only API - for liveness} *)
-
-val iter_value_refs_from : t -> (Lexing.position -> Pos_set.t -> unit) -> unit
-(** Iterate all value refs *)
-
-val iter_type_refs_from : t -> (Lexing.position -> Pos_set.t -> unit) -> unit
-(** Iterate all type refs *)
-
-(** {2 Length} *)
-
-val value_refs_from_length : t -> int
-val type_refs_from_length : t -> int

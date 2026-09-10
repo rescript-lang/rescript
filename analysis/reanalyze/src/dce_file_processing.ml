@@ -1,8 +1,7 @@
 (** Per-file AST processing for dead code analysis.
 
     This module coordinates per-file processing using local mutable builders
-    and returns them for merging. The caller freezes them before
-    passing to the solver. *)
+    and returns them, to be fed into the reactive collections. *)
 
 open Dead_common
 
@@ -82,5 +81,5 @@ let process_cmt_file ~config ~(file : file_context) ~cmt_file_path
       ~file:dead_common_file ~do_types:true ~do_externals
       ~cmt_value_dependencies:cmt_infos.cmt_value_dependencies structure
   | _ -> ());
-  (* Return builders - caller will merge and freeze *)
+  (* Return builders - the caller feeds them to the reactive collections *)
   {annotations; decls; refs; cross_file; file_deps}
