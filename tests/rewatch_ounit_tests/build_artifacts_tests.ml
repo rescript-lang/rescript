@@ -13,6 +13,7 @@ let with_temp_dir run =
   let root = Filename.temp_file "rewatch-build-artifacts-" "" in
   Sys.remove root;
   Unix.mkdir root 0o755;
+  let root = Unix.realpath root in
   Fun.protect
     ~finally:(fun () -> File_util.remove_tree root)
     (fun () -> run root)

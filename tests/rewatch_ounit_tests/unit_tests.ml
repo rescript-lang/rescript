@@ -225,6 +225,7 @@ let tests =
   let path_root = Filename.temp_file "rewatch-ocaml-path-" "" in
   Sys.remove path_root;
   Unix.mkdir path_root 0o755;
+  let path_root = Unix.realpath path_root in
   Fun.protect
     ~finally:(fun () -> File_util.remove_tree path_root)
     (fun () ->
@@ -280,6 +281,7 @@ let tests =
   let scheduler_root = Filename.temp_file "rewatch-ocaml-scheduler-" "" in
   Sys.remove scheduler_root;
   Unix.mkdir scheduler_root 0o755;
+  let scheduler_root = Unix.realpath scheduler_root in
   Fun.protect
     ~finally:(fun () -> File_util.remove_tree scheduler_root)
     (fun () ->
@@ -389,6 +391,7 @@ let tests =
     let temporary = Filename.temp_file "rewatch-ocaml-package-path-" "" in
     Sys.remove temporary;
     Unix.mkdir temporary 0o755;
+    let temporary = Unix.realpath temporary in
     let package = Filename.concat temporary "package" in
     let node_modules = Filename.concat temporary "node_modules" in
     Unix.mkdir package 0o755;
@@ -486,6 +489,7 @@ let tests =
   let lock_root = Filename.temp_file "rewatch-ocaml-stale-lock-" "" in
   Sys.remove lock_root;
   Unix.mkdir lock_root 0o755;
+  let lock_root = Unix.realpath lock_root in
   let lock_dir = Filename.concat lock_root "lib" in
   Unix.mkdir lock_dir 0o755;
   let lock = Filename.concat lock_dir "build.lock" in
@@ -529,6 +533,7 @@ let tests =
   let config_root = Filename.temp_file "rewatch-ocaml-config-" "" in
   Sys.remove config_root;
   Unix.mkdir config_root 0o755;
+  let config_root = Unix.realpath config_root in
   Fun.protect
     ~finally:(fun () -> File_util.remove_tree config_root)
     (fun () ->
@@ -742,6 +747,7 @@ let tests =
   in
   Sys.remove dependency_root;
   Unix.mkdir dependency_root 0o755;
+  let dependency_root = Unix.realpath dependency_root in
   Fun.protect
     ~finally:(fun () -> File_util.remove_tree dependency_root)
     (fun () ->

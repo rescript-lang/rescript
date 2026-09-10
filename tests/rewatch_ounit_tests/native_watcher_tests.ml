@@ -6,7 +6,7 @@ let temporary_directory () =
   let path = Filename.temp_file "rewatch-native-watcher-" "" in
   Sys.remove path;
   Unix.mkdir path 0o700;
-  path
+  Unix.realpath path
 
 let tests =
   "native_watcher_tests" >:: fun _context ->

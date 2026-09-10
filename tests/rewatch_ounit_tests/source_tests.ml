@@ -32,6 +32,7 @@ let tests =
   let root = Filename.temp_file "rewatch-ocaml-sources-" "" in
   Sys.remove root;
   Unix.mkdir root 0o755;
+  let root = Unix.realpath root in
   Fun.protect
     ~finally:(fun () -> File_util.remove_tree root)
     (fun () ->
