@@ -132,7 +132,7 @@ fi
 ./compile/17-prod-flag.sh &&
 ./compile/18-external-dep-uncurried-dot.sh &&
 ./compile/19-utf8-warning.sh &&
-node ./gentype/project-root.test.mjs &&
+./gentype/01-gentype-project-root.sh &&
 ./compile/14-no-testrepo-changes.sh &&
 ./compile/15-no-new-files.sh &&
 ./compile/16-snapshots-unchanged.sh &&
