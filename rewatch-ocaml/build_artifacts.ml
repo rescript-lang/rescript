@@ -104,10 +104,10 @@ let prepare_watch_output watch_outputs watch_output_paths ~dirty_ast output =
 let with_root_options (config : Config.t) (root_config : Config.t) =
   {
     config with
-    (* Like the Rust implementation, one invocation compiles every package for
-       the root project's requested module systems and suffixes. Apart from
-       producing consistent output, this ensures dependency CMIs advertise a
-       module system that their dependents can consume. *)
+    (* Every package in one invocation must use the root project's requested
+       module systems and suffixes. This produces consistent output and ensures
+       dependency CMIs advertise a module system that their dependents can
+       consume. *)
     package_specs = root_config.package_specs;
     suffix = root_config.suffix;
     jsx_args = root_config.jsx_args;
@@ -131,19 +131,18 @@ type cleanup_result = {
 let cleanup_stale ?ocaml_files ?ast_sources ?source_files ~root ~ocaml_dir
     ~is_local (config : Config.t) modules =
   let build_dir = lib_path root "bs" in
-  (* Keep one inventory of each artifact tree. Rewalking these trees for every
-     cleanup phase made unchanged builds perform several times Rust's directory
-     and metadata work. Paths removed below can safely remain in the inventory:
-     later phases only classify their names or call the idempotent
-     File_util.remove_file. *)
+  (* Keep one inventory of each artifact tree to avoid repeating directory and
+     metadata work during every cleanup phase. Paths removed below can safely
+     remain in the inventory: later phases only classify their names or call
+     the idempotent File_util.remove_file. *)
   let ocaml_files =
     match ocaml_files with
     | Some files -> files
     | None -> File_util.files_under ocaml_dir
   in
-  (* Published ASTs contain the absolute source path used to create them. That
-     is enough to address their working artifacts directly, as Rust does. Keep
-     the recursive walk lazy for malformed or legacy ASTs that cannot be
+  (* Published ASTs contain the absolute source path used to create them, which
+     is enough to address their working artifacts without scanning for them.
+     Keep the recursive walk lazy for malformed or legacy ASTs that cannot be
      mapped; normal unchanged builds must not inventory the whole lib/bs tree. *)
   let ast_sources = Option.value ast_sources ~default:[] in
   let fallback_build_files = lazy (File_util.files_under build_dir) in

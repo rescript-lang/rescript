@@ -1248,6 +1248,14 @@ duplicating records or introducing callback-heavy interfaces. The extraction
 does not alter filesystem access or build scheduling; all 18 OUnit2 tests and
 the focused build/incremental runner passed afterward.
 
+The remaining `build.ml` lifecycle was reviewed again after those extractions.
+Its setup, progress/error reporting, staged-output publication, log and lock
+finalization, and build/watch entry points share command-scoped state and form
+one coherent owner; splitting them further would primarily replace local
+closures with callback plumbing. It therefore remains one 387-line
+implementation, while a narrow `build.mli` exposes only the command entry
+points and translated public exceptions.
+
 Package-tree discovery now lives in `package_graph.ml`. It owns the two-pass
 feature-union traversal, command-wide dependency resolution and duplicate
 selection, `allowed-dependents` validation, local/dev classification, source
@@ -1574,13 +1582,8 @@ gate passed after the split.
 
 ## Next actions
 
-1. Review the remaining command lifecycle in `build.ml` for any stable final
-   ownership split without introducing trivial wrappers. Filesystem/artifact,
-   compiler-process, compiler-scheduling, watcher, clean, command-cycle state,
-   package-tree discovery, global preparation, and per-package build planning
-   now have separate owners.
-2. Perform the final two-scope whole-port review and address confirmed findings.
-3. At the final maintainability pass, add comments around ownership,
+1. Perform the final two-scope whole-port review and address confirmed findings.
+2. At the final maintainability pass, add comments around ownership,
    concurrency, platform, and algorithmic invariants that are not apparent from
    the code itself. Comments should start with why the code or invariant is
    needed, provide enough context for readers who are not specialists in every
@@ -1591,12 +1594,12 @@ gate passed after the split.
    clearer as `Module.function` than through `open`; do not apply either style
    mechanically. Remove dead code, and document the complete
    compatibility-oddity, corrected-Rust-behavior, and future-performance lists.
-4. Validate macOS packaging and native event behavior, then prepare the pinned
+3. Validate macOS packaging and native event behavior, then prepare the pinned
    Windows handoff. Finish the Windows watcher/lock
    backend and path audit and run the native build, unit, focused, and canonical
    Bash suites in the VM. Address findings there and finish with an x64 Windows
    confidence run where available.
-5. Complete the final output-presentation pass after platform validation: port
+4. Complete the final output-presentation pass after platform validation: port
    Rust's semantic `-v`/`-vv` events with an order-insensitive differential
    gate, then implement and test the live interactive spinner frames and the
    clear-screen rebuild/failure headers.
