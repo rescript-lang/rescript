@@ -26,9 +26,10 @@ let status_string = function
   | Unix.WSIGNALED signal -> Printf.sprintf "signal %d" signal
   | Unix.WSTOPPED signal -> Printf.sprintf "stopped by signal %d" signal
 
-(* Blocking reader threads are portable to Windows, where select cannot wait on
-   anonymous pipes, and prevent either stream from filling while the child is
-   writing to the other one. Scheduling stays single-threaded. *)
+(* Reader threads are needed because a child can block when either output pipe
+   fills, and Windows cannot use select to drain anonymous pipes concurrently.
+   The threads perform only blocking I/O; dependency scheduling stays on the
+   calling thread. *)
 let default_max_jobs = min 32 (max 1 (Domain.recommended_domain_count ()))
 
 type capture = {
@@ -36,17 +37,93 @@ type capture = {
   outcome: (string, exn) Stdlib.result option ref;
 }
 
+type child_wait = {
+  thread: Thread.t;
+  direct_outcome: (Unix.process_status, exn) Stdlib.result option Atomic.t;
+  outcome: (result, exn) Stdlib.result option Atomic.t;
+}
+
 type 'a running = {
   payload: 'a;
   pid: int;
-  stdout_capture: capture;
-  stderr_capture: capture;
+  child_wait: child_wait;
 }
+
+type completion_notifier = {
+  mutex: Mutex.t;
+  condition: Condition.t;
+  mutable generation: int;
+  mutable stopped: bool;
+}
+
+let create_completion_notifier () =
+  {
+    mutex = Mutex.create ();
+    condition = Condition.create ();
+    generation = 0;
+    stopped = false;
+  }
+
+let notify_completion notifier =
+  Mutex.protect notifier.mutex (fun () ->
+    if not notifier.stopped then (
+      notifier.generation <- notifier.generation + 1;
+      Condition.broadcast notifier.condition))
+
+let notifier_generation notifier =
+  Mutex.protect notifier.mutex (fun () -> notifier.generation)
+
+let await_notification notifier generation =
+  Mutex.protect notifier.mutex (fun () ->
+    while notifier.generation = generation && not notifier.stopped do
+      Condition.wait notifier.condition notifier.mutex
+    done;
+    notifier.generation)
+
+let with_completion_notifier ?(ticker_enabled = false) action =
+  (* The scheduler needs immediate child completion without repeatedly asking
+     the operating system about every running PID. A condition variable wakes
+     it when status and captured output are both ready; one ticker also wakes a
+     supplied watch poll callback every five milliseconds while children are
+     busy. *)
+  let notifier = create_completion_notifier () in
+  let rec send_tick () =
+    Thread.delay 0.005;
+    let continue =
+      Mutex.protect notifier.mutex (fun () ->
+        if notifier.stopped then false
+        else (
+          notifier.generation <- notifier.generation + 1;
+          Condition.broadcast notifier.condition;
+          true))
+    in
+    if continue then send_tick ()
+  in
+  let restore_signals = Platform.defer_termination_signals () in
+  let ticker = ref None in
+  let stopped = ref false in
+  let stop () =
+    if not !stopped then (
+      Mutex.protect notifier.mutex (fun () ->
+        notifier.stopped <- true;
+        Condition.broadcast notifier.condition);
+      Option.iter Thread.join !ticker;
+      stopped := true)
+  in
+  try
+    if ticker_enabled then ticker := Some (Thread.create send_tick ());
+    Fun.protect ~finally:stop (fun () ->
+      restore_signals ();
+      action notifier)
+  with exn ->
+    stop ();
+    let exn = try restore_signals (); exn with signal_exn -> signal_exn in
+    raise exn
 
 let close_noerr descriptor =
   try Unix.close descriptor with Unix.Unix_error _ -> ()
 
-let start_capture descriptor =
+let start_capture descriptor : capture =
   let outcome = ref None in
   let thread =
     Thread.create
@@ -74,7 +151,7 @@ let start_capture descriptor =
   in
   {thread; outcome}
 
-let capture_outcome capture =
+let capture_outcome (capture : capture) =
   Thread.join capture.thread;
   match !(capture.outcome) with
   | Some outcome -> outcome
@@ -83,15 +160,44 @@ let capture_outcome capture =
 let capture_error exn =
   Error ("failed to capture subprocess output: " ^ Printexc.to_string exn)
 
-let launch ?env payload job =
-  (* Signals are deferred before opening pipes so asynchronous watch
-     termination cannot interrupt the gap between acquiring descriptors and
-     installing their cleanup owner. *)
+let start_child_wait pid notifier stdout_capture stderr_capture : child_wait =
+  let direct_outcome = Atomic.make None in
+  let outcome = Atomic.make None in
+  let rec wait () =
+    try
+      let _, status = Unix.waitpid [] pid in
+      status
+    with Unix.Unix_error (Unix.EINTR, _, _) -> wait ()
+  in
+  let thread =
+    Thread.create
+      (fun () ->
+        let status = try Ok (wait ()) with exn -> Error exn in
+        Atomic.set direct_outcome (Some status);
+        let stdout = capture_outcome stdout_capture in
+        let stderr = capture_outcome stderr_capture in
+        let result =
+          match status, stdout, stderr with
+          | Ok status, Ok stdout, Ok stderr -> Ok {status; stdout; stderr}
+          | Error exn, _, _ -> Error exn
+          | _, Error exn, _ | _, _, Error exn -> Error (capture_error exn)
+        in
+        Atomic.set outcome (Some result);
+        notify_completion notifier)
+      ()
+  in
+  {thread; direct_outcome; outcome}
+
+let launch ?env ~notifier payload job =
+  (* Capture descriptors need a cleanup owner before asynchronous watch
+     termination can raise. Signals are therefore deferred across pipe
+     acquisition and restored only after every descriptor has an owner. *)
   let restore_signals = Platform.defer_termination_signals () in
   let opened_pipes = ref None in
   let stdout_capture = ref None in
   let stderr_capture = ref None in
   let child_pid = ref None in
+  let child_wait = ref None in
   try
     let pipes = Platform.create_capture_pipes () in
     opened_pipes := Some pipes;
@@ -107,54 +213,60 @@ let launch ?env payload job =
     child_pid := Some pid;
     close_noerr stdout_write;
     close_noerr stderr_write;
+    let wait = start_child_wait pid notifier stdout stderr in
+    child_wait := Some wait;
     restore_signals ();
-    {payload; pid; stdout_capture = stdout; stderr_capture = stderr}
+    {payload; pid; child_wait = wait}
   with exn ->
     Option.iter
       (fun ((stdout_read, stdout_write), (stderr_read, stderr_write)) ->
         Option.iter
           (fun pid ->
-            Platform.signal_process_tree pid Sys.sigkill;
-            try ignore (Unix.waitpid [] pid) with Unix.Unix_error _ -> ())
+            let root_reaped =
+              match !child_wait with
+              | Some wait -> Option.is_some (Atomic.get wait.direct_outcome)
+              | None -> false
+            in
+            Platform.signal_process_tree ~root_reaped pid Sys.sigkill;
+            if Option.is_none !child_wait then
+              try ignore (Unix.waitpid [] pid) with Unix.Unix_error _ -> ())
           !child_pid;
         close_noerr stdout_write;
         close_noerr stderr_write;
         if Option.is_none !stdout_capture then close_noerr stdout_read;
         if Option.is_none !stderr_capture then close_noerr stderr_read;
-        Option.iter (fun capture -> Thread.join capture.thread) !stdout_capture;
-        Option.iter (fun capture -> Thread.join capture.thread) !stderr_capture)
+        (match !child_wait with
+        | Some wait -> Thread.join wait.thread
+        | None ->
+          Option.iter
+            (fun (capture : capture) -> Thread.join capture.thread)
+            !stdout_capture;
+          Option.iter
+            (fun (capture : capture) -> Thread.join capture.thread)
+            !stderr_capture))
       !opened_pipes;
     let exn = try restore_signals (); exn with signal_exn -> signal_exn in
     raise exn
 
-let wait_for_running ?(poll = fun () -> ()) active =
-  let rec wait = function
-    | [] ->
-      poll ();
-      ignore (Unix.select [] [] [] 0.00001);
-      wait active
-    | child :: rest ->
-      let restore_signals = Platform.defer_termination_signals () in
-      try
-        match Unix.waitpid [Unix.WNOHANG] child.pid with
-        | 0, _ ->
-          restore_signals ();
-          wait rest
-        | _, status -> ((child, status), restore_signals)
-      with exn ->
-        let exn = try restore_signals (); exn with signal_exn -> signal_exn in
-        raise exn
+let wait_for_running ?(poll = fun () -> ()) notifier active =
+  let rec find_completed = function
+    | [] -> None
+    | child :: rest -> (
+      match Atomic.get child.child_wait.outcome with
+      | Some outcome -> Some (child, outcome)
+      | None -> find_completed rest)
   in
-  wait active
-
-let collect_result child status =
-  let stdout = capture_outcome child.stdout_capture in
-  let stderr = capture_outcome child.stderr_capture in
-  match stdout, stderr with
-  | Ok stdout, Ok stderr -> {status; stdout; stderr}
-  | Error exn, _ | _, Error exn -> raise (capture_error exn)
-
-let discard_capture capture = ignore (capture_outcome capture)
+  let rec wait generation =
+    match find_completed active with
+    | Some (child, Ok result) ->
+      let restore_signals = Platform.defer_termination_signals () in
+      ((child, result), restore_signals)
+    | Some (_, Error exn) -> raise exn
+    | None ->
+      poll ();
+      await_notification notifier generation |> wait
+  in
+  notifier_generation notifier |> wait
 
 let with_signal_restore restore_signals action =
   try
@@ -167,50 +279,41 @@ let with_signal_restore restore_signals action =
 
 let terminate_running children =
   if children <> [] then (
-    let signal_group signal child = Platform.signal_process_tree child.pid signal in
+    let root_identity_lost child =
+      Option.is_some (Atomic.get child.child_wait.direct_outcome)
+    in
+    let signal_group signal child =
+      let root_reaped = root_identity_lost child in
+      Platform.signal_process_tree ~root_reaped child.pid signal
+    in
     let graceful_signal = Platform.graceful_termination_signal in
     List.iter (signal_group graceful_signal) children;
     let deadline = Unix.gettimeofday () +. 0.25 in
-    let rec reap_until_deadline children =
+    let rec wait_until_deadline children =
       let remaining =
         List.filter
-          (fun child ->
-            try
-              match Unix.waitpid [Unix.WNOHANG] child.pid with
-              | 0, _ -> true
-              | _ -> false
-            with
-            | Unix.Unix_error (Unix.EINTR, _, _) -> true
-            | Unix.Unix_error (Unix.ECHILD, _, _) -> false)
+          (fun child -> not (root_identity_lost child))
           children
       in
       if remaining <> [] && Unix.gettimeofday () < deadline then (
         ignore (Unix.select [] [] [] 0.01);
-        reap_until_deadline remaining)
+        wait_until_deadline remaining)
       else remaining
     in
-    let remaining = reap_until_deadline children in
-    (* A direct child may have exited while a PPX/helper in its process group
-       remains alive, so escalate every original group rather than only the
-       direct children that still need reaping. *)
+    ignore (wait_until_deadline children);
+    (* Every original process group needs escalation because a direct child can
+       exit while a PPX or helper in its group remains alive. *)
     if Platform.escalate_process_groups then
       List.iter (signal_group Sys.sigkill) children;
-    List.iter
-      (fun child ->
-        try ignore (Unix.waitpid [] child.pid) with Unix.Unix_error _ -> ())
-      remaining;
-    List.iter
-      (fun child ->
-        discard_capture child.stdout_capture;
-        discard_capture child.stderr_capture)
-      children)
+    List.iter (fun child -> Thread.join child.child_wait.thread) children)
 
-let run_parallel ?(max_jobs = default_max_jobs) ?(poll = fun () -> ()) jobs =
-  if max_jobs < 1 then raise (Error "max_jobs must be at least one");
+let run_parallel_with_notifier ~max_jobs ~poll notifier jobs =
   let indexed = List.mapi (fun index job -> (index, job)) jobs in
   let results = Array.make (List.length jobs) None in
   let active = ref [] in
-  let launch_indexed (index, job) = active := launch index job :: !active in
+  let launch_indexed (index, job) =
+    active := launch ~notifier index job :: !active
+  in
   let rec fill slots queued =
     if slots = 0 then queued
     else
@@ -225,11 +328,13 @@ let run_parallel ?(max_jobs = default_max_jobs) ?(poll = fun () -> ()) jobs =
     match !active with
     | [] -> ()
     | _ ->
-      let (child, status), restore_signals = wait_for_running ~poll !active in
+      let (child, result), restore_signals =
+        wait_for_running ~poll notifier !active
+      in
       with_signal_restore restore_signals (fun () ->
         active :=
           List.filter (fun running -> running.pid <> child.pid) !active;
-        results.(child.payload) <- Some (collect_result child status));
+        results.(child.payload) <- Some result);
       schedule queued
   in
   try
@@ -242,6 +347,19 @@ let run_parallel ?(max_jobs = default_max_jobs) ?(poll = fun () -> ()) jobs =
     terminate_running !active;
     raise exn
 
+let run_parallel ?(max_jobs = default_max_jobs) ?poll jobs =
+  if max_jobs < 1 then raise (Error "max_jobs must be at least one");
+  match jobs with
+  | [] -> []
+  | _ ->
+    let poll, ticker_enabled =
+      match poll with
+      | Some poll -> (poll, true)
+      | None -> ((fun () -> ()), false)
+    in
+    with_completion_notifier ~ticker_enabled (fun notifier ->
+      run_parallel_with_notifier ~max_jobs ~poll notifier jobs)
+
 type 'a work = {key: string; dependencies: string list; value: 'a}
 
 module Work_ready = Set.Make (struct
@@ -252,10 +370,8 @@ module Work_ready = Set.Make (struct
     if by_priority <> 0 then by_priority else String.compare first_key second_key
 end)
 
-let run_dependency_graph ?(max_jobs = default_max_jobs)
-    ?(is_fatal = function Sys.Break -> true | _ -> false)
-    ?(poll = fun () -> ()) works ~next =
-  if max_jobs < 1 then raise (Error "max_jobs must be at least one");
+let run_dependency_graph_with_notifier ~max_jobs ~is_fatal ~poll notifier works
+    ~next =
   let count = List.length works in
   let by_key = Hashtbl.create count in
   List.iter
@@ -354,7 +470,7 @@ let run_dependency_graph ?(max_jobs = default_max_jobs)
         (try
            match next work.value None with
            | None -> complete work
-           | Some job -> active := launch work job :: !active
+           | Some job -> active := launch ~notifier work job :: !active
          with exn -> record_error work exn);
         fill ()
   in
@@ -371,17 +487,16 @@ let run_dependency_graph ?(max_jobs = default_max_jobs)
         raise (Error "subprocess dependency graph stalled")
       | [] -> ())
     | _ ->
-      let (child, status), restore_signals = wait_for_running ~poll !active in
-      let result =
-        with_signal_restore restore_signals (fun () ->
-          active :=
-            List.filter (fun running -> running.pid <> child.pid) !active;
-          collect_result child status)
+      let (child, result), restore_signals =
+        wait_for_running ~poll notifier !active
       in
+      with_signal_restore restore_signals (fun () ->
+        active :=
+          List.filter (fun running -> running.pid <> child.pid) !active);
       (try
          match next child.payload.value (Some result) with
          | Some job ->
-           active := launch child.payload job :: !active
+           active := launch ~notifier child.payload job :: !active
          | None -> complete child.payload
        with exn -> record_error child.payload exn);
       schedule ()
@@ -391,13 +506,32 @@ let run_dependency_graph ?(max_jobs = default_max_jobs)
     terminate_running !active;
     raise exn
 
+let run_dependency_graph ?(max_jobs = default_max_jobs)
+    ?(is_fatal = function Sys.Break -> true | _ -> false)
+    ?poll works ~next =
+  if max_jobs < 1 then raise (Error "max_jobs must be at least one");
+  match works with
+  | [] -> ()
+  | _ ->
+    let poll, ticker_enabled =
+      match poll with
+      | Some poll -> (poll, true)
+      | None -> ((fun () -> ()), false)
+    in
+    with_completion_notifier ~ticker_enabled (fun notifier ->
+      run_dependency_graph_with_notifier ~max_jobs ~is_fatal ~poll notifier
+        works ~next)
+
 let run ?env ~cwd program args =
-  let child = launch ?env () {program; args; cwd} in
-  let reaped = ref false in
-  try
-    let (child, status), restore_signals = wait_for_running [child] in
-    reaped := true;
-    with_signal_restore restore_signals (fun () -> collect_result child status)
-  with exn ->
-    if not !reaped then terminate_running [child];
-    raise exn
+  with_completion_notifier (fun notifier ->
+    let child = launch ?env ~notifier () {program; args; cwd} in
+    let reaped = ref false in
+    try
+      let (_, result), restore_signals =
+        wait_for_running notifier [child]
+      in
+      reaped := true;
+      with_signal_restore restore_signals (fun () -> result)
+    with exn ->
+      if not !reaped then terminate_running [child];
+      raise exn)

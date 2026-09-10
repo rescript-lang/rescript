@@ -74,6 +74,14 @@ let () =
       while true do
         ignore (Unix.select [] [] [] 1.)
       done
+    | "--sleep" ->
+      Thread.delay (float_of_string (argument 2));
+      exit 0
+    | "--exit-with-descendant" ->
+      let executable = Unix.realpath Sys.executable_name in
+      ignore
+        (Spawn.spawn ~prog:executable ~argv:[executable; "--sleep"; "2"] ());
+      exit 0
     | "-format" -> (
       match Sys.getenv_opt "REWATCH_FORMAT_TEST_ROOT" with
       | None -> ()
@@ -153,6 +161,27 @@ let tests =
   in
   check dependency_graph_cancelled
     "dependency scheduler cancellation terminates active subprocesses";
+  (if not Sys.win32 then
+     let descendant_pipe_polls = ref 0 in
+     let started = Unix.gettimeofday () in
+     let descendant_pipe_cancelled =
+       let exception Cancel in
+       try
+         Process.run_dependency_graph
+           [graph_work "descendant-pipe" []]
+           ~poll:(fun () ->
+             incr descendant_pipe_polls;
+             if !descendant_pipe_polls = 2 then raise Cancel)
+           ~next:(fun _ result ->
+             match result with
+             | None -> Some (process_job ["--exit-with-descendant"])
+             | Some _ -> None);
+         false
+       with Cancel -> true
+     in
+     check
+       (descendant_pipe_cancelled && Unix.gettimeofday () -. started < 1.)
+       "an exited parent with descendant-held pipes remains cancellable");
   let graph_completion_order = ref [] in
   let graph_completed = Hashtbl.create 3 in
   Process.run_dependency_graph ~max_jobs:1

@@ -69,7 +69,13 @@ let create_capture_pipes () =
     Unix.close (snd stdout);
     raise exn
 
-let signal_process_tree pid _signal =
+let signal_process_tree ~root_reaped pid _signal =
+  (* A reaped Windows PID is no longer a safe process-tree identity because the
+     operating system may reuse it for an unrelated process. Native Windows
+     descendant cleanup therefore needs a retained process or job handle rather
+     than another taskkill invocation. *)
+  if root_reaped then ()
+  else
   let taskkill =
     match Sys.getenv_opt "SystemRoot" with
     | Some root ->

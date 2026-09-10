@@ -37,7 +37,7 @@ let create_capture_pipes () =
     Unix.close (snd stdout);
     raise exn
 
-let signal_process_tree pid signal =
+let signal_process_tree ~root_reaped:_ pid signal =
   try Unix.kill (-pid) signal with Unix.Unix_error _ -> ()
 
 let defer_termination_signals () =
