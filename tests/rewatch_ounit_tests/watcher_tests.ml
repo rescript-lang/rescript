@@ -14,6 +14,7 @@ let tests =
   let root = Filename.temp_file "rewatch-watcher-lifecycle-" "" in
   Sys.remove root;
   Unix.mkdir root 0o700;
+  let root = Unix.realpath root in
   let config_path = Filename.concat root "rescript.json" in
   let channel = open_out config_path in
   output_string channel {|{"name":"watcher-lifecycle","sources":[]}|};

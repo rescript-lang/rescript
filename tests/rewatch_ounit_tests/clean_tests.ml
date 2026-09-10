@@ -13,6 +13,7 @@ let with_temp_dir f =
   let path = Filename.temp_file "rewatch-ocaml-clean-" "" in
   Sys.remove path;
   Unix.mkdir path 0o755;
+  let path = Unix.realpath path in
   Fun.protect ~finally:(fun () -> File_util.remove_tree path) (fun () -> f path)
 
 let tests =

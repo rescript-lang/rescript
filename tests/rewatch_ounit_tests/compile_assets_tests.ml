@@ -12,6 +12,7 @@ let with_temp_dir run =
   let path = Filename.temp_file "rewatch-compile-assets-" "" in
   Sys.remove path;
   Unix.mkdir path 0o755;
+  let path = Unix.realpath path in
   Fun.protect
     ~finally:(fun () -> File_util.remove_tree path)
     (fun () -> run path)
