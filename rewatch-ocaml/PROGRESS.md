@@ -14,6 +14,17 @@ ordinary verbosity and diagnostics remain in scope. Incremental state uses
 existing AST, CMI, CMT, and generated-output artifacts rather than in-process
 compiler state.
 
+A renewed lifecycle audit is in progress after watch testing exposed a gap in
+the earlier source-oriented comparison: Rust retains its initialized build
+state across ordinary watch edits, while the OCaml callback reconstructed that
+state on every event. The common existing-file edit path now carries the
+snapshot's exact changed paths into the build, retains package, dependency,
+artifact, cleanup, and module state, and reparses only those paths. Additions,
+removals, unknown paths, configuration changes, and changed dependency headers
+still conservatively reinitialize the build. Updating dependency edges in
+place, retained-watch work measurements, and the complete lifecycle audit are
+required before this gap is closed.
+
 Native macOS validation at checkpoint `30725fb01` passed `make test-all` and,
 after making temporary fixture paths canonical and accounting for the host's
 case-insensitive filesystem, all 19 dedicated rewatch OUnit2 groups. The
@@ -224,9 +235,9 @@ The clean-build path now prepares all packages before launching compiler work,
 parses dirty sources as one global batch, emits namespaces as one global batch,
 and schedules compilation over one cross-package dependency graph using
 critical-path priorities. It still reconstructs its in-memory state for every
-invocation, while Rust persists richer compile state. Rust also has native
-filesystem events, diagnostic persistence, telemetry, and broader
-configuration and platform handling that are not yet ported.
+short-lived invocation, while ordinary watch edits now retain it. Rust also has
+diagnostic persistence, telemetry, and broader configuration and platform
+handling that are not all ported.
 
 A fresh review of the compile 09–13 increment found failure-log omissions,
 unsafe deferred watch outputs, first-edge-wins feature selection, dependency
@@ -248,6 +259,11 @@ maps), recoverable initial/rebuild errors, atomic populated lock creation with
 stale-owner takeover, workspace build locks, owned lock removal, race-tolerant
 symlink-aware snapshots, and cached content hashes. Takeover markers also carry
 an owner PID and can themselves be recovered after an interrupted takeover.
+Those reviews established event, output, locking, and recovery correctness but
+did not compare end-to-end state lifetime or work per repeated event. The
+resulting claim was therefore too broad. The replacement audit records state
+ownership and measured work for initial build, content edit, dependency edit,
+add/remove/rename, configuration change, failure, and recovery separately.
 
 The pinned Rust algorithms remain the default reference. Confirmed Rust bugs or
 obvious low-risk inefficiencies may be corrected rather than copied, but every
@@ -1208,8 +1224,6 @@ Ideas not present in Rust remain separate hypotheses for after parity:
   isolation of compiler-global state;
 - parallelize independent configuration parsing or directory inventory with
   OCaml domains if profiling shows CPU saturation rather than I/O latency;
-- use watcher event state to avoid a full rediscovery after quiet periods,
-  retaining overflow/config-change fallbacks to a clean rescan.
 
 For each hypothesis, measure it independently, preserve the 1.25× timing/RSS
 gate and exact work/artifact checks, compare filesystem calls, and include a
@@ -1746,8 +1760,12 @@ Three later Rust fixes were audited explicitly against the port:
 
 ## Next actions
 
-1. Perform the final two-scope whole-port review and address confirmed findings.
-2. At the final maintainability pass, add comments around ownership,
+1. Finish long-lived watcher parity: update changed dependency edges without a
+   full rescan, verify structural-change and failure recovery, and add retained
+   watch latency/work and filesystem-call measurements. Complete the renewed
+   lifecycle audit before accepting watcher or algorithm parity.
+2. Perform the final two-scope whole-port review and address confirmed findings.
+3. At the final maintainability pass, add comments around ownership,
    concurrency, platform, and algorithmic invariants that are not apparent from
    the code itself. Comments should start with why the code or invariant is
    needed, provide enough context for readers who are not specialists in every
@@ -1758,12 +1776,12 @@ Three later Rust fixes were audited explicitly against the port:
    clearer as `Module.function` than through `open`; do not apply either style
    mechanically. Remove dead code, and document the complete
    compatibility-oddity, corrected-Rust-behavior, and future-performance lists.
-3. Validate macOS packaging and native event behavior, then prepare the pinned
+4. Validate macOS packaging and native event behavior, then prepare the pinned
    Windows handoff. Finish the Windows watcher/lock
    backend and path audit and run the native build, unit, focused, and canonical
    Bash suites in the VM. Address findings there and finish with an x64 Windows
    confidence run where available.
-4. Complete the final output-presentation pass after platform validation: port
+5. Complete the final output-presentation pass after platform validation: port
    Rust's semantic `-v`/`-vv` events with an order-insensitive differential
    gate, then implement and test the live interactive spinner frames and the
    clear-screen rebuild/failure headers.

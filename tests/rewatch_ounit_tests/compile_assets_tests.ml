@@ -75,4 +75,17 @@ let tests =
       Compile_assets.refresh_cmi state ~key:"Example" ~path:first;
       check
         (Option.is_none (Compile_assets.cmi state "Example"))
-        "refresh removes a deleted CMI")
+        "refresh removes a deleted CMI";
+      let replacement_ast = Filename.concat root "Replacement.ast" in
+      write replacement_ast "replacement";
+      Compile_assets.refresh_ast state ~source ~path:replacement_ast;
+      check
+        (Compile_assets.ast state source
+        |> Option.map (fun entry -> entry.Compile_assets.path)
+        = Some replacement_ast)
+        "refresh replaces the AST freshness entry after publication";
+      Sys.remove replacement_ast;
+      Compile_assets.refresh_ast state ~source ~path:replacement_ast;
+      check
+        (Option.is_none (Compile_assets.ast state source))
+        "refresh removes a deleted AST freshness entry")

@@ -91,3 +91,53 @@ let create ~warning_state ~poll =
     had_warnings = false;
     poll;
   }
+
+let create_incremental ~previous ~poll =
+  (* Each rebuild needs fresh diagnostics and pending work, while the package
+     graph and artifact/module state describe the long-lived watcher session.
+     Sharing only that persistent subset prevents completed cleanup actions or
+     failed subprocess records from leaking into the next edit. *)
+  let cleanup_results = Hashtbl.create (Hashtbl.length previous.cleanup_results) in
+  Hashtbl.iter
+    (fun root cleanup ->
+      Hashtbl.add cleanup_results root
+        Build_artifacts.
+          {
+            removed_modules = [];
+            previous_ast_count = 0;
+            deferred_artifacts = [];
+            present_public_outputs = cleanup.present_public_outputs;
+          })
+    previous.cleanup_results;
+  {
+    cleaned = 0;
+    previous_asts = 0;
+    parsed = 0;
+    compiled = 0;
+    parse_seconds = 0.;
+    diagnostics = [];
+    failure = None;
+    removed_modules = Hashtbl.create 16;
+    forced_parse_paths = Hashtbl.create 16;
+    preparse_stderr = Hashtbl.create 16;
+    preparse_results = Hashtbl.create 16;
+    blocked_modules = Hashtbl.create 16;
+    active_features = previous.active_features;
+    initialized_logs = Hashtbl.create 16;
+    watch_outputs = ref [];
+    watch_output_paths = Hashtbl.create 16;
+    global_raw_dependencies = previous.global_raw_dependencies;
+    graph_packages = previous.graph_packages;
+    cleanup_results;
+    deferred_artifact_cleanup = ref [];
+    namespace_jobs = ref [];
+    scheduled_modules = ref [];
+    compile_cleanup = ref [];
+    compiler_context = previous.compiler_context;
+    compile_assets = previous.compile_assets;
+    build_state = previous.build_state;
+    compiler_cleaned = false;
+    warning_state = previous.warning_state;
+    had_warnings = false;
+    poll;
+  }

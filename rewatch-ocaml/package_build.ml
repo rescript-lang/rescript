@@ -218,11 +218,17 @@ let rec prepare_tree ~(root_config : Config.t) ~dependency_context ~seen
     if stderr <> "" then Compiler_log.append root stderr;
     if stderr <> "" then prerr_string stderr;
     let ast = Source.ast_path path in
-    if is_local && stderr <> "" then warning_asts := ast :: !warning_asts;
-    File_util.copy_existing_file ~ensure_parent:false (Filename.concat build_dir ast)
-      (Filename.concat
-         (Build_artifacts.lib_path config.root "ocaml")
-         (Filename.basename ast));
+    if is_local && stderr <> "" then
+      warning_asts := (absolute_path, ast) :: !warning_asts;
+    let published_ast =
+      Filename.concat
+        (Build_artifacts.lib_path config.root "ocaml")
+        (Filename.basename ast)
+    in
+    File_util.copy_existing_file ~ensure_parent:false
+      (Filename.concat build_dir ast) published_ast;
+    Compile_assets.refresh_ast compile_assets ~source:absolute_path
+      ~path:published_ast;
     File_util.copy_existing_file ~ensure_parent:false (Filename.concat config.root path)
       (Filename.concat
          (Build_artifacts.lib_path config.root "ocaml")
@@ -409,8 +415,10 @@ let rec prepare_tree ~(root_config : Config.t) ~dependency_context ~seen
                 paths)
           compile_warning_modules;
       List.iter
-        (fun ast ->
-          File_util.remove_file (Filename.concat ocaml_dir (Filename.basename ast)))
+        (fun (source, ast) ->
+          let path = Filename.concat ocaml_dir (Filename.basename ast) in
+          File_util.remove_file path;
+          Compile_assets.refresh_ast compile_assets ~source ~path)
         !warning_asts)
     :: !(stats.compile_cleanup);
   ()
