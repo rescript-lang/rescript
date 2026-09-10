@@ -5,6 +5,7 @@ type dependency_context = {
   current_root: string;
   workspace_root: string;
   allow_upward_search: bool;
+  include_workspace_dependencies: bool;
 }
 
 let path_is_within_canonical ~root path =
@@ -70,9 +71,16 @@ let dependency_context (current : Config.t) =
     current_root = current.root;
     workspace_root;
     allow_upward_search = workspace_root = current.root && not is_monorepo_root;
+    include_workspace_dependencies = workspace_root = current.root;
   }
 
-let dependency_workspace context = context.workspace_root
+let dependency_is_local_canonical context path =
+  (* A command run from one package listed by a parent workspace owns only that
+     package. Sibling packages still resolve through the workspace, but treating
+     them as local would also include their development sources, clean their
+     outputs, and watch their source trees. *)
+  context.include_workspace_dependencies
+  && is_local_dependency_canonical ~workspace:context.workspace_root path
 
 let dependency_candidates_in context package_root name =
   let candidate root = Filename.concat (Filename.concat root "node_modules") name in
@@ -112,6 +120,7 @@ let standalone_dependency_context root =
     current_root = root;
     workspace_root = root;
     allow_upward_search = true;
+    include_workspace_dependencies = true;
   }
 
 let dependency_candidates root name =
@@ -144,7 +153,3 @@ let relative_to root path =
   else if String.starts_with ~prefix:(comparable prefix) (comparable path) then
     String.sub path (String.length prefix) (String.length path - String.length prefix)
   else raise (Error (path ^ " is not inside " ^ root))
-
-let is_local_dependency ~workspace path =
-  is_local_dependency_canonical ~workspace:(Unix.realpath workspace)
-    (Unix.realpath path)

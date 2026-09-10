@@ -29,10 +29,8 @@ let rec run ~(root_config : Config.t) ~dependency_context ~seen ~root ~prod
               try
                 run ~root_config ~dependency_context ~seen ~root:directory ~prod
                   ~is_local:
-                    (Project_context.is_local_dependency_canonical
-                       ~workspace:
-                         (Project_context.dependency_workspace dependency_context)
-                       directory)
+                    (Project_context.dependency_is_local_canonical
+                       dependency_context directory)
                   ~on_clean
               with Config.Error message ->
                 raise

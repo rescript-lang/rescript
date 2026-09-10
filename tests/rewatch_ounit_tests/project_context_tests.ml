@@ -71,6 +71,11 @@ let tests =
         Project_context.dependency_context dependency_config
       in
       check
+        (not
+           (Project_context.dependency_is_local_canonical dependency_context
+              dev_dependency))
+        "a directly invoked workspace package does not own its siblings";
+      check
         (Project_context.dependency_candidates_in dependency_context dependency
            "@scope/pkg"
         = [
@@ -80,6 +85,22 @@ let tests =
             Filename.concat (Filename.concat root "node_modules") "@scope/pkg";
           ])
         "a workspace package checks only its own and the workspace node_modules";
+      let node_modules = Filename.concat root "node_modules" in
+      File_util.ensure_dir node_modules;
+      Unix.symlink "../packages/dependency"
+        (Filename.concat node_modules "dependency");
+      Unix.symlink "../packages/dev-dependency"
+        (Filename.concat node_modules "dev-dependency");
+      let root_context =
+        Project_context.dependency_context (Config.load_root root)
+      in
+      check
+        (Project_context.dependency_is_local_canonical root_context dependency)
+        "a workspace-root invocation owns linked workspace dependencies";
+      check
+        (Project_context.dependency_is_local_canonical root_context
+           dev_dependency)
+        "a workspace-root invocation owns linked development dependencies";
       let repository_tmp = Filename.concat (Sys.getcwd ()) "tmp" in
       File_util.ensure_dir repository_tmp;
       let standalone =

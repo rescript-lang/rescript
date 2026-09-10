@@ -25,7 +25,6 @@ let dependent_is_allowed allowed_dependents dependent =
 let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
     ~stats =
   let dependency_context = Project_context.dependency_context root_config in
-  let workspace = Project_context.dependency_workspace dependency_context in
   let requested_features = Hashtbl.create 32 in
   let unallowed_dependencies = ref [] in
   let loaded_configs = Hashtbl.create 32 in
@@ -129,7 +128,7 @@ let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
         (fun ((dependency : Config.dependency), directory) ->
           collect ~folder:directory ~features:dependency.features
             ~is_local:
-              (Project_context.is_local_dependency_canonical ~workspace
+              (Project_context.dependency_is_local_canonical dependency_context
                  directory))
         resolved_dependencies)
   in
@@ -184,7 +183,7 @@ let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
           visit ~folder:directory ~features:dependency.features
             ~warn_error:None ~filter:None
             ~is_local:
-              (Project_context.is_local_dependency_canonical ~workspace
+              (Project_context.dependency_is_local_canonical dependency_context
                  directory))
         dependency_directories;
       let discovery =

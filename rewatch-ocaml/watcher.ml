@@ -16,7 +16,6 @@ let watch_context ~root ~prod ~features =
   try
     let root_config = Config.load_root root in
     let dependency_context = Project_context.dependency_context root_config in
-    let workspace = Project_context.dependency_workspace dependency_context in
   let visited = Hashtbl.create 32 in
   let packages = Hashtbl.create 32 in
   let requested_features = Hashtbl.create 32 in
@@ -80,7 +79,7 @@ let watch_context ~root ~prod ~features =
             dependency.name
         with
         | Some directory
-          when Project_context.is_local_dependency_canonical ~workspace
+          when Project_context.dependency_is_local_canonical dependency_context
                  directory
                && Config.exists_in_root directory ->
           if not (Hashtbl.mem visited directory) then (
@@ -91,8 +90,8 @@ let watch_context ~root ~prod ~features =
           (try
              visit
                ~is_local:
-                 (Project_context.is_local_dependency_canonical ~workspace
-                    directory)
+                 (Project_context.dependency_is_local_canonical
+                    dependency_context directory)
                ~features:dependency.features (Config.load_root directory)
            with Config.Error _ -> Hashtbl.replace visited directory ())
         | None -> watch_unresolved_dependency config.root dependency.name

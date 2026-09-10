@@ -5,7 +5,7 @@ type dependency_context
 
 val workspace_lock_root : string -> string
 val dependency_context : Config.t -> dependency_context
-val dependency_workspace : dependency_context -> string
+val dependency_is_local_canonical : dependency_context -> string -> bool
 
 val dependency_candidates_in :
   dependency_context -> string -> string -> string list
@@ -21,4 +21,3 @@ val require_dependency_directory :
 
 val relative_to : string -> string -> string
 val is_local_dependency_canonical : workspace:string -> string -> bool
-val is_local_dependency : workspace:string -> string -> bool

@@ -51,11 +51,18 @@ Project/workspace path policy now has an explicit `project_context.ml` owner
 instead of remaining embedded in `build.ml`. It owns workspace-root selection,
 contextual package-local/invocation/workspace `node_modules` lookup,
 standalone-only ancestor hoisting, dependency-config preflight,
-canonical locality classification, and project-relative presentation. `Format`
-and the OUnit2 project-context tests use that owner directly; `Build.Error` and
-`Build.Package_error` remain exception aliases so command exit classes and
-existing callers retain their contract. This removes roughly one hundred lines
-from `build.ml` without adding a facade layer or changing filesystem work.
+invocation-scoped canonical locality classification, and project-relative
+presentation. A listed workspace package can resolve siblings through the
+workspace without treating them as locally owned: their development graph,
+source-directory metadata, cleanup policy, formatting scope, and watcher roots
+remain excluded. Package discovery, build preparation, clean, format, and watch
+all consume the same context decision. Focused tests cover both a workspace-root
+invocation and a direct child-package invocation, while integration coverage
+keeps a sibling's missing development dependency dormant and inspects the
+resulting `.sourcedirs.json`. `Build.Error` and `Build.Package_error` remain
+exception aliases so command exit classes and existing callers retain their
+contract. This removes roughly one hundred lines from `build.ml` without adding
+a facade layer or changing filesystem work.
 
 Compiler-log lifecycle now lives in `compiler_log.ml`, matching Rust's
 `build/logs.rs` responsibility. The module owns log paths, initialization,
