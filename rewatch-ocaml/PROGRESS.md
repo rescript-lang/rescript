@@ -1572,6 +1572,15 @@ Three later Rust fixes were audited explicitly against the port:
   being parsed and discarded, and the clear-screen predicate is separately
   tested for interactive and redirected output. This closes the Rust unit-test
   inventory; it does not close the broader spinner/phase presentation gate.
+- CLI normalization now retains two non-obvious Clap behaviors: a version flag
+  is global only before an explicit subcommand, and the optional boolean value
+  for `--no-timing` consumes a following folder token and rejects it as a
+  non-boolean. Unit and executable-level tests cover both forms. Keep the
+  latter in the final inventory of compatibility behavior that appears odd.
+- Redirected config diagnostics now use the same single leading blank line as
+  Rust. The differential output gate combines deprecated aliases, a known
+  unsupported field, and an unknown field so spacing and ordering are compared
+  exactly rather than inferred from separate schema tests.
 - Interactive builds now also emit Rust-shaped cleanup, parse, and compile
   completion lines with three-step initial-build numbering, two-step watch
   rebuild numbering, phase-specific emojis, counts, and two-decimal timing.

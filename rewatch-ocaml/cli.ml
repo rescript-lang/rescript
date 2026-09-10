@@ -256,7 +256,9 @@ let normalize_argv argv =
   let rec normalize_short_booleans = function
   | [] -> []
   | "--" :: rest -> "--" :: rest
-  | ("-n" | "--no-timing") :: (("true" | "false") as value) :: rest ->
+  | ("-n" | "--no-timing") :: value :: rest
+    when value <> "--"
+         && (String.length value = 0 || value.[0] <> '-') ->
     ("--no-timing=" ^ value) :: normalize_short_booleans rest
   | ("-n" | "--no-timing") :: rest ->
     "--no-timing=true" :: normalize_short_booleans rest
@@ -270,6 +272,12 @@ let normalize_argv argv =
   | "--" :: rest -> "--" :: rest
   | ("-h" | "--help") :: rest -> "--help=plain" :: normalize_help rest
   | argument :: rest -> argument :: normalize_help rest
+  in
+  let rec reject_subcommand_version = function
+  | [] -> []
+  | "--" :: rest -> "--" :: rest
+  | "--version" :: rest -> "-V" :: reject_subcommand_version rest
+  | argument :: rest -> argument :: reject_subcommand_version rest
   in
   let rec split_leading_globals globals = function
   | argument :: rest when is_global argument ->
@@ -308,7 +316,9 @@ let normalize_argv argv =
         else if List.exists is_version globals then [executable; "--version"]
         else
           (match command_and_rest with
-          | command :: rest -> executable :: command :: (globals @ rest)
+          | command :: rest ->
+            executable :: command
+            :: reject_subcommand_version (globals @ rest)
           | [] -> assert false)
       | _ ->
         let globals, others = partition_implicit arguments in
