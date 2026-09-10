@@ -252,10 +252,11 @@ and expression_extra i ppf x attrs =
     line i ppf "Texp_constraint\n";
     attributes i ppf attrs;
     core_type i ppf ct
-  | Texp_coerce cto2 ->
+  | Texp_coerce {source; target} ->
     line i ppf "Texp_coerce\n";
     attributes i ppf attrs;
-    core_type i ppf cto2
+    line i ppf "source %a\n" Printtyp.type_expr source;
+    core_type i ppf target
   | Texp_open (ovf, m, _, _) ->
     line i ppf "Texp_open %a \"%a\"\n" fmt_override_flag ovf fmt_path m;
     attributes i ppf attrs
