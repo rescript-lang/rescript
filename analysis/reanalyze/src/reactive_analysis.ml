@@ -58,6 +58,18 @@ let process_cmt_infos ~config ~cmt_file_path cmt_infos : cmt_file_result option
       Dead_common.File_context.
         {source_path = source_file; module_name; is_interface = is_interface_}
     in
+    if config.Dce_config.cli.debug then
+      Log_.item "Scanning %s Source:%s@."
+        (match
+           config.Dce_config.cli.ci && not (Filename.is_relative cmt_file_path)
+         with
+        | true -> Filename.basename cmt_file_path
+        | false -> cmt_file_path)
+        (match
+           config.Dce_config.cli.ci && not (Filename.is_relative source_file)
+         with
+        | true -> source_file |> Filename.basename
+        | false -> source_file);
     let dce_data =
       if config.Dce_config.run.dce then
         Some
@@ -165,4 +177,8 @@ let collect_exception_results (collection : t) : Exception.file_result list =
       | Some {exception_data = Some data; _} -> results := data :: !results
       | _ -> ())
     collection;
+  (* The collection iterates in hash order. Sort so reported checks do not
+     depend on the order files happened to be processed in. *)
   !results
+  |> List.sort (fun (a : Exception.file_result) b ->
+      compare a.module_name b.module_name)

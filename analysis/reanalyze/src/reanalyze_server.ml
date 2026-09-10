@@ -96,23 +96,14 @@ module Server = struct
     let s = Gc.quick_stat () in
     mb_of_words s.live_words
 
-  type reactive_pipeline = {
-    dce_config: Dce_config.t;
-    reactive_collection: Reactive_analysis.t;
-    reactive_merge: Reactive_merge.t;
-    reactive_liveness: Reactive_liveness.t;
-    reactive_solver: Reactive_solver.t;
-  }
+  type reactive_pipeline = {dce_config: Dce_config.t; pipeline: Dce_pipeline.t}
 
   type server_state = {
     parse_argv: string array -> string option;
     run_analysis:
       dce_config:Dce_config.t ->
       cmt_root:string option ->
-      reactive_collection:Reactive_analysis.t option ->
-      reactive_merge:Reactive_merge.t option ->
-      reactive_liveness:Reactive_liveness.t option ->
-      reactive_solver:Reactive_solver.t option ->
+      pipeline:Dce_pipeline.t ->
       skip_file:(string -> bool) option ->
       ?file_stats:Reactive_analysis.processing_stats ->
       unit ->
@@ -268,38 +259,13 @@ Examples:
 
   let create_reactive_pipeline () : reactive_pipeline =
     let dce_config = Dce_config.current () in
-    let reactive_collection = Reactive_analysis.create ~config:dce_config in
-    let file_data_collection =
-      Reactive_analysis.to_file_data_collection reactive_collection
-    in
-    let reactive_merge = Reactive_merge.create file_data_collection in
-    let reactive_liveness = Reactive_liveness.create ~merged:reactive_merge in
-    let value_refs_from =
-      if dce_config.Dce_config.run.transitive then None
-      else Some reactive_merge.Reactive_merge.value_refs_from
-    in
-    let reactive_solver =
-      Reactive_solver.create ~decls:reactive_merge.Reactive_merge.decls
-        ~live:reactive_liveness.Reactive_liveness.live
-        ~annotations:reactive_merge.Reactive_merge.annotations ~value_refs_from
-        ~config:dce_config
-    in
-    {
-      dce_config;
-      reactive_collection;
-      reactive_merge;
-      reactive_liveness;
-      reactive_solver;
-    }
+    {dce_config; pipeline = Dce_pipeline.create ~config:dce_config}
 
   let init_state ~(parse_argv : string array -> string option)
       ~(run_analysis :
          dce_config:Dce_config.t ->
          cmt_root:string option ->
-         reactive_collection:Reactive_analysis.t option ->
-         reactive_merge:Reactive_merge.t option ->
-         reactive_liveness:Reactive_liveness.t option ->
-         reactive_solver:Reactive_solver.t option ->
+         pipeline:Dce_pipeline.t ->
          skip_file:(string -> bool) option ->
          ?file_stats:Reactive_analysis.processing_stats ->
          unit ->
@@ -308,8 +274,6 @@ Examples:
     with_cwd config.cwd (fun () ->
         (* Editor mode only: the server always behaves like `reanalyze -json`. *)
         let cmt_root = parse_argv [|"reanalyze"; "-json"|] in
-        (* Force reactive mode in server. *)
-        Cli.reactive := true;
         (* Keep server requests single-run and deterministic. *)
         if !Cli.runs <> 1 then
           errorf
@@ -378,14 +342,12 @@ Examples:
               Emit_json.start ();
               let p = state.pipeline in
               state.run_analysis ~dce_config:p.dce_config
-                ~cmt_root:state.cmt_root
-                ~reactive_collection:(Some p.reactive_collection)
-                ~reactive_merge:(Some p.reactive_merge)
-                ~reactive_liveness:(Some p.reactive_liveness)
-                ~reactive_solver:(Some p.reactive_solver) ~skip_file:None
+                ~cmt_root:state.cmt_root ~pipeline:p.pipeline ~skip_file:None
                 ~file_stats ();
               issue_count := Log_.Stats.get_issue_count ();
-              let d, l = Reactive_solver.stats ~t:p.reactive_solver in
+              let d, l =
+                Reactive_solver.stats ~t:p.pipeline.Dce_pipeline.solver
+              in
               dead_count := d;
               live_count := l;
               Log_.Stats.report ~config:p.dce_config;
@@ -455,10 +417,7 @@ Examples:
       ~(run_analysis :
          dce_config:Dce_config.t ->
          cmt_root:string option ->
-         reactive_collection:Reactive_analysis.t option ->
-         reactive_merge:Reactive_merge.t option ->
-         reactive_liveness:Reactive_liveness.t option ->
-         reactive_solver:Reactive_solver.t option ->
+         pipeline:Dce_pipeline.t ->
          skip_file:(string -> bool) option ->
          ?file_stats:Reactive_analysis.processing_stats ->
          unit ->
@@ -481,10 +440,7 @@ let server_cli ~(parse_argv : string array -> string option)
     ~(run_analysis :
        dce_config:Dce_config.t ->
        cmt_root:string option ->
-       reactive_collection:Reactive_analysis.t option ->
-       reactive_merge:Reactive_merge.t option ->
-       reactive_liveness:Reactive_liveness.t option ->
-       reactive_solver:Reactive_solver.t option ->
+       pipeline:Dce_pipeline.t ->
        skip_file:(string -> bool) option ->
        ?file_stats:Reactive_analysis.processing_stats ->
        unit ->

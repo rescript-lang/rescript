@@ -1,32 +1,5 @@
 open Dead_common
 
-module Path_map = Map.Make (struct
-  type t = Dce_path.t
-
-  let compare = Stdlib.compare
-end)
-
-let find_exception_from_decls (decls : Declarations.t) :
-    Dce_path.t -> Location.t option =
-  let index =
-    Declarations.fold
-      (fun _pos (decl : Decl.t) acc ->
-        match decl.Decl.decl_kind with
-        | Exception ->
-          (* Use raw decl positions: reference graph keys are raw positions. *)
-          let loc : Location.t =
-            {
-              Location.loc_start = decl.pos;
-              loc_end = decl.pos_end;
-              loc_ghost = false;
-            }
-          in
-          Path_map.add decl.path loc acc
-        | _ -> acc)
-      decls Path_map.empty
-  in
-  fun path -> Path_map.find_opt path index
-
 let add ~config ~decls ~file ~path ~loc ~(str_loc : Location.t)
     ~(module_loc : Location.t) name =
   addDeclaration_ ~config ~decls ~file ~pos_end:str_loc.loc_end

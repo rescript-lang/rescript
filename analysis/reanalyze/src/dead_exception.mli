@@ -1,8 +1,5 @@
 open Dead_common
 
-val find_exception_from_decls :
-  Declarations.t -> Dce_path.t -> Location.t option
-
 val add :
   config:Dce_config.t ->
   decls:Declarations.builder ->

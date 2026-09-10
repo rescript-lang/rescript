@@ -1,80 +1,5 @@
 let run_config = Run_config.run_config
 
-type cmt_file_result = {
-  dce_data: Dce_file_processing.file_data option;
-  exception_data: Exception.file_result option;
-}
-(** Result of processing a single cmt file *)
-
-(** Process a cmt file and return its results.
-    Conceptually: map over files, then merge results. *)
-let load_cmt_file ~config cmt_file_path : cmt_file_result option =
-  let cmt_infos = Cmt_format.read_cmt cmt_file_path in
-  let exclude_path source_file =
-    config.Dce_config.cli.exclude_paths
-    |> List.exists (fun prefix_ ->
-        let prefix =
-          match Filename.is_relative source_file with
-          | true -> prefix_
-          | false -> Filename.concat (Sys.getcwd ()) prefix_
-        in
-        String.length prefix <= String.length source_file
-        &&
-          try String.sub source_file 0 (String.length prefix) = prefix
-          with Invalid_argument _ -> false)
-  in
-  match cmt_infos.cmt_annots |> Find_source_file.cmt with
-  | Some source_file when not (exclude_path source_file) ->
-    let is_interface_ =
-      match cmt_infos.cmt_annots with
-      | Interface _ -> true
-      | _ -> Filename.check_suffix source_file "i"
-    in
-    let module_name = source_file |> Paths.get_module_name in
-    (* File context for DceFileProcessing (breaks cycle with DeadCommon) *)
-    let dce_file_context : Dce_file_processing.file_context =
-      {source_path = source_file; module_name; is_interface = is_interface_}
-    in
-    (* File context for Exception/Arnold (uses DeadCommon.FileContext) *)
-    let file_context =
-      Dead_common.File_context.
-        {source_path = source_file; module_name; is_interface = is_interface_}
-    in
-    if config.cli.debug then
-      Log_.item "Scanning %s Source:%s@."
-        (match config.cli.ci && not (Filename.is_relative cmt_file_path) with
-        | true -> Filename.basename cmt_file_path
-        | false -> cmt_file_path)
-        (match config.cli.ci && not (Filename.is_relative source_file) with
-        | true -> source_file |> Filename.basename
-        | false -> source_file);
-    (* Process file for DCE - return file_data *)
-    let dce_data =
-      if config.Dce_config.run.dce then
-        Some
-          (cmt_infos
-          |> Dce_file_processing.process_cmt_file ~config ~file:dce_file_context
-               ~cmt_file_path)
-      else None
-    in
-    (* Process file for Exception analysis *)
-    let exception_data =
-      if config.Dce_config.run.exception_ then
-        cmt_infos |> Exception.process_cmt ~file:file_context
-      else None
-    in
-    if config.Dce_config.run.termination then
-      cmt_infos |> Arnold.process_cmt ~config ~file:file_context;
-    Some {dce_data; exception_data}
-  | _ -> None
-
-type all_files_result = {
-  dce_data_list: Dce_file_processing.file_data list;
-  exception_results: Exception.file_result list;
-}
-(** Result of processing all cmt files *)
-
-(** Collect all cmt file paths to process *)
 let collect_cmt_file_paths ~cmt_root : string list =
   let ( +++ ) = Filename.concat in
   let paths = ref [] in
@@ -135,55 +60,6 @@ let collect_cmt_file_paths ~cmt_root : string list =
         if entry.also_scan_build_root then add_dir build_root_abs));
   !paths |> List.rev
 
-(** Process files sequentially *)
-let process_files_sequential ~config (cmt_file_paths : string list) :
-    all_files_result =
-  Timing.time_phase `FileLoading (fun () ->
-      let dce_data_list = ref [] in
-      let exception_results = ref [] in
-      cmt_file_paths
-      |> List.iter (fun cmt_file_path ->
-          match load_cmt_file ~config cmt_file_path with
-          | Some {dce_data; exception_data} -> (
-            (match dce_data with
-            | Some data -> dce_data_list := data :: !dce_data_list
-            | None -> ());
-            match exception_data with
-            | Some data -> exception_results := data :: !exception_results
-            | None -> ())
-          | None -> ());
-      {dce_data_list = !dce_data_list; exception_results = !exception_results})
-
-(** Process all cmt files and return results for DCE and Exception analysis.
-    Conceptually: map process_cmt_file over all files.
-    If file_stats is provided, it will be updated with processing statistics. *)
-let process_cmt_files ~config ~cmt_root ~reactive_collection ~skip_file
-    ?(file_stats : Reactive_analysis.processing_stats option) () :
-    all_files_result =
-  let cmt_file_paths =
-    let all = collect_cmt_file_paths ~cmt_root in
-    match skip_file with
-    | Some should_skip -> List.filter (fun p -> not (should_skip p)) all
-    | None -> all
-  in
-  (* Reactive mode: use incremental processing that skips unchanged files *)
-  match reactive_collection with
-  | Some collection ->
-    let result, stats =
-      Reactive_analysis.process_files ~collection ~config cmt_file_paths
-    in
-    (match file_stats with
-    | Some fs ->
-      fs.total_files <- stats.total_files;
-      fs.processed <- stats.processed;
-      fs.from_cache <- stats.from_cache
-    | None -> ());
-    {
-      dce_data_list = result.dce_data_list;
-      exception_results = result.exception_results;
-    }
-  | None -> process_files_sequential ~config cmt_file_paths
-
 (* Shuffle a list using Fisher-Yates algorithm *)
 let shuffle_list lst =
   let arr = Array.of_list lst in
@@ -196,237 +72,109 @@ let shuffle_list lst =
   done;
   Array.to_list arr
 
-let run_analysis ~dce_config ~cmt_root ~reactive_collection ~reactive_merge
-    ~reactive_liveness ~reactive_solver ~skip_file ?file_stats () =
-  (* Map: process each file -> list of file_data *)
-  let {dce_data_list; exception_results} =
-    process_cmt_files ~config:dce_config ~cmt_root ~reactive_collection
-      ~skip_file ?file_stats ()
-  in
-  (* Get exception results from reactive collection if available *)
-  let exception_results =
-    match reactive_collection with
-    | Some collection -> Reactive_analysis.collect_exception_results collection
-    | None -> exception_results
-  in
-  (* Optionally shuffle for order-independence testing *)
-  let dce_data_list =
+(** Process all cmt files and return results for DCE and Exception analysis.
+    Conceptually: map process_cmt_file over all files.
+    If file_stats is provided, it will be updated with processing statistics. *)
+let process_cmt_files ~config ~cmt_root ~collection ~skip_file
+    ?(file_stats : Reactive_analysis.processing_stats option) () :
+    Reactive_analysis.all_files_result =
+  let cmt_file_paths =
+    let all = collect_cmt_file_paths ~cmt_root in
+    let all =
+      match skip_file with
+      | Some should_skip -> List.filter (fun p -> not (should_skip p)) all
+      | None -> all
+    in
+    (* Order-independence testing: results must not depend on the order files
+       are processed in. Shuffle the paths, which is the order that reaches the
+       reactive collection. *)
     if !Cli.test_shuffle then (
       Random.self_init ();
-      if dce_config.Dce_config.cli.debug then
+      if config.Dce_config.cli.debug then
         Log_.item "Shuffling file order for order-independence test@.";
-      shuffle_list dce_data_list)
-    else dce_data_list
+      shuffle_list all)
+    else all
   in
-  (* Analysis phase: merge data and solve *)
+  let result, stats =
+    Reactive_analysis.process_files ~collection ~config cmt_file_paths
+  in
+  (match file_stats with
+  | Some fs ->
+    fs.total_files <- stats.total_files;
+    fs.processed <- stats.processed;
+    fs.from_cache <- stats.from_cache
+  | None -> ());
+  {
+    dce_data_list = result.dce_data_list;
+    exception_results = result.exception_results;
+  }
+
+let run_analysis ~dce_config ~cmt_root ~(pipeline : Dce_pipeline.t) ~skip_file
+    ?file_stats () =
+  let {Dce_pipeline.collection; merged; liveness; solver} = pipeline in
+  (* Map: process each file -> the reactive collection *)
+  ignore
+    (process_cmt_files ~config:dce_config ~cmt_root ~collection ~skip_file
+       ?file_stats ());
+  let exception_results =
+    Reactive_analysis.collect_exception_results collection
+  in
+  (* Analysis phase: solve over the reactive collections *)
   let analysis_result =
     if dce_config.Dce_config.run.dce then
-      (* Merging phase: combine all builders -> immutable data *)
-      let ann_store, decl_store, cross_file_store, ref_store =
+      let ann_store =
         Timing.time_phase `Merging (fun () ->
-            (* Use reactive merge if available, otherwise list-based merge *)
-            let ann_store, decl_store, cross_file_store =
-              match reactive_merge with
-              | Some merged ->
-                (* Reactive mode: use stores directly, skip freeze! *)
-                ( Annotation_store.of_reactive merged.Reactive_merge.annotations,
-                  Declaration_store.of_reactive merged.Reactive_merge.decls,
-                  Cross_file_items_store.of_reactive
-                    merged.Reactive_merge.cross_file_items )
-              | None ->
-                (* Non-reactive mode: freeze into data, wrap in store *)
-                let decls =
-                  Declarations.merge_all
-                    (dce_data_list
-                    |> List.map (fun fd -> fd.Dce_file_processing.decls))
-                in
-                ( Annotation_store.of_frozen
-                    (File_annotations.merge_all
-                       (dce_data_list
-                       |> List.map (fun fd ->
-                           fd.Dce_file_processing.annotations))),
-                  Declaration_store.of_frozen decls,
-                  Cross_file_items_store.of_frozen
-                    (Cross_file_items.merge_all
-                       (dce_data_list
-                       |> List.map (fun fd -> fd.Dce_file_processing.cross_file)
-                       )) )
-            in
-            (* Compute refs.
-               In reactive mode, use stores directly (skip freeze!).
-               In non-reactive mode, use the imperative processing. *)
-            let ref_store =
-              match reactive_merge with
-              | Some merged ->
-                (* Reactive mode: use stores directly *)
-                Reference_store.of_reactive
-                  ~value_refs_from:merged.value_refs_from
-                  ~type_refs_from:merged.type_refs_from
-                  ~type_deps:merged.type_deps
-                  ~exception_refs:merged.exception_refs
-              | None ->
-                (* Non-reactive mode: build refs imperatively *)
-                (* Need Declarations.t for type deps processing *)
-                let decls =
-                  match decl_store with
-                  | Declaration_store.Frozen d -> d
-                  | Declaration_store.Reactive _ ->
-                    failwith
-                      "unreachable: non-reactive path with reactive store"
-                in
-                (* Need CrossFileItems.t for exception refs processing *)
-                let cross_file =
-                  match cross_file_store with
-                  | Cross_file_items_store.Frozen cfi -> cfi
-                  | Cross_file_items_store.Reactive _ ->
-                    failwith
-                      "unreachable: non-reactive path with reactive store"
-                in
-                let refs_builder = References.create_builder () in
-                let file_deps_builder = File_deps.create_builder () in
-                (match reactive_collection with
-                | Some collection ->
-                  Reactive_analysis.iter_file_data collection (fun fd ->
-                      References.merge_into_builder
-                        ~from:fd.Dce_file_processing.refs ~into:refs_builder;
-                      File_deps.merge_into_builder
-                        ~from:fd.Dce_file_processing.file_deps
-                        ~into:file_deps_builder)
-                | None ->
-                  dce_data_list
-                  |> List.iter (fun fd ->
-                      References.merge_into_builder
-                        ~from:fd.Dce_file_processing.refs ~into:refs_builder;
-                      File_deps.merge_into_builder
-                        ~from:fd.Dce_file_processing.file_deps
-                        ~into:file_deps_builder));
-                (* Compute type-label dependencies after merge *)
-                Dead_type.process_type_label_dependencies ~config:dce_config
-                  ~decls ~refs:refs_builder
-                  ~coercions:cross_file.Cross_file_items.coercions;
-                let find_exception =
-                  Dead_exception.find_exception_from_decls decls
-                in
-                (* Process cross-file exception refs *)
-                Cross_file_items.process_exception_refs cross_file
-                  ~refs:refs_builder ~file_deps:file_deps_builder
-                  ~find_exception ~config:dce_config;
-                (* Freeze refs for solver *)
-                let refs = References.freeze_builder refs_builder in
-                Reference_store.of_frozen refs
-            in
-            (ann_store, decl_store, cross_file_store, ref_store))
+            Annotation_store.of_reactive merged.Reactive_merge.annotations)
       in
-      (* Solving phase: run the solver and collect issues *)
       Timing.time_phase `Solving (fun () ->
-          match reactive_solver with
-          | Some solver ->
-            (* Reactive solver: iterate dead_decls + live_decls *)
-            let t0 = Unix.gettimeofday () in
-            let dead_code_issues =
-              Reactive_solver.collect_issues ~t:solver ~config:dce_config
-                ~ann_store
+          let t0 = Unix.gettimeofday () in
+          let dead_code_issues =
+            Reactive_solver.collect_issues ~t:solver ~config:dce_config
+              ~ann_store
+          in
+          let t1 = Unix.gettimeofday () in
+          (* Optional args issues, for live declarations only *)
+          let optional_args_issues =
+            let cross_file_store =
+              Cross_file_items_store.of_reactive
+                merged.Reactive_merge.cross_file_items
             in
-            let t1 = Unix.gettimeofday () in
-            (* Collect optional args issues from live declarations *)
-            let optional_args_issues =
-              match reactive_merge with
-              | Some merged ->
-                (* Create CrossFileItemsStore from reactive collection *)
-                let cross_file_store =
-                  Cross_file_items_store.of_reactive
-                    merged.Reactive_merge.cross_file_items
-                in
-                (* Compute optional args state using reactive liveness check.
-                   Uses ReactiveSolver.is_pos_live which checks the reactive live collection
-                   instead of mutable resolvedDead field. *)
-                let is_live pos = Reactive_solver.is_pos_live ~t:solver pos in
-                let find_decl pos =
-                  Reactive.get merged.Reactive_merge.decls pos
-                in
-                let optional_args_state =
-                  Cross_file_items_store.compute_optional_args_state
-                    cross_file_store ~find_decl ~is_live
-                in
-                let optional_arg_value_escapes =
-                  Cross_file_items_store.compute_live_optional_arg_value_escapes
-                    cross_file_store ~is_live
-                in
-                (* Iterate live declarations and check for optional args issues *)
-                let issues = ref [] in
-                Reactive_solver.iter_live_decls ~t:solver (fun decl ->
-                    let decl_issues =
-                      Dead_optional_args.check ~optional_args_state
-                        ~optional_arg_value_escapes ~ann_store
-                        ~config:dce_config decl
-                    in
-                    issues := List.rev_append decl_issues !issues);
-                List.rev !issues
-              | None -> []
-            in
-            let t2 = Unix.gettimeofday () in
-            let all_issues = dead_code_issues @ optional_args_issues in
-            let num_dead, num_live = Reactive_solver.stats ~t:solver in
-            if !Cli.timing then (
-              Printf.eprintf
-                "  ReactiveSolver: dead_code=%.3fms opt_args=%.3fms (dead=%d, \
-                 live=%d, issues=%d)\n"
-                ((t1 -. t0) *. 1000.0)
-                ((t2 -. t1) *. 1000.0)
-                num_dead num_live (List.length all_issues);
-              (match reactive_liveness with
-              | Some liveness -> Reactive_liveness.print_stats ~t:liveness
-              | None -> ());
-              Reactive_solver.print_stats ~t:solver;
-              (* Print full reactive node stats, including Top-N by time. *)
-              Reactive.print_stats ());
-            if !Cli.mermaid then
-              Printf.eprintf "\n%s\n" (Reactive.to_mermaid ());
-            Some (Analysis_result.add_issues Analysis_result.empty all_issues)
-          | None ->
-            (* Non-reactive path: use old solver with optional args *)
-            let empty_optional_args_state = Optional_args_state.create () in
-            let analysis_result_core =
-              Dead_common.solve_dead ~ann_store ~decl_store ~ref_store
-                ~optional_args_state:empty_optional_args_state
-                ~config:dce_config
-                ~check_optional_arg:(fun
-                    ~optional_args_state:_ ~ann_store:_ ~config:_ _ -> [])
-            in
-            (* Compute liveness-aware optional args state *)
-            let is_live pos =
-              match Declaration_store.find_opt decl_store pos with
-              | Some decl -> Decl.is_live decl
-              | None -> true
-            in
+            let is_live pos = Reactive_solver.is_pos_live ~t:solver pos in
+            let find_decl pos = Reactive.get merged.Reactive_merge.decls pos in
             let optional_args_state =
               Cross_file_items_store.compute_optional_args_state
-                cross_file_store
-                ~find_decl:(Declaration_store.find_opt decl_store)
-                ~is_live
+                cross_file_store ~find_decl ~is_live
             in
             let optional_arg_value_escapes =
               Cross_file_items_store.compute_live_optional_arg_value_escapes
                 cross_file_store ~is_live
             in
-            (* Collect optional args issues only for live declarations *)
-            let optional_args_issues =
-              Declaration_store.fold
-                (fun _pos decl acc ->
-                  if Decl.is_live decl then
-                    let issues =
-                      Dead_optional_args.check ~optional_args_state
-                        ~optional_arg_value_escapes ~ann_store
-                        ~config:dce_config decl
-                    in
-                    List.rev_append issues acc
-                  else acc)
-                decl_store []
-              |> List.rev
-            in
-            Some
-              (Analysis_result.add_issues analysis_result_core
-                 optional_args_issues))
+            let issues = ref [] in
+            Reactive_solver.iter_live_decls ~t:solver (fun decl ->
+                let decl_issues =
+                  Dead_optional_args.check ~optional_args_state
+                    ~optional_arg_value_escapes ~ann_store ~config:dce_config
+                    decl
+                in
+                issues := List.rev_append decl_issues !issues);
+            List.rev !issues
+          in
+          let t2 = Unix.gettimeofday () in
+          let all_issues = dead_code_issues @ optional_args_issues in
+          let num_dead, num_live = Reactive_solver.stats ~t:solver in
+          if !Cli.timing then (
+            Printf.eprintf
+              "  ReactiveSolver: dead_code=%.3fms opt_args=%.3fms (dead=%d, \
+               live=%d, issues=%d)\n"
+              ((t1 -. t0) *. 1000.0)
+              ((t2 -. t1) *. 1000.0)
+              num_dead num_live (List.length all_issues);
+            Reactive_liveness.print_stats ~t:liveness;
+            Reactive_solver.print_stats ~t:solver;
+            (* Print full reactive node stats, including Top-N by time. *)
+            Reactive.print_stats ());
+          if !Cli.mermaid then Printf.eprintf "\n%s\n" (Reactive.to_mermaid ());
+          Some (Analysis_result.add_issues Analysis_result.empty all_issues))
     else None
   in
   (* Reporting phase *)
@@ -452,47 +200,10 @@ let run_analysis_and_report ~cmt_root =
   if !Cli.json then Emit_json.start ();
   let dce_config = Dce_config.current () in
   let num_runs = max 1 !Cli.runs in
-  (* Create reactive collection once, reuse across runs *)
-  let reactive_collection =
-    if !Cli.reactive then Some (Reactive_analysis.create ~config:dce_config)
-    else None
-  in
-  (* Create reactive merge once if reactive mode is enabled.
-     This automatically updates when reactive_collection changes. *)
-  let reactive_merge =
-    match reactive_collection with
-    | Some collection ->
-      let file_data_collection =
-        Reactive_analysis.to_file_data_collection collection
-      in
-      Some (Reactive_merge.create file_data_collection)
-    | None -> None
-  in
-  (* Create reactive liveness. This is created before files are processed,
-     so it receives deltas as files are processed incrementally. *)
-  let reactive_liveness =
-    match reactive_merge with
-    | Some merged -> Some (Reactive_liveness.create ~merged)
-    | None -> None
-  in
-  (* Create reactive solver once - sets up the reactive pipeline:
-     decls + live → dead_decls → issues
-     All downstream collections update automatically when inputs change. *)
-  let reactive_solver =
-    match (reactive_merge, reactive_liveness) with
-    | Some merged, Some liveness_result ->
-      (* Pass value_refs_from for hasRefBelow (needed when transitive=false) *)
-      let value_refs_from =
-        if dce_config.Dce_config.run.transitive then None
-        else Some merged.Reactive_merge.value_refs_from
-      in
-      Some
-        (Reactive_solver.create ~decls:merged.Reactive_merge.decls
-           ~live:liveness_result.Reactive_liveness.live
-           ~annotations:merged.Reactive_merge.annotations ~value_refs_from
-           ~config:dce_config)
-    | _ -> None
-  in
+  (* One reactive pipeline, created once and reused across runs. Downstream
+     collections update automatically as files are processed. *)
+  let pipeline = Dce_pipeline.create ~config:dce_config in
+  let {Dce_pipeline.collection; liveness; solver} = pipeline in
   (* Collect CMT file paths once for churning *)
   let cmt_file_paths =
     if !Cli.churn > 0 then Some (collect_cmt_file_paths ~cmt_root) else None
@@ -516,8 +227,8 @@ let run_analysis_and_report ~cmt_root =
       Printf.eprintf "\n=== Run %d/%d ===\n%!" run num_runs;
     (* Churn: alternate between remove and add phases *)
     (if !Cli.churn > 0 then
-       match (reactive_collection, cmt_file_paths) with
-       | Some collection, Some paths ->
+       match cmt_file_paths with
+       | Some paths ->
          Reactive.reset_stats ();
          if run > 1 && !removed_files <> [] then (
            (* Add back previously removed files *)
@@ -539,12 +250,8 @@ let run_analysis_and_report ~cmt_root =
            if !Cli.timing then (
              Printf.eprintf "  Added back %d files (%.3fs)\n%!" processed
                elapsed;
-             (match reactive_liveness with
-             | Some liveness -> Reactive_liveness.print_stats ~t:liveness
-             | None -> ());
-             match reactive_solver with
-             | Some solver -> Reactive_solver.print_stats ~t:solver
-             | None -> ()))
+             Reactive_liveness.print_stats ~t:liveness;
+             Reactive_solver.print_stats ~t:solver))
          else if run > 1 then (
            (* Remove new random files *)
            let num_churn = min !Cli.churn (List.length paths) in
@@ -566,12 +273,8 @@ let run_analysis_and_report ~cmt_root =
            churn_times := elapsed :: !churn_times;
            if !Cli.timing then (
              Printf.eprintf "  Removed %d files (%.3fs)\n%!" removed elapsed;
-             (match reactive_liveness with
-             | Some liveness -> Reactive_liveness.print_stats ~t:liveness
-             | None -> ());
-             match reactive_solver with
-             | Some solver -> Reactive_solver.print_stats ~t:solver
-             | None -> ()))
+             Reactive_liveness.print_stats ~t:liveness;
+             Reactive_solver.print_stats ~t:solver))
        | _ -> ());
     (* Skip removed files in reactive mode *)
     let skip_file =
@@ -579,8 +282,7 @@ let run_analysis_and_report ~cmt_root =
         Some (fun path -> Hashtbl.mem removed_set path)
       else None
     in
-    run_analysis ~dce_config ~cmt_root ~reactive_collection ~reactive_merge
-      ~reactive_liveness ~reactive_solver ~skip_file ();
+    run_analysis ~dce_config ~cmt_root ~pipeline ~skip_file ();
     (* Report issue count with diff *)
     let current_count = Log_.Stats.get_issue_count () in
     if !Cli.churn > 0 then (
@@ -748,10 +450,6 @@ let parse_argv (argv : string array) : string option =
       ( "-mermaid",
         Set Cli.mermaid,
         "Output Mermaid diagram of reactive pipeline" );
-      ( "-reactive",
-        Set Cli.reactive,
-        "Use reactive analysis (caches processed file_data, skips unchanged \
-         files)" );
       ( "-runs",
         Int (fun n -> Cli.runs := n),
         "n Run analysis n times (for benchmarking cache effectiveness)" );
@@ -788,6 +486,7 @@ let cli () =
 module Reanalyze_server = Reanalyze_server
 
 module Run_config = Run_config
+module Dce_pipeline = Dce_pipeline
 module Dce_config = Dce_config
 module Log_ = Log_
 module Yojson_helpers = Yojson_helpers

@@ -37,6 +37,7 @@ type t = {
   (* refs_to direction: target -> sources *)
   same_path_refs: (Lexing.position, Pos_set.t) Reactive.t;
   cross_file_refs: (Lexing.position, Pos_set.t) Reactive.t;
+  manifest_refs: (Lexing.position, Pos_set.t) Reactive.t;
   all_type_refs: (Lexing.position, Pos_set.t) Reactive.t;
   impl_to_intf_refs_path2: (Lexing.position, Pos_set.t) Reactive.t;
   intf_to_impl_refs: (Lexing.position, Pos_set.t) Reactive.t;
@@ -192,6 +193,36 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
       ~merge:Pos_set.union ()
   in
 
+  (* Re-exported types [type y = x = {...}]: a label of the re-exporting type
+     and the label of the same name on the manifest type are the same field, so
+     liveness flows both ways. The label declarations carry the manifest type
+     path; look the corresponding label up by its full path. *)
+  let manifest_decls =
+    Reactive.flat_map ~name:"type_deps.manifest_decls" decls
+      ~f:(fun _pos (decl : Decl.t) ->
+        match (decl.decl_kind, decl.manifest_type_path, decl.path) with
+        | (RecordLabel | VariantCase), Some manifest_type_path, field_name :: _
+          ->
+          [(decl.pos, (decl.pos, field_name :: manifest_type_path))]
+        | _ -> [])
+      ()
+  in
+
+  let manifest_refs =
+    Reactive.join ~name:"type_deps.manifest_refs" manifest_decls decl_by_path
+      ~key_of:(fun _pos (_pos_current, manifest_field_path) ->
+        manifest_field_path)
+      ~f:(fun _pos (pos_current, _) manifest_decls_opt ->
+        match manifest_decls_opt with
+        | Some (manifest_info :: _) when manifest_info.pos <> pos_current ->
+          [
+            (pos_current, Pos_set.singleton manifest_info.pos);
+            (manifest_info.pos, Pos_set.singleton pos_current);
+          ]
+        | _ -> [])
+      ~merge:Pos_set.union ()
+  in
+
   (* Cross-file refs are the combination of:
      - impl_to_intf_refs (path1 matches)
      - impl_to_intf_refs_path2 (path2 fallback)
@@ -199,7 +230,7 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
   let cross_file_refs = impl_to_intf_refs in
 
   (* All type refs = same_path_refs + all cross-file sources.
-     We expose these separately and merge in freeze_refs. *)
+     We expose these separately and combine them here. *)
   let all_type_refs = same_path_refs in
 
   (* Create refs_from by combining and inverting all refs_to sources.
@@ -215,7 +246,11 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
         Reactive.union ~name:"type_deps.u2" u1 impl_to_intf_refs_path2
           ~merge:Pos_set.union ()
       in
-      Reactive.union ~name:"type_deps.combined_refs_to" u2 intf_to_impl_refs
+      let u3 =
+        Reactive.union ~name:"type_deps.u3" u2 intf_to_impl_refs
+          ~merge:Pos_set.union ()
+      in
+      Reactive.union ~name:"type_deps.combined_refs_to" u3 manifest_refs
         ~merge:Pos_set.union ()
     in
     (* Invert the combined refs_to to refs_from *)
@@ -230,19 +265,9 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
     decl_by_path;
     same_path_refs;
     cross_file_refs;
+    manifest_refs;
     all_type_refs;
     impl_to_intf_refs_path2;
     intf_to_impl_refs;
     all_type_refs_from;
   }
-
-(** {1 Freezing for solver} *)
-
-(** Add all type refs to a References.builder *)
-let add_to_refs_builder (t : t) ~(refs : References.builder) : unit =
-  Reactive.iter
-    (fun pos_to pos_from_set ->
-      Pos_set.iter
-        (fun pos_from -> References.add_type_ref refs ~pos_to ~pos_from)
-        pos_from_set)
-    t.all_type_refs

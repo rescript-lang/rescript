@@ -1,41 +1,22 @@
-(** Abstraction over cross-file items storage.
+(** Iteration over cross-file items held in the reactive collection. *)
 
-    Allows iteration over optional arg calls and function refs from either:
-    - [Frozen]: Collected [CrossFileItems.t] 
-    - [Reactive]: Direct iteration over reactive collection (no intermediate allocation) *)
+type t = (string, Cross_file_items.t) Reactive.t
 
-type t =
-  | Frozen of Cross_file_items.t
-  | Reactive of (string, Cross_file_items.t) Reactive.t
+let of_reactive reactive = reactive
 
-let of_frozen cfi = Frozen cfi
-
-let of_reactive reactive = Reactive reactive
+let iter_items t f =
+  Reactive.iter (fun _path (items : Cross_file_items.t) -> f items) t
 
 let iter_optional_arg_calls t f =
-  match t with
-  | Frozen cfi -> List.iter f cfi.Cross_file_items.optional_arg_calls
-  | Reactive r ->
-    Reactive.iter
-      (fun _path items -> List.iter f items.Cross_file_items.optional_arg_calls)
-      r
+  iter_items t (fun items ->
+      List.iter f items.Cross_file_items.optional_arg_calls)
 
 let iter_function_refs t f =
-  match t with
-  | Frozen cfi -> List.iter f cfi.Cross_file_items.function_refs
-  | Reactive r ->
-    Reactive.iter
-      (fun _path items -> List.iter f items.Cross_file_items.function_refs)
-      r
+  iter_items t (fun items -> List.iter f items.Cross_file_items.function_refs)
 
 let iter_optional_arg_value_escapes t f =
-  match t with
-  | Frozen cfi -> List.iter f cfi.Cross_file_items.optional_arg_value_escapes
-  | Reactive r ->
-    Reactive.iter
-      (fun _path items ->
-        List.iter f items.Cross_file_items.optional_arg_value_escapes)
-      r
+  iter_items t (fun items ->
+      List.iter f items.Cross_file_items.optional_arg_value_escapes)
 
 (** Compute optional args state from calls and function references.
     Returns a map from position to final OptionalArgs.t state.
