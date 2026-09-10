@@ -1527,6 +1527,31 @@ Three later Rust fixes were audited explicitly against the port:
   presented during final reporting, after the build summary and before config
   diagnostics. This matches Rust's deterministic snapshot order without
   delaying failure detection; the complete canonical suite protects it.
+- Namespace dependency resolution now retains each complete AST-header entry
+  until the graph resolver and ignores an entry equal to the source package's
+  own namespace. The compiler records `OL.Coordinate` as the imprecise header
+  dependency `OL`; expanding that marker into every `OL` member created false
+  edges and could turn a valid `Geometry -> Extent -> Coordinate` graph into an
+  `Extent <-> Geometry` cycle. A focused clean-build regression combines the
+  ordinary `Coordinate` dependency, the qualified `OL.Coordinate` reference,
+  and the reverse `Geometry -> Extent` edge. Resolver candidates using the
+  current namespace suffix now also apply the same declared-package visibility
+  check as other candidates.
+- A source that refers to a same-package module *only* through its namespace
+  still exposes a limitation in the compiler dependency header: the exact
+  member name is unavailable, so neither implementation can schedule that CMI
+  deterministically on a clean tree. A synthetic reproduction fails in Rust as
+  well when `Extent` contains only `OL.Coordinate` and `Coordinate-OL.cmi` does
+  not yet exist. Fixing this reliably belongs in the compiler dependency
+  format/extractor rather than guessing source dependencies in rewatch; keep it
+  in the final corrected-Rust/future-work inventory.
+- Visible packages that publish the same compiler namespace artifact are now
+  rejected during graph initialization. The check is scoped to a package and
+  its direct dependency include paths, so unrelated dependency branches may
+  reuse a namespace. This deliberately improves on the current Rust behavior,
+  which reaches compilation and can load the wrong namespace map or report an
+  unrelated missing module. Focused coverage requires the early diagnostic to
+  identify the shared namespace and both packages.
 - Parser and compiler arguments now follow Rust's phase-specific ordering, and
   `compiler-args` reports the parser's actual path relative to `lib/bs`.
   PPXs are owned by parsing only: known GraphQL, Spice, Relay, Formality, and
@@ -1696,6 +1721,12 @@ Three later Rust fixes were audited explicitly against the port:
   non-Windows binary package that carries the OCaml executable includes
   `THIRD_PARTY_NOTICES_REWATCH.md`, covering Cmdliner, Yojson, Spawn, Luv,
   libuv, ctypes, and integers; a dry-run package build confirms its inclusion.
+  Luv's vendored-libuv rule currently drops the ARM64 musl compiler's
+  `-mno-outline-atomics` flag, so CI applies a repository-local opam package
+  patch that restores the flag only for that target. We should contribute that
+  build fix upstream. Luv 0.5.14 vendors libuv 1.48.0 while newer 1.x releases
+  exist; evaluating and contributing a vendored-libuv update upstream is a
+  separate follow-up, not part of this compatibility port.
 
 ## Next actions
 
