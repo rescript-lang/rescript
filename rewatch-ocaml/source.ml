@@ -29,11 +29,10 @@ let module_name path =
   |> String.capitalize_ascii
 
 let is_non_exotic_module_name name =
-  let is_ascii_uppercase character = character >= 'A' && character <= 'Z' in
-  let is_ascii_alphanumeric character =
-    character >= 'A' && character <= 'Z'
-    || character >= 'a' && character <= 'z'
-    || character >= '0' && character <= '9'
+  let is_ascii_uppercase = function 'A' .. 'Z' -> true | _ -> false in
+  let is_ascii_alphanumeric = function
+    | 'A' .. 'Z' | 'a' .. 'z' | '0' .. '9' -> true
+    | _ -> false
   in
   let rec valid_tail index =
     if index = String.length name then true
