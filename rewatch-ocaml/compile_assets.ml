@@ -121,3 +121,6 @@ let refresh_cmi state ~key ~path =
 
 let refresh_cmt state ~key ~path =
   replace_from_path state.cmt_by_module key path
+
+let refresh_ast state ~source ~path =
+  replace_from_path state.ast_by_source source path

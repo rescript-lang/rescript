@@ -1,5 +1,8 @@
 exception Stop
 
+type change_kind = Added | Removed | Modified
+type change = {path: string; kind: change_kind}
+
 type source_root = {directory: string; recursive: bool}
 
 let is_directory path =
@@ -301,6 +304,35 @@ let snapshot_with_symlink_paths digest_cache ~matches_source roots sources
   in
   (snapshot, paths)
 
+let changes_between before after =
+  (* A content snapshot deliberately treats native events only as wakeups. The
+     before/after membership is still enough to distinguish an in-place edit,
+     which can reuse the build graph, from a structural change that requires
+     rediscovery. *)
+  let before_by_path = Hashtbl.create (List.length before) in
+  let after_by_path = Hashtbl.create (List.length after) in
+  List.iter
+    (fun ((path, _, _, _) as entry) -> Hashtbl.replace before_by_path path entry)
+    before;
+  List.iter
+    (fun ((path, _, _, _) as entry) -> Hashtbl.replace after_by_path path entry)
+    after;
+  let changes = ref [] in
+  Hashtbl.iter
+    (fun path before_entry ->
+      match Hashtbl.find_opt after_by_path path with
+      | None -> changes := {path; kind = Removed} :: !changes
+      | Some after_entry when before_entry <> after_entry ->
+        changes := {path; kind = Modified} :: !changes
+      | Some _ -> ())
+    before_by_path;
+  Hashtbl.iter
+    (fun path _ ->
+      if not (Hashtbl.mem before_by_path path) then
+        changes := {path; kind = Added} :: !changes)
+    after_by_path;
+  List.sort (fun first second -> String.compare first.path second.path) !changes
+
 let path_in_scope roots sources unresolved path =
   let name = Filename.basename path in
   let is_control =
@@ -415,7 +447,7 @@ let run_locked ~root ~prod ~features ~filter ~clear_screen ~show_progress ~build
           snapshot digest_cache ~matches_source:matches_filter build_roots
             build_sources build_unresolved
         in
-        build ~poll;
+        build ~poll ~changes:(Some (changes_between previous current));
         let new_roots, _, new_sources, new_unresolved =
           watch_context ~root ~prod ~features
         in
@@ -472,7 +504,7 @@ let run_locked ~root ~prod ~features ~filter ~clear_screen ~show_progress ~build
         snapshot digest_cache ~matches_source:matches_filter build_roots
           build_sources build_unresolved
       in
-      build ~poll;
+      build ~poll ~changes:(Some (changes_between previous current));
       let new_roots, paths, new_sources, new_unresolved =
         watch_context ~root ~prod ~features
       in
@@ -529,7 +561,7 @@ let run_locked ~root ~prod ~features ~filter ~clear_screen ~show_progress ~build
       snapshot digest_cache ~matches_source:matches_filter roots sources
         unresolved
     in
-    build ~poll;
+    build ~poll ~changes:None;
     let roots, paths, sources, unresolved =
       watch_context ~root ~prod ~features
     in

@@ -59,3 +59,5 @@ type t = {
 }
 
 val create : warning_state:Warning_state.t -> poll:(unit -> unit) -> t
+
+val create_incremental : previous:t -> poll:(unit -> unit) -> t

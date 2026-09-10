@@ -4,8 +4,18 @@ exception Stop_watch = Watcher.Stop
 exception Build_failure = Compiler_scheduler.Build_failure
 exception Parse_failure = Package_build.Parse_failure
 exception Reported_failure of string
+exception Full_rebuild_required
 
 open Build_types
+
+type retained_build = {root_config: Config.t; stats: Build_types.t}
+
+type incremental_source = {
+  package: Build_types.graph_package;
+  module_: Source.module_;
+  relative_path: string;
+  absolute_path: string;
+}
 
 let project_root folder =
   if not (Sys.file_exists folder) then
@@ -125,20 +135,123 @@ let write_build_ninja stats =
       close_out channel)
     stats.graph_packages
 
-let run_with_warning_state ~poll ~warning_state ~compilation_kind ~no_timing
-    ~seen ~verbosity ~folder ~prod ~features ~warn_error ~watch ~after_build
-    ~filter =
+let incremental_sources previous changes =
+  let sources_by_path = Hashtbl.create 64 in
+  Hashtbl.iter
+    (fun _ package ->
+      List.iter
+        (fun module_ ->
+          (module_.Source.implementation
+          :: Option.to_list module_.Source.interface)
+          |> List.iter (fun relative_path ->
+               let absolute_path =
+                 Filename.concat package.graph_root relative_path
+               in
+               Hashtbl.replace sources_by_path
+                 (Platform.normalize_path_for_comparison absolute_path)
+                 {package; module_; relative_path; absolute_path}))
+        package.graph_modules)
+    previous.stats.graph_packages;
+  changes
+  |> List.map (fun (change : Watcher.change) ->
+       match change.kind with
+       | Watcher.Added | Watcher.Removed -> raise Full_rebuild_required
+       | Watcher.Modified -> (
+         match
+           Hashtbl.find_opt sources_by_path
+             (Platform.normalize_path_for_comparison change.path)
+         with
+         | Some source -> source
+         | None -> raise Full_rebuild_required))
+
+let prepare_incremental previous changes stats =
+  let sources = incremental_sources previous changes in
+  let bsc =
+    match stats.compiler_context with
+    | Some context -> context.bsc_path
+    | None -> raise Full_rebuild_required
+  in
+  let started_at = Unix.gettimeofday () in
+  let results =
+    sources
+    |> List.map (fun source ->
+         Compiler_process.parse_job ~bsc
+           ~build_dir:source.package.graph_build_dir
+           ~config:source.package.graph_compile_config source.relative_path)
+    |> Process.run_parallel ~poll:stats.poll
+  in
+  let affected_modules = Hashtbl.create (List.length sources) in
+  List.iter2
+    (fun source result ->
+      Hashtbl.replace stats.forced_parse_paths source.absolute_path ();
+      Hashtbl.replace stats.preparse_results source.absolute_path result;
+      if Process.succeeded result && result.stderr <> "" then
+        Hashtbl.replace stats.preparse_stderr source.absolute_path result.stderr;
+      (try
+         let modified = (Unix.stat source.absolute_path).Unix.st_mtime in
+         Hashtbl.replace source.package.graph_source_mtimes source.relative_path
+           modified
+       with Unix.Unix_error _ | Sys_error _ -> raise Full_rebuild_required);
+      let key =
+        Source.compiler_basename source.package.graph_compile_config
+          source.module_.Source.name
+      in
+      Hashtbl.replace affected_modules key (source.package, source.module_))
+    sources results;
+  Hashtbl.iter
+    (fun key (package, module_) ->
+      let changed_parse_failed =
+        sources
+        |> List.exists (fun source ->
+             source.module_ == module_
+             &&
+             match
+               Hashtbl.find_opt stats.preparse_results source.absolute_path
+             with
+             | Some result -> not (Process.succeeded result)
+             | None -> true)
+      in
+      if not changed_parse_failed then (
+        let dependencies path =
+          Compiler_process.ast_dependencies ~build_dir:package.graph_build_dir
+            (Source.ast_path path)
+        in
+        let raw_dependencies =
+          List.sort_uniq String.compare
+            (dependencies module_.Source.implementation
+            @
+            match module_.Source.interface with
+            | None -> []
+            | Some path -> dependencies path)
+        in
+        match Hashtbl.find_opt stats.global_raw_dependencies key with
+        | Some previous when previous = raw_dependencies -> ()
+        | Some _ | None -> raise Full_rebuild_required))
+    affected_modules;
+  stats.parse_seconds <- Unix.gettimeofday () -. started_at
+
+let run_with_warning_state ~poll ~warning_state ~previous ~changes
+    ~compilation_kind ~no_timing ~seen ~verbosity ~folder ~prod ~features
+    ~warn_error ~watch ~after_build ~filter =
   let started_at = Unix.gettimeofday () in
   let interactive = Unix.isatty Unix.stdout && Unix.isatty Unix.stderr in
   let show_progress = verbosity >= 0 in
   let is_rebuild = compilation_kind = Some "incremental" in
   let should_write_build_ninja = (not watch) || is_rebuild in
   let root = project_root folder in
-  let root_config = Config.load_root root in
+  let root_config =
+    match previous with
+    | Some previous -> previous.root_config
+    | None -> Config.load_root root
+  in
   if verbosity > 0 then
     Printf.printf "Created project context for %S\n%!" root_config.root;
   let visited = Hashtbl.create 32 in
-  let stats = Build_types.create ~warning_state ~poll in
+  let stats =
+    match previous with
+    | Some previous -> Build_types.create_incremental ~previous:previous.stats ~poll
+    | None -> Build_types.create ~warning_state ~poll
+  in
   List.iter (fun path -> Hashtbl.replace visited (Unix.realpath path) ()) seen;
   let finalize_logs () =
     Hashtbl.iter (fun package_root () -> Compiler_log.finalize package_root)
@@ -152,13 +265,20 @@ let run_with_warning_state ~poll ~warning_state ~compilation_kind ~no_timing
       write_build_ninja stats;
       build_ninja_written := true)
   in
+  let retain_public_output output =
+    Hashtbl.iter
+      (fun _ cleanup ->
+        Hashtbl.replace cleanup.Build_artifacts.present_public_outputs output ())
+      stats.cleanup_results
+  in
   let expose_watch_outputs () =
     !(stats.watch_outputs)
     |> List.rev
     |> List.iter (fun (output, pending, _) ->
          if Sys.file_exists pending then (
            File_util.remove_file output;
-           Unix.rename pending output))
+           Unix.rename pending output;
+           retain_public_output output))
   in
   let finish_watch_outputs ~success =
     !(stats.watch_outputs)
@@ -167,7 +287,9 @@ let run_with_warning_state ~poll ~warning_state ~compilation_kind ~no_timing
          if success then (
            if Sys.file_exists pending then (
              File_util.remove_file output;
-             Unix.rename pending output))
+             Unix.rename pending output;
+             retain_public_output output)
+           else if Sys.file_exists output then retain_public_output output)
          else (
            File_util.remove_file output;
            File_util.remove_file pending;
@@ -262,15 +384,21 @@ let run_with_warning_state ~poll ~warning_state ~compilation_kind ~no_timing
   let execute ~release_build_lock =
     poll ();
     let cycle =
-      Build_preparation.run ~root_config ~prod ~features ~warn_error ~filter
-        ~watch ~stats
-        ~on_cleanup:(fun seconds ->
-          if interactive && show_progress && not is_rebuild then (
-            if stats.compiler_cleaned then
-              print_endline (Output.compiler_cleanup_message ~step:"1/3");
-            print_endline
-              (Output.cleanup_message ~step:"1/3" ~cleaned:stats.cleaned
-                 ~total:stats.previous_asts ~seconds:(phase_seconds seconds))))
+      match previous, changes with
+      | Some previous, Some changes ->
+        prepare_incremental previous changes stats;
+        None
+      | Some _, None -> raise Full_rebuild_required
+      | None, _ ->
+        Build_preparation.run ~root_config ~prod ~features ~warn_error ~filter
+          ~watch ~stats
+          ~on_cleanup:(fun seconds ->
+            if interactive && show_progress && not is_rebuild then (
+              if stats.compiler_cleaned then
+                print_endline (Output.compiler_cleanup_message ~step:"1/3");
+              print_endline
+                (Output.cleanup_message ~step:"1/3" ~cleaned:stats.cleaned
+                   ~total:stats.previous_asts ~seconds:(phase_seconds seconds))))
     in
     poll ();
     if stats.compiler_cleaned && show_progress && not interactive then
@@ -358,14 +486,17 @@ let run_with_warning_state ~poll ~warning_state ~compilation_kind ~no_timing
         (fun () ->
           try execute ~release_build_lock with
           | Build_failure output -> report_failure output
-          | Parse_failure output -> report_parse_failure output))
+          | Parse_failure output -> report_parse_failure output));
+  {root_config; stats}
 
 let run ~seen ~verbosity ~folder ~prod ~features ~warn_error ~watch ~after_build
     ~filter ~no_timing =
   try
     run_with_warning_state ~warning_state:(Warning_state.create ())
-      ~poll:(fun () -> ()) ~compilation_kind:None ~no_timing ~seen ~verbosity
-      ~folder ~prod ~features ~warn_error ~watch ~after_build ~filter
+      ~poll:(fun () -> ()) ~previous:None ~changes:None ~compilation_kind:None
+      ~no_timing ~seen ~verbosity ~folder ~prod ~features ~warn_error ~watch
+      ~after_build ~filter
+    |> ignore
   with Reported_failure message -> raise (Error message)
 
 let watch ~verbosity ~folder ~prod ~features ~warn_error ~after_build ~filter
@@ -374,15 +505,31 @@ let watch ~verbosity ~folder ~prod ~features ~warn_error ~after_build ~filter
   ignore (Config.load_root root);
   let warning_state = Warning_state.create () in
   let initial_build = ref true in
-  let build ~poll =
+  let retained = ref None in
+  let force_full_rebuild = ref false in
+  let build ~poll ~changes =
     let compilation_kind =
       if !initial_build then Some "initial" else Some "incremental"
     in
     initial_build := false;
     try
-      run_with_warning_state ~poll ~warning_state ~compilation_kind
-        ~no_timing:false ~seen:[] ~verbosity ~folder ~prod ~features ~warn_error
-        ~watch:true ~after_build ~filter
+      let run ?previous ?changes compilation_kind =
+        run_with_warning_state ~poll ~warning_state ~previous ~changes
+          ~compilation_kind ~no_timing:false ~seen:[] ~verbosity ~folder ~prod
+          ~features ~warn_error ~watch:true ~after_build ~filter
+      in
+      let next =
+        match !retained, changes, !force_full_rebuild with
+        | Some previous, Some changes, false -> (
+          try run ~previous ~changes compilation_kind
+          with Full_rebuild_required ->
+            force_full_rebuild := true;
+            run None)
+        | Some _, _, true -> run None
+        | None, _, _ | Some _, None, false -> run compilation_kind
+      in
+      retained := Some next;
+      force_full_rebuild := false
     with
     | Reported_failure _ -> ()
     | Package_error message | Error message | Config.Error message
