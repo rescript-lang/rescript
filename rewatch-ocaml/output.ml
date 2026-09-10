@@ -1,5 +1,12 @@
 let line_clear = "\027[2K\r"
 
+let log ~minimum ~verbosity ~label message =
+  if verbosity >= minimum then Printf.printf "%s:\n%s\n%!" label message
+
+let debug ~verbosity message = log ~minimum:1 ~verbosity ~label:"DEBUG" message
+let trace ~verbosity message = log ~minimum:2 ~verbosity ~label:"TRACE" message
+let trace_enabled verbosity = verbosity >= 2
+
 let yellow text =
   if String.starts_with ~prefix:"\n" text then
     "\n\027[33m"

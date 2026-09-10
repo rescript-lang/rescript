@@ -57,8 +57,10 @@ type t = {
   warning_state: Warning_state.t;
   mutable had_warnings: bool;
   poll: unit -> unit;
+  verbosity: int;
 }
 
-val create : warning_state:Warning_state.t -> poll:(unit -> unit) -> t
+val create :
+  warning_state:Warning_state.t -> poll:(unit -> unit) -> verbosity:int -> t
 
-val create_incremental : previous:t -> poll:(unit -> unit) -> t
+val create_incremental : previous:t -> poll:(unit -> unit) -> verbosity:int -> t

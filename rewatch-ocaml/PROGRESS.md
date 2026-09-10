@@ -453,14 +453,12 @@ applicable.
 
 The external control-file inventory found one omitted compatibility artifact:
 Rust writes an empty `lib/bs/build.ninja` to invalidate editor-tooling caches
-after normal and structural builds. The port now writes the same marker after
-successful and compiler-failing normal builds and after post-initial watch
-rebuilds. The current snapshot watcher does not expose native event kinds, so
-it conservatively rewrites the marker after content-only rebuilds too. That is
-a documented over-invalidation and one extra file write, not a missing cache
-invalidation. Focused success/failure builds and the recoverable config-change
-watch case retain the behavior; isolated manifests confirm there are no other
-missing control-file names.
+after one-shot and full structural builds. The port represents one-shot,
+initial-watch, incremental-watch, and full-watch compilation explicitly and
+writes the same marker for one-shot/full builds, but not initial or retained
+incremental watches. Focused success/failure builds and the recoverable
+config-change watch case retain the behavior; isolated manifests confirm there
+are no other missing control-file names.
 
 ## Verified
 
@@ -1422,9 +1420,11 @@ recursively expanding `node_modules`, and canonical containment prevents them
 from escaping the workspace through `..` or symlink components. Active regular
 source symlinks also retain a shallow watch on their target parent, including
 while the target is temporarily absent, so external atomic rewrites and
-delete/recreate cycles remain observable. Native registration is followed by a
-fresh snapshot, closing the handoff window for edits that land while a newly
-needed handle is installed. The 79-case differential gate covers dependency
+delete/recreate cycles remain observable. Their containing directory and its
+parent are watched shallowly so moving the watched directory itself remains
+observable across filesystem backends. Initial native handles are installed
+before compilation, and registration is followed by a fresh snapshot, closing
+both the initial-build and refresh handoff windows. The 84-case differential gate covers dependency
 installation and candidate fallback, external symlink target replacement, the
 delayed-compiler race, included, filter-excluded, and feature-disabled live
 edits, and recovery from malformed root or dependency configuration.
@@ -1473,8 +1473,8 @@ Three later Rust fixes were audited explicitly against the port:
   compile-state model is not otherwise ported.
 - Native Windows verification remains incomplete. Configuration schema
   acceptance, argument projection, source-level validation, and ordinary
-  redirected-output inventory are complete; semantic `-v`/`-vv` events stay
-  deferred with terminal presentation. Incremental filesystem work is at or
+  redirected-output inventory are complete, including semantic `-v`/`-vv`
+  events. Incremental filesystem work is at or
   below Rust, while the explained clean-build driver delta remains documented
   for future optimization.
 - Full validation coverage is now an explicit source-inventory gate in
@@ -1637,21 +1637,22 @@ Three later Rust fixes were audited explicitly against the port:
   compares normalized initial and incremental phase/final-status frames. It
   exposed and fixed the initial OCaml watch label from generic `Finished
   compilation` to Rust's `Finished initial compilation`. Redirected output
-  remains unchanged. Live spinner frames and positive verbosity events remain
-  separate output-gate work.
+  remains unchanged. Live spinner frames remain separate output-gate work.
 - Interactive output parity remains open. The OCaml executable now selects a
   TTY-specific final status with timing and emoji, emits phase completion
   counts, and clears the terminal when requested, but does not yet reproduce
-  the live parsing/compilation spinner, positive `-v`/`-vv` events, or the
-  clear-screen rebuild/failure headers. Plain redirected output and
+  the live parsing/compilation spinner or the clear-screen rebuild/failure
+  headers. Plain redirected output and
   pseudo-terminal output are tracked as distinct gates in
   `PARITY_CHECKLIST.md`.
-- A focused verbosity audit isolates the remaining non-spinner output gap. Rust
-  `-v` reports project context, package discovery, AST generation, and
-  interface/implementation compilation events; OCaml currently reports only
-  its project root. Rust `-vv` also reports the compiled/dirty scheduler
-  universe. The eventual gate should compare normalized event multisets rather
-  than Rayon-dependent ordering. Redirected default output is unaffected.
+- Positive verbosity now reports Rust's semantic project-context, package
+  discovery, AST generation, and interface/implementation compilation events.
+  `-vv` additionally reports the initially dirty modules and the completed
+  scheduler universe. The differential gate compares normalized event
+  multisets rather than imposing Rayon completion order on OCaml. Building the
+  universe also now schedules only initially dirty modules and their transitive
+  dependents; clean unrelated modules are not inserted as no-op scheduler
+  nodes.
 - `watch` now uses long-lived libuv filesystem-event handles for the root and
   recursively resolved local dependency directories. Existing source content
   events use libuv's path directly; structural or ambiguous events use the
@@ -1806,20 +1807,28 @@ Three later Rust fixes were audited explicitly against the port:
    clearer as `Module.function` than through `open`; do not apply either style
    mechanically. Remove dead code, and document the complete
    compatibility-oddity, corrected-Rust-behavior, and future-performance lists.
-4. Complete the final output-presentation pass: port Rust's semantic `-v`/`-vv`
-   events with an order-insensitive differential gate, then implement and test
-   the live interactive spinner frames and the clear-screen rebuild/failure
-   headers.
+   Follow the functional-design principle of making illegal states
+   unrepresentable where it removes a concrete ambiguity or failure mode, not as
+   a ceremonial replacement for every `option`. In particular, review the
+   partially initialized build-state fields as explicit lifecycle phases,
+   feature selection as `All` versus an explicit selection, namespace and its
+   entry point as one coherent value, and normalized format input as stdin
+   versus files. Also review dependency-access policy (`None` currently means
+   unrestricted, while `Some []` means no allowed dependents). Retain ordinary
+   options for values that are genuinely absent, such as a missing interface,
+   an unavailable native-event filename, or an optional hook.
+4. Complete the final output-presentation pass: implement and test the live
+   interactive spinner frames and the clear-screen rebuild/failure headers.
 5. Validate macOS packaging and native event behavior, then prepare the pinned
    Windows handoff. Finish the Windows watcher/lock
    backend and path audit and run the native build, unit, focused, and canonical
    Bash suites in the VM. Address findings there and finish with an x64 Windows
    confidence run where available.
 
-Live spinner animation and positive verbose-event parity are explicitly
-grouped into the final output-presentation pass before Windows validation. The
-future filesystem-performance ideas documented above do not block completion
-of the compatibility port.
+Live spinner animation is explicitly grouped into the final
+output-presentation pass before Windows validation. The future
+filesystem-performance ideas documented above do not block completion of the
+compatibility port.
 
 The OCaml unit-test sources now live in `tests/rewatch_ounit_tests` and use the
 repository's existing OUnit2 dependency, leaving production modules in

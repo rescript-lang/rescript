@@ -10,5 +10,6 @@ val run :
   filter:string option ->
   clear_screen:bool ->
   show_progress:bool ->
+  verbosity:int ->
   build:(poll:(unit -> unit) -> changes:change list option -> unit) ->
   unit

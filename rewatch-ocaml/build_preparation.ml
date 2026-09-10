@@ -248,15 +248,23 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error
     |> List.concat_map (fun package ->
          package.graph_modules
          |> List.concat_map (fun module_ ->
-              module_.Source.implementation
-              :: Option.to_list module_.Source.interface)
-         |> List.filter_map (fun path ->
-              if Build_freshness.source_is_not_older_than_ast compile_assets
-                   ~root:package.graph_root
-                   ~source_mtimes:package.graph_source_mtimes path
-              then
-                Some (package, path)
-              else None))
+              let paths =
+                module_.Source.implementation
+                :: Option.to_list module_.Source.interface
+              in
+              let dirty_paths =
+                paths
+                |> List.filter (fun path ->
+                     Build_freshness.source_is_not_older_than_ast compile_assets
+                       ~root:package.graph_root
+                       ~source_mtimes:package.graph_source_mtimes path)
+              in
+              if dirty_paths <> [] then
+                Output.debug ~verbosity:stats.verbosity
+                  ("Generating AST for module: "
+                  ^ Source.compiler_basename package.graph_compile_config
+                      module_.Source.name);
+              List.map (fun path -> (package, path)) dirty_paths))
   in
   let parse_results =
     parse_entries

@@ -44,7 +44,8 @@ let file_digest path =
   try Some (Digest.file path) with Sys_error _ | Unix.Unix_error _ -> None
 
 let run ~poll ~warning_state ~blocked_modules ~compile_assets ~build_state
-    ~scheduled_modules ~compile_cleanup ~mark_compiled ~mark_had_warnings =
+    ~scheduled_modules ~compile_cleanup ~mark_compiled ~mark_had_warnings
+    ~verbosity =
   let finish_successful_compile (scheduled : scheduled_module) =
     (* Only a changed interface invalidates reverse dependents. Comparing bytes
        avoids timestamp races and skips unnecessary downstream compilation. *)
@@ -77,13 +78,54 @@ let run ~poll ~warning_state ~blocked_modules ~compile_assets ~build_state
          |> List.map (fun path -> Filename.concat scheduled.package_root path))
   in
   Warning_state.retain_paths warning_state warning_paths;
+  if Output.trace_enabled verbosity then
+    scheduled_modules
+    |> List.filter (fun scheduled -> scheduled.state.compile_dirty)
+    |> List.sort (fun first second -> String.compare first.key second.key)
+    |> List.iter (fun scheduled ->
+         Printf.printf "compile dirty: %s\n%!" scheduled.key);
+  (* The scheduler only needs dirty modules and their transitive dependents.
+     Dependencies outside that universe already have usable artifacts, while
+     keeping every module in the subprocess graph makes small edits scale with
+     the whole project. *)
+  let scheduled_by_key = Hashtbl.create (List.length scheduled_modules) in
+  List.iter
+    (fun scheduled -> Hashtbl.replace scheduled_by_key scheduled.key scheduled)
+    scheduled_modules;
+  let universe = Hashtbl.create (List.length scheduled_modules) in
+  let pending = Queue.create () in
+  let add_to_universe key =
+    if
+      Hashtbl.mem scheduled_by_key key
+      && not (Hashtbl.mem universe key)
+    then (
+      Hashtbl.add universe key ();
+      Queue.add key pending)
+  in
+  scheduled_modules
+  |> List.iter (fun scheduled ->
+       if scheduled.state.compile_dirty then add_to_universe scheduled.key);
+  while not (Queue.is_empty pending) do
+    let key = Queue.take pending in
+    let state = Build_state.find_exn build_state key in
+    List.iter add_to_universe state.dependents
+  done;
+  let scheduled_modules =
+    List.filter
+      (fun scheduled -> Hashtbl.mem universe scheduled.key)
+      scheduled_modules
+  in
+  let completed_modules = ref 0 in
   let works =
     scheduled_modules
     |> List.map (fun (scheduled : scheduled_module) ->
          Process.
            {
              key = scheduled.key;
-             dependencies = scheduled.dependencies;
+             dependencies =
+               List.filter
+                 (fun dependency -> Hashtbl.mem universe dependency)
+                 scheduled.dependencies;
              value = scheduled;
            })
   in
@@ -133,18 +175,25 @@ let run ~poll ~warning_state ~blocked_modules ~compile_assets ~build_state
                   scheduled.cmi_digest_before <- file_digest scheduled.cmi_path;
                   match scheduled.source.Source.interface with
                   | Some path ->
+                    Output.debug ~verbosity
+                      ("Compiling interface file: " ^ scheduled.key);
                     scheduled.phase := `Interface path;
                     Some (scheduled.compile ~is_interface:true path)
                   | None ->
                     let path = scheduled.source.Source.implementation in
+                    Output.debug ~verbosity
+                      ("Compiling file: " ^ scheduled.key);
                     scheduled.phase := `Implementation path;
                     Some (scheduled.compile ~is_interface:false path))
                 else (
                   scheduled.phase := `Done;
+                  incr completed_modules;
                   None)
               | Some result, `Interface path ->
                 record_result scheduled ~is_interface:true path result;
                 let path = scheduled.source.Source.implementation in
+                Output.debug ~verbosity
+                  ("Compiling file: " ^ scheduled.key);
                 scheduled.phase := `Implementation path;
                 Some (scheduled.compile ~is_interface:false path)
               | Some result, `Implementation path ->
@@ -154,6 +203,7 @@ let run ~poll ~warning_state ~blocked_modules ~compile_assets ~build_state
                   raise Module_failed
                 else (
                   finish_successful_compile scheduled;
+                  incr completed_modules;
                   None)
               | None, (`Interface _ | `Implementation _ | `Done)
               | Some _, (`Start | `Done) ->
@@ -162,6 +212,9 @@ let run ~poll ~warning_state ~blocked_modules ~compile_assets ~build_state
           false
         with Module_failed -> true
       in
+      Output.trace ~verbosity
+        (Printf.sprintf "Compiled %d out of %d in the universe"
+           !completed_modules (List.length scheduled_modules));
       let failures = ref [] in
       scheduled_modules
       |> List.sort (fun (first : scheduled_module) second ->

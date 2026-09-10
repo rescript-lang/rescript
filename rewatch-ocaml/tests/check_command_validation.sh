@@ -68,12 +68,14 @@ mkdir -p "$work/parse-source-race-rust/src" \
 mkdir -p "$work/watch-config-rust/src" "$work/watch-config-ocaml/src"
 mkdir -p "$work/watch-retained-graph/src"
 mkdir -p "$work/watch-dependency-recovery/src" \
+  "$work/watch-dependency-recovery/node_modules" \
   "$work/watch-dependency-recovery/packages/dep/src"
 mkdir -p "$work/watch-dependency-install/src" \
   "$work/watch-dependency-install/node_modules"
 mkdir -p "$work/watch-dependency-fallback/src" \
   "$work/watch-dependency-fallback/node_modules/dep" \
-  "$work/watch-dependency-fallback/packages/dep/src"
+  "$work/watch-dependency-fallback/packages/dep/src" \
+  "$work/node_modules"
 mkdir -p "$work/watch-symlink-target/src" "$work/watch-symlink-external/sub"
 mkdir -p "$work/watch-feature-scope/src" "$work/watch-feature-scope/inactive"
 mkdir -p "$work/watch-filter-rust/src" "$work/watch-filter-rust/inactive" \
@@ -270,6 +272,8 @@ printf '{ invalid json\n' \
   >"$work/watch-dependency-recovery/packages/dep/rescript.json"
 printf 'let dependency = 1\n' \
   >"$work/watch-dependency-recovery/packages/dep/src/Dep.res"
+ln -s ../packages/dep \
+  "$work/watch-dependency-recovery/node_modules/dep"
 printf '{"name":"watch-dependency-install","sources":["src"],"dependencies":["dep"]}\n' \
   >"$work/watch-dependency-install/rescript.json"
 printf 'let value = 1\n' >"$work/watch-dependency-install/src/A.res"
@@ -329,6 +333,10 @@ classify() {
     2) printf exit2 ;;
     *) printf reject ;;
   esac
+}
+
+strip_ansi() {
+  LC_ALL=C sed $'s/\033\\[[0-9;]*m//g' "$1"
 }
 
 checked=0
@@ -518,7 +526,12 @@ wait_for_file() {
     attempts=$((attempts + 1))
     sleep 0.1
   done
-  [ -f "$path" ]
+  if [ -f "$path" ]; then
+    return 0
+  fi
+  printf 'Timed out waiting for file %s (requested at line %s)\n' \
+    "$path" "${BASH_LINENO[0]:-unknown}" >&2
+  return 1
 }
 
 wait_for_text() {
@@ -530,7 +543,17 @@ wait_for_text() {
     attempts=$((attempts + 1))
     sleep 0.1
   done
-  grep -F "$pattern" "$path" >/dev/null 2>&1
+  if grep -F "$pattern" "$path" >/dev/null 2>&1; then
+    return 0
+  fi
+  printf 'Timed out waiting for %s in %s\n' "$pattern" "$path" >&2
+  if [ -f "$path" ]; then
+    printf '%s\n' '--- observed contents ---' >&2
+    cat "$path" >&2
+  else
+    printf '%s\n' '--- file does not exist ---' >&2
+  fi
+  return 1
 }
 
 wait_for_exit() {
@@ -875,23 +898,29 @@ run_case build-excludes-external-dev-source accept accept build \
   "$work/external-dev-source"
 run_case build-ignores-dormant-external-dev-permission reject accept build \
   "$work/external-dev-permission"
+strip_ansi "$work/rust.out" >"$work/rust.out.plain"
+strip_ansi "$work/rust.err" >"$work/rust.err.plain"
 if ! grep -F 'a has the following unallowed dependencies' \
-    "$work/rust.err" >/dev/null; then
+    "$work/rust.err.plain" >/dev/null; then
   echo "Rust dormant external dev-dependency rejection was not reproduced" >&2
   cat "$work/rust.out" "$work/rust.err" >&2
   exit 1
 fi
 run_case build-reports-all-active-permission-failures reject reject build \
   "$work/active-permission"
+strip_ansi "$work/rust.out" >"$work/rust.out.plain"
+strip_ansi "$work/rust.err" >"$work/rust.err.plain"
+strip_ansi "$work/ocaml.out" >"$work/ocaml.out.plain"
+strip_ansi "$work/ocaml.err" >"$work/ocaml.err.plain"
 rust_permission_details=$(grep -Ec '^dependencies dependencies: (a|b)$' \
-  "$work/rust.out" || true)
+  "$work/rust.out.plain" || true)
 if [ "$rust_permission_details" -ne 1 ] || \
-  ! grep -Fx 'root dependencies: a' "$work/ocaml.err" >/dev/null || \
-  ! grep -Fx 'root dependencies: b' "$work/ocaml.err" >/dev/null || \
-  ! grep -F 'unallowed_dependents' "$work/rust.err" >/dev/null || \
-  ! grep -F 'config.json' "$work/rust.err" >/dev/null || \
+  ! grep -Fx 'root dependencies: a' "$work/ocaml.err.plain" >/dev/null || \
+  ! grep -Fx 'root dependencies: b' "$work/ocaml.err.plain" >/dev/null || \
+  ! grep -F 'unallowed_dependents' "$work/rust.err.plain" >/dev/null || \
+  ! grep -F 'config.json' "$work/rust.err.plain" >/dev/null || \
   ! grep -F 'Update allowed-dependents in the dependency rescript.json files.' \
-    "$work/ocaml.err" >/dev/null || [ -s "$work/ocaml.out" ]; then
+    "$work/ocaml.err.plain" >/dev/null || [ -s "$work/ocaml.out.plain" ]; then
   echo "Active dependency-permission diagnostics changed unexpectedly" >&2
   printf '%s\n' '--- Rust output ---' >&2
   cat "$work/rust.out" "$work/rust.err" >&2
@@ -1271,7 +1300,12 @@ checked=$((checked + 1))
   2>"$work/watch-dependency-install.err" &
 dependency_install_pid=$!
 background_pids="$background_pids $dependency_install_pid"
-wait_for_text "$work/watch-dependency-install.err" "Could not resolve dependency dep"
+if ! wait_for_text "$work/watch-dependency-install.err" \
+    "Could not resolve dependency dep"; then
+  printf '%s\n' '--- watcher stdout ---' >&2
+  cat "$work/watch-dependency-install.out" >&2
+  exit 1
+fi
 if ! kill -0 "$dependency_install_pid" 2>/dev/null; then
   echo "OCaml watcher exited while waiting for a missing dependency" >&2
   exit 1
@@ -1286,6 +1320,8 @@ kill -TERM "$dependency_install_pid"
 wait "$dependency_install_pid"
 checked=$((checked + 1))
 
+ln -s ../watch-dependency-fallback/packages/dep \
+  "$work/node_modules/dep"
 "$ocaml" watch "$work/watch-dependency-fallback" \
   >"$work/watch-dependency-fallback.out" \
   2>"$work/watch-dependency-fallback.err" &

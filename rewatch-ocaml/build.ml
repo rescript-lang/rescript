@@ -10,6 +10,12 @@ open Build_types
 
 type retained_build = {root_config: Config.t; stats: Build_types.t}
 
+type compilation_kind =
+  | One_shot
+  | Initial_watch
+  | Incremental_watch
+  | Full_watch
+
 type incremental_source = {
   package: Build_types.graph_package;
   module_: Source.module_;
@@ -62,6 +68,7 @@ let run_scheduled_modules stats =
     ~compile_cleanup:!(stats.compile_cleanup)
     ~mark_compiled:(fun () -> stats.compiled <- stats.compiled + 1)
     ~mark_had_warnings:(fun () -> stats.had_warnings <- true)
+    ~verbosity:stats.verbosity
 
 let run_namespace_jobs stats =
   let jobs = List.rev !(stats.namespace_jobs) in
@@ -172,6 +179,14 @@ let prepare_incremental previous changes stats =
     | None -> raise Full_rebuild_required
   in
   let started_at = Unix.gettimeofday () in
+  sources
+  |> List.map (fun source ->
+       Source.compiler_basename source.package.graph_compile_config
+         source.module_.Source.name)
+  |> List.sort_uniq String.compare
+  |> List.iter (fun name ->
+       Output.debug ~verbosity:stats.verbosity
+         ("Generating AST for module: " ^ name));
   let results =
     sources
     |> List.map (fun source ->
@@ -252,21 +267,33 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
   let started_at = Unix.gettimeofday () in
   let interactive = Unix.isatty Unix.stdout && Unix.isatty Unix.stderr in
   let show_progress = verbosity >= 0 in
-  let is_rebuild = compilation_kind = Some "incremental" in
-  let should_write_build_ninja = (not watch) || is_rebuild in
+  let is_rebuild = compilation_kind = Incremental_watch in
+  let should_write_build_ninja =
+    match compilation_kind with
+    | One_shot | Full_watch -> true
+    | Initial_watch | Incremental_watch -> false
+  in
+  let output_kind =
+    match compilation_kind with
+    | Initial_watch -> Some "initial"
+    | Incremental_watch -> Some "incremental"
+    | One_shot | Full_watch -> None
+  in
   let root = project_root folder in
   let root_config =
     match previous with
     | Some previous -> previous.root_config
     | None -> Config.load_root root
   in
-  if verbosity > 0 then
-    Printf.printf "Created project context for %S\n%!" root_config.root;
+  Output.debug ~verbosity
+    (Printf.sprintf "Created project context Single project: %S at %S for %S"
+       root_config.name root_config.path root_config.root);
   let visited = Hashtbl.create 32 in
   let stats =
     match previous with
-    | Some previous -> Build_types.create_incremental ~previous:previous.stats ~poll
-    | None -> Build_types.create ~warning_state ~poll
+    | Some previous ->
+      Build_types.create_incremental ~previous:previous.stats ~poll ~verbosity
+    | None -> Build_types.create ~warning_state ~poll ~verbosity
   in
   List.iter (fun path -> Hashtbl.replace visited (Unix.realpath path) ()) seen;
   let finalize_logs () =
@@ -326,7 +353,7 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
         if success then Printf.printf "Compiled %d modules\n%!" stats.compiled
         else Printf.eprintf "Compiled %d modules\n%!" stats.compiled);
     let diagnostics =
-      if compilation_kind = Some "incremental" then []
+      if compilation_kind = Incremental_watch then []
       else stats.diagnostics |> List.rev |> List.sort_uniq String.compare
     in
     let warning_entries = Warning_state.entries stats.warning_state in
@@ -345,7 +372,7 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
         if no_timing then 0. else Unix.gettimeofday () -. started_at
       in
       Printf.printf "\n%s\n%!"
-        (Output.finished_compilation_message ~kind:compilation_kind
+        (Output.finished_compilation_message ~kind:output_kind
            ~warnings:
              (stats.had_warnings || diagnostics <> []
              || Warning_state.entries stats.warning_state <> [])
@@ -511,7 +538,8 @@ let run ~seen ~verbosity ~folder ~prod ~features ~warn_error ~watch ~after_build
     ~filter ~no_timing =
   try
     run_with_warning_state ~warning_state:(Warning_state.create ())
-      ~poll:(fun () -> ()) ~previous:None ~changes:None ~compilation_kind:None
+      ~poll:(fun () -> ()) ~previous:None ~changes:None
+      ~compilation_kind:One_shot
       ~no_timing ~seen ~verbosity ~folder ~prod ~features ~warn_error ~watch
       ~after_build ~filter
     |> ignore
@@ -526,9 +554,7 @@ let watch ~verbosity ~folder ~prod ~features ~warn_error ~after_build ~filter
   let retained = ref None in
   let force_full_rebuild = ref false in
   let build ~poll ~changes =
-    let compilation_kind =
-      if !initial_build then Some "initial" else Some "incremental"
-    in
+    let is_initial = !initial_build in
     initial_build := false;
     try
       let run ?previous ?changes compilation_kind =
@@ -539,12 +565,13 @@ let watch ~verbosity ~folder ~prod ~features ~warn_error ~after_build ~filter
       let next =
         match !retained, changes, !force_full_rebuild with
         | Some previous, Some changes, false -> (
-          try run ~previous ~changes compilation_kind
+          try run ~previous ~changes Incremental_watch
           with Full_rebuild_required ->
             force_full_rebuild := true;
-            run None)
-        | Some _, _, true -> run None
-        | None, _, _ | Some _, None, false -> run compilation_kind
+            run Full_watch)
+        | Some _, _, true -> run Full_watch
+        | None, _, _ -> run (if is_initial then Initial_watch else Full_watch)
+        | Some _, None, false -> run Full_watch
       in
       retained := Some next;
       force_full_rebuild := false
@@ -557,4 +584,4 @@ let watch ~verbosity ~folder ~prod ~features ~warn_error ~after_build ~filter
       prerr_endline (Printexc.to_string exn)
   in
   Watcher.run ~root ~prod ~features ~filter ~clear_screen
-    ~show_progress:(verbosity >= 0) ~build
+    ~show_progress:(verbosity >= 0) ~verbosity ~build

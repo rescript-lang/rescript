@@ -98,6 +98,8 @@ let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
     if not (Hashtbl.mem collected root) then (
       Hashtbl.add collected root ();
       let config = load_config root in
+      Output.debug ~verbosity:stats.verbosity
+        ("Parsing package: " ^ config.name);
       let dependencies =
         List.map (fun dependency -> ("dependencies", dependency))
           config.dependencies
@@ -187,6 +189,8 @@ let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
                  directory))
         dependency_directories;
       let discovery =
+        Output.debug ~verbosity:stats.verbosity
+          ("Building source file-tree for package: " ^ config.name);
         Source.discover_with_inventory config
           ~prod:(source_discovery_prod ~prod ~is_local)
           ~features ~filter

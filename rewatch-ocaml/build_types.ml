@@ -57,9 +57,10 @@ type t = {
   warning_state: Warning_state.t;
   mutable had_warnings: bool;
   poll: unit -> unit;
+  verbosity: int;
 }
 
-let create ~warning_state ~poll =
+let create ~warning_state ~poll ~verbosity =
   {
     cleaned = 0;
     previous_asts = 0;
@@ -92,9 +93,10 @@ let create ~warning_state ~poll =
     warning_state;
     had_warnings = false;
     poll;
+    verbosity;
   }
 
-let create_incremental ~previous ~poll =
+let create_incremental ~previous ~poll ~verbosity =
   (* Each rebuild needs fresh diagnostics and pending work, while the package
      graph and artifact/module state describe the long-lived watcher session.
      Sharing only that persistent subset prevents completed cleanup actions or
@@ -143,4 +145,5 @@ let create_incremental ~previous ~poll =
     warning_state = previous.warning_state;
     had_warnings = false;
     poll;
+    verbosity;
   }
