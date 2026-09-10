@@ -387,7 +387,14 @@ missing control-file names.
 
 ## Verified
 
-- `dune runtest tests/rewatch_ounit_tests` passes all 17 OUnit2 suites; the
+- Recursive directory creation now has `create_dir_all`-style race semantics:
+  concurrent creators may observe `EEXIST` only when the winning path is a
+  directory, while an existing non-directory remains an error. A 16-thread
+  OUnit regression repeatedly creates the same nested tree and separately
+  retains the non-directory failure boundary. Recursion also stops at a
+  `Filename.dirname` fixed point so an unavailable Windows volume root returns
+  its native filesystem error rather than overflowing the OCaml stack.
+- `dune runtest tests/rewatch_ounit_tests` passes all 18 OUnit2 suites; the
   former `dune runtest rewatch-ocaml` scope forwards to the same suite so it
   cannot silently run zero tests.
 - A clean one-shot build of the installed `rewatch/testrepo` succeeds with the
