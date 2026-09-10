@@ -120,6 +120,24 @@ to the same project artifact or discovery path as the primary evidence of
 superfluous orchestration work. The existing compiler-work and artifact checks
 must remain enabled so fewer filesystem calls cannot conceal skipped work.
 
+For the ordinary-edit path inside one long-lived watcher, run:
+
+```sh
+rewatch-ocaml/bench/watch_filesystem_audit.sh \
+  rewatch/target/release/rescript \
+  _build/default/rewatch-ocaml/rescript_ocaml.exe
+```
+
+This starts each implementation on an isolated small project, waits for its
+initial build hook, traces one dependency-preserving source edit, and stops the
+watcher through its lock file. Only calls timestamped between the edit and the
+successful incremental-build hook enter the normalized reports, so initial
+discovery and shutdown do not obscure retained-state work. Set
+`KEEP_REWATCH_WATCH_AUDIT=1` to retain raw traces, normalized path/category
+tables, process attribution, and command output. As with the short-lived audit,
+project-local repeated paths and compiler work are the useful comparison; raw
+runtime-wide syscall totals are diagnostic rather than an acceptance limit.
+
 ## Source-size snapshot
 
 Run `bench/source_size.sh` with `cloc` installed to record a reproducible

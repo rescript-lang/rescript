@@ -28,7 +28,16 @@ updated graph for cycles without rescanning the project. A focused long-lived
 watch case changes an edge, observes the rebuilt dependent, introduces a cycle,
 confirms that the watcher remains alive, and then confirms recovery after the
 cycle is removed. Retained-watch work measurements and the complete lifecycle
-audit are still required before this gap is closed.
+audit are still required before this gap is closed. For ordinary existing-file
+content events, the libuv backend now returns the event path and kind directly;
+the watcher skips configuration reload, source snapshots, and handle refresh.
+Ambiguous filenames, source or directory topology changes, control files,
+unresolved dependencies, and symlink targets retain snapshot reconciliation.
+The retained-watch filesystem audit reports zero source-directory scans for
+both implementations on a single edit. Its latest diagnostic run reported 43
+OCaml versus 38 Rust project-local opens and 42 versus 25 metadata operations;
+the remaining OCaml delta is concentrated in staged output/source-map and
+artifact-safety checks rather than project rediscovery.
 
 Native macOS validation at checkpoint `30725fb01` passed `make test-all` and,
 after making temporary fixture paths canonical and accounting for the host's
@@ -1614,7 +1623,13 @@ Three later Rust fixes were audited explicitly against the port:
 - Redirected config diagnostics now use the same single leading blank line as
   Rust. The differential output gate combines deprecated aliases, a known
   unsupported field, and an unknown field so spacing and ordering are compared
-  exactly rather than inferred from separate schema tests.
+  exactly rather than inferred from separate schema tests. Color enablement now
+  also follows the reference CLI-color policy: a capable terminal respects
+  `CLICOLOR`, `NO_COLOR`, and `TERM`, while nonzero `CLICOLOR_FORCE` enables
+  ANSI output even when redirected. Each diagnostic is wrapped independently,
+  matching the three Rust call sites. Pure policy tests and a byte-exact forced
+  color differential case retain the CI-only behavior that the earlier source
+  audit missed.
 - Interactive builds now also emit Rust-shaped cleanup, parse, and compile
   completion lines with three-step initial-build numbering, two-step watch
   rebuild numbering, phase-specific emojis, counts, and two-decimal timing.
@@ -1638,11 +1653,13 @@ Three later Rust fixes were audited explicitly against the port:
   universe. The eventual gate should compare normalized event multisets rather
   than Rayon-dependent ordering. Redirected default output is unaffected.
 - `watch` now uses long-lived libuv filesystem-event handles for the root and
-  recursively resolved local dependency directories. Native events are treated
-  as wakeups for the established snapshot/diff algorithm, so correctness does
-  not depend on platform-specific rename payloads or event ordering. Handles
-  are retained across builds and only added or closed when directory topology
-  changes; a focused resource test covers stable, added, and removed counts.
+  recursively resolved local dependency directories. Existing source content
+  events use libuv's path directly; structural or ambiguous events use the
+  snapshot/diff reconciliation path, so correctness does not depend on every
+  platform supplying precise rename payloads or event ordering. Generated
+  output events are ignored before reconciliation. Handles are retained across
+  builds and only added or closed when directory topology changes; a focused
+  resource test covers stable, added, and removed counts.
   The former polling loop remains a runtime fallback if native setup fails.
 - Existing generated outputs are updated as their compiler subprocesses
   succeed; only previously absent outputs are held until whole-build success.
@@ -1789,20 +1806,20 @@ Three later Rust fixes were audited explicitly against the port:
    clearer as `Module.function` than through `open`; do not apply either style
    mechanically. Remove dead code, and document the complete
    compatibility-oddity, corrected-Rust-behavior, and future-performance lists.
-4. Validate macOS packaging and native event behavior, then prepare the pinned
+4. Complete the final output-presentation pass: port Rust's semantic `-v`/`-vv`
+   events with an order-insensitive differential gate, then implement and test
+   the live interactive spinner frames and the clear-screen rebuild/failure
+   headers.
+5. Validate macOS packaging and native event behavior, then prepare the pinned
    Windows handoff. Finish the Windows watcher/lock
    backend and path audit and run the native build, unit, focused, and canonical
    Bash suites in the VM. Address findings there and finish with an x64 Windows
    confidence run where available.
-5. Complete the final output-presentation pass after platform validation: port
-   Rust's semantic `-v`/`-vv` events with an order-insensitive differential
-   gate, then implement and test the live interactive spinner frames and the
-   clear-screen rebuild/failure headers.
 
 Live spinner animation and positive verbose-event parity are explicitly
-deferred until the final output-presentation pass after macOS and Windows
-validation. The future filesystem-performance ideas documented above do not
-block completion of the compatibility port.
+grouped into the final output-presentation pass before Windows validation. The
+future filesystem-performance ideas documented above do not block completion
+of the compatibility port.
 
 The OCaml unit-test sources now live in `tests/rewatch_ounit_tests` and use the
 repository's existing OUnit2 dependency, leaving production modules in

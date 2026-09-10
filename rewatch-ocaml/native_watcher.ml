@@ -1,5 +1,8 @@
+type change_kind = Content | Structural
+type change = {path: string option; kind: change_kind}
+
 type wait_result =
-  | Changed
+  | Changed of change list
   | Stopped
   | Failed of string
 
@@ -12,7 +15,7 @@ type t = {
   loop: Luv.Loop.t;
   timer: Luv.Timer.t;
   mutable handles: (string * Luv.FS_event.t) list;
-  mutable changed: bool;
+  mutable changes: change list;
   mutable stopped: bool;
   mutable error: string option;
 }
@@ -90,8 +93,22 @@ let install_handles watcher directories =
       | Ok handle ->
         added := (directory, handle) :: !added;
         Luv.FS_event.start handle directory (function
-          | Ok _ ->
-            watcher.changed <- true;
+          | Ok (filename, events) ->
+            let path =
+              match filename with
+              | None | Some "" -> None
+              | Some filename ->
+                Some
+                  (if Filename.is_relative filename then
+                     Filename.concat directory filename
+                   else filename)
+            in
+            let kind =
+              if List.mem `CHANGE events && not (List.mem `RENAME events) then
+                Content
+              else Structural
+            in
+            watcher.changes <- {path; kind} :: watcher.changes;
             Luv.Loop.stop watcher.loop
           | Error error ->
             watcher.error <- Some (error_message error);
@@ -113,7 +130,7 @@ let create ~paths =
       Error (error_message error)
     | Ok timer ->
       let watcher =
-        {loop; timer; handles = []; changed = false; stopped = false; error = None}
+        {loop; timer; handles = []; changes = []; stopped = false; error = None}
       in
       match install_handles watcher (directories_under paths) with
       | Ok () -> Ok watcher
@@ -134,9 +151,10 @@ let wait watcher ~keep_running =
     match watcher.error with
     | Some message -> Some (Failed message)
     | None when watcher.stopped -> Some Stopped
-    | None when watcher.changed ->
-      watcher.changed <- false;
-      Some Changed
+    | None when watcher.changes <> [] ->
+      let changes = List.rev watcher.changes in
+      watcher.changes <- [];
+      Some (Changed changes)
     | None -> None
   in
   match ready_result () with
@@ -151,7 +169,7 @@ let wait watcher ~keep_running =
     | Ok () -> ()
     | Error error -> watcher.error <- Some (error_message error));
     while
-      (not watcher.changed) && not watcher.stopped
+      watcher.changes = [] && not watcher.stopped
       && Option.is_none watcher.error
     do
       ignore (Luv.Loop.run ~loop:watcher.loop ~mode:`ONCE ())
@@ -160,6 +178,24 @@ let wait watcher ~keep_running =
     (match ready_result () with
     | Some result -> result
     | None -> Failed "native watcher loop stopped without a wakeup condition")
+
+let drain watcher =
+  (* The first callback stops the loop so the build can start promptly. Pump
+     already-ready callbacks after the debounce window to keep one editor save
+     together without waiting for another build cycle. *)
+  let rec pump remaining =
+    if remaining > 0 then
+      let changes = watcher.changes in
+      ignore (Luv.Loop.run ~loop:watcher.loop ~mode:`NOWAIT ());
+      if watcher.changes != changes then pump (remaining - 1)
+  in
+  pump 1024;
+  let changes = List.rev watcher.changes in
+  watcher.changes <- [];
+  changes
+
+let watches_directory watcher path =
+  List.exists (fun (directory, _) -> directory = path) watcher.handles
 
 let refresh watcher ~paths =
   (* Only failures from work completed before this refresh are stale. Clear
@@ -186,6 +222,8 @@ let close watcher =
 
 module For_test = struct
   let handle_count watcher = List.length watcher.handles
-  let queue_change watcher = watcher.changed <- true
+  let queue_change watcher =
+    watcher.changes <- {path = None; kind = Structural} :: watcher.changes
+
   let queue_error watcher message = watcher.error <- Some message
 end

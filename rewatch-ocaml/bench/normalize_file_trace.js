@@ -3,12 +3,22 @@
 import fs from "node:fs";
 import path from "node:path";
 
-if (process.argv.length !== 5) {
-  console.error("Usage: normalize_file_trace.js TRACE_PREFIX FIXTURE OUTPUT_PREFIX");
+if (process.argv.length !== 5 && process.argv.length !== 7) {
+  console.error(
+    "Usage: normalize_file_trace.js TRACE_PREFIX FIXTURE OUTPUT_PREFIX [START_EPOCH END_EPOCH]",
+  );
   process.exit(2);
 }
 
-const [, , tracePrefix, fixtureArgument, outputPrefix] = process.argv;
+const [, , tracePrefix, fixtureArgument, outputPrefix, startArgument, endArgument] =
+  process.argv;
+const startEpoch =
+  startArgument === undefined ? Number.NEGATIVE_INFINITY : Number(startArgument);
+const endEpoch = endArgument === undefined ? Number.POSITIVE_INFINITY : Number(endArgument);
+if (Number.isNaN(startEpoch) || Number.isNaN(endEpoch) || startEpoch > endEpoch) {
+  console.error("Trace epoch bounds must be ordered numbers.");
+  process.exit(2);
+}
 const fixture = path.resolve(fixtureArgument);
 const traceDirectory = path.dirname(tracePrefix);
 const traceBasename = `${path.basename(tracePrefix)}.`;
@@ -65,12 +75,16 @@ for (const trace of traces) {
   let cwd = fixture;
   const lines = fs.readFileSync(path.join(traceDirectory, trace), "utf8").split("\n");
   const executable = lines
+    .map((line) => line.replace(/^\d+\.\d+\s+/, ""))
     .map((line) => line.match(/^execve\("((?:[^"\\]|\\.)*)"/))
     .find((match) => match !== null);
   const processName = executable
     ? path.basename(decodeQuoted(executable[1]))
     : "inherited-process";
-  for (const line of lines) {
+  for (const rawLine of lines) {
+    const timed = rawLine.match(/^(\d+\.\d+)\s+(.*)$/);
+    const timestamp = timed === null ? null : Number(timed[1]);
+    const line = timed === null ? rawLine : timed[2];
     const call = line.match(/^([a-zA-Z0-9_]+)\(/);
     if (!call) continue;
     const operation = call[1];
@@ -79,11 +93,16 @@ for (const trace of traces) {
     for (const value of values) {
       const normalized = normalize(callCwd, value);
       if (normalized === null) continue;
-      operations.push(`${operation}\t${normalized}`);
-      const name = category(operation);
-      categories.set(name, (categories.get(name) || 0) + 1);
-      const processKey = `${processName}\t${name}`;
-      processCategories.set(processKey, (processCategories.get(processKey) || 0) + 1);
+      if (
+        timestamp === null ||
+        (timestamp >= startEpoch && timestamp <= endEpoch)
+      ) {
+        operations.push(`${operation}\t${normalized}`);
+        const name = category(operation);
+        categories.set(name, (categories.get(name) || 0) + 1);
+        const processKey = `${processName}\t${name}`;
+        processCategories.set(processKey, (processCategories.get(processKey) || 0) + 1);
+      }
     }
     if (operation === "chdir" && line.endsWith("= 0") && values.length === 1) {
       cwd = path.isAbsolute(values[0])
