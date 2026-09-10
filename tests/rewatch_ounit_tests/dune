@@ -28,4 +28,7 @@
   unit_tests
   warning_state_tests
   watcher_tests)
+ (foreign_stubs
+  (language c)
+  (names test_env_stubs))
  (libraries rewatch_ocaml_lib ounit2))

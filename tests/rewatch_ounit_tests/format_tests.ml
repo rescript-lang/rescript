@@ -83,7 +83,7 @@ let tests =
         ~finally:(fun () ->
           match previous_root with
           | Some value -> Unix.putenv "REWATCH_FORMAT_TEST_ROOT" value
-          | None -> Unix.unsetenv "REWATCH_FORMAT_TEST_ROOT")
+          | None -> Test_support.unsetenv "REWATCH_FORMAT_TEST_ROOT")
         (fun () ->
           Format.format_files_with_bsc ~max_jobs:2
             ~bsc:(Unix.realpath Sys.executable_name)
