@@ -302,7 +302,8 @@ let run_analysis ~dce_config ~cmt_root ~reactive_collection ~reactive_merge
                         ~into:file_deps_builder));
                 (* Compute type-label dependencies after merge *)
                 Dead_type.process_type_label_dependencies ~config:dce_config
-                  ~decls ~refs:refs_builder;
+                  ~decls ~refs:refs_builder
+                  ~coercions:cross_file.Cross_file_items.coercions;
                 let find_exception =
                   Dead_exception.find_exception_from_decls decls
                 in

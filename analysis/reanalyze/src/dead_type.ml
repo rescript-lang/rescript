@@ -68,20 +68,44 @@ let add_declaration ~config ~decls ~file ~(module_path : Module_path.t)
       decls
   | _ -> ()
 
+(* A record coercion [(e :> Target.t)] views the source record through the
+   target's labels: reading a target label is a read of the source label of the
+   same name. The edge runs target -> source only - reading a source label says
+   nothing about the target's.
+
+   The batch and the reactive pipelines share this rule and the shape of a
+   record-label declaration below, and differ only in how they index
+   declarations and how they record an edge. *)
+(* Use raw declaration positions, not [declGetLoc], because references are keyed
+   by raw positions (decl.pos). [declGetLoc] applies [posAdjustment] (e.g. +2 for
+   OtherVariant), which is intended for reporting locations, not for reference
+   graph keys. *)
+let decl_raw_loc (decl : Decl.t) : Location.t =
+  {Location.loc_start = decl.pos; loc_end = decl.pos_end; loc_ghost = false}
+
+let record_label_of_decl (decl : Decl.t) =
+  match (decl.decl_kind, decl.path) with
+  | RecordLabel, label :: type_path ->
+    Some (type_path, (label, decl |> decl_raw_loc))
+  | _ -> None
+
+let pair_coercion_labels ~source_labels ~target_labels ~add_edge =
+  target_labels
+  |> List.iter (fun (label, (target_loc : Location.t)) ->
+      match List.assoc_opt label source_labels with
+      | Some (source_loc : Location.t)
+        when (not source_loc.loc_ghost) && (not target_loc.loc_ghost)
+             && source_loc.loc_start <> target_loc.loc_start ->
+        add_edge ~source_loc ~target_loc
+      | _ -> ())
+
 module Path_map = Map.Make (struct
   type t = Dce_path.t
 
   let compare = Stdlib.compare
 end)
 
-let process_type_label_dependencies ~config ~decls ~refs =
-  (* Use raw declaration positions, not [declGetLoc], because references are keyed
-     by raw positions (decl.pos). [declGetLoc] applies [posAdjustment] (e.g. +2
-     for OtherVariant), which is intended for reporting locations, not for
-     reference graph keys. *)
-  let decl_raw_loc (decl : Decl.t) : Location.t =
-    {Location.loc_start = decl.pos; loc_end = decl.pos_end; loc_ghost = false}
-  in
+let process_type_label_dependencies ~config ~decls ~refs ~coercions =
   (* Build an index from full label path -> list of locations *)
   let index =
     Declarations.fold
@@ -206,6 +230,41 @@ let process_type_label_dependencies ~config ~decls ~refs =
         )
       | _ -> ())
     decls;
+
+  (* Record coercions: pair the labels with [pair_coercion_labels], indexing
+     declarations by the type path they belong to. *)
+  (if coercions <> [] then
+     let labels_by_type_path =
+       Declarations.fold
+         (fun _pos decl acc ->
+           match record_label_of_decl decl with
+           | Some (type_path, label) ->
+             let existing =
+               Path_map.find_opt type_path acc |> Option.value ~default:[]
+             in
+             Path_map.add type_path (label :: existing) acc
+           | None -> acc)
+         decls Path_map.empty
+     in
+     let labels_of_candidates paths =
+       paths
+       |> List.concat_map (fun path ->
+           Path_map.find_opt path labels_by_type_path
+           |> Option.value ~default:[])
+       (* Keep the pairing independent of declaration traversal order. *)
+       |> List.fast_sort (fun (_, l1) (_, l2) ->
+           compare_pos l1.Location.loc_start l2.Location.loc_start)
+     in
+     coercions |> List.fast_sort compare
+     |> List.iter
+          (fun {Cross_file_items.source_type_paths; target_type_paths} ->
+            match labels_of_candidates source_type_paths with
+            | [] -> ()
+            | source_labels ->
+              pair_coercion_labels ~source_labels
+                ~target_labels:(labels_of_candidates target_type_paths)
+                ~add_edge:(fun ~source_loc ~target_loc ->
+                  extend_type_dependencies ~config ~refs source_loc target_loc)));
 
   groups |> Hashtbl.to_seq |> List.of_seq
   |> List.map (fun (current_type_path, (rep_pos, manifest_type_path, items)) ->

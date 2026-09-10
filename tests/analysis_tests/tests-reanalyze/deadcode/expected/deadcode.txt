@@ -1654,6 +1654,51 @@
   addTypeReference Tuples.res:49:84 --> Tuples.res:36:2
   addValueReference Tuples.res:49:4 --> Tuples.res:49:31
   addValueReference Tuples.res:49:4 --> Tuples.res:49:31
+  Scanning TypeCoercion.cmt Source:TypeCoercion.res
+  addValueDeclaration +readNarrow TypeCoercion.res:22:4 path:+TypeCoercion
+  addValueDeclaration +takesUnread TypeCoercion.res:23:4 path:+TypeCoercion
+  addValueDeclaration +readAliasedNarrow TypeCoercion.res:24:4 path:+TypeCoercion
+  addValueDeclaration +readAliasedTarget TypeCoercion.res:25:4 path:+TypeCoercion
+  addValueDeclaration +main TypeCoercion.res:27:4 path:+TypeCoercion
+  addRecordLabelDeclaration name TypeCoercion.res:3:13 path:+TypeCoercion.user
+  addRecordLabelDeclaration email TypeCoercion.res:3:27 path:+TypeCoercion.user
+  addRecordLabelDeclaration age TypeCoercion.res:3:42 path:+TypeCoercion.user
+  addRecordLabelDeclaration a TypeCoercion.res:6:13 path:+TypeCoercion.wide
+  addRecordLabelDeclaration b TypeCoercion.res:6:24 path:+TypeCoercion.wide
+  addRecordLabelDeclaration a TypeCoercion.res:7:15 path:+TypeCoercion.narrow
+  addRecordLabelDeclaration u TypeCoercion.res:10:21 path:+TypeCoercion.unreadSource
+  addRecordLabelDeclaration u TypeCoercion.res:11:21 path:+TypeCoercion.unreadTarget
+  addRecordLabelDeclaration sa TypeCoercion.res:14:22 path:+TypeCoercion.aliasedSource
+  addRecordLabelDeclaration sb TypeCoercion.res:14:34 path:+TypeCoercion.aliasedSource
+  addRecordLabelDeclaration sa TypeCoercion.res:16:22 path:+TypeCoercion.aliasedNarrow
+  addRecordLabelDeclaration ta TypeCoercion.res:18:22 path:+TypeCoercion.aliasedTarget
+  addRecordLabelDeclaration tb TypeCoercion.res:18:34 path:+TypeCoercion.aliasedTarget
+  addRecordLabelDeclaration ta TypeCoercion.res:19:28 path:+TypeCoercion.aliasedTargetNarrow
+  addTypeReference TypeCoercion.res:22:44 --> TypeCoercion.res:7:15
+  addValueReference TypeCoercion.res:22:4 --> TypeCoercion.res:22:18
+  addTypeReference TypeCoercion.res:24:58 --> TypeCoercion.res:16:22
+  addValueReference TypeCoercion.res:24:4 --> TypeCoercion.res:24:25
+  addTypeReference TypeCoercion.res:25:62 --> TypeCoercion.res:19:28
+  addValueReference TypeCoercion.res:25:4 --> TypeCoercion.res:25:25
+  addValueDeclaration +john TypeCoercion.res:28:6 path:+TypeCoercion
+  addValueDeclaration +source TypeCoercion.res:32:6 path:+TypeCoercion
+  addValueDeclaration +aliasedSource TypeCoercion.res:34:6 path:+TypeCoercion
+  addValueReference TypeCoercion.res:27:4 --> TypeCoercion.res:25:4
+  addValueReference TypeCoercion.res:27:4 --> TypeCoercion.res:34:6
+  addValueReference TypeCoercion.res:27:4 --> TypeCoercion.res:24:4
+  addValueReference TypeCoercion.res:27:4 --> TypeCoercion.res:32:6
+  addValueReference TypeCoercion.res:27:4 --> TypeCoercion.res:23:4
+  addValueReference TypeCoercion.res:27:4 --> TypeCoercion.res:22:4
+  addValueReference TypeCoercion.res:27:4 --> TypeCoercion.res:28:6
+  addValueReference TypeCoercion.res:27:4 --> TypeCoercionPerson.res:3:4
+  addTypeReference TypeCoercion.res:29:14 --> TypeCoercion.res:3:27
+  addValueReference TypeCoercion.res:27:4 --> TypeCoercion.res:28:6
+  addValueReference TypeCoercion.res:39:0 --> TypeCoercion.res:27:4
+  Scanning TypeCoercionPerson.cmt Source:TypeCoercionPerson.res
+  addValueDeclaration +greet TypeCoercionPerson.res:3:4 path:+TypeCoercionPerson
+  addRecordLabelDeclaration name TypeCoercionPerson.res:1:10 path:+TypeCoercionPerson.t
+  addTypeReference TypeCoercionPerson.res:3:47 --> TypeCoercionPerson.res:1:10
+  addValueReference TypeCoercionPerson.res:3:4 --> TypeCoercionPerson.res:3:13
   Scanning TypeParams1.cmt Source:TypeParams1.res
   addValueDeclaration +exportSomething TypeParams1.res:4:4 path:+TypeParams1
   Scanning TypeParams2.cmt Source:TypeParams2.res
@@ -2054,6 +2099,16 @@
   addTypeReference DeadTypeTest.resi:9:2 --> DeadTypeTest.res:9:2
   extendTypeDependencies DeadTypeTest.resi:9:2 --> DeadTypeTest.res:9:2
   addTypeReference DeadTypeTest.res:9:2 --> DeadTypeTest.resi:9:2
+  extendTypeDependencies TypeCoercion.res:14:22 --> TypeCoercion.res:16:22
+  addTypeReference TypeCoercion.res:16:22 --> TypeCoercion.res:14:22
+  extendTypeDependencies TypeCoercion.res:18:22 --> TypeCoercion.res:19:28
+  addTypeReference TypeCoercion.res:19:28 --> TypeCoercion.res:18:22
+  extendTypeDependencies TypeCoercion.res:10:21 --> TypeCoercion.res:11:21
+  addTypeReference TypeCoercion.res:11:21 --> TypeCoercion.res:10:21
+  extendTypeDependencies TypeCoercion.res:3:13 --> TypeCoercionPerson.res:1:10
+  addTypeReference TypeCoercionPerson.res:1:10 --> TypeCoercion.res:3:13
+  extendTypeDependencies TypeCoercion.res:6:13 --> TypeCoercion.res:7:15
+  addTypeReference TypeCoercion.res:7:15 --> TypeCoercion.res:6:13
   extendTypeDependencies TypeReexportCrossFileB.res:4:2 --> TypeReexportCrossFileA.res:5:2
   addTypeReference TypeReexportCrossFileA.res:5:2 --> TypeReexportCrossFileB.res:4:2
   extendTypeDependencies TypeReexportCrossFileA.res:5:2 --> TypeReexportCrossFileB.res:4:2
@@ -2106,10 +2161,11 @@
   
 Forward Liveness Analysis
 
-    decls: 746
-    roots(external targets): 161
-    decl-deps: decls_with_out=451 edges_to_decls=323
+    decls: 770
+    roots(external targets): 167
+    decl-deps: decls_with_out=461 edges_to_decls=341
 
+    Root (external ref): Value +TypeCoercion.+main
     Root (external ref): Value +FirstClassModules.M.InnerModule2.+k
     Root (external ref): VariantCase DeadRT.moduleAccessPath.Root
     Root (external ref): Value +TypeReexport.VariantUseOriginal.+value
@@ -2226,6 +2282,7 @@ Forward Liveness Analysis
     Root (external ref): VariantCase +DeadTest.WithInclude.t.A
     Root (annotated): Value +Records.+origin
     Root (annotated): Value +Variants.+onlySunday
+    Root (external ref): RecordLabel +TypeCoercion.aliasedNarrow.sa
     Root (annotated): Value +TypeParams3.+test2
     Root (annotated): Value +Tuples.+origin
     Root (annotated): Value +Records.+getPayloadRecord
@@ -2252,6 +2309,7 @@ Forward Liveness Analysis
     Root (external ref): RecordLabel +Types.mutuallyRecursiveA.b
     Root (annotated): RecordLabel +ImportHooks.props.renderMe
     Root (external ref): Value +EmptyArray.Z.+make
+    Root (external ref): RecordLabel +TypeCoercion.user.email
     Root (annotated): Value +ScopedAnnotationsLiveVsDead.LiveScope.+root
     Root (external ref): Value +Newton.+result
     Root (annotated): Value +Records.+findAllAddresses
@@ -2295,6 +2353,7 @@ Forward Liveness Analysis
     Root (annotated): Value +OcamlWarningSuppressToplevel.M.+suppressed3
     Root (annotated): Value +Uncurried.+uncurried0
     Root (annotated): Value +Records.+someBusiness
+    Root (external ref): RecordLabel +TypeCoercionPerson.t.name
     Root (annotated): Value +Records.+computeArea4
     Root (external ref): RecordLabel +Hooks.vehicle.name
     Root (external ref): RecordLabel +Tuples.person.age
@@ -2397,6 +2456,7 @@ Forward Liveness Analysis
     Root (annotated): Value +Docstrings.+grouped
     Root (annotated): Value +TransitiveType1.+convertAlias
     Root (annotated): Value +Records.+payloadValue
+    Root (external ref): RecordLabel +TypeCoercion.aliasedTargetNarrow.ta
     Root (annotated): Value +ForOf.+keep
     Root (external ref): RecordLabel +Uncurried.auth.login
     Root (external ref): VariantCase +Unison.stack.Cons
@@ -2428,6 +2488,7 @@ Forward Liveness Analysis
     Root (external ref): Value +TypeReexport.OnlyReexportedDead.+value
     Root (annotated): Value +DeadTest.GloobLive.+globallyLive3
     Root (annotated): Value +ImportIndex.+make
+    Root (external ref): RecordLabel +TypeCoercion.narrow.a
     Root (annotated): Value +Unboxed.+testV1
     Root (annotated): Value +NestedModules.Universe.+theAnswer
     Root (annotated): Value +References.+access
@@ -2459,8 +2520,16 @@ Forward Liveness Analysis
     Root (annotated): Value +UseImportJsValue.+useGetProp
     Root (annotated): Value +Hooks.+functionWithRenamedArgs
   
-  348 roots found
+  354 roots found
 
+    Propagate: +TypeCoercion.+main -> +TypeCoercion.+readNarrow
+    Propagate: +TypeCoercion.+main -> +TypeCoercion.+takesUnread
+    Propagate: +TypeCoercion.+main -> +TypeCoercion.+readAliasedNarrow
+    Propagate: +TypeCoercion.+main -> +TypeCoercion.+readAliasedTarget
+    Propagate: +TypeCoercion.+main -> +TypeCoercion.+john
+    Propagate: +TypeCoercion.+main -> +TypeCoercion.+source
+    Propagate: +TypeCoercion.+main -> +TypeCoercion.+aliasedSource
+    Propagate: +TypeCoercion.+main -> +TypeCoercionPerson.+greet
     Propagate: DeadRT.moduleAccessPath.Root -> +DeadRT.moduleAccessPath.Root
     Propagate: +TypeReexportCrossFileB.reexportedRecord.usedField -> +TypeReexportCrossFileA.originalRecord.usedField
     Propagate: +OptArg.+wrapfourArgs -> +OptArg.+fourArgs
@@ -2482,6 +2551,7 @@ Forward Liveness Analysis
     Propagate: +TypeReexport.UseReexported.reexportedType.usedField -> +TypeReexport.UseReexported.originalType.usedField
     Propagate: +CrossFileOptionalArgValueUse.+liveReturnCaller -> +CrossFileOptionalArgProvider.+formatDate
     Propagate: +DeadTest.WithInclude.t.A -> +DeadTest.WithInclude.t.A
+    Propagate: +TypeCoercion.aliasedNarrow.sa -> +TypeCoercion.aliasedSource.sa
     Propagate: +References.+get -> +References.R.+get
     Propagate: +TopLevelOptionalArgValueUse.+mutuallyRecursiveCaller -> +TopLevelOptionalArgValueUse.+mutuallyRecursiveTarget
     Propagate: +DeadTest.MM.+x -> +DeadTest.MM.+x
@@ -2496,6 +2566,7 @@ Forward Liveness Analysis
     Propagate: +OptArg.+wrapOneArg -> +OptArg.+oneArg
     Propagate: +TestImmutableArray.+testImmutableArrayGet -> ImmutableArray.Array.+get
     Propagate: +ContextOptionalArgs.NotificationProvider.Provider.+make -> +ContextOptionalArgs.NotificationProvider.+dispatchNotificationContext
+    Propagate: +TypeCoercionPerson.t.name -> +TypeCoercion.user.name
     Propagate: +TypeReexport.VariantUseReexported.reexportedType.A -> +TypeReexport.VariantUseReexported.originalType.A
     Propagate: +Unison.+toString -> +Unison.+fits
     Propagate: +References.+set -> +References.R.+set
@@ -2509,10 +2580,12 @@ Forward Liveness Analysis
     Propagate: +DeadRT.moduleAccessPath.Kaboom -> DeadRT.moduleAccessPath.Kaboom
     Propagate: +TopLevelOptionalArgValueUse.+liveReturnedFunctionCaller -> +TopLevelOptionalArgValueUse.+returnedFunction
     Propagate: DeadValueTest.+valueAlive -> +DeadValueTest.+valueAlive
+    Propagate: +TypeCoercion.aliasedTargetNarrow.ta -> +TypeCoercion.aliasedTarget.ta
     Propagate: +TopLevelOptionalArgValueUse.+liveForwardingCaller -> +TopLevelOptionalArgValueUse.+formatDateForwarded
     Propagate: +DeadTest.VariantUsedOnlyInImplementation.+a -> +DeadTest.VariantUsedOnlyInImplementation.+a
     Propagate: +ImportJsValue.+useGetAbs -> +ImportJsValue.AbsoluteValue.+getAbs
     Propagate: +TypeReexport.VariantUseOriginal.reexportedType.A -> +TypeReexport.VariantUseOriginal.originalType.A
+    Propagate: +TypeCoercion.narrow.a -> +TypeCoercion.wide.a
     Propagate: +TypeReexport.OnlyReexportedDead.reexportedType.usedField -> +TypeReexport.OnlyReexportedDead.originalType.usedField
     Propagate: +TopLevelOptionalArgValueUse.+formatDateAlias2 -> +TopLevelOptionalArgValueUse.+formatDateAlias
     Propagate: ReturnedOptionalSignature.+returnedOptional -> +ReturnedOptionalSignature.+returnedOptional
@@ -2533,7 +2606,7 @@ Forward Liveness Analysis
     Propagate: +TopLevelOptionalArgValueUse.+returnedFunction -> +TopLevelOptionalArgValueUse.+returnsFunction
     Propagate: +ImportJsValue.AbsoluteValue.+getAbs -> +ImportJsValue.AbsoluteValue.+getAbs
   
-  71 declarations marked live via propagation
+  83 declarations marked live via propagation
 
   Dead VariantCase +AutoAnnotate.variant.R
   Dead RecordLabel +AutoAnnotate.record.variant
@@ -4039,6 +4112,81 @@ Forward Liveness Analysis
   Live (annotated) Value +Tuples.+changeSecondAge
       deps: in=0 (live=0 dead=0) out=1
         -> +Tuples.person.age
+  Live (propagated) RecordLabel +TypeCoercion.user.name
+      deps: in=1 (live=1 dead=0) out=0
+        <- +TypeCoercionPerson.t.name (live)
+  Live (external ref) RecordLabel +TypeCoercion.user.email
+      deps: in=1 (live=1 dead=0) out=0
+        <- +TypeCoercion.+main (live)
+  Dead RecordLabel +TypeCoercion.user.age
+  Live (propagated) RecordLabel +TypeCoercion.wide.a
+      deps: in=1 (live=1 dead=0) out=0
+        <- +TypeCoercion.narrow.a (live)
+  Dead RecordLabel +TypeCoercion.wide.b
+  Live (external ref) RecordLabel +TypeCoercion.narrow.a
+      deps: in=1 (live=1 dead=0) out=1
+        <- +TypeCoercion.+readNarrow (live)
+        -> +TypeCoercion.wide.a
+  Dead RecordLabel +TypeCoercion.unreadSource.u
+      deps: in=1 (live=0 dead=1) out=0
+        <- +TypeCoercion.unreadTarget.u (dead)
+  Dead RecordLabel +TypeCoercion.unreadTarget.u
+      deps: in=0 (live=0 dead=0) out=1
+        -> +TypeCoercion.unreadSource.u
+  Live (propagated) RecordLabel +TypeCoercion.aliasedSource.sa
+      deps: in=1 (live=1 dead=0) out=0
+        <- +TypeCoercion.aliasedNarrow.sa (live)
+  Dead RecordLabel +TypeCoercion.aliasedSource.sb
+  Live (external ref) RecordLabel +TypeCoercion.aliasedNarrow.sa
+      deps: in=1 (live=1 dead=0) out=1
+        <- +TypeCoercion.+readAliasedNarrow (live)
+        -> +TypeCoercion.aliasedSource.sa
+  Live (propagated) RecordLabel +TypeCoercion.aliasedTarget.ta
+      deps: in=1 (live=1 dead=0) out=0
+        <- +TypeCoercion.aliasedTargetNarrow.ta (live)
+  Dead RecordLabel +TypeCoercion.aliasedTarget.tb
+  Live (external ref) RecordLabel +TypeCoercion.aliasedTargetNarrow.ta
+      deps: in=1 (live=1 dead=0) out=1
+        <- +TypeCoercion.+readAliasedTarget (live)
+        -> +TypeCoercion.aliasedTarget.ta
+  Live (propagated) Value +TypeCoercion.+readNarrow
+      deps: in=1 (live=1 dead=0) out=1
+        <- +TypeCoercion.+main (live)
+        -> +TypeCoercion.narrow.a
+  Live (propagated) Value +TypeCoercion.+takesUnread
+      deps: in=1 (live=1 dead=0) out=0
+        <- +TypeCoercion.+main (live)
+  Live (propagated) Value +TypeCoercion.+readAliasedNarrow
+      deps: in=1 (live=1 dead=0) out=1
+        <- +TypeCoercion.+main (live)
+        -> +TypeCoercion.aliasedNarrow.sa
+  Live (propagated) Value +TypeCoercion.+readAliasedTarget
+      deps: in=1 (live=1 dead=0) out=1
+        <- +TypeCoercion.+main (live)
+        -> +TypeCoercion.aliasedTargetNarrow.ta
+  Live (external ref) Value +TypeCoercion.+main
+      deps: in=0 (live=0 dead=0) out=9
+        -> +TypeCoercion.+readNarrow
+        -> +TypeCoercion.+takesUnread
+        -> +TypeCoercion.+readAliasedNarrow
+        -> ... (6 more)
+  Live (propagated) Value +TypeCoercion.+john
+      deps: in=1 (live=1 dead=0) out=0
+        <- +TypeCoercion.+main (live)
+  Live (propagated) Value +TypeCoercion.+source
+      deps: in=1 (live=1 dead=0) out=0
+        <- +TypeCoercion.+main (live)
+  Live (propagated) Value +TypeCoercion.+aliasedSource
+      deps: in=1 (live=1 dead=0) out=0
+        <- +TypeCoercion.+main (live)
+  Live (external ref) RecordLabel +TypeCoercionPerson.t.name
+      deps: in=1 (live=1 dead=0) out=1
+        <- +TypeCoercionPerson.+greet (live)
+        -> +TypeCoercion.user.name
+  Live (propagated) Value +TypeCoercionPerson.+greet
+      deps: in=1 (live=1 dead=0) out=1
+        <- +TypeCoercion.+main (live)
+        -> +TypeCoercionPerson.t.name
   Dead Value +TypeParams1.+exportSomething
   Dead RecordLabel +TypeParams2.item.id
   Dead Value +TypeParams2.+exportSomething
@@ -5404,6 +5552,30 @@ Forward Liveness Analysis
   TransitiveType3.res:4:3-11
   t3.s is a record label never used to read a value
 
+  Warning Dead Type
+  TypeCoercion.res:3:43-50
+  user.age is a record label never used to read a value
+
+  Warning Dead Type
+  TypeCoercion.res:6:25-33
+  wide.b is a record label never used to read a value
+
+  Warning Dead Type
+  TypeCoercion.res:10:22-30
+  unreadSource.u is a record label never used to read a value
+
+  Warning Dead Type
+  TypeCoercion.res:11:22-30
+  unreadTarget.u is a record label never used to read a value
+
+  Warning Dead Type
+  TypeCoercion.res:14:35-44
+  aliasedSource.sb is a record label never used to read a value
+
+  Warning Dead Type
+  TypeCoercion.res:18:35-44
+  aliasedTarget.tb is a record label never used to read a value
+
   Warning Dead Module
   TypeParams1.res:0:1
   TypeParams1 is a dead module as all its items are dead.
@@ -5660,4 +5832,4 @@ Forward Liveness Analysis
   OptArg.res:14:1-42
   optional argument b of function twoArgs is never used
   
-  Analysis reported 330 issues (Incorrect Dead Annotation:1, Warning Dead Exception:2, Warning Dead Module:23, Warning Dead Type:94, Warning Dead Value:179, Warning Dead Value With Side Effects:6, Warning Redundant Optional Argument:7, Warning Unused Argument:18)
+  Analysis reported 336 issues (Incorrect Dead Annotation:1, Warning Dead Exception:2, Warning Dead Module:23, Warning Dead Type:100, Warning Dead Value:179, Warning Dead Value With Side Effects:6, Warning Redundant Optional Argument:7, Warning Unused Argument:18)

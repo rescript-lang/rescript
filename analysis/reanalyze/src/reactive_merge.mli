@@ -37,6 +37,7 @@ type t = {
   (* Reactive type/exception dependencies *)
   type_deps: Reactive_type_deps.t;
   exception_refs: Reactive_exception_refs.t;
+  coercion_refs: Reactive_coercions.t;
 }
 (** All derived reactive collections from per-file data *)
 
