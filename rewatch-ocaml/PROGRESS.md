@@ -848,15 +848,15 @@ sufficient on its own: the compiler-work tuple and selected artifact manifests
 must also be identical, and the canonical/focused integration tests remain the
 behavioral-equivalence gate.
 
-The latest five-run release-build measurement was made in the Linux Docker
-environment on the plugged-in Mac host:
+The latest five-run release-build measurement was made at commit `d5cead598`
+in the Linux Docker environment on the plugged-in, otherwise idle Mac host:
 
 | Implementation | Median wall time | Median peak tree RSS |
 | --- | ---: | ---: |
-| Rust | 5,489 ms | 759,232 KiB |
-| OCaml | 6,468 ms | 752,496 KiB |
+| Rust | 4,589 ms | 739,096 KiB |
+| OCaml | 5,498 ms | 772,396 KiB |
 
-The latest completed gate's 1.178× wall-time ratio and 0.991× RSS ratio pass
+The latest completed gate's 1.198× wall-time ratio and 1.045× RSS ratio pass
 the 1.25× gate.
 The host was plugged in and otherwise idle for this run. Docker on a Mac is
 still noisier than native Linux or dedicated CI, so final acceptance should
@@ -896,6 +896,25 @@ sample was 13,932 ms / 621,948 KiB for Rust and 15,851 ms / 645,312 KiB for
 OCaml. That 1.138× sample is useful only as a correctness smoke test and does
 not replace the five-run performance result; its much higher absolute times
 also illustrate why a single run is not an acceptance measurement.
+
+The filesystem audit at commit `d5cead598` reports nearly identical
+incremental driver work. Unchanged builds use 2,911 OCaml versus 2,962 Rust
+metadata calls, 1,221 versus 1,220 opens, and 162 versus 160 directory scans.
+After one source edit the counts are 2,931 versus 2,979 metadata calls, 1,249
+versus 1,246 opens, and again 162 versus 160 scans. Clean builds use 13,150
+versus 12,018 metadata calls and 14,363 versus 13,492 opens, with 160 versus 158
+scans. The remaining clean-build delta is therefore 1,132 metadata and 871 open
+calls around the same 1,031 compiler jobs; prior per-process attribution
+identifies repeated CMI comparison and case-candidate checks, not extra
+compilation or directory-tree discovery. Raw create/remove totals intentionally
+remain diagnostic because the drivers use different publication mechanics.
+
+The maintained source-size tool reports 7,337 lines of OCaml production code
+and 7,818 lines of Rust production code when Rust telemetry is excluded. Tests
+remain separate: OCaml has 5,685 test/fixture lines and 372 benchmark-tooling
+lines; Rust has 2,773 inline unit-test lines. Blank and comment lines are
+reported separately by `bench/source_size.sh` and are not included in these
+code counts.
 
 The harness now respects an explicitly paired `RESCRIPT_BSC_EXE` and
 `RESCRIPT_RUNTIME` and classifies compiler work by that exact executable path,
@@ -1097,8 +1116,8 @@ than directory discovery or extra compilation.
 
 The aggregate timing, memory, compiler-work, artifact, and behavioral gates
 pass, and incremental filesystem work is now slightly below Rust apart from two
-inventory scans. Clean-build driver metadata remains about 1,174 calls above
-Rust, with a concrete per-CMI comparison/candidate shape rather than repeated
+inventory scans. Clean-build driver metadata remains 1,132 calls above Rust,
+with a concrete per-CMI comparison/candidate shape rather than repeated
 directory discovery. Closing or specifically documenting that residual is a
 completion gate for the current architecture refactor. Rerun
 the evidence with `bench/filesystem_audit.sh`; its prerequisites, isolation,
