@@ -1,4 +1,5 @@
-let rec run ~(root_config : Config.t) ~seen ~root ~prod ~is_local ~on_clean =
+let rec run ~(root_config : Config.t) ~dependency_context ~seen ~root ~prod
+    ~is_local ~on_clean =
   if not (Hashtbl.mem seen root) then (
     Hashtbl.add seen root ();
     let config_path = Config.path_in_root root in
@@ -23,13 +24,15 @@ let rec run ~(root_config : Config.t) ~seen ~root ~prod ~is_local ~on_clean =
             (fun (dependency : Config.dependency) ->
               let directory =
                 Project_context.require_dependency_directory
-                  ~workspace_root:root_config.root root dependency
+                  ~context:dependency_context root dependency
               in
               try
-                run ~root_config ~seen ~root:directory ~prod
+                run ~root_config ~dependency_context ~seen ~root:directory ~prod
                   ~is_local:
                     (Project_context.is_local_dependency_canonical
-                       ~workspace:root_config.root directory)
+                       ~workspace:
+                         (Project_context.dependency_workspace dependency_context)
+                       directory)
                   ~on_clean
               with Config.Error message ->
                 raise

@@ -75,6 +75,7 @@ let package_sources (package : discovered_package) =
    diagnostics and the eventual local file set cannot drift apart. *)
 let discover_package_graph (current : Config.t) =
   let workspace = Project_context.workspace_lock_root current.root in
+  let dependency_context = Project_context.dependency_context current in
   let resolved_packages = Hashtbl.create 32 in
   let package_configs = Hashtbl.create 32 in
   let feature_requests = Hashtbl.create 32 in
@@ -95,8 +96,8 @@ let discover_package_graph (current : Config.t) =
       |> List.filter_map (fun (dependency : Config.dependency) ->
            add_feature_request dependency.name dependency.features;
            let directory =
-             Project_context.require_dependency_directory ~workspace_root:current.root
-               config.root dependency
+             Project_context.require_dependency_directory
+               ~context:dependency_context config.root dependency
            in
            match Hashtbl.find_opt resolved_packages dependency.name with
            | Some chosen ->

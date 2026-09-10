@@ -27,9 +27,11 @@ let clean ~seen ~verbosity ~folder ~prod =
   Build_lock.with_build (Project_context.workspace_lock_root root)
     (fun ~release:_ ->
       let root_config = Config.load_root root in
+      let dependency_context = Project_context.dependency_context root_config in
       let visited = Hashtbl.create 32 in
       List.iter (fun path -> Hashtbl.replace visited (Unix.realpath path) ()) seen;
-      Clean.run ~root_config ~seen:visited ~root ~prod ~is_local:true ~on_clean)
+      Clean.run ~root_config ~dependency_context ~seen:visited ~root ~prod
+        ~is_local:true ~on_clean)
 
 let compiler_args = Compiler_args_command.run
 
@@ -277,8 +279,10 @@ let run_with_warning_state ~poll ~warning_state ~compilation_kind ~no_timing
           (fun name -> Hashtbl.replace stats.blocked_modules name ())
           cycle_info.blocked)
       cycle;
-    Package_build.prepare_tree ~root_config ~seen:visited ~folder:root ~prod ~features
-      ~warn_error ~watch ~filter ~is_local:true ~stats;
+    Package_build.prepare_tree ~root_config
+      ~dependency_context:(Project_context.dependency_context root_config)
+      ~seen:visited ~folder:root ~prod ~features ~warn_error ~watch ~filter
+      ~is_local:true ~stats;
     poll ();
     if interactive && show_progress then
       print_endline

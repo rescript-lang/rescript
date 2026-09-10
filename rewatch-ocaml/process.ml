@@ -432,8 +432,20 @@ let run_dependency_graph_with_notifier ~max_jobs ~is_fatal ~poll notifier works
          Hashtbl.replace remaining_dependents dependency remaining;
          if remaining = 0 then Queue.add dependency leaves)
   done;
-  if !prioritized <> count then
-    raise (Error "subprocess dependency graph contains a cycle");
+  let () =
+    if !prioritized <> count then
+      let cycle =
+        Graph.shortest_cycle works ~name:(fun work -> work.key)
+          ~deps:(fun work -> work.dependencies)
+        |> Option.value ~default:[]
+      in
+      let details =
+        match cycle with
+        | [] -> ""
+        | cycle -> ": " ^ String.concat " -> " cycle
+      in
+      raise (Error ("subprocess dependency graph contains a cycle" ^ details))
+  in
   let ready = ref Work_ready.empty in
   let add_ready work =
     ready :=

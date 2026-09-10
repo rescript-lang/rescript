@@ -1,12 +1,23 @@
 exception Error of string
 exception Package_error of string
 
+type dependency_context
+
 val workspace_lock_root : string -> string
+val dependency_context : Config.t -> dependency_context
+val dependency_workspace : dependency_context -> string
+
+val dependency_candidates_in :
+  dependency_context -> string -> string -> string list
+
+val dependency_path_in :
+  dependency_context -> string -> string -> string option
+
 val dependency_candidates : string -> string -> string list
 val dependency_path : string -> string -> string option
 
 val require_dependency_directory :
-  workspace_root:string -> string -> Config.dependency -> string
+  context:dependency_context -> string -> Config.dependency -> string
 
 val relative_to : string -> string -> string
 val is_local_dependency_canonical : workspace:string -> string -> bool

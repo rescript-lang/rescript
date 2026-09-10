@@ -31,6 +31,11 @@ let resolve_program ~path_separator ~executable_extensions ~search_directories
     |> Option.value ~default:program
 
 let process_is_active ~probe value =
-  try probe (int_of_string value) with
+  try
+    let pid = int_of_string value in
+    (* PID zero names a process group on Unix and is not a usable child-process
+       identity on Windows, so it can never prove ownership of a build lock. *)
+    if pid = 0 then false else probe pid
+  with
   | Failure _ | Unix.Unix_error (Unix.ESRCH, _, _) -> false
   | Unix.Unix_error (Unix.EPERM, _, _) -> true

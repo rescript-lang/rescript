@@ -13,6 +13,10 @@ let rec nearest_existing_ancestor path =
     if parent = path then None else nearest_existing_ancestor parent
 
 let watch_context ~root ~prod ~features =
+  try
+    let root_config = Config.load_root root in
+    let dependency_context = Project_context.dependency_context root_config in
+    let workspace = Project_context.dependency_workspace dependency_context in
   let visited = Hashtbl.create 32 in
   let packages = Hashtbl.create 32 in
   let requested_features = Hashtbl.create 32 in
@@ -45,7 +49,7 @@ let watch_context ~root ~prod ~features =
     path = root || String.starts_with ~prefix:(Filename.concat root "") path
   in
   let watch_unresolved_dependency package_root name =
-    Project_context.dependency_candidates package_root name
+    Project_context.dependency_candidates_in dependency_context package_root name
     |> List.iter (fun candidate ->
          let existing = nearest_existing_directory root candidate in
          try
@@ -71,9 +75,12 @@ let watch_context ~root ~prod ~features =
     in
     List.iter
       (fun (dependency : Config.dependency) ->
-        match Project_context.dependency_path config.root dependency.name with
+        match
+          Project_context.dependency_path_in dependency_context config.root
+            dependency.name
+        with
         | Some directory
-          when Project_context.is_local_dependency_canonical ~workspace:root
+          when Project_context.is_local_dependency_canonical ~workspace
                  directory
                && Config.exists_in_root directory ->
           if not (Hashtbl.mem visited directory) then (
@@ -84,7 +91,7 @@ let watch_context ~root ~prod ~features =
           (try
              visit
                ~is_local:
-                 (Project_context.is_local_dependency_canonical ~workspace:root
+                 (Project_context.is_local_dependency_canonical ~workspace
                     directory)
                ~features:dependency.features (Config.load_root directory)
            with Config.Error _ -> Hashtbl.replace visited directory ())
@@ -105,8 +112,7 @@ let watch_context ~root ~prod ~features =
         | Some _ -> ())
       dependencies)
   in
-  try
-    visit ~is_local:true ~features (Config.load_root root);
+    visit ~is_local:true ~features root_config;
     Hashtbl.iter
       (fun package_root ((config : Config.t), is_local) ->
         try

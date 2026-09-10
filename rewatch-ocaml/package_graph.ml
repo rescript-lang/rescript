@@ -24,6 +24,8 @@ let dependent_is_allowed allowed_dependents dependent =
 
 let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
     ~stats =
+  let dependency_context = Project_context.dependency_context root_config in
+  let workspace = Project_context.dependency_workspace dependency_context in
   let requested_features = Hashtbl.create 32 in
   let unallowed_dependencies = ref [] in
   let loaded_configs = Hashtbl.create 32 in
@@ -46,7 +48,7 @@ let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
     | None ->
       let directory =
         Project_context.require_dependency_directory
-          ~workspace_root:root_config.root package_root dependency
+          ~context:dependency_context package_root dependency
       in
       let warn_duplicate chosen =
         let warning_key = dependency.name ^ "\000" ^ directory in
@@ -127,8 +129,8 @@ let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
         (fun ((dependency : Config.dependency), directory) ->
           collect ~folder:directory ~features:dependency.features
             ~is_local:
-              (Project_context.is_local_dependency_canonical
-                 ~workspace:root_config.root directory))
+              (Project_context.is_local_dependency_canonical ~workspace
+                 directory))
         resolved_dependencies)
   in
   collect ~folder:root_config.root ~features ~is_local:true;
@@ -182,8 +184,8 @@ let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
           visit ~folder:directory ~features:dependency.features
             ~warn_error:None ~filter:None
             ~is_local:
-              (Project_context.is_local_dependency_canonical
-                 ~workspace:root_config.root directory))
+              (Project_context.is_local_dependency_canonical ~workspace
+                 directory))
         dependency_directories;
       let discovery =
         Source.discover_with_inventory config
