@@ -3,8 +3,6 @@ exception Package_error = Project_context.Package_error
 exception Build_failure = Compiler_scheduler.Build_failure
 exception Parse_failure of string
 
-open Build_artifacts
-open File_util
 open Build_types
 
 let rec prepare_tree ~(root_config : Config.t) ~seen ~folder:root ~prod ~features
@@ -66,7 +64,7 @@ let rec prepare_tree ~(root_config : Config.t) ~seen ~folder:root ~prod ~feature
              if Option.is_none stats.failure then stats.failure <- Some output)
         | _ -> ()
       in
-      let ocaml = lib_path candidate "ocaml" in
+      let ocaml = Build_artifacts.lib_path candidate "ocaml" in
       if Sys.file_exists ocaml then Some (dependency, ocaml) else None)
   in
   let dependency_dirs = List.map snd dependency_directories in
@@ -101,15 +99,15 @@ let rec prepare_tree ~(root_config : Config.t) ~seen ~folder:root ~prod ~feature
   let build_dir =
     match prepared with
     | Some package -> package.graph_build_dir
-    | None -> lib_path root "bs"
+    | None -> Build_artifacts.lib_path root "bs"
   in
   let ocaml_dir =
     match prepared with
     | Some package -> package.graph_ocaml_dir
-    | None -> lib_path root "ocaml"
+    | None -> Build_artifacts.lib_path root "ocaml"
   in
-  ensure_dir build_dir;
-  ensure_dir ocaml_dir;
+  File_util.ensure_dir build_dir;
+  File_util.ensure_dir ocaml_dir;
   Compiler_log.initialize root;
   Hashtbl.replace stats.initialized_logs root ();
   let modules =
@@ -130,7 +128,7 @@ let rec prepare_tree ~(root_config : Config.t) ~seen ~folder:root ~prod ~feature
     match prepared with
     | Some package -> package.graph_compile_config
     | None ->
-      with_root_options config root_config
+      Build_artifacts.with_root_options config root_config
       |> Compiler_args.with_local_warning_policy ~is_local
   in
   let cleanup =
@@ -217,10 +215,15 @@ let rec prepare_tree ~(root_config : Config.t) ~seen ~folder:root ~prod ~feature
     if stderr <> "" then prerr_string stderr;
     let ast = Source.ast_path path in
     if is_local && stderr <> "" then warning_asts := ast :: !warning_asts;
-    copy_existing_file ~ensure_parent:false (Filename.concat build_dir ast)
-      (Filename.concat (lib_path config.root "ocaml") (Filename.basename ast));
-    copy_existing_file ~ensure_parent:false (Filename.concat config.root path)
-      (Filename.concat (lib_path config.root "ocaml") (Filename.basename path))) parsed;
+    File_util.copy_existing_file ~ensure_parent:false (Filename.concat build_dir ast)
+      (Filename.concat
+         (Build_artifacts.lib_path config.root "ocaml")
+         (Filename.basename ast));
+    File_util.copy_existing_file ~ensure_parent:false (Filename.concat config.root path)
+      (Filename.concat
+         (Build_artifacts.lib_path config.root "ocaml")
+         (Filename.basename path)))
+    parsed;
   let raw_dependencies = Hashtbl.create (List.length modules) in
   let parse_dirty_modules = Hashtbl.create (List.length modules) in
   List.iter
@@ -266,13 +269,15 @@ let rec prepare_tree ~(root_config : Config.t) ~seen ~folder:root ~prod ~feature
         List.for_all
           (fun spec ->
             Hashtbl.mem cleanup.present_public_outputs
-              (generated_js_path config module_.Source.implementation spec))
+              (Build_artifacts.generated_js_path config
+                 module_.Source.implementation spec))
           config.package_specs
       | None ->
         List.for_all
           (fun spec ->
             Sys.file_exists
-              (generated_js_path config module_.Source.implementation spec))
+              (Build_artifacts.generated_js_path config
+                 module_.Source.implementation spec))
           config.package_specs
     in
     let raw_dependencies =
@@ -304,13 +309,15 @@ let rec prepare_tree ~(root_config : Config.t) ~seen ~folder:root ~prod ~feature
     let path = module_.Source.implementation in
     List.iter
       (fun spec ->
-        let output = generated_js_path config path spec in
+        let output = Build_artifacts.generated_js_path config path spec in
         let dirty_ast = Filename.concat build_dir (Source.ast_path path) in
-        ensure_dir (Filename.dirname output);
+        File_util.ensure_dir (Filename.dirname output);
         if watch then (
-          prepare_watch_output stats.watch_outputs stats.watch_output_paths
+          Build_artifacts.prepare_watch_output stats.watch_outputs
+            stats.watch_output_paths
             ~dirty_ast output;
-          prepare_watch_output stats.watch_outputs stats.watch_output_paths
+          Build_artifacts.prepare_watch_output stats.watch_outputs
+            stats.watch_output_paths
             ~dirty_ast (output ^ ".map")))
       config.package_specs
   in
@@ -393,13 +400,13 @@ let rec prepare_tree ~(root_config : Config.t) ~seen ~folder:root ~prod ~feature
               List.iter
                 (fun path ->
                   let ast = Source.ast_path path in
-                  remove_file
+                  File_util.remove_file
                     (Filename.concat ocaml_dir (Filename.basename ast)))
                 paths)
           compile_warning_modules;
       List.iter
         (fun ast ->
-          remove_file (Filename.concat ocaml_dir (Filename.basename ast)))
+          File_util.remove_file (Filename.concat ocaml_dir (Filename.basename ast)))
         !warning_asts)
     :: !(stats.compile_cleanup);
   ()

@@ -1,8 +1,6 @@
 exception Error = Project_context.Error
 exception Package_error = Project_context.Package_error
 
-open Build_artifacts
-open File_util
 open Build_types
 
 let source_discovery_prod ~prod ~is_local = prod || not is_local
@@ -206,7 +204,7 @@ let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
         let config =
           with_gentype_source_dirs discovery.gentype_dirs config
         in
-        let inherited = with_root_options config root_config in
+        let inherited = Build_artifacts.with_root_options config root_config in
         let output_config =
           if owns_outputs then
             {
@@ -218,9 +216,9 @@ let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
         in
         output_config |> Compiler_args.with_local_warning_policy ~is_local
       in
-      let build_dir = lib_path root "bs" in
-      let ocaml_dir = lib_path root "ocaml" in
-      ensure_dir build_dir;
+      let build_dir = Build_artifacts.lib_path root "bs" in
+      let ocaml_dir = Build_artifacts.lib_path root "ocaml" in
+      File_util.ensure_dir build_dir;
       let source_mtimes = Hashtbl.create (List.length discovery.source_mtimes) in
       List.iter
         (fun (path, modified) -> Hashtbl.replace source_mtimes path modified)

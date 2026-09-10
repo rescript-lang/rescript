@@ -1,7 +1,5 @@
 exception Error = Project_context.Error
 
-open Build_artifacts
-open File_util
 open Build_types
 
 type cycle_info = {
@@ -81,8 +79,8 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error
              package.graph_compile_config package.graph_modules);
         Compiler_info.clean_package package.graph_config;
         stats.compiler_cleaned <- true);
-      ensure_dir package.graph_build_dir;
-      ensure_dir package.graph_ocaml_dir)
+      File_util.ensure_dir package.graph_build_dir;
+      File_util.ensure_dir package.graph_ocaml_dir)
     graph_packages;
   let compile_assets =
     graph_packages

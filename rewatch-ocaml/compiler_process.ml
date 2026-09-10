@@ -1,6 +1,3 @@
-open Build_artifacts
-open File_util
-
 let contains_text value text =
   try
     ignore (Str.search_forward (Str.regexp_string text) value 0);
@@ -18,8 +15,8 @@ let retain_critical_external_warnings stderr =
 
 let parse_job ~bsc ~build_dir ~(config : Config.t) path =
   let ast = Source.ast_path path in
-  ensure_dir (Filename.concat build_dir (Filename.dirname ast));
-  let contents = read_file (Filename.concat config.root path) in
+  File_util.ensure_dir (Filename.concat build_dir (Filename.dirname ast));
+  let contents = File_util.read_file (Filename.concat config.root path) in
   let args =
     Compiler_args.compiler_flags
       ~ppx_flags:(Compiler_args.filter_ppx_flags config.ppx_flags contents)
@@ -114,16 +111,16 @@ let namespace_job ~bsc ~runtime ~build_dir ~ocaml_dir ~entry ~package_dirty
             raise
               (Compiler_scheduler.Build_failure
                  (result.Process.stderr ^ result.stdout));
-          copy_file_if_changed ~ensure_parent:false
+          File_util.copy_file_if_changed ~ensure_parent:false
             (Filename.concat build_dir (namespace ^ ".cmi"))
             (Filename.concat ocaml_dir (namespace ^ ".cmi"));
-          copy_existing_file ~ensure_parent:false
+          File_util.copy_existing_file ~ensure_parent:false
             (Filename.concat build_dir (namespace ^ ".cmj"))
             (Filename.concat ocaml_dir (namespace ^ ".cmj"));
-          copy_existing_file ~ensure_parent:false
+          File_util.copy_existing_file ~ensure_parent:false
             (Filename.concat build_dir (namespace ^ ".cmt"))
             (Filename.concat ocaml_dir (namespace ^ ".cmt"));
-          copy_existing_file ~ensure_parent:false mlmap
+          File_util.copy_existing_file ~ensure_parent:false mlmap
             (Filename.concat ocaml_dir (namespace ^ ".mlmap")) )
 
 let run_post_build (config : Config.t) path =
@@ -132,7 +129,7 @@ let run_post_build (config : Config.t) path =
   | Some command ->
     List.iter
       (fun spec ->
-        let output = generated_js_path config path spec in
+        let output = Build_artifacts.generated_js_path config path spec in
         let env, program, args = Platform.post_build_command ~command ~output in
         let result =
           match env with
@@ -194,38 +191,38 @@ let publish ~build_dir ~ocaml_dir ~watch ~watch_output_paths ~is_local
       let source = Filename.concat artifact_dir (basename ^ "." ^ extension) in
       let destination = Filename.concat ocaml_dir (basename ^ "." ^ extension) in
       if extension = "cmi" then
-        copy_file_if_changed ~ensure_parent:false source destination
+        File_util.copy_file_if_changed ~ensure_parent:false source destination
       else if extension = "cmt" || extension = "cmti" then
-        copy_optional_existing_file ~ensure_parent:false source destination
-      else copy_existing_file ~ensure_parent:false source destination)
+        File_util.copy_optional_existing_file ~ensure_parent:false source destination
+      else File_util.copy_existing_file ~ensure_parent:false source destination)
     extensions;
   let source = Filename.concat config.root path in
   let build_source = Filename.concat build_dir path in
-  ensure_dir (Filename.dirname build_source);
-  copy_existing_file ~ensure_parent:false source build_source;
-  copy_existing_file ~ensure_parent:false source
+  File_util.ensure_dir (Filename.dirname build_source);
+  File_util.copy_existing_file ~ensure_parent:false source build_source;
+  File_util.copy_existing_file ~ensure_parent:false source
     (Filename.concat ocaml_dir (Filename.basename path));
   if not is_interface then (
     List.iter
       (fun spec ->
         if spec.Config.in_source then (
-          let output = generated_js_path config path spec in
+          let output = Build_artifacts.generated_js_path config path spec in
           let build_output =
-            generated_build_js_path ~build_dir config path spec
+            Build_artifacts.generated_build_js_path ~build_dir config path spec
           in
-          ensure_dir (Filename.dirname build_output);
+          File_util.ensure_dir (Filename.dirname build_output);
           if Sys.file_exists output then
-            copy_existing_file ~ensure_parent:false output build_output;
+            File_util.copy_existing_file ~ensure_parent:false output build_output;
           if Sys.file_exists (output ^ ".map") then
-            copy_existing_file ~ensure_parent:false (output ^ ".map")
+            File_util.copy_existing_file ~ensure_parent:false (output ^ ".map")
               (build_output ^ ".map")
-          else remove_file (build_output ^ ".map")))
+          else File_util.remove_file (build_output ^ ".map")))
       config.package_specs;
     run_post_build config path;
     if watch then
       List.iter
         (fun spec ->
-          let output = generated_js_path config path spec in
+          let output = Build_artifacts.generated_js_path config path spec in
           List.iter
             (fun generated ->
               if
