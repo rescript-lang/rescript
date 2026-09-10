@@ -68,32 +68,35 @@ pub fn remove_compile_assets(package: &packages::Package, source_file: &Path) {
 }
 
 fn clean_source_files(packages: &AHashMap<String, Package>, root_config: &Config) {
-    let rescript_file_locations = packages
-        .values()
-        .filter_map(|package| package.source_files.as_ref().map(|files| (package, files)))
-        .flat_map(|(package, files)| {
-            files
-                .keys()
-                .filter(|file| {
-                    file.extension()
-                        .and_then(|extension| extension.to_str())
-                        .is_some_and(helpers::is_implementation_file)
-                })
-                .flat_map(move |file| {
-                    root_config
-                        .get_package_specs()
-                        .into_iter()
-                        .filter(|spec| spec.in_source)
-                        .map(move |spec| {
-                            let suffix = match spec.suffix {
-                                None => root_config.get_suffix(&spec),
-                                Some(suffix) => suffix,
-                            };
-                            (package.path.join(file), suffix)
-                        })
-                })
-        })
-        .collect::<Vec<(PathBuf, String)>>();
+    let mut rescript_file_locations = Vec::new();
+    for package in packages.values() {
+        let Some(source_files) = &package.source_files else {
+            continue;
+        };
+        for source_file in source_files.keys().filter(|source_file| {
+            source_file
+                .extension()
+                .and_then(|extension| extension.to_str())
+                .is_some_and(helpers::is_implementation_file)
+        }) {
+            for spec in root_config.get_package_specs() {
+                let output_base = if spec.in_source {
+                    package.path.join(source_file)
+                } else {
+                    package
+                        .path
+                        .join("lib")
+                        .join(spec.get_out_of_source_dir())
+                        .join(source_file)
+                };
+                let suffix = match &spec.suffix {
+                    None => root_config.get_suffix(&spec),
+                    Some(suffix) => suffix.clone(),
+                };
+                rescript_file_locations.push((output_base, suffix));
+            }
+        }
+    }
 
     rescript_file_locations
         .par_iter()
