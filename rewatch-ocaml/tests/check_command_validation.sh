@@ -673,10 +673,20 @@ if [ "$(cat "$work/malformed-lock/lib/build.lock")" != not-a-pid ]; then
   echo "OCaml replaced a malformed build lock with unknown ownership" >&2
   exit 1
 fi
+if [ -n "$(find "$work/malformed-lock/lib" -maxdepth 1 \
+  -name '.build-lock-*.tmp' -print -quit)" ]; then
+  echo "OCaml left a build-lock candidate after acquisition failed" >&2
+  exit 1
+fi
 printf 'not-a-pid' >"$work/malformed-lock/lib/watch.lock"
 run_case watch-malformed-lock reject reject watch "$work/malformed-lock"
 if [ "$(cat "$work/malformed-lock/lib/watch.lock")" != not-a-pid ]; then
   echo "OCaml replaced a malformed watch lock with unknown ownership" >&2
+  exit 1
+fi
+if [ -n "$(find "$work/malformed-lock/lib" -maxdepth 1 \
+  -name '.watch-lock-*.tmp' -print -quit)" ]; then
+  echo "OCaml left a watch-lock candidate after acquisition failed" >&2
   exit 1
 fi
 run_case build-interface-path-mismatch reject reject build \

@@ -216,8 +216,5 @@ let run_locked ~root ~prod ~clear_screen ~show_progress ~build ~watch_lock =
         fallback)
 
 let run ~root ~prod ~clear_screen ~show_progress ~build =
-  let watch_lock = Build_lock.acquire_watch root in
-  Fun.protect
-    (fun () ->
-      run_locked ~root ~prod ~clear_screen ~show_progress ~build ~watch_lock)
-    ~finally:(fun () -> Build_lock.release watch_lock)
+  Build_lock.with_watch root (fun watch_lock ->
+    run_locked ~root ~prod ~clear_screen ~show_progress ~build ~watch_lock)

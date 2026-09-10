@@ -485,12 +485,27 @@ let tests =
       Unix.rmdir lock_dir;
       Unix.rmdir lock_root)
     (fun () ->
-      let release = Build_lock.acquire_build lock_root in
-      check
-        (Build_lock.read_owner lock = Some (string_of_int (Unix.getpid ())))
-        "stale build lock is replaced";
-      check (not (Sys.file_exists takeover)) "stale takeover marker is removed";
-      release ());
+      Build_lock.with_build lock_root (fun ~release ->
+          check
+            (Build_lock.read_owner lock = Some (string_of_int (Unix.getpid ())))
+            "stale build lock is replaced";
+          check
+            (not (Sys.file_exists takeover))
+            "stale takeover marker is removed";
+          let candidates =
+            Sys.readdir lock_dir |> Array.to_list
+            |> List.filter (String.starts_with ~prefix:".build-lock-")
+          in
+          check (candidates = []) "lock candidate is removed before build work";
+          release ();
+          check
+            (not (Sys.file_exists lock))
+            "build lock is released immediately";
+          release ();
+          check
+            (not (Sys.file_exists lock))
+            "releasing a build lock twice is harmless");
+      check (not (Sys.file_exists lock)) "released build lock is removed");
   let config_root = Filename.temp_file "rewatch-ocaml-config-" "" in
   Sys.remove config_root;
   Unix.mkdir config_root 0o755;

@@ -25,14 +25,12 @@ let clean ~seen ~verbosity ~folder ~prod =
   let on_clean name =
     if show_plain_progress then Printf.printf "Cleaning %s\n%!" name
   in
-  let release_build_lock =
-    Build_lock.acquire_build (Project_context.workspace_lock_root root)
-  in
-  Fun.protect ~finally:release_build_lock (fun () ->
-    let root_config = Config.load_root root in
-    let visited = Hashtbl.create 32 in
-    List.iter (fun path -> Hashtbl.replace visited (Unix.realpath path) ()) seen;
-    Clean.run ~root_config ~seen:visited ~root ~prod ~is_local:true ~on_clean)
+  Build_lock.with_build (Project_context.workspace_lock_root root)
+    (fun ~release:_ ->
+      let root_config = Config.load_root root in
+      let visited = Hashtbl.create 32 in
+      List.iter (fun path -> Hashtbl.replace visited (Unix.realpath path) ()) seen;
+      Clean.run ~root_config ~seen:visited ~root ~prod ~is_local:true ~on_clean)
 
 let compiler_args = Compiler_args_command.run
 
@@ -255,13 +253,10 @@ let run_with_warning_state ~poll ~warning_state ~compilation_kind ~no_timing
     ^ (cycle |> List.map format_node |> String.concat "\n → ")
     ^ "\nPossible solutions:\n- Extract shared code into a new module both depend on.\n"
   in
-  let release_build_lock =
-    Build_lock.acquire_build (Project_context.workspace_lock_root root)
-  in
   let phase_seconds seconds = if no_timing then 0. else seconds in
   let parse_step = if is_rebuild then "1/2" else "2/3" in
   let compile_step = if is_rebuild then "2/2" else "3/3" in
-  let execute () =
+  let execute ~release_build_lock =
     poll ();
     let cycle =
       Build_preparation.run ~root_config ~prod ~features ~warn_error ~filter
@@ -348,16 +343,17 @@ let run_with_warning_state ~poll ~warning_state ~compilation_kind ~no_timing
         after_build;
       report ~success:true ())
   in
-  Fun.protect
-    ~finally:(fun () ->
-      List.iter remove_file !(stats.deferred_artifact_cleanup);
-      if not !outputs_finished then finish_watch_outputs ~success:false;
-      finalize_logs ();
-      release_build_lock ())
-    (fun () ->
-      try execute () with
-      | Build_failure output -> report_failure output
-      | Parse_failure output -> report_parse_failure output)
+  Build_lock.with_build (Project_context.workspace_lock_root root)
+    (fun ~release:release_build_lock ->
+      Fun.protect
+        ~finally:(fun () ->
+          List.iter remove_file !(stats.deferred_artifact_cleanup);
+          if not !outputs_finished then finish_watch_outputs ~success:false;
+          finalize_logs ())
+        (fun () ->
+          try execute ~release_build_lock with
+          | Build_failure output -> report_failure output
+          | Parse_failure output -> report_parse_failure output))
 
 let run ~seen ~verbosity ~folder ~prod ~features ~warn_error ~watch ~after_build
     ~filter ~no_timing =
