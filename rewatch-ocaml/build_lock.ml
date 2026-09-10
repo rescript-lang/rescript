@@ -1,4 +1,4 @@
-open Build_artifacts
+open File_util
 
 type watch = {path: string; pid: string}
 

@@ -1,4 +1,5 @@
 open Build_artifacts
+open File_util
 
 let contains_text value text =
   try

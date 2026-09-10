@@ -3,7 +3,7 @@ open OUnit2
 let check condition message = assert_bool message condition
 
 let write_file path contents =
-  Build_artifacts.ensure_dir (Filename.dirname path);
+  File_util.ensure_dir (Filename.dirname path);
   let channel = open_out_bin path in
   Fun.protect
     ~finally:(fun () -> close_out_noerr channel)
@@ -39,7 +39,7 @@ let tests =
   Sys.remove root;
   Unix.mkdir root 0o755;
   Fun.protect
-    ~finally:(fun () -> Build_artifacts.remove_tree root)
+    ~finally:(fun () -> File_util.remove_tree root)
     (fun () ->
       let source = Filename.concat root "src/A.res" in
       let dev_source = Filename.concat root "dev/D.res" in
@@ -51,8 +51,8 @@ let tests =
       write_file prefixed_source "let value = 4\n";
       List.iter
         (fun package ->
-          Build_artifacts.ensure_dir
-            (Build_artifacts.path_of_parts root ["node_modules"; package]))
+          File_util.ensure_dir
+            (File_util.path_of_parts root ["node_modules"; package]))
         ["@rescript/runtime"; "regular"; "development"];
       write_file
         (Filename.concat root "rescript.json")
@@ -63,11 +63,10 @@ let tests =
           "dev-dependencies": ["development"]
         }|};
       let regular =
-        Build_artifacts.path_of_parts root
-          ["node_modules"; "regular"; "lib"; "ocaml"]
+        File_util.path_of_parts root ["node_modules"; "regular"; "lib"; "ocaml"]
       in
       let development =
-        Build_artifacts.path_of_parts root
+        File_util.path_of_parts root
           ["node_modules"; "development"; "lib"; "ocaml"]
       in
       let ordinary_includes = compiler_args source |> adjacent_positions "-I" in
@@ -95,14 +94,14 @@ let tests =
         (compiler_args prefixed_source
         |> adjacent_positions "-I" |> position development |> Option.is_none)
         "source directory matching respects path-component boundaries";
-      Build_artifacts.remove_tree
-        (Build_artifacts.path_of_parts root ["node_modules"; "development"]);
+      File_util.remove_tree
+        (File_util.path_of_parts root ["node_modules"; "development"]);
       check
         (compiler_args dev_source |> adjacent_positions "-I"
        |> position development |> Option.is_none)
         "missing development dependencies are omitted like Rust";
-      Build_artifacts.remove_tree
-        (Build_artifacts.path_of_parts root ["node_modules"; "regular"]);
+      File_util.remove_tree
+        (File_util.path_of_parts root ["node_modules"; "regular"]);
       check
         (try
            ignore (compiler_args source);

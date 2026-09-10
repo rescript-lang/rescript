@@ -3,7 +3,7 @@ open OUnit2
 let check condition message = assert_bool message condition
 
 let write_file path contents =
-  Build_artifacts.ensure_dir (Filename.dirname path);
+  File_util.ensure_dir (Filename.dirname path);
   let channel = open_out_bin path in
   Fun.protect
     ~finally:(fun () -> close_out_noerr channel)
@@ -14,109 +14,11 @@ let with_temp_dir run =
   Sys.remove root;
   Unix.mkdir root 0o755;
   Fun.protect
-    ~finally:(fun () -> Build_artifacts.remove_tree root)
+    ~finally:(fun () -> File_util.remove_tree root)
     (fun () -> run root)
 
 let tests =
   "build_artifacts_tests" >:: fun _context ->
-  with_temp_dir (fun root ->
-      let first = Filename.concat root "first" in
-      let second = Filename.concat root "nested/second" in
-      let missing = Filename.concat root "missing" in
-      write_file first "same";
-      write_file second "same";
-      check
-        (Build_artifacts.files_equal first second)
-        "equal file contents should compare equal";
-      write_file second "different";
-      check
-        (not (Build_artifacts.files_equal first second))
-        "different file contents should not compare equal";
-      check
-        (not (Build_artifacts.files_equal missing first))
-        "a missing file should not compare equal";
-      let concurrent_root = Filename.concat root "concurrent" in
-      let start = Atomic.make false in
-      let failures = ref [] in
-      let failures_lock = Mutex.create () in
-      let workers =
-        Array.init 16 (fun _ ->
-            Thread.create
-              (fun () ->
-                while not (Atomic.get start) do
-                  Thread.yield ()
-                done;
-                for index = 0 to 63 do
-                  Thread.yield ();
-                  let path =
-                    Filename.concat concurrent_root (string_of_int index)
-                  in
-                  try Build_artifacts.ensure_dir path
-                  with error ->
-                    Mutex.lock failures_lock;
-                    failures := error :: !failures;
-                    Mutex.unlock failures_lock
-                done)
-              ())
-      in
-      Atomic.set start true;
-      Array.iter Thread.join workers;
-      check (!failures = [])
-        "concurrent directory creation should tolerate another creator";
-      check
-        (Sys.is_directory (Filename.concat concurrent_root "63"))
-        "concurrent directory creation should leave the requested tree";
-      let existing_file_is_rejected =
-        try
-          Build_artifacts.ensure_dir first;
-          false
-        with Unix.Unix_error (Unix.EEXIST, _, _) -> true
-      in
-      check existing_file_is_rejected
-        "directory creation should reject an existing non-directory";
-      check
-        (Option.is_some (Build_artifacts.modification_time first))
-        "an existing file should have a modification time";
-      check
-        (Option.is_none (Build_artifacts.modification_time missing))
-        "a missing file should not have a modification time";
-      let optional_copy = Filename.concat root "optional-copy" in
-      Build_artifacts.copy_optional_existing_file first optional_copy;
-      check
-        (Build_artifacts.read_file optional_copy = "same")
-        "an available optional artifact should be copied";
-      Build_artifacts.copy_optional_existing_file missing optional_copy;
-      check
-        (not (Sys.file_exists optional_copy))
-        "a stale optional destination should be removed when its source is \
-         absent";
-      let destination_failure_is_reported =
-        try
-          Build_artifacts.copy_optional_existing_file ~ensure_parent:false first
-            (Filename.concat root "absent/optional-copy");
-          false
-        with Sys_error _ | Unix.Unix_error _ -> true
-      in
-      check destination_failure_is_reported
-        "an optional copy must not hide destination failures";
-      check
-        (List.sort String.compare (Build_artifacts.files_under root)
-        = List.sort String.compare [first; second])
-        "recursive inventory should contain files but not directories";
-      if not Sys.win32 then (
-        let live_link = Filename.concat root "live-link" in
-        let dangling_link = Filename.concat root "dangling-link" in
-        Unix.symlink first live_link;
-        Unix.symlink missing dangling_link;
-        check
-          (List.sort String.compare (Build_artifacts.files_under root)
-          = List.sort String.compare [first; second; live_link])
-          "recursive inventory should retain live links and omit dangling links");
-      Build_artifacts.remove_file first;
-      Build_artifacts.remove_file first;
-      check
-        (not (Sys.file_exists first))
-        "removing an existing or already-missing file should be idempotent");
   with_temp_dir (fun root ->
       let config_path = Filename.concat root "rescript.json" in
       let source = Filename.concat root "src/Old.res" in

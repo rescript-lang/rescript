@@ -13,7 +13,7 @@ let contains text fragment =
   fragment_length = 0 || loop 0
 
 let write_file path contents =
-  Build_artifacts.ensure_dir (Filename.dirname path);
+  File_util.ensure_dir (Filename.dirname path);
   let channel = open_out_bin path in
   Fun.protect
     ~finally:(fun () -> close_out_noerr channel)
@@ -23,9 +23,7 @@ let with_temp_dir f =
   let path = Filename.temp_file "rewatch-ocaml-format-" "" in
   Sys.remove path;
   Unix.mkdir path 0o755;
-  Fun.protect
-    ~finally:(fun () -> Build_artifacts.remove_tree path)
-    (fun () -> f path)
+  Fun.protect ~finally:(fun () -> File_util.remove_tree path) (fun () -> f path)
 
 let tests =
   "format_tests" >:: fun _context ->

@@ -1,4 +1,5 @@
 open Build_artifacts
+open File_util
 
 let rec remove_tree path =
   if Sys.file_exists path then

@@ -2,6 +2,7 @@ exception Error = Project_context.Error
 exception Package_error = Project_context.Package_error
 
 open Build_artifacts
+open File_util
 open Build_types
 
 let source_discovery_prod ~prod ~is_local = prod || not is_local

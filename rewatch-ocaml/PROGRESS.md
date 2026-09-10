@@ -116,14 +116,14 @@ moved out of production `Build` into the OUnit2-only `test_support.ml`.
 Independent review found no argument-order, AST-decoding, namespace,
 publication, warning, hook, staging, exception-identity, or API regression.
 
-Recursive explicit cleaning now lives in `clean.ml` over the existing
-`build_artifacts.ml` primitives. It owns package traversal, consumer-versus-
+Recursive explicit cleaning now lives in `clean.ml` over `build_artifacts.ml`
+and `file_util.ml`. It owns package traversal, consumer-versus-
 independent dependency ownership, generated-output and watch-sidecar removal,
 and compiler-tree deletion; `Build.clean` retains only project/lock/progress
 command policy. Shared package warnings, missing-source reporting, and
 package.json-name validation now live in `package_diagnostics.ml` and are used
 consistently by build, clean, and format. Test teardown uses the shared
-`Build_artifacts.remove_tree`; clean's stricter command-local deletion helper
+`File_util.remove_tree`; clean's stricter command-local deletion helper
 remains private rather than creating a second ambiguous filesystem API.
 Independent review found no behavior regression; its sole API-ownership finding
 was resolved by making that command-local helper private.
@@ -1157,9 +1157,9 @@ observational and do not replace the five-run acceptance result.
 
 The current `cloc` 2.04 source-size snapshot reports 7,818 Rust production
 lines after excluding the intentionally omitted telemetry module and inline
-test-only sections, versus 6,623 OCaml production lines, or 84.7%. Counting
+test-only sections, versus 6,672 OCaml production lines, or 85.3%. Counting
 language-specific tests separately gives 2,773 embedded Rust unit-test lines
-and 5,044 OCaml unit/focused test and fixture lines. The OCaml benchmark tooling
+and 5,242 OCaml unit/focused test and fixture lines. The OCaml benchmark tooling
 adds another 372 lines, including the source-size script itself. The shared
 canonical integration suite is deliberately not charged to either side. These
 figures describe maintainability surface, not parity or quality: explicit
@@ -1167,6 +1167,17 @@ interfaces and separate test infrastructure add useful lines rather than
 indicating behavioral duplication.
 [`bench/source_size.sh`](bench/source_size.sh) preserves the scope and command;
 rerun it for the final maintainability review alongside maximum module size.
+
+General portable filesystem operations now live behind the narrow
+`file_util.mli` interface. Recursive directory creation, file reading/copying,
+content comparison, timestamps, recursive inventory, and removal no longer
+share a module with ReScript-specific generated-output naming and stale
+cleanup. `build_artifacts.ml` is now 365 lines, while the general owner is 135
+lines. Its focused coverage moved into `file_util_tests.ml`, leaving
+`build_artifacts_tests.ml` concerned only with artifact cleanup. The extraction
+also closes partial-channel leaks when opening a copy destination or the second
+file in a comparison fails: every successfully opened channel enters its own
+`Fun.protect` before the next acquisition.
 
 The command-cycle accumulator and the prepared-package/global-module records
 now live in `build_types.ml`, including one constructor for their initial

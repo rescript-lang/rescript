@@ -1,4 +1,5 @@
 open Build_artifacts
+open File_util
 
 let path root directory = Filename.concat (lib_path root directory) ".compiler.log"
 

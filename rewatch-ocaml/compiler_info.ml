@@ -37,7 +37,7 @@ let make_context ~build_root ~bsc_path ~runtime_path ~source_map_args
   }
 
 let path root =
-  Build_artifacts.path_of_parts root ["lib"; "bs"; "compiler-info.json"]
+  File_util.path_of_parts root ["lib"; "bs"; "compiler-info.json"]
 
 let config_hash (config : Config.t) =
   Digest.file config.path |> Digest.to_hex
@@ -142,7 +142,7 @@ let config_with_package_output_specs (config : Config.t) specs =
 
 let previous_build_exists root =
   Sys.file_exists
-    (Build_artifacts.path_of_parts root ["lib"; "ocaml"; ".compiler.log"])
+    (File_util.path_of_parts root ["lib"; "ocaml"; ".compiler.log"])
 
 let needs_clean context (config : Config.t) =
   let info_path = path config.root in
@@ -150,8 +150,8 @@ let needs_clean context (config : Config.t) =
   else previous_build_exists config.root
 
 let clean_package (config : Config.t) =
-  Build_artifacts.remove_tree (Build_artifacts.lib_path config.root "bs");
-  Build_artifacts.remove_tree (Build_artifacts.lib_path config.root "ocaml")
+  File_util.remove_tree (Build_artifacts.lib_path config.root "bs");
+  File_util.remove_tree (Build_artifacts.lib_path config.root "ocaml")
 
 let verify_package context config =
   let should_clean = needs_clean context config in
@@ -161,13 +161,13 @@ let verify_package context config =
 let write_package context (config : Config.t) =
   if not (matches context config) then (
     let info_path = path config.root in
-    Build_artifacts.ensure_dir (Filename.dirname info_path);
+    File_util.ensure_dir (Filename.dirname info_path);
     let temporary =
       Filename.temp_file ~temp_dir:(Filename.dirname info_path)
         ".compiler-info-" ".json.tmp"
     in
     Fun.protect
-      ~finally:(fun () -> Build_artifacts.remove_file temporary)
+      ~finally:(fun () -> File_util.remove_file temporary)
       (fun () ->
         let channel = open_out_bin temporary in
         Fun.protect
@@ -175,5 +175,5 @@ let write_package context (config : Config.t) =
           (fun () ->
             Yojson.Safe.pretty_to_channel channel (json context config);
             output_char channel '\n');
-        Build_artifacts.remove_file info_path;
+        File_util.remove_file info_path;
         Sys.rename temporary info_path))

@@ -15,6 +15,7 @@
   compiler_args_tests
   compiler_info_tests
   config_tests
+  file_util_tests
   format_tests
   native_watcher_tests
   output_tests

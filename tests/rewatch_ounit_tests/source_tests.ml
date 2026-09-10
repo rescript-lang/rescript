@@ -3,7 +3,7 @@ open OUnit2
 let check condition message = assert_bool message condition
 
 let write_file path contents =
-  Build_artifacts.ensure_dir (Filename.dirname path);
+  File_util.ensure_dir (Filename.dirname path);
   let channel = open_out_bin path in
   Fun.protect
     ~finally:(fun () -> close_out_noerr channel)
@@ -33,7 +33,7 @@ let tests =
   Sys.remove root;
   Unix.mkdir root 0o755;
   Fun.protect
-    ~finally:(fun () -> Build_artifacts.remove_tree root)
+    ~finally:(fun () -> File_util.remove_tree root)
     (fun () ->
       write_file (Filename.concat root "src/Main.res") "let value = 1\n";
       write_file
