@@ -18,6 +18,8 @@
  (modules
   rewatch_version
   cli
+  config_types
+  config_decode
   config
   project_context
   platform_common
