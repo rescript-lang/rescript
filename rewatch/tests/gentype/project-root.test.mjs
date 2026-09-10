@@ -1,11 +1,13 @@
 import assert from "node:assert/strict";
 import {spawnSync} from "node:child_process";
-import {mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync} from "node:fs";
+import {existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync} from "node:fs";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
 
 const executable = process.env.REWATCH_EXECUTABLE;
 assert(executable, "REWATCH_EXECUTABLE must be set");
+const executableForNode =
+  process.platform === "win32" && existsSync(`${executable}.cmd`) ? `${executable}.cmd` : executable;
 
 const projectDir = mkdtempSync(join(tmpdir(), "rescript-gentype-root-"));
 
@@ -21,7 +23,7 @@ try {
     "@genType\nlet getValue = (record: A.t) => record.value\n",
   );
 
-  const result = spawnSync(executable, ["build"], {
+  const result = spawnSync(executableForNode, ["build"], {
     cwd: projectDir,
     encoding: "utf8",
     env: process.env,
