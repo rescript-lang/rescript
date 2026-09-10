@@ -7,13 +7,6 @@ exception Parse_failure of string
 open Build_artifacts
 open Build_types
 
-let bsc_path () =
-  try Toolchain.bsc () with Toolchain.Error message -> raise (Error message)
-
-let runtime_path root =
-  try Toolchain.runtime ~find_package:(Project_context.dependency_path root)
-  with Toolchain.Error message -> raise (Error message)
-
 let project_root folder =
   if not (Sys.file_exists folder) then
     raise
@@ -41,312 +34,6 @@ let clean ~seen ~verbosity ~folder ~prod =
     Clean.run ~root_config ~seen:visited ~root ~prod ~is_local:true ~on_clean)
 
 let compiler_args = Compiler_args_command.run
-
-let dependency_head dependency =
-  match String.split_on_char '.' dependency with
-  | head :: _ -> head
-  | [] -> dependency
-
-let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
-    ~filter ~watch ~stats ~on_cleanup =
-  let bsc = bsc_path () in
-  let graph_packages =
-    Package_graph.discover ~root_config ~prod ~features ~warn_error ~filter ~stats
-  in
-  let runtime = runtime_path root_config.root in
-  let source_map_args =
-    if root_config.source_map_dev && not watch then
-      ["-bs-source-map"; "false"]
-    else root_config.source_map_args
-  in
-  let compiler_context =
-    Compiler_info.make_context ~build_root:root_config.root ~bsc_path:bsc
-      ~runtime_path:runtime
-      ~source_map_args
-      ~package_output_specs:(Compiler_info.package_output_specs root_config)
-  in
-  stats.compiler_context <- Some compiler_context;
-  let cleanup_started = Unix.gettimeofday () in
-  List.iter
-    (fun package ->
-      let package_context =
-        {
-          compiler_context with
-          build_root = package.graph_build_owner;
-          package_output_specs =
-            Compiler_info.package_output_specs package.graph_compile_config;
-        }
-      in
-      if Compiler_info.needs_clean package_context package.graph_config then (
-        Compiler_info.changed_package_output_specs package_context
-          package.graph_config
-        |> Option.iter (fun previous_specs ->
-             let previous_config =
-               Compiler_info.config_with_package_output_specs
-                 package.graph_compile_config previous_specs
-             in
-             Build_artifacts.remove_public_outputs previous_config
-               package.graph_modules);
-        let compile_assets =
-          Compile_assets.create [package.graph_ocaml_dir]
-        in
-        ignore
-          (Build_artifacts.cleanup_stale
-             ~ocaml_files:
-               (Compile_assets.files compile_assets package.graph_ocaml_dir)
-             ~ast_sources:
-               (Compile_assets.ast_sources compile_assets
-                  package.graph_ocaml_dir)
-             ~root:package.graph_root
-             ~ocaml_dir:package.graph_ocaml_dir
-             ~source_files:package.graph_source_files
-             ~is_local:
-               (Project_context.is_local_dependency_canonical ~workspace:root_config.root
-                  package.graph_root)
-             package.graph_compile_config package.graph_modules);
-        Compiler_info.clean_package package.graph_config;
-        stats.compiler_cleaned <- true);
-      ensure_dir package.graph_build_dir;
-      ensure_dir package.graph_ocaml_dir)
-    graph_packages;
-  let compile_assets =
-    graph_packages
-    |> List.map (fun package -> package.graph_ocaml_dir)
-    |> Compile_assets.create
-  in
-  List.iter
-    (fun package ->
-      let cleanup =
-        Build_artifacts.cleanup_stale
-          ~ocaml_files:
-            (Compile_assets.files compile_assets package.graph_ocaml_dir)
-          ~ast_sources:
-            (Compile_assets.ast_sources compile_assets package.graph_ocaml_dir)
-          ~root:package.graph_root
-          ~ocaml_dir:package.graph_ocaml_dir
-          ~source_files:package.graph_source_files
-          ~is_local:
-            (Project_context.is_local_dependency_canonical ~workspace:root_config.root
-               package.graph_root)
-          package.graph_compile_config package.graph_modules
-      in
-      Hashtbl.replace stats.cleanup_results package.graph_root
-        cleanup;
-      stats.deferred_artifact_cleanup :=
-        cleanup.deferred_artifacts @ !(stats.deferred_artifact_cleanup);
-      stats.cleaned <- stats.cleaned + List.length cleanup.removed_modules;
-      stats.previous_asts <-
-        stats.previous_asts + cleanup.previous_ast_count;
-      List.iter
-        (fun module_name -> Hashtbl.replace stats.removed_modules module_name ())
-        cleanup.removed_modules)
-    graph_packages;
-  stats.compile_assets <- Some compile_assets;
-  on_cleanup (Unix.gettimeofday () -. cleanup_started);
-  let parse_started = Unix.gettimeofday () in
-  let parse_entries =
-    graph_packages
-    |> List.concat_map (fun package ->
-         package.graph_modules
-         |> List.concat_map (fun module_ ->
-              module_.Source.implementation
-              :: Option.to_list module_.Source.interface)
-         |> List.filter_map (fun path ->
-              if Build_freshness.source_is_not_older_than_ast compile_assets
-                   ~root:package.graph_root
-                   ~source_mtimes:package.graph_source_mtimes path
-              then
-                Some (package, path)
-              else None))
-  in
-  let parse_results =
-    parse_entries
-    |> List.map (fun (package, path) ->
-         Compiler_process.parse_job ~bsc ~build_dir:package.graph_build_dir
-           ~config:package.graph_compile_config path)
-    |> Process.run_parallel ~poll:stats.poll
-  in
-  let failed_parse_paths = Hashtbl.create 8 in
-  List.iter2
-    (fun (package, path) result ->
-      let absolute_path = Filename.concat package.graph_root path in
-      Hashtbl.replace stats.forced_parse_paths absolute_path ();
-      Hashtbl.replace stats.preparse_results absolute_path result;
-      if Process.succeeded result then (
-        if result.stderr <> "" then
-          Hashtbl.replace stats.preparse_stderr absolute_path result.stderr)
-      else Hashtbl.replace failed_parse_paths absolute_path ())
-    parse_entries parse_results;
-  let nodes = ref [] in
-  List.iter
-    (fun package ->
-      List.iter
-        (fun module_ ->
-          let intf_dependencies =
-            match module_.Source.interface with
-            | None -> []
-            | Some path ->
-              if
-                Hashtbl.mem failed_parse_paths
-                  (Filename.concat package.graph_root path)
-              then []
-              else
-                Compiler_process.ast_dependencies
-                  ~build_dir:package.graph_build_dir
-                  (Source.ast_path path)
-          in
-          let raw_dependencies =
-            List.sort_uniq String.compare
-              ((if
-                  Hashtbl.mem failed_parse_paths
-                    (Filename.concat package.graph_root
-                       module_.Source.implementation)
-                then []
-                else
-                  Compiler_process.ast_dependencies
-                    ~build_dir:package.graph_build_dir
-                    (Source.ast_path module_.Source.implementation))
-              @ intf_dependencies)
-          in
-          let compiler_base =
-            Source.compiler_basename package.graph_compile_config
-              module_.Source.name
-          in
-          if Option.is_none (Compile_assets.cmt compile_assets compiler_base) then
-            Hashtbl.replace stats.forced_parse_paths
-              (Filename.concat package.graph_root module_.Source.implementation)
-              ();
-          Hashtbl.replace stats.global_raw_dependencies compiler_base
-            raw_dependencies;
-          nodes :=
-            {
-              key = compiler_base;
-              package_name = package.graph_config.name;
-              package_root = package.graph_root;
-              source_path = module_.Source.implementation;
-              source = module_;
-              namespace = package.graph_compile_config.namespace;
-              namespace_entry = package.graph_compile_config.namespace_entry;
-              allowed_dependencies =
-                List.map
-                  (fun (dependency : Config.dependency) -> dependency.name)
-                  package.graph_dependencies;
-              raw_dependencies;
-            }
-            :: !nodes)
-        package.graph_modules)
-    graph_packages;
-  let nodes =
-    List.sort (fun first second -> String.compare first.key second.key) !nodes
-  in
-  let by_key = Hashtbl.create (List.length nodes) in
-  List.iter
-    (fun node ->
-      match Hashtbl.find_opt by_key node.key with
-      | None -> Hashtbl.add by_key node.key node
-      | Some previous ->
-        raise
-          (Source.duplicate_error ~display_root:root_config.root "" node.key
-             (Filename.concat previous.package_root previous.source_path)
-             (Filename.concat node.package_root node.source_path)))
-    nodes;
-  let resolve_dependency node dependency =
-    let raw_name = dependency_head dependency in
-    let local_name =
-      match node.namespace, String.split_on_char '.' dependency with
-      | Some namespace, first :: second :: _ when first = namespace -> second
-      | _ -> raw_name
-    in
-    let local_key =
-      match node.namespace with
-      | None -> local_name
-      | Some namespace -> (
-        match node.namespace_entry with
-        | Some entry when entry = local_name -> local_name
-        | Some _ -> local_name ^ "-@" ^ namespace
-        | None -> local_name ^ "-" ^ namespace)
-    in
-    let is_visible dependency_node =
-      dependency_node.package_name = node.package_name
-      || List.mem dependency_node.package_name node.allowed_dependencies
-    in
-    match Hashtbl.find_opt by_key local_key with
-    | Some dependency_node
-      when dependency_node.package_name = node.package_name ->
-      [local_key]
-    | _ ->
-      (match Hashtbl.find_opt by_key raw_name with
-      | Some dependency_node when is_visible dependency_node ->
-        [raw_name]
-      | _ ->
-        let explicit_namespaced_module =
-          match String.split_on_char '.' dependency with
-        | namespace :: module_name :: _ ->
-          [module_name ^ "-" ^ namespace; module_name ^ "-@" ^ namespace]
-          |> List.find_opt (fun key ->
-               match Hashtbl.find_opt by_key key with
-               | Some dependency_node
-                 when dependency_node.namespace = Some namespace
-                      && is_visible dependency_node ->
-                 true
-               | Some _ | None -> false)
-        | _ -> None
-        in
-        match explicit_namespaced_module with
-        | Some key -> [key]
-        | None ->
-          nodes
-          |> List.filter_map (fun dependency_node ->
-               if
-                 dependency_node.namespace = Some raw_name
-                 && is_visible dependency_node
-               then Some dependency_node.key
-               else None))
-  in
-  let graph_nodes =
-    List.map
-      (fun node ->
-        ( node,
-          node.raw_dependencies
-          |> List.concat_map (resolve_dependency node)
-          |> List.filter (fun dependency -> dependency <> node.key)
-          |> List.sort_uniq String.compare ))
-      nodes
-  in
-  let build_state = Build_state.create (List.length graph_nodes) in
-  let modified = Option.map (fun entry -> entry.Compile_assets.modified) in
-  List.iter
-    (fun (node, _) ->
-      Build_state.add build_state ~key:node.key
-        ~package_name:node.package_name ~package_root:node.package_root
-        ~source:node.source ~raw_dependencies:node.raw_dependencies
-        ~last_compiled_cmi:(Compile_assets.cmi compile_assets node.key |> modified)
-        ~last_compiled_cmt:(Compile_assets.cmt compile_assets node.key |> modified))
-    graph_nodes;
-  List.iter
-    (fun (node, dependencies) ->
-      Build_state.set_dependencies build_state ~key:node.key dependencies)
-    graph_nodes;
-  stats.build_state <- Some build_state;
-  let cycle =
-    try
-      ignore
-        (Graph.topological_sort graph_nodes
-           ~name:(fun (node, _) -> node.key)
-           ~deps:snd);
-      None
-    with Graph.Cycle cycle ->
-      let blocked =
-        Graph.blocked_dependents
-          (List.map
-             (fun (node, dependencies) -> (node.key, dependencies))
-             graph_nodes)
-          cycle
-      in
-      Some (cycle, blocked, by_key)
-  in
-  stats.parse_seconds <- Unix.gettimeofday () -. parse_started;
-  cycle
 
 let rec run_internal ~(root_config : Config.t) ~seen ~folder:root ~prod ~features
     ~warn_error ~watch ~filter ~is_local ~stats =
@@ -971,7 +658,7 @@ let run_with_warning_state ~poll ~warning_state ~compilation_kind ~no_timing
   let execute () =
     poll ();
     let cycle =
-      prepare_global_graph ~root_config ~prod ~features ~warn_error ~filter
+      Build_preparation.run ~root_config ~prod ~features ~warn_error ~filter
         ~watch ~stats
         ~on_cleanup:(fun seconds ->
           if interactive && not is_rebuild then (
@@ -985,10 +672,10 @@ let run_with_warning_state ~poll ~warning_state ~compilation_kind ~no_timing
     if stats.compiler_cleaned && not interactive then
       print_endline "Cleaned previous build due to compiler update";
     Option.iter
-      (fun (_, blocked, _) ->
+      (fun (cycle_info : Build_preparation.cycle_info) ->
         List.iter
           (fun name -> Hashtbl.replace stats.blocked_modules name ())
-          blocked)
+          cycle_info.blocked)
       cycle;
     run_internal ~root_config ~seen:visited ~folder:root ~prod ~features
       ~warn_error ~watch ~filter ~is_local:true ~stats;
@@ -1016,10 +703,12 @@ let run_with_warning_state ~poll ~warning_state ~compilation_kind ~no_timing
              ~count:stats.compiled ~seconds));
     (match stats.failure, cycle with
     | Some output, _ -> report_failure output
-    | None, Some (names, _, by_key) ->
-      let output = format_cycle names by_key in
-      names
-      |> List.filter_map (Hashtbl.find_opt by_key)
+    | None, Some cycle_info ->
+      let output =
+        format_cycle cycle_info.cycle cycle_info.modules_by_key
+      in
+      cycle_info.cycle
+      |> List.filter_map (Hashtbl.find_opt cycle_info.modules_by_key)
       |> List.map (fun node -> node.package_root)
       |> List.sort_uniq String.compare
       |> List.iter (fun package_root -> Compiler_log.append package_root output);

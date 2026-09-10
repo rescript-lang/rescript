@@ -1164,13 +1164,13 @@ Package-tree discovery now lives in `package_graph.ml`. It owns the two-pass
 feature-union traversal, command-wide dependency resolution and duplicate
 selection, `allowed-dependents` validation, local/dev classification, source
 inventory, root-only warning/filter overrides, output ownership, and prepared
-package ordering. `build.ml` consumes that prepared list for cleanup, parsing,
-dependency extraction, and compilation instead of mixing package discovery
-into the phase orchestrator. The production/test helper calls moved to the new
-owner, reducing `build.ml` from 1,407 to 1,174 lines without changing path or
-process APIs. The warning-free build, all 18 OUnit2 tests, focused integration
-runner, 69-case command-validation gate, and complete canonical rewatch suite
-passed after the split.
+package ordering. The production/test helper calls moved to the new owner,
+reducing `build.ml` from 1,407 to 1,174 lines without changing path or process
+APIs. The warning-free build, all 18 OUnit2 tests, focused integration runner,
+69-case command-validation gate, and complete canonical rewatch suite passed
+after the split. `build_preparation.ml` now consumes the prepared list for
+cleanup, preliminary parsing, and dependency-state construction; `build.ml`
+receives that state for recursive compilation.
 
 Artifact/source timestamp comparisons and the published-AST freshness marker
 now live in `build_freshness.ml`; cycle-dependent closure now lives beside
@@ -1184,6 +1184,16 @@ classification now live in `after_build.ml`. Build orchestration retains only
 the post-success dispatch point and still releases the build lock before the
 hook runs. Existing focused success coverage and the three differential empty,
 missing-program, and nonzero-exit cases protect the extracted behavior.
+
+Toolchain and compiler-context initialization, compile-asset cleanup,
+preliminary global parsing, dependency extraction, build-state construction,
+and cycle detection now live in `build_preparation.ml`. It consumes the package
+ordering from `package_graph.ml` and hands a ready global state to `build.ml`
+for recursive compilation. This exact-move extraction reduces `build.ml` from
+1,094 to 781 lines without changing filesystem calls, process work, phase
+ordering, timing accumulation, or cleanup accounting. The warning-free build,
+all 18 OUnit2 tests, focused integration runner, 69-case command-validation
+gate, and complete canonical rewatch suite passed after the extraction.
 
 ## Known gaps
 
@@ -1445,9 +1455,9 @@ missing-program, and nonzero-exit cases protect the extracted behavior.
 
 1. Continue splitting `build.ml` along stable responsibility boundaries. The
    filesystem/artifact, compiler-process, compiler-scheduling, watcher, clean,
-   command-cycle state, and package-tree owners are now separate; dependency
-   extraction and dirty-state preparation remain the principal mixed
-   responsibility.
+   command-cycle state, package-tree, and global build-preparation owners are
+   now separate; per-package dirty-state construction and recursive compilation
+   remain the principal mixed responsibility.
 2. Perform the final two-scope whole-port review and address confirmed findings.
 3. At the final maintainability pass, add comments around ownership,
    concurrency, platform, and algorithmic invariants that are not apparent from
