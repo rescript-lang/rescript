@@ -915,8 +915,11 @@ stdout/stderr pipe-capacity deadlocks and works on Windows without assuming
 that `select` supports anonymous pipes. Capture is intentionally unbounded like
 Rust's `Command::output`; changing diagnostic limits would be a separate
 behavior decision. Descriptor creation stays behind `platform.mli`, and
-termination drains all readers after descendant cleanup. A stress test verifies
-exact capture of 1 MiB on both streams without truncation or deadlock.
+termination is deferred before descriptor acquisition so an asynchronous watch
+stop cannot interrupt the handoff to the cleanup owner. Failure cleanup closes
+unowned descriptors, terminates and reaps any launched child, then joins reader
+threads after closing their parent-side write ends. A stress test verifies exact
+capture of 1 MiB on both streams without truncation or deadlock.
 [`bench/filesystem_audit.sh`](bench/filesystem_audit.sh) now preserves a
 normalized Linux `%file` syscall audit for clean, unchanged, and single-edit
 builds. It reports fixture-local path/operation multisets and repeated accesses
