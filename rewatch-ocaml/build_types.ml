@@ -22,7 +22,7 @@ type global_module = {
   namespace: string option;
   namespace_entry: string option;
   allowed_dependencies: string list;
-  raw_dependencies: string list;
+  mutable raw_dependencies: string list;
 }
 
 type t = {
@@ -43,6 +43,7 @@ type t = {
   watch_outputs: (string * string * string) list ref;
   watch_output_paths: (string, unit) Hashtbl.t;
   global_raw_dependencies: (string, string list) Hashtbl.t;
+  global_modules: (string, global_module) Hashtbl.t;
   graph_packages: (string, graph_package) Hashtbl.t;
   cleanup_results: (string, Build_artifacts.cleanup_result) Hashtbl.t;
   deferred_artifact_cleanup: string list ref;
@@ -77,6 +78,7 @@ let create ~warning_state ~poll =
     watch_outputs = ref [];
     watch_output_paths = Hashtbl.create 16;
     global_raw_dependencies = Hashtbl.create 64;
+    global_modules = Hashtbl.create 64;
     graph_packages = Hashtbl.create 32;
     cleanup_results = Hashtbl.create 32;
     deferred_artifact_cleanup = ref [];
@@ -127,6 +129,7 @@ let create_incremental ~previous ~poll =
     watch_outputs = ref [];
     watch_output_paths = Hashtbl.create 16;
     global_raw_dependencies = previous.global_raw_dependencies;
+    global_modules = previous.global_modules;
     graph_packages = previous.graph_packages;
     cleanup_results;
     deferred_artifact_cleanup = ref [];
