@@ -1172,6 +1172,13 @@ process APIs. The warning-free build, all 18 OUnit2 tests, focused integration
 runner, 69-case command-validation gate, and complete canonical rewatch suite
 passed after the split.
 
+Artifact/source timestamp comparisons and the published-AST freshness marker
+now live in `build_freshness.ml`; cycle-dependent closure now lives beside
+cycle detection in `graph.ml`. Their existing focused tests address the new
+owners directly. This removes two small algorithms from orchestration and
+keeps the forthcoming dependency-preparation interface from exposing helpers
+that belong to reusable state/graph boundaries.
+
 ## Known gaps
 
 - Incremental state currently relies on artifact timestamps, byte-identical CMI
