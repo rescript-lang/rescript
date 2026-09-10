@@ -2,6 +2,8 @@ open OUnit2
 
 let check condition message = assert_bool message condition
 
+let environment values name = List.assoc_opt name values
+
 let tests =
   "output_tests" >:: fun _context ->
   check
@@ -55,4 +57,42 @@ let tests =
     (not
        (Output.should_clear_screen ~clear_screen:true ~show_progress:false
           ~interactive:true))
-    "quiet watch mode should preserve the terminal"
+    "quiet watch mode should preserve the terminal";
+  check
+    (Output.colors_enabled_with
+       ~getenv:(environment [("CLICOLOR_FORCE", "1")])
+       ~win32:false ~interactive:false)
+    "CLICOLOR_FORCE enables redirected colors";
+  check
+    (not
+       (Output.colors_enabled_with
+          ~getenv:(environment [("CLICOLOR_FORCE", "0"); ("TERM", "xterm")])
+          ~win32:false ~interactive:false))
+    "zero CLICOLOR_FORCE does not enable redirected colors";
+  check
+    (Output.colors_enabled_with
+       ~getenv:(environment [("TERM", "xterm")])
+       ~win32:false ~interactive:true)
+    "a Unix color terminal enables colors";
+  check
+    (not
+       (Output.colors_enabled_with
+          ~getenv:(environment [("TERM", "xterm"); ("CLICOLOR", "0")])
+          ~win32:false ~interactive:true))
+    "CLICOLOR zero disables terminal colors";
+  check
+    (not
+       (Output.colors_enabled_with
+          ~getenv:(environment [("TERM", "xterm"); ("NO_COLOR", "1")])
+          ~win32:false ~interactive:true))
+    "NO_COLOR disables Unix terminal colors";
+  check
+    (not
+       (Output.colors_enabled_with ~getenv:(environment []) ~win32:false
+          ~interactive:true))
+    "a Unix terminal without TERM does not assume color support";
+  check
+    (Output.colors_enabled_with
+       ~getenv:(environment [("TERM", "dumb"); ("NO_COLOR", "1")])
+       ~win32:true ~interactive:true)
+    "a Windows console does not use Unix terminal environment gates"
