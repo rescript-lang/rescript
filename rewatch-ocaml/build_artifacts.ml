@@ -2,6 +2,11 @@ let path_of_parts root parts = List.fold_left Filename.concat root parts
 let lib_path root directory = path_of_parts root ["lib"; directory]
 
 let ensure_dir path =
+  (* OCaml's standard library has no recursive directory-creation primitive.
+     Another process may win a mkdir race, but EEXIST is success only when the
+     resulting path is a directory. Filename.dirname may return an unavailable
+     Windows volume root unchanged, so stop at that fixed point and let mkdir
+     surface the native filesystem error. *)
   let is_directory path =
     try (Unix.stat path).Unix.st_kind = Unix.S_DIR
     with Sys_error _ | Unix.Unix_error _ -> false

@@ -28,7 +28,7 @@ let tests =
   Fun.protect ~finally:restore (fun () ->
       let raised =
         try
-          Watcher.run ~root ~prod:false ~clear_screen:false
+          Watcher.run ~root ~prod:false ~clear_screen:false ~show_progress:true
             ~build:(fun ~poll:_ -> raise Exit);
           false
         with Exit -> true
@@ -44,7 +44,8 @@ let tests =
       check
         (signal_is_ignored Sys.sigterm)
         "SIGTERM handler is restored after failure";
-      Watcher.run ~root ~prod:false ~clear_screen:false ~build:(fun ~poll ->
+      Watcher.run ~root ~prod:false ~clear_screen:false ~show_progress:true
+        ~build:(fun ~poll ->
           poll ();
           Sys.remove lock);
       check

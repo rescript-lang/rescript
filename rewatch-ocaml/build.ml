@@ -3,6 +3,7 @@ exception Package_error = Project_context.Package_error
 exception Stop_watch = Watcher.Stop
 exception Build_failure = Compiler_scheduler.Build_failure
 exception Parse_failure = Package_build.Parse_failure
+exception Reported_failure of string
 
 open Build_artifacts
 open Build_types
@@ -130,6 +131,7 @@ let run_with_warning_state ~poll ~warning_state ~compilation_kind ~no_timing
     ~filter =
   let started_at = Unix.gettimeofday () in
   let interactive = Unix.isatty Unix.stdout && Unix.isatty Unix.stderr in
+  let show_progress = verbosity >= 0 in
   let is_rebuild = compilation_kind = Some "incremental" in
   let should_write_build_ninja = (not watch) || is_rebuild in
   let root = project_root folder in
@@ -178,7 +180,7 @@ let run_with_warning_state ~poll ~warning_state ~compilation_kind ~no_timing
   let report ~success () =
     finish_watch_outputs ~success;
     finalize_logs ();
-    if not interactive then
+    if show_progress && not interactive then
       if watch then (
         if success then Printf.printf "Finished compilation\n%!")
       else (
@@ -196,7 +198,7 @@ let run_with_warning_state ~poll ~warning_state ~compilation_kind ~no_timing
     flush stderr;
     if diagnostics <> [] then
       prerr_endline (String.concat "\n\n" diagnostics);
-    if success && interactive then
+    if success && interactive && show_progress then
       let seconds =
         if no_timing then 0. else Unix.gettimeofday () -. started_at
       in
@@ -213,22 +215,23 @@ let run_with_warning_state ~poll ~warning_state ~compilation_kind ~no_timing
     prerr_string output;
     prerr_newline ();
     raise
-      (Error
-        ("Incremental build failed. Error: \027[2K\r  Failed to Compile. "
-        ^ "See Errors Above"))
+      (Reported_failure
+         ("Incremental build failed. Error: \027[2K\r  Failed to Compile. "
+         ^ "See Errors Above"))
   in
   let report_parse_failure output =
     write_build_ninja_once ();
     finish_watch_outputs ~success:false;
     finalize_logs ();
-    if interactive then
+    if interactive && show_progress then
       prerr_endline
         (Output.parsing_failed_message ~step:(if is_rebuild then "1/2" else "2/3")
            ~seconds:(if no_timing then 0. else stats.parse_seconds))
-    else Printf.printf "Cleaned %d/%d\n%!" stats.cleaned stats.previous_asts;
+    else if show_progress then
+      Printf.printf "Cleaned %d/%d\n%!" stats.cleaned stats.previous_asts;
     prerr_endline output;
     raise
-      (Error
+      (Reported_failure
          "Incremental build failed. Error: \027[2K\r  Could not parse Source Files")
   in
   let format_cycle cycle by_key =
@@ -264,7 +267,7 @@ let run_with_warning_state ~poll ~warning_state ~compilation_kind ~no_timing
       Build_preparation.run ~root_config ~prod ~features ~warn_error ~filter
         ~watch ~stats
         ~on_cleanup:(fun seconds ->
-          if interactive && not is_rebuild then (
+          if interactive && show_progress && not is_rebuild then (
             if stats.compiler_cleaned then
               print_endline (Output.compiler_cleanup_message ~step:"1/3");
             print_endline
@@ -272,7 +275,7 @@ let run_with_warning_state ~poll ~warning_state ~compilation_kind ~no_timing
                  ~total:stats.previous_asts ~seconds:(phase_seconds seconds))))
     in
     poll ();
-    if stats.compiler_cleaned && not interactive then
+    if stats.compiler_cleaned && show_progress && not interactive then
       print_endline "Cleaned previous build due to compiler update";
     Option.iter
       (fun (cycle_info : Build_preparation.cycle_info) ->
@@ -283,7 +286,7 @@ let run_with_warning_state ~poll ~warning_state ~compilation_kind ~no_timing
     Package_build.prepare_tree ~root_config ~seen:visited ~folder:root ~prod ~features
       ~warn_error ~watch ~filter ~is_local:true ~stats;
     poll ();
-    if interactive then
+    if interactive && show_progress then
       print_endline
         (Output.parsing_message ~step:parse_step ~count:stats.parsed
            ~seconds:(phase_seconds stats.parse_seconds));
@@ -293,7 +296,7 @@ let run_with_warning_state ~poll ~warning_state ~compilation_kind ~no_timing
        run_scheduled_modules stats
      with Build_failure output ->
        if Option.is_none stats.failure then stats.failure <- Some output);
-    if interactive then (
+    if interactive && show_progress then (
       let seconds = phase_seconds (Unix.gettimeofday () -. compile_started) in
       match stats.failure with
       | None ->
@@ -358,9 +361,11 @@ let run_with_warning_state ~poll ~warning_state ~compilation_kind ~no_timing
 
 let run ~seen ~verbosity ~folder ~prod ~features ~warn_error ~watch ~after_build
     ~filter ~no_timing =
-  run_with_warning_state ~warning_state:(Warning_state.create ())
-    ~poll:(fun () -> ()) ~compilation_kind:None ~no_timing ~seen ~verbosity
-    ~folder ~prod ~features ~warn_error ~watch ~after_build ~filter
+  try
+    run_with_warning_state ~warning_state:(Warning_state.create ())
+      ~poll:(fun () -> ()) ~compilation_kind:None ~no_timing ~seen ~verbosity
+      ~folder ~prod ~features ~warn_error ~watch ~after_build ~filter
+  with Reported_failure message -> raise (Error message)
 
 let watch ~verbosity ~folder ~prod ~features ~warn_error ~after_build ~filter
     ~clear_screen =
@@ -378,9 +383,10 @@ let watch ~verbosity ~folder ~prod ~features ~warn_error ~after_build ~filter
         ~watch:true ~after_build ~filter;
       initial_build := false
     with
+    | Reported_failure _ -> ()
     | Error message | Config.Error message | Source.Error message
     | Process.Error message -> prerr_endline message
     | (Sys_error _ as exn) | (Unix.Unix_error _ as exn) ->
       prerr_endline (Printexc.to_string exn)
   in
-  Watcher.run ~root ~prod ~clear_screen ~build
+  Watcher.run ~root ~prod ~clear_screen ~show_progress:(verbosity >= 0) ~build
