@@ -1,0 +1,20 @@
+--- a/src/c/dune
++++ b/src/c/dune
+@@ -82,8 +82,14 @@
+  (action (progn
+   (bash "cp -r vendor/configure/* vendor/libuv/")
+   (chdir vendor/libuv (progn
+    (bash
+-    "sh configure --host `ocamlc -config | awk '/^host:/ {print $NF}'` \
+-      'CC=%{cc}' CFLAGS=-DNDEBUG --silent --enable-silent-rules")
++    "architecture=`ocamlc -config-var architecture`
++     c_compiler=`ocamlc -config-var c_compiler`
++     extra_cflags=
++     case \"$architecture:$c_compiler\" in
++       arm64:*musl*) extra_cflags=-mno-outline-atomics ;;
++     esac
++     sh configure --host `ocamlc -config | awk '/^host:/ {print $NF}'` \
++       'CC=%{cc}' CFLAGS=\"-DNDEBUG $extra_cflags\" --silent --enable-silent-rules")
+    (ignore-outputs (bash
+     "$([ '%{os_type}' = Unix ] && echo %{make} || echo make) V=0 -j 4 \
+       -o aclocal.m4 -o Makefile.in -o configure \
