@@ -424,13 +424,68 @@ let run_locked ~root ~prod ~features ~filter ~clear_screen ~show_progress ~build
   let keep_running () =
     (not !stop_requested) && Build_lock.is_owned watch_lock
   in
-  let poll () = if not (keep_running ()) then raise Stop in
+  (* Lock removal is observed by the outer native or polling loop. Checking
+     the lock file on every subprocess scheduler poll would turn one source
+     edit into many identical filesystem reads. Signals raised during a build
+     already interrupt it directly; the flag covers a signal received while
+     libuv owns the callback stack. *)
+  let poll () = if !stop_requested then raise Stop in
   let clear_terminal () =
     if
       Output.should_clear_screen ~clear_screen ~show_progress
         ~interactive:(Unix.isatty Unix.stdout && Unix.isatty Unix.stderr)
     then
       Printf.printf "\027[2J\027[H%!"
+  in
+  let direct_content_changes watcher roots sources unresolved events =
+    let changes = ref [] in
+    let requires_reconciliation = ref false in
+    let is_source_path path =
+      let extension = Filename.extension path in
+      extension = ".res" || extension = ".resi"
+    in
+    let is_in_source_tree path =
+      List.exists
+        (fun source ->
+          path = source.directory
+          || (source.recursive
+             && String.starts_with
+                  ~prefix:(source.directory ^ Filename.dir_sep)
+                  path))
+        sources
+    in
+    let is_directory path =
+      try Sys.is_directory path with Sys_error _ -> false
+    in
+    List.iter
+      (fun (event : Native_watcher.change) ->
+        match event.kind, event.path with
+        | _, None ->
+          requires_reconciliation := true
+        | Native_watcher.Structural, Some path ->
+          if
+            is_source_path path || path_in_scope roots sources unresolved path
+            || Native_watcher.watches_directory watcher path
+            || (is_in_source_tree path && is_directory path)
+          then
+            requires_reconciliation := true
+        | Native_watcher.Content, Some path ->
+          if is_source_path path then
+            if path_in_scope roots sources unresolved path then
+              if matches_filter path then
+                if Sys.file_exists path then
+                  changes := {path; kind = Modified} :: !changes
+                else requires_reconciliation := true
+            else requires_reconciliation := true
+          else if path_in_scope roots sources unresolved path then
+            requires_reconciliation := true)
+      events;
+    if !requires_reconciliation then None
+    else
+      Some
+        (!changes
+        |> List.sort_uniq (fun (first : change) second ->
+             String.compare first.path second.path))
   in
   let rec polling_loop roots sources unresolved previous =
     if keep_running () then (
@@ -487,9 +542,16 @@ let run_locked ~root ~prod ~features ~filter ~clear_screen ~show_progress ~build
     | Native_watcher.Stopped -> None
     | Native_watcher.Failed message ->
       Some (message, roots, sources, unresolved, previous)
-    | Native_watcher.Changed ->
+    | Native_watcher.Changed events ->
       ignore (Unix.select [] [] [] 0.05);
-      native_reconcile watcher roots sources unresolved previous
+      let events = events @ Native_watcher.drain watcher in
+      (match direct_content_changes watcher roots sources unresolved events with
+      | Some [] -> native_loop watcher roots sources unresolved previous
+      | Some changes ->
+        clear_terminal ();
+        build ~poll ~changes:(Some changes);
+        native_loop watcher roots sources unresolved previous
+      | None -> native_reconcile watcher roots sources unresolved previous)
   and native_reconcile watcher roots sources unresolved previous =
     let current =
       snapshot digest_cache ~matches_source:matches_filter roots sources

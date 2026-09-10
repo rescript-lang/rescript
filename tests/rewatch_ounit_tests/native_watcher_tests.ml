@@ -31,7 +31,7 @@ let tests =
                Native_watcher.wait watcher ~keep_running:(fun () -> true)
              with
             | Native_watcher.Failed "injected failure" -> ()
-            | Native_watcher.Changed | Native_watcher.Stopped
+            | Native_watcher.Changed _ | Native_watcher.Stopped
             | Native_watcher.Failed _ ->
               assert_failure "a native failure takes precedence over a change");
             (match Native_watcher.refresh watcher ~paths with
@@ -40,7 +40,9 @@ let tests =
             (match
                Native_watcher.wait watcher ~keep_running:(fun () -> true)
              with
-            | Native_watcher.Changed -> ()
+            | Native_watcher.Changed [_] -> ()
+            | Native_watcher.Changed _ ->
+              assert_failure "refresh preserves exactly one queued change"
             | Native_watcher.Stopped | Native_watcher.Failed _ ->
               assert_failure "refresh preserves a previously queued change");
             Native_watcher.For_test.queue_change watcher;
@@ -48,12 +50,15 @@ let tests =
                Native_watcher.wait watcher ~keep_running:(fun () -> false)
              with
             | Native_watcher.Stopped -> ()
-            | Native_watcher.Changed | Native_watcher.Failed _ ->
+            | Native_watcher.Changed _ | Native_watcher.Failed _ ->
               assert_failure "an external stop takes precedence over a change");
             (match
                Native_watcher.wait watcher ~keep_running:(fun () -> true)
              with
-            | Native_watcher.Changed -> ()
+            | Native_watcher.Changed [_] -> ()
+            | Native_watcher.Changed _ ->
+              assert_failure
+                "a stopped wait preserves exactly one queued change"
             | Native_watcher.Stopped | Native_watcher.Failed _ ->
               assert_failure "a stopped wait preserves its queued change");
             check
