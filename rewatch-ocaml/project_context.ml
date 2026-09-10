@@ -18,29 +18,28 @@ let workspace_lock_root folder =
     parent.root
   | Some _ | None -> folder
 
+let dependency_candidates root name =
+  let rec in_ancestors directory acc =
+    let candidate = Filename.concat (Filename.concat directory "node_modules") name in
+    let parent = Filename.dirname directory in
+    if parent = directory then List.rev (candidate :: acc)
+    else in_ancestors parent (candidate :: acc)
+  in
+  let package_name =
+    match List.rev (String.split_on_char '/' name) with
+    | last :: _ -> last
+    | [] -> name
+  in
+  let sibling = Filename.concat (Filename.dirname root) name in
+  let workspace = Filename.concat (Filename.concat root "packages") package_name in
+  in_ancestors root [] @ [sibling; workspace]
+
 let dependency_path root name =
   let existing_realpath path =
-    if Sys.file_exists path then Some (Unix.realpath path) else None
+    try if Sys.file_exists path then Some (Unix.realpath path) else None
+    with Sys_error _ | Unix.Unix_error _ -> None
   in
-  let rec in_ancestors directory =
-    let candidate = Filename.concat (Filename.concat directory "node_modules") name in
-    match existing_realpath candidate with
-    | Some path -> Some path
-    | None ->
-      let parent = Filename.dirname directory in
-      if parent = directory then None else in_ancestors parent
-  in
-  match in_ancestors root with
-  | Some path -> Some path
-  | None ->
-    let package_name =
-      match List.rev (String.split_on_char '/' name) with
-      | last :: _ -> last
-      | [] -> name
-    in
-    let sibling = Filename.concat (Filename.dirname root) name in
-    let workspace = Filename.concat (Filename.concat root "packages") package_name in
-    List.find_map existing_realpath [sibling; workspace]
+  dependency_candidates root name |> List.find_map existing_realpath
 
 let require_dependency_directory ~workspace_root package_root
     (dependency : Config.dependency) =

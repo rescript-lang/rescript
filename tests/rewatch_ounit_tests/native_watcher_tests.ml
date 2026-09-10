@@ -25,9 +25,37 @@ let tests =
             check
               (Native_watcher.For_test.handle_count watcher = 2)
               "root and source handles";
+            Native_watcher.For_test.queue_change watcher;
+            Native_watcher.For_test.queue_error watcher "injected failure";
+            (match
+               Native_watcher.wait watcher ~keep_running:(fun () -> true)
+             with
+            | Native_watcher.Failed "injected failure" -> ()
+            | Native_watcher.Changed | Native_watcher.Stopped
+            | Native_watcher.Failed _ ->
+              assert_failure "a native failure takes precedence over a change");
             (match Native_watcher.refresh watcher ~paths with
             | Error message -> failwith ("native watcher refresh: " ^ message)
             | Ok () -> ());
+            (match
+               Native_watcher.wait watcher ~keep_running:(fun () -> true)
+             with
+            | Native_watcher.Changed -> ()
+            | Native_watcher.Stopped | Native_watcher.Failed _ ->
+              assert_failure "refresh preserves a previously queued change");
+            Native_watcher.For_test.queue_change watcher;
+            (match
+               Native_watcher.wait watcher ~keep_running:(fun () -> false)
+             with
+            | Native_watcher.Stopped -> ()
+            | Native_watcher.Changed | Native_watcher.Failed _ ->
+              assert_failure "an external stop takes precedence over a change");
+            (match
+               Native_watcher.wait watcher ~keep_running:(fun () -> true)
+             with
+            | Native_watcher.Changed -> ()
+            | Native_watcher.Stopped | Native_watcher.Failed _ ->
+              assert_failure "a stopped wait preserves its queued change");
             check
               (Native_watcher.For_test.handle_count watcher = 2)
               "unchanged refresh retains handle count";

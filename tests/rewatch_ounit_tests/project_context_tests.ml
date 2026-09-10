@@ -52,6 +52,16 @@ let tests =
         (Project_context.relative_to root (Filename.concat root "packages")
         = "packages")
         "a child path is represented relative to its root";
+      let candidates =
+        Project_context.dependency_candidates root "@scope/pkg"
+      in
+      check
+        (List.hd candidates
+        = Filename.concat (Filename.concat root "node_modules") "@scope/pkg")
+        "dependency candidates start with the package-local node_modules path";
+      check
+        (List.mem (Filename.concat root "packages/pkg") candidates)
+        "scoped dependency candidates retain the workspace package fallback";
       let repository_tmp = Filename.concat (Sys.getcwd ()) "tmp" in
       File_util.ensure_dir repository_tmp;
       let standalone =

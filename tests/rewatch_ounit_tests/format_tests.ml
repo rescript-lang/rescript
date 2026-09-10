@@ -53,6 +53,24 @@ let tests =
            contains message "Could not write formatted file"
            && contains message path)
         "formatter write failures retain their operation and source path");
+  if not Sys.win32 then
+    with_temp_dir (fun root ->
+        let target = Filename.concat root "target.res" in
+        let symlink = Filename.concat root "symlink.res" in
+        let hard_link = Filename.concat root "hard-link.res" in
+        write_file target "before";
+        Unix.symlink target symlink;
+        Unix.link target hard_link;
+        let inode = (Unix.stat target).Unix.st_ino in
+        Format.write_file symlink "through symlink";
+        check
+          (File_util.read_file target = "through symlink")
+          "formatting a symlink should update its target";
+        Format.write_file hard_link "through hard link";
+        check
+          ((Unix.stat target).Unix.st_ino = inode
+          && File_util.read_file target = "through hard link")
+          "formatting should preserve hard-link identity");
   with_temp_dir (fun root ->
       let first = Filename.concat root "First.res" in
       let second = Filename.concat root "Second.res" in

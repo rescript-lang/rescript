@@ -124,28 +124,48 @@ let create ~paths =
         error)
 
 let wait watcher ~keep_running =
-  watcher.changed <- false;
-  watcher.stopped <- false;
-  let check_running () =
-    if not (keep_running ()) then (
-      watcher.stopped <- true;
-      Luv.Loop.stop watcher.loop)
+  watcher.stopped <- not (keep_running ());
+  (* Events can arrive while refresh closes handles and pumps the libuv loop.
+     Consume the event that wakes this call, but never erase one already queued
+     by reconciliation before the next wait begins. A failed handle or an
+     external stop must take precedence because another reconciliation could
+     otherwise erase the condition that requires native watch to end. *)
+  let ready_result () =
+    match watcher.error with
+    | Some message -> Some (Failed message)
+    | None when watcher.stopped -> Some Stopped
+    | None when watcher.changed ->
+      watcher.changed <- false;
+      Some Changed
+    | None -> None
   in
-  (match Luv.Timer.start ~repeat:100 watcher.timer 100 check_running with
-  | Ok () -> ()
-  | Error error -> watcher.error <- Some (error_message error));
-  while
-    (not watcher.changed) && not watcher.stopped
-    && Option.is_none watcher.error
-  do
-    ignore (Luv.Loop.run ~loop:watcher.loop ~mode:`ONCE ())
-  done;
-  ignore (Luv.Timer.stop watcher.timer);
-  match watcher.error with
-  | Some message -> Failed message
-  | None -> if watcher.stopped then Stopped else Changed
+  match ready_result () with
+  | Some result -> result
+  | None ->
+    let check_running () =
+      if not (keep_running ()) then (
+        watcher.stopped <- true;
+        Luv.Loop.stop watcher.loop)
+    in
+    (match Luv.Timer.start ~repeat:100 watcher.timer 100 check_running with
+    | Ok () -> ()
+    | Error error -> watcher.error <- Some (error_message error));
+    while
+      (not watcher.changed) && not watcher.stopped
+      && Option.is_none watcher.error
+    do
+      ignore (Luv.Loop.run ~loop:watcher.loop ~mode:`ONCE ())
+    done;
+    ignore (Luv.Timer.stop watcher.timer);
+    (match ready_result () with
+    | Some result -> result
+    | None -> Failed "native watcher loop stopped without a wakeup condition")
 
 let refresh watcher ~paths =
+  (* Only failures from work completed before this refresh are stale. Clear
+     them before pumping close callbacks so a newly reported handle failure is
+     preserved and makes the caller fall back to polling. *)
+  watcher.error <- None;
   let directories = directories_under paths in
   let desired = Hashtbl.create (List.length directories) in
   List.iter (fun directory -> Hashtbl.add desired directory ()) directories;
@@ -156,7 +176,6 @@ let refresh watcher ~paths =
   in
   close_fs_handles watcher.loop (List.map snd removed);
   watcher.handles <- kept;
-  watcher.error <- None;
   install_handles watcher directories
 
 let close watcher =
@@ -167,4 +186,6 @@ let close watcher =
 
 module For_test = struct
   let handle_count watcher = List.length watcher.handles
+  let queue_change watcher = watcher.changed <- true
+  let queue_error watcher message = watcher.error <- Some message
 end

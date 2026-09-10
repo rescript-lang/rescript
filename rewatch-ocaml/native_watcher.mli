@@ -17,4 +17,6 @@ val close : t -> unit
 
 module For_test : sig
   val handle_count : t -> int
+  val queue_change : t -> unit
+  val queue_error : t -> string -> unit
 end

@@ -22,9 +22,12 @@ let tests =
         (Filename.concat root "rescript.json")
         {|{
         "name": "clean-ownership",
-        "sources": ["src"],
+        "sources": [{"dir":"src","subdirs":true}],
         "dependencies": ["installed"],
-        "package-specs": {"module": "esmodule", "in-source": false}
+        "package-specs": [
+          {"module": "esmodule", "in-source": false},
+          {"module": "esmodule", "in-source": true, "suffix": ".in.js"}
+        ]
       }|};
       write_file (Filename.concat root "src/A.res") "let value = 1\n";
       write_file
@@ -51,6 +54,20 @@ let tests =
       let unrelated_sidecar_name =
         Filename.concat root "lib/es6/notes.rewatch-pending"
       in
+      let duplicate_a = Filename.concat root "src/one/Duplicate.res" in
+      let duplicate_b = Filename.concat root "src/two/Duplicate.res" in
+      let duplicate_output_a =
+        Filename.concat root "lib/es6/src/one/Duplicate.js"
+      in
+      let duplicate_output_b =
+        Filename.concat root "lib/es6/src/two/Duplicate.js"
+      in
+      let duplicate_in_source_a =
+        Filename.concat root "src/one/Duplicate.in.js"
+      in
+      let duplicate_in_source_b =
+        Filename.concat root "src/two/Duplicate.in.js"
+      in
       write_file generated "generated\n";
       write_file (generated ^ ".map") "generated map\n";
       write_file unowned "keep\n";
@@ -60,6 +77,12 @@ let tests =
       write_file abandoned_source_sidecar "abandoned output\n";
       write_file abandoned_map_sidecar "abandoned map\n";
       write_file unrelated_sidecar_name "not a generated output\n";
+      write_file duplicate_a "let value = 1\n";
+      write_file duplicate_b "let value = 2\n";
+      write_file duplicate_output_a "generated duplicate one\n";
+      write_file duplicate_output_b "generated duplicate two\n";
+      write_file duplicate_in_source_a "generated duplicate one\n";
+      write_file duplicate_in_source_b "generated duplicate two\n";
       write_file (Filename.concat root "lib/bs/compiler-state") "temporary\n";
       write_file (Filename.concat root "lib/ocaml/A.cmj") "temporary\n";
       Build.clean ~seen:[] ~verbosity:(-1) ~folder:root ~prod:false;
@@ -89,6 +112,18 @@ let tests =
       check
         (Sys.file_exists unrelated_sidecar_name)
         "clean preserves staging-like names that are not generated outputs";
+      check
+        (not (Sys.file_exists duplicate_output_a))
+        "clean removes the first output when module names are duplicated";
+      check
+        (not (Sys.file_exists duplicate_output_b))
+        "clean removes the second output when module names are duplicated";
+      check
+        (not (Sys.file_exists duplicate_in_source_a))
+        "invalid-graph clean removes the first in-source output";
+      check
+        (not (Sys.file_exists duplicate_in_source_b))
+        "invalid-graph clean removes the second in-source output";
       check
         (not (Sys.file_exists (Filename.concat root "lib/bs")))
         "clean removes compiler working artifacts";

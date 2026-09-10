@@ -27,16 +27,11 @@ let strip_ansi content =
 let initialize root =
   let path = path root "bs" in
   File_util.ensure_dir (Filename.dirname path);
-  let channel = open_out_bin path in
-  Fun.protect ~finally:(fun () -> close_out_noerr channel) (fun () ->
-    Printf.fprintf channel "#Start(%.6f)\n" (Unix.gettimeofday ()))
+  File_util.write_file path
+    (Printf.sprintf "#Start(%.6f)\n" (Unix.gettimeofday ()))
 
 let append root content =
-  let channel =
-    open_out_gen [Open_wronly; Open_append; Open_binary] 0o644 (path root "bs")
-  in
-  Fun.protect ~finally:(fun () -> close_out_noerr channel) (fun () ->
-    output_string channel (strip_ansi content))
+  File_util.append_file (path root "bs") (strip_ansi content)
 
 let finalize root =
   append root (Printf.sprintf "#Done(%.6f)\n" (Unix.gettimeofday ()));

@@ -16,6 +16,12 @@ type discovery = {
 
 type discovered_file = {path: string; modified: float}
 
+type scanned_sources = {
+  files: (discovered_file * bool * bool) list;
+  inventory_files: string list;
+  gentype_dirs: string list;
+}
+
 exception Error of string
 
 let source_extension path =
@@ -216,21 +222,8 @@ let resolve_active_features (config : Config.t) requested =
   List.iter (fun feature -> activate feature []) requested;
   active_features
 
-let discover_with_inventory ?(on_orphan = fun _ -> ())
-    ?(on_missing = fun path ->
-      Printf.eprintf "Could not read folder %s\n%!" path)
-    ?(display_root = Sys.getcwd ()) (config : Config.t) ~prod ~features ~filter =
-  let matches_filter =
-    match filter with
-    | None -> fun _ -> true
-    | Some pattern ->
-      let regex = try Str.regexp pattern with Failure _ -> raise (Error ("invalid filter regex: " ^ pattern)) in
-      fun path ->
-        try
-          ignore (Str.search_forward regex (Filename.basename path) 0);
-          true
-        with Not_found -> false
-  in
+let scan_sources ~on_missing (config : Config.t) ~prod ~features
+    ~collect_gentype =
   let active_features =
     resolve_active_features config (Option.value features ~default:[])
   in
@@ -253,9 +246,52 @@ let discover_with_inventory ?(on_orphan = fun _ -> ())
        in
        scan_source ~root:config.root source ~discover_modules ~on_missing
          ~visited_dirs
-         ~collect_gentype:(config.gentype_args <> [] && feature_enabled)
+         ~collect_gentype:(collect_gentype && feature_enabled)
          ~visited_gentype_dirs files inventory_files gentype_dirs);
-  let files = !files in
+  {
+    files = !files;
+    inventory_files = List.sort_uniq String.compare !inventory_files;
+    gentype_dirs = List.sort_uniq String.compare !gentype_dirs;
+  }
+
+let discover_for_cleanup
+    ?(on_missing = fun path ->
+      Printf.eprintf "Could not read folder %s\n%!" path)
+    (config : Config.t) ~prod =
+  let scanned =
+    scan_sources ~on_missing config ~prod ~features:None ~collect_gentype:false
+  in
+  let implementations =
+    scanned.files
+    |> List.filter_map (fun (file, is_interface, _) ->
+         if is_interface then None else Some file.path)
+    |> List.sort_uniq String.compare
+  in
+  (implementations, scanned.inventory_files)
+
+let discover_with_inventory ?(on_orphan = fun _ -> ())
+    ?(on_missing = fun path ->
+      Printf.eprintf "Could not read folder %s\n%!" path)
+    ?(display_root = Sys.getcwd ()) (config : Config.t) ~prod ~features ~filter =
+  let matches_filter =
+    match filter with
+    | None -> fun _ -> true
+    | Some pattern ->
+      let regex =
+        try Str.regexp pattern
+        with Failure _ -> raise (Error ("invalid filter regex: " ^ pattern))
+      in
+      fun path ->
+        try
+          ignore (Str.search_forward regex (Filename.basename path) 0);
+          true
+        with Not_found -> false
+  in
+  let scanned =
+    scan_sources ~on_missing config ~prod ~features
+      ~collect_gentype:(config.gentype_args <> [])
+  in
+  let files = scanned.files in
   let table = Hashtbl.create (List.length files) in
   List.iter
     (fun (file, is_interface, is_dev) ->
@@ -326,8 +362,8 @@ let discover_with_inventory ?(on_orphan = fun _ -> ())
   {
     modules;
     source_mtimes;
-    inventory_files = List.sort_uniq String.compare !inventory_files;
-    gentype_dirs = List.sort_uniq String.compare !gentype_dirs;
+    inventory_files = scanned.inventory_files;
+    gentype_dirs = scanned.gentype_dirs;
   }
 
 let discover ?on_orphan ?on_missing ?display_root config ~prod ~features ~filter

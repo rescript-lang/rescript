@@ -2,6 +2,7 @@ exception Error of string
 exception Package_error of string
 
 val workspace_lock_root : string -> string
+val dependency_candidates : string -> string -> string list
 val dependency_path : string -> string -> string option
 
 val require_dependency_directory :

@@ -77,10 +77,8 @@ let namespace_job ~bsc ~runtime ~build_dir ~ocaml_dir ~entry ~package_dirty
     with Sys_error _ -> None
   in
   let mlmap_changed = previous_contents <> Some contents in
-  if mlmap_changed then (
-    let channel = open_out_bin mlmap in
-    Fun.protect ~finally:(fun () -> close_out_noerr channel) (fun () ->
-      output_string channel contents));
+  if mlmap_changed then
+    File_util.write_file_atomic ~ensure_parent:false ~perm:0o644 mlmap contents;
   let outputs_exist =
     ["cmi"; "cmj"; "cmt"; "mlmap"]
     |> List.for_all (fun extension ->

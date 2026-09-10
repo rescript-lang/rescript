@@ -111,6 +111,29 @@ let tests =
       done;
       check_descriptor_count descriptors_before_failed_copies
         "failed destination acquisition should close the source";
+      let atomic = Filename.concat root "atomic" in
+      write_file atomic "previous";
+      if not Sys.win32 then Unix.chmod atomic 0o640;
+      File_util.write_file_atomic ~ensure_parent:false atomic "replacement";
+      check
+        (File_util.read_file atomic = "replacement")
+        "atomic writes should publish the complete replacement";
+      if not Sys.win32 then
+        check
+          ((Unix.stat atomic).Unix.st_perm = 0o640)
+          "atomic replacement should preserve existing file permissions";
+      check
+        (Sys.readdir root |> Array.to_list
+        |> List.for_all (fun name ->
+            not (String.starts_with ~prefix:".rewatch-write-" name)))
+        "successful atomic writes should not leave temporary files";
+      if (not Sys.win32) && Sys.file_exists "/dev/full" then
+        check
+          (try
+             File_util.write_file "/dev/full" "buffered output";
+             false
+           with Sys_error _ | Unix.Unix_error _ -> true)
+          "a failure while flushing or closing an output file must be reported";
       Sys.remove first;
       write_file first "same";
       if not Sys.win32 then (
@@ -144,7 +167,7 @@ let tests =
         File_util.remove_file unreadable);
       check
         (List.sort String.compare (File_util.files_under root)
-        = List.sort String.compare [first; second])
+        = List.sort String.compare [atomic; first; second])
         "recursive inventory should contain files but not directories";
       if not Sys.win32 then (
         let live_link = Filename.concat root "live-link" in
@@ -153,7 +176,7 @@ let tests =
         Unix.symlink missing dangling_link;
         check
           (List.sort String.compare (File_util.files_under root)
-          = List.sort String.compare [first; second; live_link])
+          = List.sort String.compare [atomic; first; second; live_link])
           "recursive inventory should retain live links and omit dangling links");
       File_util.remove_file first;
       File_util.remove_file first;
