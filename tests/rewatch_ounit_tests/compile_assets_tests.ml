@@ -52,14 +52,14 @@ let tests =
       let source_mtimes = Hashtbl.create 1 in
       Hashtbl.add source_mtimes source_path ast_modified;
       check
-        (Build.source_is_not_older_than_ast state ~root ~source_mtimes
+        (Build_freshness.source_is_not_older_than_ast state ~root ~source_mtimes
            source_path)
         "equal source and AST timestamps follow Rust and require parsing";
       Hashtbl.replace source_mtimes source_path (ast_modified -. 1.);
       check
         (not
-           (Build.source_is_not_older_than_ast state ~root ~source_mtimes
-              source_path))
+           (Build_freshness.source_is_not_older_than_ast state ~root
+              ~source_mtimes source_path))
         "an AST newer than its source is parse-clean";
       check
         (Option.is_some (Compile_assets.cmi state "Example"))

@@ -1,5 +1,24 @@
 exception Cycle of string list
 
+let blocked_dependents graph cycle =
+  let blocked = Hashtbl.create (List.length cycle) in
+  List.iter (fun name -> Hashtbl.replace blocked name ()) cycle;
+  let rec add_dependents () =
+    let changed = ref false in
+    List.iter
+      (fun (name, dependencies) ->
+        if
+          not (Hashtbl.mem blocked name)
+          && List.exists (Hashtbl.mem blocked) dependencies
+        then (
+          Hashtbl.add blocked name ();
+          changed := true))
+      graph;
+    if !changed then add_dependents ()
+  in
+  add_dependents ();
+  Hashtbl.to_seq_keys blocked |> List.of_seq
+
 let canonical_cycle cycle =
   let rec without_last = function
   | [] | [_] -> []

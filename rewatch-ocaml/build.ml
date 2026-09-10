@@ -77,56 +77,10 @@ let clean ~seen ~verbosity ~folder ~prod =
 
 let compiler_args = Compiler_args_command.run
 
-let source_is_newer ~source ~artifact =
-  match modification_time source, modification_time artifact with
-  | Some source_time, Some artifact_time -> source_time > artifact_time
-  | Some _, None -> true
-  | None, _ -> false
-
-let source_is_not_older_than_ast compile_assets ~root ~source_mtimes path =
-  let absolute = Filename.concat root path in
-  match Hashtbl.find_opt source_mtimes path with
-  | None ->
-    source_is_newer ~source:absolute
-      ~artifact:
-        (Filename.concat (lib_path root "ocaml")
-           (Filename.basename (Source.ast_path path)))
-  | Some source_modified -> (
-    match Compile_assets.ast compile_assets absolute with
-    | None -> true
-    | Some ast -> source_modified >= ast.modified)
-
-let published_ast_path ~ocaml_dir source_path =
-  (* bsc gives its intermediate AST an epoch mtime. The copy published after a
-     successful parse is the stable freshness marker across build cycles. *)
-  Filename.concat ocaml_dir (Filename.basename (Source.ast_path source_path))
-
-let global_module_key (config : Config.t) module_name =
-  Source.compiler_basename config module_name
-
 let dependency_head dependency =
   match String.split_on_char '.' dependency with
   | head :: _ -> head
   | [] -> dependency
-
-let blocked_dependents graph cycle =
-  let blocked = Hashtbl.create (List.length cycle) in
-  List.iter (fun name -> Hashtbl.replace blocked name ()) cycle;
-  let rec add_dependents () =
-    let changed = ref false in
-    List.iter
-      (fun (name, dependencies) ->
-        if
-          not (Hashtbl.mem blocked name)
-          && List.exists (Hashtbl.mem blocked) dependencies
-        then (
-          Hashtbl.add blocked name ();
-          changed := true))
-      graph;
-    if !changed then add_dependents ()
-  in
-  add_dependents ();
-  Hashtbl.to_seq_keys blocked |> List.of_seq
 
 let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
     ~filter ~watch ~stats ~on_cleanup =
@@ -233,7 +187,7 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
               module_.Source.implementation
               :: Option.to_list module_.Source.interface)
          |> List.filter_map (fun path ->
-              if source_is_not_older_than_ast compile_assets
+              if Build_freshness.source_is_not_older_than_ast compile_assets
                    ~root:package.graph_root
                    ~source_mtimes:package.graph_source_mtimes path
               then
@@ -290,7 +244,8 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
               @ intf_dependencies)
           in
           let compiler_base =
-            global_module_key package.graph_compile_config module_.Source.name
+            Source.compiler_basename package.graph_compile_config
+              module_.Source.name
           in
           if Option.is_none (Compile_assets.cmt compile_assets compiler_base) then
             Hashtbl.replace stats.forced_parse_paths
@@ -417,7 +372,7 @@ let prepare_global_graph ~(root_config : Config.t) ~prod ~features ~warn_error
       None
     with Graph.Cycle cycle ->
       let blocked =
-        blocked_dependents
+        Graph.blocked_dependents
           (List.map
              (fun (node, dependencies) -> (node.key, dependencies))
              graph_nodes)
@@ -583,11 +538,11 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder:root ~prod ~feature
          ||
          match prepared, stats.compile_assets with
          | Some package, Some compile_assets ->
-           source_is_not_older_than_ast compile_assets ~root
+           Build_freshness.source_is_not_older_than_ast compile_assets ~root
              ~source_mtimes:package.graph_source_mtimes path
          | None, _ | _, None ->
-           source_is_newer ~source:(Filename.concat root path)
-             ~artifact:(published_ast_path ~ocaml_dir path))
+           Build_freshness.source_is_newer ~source:(Filename.concat root path)
+             ~artifact:(Build_freshness.published_ast_path ~ocaml_dir path))
   in
   let parse_paths_to_run =
     dirty_parse_paths
@@ -646,7 +601,7 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder:root ~prod ~feature
   let parse_dirty_modules = Hashtbl.create (List.length modules) in
   List.iter
     (fun module_ ->
-      let global_key = global_module_key config module_.Source.name in
+      let global_key = Source.compiler_basename config module_.Source.name in
       let dependencies =
         match Hashtbl.find_opt stats.global_raw_dependencies global_key with
         | Some dependencies -> dependencies
@@ -678,7 +633,7 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder:root ~prod ~feature
   stats.parsed <- stats.parsed + Hashtbl.length parse_dirty_modules;
   let compile_warning_modules = Hashtbl.create 8 in
   let module_is_dirty module_ state =
-    let global_key = global_module_key config module_.Source.name in
+    let global_key = Source.compiler_basename config module_.Source.name in
     let module_name = Source.module_name module_.Source.implementation in
     let source = Filename.concat root module_.Source.implementation in
     let outputs_exist =
@@ -748,7 +703,7 @@ let rec run_internal ~(root_config : Config.t) ~seen ~folder:root ~prod ~feature
   let scheduled =
     List.map
       (fun module_ ->
-        let key = global_module_key config module_.Source.name in
+        let key = Source.compiler_basename config module_.Source.name in
         let state = Build_state.find_exn build_state key in
         (* Rust fixes the initial dirty set before dispatch. Files published by
            concurrently finishing jobs must not change this module's decision;

@@ -35,6 +35,7 @@
   compiler_scheduler
   build_lock
   build_artifacts
+  build_freshness
   build_types
   clean
   compile_assets

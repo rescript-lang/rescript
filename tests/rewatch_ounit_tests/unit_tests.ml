@@ -339,7 +339,7 @@ let tests =
     (shortest_cycle = ["ShortA"; "ShortB"; "ShortA"])
     "cycle diagnostics select the shortest cycle deterministically";
   let blocked =
-    Build.blocked_dependents
+    Graph.blocked_dependents
       [
         ("A", ["B"]); ("B", ["A"]); ("C", ["A"]); ("D", ["C"]); ("Unrelated", []);
       ]
