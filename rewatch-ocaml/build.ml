@@ -335,8 +335,11 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
     if warning_entries <> [] && diagnostics = [] then prerr_newline ();
     flush stderr;
     if diagnostics <> [] then (
-      let output = String.concat "\n\n" diagnostics in
-      prerr_endline (if interactive then Output.yellow output else output));
+      let color = Output.colors_enabled ~interactive in
+      diagnostics
+      |> List.map (fun diagnostic ->
+           if color then Output.yellow diagnostic else diagnostic)
+      |> String.concat "\n\n" |> prerr_endline);
     if success && interactive && show_progress then
       let seconds =
         if no_timing then 0. else Unix.gettimeofday () -. started_at

@@ -459,6 +459,13 @@ run_build_output_case() {
     rust_status=$?
     "$ocaml" -q build "$ocaml_project" >"$work/ocaml.out" 2>"$work/ocaml.err"
     ocaml_status=$?
+  elif [ "$mode" = forced-color ]; then
+    CLICOLOR_FORCE=1 "$rust" build "$rust_project" \
+      >"$work/rust.out" 2>"$work/rust.err"
+    rust_status=$?
+    CLICOLOR_FORCE=1 "$ocaml" build "$ocaml_project" \
+      >"$work/ocaml.out" 2>"$work/ocaml.err"
+    ocaml_status=$?
   else
     "$rust" build "$rust_project" >"$work/rust.out" 2>"$work/rust.err"
     rust_status=$?
@@ -581,6 +588,8 @@ run_build_output_case redirected-warning 0 \
   "$root/rewatch-ocaml/tests/warning-replay" redirected
 run_build_output_case redirected-config-diagnostics 0 \
   "$work/redirected-config-diagnostics" redirected
+run_build_output_case forced-color-config-diagnostics 0 \
+  "$work/redirected-config-diagnostics" forced-color
 
 run_build_output_case quiet-success 0 "$project" quiet
 if [ -s "$work/rust.out" ] || [ -s "$work/rust.err" ] || \

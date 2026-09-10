@@ -7,6 +7,29 @@ let yellow text =
     ^ "\027[0m"
   else "\027[33m" ^ text ^ "\027[0m"
 
+let colors_enabled_with ~getenv ~win32 ~interactive =
+  let nonzero name default =
+    match getenv name with
+    | None -> default
+    | Some value -> value <> "0"
+  in
+  let terminal_supports_color =
+    interactive
+    &&
+    if win32 then true
+    else
+      Option.is_none (getenv "NO_COLOR")
+      &&
+      match getenv "TERM" with
+      | Some term -> term <> "dumb"
+      | None -> false
+  in
+  (terminal_supports_color && nonzero "CLICOLOR" true)
+  || nonzero "CLICOLOR_FORCE" false
+
+let colors_enabled ~interactive =
+  colors_enabled_with ~getenv:Sys.getenv_opt ~win32:Sys.win32 ~interactive
+
 let cleanup_message ~step ~cleaned ~total ~seconds =
   Printf.sprintf "%s[%s] 🧹 Cleaned %d/%d in %.2fs" line_clear step cleaned
     total seconds

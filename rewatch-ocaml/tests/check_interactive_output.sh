@@ -42,13 +42,16 @@ capture() {
   executable=$2
   transcript="$work/$implementation.tty"
   if [ "$(uname -s)" = Darwin ]; then
-    script -q "$transcript" env \
+    script -q "$transcript" env -u NO_COLOR \
+      "TERM=xterm" \
+      "CLICOLOR=1" \
+      "CLICOLOR_FORCE=0" \
       "RESCRIPT_BSC_EXE=$RESCRIPT_BSC_EXE" \
       "RESCRIPT_RUNTIME=$RESCRIPT_RUNTIME" \
       "$executable" build "$work/$implementation" --no-timing >/dev/null
   else
     script -qefc \
-      "RESCRIPT_BSC_EXE=$RESCRIPT_BSC_EXE RESCRIPT_RUNTIME=$RESCRIPT_RUNTIME $executable build $work/$implementation --no-timing" \
+      "env -u NO_COLOR TERM=xterm CLICOLOR=1 CLICOLOR_FORCE=0 RESCRIPT_BSC_EXE=$RESCRIPT_BSC_EXE RESCRIPT_RUNTIME=$RESCRIPT_RUNTIME $executable build $work/$implementation --no-timing" \
       "$transcript" >/dev/null
   fi
   tr '\r' '\n' <"$transcript" \
@@ -87,13 +90,16 @@ capture_quiet_build() {
   executable=$2
   transcript="$work/$implementation-quiet.tty"
   if [ "$(uname -s)" = Darwin ]; then
-    script -q "$transcript" env \
+    script -q "$transcript" env -u NO_COLOR \
+      "TERM=xterm" \
+      "CLICOLOR=1" \
+      "CLICOLOR_FORCE=0" \
       "RESCRIPT_BSC_EXE=$RESCRIPT_BSC_EXE" \
       "RESCRIPT_RUNTIME=$RESCRIPT_RUNTIME" \
       "$executable" -q build "$work/$implementation" >/dev/null
   else
     script -qefc \
-      "RESCRIPT_BSC_EXE=$RESCRIPT_BSC_EXE RESCRIPT_RUNTIME=$RESCRIPT_RUNTIME $executable -q build $work/$implementation" \
+      "env -u NO_COLOR TERM=xterm CLICOLOR=1 CLICOLOR_FORCE=0 RESCRIPT_BSC_EXE=$RESCRIPT_BSC_EXE RESCRIPT_RUNTIME=$RESCRIPT_RUNTIME $executable -q build $work/$implementation" \
       "$transcript" >/dev/null
   fi
   if tr '\r' '\n' <"$transcript" \
@@ -129,13 +135,16 @@ capture_watch_rebuild() {
   local project="$work/$implementation-watch"
   local transcript="$work/$implementation-watch.tty"
   if [ "$(uname -s)" = Darwin ]; then
-    script -q "$transcript" env \
+    script -q "$transcript" env -u NO_COLOR \
+      "TERM=xterm" \
+      "CLICOLOR=1" \
+      "CLICOLOR_FORCE=0" \
       "RESCRIPT_BSC_EXE=$RESCRIPT_BSC_EXE" \
       "RESCRIPT_RUNTIME=$RESCRIPT_RUNTIME" \
       "$executable" watch "$project" >/dev/null &
   else
     script -qefc \
-      "RESCRIPT_BSC_EXE=$RESCRIPT_BSC_EXE RESCRIPT_RUNTIME=$RESCRIPT_RUNTIME $executable watch $project" \
+      "env -u NO_COLOR TERM=xterm CLICOLOR=1 CLICOLOR_FORCE=0 RESCRIPT_BSC_EXE=$RESCRIPT_BSC_EXE RESCRIPT_RUNTIME=$RESCRIPT_RUNTIME $executable watch $project" \
       "$transcript" >/dev/null &
   fi
   active_script_pid=$!
@@ -214,13 +223,16 @@ capture_warning_watch() {
   local project="$work/$implementation-warning-watch"
   local transcript="$work/$implementation-warning-watch.tty"
   if [ "$(uname -s)" = Darwin ]; then
-    script -q "$transcript" env \
+    script -q "$transcript" env -u NO_COLOR \
+      "TERM=xterm" \
+      "CLICOLOR=1" \
+      "CLICOLOR_FORCE=0" \
       "RESCRIPT_BSC_EXE=$RESCRIPT_BSC_EXE" \
       "RESCRIPT_RUNTIME=$RESCRIPT_RUNTIME" \
       "$executable" watch "$project" >/dev/null &
   else
     script -qefc \
-      "RESCRIPT_BSC_EXE=$RESCRIPT_BSC_EXE RESCRIPT_RUNTIME=$RESCRIPT_RUNTIME $executable watch $project" \
+      "env -u NO_COLOR TERM=xterm CLICOLOR=1 CLICOLOR_FORCE=0 RESCRIPT_BSC_EXE=$RESCRIPT_BSC_EXE RESCRIPT_RUNTIME=$RESCRIPT_RUNTIME $executable watch $project" \
       "$transcript" >/dev/null &
   fi
   active_script_pid=$!
