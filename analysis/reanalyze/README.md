@@ -21,29 +21,23 @@ rescript-tools reanalyze -dce-cmt path/to/lib/bs
 rescript-tools reanalyze -all
 ```
 
-## Performance Options
+## Performance
 
-### Reactive Mode (Experimental)
+Analysis is reactive: processed file data is cached and unchanged files are
+skipped on subsequent runs. This matters for repeated analysis, such as a watch
+mode or the server:
 
-Cache processed file data and skip unchanged files on subsequent runs:
-
-```bash
-rescript-tools reanalyze -config -reactive
-```
-
-This provides significant speedup for repeated analysis (e.g., in a watch mode or service):
-
-| Mode | CMT Processing | Total | Speedup |
+| Run | CMT Processing | Total | Speedup |
 |------|----------------|-------|---------|
-| Standard | 0.78s | 1.01s | 1x |
-| Reactive (warm) | 0.01s | 0.20s | 5x |
+| Cold | 0.78s | 1.01s | 1x |
+| Warm | 0.01s | 0.20s | 5x |
 
 ### Benchmarking
 
 Run analysis multiple times to measure cache effectiveness:
 
 ```bash
-rescript-tools reanalyze -config -reactive -timing -runs 3
+rescript-tools reanalyze -config -timing -runs 3
 ```
 
 ## CLI Flags
@@ -55,7 +49,6 @@ rescript-tools reanalyze -config -reactive -timing -runs 3
 | `-exception` | Run exception analysis |
 | `-termination` | Run termination analysis |
 | `-all` | Run all analyses |
-| `-reactive` | Cache processed file_data, skip unchanged files |
 | `-runs n` | Run analysis n times (for benchmarking) |
 | `-churn n` | Remove/re-add n random files between runs (incremental correctness/perf testing) |
 | `-timing` | Report timing of analysis phases |
@@ -78,7 +71,7 @@ To regenerate it:
 
 ```bash
 # Run from any ReScript project (so -config works), then capture stderr:
-rescript-tools reanalyze -config -reactive -no-transitive -mermaid \
+rescript-tools reanalyze -config -no-transitive -mermaid \
   >/dev/null 2> analysis/reanalyze/diagrams/reactive-pipeline-full.mmd
 ```
 
@@ -93,7 +86,7 @@ This design enables order-independence and incremental updates.
 
 ## Reactive Analysis
 
-The reactive mode (`-reactive`) caches processed per-file results and efficiently skips unchanged files on subsequent runs:
+The analysis caches processed per-file results and efficiently skips unchanged files on subsequent runs:
 
 1. **First run**: All files are processed and results cached
 2. **Subsequent runs**: Only changed files are re-processed
@@ -150,7 +143,6 @@ rescript-tools reanalyze-server \
 - **Transparent delegation**: Regular `reanalyze` calls automatically use the server if running
 - **Default socket**: `<projectRoot>/.rescript-reanalyze.sock` (used by both server and client)
 - **Socket location invariant**: socket is always in the project root; `reanalyze` may be called from anywhere inside the project
-- **Reactive mode forced**: The server always runs with `-reactive` enabled internally
 - **Same output**: stdout/stderr/exit-code match what a direct CLI invocation would produce
 - **Incremental updates**: When source files change and the project is rebuilt, subsequent requests reflect the updated analysis
 
@@ -198,7 +190,7 @@ make time-reactive
 The `make time-reactive` target runs:
 
 1. **Standard mode** (baseline) - Full analysis every time
-2. **Reactive mode** with 3 runs - First run is cold (processes all files), subsequent runs are warm (skip unchanged files)
+2. **3 runs** - the first is cold (processes all files), subsequent runs are warm (skip unchanged files)
 
 Example output:
 

@@ -126,20 +126,16 @@ AnalysisResult.get_issues analysis_result
 
 ---
 
-## Incremental updates in the non-reactive pipeline
+## Incremental updates
 
-The phase boundaries permit the non-reactive pipeline to update one file's
-input without retaining mutable per-file analysis state:
+The phase boundaries permit one file's input to be updated without retaining
+mutable per-file analysis state: re-run Phase 1 for the changed file, replace
+its entry in the `file_data` map, and re-run merge and solve. Immutable phase
+outputs allow one file's data to be replaced without mutating the retained
+outputs for other files.
 
-1. Re-run Phase 1 for changed file only → new `file_data`
-2. Replace in `file_data` map (keyed by filename)
-3. Re-run Phase 2 (merge) - fast, pure function
-4. Re-run Phase 3 (solve) - fast, pure function
-
-Immutable phase outputs allow one file's data to be replaced without mutating
-the retained outputs for other files. The current reactive pipeline below goes
-further by propagating deltas through derived collections rather than rerunning
-the complete merge and solve phases.
+The reactive pipeline below goes further, propagating deltas through derived
+collections rather than rerunning the complete merge and solve phases.
 
 ---
 
@@ -231,7 +227,7 @@ Files → file_data → decls, annotations, refs → live (fixpoint) → dead/li
 | `incorrect_dead_decls` | `(pos, Decl.t)` | Live decls with @dead annotation |
 | `dead_module_issues` | `(Name.t, Issue.t)` | Module issues (join of dead_modules + modules_with_reported) |
 
-**Note**: Optional args analysis (unused/redundant arguments) is not yet in the reactive pipeline - it still uses the non-reactive path (~8-14ms). TODO: Add `live_decls + cross_file_items → optional_args_issues` to the reactive pipeline.
+**Note**: Optional args analysis (unused/redundant arguments) is computed after the solver settles, by iterating live declarations, rather than as reactive collections. TODO: Add `live_decls + cross_file_items → optional_args_issues` to the reactive pipeline.
 
 ### Reactive Pipeline Diagram
 
