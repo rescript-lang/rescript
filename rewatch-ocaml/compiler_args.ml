@@ -1,5 +1,3 @@
-open Build_artifacts
-
 let contains_text value text =
   try
     ignore (Str.search_forward (Str.regexp_string text) value 0);
@@ -67,8 +65,8 @@ let package_output (config : Config.t) path (spec : Config.package_spec) =
     else
       Filename.concat
         (match spec.module_format with
-        | Config.Esmodule -> lib_path "" "es6"
-        | Config.Commonjs -> lib_path "" "js")
+        | Config.Esmodule -> Build_artifacts.lib_path "" "es6"
+        | Config.Commonjs -> Build_artifacts.lib_path "" "js")
         directory
   in
   Printf.sprintf "%s:%s:%s"

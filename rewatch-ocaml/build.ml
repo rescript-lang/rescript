@@ -5,7 +5,6 @@ exception Build_failure = Compiler_scheduler.Build_failure
 exception Parse_failure = Package_build.Parse_failure
 exception Reported_failure of string
 
-open File_util
 open Build_types
 
 let project_root folder =
@@ -65,8 +64,8 @@ let write_source_dirs (root_config : Config.t) stats =
   packages
   |> List.iter (fun package ->
        if package.graph_root <> root_config.root then
-         remove_file
-           (path_of_parts package.graph_root ["lib"; "bs"; ".sourcedirs.json"]));
+         File_util.remove_file
+           (File_util.path_of_parts package.graph_root ["lib"; "bs"; ".sourcedirs.json"]));
   let local_packages = List.filter (fun package -> package.graph_is_local) packages in
   let source_directories package =
     package.graph_modules
@@ -102,8 +101,8 @@ let write_source_dirs (root_config : Config.t) stats =
     |> List.map (fun package ->
          let relative_root = relative_package_root package in
          let build_root =
-           if relative_root = "" then path_of_parts "" ["lib"; "bs"]
-           else path_of_parts relative_root ["lib"; "bs"]
+           if relative_root = "" then File_util.path_of_parts "" ["lib"; "bs"]
+           else File_util.path_of_parts relative_root ["lib"; "bs"]
          in
          Source_dirs.
            {
@@ -156,7 +155,7 @@ let run_with_warning_state ~poll ~warning_state ~compilation_kind ~no_timing
     |> List.rev
     |> List.iter (fun (output, pending, _) ->
          if Sys.file_exists pending then (
-           remove_file output;
+           File_util.remove_file output;
            Unix.rename pending output))
   in
   let finish_watch_outputs ~success =
@@ -165,12 +164,12 @@ let run_with_warning_state ~poll ~warning_state ~compilation_kind ~no_timing
     |> List.iter (fun (output, pending, dirty_ast) ->
          if success then (
            if Sys.file_exists pending then (
-             remove_file output;
+             File_util.remove_file output;
              Unix.rename pending output))
          else (
-           remove_file output;
-           remove_file pending;
-           remove_file dirty_ast));
+           File_util.remove_file output;
+           File_util.remove_file pending;
+           File_util.remove_file dirty_ast));
     stats.watch_outputs := [];
     Hashtbl.clear stats.watch_output_paths;
     outputs_finished := true
@@ -347,7 +346,7 @@ let run_with_warning_state ~poll ~warning_state ~compilation_kind ~no_timing
     (fun ~release:release_build_lock ->
       Fun.protect
         ~finally:(fun () ->
-          List.iter remove_file !(stats.deferred_artifact_cleanup);
+          List.iter File_util.remove_file !(stats.deferred_artifact_cleanup);
           if not !outputs_finished then finish_watch_outputs ~success:false;
           finalize_logs ())
         (fun () ->

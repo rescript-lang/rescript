@@ -99,15 +99,6 @@ let () =
 
 let tests =
   "unit_tests" >:: fun _context ->
-  check
-    (Build_artifacts.generated_output_owner "Foo.bs.js" = Some "Foo")
-    "compound .bs.js outputs retain their module owner";
-  check
-    (Build_artifacts.generated_output_owner "Foo.res.js" = Some "Foo")
-    "compound .res.js outputs retain their module owner";
-  check
-    (Build_artifacts.generated_output_owner "Foo.res.js.map" = Some "Foo")
-    "compound source maps retain their module owner";
   let test_executable = Unix.realpath Sys.executable_name in
   let process_job args =
     {Process.program = test_executable; args; cwd = Sys.getcwd ()}

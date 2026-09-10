@@ -1,6 +1,3 @@
-open Build_artifacts
-open File_util
-
 let rec remove_tree path =
   if Sys.file_exists path then
     try
@@ -58,23 +55,25 @@ let rec run ~(root_config : Config.t) ~seen ~root ~prod ~is_local ~on_clean =
                 (Package_diagnostics.report_missing_source_folder config)
               ~display_root:root_config.root
           in
-          let output_config = with_root_options config root_config in
-          cleanup_watch_output_sidecars
+          let output_config =
+            Build_artifacts.with_root_options config root_config
+          in
+          Build_artifacts.cleanup_watch_output_sidecars
             ~source_files:discovery.inventory_files ~root output_config;
           List.iter
             (fun module_ ->
               List.iter
                 (fun spec ->
                   let output =
-                    generated_js_path output_config
+                    Build_artifacts.generated_js_path output_config
                       module_.Source.implementation spec
                   in
-                  remove_file output;
-                  remove_file (output ^ ".map");
-                  remove_file (output ^ ".rewatch-pending");
-                  remove_file (output ^ ".rewatch-backup");
-                  remove_file (output ^ ".map.rewatch-pending");
-                  remove_file (output ^ ".map.rewatch-backup"))
+                  File_util.remove_file output;
+                  File_util.remove_file (output ^ ".map");
+                  File_util.remove_file (output ^ ".rewatch-pending");
+                  File_util.remove_file (output ^ ".rewatch-backup");
+                  File_util.remove_file (output ^ ".map.rewatch-pending");
+                  File_util.remove_file (output ^ ".map.rewatch-backup"))
                 output_config.package_specs)
             discovery.modules;
           (true, Some config.name)))
@@ -84,4 +83,7 @@ let rec run ~(root_config : Config.t) ~seen ~root ~prod ~is_local ~on_clean =
       Option.iter on_clean package_name;
       List.iter
         (fun dir -> remove_tree (Filename.concat root dir))
-        [lib_path "" "bs"; lib_path "" "ocaml"]))
+        [
+          Build_artifacts.lib_path "" "bs";
+          Build_artifacts.lib_path "" "ocaml";
+        ]))

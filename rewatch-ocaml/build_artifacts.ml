@@ -1,6 +1,4 @@
-open File_util
-
-let lib_path root directory = path_of_parts root ["lib"; directory]
+let lib_path root directory = File_util.path_of_parts root ["lib"; directory]
 
 let generated_js_path (config : Config.t) path (spec : Config.package_spec) =
   let directory = Filename.dirname path in
@@ -31,8 +29,8 @@ let remove_public_outputs (config : Config.t) modules =
           let output =
             generated_js_path config module_.Source.implementation spec
           in
-          remove_file output;
-          remove_file (output ^ ".map"))
+          File_util.remove_file output;
+          File_util.remove_file (output ^ ".map"))
         config.package_specs)
     modules
 
@@ -64,10 +62,6 @@ let generated_output_details path =
              output_path )
        else None)
 
-let generated_output_owner path =
-  generated_output_details path
-  |> Option.map (fun (owner, _, _) -> owner)
-
 let watch_sidecar_suffixes = [".rewatch-pending"; ".rewatch-backup"]
 
 let is_watch_output_sidecar path =
@@ -86,16 +80,16 @@ let cleanup_watch_output_sidecars ?source_files ~root (config : Config.t) =
     | None ->
       config.sources
       |> List.concat_map (fun (source : Config.source) ->
-           files_under (Filename.concat root source.dir))
+           File_util.files_under (Filename.concat root source.dir))
   in
   let output_files =
     [lib_path "" "es6"; lib_path "" "js"]
     |> List.concat_map (fun directory ->
-         files_under (Filename.concat root directory))
+         File_util.files_under (Filename.concat root directory))
   in
   source_files @ output_files
   |> List.iter (fun path ->
-       if is_watch_output_sidecar path then remove_file path)
+       if is_watch_output_sidecar path then File_util.remove_file path)
 
 let prepare_watch_output watch_outputs watch_output_paths ~dirty_ast output =
   if
@@ -103,7 +97,7 @@ let prepare_watch_output watch_outputs watch_output_paths ~dirty_ast output =
     && not (Hashtbl.mem watch_output_paths output)
   then (
     let pending = output ^ ".rewatch-pending" in
-    remove_file pending;
+    File_util.remove_file pending;
     Hashtbl.add watch_output_paths output ();
     watch_outputs := (output, pending, dirty_ast) :: !watch_outputs)
 
@@ -140,31 +134,32 @@ let cleanup_stale ?ocaml_files ?ast_sources ?source_files ~root ~ocaml_dir
   (* Keep one inventory of each artifact tree. Rewalking these trees for every
      cleanup phase made unchanged builds perform several times Rust's directory
      and metadata work. Paths removed below can safely remain in the inventory:
-     later phases only classify their names or call the idempotent remove_file. *)
+     later phases only classify their names or call the idempotent
+     File_util.remove_file. *)
   let ocaml_files =
     match ocaml_files with
     | Some files -> files
-    | None -> files_under ocaml_dir
+    | None -> File_util.files_under ocaml_dir
   in
   (* Published ASTs contain the absolute source path used to create them. That
      is enough to address their working artifacts directly, as Rust does. Keep
      the recursive walk lazy for malformed or legacy ASTs that cannot be
      mapped; normal unchanged builds must not inventory the whole lib/bs tree. *)
   let ast_sources = Option.value ast_sources ~default:[] in
-  let fallback_build_files = lazy (files_under build_dir) in
+  let fallback_build_files = lazy (File_util.files_under build_dir) in
   let source_files =
     match source_files with
     | Some files -> files
     | None ->
       config.sources
       |> List.concat_map (fun source ->
-           files_under (Filename.concat root source.Config.dir))
+           File_util.files_under (Filename.concat root source.Config.dir))
   in
   let output_files =
     [lib_path "" "es6"; lib_path "" "js"]
     |> List.map (fun directory ->
          let output_dir = Filename.concat root directory in
-         (output_dir, files_under output_dir))
+         (output_dir, File_util.files_under output_dir))
   in
   let present_public_outputs = Hashtbl.create 64 in
   source_files @ List.concat_map snd output_files
@@ -173,7 +168,7 @@ let cleanup_stale ?ocaml_files ?ast_sources ?source_files ~root ~ocaml_dir
          Hashtbl.replace present_public_outputs path ());
   (source_files @ List.concat_map snd output_files)
   |> List.iter (fun path ->
-       if is_watch_output_sidecar path then remove_file path);
+       if is_watch_output_sidecar path then File_util.remove_file path);
   let expected_artifacts = Hashtbl.create (List.length modules * 8) in
   let owned_output_names = Hashtbl.create (List.length modules * 2) in
   let add_expected base extensions =
@@ -289,14 +284,14 @@ let cleanup_stale ?ocaml_files ?ast_sources ?source_files ~root ~ocaml_dir
            removed_modules := Source.module_name basename :: !removed_modules
          else if Filename.check_suffix basename ".iast" then
            removed_modules := Source.module_name basename :: !removed_modules;
-         remove_file path;
+         File_util.remove_file path;
          working_paths basename
          |> List.iter (fun build_path ->
               if defer_working_cmi_until_after_compile basename then
                 if Sys.file_exists build_path then
                   deferred_artifacts := build_path :: !deferred_artifacts
                 else ()
-              else remove_file build_path)));
+              else File_util.remove_file build_path)));
   let configured_suffixes =
     List.map (Config.package_spec_suffix config) config.package_specs
   in
@@ -336,10 +331,10 @@ let cleanup_stale ?ocaml_files ?ast_sources ?source_files ~root ~ocaml_dir
   in
   let remove_output ~build_relative path =
     Hashtbl.remove present_public_outputs path;
-    remove_file path;
+    File_util.remove_file path;
     let working_output = Filename.concat build_dir build_relative in
-    remove_file working_output;
-    remove_file (working_output ^ ".map")
+    File_util.remove_file working_output;
+    File_util.remove_file (working_output ^ ".map")
   in
   source_files
   |> List.iter (fun path ->

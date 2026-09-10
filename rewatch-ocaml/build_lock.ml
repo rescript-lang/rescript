@@ -1,5 +1,3 @@
-open File_util
-
 type watch = {path: string; pid: string}
 
 let read_owner_contents path =
@@ -61,13 +59,13 @@ let with_candidate ~lock_dir prefix pid action =
     close_out output;
     channel := None;
     Fun.protect
-      ~finally:(fun () -> remove_file path)
+      ~finally:(fun () -> File_util.remove_file path)
       (fun () ->
         restore_signals ();
         action path)
   with exception_raised ->
     Option.iter close_out_noerr !channel;
-    Option.iter remove_file !candidate;
+    Option.iter File_util.remove_file !candidate;
     let exception_raised =
       try
         restore_signals ();
@@ -81,17 +79,17 @@ let clear_stale ~candidate path =
   try
     Unix.link candidate takeover;
     Fun.protect
-      ~finally:(fun () -> remove_file takeover)
+      ~finally:(fun () -> File_util.remove_file takeover)
       (fun () ->
         match read_owner path with
         | Some owner when not (valid_owner owner) -> raise (malformed_error ())
         | Some owner when process_is_active owner -> ()
-        | _ -> remove_file path);
+        | _ -> File_util.remove_file path);
     true
   with Unix.Unix_error (Unix.EEXIST, _, _) ->
     (match read_owner takeover with
     | Some owner when process_is_active owner -> ()
-    | _ -> remove_file takeover);
+    | _ -> File_util.remove_file takeover);
     false
 
 let restore_after_exception restore_signals exception_raised =
@@ -109,7 +107,7 @@ let release_owned path pid =
 
 let with_build root action =
   let lock_dir = Filename.concat root "lib" in
-  ensure_dir lock_dir;
+  File_util.ensure_dir lock_dir;
   let path = Filename.concat lock_dir "build.lock" in
   let pid = string_of_int (Unix.getpid ()) in
   with_candidate ~lock_dir ".build-lock-" pid (fun candidate ->
@@ -157,7 +155,7 @@ let with_build root action =
 
 let with_watch root action =
   let lock_dir = Filename.concat root "lib" in
-  ensure_dir lock_dir;
+  File_util.ensure_dir lock_dir;
   let path = Filename.concat lock_dir "watch.lock" in
   let pid = string_of_int (Unix.getpid ()) in
   with_candidate ~lock_dir ".watch-lock-" pid (fun candidate ->

@@ -1,7 +1,5 @@
-open Build_artifacts
-open File_util
-
-let path root directory = Filename.concat (lib_path root directory) ".compiler.log"
+let path root directory =
+  Filename.concat (Build_artifacts.lib_path root directory) ".compiler.log"
 
 let strip_ansi content =
   let length = String.length content in
@@ -28,7 +26,7 @@ let strip_ansi content =
 
 let initialize root =
   let path = path root "bs" in
-  ensure_dir (Filename.dirname path);
+  File_util.ensure_dir (Filename.dirname path);
   let channel = open_out_bin path in
   Fun.protect ~finally:(fun () -> close_out_noerr channel) (fun () ->
     Printf.fprintf channel "#Start(%.6f)\n" (Unix.gettimeofday ()))
@@ -42,4 +40,4 @@ let append root content =
 
 let finalize root =
   append root (Printf.sprintf "#Done(%.6f)\n" (Unix.gettimeofday ()));
-  copy_existing_file ~ensure_parent:false (path root "bs") (path root "ocaml")
+  File_util.copy_existing_file ~ensure_parent:false (path root "bs") (path root "ocaml")

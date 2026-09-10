@@ -1198,9 +1198,9 @@ observational and do not replace the five-run acceptance result.
 
 The current `cloc` 2.04 source-size snapshot reports 7,818 Rust production
 lines after excluding the intentionally omitted telemetry module and inline
-test-only sections, versus 6,672 OCaml production lines, or 85.3%. Counting
+test-only sections, versus 6,910 OCaml production lines, or 88.4%. Counting
 language-specific tests separately gives 2,773 embedded Rust unit-test lines
-and 5,242 OCaml unit/focused test and fixture lines. The OCaml benchmark tooling
+and 5,287 OCaml unit/focused test and fixture lines. The OCaml benchmark tooling
 adds another 372 lines, including the source-size script itself. The shared
 canonical integration suite is deliberately not charged to either side. These
 figures describe maintainability surface, not parity or quality: explicit
@@ -1213,12 +1213,31 @@ General portable filesystem operations now live behind the narrow
 `file_util.mli` interface. Recursive directory creation, file reading/copying,
 content comparison, timestamps, recursive inventory, and removal no longer
 share a module with ReScript-specific generated-output naming and stale
-cleanup. `build_artifacts.ml` is now 365 lines, while the general owner is 135
+cleanup. `build_artifacts.ml` is now 361 lines, while the general owner is 135
 lines. Its focused coverage moved into `file_util_tests.ml`, leaving
 `build_artifacts_tests.ml` concerned only with artifact cleanup. The extraction
 also closes partial-channel leaks when opening a copy destination or the second
 file in a comparison fails: every successfully opened channel enters its own
 `Fun.protect` before the next acquisition.
+
+The qualification audit removed broad `File_util` and `Build_artifacts` opens.
+Calls such as `File_util.remove_file`, `File_util.ensure_dir`, and
+`Build_artifacts.generated_js_path` now show both ownership and potentially
+destructive effects at the call site. `Build_types` remains open in the four
+record-heavy build modules because qualifying its pervasive record fields and
+types would add noise without clarifying effects; Cmdliner's module and term
+syntax opens remain for the same DSL-readability reason. `Config_decode` and
+`Config_types` retain their local include/open relationship because `Config`
+deliberately presents them as one public configuration API. Narrow
+`build_artifacts.mli` and `process.mli` interfaces now hide implementation-only
+classification, pipe, thread, notification, and scheduler details. This also
+made an unused `generated_output_owner` helper visible as dead API, so it and
+its tests were removed; stale-output behavior remains covered through the
+public cleanup operation.
+The warning-free whole build, all 19 OUnit2 groups, the focused integration
+runner, all 74 command-validation cases, and the complete applicable canonical
+Rewatch suite pass after the audit. An independent maintainability review found
+no semantic, API, coverage, or Windows-portability issue in the slice.
 
 The command-cycle accumulator and the prepared-package/global-module records
 now live in `build_types.ml`, including one constructor for their initial
