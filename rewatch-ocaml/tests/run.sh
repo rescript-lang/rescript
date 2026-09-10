@@ -68,6 +68,15 @@ cp -R "$root/rewatch-ocaml/tests/out-of-source" "$work/out-of-source"
 cp -R "$root/rewatch-ocaml/tests/ppx-filter" "$work/ppx-filter"
 cp -R "$root/rewatch-ocaml/tests/namespace" "$work/namespace"
 cp -R "$root/rewatch-ocaml/tests/namespace-entry" "$work/namespace-entry"
+cp -R "$root/rewatch-ocaml/tests/qualified-namespace" \
+  "$work/qualified-namespace"
+cp -R "$root/rewatch-ocaml/tests/namespace-collision" \
+  "$work/namespace-collision"
+mkdir -p "$work/namespace-collision/node_modules"
+for dependency in namespace-one namespace-two; do
+  ln -s "../packages/$dependency" \
+    "$work/namespace-collision/node_modules/$dependency"
+done
 cp -R "$root/rewatch-ocaml/tests/source-map" "$work/source-map"
 cp -R "$root/rewatch-ocaml/tests/warning-replay" "$work/warning-replay"
 cp -R "$root/rewatch-ocaml/tests/monorepo" "$work/monorepo"
@@ -91,6 +100,8 @@ out_of_source="$work/out-of-source"
 ppx_filter="$work/ppx-filter"
 namespace="$work/namespace"
 namespace_entry="$work/namespace-entry"
+qualified_namespace="$work/qualified-namespace"
+namespace_collision="$work/namespace-collision"
 source_map="$work/source-map"
 warning_replay="$work/warning-replay"
 monorepo="$work/monorepo"
@@ -683,6 +694,20 @@ test -f "$namespace_entry/src/Entry.mjs"
 test -f "$namespace_entry/lib/ocaml/Entry.cmi"
 test -f "$namespace_entry/lib/ocaml/Entry_alias-@EntryNamespace.cmi"
 
+"$port" build "$qualified_namespace"
+test -f "$qualified_namespace/src/Extent.js"
+test -f "$qualified_namespace/src/Geometry.js"
+
+if "$port" build "$namespace_collision" \
+  >"$namespace_collision/output.log" 2>&1; then
+  echo "namespace collision build unexpectedly succeeded" >&2
+  exit 1
+fi
+grep 'Namespace SharedNamespace is provided by both' \
+  "$namespace_collision/output.log" >/dev/null
+grep 'namespace-one' "$namespace_collision/output.log" >/dev/null
+grep 'namespace-two' "$namespace_collision/output.log" >/dev/null
+
 "$port" build "$source_map"
 test -f "$source_map/src/Main.js.map"
 test -f "$source_map/lib/bs/compiler-info.json"
@@ -739,8 +764,11 @@ rm -rf "$post_build/lib"
 rm -rf "$out_of_source/lib"
 rm -rf "$namespace/lib"
 rm -rf "$namespace_entry/lib"
+rm -rf "$qualified_namespace/lib"
+rm -rf "$namespace_collision/lib"
 rm -rf "$source_map/lib"
 rm -f "$source_map/unchanged.log" "$source_map/changed.log"
 rm -f "$basic/src/A.mjs" "$basic/src/B.mjs" "$basic/src/WithInterface.mjs"
 rm -f "$legacy_config/src/A.mjs" "$legacy_config/src/B.mjs" "$legacy_config/src/WithInterface.mjs"
 rm -f "$cycle/output.log" "$failure/output.log"
+rm -f "$namespace_collision/output.log"

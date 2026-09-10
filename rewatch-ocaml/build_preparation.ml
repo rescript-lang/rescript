@@ -20,12 +20,58 @@ let dependency_head dependency =
   | head :: _ -> head
   | [] -> dependency
 
+let compiler_namespace (config : Config.t) =
+  match config.namespace, config.namespace_entry with
+  | Some namespace, Some _ -> Some ("@" ^ namespace)
+  | Some namespace, None -> Some namespace
+  | None, _ -> None
+
+let validate_visible_namespaces ~(root_config : Config.t) graph_packages =
+  let by_root = Hashtbl.create (List.length graph_packages) in
+  List.iter
+    (fun package -> Hashtbl.replace by_root package.graph_root package)
+    graph_packages;
+  graph_packages
+  |> List.sort (fun first second ->
+       String.compare first.graph_root second.graph_root)
+  |> List.iter (fun consumer ->
+       let visible =
+         consumer
+         :: (consumer.graph_dependency_directories
+            |> List.filter_map (fun (_, directory) ->
+                 Hashtbl.find_opt by_root directory))
+       in
+       let namespaces = Hashtbl.create (List.length visible) in
+       visible
+       |> List.sort (fun first second ->
+            String.compare first.graph_root second.graph_root)
+       |> List.iter (fun package ->
+            compiler_namespace package.graph_compile_config
+            |> Option.iter (fun namespace ->
+                 match Hashtbl.find_opt namespaces namespace with
+                 | None -> Hashtbl.add namespaces namespace package
+                 | Some previous when previous.graph_root = package.graph_root ->
+                   ()
+                 | Some previous ->
+                   let display package =
+                     Printf.sprintf "%s (%s)" package.graph_config.name
+                       (Project_context.relative_to root_config.root
+                          package.graph_root)
+                   in
+                   raise
+                     (Error
+                        (Printf.sprintf
+                           "Could not initialize build: Namespace %s is provided by both %s and %s while building %s. Give the packages distinct namespaces."
+                           namespace (display previous) (display package)
+                           (display consumer))))))
+
 let run ~(root_config : Config.t) ~prod ~features ~warn_error
     ~filter ~watch ~stats ~on_cleanup =
   let bsc = bsc_path () in
   let graph_packages =
     Package_graph.discover ~root_config ~prod ~features ~warn_error ~filter ~stats
   in
+  validate_visible_namespaces ~root_config graph_packages;
   let runtime = runtime_path root_config.root in
   let source_map_args =
     if root_config.source_map_dev && not watch then
@@ -244,9 +290,14 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error
       || List.mem dependency_node.package_name node.allowed_dependencies
     in
     match Hashtbl.find_opt by_key local_key with
-    | Some dependency_node
-      when dependency_node.package_name = node.package_name ->
+    | Some dependency_node when is_visible dependency_node ->
       [local_key]
+    | _ when node.namespace = Some raw_name ->
+      (* Ignoring the current namespace marker prevents one qualified
+         reference from becoming a dependency on every module exported by the
+         package. The compiler dependency header records [OwnNamespace.Member]
+         as only [OwnNamespace]. *)
+      []
     | _ ->
       (match Hashtbl.find_opt by_key raw_name with
       | Some dependency_node when is_visible dependency_node ->

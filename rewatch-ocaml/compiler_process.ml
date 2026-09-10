@@ -45,9 +45,7 @@ let ast_dependencies ~build_dir ast =
           let line = String.trim line in
           if line = "" then loop acc
           else if not (Filename.is_relative line) then List.rev acc
-          else
-            let dependency = String.split_on_char '.' line |> List.hd in
-            loop (dependency :: acc)
+          else loop (line :: acc)
         | exception End_of_file -> List.rev acc
       in
       loop [])
