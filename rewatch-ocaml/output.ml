@@ -1,5 +1,12 @@
 let line_clear = "\027[2K\r"
 
+let yellow text =
+  if String.starts_with ~prefix:"\n" text then
+    "\n\027[33m"
+    ^ String.sub text 1 (String.length text - 1)
+    ^ "\027[0m"
+  else "\027[33m" ^ text ^ "\027[0m"
+
 let cleanup_message ~step ~cleaned ~total ~seconds =
   Printf.sprintf "%s[%s] 🧹 Cleaned %d/%d in %.2fs" line_clear step cleaned
     total seconds
