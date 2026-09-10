@@ -100,11 +100,13 @@ let watch_context ~root ~prod ~features =
         | None -> watch_unresolved_dependency config.root dependency.name
         | Some directory
           when not (Config.exists_in_root directory) && is_directory directory ->
-          (* An existing package without a config needs only a shallow watch;
-             its directory identity also detects removal that exposes a lower
-             priority candidate. *)
+          (* The parent watch is needed because removing or replacing the
+             watched directory itself is not reported consistently by every
+             filesystem backend. It also detects a newly installed candidate
+             that should take priority over a lower resolution. *)
           roots := directory :: !roots;
           unresolved := directory :: !unresolved;
+          add_path (Filename.dirname directory) false;
           add_path directory false
         | Some path when not (Config.exists_in_root path) ->
           (* A non-directory candidate may be replaced with an install. Watch
@@ -299,8 +301,12 @@ let snapshot_with_symlink_paths digest_cache ~matches_source roots sources
   in
   let paths =
     !target_parents |> List.sort_uniq String.compare
-    |> List.map (fun directory ->
-         Native_watcher.{directory; recursive = false})
+    |> List.concat_map (fun directory ->
+         let parent = Filename.dirname directory in
+         let directories = if parent = directory then [directory] else [directory; parent] in
+         List.map
+           (fun directory -> Native_watcher.{directory; recursive = false})
+           directories)
   in
   (snapshot, paths)
 
@@ -377,8 +383,8 @@ let with_signal_handlers handler f =
         ignore (Sys.signal Sys.sigterm previous_sigterm)))
     ~finally:(fun () -> ignore (Sys.signal Sys.sigint previous_sigint))
 
-let run_locked ~root ~prod ~features ~filter ~clear_screen ~show_progress ~build
-    ~watch_lock =
+let run_locked ~root ~prod ~features ~filter ~clear_screen ~show_progress
+    ~verbosity ~build ~watch_lock =
   let stop_requested = ref false in
   let waiting_for_native_event = ref false in
   let stop () =
@@ -424,12 +430,18 @@ let run_locked ~root ~prod ~features ~filter ~clear_screen ~show_progress ~build
   let keep_running () =
     (not !stop_requested) && Build_lock.is_owned watch_lock
   in
-  (* Lock removal is observed by the outer native or polling loop. Checking
-     the lock file on every subprocess scheduler poll would turn one source
-     edit into many identical filesystem reads. Signals raised during a build
-     already interrupt it directly; the flag covers a signal received while
-     libuv owns the callback stack. *)
-  let poll () = if !stop_requested then raise Stop in
+  let next_lock_check = ref 0. in
+  (* Lock removal is the test suite's portable shutdown protocol and must also
+     interrupt an initial build, before native watch handles exist. Throttle
+     ownership checks so the scheduler's frequent responsiveness ticks do not
+     turn one source edit into a stream of identical filesystem reads. *)
+  let poll () =
+    if !stop_requested then raise Stop;
+    let now = Unix.gettimeofday () in
+    if now >= !next_lock_check then (
+      next_lock_check := now +. 0.1;
+      if not (Build_lock.is_owned watch_lock) then raise Stop)
+  in
   let clear_terminal () =
     if
       Output.should_clear_screen ~clear_screen ~show_progress
@@ -467,16 +479,18 @@ let run_locked ~root ~prod ~features ~filter ~clear_screen ~show_progress ~build
             is_source_path path || path_in_scope roots sources unresolved path
             || Native_watcher.watches_directory watcher path
             || (is_in_source_tree path && is_directory path)
+            || (Native_watcher.watches_directory watcher (Filename.dirname path)
+               && is_directory path)
           then
             requires_reconciliation := true
         | Native_watcher.Content, Some path ->
-          if is_source_path path then
-            if path_in_scope roots sources unresolved path then
+          if is_source_path path then (
+            if path_in_scope roots sources unresolved path then (
               if matches_filter path then
                 if Sys.file_exists path then
                   changes := {path; kind = Modified} :: !changes
-                else requires_reconciliation := true
-            else requires_reconciliation := true
+                else requires_reconciliation := true)
+            else requires_reconciliation := true)
           else if path_in_scope roots sources unresolved path then
             requires_reconciliation := true)
       events;
@@ -494,6 +508,7 @@ let run_locked ~root ~prod ~features ~filter ~clear_screen ~show_progress ~build
           unresolved
       in
       if current <> previous then (
+        Output.debug ~verbosity "doing Full";
         clear_terminal ();
         let build_roots, _, build_sources, build_unresolved =
           watch_context ~root ~prod ~features
@@ -545,9 +560,13 @@ let run_locked ~root ~prod ~features ~filter ~clear_screen ~show_progress ~build
     | Native_watcher.Changed events ->
       ignore (Unix.select [] [] [] 0.05);
       let events = events @ Native_watcher.drain watcher in
-      (match direct_content_changes watcher roots sources unresolved events with
+      let direct =
+        direct_content_changes watcher roots sources unresolved events
+      in
+      (match direct with
       | Some [] -> native_loop watcher roots sources unresolved previous
       | Some changes ->
+        Output.debug ~verbosity "doing Incremental";
         clear_terminal ();
         build ~poll ~changes:(Some changes);
         native_loop watcher roots sources unresolved previous
@@ -558,6 +577,7 @@ let run_locked ~root ~prod ~features ~filter ~clear_screen ~show_progress ~build
         unresolved
     in
     if current <> previous then (
+      Output.debug ~verbosity "doing Full";
       clear_terminal ();
       let build_roots, _, build_sources, build_unresolved =
         watch_context ~root ~prod ~features
@@ -618,27 +638,34 @@ let run_locked ~root ~prod ~features ~filter ~clear_screen ~show_progress ~build
             registered_snapshot
   in
   with_signal_handlers (fun _ -> stop ()) (fun () ->
-    let roots, _, sources, unresolved = watch_context ~root ~prod ~features in
-    let before_build =
-      snapshot digest_cache ~matches_source:matches_filter roots sources
-        unresolved
-    in
-    build ~poll ~changes:None;
     let roots, paths, sources, unresolved =
       watch_context ~root ~prod ~features
     in
-    let _, symlink_paths =
-      snapshot_with_symlink_paths digest_cache ~matches_source:matches_filter
-        roots sources unresolved
+    let before_build, symlink_paths =
+      snapshot_with_symlink_paths digest_cache
+        ~matches_source:matches_filter roots sources unresolved
     in
+    (* Install handles before the initial build so an edit made as soon as its
+       output appears cannot land in a blind interval between compilation and
+       watcher setup. Snapshot reconciliation below consumes any event queued
+       while compiler subprocesses were running. *)
     match Native_watcher.create ~paths:(paths @ symlink_paths) with
     | Error message ->
       native_fallback message;
+      build ~poll ~changes:None;
+      let roots, _, sources, unresolved =
+        watch_context ~root ~prod ~features
+      in
       polling_loop roots sources unresolved before_build
     | Ok watcher ->
       let fallback =
         Fun.protect
           (fun () ->
+            build ~poll ~changes:None;
+            (* The following snapshot is authoritative for changes that arrived
+               during the build. Pump and discard callbacks already queued for
+               that interval so they do not request the same rebuild twice. *)
+            ignore (Native_watcher.drain watcher);
             native_reconcile watcher roots sources unresolved before_build)
           ~finally:(fun () -> Native_watcher.close watcher)
       in
@@ -648,7 +675,8 @@ let run_locked ~root ~prod ~features ~filter ~clear_screen ~show_progress ~build
           polling_loop roots sources unresolved previous)
         fallback)
 
-let run ~root ~prod ~features ~filter ~clear_screen ~show_progress ~build =
+let run ~root ~prod ~features ~filter ~clear_screen ~show_progress ~verbosity
+    ~build =
   Build_lock.with_watch root (fun watch_lock ->
-    run_locked ~root ~prod ~features ~filter ~clear_screen ~show_progress ~build
-      ~watch_lock)
+    run_locked ~root ~prod ~features ~filter ~clear_screen ~show_progress
+      ~verbosity ~build ~watch_lock)

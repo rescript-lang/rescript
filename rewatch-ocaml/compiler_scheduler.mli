@@ -28,4 +28,5 @@ val run :
   compile_cleanup:(unit -> unit) list ->
   mark_compiled:(unit -> unit) ->
   mark_had_warnings:(unit -> unit) ->
+  verbosity:int ->
   unit

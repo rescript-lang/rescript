@@ -30,7 +30,7 @@ let tests =
       let raised =
         try
           Watcher.run ~root ~prod:false ~features:None ~filter:None
-            ~clear_screen:false ~show_progress:true
+            ~clear_screen:false ~show_progress:true ~verbosity:0
             ~build:(fun ~poll:_ ~changes:_ -> raise Exit);
           false
         with Exit -> true
@@ -47,7 +47,8 @@ let tests =
         (signal_is_ignored Sys.sigterm)
         "SIGTERM handler is restored after failure";
       Watcher.run ~root ~prod:false ~features:None ~filter:None
-        ~clear_screen:false ~show_progress:true ~build:(fun ~poll ~changes:_ ->
+        ~clear_screen:false ~show_progress:true ~verbosity:0
+        ~build:(fun ~poll ~changes:_ ->
           poll ();
           Sys.remove lock);
       check

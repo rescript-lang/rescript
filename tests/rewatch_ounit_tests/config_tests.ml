@@ -149,6 +149,7 @@ let tests =
       let stats =
         Build_types.create ~warning_state:(Warning_state.create ())
           ~poll:(fun () -> ())
+          ~verbosity:0
       in
       let package =
         Package_graph.discover ~root_config:config ~prod:false ~features:None

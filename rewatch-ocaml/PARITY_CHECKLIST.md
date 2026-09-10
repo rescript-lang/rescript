@@ -181,21 +181,19 @@ on whether stdout and stderr are terminals.
 
 | Mode | Required comparison | Current status |
 | --- | --- | --- |
-| Redirected/plain output | Success summaries, warnings, errors, ordering, exit status, and absence of terminal control sequences unless color is explicitly forced; Cmdliner help may use its native man-page headings and layout | Matched for ordinary output: differential cases exactly compare normalized clean-build, compile-error, parse-error, successful-warning, and combined deprecated/unsupported/unknown-config stdout/stderr at default level, the first four cases at quiet level, plus default and quiet `clean`; the combined diagnostic case is also byte-compared with `CLICOLOR_FORCE=1`. A quiet redirected watcher performs initial and incremental builds without output. Format and compiler-args have focused/canonical checks. Semantic `-v`/`-vv` events remain deliberately deferred with the interactive presentation pass |
-| Interactive build | TTY detection, parsing/compilation progress, spinner lifecycle, timing, colors, symbols/emojis, quiet/verbose behavior, and cleanup on interruption | Partial; a retained Linux PTY gate exactly compares normalized cleanup/parse/compile completion lines, step counts, timing, phase emojis, and final status, and verifies that `-q` suppresses those lines; warning state is covered separately, while live spinner updates and positive verbosity events remain open |
-| Interactive watch | Initial-build and rebuild progress, clear-screen behavior, persistent warnings, recovery errors, symbols/emojis, and orderly shutdown | Partial; a retained PTY gate exactly compares Rust/OCaml initial three-step and incremental two-step phase lines, counts, symbols, and final status after normalizing timing; terminal clearing and its quiet no-clear predicate, warning persistence, recovery, and lifecycle are covered. The live spinner, positive verbosity events, clear-screen change/full-rebuild header, and post-failure watching footer remain open |
+| Redirected/plain output | Success summaries, warnings, errors, ordering, exit status, and absence of terminal control sequences unless color is explicitly forced; Cmdliner help may use its native man-page headings and layout | Matched for ordinary output: differential cases exactly compare normalized clean-build, compile-error, parse-error, successful-warning, and combined deprecated/unsupported/unknown-config stdout/stderr at default level, the first four cases at quiet level, plus default and quiet `clean`; the combined diagnostic case is also byte-compared with `CLICOLOR_FORCE=1`. A quiet redirected watcher performs initial and incremental builds without output. Format and compiler-args have focused/canonical checks. An order-insensitive differential gate matches semantic Rust `-v` project/package/parse/compile events and `-vv` dirty/completed scheduler-universe events. |
+| Interactive build | TTY detection, parsing/compilation progress, spinner lifecycle, timing, colors, symbols/emojis, quiet/verbose behavior, and cleanup on interruption | Partial; a retained Linux PTY gate exactly compares normalized cleanup/parse/compile completion lines, step counts, timing, phase emojis, and final status, and verifies that `-q` suppresses those lines; warning state and positive verbosity are covered separately, while live spinner updates remain open |
+| Interactive watch | Initial-build and rebuild progress, clear-screen behavior, persistent warnings, recovery errors, symbols/emojis, and orderly shutdown | Partial; a retained PTY gate exactly compares Rust/OCaml initial three-step and incremental two-step phase lines, counts, symbols, and final status after normalizing timing; terminal clearing and its quiet no-clear predicate, warning persistence, recovery, lifecycle, and positive verbosity are covered. The live spinner, clear-screen change/full-rebuild header, and post-failure watching footer remain open |
 | Accessibility/terminal fallback | Stable meaningful text when color or richer glyphs are unavailable | Redirected output uses stable text without driver ANSI/glyph decoration and is covered by canonical snapshots; neither implementation probes terminal glyph support, so no richer fallback contract exists to port |
 
-The remaining non-spinner output gap is positive diagnostic verbosity. A focused
-single-package comparison shows that Rust `-v` prints project-context, package
-discovery, per-module parse, and per-module interface/implementation compile
-events, while OCaml currently prints only its project-root context. Rust `-vv`
-also prints the compiled/dirty scheduler-universe count trace. These events need
-semantic comparison without imposing Rayon completion order on OCaml. Live
-spinner frames and verbosity are deliberately grouped into one final
-output-parity pass before Windows implementation and verification; the native
-Windows run will therefore validate the final presentation behavior as well as
-the platform backend.
+Positive diagnostic verbosity is covered by a focused differential gate. Rust
+and OCaml `-v` emit the same semantic project-context, package-discovery,
+per-module parse, and per-module interface/implementation compile events; `-vv`
+also matches dirty and completed scheduler-universe events. The comparison is
+order-insensitive because Rust's Rayon completion order is not contractual.
+Live spinner frames remain in the final output-parity pass before Windows
+implementation and verification; the native Windows run will therefore
+validate the final presentation behavior as well as the platform backend.
 
 Interactive checks should run both implementations under a pseudo-terminal and
 capture normalized frames/events rather than snapshotting spinner timing byte
