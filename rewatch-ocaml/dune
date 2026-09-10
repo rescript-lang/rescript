@@ -33,6 +33,7 @@
   compiler_log
   compiler_process
   compiler_scheduler
+  after_build
   build_lock
   build_artifacts
   build_freshness
