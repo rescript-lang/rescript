@@ -31,5 +31,5 @@ let finished_compilation_message ~kind ~warnings ~seconds =
   Printf.sprintf "%s%sFinished %scompilation%s in %.2fs" line_clear status
     kind warning_suffix seconds
 
-let should_clear_screen ~clear_screen ~interactive =
-  clear_screen && interactive
+let should_clear_screen ~clear_screen ~show_progress ~interactive =
+  clear_screen && show_progress && interactive

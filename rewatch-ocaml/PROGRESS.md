@@ -659,7 +659,9 @@ missing control-file names.
   pairs and require an explicit module when configured, matching current Rust
   validation; legacy `cjs`/`es6` values retain their deprecation diagnostics.
 - `watch --clear-screen` is accepted and clears an interactive terminal before
-  rebuilds. Comma-separated feature names are trimmed like the Rust CLI.
+  rebuilds. Its final presentation still lacks the change/full-rebuild header
+  and post-failure watching footer and remains in the output-presentation gate.
+  Comma-separated feature names are trimmed like the Rust CLI.
 - GenType compiler arguments distinguish single-file inspection from a full
   build: `compiler-args` omits unavailable expanded source/dependency paths,
   while builds retain them; both include the workspace project root.
@@ -722,6 +724,14 @@ missing control-file names.
   exactly at the default level and requires both implementations to stay quiet
   under `-q`; interactive clean phase rendering remains in the final terminal
   presentation pass.
+- Quiet build and watch now share Rust's `show_progress` boundary. `-q`
+  suppresses redirected and interactive cleanup, parse, compile, completion,
+  and terminal-clear output while retaining compiler warnings and failures.
+  Differential success, compile-error, parse-error, warning, clean, and
+  recoverable watch-failure cases bring the command-validation gate to 74
+  cases; the watch case compares the raw parse diagnostic, proves a subsequent
+  successful rebuild, and rejects a duplicate high-level failure summary. The
+  PTY gate separately retains quiet interactive builds.
 - Redirected build failures now retain Rust's phase and stream boundaries.
   Compile failures send the `Compiled <n> modules` summary to stderr, while
   parser failures stop before the parse/compile summaries, prefix the compiler
@@ -1356,14 +1366,15 @@ gate passed after the split.
   compares normalized initial and incremental phase/final-status frames. It
   exposed and fixed the initial OCaml watch label from generic `Finished
   compilation` to Rust's `Finished initial compilation`. Redirected output
-  remains unchanged. Live spinner frames and complete verbosity behavior remain
+  remains unchanged. Live spinner frames and positive verbosity events remain
   separate output-gate work.
 - Interactive output parity remains open. The OCaml executable now selects a
   TTY-specific final status with timing and emoji, emits phase completion
-  counts, and supports watch clear-screen behavior, but does not yet reproduce
-  Rust's live parsing/compilation spinner or complete verbosity behavior. Plain
-  redirected output and pseudo-terminal output are tracked as distinct gates
-  in `PARITY_CHECKLIST.md`.
+  counts, and clears the terminal when requested, but does not yet reproduce
+  the live parsing/compilation spinner, positive `-v`/`-vv` events, or the
+  clear-screen rebuild/failure headers. Plain redirected output and
+  pseudo-terminal output are tracked as distinct gates in
+  `PARITY_CHECKLIST.md`.
 - A focused verbosity audit isolates the remaining non-spinner output gap. Rust
   `-v` reports project context, package discovery, AST generation, and
   interface/implementation compilation events; OCaml currently reports only
@@ -1491,8 +1502,13 @@ gate passed after the split.
 2. Perform the final two-scope whole-port review and address confirmed findings.
 3. At the final maintainability pass, add comments around ownership,
    concurrency, platform, and algorithmic invariants that are not apparent from
-   the code itself; review naming, remove dead code, and document the complete
-   compatibility-oddity, corrected-Rust-behavior, and future-performance lists.
+   the code itself. Comments should start with why the code or invariant is
+   needed, provide enough context for readers who are not specialists in every
+   relevant OCaml, build-system, compiler, or operating-system detail, and
+   stand on their own rather than explaining code mainly by comparison with
+   Rust (unless that compatibility relationship is itself the reason). Review
+   naming, remove dead code, and document the complete compatibility-oddity,
+   corrected-Rust-behavior, and future-performance lists.
 4. Validate macOS packaging and native event behavior, then prepare the pinned
    Windows handoff. Finish the Windows watcher/lock
    backend and path audit and run the native build, unit, focused, and canonical
@@ -1500,12 +1516,13 @@ gate passed after the split.
    confidence run where available.
 5. Complete the final output-presentation pass after platform validation: port
    Rust's semantic `-v`/`-vv` events with an order-insensitive differential
-   gate, then implement and test the live interactive spinner frames.
+   gate, then implement and test the live interactive spinner frames and the
+   clear-screen rebuild/failure headers.
 
-Live spinner animation and verbose event parity are explicitly deferred until
-the final output-presentation pass after macOS and Windows validation. The future
-filesystem-performance ideas documented above do not block completion of the
-compatibility port.
+Live spinner animation and positive verbose-event parity are explicitly
+deferred until the final output-presentation pass after macOS and Windows
+validation. The future filesystem-performance ideas documented above do not
+block completion of the compatibility port.
 
 The OCaml unit-test sources now live in `tests/rewatch_ounit_tests` and use the
 repository's existing OUnit2 dependency, leaving production modules in

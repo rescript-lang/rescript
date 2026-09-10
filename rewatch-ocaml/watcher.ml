@@ -115,7 +115,7 @@ let with_signal_handlers handler f =
         ignore (Sys.signal Sys.sigterm previous_sigterm)))
     ~finally:(fun () -> ignore (Sys.signal Sys.sigint previous_sigint))
 
-let run_locked ~root ~prod ~clear_screen ~build ~watch_lock =
+let run_locked ~root ~prod ~clear_screen ~show_progress ~build ~watch_lock =
   let stop_requested = ref false in
   let waiting_for_native_event = ref false in
   let stop () =
@@ -132,7 +132,7 @@ let run_locked ~root ~prod ~clear_screen ~build ~watch_lock =
   let poll () = if not (keep_running ()) then raise Stop in
   let clear_terminal () =
     if
-      Output.should_clear_screen ~clear_screen
+      Output.should_clear_screen ~clear_screen ~show_progress
         ~interactive:(Unix.isatty Unix.stdout && Unix.isatty Unix.stderr)
     then
       Printf.printf "\027[2J\027[H%!"
@@ -215,8 +215,9 @@ let run_locked ~root ~prod ~clear_screen ~build ~watch_lock =
           polling_loop roots previous)
         fallback)
 
-let run ~root ~prod ~clear_screen ~build =
+let run ~root ~prod ~clear_screen ~show_progress ~build =
   let watch_lock = Build_lock.acquire_watch root in
   Fun.protect
-    (fun () -> run_locked ~root ~prod ~clear_screen ~build ~watch_lock)
+    (fun () ->
+      run_locked ~root ~prod ~clear_screen ~show_progress ~build ~watch_lock)
     ~finally:(fun () -> Build_lock.release watch_lock)

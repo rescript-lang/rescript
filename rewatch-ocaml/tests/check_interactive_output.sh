@@ -78,6 +78,31 @@ if ! cmp -s "$work/expected" "$work/ocaml.phases"; then
   exit 1
 fi
 
+capture_quiet_build() {
+  implementation=$1
+  executable=$2
+  transcript="$work/$implementation-quiet.tty"
+  if [ "$(uname -s)" = Darwin ]; then
+    script -q "$transcript" env \
+      "RESCRIPT_BSC_EXE=$RESCRIPT_BSC_EXE" \
+      "RESCRIPT_RUNTIME=$RESCRIPT_RUNTIME" \
+      "$executable" -q build "$work/$implementation" >/dev/null
+  else
+    script -qefc \
+      "RESCRIPT_BSC_EXE=$RESCRIPT_BSC_EXE RESCRIPT_RUNTIME=$RESCRIPT_RUNTIME $executable -q build $work/$implementation" \
+      "$transcript" >/dev/null
+  fi
+  if tr '\r' '\n' <"$transcript" \
+    | grep -E '(Cleaned|Parsed|Compiled|Finished .*compilation)' >/dev/null; then
+    echo "$implementation quiet interactive build emitted progress" >&2
+    cat "$transcript" >&2
+    exit 1
+  fi
+}
+
+capture_quiet_build rust "$rust"
+capture_quiet_build ocaml "$ocaml"
+
 wait_for_text() {
   path=$1
   pattern=$2

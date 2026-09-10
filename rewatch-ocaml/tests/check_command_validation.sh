@@ -67,6 +67,7 @@ mkdir -p "$work/parse-source-race-rust/src" \
   "$work/parse-source-race-ocaml/src"
 mkdir -p "$work/watch-config-rust/src" "$work/watch-config-ocaml/src"
 mkdir -p "$work/watch-filter-rust/src" "$work/watch-filter-ocaml/src"
+mkdir -p "$work/quiet-watch-rust/src" "$work/quiet-watch-ocaml/src"
 printf '{"name":"command-validation","sources":["src"]}\n' \
   >"$project/rescript.json"
 printf 'let value = 1\n' >"$project/src/A.res"
@@ -248,6 +249,10 @@ for implementation in rust ocaml; do
     >"$work/watch-filter-$implementation/src/Include.res"
   printf 'let value = 10\n' \
     >"$work/watch-filter-$implementation/src/Exclude.res"
+  printf '{"name":"quiet-watch","sources":["src"]}\n' \
+    >"$work/quiet-watch-$implementation/rescript.json"
+  printf 'let value = 1\n' \
+    >"$work/quiet-watch-$implementation/src/A.res"
 done
 printf 'require("fs").appendFileSync(process.env.REWATCH_WATCH_FILTER_MARKER, "done\\n")\n' \
   >"$work/watch-filter-marker.js"
@@ -377,19 +382,27 @@ run_missing_bsc_case() {
   checked=$((checked + 1))
 }
 
-run_redirected_build_case() {
+run_build_output_case() {
   name=$1
   expected_status=$2
   fixture=$3
+  mode=$4
   rust_project="$work/$name-rust"
   ocaml_project="$work/$name-ocaml"
   cp -R "$fixture" "$rust_project"
   cp -R "$fixture" "$ocaml_project"
   set +e
-  "$rust" build "$rust_project" >"$work/rust.out" 2>"$work/rust.err"
-  rust_status=$?
-  "$ocaml" build "$ocaml_project" >"$work/ocaml.out" 2>"$work/ocaml.err"
-  ocaml_status=$?
+  if [ "$mode" = quiet ]; then
+    "$rust" -q build "$rust_project" >"$work/rust.out" 2>"$work/rust.err"
+    rust_status=$?
+    "$ocaml" -q build "$ocaml_project" >"$work/ocaml.out" 2>"$work/ocaml.err"
+    ocaml_status=$?
+  else
+    "$rust" build "$rust_project" >"$work/rust.out" 2>"$work/rust.err"
+    rust_status=$?
+    "$ocaml" build "$ocaml_project" >"$work/ocaml.out" 2>"$work/ocaml.err"
+    ocaml_status=$?
+  fi
   set -e
   sed "s|$rust_project|<ROOT>|g" "$work/rust.out" >"$work/rust.out.norm"
   sed "s|$rust_project|<ROOT>|g" "$work/rust.err" >"$work/rust.err.norm"
@@ -399,7 +412,7 @@ run_redirected_build_case() {
     [ "$ocaml_status" -ne "$expected_status" ] || \
     ! cmp -s "$work/rust.out.norm" "$work/ocaml.out.norm" || \
     ! cmp -s "$work/rust.err.norm" "$work/ocaml.err.norm"; then
-    echo "$name: redirected build output differs" >&2
+    echo "$name: $mode build output differs" >&2
     printf '%s\n' '--- Rust stdout ---' >&2
     cat "$work/rust.out.norm" >&2
     printf '%s\n' '--- OCaml stdout ---' >&2
@@ -463,14 +476,26 @@ wait_for_line_count() {
   return 1
 }
 
-run_redirected_build_case redirected-success 0 \
-  "$root/rewatch-ocaml/tests/basic"
-run_redirected_build_case redirected-compile-error 1 \
-  "$root/rewatch-ocaml/tests/failure"
-run_redirected_build_case redirected-parse-error 1 \
-  "$work/redirected-parse-fixture"
-run_redirected_build_case redirected-warning 0 \
-  "$root/rewatch-ocaml/tests/warning-replay"
+run_build_output_case redirected-success 0 \
+  "$root/rewatch-ocaml/tests/basic" redirected
+run_build_output_case redirected-compile-error 1 \
+  "$root/rewatch-ocaml/tests/failure" redirected
+run_build_output_case redirected-parse-error 1 \
+  "$work/redirected-parse-fixture" redirected
+run_build_output_case redirected-warning 0 \
+  "$root/rewatch-ocaml/tests/warning-replay" redirected
+
+run_build_output_case quiet-success 0 "$project" quiet
+if [ -s "$work/rust.out" ] || [ -s "$work/rust.err" ] || \
+  [ -s "$work/ocaml.out" ] || [ -s "$work/ocaml.err" ]; then
+  echo "quiet-success: a clean build emitted output" >&2
+  exit 1
+fi
+run_build_output_case quiet-compile-error 1 \
+  "$root/rewatch-ocaml/tests/failure" quiet
+run_build_output_case quiet-parse-error 1 "$work/redirected-parse-fixture" quiet
+run_build_output_case quiet-warning 0 \
+  "$root/rewatch-ocaml/tests/warning-replay" quiet
 
 run_case compiler-args-source accept accept compiler-args "$project/src/A.res"
 run_case compiler-args-extension accept reject compiler-args "$project/src/A.txt"
@@ -1123,6 +1148,60 @@ if cmp -s "$work/watch-filter-ocaml-initial.js" \
 fi
 kill -TERM "$ocaml_filter_pid"
 wait "$ocaml_filter_pid"
+checked=$((checked + 1))
+
+for implementation in rust ocaml; do
+  if [ "$implementation" = rust ]; then
+    executable=$rust
+  else
+    executable=$ocaml
+  fi
+  quiet_watch_project="$work/quiet-watch-$implementation"
+  quiet_watch_marker="$quiet_watch_project/after-build.log"
+  REWATCH_WATCH_FILTER_MARKER="$quiet_watch_marker" \
+    "$executable" -q watch \
+      --after-build "node $work/watch-filter-marker.js" \
+      "$quiet_watch_project" \
+      >"$work/quiet-watch-$implementation.out" \
+      2>"$work/quiet-watch-$implementation.err" &
+  quiet_watch_pid=$!
+  background_pids="$background_pids $quiet_watch_pid"
+  wait_for_line_count "$quiet_watch_marker" 1
+  printf 'let value = 2\n' >"$quiet_watch_project/src/A.res"
+  wait_for_line_count "$quiet_watch_marker" 2
+  printf 'let value =\n' >"$quiet_watch_project/src/A.res"
+  wait_for_text "$work/quiet-watch-$implementation.err" \
+    "This let-binding misses an expression"
+  if ! kill -0 "$quiet_watch_pid" 2>/dev/null; then
+    echo "quiet-watch-$implementation: watcher exited after a parse error" >&2
+    exit 1
+  fi
+  printf 'let value = 3\n' >"$quiet_watch_project/src/A.res"
+  wait_for_line_count "$quiet_watch_marker" 3
+  rm "$quiet_watch_project/lib/watch.lock"
+  wait_for_exit "$quiet_watch_pid"
+  wait "$quiet_watch_pid"
+  if [ -s "$work/quiet-watch-$implementation.out" ] || \
+    grep -F "Incremental build failed" \
+      "$work/quiet-watch-$implementation.err" >/dev/null; then
+    echo "quiet-watch-$implementation: quiet watch emitted progress or a duplicate failure summary" >&2
+    cat "$work/quiet-watch-$implementation.out" \
+      "$work/quiet-watch-$implementation.err" >&2
+    exit 1
+  fi
+  sed "s|$quiet_watch_project|<ROOT>|g" \
+    "$work/quiet-watch-$implementation.err" \
+    >"$work/quiet-watch-$implementation.err.norm"
+done
+if ! cmp -s "$work/quiet-watch-rust.err.norm" \
+  "$work/quiet-watch-ocaml.err.norm"; then
+  echo "Quiet watch failure diagnostics differ" >&2
+  printf '%s\n' '--- Rust stderr ---' >&2
+  cat "$work/quiet-watch-rust.err.norm" >&2
+  printf '%s\n' '--- OCaml stderr ---' >&2
+  cat "$work/quiet-watch-ocaml.err.norm" >&2
+  exit 1
+fi
 checked=$((checked + 1))
 
 run_case clean-missing-dependency exit2 exit2 clean "$work/missing-dependency"

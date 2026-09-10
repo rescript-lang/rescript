@@ -38,11 +38,21 @@ let tests =
     = "\027[2K\r⚠️ Finished incremental compilation with warnings in 1.50s")
     "warning completion format";
   check
-    (Output.should_clear_screen ~clear_screen:true ~interactive:true)
+    (Output.should_clear_screen ~clear_screen:true ~show_progress:true
+       ~interactive:true)
     "interactive clear-screen";
   check
-    (not (Output.should_clear_screen ~clear_screen:true ~interactive:false))
+    (not
+       (Output.should_clear_screen ~clear_screen:true ~show_progress:true
+          ~interactive:false))
     "non-interactive clear-screen";
   check
-    (not (Output.should_clear_screen ~clear_screen:false ~interactive:true))
-    "disabled clear-screen"
+    (not
+       (Output.should_clear_screen ~clear_screen:false ~show_progress:true
+          ~interactive:true))
+    "disabled clear-screen";
+  check
+    (not
+       (Output.should_clear_screen ~clear_screen:true ~show_progress:false
+          ~interactive:true))
+    "quiet watch mode should preserve the terminal"
