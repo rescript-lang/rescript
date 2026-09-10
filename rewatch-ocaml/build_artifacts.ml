@@ -2,11 +2,23 @@ let path_of_parts root parts = List.fold_left Filename.concat root parts
 let lib_path root directory = path_of_parts root ["lib"; directory]
 
 let ensure_dir path =
+  let is_directory path =
+    try (Unix.stat path).Unix.st_kind = Unix.S_DIR
+    with Sys_error _ | Unix.Unix_error _ -> false
+  in
+  let mkdir path =
+    try Unix.mkdir path 0o755
+    with Unix.Unix_error (Unix.EEXIST, _, _) as error ->
+      if not (is_directory path) then raise error
+  in
   let rec loop path =
-    if path = "" || path = "." || Sys.file_exists path then ()
-    else (
-      loop (Filename.dirname path);
-      Unix.mkdir path 0o755)
+    if path = "" || path = "." || is_directory path then ()
+    else
+      let parent = Filename.dirname path in
+      if parent = path then mkdir path
+      else (
+        loop parent;
+        mkdir path)
   in
   loop path
 

@@ -35,6 +35,45 @@ let tests =
       check
         (not (Build_artifacts.files_equal missing first))
         "a missing file should not compare equal";
+      let concurrent_root = Filename.concat root "concurrent" in
+      let start = Atomic.make false in
+      let failures = ref [] in
+      let failures_lock = Mutex.create () in
+      let workers =
+        Array.init 16 (fun _ ->
+            Thread.create
+              (fun () ->
+                while not (Atomic.get start) do
+                  Thread.yield ()
+                done;
+                for index = 0 to 63 do
+                  Thread.yield ();
+                  let path =
+                    Filename.concat concurrent_root (string_of_int index)
+                  in
+                  try Build_artifacts.ensure_dir path
+                  with error ->
+                    Mutex.lock failures_lock;
+                    failures := error :: !failures;
+                    Mutex.unlock failures_lock
+                done)
+              ())
+      in
+      Atomic.set start true;
+      Array.iter Thread.join workers;
+      check (!failures = [])
+        "concurrent directory creation should tolerate another creator";
+      check
+        (Sys.is_directory (Filename.concat concurrent_root "63"))
+        "concurrent directory creation should leave the requested tree";
+      let existing_file_is_rejected =
+        try
+          Build_artifacts.ensure_dir first;
+          false
+        with Unix.Unix_error (Unix.EEXIST, _, _) -> true
+      in
+      check existing_file_is_rejected
+        "directory creation should reject an existing non-directory";
       check
         (Option.is_some (Build_artifacts.modification_time first))
         "an existing file should have a modification time";
