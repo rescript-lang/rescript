@@ -66,6 +66,17 @@ the build and watch paths. Process probing remains behind `platform.mli`; the
 atomic hard-link primitive is centralized here so native Windows validation can
 either approve it or replace it through the same platform boundary.
 
+Lock acquisition and use are callback-scoped so cleanup ownership is installed
+before deferred termination signals can be delivered. Candidate files are
+atomically created and opened, flushed before publication, removed before build
+or watch work begins, and cleaned on every synchronous or asynchronous failure
+path. Final-lock removal reports sharing and permission errors instead of
+mistaking them for a missing lock; the optional early release used before
+post-build hooks is immediate and idempotent. The warning-free build, all 19
+OUnit2 groups, focused integration runner, and 74-case differential command
+validation pass with these invariants, including candidate-cleanup checks after
+failed acquisition.
+
 Dependency-aware compiler dispatch now lives in `compiler_scheduler.ml`. Its
 abstract scheduled-module type owns the interface-before-implementation phase
 machine, parallel dependency scheduling, deterministic failure aggregation,
@@ -1518,8 +1529,10 @@ gate passed after the split.
    relevant OCaml, build-system, compiler, or operating-system detail, and
    stand on their own rather than explaining code mainly by comparison with
    Rust (unless that compatibility relationship is itself the reason). Review
-   naming, remove dead code, and document the complete compatibility-oddity,
-   corrected-Rust-behavior, and future-performance lists.
+   naming and module qualification, including whether generic utility calls are
+   clearer as `Module.function` than through `open`; do not apply either style
+   mechanically. Remove dead code, and document the complete
+   compatibility-oddity, corrected-Rust-behavior, and future-performance lists.
 4. Validate macOS packaging and native event behavior, then prepare the pinned
    Windows handoff. Finish the Windows watcher/lock
    backend and path audit and run the native build, unit, focused, and canonical

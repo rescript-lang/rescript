@@ -123,6 +123,11 @@ Produce code that a maintainer can understand and extend:
 - Clean up processes, file descriptors, temporary files, and watcher resources on success and failure.
 - Remove dead code, abandoned experiments, stale comments, and placeholders before completing a milestone.
 - Comments should explain invariants and non-obvious decisions rather than restate the code.
+  Start with why the code or invariant is needed, give enough context for a
+  reader who is not a specialist in every relevant OCaml, build-system,
+  compiler, or operating-system detail, and make the explanation stand on its
+  own. Refer to the Rust implementation only when that compatibility
+  relationship is itself the reason for the decision.
 - Do not suppress warnings or weaken tests to make the port pass.
 - Measure before introducing performance-driven complexity.
 - Treat performance parity as a work-equivalence gate, not only a wall-clock
@@ -162,6 +167,9 @@ whole-port maintainability pass before release:
 - Review module, file, type, function, field, and test names for clear ownership
   and consistent terminology. Remove misleading Rust-derived names and unclear
   abbreviations, while keeping established ReScript concepts recognizable.
+  Review opened modules at the same time: explicitly qualify calls when doing
+  so makes ownership or side effects clearer, especially for generic utility
+  names, but retain an open when qualification would only add repetitive noise.
 - Simplify duplicated control flow and remove dead code, stale compatibility
   scaffolding, abandoned experiments, and avoidable allocations without
   regressing measured performance.
