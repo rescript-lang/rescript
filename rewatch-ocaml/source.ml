@@ -81,8 +81,8 @@ let interface_mismatch_error implementation interface =
    recursion rules. Compilation follows directory links and honors source
    activation/subdirs; cleanup inventories every real descendant but treats
    links as leaves; GenType records every configured directory that its
-   subdirs setting reaches. Keeping the views in one walk matches Rust's
-   package-state ownership without weakening stale-output cleanup. *)
+   subdirs setting reaches. Keeping the views in one walk gives every consumer
+   the same filesystem snapshot without weakening stale-output cleanup. *)
 let scan_source ~root (source : Config.source) ~discover_modules ~on_missing
     ~visited_dirs ~collect_gentype ~visited_gentype_dirs candidates
     inventory_files gentype_dirs =

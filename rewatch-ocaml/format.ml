@@ -69,10 +69,9 @@ let package_sources (package : discovered_package) =
           | None -> []
           | Some path -> [Filename.concat config.root path]))
 
-(* Rust discovers the complete package graph before selecting the local files
-   that format owns. Scan that graph with its effective feature selections so
-   installed-package diagnostics and the eventual local file set cannot drift
-   apart. *)
+(* Validate the complete package graph before selecting the local files that
+   format owns. Scan it with the effective feature selections so dependency
+   diagnostics and the eventual local file set cannot drift apart. *)
 let discover_package_graph (current : Config.t) =
   let workspace = Project_context.workspace_lock_root current.root in
   let resolved_packages = Hashtbl.create 32 in

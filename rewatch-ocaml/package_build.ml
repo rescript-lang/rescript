@@ -336,9 +336,9 @@ let rec prepare_tree ~(root_config : Config.t) ~seen ~folder:root ~prod ~feature
       (fun module_ ->
         let key = Source.compiler_basename config module_.Source.name in
         let state = Build_state.find_exn build_state key in
-        (* Rust fixes the initial dirty set before dispatch. Files published by
-           concurrently finishing jobs must not change this module's decision;
-           only explicit CMI-change propagation may do that. *)
+        (* Fix the initial dirty set before dispatch so files published by
+           concurrently finishing jobs cannot change this module's decision.
+           Only explicit CMI-change propagation may do that. *)
         state.compile_dirty <- module_is_dirty module_ state;
         let dependencies =
           if Hashtbl.mem stats.blocked_modules key then []
@@ -381,8 +381,8 @@ let rec prepare_tree ~(root_config : Config.t) ~seen ~folder:root ~prod ~feature
   stats.compile_cleanup :=
     (fun () ->
       (* The published AST is the freshness marker. Keep bsc's working AST in
-         lib/bs, as Rust does, and remove only the published copy so warnings
-         are replayed without deleting a usable intermediate artifact. *)
+         lib/bs and remove only the published copy so warnings are replayed
+         without deleting a usable intermediate artifact. *)
       if not watch then
         Hashtbl.iter
           (fun module_name () ->
