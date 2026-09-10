@@ -119,9 +119,7 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error
              ~root:package.graph_root
              ~ocaml_dir:package.graph_ocaml_dir
              ~source_files:package.graph_source_files
-             ~is_local:
-               (Project_context.is_local_dependency_canonical ~workspace:root_config.root
-                  package.graph_root)
+             ~is_local:package.graph_is_local
              package.graph_compile_config package.graph_modules);
         Compiler_info.clean_package package.graph_config;
         stats.compiler_cleaned <- true);
@@ -144,9 +142,7 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error
           ~root:package.graph_root
           ~ocaml_dir:package.graph_ocaml_dir
           ~source_files:package.graph_source_files
-          ~is_local:
-            (Project_context.is_local_dependency_canonical ~workspace:root_config.root
-               package.graph_root)
+          ~is_local:package.graph_is_local
           package.graph_compile_config package.graph_modules
       in
       Hashtbl.replace stats.cleanup_results package.graph_root

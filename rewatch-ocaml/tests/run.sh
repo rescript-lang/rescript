@@ -302,6 +302,38 @@ rm -rf "$source_map/lib"
 mkdir -p "$monorepo/node_modules"
 ln -s ../packages/consumer "$monorepo/node_modules/consumer"
 ln -s ../packages/dep "$monorepo/node_modules/dep"
+
+# A command run from a listed workspace package may resolve sibling packages,
+# but those siblings are ordinary dependencies for this invocation. In
+# particular, their development-only dependency graph must remain dormant and
+# their sources must not be added to the invoking package's analysis metadata.
+cp "$monorepo/packages/dep/rescript.json" \
+  "$monorepo/packages/dep/rescript.original"
+printf '%s\n' \
+  '{"name":"dep","sources":"src","dev-dependencies":["missing-dev"]}' \
+  >"$monorepo/packages/dep/rescript.json"
+"$port" build "$monorepo/packages/consumer"
+test -f "$monorepo/packages/consumer/src/Consumer.js"
+test -f "$monorepo/packages/dep/src/Dep.js"
+test ! -f "$monorepo/packages/dep/lib/bs/.sourcedirs.json"
+node - "$monorepo/packages/consumer/lib/bs/.sourcedirs.json" \
+  "$monorepo/packages/dep" <<'NODE'
+const fs = require("fs");
+const [sourceDirsPath, dependencyPath] = process.argv.slice(2);
+const sourceDirs = JSON.parse(fs.readFileSync(sourceDirsPath, "utf8"));
+if (JSON.stringify(sourceDirs.dirs) !== JSON.stringify(["src"])) {
+  throw new Error(`unexpected direct-package source dirs: ${JSON.stringify(sourceDirs.dirs)}`);
+}
+if (sourceDirs.cmt_scan.length !== 1 || sourceDirs.cmt_scan[0].build_root !== "lib/bs") {
+  throw new Error(`unexpected direct-package scan plan: ${JSON.stringify(sourceDirs.cmt_scan)}`);
+}
+const packages = new Map(sourceDirs.pkgs);
+if (packages.get("dep") !== dependencyPath) {
+  throw new Error(`missing absolute sibling dependency path: ${JSON.stringify(sourceDirs.pkgs)}`);
+}
+NODE
+mv "$monorepo/packages/dep/rescript.original" \
+  "$monorepo/packages/dep/rescript.json"
 rm -f "$basic/src/A.mjs" "$basic/src/B.mjs" "$basic/src/WithInterface.mjs"
 
 "$port" build "$legacy_config"

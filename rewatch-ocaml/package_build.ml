@@ -61,10 +61,8 @@ let rec prepare_tree ~(root_config : Config.t) ~dependency_context ~seen
                ~warn_error:None ~watch
                ~filter:None
                ~is_local:
-                 (Project_context.is_local_dependency_canonical
-                    ~workspace:
-                      (Project_context.dependency_workspace dependency_context)
-                    candidate)
+                 (Project_context.dependency_is_local_canonical
+                    dependency_context candidate)
                ~stats
            with Build_failure output ->
              if Option.is_none stats.failure then stats.failure <- Some output)

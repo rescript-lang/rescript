@@ -41,21 +41,6 @@ let rec nearest_config directory =
     let parent = Filename.dirname directory in
     if parent = directory then None else nearest_config parent
 
-let local_dependency root (dependency : Config.dependency) =
-  let rec find directory =
-    let candidate =
-      Filename.concat (Filename.concat directory "node_modules") dependency.name
-    in
-    if Sys.file_exists candidate then Some (Unix.realpath candidate)
-    else
-      let parent = Filename.dirname directory in
-      if parent = directory then None else find parent
-  in
-  match find root with
-  | None -> None
-  | Some path ->
-    if Project_context.is_local_dependency ~workspace:root path then Some path else None
-
 type discovered_package = {
   config: Config.t;
   modules: Source.module_ list;
@@ -74,7 +59,6 @@ let package_sources (package : discovered_package) =
    format owns. Scan it with the effective feature selections so dependency
    diagnostics and the eventual local file set cannot drift apart. *)
 let discover_package_graph (current : Config.t) =
-  let workspace = Project_context.workspace_lock_root current.root in
   let dependency_context = Project_context.dependency_context current in
   let resolved_packages = Hashtbl.create 32 in
   let package_configs = Hashtbl.create 32 in
@@ -126,7 +110,8 @@ let discover_package_graph (current : Config.t) =
           Package_diagnostics.validate_metadata dependency_config;
           Package_diagnostics.report_missing_sources ~is_root:false dependency_config;
           let dependency_is_local =
-            Project_context.is_local_dependency ~workspace directory
+            Project_context.dependency_is_local_canonical dependency_context
+              directory
           in
           Hashtbl.replace package_configs dependency.name
             (dependency_config, dependency_is_local);
@@ -186,12 +171,22 @@ let files_in_scope () =
         (parent.dependencies @ parent.dev_dependencies)
   in
   let packages = discover_package_graph current in
+  let dependency_context = Project_context.dependency_context current in
   let roots_in_scope =
     if listed_by_parent then [current.root]
     else
       current.root
       :: (current.dependencies @ current.dev_dependencies
-         |> List.filter_map (local_dependency current.root))
+         |> List.filter_map (fun (dependency : Config.dependency) ->
+              match
+                Project_context.dependency_path_in dependency_context
+                  current.root dependency.name
+              with
+              | Some directory
+                when Project_context.dependency_is_local_canonical
+                       dependency_context directory ->
+                Some directory
+              | Some _ | None -> None))
   in
   packages
   |> List.filter (fun package ->
