@@ -82,7 +82,8 @@ runs:
       run: |
         dependency_flags_key="${DEPENDENCY_FLAGS//--/}"
         dependency_flags_key="${dependency_flags_key// /_}"
-        key="$CACHE_PREFIX-$OS-3.8.0-$COMPILER-$dependency_flags_key-${{ hashFiles('*.opam') }}"
+        dependency_hash="${{ hashFiles('*.opam', '.github/opam-repository/repo', '.github/opam-repository/packages/**') }}"
+        key="$CACHE_PREFIX-$OS-3.8.0-$COMPILER-$dependency_flags_key-$dependency_hash"
         echo "value=${key//,/-}" >> "$GITHUB_OUTPUT"
         echo "setup-version=3.8.0" >> "$GITHUB_OUTPUT"
 
@@ -125,6 +126,7 @@ runs:
       env:
         DEPENDENCY_FLAGS: ${{ inputs.dependency-flags }}
       run: |
+        opam repository add rescript-overrides "$GITHUB_WORKSPACE/.github/opam-repository"
         read -ra dependency_flags <<< "$DEPENDENCY_FLAGS"
         opam install . "${dependency_flags[@]}"
 
