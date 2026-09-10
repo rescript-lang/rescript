@@ -1234,6 +1234,10 @@ classification, pipe, thread, notification, and scheduler details. This also
 made an unused `generated_output_owner` helper visible as dead API, so it and
 its tests were removed; stale-output behavior remains covered through the
 public cleanup operation.
+The same pass removed `clean.ml`'s duplicate recursive tree remover in favor of
+`File_util.remove_tree`. Command cleanup intentionally ignores removal failures,
+and the shared helper also handles dangling links without a misleading
+preflight existence check.
 The warning-free whole build, all 19 OUnit2 groups, the focused integration
 runner, all 74 command-validation cases, and the complete applicable canonical
 Rewatch suite pass after the audit. An independent maintainability review found
