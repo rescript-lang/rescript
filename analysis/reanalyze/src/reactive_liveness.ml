@@ -23,10 +23,15 @@ let create ~(merged : Reactive_merge.t) : t =
       merged.exception_refs.resolved_refs_from ~merge:Pos_set.union ()
   in
 
-  (* Combine type refs using union: per-file refs + type deps from ReactiveTypeDeps *)
+  (* Combine type refs using union: per-file refs + type deps from
+     ReactiveTypeDeps + record coercion links *)
   let type_refs_from : (Lexing.position, Pos_set.t) Reactive.t =
-    Reactive.union ~name:"liveness.type_refs_from" merged.type_refs_from
-      merged.type_deps.all_type_refs_from ~merge:Pos_set.union ()
+    let with_type_deps =
+      Reactive.union ~name:"liveness.type_refs_from" merged.type_refs_from
+        merged.type_deps.all_type_refs_from ~merge:Pos_set.union ()
+    in
+    Reactive.union ~name:"liveness.type_refs_from_with_coercions" with_type_deps
+      merged.coercion_refs.resolved_refs_from ~merge:Pos_set.union ()
   in
 
   (* Step 1: Build decl_refs_index - maps decl -> (value_targets, type_targets) *)

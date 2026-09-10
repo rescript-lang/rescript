@@ -36,6 +36,7 @@
 
 #### :bug: Bug fix
 
+- Fix `reanalyze` reporting record labels reached through a record coercion as dead. The typed tree now keeps the source type of a coercion, so reading a label on the target counts as reading the source label of the same name. https://github.com/rescript-lang/rescript/issues/8643
 - Fix constant folding of pattern matches on unboxed variants whose payload overlaps a literal constructor, so inlined calls agree with runtime matching. Reject multi-argument unboxed constructors instead of crashing. https://github.com/rescript-lang/rescript/pull/8631
 - Fix escaped backticks and interpolation openers in backquoted `%raw`, `%ffi`, and `%re` payloads leaking into emitted JavaScript. https://github.com/rescript-lang/rescript/pull/8630
 - Fix the side-effect analysis treating bigint exponentiation and bounds-checked array and string reads as pure, which let dead-code elimination drop an unused one that throws: `let _ = 2n ** -1n` no longer raised. https://github.com/rescript-lang/rescript/pull/8617

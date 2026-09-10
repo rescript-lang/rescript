@@ -16,6 +16,7 @@ type t = {
   (* Reactive type/exception dependencies *)
   type_deps: Reactive_type_deps.t;
   exception_refs: Reactive_exception_refs.t;
+  coercion_refs: Reactive_coercions.t;
 }
 (** All derived reactive collections from per-file data *)
 
@@ -90,6 +91,7 @@ let create (source : (string, Dce_file_processing.file_data option) Reactive.t)
             function_refs = a.function_refs @ b.function_refs;
             optional_arg_value_escapes =
               a.optional_arg_value_escapes @ b.optional_arg_value_escapes;
+            coercions = a.coercions @ b.coercions;
           })
       ()
   in
@@ -143,6 +145,21 @@ let create (source : (string, Dce_file_processing.file_data option) Reactive.t)
       ~exception_refs:exception_refs_collection
   in
 
+  (* Extract coercions from cross_file_items, keyed by the coercion itself so
+     the same coercion seen in several files collapses to one entry *)
+  let coercions_collection =
+    Reactive.flat_map ~name:"coercions_collection" cross_file_items
+      ~f:(fun _path items ->
+        items.Cross_file_items.coercions
+        |> List.map (fun (c : Cross_file_items.coercion) -> (c, ())))
+      ()
+  in
+
+  (* Create reactive coercion label linking *)
+  let coercion_refs =
+    Reactive_coercions.create ~decls ~coercions:coercions_collection
+  in
+
   {
     decls;
     annotations;
@@ -153,6 +170,7 @@ let create (source : (string, Dce_file_processing.file_data option) Reactive.t)
     files;
     type_deps;
     exception_refs;
+    coercion_refs;
   }
 
 (** {1 Conversion to solver-ready format} *)
@@ -228,6 +246,7 @@ let collect_cross_file_items (t : t) : Cross_file_items.t =
   let optional_arg_calls = ref [] in
   let function_refs = ref [] in
   let optional_arg_value_escapes = ref [] in
+  let coercions = ref [] in
   Reactive.iter
     (fun _path items ->
       exception_refs := items.Cross_file_items.exception_refs @ !exception_refs;
@@ -236,13 +255,15 @@ let collect_cross_file_items (t : t) : Cross_file_items.t =
       function_refs := items.Cross_file_items.function_refs @ !function_refs;
       optional_arg_value_escapes :=
         items.Cross_file_items.optional_arg_value_escapes
-        @ !optional_arg_value_escapes)
+        @ !optional_arg_value_escapes;
+      coercions := items.Cross_file_items.coercions @ !coercions)
     t.cross_file_items;
   {
     Cross_file_items.exception_refs = !exception_refs;
     optional_arg_calls = !optional_arg_calls;
     function_refs = !function_refs;
     optional_arg_value_escapes = !optional_arg_value_escapes;
+    coercions = !coercions;
   }
 
 (** Convert reactive file deps to FileDeps.t for solver.

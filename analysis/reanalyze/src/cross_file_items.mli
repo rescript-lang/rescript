@@ -18,6 +18,14 @@ type optional_arg_call = {
 
 type function_ref = {pos_from: Lexing.position; pos_to: Lexing.position}
 
+type coercion = {
+  source_type_paths: Dce_path.t list;
+  target_type_paths: Dce_path.t list;
+}
+(** A record coercion [(e :> Target.t)], as the candidate paths of the source
+    and target types. The two types can live in different files, so the labels
+    are paired up after all declarations are known. *)
+
 type optional_arg_value_escape = {
   pos_from: Lexing.position;
   pos_to: Lexing.position;
@@ -30,6 +38,7 @@ type t = {
   optional_arg_calls: optional_arg_call list;
   function_refs: function_ref list;
   optional_arg_value_escapes: optional_arg_value_escape list;
+  coercions: coercion list;
 }
 (** Immutable cross-file items - for processing after merge *)
 
@@ -59,6 +68,13 @@ val add_function_reference :
 val add_optional_arg_value_escape :
   builder -> pos_from:Lexing.position -> pos_to:Lexing.position -> unit
 (** Record an optional-arg function used as a first-class value. *)
+
+val add_coercion :
+  builder ->
+  source_type_paths:Dce_path.t list ->
+  target_type_paths:Dce_path.t list ->
+  unit
+(** Record a record coercion, to be resolved against the declarations later. *)
 
 (** {2 Merge API} *)
 
