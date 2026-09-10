@@ -61,8 +61,25 @@ let tests =
         = Filename.concat (Filename.concat root "node_modules") "@scope/pkg")
         "dependency candidates start with the package-local node_modules path";
       check
-        (List.mem (Filename.concat root "packages/pkg") candidates)
-        "scoped dependency candidates retain the workspace package fallback";
+        (not (List.mem (Filename.concat root "packages/pkg") candidates))
+        "workspace package directories are not implicit dependency candidates";
+      check
+        (Project_context.dependency_path root "dependency" = None)
+        "a package outside node_modules is not resolved implicitly";
+      let dependency_config = Config.load_root dependency in
+      let dependency_context =
+        Project_context.dependency_context dependency_config
+      in
+      check
+        (Project_context.dependency_candidates_in dependency_context dependency
+           "@scope/pkg"
+        = [
+            Filename.concat
+              (Filename.concat dependency "node_modules")
+              "@scope/pkg";
+            Filename.concat (Filename.concat root "node_modules") "@scope/pkg";
+          ])
+        "a workspace package checks only its own and the workspace node_modules";
       let repository_tmp = Filename.concat (Sys.getcwd ()) "tmp" in
       File_util.ensure_dir repository_tmp;
       let standalone =

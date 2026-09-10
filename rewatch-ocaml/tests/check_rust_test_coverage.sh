@@ -22,7 +22,8 @@ while IFS= read -r file; do
       pending = 0
     }
   ' "$file"
-done < <(rg -l '#\[(tokio::)?test\]' "$root/rewatch/src" --glob '*.rs' | sort) \
+done < <(find "$root/rewatch/src" -type f -name '*.rs' \
+  -exec grep -lE '#\[(tokio::)?test\]' {} + | sort) \
   | sort >"$inventory"
 
 awk -F '\t' '

@@ -5,8 +5,8 @@ exception Parse_failure of string
 
 open Build_types
 
-let rec prepare_tree ~(root_config : Config.t) ~seen ~folder:root ~prod ~features
-    ~warn_error ~watch ~filter ~is_local ~stats =
+let rec prepare_tree ~(root_config : Config.t) ~dependency_context ~seen
+    ~folder:root ~prod ~features ~warn_error ~watch ~filter ~is_local ~stats =
   let features =
     match Hashtbl.find_opt stats.active_features root with
     | Some features -> features
@@ -38,7 +38,10 @@ let rec prepare_tree ~(root_config : Config.t) ~seen ~folder:root ~prod ~feature
         in
         dependencies
         |> List.map (fun (dependency : Config.dependency) ->
-             match Project_context.dependency_path root dependency.name with
+             match
+               Project_context.dependency_path_in dependency_context root
+                 dependency.name
+             with
              | Some directory -> (dependency, directory)
              | None ->
                raise
@@ -53,11 +56,14 @@ let rec prepare_tree ~(root_config : Config.t) ~seen ~folder:root ~prod ~feature
         | candidate when Hashtbl.mem seen candidate -> ()
         | candidate when Config.exists_in_root candidate ->
           (try
-             prepare_tree ~root_config ~seen ~folder:candidate ~prod
-               ~features:dependency.features ~warn_error:None ~watch
+             prepare_tree ~root_config ~dependency_context ~seen
+               ~folder:candidate ~prod ~features:dependency.features
+               ~warn_error:None ~watch
                ~filter:None
                ~is_local:
-                 (Project_context.is_local_dependency_canonical ~workspace:root_config.root
+                 (Project_context.is_local_dependency_canonical
+                    ~workspace:
+                      (Project_context.dependency_workspace dependency_context)
                     candidate)
                ~stats
            with Build_failure output ->

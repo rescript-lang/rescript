@@ -28,6 +28,26 @@ cp -R "$root/rewatch-ocaml/tests/gentype" "$work/gentype"
 cp -R "$root/rewatch-ocaml/tests/dependency" "$work/dependency"
 cp -R "$root/rewatch-ocaml/tests/package-output-dependency" \
   "$work/package-output-dependency"
+mkdir -p "$work/feature-dependencies/node_modules"
+for dependency in consumer dep-union dep-transitive dep-empty; do
+  ln -s "../packages/$dependency" \
+    "$work/feature-dependencies/node_modules/$dependency"
+done
+unlinked_dependency="$work/unlinked-dependency"
+mkdir -p "$unlinked_dependency/src" \
+  "$unlinked_dependency/packages/dep/src" \
+  "$unlinked_dependency/packages/dep/lib/ocaml"
+printf '%s\n' \
+  '{"name":"unlinked-root","sources":"src","dependencies":["dep"]}' \
+  >"$unlinked_dependency/rescript.json"
+printf 'let value = 1\n' >"$unlinked_dependency/src/Root.res"
+printf '%s\n' '{"name":"dep","sources":"src"}' \
+  >"$unlinked_dependency/packages/dep/rescript.json"
+printf 'let value = 1\n' >"$unlinked_dependency/packages/dep/src/Dep.res"
+printf 'export const value = 1;\n' \
+  >"$unlinked_dependency/packages/dep/src/Dep.js"
+printf 'owned outside the resolved graph\n' \
+  >"$unlinked_dependency/packages/dep/lib/ocaml/marker"
 mkdir -p "$work/standalone-output/src" \
   "$work/standalone-output/node_modules"
 cp -R "$root/rewatch-ocaml/tests/shared-dep" \
@@ -518,6 +538,22 @@ test -f "$feature_dependencies/packages/dep-union/extra/UnionExtra.js"
 test -f "$feature_dependencies/packages/dep-transitive/native/TransitiveNative.js"
 test -f "$feature_dependencies/packages/dep-empty/src/EmptyCommon.js"
 test ! -f "$feature_dependencies/packages/dep-empty/optional/EmptyOptional.js"
+
+if "$port" build "$unlinked_dependency" \
+  >"$unlinked_dependency/build.log" 2>&1; then
+  echo "build resolved an unlinked packages dependency" >&2
+  exit 1
+fi
+grep -q "Could not resolve dependency dep" "$unlinked_dependency/build.log"
+if "$port" clean "$unlinked_dependency" \
+  >"$unlinked_dependency/clean.log" 2>&1; then
+  echo "clean resolved an unlinked packages dependency" >&2
+  exit 1
+fi
+grep -q "Could not resolve dependency dep" "$unlinked_dependency/clean.log"
+test -f "$unlinked_dependency/packages/dep/src/Dep.js"
+test -f "$unlinked_dependency/packages/dep/lib/ocaml/marker"
+
 "$port" clean "$feature_dependencies"
 "$port" build --prod "$feature_dependencies"
 test -f "$feature_dependencies/packages/dep-union/native/UnionNative.js"

@@ -14,6 +14,12 @@ ordinary verbosity and diagnostics remain in scope. Incremental state uses
 existing AST, CMI, CMT, and generated-output artifacts rather than in-process
 compiler state.
 
+Native macOS validation at checkpoint `30725fb01` passed `make test-all` and,
+after making temporary fixture paths canonical and accounting for the host's
+case-insensitive filesystem, all 19 dedicated rewatch OUnit2 groups. The
+focused and canonical native watcher suites and packaged-binary checks remain
+part of the macOS gate.
+
 At code checkpoint `324112908`, `opam exec -- make test-all` passed
 uninterrupted with the packaged OCaml rewatch binary as the default. This
 covered formatting, roughly 300 OCaml unit assertions (now grouped into 17
@@ -37,7 +43,8 @@ cleanup, and compiler artifact publication to `lib/bs` and `lib/ocaml`.
 
 Project/workspace path policy now has an explicit `project_context.ml` owner
 instead of remaining embedded in `build.ml`. It owns workspace-root selection,
-ancestor/hoisted/sibling dependency lookup, dependency-config preflight,
+contextual package-local/invocation/workspace `node_modules` lookup,
+standalone-only ancestor hoisting, dependency-config preflight,
 canonical locality classification, and project-relative presentation. `Format`
 and the OUnit2 project-context tests use that owner directly; `Build.Error` and
 `Build.Package_error` remain exception aliases so command exit classes and
@@ -76,6 +83,14 @@ post-build hooks is immediate and idempotent. The warning-free build, all 19
 OUnit2 groups, focused integration runner, and 74-case differential command
 validation pass with these invariants, including candidate-cleanup checks after
 failed acquisition.
+
+Cross-platform ownership probing rejects PID zero because it is not a usable
+child-process identity (`kill(0, 0)` addresses the caller's process group on
+Unix). Linux verifies a live owner's executable through procfs; macOS, where
+procfs is absent, queries `/bin/ps` and accepts only a `rescript` executable
+name. This prevents an abandoned lock from becoming permanent after its
+numeric PID is reused by an unrelated process. Inconclusive probes remain
+conservative and preserve the lock.
 
 Dependency-aware compiler dispatch now lives in `compiler_scheduler.ml`. Its
 abstract scheduled-module type owns the interface-before-implementation phase
@@ -1568,13 +1583,18 @@ Three later Rust fixes were audited explicitly against the port:
 - The focused integration runner also creates an empty nested source directory,
   waits for native registration, and then adds a source, covering directory
   discovery independently of a single coalesced create batch.
-- Local source dependencies under `node_modules` or a sibling package are
-  recursively built with dependency feature selections and cycle protection;
-  prebuilt packages are accepted through their `lib/ocaml` include path.
-- Package resolution searches a package's `node_modules` and ancestor hoists,
-  then workspace-sibling locations. The benchmark fixture copier preserves all
-  of those ignored dependency trees in isolated roots; the smaller tracked
-  monorepo fixture remains preferable for ordinary integration tests.
+- Local source dependencies linked from `node_modules` into a sibling package
+  are recursively built with dependency feature selections and cycle
+  protection; prebuilt packages are accepted through their `lib/ocaml` include
+  path.
+- Package resolution checks the active package, invocation root, and workspace
+  root `node_modules` directories in priority order. Only standalone projects
+  continue searching ancestor `node_modules` directories. Bare sibling and
+  `packages/` directories are deliberately not candidates: accepting them
+  silently expanded the graph and allowed `clean` to delete outputs outside
+  the dependency graph selected by the reference implementation. Focused
+  coverage requires an unlinked `packages/dep` build and clean to fail while
+  preserving that package's JavaScript and compiler artifacts.
 - Windows support is required before this port can be considered complete. It
   cannot be executed in the current Linux environment, but it must still be
   designed and cross-built where possible. Subprocess creation now uses the

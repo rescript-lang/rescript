@@ -476,6 +476,11 @@ let tests =
     "installed dependencies always exclude development sources";
   check (Build_lock.valid_owner "0") "zero is a valid serialized u32 owner";
   check
+    (not
+       (Platform.process_is_active "0" ~run:(fun _ _ ->
+            assert_failure "PID zero must not invoke a process-name probe")))
+    "PID zero cannot own a live build lock";
+  check
     (Build_lock.valid_owner "4294967295")
     "the maximum u32 is a valid serialized lock owner";
   check (not (Build_lock.valid_owner "")) "an empty lock owner is malformed";

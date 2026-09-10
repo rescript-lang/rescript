@@ -47,7 +47,15 @@ let defer_termination_signals () =
 let graceful_termination_signal = Sys.sigterm
 let escalate_process_groups = true
 
-let probe_process pid =
+let process_name_from_ps ~run pid =
+  match run "/bin/ps" ["-p"; string_of_int pid; "-o"; "comm="] with
+  | Some (Unix.WEXITED 0, output) ->
+    output |> String.trim |> Filename.basename
+    |> String.starts_with ~prefix:"rescript"
+  | Some (Unix.WEXITED _, _) -> false
+  | Some (Unix.WSIGNALED _, _) | Some (Unix.WSTOPPED _, _) | None -> true
+
+let probe_process ~run pid =
   Unix.kill pid 0;
   let executable = Printf.sprintf "/proc/%d/exe" pid in
   if Sys.file_exists executable then
@@ -55,7 +63,12 @@ let probe_process pid =
       let basename = Unix.realpath executable |> Filename.basename in
       String.starts_with ~prefix:"rescript" basename
     with Unix.Unix_error _ -> true
-  else true
+  else
+    (* macOS has no procfs. `ps` supplies the same executable-name check so a
+       reused PID from an abandoned lock is not mistaken for this tool. A
+       failed probe remains conservative because stealing a live build's lock
+       is worse than asking the user to remove an inconclusive stale lock. *)
+    process_name_from_ps ~run pid
 
-let process_is_active ~run:_ value =
-  Platform_common.process_is_active ~probe:probe_process value
+let process_is_active ~run value =
+  Platform_common.process_is_active ~probe:(probe_process ~run) value
