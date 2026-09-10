@@ -145,7 +145,7 @@ async function test(params, expected) {
     return;
   }
 
-  if (params.includes("--foo") && stderr.includes("unknown option '--foo'")) {
+  if (params.includes("--foo") && /unknown option ['"]?--foo/.test(stderr)) {
     assert.equal(stdout, "");
     assert.match(stderr, /Usage: rescript( build| clean)? /);
     assert.equal(out.status, 2);
