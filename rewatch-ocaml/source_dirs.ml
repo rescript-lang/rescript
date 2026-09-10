@@ -14,9 +14,9 @@ let scan_json scan =
 
 let write ~root ~dirs ~packages ~scans =
   let path =
-    Build_artifacts.path_of_parts root ["lib"; "bs"; ".sourcedirs.json"]
+    File_util.path_of_parts root ["lib"; "bs"; ".sourcedirs.json"]
   in
-  Build_artifacts.ensure_dir (Filename.dirname path);
+  File_util.ensure_dir (Filename.dirname path);
   let json =
     `Assoc
       [
@@ -36,11 +36,11 @@ let write ~root ~dirs ~packages ~scans =
       ".json.tmp"
   in
   Fun.protect
-    ~finally:(fun () -> Build_artifacts.remove_file temporary)
+    ~finally:(fun () -> File_util.remove_file temporary)
     (fun () ->
       let channel = open_out_bin temporary in
       Fun.protect
         ~finally:(fun () -> close_out_noerr channel)
         (fun () -> Yojson.Safe.to_channel channel json);
-      Build_artifacts.remove_file path;
+      File_util.remove_file path;
       Sys.rename temporary path)

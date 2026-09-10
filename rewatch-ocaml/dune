@@ -36,6 +36,7 @@
   compiler_process
   compiler_scheduler
   after_build
+  file_util
   build_lock
   build_artifacts
   build_freshness

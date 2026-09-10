@@ -5,7 +5,7 @@ exception Build_failure = Compiler_scheduler.Build_failure
 exception Parse_failure = Package_build.Parse_failure
 exception Reported_failure of string
 
-open Build_artifacts
+open File_util
 open Build_types
 
 let project_root folder =

@@ -4,6 +4,7 @@ exception Build_failure = Compiler_scheduler.Build_failure
 exception Parse_failure of string
 
 open Build_artifacts
+open File_util
 open Build_types
 
 let rec prepare_tree ~(root_config : Config.t) ~seen ~folder:root ~prod ~features

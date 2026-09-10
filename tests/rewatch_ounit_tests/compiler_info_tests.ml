@@ -6,12 +6,10 @@ let with_temp_dir f =
   let path = Filename.temp_file "rewatch-compiler-info-" "" in
   Sys.remove path;
   Unix.mkdir path 0o755;
-  Fun.protect
-    ~finally:(fun () -> Build_artifacts.remove_tree path)
-    (fun () -> f path)
+  Fun.protect ~finally:(fun () -> File_util.remove_tree path) (fun () -> f path)
 
 let write path contents =
-  Build_artifacts.ensure_dir (Filename.dirname path);
+  File_util.ensure_dir (Filename.dirname path);
   let channel = open_out_bin path in
   Fun.protect
     ~finally:(fun () -> close_out_noerr channel)
@@ -28,7 +26,7 @@ let context root config source_map_args =
   let bsc = Filename.concat root "bsc.exe" in
   let runtime = Filename.concat root "runtime" in
   if not (Sys.file_exists bsc) then write bsc "compiler-v1";
-  Build_artifacts.ensure_dir runtime;
+  File_util.ensure_dir runtime;
   Compiler_info.make_context ~build_root:root ~bsc_path:bsc
     ~runtime_path:runtime ~source_map_args
     ~package_output_specs:(Compiler_info.package_output_specs config)
@@ -42,9 +40,7 @@ let tests =
         (not (Compiler_info.verify_package initial config))
         "a package without an earlier build is not spuriously cleaned";
       Compiler_info.write_package initial config;
-      let marker =
-        Build_artifacts.path_of_parts root ["lib"; "ocaml"; "marker"]
-      in
+      let marker = File_util.path_of_parts root ["lib"; "ocaml"; "marker"] in
       write marker "keep";
       check
         (not (Compiler_info.verify_package initial config))
@@ -74,7 +70,7 @@ let tests =
       let config = config root in
       let context = context root config [] in
       let old_log =
-        Build_artifacts.path_of_parts root ["lib"; "ocaml"; ".compiler.log"]
+        File_util.path_of_parts root ["lib"; "ocaml"; ".compiler.log"]
       in
       write old_log "old build";
       check
@@ -86,7 +82,7 @@ let tests =
       let bsc = Filename.concat root "bsc.exe" in
       let runtime = Filename.concat root "runtime" in
       write bsc "compiler-v1";
-      Build_artifacts.ensure_dir runtime;
+      File_util.ensure_dir runtime;
       let commonjs =
         [
           {
@@ -111,9 +107,7 @@ let tests =
           ~package_output_specs:commonjs
       in
       Compiler_info.write_package initial dependency;
-      let marker =
-        Build_artifacts.path_of_parts root ["lib"; "ocaml"; "marker"]
-      in
+      let marker = File_util.path_of_parts root ["lib"; "ocaml"; "marker"] in
       write marker "keep";
       let changed =
         Compiler_info.make_context ~build_root:root ~bsc_path:bsc
@@ -128,12 +122,12 @@ let tests =
         "package-output mismatches remove compiler artifacts");
   with_temp_dir (fun root ->
       let dependency_root = Filename.concat root "dependency" in
-      Build_artifacts.ensure_dir dependency_root;
+      File_util.ensure_dir dependency_root;
       let dependency = config dependency_root in
       let bsc = Filename.concat root "bsc.exe" in
       let runtime = Filename.concat root "runtime" in
       write bsc "compiler-v1";
-      Build_artifacts.ensure_dir runtime;
+      File_util.ensure_dir runtime;
       let standalone =
         Compiler_info.make_context ~build_root:dependency_root ~bsc_path:bsc
           ~runtime_path:runtime ~source_map_args:[]
@@ -141,7 +135,7 @@ let tests =
       in
       Compiler_info.write_package standalone dependency;
       let consumer_root = Filename.concat root "consumer" in
-      Build_artifacts.ensure_dir consumer_root;
+      File_util.ensure_dir consumer_root;
       let consumer_specs =
         [
           {

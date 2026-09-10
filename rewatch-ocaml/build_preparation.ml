@@ -1,6 +1,7 @@
 exception Error = Project_context.Error
 
 open Build_artifacts
+open File_util
 open Build_types
 
 type cycle_info = {

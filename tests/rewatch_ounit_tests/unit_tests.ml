@@ -10,7 +10,7 @@ let rec contains_adjacent left right = function
   | [] -> false
 
 let write_file path contents =
-  Build_artifacts.ensure_dir (Filename.dirname path);
+  File_util.ensure_dir (Filename.dirname path);
   let channel = open_out_bin path in
   Fun.protect
     ~finally:(fun () -> close_out_noerr channel)
@@ -206,7 +206,7 @@ let tests =
   Sys.remove path_root;
   Unix.mkdir path_root 0o755;
   Fun.protect
-    ~finally:(fun () -> Build_artifacts.remove_tree path_root)
+    ~finally:(fun () -> File_util.remove_tree path_root)
     (fun () ->
       let first = Filename.concat path_root "first" in
       let second = Filename.concat path_root "second" in
@@ -215,7 +215,7 @@ let tests =
       let command = if Sys.win32 then "worker.exe" else "worker" in
       Unix.mkdir (Filename.concat first command) 0o755;
       let executable = Filename.concat second command in
-      Build_artifacts.copy_file test_executable executable;
+      File_util.copy_file test_executable executable;
       Unix.chmod executable 0o755;
       let previous_path = Sys.getenv_opt "PATH" in
       let separator = if Sys.win32 then ";" else ":" in
@@ -231,7 +231,7 @@ let tests =
              suffixes";
           if Sys.win32 then (
             let cwd_executable = Filename.concat path_root "current.exe" in
-            Build_artifacts.copy_file test_executable cwd_executable;
+            File_util.copy_file test_executable cwd_executable;
             check
               (Platform.resolve_program ~cwd:path_root "current"
               = cwd_executable)
@@ -261,7 +261,7 @@ let tests =
   Sys.remove scheduler_root;
   Unix.mkdir scheduler_root 0o755;
   Fun.protect
-    ~finally:(fun () -> Build_artifacts.remove_tree scheduler_root)
+    ~finally:(fun () -> File_util.remove_tree scheduler_root)
     (fun () ->
       let helper =
         Spawn.spawn ~prog:test_executable
@@ -480,8 +480,8 @@ let tests =
   write_owner takeover "999999999";
   Fun.protect
     ~finally:(fun () ->
-      Build_artifacts.remove_file takeover;
-      Build_artifacts.remove_file lock;
+      File_util.remove_file takeover;
+      File_util.remove_file lock;
       Unix.rmdir lock_dir;
       Unix.rmdir lock_root)
     (fun () ->
@@ -495,7 +495,7 @@ let tests =
   Sys.remove config_root;
   Unix.mkdir config_root 0o755;
   Fun.protect
-    ~finally:(fun () -> Build_artifacts.remove_tree config_root)
+    ~finally:(fun () -> File_util.remove_tree config_root)
     (fun () ->
       let config_path = Filename.concat config_root "rescript.json" in
       write_file config_path {|{"name":"file-casing","namespace":"FileCasing"}|};
@@ -708,7 +708,7 @@ let tests =
   Sys.remove dependency_root;
   Unix.mkdir dependency_root 0o755;
   Fun.protect
-    ~finally:(fun () -> Build_artifacts.remove_tree dependency_root)
+    ~finally:(fun () -> File_util.remove_tree dependency_root)
     (fun () ->
       write_file
         (Filename.concat dependency_root "rescript.json")

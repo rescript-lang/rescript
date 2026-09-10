@@ -13,7 +13,7 @@ let with_temp_dir run =
   Sys.remove path;
   Unix.mkdir path 0o755;
   Fun.protect
-    ~finally:(fun () -> Build_artifacts.remove_tree path)
+    ~finally:(fun () -> File_util.remove_tree path)
     (fun () -> run path)
 
 let tests =

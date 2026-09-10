@@ -3,7 +3,7 @@ open OUnit2
 let check condition message = assert_bool message condition
 
 let write_file path contents =
-  Build_artifacts.ensure_dir (Filename.dirname path);
+  File_util.ensure_dir (Filename.dirname path);
   let channel = open_out_bin path in
   Fun.protect
     ~finally:(fun () -> close_out_noerr channel)
@@ -18,13 +18,12 @@ let tests =
   Sys.remove root;
   Unix.mkdir root 0o755;
   Fun.protect
-    ~finally:(fun () -> Build_artifacts.remove_tree root)
+    ~finally:(fun () -> File_util.remove_tree root)
     (fun () ->
       let dependency = Filename.concat root "packages/dependency" in
       let dev_dependency = Filename.concat root "packages/dev-dependency" in
       let unlisted = Filename.concat root "packages/unlisted" in
-      List.iter Build_artifacts.ensure_dir
-        [dependency; dev_dependency; unlisted];
+      List.iter File_util.ensure_dir [dependency; dev_dependency; unlisted];
       write_config root
         {|{
           "name": "workspace",
@@ -54,7 +53,7 @@ let tests =
         = "packages")
         "a child path is represented relative to its root";
       let repository_tmp = Filename.concat (Sys.getcwd ()) "tmp" in
-      Build_artifacts.ensure_dir repository_tmp;
+      File_util.ensure_dir repository_tmp;
       let standalone =
         Filename.temp_file ~temp_dir:repository_tmp "rewatch-ocaml-standalone-"
           ""
@@ -62,7 +61,7 @@ let tests =
       Sys.remove standalone;
       Unix.mkdir standalone 0o755;
       Fun.protect
-        ~finally:(fun () -> Build_artifacts.remove_tree standalone)
+        ~finally:(fun () -> File_util.remove_tree standalone)
         (fun () ->
           write_config standalone {|{"name":"unlisted-standalone"}|};
           let source = Filename.concat standalone "src/A.res" in

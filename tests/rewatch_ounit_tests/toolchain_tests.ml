@@ -14,7 +14,7 @@ let tests =
   Sys.remove root;
   Unix.mkdir root 0o755;
   Fun.protect
-    ~finally:(fun () -> Build_artifacts.remove_tree root)
+    ~finally:(fun () -> File_util.remove_tree root)
     (fun () ->
       let bin = Filename.concat root "bin" in
       Unix.mkdir bin 0o755;

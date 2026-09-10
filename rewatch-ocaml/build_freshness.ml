@@ -1,4 +1,5 @@
 open Build_artifacts
+open File_util
 
 let source_is_newer ~source ~artifact =
   match modification_time source, modification_time artifact with

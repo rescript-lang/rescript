@@ -61,7 +61,7 @@ let run path =
     Compiler_args.compiler_flags
       ~ppx_flags:
         (Compiler_args.filter_ppx_flags config.ppx_flags
-           (Build_artifacts.read_file source))
+           (File_util.read_file source))
       ~source_maps:false ~watch:false ~gentype:false config
     @ [
         "-absname";
