@@ -1,13 +1,3 @@
-let rec remove_tree path =
-  if Sys.file_exists path then
-    try
-      if (Unix.lstat path).Unix.st_kind = Unix.S_DIR then (
-        Sys.readdir path
-        |> Array.iter (fun name -> remove_tree (Filename.concat path name));
-        Unix.rmdir path)
-      else Sys.remove path
-    with Sys_error _ | Unix.Unix_error (Unix.ENOENT, _, _) -> ()
-
 let rec run ~(root_config : Config.t) ~seen ~root ~prod ~is_local ~on_clean =
   if not (Hashtbl.mem seen root) then (
     Hashtbl.add seen root ();
@@ -82,7 +72,7 @@ let rec run ~(root_config : Config.t) ~seen ~root ~prod ~is_local ~on_clean =
     if should_clean then (
       Option.iter on_clean package_name;
       List.iter
-        (fun dir -> remove_tree (Filename.concat root dir))
+        (fun dir -> File_util.remove_tree (Filename.concat root dir))
         [
           Build_artifacts.lib_path "" "bs";
           Build_artifacts.lib_path "" "ocaml";
