@@ -56,6 +56,12 @@ type completion_notifier = {
   mutable stopped: bool;
 }
 
+let with_mutex mutex action =
+  Mutex.lock mutex;
+  (* Unlocking in the exception path prevents one failed callback from
+     permanently blocking every waiter that shares this notifier. *)
+  Fun.protect ~finally:(fun () -> Mutex.unlock mutex) action
+
 let create_completion_notifier () =
   {
     mutex = Mutex.create ();
@@ -65,16 +71,16 @@ let create_completion_notifier () =
   }
 
 let notify_completion notifier =
-  Mutex.protect notifier.mutex (fun () ->
+  with_mutex notifier.mutex (fun () ->
     if not notifier.stopped then (
       notifier.generation <- notifier.generation + 1;
       Condition.broadcast notifier.condition))
 
 let notifier_generation notifier =
-  Mutex.protect notifier.mutex (fun () -> notifier.generation)
+  with_mutex notifier.mutex (fun () -> notifier.generation)
 
 let await_notification notifier generation =
-  Mutex.protect notifier.mutex (fun () ->
+  with_mutex notifier.mutex (fun () ->
     while notifier.generation = generation && not notifier.stopped do
       Condition.wait notifier.condition notifier.mutex
     done;
@@ -90,7 +96,7 @@ let with_completion_notifier ?(ticker_enabled = false) action =
   let rec send_tick () =
     Thread.delay 0.005;
     let continue =
-      Mutex.protect notifier.mutex (fun () ->
+      with_mutex notifier.mutex (fun () ->
         if notifier.stopped then false
         else (
           notifier.generation <- notifier.generation + 1;
@@ -104,7 +110,7 @@ let with_completion_notifier ?(ticker_enabled = false) action =
   let stopped = ref false in
   let stop () =
     if not !stopped then (
-      Mutex.protect notifier.mutex (fun () ->
+      with_mutex notifier.mutex (fun () ->
         notifier.stopped <- true;
         Condition.broadcast notifier.condition);
       Option.iter Thread.join !ticker;

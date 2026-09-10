@@ -20,6 +20,12 @@ case-insensitive filesystem, all 19 dedicated rewatch OUnit2 groups. The
 focused and canonical native watcher suites and packaged-binary checks remain
 part of the macOS gate.
 
+The oldest-supported OCaml 5.0 static matrix is also exercised locally. An
+isolated 5.0 switch exposed use of the newer `Mutex.protect` convenience API;
+the notifier now uses a small `Fun.protect`-based lock wrapper with identical
+exception-safe release behavior, and the static rewatch executable builds in
+both the 5.0 and 5.5 switches.
+
 At code checkpoint `324112908`, `opam exec -- make test-all` passed
 uninterrupted with the packaged OCaml rewatch binary as the default. This
 covered formatting, roughly 300 OCaml unit assertions (now grouped into 17
