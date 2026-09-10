@@ -39,6 +39,7 @@
   build_freshness
   build_types
   build_preparation
+  package_build
   clean
   compile_assets
   build_state

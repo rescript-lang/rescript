@@ -58,8 +58,9 @@ release version declared in `yarn.config.cjs`.
 The implementation is split by ownership rather than mirroring the Rust source
 layout mechanically. In particular, `build_artifacts.ml` owns filesystem
 primitives, generated-output paths, publication staging, and stale-artifact
-cleanup; `package_graph.ml` owns package preparation, and `build.ml` retains
-recursive compilation and command/reporting orchestration.
+cleanup; `package_graph.ml` owns package discovery, `package_build.ml` owns
+per-package parsing, dirty-state preparation, and compiler-job construction,
+and `build.ml` retains command/reporting orchestration and aggregate dispatch.
 `build_preparation.ml` consumes the prepared packages to initialize compiler
 context, clean stale assets, run the preliminary parse, and construct global
 dependency/build state. Command-level post-build execution and its error

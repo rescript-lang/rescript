@@ -1195,6 +1195,17 @@ ordering, timing accumulation, or cleanup accounting. The warning-free build,
 all 18 OUnit2 tests, focused integration runner, 69-case command-validation
 gate, and complete canonical rewatch suite passed after the extraction.
 
+Recursive dependency-package traversal, per-package parsing and publication,
+dirty-state construction, namespace-job preparation, and scheduled compiler-job
+construction now live in `package_build.ml`. `build.ml` retains aggregate
+namespace/compiler dispatch, command output, finalization, and lock handling.
+The extraction is an exact move apart from renaming `run_internal` to
+`prepare_tree` and replacing its command-facing exception with an identity alias;
+it reduces `build.ml` from 781 to 386 lines while leaving the new cohesive owner
+at 405 lines. The warning-free build, all 18 OUnit2 tests, focused integration
+runner, 69-case command-validation gate, and complete canonical rewatch suite
+passed after the extraction.
+
 ## Known gaps
 
 - Incremental state currently relies on artifact timestamps, byte-identical CMI
@@ -1453,11 +1464,11 @@ gate, and complete canonical rewatch suite passed after the extraction.
 
 ## Next actions
 
-1. Continue splitting `build.ml` along stable responsibility boundaries. The
-   filesystem/artifact, compiler-process, compiler-scheduling, watcher, clean,
-   command-cycle state, package-tree, and global build-preparation owners are
-   now separate; per-package dirty-state construction and recursive compilation
-   remain the principal mixed responsibility.
+1. Review the remaining command lifecycle in `build.ml` for any stable final
+   ownership split without introducing trivial wrappers. Filesystem/artifact,
+   compiler-process, compiler-scheduling, watcher, clean, command-cycle state,
+   package-tree discovery, global preparation, and per-package build planning
+   now have separate owners.
 2. Perform the final two-scope whole-port review and address confirmed findings.
 3. At the final maintainability pass, add comments around ownership,
    concurrency, platform, and algorithmic invariants that are not apparent from
