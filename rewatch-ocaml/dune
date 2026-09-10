@@ -38,6 +38,7 @@
   build_artifacts
   build_freshness
   build_types
+  build_preparation
   clean
   compile_assets
   build_state

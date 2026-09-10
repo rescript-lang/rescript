@@ -59,8 +59,11 @@ The implementation is split by ownership rather than mirroring the Rust source
 layout mechanically. In particular, `build_artifacts.ml` owns filesystem
 primitives, generated-output paths, publication staging, and stale-artifact
 cleanup; `package_graph.ml` owns package preparation, and `build.ml` retains
-phase orchestration. Command-level post-build execution and its error handling
-live in `after_build.ml`.
+recursive compilation and command/reporting orchestration.
+`build_preparation.ml` consumes the prepared packages to initialize compiler
+context, clean stale assets, run the preliminary parse, and construct global
+dependency/build state. Command-level post-build execution and its error
+handling live in `after_build.ml`.
 Genuinely platform-specific behavior is consolidated behind a `Platform`
 boundary rather than mixed into those modules. Unix and Windows modules now own
 executable lookup, subprocess creation, signal deferral, and process-tree
