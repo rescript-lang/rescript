@@ -1,6 +1,11 @@
 val path_of_parts : string -> string list -> string
 val ensure_dir : string -> unit
 val read_file : string -> string
+val write_file : string -> string -> unit
+val append_file : string -> string -> unit
+
+val write_file_atomic :
+  ?ensure_parent:bool -> ?perm:int -> string -> string -> unit
 
 val copy_existing_file :
   ?ensure_parent:bool -> string -> string -> unit

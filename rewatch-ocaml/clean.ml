@@ -38,25 +38,24 @@ let rec run ~(root_config : Config.t) ~seen ~root ~prod ~is_local ~on_clean =
                         "Could not build package tree for '%s' at path '%s'. Error: %s"
                         dependency.name root_config.root message)))
             dependencies;
-          let discovery =
-            Source.discover_with_inventory config
-              ~prod:(prod || not is_local) ~features:None ~filter:None
+          let implementation_files, inventory_files =
+            Source.discover_for_cleanup config
+              ~prod:(prod || not is_local)
               ~on_missing:
                 (Package_diagnostics.report_missing_source_folder config)
-              ~display_root:root_config.root
           in
           let output_config =
             Build_artifacts.with_root_options config root_config
           in
           Build_artifacts.cleanup_watch_output_sidecars
-            ~source_files:discovery.inventory_files ~root output_config;
+            ~source_files:inventory_files ~root output_config;
           List.iter
-            (fun module_ ->
+            (fun implementation ->
               List.iter
                 (fun spec ->
                   let output =
                     Build_artifacts.generated_js_path output_config
-                      module_.Source.implementation spec
+                      implementation spec
                   in
                   File_util.remove_file output;
                   File_util.remove_file (output ^ ".map");
@@ -65,7 +64,7 @@ let rec run ~(root_config : Config.t) ~seen ~root ~prod ~is_local ~on_clean =
                   File_util.remove_file (output ^ ".map.rewatch-pending");
                   File_util.remove_file (output ^ ".map.rewatch-backup"))
                 output_config.package_specs)
-            discovery.modules;
+            implementation_files;
           (true, Some config.name)))
       else (true, None)
     in

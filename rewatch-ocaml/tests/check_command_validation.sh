@@ -66,7 +66,17 @@ mkdir -p "$work/ast-race-rust/src" "$work/ast-race-ocaml/src"
 mkdir -p "$work/parse-source-race-rust/src" \
   "$work/parse-source-race-ocaml/src"
 mkdir -p "$work/watch-config-rust/src" "$work/watch-config-ocaml/src"
-mkdir -p "$work/watch-filter-rust/src" "$work/watch-filter-ocaml/src"
+mkdir -p "$work/watch-dependency-recovery/src" \
+  "$work/watch-dependency-recovery/packages/dep/src"
+mkdir -p "$work/watch-dependency-install/src" \
+  "$work/watch-dependency-install/node_modules"
+mkdir -p "$work/watch-dependency-fallback/src" \
+  "$work/watch-dependency-fallback/node_modules/dep" \
+  "$work/watch-dependency-fallback/packages/dep/src"
+mkdir -p "$work/watch-symlink-target/src" "$work/watch-symlink-external/sub"
+mkdir -p "$work/watch-feature-scope/src" "$work/watch-feature-scope/inactive"
+mkdir -p "$work/watch-filter-rust/src" "$work/watch-filter-rust/inactive" \
+  "$work/watch-filter-ocaml/src" "$work/watch-filter-ocaml/inactive"
 mkdir -p "$work/quiet-watch-rust/src" "$work/quiet-watch-ocaml/src"
 printf '{"name":"command-validation","sources":["src"]}\n' \
   >"$project/rescript.json"
@@ -242,13 +252,41 @@ cp "$work/watch-config-rust/rescript.json" \
   "$work/watch-config-ocaml/rescript.json"
 printf 'let value = 1\n' >"$work/watch-config-rust/src/A.res"
 cp "$work/watch-config-rust/src/A.res" "$work/watch-config-ocaml/src/A.res"
+printf '{"name":"watch-dependency-recovery","sources":["src"],"dependencies":["dep"]}\n' \
+  >"$work/watch-dependency-recovery/rescript.json"
+printf 'let value = 1\n' >"$work/watch-dependency-recovery/src/A.res"
+printf '{ invalid json\n' \
+  >"$work/watch-dependency-recovery/packages/dep/rescript.json"
+printf 'let dependency = 1\n' \
+  >"$work/watch-dependency-recovery/packages/dep/src/Dep.res"
+printf '{"name":"watch-dependency-install","sources":["src"],"dependencies":["dep"]}\n' \
+  >"$work/watch-dependency-install/rescript.json"
+printf 'let value = 1\n' >"$work/watch-dependency-install/src/A.res"
+printf '{"name":"watch-feature-scope","sources":["src",{"dir":"inactive","feature":"inactive"}]}\n' \
+  >"$work/watch-feature-scope/rescript.json"
+printf 'let value = 1\n' >"$work/watch-feature-scope/src/A.res"
+printf 'let inactive = 1\n' >"$work/watch-feature-scope/inactive/Inactive.res"
+printf '{"name":"watch-dependency-fallback","sources":["src"],"dependencies":["dep"]}\n' \
+  >"$work/watch-dependency-fallback/rescript.json"
+printf 'let value = 1\n' >"$work/watch-dependency-fallback/src/A.res"
+printf '{"name":"dep","sources":["src"]}\n' \
+  >"$work/watch-dependency-fallback/packages/dep/rescript.json"
+printf 'let dependency = 1\n' \
+  >"$work/watch-dependency-fallback/packages/dep/src/Dep.res"
+printf '{"name":"watch-symlink-target","sources":["src"]}\n' \
+  >"$work/watch-symlink-target/rescript.json"
+printf 'let linked = 1\n' >"$work/watch-symlink-external/sub/Linked.res"
+ln -s "$work/watch-symlink-external/sub/Linked.res" \
+  "$work/watch-symlink-target/src/Linked.res"
 for implementation in rust ocaml; do
-  printf '{"name":"watch-filter","sources":["src"]}\n' \
+  printf '{"name":"watch-filter","sources":["src",{"dir":"inactive","feature":"inactive"}]}\n' \
     >"$work/watch-filter-$implementation/rescript.json"
   printf 'let value = 1\n' \
     >"$work/watch-filter-$implementation/src/Include.res"
   printf 'let value = 10\n' \
     >"$work/watch-filter-$implementation/src/Exclude.res"
+  printf 'let value = 20\n' \
+    >"$work/watch-filter-$implementation/inactive/Inactive.res"
   printf '{"name":"quiet-watch","sources":["src"]}\n' \
     >"$work/quiet-watch-$implementation/rescript.json"
   printf 'let value = 1\n' \
@@ -256,6 +294,19 @@ for implementation in rust ocaml; do
 done
 printf 'require("fs").appendFileSync(process.env.REWATCH_WATCH_FILTER_MARKER, "done\\n")\n' \
   >"$work/watch-filter-marker.js"
+printf '%s\n' \
+  '#!/bin/sh' \
+  'if [ -f "$REWATCH_SCOPE_BLOCK_REQUEST" ] && [ ! -f "$REWATCH_SCOPE_BLOCK_STARTED" ]; then' \
+  '  : >"$REWATCH_SCOPE_BLOCK_STARTED"' \
+  '  attempts=0' \
+  '  while [ ! -f "$REWATCH_SCOPE_BLOCK_RELEASE" ] && [ "$attempts" -lt 200 ]; do' \
+  '    attempts=$((attempts + 1))' \
+  '    sleep 0.05' \
+  '  done' \
+  'fi' \
+  'exec "$REWATCH_SCOPE_REAL_BSC" "$@"' \
+  >"$work/watch-scope-bsc.sh"
+chmod +x "$work/watch-scope-bsc.sh"
 
 export RESCRIPT_BSC_EXE=${RESCRIPT_BSC_EXE:-$root/_build/default/compiler/bsc/rescript_compiler_main.exe}
 export RESCRIPT_RUNTIME=${RESCRIPT_RUNTIME:-$root/packages/@rescript/runtime}
@@ -474,6 +525,23 @@ wait_for_line_count() {
     sleep 0.1
   done
   return 1
+}
+
+line_count_stays() {
+  path=$1
+  expected=$2
+  attempts=0
+  while [ "$attempts" -lt 20 ]; do
+    actual=0
+    if [ -f "$path" ]; then
+      actual=$(wc -l <"$path" | tr -d ' ')
+    fi
+    if [ "$actual" -ne "$expected" ]; then
+      return 1
+    fi
+    attempts=$((attempts + 1))
+    sleep 0.1
+  done
 }
 
 run_build_output_case redirected-success 0 \
@@ -1097,6 +1165,14 @@ if ! kill -0 "$ocaml_watch_pid" 2>/dev/null; then
   cat "$work/watch-ocaml.out" "$work/watch-ocaml.err" >&2
   exit 1
 fi
+printf '{"name":"watch-config","sources":["src"],"dependencies":["definitely-missing-dep"]}\n' \
+  >"$work/watch-config-ocaml/rescript.json"
+wait_for_text "$work/watch-ocaml.err" "definitely-missing-dep"
+if ! kill -0 "$ocaml_watch_pid" 2>/dev/null; then
+  echo "OCaml watcher exited after a recoverable dependency error" >&2
+  cat "$work/watch-ocaml.out" "$work/watch-ocaml.err" >&2
+  exit 1
+fi
 printf '{"name":"watch-config","sources":["src"],"package-specs":{"module":"esmodule","in-source":true,"suffix":".mjs"}}\n' \
   >"$work/watch-config-ocaml/rescript.json"
 wait_for_file "$work/watch-config-ocaml/src/A.mjs"
@@ -1105,9 +1181,138 @@ kill -TERM "$ocaml_watch_pid"
 wait "$ocaml_watch_pid"
 checked=$((checked + 1))
 
+"$ocaml" watch "$work/watch-dependency-recovery" \
+  >"$work/watch-dependency-recovery.out" \
+  2>"$work/watch-dependency-recovery.err" &
+dependency_recovery_pid=$!
+background_pids="$background_pids $dependency_recovery_pid"
+wait_for_text "$work/watch-dependency-recovery.err" \
+  "Could not build package tree for 'dep'"
+if ! kill -0 "$dependency_recovery_pid" 2>/dev/null; then
+  echo "OCaml watcher exited after a malformed dependency config" >&2
+  exit 1
+fi
+printf '{"name":"dep","sources":["src"]}\n' \
+  >"$work/watch-dependency-recovery/packages/dep/rescript.json"
+wait_for_file "$work/watch-dependency-recovery/src/A.js"
+kill -TERM "$dependency_recovery_pid"
+wait "$dependency_recovery_pid"
+checked=$((checked + 1))
+
+"$ocaml" watch "$work/watch-dependency-install" \
+  >"$work/watch-dependency-install.out" \
+  2>"$work/watch-dependency-install.err" &
+dependency_install_pid=$!
+background_pids="$background_pids $dependency_install_pid"
+wait_for_text "$work/watch-dependency-install.err" "Could not resolve dependency dep"
+if ! kill -0 "$dependency_install_pid" 2>/dev/null; then
+  echo "OCaml watcher exited while waiting for a missing dependency" >&2
+  exit 1
+fi
+mkdir -p "$work/watch-dependency-install/node_modules/dep/src"
+printf '{"name":"dep","sources":["src"]}\n' \
+  >"$work/watch-dependency-install/node_modules/dep/rescript.json"
+printf 'let dependency = 1\n' \
+  >"$work/watch-dependency-install/node_modules/dep/src/Dep.res"
+wait_for_file "$work/watch-dependency-install/src/A.js"
+kill -TERM "$dependency_install_pid"
+wait "$dependency_install_pid"
+checked=$((checked + 1))
+
+"$ocaml" watch "$work/watch-dependency-fallback" \
+  >"$work/watch-dependency-fallback.out" \
+  2>"$work/watch-dependency-fallback.err" &
+dependency_fallback_pid=$!
+background_pids="$background_pids $dependency_fallback_pid"
+wait_for_text "$work/watch-dependency-fallback.err" \
+  "no rescript.json or bsconfig.json"
+mv "$work/watch-dependency-fallback/node_modules/dep" \
+  "$work/watch-dependency-fallback/node_modules/dep-disabled"
+wait_for_file "$work/watch-dependency-fallback/src/A.js"
+kill -TERM "$dependency_fallback_pid"
+wait "$dependency_fallback_pid"
+checked=$((checked + 1))
+
+symlink_target_marker="$work/watch-symlink-target/after-build.log"
+REWATCH_WATCH_FILTER_MARKER="$symlink_target_marker" \
+  "$ocaml" watch --after-build "node $work/watch-filter-marker.js" \
+  "$work/watch-symlink-target" \
+  >"$work/watch-symlink-target.out" 2>"$work/watch-symlink-target.err" &
+symlink_target_pid=$!
+background_pids="$background_pids $symlink_target_pid"
+wait_for_file "$work/watch-symlink-target/src/Linked.js"
+wait_for_line_count "$symlink_target_marker" 1
+printf 'let linked = 9876\n' \
+  >"$work/watch-symlink-external/sub/Linked.res.next"
+mv "$work/watch-symlink-external/sub/Linked.res.next" \
+  "$work/watch-symlink-external/sub/Linked.res"
+wait_for_text "$work/watch-symlink-target/src/Linked.js" "9876"
+wait_for_line_count "$symlink_target_marker" 2
+mv "$work/watch-symlink-external/sub/Linked.res" \
+  "$work/watch-symlink-external/sub/Linked.res.removed"
+wait_for_line_count "$symlink_target_marker" 3
+if [ -e "$work/watch-symlink-target/src/Linked.js" ]; then
+  echo "OCaml watcher retained output for a dangling source symlink" >&2
+  exit 1
+fi
+mv "$work/watch-symlink-external/sub/Linked.res.removed" \
+  "$work/watch-symlink-external/sub/Linked.res"
+wait_for_file "$work/watch-symlink-target/src/Linked.js"
+wait_for_line_count "$symlink_target_marker" 4
+mv "$work/watch-symlink-external/sub" \
+  "$work/watch-symlink-external/sub.removed"
+wait_for_line_count "$symlink_target_marker" 5
+if [ -e "$work/watch-symlink-target/src/Linked.js" ]; then
+  echo "OCaml watcher retained output after a symlink target parent moved" >&2
+  exit 1
+fi
+mv "$work/watch-symlink-external/sub.removed" \
+  "$work/watch-symlink-external/sub"
+wait_for_file "$work/watch-symlink-target/src/Linked.js"
+wait_for_line_count "$symlink_target_marker" 6
+kill -TERM "$symlink_target_pid"
+wait "$symlink_target_pid"
+checked=$((checked + 1))
+
+feature_scope_marker="$work/watch-feature-scope/after-build.log"
+scope_block_request="$work/watch-feature-scope/block-request"
+scope_block_started="$work/watch-feature-scope/block-started"
+scope_block_release="$work/watch-feature-scope/block-release"
+REWATCH_SCOPE_REAL_BSC="$RESCRIPT_BSC_EXE" \
+REWATCH_SCOPE_BLOCK_REQUEST="$scope_block_request" \
+REWATCH_SCOPE_BLOCK_STARTED="$scope_block_started" \
+REWATCH_SCOPE_BLOCK_RELEASE="$scope_block_release" \
+RESCRIPT_BSC_EXE="$work/watch-scope-bsc.sh" \
+REWATCH_WATCH_FILTER_MARKER="$feature_scope_marker" \
+  "$ocaml" watch --features other \
+    --after-build "node $work/watch-filter-marker.js" \
+    "$work/watch-feature-scope" \
+    >"$work/watch-feature-scope.out" 2>"$work/watch-feature-scope.err" &
+feature_scope_pid=$!
+background_pids="$background_pids $feature_scope_pid"
+wait_for_line_count "$feature_scope_marker" 1
+: >"$scope_block_request"
+printf '{"name":"watch-feature-scope","sources":["src",{"dir":"inactive","feature":"inactive"}],"features":{"other":["inactive"]}}\n' \
+  >"$work/watch-feature-scope/rescript.json"
+wait_for_file "$scope_block_started"
+printf 'let createdDuringBuild = 2\n' \
+  >"$work/watch-feature-scope/inactive/CreatedDuringBuild.res"
+: >"$scope_block_release"
+wait_for_file "$work/watch-feature-scope/inactive/Inactive.js"
+wait_for_file "$work/watch-feature-scope/inactive/CreatedDuringBuild.js"
+wait_for_line_count "$feature_scope_marker" 3
+if ! line_count_stays "$feature_scope_marker" 3; then
+  echo "OCaml watcher lost or duplicated an edit during a source-scope transition" >&2
+  cat "$work/watch-feature-scope.out" "$work/watch-feature-scope.err" >&2
+  exit 1
+fi
+kill -TERM "$feature_scope_pid"
+wait "$feature_scope_pid"
+checked=$((checked + 1))
+
 rust_filter_marker="$work/watch-filter-rust/after-build.log"
 REWATCH_WATCH_FILTER_MARKER="$rust_filter_marker" \
-  "$rust" watch --filter 'Include\.res$' \
+  "$rust" watch --features other --filter 'Include\.res$' \
     --after-build "node $work/watch-filter-marker.js" \
     "$work/watch-filter-rust" \
     >"$work/watch-filter-rust.out" 2>"$work/watch-filter-rust.err" &
@@ -1134,7 +1339,7 @@ wait "$rust_filter_pid"
 
 ocaml_filter_marker="$work/watch-filter-ocaml/after-build.log"
 REWATCH_WATCH_FILTER_MARKER="$ocaml_filter_marker" \
-  "$ocaml" watch --filter 'Include\.res$' \
+  "$ocaml" watch --features other --filter 'Include\.res$' \
     --after-build "node $work/watch-filter-marker.js" \
     "$work/watch-filter-ocaml" \
     >"$work/watch-filter-ocaml.out" 2>"$work/watch-filter-ocaml.err" &
@@ -1153,6 +1358,19 @@ if cmp -s "$work/watch-filter-ocaml-initial.js" \
     "$work/watch-filter-ocaml/src/Include.js" || \
   ! grep -F '2' "$work/watch-filter-ocaml/src/Include.js" >/dev/null; then
   echo "OCaml watch filter did not rebuild its included source" >&2
+  cat "$work/watch-filter-ocaml.out" "$work/watch-filter-ocaml.err" >&2
+  exit 1
+fi
+printf 'let value = 11\n' >"$work/watch-filter-ocaml/src/Exclude.res"
+if ! line_count_stays "$ocaml_filter_marker" 2; then
+  echo "OCaml watch filter rebuilt for an excluded-only edit" >&2
+  cat "$work/watch-filter-ocaml.out" "$work/watch-filter-ocaml.err" >&2
+  exit 1
+fi
+printf 'let value = 21\n' \
+  >"$work/watch-filter-ocaml/inactive/Inactive.res"
+if ! line_count_stays "$ocaml_filter_marker" 2; then
+  echo "OCaml watcher rebuilt for a feature-disabled source edit" >&2
   cat "$work/watch-filter-ocaml.out" "$work/watch-filter-ocaml.err" >&2
   exit 1
 fi
@@ -1217,7 +1435,33 @@ checked=$((checked + 1))
 run_case clean-missing-dependency exit2 exit2 clean "$work/missing-dependency"
 run_case clean-configless-dependency exit2 exit2 clean "$work/configless-dependency"
 run_case clean-malformed-dependency exit2 exit2 clean "$work/malformed-dependency"
-run_case watch-missing-dependency exit2 exit2 watch "$work/missing-dependency"
+set +e
+"$rust" watch "$work/missing-dependency" >"$work/rust.out" 2>"$work/rust.err"
+rust_status=$?
+set -e
+if [ "$rust_status" -ne 2 ]; then
+  echo "watch-missing-dependency: expected Rust exit 2, got $rust_status" >&2
+  cat "$work/rust.out" "$work/rust.err" >&2
+  exit 1
+fi
+"$ocaml" watch "$work/missing-dependency" \
+  >"$work/ocaml.out" 2>"$work/ocaml.err" &
+missing_dependency_watch_pid=$!
+background_pids="$background_pids $missing_dependency_watch_pid"
+wait_for_text "$work/ocaml.err" "Could not resolve dependency absent"
+if ! kill -0 "$missing_dependency_watch_pid" 2>/dev/null; then
+  echo "OCaml watcher exited after its initial dependency error" >&2
+  cat "$work/ocaml.out" "$work/ocaml.err" >&2
+  exit 1
+fi
+printf '{"name":"missing-dependency","sources":["src"]}\n' \
+  >"$work/missing-dependency/rescript.json"
+wait_for_file "$work/missing-dependency/src/A.js"
+kill -TERM "$missing_dependency_watch_pid"
+wait "$missing_dependency_watch_pid"
+printf '{"name":"missing-dependency","sources":["src"],"dependencies":["absent"]}\n' \
+  >"$work/missing-dependency/rescript.json"
+checked=$((checked + 1))
 run_cwd_case format-missing-dependency exit2 exit2 \
   "$work/missing-dependency" format
 run_cwd_case format-configless-dependency exit2 exit2 \

@@ -27,9 +27,10 @@ let read_file path =
 
 let write_file path contents =
   with_file_error ~action:"write formatted file" path (fun () ->
-    let channel = open_out_bin path in
-    Fun.protect ~finally:(fun () -> close_out_noerr channel)
-      (fun () -> output_string channel contents))
+    (* Formatting changes the contents of a user-owned file. Writing through
+       its existing inode preserves symlinks, hard links, ownership, ACLs, and
+       extended attributes that replacing the directory entry could lose. *)
+    File_util.write_file path contents)
 
 let bsc () =
   try Toolchain.bsc () with Toolchain.Error message -> raise (Error message)
@@ -249,15 +250,42 @@ let format_files ~check files =
 let format_stdin extension =
   if extension <> ".res" && extension <> ".resi" then
     raise (Error "--stdin must be .res or .resi");
-  let temporary = Filename.temp_file "rescript-ocaml-format-" extension in
-  Fun.protect
-    ~finally:(fun () -> try Sys.remove temporary with Sys_error _ -> ())
-    (fun () ->
-      let output = open_out_bin temporary in
-      Fun.protect ~finally:(fun () -> close_out_noerr output)
-        (fun () ->
-          try while true do output_char output (input_char stdin) done with End_of_file -> ());
-      print_string (formatted ~bsc:(bsc ()) ~target:"stdin" temporary))
+  (* The temporary pathname needs a cleanup owner before termination can
+     interrupt the command, otherwise an early signal can leave it behind. *)
+  let restore_deferred_signals = Platform.defer_termination_signals () in
+  let signals_restored = ref false in
+  let restore_signals () =
+    if not !signals_restored then (
+      signals_restored := true;
+      restore_deferred_signals ())
+  in
+  let temporary = ref None in
+  let remove_temporary () =
+    Option.iter
+      (fun path -> try Sys.remove path with Sys_error _ -> ())
+      !temporary
+  in
+  try
+    let path = Filename.temp_file "rescript-ocaml-format-" extension in
+    temporary := Some path;
+    Fun.protect ~finally:remove_temporary (fun () ->
+      restore_signals ();
+      let output = open_out_bin path in
+      (try
+         (try
+            while true do
+              output_char output (input_char stdin)
+            done
+          with End_of_file -> ());
+         close_out output
+       with exn ->
+         close_out_noerr output;
+         raise exn);
+      print_string (formatted ~bsc:(bsc ()) ~target:"stdin" path))
+  with exn ->
+    remove_temporary ();
+    let exn = try restore_signals (); exn with signal_exn -> signal_exn in
+    raise exn
 
 let run ~check ~stdin ~files =
   match stdin with

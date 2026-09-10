@@ -379,9 +379,11 @@ let watch ~verbosity ~folder ~prod ~features ~warn_error ~after_build ~filter
       initial_build := false
     with
     | Reported_failure _ -> ()
-    | Error message | Config.Error message | Source.Error message
+    | Package_error message | Error message | Config.Error message
+    | Source.Error message
     | Process.Error message -> prerr_endline message
     | (Sys_error _ as exn) | (Unix.Unix_error _ as exn) ->
       prerr_endline (Printexc.to_string exn)
   in
-  Watcher.run ~root ~prod ~clear_screen ~show_progress:(verbosity >= 0) ~build
+  Watcher.run ~root ~prod ~features ~filter ~clear_screen
+    ~show_progress:(verbosity >= 0) ~build

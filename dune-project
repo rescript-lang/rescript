@@ -33,11 +33,11 @@
   (yojson
    (= 3.0.0))
   (spawn
-   (>= v0.17.0))
+   (= v0.17.0))
   (cmdliner
-   (>= 2.0.0))
+   (= 2.1.1))
   (luv
-   (>= 0.5.14))
+   (= 0.5.14))
   (ounit2
    (and :with-test (= 2.2.7)))
   (odoc :with-doc)

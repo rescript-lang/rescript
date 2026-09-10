@@ -31,16 +31,5 @@ let write ~root ~dirs ~packages ~scans =
         ("version", `Int 2);
       ]
   in
-  let temporary =
-    Filename.temp_file ~temp_dir:(Filename.dirname path) ".sourcedirs-"
-      ".json.tmp"
-  in
-  Fun.protect
-    ~finally:(fun () -> File_util.remove_file temporary)
-    (fun () ->
-      let channel = open_out_bin temporary in
-      Fun.protect
-        ~finally:(fun () -> close_out_noerr channel)
-        (fun () -> Yojson.Safe.to_channel channel json);
-      File_util.remove_file path;
-      Sys.rename temporary path)
+  File_util.write_file_atomic ~ensure_parent:false ~perm:0o644 path
+    (Yojson.Safe.to_string json)

@@ -161,19 +161,5 @@ let verify_package context config =
 let write_package context (config : Config.t) =
   if not (matches context config) then (
     let info_path = path config.root in
-    File_util.ensure_dir (Filename.dirname info_path);
-    let temporary =
-      Filename.temp_file ~temp_dir:(Filename.dirname info_path)
-        ".compiler-info-" ".json.tmp"
-    in
-    Fun.protect
-      ~finally:(fun () -> File_util.remove_file temporary)
-      (fun () ->
-        let channel = open_out_bin temporary in
-        Fun.protect
-          ~finally:(fun () -> close_out_noerr channel)
-          (fun () ->
-            Yojson.Safe.pretty_to_channel channel (json context config);
-            output_char channel '\n');
-        File_util.remove_file info_path;
-        Sys.rename temporary info_path))
+    let contents = Yojson.Safe.pretty_to_string (json context config) ^ "\n" in
+    File_util.write_file_atomic ~perm:0o644 info_path contents)

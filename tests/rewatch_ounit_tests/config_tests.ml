@@ -194,12 +194,57 @@ let tests =
         with Config.Error message -> contains message "jsx.version"
       in
       check rejected "unsupported JSX versions are rejected without panicking";
-      write_file path {|{"name":"internal-path","path":"ignored"}|};
-      let config = Config.load path in
+      write_file path
+        {|{"name":"internal-path","path":"ignored","gentypeconfig":{}}|};
+      let alias_dir = Filename.concat root "alias" in
+      Unix.mkdir alias_dir 0o755;
+      let aliased_path =
+        Filename.concat alias_dir
+          (Filename.concat Filename.parent_dir_name "rescript.json")
+      in
+      let config = Config.load aliased_path in
       check
         (config.path = Unix.realpath path)
-        "the internal path field accepts a string but uses the actual config \
-         path";
+        "config loading canonicalizes a noncanonical path alias";
+      check
+        (config.root = Unix.realpath root)
+        "the package root uses the canonical config path";
+      let source = Filename.concat root "src/A.res" in
+      let build_dir = Filename.concat config.root "lib/bs" in
+      File_util.ensure_dir build_dir;
+      File_util.ensure_dir (Filename.dirname source);
+      write_file source "let value = 1\n";
+      let parse_job =
+        Compiler_process.parse_job ~bsc:"bsc" ~build_dir ~config "src/A.res"
+      in
+      let module_ =
+        Source.
+          {
+            name = "A";
+            implementation = "src/A.res";
+            interface = None;
+            is_dev = false;
+            feature = None;
+            deps = [];
+          }
+      in
+      let compile_job =
+        Compiler_process.compile_job ~bsc:"bsc" ~runtime:"runtime" ~build_dir
+          ~watch:false ~config ~dependency_dirs:[] module_ ~is_interface:false
+          "src/A.res"
+      in
+      let rec argument_after expected = function
+        | argument :: value :: _ when argument = expected -> Some value
+        | _ :: rest -> argument_after expected rest
+        | [] -> None
+      in
+      check
+        (parse_job.Process.cwd = compile_job.Process.cwd
+        && parse_job.cwd = build_dir)
+        "parser and compiler jobs derive the same canonical working directory";
+      check
+        (argument_after "-bs-project-root" compile_job.args = Some config.root)
+        "the compiler project-root argument uses the canonical job root";
       check
         (rejects path {|{"name":"internal-path","path":false}|} "path")
         "the internal path field retains Rust's string schema";

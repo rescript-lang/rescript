@@ -31,6 +31,68 @@ let read_file path =
   Fun.protect ~finally:(fun () -> close_in_noerr channel) (fun () ->
     really_input_string channel (in_channel_length channel))
 
+let with_output_channel channel write =
+  try
+    let result = write channel in
+    close_out channel;
+    result
+  with exn ->
+    close_out_noerr channel;
+    raise exn
+
+let write_file path contents =
+  let channel = open_out_bin path in
+  with_output_channel channel (fun channel -> output_string channel contents)
+
+let append_file path contents =
+  let channel =
+    open_out_gen [Open_wronly; Open_append; Open_binary] 0o644 path
+  in
+  with_output_channel channel (fun channel -> output_string channel contents)
+
+let restore_after_exception restore_signals exn =
+  let exn = try restore_signals (); exn with signal_exn -> signal_exn in
+  raise exn
+
+let write_file_atomic ?(ensure_parent = true) ?perm path contents =
+  if ensure_parent then ensure_dir (Filename.dirname path);
+  (* A temporary file must have a cleanup owner before a watch signal can
+     interrupt the command. Publishing is also signal-deferred so the final
+     path always names either the previous complete file or the replacement. *)
+  let restore_creation_signals = Platform.defer_termination_signals () in
+  let temporary = ref None in
+  let remove_temporary path =
+    try Sys.remove path with Sys_error _ | Unix.Unix_error _ -> ()
+  in
+  let perm =
+    match perm with
+    | Some _ as perm -> perm
+    | None -> (
+      try Some (Unix.stat path).Unix.st_perm
+      with Sys_error _ | Unix.Unix_error _ -> None)
+  in
+  try
+    let candidate =
+      Filename.temp_file ~temp_dir:(Filename.dirname path) ".rewatch-write-"
+        ".tmp"
+    in
+    temporary := Some candidate;
+    Fun.protect
+      ~finally:(fun () -> Option.iter remove_temporary !temporary)
+      (fun () ->
+        restore_creation_signals ();
+        Option.iter (Unix.chmod candidate) perm;
+        write_file candidate contents;
+        let restore_publish_signals = Platform.defer_termination_signals () in
+        (try
+           Sys.rename candidate path;
+           temporary := None;
+           restore_publish_signals ()
+         with exn -> restore_after_exception restore_publish_signals exn))
+  with exn ->
+    Option.iter remove_temporary !temporary;
+    restore_after_exception restore_creation_signals exn
+
 (* Callers that already created the destination directory may skip that work,
    avoiding repeated metadata probes when publishing many files. *)
 let copy_existing_file ?(ensure_parent = true) source destination =
@@ -40,11 +102,9 @@ let copy_existing_file ?(ensure_parent = true) source destination =
     ~finally:(fun () -> close_in_noerr input)
     (fun () ->
       let output = open_out_bin destination in
-      Fun.protect
-        ~finally:(fun () -> close_out_noerr output)
-        (fun () ->
-          really_input_string input (in_channel_length input)
-          |> output_string output))
+      with_output_channel output (fun output ->
+        really_input_string input (in_channel_length input)
+        |> output_string output))
 
 let copy_optional_existing_file ?(ensure_parent = true) source destination =
   try copy_existing_file ~ensure_parent source destination

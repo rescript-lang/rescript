@@ -1318,6 +1318,71 @@ warning-free build, all 18 OUnit2 tests, the dedicated 297-case differential
 configuration gate, focused integration runner, and 69-case command-validation
 gate passed after the split.
 
+The watcher now derives both native registrations and content snapshots from
+the effective source selection of each local package. Dependency feature
+requests are unioned before selecting directories, development sources use the
+same local/production rule as build discovery, and root `--filter` matching is
+applied before a source enters a snapshot. Edits confined to a disabled feature
+or an excluded basename therefore do not run an otherwise empty rebuild or its
+post-build hook. Snapshot reconciliation reads only the three package control
+files and active configured source trees; it no longer recursively scans every
+package root and filters the resulting files afterward. This closes a concrete
+source of superfluous filesystem calls rather than merely improving benchmark
+timings. Snapshot reconciliation captures the prospective scope before each
+build, so a scope activation itself does not cause a duplicate build while a
+file created after discovery in that newly active directory still queues a
+follow-up build. Unresolved dependency paths within the workspace remain in the
+snapshot and temporarily register their nearest existing ancestor, so creating
+an installed or workspace package can recover the command without an unrelated
+source edit. Candidate watches advance one path component at a time instead of
+recursively expanding `node_modules`, and canonical containment prevents them
+from escaping the workspace through `..` or symlink components. Active regular
+source symlinks also retain a shallow watch on their target parent, including
+while the target is temporarily absent, so external atomic rewrites and
+delete/recreate cycles remain observable. Native registration is followed by a
+fresh snapshot, closing the handoff window for edits that land while a newly
+needed handle is installed. The 79-case differential gate covers dependency
+installation and candidate fallback, external symlink target replacement, the
+delayed-compiler race, included, filter-excluded, and feature-disabled live
+edits, and recovery from malformed root or dependency configuration.
+
+All file writers now report flush and close failures. Generated package
+metadata, source-directory metadata, and namespace maps use same-directory
+temporary files so their public paths always contain a complete old or new
+value, with termination deferred only across temporary ownership and final
+publication. Formatting deliberately writes through the existing user-owned
+file instead: replacing that directory entry would break symlinks and hard
+links and could discard ownership, ACLs, or extended attributes. OUnit coverage
+retains complete replacement and permissions for generated files, propagates a
+buffered `/dev/full` failure where that Unix device exists, and verifies source
+symlink and hard-link behavior. The stdin formatter installs cleanup ownership
+before deferred termination can be delivered.
+
+### Review of later Rust fixes
+
+Three later Rust fixes were audited explicitly against the port:
+
+- [#8639](https://github.com/rescript-lang/rescript/pull/8639) keeps GenType's
+  parser locations and `-bs-project-root` in the same canonical Windows path
+  form. The OCaml data flow already has that invariant: loading a config
+  canonicalizes its path and package root, and both the parse working directory
+  and compile project-root argument derive from that same value. The existing
+  canonical-root unit check covers the platform-independent part; a native
+  Windows build through an 8.3 alias remains in the VM handoff because Linux
+  cannot provide that path form.
+- [#8640](https://github.com/rescript-lang/rescript/pull/8640) lets `clean`
+  operate when the module graph is invalid. Cleanup discovery now returns raw
+  implementation paths before duplicate/interface graph validation, while
+  ordinary build discovery retains those validations. OUnit creates two
+  colliding modules and requires both in-source/out-of-source owned outputs to
+  be removed successfully.
+- [#8641](https://github.com/rescript-lang/rescript/pull/8641) keeps watch alive
+  after full-rebuild initialization errors. The OCaml watch error boundary
+  already retains the prior watch state and reports configuration, source,
+  package, process, and filesystem failures. Differential lifecycle cases
+  corrupt and repair root/dependency configuration and install a previously
+  missing dependency without restarting the watcher.
+
 ## Known gaps
 
 - Incremental state currently relies on artifact timestamps, byte-identical CMI
@@ -1547,7 +1612,8 @@ gate passed after the split.
 
 - `spawn` is accepted: it is a narrow, MIT-licensed Jane Street package with
   explicit Linux, macOS, and Windows support. It replaces bespoke fork/exec/cwd
-  code and materially reduces process-launch risk.
+  code and materially reduces process-launch risk. Production constraints pin
+  the reviewed v0.17.0 release exactly.
 - OpenTelemetry is intentionally omitted from the OCaml port by project
   decision. Adding an OTLP exporter, span stack, and shutdown lifecycle would
   introduce substantial optional machinery and dependencies; this does not
@@ -1559,7 +1625,7 @@ gate passed after the split.
   reproducing clap's whitespace and headings. This presentation difference is
   accepted; command and option discoverability, command selection, validation,
   and exit classes remain compatibility requirements and are tested
-  independently.
+  independently. Production constraints pin the reviewed 2.1.1 release.
 - JSON deriving is not currently justified. The config loader must retain raw
   keys to distinguish deprecated, known-unsupported, and forward-compatible
   unknown fields; generated codecs would still require substantial custom
@@ -1581,8 +1647,10 @@ gate passed after the split.
   problem. The pinned version and upstream status must be reviewed during
   dependency updates. On Linux ARM64, static inclusion increased the promoted
   executable from approximately 3.6 MiB to 5.2 MiB; `ldd` still reports only
-  libc and libm. The packaged third-party notices must include Luv and libuv's
-  permissive license notices before general distribution.
+  libc and libm. Production constraints pin the reviewed 0.5.14 release. Every
+  non-Windows binary package that carries the OCaml executable includes
+  `THIRD_PARTY_NOTICES_REWATCH.md`, covering Cmdliner, Yojson, Spawn, Luv,
+  libuv, ctypes, and integers; a dry-run package build confirms its inclusion.
 
 ## Next actions
 
