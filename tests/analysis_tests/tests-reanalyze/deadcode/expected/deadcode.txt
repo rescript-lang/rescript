@@ -2004,149 +2004,65 @@
   Implementation 0
   Implementation 0
 
-  Incorrect Dead Annotation
-  DeadTest.res:159:1-28
-  deadIncorrect  is annotated @dead but is live
-
-  Warning Dead Module
-  ModuleAliases.res:10:12-61
-  ModuleAliases.Outer2.Inner2.InnerNested is a dead module as all its items are dead.
-
-  Warning Dead Module
-  TypeParams2.res:0:1
-  TypeParams2 is a dead module as all its items are dead.
-
-  Warning Dead Module
-  ScopedAnnotationsOverride.res:0:1
-  ScopedAnnotationsOverride is a dead module as all its items are dead.
-
-  Warning Dead Module
-  ModuleExceptionBug.res:1:8-52
-  ModuleExceptionBug.Dep is a dead module as all its items are dead.
-
-  Warning Dead Module
-  ModuleAliases.res:2:10-56
-  ModuleAliases.Outer.Inner is a dead module as all its items are dead.
-
-  Warning Dead Module
-  ModuleAliases2.res:11:10-68
-  ModuleAliases2.Outer.Inner is a dead module as all its items are dead.
-
   Warning Dead Module
   AutoAnnotate.res:0:1
   AutoAnnotate is a dead module as all its items are dead.
 
-  Warning Dead Module
-  FirstClassModulesInterface.res:0:1
-  FirstClassModulesInterface is a dead module as all its items are dead.
+  Warning Dead Type
+  AutoAnnotate.res:1:16-21
+  variant.R is a variant case which is never constructed
 
-  Warning Dead Module
-  FirstClassModulesInterface.resi:0:1
-  FirstClassModulesInterface is a dead module as all its items are dead.
+  Warning Dead Type
+  AutoAnnotate.res:4:16-31
+  record.variant is a record label never used to read a value
 
-  Warning Dead Module
-  Newsyntax.res:0:1
-  Newsyntax is a dead module as all its items are dead.
+  Warning Dead Type
+  AutoAnnotate.res:6:12-18
+  r2.r2 is a record label never used to read a value
+
+  Warning Dead Type
+  AutoAnnotate.res:8:12-18
+  r3.r3 is a record label never used to read a value
+
+  Warning Dead Type
+  AutoAnnotate.res:10:12-18
+  r4.r4 is a record label never used to read a value
+
+  Warning Dead Type
+  AutoAnnotate.res:14:3-14
+  annotatedVariant.R2 is a variant case which is never constructed
+
+  Warning Dead Type
+  AutoAnnotate.res:15:5-10
+  annotatedVariant.R4 is a variant case which is never constructed
 
   Warning Dead Module
   BucklescriptAnnotations.res:0:1
   BucklescriptAnnotations is a dead module as all its items are dead.
 
-  Warning Dead Module
-  EverythingLiveHere.res:0:1
-  EverythingLiveHere is a dead module as all its items are dead.
+  Warning Dead Value
+  BucklescriptAnnotations.res:22:1-68
+  bar is never used
 
-  Warning Dead Module
-  TransitiveType2.res:0:1
-  TransitiveType2 is a dead module as all its items are dead.
-
-  Warning Dead Module
-  TypeParams1.res:0:1
-  TypeParams1 is a dead module as all its items are dead.
-
-  Warning Dead Module
-  Types.res:152:8-79
-  Types.ObjectId is a dead module as all its items are dead.
-
-  Warning Dead Module
-  ObjectLiteralSideEffects.res:0:1
-  ObjectLiteralSideEffects is a dead module as all its items are dead.
-
-  Warning Dead Module
-  ModuleAliases2.res:0:1
-  ModuleAliases2 is a dead module as all its items are dead.
-
-  Warning Dead Module
-  DeadTest.res:27:8-97
-  DeadTest.M is a dead module as all its items are dead.
-
-  Warning Dead Module
-  DeadTestBlacklist.res:0:1
-  DeadTestBlacklist is a dead module as all its items are dead.
-
-  Warning Dead Module
-  ErrorHandler.resi:0:1
-  ErrorHandler is a dead module as all its items are dead.
-
-  Warning Dead Module
-  ModuleAliases2.res:7:8-130
-  ModuleAliases2.Outer is a dead module as all its items are dead.
-
-  Warning Dead Module
-  ErrorHandler.res:0:1
-  ErrorHandler is a dead module as all its items are dead.
-
-  Warning Dead Module
-  DeadTestWithInterface.res:1:8-54
-  DeadTestWithInterface.Ext_buffer is a dead module as all its items are dead.
+  Warning Dead Exception
+  DeadExn.res:7:1-15
+  DeadE is never raised or passed as value
 
   Warning Dead Value
-  DeadTestWithInterface.res:2:3-12
-  Ext_buffer.x is never used
+  DeadExn.res:8:1-25
+  eToplevel is never used
 
   Warning Dead Value
-  DeadTestWithInterface.res:4:3-12
-  Ext_buffer.x is never used
-
-  Warning Dead Value
-  TestImmutableArray.res:12:1-54
-  testBeltArrayGet is never used
-
-  Warning Dead Value
-  TestImmutableArray.res:17:1-58
-  testBeltArraySet is never used
-
-  Warning Dead Type
-  ImportJsValue.res:11:3-8
-  point.x is a record label never used to read a value
-
-  Warning Dead Type
-  ImportJsValue.res:12:3-16
-  point.y is a record label never used to read a value
-
-  Warning Dead Type
-  ImportJsValue.res:67:3-10
-  variant.I is a variant case which is never constructed
-
-  Warning Dead Type
-  ImportJsValue.res:68:5-13
-  variant.S is a variant case which is never constructed
-
-  Warning Dead Type
-  Hooks.res:53:11-19
-  r.x is a record label never used to read a value
-
-  Warning Dead Value
-  ErrorHandler.resi:10:1-10
-  x is never used
-
-  Warning Dead Value
-  Shadow.res:11:3-22
-  M.test is never used
+  DeadRT.res:5:1-116
+  emitModuleAccessPath is never used
 
   Warning Dead Value
   DeadTest.res:2:1-17
   fortytwo is never used
+
+  Warning Dead Module
+  DeadTest.res:27:8-97
+  DeadTest.M is a dead module as all its items are dead.
 
   Warning Dead Value
   DeadTest.res:31:3-34
@@ -2220,57 +2136,33 @@
   DeadTest.res:157:12-17
   rc.a is a record label never used to read a value
 
+  Incorrect Dead Annotation
+  DeadTest.res:159:1-28
+  deadIncorrect  is annotated @dead but is live
+
   Warning Dead Type
   DeadTest.res:164:25-30
   inlineRecord.IR.a is a record label never used to read a value
 
-  Warning Dead Value
-  DeadRT.res:5:1-116
-  emitModuleAccessPath is never used
-
-  Warning Dead Type
-  ModuleAliases.res:3:20-32
-  Outer.Inner.innerT.inner is a record label never used to read a value
-
-  Warning Dead Type
-  ModuleAliases.res:11:17-27
-  Outer2.Inner2.InnerNested.t.nested is a record label never used to read a value
-
-  Warning Dead Type
-  FirstClassModulesInterface.resi:3:3-8
-  record.x is a record label never used to read a value
-
-  Warning Dead Type
-  FirstClassModulesInterface.resi:4:3-11
-  record.y is a record label never used to read a value
+  Warning Dead Module
+  DeadTestBlacklist.res:0:1
+  DeadTestBlacklist is a dead module as all its items are dead.
 
   Warning Dead Value
-  FirstClassModulesInterface.resi:7:1-13
-  r is never used
+  DeadTestBlacklist.res:1:1-10
+  x is never used
+
+  Warning Dead Module
+  DeadTestWithInterface.res:1:8-54
+  DeadTestWithInterface.Ext_buffer is a dead module as all its items are dead.
 
   Warning Dead Value
-  DeadValueTest.resi:2:1-18
-  valueDead is never used
+  DeadTestWithInterface.res:2:3-12
+  Ext_buffer.x is never used
 
-  Warning Dead Value With Side Effects
-  ForOf.res:10:1-133
-  sideEffects is never used and could have side effects
-
-  Warning Dead Type
-  References.res:39:28-33
-  requiresConversion.x is a record label never used to read a value
-
-  Warning Dead Type
-  RepeatedLabel.res:2:3-9
-  userData.a is a record label never used to read a value
-
-  Warning Dead Type
-  RepeatedLabel.res:3:3-8
-  userData.b is a record label never used to read a value
-
-  Warning Dead Type
-  RepeatedLabel.res:9:3-11
-  tabState.f is a record label never used to read a value
+  Warning Dead Value
+  DeadTestWithInterface.res:4:3-12
+  Ext_buffer.x is never used
 
   Warning Dead Type
   DeadTypeTest.res:3:5
@@ -2285,68 +2177,340 @@
   deadType.InNeither is a variant case which is never constructed
 
   Warning Dead Type
-  TestPromise.res:6:3-8
-  fromPayload.x is a record label never used to read a value
-
-  Warning Dead Type
-  TestPromise.res:11:19-32
-  toPayload.result is a record label never used to read a value
-
-  Warning Dead Type
-  Variants.res:95:14-39
-  type_.Type is a variant case which is never constructed
-
-  Warning Dead Type
-  Variants.res:102:3-10
-  result1.Ok is a variant case which is never constructed
-
-  Warning Dead Type
-  Variants.res:103:5-13
-  result1.Error is a variant case which is never constructed
+  DeadTypeTest.resi:3:5
+  t.B is a variant case which is never constructed
 
   Warning Dead Value
-  TopLevelOptionalArgValueUse.res:16:1-42
-  deadEscape is never used
+  DeadTypeTest.resi:4:1-8
+  a is never used
+
+  Warning Dead Type
+  DeadTypeTest.resi:10:5-13
+  deadType.InNeither is a variant case which is never constructed
 
   Warning Dead Value
-  Newsyntax.res:1:1-10
+  DeadValueTest.res:2:1-17
+  valueDead is never used
+
+  Warning Dead Value
+  DeadValueTest.res:4:1-33
+  valueOnlyInImplementation is never used
+
+  Warning Dead Value
+  DeadValueTest.res:6:1-260
+  subList is never used
+
+  Warning Dead Value
+  DeadValueTest.resi:2:1-18
+  valueDead is never used
+
+  Warning Dead Type
+  Docstrings.res:61:5
+  t.B is a variant case which is never constructed
+
+  Warning Dead Module
+  ErrorHandler.res:0:1
+  ErrorHandler is a dead module as all its items are dead.
+
+  Warning Dead Value
+  ErrorHandler.res:11:1-19
+  x is never used
+
+  Warning Dead Module
+  ErrorHandler.resi:0:1
+  ErrorHandler is a dead module as all its items are dead.
+
+  Warning Dead Value
+  ErrorHandler.resi:10:1-10
+  x is never used
+
+  Warning Dead Module
+  EverythingLiveHere.res:0:1
+  EverythingLiveHere is a dead module as all its items are dead.
+
+  Warning Dead Value
+  EverythingLiveHere.res:1:1-9
   x is never used
 
   Warning Dead Value
-  Newsyntax.res:3:1-10
+  EverythingLiveHere.res:3:1-9
   y is never used
 
-  Warning Dead Type
-  Newsyntax.res:6:3-10
-  record.xxx is a record label never used to read a value
+  Warning Dead Value
+  EverythingLiveHere.res:5:1-9
+  z is never used
+
+  Warning Dead Module
+  FirstClassModulesInterface.res:0:1
+  FirstClassModulesInterface is a dead module as all its items are dead.
 
   Warning Dead Type
-  Newsyntax.res:7:3-10
-  record.yyy is a record label never used to read a value
+  FirstClassModulesInterface.res:2:3-8
+  record.x is a record label never used to read a value
 
   Warning Dead Type
-  Newsyntax.res:10:16
-  variant.A is a variant case which is never constructed
-
-  Warning Dead Type
-  Newsyntax.res:10:20-25
-  variant.B is a variant case which is never constructed
-
-  Warning Dead Type
-  Newsyntax.res:10:26-27
-  variant.C is a variant case which is never constructed
-
-  Warning Dead Type
-  Newsyntax.res:12:17-22
-  record2.xx is a record label never used to read a value
-
-  Warning Dead Type
-  Newsyntax.res:12:24-29
-  record2.yy is a record label never used to read a value
+  FirstClassModulesInterface.res:3:3-11
+  record.y is a record label never used to read a value
 
   Warning Dead Value
-  DeadTestBlacklist.res:1:1-10
-  x is never used
+  FirstClassModulesInterface.res:6:1-26
+  r is never used
+
+  Warning Dead Module
+  FirstClassModulesInterface.resi:0:1
+  FirstClassModulesInterface is a dead module as all its items are dead.
+
+  Warning Dead Type
+  FirstClassModulesInterface.resi:3:3-8
+  record.x is a record label never used to read a value
+
+  Warning Dead Type
+  FirstClassModulesInterface.resi:4:3-11
+  record.y is a record label never used to read a value
+
+  Warning Dead Value
+  FirstClassModulesInterface.resi:7:1-13
+  r is never used
+
+  Warning Dead Value With Side Effects
+  ForAwaitOf.res:10:1-148
+  sideEffects is never used and could have side effects
+
+  Warning Dead Value With Side Effects
+  ForOf.res:10:1-133
+  sideEffects is never used and could have side effects
+
+  Warning Dead Type
+  Hooks.res:53:11-19
+  r.x is a record label never used to read a value
+
+  Warning Dead Value
+  ImmutableArray.res:16:3-41
+  toArray is never used
+
+  Warning Dead Value
+  ImmutableArray.res:20:3-42
+  length is never used
+
+  Warning Dead Value
+  ImmutableArray.res:22:3-38
+  size is never used
+
+  Warning Dead Value
+  ImmutableArray.res:26:3-50
+  getExn is never used
+
+  Warning Dead Value
+  ImmutableArray.res:28:3-56
+  getUnsafe is never used
+
+  Warning Dead Value
+  ImmutableArray.res:30:3-49
+  shuffle is never used
+
+  Warning Dead Value
+  ImmutableArray.res:32:3-49
+  reverse is never used
+
+  Warning Dead Value
+  ImmutableArray.res:34:3-62
+  makeUninitialized is never used
+
+  Warning Dead Value
+  ImmutableArray.res:36:3-74
+  makeUninitializedUnsafe is never used
+
+  Warning Dead Value
+  ImmutableArray.res:38:3-44
+  make is never used
+
+  Warning Dead Value
+  ImmutableArray.res:40:3-46
+  range is never used
+
+  Warning Dead Value
+  ImmutableArray.res:42:3-64
+  rangeBy is never used
+
+  Warning Dead Value
+  ImmutableArray.res:44:3-50
+  makeByU is never used
+
+  Warning Dead Value
+  ImmutableArray.res:45:3-48
+  makeBy is never used
+
+  Warning Dead Value
+  ImmutableArray.res:47:3-70
+  makeByAndShuffleU is never used
+
+  Warning Dead Value
+  ImmutableArray.res:48:3-68
+  makeByAndShuffle is never used
+
+  Warning Dead Value
+  ImmutableArray.res:50:3-61
+  zip is never used
+
+  Warning Dead Value
+  ImmutableArray.res:52:3-72
+  zipByU is never used
+
+  Warning Dead Value
+  ImmutableArray.res:53:3-70
+  zipBy is never used
+
+  Warning Dead Value
+  ImmutableArray.res:55:3-47
+  unzip is never used
+
+  Warning Dead Value
+  ImmutableArray.res:57:3-66
+  concat is never used
+
+  Warning Dead Value
+  ImmutableArray.res:59:3-67
+  concatMany is never used
+
+  Warning Dead Value
+  ImmutableArray.res:61:3-77
+  slice is never used
+
+  Warning Dead Value
+  ImmutableArray.res:63:3-63
+  sliceToEnd is never used
+
+  Warning Dead Value
+  ImmutableArray.res:65:3-43
+  copy is never used
+
+  Warning Dead Value
+  ImmutableArray.res:67:3-54
+  forEachU is never used
+
+  Warning Dead Value
+  ImmutableArray.res:68:3-52
+  forEach is never used
+
+  Warning Dead Value
+  ImmutableArray.res:70:3-51
+  mapU is never used
+
+  Warning Dead Value
+  ImmutableArray.res:71:3-49
+  map is never used
+
+  Warning Dead Value
+  ImmutableArray.res:73:3-71
+  keepWithIndexU is never used
+
+  Warning Dead Value
+  ImmutableArray.res:74:3-69
+  keepWithIndex is never used
+
+  Warning Dead Value
+  ImmutableArray.res:76:3-59
+  keepMapU is never used
+
+  Warning Dead Value
+  ImmutableArray.res:77:3-57
+  keepMap is never used
+
+  Warning Dead Value
+  ImmutableArray.res:79:3-72
+  forEachWithIndexU is never used
+
+  Warning Dead Value
+  ImmutableArray.res:80:3-70
+  forEachWithIndex is never used
+
+  Warning Dead Value
+  ImmutableArray.res:82:3-69
+  mapWithIndexU is never used
+
+  Warning Dead Value
+  ImmutableArray.res:83:3-67
+  mapWithIndex is never used
+
+  Warning Dead Value
+  ImmutableArray.res:85:3-64
+  partitionU is never used
+
+  Warning Dead Value
+  ImmutableArray.res:86:3-62
+  partition is never used
+
+  Warning Dead Value
+  ImmutableArray.res:88:3-58
+  reduceU is never used
+
+  Warning Dead Value
+  ImmutableArray.res:89:3-56
+  reduce is never used
+
+  Warning Dead Value
+  ImmutableArray.res:91:3-72
+  reduceReverseU is never used
+
+  Warning Dead Value
+  ImmutableArray.res:92:3-70
+  reduceReverse is never used
+
+  Warning Dead Value
+  ImmutableArray.res:94:3-91
+  reduceReverse2U is never used
+
+  Warning Dead Value
+  ImmutableArray.res:95:3-89
+  reduceReverse2 is never used
+
+  Warning Dead Value
+  ImmutableArray.res:97:3-48
+  someU is never used
+
+  Warning Dead Value
+  ImmutableArray.res:98:3-46
+  some is never used
+
+  Warning Dead Value
+  ImmutableArray.res:100:3-50
+  everyU is never used
+
+  Warning Dead Value
+  ImmutableArray.res:101:3-48
+  every is never used
+
+  Warning Dead Value
+  ImmutableArray.res:103:3-69
+  every2U is never used
+
+  Warning Dead Value
+  ImmutableArray.res:104:3-67
+  every2 is never used
+
+  Warning Dead Value
+  ImmutableArray.res:106:3-67
+  some2U is never used
+
+  Warning Dead Value
+  ImmutableArray.res:107:3-65
+  some2 is never used
+
+  Warning Dead Value
+  ImmutableArray.res:109:3-63
+  cmpU is never used
+
+  Warning Dead Value
+  ImmutableArray.res:110:3-61
+  cmp is never used
+
+  Warning Dead Value
+  ImmutableArray.res:112:3-61
+  eqU is never used
+
+  Warning Dead Value
+  ImmutableArray.res:113:3-59
+  eq is never used
 
   Warning Dead Value
   ImmutableArray.resi:12:1-31
@@ -2580,6 +2744,98 @@
   ImmutableArray.resi:108:1-48
   eq is never used
 
+  Warning Dead Type
+  ImportHookDefault.res:2:3-14
+  person.name is a record label never used to read a value
+
+  Warning Dead Type
+  ImportHookDefault.res:3:3-10
+  person.age is a record label never used to read a value
+
+  Warning Dead Type
+  ImportHooks.res:3:3-14
+  person.name is a record label never used to read a value
+
+  Warning Dead Type
+  ImportHooks.res:4:3-10
+  person.age is a record label never used to read a value
+
+  Warning Dead Type
+  ImportJsValue.res:11:3-8
+  point.x is a record label never used to read a value
+
+  Warning Dead Type
+  ImportJsValue.res:12:3-16
+  point.y is a record label never used to read a value
+
+  Warning Dead Type
+  ImportJsValue.res:67:3-10
+  variant.I is a variant case which is never constructed
+
+  Warning Dead Type
+  ImportJsValue.res:68:5-13
+  variant.S is a variant case which is never constructed
+
+  Warning Dead Type
+  ImportMyBanner.res:5:17-28
+  message.text is a record label never used to read a value
+
+  Warning Dead Value
+  ImportMyBanner.res:12:1-15
+  make is never used
+
+  Warning Dead Module
+  ModuleAliases.res:2:10-56
+  ModuleAliases.Outer.Inner is a dead module as all its items are dead.
+
+  Warning Dead Type
+  ModuleAliases.res:3:20-32
+  Outer.Inner.innerT.inner is a record label never used to read a value
+
+  Warning Dead Module
+  ModuleAliases.res:10:12-61
+  ModuleAliases.Outer2.Inner2.InnerNested is a dead module as all its items are dead.
+
+  Warning Dead Type
+  ModuleAliases.res:11:17-27
+  Outer2.Inner2.InnerNested.t.nested is a record label never used to read a value
+
+  Warning Dead Module
+  ModuleAliases2.res:0:1
+  ModuleAliases2 is a dead module as all its items are dead.
+
+  Warning Dead Type
+  ModuleAliases2.res:3:3-8
+  record.x is a record label never used to read a value
+
+  Warning Dead Type
+  ModuleAliases2.res:4:3-11
+  record.y is a record label never used to read a value
+
+  Warning Dead Module
+  ModuleAliases2.res:7:8-130
+  ModuleAliases2.Outer is a dead module as all its items are dead.
+
+  Warning Dead Type
+  ModuleAliases2.res:9:17-29
+  Outer.outer.outer is a record label never used to read a value
+
+  Warning Dead Module
+  ModuleAliases2.res:11:10-68
+  ModuleAliases2.Outer.Inner is a dead module as all its items are dead.
+
+  Warning Dead Type
+  ModuleAliases2.res:13:19-31
+  Outer.Inner.inner.inner is a record label never used to read a value
+
+  Warning Dead Value
+  ModuleAliases2.res:21:1-10
+  q is never used
+
+  Warning Dead Module
+  ModuleExceptionBug.res:1:8-52
+  ModuleExceptionBug.Dep is a dead module as all its items are dead.
+
   Warning Dead Value
   ModuleExceptionBug.res:2:3-35
   Dep.customDouble is never used
@@ -2587,6 +2843,162 @@
   Warning Dead Exception
   ModuleExceptionBug.res:5:1-26
   MyOtherException is never raised or passed as value
+
+  Warning Dead Value
+  NestedModules.res:8:3-22
+  Universe.notExported is never used
+
+  Warning Dead Value
+  NestedModules.res:14:5-13
+  Universe.Nested2.x is never used
+
+  Warning Dead Value
+  NestedModules.res:19:5-13
+  Universe.Nested2.y is never used
+
+  Warning Dead Value
+  NestedModules.res:25:7-15
+  Universe.Nested2.Nested3.x is never used
+
+  Warning Dead Value
+  NestedModules.res:26:7-15
+  Universe.Nested2.Nested3.y is never used
+
+  Warning Dead Value
+  NestedModules.res:27:7-15
+  Universe.Nested2.Nested3.z is never used
+
+  Warning Dead Value
+  NestedModules.res:28:7-15
+  Universe.Nested2.Nested3.w is never used
+
+  Warning Dead Type
+  NestedModules.res:46:5-7
+  Universe.variant.A is a variant case which is never constructed
+
+  Warning Dead Type
+  NestedModules.res:47:7-15
+  Universe.variant.B is a variant case which is never constructed
+
+  Warning Dead Module
+  Newsyntax.res:0:1
+  Newsyntax is a dead module as all its items are dead.
+
+  Warning Dead Value
+  Newsyntax.res:1:1-10
+  x is never used
+
+  Warning Dead Value
+  Newsyntax.res:3:1-10
+  y is never used
+
+  Warning Dead Type
+  Newsyntax.res:6:3-10
+  record.xxx is a record label never used to read a value
+
+  Warning Dead Type
+  Newsyntax.res:7:3-10
+  record.yyy is a record label never used to read a value
+
+  Warning Dead Type
+  Newsyntax.res:10:16
+  variant.A is a variant case which is never constructed
+
+  Warning Dead Type
+  Newsyntax.res:10:20-25
+  variant.B is a variant case which is never constructed
+
+  Warning Dead Type
+  Newsyntax.res:10:26-27
+  variant.C is a variant case which is never constructed
+
+  Warning Dead Type
+  Newsyntax.res:12:17-22
+  record2.xx is a record label never used to read a value
+
+  Warning Dead Type
+  Newsyntax.res:12:24-29
+  record2.yy is a record label never used to read a value
+
+  Warning Dead Module
+  ObjectLiteralSideEffects.res:0:1
+  ObjectLiteralSideEffects is a dead module as all its items are dead.
+
+  Warning Dead Value With Side Effects
+  ObjectLiteralSideEffects.res:3:1-49
+  deadWithEffect is never used and could have side effects
+
+  Warning Dead Value
+  ObjectLiteralSideEffects.res:4:1-27
+  deadNoEffect is never used
+
+  Warning Dead Type
+  Opaque.res:2:26-41
+  opaqueFromRecords.A is a variant case which is never constructed
+
+  Warning Redundant Optional Argument
+  OptArg.res:1:1-48
+  optional argument x of function foo is always supplied (1 calls)
+
+  Warning Unused Argument
+  OptArg.res:1:1-48
+  optional argument y of function foo is never used
+
+  Warning Unused Argument
+  OptArg.res:1:1-48
+  optional argument z of function foo is never used
+
+  Warning Unused Argument
+  OptArg.res:3:1-38
+  optional argument x of function bar is never used
+
+  Warning Redundant Optional Argument
+  OptArg.res:9:1-54
+  optional argument a of function threeArgs is always supplied (2 calls)
+
+  Warning Unused Argument
+  OptArg.res:9:1-54
+  optional argument b of function threeArgs is never used
+
+  Warning Unused Argument
+  OptArg.res:14:1-42
+  optional argument a of function twoArgs is never used
+
+  Warning Unused Argument
+  OptArg.res:14:1-42
+  optional argument b of function twoArgs is never used
+
+  Warning Redundant Optional Argument
+  OptArg.res:20:1-51
+  optional argument a of function wrapOneArg is always supplied (1 calls)
+
+  Warning Unused Argument
+  OptArg.res:24:1-63
+  optional argument d of function fourArgs is never used
+
+  Warning Redundant Optional Argument
+  OptArg.res:26:1-70
+  optional argument c of function wrapfourArgs is always supplied (2 calls)
+
+  Warning Dead Value
+  OptArg.resi:1:1-54
+  foo is never used
+
+  Warning Unused Argument
+  OptArg.resi:2:1-50
+  optional argument x of function bar is never used
+
+  Warning Unused Argument
+  OptionalArgsLiveDead.res:1:1-33
+  optional argument fmt of function formatDate is never used
+
+  Warning Dead Value
+  OptionalArgsLiveDead.res:3:1-59
+  deadCaller is never used
+
+  Warning Dead Type
+  RecordRest.res:1:30-44
+  config.version is a record label never used to read a value
 
   Warning Dead Type
   Records.res:24:3-14
@@ -2616,21 +3028,37 @@
   Records.res:91:3-25
   business2.owner is a record label never used to read a value
 
-  Warning Dead Exception
-  DeadExn.res:7:1-15
-  DeadE is never raised or passed as value
-
-  Warning Dead Value
-  DeadExn.res:8:1-25
-  eToplevel is never used
+  Warning Dead Type
+  References.res:39:28-33
+  requiresConversion.x is a record label never used to read a value
 
   Warning Dead Type
-  ImportMyBanner.res:5:17-28
-  message.text is a record label never used to read a value
+  RepeatedLabel.res:2:3-9
+  userData.a is a record label never used to read a value
 
-  Warning Dead Value
-  ImportMyBanner.res:12:1-15
-  make is never used
+  Warning Dead Type
+  RepeatedLabel.res:3:3-8
+  userData.b is a record label never used to read a value
+
+  Warning Dead Type
+  RepeatedLabel.res:9:3-11
+  tabState.f is a record label never used to read a value
+
+  Warning Unused Argument
+  ReturnedOptionalSignature.res:1:1-63
+  optional argument outer of function returnedOptional is never used
+
+  Warning Unused Argument
+  ReturnedOptionalSignature.resi:1:1-80
+  optional argument outer of function returnedOptional is never used
+
+  Warning Unused Argument
+  ReturnedOptionalSignatureUse.res:5:3-82
+  optional argument outer of function InlineSignature.returnedOptional is never used
+
+  Warning Unused Argument
+  ReturnedOptionalSignatureUse.res:7:3-65
+  optional argument outer of function InlineSignature.returnedOptional is never used
 
   Warning Dead Value
   ScopedAnnotationsLiveVsDead.res:9:1-24
@@ -2644,237 +3072,205 @@
   ScopedAnnotationsLiveVsDead.res:12:1-25
   middleDead is never used
 
-  Warning Dead Value
-  ImmutableArray.res:16:3-41
-  toArray is never used
+  Warning Dead Module
+  ScopedAnnotationsOverride.res:0:1
+  ScopedAnnotationsOverride is a dead module as all its items are dead.
 
   Warning Dead Value
-  ImmutableArray.res:20:3-42
-  length is never used
+  ScopedAnnotationsOverride.res:2:3-16
+  M.before is never used
 
   Warning Dead Value
-  ImmutableArray.res:22:3-38
-  size is never used
+  ScopedAnnotationsOverride.res:22:1-20
+  afterModules is never used
 
   Warning Dead Value
-  ImmutableArray.res:26:3-50
-  getExn is never used
+  Shadow.res:11:3-22
+  M.test is never used
 
   Warning Dead Value
-  ImmutableArray.res:28:3-56
-  getUnsafe is never used
+  TestImmutableArray.res:12:1-54
+  testBeltArrayGet is never used
 
   Warning Dead Value
-  ImmutableArray.res:30:3-49
-  shuffle is never used
+  TestImmutableArray.res:17:1-58
+  testBeltArraySet is never used
 
   Warning Dead Value
-  ImmutableArray.res:32:3-49
-  reverse is never used
+  TestImport.res:13:1-43
+  innerStuffContents is never used
+
+  Warning Dead Type
+  TestImport.res:22:17-28
+  message.text is a record label never used to read a value
 
   Warning Dead Value
-  ImmutableArray.res:34:3-62
-  makeUninitialized is never used
-
-  Warning Dead Value
-  ImmutableArray.res:36:3-74
-  makeUninitializedUnsafe is never used
-
-  Warning Dead Value
-  ImmutableArray.res:38:3-44
+  TestImport.res:27:1-15
   make is never used
 
-  Warning Dead Value
-  ImmutableArray.res:40:3-46
-  range is never used
+  Warning Redundant Optional Argument
+  TestOptArg.res:3:1-28
+  optional argument x of function foo is always supplied (1 calls)
+
+  Warning Unused Argument
+  TestOptArg.res:9:1-65
+  optional argument x of function notSuppressesOptArgs is never used
+
+  Warning Unused Argument
+  TestOptArg.res:9:1-65
+  optional argument y of function notSuppressesOptArgs is never used
+
+  Warning Unused Argument
+  TestOptArg.res:9:1-65
+  optional argument z of function notSuppressesOptArgs is never used
+
+  Warning Dead Type
+  TestPromise.res:6:3-8
+  fromPayload.x is a record label never used to read a value
+
+  Warning Dead Type
+  TestPromise.res:11:19-32
+  toPayload.result is a record label never used to read a value
+
+  Warning Unused Argument
+  TopLevelOptionalArgValueUse.res:4:1-33
+  optional argument fmt of function formatDate is never used
 
   Warning Dead Value
-  ImmutableArray.res:42:3-64
-  rangeBy is never used
+  TopLevelOptionalArgValueUse.res:16:1-42
+  deadEscape is never used
+
+  Warning Unused Argument
+  TopLevelOptionalArgValueUse.res:33:1-85
+  optional argument fmt of function liveForwardingCaller is never used
+
+  Warning Redundant Optional Argument
+  TopLevelOptionalArgValueUse.res:41:1-46
+  optional argument fmt of function mutuallyRecursiveTarget is always supplied (1 calls)
+
+  Warning Dead Module
+  TransitiveType2.res:0:1
+  TransitiveType2 is a dead module as all its items are dead.
 
   Warning Dead Value
-  ImmutableArray.res:44:3-50
-  makeByU is never used
+  TransitiveType2.res:7:1-28
+  convertT2 is never used
+
+  Warning Dead Type
+  TransitiveType3.res:3:3-8
+  t3.i is a record label never used to read a value
+
+  Warning Dead Type
+  TransitiveType3.res:4:3-11
+  t3.s is a record label never used to read a value
+
+  Warning Dead Type
+  TypeCoercion.res:3:43-50
+  user.age is a record label never used to read a value
+
+  Warning Dead Type
+  TypeCoercion.res:6:25-33
+  wide.b is a record label never used to read a value
+
+  Warning Dead Type
+  TypeCoercion.res:10:22-30
+  unreadSource.u is a record label never used to read a value
+
+  Warning Dead Type
+  TypeCoercion.res:11:22-30
+  unreadTarget.u is a record label never used to read a value
+
+  Warning Dead Type
+  TypeCoercion.res:14:35-44
+  aliasedSource.sb is a record label never used to read a value
+
+  Warning Dead Type
+  TypeCoercion.res:18:35-44
+  aliasedTarget.tb is a record label never used to read a value
+
+  Warning Dead Module
+  TypeParams1.res:0:1
+  TypeParams1 is a dead module as all its items are dead.
 
   Warning Dead Value
-  ImmutableArray.res:45:3-48
-  makeBy is never used
+  TypeParams1.res:4:1-24
+  exportSomething is never used
+
+  Warning Dead Module
+  TypeParams2.res:0:1
+  TypeParams2 is a dead module as all its items are dead.
+
+  Warning Dead Type
+  TypeParams2.res:2:14-20
+  item.id is a record label never used to read a value
 
   Warning Dead Value
-  ImmutableArray.res:47:3-70
-  makeByAndShuffleU is never used
+  TypeParams2.res:10:1-24
+  exportSomething is never used
+
+  Warning Dead Type
+  TypeReexport.res:28:5-20
+  UseReexported.originalType.unusedField is a record label never used to read a value
+
+  Warning Dead Type
+  TypeReexport.res:49:5-19
+  UseOriginal.originalType.alsoUnused is a record label never used to read a value
+
+  Warning Dead Type
+  TypeReexport.res:71:5-20
+  OnlyReexportedDead.originalType.unusedField is a record label never used to read a value
+
+  Warning Dead Type
+  TypeReexport.res:91:27
+  VariantUseReexported.originalType.B is a variant case which is never constructed
+
+  Warning Dead Type
+  TypeReexport.res:109:27
+  VariantUseOriginal.originalType.B is a variant case which is never constructed
+
+  Warning Dead Type
+  TypeReexportCrossFileA.res:6:3-18
+  originalRecord.unusedField is a record label never used to read a value
+
+  Warning Dead Type
+  Types.res:12:3-13
+  typeWithVars.A is a variant case which is never constructed
+
+  Warning Dead Type
+  Types.res:13:5-9
+  typeWithVars.B is a variant case which is never constructed
+
+  Warning Dead Type
+  Types.res:35:27-47
+  mutuallyRecursiveB.a is a record label never used to read a value
+
+  Warning Dead Type
+  Types.res:56:3-5
+  opaqueVariant.A is a variant case which is never constructed
+
+  Warning Dead Type
+  Types.res:57:5
+  opaqueVariant.B is a variant case which is never constructed
+
+  Warning Dead Type
+  Types.res:78:3-8
+  record.i is a record label never used to read a value
+
+  Warning Dead Type
+  Types.res:79:3-11
+  record.s is a record label never used to read a value
+
+  Warning Dead Type
+  Types.res:124:20-26
+  someRecord.id is a record label never used to read a value
+
+  Warning Dead Module
+  Types.res:152:8-79
+  Types.ObjectId is a dead module as all its items are dead.
 
   Warning Dead Value
-  ImmutableArray.res:48:3-68
-  makeByAndShuffle is never used
-
-  Warning Dead Value
-  ImmutableArray.res:50:3-61
-  zip is never used
-
-  Warning Dead Value
-  ImmutableArray.res:52:3-72
-  zipByU is never used
-
-  Warning Dead Value
-  ImmutableArray.res:53:3-70
-  zipBy is never used
-
-  Warning Dead Value
-  ImmutableArray.res:55:3-47
-  unzip is never used
-
-  Warning Dead Value
-  ImmutableArray.res:57:3-66
-  concat is never used
-
-  Warning Dead Value
-  ImmutableArray.res:59:3-67
-  concatMany is never used
-
-  Warning Dead Value
-  ImmutableArray.res:61:3-77
-  slice is never used
-
-  Warning Dead Value
-  ImmutableArray.res:63:3-63
-  sliceToEnd is never used
-
-  Warning Dead Value
-  ImmutableArray.res:65:3-43
-  copy is never used
-
-  Warning Dead Value
-  ImmutableArray.res:67:3-54
-  forEachU is never used
-
-  Warning Dead Value
-  ImmutableArray.res:68:3-52
-  forEach is never used
-
-  Warning Dead Value
-  ImmutableArray.res:70:3-51
-  mapU is never used
-
-  Warning Dead Value
-  ImmutableArray.res:71:3-49
-  map is never used
-
-  Warning Dead Value
-  ImmutableArray.res:73:3-71
-  keepWithIndexU is never used
-
-  Warning Dead Value
-  ImmutableArray.res:74:3-69
-  keepWithIndex is never used
-
-  Warning Dead Value
-  ImmutableArray.res:76:3-59
-  keepMapU is never used
-
-  Warning Dead Value
-  ImmutableArray.res:77:3-57
-  keepMap is never used
-
-  Warning Dead Value
-  ImmutableArray.res:79:3-72
-  forEachWithIndexU is never used
-
-  Warning Dead Value
-  ImmutableArray.res:80:3-70
-  forEachWithIndex is never used
-
-  Warning Dead Value
-  ImmutableArray.res:82:3-69
-  mapWithIndexU is never used
-
-  Warning Dead Value
-  ImmutableArray.res:83:3-67
-  mapWithIndex is never used
-
-  Warning Dead Value
-  ImmutableArray.res:85:3-64
-  partitionU is never used
-
-  Warning Dead Value
-  ImmutableArray.res:86:3-62
-  partition is never used
-
-  Warning Dead Value
-  ImmutableArray.res:88:3-58
-  reduceU is never used
-
-  Warning Dead Value
-  ImmutableArray.res:89:3-56
-  reduce is never used
-
-  Warning Dead Value
-  ImmutableArray.res:91:3-72
-  reduceReverseU is never used
-
-  Warning Dead Value
-  ImmutableArray.res:92:3-70
-  reduceReverse is never used
-
-  Warning Dead Value
-  ImmutableArray.res:94:3-91
-  reduceReverse2U is never used
-
-  Warning Dead Value
-  ImmutableArray.res:95:3-89
-  reduceReverse2 is never used
-
-  Warning Dead Value
-  ImmutableArray.res:97:3-48
-  someU is never used
-
-  Warning Dead Value
-  ImmutableArray.res:98:3-46
-  some is never used
-
-  Warning Dead Value
-  ImmutableArray.res:100:3-50
-  everyU is never used
-
-  Warning Dead Value
-  ImmutableArray.res:101:3-48
-  every is never used
-
-  Warning Dead Value
-  ImmutableArray.res:103:3-69
-  every2U is never used
-
-  Warning Dead Value
-  ImmutableArray.res:104:3-67
-  every2 is never used
-
-  Warning Dead Value
-  ImmutableArray.res:106:3-67
-  some2U is never used
-
-  Warning Dead Value
-  ImmutableArray.res:107:3-65
-  some2 is never used
-
-  Warning Dead Value
-  ImmutableArray.res:109:3-63
-  cmpU is never used
-
-  Warning Dead Value
-  ImmutableArray.res:110:3-61
-  cmp is never used
-
-  Warning Dead Value
-  ImmutableArray.res:112:3-61
-  eqU is never used
-
-  Warning Dead Value
-  ImmutableArray.res:113:3-59
-  eq is never used
-
-  Warning Dead Value
-  BucklescriptAnnotations.res:22:1-68
-  bar is never used
+  Types.res:157:3-11
+  ObjectId.x is never used
 
   Warning Dead Type
   Unboxed.res:2:11-16
@@ -2896,77 +3292,21 @@
   Unboxed.res:14:14-22
   r2.B.g is a record label never used to read a value
 
-  Warning Dead Value
-  ScopedAnnotationsOverride.res:2:3-16
-  M.before is never used
-
-  Warning Dead Value
-  ScopedAnnotationsOverride.res:22:1-20
-  afterModules is never used
+  Warning Redundant Optional Argument
+  Unison.res:17:1-55
+  optional argument break_ of function group is always supplied (2 calls)
 
   Warning Dead Type
-  AutoAnnotate.res:1:16-21
-  variant.R is a variant case which is never constructed
+  Variants.res:95:14-39
+  type_.Type is a variant case which is never constructed
 
   Warning Dead Type
-  AutoAnnotate.res:4:16-31
-  record.variant is a record label never used to read a value
+  Variants.res:102:3-10
+  result1.Ok is a variant case which is never constructed
 
   Warning Dead Type
-  AutoAnnotate.res:6:12-18
-  r2.r2 is a record label never used to read a value
-
-  Warning Dead Type
-  AutoAnnotate.res:8:12-18
-  r3.r3 is a record label never used to read a value
-
-  Warning Dead Type
-  AutoAnnotate.res:10:12-18
-  r4.r4 is a record label never used to read a value
-
-  Warning Dead Type
-  AutoAnnotate.res:14:3-14
-  annotatedVariant.R2 is a variant case which is never constructed
-
-  Warning Dead Type
-  AutoAnnotate.res:15:5-10
-  annotatedVariant.R4 is a variant case which is never constructed
-
-  Warning Dead Type
-  DeadTypeTest.resi:3:5
-  t.B is a variant case which is never constructed
-
-  Warning Dead Value
-  DeadTypeTest.resi:4:1-8
-  a is never used
-
-  Warning Dead Type
-  DeadTypeTest.resi:10:5-13
-  deadType.InNeither is a variant case which is never constructed
-
-  Warning Dead Value With Side Effects
-  ObjectLiteralSideEffects.res:3:1-49
-  deadWithEffect is never used and could have side effects
-
-  Warning Dead Value
-  ObjectLiteralSideEffects.res:4:1-27
-  deadNoEffect is never used
-
-  Warning Dead Value
-  OptArg.resi:1:1-54
-  foo is never used
-
-  Warning Dead Value
-  TypeParams1.res:4:1-24
-  exportSomething is never used
-
-  Warning Dead Type
-  TypeParams2.res:2:14-20
-  item.id is a record label never used to read a value
-
-  Warning Dead Value
-  TypeParams2.res:10:1-24
-  exportSomething is never used
+  Variants.res:103:5-13
+  result1.Error is a variant case which is never constructed
 
   Warning Dead Type
   VariantsWithPayload.res:49:3-5
@@ -3007,345 +3347,5 @@
   Warning Dead Type
   VariantsWithPayload.res:96:23-32
   variant1Object.R is a variant case which is never constructed
-
-  Warning Dead Value
-  TransitiveType2.res:7:1-28
-  convertT2 is never used
-
-  Warning Dead Type
-  Types.res:12:3-13
-  typeWithVars.A is a variant case which is never constructed
-
-  Warning Dead Type
-  Types.res:13:5-9
-  typeWithVars.B is a variant case which is never constructed
-
-  Warning Dead Type
-  Types.res:35:27-47
-  mutuallyRecursiveB.a is a record label never used to read a value
-
-  Warning Dead Type
-  Types.res:56:3-5
-  opaqueVariant.A is a variant case which is never constructed
-
-  Warning Dead Type
-  Types.res:57:5
-  opaqueVariant.B is a variant case which is never constructed
-
-  Warning Dead Type
-  Types.res:78:3-8
-  record.i is a record label never used to read a value
-
-  Warning Dead Type
-  Types.res:79:3-11
-  record.s is a record label never used to read a value
-
-  Warning Dead Type
-  Types.res:124:20-26
-  someRecord.id is a record label never used to read a value
-
-  Warning Dead Value
-  Types.res:157:3-11
-  ObjectId.x is never used
-
-  Warning Dead Value
-  TestImport.res:13:1-43
-  innerStuffContents is never used
-
-  Warning Dead Type
-  TestImport.res:22:17-28
-  message.text is a record label never used to read a value
-
-  Warning Dead Value
-  TestImport.res:27:1-15
-  make is never used
-
-  Warning Dead Value
-  DeadValueTest.res:2:1-17
-  valueDead is never used
-
-  Warning Dead Value
-  DeadValueTest.res:4:1-33
-  valueOnlyInImplementation is never used
-
-  Warning Dead Value
-  DeadValueTest.res:6:1-260
-  subList is never used
-
-  Warning Dead Type
-  ModuleAliases2.res:3:3-8
-  record.x is a record label never used to read a value
-
-  Warning Dead Type
-  ModuleAliases2.res:4:3-11
-  record.y is a record label never used to read a value
-
-  Warning Dead Type
-  ModuleAliases2.res:9:17-29
-  Outer.outer.outer is a record label never used to read a value
-
-  Warning Dead Type
-  ModuleAliases2.res:13:19-31
-  Outer.Inner.inner.inner is a record label never used to read a value
-
-  Warning Dead Value
-  ModuleAliases2.res:21:1-10
-  q is never used
-
-  Warning Dead Type
-  TypeReexport.res:28:5-20
-  UseReexported.originalType.unusedField is a record label never used to read a value
-
-  Warning Dead Type
-  TypeReexport.res:49:5-19
-  UseOriginal.originalType.alsoUnused is a record label never used to read a value
-
-  Warning Dead Type
-  TypeReexport.res:71:5-20
-  OnlyReexportedDead.originalType.unusedField is a record label never used to read a value
-
-  Warning Dead Type
-  TypeReexport.res:91:27
-  VariantUseReexported.originalType.B is a variant case which is never constructed
-
-  Warning Dead Type
-  TypeReexport.res:109:27
-  VariantUseOriginal.originalType.B is a variant case which is never constructed
-
-  Warning Dead Value
-  NestedModules.res:8:3-22
-  Universe.notExported is never used
-
-  Warning Dead Value
-  NestedModules.res:14:5-13
-  Universe.Nested2.x is never used
-
-  Warning Dead Value
-  NestedModules.res:19:5-13
-  Universe.Nested2.y is never used
-
-  Warning Dead Value
-  NestedModules.res:25:7-15
-  Universe.Nested2.Nested3.x is never used
-
-  Warning Dead Value
-  NestedModules.res:26:7-15
-  Universe.Nested2.Nested3.y is never used
-
-  Warning Dead Value
-  NestedModules.res:27:7-15
-  Universe.Nested2.Nested3.z is never used
-
-  Warning Dead Value
-  NestedModules.res:28:7-15
-  Universe.Nested2.Nested3.w is never used
-
-  Warning Dead Type
-  NestedModules.res:46:5-7
-  Universe.variant.A is a variant case which is never constructed
-
-  Warning Dead Type
-  NestedModules.res:47:7-15
-  Universe.variant.B is a variant case which is never constructed
-
-  Warning Dead Value
-  ErrorHandler.res:11:1-19
-  x is never used
-
-  Warning Dead Value With Side Effects
-  ForAwaitOf.res:10:1-148
-  sideEffects is never used and could have side effects
-
-  Warning Dead Type
-  RecordRest.res:1:30-44
-  config.version is a record label never used to read a value
-
-  Warning Dead Type
-  ImportHooks.res:3:3-14
-  person.name is a record label never used to read a value
-
-  Warning Dead Type
-  ImportHooks.res:4:3-10
-  person.age is a record label never used to read a value
-
-  Warning Dead Type
-  TransitiveType3.res:3:3-8
-  t3.i is a record label never used to read a value
-
-  Warning Dead Type
-  TransitiveType3.res:4:3-11
-  t3.s is a record label never used to read a value
-
-  Warning Dead Type
-  FirstClassModulesInterface.res:2:3-8
-  record.x is a record label never used to read a value
-
-  Warning Dead Type
-  FirstClassModulesInterface.res:3:3-11
-  record.y is a record label never used to read a value
-
-  Warning Dead Value
-  FirstClassModulesInterface.res:6:1-26
-  r is never used
-
-  Warning Dead Type
-  TypeReexportCrossFileA.res:6:3-18
-  originalRecord.unusedField is a record label never used to read a value
-
-  Warning Dead Value
-  EverythingLiveHere.res:1:1-9
-  x is never used
-
-  Warning Dead Value
-  EverythingLiveHere.res:3:1-9
-  y is never used
-
-  Warning Dead Value
-  EverythingLiveHere.res:5:1-9
-  z is never used
-
-  Warning Dead Type
-  Opaque.res:2:26-41
-  opaqueFromRecords.A is a variant case which is never constructed
-
-  Warning Dead Type
-  TypeCoercion.res:3:43-50
-  user.age is a record label never used to read a value
-
-  Warning Dead Type
-  TypeCoercion.res:6:25-33
-  wide.b is a record label never used to read a value
-
-  Warning Dead Type
-  TypeCoercion.res:10:22-30
-  unreadSource.u is a record label never used to read a value
-
-  Warning Dead Type
-  TypeCoercion.res:11:22-30
-  unreadTarget.u is a record label never used to read a value
-
-  Warning Dead Type
-  TypeCoercion.res:14:35-44
-  aliasedSource.sb is a record label never used to read a value
-
-  Warning Dead Type
-  TypeCoercion.res:18:35-44
-  aliasedTarget.tb is a record label never used to read a value
-
-  Warning Dead Type
-  Docstrings.res:61:5
-  t.B is a variant case which is never constructed
-
-  Warning Dead Type
-  ImportHookDefault.res:2:3-14
-  person.name is a record label never used to read a value
-
-  Warning Dead Type
-  ImportHookDefault.res:3:3-10
-  person.age is a record label never used to read a value
-
-  Warning Dead Value
-  OptionalArgsLiveDead.res:3:1-59
-  deadCaller is never used
-
-  Warning Unused Argument
-  OptArg.res:1:1-48
-  optional argument y of function foo is never used
-
-  Warning Unused Argument
-  OptArg.res:1:1-48
-  optional argument z of function foo is never used
-
-  Warning Redundant Optional Argument
-  OptArg.res:1:1-48
-  optional argument x of function foo is always supplied (1 calls)
-
-  Warning Unused Argument
-  OptArg.resi:2:1-50
-  optional argument x of function bar is never used
-
-  Warning Unused Argument
-  TestOptArg.res:9:1-65
-  optional argument x of function notSuppressesOptArgs is never used
-
-  Warning Unused Argument
-  TestOptArg.res:9:1-65
-  optional argument y of function notSuppressesOptArgs is never used
-
-  Warning Unused Argument
-  TestOptArg.res:9:1-65
-  optional argument z of function notSuppressesOptArgs is never used
-
-  Warning Redundant Optional Argument
-  TopLevelOptionalArgValueUse.res:41:1-46
-  optional argument fmt of function mutuallyRecursiveTarget is always supplied (1 calls)
-
-  Warning Unused Argument
-  ReturnedOptionalSignatureUse.res:5:3-82
-  optional argument outer of function InlineSignature.returnedOptional is never used
-
-  Warning Unused Argument
-  TopLevelOptionalArgValueUse.res:4:1-33
-  optional argument fmt of function formatDate is never used
-
-  Warning Redundant Optional Argument
-  OptArg.res:26:1-70
-  optional argument c of function wrapfourArgs is always supplied (2 calls)
-
-  Warning Unused Argument
-  OptArg.res:9:1-54
-  optional argument b of function threeArgs is never used
-
-  Warning Redundant Optional Argument
-  OptArg.res:9:1-54
-  optional argument a of function threeArgs is always supplied (2 calls)
-
-  Warning Unused Argument
-  TopLevelOptionalArgValueUse.res:33:1-85
-  optional argument fmt of function liveForwardingCaller is never used
-
-  Warning Unused Argument
-  OptArg.res:24:1-63
-  optional argument d of function fourArgs is never used
-
-  Warning Unused Argument
-  ReturnedOptionalSignatureUse.res:7:3-65
-  optional argument outer of function InlineSignature.returnedOptional is never used
-
-  Warning Unused Argument
-  OptArg.res:14:1-42
-  optional argument a of function twoArgs is never used
-
-  Warning Unused Argument
-  OptArg.res:14:1-42
-  optional argument b of function twoArgs is never used
-
-  Warning Redundant Optional Argument
-  OptArg.res:20:1-51
-  optional argument a of function wrapOneArg is always supplied (1 calls)
-
-  Warning Redundant Optional Argument
-  TestOptArg.res:3:1-28
-  optional argument x of function foo is always supplied (1 calls)
-
-  Warning Unused Argument
-  ReturnedOptionalSignature.resi:1:1-80
-  optional argument outer of function returnedOptional is never used
-
-  Warning Unused Argument
-  OptArg.res:3:1-38
-  optional argument x of function bar is never used
-
-  Warning Redundant Optional Argument
-  Unison.res:17:1-55
-  optional argument break_ of function group is always supplied (2 calls)
-
-  Warning Unused Argument
-  OptionalArgsLiveDead.res:1:1-33
-  optional argument fmt of function formatDate is never used
-
-  Warning Unused Argument
-  ReturnedOptionalSignature.res:1:1-63
-  optional argument outer of function returnedOptional is never used
   
   Analysis reported 336 issues (Incorrect Dead Annotation:1, Warning Dead Exception:2, Warning Dead Module:23, Warning Dead Type:100, Warning Dead Value:179, Warning Dead Value With Side Effects:6, Warning Redundant Optional Argument:7, Warning Unused Argument:18)

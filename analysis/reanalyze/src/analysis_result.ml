@@ -13,7 +13,22 @@ let add_issue result issue = {issues = issue :: result.issues}
 let add_issues result new_issues =
   {issues = List.rev_append new_issues result.issues}
 
-let get_issues result = result.issues |> List.rev
+(* Issues are collected by iterating reactive collections, whose order follows
+   the hash of their keys - and [issues_by_file] is keyed by absolute path, so
+   the same project reports in a different order on another machine. Order the
+   report by source position instead, keyed on the basename so it does not
+   depend on where the project is checked out. *)
+let issue_sort_key (issue : Issue.t) =
+  let pos = issue.Issue.loc.Location.loc_start in
+  ( Filename.basename pos.Lexing.pos_fname,
+    pos.pos_lnum,
+    pos.pos_cnum - pos.pos_bol,
+    issue.Issue.name,
+    pos.pos_fname )
+
+let get_issues result =
+  result.issues |> List.rev
+  |> List.stable_sort (fun a b -> compare (issue_sort_key a) (issue_sort_key b))
 
 let issue_count result = List.length result.issues
 
