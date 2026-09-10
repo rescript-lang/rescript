@@ -77,13 +77,17 @@ let tests =
     (rejects ["build"; "-V"])
     "explicit build rejects a trailing global version flag";
   check
+    (rejects ["build"; "--version"])
+    "explicit build rejects the long trailing global version flag";
+  check
     (rejects ["watch"; "--no-timing"])
     "watch rejects build-only --no-timing";
   check
     ((build_options ["build"; "-n=false"; "."]).folder = ".")
     "build accepts short no-timing boolean values";
-  check (build_options ["build"; "--no-timing"; "."]).no_timing
-    "bare no-timing does not consume the project folder";
+  check
+    (rejects ["build"; "--no-timing"; "."])
+    "an optional no-timing value consumes the following token";
   check (build_options ["build"; "--prod"]).prod "build parses --prod";
   check (not (build_options ["build"]).prod) "build defaults --prod to false";
   check (watch_options ["watch"; "--prod"]).prod "watch parses --prod";

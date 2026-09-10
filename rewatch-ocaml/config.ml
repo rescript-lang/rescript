@@ -329,7 +329,7 @@ let load path =
      else
        [
          Printf.sprintf
-           "\n\nPackage '%s' uses deprecated config (support will be removed in a future version):\n%s"
+           "\nPackage '%s' uses deprecated config (support will be removed in a future version):\n%s"
            name
            (String.concat "\n" deprecated);
        ]

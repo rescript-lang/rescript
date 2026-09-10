@@ -83,9 +83,14 @@ printf '{"name":"command-validation","sources":["src"]}\n' \
 printf 'let value = 1\n' >"$project/src/A.res"
 printf 'not a ReScript source\n' >"$project/src/A.txt"
 mkdir -p "$work/redirected-parse-fixture/src"
+mkdir -p "$work/redirected-config-diagnostics/src"
 printf '{"name":"parse-output","sources":["src"]}\n' \
   >"$work/redirected-parse-fixture/rescript.json"
 printf 'let value =\n' >"$work/redirected-parse-fixture/src/A.res"
+printf '%s\n' \
+  '{"name":"config-diagnostics","sources":["src"],"bsc-flags":[],"ignored-dirs":[],"future-field":true}' \
+  >"$work/redirected-config-diagnostics/rescript.json"
+printf 'let value = 1\n' >"$work/redirected-config-diagnostics/src/A.res"
 printf 'process.stderr.write("hook failed\\n"); process.exit(7)\n' \
   >"$work/failing-after-build.js"
 printf 'let value = 1\n' >"$work/orphan/A.res"
@@ -552,6 +557,8 @@ run_build_output_case redirected-parse-error 1 \
   "$work/redirected-parse-fixture" redirected
 run_build_output_case redirected-warning 0 \
   "$root/rewatch-ocaml/tests/warning-replay" redirected
+run_build_output_case redirected-config-diagnostics 0 \
+  "$work/redirected-config-diagnostics" redirected
 
 run_build_output_case quiet-success 0 "$project" quiet
 if [ -s "$work/rust.out" ] || [ -s "$work/rust.err" ] || \
@@ -565,6 +572,8 @@ run_build_output_case quiet-parse-error 1 "$work/redirected-parse-fixture" quiet
 run_build_output_case quiet-warning 0 \
   "$root/rewatch-ocaml/tests/warning-replay" quiet
 
+run_case build-subcommand-version exit2 exit2 build --version
+run_case build-no-timing-consumes-folder exit2 exit2 build --no-timing "$project"
 run_case compiler-args-source accept accept compiler-args "$project/src/A.res"
 run_case compiler-args-extension accept reject compiler-args "$project/src/A.txt"
 run_case compiler-args-missing panic reject compiler-args "$project/src/Missing.res"
