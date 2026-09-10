@@ -74,7 +74,11 @@ and expression = {
 
 and exp_extra =
   | Texp_constraint of core_type
-  | Texp_coerce of {source: type_expr; target: core_type}
+  | Texp_coerce of {
+      source_type: type_expr;
+      target: core_type;
+      target_type: type_expr;
+    }
   | Texp_open of override_flag * Path.t * Longident.t loc * Env.t
 
 and expression_desc =
