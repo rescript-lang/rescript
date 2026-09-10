@@ -22,5 +22,6 @@ val run :
   filter:string option ->
   watch:bool ->
   stats:Build_types.t ->
+  parse_step:string ->
   on_cleanup:(float -> unit) ->
   cycle_info option

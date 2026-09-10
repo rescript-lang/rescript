@@ -24,13 +24,14 @@ fi
 
 for implementation in rust ocaml; do
   mkdir -p "$work/$implementation/src"
-  printf '{"name":"interactive-output","sources":["src"]}\n' \
+  printf '{"name":"interactive-output","sources":["src"],"namespace":"Interactive"}\n' \
     >"$work/$implementation/rescript.json"
   printf 'let value = 1\n' >"$work/$implementation/src/A.res"
+  printf 'let value: int\n' >"$work/$implementation/src/A.resi"
   cp -R "$work/$implementation" "$work/$implementation-watch"
   cp -R "$work/$implementation" "$work/$implementation-warning-watch"
   printf '%s\n' \
-    '{"name":"interactive-output","sources":["src"],"package-specs":{"module":"es6","in-source":true}}' \
+    '{"name":"interactive-output","sources":["src"],"namespace":"Interactive","package-specs":{"module":"es6","in-source":true}}' \
     >"$work/$implementation-warning-watch/rescript.json"
 done
 
@@ -62,6 +63,30 @@ capture() {
 
 capture rust "$rust"
 capture ocaml "$ocaml"
+
+require_spinner_frames() {
+  implementation=$1
+  if ! grep -F $'\033[1m\033[2m[2/3]\033[0m' \
+      "$work/$implementation.tty" >/dev/null; then
+    echo "$implementation did not render the interactive step style" >&2
+    cat "$work/$implementation.tty" >&2
+    exit 1
+  fi
+  tr '\r' '\n' <"$work/$implementation.tty" \
+    | sed -E $'s/\033\\[[0-9;]*[[:alpha:]]//g' \
+    >"$work/$implementation.frames"
+  if ! grep -E '^\[2/3\] 🧱 Parsing\.\.\. .+ [0-9]+/1' \
+      "$work/$implementation.frames" >/dev/null || \
+    ! grep -E '^\[3/3\] 🤺 Compiling\.\.\. .+ [0-9]+/2' \
+      "$work/$implementation.frames" >/dev/null; then
+    echo "$implementation did not render both live spinner phases" >&2
+    cat "$work/$implementation.frames" >&2
+    exit 1
+  fi
+}
+
+require_spinner_frames rust
+require_spinner_frames ocaml
 
 if ! cmp -s "$work/rust.phases" "$work/ocaml.phases"; then
   echo "Interactive phase output differs" >&2
@@ -103,7 +128,7 @@ capture_quiet_build() {
       "$transcript" >/dev/null
   fi
   if tr '\r' '\n' <"$transcript" \
-    | grep -E '(Cleaned|Parsed|Compiled|Finished .*compilation)' >/dev/null; then
+    | grep -E '(Cleaned|Parsed|Parsing\.\.\.|Compiled|Compiling\.\.\.|Finished .*compilation)' >/dev/null; then
     echo "$implementation quiet interactive build emitted progress" >&2
     cat "$transcript" >&2
     exit 1
@@ -126,6 +151,9 @@ wait_for_text() {
     attempts=$((attempts + 1))
     sleep 0.1
   done
+  printf 'Timed out waiting for occurrence %s of %s in %s\n' \
+    "$count" "$pattern" "$path" >&2
+  if [ -f "$path" ]; then cat "$path" >&2; fi
   return 1
 }
 
@@ -141,10 +169,10 @@ capture_watch_rebuild() {
       "CLICOLOR_FORCE=0" \
       "RESCRIPT_BSC_EXE=$RESCRIPT_BSC_EXE" \
       "RESCRIPT_RUNTIME=$RESCRIPT_RUNTIME" \
-      "$executable" watch "$project" >/dev/null &
+      "$executable" watch --clear-screen "$project" >/dev/null &
   else
     script -qefc \
-      "env -u NO_COLOR TERM=xterm CLICOLOR=1 CLICOLOR_FORCE=0 RESCRIPT_BSC_EXE=$RESCRIPT_BSC_EXE RESCRIPT_RUNTIME=$RESCRIPT_RUNTIME $executable watch $project" \
+      "env -u NO_COLOR TERM=xterm CLICOLOR=1 CLICOLOR_FORCE=0 RESCRIPT_BSC_EXE=$RESCRIPT_BSC_EXE RESCRIPT_RUNTIME=$RESCRIPT_RUNTIME $executable watch --clear-screen $project" \
       "$transcript" >/dev/null &
   fi
   active_script_pid=$!
@@ -155,10 +183,27 @@ capture_watch_rebuild() {
   if ! wait_for_text "$transcript" "Finished incremental compilation" 1; then
     return 1
   fi
+  cp "$transcript" "$work/$implementation-watch-phases.tty"
+  printf 'let value =\n' >"$project/src/A.res"
+  if ! wait_for_text "$transcript" "Build failed. Watching for changes..." 1; then
+    return 1
+  fi
+  printf 'let value = 3\n' >"$project/src/A.res"
+  if ! wait_for_text "$transcript" "Finished incremental compilation" 2; then
+    return 1
+  fi
+  printf '%s\n' \
+    '{"name":"interactive-output","sources":["src"],"namespace":"Interactive","package-specs":{"module":"esmodule","in-source":true,"suffix":".mjs"}}' \
+    >"$project/rescript.next"
+  mv "$project/rescript.next" "$project/rescript.json"
+  if ! wait_for_text "$transcript" "Change detected. Full rebuild..." 1 || \
+    ! wait_for_text "$transcript" "Finished compilation" 1; then
+    return 1
+  fi
   rm -f "$project/lib/watch.lock"
   wait "$active_script_pid"
   active_script_pid=""
-  tr '\r' '\n' <"$transcript" \
+  tr '\r' '\n' <"$work/$implementation-watch-phases.tty" \
     | sed -E $'s/\033\\[[0-9;]*[[:alpha:]]//g; s/in [0-9]+\\.[0-9]+s/in <TIME>/' \
     >"$work/$implementation-watch.normalized"
   grep -E '^\[[123]/3\] .* (Cleaned|Parsed|Compiled) |^✅ Finished initial compilation in ' \
@@ -167,6 +212,19 @@ capture_watch_rebuild() {
   grep -E '^\[[12]/2\] .* (Parsed|Compiled) |^✅ Finished incremental compilation in ' \
     "$work/$implementation-watch.normalized" \
     >"$work/$implementation-watch.phases"
+  tr '\r' '\n' <"$transcript" \
+    | sed -E $'s/\033\\[[0-9;]*[[:alpha:]]//g' \
+    >"$work/$implementation-watch.presentation"
+  if [ "$(grep -cF 'Change detected. Rebuilding...' \
+      "$work/$implementation-watch.presentation")" -lt 3 ] || \
+    [ "$(grep -cF 'Change detected. Full rebuild...' \
+      "$work/$implementation-watch.presentation")" -ne 1 ] || \
+    [ "$(grep -cF 'Build failed. Watching for changes...' \
+      "$work/$implementation-watch.presentation")" -ne 1 ]; then
+    echo "$implementation watch rebuild presentation changed" >&2
+    cat "$work/$implementation-watch.presentation" >&2
+    exit 1
+  fi
 }
 
 capture_watch_rebuild rust "$rust"

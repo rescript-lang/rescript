@@ -9,7 +9,11 @@ val status_string : Unix.process_status -> string
 val default_max_jobs : int
 
 val run_parallel :
-  ?max_jobs:int -> ?poll:(unit -> unit) -> job list -> result list
+  ?max_jobs:int ->
+  ?poll:(unit -> unit) ->
+  ?on_complete:(int -> unit) ->
+  job list ->
+  result list
 
 type 'a work = {key: string; dependencies: string list; value: 'a}
 

@@ -313,7 +313,7 @@ let terminate_running children =
       List.iter (signal_group Sys.sigkill) children;
     List.iter (fun child -> Thread.join child.child_wait.thread) children)
 
-let run_parallel_with_notifier ~max_jobs ~poll notifier jobs =
+let run_parallel_with_notifier ~max_jobs ~poll ~on_complete notifier jobs =
   let indexed = List.mapi (fun index job -> (index, job)) jobs in
   let results = Array.make (List.length jobs) None in
   let active = ref [] in
@@ -340,7 +340,8 @@ let run_parallel_with_notifier ~max_jobs ~poll notifier jobs =
       with_signal_restore restore_signals (fun () ->
         active :=
           List.filter (fun running -> running.pid <> child.pid) !active;
-        results.(child.payload) <- Some result);
+        results.(child.payload) <- Some result;
+        on_complete child.payload);
       schedule queued
   in
   try
@@ -353,7 +354,8 @@ let run_parallel_with_notifier ~max_jobs ~poll notifier jobs =
     terminate_running !active;
     raise exn
 
-let run_parallel ?(max_jobs = default_max_jobs) ?poll jobs =
+let run_parallel ?(max_jobs = default_max_jobs) ?poll
+    ?(on_complete = fun _ -> ()) jobs =
   if max_jobs < 1 then raise (Error "max_jobs must be at least one");
   match jobs with
   | [] -> []
@@ -364,7 +366,7 @@ let run_parallel ?(max_jobs = default_max_jobs) ?poll jobs =
       | None -> ((fun () -> ()), false)
     in
     with_completion_notifier ~ticker_enabled (fun notifier ->
-      run_parallel_with_notifier ~max_jobs ~poll notifier jobs)
+      run_parallel_with_notifier ~max_jobs ~poll ~on_complete notifier jobs)
 
 type 'a work = {key: string; dependencies: string list; value: 'a}
 

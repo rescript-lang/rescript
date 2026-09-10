@@ -178,7 +178,7 @@ let rec prepare_tree ~(root_config : Config.t) ~dependency_context ~seen
   in
   let parsed =
     List.map2 (fun path result -> (path, Some result)) parse_paths_to_run
-      (Process.run_parallel ~poll:stats.poll
+      (Process.run_parallel ?poll:stats.process_poll
          (List.map
             (Compiler_process.parse_job ~bsc ~build_dir ~config)
             parse_paths_to_run))

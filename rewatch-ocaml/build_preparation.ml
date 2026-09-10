@@ -149,8 +149,8 @@ let find_cycle modules_by_key build_state =
     in
     Some {cycle; blocked; modules_by_key}
 
-let run ~(root_config : Config.t) ~prod ~features ~warn_error
-    ~filter ~watch ~stats ~on_cleanup =
+let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
+    ~stats ~parse_step ~on_cleanup =
   let bsc = bsc_path () in
   let graph_packages =
     Package_graph.discover ~root_config ~prod ~features ~warn_error ~filter ~stats
@@ -264,18 +264,23 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error
                   ("Generating AST for module: "
                   ^ Source.compiler_basename package.graph_compile_config
                       module_.Source.name);
-              List.map (fun path -> (package, path)) dirty_paths))
+              let group = package.graph_root ^ "\000" ^ module_.Source.name in
+              List.map (fun path -> (package, path, group)) dirty_paths))
+  in
+  let parse_completed =
+    Output.Progress.start_grouped stats.progress ~step:parse_step ~symbol:"🧱 "
+      ~label:"Parsing" (List.map (fun (_, _, group) -> group) parse_entries)
   in
   let parse_results =
     parse_entries
-    |> List.map (fun (package, path) ->
+    |> List.map (fun (package, path, _) ->
          Compiler_process.parse_job ~bsc ~build_dir:package.graph_build_dir
            ~config:package.graph_compile_config path)
-    |> Process.run_parallel ~poll:stats.poll
+    |> Process.run_parallel ?poll:stats.process_poll ~on_complete:parse_completed
   in
   let failed_parse_paths = Hashtbl.create 8 in
   List.iter2
-    (fun (package, path) result ->
+    (fun (package, path, _) result ->
       let absolute_path = Filename.concat package.graph_root path in
       Hashtbl.replace stats.forced_parse_paths absolute_path ();
       Hashtbl.replace stats.preparse_results absolute_path result;

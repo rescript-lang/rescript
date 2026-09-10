@@ -50,7 +50,8 @@ let tests =
         ~clear_screen:false ~show_progress:true ~verbosity:0
         ~build:(fun ~poll ~changes:_ ->
           poll ();
-          Sys.remove lock);
+          Sys.remove lock;
+          Watcher.Succeeded);
       check
         (signal_is_ignored Sys.sigint)
         "SIGINT handler is restored after normal shutdown";
