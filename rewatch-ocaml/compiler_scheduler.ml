@@ -45,7 +45,7 @@ let file_digest path =
 
 let run ~poll ~warning_state ~blocked_modules ~compile_assets ~build_state
     ~scheduled_modules ~compile_cleanup ~mark_compiled ~mark_had_warnings
-    ~verbosity =
+    ~progress ~compile_step ~namespace_count ~verbosity =
   let finish_successful_compile (scheduled : scheduled_module) =
     (* Only a changed interface invalidates reverse dependents. Comparing bytes
        avoids timestamp races and skips unnecessary downstream compilation. *)
@@ -115,6 +115,11 @@ let run ~poll ~warning_state ~blocked_modules ~compile_assets ~build_state
       (fun scheduled -> Hashtbl.mem universe scheduled.key)
       scheduled_modules
   in
+  Output.Progress.start progress ~step:compile_step ~symbol:"🤺 "
+    ~label:"Compiling" ~total:(namespace_count + List.length scheduled_modules);
+  for _ = 1 to namespace_count do
+    Output.Progress.advance progress
+  done;
   let completed_modules = ref 0 in
   let works =
     scheduled_modules
@@ -162,7 +167,7 @@ let run ~poll ~warning_state ~blocked_modules ~compile_assets ~build_state
       in
       let scheduler_failed =
         try
-          Process.run_dependency_graph ~poll works
+          Process.run_dependency_graph ?poll works
             (* A module failure blocks its dependents, while unrelated ready
                work is drained so all independent diagnostics are retained. *)
             ~is_fatal:(function Module_failed -> false | _ -> true)
@@ -175,30 +180,32 @@ let run ~poll ~warning_state ~blocked_modules ~compile_assets ~build_state
                   scheduled.cmi_digest_before <- file_digest scheduled.cmi_path;
                   match scheduled.source.Source.interface with
                   | Some path ->
-                    Output.debug ~verbosity
+                    Output.Progress.debug progress ~verbosity
                       ("Compiling interface file: " ^ scheduled.key);
                     scheduled.phase := `Interface path;
                     Some (scheduled.compile ~is_interface:true path)
                   | None ->
                     let path = scheduled.source.Source.implementation in
-                    Output.debug ~verbosity
+                    Output.Progress.debug progress ~verbosity
                       ("Compiling file: " ^ scheduled.key);
                     scheduled.phase := `Implementation path;
                     Some (scheduled.compile ~is_interface:false path))
                 else (
                   scheduled.phase := `Done;
                   incr completed_modules;
+                  Output.Progress.advance progress;
                   None)
               | Some result, `Interface path ->
                 record_result scheduled ~is_interface:true path result;
                 let path = scheduled.source.Source.implementation in
-                Output.debug ~verbosity
+                Output.Progress.debug progress ~verbosity
                   ("Compiling file: " ^ scheduled.key);
                 scheduled.phase := `Implementation path;
                 Some (scheduled.compile ~is_interface:false path)
               | Some result, `Implementation path ->
                 record_result scheduled ~is_interface:false path result;
                 scheduled.phase := `Done;
+                Output.Progress.advance progress;
                 if !(scheduled.messages) <> [] then
                   raise Module_failed
                 else (
@@ -212,6 +219,7 @@ let run ~poll ~warning_state ~blocked_modules ~compile_assets ~build_state
           false
         with Module_failed -> true
       in
+      Output.Progress.finish progress;
       Output.trace ~verbosity
         (Printf.sprintf "Compiled %d out of %d in the universe"
            !completed_modules (List.length scheduled_modules));

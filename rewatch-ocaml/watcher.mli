@@ -2,6 +2,7 @@ exception Stop
 
 type change_kind = Added | Removed | Modified
 type change = {path: string; kind: change_kind}
+type build_result = Succeeded | Failed
 
 val run :
   root:string ->
@@ -11,5 +12,5 @@ val run :
   clear_screen:bool ->
   show_progress:bool ->
   verbosity:int ->
-  build:(poll:(unit -> unit) -> changes:change list option -> unit) ->
+  build:(poll:(unit -> unit) -> changes:change list option -> build_result) ->
   unit

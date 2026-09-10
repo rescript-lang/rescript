@@ -51,7 +51,7 @@ let clean ~seen ~verbosity ~folder ~prod =
 
 let compiler_args = Compiler_args_command.run
 
-let run_scheduled_modules stats =
+let run_scheduled_modules stats ~compile_step ~namespace_count =
   let build_state =
     match stats.build_state with
     | Some state -> state
@@ -62,18 +62,29 @@ let run_scheduled_modules stats =
     | Some state -> state
     | None -> raise (Error "compile asset state was not initialized")
   in
-  Compiler_scheduler.run ~poll:stats.poll ~warning_state:stats.warning_state
+  Compiler_scheduler.run ~poll:stats.process_poll
+    ~warning_state:stats.warning_state
     ~blocked_modules:stats.blocked_modules ~compile_assets ~build_state
     ~scheduled_modules:!(stats.scheduled_modules)
     ~compile_cleanup:!(stats.compile_cleanup)
     ~mark_compiled:(fun () -> stats.compiled <- stats.compiled + 1)
     ~mark_had_warnings:(fun () -> stats.had_warnings <- true)
+    ~progress:stats.progress ~compile_step ~namespace_count
     ~verbosity:stats.verbosity
 
 let run_namespace_jobs stats =
   let jobs = List.rev !(stats.namespace_jobs) in
-  let results = Process.run_parallel ~poll:stats.poll (List.map fst jobs) in
-  List.iter2 (fun (_, finish) result -> finish result) jobs results
+  let started_at = Unix.gettimeofday () in
+  Fun.protect
+    ~finally:(fun () ->
+      stats.parse_seconds <-
+        stats.parse_seconds +. (Unix.gettimeofday () -. started_at))
+    (fun () ->
+      let results =
+        Process.run_parallel ?poll:stats.process_poll (List.map fst jobs)
+      in
+      List.iter2 (fun (_, finish) result -> finish result) jobs results);
+  List.length jobs
 
 let write_source_dirs (root_config : Config.t) stats =
   let packages =
@@ -187,13 +198,22 @@ let prepare_incremental previous changes stats =
   |> List.iter (fun name ->
        Output.debug ~verbosity:stats.verbosity
          ("Generating AST for module: " ^ name));
+  let parse_completed =
+    Output.Progress.start_grouped stats.progress ~step:"1/2" ~symbol:"🧱 "
+      ~label:"Parsing"
+      (List.map
+         (fun source ->
+           source.package.graph_root ^ "\000" ^ source.module_.Source.name)
+         sources)
+  in
   let results =
     sources
     |> List.map (fun source ->
          Compiler_process.parse_job ~bsc
            ~build_dir:source.package.graph_build_dir
            ~config:source.package.graph_compile_config source.relative_path)
-    |> Process.run_parallel ~poll:stats.poll
+    |> Process.run_parallel ?poll:stats.process_poll
+         ~on_complete:parse_completed
   in
   let affected_modules = Hashtbl.create (List.length sources) in
   List.iter2
@@ -267,6 +287,17 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
   let started_at = Unix.gettimeofday () in
   let interactive = Unix.isatty Unix.stdout && Unix.isatty Unix.stderr in
   let show_progress = verbosity >= 0 in
+  let colors = Output.colors_enabled ~interactive in
+  let progress =
+    Output.Progress.create ~enabled:(interactive && show_progress) ~color:colors
+  in
+  let poll () =
+    poll ();
+    Output.Progress.tick progress
+  in
+  let process_poll =
+    if watch || (interactive && show_progress) then Some poll else None
+  in
   let is_rebuild = compilation_kind = Incremental_watch in
   let should_write_build_ninja =
     match compilation_kind with
@@ -292,11 +323,14 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
   let stats =
     match previous with
     | Some previous ->
-      Build_types.create_incremental ~previous:previous.stats ~poll ~verbosity
-    | None -> Build_types.create ~warning_state ~poll ~verbosity
+      Build_types.create_incremental ~previous:previous.stats ~poll ~process_poll
+        ~progress ~verbosity
+    | None ->
+      Build_types.create ~warning_state ~poll ~process_poll ~progress ~verbosity
   in
   List.iter (fun path -> Hashtbl.replace visited (Unix.realpath path) ()) seen;
   let finalize_logs () =
+    Output.Progress.finish progress;
     Hashtbl.iter (fun package_root () -> Compiler_log.finalize package_root)
       stats.initialized_logs;
     Hashtbl.clear stats.initialized_logs
@@ -362,10 +396,9 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
     if warning_entries <> [] && diagnostics = [] then prerr_newline ();
     flush stderr;
     if diagnostics <> [] then (
-      let color = Output.colors_enabled ~interactive in
       diagnostics
       |> List.map (fun diagnostic ->
-           if color then Output.yellow diagnostic else diagnostic)
+           if colors then Output.yellow diagnostic else diagnostic)
       |> String.concat "\n\n" |> prerr_endline);
     if success && interactive && show_progress then
       let seconds =
@@ -394,7 +427,8 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
     finalize_logs ();
     if interactive && show_progress then
       prerr_endline
-        (Output.parsing_failed_message ~step:(if is_rebuild then "1/2" else "2/3")
+        (Output.parsing_failed_message ~color:colors
+           ~step:(if is_rebuild then "1/2" else "2/3")
            ~seconds:(if no_timing then 0. else stats.parse_seconds))
     else if show_progress then
       Printf.printf "Cleaned %d/%d\n%!" stats.cleaned stats.previous_asts;
@@ -436,14 +470,16 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
       | Some _, None -> raise Full_rebuild_required
       | None, _ ->
         Build_preparation.run ~root_config ~prod ~features ~warn_error ~filter
-          ~watch ~stats
+          ~watch ~stats ~parse_step
           ~on_cleanup:(fun seconds ->
             if interactive && show_progress && not is_rebuild then (
               if stats.compiler_cleaned then
-                print_endline (Output.compiler_cleanup_message ~step:"1/3");
+                print_endline
+                  (Output.compiler_cleanup_message ~color:colors ~step:"1/3");
               print_endline
-                (Output.cleanup_message ~step:"1/3" ~cleaned:stats.cleaned
-                   ~total:stats.previous_asts ~seconds:(phase_seconds seconds))))
+                (Output.cleanup_message ~color:colors ~step:"1/3"
+                   ~cleaned:stats.cleaned ~total:stats.previous_asts
+                   ~seconds:(phase_seconds seconds))))
     in
     poll ();
     if stats.compiler_cleaned && show_progress && not interactive then
@@ -459,26 +495,31 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
       ~seen:visited ~folder:root ~prod ~features ~warn_error ~watch ~filter
       ~is_local:true ~stats;
     poll ();
+    let namespace_count =
+      try run_namespace_jobs stats
+      with Build_failure output -> raise (Parse_failure output)
+    in
+    Output.Progress.finish progress;
     if interactive && show_progress then
       print_endline
-        (Output.parsing_message ~step:parse_step ~count:stats.parsed
-           ~seconds:(phase_seconds stats.parse_seconds));
+        (Output.parsing_message ~color:colors ~step:parse_step
+           ~count:stats.parsed ~seconds:(phase_seconds stats.parse_seconds));
     let compile_started = Unix.gettimeofday () in
     (try
-       run_namespace_jobs stats;
-       run_scheduled_modules stats
+       run_scheduled_modules stats ~compile_step ~namespace_count
      with Build_failure output ->
        if Option.is_none stats.failure then stats.failure <- Some output);
+    Output.Progress.finish progress;
     if interactive && show_progress then (
       let seconds = phase_seconds (Unix.gettimeofday () -. compile_started) in
       match stats.failure with
       | None ->
         print_endline
-          (Output.compiling_message ~step:compile_step ~count:stats.compiled
-             ~seconds)
+          (Output.compiling_message ~color:colors ~step:compile_step
+             ~count:stats.compiled ~seconds)
       | Some _ ->
         prerr_endline
-          (Output.compilation_failed_message ~step:compile_step
+          (Output.compilation_failed_message ~color:colors ~step:compile_step
              ~count:stats.compiled ~seconds));
     (match stats.failure, cycle with
     | Some output, _ -> report_failure output
@@ -574,14 +615,17 @@ let watch ~verbosity ~folder ~prod ~features ~warn_error ~after_build ~filter
         | Some _, None, false -> run Full_watch
       in
       retained := Some next;
-      force_full_rebuild := false
+      force_full_rebuild := false;
+      Watcher.Succeeded
     with
-    | Reported_failure _ -> ()
+    | Reported_failure _ -> Watcher.Failed
     | Package_error message | Error message | Config.Error message
-    | Source.Error message
-    | Process.Error message -> prerr_endline message
+    | Source.Error message | Process.Error message ->
+      prerr_endline message;
+      Watcher.Failed
     | (Sys_error _ as exn) | (Unix.Unix_error _ as exn) ->
-      prerr_endline (Printexc.to_string exn)
+      prerr_endline (Printexc.to_string exn);
+      Watcher.Failed
   in
   Watcher.run ~root ~prod ~features ~filter ~clear_screen
     ~show_progress:(verbosity >= 0) ~verbosity ~build

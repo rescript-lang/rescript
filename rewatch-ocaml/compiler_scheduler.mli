@@ -19,7 +19,7 @@ val create :
 val requires_compile : scheduled_module -> bool
 
 val run :
-  poll:(unit -> unit) ->
+  poll:(unit -> unit) option ->
   warning_state:Warning_state.t ->
   blocked_modules:(string, unit) Hashtbl.t ->
   compile_assets:Compile_assets.t ->
@@ -28,5 +28,8 @@ val run :
   compile_cleanup:(unit -> unit) list ->
   mark_compiled:(unit -> unit) ->
   mark_had_warnings:(unit -> unit) ->
+  progress:Output.Progress.t ->
+  compile_step:string ->
+  namespace_count:int ->
   verbosity:int ->
   unit

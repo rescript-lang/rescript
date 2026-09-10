@@ -106,8 +106,11 @@ let tests =
   check
     (Process.default_max_jobs >= 1 && Process.default_max_jobs <= 32)
     "parallel subprocess bound follows the available CPUs";
+  let completed_indices = ref [] in
   let parallel_results =
     Process.run_parallel ~max_jobs:2
+      ~on_complete:(fun index ->
+        completed_indices := index :: !completed_indices)
       [
         process_job ["--process-result"; "first"; ""; "0"];
         process_job ["--process-result"; "second"; ""; "0"];
@@ -118,6 +121,9 @@ let tests =
     (List.map (fun (result : Process.result) -> result.stdout) parallel_results
     = ["first"; "second"; "third"])
     "parallel subprocess results retain input order";
+  check
+    (List.sort compare !completed_indices = [0; 1; 2])
+    "parallel subprocess completion reports every input index once";
   let large_result =
     Process.run ~cwd:(Sys.getcwd ()) test_executable ["--large-process-result"]
   in

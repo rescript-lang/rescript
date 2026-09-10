@@ -590,7 +590,10 @@ are no other missing control-file names.
   covers empty, missing, and nonzero after-build commands; the port reports
   each as a contextual command error instead of reproducing Rust's panics or
   ignored failure status.
-- Namespace packages generate and compile their `.mlmap` before member modules.
+- Namespace packages generate and compile their `.mlmap` during the parse phase,
+  before member modules. The interactive compile counter still includes the
+  already-prepared namespace marker because it participates in the scheduler
+  universe, while the completed phase summary counts only source modules.
   Out-of-source package output directories are created before compilation and
   stale output is removed; `clean` also removes in-source JavaScript and maps.
 - The integration runner builds a three-package monorepo through relative
@@ -733,9 +736,10 @@ are no other missing control-file names.
   dependency edges. Package outputs reject duplicate effective suffix/location
   pairs and require an explicit module when configured, matching current Rust
   validation; legacy `cjs`/`es6` values retain their deprecation diagnostics.
-- `watch --clear-screen` is accepted and clears an interactive terminal before
-  rebuilds. Its final presentation still lacks the change/full-rebuild header
-  and post-failure watching footer and remains in the output-presentation gate.
+- `watch --clear-screen` clears an interactive terminal before rebuilds and
+  emits the same incremental/full change header plus the post-failure watching
+  footer. The PTY gate covers a successful incremental edit, parse failure and
+  recovery, and a configuration-triggered full rebuild.
   Comma-separated feature names are trimmed like the Rust CLI.
 - GenType compiler arguments distinguish single-file inspection from a full
   build: `compiler-args` omits unavailable expanded source/dependency paths,
@@ -798,7 +802,7 @@ are no other missing control-file names.
   it does in Rust. A differential command case compares stdout and stderr
   exactly at the default level and requires both implementations to stay quiet
   under `-q`; interactive clean phase rendering remains in the final terminal
-  presentation pass.
+  presentation pass, which is now complete.
 - Quiet build and watch now share Rust's `show_progress` boundary. `-q`
   suppresses redirected and interactive cleanup, parse, compile, completion,
   and terminal-clear output while retaining compiler warnings and failures.
@@ -847,7 +851,7 @@ are no other missing control-file names.
   builds. Together with exact clean output, focused format/compiler-argument
   checks, and canonical redirected watch scenarios, this closes ordinary plain
   output; the intentionally deferred `-v`/`-vv` event stream remains part of
-  the final terminal-presentation pass.
+  the terminal-presentation pass.
 - The pre-parser source-disappearance branch now has deterministic differential
   coverage. With Rust's Rayon parser constrained to one worker, the first
   parser subprocess wrapper deletes both discovered fixture sources; Rust then
@@ -912,26 +916,27 @@ sufficient on its own: the compiler-work tuple and selected artifact manifests
 must also be identical, and the canonical/focused integration tests remain the
 behavioral-equivalence gate.
 
-The latest five-run release-build measurement was made at commit `d5cead598`
-in the Linux Docker environment on the plugged-in, otherwise idle Mac host:
+The latest five-run release-build measurement was made from the spinner
+working tree above commit `fcac3719b` in the Linux Docker environment on the
+plugged-in, otherwise idle Mac host:
 
 | Implementation | Median wall time | Median peak tree RSS |
 | --- | ---: | ---: |
-| Rust | 4,589 ms | 739,096 KiB |
-| OCaml | 5,498 ms | 772,396 KiB |
+| Rust | 6,790 ms | 761,024 KiB |
+| OCaml | 7,829 ms | 784,136 KiB |
 
-The latest completed gate's 1.198× wall-time ratio and 1.045× RSS ratio pass
+The latest completed gate's 1.153× wall-time ratio and 1.030× RSS ratio pass
 the 1.25× gate.
 The host was plugged in and otherwise idle for this run. Docker on a Mac is
 still noisier than native Linux or dedicated CI, so final acceptance should
 repeat the distribution on a stable host rather than treating this one passing
 set as universal. Repeated runs observed impossible non-median LinuxKit clock
-jumps despite the affected builds completing in seconds; the preceding run
-reported one OCaml sample as 254 seconds while its surrounding samples were
-5.6–5.8 seconds. The latest run had five coherent samples for each
-implementation, but a final native/stable-host run remains necessary. Passing
-this aggregate gate also does not excuse the clean-build publication probes
-identified by the filesystem audit below.
+jumps despite the affected builds completing in seconds; the immediately
+preceding run reported one non-median OCaml sample as 822 seconds. The latest
+run had five coherent samples for each implementation, although absolute times
+varied more than in the preceding run. A final native/stable-host run remains
+necessary. Passing this aggregate gate also does not excuse the clean-build
+publication probes identified by the filesystem audit below.
 
 Both implementations performed exactly 1,031 `bsc` launches: 512 parses, 7
 namespace compilations, and 512 module compilations, of which 40 were interface
@@ -1614,7 +1619,7 @@ Three later Rust fixes were audited explicitly against the port:
   streams are terminals. `--no-timing` is threaded into the build instead of
   being parsed and discarded, and the clear-screen predicate is separately
   tested for interactive and redirected output. This closes the Rust unit-test
-  inventory; it does not close the broader spinner/phase presentation gate.
+  inventory and is now covered together with live phase presentation.
 - CLI normalization now retains two non-obvious Clap behaviors: a version flag
   is global only before an explicit subcommand, and the optional boolean value
   for `--no-timing` consumes a following folder token and rejects it as a
@@ -1637,14 +1642,14 @@ Three later Rust fixes were audited explicitly against the port:
   compares normalized initial and incremental phase/final-status frames. It
   exposed and fixed the initial OCaml watch label from generic `Finished
   compilation` to Rust's `Finished initial compilation`. Redirected output
-  remains unchanged. Live spinner frames remain separate output-gate work.
-- Interactive output parity remains open. The OCaml executable now selects a
-  TTY-specific final status with timing and emoji, emits phase completion
-  counts, and clears the terminal when requested, but does not yet reproduce
-  the live parsing/compilation spinner or the clear-screen rebuild/failure
-  headers. Plain redirected output and
-  pseudo-terminal output are tracked as distinct gates in
-  `PARITY_CHECKLIST.md`.
+  remains unchanged.
+- Interactive output parity now includes throttled parsing and compilation
+  spinner frames, module-based position/length counters, clear-screen rebuild
+  headers, and the post-failure watching footer. Animation runs from the
+  existing scheduler poll loop rather than another thread, is capped at roughly
+  12 frames per second, and is disabled entirely for redirected and quiet
+  output. The PTY gate uses a module with both an interface and implementation
+  to ensure the parse total counts modules rather than subprocesses.
 - Positive verbosity now reports Rust's semantic project-context, package
   discovery, AST generation, and interface/implementation compilation events.
   `-vv` additionally reports the initially dirty modules and the completed
@@ -1817,18 +1822,14 @@ Three later Rust fixes were audited explicitly against the port:
    unrestricted, while `Some []` means no allowed dependents). Retain ordinary
    options for values that are genuinely absent, such as a missing interface,
    an unavailable native-event filename, or an optional hook.
-4. Complete the final output-presentation pass: implement and test the live
-   interactive spinner frames and the clear-screen rebuild/failure headers.
-5. Validate macOS packaging and native event behavior, then prepare the pinned
+4. Validate macOS packaging and native event behavior, then prepare the pinned
    Windows handoff. Finish the Windows watcher/lock
    backend and path audit and run the native build, unit, focused, and canonical
    Bash suites in the VM. Address findings there and finish with an x64 Windows
    confidence run where available.
 
-Live spinner animation is explicitly grouped into the final
-output-presentation pass before Windows validation. The future
-filesystem-performance ideas documented above do not block completion of the
-compatibility port.
+The future filesystem-performance ideas documented above do not block
+completion of the compatibility port.
 
 The OCaml unit-test sources now live in `tests/rewatch_ounit_tests` and use the
 repository's existing OUnit2 dependency, leaving production modules in

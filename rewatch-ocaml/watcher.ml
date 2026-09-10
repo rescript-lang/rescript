@@ -2,6 +2,8 @@ exception Stop
 
 type change_kind = Added | Removed | Modified
 type change = {path: string; kind: change_kind}
+type build_result = Succeeded | Failed
+type rebuild_kind = Incremental | Full
 
 type source_root = {directory: string; recursive: bool}
 
@@ -442,12 +444,23 @@ let run_locked ~root ~prod ~features ~filter ~clear_screen ~show_progress
       next_lock_check := now +. 0.1;
       if not (Build_lock.is_owned watch_lock) then raise Stop)
   in
-  let clear_terminal () =
-    if
-      Output.should_clear_screen ~clear_screen ~show_progress
-        ~interactive:(Unix.isatty Unix.stdout && Unix.isatty Unix.stderr)
-    then
-      Printf.printf "\027[2J\027[H%!"
+  let show_rebuild_presentation () =
+    Output.should_clear_screen ~clear_screen ~show_progress
+      ~interactive:(Unix.isatty Unix.stdout && Unix.isatty Unix.stderr)
+  in
+  let begin_rebuild kind =
+    if show_rebuild_presentation () then (
+      Printf.printf "\027[2J\027[H%!";
+      print_endline
+        (match kind with
+        | Incremental -> "Change detected. Rebuilding..."
+        | Full -> "Change detected. Full rebuild..."))
+  in
+  let finish_rebuild = function
+    | Succeeded -> ()
+    | Failed when show_rebuild_presentation () ->
+      print_endline "\nBuild failed. Watching for changes..."
+    | Failed -> ()
   in
   let direct_content_changes watcher roots sources unresolved events =
     let changes = ref [] in
@@ -509,7 +522,7 @@ let run_locked ~root ~prod ~features ~filter ~clear_screen ~show_progress
       in
       if current <> previous then (
         Output.debug ~verbosity "doing Full";
-        clear_terminal ();
+        begin_rebuild Full;
         let build_roots, _, build_sources, build_unresolved =
           watch_context ~root ~prod ~features
         in
@@ -517,7 +530,8 @@ let run_locked ~root ~prod ~features ~filter ~clear_screen ~show_progress
           snapshot digest_cache ~matches_source:matches_filter build_roots
             build_sources build_unresolved
         in
-        build ~poll ~changes:(Some (changes_between previous current));
+        build ~poll ~changes:(Some (changes_between previous current))
+        |> finish_rebuild;
         let new_roots, _, new_sources, new_unresolved =
           watch_context ~root ~prod ~features
         in
@@ -567,8 +581,8 @@ let run_locked ~root ~prod ~features ~filter ~clear_screen ~show_progress
       | Some [] -> native_loop watcher roots sources unresolved previous
       | Some changes ->
         Output.debug ~verbosity "doing Incremental";
-        clear_terminal ();
-        build ~poll ~changes:(Some changes);
+        begin_rebuild Incremental;
+        build ~poll ~changes:(Some changes) |> finish_rebuild;
         native_loop watcher roots sources unresolved previous
       | None -> native_reconcile watcher roots sources unresolved previous)
   and native_reconcile watcher roots sources unresolved previous =
@@ -578,7 +592,7 @@ let run_locked ~root ~prod ~features ~filter ~clear_screen ~show_progress
     in
     if current <> previous then (
       Output.debug ~verbosity "doing Full";
-      clear_terminal ();
+      begin_rebuild Full;
       let build_roots, _, build_sources, build_unresolved =
         watch_context ~root ~prod ~features
       in
@@ -586,7 +600,8 @@ let run_locked ~root ~prod ~features ~filter ~clear_screen ~show_progress
         snapshot digest_cache ~matches_source:matches_filter build_roots
           build_sources build_unresolved
       in
-      build ~poll ~changes:(Some (changes_between previous current));
+      build ~poll ~changes:(Some (changes_between previous current))
+      |> finish_rebuild;
       let new_roots, paths, new_sources, new_unresolved =
         watch_context ~root ~prod ~features
       in
@@ -652,7 +667,7 @@ let run_locked ~root ~prod ~features ~filter ~clear_screen ~show_progress
     match Native_watcher.create ~paths:(paths @ symlink_paths) with
     | Error message ->
       native_fallback message;
-      build ~poll ~changes:None;
+      ignore (build ~poll ~changes:None);
       let roots, _, sources, unresolved =
         watch_context ~root ~prod ~features
       in
@@ -661,7 +676,7 @@ let run_locked ~root ~prod ~features ~filter ~clear_screen ~show_progress
       let fallback =
         Fun.protect
           (fun () ->
-            build ~poll ~changes:None;
+            ignore (build ~poll ~changes:None);
             (* The following snapshot is authoritative for changes that arrived
                during the build. Pump and discard callbacks already queued for
                that interval so they do not request the same rebuild twice. *)
