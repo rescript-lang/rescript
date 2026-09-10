@@ -65,6 +65,90 @@ let validate_visible_namespaces ~(root_config : Config.t) graph_packages =
                            namespace (display previous) (display package)
                            (display consumer))))))
 
+let resolve_dependency modules_by_key node dependency =
+  let raw_name = dependency_head dependency in
+  let local_name =
+    match node.namespace, String.split_on_char '.' dependency with
+    | Some namespace, first :: second :: _ when first = namespace -> second
+    | _ -> raw_name
+  in
+  let local_key =
+    match node.namespace with
+    | None -> local_name
+    | Some namespace -> (
+      match node.namespace_entry with
+      | Some entry when entry = local_name -> local_name
+      | Some _ -> local_name ^ "-@" ^ namespace
+      | None -> local_name ^ "-" ^ namespace)
+  in
+  let is_visible dependency_node =
+    dependency_node.package_name = node.package_name
+    || List.mem dependency_node.package_name node.allowed_dependencies
+  in
+  match Hashtbl.find_opt modules_by_key local_key with
+  | Some dependency_node when is_visible dependency_node -> [local_key]
+  | _ when node.namespace = Some raw_name ->
+    (* A qualified reference is recorded in the compiler dependency header by
+       its leading namespace only. Treating that marker as a module reference
+       would make it depend on every module exported by the package. *)
+    []
+  | _ -> (
+    match Hashtbl.find_opt modules_by_key raw_name with
+    | Some dependency_node when is_visible dependency_node -> [raw_name]
+    | _ ->
+      let explicit_namespaced_module =
+        match String.split_on_char '.' dependency with
+        | namespace :: module_name :: _ ->
+          [module_name ^ "-" ^ namespace; module_name ^ "-@" ^ namespace]
+          |> List.find_opt (fun key ->
+               match Hashtbl.find_opt modules_by_key key with
+               | Some dependency_node
+                 when dependency_node.namespace = Some namespace
+                      && is_visible dependency_node ->
+                 true
+               | Some _ | None -> false)
+        | _ -> None
+      in
+      match explicit_namespaced_module with
+      | Some key -> [key]
+      | None ->
+        Hashtbl.to_seq_values modules_by_key
+        |> Seq.filter_map (fun dependency_node ->
+             if
+               dependency_node.namespace = Some raw_name
+               && is_visible dependency_node
+             then Some dependency_node.key
+             else None)
+        |> List.of_seq)
+
+let resolved_dependencies modules_by_key node =
+  node.raw_dependencies
+  |> List.concat_map (resolve_dependency modules_by_key node)
+  |> List.filter (fun dependency -> dependency <> node.key)
+  |> List.sort_uniq String.compare
+
+let find_cycle modules_by_key build_state =
+  let graph_nodes =
+    Hashtbl.to_seq_values modules_by_key |> List.of_seq
+    |> List.sort (fun first second -> String.compare first.key second.key)
+    |> List.map (fun node ->
+         (node, (Build_state.find_exn build_state node.key).dependencies))
+  in
+  try
+    ignore
+      (Graph.topological_sort graph_nodes ~name:(fun (node, _) -> node.key)
+         ~deps:snd);
+    None
+  with Graph.Cycle cycle ->
+    let blocked =
+      Graph.blocked_dependents
+        (List.map
+           (fun (node, dependencies) -> (node.key, dependencies))
+           graph_nodes)
+        cycle
+    in
+    Some {cycle; blocked; modules_by_key}
+
 let run ~(root_config : Config.t) ~prod ~features ~warn_error
     ~filter ~watch ~stats ~on_cleanup =
   let bsc = bsc_path () in
@@ -265,72 +349,10 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error
              (Filename.concat previous.package_root previous.source_path)
              (Filename.concat node.package_root node.source_path)))
     nodes;
-  let resolve_dependency node dependency =
-    let raw_name = dependency_head dependency in
-    let local_name =
-      match node.namespace, String.split_on_char '.' dependency with
-      | Some namespace, first :: second :: _ when first = namespace -> second
-      | _ -> raw_name
-    in
-    let local_key =
-      match node.namespace with
-      | None -> local_name
-      | Some namespace -> (
-        match node.namespace_entry with
-        | Some entry when entry = local_name -> local_name
-        | Some _ -> local_name ^ "-@" ^ namespace
-        | None -> local_name ^ "-" ^ namespace)
-    in
-    let is_visible dependency_node =
-      dependency_node.package_name = node.package_name
-      || List.mem dependency_node.package_name node.allowed_dependencies
-    in
-    match Hashtbl.find_opt by_key local_key with
-    | Some dependency_node when is_visible dependency_node ->
-      [local_key]
-    | _ when node.namespace = Some raw_name ->
-      (* Ignoring the current namespace marker prevents one qualified
-         reference from becoming a dependency on every module exported by the
-         package. The compiler dependency header records [OwnNamespace.Member]
-         as only [OwnNamespace]. *)
-      []
-    | _ ->
-      (match Hashtbl.find_opt by_key raw_name with
-      | Some dependency_node when is_visible dependency_node ->
-        [raw_name]
-      | _ ->
-        let explicit_namespaced_module =
-          match String.split_on_char '.' dependency with
-        | namespace :: module_name :: _ ->
-          [module_name ^ "-" ^ namespace; module_name ^ "-@" ^ namespace]
-          |> List.find_opt (fun key ->
-               match Hashtbl.find_opt by_key key with
-               | Some dependency_node
-                 when dependency_node.namespace = Some namespace
-                      && is_visible dependency_node ->
-                 true
-               | Some _ | None -> false)
-        | _ -> None
-        in
-        match explicit_namespaced_module with
-        | Some key -> [key]
-        | None ->
-          nodes
-          |> List.filter_map (fun dependency_node ->
-               if
-                 dependency_node.namespace = Some raw_name
-                 && is_visible dependency_node
-               then Some dependency_node.key
-               else None))
-  in
+  Hashtbl.iter (fun key node -> Hashtbl.add stats.global_modules key node) by_key;
   let graph_nodes =
     List.map
-      (fun node ->
-        ( node,
-          node.raw_dependencies
-          |> List.concat_map (resolve_dependency node)
-          |> List.filter (fun dependency -> dependency <> node.key)
-          |> List.sort_uniq String.compare ))
+      (fun node -> (node, resolved_dependencies by_key node))
       nodes
   in
   let build_state = Build_state.create (List.length graph_nodes) in
@@ -348,22 +370,6 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error
       Build_state.set_dependencies build_state ~key:node.key dependencies)
     graph_nodes;
   stats.build_state <- Some build_state;
-  let cycle =
-    try
-      ignore
-        (Graph.topological_sort graph_nodes
-           ~name:(fun (node, _) -> node.key)
-           ~deps:snd);
-      None
-    with Graph.Cycle cycle ->
-      let blocked =
-        Graph.blocked_dependents
-          (List.map
-             (fun (node, dependencies) -> (node.key, dependencies))
-             graph_nodes)
-          cycle
-      in
-      Some {cycle; blocked; modules_by_key = by_key}
-  in
+  let cycle = find_cycle by_key build_state in
   stats.parse_seconds <- Unix.gettimeofday () -. parse_started;
   cycle

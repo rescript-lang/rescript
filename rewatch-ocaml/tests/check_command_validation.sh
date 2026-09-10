@@ -66,6 +66,7 @@ mkdir -p "$work/ast-race-rust/src" "$work/ast-race-ocaml/src"
 mkdir -p "$work/parse-source-race-rust/src" \
   "$work/parse-source-race-ocaml/src"
 mkdir -p "$work/watch-config-rust/src" "$work/watch-config-ocaml/src"
+mkdir -p "$work/watch-retained-graph/src"
 mkdir -p "$work/watch-dependency-recovery/src" \
   "$work/watch-dependency-recovery/packages/dep/src"
 mkdir -p "$work/watch-dependency-install/src" \
@@ -257,6 +258,11 @@ cp "$work/watch-config-rust/rescript.json" \
   "$work/watch-config-ocaml/rescript.json"
 printf 'let value = 1\n' >"$work/watch-config-rust/src/A.res"
 cp "$work/watch-config-rust/src/A.res" "$work/watch-config-ocaml/src/A.res"
+printf '{"name":"watch-retained-graph","sources":["src"]}\n' \
+  >"$work/watch-retained-graph/rescript.json"
+printf 'let value = 1\n' >"$work/watch-retained-graph/src/A.res"
+printf 'let oldValue = 1\n' >"$work/watch-retained-graph/src/C.res"
+printf 'let value = A.value\n' >"$work/watch-retained-graph/src/B.res"
 printf '{"name":"watch-dependency-recovery","sources":["src"],"dependencies":["dep"]}\n' \
   >"$work/watch-dependency-recovery/rescript.json"
 printf 'let value = 1\n' >"$work/watch-dependency-recovery/src/A.res"
@@ -469,6 +475,9 @@ run_build_output_case() {
     ! cmp -s "$work/rust.out.norm" "$work/ocaml.out.norm" || \
     ! cmp -s "$work/rust.err.norm" "$work/ocaml.err.norm"; then
     echo "$name: $mode build output differs" >&2
+    printf '%s\n' \
+      "statuses: expected=$expected_status Rust=$rust_status OCaml=$ocaml_status" \
+      >&2
     printf '%s\n' '--- Rust stdout ---' >&2
     cat "$work/rust.out.norm" >&2
     printf '%s\n' '--- OCaml stdout ---' >&2
@@ -477,6 +486,19 @@ run_build_output_case() {
     cat "$work/rust.err.norm" >&2
     printf '%s\n' '--- OCaml stderr ---' >&2
     cat "$work/ocaml.err.norm" >&2
+    for stream in out err; do
+      if ! cmp -s "$work/rust.$stream.norm" "$work/ocaml.$stream.norm"; then
+        printf '%s\n' "--- $stream byte counts ---" >&2
+        wc -c "$work/rust.$stream.norm" "$work/ocaml.$stream.norm" >&2
+        printf '%s\n' "--- first differing $stream bytes ---" >&2
+        cmp -l "$work/rust.$stream.norm" "$work/ocaml.$stream.norm" \
+          | head -n 20 >&2 || true
+        printf '%s\n' "--- Rust $stream tail bytes ---" >&2
+        tail -c 64 "$work/rust.$stream.norm" | od -An -tx1c >&2
+        printf '%s\n' "--- OCaml $stream tail bytes ---" >&2
+        tail -c 64 "$work/ocaml.$stream.norm" | od -An -tx1c >&2
+      fi
+    done
     exit 1
   fi
   checked=$((checked + 1))
@@ -1188,6 +1210,33 @@ wait_for_file "$work/watch-config-ocaml/src/A.mjs"
 wait_for_file "$work/watch-config-ocaml/lib/bs/build.ninja"
 kill -TERM "$ocaml_watch_pid"
 wait "$ocaml_watch_pid"
+checked=$((checked + 1))
+
+retained_graph_marker="$work/watch-retained-graph/after-build.log"
+REWATCH_WATCH_FILTER_MARKER="$retained_graph_marker" \
+  "$ocaml" watch --after-build "node $work/watch-filter-marker.js" \
+    "$work/watch-retained-graph" \
+    >"$work/watch-retained-graph.out" \
+    2>"$work/watch-retained-graph.err" &
+retained_graph_pid=$!
+background_pids="$background_pids $retained_graph_pid"
+wait_for_line_count "$retained_graph_marker" 1
+printf 'let newValue = 2\n' >"$work/watch-retained-graph/src/C.res"
+printf 'let value = C.newValue\n' >"$work/watch-retained-graph/src/B.res"
+wait_for_line_count "$retained_graph_marker" 2
+wait_for_text "$work/watch-retained-graph/src/B.js" "C.newValue"
+printf 'let value = C.newValue\n' >"$work/watch-retained-graph/src/B.res"
+printf 'let newValue = B.value\n' >"$work/watch-retained-graph/src/C.res"
+wait_for_text "$work/watch-retained-graph.err" \
+  "Found a circular dependency in your code"
+if ! kill -0 "$retained_graph_pid" 2>/dev/null; then
+  echo "OCaml watcher exited after an incremental dependency cycle" >&2
+  exit 1
+fi
+printf 'let newValue = 3\n' >"$work/watch-retained-graph/src/C.res"
+wait_for_line_count "$retained_graph_marker" 3
+kill -TERM "$retained_graph_pid"
+wait "$retained_graph_pid"
 checked=$((checked + 1))
 
 "$ocaml" watch "$work/watch-dependency-recovery" \

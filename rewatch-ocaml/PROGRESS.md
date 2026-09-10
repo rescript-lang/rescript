@@ -20,10 +20,15 @@ state across ordinary watch edits, while the OCaml callback reconstructed that
 state on every event. The common existing-file edit path now carries the
 snapshot's exact changed paths into the build, retains package, dependency,
 artifact, cleanup, and module state, and reparses only those paths. Additions,
-removals, unknown paths, configuration changes, and changed dependency headers
-still conservatively reinitialize the build. Updating dependency edges in
-place, retained-watch work measurements, and the complete lifecycle audit are
-required before this gap is closed.
+removals, unknown paths, and configuration changes still conservatively
+reinitialize the build. When an existing source changes its dependency header,
+the retained graph now replaces that module's forward edges, removes obsolete
+reverse edges, adds new reverse edges without duplication, and checks the
+updated graph for cycles without rescanning the project. A focused long-lived
+watch case changes an edge, observes the rebuilt dependent, introduces a cycle,
+confirms that the watcher remains alive, and then confirms recovery after the
+cycle is removed. Retained-watch work measurements and the complete lifecycle
+audit are still required before this gap is closed.
 
 Native macOS validation at checkpoint `30725fb01` passed `make test-all` and,
 after making temporary fixture paths canonical and accounting for the host's
@@ -309,6 +314,14 @@ differential watch case uses successful hook markers rather than sleeps: it
 proves Rust completes the excluded-file wakeup with stale included output and
 that OCaml rebuilds the included output directly. The port's consistent
 positive semantics are retained as a Rust bug fix.
+Incremental dependency replacement also removes the module from dependencies
+it no longer references before adding its current reverse edges. Rust's
+`build::deps::get_deps` replaces forward edges but only appends reverse edges,
+so a long-lived watch can retain stale dependents after a source stops
+referencing a module. That
+causes unnecessary recompilation rather than an incorrect build result. The
+port performs the complete replacement, and focused build-state coverage
+protects both obsolete-edge removal and duplicate prevention.
 
 ### Rust panic follow-ups
 
@@ -1760,10 +1773,10 @@ Three later Rust fixes were audited explicitly against the port:
 
 ## Next actions
 
-1. Finish long-lived watcher parity: update changed dependency edges without a
-   full rescan, verify structural-change and failure recovery, and add retained
-   watch latency/work and filesystem-call measurements. Complete the renewed
-   lifecycle audit before accepting watcher or algorithm parity.
+1. Finish long-lived watcher parity: verify structural-change and failure
+   recovery across the lifecycle matrix, and add retained-watch latency/work
+   and filesystem-call measurements. Complete the renewed lifecycle audit
+   before accepting watcher or algorithm parity.
 2. Perform the final two-scope whole-port review and address confirmed findings.
 3. At the final maintainability pass, add comments around ownership,
    concurrency, platform, and algorithmic invariants that are not apparent from

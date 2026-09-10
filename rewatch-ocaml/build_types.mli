@@ -22,7 +22,7 @@ type global_module = {
   namespace: string option;
   namespace_entry: string option;
   allowed_dependencies: string list;
-  raw_dependencies: string list;
+  mutable raw_dependencies: string list;
 }
 
 type t = {
@@ -43,6 +43,7 @@ type t = {
   watch_outputs: (string * string * string) list ref;
   watch_output_paths: (string, unit) Hashtbl.t;
   global_raw_dependencies: (string, string list) Hashtbl.t;
+  global_modules: (string, global_module) Hashtbl.t;
   graph_packages: (string, graph_package) Hashtbl.t;
   cleanup_results: (string, Build_artifacts.cleanup_result) Hashtbl.t;
   deferred_artifact_cleanup: string list ref;

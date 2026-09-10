@@ -3,7 +3,7 @@ type module_ = {
   package_name: string;
   package_root: string;
   source: Source.module_;
-  raw_dependencies: string list;
+  mutable raw_dependencies: string list;
   mutable dependencies: string list;
   mutable dependents: string list;
   mutable compile_dirty: bool;
@@ -51,12 +51,19 @@ let dependency_compiled_after module_ dependency =
 
 let set_dependencies state ~key dependencies =
   let module_ = find_exn state key in
+  List.iter
+    (fun dependency ->
+      let dependency_module = find_exn state dependency in
+      dependency_module.dependents <-
+        List.filter (fun dependent -> dependent <> key) dependency_module.dependents)
+    module_.dependencies;
   module_.dependencies <- dependencies;
   module_.deps_dirty <- false;
   List.iter
     (fun dependency ->
       let dependency_module = find_exn state dependency in
-      dependency_module.dependents <- key :: dependency_module.dependents)
+      if not (List.mem key dependency_module.dependents) then
+        dependency_module.dependents <- key :: dependency_module.dependents)
     dependencies
 
 let mark_dependents_compile_dirty state module_ ~is_blocked =

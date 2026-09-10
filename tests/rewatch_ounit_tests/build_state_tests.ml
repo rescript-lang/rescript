@@ -49,4 +49,13 @@ let tests =
   b.last_compiled_cmt <- Some 0.5;
   check
     (Build_state.dependency_compiled_after b a)
-    "dependency CMI timestamps invalidate older dependents"
+    "dependency CMI timestamps invalidate older dependents";
+  Build_state.set_dependencies state ~key:"B" [];
+  check
+    (a.dependents = [] && b.dependencies = [])
+    "updating dependencies removes obsolete reverse edges";
+  Build_state.set_dependencies state ~key:"B" ["A"];
+  Build_state.set_dependencies state ~key:"B" ["A"];
+  check
+    (a.dependents = ["B"] && b.dependencies = ["A"])
+    "updating dependencies does not duplicate reverse edges"

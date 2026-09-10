@@ -224,11 +224,27 @@ let prepare_incremental previous changes stats =
             | None -> []
             | Some path -> dependencies path)
         in
-        match Hashtbl.find_opt stats.global_raw_dependencies key with
-        | Some previous when previous = raw_dependencies -> ()
-        | Some _ | None -> raise Full_rebuild_required))
+        let node =
+          match Hashtbl.find_opt stats.global_modules key with
+          | Some node -> node
+          | None -> raise Full_rebuild_required
+        in
+        Hashtbl.replace stats.global_raw_dependencies key raw_dependencies;
+        node.raw_dependencies <- raw_dependencies;
+        let state =
+          match stats.build_state with
+          | Some state -> state
+          | None -> raise Full_rebuild_required
+        in
+        let module_state = Build_state.find_exn state key in
+        module_state.raw_dependencies <- raw_dependencies;
+        Build_state.set_dependencies state ~key
+          (Build_preparation.resolved_dependencies stats.global_modules node)))
     affected_modules;
-  stats.parse_seconds <- Unix.gettimeofday () -. started_at
+  stats.parse_seconds <- Unix.gettimeofday () -. started_at;
+  match stats.build_state with
+  | Some state -> Build_preparation.find_cycle stats.global_modules state
+  | None -> raise Full_rebuild_required
 
 let run_with_warning_state ~poll ~warning_state ~previous ~changes
     ~compilation_kind ~no_timing ~seen ~verbosity ~folder ~prod ~features
@@ -386,8 +402,7 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
     let cycle =
       match previous, changes with
       | Some previous, Some changes ->
-        prepare_incremental previous changes stats;
-        None
+        prepare_incremental previous changes stats
       | Some _, None -> raise Full_rebuild_required
       | None, _ ->
         Build_preparation.run ~root_config ~prod ~features ~warn_error ~filter
