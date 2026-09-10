@@ -84,14 +84,18 @@ let capture_error exn =
   Error ("failed to capture subprocess output: " ^ Printexc.to_string exn)
 
 let launch ?env payload job =
-  let (stdout_read, stdout_write), (stderr_read, stderr_write) =
-    Platform.create_capture_pipes ()
-  in
+  (* Signals are deferred before opening pipes so asynchronous watch
+     termination cannot interrupt the gap between acquiring descriptors and
+     installing their cleanup owner. *)
   let restore_signals = Platform.defer_termination_signals () in
+  let opened_pipes = ref None in
   let stdout_capture = ref None in
   let stderr_capture = ref None in
   let child_pid = ref None in
   try
+    let pipes = Platform.create_capture_pipes () in
+    opened_pipes := Some pipes;
+    let (stdout_read, stdout_write), (stderr_read, stderr_write) = pipes in
     let stdout = start_capture stdout_read in
     stdout_capture := Some stdout;
     let stderr = start_capture stderr_read in
@@ -107,16 +111,19 @@ let launch ?env payload job =
     {payload; pid; stdout_capture = stdout; stderr_capture = stderr}
   with exn ->
     Option.iter
-      (fun pid ->
-        Platform.signal_process_tree pid Sys.sigkill;
-        try ignore (Unix.waitpid [] pid) with Unix.Unix_error _ -> ())
-      !child_pid;
-    close_noerr stdout_write;
-    close_noerr stderr_write;
-    if Option.is_none !stdout_capture then close_noerr stdout_read;
-    if Option.is_none !stderr_capture then close_noerr stderr_read;
-    Option.iter (fun capture -> Thread.join capture.thread) !stdout_capture;
-    Option.iter (fun capture -> Thread.join capture.thread) !stderr_capture;
+      (fun ((stdout_read, stdout_write), (stderr_read, stderr_write)) ->
+        Option.iter
+          (fun pid ->
+            Platform.signal_process_tree pid Sys.sigkill;
+            try ignore (Unix.waitpid [] pid) with Unix.Unix_error _ -> ())
+          !child_pid;
+        close_noerr stdout_write;
+        close_noerr stderr_write;
+        if Option.is_none !stdout_capture then close_noerr stdout_read;
+        if Option.is_none !stderr_capture then close_noerr stderr_read;
+        Option.iter (fun capture -> Thread.join capture.thread) !stdout_capture;
+        Option.iter (fun capture -> Thread.join capture.thread) !stderr_capture)
+      !opened_pipes;
     let exn = try restore_signals (); exn with signal_exn -> signal_exn in
     raise exn
 
