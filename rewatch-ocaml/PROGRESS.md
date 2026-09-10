@@ -1179,6 +1179,12 @@ owners directly. This removes two small algorithms from orchestration and
 keeps the forthcoming dependency-preparation interface from exposing helpers
 that belong to reusable state/graph boundaries.
 
+Command-level `--after-build` parsing, execution, output forwarding, and error
+classification now live in `after_build.ml`. Build orchestration retains only
+the post-success dispatch point and still releases the build lock before the
+hook runs. Existing focused success coverage and the three differential empty,
+missing-program, and nonzero-exit cases protect the extracted behavior.
+
 ## Known gaps
 
 - Incremental state currently relies on artifact timestamps, byte-identical CMI
