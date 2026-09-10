@@ -188,15 +188,17 @@ let run_with_warning_state ~poll ~warning_state ~compilation_kind ~no_timing
         if success then Printf.printf "Compiled %d modules\n%!" stats.compiled
         else Printf.eprintf "Compiled %d modules\n%!" stats.compiled);
     let diagnostics =
-      stats.diagnostics |> List.rev |> List.sort_uniq String.compare
+      if compilation_kind = Some "incremental" then []
+      else stats.diagnostics |> List.rev |> List.sort_uniq String.compare
     in
     let warning_entries = Warning_state.entries stats.warning_state in
     warning_entries
     |> List.iter (fun entry -> prerr_string entry.Warning_state.output);
     if warning_entries <> [] && diagnostics = [] then prerr_newline ();
     flush stderr;
-    if diagnostics <> [] then
-      prerr_endline (String.concat "\n\n" diagnostics);
+    if diagnostics <> [] then (
+      let output = String.concat "\n\n" diagnostics in
+      prerr_endline (if interactive then Output.yellow output else output));
     if success && interactive && show_progress then
       let seconds =
         if no_timing then 0. else Unix.gettimeofday () -. started_at
@@ -376,11 +378,11 @@ let watch ~verbosity ~folder ~prod ~features ~warn_error ~after_build ~filter
     let compilation_kind =
       if !initial_build then Some "initial" else Some "incremental"
     in
+    initial_build := false;
     try
       run_with_warning_state ~poll ~warning_state ~compilation_kind
         ~no_timing:false ~seen:[] ~verbosity ~folder ~prod ~features ~warn_error
-        ~watch:true ~after_build ~filter;
-      initial_build := false
+        ~watch:true ~after_build ~filter
     with
     | Reported_failure _ -> ()
     | Package_error message | Error message | Config.Error message

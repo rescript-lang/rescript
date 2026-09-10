@@ -28,6 +28,10 @@ for implementation in rust ocaml; do
     >"$work/$implementation/rescript.json"
   printf 'let value = 1\n' >"$work/$implementation/src/A.res"
   cp -R "$work/$implementation" "$work/$implementation-watch"
+  cp -R "$work/$implementation" "$work/$implementation-warning-watch"
+  printf '%s\n' \
+    '{"name":"interactive-output","sources":["src"],"package-specs":{"module":"es6","in-source":true}}' \
+    >"$work/$implementation-warning-watch/rescript.json"
 done
 
 export RESCRIPT_BSC_EXE=${RESCRIPT_BSC_EXE:-$root/_build/default/compiler/bsc/rescript_compiler_main.exe}
@@ -203,5 +207,54 @@ if ! cmp -s "$work/expected-watch" "$work/ocaml-watch.phases"; then
   cat "$work/ocaml-watch.phases" >&2
   exit 1
 fi
+
+capture_warning_watch() {
+  local implementation=$1
+  local executable=$2
+  local project="$work/$implementation-warning-watch"
+  local transcript="$work/$implementation-warning-watch.tty"
+  if [ "$(uname -s)" = Darwin ]; then
+    script -q "$transcript" env \
+      "RESCRIPT_BSC_EXE=$RESCRIPT_BSC_EXE" \
+      "RESCRIPT_RUNTIME=$RESCRIPT_RUNTIME" \
+      "$executable" watch "$project" >/dev/null &
+  else
+    script -qefc \
+      "RESCRIPT_BSC_EXE=$RESCRIPT_BSC_EXE RESCRIPT_RUNTIME=$RESCRIPT_RUNTIME $executable watch $project" \
+      "$transcript" >/dev/null &
+  fi
+  active_script_pid=$!
+  if ! wait_for_text "$transcript" "Finished initial compilation" 1; then
+    return 1
+  fi
+  printf 'let value = 2\n' >"$project/src/A.res"
+  if ! wait_for_text "$transcript" "Finished incremental compilation" 1; then
+    return 1
+  fi
+  rm -f "$project/lib/watch.lock"
+  wait "$active_script_pid"
+  active_script_pid=""
+
+  if [ "$(grep -cF "uses deprecated config" "$transcript")" -ne 1 ]; then
+    echo "$implementation repeated a configuration warning during watch" >&2
+    cat "$transcript" >&2
+    exit 1
+  fi
+  if grep -F "Finished incremental compilation with warnings" \
+    "$transcript" >/dev/null; then
+    echo "$implementation carried a static configuration warning into the incremental footer" >&2
+    cat "$transcript" >&2
+    exit 1
+  fi
+  if [ "$implementation" = ocaml ] && \
+    ! grep -F $'\033[33mPackage' "$transcript" >/dev/null; then
+    echo "$implementation did not render interactive configuration warnings in yellow" >&2
+    cat "$transcript" >&2
+    exit 1
+  fi
+}
+
+capture_warning_watch rust "$rust"
+capture_warning_watch ocaml "$ocaml"
 
 echo "Interactive output phases matched"
