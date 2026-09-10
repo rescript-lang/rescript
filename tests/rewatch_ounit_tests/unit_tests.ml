@@ -769,7 +769,7 @@ let tests =
         ~finally:(fun () ->
           match previous_bsc with
           | Some value -> Unix.putenv "RESCRIPT_BSC_EXE" value
-          | None -> Unix.unsetenv "RESCRIPT_BSC_EXE")
+          | None -> Test_support.unsetenv "RESCRIPT_BSC_EXE")
         (fun () ->
           let rejected =
             try
