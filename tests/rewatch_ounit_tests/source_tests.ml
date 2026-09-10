@@ -159,16 +159,21 @@ let tests =
       check casing_rejected
         "implementation and interface basename casing must match";
       write_file (Filename.concat root "case/Lower.res") "let value = 1\n";
-      let duplicate_rejected =
-        try
-          ignore (discover config ());
-          false
-        with Source.Error message ->
-          Test_support.contains_text message "Duplicate module name: Lower"
-      in
-      check duplicate_rejected
-        "adding the exact implementation still exposes the differently-cased \
-         duplicate";
+      let lower = Unix.stat (Filename.concat root "case/lower.res") in
+      let upper = Unix.stat (Filename.concat root "case/Lower.res") in
+      (* Case-insensitive filesystems give both spellings the same directory
+         entry, so they cannot represent the two inputs needed by this check. *)
+      (if lower.st_dev <> upper.st_dev || lower.st_ino <> upper.st_ino then
+         let duplicate_rejected =
+           try
+             ignore (discover config ());
+             false
+           with Source.Error message ->
+             Test_support.contains_text message "Duplicate module name: Lower"
+         in
+         check duplicate_rejected
+           "adding the exact implementation still exposes the \
+            differently-cased duplicate");
       write_file (Filename.concat root "paths/a/Path.res") "let value = 1\n";
       write_file (Filename.concat root "paths/b/Path.resi") "let value: int\n";
       write_file config_path
