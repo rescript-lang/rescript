@@ -16,6 +16,30 @@ ordinary verbosity and diagnostics remain in scope. Incremental state uses
 existing AST, CMI, CMT, and generated-output artifacts rather than in-process
 compiler state.
 
+The September whole-port source review's six findings are now covered. Full
+watch attempts initialize persistent compile freshness even when parsing fails;
+Windows launches restrict inheritance to the three intended standard handles;
+configured output suffixes drive freshness and stale-family cleanup; stdin
+formatting remains interruptible while its input stays open; formatting uses a
+discovered-file inventory rather than compilation modules; and diagnostics use
+permissive display paths for external dependency cycles and namespace
+collisions. Focused regressions cover initial-failure recovery, compound and
+non-JavaScript suffixes, open-stdin termination, orphan interfaces, duplicate
+module basenames, and external diagnostic paths. Native execution of the new
+Windows handle-list path remains part of the dedicated Windows phase.
+
+The same pass avoids rewriting `.sourcedirs.json` on ordinary retained edits,
+caches namespace-member freshness summaries per attempt, and reuses the CMI
+byte comparison performed by publication instead of rereading the CMI before
+and after every compile. CMI publication state is a normal three-case variant
+(`changed`, `unchanged`, or `unknown`) rather than an optional boolean; an audit
+found no remaining `bool option` in the port or its unit tests. A session-owned
+worker pool and a different capture backend remain measurement-gated: both add
+lifecycle and Windows-pipe risk, and prior capture-buffer experiments did not
+improve wall time. The overlapping historical progress documents should be
+consolidated only after implementation stabilizes, so active review evidence is
+not discarded during the review cycle.
+
 A renewed lifecycle audit found a gap in the earlier source-oriented
 comparison: Rust retains its initialized build
 state across ordinary watch edits, while the OCaml callback reconstructed that

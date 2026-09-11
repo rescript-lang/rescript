@@ -315,6 +315,41 @@ printf '%s\n' '{"name":"shared","sources":"src"}' \
 printf 'let value = 2\n' \
   >"$external_duplicate_base/node_modules/shared/src/Shared.res"
 
+external_diagnostics_base="$work/external-diagnostics"
+external_cycle="$external_diagnostics_base/project"
+external_cycle_dependency="$external_diagnostics_base/store/cycle-dep"
+mkdir -p "$external_cycle/src" "$external_cycle/node_modules" \
+  "$external_cycle_dependency/src" "$external_cycle_dependency/node_modules"
+printf '%s\n' \
+  '{"name":"external-cycle-root","sources":"src","dependencies":["cycle-dep"]}' \
+  >"$external_cycle/rescript.json"
+printf 'let value = CycleDep.value\n' >"$external_cycle/src/Root.res"
+printf '%s\n' \
+  '{"name":"cycle-dep","sources":"src","dependencies":["external-cycle-root"]}' \
+  >"$external_cycle_dependency/rescript.json"
+printf 'let value = Root.value\n' >"$external_cycle_dependency/src/CycleDep.res"
+ln -s ../../store/cycle-dep "$external_cycle/node_modules/cycle-dep"
+ln -s ../../../project \
+  "$external_cycle_dependency/node_modules/external-cycle-root"
+
+external_namespace="$external_diagnostics_base/namespace-project"
+mkdir -p "$external_namespace/src" "$external_namespace/node_modules" \
+  "$external_diagnostics_base/store/ns-one/src" \
+  "$external_diagnostics_base/store/ns-two/src"
+printf '%s\n' \
+  '{"name":"external-namespace-root","sources":"src","dependencies":["ns-one","ns-two"]}' \
+  >"$external_namespace/rescript.json"
+printf 'let value = 1\n' >"$external_namespace/src/Main.res"
+for namespace_dependency_name in ns-one ns-two; do
+  printf '%s\n' \
+    "{\"name\":\"$namespace_dependency_name\",\"namespace\":\"SharedNs\",\"sources\":\"src\"}" \
+    >"$external_diagnostics_base/store/$namespace_dependency_name/rescript.json"
+  printf 'let value = 1\n' \
+    >"$external_diagnostics_base/store/$namespace_dependency_name/src/Value.res"
+  ln -s "../../store/$namespace_dependency_name" \
+    "$external_namespace/node_modules/$namespace_dependency_name"
+done
+
 dev_include_order="$work/dev-include-order"
 mkdir -p "$dev_include_order/src" "$dev_include_order/dev" \
   "$dev_include_order/node_modules/regular/src" \
@@ -1030,6 +1065,23 @@ wait "$retained_parse_pid" 2>/dev/null || true
 "$port" build "$external_duplicate" >"$external_duplicate/build.log" 2>&1
 grep -F "$external_duplicate_base/node_modules/shared" \
   "$external_duplicate/build.log" >/dev/null
+if "$port" build "$external_cycle" \
+  >"$external_cycle/build.log" 2>&1; then
+  echo "external dependency cycle unexpectedly built" >&2
+  exit 1
+fi
+grep -F "circular dependency" "$external_cycle/build.log" >/dev/null
+grep -F "$external_cycle_dependency/src/CycleDep.res" \
+  "$external_cycle/build.log" >/dev/null
+if "$port" build "$external_namespace" \
+  >"$external_namespace/build.log" 2>&1; then
+  echo "external namespace collision unexpectedly built" >&2
+  exit 1
+fi
+grep -F "Namespace SharedNs is provided by both" \
+  "$external_namespace/build.log" >/dev/null
+grep -F "$external_diagnostics_base/store/ns-one" \
+  "$external_namespace/build.log" >/dev/null
 mkdir -p \
   "$duplicate_selection/node_modules/a/node_modules/shared/lib/ocaml"
 printf 'preserve nested duplicate\n' \
