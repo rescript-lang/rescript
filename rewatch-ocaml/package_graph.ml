@@ -209,7 +209,8 @@ let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
               let absolute_path = Filename.concat root relative_path in
               Hashtbl.replace stats.retained.source_index
                 (Platform.normalize_path_for_comparison absolute_path)
-                (root, module_, relative_path, absolute_path)))
+                Build_types.
+                  {package_root = root; module_; relative_path; absolute_path}))
         modules;
       graph_packages := package :: !graph_packages)
   in

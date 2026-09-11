@@ -4,13 +4,15 @@ type change_kind = Added | Removed | Modified
 type change = {path: string; kind: change_kind}
 type build_result = Succeeded | Failed
 
+type snapshot_entry = {path: string; modified: float; size: int; digest: string}
+
 module For_test : sig
   val is_control_file_name : string -> bool
 
   val polling_build_changes :
-    previous:(string * float * int * string) list ->
-    trigger:(string * float * int * string) list ->
-    before_build:(string * float * int * string) list ->
+    previous:snapshot_entry list ->
+    trigger:snapshot_entry list ->
+    before_build:snapshot_entry list ->
     change list
 
   val changes_are_incremental : change list -> bool

@@ -54,6 +54,28 @@ type 'a running = {
   child_wait: child_wait;
 }
 
+type capture_pipes =
+  (Unix.file_descr * Unix.file_descr) * (Unix.file_descr * Unix.file_descr)
+
+type launch_ownership = {
+  mutable pipes: capture_pipes option;
+  mutable stdout_capture: capture option;
+  mutable stderr_capture: capture option;
+  mutable process: Platform.process option;
+  mutable child_wait: child_wait option;
+  mutable termination_failed: bool;
+}
+
+let empty_launch_ownership () =
+  {
+    pipes = None;
+    stdout_capture = None;
+    stderr_capture = None;
+    process = None;
+    child_wait = None;
+    termination_failed = false;
+  }
+
 type completion_notifier = {
   mutex: Mutex.t;
   condition: Condition.t;
@@ -209,6 +231,66 @@ let start_child_wait pid notifier stdout_capture stderr_capture : child_wait =
   in
   {thread; direct_outcome; outcome}
 
+let fail_launch ownership restore_signals launch_error =
+  Option.iter
+    (fun ((stdout_read, stdout_write), (stderr_read, stderr_write)) ->
+      Option.iter
+        (fun process ->
+          let pid = Platform.process_id process in
+          let root_reaped =
+            match ownership.child_wait with
+            | Some wait -> Option.is_some (Atomic.get wait.direct_outcome)
+            | None -> false
+          in
+          if not (Platform.signal_process_tree ~root_reaped process Sys.sigkill)
+          then ownership.termination_failed <- true;
+          if
+            (not ownership.termination_failed)
+            && Option.is_none ownership.child_wait
+          then try ignore (Unix.waitpid [] pid) with Unix.Unix_error _ -> ())
+        ownership.process;
+      close_noerr stdout_write;
+      close_noerr stderr_write;
+      if Option.is_none ownership.stdout_capture then close_noerr stdout_read;
+      if Option.is_none ownership.stderr_capture then close_noerr stderr_read;
+      match ownership.child_wait with
+      | Some wait when not ownership.termination_failed ->
+        Thread.join wait.thread
+      | Some _ -> ()
+      | None
+        when (not ownership.termination_failed)
+             && Option.is_some ownership.process ->
+        Option.iter
+          (fun (capture : capture) -> Thread.join capture.thread)
+          ownership.stdout_capture;
+        Option.iter
+          (fun (capture : capture) -> Thread.join capture.thread)
+          ownership.stderr_capture
+      | None -> ())
+    ownership.pipes;
+  let release_error =
+    try
+      Option.iter Platform.release_process ownership.process;
+      None
+    with release_exn -> Some release_exn
+  in
+  let restore_error =
+    try
+      restore_signals ();
+      None
+    with signal_exn -> Some signal_exn
+  in
+  let error =
+    if ownership.termination_failed then
+      Error "Could not terminate a partially launched subprocess tree"
+    else
+      match (restore_error, release_error) with
+      | Some signal_exn, _ -> signal_exn
+      | None, Some release_exn -> release_exn
+      | None, None -> launch_error
+  in
+  raise error
+
 let launch ?env ?stdout_chunk ?stderr_chunk ?(defer_signals = true) ~notifier
     payload job =
   (* Capture descriptors need a cleanup owner before asynchronous watch
@@ -217,95 +299,34 @@ let launch ?env ?stdout_chunk ?stderr_chunk ?(defer_signals = true) ~notifier
   let restore_signals =
     if defer_signals then Platform.defer_termination_signals () else Fun.id
   in
-  let opened_pipes = ref None in
-  let stdout_capture = ref None in
-  let stderr_capture = ref None in
-  let child_process = ref None in
-  let child_wait = ref None in
-  let termination_failed = ref false in
+  let ownership = empty_launch_ownership () in
   try
     let pipes = Platform.create_capture_pipes () in
-    opened_pipes := Some pipes;
+    ownership.pipes <- Some pipes;
     let (stdout_read, stdout_write), (stderr_read, stderr_write) = pipes in
     let stdout = start_capture ?on_chunk:stdout_chunk stdout_read in
-    stdout_capture := Some stdout;
+    ownership.stdout_capture <- Some stdout;
     let stderr = start_capture ?on_chunk:stderr_chunk stderr_read in
-    stderr_capture := Some stderr;
+    ownership.stderr_capture <- Some stderr;
     let process =
       Platform.spawn ~env ~cwd:job.cwd ~program:job.program ~args:job.args
         ~stdout:stdout_write ~stderr:stderr_write
     in
-    child_process := Some process;
+    ownership.process <- Some process;
     let pid = Platform.process_id process in
     close_noerr stdout_write;
     close_noerr stderr_write;
     let wait = start_child_wait pid notifier stdout stderr in
-    child_wait := Some wait;
+    ownership.child_wait <- Some wait;
     restore_signals ();
     {payload; process; pid; child_wait = wait}
-  with exn ->
-    Option.iter
-      (fun ((stdout_read, stdout_write), (stderr_read, stderr_write)) ->
-        Option.iter
-          (fun process ->
-            let pid = Platform.process_id process in
-            let root_reaped =
-              match !child_wait with
-              | Some wait -> Option.is_some (Atomic.get wait.direct_outcome)
-              | None -> false
-            in
-            if
-              not
-                (Platform.signal_process_tree ~root_reaped process Sys.sigkill)
-            then termination_failed := true;
-            if (not !termination_failed) && Option.is_none !child_wait then
-              try ignore (Unix.waitpid [] pid) with Unix.Unix_error _ -> ())
-          !child_process;
-        close_noerr stdout_write;
-        close_noerr stderr_write;
-        if Option.is_none !stdout_capture then close_noerr stdout_read;
-        if Option.is_none !stderr_capture then close_noerr stderr_read;
-        match !child_wait with
-        | Some wait when not !termination_failed -> Thread.join wait.thread
-        | Some _ -> ()
-        | None when (not !termination_failed) && Option.is_some !child_process
-          ->
-          Option.iter
-            (fun (capture : capture) -> Thread.join capture.thread)
-            !stdout_capture;
-          Option.iter
-            (fun (capture : capture) -> Thread.join capture.thread)
-            !stderr_capture
-        | None -> ())
-      !opened_pipes;
-    let release_error =
-      try
-        Option.iter Platform.release_process !child_process;
-        None
-      with release_exn -> Some release_exn
-    in
-    let restore_error =
-      try
-        restore_signals ();
-        None
-      with signal_exn -> Some signal_exn
-    in
-    let exn =
-      if !termination_failed then
-        Error "Could not terminate a partially launched subprocess tree"
-      else
-        match (restore_error, release_error) with
-        | Some signal_exn, _ -> signal_exn
-        | None, Some release_exn -> release_exn
-        | None, None -> exn
-    in
-    raise exn
+  with exn -> fail_launch ownership restore_signals exn
 
 let wait_for_running ?(poll = fun () -> ()) ?(defer_signals = true) notifier
     active =
   let rec find_completed = function
     | [] -> None
-    | child :: rest -> (
+    | (child : _ running) :: rest -> (
       match Atomic.get child.child_wait.outcome with
       | Some outcome -> Some (child, outcome)
       | None -> find_completed rest)
@@ -338,12 +359,12 @@ let with_signal_restore restore_signals action =
     in
     raise exn
 
-let signal_running children =
+let signal_running (children : _ running list) =
   if children <> [] then (
-    let root_identity_lost child =
+    let root_identity_lost (child : _ running) =
       Option.is_some (Atomic.get child.child_wait.direct_outcome)
     in
-    let signal_group signal child =
+    let signal_group signal (child : _ running) =
       let root_reaped = root_identity_lost child in
       Platform.signal_process_tree ~root_reaped child.process signal
     in
@@ -373,7 +394,7 @@ let signal_running children =
     if not (graceful_succeeded && escalation_succeeded) then
       raise (Error "Could not terminate a subprocess tree"))
 
-let release_after_completion child =
+let release_after_completion (child : _ running) =
   ignore
     (Thread.create
        (fun () ->
@@ -381,12 +402,12 @@ let release_after_completion child =
          Platform.release_process child.process)
        ())
 
-let terminate_running children =
+let terminate_running (children : _ running list) =
   if children <> [] then (
     try
       signal_running children;
       List.iter
-        (fun child ->
+        (fun (child : _ running) ->
           Thread.join child.child_wait.thread;
           Platform.release_process child.process)
         children
@@ -394,7 +415,7 @@ let terminate_running children =
       List.iter release_after_completion children;
       raise exn)
 
-let release_running child =
+let release_running (child : _ running) =
   Thread.join child.child_wait.thread;
   Platform.release_process child.process
 

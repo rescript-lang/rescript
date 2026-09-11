@@ -101,6 +101,35 @@ let unlink_existing path =
 let release_owned path pid =
   if read_owner_for_release path = Some pid then unlink_existing path
 
+type owned_lock = {path: string; pid: string; mutable released: bool}
+
+let release lock =
+  if not lock.released then (
+    release_owned lock.path lock.pid;
+    lock.released <- true)
+
+let attempt_link ~candidate ~path =
+  let restore_signals = Platform.defer_termination_signals () in
+  let linked =
+    try
+      Unix.link candidate path;
+      true
+    with
+    | Unix.Unix_error (Unix.EEXIST, _, _) -> false
+    | exception_raised ->
+      raise (restore_after_exception restore_signals exception_raised)
+  in
+  (linked, restore_signals)
+
+let with_acquired ~candidate ~path ~pid ~restore_signals action =
+  let lock = {path; pid; released = false} in
+  Fun.protect
+    ~finally:(fun () -> release lock)
+    (fun () ->
+      unlink_existing candidate;
+      restore_signals ();
+      action lock)
+
 let retry_delay poll =
   (try ignore (Unix.select [] [] [] 0.05)
    with Unix.Unix_error (Unix.EINTR, _, _) -> ());
@@ -118,27 +147,10 @@ let with_build ?(poll = fun () -> ()) root action =
           raise
             (Project_context.Error
                "Timed out waiting for another ReScript build to finish");
-        let restore_signals = Platform.defer_termination_signals () in
-        let linked =
-          try
-            Unix.link candidate path;
-            true
-          with
-          | Unix.Unix_error (Unix.EEXIST, _, _) -> false
-          | exception_raised ->
-            raise (restore_after_exception restore_signals exception_raised)
-        in
+        let linked, restore_signals = attempt_link ~candidate ~path in
         if linked then
-          let released = ref false in
-          let release () =
-            if not !released then (
-              release_owned path pid;
-              released := true)
-          in
-          Fun.protect ~finally:release (fun () ->
-              unlink_existing candidate;
-              restore_signals ();
-              action ~release)
+          with_acquired ~candidate ~path ~pid ~restore_signals (fun lock ->
+              action ~release:(fun () -> release lock))
         else (
           restore_signals ();
           match read_owner path with
@@ -166,24 +178,10 @@ let with_watch root action =
           raise
             (Project_context.Error
                "Timed out recovering a stale ReScript watch lock");
-        let restore_signals = Platform.defer_termination_signals () in
-        let linked =
-          try
-            Unix.link candidate path;
-            true
-          with
-          | Unix.Unix_error (Unix.EEXIST, _, _) -> false
-          | exception_raised ->
-            raise (restore_after_exception restore_signals exception_raised)
-        in
+        let linked, restore_signals = attempt_link ~candidate ~path in
         if linked then
-          let watch = {path; pid} in
-          Fun.protect
-            ~finally:(fun () -> release_owned path pid)
-            (fun () ->
-              unlink_existing candidate;
-              restore_signals ();
-              action watch)
+          with_acquired ~candidate ~path ~pid ~restore_signals (fun _ ->
+              action {path; pid})
         else (
           restore_signals ();
           match read_owner path with
@@ -203,4 +201,4 @@ let with_watch root action =
       in
       acquire 1000)
 
-let is_owned watch = read_owner watch.path = Some watch.pid
+let is_owned (watch : watch) = read_owner watch.path = Some watch.pid
