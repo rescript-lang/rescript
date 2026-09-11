@@ -8,6 +8,11 @@ type phase =
   | Post_build of string * (string * Process.task) list
   | Done
 
+type publication = {
+  outcome: (string, exn) result;
+  cmi_digest: Digest.t option;
+}
+
 type scheduled_module = {
   key: string;
   dependencies: string list;
@@ -15,10 +20,11 @@ type scheduled_module = {
   state: Build_state.module_;
   cmi_path: string;
   mutable cmi_digest_before: Digest.t option;
-  mutable cmi_digest_after: Digest.t option;
+  publication: publication option Atomic.t;
   prepare: unit -> unit;
   compile: is_interface:bool -> string -> Process.job;
   publish: is_interface:bool -> string -> Process.result -> string;
+  record_published_outputs: is_interface:bool -> string -> unit;
   post_build: string -> (string * Process.task) list;
   package_root: string;
   is_local: bool;
@@ -28,7 +34,7 @@ type scheduled_module = {
 }
 
 let create ~key ~dependencies ~source ~state ~cmi_path ~prepare ~compile ~publish
-    ~post_build ~package_root ~is_local ~mark_warning =
+    ~record_published_outputs ~post_build ~package_root ~is_local ~mark_warning =
   {
     key;
     dependencies;
@@ -36,10 +42,11 @@ let create ~key ~dependencies ~source ~state ~cmi_path ~prepare ~compile ~publis
     state;
     cmi_path;
     cmi_digest_before = None;
-    cmi_digest_after = None;
+    publication = Atomic.make None;
     prepare;
     compile;
     publish;
+    record_published_outputs;
     post_build;
     package_root;
     is_local;
@@ -56,10 +63,9 @@ let file_digest path =
 let run ~poll ~warning_state ~blocked_modules ~compile_assets ~build_state
     ~scheduled_modules ~mark_compiled ~mark_had_warnings ~progress ~compile_step
     ~namespace_count ~verbosity =
-  let refresh_published_cmi (scheduled : scheduled_module) =
+  let refresh_published_cmi (scheduled : scheduled_module) cmi_digest_after =
     (* Only a changed interface invalidates reverse dependents. Comparing bytes
        avoids timestamp races and skips unnecessary downstream compilation. *)
-    let cmi_digest_after = scheduled.cmi_digest_after in
     let cmi_changed =
       match scheduled.cmi_digest_before, cmi_digest_after with
       | Some before, Some after -> before <> after
@@ -71,7 +77,6 @@ let run ~poll ~warning_state ~blocked_modules ~compile_assets ~build_state
       (Compile_assets.cmi compile_assets scheduled.key
       |> Option.map (fun entry -> entry.Compile_assets.modified));
     scheduled.cmi_digest_before <- cmi_digest_after;
-    scheduled.cmi_digest_after <- None;
     if cmi_changed then
       Build_state.mark_dependents_compile_dirty build_state scheduled.state
         ~is_blocked:(Hashtbl.mem blocked_modules)
@@ -148,11 +153,30 @@ let run ~poll ~warning_state ~blocked_modules ~compile_assets ~build_state
              value = scheduled;
            })
   in
-  let record_result (scheduled : scheduled_module) path result =
-        let message =
-          if Process.succeeded result then
-            let () = refresh_published_cmi scheduled in
-            match result.Process.stderr with
+  let record_result (scheduled : scheduled_module) ~is_interface path result =
+    let publication = Atomic.exchange scheduled.publication None in
+    let result, publication_error =
+      match publication with
+      | Some publication -> (
+        match publication.outcome with
+        | Ok stderr -> ({result with Process.stderr}, None)
+        | Error exn -> (result, Some (Printexc.to_string exn)))
+      | None -> (result, None)
+    in
+    Option.iter
+      (fun publication ->
+        refresh_published_cmi scheduled publication.cmi_digest;
+        scheduled.record_published_outputs ~is_interface path)
+      publication;
+    let message =
+      match publication_error with
+      | Some message ->
+        Warning_state.remove warning_state ~package_root:scheduled.package_root
+          ~path;
+        Some message
+      | None ->
+        if Process.succeeded result then
+          match result.Process.stderr with
             | "" ->
               Warning_state.remove warning_state
                 ~package_root:scheduled.package_root ~path;
@@ -163,29 +187,29 @@ let run ~poll ~warning_state ~blocked_modules ~compile_assets ~build_state
                 ~package_root:scheduled.package_root ~path ~output:warning;
               if scheduled.is_local then scheduled.mark_warning path;
               None
-          else (
-            Warning_state.remove warning_state
-              ~package_root:scheduled.package_root ~path;
-            Some (result.Process.stderr ^ result.Process.stdout))
+        else (
+          Warning_state.remove warning_state
+            ~package_root:scheduled.package_root ~path;
+          Some (result.Process.stderr ^ result.Process.stdout))
+    in
+    Option.iter
+      (fun message -> scheduled.messages := message :: !(scheduled.messages))
+      message;
+    Option.is_none message
+  in
+  let compilation_task (scheduled : scheduled_module) ~is_interface path =
+    let job = scheduled.compile ~is_interface path in
+    Atomic.set scheduled.publication None;
+    Process.task job ~on_result:(fun result ->
+      if Process.succeeded result then (
+        let outcome =
+          try Ok (scheduled.publish ~is_interface path result)
+          with exn -> Error exn
         in
-        Option.iter
-          (fun message -> scheduled.messages := message :: !(scheduled.messages))
-          message;
-        Option.is_none message
-      in
-      let compilation_task (scheduled : scheduled_module) ~is_interface path =
-        let job = scheduled.compile ~is_interface path in
-        Process.task job ~on_result:(fun result ->
-          if Process.succeeded result then
-            let stderr =
-              Fun.protect
-                (fun () -> scheduled.publish ~is_interface path result)
-                ~finally:(fun () ->
-                  scheduled.cmi_digest_after <- file_digest scheduled.cmi_path)
-            in
-            {result with Process.stderr}
-          else result)
-      in
+        Atomic.set scheduled.publication
+          (Some {outcome; cmi_digest = file_digest scheduled.cmi_path}));
+      result)
+  in
       let record_post_build_result (scheduled : scheduled_module) output result =
         if Process.succeeded result then (
           if result.Process.stdout <> "" then print_string result.stdout;
@@ -248,14 +272,14 @@ let run ~poll ~warning_state ~blocked_modules ~compile_assets ~build_state
                   Output.Progress.advance progress;
                   None)
               | Some result, Interface path ->
-                ignore (record_result scheduled path result);
+                ignore (record_result scheduled ~is_interface:true path result);
                 let path = scheduled.source.Source.implementation in
                 Output.Progress.debug progress ~verbosity
                   ("Compiling file: " ^ scheduled.key);
                 scheduled.phase := Implementation path;
                 Some (compilation_task scheduled ~is_interface:false path)
               | Some result, Implementation path ->
-                if record_result scheduled path result then
+                if record_result scheduled ~is_interface:false path result then
                   continue_post_build scheduled (scheduled.post_build path)
                 else (
                   complete_module scheduled;

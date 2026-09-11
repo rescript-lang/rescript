@@ -11,6 +11,7 @@ let () =
            Compile_assets_tests.tests;
            Compiler_args_tests.tests;
            Compiler_info_tests.tests;
+           Compiler_scheduler_tests.tests;
            Config_tests.tests;
            File_util_tests.tests;
            Format_tests.tests;

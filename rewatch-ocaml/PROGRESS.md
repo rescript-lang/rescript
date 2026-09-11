@@ -2242,12 +2242,11 @@ A follow-up source review found three interactions in those fixes. CMI refresh
 was still tied to successful completion of the complete publication callback,
 so an implementation that published a changed CMI and then failed its
 `js-post-build` command could lose dependent invalidation. CMI refresh and
-propagation now run after every successful compiler result even when a later
-publication step fails, while the module itself remains dirty until all of its
-work succeeds. Rust already propagates the CMI result of failed module attempts,
-so it does not share this defect. A retained-watch regression exercises a
-changed inferred interface, failing post-build command, retry, and stale
-dependent type error.
+propagation now run before post-build commands, while the module itself remains
+dirty until all of its work succeeds. Rust already propagates the CMI result of
+failed module attempts, so it does not share this defect. A retained-watch
+regression exercises a changed inferred interface, failing post-build command,
+retry, and stale dependent type error.
 
 Retained dirtiness could also override the cycle-blocking decision made during
 the next preparation, allowing a previously failing module to compile after an
@@ -2266,6 +2265,27 @@ Rust's scheduling-based cycle detection does not have the OCaml regression.
 Clean-build dirty-source membership also used repeated linear list searches;
 preparation now builds hash-backed membership tables once for dirty paths and
 removed module names. This was another OCaml-only quadratic path.
+
+The next source-only review found two remaining interactions at the parallel
+publication boundary. A successful CMI copy followed by a failing CMJ, source,
+or JavaScript mirror copy escaped the worker callback before the scheduler
+could propagate the CMI change. Worker completion now records a normal
+publication outcome, including exceptions, and the scheduler consumes that
+outcome and refreshes the CMI before reporting the publication error. A focused
+retained-watch regression forces a source-mirror failure after changing an
+inferred interface, repairs it, and requires the stale dependent type error on
+retry. Rust does not have this recoverable stale-state path, although several
+of its later artifact copies instead panic or are ignored as separately
+inventoried.
+
+Parallel publication callbacks also updated the retained package output
+inventory through one unsynchronized hash table. Publication file I/O remains
+parallel, but the scheduler thread now records whichever public outputs exist
+after each attempt. A deterministic scheduler test verifies that this callback
+runs on the dispatch thread, grows the shared inventory through multiple hash
+table resizes, and recompiles a retained dependent after a late publication
+failure. Rust likewise confines shared build-state mutation to its dispatcher,
+so it did not share the unsafe update.
 
 Artifact copies no longer materialize each complete CMI, CMT, CMJ, source, or
 JavaScript file as an OCaml string. They stream through one bounded 64 KiB
