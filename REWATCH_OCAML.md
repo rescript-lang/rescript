@@ -196,6 +196,9 @@ whole-port maintainability pass before release:
   selected and unselected implementations; complete the native Windows run.
 - Review dependency maintenance, licenses/notices, static packaging, and the
   final npm artifact manifest.
+- Remove the temporary `save-pr-cache` setup-OCaml input and its
+  `rewatch-ocaml` branch settings from CI and coverage once the new OPAM cache
+  key is available on the default branch, and in all cases before merge.
 - Review test isolation and reliability, replacing fragile sleeps with observable
   polling where possible and retaining tests for every intentional Rust
   divergence or corrected Rust bug.
