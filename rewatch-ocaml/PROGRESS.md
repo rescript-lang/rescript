@@ -1716,6 +1716,21 @@ missing.
 
 ### Possible post-parity performance improvements absent from Rust
 
+- Replace the two pipe-reader threads plus waiter thread created for every
+  child with centrally serviced libuv process pipes. The latest stable clean
+  gate measured 94 peak process-tree tasks for OCaml versus 74 for Rust, so the
+  additional fan-out is real; its contribution to the 1.1887× wall-time ratio
+  is not yet isolated. A shared event loop could reduce thread creation, stack
+  memory, synchronization, and per-child capture buffers, but it is a high-risk
+  process-lifecycle change. It must preserve separate ordered stdout/stderr
+  capture, completion only after exit and both EOFs, descendant-held-pipe
+  cancellation, deterministic scheduling, and concurrent publication. On
+  Windows it requires libuv overlapped pipes while retaining suspended Job
+  Object assignment and whole-tree termination; replacing `Spawn` entirely is
+  not justified unless that ownership can be reproduced cleanly. Profile driver
+  CPU, context switches, and ready-work idle intervals first, then require the
+  full process failure/cancellation suite, native Windows validation, exact
+  work/artifact equivalence, clean/watch resource gates, and stable timing.
 - Persist a validated discovery/build inventory across separate CLI processes.
   This is a hypothesis aimed at configuration and filesystem setup in repeated
   short-lived builds. It needs a versioned content fingerprint, conservative
