@@ -12,9 +12,9 @@ let source_is_not_older_than_ast compile_assets ~root ~source_mtimes path =
   | None ->
     source_is_newer ~source:absolute
       ~artifact:
-        (Filename.concat
-           (Build_artifacts.lib_path root "ocaml")
-           (Filename.basename (Source.ast_path path)))
+        (Build_artifacts.published_ast_path
+           ~ocaml_dir:(Build_artifacts.lib_path root "ocaml")
+           path)
   | Some source_modified -> (
     match Compile_assets.ast compile_assets absolute with
     | None -> true

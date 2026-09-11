@@ -9,7 +9,7 @@ type context = {
 }
 
 and package_output_spec = {
-  module_format: string;
+  module_format: Config.module_format;
   in_source: bool;
   suffix: string;
 }
@@ -20,7 +20,7 @@ let package_output_specs (config : Config.t) =
   List.map
     (fun (spec : Config.package_spec) ->
       {
-        module_format = Config.module_format_name spec.module_format;
+        module_format = spec.module_format;
         in_source = spec.in_source;
         suffix = Config.package_spec_suffix config spec;
       })
@@ -38,12 +38,15 @@ let make_context ~build_root ~bsc_path ~runtime_path ~source_map_args
     package_output_specs;
   }
 
+let for_package context ~build_root config =
+  {context with build_root; package_output_specs = package_output_specs config}
+
 let path root = File_util.path_of_parts root ["lib"; "bs"; "compiler-info.json"]
 
 let package_output_spec_json spec =
   `Assoc
     [
-      ("module", `String spec.module_format);
+      ("module", `String (Config.module_format_name spec.module_format));
       ("in_source", `Bool spec.in_source);
       ("suffix", `String spec.suffix);
     ]
@@ -55,10 +58,13 @@ let package_output_spec_of_json = function
         List.assoc_opt "in_source" fields,
         List.assoc_opt "suffix" fields )
     with
-    | ( Some (`String (("esmodule" | "commonjs") as module_format)),
+    | ( Some (`String module_format),
         Some (`Bool in_source),
-        Some (`String suffix) ) ->
-      Some {module_format; in_source; suffix}
+        Some (`String suffix) ) -> (
+      match module_format with
+      | "esmodule" -> Some {module_format = Config.Esmodule; in_source; suffix}
+      | "commonjs" -> Some {module_format = Config.Commonjs; in_source; suffix}
+      | _ -> None)
     | _ -> None)
   | _ -> None
 
@@ -128,22 +134,13 @@ let changed_package_output_specs context config =
 
 let config_with_package_output_specs (config : Config.t) specs =
   let package_specs =
-    List.filter_map
-      (fun spec ->
-        let module_format =
-          match spec.module_format with
-          | "esmodule" -> Some Config.Esmodule
-          | "commonjs" -> Some Config.Commonjs
-          | _ -> None
-        in
-        Option.map
-          (fun module_format : Config.package_spec ->
-            {
-              module_format;
-              in_source = spec.in_source;
-              suffix = Some spec.suffix;
-            })
-          module_format)
+    List.map
+      (fun spec : Config.package_spec ->
+        {
+          module_format = spec.module_format;
+          in_source = spec.in_source;
+          suffix = Some spec.suffix;
+        })
       specs
   in
   {config with package_specs}

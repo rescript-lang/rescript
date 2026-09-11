@@ -28,9 +28,7 @@ type global_module = {
   package_name: string;
   package_root: string;
   source_path: string;
-  source: Source.module_;
-  namespace: string option;
-  namespace_entry: string option;
+  namespace: Config.namespace;
   allowed_dependencies: string list;
   mutable raw_dependencies: string list;
 }
@@ -92,7 +90,7 @@ type t = {
   mutable parsed: int;
   mutable compiled: int;
   mutable parse_seconds: float;
-  parse_messages: parse_message list ref;
+  mutable parse_messages: parse_message list;
   mutable diagnostics: string list;
   mutable failure: string option;
   removed_modules: (string, unit) Hashtbl.t;
@@ -100,14 +98,13 @@ type t = {
   blocked_modules: (string, unit) Hashtbl.t;
   initialized_logs: (string, unit) Hashtbl.t;
   namespace_freshness: (string, float option) Hashtbl.t;
-  deferred_artifact_cleanup: string list ref;
-  namespace_jobs: (Process.job * (Process.result -> unit)) list ref;
-  compile_candidates: Compiler_scheduler.candidate list ref;
-  compile_cleanup: (unit -> unit) list ref;
+  mutable deferred_artifact_cleanup: string list;
+  mutable namespace_jobs: (Process.job * (Process.result -> unit)) list;
+  mutable compile_candidates: Compiler_scheduler.candidate list;
+  mutable compile_cleanup: (unit -> unit) list;
   mutable compiler_cleaned: bool;
   retained: retained;
   mutable had_warnings: bool;
-  poll: unit -> unit;
   process_poll: (unit -> unit) option;
   progress: Output.Progress.t;
   verbosity: int;
@@ -115,7 +112,6 @@ type t = {
 
 val create :
   warning_state:Warning_state.t ->
-  poll:(unit -> unit) ->
   process_poll:(unit -> unit) option ->
   progress:Output.Progress.t ->
   verbosity:int ->
@@ -123,7 +119,6 @@ val create :
 
 val create_incremental :
   previous:t ->
-  poll:(unit -> unit) ->
   process_poll:(unit -> unit) option ->
   progress:Output.Progress.t ->
   verbosity:int ->

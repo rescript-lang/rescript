@@ -1,10 +1,6 @@
 type watch = {path: string; pid: string}
 
-let read_owner_contents path =
-  let channel = open_in_bin path in
-  Fun.protect
-    ~finally:(fun () -> close_in_noerr channel)
-    (fun () -> really_input_string channel (in_channel_length channel))
+let read_owner_contents = File_util.read_file
 
 let read_owner path =
   try Some (read_owner_contents path) with Sys_error _ -> None

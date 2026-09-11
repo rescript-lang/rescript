@@ -4,8 +4,6 @@ type module_kind = Source_module | Namespace_map
 
 type module_ = {
   key: string;
-  package_name: string;
-  package_root: string;
   kind: module_kind;
   mutable dependencies: string list;
   mutable dependents: String_set.t;
@@ -21,8 +19,6 @@ val create : int -> t
 val add :
   t ->
   key:string ->
-  package_name:string ->
-  package_root:string ->
   kind:module_kind ->
   last_compiled_cmi:float option ->
   last_compiled_cmt:float option ->

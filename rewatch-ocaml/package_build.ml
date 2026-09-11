@@ -17,14 +17,13 @@ let rec prepare_tree ~seen ~(package : Build_types.graph_package) ~watch
       let candidate = dependency.directory in
       match candidate with
       | candidate when Hashtbl.mem seen candidate -> ()
-      | candidate when Hashtbl.mem stats.retained.graph_packages candidate -> (
-        try
-          prepare_tree ~seen
-            ~package:(Hashtbl.find stats.retained.graph_packages candidate)
-            ~watch ~stats
-        with Build_failure output ->
-          if Option.is_none stats.failure then stats.failure <- Some output)
-      | _ -> ());
+      | candidate -> (
+        match Hashtbl.find_opt stats.retained.graph_packages candidate with
+        | None -> ()
+        | Some package -> (
+          try prepare_tree ~seen ~package ~watch ~stats
+          with Build_failure output ->
+            if Option.is_none stats.failure then stats.failure <- Some output)));
   let prepared = Build_types.prepared_exn stats in
   let prepared_package = Build_types.prepared_package_exn stats root in
   let bsc = prepared.compiler_context.bsc_path in
@@ -104,15 +103,13 @@ let rec prepare_tree ~seen ~(package : Build_types.graph_package) ~watch
         if stderr <> "" then (
           stats.had_warnings <- true;
           Compiler_log.append root stderr;
-          stats.parse_messages :=
-            Build_types.Parse_warning stderr :: !(stats.parse_messages));
+          stats.parse_messages <-
+            Build_types.Parse_warning stderr :: stats.parse_messages);
         let ast = Source.ast_path path in
         if is_local && stderr <> "" then
           warning_asts := (absolute_path, ast) :: !warning_asts;
         let published_ast =
-          Filename.concat
-            (Build_artifacts.lib_path config.root "ocaml")
-            (Filename.basename ast)
+          Build_artifacts.published_ast_path ~ocaml_dir path
         in
         File_util.copy_existing_file ~ensure_parent:false
           (Filename.concat build_dir ast)
@@ -135,14 +132,14 @@ let rec prepare_tree ~seen ~(package : Build_types.graph_package) ~watch
           Printf.sprintf "Error in %s:\n%s%s" config.name stderr stdout
         in
         Compiler_log.append root output;
-        stats.parse_messages :=
-          Build_types.Parse_error output :: !(stats.parse_messages)
+        stats.parse_messages <-
+          Build_types.Parse_error output :: stats.parse_messages
       | Build_types.Parsed_successfully {stderr} ->
         publish_successful_parse stderr
       | Build_types.Use_existing_ast -> publish_successful_parse "")
     parsed;
   if !warning_asts <> [] then
-    stats.compile_cleanup :=
+    stats.compile_cleanup <-
       (fun () ->
         List.iter
           (fun (source, ast) ->
@@ -150,7 +147,7 @@ let rec prepare_tree ~seen ~(package : Build_types.graph_package) ~watch
             File_util.remove_file path;
             Compile_assets.refresh_ast compile_assets ~source ~path)
           !warning_asts)
-      :: !(stats.compile_cleanup);
+      :: stats.compile_cleanup;
   let parse_dirty_modules = Hashtbl.create (List.length modules) in
   List.iter
     (fun module_ ->
@@ -224,7 +221,7 @@ let rec prepare_tree ~seen ~(package : Build_types.graph_package) ~watch
       (function
         | Build_types.Parse_error _ -> true
         | Build_types.Parse_warning _ -> false)
-      !(stats.parse_messages)
+      stats.parse_messages
   then ()
   else (
     stats.parsed <- stats.parsed + Hashtbl.length parse_dirty_modules;
@@ -293,13 +290,8 @@ let rec prepare_tree ~seen ~(package : Build_types.graph_package) ~watch
             Some (Compiler_scheduler.candidate ~key ~state ~warning_paths ~make))
         modules
     in
-    Option.iter
-      (fun namespace ->
-        let compiler_name =
-          match config.namespace_entry with
-          | Some _ -> "@" ^ namespace
-          | None -> namespace
-        in
+    Config.namespace_compiler_name config.namespace
+    |> Option.iter (fun compiler_name ->
         let namespace_map =
           Hashtbl.find stats.retained.namespace_maps
             (Build_types.namespace_map_key root)
@@ -344,13 +336,12 @@ let rec prepare_tree ~seen ~(package : Build_types.graph_package) ~watch
                   Build_state.mark_dependents_compile_dirty build_state
                     namespace_state
               in
-              stats.namespace_jobs := (job, finish) :: !(stats.namespace_jobs))
+              stats.namespace_jobs <- (job, finish) :: stats.namespace_jobs)
             (Compiler_process.namespace_job ~bsc ~runtime ~build_dir ~ocaml_dir
-               ~entry:config.namespace_entry ~package_dirty compiler_name
-               modules))
-      config.namespace;
-    stats.compile_candidates := candidates @ !(stats.compile_candidates);
-    stats.compile_cleanup :=
+               ~entry:(Config.namespace_entry config.namespace)
+               ~package_dirty compiler_name modules));
+    stats.compile_candidates <- candidates @ stats.compile_candidates;
+    stats.compile_cleanup <-
       (fun () ->
         (* The published AST is the freshness marker. Keep bsc's working AST in
          lib/bs and remove only the published copy so warnings are replayed
@@ -371,10 +362,9 @@ let rec prepare_tree ~seen ~(package : Build_types.graph_package) ~watch
                 in
                 List.iter
                   (fun path ->
-                    let ast = Source.ast_path path in
                     File_util.remove_file
-                      (Filename.concat ocaml_dir (Filename.basename ast)))
+                      (Build_artifacts.published_ast_path ~ocaml_dir path))
                   paths)
             compile_warning_modules)
-      :: !(stats.compile_cleanup);
+      :: stats.compile_cleanup;
     ())

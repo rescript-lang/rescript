@@ -115,7 +115,7 @@ let tests =
       let commonjs =
         [
           {
-            Compiler_info.module_format = "commonjs";
+            Compiler_info.module_format = Config.Commonjs;
             in_source = true;
             suffix = ".js";
           };
@@ -124,7 +124,7 @@ let tests =
       let esmodule =
         [
           {
-            Compiler_info.module_format = "esmodule";
+            Compiler_info.module_format = Config.Esmodule;
             in_source = true;
             suffix = ".js";
           };
@@ -169,7 +169,7 @@ let tests =
       let consumer_specs =
         [
           {
-            Compiler_info.module_format = "commonjs";
+            Compiler_info.module_format = Config.Commonjs;
             in_source = false;
             suffix = ".cjs";
           };

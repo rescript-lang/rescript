@@ -9,21 +9,7 @@ type t = {
 }
 
 let ast_source_location path =
-  try
-    let channel = open_in_bin path in
-    Fun.protect
-      ~finally:(fun () -> close_in_noerr channel)
-      (fun () ->
-        (try ignore (input_line channel) with End_of_file -> ());
-        let rec find () =
-          match input_line channel with
-          | line ->
-            let line = String.trim line in
-            if line <> "" && not (Filename.is_relative line) then Some line
-            else find ()
-          | exception End_of_file -> None
-        in
-        find ())
+  try (Ast_header.read path).source
   with Sys_error _ | Unix.Unix_error _ -> None
 
 let cleanup_extensions =

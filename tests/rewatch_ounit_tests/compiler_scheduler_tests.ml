@@ -29,7 +29,6 @@ let source name =
       implementation = Filename.concat "src" (name ^ ".res");
       interface = None;
       is_dev = false;
-      feature = None;
     }
 
 let tests =
@@ -45,8 +44,7 @@ let tests =
       let build_state = Build_state.create 3 in
       List.iter
         (fun key ->
-          Build_state.add build_state ~key ~package_name:"scheduler-test"
-            ~package_root:root ~kind:Build_state.Source_module
+          Build_state.add build_state ~key ~kind:Build_state.Source_module
             ~last_compiled_cmi:(Some 0.) ~last_compiled_cmt:(Some 0.))
         ["A"; "B"; "C"];
       Build_state.set_dependencies build_state ~key:"B" ["A"];

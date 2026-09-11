@@ -4,8 +4,6 @@ type module_kind = Source_module | Namespace_map
 
 type module_ = {
   key: string;
-  package_name: string;
-  package_root: string;
   kind: module_kind;
   mutable dependencies: string list;
   mutable dependents: String_set.t;
@@ -18,13 +16,10 @@ type t = {modules: (string, module_) Hashtbl.t}
 
 let create capacity = {modules = Hashtbl.create capacity}
 
-let add state ~key ~package_name ~package_root ~kind ~last_compiled_cmi
-    ~last_compiled_cmt =
+let add state ~key ~kind ~last_compiled_cmi ~last_compiled_cmt =
   Hashtbl.add state.modules key
     {
       key;
-      package_name;
-      package_root;
       kind;
       dependencies = [];
       dependents = String_set.empty;

@@ -4,6 +4,26 @@ open Config_decode
 
 let namespace_from_package_name = Config_decode.namespace_from_package_name
 
+let namespace_name = function
+  | No_namespace -> None
+  | Namespace name | Namespace_with_entry {name; entry = _} -> Some name
+
+let namespace_entry = function
+  | Namespace_with_entry {name = _; entry} -> Some entry
+  | No_namespace | Namespace _ -> None
+
+let namespace_compiler_name = function
+  | No_namespace -> None
+  | Namespace name -> Some name
+  | Namespace_with_entry {name; entry = _} -> Some ("@" ^ name)
+
+let namespaced_module_name namespace module_name =
+  match namespace with
+  | No_namespace -> module_name
+  | Namespace name -> module_name ^ "-" ^ name
+  | Namespace_with_entry {name; entry} ->
+    if entry = module_name then module_name else module_name ^ "-@" ^ name
+
 let path_in_root root =
   let current = Filename.concat root "rescript.json" in
   if Sys.file_exists current then current
@@ -132,7 +152,7 @@ let load path =
              effective_suffix);
       Hashtbl.add seen_package_outputs key ())
     package_specs;
-  let namespace =
+  let namespace_name =
     match optional_member "namespace" fields with
     | None | Some (`Bool false) -> None
     | Some (`Bool true) -> Some (namespace_from_package_name name)
@@ -140,11 +160,13 @@ let load path =
     | Some (`String value) -> Some (namespace_from_package_name value)
     | Some _ -> fail path "field \"namespace\" must be a boolean or string"
   in
-  let namespace_entry =
-    match (optional_member "namespace-entry" fields, namespace) with
-    | None, _ -> None
+  let namespace =
+    match (optional_member "namespace-entry" fields, namespace_name) with
+    | None, None -> No_namespace
+    | None, Some name -> Namespace name
     | Some _, None -> fail path "field \"namespace-entry\" requires a namespace"
-    | Some value, Some _ -> Some (string path "namespace-entry" value)
+    | Some value, Some name ->
+      Namespace_with_entry {name; entry = string path "namespace-entry" value}
   in
   let compiler_flags =
     match (member "compiler-flags" fields, member "bsc-flags" fields) with
@@ -408,7 +430,6 @@ let load path =
     package_specs;
     suffix;
     namespace;
-    namespace_entry;
     features;
     warning_flags;
     ppx_flags;

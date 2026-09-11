@@ -39,21 +39,11 @@ let remove_suffix suffix value =
     String.sub value 0 (String.length value - String.length suffix)
   else value
 
-let contains_substring value substring =
-  let value_length = String.length value in
-  let substring_length = String.length substring in
-  let rec loop index =
-    if index + substring_length > value_length then false
-    else if String.sub value index substring_length = substring then true
-    else loop (index + 1)
-  in
-  substring_length = 0 || loop 0
-
 let issues_url_from_repository repository =
   let cleaned = repository |> remove_prefix "git+" |> remove_suffix ".git" in
   if
     (not (String.contains cleaned '@'))
-    && not (contains_substring cleaned "://")
+    && not (String_util.contains cleaned "://")
   then
     let path = remove_prefix "github:" cleaned in
     "https://github.com/" ^ path ^ "/issues"

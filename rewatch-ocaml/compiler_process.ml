@@ -1,17 +1,11 @@
-let contains_text value text =
-  try
-    ignore (Str.search_forward (Str.regexp_string text) value 0);
-    true
-  with Not_found -> false
-
 let retain_critical_external_warnings stderr =
   let marker = "`(. ...)` uncurried syntax" in
-  if not (contains_text stderr marker) then ""
+  if not (String_util.contains stderr marker) then ""
   else
     stderr
     |> Str.global_replace (Str.regexp_string "\r\n") "\n"
     |> Str.split_delim (Str.regexp_string "\n\n\n")
-    |> List.filter (fun block -> contains_text block marker)
+    |> List.filter (fun block -> String_util.contains block marker)
     |> String.concat "\n\n\n"
 
 let parse_job ~bsc ~build_dir ~(config : Config.t) path =
@@ -25,21 +19,7 @@ let parse_job ~bsc ~build_dir ~(config : Config.t) path =
   Process.{program = bsc; args; cwd = build_dir}
 
 let ast_dependencies ~build_dir ast =
-  let channel = open_in_bin (Filename.concat build_dir ast) in
-  Fun.protect
-    ~finally:(fun () -> close_in_noerr channel)
-    (fun () ->
-      (try ignore (input_line channel) with End_of_file -> ());
-      let rec loop acc =
-        match input_line channel with
-        | line ->
-          let line = String.trim line in
-          if line = "" then loop acc
-          else if not (Filename.is_relative line) then List.rev acc
-          else loop (line :: acc)
-        | exception End_of_file -> List.rev acc
-      in
-      loop [])
+  (Ast_header.read (Filename.concat build_dir ast)).dependencies
 
 let namespace_job ~bsc ~runtime ~build_dir ~ocaml_dir ~entry ~package_dirty
     namespace modules =
@@ -59,13 +39,7 @@ let namespace_job ~bsc ~runtime ~build_dir ~ocaml_dir ~entry ~package_dirty
     Buffer.contents buffer
   in
   let previous_contents =
-    try
-      let channel = open_in_bin mlmap in
-      Fun.protect
-        ~finally:(fun () -> close_in_noerr channel)
-        (fun () ->
-          Some (really_input_string channel (in_channel_length channel)))
-    with Sys_error _ -> None
+    try Some (File_util.read_file mlmap) with Sys_error _ -> None
   in
   let mlmap_changed = previous_contents <> Some contents in
   if mlmap_changed then

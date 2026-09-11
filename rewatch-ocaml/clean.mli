@@ -4,7 +4,6 @@ val prepare :
   root_config:Config.t ->
   resolution:Package_resolution.t ->
   seen:(string, unit) Hashtbl.t ->
-  root:string ->
   prod:bool ->
   is_local:bool ->
   t

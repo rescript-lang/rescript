@@ -31,8 +31,8 @@ type scheduled_module = {
   package_root: string;
   is_local: bool;
   mark_warning: string -> unit;
-  messages: string list ref;
-  phase: phase ref;
+  mutable messages: string list;
+  mutable phase: phase;
 }
 
 type candidate = {
@@ -60,8 +60,8 @@ let create ~key ~dependencies ~source ~state ~cmi_path ~prepare ~compile
     package_root;
     is_local;
     mark_warning;
-    messages = ref [];
-    phase = ref Start;
+    messages = [];
+    phase = Start;
   }
 
 let candidate ~key ~state ~warning_paths ~make =
@@ -201,7 +201,7 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
           Some (result.Process.stderr ^ result.Process.stdout))
     in
     Option.iter
-      (fun message -> scheduled.messages := message :: !(scheduled.messages))
+      (fun message -> scheduled.messages <- message :: scheduled.messages)
       message;
     Option.is_none message
   in
@@ -236,13 +236,13 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
         Printf.sprintf "js-post-build command failed for %s%s" output
           (if captured = "" then "" else "\n" ^ captured)
       in
-      scheduled.messages := message :: !(scheduled.messages);
+      scheduled.messages <- message :: scheduled.messages;
       false
   in
   let complete_module (scheduled : scheduled_module) =
-    scheduled.phase := Done;
+    scheduled.phase <- Done;
     Output.Progress.advance progress;
-    if !(scheduled.messages) <> [] then raise Module_failed
+    if scheduled.messages <> [] then raise Module_failed
     else (
       finish_successful_compile scheduled;
       incr completed_modules)
@@ -253,7 +253,7 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
       complete_module scheduled;
       None
     | (output, task) :: remaining ->
-      scheduled.phase := Post_build (output, remaining);
+      scheduled.phase <- Post_build (output, remaining);
       Some task
   in
   let scheduler_failed =
@@ -266,7 +266,7 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
           | Module_failed -> Process.Stop_new_work
           | _ -> Process.Abort_immediately)
         ~next:(fun scheduled result ->
-          match (result, !(scheduled.phase)) with
+          match (result, scheduled.phase) with
           | None, Start ->
             if scheduled.state.compile_dirty then (
               mark_compiled ();
@@ -275,16 +275,16 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
               | Some path ->
                 Output.Progress.debug progress ~verbosity
                   ("Compiling interface file: " ^ scheduled.key);
-                scheduled.phase := Interface path;
+                scheduled.phase <- Interface path;
                 Some (compilation_task scheduled ~is_interface:true path)
               | None ->
                 let path = scheduled.source.Source.implementation in
                 Output.Progress.debug progress ~verbosity
                   ("Compiling file: " ^ scheduled.key);
-                scheduled.phase := Implementation path;
+                scheduled.phase <- Implementation path;
                 Some (compilation_task scheduled ~is_interface:false path))
             else (
-              scheduled.phase := Done;
+              scheduled.phase <- Done;
               incr completed_modules;
               Output.Progress.advance progress;
               None)
@@ -293,7 +293,7 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
             let path = scheduled.source.Source.implementation in
             Output.Progress.debug progress ~verbosity
               ("Compiling file: " ^ scheduled.key);
-            scheduled.phase := Implementation path;
+            scheduled.phase <- Implementation path;
             Some (compilation_task scheduled ~is_interface:false path)
           | Some result, Implementation path ->
             if record_result scheduled ~is_interface:false path result then
@@ -322,7 +322,7 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
   |> List.sort (fun (first : scheduled_module) second ->
       String.compare first.key second.key)
   |> List.iter (fun (scheduled : scheduled_module) ->
-      !(scheduled.messages) |> List.rev
+      scheduled.messages |> List.rev
       |> List.iter (fun output -> failures := (scheduled, output) :: !failures));
   Warning_state.entries warning_state
   |> List.iter (fun entry ->

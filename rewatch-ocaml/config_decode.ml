@@ -21,13 +21,20 @@ let optional_member name fields =
   | None | Some `Null -> None
   | value -> value
 
-let rec deduplicate_last = function
-  | [] -> []
-  | ((name, _) as field) :: rest ->
-    if List.mem_assoc name rest then deduplicate_last rest
-    else field :: deduplicate_last rest
+let last_member name fields =
+  List.fold_left
+    (fun found (field, value) -> if field = name then Some value else found)
+    None fields
 
-let last_member name fields = List.assoc_opt name (deduplicate_last fields)
+let deduplicate_last fields =
+  let seen = Hashtbl.create (List.length fields) in
+  List.fold_left
+    (fun unique ((name, _) as field) ->
+      if Hashtbl.mem seen name then unique
+      else (
+        Hashtbl.add seen name ();
+        field :: unique))
+    [] (List.rev fields)
 
 let last_optional_member name fields =
   match last_member name fields with

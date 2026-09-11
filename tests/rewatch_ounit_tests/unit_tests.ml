@@ -937,9 +937,8 @@ let tests =
             try
               Build.run
                 ~poll:(fun () -> ())
-                ~seen:[] ~verbosity:0 ~folder:dependency_root ~prod:false
-                ~features:None ~warn_error:None ~watch:false ~after_build:None
-                ~filter:None ~no_timing:false;
+                ~verbosity:0 ~folder:dependency_root ~prod:false ~features:None
+                ~warn_error:None ~after_build:None ~filter:None ~no_timing:false;
               false
             with Build.Error message ->
               if
@@ -956,9 +955,8 @@ let tests =
             try
               Build.run
                 ~poll:(fun () -> ())
-                ~seen:[] ~verbosity:0 ~folder:dependency_root ~prod:false
-                ~features:None ~warn_error:None ~watch:false ~after_build:None
-                ~filter:None ~no_timing:false;
+                ~verbosity:0 ~folder:dependency_root ~prod:false ~features:None
+                ~warn_error:None ~after_build:None ~filter:None ~no_timing:false;
               false
             with Build.Error message ->
               Test_support.contains_text message

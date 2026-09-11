@@ -1,20 +1,16 @@
-let contains_text value text =
-  try
-    ignore (Str.search_forward (Str.regexp_string text) value 0);
-    true
-  with Not_found -> false
-
 let ppx_is_enabled ~bisect_enabled flag contents =
-  if contains_text flag "bisect" then bisect_enabled
+  if String_util.contains flag "bisect" then bisect_enabled
   else
     not
-      ((contains_text flag "graphql-ppx" || contains_text flag "graphql_ppx")
-       && not (contains_text contents "%graphql")
-      || (contains_text flag "spice" && not (contains_text contents "@spice"))
-      || contains_text flag "rescript-relay"
-         && not (contains_text contents "%relay")
-      || contains_text flag "re-formality"
-         && not (contains_text contents "%form"))
+      ((String_util.contains flag "graphql-ppx"
+       || String_util.contains flag "graphql_ppx")
+       && not (String_util.contains contents "%graphql")
+      || String_util.contains flag "spice"
+         && not (String_util.contains contents "@spice")
+      || String_util.contains flag "rescript-relay"
+         && not (String_util.contains contents "%relay")
+      || String_util.contains flag "re-formality"
+         && not (String_util.contains contents "%form"))
 
 let filter_ppx_flags ?bisect_enabled flags contents =
   let bisect_enabled =
@@ -26,6 +22,10 @@ let filter_ppx_flags ?bisect_enabled flags contents =
       | [] -> false
       | flag :: _ -> ppx_is_enabled ~bisect_enabled flag contents)
     flags
+
+let source_map_args (config : Config.t) ~watch =
+  if config.source_map_dev && not watch then ["-bs-source-map"; "false"]
+  else config.source_map_args
 
 let compiler_flags ?(ppx_flags = []) ~source_maps ~watch ~gentype
     (config : Config.t) =
@@ -42,9 +42,7 @@ let compiler_flags ?(ppx_flags = []) ~source_maps ~watch ~gentype
         ["-ppx"; String.concat " " (executable :: arguments)])
   in
   let source_map_args =
-    if not source_maps then []
-    else if config.source_map_dev && not watch then ["-bs-source-map"; "false"]
-    else config.source_map_args
+    if source_maps then source_map_args config ~watch else []
   in
   if source_maps then
     ppx_args @ config.jsx_args @ source_map_args @ config.compiler_flags
@@ -59,29 +57,11 @@ let with_local_warning_policy ~is_local (config : Config.t) =
   if is_local then config else {config with warning_flags = []}
 
 let package_output (config : Config.t) path (spec : Config.package_spec) =
-  let directory = Filename.dirname path in
-  let output_dir =
-    if spec.in_source then directory
-    else
-      Filename.concat
-        (match spec.module_format with
-        | Config.Esmodule -> Build_artifacts.lib_path "" "es6"
-        | Config.Commonjs -> Build_artifacts.lib_path "" "js")
-        directory
-  in
+  let output_dir = Build_artifacts.relative_output_directory path spec in
   Printf.sprintf "%s:%s:%s"
     (Config.module_format_name spec.module_format)
     output_dir
     (Config.package_spec_suffix config spec)
-
-let gentype_dependency_args (config : Config.t) =
-  if config.gentype_args = [] then []
-  else
-    config.dependencies
-    |> List.concat_map (fun (dependency : Config.dependency) ->
-        match Project_context.dependency_path config.root dependency.name with
-        | None -> []
-        | Some path -> ["-bs-gentype-dep-path"; dependency.name ^ "=" ^ path])
 
 let gentype_dependency_args_from_paths (config : Config.t) dependencies =
   if config.gentype_args = [] then []
@@ -98,12 +78,12 @@ let gentype_dependency_args_from_paths (config : Config.t) dependencies =
         | Some path -> ["-bs-gentype-dep-path"; dependency.name ^ "=" ^ path])
 
 let namespace_args (config : Config.t) module_name =
-  match (config.namespace, config.namespace_entry) with
-  | None, _ -> []
-  | Some namespace, Some entry when entry = module_name ->
-    ["-open"; "@" ^ namespace]
-  | Some namespace, Some _ -> ["-bs-ns"; "@" ^ namespace]
-  | Some namespace, _ -> ["-bs-ns"; namespace]
+  match config.namespace with
+  | Config.No_namespace -> []
+  | Config.Namespace namespace -> ["-bs-ns"; namespace]
+  | Config.Namespace_with_entry {name; entry} ->
+    if entry = module_name then ["-open"; "@" ^ name]
+    else ["-bs-ns"; "@" ^ name]
 
 let parser_arguments ~(config : Config.t) ~contents ~path =
   compiler_flags

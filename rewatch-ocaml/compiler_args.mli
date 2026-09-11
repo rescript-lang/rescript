@@ -1,6 +1,8 @@
 val filter_ppx_flags :
   ?bisect_enabled:bool -> string list list -> string -> string list list
 
+val source_map_args : Config.t -> watch:bool -> string list
+
 val compiler_flags :
   ?ppx_flags:string list list ->
   source_maps:bool ->
@@ -11,8 +13,6 @@ val compiler_flags :
 
 val with_local_warning_policy : is_local:bool -> Config.t -> Config.t
 val package_output : Config.t -> string -> Config.package_spec -> string
-val gentype_dependency_args : Config.t -> string list
-
 val gentype_dependency_args_from_paths :
   Config.t -> (Config.dependency * string) list -> string list
 

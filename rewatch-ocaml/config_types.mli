@@ -1,4 +1,8 @@
 type module_format = Esmodule | Commonjs
+type namespace =
+  | No_namespace
+  | Namespace of string
+  | Namespace_with_entry of {name: string; entry: string}
 
 type package_spec = {
   module_format: module_format;
@@ -22,8 +26,7 @@ type t = {
   compiler_flags: string list;
   package_specs: package_spec list;
   suffix: string;
-  namespace: string option;
-  namespace_entry: string option;
+  namespace: namespace;
   features: (string * string list) list;
   warning_flags: string list;
   ppx_flags: string list list;

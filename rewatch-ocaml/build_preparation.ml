@@ -28,10 +28,7 @@ let dependency_head dependency =
   | [] -> dependency
 
 let compiler_namespace (config : Config.t) =
-  match (config.namespace, config.namespace_entry) with
-  | Some namespace, Some _ -> Some ("@" ^ namespace)
-  | Some namespace, None -> Some namespace
-  | None, _ -> None
+  Config.namespace_compiler_name config.namespace
 
 let validate_visible_namespaces ~(root_config : Config.t)
     (graph_packages : Build_types.graph_package list) =
@@ -82,26 +79,20 @@ let resolve_dependency
     namespace_maps_by_name (node : Build_types.global_module) dependency =
   let raw_name = dependency_head dependency in
   let local_name =
-    match (node.namespace, String.split_on_char '.' dependency) with
+    match
+      (Config.namespace_name node.namespace, String.split_on_char '.' dependency)
+    with
     | Some namespace, first :: second :: _ when first = namespace -> second
     | _ -> raw_name
   in
-  let local_key =
-    match node.namespace with
-    | None -> local_name
-    | Some namespace -> (
-      match node.namespace_entry with
-      | Some entry when entry = local_name -> local_name
-      | Some _ -> local_name ^ "-@" ^ namespace
-      | None -> local_name ^ "-" ^ namespace)
-  in
+  let local_key = Config.namespaced_module_name node.namespace local_name in
   let is_visible (dependency_node : Build_types.global_module) =
     dependency_node.Build_types.package_name = node.package_name
     || List.mem dependency_node.package_name node.allowed_dependencies
   in
   match Hashtbl.find_opt modules_by_key local_key with
   | Some dependency_node when is_visible dependency_node -> [local_key]
-  | _ when node.namespace = Some raw_name ->
+  | _ when Config.namespace_name node.namespace = Some raw_name ->
     (* A qualified reference is recorded in the compiler dependency header by
        its leading namespace only. Treating that marker as a module reference
        would make it depend on every module exported by the package. *)
@@ -117,7 +108,8 @@ let resolve_dependency
           |> List.find_opt (fun key ->
               match Hashtbl.find_opt modules_by_key key with
               | Some dependency_node
-                when dependency_node.Build_types.namespace = Some namespace
+                when Config.namespace_name dependency_node.Build_types.namespace
+                     = Some namespace
                      && is_visible dependency_node ->
                 true
               | Some _ | None -> false)
@@ -144,8 +136,8 @@ let resolved_dependencies
          (resolve_dependency modules_by_key namespace_maps_by_name node)
   in
   let implicit_namespace_entry =
-    match (node.namespace, node.namespace_entry) with
-    | Some namespace, Some entry
+    match node.namespace with
+    | Config.Namespace_with_entry {name = namespace; entry}
       when Source.module_name node.source_path = entry ->
       Hashtbl.find_opt namespace_maps_by_name namespace
       |> Option.value ~default:[]
@@ -154,7 +146,9 @@ let resolved_dependencies
             Some namespace_map.key
           else None)
       |> Option.to_list
-    | Some _, Some _ | Some _, None | None, _ -> []
+    | Config.Namespace_with_entry _ | Config.Namespace _ | Config.No_namespace
+      ->
+      []
   in
   parsed @ implicit_namespace_entry
   |> List.filter (fun dependency -> dependency <> node.key)
@@ -169,11 +163,12 @@ let find_cycle modules_by_key namespace_maps build_state =
     (fun key (node : Build_types.global_module) ->
       let module_name = Source.module_name node.source_path in
       let display_name =
-        match (node.namespace, node.namespace_entry) with
-        | Some namespace, Some entry when entry <> module_name ->
+        match node.namespace with
+        | Config.Namespace_with_entry {name = namespace; entry}
+          when entry <> module_name ->
           namespace ^ "." ^ module_name
-        | Some namespace, None -> namespace ^ "." ^ module_name
-        | _ -> module_name
+        | Config.Namespace namespace -> namespace ^ "." ^ module_name
+        | Config.Namespace_with_entry _ | Config.No_namespace -> module_name
       in
       Hashtbl.add nodes_by_key key
         {
@@ -223,10 +218,7 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
   in
   validate_visible_namespaces ~root_config graph_packages;
   let runtime = runtime_path root_config.root in
-  let source_map_args =
-    if root_config.source_map_dev && not watch then ["-bs-source-map"; "false"]
-    else root_config.source_map_args
-  in
+  let source_map_args = Compiler_args.source_map_args root_config ~watch in
   let compiler_context =
     Compiler_info.make_context ~build_root:root_config.root ~bsc_path:bsc
       ~runtime_path:runtime ~source_map_args
@@ -238,12 +230,8 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
   List.iter
     (fun package ->
       let package_context =
-        {
-          compiler_context with
-          build_root = package.graph_build_owner;
-          package_output_specs =
-            Compiler_info.package_output_specs package.graph_compile_config;
-        }
+        Compiler_info.for_package compiler_context
+          ~build_root:package.graph_build_owner package.graph_compile_config
       in
       if Compiler_info.needs_clean package_context package.graph_config then (
         Compiler_info.changed_package_output_specs package_context
@@ -293,8 +281,8 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
           package.graph_modules
       in
       Hashtbl.replace stats.retained.cleanup_results package.graph_root cleanup;
-      stats.deferred_artifact_cleanup :=
-        cleanup.deferred_artifacts @ !(stats.deferred_artifact_cleanup);
+      stats.deferred_artifact_cleanup <-
+        cleanup.deferred_artifacts @ stats.deferred_artifact_cleanup;
       stats.cleaned <- stats.cleaned + List.length cleanup.removed_modules;
       stats.previous_asts <- stats.previous_asts + cleanup.previous_ast_count;
       List.iter
@@ -398,9 +386,7 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
               package_name = package.graph_config.name;
               package_root = package.graph_root;
               source_path = module_.Source.implementation;
-              source = module_;
               namespace = package.graph_compile_config.namespace;
-              namespace_entry = package.graph_compile_config.namespace_entry;
               allowed_dependencies =
                 List.map
                   (fun (dependency : Config.dependency) -> dependency.name)
@@ -435,20 +421,20 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
   let namespace_maps =
     graph_packages
     |> List.filter_map (fun package ->
-        package.Build_types.graph_compile_config.namespace
-        |> Option.map (fun namespace ->
-            let compiler_name =
-              match
-                package.Build_types.graph_compile_config.namespace_entry
-              with
-              | Some _ -> "@" ^ namespace
-              | None -> namespace
-            in
+        let namespace = package.Build_types.graph_compile_config.namespace in
+        let namespace_details =
+          match namespace with
+          | Config.No_namespace -> None
+          | Config.Namespace name -> Some (name, name, None)
+          | Config.Namespace_with_entry {name; entry} ->
+            Some ("@" ^ name, name, Some entry)
+        in
+        namespace_details
+        |> Option.map (fun (compiler_name, name, namespace_entry) ->
             let members =
               package.graph_modules
               |> List.filter (fun module_ ->
-                  Some module_.Source.name
-                  <> package.graph_compile_config.namespace_entry)
+                  Some module_.Source.name <> namespace_entry)
               |> List.filter (fun module_ ->
                   Source.is_non_exotic_module_name module_.Source.name)
               |> List.map (fun module_ ->
@@ -460,7 +446,7 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
               {
                 key = Build_types.namespace_map_key package.graph_root;
                 compiler_name;
-                namespace;
+                namespace = name;
                 package_name = package.graph_config.name;
                 package_root = package.graph_root;
                 members;
@@ -492,8 +478,7 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
   let modified = Option.map (fun entry -> entry.Compile_assets.modified) in
   List.iter
     (fun ((node : Build_types.global_module), _) ->
-      Build_state.add build_state ~key:node.key ~package_name:node.package_name
-        ~package_root:node.package_root ~kind:Build_state.Source_module
+      Build_state.add build_state ~key:node.key ~kind:Build_state.Source_module
         ~last_compiled_cmi:
           (Compile_assets.cmi compile_assets node.key |> modified)
         ~last_compiled_cmt:
@@ -502,8 +487,7 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
   List.iter
     (fun (namespace_map : Build_types.namespace_map) ->
       Build_state.add build_state ~key:namespace_map.key
-        ~package_name:namespace_map.package_name
-        ~package_root:namespace_map.package_root ~kind:Build_state.Namespace_map
+        ~kind:Build_state.Namespace_map
         ~last_compiled_cmi:
           (Compile_assets.cmi compile_assets namespace_map.compiler_name
           |> modified)
@@ -523,21 +507,21 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
   let packages = Hashtbl.create (List.length graph_packages) in
   List.iter
     (fun (package : Build_types.graph_package) ->
-      let dependency_directories kind =
-        package.graph_dependency_directories
-        |> List.filter_map (fun dependency ->
+      let regular_dependency_dirs, development_dependency_dirs =
+        List.fold_left
+          (fun (regular, development) dependency ->
             let directory =
               Build_artifacts.lib_path dependency.directory "ocaml"
             in
-            if dependency.kind = kind && Sys.file_exists directory then
-              Some directory
-            else None)
-      in
-      let regular_dependency_dirs =
-        dependency_directories Build_types.Regular_dependency
-      in
-      let development_dependency_dirs =
-        dependency_directories Build_types.Development_dependency
+            if not (Sys.file_exists directory) then (regular, development)
+            else
+              match dependency.kind with
+              | Build_types.Regular_dependency ->
+                (directory :: regular, development)
+              | Build_types.Development_dependency ->
+                (regular, directory :: development))
+          ([], []) package.graph_dependency_directories
+        |> fun (regular, development) -> (List.rev regular, List.rev development)
       in
       let common_args dependency_dirs =
         Compiler_args.compiler_common_arguments
