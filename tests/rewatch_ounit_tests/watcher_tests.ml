@@ -76,4 +76,54 @@ let tests =
         "SIGINT handler is restored after normal shutdown";
       check
         (signal_is_ignored Sys.sigterm)
-        "SIGTERM handler is restored after normal shutdown")
+        "SIGTERM handler is restored after normal shutdown";
+      let source_dir = Filename.concat root "src" in
+      Unix.mkdir source_dir 0o700;
+      let source = Filename.concat source_dir "A.res" in
+      let channel = open_out source in
+      output_string channel "let value = 1\n";
+      close_out channel;
+      let channel = open_out config_path in
+      output_string channel
+        {|{"name":"watcher-lifecycle","sources":[{"dir":"src"}]}|};
+      close_out channel;
+      let builds = ref 0 in
+      let fallback_message = ref None in
+      let fallback_rebuilt =
+        try
+          Watcher.For_test.run_with_native_failure
+            ~message:"injected native setup failure"
+            ~on_fallback:(fun message -> fallback_message := Some message)
+            ~root ~prod:false ~features:None ~filter:None ~clear_screen:false
+            ~show_progress:false ~verbosity:0
+            ~build:(fun ~poll:_ ~changes ->
+              incr builds;
+              match (!builds, changes) with
+              | 1, None ->
+                let channel = open_out source in
+                output_string channel "let value = 2\n";
+                close_out channel;
+                Watcher.Succeeded
+              | 2, Some [Watcher.{path; kind = Modified}] when path = source ->
+                raise Exit
+              | _ ->
+                assert_failure
+                  "polling fallback requested an unexpected build transition");
+          false
+        with Exit -> true
+      in
+      check fallback_rebuilt
+        "native setup failure falls back to polling and observes source edits";
+      check
+        (!fallback_message = Some "injected native setup failure")
+        "polling fallback reports the native setup failure";
+      check (!builds = 2) "polling fallback rebuilds the source exactly once";
+      check
+        (not (Sys.file_exists lock))
+        "watch lock is released when the polling fallback exits";
+      check
+        (signal_is_ignored Sys.sigint)
+        "SIGINT handler is restored after polling fallback failure";
+      check
+        (signal_is_ignored Sys.sigterm)
+        "SIGTERM handler is restored after polling fallback failure")
