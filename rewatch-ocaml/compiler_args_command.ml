@@ -11,16 +11,19 @@ let runtime_path root =
   try Toolchain.runtime ~find_package:(Project_context.dependency_path root)
   with Toolchain.Error message -> error message
 
+let source_error path message =
+  error (Printf.sprintf "Could not read source file %s: %s" path message)
+
 let run path =
   let source =
-    try Unix.realpath path
+    try
+      Filename.concat
+        (Platform.canonicalize_path (Filename.dirname path))
+        (Filename.basename path)
     with
-    | Sys_error message ->
-      error (Printf.sprintf "Could not read source file %s: %s" path message)
+    | Sys_error message -> source_error path message
     | Unix.Unix_error (unix_error, _, _) ->
-      error
-        (Printf.sprintf "Could not read source file %s: %s" path
-           (Unix.error_message unix_error))
+      source_error path (Unix.error_message unix_error)
   in
   if
     not
@@ -37,7 +40,28 @@ let run path =
   in
   let config = Build_artifacts.with_root_options package_config root_config in
   let relative = Project_context.relative_to config.root source in
-  let runtime = runtime_path config.root in
+  let contents =
+    try File_util.read_file source
+    with
+    | Sys_error message -> source_error path message
+    | Unix.Unix_error (unix_error, _, _) ->
+      source_error path (Unix.error_message unix_error)
+  in
+  let parser_args =
+    Compiler_args.compiler_flags
+      ~ppx_flags:
+        (Compiler_args.filter_ppx_flags config.ppx_flags contents)
+      ~source_maps:false ~watch:false ~gentype:false config
+    @ [
+        "-absname";
+        "-bs-ast";
+        "-o";
+        Source.ast_path relative;
+        Filename.concat
+          (Filename.concat Filename.parent_dir_name Filename.parent_dir_name)
+        relative;
+      ]
+  in
   let is_interface = Filename.check_suffix source ".resi" in
   let has_interface = not is_interface && Sys.file_exists (source ^ "i") in
   let dependencies =
@@ -57,22 +81,7 @@ let run path =
              (Printf.sprintf "Expected to find dependent package %s of %s"
                 dependency.name config.name))
   in
-  let parser_args =
-    Compiler_args.compiler_flags
-      ~ppx_flags:
-        (Compiler_args.filter_ppx_flags config.ppx_flags
-           (File_util.read_file source))
-      ~source_maps:false ~watch:false ~gentype:false config
-    @ [
-        "-absname";
-        "-bs-ast";
-        "-o";
-        Source.ast_path relative;
-        Filename.concat
-          (Filename.concat Filename.parent_dir_name Filename.parent_dir_name)
-          relative;
-      ]
-  in
+  let runtime = runtime_path config.root in
   let compiler_args =
     let ast = Source.ast_path relative in
     let namespace_args =

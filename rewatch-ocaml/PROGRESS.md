@@ -1845,6 +1845,13 @@ required behavior decision, not a performance proposal.
   identify the shared namespace and both packages.
 - Parser and compiler arguments now follow Rust's phase-specific ordering, and
   `compiler-args` reports the parser's actual path relative to `lib/bs`.
+  The command reads the source and constructs parser arguments before resolving
+  dependency includes, then resolves regular dependencies before the runtime;
+  focused failure tests retain that observable ordering. Its source lookup
+  preserves a final symlink as a path in the project rather than moving project
+  ownership to the symlink target. The JSON contract is checked structurally,
+  including the order of each argument array; insignificant serializer
+  whitespace is not treated as command behavior.
   PPXs are owned by parsing only: known GraphQL, Spice, Relay, Formality, and
   Bisect PPXs are filtered using the same source markers/environment rule as
   Rust. Unit tests cover every filter branch, while a focused build proves a
@@ -2095,29 +2102,29 @@ required behavior decision, not a performance proposal.
 1. Perform a command-by-command phase and ordering audit for build, clean,
    format, compiler-args, and watch. This audit must compare intermediate state
    transitions and observable phases, not infer algorithm parity from matching
-   final files or exit status. Stop after this audit for the requested external
-   AI review before beginning the remaining whole-port cleanup.
-2. Address that review, then complete the non-comment maintainability work,
-   native-platform validation, final performance/resource measurements,
-   packaging checks, and the final two-scope whole-port review. Review naming
-   and module qualification, including whether generic utility calls are
+   final files or exit status.
+2. Stop for the requested external AI review, then address its findings.
+3. Complete the non-comment maintainability work. Review naming and module
+   qualification, including whether generic utility calls are
    clearer as `Module.function` than through `open`; do not apply either style
    mechanically. Remove dead code. In particular, remove legacy recognition,
    cleanup, and tests for `.rewatch-pending` and `.rewatch-backup` after the
    current experimental migration window; no supported implementation creates
-   these sidecars anymore. Validate macOS packaging and native event behavior,
-   then prepare the pinned Windows handoff. Finish the Windows watcher/lock
-   backend and path audit and run the native build, unit, focused, and canonical
-   Bash suites in the VM. Address findings there and finish with an x64 Windows
-   confidence run where available. Confirm that the three release inventories
-   remain complete after the final behavior and platform work.
+   these sidecars anymore.
    Continue applying the functional-design principle of making illegal states
    unrepresentable where it removes a concrete ambiguity or failure mode, not as
    a ceremonial replacement for every `option`; the recorded candidates and
    the format-input change are evaluated above. Retain ordinary options for
    values that are genuinely absent, such as a missing interface, an
    unavailable native-event filename, or an optional hook.
-3. Immediately before the final release-quality gate, perform the broad comment
+4. Validate macOS packaging and native event behavior, then prepare the pinned
+   Windows handoff. Finish the Windows watcher/lock backend and path audit and
+   run the native build, unit, focused, and canonical Bash suites in the VM.
+   Address findings there and finish with an x64 Windows confidence run where
+   available. Then run the final performance/resource measurements, packaging
+   and artifact checks, equivalence gates, and two-scope whole-port review.
+   Confirm that the three release inventories remain complete.
+5. Immediately before the final release-quality gate, perform the broad comment
    pass for ownership, concurrency, platform, and algorithmic invariants that
    are not apparent from the code itself. Comments should start with why the
    code or invariant is needed, provide enough context for readers who are not
