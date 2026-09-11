@@ -1,68 +1,28 @@
 exception Error = Project_context.Error
-exception Package_error = Project_context.Package_error
 exception Build_failure = Compiler_scheduler.Build_failure
 exception Parse_failure of string
 
-let rec prepare_tree ~(root_config : Config.t) ~dependency_context ~seen
-    ~folder:root ~prod ~features ~warn_error ~watch ~filter ~is_local
-    ~(stats : Build_types.t) =
-  let features =
-    match Hashtbl.find_opt stats.active_features root with
-    | Some features -> features
-    | None -> features
-  in
+let rec prepare_tree ~seen ~folder:root ~watch ~(stats : Build_types.t) =
   Hashtbl.replace seen root ();
-  let prepared = Hashtbl.find_opt stats.graph_packages root in
-  let config =
-    match prepared with
-    | Some package -> package.graph_config
-    | None ->
-      let config = Config.load_root root in
-      (match warn_error with
-      | None -> config
-      | Some value -> {config with warning_flags = ["-warn-error"; value]})
+  let package =
+    match Hashtbl.find_opt stats.graph_packages root with
+    | Some package -> package
+    | None -> raise (Error ("Package graph was not prepared for " ^ root))
   in
+  let is_local = package.graph_is_local in
+  let config = package.graph_config in
   stats.diagnostics <-
     List.rev_append
       (Package_diagnostics.for_package ~is_local config)
       stats.diagnostics;
   let dependency_directories =
-    let candidates =
-      match prepared with
-      | Some package -> package.graph_dependency_directories
-      | None ->
-        let dependencies : Config.dependency list =
-          config.dependencies
-          @ if prod || not is_local then [] else config.dev_dependencies
-        in
-        dependencies
-        |> List.map (fun (dependency : Config.dependency) ->
-             match
-               Project_context.dependency_path_in dependency_context root
-                 dependency.name
-             with
-             | Some directory -> (dependency, directory)
-             | None ->
-               raise
-                 (Package_error
-                    (Printf.sprintf
-                       "Could not build package tree reading dependency '%s' at path '%s'. Error: Could not resolve dependency %s"
-                       dependency.name root_config.root dependency.name)))
-    in
-    candidates
+    package.graph_dependency_directories
     |> List.filter_map (fun ((dependency : Config.dependency), candidate) ->
       let () = match candidate with
         | candidate when Hashtbl.mem seen candidate -> ()
-        | candidate when Config.exists_in_root candidate ->
+        | candidate when Hashtbl.mem stats.graph_packages candidate ->
           (try
-             prepare_tree ~root_config ~dependency_context ~seen
-               ~folder:candidate ~prod ~features:dependency.features
-               ~warn_error:None ~watch
-               ~filter:None
-               ~is_local:
-                 (Project_context.dependency_is_local_canonical
-                    dependency_context candidate)
-               ~stats
+             prepare_tree ~seen ~folder:candidate ~watch ~stats
            with Build_failure output ->
              if Option.is_none stats.failure then stats.failure <- Some output)
         | _ -> ()
@@ -99,52 +59,21 @@ let rec prepare_tree ~(root_config : Config.t) ~dependency_context ~seen
     | Some state -> state
     | None -> raise (Error "compile asset state was not initialized")
   in
-  let build_dir =
-    match prepared with
-    | Some package -> package.graph_build_dir
-    | None -> Build_artifacts.lib_path root "bs"
-  in
-  let ocaml_dir =
-    match prepared with
-    | Some package -> package.graph_ocaml_dir
-    | None -> Build_artifacts.lib_path root "ocaml"
-  in
+  let build_dir = package.graph_build_dir in
+  let ocaml_dir = package.graph_ocaml_dir in
   File_util.ensure_dir build_dir;
   File_util.ensure_dir ocaml_dir;
   Compiler_log.initialize root;
   Hashtbl.replace stats.initialized_logs root ();
-  let modules =
-    match prepared with
-    | Some package -> package.graph_modules
-    | None ->
-      Source.discover config
-        ~prod:(Package_graph.source_discovery_prod ~prod ~is_local)
-        ~features ~filter
-        ~display_root:root_config.root
-        ~on_missing:(Package_diagnostics.report_missing_source_folder config)
-        ~on_orphan:(fun path ->
-          Printf.eprintf
-            "\027[2K\r No implementation file found for interface file (skipping): %s\n%!"
-            path)
-  in
-  let config =
-    match prepared with
-    | Some package -> package.graph_compile_config
-    | None ->
-      Build_artifacts.with_root_options config root_config
-      |> Compiler_args.with_local_warning_policy ~is_local
-  in
+  let modules = package.graph_modules in
+  let config = package.graph_compile_config in
   let cleanup =
     match Hashtbl.find_opt stats.cleanup_results root with
     | Some result -> result
-    | None ->
-      Build_artifacts.cleanup_stale ~root ~ocaml_dir ~is_local config modules
+    | None -> raise (Error ("Package cleanup was not prepared for " ^ root))
   in
   let removed_modules = cleanup.removed_modules in
   let removed_module_names = Hashtbl.create (List.length removed_modules) in
-  if not (Hashtbl.mem stats.cleanup_results root) then
-    stats.deferred_artifact_cleanup :=
-      cleanup.deferred_artifacts @ !(stats.deferred_artifact_cleanup);
   List.iter
     (fun module_name ->
       Hashtbl.replace removed_module_names module_name ();
@@ -163,14 +92,8 @@ let rec prepare_tree ~(root_config : Config.t) ~dependency_context ~seen
     |> List.filter (fun path ->
          Hashtbl.mem removed_module_names (Source.module_name path)
          || Hashtbl.mem stats.forced_parse_paths (Filename.concat root path)
-         ||
-         match prepared, stats.compile_assets with
-         | Some package, Some compile_assets ->
-           Build_freshness.source_is_not_older_than_ast compile_assets ~root
-             ~source_mtimes:package.graph_source_mtimes path
-         | None, _ | _, None ->
-           Build_freshness.source_is_newer ~source:(Filename.concat root path)
-             ~artifact:(Build_freshness.published_ast_path ~ocaml_dir path))
+         || Build_freshness.source_is_not_older_than_ast compile_assets ~root
+              ~source_mtimes:package.graph_source_mtimes path)
   in
   let dirty_parse_path_set = Hashtbl.create (List.length dirty_parse_paths) in
   List.iter
@@ -304,21 +227,12 @@ let rec prepare_tree ~(root_config : Config.t) ~dependency_context ~seen
     let module_name = Source.module_name module_.Source.implementation in
     let source = Filename.concat root module_.Source.implementation in
     let outputs_exist =
-      match Hashtbl.find_opt stats.cleanup_results root with
-      | Some cleanup ->
-        List.for_all
-          (fun spec ->
-            Hashtbl.mem cleanup.present_public_outputs
-              (Build_artifacts.generated_js_path config
-                 module_.Source.implementation spec))
-          config.package_specs
-      | None ->
-        List.for_all
-          (fun spec ->
-            Sys.file_exists
-              (Build_artifacts.generated_js_path config
-                 module_.Source.implementation spec))
-          config.package_specs
+      List.for_all
+        (fun spec ->
+          Hashtbl.mem cleanup.present_public_outputs
+            (Build_artifacts.generated_js_path config
+               module_.Source.implementation spec))
+        config.package_specs
     in
     let raw_dependencies =
       Hashtbl.find_opt raw_dependencies module_.Source.name

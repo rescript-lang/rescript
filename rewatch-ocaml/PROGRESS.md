@@ -2265,13 +2265,18 @@ The full clean-build effect remains to be measured under the stable performance
 gate rather than inferred from allocation behavior.
 
 The follow-up review also identified larger simplification candidates for the
-final non-comment cleanup: require fully prepared packages at package-build
-entry, choose one owner for duplicated dependency state, give deferred cleanup
-one execution owner, and share pure compiler-argument construction between the
-diagnostic command and actual builds. These should be adopted only where they
-remove real fallback or synchronization paths without disturbing retained-watch
-state or argument parity. The same pass will replace internal polymorphic
-variants with normal variants wherever the case set is closed; external APIs
+final non-comment cleanup. Package build now requires the graph, source set,
+compile configuration, output ownership, source mtimes, and cleanup inventory
+prepared by `Build_preparation`; it no longer carries a second fallback policy
+that reloads configuration, resolves dependencies, rediscovers sources, or
+recomputes cleanup. A missing prepared root is an internal-state error, while a
+resolved dependency without a build configuration remains a prebuilt include
+directory rather than being recursively prepared. The remaining candidates are
+to choose one owner for duplicated dependency state, give deferred cleanup one
+execution owner, and share pure compiler-argument construction between the
+diagnostic command and actual builds. The same pass will replace internal
+polymorphic variants with normal variants wherever the case set is closed;
+external APIs
 and genuinely open case sets remain exceptions. Remaining measured-performance candidates are
 per-child reader/waiter threads and buffers, serial parser-job preparation,
 retained-build reconstruction, and publication allocation/GC. They require
