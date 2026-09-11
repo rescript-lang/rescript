@@ -631,6 +631,8 @@ run_build_output_case quiet-warning 0 \
   "$root/rewatch-ocaml/tests/warning-replay" quiet
 
 run_case build-subcommand-version exit2 exit2 build --version
+run_case implicit-conflicting-verbosity exit2 exit2 -v -q
+run_case build-conflicting-verbosity exit2 exit2 build --verbose --quiet
 run_case build-no-timing-consumes-folder exit2 exit2 build --no-timing "$project"
 run_case compiler-args-source accept accept compiler-args "$project/src/A.res"
 run_case compiler-args-extension accept reject compiler-args "$project/src/A.txt"

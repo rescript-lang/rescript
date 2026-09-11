@@ -67,6 +67,12 @@ let tests =
     | _ -> false)
     "build accepts a trailing verbosity flag";
   check
+    (rejects ["-v"; "-q"])
+    "implicit build rejects conflicting verbose and quiet modes";
+  check
+    (rejects ["build"; "--verbose"; "--quiet"])
+    "explicit build rejects conflicting verbose and quiet modes";
+  check
     (shows_version ["-V"; "build"])
     "a leading short version flag has global precedence";
   check
