@@ -26,7 +26,6 @@ val run :
   compile_assets:Compile_assets.t ->
   build_state:Build_state.t ->
   scheduled_modules:scheduled_module list ->
-  compile_cleanup:(unit -> unit) list ->
   mark_compiled:(unit -> unit) ->
   mark_had_warnings:(unit -> unit) ->
   progress:Output.Progress.t ->

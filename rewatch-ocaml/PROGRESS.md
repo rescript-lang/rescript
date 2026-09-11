@@ -2276,8 +2276,12 @@ have one owner in each prepared global-module record, while `Build_state` owns
 only resolved forward and reverse graph edges. The redundant global raw table,
 unused build-state raw/deps-dirty fields, and unused mutable dependency list on
 source-discovery records have been removed; incremental AST updates change the
-global-module record and rebuild its resolved edges directly. The remaining
-candidates are to give deferred cleanup one execution owner and share pure
+global-module record and rebuild its resolved edges directly. Deferred compile
+cleanup now has one execution owner in the build transaction's protected
+finalizer. The compiler scheduler no longer executes those actions early, and
+the individual cleanup closures no longer carry defensive one-shot flags; the
+transaction consumes and clears its pending action list on success, reported
+failure, or an unexpected exception. The remaining candidate is to share pure
 compiler-argument construction between the diagnostic command and actual
 builds. The same pass will replace internal
 polymorphic variants with normal variants wherever the case set is closed;

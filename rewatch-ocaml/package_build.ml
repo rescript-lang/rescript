@@ -162,19 +162,16 @@ let rec prepare_tree ~seen ~folder:root ~watch ~(stats : Build_types.t) =
            (Build_artifacts.lib_path config.root "ocaml")
            (Filename.basename path)))
     parsed;
-  if !warning_asts <> [] then (
-    let cleaned = ref false in
+  if !warning_asts <> [] then
     stats.compile_cleanup :=
       (fun () ->
-        if not !cleaned then (
-          cleaned := true;
-          List.iter
-            (fun (source, ast) ->
-              let path = Filename.concat ocaml_dir (Filename.basename ast) in
-              File_util.remove_file path;
-              Compile_assets.refresh_ast compile_assets ~source ~path)
-            !warning_asts))
-      :: !(stats.compile_cleanup));
+        List.iter
+          (fun (source, ast) ->
+            let path = Filename.concat ocaml_dir (Filename.basename ast) in
+            File_util.remove_file path;
+            Compile_assets.refresh_ast compile_assets ~source ~path)
+          !warning_asts)
+      :: !(stats.compile_cleanup);
   if
     List.exists
       (function
@@ -311,11 +308,8 @@ let rec prepare_tree ~seen ~folder:root ~watch ~(stats : Build_types.t) =
            ~entry:config.namespace_entry ~package_dirty namespace modules))
     config.namespace;
   stats.scheduled_modules := scheduled @ !(stats.scheduled_modules);
-  let cleaned = ref false in
   stats.compile_cleanup :=
     (fun () ->
-      if not !cleaned then (
-        cleaned := true;
       (* The published AST is the freshness marker. Keep bsc's working AST in
          lib/bs and remove only the published copy so warnings are replayed
          without deleting a usable intermediate artifact. *)
@@ -339,6 +333,6 @@ let rec prepare_tree ~seen ~folder:root ~watch ~(stats : Build_types.t) =
                   File_util.remove_file
                     (Filename.concat ocaml_dir (Filename.basename ast)))
                 paths)
-          compile_warning_modules))
+          compile_warning_modules)
     :: !(stats.compile_cleanup);
   ())
