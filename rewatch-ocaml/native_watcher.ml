@@ -23,6 +23,11 @@ type t = {
 let error_message error =
   Printf.sprintf "%s: %s" (Luv.Error.err_name error) (Luv.Error.strerror error)
 
+let is_build_directory path =
+  let name = Filename.basename path in
+  (name = "bs" || name = "ocaml")
+  && Filename.basename (Filename.dirname path) = "lib"
+
 let directories_under paths =
   let visited = Hashtbl.create 64 in
   let rec walk acc directory =
@@ -34,10 +39,9 @@ let directories_under paths =
         Sys.readdir canonical |> Array.to_list
         |> List.fold_left
              (fun acc name ->
-               if List.mem name ["lib"; "node_modules"; ".git"; "_build"] then
-                 acc
+               let path = Filename.concat canonical name in
+               if is_build_directory path then acc
                else
-                 let path = Filename.concat canonical name in
                  try
                    let stat = Unix.stat path in
                    if stat.Unix.st_kind = Unix.S_DIR then walk acc path else acc

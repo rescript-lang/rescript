@@ -2148,6 +2148,30 @@ dirtiness. A canonical watch regression changes an interface, observes the
 implementation failure, repairs the implementation, and verifies that the
 dependent is recompiled and reports its newly invalid type use.
 
+The same review found three watch-scope defects. Recursive registration and
+polling snapshots skipped every directory named `lib`, so configured sources
+under `src/lib` compiled initially but were never observed again. This was an
+OCaml-only defect: Rust filters only `lib/bs` and `lib/ocaml` artifact paths.
+Both OCaml traversal paths now use that precise artifact rule, with native and
+canonical watch regressions for a valid nested `lib` source.
+
+The root `--filter` was also applied to every watched package even though
+dependency discovery intentionally receives no filter. Source watch roots now
+retain package ownership and apply the filter only to the root package. The
+exact dependency-suppression defect was OCaml-only; Rust does observe a
+non-matching dependency edit, but direct source inspection found a separate
+inverted event-filter predicate that can suppress the matching root edit. The
+OCaml behavior follows discovery semantics rather than retaining either bug,
+and a workspace watch regression covers a dependency edit under a root filter.
+
+Finally, OCaml registered the parent of a source symlink's target but discarded
+the target identity, so an in-place target edit outside the source tree could
+be ignored when the target did not have a ReScript extension. Snapshots now
+retain exact target paths and use their native content events to request
+reconciliation. Rust registers no external target watch, so the underlying
+behavioral defect is shared; the OCaml port intentionally corrects it. A watch
+regression covers a `.res` symlink whose target has a `.txt` name.
+
 1. Stop for the requested external AI review.
 2. Address the external review findings and rerun the affected gates.
 3. Complete the non-comment maintainability work. Review naming and module

@@ -116,6 +116,37 @@ printf 'let value = 1\n' >"$interface_failure_recovery/src/A.res"
 printf 'let dependent = A.value + 1\n' \
   >"$interface_failure_recovery/src/B.res"
 
+recursive_lib="$work/recursive-lib"
+mkdir -p "$recursive_lib/src/lib"
+printf '%s\n' \
+  '{"name":"recursive-lib","sources":[{"dir":"src","subdirs":true}],"package-specs":{"module":"esmodule","in-source":true,"suffix":".mjs"}}' \
+  >"$recursive_lib/rescript.json"
+printf 'let value = 1\n' >"$recursive_lib/src/lib/Nested.res"
+
+filtered_dependency="$work/filtered-dependency"
+mkdir -p "$filtered_dependency/src" \
+  "$filtered_dependency/packages/dep/src" \
+  "$filtered_dependency/node_modules"
+printf '%s\n' \
+  '{"name":"filtered-root","sources":"src","dependencies":["dep"],"package-specs":{"module":"esmodule","in-source":true,"suffix":".mjs"}}' \
+  >"$filtered_dependency/rescript.json"
+printf 'let value = Helper.value\n' >"$filtered_dependency/src/Main.res"
+printf 'let ignored = 1\n' >"$filtered_dependency/src/Ignored.res"
+printf '%s\n' \
+  '{"name":"dep","sources":"src","package-specs":{"module":"esmodule","in-source":true,"suffix":".mjs"}}' \
+  >"$filtered_dependency/packages/dep/rescript.json"
+printf 'let value = 1\n' \
+  >"$filtered_dependency/packages/dep/src/Helper.res"
+ln -s '../packages/dep' "$filtered_dependency/node_modules/dep"
+
+symlink_source="$work/symlink-source"
+mkdir -p "$symlink_source/src" "$symlink_source/shared"
+printf '%s\n' \
+  '{"name":"symlink-source","sources":"src","package-specs":{"module":"esmodule","in-source":true,"suffix":".mjs"}}' \
+  >"$symlink_source/rescript.json"
+printf 'let value = 1\n' >"$symlink_source/shared/linked.txt"
+ln -s '../shared/linked.txt' "$symlink_source/src/Linked.res"
+
 if [ -x "$port_directory/bsc.exe" ]; then
   env -u RESCRIPT_BSC_EXE "$port" build "$packaged_basic" \
     >"$packaged_basic/build.log"
@@ -483,6 +514,56 @@ if ! wait_for_text "$interface_failure_log" 'This has type:'; then
 fi
 kill -TERM "$interface_failure_pid"
 wait "$interface_failure_pid" 2>/dev/null || true
+
+"$port" watch "$recursive_lib" >"$recursive_lib/watch.log" 2>&1 &
+recursive_lib_pid=$!
+background_pids="$background_pids $recursive_lib_pid"
+if ! wait_for_file "$recursive_lib/src/lib/Nested.mjs"; then
+  cat "$recursive_lib/watch.log" >&2
+  exit 1
+fi
+printf 'let value = 2\n' >"$recursive_lib/src/lib/Nested.res"
+if ! wait_for_text "$recursive_lib/src/lib/Nested.mjs" 'value = 2'; then
+  cat "$recursive_lib/watch.log" >&2
+  exit 1
+fi
+kill -TERM "$recursive_lib_pid"
+wait "$recursive_lib_pid" 2>/dev/null || true
+
+"$port" watch --filter '^Main\.res$' "$filtered_dependency" \
+  >"$filtered_dependency/watch.log" 2>&1 &
+filtered_dependency_pid=$!
+background_pids="$background_pids $filtered_dependency_pid"
+if ! wait_for_file "$filtered_dependency/packages/dep/src/Helper.mjs"; then
+  cat "$filtered_dependency/watch.log" >&2
+  exit 1
+fi
+test -f "$filtered_dependency/src/Main.mjs"
+test ! -f "$filtered_dependency/src/Ignored.mjs"
+printf 'let value = 2\n' \
+  >"$filtered_dependency/packages/dep/src/Helper.res"
+if ! wait_for_text "$filtered_dependency/packages/dep/src/Helper.mjs" \
+  'value = 2'; then
+  cat "$filtered_dependency/watch.log" >&2
+  exit 1
+fi
+kill -TERM "$filtered_dependency_pid"
+wait "$filtered_dependency_pid" 2>/dev/null || true
+
+"$port" watch "$symlink_source" >"$symlink_source/watch.log" 2>&1 &
+symlink_source_pid=$!
+background_pids="$background_pids $symlink_source_pid"
+if ! wait_for_file "$symlink_source/src/Linked.mjs"; then
+  cat "$symlink_source/watch.log" >&2
+  exit 1
+fi
+printf 'let value = 2\n' >"$symlink_source/shared/linked.txt"
+if ! wait_for_text "$symlink_source/src/Linked.mjs" 'value = 2'; then
+  cat "$symlink_source/watch.log" >&2
+  exit 1
+fi
+kill -TERM "$symlink_source_pid"
+wait "$symlink_source_pid" 2>/dev/null || true
 
 warning_call_log="$warning_replay/bsc-calls.log"
 warning_watch_log="$warning_replay/watch.log"
