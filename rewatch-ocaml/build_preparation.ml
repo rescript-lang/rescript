@@ -182,7 +182,6 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
       ~source_map_args
       ~package_output_specs:(Compiler_info.package_output_specs root_config)
   in
-  stats.compiler_context <- Some compiler_context;
   let cleanup_started = Unix.gettimeofday () in
   List.iter
     (fun package ->
@@ -217,6 +216,7 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
              ~root:package.graph_root
              ~ocaml_dir:package.graph_ocaml_dir
              ~source_files:package.graph_source_files
+             ~present_source_files:package.graph_present_source_files
              ~is_local:package.graph_is_local
              package.graph_compile_config package.graph_modules);
         Compiler_info.clean_package package.graph_config;
@@ -240,10 +240,11 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
           ~root:package.graph_root
           ~ocaml_dir:package.graph_ocaml_dir
           ~source_files:package.graph_source_files
+          ~present_source_files:package.graph_present_source_files
           ~is_local:package.graph_is_local
           package.graph_compile_config package.graph_modules
       in
-      Hashtbl.replace stats.cleanup_results package.graph_root
+      Hashtbl.replace stats.retained.cleanup_results package.graph_root
         cleanup;
       stats.deferred_artifact_cleanup :=
         cleanup.deferred_artifacts @ !(stats.deferred_artifact_cleanup);
@@ -254,7 +255,6 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
         (fun module_name -> Hashtbl.replace stats.removed_modules module_name ())
         cleanup.removed_modules)
     graph_packages;
-  stats.compile_assets <- Some compile_assets;
   on_cleanup (Unix.gettimeofday () -. cleanup_started);
   let parse_started = Unix.gettimeofday () in
   let parse_entries =
@@ -374,23 +374,26 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
              (Filename.concat previous.package_root previous.source_path)
              (Filename.concat node.package_root node.source_path)))
     nodes;
-  Hashtbl.iter (fun key node -> Hashtbl.add stats.global_modules key node) by_key;
+  Hashtbl.iter
+    (fun key node -> Hashtbl.add stats.retained.global_modules key node)
+    by_key;
   Hashtbl.iter
     (fun key node ->
       node.namespace
       |> Option.iter (fun namespace ->
            let keys =
-             Hashtbl.find_opt stats.global_namespace_modules namespace
+             Hashtbl.find_opt stats.retained.global_namespace_modules namespace
              |> Option.value ~default:[]
            in
-           Hashtbl.replace stats.global_namespace_modules namespace
+           Hashtbl.replace stats.retained.global_namespace_modules namespace
              (key :: keys)))
     by_key;
   let graph_nodes =
     List.map
       (fun node ->
         ( node,
-          resolved_dependencies by_key stats.global_namespace_modules node ))
+          resolved_dependencies by_key stats.retained.global_namespace_modules
+            node ))
       nodes
   in
   let build_state = Build_state.create (List.length graph_nodes) in
@@ -407,7 +410,7 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
     (fun (node, dependencies) ->
       Build_state.set_dependencies build_state ~key:node.key dependencies)
     graph_nodes;
-  stats.build_state <- Some build_state;
+  stats.retained.prepared <- Some {compiler_context; compile_assets; build_state};
   let cycle = find_cycle by_key build_state in
   stats.parse_seconds <- Unix.gettimeofday () -. parse_started;
   cycle

@@ -10,6 +10,7 @@ type discovery = {
   modules: module_ list;
   source_mtimes: (string * float) list;
   inventory_files: string list;
+  present_files: string list;
   gentype_dirs: string list;
 }
 
@@ -18,6 +19,7 @@ type discovered_file = {path: string; modified: float}
 type scanned_sources = {
   files: (discovered_file * bool * bool) list;
   inventory_files: string list;
+  present_files: string list;
   gentype_dirs: string list;
 }
 
@@ -85,7 +87,7 @@ let interface_mismatch_error implementation interface =
    the same filesystem snapshot without weakening stale-output cleanup. *)
 let scan_source ~root (source : Config.source) ~discover_modules ~on_missing
     ~visited_dirs ~collect_inventory ~collect_gentype ~visited_gentype_dirs
-    candidates inventory_files gentype_dirs =
+    candidates inventory_files present_files gentype_dirs =
   let rec scan_directory ~relative ~collect_inventory ~discover_requested
       ~collect_gentype ~identity =
     let absolute = Filename.concat root relative in
@@ -145,6 +147,7 @@ let scan_source ~root (source : Config.source) ~discover_modules ~on_missing
                   ~discover_requested:discover_children
                   ~collect_gentype:gentype_children ~identity
             | _ ->
+              present_files := absolute_path :: !present_files;
               if collect_inventory then
                 inventory_files := absolute_path :: !inventory_files;
               if discover_here then
@@ -157,6 +160,7 @@ let scan_source ~root (source : Config.source) ~discover_modules ~on_missing
                       source.is_dev )
                     :: !candidates)
           | _ ->
+            present_files := absolute_path :: !present_files;
             if collect_inventory then
               inventory_files := absolute_path :: !inventory_files;
             if discover_here then
@@ -193,9 +197,11 @@ let scan_source ~root (source : Config.source) ~discover_modules ~on_missing
           ~discover_requested:discover_modules
           ~collect_gentype ~identity
       | _ ->
+        present_files := absolute :: !present_files;
         inventory_files := absolute :: !inventory_files;
         if discover_modules then on_missing absolute)
     | _ ->
+      present_files := absolute :: !present_files;
       inventory_files := absolute :: !inventory_files;
       if discover_modules then on_missing absolute
   with Sys_error _ | Unix.Unix_error _ ->
@@ -229,6 +235,7 @@ let scan_sources ~on_missing (config : Config.t) ~prod ~features
   let visited_gentype_dirs = Hashtbl.create 32 in
   let files = ref [] in
   let inventory_files = ref [] in
+  let present_files = ref [] in
   let gentype_dirs = ref [] in
   config.sources
   |> List.iter (fun (source : Config.source) ->
@@ -244,10 +251,11 @@ let scan_sources ~on_missing (config : Config.t) ~prod ~features
        scan_source ~root:config.root source ~discover_modules ~on_missing
          ~visited_dirs ~collect_inventory
          ~collect_gentype:(collect_gentype && feature_enabled)
-         ~visited_gentype_dirs files inventory_files gentype_dirs);
+         ~visited_gentype_dirs files inventory_files present_files gentype_dirs);
   {
     files = !files;
     inventory_files = List.sort_uniq String.compare !inventory_files;
+    present_files = List.sort_uniq String.compare !present_files;
     gentype_dirs = List.sort_uniq String.compare !gentype_dirs;
   }
 
@@ -352,6 +360,7 @@ let discover_with_inventory ?(on_orphan = fun _ -> ())
     modules;
     source_mtimes;
     inventory_files = scanned.inventory_files;
+    present_files = scanned.present_files;
     gentype_dirs = scanned.gentype_dirs;
   }
 

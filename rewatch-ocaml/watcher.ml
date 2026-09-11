@@ -27,7 +27,10 @@ let rec nearest_existing_ancestor path =
 let watch_context ~root ~prod ~features ~filter =
   try
     let root_config = Config.load_root root in
-    let dependency_context = Project_context.dependency_context root_config in
+    let resolution =
+      Package_resolution.create
+        ~diagnostic_mode:Package_resolution.Suppress_diagnostics root_config
+    in
   let visited = Hashtbl.create 32 in
   let packages = Hashtbl.create 32 in
   let requested_features = Hashtbl.create 32 in
@@ -60,7 +63,7 @@ let watch_context ~root ~prod ~features ~filter =
     path = root || String.starts_with ~prefix:(Filename.concat root "") path
   in
   let watch_unresolved_dependency package_root name =
-    Project_context.dependency_candidates_in dependency_context package_root name
+    Package_resolution.dependency_candidates resolution ~package_root name
     |> List.iter (fun candidate ->
          let existing = nearest_existing_directory root candidate in
          try
@@ -87,25 +90,27 @@ let watch_context ~root ~prod ~features ~filter =
     List.iter
       (fun (dependency : Config.dependency) ->
         match
-          Project_context.dependency_path_in dependency_context config.root
-            dependency.name
+          Package_resolution.dependency_path resolution
+            ~package_root:config.root dependency.name
         with
-        | Some directory
-          when Project_context.dependency_is_local_canonical dependency_context
-                 directory
-               && Config.exists_in_root directory ->
-          if not (Hashtbl.mem visited directory) then (
-            (* A broken dependency configuration must remain watched so fixing
-               that file can recover the long-lived command. *)
-            roots := directory :: !roots;
-            add_path directory false);
+        | Some directory when Config.exists_in_root directory ->
           (try
-             visit
-               ~is_local:
-                 (Project_context.dependency_is_local_canonical
-                    dependency_context directory)
-               ~features:dependency.features (Config.load_root directory)
-           with Config.Error _ -> Hashtbl.replace visited directory ())
+             let resolved =
+               Package_resolution.resolve resolution
+                 ~package_root:config.root dependency
+             in
+             if resolved.is_local then (
+               if not (Hashtbl.mem visited resolved.directory) then (
+                 roots := resolved.directory :: !roots;
+                 add_path resolved.directory false);
+               visit ~is_local:true ~features:dependency.features
+                 resolved.config)
+           with Project_context.Package_error _ | Project_context.Error _ ->
+             (* A broken dependency configuration must remain watched so fixing
+                that file can recover the long-lived command. *)
+             roots := directory :: !roots;
+             add_path directory false;
+             Hashtbl.replace visited directory ())
         | None -> watch_unresolved_dependency config.root dependency.name
         | Some directory
           when not (Config.exists_in_root directory) && is_directory directory ->
@@ -650,12 +655,12 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
       | Some changes ->
         Output.debug ~verbosity "doing Incremental";
         begin_rebuild Incremental;
-        build ~poll ~changes:(Some changes) |> finish_rebuild;
-        let updated_previous =
+        let before_build =
           update_snapshot_entries digest_cache previous changes
         in
+        build ~poll ~changes:(Some changes) |> finish_rebuild;
         native_loop watcher roots sources unresolved symlink_targets
-          updated_previous
+          before_build
       | None -> native_reconcile watcher roots sources unresolved previous)
   and native_reconcile watcher roots sources unresolved previous =
     let current =

@@ -8,9 +8,11 @@ type graph_package = {
   graph_ocaml_dir: string;
   graph_dependencies: Config.dependency list;
   graph_dependency_directories: (Config.dependency * string) list;
+  graph_gentype_dependency_args: string list;
   graph_modules: Source.module_ list;
   graph_source_mtimes: (string, float) Hashtbl.t;
   graph_source_files: string list;
+  graph_present_source_files: string list;
 }
 
 type global_module = {
@@ -26,8 +28,27 @@ type global_module = {
 }
 
 type parse_message = Parse_warning of string | Parse_error of string
+type attempt_kind = Full_attempt | Retained_attempt
+
+type prepared = {
+  compiler_context: Compiler_info.context;
+  compile_assets: Compile_assets.t;
+  build_state: Build_state.t;
+}
+
+type retained = {
+  active_features: (string, string list option) Hashtbl.t;
+  global_modules: (string, global_module) Hashtbl.t;
+  global_namespace_modules: (string, string list) Hashtbl.t;
+  graph_packages: (string, graph_package) Hashtbl.t;
+  source_index: (string, string * Source.module_ * string * string) Hashtbl.t;
+  cleanup_results: (string, Build_artifacts.cleanup_result) Hashtbl.t;
+  mutable prepared: prepared option;
+  warning_state: Warning_state.t;
+}
 
 type t = {
+  attempt_kind: attempt_kind;
   mutable cleaned: int;
   mutable previous_asts: int;
   mutable parsed: int;
@@ -41,21 +62,13 @@ type t = {
   preparse_stderr: (string, string) Hashtbl.t;
   preparse_results: (string, Process.result) Hashtbl.t;
   blocked_modules: (string, unit) Hashtbl.t;
-  active_features: (string, string list option) Hashtbl.t;
   initialized_logs: (string, unit) Hashtbl.t;
-  global_modules: (string, global_module) Hashtbl.t;
-  global_namespace_modules: (string, string list) Hashtbl.t;
-  graph_packages: (string, graph_package) Hashtbl.t;
-  cleanup_results: (string, Build_artifacts.cleanup_result) Hashtbl.t;
   deferred_artifact_cleanup: string list ref;
   namespace_jobs: (Process.job * (Process.result -> unit)) list ref;
   scheduled_modules: Compiler_scheduler.scheduled_module list ref;
   compile_cleanup: (unit -> unit) list ref;
-  mutable compiler_context: Compiler_info.context option;
-  mutable compile_assets: Compile_assets.t option;
-  mutable build_state: Build_state.t option;
   mutable compiler_cleaned: bool;
-  warning_state: Warning_state.t;
+  retained: retained;
   mutable had_warnings: bool;
   poll: unit -> unit;
   process_poll: (unit -> unit) option;
@@ -65,6 +78,7 @@ type t = {
 
 let create ~warning_state ~poll ~process_poll ~progress ~verbosity =
   {
+    attempt_kind = Full_attempt;
     cleaned = 0;
     previous_asts = 0;
     parsed = 0;
@@ -78,21 +92,23 @@ let create ~warning_state ~poll ~process_poll ~progress ~verbosity =
     preparse_stderr = Hashtbl.create 16;
     preparse_results = Hashtbl.create 16;
     blocked_modules = Hashtbl.create 16;
-    active_features = Hashtbl.create 16;
     initialized_logs = Hashtbl.create 16;
-    global_modules = Hashtbl.create 64;
-    global_namespace_modules = Hashtbl.create 16;
-    graph_packages = Hashtbl.create 32;
-    cleanup_results = Hashtbl.create 32;
     deferred_artifact_cleanup = ref [];
     namespace_jobs = ref [];
     scheduled_modules = ref [];
     compile_cleanup = ref [];
-    compiler_context = None;
-    compile_assets = None;
-    build_state = None;
     compiler_cleaned = false;
-    warning_state;
+    retained =
+      {
+        active_features = Hashtbl.create 16;
+        global_modules = Hashtbl.create 64;
+        global_namespace_modules = Hashtbl.create 16;
+        graph_packages = Hashtbl.create 32;
+        source_index = Hashtbl.create 64;
+        cleanup_results = Hashtbl.create 32;
+        prepared = None;
+        warning_state;
+      };
     had_warnings = false;
     poll;
     process_poll;
@@ -105,7 +121,9 @@ let create_incremental ~previous ~poll ~process_poll ~progress ~verbosity =
      graph and artifact/module state describe the long-lived watcher session.
      Sharing only that persistent subset prevents completed cleanup actions or
      failed subprocess records from leaking into the next edit. *)
-  let cleanup_results = Hashtbl.create (Hashtbl.length previous.cleanup_results) in
+  let cleanup_results =
+    Hashtbl.create (Hashtbl.length previous.retained.cleanup_results)
+  in
   Hashtbl.iter
     (fun root cleanup ->
       Hashtbl.add cleanup_results root
@@ -116,8 +134,9 @@ let create_incremental ~previous ~poll ~process_poll ~progress ~verbosity =
             deferred_artifacts = [];
             present_public_outputs = cleanup.present_public_outputs;
           })
-    previous.cleanup_results;
+    previous.retained.cleanup_results;
   {
+    attempt_kind = Retained_attempt;
     cleaned = 0;
     previous_asts = 0;
     parsed = 0;
@@ -131,24 +150,21 @@ let create_incremental ~previous ~poll ~process_poll ~progress ~verbosity =
     preparse_stderr = Hashtbl.create 16;
     preparse_results = Hashtbl.create 16;
     blocked_modules = Hashtbl.create 16;
-    active_features = previous.active_features;
     initialized_logs = Hashtbl.create 16;
-    global_modules = previous.global_modules;
-    global_namespace_modules = previous.global_namespace_modules;
-    graph_packages = previous.graph_packages;
-    cleanup_results;
     deferred_artifact_cleanup = ref [];
     namespace_jobs = ref [];
     scheduled_modules = ref [];
     compile_cleanup = ref [];
-    compiler_context = previous.compiler_context;
-    compile_assets = previous.compile_assets;
-    build_state = previous.build_state;
     compiler_cleaned = false;
-    warning_state = previous.warning_state;
+    retained = {previous.retained with cleanup_results};
     had_warnings = false;
     poll;
     process_poll;
     progress;
     verbosity;
   }
+
+let prepared_exn stats =
+  match stats.retained.prepared with
+  | Some prepared -> prepared
+  | None -> invalid_arg "build state has not been prepared"

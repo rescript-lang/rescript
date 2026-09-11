@@ -59,17 +59,16 @@ let package_sources (package : discovered_package) =
    format owns. Scan it with the effective feature selections so dependency
    diagnostics and the eventual local file set cannot drift apart. *)
 let discover_package_graph (current : Config.t) =
-  let dependency_context = Project_context.dependency_context current in
-  let resolved_packages = Hashtbl.create 32 in
+  let resolution = Package_resolution.create current in
   let package_configs = Hashtbl.create 32 in
   let feature_requests = Hashtbl.create 32 in
   Package_diagnostics.validate_metadata current;
-  Hashtbl.add package_configs current.name (current, true);
-  let add_feature_request name request =
+  Hashtbl.add package_configs current.root (current, true);
+  let add_feature_request root request =
     let requests =
-      Option.value (Hashtbl.find_opt feature_requests name) ~default:[]
+      Option.value (Hashtbl.find_opt feature_requests root) ~default:[]
     in
-    Hashtbl.replace feature_requests name (request :: requests)
+    Hashtbl.replace feature_requests root (request :: requests)
   in
   let rec visit ~is_local (config : Config.t) =
     let dependencies =
@@ -78,53 +77,30 @@ let discover_package_graph (current : Config.t) =
     let pending =
       dependencies
       |> List.filter_map (fun (dependency : Config.dependency) ->
-           add_feature_request dependency.name dependency.features;
-           let directory =
-             Project_context.require_dependency_directory
-               ~context:dependency_context config.root dependency
+           let resolved =
+             Package_resolution.resolve resolution ~package_root:config.root
+               dependency
            in
-           match Hashtbl.find_opt resolved_packages dependency.name with
-           | Some chosen ->
-             if chosen <> directory then
-               Printf.eprintf
-                 "Duplicated package: %s ./%s (chosen) vs ./%s in ./%s\n%!"
-                 dependency.name (Project_context.relative_to current.root chosen)
-                 (Project_context.relative_to current.root directory)
-                 (Project_context.relative_to current.root config.root);
-             None
-           | None ->
-             Hashtbl.add resolved_packages dependency.name directory;
-             Some (dependency, directory))
+           add_feature_request resolved.directory dependency.features;
+           if Hashtbl.mem package_configs resolved.directory then None
+           else Some resolved)
     in
     List.iter
-      (fun ((dependency : Config.dependency), directory) ->
-          let dependency_config =
-            try Config.load_root directory
-            with Config.Error message ->
-              raise
-                (Project_context.Package_error
-                   (Printf.sprintf
-                      "Could not build package tree for '%s' at path '%s'. Error: %s"
-                      dependency.name current.root message))
-          in
-          Package_diagnostics.validate_metadata dependency_config;
-          Package_diagnostics.report_missing_sources ~is_root:false dependency_config;
-          let dependency_is_local =
-            Project_context.dependency_is_local_canonical dependency_context
-              directory
-          in
-          Hashtbl.replace package_configs dependency.name
-            (dependency_config, dependency_is_local);
-          visit ~is_local:dependency_is_local dependency_config)
+      (fun (dependency : Package_resolution.dependency) ->
+        Package_diagnostics.report_missing_sources ~is_root:false
+          dependency.config;
+        Hashtbl.replace package_configs dependency.directory
+          (dependency.config, dependency.is_local);
+        visit ~is_local:dependency.is_local dependency.config)
       pending
   in
   visit ~is_local:true current;
   Hashtbl.to_seq package_configs
-  |> Seq.map (fun (package_name, ((config : Config.t), is_local)) ->
+  |> Seq.map (fun (package_root, ((config : Config.t), is_local)) ->
        let features =
          if config.root = current.root then None
          else
-           match Hashtbl.find_opt feature_requests package_name with
+           match Hashtbl.find_opt feature_requests package_root with
            | None -> None
            | Some requests when List.exists Option.is_none requests -> None
            | Some requests ->
@@ -137,7 +113,7 @@ let discover_package_graph (current : Config.t) =
                 raise
                   (Error
                      (Printf.sprintf "Invalid features for package '%s': %s"
-                        package_name message)));
+                        config.name message)));
              Some requested
        in
        let modules =
@@ -171,7 +147,7 @@ let files_in_scope () =
         (parent.dependencies @ parent.dev_dependencies)
   in
   let packages = discover_package_graph current in
-  let dependency_context = Project_context.dependency_context current in
+  let resolution = Package_resolution.create current in
   let roots_in_scope =
     if listed_by_parent then [current.root]
     else
@@ -179,12 +155,11 @@ let files_in_scope () =
       :: (current.dependencies @ current.dev_dependencies
          |> List.filter_map (fun (dependency : Config.dependency) ->
               match
-                Project_context.dependency_path_in dependency_context
-                  current.root dependency.name
+                Package_resolution.dependency_path resolution
+                  ~package_root:current.root dependency.name
               with
               | Some directory
-                when Project_context.dependency_is_local_canonical
-                       dependency_context directory ->
+                when Package_resolution.is_local resolution directory ->
                 Some directory
               | Some _ | None -> None))
   in

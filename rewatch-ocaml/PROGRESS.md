@@ -2440,6 +2440,63 @@ would mainly expose that mutable lifetime through callbacks. The broad comment
 and documentation pass remains deliberately deferred until immediately before
 the final release-quality gate.
 
+The next source-only review found six more correctness gaps. All were specific
+to the OCaml port rather than confirmed Rust defects:
+
+- A successfully published IAST now makes its module compilation-pending even
+  when another source's parse error prevents the compilation phase from
+  starting. Freshness considers both the implementation AST and interface IAST,
+  and the pending bit survives the failed attempt. Rust already derives this
+  state from both source artifacts.
+- Direct native-watch events snapshot their changed contents before starting a
+  build. An atomic replacement that arrives while compilation is running can
+  therefore no longer be mistaken for the completed build's baseline. Rust's
+  queued event handling did not expose the stale-output sequence.
+- The command-wide warning-error override now reaches every local dependency;
+  the existing locality policy still removes it at installed-package
+  boundaries. Rust already applies that command-wide/local rule.
+- Native watch handles retain filesystem identity as well as pathname and are
+  reinstalled when a directory is replaced at the same path. Unix uses device
+  and inode identity; the Windows backend uses volume serial and file index.
+  Rust's parent-directory event followed by full watch re-registration already
+  covers this replacement case.
+- Stale generated outputs are classified before deletion, then JavaScript,
+  source map, and working mirrors are removed as one output family. Rust's
+  source-based cleanup already removes JavaScript and map together.
+- Source discovery now exposes a non-owning presence inventory in addition to
+  the cleanup inventory. It follows configured directory symlinks for freshness
+  without authorizing recursive deletion through them, avoiding needless
+  unchanged rebuilds. Rust's compile-asset state does not couple these two
+  responsibilities.
+
+The same round consolidated dependency selection in `package_resolution.ml`.
+Build, clean, implicit format, and watch topology now share candidate order,
+canonical locality, first-package selection, duplicate reporting, and config
+loading, while watch retains its deliberately recoverable handling of missing
+or malformed packages. Prepared compiler context, compile assets, and module
+state form one required value, and persistent graph/artifact state is separated
+structurally from per-attempt diagnostics and work queues. Package compilation
+accepts a prepared package instead of looking it up through an optional phase
+state. GenType arguments reuse the dependency paths chosen for that graph.
+
+The concrete performance recommendations were also implemented. Retained
+builds reuse a normalized source-path index, accumulate changed-module parse
+failures in one pass, restrict freshness work to explicitly changed paths,
+skip unchanged namespace reconstruction, and avoid reading source text in the
+driver when no PPX filtering needs it. Package-level compiler arguments and
+GenType dependency arguments are constructed once instead of once per module.
+The remaining subprocess design was profiled rather than replaced: clean builds
+still peak near 95 tasks because each child has two stream readers and one
+waiter, but bounded pipe capture has no growth across retained builds.
+
+On the quiet, powered host, the five-run interleaved release gate measured a
+5.455 s OCaml median against 4.644 s Rust (1.175x), with 1,516,904 KiB versus
+1,504,696 KiB summed process-tree RSS. Compiler work matched exactly for clean,
+unchanged, and edited builds, and stable artifacts were byte-identical. The
+seven-edit retained-watch gate measured 119 ms OCaml versus 120 ms Rust, exactly
+seven parser and compiler calls per implementation, stable descriptors/tasks,
+and no RSS growth. Both remain within their documented thresholds.
+
 1. Close the deterministic packaging, npm artifact-manifest, equivalence, and
    release-inventory checks that do not depend on host timing or native Windows,
    and prepare a pinned Windows handoff.

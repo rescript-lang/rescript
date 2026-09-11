@@ -232,9 +232,11 @@ let tests =
           }
       in
       let compile_job =
-        Compiler_process.compile_job ~bsc:"bsc" ~runtime:"runtime" ~build_dir
-          ~watch:false ~config ~dependency_dirs:[] module_ ~is_interface:false
-          "src/A.res"
+        Compiler_process.compile_job ~bsc:"bsc" ~build_dir ~config
+          ~common_args:
+            (Compiler_args.compiler_common_arguments ~config ~runtime:"runtime"
+               ~dependency_dirs:[] ~watch:false ~gentype_dependency_args:[])
+          module_ ~is_interface:false "src/A.res"
       in
       let rec argument_after expected = function
         | argument :: value :: _ when argument = expected -> Some value

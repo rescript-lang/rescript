@@ -92,8 +92,8 @@ type cleanup_result = {
   present_public_outputs: (string, unit) Hashtbl.t;
 }
 
-let cleanup_stale ?ocaml_files ?ast_sources ?source_files ~root ~ocaml_dir
-    ~is_local (config : Config.t) modules =
+let cleanup_stale ?ocaml_files ?ast_sources ?source_files ?present_source_files
+    ~root ~ocaml_dir ~is_local (config : Config.t) modules =
   let build_dir = lib_path root "bs" in
   (* Keep one inventory of each artifact tree to avoid repeating directory and
      metadata work during every cleanup phase. Paths removed below can safely
@@ -118,6 +118,9 @@ let cleanup_stale ?ocaml_files ?ast_sources ?source_files ~root ~ocaml_dir
       |> List.concat_map (fun source ->
            File_util.files_under (Filename.concat root source.Config.dir))
   in
+  let present_source_files =
+    Option.value present_source_files ~default:source_files
+  in
   let output_files =
     [lib_path "" "es6"; lib_path "" "js"]
     |> List.map (fun directory ->
@@ -125,7 +128,7 @@ let cleanup_stale ?ocaml_files ?ast_sources ?source_files ~root ~ocaml_dir
          (output_dir, File_util.files_under output_dir))
   in
   let present_public_outputs = Hashtbl.create 64 in
-  source_files @ List.concat_map snd output_files
+  present_source_files @ List.concat_map snd output_files
   |> List.iter (fun path ->
        if Option.is_some (generated_output_details path) then
          Hashtbl.replace present_public_outputs path ());
@@ -289,29 +292,40 @@ let cleanup_stale ?ocaml_files ?ast_sources ?source_files ~root ~ocaml_dir
          (is_local
          && Sys.file_exists (Filename.concat build_dir build_relative)))
   in
-  let remove_output ~build_relative path =
-    Hashtbl.remove present_public_outputs path;
-    File_util.remove_file path;
-    let working_output = Filename.concat build_dir build_relative in
-    File_util.remove_file working_output;
-    File_util.remove_file (working_output ^ ".map")
+  let planned_outputs = Hashtbl.create 16 in
+  let plan_output ~build_relative path =
+    generated_output_details path
+    |> Option.iter (fun (_, _, output_path) ->
+         if should_remove_output ~build_relative output_path then
+           Hashtbl.replace planned_outputs output_path build_relative)
   in
   source_files
   |> List.iter (fun path ->
        generated_output_details path
        |> Option.iter (fun (_, _, output_path) ->
-            let build_relative = relative_under root output_path in
-            if should_remove_output ~build_relative path then
-              remove_output ~build_relative path));
+            plan_output ~build_relative:(relative_under root output_path)
+              output_path));
   output_files
   |> List.iter (fun (output_dir, files) ->
        files
        |> List.iter (fun path ->
             generated_output_details path
             |> Option.iter (fun (_, _, output_path) ->
-                 let build_relative = relative_under output_dir output_path in
-                 if should_remove_output ~build_relative path then
-                   remove_output ~build_relative path)));
+                 plan_output
+                   ~build_relative:(relative_under output_dir output_path)
+                   output_path)));
+  let remove_output (path, build_relative) =
+    Hashtbl.remove present_public_outputs path;
+    Hashtbl.remove present_public_outputs (path ^ ".map");
+    File_util.remove_file path;
+    File_util.remove_file (path ^ ".map");
+    let working_output = Filename.concat build_dir build_relative in
+    File_util.remove_file working_output;
+    File_util.remove_file (working_output ^ ".map")
+  in
+  planned_outputs |> Hashtbl.to_seq |> List.of_seq
+  |> List.sort (fun (left, _) (right, _) -> String.compare left right)
+  |> List.iter remove_output;
   {
     removed_modules = !removed_modules;
     previous_ast_count = !previous_ast_count;

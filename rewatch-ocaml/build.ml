@@ -51,11 +51,11 @@ let clean ~seen ~verbosity ~folder ~prod =
   Build_lock.with_build (Project_context.workspace_lock_root root)
     (fun ~release:_ ->
       let root_config = Config.load_root root in
-      let dependency_context = Project_context.dependency_context root_config in
+      let resolution = Package_resolution.create root_config in
       let visited = Hashtbl.create 32 in
       List.iter (fun path -> Hashtbl.replace visited (Unix.realpath path) ()) seen;
       let cleanup =
-        Clean.prepare ~root_config ~dependency_context ~seen:visited ~root ~prod
+        Clean.prepare ~root_config ~resolution ~seen:visited ~root ~prod
           ~is_local:true
       in
       let compiler_assets = "compiler assets" in
@@ -85,19 +85,11 @@ let clean ~seen ~verbosity ~folder ~prod =
 let compiler_args = Compiler_args_command.run
 
 let run_scheduled_modules (stats : Build_types.t) ~compile_step ~namespace_count =
-  let build_state =
-    match stats.build_state with
-    | Some state -> state
-    | None -> raise (Error "build state was not initialized")
-  in
-  let compile_assets =
-    match stats.compile_assets with
-    | Some state -> state
-    | None -> raise (Error "compile asset state was not initialized")
-  in
+  let prepared = Build_types.prepared_exn stats in
   Compiler_scheduler.run ~poll:stats.process_poll
-    ~warning_state:stats.warning_state
-    ~blocked_modules:stats.blocked_modules ~compile_assets ~build_state
+    ~warning_state:stats.retained.warning_state
+    ~blocked_modules:stats.blocked_modules
+    ~compile_assets:prepared.compile_assets ~build_state:prepared.build_state
     ~scheduled_modules:!(stats.scheduled_modules)
     ~mark_compiled:(fun () -> stats.compiled <- stats.compiled + 1)
     ~mark_had_warnings:(fun () -> stats.had_warnings <- true)
@@ -120,7 +112,7 @@ let run_namespace_jobs (stats : Build_types.t) =
 
 let write_source_dirs (root_config : Config.t) (stats : Build_types.t) =
   let packages =
-    Hashtbl.to_seq_values stats.graph_packages |> List.of_seq
+    Hashtbl.to_seq_values stats.retained.graph_packages |> List.of_seq
     |> List.sort (fun (left : Build_types.graph_package) right ->
          String.compare left.graph_root right.graph_root)
   in
@@ -191,38 +183,31 @@ let write_build_ninja (stats : Build_types.t) =
       in
       let channel = open_out_bin path in
       close_out channel)
-    stats.graph_packages
+    stats.retained.graph_packages
 
 let incremental_sources (previous : retained_build) changes =
   (* Reusing the graph is safe only for modifications of already-known source
      paths. Additions, removals, and unknown paths can change module identity or
      package topology, so their caller must reconstruct the build instead. *)
-  let sources_by_path = Hashtbl.create 64 in
-  Hashtbl.iter
-    (fun _ package ->
-      List.iter
-        (fun module_ ->
-          (module_.Source.implementation
-          :: Option.to_list module_.Source.interface)
-          |> List.iter (fun relative_path ->
-               let absolute_path =
-                 Filename.concat package.Build_types.graph_root relative_path
-               in
-               Hashtbl.replace sources_by_path
-                 (Platform.normalize_path_for_comparison absolute_path)
-                 {package; module_; relative_path; absolute_path}))
-        package.graph_modules)
-    previous.stats.graph_packages;
   changes
   |> List.map (fun (change : Watcher.change) ->
        match change.kind with
        | Watcher.Added | Watcher.Removed -> raise Full_rebuild_required
        | Watcher.Modified -> (
          match
-           Hashtbl.find_opt sources_by_path
+           Hashtbl.find_opt previous.stats.retained.source_index
              (Platform.normalize_path_for_comparison change.path)
          with
-         | Some source -> source
+         | Some (package_root, module_, relative_path, absolute_path) ->
+           let package =
+             match
+               Hashtbl.find_opt previous.stats.retained.graph_packages
+                 package_root
+             with
+             | Some package -> package
+             | None -> raise Full_rebuild_required
+           in
+           {package; module_; relative_path; absolute_path}
          | None -> raise Full_rebuild_required))
 
 let prepare_incremental previous changes (stats : Build_types.t) =
@@ -230,11 +215,12 @@ let prepare_incremental previous changes (stats : Build_types.t) =
      affected modules' dependency edges in memory. This keeps the long-lived
      graph coherent without rediscovering the package tree. *)
   let sources = incremental_sources previous changes in
-  let bsc =
-    match stats.compiler_context with
-    | Some context -> context.bsc_path
+  let prepared =
+    match stats.retained.prepared with
+    | Some prepared -> prepared
     | None -> raise Full_rebuild_required
   in
+  let bsc = prepared.compiler_context.bsc_path in
   let started_at = Unix.gettimeofday () in
   sources
   |> List.map (fun source ->
@@ -277,21 +263,17 @@ let prepare_incremental previous changes (stats : Build_types.t) =
         Source.compiler_basename source.package.graph_compile_config
           source.module_.Source.name
       in
-      Hashtbl.replace affected_modules key (source.package, source.module_))
+      let parse_failed = not (Process.succeeded result) in
+      let parse_failed =
+        match Hashtbl.find_opt affected_modules key with
+        | Some (_, _, previous_failed) -> previous_failed || parse_failed
+        | None -> parse_failed
+      in
+      Hashtbl.replace affected_modules key
+        (source.package, source.module_, parse_failed))
     sources results;
   Hashtbl.iter
-    (fun key (package, module_) ->
-      let changed_parse_failed =
-        sources
-        |> List.exists (fun source ->
-             source.module_ == module_
-             &&
-             match
-               Hashtbl.find_opt stats.preparse_results source.absolute_path
-             with
-             | Some result -> not (Process.succeeded result)
-             | None -> true)
-      in
+    (fun key (package, module_, changed_parse_failed) ->
       if not changed_parse_failed then (
         let dependencies path =
           Compiler_process.ast_dependencies
@@ -307,24 +289,19 @@ let prepare_incremental previous changes (stats : Build_types.t) =
             | Some path -> dependencies path)
         in
         let node =
-          match Hashtbl.find_opt stats.global_modules key with
+          match Hashtbl.find_opt stats.retained.global_modules key with
           | Some node -> node
           | None -> raise Full_rebuild_required
         in
         node.raw_dependencies <- raw_dependencies;
-        let state =
-          match stats.build_state with
-          | Some state -> state
-          | None -> raise Full_rebuild_required
-        in
-        Build_state.set_dependencies state ~key
-          (Build_preparation.resolved_dependencies stats.global_modules
-             stats.global_namespace_modules node)))
+        Build_state.set_dependencies prepared.build_state ~key
+          (Build_preparation.resolved_dependencies
+             stats.retained.global_modules
+             stats.retained.global_namespace_modules node)))
     affected_modules;
   stats.parse_seconds <- Unix.gettimeofday () -. started_at;
-  match stats.build_state with
-  | Some state -> Build_preparation.find_cycle stats.global_modules state
-  | None -> raise Full_rebuild_required
+  Build_preparation.find_cycle stats.retained.global_modules
+    prepared.build_state
 
 let run_with_warning_state ~poll ~warning_state ~previous ~changes
     ~compilation_kind ~no_timing ~seen ~verbosity ~folder ~prod ~features
@@ -448,7 +425,7 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
       | One_shot | Initial_watch ->
         stats.diagnostics |> List.rev |> List.sort_uniq String.compare
     in
-    let warning_entries = Warning_state.entries stats.warning_state in
+    let warning_entries = Warning_state.entries stats.retained.warning_state in
     warning_entries
     |> List.iter (fun entry -> prerr_string entry.Warning_state.output);
     if warning_entries <> [] && diagnostics = [] then prerr_newline ();
@@ -469,7 +446,7 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
         (Output.finished_compilation_message ~kind:output_kind
            ~warnings:
              (stats.had_warnings || diagnostics <> []
-             || Warning_state.entries stats.warning_state <> [])
+             || Warning_state.entries stats.retained.warning_state <> [])
            ~seconds)
     else if watch && show_progress then
       Printf.printf "Finished %scompilation\n%!"
@@ -563,7 +540,12 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
           (fun name -> Hashtbl.replace stats.blocked_modules name ())
           cycle_info.blocked)
       cycle;
-    Package_build.prepare_tree ~seen:visited ~folder:root ~watch ~stats;
+    let root_package =
+      match Hashtbl.find_opt stats.retained.graph_packages root with
+      | Some package -> package
+      | None -> raise (Error ("Package graph was not prepared for " ^ root))
+    in
+    Package_build.prepare_tree ~seen:visited ~package:root_package ~watch ~stats;
     let parse_messages = parse_messages () in
     let parse_output = parse_output parse_messages in
     if parse_failed parse_messages then raise (Parse_failure parse_output);
@@ -602,7 +584,8 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
     | None, None ->
       let diagnostics = prepare_report ~success:true ~compile_seconds in
       Option.iter
-        (fun (context : Compiler_info.context) ->
+        (fun (prepared : Build_types.prepared) ->
+          let context = prepared.compiler_context in
           Hashtbl.iter
             (fun _ package ->
               let package_context =
@@ -615,8 +598,8 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
                 }
               in
               Compiler_info.write_package package_context package.graph_config)
-            stats.graph_packages)
-        stats.compiler_context;
+            stats.retained.graph_packages)
+        stats.retained.prepared;
       if compilation_kind = One_shot then report_completion diagnostics;
       cleanup_after_build ();
       write_build_ninja_once ();

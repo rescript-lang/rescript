@@ -1,5 +1,7 @@
 #define CAML_INTERNALS
 
+#include <stdio.h>
+
 /* This owner extends the MIT-licensed Spawn 0.17 Windows process setup with
    suspended Job Object assignment, which must happen before user code runs. */
 
@@ -17,6 +19,38 @@
 #ifdef _WIN32
 
 #include <windows.h>
+
+CAMLprim value rewatch_windows_directory_identity(value path_value)
+{
+  CAMLparam1(path_value);
+  CAMLlocal1(identity_value);
+  WCHAR *path = caml_stat_strdup_to_utf16(String_val(path_value));
+  BY_HANDLE_FILE_INFORMATION information;
+  char identity[26];
+  HANDLE handle = CreateFileW(path, 0,
+                              FILE_SHARE_READ | FILE_SHARE_WRITE |
+                                FILE_SHARE_DELETE,
+                              NULL, OPEN_EXISTING,
+                              FILE_FLAG_BACKUP_SEMANTICS, NULL);
+  caml_stat_free(path);
+  if (handle == INVALID_HANDLE_VALUE) {
+    caml_win32_maperr(GetLastError());
+    uerror("CreateFile", path_value);
+  }
+  if (!GetFileInformationByHandle(handle, &information)) {
+    DWORD error = GetLastError();
+    CloseHandle(handle);
+    caml_win32_maperr(error);
+    uerror("GetFileInformationByHandle", path_value);
+  }
+  CloseHandle(handle);
+  snprintf(identity, sizeof(identity), "%08lx:%08lx%08lx",
+           (unsigned long)information.dwVolumeSerialNumber,
+           (unsigned long)information.nFileIndexHigh,
+           (unsigned long)information.nFileIndexLow);
+  identity_value = caml_copy_string(identity);
+  CAMLreturn(identity_value);
+}
 
 struct rewatch_windows_job {
   HANDLE handle;
@@ -266,6 +300,12 @@ CAMLprim value rewatch_windows_close_process_job(value job_value)
 }
 
 #else
+
+CAMLprim value rewatch_windows_directory_identity(value path_value)
+{
+  (void)path_value;
+  caml_invalid_argument("Windows directory identities are unavailable");
+}
 
 CAMLprim value rewatch_windows_spawn_owned(value env_value,
                                             value cwd_value,

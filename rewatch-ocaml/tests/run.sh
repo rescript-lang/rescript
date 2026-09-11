@@ -115,6 +115,23 @@ printf 'let value: int\n' >"$interface_failure_recovery/src/A.resi"
 printf 'let value = 1\n' >"$interface_failure_recovery/src/A.res"
 printf 'let dependent = A.value + 1\n' \
   >"$interface_failure_recovery/src/B.res"
+printf 'let valid = true\n' \
+  >"$interface_failure_recovery/src/Broken.res"
+
+atomic_save="$work/atomic-save"
+mkdir -p "$atomic_save/src"
+printf '%s\n' \
+  '{"name":"atomic-save","sources":"src","package-specs":{"module":"esmodule","in-source":true,"suffix":".mjs"}}' \
+  >"$atomic_save/rescript.json"
+printf 'let value = 1\n' >"$atomic_save/src/Main.res"
+
+directory_symlink="$work/directory-symlink"
+mkdir -p "$directory_symlink/shared"
+printf '%s\n' \
+  '{"name":"directory-symlink","sources":[{"dir":"src","subdirs":true}],"package-specs":{"module":"esmodule","in-source":true,"suffix":".mjs"}}' \
+  >"$directory_symlink/rescript.json"
+printf 'let value = 1\n' >"$directory_symlink/shared/Linked.res"
+ln -s shared "$directory_symlink/src"
 
 recursive_lib="$work/recursive-lib"
 mkdir -p "$recursive_lib/src/lib"
@@ -551,6 +568,66 @@ fi
 kill -TERM "$interface_failure_pid"
 wait "$interface_failure_pid" 2>/dev/null || true
 
+# A parsed interface remains pending when another source prevents compilation.
+printf 'let value: int\n' >"$interface_failure_recovery/src/A.resi"
+printf 'let value = 1\n' >"$interface_failure_recovery/src/A.res"
+"$port" build "$interface_failure_recovery"
+printf 'let value: string\n' \
+  >"$interface_failure_recovery/src/A.resi"
+printf 'let =\n' >"$interface_failure_recovery/src/Broken.res"
+if "$port" build "$interface_failure_recovery" \
+  >"$interface_failure_recovery/pending-interface.log" 2>&1; then
+  echo "build unexpectedly accepted the broken source" >&2
+  exit 1
+fi
+printf 'let valid = true\n' >"$interface_failure_recovery/src/Broken.res"
+if "$port" build "$interface_failure_recovery" \
+  >>"$interface_failure_recovery/pending-interface.log" 2>&1; then
+  echo "pending interface change was forgotten after a parse failure" >&2
+  exit 1
+fi
+grep 'does not match the interface' \
+  "$interface_failure_recovery/pending-interface.log" >/dev/null
+
+"$port" build "$directory_symlink"
+"$port" build "$directory_symlink" >"$directory_symlink/unchanged.log" 2>&1
+grep 'Parsed 0 source files' "$directory_symlink/unchanged.log" >/dev/null
+grep 'Compiled 0 modules' "$directory_symlink/unchanged.log" >/dev/null
+
+# Record the content that triggered a direct event before building it. An
+# atomic replacement made while that build is compiling must cause a second
+# build rather than becoming the post-build snapshot baseline.
+atomic_release="$atomic_save/release"
+atomic_started="$atomic_save/compile-started"
+touch "$atomic_release"
+env RESCRIPT_BSC_EXE="$root/rewatch-ocaml/tests/block-compile-bsc.sh" \
+  REWATCH_OCAML_REAL_BSC="$RESCRIPT_BSC_EXE" \
+  REWATCH_OCAML_RELEASE_FILE="$atomic_release" \
+  REWATCH_OCAML_COMPILE_STARTED="$atomic_started" \
+  "$port" watch "$atomic_save" >"$atomic_save/watch.log" 2>&1 &
+atomic_save_pid=$!
+background_pids="$background_pids $atomic_save_pid"
+if ! wait_for_file "$atomic_save/src/Main.mjs"; then
+  cat "$atomic_save/watch.log" >&2
+  exit 1
+fi
+rm "$atomic_release" "$atomic_started"
+printf 'let value = 2\n' >"$atomic_save/src/Main.res"
+if ! wait_for_file "$atomic_started"; then
+  cat "$atomic_save/watch.log" >&2
+  exit 1
+fi
+printf 'let value = 3\n' >"$atomic_save/src/Main.next"
+mv "$atomic_save/src/Main.next" "$atomic_save/src/Main.res"
+touch "$atomic_release"
+if ! wait_for_text "$atomic_save/src/Main.mjs" 'value = 3'; then
+  cat "$atomic_save/watch.log" >&2
+  cat "$atomic_save/src/Main.mjs" >&2
+  exit 1
+fi
+kill -TERM "$atomic_save_pid"
+wait "$atomic_save_pid" 2>/dev/null || true
+
 "$port" watch "$recursive_lib" >"$recursive_lib/watch.log" 2>&1 &
 recursive_lib_pid=$!
 background_pids="$background_pids $recursive_lib_pid"
@@ -585,6 +662,13 @@ if ! wait_for_text "$filtered_dependency/packages/dep/src/Helper.mjs" \
 fi
 kill -TERM "$filtered_dependency_pid"
 wait "$filtered_dependency_pid" 2>/dev/null || true
+printf 'let value = { let unused = 2; 1 }\n' \
+  >"$filtered_dependency/packages/dep/src/Helper.res"
+if "$port" build --warn-error A "$filtered_dependency" \
+  >"$filtered_dependency/warn-error.log" 2>&1; then
+  echo "--warn-error did not apply to a local dependency" >&2
+  exit 1
+fi
 
 "$port" watch "$symlink_source" >"$symlink_source/watch.log" 2>&1 &
 symlink_source_pid=$!

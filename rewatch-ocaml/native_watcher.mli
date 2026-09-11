@@ -23,6 +23,7 @@ val close : t -> unit
 
 module For_test : sig
   val handle_count : t -> int
+  val directory_identity : t -> string -> string option
   val queue_change : t -> unit
   val queue_error : t -> string -> unit
 end

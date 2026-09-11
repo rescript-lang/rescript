@@ -94,4 +94,36 @@ let tests =
            config []);
       check
         (not (Sys.file_exists working_cmt))
-        "unmapped legacy artifacts fall back to the recursive working inventory")
+        "unmapped legacy artifacts fall back to the recursive working inventory");
+  with_temp_dir (fun root ->
+      let config_path = Filename.concat root "rescript.json" in
+      let old_output = Filename.concat root "src/A.js" in
+      let old_map = old_output ^ ".map" in
+      let working_output = Filename.concat root "lib/bs/src/A.js" in
+      let working_map = working_output ^ ".map" in
+      let ocaml_dir = Filename.concat root "lib/ocaml" in
+      write_file config_path
+        {|{"name":"cleanup-map","sources":{"dir":"src","subdirs":true},"package-specs":{"module":"esmodule","in-source":true}}|};
+      List.iter
+        (fun path -> write_file path "generated")
+        [old_output; old_map; working_output; working_map];
+      let config = Config.load_root root in
+      let moved_module : Source.module_ =
+        {
+          name = "A";
+          implementation = "src/nested/A.res";
+          interface = None;
+          is_dev = false;
+          feature = None;
+        }
+      in
+      ignore
+        (Build_artifacts.cleanup_stale ~ocaml_files:[] ~ast_sources:[]
+           ~source_files:[old_output; old_map] ~root ~ocaml_dir ~is_local:true
+           config [moved_module]);
+      List.iter
+        (fun path ->
+          check
+            (not (Sys.file_exists path))
+            ("moving a source removes its stale output family: " ^ path))
+        [old_output; old_map; working_output; working_map])
