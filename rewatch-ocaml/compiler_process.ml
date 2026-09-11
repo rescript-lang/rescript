@@ -144,40 +144,53 @@ let publish ~build_dir ~ocaml_dir ~is_local ~(config : Config.t) ~is_interface
   let extensions =
     if is_interface then ["cmi"; "cmti"] else ["cmi"; "cmj"; "cmt"]
   in
-  List.iter
-    (fun extension ->
-      let source = Filename.concat artifact_dir (basename ^ "." ^ extension) in
-      let destination =
-        Filename.concat ocaml_dir (basename ^ "." ^ extension)
-      in
-      if extension = "cmi" then
-        File_util.copy_file_if_changed ~ensure_parent:false source destination
-      else if extension = "cmt" || extension = "cmti" then
-        File_util.copy_optional_existing_file ~ensure_parent:false source
-          destination
-      else File_util.copy_existing_file ~ensure_parent:false source destination)
-    extensions;
-  let source = Filename.concat config.root path in
-  let build_source = Filename.concat build_dir path in
-  File_util.ensure_dir (Filename.dirname build_source);
-  File_util.copy_existing_file ~ensure_parent:false source build_source;
-  File_util.copy_existing_file ~ensure_parent:false source
-    (Filename.concat ocaml_dir (Filename.basename path));
-  if not is_interface then
+  let cmi_change = ref Compiler_scheduler.Cmi_change_unknown in
+  try
     List.iter
-      (fun spec ->
-        if spec.Config.in_source then (
-          let output = Build_artifacts.generated_js_path config path spec in
-          let build_output =
-            Build_artifacts.generated_build_js_path ~build_dir config path spec
-          in
-          File_util.ensure_dir (Filename.dirname build_output);
-          if Sys.file_exists output then
-            File_util.copy_existing_file ~ensure_parent:false output
-              build_output;
-          if Sys.file_exists (output ^ ".map") then
-            File_util.copy_existing_file ~ensure_parent:false (output ^ ".map")
-              (build_output ^ ".map")
-          else File_util.remove_file (build_output ^ ".map")))
-      config.package_specs;
-  stderr
+      (fun extension ->
+        let source =
+          Filename.concat artifact_dir (basename ^ "." ^ extension)
+        in
+        let destination =
+          Filename.concat ocaml_dir (basename ^ "." ^ extension)
+        in
+        if extension = "cmi" then
+          cmi_change :=
+            if
+              File_util.copy_file_if_different ~ensure_parent:false source
+                destination
+            then Compiler_scheduler.Cmi_changed
+            else Compiler_scheduler.Cmi_unchanged
+        else if extension = "cmt" || extension = "cmti" then
+          File_util.copy_optional_existing_file ~ensure_parent:false source
+            destination
+        else
+          File_util.copy_existing_file ~ensure_parent:false source destination)
+      extensions;
+    let source = Filename.concat config.root path in
+    let build_source = Filename.concat build_dir path in
+    File_util.ensure_dir (Filename.dirname build_source);
+    File_util.copy_existing_file ~ensure_parent:false source build_source;
+    File_util.copy_existing_file ~ensure_parent:false source
+      (Filename.concat ocaml_dir (Filename.basename path));
+    if not is_interface then
+      List.iter
+        (fun spec ->
+          if spec.Config.in_source then (
+            let output = Build_artifacts.generated_js_path config path spec in
+            let build_output =
+              Build_artifacts.generated_build_js_path ~build_dir config path
+                spec
+            in
+            File_util.ensure_dir (Filename.dirname build_output);
+            if Sys.file_exists output then
+              File_util.copy_existing_file ~ensure_parent:false output
+                build_output;
+            if Sys.file_exists (output ^ ".map") then
+              File_util.copy_existing_file ~ensure_parent:false
+                (output ^ ".map") (build_output ^ ".map")
+            else File_util.remove_file (build_output ^ ".map")))
+        config.package_specs;
+    Compiler_scheduler.{stderr; cmi_change = !cmi_change}
+  with exn ->
+    raise (Compiler_scheduler.Publication_failure (exn, !cmi_change))

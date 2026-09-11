@@ -78,7 +78,11 @@ let tests =
             if key = "A" && !fail_a_publication then (
               fail_a_publication := false;
               raise (Failure "later publication failed"));
-            "")
+            Compiler_scheduler.
+              {
+                stderr = "";
+                cmi_change = (if key = "A" then Cmi_changed else Cmi_unchanged);
+              })
           ~record_published_outputs:(fun ~is_interface:_ _path ->
             check
               (Thread.id (Thread.self ()) = scheduler_thread)
