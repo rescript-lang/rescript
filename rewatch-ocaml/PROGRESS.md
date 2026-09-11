@@ -2558,6 +2558,21 @@ a materially larger advantage than the earlier passing run. The 1.25x
 completion gate therefore remains open and requires investigation or a later
 coherent reproduction within the threshold; matching work alone is not enough.
 
+A same-host historical-binary investigation did not find an OCaml regression
+behind that changed ratio. The pre-pipe `0585d07dc4` binary measured 5.886 s
+against a 4.250 s Rust median, and the earlier `353479276f` binary measured
+5.864 s against 4.173 s. More importantly, a five-run interleaved A/B test
+removed Rust from the comparison: the exact `54a7273d4f` binary for which the
+original post-pipe gate recorded 1.190x measured 5.753 s, while the current
+binary measured 5.803 s. The 0.9% difference is within the observed host noise
+and is far too small to explain the ratio change. During these runs the same
+Rust binary varied between 3.980 s and 6.210 s, compared with its historical
+4.662 s median. The current evidence therefore attributes the apparent
+regression to variation in the Rust denominator and host scheduling rather
+than to a port change. The gate remains open: repeat both the Rust/OCaml gate
+and the old/current OCaml control on a suitably stable host before accepting or
+investigating smaller differences.
+
 The latest retained-watch gate at `d1c3ca9732` was coherent and passed: 118 ms
 OCaml versus 123 ms Rust, exactly seven parser and seven compiler calls per
 implementation, identical generated output, stable file descriptors and task
