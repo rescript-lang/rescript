@@ -2132,7 +2132,7 @@ specific compatibility risks; they are not remaining gaps.
 
 ### Native Windows handoff
 
-The implementation checkpoint for the Windows session is `1ab6b3493`. Use a
+The implementation checkpoint for the Windows session is `ab42758f0`. Use a
 native checkout on the VM's NTFS volume, OCaml 5.5 through the repository's
 opam setup, and the Cygwin Bash installed with that toolchain. The checkpoint
 already selects `platform_windows.ml` through Dune, compiles the Job Object C
@@ -2530,13 +2530,38 @@ while wrapping every remaining path/name string would currently add conversion
 ceremony without removing a known invalid state. These decisions must be
 reported and reconsidered in the final quality review.
 
-On the quiet, powered host, the five-run interleaved release gate measured a
-5.455 s OCaml median against 4.644 s Rust (1.175x), with 1,516,904 KiB versus
-1,504,696 KiB summed process-tree RSS. Compiler work matched exactly for clean,
-unchanged, and edited builds, and stable artifacts were byte-identical. The
-seven-edit retained-watch gate measured 119 ms OCaml versus 120 ms Rust, exactly
-seven parser and compiler calls per implementation, stable descriptors/tasks,
-and no RSS growth. Both remain within their documented thresholds.
+The follow-up behavioral review found one additional watch-only traversal gap.
+An installed dependency can itself resolve a regular dependency back into the
+local workspace. Build discovery already traversed that graph and compiled the
+local package, but watch discovery stopped at the installed package and never
+registered the local package's sources. Watch topology now traverses regular
+dependencies through non-local packages while adding source/config watches
+only for packages classified as local. A focused fixture builds
+`root -> installed -> local workspace`, edits the local source, and requires
+its generated JavaScript to change without another trigger. Rust already
+traverses the full dependency graph before selecting local watch roots, so this
+was an OCaml-port defect rather than a shared Rust issue. The resource/quality
+review found no other concrete P0-P3 issue at this checkpoint, and the targeted
+source-only follow-up approved both the traversal fix and its regression.
+
+A five-run measurement after the review work produced identical clean,
+unchanged, and single-edit compiler-work counts and identical complete/stable
+artifact sets, but its 5.809 s OCaml versus 4.418 s Rust medians (1.315x) did
+not pass the timing threshold. A contemporaneous three-run comparison using
+the prior `a4b0728b2f` OCaml binary measured that older binary at 5.984 s,
+slower in absolute terms than the current binary, while Rust samples ranged
+from 4.222 to 5.391 s. The failed ratio therefore does not demonstrate a code
+regression; it demonstrates an unstable Rust baseline. A coherent five-run
+measurement of the latest checkpoint remains required before the final gate.
+
+At the earlier `a4b0728b2f` checkpoint on the quiet, powered host, the five-run
+interleaved release gate measured a 5.455 s OCaml median against 4.644 s Rust
+(1.175x), with 1,516,904 KiB versus 1,504,696 KiB summed process-tree RSS.
+Compiler work matched exactly for clean, unchanged, and edited builds, and
+stable artifacts were byte-identical. The seven-edit retained-watch gate
+measured 119 ms OCaml versus 120 ms Rust, exactly seven parser and compiler
+calls per implementation, stable descriptors/tasks, and no RSS growth. Both
+were within their documented thresholds.
 
 The deterministic non-Windows packaging gate was repeated at implementation
 checkpoint `a4b0728b2f`. A `static`-profile promotion produced a statically
@@ -2551,19 +2576,17 @@ coverage build likewise installs the instrumented OCaml executable as the
 non-Windows default without expecting a nonexistent Dune-installed `rescript`
 binary.
 
-1. Obtain a follow-up source-only review of implementation checkpoint
-   `1ab6b3493` and address any confirmed findings.
-2. In the Windows VM, finish the watcher/lock and path audit and run the native
+1. In the Windows VM, finish the watcher/lock and path audit and run the native
    build, unit, focused, and canonical Bash suites. Address findings there and
    finish with an x64 Windows confidence run where available.
-3. Immediately before the final release-quality gate, perform the broad comment
+2. Immediately before the final release-quality gate, perform the broad comment
    pass for ownership, concurrency, platform, and algorithmic invariants that
    are not apparent from the code itself. Comments should start with why the
    code or invariant is needed, provide enough context for readers who are not
    specialists in every relevant OCaml, build-system, compiler, or
    operating-system detail, and stand on their own rather than explaining code
    mainly by comparison with Rust unless compatibility itself is the reason.
-4. Rerun the complete release-quality gate, perform the final two-scope
+3. Rerun the complete release-quality gate, perform the final two-scope
    whole-port review, and publish the final report with the compatibility-oddity,
    Rust-fix, and future-performance inventories.
 
