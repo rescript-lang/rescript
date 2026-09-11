@@ -7,8 +7,7 @@ type cleanup_result = {
 
 val lib_path : string -> string -> string
 
-val generated_js_path :
-  Config.t -> string -> Config.package_spec -> string
+val generated_js_path : Config.t -> string -> Config.package_spec -> string
 
 val generated_build_js_path :
   build_dir:string -> Config.t -> string -> Config.package_spec -> string

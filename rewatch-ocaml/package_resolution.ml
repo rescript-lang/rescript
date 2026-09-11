@@ -62,20 +62,21 @@ let resolve resolution ~package_root (declaration : Config.dependency) =
       match Hashtbl.find_opt resolution.selected declaration.name with
       | Some selected ->
         (if selected.directory <> candidate then
-          let key = declaration.name ^ "\000" ^ candidate in
-          if
-            resolution.diagnostic_mode = Report_diagnostics
-            && not (Hashtbl.mem resolution.reported_duplicates key)
-          then (
-            Hashtbl.add resolution.reported_duplicates key ();
-            Printf.eprintf
-              "Duplicated package: %s ./%s (chosen) vs ./%s in ./%s\n%!"
-              declaration.name
-              (Project_context.relative_to resolution.root_config.root
-                 selected.directory)
-              (Project_context.relative_to resolution.root_config.root candidate)
-              (Project_context.relative_to resolution.root_config.root
-                 package_root)));
+           let key = declaration.name ^ "\000" ^ candidate in
+           if
+             resolution.diagnostic_mode = Report_diagnostics
+             && not (Hashtbl.mem resolution.reported_duplicates key)
+           then (
+             Hashtbl.add resolution.reported_duplicates key ();
+             Printf.eprintf
+               "Duplicated package: %s ./%s (chosen) vs ./%s in ./%s\n%!"
+               declaration.name
+               (Project_context.relative_to resolution.root_config.root
+                  selected.directory)
+               (Project_context.relative_to resolution.root_config.root
+                  candidate)
+               (Project_context.relative_to resolution.root_config.root
+                  package_root)));
         {selected with declaration}
       | None ->
         let config =
@@ -84,7 +85,8 @@ let resolve resolution ~package_root (declaration : Config.dependency) =
             raise
               (Project_context.Package_error
                  (Printf.sprintf
-                    "Could not build package tree for '%s' at path '%s'. Error: %s"
+                    "Could not build package tree for '%s' at path '%s'. \
+                     Error: %s"
                     declaration.name resolution.root_config.root message))
         in
         let dependency =

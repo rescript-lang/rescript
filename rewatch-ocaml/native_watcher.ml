@@ -1,15 +1,9 @@
 type change_kind = Content | Structural
 type change = {path: string option; kind: change_kind}
 
-type wait_result =
-  | Changed of change list
-  | Stopped
-  | Failed of string
+type wait_result = Changed of change list | Stopped | Failed of string
 
-type watch_path = {
-  directory: string;
-  recursive: bool;
-}
+type watch_path = {directory: string; recursive: bool}
 
 type watched_directory = {
   directory: string;
@@ -158,7 +152,7 @@ let create_with_directory_identity ~directory_identity ~paths =
     | Error error ->
       ignore (Luv.Loop.close loop);
       Error (error_message error)
-    | Ok timer ->
+    | Ok timer -> (
       let watcher =
         {loop; timer; handles = []; changes = []; stopped = false; error = None}
       in
@@ -175,7 +169,7 @@ let create_with_directory_identity ~directory_identity ~paths =
         remove_handles watcher;
         close_timer loop timer;
         ignore (Luv.Loop.close loop);
-        error)
+        error))
 
 let create = create_with_directory_identity ~directory_identity
 
@@ -198,7 +192,7 @@ let wait watcher ~keep_running =
   in
   match ready_result () with
   | Some result -> result
-  | None ->
+  | None -> (
     let check_running () =
       if not (keep_running ()) then (
         watcher.stopped <- true;
@@ -208,13 +202,13 @@ let wait watcher ~keep_running =
     | Ok () -> ()
     | Error error -> watcher.error <- Some (error_message error));
     while
-      watcher.changes = [] && not watcher.stopped
+      watcher.changes = [] && (not watcher.stopped)
       && Option.is_none watcher.error
     do
       ignore (Luv.Loop.run ~loop:watcher.loop ~mode:`ONCE ())
     done;
     ignore (Luv.Timer.stop watcher.timer);
-    (match ready_result () with
+    match ready_result () with
     | Some result -> result
     | None -> Failed "native watcher loop stopped without a wakeup condition")
 
@@ -223,10 +217,10 @@ let drain watcher =
      already-ready callbacks after the debounce window to keep one editor save
      together without waiting for another build cycle. *)
   let rec pump remaining =
-    if remaining > 0 then
+    if remaining > 0 then (
       let changes = watcher.changes in
       ignore (Luv.Loop.run ~loop:watcher.loop ~mode:`NOWAIT ());
-      if watcher.changes != changes then pump (remaining - 1)
+      if watcher.changes != changes then pump (remaining - 1))
   in
   pump 1024;
   let changes = List.rev watcher.changes in

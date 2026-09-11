@@ -9,12 +9,12 @@ let ppx_is_enabled ~bisect_enabled flag contents =
   else
     not
       ((contains_text flag "graphql-ppx" || contains_text flag "graphql_ppx")
-      && not (contains_text contents "%graphql")
+       && not (contains_text contents "%graphql")
       || (contains_text flag "spice" && not (contains_text contents "@spice"))
-      || (contains_text flag "rescript-relay"
-         && not (contains_text contents "%relay"))
-      || (contains_text flag "re-formality"
-         && not (contains_text contents "%form")))
+      || contains_text flag "rescript-relay"
+         && not (contains_text contents "%relay")
+      || contains_text flag "re-formality"
+         && not (contains_text contents "%form"))
 
 let filter_ppx_flags ?bisect_enabled flags contents =
   let bisect_enabled =
@@ -30,7 +30,8 @@ let filter_ppx_flags ?bisect_enabled flags contents =
 let compiler_flags ?(ppx_flags = []) ~source_maps ~watch ~gentype
     (config : Config.t) =
   let ppx_args =
-    ppx_flags |> List.concat_map (function
+    ppx_flags
+    |> List.concat_map (function
       | [] -> []
       | flag :: arguments ->
         let executable =
@@ -42,8 +43,7 @@ let compiler_flags ?(ppx_flags = []) ~source_maps ~watch ~gentype
   in
   let source_map_args =
     if not source_maps then []
-    else if config.source_map_dev && not watch then
-      ["-bs-source-map"; "false"]
+    else if config.source_map_dev && not watch then ["-bs-source-map"; "false"]
     else config.source_map_args
   in
   if source_maps then
@@ -77,10 +77,11 @@ let package_output (config : Config.t) path (spec : Config.package_spec) =
 let gentype_dependency_args (config : Config.t) =
   if config.gentype_args = [] then []
   else
-    config.dependencies |> List.concat_map (fun (dependency : Config.dependency) ->
-      match Project_context.dependency_path config.root dependency.name with
-      | None -> []
-      | Some path -> ["-bs-gentype-dep-path"; dependency.name ^ "=" ^ path])
+    config.dependencies
+    |> List.concat_map (fun (dependency : Config.dependency) ->
+        match Project_context.dependency_path config.root dependency.name with
+        | None -> []
+        | Some path -> ["-bs-gentype-dep-path"; dependency.name ^ "=" ^ path])
 
 let gentype_dependency_args_from_paths (config : Config.t) dependencies =
   if config.gentype_args = [] then []
@@ -92,15 +93,15 @@ let gentype_dependency_args_from_paths (config : Config.t) dependencies =
       dependencies;
     config.dependencies
     |> List.concat_map (fun (dependency : Config.dependency) ->
-         match Hashtbl.find_opt paths dependency.name with
-         | None -> []
-         | Some path ->
-           ["-bs-gentype-dep-path"; dependency.name ^ "=" ^ path])
+        match Hashtbl.find_opt paths dependency.name with
+        | None -> []
+        | Some path -> ["-bs-gentype-dep-path"; dependency.name ^ "=" ^ path])
 
 let namespace_args (config : Config.t) module_name =
-  match config.namespace, config.namespace_entry with
+  match (config.namespace, config.namespace_entry) with
   | None, _ -> []
-  | Some namespace, Some entry when entry = module_name -> ["-open"; "@" ^ namespace]
+  | Some namespace, Some entry when entry = module_name ->
+    ["-open"; "@" ^ namespace]
   | Some namespace, Some _ -> ["-bs-ns"; "@" ^ namespace]
   | Some namespace, _ -> ["-bs-ns"; namespace]
 
@@ -130,7 +131,7 @@ let compiler_common_arguments ~(config : Config.t) ~runtime ~dependency_dirs
 let compiler_arguments_with_common ~(config : Config.t) ~common_args
     ~module_name ~is_interface ~has_interface ~path =
   let interface_args =
-    if not is_interface && has_interface then ["-bs-read-cmi"] else []
+    if (not is_interface) && has_interface then ["-bs-read-cmi"] else []
   in
   let output_args =
     if is_interface then []
@@ -139,8 +140,9 @@ let compiler_arguments_with_common ~(config : Config.t) ~common_args
         (fun spec -> ["-bs-package-output"; package_output config path spec])
         config.package_specs
   in
-  namespace_args config module_name @ interface_args
-  @ common_args @ output_args @ [Source.ast_path path]
+  namespace_args config module_name
+  @ interface_args @ common_args @ output_args
+  @ [Source.ast_path path]
 
 let compiler_arguments ~(config : Config.t) ~runtime ~dependency_dirs
     ~module_name ~is_interface ~has_interface ~watch ~gentype_dependency_args

@@ -45,7 +45,7 @@ let has_complete_compile_assets module_ =
   && Option.is_some module_.last_compiled_cmt
 
 let dependency_compiled_after module_ dependency =
-  match dependency.last_compiled_cmi, module_.last_compiled_cmt with
+  match (dependency.last_compiled_cmi, module_.last_compiled_cmt) with
   | Some dependency_time, Some module_time -> dependency_time > module_time
   | None, _ | _, None -> false
 
@@ -70,12 +70,11 @@ let mark_dependents_compile_dirty state module_ ~is_blocked =
   let rec mark dependent =
     if not (Hashtbl.mem visited dependent) then (
       Hashtbl.add visited dependent ();
-      if not (is_blocked dependent) then
+      if not (is_blocked dependent) then (
         let dependent_module = find_exn state dependent in
         dependent_module.compile_dirty <- true;
         match dependent_module.kind with
         | Source_module -> ()
-        | Namespace_map ->
-          String_set.iter mark dependent_module.dependents)
+        | Namespace_map -> String_set.iter mark dependent_module.dependents))
   in
   String_set.iter mark module_.dependents

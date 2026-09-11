@@ -21,7 +21,7 @@ let with_termination_handlers action =
         Sys.signal Sys.sigterm (Sys.Signal_handle interrupt)
       in
       Fun.protect action ~finally:(fun () ->
-        ignore (Sys.signal Sys.sigterm previous_sigterm)))
+          ignore (Sys.signal Sys.sigterm previous_sigterm)))
     ~finally:(fun () -> ignore (Sys.signal Sys.sigint previous_sigint))
 
 let run_command = function
@@ -36,11 +36,10 @@ let run_command = function
         filter;
         clear_screen;
         no_timing;
-      }
-    ->
+      } ->
     ignore clear_screen;
-    Build.run ~seen:[] ~verbosity ~folder ~prod ~features ~warn_error ~watch:false
-      ~after_build ~filter ~no_timing
+    Build.run ~seen:[] ~verbosity ~folder ~prod ~features ~warn_error
+      ~watch:false ~after_build ~filter ~no_timing
   | Cli.Watch
       {
         verbosity;
@@ -52,13 +51,13 @@ let run_command = function
         filter;
         clear_screen;
         no_timing;
-      }
-    ->
+      } ->
     ignore no_timing;
-    Build.watch ~verbosity ~folder ~prod ~features ~warn_error ~after_build ~filter
-      ~clear_screen
+    Build.watch ~verbosity ~folder ~prod ~features ~warn_error ~after_build
+      ~filter ~clear_screen
   | Cli.Format (Cli.Format_stdin extension) -> Format.format_stdin extension
-  | Cli.Format (Cli.Format_files {check; paths}) -> Format.run_files ~check paths
+  | Cli.Format (Cli.Format_files {check; paths}) ->
+    Format.run_files ~check paths
   | Cli.Compiler_args path -> print_endline (Build.compiler_args path)
   | Cli.Clean {verbosity; folder; prod} ->
     Build.clean ~seen:[] ~verbosity ~folder ~prod

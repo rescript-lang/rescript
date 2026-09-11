@@ -10,10 +10,11 @@ let search_directories ~cwd:_ directories = directories
 let executable_is_usable candidate =
   try
     (Unix.stat candidate).Unix.st_kind = Unix.S_REG
-    && try
-         Unix.access candidate [Unix.X_OK];
-         true
-       with Unix.Unix_error _ -> false
+    &&
+      try
+        Unix.access candidate [Unix.X_OK];
+        true
+      with Unix.Unix_error _ -> false
   with Unix.Unix_error _ -> false
 
 let resolve_program =

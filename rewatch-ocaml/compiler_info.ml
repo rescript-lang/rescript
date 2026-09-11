@@ -36,11 +36,9 @@ let make_context ~build_root ~bsc_path ~runtime_path ~source_map_args
     package_output_specs;
   }
 
-let path root =
-  File_util.path_of_parts root ["lib"; "bs"; "compiler-info.json"]
+let path root = File_util.path_of_parts root ["lib"; "bs"; "compiler-info.json"]
 
-let config_hash (config : Config.t) =
-  Digest.file config.path |> Digest.to_hex
+let config_hash (config : Config.t) = Digest.file config.path |> Digest.to_hex
 
 let package_output_spec_json spec =
   `Assoc
@@ -57,7 +55,7 @@ let package_output_spec_of_json = function
         List.assoc_opt "in_source" fields,
         List.assoc_opt "suffix" fields )
     with
-    | ( Some (`String ("esmodule" | "commonjs" as module_format)),
+    | ( Some (`String (("esmodule" | "commonjs") as module_format)),
         Some (`Bool in_source),
         Some (`String suffix) ) ->
       Some {module_format; in_source; suffix}
@@ -95,7 +93,8 @@ let json context (config : Config.t) =
       ( "source_map_args",
         `List (List.map (fun value -> `String value) context.source_map_args) );
       ( "package_output_specs",
-        `List (List.map package_output_spec_json context.package_output_specs) );
+        `List (List.map package_output_spec_json context.package_output_specs)
+      );
       ("runtime_path", `String context.runtime_path);
     ]
 
@@ -134,7 +133,11 @@ let config_with_package_output_specs (config : Config.t) specs =
         in
         Option.map
           (fun module_format : Config.package_spec ->
-            {module_format; in_source = spec.in_source; suffix = Some spec.suffix})
+            {
+              module_format;
+              in_source = spec.in_source;
+              suffix = Some spec.suffix;
+            })
           module_format)
       specs
   in
@@ -159,7 +162,7 @@ let verify_package context config =
   should_clean
 
 let write_package context (config : Config.t) =
-  if not (matches context config) then (
+  if not (matches context config) then
     let info_path = path config.root in
     let contents = Yojson.Safe.pretty_to_string (json context config) ^ "\n" in
-    File_util.write_file_atomic ~perm:0o644 info_path contents)
+    File_util.write_file_atomic ~perm:0o644 info_path contents

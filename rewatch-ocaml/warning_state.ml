@@ -22,13 +22,13 @@ let retain_paths state paths =
   let current = Hashtbl.create (List.length paths) in
   List.iter (fun path -> Hashtbl.replace current path ()) paths;
   Hashtbl.filter_map_inplace
-    (fun path entry ->
-      if Hashtbl.mem current path then Some entry else None)
+    (fun path entry -> if Hashtbl.mem current path then Some entry else None)
     state
 
 let entries state =
-  Hashtbl.to_seq_values state |> List.of_seq
+  Hashtbl.to_seq_values state
+  |> List.of_seq
   |> List.sort (fun first second ->
-       match String.compare first.module_name second.module_name with
-       | 0 -> String.compare first.path second.path
-       | order -> order)
+      match String.compare first.module_name second.module_name with
+      | 0 -> String.compare first.path second.path
+      | order -> order)

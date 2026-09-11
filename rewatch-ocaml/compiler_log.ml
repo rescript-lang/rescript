@@ -8,14 +8,14 @@ let strip_ansi content =
     if index >= length then index
     else
       let code = Char.code content.[index] in
-      if code >= 0x40 && code <= 0x7e then index + 1
-      else skip_csi (index + 1)
+      if code >= 0x40 && code <= 0x7e then index + 1 else skip_csi (index + 1)
   in
   let rec loop index =
     if index < length then
       if
         (content.[index] = '\027' || content.[index] = '\155')
-        && index + 1 < length && content.[index + 1] = '['
+        && index + 1 < length
+        && content.[index + 1] = '['
       then loop (skip_csi (index + 2))
       else (
         Buffer.add_char output content.[index];
@@ -35,4 +35,5 @@ let append root content =
 
 let finalize root =
   append root (Printf.sprintf "#Done(%.6f)\n" (Unix.gettimeofday ()));
-  File_util.copy_existing_file ~ensure_parent:false (path root "bs") (path root "ocaml")
+  File_util.copy_existing_file ~ensure_parent:false (path root "bs")
+    (path root "ocaml")

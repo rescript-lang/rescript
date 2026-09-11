@@ -14,7 +14,8 @@ let canonical_existing ~message path =
 
 let absolute_program ~cwd program =
   let resolved = Platform.resolve_program ~cwd program in
-  if Filename.is_relative resolved then Filename.concat cwd resolved else resolved
+  if Filename.is_relative resolved then Filename.concat cwd resolved
+  else resolved
 
 let sibling_bsc_candidate ~cwd ~executable =
   let executable = absolute_program ~cwd executable in
@@ -29,8 +30,7 @@ let bsc () =
   let candidate, message =
     match Sys.getenv_opt "RESCRIPT_BSC_EXE" with
     | Some path ->
-      ( path,
-        fun missing -> "RESCRIPT_BSC_EXE points to missing path " ^ missing )
+      (path, fun missing -> "RESCRIPT_BSC_EXE points to missing path " ^ missing)
     | None ->
       ( sibling_bsc_candidate ~cwd:(Sys.getcwd ())
           ~executable:Sys.executable_name,
@@ -44,7 +44,8 @@ let runtime ~find_package =
   match Sys.getenv_opt "RESCRIPT_RUNTIME" with
   | Some path ->
     canonical_existing
-      ~message:(fun missing -> "RESCRIPT_RUNTIME points to missing path " ^ missing)
+      ~message:(fun missing ->
+        "RESCRIPT_RUNTIME points to missing path " ^ missing)
       path
   | None -> (
     match find_package "@rescript/runtime" with
@@ -52,6 +53,6 @@ let runtime ~find_package =
     | None ->
       raise
         (Error
-           "The rescript runtime package could not be found.\nPlease set \
-            RESCRIPT_RUNTIME environment variable or make sure the runtime \
-            package is installed."))
+           "The rescript runtime package could not be found.\n\
+            Please set RESCRIPT_RUNTIME environment variable or make sure the \
+            runtime package is installed."))

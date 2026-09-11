@@ -26,10 +26,7 @@ val resolve_active_features :
   Config.t -> string list -> (string, unit) Hashtbl.t
 
 val discover_for_cleanup :
-  ?on_missing:(string -> unit) ->
-  Config.t ->
-  prod:bool ->
-  string list
+  ?on_missing:(string -> unit) -> Config.t -> prod:bool -> string list
 
 val discover_with_inventory :
   ?on_orphan:(string -> unit) ->

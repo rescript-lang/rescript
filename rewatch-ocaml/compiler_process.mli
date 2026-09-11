@@ -1,5 +1,6 @@
 val retain_critical_external_warnings : string -> string
-val parse_job : bsc:string -> build_dir:string -> config:Config.t -> string -> Process.job
+val parse_job :
+  bsc:string -> build_dir:string -> config:Config.t -> string -> Process.job
 val ast_dependencies : build_dir:string -> string -> string list
 
 val namespace_job :

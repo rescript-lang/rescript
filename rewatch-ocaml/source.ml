@@ -36,7 +36,10 @@ let module_name path =
   |> String.capitalize_ascii
 
 let is_non_exotic_module_name name =
-  let is_ascii_uppercase = function 'A' .. 'Z' -> true | _ -> false in
+  let is_ascii_uppercase = function
+    | 'A' .. 'Z' -> true
+    | _ -> false
+  in
   let is_ascii_alphanumeric = function
     | 'A' .. 'Z' | 'a' .. 'z' | '0' .. '9' -> true
     | _ -> false
@@ -70,13 +73,15 @@ let duplicate_error ~display_root root name first second =
   in
   Error
     (Printf.sprintf
-       "Could not initialize build: Duplicate module name: %s. Found in %s and %s. Rename one of these files."
+       "Could not initialize build: Duplicate module name: %s. Found in %s and \
+        %s. Rename one of these files."
        name first second)
 
 let interface_mismatch_error implementation interface =
   Error
     (Printf.sprintf
-       "Could not initialize build: Implementation and interface have different path names or different cases: `%s` vs `%s`"
+       "Could not initialize build: Implementation and interface have \
+        different path names or different cases: `%s` vs `%s`"
        implementation interface)
 
 (* A package source tree has three consumers with deliberately different
@@ -146,7 +151,7 @@ let scan_source ~root (source : Config.source) ~discover_modules ~on_missing
                 scan_directory ~relative:relative_path ~collect_inventory:false
                   ~discover_requested:discover_children
                   ~collect_gentype:gentype_children ~identity
-            | _ ->
+            | _ -> (
               present_files := absolute_path :: !present_files;
               if collect_inventory then
                 inventory_files := absolute_path :: !inventory_files;
@@ -155,11 +160,14 @@ let scan_source ~root (source : Config.source) ~discover_modules ~on_missing
                 | None -> ()
                 | Some is_interface ->
                   candidates :=
-                    ( {path = relative_path; modified = target_metadata.Unix.st_mtime},
+                    ( {
+                        path = relative_path;
+                        modified = target_metadata.Unix.st_mtime;
+                      },
                       is_interface,
                       source.is_dev )
-                    :: !candidates)
-          | _ ->
+                    :: !candidates))
+          | _ -> (
             present_files := absolute_path :: !present_files;
             if collect_inventory then
               inventory_files := absolute_path :: !inventory_files;
@@ -171,7 +179,7 @@ let scan_source ~root (source : Config.source) ~discover_modules ~on_missing
                   ( {path = relative_path; modified = metadata.Unix.st_mtime},
                     is_interface,
                     source.is_dev )
-                  :: !candidates
+                  :: !candidates)
         with Sys_error _ | Unix.Unix_error _ -> ())
       entries
   in
@@ -183,8 +191,7 @@ let scan_source ~root (source : Config.source) ~discover_modules ~on_missing
     | Unix.S_DIR ->
       let identity = Platform.directory_identity ~path:absolute metadata in
       scan_directory ~relative ~collect_inventory
-        ~discover_requested:discover_modules
-        ~collect_gentype ~identity
+        ~discover_requested:discover_modules ~collect_gentype ~identity
     | Unix.S_LNK -> (
       let target_metadata = Unix.stat absolute in
       match target_metadata.Unix.st_kind with
@@ -194,8 +201,7 @@ let scan_source ~root (source : Config.source) ~discover_modules ~on_missing
           Platform.directory_identity ~path:absolute target_metadata
         in
         scan_directory ~relative ~collect_inventory:false
-          ~discover_requested:discover_modules
-          ~collect_gentype ~identity
+          ~discover_requested:discover_modules ~collect_gentype ~identity
       | _ ->
         present_files := absolute :: !present_files;
         inventory_files := absolute :: !inventory_files;
@@ -214,13 +220,13 @@ let resolve_active_features (config : Config.t) requested =
     raise (Error ("Cycle detected in `features` map: " ^ chain))
   in
   let rec activate feature visiting =
-    if List.mem feature visiting then
-      raise_feature_cycle feature visiting;
+    if List.mem feature visiting then raise_feature_cycle feature visiting;
     if not (Hashtbl.mem active_features feature) then (
       Hashtbl.add active_features feature ();
       match List.assoc_opt feature config.features with
       | None -> ()
-      | Some implied -> List.iter (fun name -> activate name (feature :: visiting)) implied)
+      | Some implied ->
+        List.iter (fun name -> activate name (feature :: visiting)) implied)
   in
   List.iter (fun feature -> activate feature []) requested;
   active_features
@@ -239,19 +245,17 @@ let scan_sources ~on_missing (config : Config.t) ~prod ~features
   let gentype_dirs = ref [] in
   config.sources
   |> List.iter (fun (source : Config.source) ->
-       let feature_enabled =
-         all_features
-         || Option.fold ~none:true
-              ~some:(fun feature -> Hashtbl.mem active_features feature)
-              source.feature
-       in
-       let discover_modules =
-         not (prod && source.is_dev) && feature_enabled
-       in
-       scan_source ~root:config.root source ~discover_modules ~on_missing
-         ~visited_dirs ~collect_inventory
-         ~collect_gentype:(collect_gentype && feature_enabled)
-         ~visited_gentype_dirs files inventory_files present_files gentype_dirs);
+      let feature_enabled =
+        all_features
+        || Option.fold ~none:true
+             ~some:(fun feature -> Hashtbl.mem active_features feature)
+             source.feature
+      in
+      let discover_modules = (not (prod && source.is_dev)) && feature_enabled in
+      scan_source ~root:config.root source ~discover_modules ~on_missing
+        ~visited_dirs ~collect_inventory
+        ~collect_gentype:(collect_gentype && feature_enabled)
+        ~visited_gentype_dirs files inventory_files present_files gentype_dirs);
   {
     files = !files;
     inventory_files = List.sort_uniq String.compare !inventory_files;
@@ -260,33 +264,33 @@ let scan_sources ~on_missing (config : Config.t) ~prod ~features
   }
 
 let discover_for_cleanup
-    ?(on_missing = fun path ->
-      Printf.eprintf "Could not read folder %s\n%!" path)
+    ?(on_missing =
+      fun path -> Printf.eprintf "Could not read folder %s\n%!" path)
     (config : Config.t) ~prod =
   let scanned =
-    scan_sources ~on_missing config ~prod ~features:None ~collect_inventory:false
-      ~collect_gentype:false
+    scan_sources ~on_missing config ~prod ~features:None
+      ~collect_inventory:false ~collect_gentype:false
   in
   let implementations =
     scanned.files
     |> List.filter_map (fun (file, is_interface, _) ->
-         if is_interface then None else Some file.path)
+        if is_interface then None else Some file.path)
     |> List.sort_uniq String.compare
   in
   implementations
 
 let discover_with_inventory ?(on_orphan = fun _ -> ())
-    ?(on_missing = fun path ->
-      Printf.eprintf "Could not read folder %s\n%!" path)
-    ?(display_root = Sys.getcwd ()) (config : Config.t) ~prod ~features ~filter =
+    ?(on_missing =
+      fun path -> Printf.eprintf "Could not read folder %s\n%!" path)
+    ?(display_root = Sys.getcwd ()) (config : Config.t) ~prod ~features ~filter
+    =
   let matches_filter =
     match filter with
     | None -> fun _ -> true
     | Some filter -> Source_filter.matches_basename filter
   in
   let scanned =
-    scan_sources ~on_missing config ~prod ~features
-      ~collect_inventory:true
+    scan_sources ~on_missing config ~prod ~features ~collect_inventory:true
       ~collect_gentype:(config.gentype_args <> [])
   in
   let files = scanned.files in
@@ -319,7 +323,7 @@ let discover_with_inventory ?(on_orphan = fun _ -> ())
     (List.filter (fun (file, _, _) -> matches_filter file.path) files);
   Hashtbl.iter
     (fun _ (implementation, interface, _) ->
-      match implementation, interface with
+      match (implementation, interface) with
       | Some implementation, Some interface
         when Filename.remove_extension implementation.path
              <> Filename.remove_extension interface.path ->
@@ -328,31 +332,31 @@ let discover_with_inventory ?(on_orphan = fun _ -> ())
     table;
   Hashtbl.to_seq table
   |> Seq.filter_map (fun (_, (implementation, interface, _)) ->
-       match implementation, interface with
-       | None, Some interface -> Some interface.path
-       | _ -> None)
+      match (implementation, interface) with
+      | None, Some interface -> Some interface.path
+      | _ -> None)
   |> List.of_seq |> List.sort String.compare |> List.iter on_orphan;
   let modules =
     Hashtbl.to_seq table
     |> Seq.filter_map (fun (name, (implementation, interface, is_dev)) ->
-         match implementation with
-         | None -> None
-         | Some implementation ->
-           Some
-             {
-               name;
-               implementation = implementation.path;
-               interface = Option.map (fun file -> file.path) interface;
-               is_dev;
-               feature = None;
-             })
+        match implementation with
+        | None -> None
+        | Some implementation ->
+          Some
+            {
+              name;
+              implementation = implementation.path;
+              interface = Option.map (fun file -> file.path) interface;
+              is_dev;
+              feature = None;
+            })
     |> List.of_seq
     |> List.sort (fun a b -> String.compare a.name b.name)
   in
   let source_mtimes =
     Hashtbl.to_seq_values table
     |> Seq.flat_map (fun (implementation, interface, _) ->
-         List.to_seq (Option.to_list implementation @ Option.to_list interface))
+        List.to_seq (Option.to_list implementation @ Option.to_list interface))
     |> Seq.map (fun file -> (file.path, file.modified))
     |> List.of_seq
   in
@@ -375,7 +379,7 @@ let ast_path path =
   ^ if Filename.extension path = ".resi" then ".iast" else ".ast"
 
 let compiler_basename config module_name =
-  match config.Config.namespace, config.namespace_entry with
+  match (config.Config.namespace, config.namespace_entry) with
   | Some _, Some entry when entry = module_name -> module_name
   | Some namespace, Some _ -> module_name ^ "-@" ^ namespace
   | Some namespace, _ -> module_name ^ "-" ^ namespace
@@ -384,10 +388,8 @@ let compiler_basename config module_name =
 (* Compiler artifacts preserve the source filename's case, while dependency
    graph module names are capitalized. Keep those two names distinct. *)
 let compiler_asset_basename config path =
-  let basename =
-    path |> Filename.basename |> Filename.remove_extension
-  in
-  match config.Config.namespace, config.namespace_entry with
+  let basename = path |> Filename.basename |> Filename.remove_extension in
+  match (config.Config.namespace, config.namespace_entry) with
   | Some _, Some entry when entry = module_name path -> basename
   | Some namespace, Some _ -> basename ^ "-@" ^ namespace
   | Some namespace, _ -> basename ^ "-" ^ namespace

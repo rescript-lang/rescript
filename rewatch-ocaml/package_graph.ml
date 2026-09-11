@@ -33,7 +33,7 @@ let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
     (resolved.directory, resolved.config)
   in
   let add_feature_request root request =
-    match Hashtbl.find_opt requested_features root, request with
+    match (Hashtbl.find_opt requested_features root, request) with
     | None, request -> Hashtbl.add requested_features root request
     | Some None, _ | Some _, None ->
       Hashtbl.replace requested_features root None
@@ -43,21 +43,22 @@ let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
   in
   let collected = Hashtbl.create 32 in
   let rec collect ~folder:root ~features ~is_local =
-    if root <> root_config.root || not (Hashtbl.mem requested_features root) then
-      add_feature_request root features;
+    if root <> root_config.root || not (Hashtbl.mem requested_features root)
+    then add_feature_request root features;
     if not (Hashtbl.mem collected root) then (
       Hashtbl.add collected root ();
       let config = load_config root in
-      Output.debug ~verbosity:stats.verbosity
-        ("Parsing package: " ^ config.name);
+      Output.debug ~verbosity:stats.verbosity ("Parsing package: " ^ config.name);
       let dependencies =
-        List.map (fun dependency -> ("dependencies", dependency))
+        List.map
+          (fun dependency -> ("dependencies", dependency))
           config.dependencies
-        @ if prod || not is_local then []
-          else
-            List.map
-              (fun dependency -> ("dev-dependencies", dependency))
-              config.dev_dependencies
+        @
+        if prod || not is_local then []
+        else
+          List.map
+            (fun dependency -> ("dev-dependencies", dependency))
+            config.dev_dependencies
       in
       let resolved_dependencies =
         List.map
@@ -79,23 +80,23 @@ let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
       List.iter
         (fun ((dependency : Config.dependency), directory) ->
           collect ~folder:directory ~features:dependency.features
-            ~is_local:
-              (Package_resolution.is_local resolution directory))
+            ~is_local:(Package_resolution.is_local resolution directory))
         resolved_dependencies)
   in
   collect ~folder:root_config.root ~features ~is_local:true;
   (if !unallowed_dependencies <> [] then
-    let details =
-      !unallowed_dependencies |> List.sort_uniq compare
-      |> List.map (fun (dependent, kind, dependency) ->
+     let details =
+       !unallowed_dependencies |> List.sort_uniq compare
+       |> List.map (fun (dependent, kind, dependency) ->
            Printf.sprintf "%s %s: %s" dependent kind dependency)
-      |> String.concat "\n"
-    in
-    raise
-      (Error
-         ("The following packages use dependencies that do not allow them:\n"
+       |> String.concat "\n"
+     in
+     raise
+       (Error
+          ("The following packages use dependencies that do not allow them:\n"
          ^ details
-         ^ "\nUpdate allowed-dependents in the dependency rescript.json files.")));
+         ^ "\nUpdate allowed-dependents in the dependency rescript.json files."
+          )));
   Hashtbl.iter
     (fun root features ->
       Hashtbl.replace stats.retained.active_features root features)
@@ -116,20 +117,17 @@ let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
       let config =
         match warn_error with
         | None -> config
-        | Some value ->
-          {config with warning_flags = ["-warn-error"; value]}
+        | Some value -> {config with warning_flags = ["-warn-error"; value]}
       in
       let dependencies_with_kind =
         List.map
-          (fun dependency ->
-            (Build_types.Regular_dependency, dependency))
+          (fun dependency -> (Build_types.Regular_dependency, dependency))
           config.dependencies
         @
         if prod || not is_local then []
         else
           List.map
-            (fun dependency ->
-              (Build_types.Development_dependency, dependency))
+            (fun dependency -> (Build_types.Development_dependency, dependency))
             config.dev_dependencies
       in
       let dependencies = List.map snd dependencies_with_kind in
@@ -143,8 +141,7 @@ let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
       List.iter
         (fun (dependency : Build_types.graph_dependency) ->
           visit ~folder:dependency.directory
-            ~features:dependency.declaration.features
-            ~warn_error ~filter:None
+            ~features:dependency.declaration.features ~warn_error ~filter:None
             ~is_local:
               (Package_resolution.is_local resolution dependency.directory))
         dependency_directories;
@@ -157,7 +154,9 @@ let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
           ~on_missing:(Package_diagnostics.report_missing_source_folder config)
           ~on_orphan:(fun path ->
             Printf.eprintf
-              "\027[2K\r No implementation file found for interface file (skipping): %s\n%!"
+              "\027[2K\r No implementation file found for interface file \
+               (skipping): %s\n\
+               %!"
               path)
           ~display_root:root_config.root
       in
@@ -166,9 +165,7 @@ let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
         root <> root_config.root && Compiler_info.owns_outputs config
       in
       let compile_config =
-        let config =
-          with_gentype_source_dirs discovery.gentype_dirs config
-        in
+        let config = with_gentype_source_dirs discovery.gentype_dirs config in
         let inherited = Build_artifacts.with_root_options config root_config in
         let output_config =
           if owns_outputs then
@@ -184,7 +181,9 @@ let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
       let build_dir = Build_artifacts.lib_path root "bs" in
       let ocaml_dir = Build_artifacts.lib_path root "ocaml" in
       File_util.ensure_dir build_dir;
-      let source_mtimes = Hashtbl.create (List.length discovery.source_mtimes) in
+      let source_mtimes =
+        Hashtbl.create (List.length discovery.source_mtimes)
+      in
       List.iter
         (fun (path, modified) -> Hashtbl.replace source_mtimes path modified)
         discovery.source_mtimes;
@@ -214,13 +213,13 @@ let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
       Hashtbl.replace stats.retained.graph_packages root package;
       List.iter
         (fun module_ ->
-          (module_.Source.implementation
-          :: Option.to_list module_.Source.interface)
+          module_.Source.implementation
+          :: Option.to_list module_.Source.interface
           |> List.iter (fun relative_path ->
-               let absolute_path = Filename.concat root relative_path in
-               Hashtbl.replace stats.retained.source_index
-                 (Platform.normalize_path_for_comparison absolute_path)
-                 (root, module_, relative_path, absolute_path)))
+              let absolute_path = Filename.concat root relative_path in
+              Hashtbl.replace stats.retained.source_index
+                (Platform.normalize_path_for_comparison absolute_path)
+                (root, module_, relative_path, absolute_path)))
         modules;
       graph_packages := package :: !graph_packages)
   in

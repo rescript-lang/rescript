@@ -28,8 +28,9 @@ let ensure_dir path =
 
 let read_file path =
   let channel = open_in_bin path in
-  Fun.protect ~finally:(fun () -> close_in_noerr channel) (fun () ->
-    really_input_string channel (in_channel_length channel))
+  Fun.protect
+    ~finally:(fun () -> close_in_noerr channel)
+    (fun () -> really_input_string channel (in_channel_length channel))
 
 let with_output_channel channel write =
   try
@@ -51,7 +52,12 @@ let append_file path contents =
   with_output_channel channel (fun channel -> output_string channel contents)
 
 let restore_after_exception restore_signals exn =
-  let exn = try restore_signals (); exn with signal_exn -> signal_exn in
+  let exn =
+    try
+      restore_signals ();
+      exn
+    with signal_exn -> signal_exn
+  in
   raise exn
 
 let write_file_atomic ?(ensure_parent = true) ?perm path contents =
@@ -84,11 +90,11 @@ let write_file_atomic ?(ensure_parent = true) ?perm path contents =
         Option.iter (Unix.chmod candidate) perm;
         write_file candidate contents;
         let restore_publish_signals = Platform.defer_termination_signals () in
-        (try
-           Sys.rename candidate path;
-           temporary := None;
-           restore_publish_signals ()
-         with exn -> restore_after_exception restore_publish_signals exn))
+        try
+          Sys.rename candidate path;
+          temporary := None;
+          restore_publish_signals ()
+        with exn -> restore_after_exception restore_publish_signals exn)
   with exn ->
     Option.iter remove_temporary !temporary;
     restore_after_exception restore_creation_signals exn
@@ -103,14 +109,14 @@ let copy_existing_file ?(ensure_parent = true) source destination =
     (fun () ->
       let output_channel = open_out_bin destination in
       with_output_channel output_channel (fun output_channel ->
-        let buffer = Bytes.create 65_536 in
-        let rec copy () =
-          let count = input input_channel buffer 0 (Bytes.length buffer) in
-          if count > 0 then (
-            output output_channel buffer 0 count;
-            copy ())
-        in
-        copy ()))
+          let buffer = Bytes.create 65_536 in
+          let rec copy () =
+            let count = input input_channel buffer 0 (Bytes.length buffer) in
+            if count > 0 then (
+              output output_channel buffer 0 count;
+              copy ())
+          in
+          copy ()))
 
 let copy_optional_existing_file ?(ensure_parent = true) source destination =
   try copy_existing_file ~ensure_parent source destination
@@ -129,8 +135,7 @@ let copy_file source destination =
   if Sys.file_exists source then copy_existing_file source destination
 
 let stat_opt path =
-  try Some (Unix.stat path)
-  with Sys_error _ | Unix.Unix_error _ -> None
+  try Some (Unix.stat path) with Sys_error _ | Unix.Unix_error _ -> None
 
 let files_equal first second =
   match stat_opt first with
@@ -140,29 +145,30 @@ let files_equal first second =
     | None -> false
     | Some second_stat ->
       first_stat.Unix.st_size = second_stat.Unix.st_size
-      && let first_channel = open_in_bin first in
-         Fun.protect
-           ~finally:(fun () -> close_in_noerr first_channel)
-           (fun () ->
-             let second_channel = open_in_bin second in
-             Fun.protect
-               ~finally:(fun () -> close_in_noerr second_channel)
-               (fun () ->
-                 let buffer_size = 65_536 in
-                 let first_buffer = Bytes.create buffer_size in
-                 let second_buffer = Bytes.create buffer_size in
-                 let rec loop () =
-                   let first_count =
-                     input first_channel first_buffer 0 buffer_size
-                   in
-                   let second_count =
-                     input second_channel second_buffer 0 buffer_size
-                   in
-                   first_count = second_count
-                   && (first_count = 0
-                      || (Bytes.equal first_buffer second_buffer && loop ()))
-                 in
-                 loop ())))
+      &&
+      let first_channel = open_in_bin first in
+      Fun.protect
+        ~finally:(fun () -> close_in_noerr first_channel)
+        (fun () ->
+          let second_channel = open_in_bin second in
+          Fun.protect
+            ~finally:(fun () -> close_in_noerr second_channel)
+            (fun () ->
+              let buffer_size = 65_536 in
+              let first_buffer = Bytes.create buffer_size in
+              let second_buffer = Bytes.create buffer_size in
+              let rec loop () =
+                let first_count =
+                  input first_channel first_buffer 0 buffer_size
+                in
+                let second_count =
+                  input second_channel second_buffer 0 buffer_size
+                in
+                first_count = second_count
+                && (first_count = 0
+                   || (Bytes.equal first_buffer second_buffer && loop ()))
+              in
+              loop ())))
 
 let copy_file_if_changed ?(ensure_parent = true) source destination =
   if not (files_equal source destination) then
@@ -173,7 +179,7 @@ let modification_time path =
   stat_opt path |> Option.map (fun metadata -> metadata.Unix.st_mtime)
 
 let remove_file path =
-  if Sys.file_exists path then (try Sys.remove path with Sys_error _ -> ())
+  if Sys.file_exists path then try Sys.remove path with Sys_error _ -> ()
 
 let rec remove_tree path =
   try
@@ -191,7 +197,7 @@ let rec files_under directory =
     | Unix.S_DIR ->
       Sys.readdir directory |> Array.to_list
       |> List.concat_map (fun name ->
-           files_under (Filename.concat directory name))
+          files_under (Filename.concat directory name))
     (* Following links during recursion could leave the requested tree or enter
        a cycle. Follow one only to omit dangling links from the result. *)
     | Unix.S_LNK when not (Sys.file_exists directory) -> []

@@ -38,116 +38,119 @@ let watch_context ~root ~prod ~features ~filter =
       Package_resolution.create
         ~diagnostic_mode:Package_resolution.Suppress_diagnostics root_config
     in
-  let visited = Hashtbl.create 32 in
-  let packages = Hashtbl.create 32 in
-  let requested_features = Hashtbl.create 32 in
-  let roots = ref [root] in
-  let paths = ref [] in
-  let sources = ref [] in
-  let unresolved = ref [] in
-  let add_path directory recursive =
-    paths := Native_watcher.{directory; recursive} :: !paths
-  in
-  let rec nearest_existing_directory package_root directory =
-    if Sys.file_exists directory then directory
-    else
-      let parent = Filename.dirname directory in
-      if parent = directory || directory = package_root then package_root
-      else nearest_existing_directory package_root parent
-  in
-  let add_feature_request root request =
-    match Hashtbl.find_opt requested_features root, request with
-    | None, request -> Hashtbl.add requested_features root request
-    | Some None, _ | Some _, None -> Hashtbl.replace requested_features root None
-    | Some (Some current), Some requested ->
-      Hashtbl.replace requested_features root
-        (Some (List.sort_uniq String.compare (current @ requested)))
-  in
-  let path_is_within_root path =
-    let normalize = Platform.normalize_path_for_comparison in
-    let root = normalize root in
-    let path = normalize path in
-    path = root || String.starts_with ~prefix:(Filename.concat root "") path
-  in
-  let watch_unresolved_dependency package_root name =
-    Package_resolution.dependency_candidates resolution ~package_root name
-    |> List.iter (fun candidate ->
-         let existing = nearest_existing_directory root candidate in
-         try
-           let canonical_existing = Unix.realpath existing in
-           if path_is_within_root canonical_existing then (
-             unresolved := candidate :: !unresolved;
-             (* A shallow ancestor watch is sufficient: each directory creation
+    let visited = Hashtbl.create 32 in
+    let packages = Hashtbl.create 32 in
+    let requested_features = Hashtbl.create 32 in
+    let roots = ref [root] in
+    let paths = ref [] in
+    let sources = ref [] in
+    let unresolved = ref [] in
+    let add_path directory recursive =
+      paths := Native_watcher.{directory; recursive} :: !paths
+    in
+    let rec nearest_existing_directory package_root directory =
+      if Sys.file_exists directory then directory
+      else
+        let parent = Filename.dirname directory in
+        if parent = directory || directory = package_root then package_root
+        else nearest_existing_directory package_root parent
+    in
+    let add_feature_request root request =
+      match (Hashtbl.find_opt requested_features root, request) with
+      | None, request -> Hashtbl.add requested_features root request
+      | Some None, _ | Some _, None ->
+        Hashtbl.replace requested_features root None
+      | Some (Some current), Some requested ->
+        Hashtbl.replace requested_features root
+          (Some (List.sort_uniq String.compare (current @ requested)))
+    in
+    let path_is_within_root path =
+      let normalize = Platform.normalize_path_for_comparison in
+      let root = normalize root in
+      let path = normalize path in
+      path = root || String.starts_with ~prefix:(Filename.concat root "") path
+    in
+    let watch_unresolved_dependency package_root name =
+      Package_resolution.dependency_candidates resolution ~package_root name
+      |> List.iter (fun candidate ->
+          let existing = nearest_existing_directory root candidate in
+          try
+            let canonical_existing = Unix.realpath existing in
+            if path_is_within_root canonical_existing then (
+              unresolved := candidate :: !unresolved;
+              (* A shallow ancestor watch is sufficient: each directory creation
                 wakes reconciliation, which advances the watch toward the complete
                 candidate without expanding all of node_modules. *)
-             add_path canonical_existing false)
-         with Sys_error _ | Unix.Unix_error _ -> ())
-  in
-  let rec visit ~is_local ~features (config : Config.t) =
-    add_feature_request config.root features;
-    if Hashtbl.mem visited config.root then ()
-    else (
-    Hashtbl.add visited config.root ();
-    Hashtbl.add packages config.root (config, is_local);
-    add_path config.root false;
-    let dependencies =
-      config.dependencies
-      @ if prod || not is_local then [] else config.dev_dependencies
+              add_path canonical_existing false)
+          with Sys_error _ | Unix.Unix_error _ -> ())
     in
-    let dependency_watches =
-      List.map
-      (fun (dependency : Config.dependency) ->
-        match
-          Package_resolution.dependency_path resolution
-            ~package_root:config.root dependency.name
-        with
-        | Some directory when Config.exists_in_root directory ->
-          (try
-             Resolved_dependency
-               (Package_resolution.resolve resolution
-                  ~package_root:config.root dependency)
-           with Project_context.Package_error _ | Project_context.Error _ ->
-             Broken_dependency directory)
-        | None -> Unresolved_dependency dependency.name
-        | Some directory
-          when not (Config.exists_in_root directory) && is_directory directory ->
-          Missing_dependency_directory directory
-        | Some path -> Missing_dependency_path path)
-      dependencies
-    in
-    List.iter
-      (function
-        | Resolved_dependency resolved when resolved.is_local ->
-          if not (Hashtbl.mem visited resolved.directory) then (
-            roots := resolved.directory :: !roots;
-            add_path resolved.directory false);
-          visit ~is_local:true ~features:resolved.declaration.features
-            resolved.config
-        | Resolved_dependency _ -> ()
-        | Broken_dependency directory ->
-          (* A broken dependency configuration must remain watched so fixing
+    let rec visit ~is_local ~features (config : Config.t) =
+      add_feature_request config.root features;
+      if Hashtbl.mem visited config.root then ()
+      else (
+        Hashtbl.add visited config.root ();
+        Hashtbl.add packages config.root (config, is_local);
+        add_path config.root false;
+        let dependencies =
+          config.dependencies
+          @ if prod || not is_local then [] else config.dev_dependencies
+        in
+        let dependency_watches =
+          List.map
+            (fun (dependency : Config.dependency) ->
+              match
+                Package_resolution.dependency_path resolution
+                  ~package_root:config.root dependency.name
+              with
+              | Some directory when Config.exists_in_root directory -> (
+                try
+                  Resolved_dependency
+                    (Package_resolution.resolve resolution
+                       ~package_root:config.root dependency)
+                with
+                | Project_context.Package_error _ | Project_context.Error _ ->
+                  Broken_dependency directory)
+              | None -> Unresolved_dependency dependency.name
+              | Some directory
+                when (not (Config.exists_in_root directory))
+                     && is_directory directory ->
+                Missing_dependency_directory directory
+              | Some path -> Missing_dependency_path path)
+            dependencies
+        in
+        List.iter
+          (function
+            | Resolved_dependency resolved when resolved.is_local ->
+              if not (Hashtbl.mem visited resolved.directory) then (
+                roots := resolved.directory :: !roots;
+                add_path resolved.directory false);
+              visit ~is_local:true ~features:resolved.declaration.features
+                resolved.config
+            | Resolved_dependency _ -> ()
+            | Broken_dependency directory ->
+              (* A broken dependency configuration must remain watched so fixing
              that file can recover the long-lived command. *)
-          roots := directory :: !roots;
-          add_path directory false;
-          Hashtbl.replace visited directory ()
-        | Missing_dependency_directory directory ->
-          (* The parent watch is needed because removing or replacing the
+              roots := directory :: !roots;
+              add_path directory false;
+              Hashtbl.replace visited directory ()
+            | Missing_dependency_directory directory ->
+              (* The parent watch is needed because removing or replacing the
              watched directory itself is not reported consistently by every
              filesystem backend. It also detects a newly installed candidate
              that should take priority over a lower resolution. *)
-          roots := directory :: !roots;
-          unresolved := directory :: !unresolved;
-          add_path (Filename.dirname directory) false;
-          add_path directory false
-        | Missing_dependency_path path ->
-          (* A non-directory candidate may be replaced with an install. Watch
+              roots := directory :: !roots;
+              unresolved := directory :: !unresolved;
+              add_path (Filename.dirname directory) false;
+              add_path directory false
+            | Missing_dependency_path path ->
+              (* A non-directory candidate may be replaced with an install. Watch
              its parent and retain its type in the snapshot until that happens. *)
-          unresolved := path :: !unresolved;
-          add_path (Filename.dirname path) false
-        | Unresolved_dependency name ->
-          watch_unresolved_dependency config.root name)
-      dependency_watches)
-  in
+              unresolved := path :: !unresolved;
+              add_path (Filename.dirname path) false
+            | Unresolved_dependency name ->
+              watch_unresolved_dependency config.root name)
+          dependency_watches)
+    in
     visit ~is_local:true ~features root_config;
     Hashtbl.iter
       (fun package_root ((config : Config.t), is_local) ->
@@ -161,27 +164,25 @@ let watch_context ~root ~prod ~features ~filter =
           in
           config.sources
           |> List.filter (fun (source : Config.source) ->
-               let feature_enabled =
-                 all_features
-                 || Option.fold ~none:true
-                      ~some:(fun feature ->
-                        Hashtbl.mem active_features feature)
-                      source.feature
-               in
-               (not (Package_graph.source_discovery_prod ~prod ~is_local
-                     && source.is_dev))
-               && feature_enabled)
+              let feature_enabled =
+                all_features
+                || Option.fold ~none:true
+                     ~some:(fun feature -> Hashtbl.mem active_features feature)
+                     source.feature
+              in
+              (not
+                 (Package_graph.source_discovery_prod ~prod ~is_local
+                 && source.is_dev))
+              && feature_enabled)
           |> List.iter (fun source ->
-               let directory = Filename.concat config.root source.Config.dir in
-               let filter =
-                 if package_root = root_config.root then filter else None
-               in
-               sources :=
-                 {directory; recursive = source.recurse; filter} :: !sources;
-               let existing =
-                 nearest_existing_directory config.root directory
-               in
-               add_path existing (existing = directory && source.recurse))
+              let directory = Filename.concat config.root source.Config.dir in
+              let filter =
+                if package_root = root_config.root then filter else None
+              in
+              sources :=
+                {directory; recursive = source.recurse; filter} :: !sources;
+              let existing = nearest_existing_directory config.root directory in
+              add_path existing (existing = directory && source.recurse))
         with Source.Error _ -> ())
       packages;
     let deduplicated_paths = Hashtbl.create (List.length !paths) in
@@ -196,19 +197,17 @@ let watch_context ~root ~prod ~features ~filter =
         Hashtbl.replace deduplicated_paths path.directory recursive)
       !paths;
     let paths =
-      Hashtbl.to_seq deduplicated_paths |> List.of_seq
+      Hashtbl.to_seq deduplicated_paths
+      |> List.of_seq
       |> List.map (fun (directory, recursive) ->
-           Native_watcher.{directory; recursive})
+          Native_watcher.{directory; recursive})
     in
     ( List.sort_uniq String.compare !roots,
       paths,
       !sources,
       List.sort_uniq String.compare !unresolved )
   with Config.Error _ ->
-    ( [root],
-      [Native_watcher.{directory = root; recursive = false}],
-      [],
-      [] )
+    ([root], [Native_watcher.{directory = root; recursive = false}], [], [])
 
 let snapshot ?(on_source_symlink = fun _ -> ()) digest_cache roots sources
     unresolved =
@@ -259,8 +258,7 @@ let snapshot ?(on_source_symlink = fun _ -> ()) digest_cache roots sources
                 if
                   (not recursive)
                   || Native_watcher.is_compiler_artifact_directory path
-                then
-                  acc
+                then acc
                 else walk source true path acc
               | Unix.S_LNK -> (
                 let is_source_name =
@@ -268,20 +266,20 @@ let snapshot ?(on_source_symlink = fun _ -> ()) digest_cache roots sources
                   || Filename.extension path = ".resi")
                   && matches_source source path
                 in
-                if is_source_name then (
-                  try
-                    let target = Unix.readlink path in
-                    let target =
-                      if Filename.is_relative target then
-                        Filename.concat (Filename.dirname path) target
-                      else target
-                    in
-                    let target =
-                      try Unix.realpath target
-                      with Sys_error _ | Unix.Unix_error _ -> target
-                    in
-                    on_source_symlink target
-                  with Sys_error _ | Unix.Unix_error _ -> ());
+                (if is_source_name then
+                   try
+                     let target = Unix.readlink path in
+                     let target =
+                       if Filename.is_relative target then
+                         Filename.concat (Filename.dirname path) target
+                       else target
+                     in
+                     let target =
+                       try Unix.realpath target
+                       with Sys_error _ | Unix.Unix_error _ -> target
+                     in
+                     on_source_symlink target
+                   with Sys_error _ | Unix.Unix_error _ -> ());
                 let target = Unix.stat path in
                 match target.Unix.st_kind with
                 | Unix.S_DIR when recursive -> walk source true path acc
@@ -300,17 +298,17 @@ let snapshot ?(on_source_symlink = fun _ -> ()) digest_cache roots sources
   let add_control_files acc root =
     control_file_names
     |> List.fold_left
-      (fun acc name ->
-        let path = Filename.concat root name in
-        try
-          let stat = Unix.stat path in
-          if stat.Unix.st_kind = Unix.S_REG then add_file path stat acc else acc
-        with Sys_error _ | Unix.Unix_error _ -> acc)
-      acc
+         (fun acc name ->
+           let path = Filename.concat root name in
+           try
+             let stat = Unix.stat path in
+             if stat.Unix.st_kind = Unix.S_REG then add_file path stat acc
+             else acc
+           with Sys_error _ | Unix.Unix_error _ -> acc)
+         acc
   in
   let result =
-    List.fold_left add_control_files [] roots
-    |> fun acc ->
+    List.fold_left add_control_files [] roots |> fun acc ->
     List.fold_left
       (fun acc source -> walk source source.recursive source.directory acc)
       acc sources
@@ -320,10 +318,7 @@ let snapshot ?(on_source_symlink = fun _ -> ()) digest_cache roots sources
         try
           let stat = Unix.lstat path in
           Hashtbl.replace seen_files path ();
-          ( path,
-            stat.Unix.st_mtime,
-            stat.Unix.st_size,
-            "dependency-candidate" )
+          (path, stat.Unix.st_mtime, stat.Unix.st_size, "dependency-candidate")
           :: acc
         with Sys_error _ | Unix.Unix_error _ ->
           (path, 0., 0, "missing-dependency-candidate") :: acc)
@@ -332,7 +327,7 @@ let snapshot ?(on_source_symlink = fun _ -> ()) digest_cache roots sources
   in
   Hashtbl.filter_map_inplace
     (fun path value -> if Hashtbl.mem seen_files path then Some value else None)
-  digest_cache;
+    digest_cache;
   result
 
 let snapshot_with_symlink_paths digest_cache roots sources unresolved =
@@ -343,15 +338,18 @@ let snapshot_with_symlink_paths digest_cache roots sources unresolved =
       digest_cache roots sources unresolved
   in
   let paths =
-    !targets |> List.sort_uniq String.compare
+    !targets
+    |> List.sort_uniq String.compare
     |> List.filter_map (fun target ->
-         Filename.dirname target |> nearest_existing_ancestor)
+        Filename.dirname target |> nearest_existing_ancestor)
     |> List.concat_map (fun directory ->
-         let parent = Filename.dirname directory in
-         let directories = if parent = directory then [directory] else [directory; parent] in
-         List.map
-           (fun directory -> Native_watcher.{directory; recursive = false})
-           directories)
+        let parent = Filename.dirname directory in
+        let directories =
+          if parent = directory then [directory] else [directory; parent]
+        in
+        List.map
+          (fun directory -> Native_watcher.{directory; recursive = false})
+          directories)
   in
   (snapshot, paths, List.sort_uniq String.compare !targets)
 
@@ -363,7 +361,8 @@ let changes_between before after =
   let before_by_path = Hashtbl.create (List.length before) in
   let after_by_path = Hashtbl.create (List.length after) in
   List.iter
-    (fun ((path, _, _, _) as entry) -> Hashtbl.replace before_by_path path entry)
+    (fun ((path, _, _, _) as entry) ->
+      Hashtbl.replace before_by_path path entry)
     before;
   List.iter
     (fun ((path, _, _, _) as entry) -> Hashtbl.replace after_by_path path entry)
@@ -433,15 +432,14 @@ let path_in_scope roots sources unresolved path =
          (fun source ->
            let in_directory =
              Filename.dirname path = source.directory
-             || (source.recursive
+             || source.recursive
                 && String.starts_with
                      ~prefix:(source.directory ^ Filename.dir_sep)
-                     path)
+                     path
            in
            in_directory
            && Option.fold ~none:true
-                ~some:(fun filter ->
-                  Source_filter.matches_basename filter path)
+                ~some:(fun filter -> Source_filter.matches_basename filter path)
                 source.filter)
          sources
   in
@@ -469,7 +467,7 @@ let with_signal_handlers handler f =
         Sys.signal Sys.sigterm (Sys.Signal_handle handler)
       in
       Fun.protect f ~finally:(fun () ->
-        ignore (Sys.signal Sys.sigterm previous_sigterm)))
+          ignore (Sys.signal Sys.sigterm previous_sigterm)))
     ~finally:(fun () -> ignore (Sys.signal Sys.sigint previous_sigint))
 
 let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
@@ -557,10 +555,10 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
       List.exists
         (fun source ->
           path = source.directory
-          || (source.recursive
+          || source.recursive
              && String.starts_with
                   ~prefix:(source.directory ^ Filename.dir_sep)
-                  path))
+                  path)
         sources
     in
     let is_directory path =
@@ -575,43 +573,39 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
     in
     List.iter
       (fun (event : Native_watcher.change) ->
-        match event.kind, event.path with
-        | _, None ->
-          requires_reconciliation := true
+        match (event.kind, event.path) with
+        | _, None -> requires_reconciliation := true
         | Native_watcher.Structural, Some path ->
           if
-            is_source_path path || path_in_scope roots sources unresolved path
+            is_source_path path
+            || path_in_scope roots sources unresolved path
             || Native_watcher.watches_directory watcher path
             || (is_in_source_tree path && is_directory path)
-            || (Native_watcher.watches_directory watcher (Filename.dirname path)
-               && not (Build_artifacts.is_generated_output_path path))
-          then
-            requires_reconciliation := true
+            || Native_watcher.watches_directory watcher (Filename.dirname path)
+               && not (Build_artifacts.is_generated_output_path path)
+          then requires_reconciliation := true
         | Native_watcher.Content, Some path ->
-          if is_source_path path then (
-            if path_in_scope roots sources unresolved path then (
+          if is_source_path path then
+            if path_in_scope roots sources unresolved path then
               if Sys.file_exists path then
                 changes := {path; kind = Modified} :: !changes
-              else requires_reconciliation := true)
-            else requires_reconciliation := true)
+              else requires_reconciliation := true
+            else requires_reconciliation := true
           else if
             path_in_scope roots sources unresolved path
             || is_symlink_target path
-          then
-            requires_reconciliation := true)
+          then requires_reconciliation := true)
       events;
     if !requires_reconciliation then None
     else
       Some
         (!changes
         |> List.sort_uniq (fun (first : change) second ->
-             String.compare first.path second.path))
+            String.compare first.path second.path))
   in
   let rec polling_loop roots sources unresolved previous =
-    if keep_running () then (
-      let current =
-        snapshot digest_cache roots sources unresolved
-      in
+    if keep_running () then
+      let current = snapshot digest_cache roots sources unresolved in
       if current <> previous then (
         let build_roots, _, build_sources, build_unresolved =
           watch_context ~root ~prod ~features ~filter
@@ -630,8 +624,7 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
           | Incremental -> "doing Incremental"
           | Full -> "doing Full");
         begin_rebuild rebuild_kind;
-        build ~poll ~changes:(Some changes)
-        |> finish_rebuild;
+        build ~poll ~changes:(Some changes) |> finish_rebuild;
         let new_roots, _, new_sources, new_unresolved =
           watch_context ~root ~prod ~features ~filter
         in
@@ -652,22 +645,23 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
         else polling_loop new_roots new_sources new_unresolved after_build)
       else (
         delay 0.2;
-        polling_loop roots sources unresolved current))
+        polling_loop roots sources unresolved current)
   in
-  let rec native_loop watcher roots sources unresolved symlink_targets previous =
+  let rec native_loop watcher roots sources unresolved symlink_targets previous
+      =
     let result = Native_watcher.wait watcher ~keep_running in
     match result with
     | Native_watcher.Stopped -> None
     | Native_watcher.Failed message ->
       Some (message, roots, sources, unresolved, previous)
-    | Native_watcher.Changed events ->
+    | Native_watcher.Changed events -> (
       delay 0.05;
       let events = events @ Native_watcher.drain watcher in
       let direct =
         direct_content_changes watcher roots sources unresolved symlink_targets
           events
       in
-      (match direct with
+      match direct with
       | Some [] ->
         native_loop watcher roots sources unresolved symlink_targets previous
       | Some changes ->
@@ -681,9 +675,7 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
           before_build
       | None -> native_reconcile watcher roots sources unresolved previous)
   and native_reconcile watcher roots sources unresolved previous =
-    let current =
-      snapshot digest_cache roots sources unresolved
-    in
+    let current = snapshot digest_cache roots sources unresolved in
     if current <> previous then (
       Output.debug ~verbosity "doing Full";
       begin_rebuild Full;
@@ -704,8 +696,8 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
       in
       let baseline =
         reconciliation_baseline ~old_roots:build_roots
-          ~old_sources:build_sources ~old_unresolved:build_unresolved
-          ~new_roots ~new_sources ~new_unresolved before_build after_build
+          ~old_sources:build_sources ~old_unresolved:build_unresolved ~new_roots
+          ~new_sources ~new_unresolved before_build after_build
       in
       match
         refresh_and_snapshot watcher ~paths ~symlink_paths new_roots new_sources
@@ -718,8 +710,7 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
           native_reconcile watcher new_roots new_sources new_unresolved baseline
         else
           native_loop watcher new_roots new_sources new_unresolved
-            symlink_targets
-            registered_snapshot)
+            symlink_targets registered_snapshot)
     else
       let new_roots, paths, new_sources, new_unresolved =
         watch_context ~root ~prod ~features ~filter
@@ -744,52 +735,53 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
           native_reconcile watcher new_roots new_sources new_unresolved baseline
         else
           native_loop watcher new_roots new_sources new_unresolved
-            symlink_targets
-            registered_snapshot
+            symlink_targets registered_snapshot
   in
-  with_signal_handlers (fun _ -> stop ()) (fun () ->
-    let roots, paths, sources, unresolved =
-      watch_context ~root ~prod ~features ~filter
-    in
-    let before_build, symlink_paths, _ =
-      snapshot_with_symlink_paths digest_cache roots sources unresolved
-    in
-    (* Install handles before the initial build so an edit made as soon as its
+  with_signal_handlers
+    (fun _ -> stop ())
+    (fun () ->
+      let roots, paths, sources, unresolved =
+        watch_context ~root ~prod ~features ~filter
+      in
+      let before_build, symlink_paths, _ =
+        snapshot_with_symlink_paths digest_cache roots sources unresolved
+      in
+      (* Install handles before the initial build so an edit made as soon as its
        output appears cannot land in a blind interval between compilation and
        watcher setup. Snapshot reconciliation below consumes any event queued
        while compiler subprocesses were running. *)
-    match native_create ~paths:(paths @ symlink_paths) with
-    | Error message ->
-      report_native_fallback message;
-      ignore (build ~poll ~changes:None);
-      let roots, _, sources, unresolved =
-        watch_context ~root ~prod ~features ~filter
-      in
-      polling_loop roots sources unresolved before_build
-    | Ok watcher ->
-      let fallback =
-        Fun.protect
-          (fun () ->
-            ignore (build ~poll ~changes:None);
-            (* The following snapshot is authoritative for changes that arrived
+      match native_create ~paths:(paths @ symlink_paths) with
+      | Error message ->
+        report_native_fallback message;
+        ignore (build ~poll ~changes:None);
+        let roots, _, sources, unresolved =
+          watch_context ~root ~prod ~features ~filter
+        in
+        polling_loop roots sources unresolved before_build
+      | Ok watcher ->
+        let fallback =
+          Fun.protect
+            (fun () ->
+              ignore (build ~poll ~changes:None);
+              (* The following snapshot is authoritative for changes that arrived
                during the build. Pump and discard callbacks already queued for
                that interval so they do not request the same rebuild twice. *)
-            ignore (Native_watcher.drain watcher);
-            native_reconcile watcher roots sources unresolved before_build)
-          ~finally:(fun () -> Native_watcher.close watcher)
-      in
-      Option.iter
-        (fun (message, roots, sources, unresolved, previous) ->
-          report_native_fallback message;
-          polling_loop roots sources unresolved previous)
-        fallback)
+              ignore (Native_watcher.drain watcher);
+              native_reconcile watcher roots sources unresolved before_build)
+            ~finally:(fun () -> Native_watcher.close watcher)
+        in
+        Option.iter
+          (fun (message, roots, sources, unresolved, previous) ->
+            report_native_fallback message;
+            polling_loop roots sources unresolved previous)
+          fallback)
 
 let run_with_native_create ~native_create ~report_native_fallback ~root ~prod
     ~features ~filter ~clear_screen ~show_progress ~verbosity ~build =
   Build_lock.with_watch root (fun watch_lock ->
-    ignore (Config.load_root root);
-    run_locked ~native_create ~report_native_fallback ~root ~prod ~features
-      ~filter ~clear_screen ~show_progress ~verbosity ~build ~watch_lock)
+      ignore (Config.load_root root);
+      run_locked ~native_create ~report_native_fallback ~root ~prod ~features
+        ~filter ~clear_screen ~show_progress ~verbosity ~build ~watch_lock)
 
 let report_native_fallback message =
   prerr_endline
@@ -806,6 +798,7 @@ module For_test = struct
   let changes_are_incremental = changes_are_incremental
 
   let run_with_native_failure ~message ~on_fallback =
-    run_with_native_create ~native_create:(fun ~paths:_ -> Error message)
+    run_with_native_create
+      ~native_create:(fun ~paths:_ -> Error message)
       ~report_native_fallback:on_fallback
 end

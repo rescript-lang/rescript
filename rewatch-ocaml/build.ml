@@ -28,8 +28,8 @@ let project_root folder =
   if not (Sys.file_exists folder) then
     raise
       (Error
-         ("Could not start Rescript build: Could not write lockfile because the specified project folder does not exist: "
-         ^ folder));
+         ("Could not start Rescript build: Could not write lockfile because \
+           the specified project folder does not exist: " ^ folder));
   Unix.realpath folder
 
 let clean ~seen ~verbosity ~folder ~prod =
@@ -53,7 +53,9 @@ let clean ~seen ~verbosity ~folder ~prod =
       let root_config = Config.load_root root in
       let resolution = Package_resolution.create root_config in
       let visited = Hashtbl.create 32 in
-      List.iter (fun path -> Hashtbl.replace visited (Unix.realpath path) ()) seen;
+      List.iter
+        (fun path -> Hashtbl.replace visited (Unix.realpath path) ())
+        seen;
       let cleanup =
         Clean.prepare ~root_config ~resolution ~seen:visited ~root ~prod
           ~is_local:true
@@ -69,9 +71,9 @@ let clean ~seen ~verbosity ~folder ~prod =
       let suffixes =
         root_config.package_specs
         |> List.filter_map (fun (spec : Config.package_spec) ->
-             if spec.in_source then
-               Some (Config.package_spec_suffix root_config spec)
-             else None)
+            if spec.in_source then
+              Some (Config.package_spec_suffix root_config spec)
+            else None)
         |> String.concat ", "
       in
       let generated_files = suffixes ^ " files" in
@@ -83,7 +85,8 @@ let clean ~seen ~verbosity ~folder ~prod =
 
 let compiler_args = Compiler_args_command.run
 
-let run_scheduled_modules (stats : Build_types.t) ~compile_step ~namespace_count =
+let run_scheduled_modules (stats : Build_types.t) ~compile_step ~namespace_count
+    =
   let prepared = Build_types.prepared_exn stats in
   Compiler_scheduler.run ~poll:stats.process_poll
     ~warning_state:stats.retained.warning_state
@@ -111,15 +114,17 @@ let run_namespace_jobs (stats : Build_types.t) =
 
 let write_source_dirs (root_config : Config.t) (stats : Build_types.t) =
   let packages =
-    Hashtbl.to_seq_values stats.retained.graph_packages |> List.of_seq
+    Hashtbl.to_seq_values stats.retained.graph_packages
+    |> List.of_seq
     |> List.sort (fun (left : Build_types.graph_package) right ->
-         String.compare left.graph_root right.graph_root)
+        String.compare left.graph_root right.graph_root)
   in
   packages
   |> List.iter (fun package ->
-       if package.Build_types.graph_root <> root_config.root then
-         File_util.remove_file
-           (File_util.path_of_parts package.graph_root ["lib"; "bs"; ".sourcedirs.json"]));
+      if package.Build_types.graph_root <> root_config.root then
+        File_util.remove_file
+          (File_util.path_of_parts package.graph_root
+             ["lib"; "bs"; ".sourcedirs.json"]));
   let local_packages =
     List.filter (fun package -> package.Build_types.graph_is_local) packages
   in
@@ -135,40 +140,41 @@ let write_source_dirs (root_config : Config.t) (stats : Build_types.t) =
   let dirs =
     local_packages
     |> List.concat_map (fun package ->
-         let relative_root = relative_package_root package in
-         source_directories package
-         |> List.map (fun directory ->
-              if relative_root = "" then directory
-              else Filename.concat relative_root directory))
+        let relative_root = relative_package_root package in
+        source_directories package
+        |> List.map (fun directory ->
+            if relative_root = "" then directory
+            else Filename.concat relative_root directory))
     |> List.sort_uniq String.compare
   in
   let package_roots = Hashtbl.create 16 in
   local_packages
   |> List.iter (fun package ->
-       package.Build_types.graph_dependency_directories
-       |> List.iter (fun dependency ->
-            Hashtbl.replace package_roots
-              dependency.Build_types.declaration.name dependency.directory));
+      package.Build_types.graph_dependency_directories
+      |> List.iter (fun dependency ->
+          Hashtbl.replace package_roots dependency.Build_types.declaration.name
+            dependency.directory));
   let package_roots =
-    Hashtbl.to_seq package_roots |> List.of_seq
+    Hashtbl.to_seq package_roots
+    |> List.of_seq
     |> List.sort (fun (left, _) (right, _) -> String.compare left right)
   in
   let scans =
     local_packages
     |> List.map (fun package ->
-         let relative_root = relative_package_root package in
-         let build_root =
-           if relative_root = "" then File_util.path_of_parts "" ["lib"; "bs"]
-           else File_util.path_of_parts relative_root ["lib"; "bs"]
-         in
-         Source_dirs.
-           {
-             build_root;
-             scan_dirs = source_directories package;
-             also_scan_build_root = true;
-           })
+        let relative_root = relative_package_root package in
+        let build_root =
+          if relative_root = "" then File_util.path_of_parts "" ["lib"; "bs"]
+          else File_util.path_of_parts relative_root ["lib"; "bs"]
+        in
+        Source_dirs.
+          {
+            build_root;
+            scan_dirs = source_directories package;
+            also_scan_build_root = true;
+          })
     |> List.sort (fun (left : Source_dirs.scan) right ->
-         String.compare left.build_root right.build_root)
+        String.compare left.build_root right.build_root)
   in
   Source_dirs.write ~root:root_config.root ~dirs ~packages:package_roots ~scans
 
@@ -233,12 +239,12 @@ let prepare_incremental previous changes (stats : Build_types.t) =
   let started_at = Unix.gettimeofday () in
   sources
   |> List.map (fun source ->
-       Source.compiler_basename source.package.graph_compile_config
-         source.module_.Source.name)
+      Source.compiler_basename source.package.graph_compile_config
+        source.module_.Source.name)
   |> List.sort_uniq String.compare
   |> List.iter (fun name ->
-       Output.debug ~verbosity:stats.verbosity
-         ("Generating AST for module: " ^ name));
+      Output.debug ~verbosity:stats.verbosity
+        ("Generating AST for module: " ^ name));
   let parse_completed =
     Output.Progress.start_grouped stats.progress ~step:"1/2" ~symbol:"🧱 "
       ~label:"Parsing"
@@ -250,9 +256,9 @@ let prepare_incremental previous changes (stats : Build_types.t) =
   let results =
     sources
     |> List.map (fun source ->
-         Compiler_process.parse_job ~bsc
-           ~build_dir:source.package.graph_build_dir
-           ~config:source.package.graph_compile_config source.relative_path)
+        Compiler_process.parse_job ~bsc
+          ~build_dir:source.package.graph_build_dir
+          ~config:source.package.graph_compile_config source.relative_path)
     |> Process.run_parallel ?poll:stats.process_poll
          ~on_complete:parse_completed
   in
@@ -304,8 +310,7 @@ let prepare_incremental previous changes (stats : Build_types.t) =
         in
         node.raw_dependencies <- raw_dependencies;
         Build_state.set_dependencies prepared.build_state ~key
-          (Build_preparation.resolved_dependencies
-             stats.retained.global_modules
+          (Build_preparation.resolved_dependencies stats.retained.global_modules
              stats.retained.namespace_maps_by_name node)))
     affected_modules;
   stats.parse_seconds <- Unix.gettimeofday () -. started_at;
@@ -354,8 +359,8 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
   let stats : Build_types.t =
     match previous with
     | Some previous ->
-      Build_types.create_incremental ~previous:previous.stats ~poll ~process_poll
-        ~progress ~verbosity
+      Build_types.create_incremental ~previous:previous.stats ~poll
+        ~process_poll ~progress ~verbosity
     | None ->
       Build_types.create ~warning_state ~poll ~process_poll ~progress ~verbosity
   in
@@ -363,8 +368,8 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
   let parse_output messages =
     messages
     |> List.map (function
-         | Build_types.Parse_warning output
-         | Build_types.Parse_error output -> output)
+        | Build_types.Parse_warning output | Build_types.Parse_error output ->
+        output)
     |> String.concat ""
   in
   let parse_failed messages =
@@ -382,7 +387,8 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
   List.iter (fun path -> Hashtbl.replace visited (Unix.realpath path) ()) seen;
   let finalize_logs () =
     Output.Progress.finish progress;
-    Hashtbl.iter (fun package_root () -> Compiler_log.finalize package_root)
+    Hashtbl.iter
+      (fun package_root () -> Compiler_log.finalize package_root)
       stats.initialized_logs;
     Hashtbl.clear stats.initialized_logs
   in
@@ -439,11 +445,11 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
     |> List.iter (fun entry -> prerr_string entry.Warning_state.output);
     if warning_entries <> [] && diagnostics = [] then prerr_newline ();
     flush stderr;
-    if diagnostics <> [] then (
+    if diagnostics <> [] then
       diagnostics
       |> List.map (fun diagnostic ->
-           if colors then Output.yellow diagnostic else diagnostic)
-      |> String.concat "\n\n" |> prerr_endline);
+          if colors then Output.yellow diagnostic else diagnostic)
+      |> String.concat "\n\n" |> prerr_endline;
     diagnostics
   in
   let report_completion diagnostics =
@@ -477,7 +483,7 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
     raise
       (Reported_failure
          ("Incremental build failed. Error: \027[2K\r  Failed to Compile. "
-         ^ "See Errors Above"))
+        ^ "See Errors Above"))
   in
   let report_parse_failure output =
     finalize_logs ();
@@ -496,7 +502,8 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
     write_build_ninja_once ();
     raise
       (Reported_failure
-         "Incremental build failed. Error: \027[2K\r  Could not parse Source Files")
+         "Incremental build failed. Error: \027[2K\r  Could not parse Source \
+          Files")
   in
   let format_cycle cycle
       (by_key : (string, Build_preparation.cycle_node) Hashtbl.t) =
@@ -515,19 +522,20 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
     in
     "\nCan't continue... Found a circular dependency in your code:\n"
     ^ (cycle |> List.map format_node |> String.concat "\n → ")
-    ^ "\nPossible solutions:\n- Extract shared code into a new module both depend on.\n"
+    ^ "\n\
+       Possible solutions:\n\
+       - Extract shared code into a new module both depend on.\n"
   in
   let execute ~release_build_lock =
     poll ();
     let cycle =
-      match previous, changes with
+      match (previous, changes) with
       | Some previous, Some changes ->
         prepare_incremental previous changes stats
       | Some _, None -> raise Full_rebuild_required
       | None, _ ->
         Build_preparation.run ~root_config ~prod ~features ~warn_error ~filter
-          ~watch ~stats ~parse_step
-          ~on_cleanup:(fun seconds ->
+          ~watch ~stats ~parse_step ~on_cleanup:(fun seconds ->
             if interactive && show_progress && not is_rebuild then (
               if stats.compiler_cleaned then
                 print_endline
@@ -558,29 +566,28 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
     poll ();
     let namespace_count =
       try run_namespace_jobs stats
-      with Build_failure output -> raise (Parse_failure (parse_output ^ output))
+      with Build_failure output ->
+        raise (Parse_failure (parse_output ^ output))
     in
     Output.Progress.finish progress;
     if interactive && show_progress then
       print_endline
         (Output.parsing_message ~color:colors ~step:parse_step
-           ~count:stats.parsed ~seconds:(phase_seconds stats.parse_seconds));
+           ~count:stats.parsed
+           ~seconds:(phase_seconds stats.parse_seconds));
     prerr_string parse_output;
     let compile_started = Unix.gettimeofday () in
-    (try
-       run_scheduled_modules stats ~compile_step ~namespace_count
+    (try run_scheduled_modules stats ~compile_step ~namespace_count
      with Build_failure output ->
        if Option.is_none stats.failure then stats.failure <- Some output);
     Output.Progress.finish progress;
     let compile_seconds =
       phase_seconds (Unix.gettimeofday () -. compile_started)
     in
-    (match stats.failure, cycle with
+    match (stats.failure, cycle) with
     | Some output, _ -> report_failure ~compile_seconds output
     | None, Some cycle_info ->
-      let output =
-        format_cycle cycle_info.cycle cycle_info.nodes_by_key
-      in
+      let output = format_cycle cycle_info.cycle cycle_info.nodes_by_key in
       cycle_info.cycle
       |> List.filter_map (Hashtbl.find_opt cycle_info.nodes_by_key)
       |> List.map (fun node -> node.Build_preparation.package_root)
@@ -613,7 +620,7 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
       Option.iter
         (fun command -> After_build.run ?poll:process_poll ~root command)
         after_build;
-      if compilation_kind <> One_shot then report_completion diagnostics)
+      if compilation_kind <> One_shot then report_completion diagnostics
   in
   Build_lock.with_build ~poll (Project_context.workspace_lock_root root)
     (fun ~release:release_build_lock ->
@@ -631,10 +638,10 @@ let run ~seen ~verbosity ~folder ~prod ~features ~warn_error ~watch ~after_build
     ~filter ~no_timing =
   try
     run_with_warning_state ~warning_state:(Warning_state.create ())
-      ~poll:(fun () -> ()) ~previous:None ~changes:None
-      ~compilation_kind:One_shot
-      ~no_timing ~seen ~verbosity ~folder ~prod ~features ~warn_error ~watch
-      ~after_build ~filter ~on_state:(fun _ -> ())
+      ~poll:(fun () -> ())
+      ~previous:None ~changes:None ~compilation_kind:One_shot ~no_timing ~seen
+      ~verbosity ~folder ~prod ~features ~warn_error ~watch ~after_build ~filter
+      ~on_state:(fun _ -> ())
     |> ignore
   with Reported_failure message -> raise (Error message)
 
@@ -660,14 +667,14 @@ let watch ~verbosity ~folder ~prod ~features ~warn_error ~after_build ~filter
           (* Failed initial and incremental attempts still own useful parsed
              state. Full reconstruction failures do not, because their graph may
              be only partially discovered. *)
-          (match compilation_kind, !attempted with
+          (match (compilation_kind, !attempted) with
           | (Initial_watch | Incremental_watch), Some state ->
             retained := Some state
           | (One_shot | Full_watch), _ | _, None -> ());
           raise exn
       in
       let next =
-        match !retained, changes, !force_full_rebuild with
+        match (!retained, changes, !force_full_rebuild) with
         | Some previous, Some changes, false -> (
           try run ~previous ~changes Incremental_watch
           with Full_rebuild_required ->
@@ -682,8 +689,11 @@ let watch ~verbosity ~folder ~prod ~features ~warn_error ~after_build ~filter
       Watcher.Succeeded
     with
     | Reported_failure _ -> Watcher.Failed
-    | Package_error message | Error message | Config.Error message
-    | Source.Error message | Process.Error message ->
+    | Package_error message
+    | Error message
+    | Config.Error message
+    | Source.Error message
+    | Process.Error message ->
       prerr_endline message;
       Watcher.Failed
     | (Sys_error _ as exn) | (Unix.Unix_error _ as exn) ->
