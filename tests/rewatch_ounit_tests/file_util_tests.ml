@@ -42,6 +42,24 @@ let tests =
       check
         (not (File_util.files_equal missing first))
         "a missing file should not compare equal";
+      let large_source = Filename.concat root "large-source" in
+      let large_copy = Filename.concat root "large-copy" in
+      let large_contents =
+        String.init 150_000 (fun index -> Char.chr (index mod 251))
+      in
+      write_file large_source large_contents;
+      File_util.copy_existing_file large_source large_copy;
+      check
+        (File_util.files_equal large_source large_copy)
+        "streaming copies preserve files spanning multiple buffer reads";
+      let changed_contents = Bytes.of_string large_contents in
+      Bytes.set changed_contents (Bytes.length changed_contents - 1) 'x';
+      write_file large_copy (Bytes.to_string changed_contents);
+      check
+        (not (File_util.files_equal large_source large_copy))
+        "chunk comparison detects a difference after the first buffer";
+      File_util.remove_file large_source;
+      File_util.remove_file large_copy;
       let concurrent_root = Filename.concat root "concurrent" in
       let start = Atomic.make false in
       let failures = ref [] in

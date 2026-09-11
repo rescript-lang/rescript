@@ -119,27 +119,16 @@ let namespace_job ~bsc ~runtime ~build_dir ~ocaml_dir ~entry ~package_dirty
           File_util.copy_existing_file ~ensure_parent:false mlmap
             (Filename.concat ocaml_dir (namespace ^ ".mlmap")) )
 
-let run_post_build ?poll (config : Config.t) path =
+let post_build_tasks (config : Config.t) path =
   match config.js_post_build with
-  | None -> ()
+  | None -> []
   | Some command ->
-    List.iter
+    List.map
       (fun spec ->
         let output = Build_artifacts.generated_js_path config path spec in
         let env, program, args = Platform.post_build_command ~command ~output in
-        let result =
-          match env with
-          | None -> Process.run ?poll ~cwd:config.root program args
-          | Some env -> Process.run ~env ?poll ~cwd:config.root program args
-        in
-        if not (Process.succeeded result) then (
-          let captured = result.stderr ^ result.stdout in
-          raise
-            (Compiler_scheduler.Build_failure
-               (Printf.sprintf "js-post-build command failed for %s%s" output
-                  (if captured = "" then "" else "\n" ^ captured))));
-        if result.stdout <> "" then print_string result.stdout;
-        if result.stderr <> "" then prerr_string result.stderr)
+        ( output,
+          Process.task ?env Process.{program; args; cwd = config.root} ))
       config.package_specs
 
 let compile_job ~bsc ~runtime ~build_dir ~watch ~(config : Config.t)
@@ -171,8 +160,8 @@ let compile_job ~bsc ~runtime ~build_dir ~watch ~(config : Config.t)
   in
   Process.{program = bsc; args; cwd = build_dir}
 
-let publish ?poll ~build_dir ~ocaml_dir ~is_local ~(config : Config.t)
-    ~is_interface path result =
+let publish ~build_dir ~ocaml_dir ~is_local ~(config : Config.t) ~is_interface
+    path result =
   let stderr =
     if is_local then result.Process.stderr
     else retain_critical_external_warnings result.stderr
@@ -198,7 +187,7 @@ let publish ?poll ~build_dir ~ocaml_dir ~is_local ~(config : Config.t)
   File_util.copy_existing_file ~ensure_parent:false source build_source;
   File_util.copy_existing_file ~ensure_parent:false source
     (Filename.concat ocaml_dir (Filename.basename path));
-  if not is_interface then (
+  if not is_interface then
     List.iter
       (fun spec ->
         if spec.Config.in_source then (
@@ -214,5 +203,4 @@ let publish ?poll ~build_dir ~ocaml_dir ~is_local ~(config : Config.t)
               (build_output ^ ".map")
           else File_util.remove_file (build_output ^ ".map")))
       config.package_specs;
-    run_post_build ?poll config path);
   stderr

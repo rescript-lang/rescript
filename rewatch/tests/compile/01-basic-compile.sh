@@ -28,8 +28,7 @@ fi
 # Rust clean rebuilds the portal dependency with the consumer's output settings,
 # while the OCaml implementation preserves its independently published output.
 # Normalize the equivalent import before comparing this shared fixture.
-replace 's#@rescript/belt/src/#@rescript/belt/lib/es6/src/#g' \
-  ./packages/dep02/src/Array.mjs
+normalize_belt_portal_import
 
 if git diff --exit-code ./;
 then

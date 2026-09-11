@@ -68,6 +68,13 @@ replace() {
   fi
 }
 
+normalize_belt_portal_import() {
+  local output="./packages/dep02/src/Array.mjs"
+  if [ -f "$output" ]; then
+    replace 's#@rescript/belt/src/#@rescript/belt/lib/es6/src/#g' "$output"
+  fi
+}
+
 wait_for_pid_gone() {
   local pid="$1"; local timeout="${2:-10}"
   while kill -0 "$pid" 2> /dev/null && [ "$timeout" -gt 0 ]; do

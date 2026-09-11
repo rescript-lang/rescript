@@ -1,6 +1,7 @@
 exception Cycle of string list
 
-val blocked_dependents : (string * string list) list -> string list -> string list
+val cycle_blocked_nodes :
+  'a list -> name:('a -> string) -> deps:('a -> string list) -> 'a list
 
 val shortest_cycle :
   'a list ->

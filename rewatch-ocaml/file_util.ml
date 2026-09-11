@@ -97,14 +97,20 @@ let write_file_atomic ?(ensure_parent = true) ?perm path contents =
    avoiding repeated metadata probes when publishing many files. *)
 let copy_existing_file ?(ensure_parent = true) source destination =
   if ensure_parent then ensure_dir (Filename.dirname destination);
-  let input = open_in_bin source in
+  let input_channel = open_in_bin source in
   Fun.protect
-    ~finally:(fun () -> close_in_noerr input)
+    ~finally:(fun () -> close_in_noerr input_channel)
     (fun () ->
-      let output = open_out_bin destination in
-      with_output_channel output (fun output ->
-        really_input_string input (in_channel_length input)
-        |> output_string output))
+      let output_channel = open_out_bin destination in
+      with_output_channel output_channel (fun output_channel ->
+        let buffer = Bytes.create 65_536 in
+        let rec copy () =
+          let count = input input_channel buffer 0 (Bytes.length buffer) in
+          if count > 0 then (
+            output output_channel buffer 0 count;
+            copy ())
+        in
+        copy ()))
 
 let copy_optional_existing_file ?(ensure_parent = true) source destination =
   try copy_existing_file ~ensure_parent source destination
@@ -154,9 +160,7 @@ let files_equal first second =
                    in
                    first_count = second_count
                    && (first_count = 0
-                      || (Bytes.sub first_buffer 0 first_count
-                          = Bytes.sub second_buffer 0 second_count
-                         && loop ()))
+                      || (Bytes.equal first_buffer second_buffer && loop ()))
                  in
                  loop ())))
 

@@ -220,7 +220,9 @@ let format_files_with_bsc ?max_jobs ~bsc ~check files =
            })
   in
   let next path = function
-  | None -> Some Process.{program = bsc; args = ["-format"; path]; cwd}
+  | None ->
+    Some
+      (Process.task Process.{program = bsc; args = ["-format"; path]; cwd})
   | Some result ->
     if not (Process.succeeded result) then
       raise (Error (formatting_error path result.stderr));

@@ -57,6 +57,8 @@ replace '/Console.log("added-by-test")/d' ./packages/main/src/Main.res;
 
 sleep 5
 
+normalize_belt_portal_import
+
 if git diff --exit-code ./
 then
   success "Adding and removing changes nothing"

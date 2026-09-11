@@ -180,4 +180,6 @@ fi
 
 # Compiler-args tests
 ./compiler-args/01-compiler-args-cwd-invariant.sh &&
-./compiler-args/02-warnings-in-parser-and-compiler.sh
+./compiler-args/02-warnings-in-parser-and-compiler.sh &&
+
+(cd ../testrepo && normalize_belt_portal_import)

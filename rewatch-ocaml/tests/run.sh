@@ -158,6 +158,23 @@ printf 'let value = D.value\n' >"$multiple_cycles/src/C.res"
 printf 'let value = C.value\n' >"$multiple_cycles/src/D.res"
 printf 'let value = 1\n' >"$multiple_cycles/src/Valid.res"
 
+post_build_cmi="$work/post-build-cmi"
+mkdir -p "$post_build_cmi/src"
+printf '%s\n' \
+  '{"name":"post-build-cmi","sources":"src","package-specs":{"module":"esmodule","in-source":true,"suffix":".mjs"},"js-post-build":{"cmd":"node -e \"process.exit(require('\''fs'\'').existsSync('\''allow-post-build'\'') ? 0 : 7)\""}}' \
+  >"$post_build_cmi/rescript.json"
+printf 'let value = 1\n' >"$post_build_cmi/src/A.res"
+printf 'let dependent = A.value + 1\n' >"$post_build_cmi/src/B.res"
+touch "$post_build_cmi/allow-post-build"
+
+retained_cycle="$work/retained-cycle"
+mkdir -p "$retained_cycle/src"
+printf '%s\n' \
+  '{"name":"retained-cycle","sources":"src","package-specs":{"module":"esmodule","in-source":true,"suffix":".mjs"}}' \
+  >"$retained_cycle/rescript.json"
+printf 'let value = 1\n' >"$retained_cycle/src/A.res"
+printf 'let dependent = A.value\n' >"$retained_cycle/src/B.res"
+
 if [ -x "$port_directory/bsc.exe" ]; then
   env -u RESCRIPT_BSC_EXE "$port" build "$packaged_basic" \
     >"$packaged_basic/build.log"
@@ -575,6 +592,55 @@ if ! wait_for_text "$symlink_source/src/Linked.mjs" 'value = 2'; then
 fi
 kill -TERM "$symlink_source_pid"
 wait "$symlink_source_pid" 2>/dev/null || true
+
+"$port" watch "$post_build_cmi" >"$post_build_cmi/watch.log" 2>&1 &
+post_build_cmi_pid=$!
+background_pids="$background_pids $post_build_cmi_pid"
+if ! wait_for_file "$post_build_cmi/src/B.mjs"; then
+  cat "$post_build_cmi/watch.log" >&2
+  exit 1
+fi
+rm "$post_build_cmi/allow-post-build"
+printf 'let value = "changed"\n' >"$post_build_cmi/src/A.res"
+if ! wait_for_text "$post_build_cmi/watch.log" \
+  'js-post-build command failed'; then
+  cat "$post_build_cmi/watch.log" >&2
+  exit 1
+fi
+touch "$post_build_cmi/allow-post-build"
+printf 'let value = "changed"\n\n' >"$post_build_cmi/src/A.res"
+if ! wait_for_text "$post_build_cmi/watch.log" 'This has type:'; then
+  cat "$post_build_cmi/watch.log" >&2
+  exit 1
+fi
+kill -TERM "$post_build_cmi_pid"
+wait "$post_build_cmi_pid" 2>/dev/null || true
+
+"$port" watch "$retained_cycle" >"$retained_cycle/watch.log" 2>&1 &
+retained_cycle_pid=$!
+background_pids="$background_pids $retained_cycle_pid"
+if ! wait_for_file "$retained_cycle/src/A.mjs"; then
+  cat "$retained_cycle/watch.log" >&2
+  exit 1
+fi
+printf 'let value: int = "broken"\n' >"$retained_cycle/src/A.res"
+if ! wait_for_text "$retained_cycle/watch.log" 'expected to have type'; then
+  cat "$retained_cycle/watch.log" >&2
+  exit 1
+fi
+printf 'let value = B.dependent\n' >"$retained_cycle/src/A.res"
+if ! wait_for_text "$retained_cycle/watch.log" 'circular dependency'; then
+  cat "$retained_cycle/watch.log" >&2
+  exit 1
+fi
+if grep -F 'from "./B.mjs"' "$retained_cycle/src/A.mjs" >/dev/null; then
+  cat "$retained_cycle/src/A.mjs" >&2
+  cat "$retained_cycle/watch.log" >&2
+  echo "cycle member was compiled from retained dirty state" >&2
+  exit 1
+fi
+kill -TERM "$retained_cycle_pid"
+wait "$retained_cycle_pid" 2>/dev/null || true
 
 warning_call_log="$warning_replay/bsc-calls.log"
 warning_watch_log="$warning_replay/watch.log"

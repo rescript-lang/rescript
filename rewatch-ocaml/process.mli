@@ -1,5 +1,6 @@
 type result = {status: Unix.process_status; stdout: string; stderr: string}
 type job = {program: string; args: string list; cwd: string}
+type task
 
 exception Error of string
 
@@ -7,6 +8,9 @@ val decode_utf8_lossy : string -> string
 val succeeded : result -> bool
 val status_string : Unix.process_status -> string
 val default_max_jobs : int
+
+val task :
+  ?env:Spawn.Env.t -> ?on_result:(result -> result) -> job -> task
 
 val run_parallel :
   ?max_jobs:int ->
@@ -22,7 +26,7 @@ val run_dependency_graph :
   ?is_fatal:(exn -> bool) ->
   ?poll:(unit -> unit) ->
   'a work list ->
-  next:('a -> result option -> job option) ->
+  next:('a -> result option -> task option) ->
   unit
 
 val run :

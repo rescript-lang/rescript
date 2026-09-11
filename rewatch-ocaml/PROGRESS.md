@@ -1079,6 +1079,18 @@ pipes in under one second on Unix. A single five-millisecond ticker exists only
 for scheduler calls with a watch poll callback; child completion wakes the
 scheduler immediately.
 
+Compiler completion finalizers now run on the child waiter threads before the
+dispatcher is notified. Successful compiler jobs publish artifacts and hash the
+published CMI there, allowing independent modules' filesystem work to overlap;
+the dispatcher alone applies the resulting digest to shared build state before
+releasing dependents. Per-module post-build commands are tracked as subsequent
+tasks for the same graph node, so independent hooks also overlap while every
+child remains visible to normal cancellation and process-tree cleanup. The node
+keeps its scheduler slot until compilation, publication, and all hooks finish,
+matching the reference worker lifecycle. A synchronization-based unit test
+requires two independent finalizers to enter concurrently, and retained watch
+tests cover CMI propagation when a hook fails.
+
 A one-run working-tree performance smoke check measured 5,534 ms / 739,804 KiB
 for OCaml and 4,766 ms / 723,876 KiB for Rust (1.161x wall time and 1.022x RSS).
 It retained identical clean, unchanged, and edit compiler-work manifests,
@@ -2185,13 +2197,13 @@ Build preparation previously blocked only the one cycle selected for the user
 diagnostic. A second independent cycle then reached the subprocess scheduler's
 acyclic-graph precondition, preventing unrelated work from running and replacing
 the source-level diagnostic with an internal scheduler error. Preparation now
-repeatedly removes each cyclic component and its transitive dependents while
-retaining the globally shortest deterministic cycle for presentation. Rust does
-not share this defect: its compiler scheduler dispatches available work first
-and diagnoses the remaining cycle only when scheduling stalls. A canonical
-fixture with two independent cycles verifies that an unrelated module compiles,
-all cycle members remain blocked, and only the normal circular-dependency
-diagnostic is emitted.
+uses a linear scheduling pass to identify every cyclic component and its
+transitive dependents, then searches that residual graph once for the shortest
+deterministic cycle to present. Rust does not share this defect: its compiler
+scheduler dispatches available work first and diagnoses the remaining cycle
+only when scheduling stalls. A canonical fixture with two independent cycles
+verifies that an unrelated module compiles, all cycle members remain blocked,
+and only the normal circular-dependency diagnostic is emitted.
 
 The review's two graph-construction performance findings were OCaml-only.
 Unresolved dependency names previously scanned every global module looking for
@@ -2211,9 +2223,60 @@ it does not share this defect. These are algorithmic complexity corrections;
 their effect will be included in the deferred stable performance gate rather
 than claimed from noisy timing here.
 
-All eight external-review findings are resolved. The affected OUnit, canonical
-watch/build, 111-case command-validation, Rust-test-inventory, and formatting
-gates pass.
+All eight initial external-review findings are resolved. The affected OUnit,
+canonical watch/build, 111-case command-validation, Rust-test-inventory, and
+formatting gates pass.
+
+A follow-up source review found three interactions in those fixes. CMI refresh
+was still tied to successful completion of the complete publication callback,
+so an implementation that published a changed CMI and then failed its
+`js-post-build` command could lose dependent invalidation. CMI refresh and
+propagation now run after every successful compiler result even when a later
+publication step fails, while the module itself remains dirty until all of its
+work succeeds. Rust already propagates the CMI result of failed module attempts,
+so it does not share this defect. A retained-watch regression exercises a
+changed inferred interface, failing post-build command, retry, and stale
+dependent type error.
+
+Retained dirtiness could also override the cycle-blocking decision made during
+the next preparation, allowing a previously failing module to compile after an
+edit introduced a cycle. Cycle admission is now an independent requirement:
+blocked modules are never dirty or scheduled, regardless of retained recovery
+state. This interaction was specific to the OCaml retained-state model. A live
+watch regression first retains a compiler failure, introduces a cycle, and
+verifies that the prior JavaScript output is not replaced with an import from
+the blocked module.
+
+Finally, the first multiple-cycle fix searched for a shortest cycle from every
+node even on ordinary acyclic builds, then repeated that search while blocking
+cycles. The linear residual pass described above removes that regression and
+reserves the more expensive shortest-cycle search for actual error reporting.
+Rust's scheduling-based cycle detection does not have the OCaml regression.
+Clean-build dirty-source membership also used repeated linear list searches;
+preparation now builds hash-backed membership tables once for dirty paths and
+removed module names. This was another OCaml-only quadratic path.
+
+Artifact copies no longer materialize each complete CMI, CMT, CMJ, source, or
+JavaScript file as an OCaml string. They stream through one bounded 64 KiB
+buffer, and equality checks compare reusable buffers without allocating a pair
+of slices for every chunk. This preserves the existing portable channel-based
+implementation and publication semantics while bounding per-copy live memory.
+The full clean-build effect remains to be measured under the stable performance
+gate rather than inferred from allocation behavior.
+
+The follow-up review also identified larger simplification candidates for the
+final non-comment cleanup: require fully prepared packages at package-build
+entry, choose one owner for duplicated dependency state, give deferred cleanup
+one execution owner, and share pure compiler-argument construction between the
+diagnostic command and actual builds. These should be adopted only where they
+remove real fallback or synchronization paths without disturbing retained-watch
+state or argument parity. The same pass will replace internal polymorphic
+variants with normal variants wherever the case set is closed; external APIs
+and genuinely open case sets remain exceptions. Remaining measured-performance candidates are
+per-child reader/waiter threads and buffers, serial parser-job preparation,
+retained-build reconstruction, and publication allocation/GC. They require
+profiling before architectural work; the cycle, dirty-membership, and
+worker-lifecycle differences were concrete enough to correct immediately.
 
 The non-comment cleanup removed the obsolete `.rewatch-pending` and
 `.rewatch-backup` recognition, cleanup scans, explicit deletion paths, and

@@ -151,7 +151,7 @@ let tests =
           if !cancellation_polls = 2 then raise Cancel)
         ~next:(fun _ result ->
           match result with
-          | None -> Some (process_job ["--wait-forever"])
+          | None -> Some (Process.task (process_job ["--wait-forever"]))
           | Some _ -> None);
       false
     with Cancel -> true
@@ -185,7 +185,8 @@ let tests =
              if !descendant_pipe_polls = 2 then raise Cancel)
            ~next:(fun _ result ->
              match result with
-             | None -> Some (process_job ["--exit-with-descendant"])
+             | None ->
+               Some (Process.task (process_job ["--exit-with-descendant"]))
              | Some _ -> None);
          false
        with Cancel -> true
@@ -204,7 +205,7 @@ let tests =
           check
             (Hashtbl.mem graph_completed "a")
             "dependency work starts only after its prerequisite completes";
-        Some (process_job ["--process-result"; key; ""; "0"])
+        Some (Process.task (process_job ["--process-result"; key; ""; "0"]))
       | Some result ->
         check
           (Process.succeeded result && result.stdout = key)
@@ -215,6 +216,36 @@ let tests =
   check
     (List.rev !graph_completion_order = ["a"; "b"; "c"])
     "dependency scheduler prioritizes the longest ready path";
+  let finalizers_entered = Atomic.make 0 in
+  let parallel_finalizers_completed =
+    let exception Finalizers_serialized in
+    try
+      Process.run_dependency_graph ~max_jobs:2
+        [graph_work "first" []; graph_work "second" []]
+        ~next:(fun _ result ->
+          match result with
+          | Some _ -> None
+          | None ->
+            Some
+              (Process.task
+                 ~on_result:(fun result ->
+                   ignore (Atomic.fetch_and_add finalizers_entered 1);
+                   let deadline = Unix.gettimeofday () +. 2. in
+                   while
+                     Atomic.get finalizers_entered < 2
+                     && Unix.gettimeofday () < deadline
+                   do
+                     Thread.delay 0.001
+                   done;
+                   if Atomic.get finalizers_entered < 2 then
+                     raise Finalizers_serialized;
+                   result)
+                 (process_job ["--process-result"; ""; ""; "0"])));
+      true
+    with Finalizers_serialized -> false
+  in
+  check parallel_finalizers_completed
+    "independent subprocess finalizers run before scheduler dispatch resumes";
   let graph_cycle_rejected =
     try
       Process.run_dependency_graph
@@ -231,7 +262,8 @@ let tests =
         [graph_work "z" []; graph_work "a" []]
         ~next:(fun key result ->
           match result with
-          | None -> Some (process_job ["--process-result"; ""; ""; "1"])
+          | None ->
+            Some (Process.task (process_job ["--process-result"; ""; ""; "1"]))
           | Some _ ->
             incr drained_failures;
             raise (Failure key));
@@ -391,19 +423,23 @@ let tests =
   check
     (shortest_cycle = ["ShortA"; "ShortB"; "ShortA"])
     "cycle diagnostics select the shortest cycle deterministically";
-  let blocked =
-    Graph.blocked_dependents
+  let cycle_blocked =
+    Graph.cycle_blocked_nodes
       [
-        ("A", ["B"]); ("B", ["A"]); ("C", ["A"]); ("D", ["C"]); ("Unrelated", []);
+        node "A" ["B"];
+        node "B" ["A"];
+        node "C" ["D"];
+        node "D" ["C"];
+        node "Dependent" ["A"];
+        node "TransitiveDependent" ["Dependent"];
+        node "Unrelated" [];
       ]
-      ["A"; "B"]
+      ~name:fst ~deps:snd
+    |> List.map fst |> List.sort String.compare
   in
   check
-    (List.for_all (fun name -> List.mem name blocked) ["A"; "B"; "C"; "D"])
-    "cycle transitive dependents are blocked";
-  check
-    (not (List.mem "Unrelated" blocked))
-    "cycle-unrelated modules remain schedulable";
+    (cycle_blocked = ["A"; "B"; "C"; "D"; "Dependent"; "TransitiveDependent"])
+    "a linear scheduling pass retains every cycle and its dependents";
   check
     (Project_context.is_local_dependency_canonical ~workspace:"/workspace"
        "/workspace/packages/dependency")
