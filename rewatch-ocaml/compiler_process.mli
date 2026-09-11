@@ -34,4 +34,4 @@ val publish :
   is_interface:bool ->
   string ->
   Process.result ->
-  string
+  Compiler_scheduler.publish_result

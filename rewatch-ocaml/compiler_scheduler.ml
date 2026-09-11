@@ -1,5 +1,9 @@
 exception Build_failure of string
 exception Module_failed
+type cmi_change = Cmi_changed | Cmi_unchanged | Cmi_change_unknown
+exception Publication_failure of exn * cmi_change
+
+type publish_result = {stderr: string; cmi_change: cmi_change}
 
 type phase =
   | Start
@@ -9,8 +13,8 @@ type phase =
   | Done
 
 type publication =
-  | Published of {stderr: string; cmi_digest: Digest.t option}
-  | Failed_after_cmi_publication of {error: exn; cmi_digest: Digest.t option}
+  | Published of {stderr: string; cmi_change: cmi_change}
+  | Failed_after_cmi_publication of {error: exn; cmi_change: cmi_change}
 
 type scheduled_module = {
   key: string;
@@ -18,11 +22,10 @@ type scheduled_module = {
   source: Source.module_;
   state: Build_state.module_;
   cmi_path: string;
-  mutable cmi_digest_before: Digest.t option;
   publication: publication option Atomic.t;
   prepare: unit -> unit;
   compile: is_interface:bool -> string -> Process.job;
-  publish: is_interface:bool -> string -> Process.result -> string;
+  publish: is_interface:bool -> string -> Process.result -> publish_result;
   record_published_outputs: is_interface:bool -> string -> unit;
   post_build: string -> (string * Process.task) list;
   package_root: string;
@@ -48,7 +51,6 @@ let create ~key ~dependencies ~source ~state ~cmi_path ~prepare ~compile
     source;
     state;
     cmi_path;
-    cmi_digest_before = None;
     publication = Atomic.make None;
     prepare;
     compile;
@@ -67,27 +69,16 @@ let candidate ~key ~state ~warning_paths ~make =
 
 let candidate_requires_compile candidate = candidate.state.compile_dirty
 
-let file_digest path =
-  try Some (Digest.file path) with Sys_error _ | Unix.Unix_error _ -> None
-
 let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
     ~mark_compiled ~mark_had_warnings ~progress ~compile_step ~namespace_count
     ~verbosity =
-  let refresh_published_cmi (scheduled : scheduled_module) cmi_digest_after =
-    (* Only a changed interface invalidates reverse dependents. Comparing bytes
-       avoids timestamp races and skips unnecessary downstream compilation. *)
-    let cmi_changed =
-      match (scheduled.cmi_digest_before, cmi_digest_after) with
-      | Some before, Some after -> before <> after
-      | _ -> true
-    in
+  let refresh_published_cmi (scheduled : scheduled_module) cmi_change =
     Compile_assets.refresh_cmi compile_assets ~key:scheduled.key
       ~path:scheduled.cmi_path;
     scheduled.state.last_compiled_cmi <-
       Compile_assets.cmi compile_assets scheduled.key
       |> Option.map (fun entry -> entry.Compile_assets.modified);
-    scheduled.cmi_digest_before <- cmi_digest_after;
-    if cmi_changed then
+    if cmi_change <> Cmi_unchanged then
       Build_state.mark_dependents_compile_dirty build_state scheduled.state
   in
   let finish_successful_compile (scheduled : scheduled_module) =
@@ -172,19 +163,19 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
   in
   let record_result (scheduled : scheduled_module) ~is_interface path result =
     let publication = Atomic.exchange scheduled.publication None in
-    let result, publication_error, cmi_digest =
+    let result, publication_error, cmi_change =
       match publication with
-      | Some (Published {stderr; cmi_digest}) ->
-        ({result with Process.stderr}, None, Some cmi_digest)
-      | Some (Failed_after_cmi_publication {error; cmi_digest}) ->
-        (result, Some (Printexc.to_string error), Some cmi_digest)
+      | Some (Published {stderr; cmi_change}) ->
+        ({result with Process.stderr}, None, Some cmi_change)
+      | Some (Failed_after_cmi_publication {error; cmi_change}) ->
+        (result, Some (Printexc.to_string error), Some cmi_change)
       | None -> (result, None, None)
     in
     Option.iter
-      (fun cmi_digest ->
-        refresh_published_cmi scheduled cmi_digest;
+      (fun cmi_change ->
+        refresh_published_cmi scheduled cmi_change;
         scheduled.record_published_outputs ~is_interface path)
-      cmi_digest;
+      cmi_change;
     let message =
       match publication_error with
       | Some message ->
@@ -221,11 +212,15 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
         (if Process.succeeded result then
            let publication =
              try
-               let stderr = scheduled.publish ~is_interface path result in
-               Published {stderr; cmi_digest = file_digest scheduled.cmi_path}
-             with error ->
+               let published = scheduled.publish ~is_interface path result in
+               Published
+                 {stderr = published.stderr; cmi_change = published.cmi_change}
+             with
+             | Publication_failure (error, cmi_change) ->
+               Failed_after_cmi_publication {error; cmi_change}
+             | error ->
                Failed_after_cmi_publication
-                 {error; cmi_digest = file_digest scheduled.cmi_path}
+                 {error; cmi_change = Cmi_change_unknown}
            in
            Atomic.set scheduled.publication (Some publication));
         result)
@@ -276,7 +271,6 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
             if scheduled.state.compile_dirty then (
               mark_compiled ();
               scheduled.prepare ();
-              scheduled.cmi_digest_before <- file_digest scheduled.cmi_path;
               match scheduled.source.Source.interface with
               | Some path ->
                 Output.Progress.debug progress ~verbosity

@@ -170,10 +170,15 @@ let files_equal first second =
               in
               loop ())))
 
-let copy_file_if_changed ?(ensure_parent = true) source destination =
-  if not (files_equal source destination) then
+let copy_file_if_different ?(ensure_parent = true) source destination =
+  let changed = not (files_equal source destination) in
+  if changed then
     if ensure_parent then copy_file source destination
-    else copy_existing_file ~ensure_parent:false source destination
+    else copy_existing_file ~ensure_parent:false source destination;
+  changed
+
+let copy_file_if_changed ?ensure_parent source destination =
+  ignore (copy_file_if_different ?ensure_parent source destination)
 
 let modification_time path =
   stat_opt path |> Option.map (fun metadata -> metadata.Unix.st_mtime)

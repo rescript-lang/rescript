@@ -1,4 +1,8 @@
 exception Build_failure of string
+type cmi_change = Cmi_changed | Cmi_unchanged | Cmi_change_unknown
+exception Publication_failure of exn * cmi_change
+
+type publish_result = {stderr: string; cmi_change: cmi_change}
 
 type scheduled_module
 type candidate
@@ -11,7 +15,7 @@ val create :
   cmi_path:string ->
   prepare:(unit -> unit) ->
   compile:(is_interface:bool -> string -> Process.job) ->
-  publish:(is_interface:bool -> string -> Process.result -> string) ->
+  publish:(is_interface:bool -> string -> Process.result -> publish_result) ->
   record_published_outputs:(is_interface:bool -> string -> unit) ->
   post_build:(string -> (string * Process.task) list) ->
   package_root:string ->

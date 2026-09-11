@@ -178,6 +178,9 @@ whole-port maintainability pass before release:
 - Simplify duplicated control flow and remove dead code, stale compatibility
   scaffolding, abandoned experiments, and avoidable allocations without
   regressing measured performance.
+- Audit optional booleans and other encodings with unnamed states. Prefer a
+  normal variant when each state has distinct meaning so invalid combinations
+  are unrepresentable and compiler errors name the missing case.
 - Add comments for ownership, concurrency, platform, cleanup, and algorithmic
   invariants that are not evident from the code. Do not add comments that merely
   paraphrase statements.

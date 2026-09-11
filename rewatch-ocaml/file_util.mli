@@ -14,6 +14,7 @@ val copy_optional_existing_file :
 
 val copy_file : string -> string -> unit
 val files_equal : string -> string -> bool
+val copy_file_if_different : ?ensure_parent:bool -> string -> string -> bool
 val copy_file_if_changed : ?ensure_parent:bool -> string -> string -> unit
 val modification_time : string -> float option
 val remove_file : string -> unit
