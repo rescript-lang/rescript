@@ -165,6 +165,7 @@ fi
 ./clean/02-clean-dev-dependencies.sh &&
 ./clean/03-clean-node-modules.sh &&
 ./clean/04-clean-rebuild-no-compiler-update.sh &&
+./clean/05-clean-invalid-module-graph.sh &&
 
 # Experimental tests
 ./experimental/01-experimental-features-emit.sh &&

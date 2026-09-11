@@ -1,12 +1,11 @@
 use super::build_types::*;
 use super::packages;
-use crate::build;
 use crate::build::packages::Package;
-use crate::config::{Config, SourceMapCommand};
+use crate::config::Config;
 use crate::helpers;
 use crate::helpers::emojis::*;
 use crate::project_context::ProjectContext;
-use ahash::AHashSet;
+use ahash::{AHashMap, AHashSet};
 use anyhow::Result;
 use console::style;
 use rayon::prelude::*;
@@ -68,37 +67,36 @@ pub fn remove_compile_assets(package: &packages::Package, source_file: &Path) {
     }
 }
 
-fn clean_source_files(build_state: &BuildState, root_config: &Config) {
-    // get all rescript file locations
-    let rescript_file_locations = build_state
-        .modules
-        .values()
-        .filter_map(|module| match &module.source_type {
-            SourceType::SourceFile(source_file) => {
-                build_state.packages.get(&module.package_name).map(|package| {
-                    root_config
-                        .get_package_specs()
-                        .into_iter()
-                        .filter_map(|spec| {
-                            if spec.in_source {
-                                Some((
-                                    package.path.join(&source_file.implementation.path),
-                                    match spec.suffix {
-                                        None => root_config.get_suffix(&spec),
-                                        Some(suffix) => suffix,
-                                    },
-                                ))
-                            } else {
-                                None
-                            }
-                        })
-                        .collect::<Vec<(PathBuf, String)>>()
-                })
+fn clean_source_files(packages: &AHashMap<String, Package>, root_config: &Config) {
+    let mut rescript_file_locations = Vec::new();
+    for package in packages.values() {
+        let Some(source_files) = &package.source_files else {
+            continue;
+        };
+        for source_file in source_files.keys().filter(|source_file| {
+            source_file
+                .extension()
+                .and_then(|extension| extension.to_str())
+                .is_some_and(helpers::is_implementation_file)
+        }) {
+            for spec in root_config.get_package_specs() {
+                let output_base = if spec.in_source {
+                    package.path.join(source_file)
+                } else {
+                    package
+                        .path
+                        .join("lib")
+                        .join(spec.get_out_of_source_dir())
+                        .join(source_file)
+                };
+                let suffix = match &spec.suffix {
+                    None => root_config.get_suffix(&spec),
+                    Some(suffix) => suffix.clone(),
+                };
+                rescript_file_locations.push((output_base, suffix));
             }
-            _ => None,
-        })
-        .flatten()
-        .collect::<Vec<(PathBuf, String)>>();
+        }
+    }
 
     rescript_file_locations
         .par_iter()
@@ -342,7 +340,6 @@ pub fn cleanup_after_build(build_state: &BuildCommandState) {
 #[instrument(name = "clean.clean", skip_all)]
 pub fn clean(path: &Path, show_progress: bool, plain_output: bool, prod: bool) -> Result<()> {
     let project_context = ProjectContext::new(path)?;
-    let compiler_info = build::get_compiler_info(&project_context)?;
     // `clean` always acts on the full set of source directories regardless of which features are
     // active. We explicitly pass `None` so every tagged source folder is included and its
     // artifacts can be removed, even for features the user hasn't enabled for this build.
@@ -376,9 +373,7 @@ pub fn clean(path: &Path, show_progress: bool, plain_output: bool, prod: bool) -
     }
 
     let timing_clean_mjs = Instant::now();
-    let mut build_state = BuildState::new(project_context, packages, compiler_info, SourceMapCommand::Build);
-    packages::parse_packages(&mut build_state)?;
-    let root_config = build_state.get_root_config();
+    let root_config = project_context.get_root_config();
     let suffix_for_print = match root_config.package_specs {
         None => match &root_config.suffix {
             None => String::from(".js"),
@@ -408,7 +403,7 @@ pub fn clean(path: &Path, show_progress: bool, plain_output: bool, prod: bool) -
         let _ = std::io::stdout().flush();
     }
 
-    clean_source_files(&build_state, root_config);
+    clean_source_files(&packages, root_config);
     let timing_clean_mjs_elapsed = timing_clean_mjs.elapsed();
 
     if !plain_output && show_progress {
