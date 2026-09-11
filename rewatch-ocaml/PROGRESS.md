@@ -2578,6 +2578,19 @@ relative to the historical gate. The reason for that environment-sensitive
 difference remains unexplained, so the 1.25x completion gate stays open even
 though the source-regression hypothesis is closed.
 
+A later five-run gate at `00db0a010` measured 5.733 s OCaml versus 4.106 s
+Rust (1.396x), with identical clean, unchanged, and edited compiler work and
+identical complete and stable artifact sets. Peak RSS remained close at
+1,564,736 versus 1,531,416 KiB. Process tracing confirmed that the portable
+capture implementation creates three threads for each child: the clean build
+made 3,095 thread-clone calls in addition to 1,032 process clones, while Rust
+made 1,043 total clone calls. A measured Unix experiment drained both pipes
+with `select` on a fixed worker pool. It removed the peak-task difference and
+reduced per-build thread creation to the pool size, but its smoke median was
+still 5.583 s versus 4.046 s (1.380x). The experiment was therefore discarded:
+thread churn is real resource overhead, but it does not explain the wall-time
+gap and the extra lifecycle machinery did not earn its maintenance cost.
+
 The latest retained-watch gate at `d1c3ca9732` was coherent and passed: 118 ms
 OCaml versus 123 ms Rust, exactly seven parser and seven compiler calls per
 implementation, identical generated output, stable file descriptors and task
