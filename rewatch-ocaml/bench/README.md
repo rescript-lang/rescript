@@ -170,7 +170,10 @@ out-of-scope telemetry module and reports its inline `#[cfg(test)]` sections as
 tests rather than implementation. Both OCaml platform backends count because
 both remain maintained production source. All tracked OCaml test harnesses,
 fixtures, and configuration files are reported together but separately from
-implementation; benchmark tooling includes this counting script itself. Record
+implementation; benchmark tooling includes every executable shell/JavaScript
+file in `bench`, including this counting script itself. The report also lists
+the ten largest production modules and test/tooling files so growth and mixed
+responsibilities are visible without treating line count as a target. Record
 the `cloc` version with the result and rerun this at the final maintainability
 review.
 

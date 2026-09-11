@@ -433,9 +433,6 @@ if ! wait_for_file "$watch_basic/src/New.js"; then
 fi
 test -f "$watch_basic/src/New.js"
 mkdir "$watch_basic/src/new-directory"
-# Create the source only after the watcher has had time to register the empty
-# directory; this exercises dynamic directory watches rather than event batching.
-sleep 1
 printf 'let nested = "new directory"\n' \
   > "$watch_basic/src/new-directory/Nested.res"
 if ! wait_for_file "$watch_basic/src/new-directory/Nested.js"; then
