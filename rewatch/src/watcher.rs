@@ -486,7 +486,7 @@ async fn async_watch(
                 let timing_total = Instant::now();
                 // Reinitialization runs cleanup for previous build artifacts, so full rebuilds need
                 // the same build lock boundary as regular `rescript build`.
-                let result = build::with_build_lock(path, || {
+                let result = build::with_build_lock(path, || -> Result<_> {
                     let mut next_build_state = build::initialize_build(
                         None,
                         filter,
@@ -498,7 +498,7 @@ async fn async_watch(
                         features.clone(),
                         SourceMapCommand::Watch,
                     )
-                    .expect("Could not initialize build");
+                    .context("Could not initialize build")?;
 
                     // Full rebuilds can be triggered by editor atomic saves that surface as rename events.
                     // Preserve warning state for unchanged modules so their warnings are re-emitted after the
@@ -521,10 +521,10 @@ async fn async_watch(
                         plain_output,
                     );
                     build::write_build_ninja(&build_state);
-                    result
+                    Ok(result)
                 });
                 match result {
-                    Ok(result) => {
+                    Ok(Ok(result)) => {
                         finish_successful_watch_compile(
                             after_build.clone(),
                             timing_total,
@@ -535,7 +535,13 @@ async fn async_watch(
                             result,
                         );
                     }
-                    Err(_) => {
+                    Ok(Err(_)) => {
+                        if should_clear_screen(clear_screen, show_progress, plain_output) {
+                            print_build_failed_footer();
+                        }
+                    }
+                    Err(error) => {
+                        eprintln!("{error:#}");
                         if should_clear_screen(clear_screen, show_progress, plain_output) {
                             print_build_failed_footer();
                         }

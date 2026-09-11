@@ -147,6 +147,7 @@ fi
 ./watch/04-watch-config-change.sh &&
 ./watch/05-watch-ignores-non-source.sh &&
 ./watch/06-watch-missing-source-folder.sh &&
+./watch/07-watch-recovers-from-invalid-config.sh &&
 
 # Lock tests
 ./lock/01-lock-when-watching.sh &&
