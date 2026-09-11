@@ -28,10 +28,11 @@ val run_parallel_map :
   result list
 
 type 'a work = {key: string; dependencies: string list; value: 'a}
+type failure_action = Abort_immediately | Stop_new_work
 
 val run_dependency_graph :
   ?max_jobs:int ->
-  ?is_fatal:(exn -> bool) ->
+  ?on_failure:(exn -> failure_action) ->
   ?poll:(unit -> unit) ->
   'a work list ->
   next:('a -> result option -> task option) ->

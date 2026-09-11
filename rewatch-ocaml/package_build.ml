@@ -12,41 +12,21 @@ let rec prepare_tree ~seen ~(package : Build_types.graph_package) ~watch
     List.rev_append
       (Package_diagnostics.for_package ~is_local config)
       stats.diagnostics;
-  let dependency_directories =
-    package.graph_dependency_directories
-    |> List.filter_map (fun (dependency : Build_types.graph_dependency) ->
-        let candidate = dependency.directory in
-        let () =
-          match candidate with
-          | candidate when Hashtbl.mem seen candidate -> ()
-          | candidate when Hashtbl.mem stats.retained.graph_packages candidate
-            -> (
-            try
-              prepare_tree ~seen
-                ~package:(Hashtbl.find stats.retained.graph_packages candidate)
-                ~watch ~stats
-            with Build_failure output ->
-              if Option.is_none stats.failure then stats.failure <- Some output)
-          | _ -> ()
-        in
-        let ocaml = Build_artifacts.lib_path candidate "ocaml" in
-        if Sys.file_exists ocaml then Some (dependency.kind, ocaml) else None)
-  in
-  let regular_dependency_dirs =
-    dependency_directories
-    |> List.filter_map (fun (kind, directory) ->
-        match kind with
-        | Build_types.Regular_dependency -> Some directory
-        | Build_types.Development_dependency -> None)
-  in
-  let dev_dependency_dirs =
-    dependency_directories
-    |> List.filter_map (fun (kind, directory) ->
-        match kind with
-        | Build_types.Regular_dependency -> None
-        | Build_types.Development_dependency -> Some directory)
-  in
+  package.graph_dependency_directories
+  |> List.iter (fun (dependency : Build_types.graph_dependency) ->
+      let candidate = dependency.directory in
+      match candidate with
+      | candidate when Hashtbl.mem seen candidate -> ()
+      | candidate when Hashtbl.mem stats.retained.graph_packages candidate -> (
+        try
+          prepare_tree ~seen
+            ~package:(Hashtbl.find stats.retained.graph_packages candidate)
+            ~watch ~stats
+        with Build_failure output ->
+          if Option.is_none stats.failure then stats.failure <- Some output)
+      | _ -> ());
   let prepared = Build_types.prepared_exn stats in
+  let prepared_package = Build_types.prepared_package_exn stats root in
   let bsc = prepared.compiler_context.bsc_path in
   let runtime = prepared.compiler_context.runtime_path in
   let build_state = prepared.build_state in
@@ -59,14 +39,8 @@ let rec prepare_tree ~seen ~(package : Build_types.graph_package) ~watch
   Hashtbl.replace stats.initialized_logs root ();
   let modules = package.graph_modules in
   let config = package.graph_compile_config in
-  let common_args dependency_dirs =
-    Compiler_args.compiler_common_arguments ~config ~runtime ~dependency_dirs
-      ~watch ~gentype_dependency_args:package.graph_gentype_dependency_args
-  in
-  let regular_common_args = common_args regular_dependency_dirs in
-  let dev_common_args =
-    common_args (dev_dependency_dirs @ regular_dependency_dirs)
-  in
+  let regular_common_args = prepared_package.regular_common_args in
+  let dev_common_args = prepared_package.development_common_args in
   let cleanup =
     match Hashtbl.find_opt stats.retained.cleanup_results root with
     | Some result -> result
@@ -79,12 +53,7 @@ let rec prepare_tree ~seen ~(package : Build_types.graph_package) ~watch
       Hashtbl.replace removed_module_names module_name ();
       Hashtbl.replace stats.removed_modules module_name ())
     removed_modules;
-  let parse_paths =
-    List.concat_map
-      (fun module_ ->
-        module_.Source.implementation :: Option.to_list module_.interface)
-      modules
-  in
+  let parse_paths = prepared_package.parse_paths in
   let dirty_parse_paths =
     parse_paths
     |> List.filter (fun path ->

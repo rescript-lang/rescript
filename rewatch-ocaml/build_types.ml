@@ -58,12 +58,23 @@ let preliminary_parse result =
   if Process.succeeded result then Parsed_successfully {stderr = result.stderr}
   else Parse_failed {stdout = result.stdout; stderr = result.stderr}
 
+type prepared_package = {
+  regular_common_args: string list;
+  development_common_args: string list;
+  parse_paths: string list;
+}
+
 type prepared = {
   compiler_context: Compiler_info.context;
   compile_assets: Compile_assets.t;
   build_state: Build_state.t;
-  mutable freshness_initialized: bool;
+  packages: (string, prepared_package) Hashtbl.t;
 }
+
+type preparation =
+  | Not_prepared
+  | Freshness_pending of prepared
+  | Ready of prepared
 
 type retained = {
   active_features: (string, string list option) Hashtbl.t;
@@ -75,7 +86,7 @@ type retained = {
   source_index: (string, string * Source.module_ * string * string) Hashtbl.t;
   pending_parse_paths: (string, unit) Hashtbl.t;
   cleanup_results: (string, Build_artifacts.cleanup_result) Hashtbl.t;
-  mutable prepared: prepared option;
+  mutable preparation: preparation;
   warning_state: Warning_state.t;
 }
 
@@ -149,7 +160,7 @@ let create ~warning_state ~poll ~process_poll ~progress ~verbosity =
       source_index = Hashtbl.create 64;
       pending_parse_paths = Hashtbl.create 16;
       cleanup_results = Hashtbl.create 32;
-      prepared = None;
+      preparation = Not_prepared;
       warning_state;
     }
   in
@@ -176,15 +187,35 @@ let create_incremental ~previous ~poll ~process_poll ~progress ~verbosity =
           })
     previous.retained.cleanup_results;
   let attempt_kind =
-    match previous.retained.prepared with
-    | Some prepared when prepared.freshness_initialized -> Retained_attempt
-    | Some _ | None -> Full_attempt
+    match previous.retained.preparation with
+    | Ready _ -> Retained_attempt
+    | Not_prepared | Freshness_pending _ -> Full_attempt
   in
   create_attempt ~attempt_kind
     ~retained:{previous.retained with cleanup_results}
     ~poll ~process_poll ~progress ~verbosity
 
 let prepared_exn stats =
-  match stats.retained.prepared with
-  | Some prepared -> prepared
-  | None -> invalid_arg "build state has not been prepared"
+  match stats.retained.preparation with
+  | Freshness_pending prepared | Ready prepared -> prepared
+  | Not_prepared -> invalid_arg "build state has not been prepared"
+
+let prepared stats =
+  match stats.retained.preparation with
+  | Freshness_pending prepared | Ready prepared -> Some prepared
+  | Not_prepared -> None
+
+let install_prepared stats prepared =
+  stats.retained.preparation <- Freshness_pending prepared
+
+let mark_freshness_initialized stats =
+  match stats.retained.preparation with
+  | Freshness_pending prepared -> stats.retained.preparation <- Ready prepared
+  | Ready _ -> ()
+  | Not_prepared -> invalid_arg "build state has not been prepared"
+
+let prepared_package_exn stats root =
+  let prepared = prepared_exn stats in
+  match Hashtbl.find_opt prepared.packages root with
+  | Some package -> package
+  | None -> invalid_arg ("package has not been prepared: " ^ root)

@@ -157,16 +157,31 @@ let files_equal first second =
               let buffer_size = 65_536 in
               let first_buffer = Bytes.create buffer_size in
               let second_buffer = Bytes.create buffer_size in
+              let rec read_chunk channel buffer offset =
+                if offset = Bytes.length buffer then offset
+                else
+                  match
+                    input channel buffer offset (Bytes.length buffer - offset)
+                  with
+                  | 0 -> offset
+                  | count -> read_chunk channel buffer (offset + count)
+              in
+              let equal_prefix length =
+                let index = ref 0 in
+                while
+                  !index < length
+                  && Bytes.get first_buffer !index
+                     = Bytes.get second_buffer !index
+                do
+                  incr index
+                done;
+                !index = length
+              in
               let rec loop () =
-                let first_count =
-                  input first_channel first_buffer 0 buffer_size
-                in
-                let second_count =
-                  input second_channel second_buffer 0 buffer_size
-                in
+                let first_count = read_chunk first_channel first_buffer 0 in
+                let second_count = read_chunk second_channel second_buffer 0 in
                 first_count = second_count
-                && (first_count = 0
-                   || (Bytes.equal first_buffer second_buffer && loop ()))
+                && (first_count = 0 || (equal_prefix first_count && loop ()))
               in
               loop ())))
 

@@ -6,7 +6,11 @@ exception Parse_failure = Package_build.Parse_failure
 exception Reported_failure of string
 exception Full_rebuild_required
 
-type retained_build = {root_config: Config.t; stats: Build_types.t}
+type retained_build = {
+  root_config: Config.t;
+  build_lock_root: string;
+  stats: Build_types.t;
+}
 
 (* Build kind controls which persistent markers and diagnostics may be reused.
    Keeping all four states explicit prevents an initial watch build from being
@@ -30,7 +34,7 @@ let project_root folder =
       (Error
          ("Could not start Rescript build: Could not write lockfile because \
            the specified project folder does not exist: " ^ folder));
-  Unix.realpath folder
+  Platform.canonicalize_path folder
 
 let clean ~poll ~seen ~verbosity ~folder ~prod =
   let root = project_root folder in
@@ -55,7 +59,8 @@ let clean ~poll ~seen ~verbosity ~folder ~prod =
       let resolution = Package_resolution.create root_config in
       let visited = Hashtbl.create 32 in
       List.iter
-        (fun path -> Hashtbl.replace visited (Unix.realpath path) ())
+        (fun path ->
+          Hashtbl.replace visited (Platform.canonicalize_path path) ())
         seen;
       let cleanup =
         Clean.prepare ~root_config ~resolution ~seen:visited ~root ~prod
@@ -233,7 +238,7 @@ let prepare_incremental previous changes (stats : Build_types.t) =
      graph coherent without rediscovering the package tree. *)
   let sources = incremental_sources previous changes in
   let prepared =
-    match stats.retained.prepared with
+    match Build_types.prepared stats with
     | Some prepared -> prepared
     | None -> raise Full_rebuild_required
   in
@@ -256,13 +261,11 @@ let prepare_incremental previous changes (stats : Build_types.t) =
          sources)
   in
   let results =
-    sources
-    |> List.map (fun source ->
+    Process.run_parallel_map ?poll:stats.process_poll
+      ~on_complete:parse_completed sources ~job:(fun source ->
         Compiler_process.parse_job ~bsc
           ~build_dir:source.package.graph_build_dir
           ~config:source.package.graph_compile_config source.relative_path)
-    |> Process.run_parallel ?poll:stats.process_poll
-         ~on_complete:parse_completed
   in
   let affected_modules = Hashtbl.create (List.length sources) in
   let dependencies_changed = ref false in
@@ -365,6 +368,7 @@ let run_with_warning_state ~process_poll ~poll ~warning_state ~previous ~changes
     | Some previous -> previous.root_config
     | None -> Config.load_root root
   in
+  let build_lock_root = Project_context.workspace_lock_root_for root_config in
   Output.debug ~verbosity
     (Printf.sprintf "Created project context Single project: %S at %S for %S"
        root_config.name root_config.path root_config.root);
@@ -396,8 +400,10 @@ let run_with_warning_state ~process_poll ~poll ~warning_state ~previous ~changes
      compilation fails, because its successful ASTs and artifact inventory are
      needed to recover incrementally on the next edit. Publish ownership before
      any fallible phase starts. *)
-  on_state {root_config; stats};
-  List.iter (fun path -> Hashtbl.replace visited (Unix.realpath path) ()) seen;
+  on_state {root_config; build_lock_root; stats};
+  List.iter
+    (fun path -> Hashtbl.replace visited (Platform.canonicalize_path path) ())
+    seen;
   let finalize_logs () =
     Output.Progress.finish progress;
     Hashtbl.iter
@@ -576,7 +582,7 @@ let run_with_warning_state ~process_poll ~poll ~warning_state ~previous ~changes
       | None -> raise (Error ("Package graph was not prepared for " ^ root))
     in
     Package_build.prepare_tree ~seen:visited ~package:root_package ~watch ~stats;
-    (Build_types.prepared_exn stats).freshness_initialized <- true;
+    Build_types.mark_freshness_initialized stats;
     let parse_messages = parse_messages () in
     let parse_output = parse_output parse_messages in
     if parse_failed parse_messages then raise (Parse_failure parse_output);
@@ -631,7 +637,7 @@ let run_with_warning_state ~process_poll ~poll ~warning_state ~previous ~changes
               in
               Compiler_info.write_package package_context package.graph_config)
             stats.retained.graph_packages)
-        stats.retained.prepared;
+        (Build_types.prepared stats);
       if compilation_kind = One_shot then report_completion diagnostics;
       cleanup_after_build ();
       write_build_ninja_once ();
@@ -641,7 +647,7 @@ let run_with_warning_state ~process_poll ~poll ~warning_state ~previous ~changes
         after_build;
       if compilation_kind <> One_shot then report_completion diagnostics
   in
-  Build_lock.with_build ~poll (Project_context.workspace_lock_root root)
+  Build_lock.with_build ~poll build_lock_root
     (fun ~release:release_build_lock ->
       Fun.protect
         ~finally:(fun () ->
@@ -651,7 +657,7 @@ let run_with_warning_state ~process_poll ~poll ~warning_state ~previous ~changes
           try execute ~release_build_lock with
           | Build_failure output -> report_failure ~compile_seconds:0. output
           | Parse_failure output -> report_parse_failure output));
-  {root_config; stats}
+  {root_config; build_lock_root; stats}
 
 let run ~poll ~seen ~verbosity ~folder ~prod ~features ~warn_error ~watch
     ~after_build ~filter ~no_timing =
@@ -662,6 +668,22 @@ let run ~poll ~seen ~verbosity ~folder ~prod ~features ~warn_error ~watch
       ~features ~warn_error ~watch ~after_build ~filter ~on_state:(fun _ -> ())
     |> ignore
   with Reported_failure message -> raise (Error message)
+
+let remove_compile_warning_freshness warning_state =
+  Warning_state.entries warning_state
+  |> List.iter (fun (entry : Warning_state.entry) ->
+      let implementation =
+        if Filename.check_suffix entry.path ".resi" then
+          Filename.chop_suffix entry.path "i"
+        else entry.path
+      in
+      [implementation; implementation ^ "i"]
+      |> List.iter (fun source ->
+          let artifact = Source.ast_path source |> Filename.basename in
+          File_util.remove_file
+            (Filename.concat
+               (Build_artifacts.lib_path entry.package_root "ocaml")
+               artifact)))
 
 let watch ~verbosity ~folder ~prod ~features ~warn_error ~after_build ~filter
     ~clear_screen =
@@ -719,5 +741,14 @@ let watch ~verbosity ~folder ~prod ~features ~warn_error ~after_build ~filter
       prerr_endline (Printexc.to_string exn);
       Watcher.Failed
   in
-  Watcher.run ~root ~prod ~features ~filter ~clear_screen
-    ~show_progress:(verbosity >= 0) ~verbosity ~build
+  Fun.protect
+    (fun () ->
+      Watcher.run ~root ~prod ~features ~filter ~clear_screen
+        ~show_progress:(verbosity >= 0) ~verbosity ~build)
+    ~finally:(fun () ->
+      if Warning_state.entries warning_state <> [] then
+        match !retained with
+        | Some state ->
+          Build_lock.with_build state.build_lock_root (fun ~release:_ ->
+              remove_compile_warning_freshness warning_state)
+        | None -> ())

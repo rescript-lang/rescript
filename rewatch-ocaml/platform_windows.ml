@@ -87,6 +87,13 @@ let ensure_no_null label value =
 let program_for_working_directory ~cwd program =
   if Filename.is_relative program then Filename.concat cwd program else program
 
+let serialize_command_line ~program ~args =
+  match args with
+  | ["/D"; "/V:OFF"; "/S"; "/C"; command] ->
+    String.concat " " [quote_argument program; "/D"; "/V:OFF"; "/S"; "/C"]
+    ^ " " ^ command
+  | _ -> program :: args |> List.map quote_argument |> String.concat " "
+
 let spawn ~env ~cwd ~program ~args ~stdout ~stderr =
   let program = resolve_program ~cwd program in
   ensure_no_null "working directory" cwd;
@@ -98,9 +105,7 @@ let spawn ~env ~cwd ~program ~args ~stdout ~stderr =
       (resolve_program ~cwd "cmd.exe", ["/D"; "/V:OFF"; "/S"; "/C"; command])
     else (program, args)
   in
-  let command_line =
-    program :: args |> List.map quote_argument |> String.concat " "
-  in
+  let command_line = serialize_command_line ~program ~args in
   let program = program_for_working_directory ~cwd program in
   (* Starting suspended closes the only interval in which a child could create
      descendants before the job owns its process tree. *)

@@ -15,7 +15,8 @@ let exists_in_root root =
 
 let source_is_dev (config : t) relative_path =
   let canonical path =
-    try Some (Unix.realpath path) with Unix.Unix_error _ | Sys_error _ -> None
+    try Some (Platform.canonicalize_path path)
+    with Unix.Unix_error _ | Sys_error _ -> None
   in
   let source_parent =
     Filename.concat config.root relative_path |> Filename.dirname |> canonical
@@ -41,7 +42,7 @@ let source_is_dev (config : t) relative_path =
 let load path =
   let requested_path = path in
   let root =
-    try Unix.realpath (Filename.dirname path) with
+    try Platform.canonicalize_path (Filename.dirname path) with
     | Sys_error message ->
       fail_read requested_path (strip_read_path requested_path message)
     | Unix.Unix_error (error, _, _) ->
