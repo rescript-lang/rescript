@@ -2193,6 +2193,24 @@ fixture with two independent cycles verifies that an unrelated module compiles,
 all cycle members remain blocked, and only the normal circular-dependency
 diagnostic is emitted.
 
+The review's two graph-construction performance findings were OCaml-only.
+Unresolved dependency names previously scanned every global module looking for
+a matching namespace, including the common case of runtime modules absent from
+the project graph. Preparation now builds a namespace-to-module-key index once
+and retains it across incremental watch builds, making both missing-namespace
+checks and namespace expansion indexed lookups. Rust already uses hash-backed
+module membership and explicit namespace entries, so it does not share this
+quadratic path.
+
+Reverse dependency edges were also stored as lists, making insertion into a
+high-fan-out dependency quadratic through repeated membership checks. They now
+use the standard OCaml string set for logarithmic insertion and removal with no
+new dependency, while forward dependencies remain sorted lists where their
+ordering is useful. Rust already stores reverse dependencies in `AHashSet`, so
+it does not share this defect. These are algorithmic complexity corrections;
+their effect will be included in the deferred stable performance gate rather
+than claimed from noisy timing here.
+
 1. Stop for the requested external AI review.
 2. Address the external review findings and rerun the affected gates.
 3. Complete the non-comment maintainability work. Review naming and module

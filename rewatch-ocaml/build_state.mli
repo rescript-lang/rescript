@@ -1,3 +1,5 @@
+module String_set : Set.S with type elt = string
+
 type module_ = {
   key: string;
   package_name: string;
@@ -5,7 +7,7 @@ type module_ = {
   source: Source.module_;
   mutable raw_dependencies: string list;
   mutable dependencies: string list;
-  mutable dependents: string list;
+  mutable dependents: String_set.t;
   mutable compile_dirty: bool;
   mutable deps_dirty: bool;
   mutable last_compiled_cmi: float option;

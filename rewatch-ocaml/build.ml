@@ -322,7 +322,8 @@ let prepare_incremental previous changes (stats : Build_types.t) =
         let module_state = Build_state.find_exn state key in
         module_state.raw_dependencies <- raw_dependencies;
         Build_state.set_dependencies state ~key
-          (Build_preparation.resolved_dependencies stats.global_modules node)))
+          (Build_preparation.resolved_dependencies stats.global_modules
+             stats.global_namespace_modules node)))
     affected_modules;
   stats.parse_seconds <- Unix.gettimeofday () -. started_at;
   match stats.build_state with

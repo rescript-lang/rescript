@@ -45,6 +45,7 @@ type t = {
   initialized_logs: (string, unit) Hashtbl.t;
   global_raw_dependencies: (string, string list) Hashtbl.t;
   global_modules: (string, global_module) Hashtbl.t;
+  global_namespace_modules: (string, string list) Hashtbl.t;
   graph_packages: (string, graph_package) Hashtbl.t;
   cleanup_results: (string, Build_artifacts.cleanup_result) Hashtbl.t;
   deferred_artifact_cleanup: string list ref;

@@ -112,7 +112,7 @@ let run ~poll ~warning_state ~blocked_modules ~compile_assets ~build_state
   while not (Queue.is_empty pending) do
     let key = Queue.take pending in
     let state = Build_state.find_exn build_state key in
-    List.iter add_to_universe state.dependents
+    Build_state.String_set.iter add_to_universe state.dependents
   done;
   let scheduled_modules =
     List.filter
