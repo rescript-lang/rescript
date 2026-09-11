@@ -60,7 +60,6 @@ let clean ~seen ~verbosity ~folder ~prod =
       in
       let compiler_assets = "compiler assets" in
       let compiler_started = Unix.gettimeofday () in
-      print_cleaning ~step:"1/2" compiler_assets;
       Clean.remove_compiler_assets cleanup ~on_clean:(fun name ->
           if show_progress then
             if interactive then print_cleaning ~step:"1/2" name
