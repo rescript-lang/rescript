@@ -277,7 +277,7 @@ capture_clean() {
   tr '\r' '\n' <"$transcript" \
     | sed -E $'s/\033\\[[0-9;]*[[:alpha:]]//g' \
     | grep -E '^\[[12]/2\] 🧹 (Cleaning|Cleaned)' \
-    | sed '/^\[1\/2\] 🧹 Cleaning compiler assets\.\.\.$/d' \
+    | awk '$0 != "[1/2] 🧹 Cleaning compiler assets..."' \
     | sed -E 's/in [0-9]+\.[0-9]+s$/in 0.00s/' \
     >"$work/$implementation-clean.phases"
 }
