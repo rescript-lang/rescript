@@ -951,6 +951,9 @@ are no other missing control-file names.
   canonical suite through the installed package. Windows keeps Rust as the
   default until the native OCaml binary is ready rather than publishing an
   unverified executable.
+  Regenerating the manifest at checkpoint `2f5067d50a` produced no diff, and
+  the command-validation gate passed all 111 cases with physical binaries named
+  exactly like CI's `rescript-rust.exe` and `rescript.exe` artifacts.
 
 ## Performance and equivalence gate
 
@@ -1770,15 +1773,18 @@ required behavior decision, not a performance proposal.
   records the supported boundary. This accepted divergence is not a completion
   blocker; silently different meanings for syntax known to diverge remain a
   bug.
-- Incremental state currently relies on artifact timestamps, byte-identical CMI
-  publication, and in-memory warning state during watch. Rust's richer
-  compile-state model is not otherwise ported.
 - Native Windows verification remains incomplete. Configuration schema
   acceptance, argument projection, source-level validation, and ordinary
   redirected-output inventory are complete, including semantic `-v`/`-vv`
   events. Incremental filesystem work is at or
   below Rust, while the explained clean-build driver delta remains documented
   for future optimization.
+
+## Completed compatibility evidence
+
+The following results are retained because they explain how the port closes
+specific compatibility risks; they are not remaining gaps.
+
 - Full validation coverage is now an explicit source-inventory gate in
   `PARITY_CHECKLIST.md`: every user-reachable Rust guard must map to an OCaml
   location and test or to a documented intentional divergence. Existing suite
@@ -2058,6 +2064,8 @@ required behavior decision, not a performance proposal.
   the dependency graph selected by the reference implementation. Focused
   coverage requires an unlinked `packages/dep` build and clean to fail while
   preserving that package's JavaScript and compiler artifacts.
+## Native Windows implementation and handoff
+
 - Windows support is required before this port can be considered complete. It
   cannot be executed in the current Linux environment, but it must still be
   designed and cross-built where possible. Unix subprocess creation uses the
