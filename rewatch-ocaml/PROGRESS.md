@@ -2132,7 +2132,7 @@ specific compatibility risks; they are not remaining gaps.
 
 ### Native Windows handoff
 
-The implementation checkpoint for the Windows session is `ab42758f0`. Use a
+The implementation checkpoint for the Windows session is `b6c05e8e9`. Use a
 native checkout on the VM's NTFS volume, OCaml 5.5 through the repository's
 opam setup, and the Cygwin Bash installed with that toolchain. The checkpoint
 already selects `platform_windows.ml` through Dune, compiles the Job Object C
