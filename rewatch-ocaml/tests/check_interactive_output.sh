@@ -339,6 +339,7 @@ wait_for_text() {
   attempts=0
   while [ "$attempts" -lt 200 ]; do
     actual=$(grep -cF "$pattern" "$path" 2>/dev/null || true)
+    actual=${actual:-0}
     if [ "$actual" -ge "$count" ]; then
       return 0
     fi
@@ -412,8 +413,13 @@ capture_watch_rebuild() {
   tr '\r' '\n' <"$work/$implementation-watch-phases.tty" \
     | sed -E $'s/\033\\[[0-9;]*[[:alpha:]]//g; s/in [0-9]+\\.[0-9]+s/in <TIME>/' \
     >"$work/$implementation-watch.normalized"
-  grep -E '^\[[123]/3\] .* (Cleaned|Parsed|Compiled) |^✅ Finished initial compilation in ' \
-    "$work/$implementation-watch.normalized" \
+  awk '
+    /^\[[123]\/3\] .* (Cleaned|Parsed|Compiled) / ||
+      /^✅ Finished initial compilation in / {
+      print
+    }
+    /^✅ Finished initial compilation in / { exit }
+  ' "$work/$implementation-watch.normalized" \
     >"$work/$implementation-watch-initial.phases"
   grep -E '^\[[12]/2\] .* (Parsed|Compiled) |^✅ Finished incremental compilation in ' \
     "$work/$implementation-watch.normalized" \
@@ -421,12 +427,17 @@ capture_watch_rebuild() {
   tr '\r' '\n' <"$transcript" \
     | sed -E $'s/\033\\[[0-9;]*[[:alpha:]]//g' \
     >"$work/$implementation-watch.presentation"
-  if [ "$(grep -cF 'Change detected. Rebuilding...' \
-      "$work/$implementation-watch.presentation")" -lt 3 ] || \
-    [ "$(grep -cF 'Change detected. Full rebuild...' \
-      "$work/$implementation-watch.presentation")" -ne 1 ] || \
-    [ "$(grep -cF 'Build failed. Watching for changes...' \
-      "$work/$implementation-watch.presentation")" -ne 1 ]; then
+  rebuilds=$(grep -cF 'Change detected. Rebuilding...' \
+    "$work/$implementation-watch.presentation" || true)
+  rebuilds=${rebuilds:-0}
+  full_rebuilds=$(grep -cF 'Change detected. Full rebuild...' \
+    "$work/$implementation-watch.presentation" || true)
+  full_rebuilds=${full_rebuilds:-0}
+  failures=$(grep -cF 'Build failed. Watching for changes...' \
+    "$work/$implementation-watch.presentation" || true)
+  failures=${failures:-0}
+  if [ "$rebuilds" -lt 3 ] || [ "$full_rebuilds" -ne 1 ] || \
+    [ "$failures" -ne 1 ]; then
     echo "$implementation watch rebuild presentation changed" >&2
     cat "$work/$implementation-watch.presentation" >&2
     exit 1
