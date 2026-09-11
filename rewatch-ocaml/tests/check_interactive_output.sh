@@ -525,6 +525,7 @@ capture_initial_failure_recovery() {
     | sed -E $'s/\033\\[[0-9;]*[[:alpha:]]//g; s/in [0-9]+\\.[0-9]+s/in <TIME>/' \
     | sed -n '/Change detected\. Rebuilding\.\.\./,$p' \
     | grep -E '^(Change detected|\[[12]/2\] .* (Parsed|Compiled) |✅ Finished incremental compilation)' \
+    | awk '{ print } /✅ Finished incremental compilation/ { exit }' \
     >"$work/$implementation-initial-failure-recovery.phases"
 }
 

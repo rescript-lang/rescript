@@ -80,9 +80,13 @@ else
   exit 1
 fi
 
-# Restore the configuration and source as separate, observable transitions so
-# one build's final marker cannot be mistaken for the next build's completion.
+# Native Windows delivery can coalesce the two atomic replacements. Restore
+# both files before observing that single rebuild there; Unix keeps the
+# transitions separate so each event is independently exercised.
 replace "s/.res.mjs/.mjs/g" rescript.json
+if is_windows; then
+  restore_tracked_files ./src/Test.res
+fi
 if wait_for_next_build && wait_for_file_gone "./src/Test.res.mjs" 20; then
   success "Rebuild after restore removed old suffix files"
 else
@@ -93,12 +97,14 @@ else
   exit 1
 fi
 
-restore_tracked_files ./src/Test.res
-if ! wait_for_next_build; then
-  error "Source restore did not settle"
-  cat rewatch.log
-  exit_watcher
-  exit 1
+if ! is_windows; then
+  restore_tracked_files ./src/Test.res
+  if ! wait_for_next_build; then
+    error "Source restore did not settle"
+    cat rewatch.log
+    exit_watcher
+    exit 1
+  fi
 fi
 
 if ! exit_watcher; then
