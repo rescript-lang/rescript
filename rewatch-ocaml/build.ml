@@ -388,25 +388,46 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
       stats.initialized_logs;
     Hashtbl.clear stats.initialized_logs
   in
+  let artifacts_cleaned = ref false in
+  let cleanup_after_build () =
+    if not !artifacts_cleaned then (
+      List.iter File_util.remove_file !(stats.deferred_artifact_cleanup);
+      stats.deferred_artifact_cleanup := [];
+      artifacts_cleaned := true)
+  in
   let build_ninja_written = ref false in
   let write_build_ninja_once () =
     if should_write_build_ninja && not !build_ninja_written then (
       write_build_ninja stats;
       build_ninja_written := true)
   in
-  let prepare_report ~success =
+  let phase_seconds seconds = if no_timing then 0. else seconds in
+  let parse_step = if is_rebuild then "1/2" else "2/3" in
+  let compile_step = if is_rebuild then "2/2" else "3/3" in
+  let prepare_report ~success ~compile_seconds =
     (* Finalize compiler logs before replaying warnings and configuration
        diagnostics so persisted and terminal output describe the same completed
        build, in deterministic module and package order. *)
     finalize_logs ();
-    if show_progress && not interactive then (
-      (match compilation_kind with
-      | One_shot | Initial_watch | Full_watch ->
-        Printf.printf "Cleaned %d/%d\n%!" stats.cleaned stats.previous_asts
-      | Incremental_watch -> ());
-      Printf.printf "Parsed %d source files\n%!" stats.parsed;
-      if success then Printf.printf "Compiled %d modules\n%!" stats.compiled
-      else Printf.eprintf "Compiled %d modules\n%!" stats.compiled);
+    write_source_dirs root_config stats;
+    if show_progress then
+      if interactive then
+        if success then
+          print_endline
+            (Output.compiling_message ~color:colors ~step:compile_step
+               ~count:stats.compiled ~seconds:compile_seconds)
+        else
+          prerr_endline
+            (Output.compilation_failed_message ~color:colors ~step:compile_step
+               ~count:stats.compiled ~seconds:compile_seconds)
+      else (
+        (match compilation_kind with
+        | One_shot | Initial_watch | Full_watch ->
+          Printf.printf "Cleaned %d/%d\n%!" stats.cleaned stats.previous_asts
+        | Incremental_watch -> ());
+        Printf.printf "Parsed %d source files\n%!" stats.parsed;
+        if success then Printf.printf "Compiled %d modules\n%!" stats.compiled
+        else Printf.eprintf "Compiled %d modules\n%!" stats.compiled);
     let diagnostics =
       if compilation_kind = Incremental_watch then []
       else stats.diagnostics |> List.rev |> List.sort_uniq String.compare
@@ -441,22 +462,22 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
         | Incremental_watch -> "incremental "
         | One_shot | Full_watch -> "")
   in
-  let report ~success () =
-    let diagnostics = prepare_report ~success in
+  let report ~success ~compile_seconds =
+    let diagnostics = prepare_report ~success ~compile_seconds in
     if success then report_completion diagnostics
   in
-  let report_failure output =
-    write_build_ninja_once ();
-    report ~success:false ();
+  let report_failure ~compile_seconds output =
+    report ~success:false ~compile_seconds;
     prerr_string output;
     prerr_newline ();
+    cleanup_after_build ();
+    write_build_ninja_once ();
     raise
       (Reported_failure
          ("Incremental build failed. Error: \027[2K\r  Failed to Compile. "
          ^ "See Errors Above"))
   in
   let report_parse_failure output =
-    write_build_ninja_once ();
     finalize_logs ();
     (if interactive && show_progress then
        prerr_endline
@@ -469,6 +490,8 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
          Printf.printf "Cleaned %d/%d\n%!" stats.cleaned stats.previous_asts
        | Incremental_watch -> ());
     prerr_endline output;
+    cleanup_after_build ();
+    write_build_ninja_once ();
     raise
       (Reported_failure
          "Incremental build failed. Error: \027[2K\r  Could not parse Source Files")
@@ -495,9 +518,6 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
     ^ (cycle |> List.map format_node |> String.concat "\n → ")
     ^ "\nPossible solutions:\n- Extract shared code into a new module both depend on.\n"
   in
-  let phase_seconds seconds = if no_timing then 0. else seconds in
-  let parse_step = if is_rebuild then "1/2" else "2/3" in
-  let compile_step = if is_rebuild then "2/2" else "3/3" in
   let execute ~release_build_lock =
     poll ();
     let cycle =
@@ -547,19 +567,11 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
      with Build_failure output ->
        if Option.is_none stats.failure then stats.failure <- Some output);
     Output.Progress.finish progress;
-    if interactive && show_progress then (
-      let seconds = phase_seconds (Unix.gettimeofday () -. compile_started) in
-      match stats.failure with
-      | None ->
-        print_endline
-          (Output.compiling_message ~color:colors ~step:compile_step
-             ~count:stats.compiled ~seconds)
-      | Some _ ->
-        prerr_endline
-          (Output.compilation_failed_message ~color:colors ~step:compile_step
-             ~count:stats.compiled ~seconds));
+    let compile_seconds =
+      phase_seconds (Unix.gettimeofday () -. compile_started)
+    in
     (match stats.failure, cycle with
-    | Some output, _ -> report_failure output
+    | Some output, _ -> report_failure ~compile_seconds output
     | None, Some cycle_info ->
       let output =
         format_cycle cycle_info.cycle cycle_info.modules_by_key
@@ -569,8 +581,9 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
       |> List.map (fun node -> node.Build_types.package_root)
       |> List.sort_uniq String.compare
       |> List.iter (fun package_root -> Compiler_log.append package_root output);
-      report_failure output
+      report_failure ~compile_seconds output
     | None, None ->
+      let diagnostics = prepare_report ~success:true ~compile_seconds in
       Option.iter
         (fun (context : Compiler_info.context) ->
           Hashtbl.iter
@@ -587,25 +600,24 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
               Compiler_info.write_package package_context package.graph_config)
             stats.graph_packages)
         stats.compiler_context;
-      write_source_dirs root_config stats;
+      if compilation_kind = One_shot then report_completion diagnostics;
+      cleanup_after_build ();
       write_build_ninja_once ();
-      let diagnostics = prepare_report ~success:true in
+      release_build_lock ();
       Option.iter
-        (fun command ->
-          release_build_lock ();
-          After_build.run ?poll:process_poll ~root command)
+        (fun command -> After_build.run ?poll:process_poll ~root command)
         after_build;
-      report_completion diagnostics)
+      if compilation_kind <> One_shot then report_completion diagnostics)
   in
   Build_lock.with_build ~poll (Project_context.workspace_lock_root root)
     (fun ~release:release_build_lock ->
       Fun.protect
         ~finally:(fun () ->
-          List.iter File_util.remove_file !(stats.deferred_artifact_cleanup);
+          cleanup_after_build ();
           finalize_logs ())
         (fun () ->
           try execute ~release_build_lock with
-          | Build_failure output -> report_failure output
+          | Build_failure output -> report_failure ~compile_seconds:0. output
           | Parse_failure output -> report_parse_failure output));
   {root_config; stats}
 

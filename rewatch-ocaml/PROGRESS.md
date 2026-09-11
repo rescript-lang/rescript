@@ -1619,6 +1619,12 @@ missing.
 
 ### Rust bugs and simple inefficiencies corrected by the port
 
+- Formatting schedules individual source files up to the process bound. Rust
+  splits files into chunks of four times the CPU count, runs chunks in parallel,
+  and formats every file inside a chunk serially; projects below that threshold
+  therefore use only one formatter process at a time. The OCaml scheduler keeps
+  the same bounded external-process model without that accidental serialization,
+  and `format_tests.ml` requires two independent formatter jobs to overlap.
 - Malformed input and missing-resource paths return contextual errors instead
   of panicking or hanging. This covers unsupported JSX versions, empty PPX
   commands, unresolved regular dependencies, sources outside a project,

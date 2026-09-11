@@ -240,12 +240,10 @@ let format_files_with_bsc ?max_jobs ~bsc ~check files =
     raise (Error "Formatting check failed")
   )
 
-let format_files ~check files =
-  format_files_with_bsc ~bsc:(bsc ()) ~check files
-
 let format_stdin extension =
   if extension <> ".res" && extension <> ".resi" then
     raise (Error "--stdin must be .res or .resi");
+  let bsc = bsc () in
   (* The temporary pathname needs a cleanup owner before termination can
      interrupt the command, otherwise an early signal can leave it behind. *)
   let restore_deferred_signals = Platform.defer_termination_signals () in
@@ -277,11 +275,13 @@ let format_stdin extension =
        with exn ->
          close_out_noerr output;
          raise exn);
-      print_string (formatted ~bsc:(bsc ()) ~target:"stdin" path))
+      print_string (formatted ~bsc ~target:"stdin" path))
   with exn ->
     remove_temporary ();
     let exn = try restore_signals (); exn with signal_exn -> signal_exn in
     raise exn
 
 let run_files ~check paths =
-  format_files ~check (if paths = [] then files_in_scope () else paths)
+  let bsc = bsc () in
+  let files = if paths = [] then files_in_scope () else paths in
+  format_files_with_bsc ~bsc ~check files

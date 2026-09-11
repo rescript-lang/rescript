@@ -54,6 +54,31 @@ let tests =
            contains message "Could not write formatted file"
            && contains message path)
         "formatter write failures retain their operation and source path");
+  with_temp_dir (fun root ->
+      write_file (Filename.concat root "rescript.json") "{";
+      let previous_directory = Sys.getcwd () in
+      let previous_bsc = Sys.getenv_opt "RESCRIPT_BSC_EXE" in
+      Unix.chdir root;
+      Unix.putenv "RESCRIPT_BSC_EXE" (Filename.concat root "missing-bsc");
+      let message =
+        Fun.protect
+          ~finally:(fun () ->
+            Unix.chdir previous_directory;
+            match previous_bsc with
+            | Some value -> Unix.putenv "RESCRIPT_BSC_EXE" value
+            | None -> Test_support.unsetenv "RESCRIPT_BSC_EXE")
+          (fun () ->
+            try
+              Format.run_files ~check:false [];
+              None
+            with Format.Error message -> Some message)
+      in
+      check
+        (match message with
+        | Some message ->
+          contains message "RESCRIPT_BSC_EXE points to missing path"
+        | None -> false)
+        "format resolves the compiler before discovering implicit project files");
   if not Sys.win32 then
     with_temp_dir (fun root ->
         let target = Filename.concat root "target.res" in
