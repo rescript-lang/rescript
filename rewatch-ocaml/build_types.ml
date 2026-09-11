@@ -53,6 +53,7 @@ type prepared = {
   compiler_context: Compiler_info.context;
   compile_assets: Compile_assets.t;
   build_state: Build_state.t;
+  mutable freshness_initialized: bool;
 }
 
 type retained = {
@@ -85,6 +86,7 @@ type t = {
   preparse_results: (string, Process.result) Hashtbl.t;
   blocked_modules: (string, unit) Hashtbl.t;
   initialized_logs: (string, unit) Hashtbl.t;
+  namespace_freshness: (string, float option) Hashtbl.t;
   deferred_artifact_cleanup: string list ref;
   namespace_jobs: (Process.job * (Process.result -> unit)) list ref;
   compile_candidates: Compiler_scheduler.candidate list ref;
@@ -116,6 +118,7 @@ let create_attempt ~attempt_kind ~retained ~poll ~process_poll ~progress
     preparse_results = Hashtbl.create 16;
     blocked_modules = Hashtbl.create 16;
     initialized_logs = Hashtbl.create 16;
+    namespace_freshness = Hashtbl.create 16;
     deferred_artifact_cleanup = ref [];
     namespace_jobs = ref [];
     compile_candidates = ref [];
@@ -167,7 +170,12 @@ let create_incremental ~previous ~poll ~process_poll ~progress ~verbosity =
             present_public_outputs = cleanup.present_public_outputs;
           })
     previous.retained.cleanup_results;
-  create_attempt ~attempt_kind:Retained_attempt
+  let attempt_kind =
+    match previous.retained.prepared with
+    | Some prepared when prepared.freshness_initialized -> Retained_attempt
+    | Some _ | None -> Full_attempt
+  in
+  create_attempt ~attempt_kind
     ~retained:{previous.retained with cleanup_results}
     ~poll ~process_poll ~progress ~verbosity
 

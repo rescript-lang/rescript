@@ -53,6 +53,7 @@ type prepared = {
   compiler_context: Compiler_info.context;
   compile_assets: Compile_assets.t;
   build_state: Build_state.t;
+  mutable freshness_initialized: bool;
 }
 
 type retained = {
@@ -85,6 +86,7 @@ type t = {
   preparse_results: (string, Process.result) Hashtbl.t;
   blocked_modules: (string, unit) Hashtbl.t;
   initialized_logs: (string, unit) Hashtbl.t;
+  namespace_freshness: (string, float option) Hashtbl.t;
   deferred_artifact_cleanup: string list ref;
   namespace_jobs: (Process.job * (Process.result -> unit)) list ref;
   compile_candidates: Compiler_scheduler.candidate list ref;

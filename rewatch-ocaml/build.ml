@@ -430,7 +430,8 @@ let run_with_warning_state ~process_poll ~poll ~warning_state ~previous ~changes
        diagnostics so persisted and terminal output describe the same completed
        build, in deterministic module and package order. *)
     finalize_logs ();
-    write_source_dirs root_config stats;
+    if stats.attempt_kind = Build_types.Full_attempt then
+      write_source_dirs root_config stats;
     if show_progress then
       if interactive then
         if success then
@@ -530,10 +531,11 @@ let run_with_warning_state ~process_poll ~poll ~warning_state ~previous ~changes
         | Some source_path ->
           let absolute = Filename.concat node.package_root source_path in
           Printf.sprintf "%s (%s)" node.display_name
-            (Project_context.relative_to root_config.root absolute)
+            (Project_context.display_path ~root:root_config.root absolute)
         | None ->
           Printf.sprintf "%s (%s namespace map)" node.display_name
-            (Project_context.relative_to root_config.root node.package_root))
+            (Project_context.display_path ~root:root_config.root
+               node.package_root))
     in
     "\nCan't continue... Found a circular dependency in your code:\n"
     ^ (cycle |> List.map format_node |> String.concat "\n → ")
@@ -575,6 +577,7 @@ let run_with_warning_state ~process_poll ~poll ~warning_state ~previous ~changes
       | None -> raise (Error ("Package graph was not prepared for " ^ root))
     in
     Package_build.prepare_tree ~seen:visited ~package:root_package ~watch ~stats;
+    (Build_types.prepared_exn stats).freshness_initialized <- true;
     let parse_messages = parse_messages () in
     let parse_output = parse_output parse_messages in
     if parse_failed parse_messages then raise (Parse_failure parse_output);

@@ -47,12 +47,12 @@ let generated_output_suffixes =
     ".js";
   ]
 
-let generated_output_details path =
+let generated_output_details_for_suffixes suffixes path =
   let output_path =
     if Filename.check_suffix path ".map" then Filename.chop_suffix path ".map"
     else path
   in
-  generated_output_suffixes
+  suffixes
   |> List.find_map (fun suffix ->
       if Filename.check_suffix output_path suffix then
         Some
@@ -61,6 +61,9 @@ let generated_output_details path =
             suffix,
             output_path )
       else None)
+
+let generated_output_details path =
+  generated_output_details_for_suffixes generated_output_suffixes path
 
 let is_generated_output_path path =
   Option.is_some (generated_output_details path)
@@ -127,11 +130,37 @@ let cleanup_stale ?ocaml_files ?ast_sources ?source_files ?present_source_files
         let output_dir = Filename.concat root directory in
         (output_dir, File_util.files_under output_dir))
   in
+  let configured_suffixes =
+    List.map (Config.package_spec_suffix config) config.package_specs
+  in
+  let output_suffixes =
+    configured_suffixes @ generated_output_suffixes
+    |> List.sort_uniq (fun left right ->
+        let length_order =
+          Int.compare (String.length right) (String.length left)
+        in
+        if length_order = 0 then String.compare left right else length_order)
+  in
+  let output_details = generated_output_details_for_suffixes output_suffixes in
   let present_public_outputs = Hashtbl.create 64 in
   present_source_files @ List.concat_map snd output_files
   |> List.iter (fun path ->
-      if Option.is_some (generated_output_details path) then
+      if Option.is_some (output_details path) then
         Hashtbl.replace present_public_outputs path ());
+  (* Expected outputs may use arbitrary configured suffixes, including suffixes
+     that do not resemble JavaScript. Probe those paths directly rather than
+     treating a filename heuristic as the source of truth. *)
+  List.iter
+    (fun module_ ->
+      List.iter
+        (fun spec ->
+          let output =
+            generated_js_path config module_.Source.implementation spec
+          in
+          if Sys.file_exists output then
+            Hashtbl.replace present_public_outputs output ())
+        config.package_specs)
+    modules;
   let expected_artifacts = Hashtbl.create (List.length modules * 8) in
   let owned_output_names = Hashtbl.create (List.length modules * 2) in
   let add_expected base extensions =
@@ -268,9 +297,6 @@ let cleanup_stale ?ocaml_files ?ast_sources ?source_files ?present_source_files
                 deferred_artifacts := build_path :: !deferred_artifacts
               else ()
             else File_util.remove_file build_path)));
-  let configured_suffixes =
-    List.map (Config.package_spec_suffix config) config.package_specs
-  in
   let relative_under directory path =
     let prefix = directory ^ Filename.dir_sep in
     String.sub path (String.length prefix)
@@ -289,7 +315,7 @@ let cleanup_stale ?ocaml_files ?ast_sources ?source_files ?present_source_files
         config.package_specs)
     modules;
   let should_remove_output ~build_relative path =
-    generated_output_details path
+    output_details path
     |> Option.fold ~none:false ~some:(fun (name, suffix, output_path) ->
         Hashtbl.mem owned_output_names name
         && (not (Hashtbl.mem expected_outputs output_path))
@@ -306,14 +332,14 @@ let cleanup_stale ?ocaml_files ?ast_sources ?source_files ?present_source_files
   in
   let planned_outputs = Hashtbl.create 16 in
   let plan_output ~build_relative path =
-    generated_output_details path
+    output_details path
     |> Option.iter (fun (_, _, output_path) ->
         if should_remove_output ~build_relative output_path then
           Hashtbl.replace planned_outputs output_path build_relative)
   in
   source_files
   |> List.iter (fun path ->
-      generated_output_details path
+      output_details path
       |> Option.iter (fun (_, _, output_path) ->
           plan_output
             ~build_relative:(relative_under root output_path)
@@ -331,7 +357,7 @@ let cleanup_stale ?ocaml_files ?ast_sources ?source_files ?present_source_files
   |> List.iter (fun (output_dir, files) ->
       files
       |> List.iter (fun path ->
-          generated_output_details path
+          output_details path
           |> Option.iter (fun (_, _, output_path) ->
               plan_output
                 ~build_relative:(relative_under output_dir output_path)

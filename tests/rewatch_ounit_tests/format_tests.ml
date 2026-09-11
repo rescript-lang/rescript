@@ -119,13 +119,19 @@ let tests =
         "formatter subprocesses overlap rather than running serially");
   with_temp_dir (fun root ->
       let root_source = Filename.concat root "src/App.res" in
+      let orphan_interface = Filename.concat root "src/Orphan.resi" in
+      let duplicate_one = Filename.concat root "src/one/Duplicate.res" in
+      let duplicate_two = Filename.concat root "src/two/Duplicate.res" in
       let installed_source =
         Filename.concat root "node_modules/installed/src/Installed.res"
       in
       write_file
         (Filename.concat root "rescript.json")
-        {|{"name":"app","sources":["src"],"dependencies":["installed"]}|};
+        {|{"name":"app","sources":[{"dir":"src","subdirs":true}],"dependencies":["installed"]}|};
       write_file root_source "let value = 1\n";
+      write_file orphan_interface "let value: int\n";
+      write_file duplicate_one "let value = 1\n";
+      write_file duplicate_two "let value = 2\n";
       write_file
         (Filename.concat root "node_modules/installed/rescript.json")
         {|{"name":"installed","sources":["src"]}|};
@@ -141,6 +147,12 @@ let tests =
       check
         (List.mem root_source files)
         "implicit format includes the current package";
+      check
+        (List.mem orphan_interface files)
+        "implicit format includes an orphan interface";
+      check
+        (List.mem duplicate_one files && List.mem duplicate_two files)
+        "implicit format does not impose compilation module uniqueness";
       check
         (not (List.mem installed_source files))
         "implicit format does not rewrite installed node_modules dependencies")

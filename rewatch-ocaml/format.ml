@@ -43,17 +43,10 @@ let rec nearest_config directory =
     let parent = Filename.dirname directory in
     if parent = directory then None else nearest_config parent
 
-type discovered_package = {config: Config.t; modules: Source.module_ list}
+type discovered_package = {config: Config.t; files: string list}
 
 let package_sources (package : discovered_package) =
-  package.modules
-  |> List.concat_map (fun module_ ->
-      let config = package.config in
-      Filename.concat config.root module_.Source.implementation
-      ::
-      (match module_.interface with
-      | None -> []
-      | Some path -> [Filename.concat config.root path]))
+  package.files |> List.map (Filename.concat package.config.root)
 
 (* Validate the complete package graph before selecting the local files that
    format owns. Scan it with the effective feature selections so dependency
@@ -105,14 +98,13 @@ let discover_package_graph (current : Config.t) =
                        config.name message)));
             Some requested
       in
-      let modules =
-        Source.discover config
+      let files =
+        Source.discover_files config
           ~prod:(Package_graph.source_discovery_prod ~prod:false ~is_local)
           ~features ~filter:None
           ~on_missing:(Package_diagnostics.report_missing_source_folder config)
-          ~display_root:current.root
       in
-      {config; modules})
+      {config; files})
   |> List.of_seq
 
 let files_in_scope () =
@@ -202,6 +194,44 @@ let format_files_with_bsc ?max_jobs ?poll ~bsc ~check files =
     prerr_endline (format_check_summary !incorrect);
     raise (Error "Formatting check failed"))
 
+type stdin_read_result = Stdin_contents of string | Stdin_error of exn
+
+let read_stdin_interruptibly ?poll () =
+  let result = Atomic.make None in
+  let reader =
+    Thread.create
+      (fun () ->
+        let value =
+          try
+            let buffer = Buffer.create 4096 in
+            let bytes = Bytes.create 65536 in
+            let rec read () =
+              match input stdin bytes 0 (Bytes.length bytes) with
+              | 0 -> Stdin_contents (Buffer.contents buffer)
+              | count ->
+                Buffer.add_subbytes buffer bytes 0 count;
+                read ()
+            in
+            read ()
+          with exn -> Stdin_error exn
+        in
+        Atomic.set result (Some value))
+      ()
+  in
+  let rec await () =
+    Option.iter (fun poll -> poll ()) poll;
+    match Atomic.get result with
+    | Some value ->
+      Thread.join reader;
+      value
+    | None ->
+      Unix.sleepf 0.02;
+      await ()
+  in
+  match await () with
+  | Stdin_contents contents -> contents
+  | Stdin_error exn -> raise exn
+
 let format_stdin ?poll extension =
   if extension <> ".res" && extension <> ".resi" then
     raise (Error "--stdin must be .res or .resi");
@@ -226,17 +256,11 @@ let format_stdin ?poll extension =
     temporary := Some path;
     Fun.protect ~finally:remove_temporary (fun () ->
         restore_signals ();
+        let contents = read_stdin_interruptibly ?poll () in
         let output = open_out_bin path in
-        (try
-           (try
-              while true do
-                output_char output (input_char stdin)
-              done
-            with End_of_file -> ());
-           close_out output
-         with exn ->
-           close_out_noerr output;
-           raise exn);
+        Fun.protect
+          ~finally:(fun () -> close_out_noerr output)
+          (fun () -> output_string output contents);
         print_string (formatted ?poll ~bsc ~target:"stdin" path))
   with exn ->
     remove_temporary ();

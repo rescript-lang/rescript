@@ -279,6 +279,24 @@ let discover_for_cleanup
   in
   implementations
 
+let discover_files
+    ?(on_missing =
+      fun path -> Printf.eprintf "Could not read folder %s\n%!" path)
+    (config : Config.t) ~prod ~features ~filter =
+  let matches_filter =
+    match filter with
+    | None -> fun _ -> true
+    | Some filter -> Source_filter.matches_basename filter
+  in
+  let scanned =
+    scan_sources ~on_missing config ~prod ~features ~collect_inventory:false
+      ~collect_gentype:false
+  in
+  scanned.files
+  |> List.filter_map (fun (file, _, _) ->
+      if matches_filter file.path then Some file.path else None)
+  |> List.sort_uniq String.compare
+
 let discover_with_inventory ?(on_orphan = fun _ -> ())
     ?(on_missing =
       fun path -> Printf.eprintf "Could not read folder %s\n%!" path)
