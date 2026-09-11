@@ -61,7 +61,10 @@
   output
   build
   format)
- (libraries unix threads yojson str spawn cmdliner luv re.perl))
+ (libraries unix threads yojson str spawn cmdliner luv re.perl)
+ (foreign_stubs
+  (language c)
+  (names windows_job_stubs)))
 
 (executable
  (name rescript_ocaml)

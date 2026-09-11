@@ -23,11 +23,16 @@ let resolve_program =
 let post_build_command ~command ~output =
   (None, "/bin/sh", ["-c"; command ^ " " ^ Filename.quote output])
 
+type process = int
+
 let spawn ~env ~cwd ~program ~args ~stdout ~stderr =
   let program = resolve_program ~cwd program in
   Spawn.spawn ?env ~cwd:(Spawn.Working_dir.Path cwd) ~prog:program
     ~argv:(program :: args) ~stdout ~stderr
     ~setpgid:Spawn.Pgid.new_process_group ()
+
+let process_id process = process
+let release_process _process = ()
 
 let create_capture_pipes () =
   let stdout = Spawn.safe_pipe () in
@@ -37,8 +42,11 @@ let create_capture_pipes () =
     Unix.close (snd stdout);
     raise exn
 
-let signal_process_tree ~root_reaped:_ pid signal =
-  try Unix.kill (-pid) signal with Unix.Unix_error _ -> ()
+let signal_process_tree ~root_reaped:_ process signal =
+  try
+    Unix.kill (-process) signal;
+    true
+  with Unix.Unix_error _ -> true
 
 let defer_termination_signals () =
   let previous = Unix.sigprocmask Unix.SIG_BLOCK [Sys.sigint; Sys.sigterm] in

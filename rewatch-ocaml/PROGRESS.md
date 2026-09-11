@@ -1026,9 +1026,9 @@ identifies repeated CMI comparison and case-candidate checks, not extra
 compilation or directory-tree discovery. Raw create/remove totals intentionally
 remain diagnostic because the drivers use different publication mechanics.
 
-The maintained source-size tool reports 8,332 lines of OCaml production code
+The maintained source-size tool reports 8,389 lines of OCaml production code
 and 7,818 lines of Rust production code when Rust telemetry is excluded. Tests
-remain separate: OCaml has 6,646 test/fixture lines and 1,021 benchmark-tooling
+remain separate: OCaml has 6,657 test/fixture lines and 1,021 benchmark-tooling
 lines; Rust has 2,773 inline unit-test lines. Blank and comment lines are
 reported separately by `bench/source_size.sh` and are not included in these
 code counts. The tooling scope includes all six executable shell/JavaScript
@@ -1334,9 +1334,9 @@ observational and do not replace the five-run acceptance result.
 
 The current `cloc` 2.04 source-size snapshot reports 7,818 Rust production
 lines after excluding the intentionally omitted telemetry module and inline
-test-only sections, versus 8,332 OCaml production lines, or 106.6%. Counting
+test-only sections, versus 8,389 OCaml production lines, or 107.3%. Counting
 language-specific tests separately gives 2,773 embedded Rust unit-test lines
-and 6,646 OCaml unit/focused test and fixture lines. The OCaml benchmark tooling
+and 6,657 OCaml unit/focused test and fixture lines. The OCaml benchmark tooling
 adds another 1,021 lines across every executable audit/measurement script. The shared
 canonical integration suite is deliberately not charged to either side. These
 figures describe maintainability surface, not parity or quality: explicit
@@ -1344,7 +1344,7 @@ interfaces and separate test infrastructure add useful lines rather than
 indicating behavioral duplication.
 [`bench/source_size.sh`](bench/source_size.sh) preserves the scope and command;
 it now reports largest files directly. The current largest production modules
-are `watcher.ml` (692 code lines), `build.ml` (645), `process.ml` (514),
+are `watcher.ml` (692 code lines), `build.ml` (645), `process.ml` (564),
 `package_build.ml` (416), and `config.ml` (375). The largest test/tooling files
 are `check_command_validation.sh` (1,629), `unit_tests.ml` (848), `run.sh`
 (739), `config_tests.ml` (493), and `check_interactive_output.sh` (405).
@@ -1768,24 +1768,32 @@ Three later Rust fixes were audited explicitly against the port:
   preserving that package's JavaScript and compiler artifacts.
 - Windows support is required before this port can be considered complete. It
   cannot be executed in the current Linux environment, but it must still be
-  designed and cross-built where possible. Subprocess creation now uses the
-  cross-platform `spawn` library (`CreateProcess` on Windows), including child
-  working directories and PATH/PATHEXT resolution. Windows cleanup uses
-  `taskkill /T` for compiler/helper trees (with a direct-PID fallback), while
-  Unix retains process-group cleanup. `spawn` exposes only the child PID, not a
-  retained Windows process or job handle. If the direct child exits while a
-  descendant still holds an output pipe, cancellation must not pass that
-  potentially reused PID to `taskkill`; the current safe fallback therefore
-  cannot terminate that descendant and may wait indefinitely for pipe closure.
-  An atomic reaped-state flag narrows but cannot close the check/use race
-  between a waiter reaping the child and `taskkill` opening the PID.
-  The Windows milestone must add retained process/job ownership before native
-  watch cancellation is complete; this is implementation work, not only
-  verification. Watch lock/process
-  probing and native watcher behavior still need a Windows cross-build and runtime
-  verification. Shared filesystem logic uses `Filename` operations rather than
-  embedded `/` or `\\` separators; Unix-only test cases are being isolated or
-  replaced with portable helpers.
+  designed and cross-built where possible. Unix subprocess creation uses the
+  `spawn` library, while Windows uses a narrow native owner around the same
+  `CreateProcess` behavior, working directory, environment, pipe inheritance,
+  argument quoting, and PATH/PATHEXT resolution. It creates each child suspended,
+  assigns it to a new Job Object, and only then resumes it, so no descendant can
+  escape during launch. The job remains a valid tree identity after `waitpid`
+  closes the direct process handle, allowing cancellation to terminate
+  descendants that still own capture pipes without relying on a reusable numeric
+  PID. A failed job assignment attempts to terminate the still-suspended child
+  and makes the launch fail instead of falling back to a racy `taskkill`; an
+  operating-system failure to terminate it is reported as the cleanup operation
+  without waiting indefinitely on inherited capture pipes. Normal completion
+  closes the job without terminating detached descendants; cancellation calls
+  `TerminateJobObject` explicitly. Unix retains process-group cleanup. Normal
+  completion, partial launch, scheduler failure, and cancellation all release
+  the platform process owner after reader and waiter threads finish. Native
+  Windows must still verify this lifecycle in the VM, including the
+  descendant-held-pipe cancellation case.
+  Watch lock/process probing and native watcher behavior also need a Windows
+  cross-build and runtime verification. Shared filesystem logic uses `Filename`
+  operations rather than embedded `/` or `\\` separators; Unix-only test cases
+  are being isolated or replaced with portable helpers. The maintained
+  `tests/check_windows_job_stub.sh` check compiles the native Job Object branch
+  with a Windows-targeting C compiler, its matching OCaml headers, and warnings
+  as errors; this catches Windows API and OCaml C-interface mistakes without
+  claiming native runtime coverage.
 - The preferred non-CI Windows validation environment is a Windows 11 ARM VM on
   the Apple Silicon development host, with the repository on the guest's local
   NTFS volume. Run the existing Bash suites in the Cygwin environment supplied
@@ -1800,11 +1808,12 @@ Three later Rust fixes were audited explicitly against the port:
   selects either `platform_unix.ml` or `platform_windows.ml` as `platform.ml`
   using `%{os_type}`. Process-tree termination, PID probing, executable lookup,
   subprocess creation, signal deferral, post-build shell invocation, and path
-  comparison are behind that boundary. The unselected Windows implementation
-  is also type-checked against the contract in Linux unit builds. Pipe
-  creation uses `Spawn.safe_pipe` behind that boundary, while portable reader
-  ownership stays in `Process`. The cross-platform native watcher has its own
-  narrow interface over libuv rather than duplicating
+  comparison are behind that boundary. The abstract process owner also keeps
+  Unix process groups and Windows Job Objects out of shared scheduling code.
+  The unselected Windows implementation is type-checked against the contract in
+  Linux unit builds. Pipe creation uses `Spawn.safe_pipe` behind that boundary,
+  while portable reader ownership stays in `Process`. The cross-platform native
+  watcher has its own narrow interface over libuv rather than duplicating
   identical Unix and Windows implementations; actual Windows cross-build/runtime
   verification remains open.
 - Native Windows implementation and runtime validation are deliberately an

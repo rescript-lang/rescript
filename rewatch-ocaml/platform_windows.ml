@@ -50,16 +50,61 @@ let is_batch_file program =
     (Filename.extension program |> String.lowercase_ascii)
     [".bat"; ".cmd"]
 
+type process_job
+
+type process = {wait_id: int; job: process_job}
+
+external spawn_owned :
+  env:Spawn.Env.t option ->
+  cwd:string ->
+  program:string ->
+  command_line:string ->
+  stdin:Unix.file_descr ->
+  stdout:Unix.file_descr ->
+  stderr:Unix.file_descr ->
+  process = "rewatch_windows_spawn_owned_byte" "rewatch_windows_spawn_owned"
+
+external terminate_process_job : process_job -> bool
+  = "rewatch_windows_terminate_process_job"
+
+external close_process_job : process_job -> unit
+  = "rewatch_windows_close_process_job"
+
+let quote_argument argument =
+  if
+    argument = "" || String.contains argument ' '
+    || String.contains argument '\t' || String.contains argument '"'
+  then Filename.quote argument
+  else argument
+
+let ensure_no_null label value =
+  if String.contains value '\x00' then
+    invalid_arg (Printf.sprintf "%s contains a NUL byte" label)
+
+let program_for_working_directory ~cwd program =
+  if Filename.is_relative program then Filename.concat cwd program else program
+
 let spawn ~env ~cwd ~program ~args ~stdout ~stderr =
   let program = resolve_program ~cwd program in
+  ensure_no_null "working directory" cwd;
+  ensure_no_null "program" program;
+  List.iter (ensure_no_null "argument") args;
   let program, args =
     if is_batch_file program then
       let command = Filename.quote_command program args in
       (resolve_program ~cwd "cmd.exe", ["/D"; "/V:OFF"; "/S"; "/C"; command])
     else (program, args)
   in
-  Spawn.spawn ?env ~cwd:(Spawn.Working_dir.Path cwd) ~prog:program
-    ~argv:(program :: args) ~stdout ~stderr ()
+  let command_line =
+    program :: args |> List.map quote_argument |> String.concat " "
+  in
+  let program = program_for_working_directory ~cwd program in
+  (* Starting suspended closes the only interval in which a child could create
+     descendants before the job owns its process tree. *)
+  spawn_owned ~env ~cwd ~program ~command_line ~stdin:Unix.stdin ~stdout ~stderr
+
+let process_id process = process.wait_id
+let release_process process = close_process_job process.job
 
 let create_capture_pipes () =
   let stdout = Spawn.safe_pipe () in
@@ -69,48 +114,8 @@ let create_capture_pipes () =
     Unix.close (snd stdout);
     raise exn
 
-let signal_process_tree ~root_reaped pid _signal =
-  (* A reaped Windows PID is no longer a safe process-tree identity because the
-     operating system may reuse it for an unrelated process. Native Windows
-     descendant cleanup therefore needs a retained process or job handle rather
-     than another taskkill invocation. *)
-  if root_reaped then ()
-  else
-  let taskkill =
-    match Sys.getenv_opt "SystemRoot" with
-    | Some root ->
-      Filename.concat (Filename.concat root "System32") "taskkill.exe"
-    | None -> "taskkill.exe"
-  in
-  let output = ref None in
-  let killer_pid = ref None in
-  let fallback () =
-    try Unix.kill pid Sys.sigkill with Unix.Unix_error _ -> ()
-  in
-  try
-    let null = Unix.openfile Filename.null [Unix.O_WRONLY] 0o600 in
-    output := Some null;
-    let killer =
-      Spawn.spawn ~prog:taskkill
-        ~argv:[taskkill; "/PID"; string_of_int pid; "/T"; "/F"]
-        ~stdout:null ~stderr:null ()
-    in
-    killer_pid := Some killer;
-    Unix.close null;
-    output := None;
-    let _, status = Unix.waitpid [] killer in
-    killer_pid := None;
-    if status <> Unix.WEXITED 0 then fallback ()
-  with _ ->
-    Option.iter
-      (fun fd -> try Unix.close fd with Unix.Unix_error _ -> ())
-      !output;
-    Option.iter
-      (fun killer ->
-        (try Unix.kill killer Sys.sigkill with Unix.Unix_error _ -> ());
-        try ignore (Unix.waitpid [] killer) with Unix.Unix_error _ -> ())
-      !killer_pid;
-    fallback ()
+let signal_process_tree ~root_reaped:_ process _signal =
+  terminate_process_job process.job
 
 let defer_termination_signals () =
   let pending = ref [] in
