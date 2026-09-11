@@ -2715,6 +2715,19 @@ native Windows ownership. Those remaining changes stay explicitly
 profile-dependent in the future-performance inventory for consideration after
 Windows validation.
 
+A final scheduler handoff audit corrected an OCaml 5 signal assumption. Pending
+signals are process-wide and may be handled by a worker domain, rather than
+being confined to the initial domain. Command interruptions are now explicit
+fatal scheduler exceptions, so the worker that receives one first releases its
+owned child and the scheduler cancels every other process tree. One-shot and
+watch handlers use atomic state instead of changing handlers from an arbitrary
+domain. Windows also serializes temporary signal-handler replacement because
+it has no Unix-style per-thread signal mask; this prevents concurrent artifact
+publication from restoring process-wide handlers out of order. The selected
+Unix build, the unselected Windows module typecheck, all 20 OUnit groups, and
+the focused integration suite pass; native signal delivery remains part of the
+planned Windows VM validation.
+
 1. In the Windows VM, finish the watcher/lock and path audit and run the native
    build, unit, focused, and canonical Bash suites. Address findings there and
    finish with an x64 Windows confidence run where available.

@@ -3,6 +3,7 @@ type job = {program: string; args: string list; cwd: string}
 type task
 
 exception Error of string
+exception Interrupted of int
 
 val decode_utf8_lossy : string -> string
 val succeeded : result -> bool

@@ -200,10 +200,8 @@ let tests =
     "dependency scheduler cancellation terminates active subprocesses";
   let fatal_finalizer_started = Unix.gettimeofday () in
   let fatal_finalizer_cancels_other_workers =
-    let exception Finalizer_failed in
     try
       Process.run_dependency_graph ~max_jobs:2
-        ~is_fatal:(fun _ -> true)
         [graph_work "failure" []; graph_work "waiting" []]
         ~next:(fun key result ->
           match result with
@@ -215,11 +213,12 @@ let tests =
             Some
               (Process.task
                  ~on_result:(fun result ->
-                   if key = "failure" then raise Finalizer_failed else result)
+                   if key = "failure" then raise (Process.Interrupted 130)
+                   else result)
                  (process_job arguments))
           | Some _ -> None);
       false
-    with Finalizer_failed -> true
+    with Process.Interrupted 130 -> true
   in
   check
     (fatal_finalizer_cancels_other_workers

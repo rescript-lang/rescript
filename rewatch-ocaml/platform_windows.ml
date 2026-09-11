@@ -120,16 +120,33 @@ let create_capture_pipes () =
 let signal_process_tree ~root_reaped:_ process _signal =
   terminate_process_job process.job
 
+let termination_signal_mutex = Mutex.create ()
+
 let defer_termination_signals () =
+  (* Windows has no per-thread signal mask, so temporary handlers affect every
+     domain. Serializing installation keeps concurrently published artifacts
+     from restoring one another's handlers out of order. *)
+  Mutex.lock termination_signal_mutex;
   let pending = ref [] in
   let defer signal =
     if not (List.mem signal !pending) then pending := signal :: !pending
   in
-  let previous_int = Sys.signal Sys.sigint (Sys.Signal_handle defer) in
+  let previous_int =
+    try Sys.signal Sys.sigint (Sys.Signal_handle defer)
+    with exn ->
+      Mutex.unlock termination_signal_mutex;
+      raise exn
+  in
   let previous_term =
     try Sys.signal Sys.sigterm (Sys.Signal_handle defer)
     with exn ->
-      ignore (Sys.signal Sys.sigint previous_int);
+      let exn =
+        try
+          ignore (Sys.signal Sys.sigint previous_int);
+          exn
+        with restore_exn -> restore_exn
+      in
+      Mutex.unlock termination_signal_mutex;
       raise exn
   in
   let restored = ref false in
@@ -142,8 +159,16 @@ let defer_termination_signals () =
   fun () ->
     if not !restored then (
       restored := true;
-      ignore (Sys.signal Sys.sigint previous_int);
-      ignore (Sys.signal Sys.sigterm previous_term);
+      let restore_error = ref None in
+      let restore signal behavior =
+        try ignore (Sys.signal signal behavior)
+        with exn ->
+          if Option.is_none !restore_error then restore_error := Some exn
+      in
+      restore Sys.sigint previous_int;
+      restore Sys.sigterm previous_term;
+      Mutex.unlock termination_signal_mutex;
+      Option.iter raise !restore_error;
       List.rev !pending
       |> List.iter (fun signal ->
           dispatch signal
