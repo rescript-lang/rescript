@@ -17,20 +17,7 @@ let parse_job ~bsc ~build_dir ~(config : Config.t) path =
   let ast = Source.ast_path path in
   File_util.ensure_dir (Filename.concat build_dir (Filename.dirname ast));
   let contents = File_util.read_file (Filename.concat config.root path) in
-  let args =
-    Compiler_args.compiler_flags
-      ~ppx_flags:(Compiler_args.filter_ppx_flags config.ppx_flags contents)
-      ~source_maps:false ~watch:false ~gentype:false config
-    @ [
-        "-absname";
-        "-bs-ast";
-        "-o";
-        ast;
-        Filename.concat
-          (Filename.concat Filename.parent_dir_name Filename.parent_dir_name)
-          path;
-      ]
-  in
+  let args = Compiler_args.parser_arguments ~config ~contents ~path in
   Process.{program = bsc; args; cwd = build_dir}
 
 let ast_dependencies ~build_dir ast =
@@ -133,30 +120,12 @@ let post_build_tasks (config : Config.t) path =
 
 let compile_job ~bsc ~runtime ~build_dir ~watch ~(config : Config.t)
     ~dependency_dirs (module_ : Source.module_) ~is_interface path =
-  let ast = Source.ast_path path in
-  let namespace_args = Compiler_args.namespace_args config module_.name in
-  let interface_args =
-    if not is_interface && Option.is_some module_.interface then
-      ["-bs-read-cmi"]
-    else []
-  in
-  let output_args =
-    if is_interface then []
-    else
-      List.concat_map
-        (fun spec ->
-          ["-bs-package-output"; Compiler_args.package_output config path spec])
-        config.package_specs
-  in
   let args =
-    namespace_args @ interface_args
-    @ ["-I"; Filename.concat Filename.parent_dir_name "ocaml"]
-    @ ["-runtime-path"; runtime]
-    @ List.concat_map (fun dir -> ["-I"; dir]) dependency_dirs
-    @ Compiler_args.compiler_flags ~source_maps:true ~watch ~gentype:true config
-    @ Compiler_args.gentype_dependency_args config
-    @ ["-bs-package-name"; config.name; "-bs-project-root"; config.root]
-    @ output_args @ [ast]
+    Compiler_args.compiler_arguments ~config ~runtime ~dependency_dirs
+      ~module_name:module_.name ~is_interface
+      ~has_interface:(Option.is_some module_.interface) ~watch
+      ~gentype_dependency_args:(Compiler_args.gentype_dependency_args config)
+      ~path
   in
   Process.{program = bsc; args; cwd = build_dir}
 
