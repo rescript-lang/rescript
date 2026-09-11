@@ -197,26 +197,37 @@ let cleanup_stale ?ocaml_files ?ast_sources ?source_files ?present_source_files
            (String.length path - String.length prefix))
     else None
   in
-  let source_base path =
-    path |> Filename.basename |> Filename.remove_extension
+  let mapped_source_directories =
+    Hashtbl.create (List.length ast_sources * 2)
   in
-  let artifact_belongs_to_source basename source =
-    let artifact = Filename.remove_extension basename in
-    let source = source_base source in
-    artifact = source || String.starts_with ~prefix:(source ^ "-") artifact
+  let add_mapped_source_directory key directory =
+    let directories =
+      Hashtbl.find_opt mapped_source_directories key |> Option.value ~default:[]
+    in
+    Hashtbl.replace mapped_source_directories key (directory :: directories)
   in
+  List.iter
+    (fun (_, source) ->
+      relative_to_root source
+      |> Option.iter (fun relative_source ->
+          let directory = Filename.dirname relative_source in
+          let source_base =
+            relative_source |> Filename.basename |> Filename.remove_extension
+          in
+          add_mapped_source_directory source_base directory;
+          add_mapped_source_directory
+            (Source.compiler_asset_basename config relative_source)
+            directory))
+    ast_sources;
   let directly_mapped_working_paths basename =
     let extension = Filename.extension basename in
     if extension = ".mlmap" then [Filename.concat build_dir basename]
     else
-      ast_sources
-      |> List.filter_map (fun (_, source) ->
-          if artifact_belongs_to_source basename source then
-            relative_to_root source
-            |> Option.map (fun relative_source ->
-                Filename.concat build_dir
-                  (Filename.concat (Filename.dirname relative_source) basename))
-          else None)
+      Hashtbl.find_opt mapped_source_directories
+        (Filename.remove_extension basename)
+      |> Option.value ~default:[]
+      |> List.map (fun directory ->
+          Filename.concat build_dir (Filename.concat directory basename))
       |> List.sort_uniq String.compare
   in
   let working_paths basename =

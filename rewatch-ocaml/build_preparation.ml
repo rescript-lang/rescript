@@ -505,5 +505,6 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
     find_cycle stats.retained.global_modules stats.retained.namespace_maps
       build_state
   in
+  stats.retained.graph_has_cycle <- Option.is_some cycle;
   stats.parse_seconds <- Unix.gettimeofday () -. parse_started;
   cycle

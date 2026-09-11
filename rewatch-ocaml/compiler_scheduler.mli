@@ -1,6 +1,7 @@
 exception Build_failure of string
 
 type scheduled_module
+type candidate
 
 val create :
   key:string ->
@@ -18,7 +19,14 @@ val create :
   mark_warning:(string -> unit) ->
   scheduled_module
 
-val requires_compile : scheduled_module -> bool
+val candidate :
+  key:string ->
+  state:Build_state.module_ ->
+  warning_paths:string list ->
+  make:(unit -> scheduled_module) ->
+  candidate
+
+val candidate_requires_compile : candidate -> bool
 
 val run :
   poll:(unit -> unit) option ->
@@ -26,7 +34,7 @@ val run :
   blocked_modules:(string, unit) Hashtbl.t ->
   compile_assets:Compile_assets.t ->
   build_state:Build_state.t ->
-  scheduled_modules:scheduled_module list ->
+  candidates:candidate list ->
   mark_compiled:(unit -> unit) ->
   mark_had_warnings:(unit -> unit) ->
   progress:Output.Progress.t ->

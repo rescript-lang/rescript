@@ -23,7 +23,7 @@ let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
     ~(stats : Build_types.t) =
   Package_diagnostics.validate_metadata root_config;
   let resolution = Package_resolution.create root_config in
-  let requested_features = Hashtbl.create 32 in
+  let requested_features = Feature_requests.create () in
   let unallowed_dependencies = ref [] in
   let load_config = Package_resolution.load_config resolution in
   let resolve_dependency package_root (dependency : Config.dependency) =
@@ -32,19 +32,12 @@ let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
     in
     (resolved.directory, resolved.config)
   in
-  let add_feature_request root request =
-    match (Hashtbl.find_opt requested_features root, request) with
-    | None, request -> Hashtbl.add requested_features root request
-    | Some None, _ | Some _, None ->
-      Hashtbl.replace requested_features root None
-    | Some (Some current), Some requested ->
-      Hashtbl.replace requested_features root
-        (Some (List.sort_uniq String.compare (current @ requested)))
-  in
   let collected = Hashtbl.create 32 in
   let rec collect ~folder:root ~features ~is_local =
-    if root <> root_config.root || not (Hashtbl.mem requested_features root)
-    then add_feature_request root features;
+    if
+      root <> root_config.root
+      || not (Feature_requests.mem requested_features root)
+    then Feature_requests.add requested_features root features;
     if not (Hashtbl.mem collected root) then (
       Hashtbl.add collected root ();
       let config = load_config root in
@@ -97,10 +90,9 @@ let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
          ^ details
          ^ "\nUpdate allowed-dependents in the dependency rescript.json files."
           )));
-  Hashtbl.iter
-    (fun root features ->
-      Hashtbl.replace stats.retained.active_features root features)
-    requested_features;
+  Feature_requests.iter requested_features (fun root features ->
+      Hashtbl.replace stats.retained.active_features root
+        (Feature_requests.to_option features));
   let visited = Hashtbl.create 32 in
   let graph_packages = ref [] in
   let rec visit ~folder:root ~features ~warn_error ~filter ~is_local =

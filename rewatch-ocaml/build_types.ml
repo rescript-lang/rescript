@@ -60,6 +60,7 @@ type retained = {
   global_modules: (string, global_module) Hashtbl.t;
   namespace_maps: (string, namespace_map) Hashtbl.t;
   namespace_maps_by_name: (string, namespace_map list) Hashtbl.t;
+  mutable graph_has_cycle: bool;
   graph_packages: (string, graph_package) Hashtbl.t;
   source_index: (string, string * Source.module_ * string * string) Hashtbl.t;
   pending_parse_paths: (string, unit) Hashtbl.t;
@@ -86,7 +87,7 @@ type t = {
   initialized_logs: (string, unit) Hashtbl.t;
   deferred_artifact_cleanup: string list ref;
   namespace_jobs: (Process.job * (Process.result -> unit)) list ref;
-  scheduled_modules: Compiler_scheduler.scheduled_module list ref;
+  compile_candidates: Compiler_scheduler.candidate list ref;
   compile_cleanup: (unit -> unit) list ref;
   mutable compiler_cleaned: bool;
   retained: retained;
@@ -117,7 +118,7 @@ let create_attempt ~attempt_kind ~retained ~poll ~process_poll ~progress
     initialized_logs = Hashtbl.create 16;
     deferred_artifact_cleanup = ref [];
     namespace_jobs = ref [];
-    scheduled_modules = ref [];
+    compile_candidates = ref [];
     compile_cleanup = ref [];
     compiler_cleaned = false;
     retained;
@@ -135,6 +136,7 @@ let create ~warning_state ~poll ~process_poll ~progress ~verbosity =
       global_modules = Hashtbl.create 64;
       namespace_maps = Hashtbl.create 16;
       namespace_maps_by_name = Hashtbl.create 16;
+      graph_has_cycle = false;
       graph_packages = Hashtbl.create 32;
       source_index = Hashtbl.create 64;
       pending_parse_paths = Hashtbl.create 16;

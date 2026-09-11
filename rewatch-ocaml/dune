@@ -29,6 +29,7 @@
   config
   project_context
   package_resolution
+  feature_requests
   platform_common
   platform
   process

@@ -106,6 +106,19 @@ let () =
 
 let tests =
   "unit_tests" >:: fun _context ->
+  let feature_requests = Feature_requests.create () in
+  Feature_requests.add feature_requests "package" (Some ["browser"]);
+  Feature_requests.add feature_requests "package" (Some ["native"; "browser"]);
+  check
+    (Feature_requests.find feature_requests "package"
+    = Some (Feature_requests.Selected ["browser"; "native"]))
+    "feature requests merge and deduplicate named selections";
+  Feature_requests.add feature_requests "package" None;
+  Feature_requests.add feature_requests "package" (Some ["ignored"]);
+  check
+    (Feature_requests.find feature_requests "package"
+    = Some Feature_requests.All)
+    "an unrestricted feature request dominates named selections";
   let test_executable = Unix.realpath Sys.executable_name in
   let process_job args =
     {Process.program = test_executable; args; cwd = Sys.getcwd ()}
