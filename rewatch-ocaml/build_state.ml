@@ -1,3 +1,5 @@
+module String_set = Set.Make (String)
+
 type module_ = {
   key: string;
   package_name: string;
@@ -5,7 +7,7 @@ type module_ = {
   source: Source.module_;
   mutable raw_dependencies: string list;
   mutable dependencies: string list;
-  mutable dependents: string list;
+  mutable dependents: String_set.t;
   mutable compile_dirty: bool;
   mutable deps_dirty: bool;
   mutable last_compiled_cmi: float option;
@@ -26,7 +28,7 @@ let add state ~key ~package_name ~package_root ~source ~raw_dependencies
       source;
       raw_dependencies;
       dependencies = [];
-      dependents = [];
+      dependents = String_set.empty;
       compile_dirty = false;
       deps_dirty = true;
       last_compiled_cmi;
@@ -55,19 +57,19 @@ let set_dependencies state ~key dependencies =
     (fun dependency ->
       let dependency_module = find_exn state dependency in
       dependency_module.dependents <-
-        List.filter (fun dependent -> dependent <> key) dependency_module.dependents)
+        String_set.remove key dependency_module.dependents)
     module_.dependencies;
   module_.dependencies <- dependencies;
   module_.deps_dirty <- false;
   List.iter
     (fun dependency ->
       let dependency_module = find_exn state dependency in
-      if not (List.mem key dependency_module.dependents) then
-        dependency_module.dependents <- key :: dependency_module.dependents)
+      dependency_module.dependents <-
+        String_set.add key dependency_module.dependents)
     dependencies
 
 let mark_dependents_compile_dirty state module_ ~is_blocked =
-  List.iter
+  String_set.iter
     (fun dependent ->
       if not (is_blocked dependent) then
         (find_exn state dependent).compile_dirty <- true)

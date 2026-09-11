@@ -71,7 +71,7 @@ let validate_visible_namespaces ~(root_config : Config.t)
 
 let resolve_dependency
     (modules_by_key : (string, Build_types.global_module) Hashtbl.t)
-    (node : Build_types.global_module) dependency =
+    namespace_modules (node : Build_types.global_module) dependency =
   let raw_name = dependency_head dependency in
   let local_name =
     match node.namespace, String.split_on_char '.' dependency with
@@ -117,21 +117,17 @@ let resolve_dependency
       in
       match explicit_namespaced_module with
       | Some key -> [key]
-      | None ->
-        Hashtbl.to_seq_values modules_by_key
-        |> Seq.filter_map (fun dependency_node ->
-             if
-               dependency_node.Build_types.namespace = Some raw_name
-               && is_visible dependency_node
-             then Some dependency_node.key
-             else None)
-        |> List.of_seq)
+      | None -> (
+        Hashtbl.find_opt namespace_modules raw_name
+        |> Option.value ~default:[]
+        |> List.filter (fun key ->
+             Hashtbl.find modules_by_key key |> is_visible)))
 
 let resolved_dependencies
     (modules_by_key : (string, Build_types.global_module) Hashtbl.t)
-    (node : Build_types.global_module) =
+    namespace_modules (node : Build_types.global_module) =
   node.raw_dependencies
-  |> List.concat_map (resolve_dependency modules_by_key node)
+  |> List.concat_map (resolve_dependency modules_by_key namespace_modules node)
   |> List.filter (fun dependency -> dependency <> node.key)
   |> List.sort_uniq String.compare
 
@@ -384,9 +380,22 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
              (Filename.concat node.package_root node.source_path)))
     nodes;
   Hashtbl.iter (fun key node -> Hashtbl.add stats.global_modules key node) by_key;
+  Hashtbl.iter
+    (fun key node ->
+      node.namespace
+      |> Option.iter (fun namespace ->
+           let keys =
+             Hashtbl.find_opt stats.global_namespace_modules namespace
+             |> Option.value ~default:[]
+           in
+           Hashtbl.replace stats.global_namespace_modules namespace
+             (key :: keys)))
+    by_key;
   let graph_nodes =
     List.map
-      (fun node -> (node, resolved_dependencies by_key node))
+      (fun node ->
+        ( node,
+          resolved_dependencies by_key stats.global_namespace_modules node ))
       nodes
   in
   let build_state = Build_state.create (List.length graph_nodes) in

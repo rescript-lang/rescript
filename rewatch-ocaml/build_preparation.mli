@@ -6,6 +6,7 @@ type cycle_info = {
 
 val resolved_dependencies :
   (string, Build_types.global_module) Hashtbl.t ->
+  (string, string list) Hashtbl.t ->
   Build_types.global_module ->
   string list
 

@@ -45,6 +45,7 @@ type t = {
   initialized_logs: (string, unit) Hashtbl.t;
   global_raw_dependencies: (string, string list) Hashtbl.t;
   global_modules: (string, global_module) Hashtbl.t;
+  global_namespace_modules: (string, string list) Hashtbl.t;
   graph_packages: (string, graph_package) Hashtbl.t;
   cleanup_results: (string, Build_artifacts.cleanup_result) Hashtbl.t;
   deferred_artifact_cleanup: string list ref;
@@ -82,6 +83,7 @@ let create ~warning_state ~poll ~process_poll ~progress ~verbosity =
     initialized_logs = Hashtbl.create 16;
     global_raw_dependencies = Hashtbl.create 64;
     global_modules = Hashtbl.create 64;
+    global_namespace_modules = Hashtbl.create 16;
     graph_packages = Hashtbl.create 32;
     cleanup_results = Hashtbl.create 32;
     deferred_artifact_cleanup = ref [];
@@ -135,6 +137,7 @@ let create_incremental ~previous ~poll ~process_poll ~progress ~verbosity =
     initialized_logs = Hashtbl.create 16;
     global_raw_dependencies = previous.global_raw_dependencies;
     global_modules = previous.global_modules;
+    global_namespace_modules = previous.global_namespace_modules;
     graph_packages = previous.graph_packages;
     cleanup_results;
     deferred_artifact_cleanup = ref [];

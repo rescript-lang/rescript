@@ -39,7 +39,9 @@ let tests =
     (not (Build_state.dependency_compiled_after b a))
     "a module without a prior CMT relies on its own dirty state";
   check
-    (a.dependents = ["B"] && b.dependencies = ["A"])
+    (Build_state.String_set.equal a.dependents
+       (Build_state.String_set.singleton "B")
+    && b.dependencies = ["A"])
     "setting dependencies creates the reverse edge";
   check (not b.deps_dirty) "stored dependency state is marked initialized";
   Build_state.mark_dependents_compile_dirty state a ~is_blocked:(fun _ -> true);
@@ -52,10 +54,12 @@ let tests =
     "dependency CMI timestamps invalidate older dependents";
   Build_state.set_dependencies state ~key:"B" [];
   check
-    (a.dependents = [] && b.dependencies = [])
+    (Build_state.String_set.is_empty a.dependents && b.dependencies = [])
     "updating dependencies removes obsolete reverse edges";
   Build_state.set_dependencies state ~key:"B" ["A"];
   Build_state.set_dependencies state ~key:"B" ["A"];
   check
-    (a.dependents = ["B"] && b.dependencies = ["A"])
+    (Build_state.String_set.equal a.dependents
+       (Build_state.String_set.singleton "B")
+    && b.dependencies = ["A"])
     "updating dependencies does not duplicate reverse edges"
