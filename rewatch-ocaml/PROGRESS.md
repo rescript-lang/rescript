@@ -2544,15 +2544,24 @@ was an OCaml-port defect rather than a shared Rust issue. The resource/quality
 review found no other concrete P0-P3 issue at this checkpoint, and the targeted
 source-only follow-up approved both the traversal fix and its regression.
 
-A five-run measurement after the review work produced identical clean,
+Two five-run measurements after the review work produced identical clean,
 unchanged, and single-edit compiler-work counts and identical complete/stable
-artifact sets, but its 5.809 s OCaml versus 4.418 s Rust medians (1.315x) did
-not pass the timing threshold. A contemporaneous three-run comparison using
-the prior `a4b0728b2f` OCaml binary measured that older binary at 5.984 s,
-slower in absolute terms than the current binary, while Rust samples ranged
-from 4.222 to 5.391 s. The failed ratio therefore does not demonstrate a code
-regression; it demonstrates an unstable Rust baseline. A coherent five-run
-measurement of the latest checkpoint remains required before the final gate.
+artifact sets, but their timing ratios did not pass the threshold. The first
+measured 5.809 s OCaml versus 4.418 s Rust (1.315x); the second measured 6.016 s
+versus 4.528 s (1.329x). A contemporaneous three-run comparison using the prior
+`a4b0728b2f` OCaml binary measured that older binary at 5.984 s, slower in
+absolute terms than the current binary, while Rust samples ranged from 4.222
+to 5.391 s. The second full run likewise contained a 4.291-to-6.289 s Rust
+range. The failed ratios therefore do not demonstrate a code regression, but
+they also cannot establish performance acceptance for the latest checkpoint.
+A coherent five-run measurement remains required before the final gate.
+
+The latest retained-watch gate at `d1c3ca9732` was coherent and passed: 118 ms
+OCaml versus 123 ms Rust, exactly seven parser and seven compiler calls per
+implementation, identical generated output, stable file descriptors and task
+counts, and no RSS growth. The complete canonical 48-test rewatch suite also
+passed against the same OCaml executable and left no watcher or testrepo change
+behind.
 
 At the earlier `a4b0728b2f` checkpoint on the quiet, powered host, the five-run
 interleaved release gate measured a 5.455 s OCaml median against 4.644 s Rust
