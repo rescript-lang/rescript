@@ -99,8 +99,12 @@ let () =
         exit 0)
     | _ -> ()
 
-let tests =
-  "unit_tests" >:: fun _context ->
+let test_executable () = Unix.realpath Sys.executable_name
+
+let process_job args =
+  {Process.program = test_executable (); args; cwd = Sys.getcwd ()}
+
+let feature_request_tests _context =
   let feature_requests = Feature_requests.create () in
   Feature_requests.add feature_requests "package" (Some ["browser"]);
   Feature_requests.add feature_requests "package" (Some ["native"; "browser"]);
@@ -113,11 +117,10 @@ let tests =
   check
     (Feature_requests.find feature_requests "package"
     = Some Feature_requests.All)
-    "an unrestricted feature request dominates named selections";
-  let test_executable = Unix.realpath Sys.executable_name in
-  let process_job args =
-    {Process.program = test_executable; args; cwd = Sys.getcwd ()}
-  in
+    "an unrestricted feature request dominates named selections"
+
+let process_tests _context =
+  let test_executable = test_executable () in
   check
     (Process.default_max_jobs >= 1 && Process.default_max_jobs <= 32)
     "parallel subprocess bound follows the available CPUs";
@@ -334,7 +337,10 @@ let tests =
   check
     (!drained_failures = 2 && deterministic_failure = Some "a")
     "dependency scheduler drains active work and reports errors \
-     deterministically";
+     deterministically"
+
+let platform_tests _context =
+  let test_executable = test_executable () in
   let path_root = Filename.temp_file "rewatch-ocaml-path-" "" in
   Sys.remove path_root;
   Unix.mkdir path_root 0o755;
@@ -412,7 +418,10 @@ let tests =
        ~args:["/D"; "/V:OFF"; "/S"; "/C"; {|echo "hello world"|}]
     = {|cmd.exe /D /V:OFF /S /C echo "hello world"|})
     "Windows preserves cmd.exe shell syntax without executable-argument \
-     re-quoting";
+     re-quoting"
+
+let scheduler_tests _context =
+  let test_executable = test_executable () in
   let scheduler_root = Filename.temp_file "rewatch-ocaml-scheduler-" "" in
   Sys.remove scheduler_root;
   Unix.mkdir scheduler_root 0o755;
@@ -460,7 +469,9 @@ let tests =
         (Sys.readdir scheduler_root
         |> Array.for_all (fun name ->
             not (String.starts_with ~prefix:".rewatch-ocaml-" name)))
-        "pipe capture creates no temporary scheduler logs");
+        "pipe capture creates no temporary scheduler logs")
+
+let graph_and_diagnostic_tests _context =
   let node name deps = (name, deps) in
   let shortest_cycle =
     Graph.shortest_cycle
@@ -611,7 +622,10 @@ let tests =
     "a lock owner outside the Rust u32 range is malformed";
   check
     (not (Build_lock.valid_owner "123\n"))
-    "trailing data in a lock owner is malformed";
+    "trailing data in a lock owner is malformed"
+
+let lock_tests _context =
+  let test_executable = test_executable () in
   let lock_root = Filename.temp_file "rewatch-ocaml-stale-lock-" "" in
   Sys.remove lock_root;
   Unix.mkdir lock_root 0o755;
@@ -691,7 +705,9 @@ let tests =
       Unix.kill owner_pid Sys.sigterm;
       ignore (Unix.waitpid [] owner_pid);
       lock_owner_pid := None;
-      File_util.remove_file lock);
+      File_util.remove_file lock)
+
+let config_tests _context =
   let config_root = Filename.temp_file "rewatch-ocaml-config-" "" in
   Sys.remove config_root;
   Unix.mkdir config_root 0o755;
@@ -903,7 +919,10 @@ let tests =
              Test_support.contains_text message "field 'generators'"
              && Test_support.contains_text message "is not supported")
            config.diagnostics)
-        "known unsupported config fields are distinguished from unknown fields");
+        "known unsupported config fields are distinguished from unknown fields")
+
+let dependency_validation_tests _context =
+  let test_executable = test_executable () in
   let dependency_root =
     Filename.temp_file "rewatch-ocaml-allowed-dependents-" ""
   in
@@ -958,3 +977,16 @@ let tests =
                 "app dev-dependencies: restricted"
           in
           check rejected "unallowed development dependency is rejected"))
+
+let tests =
+  "unit_tests"
+  >::: [
+         "feature_requests" >:: feature_request_tests;
+         "process" >:: process_tests;
+         "platform" >:: platform_tests;
+         "scheduler" >:: scheduler_tests;
+         "graph_and_diagnostics" >:: graph_and_diagnostic_tests;
+         "locks" >:: lock_tests;
+         "configuration" >:: config_tests;
+         "dependency_validation" >:: dependency_validation_tests;
+       ]
