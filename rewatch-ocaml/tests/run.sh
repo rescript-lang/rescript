@@ -106,6 +106,31 @@ source_map="$work/source-map"
 warning_replay="$work/warning-replay"
 monorepo="$work/monorepo"
 
+transitive_local_watch="$work/transitive-local-watch"
+mkdir -p "$transitive_local_watch/src" \
+  "$transitive_local_watch/node_modules/external/src" \
+  "$transitive_local_watch/node_modules/external/node_modules" \
+  "$transitive_local_watch/packages/local/src"
+printf '%s\n' '{"workspaces":["packages/*"]}' \
+  >"$transitive_local_watch/package.json"
+printf '%s\n' \
+  '{"name":"transitive-local-watch","sources":"src","dependencies":["external"],"package-specs":{"module":"esmodule","in-source":true,"suffix":".mjs"}}' \
+  >"$transitive_local_watch/rescript.json"
+printf 'let value = External.value\n' \
+  >"$transitive_local_watch/src/Main.res"
+printf '%s\n' \
+  '{"name":"external","sources":"src","dependencies":["local"],"package-specs":{"module":"esmodule","in-source":true,"suffix":".mjs"}}' \
+  >"$transitive_local_watch/node_modules/external/rescript.json"
+printf 'let value = Local.value\n' \
+  >"$transitive_local_watch/node_modules/external/src/External.res"
+printf '%s\n' \
+  '{"name":"local","sources":"src","package-specs":{"module":"esmodule","in-source":true,"suffix":".mjs"}}' \
+  >"$transitive_local_watch/packages/local/rescript.json"
+printf 'let value = 1\n' \
+  >"$transitive_local_watch/packages/local/src/Local.res"
+ln -s ../../../packages/local \
+  "$transitive_local_watch/node_modules/external/node_modules/local"
+
 namespace_invalidation="$work/namespace-invalidation"
 mkdir -p "$namespace_invalidation/src" \
   "$namespace_invalidation/packages/dep/src" \
@@ -925,6 +950,27 @@ if ! wait_for_text \
 fi
 kill -TERM "$duplicate_selection_pid"
 wait "$duplicate_selection_pid" 2>/dev/null || true
+
+# Dependency traversal must continue through installed packages because a
+# later edge can resolve back into the local workspace and therefore needs a
+# source watch.
+"$port" watch "$transitive_local_watch" \
+  >"$transitive_local_watch/watch.log" 2>&1 &
+transitive_local_watch_pid=$!
+background_pids="$background_pids $transitive_local_watch_pid"
+transitive_local_output="$transitive_local_watch/packages/local/src/Local.mjs"
+if ! wait_for_text "$transitive_local_output" 'value = 1'; then
+  cat "$transitive_local_watch/watch.log" >&2
+  exit 1
+fi
+printf 'let value = 2\n' \
+  >"$transitive_local_watch/packages/local/src/Local.res"
+if ! wait_for_text "$transitive_local_output" 'value = 2'; then
+  cat "$transitive_local_watch/watch.log" >&2
+  exit 1
+fi
+kill -TERM "$transitive_local_watch_pid"
+wait "$transitive_local_watch_pid" 2>/dev/null || true
 
 dev_include_call_log="$dev_include_order/bsc-calls.log"
 env RESCRIPT_BSC_EXE="$root/rewatch-ocaml/tests/counting-bsc.sh" \
