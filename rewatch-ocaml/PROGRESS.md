@@ -2575,8 +2575,8 @@ measured 119 ms OCaml versus 120 ms Rust, exactly seven parser and compiler
 calls per implementation, stable descriptors/tasks, and no RSS growth. Both
 were within their documented thresholds.
 
-The deterministic non-Windows packaging gate was repeated at implementation
-checkpoint `a4b0728b2f`. A `static`-profile promotion produced a statically
+The deterministic non-Windows packaging gate was repeated at checkpoint
+`88b171cc46`. A targeted `static`-profile promotion produced a statically
 linked `rescript.exe`; `scripts/checkCompilerExes.js` confirmed that the
 promoted platform binary was the current Dune output. Regenerating
 `packages/artifacts.json` produced no diff, and Yarn's package dry run contained
