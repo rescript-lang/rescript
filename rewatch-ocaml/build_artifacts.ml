@@ -62,37 +62,8 @@ let generated_output_details path =
              output_path )
        else None)
 
-let watch_sidecar_suffixes = [".rewatch-pending"; ".rewatch-backup"]
-
-let is_watch_output_sidecar path =
-  List.exists
-    (fun sidecar_suffix ->
-      Filename.check_suffix path sidecar_suffix
-      &&
-      let output = Filename.chop_suffix path sidecar_suffix in
-      Option.is_some (generated_output_details output))
-    watch_sidecar_suffixes
-
 let is_generated_output_path path =
-  Option.is_some (generated_output_details path) || is_watch_output_sidecar path
-
-let cleanup_watch_output_sidecars ?source_files ~root (config : Config.t) =
-  let source_files =
-    match source_files with
-    | Some files -> files
-    | None ->
-      config.sources
-      |> List.concat_map (fun (source : Config.source) ->
-           File_util.files_under (Filename.concat root source.dir))
-  in
-  let output_files =
-    [lib_path "" "es6"; lib_path "" "js"]
-    |> List.concat_map (fun directory ->
-         File_util.files_under (Filename.concat root directory))
-  in
-  source_files @ output_files
-  |> List.iter (fun path ->
-       if is_watch_output_sidecar path then File_util.remove_file path)
+  Option.is_some (generated_output_details path)
 
 let with_root_options (config : Config.t) (root_config : Config.t) =
   {
@@ -158,9 +129,6 @@ let cleanup_stale ?ocaml_files ?ast_sources ?source_files ~root ~ocaml_dir
   |> List.iter (fun path ->
        if Option.is_some (generated_output_details path) then
          Hashtbl.replace present_public_outputs path ());
-  (source_files @ List.concat_map snd output_files)
-  |> List.iter (fun path ->
-       if is_watch_output_sidecar path then File_util.remove_file path);
   let expected_artifacts = Hashtbl.create (List.length modules * 8) in
   let owned_output_names = Hashtbl.create (List.length modules * 2) in
   let add_expected base extensions =

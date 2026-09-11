@@ -17,9 +17,6 @@ val remove_public_outputs : Config.t -> Source.module_ list -> unit
 
 val is_generated_output_path : string -> bool
 
-val cleanup_watch_output_sidecars :
-  ?source_files:string list -> root:string -> Config.t -> unit
-
 val with_root_options : Config.t -> Config.t -> Config.t
 
 val cleanup_stale :

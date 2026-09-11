@@ -46,15 +46,6 @@ let tests =
       let dependency_unowned =
         Filename.concat root "node_modules/installed/lib/es6/keep.txt"
       in
-      let abandoned_source_sidecar =
-        Filename.concat root "src/Deleted.js.rewatch-pending"
-      in
-      let abandoned_map_sidecar =
-        Filename.concat root "lib/es6/deleted/Deleted.js.map.rewatch-backup"
-      in
-      let unrelated_sidecar_name =
-        Filename.concat root "lib/es6/notes.rewatch-pending"
-      in
       let duplicate_a = Filename.concat root "src/one/Duplicate.res" in
       let duplicate_b = Filename.concat root "src/two/Duplicate.res" in
       let duplicate_output_a =
@@ -75,9 +66,6 @@ let tests =
       write_file unowned_javascript "manual\n";
       write_file dependency_generated "generated dependency\n";
       write_file dependency_unowned "keep dependency\n";
-      write_file abandoned_source_sidecar "abandoned output\n";
-      write_file abandoned_map_sidecar "abandoned map\n";
-      write_file unrelated_sidecar_name "not a generated output\n";
       write_file duplicate_a "let value = 1\n";
       write_file duplicate_b "let value = 2\n";
       write_file duplicate_output_a "generated duplicate one\n";
@@ -104,15 +92,6 @@ let tests =
       check
         (Sys.file_exists dependency_unowned)
         "clean preserves unrelated files beside installed dependency outputs";
-      check
-        (not (Sys.file_exists abandoned_source_sidecar))
-        "clean removes a staging sidecar whose source was deleted";
-      check
-        (not (Sys.file_exists abandoned_map_sidecar))
-        "clean removes an abandoned staged source map";
-      check
-        (Sys.file_exists unrelated_sidecar_name)
-        "clean preserves staging-like names that are not generated outputs";
       check
         (not (Sys.file_exists duplicate_output_a))
         "clean removes the first output when module names are duplicated";
