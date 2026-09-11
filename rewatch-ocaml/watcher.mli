@@ -5,6 +5,8 @@ type change = {path: string; kind: change_kind}
 type build_result = Succeeded | Failed
 
 module For_test : sig
+  val is_control_file_name : string -> bool
+
   val polling_build_changes :
     previous:(string * float * int * string) list ->
     trigger:(string * float * int * string) list ->

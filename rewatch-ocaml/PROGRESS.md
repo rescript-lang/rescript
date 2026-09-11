@@ -1918,6 +1918,15 @@ required behavior decision, not a performance proposal.
   12 frames per second, and is disabled entirely for redirected and quiet
   output. The PTY gate uses a module with both an interface and implementation
   to ensure the parse total counts modules rather than subprocesses.
+- Configuration diagnostics are reported during the initial watch build but
+  not repeated by either incremental edits or full structural rebuilds. The PTY
+  lifecycle check now performs both kinds of rebuild and requires the
+  deprecation diagnostic to occur exactly once.
+- Initial watch configuration validation runs inside the acquired watch-lock
+  scope. A second watcher therefore reports the active owner before attempting
+  to parse a concurrently malformed configuration, while the lock finalizer
+  still releases ownership if initial validation fails. A differential command
+  case retains the lock-before-config ordering.
 - Explicit `clean` now validates and collects the complete dependency-first
   package plan before mutating the filesystem, then removes compiler trees and
   generated outputs in distinct phases. The previous per-package interleaving
@@ -1963,6 +1972,11 @@ required behavior decision, not a performance proposal.
   injected native-constructor failure drives the actual fallback loop in OUnit,
   changes a source after the initial build, and requires exactly one
   path-specific incremental rebuild plus lock and signal cleanup.
+- Watch snapshots treat only `rescript.json` and legacy `bsconfig.json` as
+  package-root control files. `package.json` is not a reference watch trigger;
+  hashing it added work while allowing unrelated metadata edits to request an
+  extra full rebuild. A focused scope test retains the two accepted names and
+  rejects `package.json`.
 - Generated outputs are published as their compiler subprocesses succeed, so a
   module does not become visible before a dependency whose CMI allowed it to
   compile. Ordinary build cleanup and explicit `clean` still remove abandoned

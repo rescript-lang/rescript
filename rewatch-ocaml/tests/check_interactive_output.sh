@@ -595,6 +595,10 @@ capture_warning_watch() {
   if ! wait_for_text "$transcript" "Finished incremental compilation" 1; then
     return 1
   fi
+  printf 'let added = 1\n' >"$project/src/B.res"
+  if ! wait_for_text "$transcript" "Finished compilation" 1; then
+    return 1
+  fi
   rm -f "$project/lib/watch.lock"
   wait "$active_script_pid"
   active_script_pid=""

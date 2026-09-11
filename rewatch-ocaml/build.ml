@@ -446,8 +446,10 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
         if success then Printf.printf "Compiled %d modules\n%!" stats.compiled
         else Printf.eprintf "Compiled %d modules\n%!" stats.compiled);
     let diagnostics =
-      if compilation_kind = Incremental_watch then []
-      else stats.diagnostics |> List.rev |> List.sort_uniq String.compare
+      match compilation_kind with
+      | Incremental_watch | Full_watch -> []
+      | One_shot | Initial_watch ->
+        stats.diagnostics |> List.rev |> List.sort_uniq String.compare
     in
     let warning_entries = Warning_state.entries stats.warning_state in
     warning_entries
@@ -656,7 +658,6 @@ let run ~seen ~verbosity ~folder ~prod ~features ~warn_error ~watch ~after_build
 let watch ~verbosity ~folder ~prod ~features ~warn_error ~after_build ~filter
     ~clear_screen =
   let root = project_root folder in
-  ignore (Config.load_root root);
   let warning_state = Warning_state.create () in
   let initial_build = ref true in
   let retained = ref None in
