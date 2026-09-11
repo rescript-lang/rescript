@@ -192,47 +192,71 @@ let rec prepare_tree ~(root_config : Config.t) ~dependency_context ~seen
   let warning_asts = ref [] in
   List.iter (fun (path, result) ->
     let absolute_path = Filename.concat root path in
-    let stderr =
-      match result with
-      | Some result -> result.Process.stderr
-      | None ->
-        Hashtbl.find_opt stats.preparse_stderr absolute_path
-        |> Option.value ~default:""
-    in
-    Option.iter
-      (fun result ->
-        if not (Process.succeeded result) then
-          let output =
-            Printf.sprintf "Error in %s:\n%s%s" config.name result.stderr
-              result.stdout
-          in
-          Compiler_log.append root output;
-          raise (Parse_failure output))
-      result;
-    let stderr =
-      if is_local then stderr
-      else Compiler_process.retain_critical_external_warnings stderr
-    in
-    if stderr <> "" then stats.had_warnings <- true;
-    if stderr <> "" then Compiler_log.append root stderr;
-    if stderr <> "" then prerr_string stderr;
-    let ast = Source.ast_path path in
-    if is_local && stderr <> "" then
-      warning_asts := (absolute_path, ast) :: !warning_asts;
-    let published_ast =
-      Filename.concat
-        (Build_artifacts.lib_path config.root "ocaml")
-        (Filename.basename ast)
-    in
-    File_util.copy_existing_file ~ensure_parent:false
-      (Filename.concat build_dir ast) published_ast;
-    Compile_assets.refresh_ast compile_assets ~source:absolute_path
-      ~path:published_ast;
-    File_util.copy_existing_file ~ensure_parent:false (Filename.concat config.root path)
-      (Filename.concat
-         (Build_artifacts.lib_path config.root "ocaml")
-         (Filename.basename path)))
+    match result with
+    | Some result when not (Process.succeeded result) ->
+      let output =
+        Printf.sprintf "Error in %s:\n%s%s" config.name result.stderr
+          result.stdout
+      in
+      Compiler_log.append root output;
+      stats.parse_messages :=
+        Build_types.Parse_error output :: !(stats.parse_messages)
+    | _ ->
+      let stderr =
+        match result with
+        | Some result -> result.Process.stderr
+        | None ->
+          Hashtbl.find_opt stats.preparse_stderr absolute_path
+          |> Option.value ~default:""
+      in
+      let stderr =
+        if is_local then stderr
+        else Compiler_process.retain_critical_external_warnings stderr
+      in
+      if stderr <> "" then (
+        stats.had_warnings <- true;
+        Compiler_log.append root stderr;
+        stats.parse_messages :=
+          Build_types.Parse_warning stderr :: !(stats.parse_messages));
+      let ast = Source.ast_path path in
+      if is_local && stderr <> "" then
+        warning_asts := (absolute_path, ast) :: !warning_asts;
+      let published_ast =
+        Filename.concat
+          (Build_artifacts.lib_path config.root "ocaml")
+          (Filename.basename ast)
+      in
+      File_util.copy_existing_file ~ensure_parent:false
+        (Filename.concat build_dir ast) published_ast;
+      Compile_assets.refresh_ast compile_assets ~source:absolute_path
+        ~path:published_ast;
+      File_util.copy_existing_file ~ensure_parent:false
+        (Filename.concat config.root path)
+        (Filename.concat
+           (Build_artifacts.lib_path config.root "ocaml")
+           (Filename.basename path)))
     parsed;
+  if !warning_asts <> [] then (
+    let cleaned = ref false in
+    stats.compile_cleanup :=
+      (fun () ->
+        if not !cleaned then (
+          cleaned := true;
+          List.iter
+            (fun (source, ast) ->
+              let path = Filename.concat ocaml_dir (Filename.basename ast) in
+              File_util.remove_file path;
+              Compile_assets.refresh_ast compile_assets ~source ~path)
+            !warning_asts))
+      :: !(stats.compile_cleanup));
+  if
+    List.exists
+      (function
+        | Build_types.Parse_error _ -> true
+        | Build_types.Parse_warning _ -> false)
+      !(stats.parse_messages)
+  then ()
+  else (
   let raw_dependencies = Hashtbl.create (List.length modules) in
   let parse_dirty_modules = Hashtbl.create (List.length modules) in
   List.iter
@@ -390,8 +414,11 @@ let rec prepare_tree ~(root_config : Config.t) ~dependency_context ~seen
            ~entry:config.namespace_entry ~package_dirty namespace modules))
     config.namespace;
   stats.scheduled_modules := scheduled @ !(stats.scheduled_modules);
+  let cleaned = ref false in
   stats.compile_cleanup :=
     (fun () ->
+      if not !cleaned then (
+        cleaned := true;
       (* The published AST is the freshness marker. Keep bsc's working AST in
          lib/bs and remove only the published copy so warnings are replayed
          without deleting a usable intermediate artifact. *)
@@ -415,12 +442,6 @@ let rec prepare_tree ~(root_config : Config.t) ~dependency_context ~seen
                   File_util.remove_file
                     (Filename.concat ocaml_dir (Filename.basename ast)))
                 paths)
-          compile_warning_modules;
-      List.iter
-        (fun (source, ast) ->
-          let path = Filename.concat ocaml_dir (Filename.basename ast) in
-          File_util.remove_file path;
-          Compile_assets.refresh_ast compile_assets ~source ~path)
-        !warning_asts)
+          compile_warning_modules))
     :: !(stats.compile_cleanup);
-  ()
+  ())

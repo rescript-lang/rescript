@@ -1888,6 +1888,14 @@ required behavior decision, not a performance proposal.
   matching the three Rust call sites. Pure policy tests and a byte-exact forced
   color differential case retain the CI-only behavior that the earlier source
   audit missed.
+- Parser subprocess results are consumed completely before the parse phase is
+  reported. Successful warnings are buffered until after the `Parsed` line,
+  while a failed batch retains every independent parser diagnostic before
+  returning. A PTY wrapper compares the warning/phase order directly with Rust,
+  and the 107-case command gate requires both errors from a two-file failing
+  batch without imposing Rust's hash-map-dependent order. Parsing already used
+  one bounded global subprocess batch, so closing this gap did not require a
+  different scheduler.
 - Interactive builds now also emit Rust-shaped cleanup, parse, and compile
   completion lines with three-step initial-build numbering, two-step watch
   rebuild numbering, phase-specific emojis, counts, and two-decimal timing.
@@ -2085,35 +2093,38 @@ required behavior decision, not a performance proposal.
 ## Next actions
 
 1. Perform a command-by-command phase and ordering audit for build, clean,
-   format, compiler-args, and watch, then perform the final two-scope whole-port
-   review and address confirmed findings. This audit must compare intermediate
-   state transitions and observable phases, not infer algorithm parity from
-   matching final files or exit status.
-2. At the final maintainability pass, add comments around ownership,
-   concurrency, platform, and algorithmic invariants that are not apparent from
-   the code itself. Comments should start with why the code or invariant is
-   needed, provide enough context for readers who are not specialists in every
-   relevant OCaml, build-system, compiler, or operating-system detail, and
-   stand on their own rather than explaining code mainly by comparison with
-   Rust (unless that compatibility relationship is itself the reason). Review
-   naming and module qualification, including whether generic utility calls are
+   format, compiler-args, and watch. This audit must compare intermediate state
+   transitions and observable phases, not infer algorithm parity from matching
+   final files or exit status. Stop after this audit for the requested external
+   AI review before beginning the remaining whole-port cleanup.
+2. Address that review, then complete the non-comment maintainability work,
+   native-platform validation, final performance/resource measurements,
+   packaging checks, and the final two-scope whole-port review. Review naming
+   and module qualification, including whether generic utility calls are
    clearer as `Module.function` than through `open`; do not apply either style
    mechanically. Remove dead code. In particular, remove legacy recognition,
    cleanup, and tests for `.rewatch-pending` and `.rewatch-backup` after the
    current experimental migration window; no supported implementation creates
-   these sidecars anymore. Confirm that the three release
-   inventories remain complete after the final behavior and platform work.
+   these sidecars anymore. Validate macOS packaging and native event behavior,
+   then prepare the pinned Windows handoff. Finish the Windows watcher/lock
+   backend and path audit and run the native build, unit, focused, and canonical
+   Bash suites in the VM. Address findings there and finish with an x64 Windows
+   confidence run where available. Confirm that the three release inventories
+   remain complete after the final behavior and platform work.
    Continue applying the functional-design principle of making illegal states
    unrepresentable where it removes a concrete ambiguity or failure mode, not as
    a ceremonial replacement for every `option`; the recorded candidates and
    the format-input change are evaluated above. Retain ordinary options for
    values that are genuinely absent, such as a missing interface, an
    unavailable native-event filename, or an optional hook.
-3. Validate macOS packaging and native event behavior, then prepare the pinned
-   Windows handoff. Finish the Windows watcher/lock
-   backend and path audit and run the native build, unit, focused, and canonical
-   Bash suites in the VM. Address findings there and finish with an x64 Windows
-   confidence run where available.
+3. Immediately before the final release-quality gate, perform the broad comment
+   pass for ownership, concurrency, platform, and algorithmic invariants that
+   are not apparent from the code itself. Comments should start with why the
+   code or invariant is needed, provide enough context for readers who are not
+   specialists in every relevant OCaml, build-system, compiler, or
+   operating-system detail, and stand on their own rather than explaining code
+   mainly by comparison with Rust unless compatibility itself is the reason.
+   Then rerun the complete release-quality gate and publish the final report.
 
 The future filesystem-performance ideas documented above do not block
 completion of the compatibility port.
