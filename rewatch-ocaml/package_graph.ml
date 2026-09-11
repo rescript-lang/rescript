@@ -1,8 +1,6 @@
 exception Error = Project_context.Error
 exception Package_error = Project_context.Package_error
 
-open Build_types
-
 let source_discovery_prod ~prod ~is_local = prod || not is_local
 
 let with_gentype_source_dirs directories (config : Config.t) =
@@ -23,7 +21,7 @@ let dependent_is_allowed allowed_dependents dependent =
     allowed_dependents
 
 let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
-    ~stats =
+    ~(stats : Build_types.t) =
   let dependency_context = Project_context.dependency_context root_config in
   let requested_features = Hashtbl.create 32 in
   let unallowed_dependencies = ref [] in
@@ -228,7 +226,7 @@ let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
       List.iter
         (fun (path, modified) -> Hashtbl.replace source_mtimes path modified)
         discovery.source_mtimes;
-      let package =
+      let package : Build_types.graph_package =
         {
           graph_root = root;
           graph_build_owner = (if owns_outputs then root else root_config.root);

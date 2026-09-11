@@ -5,6 +5,11 @@
 
 (test
  (name rewatch_ounit_tests_main)
+ ; Several cases launch this executable to test concurrent subprocess capture.
+ ; A sequential outer runner avoids nesting them inside OUnit worker processes;
+ ; the production concurrency is still exercised by those cases themselves.
+ (action
+  (run %{test} -runner sequential))
  (modules
   rewatch_ounit_tests_main
   build_artifacts_tests

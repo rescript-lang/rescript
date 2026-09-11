@@ -71,7 +71,7 @@ layout mechanically. Configuration types and the shared error identity live in
 in `config_decode.ml`, and `config.ml` retains the top-level loader and
 runtime/path queries. `file_util.ml` owns general portable path, directory,
 copy, comparison, inventory, and removal operations; `build_artifacts.ml` owns
-ReScript output paths, publication staging, ownership, and stale-artifact
+ReScript output paths, publication, ownership, and stale-artifact
 cleanup. `package_graph.ml` owns package discovery, `package_build.ml` owns
 per-package parsing, dirty-state preparation, and compiler-job construction,
 and `build.ml` retains command/reporting orchestration and aggregate dispatch.

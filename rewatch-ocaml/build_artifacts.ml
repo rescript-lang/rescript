@@ -94,16 +94,6 @@ let cleanup_watch_output_sidecars ?source_files ~root (config : Config.t) =
   |> List.iter (fun path ->
        if is_watch_output_sidecar path then File_util.remove_file path)
 
-let prepare_watch_output watch_outputs watch_output_paths ~dirty_ast output =
-  if
-    (not (Sys.file_exists output))
-    && not (Hashtbl.mem watch_output_paths output)
-  then (
-    let pending = output ^ ".rewatch-pending" in
-    File_util.remove_file pending;
-    Hashtbl.add watch_output_paths output ();
-    watch_outputs := (output, pending, dirty_ast) :: !watch_outputs)
-
 let with_root_options (config : Config.t) (root_config : Config.t) =
   {
     config with

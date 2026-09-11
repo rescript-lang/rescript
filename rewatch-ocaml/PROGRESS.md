@@ -36,16 +36,15 @@ unresolved dependencies, and symlink targets retain snapshot reconciliation.
 The retained-watch filesystem audit reports zero source-directory scans for
 both implementations on a single edit. Its latest diagnostic run reported 46
 OCaml versus 38 Rust project-local opens and 44 versus 25 metadata operations;
-the remaining OCaml delta is concentrated in staged output/source-map and
+the remaining OCaml delta is concentrated in output/source-map and
 artifact-safety checks rather than project rediscovery.
 
 Retained watch builds now keep their attempted initialized state even when the
 initial compile fails, so repairing a source performs the same two-phase
 incremental parse/compile recovery as Rust instead of an unnecessary full
-three-phase rebuild. Parsed ASTs belonging to that retained state survive
-rollback of brand-new staged JavaScript, so a partially successful initial
-compile can also recover without retaining in-memory state that refers to a
-deleted AST. Polling fallback compares the pre-event snapshot with the
+three-phase rebuild. Parsed ASTs belonging to that retained state survive, so
+a partially successful initial compile can recover without retaining in-memory
+state that refers to a deleted AST. Polling fallback compares the pre-event snapshot with the
 snapshot immediately before compilation; an edit arriving after the trigger
 snapshot can no longer be absorbed into the next baseline without compiling.
 Focused tests retain both cases, including exact Rust/OCaml PTY recovery output.
@@ -220,12 +219,12 @@ projection, while `compiler_args.ml` remains the shared argument-policy owner.
 External compiler work now lives in `compiler_process.ml`. It owns parser and
 compiler job construction, AST dependency decoding, namespace map compilation,
 external-warning selection, compiler-artifact publication, watch-output
-staging, and per-output JavaScript post-build hooks. The scheduler remains
+inventory updates, and per-output JavaScript post-build hooks. The scheduler remains
 process-agnostic, and `build.ml` supplies package state and callbacks without
 creating unused parse/compile tuple payloads. Generic substring assertions also
 moved out of production `Build` into the OUnit2-only `test_support.ml`.
 Independent review found no argument-order, AST-decoding, namespace,
-publication, warning, hook, staging, exception-identity, or API regression.
+publication, warning, hook, exception-identity, or API regression.
 
 Recursive explicit cleaning now lives in `clean.ml` over `build_artifacts.ml`
 and `file_util.ml`. It owns package traversal, consumer-versus-
@@ -313,14 +312,16 @@ reverse closure while continuing to compile unrelated modules, with focused
 unit coverage for that invariant.
 
 Two independent watch reviews covered behavioral parity and resource/locking
-safety. Their confirmed findings drove absent-output staging (including source
-maps), recoverable initial/rebuild errors, atomic populated lock creation with
+safety. Their findings drove recoverable initial/rebuild errors, atomic populated lock creation with
 stale-owner takeover, workspace build locks, owned lock removal, race-tolerant
 symlink-aware snapshots, and cached content hashes. Takeover markers also carry
 an owner PID and can themselves be recovered after an interrupted takeover.
-Those reviews established event, output, locking, and recovery correctness but
-did not compare end-to-end state lifetime or work per repeated event. The
-resulting claim was therefore too broad. The replacement audit records state
+They also introduced absent-output staging, which a later phase-ordering audit
+removed after demonstrating that `bsc` made the public output observable before
+the staging rename and could therefore expose an incoherent project. Those
+reviews established event, locking, and recovery correctness but did not
+compare end-to-end state lifetime or work per repeated event. The resulting
+claim was therefore too broad. The replacement audit records state
 ownership and measured work for initial build, content edit, dependency edit,
 add/remove/rename, configuration change, failure, and recovery separately.
 
@@ -700,6 +701,12 @@ are no other missing control-file names.
   dependency CMIs. Treating those paths as compatibility requirements would
   preserve a build-cache accident rather than Rust's intended package-output
   algorithm.
+- Rust explicit clean still rebuilds a portal dependency with the consumer's
+  output settings, while the OCaml implementation preserves an independently
+  built dependency's compiler metadata and published output tree. The shared
+  canonical fixture normalizes the resulting equivalent Belt import before its
+  clean-tree assertion. This is a Rust ownership follow-up, not a Windows path
+  difference.
 - The integration runner starts watch mode, confirms the lock, performs a
   source edit, changes the configured output suffix, observes the resulting
   rebuild and stale-output removal, adds then deletes a source module while
@@ -1024,10 +1031,10 @@ identifies repeated CMI comparison and case-candidate checks, not extra
 compilation or directory-tree discovery. Raw create/remove totals intentionally
 remain diagnostic because the drivers use different publication mechanics.
 
-The maintained source-size tool reports 8,971 lines of OCaml-port production
+The maintained source-size tool reports 9,058 lines of OCaml-port production
 code, including its native C boundary,
 and 7,818 lines of Rust production code when Rust telemetry is excluded. Tests
-remain separate: OCaml has 6,731 test/fixture lines and 1,021 benchmark-tooling
+remain separate: OCaml has 6,806 test/fixture lines and 1,021 benchmark-tooling
 lines; Rust has 2,773 inline unit-test lines. Blank and comment lines are
 reported separately by `bench/source_size.sh` and are not included in these
 code counts. The tooling scope includes all six executable shell/JavaScript
@@ -1333,10 +1340,10 @@ observational and do not replace the five-run acceptance result.
 
 The current `cloc` 2.04 source-size snapshot reports 7,818 Rust production
 lines after excluding the intentionally omitted telemetry module and inline
-test-only sections, versus 8,971 OCaml-port production lines including the
-native C boundary, or 114.7%. Counting
+test-only sections, versus 8,981 OCaml-port production lines including the
+native C boundary, or 114.9%. Counting
 language-specific tests separately gives 2,773 embedded Rust unit-test lines
-and 6,731 OCaml unit/focused test and fixture lines. The OCaml benchmark tooling
+and 6,806 OCaml unit/focused test and fixture lines. The OCaml benchmark tooling
 adds another 1,021 lines across every executable audit/measurement script. The shared
 canonical integration suite is deliberately not charged to either side. These
 figures describe maintainability surface, not parity or quality: explicit
@@ -1344,10 +1351,10 @@ interfaces and separate test infrastructure add useful lines rather than
 indicating behavioral duplication.
 [`bench/source_size.sh`](bench/source_size.sh) preserves the scope and command;
 it now reports largest files directly. The current largest production modules
-are `watcher.ml` (692 code lines), `build.ml` (645), `process.ml` (564),
-`package_build.ml` (416), and `cli.ml` (376). The largest test/tooling files
+are `watcher.ml` (692 code lines), `build.ml` (640), `process.ml` (564),
+`package_build.ml` (419), and `build_preparation.ml` (388). The largest test/tooling files
 are `check_command_validation.sh` (1,635), `unit_tests.ml` (859), `run.sh`
-(761), `config_tests.ml` (493), and `check_interactive_output.sh` (405).
+(761), `config_tests.ml` (493), and `check_interactive_output.sh` (471).
 
 The final API-surface audit added explicit interfaces for build state, compile
 asset inventory, graph algorithms, package metadata, source-directory output,
@@ -1366,6 +1373,15 @@ branches: deterministic duplicate-path ordering now compares its two paths
 directly, and CLI routing returns an explicit `(globals, command, rest)` only
 after finding a command. All 19 OUnit2 groups, the 106-case command gate, and
 `dune build @all` pass afterward.
+
+The module-qualification review removed broad `open Build_types` directives
+from the build coordinator, package traversal, and package build modules.
+Boundary parameter annotations and a few `Build_types.field` selections now
+make state ownership explicit there. `build_preparation.ml` retains the open
+because nearly every expression constructs or transforms those records and
+qualification would obscure the graph algorithm. The dense Cmdliner DSL and
+configuration decoder similarly retain their focused opens; no generic utility
+module is opened merely to shorten calls.
 
 General portable filesystem operations now live behind the narrow
 `file_util.mli` interface. Recursive directory creation, file reading/copying,
@@ -1411,12 +1427,12 @@ does not alter filesystem access or build scheduling; all 18 OUnit2 tests and
 the focused build/incremental runner passed afterward.
 
 The remaining `build.ml` lifecycle was reviewed again after those extractions.
-It is now 645 code lines because retained-watch initialization, incremental
+It is now 640 code lines because retained-watch initialization, incremental
 preparation, and command presentation were subsequently added. Its setup,
-progress/error reporting, staged-output publication, log and lock finalization,
+progress/error reporting, output publication, log and lock finalization,
 incremental transition, and build/watch entry points still share one
 command-scoped state owner. The largest function is the command transaction
-whose local finalizers close logs, staged outputs, and the build lock; extracting
+whose local finalizers close logs and the build lock; extracting
 pieces would expose that mutable lifetime through callbacks rather than create a
 cohesive new owner. A narrow `build.mli` exposes only the command entry points
 and translated public exceptions. Revisit this decision if another independent
@@ -1593,12 +1609,13 @@ missing.
   retained initial/incremental watch builds. Focused build/watch assertions and
   artifact manifests cover the distinction; editor tooling should eventually
   use an explicitly named invalidation marker.
-- Existing generated outputs are published as compiler jobs succeed, while
-  newly created outputs are staged until the whole build succeeds. This is not
-  a transaction across all outputs, but it preserves last-known files while
-  preventing a failed initial output from escaping. Failure, source-map, and
-  watch recovery tests cover both branches; changing it requires an explicit
-  artifact-consistency contract and corresponding failure-sequence tests.
+- Compiler jobs publish generated outputs as they succeed. A prior attempt to
+  stage only previously absent outputs was removed: because `bsc` writes to the
+  public package-output path, the file was observable while compilation was in
+  progress and then hidden after the job completed. That could expose a root
+  output while a successfully compiled dependency was hidden in a sidecar. The
+  canonical clean-to-watch test now requires the root and imported dependency
+  outputs to become observable coherently.
 
 ### Rust bugs and simple inefficiencies corrected by the port
 
@@ -1880,6 +1897,16 @@ required behavior decision, not a performance proposal.
   12 frames per second, and is disabled entirely for redirected and quiet
   output. The PTY gate uses a module with both an interface and implementation
   to ensure the parse total counts modules rather than subprocesses.
+- Explicit `clean` now validates and collects the complete dependency-first
+  package plan before mutating the filesystem, then removes compiler trees and
+  generated outputs in distinct phases. The previous per-package interleaving
+  produced the right final files and redirected package lines but left an
+  interactive terminal blank; that exposed a phase-ordering hole in the earlier
+  outcome-oriented source audit. The PTY gate now compares both implementations'
+  five `[1/2]`/`[2/2]` progress frames exactly after normalizing timing and also
+  requires quiet interactive clean to stay silent. The 106-case command gate
+  retains redirected and validation behavior, while the focused runner retains
+  cleanup ownership and final artifacts.
 - Positive verbosity now reports Rust's semantic project-context, package
   discovery, AST generation, and interface/implementation compilation events.
   `-vv` additionally reports the initially dirty modules and the completed
@@ -1900,16 +1927,13 @@ required behavior decision, not a performance proposal.
   injected native-constructor failure drives the actual fallback loop in OUnit,
   changes a source after the initial build, and requires exactly one
   path-specific incremental rebuild plus lock and signal cleanup.
-- Existing generated outputs are updated as their compiler subprocesses
-  succeed; only previously absent outputs are held until whole-build success.
-  This preserves artifact/output consistency and avoids removing last-known
-  output during compilation, but it is not an all-or-nothing filesystem
-  transaction across an entire incremental build.
-- Ordinary build cleanup and explicit `clean` remove abandoned watch staging
-  sidecars even when their source was subsequently deleted. Sweeping is limited
-  to tool-specific sidecar suffixes whose underlying path is a recognized
-  generated JavaScript or source-map name; unrelated user files with a
-  staging-like suffix are preserved and covered by a focused filesystem test.
+- Generated outputs are published as their compiler subprocesses succeed, so a
+  module does not become visible before a dependency whose CMI allowed it to
+  compile. Ordinary build cleanup and explicit `clean` still remove abandoned
+  sidecars created by earlier experimental OCaml binaries. Sweeping is limited
+  to tool-specific suffixes whose underlying path is a recognized generated
+  JavaScript or source-map name; unrelated user files are preserved and covered
+  by a focused filesystem test.
 - The focused integration runner creates a nested source directory and source
   as one topology-change batch and requires the new output. Separately,
   `native_watcher_tests.ml` refreshes after creating an empty nested directory
@@ -2054,8 +2078,11 @@ required behavior decision, not a performance proposal.
 
 ## Next actions
 
-1. Perform the final two-scope whole-port review and address confirmed findings,
-   including the remaining findings from the option-by-option CLI audit.
+1. Perform a command-by-command phase and ordering audit for build, clean,
+   format, compiler-args, and watch, then perform the final two-scope whole-port
+   review and address confirmed findings. This audit must compare intermediate
+   state transitions and observable phases, not infer algorithm parity from
+   matching final files or exit status.
 2. At the final maintainability pass, add comments around ownership,
    concurrency, platform, and algorithmic invariants that are not apparent from
    the code itself. Comments should start with why the code or invariant is
@@ -2065,7 +2092,10 @@ required behavior decision, not a performance proposal.
    Rust (unless that compatibility relationship is itself the reason). Review
    naming and module qualification, including whether generic utility calls are
    clearer as `Module.function` than through `open`; do not apply either style
-   mechanically. Remove dead code, and confirm that the three release
+   mechanically. Remove dead code. In particular, remove legacy recognition,
+   cleanup, and tests for `.rewatch-pending` and `.rewatch-backup` after the
+   current experimental migration window; no supported implementation creates
+   these sidecars anymore. Confirm that the three release
    inventories remain complete after the final behavior and platform work.
    Continue applying the functional-design principle of making illegal states
    unrepresentable where it removes a concrete ambiguity or failure mode, not as

@@ -3,10 +3,9 @@ exception Package_error = Project_context.Package_error
 exception Build_failure = Compiler_scheduler.Build_failure
 exception Parse_failure of string
 
-open Build_types
-
 let rec prepare_tree ~(root_config : Config.t) ~dependency_context ~seen
-    ~folder:root ~prod ~features ~warn_error ~watch ~filter ~is_local ~stats =
+    ~folder:root ~prod ~features ~warn_error ~watch ~filter ~is_local
+    ~(stats : Build_types.t) =
   let features =
     match Hashtbl.find_opt stats.active_features root with
     | Some features -> features
@@ -320,15 +319,7 @@ let rec prepare_tree ~(root_config : Config.t) ~dependency_context ~seen
     List.iter
       (fun spec ->
         let output = Build_artifacts.generated_js_path config path spec in
-        let dirty_ast = Filename.concat build_dir (Source.ast_path path) in
-        File_util.ensure_dir (Filename.dirname output);
-        if watch then (
-          Build_artifacts.prepare_watch_output stats.watch_outputs
-            stats.watch_output_paths
-            ~dirty_ast output;
-          Build_artifacts.prepare_watch_output stats.watch_outputs
-            stats.watch_output_paths
-            ~dirty_ast (output ^ ".map")))
+        File_util.ensure_dir (Filename.dirname output))
       config.package_specs
   in
   let compile_process module_ ~is_interface path =
@@ -337,9 +328,20 @@ let rec prepare_tree ~(root_config : Config.t) ~dependency_context ~seen
       module_ ~is_interface path
   in
   let publish ~is_interface path result =
-    Compiler_process.publish ?poll:stats.process_poll ~build_dir ~ocaml_dir ~watch
-      ~watch_output_paths:stats.watch_output_paths ~is_local ~config
-      ~is_interface path result
+    let stderr =
+      Compiler_process.publish ?poll:stats.process_poll ~build_dir ~ocaml_dir
+        ~is_local ~config ~is_interface path result
+    in
+    if not is_interface then
+      List.iter
+        (fun spec ->
+          let output = Build_artifacts.generated_js_path config path spec in
+          [output; output ^ ".map"]
+          |> List.iter (fun path ->
+               if Sys.file_exists path then
+                 Hashtbl.replace cleanup.present_public_outputs path ()))
+        config.package_specs;
+    stderr
   in
   let scheduled =
     List.map

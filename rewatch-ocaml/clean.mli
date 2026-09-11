@@ -1,9 +1,13 @@
-val run :
+type t
+
+val prepare :
   root_config:Config.t ->
   dependency_context:Project_context.dependency_context ->
   seen:(string, unit) Hashtbl.t ->
   root:string ->
   prod:bool ->
   is_local:bool ->
-  on_clean:(string -> unit) ->
-  unit
+  t
+
+val remove_compiler_assets : t -> on_clean:(string -> unit) -> unit
+val remove_generated_outputs : t -> unit
