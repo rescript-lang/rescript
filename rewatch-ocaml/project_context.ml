@@ -163,8 +163,4 @@ let relative_to root path =
   else raise (Error (path ^ " is not inside " ^ root))
 
 let display_path ~root path =
-  try
-    match relative_to root path with
-    | "." -> "."
-    | relative -> "./" ^ relative
-  with Error _ -> path
+  try relative_to root path with Error _ -> path
