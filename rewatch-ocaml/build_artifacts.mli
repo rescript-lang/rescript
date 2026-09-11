@@ -23,6 +23,7 @@ val cleanup_stale :
   ?ocaml_files:string list ->
   ?ast_sources:(string * string) list ->
   ?source_files:string list ->
+  ?present_source_files:string list ->
   root:string ->
   ocaml_dir:string ->
   is_local:bool ->

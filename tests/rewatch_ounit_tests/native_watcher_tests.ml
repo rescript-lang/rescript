@@ -13,6 +13,7 @@ let tests =
   let root = temporary_directory () in
   let source = Filename.concat root "src" in
   let nested = Filename.concat source "nested" in
+  let replaced_nested = root ^ "-replaced-nested" in
   let source_lib = Filename.concat source "lib" in
   let artifact_lib = Filename.concat root "lib" in
   let artifact_bs = Filename.concat artifact_lib "bs" in
@@ -77,6 +78,22 @@ let tests =
             check
               (Native_watcher.For_test.handle_count watcher = 5)
               "new directory adds one handle";
+            let original_identity =
+              Native_watcher.For_test.directory_identity watcher nested
+            in
+            Unix.rename nested replaced_nested;
+            Unix.mkdir nested 0o700;
+            (match Native_watcher.refresh watcher ~paths with
+            | Error message ->
+              failwith ("native watcher replacement: " ^ message)
+            | Ok () -> ());
+            check
+              (Native_watcher.For_test.handle_count watcher = 5)
+              "directory replacement preserves the desired handle count";
+            check
+              (Native_watcher.For_test.directory_identity watcher nested
+              <> original_identity)
+              "directory replacement installs a handle for the new identity";
             Unix.rmdir nested;
             (match Native_watcher.refresh watcher ~paths with
             | Error message -> failwith ("native watcher remove: " ^ message)
@@ -87,6 +104,7 @@ let tests =
           ~finally:(fun () -> Native_watcher.close watcher))
     ~finally:(fun () ->
       (try Unix.rmdir nested with Unix.Unix_error _ -> ());
+      (try Unix.rmdir replaced_nested with Unix.Unix_error _ -> ());
       (try Unix.rmdir artifact_bs with Unix.Unix_error _ -> ());
       (try Unix.rmdir artifact_lib with Unix.Unix_error _ -> ());
       (try Unix.rmdir source_lib with Unix.Unix_error _ -> ());

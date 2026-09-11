@@ -243,4 +243,9 @@ let tests =
           "source discovery follows a configured directory symlink";
         check
           (discovery.inventory_files = [Filename.concat root "linked-source"])
-          "cleanup inventory retains a directory symlink as a leaf"))
+          "cleanup inventory retains a directory symlink as a leaf";
+        check
+          (List.mem
+             (Filename.concat root "linked-source/Linked.res")
+             discovery.present_files)
+          "freshness inventory includes files below a directory symlink"))

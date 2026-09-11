@@ -2,7 +2,7 @@ type t
 
 val prepare :
   root_config:Config.t ->
-  dependency_context:Project_context.dependency_context ->
+  resolution:Package_resolution.t ->
   seen:(string, unit) Hashtbl.t ->
   root:string ->
   prod:bool ->

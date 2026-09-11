@@ -288,9 +288,13 @@ COVERAGE_TEST_ENV := BISECT_FILE=$(COVERAGE_BISECT_PREFIX) BISECT_SILENT=YES
 .PHONY: coverage-build
 coverage-build: | $(YARN_INSTALL_STAMP)
 	dune build --instrument-with bisect_ppx
-	@$(foreach bin,$(COMPILER_BIN_NAMES), \
+	@$(foreach bin,$(filter-out rescript,$(COMPILER_BIN_NAMES)), \
 		cp $(DUNE_BIN_DIR)/$(bin)$(PLATFORM_EXE_EXT) $(BIN_DIR)/$(bin).exe && \
 		chmod 755 $(BIN_DIR)/$(bin).exe;)
+ifneq ($(OS),Windows_NT)
+	cp _build/default/rewatch-ocaml/rescript_ocaml.exe $(RESCRIPT_EXE)
+	chmod 755 $(RESCRIPT_EXE)
+endif
 
 .PHONY: coverage-prepare
 coverage-prepare: clean-coverage coverage-build

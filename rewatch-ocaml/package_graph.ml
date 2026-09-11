@@ -1,5 +1,4 @@
 exception Error = Project_context.Error
-exception Package_error = Project_context.Package_error
 
 let source_discovery_prod ~prod ~is_local = prod || not is_local
 
@@ -22,63 +21,16 @@ let dependent_is_allowed allowed_dependents dependent =
 
 let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
     ~(stats : Build_types.t) =
-  let dependency_context = Project_context.dependency_context root_config in
+  Package_diagnostics.validate_metadata root_config;
+  let resolution = Package_resolution.create root_config in
   let requested_features = Hashtbl.create 32 in
   let unallowed_dependencies = ref [] in
-  let loaded_configs = Hashtbl.create 32 in
-  let resolved_dependencies = Hashtbl.create 32 in
-  let resolved_packages = Hashtbl.create 32 in
-  let reported_duplicate_packages = Hashtbl.create 8 in
-  let load_config root =
-    match Hashtbl.find_opt loaded_configs root with
-    | Some config -> config
-    | None ->
-      let config = Config.load_root root in
-      Package_diagnostics.validate_metadata config;
-      Hashtbl.add loaded_configs root config;
-      config
-  in
+  let load_config = Package_resolution.load_config resolution in
   let resolve_dependency package_root (dependency : Config.dependency) =
-    let key = package_root ^ "\000" ^ dependency.name in
-    match Hashtbl.find_opt resolved_dependencies key with
-    | Some resolved -> resolved
-    | None ->
-      let directory =
-        Project_context.require_dependency_directory
-          ~context:dependency_context package_root dependency
-      in
-      let warn_duplicate chosen =
-        let warning_key = dependency.name ^ "\000" ^ directory in
-        if not (Hashtbl.mem reported_duplicate_packages warning_key) then (
-          Hashtbl.add reported_duplicate_packages warning_key ();
-          Printf.eprintf
-            "Duplicated package: %s ./%s (chosen) vs ./%s in ./%s\n%!"
-            dependency.name
-            (Project_context.relative_to root_config.root chosen)
-            (Project_context.relative_to root_config.root directory)
-            (Project_context.relative_to root_config.root package_root))
-      in
-      let resolved =
-        match Hashtbl.find_opt resolved_packages dependency.name with
-        | Some ((chosen, _) as resolved) ->
-          if chosen <> directory then warn_duplicate chosen;
-          resolved
-        | None ->
-          let config =
-            try load_config directory
-            with Config.Error message ->
-              raise
-                (Package_error
-                   (Printf.sprintf
-                      "Could not build package tree for '%s' at path '%s'. Error: %s"
-                      dependency.name root_config.root message))
-          in
-          let resolved = (directory, config) in
-          Hashtbl.add resolved_packages dependency.name resolved;
-          resolved
-      in
-      Hashtbl.add resolved_dependencies key resolved;
-      resolved
+    let resolved =
+      Package_resolution.resolve resolution ~package_root dependency
+    in
+    (resolved.directory, resolved.config)
   in
   let add_feature_request root request =
     match Hashtbl.find_opt requested_features root, request with
@@ -128,8 +80,7 @@ let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
         (fun ((dependency : Config.dependency), directory) ->
           collect ~folder:directory ~features:dependency.features
             ~is_local:
-              (Project_context.dependency_is_local_canonical dependency_context
-                 directory))
+              (Package_resolution.is_local resolution directory))
         resolved_dependencies)
   in
   collect ~folder:root_config.root ~features ~is_local:true;
@@ -146,7 +97,8 @@ let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
          ^ details
          ^ "\nUpdate allowed-dependents in the dependency rescript.json files.")));
   Hashtbl.iter
-    (fun root features -> Hashtbl.replace stats.active_features root features)
+    (fun root features ->
+      Hashtbl.replace stats.retained.active_features root features)
     requested_features;
   let visited = Hashtbl.create 32 in
   let graph_packages = ref [] in
@@ -154,7 +106,7 @@ let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
     if not (Hashtbl.mem visited root) then (
       Hashtbl.add visited root ();
       let features =
-        match Hashtbl.find_opt stats.active_features root with
+        match Hashtbl.find_opt stats.retained.active_features root with
         | Some features -> features
         | None -> features
       in
@@ -181,10 +133,9 @@ let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
       List.iter
         (fun ((dependency : Config.dependency), directory) ->
           visit ~folder:directory ~features:dependency.features
-            ~warn_error:None ~filter:None
+            ~warn_error ~filter:None
             ~is_local:
-              (Project_context.dependency_is_local_canonical dependency_context
-                 directory))
+              (Package_resolution.is_local resolution directory))
         dependency_directories;
       let discovery =
         Output.debug ~verbosity:stats.verbosity
@@ -237,12 +188,26 @@ let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
           graph_ocaml_dir = ocaml_dir;
           graph_dependencies = dependencies;
           graph_dependency_directories = dependency_directories;
+          graph_gentype_dependency_args =
+            Compiler_args.gentype_dependency_args_from_paths compile_config
+              dependency_directories;
           graph_modules = modules;
           graph_source_mtimes = source_mtimes;
           graph_source_files = discovery.inventory_files;
+          graph_present_source_files = discovery.present_files;
         }
       in
-      Hashtbl.replace stats.graph_packages root package;
+      Hashtbl.replace stats.retained.graph_packages root package;
+      List.iter
+        (fun module_ ->
+          (module_.Source.implementation
+          :: Option.to_list module_.Source.interface)
+          |> List.iter (fun relative_path ->
+               let absolute_path = Filename.concat root relative_path in
+               Hashtbl.replace stats.retained.source_index
+                 (Platform.normalize_path_for_comparison absolute_path)
+                 (root, module_, relative_path, absolute_path)))
+        modules;
       graph_packages := package :: !graph_packages)
   in
   visit ~folder:root_config.root ~features ~warn_error ~filter ~is_local:true;

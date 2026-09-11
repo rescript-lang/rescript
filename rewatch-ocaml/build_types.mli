@@ -8,9 +8,11 @@ type graph_package = {
   graph_ocaml_dir: string;
   graph_dependencies: Config.dependency list;
   graph_dependency_directories: (Config.dependency * string) list;
+  graph_gentype_dependency_args: string list;
   graph_modules: Source.module_ list;
   graph_source_mtimes: (string, float) Hashtbl.t;
   graph_source_files: string list;
+  graph_present_source_files: string list;
 }
 
 type global_module = {
@@ -26,8 +28,27 @@ type global_module = {
 }
 
 type parse_message = Parse_warning of string | Parse_error of string
+type attempt_kind = Full_attempt | Retained_attempt
+
+type prepared = {
+  compiler_context: Compiler_info.context;
+  compile_assets: Compile_assets.t;
+  build_state: Build_state.t;
+}
+
+type retained = {
+  active_features: (string, string list option) Hashtbl.t;
+  global_modules: (string, global_module) Hashtbl.t;
+  global_namespace_modules: (string, string list) Hashtbl.t;
+  graph_packages: (string, graph_package) Hashtbl.t;
+  source_index: (string, string * Source.module_ * string * string) Hashtbl.t;
+  cleanup_results: (string, Build_artifacts.cleanup_result) Hashtbl.t;
+  mutable prepared: prepared option;
+  warning_state: Warning_state.t;
+}
 
 type t = {
+  attempt_kind: attempt_kind;
   mutable cleaned: int;
   mutable previous_asts: int;
   mutable parsed: int;
@@ -41,21 +62,13 @@ type t = {
   preparse_stderr: (string, string) Hashtbl.t;
   preparse_results: (string, Process.result) Hashtbl.t;
   blocked_modules: (string, unit) Hashtbl.t;
-  active_features: (string, string list option) Hashtbl.t;
   initialized_logs: (string, unit) Hashtbl.t;
-  global_modules: (string, global_module) Hashtbl.t;
-  global_namespace_modules: (string, string list) Hashtbl.t;
-  graph_packages: (string, graph_package) Hashtbl.t;
-  cleanup_results: (string, Build_artifacts.cleanup_result) Hashtbl.t;
   deferred_artifact_cleanup: string list ref;
   namespace_jobs: (Process.job * (Process.result -> unit)) list ref;
   scheduled_modules: Compiler_scheduler.scheduled_module list ref;
   compile_cleanup: (unit -> unit) list ref;
-  mutable compiler_context: Compiler_info.context option;
-  mutable compile_assets: Compile_assets.t option;
-  mutable build_state: Build_state.t option;
   mutable compiler_cleaned: bool;
-  warning_state: Warning_state.t;
+  retained: retained;
   mutable had_warnings: bool;
   poll: unit -> unit;
   process_poll: (unit -> unit) option;
@@ -78,3 +91,5 @@ val create_incremental :
   progress:Output.Progress.t ->
   verbosity:int ->
   t
+
+val prepared_exn : t -> prepared

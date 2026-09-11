@@ -15,11 +15,9 @@ val namespace_job :
 
 val compile_job :
   bsc:string ->
-  runtime:string ->
   build_dir:string ->
-  watch:bool ->
   config:Config.t ->
-  dependency_dirs:string list ->
+  common_args:string list ->
   Source.module_ ->
   is_interface:bool ->
   string ->

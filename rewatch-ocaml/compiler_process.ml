@@ -16,7 +16,10 @@ let retain_critical_external_warnings stderr =
 let parse_job ~bsc ~build_dir ~(config : Config.t) path =
   let ast = Source.ast_path path in
   File_util.ensure_dir (Filename.concat build_dir (Filename.dirname ast));
-  let contents = File_util.read_file (Filename.concat config.root path) in
+  let contents =
+    if config.ppx_flags = [] then ""
+    else File_util.read_file (Filename.concat config.root path)
+  in
   let args = Compiler_args.parser_arguments ~config ~contents ~path in
   Process.{program = bsc; args; cwd = build_dir}
 
@@ -118,14 +121,12 @@ let post_build_tasks (config : Config.t) path =
           Process.task ?env Process.{program; args; cwd = config.root} ))
       config.package_specs
 
-let compile_job ~bsc ~runtime ~build_dir ~watch ~(config : Config.t)
-    ~dependency_dirs (module_ : Source.module_) ~is_interface path =
+let compile_job ~bsc ~build_dir ~(config : Config.t) ~common_args
+    (module_ : Source.module_) ~is_interface path =
   let args =
-    Compiler_args.compiler_arguments ~config ~runtime ~dependency_dirs
+    Compiler_args.compiler_arguments_with_common ~config ~common_args
       ~module_name:module_.name ~is_interface
-      ~has_interface:(Option.is_some module_.interface) ~watch
-      ~gentype_dependency_args:(Compiler_args.gentype_dependency_args config)
-      ~path
+      ~has_interface:(Option.is_some module_.interface) ~path
   in
   Process.{program = bsc; args; cwd = build_dir}
 

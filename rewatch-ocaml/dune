@@ -28,6 +28,7 @@
   config_decode
   config
   project_context
+  package_resolution
   platform_common
   platform
   process

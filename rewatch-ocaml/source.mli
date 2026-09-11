@@ -10,6 +10,7 @@ type discovery = {
   modules: module_ list;
   source_mtimes: (string * float) list;
   inventory_files: string list;
+  present_files: string list;
   gentype_dirs: string list;
 }
 

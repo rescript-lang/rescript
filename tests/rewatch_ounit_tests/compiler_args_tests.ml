@@ -98,6 +98,14 @@ let tests =
         (compiler_args prefixed_source
         |> adjacent_positions "-I" |> position development |> Option.is_none)
         "source directory matching respects path-component boundaries";
+      let config = Config.load_root root in
+      let gentype_config = {config with gentype_args = ["-bs-gentype"]} in
+      let selected_regular = Filename.concat root "selected/regular" in
+      check
+        (Compiler_args.gentype_dependency_args_from_paths gentype_config
+           [({Config.name = "regular"; features = None}, selected_regular)]
+        = ["-bs-gentype-dep-path"; "regular=" ^ selected_regular])
+        "GenType arguments reuse the dependency path selected for the graph";
       (if not Sys.win32 then
          let external_source =
            Filename.temp_file "rewatch-linked-source-" ".res"

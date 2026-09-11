@@ -82,6 +82,21 @@ let gentype_dependency_args (config : Config.t) =
       | None -> []
       | Some path -> ["-bs-gentype-dep-path"; dependency.name ^ "=" ^ path])
 
+let gentype_dependency_args_from_paths (config : Config.t) dependencies =
+  if config.gentype_args = [] then []
+  else
+    let paths = Hashtbl.create (List.length dependencies) in
+    List.iter
+      (fun ((dependency : Config.dependency), path) ->
+        Hashtbl.replace paths dependency.name path)
+      dependencies;
+    config.dependencies
+    |> List.concat_map (fun (dependency : Config.dependency) ->
+         match Hashtbl.find_opt paths dependency.name with
+         | None -> []
+         | Some path ->
+           ["-bs-gentype-dep-path"; dependency.name ^ "=" ^ path])
+
 let namespace_args (config : Config.t) module_name =
   match config.namespace, config.namespace_entry with
   | None, _ -> []
@@ -103,9 +118,17 @@ let parser_arguments ~(config : Config.t) ~contents ~path =
         path;
     ]
 
-let compiler_arguments ~(config : Config.t) ~runtime ~dependency_dirs
-    ~module_name ~is_interface ~has_interface ~watch ~gentype_dependency_args
-    ~path =
+let compiler_common_arguments ~(config : Config.t) ~runtime ~dependency_dirs
+    ~watch ~gentype_dependency_args =
+  ["-I"; Filename.concat Filename.parent_dir_name "ocaml"]
+  @ ["-runtime-path"; runtime]
+  @ List.concat_map (fun directory -> ["-I"; directory]) dependency_dirs
+  @ compiler_flags ~source_maps:true ~watch ~gentype:true config
+  @ gentype_dependency_args
+  @ ["-bs-package-name"; config.name; "-bs-project-root"; config.root]
+
+let compiler_arguments_with_common ~(config : Config.t) ~common_args
+    ~module_name ~is_interface ~has_interface ~path =
   let interface_args =
     if not is_interface && has_interface then ["-bs-read-cmi"] else []
   in
@@ -117,10 +140,13 @@ let compiler_arguments ~(config : Config.t) ~runtime ~dependency_dirs
         config.package_specs
   in
   namespace_args config module_name @ interface_args
-  @ ["-I"; Filename.concat Filename.parent_dir_name "ocaml"]
-  @ ["-runtime-path"; runtime]
-  @ List.concat_map (fun directory -> ["-I"; directory]) dependency_dirs
-  @ compiler_flags ~source_maps:true ~watch ~gentype:true config
-  @ gentype_dependency_args
-  @ ["-bs-package-name"; config.name; "-bs-project-root"; config.root]
-  @ output_args @ [Source.ast_path path]
+  @ common_args @ output_args @ [Source.ast_path path]
+
+let compiler_arguments ~(config : Config.t) ~runtime ~dependency_dirs
+    ~module_name ~is_interface ~has_interface ~watch ~gentype_dependency_args
+    ~path =
+  compiler_arguments_with_common ~config
+    ~common_args:
+      (compiler_common_arguments ~config ~runtime ~dependency_dirs ~watch
+         ~gentype_dependency_args)
+    ~module_name ~is_interface ~has_interface ~path
