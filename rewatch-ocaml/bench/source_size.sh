@@ -40,6 +40,8 @@ ocaml_focused_tests=()
 for relative in "${ocaml_focused_test_relative[@]}"; do
   ocaml_focused_tests+=("$repo_root/$relative")
 done
+mapfile -t ocaml_benchmark_tooling < <(find "$repo_root/rewatch-ocaml/bench" \
+  -maxdepth 1 -type f \( -name '*.sh' -o -name '*.js' \) | sort)
 
 count() {
   local label=$1
@@ -58,8 +60,26 @@ count "OCaml production" "${ocaml_production[@]}"
 count "OCaml test code and fixtures" \
   --force-lang=ReScript,fixed --force-lang=ReScript,invalid \
   "${ocaml_unit_tests[@]}" "${ocaml_focused_tests[@]}"
-count "OCaml benchmark tooling" \
-  "$repo_root/rewatch-ocaml/bench/performance_gate.sh" \
-  "$repo_root/rewatch-ocaml/bench/source_size.sh"
+count "OCaml benchmark tooling" "${ocaml_benchmark_tooling[@]}"
+
+largest() {
+  local label=$1
+  shift
+  printf '\n%s (code lines):\n' "$label"
+  "$cloc_command" --by-file --csv --quiet --skip-uniqueness "$@" \
+    | awk -F, -v root="$repo_root/" \
+        '$1 != "language" && $1 != "SUM" {
+          sub("^" root, "", $2);
+          printf "%8d  %s\n", $5, $2
+        }' \
+    | sort -nr \
+    | head -10
+}
+
+largest "Largest OCaml production modules" "${ocaml_production[@]}"
+largest "Largest OCaml test/tooling files" \
+  --force-lang=ReScript,fixed --force-lang=ReScript,invalid \
+  "${ocaml_unit_tests[@]}" "${ocaml_focused_tests[@]}" \
+  "${ocaml_benchmark_tooling[@]}"
 
 printf '\ncloc version: %s\n' "$("$cloc_command" --version)"

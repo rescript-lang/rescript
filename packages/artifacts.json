@@ -840,5 +840,63 @@
     "src/Belt_internalSetBuckets.resi",
     "src/Belt_internalSetInt.res",
     "src/Belt_internalSetString.res"
+  ],
+  "@rescript/darwin-arm64": [
+    "THIRD_PARTY_NOTICES_REWATCH.md",
+    "bin.d.ts",
+    "bin.js",
+    "bin/.gitkeep",
+    "bin/bsc.exe",
+    "bin/rescript-editor-analysis.exe",
+    "bin/rescript-rust.exe",
+    "bin/rescript-tools.exe",
+    "bin/rescript.exe",
+    "package.json"
+  ],
+  "@rescript/darwin-x64": [
+    "THIRD_PARTY_NOTICES_REWATCH.md",
+    "bin.d.ts",
+    "bin.js",
+    "bin/.gitkeep",
+    "bin/bsc.exe",
+    "bin/rescript-editor-analysis.exe",
+    "bin/rescript-rust.exe",
+    "bin/rescript-tools.exe",
+    "bin/rescript.exe",
+    "package.json"
+  ],
+  "@rescript/linux-arm64": [
+    "THIRD_PARTY_NOTICES_REWATCH.md",
+    "bin.d.ts",
+    "bin.js",
+    "bin/.gitkeep",
+    "bin/bsc.exe",
+    "bin/rescript-editor-analysis.exe",
+    "bin/rescript-rust.exe",
+    "bin/rescript-tools.exe",
+    "bin/rescript.exe",
+    "package.json"
+  ],
+  "@rescript/linux-x64": [
+    "THIRD_PARTY_NOTICES_REWATCH.md",
+    "bin.d.ts",
+    "bin.js",
+    "bin/.gitkeep",
+    "bin/bsc.exe",
+    "bin/rescript-editor-analysis.exe",
+    "bin/rescript-rust.exe",
+    "bin/rescript-tools.exe",
+    "bin/rescript.exe",
+    "package.json"
+  ],
+  "@rescript/win32-x64": [
+    "bin.d.ts",
+    "bin.js",
+    "bin/.gitkeep",
+    "bin/bsc.exe",
+    "bin/rescript-editor-analysis.exe",
+    "bin/rescript-tools.exe",
+    "bin/rescript.exe",
+    "package.json"
   ]
 }

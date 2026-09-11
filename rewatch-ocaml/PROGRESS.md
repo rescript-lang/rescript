@@ -930,7 +930,12 @@ are no other missing control-file names.
   an alias for early testers. This makes ordinary workspace builds and the full
   repository test pipeline exercise OCaml without per-test overrides. The
   artifact manifest includes both launchers and their shared signal-forwarding
-  helper. Non-Windows CI runs the OCaml unit, focused, and complete canonical
+  helper, plus every platform package and its exact binary/notice paths.
+  `updateArtifactList.js` temporarily creates only absent executable names for
+  local cross-platform inventory and removes its owned placeholders in a
+  `finally` block; CI requires every downloaded executable to exist and cannot
+  use that convenience to hide a missing artifact. Non-Windows CI runs the
+  OCaml unit, focused, and complete canonical
   rewatch suites against the default packaged executable and repeats the
   canonical suite through the installed package. Windows keeps Rust as the
   default until the native OCaml binary is ready rather than publishing an
@@ -1021,12 +1026,14 @@ identifies repeated CMI comparison and case-candidate checks, not extra
 compilation or directory-tree discovery. Raw create/remove totals intentionally
 remain diagnostic because the drivers use different publication mechanics.
 
-The maintained source-size tool reports 7,337 lines of OCaml production code
+The maintained source-size tool reports 8,292 lines of OCaml production code
 and 7,818 lines of Rust production code when Rust telemetry is excluded. Tests
-remain separate: OCaml has 5,685 test/fixture lines and 372 benchmark-tooling
+remain separate: OCaml has 6,558 test/fixture lines and 1,021 benchmark-tooling
 lines; Rust has 2,773 inline unit-test lines. Blank and comment lines are
 reported separately by `bench/source_size.sh` and are not included in these
-code counts.
+code counts. The tooling scope includes all six executable shell/JavaScript
+benchmark and filesystem-audit scripts rather than only the original clean
+build gate and counting script.
 
 The harness now respects an explicitly paired `RESCRIPT_BSC_EXE` and
 `RESCRIPT_RUNTIME` and classifies compiler work by that exact executable path,
@@ -1327,16 +1334,20 @@ observational and do not replace the five-run acceptance result.
 
 The current `cloc` 2.04 source-size snapshot reports 7,818 Rust production
 lines after excluding the intentionally omitted telemetry module and inline
-test-only sections, versus 6,910 OCaml production lines, or 88.4%. Counting
+test-only sections, versus 8,292 OCaml production lines, or 106.1%. Counting
 language-specific tests separately gives 2,773 embedded Rust unit-test lines
-and 5,287 OCaml unit/focused test and fixture lines. The OCaml benchmark tooling
-adds another 372 lines, including the source-size script itself. The shared
+and 6,558 OCaml unit/focused test and fixture lines. The OCaml benchmark tooling
+adds another 1,021 lines across every executable audit/measurement script. The shared
 canonical integration suite is deliberately not charged to either side. These
 figures describe maintainability surface, not parity or quality: explicit
 interfaces and separate test infrastructure add useful lines rather than
 indicating behavioral duplication.
 [`bench/source_size.sh`](bench/source_size.sh) preserves the scope and command;
-rerun it for the final maintainability review alongside maximum module size.
+it now reports largest files directly. The current largest production modules
+are `watcher.ml` (698 code lines), `build.ml` (645), `process.ml` (514),
+`package_build.ml` (416), and `config.ml` (375). The largest test/tooling files
+are `check_command_validation.sh` (1,593), `unit_tests.ml` (848), `run.sh`
+(739), `config_tests.ml` (493), and `check_interactive_output.sh` (405).
 
 General portable filesystem operations now live behind the narrow
 `file_util.mli` interface. Recursive directory creation, file reading/copying,
@@ -1728,9 +1739,11 @@ Three later Rust fixes were audited explicitly against the port:
   to tool-specific sidecar suffixes whose underlying path is a recognized
   generated JavaScript or source-map name; unrelated user files with a
   staging-like suffix are preserved and covered by a focused filesystem test.
-- The focused integration runner also creates an empty nested source directory,
-  waits for native registration, and then adds a source, covering directory
-  discovery independently of a single coalesced create batch.
+- The focused integration runner creates a nested source directory and source
+  as one topology-change batch and requires the new output. Separately,
+  `native_watcher_tests.ml` refreshes after creating an empty nested directory
+  and asserts that the handle count increases, so dynamic registration is
+  proved without a timing-based sleep.
 - Local source dependencies linked from `node_modules` into a sibling package
   are recursively built with dependency feature selections and cycle
   protection; prebuilt packages are accepted through their `lib/ocaml` include
