@@ -633,6 +633,12 @@ run_build_output_case quiet-warning 0 \
   "$root/rewatch-ocaml/tests/warning-replay" quiet
 
 run_case build-subcommand-version exit2 exit2 build --version
+run_case clustered-global-version accept accept -vV build
+run_case clustered-global-verbosity accept accept -vvvvv build "$project"
+run_case clustered-global-version-before-help accept accept -Vh build
+run_case clustered-global-help-before-version accept accept -hV build
+run_case clustered-subcommand-help-before-version accept accept build -hV
+run_case clustered-subcommand-version-before-help exit2 exit2 build -Vh
 run_case implicit-conflicting-verbosity exit2 exit2 -v -q
 run_case build-conflicting-verbosity exit2 exit2 build --verbose --quiet
 run_case filter-perl-quoting exit2 exit2 build --filter '\QFoo.res\E' "$project"

@@ -42,11 +42,18 @@ let create_capture_pipes () =
     Unix.close (snd stdout);
     raise exn
 
-let signal_process_tree ~root_reaped:_ process signal =
+let rec signal_process_tree ~root_reaped process signal =
   try
     Unix.kill (-process) signal;
     true
-  with Unix.Unix_error _ -> true
+  with
+  (* A missing group is already in the requested terminal state. Other errors
+     must prevent the caller from waiting indefinitely for an undelivered
+     signal. *)
+  | Unix.Unix_error (Unix.ESRCH, _, _) -> true
+  | Unix.Unix_error (Unix.EINTR, _, _) ->
+    signal_process_tree ~root_reaped process signal
+  | Unix.Unix_error _ -> false
 
 let defer_termination_signals () =
   let previous = Unix.sigprocmask Unix.SIG_BLOCK [Sys.sigint; Sys.sigterm] in

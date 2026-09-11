@@ -31,7 +31,7 @@ done < <(find "$repo_root/rewatch/src" -type f -name '*.rs' \
   ! -name telemetry.rs | sort)
 
 mapfile -t ocaml_production < <(find "$repo_root/rewatch-ocaml" -maxdepth 1 \
-  -type f \( -name '*.ml' -o -name '*.mli' \) | sort)
+  -type f \( -name '*.ml' -o -name '*.mli' -o -name '*.c' \) | sort)
 mapfile -t ocaml_unit_tests < <(find "$repo_root/tests/rewatch_ounit_tests" \
   -maxdepth 1 -type f -name '*.ml' | sort)
 mapfile -t ocaml_focused_test_relative < <(git -C "$repo_root" ls-files \
@@ -56,7 +56,7 @@ count() {
 printf '%-34s %8s %8s %8s\n' Scope Blank Comment Code
 count "Rust production, no telemetry" "$rust_production"
 count "Rust unit tests, no telemetry" "$rust_tests"
-count "OCaml production" "${ocaml_production[@]}"
+count "OCaml-port production" "${ocaml_production[@]}"
 count "OCaml test code and fixtures" \
   --force-lang=ReScript,fixed --force-lang=ReScript,invalid \
   "${ocaml_unit_tests[@]}" "${ocaml_focused_tests[@]}"

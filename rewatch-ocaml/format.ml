@@ -283,7 +283,5 @@ let format_stdin extension =
     let exn = try restore_signals (); exn with signal_exn -> signal_exn in
     raise exn
 
-let run ~check ~stdin ~files =
-  match stdin with
-  | Some extension -> format_stdin extension
-  | None -> format_files ~check (if files = [] then files_in_scope () else files)
+let run_files ~check paths =
+  format_files ~check (if paths = [] then files_in_scope () else paths)

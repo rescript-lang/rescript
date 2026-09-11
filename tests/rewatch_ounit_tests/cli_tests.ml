@@ -62,6 +62,24 @@ let tests =
     | _ -> false)
     "leading verbosity before watch";
   check
+    ((build_options ["-vvvvv"; "build"]).verbosity = 5)
+    "arbitrarily long clustered verbosity remains global";
+  check
+    (shows_version ["-vV"; "build"])
+    "a clustered leading version flag has global precedence";
+  check
+    (shows_version ["-Vh"; "build"])
+    "a leading cluster uses its first display flag";
+  check
+    (shows_help ["-hV"; "build"])
+    "a leading help flag wins when it precedes version in a cluster";
+  check
+    (shows_help ["build"; "-hV"])
+    "subcommand help stops before a later invalid version flag";
+  check
+    (rejects ["build"; "-Vh"])
+    "a subcommand cluster rejects version before help";
+  check
     (match parse ["build"; "-v"] with
     | Cli.Build _ -> true
     | _ -> false)
@@ -176,6 +194,16 @@ let tests =
   check
     (rejects ["format"; "--stdin"; ".res"; "--check"])
     "format check conflicts with stdin regardless of argument order";
+  check
+    (match parse ["format"; "--stdin"; ".res"] with
+    | Cli.Format (Cli.Format_stdin ".res") -> true
+    | _ -> false)
+    "format represents standard input independently from file inputs";
+  check
+    (match parse ["format"; "--check"; "A.res"] with
+    | Cli.Format (Cli.Format_files {check = true; paths = ["A.res"]}) -> true
+    | _ -> false)
+    "format represents file inputs with their check mode";
   check (shows_help ["help"]) "the help command displays global help";
   check
     (shows_help ["help"; "build"])
