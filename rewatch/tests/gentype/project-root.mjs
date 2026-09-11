@@ -6,8 +6,44 @@ import {join} from "node:path";
 
 const executable = process.env.REWATCH_EXECUTABLE;
 assert(executable, "REWATCH_EXECUTABLE must be set");
-const executableForNode =
-  process.platform === "win32" && existsSync(`${executable}.cmd`) ? `${executable}.cmd` : executable;
+
+function runBuild(buildDirectory) {
+  if (process.platform !== "win32") {
+    return spawnSync(executable, ["build"], {
+      cwd: buildDirectory,
+      encoding: "utf8",
+      env: process.env,
+      timeout: 30_000,
+    });
+  }
+
+  const executablePath = executable.endsWith(".exe") ? executable : `${executable}.exe`;
+  const commandShim = executable.endsWith(".cmd") ? executable : `${executable}.cmd`;
+  const resolvedExecutable = existsSync(executablePath)
+    ? executablePath
+    : existsSync(commandShim)
+      ? commandShim
+      : executable;
+
+  return spawnSync(
+    process.env.ComSpec ?? "cmd.exe",
+    [
+      "/d",
+      "/c",
+      'cd /d "%REWATCH_TEST_PROJECT%" && "%REWATCH_TEST_EXECUTABLE%" build',
+    ],
+    {
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        REWATCH_TEST_EXECUTABLE: resolvedExecutable,
+        REWATCH_TEST_PROJECT: buildDirectory,
+      },
+      timeout: 30_000,
+      windowsVerbatimArguments: true,
+    },
+  );
+}
 
 function getBuildDirectory(projectDir) {
   if (process.platform !== "win32") {
@@ -15,9 +51,15 @@ function getBuildDirectory(projectDir) {
   }
 
   const expandedPath = realpathSync.native(projectDir);
-  const result = spawnSync(process.env.ComSpec ?? "cmd.exe", ["/d", "/s", "/c", `for %I in ("${expandedPath}") do @echo %~sI`], {
-    encoding: "utf8",
-  });
+  const result = spawnSync(
+    process.env.ComSpec ?? "cmd.exe",
+    ["/d", "/c", 'for %I in ("%REWATCH_TEST_PROJECT%") do @echo %~sI'],
+    {
+      encoding: "utf8",
+      env: {...process.env, REWATCH_TEST_PROJECT: expandedPath},
+      windowsVerbatimArguments: true,
+    },
+  );
   assert.ifError(result.error);
   assert.equal(result.status, 0, result.stderr);
 
@@ -55,12 +97,8 @@ try {
   );
 
   const buildDirectory = getBuildDirectory(projectDir);
-  const result = spawnSync(executableForNode, ["build"], {
-    cwd: buildDirectory,
-    encoding: "utf8",
-    env: process.env,
-    timeout: 30_000,
-  });
+  assert(existsSync(buildDirectory), `Build directory does not exist: ${buildDirectory}`);
+  const result = runBuild(buildDirectory);
 
   assert.ifError(result.error);
   assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);

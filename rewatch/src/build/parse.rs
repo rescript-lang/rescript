@@ -436,18 +436,11 @@ fn generate_ast(
     // generate the dir of the ast_path (it mirrors the source file dir)
     let ast_parent_path = package.get_build_path().join(ast_path.parent().unwrap());
     helpers::create_path(&ast_parent_path);
-    // Keep absolute source locations in the AST in the same path form as the
-    // canonical project root passed during compilation. This matters for
-    // Windows paths that have both short and expanded representations.
-    let parse_working_dir = build_path_abs
-        .canonicalize()
-        .map(helpers::StrippedVerbatimPath::to_stripped_verbatim_path)
-        .unwrap_or_else(|_| build_path_abs.clone());
 
     /* Create .ast */
     let result = match Some(
         Command::new(&build_state.compiler_info.bsc_path)
-            .current_dir(&parse_working_dir)
+            .current_dir(&build_path_abs)
             .args(parser_args)
             .output()
             .map_err(|e| {

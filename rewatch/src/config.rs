@@ -1029,7 +1029,7 @@ impl Config {
     }
 
     pub fn get_project_root_args(&self) -> Vec<String> {
-        // The parser records locations from a canonical working directory.
+        // Package discovery gives the parser a canonical working directory.
         // Use the same representation here so GenType can strip this prefix,
         // including when Windows supplied the project through an 8.3 path.
         let root = self
