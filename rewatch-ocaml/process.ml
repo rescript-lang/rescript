@@ -274,7 +274,7 @@ let launch ?env ~notifier payload job =
     in
     let exn =
       if !termination_failed then
-        Failure "Could not terminate a partially launched subprocess tree"
+        Error "Could not terminate a partially launched subprocess tree"
       else
         match (restore_error, release_error) with
         | Some signal_exn, _ -> signal_exn
@@ -354,7 +354,7 @@ let terminate_running children =
         children
     else (
       List.iter (fun child -> Platform.release_process child.process) children;
-      failwith "Could not terminate a subprocess tree"))
+      raise (Error "Could not terminate a subprocess tree")))
 
 let release_running child =
   Thread.join child.child_wait.thread;

@@ -108,7 +108,7 @@ clean-rewatch:
 # Compiler
 
 COMPILER_SOURCE_DIRS := compiler tests analysis tools rewatch-ocaml
-COMPILER_SOURCES = $(shell find $(COMPILER_SOURCE_DIRS) -type f \( -name '*.ml' -o -name '*.mli' -o -name '*.dune' -o -name dune -o -name dune-project \))
+COMPILER_SOURCES = $(shell find $(COMPILER_SOURCE_DIRS) -type f \( -name '*.ml' -o -name '*.mli' -o -name '*.c' -o -name '*.h' -o -name '*.dune' -o -name dune -o -name dune-project \))
 COMPILER_BIN_NAMES := bsc rescript-editor-analysis rescript-tools
 ifneq ($(OS),Windows_NT)
 COMPILER_BIN_NAMES += rescript

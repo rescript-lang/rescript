@@ -56,6 +56,10 @@ after-build, and build-lock waits all poll that request, while interrupted
 debounce waits convert `EINTR` into the same controlled shutdown path. This
 keeps lock, watcher-handle, child-process, and signal restoration finalizers in
 control regardless of where SIGINT or SIGTERM arrives.
+One-shot build, clean, format, and compiler-argument commands install a separate
+command-scoped handler that raises through those same finalizers. A focused
+slow-compiler case sends SIGTERM during a build and requires exit 143, complete
+subprocess-group cleanup, build-lock removal, and no abandoned capture log.
 Atomic replacements are reconciled even when the filesystem reports only the
 now-absent temporary filename: every structural event immediately below an
 explicit watch root requests a snapshot, while unchanged unrelated files still
@@ -258,13 +262,11 @@ differences:
   so a directory-only regex selected files that Rust excludes. Discovery now
   applies the regex to `Filename.basename`; differential builds retain both a
   directory-only non-match and a basename match, with focused source tests for
-  the same boundary. The engines are not otherwise syntax-compatible: Rust
-  uses the `regex` crate, while the port currently uses OCaml's `Str`. Their
-  common basic forms (for example `^Foo.*\.res$`) work, but Rust expressions
-  such as `Foo|Bar`, `\d+`, or `(?:Foo|Bar)` do not have the same meaning in
-  `Str`, whose alternation and grouping operators use its older escaped syntax.
-  This is a documented CLI compatibility gap rather than a new watcher
-  requirement.
+  the same boundary. The original `Str` matcher has since been replaced by
+  maintained `Re.Perl`, closing common alternation, grouping, shorthand-class,
+  and repetition gaps while retaining linear-time matching. Rust-only Unicode
+  and class-set behavior remains the explicit filter gap recorded in the
+  compatibility matrix and final review.
 - PPX resolution did not search hoisted `node_modules`.
 - Stale cleanup treated every JavaScript-looking file as owned output and
   deleted checked-in legacy files that had no corresponding source or AST.
@@ -1026,9 +1028,10 @@ identifies repeated CMI comparison and case-candidate checks, not extra
 compilation or directory-tree discovery. Raw create/remove totals intentionally
 remain diagnostic because the drivers use different publication mechanics.
 
-The maintained source-size tool reports 8,389 lines of OCaml production code
+The maintained source-size tool reports 8,732 lines of OCaml-port production
+code, including its native C boundary,
 and 7,818 lines of Rust production code when Rust telemetry is excluded. Tests
-remain separate: OCaml has 6,657 test/fixture lines and 1,021 benchmark-tooling
+remain separate: OCaml has 6,731 test/fixture lines and 1,021 benchmark-tooling
 lines; Rust has 2,773 inline unit-test lines. Blank and comment lines are
 reported separately by `bench/source_size.sh` and are not included in these
 code counts. The tooling scope includes all six executable shell/JavaScript
@@ -1334,9 +1337,10 @@ observational and do not replace the five-run acceptance result.
 
 The current `cloc` 2.04 source-size snapshot reports 7,818 Rust production
 lines after excluding the intentionally omitted telemetry module and inline
-test-only sections, versus 8,389 OCaml production lines, or 107.3%. Counting
+test-only sections, versus 8,732 OCaml-port production lines including the
+native C boundary, or 111.7%. Counting
 language-specific tests separately gives 2,773 embedded Rust unit-test lines
-and 6,657 OCaml unit/focused test and fixture lines. The OCaml benchmark tooling
+and 6,731 OCaml unit/focused test and fixture lines. The OCaml benchmark tooling
 adds another 1,021 lines across every executable audit/measurement script. The shared
 canonical integration suite is deliberately not charged to either side. These
 figures describe maintainability surface, not parity or quality: explicit
@@ -1345,9 +1349,9 @@ indicating behavioral duplication.
 [`bench/source_size.sh`](bench/source_size.sh) preserves the scope and command;
 it now reports largest files directly. The current largest production modules
 are `watcher.ml` (692 code lines), `build.ml` (645), `process.ml` (564),
-`package_build.ml` (416), and `config.ml` (375). The largest test/tooling files
-are `check_command_validation.sh` (1,629), `unit_tests.ml` (848), `run.sh`
-(739), `config_tests.ml` (493), and `check_interactive_output.sh` (405).
+`package_build.ml` (416), and `cli.ml` (385). The largest test/tooling files
+are `check_command_validation.sh` (1,635), `unit_tests.ml` (859), `run.sh`
+(761), `config_tests.ml` (493), and `check_interactive_output.sh` (405).
 
 General portable filesystem operations now live behind the narrow
 `file_util.mli` interface. Recursive directory creation, file reading/copying,
@@ -1393,12 +1397,27 @@ does not alter filesystem access or build scheduling; all 18 OUnit2 tests and
 the focused build/incremental runner passed afterward.
 
 The remaining `build.ml` lifecycle was reviewed again after those extractions.
-Its setup, progress/error reporting, staged-output publication, log and lock
-finalization, and build/watch entry points share command-scoped state and form
-one coherent owner; splitting them further would primarily replace local
-closures with callback plumbing. It therefore remains one 387-line
-implementation, while a narrow `build.mli` exposes only the command entry
-points and translated public exceptions.
+It is now 645 code lines because retained-watch initialization, incremental
+preparation, and command presentation were subsequently added. Its setup,
+progress/error reporting, staged-output publication, log and lock finalization,
+incremental transition, and build/watch entry points still share one
+command-scoped state owner. The largest function is the command transaction
+whose local finalizers close logs, staged outputs, and the build lock; extracting
+pieces would expose that mutable lifetime through callbacks rather than create a
+cohesive new owner. A narrow `build.mli` exposes only the command entry points
+and translated public exceptions. Revisit this decision if another independent
+command lifecycle is added, rather than splitting solely to reduce the count.
+
+The final illegal-state review replaced format's independent `check`, `stdin`,
+and file-list fields with a `Format_stdin` versus `Format_files` command value,
+so successfully parsed CLI state cannot contain conflicting input modes. The
+other recorded candidates represent meaningful absence rather than accidental
+partial state: build initialization options support guarded full-rebuild
+fallbacks, `None` versus `Some []` distinguishes all features from an explicit
+empty selection and unrestricted from no allowed dependents, and configuration
+decoding rejects a namespace entry without a namespace before constructing a
+usable build. Introducing variants for those cases would rename valid states
+without removing an observed failure mode.
 
 Package-tree discovery now lives in `package_graph.ml`. It owns the two-pass
 feature-union traversal, command-wide dependency resolution and duplicate
@@ -1483,7 +1502,7 @@ delete/recreate cycles remain observable. Their containing directory and its
 parent are watched shallowly so moving the watched directory itself remains
 observable across filesystem backends. Initial native handles are installed
 before compilation, and registration is followed by a fresh snapshot, closing
-both the initial-build and refresh handoff windows. The 100-case differential
+both the initial-build and refresh handoff windows. The 106-case differential
 gate covers dependency installation and candidate fallback, external symlink
 target replacement, the delayed-compiler race, included, filter-excluded, and
 feature-disabled live edits, signal-safe lock waiting, and recovery from
@@ -1690,6 +1709,12 @@ Three later Rust fixes were audited explicitly against the port:
   for `--no-timing` consumes a following folder token and rejects it as a
   non-boolean. Unit and executable-level tests cover both forms. Keep the
   latter in the final inventory of compatibility behavior that appears odd.
+- Clustered global short flags are recognized by their characters rather than
+  a fixed spelling list. This preserves arbitrarily repeated verbosity and
+  mixed display clusters before an explicit command; the first `h` or `V`
+  determines help versus version, while command-local help only wins if its
+  `h` precedes an otherwise invalid `V`. OUnit and differential executable
+  cases retain both orders and the `-vvvvv` routing form.
 - Verbosity selection now rejects combining any `-v`/`--verbose` occurrence
   with any `-q`/`--quiet` occurrence, matching Clap's mutually exclusive
   verbosity modes instead of subtracting the two counts. OUnit and differential
@@ -1794,6 +1819,9 @@ Three later Rust fixes were audited explicitly against the port:
   with a Windows-targeting C compiler, its matching OCaml headers, and warnings
   as errors; this catches Windows API and OCaml C-interface mistakes without
   claiming native runtime coverage.
+  The repository Makefile's compiler source stamp includes C and header files,
+  so changing this native owner cannot leave an older promoted/package binary
+  in place while `make compiler` incorrectly reports it current.
 - The preferred non-CI Windows validation environment is a Windows 11 ARM VM on
   the Apple Silicon development host, with the repository on the guest's local
   NTFS volume. Run the existing Bash suites in the Cygwin environment supplied
@@ -1902,16 +1930,12 @@ Three later Rust fixes were audited explicitly against the port:
    clearer as `Module.function` than through `open`; do not apply either style
    mechanically. Remove dead code, and document the complete
    compatibility-oddity, corrected-Rust-behavior, and future-performance lists.
-   Follow the functional-design principle of making illegal states
+   Continue applying the functional-design principle of making illegal states
    unrepresentable where it removes a concrete ambiguity or failure mode, not as
-   a ceremonial replacement for every `option`. In particular, review the
-   partially initialized build-state fields as explicit lifecycle phases,
-   feature selection as `All` versus an explicit selection, namespace and its
-   entry point as one coherent value, and normalized format input as stdin
-   versus files. Also review dependency-access policy (`None` currently means
-   unrestricted, while `Some []` means no allowed dependents). Retain ordinary
-   options for values that are genuinely absent, such as a missing interface,
-   an unavailable native-event filename, or an optional hook.
+   a ceremonial replacement for every `option`; the recorded candidates and
+   the format-input change are evaluated above. Retain ordinary options for
+   values that are genuinely absent, such as a missing interface, an
+   unavailable native-event filename, or an optional hook.
 3. Validate macOS packaging and native event behavior, then prepare the pinned
    Windows handoff. Finish the Windows watcher/lock
    backend and path audit and run the native build, unit, focused, and canonical

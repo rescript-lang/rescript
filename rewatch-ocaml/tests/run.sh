@@ -512,6 +512,31 @@ test ! -f "$interrupt_basic/lib/watch.lock"
 test -z "$(pgrep -f "$interrupt_basic/slow-bsc.sh" || true)"
 test -z "$(find "$interrupt_basic" -name '.rewatch-ocaml-*.log' -print)"
 
+# One-shot commands must unwind through the same process and lock owners when
+# the shell terminates them during compiler work.
+interrupt_build="$work/interrupt-build"
+cp -R "$root/rewatch-ocaml/tests/basic" "$interrupt_build"
+cp "$root/rewatch-ocaml/tests/slow-bsc.sh" \
+  "$interrupt_build/slow-bsc.sh"
+chmod +x "$interrupt_build/slow-bsc.sh"
+build_child_marker="$interrupt_build/child-started"
+REWATCH_OCAML_CHILD_STARTED="$build_child_marker" \
+REWATCH_OCAML_REAL_BSC="$RESCRIPT_BSC_EXE" \
+RESCRIPT_BSC_EXE="$interrupt_build/slow-bsc.sh" \
+"$port" build "$interrupt_build" >"$interrupt_build/build.log" 2>&1 &
+interrupt_build_pid=$!
+background_pids="$background_pids $interrupt_build_pid"
+wait_for_file "$build_child_marker"
+kill -TERM "$interrupt_build_pid"
+set +e
+wait "$interrupt_build_pid"
+interrupt_build_status=$?
+set -e
+test "$interrupt_build_status" -eq 143
+test ! -f "$interrupt_build/lib/build.lock"
+test -z "$(pgrep -f "$interrupt_build/slow-bsc.sh" || true)"
+test -z "$(find "$interrupt_build" -name '.rewatch-ocaml-*.log' -print)"
+
 # Removing watch.lock is the shell-suite shutdown protocol. It must interrupt
 # an in-progress compiler batch just as SIGTERM does, rather than waiting for
 # every queued module to finish.

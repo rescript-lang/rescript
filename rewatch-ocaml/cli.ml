@@ -2,7 +2,7 @@ type command =
   | Build of build_options
   | Clean of {verbosity: int; folder: string; prod: bool}
   | Watch of build_options
-  | Format of {check: bool; stdin: string option; files: string list}
+  | Format of format_input
   | Compiler_args of string
 
 and build_options = {
@@ -16,6 +16,10 @@ and build_options = {
   clear_screen: bool;
   no_timing: bool;
 }
+
+and format_input =
+  | Format_stdin of string
+  | Format_files of {check: bool; paths: string list}
 
 open Cmdliner
 open Cmdliner.Term.Syntax
@@ -164,7 +168,8 @@ let format_term =
      match (check, stdin, files) with
      | true, Some _, _ -> Error (`Msg "--stdin conflicts with --check")
      | _, Some _, _ :: _ -> Error (`Msg "files conflict with --stdin")
-     | _ -> Ok (Format {check; stdin; files}))
+     | _, Some extension, [] -> Ok (Format (Format_stdin extension))
+     | _, None, paths -> Ok (Format (Format_files {check; paths})))
 
 let compiler_args_term =
   let path =
@@ -243,16 +248,49 @@ let argv_is_utf_8 argv = Array.for_all String.is_valid_utf_8 argv
 (* Cmdliner owns option parsing. This adapter only reproduces clap's implicit
    build routing and global help/version placement before Cmdliner sees argv. *)
 let normalize_argv argv =
+  let is_short_global_cluster argument =
+    let length = String.length argument in
+    length > 1 && argument.[0] = '-' && argument.[1] <> '-'
+    && String.for_all
+         (function 'v' | 'q' | 'h' | 'V' -> true | _ -> false)
+         (String.sub argument 1 (length - 1))
+  in
+  let short_cluster_contains character argument =
+    is_short_global_cluster argument
+    && String.contains_from argument 1 character
+  in
   let is_verbosity = function
   | "-v" | "-vv" | "-vvv" | "-vvvv" | "--verbose" | "-q" | "-qq"
   | "-qqq" | "-qqqq" | "--quiet" -> true
-  | _ -> false
+  | argument ->
+    is_short_global_cluster argument
+    && not
+         (short_cluster_contains 'h' argument
+         || short_cluster_contains 'V' argument)
   in
   let is_help = function "-h" | "--help" -> true | _ -> false in
   let is_version = function "-V" | "--version" -> true | _ -> false in
   let is_global argument =
-    is_verbosity argument || is_help argument || is_version argument
+    is_short_global_cluster argument || is_verbosity argument
+    || is_help argument || is_version argument
   in
+  let display_request argument =
+    if argument = "--help" then Some `Help
+    else if argument = "--version" then Some `Version
+    else if is_short_global_cluster argument then
+      let rec first index =
+        if index = String.length argument then None
+        else
+          match argument.[index] with
+          | 'h' -> Some `Help
+          | 'V' -> Some `Version
+          | 'v' | 'q' -> first (index + 1)
+          | _ -> None
+      in
+      first 1
+    else None
+  in
+  let first_display_request arguments = List.find_map display_request arguments in
   let is_command = function
   | "build" | "watch" | "clean" | "format" | "compiler-args" | "help" ->
     true
@@ -276,6 +314,14 @@ let normalize_argv argv =
   | [] -> []
   | "--" :: rest -> "--" :: rest
   | ("-h" | "--help") :: rest -> "--help=plain" :: normalize_help rest
+  | argument :: rest
+    when is_short_global_cluster argument
+         && short_cluster_contains 'h' argument
+         &&
+         let help_index = String.index_from argument 1 'h' in
+         (not (short_cluster_contains 'V' argument))
+         || help_index < String.index_from argument 1 'V' ->
+    "--help=plain" :: normalize_help rest
   | argument :: rest -> argument :: normalize_help rest
   in
   let rec reject_subcommand_version = function
@@ -317,19 +363,21 @@ let normalize_argv argv =
       match first_non_global arguments with
       | Some command when is_command command ->
         let globals, command_and_rest = split_leading_globals [] arguments in
-        if List.exists is_help globals then [executable; "--help"]
-        else if List.exists is_version globals then [executable; "--version"]
-        else
+        (match first_display_request globals with
+        | Some `Help -> [executable; "--help"]
+        | Some `Version -> [executable; "--version"]
+        | None ->
           (match command_and_rest with
           | command :: rest ->
             executable :: command
             :: reject_subcommand_version (globals @ rest)
-          | [] -> assert false)
+          | [] -> assert false))
       | _ ->
         let globals, others = partition_implicit arguments in
-        if List.exists is_help globals then [executable; "--help"]
-        else if List.exists is_version globals then [executable; "--version"]
-        else executable :: "build" :: (globals @ others)
+        (match first_display_request globals with
+        | Some `Help -> [executable; "--help"]
+        | Some `Version -> [executable; "--version"]
+        | None -> executable :: "build" :: (globals @ others))
     in
     Array.of_list
       (routed |> normalize_short_booleans |> normalize_help)
