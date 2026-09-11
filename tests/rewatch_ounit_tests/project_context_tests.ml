@@ -55,8 +55,8 @@ let tests =
         "a child path is represented relative to its root";
       check
         (Project_context.display_path ~root (Filename.concat root "packages")
-        = "./packages")
-        "diagnostic paths inside the project are visibly relative";
+        = "packages")
+        "diagnostic paths inside the project are relative";
       check
         (Project_context.display_path ~root "/external/dependency"
         = "/external/dependency")
