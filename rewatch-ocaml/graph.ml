@@ -1,5 +1,7 @@
 exception Cycle of string list
 
+type visit_state = Visiting | Done
+
 let cycle_blocked_nodes nodes ~name ~deps =
   let count = List.length nodes in
   let by_name = Hashtbl.create count in
@@ -129,17 +131,17 @@ let topological_sort nodes ~name ~deps =
   let rec visit stack node =
     let node_name = name node in
     match Hashtbl.find_opt state node_name with
-    | Some `Done -> ()
-    | Some `Visiting -> raise (Cycle (List.rev (node_name :: stack)))
+    | Some Done -> ()
+    | Some Visiting -> raise (Cycle (List.rev (node_name :: stack)))
     | None ->
-      Hashtbl.replace state node_name `Visiting;
+      Hashtbl.replace state node_name Visiting;
       List.iter
         (fun dep ->
           match Hashtbl.find_opt by_name dep with
           | None -> ()
           | Some dep_node -> visit (node_name :: stack) dep_node)
         (deps node);
-      Hashtbl.replace state node_name `Done;
+      Hashtbl.replace state node_name Done;
       result := node :: !result
   in
   try

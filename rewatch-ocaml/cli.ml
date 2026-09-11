@@ -247,6 +247,8 @@ let argv_is_utf_8 argv = Array.for_all String.is_valid_utf_8 argv
 
 (* Cmdliner owns option parsing. This adapter only reproduces clap's implicit
    build routing and global help/version placement before Cmdliner sees argv. *)
+type display_request = Help_requested | Version_requested
+
 let normalize_argv argv =
   let is_short_global_cluster argument =
     let length = String.length argument in
@@ -275,15 +277,15 @@ let normalize_argv argv =
     || is_help argument || is_version argument
   in
   let display_request argument =
-    if argument = "--help" then Some `Help
-    else if argument = "--version" then Some `Version
+    if argument = "--help" then Some Help_requested
+    else if argument = "--version" then Some Version_requested
     else if is_short_global_cluster argument then
       let rec first index =
         if index = String.length argument then None
         else
           match argument.[index] with
-          | 'h' -> Some `Help
-          | 'V' -> Some `Version
+          | 'h' -> Some Help_requested
+          | 'V' -> Some Version_requested
           | 'v' | 'q' -> first (index + 1)
           | _ -> None
       in
@@ -359,15 +361,15 @@ let normalize_argv argv =
       match explicit_command arguments with
       | Some (globals, command, rest) ->
         (match first_display_request globals with
-        | Some `Help -> [executable; "--help"]
-        | Some `Version -> [executable; "--version"]
+        | Some Help_requested -> [executable; "--help"]
+        | Some Version_requested -> [executable; "--version"]
         | None ->
           executable :: command :: reject_subcommand_version (globals @ rest))
       | None ->
         let globals, others = partition_implicit arguments in
         (match first_display_request globals with
-        | Some `Help -> [executable; "--help"]
-        | Some `Version -> [executable; "--version"]
+        | Some Help_requested -> [executable; "--help"]
+        | Some Version_requested -> [executable; "--version"]
         | None -> executable :: "build" :: (globals @ others))
     in
     Array.of_list
