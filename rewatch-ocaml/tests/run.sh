@@ -762,6 +762,11 @@ test -f "$monorepo/packages/consumer/src/Consumer.js"
 test -f "$monorepo/packages/dep/src/Dep.js"
 "$port" clean "$monorepo"
 test ! -d "$monorepo/lib/ocaml"
+# This package was built directly above, so the later workspace build must not
+# transfer ownership of its outputs to the parent invocation.
+test -d "$monorepo/packages/consumer/lib/ocaml"
+test -d "$monorepo/packages/dep/lib/ocaml"
+"$port" clean "$monorepo/packages/consumer"
 test ! -d "$monorepo/packages/consumer/lib/ocaml"
 test ! -d "$monorepo/packages/dep/lib/ocaml"
 rm -f "$features/native/Native.js"

@@ -11,7 +11,7 @@ rust_executable=$(cd "$(dirname "$1")" && pwd)/$(basename "$1")
 ocaml_executable=$(cd "$(dirname "$2")" && pwd)/$(basename "$2")
 normalizer="$repo_root/rewatch-ocaml/bench/normalize_file_trace.js"
 
-for command in cp date find grep join mktemp node sed seq sleep sort strace wc; do
+for command in awk cat cp date find grep join mktemp node sed seq setsid sleep sort strace wc; do
   command -v "$command" >/dev/null || {
     echo "Missing required command: $command" >&2
     exit 2
@@ -29,9 +29,34 @@ export RESCRIPT_BSC_EXE RESCRIPT_RUNTIME
 
 work_root=$(mktemp -d "${TMPDIR:-/tmp}/rewatch-watch-audit.XXXXXX")
 background_pids=""
-cleanup() {
-  for pid in $background_pids; do
+terminate_group() {
+  local pid=$1
+  local reaped=false state
+  if ! kill -TERM -- "-$pid" 2>/dev/null; then
     kill -TERM "$pid" 2>/dev/null || true
+  fi
+  for _ in $(seq 1 100); do
+    if [[ $reaped == false && -r /proc/$pid/stat ]]; then
+      state=$(awk '{print $3}' "/proc/$pid/stat" 2>/dev/null || true)
+      if [[ $state == Z ]]; then
+        wait "$pid" 2>/dev/null || true
+        reaped=true
+      fi
+    fi
+    if ! kill -0 -- "-$pid" 2>/dev/null; then
+      if [[ $reaped == false ]]; then wait "$pid" 2>/dev/null || true; fi
+      return
+    fi
+    sleep 0.05
+  done
+  kill -KILL -- "-$pid" 2>/dev/null || true
+  if [[ $reaped == false ]]; then kill -KILL "$pid" 2>/dev/null || true; fi
+  if [[ $reaped == false ]]; then wait "$pid" 2>/dev/null || true; fi
+}
+cleanup() {
+  trap - EXIT INT TERM
+  for pid in $background_pids; do
+    terminate_group "$pid"
   done
   if [[ ${KEEP_REWATCH_WATCH_AUDIT:-0} == 1 ]]; then
     echo "Kept watch audit workdir: $work_root" >&2
@@ -72,6 +97,25 @@ wait_for_watch_ready() {
   exit 1
 }
 
+wait_for_native_loop() {
+  local trace_pid=$1
+  for _ in $(seq 1 400); do
+    local child task wait_channel
+    for child in $(cat "/proc/$trace_pid/task/$trace_pid/children" 2>/dev/null || true); do
+      for task in "/proc/$child"/task/*/wchan; do
+        [[ -r $task ]] || continue
+        wait_channel=$(cat "$task")
+        if [[ $wait_channel == *epoll* || $wait_channel == ep_poll* ]]; then
+          return
+        fi
+      done
+    done
+    sleep 0.05
+  done
+  echo "Timed out waiting for the watcher event loop" >&2
+  exit 1
+}
+
 trace_watch_edit() {
   local implementation=$1 executable=$2
   local fixture="$work_root/$implementation"
@@ -81,8 +125,9 @@ trace_watch_edit() {
   cp -R "$repo_root/rewatch-ocaml/tests/basic" "$fixture"
   (
     cd "$fixture"
-    REWATCH_WATCH_AUDIT_MARKER="$marker" \
-      strace -f -ff -qq -ttt -yy -s 4096 -e trace=%file,getdents64 \
+    export REWATCH_WATCH_AUDIT_MARKER="$marker"
+    exec setsid strace -f -ff -qq -ttt -yy -s 4096 \
+        -e trace=%file,getdents64 \
         -o "$trace_prefix" "$executable" watch \
         --after-build "node $marker_script" . \
         >"$normalized.stdout" 2>"$normalized.stderr"
@@ -91,6 +136,10 @@ trace_watch_edit() {
   background_pids="$background_pids $trace_pid"
   wait_for_lines "$marker" 1
   wait_for_watch_ready "$trace_prefix" "$fixture/src"
+  # The after-build hook runs before the initial build has returned to the
+  # watcher. Wait for a subsequent blocking event-loop iteration so initial
+  # reconciliation work cannot be mistaken for retained-edit work.
+  wait_for_native_loop "$trace_pid"
   local start_epoch end_epoch
   start_epoch=$(date +%s.%N)
   printf 'let answer = A.value + 2\n' >"$fixture/src/B.res"

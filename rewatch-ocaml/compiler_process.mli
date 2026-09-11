@@ -26,6 +26,7 @@ val compile_job :
   Process.job
 
 val publish :
+  ?poll:(unit -> unit) ->
   build_dir:string ->
   ocaml_dir:string ->
   watch:bool ->

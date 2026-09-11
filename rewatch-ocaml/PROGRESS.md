@@ -14,7 +14,7 @@ ordinary verbosity and diagnostics remain in scope. Incremental state uses
 existing AST, CMI, CMT, and generated-output artifacts rather than in-process
 compiler state.
 
-A renewed lifecycle audit is in progress after watch testing exposed a gap in
+A renewed lifecycle audit found a gap in
 the earlier source-oriented comparison: Rust retains its initialized build
 state across ordinary watch edits, while the OCaml callback reconstructed that
 state on every event. The common existing-file edit path now carries the
@@ -34,10 +34,41 @@ the watcher skips configuration reload, source snapshots, and handle refresh.
 Ambiguous filenames, source or directory topology changes, control files,
 unresolved dependencies, and symlink targets retain snapshot reconciliation.
 The retained-watch filesystem audit reports zero source-directory scans for
-both implementations on a single edit. Its latest diagnostic run reported 43
-OCaml versus 38 Rust project-local opens and 42 versus 25 metadata operations;
+both implementations on a single edit. Its latest diagnostic run reported 46
+OCaml versus 38 Rust project-local opens and 44 versus 25 metadata operations;
 the remaining OCaml delta is concentrated in staged output/source-map and
 artifact-safety checks rather than project rediscovery.
+
+Retained watch builds now keep their attempted initialized state even when the
+initial compile fails, so repairing a source performs the same two-phase
+incremental parse/compile recovery as Rust instead of an unnecessary full
+three-phase rebuild. Parsed ASTs belonging to that retained state survive
+rollback of brand-new staged JavaScript, so a partially successful initial
+compile can also recover without retaining in-memory state that refers to a
+deleted AST. Polling fallback compares the pre-event snapshot with the
+snapshot immediately before compilation; an edit arriving after the trigger
+snapshot can no longer be absorbed into the next baseline without compiling.
+Focused tests retain both cases, including exact Rust/OCaml PTY recovery output.
+
+Signal handlers only record deferred termination, including while libuv is
+executing a callback. Compiler, parser, namespace, JavaScript post-build,
+after-build, and build-lock waits all poll that request, while interrupted
+debounce waits convert `EINTR` into the same controlled shutdown path. This
+keeps lock, watcher-handle, child-process, and signal restoration finalizers in
+control regardless of where SIGINT or SIGTERM arrives.
+Atomic replacements are reconciled even when the filesystem reports only the
+now-absent temporary filename: every structural event immediately below an
+explicit watch root requests a snapshot, while unchanged unrelated files still
+do not request a build.
+
+The retained-watch gate now verifies seven interleaved edits against release
+executables, requiring identical parser/compiler calls and generated output
+while sampling process resources after every edit. Its first recorded run
+measured a 127 ms Rust median and 113 ms OCaml median. Rust stayed at 8 file
+descriptors and 14 tasks, while OCaml stayed at 12 file descriptors and 3
+tasks; RSS changed from 6,764 to 6,820 KiB for Rust and 9,844 to 9,872 KiB for
+OCaml. These idle-host figures are evidence for this checkpoint rather than a
+portable absolute baseline.
 
 Native macOS validation at checkpoint `30725fb01` passed `make test-all` and,
 after making temporary fixture paths canonical and accounting for the host's
@@ -1429,10 +1460,11 @@ delete/recreate cycles remain observable. Their containing directory and its
 parent are watched shallowly so moving the watched directory itself remains
 observable across filesystem backends. Initial native handles are installed
 before compilation, and registration is followed by a fresh snapshot, closing
-both the initial-build and refresh handoff windows. The 84-case differential gate covers dependency
-installation and candidate fallback, external symlink target replacement, the
-delayed-compiler race, included, filter-excluded, and feature-disabled live
-edits, and recovery from malformed root or dependency configuration.
+both the initial-build and refresh handoff windows. The 85-case differential
+gate covers dependency installation and candidate fallback, external symlink
+target replacement, the delayed-compiler race, included, filter-excluded, and
+feature-disabled live edits, signal-safe lock waiting, and recovery from
+malformed root or dependency configuration.
 
 All file writers now report flush and close failures. Generated package
 metadata, source-directory metadata, and namespace maps use same-directory

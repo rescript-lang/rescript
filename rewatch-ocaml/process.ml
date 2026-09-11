@@ -542,13 +542,18 @@ let run_dependency_graph ?(max_jobs = default_max_jobs)
       run_dependency_graph_with_notifier ~max_jobs ~is_fatal ~poll notifier
         works ~next)
 
-let run ?env ~cwd program args =
-  with_completion_notifier (fun notifier ->
+let run ?env ?poll ~cwd program args =
+  let poll, ticker_enabled =
+    match poll with
+    | Some poll -> (poll, true)
+    | None -> ((fun () -> ()), false)
+  in
+  with_completion_notifier ~ticker_enabled (fun notifier ->
     let child = launch ?env ~notifier () {program; args; cwd} in
     let reaped = ref false in
     try
       let (_, result), restore_signals =
-        wait_for_running notifier [child]
+        wait_for_running ~poll notifier [child]
       in
       reaped := true;
       with_signal_restore restore_signals (fun () -> result)

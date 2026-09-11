@@ -15,6 +15,8 @@ val generated_build_js_path :
 
 val remove_public_outputs : Config.t -> Source.module_ list -> unit
 
+val is_generated_output_path : string -> bool
+
 val cleanup_watch_output_sidecars :
   ?source_files:string list -> root:string -> Config.t -> unit
 

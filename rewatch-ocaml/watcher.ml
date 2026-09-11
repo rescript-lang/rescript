@@ -341,6 +341,49 @@ let changes_between before after =
     after_by_path;
   List.sort (fun first second -> String.compare first.path second.path) !changes
 
+let update_snapshot_entries digest_cache previous changes =
+  let entries = Hashtbl.create (List.length previous) in
+  List.iter
+    (fun ((path, _, _, _) as entry) -> Hashtbl.replace entries path entry)
+    previous;
+  List.iter
+    (fun change ->
+      match change.kind with
+      | Removed ->
+        Hashtbl.remove entries change.path;
+        Hashtbl.remove digest_cache change.path
+      | Added | Modified -> (
+        try
+          let stat = Unix.stat change.path in
+          let digest = Digest.file change.path |> Digest.to_hex in
+          Hashtbl.replace digest_cache change.path
+            (stat.Unix.st_mtime, stat.Unix.st_ctime, stat.Unix.st_size, digest);
+          Hashtbl.replace entries change.path
+            (change.path, stat.Unix.st_mtime, stat.Unix.st_size, digest)
+        with Sys_error _ | Unix.Unix_error _ ->
+          Hashtbl.remove entries change.path;
+          Hashtbl.remove digest_cache change.path))
+    changes;
+  Hashtbl.to_seq_values entries |> List.of_seq |> List.sort compare
+
+let polling_build_changes ~previous ~trigger ~before_build =
+  if trigger = previous then [] else changes_between previous before_build
+
+let changes_are_incremental changes =
+  changes <> []
+  && List.for_all
+       (fun change ->
+         change.kind = Modified
+         &&
+         let extension = Filename.extension change.path in
+         extension = ".res" || extension = ".resi")
+       changes
+
+module For_test = struct
+  let polling_build_changes = polling_build_changes
+  let changes_are_incremental = changes_are_incremental
+end
+
 let path_in_scope roots sources unresolved path =
   let name = Filename.basename path in
   let is_control =
@@ -388,13 +431,15 @@ let with_signal_handlers handler f =
 let run_locked ~root ~prod ~features ~filter ~clear_screen ~show_progress
     ~verbosity ~build ~watch_lock =
   let stop_requested = ref false in
-  let waiting_for_native_event = ref false in
   let stop () =
     Sys.set_signal Sys.sigint Sys.Signal_ignore;
     Sys.set_signal Sys.sigterm Sys.Signal_ignore;
-    (* Do not raise through libuv while it owns the callback stack. Its
-       keep-running predicate closes the handles and returns Stopped instead. *)
-    if !waiting_for_native_event then stop_requested := true else raise Stop
+    (* Signal handlers only request termination because libuv may invoke them
+       while a callback is being drained or a watch handle is being refreshed.
+       Raising through that callback would be treated as an uncaught libuv
+       exception and could bypass lock and handle cleanup. The build poll and
+       watch-loop timer observe this flag, so shutdown remains prompt. *)
+    stop_requested := true
   in
   let digest_cache = Hashtbl.create 256 in
   let matches_filter =
@@ -443,6 +488,11 @@ let run_locked ~root ~prod ~features ~filter ~clear_screen ~show_progress
     if now >= !next_lock_check then (
       next_lock_check := now +. 0.1;
       if not (Build_lock.is_owned watch_lock) then raise Stop)
+  in
+  let delay seconds =
+    (try ignore (Unix.select [] [] [] seconds)
+     with Unix.Unix_error (Unix.EINTR, _, _) -> ());
+    poll ()
   in
   let show_rebuild_presentation () =
     Output.should_clear_screen ~clear_screen ~show_progress
@@ -493,7 +543,7 @@ let run_locked ~root ~prod ~features ~filter ~clear_screen ~show_progress
             || Native_watcher.watches_directory watcher path
             || (is_in_source_tree path && is_directory path)
             || (Native_watcher.watches_directory watcher (Filename.dirname path)
-               && is_directory path)
+               && not (Build_artifacts.is_generated_output_path path))
           then
             requires_reconciliation := true
         | Native_watcher.Content, Some path ->
@@ -521,8 +571,6 @@ let run_locked ~root ~prod ~features ~filter ~clear_screen ~show_progress
           unresolved
       in
       if current <> previous then (
-        Output.debug ~verbosity "doing Full";
-        begin_rebuild Full;
         let build_roots, _, build_sources, build_unresolved =
           watch_context ~root ~prod ~features
         in
@@ -530,7 +578,18 @@ let run_locked ~root ~prod ~features ~filter ~clear_screen ~show_progress
           snapshot digest_cache ~matches_source:matches_filter build_roots
             build_sources build_unresolved
         in
-        build ~poll ~changes:(Some (changes_between previous current))
+        let changes =
+          polling_build_changes ~previous ~trigger:current ~before_build
+        in
+        let rebuild_kind =
+          if changes_are_incremental changes then Incremental else Full
+        in
+        Output.debug ~verbosity
+          (match rebuild_kind with
+          | Incremental -> "doing Incremental"
+          | Full -> "doing Full");
+        begin_rebuild rebuild_kind;
+        build ~poll ~changes:(Some changes)
         |> finish_rebuild;
         let new_roots, _, new_sources, new_unresolved =
           watch_context ~root ~prod ~features
@@ -544,7 +603,7 @@ let run_locked ~root ~prod ~features ~filter ~clear_screen ~show_progress
             ~old_sources:build_sources ~old_unresolved:build_unresolved
             ~new_roots ~new_sources ~new_unresolved before_build after_build
         in
-        ignore (Unix.select [] [] [] 0.2);
+        delay 0.2;
         (* Keep the snapshot from before the rebuild when another edit lands
            during compilation. Otherwise that edit would become the new baseline
            and an atomic configuration rewrite could be missed. *)
@@ -552,7 +611,7 @@ let run_locked ~root ~prod ~features ~filter ~clear_screen ~show_progress
           polling_loop new_roots new_sources new_unresolved baseline
         else polling_loop new_roots new_sources new_unresolved after_build)
       else (
-        ignore (Unix.select [] [] [] 0.2);
+        delay 0.2;
         polling_loop roots sources unresolved current))
   in
   let native_fallback message =
@@ -561,18 +620,13 @@ let run_locked ~root ~prod ~features ~filter ~clear_screen ~show_progress
      ^ "); falling back to polling")
   in
   let rec native_loop watcher roots sources unresolved previous =
-    waiting_for_native_event := true;
-    let result =
-      Fun.protect
-        (fun () -> Native_watcher.wait watcher ~keep_running)
-        ~finally:(fun () -> waiting_for_native_event := false)
-    in
+    let result = Native_watcher.wait watcher ~keep_running in
     match result with
     | Native_watcher.Stopped -> None
     | Native_watcher.Failed message ->
       Some (message, roots, sources, unresolved, previous)
     | Native_watcher.Changed events ->
-      ignore (Unix.select [] [] [] 0.05);
+      delay 0.05;
       let events = events @ Native_watcher.drain watcher in
       let direct =
         direct_content_changes watcher roots sources unresolved events
@@ -583,7 +637,10 @@ let run_locked ~root ~prod ~features ~filter ~clear_screen ~show_progress
         Output.debug ~verbosity "doing Incremental";
         begin_rebuild Incremental;
         build ~poll ~changes:(Some changes) |> finish_rebuild;
-        native_loop watcher roots sources unresolved previous
+        let updated_previous =
+          update_snapshot_entries digest_cache previous changes
+        in
+        native_loop watcher roots sources unresolved updated_previous
       | None -> native_reconcile watcher roots sources unresolved previous)
   and native_reconcile watcher roots sources unresolved previous =
     let current =

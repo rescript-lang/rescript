@@ -26,4 +26,9 @@ val run_dependency_graph :
   unit
 
 val run :
-  ?env:Spawn.Env.t -> cwd:string -> string -> string list -> result
+  ?env:Spawn.Env.t ->
+  ?poll:(unit -> unit) ->
+  cwd:string ->
+  string ->
+  string list ->
+  result

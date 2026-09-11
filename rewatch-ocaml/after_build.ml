@@ -1,13 +1,13 @@
 exception Error = Project_context.Error
 
-let run ~root command =
+let run ?poll ~root command =
   let program, args =
     match Str.split (Str.regexp "[ \t\r\n]+") command with
     | program :: args -> (program, args)
     | [] -> raise (Error "--after-build command cannot be empty")
   in
   let result =
-    try Process.run ~cwd:root program args with
+    try Process.run ?poll ~cwd:root program args with
     | Process.Error message ->
       raise
         (Error

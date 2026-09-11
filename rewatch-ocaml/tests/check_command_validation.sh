@@ -22,6 +22,7 @@ mkdir -p "$project/src" "$work/orphan" "$work/empty" "$work/malformed"
 mkdir -p "$work/malformed-parent/child/src" "$work/config-directory/rescript.json"
 mkdir -p "$work/missing-dependency/src"
 mkdir -p "$work/malformed-lock/src" "$work/malformed-lock/lib"
+mkdir -p "$work/signal-lock/src" "$work/signal-lock/lib"
 mkdir -p "$work/interface-mismatch/src"
 mkdir -p "$work/exotic-module-rust/src" "$work/exotic-module-ocaml/src"
 mkdir -p "$work/filter-basename-rust/src/nested" \
@@ -85,6 +86,9 @@ printf '{"name":"command-validation","sources":["src"]}\n' \
   >"$project/rescript.json"
 printf 'let value = 1\n' >"$project/src/A.res"
 printf 'not a ReScript source\n' >"$project/src/A.txt"
+printf '{"name":"signal-lock","sources":["src"]}\n' \
+  >"$work/signal-lock/rescript.json"
+printf 'let value = 1\n' >"$work/signal-lock/src/A.res"
 mkdir -p "$work/redirected-parse-fixture/src"
 mkdir -p "$work/redirected-config-diagnostics/src"
 printf '{"name":"parse-output","sources":["src"]}\n' \
@@ -809,6 +813,26 @@ if [ -n "$(find "$work/malformed-lock/lib" -maxdepth 1 \
   echo "OCaml left a build-lock candidate after acquisition failed" >&2
   exit 1
 fi
+cp "$(command -v sleep)" "$work/rescript-lock-owner"
+"$work/rescript-lock-owner" 60 &
+signal_lock_owner_pid=$!
+background_pids="$background_pids $signal_lock_owner_pid"
+printf '%s' "$signal_lock_owner_pid" >"$work/signal-lock/lib/build.lock"
+"$ocaml" watch "$work/signal-lock" \
+  >"$work/signal-lock.out" 2>"$work/signal-lock.err" &
+signal_lock_watch_pid=$!
+background_pids="$background_pids $signal_lock_watch_pid"
+wait_for_text "$work/signal-lock.out" "Waiting for other build to finish"
+kill -TERM "$signal_lock_watch_pid"
+wait "$signal_lock_watch_pid"
+if [ -s "$work/signal-lock.err" ]; then
+  echo "Signal during build-lock wait emitted a diagnostic" >&2
+  cat "$work/signal-lock.err" >&2
+  exit 1
+fi
+kill -TERM "$signal_lock_owner_pid"
+wait "$signal_lock_owner_pid" 2>/dev/null || true
+checked=$((checked + 1))
 printf 'not-a-pid' >"$work/malformed-lock/lib/watch.lock"
 run_case watch-malformed-lock reject reject watch "$work/malformed-lock"
 if [ "$(cat "$work/malformed-lock/lib/watch.lock")" != not-a-pid ]; then
@@ -1247,7 +1271,16 @@ printf '{"name":"watch-config","sources":["src"],"package-specs":{"module":"esmo
 wait_for_file "$work/watch-config-ocaml/src/A.mjs"
 wait_for_file "$work/watch-config-ocaml/lib/bs/build.ninja"
 kill -TERM "$ocaml_watch_pid"
+set +e
 wait "$ocaml_watch_pid"
+ocaml_watch_status=$?
+set -e
+if [ "$ocaml_watch_status" -ne 0 ]; then
+  printf 'recoverable-config watcher exited with status %s after shutdown\n' \
+    "$ocaml_watch_status" >&2
+  cat "$work/watch-ocaml.out" "$work/watch-ocaml.err" >&2
+  exit 1
+fi
 checked=$((checked + 1))
 
 retained_graph_marker="$work/watch-retained-graph/after-build.log"

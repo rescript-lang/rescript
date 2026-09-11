@@ -138,6 +138,30 @@ tables, process attribution, and command output. As with the short-lived audit,
 project-local repeated paths and compiler work are the useful comparison; raw
 runtime-wide syscall totals are diagnostic rather than an acceptance limit.
 
+The retained-watch performance and resource gate exercises several ordinary
+edits through the same long-lived watcher:
+
+```sh
+rewatch-ocaml/bench/watch_performance_gate.sh \
+  rewatch/target/release/rescript \
+  _build/default/rewatch-ocaml/rescript_ocaml.exe \
+  7
+```
+
+It warms both implementations, interleaves an odd number of timed edits,
+requires byte-identical generated JavaScript and normalized parser/compiler
+argument logs, and samples file descriptors, tasks, and RSS after every build.
+This catches retained-state implementations that appear fast by skipping work,
+as well as resource growth that a one-event syscall trace cannot show. The
+default median-latency limit is 150% of Rust because individual watch events
+include operating-system notification and 50 ms polling intervals; override it
+with `REWATCH_WATCH_PERFORMANCE_THRESHOLD_PERCENT` only for investigation.
+The build gate's lower-noise 125% clean/incremental threshold remains the
+authoritative general performance criterion. Set
+`KEEP_REWATCH_WATCH_PERFORMANCE=1` to retain output, compiler-call logs,
+latencies, and fixtures. This gate requires Linux `/proc`, GNU-compatible
+millisecond `date`, and `setsid`.
+
 ## Source-size snapshot
 
 Run `bench/source_size.sh` with `cloc` installed to record a reproducible

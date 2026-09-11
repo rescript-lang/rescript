@@ -158,6 +158,20 @@ let tests =
   in
   check dependency_graph_cancelled
     "dependency scheduler cancellation terminates active subprocesses";
+  let process_polls = ref 0 in
+  let process_cancelled =
+    let exception Cancel in
+    try
+      ignore
+        (Process.run ~cwd:(Sys.getcwd ()) test_executable ["--wait-forever"]
+           ~poll:(fun () ->
+             incr process_polls;
+             if !process_polls = 2 then raise Cancel));
+      false
+    with Cancel -> true
+  in
+  check process_cancelled
+    "single subprocess cancellation terminates the active process";
   (if not Sys.win32 then
      let descendant_pipe_polls = ref 0 in
      let started = Unix.gettimeofday () in
@@ -513,12 +527,15 @@ let tests =
   in
   write_owner lock "999999999";
   write_owner takeover "999999999";
+  let lock_owner_pid = ref None in
   Fun.protect
     ~finally:(fun () ->
-      File_util.remove_file takeover;
-      File_util.remove_file lock;
-      Unix.rmdir lock_dir;
-      Unix.rmdir lock_root)
+      Option.iter
+        (fun pid ->
+          (try Unix.kill pid Sys.sigterm with Unix.Unix_error _ -> ());
+          try ignore (Unix.waitpid [] pid) with Unix.Unix_error _ -> ())
+        !lock_owner_pid;
+      File_util.remove_tree lock_root)
     (fun () ->
       Build_lock.with_build lock_root (fun ~release ->
           check
@@ -540,7 +557,40 @@ let tests =
           check
             (not (Sys.file_exists lock))
             "releasing a build lock twice is harmless");
-      check (not (Sys.file_exists lock)) "released build lock is removed");
+      check (not (Sys.file_exists lock)) "released build lock is removed";
+      let lock_owner_executable =
+        Filename.concat lock_root "rescript-lock-owner"
+      in
+      File_util.copy_existing_file ~ensure_parent:false test_executable
+        lock_owner_executable;
+      Unix.chmod lock_owner_executable 0o755;
+      let owner_pid =
+        Spawn.spawn ~prog:lock_owner_executable
+          ~argv:[lock_owner_executable; "--wait-forever"]
+          ()
+      in
+      lock_owner_pid := Some owner_pid;
+      write_owner lock (string_of_int owner_pid);
+      let lock_polls = ref 0 in
+      let lock_wait_cancelled =
+        let exception Cancel in
+        try
+          Build_lock.with_build lock_root
+            ~poll:(fun () ->
+              incr lock_polls;
+              if !lock_polls = 2 then raise Cancel)
+            (fun ~release:_ -> check false "active lock was acquired");
+          false
+        with Cancel -> true
+      in
+      check lock_wait_cancelled "waiting for a build lock remains cancellable";
+      check
+        (Build_lock.read_owner lock = Some (string_of_int owner_pid))
+        "cancelling a lock wait preserves the active owner's lock";
+      Unix.kill owner_pid Sys.sigterm;
+      ignore (Unix.waitpid [] owner_pid);
+      lock_owner_pid := None;
+      File_util.remove_file lock);
   let config_root = Filename.temp_file "rewatch-ocaml-config-" "" in
   Sys.remove config_root;
   Unix.mkdir config_root 0o755;

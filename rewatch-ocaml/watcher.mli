@@ -4,6 +4,16 @@ type change_kind = Added | Removed | Modified
 type change = {path: string; kind: change_kind}
 type build_result = Succeeded | Failed
 
+module For_test : sig
+  val polling_build_changes :
+    previous:(string * float * int * string) list ->
+    trigger:(string * float * int * string) list ->
+    before_build:(string * float * int * string) list ->
+    change list
+
+  val changes_are_incremental : change list -> bool
+end
+
 val run :
   root:string ->
   prod:bool ->

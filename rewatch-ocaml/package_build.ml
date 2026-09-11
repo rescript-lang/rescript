@@ -337,7 +337,7 @@ let rec prepare_tree ~(root_config : Config.t) ~dependency_context ~seen
       module_ ~is_interface path
   in
   let publish ~is_interface path result =
-    Compiler_process.publish ~build_dir ~ocaml_dir ~watch
+    Compiler_process.publish ?poll:stats.process_poll ~build_dir ~ocaml_dir ~watch
       ~watch_output_paths:stats.watch_output_paths ~is_local ~config
       ~is_interface path result
   in

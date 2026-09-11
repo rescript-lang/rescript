@@ -31,11 +31,11 @@ let malformed_error () =
   Project_context.Error
     "Could not start Rescript build: Could not parse lockfile PID\n  (try removing it and running the command again)"
 
-let process_is_active value =
+let process_is_active ?poll value =
   Platform.process_is_active value ~run:(fun program args ->
     try
       let result =
-        Process.run ~cwd:(Filename.get_temp_dir_name ()) program args
+        Process.run ?poll ~cwd:(Filename.get_temp_dir_name ()) program args
       in
       Some (result.Process.status, result.stdout)
     with
@@ -74,7 +74,7 @@ let with_candidate ~lock_dir prefix pid action =
     in
     raise exception_raised
 
-let clear_stale ~candidate path =
+let clear_stale ?poll ~candidate path =
   let takeover = path ^ ".takeover" in
   try
     Unix.link candidate takeover;
@@ -83,12 +83,12 @@ let clear_stale ~candidate path =
       (fun () ->
         match read_owner path with
         | Some owner when not (valid_owner owner) -> raise (malformed_error ())
-        | Some owner when process_is_active owner -> ()
+        | Some owner when process_is_active ?poll owner -> ()
         | _ -> File_util.remove_file path);
     true
   with Unix.Unix_error (Unix.EEXIST, _, _) ->
     (match read_owner takeover with
-    | Some owner when process_is_active owner -> ()
+    | Some owner when process_is_active ?poll owner -> ()
     | _ -> File_util.remove_file takeover);
     false
 
@@ -105,13 +105,19 @@ let unlink_existing path =
 let release_owned path pid =
   if read_owner_for_release path = Some pid then unlink_existing path
 
-let with_build root action =
+let retry_delay poll =
+  (try ignore (Unix.select [] [] [] 0.05)
+   with Unix.Unix_error (Unix.EINTR, _, _) -> ());
+  poll ()
+
+let with_build ?(poll = fun () -> ()) root action =
   let lock_dir = Filename.concat root "lib" in
   File_util.ensure_dir lock_dir;
   let path = Filename.concat lock_dir "build.lock" in
   let pid = string_of_int (Unix.getpid ()) in
   with_candidate ~lock_dir ".build-lock-" pid (fun candidate ->
     let rec acquire attempts =
+      poll ();
       if attempts = 0 then
         raise
           (Project_context.Error
@@ -141,14 +147,14 @@ let with_build root action =
         restore_signals ();
         match read_owner path with
         | Some owner when not (valid_owner owner) -> raise (malformed_error ())
-        | Some owner when process_is_active owner ->
+        | Some owner when process_is_active ~poll owner ->
           if attempts = 1200 then
             print_endline "Waiting for other build to finish...";
-          ignore (Unix.select [] [] [] 0.05);
+          retry_delay poll;
           acquire (attempts - 1)
         | _ ->
-          if not (clear_stale ~candidate path) then
-            ignore (Unix.select [] [] [] 0.05);
+          if not (clear_stale ~poll ~candidate path) then
+            retry_delay poll;
           acquire (attempts - 1))
     in
     acquire 1200)
