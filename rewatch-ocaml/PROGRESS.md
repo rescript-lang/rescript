@@ -2610,6 +2610,44 @@ coverage build likewise installs the instrumented OCaml executable as the
 non-Windows default without expecting a nonexistent Dune-installed `rescript`
 binary.
 
+The latest source-only review found seven further dependency, recovery, and
+watch reconciliation gaps. They are fixed at checkpoints `fe440144c` and
+`5225a4f97`. Cycle membership now controls dispatch eligibility without
+clearing persistent compilation dirtiness, including invalidations received
+while blocked. Restart freshness follows namespace-map members, and namespace
+entry modules have the implicit edge required by their `-open` argument.
+Duplicate-package diagnostics use relative paths when contained and absolute
+paths otherwise. Resolution caches package identity separately from each
+declaration's feature request. Structural events prioritize explicitly tracked
+symlink targets even when the target has a generated-output extension. Stale
+output planning derives prior public JavaScript and map candidates from AST
+provenance before compiler artifacts are removed. The last cleanup limitation
+also exists in the reference Rust ordering and is recorded as an inherited bug
+that the OCaml implementation fixes.
+
+The associated maintainability changes are complete at `f5553335c`. Build,
+watch, format, and clean share dependency selection and feature aggregation
+through `package_traversal.ml`; cached dependency identity remains separate
+from request-specific kind and features. Diagnostic path presentation has a
+permissive API distinct from containment checks. Captured and streaming
+subprocess modes share one lifetime owner. Required artifact deletion reports
+errors, while only explicitly best-effort lock cleanup suppresses them.
+Configuration decoding now fingerprints the exact bytes it parsed rather than
+rereading a potentially changed file later. Focused regressions additionally
+restart a namespace consumer after a failed member-interface change and edit a
+feature directory selected through combined regular and development requests.
+
+The remaining suggestions from that review do not identify missing current
+work. Scheduler setup is global rather than repeated per package, and the
+process path already returns immediately for an empty task list. Namespace
+references are persistent graph nodes with resolved edges, so scheduler setup
+does not repeat namespace expansion. Reusing CMI bytes or digests across
+publication would require changing the publication result and streaming-copy
+contract; reducing the two reader threads plus waiter or changing the fixed
+32-child ceiling likewise affects cancellation and native Windows ownership.
+Those changes remain explicitly profile-dependent and are retained in the
+future-performance inventory for consideration after Windows validation.
+
 1. In the Windows VM, finish the watcher/lock and path audit and run the native
    build, unit, focused, and canonical Bash suites. Address findings there and
    finish with an x64 Windows confidence run where available.
