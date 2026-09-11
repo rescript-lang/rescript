@@ -1061,10 +1061,10 @@ identifies repeated CMI comparison and case-candidate checks, not extra
 compilation or directory-tree discovery. Raw create/remove totals intentionally
 remain diagnostic because the drivers use different publication mechanics.
 
-The maintained source-size tool reports 9,058 lines of OCaml-port production
+The maintained source-size tool reports 9,225 lines of OCaml-port production
 code, including its native C boundary,
 and 7,818 lines of Rust production code when Rust telemetry is excluded. Tests
-remain separate: OCaml has 6,806 test/fixture lines and 1,021 benchmark-tooling
+remain separate: OCaml has 7,743 test/fixture lines and 1,032 benchmark-tooling
 lines; Rust has 2,773 inline unit-test lines. Blank and comment lines are
 reported separately by `bench/source_size.sh` and are not included in these
 code counts. The tooling scope includes all six executable shell/JavaScript
@@ -1382,21 +1382,21 @@ observational and do not replace the five-run acceptance result.
 
 The current `cloc` 2.04 source-size snapshot reports 7,818 Rust production
 lines after excluding the intentionally omitted telemetry module and inline
-test-only sections, versus 8,981 OCaml-port production lines including the
-native C boundary, or 114.9%. Counting
+test-only sections, versus 9,225 OCaml-port production lines including the
+native C boundary, or 118.0%. Counting
 language-specific tests separately gives 2,773 embedded Rust unit-test lines
-and 6,806 OCaml unit/focused test and fixture lines. The OCaml benchmark tooling
-adds another 1,021 lines across every executable audit/measurement script. The shared
-canonical integration suite is deliberately not charged to either side. These
+and 7,743 OCaml unit/focused test and fixture lines. The OCaml benchmark tooling
+adds another 1,032 lines across every executable audit/measurement script. The
+shared canonical integration suite is deliberately not charged to either side. These
 figures describe maintainability surface, not parity or quality: explicit
 interfaces and separate test infrastructure add useful lines rather than
 indicating behavioral duplication.
 [`bench/source_size.sh`](bench/source_size.sh) preserves the scope and command;
 it now reports largest files directly. The current largest production modules
-are `watcher.ml` (692 code lines), `build.ml` (640), `process.ml` (564),
-`package_build.ml` (419), and `build_preparation.ml` (388). The largest test/tooling files
-are `check_command_validation.sh` (1,635), `unit_tests.ml` (859), `run.sh`
-(761), `config_tests.ml` (493), and `check_interactive_output.sh` (471).
+are `watcher.ml` (728 code lines), `build.ml` (651), `process.ml` (584),
+`build_preparation.ml` (402), and `cli.ml` (377). The largest test/tooling files
+are `check_command_validation.sh` (1,791), `run.sh` (1,067), `unit_tests.ml`
+(921), `check_interactive_output.sh` (575), and `config_tests.ml` (494).
 
 The final API-surface audit added explicit interfaces for build state, compile
 asset inventory, graph algorithms, package metadata, source-directory output,
@@ -2132,11 +2132,12 @@ specific compatibility risks; they are not remaining gaps.
 
 ### Native Windows handoff
 
-The implementation checkpoint for the Windows session is `2f5067d50a`. Use a
+The implementation checkpoint for the Windows session is `a4b0728b2f`. Use a
 native checkout on the VM's NTFS volume, OCaml 5.5 through the repository's
 opam setup, and the Cygwin Bash installed with that toolchain. The checkpoint
 already selects `platform_windows.ml` through Dune, compiles the Job Object C
-owner, and type-checks the Windows module in the cross-platform unit suite.
+owner, provides volume-and-file-index identities for replaced watch directories,
+and type-checks the Windows module in the cross-platform unit suite.
 
 Build and run the portable gates from the repository root:
 
@@ -2166,7 +2167,8 @@ descendant that retains a capture pipe; stdout/stderr EOF and handle cleanup;
 active, stale, malformed, and concurrently replaced build/watch locks; `cmd.exe`
 post-build quoting; PATH/PATHEXT lookup; spaces, Unicode, drive, UNC, mixed-case,
 and 8.3 project paths; native recursive events, atomic-save replacement, new and
-removed directories, edits during a build, and polling fallback. Run through
+removed directories, replacement of a watched directory at the same pathname,
+edits during a build, and polling fallback. Run through
 the promoted/package layout as well as the Dune executable so sibling `bsc.exe`
 and runtime discovery are covered. Only after this pass should Windows CI and
 the Windows npm package switch their default `rescript.exe` to the OCaml port.
@@ -2497,9 +2499,21 @@ seven-edit retained-watch gate measured 119 ms OCaml versus 120 ms Rust, exactly
 seven parser and compiler calls per implementation, stable descriptors/tasks,
 and no RSS growth. Both remain within their documented thresholds.
 
-1. Close the deterministic packaging, npm artifact-manifest, equivalence, and
-   release-inventory checks that do not depend on host timing or native Windows,
-   and prepare a pinned Windows handoff.
+The deterministic non-Windows packaging gate was repeated at implementation
+checkpoint `a4b0728b2f`. A `static`-profile promotion produced a statically
+linked `rescript.exe`; `scripts/checkCompilerExes.js` confirmed that the
+promoted platform binary was the current Dune output. Regenerating
+`packages/artifacts.json` produced no diff, and Yarn's package dry run contained
+both `rescript.exe` and `rescript-rust.exe` together with
+`THIRD_PARTY_NOTICES_REWATCH.md` and `RE_LICENSE.md`. CI repeats the manifest
+generation only after downloading every platform artifact and rejects a
+missing declared executable instead of creating a local placeholder. The
+coverage build likewise installs the instrumented OCaml executable as the
+non-Windows default without expecting a nonexistent Dune-installed `rescript`
+binary.
+
+1. Obtain a follow-up source-only review of implementation checkpoint
+   `a4b0728b2f` and address any confirmed findings.
 2. In the Windows VM, finish the watcher/lock and path audit and run the native
    build, unit, focused, and canonical Bash suites. Address findings there and
    finish with an x64 Windows confidence run where available.

@@ -113,6 +113,27 @@ remaining compatibility or platform gaps. `PARITY_CHECKLIST.md` defines the
 separate validation-inventory and interactive-output gates that must be closed
 before replacement.
 
+## Packaging checks
+
+The release inventory uses the repository's existing Dune promotion and npm
+artifact tooling. On Linux, build and verify the current platform package with:
+
+```sh
+opam exec -- dune build --profile static compiler/sync/rescript.exe
+file packages/@rescript/linux-arm64/bin/rescript.exe
+node scripts/checkCompilerExes.js
+node scripts/updateArtifactList.js
+git diff --exit-code packages/artifacts.json
+yarn workspace @rescript/linux-arm64 pack --json --dry-run
+```
+
+Use `linux-x64` instead on an x64 host. The package listing must contain the
+OCaml `bin/rescript.exe`, the Rust reference `bin/rescript-rust.exe`, and both
+rewatch notice files. CI runs the artifact-list check only after downloading
+all platform builds and treats any missing declared executable as an error;
+local manifest generation uses temporary placeholders solely for platforms
+that were not built on the current machine.
+
 OpenTelemetry/OTLP tracing is intentionally not part of this port. This is an
 explicit project scope decision, not a silently ignored configuration feature;
 ordinary command output, verbosity, diagnostics, and exit statuses remain in
