@@ -48,11 +48,23 @@ let load path =
       fail_read requested_path (Unix.error_message error)
   in
   let root = Filename.dirname path in
-  let json =
-    try Yojson.Safe.from_file path with
-    | Yojson.Json_error message -> fail path ("invalid JSON: " ^ message)
+  (try
+     match (Unix.stat path).Unix.st_kind with
+     | Unix.S_DIR -> fail_read path (Unix.error_message Unix.EISDIR)
+     | Unix.S_REG | Unix.S_CHR | Unix.S_BLK | Unix.S_LNK | Unix.S_FIFO
+     | Unix.S_SOCK ->
+       ()
+   with
+  | Sys_error message -> fail_read path (strip_read_path path message)
+  | Unix.Unix_error (error, _, _) -> fail_read path (Unix.error_message error));
+  let contents =
+    try File_util.read_file path with
     | Sys_error message -> fail_read path (strip_read_path path message)
     | Unix.Unix_error (error, _, _) -> fail_read path (Unix.error_message error)
+  in
+  let json =
+    try Yojson.Safe.from_string contents
+    with Yojson.Json_error message -> fail path ("invalid JSON: " ^ message)
   in
   let fields =
     match json with
@@ -385,6 +397,7 @@ let load path =
   {
     path;
     root;
+    file_hash = Digest.string contents |> Digest.to_hex;
     name;
     sources;
     sources_defined;

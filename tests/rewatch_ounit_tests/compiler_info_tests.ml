@@ -68,6 +68,20 @@ let tests =
         (Compiler_info.verify_package changed config)
         "changed compiler contents invalidate artifacts");
   with_temp_dir (fun root ->
+      let decoded = config root in
+      let context = context root decoded [] in
+      Compiler_info.write_package context decoded;
+      write
+        (Filename.concat root "rescript.json")
+        {|{"name":"compiler-info-test","sources":["src"],"suffix":".mjs"}|};
+      check
+        (Compiler_info.matches context decoded)
+        "compiler metadata uses the bytes associated with the decoded config";
+      let changed = Config.load_root root in
+      check
+        (not (Compiler_info.matches context changed))
+        "reloading changed configuration produces a new fingerprint");
+  with_temp_dir (fun root ->
       let config = config root in
       let context = context root config [] in
       let old_log =

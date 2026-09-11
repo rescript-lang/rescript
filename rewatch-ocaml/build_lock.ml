@@ -60,13 +60,13 @@ let with_candidate ~lock_dir prefix pid action =
     close_out output;
     channel := None;
     Fun.protect
-      ~finally:(fun () -> File_util.remove_file path)
+      ~finally:(fun () -> File_util.remove_file_best_effort path)
       (fun () ->
         restore_signals ();
         action path)
   with exception_raised ->
     Option.iter close_out_noerr !channel;
-    Option.iter File_util.remove_file !candidate;
+    Option.iter File_util.remove_file_best_effort !candidate;
     let exception_raised =
       try
         restore_signals ();
@@ -80,17 +80,17 @@ let clear_stale ?poll ~candidate path =
   try
     Unix.link candidate takeover;
     Fun.protect
-      ~finally:(fun () -> File_util.remove_file takeover)
+      ~finally:(fun () -> File_util.remove_file_best_effort takeover)
       (fun () ->
         match read_owner path with
         | Some owner when not (valid_owner owner) -> raise (malformed_error ())
         | Some owner when process_is_active ?poll owner -> ()
-        | _ -> File_util.remove_file path);
+        | _ -> File_util.remove_file_best_effort path);
     true
   with Unix.Unix_error (Unix.EEXIST, _, _) ->
     (match read_owner takeover with
     | Some owner when process_is_active ?poll owner -> ()
-    | _ -> File_util.remove_file takeover);
+    | _ -> File_util.remove_file_best_effort takeover);
     false
 
 let restore_after_exception restore_signals exception_raised =

@@ -30,6 +30,7 @@
   project_context
   package_resolution
   feature_requests
+  package_traversal
   platform_common
   platform
   process
