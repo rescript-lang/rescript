@@ -44,3 +44,11 @@ val run :
   string ->
   string list ->
   result
+
+val run_streaming :
+  ?env:Spawn.Env.t ->
+  ?poll:(unit -> unit) ->
+  cwd:string ->
+  string ->
+  string list ->
+  result

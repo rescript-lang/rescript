@@ -7,7 +7,7 @@ let run ?poll ~root command =
     | [] -> raise (Error "--after-build command cannot be empty")
   in
   let result =
-    try Process.run ?poll ~cwd:root program args with
+    try Process.run_streaming ?poll ~cwd:root program args with
     | Process.Error message ->
       raise
         (Error
@@ -26,11 +26,7 @@ let run ?poll ~root command =
               command (Unix.error_message error) operation target))
   in
   if not (Process.succeeded result) then (
-    let output = result.stderr ^ result.stdout in
     raise
       (Error
-         (Printf.sprintf "--after-build command failed with %s%s"
-            (Process.status_string result.status)
-            (if output = "" then "" else ":\n" ^ output))));
-  if result.stdout <> "" then print_string result.stdout;
-  if result.stderr <> "" then prerr_string result.stderr
+         (Printf.sprintf "--after-build command failed with %s"
+            (Process.status_string result.status))))

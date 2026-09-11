@@ -2,24 +2,15 @@ open OUnit2
 
 let check condition message = assert_bool message condition
 
-let source name =
-  Source.
-    {
-      name;
-      implementation = "src/" ^ name ^ ".res";
-      interface = None;
-      is_dev = false;
-      feature = None;
-    }
-
 let tests =
   "build_state_tests" >:: fun _context ->
   let state = Build_state.create 2 in
   Build_state.add state ~key:"A" ~package_name:"package" ~package_root:"root"
-    ~source:(source "A") ~last_compiled_cmi:(Some 1.)
+    ~kind:Build_state.Source_module ~last_compiled_cmi:(Some 1.)
     ~last_compiled_cmt:(Some 2.);
   Build_state.add state ~key:"B" ~package_name:"package" ~package_root:"root"
-    ~source:(source "B") ~last_compiled_cmi:None ~last_compiled_cmt:None;
+    ~kind:Build_state.Source_module ~last_compiled_cmi:None
+    ~last_compiled_cmt:None;
   Build_state.set_dependencies state ~key:"A" [];
   Build_state.set_dependencies state ~key:"B" ["A"];
   let a = Build_state.find_exn state "A" in
@@ -59,4 +50,24 @@ let tests =
     (Build_state.String_set.equal a.dependents
        (Build_state.String_set.singleton "B")
     && b.dependencies = ["A"])
-    "updating dependencies does not duplicate reverse edges"
+    "updating dependencies does not duplicate reverse edges";
+  let namespace_state = Build_state.create 3 in
+  Build_state.add namespace_state ~key:"A" ~package_name:"dependency"
+    ~package_root:"dependency" ~kind:Build_state.Source_module
+    ~last_compiled_cmi:None ~last_compiled_cmt:None;
+  Build_state.add namespace_state ~key:"namespace" ~package_name:"dependency"
+    ~package_root:"dependency" ~kind:Build_state.Namespace_map
+    ~last_compiled_cmi:None ~last_compiled_cmt:None;
+  Build_state.add namespace_state ~key:"Consumer" ~package_name:"consumer"
+    ~package_root:"consumer" ~kind:Build_state.Source_module
+    ~last_compiled_cmi:None ~last_compiled_cmt:None;
+  Build_state.set_dependencies namespace_state ~key:"A" [];
+  Build_state.set_dependencies namespace_state ~key:"namespace" ["A"];
+  Build_state.set_dependencies namespace_state ~key:"Consumer" ["namespace"];
+  let namespace = Build_state.find_exn namespace_state "namespace" in
+  let consumer = Build_state.find_exn namespace_state "Consumer" in
+  Build_state.mark_dependents_compile_dirty namespace_state
+    (Build_state.find_exn namespace_state "A") ~is_blocked:(fun _ -> false);
+  check
+    (namespace.compile_dirty && consumer.compile_dirty)
+    "namespace-map invalidation propagates to namespace consumers"

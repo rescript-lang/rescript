@@ -146,8 +146,9 @@ let write_source_dirs (root_config : Config.t) (stats : Build_types.t) =
   local_packages
   |> List.iter (fun package ->
        package.Build_types.graph_dependency_directories
-       |> List.iter (fun ((dependency : Config.dependency), path) ->
-            Hashtbl.replace package_roots dependency.name path));
+       |> List.iter (fun dependency ->
+            Hashtbl.replace package_roots
+              dependency.Build_types.declaration.name dependency.directory));
   let package_roots =
     Hashtbl.to_seq package_roots |> List.of_seq
     |> List.sort (fun (left, _) (right, _) -> String.compare left right)
@@ -188,26 +189,35 @@ let incremental_sources (previous : retained_build) changes =
   (* Reusing the graph is safe only for modifications of already-known source
      paths. Additions, removals, and unknown paths can change module identity or
      package topology, so their caller must reconstruct the build instead. *)
-  changes
-  |> List.map (fun (change : Watcher.change) ->
-       match change.kind with
-       | Watcher.Added | Watcher.Removed -> raise Full_rebuild_required
-       | Watcher.Modified -> (
-         match
-           Hashtbl.find_opt previous.stats.retained.source_index
-             (Platform.normalize_path_for_comparison change.path)
-         with
-         | Some (package_root, module_, relative_path, absolute_path) ->
-           let package =
-             match
-               Hashtbl.find_opt previous.stats.retained.graph_packages
-                 package_root
-             with
-             | Some package -> package
-             | None -> raise Full_rebuild_required
-           in
-           {package; module_; relative_path; absolute_path}
-         | None -> raise Full_rebuild_required))
+  let included = Hashtbl.create (List.length changes) in
+  let sources = ref [] in
+  let add normalized_path =
+    if not (Hashtbl.mem included normalized_path) then (
+      Hashtbl.add included normalized_path ();
+      match
+        Hashtbl.find_opt previous.stats.retained.source_index normalized_path
+      with
+      | Some (package_root, module_, relative_path, absolute_path) ->
+        let package =
+          match
+            Hashtbl.find_opt previous.stats.retained.graph_packages package_root
+          with
+          | Some package -> package
+          | None -> raise Full_rebuild_required
+        in
+        sources := {package; module_; relative_path; absolute_path} :: !sources
+      | None -> raise Full_rebuild_required)
+  in
+  List.iter
+    (fun (change : Watcher.change) ->
+      match change.kind with
+      | Watcher.Added | Watcher.Removed -> raise Full_rebuild_required
+      | Watcher.Modified ->
+        add (Platform.normalize_path_for_comparison change.path))
+    changes;
+  previous.stats.retained.pending_parse_paths |> Hashtbl.to_seq_keys
+  |> List.of_seq |> List.sort String.compare |> List.iter add;
+  List.rev !sources
 
 let prepare_incremental previous changes (stats : Build_types.t) =
   (* A retained edit reparses only the reported paths, then replaces the
@@ -296,11 +306,11 @@ let prepare_incremental previous changes (stats : Build_types.t) =
         Build_state.set_dependencies prepared.build_state ~key
           (Build_preparation.resolved_dependencies
              stats.retained.global_modules
-             stats.retained.global_namespace_modules node)))
+             stats.retained.namespace_maps_by_name node)))
     affected_modules;
   stats.parse_seconds <- Unix.gettimeofday () -. started_at;
   Build_preparation.find_cycle stats.retained.global_modules
-    prepared.build_state
+    stats.retained.namespace_maps prepared.build_state
 
 let run_with_warning_state ~poll ~warning_state ~previous ~changes
     ~compilation_kind ~no_timing ~seen ~verbosity ~folder ~prod ~features
@@ -489,22 +499,19 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
          "Incremental build failed. Error: \027[2K\r  Could not parse Source Files")
   in
   let format_cycle cycle
-      (by_key : (string, Build_types.global_module) Hashtbl.t) =
+      (by_key : (string, Build_preparation.cycle_node) Hashtbl.t) =
     let format_node name =
       match Hashtbl.find_opt by_key name with
       | None -> name
-      | Some node ->
-        let absolute = Filename.concat node.package_root node.source_path in
-        let module_name = Source.module_name node.source_path in
-        let display_name =
-          match node.namespace, node.namespace_entry with
-          | Some namespace, Some entry when entry <> module_name ->
-            namespace ^ "." ^ module_name
-          | Some namespace, None -> namespace ^ "." ^ module_name
-          | _ -> module_name
-        in
-        Printf.sprintf "%s (%s)" display_name
-          (Project_context.relative_to root_config.root absolute)
+      | Some node -> (
+        match node.source_path with
+        | Some source_path ->
+          let absolute = Filename.concat node.package_root source_path in
+          Printf.sprintf "%s (%s)" node.display_name
+            (Project_context.relative_to root_config.root absolute)
+        | None ->
+          Printf.sprintf "%s (%s namespace map)" node.display_name
+            (Project_context.relative_to root_config.root node.package_root))
     in
     "\nCan't continue... Found a circular dependency in your code:\n"
     ^ (cycle |> List.map format_node |> String.concat "\n → ")
@@ -572,11 +579,11 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
     | Some output, _ -> report_failure ~compile_seconds output
     | None, Some cycle_info ->
       let output =
-        format_cycle cycle_info.cycle cycle_info.modules_by_key
+        format_cycle cycle_info.cycle cycle_info.nodes_by_key
       in
       cycle_info.cycle
-      |> List.filter_map (Hashtbl.find_opt cycle_info.modules_by_key)
-      |> List.map (fun node -> node.Build_types.package_root)
+      |> List.filter_map (Hashtbl.find_opt cycle_info.nodes_by_key)
+      |> List.map (fun node -> node.Build_preparation.package_root)
       |> List.sort_uniq String.compare
       |> List.iter (fun package_root -> Compiler_log.append package_root output);
       report_failure ~compile_seconds output

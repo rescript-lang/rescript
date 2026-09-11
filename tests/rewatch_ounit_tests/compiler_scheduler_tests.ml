@@ -43,11 +43,11 @@ let tests =
       let b_source = source "B" in
       let build_state = Build_state.create 2 in
       List.iter
-        (fun (key, source) ->
+        (fun key ->
           Build_state.add build_state ~key ~package_name:"scheduler-test"
-            ~package_root:root ~source ~last_compiled_cmi:(Some 0.)
-            ~last_compiled_cmt:(Some 0.))
-        [("A", a_source); ("B", b_source)];
+            ~package_root:root ~kind:Build_state.Source_module
+            ~last_compiled_cmi:(Some 0.) ~last_compiled_cmt:(Some 0.))
+        ["A"; "B"];
       Build_state.set_dependencies build_state ~key:"B" ["A"];
       let a_state = Build_state.find_exn build_state "A" in
       let b_state = Build_state.find_exn build_state "B" in

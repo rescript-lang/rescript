@@ -30,14 +30,15 @@ let prepare ~(root_config : Config.t) ~resolution ~seen ~root ~prod
           config.dependencies
           @ if prod || not is_local then [] else config.dev_dependencies
         in
+        let resolved_dependencies =
+          List.map
+            (Package_resolution.resolve resolution ~package_root:root)
+            dependencies
+        in
         List.iter
-          (fun (dependency : Config.dependency) ->
-            let resolved =
-              Package_resolution.resolve resolution ~package_root:root
-                dependency
-            in
+          (fun (resolved : Package_resolution.dependency) ->
             visit resolved.config ~is_local:resolved.is_local)
-          dependencies;
+          resolved_dependencies;
         let implementation_files =
           Source.discover_for_cleanup config ~prod:(prod || not is_local)
             ~on_missing:

@@ -24,6 +24,17 @@ let tests =
       Unix.mkdir artifact_lib 0o700;
       Unix.mkdir artifact_bs 0o700;
       let paths = [Native_watcher.{directory = root; recursive = true}] in
+      let identity_failure _ = Error "injected identity failure" in
+      (match
+         Native_watcher.For_test.create_with_directory_identity
+           ~directory_identity:identity_failure ~paths
+       with
+      | Error "injected identity failure" -> ()
+      | Error message ->
+        assert_failure ("unexpected identity failure: " ^ message)
+      | Ok watcher ->
+        Native_watcher.close watcher;
+        assert_failure "identity failure did not reject watcher creation");
       match Native_watcher.create ~paths with
       | Error message -> failwith ("native watcher initialization: " ^ message)
       | Ok watcher ->
@@ -71,6 +82,18 @@ let tests =
             check
               (Native_watcher.For_test.handle_count watcher = 4)
               "unchanged refresh retains handle count";
+            (match
+               Native_watcher.For_test.refresh_with_directory_identity
+                 ~directory_identity:identity_failure watcher ~paths
+             with
+            | Error "injected identity failure" -> ()
+            | Error message ->
+              assert_failure ("unexpected refresh failure: " ^ message)
+            | Ok () ->
+              assert_failure "identity failure did not reject watcher refresh");
+            check
+              (Native_watcher.For_test.handle_count watcher = 4)
+              "failed identity refresh preserves existing handles";
             Unix.mkdir nested 0o700;
             (match Native_watcher.refresh watcher ~paths with
             | Error message -> failwith ("native watcher add: " ^ message)
