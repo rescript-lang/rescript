@@ -8,14 +8,7 @@ let write path contents =
     ~finally:(fun () -> close_out_noerr channel)
     (fun () -> output_string channel contents)
 
-let with_temp_dir run =
-  let path = Filename.temp_file "rewatch-compile-assets-" "" in
-  Sys.remove path;
-  Unix.mkdir path 0o755;
-  let path = Unix.realpath path in
-  Fun.protect
-    ~finally:(fun () -> File_util.remove_tree path)
-    (fun () -> run path)
+let with_temp_dir = Test_support.with_temp_dir "rewatch-compile-assets-"
 
 let tests =
   "compile_assets_tests" >:: fun _context ->

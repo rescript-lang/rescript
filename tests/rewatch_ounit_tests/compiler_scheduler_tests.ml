@@ -2,25 +2,14 @@ open OUnit2
 
 let check condition message = assert_bool message condition
 
-let write_file path contents =
-  let channel = open_out_bin path in
-  Fun.protect
-    ~finally:(fun () -> close_out_noerr channel)
-    (fun () -> output_string channel contents)
+let write_file = Test_support.write_file
 
 let process_job () =
   let executable = Unix.realpath Sys.executable_name in
   Process.
     {program = executable; args = ["--process-result"; ""; ""; "0"]; cwd = "."}
 
-let with_temp_dir run =
-  let root = Filename.temp_file "rewatch-scheduler-" "" in
-  Sys.remove root;
-  Unix.mkdir root 0o755;
-  let root = Unix.realpath root in
-  Fun.protect
-    ~finally:(fun () -> File_util.remove_tree root)
-    (fun () -> run root)
+let with_temp_dir = Test_support.with_temp_dir "rewatch-scheduler-"
 
 let source name =
   Source.

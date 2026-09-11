@@ -2,19 +2,9 @@ open OUnit2
 
 let check condition message = assert_bool message condition
 
-let write_file path contents =
-  File_util.ensure_dir (Filename.dirname path);
-  let channel = open_out_bin path in
-  Fun.protect
-    ~finally:(fun () -> close_out_noerr channel)
-    (fun () -> output_string channel contents)
+let write_file = Test_support.write_file
 
-let with_temp_dir f =
-  let path = Filename.temp_file "rewatch-ocaml-clean-" "" in
-  Sys.remove path;
-  Unix.mkdir path 0o755;
-  let path = Unix.realpath path in
-  Fun.protect ~finally:(fun () -> File_util.remove_tree path) (fun () -> f path)
+let with_temp_dir = Test_support.with_temp_dir "rewatch-ocaml-clean-"
 
 let tests =
   "clean_tests" >:: fun _context ->

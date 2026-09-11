@@ -2,11 +2,7 @@ open OUnit2
 
 let check condition message = assert_bool message condition
 
-let write_file path contents =
-  let channel = open_out_bin path in
-  Fun.protect
-    ~finally:(fun () -> close_out_noerr channel)
-    (fun () -> output_string channel contents)
+let write_file = Test_support.write_file
 
 let contains text fragment =
   let text_length = String.length text in

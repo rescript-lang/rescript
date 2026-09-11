@@ -11,12 +11,7 @@ let rec contains_adjacent left right = function
   | _ :: rest -> contains_adjacent left right rest
   | [] -> false
 
-let write_file path contents =
-  File_util.ensure_dir (Filename.dirname path);
-  let channel = open_out_bin path in
-  Fun.protect
-    ~finally:(fun () -> close_out_noerr channel)
-    (fun () -> output_string channel contents)
+let write_file = Test_support.write_file
 
 let read_file path =
   let channel = open_in_bin path in

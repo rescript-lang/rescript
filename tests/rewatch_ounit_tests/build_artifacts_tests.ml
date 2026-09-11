@@ -2,21 +2,9 @@ open OUnit2
 
 let check condition message = assert_bool message condition
 
-let write_file path contents =
-  File_util.ensure_dir (Filename.dirname path);
-  let channel = open_out_bin path in
-  Fun.protect
-    ~finally:(fun () -> close_out_noerr channel)
-    (fun () -> output_string channel contents)
+let write_file = Test_support.write_file
 
-let with_temp_dir run =
-  let root = Filename.temp_file "rewatch-build-artifacts-" "" in
-  Sys.remove root;
-  Unix.mkdir root 0o755;
-  let root = Unix.realpath root in
-  Fun.protect
-    ~finally:(fun () -> File_util.remove_tree root)
-    (fun () -> run root)
+let with_temp_dir = Test_support.with_temp_dir "rewatch-build-artifacts-"
 
 let tests =
   "build_artifacts_tests" >:: fun _context ->

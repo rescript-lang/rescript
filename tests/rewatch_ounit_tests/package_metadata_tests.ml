@@ -3,11 +3,7 @@ open OUnit2
 let check_equal expected actual message =
   assert_equal ~msg:message expected actual
 
-let write_file path contents =
-  let channel = open_out_bin path in
-  Fun.protect
-    ~finally:(fun () -> close_out_noerr channel)
-    (fun () -> output_string channel contents)
+let write_file = Test_support.write_file
 
 let tests =
   "package_metadata_tests" >:: fun _context ->
