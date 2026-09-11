@@ -141,11 +141,14 @@ let rec prepare_tree ~(root_config : Config.t) ~dependency_context ~seen
       Build_artifacts.cleanup_stale ~root ~ocaml_dir ~is_local config modules
   in
   let removed_modules = cleanup.removed_modules in
+  let removed_module_names = Hashtbl.create (List.length removed_modules) in
   if not (Hashtbl.mem stats.cleanup_results root) then
     stats.deferred_artifact_cleanup :=
       cleanup.deferred_artifacts @ !(stats.deferred_artifact_cleanup);
   List.iter
-    (fun module_name -> Hashtbl.replace stats.removed_modules module_name ())
+    (fun module_name ->
+      Hashtbl.replace removed_module_names module_name ();
+      Hashtbl.replace stats.removed_modules module_name ())
     removed_modules;
   let names = Hashtbl.create (List.length modules) in
   List.iter
@@ -158,7 +161,7 @@ let rec prepare_tree ~(root_config : Config.t) ~dependency_context ~seen
   let dirty_parse_paths =
     parse_paths
     |> List.filter (fun path ->
-         List.mem (Source.module_name path) removed_modules
+         Hashtbl.mem removed_module_names (Source.module_name path)
          || Hashtbl.mem stats.forced_parse_paths (Filename.concat root path)
          ||
          match prepared, stats.compile_assets with
@@ -169,6 +172,10 @@ let rec prepare_tree ~(root_config : Config.t) ~dependency_context ~seen
            Build_freshness.source_is_newer ~source:(Filename.concat root path)
              ~artifact:(Build_freshness.published_ast_path ~ocaml_dir path))
   in
+  let dirty_parse_path_set = Hashtbl.create (List.length dirty_parse_paths) in
+  List.iter
+    (fun path -> Hashtbl.replace dirty_parse_path_set path ())
+    dirty_parse_paths;
   let parse_paths_to_run =
     dirty_parse_paths
     |> List.filter (fun path ->
@@ -281,7 +288,7 @@ let rec prepare_tree ~(root_config : Config.t) ~dependency_context ~seen
       let paths =
         module_.Source.implementation :: Option.to_list module_.Source.interface
       in
-      if List.exists (fun path -> List.mem path dirty_parse_paths) paths then
+      if List.exists (Hashtbl.mem dirty_parse_path_set) paths then
         Hashtbl.replace parse_dirty_modules module_.Source.name ();
       module_.deps <-
         if Hashtbl.mem stats.blocked_modules global_key then []
@@ -324,15 +331,14 @@ let rec prepare_tree ~(root_config : Config.t) ~dependency_context ~seen
     not (Hashtbl.mem stats.blocked_modules global_key)
     &&
     (Hashtbl.mem parse_dirty_modules module_.Source.name
-    || List.mem module_name removed_modules
+    || Hashtbl.mem removed_module_names module_name
     || (match Compile_assets.ast compile_assets source, state.last_compiled_cmt with
        | Some ast, Some cmt_time -> ast.modified >= cmt_time
        | Some _, None -> true
        | None, _ -> false)
     || not (Build_state.has_complete_compile_assets state)
     || not outputs_exist
-    || List.exists (fun dependency -> List.mem dependency removed_modules)
-         raw_dependencies
+    || List.exists (Hashtbl.mem removed_module_names) raw_dependencies
     || List.exists
          (fun dependency -> Hashtbl.mem stats.removed_modules dependency)
          raw_dependencies
@@ -353,8 +359,8 @@ let rec prepare_tree ~(root_config : Config.t) ~dependency_context ~seen
   in
   let publish ~is_interface path result =
     let stderr =
-      Compiler_process.publish ?poll:stats.process_poll ~build_dir ~ocaml_dir
-        ~is_local ~config ~is_interface path result
+      Compiler_process.publish ~build_dir ~ocaml_dir ~is_local ~config
+        ~is_interface path result
     in
     if not is_interface then
       List.iter
@@ -367,6 +373,7 @@ let rec prepare_tree ~(root_config : Config.t) ~dependency_context ~seen
         config.package_specs;
     stderr
   in
+  let post_build path = Compiler_process.post_build_tasks config path in
   let scheduled =
     List.map
       (fun module_ ->
@@ -375,7 +382,9 @@ let rec prepare_tree ~(root_config : Config.t) ~dependency_context ~seen
         (* Fix the initial dirty set before dispatch so files published by
            concurrently finishing jobs cannot change this module's decision.
            Only explicit CMI-change propagation may do that. *)
-        state.compile_dirty <- state.compile_dirty || module_is_dirty module_ state;
+        state.compile_dirty <-
+          (not (Hashtbl.mem stats.blocked_modules key))
+          && (state.compile_dirty || module_is_dirty module_ state);
         let dependencies =
           if Hashtbl.mem stats.blocked_modules key then []
           else state.dependencies
@@ -391,6 +400,7 @@ let rec prepare_tree ~(root_config : Config.t) ~dependency_context ~seen
             compile_process module_ ~is_interface path)
           ~publish:(fun ~is_interface path result ->
             publish ~is_interface path result)
+          ~post_build
           ~package_root:config.root ~is_local
           ~mark_warning:(fun path ->
             Hashtbl.replace compile_warning_modules (Source.module_name path) ()))

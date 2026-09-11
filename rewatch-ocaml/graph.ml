@@ -1,23 +1,45 @@
 exception Cycle of string list
 
-let blocked_dependents graph cycle =
-  let blocked = Hashtbl.create (List.length cycle) in
-  List.iter (fun name -> Hashtbl.replace blocked name ()) cycle;
-  let rec add_dependents () =
-    let changed = ref false in
-    List.iter
-      (fun (name, dependencies) ->
-        if
-          not (Hashtbl.mem blocked name)
-          && List.exists (Hashtbl.mem blocked) dependencies
-        then (
-          Hashtbl.add blocked name ();
-          changed := true))
-      graph;
-    if !changed then add_dependents ()
-  in
-  add_dependents ();
-  Hashtbl.to_seq_keys blocked |> List.of_seq
+let cycle_blocked_nodes nodes ~name ~deps =
+  let count = List.length nodes in
+  let by_name = Hashtbl.create count in
+  List.iter (fun node -> Hashtbl.replace by_name (name node) node) nodes;
+  let dependents = Hashtbl.create count in
+  let pending = Hashtbl.create count in
+  List.iter
+    (fun node ->
+      let node_name = name node in
+      let dependency_count = ref 0 in
+      let seen_dependencies = Hashtbl.create 8 in
+      deps node
+      |> List.iter
+        (fun dependency ->
+          if
+            Hashtbl.mem by_name dependency
+            && not (Hashtbl.mem seen_dependencies dependency)
+          then (
+            Hashtbl.add seen_dependencies dependency ();
+            incr dependency_count;
+            let current =
+              Hashtbl.find_opt dependents dependency
+              |> Option.value ~default:[]
+            in
+            Hashtbl.replace dependents dependency (node_name :: current)));
+      Hashtbl.replace pending node_name !dependency_count)
+    nodes;
+  let ready = Queue.create () in
+  Hashtbl.iter (fun key count -> if count = 0 then Queue.add key ready) pending;
+  let removed = Hashtbl.create count in
+  while not (Queue.is_empty ready) do
+    let key = Queue.take ready in
+    Hashtbl.replace removed key ();
+    Hashtbl.find_opt dependents key |> Option.value ~default:[]
+    |> List.iter (fun dependent ->
+         let count = Hashtbl.find pending dependent - 1 in
+         Hashtbl.replace pending dependent count;
+         if count = 0 then Queue.add dependent ready)
+  done;
+  List.filter (fun node -> not (Hashtbl.mem removed (name node))) nodes
 
 let canonical_cycle cycle =
   let rec without_last = function

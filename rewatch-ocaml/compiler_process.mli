@@ -25,8 +25,9 @@ val compile_job :
   string ->
   Process.job
 
+val post_build_tasks : Config.t -> string -> (string * Process.task) list
+
 val publish :
-  ?poll:(unit -> unit) ->
   build_dir:string ->
   ocaml_dir:string ->
   is_local:bool ->

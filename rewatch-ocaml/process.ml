@@ -1,5 +1,10 @@
 type result = {status: Unix.process_status; stdout: string; stderr: string}
 type job = {program: string; args: string list; cwd: string}
+type task = {
+  job: job;
+  env: Spawn.Env.t option;
+  on_result: result -> result;
+}
 
 exception Error of string
 
@@ -31,6 +36,9 @@ let status_string = function
    The threads perform only blocking I/O; dependency scheduling stays on the
    calling thread. *)
 let default_max_jobs = min 32 (max 1 (Domain.recommended_domain_count ()))
+
+let task ?env ?(on_result = fun result -> result) job =
+  {job; env; on_result}
 
 type capture = {
   thread: Thread.t;
@@ -167,7 +175,8 @@ let capture_outcome (capture : capture) =
 let capture_error exn =
   Error ("failed to capture subprocess output: " ^ Printexc.to_string exn)
 
-let start_child_wait pid notifier stdout_capture stderr_capture : child_wait =
+let start_child_wait pid notifier stdout_capture stderr_capture on_result :
+    child_wait =
   let direct_outcome = Atomic.make None in
   let outcome = Atomic.make None in
   let rec wait () =
@@ -185,7 +194,8 @@ let start_child_wait pid notifier stdout_capture stderr_capture : child_wait =
         let stderr = capture_outcome stderr_capture in
         let result =
           match status, stdout, stderr with
-          | Ok status, Ok stdout, Ok stderr -> Ok {status; stdout; stderr}
+          | Ok status, Ok stdout, Ok stderr ->
+            (try Ok (on_result {status; stdout; stderr}) with exn -> Error exn)
           | Error exn, _, _ -> Error exn
           | _, Error exn, _ | _, _, Error exn -> Error (capture_error exn)
         in
@@ -195,7 +205,7 @@ let start_child_wait pid notifier stdout_capture stderr_capture : child_wait =
   in
   {thread; direct_outcome; outcome}
 
-let launch ?env ~notifier payload job =
+let launch ?env ?(on_result = fun result -> result) ~notifier payload job =
   (* Capture descriptors need a cleanup owner before asynchronous watch
      termination can raise. Signals are therefore deferred across pipe
      acquisition and restored only after every descriptor has an owner. *)
@@ -222,7 +232,7 @@ let launch ?env ~notifier payload job =
     let pid = Platform.process_id process in
     close_noerr stdout_write;
     close_noerr stderr_write;
-    let wait = start_child_wait pid notifier stdout stderr in
+    let wait = start_child_wait pid notifier stdout stderr on_result in
     child_wait := Some wait;
     restore_signals ();
     {payload; process; pid; child_wait = wait}
@@ -538,7 +548,11 @@ let run_dependency_graph_with_notifier ~max_jobs ~is_fatal ~poll notifier works
         (try
            match next work.value None with
            | None -> complete work
-           | Some job -> active := launch ~notifier work job :: !active
+           | Some task ->
+             active :=
+               launch ?env:task.env ~on_result:task.on_result ~notifier work
+                 task.job
+               :: !active
          with exn -> record_error work exn);
         fill ()
   in
@@ -564,8 +578,11 @@ let run_dependency_graph_with_notifier ~max_jobs ~is_fatal ~poll notifier works
         release_running child);
       (try
          match next child.payload.value (Some result) with
-         | Some job ->
-           active := launch ~notifier child.payload job :: !active
+         | Some task ->
+           active :=
+             launch ?env:task.env ~on_result:task.on_result ~notifier
+               child.payload task.job
+             :: !active
          | None -> complete child.payload
        with exn -> record_error child.payload exn);
       schedule ()

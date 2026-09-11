@@ -11,6 +11,7 @@ val create :
   prepare:(unit -> unit) ->
   compile:(is_interface:bool -> string -> Process.job) ->
   publish:(is_interface:bool -> string -> Process.result -> string) ->
+  post_build:(string -> (string * Process.task) list) ->
   package_root:string ->
   is_local:bool ->
   mark_warning:(string -> unit) ->

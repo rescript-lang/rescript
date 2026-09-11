@@ -143,26 +143,23 @@ let find_cycle
            (Build_state.find_exn build_state node.Build_types.key).dependencies ))
   in
   let name (node, _) = node.Build_types.key in
-  let graph = List.map (fun node -> (name node, snd node)) graph_nodes in
-  match Graph.shortest_cycle graph_nodes ~name ~deps:snd with
-  | None -> None
-  | Some cycle ->
-    let blocked = Hashtbl.create (List.length cycle) in
-    let rec block_cycles remaining =
-      match Graph.shortest_cycle remaining ~name ~deps:snd with
-      | None -> ()
-      | Some cycle ->
-        Graph.blocked_dependents graph cycle
-        |> List.iter (fun key -> Hashtbl.replace blocked key ());
-        remaining
-        |> List.filter (fun node -> not (Hashtbl.mem blocked (name node)))
-        |> block_cycles
+  let blocked_nodes =
+    Graph.cycle_blocked_nodes graph_nodes ~name ~deps:snd
+  in
+  match blocked_nodes with
+  | [] -> None
+  | _ ->
+    let cycle =
+      match Graph.shortest_cycle blocked_nodes ~name ~deps:snd with
+      | Some cycle -> cycle
+      | None ->
+        raise
+          (Error "cycle-blocked dependency graph contains no detectable cycle")
     in
-    block_cycles graph_nodes;
     Some
       {
         cycle;
-        blocked = Hashtbl.to_seq_keys blocked |> List.of_seq;
+        blocked = List.map name blocked_nodes;
         modules_by_key;
       }
 
