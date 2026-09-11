@@ -520,14 +520,47 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
       Build_state.set_dependencies build_state ~key:namespace_map.key
         namespace_map.members)
     namespace_maps;
-  stats.retained.prepared <-
-    Some
-      {
-        compiler_context;
-        compile_assets;
-        build_state;
-        freshness_initialized = false;
-      };
+  let packages = Hashtbl.create (List.length graph_packages) in
+  List.iter
+    (fun (package : Build_types.graph_package) ->
+      let dependency_directories kind =
+        package.graph_dependency_directories
+        |> List.filter_map (fun dependency ->
+            let directory =
+              Build_artifacts.lib_path dependency.directory "ocaml"
+            in
+            if dependency.kind = kind && Sys.file_exists directory then
+              Some directory
+            else None)
+      in
+      let regular_dependency_dirs =
+        dependency_directories Build_types.Regular_dependency
+      in
+      let development_dependency_dirs =
+        dependency_directories Build_types.Development_dependency
+      in
+      let common_args dependency_dirs =
+        Compiler_args.compiler_common_arguments
+          ~config:package.graph_compile_config ~runtime ~dependency_dirs ~watch
+          ~gentype_dependency_args:package.graph_gentype_dependency_args
+      in
+      let parse_paths =
+        package.graph_modules
+        |> List.concat_map (fun module_ ->
+            module_.Source.implementation
+            :: Option.to_list module_.Source.interface)
+      in
+      Hashtbl.add packages package.graph_root
+        Build_types.
+          {
+            regular_common_args = common_args regular_dependency_dirs;
+            development_common_args =
+              common_args (development_dependency_dirs @ regular_dependency_dirs);
+            parse_paths;
+          })
+    graph_packages;
+  Build_types.install_prepared stats
+    {compiler_context; compile_assets; build_state; packages};
   let cycle =
     find_cycle stats.retained.global_modules stats.retained.namespace_maps
       build_state

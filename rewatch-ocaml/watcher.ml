@@ -26,7 +26,7 @@ let is_directory path =
   with Sys_error _ | Unix.Unix_error _ -> false
 
 let rec nearest_existing_ancestor path =
-  if is_directory path then Some (Unix.realpath path)
+  if is_directory path then Some (Platform.canonicalize_path path)
   else
     let parent = Filename.dirname path in
     if parent = path then None else nearest_existing_ancestor parent
@@ -66,7 +66,7 @@ let watch_context ~root ~prod ~features ~filter =
       |> List.iter (fun candidate ->
           let existing = nearest_existing_directory root candidate in
           try
-            let canonical_existing = Unix.realpath existing in
+            let canonical_existing = Platform.canonicalize_path existing in
             if path_is_within_root canonical_existing then (
               unresolved := candidate :: !unresolved;
               (* A shallow ancestor watch is sufficient: each directory creation
@@ -222,7 +222,7 @@ let snapshot ?(on_source_symlink = fun _ -> ()) digest_cache roots sources
   in
   let rec walk source recursive dir acc =
     try
-      let canonical = Unix.realpath dir in
+      let canonical = Platform.canonicalize_path dir in
       let previous = Hashtbl.find_opt visited_directories canonical in
       if previous = Some true || (previous = Some false && not recursive) then
         acc
@@ -256,7 +256,7 @@ let snapshot ?(on_source_symlink = fun _ -> ()) digest_cache roots sources
                        else target
                      in
                      let target =
-                       try Unix.realpath target
+                       try Platform.canonicalize_path target
                        with Sys_error _ | Unix.Unix_error _ -> target
                      in
                      on_source_symlink target

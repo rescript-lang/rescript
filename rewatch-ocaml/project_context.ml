@@ -60,7 +60,7 @@ let dependency_context (current : Config.t) =
     try
       Sys.file_exists candidate
       && is_local_dependency_canonical ~workspace:current.root
-           (Unix.realpath candidate)
+           (Platform.canonicalize_path candidate)
     with Sys_error _ | Unix.Unix_error _ -> false
   in
   let is_monorepo_root =
@@ -114,7 +114,9 @@ let dependency_candidates_in context package_root name =
 
 let dependency_path_in context package_root name =
   let existing_realpath path =
-    try if Sys.file_exists path then Some (Unix.realpath path) else None
+    try
+      if Sys.file_exists path then Some (Platform.canonicalize_path path)
+      else None
     with Sys_error _ | Unix.Unix_error _ -> None
   in
   dependency_candidates_in context package_root name

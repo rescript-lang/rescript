@@ -260,11 +260,11 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
     try
       Process.run_dependency_graph ?poll
         works
-        (* A module failure blocks its dependents, while unrelated ready
-               work is drained so all independent diagnostics are retained. *)
-        ~is_fatal:(function
-          | Module_failed -> false
-          | _ -> true)
+        (* A module failure stops new work while subprocesses that already own
+           resources finish, matching the command-level failure policy. *)
+        ~on_failure:(function
+          | Module_failed -> Process.Stop_new_work
+          | _ -> Process.Abort_immediately)
         ~next:(fun scheduled result ->
           match (result, !(scheduled.phase)) with
           | None, Start ->

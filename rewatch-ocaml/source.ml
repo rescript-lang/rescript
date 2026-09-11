@@ -57,7 +57,7 @@ let display_path ~display_root root path =
   let absolute =
     if Filename.is_relative path then Filename.concat root path else path
   in
-  let display_root = Unix.realpath display_root in
+  let display_root = Platform.canonicalize_path display_root in
   let prefix = Filename.concat display_root "" in
   let comparable = Platform.normalize_path_for_comparison in
   if String.starts_with ~prefix:(comparable prefix) (comparable absolute) then

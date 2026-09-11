@@ -412,6 +412,12 @@ let tests =
        "/toolchain/compiler.exe"
     = "/toolchain/compiler.exe")
     "Windows preserves absolute executable paths";
+  check
+    (Platform_windows.serialize_command_line ~program:"cmd.exe"
+       ~args:["/D"; "/V:OFF"; "/S"; "/C"; {|echo "hello world"|}]
+    = {|cmd.exe /D /V:OFF /S /C echo "hello world"|})
+    "Windows preserves cmd.exe shell syntax without executable-argument \
+     re-quoting";
   let scheduler_root = Filename.temp_file "rewatch-ocaml-scheduler-" "" in
   Sys.remove scheduler_root;
   Unix.mkdir scheduler_root 0o755;

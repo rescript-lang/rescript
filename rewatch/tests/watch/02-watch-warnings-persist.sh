@@ -75,6 +75,19 @@ exit_watcher
 
 sleep 2
 
+# A new invocation has no retained in-memory warning state, so the watcher must
+# leave a freshness marker that causes the warning-producing module to run.
+next_output=$(rewatch build 2>&1)
+next_status=$?
+if [ "$next_status" -eq 0 ] \
+  && printf '%s\n' "$next_output" | grep -q "unused value unusedValue"; then
+  success "Warning persists after watcher shutdown"
+else
+  error "Warning was lost after watcher shutdown"
+  printf '%s\n' "$next_output"
+  exit 1
+fi
+
 # Clean up log file
 rm -f rewatch-stderr.log
 

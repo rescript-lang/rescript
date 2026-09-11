@@ -460,6 +460,7 @@ let run_parallel ?max_jobs ?poll ?on_complete jobs =
   run_parallel_map ?max_jobs ?poll ?on_complete jobs ~job:Fun.id
 
 type 'a work = {key: string; dependencies: string list; value: 'a}
+type failure_action = Abort_immediately | Stop_new_work
 
 module Work_ready = Set.Make (struct
   type t = int * string
@@ -725,8 +726,8 @@ let with_worker_pool ~max_jobs notifier action =
     in
     raise exn
 
-let run_dependency_graph_with_notifier ~max_jobs ~is_fatal ~poll notifier works
-    ~next =
+let run_dependency_graph_with_notifier ~max_jobs ~on_failure ~poll notifier
+    works ~next =
   let count = List.length works in
   let by_key = Hashtbl.create count in
   List.iter
@@ -814,10 +815,11 @@ let run_dependency_graph_with_notifier ~max_jobs ~is_fatal ~poll notifier works
   let stopped = ref false in
   let errors = ref [] in
   let record_error work exn =
-    if is_fatal exn then raise exn
-    else (
+    match on_failure exn with
+    | Abort_immediately -> raise exn
+    | Stop_new_work ->
       stopped := true;
-      errors := (work.key, exn) :: !errors)
+      errors := (work.key, exn) :: !errors
   in
   let complete work =
     incr completed;
@@ -873,10 +875,10 @@ let run_dependency_graph_with_notifier ~max_jobs ~is_fatal ~poll notifier works
   with_worker_pool ~max_jobs:(min max_jobs count) notifier schedule
 
 let run_dependency_graph ?(max_jobs = default_max_jobs)
-    ?(is_fatal =
+    ?(on_failure =
       function
-      | Sys.Break | Interrupted _ -> true
-      | _ -> false) ?poll works ~next =
+      | Sys.Break | Interrupted _ -> Abort_immediately
+      | _ -> Stop_new_work) ?poll works ~next =
   if max_jobs < 1 then raise (Error "max_jobs must be at least one");
   match works with
   | [] -> ()
@@ -887,7 +889,7 @@ let run_dependency_graph ?(max_jobs = default_max_jobs)
       | None -> ((fun () -> ()), false)
     in
     with_completion_notifier ~ticker_enabled (fun notifier ->
-        run_dependency_graph_with_notifier ~max_jobs ~is_fatal ~poll notifier
+        run_dependency_graph_with_notifier ~max_jobs ~on_failure ~poll notifier
           works ~next)
 
 let run_one ?env ?poll ?stdout_chunk ?stderr_chunk ~cwd program args =

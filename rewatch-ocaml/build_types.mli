@@ -56,12 +56,20 @@ type preliminary_parse =
 
 val preliminary_parse : Process.result -> preliminary_parse
 
+type prepared_package = {
+  regular_common_args: string list;
+  development_common_args: string list;
+  parse_paths: string list;
+}
+
 type prepared = {
   compiler_context: Compiler_info.context;
   compile_assets: Compile_assets.t;
   build_state: Build_state.t;
-  mutable freshness_initialized: bool;
+  packages: (string, prepared_package) Hashtbl.t;
 }
+
+type preparation
 
 type retained = {
   active_features: (string, string list option) Hashtbl.t;
@@ -73,7 +81,7 @@ type retained = {
   source_index: (string, string * Source.module_ * string * string) Hashtbl.t;
   pending_parse_paths: (string, unit) Hashtbl.t;
   cleanup_results: (string, Build_artifacts.cleanup_result) Hashtbl.t;
-  mutable prepared: prepared option;
+  mutable preparation: preparation;
   warning_state: Warning_state.t;
 }
 
@@ -122,3 +130,7 @@ val create_incremental :
   t
 
 val prepared_exn : t -> prepared
+val prepared : t -> prepared option
+val install_prepared : t -> prepared -> unit
+val mark_freshness_initialized : t -> unit
+val prepared_package_exn : t -> string -> prepared_package

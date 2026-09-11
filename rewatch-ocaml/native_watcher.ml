@@ -32,7 +32,7 @@ let directories_under paths =
   let visited = Hashtbl.create 64 in
   let rec walk acc directory =
     try
-      let canonical = Unix.realpath directory in
+      let canonical = Platform.canonicalize_path directory in
       if Hashtbl.mem visited canonical then acc
       else (
         Hashtbl.add visited canonical ();
@@ -54,7 +54,7 @@ let directories_under paths =
        (fun directories path ->
          if path.recursive then walk directories path.directory
          else
-           try Unix.realpath path.directory :: directories
+           try Platform.canonicalize_path path.directory :: directories
            with Sys_error _ | Unix.Unix_error _ -> directories)
        []
   |> List.sort_uniq String.compare
