@@ -43,6 +43,11 @@ Cover all current rewatch responsibilities, including:
 
 Do not silently ignore unsupported options or configuration. Document temporary gaps precisely.
 
+Exact parser and Unicode semantics of Rust's `regex` crate are not required for
+`--filter`. The OCaml port may expose a documented, visibly rejected subset
+through a maintained native OCaml matcher. Known parser and non-ASCII matching
+differences must remain documented and covered at the compatibility boundary.
+
 ## Milestones and gates
 
 ### 1. Working one-shot build

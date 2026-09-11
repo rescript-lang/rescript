@@ -265,7 +265,7 @@ differences:
   the same boundary. The original `Str` matcher has since been replaced by
   maintained `Re.Perl`, closing common alternation, grouping, shorthand-class,
   and repetition gaps while retaining linear-time matching. Rust-only Unicode
-  and class-set behavior remains the explicit filter gap recorded in the
+  and class-set behavior is an accepted engine divergence recorded in the
   compatibility matrix and final review.
 - PPX resolution did not search hoisted `node_modules`.
 - Stale cleanup treated every JavaScript-looking file as owned output and
@@ -1028,7 +1028,7 @@ identifies repeated CMI comparison and case-candidate checks, not extra
 compilation or directory-tree discovery. Raw create/remove totals intentionally
 remain diagnostic because the drivers use different publication mechanics.
 
-The maintained source-size tool reports 8,801 lines of OCaml-port production
+The maintained source-size tool reports 8,971 lines of OCaml-port production
 code, including its native C boundary,
 and 7,818 lines of Rust production code when Rust telemetry is excluded. Tests
 remain separate: OCaml has 6,731 test/fixture lines and 1,021 benchmark-tooling
@@ -1337,8 +1337,8 @@ observational and do not replace the five-run acceptance result.
 
 The current `cloc` 2.04 source-size snapshot reports 7,818 Rust production
 lines after excluding the intentionally omitted telemetry module and inline
-test-only sections, versus 8,801 OCaml-port production lines including the
-native C boundary, or 112.6%. Counting
+test-only sections, versus 8,971 OCaml-port production lines including the
+native C boundary, or 114.7%. Counting
 language-specific tests separately gives 2,773 embedded Rust unit-test lines
 and 6,731 OCaml unit/focused test and fixture lines. The OCaml benchmark tooling
 adds another 1,021 lines across every executable audit/measurement script. The shared
@@ -1355,15 +1355,21 @@ are `check_command_validation.sh` (1,635), `unit_tests.ml` (859), `run.sh`
 
 The final API-surface audit added explicit interfaces for build state, compile
 asset inventory, graph algorithms, package metadata, source-directory output,
-and warning persistence. Their mutable representations are exposed only where
-the scheduler and build phases currently need the fields; directory indexes
-and warning tables remain abstract. Platform implementation files deliberately
-do not have separate interfaces because Dune selects one as `platform.ml`,
-which is checked against the shared `platform.mli`. The same pass removed the
-last two production `assert false` branches: deterministic duplicate-path
-ordering now compares its two paths directly, and CLI routing returns an
-explicit `(globals, command, rest)` only after finding a command. All 19 OUnit2
-groups, the 106-case command gate, and `dune build @all` pass afterward.
+warning persistence, CLI commands, compiler fingerprints, formatting, terminal
+output/progress, shared platform helpers, and source discovery. Every
+production library module now has an interface. Mutable representations are
+exposed only where the scheduler and build phases currently need the fields;
+directory indexes, warning tables, progress state, and discovery internals
+remain abstract. The selected platform implementation files deliberately do
+not have separate interfaces because Dune copies one to `platform.ml`, which is
+checked against the shared `platform.mli`; the executable entry point also does
+not need a library interface. Constraining `Output.Progress` exposed and removed
+an accidental optional `force` argument inherited by `tick` from a direct
+function alias. The same pass removed the last two production `assert false`
+branches: deterministic duplicate-path ordering now compares its two paths
+directly, and CLI routing returns an explicit `(globals, command, rest)` only
+after finding a command. All 19 OUnit2 groups, the 106-case command gate, and
+`dune build @all` pass afterward.
 
 General portable filesystem operations now live behind the narrow
 `file_util.mli` interface. Recursive directory creation, file reading/copying,
@@ -1678,7 +1684,8 @@ required behavior decision, not a performance proposal.
 
 ## Known gaps
 
-- `--filter` now uses `Re.Perl` rather than `Str`, matching common Rust-regex
+- By explicit project decision, exact Rust-regex semantics are not required for
+  `--filter`. It uses `Re.Perl`, matching common Rust-regex
   syntax and retaining linear-time matching. It remains a documented subset:
   Unicode properties and inline modes, Python-style named groups, possessive
   quantifiers, and class-set algebra accepted by Rust fail visibly in OCaml.
@@ -1687,7 +1694,9 @@ required behavior decision, not a performance proposal.
   wrong source set. Because the matcher is byte-oriented, shared patterns can
   still select non-ASCII basenames differently, including dot, hexadecimal
   escapes, shorthand classes, and literal classes; the differential suite
-  records the supported boundary.
+  records the supported boundary. This accepted divergence is not a completion
+  blocker; silently different meanings for syntax known to diverge remain a
+  bug.
 - Incremental state currently relies on artifact timestamps, byte-identical CMI
   publication, and in-memory warning state during watch. Rust's richer
   compile-state model is not otherwise ported.
@@ -2023,8 +2032,9 @@ required behavior decision, not a performance proposal.
   comment, anchor, control/octal escape, range, nested/collating class, and
   divergent in-class escape forms rather than accepting them with a different
   meaning. Representative shared and rejected syntax has direct unit and
-  differential build coverage. Production constraints pin the reviewed 1.14.0
-  release.
+  differential build coverage. Exact Rust-regex semantics are explicitly out of
+  scope by project decision, so this visible subset does not require a Rust or
+  PCRE2 bridge. Production constraints pin the reviewed 1.14.0 release.
 - `luv` 0.5.14 is accepted for native filesystem events. It is a thin
   MIT-licensed binding that vendors and statically links libuv, supports the
   required Linux/macOS/Windows targets, and keeps the executable free of a

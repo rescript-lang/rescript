@@ -60,7 +60,7 @@ module Progress = struct
       progress.phase;
     draw progress
 
-  let tick = draw
+  let tick progress = draw progress
   let finish progress = progress.phase <- None
 
   let debug progress ~verbosity message =
