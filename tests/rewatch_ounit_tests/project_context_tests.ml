@@ -53,6 +53,14 @@ let tests =
         (Project_context.relative_to root (Filename.concat root "packages")
         = "packages")
         "a child path is represented relative to its root";
+      check
+        (Project_context.display_path ~root (Filename.concat root "packages")
+        = "./packages")
+        "diagnostic paths inside the project are visibly relative";
+      check
+        (Project_context.display_path ~root "/external/dependency"
+        = "/external/dependency")
+        "diagnostic paths outside the project remain absolute";
       let candidates =
         Project_context.dependency_candidates root "@scope/pkg"
       in
@@ -101,6 +109,20 @@ let tests =
         (Project_context.dependency_is_local_canonical root_context
            dev_dependency)
         "a workspace-root invocation owns linked development dependencies";
+      let resolution = Package_resolution.create (Config.load_root root) in
+      let first =
+        Package_resolution.resolve resolution ~package_root:root
+          Config.{name = "dependency"; features = Some ["first"]}
+      in
+      let second =
+        Package_resolution.resolve resolution ~package_root:root
+          Config.{name = "dependency"; features = Some ["second"]}
+      in
+      check
+        (first.directory = second.directory
+        && first.declaration.features = Some ["first"]
+        && second.declaration.features = Some ["second"])
+        "cached dependency identity retains each declaration's feature request";
       let repository_tmp = Filename.concat (Sys.getcwd ()) "tmp" in
       File_util.ensure_dir repository_tmp;
       let standalone =

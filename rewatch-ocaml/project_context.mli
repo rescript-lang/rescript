@@ -19,4 +19,5 @@ val require_dependency_directory :
   context:dependency_context -> string -> Config.dependency -> string
 
 val relative_to : string -> string -> string
+val display_path : root:string -> string -> string
 val is_local_dependency_canonical : workspace:string -> string -> bool

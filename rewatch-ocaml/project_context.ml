@@ -161,3 +161,10 @@ let relative_to root path =
     String.sub path (String.length prefix)
       (String.length path - String.length prefix)
   else raise (Error (path ^ " is not inside " ^ root))
+
+let display_path ~root path =
+  try
+    match relative_to root path with
+    | "." -> "."
+    | relative -> "./" ^ relative
+  with Error _ -> path

@@ -204,8 +204,8 @@ mkdir -p "$symlink_source/src" "$symlink_source/shared"
 printf '%s\n' \
   '{"name":"symlink-source","sources":"src","package-specs":{"module":"esmodule","in-source":true,"suffix":".mjs"}}' \
   >"$symlink_source/rescript.json"
-printf 'let value = 1\n' >"$symlink_source/shared/linked.txt"
-ln -s '../shared/linked.txt' "$symlink_source/src/Linked.res"
+printf 'let value = 1\n' >"$symlink_source/shared/Source.js"
+ln -s '../shared/Source.js' "$symlink_source/src/Linked.res"
 
 multiple_cycles="$work/multiple-cycles"
 mkdir -p "$multiple_cycles/src"
@@ -791,8 +791,15 @@ if ! wait_for_file "$symlink_source/src/Linked.mjs"; then
   cat "$symlink_source/watch.log" >&2
   exit 1
 fi
-printf 'let value = 2\n' >"$symlink_source/shared/linked.txt"
+printf 'let value = 2\n' >"$symlink_source/shared/Source.js"
 if ! wait_for_text "$symlink_source/src/Linked.mjs" 'value = 2'; then
+  cat "$symlink_source/watch.log" >&2
+  exit 1
+fi
+symlink_replacement=$(mktemp "${TMPDIR:-/tmp}/rewatch-symlink-target.XXXXXX")
+printf 'let value = 3\n' >"$symlink_replacement"
+mv "$symlink_replacement" "$symlink_source/shared/Source.js"
+if ! wait_for_text "$symlink_source/src/Linked.mjs" 'value = 3'; then
   cat "$symlink_source/watch.log" >&2
   exit 1
 fi

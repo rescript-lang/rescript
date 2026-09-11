@@ -574,7 +574,7 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
         | _, None -> requires_reconciliation := true
         | Native_watcher.Structural, Some path ->
           if
-            is_source_path path
+            is_symlink_target path || is_source_path path
             || path_in_scope roots sources unresolved path
             || Native_watcher.watches_directory watcher path
             || (is_in_source_tree path && is_directory path)

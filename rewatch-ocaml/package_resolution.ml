@@ -5,14 +5,16 @@ type dependency = {
   is_local: bool;
 }
 
+type dependency_identity = {directory: string; config: Config.t; is_local: bool}
+
 type diagnostic_mode = Report_diagnostics | Suppress_diagnostics
 
 type t = {
   root_config: Config.t;
   context: Project_context.dependency_context;
   loaded: (string, Config.t) Hashtbl.t;
-  edges: (string, dependency) Hashtbl.t;
-  selected: (string, dependency) Hashtbl.t;
+  edges: (string, dependency_identity) Hashtbl.t;
+  selected: (string, dependency_identity) Hashtbl.t;
   reported_duplicates: (string, unit) Hashtbl.t;
   diagnostic_mode: diagnostic_mode;
 }
@@ -49,10 +51,18 @@ let dependency_path resolution ~package_root name =
 let dependency_candidates resolution ~package_root name =
   Project_context.dependency_candidates_in resolution.context package_root name
 
+let with_declaration declaration (identity : dependency_identity) =
+  {
+    declaration;
+    directory = identity.directory;
+    config = identity.config;
+    is_local = identity.is_local;
+  }
+
 let resolve resolution ~package_root (declaration : Config.dependency) =
   let edge_key = package_root ^ "\000" ^ declaration.name in
   match Hashtbl.find_opt resolution.edges edge_key with
-  | Some dependency -> dependency
+  | Some identity -> with_declaration declaration identity
   | None ->
     let candidate =
       Project_context.require_dependency_directory ~context:resolution.context
@@ -68,16 +78,15 @@ let resolve resolution ~package_root (declaration : Config.dependency) =
              && not (Hashtbl.mem resolution.reported_duplicates key)
            then (
              Hashtbl.add resolution.reported_duplicates key ();
-             Printf.eprintf
-               "Duplicated package: %s ./%s (chosen) vs ./%s in ./%s\n%!"
+             Printf.eprintf "Duplicated package: %s %s (chosen) vs %s in %s\n%!"
                declaration.name
-               (Project_context.relative_to resolution.root_config.root
+               (Project_context.display_path ~root:resolution.root_config.root
                   selected.directory)
-               (Project_context.relative_to resolution.root_config.root
+               (Project_context.display_path ~root:resolution.root_config.root
                   candidate)
-               (Project_context.relative_to resolution.root_config.root
+               (Project_context.display_path ~root:resolution.root_config.root
                   package_root)));
-        {selected with declaration}
+        selected
       | None ->
         let config =
           try load_config resolution candidate
@@ -89,16 +98,15 @@ let resolve resolution ~package_root (declaration : Config.dependency) =
                      Error: %s"
                     declaration.name resolution.root_config.root message))
         in
-        let dependency =
+        let identity =
           {
-            declaration;
             directory = candidate;
             config;
             is_local = is_local resolution candidate;
           }
         in
-        Hashtbl.add resolution.selected declaration.name dependency;
-        dependency
+        Hashtbl.add resolution.selected declaration.name identity;
+        identity
     in
     Hashtbl.add resolution.edges edge_key dependency;
-    dependency
+    with_declaration declaration dependency

@@ -126,4 +126,37 @@ let tests =
           check
             (not (Sys.file_exists path))
             ("moving a source removes its stale output family: " ^ path))
+        [old_output; old_map; working_output; working_map]);
+  with_temp_dir (fun root ->
+      let config_path = Filename.concat root "rescript.json" in
+      let old_source = Filename.concat root "old/Foo.res" in
+      let old_output = Filename.concat root "old/Foo.js" in
+      let old_map = old_output ^ ".map" in
+      let working_output = Filename.concat root "lib/bs/old/Foo.js" in
+      let working_map = working_output ^ ".map" in
+      let ocaml_dir = Filename.concat root "lib/ocaml" in
+      let published_ast = Filename.concat ocaml_dir "Foo.ast" in
+      write_file config_path
+        {|{"name":"cleanup-removed-source-dir","sources":"src","package-specs":{"module":"esmodule","in-source":true}}|};
+      List.iter
+        (fun path -> write_file path "generated")
+        [
+          old_source;
+          old_output;
+          old_map;
+          working_output;
+          working_map;
+          published_ast;
+        ];
+      let config = Config.load_root root in
+      ignore
+        (Build_artifacts.cleanup_stale ~ocaml_files:[published_ast]
+           ~ast_sources:[(published_ast, old_source)]
+           ~source_files:[] ~root ~ocaml_dir ~is_local:true config []);
+      List.iter
+        (fun path ->
+          check
+            (not (Sys.file_exists path))
+            ("removing a source directory removes its stale output family: "
+           ^ path))
         [old_output; old_map; working_output; working_map])

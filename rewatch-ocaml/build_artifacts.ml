@@ -318,6 +318,15 @@ let cleanup_stale ?ocaml_files ?ast_sources ?source_files ?present_source_files
           plan_output
             ~build_relative:(relative_under root output_path)
             output_path));
+  ast_sources
+  |> List.iter (fun (_, source) ->
+      relative_to_root source
+      |> Option.iter (fun relative_source ->
+          List.iter
+            (fun spec ->
+              let output = generated_js_path config relative_source spec in
+              plan_output ~build_relative:(relative_under root output) output)
+            config.package_specs));
   output_files
   |> List.iter (fun (output_dir, files) ->
       files
