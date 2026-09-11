@@ -2590,6 +2590,21 @@ reduced per-build thread creation to the pool size, but its smoke median was
 still 5.583 s versus 4.046 s (1.380x). The experiment was therefore discarded:
 thread churn is real resource overhead, but it does not explain the wall-time
 gap and the extra lifecycle machinery did not earn its maintenance cost.
+An untraced process-tree sample attributed nearly identical compiler user time
+(8.22 s Rust versus 8.49 s OCaml) but higher OCaml system time (14.61 s versus
+11.89 s). `spawn` was confirmed to use `CLONE_VM|CLONE_VFORK`; replacing it for
+a supposedly faster fork API is therefore not an opportunity. Reducing the
+10-child limit to eight was neutral, while raising it to twelve made both parse
+and compile phases slower. A second experiment replaced channel copying with a
+runtime-lock-releasing C implementation backed by Linux `sendfile`; its 5.47 s
+median was likewise indistinguishable and the added platform code was removed.
+The strongest remaining architectural hypothesis is that Rust launches each
+child and publishes its artifacts inside persistent Rayon workers, whereas the
+OCaml dispatcher performs every spawn serially and its system threads share one
+OCaml domain for publication. Testing that requires a worker design that owns
+the complete spawn/capture/wait/publication lifetime, not another isolated pipe
+or copy optimization, and must preserve the documented Windows Job Object
+lifecycle.
 
 The latest retained-watch gate at `d1c3ca9732` was coherent and passed: 118 ms
 OCaml versus 123 ms Rust, exactly seven parser and seven compiler calls per
