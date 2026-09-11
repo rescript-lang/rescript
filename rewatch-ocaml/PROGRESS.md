@@ -2285,14 +2285,14 @@ failure, or an unexpected exception. Parser and compiler argument construction
 is now shared as pure functions by actual build jobs and `compiler-args`;
 callers explicitly supply the intentional differences in watch mode, interface
 presence, dependency include directories, and GenType dependency arguments.
-The same pass will replace internal
-polymorphic variants with normal variants wherever the case set is closed;
-external APIs
-and genuinely open case sets remain exceptions. Remaining measured-performance candidates are
-per-child reader/waiter threads and buffers, serial parser-job preparation,
-retained-build reconstruction, and publication allocation/GC. They require
-profiling before architectural work; the cycle, dirty-membership, and
-worker-lifecycle differences were concrete enough to correct immediately.
+The closed internal visitation and CLI-routing states now use normal variants.
+The remaining polymorphic variants are required at Yojson, Cmdliner, Re, and
+Luv API boundaries; no internally owned open case set remains. Remaining
+measured-performance candidates are per-child reader/waiter threads and
+buffers, serial parser-job preparation, retained-build reconstruction, and
+publication allocation/GC. They require profiling before architectural work;
+the cycle, dirty-membership, and worker-lifecycle differences were concrete
+enough to correct immediately.
 
 The non-comment cleanup removed the obsolete `.rewatch-pending` and
 `.rewatch-backup` recognition, cleanup scans, explicit deletion paths, and
