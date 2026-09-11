@@ -46,7 +46,7 @@ let file_digest path =
 let run ~poll ~warning_state ~blocked_modules ~compile_assets ~build_state
     ~scheduled_modules ~compile_cleanup ~mark_compiled ~mark_had_warnings
     ~progress ~compile_step ~namespace_count ~verbosity =
-  let finish_successful_compile (scheduled : scheduled_module) =
+  let refresh_successful_cmi (scheduled : scheduled_module) =
     (* Only a changed interface invalidates reverse dependents. Comparing bytes
        avoids timestamp races and skips unnecessary downstream compilation. *)
     let cmi_digest_after = file_digest scheduled.cmi_path in
@@ -55,20 +55,24 @@ let run ~poll ~warning_state ~blocked_modules ~compile_assets ~build_state
       | Some before, Some after -> before <> after
       | _ -> true
     in
-    let cmt_path = Filename.remove_extension scheduled.cmi_path ^ ".cmt" in
     Compile_assets.refresh_cmi compile_assets ~key:scheduled.key
       ~path:scheduled.cmi_path;
-    Compile_assets.refresh_cmt compile_assets ~key:scheduled.key ~path:cmt_path;
     scheduled.state.last_compiled_cmi <-
       (Compile_assets.cmi compile_assets scheduled.key
       |> Option.map (fun entry -> entry.Compile_assets.modified));
-    scheduled.state.last_compiled_cmt <-
-      (Compile_assets.cmt compile_assets scheduled.key
-      |> Option.map (fun entry -> entry.Compile_assets.modified));
-    scheduled.state.compile_dirty <- false;
+    scheduled.cmi_digest_before <- cmi_digest_after;
     if cmi_changed then
       Build_state.mark_dependents_compile_dirty build_state scheduled.state
         ~is_blocked:(Hashtbl.mem blocked_modules)
+  in
+  let finish_successful_compile (scheduled : scheduled_module) =
+    refresh_successful_cmi scheduled;
+    let cmt_path = Filename.remove_extension scheduled.cmi_path ^ ".cmt" in
+    Compile_assets.refresh_cmt compile_assets ~key:scheduled.key ~path:cmt_path;
+    scheduled.state.last_compiled_cmt <-
+      (Compile_assets.cmt compile_assets scheduled.key
+      |> Option.map (fun entry -> entry.Compile_assets.modified));
+    scheduled.state.compile_dirty <- false
   in
   let warning_paths =
     scheduled_modules
@@ -163,7 +167,8 @@ let run ~poll ~warning_state ~blocked_modules ~compile_assets ~build_state
         in
         Option.iter
           (fun message -> scheduled.messages := message :: !(scheduled.messages))
-          message
+          message;
+        Option.is_none message
       in
       let scheduler_failed =
         try
@@ -196,14 +201,18 @@ let run ~poll ~warning_state ~blocked_modules ~compile_assets ~build_state
                   Output.Progress.advance progress;
                   None)
               | Some result, `Interface path ->
-                record_result scheduled ~is_interface:true path result;
+                let succeeded =
+                  record_result scheduled ~is_interface:true path result
+                in
+                if succeeded then refresh_successful_cmi scheduled;
                 let path = scheduled.source.Source.implementation in
                 Output.Progress.debug progress ~verbosity
                   ("Compiling file: " ^ scheduled.key);
                 scheduled.phase := `Implementation path;
                 Some (scheduled.compile ~is_interface:false path)
               | Some result, `Implementation path ->
-                record_result scheduled ~is_interface:false path result;
+                ignore
+                  (record_result scheduled ~is_interface:false path result);
                 scheduled.phase := `Done;
                 Output.Progress.advance progress;
                 if !(scheduled.messages) <> [] then
