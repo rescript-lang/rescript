@@ -87,6 +87,12 @@ isolated 5.0 switch exposed use of the newer `Mutex.protect` convenience API;
 the notifier now uses a small `Fun.protect`-based lock wrapper with identical
 exception-safe release behavior, and the static rewatch executable builds in
 both the 5.0 and 5.5 switches.
+The `static` Dune profile now passes `-ccopt -static` for the OCaml rewatch
+executable itself, matching the compiler executable stanzas rather than relying
+on switch configuration to imply the final native link mode. A local 5.5 build
+was confirmed by both `file` (`statically linked`) and `ldd` (`not a dynamic
+executable`); the artifact assembly gate independently rejects dynamic Linux
+binaries.
 
 At code checkpoint `324112908`, `opam exec -- make test-all` passed
 uninterrupted with the packaged OCaml rewatch binary as the default. This

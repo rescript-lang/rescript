@@ -1,3 +1,8 @@
+(env
+ (static
+  (flags
+   (:standard -ccopt -static))))
+
 (rule
  (target platform.ml)
  (enabled_if
