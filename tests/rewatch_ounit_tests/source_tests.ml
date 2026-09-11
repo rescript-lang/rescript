@@ -149,6 +149,22 @@ let tests =
         (discovery.gentype_dirs
         = ["src"; "test"; Filename.concat "test" "nested"])
         "GenType directories use active features but retain dev sources";
+      write_file config_path
+        {|{
+          "name": "overlapping-source-tests",
+          "sources": ["src", {"dir": "src", "subdirs": true}],
+          "gentypeconfig": {}
+        }|};
+      let overlapping =
+        Config.load config_path |> fun config ->
+        discover_with_inventory config ()
+      in
+      check
+        (names overlapping.modules = ["Main"; "NotDiscovered"])
+        "a recursive declaration upgrades an earlier shallow traversal";
+      check
+        (overlapping.gentype_dirs = ["src"; Filename.concat "src" "nested"])
+        "GenType traversal also upgrades overlapping source coverage";
       write_file (Filename.concat root "ignored/Nested.res") "let value = 1\n";
       write_file config_path
         {|{

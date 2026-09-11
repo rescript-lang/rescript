@@ -2172,6 +2172,15 @@ reconciliation. Rust registers no external target watch, so the underlying
 behavioral defect is shared; the OCaml port intentionally corrects it. A watch
 regression covers a `.res` symlink whose target has a `.txt` name.
 
+Overlapping source declarations previously remembered only that a directory
+had been visited, not whether its module and GenType traversal had been shallow
+or recursive. A later recursive declaration could therefore fail to discover
+any descendants. The discovery tables now retain traversal coverage and allow
+a shallow visit to be upgraded without rediscovering files at the shared root.
+This defect was OCaml-only: Rust scans each source declaration independently
+and merges the resulting path maps. Focused tests retain both descendant module
+discovery and GenType directories for the shallow-then-recursive ordering.
+
 1. Stop for the requested external AI review.
 2. Address the external review findings and rerun the affected gates.
 3. Complete the non-comment maintainability work. Review naming and module
