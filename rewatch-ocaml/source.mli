@@ -29,7 +29,7 @@ val discover_for_cleanup :
   ?on_missing:(string -> unit) ->
   Config.t ->
   prod:bool ->
-  string list * string list
+  string list
 
 val discover_with_inventory :
   ?on_orphan:(string -> unit) ->

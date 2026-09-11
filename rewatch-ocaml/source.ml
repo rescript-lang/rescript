@@ -85,8 +85,8 @@ let interface_mismatch_error implementation interface =
    subdirs setting reaches. Keeping the views in one walk gives every consumer
    the same filesystem snapshot without weakening stale-output cleanup. *)
 let scan_source ~root (source : Config.source) ~discover_modules ~on_missing
-    ~visited_dirs ~collect_gentype ~visited_gentype_dirs candidates
-    inventory_files gentype_dirs =
+    ~visited_dirs ~collect_inventory ~collect_gentype ~visited_gentype_dirs
+    candidates inventory_files gentype_dirs =
   let rec scan_directory ~relative ~collect_inventory ~discover_requested
       ~collect_gentype ~identity =
     let absolute = Filename.concat root relative in
@@ -124,12 +124,13 @@ let scan_source ~root (source : Config.source) ~discover_modules ~on_missing
           let metadata = Unix.lstat absolute_path in
           match metadata.Unix.st_kind with
           | Unix.S_DIR ->
-            let identity =
-              Platform.directory_identity ~path:absolute_path metadata
-            in
-            scan_directory ~relative:relative_path ~collect_inventory
-              ~discover_requested:discover_children
-              ~collect_gentype:gentype_children ~identity
+            if collect_inventory || discover_children || gentype_children then
+              let identity =
+                Platform.directory_identity ~path:absolute_path metadata
+              in
+              scan_directory ~relative:relative_path ~collect_inventory
+                ~discover_requested:discover_children
+                ~collect_gentype:gentype_children ~identity
           | Unix.S_LNK -> (
             let target_metadata = Unix.stat absolute_path in
             match target_metadata.Unix.st_kind with
@@ -178,7 +179,7 @@ let scan_source ~root (source : Config.source) ~discover_modules ~on_missing
     match metadata.Unix.st_kind with
     | Unix.S_DIR ->
       let identity = Platform.directory_identity ~path:absolute metadata in
-      scan_directory ~relative ~collect_inventory:true
+      scan_directory ~relative ~collect_inventory
         ~discover_requested:discover_modules
         ~collect_gentype ~identity
     | Unix.S_LNK -> (
@@ -220,7 +221,7 @@ let resolve_active_features (config : Config.t) requested =
   active_features
 
 let scan_sources ~on_missing (config : Config.t) ~prod ~features
-    ~collect_gentype =
+    ~collect_inventory ~collect_gentype =
   let active_features =
     resolve_active_features config (Option.value features ~default:[])
   in
@@ -242,7 +243,7 @@ let scan_sources ~on_missing (config : Config.t) ~prod ~features
          not (prod && source.is_dev) && feature_enabled
        in
        scan_source ~root:config.root source ~discover_modules ~on_missing
-         ~visited_dirs
+         ~visited_dirs ~collect_inventory
          ~collect_gentype:(collect_gentype && feature_enabled)
          ~visited_gentype_dirs files inventory_files gentype_dirs);
   {
@@ -256,7 +257,8 @@ let discover_for_cleanup
       Printf.eprintf "Could not read folder %s\n%!" path)
     (config : Config.t) ~prod =
   let scanned =
-    scan_sources ~on_missing config ~prod ~features:None ~collect_gentype:false
+    scan_sources ~on_missing config ~prod ~features:None ~collect_inventory:false
+      ~collect_gentype:false
   in
   let implementations =
     scanned.files
@@ -264,7 +266,7 @@ let discover_for_cleanup
          if is_interface then None else Some file.path)
     |> List.sort_uniq String.compare
   in
-  (implementations, scanned.inventory_files)
+  implementations
 
 let discover_with_inventory ?(on_orphan = fun _ -> ())
     ?(on_missing = fun path ->
@@ -277,6 +279,7 @@ let discover_with_inventory ?(on_orphan = fun _ -> ())
   in
   let scanned =
     scan_sources ~on_missing config ~prod ~features
+      ~collect_inventory:true
       ~collect_gentype:(config.gentype_args <> [])
   in
   let files = scanned.files in

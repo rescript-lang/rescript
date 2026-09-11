@@ -14,7 +14,7 @@ type wait_result =
   | Failed of string
 
 val create : paths:watch_path list -> (t, string) result
-val is_build_directory : string -> bool
+val is_compiler_artifact_directory : string -> bool
 val wait : t -> keep_running:(unit -> bool) -> wait_result
 val drain : t -> change list
 val watches_directory : t -> string -> bool

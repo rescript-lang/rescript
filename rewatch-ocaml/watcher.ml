@@ -233,7 +233,10 @@ let snapshot ?(on_source_symlink = fun _ -> ()) digest_cache roots sources
               let stat = Unix.lstat path in
               match stat.Unix.st_kind with
               | Unix.S_DIR ->
-                if (not recursive) || Native_watcher.is_build_directory path then
+                if
+                  (not recursive)
+                  || Native_watcher.is_compiler_artifact_directory path
+                then
                   acc
                 else walk source true path acc
               | Unix.S_LNK -> (

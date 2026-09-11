@@ -23,7 +23,7 @@ type t = {
 let error_message error =
   Printf.sprintf "%s: %s" (Luv.Error.err_name error) (Luv.Error.strerror error)
 
-let is_build_directory path =
+let is_compiler_artifact_directory path =
   let name = Filename.basename path in
   (name = "bs" || name = "ocaml")
   && Filename.basename (Filename.dirname path) = "lib"
@@ -40,7 +40,7 @@ let directories_under paths =
         |> List.fold_left
              (fun acc name ->
                let path = Filename.concat canonical name in
-               if is_build_directory path then acc
+               if is_compiler_artifact_directory path then acc
                else
                  try
                    let stat = Unix.stat path in
