@@ -28,6 +28,7 @@ for implementation in rust ocaml; do
     >"$work/$implementation/rescript.json"
   printf 'let value = 1\n' >"$work/$implementation/src/A.res"
   printf 'let value: int\n' >"$work/$implementation/src/A.resi"
+  cp -R "$work/$implementation" "$work/$implementation-after-build"
   cp -R "$work/$implementation" "$work/$implementation-watch"
   cp -R "$work/$implementation" "$work/$implementation-initial-failure-watch"
   printf 'let value =\n' \
@@ -41,6 +42,12 @@ for implementation in rust ocaml; do
     '{"name":"interactive-output","sources":["src"],"namespace":"Interactive","package-specs":{"module":"es6","in-source":true}}' \
     >"$work/$implementation-warning-watch/rescript.json"
 done
+
+cat >"$work/after-build-marker.sh" <<'EOF'
+#!/bin/sh
+printf '%s\n' AFTER_BUILD_MARKER
+EOF
+chmod +x "$work/after-build-marker.sh"
 
 export RESCRIPT_BSC_EXE=${RESCRIPT_BSC_EXE:-$root/_build/default/compiler/bsc/rescript_compiler_main.exe}
 export RESCRIPT_RUNTIME=${RESCRIPT_RUNTIME:-$root/packages/@rescript/runtime}
@@ -116,6 +123,49 @@ if ! cmp -s "$work/expected" "$work/ocaml.phases"; then
   cat "$work/ocaml.phases" >&2
   exit 1
 fi
+
+capture_after_build_order() {
+  implementation=$1
+  executable=$2
+  transcript="$work/$implementation-after-build.tty"
+  project="$work/$implementation-after-build"
+  if [ "$(uname -s)" = Darwin ]; then
+    script -q "$transcript" env -u NO_COLOR \
+      "TERM=xterm" \
+      "CLICOLOR=1" \
+      "CLICOLOR_FORCE=0" \
+      "RESCRIPT_BSC_EXE=$RESCRIPT_BSC_EXE" \
+      "RESCRIPT_RUNTIME=$RESCRIPT_RUNTIME" \
+      "$executable" build --after-build "$work/after-build-marker.sh" \
+      "$project" --no-timing >/dev/null
+  else
+    script -qefc \
+      "env -u NO_COLOR TERM=xterm CLICOLOR=1 CLICOLOR_FORCE=0 RESCRIPT_BSC_EXE=$RESCRIPT_BSC_EXE RESCRIPT_RUNTIME=$RESCRIPT_RUNTIME $executable build --after-build $work/after-build-marker.sh $project --no-timing" \
+      "$transcript" >/dev/null
+  fi
+  tr '\r' '\n' <"$transcript" \
+    | sed -E $'s/\033\\[[0-9;]*[[:alpha:]]//g' \
+    | grep -E '^(✅ Finished compilation in |AFTER_BUILD_MARKER$)' \
+    | sed -E 's/in [0-9]+\.[0-9]+s$/in 0.00s/' \
+    >"$work/$implementation-after-build.order"
+}
+
+capture_after_build_order rust "$rust"
+capture_after_build_order ocaml "$ocaml"
+
+cat >"$work/expected-after-build-order" <<'EOF'
+✅ Finished compilation in 0.00s
+AFTER_BUILD_MARKER
+EOF
+
+for implementation in rust ocaml; do
+  if ! cmp -s "$work/expected-after-build-order" \
+    "$work/$implementation-after-build.order"; then
+    echo "$implementation ran one-shot --after-build in the wrong phase" >&2
+    cat "$work/$implementation-after-build.order" >&2
+    exit 1
+  fi
+done
 
 capture_quiet_build() {
   implementation=$1
