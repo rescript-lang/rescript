@@ -2181,6 +2181,18 @@ This defect was OCaml-only: Rust scans each source declaration independently
 and merges the resulting path maps. Focused tests retain both descendant module
 discovery and GenType directories for the shallow-then-recursive ordering.
 
+Build preparation previously blocked only the one cycle selected for the user
+diagnostic. A second independent cycle then reached the subprocess scheduler's
+acyclic-graph precondition, preventing unrelated work from running and replacing
+the source-level diagnostic with an internal scheduler error. Preparation now
+repeatedly removes each cyclic component and its transitive dependents while
+retaining the globally shortest deterministic cycle for presentation. Rust does
+not share this defect: its compiler scheduler dispatches available work first
+and diagnoses the remaining cycle only when scheduling stalls. A canonical
+fixture with two independent cycles verifies that an unrelated module compiles,
+all cycle members remain blocked, and only the normal circular-dependency
+diagnostic is emitted.
+
 1. Stop for the requested external AI review.
 2. Address the external review findings and rerun the affected gates.
 3. Complete the non-comment maintainability work. Review naming and module
