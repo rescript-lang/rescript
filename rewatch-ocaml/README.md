@@ -18,6 +18,16 @@ The executable is written to:
 _build/default/rewatch-ocaml/rescript_ocaml.exe
 ```
 
+Linux release jobs use Dune's `static` profile. The rewatch executable declares
+the same explicit `-ccopt -static` profile flag as the compiler executables, so
+the npm artifact does not depend on the runner's glibc. A local Linux packaging
+check can reproduce that link with:
+
+```sh
+opam exec -- dune build --profile static rewatch-ocaml/rescript_ocaml.exe
+file _build/default/rewatch-ocaml/rescript_ocaml.exe
+```
+
 It invokes `bsc` as an external process. When running outside this repository's
 normal Makefile environment, point it at the compiler and runtime explicitly:
 
