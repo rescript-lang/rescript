@@ -22,6 +22,17 @@ val refresh : t -> paths:watch_path list -> (unit, string) result
 val close : t -> unit
 
 module For_test : sig
+  val create_with_directory_identity :
+    directory_identity:(string -> (string, string) result) ->
+    paths:watch_path list ->
+    (t, string) result
+
+  val refresh_with_directory_identity :
+    directory_identity:(string -> (string, string) result) ->
+    t ->
+    paths:watch_path list ->
+    (unit, string) result
+
   val handle_count : t -> int
   val directory_identity : t -> string -> string option
   val queue_change : t -> unit

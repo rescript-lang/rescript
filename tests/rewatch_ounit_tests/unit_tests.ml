@@ -329,6 +329,11 @@ let tests =
             (Platform.resolve_program ~cwd:path_root requested = executable)
             "PATH lookup skips directories and applies platform executable \
              suffixes";
+          check
+            (Platform.resolve_program ~cwd:path_root
+               (Filename.concat "." requested)
+            = Filename.concat "." requested)
+            "an explicit current-directory executable does not use PATH";
           if Sys.win32 then (
             let cwd_executable = Filename.concat path_root "current.exe" in
             File_util.copy_file test_executable cwd_executable;

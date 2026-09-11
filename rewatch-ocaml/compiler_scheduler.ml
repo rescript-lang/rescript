@@ -112,22 +112,21 @@ let run ~poll ~warning_state ~blocked_modules ~compile_assets ~build_state
     (fun scheduled -> Hashtbl.replace scheduled_by_key scheduled.key scheduled)
     scheduled_modules;
   let universe = Hashtbl.create (List.length scheduled_modules) in
+  let reached = Hashtbl.create (List.length scheduled_modules) in
   let pending = Queue.create () in
-  let add_to_universe key =
-    if
-      Hashtbl.mem scheduled_by_key key
-      && not (Hashtbl.mem universe key)
-    then (
-      Hashtbl.add universe key ();
+  let add_to_closure key =
+    if not (Hashtbl.mem reached key) then (
+      Hashtbl.add reached key ();
+      if Hashtbl.mem scheduled_by_key key then Hashtbl.add universe key ();
       Queue.add key pending)
   in
   scheduled_modules
   |> List.iter (fun scheduled ->
-       if scheduled.state.compile_dirty then add_to_universe scheduled.key);
+       if scheduled.state.compile_dirty then add_to_closure scheduled.key);
   while not (Queue.is_empty pending) do
     let key = Queue.take pending in
     let state = Build_state.find_exn build_state key in
-    Build_state.String_set.iter add_to_universe state.dependents
+    Build_state.String_set.iter add_to_closure state.dependents
   done;
   let scheduled_modules =
     List.filter
@@ -140,16 +139,28 @@ let run ~poll ~warning_state ~blocked_modules ~compile_assets ~build_state
     Output.Progress.advance progress
   done;
   let completed_modules = ref 0 in
+  let scheduled_dependencies dependencies =
+    let visited = Hashtbl.create 4 in
+    let rec expand dependency =
+      if Hashtbl.mem visited dependency then []
+      else (
+        Hashtbl.add visited dependency ();
+        if Hashtbl.mem universe dependency then [dependency]
+        else
+          match Build_state.find build_state dependency with
+          | Some state when state.kind = Build_state.Namespace_map ->
+            List.concat_map expand state.dependencies
+          | Some _ | None -> [])
+    in
+    dependencies |> List.concat_map expand |> List.sort_uniq String.compare
+  in
   let works =
     scheduled_modules
     |> List.map (fun (scheduled : scheduled_module) ->
          Process.
            {
              key = scheduled.key;
-             dependencies =
-               List.filter
-                 (fun dependency -> Hashtbl.mem universe dependency)
-                 scheduled.dependencies;
+             dependencies = scheduled_dependencies scheduled.dependencies;
              value = scheduled;
            })
   in

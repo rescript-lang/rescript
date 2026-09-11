@@ -1,10 +1,12 @@
 module String_set = Set.Make (String)
 
+type module_kind = Source_module | Namespace_map
+
 type module_ = {
   key: string;
   package_name: string;
   package_root: string;
-  source: Source.module_;
+  kind: module_kind;
   mutable dependencies: string list;
   mutable dependents: String_set.t;
   mutable compile_dirty: bool;
@@ -16,14 +18,14 @@ type t = {modules: (string, module_) Hashtbl.t}
 
 let create capacity = {modules = Hashtbl.create capacity}
 
-let add state ~key ~package_name ~package_root ~source ~last_compiled_cmi
+let add state ~key ~package_name ~package_root ~kind ~last_compiled_cmi
     ~last_compiled_cmt =
   Hashtbl.add state.modules key
     {
       key;
       package_name;
       package_root;
-      source;
+      kind;
       dependencies = [];
       dependents = String_set.empty;
       compile_dirty = false;
@@ -64,8 +66,16 @@ let set_dependencies state ~key dependencies =
     dependencies
 
 let mark_dependents_compile_dirty state module_ ~is_blocked =
-  String_set.iter
-    (fun dependent ->
+  let visited = Hashtbl.create 8 in
+  let rec mark dependent =
+    if not (Hashtbl.mem visited dependent) then (
+      Hashtbl.add visited dependent ();
       if not (is_blocked dependent) then
-        (find_exn state dependent).compile_dirty <- true)
-    module_.dependents
+        let dependent_module = find_exn state dependent in
+        dependent_module.compile_dirty <- true;
+        match dependent_module.kind with
+        | Source_module -> ()
+        | Namespace_map ->
+          String_set.iter mark dependent_module.dependents)
+  in
+  String_set.iter mark module_.dependents

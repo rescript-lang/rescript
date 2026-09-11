@@ -1,3 +1,11 @@
+type dependency_kind = Regular_dependency | Development_dependency
+
+type graph_dependency = {
+  declaration: Config.dependency;
+  directory: string;
+  kind: dependency_kind;
+}
+
 type graph_package = {
   graph_root: string;
   graph_build_owner: string;
@@ -7,7 +15,7 @@ type graph_package = {
   graph_build_dir: string;
   graph_ocaml_dir: string;
   graph_dependencies: Config.dependency list;
-  graph_dependency_directories: (Config.dependency * string) list;
+  graph_dependency_directories: graph_dependency list;
   graph_gentype_dependency_args: string list;
   graph_modules: Source.module_ list;
   graph_source_mtimes: (string, float) Hashtbl.t;
@@ -27,6 +35,17 @@ type global_module = {
   mutable raw_dependencies: string list;
 }
 
+type namespace_map = {
+  key: string;
+  compiler_name: string;
+  namespace: string;
+  package_name: string;
+  package_root: string;
+  members: string list;
+}
+
+val namespace_map_key : string -> string
+
 type parse_message = Parse_warning of string | Parse_error of string
 type attempt_kind = Full_attempt | Retained_attempt
 
@@ -39,9 +58,11 @@ type prepared = {
 type retained = {
   active_features: (string, string list option) Hashtbl.t;
   global_modules: (string, global_module) Hashtbl.t;
-  global_namespace_modules: (string, string list) Hashtbl.t;
+  namespace_maps: (string, namespace_map) Hashtbl.t;
+  namespace_maps_by_name: (string, namespace_map list) Hashtbl.t;
   graph_packages: (string, graph_package) Hashtbl.t;
   source_index: (string, string * Source.module_ * string * string) Hashtbl.t;
+  pending_parse_paths: (string, unit) Hashtbl.t;
   cleanup_results: (string, Build_artifacts.cleanup_result) Hashtbl.t;
   mutable prepared: prepared option;
   warning_state: Warning_state.t;

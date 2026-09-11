@@ -11,6 +11,13 @@ type source_root = {
   filter: Source_filter.t option;
 }
 
+type dependency_watch =
+  | Resolved_dependency of Package_resolution.dependency
+  | Broken_dependency of string
+  | Missing_dependency_directory of string
+  | Missing_dependency_path of string
+  | Unresolved_dependency of string
+
 let control_file_names = ["rescript.json"; "bsconfig.json"]
 let is_control_file_name name = List.mem name control_file_names
 
@@ -87,7 +94,8 @@ let watch_context ~root ~prod ~features ~filter =
       config.dependencies
       @ if prod || not is_local then [] else config.dev_dependencies
     in
-    List.iter
+    let dependency_watches =
+      List.map
       (fun (dependency : Config.dependency) ->
         match
           Package_resolution.dependency_path resolution
@@ -95,25 +103,34 @@ let watch_context ~root ~prod ~features ~filter =
         with
         | Some directory when Config.exists_in_root directory ->
           (try
-             let resolved =
-               Package_resolution.resolve resolution
-                 ~package_root:config.root dependency
-             in
-             if resolved.is_local then (
-               if not (Hashtbl.mem visited resolved.directory) then (
-                 roots := resolved.directory :: !roots;
-                 add_path resolved.directory false);
-               visit ~is_local:true ~features:dependency.features
-                 resolved.config)
+             Resolved_dependency
+               (Package_resolution.resolve resolution
+                  ~package_root:config.root dependency)
            with Project_context.Package_error _ | Project_context.Error _ ->
-             (* A broken dependency configuration must remain watched so fixing
-                that file can recover the long-lived command. *)
-             roots := directory :: !roots;
-             add_path directory false;
-             Hashtbl.replace visited directory ())
-        | None -> watch_unresolved_dependency config.root dependency.name
+             Broken_dependency directory)
+        | None -> Unresolved_dependency dependency.name
         | Some directory
           when not (Config.exists_in_root directory) && is_directory directory ->
+          Missing_dependency_directory directory
+        | Some path -> Missing_dependency_path path)
+      dependencies
+    in
+    List.iter
+      (function
+        | Resolved_dependency resolved when resolved.is_local ->
+          if not (Hashtbl.mem visited resolved.directory) then (
+            roots := resolved.directory :: !roots;
+            add_path resolved.directory false);
+          visit ~is_local:true ~features:resolved.declaration.features
+            resolved.config
+        | Resolved_dependency _ -> ()
+        | Broken_dependency directory ->
+          (* A broken dependency configuration must remain watched so fixing
+             that file can recover the long-lived command. *)
+          roots := directory :: !roots;
+          add_path directory false;
+          Hashtbl.replace visited directory ()
+        | Missing_dependency_directory directory ->
           (* The parent watch is needed because removing or replacing the
              watched directory itself is not reported consistently by every
              filesystem backend. It also detects a newly installed candidate
@@ -122,13 +139,14 @@ let watch_context ~root ~prod ~features ~filter =
           unresolved := directory :: !unresolved;
           add_path (Filename.dirname directory) false;
           add_path directory false
-        | Some path when not (Config.exists_in_root path) ->
+        | Missing_dependency_path path ->
           (* A non-directory candidate may be replaced with an install. Watch
              its parent and retain its type in the snapshot until that happens. *)
           unresolved := path :: !unresolved;
           add_path (Filename.dirname path) false
-        | Some _ -> ())
-      dependencies)
+        | Unresolved_dependency name ->
+          watch_unresolved_dependency config.root name)
+      dependency_watches)
   in
     visit ~is_local:true ~features root_config;
     Hashtbl.iter

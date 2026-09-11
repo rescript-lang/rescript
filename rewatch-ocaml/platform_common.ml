@@ -1,6 +1,7 @@
 let resolve_program ~path_separator ~executable_extensions ~search_directories
     ~executable_is_usable ~cwd program =
-  if (not (Filename.is_relative program)) || Filename.dirname program <> "."
+  if
+    (not (Filename.is_implicit program)) || Filename.dirname program <> "."
   then program
   else
     let path_directories =

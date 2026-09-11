@@ -119,23 +119,34 @@ let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
         | Some value ->
           {config with warning_flags = ["-warn-error"; value]}
       in
-      let dependencies =
-        config.dependencies
-        @ if prod || not is_local then [] else config.dev_dependencies
-      in
-      let dependency_directories =
+      let dependencies_with_kind =
         List.map
           (fun dependency ->
+            (Build_types.Regular_dependency, dependency))
+          config.dependencies
+        @
+        if prod || not is_local then []
+        else
+          List.map
+            (fun dependency ->
+              (Build_types.Development_dependency, dependency))
+            config.dev_dependencies
+      in
+      let dependencies = List.map snd dependencies_with_kind in
+      let dependency_directories =
+        List.map
+          (fun (kind, dependency) ->
             let directory, _ = resolve_dependency root dependency in
-            (dependency, directory))
-          dependencies
+            Build_types.{declaration = dependency; directory; kind})
+          dependencies_with_kind
       in
       List.iter
-        (fun ((dependency : Config.dependency), directory) ->
-          visit ~folder:directory ~features:dependency.features
+        (fun (dependency : Build_types.graph_dependency) ->
+          visit ~folder:dependency.directory
+            ~features:dependency.declaration.features
             ~warn_error ~filter:None
             ~is_local:
-              (Package_resolution.is_local resolution directory))
+              (Package_resolution.is_local resolution dependency.directory))
         dependency_directories;
       let discovery =
         Output.debug ~verbosity:stats.verbosity
@@ -190,7 +201,10 @@ let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
           graph_dependency_directories = dependency_directories;
           graph_gentype_dependency_args =
             Compiler_args.gentype_dependency_args_from_paths compile_config
-              dependency_directories;
+              (List.map
+                 (fun (dependency : Build_types.graph_dependency) ->
+                   (dependency.declaration, dependency.directory))
+                 dependency_directories);
           graph_modules = modules;
           graph_source_mtimes = source_mtimes;
           graph_source_files = discovery.inventory_files;

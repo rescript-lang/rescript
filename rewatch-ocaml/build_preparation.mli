@@ -1,17 +1,25 @@
 type cycle_info = {
   cycle: string list;
   blocked: string list;
-  modules_by_key: (string, Build_types.global_module) Hashtbl.t;
+  nodes_by_key: (string, cycle_node) Hashtbl.t;
+}
+
+and cycle_node = {
+  key: string;
+  package_root: string;
+  source_path: string option;
+  display_name: string;
 }
 
 val resolved_dependencies :
   (string, Build_types.global_module) Hashtbl.t ->
-  (string, string list) Hashtbl.t ->
+  (string, Build_types.namespace_map list) Hashtbl.t ->
   Build_types.global_module ->
   string list
 
 val find_cycle :
   (string, Build_types.global_module) Hashtbl.t ->
+  (string, Build_types.namespace_map) Hashtbl.t ->
   Build_state.t ->
   cycle_info option
 

@@ -14,7 +14,8 @@ let rec prepare_tree ~seen ~(package : Build_types.graph_package) ~watch
       stats.diagnostics;
   let dependency_directories =
     package.graph_dependency_directories
-    |> List.filter_map (fun ((dependency : Config.dependency), candidate) ->
+    |> List.filter_map (fun (dependency : Build_types.graph_dependency) ->
+      let candidate = dependency.directory in
       let () = match candidate with
         | candidate when Hashtbl.mem seen candidate -> ()
         | candidate when Hashtbl.mem stats.retained.graph_packages candidate ->
@@ -28,19 +29,21 @@ let rec prepare_tree ~seen ~(package : Build_types.graph_package) ~watch
         | _ -> ()
       in
       let ocaml = Build_artifacts.lib_path candidate "ocaml" in
-      if Sys.file_exists ocaml then Some (dependency, ocaml) else None)
-  in
-  let dependency_dirs = List.map snd dependency_directories in
-  let regular_dependency_names =
-    config.dependencies
-    |> List.map (fun (dependency : Config.dependency) -> dependency.name)
+      if Sys.file_exists ocaml then Some (dependency.kind, ocaml) else None)
   in
   let regular_dependency_dirs =
     dependency_directories
-    |> List.filter_map (fun ((dependency : Config.dependency), directory) ->
-         if List.mem dependency.name regular_dependency_names then
-           Some directory
-         else None)
+    |> List.filter_map (fun (kind, directory) ->
+         match kind with
+         | Build_types.Regular_dependency -> Some directory
+         | Build_types.Development_dependency -> None)
+  in
+  let dev_dependency_dirs =
+    dependency_directories
+    |> List.filter_map (fun (kind, directory) ->
+         match kind with
+         | Build_types.Regular_dependency -> None
+         | Build_types.Development_dependency -> Some directory)
   in
   let prepared = Build_types.prepared_exn stats in
   let bsc = prepared.compiler_context.bsc_path in
@@ -60,7 +63,7 @@ let rec prepare_tree ~seen ~(package : Build_types.graph_package) ~watch
       ~watch ~gentype_dependency_args:package.graph_gentype_dependency_args
   in
   let regular_common_args = common_args regular_dependency_dirs in
-  let dev_common_args = common_args dependency_dirs in
+  let dev_common_args = common_args (dev_dependency_dirs @ regular_dependency_dirs) in
   let cleanup =
     match Hashtbl.find_opt stats.retained.cleanup_results root with
     | Some result -> result
@@ -116,8 +119,10 @@ let rec prepare_tree ~seen ~(package : Build_types.graph_package) ~watch
   let warning_asts = ref [] in
   List.iter (fun (path, result) ->
     let absolute_path = Filename.concat root path in
+    let pending_path = Platform.normalize_path_for_comparison absolute_path in
     match result with
     | Some result when not (Process.succeeded result) ->
+      Hashtbl.replace stats.retained.pending_parse_paths pending_path ();
       let output =
         Printf.sprintf "Error in %s:\n%s%s" config.name result.stderr
           result.stdout
@@ -158,7 +163,10 @@ let rec prepare_tree ~seen ~(package : Build_types.graph_package) ~watch
         (Filename.concat config.root path)
         (Filename.concat
            (Build_artifacts.lib_path config.root "ocaml")
-           (Filename.basename path)))
+           (Filename.basename path));
+      if is_local && stderr <> "" then
+        Hashtbl.replace stats.retained.pending_parse_paths pending_path ()
+      else Hashtbl.remove stats.retained.pending_parse_paths pending_path)
     parsed;
   if !warning_asts <> [] then
     stats.compile_cleanup :=
@@ -302,10 +310,17 @@ let rec prepare_tree ~seen ~(package : Build_types.graph_package) ~watch
   in
   Option.iter
     (fun namespace ->
-      let namespace =
+      let compiler_name =
         match config.namespace_entry with
         | Some _ -> "@" ^ namespace
         | None -> namespace
+      in
+      let namespace_map =
+        Hashtbl.find stats.retained.namespace_maps
+          (Build_types.namespace_map_key root)
+      in
+      let namespace_state =
+        Build_state.find_exn build_state namespace_map.key
       in
       let package_dirty =
         List.exists
@@ -314,9 +329,40 @@ let rec prepare_tree ~seen ~(package : Build_types.graph_package) ~watch
       in
       if package_dirty || stats.attempt_kind = Build_types.Full_attempt then
         Option.iter
-          (fun job -> stats.namespace_jobs := job :: !(stats.namespace_jobs))
+          (fun (job, finish) ->
+            let cmi_path = Filename.concat ocaml_dir (compiler_name ^ ".cmi") in
+            let digest_before =
+              try Some (Digest.file cmi_path)
+              with Sys_error _ | Unix.Unix_error _ -> None
+            in
+            let finish result =
+              finish result;
+              let digest_after =
+                try Some (Digest.file cmi_path)
+                with Sys_error _ | Unix.Unix_error _ -> None
+              in
+              Compile_assets.refresh_cmi compile_assets ~key:compiler_name
+                ~path:cmi_path;
+              let cmt_path =
+                Filename.concat ocaml_dir (compiler_name ^ ".cmt")
+              in
+              Compile_assets.refresh_cmt compile_assets ~key:compiler_name
+                ~path:cmt_path;
+              namespace_state.last_compiled_cmi <-
+                (Compile_assets.cmi compile_assets compiler_name
+                |> Option.map (fun entry -> entry.Compile_assets.modified));
+              namespace_state.last_compiled_cmt <-
+                (Compile_assets.cmt compile_assets compiler_name
+                |> Option.map (fun entry -> entry.Compile_assets.modified));
+              namespace_state.compile_dirty <- false;
+              if digest_before <> digest_after then
+                Build_state.mark_dependents_compile_dirty build_state
+                  namespace_state
+                  ~is_blocked:(Hashtbl.mem stats.blocked_modules)
+            in
+            stats.namespace_jobs := (job, finish) :: !(stats.namespace_jobs))
           (Compiler_process.namespace_job ~bsc ~runtime ~build_dir ~ocaml_dir
-             ~entry:config.namespace_entry ~package_dirty namespace modules))
+             ~entry:config.namespace_entry ~package_dirty compiler_name modules))
     config.namespace;
   stats.scheduled_modules := scheduled @ !(stats.scheduled_modules);
   stats.compile_cleanup :=

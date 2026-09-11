@@ -154,6 +154,7 @@ CAMLprim value rewatch_windows_spawn_owned(value env_value,
   process_value = caml_alloc_small(2, 0);
   Store_field(process_value, 0, Val_long(0));
   Store_field(process_value, 1, job_value);
+  job = Job_val(job_value);
 
   ZeroMemory(&startup, sizeof(startup));
   ZeroMemory(&process, sizeof(process));

@@ -138,7 +138,7 @@ let with_completion_notifier ?(ticker_enabled = false) action =
 let close_noerr descriptor =
   try Unix.close descriptor with Unix.Unix_error _ -> ()
 
-let start_capture descriptor : capture =
+let start_capture ?on_chunk descriptor : capture =
   let outcome = ref None in
   let thread =
     Thread.create
@@ -153,12 +153,17 @@ let start_capture descriptor : capture =
                    match Unix.read descriptor bytes 0 (Bytes.length bytes) with
                    | 0 -> ()
                    | count ->
-                     Buffer.add_subbytes output bytes 0 count;
+                     (match on_chunk with
+                     | Some on_chunk -> on_chunk bytes count
+                     | None -> Buffer.add_subbytes output bytes 0 count);
                      read ()
                  with Unix.Unix_error (Unix.EINTR, _, _) -> read ()
                in
                Fun.protect ~finally:(fun () -> close_noerr descriptor) read;
-               Ok (Buffer.contents output |> decode_utf8_lossy)
+               Ok
+                 (match on_chunk with
+                 | Some _ -> ""
+                 | None -> Buffer.contents output |> decode_utf8_lossy)
              with exn ->
                close_noerr descriptor;
                Error exn))
@@ -205,7 +210,8 @@ let start_child_wait pid notifier stdout_capture stderr_capture on_result :
   in
   {thread; direct_outcome; outcome}
 
-let launch ?env ?(on_result = fun result -> result) ~notifier payload job =
+let launch ?env ?stdout_chunk ?stderr_chunk
+    ?(on_result = fun result -> result) ~notifier payload job =
   (* Capture descriptors need a cleanup owner before asynchronous watch
      termination can raise. Signals are therefore deferred across pipe
      acquisition and restored only after every descriptor has an owner. *)
@@ -220,9 +226,9 @@ let launch ?env ?(on_result = fun result -> result) ~notifier payload job =
     let pipes = Platform.create_capture_pipes () in
     opened_pipes := Some pipes;
     let (stdout_read, stdout_write), (stderr_read, stderr_write) = pipes in
-    let stdout = start_capture stdout_read in
+    let stdout = start_capture ?on_chunk:stdout_chunk stdout_read in
     stdout_capture := Some stdout;
-    let stderr = start_capture stderr_read in
+    let stderr = start_capture ?on_chunk:stderr_chunk stderr_read in
     stderr_capture := Some stderr;
     let process =
       Platform.spawn ~env ~cwd:job.cwd ~program:job.program ~args:job.args
@@ -621,6 +627,34 @@ let run ?env ?poll ~cwd program args =
   in
   with_completion_notifier ~ticker_enabled (fun notifier ->
     let child = launch ?env ~notifier () {program; args; cwd} in
+    let reaped = ref false in
+    try
+      let (_, result), restore_signals =
+        wait_for_running ~poll notifier [child]
+      in
+      reaped := true;
+      with_signal_restore restore_signals (fun () ->
+        release_running child;
+        result)
+    with exn ->
+      if not !reaped then terminate_running [child];
+      raise exn)
+
+let run_streaming ?env ?poll ~cwd program args =
+  let poll, ticker_enabled =
+    match poll with
+    | Some poll -> (poll, true)
+    | None -> ((fun () -> ()), false)
+  in
+  let write channel bytes count =
+    output channel bytes 0 count;
+    flush channel
+  in
+  with_completion_notifier ~ticker_enabled (fun notifier ->
+    let child =
+      launch ?env ~stdout_chunk:(write stdout) ~stderr_chunk:(write stderr)
+        ~notifier () {program; args; cwd}
+    in
     let reaped = ref false in
     try
       let (_, result), restore_signals =

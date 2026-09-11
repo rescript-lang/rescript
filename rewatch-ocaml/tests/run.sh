@@ -106,6 +106,24 @@ source_map="$work/source-map"
 warning_replay="$work/warning-replay"
 monorepo="$work/monorepo"
 
+namespace_invalidation="$work/namespace-invalidation"
+mkdir -p "$namespace_invalidation/src" \
+  "$namespace_invalidation/packages/dep/src" \
+  "$namespace_invalidation/node_modules"
+printf '%s\n' \
+  '{"name":"namespace-consumer","sources":"src","dependencies":["namespace-dep"],"package-specs":{"module":"esmodule","in-source":true,"suffix":".mjs"}}' \
+  >"$namespace_invalidation/rescript.json"
+printf 'let value = Ns.A.value\n' >"$namespace_invalidation/src/Main.res"
+printf '%s\n' \
+  '{"name":"namespace-dep","namespace":"Ns","sources":"src","package-specs":{"module":"esmodule","in-source":true,"suffix":".mjs"}}' \
+  >"$namespace_invalidation/packages/dep/rescript.json"
+printf 'let value = 1\n' \
+  >"$namespace_invalidation/packages/dep/src/A.res"
+printf 'let value = 2\n' \
+  >"$namespace_invalidation/packages/dep/src/B.res"
+ln -s ../packages/dep \
+  "$namespace_invalidation/node_modules/namespace-dep"
+
 interface_failure_recovery="$work/interface-failure-recovery"
 mkdir -p "$interface_failure_recovery/src"
 printf '%s\n' \
@@ -199,6 +217,62 @@ printf '%s\n' \
   >"$retained_cycle/rescript.json"
 printf 'let value = 1\n' >"$retained_cycle/src/A.res"
 printf 'let dependent = A.value\n' >"$retained_cycle/src/B.res"
+
+retained_parse="$work/retained-parse"
+mkdir -p "$retained_parse/src"
+printf '%s\n' \
+  '{"name":"retained-parse","sources":"src","package-specs":{"module":"esmodule","in-source":true,"suffix":".mjs"}}' \
+  >"$retained_parse/rescript.json"
+printf 'let value = 1\n' >"$retained_parse/src/A.res"
+printf 'let other = 1\n' >"$retained_parse/src/B.res"
+
+duplicate_selection="$work/duplicate-selection"
+mkdir -p "$duplicate_selection/src" \
+  "$duplicate_selection/node_modules" \
+  "$duplicate_selection/packages/a/src" \
+  "$duplicate_selection/packages/a/node_modules" \
+  "$duplicate_selection/packages/shared/src" \
+  "$duplicate_selection/packages/nested-shared/src"
+printf '%s\n' \
+  '{"name":"duplicate-root","sources":"src","dependencies":["a","shared"],"package-specs":{"module":"esmodule","in-source":true,"suffix":".mjs"}}' \
+  >"$duplicate_selection/rescript.json"
+printf 'let value = Shared.value\n' >"$duplicate_selection/src/Main.res"
+printf '%s\n' \
+  '{"name":"a","sources":"src","dependencies":["shared"]}' \
+  >"$duplicate_selection/packages/a/rescript.json"
+printf 'let value = 1\n' >"$duplicate_selection/packages/a/src/A.res"
+printf '%s\n' \
+  '{"name":"shared","sources":"src","package-specs":{"module":"esmodule","in-source":true,"suffix":".mjs"}}' \
+  >"$duplicate_selection/packages/shared/rescript.json"
+printf 'let value = 1\n' \
+  >"$duplicate_selection/packages/shared/src/Shared.res"
+printf '%s\n' \
+  '{"name":"shared","sources":"src","package-specs":{"module":"esmodule","in-source":true,"suffix":".mjs"}}' \
+  >"$duplicate_selection/packages/nested-shared/rescript.json"
+printf 'let value = 2\n' \
+  >"$duplicate_selection/packages/nested-shared/src/Shared.res"
+ln -s ../packages/a "$duplicate_selection/node_modules/a"
+ln -s ../packages/shared "$duplicate_selection/node_modules/shared"
+ln -s ../../nested-shared \
+  "$duplicate_selection/packages/a/node_modules/shared"
+
+dev_include_order="$work/dev-include-order"
+mkdir -p "$dev_include_order/src" "$dev_include_order/dev" \
+  "$dev_include_order/node_modules/regular/src" \
+  "$dev_include_order/node_modules/development/src"
+printf '%s\n' \
+  '{"name":"dev-include-root","sources":["src",{"dir":"dev","type":"dev"}],"dependencies":["regular"],"dev-dependencies":["development"]}' \
+  >"$dev_include_order/rescript.json"
+printf 'let value = 1\n' >"$dev_include_order/src/Main.res"
+printf 'let value = 2\n' >"$dev_include_order/dev/Test.res"
+printf '%s\n' '{"name":"regular","sources":"src"}' \
+  >"$dev_include_order/node_modules/regular/rescript.json"
+printf 'let value = 1\n' \
+  >"$dev_include_order/node_modules/regular/src/Regular.res"
+printf '%s\n' '{"name":"development","sources":"src"}' \
+  >"$dev_include_order/node_modules/development/rescript.json"
+printf 'let value = 1\n' \
+  >"$dev_include_order/node_modules/development/src/Development.res"
 
 if [ -x "$port_directory/bsc.exe" ]; then
   env -u RESCRIPT_BSC_EXE "$port" build "$packaged_basic" \
@@ -450,6 +524,21 @@ test -f "$basic/src/B.mjs"
 test -f "$basic/src/WithInterface.mjs"
 test -f "$basic/lib/ocaml/A.cmi"
 test -f "$basic/lib/ocaml/WithInterface.cmti"
+
+printf '\nlet streamedAfterBuild = 1\n' >>"$basic/src/A.res"
+after_build_release="$basic/after-build-release"
+after_build_log="$basic/after-build-stream.log"
+"$port" build --after-build \
+  "$root/rewatch-ocaml/tests/stream-after-build.sh $after_build_release" \
+  "$basic" >"$after_build_log" 2>&1 &
+after_build_pid=$!
+background_pids="$background_pids $after_build_pid"
+if ! wait_for_text "$after_build_log" REWATCH_AFTER_BUILD_READY; then
+  cat "$after_build_log" >&2
+  exit 1
+fi
+touch "$after_build_release"
+wait "$after_build_pid"
 
 # Keep a stale working CMI only while its dependents compile, so bsc can emit
 # its source-level missing-module diagnostic. It must not survive the command.
@@ -764,6 +853,97 @@ fi
 kill -TERM "$retained_cycle_pid"
 wait "$retained_cycle_pid" 2>/dev/null || true
 
+# Failed parses and parser warnings remain pending until the same source parses
+# cleanly. An unrelated edit must not compile an older AST or forget diagnostics.
+retained_parse_log="$retained_parse/watch.log"
+retained_parse_calls="$retained_parse/bsc-calls.log"
+env RESCRIPT_BSC_EXE="$root/rewatch-ocaml/tests/parse-warning-bsc.sh" \
+  REWATCH_REAL_BSC="$RESCRIPT_BSC_EXE" \
+  REWATCH_BSC_CALL_LOG="$retained_parse_calls" \
+  REWATCH_PARSE_WARNING_SOURCE=A.res \
+  "$port" watch "$retained_parse" >"$retained_parse_log" 2>&1 &
+retained_parse_pid=$!
+background_pids="$background_pids $retained_parse_pid"
+if ! wait_for_count "$retained_parse_log" REWATCH_PARSE_WARNING 1 || \
+  ! wait_for_file "$retained_parse/src/A.mjs"; then
+  cat "$retained_parse_log" >&2
+  exit 1
+fi
+initial_a_parse_count=$(grep -c -- '-bs-ast.*A.res' "$retained_parse_calls")
+printf 'let other = 2\n' >"$retained_parse/src/B.res"
+if ! wait_for_count "$retained_parse_log" REWATCH_PARSE_WARNING 2; then
+  cat "$retained_parse_log" >&2
+  exit 1
+fi
+warning_a_parse_count=$(grep -c -- '-bs-ast.*A.res' "$retained_parse_calls")
+test "$warning_a_parse_count" -gt "$initial_a_parse_count"
+printf 'let value =\n' >"$retained_parse/src/A.res"
+if ! wait_for_count "$retained_parse_log" 'Error in retained-parse' 1; then
+  cat "$retained_parse_log" >&2
+  exit 1
+fi
+failed_a_parse_count=$(grep -c -- '-bs-ast.*A.res' "$retained_parse_calls")
+printf 'let other = 3\n' >"$retained_parse/src/B.res"
+if ! wait_for_count "$retained_parse_log" 'Error in retained-parse' 2; then
+  cat "$retained_parse_log" >&2
+  exit 1
+fi
+retried_a_parse_count=$(grep -c -- '-bs-ast.*A.res' "$retained_parse_calls")
+test "$retried_a_parse_count" -gt "$failed_a_parse_count"
+grep 'value = 1' "$retained_parse/src/A.mjs" >/dev/null
+printf 'let value = 2\n' >"$retained_parse/src/A.res"
+if ! wait_for_text "$retained_parse/src/A.mjs" 'value = 2'; then
+  cat "$retained_parse_log" >&2
+  exit 1
+fi
+kill -TERM "$retained_parse_pid"
+wait "$retained_parse_pid" 2>/dev/null || true
+
+"$port" build "$duplicate_selection" >/dev/null
+mkdir -p \
+  "$duplicate_selection/node_modules/a/node_modules/shared/lib/ocaml"
+printf 'preserve nested duplicate\n' \
+  >"$duplicate_selection/node_modules/a/node_modules/shared/lib/ocaml/marker"
+"$port" clean "$duplicate_selection" >/dev/null
+test ! -f "$duplicate_selection/node_modules/shared/src/Shared.mjs"
+test -f \
+  "$duplicate_selection/node_modules/a/node_modules/shared/lib/ocaml/marker"
+"$port" watch "$duplicate_selection" \
+  >"$duplicate_selection/watch.log" 2>&1 &
+duplicate_selection_pid=$!
+background_pids="$background_pids $duplicate_selection_pid"
+if ! wait_for_file "$duplicate_selection/src/Main.mjs"; then
+  cat "$duplicate_selection/watch.log" >&2
+  exit 1
+fi
+printf 'let value = 3\n' \
+  >"$duplicate_selection/node_modules/shared/src/Shared.res"
+if ! wait_for_text \
+  "$duplicate_selection/node_modules/shared/src/Shared.mjs" 'value = 3'; then
+  cat "$duplicate_selection/watch.log" >&2
+  exit 1
+fi
+kill -TERM "$duplicate_selection_pid"
+wait "$duplicate_selection_pid" 2>/dev/null || true
+
+dev_include_call_log="$dev_include_order/bsc-calls.log"
+env RESCRIPT_BSC_EXE="$root/rewatch-ocaml/tests/counting-bsc.sh" \
+  REWATCH_REAL_BSC="$RESCRIPT_BSC_EXE" \
+  REWATCH_BSC_CALL_LOG="$dev_include_call_log" \
+  "$port" build "$dev_include_order" >/dev/null
+node - "$dev_include_call_log" \
+  "$dev_include_order/node_modules/development/lib/ocaml" \
+  "$dev_include_order/node_modules/regular/lib/ocaml" <<'EOF'
+const fs = require("fs");
+const [log, development, regular] = process.argv.slice(2);
+const command = fs.readFileSync(log, "utf8").split("\n")
+  .find(line => line.includes("Test.ast") && !line.includes("-bs-ast"));
+if (!command || command.indexOf(development) < 0 ||
+    command.indexOf(development) > command.indexOf(regular)) {
+  process.exit(1);
+}
+EOF
+
 warning_call_log="$warning_replay/bsc-calls.log"
 warning_watch_log="$warning_replay/watch.log"
 env RESCRIPT_BSC_EXE="$root/rewatch-ocaml/tests/counting-bsc.sh" \
@@ -1040,7 +1220,7 @@ namespace_call_log="$namespace/bsc-calls.log"
 env RESCRIPT_BSC_EXE="$root/rewatch-ocaml/tests/counting-bsc.sh" \
   REWATCH_REAL_BSC="$RESCRIPT_BSC_EXE" \
   REWATCH_BSC_CALL_LOG="$namespace_call_log" \
-  "$port" build "$namespace"
+"$port" build "$namespace"
 test -f "$namespace/lib/ocaml/A-Widget.cmi"
 test -f "$namespace/src/B.js"
 : > "$namespace_call_log"
@@ -1058,6 +1238,15 @@ env RESCRIPT_BSC_EXE="$root/rewatch-ocaml/tests/counting-bsc.sh" \
   REWATCH_BSC_CALL_LOG="$namespace_call_log" \
   "$port" build "$namespace"
 grep -F 'Widget.mlmap' "$namespace_call_log" >/dev/null
+
+"$port" build "$namespace_invalidation"
+rm "$namespace_invalidation/packages/dep/src/A.res"
+if "$port" build "$namespace_invalidation" \
+  >"$namespace_invalidation/removal.log" 2>&1; then
+  echo "namespace consumer was not invalidated after member removal" >&2
+  exit 1
+fi
+grep -F 'Ns.A' "$namespace_invalidation/removal.log" >/dev/null
 
 "$port" build "$namespace_entry"
 test -f "$namespace_entry/src/Entry.mjs"

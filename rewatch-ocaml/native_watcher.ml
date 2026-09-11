@@ -94,25 +94,35 @@ let remove_handles watcher =
 let directory_identity directory =
   try
     let metadata = Unix.stat directory in
-    Some (Platform.directory_identity ~path:directory metadata)
-  with Sys_error _ | Unix.Unix_error _ -> None
+    Ok (Platform.directory_identity ~path:directory metadata)
+  with (Sys_error _ | Unix.Unix_error _) as error ->
+    Error
+      (Printf.sprintf "could not identify watched directory %s: %s" directory
+         (Printexc.to_string error))
 
-let install_handles watcher directories =
+let identify_directories ~directory_identity directories =
+  let rec identify identified = function
+    | [] -> Ok (List.rev identified)
+    | directory :: rest -> (
+      match directory_identity directory with
+      | Ok identity -> identify ((directory, identity) :: identified) rest
+      | Error _ as error -> error)
+  in
+  identify [] directories
+
+let install_handles watcher identified_directories =
   let existing = Hashtbl.create (List.length watcher.handles) in
   List.iter
     (fun watched -> Hashtbl.add existing watched.directory ())
     watcher.handles;
   let added = ref [] in
-  let install directory =
+  let install (directory, identity) =
     if not (Hashtbl.mem existing directory) then
-      match directory_identity directory with
-      | None -> ()
-      | Some identity -> (
-        match Luv.FS_event.init ~loop:watcher.loop () with
-        | Error error -> watcher.error <- Some (error_message error)
-        | Ok handle ->
-          added := {directory; identity; handle} :: !added;
-          Luv.FS_event.start handle directory (function
+      match Luv.FS_event.init ~loop:watcher.loop () with
+      | Error error -> watcher.error <- Some (error_message error)
+      | Ok handle ->
+        added := {directory; identity; handle} :: !added;
+        Luv.FS_event.start handle directory (function
           | Ok (filename, events) ->
             let path =
               match filename with
@@ -132,15 +142,15 @@ let install_handles watcher directories =
             Luv.Loop.stop watcher.loop
           | Error error ->
             watcher.error <- Some (error_message error);
-            Luv.Loop.stop watcher.loop))
+            Luv.Loop.stop watcher.loop)
   in
-  List.iter install directories;
+  List.iter install identified_directories;
   watcher.handles <- watcher.handles @ List.rev !added;
   match watcher.error with
   | None -> Ok ()
   | Some message -> Error message
 
-let create ~paths =
+let create_with_directory_identity ~directory_identity ~paths =
   match Luv.Loop.init () with
   | Error error -> Error (error_message error)
   | Ok loop -> (
@@ -152,13 +162,22 @@ let create ~paths =
       let watcher =
         {loop; timer; handles = []; changes = []; stopped = false; error = None}
       in
-      match install_handles watcher (directories_under paths) with
+      let installed =
+        match
+          identify_directories ~directory_identity (directories_under paths)
+        with
+        | Error _ as error -> error
+        | Ok directories -> install_handles watcher directories
+      in
+      match installed with
       | Ok () -> Ok watcher
       | Error _ as error ->
         remove_handles watcher;
         close_timer loop timer;
         ignore (Luv.Loop.close loop);
         error)
+
+let create = create_with_directory_identity ~directory_identity
 
 let wait watcher ~keep_running =
   watcher.stopped <- not (keep_running ());
@@ -217,28 +236,31 @@ let drain watcher =
 let watches_directory watcher path =
   List.exists (fun watched -> watched.directory = path) watcher.handles
 
-let refresh watcher ~paths =
+let refresh_with_directory_identity ~directory_identity watcher ~paths =
   (* Only failures from work completed before this refresh are stale. Clear
      them before pumping close callbacks so a newly reported handle failure is
      preserved and makes the caller fall back to polling. *)
   watcher.error <- None;
   let directories = directories_under paths in
-  let desired = Hashtbl.create (List.length directories) in
-  List.iter
-    (fun directory ->
-      Option.iter
-        (fun identity -> Hashtbl.add desired directory identity)
-        (directory_identity directory))
-    directories;
-  let kept, removed =
-    List.partition
-      (fun watched ->
-        Hashtbl.find_opt desired watched.directory = Some watched.identity)
-      watcher.handles
-  in
-  close_fs_handles watcher.loop (List.map (fun watched -> watched.handle) removed);
-  watcher.handles <- kept;
-  install_handles watcher directories
+  match identify_directories ~directory_identity directories with
+  | Error _ as error -> error
+  | Ok identified_directories ->
+    let desired = Hashtbl.create (List.length directories) in
+    List.iter
+      (fun (directory, identity) -> Hashtbl.add desired directory identity)
+      identified_directories;
+    let kept, removed =
+      List.partition
+        (fun watched ->
+          Hashtbl.find_opt desired watched.directory = Some watched.identity)
+        watcher.handles
+    in
+    close_fs_handles watcher.loop
+      (List.map (fun watched -> watched.handle) removed);
+    watcher.handles <- kept;
+    install_handles watcher identified_directories
+
+let refresh = refresh_with_directory_identity ~directory_identity
 
 let close watcher =
   remove_handles watcher;
@@ -247,6 +269,8 @@ let close watcher =
   ignore (Luv.Loop.close watcher.loop)
 
 module For_test = struct
+  let create_with_directory_identity = create_with_directory_identity
+  let refresh_with_directory_identity = refresh_with_directory_identity
   let handle_count watcher = List.length watcher.handles
   let directory_identity watcher directory =
     watcher.handles

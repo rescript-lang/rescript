@@ -1,3 +1,11 @@
+type dependency_kind = Regular_dependency | Development_dependency
+
+type graph_dependency = {
+  declaration: Config.dependency;
+  directory: string;
+  kind: dependency_kind;
+}
+
 type graph_package = {
   graph_root: string;
   graph_build_owner: string;
@@ -7,7 +15,7 @@ type graph_package = {
   graph_build_dir: string;
   graph_ocaml_dir: string;
   graph_dependencies: Config.dependency list;
-  graph_dependency_directories: (Config.dependency * string) list;
+  graph_dependency_directories: graph_dependency list;
   graph_gentype_dependency_args: string list;
   graph_modules: Source.module_ list;
   graph_source_mtimes: (string, float) Hashtbl.t;
@@ -27,6 +35,17 @@ type global_module = {
   mutable raw_dependencies: string list;
 }
 
+type namespace_map = {
+  key: string;
+  compiler_name: string;
+  namespace: string;
+  package_name: string;
+  package_root: string;
+  members: string list;
+}
+
+let namespace_map_key package_root = "\000namespace:" ^ package_root
+
 type parse_message = Parse_warning of string | Parse_error of string
 type attempt_kind = Full_attempt | Retained_attempt
 
@@ -39,9 +58,11 @@ type prepared = {
 type retained = {
   active_features: (string, string list option) Hashtbl.t;
   global_modules: (string, global_module) Hashtbl.t;
-  global_namespace_modules: (string, string list) Hashtbl.t;
+  namespace_maps: (string, namespace_map) Hashtbl.t;
+  namespace_maps_by_name: (string, namespace_map list) Hashtbl.t;
   graph_packages: (string, graph_package) Hashtbl.t;
   source_index: (string, string * Source.module_ * string * string) Hashtbl.t;
+  pending_parse_paths: (string, unit) Hashtbl.t;
   cleanup_results: (string, Build_artifacts.cleanup_result) Hashtbl.t;
   mutable prepared: prepared option;
   warning_state: Warning_state.t;
@@ -76,9 +97,10 @@ type t = {
   verbosity: int;
 }
 
-let create ~warning_state ~poll ~process_poll ~progress ~verbosity =
+let create_attempt ~attempt_kind ~retained ~poll ~process_poll ~progress
+    ~verbosity =
   {
-    attempt_kind = Full_attempt;
+    attempt_kind;
     cleaned = 0;
     previous_asts = 0;
     parsed = 0;
@@ -98,23 +120,31 @@ let create ~warning_state ~poll ~process_poll ~progress ~verbosity =
     scheduled_modules = ref [];
     compile_cleanup = ref [];
     compiler_cleaned = false;
-    retained =
-      {
-        active_features = Hashtbl.create 16;
-        global_modules = Hashtbl.create 64;
-        global_namespace_modules = Hashtbl.create 16;
-        graph_packages = Hashtbl.create 32;
-        source_index = Hashtbl.create 64;
-        cleanup_results = Hashtbl.create 32;
-        prepared = None;
-        warning_state;
-      };
+    retained;
     had_warnings = false;
     poll;
     process_poll;
     progress;
     verbosity;
   }
+
+let create ~warning_state ~poll ~process_poll ~progress ~verbosity =
+  let retained =
+    {
+      active_features = Hashtbl.create 16;
+      global_modules = Hashtbl.create 64;
+      namespace_maps = Hashtbl.create 16;
+      namespace_maps_by_name = Hashtbl.create 16;
+      graph_packages = Hashtbl.create 32;
+      source_index = Hashtbl.create 64;
+      pending_parse_paths = Hashtbl.create 16;
+      cleanup_results = Hashtbl.create 32;
+      prepared = None;
+      warning_state;
+    }
+  in
+  create_attempt ~attempt_kind:Full_attempt ~retained ~poll ~process_poll
+    ~progress ~verbosity
 
 let create_incremental ~previous ~poll ~process_poll ~progress ~verbosity =
   (* Each rebuild needs fresh diagnostics and pending work, while the package
@@ -135,34 +165,9 @@ let create_incremental ~previous ~poll ~process_poll ~progress ~verbosity =
             present_public_outputs = cleanup.present_public_outputs;
           })
     previous.retained.cleanup_results;
-  {
-    attempt_kind = Retained_attempt;
-    cleaned = 0;
-    previous_asts = 0;
-    parsed = 0;
-    compiled = 0;
-    parse_seconds = 0.;
-    parse_messages = ref [];
-    diagnostics = [];
-    failure = None;
-    removed_modules = Hashtbl.create 16;
-    forced_parse_paths = Hashtbl.create 16;
-    preparse_stderr = Hashtbl.create 16;
-    preparse_results = Hashtbl.create 16;
-    blocked_modules = Hashtbl.create 16;
-    initialized_logs = Hashtbl.create 16;
-    deferred_artifact_cleanup = ref [];
-    namespace_jobs = ref [];
-    scheduled_modules = ref [];
-    compile_cleanup = ref [];
-    compiler_cleaned = false;
-    retained = {previous.retained with cleanup_results};
-    had_warnings = false;
-    poll;
-    process_poll;
-    progress;
-    verbosity;
-  }
+  create_attempt ~attempt_kind:Retained_attempt
+    ~retained:{previous.retained with cleanup_results}
+    ~poll ~process_poll ~progress ~verbosity
 
 let prepared_exn stats =
   match stats.retained.prepared with

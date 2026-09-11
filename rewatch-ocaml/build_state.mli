@@ -1,10 +1,12 @@
 module String_set : Set.S with type elt = string
 
+type module_kind = Source_module | Namespace_map
+
 type module_ = {
   key: string;
   package_name: string;
   package_root: string;
-  source: Source.module_;
+  kind: module_kind;
   mutable dependencies: string list;
   mutable dependents: String_set.t;
   mutable compile_dirty: bool;
@@ -21,7 +23,7 @@ val add :
   key:string ->
   package_name:string ->
   package_root:string ->
-  source:Source.module_ ->
+  kind:module_kind ->
   last_compiled_cmi:float option ->
   last_compiled_cmt:float option ->
   unit
