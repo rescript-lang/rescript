@@ -11,6 +11,11 @@ let signal_is_ignored signal =
 
 let tests =
   "watcher_tests" >:: fun _context ->
+  check
+    (Watcher.For_test.is_control_file_name "rescript.json"
+    && Watcher.For_test.is_control_file_name "bsconfig.json"
+    && not (Watcher.For_test.is_control_file_name "package.json"))
+    "only compiler configuration files trigger control-file rebuilds";
   let snapshot path digest = [(path, 1., 1, digest)] in
   let previous = snapshot "A.res" "old-a" @ snapshot "B.res" "old-b" in
   let trigger = snapshot "A.res" "new-a" @ snapshot "B.res" "old-b" in

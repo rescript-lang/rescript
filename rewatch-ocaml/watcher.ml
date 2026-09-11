@@ -7,6 +7,9 @@ type rebuild_kind = Incremental | Full
 
 type source_root = {directory: string; recursive: bool}
 
+let control_file_names = ["rescript.json"; "bsconfig.json"]
+let is_control_file_name name = List.mem name control_file_names
+
 let is_directory path =
   try (Unix.stat path).Unix.st_kind = Unix.S_DIR
   with Sys_error _ | Unix.Unix_error _ -> false
@@ -256,14 +259,15 @@ let snapshot ?(on_source_symlink = fun _ -> ()) digest_cache ~matches_source
     with Sys_error _ | Unix.Unix_error _ -> acc
   in
   let add_control_files acc root =
-    List.fold_left
+    control_file_names
+    |> List.fold_left
       (fun acc name ->
         let path = Filename.concat root name in
         try
           let stat = Unix.stat path in
           if stat.Unix.st_kind = Unix.S_REG then add_file path stat acc else acc
         with Sys_error _ | Unix.Unix_error _ -> acc)
-      acc ["rescript.json"; "bsconfig.json"; "package.json"]
+      acc
   in
   let result =
     List.fold_left add_control_files [] roots
@@ -382,8 +386,7 @@ let changes_are_incremental changes =
 let path_in_scope roots sources unresolved path =
   let name = Filename.basename path in
   let is_control =
-    List.mem name ["rescript.json"; "bsconfig.json"; "package.json"]
-    && List.mem (Filename.dirname path) roots
+    is_control_file_name name && List.mem (Filename.dirname path) roots
   in
   let is_source =
     (Filename.extension path = ".res" || Filename.extension path = ".resi")
@@ -734,6 +737,7 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
 let run_with_native_create ~native_create ~report_native_fallback ~root ~prod
     ~features ~filter ~clear_screen ~show_progress ~verbosity ~build =
   Build_lock.with_watch root (fun watch_lock ->
+    ignore (Config.load_root root);
     run_locked ~native_create ~report_native_fallback ~root ~prod ~features
       ~filter ~clear_screen ~show_progress ~verbosity ~build ~watch_lock)
 
@@ -747,6 +751,7 @@ let run =
     ~report_native_fallback
 
 module For_test = struct
+  let is_control_file_name = is_control_file_name
   let polling_build_changes = polling_build_changes
   let changes_are_incremental = changes_are_incremental
 
