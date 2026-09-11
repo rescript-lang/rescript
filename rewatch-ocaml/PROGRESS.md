@@ -1928,6 +1928,21 @@ required behavior decision, not a performance proposal.
   requires quiet interactive clean to stay silent. The 106-case command gate
   retains redirected and validation behavior, while the focused runner retains
   cleanup ownership and final artifacts.
+- `clean` does not resolve or hash `bsc` and does not resolve the runtime,
+  because neither installation is read while deleting known build artifacts.
+  Rust currently performs both preflights and therefore panics on a missing
+  compiler or rejects a missing runtime without cleaning. This is retained as a
+  small reference-side inefficiency rather than imposing an unrelated
+  toolchain requirement on the OCaml command. Differential cases require the
+  OCaml command to remove its owned compiler tree in both conditions and retain
+  the current Rust outcomes for visibility.
+- `clean` inventories source-owned outputs without requiring the sources to
+  form a valid compilation module graph. Rust deletes `lib/bs` and `lib/ocaml`,
+  then reconstructs that graph; duplicate module names make it return early and
+  leave the corresponding generated JavaScript behind. The OCaml command
+  completes both cleanup phases for the same project. A differential case
+  retains the reference's partial-clean result and the port's complete-clean
+  result so this corrected failure mode remains explicit.
 - Positive verbosity now reports Rust's semantic project-context, package
   discovery, AST generation, and interface/implementation compilation events.
   `-vv` additionally reports the initially dirty modules and the completed
