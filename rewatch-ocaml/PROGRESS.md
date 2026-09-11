@@ -2122,6 +2122,47 @@ required behavior decision, not a performance proposal.
   commands, expected results, unverified behaviors, and platform-sensitive
   scenarios so the Windows session can continue without reconstructing history.
 
+### Native Windows handoff
+
+The implementation checkpoint for the Windows session is `2f5067d50a`. Use a
+native checkout on the VM's NTFS volume, OCaml 5.5 through the repository's
+opam setup, and the Cygwin Bash installed with that toolchain. The checkpoint
+already selects `platform_windows.ml` through Dune, compiles the Job Object C
+owner, and type-checks the Windows module in the cross-platform unit suite.
+
+Build and run the portable gates from the repository root:
+
+```sh
+opam exec -- make
+rust=packages/@rescript/win32-x64/bin/rescript.exe
+ocaml=_build/default/rewatch-ocaml/rescript_ocaml.exe
+opam exec -- dune runtest tests/rewatch_ounit_tests
+bash rewatch-ocaml/tests/check_rust_test_coverage.sh --require-complete
+bash rewatch-ocaml/tests/check_canonical_test_coverage.sh
+bash rewatch-ocaml/tests/check_config_acceptance.sh "$rust" "$ocaml"
+bash rewatch-ocaml/tests/check_command_validation.sh "$rust" "$ocaml"
+bash rewatch-ocaml/tests/check_interactive_output.sh "$rust" "$ocaml"
+bash rewatch-ocaml/tests/check_verbose_output.sh "$rust" "$ocaml"
+sh rewatch-ocaml/tests/run.sh "$ocaml"
+bash rewatch/tests/suite.sh "$ocaml"
+```
+
+All commands must finish without failures, leave `rewatch/testrepo` unchanged,
+and leave no rewatch process, lock, capture file, or temporary output behind.
+Convert custom absolute `RESCRIPT_BSC_EXE` and `RESCRIPT_RUNTIME` values with
+`cygpath -w` if Cygwin does not translate them when launching the native binary.
+
+The native-only acceptance pass must exercise: suspended launch and Job Object
+assignment; cancellation before and after the direct child exits, including a
+descendant that retains a capture pipe; stdout/stderr EOF and handle cleanup;
+active, stale, malformed, and concurrently replaced build/watch locks; `cmd.exe`
+post-build quoting; PATH/PATHEXT lookup; spaces, Unicode, drive, UNC, mixed-case,
+and 8.3 project paths; native recursive events, atomic-save replacement, new and
+removed directories, edits during a build, and polling fallback. Run through
+the promoted/package layout as well as the Dune executable so sibling `bsc.exe`
+and runtime discovery are covered. Only after this pass should Windows CI and
+the Windows npm package switch their default `rescript.exe` to the OCaml port.
+
 ## Dependency decisions
 
 - `spawn` is accepted: it is a narrow, MIT-licensed Jane Street package with
