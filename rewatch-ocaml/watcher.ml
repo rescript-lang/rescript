@@ -379,11 +379,6 @@ let changes_are_incremental changes =
          extension = ".res" || extension = ".resi")
        changes
 
-module For_test = struct
-  let polling_build_changes = polling_build_changes
-  let changes_are_incremental = changes_are_incremental
-end
-
 let path_in_scope roots sources unresolved path =
   let name = Filename.basename path in
   let is_control =
@@ -428,8 +423,8 @@ let with_signal_handlers handler f =
         ignore (Sys.signal Sys.sigterm previous_sigterm)))
     ~finally:(fun () -> ignore (Sys.signal Sys.sigint previous_sigint))
 
-let run_locked ~root ~prod ~features ~filter ~clear_screen ~show_progress
-    ~verbosity ~build ~watch_lock =
+let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
+    ~filter ~clear_screen ~show_progress ~verbosity ~build ~watch_lock =
   let stop_requested = ref false in
   let stop () =
     Sys.set_signal Sys.sigint Sys.Signal_ignore;
@@ -614,11 +609,6 @@ let run_locked ~root ~prod ~features ~filter ~clear_screen ~show_progress
         delay 0.2;
         polling_loop roots sources unresolved current))
   in
-  let native_fallback message =
-    prerr_endline
-      ("Native file watching is unavailable (" ^ message
-     ^ "); falling back to polling")
-  in
   let rec native_loop watcher roots sources unresolved previous =
     let result = Native_watcher.wait watcher ~keep_running in
     match result with
@@ -721,9 +711,9 @@ let run_locked ~root ~prod ~features ~filter ~clear_screen ~show_progress
        output appears cannot land in a blind interval between compilation and
        watcher setup. Snapshot reconciliation below consumes any event queued
        while compiler subprocesses were running. *)
-    match Native_watcher.create ~paths:(paths @ symlink_paths) with
+    match native_create ~paths:(paths @ symlink_paths) with
     | Error message ->
-      native_fallback message;
+      report_native_fallback message;
       ignore (build ~poll ~changes:None);
       let roots, _, sources, unresolved =
         watch_context ~root ~prod ~features
@@ -743,12 +733,30 @@ let run_locked ~root ~prod ~features ~filter ~clear_screen ~show_progress
       in
       Option.iter
         (fun (message, roots, sources, unresolved, previous) ->
-          native_fallback message;
+          report_native_fallback message;
           polling_loop roots sources unresolved previous)
         fallback)
 
-let run ~root ~prod ~features ~filter ~clear_screen ~show_progress ~verbosity
-    ~build =
+let run_with_native_create ~native_create ~report_native_fallback ~root ~prod
+    ~features ~filter ~clear_screen ~show_progress ~verbosity ~build =
   Build_lock.with_watch root (fun watch_lock ->
-    run_locked ~root ~prod ~features ~filter ~clear_screen ~show_progress
-      ~verbosity ~build ~watch_lock)
+    run_locked ~native_create ~report_native_fallback ~root ~prod ~features
+      ~filter ~clear_screen ~show_progress ~verbosity ~build ~watch_lock)
+
+let report_native_fallback message =
+  prerr_endline
+    ("Native file watching is unavailable (" ^ message
+   ^ "); falling back to polling")
+
+let run =
+  run_with_native_create ~native_create:Native_watcher.create
+    ~report_native_fallback
+
+module For_test = struct
+  let polling_build_changes = polling_build_changes
+  let changes_are_incremental = changes_are_incremental
+
+  let run_with_native_failure ~message ~on_fallback =
+    run_with_native_create ~native_create:(fun ~paths:_ -> Error message)
+      ~report_native_fallback:on_fallback
+end

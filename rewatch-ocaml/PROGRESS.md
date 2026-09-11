@@ -14,8 +14,8 @@ ordinary verbosity and diagnostics remain in scope. Incremental state uses
 existing AST, CMI, CMT, and generated-output artifacts rather than in-process
 compiler state.
 
-A renewed lifecycle audit found a gap in
-the earlier source-oriented comparison: Rust retains its initialized build
+A renewed lifecycle audit found a gap in the earlier source-oriented
+comparison: Rust retains its initialized build
 state across ordinary watch edits, while the OCaml callback reconstructed that
 state on every event. The common existing-file edit path now carries the
 snapshot's exact changed paths into the build, retains package, dependency,
@@ -27,8 +27,8 @@ reverse edges, adds new reverse edges without duplication, and checks the
 updated graph for cycles without rescanning the project. A focused long-lived
 watch case changes an edge, observes the rebuilt dependent, introduces a cycle,
 confirms that the watcher remains alive, and then confirms recovery after the
-cycle is removed. Retained-watch work measurements and the complete lifecycle
-audit are still required before this gap is closed. For ordinary existing-file
+cycle is removed. The retained-watch work/resource measurements and lifecycle
+audit are now complete on Linux. For ordinary existing-file
 content events, the libuv backend now returns the event path and kind directly;
 the watcher skips configuration reload, source snapshots, and handle refresh.
 Ambiguous filenames, source or directory topology changes, control files,
@@ -60,6 +60,12 @@ Atomic replacements are reconciled even when the filesystem reports only the
 now-absent temporary filename: every structural event immediately below an
 explicit watch root requests a snapshot, while unchanged unrelated files still
 do not request a build.
+Native setup failure now has an injected end-to-end OUnit path through the real
+polling loop. It requires the initial build, changes a source, observes one
+incremental rebuild with the changed path, checks the fallback diagnostic, and
+exits through the callback while verifying lock and signal cleanup. This closes
+the previous test-evidence gap for the retained polling backend without adding
+a production environment switch.
 
 The retained-watch gate now verifies seven interleaved edits against release
 executables, requiring identical parser/compiler calls and generated output
@@ -1698,7 +1704,10 @@ Three later Rust fixes were audited explicitly against the port:
   output events are ignored before reconciliation. Handles are retained across
   builds and only added or closed when directory topology changes; a focused
   resource test covers stable, added, and removed counts.
-  The former polling loop remains a runtime fallback if native setup fails.
+  The former polling loop remains a runtime fallback if native setup fails. An
+  injected native-constructor failure drives the actual fallback loop in OUnit,
+  changes a source after the initial build, and requires exactly one
+  path-specific incremental rebuild plus lock and signal cleanup.
 - Existing generated outputs are updated as their compiler subprocesses
   succeed; only previously absent outputs are held until whole-build success.
   This preserves artifact/output consistency and avoids removing last-known
@@ -1828,12 +1837,12 @@ Three later Rust fixes were audited explicitly against the port:
 
 ## Next actions
 
-1. Finish long-lived watcher parity: verify structural-change and failure
-   recovery across the lifecycle matrix, and add retained-watch latency/work
-   and filesystem-call measurements. Complete the renewed lifecycle audit
-   before accepting watcher or algorithm parity.
-2. Perform the final two-scope whole-port review and address confirmed findings.
-3. At the final maintainability pass, add comments around ownership,
+1. Perform the final two-scope whole-port review and address confirmed findings,
+   including a last option-by-option CLI audit. The remaining `Str` versus Rust
+   `regex` syntax difference stays an explicit dependency/compatibility decision
+   unless that audit finds a maintained implementation that closes rather than
+   merely narrows it.
+2. At the final maintainability pass, add comments around ownership,
    concurrency, platform, and algorithmic invariants that are not apparent from
    the code itself. Comments should start with why the code or invariant is
    needed, provide enough context for readers who are not specialists in every
@@ -1854,7 +1863,7 @@ Three later Rust fixes were audited explicitly against the port:
    unrestricted, while `Some []` means no allowed dependents). Retain ordinary
    options for values that are genuinely absent, such as a missing interface,
    an unavailable native-event filename, or an optional hook.
-4. Validate macOS packaging and native event behavior, then prepare the pinned
+3. Validate macOS packaging and native event behavior, then prepare the pinned
    Windows handoff. Finish the Windows watcher/lock
    backend and path audit and run the native build, unit, focused, and canonical
    Bash suites in the VM. Address findings there and finish with an x64 Windows
