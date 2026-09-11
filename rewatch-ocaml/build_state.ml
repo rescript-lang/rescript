@@ -44,23 +44,28 @@ let has_complete_compile_assets module_ =
   Option.is_some module_.last_compiled_cmi
   && Option.is_some module_.last_compiled_cmt
 
-let dependency_tree_compiled_after state module_ dependency =
-  let is_newer dependency =
-    match (dependency.last_compiled_cmi, module_.last_compiled_cmt) with
-    | Some dependency_time, Some module_time -> dependency_time > module_time
-    | None, _ | _, None -> false
-  in
-  let rec contains_newer dependency =
-    is_newer dependency
-    ||
+let dependency_tree_compiled_after ?(namespace_freshness = Hashtbl.create 4)
+    state module_ dependency =
+  let rec latest_cmi dependency =
     match dependency.kind with
-    | Source_module -> false
-    | Namespace_map ->
-      List.exists
-        (fun key -> contains_newer (find_exn state key))
-        dependency.dependencies
+    | Source_module -> dependency.last_compiled_cmi
+    | Namespace_map -> (
+      match Hashtbl.find_opt namespace_freshness dependency.key with
+      | Some modified -> modified
+      | None ->
+        let modified =
+          dependency.dependencies
+          |> List.filter_map (fun key -> latest_cmi (find_exn state key))
+          |> List.fold_left max neg_infinity
+          |> fun modified ->
+          if modified = neg_infinity then None else Some modified
+        in
+        Hashtbl.add namespace_freshness dependency.key modified;
+        modified)
   in
-  contains_newer dependency
+  match (latest_cmi dependency, module_.last_compiled_cmt) with
+  | Some dependency_time, Some module_time -> dependency_time > module_time
+  | None, _ | _, None -> false
 
 let set_dependencies state ~key dependencies =
   let module_ = find_exn state key in

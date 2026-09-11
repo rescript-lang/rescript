@@ -65,7 +65,7 @@ let validate_visible_namespaces ~(root_config : Config.t)
               | Some previous ->
                 let display package =
                   Printf.sprintf "%s (%s)" package.Build_types.graph_config.name
-                    (Project_context.relative_to root_config.root
+                    (Project_context.display_path ~root:root_config.root
                        package.graph_root)
                 in
                 raise
@@ -516,7 +516,13 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
         namespace_map.members)
     namespace_maps;
   stats.retained.prepared <-
-    Some {compiler_context; compile_assets; build_state};
+    Some
+      {
+        compiler_context;
+        compile_assets;
+        build_state;
+        freshness_initialized = false;
+      };
   let cycle =
     find_cycle stats.retained.global_modules stats.retained.namespace_maps
       build_state

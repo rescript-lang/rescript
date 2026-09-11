@@ -28,6 +28,14 @@ val resolve_active_features :
 val discover_for_cleanup :
   ?on_missing:(string -> unit) -> Config.t -> prod:bool -> string list
 
+val discover_files :
+  ?on_missing:(string -> unit) ->
+  Config.t ->
+  prod:bool ->
+  features:string list option ->
+  filter:Source_filter.t option ->
+  string list
+
 val discover_with_inventory :
   ?on_orphan:(string -> unit) ->
   ?on_missing:(string -> unit) ->

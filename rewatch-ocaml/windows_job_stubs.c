@@ -1,5 +1,11 @@
 #define CAML_INTERNALS
 
+#ifdef _WIN32
+#ifndef _WIN32_WINNT
+#define _WIN32_WINNT 0x0600
+#endif
+#endif
+
 #include <stdio.h>
 
 /* This owner extends the MIT-licensed Spawn 0.17 Windows process setup with
@@ -134,10 +140,12 @@ CAMLprim value rewatch_windows_spawn_owned(value env_value,
              stdin_value);
   CAMLxparam2(stdout_value, stderr_value);
   CAMLlocal2(job_value, process_value);
-  STARTUPINFOW startup;
+  STARTUPINFOEXW startup;
   PROCESS_INFORMATION process;
   struct rewatch_windows_job *job;
   HANDLE job_handle;
+  HANDLE inherited_handles[3];
+  SIZE_T attribute_list_size = 0;
   DWORD error;
 
   job_value = caml_alloc_custom(&rewatch_windows_job_operations,
@@ -158,8 +166,8 @@ CAMLprim value rewatch_windows_spawn_owned(value env_value,
 
   ZeroMemory(&startup, sizeof(startup));
   ZeroMemory(&process, sizeof(process));
-  startup.cb = sizeof(startup);
-  startup.dwFlags = STARTF_USESTDHANDLES;
+  startup.StartupInfo.cb = sizeof(startup);
+  startup.StartupInfo.dwFlags = STARTF_USESTDHANDLES;
 
   if (!duplicate_standard_handle(stdin_value, &job->stdin_handle) ||
       !duplicate_standard_handle(stdout_value, &job->stdout_handle) ||
@@ -168,9 +176,42 @@ CAMLprim value rewatch_windows_spawn_owned(value env_value,
     caml_win32_maperr(error);
     uerror("DuplicateHandle", Nothing);
   }
-  startup.hStdInput = job->stdin_handle;
-  startup.hStdOutput = job->stdout_handle;
-  startup.hStdError = job->stderr_handle;
+  startup.StartupInfo.hStdInput = job->stdin_handle;
+  startup.StartupInfo.hStdOutput = job->stdout_handle;
+  startup.StartupInfo.hStdError = job->stderr_handle;
+  inherited_handles[0] = job->stdin_handle;
+  inherited_handles[1] = job->stdout_handle;
+  inherited_handles[2] = job->stderr_handle;
+
+  InitializeProcThreadAttributeList(NULL, 1, 0, &attribute_list_size);
+  startup.lpAttributeList =
+    HeapAlloc(GetProcessHeap(), 0, attribute_list_size);
+  if (startup.lpAttributeList == NULL) {
+    rewatch_windows_release_launch_resources(job);
+    caml_win32_maperr(ERROR_NOT_ENOUGH_MEMORY);
+    uerror("HeapAlloc", Nothing);
+  }
+  if (!InitializeProcThreadAttributeList(startup.lpAttributeList, 1, 0,
+                                         &attribute_list_size)) {
+    error = GetLastError();
+    HeapFree(GetProcessHeap(), 0, startup.lpAttributeList);
+    startup.lpAttributeList = NULL;
+    rewatch_windows_release_launch_resources(job);
+    caml_win32_maperr(error);
+    uerror("InitializeProcThreadAttributeList", Nothing);
+  }
+  if (!UpdateProcThreadAttribute(startup.lpAttributeList, 0,
+                                 PROC_THREAD_ATTRIBUTE_HANDLE_LIST,
+                                 inherited_handles,
+                                 sizeof(inherited_handles), NULL, NULL)) {
+    error = GetLastError();
+    DeleteProcThreadAttributeList(startup.lpAttributeList);
+    HeapFree(GetProcessHeap(), 0, startup.lpAttributeList);
+    startup.lpAttributeList = NULL;
+    rewatch_windows_release_launch_resources(job);
+    caml_win32_maperr(error);
+    uerror("UpdateProcThreadAttribute", Nothing);
+  }
 
   job->program = caml_stat_strdup_to_utf16(String_val(program_value));
   job->command_line =
@@ -189,6 +230,8 @@ CAMLprim value rewatch_windows_spawn_owned(value env_value,
   job_handle = CreateJobObjectW(NULL, NULL);
   if (job_handle == NULL) {
     error = GetLastError();
+    DeleteProcThreadAttributeList(startup.lpAttributeList);
+    HeapFree(GetProcessHeap(), 0, startup.lpAttributeList);
     rewatch_windows_release_launch_resources(job);
     caml_win32_maperr(error);
     uerror("CreateJobObject", Nothing);
@@ -196,9 +239,13 @@ CAMLprim value rewatch_windows_spawn_owned(value env_value,
   job->handle = job_handle;
 
   if (!CreateProcessW(job->program, job->command_line, NULL, NULL, TRUE,
-                      CREATE_SUSPENDED | CREATE_UNICODE_ENVIRONMENT,
-                      job->environment, job->cwd, &startup, &process)) {
+                      CREATE_SUSPENDED | CREATE_UNICODE_ENVIRONMENT |
+                        EXTENDED_STARTUPINFO_PRESENT,
+                      job->environment, job->cwd, &startup.StartupInfo,
+                      &process)) {
     error = GetLastError();
+    DeleteProcThreadAttributeList(startup.lpAttributeList);
+    HeapFree(GetProcessHeap(), 0, startup.lpAttributeList);
     rewatch_windows_release_launch_resources(job);
     CloseHandle(job->handle);
     job->handle = NULL;
@@ -206,6 +253,8 @@ CAMLprim value rewatch_windows_spawn_owned(value env_value,
     uerror("CreateProcess", Nothing);
   }
 
+  DeleteProcThreadAttributeList(startup.lpAttributeList);
+  HeapFree(GetProcessHeap(), 0, startup.lpAttributeList);
   rewatch_windows_release_launch_resources(job);
 
   if (!AssignProcessToJobObject(job->handle, process.hProcess)) {

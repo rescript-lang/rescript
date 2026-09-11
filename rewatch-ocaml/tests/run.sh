@@ -255,6 +255,14 @@ printf '%s\n' \
 printf 'let value = 1\n' >"$retained_parse/src/A.res"
 printf 'let other = 1\n' >"$retained_parse/src/B.res"
 
+initial_failure_freshness="$work/initial-failure-freshness"
+mkdir -p "$initial_failure_freshness/src"
+printf '%s\n' \
+  '{"name":"initial-failure-freshness","sources":"src","package-specs":{"module":"esmodule","in-source":true,"suffix":".mjs"}}' \
+  >"$initial_failure_freshness/rescript.json"
+printf 'let value = 1\n' >"$initial_failure_freshness/src/A.res"
+printf 'let other = 1\n' >"$initial_failure_freshness/src/B.res"
+
 duplicate_selection="$work/duplicate-selection"
 mkdir -p "$duplicate_selection/src" \
   "$duplicate_selection/node_modules" \
@@ -471,6 +479,37 @@ if printf 'let =\n' | "$port" format --stdin .res \
   exit 1
 fi
 grep -F "Error formatting stdin:" "$work/format-invalid.err" >/dev/null
+
+format_stdin_tmp="$work/format-stdin-tmp"
+format_stdin_fifo="$work/format-stdin.fifo"
+mkdir -p "$format_stdin_tmp"
+mkfifo "$format_stdin_fifo"
+exec 9<>"$format_stdin_fifo"
+TMPDIR="$format_stdin_tmp" "$port" format --stdin .res \
+  <"$format_stdin_fifo" >"$work/format-signal.out" \
+  2>"$work/format-signal.err" &
+format_stdin_pid=$!
+background_pids="$background_pids $format_stdin_pid"
+attempts=0
+while [ "$attempts" -lt 100 ] && [ -z "$(find "$format_stdin_tmp" -type f -print -quit)" ]; do
+  attempts=$((attempts + 1))
+  sleep 0.05
+done
+if [ "$attempts" -eq 100 ]; then
+  echo "stdin formatter did not start reading" >&2
+  exit 1
+fi
+kill -TERM "$format_stdin_pid"
+if ! wait_for_pid_gone "$format_stdin_pid"; then
+  echo "stdin formatter did not respond to termination" >&2
+  exit 1
+fi
+wait "$format_stdin_pid" 2>/dev/null || true
+exec 9>&-
+if find "$format_stdin_tmp" -type f -print -quit | grep . >/dev/null; then
+  echo "stdin formatter left a temporary file after termination" >&2
+  exit 1
+fi
 
 printf 'let unformatted=1\n' >"$work/unformatted.res"
 if "$port" format --check "$work/unformatted.res" \
@@ -917,6 +956,29 @@ if ! wait_for_text "$retained_cycle/src/A.mjs" 'from "./B.mjs"'; then
 fi
 kill -TERM "$retained_cycle_pid"
 wait "$retained_cycle_pid" 2>/dev/null || true
+
+# Initial watch recovery must retain freshness work discovered alongside an
+# unrelated parse failure.
+"$port" build "$initial_failure_freshness" >/dev/null
+rm "$initial_failure_freshness/lib/ocaml/A.cmi"
+printf 'let other =\n' >"$initial_failure_freshness/src/B.res"
+"$port" watch "$initial_failure_freshness" \
+  >"$initial_failure_freshness/watch.log" 2>&1 &
+initial_failure_freshness_pid=$!
+background_pids="$background_pids $initial_failure_freshness_pid"
+if ! wait_for_text "$initial_failure_freshness/watch.log" \
+  'Error in initial-failure-freshness'; then
+  cat "$initial_failure_freshness/watch.log" >&2
+  exit 1
+fi
+printf 'let other = 2\n' >"$initial_failure_freshness/src/B.res"
+if ! wait_for_file "$initial_failure_freshness/lib/ocaml/A.cmi"; then
+  cat "$initial_failure_freshness/watch.log" >&2
+  echo "initial parse recovery forgot missing compile artifacts" >&2
+  exit 1
+fi
+kill -TERM "$initial_failure_freshness_pid"
+wait "$initial_failure_freshness_pid" 2>/dev/null || true
 
 # Failed parses and parser warnings remain pending until the same source parses
 # cleanly. An unrelated edit must not compile an older AST or forget diagnostics.

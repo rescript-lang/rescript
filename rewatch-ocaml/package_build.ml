@@ -197,6 +197,63 @@ let rec prepare_tree ~seen ~(package : Build_types.graph_package) ~watch
         let key = Source.compiler_basename config module_.Source.name in
         (Build_state.find_exn build_state key).compile_dirty <- true))
     modules;
+  let module_is_dirty module_ (state : Build_state.module_) =
+    let global_key = Source.compiler_basename config module_.Source.name in
+    let module_name = Source.module_name module_.Source.implementation in
+    let source_artifact_is_pending path =
+      let source = Filename.concat root path in
+      match
+        (Compile_assets.ast compile_assets source, state.last_compiled_cmt)
+      with
+      | Some ast, Some cmt_time -> ast.modified >= cmt_time
+      | Some _, None -> true
+      | None, _ -> false
+    in
+    let outputs_exist =
+      List.for_all
+        (fun spec ->
+          Hashtbl.mem cleanup.present_public_outputs
+            (Build_artifacts.generated_js_path config
+               module_.Source.implementation spec))
+        config.package_specs
+    in
+    let raw_dependencies =
+      match Hashtbl.find_opt stats.retained.global_modules global_key with
+      | Some node -> node.raw_dependencies
+      | None ->
+        raise (Error ("Build module was not prepared for " ^ global_key))
+    in
+    let dependency_is_newer dependency =
+      let dependency_state = Build_state.find_exn build_state dependency in
+      Build_state.dependency_tree_compiled_after
+        ~namespace_freshness:stats.namespace_freshness build_state state
+        dependency_state
+    in
+    Hashtbl.mem parse_dirty_modules module_.Source.name
+    || Hashtbl.mem removed_module_names module_name
+    || List.exists source_artifact_is_pending
+         (module_.Source.implementation
+         :: Option.to_list module_.Source.interface)
+    || (not (Build_state.has_complete_compile_assets state))
+    || (not outputs_exist)
+    || List.exists (Hashtbl.mem removed_module_names) raw_dependencies
+    || List.exists
+         (fun dependency -> Hashtbl.mem stats.removed_modules dependency)
+         raw_dependencies
+    || List.exists dependency_is_newer state.dependencies
+  in
+  (* Freshness is persistent state, while cycle blocking controls only whether
+     a module may be dispatched in this attempt. Compute the full initial state
+     even when another source failed to parse so a retained watch attempt
+     cannot forget unrelated missing or stale artifacts. *)
+  if stats.attempt_kind = Build_types.Full_attempt then
+    List.iter
+      (fun module_ ->
+        let key = Source.compiler_basename config module_.Source.name in
+        let state = Build_state.find_exn build_state key in
+        state.compile_dirty <-
+          state.compile_dirty || module_is_dirty module_ state)
+      modules;
   if
     List.exists
       (function
@@ -207,51 +264,6 @@ let rec prepare_tree ~seen ~(package : Build_types.graph_package) ~watch
   else (
     stats.parsed <- stats.parsed + Hashtbl.length parse_dirty_modules;
     let compile_warning_modules = Hashtbl.create 8 in
-    let module_is_dirty module_ (state : Build_state.module_) =
-      let global_key = Source.compiler_basename config module_.Source.name in
-      let module_name = Source.module_name module_.Source.implementation in
-      let source_artifact_is_pending path =
-        let source = Filename.concat root path in
-        match
-          (Compile_assets.ast compile_assets source, state.last_compiled_cmt)
-        with
-        | Some ast, Some cmt_time -> ast.modified >= cmt_time
-        | Some _, None -> true
-        | None, _ -> false
-      in
-      let outputs_exist =
-        List.for_all
-          (fun spec ->
-            Hashtbl.mem cleanup.present_public_outputs
-              (Build_artifacts.generated_js_path config
-                 module_.Source.implementation spec))
-          config.package_specs
-      in
-      let raw_dependencies =
-        match Hashtbl.find_opt stats.retained.global_modules global_key with
-        | Some node -> node.raw_dependencies
-        | None ->
-          raise (Error ("Build module was not prepared for " ^ global_key))
-      in
-      let dependency_is_newer dependency =
-        let dependency_state = Build_state.find_exn build_state dependency in
-        Build_state.dependency_tree_compiled_after build_state state
-          dependency_state
-      in
-      (not (Hashtbl.mem stats.blocked_modules global_key))
-      && (Hashtbl.mem parse_dirty_modules module_.Source.name
-         || Hashtbl.mem removed_module_names module_name
-         || List.exists source_artifact_is_pending
-              (module_.Source.implementation
-              :: Option.to_list module_.Source.interface)
-         || (not (Build_state.has_complete_compile_assets state))
-         || (not outputs_exist)
-         || List.exists (Hashtbl.mem removed_module_names) raw_dependencies
-         || List.exists
-              (fun dependency -> Hashtbl.mem stats.removed_modules dependency)
-              raw_dependencies
-         || List.exists dependency_is_newer state.dependencies)
-    in
     let prepare_outputs module_ =
       let path = module_.Source.implementation in
       List.iter
@@ -284,16 +296,6 @@ let rec prepare_tree ~seen ~(package : Build_types.graph_package) ~watch
         (fun module_ ->
           let key = Source.compiler_basename config module_.Source.name in
           let state = Build_state.find_exn build_state key in
-          (* Fix the initial dirty set before dispatch so files published by
-           concurrently finishing jobs cannot change this module's decision.
-           Only explicit CMI-change propagation may do that. *)
-          let newly_dirty =
-            match stats.attempt_kind with
-            | Build_types.Retained_attempt ->
-              Hashtbl.mem parse_dirty_modules module_.Source.name
-            | Build_types.Full_attempt -> module_is_dirty module_ state
-          in
-          state.compile_dirty <- state.compile_dirty || newly_dirty;
           let blocked = Hashtbl.mem stats.blocked_modules key in
           let cmi_path =
             Filename.concat ocaml_dir

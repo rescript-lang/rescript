@@ -159,4 +159,57 @@ let tests =
             (not (Sys.file_exists path))
             ("removing a source directory removes its stale output family: "
            ^ path))
-        [old_output; old_map; working_output; working_map])
+        [old_output; old_map; working_output; working_map]);
+  with_temp_dir (fun root ->
+      let config_path = Filename.concat root "rescript.json" in
+      let source = Filename.concat root "src/Custom.res" in
+      let public_output = Filename.concat root "src/Custom.generated.js" in
+      let public_map = public_output ^ ".map" in
+      let working_output =
+        Filename.concat root "lib/bs/src/Custom.generated.js"
+      in
+      let working_map = working_output ^ ".map" in
+      let ocaml_dir = Filename.concat root "lib/ocaml" in
+      let published_ast = Filename.concat ocaml_dir "Custom.ast" in
+      write_file config_path
+        {|{"name":"custom-cleanup","sources":"src","package-specs":{"module":"esmodule","in-source":true,"suffix":".generated.js"}}|};
+      List.iter
+        (fun path -> write_file path "generated")
+        [public_output; public_map; working_output; working_map; published_ast];
+      let config = Config.load_root root in
+      ignore
+        (Build_artifacts.cleanup_stale ~ocaml_files:[published_ast]
+           ~ast_sources:[(published_ast, source)]
+           ~source_files:[public_output; public_map]
+           ~root ~ocaml_dir ~is_local:true config []);
+      List.iter
+        (fun path ->
+          check
+            (not (Sys.file_exists path))
+            ("custom suffix cleanup removes " ^ path))
+        [public_output; public_map; working_output; working_map]);
+  with_temp_dir (fun root ->
+      let config_path = Filename.concat root "rescript.json" in
+      let output = Filename.concat root "src/Present.output" in
+      let ocaml_dir = Filename.concat root "lib/ocaml" in
+      write_file config_path
+        {|{"name":"custom-freshness","sources":"src","package-specs":{"module":"esmodule","in-source":true,"suffix":".output"}}|};
+      write_file output "generated";
+      let config = Config.load_root root in
+      let module_ : Source.module_ =
+        {
+          name = "Present";
+          implementation = "src/Present.res";
+          interface = None;
+          is_dev = false;
+          feature = None;
+        }
+      in
+      let result =
+        Build_artifacts.cleanup_stale ~ocaml_files:[] ~ast_sources:[]
+          ~source_files:[output] ~present_source_files:[output] ~root ~ocaml_dir
+          ~is_local:true config [module_]
+      in
+      check
+        (Hashtbl.mem result.present_public_outputs output)
+        "custom suffix outputs participate in unchanged-build freshness")
