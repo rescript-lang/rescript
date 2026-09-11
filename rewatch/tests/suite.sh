@@ -136,6 +136,9 @@ fi
 ./compile/15-no-new-files.sh &&
 ./compile/16-snapshots-unchanged.sh &&
 
+# GenType tests
+./gentype/01-gentype-project-root.sh &&
+
 # Watch tests
 ./watch/01-watch-recompile.sh &&
 ./watch/02-watch-warnings-persist.sh &&

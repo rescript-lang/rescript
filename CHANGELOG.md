@@ -38,6 +38,7 @@
 
 - Fix `reanalyze` reporting labels and variant cases of a re-exported type (`type y = x = {...}`) as dead in the editor. The re-export linking existed only in the batch pipeline, while the editor runs the reactive one; both are now the same pipeline. The `reanalyze -reactive` flag is gone with it, since analysis is always reactive. https://github.com/rescript-lang/rescript/issues/8647
 - Fix `reanalyze` reporting record labels reached through a record coercion as dead. The typed tree now keeps the source type of a coercion, so reading a label on the target counts as reading the source label of the same name. https://github.com/rescript-lang/rescript/issues/8643
+- Fix GenType path resolution hanging on Windows when project paths use different short and canonical forms. https://github.com/rescript-lang/rescript/pull/8639
 - Fix constant folding of pattern matches on unboxed variants whose payload overlaps a literal constructor, so inlined calls agree with runtime matching. Reject multi-argument unboxed constructors instead of crashing. https://github.com/rescript-lang/rescript/pull/8631
 - Fix escaped backticks and interpolation openers in backquoted `%raw`, `%ffi`, and `%re` payloads leaking into emitted JavaScript. https://github.com/rescript-lang/rescript/pull/8630
 - Fix the side-effect analysis treating bigint exponentiation and bounds-checked array and string reads as pure, which let dead-code elimination drop an unused one that throws: `let _ = 2n ** -1n` no longer raised. https://github.com/rescript-lang/rescript/pull/8617
