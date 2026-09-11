@@ -127,6 +127,8 @@ for implementation in rust ocaml; do
     >"$work/filter-basename-$implementation/rescript.json"
   printf 'let value = 1\n' \
     >"$work/filter-basename-$implementation/src/nested/A.res"
+  printf 'let value = 2\n' \
+    >"$work/filter-basename-$implementation/src/nested/B2.res"
 done
 printf '{"name":"external-dev-source","sources":["src"],"dependencies":["dep"]}\n' \
   >"$work/external-dev-source/rescript.json"
@@ -633,6 +635,20 @@ run_build_output_case quiet-warning 0 \
 run_case build-subcommand-version exit2 exit2 build --version
 run_case implicit-conflicting-verbosity exit2 exit2 -v -q
 run_case build-conflicting-verbosity exit2 exit2 build --verbose --quiet
+run_case filter-perl-quoting exit2 exit2 build --filter '\QFoo.res\E' "$project"
+run_case filter-comment-group exit2 exit2 build --filter '(?#note)Foo' "$project"
+run_case filter-octal-escape exit2 exit2 build --filter '\123' "$project"
+run_case filter-braced-octal-escape exit2 exit2 build --filter '\o{123}' "$project"
+run_case filter-perl-control-escape-e exit2 exit2 build --filter '\e' "$project"
+run_case filter-perl-anchor-g exit2 exit2 build --filter '\G' "$project"
+run_case filter-perl-anchor-z exit2 exit2 build --filter '\Z' "$project"
+run_case filter-descending-range exit2 exit2 build --filter '[z-a]' "$project"
+run_case filter-escaped-range-start exit2 exit2 build --filter '[\d-z]' "$project"
+run_case filter-in-class-nonword accept exit2 build --filter \
+  '^[\W]+\.res$' "$project"
+run_case filter-collating-element accept exit2 build --filter '[[.a.]]' "$project"
+run_case filter-class-algebra accept exit2 build --filter \
+  '[a-z&&[^aeiou]]' "$project"
 run_case build-no-timing-consumes-folder exit2 exit2 build --no-timing "$project"
 run_case compiler-args-source accept accept compiler-args "$project/src/A.res"
 run_case compiler-args-extension accept reject compiler-args "$project/src/A.txt"
@@ -913,6 +929,26 @@ if [ "$(classify "$rust_status")" != accept ] || \
   [ ! -e "$work/filter-basename-rust/src/nested/A.js" ] || \
   [ ! -e "$work/filter-basename-ocaml/src/nested/A.js" ]; then
   echo "Source filters did not consistently include a basename match" >&2
+  printf '%s\n' '--- Rust output ---' >&2
+  cat "$work/rust.out" "$work/rust.err" >&2
+  printf '%s\n' '--- OCaml output ---' >&2
+  cat "$work/ocaml.out" "$work/ocaml.err" >&2
+  exit 1
+fi
+checked=$((checked + 1))
+set +e
+"$rust" build --filter '(?:A|B\d)\.res$' "$work/filter-basename-rust" \
+  >"$work/rust.out" 2>"$work/rust.err"
+rust_status=$?
+"$ocaml" build --filter '(?:A|B\d)\.res$' "$work/filter-basename-ocaml" \
+  >"$work/ocaml.out" 2>"$work/ocaml.err"
+ocaml_status=$?
+set -e
+if [ "$(classify "$rust_status")" != accept ] || \
+  [ "$(classify "$ocaml_status")" != accept ] || \
+  [ ! -e "$work/filter-basename-rust/src/nested/B2.js" ] || \
+  [ ! -e "$work/filter-basename-ocaml/src/nested/B2.js" ]; then
+  echo "Source filters did not consistently support Rust-style regex syntax" >&2
   printf '%s\n' '--- Rust output ---' >&2
   cat "$work/rust.out" "$work/rust.err" >&2
   printf '%s\n' '--- OCaml output ---' >&2

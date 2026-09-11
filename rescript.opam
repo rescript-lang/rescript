@@ -19,6 +19,7 @@ depends: [
   "spawn" {= "v0.17.0"}
   "cmdliner" {= "2.1.1"}
   "luv" {= "0.5.14"}
+  "re" {= "1.14.0"}
   "ounit2" {with-test & = "2.2.7"}
   "odoc" {with-doc}
   "ocaml-lsp-server" {with-dev-setup & >= "1.23.0"}

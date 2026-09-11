@@ -22,6 +22,7 @@
  (wrapped false)
  (modules
   rewatch_version
+  source_filter
   cli
   config_types
   config_decode
@@ -60,7 +61,7 @@
   output
   build
   format)
- (libraries unix threads yojson str spawn cmdliner luv))
+ (libraries unix threads yojson str spawn cmdliner luv re.perl))
 
 (executable
  (name rescript_ocaml)

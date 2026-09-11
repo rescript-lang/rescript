@@ -5,6 +5,6 @@ val discover :
   prod:bool ->
   features:string list option ->
   warn_error:string option ->
-  filter:string option ->
+  filter:Source_filter.t option ->
   stats:Build_types.t ->
   Build_types.graph_package list

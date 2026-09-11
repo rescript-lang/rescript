@@ -48,6 +48,14 @@ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
+## Re
+
+Copyright (C) 2001 Jerome Vouillon
+
+Re is distributed under the GNU Lesser General Public License version 2.1 or,
+at your option, any later version, with the OCaml linking exception. The full
+license and exception are included in `RE_LICENSE.md`.
+
 ## Spawn, Luv, libuv, ctypes, and integers
 
 - Spawn: Copyright (c) 2016-2018 Jane Street Group, LLC

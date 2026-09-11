@@ -19,7 +19,7 @@ module For_test : sig
     root:string ->
     prod:bool ->
     features:string list option ->
-    filter:string option ->
+    filter:Source_filter.t option ->
     clear_screen:bool ->
     show_progress:bool ->
     verbosity:int ->
@@ -31,7 +31,7 @@ val run :
   root:string ->
   prod:bool ->
   features:string list option ->
-  filter:string option ->
+  filter:Source_filter.t option ->
   clear_screen:bool ->
   show_progress:bool ->
   verbosity:int ->

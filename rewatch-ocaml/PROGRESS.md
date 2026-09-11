@@ -1026,9 +1026,9 @@ identifies repeated CMI comparison and case-candidate checks, not extra
 compilation or directory-tree discovery. Raw create/remove totals intentionally
 remain diagnostic because the drivers use different publication mechanics.
 
-The maintained source-size tool reports 8,292 lines of OCaml production code
+The maintained source-size tool reports 8,332 lines of OCaml production code
 and 7,818 lines of Rust production code when Rust telemetry is excluded. Tests
-remain separate: OCaml has 6,558 test/fixture lines and 1,021 benchmark-tooling
+remain separate: OCaml has 6,646 test/fixture lines and 1,021 benchmark-tooling
 lines; Rust has 2,773 inline unit-test lines. Blank and comment lines are
 reported separately by `bench/source_size.sh` and are not included in these
 code counts. The tooling scope includes all six executable shell/JavaScript
@@ -1334,9 +1334,9 @@ observational and do not replace the five-run acceptance result.
 
 The current `cloc` 2.04 source-size snapshot reports 7,818 Rust production
 lines after excluding the intentionally omitted telemetry module and inline
-test-only sections, versus 8,292 OCaml production lines, or 106.1%. Counting
+test-only sections, versus 8,332 OCaml production lines, or 106.6%. Counting
 language-specific tests separately gives 2,773 embedded Rust unit-test lines
-and 6,558 OCaml unit/focused test and fixture lines. The OCaml benchmark tooling
+and 6,646 OCaml unit/focused test and fixture lines. The OCaml benchmark tooling
 adds another 1,021 lines across every executable audit/measurement script. The shared
 canonical integration suite is deliberately not charged to either side. These
 figures describe maintainability surface, not parity or quality: explicit
@@ -1344,9 +1344,9 @@ interfaces and separate test infrastructure add useful lines rather than
 indicating behavioral duplication.
 [`bench/source_size.sh`](bench/source_size.sh) preserves the scope and command;
 it now reports largest files directly. The current largest production modules
-are `watcher.ml` (698 code lines), `build.ml` (645), `process.ml` (514),
+are `watcher.ml` (692 code lines), `build.ml` (645), `process.ml` (514),
 `package_build.ml` (416), and `config.ml` (375). The largest test/tooling files
-are `check_command_validation.sh` (1,593), `unit_tests.ml` (848), `run.sh`
+are `check_command_validation.sh` (1,629), `unit_tests.ml` (848), `run.sh`
 (739), `config_tests.ml` (493), and `check_interactive_output.sh` (405).
 
 General portable filesystem operations now live behind the narrow
@@ -1483,7 +1483,7 @@ delete/recreate cycles remain observable. Their containing directory and its
 parent are watched shallowly so moving the watched directory itself remains
 observable across filesystem backends. Initial native handles are installed
 before compilation, and registration is followed by a fresh snapshot, closing
-both the initial-build and refresh handoff windows. The 87-case differential
+both the initial-build and refresh handoff windows. The 100-case differential
 gate covers dependency installation and candidate fallback, external symlink
 target replacement, the delayed-compiler race, included, filter-excluded, and
 feature-disabled live edits, signal-safe lock waiting, and recovery from
@@ -1528,6 +1528,16 @@ Three later Rust fixes were audited explicitly against the port:
 
 ## Known gaps
 
+- `--filter` now uses `Re.Perl` rather than `Str`, matching common Rust-regex
+  syntax and retaining linear-time matching. It remains a documented subset:
+  Unicode properties and inline modes, Python-style named groups, possessive
+  quantifiers, and class-set algebra accepted by Rust fail visibly in OCaml.
+  Known Re-only syntax, ranges, nested/collating classes, and divergent in-class
+  escapes are rejected before compilation so they cannot silently select the
+  wrong source set. Because the matcher is byte-oriented, shared patterns can
+  still select non-ASCII basenames differently, including dot, hexadecimal
+  escapes, shorthand classes, and literal classes; the differential suite
+  records the supported boundary.
 - Incremental state currently relies on artifact timestamps, byte-identical CMI
   publication, and in-memory warning state during watch. Rust's richer
   compile-state model is not otherwise ported.
@@ -1830,14 +1840,23 @@ Three later Rust fixes were audited explicitly against the port:
   keys to distinguish deprecated, known-unsupported, and forward-compatible
   unknown fields; generated codecs would still require substantial custom
   validation around the derived layer.
-- No additional regular-expression library is being added at this stage solely
-  for `--filter`. The maintained, pure-OCaml `re` package and its `Re.Perl`
-  frontend are substantially closer to Rust's syntax, but still do not provide
-  exact `regex`-crate compatibility (notably for Unicode property classes).
-  Switching engines would therefore reduce rather than close the documented
-  gap while adding another production dependency. Revisit this during the final
-  CLI audit if real-world filters or a deliberately supported syntax subset
-  justify it; keep filter compilation behind one owner if that change is made.
+- `re` 1.14.0 is accepted for `--filter`. It is actively maintained by the
+  OCaml organization, pure OCaml, supports native Windows, and is distributed
+  under LGPL-2.1-or-later with the OCaml linking exception. Its DFA matcher has
+  the same linear-time safety property as Rust's `regex` crate. `Re.Perl`
+  closes the user-relevant `Str` gaps for alternation, capturing and
+  non-capturing groups, shorthand classes, and conventional repetition.
+  `source_filter.ml` owns validation, compilation, basename selection, and the
+  abstract compiled type, so invalid raw patterns cannot enter build or watch
+  APIs and structural rebuilds do not recompile the expression. Unicode
+  properties and inline modes, Python-style named groups, possessive
+  quantifiers, and character-class algebra remain documented, visibly rejected
+  engine differences. A compatibility check also rejects known Re-only quoting,
+  comment, anchor, control/octal escape, range, nested/collating class, and
+  divergent in-class escape forms rather than accepting them with a different
+  meaning. Representative shared and rejected syntax has direct unit and
+  differential build coverage. Production constraints pin the reviewed 1.14.0
+  release.
 - `luv` 0.5.14 is accepted for native filesystem events. It is a thin
   MIT-licensed binding that vendors and statically links libuv, supports the
   required Linux/macOS/Windows targets, and keeps the executable free of a
@@ -1849,8 +1868,9 @@ Three later Rust fixes were audited explicitly against the port:
   executable from approximately 3.6 MiB to 5.2 MiB; `ldd` still reports only
   libc and libm. Production constraints pin the reviewed 0.5.14 release. Every
   non-Windows binary package that carries the OCaml executable includes
-  `THIRD_PARTY_NOTICES_REWATCH.md`, covering Cmdliner, Yojson, Spawn, Luv,
-  libuv, ctypes, and integers; a dry-run package build confirms its inclusion.
+  `THIRD_PARTY_NOTICES_REWATCH.md`, covering Cmdliner, Yojson, Re, Spawn, Luv,
+  libuv, ctypes, and integers, plus Re's full license and linking exception in
+  `RE_LICENSE.md`; a dry-run package build confirms both files are included.
   Luv's vendored-libuv rule currently drops the ARM64 musl compiler's
   `-mno-outline-atomics` flag, so CI applies a repository-local opam package
   patch that restores the flag only for that target. We should contribute that
@@ -1861,10 +1881,7 @@ Three later Rust fixes were audited explicitly against the port:
 ## Next actions
 
 1. Perform the final two-scope whole-port review and address confirmed findings,
-   including a last option-by-option CLI audit. The remaining `Str` versus Rust
-   `regex` syntax difference stays an explicit dependency/compatibility decision
-   unless that audit finds a maintained implementation that closes rather than
-   merely narrows it.
+   including the remaining findings from the option-by-option CLI audit.
 2. At the final maintainability pass, add comments around ownership,
    concurrency, platform, and algorithmic invariants that are not apparent from
    the code itself. Comments should start with why the code or invariant is
