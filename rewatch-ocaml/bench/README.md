@@ -8,14 +8,16 @@ into each root. Cleaning one
 implementation therefore cannot warm or remove artifacts used by the other.
 
 The gate performs one warm-up per implementation, at least five interleaved
-clean builds, and reports median wall time plus peak summed process-tree RSS. It
-then traces clean, unchanged, and single-edit builds with `strace` and requires
-identical normalized package/phase/input multisets as well as identical counts
-for parser, namespace, compiler, interface, and PPX process launches. The edit
-targets the same leaf source in each isolated fixture. This sequence detects
-superfluous incremental parsing or compilation that a clean-only comparison
-cannot expose. Finally, both implementations clean and build a third fixture at
-the same absolute path. The gate first requires the complete post-build
+clean builds, and reports median wall time, peak summed process-tree RSS, and
+peak process-tree task count. Wall time and RSS are acceptance criteria; task
+count is diagnostic evidence for subprocess-management overhead. It then traces
+clean, unchanged, and single-edit builds with `strace` and requires identical
+normalized package/phase/input multisets as well as identical counts for parser,
+namespace, compiler, interface, and PPX process launches. The edit targets the
+same leaf source in each isolated fixture. This sequence detects superfluous
+incremental parsing or compilation that a clean-only comparison cannot expose.
+Finally, both implementations clean and build a third fixture at the same
+absolute path. The gate first requires the complete post-build
 file-name sets to match, including auxiliary cache and editor-control files,
 and then requires byte-identical generated JavaScript, compiler interfaces
 (`.cmi`), JavaScript IR (`.cmj`), parser AST caches, namespace maps, copied

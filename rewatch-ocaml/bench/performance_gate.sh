@@ -77,19 +77,23 @@ fi
 export RESCRIPT_BSC_EXE RESCRIPT_RUNTIME
 
 results="$work_root/results.csv"
-echo "implementation,iteration,wall_ms,peak_tree_rss_kib" >"$results"
+echo "implementation,iteration,wall_ms,peak_tree_rss_kib,peak_tree_tasks" \
+  >"$results"
 
-tree_rss_kib() {
+tree_resources() {
   local root_pid=$1
-  ps -e -o pid=,ppid=,rss= | awk -v root="$root_pid" '
-    { pids[NR] = $1; parent[$1] = $2; memory[$1] = $3 }
+  ps -e -o pid=,ppid=,rss=,nlwp= | awk -v root="$root_pid" '
+    { pids[NR] = $1; parent[$1] = $2; memory[$1] = $3; tasks[$1] = $4 }
     END {
       live[root] = 1
       for (pass = 0; pass < NR; pass++)
         for (i = 1; i <= NR; i++)
           if (live[parent[pids[i]]]) live[pids[i]] = 1
-      for (pid in live) total += memory[pid]
-      print total + 0
+      for (pid in live) {
+        total_memory += memory[pid]
+        total_tasks += tasks[pid]
+      }
+      print total_memory + 0, total_tasks + 0
     }'
 }
 
@@ -103,23 +107,26 @@ measure() {
   local implementation=$1 executable=$2 fixture=$3 iteration=$4
   local output="$work_root/${implementation}-${iteration}"
   "$executable" clean "$fixture" >/dev/null 2>&1
-  local start_ns root_pid peak=0 rss end_ns wall_ms
+  local start_ns root_pid peak_rss=0 peak_tasks=0 rss tasks end_ns wall_ms
   start_ns=$(date +%s%N)
   "$executable" build "$fixture" >"$output" 2>"$output.stderr" &
   root_pid=$!
   while kill -0 "$root_pid" 2>/dev/null; do
-    rss=$(tree_rss_kib "$root_pid")
-    if ((rss > peak)); then
-      peak=$rss
+    read -r rss tasks < <(tree_resources "$root_pid")
+    if ((rss > peak_rss)); then
+      peak_rss=$rss
+    fi
+    if ((tasks > peak_tasks)); then
+      peak_tasks=$tasks
     fi
     sleep 0.02
   done
   wait "$root_pid"
   end_ns=$(date +%s%N)
   wall_ms=$(((end_ns - start_ns) / 1000000))
-  echo "$implementation,$iteration,$wall_ms,$peak" >>"$results"
-  printf '%-5s run %d: %6d ms  %8d KiB\n' \
-    "$implementation" "$iteration" "$wall_ms" "$peak"
+  echo "$implementation,$iteration,$wall_ms,$peak_rss,$peak_tasks" >>"$results"
+  printf '%-5s run %d: %6d ms  %8d KiB  %4d tasks\n' \
+    "$implementation" "$iteration" "$wall_ms" "$peak_rss" "$peak_tasks"
 }
 
 median_column() {
@@ -153,8 +160,12 @@ rust_wall=$(median_column rust 3)
 ocaml_wall=$(median_column ocaml 3)
 rust_rss=$(median_column rust 4)
 ocaml_rss=$(median_column ocaml 4)
-printf 'median Rust:  %6d ms  %8d KiB\n' "$rust_wall" "$rust_rss"
-printf 'median OCaml: %6d ms  %8d KiB\n' "$ocaml_wall" "$ocaml_rss"
+rust_tasks=$(median_column rust 5)
+ocaml_tasks=$(median_column ocaml 5)
+printf 'median Rust:  %6d ms  %8d KiB  %4d peak tasks\n' \
+  "$rust_wall" "$rust_rss" "$rust_tasks"
+printf 'median OCaml: %6d ms  %8d KiB  %4d peak tasks\n' \
+  "$ocaml_wall" "$ocaml_rss" "$ocaml_tasks"
 
 trace_and_classify() {
   local implementation=$1 scenario=$2 executable=$3 fixture=$4 manifest=$5
