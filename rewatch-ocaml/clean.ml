@@ -1,7 +1,7 @@
 type package = {
   root: string;
   name: string option;
-  generated_outputs: (Config.t * string list * string list) option;
+  generated_outputs: (Config.t * string list) option;
 }
 
 type t = package list
@@ -49,7 +49,7 @@ let prepare ~(root_config : Config.t) ~dependency_context ~seen ~root ~prod
                         "Could not build package tree for '%s' at path '%s'. Error: %s"
                         dependency.name root_config.root message)))
             dependencies;
-          let implementation_files, inventory_files =
+          let implementation_files, _inventory_files =
             Source.discover_for_cleanup config
               ~prod:(prod || not is_local)
               ~on_missing:
@@ -62,8 +62,7 @@ let prepare ~(root_config : Config.t) ~dependency_context ~seen ~root ~prod
             {
               root;
               name = Some config.name;
-              generated_outputs =
-                Some (output_config, implementation_files, inventory_files);
+              generated_outputs = Some (output_config, implementation_files);
             }
             :: !packages))
       else
@@ -89,9 +88,7 @@ let remove_generated_outputs packages =
     (fun package ->
       match package.generated_outputs with
       | None -> ()
-      | Some (output_config, implementation_files, inventory_files) ->
-        Build_artifacts.cleanup_watch_output_sidecars
-          ~source_files:inventory_files ~root:package.root output_config;
+      | Some (output_config, implementation_files) ->
         List.iter
           (fun implementation ->
             List.iter
@@ -101,11 +98,7 @@ let remove_generated_outputs packages =
                     spec
                 in
                 File_util.remove_file output;
-                File_util.remove_file (output ^ ".map");
-                File_util.remove_file (output ^ ".rewatch-pending");
-                File_util.remove_file (output ^ ".rewatch-backup");
-                File_util.remove_file (output ^ ".map.rewatch-pending");
-                File_util.remove_file (output ^ ".map.rewatch-backup"))
+                File_util.remove_file (output ^ ".map"))
               output_config.package_specs)
           implementation_files)
     packages
