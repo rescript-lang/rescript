@@ -567,10 +567,7 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
           (fun name -> Hashtbl.replace stats.blocked_modules name ())
           cycle_info.blocked)
       cycle;
-    Package_build.prepare_tree ~root_config
-      ~dependency_context:(Project_context.dependency_context root_config)
-      ~seen:visited ~folder:root ~prod ~features ~warn_error ~watch ~filter
-      ~is_local:true ~stats;
+    Package_build.prepare_tree ~seen:visited ~folder:root ~watch ~stats;
     let parse_messages = parse_messages () in
     let parse_output = parse_output parse_messages in
     if parse_failed parse_messages then raise (Parse_failure parse_output);
