@@ -1466,7 +1466,7 @@ delete/recreate cycles remain observable. Their containing directory and its
 parent are watched shallowly so moving the watched directory itself remains
 observable across filesystem backends. Initial native handles are installed
 before compilation, and registration is followed by a fresh snapshot, closing
-both the initial-build and refresh handoff windows. The 85-case differential
+both the initial-build and refresh handoff windows. The 87-case differential
 gate covers dependency installation and candidate fallback, external symlink
 target replacement, the delayed-compiler race, included, filter-excluded, and
 feature-disabled live edits, signal-safe lock waiting, and recovery from
@@ -1663,6 +1663,10 @@ Three later Rust fixes were audited explicitly against the port:
   for `--no-timing` consumes a following folder token and rejects it as a
   non-boolean. Unit and executable-level tests cover both forms. Keep the
   latter in the final inventory of compatibility behavior that appears odd.
+- Verbosity selection now rejects combining any `-v`/`--verbose` occurrence
+  with any `-q`/`--quiet` occurrence, matching Clap's mutually exclusive
+  verbosity modes instead of subtracting the two counts. OUnit and differential
+  executable cases cover both implicit and explicit build routing.
 - Redirected config diagnostics now use the same single leading blank line as
   Rust. The differential output gate combines deprecated aliases, a known
   unsupported field, and an unknown field so spacing and ordering are compared

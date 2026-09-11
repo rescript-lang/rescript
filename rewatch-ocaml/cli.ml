@@ -31,8 +31,12 @@ let verbosity =
       value & flag_all
       & info ["q"; "quiet"] ~doc:"Decrease logging verbosity.")
   in
-  let+ verbose and+ quiet in
-  List.length verbose - List.length quiet
+  Term.term_result
+    (let+ verbose and+ quiet in
+     match (verbose, quiet) with
+     | _ :: _, _ :: _ ->
+       Error (`Msg "--verbose cannot be used together with --quiet")
+     | _ -> Ok (List.length verbose - List.length quiet))
 
 let folder =
   Arg.(
