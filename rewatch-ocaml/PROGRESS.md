@@ -5,9 +5,11 @@ Reference Rust implementation: `2e532c7f6587d4201befd00ced516e267c90fe73`.
 ## Current milestone
 
 The complete applicable canonical `rewatch/tests` suite now passes with the
-experimental `rescript_ocaml.exe`. Milestone 6 remains open for native platform
-validation, final performance/resource confirmation, maintainability cleanup,
-and the final whole-port review. The configuration, Rust-source validation,
+experimental `rescript_ocaml.exe`. Milestone 6 remains open for native Windows
+validation, the final comment pass, and the release-quality whole-port review.
+Stable Linux performance/resource measurement, macOS testing, and the
+non-comment maintainability cleanup are complete. The configuration,
+Rust-source validation,
 Rust-test, control-file, and ordinary redirected-output inventories are
 complete. OpenTelemetry parity is explicitly excluded by project decision;
 ordinary verbosity and diagnostics remain in scope. Incremental state uses
@@ -1978,7 +1980,10 @@ required behavior decision, not a performance proposal.
   scope. A second watcher therefore reports the active owner before attempting
   to parse a concurrently malformed configuration, while the lock finalizer
   still releases ownership if initial validation fails. A differential command
-  case retains the lock-before-config ordering.
+  case retains the lock-before-config ordering. Its live-owner probe creates a
+  separate process with each tested executable's basename: release CI names the
+  reference binary `rescript-rust.exe`, so one shared `rescript` dummy would be
+  rejected by Rust and could erase the lock before the OCaml assertion ran.
 - Explicit `clean` now validates and collects the complete dependency-first
   package plan before mutating the filesystem, then removes compiler trees and
   generated outputs in distinct phases. The previous per-package interleaving
@@ -2185,7 +2190,7 @@ format, compiler-args, and watch. It compared intermediate state transitions and
 observable phases rather than inferring parity from final files or exit status.
 The closing evidence is 136/136 reviewed Rust unit tests with no gaps, 297
 configuration cases, 111 command-validation cases, the interactive phase gate,
-all 19 OUnit groups, and the canonical OCaml suite. The audit's material fixes
+all 20 OUnit groups, and the canonical OCaml suite. The audit's material fixes
 and intentional corrections are recorded above.
 
 A subsequent external source review found that the OCaml scheduler published a
@@ -2386,15 +2391,12 @@ would mainly expose that mutable lifetime through callbacks. The broad comment
 and documentation pass remains deliberately deferred until immediately before
 the final release-quality gate.
 
-1. Validate macOS packaging and native event behavior, then prepare the pinned
-   Windows handoff. Finish the Windows watcher/lock backend and path audit and
-   run the native build, unit, focused, and canonical Bash suites in the VM.
-   Address findings there and finish with an x64 Windows confidence run where
-   available.
-2. When stable measurements are available, run the final performance,
-   filesystem-call, and resource gates. Then verify packaging, the npm artifact
-   manifest, equivalence gates, and the final two-scope whole-port review.
-   Confirm that the three release inventories remain complete.
+1. Close the deterministic packaging, npm artifact-manifest, equivalence, and
+   release-inventory checks that do not depend on host timing or native Windows,
+   and prepare a pinned Windows handoff.
+2. In the Windows VM, finish the watcher/lock and path audit and run the native
+   build, unit, focused, and canonical Bash suites. Address findings there and
+   finish with an x64 Windows confidence run where available.
 3. Immediately before the final release-quality gate, perform the broad comment
    pass for ownership, concurrency, platform, and algorithmic invariants that
    are not apparent from the code itself. Comments should start with why the
@@ -2402,7 +2404,9 @@ the final release-quality gate.
    specialists in every relevant OCaml, build-system, compiler, or
    operating-system detail, and stand on their own rather than explaining code
    mainly by comparison with Rust unless compatibility itself is the reason.
-   Then rerun the complete release-quality gate and publish the final report.
+4. Rerun the complete release-quality gate, perform the final two-scope
+   whole-port review, and publish the final report with the compatibility-oddity,
+   Rust-fix, and future-performance inventories.
 
 The future filesystem-performance ideas documented above do not block
 completion of the compatibility port.
