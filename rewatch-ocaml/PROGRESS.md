@@ -973,17 +973,20 @@ sufficient on its own: the compiler-work tuple and selected artifact manifests
 must also be identical, and the canonical/focused integration tests remain the
 behavioral-equivalence gate.
 
-The latest five-run release-build measurement was made from the interface-audit
-working tree above commit `2ada96936` in the Linux Docker environment on the
-plugged-in, otherwise idle Mac host:
+The latest five-run release-build measurement was made from the
+measurement-tooling working tree above commit `353479276` in the Linux Docker
+environment on the plugged-in, otherwise idle Mac host:
 
-| Implementation | Median wall time | Median peak tree RSS |
-| --- | ---: | ---: |
-| Rust | 4,662 ms | 806,340 KiB |
-| OCaml | 5,588 ms | 840,740 KiB |
+| Implementation | Median wall time | Median peak tree RSS | Median peak tasks |
+| --- | ---: | ---: | ---: |
+| Rust | 4,548 ms | 1,421,436 KiB | 74 |
+| OCaml | 5,406 ms | 1,468,184 KiB | 94 |
 
-The latest completed gate's 1.199× wall-time ratio and 1.043× RSS ratio pass
-the 1.25× gate.
+The latest completed gate's 1.1887× wall-time ratio and 1.0329× RSS ratio
+pass the 1.25× gate. Peak process-tree task count is diagnostic rather than an
+acceptance threshold; the observed 1.2703× ratio establishes that the OCaml
+subprocess-capture design has materially greater thread fan-out, but does not
+by itself attribute the wall-time gap to those threads.
 The host was plugged in and otherwise idle for this run. Docker on a Mac still
 makes the absolute values less portable than native Linux or dedicated
 CI, but all ten interleaved samples were coherent and this is the required
@@ -991,7 +994,7 @@ current stable-host acceptance run. Passing this aggregate gate also does not
 excuse the clean-build publication probes identified by the filesystem audit
 below.
 
-A later five-run directional check at `4566147ab`, after the scheduler and
+An earlier five-run directional check at `4566147ab`, after the scheduler and
 review-driven simplifications, measured 5,300 ms / 1,431,388 KiB for Rust and
 6,278 ms / 1,468,592 KiB for OCaml (1.1845× wall time and 1.026× RSS). It
 passed the 1.25× gate and again matched all clean, unchanged, and single-edit
@@ -1002,14 +1005,16 @@ interfere. The small ratio change from 1.199× therefore does not demonstrate a
 performance improvement; this run establishes directional regression and work
 equivalence evidence only. The quiet-host release measurement remains due.
 
-A three-run smoke check at `6c8446b21`, after making parser-job construction
+A subsequent three-run smoke check at `6c8446b21`, after making parser-job construction
 demand-driven, measured 5,124 ms / 1,437,824 KiB for Rust and 5,661 ms /
 1,461,376 KiB for OCaml (1.105× wall time and 1.016× RSS). It again matched
 the 1,031/4/6 clean, unchanged, and edit compiler-work manifests plus complete
 file and stable-artifact contents. This suggests that eliminating the serial
 pre-launch preparation prefix may be material, but three samples on a host with
 potential competing work are not an acceptance measurement and do not establish
-the improvement's size. The five-run quiet-host gate remains authoritative.
+the improvement's size. The authoritative five-run result above did not
+reproduce that ratio and shows no demonstrated material timing improvement from
+parser overlap alone.
 
 Both implementations performed exactly 1,031 `bsc` launches: 512 parses, 7
 namespace compilations, and 512 module compilations, of which 40 were interface
