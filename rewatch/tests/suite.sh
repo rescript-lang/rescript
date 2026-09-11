@@ -112,6 +112,9 @@ if [[ "$(uname -s)" == "Darwin" && "$(uname -m)" == "x86_64" ]]; then
   success "sury-ppx fixture disabled"
 fi
 
+# Platform module tests use their own small fixture rather than the shared testrepo.
+bash ./platforms/01-react-native-platforms.sh
+
 # Individual test files
 # Comment out any test to skip it
 

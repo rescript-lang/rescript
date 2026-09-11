@@ -49,6 +49,9 @@ val directives : string list ref
 val cross_module_inline : bool ref
 (** cross module inline option *)
 
+val platform_interface : bool ref
+(** emit conservative [.cmj] metadata for a platform implementation *)
+
 val debug_ir : bool ref
 (** dump intermediate representations and related diagnostics *)
 

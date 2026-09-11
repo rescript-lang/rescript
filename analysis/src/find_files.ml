@@ -116,6 +116,27 @@ let get_namespace config =
     in
     from_name |> Option.map name_space_to_name
 
+let get_platforms config =
+  match
+    config |> Yojson_helpers.get "platforms" |> bind Yojson_helpers.to_list_opt
+  with
+  | None -> []
+  | Some platforms -> platforms |> List.filter_map Yojson_helpers.string_opt
+
+let get_platform_implementation platforms file =
+  if not (Filename.check_suffix file ".res") then None
+  else
+    let stem = Filename.basename file |> Filename.chop_extension in
+    platforms
+    |> List.find_map (fun platform ->
+        let suffix = "." ^ platform in
+        if Filename.check_suffix stem suffix then
+          Some
+            ( platform,
+              String.sub stem 0 (String.length stem - String.length suffix)
+              |> String.capitalize_ascii )
+        else None)
+
 module String_set = Set.Make (String)
 
 let get_public config =
@@ -180,7 +201,8 @@ let find_package_root ~base ~sourcedirs_package_roots name =
   | _ -> Module_resolution.resolve_node_module_path ~start_path:base name
 
 (* returns a list of (absolute path to cmt(i), relative path from base to source file) *)
-let find_project_files ~public ~namespace ~path ~source_directories ~lib_bs =
+let find_project_files ~public ~namespace ~platforms ~path ~source_directories
+    ~lib_bs =
   let dirs =
     source_directories |> List.map (Filename.concat path) |> String_set.of_list
   in
@@ -205,39 +227,77 @@ let find_project_files ~public ~namespace ~path ~source_directories ~lib_bs =
 
   let normals =
     files |> String_set.elements
-    |> Utils.filter_map (fun file ->
+    |> List.concat_map (fun file ->
         if is_implementation file then (
-          let module_name = get_name file in
+          let platform_implementation =
+            get_platform_implementation platforms file
+          in
+          let physical_module_name = get_name file in
+          let module_name =
+            match platform_implementation with
+            | Some (_, logical_module_name) -> logical_module_name
+            | None -> physical_module_name
+          in
+          let is_primary_platform =
+            match (platforms, platform_implementation) with
+            | primary :: _, Some (platform, _) -> primary = platform
+            | _ -> true
+          in
           let resi = Hashtbl.find_opt interfaces module_name in
-          Hashtbl.remove interfaces module_name;
+          if is_primary_platform then Hashtbl.remove interfaces module_name;
           let base = compiled_base_name ~namespace (Files.relpath path file) in
-          match resi with
-          | Some resi ->
-            let cmti = (lib_bs /+ base) ^ ".cmti" in
+          match (platform_implementation, is_primary_platform, resi) with
+          | Some _, false, _ ->
+            let cmt = (lib_bs /+ base) ^ ".cmt" in
+            if Files.exists cmt then
+              [
+                ( physical_module_name,
+                  module_name,
+                  Shared_types.Impl {cmt; res = file} );
+              ]
+            else (
+              Log.log ("Bad platform source file (no cmt) " ^ (lib_bs /+ base));
+              [])
+          | _, _, Some resi ->
+            let interface_base =
+              compiled_base_name ~namespace (Files.relpath path resi)
+            in
+            let cmti = (lib_bs /+ interface_base) ^ ".cmti" in
             let cmt = (lib_bs /+ base) ^ ".cmt" in
             if Files.exists cmti then
               if Files.exists cmt then
                 (* Log.log("Intf and impl " ++ cmti ++ " " ++ cmt) *)
-                Some
+                let logical_entry =
                   ( module_name,
+                    module_name,
                     Shared_types.IntfAndImpl {cmti; resi; cmt; res = file} )
-              else None
+                in
+                match platform_implementation with
+                | Some _ ->
+                  [
+                    logical_entry;
+                    ( physical_module_name,
+                      module_name,
+                      Shared_types.Impl {cmt; res = file} );
+                  ]
+                | None -> [logical_entry]
+              else []
             else (
               (* Log.log("Just intf " ++ cmti) *)
               Log.log ("Bad source file (no cmt/cmti/cmi) " ^ (lib_bs /+ base));
-              None)
-          | None ->
+              [])
+          | _, _, None ->
             let cmt = (lib_bs /+ base) ^ ".cmt" in
-            if Files.exists cmt then Some (module_name, Impl {cmt; res = file})
+            if Files.exists cmt then
+              [(module_name, module_name, Shared_types.Impl {cmt; res = file})]
             else (
               Log.log ("Bad source file (no cmt/cmi) " ^ (lib_bs /+ base));
-              None))
-        else None)
+              []))
+        else [])
   in
   let result =
     normals
-    |> List.filter_map (fun (name, paths) ->
-        let original_name = name in
+    |> List.filter_map (fun (name, public_name, paths) ->
         let name =
           match namespace with
           | None -> name
@@ -245,7 +305,7 @@ let find_project_files ~public ~namespace ~path ~source_directories ~lib_bs =
         in
         match public with
         | Some public ->
-          if public |> String_set.mem original_name then Some (name, paths)
+          if public |> String_set.mem public_name then Some (name, paths)
           else None
         | None -> Some (name, paths))
   in
@@ -316,7 +376,8 @@ let find_dependency_files base config =
                     in
                     let project_files =
                       find_project_files ~public:(get_public inner) ~namespace
-                        ~path ~source_directories ~lib_bs
+                        ~platforms:(get_platforms inner) ~path
+                        ~source_directories ~lib_bs
                     in
                     Some (compiled_directories, project_files))
                 | None -> None

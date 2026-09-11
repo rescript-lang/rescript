@@ -106,7 +106,9 @@ let new_bs_package ~root_path =
             let project_files_and_paths =
               Find_files.find_project_files
                 ~public:(Find_files.get_public config)
-                ~namespace ~path:root_path ~source_directories ~lib_bs
+                ~namespace
+                ~platforms:(Find_files.get_platforms config)
+                ~path:root_path ~source_directories ~lib_bs
             in
             let paths_for_module =
               make_paths_for_module ~project_files_and_paths

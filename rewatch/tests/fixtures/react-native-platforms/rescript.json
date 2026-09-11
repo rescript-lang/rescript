@@ -1,0 +1,8 @@
+{
+  "name": "rescript-react-native-platform-experiment",
+  "sources": ["src"],
+  "jsx": { "version": 4 },
+  "package-specs": { "module": "commonjs", "in-source": false },
+  "suffix": ".js",
+  "platforms": ["android", "ios"]
+}

@@ -5,6 +5,7 @@ test-analysis-binary:
 	make -C tests-generic-jsx-transform test
 	make -C tests-incremental-typechecking test
 	make -C tests-namespaced-references test
+	make -C tests-platform-modules test
 	make -C tests-sourcedirs-dependency test
 
 # Belt is shared by CommonJS and ES module test projects. Rebuild it until
@@ -22,6 +23,7 @@ clean:
 	make -C tests-generic-jsx-transform clean
 	make -C tests-incremental-typechecking clean
 	make -C tests-namespaced-references clean
+	make -C tests-platform-modules clean
 	make -C tests-sourcedirs-dependency clean
 	make -C tests-reanalyze clean
 

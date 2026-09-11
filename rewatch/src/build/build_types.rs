@@ -34,8 +34,17 @@ pub struct Interface {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct PlatformImplementation {
+    pub name: String,
+    pub logical_path: PathBuf,
+    pub logical_module_name: String,
+    pub primary: bool,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct Implementation {
     pub path: PathBuf,
+    pub platform: Option<Box<PlatformImplementation>>,
     pub parse_state: ParseState,
     pub compile_state: CompileState,
     pub last_modified: SystemTime,

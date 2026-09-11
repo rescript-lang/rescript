@@ -68,6 +68,13 @@ let iter (x : t) cb = Ext_list.iter x.module_systems cb
 
 let map (x : t) cb = Ext_list.map x.module_systems cb
 
+let with_suffix suffix (x : t) =
+  {
+    x with
+    module_systems =
+      Ext_list.map x.module_systems (fun package -> {package with suffix});
+  }
+
 (* let equal (x : t) ({name; module_systems}) =
     x.name = name &&
     Ext_list.for_all2_no_exn

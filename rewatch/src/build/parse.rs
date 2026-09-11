@@ -79,7 +79,15 @@ pub fn generate_asts(
                         )
                         .map_err(|e| e.to_string());
 
+                        let should_parse_interface = source_file
+                            .implementation
+                            .platform
+                            .as_ref()
+                            .is_none_or(|platform| platform.primary);
                         let iast_result = match source_file.interface.as_ref().map(|i| i.path.to_owned()) {
+                            Some(interface_file_path) if !should_parse_interface => {
+                                Ok(Some((helpers::get_ast_path(&interface_file_path), None)))
+                            }
                             Some(interface_file_path) => {
                                 match generate_ast(
                                     package.to_owned(),

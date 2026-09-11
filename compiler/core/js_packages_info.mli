@@ -42,6 +42,8 @@ val iter : t -> (package_info -> unit) -> unit
 
 val map : t -> (package_info -> 'a) -> 'a list
 
+val with_suffix : string -> t -> t
+
 val empty : t
 
 val from_name : string -> t

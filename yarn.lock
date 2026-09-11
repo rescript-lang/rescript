@@ -937,6 +937,14 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@tests/platform-modules@workspace:tests/analysis_tests/tests-platform-modules":
+  version: 0.0.0-use.local
+  resolution: "@tests/platform-modules@workspace:tests/analysis_tests/tests-platform-modules"
+  dependencies:
+    rescript: "workspace:^"
+  languageName: unknown
+  linkType: soft
+
 "@tests/reanalyze-benchmark@workspace:tests/analysis_tests/tests-reanalyze/deadcode-benchmark":
   version: 0.0.0-use.local
   resolution: "@tests/reanalyze-benchmark@workspace:tests/analysis_tests/tests-reanalyze/deadcode-benchmark"

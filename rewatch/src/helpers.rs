@@ -336,6 +336,37 @@ pub fn file_path_to_module_name(path: &Path, namespace: &packages::Namespace) ->
     capitalize(&file_path_to_compiler_asset_basename(path, namespace))
 }
 
+/// Returns the platform suffix and the corresponding ordinary implementation
+/// path. `src/Button.android.res` becomes (`android`, `src/Button.res`).
+pub fn platform_implementation(path: &Path, platforms: &[String]) -> Option<(String, PathBuf)> {
+    if path.extension().and_then(|extension| extension.to_str()) != Some("res") {
+        return None;
+    }
+    let stem = path.file_stem()?.to_str()?;
+    let (logical_stem, platform) = stem.rsplit_once('.')?;
+    if logical_stem.is_empty() || !platforms.iter().any(|candidate| candidate == platform) {
+        return None;
+    }
+    let logical = path.with_file_name(format!("{logical_stem}.res"));
+    Some((platform.to_string(), logical))
+}
+
+/// Returns the platform suffix and common interface path for a platform-specific
+/// interface. Platform module families deliberately use `Button.resi`, so this
+/// recognizes `Button.android.resi` in order to report it as unsupported.
+pub fn platform_interface(path: &Path, platforms: &[String]) -> Option<(String, PathBuf)> {
+    if path.extension().and_then(|extension| extension.to_str()) != Some("resi") {
+        return None;
+    }
+    let stem = path.file_stem()?.to_str()?;
+    let (logical_stem, platform) = stem.rsplit_once('.')?;
+    if logical_stem.is_empty() || !platforms.iter().any(|candidate| candidate == platform) {
+        return None;
+    }
+    let logical = path.with_file_name(format!("{logical_stem}.resi"));
+    Some((platform.to_string(), logical))
+}
+
 pub fn contains_ascii_characters(str: &str) -> bool {
     for chr in str.chars() {
         if chr.is_ascii_alphanumeric() {
@@ -549,4 +580,30 @@ pub fn is_local_package(workspace_path: &Path, canonical_package_path: &Path) ->
         && !canonical_package_path
             .components()
             .any(|c| c.as_os_str() == "node_modules")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn recognizes_configured_platform_sources() {
+        let platforms = vec!["android".to_string(), "ios".to_string()];
+        assert_eq!(
+            platform_implementation(Path::new("src/Button.android.res"), &platforms),
+            Some(("android".to_string(), PathBuf::from("src/Button.res")))
+        );
+        assert_eq!(
+            platform_interface(Path::new("src/Button.ios.resi"), &platforms),
+            Some(("ios".to_string(), PathBuf::from("src/Button.resi")))
+        );
+        assert_eq!(
+            platform_implementation(Path::new("src/Button.web.res"), &platforms),
+            None
+        );
+        assert_eq!(
+            platform_implementation(Path::new("src/Button.android.resi"), &platforms),
+            None
+        );
+    }
 }

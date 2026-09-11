@@ -10,6 +10,7 @@ use anyhow::Result;
 use console::style;
 use rayon::prelude::*;
 use std::io::Write;
+use std::path::Component;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 use tracing::instrument;
@@ -103,6 +104,108 @@ fn clean_source_files(packages: &AHashMap<String, Package>, root_config: &Config
         .for_each(|(rescript_file_location, suffix)| remove_mjs_file(rescript_file_location, suffix));
 }
 
+const PLATFORM_OUTPUTS_FILE: &str = ".platform-outputs.json";
+
+fn platform_outputs_path(package: &Package) -> PathBuf {
+    package.path.join("lib").join(PLATFORM_OUTPUTS_FILE)
+}
+
+fn is_safe_relative_path(path: &Path) -> bool {
+    !path.is_absolute()
+        && path.components().all(|component| {
+            !matches!(
+                component,
+                Component::ParentDir | Component::RootDir | Component::Prefix(_)
+            )
+        })
+}
+
+fn read_recorded_platform_outputs(package: &Package) -> Vec<PathBuf> {
+    std::fs::read_to_string(platform_outputs_path(package))
+        .ok()
+        .and_then(|contents| serde_json::from_str::<Vec<PathBuf>>(&contents).ok())
+        .unwrap_or_default()
+        .into_iter()
+        .filter(|path| is_safe_relative_path(path))
+        .collect()
+}
+
+fn expected_platform_outputs(build_state: &BuildState, package: &Package) -> AHashSet<PathBuf> {
+    let root_config = build_state.get_root_config();
+    build_state
+        .modules
+        .values()
+        .filter(|module| module.package_name == package.name)
+        .filter_map(|module| match &module.source_type {
+            SourceType::SourceFile(source_file) => source_file.implementation.platform.as_ref(),
+            SourceType::MlMap(_) => None,
+        })
+        .flat_map(|platform| {
+            root_config.get_package_specs().into_iter().map(move |spec| {
+                let output_dir = if spec.in_source {
+                    platform.logical_path.parent().unwrap().to_path_buf()
+                } else {
+                    Path::new("lib")
+                        .join(spec.get_out_of_source_dir())
+                        .join(platform.logical_path.parent().unwrap())
+                };
+                let basename = platform.logical_path.file_stem().unwrap().to_string_lossy();
+                output_dir.join(format!(
+                    "{basename}.{}{}",
+                    platform.name,
+                    root_config.get_suffix(&spec)
+                ))
+            })
+        })
+        .collect()
+}
+
+pub fn reconcile_platform_outputs(build_state: &BuildState) {
+    build_state.packages.values().for_each(|package| {
+        let expected = expected_platform_outputs(build_state, package);
+        for previous in read_recorded_platform_outputs(package) {
+            if !expected.contains(&previous) {
+                let output = package.path.join(previous);
+                let _ = std::fs::remove_file(&output);
+                let _ = std::fs::remove_file(PathBuf::from(format!("{}.map", output.to_string_lossy())));
+            }
+        }
+    });
+}
+
+pub fn write_platform_outputs(build_state: &BuildState) {
+    build_state.packages.values().for_each(|package| {
+        let mut outputs = expected_platform_outputs(build_state, package)
+            .into_iter()
+            .collect::<Vec<_>>();
+        outputs.sort();
+        let manifest = platform_outputs_path(package);
+        if outputs.is_empty() {
+            let _ = std::fs::remove_file(manifest);
+            return;
+        }
+        let Ok(contents) = serde_json::to_string(&outputs) else {
+            return;
+        };
+        if std::fs::read_to_string(&manifest).ok().as_deref() == Some(&contents) {
+            return;
+        }
+        if let Some(parent) = manifest.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        let _ = std::fs::write(manifest, contents);
+    });
+}
+
+pub fn remove_recorded_platform_outputs(package: &Package) {
+    for relative in read_recorded_platform_outputs(package) {
+        let output = package.path.join(relative);
+        let _ = std::fs::remove_file(&output);
+        let _ = std::fs::remove_file(PathBuf::from(format!("{}.map", output.to_string_lossy())));
+    }
+    let _ = std::fs::remove_file(platform_outputs_path(package));
+}
+
 // TODO: change to scan_previous_build => CompileAssetsState
 // and then do cleanup on that state (for instance remove all .mjs files that are not in the state)
 
@@ -163,6 +266,7 @@ pub fn cleanup_previous_build(
         .for_each(|res_file_location| {
             let AstModule {
                 module_name,
+                package_name,
                 last_modified: ast_last_modified,
                 ast_file_path,
                 ..
@@ -170,6 +274,27 @@ pub fn cleanup_previous_build(
                 .ast_modules
                 .get(res_file_location)
                 .expect("Could not find module name for ast file");
+            if helpers::is_interface_ast_file(ast_file_path) {
+                let package_path = build_state.packages.get(package_name).unwrap().path.clone();
+                for module in build_state
+                    .modules
+                    .values_mut()
+                    .filter(|module| module.package_name == *package_name)
+                {
+                    let SourceType::SourceFile(source_file) = &mut module.source_type else {
+                        continue;
+                    };
+                    let Some(interface) = &mut source_file.interface else {
+                        continue;
+                    };
+                    if package_path.join(&interface.path) == *res_file_location
+                        && ast_last_modified > &interface.last_modified
+                    {
+                        interface.parse_dirty = false;
+                    }
+                }
+                return;
+            }
             let module = build_state
                 .modules
                 .get_mut(module_name)
@@ -190,24 +315,11 @@ pub fn cleanup_previous_build(
             match &mut module.source_type {
                 SourceType::MlMap(_) => unreachable!("MlMap is not matched with a ReScript file"),
                 SourceType::SourceFile(source_file) => {
-                    if helpers::is_interface_ast_file(ast_file_path) {
-                        let interface = source_file
-                            .interface
-                            .as_mut()
-                            .expect("Could not find interface for module");
-
-                        let source_last_modified = interface.last_modified;
-                        if ast_last_modified > &source_last_modified {
-                            interface.parse_dirty = false;
-                        }
-                    } else {
-                        let implementation = &mut source_file.implementation;
-                        let source_last_modified = implementation.last_modified;
-                        if ast_last_modified > &source_last_modified
-                            && !deleted_interfaces.contains(module_name)
-                        {
-                            implementation.parse_dirty = false;
-                        }
+                    let implementation = &mut source_file.implementation;
+                    let source_last_modified = implementation.last_modified;
+                    if ast_last_modified > &source_last_modified && !deleted_interfaces.contains(module_name)
+                    {
+                        implementation.parse_dirty = false;
                     }
                 }
             }
@@ -356,6 +468,7 @@ pub fn clean(path: &Path, show_progress: bool, plain_output: bool, prod: bool) -
     };
 
     for (_, package) in &packages {
+        remove_recorded_platform_outputs(package);
         clean_package(show_progress, plain_output, package)
     }
 

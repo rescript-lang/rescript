@@ -1,0 +1,11 @@
+{
+  "name": "@tests/platform-modules",
+  "private": true,
+  "scripts": {
+    "build": "rescript build",
+    "clean": "rescript clean"
+  },
+  "devDependencies": {
+    "rescript": "workspace:^"
+  }
+}

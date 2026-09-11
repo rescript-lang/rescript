@@ -493,6 +493,16 @@
     "suffix": {
       "$ref": "#/definitions/suffix-spec"
     },
+    "platforms": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_]*$"
+      },
+      "description": "Platform suffixes for shared-interface modules such as Button.android.res and Button.ios.res."
+    },
     "reanalyze": {
       "$ref": "#/definitions/reanalyze",
       "description": "Configure reanalyze, a static code analysis tool for ReScript."
