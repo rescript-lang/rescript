@@ -2637,6 +2637,11 @@ another process is active. The focused runner, 111 command cases, exact
 interactive and verbose gates, formatting, and the complete 48-test canonical
 suite pass; the faster scheduler exposed and fixed a stdout/stderr phase-order
 race by flushing completed parse output before diagnostics and compile progress.
+At documentation checkpoint `d1c576507`, `opam exec -- make test-all` also
+passed the repository-wide gate, including promotion of the OCaml rewatch
+binary, compiler and runtime tests, both GenType projects, analysis, tools, and
+the packaged canonical rewatch suite. It left the worktree clean and no watcher
+or subprocess helper running.
 
 The latest retained-watch gate at `d1c3ca9732` was coherent and passed: 118 ms
 OCaml versus 123 ms Rust, exactly seven parser and seven compiler calls per
