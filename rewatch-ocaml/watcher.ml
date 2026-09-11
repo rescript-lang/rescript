@@ -40,7 +40,7 @@ let watch_context ~root ~prod ~features ~filter =
     in
     let visited = Hashtbl.create 32 in
     let packages = Hashtbl.create 32 in
-    let requested_features = Hashtbl.create 32 in
+    let requested_features = Feature_requests.create () in
     let roots = ref [root] in
     let paths = ref [] in
     let sources = ref [] in
@@ -54,15 +54,6 @@ let watch_context ~root ~prod ~features ~filter =
         let parent = Filename.dirname directory in
         if parent = directory || directory = package_root then package_root
         else nearest_existing_directory package_root parent
-    in
-    let add_feature_request root request =
-      match (Hashtbl.find_opt requested_features root, request) with
-      | None, request -> Hashtbl.add requested_features root request
-      | Some None, _ | Some _, None ->
-        Hashtbl.replace requested_features root None
-      | Some (Some current), Some requested ->
-        Hashtbl.replace requested_features root
-          (Some (List.sort_uniq String.compare (current @ requested)))
     in
     let path_is_within_root path =
       let normalize = Platform.normalize_path_for_comparison in
@@ -85,7 +76,7 @@ let watch_context ~root ~prod ~features ~filter =
           with Sys_error _ | Unix.Unix_error _ -> ())
     in
     let rec visit ~is_local ~features (config : Config.t) =
-      add_feature_request config.root features;
+      Feature_requests.add requested_features config.root features;
       if Hashtbl.mem visited config.root then ()
       else (
         Hashtbl.add visited config.root ();
@@ -155,8 +146,11 @@ let watch_context ~root ~prod ~features ~filter =
     Hashtbl.iter
       (fun package_root ((config : Config.t), is_local) ->
         try
-          let requested = Hashtbl.find_opt requested_features package_root in
-          let requested = Option.value requested ~default:None in
+          let requested =
+            Feature_requests.find requested_features package_root
+            |> Option.map Feature_requests.to_option
+            |> Option.value ~default:None
+          in
           let all_features = Option.is_none requested in
           let active_features =
             Source.resolve_active_features config

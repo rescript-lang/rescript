@@ -41,24 +41,28 @@ let tests =
       Compiler_log.initialize root;
       let a_source = source "A" in
       let b_source = source "B" in
-      let build_state = Build_state.create 2 in
+      let c_source = source "C" in
+      let build_state = Build_state.create 3 in
       List.iter
         (fun key ->
           Build_state.add build_state ~key ~package_name:"scheduler-test"
             ~package_root:root ~kind:Build_state.Source_module
             ~last_compiled_cmi:(Some 0.) ~last_compiled_cmt:(Some 0.))
-        ["A"; "B"];
+        ["A"; "B"; "C"];
       Build_state.set_dependencies build_state ~key:"B" ["A"];
       let a_state = Build_state.find_exn build_state "A" in
       let b_state = Build_state.find_exn build_state "B" in
+      let c_state = Build_state.find_exn build_state "C" in
       a_state.compile_dirty <- true;
       let a_cmi = Filename.concat ocaml_dir "A.cmi" in
       let b_cmi = Filename.concat ocaml_dir "B.cmi" in
+      let c_cmi = Filename.concat ocaml_dir "C.cmi" in
       write_file a_cmi "old interface";
       write_file b_cmi "dependent interface";
       let compile_assets = Compile_assets.create [ocaml_dir] in
       let fail_a_publication = ref true in
       let b_compilations = ref 0 in
+      let c_candidates_built = ref 0 in
       let scheduler_thread = Thread.id (Thread.self ()) in
       let output_inventory = Hashtbl.create 1 in
       let make_scheduled key source state cmi_path =
@@ -89,14 +93,22 @@ let tests =
           ~mark_warning:(fun _ -> ())
       in
       let run () =
+        let candidates =
+          [
+            ("A", a_source, a_state, a_cmi, fun () -> ());
+            ("B", b_source, b_state, b_cmi, fun () -> ());
+            ("C", c_source, c_state, c_cmi, fun () -> incr c_candidates_built);
+          ]
+          |> List.map (fun (key, source, state, cmi_path, on_make) ->
+              Compiler_scheduler.candidate ~key ~state ~warning_paths:[]
+                ~make:(fun () ->
+                  on_make ();
+                  make_scheduled key source state cmi_path))
+        in
         Compiler_scheduler.run ~poll:None
           ~warning_state:(Warning_state.create ())
           ~blocked_modules:(Hashtbl.create 0) ~compile_assets ~build_state
-          ~scheduled_modules:
-            [
-              make_scheduled "A" a_source a_state a_cmi;
-              make_scheduled "B" b_source b_state b_cmi;
-            ]
+          ~candidates
           ~mark_compiled:(fun () -> ())
           ~mark_had_warnings:(fun () -> ())
           ~progress:(Output.Progress.create ~enabled:false ~color:false)
@@ -120,4 +132,6 @@ let tests =
         "the retained dependent recompiles after publication recovers";
       check
         (Hashtbl.length output_inventory = 256)
-        "scheduler-owned publication inventory updates survive table growth")
+        "scheduler-owned publication inventory updates survive table growth";
+      check (!c_candidates_built = 0)
+        "an unaffected module does not construct compiler callbacks")

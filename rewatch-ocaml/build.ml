@@ -92,7 +92,7 @@ let run_scheduled_modules (stats : Build_types.t) ~compile_step ~namespace_count
     ~warning_state:stats.retained.warning_state
     ~blocked_modules:stats.blocked_modules
     ~compile_assets:prepared.compile_assets ~build_state:prepared.build_state
-    ~scheduled_modules:!(stats.scheduled_modules)
+    ~candidates:!(stats.compile_candidates)
     ~mark_compiled:(fun () -> stats.compiled <- stats.compiled + 1)
     ~mark_had_warnings:(fun () -> stats.had_warnings <- true)
     ~progress:stats.progress ~compile_step ~namespace_count
@@ -263,6 +263,7 @@ let prepare_incremental previous changes (stats : Build_types.t) =
          ~on_complete:parse_completed
   in
   let affected_modules = Hashtbl.create (List.length sources) in
+  let dependencies_changed = ref false in
   List.iter2
     (fun source result ->
       Hashtbl.replace stats.forced_parse_paths source.absolute_path ();
@@ -289,7 +290,7 @@ let prepare_incremental previous changes (stats : Build_types.t) =
     sources results;
   Hashtbl.iter
     (fun key (package, module_, changed_parse_failed) ->
-      if not changed_parse_failed then (
+      if not changed_parse_failed then
         let dependencies path =
           Compiler_process.ast_dependencies
             ~build_dir:package.Build_types.graph_build_dir
@@ -308,14 +309,23 @@ let prepare_incremental previous changes (stats : Build_types.t) =
           | Some node -> node
           | None -> raise Full_rebuild_required
         in
-        node.raw_dependencies <- raw_dependencies;
-        Build_state.set_dependencies prepared.build_state ~key
-          (Build_preparation.resolved_dependencies stats.retained.global_modules
-             stats.retained.namespace_maps_by_name node)))
+        if node.raw_dependencies <> raw_dependencies then (
+          dependencies_changed := true;
+          node.raw_dependencies <- raw_dependencies;
+          Build_state.set_dependencies prepared.build_state ~key
+            (Build_preparation.resolved_dependencies
+               stats.retained.global_modules
+               stats.retained.namespace_maps_by_name node)))
     affected_modules;
   stats.parse_seconds <- Unix.gettimeofday () -. started_at;
-  Build_preparation.find_cycle stats.retained.global_modules
-    stats.retained.namespace_maps prepared.build_state
+  if !dependencies_changed || stats.retained.graph_has_cycle then (
+    let cycle =
+      Build_preparation.find_cycle stats.retained.global_modules
+        stats.retained.namespace_maps prepared.build_state
+    in
+    stats.retained.graph_has_cycle <- Option.is_some cycle;
+    cycle)
+  else None
 
 let run_with_warning_state ~poll ~warning_state ~previous ~changes
     ~compilation_kind ~no_timing ~seen ~verbosity ~folder ~prod ~features

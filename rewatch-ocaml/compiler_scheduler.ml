@@ -8,7 +8,9 @@ type phase =
   | Post_build of string * (string * Process.task) list
   | Done
 
-type publication = {outcome: (string, exn) result; cmi_digest: Digest.t option}
+type publication =
+  | Published of {stderr: string; cmi_digest: Digest.t option}
+  | Failed_after_cmi_publication of {error: exn; cmi_digest: Digest.t option}
 
 type scheduled_module = {
   key: string;
@@ -28,6 +30,13 @@ type scheduled_module = {
   mark_warning: string -> unit;
   messages: string list ref;
   phase: phase ref;
+}
+
+type candidate = {
+  key: string;
+  state: Build_state.module_;
+  warning_paths: string list;
+  make: unit -> scheduled_module;
 }
 
 let create ~key ~dependencies ~source ~state ~cmi_path ~prepare ~compile
@@ -53,13 +62,16 @@ let create ~key ~dependencies ~source ~state ~cmi_path ~prepare ~compile
     phase = ref Start;
   }
 
-let requires_compile scheduled = scheduled.state.compile_dirty
+let candidate ~key ~state ~warning_paths ~make =
+  {key; state; warning_paths; make}
+
+let candidate_requires_compile candidate = candidate.state.compile_dirty
 
 let file_digest path =
   try Some (Digest.file path) with Sys_error _ | Unix.Unix_error _ -> None
 
 let run ~poll ~warning_state ~blocked_modules ~compile_assets ~build_state
-    ~scheduled_modules ~mark_compiled ~mark_had_warnings ~progress ~compile_step
+    ~candidates ~mark_compiled ~mark_had_warnings ~progress ~compile_step
     ~namespace_count ~verbosity =
   let refresh_published_cmi (scheduled : scheduled_module) cmi_digest_after =
     (* Only a changed interface invalidates reverse dependents. Comparing bytes
@@ -88,48 +100,44 @@ let run ~poll ~warning_state ~blocked_modules ~compile_assets ~build_state
     scheduled.state.compile_dirty <- false
   in
   let warning_paths =
-    scheduled_modules
-    |> List.concat_map (fun (scheduled : scheduled_module) ->
-        scheduled.source.Source.implementation
-        :: Option.to_list scheduled.source.Source.interface
-        |> List.map (fun path -> Filename.concat scheduled.package_root path))
+    candidates |> List.concat_map (fun candidate -> candidate.warning_paths)
   in
   Warning_state.retain_paths warning_state warning_paths;
   if Output.trace_enabled verbosity then
-    scheduled_modules
-    |> List.filter (fun scheduled -> scheduled.state.compile_dirty)
+    candidates
+    |> List.filter candidate_requires_compile
     |> List.sort (fun first second -> String.compare first.key second.key)
-    |> List.iter (fun scheduled ->
-        Printf.printf "compile dirty: %s\n%!" scheduled.key);
+    |> List.iter (fun candidate ->
+        Printf.printf "compile dirty: %s\n%!" candidate.key);
   (* The scheduler only needs dirty modules and their transitive dependents.
      Dependencies outside that universe already have usable artifacts, while
      keeping every module in the subprocess graph makes small edits scale with
      the whole project. *)
-  let scheduled_by_key = Hashtbl.create (List.length scheduled_modules) in
+  let candidate_by_key = Hashtbl.create (List.length candidates) in
   List.iter
-    (fun scheduled -> Hashtbl.replace scheduled_by_key scheduled.key scheduled)
-    scheduled_modules;
-  let universe = Hashtbl.create (List.length scheduled_modules) in
-  let reached = Hashtbl.create (List.length scheduled_modules) in
+    (fun candidate -> Hashtbl.replace candidate_by_key candidate.key candidate)
+    candidates;
+  let universe = Hashtbl.create (List.length candidates) in
+  let reached = Hashtbl.create (List.length candidates) in
   let pending = Queue.create () in
   let add_to_closure key =
     if not (Hashtbl.mem reached key) then (
       Hashtbl.add reached key ();
-      if Hashtbl.mem scheduled_by_key key then Hashtbl.add universe key ();
+      if Hashtbl.mem candidate_by_key key then Hashtbl.add universe key ();
       Queue.add key pending)
   in
-  scheduled_modules
-  |> List.iter (fun scheduled ->
-      if scheduled.state.compile_dirty then add_to_closure scheduled.key);
+  candidates
+  |> List.iter (fun candidate ->
+      if candidate.state.compile_dirty then add_to_closure candidate.key);
   while not (Queue.is_empty pending) do
     let key = Queue.take pending in
     let state = Build_state.find_exn build_state key in
     Build_state.String_set.iter add_to_closure state.dependents
   done;
   let scheduled_modules =
-    List.filter
-      (fun scheduled -> Hashtbl.mem universe scheduled.key)
-      scheduled_modules
+    candidates
+    |> List.filter (fun candidate -> Hashtbl.mem universe candidate.key)
+    |> List.map (fun candidate -> candidate.make ())
   in
   Output.Progress.start progress ~step:compile_step ~symbol:"🤺 "
     ~label:"Compiling"
@@ -165,19 +173,19 @@ let run ~poll ~warning_state ~blocked_modules ~compile_assets ~build_state
   in
   let record_result (scheduled : scheduled_module) ~is_interface path result =
     let publication = Atomic.exchange scheduled.publication None in
-    let result, publication_error =
+    let result, publication_error, cmi_digest =
       match publication with
-      | Some publication -> (
-        match publication.outcome with
-        | Ok stderr -> ({result with Process.stderr}, None)
-        | Error exn -> (result, Some (Printexc.to_string exn)))
-      | None -> (result, None)
+      | Some (Published {stderr; cmi_digest}) ->
+        ({result with Process.stderr}, None, Some cmi_digest)
+      | Some (Failed_after_cmi_publication {error; cmi_digest}) ->
+        (result, Some (Printexc.to_string error), Some cmi_digest)
+      | None -> (result, None, None)
     in
     Option.iter
-      (fun publication ->
-        refresh_published_cmi scheduled publication.cmi_digest;
+      (fun cmi_digest ->
+        refresh_published_cmi scheduled cmi_digest;
         scheduled.record_published_outputs ~is_interface path)
-      publication;
+      cmi_digest;
     let message =
       match publication_error with
       | Some message ->
@@ -212,12 +220,15 @@ let run ~poll ~warning_state ~blocked_modules ~compile_assets ~build_state
     Atomic.set scheduled.publication None;
     Process.task job ~on_result:(fun result ->
         (if Process.succeeded result then
-           let outcome =
-             try Ok (scheduled.publish ~is_interface path result)
-             with exn -> Error exn
+           let publication =
+             try
+               let stderr = scheduled.publish ~is_interface path result in
+               Published {stderr; cmi_digest = file_digest scheduled.cmi_path}
+             with error ->
+               Failed_after_cmi_publication
+                 {error; cmi_digest = file_digest scheduled.cmi_path}
            in
-           Atomic.set scheduled.publication
-             (Some {outcome; cmi_digest = file_digest scheduled.cmi_path}));
+           Atomic.set scheduled.publication (Some publication));
         result)
   in
   let record_post_build_result (scheduled : scheduled_module) output result =

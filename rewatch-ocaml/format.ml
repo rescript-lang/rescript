@@ -61,15 +61,9 @@ let package_sources (package : discovered_package) =
 let discover_package_graph (current : Config.t) =
   let resolution = Package_resolution.create current in
   let package_configs = Hashtbl.create 32 in
-  let feature_requests = Hashtbl.create 32 in
+  let feature_requests = Feature_requests.create () in
   Package_diagnostics.validate_metadata current;
   Hashtbl.add package_configs current.root (current, true);
-  let add_feature_request root request =
-    let requests =
-      Option.value (Hashtbl.find_opt feature_requests root) ~default:[]
-    in
-    Hashtbl.replace feature_requests root (request :: requests)
-  in
   let rec visit ~is_local (config : Config.t) =
     let dependencies =
       config.dependencies @ if is_local then config.dev_dependencies else []
@@ -81,7 +75,8 @@ let discover_package_graph (current : Config.t) =
             Package_resolution.resolve resolution ~package_root:config.root
               dependency
           in
-          add_feature_request resolved.directory dependency.features;
+          Feature_requests.add feature_requests resolved.directory
+            dependency.features;
           if Hashtbl.mem package_configs resolved.directory then None
           else Some resolved)
     in
@@ -100,14 +95,9 @@ let discover_package_graph (current : Config.t) =
       let features =
         if config.root = current.root then None
         else
-          match Hashtbl.find_opt feature_requests package_root with
-          | None -> None
-          | Some requests when List.exists Option.is_none requests -> None
-          | Some requests ->
-            let requested =
-              requests |> List.filter_map Fun.id |> List.concat
-              |> List.sort_uniq String.compare
-            in
+          match Feature_requests.find feature_requests package_root with
+          | None | Some Feature_requests.All -> None
+          | Some (Feature_requests.Selected requested) ->
             (try ignore (Source.resolve_active_features config requested)
              with Source.Error message ->
                raise

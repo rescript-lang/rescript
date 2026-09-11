@@ -279,7 +279,7 @@ let rec prepare_tree ~seen ~(package : Build_types.graph_package) ~watch
           config.package_specs
     in
     let post_build path = Compiler_process.post_build_tasks config path in
-    let scheduled =
+    let candidates =
       List.map
         (fun module_ ->
           let key = Source.compiler_basename config module_.Source.name in
@@ -305,19 +305,26 @@ let rec prepare_tree ~seen ~(package : Build_types.graph_package) ~watch
                  module_.Source.implementation
               ^ ".cmi")
           in
-          Compiler_scheduler.create ~key ~dependencies ~source:module_ ~state
-            ~cmi_path
-            ~prepare:(fun () -> prepare_outputs module_)
-            ~compile:(fun ~is_interface path ->
-              compile_process module_ ~is_interface path)
-            ~publish:(fun ~is_interface path result ->
-              Compiler_process.publish ~build_dir ~ocaml_dir ~is_local ~config
-                ~is_interface path result)
-            ~record_published_outputs ~post_build ~package_root:config.root
-            ~is_local
-            ~mark_warning:(fun path ->
-              Hashtbl.replace compile_warning_modules (Source.module_name path)
-                ()))
+          let warning_paths =
+            module_.Source.implementation
+            :: Option.to_list module_.Source.interface
+            |> List.map (Filename.concat config.root)
+          in
+          Compiler_scheduler.candidate ~key ~state ~warning_paths
+            ~make:(fun () ->
+              Compiler_scheduler.create ~key ~dependencies ~source:module_
+                ~state ~cmi_path
+                ~prepare:(fun () -> prepare_outputs module_)
+                ~compile:(fun ~is_interface path ->
+                  compile_process module_ ~is_interface path)
+                ~publish:(fun ~is_interface path result ->
+                  Compiler_process.publish ~build_dir ~ocaml_dir ~is_local
+                    ~config ~is_interface path result)
+                ~record_published_outputs ~post_build ~package_root:config.root
+                ~is_local
+                ~mark_warning:(fun path ->
+                  Hashtbl.replace compile_warning_modules
+                    (Source.module_name path) ())))
         modules
     in
     Option.iter
@@ -335,7 +342,7 @@ let rec prepare_tree ~seen ~(package : Build_types.graph_package) ~watch
           Build_state.find_exn build_state namespace_map.key
         in
         let package_dirty =
-          List.exists Compiler_scheduler.requires_compile scheduled
+          List.exists Compiler_scheduler.candidate_requires_compile candidates
         in
         if package_dirty || stats.attempt_kind = Build_types.Full_attempt then
           Option.iter
@@ -377,7 +384,7 @@ let rec prepare_tree ~seen ~(package : Build_types.graph_package) ~watch
                ~entry:config.namespace_entry ~package_dirty compiler_name
                modules))
       config.namespace;
-    stats.scheduled_modules := scheduled @ !(stats.scheduled_modules);
+    stats.compile_candidates := candidates @ !(stats.compile_candidates);
     stats.compile_cleanup :=
       (fun () ->
         (* The published AST is the freshness marker. Keep bsc's working AST in

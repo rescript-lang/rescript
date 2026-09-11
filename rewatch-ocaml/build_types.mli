@@ -60,6 +60,7 @@ type retained = {
   global_modules: (string, global_module) Hashtbl.t;
   namespace_maps: (string, namespace_map) Hashtbl.t;
   namespace_maps_by_name: (string, namespace_map list) Hashtbl.t;
+  mutable graph_has_cycle: bool;
   graph_packages: (string, graph_package) Hashtbl.t;
   source_index: (string, string * Source.module_ * string * string) Hashtbl.t;
   pending_parse_paths: (string, unit) Hashtbl.t;
@@ -86,7 +87,7 @@ type t = {
   initialized_logs: (string, unit) Hashtbl.t;
   deferred_artifact_cleanup: string list ref;
   namespace_jobs: (Process.job * (Process.result -> unit)) list ref;
-  scheduled_modules: Compiler_scheduler.scheduled_module list ref;
+  compile_candidates: Compiler_scheduler.candidate list ref;
   compile_cleanup: (unit -> unit) list ref;
   mutable compiler_cleaned: bool;
   retained: retained;
