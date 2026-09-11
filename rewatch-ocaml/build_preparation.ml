@@ -146,22 +146,29 @@ let find_cycle
          ( node,
            (Build_state.find_exn build_state node.Build_types.key).dependencies ))
   in
-  try
-    ignore
-      (Graph.topological_sort graph_nodes
-         ~name:(fun (node, _) -> node.Build_types.key)
-         ~deps:snd);
-    None
-  with Graph.Cycle cycle ->
-    let blocked =
-      Graph.blocked_dependents
-        (List.map
-           (fun (node, dependencies) ->
-             (node.Build_types.key, dependencies))
-           graph_nodes)
-        cycle
+  let name (node, _) = node.Build_types.key in
+  let graph = List.map (fun node -> (name node, snd node)) graph_nodes in
+  match Graph.shortest_cycle graph_nodes ~name ~deps:snd with
+  | None -> None
+  | Some cycle ->
+    let blocked = Hashtbl.create (List.length cycle) in
+    let rec block_cycles remaining =
+      match Graph.shortest_cycle remaining ~name ~deps:snd with
+      | None -> ()
+      | Some cycle ->
+        Graph.blocked_dependents graph cycle
+        |> List.iter (fun key -> Hashtbl.replace blocked key ());
+        remaining
+        |> List.filter (fun node -> not (Hashtbl.mem blocked (name node)))
+        |> block_cycles
     in
-    Some {cycle; blocked; modules_by_key}
+    block_cycles graph_nodes;
+    Some
+      {
+        cycle;
+        blocked = Hashtbl.to_seq_keys blocked |> List.of_seq;
+        modules_by_key;
+      }
 
 let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
     ~(stats : Build_types.t) ~parse_step ~on_cleanup =

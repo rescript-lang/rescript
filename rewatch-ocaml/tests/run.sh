@@ -147,6 +147,17 @@ printf '%s\n' \
 printf 'let value = 1\n' >"$symlink_source/shared/linked.txt"
 ln -s '../shared/linked.txt' "$symlink_source/src/Linked.res"
 
+multiple_cycles="$work/multiple-cycles"
+mkdir -p "$multiple_cycles/src"
+printf '%s\n' \
+  '{"name":"multiple-cycles","sources":"src","package-specs":{"module":"esmodule","in-source":true,"suffix":".mjs"}}' \
+  >"$multiple_cycles/rescript.json"
+printf 'let value = B.value\n' >"$multiple_cycles/src/A.res"
+printf 'let value = A.value\n' >"$multiple_cycles/src/B.res"
+printf 'let value = D.value\n' >"$multiple_cycles/src/C.res"
+printf 'let value = C.value\n' >"$multiple_cycles/src/D.res"
+printf 'let value = 1\n' >"$multiple_cycles/src/Valid.res"
+
 if [ -x "$port_directory/bsc.exe" ]; then
   env -u RESCRIPT_BSC_EXE "$port" build "$packaged_basic" \
     >"$packaged_basic/build.log"
@@ -917,6 +928,23 @@ if "$port" build "$cycle" >"$cycle/output.log" 2>&1; then
   exit 1
 fi
 grep "circular dependency" "$cycle/output.log" >/dev/null
+
+if "$port" build "$multiple_cycles" \
+  >"$multiple_cycles/output.log" 2>&1; then
+  echo "multiple-cycle build unexpectedly succeeded" >&2
+  exit 1
+fi
+grep "circular dependency" "$multiple_cycles/output.log" >/dev/null
+if grep "subprocess dependency graph contains a cycle" \
+  "$multiple_cycles/output.log" >/dev/null; then
+  echo "multiple cycles escaped build preparation" >&2
+  exit 1
+fi
+test -f "$multiple_cycles/src/Valid.mjs"
+test ! -f "$multiple_cycles/src/A.mjs"
+test ! -f "$multiple_cycles/src/B.mjs"
+test ! -f "$multiple_cycles/src/C.mjs"
+test ! -f "$multiple_cycles/src/D.mjs"
 
 if "$port" build "$failure" >"$failure/output.log" 2>&1; then
   echo "invalid build unexpectedly succeeded" >&2
