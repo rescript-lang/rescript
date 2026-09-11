@@ -73,6 +73,9 @@ let is_watch_output_sidecar path =
       Option.is_some (generated_output_details output))
     watch_sidecar_suffixes
 
+let is_generated_output_path path =
+  Option.is_some (generated_output_details path) || is_watch_output_sidecar path
+
 let cleanup_watch_output_sidecars ?source_files ~root (config : Config.t) =
   let source_files =
     match source_files with

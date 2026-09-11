@@ -11,6 +11,25 @@ let signal_is_ignored signal =
 
 let tests =
   "watcher_tests" >:: fun _context ->
+  let snapshot path digest = [(path, 1., 1, digest)] in
+  let previous = snapshot "A.res" "old-a" @ snapshot "B.res" "old-b" in
+  let trigger = snapshot "A.res" "new-a" @ snapshot "B.res" "old-b" in
+  let before_build = snapshot "A.res" "new-a" @ snapshot "B.res" "new-b" in
+  let polling_changes =
+    Watcher.For_test.polling_build_changes ~previous ~trigger ~before_build
+  in
+  check
+    (List.map (fun (change : Watcher.change) -> change.path) polling_changes
+    = ["A.res"; "B.res"])
+    "polling includes edits that arrive after the triggering snapshot";
+  check
+    (Watcher.For_test.changes_are_incremental polling_changes)
+    "polling source modifications use incremental presentation";
+  check
+    (not
+       (Watcher.For_test.changes_are_incremental
+          [Watcher.{path = "rescript.json"; kind = Modified}]))
+    "polling control-file changes use full-rebuild presentation";
   let root = Filename.temp_file "rewatch-watcher-lifecycle-" "" in
   Sys.remove root;
   Unix.mkdir root 0o700;

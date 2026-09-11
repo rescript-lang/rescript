@@ -119,7 +119,7 @@ let namespace_job ~bsc ~runtime ~build_dir ~ocaml_dir ~entry ~package_dirty
           File_util.copy_existing_file ~ensure_parent:false mlmap
             (Filename.concat ocaml_dir (namespace ^ ".mlmap")) )
 
-let run_post_build (config : Config.t) path =
+let run_post_build ?poll (config : Config.t) path =
   match config.js_post_build with
   | None -> ()
   | Some command ->
@@ -129,8 +129,8 @@ let run_post_build (config : Config.t) path =
         let env, program, args = Platform.post_build_command ~command ~output in
         let result =
           match env with
-          | None -> Process.run ~cwd:config.root program args
-          | Some env -> Process.run ~env ~cwd:config.root program args
+          | None -> Process.run ?poll ~cwd:config.root program args
+          | Some env -> Process.run ~env ?poll ~cwd:config.root program args
         in
         if not (Process.succeeded result) then (
           let captured = result.stderr ^ result.stdout in
@@ -171,7 +171,7 @@ let compile_job ~bsc ~runtime ~build_dir ~watch ~(config : Config.t)
   in
   Process.{program = bsc; args; cwd = build_dir}
 
-let publish ~build_dir ~ocaml_dir ~watch ~watch_output_paths ~is_local
+let publish ?poll ~build_dir ~ocaml_dir ~watch ~watch_output_paths ~is_local
     ~(config : Config.t) ~is_interface path result =
   let stderr =
     if is_local then result.Process.stderr
@@ -214,7 +214,7 @@ let publish ~build_dir ~ocaml_dir ~watch ~watch_output_paths ~is_local
               (build_output ^ ".map")
           else File_util.remove_file (build_output ^ ".map")))
       config.package_specs;
-    run_post_build config path;
+    run_post_build ?poll config path;
     if watch then
       List.iter
         (fun spec ->

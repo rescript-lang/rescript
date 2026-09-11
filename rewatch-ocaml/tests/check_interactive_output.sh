@@ -29,6 +29,13 @@ for implementation in rust ocaml; do
   printf 'let value = 1\n' >"$work/$implementation/src/A.res"
   printf 'let value: int\n' >"$work/$implementation/src/A.resi"
   cp -R "$work/$implementation" "$work/$implementation-watch"
+  cp -R "$work/$implementation" "$work/$implementation-initial-failure-watch"
+  printf 'let value =\n' \
+    >"$work/$implementation-initial-failure-watch/src/A.res"
+  cp -R "$root/rewatch-ocaml/tests/basic" \
+    "$work/$implementation-partial-initial-failure-watch"
+  printf 'let answer: int = "not an int"\n' \
+    >"$work/$implementation-partial-initial-failure-watch/src/B.res"
   cp -R "$work/$implementation" "$work/$implementation-warning-watch"
   printf '%s\n' \
     '{"name":"interactive-output","sources":["src"],"namespace":"Interactive","package-specs":{"module":"es6","in-source":true}}' \
@@ -157,6 +164,18 @@ wait_for_text() {
   return 1
 }
 
+wait_for_file() {
+  path=$1
+  attempts=0
+  while [ "$attempts" -lt 200 ]; do
+    if [ -f "$path" ]; then return 0; fi
+    attempts=$((attempts + 1))
+    sleep 0.1
+  done
+  printf 'Timed out waiting for %s\n' "$path" >&2
+  return 1
+}
+
 capture_watch_rebuild() {
   local implementation=$1
   local executable=$2
@@ -274,6 +293,96 @@ if ! cmp -s "$work/expected-watch" "$work/ocaml-watch.phases"; then
   cat "$work/ocaml-watch.phases" >&2
   exit 1
 fi
+
+capture_initial_failure_recovery() {
+  local implementation=$1
+  local executable=$2
+  local project="$work/$implementation-initial-failure-watch"
+  local transcript="$work/$implementation-initial-failure-watch.tty"
+  if [ "$(uname -s)" = Darwin ]; then
+    script -q "$transcript" env -u NO_COLOR \
+      "TERM=xterm" \
+      "CLICOLOR=1" \
+      "CLICOLOR_FORCE=0" \
+      "RESCRIPT_BSC_EXE=$RESCRIPT_BSC_EXE" \
+      "RESCRIPT_RUNTIME=$RESCRIPT_RUNTIME" \
+      "$executable" watch --clear-screen "$project" >/dev/null &
+  else
+    script -qefc \
+      "env -u NO_COLOR TERM=xterm CLICOLOR=1 CLICOLOR_FORCE=0 RESCRIPT_BSC_EXE=$RESCRIPT_BSC_EXE RESCRIPT_RUNTIME=$RESCRIPT_RUNTIME $executable watch --clear-screen $project" \
+      "$transcript" >/dev/null &
+  fi
+  active_script_pid=$!
+  if ! wait_for_text "$transcript" "Error parsing source files" 1; then
+    return 1
+  fi
+  printf 'let value = 1\n' >"$project/src/A.res"
+  if ! wait_for_text "$transcript" "Finished incremental compilation" 1; then
+    return 1
+  fi
+  rm -f "$project/lib/watch.lock"
+  wait "$active_script_pid"
+  active_script_pid=""
+  tr '\r' '\n' <"$transcript" \
+    | sed -E $'s/\033\\[[0-9;]*[[:alpha:]]//g; s/in [0-9]+\\.[0-9]+s/in <TIME>/' \
+    | sed -n '/Change detected\. Rebuilding\.\.\./,$p' \
+    | grep -E '^(Change detected|\[[12]/2\] .* (Parsed|Compiled) |✅ Finished incremental compilation)' \
+    >"$work/$implementation-initial-failure-recovery.phases"
+}
+
+capture_initial_failure_recovery rust "$rust"
+capture_initial_failure_recovery ocaml "$ocaml"
+
+if ! cmp -s "$work/rust-initial-failure-recovery.phases" \
+  "$work/ocaml-initial-failure-recovery.phases"; then
+  echo "Interactive initial-failure recovery output differs" >&2
+  printf '%s\n' '--- Rust recovery phases ---' >&2
+  cat "$work/rust-initial-failure-recovery.phases" >&2
+  printf '%s\n' '--- OCaml recovery phases ---' >&2
+  cat "$work/ocaml-initial-failure-recovery.phases" >&2
+  exit 1
+fi
+
+cat >"$work/expected-initial-failure-recovery" <<'EOF'
+Change detected. Rebuilding...
+[1/2] 🧱 Parsed 1 source files in <TIME>
+[2/2] 🤺 Compiled 1 modules in <TIME>
+✅ Finished incremental compilation in <TIME>
+EOF
+
+if ! cmp -s "$work/expected-initial-failure-recovery" \
+  "$work/ocaml-initial-failure-recovery.phases"; then
+  echo "Initial-failure recovery did not retain incremental state" >&2
+  cat "$work/ocaml-initial-failure-recovery.phases" >&2
+  exit 1
+fi
+
+capture_partial_initial_failure_recovery() {
+  local implementation=$1
+  local executable=$2
+  local project="$work/$implementation-partial-initial-failure-watch"
+  local transcript="$work/$implementation-partial-initial-failure-watch.log"
+  "$executable" watch "$project" >"$transcript" 2>&1 &
+  active_script_pid=$!
+  if ! wait_for_text "$transcript" "expected to have type" 1; then return 1; fi
+  printf 'let answer = A.value + 1\n' >"$project/src/B.res"
+  if ! wait_for_text "$transcript" "Finished incremental compilation" 1; then
+    return 1
+  fi
+  wait_for_file "$project/src/A.mjs"
+  wait_for_file "$project/src/B.mjs"
+  if grep -F "I/O error: src/A.ast" "$transcript" >/dev/null; then
+    echo "$implementation retained build state without its parsed AST" >&2
+    cat "$transcript" >&2
+    return 1
+  fi
+  rm -f "$project/lib/watch.lock"
+  wait "$active_script_pid"
+  active_script_pid=""
+}
+
+capture_partial_initial_failure_recovery rust "$rust"
+capture_partial_initial_failure_recovery ocaml "$ocaml"
 
 capture_warning_watch() {
   local implementation=$1

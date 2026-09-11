@@ -283,7 +283,7 @@ let prepare_incremental previous changes stats =
 
 let run_with_warning_state ~poll ~warning_state ~previous ~changes
     ~compilation_kind ~no_timing ~seen ~verbosity ~folder ~prod ~features
-    ~warn_error ~watch ~after_build ~filter =
+    ~warn_error ~watch ~after_build ~filter ~on_state =
   let started_at = Unix.gettimeofday () in
   let interactive = Unix.isatty Unix.stdout && Unix.isatty Unix.stderr in
   let show_progress = verbosity >= 0 in
@@ -328,6 +328,7 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
     | None ->
       Build_types.create ~warning_state ~poll ~process_poll ~progress ~verbosity
   in
+  on_state {root_config; stats};
   List.iter (fun path -> Hashtbl.replace visited (Unix.realpath path) ()) seen;
   let finalize_logs () =
     Output.Progress.finish progress;
@@ -358,6 +359,11 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
            retain_public_output output))
   in
   let finish_watch_outputs ~success =
+    let retain_dirty_asts =
+      match compilation_kind with
+      | Initial_watch | Incremental_watch -> true
+      | One_shot | Full_watch -> false
+    in
     !(stats.watch_outputs)
     |> List.rev
     |> List.iter (fun (output, pending, dirty_ast) ->
@@ -370,22 +376,22 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
          else (
            File_util.remove_file output;
            File_util.remove_file pending;
-           File_util.remove_file dirty_ast));
+           if not retain_dirty_asts then File_util.remove_file dirty_ast));
     stats.watch_outputs := [];
     Hashtbl.clear stats.watch_output_paths;
     outputs_finished := true
   in
-  let report ~success () =
+  let prepare_report ~success =
     finish_watch_outputs ~success;
     finalize_logs ();
-    if show_progress && not interactive then
-      if watch then (
-        if success then Printf.printf "Finished compilation\n%!")
-      else (
-        Printf.printf "Cleaned %d/%d\nParsed %d source files\n%!" stats.cleaned
-          stats.previous_asts stats.parsed;
-        if success then Printf.printf "Compiled %d modules\n%!" stats.compiled
-        else Printf.eprintf "Compiled %d modules\n%!" stats.compiled);
+    if show_progress && not interactive then (
+      (match compilation_kind with
+      | One_shot | Initial_watch | Full_watch ->
+        Printf.printf "Cleaned %d/%d\n%!" stats.cleaned stats.previous_asts
+      | Incremental_watch -> ());
+      Printf.printf "Parsed %d source files\n%!" stats.parsed;
+      if success then Printf.printf "Compiled %d modules\n%!" stats.compiled
+      else Printf.eprintf "Compiled %d modules\n%!" stats.compiled);
     let diagnostics =
       if compilation_kind = Incremental_watch then []
       else stats.diagnostics |> List.rev |> List.sort_uniq String.compare
@@ -400,7 +406,10 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
       |> List.map (fun diagnostic ->
            if colors then Output.yellow diagnostic else diagnostic)
       |> String.concat "\n\n" |> prerr_endline);
-    if success && interactive && show_progress then
+    diagnostics
+  in
+  let report_completion diagnostics =
+    if interactive && show_progress then
       let seconds =
         if no_timing then 0. else Unix.gettimeofday () -. started_at
       in
@@ -410,6 +419,16 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
              (stats.had_warnings || diagnostics <> []
              || Warning_state.entries stats.warning_state <> [])
            ~seconds)
+    else if watch && show_progress then
+      Printf.printf "Finished %scompilation\n%!"
+        (match compilation_kind with
+        | Initial_watch -> "initial "
+        | Incremental_watch -> "incremental "
+        | One_shot | Full_watch -> "")
+  in
+  let report ~success () =
+    let diagnostics = prepare_report ~success in
+    if success then report_completion diagnostics
   in
   let report_failure output =
     write_build_ninja_once ();
@@ -425,13 +444,16 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
     write_build_ninja_once ();
     finish_watch_outputs ~success:false;
     finalize_logs ();
-    if interactive && show_progress then
-      prerr_endline
-        (Output.parsing_failed_message ~color:colors
-           ~step:(if is_rebuild then "1/2" else "2/3")
-           ~seconds:(if no_timing then 0. else stats.parse_seconds))
-    else if show_progress then
-      Printf.printf "Cleaned %d/%d\n%!" stats.cleaned stats.previous_asts;
+    (if interactive && show_progress then
+       prerr_endline
+         (Output.parsing_failed_message ~color:colors
+            ~step:(if is_rebuild then "1/2" else "2/3")
+            ~seconds:(if no_timing then 0. else stats.parse_seconds))
+     else if show_progress then
+       match compilation_kind with
+       | One_shot | Initial_watch | Full_watch ->
+         Printf.printf "Cleaned %d/%d\n%!" stats.cleaned stats.previous_asts
+       | Incremental_watch -> ());
     prerr_endline output;
     raise
       (Reported_failure
@@ -552,17 +574,16 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
         stats.compiler_context;
       write_source_dirs root_config stats;
       write_build_ninja_once ();
+      Option.iter (fun _ -> expose_watch_outputs ()) after_build;
+      let diagnostics = prepare_report ~success:true in
       Option.iter
         (fun command ->
-          expose_watch_outputs ();
-          finish_watch_outputs ~success:true;
-          finalize_logs ();
           release_build_lock ();
-          After_build.run ~root command)
+          After_build.run ?poll:process_poll ~root command)
         after_build;
-      report ~success:true ())
+      report_completion diagnostics)
   in
-  Build_lock.with_build (Project_context.workspace_lock_root root)
+  Build_lock.with_build ~poll (Project_context.workspace_lock_root root)
     (fun ~release:release_build_lock ->
       Fun.protect
         ~finally:(fun () ->
@@ -582,7 +603,7 @@ let run ~seen ~verbosity ~folder ~prod ~features ~warn_error ~watch ~after_build
       ~poll:(fun () -> ()) ~previous:None ~changes:None
       ~compilation_kind:One_shot
       ~no_timing ~seen ~verbosity ~folder ~prod ~features ~warn_error ~watch
-      ~after_build ~filter
+      ~after_build ~filter ~on_state:(fun _ -> ())
     |> ignore
   with Reported_failure message -> raise (Error message)
 
@@ -599,9 +620,18 @@ let watch ~verbosity ~folder ~prod ~features ~warn_error ~after_build ~filter
     initial_build := false;
     try
       let run ?previous ?changes compilation_kind =
-        run_with_warning_state ~poll ~warning_state ~previous ~changes
-          ~compilation_kind ~no_timing:false ~seen:[] ~verbosity ~folder ~prod
-          ~features ~warn_error ~watch:true ~after_build ~filter
+        let attempted = ref None in
+        try
+          run_with_warning_state ~poll ~warning_state ~previous ~changes
+            ~compilation_kind ~no_timing:false ~seen:[] ~verbosity ~folder ~prod
+            ~features ~warn_error ~watch:true ~after_build ~filter
+            ~on_state:(fun state -> attempted := Some state)
+        with exn ->
+          (match compilation_kind, !attempted with
+          | (Initial_watch | Incremental_watch), Some state ->
+            retained := Some state
+          | (One_shot | Full_watch), _ | _, None -> ());
+          raise exn
       in
       let next =
         match !retained, changes, !force_full_rebuild with
