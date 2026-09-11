@@ -2136,6 +2136,18 @@ configuration cases, 111 command-validation cases, the interactive phase gate,
 all 19 OUnit groups, and the canonical OCaml suite. The audit's material fixes
 and intentional corrections are recorded above.
 
+A subsequent external source review found that the OCaml scheduler published a
+successfully changed interface CMI but lost its dependent invalidation when the
+implementation then failed. The next retained watch build could consequently
+skip a stale dependent. Rust does not share this defect: it compares the CMI
+around the complete module attempt, propagates that change independently of the
+compile result, and persists dirtiness for modules left unscheduled after a
+failure. The OCaml scheduler now refreshes CMI state immediately after a
+successful interface and incremental preparation preserves already-propagated
+dirtiness. A canonical watch regression changes an interface, observes the
+implementation failure, repairs the implementation, and verifies that the
+dependent is recompiled and reports its newly invalid type use.
+
 1. Stop for the requested external AI review.
 2. Address the external review findings and rerun the affected gates.
 3. Complete the non-comment maintainability work. Review naming and module

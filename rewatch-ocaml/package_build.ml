@@ -375,7 +375,7 @@ let rec prepare_tree ~(root_config : Config.t) ~dependency_context ~seen
         (* Fix the initial dirty set before dispatch so files published by
            concurrently finishing jobs cannot change this module's decision.
            Only explicit CMI-change propagation may do that. *)
-        state.compile_dirty <- module_is_dirty module_ state;
+        state.compile_dirty <- state.compile_dirty || module_is_dirty module_ state;
         let dependencies =
           if Hashtbl.mem stats.blocked_modules key then []
           else state.dependencies

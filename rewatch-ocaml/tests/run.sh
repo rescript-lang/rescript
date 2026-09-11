@@ -106,6 +106,16 @@ source_map="$work/source-map"
 warning_replay="$work/warning-replay"
 monorepo="$work/monorepo"
 
+interface_failure_recovery="$work/interface-failure-recovery"
+mkdir -p "$interface_failure_recovery/src"
+printf '%s\n' \
+  '{"name":"interface-failure-recovery","sources":"src","package-specs":{"module":"esmodule","in-source":true,"suffix":".mjs"}}' \
+  >"$interface_failure_recovery/rescript.json"
+printf 'let value: int\n' >"$interface_failure_recovery/src/A.resi"
+printf 'let value = 1\n' >"$interface_failure_recovery/src/A.res"
+printf 'let dependent = A.value + 1\n' \
+  >"$interface_failure_recovery/src/B.res"
+
 if [ -x "$port_directory/bsc.exe" ]; then
   env -u RESCRIPT_BSC_EXE "$port" build "$packaged_basic" \
     >"$packaged_basic/build.log"
@@ -447,6 +457,32 @@ if ! wait_for_file_gone "$watch_basic/src/New.js"; then
   exit 1
 fi
 test ! -f "$watch_basic/src/New.js"
+
+# A successfully published interface must invalidate its dependents even when
+# the corresponding implementation fails and aborts the rest of that build.
+interface_failure_log="$interface_failure_recovery/watch.log"
+"$port" watch "$interface_failure_recovery" \
+  >"$interface_failure_log" 2>&1 &
+interface_failure_pid=$!
+background_pids="$background_pids $interface_failure_pid"
+if ! wait_for_file "$interface_failure_recovery/src/B.mjs"; then
+  cat "$interface_failure_log" >&2
+  exit 1
+fi
+printf 'let value: string\n' \
+  >"$interface_failure_recovery/src/A.resi"
+if ! wait_for_text "$interface_failure_log" 'does not match the interface'; then
+  cat "$interface_failure_log" >&2
+  exit 1
+fi
+printf 'let value = "fixed"\n' \
+  >"$interface_failure_recovery/src/A.res"
+if ! wait_for_text "$interface_failure_log" 'This has type:'; then
+  cat "$interface_failure_log" >&2
+  exit 1
+fi
+kill -TERM "$interface_failure_pid"
+wait "$interface_failure_pid" 2>/dev/null || true
 
 warning_call_log="$warning_replay/bsc-calls.log"
 warning_watch_log="$warning_replay/watch.log"
