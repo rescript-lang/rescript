@@ -2226,26 +2226,26 @@ exists. The watch helper was also renamed from the ambiguous "build directory"
 predicate to `is_compiler_artifact_directory`, reflecting that valid configured
 source directories remain watchable.
 
-1. Complete the non-comment maintainability work. Review naming and module
-   qualification, including whether generic utility calls are
-   clearer as `Module.function` than through `open`; do not apply either style
-   mechanically. Remove dead code.
-   Continue applying the functional-design principle of making illegal states
-   unrepresentable where it removes a concrete ambiguity or failure mode, not as
-   a ceremonial replacement for every `option`; the recorded candidates and
-   the format-input change are evaluated above. Retain ordinary options for
-   values that are genuinely absent, such as a missing interface, an
-   unavailable native-event filename, or an optional hook.
-2. Validate macOS packaging and native event behavior, then prepare the pinned
+The remaining non-comment quality audit revisited naming, module qualification,
+interfaces, dead code, and the recorded illegal-state candidates after the
+review fixes. The new graph fields and watch-scope values have specific owners
+and names, all production modules remain interface-constrained, and the full
+build is warning-free. No further module split is warranted: the larger build
+and watcher modules still each own one lifecycle, while another extraction
+would mainly expose that mutable lifetime through callbacks. The broad comment
+and documentation pass remains deliberately deferred until immediately before
+the final release-quality gate.
+
+1. Validate macOS packaging and native event behavior, then prepare the pinned
    Windows handoff. Finish the Windows watcher/lock backend and path audit and
    run the native build, unit, focused, and canonical Bash suites in the VM.
    Address findings there and finish with an x64 Windows confidence run where
    available.
-3. When stable measurements are available, run the final performance,
+2. When stable measurements are available, run the final performance,
    filesystem-call, and resource gates. Then verify packaging, the npm artifact
    manifest, equivalence gates, and the final two-scope whole-port review.
    Confirm that the three release inventories remain complete.
-4. Immediately before the final release-quality gate, perform the broad comment
+3. Immediately before the final release-quality gate, perform the broad comment
    pass for ownership, concurrency, platform, and algorithmic invariants that
    are not apparent from the code itself. Comments should start with why the
    code or invariant is needed, provide enough context for readers who are not
