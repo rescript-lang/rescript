@@ -2805,6 +2805,28 @@ rewatch executable running all canonical build, failure, clean, format, and
 watch scenarios. The run left the worktree clean and no watcher or compiler
 subprocess alive.
 
+The subsequent non-comment maintainability pass is complete through checkpoint
+`c7780d735`. It removed unused retained state and test-only production APIs,
+made namespace and lifecycle stages explicit normal variants, and centralized
+artifact naming, namespace naming, AST-header decoding, path/config lookup,
+effective compiler options, source activation, and common string/file
+operations. Watch scope, snapshot entries, source references, lock ownership,
+and subprocess launch ownership now use named records instead of positional
+tuples or loosely related options. Package attempt preparation was split into
+focused parsing and compilation modules, leaving `package_build.ml` as the
+small orchestration owner. The public configuration interface now re-exports
+`Config_types` directly instead of repeating every type definition.
+
+The same pass consolidated shared test fixtures and split the two largest
+catch-all OUnit cases by subsystem and configuration concern. The suite now
+reports 32 independently named groups, so one failure no longer suppresses
+unrelated assertions. `Mutex.protect` was deliberately not adopted because it
+is unavailable in the supported OCaml 5.0 baseline; the exception-safe local
+mutex helper remains. A fresh `opam exec -- make test-all` at `c7780d735`
+passed formatting, compiler/runtime, GenType, analysis, tools, and the complete
+installed-package rewatch suite on Linux. This is the checkpoint for the next
+fresh source review before comments are added.
+
 1. In the Windows VM, finish the watcher/lock and path audit and run the native
    build, unit, focused, and canonical Bash suites. Address findings there and
    finish with an x64 Windows confidence run where available.
