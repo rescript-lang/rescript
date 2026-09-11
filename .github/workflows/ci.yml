@@ -118,6 +118,7 @@ jobs:
           compiler: ${{ matrix.ocaml_compiler }}
           os: ${{ matrix.os }}
           cache-prefix: opam-env-v8
+          save-pr-cache: ${{ github.head_ref == 'rewatch-ocaml' }}
 
       - name: Compiler build state key
         id: compiler-build-state-key
