@@ -167,6 +167,14 @@ printf 'let value = 1\n' >"$post_build_cmi/src/A.res"
 printf 'let dependent = A.value + 1\n' >"$post_build_cmi/src/B.res"
 touch "$post_build_cmi/allow-post-build"
 
+publication_cmi="$work/publication-cmi"
+mkdir -p "$publication_cmi/src"
+printf '%s\n' \
+  '{"name":"publication-cmi","sources":"src","package-specs":{"module":"esmodule","in-source":true,"suffix":".mjs"}}' \
+  >"$publication_cmi/rescript.json"
+printf 'let value = 1\n' >"$publication_cmi/src/A.res"
+printf 'let dependent = A.value + 1\n' >"$publication_cmi/src/B.res"
+
 retained_cycle="$work/retained-cycle"
 mkdir -p "$retained_cycle/src"
 printf '%s\n' \
@@ -615,6 +623,36 @@ if ! wait_for_text "$post_build_cmi/watch.log" 'This has type:'; then
 fi
 kill -TERM "$post_build_cmi_pid"
 wait "$post_build_cmi_pid" 2>/dev/null || true
+
+publication_destination="$publication_cmi/lib/bs/src/A.res"
+env RESCRIPT_BSC_EXE="$root/rewatch-ocaml/tests/fail-late-publication-bsc.sh" \
+  REWATCH_REAL_BSC="$RESCRIPT_BSC_EXE" \
+  REWATCH_FAIL_PUBLICATION="$publication_cmi/fail-publication" \
+  REWATCH_PUBLICATION_FAILED="$publication_cmi/publication-failed" \
+  REWATCH_PUBLICATION_DESTINATION="$publication_destination" \
+  "$port" watch "$publication_cmi" >"$publication_cmi/watch.log" 2>&1 &
+publication_cmi_pid=$!
+background_pids="$background_pids $publication_cmi_pid"
+if ! wait_for_file "$publication_cmi/src/B.mjs"; then
+  cat "$publication_cmi/watch.log" >&2
+  exit 1
+fi
+touch "$publication_cmi/fail-publication"
+printf 'let value = "changed"\n' >"$publication_cmi/src/A.res"
+if ! wait_for_file "$publication_cmi/publication-failed" || \
+  ! wait_for_text "$publication_cmi/watch.log" 'A.res'; then
+  cat "$publication_cmi/watch.log" >&2
+  exit 1
+fi
+rmdir "$publication_destination"
+rm "$publication_cmi/fail-publication"
+printf 'let value = "changed"\n\n' >"$publication_cmi/src/A.res"
+if ! wait_for_text "$publication_cmi/watch.log" 'This has type:'; then
+  cat "$publication_cmi/watch.log" >&2
+  exit 1
+fi
+kill -TERM "$publication_cmi_pid"
+wait "$publication_cmi_pid" 2>/dev/null || true
 
 "$port" watch "$retained_cycle" >"$retained_cycle/watch.log" 2>&1 &
 retained_cycle_pid=$!

@@ -241,11 +241,7 @@ let rec prepare_tree ~seen ~folder:root ~watch ~(stats : Build_types.t) =
       ~dependency_dirs:(dependency_dirs_for module_)
       module_ ~is_interface path
   in
-  let publish ~is_interface path result =
-    let stderr =
-      Compiler_process.publish ~build_dir ~ocaml_dir ~is_local ~config
-        ~is_interface path result
-    in
+  let record_published_outputs ~is_interface path =
     if not is_interface then
       List.iter
         (fun spec ->
@@ -255,7 +251,6 @@ let rec prepare_tree ~seen ~folder:root ~watch ~(stats : Build_types.t) =
                if Sys.file_exists path then
                  Hashtbl.replace cleanup.present_public_outputs path ()))
         config.package_specs;
-    stderr
   in
   let post_build path = Compiler_process.post_build_tasks config path in
   let scheduled =
@@ -283,7 +278,9 @@ let rec prepare_tree ~seen ~folder:root ~watch ~(stats : Build_types.t) =
           ~compile:(fun ~is_interface path ->
             compile_process module_ ~is_interface path)
           ~publish:(fun ~is_interface path result ->
-            publish ~is_interface path result)
+            Compiler_process.publish ~build_dir ~ocaml_dir ~is_local ~config
+              ~is_interface path result)
+          ~record_published_outputs
           ~post_build
           ~package_root:config.root ~is_local
           ~mark_warning:(fun path ->
