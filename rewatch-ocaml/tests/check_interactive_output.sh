@@ -29,6 +29,7 @@ for implementation in rust ocaml; do
   printf 'let value = 1\n' >"$work/$implementation/src/A.res"
   printf 'let value: int\n' >"$work/$implementation/src/A.resi"
   cp -R "$work/$implementation" "$work/$implementation-after-build"
+  cp -R "$work/$implementation" "$work/$implementation-parse-warning"
   cp -R "$work/$implementation" "$work/$implementation-watch"
   cp -R "$work/$implementation" "$work/$implementation-initial-failure-watch"
   printf 'let value =\n' \
@@ -48,6 +49,22 @@ cat >"$work/after-build-marker.sh" <<'EOF'
 printf '%s\n' AFTER_BUILD_MARKER
 EOF
 chmod +x "$work/after-build-marker.sh"
+
+cat >"$work/parse-warning-bsc.sh" <<'EOF'
+#!/bin/sh
+status=0
+"$REAL_BSC_EXE" "$@" || status=$?
+if [ "$status" -eq 0 ]; then
+  for argument in "$@"; do
+    if [ "$argument" = -bs-ast ]; then
+      printf '%s\n' PARSE_WARNING_MARKER >&2
+      break
+    fi
+  done
+fi
+exit "$status"
+EOF
+chmod +x "$work/parse-warning-bsc.sh"
 
 export RESCRIPT_BSC_EXE=${RESCRIPT_BSC_EXE:-$root/_build/default/compiler/bsc/rescript_compiler_main.exe}
 export RESCRIPT_RUNTIME=${RESCRIPT_RUNTIME:-$root/packages/@rescript/runtime}
@@ -121,6 +138,51 @@ EOF
 if ! cmp -s "$work/expected" "$work/ocaml.phases"; then
   echo "Interactive phase output no longer has the expected stable shape" >&2
   cat "$work/ocaml.phases" >&2
+  exit 1
+fi
+
+capture_parse_warning_order() {
+  implementation=$1
+  executable=$2
+  transcript="$work/$implementation-parse-warning.tty"
+  project="$work/$implementation-parse-warning"
+  if [ "$(uname -s)" = Darwin ]; then
+    script -q "$transcript" env -u NO_COLOR \
+      "TERM=xterm" \
+      "CLICOLOR=1" \
+      "CLICOLOR_FORCE=0" \
+      "REAL_BSC_EXE=$RESCRIPT_BSC_EXE" \
+      "RESCRIPT_BSC_EXE=$work/parse-warning-bsc.sh" \
+      "RESCRIPT_RUNTIME=$RESCRIPT_RUNTIME" \
+      "$executable" build "$project" --no-timing >/dev/null
+  else
+    script -qefc \
+      "env -u NO_COLOR TERM=xterm CLICOLOR=1 CLICOLOR_FORCE=0 REAL_BSC_EXE=$RESCRIPT_BSC_EXE RESCRIPT_BSC_EXE=$work/parse-warning-bsc.sh RESCRIPT_RUNTIME=$RESCRIPT_RUNTIME $executable build $project --no-timing" \
+      "$transcript" >/dev/null
+  fi
+  tr '\r' '\n' <"$transcript" \
+    | sed -E $'s/\033\\[[0-9;]*[[:alpha:]]//g' \
+    | grep -E '(^\[[123]/3\] .* Parsed |PARSE_WARNING_MARKER)' \
+    >"$work/$implementation-parse-warning.order"
+}
+
+capture_parse_warning_order rust "$rust"
+capture_parse_warning_order ocaml "$ocaml"
+
+if ! cmp -s "$work/rust-parse-warning.order" \
+  "$work/ocaml-parse-warning.order"; then
+  echo "Parser warning phase order differs" >&2
+  printf '%s\n' '--- Rust order ---' >&2
+  cat "$work/rust-parse-warning.order" >&2
+  printf '%s\n' '--- OCaml order ---' >&2
+  cat "$work/ocaml-parse-warning.order" >&2
+  exit 1
+fi
+
+if ! sed -n '1p' "$work/ocaml-parse-warning.order" \
+  | grep -E '^\[2/3\] .* Parsed 1 source files in 0.00s$' >/dev/null; then
+  echo "Parser warnings were emitted before the completed parse phase" >&2
+  cat "$work/ocaml-parse-warning.order" >&2
   exit 1
 fi
 

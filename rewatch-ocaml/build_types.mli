@@ -25,12 +25,15 @@ type global_module = {
   mutable raw_dependencies: string list;
 }
 
+type parse_message = Parse_warning of string | Parse_error of string
+
 type t = {
   mutable cleaned: int;
   mutable previous_asts: int;
   mutable parsed: int;
   mutable compiled: int;
   mutable parse_seconds: float;
+  parse_messages: parse_message list ref;
   mutable diagnostics: string list;
   mutable failure: string option;
   removed_modules: (string, unit) Hashtbl.t;

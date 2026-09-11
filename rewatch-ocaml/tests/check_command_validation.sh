@@ -93,10 +93,15 @@ printf '{"name":"signal-lock","sources":["src"]}\n' \
   >"$work/signal-lock/rescript.json"
 printf 'let value = 1\n' >"$work/signal-lock/src/A.res"
 mkdir -p "$work/redirected-parse-fixture/src"
+mkdir -p "$work/multiple-parse-errors/src"
 mkdir -p "$work/redirected-config-diagnostics/src"
 printf '{"name":"parse-output","sources":["src"]}\n' \
   >"$work/redirected-parse-fixture/rescript.json"
 printf 'let value =\n' >"$work/redirected-parse-fixture/src/A.res"
+printf '{"name":"multiple-parse-errors","sources":["src"]}\n' \
+  >"$work/multiple-parse-errors/rescript.json"
+printf 'let value =\n' >"$work/multiple-parse-errors/src/A.res"
+printf 'let other =\n' >"$work/multiple-parse-errors/src/B.res"
 printf '%s\n' \
   '{"name":"config-diagnostics","sources":["src"],"bsc-flags":[],"ignored-dirs":[],"future-field":true}' \
   >"$work/redirected-config-diagnostics/rescript.json"
@@ -528,6 +533,35 @@ run_build_output_case() {
   checked=$((checked + 1))
 }
 
+run_multiple_parse_errors_case() {
+  rust_project="$work/multiple-parse-errors-rust"
+  ocaml_project="$work/multiple-parse-errors-ocaml"
+  cp -R "$work/multiple-parse-errors" "$rust_project"
+  cp -R "$work/multiple-parse-errors" "$ocaml_project"
+  set +e
+  "$rust" build "$rust_project" >"$work/rust.out" 2>"$work/rust.err"
+  rust_status=$?
+  "$ocaml" build "$ocaml_project" >"$work/ocaml.out" 2>"$work/ocaml.err"
+  ocaml_status=$?
+  set -e
+  if [ "$rust_status" -ne 1 ] || [ "$ocaml_status" -ne 1 ]; then
+    printf 'multiple-parse-errors: expected status 1, got Rust=%s OCaml=%s\n' \
+      "$rust_status" "$ocaml_status" >&2
+    exit 1
+  fi
+  for implementation in rust ocaml; do
+    error="$work/$implementation.err"
+    if [ "$(grep -cF 'Error in multiple-parse-errors:' "$error")" -ne 2 ] || \
+      ! grep -F '/src/A.res' "$error" >/dev/null || \
+      ! grep -F '/src/B.res' "$error" >/dev/null; then
+      echo "$implementation did not retain every independent parse error" >&2
+      cat "$error" >&2
+      exit 1
+    fi
+  done
+  checked=$((checked + 1))
+}
+
 wait_for_file() {
   path=$1
   attempts=0
@@ -616,6 +650,7 @@ run_build_output_case redirected-compile-error 1 \
   "$root/rewatch-ocaml/tests/failure" redirected
 run_build_output_case redirected-parse-error 1 \
   "$work/redirected-parse-fixture" redirected
+run_multiple_parse_errors_case
 run_build_output_case redirected-warning 0 \
   "$root/rewatch-ocaml/tests/warning-replay" redirected
 run_build_output_case redirected-config-diagnostics 0 \

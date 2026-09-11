@@ -25,12 +25,15 @@ type global_module = {
   mutable raw_dependencies: string list;
 }
 
+type parse_message = Parse_warning of string | Parse_error of string
+
 type t = {
   mutable cleaned: int;
   mutable previous_asts: int;
   mutable parsed: int;
   mutable compiled: int;
   mutable parse_seconds: float;
+  parse_messages: parse_message list ref;
   mutable diagnostics: string list;
   mutable failure: string option;
   removed_modules: (string, unit) Hashtbl.t;
@@ -67,6 +70,7 @@ let create ~warning_state ~poll ~process_poll ~progress ~verbosity =
     parsed = 0;
     compiled = 0;
     parse_seconds = 0.;
+    parse_messages = ref [];
     diagnostics = [];
     failure = None;
     removed_modules = Hashtbl.create 16;
@@ -119,6 +123,7 @@ let create_incremental ~previous ~poll ~process_poll ~progress ~verbosity =
     parsed = 0;
     compiled = 0;
     parse_seconds = 0.;
+    parse_messages = ref [];
     diagnostics = [];
     failure = None;
     removed_modules = Hashtbl.create 16;

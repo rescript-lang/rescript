@@ -376,6 +376,21 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
     | None ->
       Build_types.create ~warning_state ~poll ~process_poll ~progress ~verbosity
   in
+  let parse_messages () = List.rev !(stats.parse_messages) in
+  let parse_output messages =
+    messages
+    |> List.map (function
+         | Build_types.Parse_warning output
+         | Build_types.Parse_error output -> output)
+    |> String.concat ""
+  in
+  let parse_failed messages =
+    List.exists
+      (function
+        | Build_types.Parse_error _ -> true
+        | Build_types.Parse_warning _ -> false)
+      messages
+  in
   (* A watch build must retain the attempted state even when later parsing or
      compilation fails, because its successful ASTs and artifact inventory are
      needed to recover incrementally on the next edit. Publish ownership before
@@ -391,6 +406,8 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
   let artifacts_cleaned = ref false in
   let cleanup_after_build () =
     if not !artifacts_cleaned then (
+      List.iter (fun cleanup -> cleanup ()) !(stats.compile_cleanup);
+      stats.compile_cleanup := [];
       List.iter File_util.remove_file !(stats.deferred_artifact_cleanup);
       stats.deferred_artifact_cleanup := [];
       artifacts_cleaned := true)
@@ -551,16 +568,20 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
       ~dependency_context:(Project_context.dependency_context root_config)
       ~seen:visited ~folder:root ~prod ~features ~warn_error ~watch ~filter
       ~is_local:true ~stats;
+    let parse_messages = parse_messages () in
+    let parse_output = parse_output parse_messages in
+    if parse_failed parse_messages then raise (Parse_failure parse_output);
     poll ();
     let namespace_count =
       try run_namespace_jobs stats
-      with Build_failure output -> raise (Parse_failure output)
+      with Build_failure output -> raise (Parse_failure (parse_output ^ output))
     in
     Output.Progress.finish progress;
     if interactive && show_progress then
       print_endline
         (Output.parsing_message ~color:colors ~step:parse_step
            ~count:stats.parsed ~seconds:(phase_seconds stats.parse_seconds));
+    prerr_string parse_output;
     let compile_started = Unix.gettimeofday () in
     (try
        run_scheduled_modules stats ~compile_step ~namespace_count
