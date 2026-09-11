@@ -49,6 +49,13 @@ val namespace_map_key : string -> string
 type parse_message = Parse_warning of string | Parse_error of string
 type attempt_kind = Full_attempt | Retained_attempt
 
+type preliminary_parse =
+  | Parsed_successfully of {stderr: string}
+  | Parse_failed of {stdout: string; stderr: string}
+  | Use_existing_ast
+
+val preliminary_parse : Process.result -> preliminary_parse
+
 type prepared = {
   compiler_context: Compiler_info.context;
   compile_assets: Compile_assets.t;
@@ -81,9 +88,7 @@ type t = {
   mutable diagnostics: string list;
   mutable failure: string option;
   removed_modules: (string, unit) Hashtbl.t;
-  forced_parse_paths: (string, unit) Hashtbl.t;
-  preparse_stderr: (string, string) Hashtbl.t;
-  preparse_results: (string, Process.result) Hashtbl.t;
+  preliminary_parses: (string, preliminary_parse) Hashtbl.t;
   blocked_modules: (string, unit) Hashtbl.t;
   initialized_logs: (string, unit) Hashtbl.t;
   namespace_freshness: (string, float option) Hashtbl.t;

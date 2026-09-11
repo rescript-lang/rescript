@@ -40,14 +40,14 @@ let source_is_dev (config : t) relative_path =
 
 let load path =
   let requested_path = path in
-  let path =
-    try Unix.realpath path with
+  let root =
+    try Unix.realpath (Filename.dirname path) with
     | Sys_error message ->
       fail_read requested_path (strip_read_path requested_path message)
     | Unix.Unix_error (error, _, _) ->
       fail_read requested_path (Unix.error_message error)
   in
-  let root = Filename.dirname path in
+  let path = Filename.concat root (Filename.basename path) in
   (try
      match (Unix.stat path).Unix.st_kind with
      | Unix.S_DIR -> fail_read path (Unix.error_message Unix.EISDIR)

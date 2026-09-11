@@ -2760,6 +2760,44 @@ reanalyze, tools, and the packaged OCaml executable running all 48 canonical
 rewatch scenarios. The run left the worktree clean and no watcher or subprocess
 helper alive.
 
+A subsequent source-only review found four more correctness gaps. Removing an
+interface now removes its published and working CMTI instead of leaving editor
+analysis pointed at a deleted interface. Native watcher content events first
+check whether a source path is also the target of another source symlink, so an
+edit rebuilds every alias through snapshot reconciliation. Configuration
+loading canonicalizes the requested project directory without following a
+symlinked `rescript.json` into a different project root. Failed process-tree
+termination no longer enters an unconditional join: ownership moves to a
+detached reaper, the worker reports the cancellation error, and Windows process
+handles remain live until the existing waiter eventually completes.
+
+The inherited compiler-fingerprint omission identified by the same review is
+also fixed in the OCaml implementation. Effective root JSX and experimental
+arguments now participate in every package's compiler metadata, so a root
+configuration change cannot reuse dependency output compiled with old inherited
+settings. The Rust implementation has the same omission and should receive an
+equivalent fix independently.
+
+The associated cleanup uses one source-activation operation for build and watch
+scope, reserves formatter traversal work before recursion without changing
+first-path package selection, and replaces three overlapping preliminary-parse
+tables with one normal variant describing success, failure, or reuse of an
+existing AST. Test-only graph/compiler-info APIs and an unused freshness helper
+were removed. Stale-output probing consults its existing inventory first, while
+cycle canonicalization rotates once at the smallest node and reuses normalized
+adjacency lists. Stable retained candidate/package caching remains a possible
+whole-project edit optimization, but requires measured evidence before adding a
+second cache-invalidation lifecycle. Process-pool reuse, capture-thread changes,
+and the 32-child policy likewise remain explicitly profiling- and Windows-gated.
+
+On the quiet host, the five-run interleaved release gate for this batch measured
+4.874 s OCaml versus 4.520 s Rust (1.078x) and 1,602,712 versus 1,495,644 KiB
+median summed process-tree RSS (1.071x). Clean, unchanged, and edit compiler
+work matched exactly at 1031/512/7/512/40/1, 4/2/0/2/1/0, and
+6/3/0/3/1/0. Complete file sets and byte-stable generated artifacts were
+identical. The focused integration suite, all 20 OUnit groups, the interactive
+output gate, and all 111 command-validation cases also pass.
+
 1. In the Windows VM, finish the watcher/lock and path audit and run the native
    build, unit, focused, and canonical Bash suites. Address findings there and
    finish with an x64 Windows confidence run where available.

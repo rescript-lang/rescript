@@ -230,6 +230,8 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
   let compiler_context =
     Compiler_info.make_context ~build_root:root_config.root ~bsc_path:bsc
       ~runtime_path:runtime ~source_map_args
+      ~inherited_compiler_args:
+        (root_config.jsx_args @ root_config.experimental_args)
       ~package_output_specs:(Compiler_info.package_output_specs root_config)
   in
   let cleanup_started = Unix.gettimeofday () in
@@ -341,12 +343,12 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
   List.iter2
     (fun (package, path, _) result ->
       let absolute_path = Filename.concat package.graph_root path in
-      Hashtbl.replace stats.forced_parse_paths absolute_path ();
-      Hashtbl.replace stats.preparse_results absolute_path result;
-      if Process.succeeded result then (
-        if result.stderr <> "" then
-          Hashtbl.replace stats.preparse_stderr absolute_path result.stderr)
-      else Hashtbl.replace failed_parse_paths absolute_path ())
+      let outcome = Build_types.preliminary_parse result in
+      Hashtbl.replace stats.preliminary_parses absolute_path outcome;
+      match outcome with
+      | Build_types.Parse_failed _ ->
+        Hashtbl.replace failed_parse_paths absolute_path ()
+      | Build_types.Parsed_successfully _ | Build_types.Use_existing_ast -> ())
     parse_entries parse_results;
   let nodes = ref [] in
   List.iter
@@ -382,11 +384,14 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
             Source.compiler_basename package.graph_compile_config
               module_.Source.name
           in
-          if Option.is_none (Compile_assets.cmt compile_assets compiler_base)
-          then
-            Hashtbl.replace stats.forced_parse_paths
-              (Filename.concat package.graph_root module_.Source.implementation)
-              ();
+          (if Option.is_none (Compile_assets.cmt compile_assets compiler_base)
+           then
+             let implementation =
+               Filename.concat package.graph_root module_.Source.implementation
+             in
+             if not (Hashtbl.mem stats.preliminary_parses implementation) then
+               Hashtbl.replace stats.preliminary_parses implementation
+                 Build_types.Use_existing_ast);
           nodes :=
             {
               key = compiler_base;

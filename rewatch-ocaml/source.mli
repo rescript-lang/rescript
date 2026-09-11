@@ -25,6 +25,9 @@ val duplicate_error :
 val resolve_active_features :
   Config.t -> string list -> (string, unit) Hashtbl.t
 
+val active_sources :
+  Config.t -> prod:bool -> features:string list option -> Config.source list
+
 val discover_for_cleanup :
   ?on_missing:(string -> unit) -> Config.t -> prod:bool -> string list
 

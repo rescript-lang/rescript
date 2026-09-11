@@ -211,6 +211,14 @@ printf '%s\n' \
 printf 'let value = 1\n' >"$symlink_source/shared/Source.js"
 ln -s '../shared/Source.js' "$symlink_source/src/Linked.res"
 
+symlink_alias="$work/symlink-alias"
+mkdir -p "$symlink_alias/src"
+printf '%s\n' \
+  '{"name":"symlink-alias","sources":"src","package-specs":{"module":"esmodule","in-source":true,"suffix":".mjs"}}' \
+  >"$symlink_alias/rescript.json"
+printf 'let value = 1\n' >"$symlink_alias/src/Original.res"
+ln -s Original.res "$symlink_alias/src/Linked.res"
+
 multiple_cycles="$work/multiple-cycles"
 mkdir -p "$multiple_cycles/src"
 printf '%s\n' \
@@ -699,6 +707,8 @@ rm "$basic/src/lower.resi"
 printf 'let value = Lower.hidden\n' > "$basic/src/LowerConsumer.res"
 "$port" build "$basic" >/dev/null
 grep 'hidden' "$basic/src/LowerConsumer.mjs" >/dev/null
+test ! -f "$basic/lib/ocaml/lower.cmti"
+test ! -f "$basic/lib/bs/src/lower.cmti"
 
 "$port" clean "$basic"
 test ! -f "$basic/src/A.mjs"
@@ -905,6 +915,22 @@ if ! wait_for_text "$symlink_source/src/Linked.mjs" 'value = 3'; then
 fi
 kill -TERM "$symlink_source_pid"
 wait "$symlink_source_pid" 2>/dev/null || true
+
+"$port" watch "$symlink_alias" >"$symlink_alias/watch.log" 2>&1 &
+symlink_alias_pid=$!
+background_pids="$background_pids $symlink_alias_pid"
+if ! wait_for_file "$symlink_alias/src/Linked.mjs"; then
+  cat "$symlink_alias/watch.log" >&2
+  exit 1
+fi
+printf 'let value = 2\n' >"$symlink_alias/src/Original.res"
+if ! wait_for_text "$symlink_alias/src/Original.mjs" 'value = 2' \
+  || ! wait_for_text "$symlink_alias/src/Linked.mjs" 'value = 2'; then
+  cat "$symlink_alias/watch.log" >&2
+  exit 1
+fi
+kill -TERM "$symlink_alias_pid"
+wait "$symlink_alias_pid" 2>/dev/null || true
 
 "$port" watch "$post_build_cmi" >"$post_build_cmi/watch.log" 2>&1 &
 post_build_cmi_pid=$!

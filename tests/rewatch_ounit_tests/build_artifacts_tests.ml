@@ -212,4 +212,34 @@ let tests =
       in
       check
         (Hashtbl.mem result.present_public_outputs output)
-        "custom suffix outputs participate in unchanged-build freshness")
+        "custom suffix outputs participate in unchanged-build freshness");
+  with_temp_dir (fun root ->
+      let config_path = Filename.concat root "rescript.json" in
+      let ocaml_dir = Filename.concat root "lib/ocaml" in
+      let working_dir = Filename.concat root "lib/bs/src" in
+      let published_cmti = Filename.concat ocaml_dir "A.cmti" in
+      let working_cmti = Filename.concat working_dir "A.cmti" in
+      write_file config_path
+        {|{"name":"removed-interface","sources":"src","package-specs":{"module":"esmodule","in-source":true}}|};
+      write_file published_cmti "published interface";
+      write_file working_cmti "working interface";
+      let config = Config.load_root root in
+      let module_ : Source.module_ =
+        {
+          name = "A";
+          implementation = "src/A.res";
+          interface = None;
+          is_dev = false;
+          feature = None;
+        }
+      in
+      ignore
+        (Build_artifacts.cleanup_stale ~ocaml_files:[published_cmti]
+           ~ast_sources:[] ~source_files:[] ~root ~ocaml_dir ~is_local:true
+           config [module_]);
+      List.iter
+        (fun path ->
+          check
+            (not (Sys.file_exists path))
+            ("removing an interface removes " ^ path))
+        [published_cmti; working_cmti])

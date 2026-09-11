@@ -54,29 +54,31 @@ let package_sources (package : discovered_package) =
 let discover_package_graph (current : Config.t) =
   let resolution = Package_resolution.create current in
   let package_configs = Hashtbl.create 32 in
+  let reserved_packages = Hashtbl.create 32 in
   let feature_requests = Feature_requests.create () in
   Package_diagnostics.validate_metadata current;
   Hashtbl.add package_configs current.root (current, true);
+  Hashtbl.add reserved_packages current.root ();
   let rec visit ~is_local (config : Config.t) =
-    let dependencies =
-      Package_traversal.requests ~prod:false ~is_local config
-    in
     let pending =
-      dependencies
+      Package_traversal.requests ~prod:false ~is_local config
       |> List.filter_map (fun request ->
           let resolved =
             Package_traversal.resolve resolution ~package_root:config.root
               request
           in
           Package_traversal.add_feature_request feature_requests resolved;
-          if Hashtbl.mem package_configs resolved.dependency.directory then None
-          else Some resolved.dependency)
+          let dependency = resolved.dependency in
+          if Hashtbl.mem reserved_packages dependency.directory then None
+          else (
+            Hashtbl.add reserved_packages dependency.directory ();
+            Some dependency))
     in
     List.iter
       (fun (dependency : Package_resolution.dependency) ->
         Package_diagnostics.report_missing_sources ~is_root:false
           dependency.config;
-        Hashtbl.replace package_configs dependency.directory
+        Hashtbl.add package_configs dependency.directory
           (dependency.config, dependency.is_local);
         visit ~is_local:dependency.is_local dependency.config)
       pending

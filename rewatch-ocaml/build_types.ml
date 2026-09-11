@@ -49,6 +49,15 @@ let namespace_map_key package_root = "\000namespace:" ^ package_root
 type parse_message = Parse_warning of string | Parse_error of string
 type attempt_kind = Full_attempt | Retained_attempt
 
+type preliminary_parse =
+  | Parsed_successfully of {stderr: string}
+  | Parse_failed of {stdout: string; stderr: string}
+  | Use_existing_ast
+
+let preliminary_parse result =
+  if Process.succeeded result then Parsed_successfully {stderr = result.stderr}
+  else Parse_failed {stdout = result.stdout; stderr = result.stderr}
+
 type prepared = {
   compiler_context: Compiler_info.context;
   compile_assets: Compile_assets.t;
@@ -81,9 +90,7 @@ type t = {
   mutable diagnostics: string list;
   mutable failure: string option;
   removed_modules: (string, unit) Hashtbl.t;
-  forced_parse_paths: (string, unit) Hashtbl.t;
-  preparse_stderr: (string, string) Hashtbl.t;
-  preparse_results: (string, Process.result) Hashtbl.t;
+  preliminary_parses: (string, preliminary_parse) Hashtbl.t;
   blocked_modules: (string, unit) Hashtbl.t;
   initialized_logs: (string, unit) Hashtbl.t;
   namespace_freshness: (string, float option) Hashtbl.t;
@@ -113,9 +120,7 @@ let create_attempt ~attempt_kind ~retained ~poll ~process_poll ~progress
     diagnostics = [];
     failure = None;
     removed_modules = Hashtbl.create 16;
-    forced_parse_paths = Hashtbl.create 16;
-    preparse_stderr = Hashtbl.create 16;
-    preparse_results = Hashtbl.create 16;
+    preliminary_parses = Hashtbl.create 16;
     blocked_modules = Hashtbl.create 16;
     initialized_logs = Hashtbl.create 16;
     namespace_freshness = Hashtbl.create 16;

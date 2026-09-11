@@ -231,6 +231,25 @@ let resolve_active_features (config : Config.t) requested =
   List.iter (fun feature -> activate feature []) requested;
   active_features
 
+let source_is_active ~prod ~all_features ~active_features
+    (source : Config.source) =
+  let feature_enabled =
+    all_features
+    || Option.fold ~none:true
+         ~some:(fun feature -> Hashtbl.mem active_features feature)
+         source.feature
+  in
+  (not (prod && source.is_dev)) && feature_enabled
+
+let active_sources (config : Config.t) ~prod ~features =
+  let active_features =
+    resolve_active_features config (Option.value features ~default:[])
+  in
+  let all_features = Option.is_none features in
+  List.filter
+    (source_is_active ~prod ~all_features ~active_features)
+    config.sources
+
 let scan_sources ~on_missing (config : Config.t) ~prod ~features
     ~collect_inventory ~collect_gentype =
   let active_features =
@@ -251,7 +270,9 @@ let scan_sources ~on_missing (config : Config.t) ~prod ~features
              ~some:(fun feature -> Hashtbl.mem active_features feature)
              source.feature
       in
-      let discover_modules = (not (prod && source.is_dev)) && feature_enabled in
+      let discover_modules =
+        source_is_active ~prod ~all_features ~active_features source
+      in
       scan_source ~root:config.root source ~discover_modules ~on_missing
         ~visited_dirs ~collect_inventory
         ~collect_gentype:(collect_gentype && feature_enabled)

@@ -268,10 +268,8 @@ let prepare_incremental previous changes (stats : Build_types.t) =
   let dependencies_changed = ref false in
   List.iter2
     (fun source result ->
-      Hashtbl.replace stats.forced_parse_paths source.absolute_path ();
-      Hashtbl.replace stats.preparse_results source.absolute_path result;
-      if Process.succeeded result && result.stderr <> "" then
-        Hashtbl.replace stats.preparse_stderr source.absolute_path result.stderr;
+      Hashtbl.replace stats.preliminary_parses source.absolute_path
+        (Build_types.preliminary_parse result);
       (try
          let modified = (Unix.stat source.absolute_path).Unix.st_mtime in
          Hashtbl.replace source.package.graph_source_mtimes source.relative_path
@@ -531,10 +529,11 @@ let run_with_warning_state ~process_poll ~poll ~warning_state ~previous ~changes
         | Some source_path ->
           let absolute = Filename.concat node.package_root source_path in
           Printf.sprintf "%s (%s)" node.display_name
-            (Project_context.display_path ~root:root_config.root absolute)
+            (Project_context.relative_or_absolute ~root:root_config.root
+               absolute)
         | None ->
           Printf.sprintf "%s (%s namespace map)" node.display_name
-            (Project_context.display_path ~root:root_config.root
+            (Project_context.relative_or_absolute ~root:root_config.root
                node.package_root))
     in
     "\nCan't continue... Found a circular dependency in your code:\n"
