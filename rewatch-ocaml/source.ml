@@ -4,7 +4,6 @@ type module_ = {
   interface: string option;
   is_dev: bool;
   feature: string option;
-  mutable deps: string list;
 }
 
 type discovery = {
@@ -338,7 +337,6 @@ let discover_with_inventory ?(on_orphan = fun _ -> ())
                interface = Option.map (fun file -> file.path) interface;
                is_dev;
                feature = None;
-               deps = [];
              })
     |> List.of_seq
     |> List.sort (fun a b -> String.compare a.name b.name)

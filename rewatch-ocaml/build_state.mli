@@ -5,11 +5,9 @@ type module_ = {
   package_name: string;
   package_root: string;
   source: Source.module_;
-  mutable raw_dependencies: string list;
   mutable dependencies: string list;
   mutable dependents: String_set.t;
   mutable compile_dirty: bool;
-  mutable deps_dirty: bool;
   mutable last_compiled_cmi: float option;
   mutable last_compiled_cmt: float option;
 }
@@ -24,7 +22,6 @@ val add :
   package_name:string ->
   package_root:string ->
   source:Source.module_ ->
-  raw_dependencies:string list ->
   last_compiled_cmi:float option ->
   last_compiled_cmt:float option ->
   unit

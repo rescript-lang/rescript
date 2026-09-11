@@ -2271,10 +2271,15 @@ prepared by `Build_preparation`; it no longer carries a second fallback policy
 that reloads configuration, resolves dependencies, rediscovers sources, or
 recomputes cleanup. A missing prepared root is an internal-state error, while a
 resolved dependency without a build configuration remains a prebuilt include
-directory rather than being recursively prepared. The remaining candidates are
-to choose one owner for duplicated dependency state, give deferred cleanup one
-execution owner, and share pure compiler-argument construction between the
-diagnostic command and actual builds. The same pass will replace internal
+directory rather than being recursively prepared. Raw dependency names now
+have one owner in each prepared global-module record, while `Build_state` owns
+only resolved forward and reverse graph edges. The redundant global raw table,
+unused build-state raw/deps-dirty fields, and unused mutable dependency list on
+source-discovery records have been removed; incremental AST updates change the
+global-module record and rebuild its resolved edges directly. The remaining
+candidates are to give deferred cleanup one execution owner and share pure
+compiler-argument construction between the diagnostic command and actual
+builds. The same pass will replace internal
 polymorphic variants with normal variants wherever the case set is closed;
 external APIs
 and genuinely open case sets remain exceptions. Remaining measured-performance candidates are

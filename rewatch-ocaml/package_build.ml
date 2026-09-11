@@ -79,10 +79,6 @@ let rec prepare_tree ~seen ~folder:root ~watch ~(stats : Build_types.t) =
       Hashtbl.replace removed_module_names module_name ();
       Hashtbl.replace stats.removed_modules module_name ())
     removed_modules;
-  let names = Hashtbl.create (List.length modules) in
-  List.iter
-    (fun module_ -> Hashtbl.replace names module_.Source.name module_)
-    modules;
   let parse_paths =
     List.concat_map (fun module_ ->
       module_.Source.implementation :: Option.to_list module_.interface) modules
@@ -187,38 +183,14 @@ let rec prepare_tree ~seen ~folder:root ~watch ~(stats : Build_types.t) =
       !(stats.parse_messages)
   then ()
   else (
-  let raw_dependencies = Hashtbl.create (List.length modules) in
   let parse_dirty_modules = Hashtbl.create (List.length modules) in
   List.iter
     (fun module_ ->
-      let global_key = Source.compiler_basename config module_.Source.name in
-      let dependencies =
-        match Hashtbl.find_opt stats.global_raw_dependencies global_key with
-        | Some dependencies -> dependencies
-        | None ->
-          let impl_ast = Source.ast_path module_.Source.implementation in
-          let impl_deps = Compiler_process.ast_dependencies ~build_dir impl_ast in
-          let intf_deps =
-            match module_.interface with
-            | None -> []
-            | Some path ->
-              Compiler_process.ast_dependencies ~build_dir
-                (Source.ast_path path)
-          in
-          List.sort_uniq String.compare (impl_deps @ intf_deps)
-      in
-      Hashtbl.replace raw_dependencies module_.Source.name dependencies;
       let paths =
         module_.Source.implementation :: Option.to_list module_.Source.interface
       in
       if List.exists (Hashtbl.mem dirty_parse_path_set) paths then
-        Hashtbl.replace parse_dirty_modules module_.Source.name ();
-      module_.deps <-
-        if Hashtbl.mem stats.blocked_modules global_key then []
-        else
-          List.filter
-            (fun dep -> dep <> module_.name && Hashtbl.mem names dep)
-            dependencies)
+        Hashtbl.replace parse_dirty_modules module_.Source.name ())
     modules;
   stats.parsed <- stats.parsed + Hashtbl.length parse_dirty_modules;
   let compile_warning_modules = Hashtbl.create 8 in
@@ -235,8 +207,9 @@ let rec prepare_tree ~seen ~folder:root ~watch ~(stats : Build_types.t) =
         config.package_specs
     in
     let raw_dependencies =
-      Hashtbl.find_opt raw_dependencies module_.Source.name
-      |> Option.value ~default:[]
+      match Hashtbl.find_opt stats.global_modules global_key with
+      | Some node -> node.raw_dependencies
+      | None -> raise (Error ("Build module was not prepared for " ^ global_key))
     in
     let dependency_is_newer dependency =
       let dependency_state = Build_state.find_exn build_state dependency in

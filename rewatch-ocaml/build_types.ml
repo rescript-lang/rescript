@@ -43,7 +43,6 @@ type t = {
   blocked_modules: (string, unit) Hashtbl.t;
   active_features: (string, string list option) Hashtbl.t;
   initialized_logs: (string, unit) Hashtbl.t;
-  global_raw_dependencies: (string, string list) Hashtbl.t;
   global_modules: (string, global_module) Hashtbl.t;
   global_namespace_modules: (string, string list) Hashtbl.t;
   graph_packages: (string, graph_package) Hashtbl.t;
@@ -81,7 +80,6 @@ let create ~warning_state ~poll ~process_poll ~progress ~verbosity =
     blocked_modules = Hashtbl.create 16;
     active_features = Hashtbl.create 16;
     initialized_logs = Hashtbl.create 16;
-    global_raw_dependencies = Hashtbl.create 64;
     global_modules = Hashtbl.create 64;
     global_namespace_modules = Hashtbl.create 16;
     graph_packages = Hashtbl.create 32;
@@ -135,7 +133,6 @@ let create_incremental ~previous ~poll ~process_poll ~progress ~verbosity =
     blocked_modules = Hashtbl.create 16;
     active_features = previous.active_features;
     initialized_logs = Hashtbl.create 16;
-    global_raw_dependencies = previous.global_raw_dependencies;
     global_modules = previous.global_modules;
     global_namespace_modules = previous.global_namespace_modules;
     graph_packages = previous.graph_packages;

@@ -312,15 +312,12 @@ let prepare_incremental previous changes (stats : Build_types.t) =
           | Some node -> node
           | None -> raise Full_rebuild_required
         in
-        Hashtbl.replace stats.global_raw_dependencies key raw_dependencies;
         node.raw_dependencies <- raw_dependencies;
         let state =
           match stats.build_state with
           | Some state -> state
           | None -> raise Full_rebuild_required
         in
-        let module_state = Build_state.find_exn state key in
-        module_state.raw_dependencies <- raw_dependencies;
         Build_state.set_dependencies state ~key
           (Build_preparation.resolved_dependencies stats.global_modules
              stats.global_namespace_modules node)))

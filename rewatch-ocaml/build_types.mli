@@ -43,7 +43,6 @@ type t = {
   blocked_modules: (string, unit) Hashtbl.t;
   active_features: (string, string list option) Hashtbl.t;
   initialized_logs: (string, unit) Hashtbl.t;
-  global_raw_dependencies: (string, string list) Hashtbl.t;
   global_modules: (string, global_module) Hashtbl.t;
   global_namespace_modules: (string, string list) Hashtbl.t;
   graph_packages: (string, graph_package) Hashtbl.t;
