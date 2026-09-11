@@ -88,3 +88,39 @@ let namespace_args (config : Config.t) module_name =
   | Some namespace, Some entry when entry = module_name -> ["-open"; "@" ^ namespace]
   | Some namespace, Some _ -> ["-bs-ns"; "@" ^ namespace]
   | Some namespace, _ -> ["-bs-ns"; namespace]
+
+let parser_arguments ~(config : Config.t) ~contents ~path =
+  compiler_flags
+    ~ppx_flags:(filter_ppx_flags config.ppx_flags contents)
+    ~source_maps:false ~watch:false ~gentype:false config
+  @ [
+      "-absname";
+      "-bs-ast";
+      "-o";
+      Source.ast_path path;
+      Filename.concat
+        (Filename.concat Filename.parent_dir_name Filename.parent_dir_name)
+        path;
+    ]
+
+let compiler_arguments ~(config : Config.t) ~runtime ~dependency_dirs
+    ~module_name ~is_interface ~has_interface ~watch ~gentype_dependency_args
+    ~path =
+  let interface_args =
+    if not is_interface && has_interface then ["-bs-read-cmi"] else []
+  in
+  let output_args =
+    if is_interface then []
+    else
+      List.concat_map
+        (fun spec -> ["-bs-package-output"; package_output config path spec])
+        config.package_specs
+  in
+  namespace_args config module_name @ interface_args
+  @ ["-I"; Filename.concat Filename.parent_dir_name "ocaml"]
+  @ ["-runtime-path"; runtime]
+  @ List.concat_map (fun directory -> ["-I"; directory]) dependency_dirs
+  @ compiler_flags ~source_maps:true ~watch ~gentype:true config
+  @ gentype_dependency_args
+  @ ["-bs-package-name"; config.name; "-bs-project-root"; config.root]
+  @ output_args @ [Source.ast_path path]

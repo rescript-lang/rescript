@@ -2281,9 +2281,11 @@ cleanup now has one execution owner in the build transaction's protected
 finalizer. The compiler scheduler no longer executes those actions early, and
 the individual cleanup closures no longer carry defensive one-shot flags; the
 transaction consumes and clears its pending action list on success, reported
-failure, or an unexpected exception. The remaining candidate is to share pure
-compiler-argument construction between the diagnostic command and actual
-builds. The same pass will replace internal
+failure, or an unexpected exception. Parser and compiler argument construction
+is now shared as pure functions by actual build jobs and `compiler-args`;
+callers explicitly supply the intentional differences in watch mode, interface
+presence, dependency include directories, and GenType dependency arguments.
+The same pass will replace internal
 polymorphic variants with normal variants wherever the case set is closed;
 external APIs
 and genuinely open case sets remain exceptions. Remaining measured-performance candidates are

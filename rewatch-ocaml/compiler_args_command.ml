@@ -48,19 +48,7 @@ let run path =
       source_error path (Unix.error_message unix_error)
   in
   let parser_args =
-    Compiler_args.compiler_flags
-      ~ppx_flags:
-        (Compiler_args.filter_ppx_flags config.ppx_flags contents)
-      ~source_maps:false ~watch:false ~gentype:false config
-    @ [
-        "-absname";
-        "-bs-ast";
-        "-o";
-        Source.ast_path relative;
-        Filename.concat
-          (Filename.concat Filename.parent_dir_name Filename.parent_dir_name)
-        relative;
-      ]
+    Compiler_args.parser_arguments ~config ~contents ~path:relative
   in
   let is_interface = Filename.check_suffix source ".resi" in
   let has_interface = not is_interface && Sys.file_exists (source ^ "i") in
@@ -83,32 +71,9 @@ let run path =
   in
   let runtime = runtime_path config.root in
   let compiler_args =
-    let ast = Source.ast_path relative in
-    let namespace_args =
-      Compiler_args.namespace_args config (Source.module_name source)
-    in
-    let interface_args =
-      if not is_interface && has_interface then ["-bs-read-cmi"] else []
-    in
-    let output_args =
-      if is_interface then []
-      else
-        List.concat_map
-          (fun spec ->
-            [
-              "-bs-package-output";
-              Compiler_args.package_output config relative spec;
-            ])
-          config.package_specs
-    in
-    namespace_args @ interface_args
-    @ ["-I"; Filename.concat Filename.parent_dir_name "ocaml"]
-    @ ["-runtime-path"; runtime]
-    @ List.concat_map (fun dir -> ["-I"; dir]) dependency_dirs
-    @ Compiler_args.compiler_flags ~source_maps:true ~watch:false ~gentype:true
-        config
-    @ ["-bs-package-name"; config.name; "-bs-project-root"; config.root]
-    @ output_args @ [ast]
+    Compiler_args.compiler_arguments ~config ~runtime ~dependency_dirs
+      ~module_name:(Source.module_name source) ~is_interface ~has_interface
+      ~watch:false ~gentype_dependency_args:[] ~path:relative
   in
   Yojson.Safe.pretty_to_string
     (`Assoc
