@@ -1028,7 +1028,7 @@ identifies repeated CMI comparison and case-candidate checks, not extra
 compilation or directory-tree discovery. Raw create/remove totals intentionally
 remain diagnostic because the drivers use different publication mechanics.
 
-The maintained source-size tool reports 8,732 lines of OCaml-port production
+The maintained source-size tool reports 8,801 lines of OCaml-port production
 code, including its native C boundary,
 and 7,818 lines of Rust production code when Rust telemetry is excluded. Tests
 remain separate: OCaml has 6,731 test/fixture lines and 1,021 benchmark-tooling
@@ -1337,8 +1337,8 @@ observational and do not replace the five-run acceptance result.
 
 The current `cloc` 2.04 source-size snapshot reports 7,818 Rust production
 lines after excluding the intentionally omitted telemetry module and inline
-test-only sections, versus 8,732 OCaml-port production lines including the
-native C boundary, or 111.7%. Counting
+test-only sections, versus 8,801 OCaml-port production lines including the
+native C boundary, or 112.6%. Counting
 language-specific tests separately gives 2,773 embedded Rust unit-test lines
 and 6,731 OCaml unit/focused test and fixture lines. The OCaml benchmark tooling
 adds another 1,021 lines across every executable audit/measurement script. The shared
@@ -1349,9 +1349,21 @@ indicating behavioral duplication.
 [`bench/source_size.sh`](bench/source_size.sh) preserves the scope and command;
 it now reports largest files directly. The current largest production modules
 are `watcher.ml` (692 code lines), `build.ml` (645), `process.ml` (564),
-`package_build.ml` (416), and `cli.ml` (385). The largest test/tooling files
+`package_build.ml` (416), and `cli.ml` (376). The largest test/tooling files
 are `check_command_validation.sh` (1,635), `unit_tests.ml` (859), `run.sh`
 (761), `config_tests.ml` (493), and `check_interactive_output.sh` (405).
+
+The final API-surface audit added explicit interfaces for build state, compile
+asset inventory, graph algorithms, package metadata, source-directory output,
+and warning persistence. Their mutable representations are exposed only where
+the scheduler and build phases currently need the fields; directory indexes
+and warning tables remain abstract. Platform implementation files deliberately
+do not have separate interfaces because Dune selects one as `platform.ml`,
+which is checked against the shared `platform.mli`. The same pass removed the
+last two production `assert false` branches: deterministic duplicate-path
+ordering now compares its two paths directly, and CLI routing returns an
+explicit `(globals, command, rest)` only after finding a command. All 19 OUnit2
+groups, the 106-case command gate, and `dune build @all` pass afterward.
 
 General portable filesystem operations now live behind the narrow
 `file_util.mli` interface. Recursive directory creation, file reading/copying,

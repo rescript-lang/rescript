@@ -63,14 +63,9 @@ let display_path ~display_root root path =
 
 let duplicate_error ~display_root root name first second =
   let first, second =
-    let paths =
-      [
-        display_path ~display_root root first;
-        display_path ~display_root root second;
-      ]
-      |> List.sort String.compare
-    in
-    match paths with [first; second] -> (first, second) | _ -> assert false
+    let first = display_path ~display_root root first in
+    let second = display_path ~display_root root second in
+    if String.compare first second <= 0 then (first, second) else (second, first)
   in
   Error
     (Printf.sprintf

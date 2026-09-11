@@ -330,20 +330,16 @@ let normalize_argv argv =
   | "--version" :: rest -> "-V" :: reject_subcommand_version rest
   | argument :: rest -> argument :: reject_subcommand_version rest
   in
-  let rec split_leading_globals globals = function
-  | argument :: rest when is_global argument ->
-    split_leading_globals (argument :: globals) rest
-  | rest -> (List.rev globals, rest)
-  in
-  let before_double_dash arguments =
-    let rec loop acc = function
-    | [] | "--" :: _ -> List.rev acc
-    | argument :: rest -> loop (argument :: acc) rest
+  let explicit_command arguments =
+    let rec loop globals = function
+    | [] | "--" :: _ -> None
+    | argument :: rest when is_global argument ->
+      loop (argument :: globals) rest
+    | command :: rest when is_command command ->
+      Some (List.rev globals, command, rest)
+    | _ -> None
     in
     loop [] arguments
-  in
-  let first_non_global arguments =
-    before_double_dash arguments |> List.find_opt (fun arg -> not (is_global arg))
   in
   let partition_implicit arguments =
     let rec loop globals others = function
@@ -360,19 +356,14 @@ let normalize_argv argv =
   | [] -> argv
   | executable :: arguments ->
     let routed =
-      match first_non_global arguments with
-      | Some command when is_command command ->
-        let globals, command_and_rest = split_leading_globals [] arguments in
+      match explicit_command arguments with
+      | Some (globals, command, rest) ->
         (match first_display_request globals with
         | Some `Help -> [executable; "--help"]
         | Some `Version -> [executable; "--version"]
         | None ->
-          (match command_and_rest with
-          | command :: rest ->
-            executable :: command
-            :: reject_subcommand_version (globals @ rest)
-          | [] -> assert false))
-      | _ ->
+          executable :: command :: reject_subcommand_version (globals @ rest))
+      | None ->
         let globals, others = partition_implicit arguments in
         (match first_display_request globals with
         | Some `Help -> [executable; "--help"]
