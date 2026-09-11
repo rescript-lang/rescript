@@ -317,17 +317,17 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
   Output.trace ~verbosity
     (Printf.sprintf "Compiled %d out of %d in the universe" !completed_modules
        (List.length scheduled_modules));
-  let failures = ref [] in
-  scheduled_modules
-  |> List.sort (fun (first : scheduled_module) second ->
-      String.compare first.key second.key)
-  |> List.iter (fun (scheduled : scheduled_module) ->
-      scheduled.messages |> List.rev
-      |> List.iter (fun output -> failures := (scheduled, output) :: !failures));
+  let failures =
+    scheduled_modules
+    |> List.sort (fun (first : scheduled_module) second ->
+        String.compare first.key second.key)
+    |> List.concat_map (fun scheduled ->
+        scheduled.messages |> List.rev
+        |> List.map (fun output -> (scheduled, output)))
+  in
   Warning_state.entries warning_state
   |> List.iter (fun entry ->
       Compiler_log.append entry.Warning_state.package_root entry.output);
-  let failures = List.rev !failures in
   List.iter
     (fun ((scheduled : scheduled_module), output) ->
       Compiler_log.append scheduled.package_root output)

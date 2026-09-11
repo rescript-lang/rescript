@@ -23,9 +23,7 @@ type compilation_kind =
 
 type incremental_source = {
   package: Build_types.graph_package;
-  module_: Source.module_;
-  relative_path: string;
-  absolute_path: string;
+  source: Build_types.source_reference;
 }
 
 let project_root folder =
@@ -206,15 +204,16 @@ let incremental_sources (previous : retained_build) changes =
       match
         Hashtbl.find_opt previous.stats.retained.source_index normalized_path
       with
-      | Some (package_root, module_, relative_path, absolute_path) ->
+      | Some source ->
         let package =
           match
-            Hashtbl.find_opt previous.stats.retained.graph_packages package_root
+            Hashtbl.find_opt previous.stats.retained.graph_packages
+              source.package_root
           with
           | Some package -> package
           | None -> raise Full_rebuild_required
         in
-        sources := {package; module_; relative_path; absolute_path} :: !sources
+        sources := {package; source} :: !sources
       | None -> raise Full_rebuild_required)
   in
   List.iter
@@ -243,7 +242,7 @@ let prepare_incremental previous changes (stats : Build_types.t) =
   sources
   |> List.map (fun source ->
       Source.compiler_basename source.package.graph_compile_config
-        source.module_.Source.name)
+        source.source.module_.Source.name)
   |> List.sort_uniq String.compare
   |> List.iter (fun name ->
       Output.debug ~verbosity:stats.verbosity
@@ -253,7 +252,8 @@ let prepare_incremental previous changes (stats : Build_types.t) =
       ~label:"Parsing"
       (List.map
          (fun source ->
-           source.package.graph_root ^ "\000" ^ source.module_.Source.name)
+           source.package.graph_root ^ "\000"
+           ^ source.source.module_.Source.name)
          sources)
   in
   let results =
@@ -261,22 +261,23 @@ let prepare_incremental previous changes (stats : Build_types.t) =
       ~on_complete:parse_completed sources ~job:(fun source ->
         Compiler_process.parse_job ~bsc
           ~build_dir:source.package.graph_build_dir
-          ~config:source.package.graph_compile_config source.relative_path)
+          ~config:source.package.graph_compile_config
+          source.source.relative_path)
   in
   let affected_modules = Hashtbl.create (List.length sources) in
   let dependencies_changed = ref false in
   List.iter2
     (fun source result ->
-      Hashtbl.replace stats.preliminary_parses source.absolute_path
+      Hashtbl.replace stats.preliminary_parses source.source.absolute_path
         (Build_types.preliminary_parse result);
       (try
-         let modified = (Unix.stat source.absolute_path).Unix.st_mtime in
-         Hashtbl.replace source.package.graph_source_mtimes source.relative_path
-           modified
+         let modified = (Unix.stat source.source.absolute_path).Unix.st_mtime in
+         Hashtbl.replace source.package.graph_source_mtimes
+           source.source.relative_path modified
        with Unix.Unix_error _ | Sys_error _ -> raise Full_rebuild_required);
       let key =
         Source.compiler_basename source.package.graph_compile_config
-          source.module_.Source.name
+          source.source.module_.Source.name
       in
       let parse_failed = not (Process.succeeded result) in
       let parse_failed =
@@ -285,7 +286,7 @@ let prepare_incremental previous changes (stats : Build_types.t) =
         | None -> parse_failed
       in
       Hashtbl.replace affected_modules key
-        (source.package, source.module_, parse_failed))
+        (source.package, source.source.module_, parse_failed))
     sources results;
   Hashtbl.iter
     (fun key (package, module_, changed_parse_failed) ->

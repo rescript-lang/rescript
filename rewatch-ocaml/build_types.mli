@@ -69,6 +69,13 @@ type prepared = {
 
 type preparation
 
+type source_reference = {
+  package_root: string;
+  module_: Source.module_;
+  relative_path: string;
+  absolute_path: string;
+}
+
 type retained = {
   active_features: (string, string list option) Hashtbl.t;
   global_modules: (string, global_module) Hashtbl.t;
@@ -76,7 +83,7 @@ type retained = {
   namespace_maps_by_name: (string, namespace_map list) Hashtbl.t;
   mutable graph_has_cycle: bool;
   graph_packages: (string, graph_package) Hashtbl.t;
-  source_index: (string, string * Source.module_ * string * string) Hashtbl.t;
+  source_index: (string, source_reference) Hashtbl.t;
   pending_parse_paths: (string, unit) Hashtbl.t;
   cleanup_results: (string, Build_artifacts.cleanup_result) Hashtbl.t;
   mutable preparation: preparation;
