@@ -2132,7 +2132,7 @@ specific compatibility risks; they are not remaining gaps.
 
 ### Native Windows handoff
 
-The implementation checkpoint for the Windows session is `a4b0728b2f`. Use a
+The implementation checkpoint for the Windows session is `1ab6b3493`. Use a
 native checkout on the VM's NTFS volume, OCaml 5.5 through the repository's
 opam setup, and the Cygwin Bash installed with that toolchain. The checkpoint
 already selects `platform_windows.ml` through Dune, compiles the Job Object C
@@ -2491,6 +2491,45 @@ The remaining subprocess design was profiled rather than replaced: clean builds
 still peak near 95 tasks because each child has two stream readers and one
 waiter, but bounded pipe capture has no growth across retained builds.
 
+A further source-only review found five actionable gaps, all now fixed at
+implementation checkpoint `1ab6b3493`. Failed parses and warning-bearing parses
+remain pending across incremental attempts instead of allowing an old AST to
+make a later build appear successful. Namespace maps are represented in the
+dependency graph, so adding or removing a namespaced module invalidates
+unchanged namespace consumers. The Windows Job Object stub reacquires its
+custom-block pointer after a GC-capable allocation. Explicit relative programs
+such as `./tool` are never redirected through `PATH`, and after-build hooks
+stream both output channels while running rather than buffering indefinitely.
+Focused regressions cover each behavior; the native Windows fix remains subject
+to the planned VM run.
+
+The same batch completed the low-risk cleanup and source-derived performance
+recommendations. Build, watch, and format share feature-request aggregation
+through a normal closed variant. Attempt construction has one initializer, and
+compiler publication uses explicit outcomes for complete and partially
+published attempts. Incremental builds skip whole-graph cycle analysis when
+dependency edges are unchanged and the retained graph was acyclic. Stale
+artifact cleanup indexes source mappings once. The compiler scheduler computes
+the affected reverse closure from lightweight candidates and constructs
+compiler/publication callbacks only for modules in that closure; warning
+retention still covers every source. The 20 OUnit2 groups, focused integration
+runner, 111-case command-validation gate, and formatting/build checks pass at
+this checkpoint.
+
+Two review proposals remain deliberately measurement-dependent rather than
+being implemented speculatively. The process runner still uses two concurrent
+pipe readers and one waiter per child; replacing this with a shared libuv event
+loop must preserve deadlock-free dual-stream draining, cancellation, process
+group or Job Object ownership, and native Windows behavior. Publication uses
+bounded 64 KiB streaming buffers but does not yet pool buffers across files in
+one module. The next stable profile should determine whether thread lifecycle,
+the concurrency cap, or residual publication allocation is material. A broad
+new module-identity wrapper was also not introduced: the concrete ambiguity
+sites now use explicit dependency, namespace-map, and build-state node types,
+while wrapping every remaining path/name string would currently add conversion
+ceremony without removing a known invalid state. These decisions must be
+reported and reconsidered in the final quality review.
+
 On the quiet, powered host, the five-run interleaved release gate measured a
 5.455 s OCaml median against 4.644 s Rust (1.175x), with 1,516,904 KiB versus
 1,504,696 KiB summed process-tree RSS. Compiler work matched exactly for clean,
@@ -2513,7 +2552,7 @@ non-Windows default without expecting a nonexistent Dune-installed `rescript`
 binary.
 
 1. Obtain a follow-up source-only review of implementation checkpoint
-   `a4b0728b2f` and address any confirmed findings.
+   `1ab6b3493` and address any confirmed findings.
 2. In the Windows VM, finish the watcher/lock and path audit and run the native
    build, unit, focused, and canonical Bash suites. Address findings there and
    finish with an x64 Windows confidence run where available.
