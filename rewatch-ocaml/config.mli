@@ -21,6 +21,7 @@ type dependency = Config_types.dependency = {
 type t = Config_types.t = {
   path: string;
   root: string;
+  file_hash: string;
   name: string;
   sources: source list;
   sources_defined: bool;

@@ -25,18 +25,17 @@ let prepare ~(root_config : Config.t) ~resolution ~seen ~root ~prod ~is_local =
         root <> root_config.root && Compiler_info.owns_outputs config
       in
       if not owns_outputs then (
-        let dependencies =
-          config.dependencies
-          @ if prod || not is_local then [] else config.dev_dependencies
-        in
+        let dependencies = Package_traversal.requests ~prod ~is_local config in
         let resolved_dependencies =
           List.map
-            (Package_resolution.resolve resolution ~package_root:root)
+            (fun request ->
+              Package_traversal.resolve resolution ~package_root:root request)
             dependencies
         in
         List.iter
-          (fun (resolved : Package_resolution.dependency) ->
-            visit resolved.config ~is_local:resolved.is_local)
+          (fun (resolved : Package_traversal.resolved) ->
+            visit resolved.dependency.config
+              ~is_local:resolved.dependency.is_local)
           resolved_dependencies;
         let implementation_files =
           Source.discover_for_cleanup config ~prod:(prod || not is_local)

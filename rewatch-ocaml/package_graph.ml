@@ -26,12 +26,6 @@ let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
   let requested_features = Feature_requests.create () in
   let unallowed_dependencies = ref [] in
   let load_config = Package_resolution.load_config resolution in
-  let resolve_dependency package_root (dependency : Config.dependency) =
-    let resolved =
-      Package_resolution.resolve resolution ~package_root dependency
-    in
-    (resolved.directory, resolved.config)
-  in
   let collected = Hashtbl.create 32 in
   let rec collect ~folder:root ~features ~is_local =
     if
@@ -42,38 +36,33 @@ let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
       Hashtbl.add collected root ();
       let config = load_config root in
       Output.debug ~verbosity:stats.verbosity ("Parsing package: " ^ config.name);
-      let dependencies =
-        List.map
-          (fun dependency -> ("dependencies", dependency))
-          config.dependencies
-        @
-        if prod || not is_local then []
-        else
-          List.map
-            (fun dependency -> ("dev-dependencies", dependency))
-            config.dev_dependencies
-      in
+      let dependencies = Package_traversal.requests ~prod ~is_local config in
       let resolved_dependencies =
         List.map
-          (fun (kind, (dependency : Config.dependency)) ->
-            let directory, dependency_config =
-              resolve_dependency root dependency
+          (fun request ->
+            let resolved =
+              Package_traversal.resolve resolution ~package_root:root request
             in
+            let dependency = resolved.dependency in
             if
               not
-                (dependent_is_allowed dependency_config.allowed_dependents
+                (dependent_is_allowed dependency.config.allowed_dependents
                    config.name)
             then
               unallowed_dependencies :=
-                (config.name, kind, dependency_config.name)
+                ( config.name,
+                  Package_traversal.dependency_kind_name request.kind,
+                  dependency.config.name )
                 :: !unallowed_dependencies;
-            (dependency, directory))
+            resolved)
           dependencies
       in
       List.iter
-        (fun ((dependency : Config.dependency), directory) ->
-          collect ~folder:directory ~features:dependency.features
-            ~is_local:(Package_resolution.is_local resolution directory))
+        (fun (resolved : Package_traversal.resolved) ->
+          Package_traversal.add_feature_request requested_features resolved;
+          collect ~folder:resolved.dependency.directory
+            ~features:resolved.request.declaration.features
+            ~is_local:resolved.dependency.is_local)
         resolved_dependencies)
   in
   collect ~folder:root_config.root ~features ~is_local:true;
@@ -111,24 +100,33 @@ let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
         | None -> config
         | Some value -> {config with warning_flags = ["-warn-error"; value]}
       in
-      let dependencies_with_kind =
-        List.map
-          (fun dependency -> (Build_types.Regular_dependency, dependency))
-          config.dependencies
-        @
-        if prod || not is_local then []
-        else
-          List.map
-            (fun dependency -> (Build_types.Development_dependency, dependency))
-            config.dev_dependencies
+      let dependency_requests =
+        Package_traversal.requests ~prod ~is_local config
       in
-      let dependencies = List.map snd dependencies_with_kind in
+      let dependencies =
+        List.map
+          (fun (request : Package_traversal.request) -> request.declaration)
+          dependency_requests
+      in
       let dependency_directories =
         List.map
-          (fun (kind, dependency) ->
-            let directory, _ = resolve_dependency root dependency in
-            Build_types.{declaration = dependency; directory; kind})
-          dependencies_with_kind
+          (fun request ->
+            let resolved =
+              Package_traversal.resolve resolution ~package_root:root request
+            in
+            let kind =
+              match request.Package_traversal.kind with
+              | Package_traversal.Regular -> Build_types.Regular_dependency
+              | Package_traversal.Development ->
+                Build_types.Development_dependency
+            in
+            Build_types.
+              {
+                declaration = request.declaration;
+                directory = resolved.dependency.directory;
+                kind;
+              })
+          dependency_requests
       in
       List.iter
         (fun (dependency : Build_types.graph_dependency) ->

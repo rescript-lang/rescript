@@ -281,6 +281,28 @@ ln -s ../packages/shared "$duplicate_selection/node_modules/shared"
 ln -s ../../nested-shared \
   "$duplicate_selection/packages/a/node_modules/shared"
 
+external_duplicate_base="$work/external-duplicate"
+external_duplicate="$external_duplicate_base/project"
+mkdir -p "$external_duplicate/src" \
+  "$external_duplicate/node_modules/a/src" \
+  "$external_duplicate/node_modules/a/node_modules/shared/src" \
+  "$external_duplicate_base/node_modules/shared/src"
+printf '%s\n' \
+  '{"name":"external-duplicate-root","sources":"src","dependencies":["a","shared"],"package-specs":{"module":"esmodule","in-source":true}}' \
+  >"$external_duplicate/rescript.json"
+printf 'let value = Shared.value\n' >"$external_duplicate/src/Main.res"
+printf '%s\n' '{"name":"a","sources":"src","dependencies":["shared"]}' \
+  >"$external_duplicate/node_modules/a/rescript.json"
+printf 'let value = 1\n' >"$external_duplicate/node_modules/a/src/A.res"
+printf '%s\n' '{"name":"shared","sources":"src"}' \
+  >"$external_duplicate/node_modules/a/node_modules/shared/rescript.json"
+printf 'let value = 1\n' \
+  >"$external_duplicate/node_modules/a/node_modules/shared/src/Shared.res"
+printf '%s\n' '{"name":"shared","sources":"src"}' \
+  >"$external_duplicate_base/node_modules/shared/rescript.json"
+printf 'let value = 2\n' \
+  >"$external_duplicate_base/node_modules/shared/src/Shared.res"
+
 dev_include_order="$work/dev-include-order"
 mkdir -p "$dev_include_order/src" "$dev_include_order/dev" \
   "$dev_include_order/node_modules/regular/src" \
@@ -939,6 +961,9 @@ kill -TERM "$retained_parse_pid"
 wait "$retained_parse_pid" 2>/dev/null || true
 
 "$port" build "$duplicate_selection" >/dev/null
+"$port" build "$external_duplicate" >"$external_duplicate/build.log" 2>&1
+grep -F "$external_duplicate_base/node_modules/shared" \
+  "$external_duplicate/build.log" >/dev/null
 mkdir -p \
   "$duplicate_selection/node_modules/a/node_modules/shared/lib/ocaml"
 printf 'preserve nested duplicate\n' \

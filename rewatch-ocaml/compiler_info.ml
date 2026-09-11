@@ -38,8 +38,6 @@ let make_context ~build_root ~bsc_path ~runtime_path ~source_map_args
 
 let path root = File_util.path_of_parts root ["lib"; "bs"; "compiler-info.json"]
 
-let config_hash (config : Config.t) = Digest.file config.path |> Digest.to_hex
-
 let package_output_spec_json spec =
   `Assoc
     [
@@ -89,7 +87,7 @@ let json context (config : Config.t) =
       ("build_root", `String context.build_root);
       ("bsc_path", `String context.bsc_path);
       ("bsc_hash", `String context.bsc_hash);
-      ("rescript_config_hash", `String (config_hash config));
+      ("rescript_config_hash", `String config.file_hash);
       ( "source_map_args",
         `List (List.map (fun value -> `String value) context.source_map_args) );
       ( "package_output_specs",

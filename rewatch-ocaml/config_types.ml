@@ -13,6 +13,7 @@ type dependency = {name: string; features: string list option}
 type t = {
   path: string;
   root: string;
+  file_hash: string;
   name: string;
   sources: source list;
   sources_defined: bool;

@@ -18,4 +18,5 @@ val copy_file_if_changed : ?ensure_parent:bool -> string -> string -> unit
 val modification_time : string -> float option
 val remove_file : string -> unit
 val remove_tree : string -> unit
+val remove_file_best_effort : string -> unit
 val files_under : string -> string list

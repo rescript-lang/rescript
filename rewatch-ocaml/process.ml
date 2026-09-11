@@ -627,41 +627,16 @@ let run_dependency_graph ?(max_jobs = default_max_jobs)
         run_dependency_graph_with_notifier ~max_jobs ~is_fatal ~poll notifier
           works ~next)
 
-let run ?env ?poll ~cwd program args =
+let run_one ?env ?poll ?stdout_chunk ?stderr_chunk ~cwd program args =
   let poll, ticker_enabled =
     match poll with
     | Some poll -> (poll, true)
     | None -> ((fun () -> ()), false)
-  in
-  with_completion_notifier ~ticker_enabled (fun notifier ->
-      let child = launch ?env ~notifier () {program; args; cwd} in
-      let reaped = ref false in
-      try
-        let (_, result), restore_signals =
-          wait_for_running ~poll notifier [child]
-        in
-        reaped := true;
-        with_signal_restore restore_signals (fun () ->
-            release_running child;
-            result)
-      with exn ->
-        if not !reaped then terminate_running [child];
-        raise exn)
-
-let run_streaming ?env ?poll ~cwd program args =
-  let poll, ticker_enabled =
-    match poll with
-    | Some poll -> (poll, true)
-    | None -> ((fun () -> ()), false)
-  in
-  let write channel bytes count =
-    output channel bytes 0 count;
-    flush channel
   in
   with_completion_notifier ~ticker_enabled (fun notifier ->
       let child =
-        launch ?env ~stdout_chunk:(write stdout) ~stderr_chunk:(write stderr)
-          ~notifier () {program; args; cwd}
+        launch ?env ?stdout_chunk ?stderr_chunk ~notifier ()
+          {program; args; cwd}
       in
       let reaped = ref false in
       try
@@ -675,3 +650,13 @@ let run_streaming ?env ?poll ~cwd program args =
       with exn ->
         if not !reaped then terminate_running [child];
         raise exn)
+
+let run ?env ?poll ~cwd program args = run_one ?env ?poll ~cwd program args
+
+let run_streaming ?env ?poll ~cwd program args =
+  let write channel bytes count =
+    output channel bytes 0 count;
+    flush channel
+  in
+  run_one ?env ?poll ~stdout_chunk:(write stdout) ~stderr_chunk:(write stderr)
+    ~cwd program args

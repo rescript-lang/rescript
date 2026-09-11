@@ -66,19 +66,18 @@ let discover_package_graph (current : Config.t) =
   Hashtbl.add package_configs current.root (current, true);
   let rec visit ~is_local (config : Config.t) =
     let dependencies =
-      config.dependencies @ if is_local then config.dev_dependencies else []
+      Package_traversal.requests ~prod:false ~is_local config
     in
     let pending =
       dependencies
-      |> List.filter_map (fun (dependency : Config.dependency) ->
+      |> List.filter_map (fun request ->
           let resolved =
-            Package_resolution.resolve resolution ~package_root:config.root
-              dependency
+            Package_traversal.resolve resolution ~package_root:config.root
+              request
           in
-          Feature_requests.add feature_requests resolved.directory
-            dependency.features;
-          if Hashtbl.mem package_configs resolved.directory then None
-          else Some resolved)
+          Package_traversal.add_feature_request feature_requests resolved;
+          if Hashtbl.mem package_configs resolved.dependency.directory then None
+          else Some resolved.dependency)
     in
     List.iter
       (fun (dependency : Package_resolution.dependency) ->
@@ -133,7 +132,8 @@ let files_in_scope () =
       let parent = Config.load path in
       List.exists
         (fun (dependency : Config.dependency) -> dependency.name = current.name)
-        (parent.dependencies @ parent.dev_dependencies)
+        (Package_traversal.requests ~prod:false ~is_local:true parent
+        |> List.map (fun request -> request.Package_traversal.declaration))
   in
   let packages = discover_package_graph current in
   let resolution = Package_resolution.create current in
@@ -141,7 +141,8 @@ let files_in_scope () =
     if listed_by_parent then [current.root]
     else
       current.root
-      :: (current.dependencies @ current.dev_dependencies
+      :: (Package_traversal.requests ~prod:false ~is_local:true current
+         |> List.map (fun request -> request.Package_traversal.declaration)
          |> List.filter_map (fun (dependency : Config.dependency) ->
              match
                Package_resolution.dependency_path resolution

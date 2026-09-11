@@ -179,17 +179,20 @@ let modification_time path =
   stat_opt path |> Option.map (fun metadata -> metadata.Unix.st_mtime)
 
 let remove_file path =
-  if Sys.file_exists path then try Sys.remove path with Sys_error _ -> ()
+  try Unix.unlink path
+  with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> ()
 
 let rec remove_tree path =
-  try
-    match (Unix.lstat path).Unix.st_kind with
-    | Unix.S_DIR ->
-      Sys.readdir path
-      |> Array.iter (fun name -> remove_tree (Filename.concat path name));
-      Unix.rmdir path
-    | _ -> Sys.remove path
-  with Sys_error _ | Unix.Unix_error _ -> ()
+  match (Unix.lstat path).Unix.st_kind with
+  | Unix.S_DIR ->
+    Sys.readdir path
+    |> Array.iter (fun name -> remove_tree (Filename.concat path name));
+    Unix.rmdir path
+  | _ -> Unix.unlink path
+  | exception Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> ()
+
+let remove_file_best_effort path =
+  try remove_file path with Sys_error _ | Unix.Unix_error _ -> ()
 
 let rec files_under directory =
   try

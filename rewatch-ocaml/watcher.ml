@@ -83,13 +83,11 @@ let watch_context ~root ~prod ~features ~filter =
         if is_local then (
           Hashtbl.add packages config.root (config, true);
           add_path config.root false);
-        let dependencies =
-          config.dependencies
-          @ if prod || not is_local then [] else config.dev_dependencies
-        in
+        let dependencies = Package_traversal.requests ~prod ~is_local config in
         let dependency_watches =
           List.map
-            (fun (dependency : Config.dependency) ->
+            (fun (request : Package_traversal.request) ->
+              let dependency = request.declaration in
               match
                 Package_resolution.dependency_path resolution
                   ~package_root:config.root dependency.name
