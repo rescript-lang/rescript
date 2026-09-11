@@ -9,7 +9,7 @@ type context = {
 }
 
 and package_output_spec = {
-  module_format: string;
+  module_format: Config.module_format;
   in_source: bool;
   suffix: string;
 }
@@ -24,6 +24,8 @@ val make_context :
   inherited_compiler_args:string list ->
   package_output_specs:package_output_spec list ->
   context
+
+val for_package : context -> build_root:string -> Config.t -> context
 
 val path : string -> string
 val owns_outputs : Config.t -> bool

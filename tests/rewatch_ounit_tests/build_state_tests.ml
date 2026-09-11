@@ -5,12 +5,10 @@ let check condition message = assert_bool message condition
 let tests =
   "build_state_tests" >:: fun _context ->
   let state = Build_state.create 2 in
-  Build_state.add state ~key:"A" ~package_name:"package" ~package_root:"root"
-    ~kind:Build_state.Source_module ~last_compiled_cmi:(Some 1.)
-    ~last_compiled_cmt:(Some 2.);
-  Build_state.add state ~key:"B" ~package_name:"package" ~package_root:"root"
-    ~kind:Build_state.Source_module ~last_compiled_cmi:None
-    ~last_compiled_cmt:None;
+  Build_state.add state ~key:"A" ~kind:Build_state.Source_module
+    ~last_compiled_cmi:(Some 1.) ~last_compiled_cmt:(Some 2.);
+  Build_state.add state ~key:"B" ~kind:Build_state.Source_module
+    ~last_compiled_cmi:None ~last_compiled_cmt:None;
   Build_state.set_dependencies state ~key:"A" [];
   Build_state.set_dependencies state ~key:"B" ["A"];
   let a = Build_state.find_exn state "A" in
@@ -50,15 +48,14 @@ let tests =
     && b.dependencies = ["A"])
     "updating dependencies does not duplicate reverse edges";
   let namespace_state = Build_state.create 3 in
-  Build_state.add namespace_state ~key:"A" ~package_name:"dependency"
-    ~package_root:"dependency" ~kind:Build_state.Source_module
+  Build_state.add namespace_state ~key:"A" ~kind:Build_state.Source_module
     ~last_compiled_cmi:None ~last_compiled_cmt:None;
-  Build_state.add namespace_state ~key:"namespace" ~package_name:"dependency"
-    ~package_root:"dependency" ~kind:Build_state.Namespace_map
-    ~last_compiled_cmi:None ~last_compiled_cmt:None;
-  Build_state.add namespace_state ~key:"Consumer" ~package_name:"consumer"
-    ~package_root:"consumer" ~kind:Build_state.Source_module
-    ~last_compiled_cmi:None ~last_compiled_cmt:None;
+  Build_state.add namespace_state ~key:"namespace"
+    ~kind:Build_state.Namespace_map ~last_compiled_cmi:None
+    ~last_compiled_cmt:None;
+  Build_state.add namespace_state ~key:"Consumer"
+    ~kind:Build_state.Source_module ~last_compiled_cmi:None
+    ~last_compiled_cmt:None;
   Build_state.set_dependencies namespace_state ~key:"A" [];
   Build_state.set_dependencies namespace_state ~key:"namespace" ["A"];
   Build_state.set_dependencies namespace_state ~key:"Consumer" ["namespace"];
@@ -82,7 +79,6 @@ let tests =
       implementation = "src/Entry.res";
       interface = None;
       is_dev = false;
-      feature = None;
     }
   in
   let entry : Build_types.global_module =
@@ -91,9 +87,8 @@ let tests =
       package_name = "package";
       package_root = "root";
       source_path = entry_source.implementation;
-      source = entry_source;
-      namespace = Some "Namespace";
-      namespace_entry = Some "Entry";
+      namespace =
+        Config.Namespace_with_entry {name = "Namespace"; entry = "Entry"};
       allowed_dependencies = [];
       raw_dependencies = [];
     }

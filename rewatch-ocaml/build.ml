@@ -36,7 +36,7 @@ let project_root folder =
            the specified project folder does not exist: " ^ folder));
   Platform.canonicalize_path folder
 
-let clean ~poll ~seen ~verbosity ~folder ~prod =
+let clean ~poll ~verbosity ~folder ~prod =
   let root = project_root folder in
   let show_progress = verbosity >= 0 in
   let interactive = Unix.isatty Unix.stdout && Unix.isatty Unix.stderr in
@@ -58,12 +58,8 @@ let clean ~poll ~seen ~verbosity ~folder ~prod =
       let root_config = Config.load_root root in
       let resolution = Package_resolution.create root_config in
       let visited = Hashtbl.create 32 in
-      List.iter
-        (fun path ->
-          Hashtbl.replace visited (Platform.canonicalize_path path) ())
-        seen;
       let cleanup =
-        Clean.prepare ~root_config ~resolution ~seen:visited ~root ~prod
+        Clean.prepare ~root_config ~resolution ~seen:visited ~prod
           ~is_local:true
       in
       let compiler_assets = "compiler assets" in
@@ -99,14 +95,14 @@ let run_scheduled_modules (stats : Build_types.t) ~compile_step ~namespace_count
   Compiler_scheduler.run ~poll:stats.process_poll
     ~warning_state:stats.retained.warning_state
     ~compile_assets:prepared.compile_assets ~build_state:prepared.build_state
-    ~candidates:!(stats.compile_candidates)
+    ~candidates:stats.compile_candidates
     ~mark_compiled:(fun () -> stats.compiled <- stats.compiled + 1)
     ~mark_had_warnings:(fun () -> stats.had_warnings <- true)
     ~progress:stats.progress ~compile_step ~namespace_count
     ~verbosity:stats.verbosity
 
 let run_namespace_jobs (stats : Build_types.t) =
-  let jobs = List.rev !(stats.namespace_jobs) in
+  let jobs = List.rev stats.namespace_jobs in
   let started_at = Unix.gettimeofday () in
   Fun.protect
     ~finally:(fun () ->
@@ -376,12 +372,12 @@ let run_with_warning_state ~process_poll ~poll ~warning_state ~previous ~changes
   let stats : Build_types.t =
     match previous with
     | Some previous ->
-      Build_types.create_incremental ~previous:previous.stats ~poll
-        ~process_poll ~progress ~verbosity
+      Build_types.create_incremental ~previous:previous.stats ~process_poll
+        ~progress ~verbosity
     | None ->
-      Build_types.create ~warning_state ~poll ~process_poll ~progress ~verbosity
+      Build_types.create ~warning_state ~process_poll ~progress ~verbosity
   in
-  let parse_messages () = List.rev !(stats.parse_messages) in
+  let parse_messages () = List.rev stats.parse_messages in
   let parse_output messages =
     messages
     |> List.map (function
@@ -414,10 +410,10 @@ let run_with_warning_state ~process_poll ~poll ~warning_state ~previous ~changes
   let artifacts_cleaned = ref false in
   let cleanup_after_build () =
     if not !artifacts_cleaned then (
-      List.iter (fun cleanup -> cleanup ()) !(stats.compile_cleanup);
-      stats.compile_cleanup := [];
-      List.iter File_util.remove_file !(stats.deferred_artifact_cleanup);
-      stats.deferred_artifact_cleanup := [];
+      List.iter (fun cleanup -> cleanup ()) stats.compile_cleanup;
+      stats.compile_cleanup <- [];
+      List.iter File_util.remove_file stats.deferred_artifact_cleanup;
+      stats.deferred_artifact_cleanup <- [];
       artifacts_cleaned := true)
   in
   let build_ninja_written = ref false in
@@ -627,13 +623,9 @@ let run_with_warning_state ~process_poll ~poll ~warning_state ~previous ~changes
           Hashtbl.iter
             (fun _ package ->
               let package_context =
-                {
-                  context with
-                  build_root = package.Build_types.graph_build_owner;
-                  package_output_specs =
-                    Compiler_info.package_output_specs
-                      package.graph_compile_config;
-                }
+                Compiler_info.for_package context
+                  ~build_root:package.Build_types.graph_build_owner
+                  package.graph_compile_config
               in
               Compiler_info.write_package package_context package.graph_config)
             stats.retained.graph_packages)
@@ -659,13 +651,14 @@ let run_with_warning_state ~process_poll ~poll ~warning_state ~previous ~changes
           | Parse_failure output -> report_parse_failure output));
   {root_config; build_lock_root; stats}
 
-let run ~poll ~seen ~verbosity ~folder ~prod ~features ~warn_error ~watch
-    ~after_build ~filter ~no_timing =
+let run ~poll ~verbosity ~folder ~prod ~features ~warn_error ~after_build
+    ~filter ~no_timing =
   try
     run_with_warning_state ~warning_state:(Warning_state.create ())
       ~process_poll:(Some poll) ~poll ~previous:None ~changes:None
-      ~compilation_kind:One_shot ~no_timing ~seen ~verbosity ~folder ~prod
-      ~features ~warn_error ~watch ~after_build ~filter ~on_state:(fun _ -> ())
+      ~compilation_kind:One_shot ~no_timing ~seen:[] ~verbosity ~folder ~prod
+      ~features ~warn_error ~watch:false ~after_build ~filter
+      ~on_state:(fun _ -> ())
     |> ignore
   with Reported_failure message -> raise (Error message)
 
@@ -679,11 +672,10 @@ let remove_compile_warning_freshness warning_state =
       in
       [implementation; implementation ^ "i"]
       |> List.iter (fun source ->
-          let artifact = Source.ast_path source |> Filename.basename in
           File_util.remove_file
-            (Filename.concat
-               (Build_artifacts.lib_path entry.package_root "ocaml")
-               artifact)))
+            (Build_artifacts.published_ast_path
+               ~ocaml_dir:(Build_artifacts.lib_path entry.package_root "ocaml")
+               source)))
 
 let watch ~verbosity ~folder ~prod ~features ~warn_error ~after_build ~filter
     ~clear_screen =

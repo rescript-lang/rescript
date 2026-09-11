@@ -3,7 +3,6 @@ type module_ = {
   implementation: string;
   interface: string option;
   is_dev: bool;
-  feature: string option;
 }
 
 type discovery = {
@@ -48,16 +47,6 @@ val discover_with_inventory :
   features:string list option ->
   filter:Source_filter.t option ->
   discovery
-
-val discover :
-  ?on_orphan:(string -> unit) ->
-  ?on_missing:(string -> unit) ->
-  ?display_root:string ->
-  Config.t ->
-  prod:bool ->
-  features:string list option ->
-  filter:Source_filter.t option ->
-  module_ list
 
 val ast_path : string -> string
 val compiler_basename : Config.t -> string -> string

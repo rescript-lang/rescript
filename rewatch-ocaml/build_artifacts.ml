@@ -1,20 +1,24 @@
 let lib_path root directory = File_util.path_of_parts root ["lib"; directory]
 
-let generated_js_path (config : Config.t) path (spec : Config.package_spec) =
+let relative_output_directory path (spec : Config.package_spec) =
   let directory = Filename.dirname path in
-  let output_dir =
-    if spec.in_source then directory
-    else
-      Filename.concat
-        (match spec.module_format with
-        | Config.Esmodule -> lib_path "" "es6"
-        | Config.Commonjs -> lib_path "" "js")
-        directory
-  in
+  if spec.in_source then directory
+  else
+    Filename.concat
+      (match spec.module_format with
+      | Config.Esmodule -> lib_path "" "es6"
+      | Config.Commonjs -> lib_path "" "js")
+      directory
+
+let generated_js_path (config : Config.t) path (spec : Config.package_spec) =
+  let output_dir = relative_output_directory path spec in
   Filename.concat config.root
     (Filename.concat output_dir
        (Filename.remove_extension (Filename.basename path)
        ^ Config.package_spec_suffix config spec))
+
+let published_ast_path ~ocaml_dir source =
+  Filename.concat ocaml_dir (Filename.basename (Source.ast_path source))
 
 let generated_build_js_path ~build_dir (config : Config.t) path
     (spec : Config.package_spec) =
@@ -201,15 +205,9 @@ let cleanup_stale ?ocaml_files ?ast_sources ?source_files ?present_source_files
         add_expected compiler_base [".cmti"]);
       add_expected compiler_base [".cmi"; ".cmj"; ".cmt"])
     modules;
-  Option.iter
-    (fun namespace ->
-      let base =
-        match config.namespace_entry with
-        | Some _ -> "@" ^ namespace
-        | None -> namespace
-      in
-      add_expected base [".cmi"; ".cmj"; ".cmt"; ".mlmap"])
-    config.namespace;
+  Config.namespace_compiler_name config.namespace
+  |> Option.iter (fun namespace ->
+      add_expected namespace [".cmi"; ".cmj"; ".cmt"; ".mlmap"]);
   let removed_modules = ref [] in
   let deferred_artifacts = ref [] in
   (* Once the published CMI is removed, bsc still consults the working CMI to
@@ -217,17 +215,6 @@ let cleanup_stale ?ocaml_files ?ast_sources ?source_files ?present_source_files
      through compilation; the command finalizer removes every deferred path. *)
   let defer_working_cmi_until_after_compile basename =
     Filename.check_suffix basename ".cmi"
-  in
-  let relative_to_root path =
-    let normalize = Platform.normalize_path_for_comparison in
-    let prefix = Filename.concat root "" in
-    let normalized_path = normalize path in
-    let normalized_prefix = normalize prefix in
-    if String.starts_with ~prefix:normalized_prefix normalized_path then
-      Some
-        (String.sub path (String.length prefix)
-           (String.length path - String.length prefix))
-    else None
   in
   let mapped_source_directories =
     Hashtbl.create (List.length ast_sources * 2)
@@ -240,7 +227,7 @@ let cleanup_stale ?ocaml_files ?ast_sources ?source_files ?present_source_files
   in
   List.iter
     (fun (_, source) ->
-      relative_to_root source
+      Project_context.relative_to_opt root source
       |> Option.iter (fun relative_source ->
           let directory = Filename.dirname relative_source in
           let source_base =
@@ -349,7 +336,7 @@ let cleanup_stale ?ocaml_files ?ast_sources ?source_files ?present_source_files
             output_path));
   ast_sources
   |> List.iter (fun (_, source) ->
-      relative_to_root source
+      Project_context.relative_to_opt root source
       |> Option.iter (fun relative_source ->
           List.iter
             (fun spec ->

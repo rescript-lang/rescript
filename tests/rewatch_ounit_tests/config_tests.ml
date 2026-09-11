@@ -159,7 +159,6 @@ let tests =
       let config = Config.load path in
       let stats =
         Build_types.create ~warning_state:(Warning_state.create ())
-          ~poll:(fun () -> ())
           ~process_poll:None
           ~progress:(Output.Progress.create ~enabled:false ~color:false)
           ~verbosity:0
@@ -239,7 +238,6 @@ let tests =
             implementation = "src/A.res";
             interface = None;
             is_dev = false;
-            feature = None;
           }
       in
       let compile_job =

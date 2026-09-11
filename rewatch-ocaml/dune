@@ -22,6 +22,7 @@
  (wrapped false)
  (modules
   rewatch_version
+  string_util
   source_filter
   cli
   config_types
@@ -42,6 +43,7 @@
   compiler_args
   compiler_args_command
   compiler_log
+  ast_header
   compiler_process
   compiler_scheduler
   after_build

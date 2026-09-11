@@ -1,12 +1,5 @@
 let error message = raise (Project_context.Error message)
 
-let rec nearest_config directory =
-  if Config.exists_in_root directory then Config.path_in_root directory
-  else
-    let parent = Filename.dirname directory in
-    if parent = directory then error "could not find a rescript.json parent"
-    else nearest_config parent
-
 let runtime_path root =
   try Toolchain.runtime ~find_package:(Project_context.dependency_path root)
   with Toolchain.Error message -> error message
@@ -30,7 +23,11 @@ let run path =
       (Filename.check_suffix source ".res"
       || Filename.check_suffix source ".resi")
   then error "compiler-args expects a .res or .resi source file";
-  let package_config = Config.load (nearest_config (Filename.dirname source)) in
+  let package_config =
+    match Project_context.nearest_config_path (Filename.dirname source) with
+    | Some path -> Config.load path
+    | None -> error "could not find a rescript.json parent"
+  in
   let root = Project_context.workspace_lock_root package_config.root in
   let root_config_path = Config.path_in_root root in
   let root_config =

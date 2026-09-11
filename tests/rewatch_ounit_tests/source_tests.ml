@@ -21,7 +21,7 @@ let discover config ?(prod = false) ?features ?filter () =
         | Error message -> failwith message)
       filter
   in
-  Source.discover config ~prod ~features ~filter
+  (Source.discover_with_inventory config ~prod ~features ~filter).modules
 
 let discover_with_inventory config ?(prod = false) ?features () =
   Source.discover_with_inventory config ~prod ~features ~filter:None

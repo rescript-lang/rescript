@@ -55,19 +55,14 @@ let watch_context ~root ~prod ~features ~filter =
         if parent = directory || directory = package_root then package_root
         else nearest_existing_directory package_root parent
     in
-    let path_is_within_root path =
-      let normalize = Platform.normalize_path_for_comparison in
-      let root = normalize root in
-      let path = normalize path in
-      path = root || String.starts_with ~prefix:(Filename.concat root "") path
-    in
     let watch_unresolved_dependency package_root name =
       Package_resolution.dependency_candidates resolution ~package_root name
       |> List.iter (fun candidate ->
           let existing = nearest_existing_directory root candidate in
           try
             let canonical_existing = Platform.canonicalize_path existing in
-            if path_is_within_root canonical_existing then (
+            if Project_context.path_is_within_canonical ~root canonical_existing
+            then (
               unresolved := candidate :: !unresolved;
               (* A shallow ancestor watch is sufficient: each directory creation
                 wakes reconciliation, which advances the watch toward the complete

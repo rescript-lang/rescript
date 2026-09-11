@@ -1,5 +1,10 @@
 type module_format = Config_types.module_format = Esmodule | Commonjs
 
+type namespace = Config_types.namespace =
+  | No_namespace
+  | Namespace of string
+  | Namespace_with_entry of {name: string; entry: string}
+
 type package_spec = Config_types.package_spec = {
   module_format: module_format;
   in_source: bool;
@@ -30,8 +35,7 @@ type t = Config_types.t = {
   compiler_flags: string list;
   package_specs: package_spec list;
   suffix: string;
-  namespace: string option;
-  namespace_entry: string option;
+  namespace: namespace;
   features: (string * string list) list;
   warning_flags: string list;
   ppx_flags: string list list;
@@ -49,6 +53,10 @@ type t = Config_types.t = {
 exception Error of string
 
 val namespace_from_package_name : string -> string
+val namespace_name : namespace -> string option
+val namespace_entry : namespace -> string option
+val namespace_compiler_name : namespace -> string option
+val namespaced_module_name : namespace -> string -> string
 val path_in_root : string -> string
 val exists_in_root : string -> bool
 val source_is_dev : t -> string -> bool

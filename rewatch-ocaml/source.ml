@@ -3,7 +3,6 @@ type module_ = {
   implementation: string;
   interface: string option;
   is_dev: bool;
-  feature: string option;
 }
 
 type discovery = {
@@ -58,12 +57,7 @@ let display_path ~display_root root path =
     if Filename.is_relative path then Filename.concat root path else path
   in
   let display_root = Platform.canonicalize_path display_root in
-  let prefix = Filename.concat display_root "" in
-  let comparable = Platform.normalize_path_for_comparison in
-  if String.starts_with ~prefix:(comparable prefix) (comparable absolute) then
-    String.sub absolute (String.length prefix)
-      (String.length absolute - String.length prefix)
-  else absolute
+  Project_context.relative_or_absolute ~root:display_root absolute
 
 let duplicate_error ~display_root root name first second =
   let first, second =
@@ -387,7 +381,6 @@ let discover_with_inventory ?(on_orphan = fun _ -> ())
               implementation = implementation.path;
               interface = Option.map (fun file -> file.path) interface;
               is_dev;
-              feature = None;
             })
     |> List.of_seq
     |> List.sort (fun a b -> String.compare a.name b.name)
@@ -407,29 +400,19 @@ let discover_with_inventory ?(on_orphan = fun _ -> ())
     gentype_dirs = scanned.gentype_dirs;
   }
 
-let discover ?on_orphan ?on_missing ?display_root config ~prod ~features ~filter
-    =
-  (discover_with_inventory ?on_orphan ?on_missing ?display_root config ~prod
-     ~features ~filter)
-    .modules
-
 let ast_path path =
   Filename.remove_extension path
   ^ if Filename.extension path = ".resi" then ".iast" else ".ast"
 
 let compiler_basename config module_name =
-  match (config.Config.namespace, config.namespace_entry) with
-  | Some _, Some entry when entry = module_name -> module_name
-  | Some namespace, Some _ -> module_name ^ "-@" ^ namespace
-  | Some namespace, _ -> module_name ^ "-" ^ namespace
-  | None, _ -> module_name
+  Config.namespaced_module_name config.Config.namespace module_name
 
 (* Compiler artifacts preserve the source filename's case, while dependency
    graph module names are capitalized. Keep those two names distinct. *)
 let compiler_asset_basename config path =
   let basename = path |> Filename.basename |> Filename.remove_extension in
-  match (config.Config.namespace, config.namespace_entry) with
-  | Some _, Some entry when entry = module_name path -> basename
-  | Some namespace, Some _ -> basename ^ "-@" ^ namespace
-  | Some namespace, _ -> basename ^ "-" ^ namespace
-  | None, _ -> basename
+  match config.Config.namespace with
+  | Config.No_namespace -> basename
+  | Config.Namespace namespace -> basename ^ "-" ^ namespace
+  | Config.Namespace_with_entry {name; entry} ->
+    if entry = module_name path then basename else basename ^ "-@" ^ name

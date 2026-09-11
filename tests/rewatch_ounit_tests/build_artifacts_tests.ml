@@ -114,7 +114,6 @@ let tests =
           implementation = "src/nested/A.res";
           interface = None;
           is_dev = false;
-          feature = None;
         }
       in
       ignore
@@ -202,7 +201,6 @@ let tests =
           implementation = "src/Present.res";
           interface = None;
           is_dev = false;
-          feature = None;
         }
       in
       let result =
@@ -230,7 +228,6 @@ let tests =
           implementation = "src/A.res";
           interface = None;
           is_dev = false;
-          feature = None;
         }
       in
       ignore

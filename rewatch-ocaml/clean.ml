@@ -10,7 +10,7 @@ type t = package list
 (* The complete cleanup plan is validated before deletion starts so a malformed
    dependency cannot leave only the packages visited before it partially
    cleaned. The resulting order remains dependency-first for progress output. *)
-let prepare ~(root_config : Config.t) ~resolution ~seen ~root ~prod ~is_local =
+let prepare ~(root_config : Config.t) ~resolution ~seen ~prod ~is_local =
   Package_diagnostics.validate_metadata root_config;
   let packages = ref [] in
   let rec visit (config : Config.t) ~is_local =
@@ -49,8 +49,6 @@ let prepare ~(root_config : Config.t) ~resolution ~seen ~root ~prod ~is_local =
           {root; name = config.name; output_config; implementation_files}
           :: !packages))
   in
-  if root <> root_config.root then
-    invalid_arg "cleanup root does not match its prepared configuration";
   visit root_config ~is_local;
   List.rev !packages
 

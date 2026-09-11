@@ -21,11 +21,7 @@ let with_file_error ~action path f =
             (Unix.error_message error)))
 
 let read_file path =
-  with_file_error ~action:"read file" path (fun () ->
-      let channel = open_in_bin path in
-      Fun.protect
-        ~finally:(fun () -> close_in_noerr channel)
-        (fun () -> really_input_string channel (in_channel_length channel)))
+  with_file_error ~action:"read file" path (fun () -> File_util.read_file path)
 
 let write_file path contents =
   with_file_error ~action:"write formatted file" path (fun () ->
@@ -36,12 +32,6 @@ let write_file path contents =
 
 let bsc () =
   try Toolchain.bsc () with Toolchain.Error message -> raise (Error message)
-
-let rec nearest_config directory =
-  if Config.exists_in_root directory then Some (Config.path_in_root directory)
-  else
-    let parent = Filename.dirname directory in
-    if parent = directory then None else nearest_config parent
 
 type discovered_package = {config: Config.t; files: string list}
 
@@ -120,7 +110,9 @@ let files_in_scope () =
               current_directory message))
   in
   let listed_by_parent =
-    match nearest_config (Filename.dirname current.root) with
+    match
+      Project_context.nearest_config_path (Filename.dirname current.root)
+    with
     | None -> false
     | Some path ->
       let parent = Config.load path in

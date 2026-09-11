@@ -45,8 +45,8 @@ let run_command ~poll = function
         no_timing;
       } ->
     ignore clear_screen;
-    Build.run ~poll ~seen:[] ~verbosity ~folder ~prod ~features ~warn_error
-      ~watch:false ~after_build ~filter ~no_timing
+    Build.run ~poll ~verbosity ~folder ~prod ~features ~warn_error ~after_build
+      ~filter ~no_timing
   | Cli.Watch
       {
         verbosity;
@@ -68,7 +68,7 @@ let run_command ~poll = function
     Format.run_files ~poll ~check paths
   | Cli.Compiler_args path -> print_endline (Build.compiler_args path)
   | Cli.Clean {verbosity; folder; prod} ->
-    Build.clean ~poll ~seen:[] ~verbosity ~folder ~prod
+    Build.clean ~poll ~verbosity ~folder ~prod
 
 let run = function
   | Cli.Watch _ as command -> run_command ~poll:(fun () -> ()) command

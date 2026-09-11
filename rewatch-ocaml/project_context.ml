@@ -14,6 +14,12 @@ let path_is_within_canonical ~root path =
   let path = normalize path in
   path = root || String.starts_with ~prefix:(Filename.concat root "") path
 
+let rec nearest_config_path directory =
+  if Config.exists_in_root directory then Some (Config.path_in_root directory)
+  else
+    let parent = Filename.dirname directory in
+    if parent = directory then None else nearest_config_path parent
+
 (* Graph roots and resolved dependency paths are already canonical. Keeping this
    predicate pure avoids repeating realpath calls throughout package traversal. *)
 let is_local_dependency_canonical ~workspace path =
@@ -31,20 +37,17 @@ let is_local_dependency_canonical ~workspace path =
   && not (contains_component path "node_modules")
 
 let workspace_lock_root_for (current : Config.t) =
-  let rec nearest_parent directory =
-    if Config.exists_in_root directory then Some (Config.load_root directory)
-    else
-      let parent = Filename.dirname directory in
-      if parent = directory then None else nearest_parent parent
-  in
-  match nearest_parent (Filename.dirname current.root) with
-  | Some parent
-    when List.exists
-           (fun (dependency : Config.dependency) ->
-             dependency.name = current.name)
-           (parent.dependencies @ parent.dev_dependencies) ->
-    parent.root
-  | Some _ | None -> current.root
+  match nearest_config_path (Filename.dirname current.root) with
+  | Some path -> (
+    match Config.load path with
+    | parent
+      when List.exists
+             (fun (dependency : Config.dependency) ->
+               dependency.name = current.name)
+             (parent.dependencies @ parent.dev_dependencies) ->
+      parent.root
+    | _ -> current.root)
+  | None -> current.root
 
 let workspace_lock_root folder =
   workspace_lock_root_for (Config.load_root folder)
@@ -94,11 +97,16 @@ let dependency_candidates_in context package_root name =
     if parent = directory then List.rev (candidate :: acc)
     else in_ancestors parent (candidate :: acc)
   in
-  let append_unique values additions =
+  let deduplicate values =
+    let seen = Hashtbl.create (List.length values) in
     List.fold_left
-      (fun values value ->
-        if List.mem value values then values else values @ [value])
-      values additions
+      (fun unique value ->
+        if Hashtbl.mem seen value then unique
+        else (
+          Hashtbl.add seen value ();
+          value :: unique))
+      [] values
+    |> List.rev
   in
   let direct =
     [
@@ -106,10 +114,10 @@ let dependency_candidates_in context package_root name =
       candidate context.current_root;
       candidate context.workspace_root;
     ]
-    |> append_unique []
+    |> deduplicate
   in
   if context.allow_upward_search then
-    append_unique direct (in_ancestors (Filename.dirname package_root) [])
+    deduplicate (direct @ in_ancestors (Filename.dirname package_root) [])
   else direct
 
 let dependency_path_in context package_root name =
@@ -164,8 +172,11 @@ let relative_to root path =
       (String.length path - String.length prefix)
   else raise (Error (path ^ " is not inside " ^ root))
 
+let relative_to_opt root path =
+  try Some (relative_to root path) with Error _ -> None
+
 let relative_or_absolute ~root path =
-  try relative_to root path with Error _ -> path
+  Option.value (relative_to_opt root path) ~default:path
 
 let display_path ~root path =
   match relative_or_absolute ~root path with

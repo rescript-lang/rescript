@@ -28,9 +28,7 @@ type global_module = {
   package_name: string;
   package_root: string;
   source_path: string;
-  source: Source.module_;
-  namespace: string option;
-  namespace_entry: string option;
+  namespace: Config.namespace;
   allowed_dependencies: string list;
   mutable raw_dependencies: string list;
 }
@@ -97,7 +95,7 @@ type t = {
   mutable parsed: int;
   mutable compiled: int;
   mutable parse_seconds: float;
-  parse_messages: parse_message list ref;
+  mutable parse_messages: parse_message list;
   mutable diagnostics: string list;
   mutable failure: string option;
   removed_modules: (string, unit) Hashtbl.t;
@@ -105,21 +103,19 @@ type t = {
   blocked_modules: (string, unit) Hashtbl.t;
   initialized_logs: (string, unit) Hashtbl.t;
   namespace_freshness: (string, float option) Hashtbl.t;
-  deferred_artifact_cleanup: string list ref;
-  namespace_jobs: (Process.job * (Process.result -> unit)) list ref;
-  compile_candidates: Compiler_scheduler.candidate list ref;
-  compile_cleanup: (unit -> unit) list ref;
+  mutable deferred_artifact_cleanup: string list;
+  mutable namespace_jobs: (Process.job * (Process.result -> unit)) list;
+  mutable compile_candidates: Compiler_scheduler.candidate list;
+  mutable compile_cleanup: (unit -> unit) list;
   mutable compiler_cleaned: bool;
   retained: retained;
   mutable had_warnings: bool;
-  poll: unit -> unit;
   process_poll: (unit -> unit) option;
   progress: Output.Progress.t;
   verbosity: int;
 }
 
-let create_attempt ~attempt_kind ~retained ~poll ~process_poll ~progress
-    ~verbosity =
+let create_attempt ~attempt_kind ~retained ~process_poll ~progress ~verbosity =
   {
     attempt_kind;
     cleaned = 0;
@@ -127,7 +123,7 @@ let create_attempt ~attempt_kind ~retained ~poll ~process_poll ~progress
     parsed = 0;
     compiled = 0;
     parse_seconds = 0.;
-    parse_messages = ref [];
+    parse_messages = [];
     diagnostics = [];
     failure = None;
     removed_modules = Hashtbl.create 16;
@@ -135,20 +131,19 @@ let create_attempt ~attempt_kind ~retained ~poll ~process_poll ~progress
     blocked_modules = Hashtbl.create 16;
     initialized_logs = Hashtbl.create 16;
     namespace_freshness = Hashtbl.create 16;
-    deferred_artifact_cleanup = ref [];
-    namespace_jobs = ref [];
-    compile_candidates = ref [];
-    compile_cleanup = ref [];
+    deferred_artifact_cleanup = [];
+    namespace_jobs = [];
+    compile_candidates = [];
+    compile_cleanup = [];
     compiler_cleaned = false;
     retained;
     had_warnings = false;
-    poll;
     process_poll;
     progress;
     verbosity;
   }
 
-let create ~warning_state ~poll ~process_poll ~progress ~verbosity =
+let create ~warning_state ~process_poll ~progress ~verbosity =
   let retained =
     {
       active_features = Hashtbl.create 16;
@@ -164,10 +159,10 @@ let create ~warning_state ~poll ~process_poll ~progress ~verbosity =
       warning_state;
     }
   in
-  create_attempt ~attempt_kind:Full_attempt ~retained ~poll ~process_poll
-    ~progress ~verbosity
+  create_attempt ~attempt_kind:Full_attempt ~retained ~process_poll ~progress
+    ~verbosity
 
-let create_incremental ~previous ~poll ~process_poll ~progress ~verbosity =
+let create_incremental ~previous ~process_poll ~progress ~verbosity =
   (* Each rebuild needs fresh diagnostics and pending work, while the package
      graph and artifact/module state describe the long-lived watcher session.
      Sharing only that persistent subset prevents completed cleanup actions or
@@ -193,7 +188,7 @@ let create_incremental ~previous ~poll ~process_poll ~progress ~verbosity =
   in
   create_attempt ~attempt_kind
     ~retained:{previous.retained with cleanup_results}
-    ~poll ~process_poll ~progress ~verbosity
+    ~process_poll ~progress ~verbosity
 
 let prepared_exn stats =
   match stats.retained.preparation with
