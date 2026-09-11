@@ -34,26 +34,27 @@ rewatch_bg watch > rewatch.log 2>&1 &
 if ! wait_for_file "./src/Test.mjs" 20 || ! wait_for_file "lib/watch.lock" 20; then
   error "Initial watch build did not complete"
   cat rewatch.log
-  mv rescript.json.watch-recovery.bak rescript.json
   exit_watcher
+  mv rescript.json.watch-recovery.bak rescript.json
+  exit 1
+fi
+
+if ! wait_for_pattern rewatch.log "Finished initial compilation" 60; then
+  error "Initial watch build did not finish"
+  cat rewatch.log
+  exit_watcher
+  mv rescript.json.watch-recovery.bak rescript.json
   exit 1
 fi
 
 initial_completed=$(grep -c "Finished compilation" rewatch.log 2> /dev/null || true)
-printf '{"name":' > rescript.json
+printf '{"name":' > rescript.json.watch-recovery.next
+mv rescript.json.watch-recovery.next rescript.json
 
 if ! wait_for_pattern rewatch.log "Could not initialize build" 30; then
   error "Watcher did not report the invalid config"
   cat rewatch.log
-  mv rescript.json.watch-recovery.bak rescript.json
   exit_watcher
-  exit 1
-fi
-
-watcher_pid=$(cat lib/watch.lock)
-if ! kill -0 "$watcher_pid" 2> /dev/null; then
-  error "Watcher exited after the invalid config"
-  cat rewatch.log
   mv rescript.json.watch-recovery.bak rescript.json
   exit 1
 fi
@@ -63,14 +64,15 @@ node -e '
   const config = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
   config.suffix = ".recovered.mjs";
   fs.writeFileSync(process.argv[2], `${JSON.stringify(config, null, 2)}\n`);
-' rescript.json.watch-recovery.bak rescript.json
+' rescript.json.watch-recovery.bak rescript.json.watch-recovery.next
+mv rescript.json.watch-recovery.next rescript.json
 
 expected_completed=$((initial_completed + 1))
 if ! wait_for_pattern_count rewatch.log "Finished compilation" "$expected_completed" 30; then
   error "Watcher did not recover after restoring a valid config"
   cat rewatch.log
-  mv rescript.json.watch-recovery.bak rescript.json
   exit_watcher
+  mv rescript.json.watch-recovery.bak rescript.json
   exit 1
 fi
 
@@ -78,9 +80,9 @@ echo '// watch-recovery-test' >> src/Test.res
 if ! wait_for_file "./src/Test.recovered.mjs" 20; then
   error "Recovered watcher did not compile with the restored config"
   cat rewatch.log
+  exit_watcher
   mv rescript.json.watch-recovery.bak rescript.json
   git checkout -- src/Test.res
-  exit_watcher
   exit 1
 fi
 
