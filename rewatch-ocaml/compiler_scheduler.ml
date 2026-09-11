@@ -54,8 +54,8 @@ let file_digest path =
   try Some (Digest.file path) with Sys_error _ | Unix.Unix_error _ -> None
 
 let run ~poll ~warning_state ~blocked_modules ~compile_assets ~build_state
-    ~scheduled_modules ~compile_cleanup ~mark_compiled ~mark_had_warnings
-    ~progress ~compile_step ~namespace_count ~verbosity =
+    ~scheduled_modules ~mark_compiled ~mark_had_warnings ~progress ~compile_step
+    ~namespace_count ~verbosity =
   let refresh_published_cmi (scheduled : scheduled_module) =
     (* Only a changed interface invalidates reverse dependents. Comparing bytes
        avoids timestamp races and skips unnecessary downstream compilation. *)
@@ -148,10 +148,7 @@ let run ~poll ~warning_state ~blocked_modules ~compile_assets ~build_state
              value = scheduled;
            })
   in
-  Fun.protect
-    ~finally:(fun () -> List.iter (fun cleanup -> cleanup ()) compile_cleanup)
-    (fun () ->
-      let record_result (scheduled : scheduled_module) path result =
+  let record_result (scheduled : scheduled_module) path result =
         let message =
           if Process.succeeded result then
             let () = refresh_published_cmi scheduled in
@@ -304,4 +301,4 @@ let run ~poll ~warning_state ~blocked_modules ~compile_assets ~build_state
              "compiler scheduler stopped without a diagnostic")
       | failures, _ ->
         failures |> List.map snd |> String.concat "" |> fun output ->
-        raise (Build_failure output))
+        raise (Build_failure output)

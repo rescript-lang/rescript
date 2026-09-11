@@ -99,7 +99,6 @@ let run_scheduled_modules (stats : Build_types.t) ~compile_step ~namespace_count
     ~warning_state:stats.warning_state
     ~blocked_modules:stats.blocked_modules ~compile_assets ~build_state
     ~scheduled_modules:!(stats.scheduled_modules)
-    ~compile_cleanup:!(stats.compile_cleanup)
     ~mark_compiled:(fun () -> stats.compiled <- stats.compiled + 1)
     ~mark_had_warnings:(fun () -> stats.had_warnings <- true)
     ~progress:stats.progress ~compile_step ~namespace_count
