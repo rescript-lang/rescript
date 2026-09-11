@@ -2220,6 +2220,11 @@ The non-comment cleanup removed the obsolete `.rewatch-pending` and
 tests. No supported implementation creates those staging files after output
 publication was aligned with Rust, so retaining migration code would add
 filesystem work and make unrelated files appear owned by Rewatch.
+The cleanup plan no longer retains the now-unused full file inventory, and its
+source traversal stops at non-recursive directories when no inventory consumer
+exists. The watch helper was also renamed from the ambiguous "build directory"
+predicate to `is_compiler_artifact_directory`, reflecting that valid configured
+source directories remain watchable.
 
 1. Complete the non-comment maintainability work. Review naming and module
    qualification, including whether generic utility calls are

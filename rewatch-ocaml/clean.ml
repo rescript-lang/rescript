@@ -49,7 +49,7 @@ let prepare ~(root_config : Config.t) ~dependency_context ~seen ~root ~prod
                         "Could not build package tree for '%s' at path '%s'. Error: %s"
                         dependency.name root_config.root message)))
             dependencies;
-          let implementation_files, _inventory_files =
+          let implementation_files =
             Source.discover_for_cleanup config
               ~prod:(prod || not is_local)
               ~on_missing:
