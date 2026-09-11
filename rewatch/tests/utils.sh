@@ -70,7 +70,7 @@ normalize_paths() {
         next
       }
       blanks = blank_count
-      if ($0 ~ /^Package .* uses deprecated config/ && blanks > 2) {
+      if ($0 ~ /Package .* uses deprecated config/ && blanks > 2) {
         blanks = 2
       }
       for (i = 0; i < blanks; i++) print ""
