@@ -80,8 +80,9 @@ let watch_context ~root ~prod ~features ~filter =
       if Hashtbl.mem visited config.root then ()
       else (
         Hashtbl.add visited config.root ();
-        Hashtbl.add packages config.root (config, is_local);
-        add_path config.root false;
+        if is_local then (
+          Hashtbl.add packages config.root (config, true);
+          add_path config.root false);
         let dependencies =
           config.dependencies
           @ if prod || not is_local then [] else config.dev_dependencies
@@ -117,7 +118,9 @@ let watch_context ~root ~prod ~features ~filter =
                 add_path resolved.directory false);
               visit ~is_local:true ~features:resolved.declaration.features
                 resolved.config
-            | Resolved_dependency _ -> ()
+            | Resolved_dependency resolved ->
+              visit ~is_local:false ~features:resolved.declaration.features
+                resolved.config
             | Broken_dependency directory ->
               (* A broken dependency configuration must remain watched so fixing
              that file can recover the long-lived command. *)
