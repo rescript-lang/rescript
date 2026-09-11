@@ -2,19 +2,9 @@ open OUnit2
 
 let check condition message = assert_bool message condition
 
-let with_temp_dir f =
-  let path = Filename.temp_file "rewatch-compiler-info-" "" in
-  Sys.remove path;
-  Unix.mkdir path 0o755;
-  let path = Unix.realpath path in
-  Fun.protect ~finally:(fun () -> File_util.remove_tree path) (fun () -> f path)
+let with_temp_dir = Test_support.with_temp_dir "rewatch-compiler-info-"
 
-let write path contents =
-  File_util.ensure_dir (Filename.dirname path);
-  let channel = open_out_bin path in
-  Fun.protect
-    ~finally:(fun () -> close_out_noerr channel)
-    (fun () -> output_string channel contents)
+let write = Test_support.write_file
 
 let config root =
   write

@@ -53,6 +53,8 @@
   build_freshness
   build_types
   build_preparation
+  package_parse
+  package_compilation
   package_build
   clean
   compile_assets
