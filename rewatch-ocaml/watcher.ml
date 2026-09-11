@@ -467,16 +467,14 @@ let with_signal_handlers handler f =
 
 let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
     ~filter ~clear_screen ~show_progress ~verbosity ~build ~watch_lock =
-  let stop_requested = ref false in
+  let stop_requested = Atomic.make false in
   let stop () =
-    Sys.set_signal Sys.sigint Sys.Signal_ignore;
-    Sys.set_signal Sys.sigterm Sys.Signal_ignore;
     (* Signal handlers only request termination because libuv may invoke them
        while a callback is being drained or a watch handle is being refreshed.
        Raising through that callback would be treated as an uncaught libuv
        exception and could bypass lock and handle cleanup. The build poll and
        watch-loop timer observe this flag, so shutdown remains prompt. *)
-    stop_requested := true
+    Atomic.set stop_requested true
   in
   let digest_cache = Hashtbl.create 256 in
   let refresh_and_snapshot watcher ~paths ~symlink_paths roots sources
@@ -501,7 +499,7 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
     loop 8 symlink_paths
   in
   let keep_running () =
-    (not !stop_requested) && Build_lock.is_owned watch_lock
+    (not (Atomic.get stop_requested)) && Build_lock.is_owned watch_lock
   in
   let next_lock_check = ref 0. in
   (* Lock removal is the test suite's portable shutdown protocol and must also
@@ -509,7 +507,7 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
      ownership checks so the scheduler's frequent responsiveness ticks do not
      turn one source edit into a stream of identical filesystem reads. *)
   let poll () =
-    if !stop_requested then raise Stop;
+    if Atomic.get stop_requested then raise Stop;
     let now = Unix.gettimeofday () in
     if now >= !next_lock_check then (
       next_lock_check := now +. 0.1;

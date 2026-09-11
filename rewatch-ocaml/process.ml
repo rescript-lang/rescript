@@ -3,6 +3,7 @@ type job = {program: string; args: string list; cwd: string}
 type task = {job: job; env: Spawn.Env.t option; on_result: result -> result}
 
 exception Error of string
+exception Interrupted of int
 
 let decode_utf8_lossy value =
   if String.is_valid_utf_8 value then value
@@ -486,10 +487,10 @@ type 'a worker_pool = {
 }
 
 let launch_worker_task notifier task =
-  (* Signal handlers execute on the main domain. A worker therefore keeps
-     ownership across launch without temporarily replacing process-wide Windows
-     handlers; cancellation is observed immediately after the child is added to
-     the pool's active set. *)
+  (* Signal handlers are process-wide and may execute on a worker domain. A
+     worker therefore keeps ownership across launch without temporarily
+     replacing those handlers: an interruption unwinds through [launch] or the
+     completion queue, and the scheduler then cancels the other process trees. *)
   launch ?env:task.env ~defer_signals:false ~notifier () task.job
 
 let remove_active pool active =
@@ -806,7 +807,7 @@ let run_dependency_graph_with_notifier ~max_jobs ~is_fatal ~poll notifier works
 let run_dependency_graph ?(max_jobs = default_max_jobs)
     ?(is_fatal =
       function
-      | Sys.Break -> true
+      | Sys.Break | Interrupted _ -> true
       | _ -> false) ?poll works ~next =
   if max_jobs < 1 then raise (Error "max_jobs must be at least one");
   match works with

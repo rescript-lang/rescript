@@ -1,18 +1,17 @@
-exception Interrupted of int
-
-(* Raising on the main thread lets command-scoped process, lock, and temporary
-   output owners unwind before the conventional shell exit status is returned.
-   Watch mode uses a cooperative flag instead because libuv callbacks must not
-   be unwound by an asynchronous exception. *)
+(* Raising in whichever domain handles the signal lets command-scoped process,
+   lock, and temporary-output owners unwind before the conventional shell exit
+   status is returned. The process scheduler carries worker exceptions back to
+   its caller. Watch mode uses a cooperative flag instead because libuv
+   callbacks must not be unwound by an asynchronous exception. *)
 let with_termination_handlers action =
+  let interrupted = Atomic.make false in
   let interrupt signal =
-    Sys.set_signal Sys.sigint Sys.Signal_ignore;
-    Sys.set_signal Sys.sigterm Sys.Signal_ignore;
-    raise
-      (Interrupted
-         (if signal = Sys.sigint then 130
-          else if signal = Sys.sigterm then 143
-          else 1))
+    if Atomic.compare_and_set interrupted false true then
+      raise
+        (Process.Interrupted
+           (if signal = Sys.sigint then 130
+            else if signal = Sys.sigterm then 143
+            else 1))
   in
   let previous_sigint = Sys.signal Sys.sigint (Sys.Signal_handle interrupt) in
   Fun.protect
@@ -83,7 +82,7 @@ let () =
     prerr_endline message;
     exit 1
   | Build.Stop_watch -> exit 0
-  | Interrupted exit_code -> exit exit_code
+  | Process.Interrupted exit_code -> exit exit_code
   | (Sys_error _ as exn) | (Unix.Unix_error _ as exn) ->
     prerr_endline (Printexc.to_string exn);
     exit 1
