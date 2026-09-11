@@ -342,8 +342,6 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
             Hashtbl.replace stats.forced_parse_paths
               (Filename.concat package.graph_root module_.Source.implementation)
               ();
-          Hashtbl.replace stats.global_raw_dependencies compiler_base
-            raw_dependencies;
           nodes :=
             {
               key = compiler_base;
@@ -401,7 +399,7 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
     (fun (node, _) ->
       Build_state.add build_state ~key:node.key
         ~package_name:node.package_name ~package_root:node.package_root
-        ~source:node.source ~raw_dependencies:node.raw_dependencies
+        ~source:node.source
         ~last_compiled_cmi:(Compile_assets.cmi compile_assets node.key |> modified)
         ~last_compiled_cmt:(Compile_assets.cmt compile_assets node.key |> modified))
     graph_nodes;

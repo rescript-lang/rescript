@@ -10,18 +10,16 @@ let source name =
       interface = None;
       is_dev = false;
       feature = None;
-      deps = [];
     }
 
 let tests =
   "build_state_tests" >:: fun _context ->
   let state = Build_state.create 2 in
   Build_state.add state ~key:"A" ~package_name:"package" ~package_root:"root"
-    ~source:(source "A") ~raw_dependencies:[] ~last_compiled_cmi:(Some 1.)
+    ~source:(source "A") ~last_compiled_cmi:(Some 1.)
     ~last_compiled_cmt:(Some 2.);
   Build_state.add state ~key:"B" ~package_name:"package" ~package_root:"root"
-    ~source:(source "B") ~raw_dependencies:["A"] ~last_compiled_cmi:None
-    ~last_compiled_cmt:None;
+    ~source:(source "B") ~last_compiled_cmi:None ~last_compiled_cmt:None;
   Build_state.set_dependencies state ~key:"A" [];
   Build_state.set_dependencies state ~key:"B" ["A"];
   let a = Build_state.find_exn state "A" in
@@ -43,7 +41,6 @@ let tests =
        (Build_state.String_set.singleton "B")
     && b.dependencies = ["A"])
     "setting dependencies creates the reverse edge";
-  check (not b.deps_dirty) "stored dependency state is marked initialized";
   Build_state.mark_dependents_compile_dirty state a ~is_blocked:(fun _ -> true);
   check (not b.compile_dirty) "CMI changes do not unblock cycle members";
   Build_state.mark_dependents_compile_dirty state a ~is_blocked:(fun _ -> false);

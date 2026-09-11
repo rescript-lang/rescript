@@ -4,7 +4,6 @@ type module_ = {
   interface: string option;
   is_dev: bool;
   feature: string option;
-  mutable deps: string list;
 }
 
 type discovery = {

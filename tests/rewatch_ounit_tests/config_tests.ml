@@ -229,7 +229,6 @@ let tests =
             interface = None;
             is_dev = false;
             feature = None;
-            deps = [];
           }
       in
       let compile_job =
