@@ -19,7 +19,7 @@ val run :
   prod:bool ->
   features:string list option ->
   warn_error:string option ->
-  filter:string option ->
+  filter:Source_filter.t option ->
   watch:bool ->
   stats:Build_types.t ->
   parse_step:string ->

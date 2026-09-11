@@ -440,13 +440,7 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
   let matches_filter =
     match filter with
     | None -> fun _ -> true
-    | Some pattern ->
-      let regex = Str.regexp pattern in
-      fun path ->
-        try
-          ignore (Str.search_forward regex (Filename.basename path) 0);
-          true
-        with Not_found -> false
+    | Some filter -> Source_filter.matches_basename filter
   in
   let refresh_and_snapshot watcher ~paths ~symlink_paths roots sources
       unresolved =

@@ -38,6 +38,8 @@
    (= 2.1.1))
   (luv
    (= 0.5.14))
+  (re
+   (= 1.14.0))
   (ounit2
    (and :with-test (= 2.2.7)))
   (odoc :with-doc)

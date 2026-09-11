@@ -276,16 +276,7 @@ let discover_with_inventory ?(on_orphan = fun _ -> ())
   let matches_filter =
     match filter with
     | None -> fun _ -> true
-    | Some pattern ->
-      let regex =
-        try Str.regexp pattern
-        with Failure _ -> raise (Error ("invalid filter regex: " ^ pattern))
-      in
-      fun path ->
-        try
-          ignore (Str.search_forward regex (Filename.basename path) 0);
-          true
-        with Not_found -> false
+    | Some filter -> Source_filter.matches_basename filter
   in
   let scanned =
     scan_sources ~on_missing config ~prod ~features

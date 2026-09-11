@@ -13,6 +13,14 @@ let names modules =
   List.map (fun (module_ : Source.module_) -> module_.name) modules
 
 let discover config ?(prod = false) ?features ?filter () =
+  let filter =
+    Option.map
+      (fun pattern ->
+        match Source_filter.compile pattern with
+        | Ok filter -> filter
+        | Error message -> failwith message)
+      filter
+  in
   Source.discover config ~prod ~features ~filter
 
 let discover_with_inventory config ?(prod = false) ?features () =
@@ -78,6 +86,16 @@ let tests =
       check
         (names (discover config ~filter:"test" ()) = [])
         "source filters do not match directory components";
+      check
+        (names (discover config ~filter:"Nested|Other" ()) = ["Nested"])
+        "source filters support Rust-style alternation";
+      check
+        (names (discover config ~filter:"(?:Nested|Other)\\.res$" ())
+        = ["Nested"])
+        "source filters support non-capturing groups";
+      check
+        (names (discover config ~filter:"Nested\\d*\\.res$" ()) = ["Nested"])
+        "source filters support shorthand classes and repetition";
       write_file config_path
         {|{
           "name": "cyclic-features",

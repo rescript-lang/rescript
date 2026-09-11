@@ -12,7 +12,7 @@ and build_options = {
   features: string list option;
   warn_error: string option;
   after_build: string option;
-  filter: string option;
+  filter: Source_filter.t option;
   clear_screen: bool;
   no_timing: bool;
 }
@@ -88,12 +88,13 @@ let after_build =
 
 let filter =
   let parse value =
-    try
-      ignore (Str.regexp value);
-      Ok value
-    with Failure message -> Error (`Msg message)
+    match Source_filter.compile value with
+    | Ok filter -> Ok filter
+    | Error message -> Error (`Msg message)
   in
-  let print = Stdlib.Format.pp_print_string in
+  let print formatter filter =
+    Stdlib.Format.pp_print_string formatter (Source_filter.pattern filter)
+  in
   Arg.(
     value
     & opt (some (conv (parse, print))) None

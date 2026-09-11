@@ -9,7 +9,7 @@ val prepare_tree :
   features:string list option ->
   warn_error:string option ->
   watch:bool ->
-  filter:string option ->
+  filter:Source_filter.t option ->
   is_local:bool ->
   stats:Build_types.t ->
   unit
