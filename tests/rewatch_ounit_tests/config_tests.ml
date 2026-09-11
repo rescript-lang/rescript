@@ -4,15 +4,7 @@ let check condition message = assert_bool message condition
 
 let write_file = Test_support.write_file
 
-let contains text fragment =
-  let text_length = String.length text in
-  let fragment_length = String.length fragment in
-  let rec loop index =
-    if index + fragment_length > text_length then false
-    else if String.sub text index fragment_length = fragment then true
-    else loop (index + 1)
-  in
-  fragment_length = 0 || loop 0
+let contains = Test_support.contains_text
 
 let count_occurrences text fragment =
   let text_length = String.length text in
@@ -42,8 +34,7 @@ let rec contains_adjacent left right = function
   | _ :: rest -> contains_adjacent left right rest
   | [] -> false
 
-let tests =
-  "config_tests" >:: fun _context ->
+let with_config_file test _context =
   let root = Filename.temp_file "rewatch-ocaml-config-" "" in
   Sys.remove root;
   Unix.mkdir root 0o755;
@@ -52,6 +43,10 @@ let tests =
     ~finally:(fun () -> File_util.remove_tree root)
     (fun () ->
       let path = Filename.concat root "rescript.json" in
+      test ~root ~path)
+
+let loading_tests =
+  with_config_file (fun ~root ~path ->
       let missing_path = Filename.concat root "missing.json" in
       check
         (try
@@ -145,7 +140,10 @@ let tests =
       let config = Config.load path in
       check
         (contains_adjacent "-bs-gentype-module" "esmodule" config.gentype_args)
-        "an explicit GenType module overrides package-specs";
+        "an explicit GenType module overrides package-specs")
+
+let gentype_discovery_tests =
+  with_config_file (fun ~root ~path ->
       let source_dir = Filename.concat root "src" in
       let shim_dir = Filename.concat source_dir "shims" in
       Unix.mkdir source_dir 0o755;
@@ -178,7 +176,10 @@ let tests =
       let config = Config.load path in
       check
         (has_diagnostic config "ignored-dirs")
-        "unsupported ignored-dirs payloads are diagnosed but not decoded";
+        "unsupported ignored-dirs payloads are diagnosed but not decoded")
+
+let validation_tests =
+  with_config_file (fun ~root ~path ->
       write_file path {|{"name":"jsx-v3","jsx":{"v3-dependencies":true}}|};
       let rejected =
         try
@@ -218,7 +219,12 @@ let tests =
         "config loading canonicalizes a noncanonical path alias";
       check
         (config.root = Unix.realpath root)
-        "the package root uses the canonical config path";
+        "the package root uses the canonical config path")
+
+let compiler_job_tests =
+  with_config_file (fun ~root ~path ->
+      write_file path {|{"name":"compiler-jobs","gentypeconfig":{}}|};
+      let config = Config.load path in
       let source = Filename.concat root "src/A.res" in
       let build_dir = Filename.concat config.root "lib/bs" in
       File_util.ensure_dir build_dir;
@@ -254,7 +260,10 @@ let tests =
         "parser and compiler jobs derive the same canonical working directory";
       check
         (argument_after "-bs-project-root" compile_job.args = Some config.root)
-        "the compiler project-root argument uses the canonical job root";
+        "the compiler project-root argument uses the canonical job root")
+
+let compiler_argument_tests =
+  with_config_file (fun ~root:_ ~path ->
       check
         (rejects path {|{"name":"internal-path","path":false}|} "path")
         "the internal path field retains Rust's string schema";
@@ -344,7 +353,10 @@ let tests =
          with
         | "-ppx" :: "tool --arg" :: _ -> true
         | _ -> false)
-        "parser arguments include the filtered PPX command";
+        "parser arguments include the filtered PPX command")
+
+let decoder_semantics_tests =
+  with_config_file (fun ~root:_ ~path ->
       [
         {|{"name":"first","name":"second"}|};
         {|{"name":"duplicate-source","sources":{"dir":"a","dir":"b"}}|};
@@ -505,3 +517,14 @@ let tests =
           && qualified.features = Some ["native"]
         | _ -> false)
         "shorthand and feature-qualified dependencies retain their data")
+
+let tests =
+  "config_tests"
+  >::: [
+         "loading" >:: loading_tests;
+         "gentype_discovery" >:: gentype_discovery_tests;
+         "validation" >:: validation_tests;
+         "compiler_jobs" >:: compiler_job_tests;
+         "compiler_arguments" >:: compiler_argument_tests;
+         "decoder_semantics" >:: decoder_semantics_tests;
+       ]
