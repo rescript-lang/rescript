@@ -272,9 +272,12 @@ capture_clean() {
       "env -u NO_COLOR TERM=xterm CLICOLOR=1 CLICOLOR_FORCE=0 $executable clean $work/$implementation" \
       "$transcript" >/dev/null
   fi
+  # The initial generic label is overwritten by the first package label on the
+  # same terminal line, so it is not part of the visible phase sequence.
   tr '\r' '\n' <"$transcript" \
     | sed -E $'s/\033\\[[0-9;]*[[:alpha:]]//g' \
     | grep -E '^\[[12]/2\] 🧹 (Cleaning|Cleaned)' \
+    | sed '/^\[1\/2\] 🧹 Cleaning compiler assets\.\.\.$/d' \
     | sed -E 's/in [0-9]+\.[0-9]+s$/in 0.00s/' \
     >"$work/$implementation-clean.phases"
 }
