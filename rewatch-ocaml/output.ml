@@ -124,6 +124,14 @@ let compiler_cleanup_message ~color ~step =
   Printf.sprintf "%s%s 🧹 Cleaned previous build due to compiler update"
     line_clear (format_step ~color step)
 
+let cleaning_command_message ~color ~step target =
+  Printf.sprintf "%s%s 🧹 Cleaning %s..." line_clear
+    (format_step ~color step) target
+
+let cleaned_command_message ~color ~step ~target ~seconds =
+  Printf.sprintf "%s%s 🧹 Cleaned %s in %.2fs" line_clear
+    (format_step ~color step) target seconds
+
 let parsing_message ~color ~step ~count ~seconds =
   Printf.sprintf "%s%s 🧱 Parsed %d source files in %.2fs" line_clear
     (format_step ~color step) count seconds

@@ -20,13 +20,6 @@ val is_generated_output_path : string -> bool
 val cleanup_watch_output_sidecars :
   ?source_files:string list -> root:string -> Config.t -> unit
 
-val prepare_watch_output :
-  (string * string * string) list ref ->
-  (string, unit) Hashtbl.t ->
-  dirty_ast:string ->
-  string ->
-  unit
-
 val with_root_options : Config.t -> Config.t -> Config.t
 
 val cleanup_stale :

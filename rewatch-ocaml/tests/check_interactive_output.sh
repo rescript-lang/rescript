@@ -145,6 +145,79 @@ capture_quiet_build() {
 capture_quiet_build rust "$rust"
 capture_quiet_build ocaml "$ocaml"
 
+capture_clean() {
+  implementation=$1
+  executable=$2
+  transcript="$work/$implementation-clean.tty"
+  if [ "$(uname -s)" = Darwin ]; then
+    script -q "$transcript" env -u NO_COLOR \
+      "TERM=xterm" \
+      "CLICOLOR=1" \
+      "CLICOLOR_FORCE=0" \
+      "$executable" clean "$work/$implementation" >/dev/null
+  else
+    script -qefc \
+      "env -u NO_COLOR TERM=xterm CLICOLOR=1 CLICOLOR_FORCE=0 $executable clean $work/$implementation" \
+      "$transcript" >/dev/null
+  fi
+  tr '\r' '\n' <"$transcript" \
+    | sed -E $'s/\033\\[[0-9;]*[[:alpha:]]//g' \
+    | grep -E '^\[[12]/2\] 🧹 (Cleaning|Cleaned)' \
+    | sed -E 's/in [0-9]+\.[0-9]+s$/in 0.00s/' \
+    >"$work/$implementation-clean.phases"
+}
+
+capture_clean rust "$rust"
+capture_clean ocaml "$ocaml"
+
+if ! cmp -s "$work/rust-clean.phases" "$work/ocaml-clean.phases"; then
+  echo "Interactive clean phase output differs" >&2
+  printf '%s\n' '--- Rust clean phases ---' >&2
+  cat "$work/rust-clean.phases" >&2
+  printf '%s\n' '--- OCaml clean phases ---' >&2
+  cat "$work/ocaml-clean.phases" >&2
+  exit 1
+fi
+
+cat >"$work/expected-clean" <<'EOF'
+[1/2] 🧹 Cleaning compiler assets...
+[1/2] 🧹 Cleaning interactive-output...
+[1/2] 🧹 Cleaned compiler assets in 0.00s
+[2/2] 🧹 Cleaning .js files...
+[2/2] 🧹 Cleaned .js files in 0.00s
+EOF
+
+if ! cmp -s "$work/expected-clean" "$work/ocaml-clean.phases"; then
+  echo "Interactive clean output no longer has the expected stable shape" >&2
+  cat "$work/ocaml-clean.phases" >&2
+  exit 1
+fi
+
+capture_quiet_clean() {
+  implementation=$1
+  executable=$2
+  transcript="$work/$implementation-clean-quiet.tty"
+  if [ "$(uname -s)" = Darwin ]; then
+    script -q "$transcript" env -u NO_COLOR \
+      "TERM=xterm" \
+      "CLICOLOR=1" \
+      "CLICOLOR_FORCE=0" \
+      "$executable" -q clean "$work/$implementation" >/dev/null
+  else
+    script -qefc \
+      "env -u NO_COLOR TERM=xterm CLICOLOR=1 CLICOLOR_FORCE=0 $executable -q clean $work/$implementation" \
+      "$transcript" >/dev/null
+  fi
+  if tr '\r' '\n' <"$transcript" | grep -E '(Cleaning|Cleaned)' >/dev/null; then
+    echo "$implementation quiet interactive clean emitted progress" >&2
+    cat "$transcript" >&2
+    exit 1
+  fi
+}
+
+capture_quiet_clean rust "$rust"
+capture_quiet_clean ocaml "$ocaml"
+
 wait_for_text() {
   path=$1
   pattern=$2

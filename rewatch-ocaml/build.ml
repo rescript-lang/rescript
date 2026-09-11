@@ -6,10 +6,11 @@ exception Parse_failure = Package_build.Parse_failure
 exception Reported_failure of string
 exception Full_rebuild_required
 
-open Build_types
-
 type retained_build = {root_config: Config.t; stats: Build_types.t}
 
+(* Build kind controls which persistent markers and diagnostics may be reused.
+   Keeping all four states explicit prevents an initial watch build from being
+   mistaken for either a disposable command or a retained incremental edit. *)
 type compilation_kind =
   | One_shot
   | Initial_watch
@@ -33,12 +34,19 @@ let project_root folder =
 
 let clean ~seen ~verbosity ~folder ~prod =
   let root = project_root folder in
-  let show_plain_progress =
-    verbosity >= 0
-    && not (Unix.isatty Unix.stdout && Unix.isatty Unix.stderr)
+  let show_progress = verbosity >= 0 in
+  let interactive = Unix.isatty Unix.stdout && Unix.isatty Unix.stderr in
+  let colors = Output.colors_enabled ~interactive in
+  let print_cleaning ~step target =
+    if interactive && show_progress then
+      Printf.printf "%s%!"
+        (Output.cleaning_command_message ~color:colors ~step target)
   in
-  let on_clean name =
-    if show_plain_progress then Printf.printf "Cleaning %s\n%!" name
+  let print_cleaned ~step ~target ~started_at =
+    if interactive && show_progress then
+      print_endline
+        (Output.cleaned_command_message ~color:colors ~step ~target
+           ~seconds:(Unix.gettimeofday () -. started_at))
   in
   Build_lock.with_build (Project_context.workspace_lock_root root)
     (fun ~release:_ ->
@@ -46,12 +54,37 @@ let clean ~seen ~verbosity ~folder ~prod =
       let dependency_context = Project_context.dependency_context root_config in
       let visited = Hashtbl.create 32 in
       List.iter (fun path -> Hashtbl.replace visited (Unix.realpath path) ()) seen;
-      Clean.run ~root_config ~dependency_context ~seen:visited ~root ~prod
-        ~is_local:true ~on_clean)
+      let cleanup =
+        Clean.prepare ~root_config ~dependency_context ~seen:visited ~root ~prod
+          ~is_local:true
+      in
+      let compiler_assets = "compiler assets" in
+      let compiler_started = Unix.gettimeofday () in
+      print_cleaning ~step:"1/2" compiler_assets;
+      Clean.remove_compiler_assets cleanup ~on_clean:(fun name ->
+          if show_progress then
+            if interactive then print_cleaning ~step:"1/2" name
+            else Printf.printf "Cleaning %s\n%!" name);
+      print_cleaned ~step:"1/2" ~target:compiler_assets
+        ~started_at:compiler_started;
+      let suffixes =
+        root_config.package_specs
+        |> List.filter_map (fun (spec : Config.package_spec) ->
+             if spec.in_source then
+               Some (Config.package_spec_suffix root_config spec)
+             else None)
+        |> String.concat ", "
+      in
+      let generated_files = suffixes ^ " files" in
+      let generated_started = Unix.gettimeofday () in
+      print_cleaning ~step:"2/2" generated_files;
+      Clean.remove_generated_outputs cleanup;
+      print_cleaned ~step:"2/2" ~target:generated_files
+        ~started_at:generated_started)
 
 let compiler_args = Compiler_args_command.run
 
-let run_scheduled_modules stats ~compile_step ~namespace_count =
+let run_scheduled_modules (stats : Build_types.t) ~compile_step ~namespace_count =
   let build_state =
     match stats.build_state with
     | Some state -> state
@@ -72,7 +105,7 @@ let run_scheduled_modules stats ~compile_step ~namespace_count =
     ~progress:stats.progress ~compile_step ~namespace_count
     ~verbosity:stats.verbosity
 
-let run_namespace_jobs stats =
+let run_namespace_jobs (stats : Build_types.t) =
   let jobs = List.rev !(stats.namespace_jobs) in
   let started_at = Unix.gettimeofday () in
   Fun.protect
@@ -86,24 +119,27 @@ let run_namespace_jobs stats =
       List.iter2 (fun (_, finish) result -> finish result) jobs results);
   List.length jobs
 
-let write_source_dirs (root_config : Config.t) stats =
+let write_source_dirs (root_config : Config.t) (stats : Build_types.t) =
   let packages =
     Hashtbl.to_seq_values stats.graph_packages |> List.of_seq
-    |> List.sort (fun left right -> String.compare left.graph_root right.graph_root)
+    |> List.sort (fun (left : Build_types.graph_package) right ->
+         String.compare left.graph_root right.graph_root)
   in
   packages
   |> List.iter (fun package ->
-       if package.graph_root <> root_config.root then
+       if package.Build_types.graph_root <> root_config.root then
          File_util.remove_file
            (File_util.path_of_parts package.graph_root ["lib"; "bs"; ".sourcedirs.json"]));
-  let local_packages = List.filter (fun package -> package.graph_is_local) packages in
+  let local_packages =
+    List.filter (fun package -> package.Build_types.graph_is_local) packages
+  in
   let source_directories package =
-    package.graph_modules
+    package.Build_types.graph_modules
     |> List.map (fun module_ -> Filename.dirname module_.Source.implementation)
     |> List.sort_uniq String.compare
   in
   let relative_package_root package =
-    if package.graph_root = root_config.root then ""
+    if package.Build_types.graph_root = root_config.root then ""
     else Project_context.relative_to root_config.root package.graph_root
   in
   let dirs =
@@ -119,7 +155,7 @@ let write_source_dirs (root_config : Config.t) stats =
   let package_roots = Hashtbl.create 16 in
   local_packages
   |> List.iter (fun package ->
-       package.graph_dependency_directories
+       package.Build_types.graph_dependency_directories
        |> List.iter (fun ((dependency : Config.dependency), path) ->
             Hashtbl.replace package_roots dependency.name path));
   let package_roots =
@@ -145,15 +181,23 @@ let write_source_dirs (root_config : Config.t) stats =
   in
   Source_dirs.write ~root:root_config.root ~dirs ~packages:package_roots ~scans
 
-let write_build_ninja stats =
+let write_build_ninja (stats : Build_types.t) =
+  (* This empty file is a cache-invalidation marker consumed by editor tooling,
+     not a serialized build plan. Only commands that reconstruct the project
+     graph call this function. *)
   Hashtbl.iter
     (fun _ package ->
-      let path = Filename.concat package.graph_build_dir "build.ninja" in
+      let path =
+        Filename.concat package.Build_types.graph_build_dir "build.ninja"
+      in
       let channel = open_out_bin path in
       close_out channel)
     stats.graph_packages
 
-let incremental_sources previous changes =
+let incremental_sources (previous : retained_build) changes =
+  (* Reusing the graph is safe only for modifications of already-known source
+     paths. Additions, removals, and unknown paths can change module identity or
+     package topology, so their caller must reconstruct the build instead. *)
   let sources_by_path = Hashtbl.create 64 in
   Hashtbl.iter
     (fun _ package ->
@@ -163,7 +207,7 @@ let incremental_sources previous changes =
           :: Option.to_list module_.Source.interface)
           |> List.iter (fun relative_path ->
                let absolute_path =
-                 Filename.concat package.graph_root relative_path
+                 Filename.concat package.Build_types.graph_root relative_path
                in
                Hashtbl.replace sources_by_path
                  (Platform.normalize_path_for_comparison absolute_path)
@@ -182,7 +226,10 @@ let incremental_sources previous changes =
          | Some source -> source
          | None -> raise Full_rebuild_required))
 
-let prepare_incremental previous changes stats =
+let prepare_incremental previous changes (stats : Build_types.t) =
+  (* A retained edit reparses only the reported paths, then replaces the
+     affected modules' dependency edges in memory. This keeps the long-lived
+     graph coherent without rediscovering the package tree. *)
   let sources = incremental_sources previous changes in
   let bsc =
     match stats.compiler_context with
@@ -248,7 +295,8 @@ let prepare_incremental previous changes stats =
       in
       if not changed_parse_failed then (
         let dependencies path =
-          Compiler_process.ast_dependencies ~build_dir:package.graph_build_dir
+          Compiler_process.ast_dependencies
+            ~build_dir:package.Build_types.graph_build_dir
             (Source.ast_path path)
         in
         let raw_dependencies =
@@ -320,7 +368,7 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
     (Printf.sprintf "Created project context Single project: %S at %S for %S"
        root_config.name root_config.path root_config.root);
   let visited = Hashtbl.create 32 in
-  let stats =
+  let stats : Build_types.t =
     match previous with
     | Some previous ->
       Build_types.create_incremental ~previous:previous.stats ~poll ~process_poll
@@ -328,6 +376,10 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
     | None ->
       Build_types.create ~warning_state ~poll ~process_poll ~progress ~verbosity
   in
+  (* A watch build must retain the attempted state even when later parsing or
+     compilation fails, because its successful ASTs and artifact inventory are
+     needed to recover incrementally on the next edit. Publish ownership before
+     any fallible phase starts. *)
   on_state {root_config; stats};
   List.iter (fun path -> Hashtbl.replace visited (Unix.realpath path) ()) seen;
   let finalize_logs () =
@@ -336,53 +388,16 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
       stats.initialized_logs;
     Hashtbl.clear stats.initialized_logs
   in
-  let outputs_finished = ref false in
   let build_ninja_written = ref false in
   let write_build_ninja_once () =
     if should_write_build_ninja && not !build_ninja_written then (
       write_build_ninja stats;
       build_ninja_written := true)
   in
-  let retain_public_output output =
-    Hashtbl.iter
-      (fun _ cleanup ->
-        Hashtbl.replace cleanup.Build_artifacts.present_public_outputs output ())
-      stats.cleanup_results
-  in
-  let expose_watch_outputs () =
-    !(stats.watch_outputs)
-    |> List.rev
-    |> List.iter (fun (output, pending, _) ->
-         if Sys.file_exists pending then (
-           File_util.remove_file output;
-           Unix.rename pending output;
-           retain_public_output output))
-  in
-  let finish_watch_outputs ~success =
-    let retain_dirty_asts =
-      match compilation_kind with
-      | Initial_watch | Incremental_watch -> true
-      | One_shot | Full_watch -> false
-    in
-    !(stats.watch_outputs)
-    |> List.rev
-    |> List.iter (fun (output, pending, dirty_ast) ->
-         if success then (
-           if Sys.file_exists pending then (
-             File_util.remove_file output;
-             Unix.rename pending output;
-             retain_public_output output)
-           else if Sys.file_exists output then retain_public_output output)
-         else (
-           File_util.remove_file output;
-           File_util.remove_file pending;
-           if not retain_dirty_asts then File_util.remove_file dirty_ast));
-    stats.watch_outputs := [];
-    Hashtbl.clear stats.watch_output_paths;
-    outputs_finished := true
-  in
   let prepare_report ~success =
-    finish_watch_outputs ~success;
+    (* Finalize compiler logs before replaying warnings and configuration
+       diagnostics so persisted and terminal output describe the same completed
+       build, in deterministic module and package order. *)
     finalize_logs ();
     if show_progress && not interactive then (
       (match compilation_kind with
@@ -442,7 +457,6 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
   in
   let report_parse_failure output =
     write_build_ninja_once ();
-    finish_watch_outputs ~success:false;
     finalize_logs ();
     (if interactive && show_progress then
        prerr_endline
@@ -459,7 +473,8 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
       (Reported_failure
          "Incremental build failed. Error: \027[2K\r  Could not parse Source Files")
   in
-  let format_cycle cycle by_key =
+  let format_cycle cycle
+      (by_key : (string, Build_types.global_module) Hashtbl.t) =
     let format_node name =
       match Hashtbl.find_opt by_key name with
       | None -> name
@@ -551,7 +566,7 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
       in
       cycle_info.cycle
       |> List.filter_map (Hashtbl.find_opt cycle_info.modules_by_key)
-      |> List.map (fun node -> node.package_root)
+      |> List.map (fun node -> node.Build_types.package_root)
       |> List.sort_uniq String.compare
       |> List.iter (fun package_root -> Compiler_log.append package_root output);
       report_failure output
@@ -563,7 +578,7 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
               let package_context =
                 {
                   context with
-                  build_root = package.graph_build_owner;
+                  build_root = package.Build_types.graph_build_owner;
                   package_output_specs =
                     Compiler_info.package_output_specs
                       package.graph_compile_config;
@@ -574,7 +589,6 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
         stats.compiler_context;
       write_source_dirs root_config stats;
       write_build_ninja_once ();
-      Option.iter (fun _ -> expose_watch_outputs ()) after_build;
       let diagnostics = prepare_report ~success:true in
       Option.iter
         (fun command ->
@@ -588,7 +602,6 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
       Fun.protect
         ~finally:(fun () ->
           List.iter File_util.remove_file !(stats.deferred_artifact_cleanup);
-          if not !outputs_finished then finish_watch_outputs ~success:false;
           finalize_logs ())
         (fun () ->
           try execute ~release_build_lock with
@@ -627,6 +640,9 @@ let watch ~verbosity ~folder ~prod ~features ~warn_error ~after_build ~filter
             ~features ~warn_error ~watch:true ~after_build ~filter
             ~on_state:(fun state -> attempted := Some state)
         with exn ->
+          (* Failed initial and incremental attempts still own useful parsed
+             state. Full reconstruction failures do not, because their graph may
+             be only partially discovered. *)
           (match compilation_kind, !attempted with
           | (Initial_watch | Incremental_watch), Some state ->
             retained := Some state

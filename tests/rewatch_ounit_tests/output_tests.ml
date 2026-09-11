@@ -16,6 +16,15 @@ let tests =
     = "\027[2K\r[1/3] 🧹 Cleaned previous build due to compiler update")
     "interactive compiler cleanup format";
   check
+    (Output.cleaning_command_message ~color:false ~step:"1/2" "compiler assets"
+    = "\027[2K\r[1/2] 🧹 Cleaning compiler assets...")
+    "interactive clean command progress format";
+  check
+    (Output.cleaned_command_message ~color:false ~step:"2/2" ~target:".js files"
+       ~seconds:1.5
+    = "\027[2K\r[2/2] 🧹 Cleaned .js files in 1.50s")
+    "interactive clean command completion format";
+  check
     (Output.parsing_message ~color:false ~step:"2/3" ~count:4 ~seconds:1.5
     = "\027[2K\r[2/3] 🧱 Parsed 4 source files in 1.50s")
     "interactive parsing phase format";

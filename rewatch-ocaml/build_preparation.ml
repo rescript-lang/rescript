@@ -26,35 +26,39 @@ let compiler_namespace (config : Config.t) =
   | Some namespace, None -> Some namespace
   | None, _ -> None
 
-let validate_visible_namespaces ~(root_config : Config.t) graph_packages =
+let validate_visible_namespaces ~(root_config : Config.t)
+    (graph_packages : Build_types.graph_package list) =
   let by_root = Hashtbl.create (List.length graph_packages) in
   List.iter
-    (fun package -> Hashtbl.replace by_root package.graph_root package)
+    (fun (package : Build_types.graph_package) ->
+      Hashtbl.replace by_root package.graph_root package)
     graph_packages;
   graph_packages
   |> List.sort (fun first second ->
-       String.compare first.graph_root second.graph_root)
+       String.compare first.Build_types.graph_root second.graph_root)
   |> List.iter (fun consumer ->
        let visible =
          consumer
-         :: (consumer.graph_dependency_directories
+         :: (consumer.Build_types.graph_dependency_directories
             |> List.filter_map (fun (_, directory) ->
                  Hashtbl.find_opt by_root directory))
        in
        let namespaces = Hashtbl.create (List.length visible) in
        visible
        |> List.sort (fun first second ->
-            String.compare first.graph_root second.graph_root)
+            String.compare first.Build_types.graph_root second.graph_root)
        |> List.iter (fun package ->
-            compiler_namespace package.graph_compile_config
+            compiler_namespace package.Build_types.graph_compile_config
             |> Option.iter (fun namespace ->
                  match Hashtbl.find_opt namespaces namespace with
                  | None -> Hashtbl.add namespaces namespace package
-                 | Some previous when previous.graph_root = package.graph_root ->
+                 | Some previous
+                   when previous.Build_types.graph_root = package.graph_root ->
                    ()
                  | Some previous ->
                    let display package =
-                     Printf.sprintf "%s (%s)" package.graph_config.name
+                     Printf.sprintf "%s (%s)"
+                       package.Build_types.graph_config.name
                        (Project_context.relative_to root_config.root
                           package.graph_root)
                    in
@@ -65,7 +69,9 @@ let validate_visible_namespaces ~(root_config : Config.t) graph_packages =
                            namespace (display previous) (display package)
                            (display consumer))))))
 
-let resolve_dependency modules_by_key node dependency =
+let resolve_dependency
+    (modules_by_key : (string, Build_types.global_module) Hashtbl.t)
+    (node : Build_types.global_module) dependency =
   let raw_name = dependency_head dependency in
   let local_name =
     match node.namespace, String.split_on_char '.' dependency with
@@ -82,7 +88,7 @@ let resolve_dependency modules_by_key node dependency =
       | None -> local_name ^ "-" ^ namespace)
   in
   let is_visible dependency_node =
-    dependency_node.package_name = node.package_name
+    dependency_node.Build_types.package_name = node.package_name
     || List.mem dependency_node.package_name node.allowed_dependencies
   in
   match Hashtbl.find_opt modules_by_key local_key with
@@ -103,7 +109,7 @@ let resolve_dependency modules_by_key node dependency =
           |> List.find_opt (fun key ->
                match Hashtbl.find_opt modules_by_key key with
                | Some dependency_node
-                 when dependency_node.namespace = Some namespace
+                 when dependency_node.Build_types.namespace = Some namespace
                       && is_visible dependency_node ->
                  true
                | Some _ | None -> false)
@@ -115,42 +121,50 @@ let resolve_dependency modules_by_key node dependency =
         Hashtbl.to_seq_values modules_by_key
         |> Seq.filter_map (fun dependency_node ->
              if
-               dependency_node.namespace = Some raw_name
+               dependency_node.Build_types.namespace = Some raw_name
                && is_visible dependency_node
              then Some dependency_node.key
              else None)
         |> List.of_seq)
 
-let resolved_dependencies modules_by_key node =
+let resolved_dependencies
+    (modules_by_key : (string, Build_types.global_module) Hashtbl.t)
+    (node : Build_types.global_module) =
   node.raw_dependencies
   |> List.concat_map (resolve_dependency modules_by_key node)
   |> List.filter (fun dependency -> dependency <> node.key)
   |> List.sort_uniq String.compare
 
-let find_cycle modules_by_key build_state =
+let find_cycle
+    (modules_by_key : (string, Build_types.global_module) Hashtbl.t)
+    build_state =
   let graph_nodes =
     Hashtbl.to_seq_values modules_by_key |> List.of_seq
-    |> List.sort (fun first second -> String.compare first.key second.key)
+    |> List.sort (fun first second ->
+         String.compare first.Build_types.key second.key)
     |> List.map (fun node ->
-         (node, (Build_state.find_exn build_state node.key).dependencies))
+         ( node,
+           (Build_state.find_exn build_state node.Build_types.key).dependencies ))
   in
   try
     ignore
-      (Graph.topological_sort graph_nodes ~name:(fun (node, _) -> node.key)
+      (Graph.topological_sort graph_nodes
+         ~name:(fun (node, _) -> node.Build_types.key)
          ~deps:snd);
     None
   with Graph.Cycle cycle ->
     let blocked =
       Graph.blocked_dependents
         (List.map
-           (fun (node, dependencies) -> (node.key, dependencies))
+           (fun (node, dependencies) ->
+             (node.Build_types.key, dependencies))
            graph_nodes)
         cycle
     in
     Some {cycle; blocked; modules_by_key}
 
 let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
-    ~stats ~parse_step ~on_cleanup =
+    ~(stats : Build_types.t) ~parse_step ~on_cleanup =
   let bsc = bsc_path () in
   let graph_packages =
     Package_graph.discover ~root_config ~prod ~features ~warn_error ~filter ~stats

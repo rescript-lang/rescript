@@ -29,8 +29,6 @@ val publish :
   ?poll:(unit -> unit) ->
   build_dir:string ->
   ocaml_dir:string ->
-  watch:bool ->
-  watch_output_paths:(string, unit) Hashtbl.t ->
   is_local:bool ->
   config:Config.t ->
   is_interface:bool ->

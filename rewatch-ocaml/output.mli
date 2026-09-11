@@ -44,6 +44,10 @@ val cleanup_message :
   string
 
 val compiler_cleanup_message : color:bool -> step:string -> string
+val cleaning_command_message : color:bool -> step:string -> string -> string
+
+val cleaned_command_message :
+  color:bool -> step:string -> target:string -> seconds:float -> string
 
 val parsing_message :
   color:bool -> step:string -> count:int -> seconds:float -> string

@@ -32,6 +32,16 @@ if ! wait_for_file "$target" 20; then
   exit 1
 fi
 
+# The root output must not become observable before an output it imports.
+# Otherwise consumers can load a superficially completed but unusable build.
+dependency_target=./packages/dep01/src/Dep01.mjs
+if [ ! -f "$dependency_target" ]; then
+  error "Dependency output was not published with the root output: $dependency_target"
+  tail -n 200 rewatch.log || true
+  exit_watcher
+  exit 1
+fi
+
 if node ./packages/main/src/Main.mjs | grep 'added-by-test' &> /dev/null;
 then
   success "Output is correct"

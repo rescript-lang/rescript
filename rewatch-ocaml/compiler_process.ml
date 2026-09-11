@@ -171,8 +171,8 @@ let compile_job ~bsc ~runtime ~build_dir ~watch ~(config : Config.t)
   in
   Process.{program = bsc; args; cwd = build_dir}
 
-let publish ?poll ~build_dir ~ocaml_dir ~watch ~watch_output_paths ~is_local
-    ~(config : Config.t) ~is_interface path result =
+let publish ?poll ~build_dir ~ocaml_dir ~is_local ~(config : Config.t)
+    ~is_interface path result =
   let stderr =
     if is_local then result.Process.stderr
     else retain_critical_external_warnings result.stderr
@@ -214,17 +214,5 @@ let publish ?poll ~build_dir ~ocaml_dir ~watch ~watch_output_paths ~is_local
               (build_output ^ ".map")
           else File_util.remove_file (build_output ^ ".map")))
       config.package_specs;
-    run_post_build ?poll config path;
-    if watch then
-      List.iter
-        (fun spec ->
-          let output = Build_artifacts.generated_js_path config path spec in
-          List.iter
-            (fun generated ->
-              if
-                Sys.file_exists generated
-                && Hashtbl.mem watch_output_paths generated
-              then Unix.rename generated (generated ^ ".rewatch-pending"))
-            [output; output ^ ".map"])
-        config.package_specs);
+    run_post_build ?poll config path);
   stderr
