@@ -2729,6 +2729,13 @@ Unix build, the unselected Windows module typecheck, all 20 OUnit groups, and
 the focused integration suite pass; native signal delivery remains part of the
 planned Windows VM validation.
 
+At cooperative-interruption checkpoint `0175a05ce`, `opam exec -- make
+test-all` passed the repository-wide gate. This included OCaml/ReScript/JS/Rust
+formatting, compiler and runtime tests, both GenType projects, analysis and
+reanalyze, tools, and the packaged OCaml executable running all 48 canonical
+rewatch scenarios. The run left the worktree clean and no watcher or subprocess
+helper alive.
+
 1. In the Windows VM, finish the watcher/lock and path audit and run the native
    build, unit, focused, and canonical Bash suites. Address findings there and
    finish with an x64 Windows confidence run where available.
