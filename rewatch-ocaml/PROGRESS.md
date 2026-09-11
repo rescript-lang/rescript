@@ -2128,11 +2128,16 @@ required behavior decision, not a performance proposal.
 
 ## Next actions
 
-1. Perform a command-by-command phase and ordering audit for build, clean,
-   format, compiler-args, and watch. This audit must compare intermediate state
-   transitions and observable phases, not infer algorithm parity from matching
-   final files or exit status.
-2. Stop for the requested external AI review, then address its findings.
+The command-by-command phase and ordering audit is complete for build, clean,
+format, compiler-args, and watch. It compared intermediate state transitions and
+observable phases rather than inferring parity from final files or exit status.
+The closing evidence is 136/136 reviewed Rust unit tests with no gaps, 297
+configuration cases, 111 command-validation cases, the interactive phase gate,
+all 19 OUnit groups, and the canonical OCaml suite. The audit's material fixes
+and intentional corrections are recorded above.
+
+1. Stop for the requested external AI review.
+2. Address the external review findings and rerun the affected gates.
 3. Complete the non-comment maintainability work. Review naming and module
    qualification, including whether generic utility calls are
    clearer as `Module.function` than through `open`; do not apply either style
@@ -2150,10 +2155,12 @@ required behavior decision, not a performance proposal.
    Windows handoff. Finish the Windows watcher/lock backend and path audit and
    run the native build, unit, focused, and canonical Bash suites in the VM.
    Address findings there and finish with an x64 Windows confidence run where
-   available. Then run the final performance/resource measurements, packaging
-   and artifact checks, equivalence gates, and two-scope whole-port review.
+   available.
+5. When stable measurements are available, run the final performance,
+   filesystem-call, and resource gates. Then verify packaging, the npm artifact
+   manifest, equivalence gates, and the final two-scope whole-port review.
    Confirm that the three release inventories remain complete.
-5. Immediately before the final release-quality gate, perform the broad comment
+6. Immediately before the final release-quality gate, perform the broad comment
    pass for ownership, concurrency, platform, and algorithmic invariants that
    are not apparent from the code itself. Comments should start with why the
    code or invariant is needed, provide enough context for readers who are not
