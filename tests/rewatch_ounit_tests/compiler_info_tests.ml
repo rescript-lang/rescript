@@ -23,13 +23,13 @@ let config root =
   Unix.mkdir (Filename.concat root "src") 0o755;
   Config.load_root root
 
-let context root config source_map_args =
+let context ?(inherited_compiler_args = []) root config source_map_args =
   let bsc = Filename.concat root "bsc.exe" in
   let runtime = Filename.concat root "runtime" in
   if not (Sys.file_exists bsc) then write bsc "compiler-v1";
   File_util.ensure_dir runtime;
   Compiler_info.make_context ~build_root:root ~bsc_path:bsc
-    ~runtime_path:runtime ~source_map_args
+    ~runtime_path:runtime ~source_map_args ~inherited_compiler_args
     ~package_output_specs:(Compiler_info.package_output_specs config)
 
 let tests =
@@ -38,13 +38,13 @@ let tests =
       let config = config root in
       let initial = context root config ["-bs-source-map"; "linked"] in
       check
-        (not (Compiler_info.verify_package initial config))
+        (not (Compiler_info.needs_clean initial config))
         "a package without an earlier build is not spuriously cleaned";
       Compiler_info.write_package initial config;
       let marker = File_util.path_of_parts root ["lib"; "ocaml"; "marker"] in
       write marker "keep";
       check
-        (not (Compiler_info.verify_package initial config))
+        (not (Compiler_info.needs_clean initial config))
         "matching compiler information is retained";
       check (Sys.file_exists marker) "matching artifacts remain";
       let info_path = Compiler_info.path root in
@@ -55,8 +55,9 @@ let tests =
         "matching compiler information is not rewritten";
       let changed = context root config ["-bs-source-map"; "false"] in
       check
-        (Compiler_info.verify_package changed config)
+        (Compiler_info.needs_clean changed config)
         "changed source-map arguments invalidate artifacts";
+      Compiler_info.clean_package config;
       check (not (Sys.file_exists marker)) "mismatched artifacts are removed");
   with_temp_dir (fun root ->
       let config = config root in
@@ -65,8 +66,20 @@ let tests =
       write (Filename.concat root "bsc.exe") "compiler-v2";
       let changed = context root config [] in
       check
-        (Compiler_info.verify_package changed config)
+        (Compiler_info.needs_clean changed config)
         "changed compiler contents invalidate artifacts");
+  with_temp_dir (fun root ->
+      let config = config root in
+      let initial =
+        context ~inherited_compiler_args:["-bs-jsx"; "4"] root config []
+      in
+      Compiler_info.write_package initial config;
+      let changed =
+        context ~inherited_compiler_args:["-bs-jsx"; "5"] root config []
+      in
+      check
+        (Compiler_info.needs_clean changed config)
+        "changed inherited compiler arguments invalidate dependency artifacts");
   with_temp_dir (fun root ->
       let decoded = config root in
       let context = context root decoded [] in
@@ -89,8 +102,9 @@ let tests =
       in
       write old_log "old build";
       check
-        (Compiler_info.verify_package context config)
+        (Compiler_info.needs_clean context config)
         "missing metadata invalidates an existing legacy build";
+      Compiler_info.clean_package config;
       check (not (Sys.file_exists old_log)) "legacy build artifacts are removed");
   with_temp_dir (fun root ->
       let dependency = config root in
@@ -118,7 +132,7 @@ let tests =
       in
       let initial =
         Compiler_info.make_context ~build_root:root ~bsc_path:bsc
-          ~runtime_path:runtime ~source_map_args:[]
+          ~runtime_path:runtime ~source_map_args:[] ~inherited_compiler_args:[]
           ~package_output_specs:commonjs
       in
       Compiler_info.write_package initial dependency;
@@ -126,12 +140,13 @@ let tests =
       write marker "keep";
       let changed =
         Compiler_info.make_context ~build_root:root ~bsc_path:bsc
-          ~runtime_path:runtime ~source_map_args:[]
+          ~runtime_path:runtime ~source_map_args:[] ~inherited_compiler_args:[]
           ~package_output_specs:esmodule
       in
       check
-        (Compiler_info.verify_package changed dependency)
+        (Compiler_info.needs_clean changed dependency)
         "same-path module-format changes invalidate dependency artifacts";
+      Compiler_info.clean_package dependency;
       check
         (not (Sys.file_exists marker))
         "package-output mismatches remove compiler artifacts");
@@ -145,7 +160,7 @@ let tests =
       File_util.ensure_dir runtime;
       let standalone =
         Compiler_info.make_context ~build_root:dependency_root ~bsc_path:bsc
-          ~runtime_path:runtime ~source_map_args:[]
+          ~runtime_path:runtime ~source_map_args:[] ~inherited_compiler_args:[]
           ~package_output_specs:(Compiler_info.package_output_specs dependency)
       in
       Compiler_info.write_package standalone dependency;
@@ -162,7 +177,7 @@ let tests =
       in
       let consumer =
         Compiler_info.make_context ~build_root:consumer_root ~bsc_path:bsc
-          ~runtime_path:runtime ~source_map_args:[]
+          ~runtime_path:runtime ~source_map_args:[] ~inherited_compiler_args:[]
           ~package_output_specs:consumer_specs
       in
       check

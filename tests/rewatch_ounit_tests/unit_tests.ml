@@ -461,35 +461,17 @@ let tests =
             not (String.starts_with ~prefix:".rewatch-ocaml-" name)))
         "pipe capture creates no temporary scheduler logs");
   let node name deps = (name, deps) in
-  let nodes = [node "C" ["B"]; node "A" []; node "B" ["A"]] in
-  let sorted =
-    Graph.topological_sort nodes ~name:fst ~deps:snd |> List.map fst
-  in
-  check (sorted = ["A"; "B"; "C"]) "topological ordering";
-  let cycle_detected =
-    try
-      ignore
-        (Graph.topological_sort
-           [node "A" ["B"]; node "B" ["A"]]
-           ~name:fst ~deps:snd);
-      false
-    with Graph.Cycle _ -> true
-  in
-  check cycle_detected "cycle detection";
   let shortest_cycle =
-    try
-      ignore
-        (Graph.topological_sort
-           [
-             node "LongA" ["LongB"];
-             node "LongB" ["LongC"];
-             node "LongC" ["LongA"];
-             node "ShortA" ["ShortB"];
-             node "ShortB" ["ShortA"];
-           ]
-           ~name:fst ~deps:snd);
-      []
-    with Graph.Cycle cycle -> cycle
+    Graph.shortest_cycle
+      [
+        node "LongA" ["LongB"];
+        node "LongB" ["LongC"];
+        node "LongC" ["LongA"];
+        node "ShortA" ["ShortB"];
+        node "ShortB" ["ShortA"];
+      ]
+      ~name:fst ~deps:snd
+    |> Option.value ~default:[]
   in
   check
     (shortest_cycle = ["ShortA"; "ShortB"; "ShortA"])

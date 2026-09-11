@@ -4,6 +4,7 @@ type context = {
   bsc_hash: string;
   runtime_path: string;
   source_map_args: string list;
+  inherited_compiler_args: string list;
   package_output_specs: package_output_spec list;
 }
 
@@ -13,7 +14,7 @@ and package_output_spec = {
   suffix: string;
 }
 
-let format_version = "3"
+let format_version = "4"
 
 let package_output_specs (config : Config.t) =
   List.map
@@ -26,13 +27,14 @@ let package_output_specs (config : Config.t) =
     config.package_specs
 
 let make_context ~build_root ~bsc_path ~runtime_path ~source_map_args
-    ~package_output_specs =
+    ~inherited_compiler_args ~package_output_specs =
   {
     build_root;
     bsc_path;
     bsc_hash = Digest.file bsc_path |> Digest.to_hex;
     runtime_path;
     source_map_args;
+    inherited_compiler_args;
     package_output_specs;
   }
 
@@ -90,6 +92,11 @@ let json context (config : Config.t) =
       ("rescript_config_hash", `String config.file_hash);
       ( "source_map_args",
         `List (List.map (fun value -> `String value) context.source_map_args) );
+      ( "inherited_compiler_args",
+        `List
+          (List.map
+             (fun value -> `String value)
+             context.inherited_compiler_args) );
       ( "package_output_specs",
         `List (List.map package_output_spec_json context.package_output_specs)
       );
@@ -153,11 +160,6 @@ let needs_clean context (config : Config.t) =
 let clean_package (config : Config.t) =
   File_util.remove_tree (Build_artifacts.lib_path config.root "bs");
   File_util.remove_tree (Build_artifacts.lib_path config.root "ocaml")
-
-let verify_package context config =
-  let should_clean = needs_clean context config in
-  if should_clean then clean_package config;
-  should_clean
 
 let write_package context (config : Config.t) =
   if not (matches context config) then

@@ -152,23 +152,9 @@ let watch_context ~root ~prod ~features ~filter =
             |> Option.map Feature_requests.to_option
             |> Option.value ~default:None
           in
-          let all_features = Option.is_none requested in
-          let active_features =
-            Source.resolve_active_features config
-              (Option.value requested ~default:[])
-          in
-          config.sources
-          |> List.filter (fun (source : Config.source) ->
-              let feature_enabled =
-                all_features
-                || Option.fold ~none:true
-                     ~some:(fun feature -> Hashtbl.mem active_features feature)
-                     source.feature
-              in
-              (not
-                 (Package_graph.source_discovery_prod ~prod ~is_local
-                 && source.is_dev))
-              && feature_enabled)
+          Source.active_sources config
+            ~prod:(Package_graph.source_discovery_prod ~prod ~is_local)
+            ~features:requested
           |> List.iter (fun source ->
               let directory = Filename.concat config.root source.Config.dir in
               let filter =
@@ -578,16 +564,15 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
                && not (Build_artifacts.is_generated_output_path path)
           then requires_reconciliation := true
         | Native_watcher.Content, Some path ->
-          if is_source_path path then
+          if is_symlink_target path then requires_reconciliation := true
+          else if is_source_path path then
             if path_in_scope roots sources unresolved path then
               if Sys.file_exists path then
                 changes := {path; kind = Modified} :: !changes
               else requires_reconciliation := true
             else requires_reconciliation := true
-          else if
-            path_in_scope roots sources unresolved path
-            || is_symlink_target path
-          then requires_reconciliation := true)
+          else if path_in_scope roots sources unresolved path then
+            requires_reconciliation := true)
       events;
     if !requires_reconciliation then None
     else

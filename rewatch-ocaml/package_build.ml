@@ -89,7 +89,7 @@ let rec prepare_tree ~seen ~(package : Build_types.graph_package) ~watch
     parse_paths
     |> List.filter (fun path ->
         let forced =
-          Hashtbl.mem stats.forced_parse_paths (Filename.concat root path)
+          Hashtbl.mem stats.preliminary_parses (Filename.concat root path)
         in
         match stats.attempt_kind with
         | Build_types.Retained_attempt -> forced
@@ -106,45 +106,28 @@ let rec prepare_tree ~seen ~(package : Build_types.graph_package) ~watch
   let parse_paths_to_run =
     dirty_parse_paths
     |> List.filter (fun path ->
-        not (Hashtbl.mem stats.forced_parse_paths (Filename.concat root path)))
+        not (Hashtbl.mem stats.preliminary_parses (Filename.concat root path)))
   in
   let parsed =
     List.map2
-      (fun path result -> (path, Some result))
+      (fun path result -> (path, Build_types.preliminary_parse result))
       parse_paths_to_run
       (Process.run_parallel_map ?poll:stats.process_poll parse_paths_to_run
          ~job:(Compiler_process.parse_job ~bsc ~build_dir ~config))
     @ (dirty_parse_paths
       |> List.filter (fun path ->
-          Hashtbl.mem stats.forced_parse_paths (Filename.concat root path))
+          Hashtbl.mem stats.preliminary_parses (Filename.concat root path))
       |> List.map (fun path ->
           ( path,
-            Hashtbl.find_opt stats.preparse_results (Filename.concat root path)
-          )))
+            Hashtbl.find stats.preliminary_parses (Filename.concat root path) ))
+      )
   in
   let warning_asts = ref [] in
   List.iter
     (fun (path, result) ->
       let absolute_path = Filename.concat root path in
       let pending_path = Platform.normalize_path_for_comparison absolute_path in
-      match result with
-      | Some result when not (Process.succeeded result) ->
-        Hashtbl.replace stats.retained.pending_parse_paths pending_path ();
-        let output =
-          Printf.sprintf "Error in %s:\n%s%s" config.name result.stderr
-            result.stdout
-        in
-        Compiler_log.append root output;
-        stats.parse_messages :=
-          Build_types.Parse_error output :: !(stats.parse_messages)
-      | _ ->
-        let stderr =
-          match result with
-          | Some result -> result.Process.stderr
-          | None ->
-            Hashtbl.find_opt stats.preparse_stderr absolute_path
-            |> Option.value ~default:""
-        in
+      let publish_successful_parse stderr =
         let stderr =
           if is_local then stderr
           else Compiler_process.retain_critical_external_warnings stderr
@@ -174,7 +157,20 @@ let rec prepare_tree ~seen ~(package : Build_types.graph_package) ~watch
              (Filename.basename path));
         if is_local && stderr <> "" then
           Hashtbl.replace stats.retained.pending_parse_paths pending_path ()
-        else Hashtbl.remove stats.retained.pending_parse_paths pending_path)
+        else Hashtbl.remove stats.retained.pending_parse_paths pending_path
+      in
+      match result with
+      | Build_types.Parse_failed {stdout; stderr} ->
+        Hashtbl.replace stats.retained.pending_parse_paths pending_path ();
+        let output =
+          Printf.sprintf "Error in %s:\n%s%s" config.name stderr stdout
+        in
+        Compiler_log.append root output;
+        stats.parse_messages :=
+          Build_types.Parse_error output :: !(stats.parse_messages)
+      | Build_types.Parsed_successfully {stderr} ->
+        publish_successful_parse stderr
+      | Build_types.Use_existing_ast -> publish_successful_parse "")
     parsed;
   if !warning_asts <> [] then
     stats.compile_cleanup :=

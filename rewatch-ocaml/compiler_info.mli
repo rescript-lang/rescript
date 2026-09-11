@@ -4,6 +4,7 @@ type context = {
   bsc_hash: string;
   runtime_path: string;
   source_map_args: string list;
+  inherited_compiler_args: string list;
   package_output_specs: package_output_spec list;
 }
 
@@ -20,6 +21,7 @@ val make_context :
   bsc_path:string ->
   runtime_path:string ->
   source_map_args:string list ->
+  inherited_compiler_args:string list ->
   package_output_specs:package_output_spec list ->
   context
 
@@ -35,5 +37,4 @@ val config_with_package_output_specs :
 
 val needs_clean : context -> Config.t -> bool
 val clean_package : Config.t -> unit
-val verify_package : context -> Config.t -> bool
 val write_package : context -> Config.t -> unit

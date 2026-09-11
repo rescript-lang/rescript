@@ -19,8 +19,3 @@ let source_is_not_older_than_ast compile_assets ~root ~source_mtimes path =
     match Compile_assets.ast compile_assets absolute with
     | None -> true
     | Some ast -> source_modified >= ast.modified)
-
-let published_ast_path ~ocaml_dir source_path =
-  (* bsc gives its intermediate AST an epoch mtime. The copy published after a
-     successful parse is the stable freshness marker across build cycles. *)
-  Filename.concat ocaml_dir (Filename.basename (Source.ast_path source_path))

@@ -80,6 +80,17 @@ let tests =
       check
         (not config.sources_defined)
         "an omitted sources field remains distinguishable for package warnings";
+      let project = Filename.concat root "project" in
+      let shared = Filename.concat root "shared" in
+      Unix.mkdir project 0o755;
+      Unix.mkdir shared 0o755;
+      let shared_config = Filename.concat shared "rescript.json" in
+      write_file shared_config {|{"name":"symlinked-config"}|};
+      let symlinked_config = Filename.concat project "rescript.json" in
+      Unix.symlink shared_config symlinked_config;
+      let config = Config.load symlinked_config in
+      check (config.root = project)
+        "a configuration symlink does not relocate the project root";
       write_file path {|{"name":"empty-sources","sources":[]}|};
       let config = Config.load path in
       check config.sources_defined

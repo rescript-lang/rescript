@@ -1,7 +1,3 @@
-exception Cycle of string list
-
-type visit_state = Visiting | Done
-
 let cycle_blocked_nodes nodes ~name ~deps =
   let count = List.length nodes in
   let by_name = Hashtbl.create count in
@@ -48,27 +44,28 @@ let canonical_cycle cycle =
     | value :: rest -> value :: without_last rest
   in
   let nodes = without_last cycle in
-  let rec rotations prefix suffix =
-    match suffix with
-    | [] -> []
-    | head :: rest as rotation ->
-      (rotation @ List.rev prefix) :: rotations (head :: prefix) rest
-  in
-  match rotations [] nodes with
+  match nodes with
   | [] -> cycle
-  | first :: rest -> (
-    let best =
-      List.fold_left
-        (fun best candidate -> if candidate < best then candidate else best)
-        first rest
+  | first :: rest ->
+    let smallest = List.fold_left min first rest in
+    let rec split prefix = function
+      | [] -> nodes
+      | head :: tail as suffix ->
+        if head = smallest then suffix @ List.rev prefix
+        else split (head :: prefix) tail
     in
-    match best with
-    | head :: _ -> best @ [head]
-    | [] -> cycle)
+    let canonical = split [] nodes in
+    canonical @ [smallest]
 
 let shortest_cycle nodes ~name ~deps =
   let by_name = Hashtbl.create (List.length nodes) in
   List.iter (fun node -> Hashtbl.replace by_name (name node) node) nodes;
+  let sorted_dependencies = Hashtbl.create (List.length nodes) in
+  List.iter
+    (fun node ->
+      Hashtbl.replace sorted_dependencies (name node)
+        (deps node |> List.sort_uniq String.compare))
+    nodes;
   let best = ref None in
   let consider cycle =
     let cycle = canonical_cycle cycle in
@@ -104,8 +101,7 @@ let shortest_cycle nodes ~name ~deps =
           match Hashtbl.find_opt by_name current with
           | None -> ()
           | Some node ->
-            deps node
-            |> List.sort_uniq String.compare
+            Hashtbl.find sorted_dependencies (name node)
             |> List.iter (fun dependency ->
                 if dependency = start then (
                   let rec path_to_start acc node_name =
@@ -125,32 +121,3 @@ let shortest_cycle nodes ~name ~deps =
                   Queue.add dependency queue))
       done);
   !best
-
-let topological_sort nodes ~name ~deps =
-  let by_name = Hashtbl.create (List.length nodes) in
-  List.iter (fun node -> Hashtbl.replace by_name (name node) node) nodes;
-  let state = Hashtbl.create (List.length nodes) in
-  let result = ref [] in
-  let rec visit stack node =
-    let node_name = name node in
-    match Hashtbl.find_opt state node_name with
-    | Some Done -> ()
-    | Some Visiting -> raise (Cycle (List.rev (node_name :: stack)))
-    | None ->
-      Hashtbl.replace state node_name Visiting;
-      List.iter
-        (fun dep ->
-          match Hashtbl.find_opt by_name dep with
-          | None -> ()
-          | Some dep_node -> visit (node_name :: stack) dep_node)
-        (deps node);
-      Hashtbl.replace state node_name Done;
-      result := node :: !result
-  in
-  try
-    List.iter (visit []) nodes;
-    List.rev !result
-  with Cycle cycle -> (
-    match shortest_cycle nodes ~name ~deps with
-    | Some shortest -> raise (Cycle shortest)
-    | None -> raise (Cycle cycle))

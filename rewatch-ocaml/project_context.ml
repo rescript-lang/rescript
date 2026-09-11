@@ -162,5 +162,11 @@ let relative_to root path =
       (String.length path - String.length prefix)
   else raise (Error (path ^ " is not inside " ^ root))
 
-let display_path ~root path =
+let relative_or_absolute ~root path =
   try relative_to root path with Error _ -> path
+
+let display_path ~root path =
+  match relative_or_absolute ~root path with
+  | "." -> "."
+  | relative when path_is_within_canonical ~root path -> "./" ^ relative
+  | absolute -> absolute

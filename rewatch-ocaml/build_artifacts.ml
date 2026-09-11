@@ -157,8 +157,10 @@ let cleanup_stale ?ocaml_files ?ast_sources ?source_files ?present_source_files
           let output =
             generated_js_path config module_.Source.implementation spec
           in
-          if Sys.file_exists output then
-            Hashtbl.replace present_public_outputs output ())
+          if
+            (not (Hashtbl.mem present_public_outputs output))
+            && Sys.file_exists output
+          then Hashtbl.replace present_public_outputs output ())
         config.package_specs)
     modules;
   let expected_artifacts = Hashtbl.create (List.length modules * 8) in
@@ -194,9 +196,10 @@ let cleanup_stale ?ocaml_files ?ast_sources ?source_files ?present_source_files
       in
       Hashtbl.replace owned_output_names source_base ();
       add_expected source_base [".ast"; ".res"];
-      if Option.is_some module_.Source.interface then
+      if Option.is_some module_.Source.interface then (
         add_expected source_base [".iast"; ".resi"];
-      add_expected compiler_base [".cmi"; ".cmj"; ".cmt"; ".cmti"])
+        add_expected compiler_base [".cmti"]);
+      add_expected compiler_base [".cmi"; ".cmj"; ".cmt"])
     modules;
   Option.iter
     (fun namespace ->

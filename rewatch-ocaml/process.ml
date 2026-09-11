@@ -373,6 +373,14 @@ let signal_running children =
     if not (graceful_succeeded && escalation_succeeded) then
       raise (Error "Could not terminate a subprocess tree"))
 
+let release_after_completion child =
+  ignore
+    (Thread.create
+       (fun () ->
+         Thread.join child.child_wait.thread;
+         Platform.release_process child.process)
+       ())
+
 let terminate_running children =
   if children <> [] then (
     try
@@ -383,7 +391,7 @@ let terminate_running children =
           Platform.release_process child.process)
         children
     with exn ->
-      List.iter (fun child -> Platform.release_process child.process) children;
+      List.iter release_after_completion children;
       raise exn)
 
 let release_running child =
@@ -462,11 +470,24 @@ module Work_ready = Set.Make (struct
     else String.compare first_key second_key
 end)
 
+type cancellation_state =
+  | Cancellation_not_requested
+  | Cancellation_requested
+  | Cancellation_failed of exn
+
+type termination_state =
+  | Termination_confirmed
+  | Termination_unconfirmed of exn
+
 type pool_active = {
   id: int;
   child: unit running;
-  mutable cancellation_requested: bool;
+  mutable cancellation: cancellation_state;
 }
+
+let cancellation_was_requested = function
+  | Cancellation_not_requested -> false
+  | Cancellation_requested | Cancellation_failed _ -> true
 
 type 'a pool_completion =
   | Task_completed of 'a * result
@@ -495,14 +516,21 @@ let launch_worker_task notifier task =
 
 let remove_active pool active =
   with_mutex pool.mutex (fun () ->
-      while pool.signalling_cancellation && active.cancellation_requested do
+      while
+        pool.signalling_cancellation
+        && cancellation_was_requested active.cancellation
+      do
         Condition.wait pool.cancellation_finished pool.mutex
       done;
       pool.active_children <-
         List.filter
           (fun current -> current.id <> active.id)
-          pool.active_children);
-  Platform.release_process active.child.process
+          pool.active_children)
+
+let release_active active = Platform.release_process active.child.process
+
+let release_active_after_completion active =
+  release_after_completion active.child
 
 let complete_pool_task pool completion =
   with_mutex pool.mutex (fun () -> Queue.add completion pool.completed_tasks);
@@ -520,30 +548,58 @@ let run_pool_task pool payload task =
             {
               id = pool.next_active_id;
               child;
-              cancellation_requested = pool.stopping;
+              cancellation =
+                (if pool.stopping then Cancellation_requested
+                 else Cancellation_not_requested);
             }
           in
           pool.next_active_id <- pool.next_active_id + 1;
           pool.active_children <- active :: pool.active_children;
-          (active, active.cancellation_requested))
+          (active, cancellation_was_requested active.cancellation))
     in
-    let task_completion =
+    let wait_result =
       try
         if cancel_after_launch then signal_running [child];
-        let (_, result), restore_signals =
-          wait_for_running ~defer_signals:false pool.notifier [child]
-        in
-        with_signal_restore restore_signals (fun () ->
-            try Task_completed (payload, task.on_result result)
-            with exn -> Task_failed (payload, exn))
-      with exn -> Task_failed (payload, exn)
+        Ok
+          (wait_for_running ~defer_signals:false
+             ~poll:(fun () ->
+               match with_mutex pool.mutex (fun () -> active.cancellation) with
+               | Cancellation_failed exn -> raise exn
+               | Cancellation_not_requested | Cancellation_requested -> ())
+             pool.notifier [child])
+      with exn -> Error exn
     in
     let completion =
-      try
+      match wait_result with
+      | Ok ((_, result), restore_signals) ->
+        let completion =
+          with_signal_restore restore_signals (fun () ->
+              try Task_completed (payload, task.on_result result)
+              with exn -> Task_failed (payload, exn))
+        in
         Thread.join child.child_wait.thread;
         remove_active pool active;
-        task_completion
-      with exn -> Task_failed (payload, exn)
+        release_active active;
+        completion
+      | Error exn -> (
+        let termination =
+          try
+            signal_running [child];
+            Termination_confirmed
+          with cancellation_exn -> Termination_unconfirmed cancellation_exn
+        in
+        (match termination with
+        | Termination_confirmed ->
+          Thread.join child.child_wait.thread;
+          remove_active pool active;
+          release_active active
+        | Termination_unconfirmed _ ->
+          remove_active pool active;
+          release_active_after_completion active);
+        match termination with
+        | Termination_confirmed -> Task_failed (payload, exn)
+        | Termination_unconfirmed cancellation_exn ->
+          Task_failed (payload, cancellation_exn))
     in
     complete_pool_task pool completion
 
@@ -624,10 +680,11 @@ let stop_worker_pool ~cancel pool =
           pool.signalling_cancellation <- true;
           pool.active_children
           |> List.filter_map (fun active ->
-              if active.cancellation_requested then None
-              else (
-                active.cancellation_requested <- true;
-                Some active.child)))
+              match active.cancellation with
+              | Cancellation_requested | Cancellation_failed _ -> None
+              | Cancellation_not_requested ->
+                active.cancellation <- Cancellation_requested;
+                Some active.child))
         else [])
   in
   let signal_error =
@@ -637,8 +694,19 @@ let stop_worker_pool ~cancel pool =
     with exn -> Some exn
   in
   with_mutex pool.mutex (fun () ->
+      Option.iter
+        (fun exn ->
+          List.iter
+            (fun active ->
+              match active.cancellation with
+              | Cancellation_requested ->
+                active.cancellation <- Cancellation_failed exn
+              | Cancellation_not_requested | Cancellation_failed _ -> ())
+            pool.active_children)
+        signal_error;
       pool.signalling_cancellation <- false;
       Condition.broadcast pool.cancellation_finished);
+  Option.iter (fun _ -> notify_completion pool.notifier) signal_error;
   List.iter Domain.join pool.workers;
   Option.iter raise signal_error
 

@@ -6,5 +6,3 @@ val source_is_not_older_than_ast :
   source_mtimes:(string, float) Hashtbl.t ->
   string ->
   bool
-
-val published_ast_path : ocaml_dir:string -> string -> string
