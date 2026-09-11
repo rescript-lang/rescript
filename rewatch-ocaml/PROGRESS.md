@@ -2134,12 +2134,15 @@ specific compatibility risks; they are not remaining gaps.
 
 ### Native Windows handoff
 
-The implementation checkpoint for the Windows session is `b6c05e8e9`. Use a
+The implementation checkpoint for the Windows session is `60231ebaa`. Use a
 native checkout on the VM's NTFS volume, OCaml 5.5 through the repository's
 opam setup, and the Cygwin Bash installed with that toolchain. The checkpoint
 already selects `platform_windows.ml` through Dune, compiles the Job Object C
 owner, provides volume-and-file-index identities for replaced watch directories,
-and type-checks the Windows module in the cross-platform unit suite.
+and type-checks the Windows module in the cross-platform unit suite. It also
+runs dependency-ready compiler tasks and their publication callbacks on bounded
+persistent domains while the main domain retains graph admission and diagnostic
+ordering.
 
 Build and run the portable gates from the repository root:
 
@@ -2163,9 +2166,11 @@ and leave no rewatch process, lock, capture file, or temporary output behind.
 Convert custom absolute `RESCRIPT_BSC_EXE` and `RESCRIPT_RUNTIME` values with
 `cygpath -w` if Cygwin does not translate them when launching the native binary.
 
-The native-only acceptance pass must exercise: suspended launch and Job Object
-assignment; cancellation before and after the direct child exits, including a
-descendant that retains a capture pipe; stdout/stderr EOF and handle cleanup;
+The native-only acceptance pass must exercise: concurrent suspended launches,
+Job Object assignment, and artifact publication from worker domains;
+cancellation during launch and before and after the direct child exits,
+including a descendant that retains a capture pipe; stdout/stderr EOF and
+handle cleanup without double release;
 active, stale, malformed, and concurrently replaced build/watch locks; `cmd.exe`
 post-build quoting; PATH/PATHEXT lookup; spaces, Unicode, drive, UNC, mixed-case,
 and 8.3 project paths; native recursive events, atomic-save replacement, new and
