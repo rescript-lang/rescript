@@ -2798,6 +2798,13 @@ work matched exactly at 1031/512/7/512/40/1, 4/2/0/2/1/0, and
 identical. The focused integration suite, all 20 OUnit groups, the interactive
 output gate, and all 111 command-validation cases also pass.
 
+At review-fix checkpoint `895807b478`, `opam exec -- make test-all` passed the
+complete repository gate. This included formatting, compiler and runtime tests,
+both GenType projects, analysis and reanalyze, tools, and the installed OCaml
+rewatch executable running all canonical build, failure, clean, format, and
+watch scenarios. The run left the worktree clean and no watcher or compiler
+subprocess alive.
+
 1. In the Windows VM, finish the watcher/lock and path audit and run the native
    build, unit, focused, and canonical Bash suites. Address findings there and
    finish with an x64 Windows confidence run where available.
