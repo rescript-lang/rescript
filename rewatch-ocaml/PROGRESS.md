@@ -1723,10 +1723,12 @@ missing.
 
 - Replace the two pipe-reader threads plus waiter thread created for every
   child with centrally serviced libuv process pipes. The latest stable clean
-  gate measured 94 peak process-tree tasks for OCaml versus 74 for Rust, so the
-  additional fan-out is real; its contribution to the 1.1887× wall-time ratio
-  is not yet isolated. A shared event loop could reduce thread creation, stack
-  memory, synchronization, and per-child capture buffers, but it is a high-risk
+  gate measured 129 peak process-tree tasks for OCaml versus 78 for Rust, so
+  the additional fan-out is real. The earlier fixed-reader experiment removed
+  the per-child threads without improving wall time, while persistent compiler
+  domains brought the total ratio to 1.096x despite retaining them. A shared
+  event loop could therefore reduce thread creation, stack memory,
+  synchronization, and per-child capture buffers, but it is a high-risk
   process-lifecycle change. It must preserve separate ordered stdout/stderr
   capture, completion only after exit and both EOFs, descendant-held-pipe
   cancellation, deterministic scheduling, and concurrent publication. On
@@ -2516,19 +2518,18 @@ retention still covers every source. The 20 OUnit2 groups, focused integration
 runner, 111-case command-validation gate, and formatting/build checks pass at
 this checkpoint.
 
-Two review proposals remain deliberately measurement-dependent rather than
-being implemented speculatively. The process runner still uses two concurrent
-pipe readers and one waiter per child; replacing this with a shared libuv event
-loop must preserve deadlock-free dual-stream draining, cancellation, process
-group or Job Object ownership, and native Windows behavior. Publication uses
-bounded 64 KiB streaming buffers but does not yet pool buffers across files in
-one module. The next stable profile should determine whether thread lifecycle,
-the concurrency cap, or residual publication allocation is material. A broad
-new module-identity wrapper was also not introduced: the concrete ambiguity
-sites now use explicit dependency, namespace-map, and build-state node types,
-while wrapping every remaining path/name string would currently add conversion
-ceremony without removing a known invalid state. These decisions must be
-reported and reconsidered in the final quality review.
+Two review proposals remained deliberately measurement-dependent at this
+checkpoint. The process runner still used two concurrent pipe readers and one
+waiter per child; replacing this with a shared libuv event loop had to preserve
+deadlock-free dual-stream draining, cancellation, process group or Job Object
+ownership, and native Windows behavior. Publication used bounded 64 KiB
+streaming buffers but did not pool buffers across files in one module. Later
+measurements below distinguish thread fan-out from serialized worker ownership.
+A broad new module-identity wrapper was also not introduced: the concrete
+ambiguity sites now use explicit dependency, namespace-map, and build-state node
+types, while wrapping every remaining path/name string would currently add
+conversion ceremony without removing a known invalid state. These decisions
+must be reported and reconsidered in the final quality review.
 
 The follow-up behavioral review found one additional watch-only traversal gap.
 An installed dependency can itself resolve a regular dependency back into the
@@ -2606,6 +2607,32 @@ the complete spawn/capture/wait/publication lifetime, not another isolated pipe
 or copy optimization, and must preserve the documented Windows Job Object
 lifecycle.
 
+Checkpoint `60231ebaa` confirms that hypothesis. The dependency graph remains
+owned by the main domain, while a bounded set of persistent domains now owns
+each ready task's spawn, concurrent pipe capture, wait, publication callback,
+and process-handle release. A task returning another phase is admitted through
+the same dependency scheduler, and fatal failure or command cancellation marks
+active children once before the owning workers join and release them. OCaml
+delivers signal handlers on the main domain, so workers do not temporarily
+replace the process-wide handlers used by Windows; a child completing launch
+after cancellation observes the stopped pool as it registers and terminates
+its own process tree. Partial pool creation also stops and joins workers that
+were already created.
+
+The powered, idle-host five-run interleaved gate measured 4.460 s OCaml versus
+4.069 s Rust, or 1.096x. Median summed process-tree RSS was 1,660,044 KiB versus
+1,568,236 KiB, or 1.058x. Both pass the 1.25x gate. Clean, unchanged, and edit
+work counts remained exactly 1031/512/7/512/40/1, 4/2/0/2/1/0, and
+6/3/0/3/1/0 respectively, and complete file sets plus stable artifacts were
+identical. Peak task count increased to 129 versus 78 because the persistent
+domains coexist with the portable per-child reader/waiter threads; the earlier
+fixed-reader experiment showed that reducing those threads alone did not
+improve wall time. OUnit covers fatal worker-finalizer cancellation while
+another process is active. The focused runner, 111 command cases, exact
+interactive and verbose gates, formatting, and the complete 48-test canonical
+suite pass; the faster scheduler exposed and fixed a stdout/stderr phase-order
+race by flushing completed parse output before diagnostics and compile progress.
+
 The latest retained-watch gate at `d1c3ca9732` was coherent and passed: 118 ms
 OCaml versus 123 ms Rust, exactly seven parser and seven compiler calls per
 implementation, identical generated output, stable file descriptors and task
@@ -2669,12 +2696,14 @@ The remaining suggestions from that review do not identify missing current
 work. Scheduler setup is global rather than repeated per package, and the
 process path already returns immediately for an empty task list. Namespace
 references are persistent graph nodes with resolved edges, so scheduler setup
-does not repeat namespace expansion. Reusing CMI bytes or digests across
-publication would require changing the publication result and streaming-copy
-contract; reducing the two reader threads plus waiter or changing the fixed
-32-child ceiling likewise affects cancellation and native Windows ownership.
-Those changes remain explicitly profile-dependent and are retained in the
-future-performance inventory for consideration after Windows validation.
+does not repeat namespace expansion. The measured persistent-domain change
+closes serialized spawn and publication while retaining the fixed child limit.
+Reusing CMI bytes or digests across publication would require changing the
+publication result and streaming-copy contract; reducing the two reader threads
+plus waiter or changing the child ceiling likewise affects cancellation and
+native Windows ownership. Those remaining changes stay explicitly
+profile-dependent in the future-performance inventory for consideration after
+Windows validation.
 
 1. In the Windows VM, finish the watcher/lock and path audit and run the native
    build, unit, focused, and canonical Bash suites. Address findings there and
