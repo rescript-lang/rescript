@@ -286,11 +286,11 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
       ~label:"Parsing" (List.map (fun (_, _, group) -> group) parse_entries)
   in
   let parse_results =
-    parse_entries
-    |> List.map (fun (package, path, _) ->
-         Compiler_process.parse_job ~bsc ~build_dir:package.graph_build_dir
-           ~config:package.graph_compile_config path)
-    |> Process.run_parallel ?poll:stats.process_poll ~on_complete:parse_completed
+    Process.run_parallel_map ?poll:stats.process_poll
+      ~on_complete:parse_completed parse_entries
+      ~job:(fun (package, path, _) ->
+        Compiler_process.parse_job ~bsc ~build_dir:package.graph_build_dir
+          ~config:package.graph_compile_config path)
   in
   let failed_parse_paths = Hashtbl.create 8 in
   List.iter2

@@ -2295,6 +2295,17 @@ implementation and publication semantics while bounding per-copy live memory.
 The full clean-build effect remains to be measured under the stable performance
 gate rather than inferred from allocation behavior.
 
+Parser subprocess preparation no longer reads every dirty source and constructs
+the complete argument list before launching the first `bsc`. The generic
+process runner now builds each job when a scheduler slot is filled, launches it
+immediately, and prepares later jobs while earlier children are already
+running. This retains deterministic input-order results and portable external
+process parallelism without adding domains. A synchronization-based unit test
+requires the first child to start before the second job can be constructed.
+The change removes the concrete serial-prefix difference from Rust's parallel
+parse jobs, but its wall-time contribution remains unclaimed until a stable
+measurement can isolate it.
+
 The follow-up review also identified larger simplification candidates for the
 final non-comment cleanup. Package build now requires the graph, source set,
 compile configuration, output ownership, source mtimes, and cleanup inventory
@@ -2320,10 +2331,10 @@ The closed internal visitation and CLI-routing states now use normal variants.
 The remaining polymorphic variants are required at Yojson, Cmdliner, Re, and
 Luv API boundaries; no internally owned open case set remains. Remaining
 measured-performance candidates are per-child reader/waiter threads and
-buffers, serial parser-job preparation, retained-build reconstruction, and
-publication allocation/GC. They require profiling before architectural work;
-the cycle, dirty-membership, and worker-lifecycle differences were concrete
-enough to correct immediately.
+buffers, retained-build reconstruction, and residual publication allocation/GC.
+They require profiling before architectural work; the cycle, dirty-membership,
+worker-lifecycle, and parser-launch differences were concrete enough to correct
+immediately.
 
 The non-comment cleanup removed the obsolete `.rewatch-pending` and
 `.rewatch-backup` recognition, cleanup scans, explicit deletion paths, and

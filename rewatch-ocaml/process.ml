@@ -370,12 +370,13 @@ let release_running child =
   Thread.join child.child_wait.thread;
   Platform.release_process child.process
 
-let run_parallel_with_notifier ~max_jobs ~poll ~on_complete notifier jobs =
-  let indexed = List.mapi (fun index job -> (index, job)) jobs in
-  let results = Array.make (List.length jobs) None in
+let run_parallel_map_with_notifier ~max_jobs ~poll ~on_complete notifier values
+    ~job =
+  let indexed = List.mapi (fun index value -> (index, value)) values in
+  let results = Array.make (List.length values) None in
   let active = ref [] in
-  let launch_indexed (index, job) =
-    active := launch ~notifier index job :: !active
+  let launch_indexed (index, value) =
+    active := launch ~notifier index (job value) :: !active
   in
   let rec fill slots queued =
     if slots = 0 then queued
@@ -412,10 +413,10 @@ let run_parallel_with_notifier ~max_jobs ~poll ~on_complete notifier jobs =
     terminate_running !active;
     raise exn
 
-let run_parallel ?(max_jobs = default_max_jobs) ?poll
-    ?(on_complete = fun _ -> ()) jobs =
+let run_parallel_map ?(max_jobs = default_max_jobs) ?poll
+    ?(on_complete = fun _ -> ()) values ~job =
   if max_jobs < 1 then raise (Error "max_jobs must be at least one");
-  match jobs with
+  match values with
   | [] -> []
   | _ ->
     let poll, ticker_enabled =
@@ -424,7 +425,11 @@ let run_parallel ?(max_jobs = default_max_jobs) ?poll
       | None -> ((fun () -> ()), false)
     in
     with_completion_notifier ~ticker_enabled (fun notifier ->
-      run_parallel_with_notifier ~max_jobs ~poll ~on_complete notifier jobs)
+      run_parallel_map_with_notifier ~max_jobs ~poll ~on_complete notifier
+        values ~job)
+
+let run_parallel ?max_jobs ?poll ?on_complete jobs =
+  run_parallel_map ?max_jobs ?poll ?on_complete jobs ~job:Fun.id
 
 type 'a work = {key: string; dependencies: string list; value: 'a}
 
