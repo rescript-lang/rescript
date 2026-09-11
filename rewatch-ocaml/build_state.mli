@@ -31,8 +31,7 @@ val add :
 val find : t -> string -> module_ option
 val find_exn : t -> string -> module_
 val has_complete_compile_assets : module_ -> bool
-val dependency_compiled_after : module_ -> module_ -> bool
+val dependency_tree_compiled_after : t -> module_ -> module_ -> bool
 val set_dependencies : t -> key:string -> string list -> unit
 
-val mark_dependents_compile_dirty :
-  t -> module_ -> is_blocked:(string -> bool) -> unit
+val mark_dependents_compile_dirty : t -> module_ -> unit

@@ -195,8 +195,7 @@ let rec prepare_tree ~seen ~(package : Build_types.graph_package) ~watch
       if List.exists (Hashtbl.mem dirty_parse_path_set) paths then (
         Hashtbl.replace parse_dirty_modules module_.Source.name ();
         let key = Source.compiler_basename config module_.Source.name in
-        if not (Hashtbl.mem stats.blocked_modules key) then
-          (Build_state.find_exn build_state key).compile_dirty <- true))
+        (Build_state.find_exn build_state key).compile_dirty <- true))
     modules;
   if
     List.exists
@@ -236,7 +235,8 @@ let rec prepare_tree ~seen ~(package : Build_types.graph_package) ~watch
       in
       let dependency_is_newer dependency =
         let dependency_state = Build_state.find_exn build_state dependency in
-        Build_state.dependency_compiled_after state dependency_state
+        Build_state.dependency_tree_compiled_after build_state state
+          dependency_state
       in
       (not (Hashtbl.mem stats.blocked_modules global_key))
       && (Hashtbl.mem parse_dirty_modules module_.Source.name
@@ -280,25 +280,21 @@ let rec prepare_tree ~seen ~(package : Build_types.graph_package) ~watch
     in
     let post_build path = Compiler_process.post_build_tasks config path in
     let candidates =
-      List.map
+      List.filter_map
         (fun module_ ->
           let key = Source.compiler_basename config module_.Source.name in
           let state = Build_state.find_exn build_state key in
           (* Fix the initial dirty set before dispatch so files published by
            concurrently finishing jobs cannot change this module's decision.
            Only explicit CMI-change propagation may do that. *)
-          state.compile_dirty <-
-            (not (Hashtbl.mem stats.blocked_modules key))
-            && (state.compile_dirty
-               ||
-               match stats.attempt_kind with
-               | Build_types.Retained_attempt ->
-                 Hashtbl.mem parse_dirty_modules module_.Source.name
-               | Build_types.Full_attempt -> module_is_dirty module_ state);
-          let dependencies =
-            if Hashtbl.mem stats.blocked_modules key then []
-            else state.dependencies
+          let newly_dirty =
+            match stats.attempt_kind with
+            | Build_types.Retained_attempt ->
+              Hashtbl.mem parse_dirty_modules module_.Source.name
+            | Build_types.Full_attempt -> module_is_dirty module_ state
           in
+          state.compile_dirty <- state.compile_dirty || newly_dirty;
+          let blocked = Hashtbl.mem stats.blocked_modules key in
           let cmi_path =
             Filename.concat ocaml_dir
               (Source.compiler_asset_basename config
@@ -310,10 +306,11 @@ let rec prepare_tree ~seen ~(package : Build_types.graph_package) ~watch
             :: Option.to_list module_.Source.interface
             |> List.map (Filename.concat config.root)
           in
-          Compiler_scheduler.candidate ~key ~state ~warning_paths
-            ~make:(fun () ->
-              Compiler_scheduler.create ~key ~dependencies ~source:module_
-                ~state ~cmi_path
+          if blocked then None
+          else
+            let make () =
+              Compiler_scheduler.create ~key ~dependencies:state.dependencies
+                ~source:module_ ~state ~cmi_path
                 ~prepare:(fun () -> prepare_outputs module_)
                 ~compile:(fun ~is_interface path ->
                   compile_process module_ ~is_interface path)
@@ -324,7 +321,9 @@ let rec prepare_tree ~seen ~(package : Build_types.graph_package) ~watch
                 ~is_local
                 ~mark_warning:(fun path ->
                   Hashtbl.replace compile_warning_modules
-                    (Source.module_name path) ())))
+                    (Source.module_name path) ())
+            in
+            Some (Compiler_scheduler.candidate ~key ~state ~warning_paths ~make))
         modules
     in
     Option.iter
@@ -377,7 +376,6 @@ let rec prepare_tree ~seen ~(package : Build_types.graph_package) ~watch
                 if digest_before <> digest_after then
                   Build_state.mark_dependents_compile_dirty build_state
                     namespace_state
-                    ~is_blocked:(Hashtbl.mem stats.blocked_modules)
               in
               stats.namespace_jobs := (job, finish) :: !(stats.namespace_jobs))
             (Compiler_process.namespace_job ~bsc ~runtime ~build_dir ~ocaml_dir

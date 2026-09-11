@@ -25,20 +25,18 @@ let tests =
     (not (Build_state.has_complete_compile_assets b))
     "a missing compile artifact requires compilation";
   check
-    (not (Build_state.dependency_compiled_after b a))
+    (not (Build_state.dependency_tree_compiled_after state b a))
     "a module without a prior CMT relies on its own dirty state";
   check
     (Build_state.String_set.equal a.dependents
        (Build_state.String_set.singleton "B")
     && b.dependencies = ["A"])
     "setting dependencies creates the reverse edge";
-  Build_state.mark_dependents_compile_dirty state a ~is_blocked:(fun _ -> true);
-  check (not b.compile_dirty) "CMI changes do not unblock cycle members";
-  Build_state.mark_dependents_compile_dirty state a ~is_blocked:(fun _ -> false);
-  check b.compile_dirty "CMI changes propagate through reverse edges";
+  Build_state.mark_dependents_compile_dirty state a;
+  check b.compile_dirty "CMI changes preserve pending dependent work";
   b.last_compiled_cmt <- Some 0.5;
   check
-    (Build_state.dependency_compiled_after b a)
+    (Build_state.dependency_tree_compiled_after state b a)
     "dependency CMI timestamps invalidate older dependents";
   Build_state.set_dependencies state ~key:"B" [];
   check
@@ -67,7 +65,54 @@ let tests =
   let namespace = Build_state.find_exn namespace_state "namespace" in
   let consumer = Build_state.find_exn namespace_state "Consumer" in
   Build_state.mark_dependents_compile_dirty namespace_state
-    (Build_state.find_exn namespace_state "A") ~is_blocked:(fun _ -> false);
+    (Build_state.find_exn namespace_state "A");
   check
     (namespace.compile_dirty && consumer.compile_dirty)
-    "namespace-map invalidation propagates to namespace consumers"
+    "namespace-map invalidation propagates to namespace consumers";
+  consumer.compile_dirty <- false;
+  consumer.last_compiled_cmt <- Some 2.;
+  (Build_state.find_exn namespace_state "A").last_compiled_cmi <- Some 3.;
+  check
+    (Build_state.dependency_tree_compiled_after namespace_state consumer
+       namespace)
+    "restart freshness traverses namespace-map members";
+  let entry_source : Source.module_ =
+    {
+      name = "Entry";
+      implementation = "src/Entry.res";
+      interface = None;
+      is_dev = false;
+      feature = None;
+    }
+  in
+  let entry : Build_types.global_module =
+    {
+      key = "Entry";
+      package_name = "package";
+      package_root = "root";
+      source_path = entry_source.implementation;
+      source = entry_source;
+      namespace = Some "Namespace";
+      namespace_entry = Some "Entry";
+      allowed_dependencies = [];
+      raw_dependencies = [];
+    }
+  in
+  let namespace_map : Build_types.namespace_map =
+    {
+      key = Build_types.namespace_map_key "root";
+      compiler_name = "@Namespace";
+      namespace = "Namespace";
+      package_name = "package";
+      package_root = "root";
+      members = [];
+    }
+  in
+  let modules = Hashtbl.create 1 in
+  Hashtbl.add modules entry.key entry;
+  let namespace_maps = Hashtbl.create 1 in
+  Hashtbl.add namespace_maps namespace_map.namespace [namespace_map];
+  check
+    (Build_preparation.resolved_dependencies modules namespace_maps entry
+    = [namespace_map.key])
+    "namespace entry implicitly depends on its namespace map"

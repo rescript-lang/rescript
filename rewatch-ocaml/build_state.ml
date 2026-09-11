@@ -44,10 +44,23 @@ let has_complete_compile_assets module_ =
   Option.is_some module_.last_compiled_cmi
   && Option.is_some module_.last_compiled_cmt
 
-let dependency_compiled_after module_ dependency =
-  match (dependency.last_compiled_cmi, module_.last_compiled_cmt) with
-  | Some dependency_time, Some module_time -> dependency_time > module_time
-  | None, _ | _, None -> false
+let dependency_tree_compiled_after state module_ dependency =
+  let is_newer dependency =
+    match (dependency.last_compiled_cmi, module_.last_compiled_cmt) with
+    | Some dependency_time, Some module_time -> dependency_time > module_time
+    | None, _ | _, None -> false
+  in
+  let rec contains_newer dependency =
+    is_newer dependency
+    ||
+    match dependency.kind with
+    | Source_module -> false
+    | Namespace_map ->
+      List.exists
+        (fun key -> contains_newer (find_exn state key))
+        dependency.dependencies
+  in
+  contains_newer dependency
 
 let set_dependencies state ~key dependencies =
   let module_ = find_exn state key in
@@ -65,16 +78,15 @@ let set_dependencies state ~key dependencies =
         String_set.add key dependency_module.dependents)
     dependencies
 
-let mark_dependents_compile_dirty state module_ ~is_blocked =
+let mark_dependents_compile_dirty state module_ =
   let visited = Hashtbl.create 8 in
   let rec mark dependent =
     if not (Hashtbl.mem visited dependent) then (
       Hashtbl.add visited dependent ();
-      if not (is_blocked dependent) then (
-        let dependent_module = find_exn state dependent in
-        dependent_module.compile_dirty <- true;
-        match dependent_module.kind with
-        | Source_module -> ()
-        | Namespace_map -> String_set.iter mark dependent_module.dependents))
+      let dependent_module = find_exn state dependent in
+      dependent_module.compile_dirty <- true;
+      match dependent_module.kind with
+      | Source_module -> ()
+      | Namespace_map -> String_set.iter mark dependent_module.dependents)
   in
   String_set.iter mark module_.dependents
