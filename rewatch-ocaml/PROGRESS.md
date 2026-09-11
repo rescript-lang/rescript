@@ -984,12 +984,23 @@ plugged-in, otherwise idle Mac host:
 
 The latest completed gate's 1.199× wall-time ratio and 1.043× RSS ratio pass
 the 1.25× gate.
-The host was plugged in and otherwise idle for this run. Docker on a Mac is
-still makes the absolute values less portable than native Linux or dedicated
+The host was plugged in and otherwise idle for this run. Docker on a Mac still
+makes the absolute values less portable than native Linux or dedicated
 CI, but all ten interleaved samples were coherent and this is the required
 current stable-host acceptance run. Passing this aggregate gate also does not
 excuse the clean-build publication probes identified by the filesystem audit
 below.
+
+A later five-run directional check at `4566147ab`, after the scheduler and
+review-driven simplifications, measured 5,300 ms / 1,431,388 KiB for Rust and
+6,278 ms / 1,468,592 KiB for OCaml (1.1845× wall time and 1.026× RSS). It
+passed the 1.25× gate and again matched all clean, unchanged, and single-edit
+compiler-work manifests (1,031/4/6 launches), the complete output file set,
+and every stable artifact byte. Individual Rust samples ranged from 4,820 to
+6,791 ms and OCaml samples from 5,668 to 7,654 ms because other host work could
+interfere. The small ratio change from 1.199× therefore does not demonstrate a
+performance improvement; this run establishes directional regression and work
+equivalence evidence only. The quiet-host release measurement remains due.
 
 Both implementations performed exactly 1,031 `bsc` launches: 512 parses, 7
 namespace compilations, and 512 module compilations, of which 40 were interface
