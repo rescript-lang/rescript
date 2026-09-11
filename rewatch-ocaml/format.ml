@@ -162,8 +162,8 @@ let files_in_scope () =
 let formatting_error target stderr =
   Printf.sprintf "Error formatting %s: %s" target stderr
 
-let formatted ~bsc ~target path =
-  let result = Process.run ~cwd:(Sys.getcwd ()) bsc ["-format"; path] in
+let formatted ?poll ~bsc ~target path =
+  let result = Process.run ?poll ~cwd:(Sys.getcwd ()) bsc ["-format"; path] in
   if not (Process.succeeded result) then
     raise (Error (formatting_error target result.stderr));
   result.stdout
@@ -172,7 +172,7 @@ let format_check_summary = function
   | 1 -> "The file listed above needs formatting"
   | count -> Printf.sprintf "The %d files listed above need formatting" count
 
-let format_files_with_bsc ?max_jobs ~bsc ~check files =
+let format_files_with_bsc ?max_jobs ?poll ~bsc ~check files =
   let cwd = Sys.getcwd () in
   let incorrect = ref 0 in
   let works =
@@ -196,13 +196,13 @@ let format_files_with_bsc ?max_jobs ~bsc ~check files =
       None
   in
   (match max_jobs with
-  | None -> Process.run_dependency_graph works ~next
-  | Some max_jobs -> Process.run_dependency_graph ~max_jobs works ~next);
+  | None -> Process.run_dependency_graph ?poll works ~next
+  | Some max_jobs -> Process.run_dependency_graph ?poll ~max_jobs works ~next);
   if !incorrect > 0 then (
     prerr_endline (format_check_summary !incorrect);
     raise (Error "Formatting check failed"))
 
-let format_stdin extension =
+let format_stdin ?poll extension =
   if extension <> ".res" && extension <> ".resi" then
     raise (Error "--stdin must be .res or .resi");
   let bsc = bsc () in
@@ -237,7 +237,7 @@ let format_stdin extension =
          with exn ->
            close_out_noerr output;
            raise exn);
-        print_string (formatted ~bsc ~target:"stdin" path))
+        print_string (formatted ?poll ~bsc ~target:"stdin" path))
   with exn ->
     remove_temporary ();
     let exn =
@@ -248,7 +248,7 @@ let format_stdin extension =
     in
     raise exn
 
-let run_files ~check paths =
+let run_files ?poll ~check paths =
   let bsc = bsc () in
   let files = if paths = [] then files_in_scope () else paths in
-  format_files_with_bsc ~bsc ~check files
+  format_files_with_bsc ?poll ~bsc ~check files

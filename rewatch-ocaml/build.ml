@@ -32,7 +32,7 @@ let project_root folder =
            the specified project folder does not exist: " ^ folder));
   Unix.realpath folder
 
-let clean ~seen ~verbosity ~folder ~prod =
+let clean ~poll ~seen ~verbosity ~folder ~prod =
   let root = project_root folder in
   let show_progress = verbosity >= 0 in
   let interactive = Unix.isatty Unix.stdout && Unix.isatty Unix.stderr in
@@ -48,8 +48,9 @@ let clean ~seen ~verbosity ~folder ~prod =
         (Output.cleaned_command_message ~color:colors ~step ~target
            ~seconds:(Unix.gettimeofday () -. started_at))
   in
-  Build_lock.with_build (Project_context.workspace_lock_root root)
+  Build_lock.with_build ~poll (Project_context.workspace_lock_root root)
     (fun ~release:_ ->
+      poll ();
       let root_config = Config.load_root root in
       let resolution = Package_resolution.create root_config in
       let visited = Hashtbl.create 32 in
@@ -68,6 +69,7 @@ let clean ~seen ~verbosity ~folder ~prod =
             else Printf.printf "Cleaning %s\n%!" name);
       print_cleaned ~step:"1/2" ~target:compiler_assets
         ~started_at:compiler_started;
+      poll ();
       let suffixes =
         root_config.package_specs
         |> List.filter_map (fun (spec : Config.package_spec) ->
@@ -80,6 +82,7 @@ let clean ~seen ~verbosity ~folder ~prod =
       let generated_started = Unix.gettimeofday () in
       print_cleaning ~step:"2/2" generated_files;
       Clean.remove_generated_outputs cleanup;
+      poll ();
       print_cleaned ~step:"2/2" ~target:generated_files
         ~started_at:generated_started)
 
@@ -326,7 +329,7 @@ let prepare_incremental previous changes (stats : Build_types.t) =
     cycle)
   else None
 
-let run_with_warning_state ~poll ~warning_state ~previous ~changes
+let run_with_warning_state ~process_poll ~poll ~warning_state ~previous ~changes
     ~compilation_kind ~no_timing ~seen ~verbosity ~folder ~prod ~features
     ~warn_error ~watch ~after_build ~filter ~on_state =
   let started_at = Unix.gettimeofday () in
@@ -341,7 +344,10 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
     Output.Progress.tick progress
   in
   let process_poll =
-    if watch || (interactive && show_progress) then Some poll else None
+    match process_poll with
+    | Some _ -> Some poll
+    | None ->
+      if watch || (interactive && show_progress) then Some poll else None
   in
   let is_rebuild = compilation_kind = Incremental_watch in
   let should_write_build_ninja =
@@ -645,14 +651,13 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
           | Parse_failure output -> report_parse_failure output));
   {root_config; stats}
 
-let run ~seen ~verbosity ~folder ~prod ~features ~warn_error ~watch ~after_build
-    ~filter ~no_timing =
+let run ~poll ~seen ~verbosity ~folder ~prod ~features ~warn_error ~watch
+    ~after_build ~filter ~no_timing =
   try
     run_with_warning_state ~warning_state:(Warning_state.create ())
-      ~poll:(fun () -> ())
-      ~previous:None ~changes:None ~compilation_kind:One_shot ~no_timing ~seen
-      ~verbosity ~folder ~prod ~features ~warn_error ~watch ~after_build ~filter
-      ~on_state:(fun _ -> ())
+      ~process_poll:(Some poll) ~poll ~previous:None ~changes:None
+      ~compilation_kind:One_shot ~no_timing ~seen ~verbosity ~folder ~prod
+      ~features ~warn_error ~watch ~after_build ~filter ~on_state:(fun _ -> ())
     |> ignore
   with Reported_failure message -> raise (Error message)
 
@@ -670,10 +675,11 @@ let watch ~verbosity ~folder ~prod ~features ~warn_error ~after_build ~filter
       let run ?previous ?changes compilation_kind =
         let attempted = ref None in
         try
-          run_with_warning_state ~poll ~warning_state ~previous ~changes
-            ~compilation_kind ~no_timing:false ~seen:[] ~verbosity ~folder ~prod
-            ~features ~warn_error ~watch:true ~after_build ~filter
-            ~on_state:(fun state -> attempted := Some state)
+          run_with_warning_state ~process_poll:(Some poll) ~poll ~warning_state
+            ~previous ~changes ~compilation_kind ~no_timing:false ~seen:[]
+            ~verbosity ~folder ~prod ~features ~warn_error ~watch:true
+            ~after_build ~filter ~on_state:(fun state ->
+              attempted := Some state)
         with exn ->
           (* Failed initial and incremental attempts still own useful parsed
              state. Full reconstruction failures do not, because their graph may

@@ -1,29 +1,37 @@
-(* Raising in whichever domain handles the signal lets command-scoped process,
-   lock, and temporary-output owners unwind before the conventional shell exit
-   status is returned. The process scheduler carries worker exceptions back to
-   its caller. Watch mode uses a cooperative flag instead because libuv
-   callbacks must not be unwound by an asynchronous exception. *)
+(* Signal handlers can run on any domain, including between spawning a child
+   and registering its cleanup owner. Recording the request and raising from
+   the command's poll point keeps unwinding on the domain that owns scheduler,
+   lock, and temporary-output cleanup. *)
 let with_termination_handlers action =
-  let interrupted = Atomic.make false in
+  let requested_exit = Atomic.make 0 in
   let interrupt signal =
-    if Atomic.compare_and_set interrupted false true then
-      raise
-        (Process.Interrupted
-           (if signal = Sys.sigint then 130
-            else if signal = Sys.sigterm then 143
-            else 1))
+    let exit_code =
+      if signal = Sys.sigint then 130
+      else if signal = Sys.sigterm then 143
+      else 1
+    in
+    ignore (Atomic.compare_and_set requested_exit 0 exit_code)
+  in
+  let poll () =
+    let exit_code = Atomic.get requested_exit in
+    if exit_code <> 0 then raise (Process.Interrupted exit_code)
   in
   let previous_sigint = Sys.signal Sys.sigint (Sys.Signal_handle interrupt) in
-  Fun.protect
-    (fun () ->
-      let previous_sigterm =
-        Sys.signal Sys.sigterm (Sys.Signal_handle interrupt)
-      in
-      Fun.protect action ~finally:(fun () ->
-          ignore (Sys.signal Sys.sigterm previous_sigterm)))
-    ~finally:(fun () -> ignore (Sys.signal Sys.sigint previous_sigint))
+  let result =
+    Fun.protect
+      (fun () ->
+        let previous_sigterm =
+          Sys.signal Sys.sigterm (Sys.Signal_handle interrupt)
+        in
+        Fun.protect
+          (fun () -> action ~poll)
+          ~finally:(fun () -> ignore (Sys.signal Sys.sigterm previous_sigterm)))
+      ~finally:(fun () -> ignore (Sys.signal Sys.sigint previous_sigint))
+  in
+  poll ();
+  result
 
-let run_command = function
+let run_command ~poll = function
   | Cli.Build
       {
         verbosity;
@@ -37,7 +45,7 @@ let run_command = function
         no_timing;
       } ->
     ignore clear_screen;
-    Build.run ~seen:[] ~verbosity ~folder ~prod ~features ~warn_error
+    Build.run ~poll ~seen:[] ~verbosity ~folder ~prod ~features ~warn_error
       ~watch:false ~after_build ~filter ~no_timing
   | Cli.Watch
       {
@@ -54,16 +62,18 @@ let run_command = function
     ignore no_timing;
     Build.watch ~verbosity ~folder ~prod ~features ~warn_error ~after_build
       ~filter ~clear_screen
-  | Cli.Format (Cli.Format_stdin extension) -> Format.format_stdin extension
+  | Cli.Format (Cli.Format_stdin extension) ->
+    Format.format_stdin ~poll extension
   | Cli.Format (Cli.Format_files {check; paths}) ->
-    Format.run_files ~check paths
+    Format.run_files ~poll ~check paths
   | Cli.Compiler_args path -> print_endline (Build.compiler_args path)
   | Cli.Clean {verbosity; folder; prod} ->
-    Build.clean ~seen:[] ~verbosity ~folder ~prod
+    Build.clean ~poll ~seen:[] ~verbosity ~folder ~prod
 
 let run = function
-  | Cli.Watch _ as command -> run_command command
-  | command -> with_termination_handlers (fun () -> run_command command)
+  | Cli.Watch _ as command -> run_command ~poll:(fun () -> ()) command
+  | command ->
+    with_termination_handlers (fun ~poll -> run_command ~poll command)
 
 let () =
   try

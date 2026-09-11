@@ -3,11 +3,17 @@ exception Package_error of string
 exception Stop_watch
 
 val clean :
-  seen:string list -> verbosity:int -> folder:string -> prod:bool -> unit
+  poll:(unit -> unit) ->
+  seen:string list ->
+  verbosity:int ->
+  folder:string ->
+  prod:bool ->
+  unit
 
 val compiler_args : string -> string
 
 val run :
+  poll:(unit -> unit) ->
   seen:string list ->
   verbosity:int ->
   folder:string ->

@@ -74,7 +74,9 @@ let tests =
       write_file duplicate_in_source_b "generated duplicate two\n";
       write_file (Filename.concat root "lib/bs/compiler-state") "temporary\n";
       write_file (Filename.concat root "lib/ocaml/A.cmj") "temporary\n";
-      Build.clean ~seen:[] ~verbosity:(-1) ~folder:root ~prod:false;
+      Build.clean
+        ~poll:(fun () -> ())
+        ~seen:[] ~verbosity:(-1) ~folder:root ~prod:false;
       check
         (not (Sys.file_exists generated))
         "clean removes the configured generated output";
