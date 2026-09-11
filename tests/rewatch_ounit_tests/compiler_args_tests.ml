@@ -9,18 +9,21 @@ let write_file path contents =
     ~finally:(fun () -> close_out_noerr channel)
     (fun () -> output_string channel contents)
 
-let compiler_args path =
+let arguments field path =
   match Yojson.Safe.from_string (Build.compiler_args path) with
   | `Assoc fields -> (
-    match List.assoc_opt "compiler_args" fields with
+    match List.assoc_opt field fields with
     | Some (`List values) ->
       List.map
         (function
           | `String value -> value
           | _ -> failwith "non-string argument")
         values
-    | _ -> failwith "missing compiler_args array")
+    | _ -> failwith ("missing " ^ field ^ " array"))
   | _ -> failwith "compiler-args did not return an object"
+
+let compiler_args = arguments "compiler_args"
+let parser_args = arguments "parser_args"
 
 let adjacent_positions flag values =
   let rec loop index positions = function
@@ -95,6 +98,23 @@ let tests =
         (compiler_args prefixed_source
         |> adjacent_positions "-I" |> position development |> Option.is_none)
         "source directory matching respects path-component boundaries";
+      (if not Sys.win32 then
+         let external_source =
+           Filename.temp_file "rewatch-linked-source-" ".res"
+         in
+         Fun.protect
+           ~finally:(fun () -> Sys.remove external_source)
+           (fun () ->
+             write_file external_source "let linked = 1\n";
+             let linked_source = Filename.concat root "src/Linked.res" in
+             Unix.symlink external_source linked_source;
+             check
+               (parser_args linked_source |> List.rev |> List.hd
+               = Filename.concat
+                   (Filename.concat Filename.parent_dir_name
+                      Filename.parent_dir_name)
+                   "src/Linked.res")
+               "compiler-args keeps a source symlink in its project scope"));
       File_util.remove_tree
         (File_util.path_of_parts root ["node_modules"; "development"]);
       check
@@ -103,14 +123,27 @@ let tests =
         "missing development dependencies are omitted like Rust";
       File_util.remove_tree
         (File_util.path_of_parts root ["node_modules"; "regular"]);
+      let previous_runtime = Sys.getenv_opt "RESCRIPT_RUNTIME" in
+      Unix.putenv "RESCRIPT_RUNTIME" (Filename.concat root "missing-runtime");
+      let missing_dependency_error =
+        Fun.protect
+          ~finally:(fun () ->
+            match previous_runtime with
+            | Some value -> Unix.putenv "RESCRIPT_RUNTIME" value
+            | None -> Test_support.unsetenv "RESCRIPT_RUNTIME")
+          (fun () ->
+            try
+              ignore (compiler_args source);
+              None
+            with Build.Error message -> Some message)
+      in
       check
-        (try
-           ignore (compiler_args source);
-           false
-         with Build.Error message ->
-           Test_support.contains_text message
-             "Expected to find dependent package regular of compiler-args-test")
-        "missing regular dependencies produce a contextual error";
+        (match missing_dependency_error with
+        | Some message ->
+          Test_support.contains_text message
+            "Expected to find dependent package regular of compiler-args-test"
+        | None -> false)
+        "dependency resolution precedes runtime resolution";
       let missing_source = Filename.concat root "src/Missing.res" in
       check
         (try
