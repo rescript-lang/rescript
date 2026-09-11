@@ -93,6 +93,8 @@ opam exec -- dune runtest tests/rewatch_ounit_tests
 rewatch-ocaml/tests/check_config_acceptance.sh
 rewatch-ocaml/tests/check_command_validation.sh
 rewatch-ocaml/tests/check_interactive_output.sh
+rewatch-ocaml/tests/check_windows_job_stub.sh "$WINDOWS_CC" \
+  "$WINDOWS_OCAML_INCLUDE"
 sh rewatch-ocaml/tests/run.sh \
   "$PWD/_build/default/rewatch-ocaml/rescript_ocaml.exe"
 ```
@@ -119,14 +121,20 @@ scope.
 ## Platform status
 
 Windows support is required for completion, even though runtime verification is
-not available in the current Linux development environment. Subprocesses use
-the cross-platform `spawn` library, which uses `CreateProcess` on Windows.
+not available in the current Linux development environment. Unix subprocesses
+use the cross-platform `spawn` library. Windows uses a narrow native
+`CreateProcessW` owner so it can establish Job Object ownership before a child
+starts running.
 Compiler output is captured through close-on-exec pipes drained by blocking
 reader threads, avoiding reliance on Windows `select` support for anonymous
-pipes. Watch mode uses long-lived filesystem-event handles through Luv/libuv
-and retains the snapshot-based polling loop only as a runtime fallback. Pipe
-inheritance/termination, the native watcher, and the lock lifecycle still
-require a Windows cross-build and runtime verification.
+pipes. Each child is attached to a retained Windows Job Object so cancellation
+can terminate descendants after the direct process has exited; the native stub
+check above compiles that API boundary with warnings as errors when given a
+Windows-targeting C compiler and its matching OCaml header directory. Watch mode
+uses long-lived filesystem-event handles through Luv/libuv and retains the
+snapshot-based polling loop only as a runtime fallback. Job assignment and
+pipe-tree cancellation, the native watcher, and the lock lifecycle still
+require native Windows runtime verification.
 `PROGRESS.md` tracks the remaining portability blockers. Shared path
 construction uses OCaml's `Filename` APIs so Windows separators and drive roots
 are not hard-coded assumptions.

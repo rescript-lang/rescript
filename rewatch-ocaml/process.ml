@@ -45,6 +45,7 @@ type child_wait = {
 
 type 'a running = {
   payload: 'a;
+  process: Platform.process;
   pid: int;
   child_wait: child_wait;
 }
@@ -202,8 +203,9 @@ let launch ?env ~notifier payload job =
   let opened_pipes = ref None in
   let stdout_capture = ref None in
   let stderr_capture = ref None in
-  let child_pid = ref None in
+  let child_process = ref None in
   let child_wait = ref None in
+  let termination_failed = ref false in
   try
     let pipes = Platform.create_capture_pipes () in
     opened_pipes := Some pipes;
@@ -212,46 +214,73 @@ let launch ?env ~notifier payload job =
     stdout_capture := Some stdout;
     let stderr = start_capture stderr_read in
     stderr_capture := Some stderr;
-    let pid =
+    let process =
       Platform.spawn ~env ~cwd:job.cwd ~program:job.program ~args:job.args
         ~stdout:stdout_write ~stderr:stderr_write
     in
-    child_pid := Some pid;
+    child_process := Some process;
+    let pid = Platform.process_id process in
     close_noerr stdout_write;
     close_noerr stderr_write;
     let wait = start_child_wait pid notifier stdout stderr in
     child_wait := Some wait;
     restore_signals ();
-    {payload; pid; child_wait = wait}
+    {payload; process; pid; child_wait = wait}
   with exn ->
     Option.iter
       (fun ((stdout_read, stdout_write), (stderr_read, stderr_write)) ->
         Option.iter
-          (fun pid ->
+          (fun process ->
+            let pid = Platform.process_id process in
             let root_reaped =
               match !child_wait with
               | Some wait -> Option.is_some (Atomic.get wait.direct_outcome)
               | None -> false
             in
-            Platform.signal_process_tree ~root_reaped pid Sys.sigkill;
-            if Option.is_none !child_wait then
+            if
+              not
+                (Platform.signal_process_tree ~root_reaped process Sys.sigkill)
+            then termination_failed := true;
+            if (not !termination_failed) && Option.is_none !child_wait then
               try ignore (Unix.waitpid [] pid) with Unix.Unix_error _ -> ())
-          !child_pid;
+          !child_process;
         close_noerr stdout_write;
         close_noerr stderr_write;
         if Option.is_none !stdout_capture then close_noerr stdout_read;
         if Option.is_none !stderr_capture then close_noerr stderr_read;
         (match !child_wait with
-        | Some wait -> Thread.join wait.thread
-        | None ->
+        | Some wait when not !termination_failed -> Thread.join wait.thread
+        | Some _ -> ()
+        | None when (not !termination_failed) && Option.is_some !child_process ->
           Option.iter
             (fun (capture : capture) -> Thread.join capture.thread)
             !stdout_capture;
           Option.iter
             (fun (capture : capture) -> Thread.join capture.thread)
-            !stderr_capture))
+            !stderr_capture
+        | None -> ()))
       !opened_pipes;
-    let exn = try restore_signals (); exn with signal_exn -> signal_exn in
+    let release_error =
+      try
+        Option.iter Platform.release_process !child_process;
+        None
+      with release_exn -> Some release_exn
+    in
+    let restore_error =
+      try
+        restore_signals ();
+        None
+      with signal_exn -> Some signal_exn
+    in
+    let exn =
+      if !termination_failed then
+        Failure "Could not terminate a partially launched subprocess tree"
+      else
+        match (restore_error, release_error) with
+        | Some signal_exn, _ -> signal_exn
+        | None, Some release_exn -> release_exn
+        | None, None -> exn
+    in
     raise exn
 
 let wait_for_running ?(poll = fun () -> ()) notifier active =
@@ -290,10 +319,15 @@ let terminate_running children =
     in
     let signal_group signal child =
       let root_reaped = root_identity_lost child in
-      Platform.signal_process_tree ~root_reaped child.pid signal
+      Platform.signal_process_tree ~root_reaped child.process signal
+    in
+    let signal_all signal =
+      List.fold_left
+        (fun succeeded child -> signal_group signal child && succeeded)
+        true children
     in
     let graceful_signal = Platform.graceful_termination_signal in
-    List.iter (signal_group graceful_signal) children;
+    let graceful_succeeded = signal_all graceful_signal in
     let deadline = Unix.gettimeofday () +. 0.25 in
     let rec wait_until_deadline children =
       let remaining =
@@ -309,9 +343,22 @@ let terminate_running children =
     ignore (wait_until_deadline children);
     (* Every original process group needs escalation because a direct child can
        exit while a PPX or helper in its group remains alive. *)
-    if Platform.escalate_process_groups then
-      List.iter (signal_group Sys.sigkill) children;
-    List.iter (fun child -> Thread.join child.child_wait.thread) children)
+    let escalation_succeeded =
+      if Platform.escalate_process_groups then signal_all Sys.sigkill else true
+    in
+    if graceful_succeeded && escalation_succeeded then
+      List.iter
+        (fun child ->
+          Thread.join child.child_wait.thread;
+          Platform.release_process child.process)
+        children
+    else (
+      List.iter (fun child -> Platform.release_process child.process) children;
+      failwith "Could not terminate a subprocess tree"))
+
+let release_running child =
+  Thread.join child.child_wait.thread;
+  Platform.release_process child.process
 
 let run_parallel_with_notifier ~max_jobs ~poll ~on_complete notifier jobs =
   let indexed = List.mapi (fun index job -> (index, job)) jobs in
@@ -340,6 +387,7 @@ let run_parallel_with_notifier ~max_jobs ~poll ~on_complete notifier jobs =
       with_signal_restore restore_signals (fun () ->
         active :=
           List.filter (fun running -> running.pid <> child.pid) !active;
+        release_running child;
         results.(child.payload) <- Some result;
         on_complete child.payload);
       schedule queued
@@ -512,7 +560,8 @@ let run_dependency_graph_with_notifier ~max_jobs ~is_fatal ~poll notifier works
       in
       with_signal_restore restore_signals (fun () ->
         active :=
-          List.filter (fun running -> running.pid <> child.pid) !active);
+          List.filter (fun running -> running.pid <> child.pid) !active;
+        release_running child);
       (try
          match next child.payload.value (Some result) with
          | Some job ->
@@ -556,7 +605,9 @@ let run ?env ?poll ~cwd program args =
         wait_for_running ~poll notifier [child]
       in
       reaped := true;
-      with_signal_restore restore_signals (fun () -> result)
+      with_signal_restore restore_signals (fun () ->
+        release_running child;
+        result)
     with exn ->
       if not !reaped then terminate_running [child];
       raise exn)

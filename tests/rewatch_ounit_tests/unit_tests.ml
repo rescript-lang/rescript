@@ -298,6 +298,17 @@ let tests =
   check
     (Platform_windows.process_is_active ~run:(fun _ _ -> None) "123")
     "a failed Windows tasklist probe conservatively preserves the lock";
+  check
+    (Platform_windows.program_for_working_directory ~cwd:"project"
+       "tools/compiler.exe"
+    = Filename.concat "project" "tools/compiler.exe")
+    "Windows resolves relative executable paths against the child working \
+     directory";
+  check
+    (Platform_windows.program_for_working_directory ~cwd:"project"
+       "/toolchain/compiler.exe"
+    = "/toolchain/compiler.exe")
+    "Windows preserves absolute executable paths";
   let scheduler_root = Filename.temp_file "rewatch-ocaml-scheduler-" "" in
   Sys.remove scheduler_root;
   Unix.mkdir scheduler_root 0o755;
