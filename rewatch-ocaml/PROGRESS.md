@@ -2561,7 +2561,10 @@ OCaml versus 123 ms Rust, exactly seven parser and seven compiler calls per
 implementation, identical generated output, stable file descriptors and task
 counts, and no RSS growth. The complete canonical 48-test rewatch suite also
 passed against the same OCaml executable and left no watcher or testrepo change
-behind.
+behind. `opam exec -- make test-all` subsequently passed the repository-wide
+gate at `9cfde3697`, including formatting, compiler and runtime tests, both
+GenType projects, analysis and reanalyze, tools, and the packaged OCaml rewatch
+canonical suite. It likewise left the worktree clean and no watcher running.
 
 At the earlier `a4b0728b2f` checkpoint on the quiet, powered host, the five-run
 interleaved release gate measured a 5.455 s OCaml median against 4.644 s Rust
