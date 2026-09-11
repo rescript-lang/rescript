@@ -7,6 +7,9 @@ ocaml=${2:-$root/_build/default/rewatch-ocaml/rescript_ocaml.exe}
 rust=$(realpath "$rust")
 ocaml=$(realpath "$ocaml")
 work=$(mktemp -d "${TMPDIR:-/tmp}/rewatch-command-validation-XXXXXX")
+# Compiler diagnostics contain canonical paths. Resolve platform aliases such
+# as macOS's /var -> /private/var before deriving paths used for comparison.
+work=$(realpath "$work")
 background_pids=""
 cleanup() {
   for pid in $background_pids; do
