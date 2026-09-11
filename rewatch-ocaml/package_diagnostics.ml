@@ -4,7 +4,7 @@ let for_package ~is_local (config : Config.t) =
     let report_suffix =
       Package_metadata.issue_tracker_url config.root
       |> Option.map (fun url ->
-           "\nPlease report this to the package maintainer: " ^ url)
+          "\nPlease report this to the package maintainer: " ^ url)
       |> Option.value ~default:""
     in
     List.map
@@ -20,22 +20,30 @@ let report_missing_source_folder (config : Config.t) path =
     else path
   in
   Printf.eprintf
-    "ERROR:\nCould not read folder: %S. Specified in dependency: %s, located %S...\n%!"
+    "ERROR:\n\
+     Could not read folder: %S. Specified in dependency: %s, located %S...\n\
+     %!"
     relative config.name config.root
 
 let report_missing_sources ~is_root (config : Config.t) =
   if (not is_root) && not config.sources_defined then
     Printf.eprintf
-      "WARN:\nPackage '%s' has not defined any sources, but is not the root package. This is likely a mistake. It is located: %s\n%!"
+      "WARN:\n\
+       Package '%s' has not defined any sources, but is not the root package. \
+       This is likely a mistake. It is located: %s\n\
+       %!"
       config.name config.root
 
 let validate_metadata (config : Config.t) =
   match Package_metadata.package_name config.root with
   | Error message ->
-    raise
-      (Project_context.Error ("Could not initialize build: " ^ message))
+    raise (Project_context.Error ("Could not initialize build: " ^ message))
   | Ok (Some package_name) when package_name <> config.name ->
     Printf.eprintf
-      "WARN:\n\nPackage name mismatch for %s:\nThe package.json name is %S, while the rescript.json name is %S\nThis inconsistency will cause issues with package resolution.\n\n%!"
+      "WARN:\n\n\
+       Package name mismatch for %s:\n\
+       The package.json name is %S, while the rescript.json name is %S\n\
+       This inconsistency will cause issues with package resolution.\n\n\
+       %!"
       config.root package_name config.name
   | Ok (Some _) | Ok None -> ()

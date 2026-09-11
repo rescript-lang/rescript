@@ -1,7 +1,6 @@
 let resolve_program ~path_separator ~executable_extensions ~search_directories
     ~executable_is_usable ~cwd program =
-  if
-    (not (Filename.is_implicit program)) || Filename.dirname program <> "."
+  if (not (Filename.is_implicit program)) || Filename.dirname program <> "."
   then program
   else
     let path_directories =
@@ -10,25 +9,24 @@ let resolve_program ~path_separator ~executable_extensions ~search_directories
     in
     search_directories ~cwd path_directories
     |> List.find_map (fun directory ->
-         let directory =
-           let directory = String.trim directory in
-           let length = String.length directory in
-           let directory =
-             if
-               length >= 2 && directory.[0] = '"'
-               && directory.[length - 1] = '"'
-             then String.sub directory 1 (length - 2)
-             else directory
-           in
-           if directory = "" then cwd
-           else if Filename.is_relative directory then
-             Filename.concat cwd directory
-           else directory
-         in
-         executable_extensions ~program
-         |> List.find_map (fun extension ->
-              let candidate = Filename.concat directory (program ^ extension) in
-              if executable_is_usable candidate then Some candidate else None))
+        let directory =
+          let directory = String.trim directory in
+          let length = String.length directory in
+          let directory =
+            if
+              length >= 2 && directory.[0] = '"' && directory.[length - 1] = '"'
+            then String.sub directory 1 (length - 2)
+            else directory
+          in
+          if directory = "" then cwd
+          else if Filename.is_relative directory then
+            Filename.concat cwd directory
+          else directory
+        in
+        executable_extensions ~program
+        |> List.find_map (fun extension ->
+            let candidate = Filename.concat directory (program ^ extension) in
+            if executable_is_usable candidate then Some candidate else None))
     |> Option.value ~default:program
 
 let process_is_active ~probe value =

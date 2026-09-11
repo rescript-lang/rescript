@@ -38,8 +38,7 @@ let post_build_command ~command ~output =
   let environment =
     Unix.environment () |> Array.to_list
     |> List.filter (fun entry ->
-         not
-           (String.starts_with ~prefix (String.lowercase_ascii entry)))
+        not (String.starts_with ~prefix (String.lowercase_ascii entry)))
     |> List.cons (variable ^ "=" ^ output)
     |> Spawn.Env.of_list
   in
@@ -74,8 +73,10 @@ external close_process_job : process_job -> unit
 
 let quote_argument argument =
   if
-    argument = "" || String.contains argument ' '
-    || String.contains argument '\t' || String.contains argument '"'
+    argument = ""
+    || String.contains argument ' '
+    || String.contains argument '\t'
+    || String.contains argument '"'
   then Filename.quote argument
   else argument
 
@@ -145,8 +146,8 @@ let defer_termination_signals () =
       ignore (Sys.signal Sys.sigterm previous_term);
       List.rev !pending
       |> List.iter (fun signal ->
-           dispatch signal
-             (if signal = Sys.sigint then previous_int else previous_term)))
+          dispatch signal
+            (if signal = Sys.sigint then previous_int else previous_term)))
 
 let graceful_termination_signal = Sys.sigkill
 let escalate_process_groups = false
@@ -180,8 +181,8 @@ let parse_tasklist_csv_line line =
 
 let tasklist_probe ~pid output =
   let lines =
-    output |> String.trim |> String.split_on_char '\n'
-    |> List.map String.trim |> List.filter (( <> ) "")
+    output |> String.trim |> String.split_on_char '\n' |> List.map String.trim
+    |> List.filter (( <> ) "")
   in
   let rows = List.map parse_tasklist_csv_line lines in
   let valid_row = function

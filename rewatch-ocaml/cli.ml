@@ -32,8 +32,7 @@ let verbosity =
   in
   let quiet =
     Arg.(
-      value & flag_all
-      & info ["q"; "quiet"] ~doc:"Decrease logging verbosity.")
+      value & flag_all & info ["q"; "quiet"] ~doc:"Decrease logging verbosity.")
   in
   Term.term_result
     (let+ verbose and+ quiet in
@@ -44,8 +43,7 @@ let verbosity =
 
 let folder =
   Arg.(
-    value
-    & pos 0 string "."
+    value & pos 0 string "."
     & info [] ~docv:"FOLDER"
         ~doc:"Path to the project or subproject containing rescript.json.")
 
@@ -57,13 +55,15 @@ let prod =
 let features =
   let parse value =
     let values =
-      String.split_on_char ',' value |> List.map String.trim
+      String.split_on_char ',' value
+      |> List.map String.trim
       |> List.filter (fun value -> value <> "")
     in
     if values = [] then
       Error
         (`Msg
-          "--features must not be empty. Omit the flag to build with all features active.")
+           "--features must not be empty. Omit the flag to build with all \
+            features active.")
     else Ok values
   in
   let print formatter values =
@@ -107,8 +107,7 @@ let filter =
 
 let no_timing =
   Arg.(
-    value
-    & opt ~vopt:true bool false
+    value & opt ~vopt:true bool false
     & info ["n"; "no-timing"] ~docv:"BOOL" ~doc:"Disable output timing.")
 
 let clear_screen =
@@ -185,11 +184,13 @@ let command_info name doc = Cmd.info name ~doc
 
 let root =
   let build =
-    Cmd.make (command_info "build" "Build the project.")
+    Cmd.make
+      (command_info "build" "Build the project.")
       (build_term ~watch:false)
   in
   let watch =
-    Cmd.make (command_info "watch" "Build, then start a watcher.")
+    Cmd.make
+      (command_info "watch" "Build, then start a watcher.")
       (build_term ~watch:true)
   in
   let clean =
@@ -218,7 +219,8 @@ let root =
          | Some command ->
            `Error (false, Printf.sprintf "unknown command %S" command))
     in
-    Cmd.make (command_info "help" "Print this message or command help.")
+    Cmd.make
+      (command_info "help" "Print this message or command help.")
       help_term
   in
   let info =
@@ -226,12 +228,15 @@ let root =
       [
         `S "NOTES";
         `P
-          "If no command is provided, the $(b,build) command is run by default. See $(b,rescript help build) for more information.";
+          "If no command is provided, the $(b,build) command is run by \
+           default. See $(b,rescript help build) for more information.";
         `P
-          "To create a new ReScript project, or to add ReScript to an existing project, use https://github.com/rescript-lang/create-rescript-app.";
+          "To create a new ReScript project, or to add ReScript to an existing \
+           project, use https://github.com/rescript-lang/create-rescript-app.";
       ]
     in
-    Cmd.info "rescript" ~version:("rescript " ^ Rewatch_version.version)
+    Cmd.info "rescript"
+      ~version:("rescript " ^ Rewatch_version.version)
       ~doc:"Fast, Simple, Fully Typed JavaScript from the Future" ~man
   in
   Cmd.group info ~default:(build_term ~watch:false)
@@ -252,9 +257,13 @@ type display_request = Help_requested | Version_requested
 let normalize_argv argv =
   let is_short_global_cluster argument =
     let length = String.length argument in
-    length > 1 && argument.[0] = '-' && argument.[1] <> '-'
+    length > 1
+    && argument.[0] = '-'
+    && argument.[1] <> '-'
     && String.for_all
-         (function 'v' | 'q' | 'h' | 'V' -> true | _ -> false)
+         (function
+           | 'v' | 'q' | 'h' | 'V' -> true
+           | _ -> false)
          (String.sub argument 1 (length - 1))
   in
   let short_cluster_contains character argument =
@@ -262,19 +271,26 @@ let normalize_argv argv =
     && String.contains_from argument 1 character
   in
   let is_verbosity = function
-  | "-v" | "-vv" | "-vvv" | "-vvvv" | "--verbose" | "-q" | "-qq"
-  | "-qqq" | "-qqqq" | "--quiet" -> true
-  | argument ->
-    is_short_global_cluster argument
-    && not
-         (short_cluster_contains 'h' argument
-         || short_cluster_contains 'V' argument)
+    | "-v" | "-vv" | "-vvv" | "-vvvv" | "--verbose" | "-q" | "-qq" | "-qqq"
+    | "-qqqq" | "--quiet" ->
+      true
+    | argument ->
+      is_short_global_cluster argument
+      && not
+           (short_cluster_contains 'h' argument
+           || short_cluster_contains 'V' argument)
   in
-  let is_help = function "-h" | "--help" -> true | _ -> false in
-  let is_version = function "-V" | "--version" -> true | _ -> false in
+  let is_help = function
+    | "-h" | "--help" -> true
+    | _ -> false
+  in
+  let is_version = function
+    | "-V" | "--version" -> true
+    | _ -> false
+  in
   let is_global argument =
-    is_short_global_cluster argument || is_verbosity argument
-    || is_help argument || is_version argument
+    is_short_global_cluster argument
+    || is_verbosity argument || is_help argument || is_version argument
   in
   let display_request argument =
     if argument = "--help" then Some Help_requested
@@ -292,65 +308,63 @@ let normalize_argv argv =
       first 1
     else None
   in
-  let first_display_request arguments = List.find_map display_request arguments in
+  let first_display_request arguments =
+    List.find_map display_request arguments
+  in
   let is_command = function
-  | "build" | "watch" | "clean" | "format" | "compiler-args" | "help" ->
-    true
-  | _ -> false
+    | "build" | "watch" | "clean" | "format" | "compiler-args" | "help" -> true
+    | _ -> false
   in
   let rec normalize_short_booleans = function
-  | [] -> []
-  | "--" :: rest -> "--" :: rest
-  | ("-n" | "--no-timing") :: value :: rest
-    when value <> "--"
-         && (String.length value = 0 || value.[0] <> '-') ->
-    ("--no-timing=" ^ value) :: normalize_short_booleans rest
-  | ("-n" | "--no-timing") :: rest ->
-    "--no-timing=true" :: normalize_short_booleans rest
-  | "-n=true" :: rest -> "--no-timing=true" :: normalize_short_booleans rest
-  | "-n=false" :: rest ->
-    "--no-timing=false" :: normalize_short_booleans rest
-  | argument :: rest -> argument :: normalize_short_booleans rest
+    | [] -> []
+    | "--" :: rest -> "--" :: rest
+    | ("-n" | "--no-timing") :: value :: rest
+      when value <> "--" && (String.length value = 0 || value.[0] <> '-') ->
+      ("--no-timing=" ^ value) :: normalize_short_booleans rest
+    | ("-n" | "--no-timing") :: rest ->
+      "--no-timing=true" :: normalize_short_booleans rest
+    | "-n=true" :: rest -> "--no-timing=true" :: normalize_short_booleans rest
+    | "-n=false" :: rest -> "--no-timing=false" :: normalize_short_booleans rest
+    | argument :: rest -> argument :: normalize_short_booleans rest
   in
   let rec normalize_help = function
-  | [] -> []
-  | "--" :: rest -> "--" :: rest
-  | ("-h" | "--help") :: rest -> "--help=plain" :: normalize_help rest
-  | argument :: rest
-    when is_short_global_cluster argument
-         && short_cluster_contains 'h' argument
-         &&
-         let help_index = String.index_from argument 1 'h' in
-         (not (short_cluster_contains 'V' argument))
-         || help_index < String.index_from argument 1 'V' ->
-    "--help=plain" :: normalize_help rest
-  | argument :: rest -> argument :: normalize_help rest
+    | [] -> []
+    | "--" :: rest -> "--" :: rest
+    | ("-h" | "--help") :: rest -> "--help=plain" :: normalize_help rest
+    | argument :: rest
+      when is_short_global_cluster argument
+           && short_cluster_contains 'h' argument
+           &&
+           let help_index = String.index_from argument 1 'h' in
+           (not (short_cluster_contains 'V' argument))
+           || help_index < String.index_from argument 1 'V' ->
+      "--help=plain" :: normalize_help rest
+    | argument :: rest -> argument :: normalize_help rest
   in
   let rec reject_subcommand_version = function
-  | [] -> []
-  | "--" :: rest -> "--" :: rest
-  | "--version" :: rest -> "-V" :: reject_subcommand_version rest
-  | argument :: rest -> argument :: reject_subcommand_version rest
+    | [] -> []
+    | "--" :: rest -> "--" :: rest
+    | "--version" :: rest -> "-V" :: reject_subcommand_version rest
+    | argument :: rest -> argument :: reject_subcommand_version rest
   in
   let explicit_command arguments =
     let rec loop globals = function
-    | [] | "--" :: _ -> None
-    | argument :: rest when is_global argument ->
-      loop (argument :: globals) rest
-    | command :: rest when is_command command ->
-      Some (List.rev globals, command, rest)
-    | _ -> None
+      | [] | "--" :: _ -> None
+      | argument :: rest when is_global argument ->
+        loop (argument :: globals) rest
+      | command :: rest when is_command command ->
+        Some (List.rev globals, command, rest)
+      | _ -> None
     in
     loop [] arguments
   in
   let partition_implicit arguments =
     let rec loop globals others = function
-    | [] -> (List.rev globals, List.rev others)
-    | "--" :: rest ->
-      (List.rev globals, List.rev_append others ("--" :: rest))
-    | argument :: rest when is_global argument ->
-      loop (argument :: globals) others rest
-    | argument :: rest -> loop globals (argument :: others) rest
+      | [] -> (List.rev globals, List.rev others)
+      | "--" :: rest -> (List.rev globals, List.rev_append others ("--" :: rest))
+      | argument :: rest when is_global argument ->
+        loop (argument :: globals) others rest
+      | argument :: rest -> loop globals (argument :: others) rest
     in
     loop [] [] arguments
   in
@@ -359,21 +373,20 @@ let normalize_argv argv =
   | executable :: arguments ->
     let routed =
       match explicit_command arguments with
-      | Some (globals, command, rest) ->
-        (match first_display_request globals with
+      | Some (globals, command, rest) -> (
+        match first_display_request globals with
         | Some Help_requested -> [executable; "--help"]
         | Some Version_requested -> [executable; "--version"]
         | None ->
           executable :: command :: reject_subcommand_version (globals @ rest))
-      | None ->
+      | None -> (
         let globals, others = partition_implicit arguments in
-        (match first_display_request globals with
+        match first_display_request globals with
         | Some Help_requested -> [executable; "--help"]
         | Some Version_requested -> [executable; "--version"]
         | None -> executable :: "build" :: (globals @ others))
     in
-    Array.of_list
-      (routed |> normalize_short_booleans |> normalize_help)
+    Array.of_list (routed |> normalize_short_booleans |> normalize_help)
 
 let eval argv =
   if not (argv_is_utf_8 argv) then (

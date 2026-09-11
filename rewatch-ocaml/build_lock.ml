@@ -2,8 +2,9 @@ type watch = {path: string; pid: string}
 
 let read_owner_contents path =
   let channel = open_in_bin path in
-  Fun.protect ~finally:(fun () -> close_in_noerr channel) (fun () ->
-    really_input_string channel (in_channel_length channel))
+  Fun.protect
+    ~finally:(fun () -> close_in_noerr channel)
+    (fun () -> really_input_string channel (in_channel_length channel))
 
 let read_owner path =
   try Some (read_owner_contents path) with Sys_error _ -> None
@@ -29,17 +30,17 @@ let valid_owner value =
 
 let malformed_error () =
   Project_context.Error
-    "Could not start Rescript build: Could not parse lockfile PID\n  (try removing it and running the command again)"
+    "Could not start Rescript build: Could not parse lockfile PID\n\
+    \  (try removing it and running the command again)"
 
 let process_is_active ?poll value =
   Platform.process_is_active value ~run:(fun program args ->
-    try
-      let result =
-        Process.run ?poll ~cwd:(Filename.get_temp_dir_name ()) program args
-      in
-      Some (result.Process.status, result.stdout)
-    with
-    | Process.Error _ | Unix.Unix_error _ | Sys_error _ -> None)
+      try
+        let result =
+          Process.run ?poll ~cwd:(Filename.get_temp_dir_name ()) program args
+        in
+        Some (result.Process.status, result.stdout)
+      with Process.Error _ | Unix.Unix_error _ | Sys_error _ -> None)
 
 let with_candidate ~lock_dir prefix pid action =
   (* Termination is deferred until candidate cleanup has an owner because the
@@ -99,8 +100,7 @@ let restore_after_exception restore_signals exception_raised =
   with signal_exception -> signal_exception
 
 let unlink_existing path =
-  try Unix.unlink path
-  with Unix.Unix_error (Unix.ENOENT, _, _) -> ()
+  try Unix.unlink path with Unix.Unix_error (Unix.ENOENT, _, _) -> ()
 
 let release_owned path pid =
   if read_owner_for_release path = Some pid then unlink_existing path
@@ -116,48 +116,48 @@ let with_build ?(poll = fun () -> ()) root action =
   let path = Filename.concat lock_dir "build.lock" in
   let pid = string_of_int (Unix.getpid ()) in
   with_candidate ~lock_dir ".build-lock-" pid (fun candidate ->
-    let rec acquire attempts =
-      poll ();
-      if attempts = 0 then
-        raise
-          (Project_context.Error
-             "Timed out waiting for another ReScript build to finish");
-      let restore_signals = Platform.defer_termination_signals () in
-      let linked =
-        try
-          Unix.link candidate path;
-          true
-        with
-        | Unix.Unix_error (Unix.EEXIST, _, _) -> false
-        | exception_raised ->
-          raise (restore_after_exception restore_signals exception_raised)
-      in
-      if linked then
-        let released = ref false in
-        let release () =
-          if not !released then (
-            release_owned path pid;
-            released := true)
+      let rec acquire attempts =
+        poll ();
+        if attempts = 0 then
+          raise
+            (Project_context.Error
+               "Timed out waiting for another ReScript build to finish");
+        let restore_signals = Platform.defer_termination_signals () in
+        let linked =
+          try
+            Unix.link candidate path;
+            true
+          with
+          | Unix.Unix_error (Unix.EEXIST, _, _) -> false
+          | exception_raised ->
+            raise (restore_after_exception restore_signals exception_raised)
         in
-        Fun.protect ~finally:release (fun () ->
-          unlink_existing candidate;
+        if linked then
+          let released = ref false in
+          let release () =
+            if not !released then (
+              release_owned path pid;
+              released := true)
+          in
+          Fun.protect ~finally:release (fun () ->
+              unlink_existing candidate;
+              restore_signals ();
+              action ~release)
+        else (
           restore_signals ();
-          action ~release)
-      else (
-        restore_signals ();
-        match read_owner path with
-        | Some owner when not (valid_owner owner) -> raise (malformed_error ())
-        | Some owner when process_is_active ~poll owner ->
-          if attempts = 1200 then
-            print_endline "Waiting for other build to finish...";
-          retry_delay poll;
-          acquire (attempts - 1)
-        | _ ->
-          if not (clear_stale ~poll ~candidate path) then
+          match read_owner path with
+          | Some owner when not (valid_owner owner) ->
+            raise (malformed_error ())
+          | Some owner when process_is_active ~poll owner ->
+            if attempts = 1200 then
+              print_endline "Waiting for other build to finish...";
             retry_delay poll;
-          acquire (attempts - 1))
-    in
-    acquire 1200)
+            acquire (attempts - 1)
+          | _ ->
+            if not (clear_stale ~poll ~candidate path) then retry_delay poll;
+            acquire (attempts - 1))
+      in
+      acquire 1200)
 
 let with_watch root action =
   let lock_dir = Filename.concat root "lib" in
@@ -165,44 +165,46 @@ let with_watch root action =
   let path = Filename.concat lock_dir "watch.lock" in
   let pid = string_of_int (Unix.getpid ()) in
   with_candidate ~lock_dir ".watch-lock-" pid (fun candidate ->
-    let rec acquire attempts =
-      if attempts = 0 then
-        raise
-          (Project_context.Error
-             "Timed out recovering a stale ReScript watch lock");
-      let restore_signals = Platform.defer_termination_signals () in
-      let linked =
-        try
-          Unix.link candidate path;
-          true
-        with
-        | Unix.Unix_error (Unix.EEXIST, _, _) -> false
-        | exception_raised ->
-          raise (restore_after_exception restore_signals exception_raised)
-      in
-      if linked then
-        let watch = {path; pid} in
-        Fun.protect
-          ~finally:(fun () -> release_owned path pid)
-          (fun () ->
-            unlink_existing candidate;
-            restore_signals ();
-            action watch)
-      else (
-        restore_signals ();
-        match read_owner path with
-        | Some owner when not (valid_owner owner) -> raise (malformed_error ())
-        | Some owner when process_is_active owner ->
+      let rec acquire attempts =
+        if attempts = 0 then
           raise
             (Project_context.Error
-               (Printf.sprintf
-                  "Could not start Rescript build: A ReScript build is already running. The process ID (PID) is %s"
-                  owner))
-        | _ ->
-          if not (clear_stale ~candidate path) then
-            ignore (Unix.select [] [] [] 0.01);
-          acquire (attempts - 1))
-    in
-    acquire 1000)
+               "Timed out recovering a stale ReScript watch lock");
+        let restore_signals = Platform.defer_termination_signals () in
+        let linked =
+          try
+            Unix.link candidate path;
+            true
+          with
+          | Unix.Unix_error (Unix.EEXIST, _, _) -> false
+          | exception_raised ->
+            raise (restore_after_exception restore_signals exception_raised)
+        in
+        if linked then
+          let watch = {path; pid} in
+          Fun.protect
+            ~finally:(fun () -> release_owned path pid)
+            (fun () ->
+              unlink_existing candidate;
+              restore_signals ();
+              action watch)
+        else (
+          restore_signals ();
+          match read_owner path with
+          | Some owner when not (valid_owner owner) ->
+            raise (malformed_error ())
+          | Some owner when process_is_active owner ->
+            raise
+              (Project_context.Error
+                 (Printf.sprintf
+                    "Could not start Rescript build: A ReScript build is \
+                     already running. The process ID (PID) is %s"
+                    owner))
+          | _ ->
+            if not (clear_stale ~candidate path) then
+              ignore (Unix.select [] [] [] 0.01);
+            acquire (attempts - 1))
+      in
+      acquire 1000)
 
 let is_owned watch = read_owner watch.path = Some watch.pid

@@ -28,7 +28,7 @@ let dependency_head dependency =
   | [] -> dependency
 
 let compiler_namespace (config : Config.t) =
-  match config.namespace, config.namespace_entry with
+  match (config.namespace, config.namespace_entry) with
   | Some namespace, Some _ -> Some ("@" ^ namespace)
   | Some namespace, None -> Some namespace
   | None, _ -> None
@@ -42,46 +42,47 @@ let validate_visible_namespaces ~(root_config : Config.t)
     graph_packages;
   graph_packages
   |> List.sort (fun first second ->
-       String.compare first.Build_types.graph_root second.graph_root)
+      String.compare first.Build_types.graph_root second.graph_root)
   |> List.iter (fun consumer ->
-       let visible =
-         consumer
-         :: (consumer.Build_types.graph_dependency_directories
-            |> List.filter_map (fun dependency ->
-                 Hashtbl.find_opt by_root dependency.Build_types.directory))
-       in
-       let namespaces = Hashtbl.create (List.length visible) in
-       visible
-       |> List.sort (fun first second ->
-            String.compare first.Build_types.graph_root second.graph_root)
-       |> List.iter (fun package ->
-            compiler_namespace package.Build_types.graph_compile_config
-            |> Option.iter (fun namespace ->
-                 match Hashtbl.find_opt namespaces namespace with
-                 | None -> Hashtbl.add namespaces namespace package
-                 | Some previous
-                   when previous.Build_types.graph_root = package.graph_root ->
-                   ()
-                 | Some previous ->
-                   let display package =
-                     Printf.sprintf "%s (%s)"
-                       package.Build_types.graph_config.name
-                       (Project_context.relative_to root_config.root
-                          package.graph_root)
-                   in
-                   raise
-                     (Error
-                        (Printf.sprintf
-                           "Could not initialize build: Namespace %s is provided by both %s and %s while building %s. Give the packages distinct namespaces."
-                           namespace (display previous) (display package)
-                           (display consumer))))))
+      let visible =
+        consumer
+        :: (consumer.Build_types.graph_dependency_directories
+           |> List.filter_map (fun dependency ->
+               Hashtbl.find_opt by_root dependency.Build_types.directory))
+      in
+      let namespaces = Hashtbl.create (List.length visible) in
+      visible
+      |> List.sort (fun first second ->
+          String.compare first.Build_types.graph_root second.graph_root)
+      |> List.iter (fun package ->
+          compiler_namespace package.Build_types.graph_compile_config
+          |> Option.iter (fun namespace ->
+              match Hashtbl.find_opt namespaces namespace with
+              | None -> Hashtbl.add namespaces namespace package
+              | Some previous
+                when previous.Build_types.graph_root = package.graph_root ->
+                ()
+              | Some previous ->
+                let display package =
+                  Printf.sprintf "%s (%s)" package.Build_types.graph_config.name
+                    (Project_context.relative_to root_config.root
+                       package.graph_root)
+                in
+                raise
+                  (Error
+                     (Printf.sprintf
+                        "Could not initialize build: Namespace %s is provided \
+                         by both %s and %s while building %s. Give the \
+                         packages distinct namespaces."
+                        namespace (display previous) (display package)
+                        (display consumer))))))
 
 let resolve_dependency
     (modules_by_key : (string, Build_types.global_module) Hashtbl.t)
     namespace_maps_by_name (node : Build_types.global_module) dependency =
   let raw_name = dependency_head dependency in
   let local_name =
-    match node.namespace, String.split_on_char '.' dependency with
+    match (node.namespace, String.split_on_char '.' dependency) with
     | Some namespace, first :: second :: _ when first = namespace -> second
     | _ -> raw_name
   in
@@ -108,18 +109,18 @@ let resolve_dependency
   | _ -> (
     match Hashtbl.find_opt modules_by_key raw_name with
     | Some dependency_node when is_visible dependency_node -> [raw_name]
-    | _ ->
+    | _ -> (
       let explicit_namespaced_module =
         match String.split_on_char '.' dependency with
         | namespace :: module_name :: _ ->
           [module_name ^ "-" ^ namespace; module_name ^ "-@" ^ namespace]
           |> List.find_opt (fun key ->
-               match Hashtbl.find_opt modules_by_key key with
-               | Some dependency_node
-                 when dependency_node.Build_types.namespace = Some namespace
-                      && is_visible dependency_node ->
-                 true
-               | Some _ | None -> false)
+              match Hashtbl.find_opt modules_by_key key with
+              | Some dependency_node
+                when dependency_node.Build_types.namespace = Some namespace
+                     && is_visible dependency_node ->
+                true
+              | Some _ | None -> false)
         | _ -> None
       in
       match explicit_namespaced_module with
@@ -128,11 +129,11 @@ let resolve_dependency
         Hashtbl.find_opt namespace_maps_by_name raw_name
         |> Option.value ~default:[]
         |> List.filter_map (fun (namespace_map : Build_types.namespace_map) ->
-             if
-               namespace_map.package_name = node.package_name
-               || List.mem namespace_map.package_name node.allowed_dependencies
-             then Some namespace_map.key
-             else None))
+            if
+              namespace_map.package_name = node.package_name
+              || List.mem namespace_map.package_name node.allowed_dependencies
+            then Some namespace_map.key
+            else None)))
 
 let resolved_dependencies
     (modules_by_key : (string, Build_types.global_module) Hashtbl.t)
@@ -145,13 +146,14 @@ let resolved_dependencies
 
 let find_cycle modules_by_key namespace_maps build_state =
   let nodes_by_key =
-    Hashtbl.create (Hashtbl.length modules_by_key + Hashtbl.length namespace_maps)
+    Hashtbl.create
+      (Hashtbl.length modules_by_key + Hashtbl.length namespace_maps)
   in
   Hashtbl.iter
     (fun key (node : Build_types.global_module) ->
       let module_name = Source.module_name node.source_path in
       let display_name =
-        match node.namespace, node.namespace_entry with
+        match (node.namespace, node.namespace_entry) with
         | Some namespace, Some entry when entry <> module_name ->
           namespace ^ "." ^ module_name
         | Some namespace, None -> namespace ^ "." ^ module_name
@@ -176,16 +178,14 @@ let find_cycle modules_by_key namespace_maps build_state =
         })
     namespace_maps;
   let graph_nodes =
-    Hashtbl.to_seq_values nodes_by_key |> List.of_seq
-    |> List.sort (fun first second ->
-         String.compare first.key second.key)
+    Hashtbl.to_seq_values nodes_by_key
+    |> List.of_seq
+    |> List.sort (fun first second -> String.compare first.key second.key)
     |> List.map (fun node ->
-         (node, (Build_state.find_exn build_state node.key).dependencies))
+        (node, (Build_state.find_exn build_state node.key).dependencies))
   in
   let name (node, _) = node.key in
-  let blocked_nodes =
-    Graph.cycle_blocked_nodes graph_nodes ~name ~deps:snd
-  in
+  let blocked_nodes = Graph.cycle_blocked_nodes graph_nodes ~name ~deps:snd in
   match blocked_nodes with
   | [] -> None
   | _ ->
@@ -196,30 +196,24 @@ let find_cycle modules_by_key namespace_maps build_state =
         raise
           (Error "cycle-blocked dependency graph contains no detectable cycle")
     in
-    Some
-      {
-        cycle;
-        blocked = List.map name blocked_nodes;
-        nodes_by_key;
-      }
+    Some {cycle; blocked = List.map name blocked_nodes; nodes_by_key}
 
 let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
     ~(stats : Build_types.t) ~parse_step ~on_cleanup =
   let bsc = bsc_path () in
   let graph_packages =
-    Package_graph.discover ~root_config ~prod ~features ~warn_error ~filter ~stats
+    Package_graph.discover ~root_config ~prod ~features ~warn_error ~filter
+      ~stats
   in
   validate_visible_namespaces ~root_config graph_packages;
   let runtime = runtime_path root_config.root in
   let source_map_args =
-    if root_config.source_map_dev && not watch then
-      ["-bs-source-map"; "false"]
+    if root_config.source_map_dev && not watch then ["-bs-source-map"; "false"]
     else root_config.source_map_args
   in
   let compiler_context =
     Compiler_info.make_context ~build_root:root_config.root ~bsc_path:bsc
-      ~runtime_path:runtime
-      ~source_map_args
+      ~runtime_path:runtime ~source_map_args
       ~package_output_specs:(Compiler_info.package_output_specs root_config)
   in
   let cleanup_started = Unix.gettimeofday () in
@@ -237,15 +231,13 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
         Compiler_info.changed_package_output_specs package_context
           package.graph_config
         |> Option.iter (fun previous_specs ->
-             let previous_config =
-               Compiler_info.config_with_package_output_specs
-                 package.graph_compile_config previous_specs
-             in
-             Build_artifacts.remove_public_outputs previous_config
-               package.graph_modules);
-        let compile_assets =
-          Compile_assets.create [package.graph_ocaml_dir]
-        in
+            let previous_config =
+              Compiler_info.config_with_package_output_specs
+                package.graph_compile_config previous_specs
+            in
+            Build_artifacts.remove_public_outputs previous_config
+              package.graph_modules);
+        let compile_assets = Compile_assets.create [package.graph_ocaml_dir] in
         ignore
           (Build_artifacts.cleanup_stale
              ~ocaml_files:
@@ -253,12 +245,11 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
              ~ast_sources:
                (Compile_assets.ast_sources compile_assets
                   package.graph_ocaml_dir)
-             ~root:package.graph_root
-             ~ocaml_dir:package.graph_ocaml_dir
+             ~root:package.graph_root ~ocaml_dir:package.graph_ocaml_dir
              ~source_files:package.graph_source_files
              ~present_source_files:package.graph_present_source_files
-             ~is_local:package.graph_is_local
-             package.graph_compile_config package.graph_modules);
+             ~is_local:package.graph_is_local package.graph_compile_config
+             package.graph_modules);
         Compiler_info.clean_package package.graph_config;
         stats.compiler_cleaned <- true);
       File_util.ensure_dir package.graph_build_dir;
@@ -277,22 +268,20 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
             (Compile_assets.files compile_assets package.graph_ocaml_dir)
           ~ast_sources:
             (Compile_assets.ast_sources compile_assets package.graph_ocaml_dir)
-          ~root:package.graph_root
-          ~ocaml_dir:package.graph_ocaml_dir
+          ~root:package.graph_root ~ocaml_dir:package.graph_ocaml_dir
           ~source_files:package.graph_source_files
           ~present_source_files:package.graph_present_source_files
-          ~is_local:package.graph_is_local
-          package.graph_compile_config package.graph_modules
+          ~is_local:package.graph_is_local package.graph_compile_config
+          package.graph_modules
       in
-      Hashtbl.replace stats.retained.cleanup_results package.graph_root
-        cleanup;
+      Hashtbl.replace stats.retained.cleanup_results package.graph_root cleanup;
       stats.deferred_artifact_cleanup :=
         cleanup.deferred_artifacts @ !(stats.deferred_artifact_cleanup);
       stats.cleaned <- stats.cleaned + List.length cleanup.removed_modules;
-      stats.previous_asts <-
-        stats.previous_asts + cleanup.previous_ast_count;
+      stats.previous_asts <- stats.previous_asts + cleanup.previous_ast_count;
       List.iter
-        (fun module_name -> Hashtbl.replace stats.removed_modules module_name ())
+        (fun module_name ->
+          Hashtbl.replace stats.removed_modules module_name ())
         cleanup.removed_modules)
     graph_packages;
   on_cleanup (Unix.gettimeofday () -. cleanup_started);
@@ -300,35 +289,35 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
   let parse_entries =
     graph_packages
     |> List.concat_map (fun package ->
-         package.graph_modules
-         |> List.concat_map (fun module_ ->
-              let paths =
-                module_.Source.implementation
-                :: Option.to_list module_.Source.interface
-              in
-              let dirty_paths =
-                paths
-                |> List.filter (fun path ->
-                     Build_freshness.source_is_not_older_than_ast compile_assets
-                       ~root:package.graph_root
-                       ~source_mtimes:package.graph_source_mtimes path)
-              in
-              if dirty_paths <> [] then
-                Output.debug ~verbosity:stats.verbosity
-                  ("Generating AST for module: "
-                  ^ Source.compiler_basename package.graph_compile_config
-                      module_.Source.name);
-              let group = package.graph_root ^ "\000" ^ module_.Source.name in
-              List.map (fun path -> (package, path, group)) dirty_paths))
+        package.graph_modules
+        |> List.concat_map (fun module_ ->
+            let paths =
+              module_.Source.implementation
+              :: Option.to_list module_.Source.interface
+            in
+            let dirty_paths =
+              paths
+              |> List.filter (fun path ->
+                  Build_freshness.source_is_not_older_than_ast compile_assets
+                    ~root:package.graph_root
+                    ~source_mtimes:package.graph_source_mtimes path)
+            in
+            if dirty_paths <> [] then
+              Output.debug ~verbosity:stats.verbosity
+                ("Generating AST for module: "
+                ^ Source.compiler_basename package.graph_compile_config
+                    module_.Source.name);
+            let group = package.graph_root ^ "\000" ^ module_.Source.name in
+            List.map (fun path -> (package, path, group)) dirty_paths))
   in
   let parse_completed =
     Output.Progress.start_grouped stats.progress ~step:parse_step ~symbol:"🧱 "
-      ~label:"Parsing" (List.map (fun (_, _, group) -> group) parse_entries)
+      ~label:"Parsing"
+      (List.map (fun (_, _, group) -> group) parse_entries)
   in
   let parse_results =
     Process.run_parallel_map ?poll:stats.process_poll
-      ~on_complete:parse_completed parse_entries
-      ~job:(fun (package, path, _) ->
+      ~on_complete:parse_completed parse_entries ~job:(fun (package, path, _) ->
         Compiler_process.parse_job ~bsc ~build_dir:package.graph_build_dir
           ~config:package.graph_compile_config path)
   in
@@ -358,8 +347,7 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
               then []
               else
                 Compiler_process.ast_dependencies
-                  ~build_dir:package.graph_build_dir
-                  (Source.ast_path path)
+                  ~build_dir:package.graph_build_dir (Source.ast_path path)
           in
           let raw_dependencies =
             List.sort_uniq String.compare
@@ -378,7 +366,8 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
             Source.compiler_basename package.graph_compile_config
               module_.Source.name
           in
-          if Option.is_none (Compile_assets.cmt compile_assets compiler_base) then
+          if Option.is_none (Compile_assets.cmt compile_assets compiler_base)
+          then
             Hashtbl.replace stats.forced_parse_paths
               (Filename.concat package.graph_root module_.Source.implementation)
               ();
@@ -425,34 +414,36 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
   let namespace_maps =
     graph_packages
     |> List.filter_map (fun package ->
-         package.Build_types.graph_compile_config.namespace
-         |> Option.map (fun namespace ->
-              let compiler_name =
-                match package.Build_types.graph_compile_config.namespace_entry with
-                | Some _ -> "@" ^ namespace
-                | None -> namespace
-              in
-              let members =
-                package.graph_modules
-                |> List.filter (fun module_ ->
-                     Some module_.Source.name
-                     <> package.graph_compile_config.namespace_entry)
-                |> List.filter (fun module_ ->
-                     Source.is_non_exotic_module_name module_.Source.name)
-                |> List.map (fun module_ ->
-                     Source.compiler_basename package.graph_compile_config
-                       module_.Source.name)
-                |> List.sort_uniq String.compare
-              in
-              Build_types.
-                {
-                  key = Build_types.namespace_map_key package.graph_root;
-                  compiler_name;
-                  namespace;
-                  package_name = package.graph_config.name;
-                  package_root = package.graph_root;
-                  members;
-                }))
+        package.Build_types.graph_compile_config.namespace
+        |> Option.map (fun namespace ->
+            let compiler_name =
+              match
+                package.Build_types.graph_compile_config.namespace_entry
+              with
+              | Some _ -> "@" ^ namespace
+              | None -> namespace
+            in
+            let members =
+              package.graph_modules
+              |> List.filter (fun module_ ->
+                  Some module_.Source.name
+                  <> package.graph_compile_config.namespace_entry)
+              |> List.filter (fun module_ ->
+                  Source.is_non_exotic_module_name module_.Source.name)
+              |> List.map (fun module_ ->
+                  Source.compiler_basename package.graph_compile_config
+                    module_.Source.name)
+              |> List.sort_uniq String.compare
+            in
+            Build_types.
+              {
+                key = Build_types.namespace_map_key package.graph_root;
+                compiler_name;
+                namespace;
+                package_name = package.graph_config.name;
+                package_root = package.graph_root;
+                members;
+              }))
   in
   List.iter
     (fun (namespace_map : Build_types.namespace_map) ->
@@ -469,27 +460,29 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
     List.map
       (fun (node : Build_types.global_module) ->
         ( node,
-          resolved_dependencies by_key stats.retained.namespace_maps_by_name node ))
+          resolved_dependencies by_key stats.retained.namespace_maps_by_name
+            node ))
       nodes
   in
   let build_state =
-    Build_state.create (List.length source_graph_nodes + List.length namespace_maps)
+    Build_state.create
+      (List.length source_graph_nodes + List.length namespace_maps)
   in
   let modified = Option.map (fun entry -> entry.Compile_assets.modified) in
   List.iter
     (fun ((node : Build_types.global_module), _) ->
-      Build_state.add build_state ~key:node.key
-        ~package_name:node.package_name ~package_root:node.package_root
-        ~kind:Build_state.Source_module
-        ~last_compiled_cmi:(Compile_assets.cmi compile_assets node.key |> modified)
-        ~last_compiled_cmt:(Compile_assets.cmt compile_assets node.key |> modified))
+      Build_state.add build_state ~key:node.key ~package_name:node.package_name
+        ~package_root:node.package_root ~kind:Build_state.Source_module
+        ~last_compiled_cmi:
+          (Compile_assets.cmi compile_assets node.key |> modified)
+        ~last_compiled_cmt:
+          (Compile_assets.cmt compile_assets node.key |> modified))
     source_graph_nodes;
   List.iter
     (fun (namespace_map : Build_types.namespace_map) ->
       Build_state.add build_state ~key:namespace_map.key
         ~package_name:namespace_map.package_name
-        ~package_root:namespace_map.package_root
-        ~kind:Build_state.Namespace_map
+        ~package_root:namespace_map.package_root ~kind:Build_state.Namespace_map
         ~last_compiled_cmi:
           (Compile_assets.cmi compile_assets namespace_map.compiler_name
           |> modified)
@@ -506,7 +499,8 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
       Build_state.set_dependencies build_state ~key:namespace_map.key
         namespace_map.members)
     namespace_maps;
-  stats.retained.prepared <- Some {compiler_context; compile_assets; build_state};
+  stats.retained.prepared <-
+    Some {compiler_context; compile_assets; build_state};
   let cycle =
     find_cycle stats.retained.global_modules stats.retained.namespace_maps
       build_state

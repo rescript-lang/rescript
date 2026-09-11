@@ -3,7 +3,8 @@ exception Error of string
 let strip_path path message =
   let prefix = path ^ ": " in
   if String.starts_with ~prefix message then
-    String.sub message (String.length prefix) (String.length message - String.length prefix)
+    String.sub message (String.length prefix)
+      (String.length message - String.length prefix)
   else message
 
 let with_file_error ~action path f =
@@ -21,16 +22,17 @@ let with_file_error ~action path f =
 
 let read_file path =
   with_file_error ~action:"read file" path (fun () ->
-    let channel = open_in_bin path in
-    Fun.protect ~finally:(fun () -> close_in_noerr channel)
-      (fun () -> really_input_string channel (in_channel_length channel)))
+      let channel = open_in_bin path in
+      Fun.protect
+        ~finally:(fun () -> close_in_noerr channel)
+        (fun () -> really_input_string channel (in_channel_length channel)))
 
 let write_file path contents =
   with_file_error ~action:"write formatted file" path (fun () ->
-    (* Formatting changes the contents of a user-owned file. Writing through
+      (* Formatting changes the contents of a user-owned file. Writing through
        its existing inode preserves symlinks, hard links, ownership, ACLs, and
        extended attributes that replacing the directory entry could lose. *)
-    File_util.write_file path contents)
+      File_util.write_file path contents)
 
 let bsc () =
   try Toolchain.bsc () with Toolchain.Error message -> raise (Error message)
@@ -41,19 +43,17 @@ let rec nearest_config directory =
     let parent = Filename.dirname directory in
     if parent = directory then None else nearest_config parent
 
-type discovered_package = {
-  config: Config.t;
-  modules: Source.module_ list;
-}
+type discovered_package = {config: Config.t; modules: Source.module_ list}
 
 let package_sources (package : discovered_package) =
   package.modules
   |> List.concat_map (fun module_ ->
-       let config = package.config in
-       Filename.concat config.root module_.Source.implementation
-       :: (match module_.interface with
-          | None -> []
-          | Some path -> [Filename.concat config.root path]))
+      let config = package.config in
+      Filename.concat config.root module_.Source.implementation
+      ::
+      (match module_.interface with
+      | None -> []
+      | Some path -> [Filename.concat config.root path]))
 
 (* Validate the complete package graph before selecting the local files that
    format owns. Scan it with the effective feature selections so dependency
@@ -77,13 +77,13 @@ let discover_package_graph (current : Config.t) =
     let pending =
       dependencies
       |> List.filter_map (fun (dependency : Config.dependency) ->
-           let resolved =
-             Package_resolution.resolve resolution ~package_root:config.root
-               dependency
-           in
-           add_feature_request resolved.directory dependency.features;
-           if Hashtbl.mem package_configs resolved.directory then None
-           else Some resolved)
+          let resolved =
+            Package_resolution.resolve resolution ~package_root:config.root
+              dependency
+          in
+          add_feature_request resolved.directory dependency.features;
+          if Hashtbl.mem package_configs resolved.directory then None
+          else Some resolved)
     in
     List.iter
       (fun (dependency : Package_resolution.dependency) ->
@@ -97,33 +97,33 @@ let discover_package_graph (current : Config.t) =
   visit ~is_local:true current;
   Hashtbl.to_seq package_configs
   |> Seq.map (fun (package_root, ((config : Config.t), is_local)) ->
-       let features =
-         if config.root = current.root then None
-         else
-           match Hashtbl.find_opt feature_requests package_root with
-           | None -> None
-           | Some requests when List.exists Option.is_none requests -> None
-           | Some requests ->
-             let requested =
-               requests |> List.filter_map Fun.id |> List.concat
-               |> List.sort_uniq String.compare
-             in
-             (try ignore (Source.resolve_active_features config requested)
-              with Source.Error message ->
-                raise
-                  (Error
-                     (Printf.sprintf "Invalid features for package '%s': %s"
-                        config.name message)));
-             Some requested
-       in
-       let modules =
-         Source.discover config
-           ~prod:(Package_graph.source_discovery_prod ~prod:false ~is_local)
-           ~features ~filter:None
-           ~on_missing:(Package_diagnostics.report_missing_source_folder config)
-           ~display_root:current.root
-       in
-       {config; modules})
+      let features =
+        if config.root = current.root then None
+        else
+          match Hashtbl.find_opt feature_requests package_root with
+          | None -> None
+          | Some requests when List.exists Option.is_none requests -> None
+          | Some requests ->
+            let requested =
+              requests |> List.filter_map Fun.id |> List.concat
+              |> List.sort_uniq String.compare
+            in
+            (try ignore (Source.resolve_active_features config requested)
+             with Source.Error message ->
+               raise
+                 (Error
+                    (Printf.sprintf "Invalid features for package '%s': %s"
+                       config.name message)));
+            Some requested
+      in
+      let modules =
+        Source.discover config
+          ~prod:(Package_graph.source_discovery_prod ~prod:false ~is_local)
+          ~features ~filter:None
+          ~on_missing:(Package_diagnostics.report_missing_source_folder config)
+          ~display_root:current.root
+      in
+      {config; modules})
   |> List.of_seq
 
 let files_in_scope () =
@@ -142,8 +142,7 @@ let files_in_scope () =
     | Some path ->
       let parent = Config.load path in
       List.exists
-        (fun (dependency : Config.dependency) ->
-          dependency.name = current.name)
+        (fun (dependency : Config.dependency) -> dependency.name = current.name)
         (parent.dependencies @ parent.dev_dependencies)
   in
   let packages = discover_package_graph current in
@@ -154,19 +153,20 @@ let files_in_scope () =
       current.root
       :: (current.dependencies @ current.dev_dependencies
          |> List.filter_map (fun (dependency : Config.dependency) ->
-              match
-                Package_resolution.dependency_path resolution
-                  ~package_root:current.root dependency.name
-              with
-              | Some directory
-                when Package_resolution.is_local resolution directory ->
-                Some directory
-              | Some _ | None -> None))
+             match
+               Package_resolution.dependency_path resolution
+                 ~package_root:current.root dependency.name
+             with
+             | Some directory
+               when Package_resolution.is_local resolution directory ->
+               Some directory
+             | Some _ | None -> None))
   in
   packages
   |> List.filter (fun package ->
-       List.exists (( = ) package.config.root) roots_in_scope)
-  |> List.concat_map package_sources |> List.sort_uniq String.compare
+      List.exists (( = ) package.config.root) roots_in_scope)
+  |> List.concat_map package_sources
+  |> List.sort_uniq String.compare
 
 let formatting_error target stderr =
   Printf.sprintf "Error formatting %s: %s" target stderr
@@ -178,8 +178,8 @@ let formatted ~bsc ~target path =
   result.stdout
 
 let format_check_summary = function
-| 1 -> "The file listed above needs formatting"
-| count -> Printf.sprintf "The %d files listed above need formatting" count
+  | 1 -> "The file listed above needs formatting"
+  | count -> Printf.sprintf "The %d files listed above need formatting" count
 
 let format_files_with_bsc ?max_jobs ~bsc ~check files =
   let cwd = Sys.getcwd () in
@@ -187,35 +187,29 @@ let format_files_with_bsc ?max_jobs ~bsc ~check files =
   let works =
     files
     |> List.mapi (fun index path ->
-         Process.
-           {
-             key = Printf.sprintf "%08d" index;
-             dependencies = [];
-             value = path;
-           })
+        Process.
+          {key = Printf.sprintf "%08d" index; dependencies = []; value = path})
   in
   let next path = function
-  | None ->
-    Some
-      (Process.task Process.{program = bsc; args = ["-format"; path]; cwd})
-  | Some result ->
-    if not (Process.succeeded result) then
-      raise (Error (formatting_error path result.stderr));
-    let original = read_file path in
-    if original <> result.stdout then
-      if check then (
-        incr incorrect;
-        prerr_endline ("[format check] " ^ path))
-      else write_file path result.stdout;
-    None
+    | None ->
+      Some (Process.task Process.{program = bsc; args = ["-format"; path]; cwd})
+    | Some result ->
+      if not (Process.succeeded result) then
+        raise (Error (formatting_error path result.stderr));
+      let original = read_file path in
+      if original <> result.stdout then
+        if check then (
+          incr incorrect;
+          prerr_endline ("[format check] " ^ path))
+        else write_file path result.stdout;
+      None
   in
   (match max_jobs with
   | None -> Process.run_dependency_graph works ~next
   | Some max_jobs -> Process.run_dependency_graph ~max_jobs works ~next);
   if !incorrect > 0 then (
     prerr_endline (format_check_summary !incorrect);
-    raise (Error "Formatting check failed")
-  )
+    raise (Error "Formatting check failed"))
 
 let format_stdin extension =
   if extension <> ".res" && extension <> ".resi" then
@@ -240,22 +234,27 @@ let format_stdin extension =
     let path = Filename.temp_file "rescript-ocaml-format-" extension in
     temporary := Some path;
     Fun.protect ~finally:remove_temporary (fun () ->
-      restore_signals ();
-      let output = open_out_bin path in
-      (try
-         (try
-            while true do
-              output_char output (input_char stdin)
-            done
-          with End_of_file -> ());
-         close_out output
-       with exn ->
-         close_out_noerr output;
-         raise exn);
-      print_string (formatted ~bsc ~target:"stdin" path))
+        restore_signals ();
+        let output = open_out_bin path in
+        (try
+           (try
+              while true do
+                output_char output (input_char stdin)
+              done
+            with End_of_file -> ());
+           close_out output
+         with exn ->
+           close_out_noerr output;
+           raise exn);
+        print_string (formatted ~bsc ~target:"stdin" path))
   with exn ->
     remove_temporary ();
-    let exn = try restore_signals (); exn with signal_exn -> signal_exn in
+    let exn =
+      try
+        restore_signals ();
+        exn
+      with signal_exn -> signal_exn
+    in
     raise exn
 
 let run_files ~check paths =

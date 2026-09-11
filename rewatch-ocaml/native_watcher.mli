@@ -3,15 +3,9 @@ type t
 type change_kind = Content | Structural
 type change = {path: string option; kind: change_kind}
 
-type watch_path = {
-  directory: string;
-  recursive: bool;
-}
+type watch_path = {directory: string; recursive: bool}
 
-type wait_result =
-  | Changed of change list
-  | Stopped
-  | Failed of string
+type wait_result = Changed of change list | Stopped | Failed of string
 
 val create : paths:watch_path list -> (t, string) result
 val is_compiler_artifact_directory : string -> bool

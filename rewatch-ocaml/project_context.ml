@@ -83,16 +83,21 @@ let dependency_is_local_canonical context path =
   && is_local_dependency_canonical ~workspace:context.workspace_root path
 
 let dependency_candidates_in context package_root name =
-  let candidate root = Filename.concat (Filename.concat root "node_modules") name in
+  let candidate root =
+    Filename.concat (Filename.concat root "node_modules") name
+  in
   let rec in_ancestors directory acc =
-    let candidate = Filename.concat (Filename.concat directory "node_modules") name in
+    let candidate =
+      Filename.concat (Filename.concat directory "node_modules") name
+    in
     let parent = Filename.dirname directory in
     if parent = directory then List.rev (candidate :: acc)
     else in_ancestors parent (candidate :: acc)
   in
   let append_unique values additions =
     List.fold_left
-      (fun values value -> if List.mem value values then values else values @ [value])
+      (fun values value ->
+        if List.mem value values then values else values @ [value])
       values additions
   in
   let direct =
@@ -136,13 +141,15 @@ let require_dependency_directory ~context package_root
     raise
       (Package_error
          (Printf.sprintf
-            "Could not build package tree reading dependency '%s' at path '%s'. Error: Could not resolve dependency %s"
+            "Could not build package tree reading dependency '%s' at path \
+             '%s'. Error: Could not resolve dependency %s"
             dependency.name context.current_root dependency.name))
   | Some directory when not (Config.exists_in_root directory) ->
     raise
       (Package_error
          (Printf.sprintf
-            "Could not build package tree for '%s' at path '%s'. Error: no rescript.json or bsconfig.json in %s"
+            "Could not build package tree for '%s' at path '%s'. Error: no \
+             rescript.json or bsconfig.json in %s"
             dependency.name context.current_root directory))
   | Some directory -> directory
 
@@ -151,5 +158,6 @@ let relative_to root path =
   let comparable = Platform.normalize_path_for_comparison in
   if comparable path = comparable root then "."
   else if String.starts_with ~prefix:(comparable prefix) (comparable path) then
-    String.sub path (String.length prefix) (String.length path - String.length prefix)
+    String.sub path (String.length prefix)
+      (String.length path - String.length prefix)
   else raise (Error (path ^ " is not inside " ^ root))

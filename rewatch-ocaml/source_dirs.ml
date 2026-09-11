@@ -13,9 +13,7 @@ let scan_json scan =
     ]
 
 let write ~root ~dirs ~packages ~scans =
-  let path =
-    File_util.path_of_parts root ["lib"; "bs"; ".sourcedirs.json"]
-  in
+  let path = File_util.path_of_parts root ["lib"; "bs"; ".sourcedirs.json"] in
   File_util.ensure_dir (Filename.dirname path);
   let json =
     `Assoc

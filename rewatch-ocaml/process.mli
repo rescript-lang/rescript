@@ -9,8 +9,7 @@ val succeeded : result -> bool
 val status_string : Unix.process_status -> string
 val default_max_jobs : int
 
-val task :
-  ?env:Spawn.Env.t -> ?on_result:(result -> result) -> job -> task
+val task : ?env:Spawn.Env.t -> ?on_result:(result -> result) -> job -> task
 
 val run_parallel :
   ?max_jobs:int ->

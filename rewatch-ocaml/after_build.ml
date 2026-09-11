@@ -25,8 +25,8 @@ let run ?poll ~root command =
            (Printf.sprintf "Could not run --after-build command %S: %s (%s %s)"
               command (Unix.error_message error) operation target))
   in
-  if not (Process.succeeded result) then (
+  if not (Process.succeeded result) then
     raise
       (Error
          (Printf.sprintf "--after-build command failed with %s"
-            (Process.status_string result.status))))
+            (Process.status_string result.status)))

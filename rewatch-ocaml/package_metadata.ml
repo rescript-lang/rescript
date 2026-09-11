@@ -50,11 +50,9 @@ let contains_substring value substring =
   substring_length = 0 || loop 0
 
 let issues_url_from_repository repository =
-  let cleaned =
-    repository |> remove_prefix "git+" |> remove_suffix ".git"
-  in
+  let cleaned = repository |> remove_prefix "git+" |> remove_suffix ".git" in
   if
-    not (String.contains cleaned '@')
+    (not (String.contains cleaned '@'))
     && not (contains_substring cleaned "://")
   then
     let path = remove_prefix "github:" cleaned in

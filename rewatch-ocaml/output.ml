@@ -74,7 +74,9 @@ module Progress = struct
     let remaining = Hashtbl.create (List.length groups) in
     List.iter
       (fun group ->
-        let count = Hashtbl.find_opt remaining group |> Option.value ~default:0 in
+        let count =
+          Hashtbl.find_opt remaining group |> Option.value ~default:0
+        in
         Hashtbl.replace remaining group (count + 1))
       groups;
     start progress ~step ~symbol ~label ~total:(Hashtbl.length remaining);
@@ -88,9 +90,7 @@ end
 
 let yellow text =
   if String.starts_with ~prefix:"\n" text then
-    "\n\027[33m"
-    ^ String.sub text 1 (String.length text - 1)
-    ^ "\027[0m"
+    "\n\027[33m" ^ String.sub text 1 (String.length text - 1) ^ "\027[0m"
   else "\027[33m" ^ text ^ "\027[0m"
 
 let colors_enabled_with ~getenv ~win32 ~interactive =
@@ -125,8 +125,8 @@ let compiler_cleanup_message ~color ~step =
     line_clear (format_step ~color step)
 
 let cleaning_command_message ~color ~step target =
-  Printf.sprintf "%s%s 🧹 Cleaning %s..." line_clear
-    (format_step ~color step) target
+  Printf.sprintf "%s%s 🧹 Cleaning %s..." line_clear (format_step ~color step)
+    target
 
 let cleaned_command_message ~color ~step ~target ~seconds =
   Printf.sprintf "%s%s 🧹 Cleaned %s in %.2fs" line_clear
@@ -152,8 +152,8 @@ let finished_compilation_message ~kind ~warnings ~seconds =
   let status = if warnings then "⚠️ " else "✅ " in
   let kind = Option.fold ~none:"" ~some:(fun value -> value ^ " ") kind in
   let warning_suffix = if warnings then " with warnings" else "" in
-  Printf.sprintf "%s%sFinished %scompilation%s in %.2fs" line_clear status
-    kind warning_suffix seconds
+  Printf.sprintf "%s%sFinished %scompilation%s in %.2fs" line_clear status kind
+    warning_suffix seconds
 
 let should_clear_screen ~clear_screen ~show_progress ~interactive =
   clear_screen && show_progress && interactive

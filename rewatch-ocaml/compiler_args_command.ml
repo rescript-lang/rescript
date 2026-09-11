@@ -41,8 +41,7 @@ let run path =
   let config = Build_artifacts.with_root_options package_config root_config in
   let relative = Project_context.relative_to config.root source in
   let contents =
-    try File_util.read_file source
-    with
+    try File_util.read_file source with
     | Sys_error message -> source_error path message
     | Unix.Unix_error (unix_error, _, _) ->
       source_error path (Unix.error_message unix_error)
@@ -51,7 +50,7 @@ let run path =
     Compiler_args.parser_arguments ~config ~contents ~path:relative
   in
   let is_interface = Filename.check_suffix source ".resi" in
-  let has_interface = not is_interface && Sys.file_exists (source ^ "i") in
+  let has_interface = (not is_interface) && Sys.file_exists (source ^ "i") in
   let dependencies =
     (if Config.source_is_dev config relative then
        List.map (fun dependency -> (false, dependency)) config.dev_dependencies
@@ -61,25 +60,26 @@ let run path =
   let dependency_dirs =
     dependencies
     |> List.filter_map (fun (required, (dependency : Config.dependency)) ->
-         match Project_context.dependency_path config.root dependency.name with
-         | Some directory -> Some (Build_artifacts.lib_path directory "ocaml")
-         | None when not required -> None
-         | None ->
-           error
-             (Printf.sprintf "Expected to find dependent package %s of %s"
-                dependency.name config.name))
+        match Project_context.dependency_path config.root dependency.name with
+        | Some directory -> Some (Build_artifacts.lib_path directory "ocaml")
+        | None when not required -> None
+        | None ->
+          error
+            (Printf.sprintf "Expected to find dependent package %s of %s"
+               dependency.name config.name))
   in
   let runtime = runtime_path config.root in
   let compiler_args =
     Compiler_args.compiler_arguments ~config ~runtime ~dependency_dirs
-      ~module_name:(Source.module_name source) ~is_interface ~has_interface
-      ~watch:false ~gentype_dependency_args:[] ~path:relative
+      ~module_name:(Source.module_name source)
+      ~is_interface ~has_interface ~watch:false ~gentype_dependency_args:[]
+      ~path:relative
   in
   Yojson.Safe.pretty_to_string
     (`Assoc
-      [
-        ( "compiler_args",
-          `List (List.map (fun value -> `String value) compiler_args) );
-        ( "parser_args",
-          `List (List.map (fun value -> `String value) parser_args) );
-      ])
+       [
+         ( "compiler_args",
+           `List (List.map (fun value -> `String value) compiler_args) );
+         ( "parser_args",
+           `List (List.map (fun value -> `String value) parser_args) );
+       ])

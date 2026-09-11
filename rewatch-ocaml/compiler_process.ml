@@ -8,7 +8,8 @@ let retain_critical_external_warnings stderr =
   let marker = "`(. ...)` uncurried syntax" in
   if not (contains_text stderr marker) then ""
   else
-    stderr |> Str.global_replace (Str.regexp_string "\r\n") "\n"
+    stderr
+    |> Str.global_replace (Str.regexp_string "\r\n") "\n"
     |> Str.split_delim (Str.regexp_string "\n\n\n")
     |> List.filter (fun block -> contains_text block marker)
     |> String.concat "\n\n\n"
@@ -49,19 +50,21 @@ let namespace_job ~bsc ~runtime ~build_dir ~ocaml_dir ~entry ~package_dirty
     modules
     |> List.filter (fun module_ -> Some module_.Source.name <> entry)
     |> List.filter (fun module_ ->
-         Source.is_non_exotic_module_name module_.Source.name)
+        Source.is_non_exotic_module_name module_.Source.name)
     |> List.map (fun module_ -> module_.Source.name)
     |> List.sort String.compare
     |> List.iter (fun name ->
-         Buffer.add_string buffer name;
-         Buffer.add_char buffer '\n');
+        Buffer.add_string buffer name;
+        Buffer.add_char buffer '\n');
     Buffer.contents buffer
   in
   let previous_contents =
     try
       let channel = open_in_bin mlmap in
-      Fun.protect ~finally:(fun () -> close_in_noerr channel) (fun () ->
-        Some (really_input_string channel (in_channel_length channel)))
+      Fun.protect
+        ~finally:(fun () -> close_in_noerr channel)
+        (fun () ->
+          Some (really_input_string channel (in_channel_length channel)))
     with Sys_error _ -> None
   in
   let mlmap_changed = previous_contents <> Some contents in
@@ -70,8 +73,8 @@ let namespace_job ~bsc ~runtime ~build_dir ~ocaml_dir ~entry ~package_dirty
   let outputs_exist =
     ["cmi"; "cmj"; "cmt"; "mlmap"]
     |> List.for_all (fun extension ->
-         Sys.file_exists
-           (Filename.concat ocaml_dir (namespace ^ "." ^ extension)))
+        Sys.file_exists
+          (Filename.concat ocaml_dir (namespace ^ "." ^ extension)))
   in
   if not (package_dirty || mlmap_changed || not outputs_exist) then None
   else
@@ -117,8 +120,7 @@ let post_build_tasks (config : Config.t) path =
       (fun spec ->
         let output = Build_artifacts.generated_js_path config path spec in
         let env, program, args = Platform.post_build_command ~command ~output in
-        ( output,
-          Process.task ?env Process.{program; args; cwd = config.root} ))
+        (output, Process.task ?env Process.{program; args; cwd = config.root}))
       config.package_specs
 
 let compile_job ~bsc ~build_dir ~(config : Config.t) ~common_args
@@ -126,7 +128,8 @@ let compile_job ~bsc ~build_dir ~(config : Config.t) ~common_args
   let args =
     Compiler_args.compiler_arguments_with_common ~config ~common_args
       ~module_name:module_.name ~is_interface
-      ~has_interface:(Option.is_some module_.interface) ~path
+      ~has_interface:(Option.is_some module_.interface)
+      ~path
   in
   Process.{program = bsc; args; cwd = build_dir}
 
@@ -144,11 +147,14 @@ let publish ~build_dir ~ocaml_dir ~is_local ~(config : Config.t) ~is_interface
   List.iter
     (fun extension ->
       let source = Filename.concat artifact_dir (basename ^ "." ^ extension) in
-      let destination = Filename.concat ocaml_dir (basename ^ "." ^ extension) in
+      let destination =
+        Filename.concat ocaml_dir (basename ^ "." ^ extension)
+      in
       if extension = "cmi" then
         File_util.copy_file_if_changed ~ensure_parent:false source destination
       else if extension = "cmt" || extension = "cmti" then
-        File_util.copy_optional_existing_file ~ensure_parent:false source destination
+        File_util.copy_optional_existing_file ~ensure_parent:false source
+          destination
       else File_util.copy_existing_file ~ensure_parent:false source destination)
     extensions;
   let source = Filename.concat config.root path in
@@ -167,7 +173,8 @@ let publish ~build_dir ~ocaml_dir ~is_local ~(config : Config.t) ~is_interface
           in
           File_util.ensure_dir (Filename.dirname build_output);
           if Sys.file_exists output then
-            File_util.copy_existing_file ~ensure_parent:false output build_output;
+            File_util.copy_existing_file ~ensure_parent:false output
+              build_output;
           if Sys.file_exists (output ^ ".map") then
             File_util.copy_existing_file ~ensure_parent:false (output ^ ".map")
               (build_output ^ ".map")

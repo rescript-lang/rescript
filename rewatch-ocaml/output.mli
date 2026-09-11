@@ -16,22 +16,13 @@ module Progress : sig
   val debug : t -> verbosity:int -> string -> unit
 
   val start_grouped :
-    t ->
-    step:string ->
-    symbol:string ->
-    label:string ->
-    'a list ->
-    int ->
-    unit
+    t -> step:string -> symbol:string -> label:string -> 'a list -> int -> unit
 end
 
 val yellow : string -> string
 
 val colors_enabled_with :
-  getenv:(string -> string option) ->
-  win32:bool ->
-  interactive:bool ->
-  bool
+  getenv:(string -> string option) -> win32:bool -> interactive:bool -> bool
 
 val colors_enabled : interactive:bool -> bool
 
@@ -52,7 +43,8 @@ val cleaned_command_message :
 val parsing_message :
   color:bool -> step:string -> count:int -> seconds:float -> string
 
-val parsing_failed_message : color:bool -> step:string -> seconds:float -> string
+val parsing_failed_message :
+  color:bool -> step:string -> seconds:float -> string
 
 val compiling_message :
   color:bool -> step:string -> count:int -> seconds:float -> string
