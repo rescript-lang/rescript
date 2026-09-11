@@ -103,10 +103,8 @@ let rec prepare_tree ~seen ~folder:root ~watch ~(stats : Build_types.t) =
   in
   let parsed =
     List.map2 (fun path result -> (path, Some result)) parse_paths_to_run
-      (Process.run_parallel ?poll:stats.process_poll
-         (List.map
-            (Compiler_process.parse_job ~bsc ~build_dir ~config)
-            parse_paths_to_run))
+      (Process.run_parallel_map ?poll:stats.process_poll parse_paths_to_run
+         ~job:(Compiler_process.parse_job ~bsc ~build_dir ~config))
     @ (dirty_parse_paths
       |> List.filter (fun path ->
            Hashtbl.mem stats.forced_parse_paths (Filename.concat root path))

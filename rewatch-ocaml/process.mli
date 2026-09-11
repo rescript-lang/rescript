@@ -19,6 +19,14 @@ val run_parallel :
   job list ->
   result list
 
+val run_parallel_map :
+  ?max_jobs:int ->
+  ?poll:(unit -> unit) ->
+  ?on_complete:(int -> unit) ->
+  'a list ->
+  job:('a -> job) ->
+  result list
+
 type 'a work = {key: string; dependencies: string list; value: 'a}
 
 val run_dependency_graph :

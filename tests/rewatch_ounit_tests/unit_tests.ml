@@ -4,6 +4,8 @@ let check condition message = assert_bool message condition
 
 module Checked_windows_platform : module type of Platform = Platform_windows
 
+type lazy_job = First | Second
+
 let rec contains_adjacent left right = function
   | current :: next :: _ when current = left && next = right -> true
   | _ :: rest -> contains_adjacent left right rest
@@ -77,6 +79,11 @@ let () =
     | "--sleep" ->
       Thread.delay (float_of_string (argument 2));
       exit 0
+    | "--wait-for-release" ->
+      let root = argument 2 in
+      touch_file (Filename.concat root "child-started");
+      ignore (wait_for_file (Filename.concat root "release"));
+      exit 0
     | "--exit-with-descendant" ->
       let executable = Unix.realpath Sys.executable_name in
       ignore
@@ -124,6 +131,26 @@ let tests =
   check
     (List.sort compare !completed_indices = [0; 1; 2])
     "parallel subprocess completion reports every input index once";
+  let lazy_root = Filename.temp_file "rewatch-lazy-jobs-" "" in
+  Sys.remove lazy_root;
+  Unix.mkdir lazy_root 0o755;
+  let lazy_results =
+    Fun.protect
+      ~finally:(fun () -> File_util.remove_tree lazy_root)
+      (fun () ->
+        Process.run_parallel_map ~max_jobs:2 [First; Second] ~job:(function
+          | First -> process_job ["--wait-for-release"; lazy_root]
+          | Second ->
+            check
+              (wait_for_file (Filename.concat lazy_root "child-started"))
+              "later job preparation overlaps an already-running child";
+            touch_file (Filename.concat lazy_root "release");
+            process_job ["--process-result"; "second"; ""; "0"]))
+  in
+  check
+    (List.map (fun (result : Process.result) -> result.stdout) lazy_results
+    = [""; "second"])
+    "demand-built subprocess results retain input order";
   let large_result =
     Process.run ~cwd:(Sys.getcwd ()) test_executable ["--large-process-result"]
   in
