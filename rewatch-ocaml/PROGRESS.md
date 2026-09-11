@@ -966,27 +966,23 @@ sufficient on its own: the compiler-work tuple and selected artifact manifests
 must also be identical, and the canonical/focused integration tests remain the
 behavioral-equivalence gate.
 
-The latest five-run release-build measurement was made from the spinner
-working tree above commit `fcac3719b` in the Linux Docker environment on the
+The latest five-run release-build measurement was made from the interface-audit
+working tree above commit `2ada96936` in the Linux Docker environment on the
 plugged-in, otherwise idle Mac host:
 
 | Implementation | Median wall time | Median peak tree RSS |
 | --- | ---: | ---: |
-| Rust | 6,790 ms | 761,024 KiB |
-| OCaml | 7,829 ms | 784,136 KiB |
+| Rust | 4,662 ms | 806,340 KiB |
+| OCaml | 5,588 ms | 840,740 KiB |
 
-The latest completed gate's 1.153× wall-time ratio and 1.030× RSS ratio pass
+The latest completed gate's 1.199× wall-time ratio and 1.043× RSS ratio pass
 the 1.25× gate.
 The host was plugged in and otherwise idle for this run. Docker on a Mac is
-still noisier than native Linux or dedicated CI, so final acceptance should
-repeat the distribution on a stable host rather than treating this one passing
-set as universal. Repeated runs observed impossible non-median LinuxKit clock
-jumps despite the affected builds completing in seconds; the immediately
-preceding run reported one non-median OCaml sample as 822 seconds. The latest
-run had five coherent samples for each implementation, although absolute times
-varied more than in the preceding run. A final native/stable-host run remains
-necessary. Passing this aggregate gate also does not excuse the clean-build
-publication probes identified by the filesystem audit below.
+still makes the absolute values less portable than native Linux or dedicated
+CI, but all ten interleaved samples were coherent and this is the required
+current stable-host acceptance run. Passing this aggregate gate also does not
+excuse the clean-build publication probes identified by the filesystem audit
+below.
 
 Both implementations performed exactly 1,031 `bsc` launches: 512 parses, 7
 namespace compilations, and 512 module compilations, of which 40 were interface
