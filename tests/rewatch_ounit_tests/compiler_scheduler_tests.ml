@@ -106,8 +106,7 @@ let tests =
                   make_scheduled key source state cmi_path))
         in
         Compiler_scheduler.run ~poll:None
-          ~warning_state:(Warning_state.create ())
-          ~blocked_modules:(Hashtbl.create 0) ~compile_assets ~build_state
+          ~warning_state:(Warning_state.create ()) ~compile_assets ~build_state
           ~candidates
           ~mark_compiled:(fun () -> ())
           ~mark_had_warnings:(fun () -> ())

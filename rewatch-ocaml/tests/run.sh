@@ -875,6 +875,13 @@ if grep -F 'from "./B.mjs"' "$retained_cycle/src/A.mjs" >/dev/null; then
   echo "cycle member was compiled from retained dirty state" >&2
   exit 1
 fi
+printf 'let dependent = 1\n' >"$retained_cycle/src/B.res"
+if ! wait_for_text "$retained_cycle/src/A.mjs" 'from "./B.mjs"'; then
+  cat "$retained_cycle/src/A.mjs" >&2
+  cat "$retained_cycle/watch.log" >&2
+  echo "cycle recovery did not compile retained pending work" >&2
+  exit 1
+fi
 kill -TERM "$retained_cycle_pid"
 wait "$retained_cycle_pid" 2>/dev/null || true
 

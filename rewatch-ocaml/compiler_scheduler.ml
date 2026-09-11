@@ -70,9 +70,9 @@ let candidate_requires_compile candidate = candidate.state.compile_dirty
 let file_digest path =
   try Some (Digest.file path) with Sys_error _ | Unix.Unix_error _ -> None
 
-let run ~poll ~warning_state ~blocked_modules ~compile_assets ~build_state
-    ~candidates ~mark_compiled ~mark_had_warnings ~progress ~compile_step
-    ~namespace_count ~verbosity =
+let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
+    ~mark_compiled ~mark_had_warnings ~progress ~compile_step ~namespace_count
+    ~verbosity =
   let refresh_published_cmi (scheduled : scheduled_module) cmi_digest_after =
     (* Only a changed interface invalidates reverse dependents. Comparing bytes
        avoids timestamp races and skips unnecessary downstream compilation. *)
@@ -89,7 +89,6 @@ let run ~poll ~warning_state ~blocked_modules ~compile_assets ~build_state
     scheduled.cmi_digest_before <- cmi_digest_after;
     if cmi_changed then
       Build_state.mark_dependents_compile_dirty build_state scheduled.state
-        ~is_blocked:(Hashtbl.mem blocked_modules)
   in
   let finish_successful_compile (scheduled : scheduled_module) =
     let cmt_path = Filename.remove_extension scheduled.cmi_path ^ ".cmt" in

@@ -138,9 +138,25 @@ let resolve_dependency
 let resolved_dependencies
     (modules_by_key : (string, Build_types.global_module) Hashtbl.t)
     namespace_maps_by_name (node : Build_types.global_module) =
-  node.raw_dependencies
-  |> List.concat_map
-       (resolve_dependency modules_by_key namespace_maps_by_name node)
+  let parsed =
+    node.raw_dependencies
+    |> List.concat_map
+         (resolve_dependency modules_by_key namespace_maps_by_name node)
+  in
+  let implicit_namespace_entry =
+    match (node.namespace, node.namespace_entry) with
+    | Some namespace, Some entry
+      when Source.module_name node.source_path = entry ->
+      Hashtbl.find_opt namespace_maps_by_name namespace
+      |> Option.value ~default:[]
+      |> List.find_map (fun (namespace_map : Build_types.namespace_map) ->
+          if namespace_map.package_root = node.package_root then
+            Some namespace_map.key
+          else None)
+      |> Option.to_list
+    | Some _, Some _ | Some _, None | None, _ -> []
+  in
+  parsed @ implicit_namespace_entry
   |> List.filter (fun dependency -> dependency <> node.key)
   |> List.sort_uniq String.compare
 

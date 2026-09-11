@@ -90,7 +90,6 @@ let run_scheduled_modules (stats : Build_types.t) ~compile_step ~namespace_count
   let prepared = Build_types.prepared_exn stats in
   Compiler_scheduler.run ~poll:stats.process_poll
     ~warning_state:stats.retained.warning_state
-    ~blocked_modules:stats.blocked_modules
     ~compile_assets:prepared.compile_assets ~build_state:prepared.build_state
     ~candidates:!(stats.compile_candidates)
     ~mark_compiled:(fun () -> stats.compiled <- stats.compiled + 1)

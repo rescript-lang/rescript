@@ -31,7 +31,6 @@ val candidate_requires_compile : candidate -> bool
 val run :
   poll:(unit -> unit) option ->
   warning_state:Warning_state.t ->
-  blocked_modules:(string, unit) Hashtbl.t ->
   compile_assets:Compile_assets.t ->
   build_state:Build_state.t ->
   candidates:candidate list ->
