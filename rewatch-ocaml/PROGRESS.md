@@ -1002,6 +1002,15 @@ interfere. The small ratio change from 1.199× therefore does not demonstrate a
 performance improvement; this run establishes directional regression and work
 equivalence evidence only. The quiet-host release measurement remains due.
 
+A three-run smoke check at `6c8446b21`, after making parser-job construction
+demand-driven, measured 5,124 ms / 1,437,824 KiB for Rust and 5,661 ms /
+1,461,376 KiB for OCaml (1.105× wall time and 1.016× RSS). It again matched
+the 1,031/4/6 clean, unchanged, and edit compiler-work manifests plus complete
+file and stable-artifact contents. This suggests that eliminating the serial
+pre-launch preparation prefix may be material, but three samples on a host with
+potential competing work are not an acceptance measurement and do not establish
+the improvement's size. The five-run quiet-host gate remains authoritative.
+
 Both implementations performed exactly 1,031 `bsc` launches: 512 parses, 7
 namespace compilations, and 512 module compilations, of which 40 were interface
 compilations; each also launched the PPX once. This rules out extra compiler
