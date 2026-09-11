@@ -40,6 +40,14 @@ mkdir -p "$work/active-permission/node_modules/a" \
   "$work/active-permission/node_modules/b"
 mkdir -p "$work/source-path-file"
 mkdir -p "$work/missing-runtime-package"
+mkdir -p "$work/clean-missing-bsc/src" "$work/clean-missing-bsc/lib/bs"
+mkdir -p "$work/clean-missing-runtime/src" \
+  "$work/clean-missing-runtime/lib/bs"
+for implementation in rust ocaml; do
+  mkdir -p "$work/clean-duplicate-$implementation/src/one" \
+    "$work/clean-duplicate-$implementation/src/two" \
+    "$work/clean-duplicate-$implementation/lib/bs"
+done
 mkdir -p "$work/missing-source-folder/src" \
   "$work/missing-source-folder/node_modules/dep"
 mkdir -p "$work/dependency-without-sources/src" \
@@ -165,6 +173,23 @@ printf '{"name":"source-path-file","sources":["src"]}\n' \
 printf 'not a directory\n' >"$work/source-path-file/src"
 printf '{"name":"missing-runtime-package","sources":[]}\n' \
   >"$work/missing-runtime-package/rescript.json"
+for clean_project in clean-missing-bsc clean-missing-runtime; do
+  printf '{"name":"%s","sources":["src"]}\n' "$clean_project" \
+    >"$work/$clean_project/rescript.json"
+  printf 'let value = 1\n' >"$work/$clean_project/src/A.res"
+  printf 'owned compiler artifact\n' >"$work/$clean_project/lib/bs/marker"
+done
+for implementation in rust ocaml; do
+  duplicate_clean="$work/clean-duplicate-$implementation"
+  printf '%s\n' \
+    '{"name":"duplicate-clean","sources":{"dir":"src","subdirs":true},"package-specs":{"module":"esmodule","in-source":true}}' \
+    >"$duplicate_clean/rescript.json"
+  printf 'let value = 1\n' >"$duplicate_clean/src/one/A.res"
+  printf 'let value = 2\n' >"$duplicate_clean/src/two/A.res"
+  printf 'generated\n' >"$duplicate_clean/src/one/A.js"
+  printf 'generated\n' >"$duplicate_clean/src/two/A.js"
+  printf 'owned compiler artifact\n' >"$duplicate_clean/lib/bs/marker"
+done
 printf '{"name":"missing-source-folder","sources":["src"],"dependencies":["dep"]}\n' \
   >"$work/missing-source-folder/rescript.json"
 printf 'let value = 1\n' >"$work/missing-source-folder/src/App.res"
@@ -701,6 +726,44 @@ run_case compiler-args-no-project panic reject compiler-args "$work/orphan/A.res
 
 run_missing_bsc_case build-missing-bsc build "$project"
 run_missing_bsc_case format-missing-bsc format "$project/src/A.res"
+set +e
+RESCRIPT_BSC_EXE="$work/missing-bsc" \
+  "$rust" clean "$work/clean-missing-bsc" \
+  >"$work/rust.out" 2>"$work/rust.err"
+rust_status=$?
+RESCRIPT_BSC_EXE="$work/missing-bsc" \
+  "$ocaml" clean "$work/clean-missing-bsc" \
+  >"$work/ocaml.out" 2>"$work/ocaml.err"
+ocaml_status=$?
+set -e
+if [ "$(classify "$rust_status")" != panic ] || [ "$ocaml_status" -ne 0 ] || \
+  [ -e "$work/clean-missing-bsc/lib/bs/marker" ]; then
+  echo "clean-missing-bsc: expected Rust panic and successful OCaml cleanup" >&2
+  printf '%s\n' '--- Rust output ---' >&2
+  cat "$work/rust.out" "$work/rust.err" >&2
+  printf '%s\n' '--- OCaml output ---' >&2
+  cat "$work/ocaml.out" "$work/ocaml.err" >&2
+  exit 1
+fi
+checked=$((checked + 1))
+set +e
+env -u RESCRIPT_RUNTIME "$rust" clean "$work/clean-missing-runtime" \
+  >"$work/rust.out" 2>"$work/rust.err"
+rust_status=$?
+env -u RESCRIPT_RUNTIME "$ocaml" clean "$work/clean-missing-runtime" \
+  >"$work/ocaml.out" 2>"$work/ocaml.err"
+ocaml_status=$?
+set -e
+if [ "$(classify "$rust_status")" != reject ] || [ "$ocaml_status" -ne 0 ] || \
+  [ -e "$work/clean-missing-runtime/lib/bs/marker" ]; then
+  echo "clean-missing-runtime: expected Rust rejection and successful OCaml cleanup" >&2
+  printf '%s\n' '--- Rust output ---' >&2
+  cat "$work/rust.out" "$work/rust.err" >&2
+  printf '%s\n' '--- OCaml output ---' >&2
+  cat "$work/ocaml.out" "$work/ocaml.err" >&2
+  exit 1
+fi
+checked=$((checked + 1))
 set +e
 env -u RESCRIPT_RUNTIME "$rust" build "$work/missing-runtime-package" \
   >"$work/rust.out" 2>"$work/rust.err"
@@ -1653,6 +1716,29 @@ checked=$((checked + 1))
 run_case clean-missing-dependency exit2 exit2 clean "$work/missing-dependency"
 run_case clean-configless-dependency exit2 exit2 clean "$work/configless-dependency"
 run_case clean-malformed-dependency exit2 exit2 clean "$work/malformed-dependency"
+set +e
+"$rust" clean "$work/clean-duplicate-rust" \
+  >"$work/rust.out" 2>"$work/rust.err"
+rust_status=$?
+"$ocaml" clean "$work/clean-duplicate-ocaml" \
+  >"$work/ocaml.out" 2>"$work/ocaml.err"
+ocaml_status=$?
+set -e
+if [ "$(classify "$rust_status")" != reject ] || [ "$ocaml_status" -ne 0 ] || \
+  [ ! -e "$work/clean-duplicate-rust/src/one/A.js" ] || \
+  [ ! -e "$work/clean-duplicate-rust/src/two/A.js" ] || \
+  [ -e "$work/clean-duplicate-rust/lib/bs/marker" ] || \
+  [ -e "$work/clean-duplicate-ocaml/src/one/A.js" ] || \
+  [ -e "$work/clean-duplicate-ocaml/src/two/A.js" ] || \
+  [ -e "$work/clean-duplicate-ocaml/lib/bs/marker" ]; then
+  echo "clean-duplicate-modules: cleanup behavior differs unexpectedly" >&2
+  printf '%s\n' '--- Rust output ---' >&2
+  cat "$work/rust.out" "$work/rust.err" >&2
+  printf '%s\n' '--- OCaml output ---' >&2
+  cat "$work/ocaml.out" "$work/ocaml.err" >&2
+  exit 1
+fi
+checked=$((checked + 1))
 set +e
 "$rust" watch "$work/missing-dependency" >"$work/rust.out" 2>"$work/rust.err"
 rust_status=$?
