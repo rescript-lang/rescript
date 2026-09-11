@@ -90,26 +90,30 @@ let scan_source ~root (source : Config.source) ~discover_modules ~on_missing
   let rec scan_directory ~relative ~collect_inventory ~discover_requested
       ~collect_gentype ~identity =
     let absolute = Filename.concat root relative in
-    let discover_here =
-      if discover_requested && not (Hashtbl.mem visited_dirs identity) then (
-        Hashtbl.add visited_dirs identity ();
-        true
-      ) else false
+    let coverage table requested =
+      if not requested then (false, false)
+      else
+        match Hashtbl.find_opt table identity with
+        | None ->
+          Hashtbl.add table identity source.recurse;
+          (true, source.recurse)
+        | Some true -> (false, false)
+        | Some false when source.recurse ->
+          Hashtbl.replace table identity true;
+          (false, true)
+        | Some false -> (false, false)
     in
-    let gentype_here =
-      if
-        collect_gentype
-        && not (Hashtbl.mem visited_gentype_dirs identity)
-      then (
-        Hashtbl.add visited_gentype_dirs identity ();
-        gentype_dirs := relative :: !gentype_dirs;
-        true
-      ) else false
+    let discover_here, discover_children =
+      coverage visited_dirs discover_requested
     in
+    let gentype_here, gentype_children =
+      coverage visited_gentype_dirs collect_gentype
+    in
+    if gentype_here then gentype_dirs := relative :: !gentype_dirs;
     let entries =
       try Sys.readdir absolute |> Array.to_list |> List.sort String.compare
       with Sys_error _ | Unix.Unix_error _ ->
-        if discover_here then on_missing absolute;
+        if discover_here || discover_children then on_missing absolute;
         []
     in
     List.iter
@@ -124,24 +128,22 @@ let scan_source ~root (source : Config.source) ~discover_modules ~on_missing
               Platform.directory_identity ~path:absolute_path metadata
             in
             scan_directory ~relative:relative_path ~collect_inventory
-              ~discover_requested:(discover_here && source.recurse)
-              ~collect_gentype:(gentype_here && source.recurse) ~identity
+              ~discover_requested:discover_children
+              ~collect_gentype:gentype_children ~identity
           | Unix.S_LNK -> (
             let target_metadata = Unix.stat absolute_path in
             match target_metadata.Unix.st_kind with
             | Unix.S_DIR ->
               if collect_inventory then
                 inventory_files := absolute_path :: !inventory_files;
-              if
-                (discover_here || gentype_here) && source.recurse
-              then
+              if discover_children || gentype_children then
                 let identity =
                   Platform.directory_identity ~path:absolute_path
                     target_metadata
                 in
                 scan_directory ~relative:relative_path ~collect_inventory:false
-                  ~discover_requested:discover_here
-                  ~collect_gentype:gentype_here ~identity
+                  ~discover_requested:discover_children
+                  ~collect_gentype:gentype_children ~identity
             | _ ->
               if collect_inventory then
                 inventory_files := absolute_path :: !inventory_files;
