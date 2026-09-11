@@ -198,6 +198,33 @@ let tests =
   in
   check dependency_graph_cancelled
     "dependency scheduler cancellation terminates active subprocesses";
+  let fatal_finalizer_started = Unix.gettimeofday () in
+  let fatal_finalizer_cancels_other_workers =
+    let exception Finalizer_failed in
+    try
+      Process.run_dependency_graph ~max_jobs:2
+        ~is_fatal:(fun _ -> true)
+        [graph_work "failure" []; graph_work "waiting" []]
+        ~next:(fun key result ->
+          match result with
+          | None ->
+            let arguments =
+              if key = "failure" then ["--process-result"; ""; ""; "0"]
+              else ["--wait-forever"]
+            in
+            Some
+              (Process.task
+                 ~on_result:(fun result ->
+                   if key = "failure" then raise Finalizer_failed else result)
+                 (process_job arguments))
+          | Some _ -> None);
+      false
+    with Finalizer_failed -> true
+  in
+  check
+    (fatal_finalizer_cancels_other_workers
+    && Unix.gettimeofday () -. fatal_finalizer_started < 2.)
+    "a fatal worker finalizer cancels other process trees without deadlock";
   let process_polls = ref 0 in
   let process_cancelled =
     let exception Cancel in

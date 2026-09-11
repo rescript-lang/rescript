@@ -180,8 +180,7 @@ let capture_outcome (capture : capture) =
 let capture_error exn =
   Error ("failed to capture subprocess output: " ^ Printexc.to_string exn)
 
-let start_child_wait pid notifier stdout_capture stderr_capture on_result :
-    child_wait =
+let start_child_wait pid notifier stdout_capture stderr_capture : child_wait =
   let direct_outcome = Atomic.make None in
   let outcome = Atomic.make None in
   let rec wait () =
@@ -199,8 +198,7 @@ let start_child_wait pid notifier stdout_capture stderr_capture on_result :
         let stderr = capture_outcome stderr_capture in
         let result =
           match (status, stdout, stderr) with
-          | Ok status, Ok stdout, Ok stderr -> (
-            try Ok (on_result {status; stdout; stderr}) with exn -> Error exn)
+          | Ok status, Ok stdout, Ok stderr -> Ok {status; stdout; stderr}
           | Error exn, _, _ -> Error exn
           | _, Error exn, _ | _, _, Error exn -> Error (capture_error exn)
         in
@@ -210,12 +208,14 @@ let start_child_wait pid notifier stdout_capture stderr_capture on_result :
   in
   {thread; direct_outcome; outcome}
 
-let launch ?env ?stdout_chunk ?stderr_chunk ?(on_result = fun result -> result)
-    ~notifier payload job =
+let launch ?env ?stdout_chunk ?stderr_chunk ?(defer_signals = true) ~notifier
+    payload job =
   (* Capture descriptors need a cleanup owner before asynchronous watch
      termination can raise. Signals are therefore deferred across pipe
      acquisition and restored only after every descriptor has an owner. *)
-  let restore_signals = Platform.defer_termination_signals () in
+  let restore_signals =
+    if defer_signals then Platform.defer_termination_signals () else Fun.id
+  in
   let opened_pipes = ref None in
   let stdout_capture = ref None in
   let stderr_capture = ref None in
@@ -238,7 +238,7 @@ let launch ?env ?stdout_chunk ?stderr_chunk ?(on_result = fun result -> result)
     let pid = Platform.process_id process in
     close_noerr stdout_write;
     close_noerr stderr_write;
-    let wait = start_child_wait pid notifier stdout stderr on_result in
+    let wait = start_child_wait pid notifier stdout stderr in
     child_wait := Some wait;
     restore_signals ();
     {payload; process; pid; child_wait = wait}
@@ -300,7 +300,8 @@ let launch ?env ?stdout_chunk ?stderr_chunk ?(on_result = fun result -> result)
     in
     raise exn
 
-let wait_for_running ?(poll = fun () -> ()) notifier active =
+let wait_for_running ?(poll = fun () -> ()) ?(defer_signals = true) notifier
+    active =
   let rec find_completed = function
     | [] -> None
     | child :: rest -> (
@@ -311,7 +312,9 @@ let wait_for_running ?(poll = fun () -> ()) notifier active =
   let rec wait generation =
     match find_completed active with
     | Some (child, Ok result) ->
-      let restore_signals = Platform.defer_termination_signals () in
+      let restore_signals =
+        if defer_signals then Platform.defer_termination_signals () else Fun.id
+      in
       ((child, result), restore_signals)
     | Some (_, Error exn) -> raise exn
     | None ->
@@ -334,7 +337,7 @@ let with_signal_restore restore_signals action =
     in
     raise exn
 
-let terminate_running children =
+let signal_running children =
   if children <> [] then (
     let root_identity_lost child =
       Option.is_some (Atomic.get child.child_wait.direct_outcome)
@@ -366,15 +369,21 @@ let terminate_running children =
     let escalation_succeeded =
       if Platform.escalate_process_groups then signal_all Sys.sigkill else true
     in
-    if graceful_succeeded && escalation_succeeded then
+    if not (graceful_succeeded && escalation_succeeded) then
+      raise (Error "Could not terminate a subprocess tree"))
+
+let terminate_running children =
+  if children <> [] then (
+    try
+      signal_running children;
       List.iter
         (fun child ->
           Thread.join child.child_wait.thread;
           Platform.release_process child.process)
         children
-    else (
+    with exn ->
       List.iter (fun child -> Platform.release_process child.process) children;
-      raise (Error "Could not terminate a subprocess tree")))
+      raise exn)
 
 let release_running child =
   Thread.join child.child_wait.thread;
@@ -451,6 +460,201 @@ module Work_ready = Set.Make (struct
     if by_priority <> 0 then by_priority
     else String.compare first_key second_key
 end)
+
+type pool_active = {
+  id: int;
+  child: unit running;
+  mutable cancellation_requested: bool;
+}
+
+type 'a pool_completion =
+  | Task_completed of 'a * result
+  | Task_failed of 'a * exn
+
+type 'a worker_pool = {
+  notifier: completion_notifier;
+  mutex: Mutex.t;
+  work_available: Condition.t;
+  cancellation_finished: Condition.t;
+  queued: ('a * task) Queue.t;
+  completed_tasks: 'a pool_completion Queue.t;
+  mutable active_children: pool_active list;
+  mutable next_active_id: int;
+  mutable stopping: bool;
+  mutable signalling_cancellation: bool;
+  mutable workers: unit Domain.t list;
+}
+
+let launch_worker_task notifier task =
+  (* Signal handlers execute on the main domain. A worker therefore keeps
+     ownership across launch without temporarily replacing process-wide Windows
+     handlers; cancellation is observed immediately after the child is added to
+     the pool's active set. *)
+  launch ?env:task.env ~defer_signals:false ~notifier () task.job
+
+let remove_active pool active =
+  with_mutex pool.mutex (fun () ->
+      while pool.signalling_cancellation && active.cancellation_requested do
+        Condition.wait pool.cancellation_finished pool.mutex
+      done;
+      pool.active_children <-
+        List.filter
+          (fun current -> current.id <> active.id)
+          pool.active_children);
+  Platform.release_process active.child.process
+
+let complete_pool_task pool completion =
+  with_mutex pool.mutex (fun () -> Queue.add completion pool.completed_tasks);
+  notify_completion pool.notifier
+
+let run_pool_task pool payload task =
+  match
+    try Ok (launch_worker_task pool.notifier task) with exn -> Error exn
+  with
+  | Error exn -> complete_pool_task pool (Task_failed (payload, exn))
+  | Ok child ->
+    let active, cancel_after_launch =
+      with_mutex pool.mutex (fun () ->
+          let active =
+            {
+              id = pool.next_active_id;
+              child;
+              cancellation_requested = pool.stopping;
+            }
+          in
+          pool.next_active_id <- pool.next_active_id + 1;
+          pool.active_children <- active :: pool.active_children;
+          (active, active.cancellation_requested))
+    in
+    let task_completion =
+      try
+        if cancel_after_launch then signal_running [child];
+        let (_, result), restore_signals =
+          wait_for_running ~defer_signals:false pool.notifier [child]
+        in
+        with_signal_restore restore_signals (fun () ->
+            try Task_completed (payload, task.on_result result)
+            with exn -> Task_failed (payload, exn))
+      with exn -> Task_failed (payload, exn)
+    in
+    let completion =
+      try
+        Thread.join child.child_wait.thread;
+        remove_active pool active;
+        task_completion
+      with exn -> Task_failed (payload, exn)
+    in
+    complete_pool_task pool completion
+
+let rec worker_loop pool =
+  let queued =
+    with_mutex pool.mutex (fun () ->
+        while Queue.is_empty pool.queued && not pool.stopping do
+          Condition.wait pool.work_available pool.mutex
+        done;
+        if Queue.is_empty pool.queued then None
+        else Some (Queue.take pool.queued))
+  in
+  match queued with
+  | None -> ()
+  | Some (payload, task) ->
+    run_pool_task pool payload task;
+    worker_loop pool
+
+let create_worker_pool ~max_jobs notifier =
+  let pool =
+    {
+      notifier;
+      mutex = Mutex.create ();
+      work_available = Condition.create ();
+      cancellation_finished = Condition.create ();
+      queued = Queue.create ();
+      completed_tasks = Queue.create ();
+      active_children = [];
+      next_active_id = 0;
+      stopping = false;
+      signalling_cancellation = false;
+      workers = [];
+    }
+  in
+  let rec start_workers remaining =
+    if remaining > 0 then (
+      let worker = Domain.spawn (fun () -> worker_loop pool) in
+      pool.workers <- worker :: pool.workers;
+      start_workers (remaining - 1))
+  in
+  try
+    start_workers max_jobs;
+    pool
+  with exn ->
+    with_mutex pool.mutex (fun () ->
+        pool.stopping <- true;
+        Condition.broadcast pool.work_available);
+    List.iter Domain.join pool.workers;
+    raise exn
+
+let submit_pool_task pool payload task =
+  with_mutex pool.mutex (fun () ->
+      if pool.stopping then raise (Error "subprocess worker pool is stopping");
+      Queue.add (payload, task) pool.queued;
+      Condition.signal pool.work_available)
+
+let await_pool_completion ~poll pool =
+  let rec wait generation =
+    match
+      with_mutex pool.mutex (fun () ->
+          if Queue.is_empty pool.completed_tasks then None
+          else Some (Queue.take pool.completed_tasks))
+    with
+    | Some completion -> completion
+    | None ->
+      poll ();
+      await_notification pool.notifier generation |> wait
+  in
+  notifier_generation pool.notifier |> wait
+
+let stop_worker_pool ~cancel pool =
+  let active =
+    with_mutex pool.mutex (fun () ->
+        pool.stopping <- true;
+        Queue.clear pool.queued;
+        Condition.broadcast pool.work_available;
+        if cancel then (
+          pool.signalling_cancellation <- true;
+          pool.active_children
+          |> List.filter_map (fun active ->
+              if active.cancellation_requested then None
+              else (
+                active.cancellation_requested <- true;
+                Some active.child)))
+        else [])
+  in
+  let signal_error =
+    try
+      signal_running active;
+      None
+    with exn -> Some exn
+  in
+  with_mutex pool.mutex (fun () ->
+      pool.signalling_cancellation <- false;
+      Condition.broadcast pool.cancellation_finished);
+  List.iter Domain.join pool.workers;
+  Option.iter raise signal_error
+
+let with_worker_pool ~max_jobs notifier action =
+  let pool = create_worker_pool ~max_jobs notifier in
+  match action pool with
+  | result ->
+    stop_worker_pool ~cancel:false pool;
+    result
+  | exception exn ->
+    let exn =
+      try
+        stop_worker_pool ~cancel:true pool;
+        exn
+      with cancellation_exn -> cancellation_exn
+    in
+    raise exn
 
 let run_dependency_graph_with_notifier ~max_jobs ~is_fatal ~poll notifier works
     ~next =
@@ -536,7 +740,7 @@ let run_dependency_graph_with_notifier ~max_jobs ~is_fatal ~poll notifier works
   List.iter
     (fun work -> if Hashtbl.find pending work.key = 0 then add_ready work)
     works;
-  let active = ref [] in
+  let in_flight = ref 0 in
   let completed = ref 0 in
   let stopped = ref false in
   let errors = ref [] in
@@ -555,8 +759,8 @@ let run_dependency_graph_with_notifier ~max_jobs ~is_fatal ~poll notifier works
         Hashtbl.replace pending dependent.key remaining;
         if remaining = 0 then add_ready dependent)
   in
-  let rec fill () =
-    if (not !stopped) && List.length !active < max_jobs then
+  let rec fill pool =
+    if (not !stopped) && !in_flight < max_jobs then
       match Work_ready.min_elt_opt !ready with
       | None -> ()
       | Some ((_, key) as ready_key) ->
@@ -566,17 +770,14 @@ let run_dependency_graph_with_notifier ~max_jobs ~is_fatal ~poll notifier works
            match next work.value None with
            | None -> complete work
            | Some task ->
-             active :=
-               launch ?env:task.env ~on_result:task.on_result ~notifier work
-                 task.job
-               :: !active
+             submit_pool_task pool work task;
+             incr in_flight
          with exn -> record_error work exn);
-        fill ()
+        fill pool
   in
-  let rec schedule () =
-    fill ();
-    match !active with
-    | [] -> (
+  let rec schedule pool =
+    fill pool;
+    if !in_flight = 0 then
       match
         !errors
         |> List.sort (fun (first, _) (second, _) -> String.compare first second)
@@ -584,30 +785,23 @@ let run_dependency_graph_with_notifier ~max_jobs ~is_fatal ~poll notifier works
       | (_, exn) :: _ -> raise exn
       | [] when !completed <> count ->
         raise (Error "subprocess dependency graph stalled")
-      | [] -> ())
-    | _ ->
-      let (child, result), restore_signals =
-        wait_for_running ~poll notifier !active
-      in
-      with_signal_restore restore_signals (fun () ->
-          active :=
-            List.filter (fun running -> running.pid <> child.pid) !active;
-          release_running child);
-      (try
-         match next child.payload.value (Some result) with
-         | Some task ->
-           active :=
-             launch ?env:task.env ~on_result:task.on_result ~notifier
-               child.payload task.job
-             :: !active
-         | None -> complete child.payload
-       with exn -> record_error child.payload exn);
-      schedule ()
+      | [] -> ()
+    else
+      let completion = await_pool_completion ~poll pool in
+      decr in_flight;
+      (match completion with
+      | Task_failed (work, exn) -> record_error work exn
+      | Task_completed (work, result) -> (
+        try
+          match next work.value (Some result) with
+          | Some task ->
+            submit_pool_task pool work task;
+            incr in_flight
+          | None -> complete work
+        with exn -> record_error work exn));
+      schedule pool
   in
-  try schedule ()
-  with exn ->
-    terminate_running !active;
-    raise exn
+  with_worker_pool ~max_jobs:(min max_jobs count) notifier schedule
 
 let run_dependency_graph ?(max_jobs = default_max_jobs)
     ?(is_fatal =

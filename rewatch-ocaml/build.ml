@@ -584,7 +584,9 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
         (Output.parsing_message ~color:colors ~step:parse_step
            ~count:stats.parsed
            ~seconds:(phase_seconds stats.parse_seconds));
+    flush stdout;
     prerr_string parse_output;
+    flush stderr;
     let compile_started = Unix.gettimeofday () in
     (try run_scheduled_modules stats ~compile_step ~namespace_count
      with Build_failure output ->
