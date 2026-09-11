@@ -149,6 +149,10 @@ printf 'let value = 2\n' \
 ln -s ../packages/dep \
   "$namespace_invalidation/node_modules/namespace-dep"
 
+namespace_restart="$work/namespace-restart"
+cp -R "$namespace_invalidation" "$namespace_restart"
+printf 'let value: int = Ns.A.value\n' >"$namespace_restart/src/Main.res"
+
 interface_failure_recovery="$work/interface-failure-recovery"
 mkdir -p "$interface_failure_recovery/src"
 printf '%s\n' \
@@ -1184,6 +1188,23 @@ test -f "$feature_dependencies/packages/dep-union/extra/UnionExtra.js"
 test -f "$feature_dependencies/packages/dep-transitive/native/TransitiveNative.js"
 test -f "$feature_dependencies/packages/dep-empty/src/EmptyCommon.js"
 test ! -f "$feature_dependencies/packages/dep-empty/optional/EmptyOptional.js"
+"$port" watch "$feature_dependencies" \
+  >"$feature_dependencies/watch.log" 2>&1 &
+feature_dependencies_pid=$!
+background_pids="$background_pids $feature_dependencies_pid"
+if ! wait_for_file "$feature_dependencies/lib/watch.lock"; then
+  cat "$feature_dependencies/watch.log" >&2
+  exit 1
+fi
+printf 'let value = 2\n' \
+  >"$feature_dependencies/packages/dep-union/extra/UnionExtra.res"
+if ! wait_for_text \
+  "$feature_dependencies/packages/dep-union/extra/UnionExtra.js" 'value = 2'; then
+  cat "$feature_dependencies/watch.log" >&2
+  exit 1
+fi
+kill -TERM "$feature_dependencies_pid"
+wait "$feature_dependencies_pid" 2>/dev/null || true
 
 if "$port" build "$unlinked_dependency" \
   >"$unlinked_dependency/build.log" 2>&1; then
@@ -1332,6 +1353,26 @@ if "$port" build "$namespace_invalidation" \
   exit 1
 fi
 grep -F 'Ns.A' "$namespace_invalidation/removal.log" >/dev/null
+
+"$port" build "$namespace_restart"
+printf 'let value = "changed"\n' \
+  >"$namespace_restart/packages/dep/src/A.res"
+if "$port" build "$namespace_restart" \
+  >"$namespace_restart/first-failure.log" 2>&1; then
+  echo "namespace consumer unexpectedly accepted a changed member CMI" >&2
+  exit 1
+fi
+if "$port" build "$namespace_restart" \
+  >"$namespace_restart/restarted-failure.log" 2>&1; then
+  echo "restarted build forgot a changed namespace member CMI" >&2
+  exit 1
+fi
+if ! grep -F 'This has type:' \
+  "$namespace_restart/restarted-failure.log" >/dev/null || \
+  ! grep -F 'string' "$namespace_restart/restarted-failure.log" >/dev/null; then
+  cat "$namespace_restart/restarted-failure.log" >&2
+  exit 1
+fi
 
 "$port" build "$namespace_entry"
 test -f "$namespace_entry/src/Entry.mjs"
