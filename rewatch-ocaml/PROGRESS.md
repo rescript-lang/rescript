@@ -1545,6 +1545,125 @@ Three later Rust fixes were audited explicitly against the port:
   corrupt and repair root/dependency configuration and install a previously
   missing dependency without restarting the watcher.
 
+## Release inventories
+
+These are the three separately maintained inventories required by the final
+code-quality gate. They describe the current implementation, but remain open
+until the native-platform and final whole-port reviews confirm that no entry is
+missing.
+
+### Compatibility behavior retained despite appearing odd or inconsistent
+
+- A JSON `path` field is accepted only when it is a string and is then ignored
+  in favor of the file actually read. This preserves the public shape leaked by
+  Rust's internal configuration type. The 297-case configuration table and a
+  focused decoder test retain it; a future schema version can remove it only as
+  an announced configuration change.
+- Duplicate known fields in typed configuration objects are rejected, while
+  duplicate keys decoded through JSON-map-backed fields keep the last value.
+  This is a decoder implementation consequence rather than a useful language
+  rule. Fifteen focused duplicate-key cases plus the full configuration table
+  retain it; a future cleanup should choose one documented rule and migrate both
+  implementations together.
+- `--no-timing` accepts an optional boolean, so `build --no-timing folder`
+  consumes `folder` as that value and rejects it instead of treating it as the
+  project path. `cli_tests.ml` and the executable differential gate retain this
+  parse result; changing it requires a coordinated CLI compatibility decision.
+- `--version` is global only before an explicit subcommand, and clustered short
+  flags use the first `h` or `V` to decide help versus version. Cmdliner routing
+  tests and executable differential cases retain both orders. The normalization
+  layer should remain isolated so this behavior can be removed if the CLI is
+  intentionally simplified later.
+- `lib/bs/build.ninja` is an empty compatibility marker rather than the actual
+  build plan. It is written by one-shot and structural rebuilds but not by
+  retained initial/incremental watch builds. Focused build/watch assertions and
+  artifact manifests cover the distinction; editor tooling should eventually
+  use an explicitly named invalidation marker.
+- Existing generated outputs are published as compiler jobs succeed, while
+  newly created outputs are staged until the whole build succeeds. This is not
+  a transaction across all outputs, but it preserves last-known files while
+  preventing a failed initial output from escaping. Failure, source-map, and
+  watch recovery tests cover both branches; changing it requires an explicit
+  artifact-consistency contract and corresponding failure-sequence tests.
+
+### Rust bugs and simple inefficiencies corrected by the port
+
+- Malformed input and missing-resource paths return contextual errors instead
+  of panicking or hanging. This covers unsupported JSX versions, empty PPX
+  commands, unresolved regular dependencies, sources outside a project,
+  disappearing source/AST files, stale compiler paths, mismatched dependency
+  identities, invalid watch reinitialization, and empty, missing, or failing
+  after-build commands. The individual source locations, expected behavior, and
+  focused coverage are catalogued under **Rust panic follow-ups** above; future
+  Rust fixes should change the differential expectations from exit 101 or a
+  bounded hang to the same normal error class.
+- Namespace entries without a namespace are rejected rather than silently
+  ignored, and compiler-flag strings do not manufacture empty argv elements
+  from repeated whitespace. Configuration unit and differential cases retain
+  both low-risk validations; upstream can adopt them without changing valid
+  configurations.
+- Dependency permissions are checked only on traversed graph edges and every
+  denied active edge is reported on stderr with current field/file names. The
+  command-validation fixtures retain Rust's dormant-edge false rejection and
+  incomplete/obsolete diagnostic beside the corrected result; the Rust pass can
+  reuse the already resolved graph and aggregate all violations.
+- Watch filtering uses the same positive regex meaning during discovery and
+  event handling. The synchronized differential watch case proves Rust's
+  inverted event predicate and the corrected rebuild; Rust should remove the
+  negation in `watcher.rs::matches_filter`.
+- Replacing a module's dependencies removes obsolete reverse edges instead of
+  only appending new ones. Focused retained-state tests cover removal and
+  duplicate prevention; Rust can rebuild those reverse entries when replacing
+  its forward set to avoid unnecessary later recompilation.
+- An inconclusive Windows lock-owner probe preserves the lock rather than
+  leaking an internal process-launch exception. Platform tests cover the
+  conservative result; Rust can translate probe failures at the same boundary.
+- Compiler fingerprints are not rewritten when their contents are unchanged,
+  avoiding an unnecessary write without weakening invalidation. Focused
+  compiler-info tests cover stability and every fingerprint input; Rust can
+  conditionally replace the file after comparing its contents.
+- Stale runtime overrides are rejected before parser/compiler work, instead of
+  producing repeated misleading compiler failures. The differential command
+  gate also checks that no compiler work starts; Rust can apply the same
+  toolchain preflight used for its compiler path.
+- Working compiler artifacts from renamed or deleted sources are removed after
+  preserving the source-located diagnostic for the current command. Focused
+  rename/delete cases and artifact manifests cover both diagnostics and final
+  absence; the detailed missing-dot defect and upstream repair path are under
+  **Rust cleanup follow-up** above.
+- Missing generated JavaScript is repaired on the next build, and package-output
+  format/path/suffix changes invalidate old outputs. Focused restart and output
+  migration tests cover issue #7728 and PR #8540 respectively; both behaviors
+  can be ported to Rust through its compile-state fingerprint/inventory.
+- Visible packages that publish the same namespace artifact fail during graph
+  initialization instead of allowing include-path order to select the wrong
+  map. A focused fixture requires both packages in the diagnostic; Rust should
+  add the same visibility-scoped uniqueness check before compilation.
+
+### Possible post-parity performance improvements absent from Rust
+
+- Persist a validated discovery/build inventory across separate CLI processes.
+  This is a hypothesis aimed at configuration and filesystem setup in repeated
+  short-lived builds. It needs a versioned content fingerprint, conservative
+  fallback, Windows path review, exact work/artifact equivalence, filesystem
+  tracing, and clean/unchanged/edit timing before adoption.
+- Keep compiler workers alive across jobs, or eventually integrate the compiler
+  in-process. This targets process startup and repeated compiler initialization,
+  but carries high compiler-global-state and failure-isolation risk and remains
+  outside this port. Prototype it only after profiling process startup, then run
+  the full failure/recovery, output-equivalence, memory, and Windows process-tree
+  gates.
+- Parallelize independent configuration parsing or directory inventory with
+  OCaml domains. This is useful only if profiling shows CPU saturation rather
+  than filesystem latency; it adds synchronization and deterministic-diagnostic
+  risk. Require a measured hot phase, stable single-thread fallback, exact
+  diagnostics/artifacts, resource measurements, and native Windows validation.
+
+The current clean-build per-CMI equality and case-candidate investigation is
+not in the last list because it is work-equivalence analysis against Rust, not
+a novel optimization. The source-filter compatibility gap is likewise a
+required behavior decision, not a performance proposal.
+
 ## Known gaps
 
 - `--filter` now uses `Re.Perl` rather than `Str`, matching common Rust-regex
@@ -1928,8 +2047,8 @@ Three later Rust fixes were audited explicitly against the port:
    Rust (unless that compatibility relationship is itself the reason). Review
    naming and module qualification, including whether generic utility calls are
    clearer as `Module.function` than through `open`; do not apply either style
-   mechanically. Remove dead code, and document the complete
-   compatibility-oddity, corrected-Rust-behavior, and future-performance lists.
+   mechanically. Remove dead code, and confirm that the three release
+   inventories remain complete after the final behavior and platform work.
    Continue applying the functional-design principle of making illegal states
    unrepresentable where it removes a concrete ambiguity or failure mode, not as
    a ceremonial replacement for every `option`; the recorded candidates and
