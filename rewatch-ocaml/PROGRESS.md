@@ -2561,17 +2561,22 @@ coherent reproduction within the threshold; matching work alone is not enough.
 A same-host historical-binary investigation did not find an OCaml regression
 behind that changed ratio. The pre-pipe `0585d07dc4` binary measured 5.886 s
 against a 4.250 s Rust median, and the earlier `353479276f` binary measured
-5.864 s against 4.173 s. More importantly, a five-run interleaved A/B test
-removed Rust from the comparison: the exact `54a7273d4f` binary for which the
-original post-pipe gate recorded 1.190x measured 5.753 s, while the current
-binary measured 5.803 s. The 0.9% difference is within the observed host noise
-and is far too small to explain the ratio change. During these runs the same
-Rust binary varied between 3.980 s and 6.210 s, compared with its historical
-4.662 s median. The current evidence therefore attributes the apparent
-regression to variation in the Rust denominator and host scheduling rather
-than to a port change. The gate remains open: repeat both the Rust/OCaml gate
-and the old/current OCaml control on a suitably stable host before accepting or
-investigating smaller differences.
+5.864 s against 4.173 s. A subsequent idle-host rerun compared the exact
+`54a7273d4f` source checkpoint for which the original post-pipe gate recorded
+1.190x with the current binary. In separate five-run Rust comparisons, the old
+checkpoint measured 5.704 s versus 4.146 s (1.376x), while current measured
+5.674 s versus 4.115 s (1.379x). A direct five-run interleaved old/current
+OCaml comparison measured 5.744 s for the old checkpoint and 5.673 s for
+current, making current about 1.2% faster under the same conditions. The
+current gate also retained exact compiler-work counts and identical complete
+and stable artifact sets.
+
+The 1.19x-to-1.38x change is therefore reproducible for the old checkpoint as
+well as current and cannot have originated in the intervening port changes.
+The same Rust source and binary are used; only its measured runtime changed
+relative to the historical gate. The reason for that environment-sensitive
+difference remains unexplained, so the 1.25x completion gate stays open even
+though the source-regression hypothesis is closed.
 
 The latest retained-watch gate at `d1c3ca9732` was coherent and passed: 118 ms
 OCaml versus 123 ms Rust, exactly seven parser and seven compiler calls per
