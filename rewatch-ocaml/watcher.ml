@@ -5,7 +5,11 @@ type change = {path: string; kind: change_kind}
 type build_result = Succeeded | Failed
 type rebuild_kind = Incremental | Full
 
-type source_root = {directory: string; recursive: bool}
+type source_root = {
+  directory: string;
+  recursive: bool;
+  filter: Source_filter.t option;
+}
 
 let control_file_names = ["rescript.json"; "bsconfig.json"]
 let is_control_file_name name = List.mem name control_file_names
@@ -20,7 +24,7 @@ let rec nearest_existing_ancestor path =
     let parent = Filename.dirname path in
     if parent = path then None else nearest_existing_ancestor parent
 
-let watch_context ~root ~prod ~features =
+let watch_context ~root ~prod ~features ~filter =
   try
     let root_config = Config.load_root root in
     let dependency_context = Project_context.dependency_context root_config in
@@ -146,7 +150,11 @@ let watch_context ~root ~prod ~features =
                && feature_enabled)
           |> List.iter (fun source ->
                let directory = Filename.concat config.root source.Config.dir in
-               sources := {directory; recursive = source.recurse} :: !sources;
+               let filter =
+                 if package_root = root_config.root then filter else None
+               in
+               sources :=
+                 {directory; recursive = source.recurse; filter} :: !sources;
                let existing =
                  nearest_existing_directory config.root directory
                in
@@ -179,8 +187,8 @@ let watch_context ~root ~prod ~features =
       [],
       [] )
 
-let snapshot ?(on_source_symlink = fun _ -> ()) digest_cache ~matches_source
-    roots sources unresolved =
+let snapshot ?(on_source_symlink = fun _ -> ()) digest_cache roots sources
+    unresolved =
   let visited_directories = Hashtbl.create 64 in
   let seen_files = Hashtbl.create 256 in
   let digest path stat =
@@ -204,7 +212,12 @@ let snapshot ?(on_source_symlink = fun _ -> ()) digest_cache ~matches_source
       let digest = digest path stat in
       (path, stat.Unix.st_mtime, stat.Unix.st_size, digest) :: acc
   in
-  let rec walk recursive dir acc =
+  let matches_source source path =
+    Option.fold ~none:true
+      ~some:(fun filter -> Source_filter.matches_basename filter path)
+      source.filter
+  in
+  let rec walk source recursive dir acc =
     try
       let canonical = Unix.realpath dir in
       let previous = Hashtbl.find_opt visited_directories canonical in
@@ -220,17 +233,14 @@ let snapshot ?(on_source_symlink = fun _ -> ()) digest_cache ~matches_source
               let stat = Unix.lstat path in
               match stat.Unix.st_kind with
               | Unix.S_DIR ->
-                if
-                  (not recursive)
-                  || List.mem name ["lib"; "node_modules"; ".git"; "_build"]
-                then
+                if (not recursive) || Native_watcher.is_build_directory path then
                   acc
-                else walk true path acc
+                else walk source true path acc
               | Unix.S_LNK -> (
                 let is_source_name =
                   (Filename.extension path = ".res"
                   || Filename.extension path = ".resi")
-                  && matches_source path
+                  && matches_source source path
                 in
                 if is_source_name then (
                   try
@@ -240,18 +250,21 @@ let snapshot ?(on_source_symlink = fun _ -> ()) digest_cache ~matches_source
                         Filename.concat (Filename.dirname path) target
                       else target
                     in
-                    Filename.dirname target |> nearest_existing_ancestor
-                    |> Option.iter on_source_symlink
+                    let target =
+                      try Unix.realpath target
+                      with Sys_error _ | Unix.Unix_error _ -> target
+                    in
+                    on_source_symlink target
                   with Sys_error _ | Unix.Unix_error _ -> ());
                 let target = Unix.stat path in
                 match target.Unix.st_kind with
-                | Unix.S_DIR when recursive -> walk true path acc
+                | Unix.S_DIR when recursive -> walk source true path acc
                 | Unix.S_REG when is_source_name -> add_file path target acc
                 | _ -> acc)
               | Unix.S_REG
                 when (Filename.extension path = ".res"
                      || Filename.extension path = ".resi")
-                     && matches_source path ->
+                     && matches_source source path ->
                 add_file path stat acc
               | _ -> acc
             with Sys_error _ | Unix.Unix_error _ -> acc)
@@ -273,7 +286,7 @@ let snapshot ?(on_source_symlink = fun _ -> ()) digest_cache ~matches_source
     List.fold_left add_control_files [] roots
     |> fun acc ->
     List.fold_left
-      (fun acc source -> walk source.recursive source.directory acc)
+      (fun acc source -> walk source source.recursive source.directory acc)
       acc sources
     |> fun acc ->
     List.fold_left
@@ -296,17 +309,17 @@ let snapshot ?(on_source_symlink = fun _ -> ()) digest_cache ~matches_source
   digest_cache;
   result
 
-let snapshot_with_symlink_paths digest_cache ~matches_source roots sources
-    unresolved =
-  let target_parents = ref [] in
+let snapshot_with_symlink_paths digest_cache roots sources unresolved =
+  let targets = ref [] in
   let snapshot =
     snapshot
-      ~on_source_symlink:(fun directory ->
-        target_parents := directory :: !target_parents)
-      digest_cache ~matches_source roots sources unresolved
+      ~on_source_symlink:(fun target -> targets := target :: !targets)
+      digest_cache roots sources unresolved
   in
   let paths =
-    !target_parents |> List.sort_uniq String.compare
+    !targets |> List.sort_uniq String.compare
+    |> List.filter_map (fun target ->
+         Filename.dirname target |> nearest_existing_ancestor)
     |> List.concat_map (fun directory ->
          let parent = Filename.dirname directory in
          let directories = if parent = directory then [directory] else [directory; parent] in
@@ -314,7 +327,7 @@ let snapshot_with_symlink_paths digest_cache ~matches_source roots sources
            (fun directory -> Native_watcher.{directory; recursive = false})
            directories)
   in
-  (snapshot, paths)
+  (snapshot, paths, List.sort_uniq String.compare !targets)
 
 let changes_between before after =
   (* A content snapshot deliberately treats native events only as wakeups. The
@@ -392,11 +405,18 @@ let path_in_scope roots sources unresolved path =
     (Filename.extension path = ".res" || Filename.extension path = ".resi")
     && List.exists
          (fun source ->
-           Filename.dirname path = source.directory
-           || (source.recursive
-              && String.starts_with
-                   ~prefix:(source.directory ^ Filename.dir_sep)
-                   path))
+           let in_directory =
+             Filename.dirname path = source.directory
+             || (source.recursive
+                && String.starts_with
+                     ~prefix:(source.directory ^ Filename.dir_sep)
+                     path)
+           in
+           in_directory
+           && Option.fold ~none:true
+                ~some:(fun filter ->
+                  Source_filter.matches_basename filter path)
+                source.filter)
          sources
   in
   is_control || is_source || List.mem path unresolved
@@ -440,11 +460,6 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
     stop_requested := true
   in
   let digest_cache = Hashtbl.create 256 in
-  let matches_filter =
-    match filter with
-    | None -> fun _ -> true
-    | Some filter -> Source_filter.matches_basename filter
-  in
   let refresh_and_snapshot watcher ~paths ~symlink_paths roots sources
       unresolved =
     (* Watch paths can change while handles are being installed, especially
@@ -457,11 +472,11 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
         match Native_watcher.refresh watcher ~paths:(paths @ symlink_paths) with
         | Error _ as error -> error
         | Ok () ->
-          let after_refresh, updated_symlink_paths =
-            snapshot_with_symlink_paths digest_cache
-              ~matches_source:matches_filter roots sources unresolved
+          let after_refresh, updated_symlink_paths, symlink_targets =
+            snapshot_with_symlink_paths digest_cache roots sources unresolved
           in
-          if updated_symlink_paths = symlink_paths then Ok after_refresh
+          if updated_symlink_paths = symlink_paths then
+            Ok (after_refresh, symlink_targets)
           else loop (remaining - 1) updated_symlink_paths
     in
     loop 8 symlink_paths
@@ -504,7 +519,8 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
       print_endline "\nBuild failed. Watching for changes..."
     | Failed -> ()
   in
-  let direct_content_changes watcher roots sources unresolved events =
+  let direct_content_changes watcher roots sources unresolved symlink_targets
+      events =
     let changes = ref [] in
     let requires_reconciliation = ref false in
     let is_source_path path =
@@ -524,6 +540,13 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
     let is_directory path =
       try Sys.is_directory path with Sys_error _ -> false
     in
+    let is_symlink_target path =
+      let comparable = Platform.normalize_path_for_comparison path in
+      List.exists
+        (fun target ->
+          Platform.normalize_path_for_comparison target = comparable)
+        symlink_targets
+    in
     List.iter
       (fun (event : Native_watcher.change) ->
         match event.kind, event.path with
@@ -541,12 +564,14 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
         | Native_watcher.Content, Some path ->
           if is_source_path path then (
             if path_in_scope roots sources unresolved path then (
-              if matches_filter path then
-                if Sys.file_exists path then
-                  changes := {path; kind = Modified} :: !changes
-                else requires_reconciliation := true)
+              if Sys.file_exists path then
+                changes := {path; kind = Modified} :: !changes
+              else requires_reconciliation := true)
             else requires_reconciliation := true)
-          else if path_in_scope roots sources unresolved path then
+          else if
+            path_in_scope roots sources unresolved path
+            || is_symlink_target path
+          then
             requires_reconciliation := true)
       events;
     if !requires_reconciliation then None
@@ -559,16 +584,14 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
   let rec polling_loop roots sources unresolved previous =
     if keep_running () then (
       let current =
-        snapshot digest_cache ~matches_source:matches_filter roots sources
-          unresolved
+        snapshot digest_cache roots sources unresolved
       in
       if current <> previous then (
         let build_roots, _, build_sources, build_unresolved =
-          watch_context ~root ~prod ~features
+          watch_context ~root ~prod ~features ~filter
         in
         let before_build =
-          snapshot digest_cache ~matches_source:matches_filter build_roots
-            build_sources build_unresolved
+          snapshot digest_cache build_roots build_sources build_unresolved
         in
         let changes =
           polling_build_changes ~previous ~trigger:current ~before_build
@@ -584,11 +607,10 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
         build ~poll ~changes:(Some changes)
         |> finish_rebuild;
         let new_roots, _, new_sources, new_unresolved =
-          watch_context ~root ~prod ~features
+          watch_context ~root ~prod ~features ~filter
         in
         let after_build =
-          snapshot digest_cache ~matches_source:matches_filter new_roots
-            new_sources new_unresolved
+          snapshot digest_cache new_roots new_sources new_unresolved
         in
         let baseline =
           reconciliation_baseline ~old_roots:build_roots
@@ -606,7 +628,7 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
         delay 0.2;
         polling_loop roots sources unresolved current))
   in
-  let rec native_loop watcher roots sources unresolved previous =
+  let rec native_loop watcher roots sources unresolved symlink_targets previous =
     let result = Native_watcher.wait watcher ~keep_running in
     match result with
     | Native_watcher.Stopped -> None
@@ -616,10 +638,12 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
       delay 0.05;
       let events = events @ Native_watcher.drain watcher in
       let direct =
-        direct_content_changes watcher roots sources unresolved events
+        direct_content_changes watcher roots sources unresolved symlink_targets
+          events
       in
       (match direct with
-      | Some [] -> native_loop watcher roots sources unresolved previous
+      | Some [] ->
+        native_loop watcher roots sources unresolved symlink_targets previous
       | Some changes ->
         Output.debug ~verbosity "doing Incremental";
         begin_rebuild Incremental;
@@ -627,31 +651,30 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
         let updated_previous =
           update_snapshot_entries digest_cache previous changes
         in
-        native_loop watcher roots sources unresolved updated_previous
+        native_loop watcher roots sources unresolved symlink_targets
+          updated_previous
       | None -> native_reconcile watcher roots sources unresolved previous)
   and native_reconcile watcher roots sources unresolved previous =
     let current =
-      snapshot digest_cache ~matches_source:matches_filter roots sources
-        unresolved
+      snapshot digest_cache roots sources unresolved
     in
     if current <> previous then (
       Output.debug ~verbosity "doing Full";
       begin_rebuild Full;
       let build_roots, _, build_sources, build_unresolved =
-        watch_context ~root ~prod ~features
+        watch_context ~root ~prod ~features ~filter
       in
       let before_build =
-        snapshot digest_cache ~matches_source:matches_filter build_roots
-          build_sources build_unresolved
+        snapshot digest_cache build_roots build_sources build_unresolved
       in
       build ~poll ~changes:(Some (changes_between previous current))
       |> finish_rebuild;
       let new_roots, paths, new_sources, new_unresolved =
-        watch_context ~root ~prod ~features
+        watch_context ~root ~prod ~features ~filter
       in
-      let after_build, symlink_paths =
-        snapshot_with_symlink_paths digest_cache
-          ~matches_source:matches_filter new_roots new_sources new_unresolved
+      let after_build, symlink_paths, _ =
+        snapshot_with_symlink_paths digest_cache new_roots new_sources
+          new_unresolved
       in
       let baseline =
         reconciliation_baseline ~old_roots:build_roots
@@ -664,19 +687,20 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
       with
       | Error message ->
         Some (message, new_roots, new_sources, new_unresolved, baseline)
-      | Ok registered_snapshot ->
+      | Ok (registered_snapshot, symlink_targets) ->
         if registered_snapshot <> baseline then
           native_reconcile watcher new_roots new_sources new_unresolved baseline
         else
           native_loop watcher new_roots new_sources new_unresolved
+            symlink_targets
             registered_snapshot)
     else
       let new_roots, paths, new_sources, new_unresolved =
-        watch_context ~root ~prod ~features
+        watch_context ~root ~prod ~features ~filter
       in
-      let after_refresh, symlink_paths =
-        snapshot_with_symlink_paths digest_cache
-          ~matches_source:matches_filter new_roots new_sources new_unresolved
+      let after_refresh, symlink_paths, _ =
+        snapshot_with_symlink_paths digest_cache new_roots new_sources
+          new_unresolved
       in
       let baseline =
         reconciliation_baseline ~old_roots:roots ~old_sources:sources
@@ -689,20 +713,20 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
       with
       | Error message ->
         Some (message, new_roots, new_sources, new_unresolved, baseline)
-      | Ok registered_snapshot ->
+      | Ok (registered_snapshot, symlink_targets) ->
         if registered_snapshot <> baseline then
           native_reconcile watcher new_roots new_sources new_unresolved baseline
         else
           native_loop watcher new_roots new_sources new_unresolved
+            symlink_targets
             registered_snapshot
   in
   with_signal_handlers (fun _ -> stop ()) (fun () ->
     let roots, paths, sources, unresolved =
-      watch_context ~root ~prod ~features
+      watch_context ~root ~prod ~features ~filter
     in
-    let before_build, symlink_paths =
-      snapshot_with_symlink_paths digest_cache
-        ~matches_source:matches_filter roots sources unresolved
+    let before_build, symlink_paths, _ =
+      snapshot_with_symlink_paths digest_cache roots sources unresolved
     in
     (* Install handles before the initial build so an edit made as soon as its
        output appears cannot land in a blind interval between compilation and
@@ -713,7 +737,7 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
       report_native_fallback message;
       ignore (build ~poll ~changes:None);
       let roots, _, sources, unresolved =
-        watch_context ~root ~prod ~features
+        watch_context ~root ~prod ~features ~filter
       in
       polling_loop roots sources unresolved before_build
     | Ok watcher ->
