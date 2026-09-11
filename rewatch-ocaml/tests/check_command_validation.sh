@@ -973,26 +973,40 @@ if [ -n "$(find "$work/malformed-lock/lib" -maxdepth 1 \
   echo "OCaml left a watch-lock candidate after acquisition failed" >&2
   exit 1
 fi
-mkdir -p "$work/watch-lock-owner"
-cp "$(command -v sleep)" "$work/watch-lock-owner/rescript"
-"$work/watch-lock-owner/rescript" 60 &
-watch_lock_owner_pid=$!
-background_pids="$background_pids $watch_lock_owner_pid"
-printf '%s' "$watch_lock_owner_pid" >"$work/watch-lock-order/lib/watch.lock"
 printf '{ invalid json\n' >"$work/watch-lock-order/rescript.json"
-run_case watch-lock-before-config reject reject watch "$work/watch-lock-order"
-if ! grep -F 'A ReScript build is already running' "$work/rust.err" >/dev/null || \
-  ! grep -F 'A ReScript build is already running' "$work/ocaml.err" >/dev/null || \
-  grep -F 'invalid JSON' "$work/ocaml.err" >/dev/null; then
-  echo "watch-lock-before-config: lock acquisition did not precede config parsing" >&2
-  printf '%s\n' '--- Rust output ---' >&2
-  cat "$work/rust.out" "$work/rust.err" >&2
-  printf '%s\n' '--- OCaml output ---' >&2
-  cat "$work/ocaml.out" "$work/ocaml.err" >&2
-  exit 1
-fi
-kill -TERM "$watch_lock_owner_pid"
-wait "$watch_lock_owner_pid" 2>/dev/null || true
+# A live lock owner must have the executable name expected by the command under
+# test. Release packages deliberately give the Rust and OCaml binaries different
+# names, so sharing one dummy owner would make the first command discard the lock.
+for implementation in rust ocaml; do
+  case "$implementation" in
+    rust) executable=$rust ;;
+    ocaml) executable=$ocaml ;;
+  esac
+  owner_dir="$work/watch-lock-owner-$implementation"
+  owner_executable="$owner_dir/$(basename "$executable")"
+  mkdir -p "$owner_dir"
+  cp "$(command -v sleep)" "$owner_executable"
+  "$owner_executable" 60 &
+  watch_lock_owner_pid=$!
+  background_pids="$background_pids $watch_lock_owner_pid"
+  printf '%s' "$watch_lock_owner_pid" >"$work/watch-lock-order/lib/watch.lock"
+  set +e
+  "$executable" watch "$work/watch-lock-order" \
+    >"$work/$implementation.out" 2>"$work/$implementation.err"
+  status=$?
+  set -e
+  if [ "$(classify "$status")" != reject ] || \
+    ! grep -F 'A ReScript build is already running' \
+      "$work/$implementation.err" >/dev/null || \
+    grep -F 'invalid JSON' "$work/$implementation.err" >/dev/null; then
+    echo "watch-lock-before-config: $implementation lock acquisition did not precede config parsing" >&2
+    cat "$work/$implementation.out" "$work/$implementation.err" >&2
+    exit 1
+  fi
+  kill -TERM "$watch_lock_owner_pid"
+  wait "$watch_lock_owner_pid" 2>/dev/null || true
+done
+checked=$((checked + 1))
 run_case build-interface-path-mismatch reject reject build \
   "$work/interface-mismatch"
 if ! cmp -s "$work/rust.err" "$work/ocaml.err"; then
