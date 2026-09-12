@@ -7,7 +7,7 @@ import { runBuildSystem } from "./common/runBuildSystem.js";
 
 if (rescript_rust_exe === undefined) {
   console.error(
-    "The separate Rust build-system binary is not available on Windows.",
+    "The Rust build-system binary is not available for this platform.",
   );
   process.exit(1);
 } else {

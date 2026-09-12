@@ -213,7 +213,6 @@ jobs:
         shell: bash
 
       - name: Run OCaml rewatch unit and focused tests
-        if: runner.os != 'Windows'
         run: |
           bash rewatch-ocaml/tests/check_rust_test_coverage.sh --require-complete
           bash rewatch-ocaml/tests/check_canonical_test_coverage.sh
@@ -234,13 +233,12 @@ jobs:
         shell: bash
 
       - name: Run OCaml rewatch canonical tests
-        if: runner.os != 'Windows'
         run: ./rewatch/tests/suite.sh packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe
         shell: bash
 
-      - name: Run Rust rewatch tests on Windows
+      - name: Run Rust rewatch reference tests on Windows
         if: runner.os == 'Windows'
-        run: ./rewatch/tests/suite.sh rewatch/target/release/rescript
+        run: ./rewatch/tests/suite.sh packages/@rescript/${{ matrix.node-target }}/bin/rescript-rust.exe
         shell: bash
 
       - name: Run syntax benchmarks
@@ -651,11 +649,9 @@ jobs:
         working-directory: rewatch/testrepo
 
       - name: Run installed default OCaml rewatch integration tests
-        if: runner.os != 'Windows'
         run: ./rewatch/tests/suite.sh rewatch/testrepo/node_modules/.bin/rescript
         shell: bash
 
-      - name: Run installed Rust rewatch integration tests on Windows
-        if: runner.os == 'Windows'
-        run: ./rewatch/tests/suite.sh rewatch/testrepo/node_modules/.bin/rescript
+      - name: Run installed Rust rewatch reference integration tests
+        run: ./rewatch/tests/suite.sh rewatch/testrepo/node_modules/.bin/rescript-rust
         shell: bash

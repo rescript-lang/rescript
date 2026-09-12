@@ -7,10 +7,9 @@
 ; cause no timestamp churn downstream.
 ;
 ; One rule per platform; %{system}/%{architecture} come from `ocamlc -config`
-; (note: x64 is "amd64" there). Non-Windows packages receive the OCaml build
-; system as rescript.exe; Cargo separately promotes the Rust reference as
-; rescript-rust.exe. Windows keeps Rust as rescript.exe until the native OCaml
-; port is complete. The browser profile is excluded because it builds a
+; (note: x64 is "amd64" there). Every package receives the OCaml build system
+; as rescript.exe; Cargo separately promotes the Rust reference as
+; rescript-rust.exe. The browser profile is excluded because it builds a
 ; playground-flavoured compiler that must never overwrite the native binaries.
 
 (rule
@@ -127,11 +126,12 @@
    (<> %{profile} browser)
    (= %{system} mingw64)
    (= %{architecture} amd64)))
- (targets bsc.exe rescript-editor-analysis.exe rescript-tools.exe)
+ (targets bsc.exe rescript-editor-analysis.exe rescript-tools.exe rescript.exe)
  (deps
   ../bsc/rescript_compiler_main.exe
   ../../analysis/bin/main.exe
-  ../../tools/bin/main.exe)
+  ../../tools/bin/main.exe
+  ../../rewatch-ocaml/rescript_ocaml.exe)
  (mode
   (promote
    (until-clean)
@@ -140,4 +140,5 @@
   (progn
    (copy ../bsc/rescript_compiler_main.exe bsc.exe)
    (copy ../../analysis/bin/main.exe rescript-editor-analysis.exe)
-   (copy ../../tools/bin/main.exe rescript-tools.exe))))
+   (copy ../../tools/bin/main.exe rescript-tools.exe)
+   (copy ../../rewatch-ocaml/rescript_ocaml.exe rescript.exe))))
