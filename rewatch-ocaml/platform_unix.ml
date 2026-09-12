@@ -32,11 +32,13 @@ let post_build_command ~command ~output =
 
 type process = int
 
-let spawn ~env ~cwd ~program ~args ~stdout ~stderr =
+let spawn ~env ~cwd ~program ~args ~stdin ~stdout ~stderr =
   let program = resolve_program ~cwd program in
   Spawn.spawn ?env ~cwd:(Spawn.Working_dir.Path cwd) ~prog:program
-    ~argv:(program :: args) ~stdout ~stderr
+    ~argv:(program :: args) ~stdin ~stdout ~stderr
     ~setpgid:Spawn.Pgid.new_process_group ()
+
+let null_device = "/dev/null"
 
 let process_id process = process
 let release_process _process = ()

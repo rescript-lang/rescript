@@ -168,6 +168,16 @@ let prepare_incremental previous changes (attempt : Build_attempt.t)
   let sources = incremental_sources previous changes in
   let bsc = prepared.compiler_context.bsc_path in
   let started_at = Unix.gettimeofday () in
+  List.iter
+    (fun source ->
+      Build_session.mark_parse_pending attempt.session
+        (Platform.normalize_path_for_comparison source.source.absolute_path);
+      let key =
+        Source.compiler_basename source.package.graph_compile_config
+          source.source.module_.Source.name
+      in
+      (Build_state.find_exn prepared.build_state key).compile_dirty <- true)
+    sources;
   sources
   |> List.map (fun source ->
       Source.compiler_basename source.package.graph_compile_config
@@ -483,9 +493,7 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
   in
   Build_lock.with_build ~poll build_lock_root
     (fun ~release:release_build_lock ->
-      Fun.protect
-        ~finally:(fun () -> Build_attempt.finish_attempt attempt)
-        (fun () ->
+      Build_attempt.protect attempt (fun () ->
           try execute ~release_build_lock with
           | Build_failure output -> report_failure ~compile_seconds:0. output
           | Parse_failure output -> report_parse_failure output));
@@ -541,6 +549,10 @@ let watch ~verbosity ~folder ~prod ~features ~warn_error ~after_build ~filter
           (match (compilation_kind, !attempted) with
           | (Initial_watch | Incremental_watch), Some state ->
             retained := Some state
+          | Full_watch, Some state
+            when Option.is_some (Build_session.prepared state.session) ->
+            retained := Some state;
+            force_full_rebuild := false
           | (One_shot | Full_watch), _ | _, None -> ());
           raise exn
       in

@@ -255,6 +255,39 @@ printf '%s\n' \
 printf 'let value = 1\n' >"$parse_publication/src/A.res"
 printf 'let other = 1\n' >"$parse_publication/src/B.res"
 
+multi_package_pending="$work/multi-package-pending"
+mkdir -p "$multi_package_pending/src" \
+  "$multi_package_pending/packages/dep1/src" \
+  "$multi_package_pending/packages/dep2/src" \
+  "$multi_package_pending/node_modules"
+printf '%s\n' \
+  '{"name":"multi-package-pending","sources":"src","dependencies":["dep1","dep2"],"package-specs":{"module":"esmodule","in-source":true,"suffix":".mjs"}}' \
+  >"$multi_package_pending/rescript.json"
+printf 'let value = A.value + B.value\n' \
+  >"$multi_package_pending/src/Main.res"
+printf 'let other = 1\n' >"$multi_package_pending/src/Other.res"
+printf '%s\n' \
+  '{"name":"dep1","sources":"src","package-specs":{"module":"esmodule","in-source":true,"suffix":".mjs"}}' \
+  >"$multi_package_pending/packages/dep1/rescript.json"
+printf 'let value = 1\n' \
+  >"$multi_package_pending/packages/dep1/src/A.res"
+printf '%s\n' \
+  '{"name":"dep2","sources":"src","package-specs":{"module":"esmodule","in-source":true,"suffix":".mjs"}}' \
+  >"$multi_package_pending/packages/dep2/rescript.json"
+printf 'let value = 1\n' \
+  >"$multi_package_pending/packages/dep2/src/B.res"
+ln -s ../packages/dep1 "$multi_package_pending/node_modules/dep1"
+ln -s ../packages/dep2 "$multi_package_pending/node_modules/dep2"
+
+full_watch_recovery="$work/full-watch-recovery"
+mkdir -p "$full_watch_recovery/src"
+printf '%s\n' \
+  '{"name":"full-watch-recovery","sources":"src","package-specs":{"module":"esmodule","in-source":true,"suffix":".mjs"}}' \
+  >"$full_watch_recovery/rescript.json"
+printf 'let value = B.value\n' >"$full_watch_recovery/src/A.res"
+printf 'let value = 1\n' >"$full_watch_recovery/src/B.res"
+printf 'let value = 1\n' >"$full_watch_recovery/src/C.res"
+
 moved_source="$work/moved-source"
 mkdir -p "$moved_source/src/nested"
 printf '%s\n' \
@@ -1028,6 +1061,59 @@ if ! wait_for_text "$parse_publication/src/A.mjs" 'value = 2'; then
 fi
 kill -TERM "$parse_publication_pid"
 wait "$parse_publication_pid" 2>/dev/null || true
+
+"$port" watch "$multi_package_pending" \
+  >"$multi_package_pending/watch.log" 2>&1 &
+multi_package_pending_pid=$!
+background_pids="$background_pids $multi_package_pending_pid"
+if ! wait_for_file "$multi_package_pending/src/Main.mjs"; then
+  cat "$multi_package_pending/watch.log" >&2
+  exit 1
+fi
+dep1_destination="$multi_package_pending/packages/dep1/lib/ocaml/A.res"
+rm "$dep1_destination"
+mkdir "$dep1_destination"
+printf 'let value = 2\n' >"$multi_package_pending/packages/dep2/src/B.res"
+printf 'let value = 2\n' >"$multi_package_pending/packages/dep1/src/A.res"
+if ! wait_for_text "$multi_package_pending/watch.log" "$dep1_destination"; then
+  cat "$multi_package_pending/watch.log" >&2
+  exit 1
+fi
+rmdir "$dep1_destination"
+printf 'let other = 2\n' >"$multi_package_pending/src/Other.res"
+if ! wait_for_text "$multi_package_pending/packages/dep2/src/B.mjs" \
+  'value = 2'; then
+  cat "$multi_package_pending/watch.log" >&2
+  echo "an earlier package failure forgot another package's edit" >&2
+  exit 1
+fi
+kill -TERM "$multi_package_pending_pid"
+wait "$multi_package_pending_pid" 2>/dev/null || true
+
+"$port" watch "$full_watch_recovery" \
+  >"$full_watch_recovery/watch.log" 2>&1 &
+full_watch_recovery_pid=$!
+background_pids="$background_pids $full_watch_recovery_pid"
+if ! wait_for_file "$full_watch_recovery/src/A.mjs"; then
+  cat "$full_watch_recovery/watch.log" >&2
+  exit 1
+fi
+rm "$full_watch_recovery/src/B.res"
+printf 'let value =\n' >"$full_watch_recovery/src/C.res"
+if ! wait_for_text "$full_watch_recovery/watch.log" \
+  'Error in full-watch-recovery'; then
+  cat "$full_watch_recovery/watch.log" >&2
+  exit 1
+fi
+printf 'let value = 2\n' >"$full_watch_recovery/src/C.res"
+if ! wait_for_text "$full_watch_recovery/watch.log" \
+  'I/O error: ../ocaml/b.cmi'; then
+  cat "$full_watch_recovery/watch.log" >&2
+  echo "full-watch parse recovery forgot deleted-dependency invalidation" >&2
+  exit 1
+fi
+kill -TERM "$full_watch_recovery_pid"
+wait "$full_watch_recovery_pid" 2>/dev/null || true
 
 publication_destination="$publication_cmi/lib/bs/src/A.res"
 env RESCRIPT_BSC_EXE="$root/rewatch-ocaml/tests/fail-late-publication-bsc.sh" \

@@ -14,9 +14,12 @@ val spawn :
   cwd:string ->
   program:string ->
   args:string list ->
+  stdin:Unix.file_descr ->
   stdout:Unix.file_descr ->
   stderr:Unix.file_descr ->
   process
+
+val null_device : string
 
 val process_id : process -> int
 val release_process : process -> unit

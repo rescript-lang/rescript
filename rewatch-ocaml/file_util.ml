@@ -28,14 +28,14 @@ let ensure_dir path =
   loop path
 
 let read_file path =
-  let descriptor = Unix.openfile path [Unix.O_RDONLY] 0 in
+  let descriptor = Unix.openfile path [Unix.O_RDONLY; Unix.O_CLOEXEC] 0 in
   let channel = Unix.in_channel_of_descr descriptor in
   Fun.protect
     ~finally:(fun () -> close_in_noerr channel)
     (fun () -> really_input_string channel (in_channel_length channel))
 
 let digest_file path =
-  let descriptor = Unix.openfile path [Unix.O_RDONLY] 0 in
+  let descriptor = Unix.openfile path [Unix.O_RDONLY; Unix.O_CLOEXEC] 0 in
   let channel = Unix.in_channel_of_descr descriptor in
   Fun.protect
     ~finally:(fun () -> close_in_noerr channel)
@@ -116,7 +116,9 @@ let write_file_atomic ?(ensure_parent = true) ?perm path contents =
    avoiding repeated metadata probes when publishing many files. *)
 let copy_existing_file ~ensure_parent source destination =
   if ensure_parent then ensure_dir (Filename.dirname destination);
-  let input_descriptor = Unix.openfile source [Unix.O_RDONLY] 0 in
+  let input_descriptor =
+    Unix.openfile source [Unix.O_RDONLY; Unix.O_CLOEXEC] 0
+  in
   let input_channel = Unix.in_channel_of_descr input_descriptor in
   Fun.protect
     ~finally:(fun () -> close_in_noerr input_channel)
@@ -153,12 +155,16 @@ let files_equal first second =
     | Some second_stat ->
       first_stat.Unix.st_size = second_stat.Unix.st_size
       &&
-      let first_descriptor = Unix.openfile first [Unix.O_RDONLY] 0 in
+      let first_descriptor =
+        Unix.openfile first [Unix.O_RDONLY; Unix.O_CLOEXEC] 0
+      in
       let first_channel = Unix.in_channel_of_descr first_descriptor in
       Fun.protect
         ~finally:(fun () -> close_in_noerr first_channel)
         (fun () ->
-          let second_descriptor = Unix.openfile second [Unix.O_RDONLY] 0 in
+          let second_descriptor =
+            Unix.openfile second [Unix.O_RDONLY; Unix.O_CLOEXEC] 0
+          in
           let second_channel = Unix.in_channel_of_descr second_descriptor in
           Fun.protect
             ~finally:(fun () -> close_in_noerr second_channel)

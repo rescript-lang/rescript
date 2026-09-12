@@ -62,6 +62,8 @@ type candidate = {
   make: unit -> scheduled_module;
 }
 
+type scheduled_item = Module of scheduled_module | Namespace_barrier
+
 let create ~key ~dependencies ~source ~state ~cmi_path ~prepare ~compile
     ~publish ~record_published_outputs ~post_build ~package_root ~is_local
     ~mark_warning =
@@ -148,31 +150,43 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
     Output.Progress.advance progress
   done;
   let completed_modules = ref 0 in
+  let scheduled_keys = Hashtbl.copy universe in
+  Hashtbl.iter
+    (fun key () ->
+      match Build_state.find build_state key with
+      | Some state when state.kind = Build_state.Namespace_map ->
+        Hashtbl.replace scheduled_keys key ()
+      | Some _ | None -> ())
+    reached;
   let scheduled_dependencies dependencies =
-    let visited = Hashtbl.create 4 in
-    let rec expand dependency =
-      if Hashtbl.mem visited dependency then []
-      else (
-        Hashtbl.add visited dependency ();
-        if Hashtbl.mem universe dependency then [dependency]
-        else
-          match Build_state.find build_state dependency with
-          | Some state when state.kind = Build_state.Namespace_map ->
-            List.concat_map expand state.dependencies
-          | Some _ | None -> [])
-    in
-    dependencies |> List.concat_map expand |> List.sort_uniq String.compare
+    List.filter (Hashtbl.mem scheduled_keys) dependencies
   in
-  let works =
+  let module_works =
     scheduled_modules
     |> List.map (fun (scheduled : scheduled_module) ->
         Process.
           {
             key = scheduled.key;
             dependencies = scheduled_dependencies scheduled.dependencies;
-            value = scheduled;
+            value = Module scheduled;
           })
   in
+  let namespace_works =
+    Hashtbl.to_seq_keys scheduled_keys
+    |> Seq.filter_map (fun key ->
+        match Build_state.find build_state key with
+        | Some state when state.kind = Build_state.Namespace_map ->
+          Some
+            Process.
+              {
+                key;
+                dependencies = scheduled_dependencies state.dependencies;
+                value = Namespace_barrier;
+              }
+        | Some _ | None -> None)
+    |> List.of_seq
+  in
+  let works = module_works @ namespace_works in
   let record_publication (scheduled : scheduled_module) ~is_interface path =
     let publication = Atomic.exchange scheduled.publication None in
     match publication with
@@ -305,51 +319,60 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
         ~on_failure:(function
           | Module_failed -> Process.Stop_new_work
           | _ -> Process.Abort_immediately)
-        ~next:(fun scheduled result ->
-          match (result, scheduled.phase) with
-          | None, Start ->
-            if scheduled.state.compile_dirty then (
-              mark_compiled ();
-              scheduled.prepare ();
-              match scheduled.source.Source.interface with
-              | Some path ->
-                Output.Progress.debug progress ~verbosity
-                  ("Compiling interface file: " ^ scheduled.key);
-                scheduled.phase <- Interface path;
-                Some (compilation_task scheduled ~is_interface:true path)
-              | None ->
-                let path = scheduled.source.Source.implementation in
-                Output.Progress.debug progress ~verbosity
-                  ("Compiling file: " ^ scheduled.key);
-                scheduled.phase <- Implementation path;
-                Some (compilation_task scheduled ~is_interface:false path))
-            else (
-              scheduled.phase <- Done;
-              incr completed_modules;
-              Output.Progress.advance progress;
-              None)
-          | Some result, Interface path ->
-            ignore (record_result scheduled ~is_interface:true path result);
-            let path = scheduled.source.Source.implementation in
-            Output.Progress.debug progress ~verbosity
-              ("Compiling file: " ^ scheduled.key);
-            scheduled.phase <- Implementation path;
-            Some (compilation_task scheduled ~is_interface:false path)
-          | Some result, Implementation path ->
-            if record_result scheduled ~is_interface:false path result then
-              continue_post_build scheduled (scheduled.post_build path)
-            else (
-              complete_module scheduled;
-              None)
-          | Some result, Post_build {output; remaining} ->
-            if record_post_build_result scheduled output result then
-              continue_post_build scheduled remaining
-            else (
-              complete_module scheduled;
-              None)
-          | None, (Interface _ | Implementation _ | Post_build _ | Done)
-          | Some _, (Start | Done) ->
-            raise (Project_context.Error "invalid compiler scheduler state"));
+        ~next:(fun item result ->
+          match item with
+          | Namespace_barrier -> (
+            match result with
+            | None -> None
+            | Some _ ->
+              raise
+                (Project_context.Error
+                   "namespace scheduler barrier produced a process result"))
+          | Module scheduled -> (
+            match (result, scheduled.phase) with
+            | None, Start ->
+              if scheduled.state.compile_dirty then (
+                mark_compiled ();
+                scheduled.prepare ();
+                match scheduled.source.Source.interface with
+                | Some path ->
+                  Output.Progress.debug progress ~verbosity
+                    ("Compiling interface file: " ^ scheduled.key);
+                  scheduled.phase <- Interface path;
+                  Some (compilation_task scheduled ~is_interface:true path)
+                | None ->
+                  let path = scheduled.source.Source.implementation in
+                  Output.Progress.debug progress ~verbosity
+                    ("Compiling file: " ^ scheduled.key);
+                  scheduled.phase <- Implementation path;
+                  Some (compilation_task scheduled ~is_interface:false path))
+              else (
+                scheduled.phase <- Done;
+                incr completed_modules;
+                Output.Progress.advance progress;
+                None)
+            | Some result, Interface path ->
+              ignore (record_result scheduled ~is_interface:true path result);
+              let path = scheduled.source.Source.implementation in
+              Output.Progress.debug progress ~verbosity
+                ("Compiling file: " ^ scheduled.key);
+              scheduled.phase <- Implementation path;
+              Some (compilation_task scheduled ~is_interface:false path)
+            | Some result, Implementation path ->
+              if record_result scheduled ~is_interface:false path result then
+                continue_post_build scheduled (scheduled.post_build path)
+              else (
+                complete_module scheduled;
+                None)
+            | Some result, Post_build {output; remaining} ->
+              if record_post_build_result scheduled output result then
+                continue_post_build scheduled remaining
+              else (
+                complete_module scheduled;
+                None)
+            | None, (Interface _ | Implementation _ | Post_build _ | Done)
+            | Some _, (Start | Done) ->
+              raise (Project_context.Error "invalid compiler scheduler state")));
       false
     with exn -> (
       reconcile_unconsumed_publications ();

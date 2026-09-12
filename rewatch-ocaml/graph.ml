@@ -108,35 +108,35 @@ let canonical_cycle cycle =
 
 let shortest_cycle_in_index index =
   let best = ref None in
+  let best_length = ref max_int in
   let consider cycle =
     let cycle = canonical_cycle cycle in
     match !best with
-    | None -> best := Some cycle
+    | None ->
+      best := Some cycle;
+      best_length := List.length cycle
     | Some current ->
       let cycle_length = List.length cycle in
-      let current_length = List.length current in
       if
-        cycle_length < current_length
-        || (cycle_length = current_length && cycle < current)
-      then best := Some cycle
+        cycle_length < !best_length
+        || (cycle_length = !best_length && cycle < current)
+      then (
+        best := Some cycle;
+        best_length := cycle_length)
   in
   index.nodes_by_name |> Hashtbl.to_seq_keys |> List.of_seq
   |> List.sort String.compare
   |> List.iter (fun start ->
       let queue = Queue.create () in
-      let parents = Hashtbl.create (node_count index) in
-      let distances = Hashtbl.create (node_count index) in
+      let parents = Hashtbl.create 16 in
+      let distances = Hashtbl.create 16 in
       Hashtbl.add distances start 0;
       Queue.add start queue;
       let found = ref false in
       while (not !found) && not (Queue.is_empty queue) do
         let current = Queue.take queue in
         let distance = Hashtbl.find distances current in
-        let can_improve =
-          match !best with
-          | None -> true
-          | Some cycle -> distance + 2 <= List.length cycle
-        in
+        let can_improve = distance + 2 <= !best_length in
         if can_improve then
           dependencies index current
           |> List.iter (fun dependency ->

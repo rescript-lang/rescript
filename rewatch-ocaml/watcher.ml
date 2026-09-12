@@ -421,23 +421,26 @@ let changes_between before after =
     !changes
 
 let update_snapshot_entries digest_cache previous changes =
-  let entries = Hashtbl.create (List.length previous) in
-  List.iter (fun entry -> Hashtbl.replace entries entry.path entry) previous;
+  let changed = Hashtbl.create (List.length changes) in
   List.iter
-    (fun change ->
-      match change.kind with
-      | Removed ->
-        Hashtbl.remove entries change.path;
-        Hashtbl.remove digest_cache change.path
-      | Added | Modified -> (
+    (fun (change : change) -> Hashtbl.replace changed change.path change.kind)
+    changes;
+  previous
+  |> List.filter_map (fun entry ->
+      match Hashtbl.find_opt changed entry.path with
+      | None -> Some entry
+      | Some Removed ->
+        Hashtbl.remove digest_cache entry.path;
+        None
+      | Some (Added | Modified) -> (
         try
-          let stat = Unix.stat change.path in
-          let digest = File_util.digest_file change.path |> Digest.to_hex in
-          Hashtbl.replace digest_cache change.path
+          let stat = Unix.stat entry.path in
+          let digest = File_util.digest_file entry.path |> Digest.to_hex in
+          Hashtbl.replace digest_cache entry.path
             (stat.Unix.st_mtime, stat.Unix.st_ctime, stat.Unix.st_size, digest);
-          Hashtbl.replace entries change.path
+          Some
             {
-              path = change.path;
+              path = entry.path;
               state =
                 File
                   {
@@ -447,10 +450,8 @@ let update_snapshot_entries digest_cache previous changes =
                   };
             }
         with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) ->
-          Hashtbl.remove entries change.path;
-          Hashtbl.remove digest_cache change.path))
-    changes;
-  Hashtbl.to_seq_values entries |> List.of_seq |> List.sort compare
+          Hashtbl.remove digest_cache entry.path;
+          None))
 
 let polling_build_changes ~previous ~trigger ~before_build =
   if snapshot_equal trigger previous then []
@@ -684,13 +685,20 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
       match direct with
       | Some [] -> native_loop watcher scope symlink_targets previous
       | Some changes ->
-        Output.debug ~verbosity "doing Incremental";
-        begin_rebuild Incremental;
-        let before_build =
-          update_snapshot_entries digest_cache previous changes
-        in
-        build ~poll ~changes:(Some changes) |> finish_rebuild;
-        native_loop watcher scope symlink_targets before_build
+        if
+          List.for_all
+            (fun (change : change) ->
+              List.exists (fun entry -> entry.path = change.path) previous)
+            changes
+        then (
+          Output.debug ~verbosity "doing Incremental";
+          begin_rebuild Incremental;
+          let before_build =
+            update_snapshot_entries digest_cache previous changes
+          in
+          build ~poll ~changes:(Some changes) |> finish_rebuild;
+          native_loop watcher scope symlink_targets before_build)
+        else native_reconcile watcher scope previous
       | None -> native_reconcile watcher scope previous)
   and native_reconcile watcher scope previous =
     let current = snapshot digest_cache scope in

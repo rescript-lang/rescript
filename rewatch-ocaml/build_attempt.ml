@@ -13,6 +13,8 @@ type finalization_state = {
   mutable actions: (unit -> unit) list;
   mutable artifacts: string list;
   initialized_logs: (string, unit) Hashtbl.t;
+  mutable artifacts_cleaned: bool;
+  mutable logs_finalized: bool;
 }
 
 type t = {
@@ -33,8 +35,6 @@ type t = {
   finalization: finalization_state;
   mutable compiler_cleaned: bool;
   mutable had_warnings: bool;
-  mutable artifacts_cleaned: bool;
-  mutable logs_finalized: bool;
   process_poll: (unit -> unit) option;
   progress: Output.Progress.t;
   verbosity: int;
@@ -72,11 +72,11 @@ let create ~freshness_mode ~session ~process_poll ~progress ~verbosity =
         actions = [];
         artifacts = [];
         initialized_logs = Hashtbl.create 16;
+        artifacts_cleaned = false;
+        logs_finalized = false;
       };
     compiler_cleaned = false;
     had_warnings = false;
-    artifacts_cleaned = false;
-    logs_finalized = false;
     process_poll;
     progress;
     verbosity;
@@ -158,16 +158,16 @@ let run_all actions =
   Option.iter raise !first_error
 
 let cleanup_artifacts attempt =
-  if not attempt.artifacts_cleaned then (
-    attempt.artifacts_cleaned <- true;
+  if not attempt.finalization.artifacts_cleaned then (
+    attempt.finalization.artifacts_cleaned <- true;
     let cleanup = take_cleanup attempt in
     run_all
       (cleanup.actions
       @ List.map (fun path () -> File_util.remove_file path) cleanup.artifacts))
 
 let finalize_logs attempt =
-  if not attempt.logs_finalized then (
-    attempt.logs_finalized <- true;
+  if not attempt.finalization.logs_finalized then (
+    attempt.finalization.logs_finalized <- true;
     let package_roots = take_initialized_logs attempt in
     run_all
       ((fun () -> Output.Progress.finish attempt.progress)
@@ -178,3 +178,13 @@ let finalize_logs attempt =
 let finish_attempt attempt =
   run_all
     [(fun () -> cleanup_artifacts attempt); (fun () -> finalize_logs attempt)]
+
+let protect attempt action =
+  match action () with
+  | result ->
+    finish_attempt attempt;
+    result
+  | exception original -> (
+    match finish_attempt attempt with
+    | () -> raise original
+    | exception cleanup_error -> raise cleanup_error)

@@ -23,8 +23,6 @@ type t = {
   finalization: finalization_state;
   mutable compiler_cleaned: bool;
   mutable had_warnings: bool;
-  mutable artifacts_cleaned: bool;
-  mutable logs_finalized: bool;
   process_poll: (unit -> unit) option;
   progress: Output.Progress.t;
   verbosity: int;
@@ -58,3 +56,4 @@ val take_initialized_logs : t -> string list
 val cleanup_artifacts : t -> unit
 val finalize_logs : t -> unit
 val finish_attempt : t -> unit
+val protect : t -> (unit -> 'a) -> 'a
