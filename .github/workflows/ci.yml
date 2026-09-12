@@ -230,10 +230,7 @@ jobs:
             packages/@rescript/${{ matrix.node-target }}/bin/rescript-rust.exe \
             packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe
           opam exec -- dune runtest tests/rewatch_ounit_tests
-          # Keep command tracing until the remaining CI-only focused-suite
-          # failure has been identified. Most assertions redirect command
-          # output, so the ordinary log otherwise ends well before the failure.
-          bash -x rewatch-ocaml/tests/run.sh packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe
+          sh rewatch-ocaml/tests/run.sh packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe
         shell: bash
 
       - name: Run OCaml rewatch canonical tests

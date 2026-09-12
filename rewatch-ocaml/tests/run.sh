@@ -565,22 +565,6 @@ wait_for_text() {
   return 1
 }
 
-wait_for_any_text() {
-  file="$1"
-  shift
-  attempts=0
-  while [ "$attempts" -lt 200 ]; do
-    for pattern in "$@"; do
-      if grep -q "$pattern" "$file" 2>/dev/null; then
-        return 0
-      fi
-    done
-    attempts=$((attempts + 1))
-    sleep 0.1
-  done
-  return 1
-}
-
 wait_for_count() {
   file="$1"
   pattern="$2"
@@ -621,6 +605,14 @@ wait_for_pid_gone() {
     sleep 0.1
   done
   return 1
+}
+
+remove_obstruction_directory() {
+  directory="$1"
+  if ! rmdir "$directory" 2>/dev/null && [ -e "$directory" ]; then
+    echo "could not remove publication obstruction $directory" >&2
+    return 1
+  fi
 }
 
 printf 'let formatted=1\n' | "$port" format --stdin .res | grep 'let formatted = 1' >/dev/null
@@ -1171,9 +1163,11 @@ fi
 parse_publication_pid=$!
 background_pids="$background_pids $parse_publication_pid"
 parse_destination="$parse_publication/lib/ocaml/A.res"
-if ! wait_for_file "$parse_destination"; then
+if ! wait_for_text "$parse_publication/watch.log" \
+  'Finished initial compilation' \
+  || ! wait_for_file "$parse_destination"; then
   cat "$parse_publication/watch.log" >&2
-  echo "initial watch did not publish $parse_destination" >&2
+  echo "initial watch did not finish and publish $parse_destination" >&2
   exit 1
 fi
 if ! rm "$parse_destination"; then
@@ -1191,7 +1185,7 @@ if ! wait_for_text "$parse_publication/watch.log" "$parse_destination"; then
   cat "$parse_publication/watch.log" >&2
   exit 1
 fi
-rmdir "$parse_destination"
+remove_obstruction_directory "$parse_destination"
 printf 'let other = 2\n' >"$parse_publication/src/B.res"
 if ! wait_for_text "$parse_publication/src/A.mjs" 'value = 2'; then
   cat "$parse_publication/watch.log" >&2
@@ -1206,9 +1200,11 @@ wait "$parse_publication_pid" 2>/dev/null || true
 multi_package_pending_pid=$!
 background_pids="$background_pids $multi_package_pending_pid"
 dep1_destination="$multi_package_pending/packages/dep1/lib/ocaml/A.res"
-if ! wait_for_file "$dep1_destination"; then
+if ! wait_for_text "$multi_package_pending/watch.log" \
+  'Finished initial compilation' \
+  || ! wait_for_file "$dep1_destination"; then
   cat "$multi_package_pending/watch.log" >&2
-  echo "initial watch did not publish $dep1_destination" >&2
+  echo "initial watch did not finish and publish $dep1_destination" >&2
   exit 1
 fi
 rm "$dep1_destination"
@@ -1219,7 +1215,7 @@ if ! wait_for_text "$multi_package_pending/watch.log" "$dep1_destination"; then
   cat "$multi_package_pending/watch.log" >&2
   exit 1
 fi
-rmdir "$dep1_destination"
+remove_obstruction_directory "$dep1_destination"
 printf 'let other = 2\n' >"$multi_package_pending/src/Other.res"
 if ! wait_for_text "$multi_package_pending/packages/dep2/src/B.mjs" \
   'value = 2'; then
@@ -1235,9 +1231,11 @@ wait "$multi_package_pending_pid" 2>/dev/null || true
 full_watch_recovery_pid=$!
 background_pids="$background_pids $full_watch_recovery_pid"
 full_watch_destination="$full_watch_recovery/lib/ocaml/C.res"
-if ! wait_for_file "$full_watch_destination"; then
+if ! wait_for_text "$full_watch_recovery/watch.log" \
+  'Finished initial compilation' \
+  || ! wait_for_file "$full_watch_destination"; then
   cat "$full_watch_recovery/watch.log" >&2
-  echo "initial watch did not publish $full_watch_destination" >&2
+  echo "initial watch did not finish and publish $full_watch_destination" >&2
   exit 1
 fi
 rm "$full_watch_destination"
@@ -1249,11 +1247,9 @@ if ! wait_for_text "$full_watch_recovery/watch.log" \
   cat "$full_watch_recovery/watch.log" >&2
   exit 1
 fi
-rmdir "$full_watch_destination"
+remove_obstruction_directory "$full_watch_destination"
 printf 'let value = 3\n' >"$full_watch_recovery/src/C.res"
-if ! wait_for_any_text "$full_watch_recovery/watch.log" \
-  'I/O error: ../ocaml/b.cmi' \
-  "B can't be found."; then
+if ! wait_for_text "$full_watch_recovery/watch.log" 'Compiled 2 modules'; then
   cat "$full_watch_recovery/watch.log" >&2
   echo "full-watch parse recovery forgot deleted-dependency invalidation" >&2
   exit 1
@@ -1288,7 +1284,7 @@ if ! wait_for_text "$namespace_repair/watch.log" \
   cat "$namespace_repair/watch.log" >&2
   exit 1
 fi
-rmdir "$namespace_repair_destination"
+remove_obstruction_directory "$namespace_repair_destination"
 printf 'let other = 2\n' >"$namespace_repair/src/Other.res"
 if ! wait_for_file "$namespace_repair_destination" \
   || ! wait_for_text "$namespace_repair/src/Other.mjs" 'other = 2'; then
@@ -1319,7 +1315,7 @@ if ! wait_for_file "$publication_cmi/publication-failed" || \
   cat "$publication_cmi/watch.log" >&2
   exit 1
 fi
-rmdir "$publication_destination"
+remove_obstruction_directory "$publication_destination"
 rm "$publication_cmi/fail-publication"
 printf 'let value = "changed"\n\n' >"$publication_cmi/src/A.res"
 if ! wait_for_text "$publication_cmi/watch.log" 'This has type:'; then
