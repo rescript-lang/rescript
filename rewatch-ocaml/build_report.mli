@@ -6,7 +6,7 @@ val create :
   show_progress:bool ->
   colors:bool ->
   no_timing:bool ->
-  compilation_kind:Build_types.compilation_kind ->
+  compilation_kind:Build_attempt.compilation_kind ->
   attempt:Build_attempt.t ->
   t
 

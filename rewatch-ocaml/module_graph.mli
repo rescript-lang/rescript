@@ -11,31 +11,49 @@ and cycle_node = {
   display_name: string;
 }
 
+type module_node = {
+  key: string;
+  package_name: string;
+  package_root: string;
+  source_path: string;
+  namespace: Config.namespace;
+  allowed_dependencies: string list;
+  mutable raw_dependencies: string list;
+}
+
+type namespace_map = {
+  key: string;
+  compiler_name: string;
+  namespace: string;
+  package_name: string;
+  package_root: string;
+  members: string list;
+}
+
+val namespace_map_key : string -> string
+
 val validate_visible_namespaces :
-  root_config:Config.t -> Build_types.graph_package list -> unit
+  root_config:Config.t -> Package_plan.t list -> unit
 
 val resolved_dependencies :
-  find_module:(string -> Build_types.global_module option) ->
-  find_namespace_maps:(string -> Build_types.namespace_map list option) ->
-  Build_types.global_module ->
+  find_module:(string -> module_node option) ->
+  find_namespace_maps:(string -> namespace_map list option) ->
+  module_node ->
   string list
 
 type initialized = {
-  nodes: Build_types.global_module list;
-  namespace_maps: Build_types.namespace_map list;
+  nodes: module_node list;
+  namespace_maps: namespace_map list;
   build_state: Build_state.t;
+  use_existing_ast_paths: string list;
 }
 
 val initialize :
   root_config:Config.t ->
-  graph_packages:Build_types.graph_package list ->
+  package_plans:Package_plan.t list ->
   compile_assets:Compile_assets.t ->
-  attempt:Build_attempt.t ->
   failed_parse_paths:(string, unit) Hashtbl.t ->
   initialized
 
 val find_cycle :
-  Build_types.global_module list ->
-  Build_types.namespace_map list ->
-  Build_state.t ->
-  cycle_info option
+  module_node list -> namespace_map list -> Build_state.t -> cycle_info option

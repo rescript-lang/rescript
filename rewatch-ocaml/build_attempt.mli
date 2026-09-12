@@ -1,5 +1,21 @@
 type freshness_mode = Initialize_freshness | Reuse_freshness
 
+type compilation_kind =
+  | One_shot
+  | Initial_watch
+  | Incremental_watch
+  | Full_watch
+
+type parse_message = Parse_warning of string | Parse_error of string
+val has_parse_error : parse_message list -> bool
+
+type preliminary_parse =
+  | Parsed_successfully of {stderr: string}
+  | Parse_failed of {stdout: string; stderr: string}
+  | Use_existing_ast
+
+val preliminary_parse : Process.result -> preliminary_parse
+
 type namespace_job = {job: Process.job; finish: Process.result -> unit}
 type pending_work
 type finalization_state
@@ -12,10 +28,10 @@ type t = {
   mutable parsed: int;
   mutable compiled: int;
   mutable parse_seconds: float;
-  mutable parse_messages: Build_types.parse_message list;
+  mutable parse_messages: parse_message list;
   mutable diagnostics: string list;
   removed_modules: (string, unit) Hashtbl.t;
-  preliminary_parses: (string, Build_types.preliminary_parse) Hashtbl.t;
+  preliminary_parses: (string, preliminary_parse) Hashtbl.t;
   blocked_modules: (string, unit) Hashtbl.t;
   namespace_freshness: (string, float option) Hashtbl.t;
   pending_work: pending_work;

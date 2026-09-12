@@ -165,7 +165,7 @@ let gentype_discovery_tests =
       check
         (contains_adjacent "-bs-gentype-source-dir"
            (Filename.concat "src" "shims")
-           package.graph_compile_config.gentype_args)
+           package.compile_config.gentype_args)
         "GenType recursively includes directories that may contain TypeScript \
          shims";
       write_file path {|{"name":"no-gentype"}|};
