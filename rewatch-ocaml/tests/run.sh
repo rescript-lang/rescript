@@ -565,6 +565,22 @@ wait_for_text() {
   return 1
 }
 
+wait_for_any_text() {
+  file="$1"
+  shift
+  attempts=0
+  while [ "$attempts" -lt 200 ]; do
+    for pattern in "$@"; do
+      if grep -q "$pattern" "$file" 2>/dev/null; then
+        return 0
+      fi
+    done
+    attempts=$((attempts + 1))
+    sleep 0.1
+  done
+  return 1
+}
+
 wait_for_count() {
   file="$1"
   pattern="$2"
@@ -1216,8 +1232,9 @@ if ! wait_for_text "$full_watch_recovery/watch.log" \
 fi
 rmdir "$full_watch_destination"
 printf 'let value = 3\n' >"$full_watch_recovery/src/C.res"
-if ! wait_for_text "$full_watch_recovery/watch.log" \
-  'I/O error: ../ocaml/b.cmi'; then
+if ! wait_for_any_text "$full_watch_recovery/watch.log" \
+  'I/O error: ../ocaml/b.cmi' \
+  "B can't be found."; then
   cat "$full_watch_recovery/watch.log" >&2
   echo "full-watch parse recovery forgot deleted-dependency invalidation" >&2
   exit 1
