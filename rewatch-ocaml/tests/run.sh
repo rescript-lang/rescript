@@ -533,7 +533,11 @@ cleanup() {
   for pid in $background_pids; do
     wait "$pid" 2>/dev/null || true
   done
-  rm -rf "$work"
+  if [ "${REWATCH_KEEP_TEST_WORK:-}" = "1" ]; then
+    echo "Preserving focused test workspace: $work" >&2
+  else
+    rm -rf "$work"
+  fi
 }
 background_pids=""
 trap cleanup EXIT
@@ -563,6 +567,15 @@ wait_for_text() {
     sleep 0.1
   done
   return 1
+}
+
+wait_for_initial_build() {
+  log="$1"
+  if ! wait_for_text "$log" 'Finished initial compilation'; then
+    cat "$log" >&2
+    echo "watcher did not finish its initial build" >&2
+    return 1
+  fi
 }
 
 wait_for_count() {
@@ -864,8 +877,15 @@ if "$port" build "$basic" >/dev/null 2>&1; then
   exit 1
 fi
 mv "$basic/src/B.backup" "$basic/src/B.res"
-"$port" build "$basic" >/dev/null
-grep 'recoveredAfterPeerParseFailure' "$basic/src/A.mjs" >/dev/null
+if ! "$port" build "$basic" >"$basic/peer-parse-retry.log" 2>&1; then
+  cat "$basic/peer-parse-retry.log" >&2
+  exit 1
+fi
+if ! grep 'recoveredAfterPeerParseFailure' "$basic/src/A.mjs" >/dev/null; then
+  cat "$basic/peer-parse-retry.log" >&2
+  echo "peer parse failure left stale output for A" >&2
+  exit 1
+fi
 
 # Removing an interface from a lowercase-named source must rebuild the
 # implementation before dependents can observe exports hidden by that interface.
@@ -895,6 +915,7 @@ if ! wait_for_file "$watch_basic/src/A.mjs"; then
   wait "$watch_pid" 2>/dev/null || true
   exit 1
 fi
+wait_for_initial_build "$watch_basic/watch.log"
 test -f "$watch_basic/lib/watch.lock"
 grep '^[0-9][0-9]*$' "$watch_basic/lib/watch.lock" >/dev/null
 printf '\nlet watchedValue = 1\n' >> "$watch_basic/src/B.res"
@@ -947,6 +968,7 @@ if ! wait_for_file "$interface_failure_recovery/src/B.mjs"; then
   cat "$interface_failure_log" >&2
   exit 1
 fi
+wait_for_initial_build "$interface_failure_log"
 printf 'let value: string\n' \
   >"$interface_failure_recovery/src/A.resi"
 if ! wait_for_text "$interface_failure_log" 'does not match the interface'; then
@@ -1005,6 +1027,7 @@ if ! wait_for_file "$atomic_save/src/Main.mjs"; then
   cat "$atomic_save/watch.log" >&2
   exit 1
 fi
+wait_for_initial_build "$atomic_save/watch.log"
 rm "$atomic_release" "$atomic_started"
 printf 'let value = 2\n' >"$atomic_save/src/Main.res"
 if ! wait_for_file "$atomic_started"; then
@@ -1029,6 +1052,7 @@ if ! wait_for_file "$recursive_lib/src/lib/Nested.mjs"; then
   cat "$recursive_lib/watch.log" >&2
   exit 1
 fi
+wait_for_initial_build "$recursive_lib/watch.log"
 printf 'let value = 2\n' >"$recursive_lib/src/lib/Nested.res"
 if ! wait_for_text "$recursive_lib/src/lib/Nested.mjs" 'value = 2'; then
   cat "$recursive_lib/watch.log" >&2
@@ -1045,6 +1069,7 @@ if ! wait_for_file "$filtered_dependency/packages/dep/src/Helper.mjs"; then
   cat "$filtered_dependency/watch.log" >&2
   exit 1
 fi
+wait_for_initial_build "$filtered_dependency/watch.log"
 test -f "$filtered_dependency/src/Main.mjs"
 test ! -f "$filtered_dependency/src/Ignored.mjs"
 printf 'let value = 2\n' \
@@ -1071,6 +1096,7 @@ if ! wait_for_file "$symlink_source/src/Linked.mjs"; then
   cat "$symlink_source/watch.log" >&2
   exit 1
 fi
+wait_for_initial_build "$symlink_source/watch.log"
 printf 'let value = 2\n' >"$symlink_source/shared/Source.js"
 if ! wait_for_text "$symlink_source/src/Linked.mjs" 'value = 2'; then
   cat "$symlink_source/watch.log" >&2
@@ -1093,6 +1119,7 @@ if ! wait_for_file "$symlink_alias/src/Linked.mjs"; then
   cat "$symlink_alias/watch.log" >&2
   exit 1
 fi
+wait_for_initial_build "$symlink_alias/watch.log"
 printf 'let value = 2\n' >"$symlink_alias/src/Original.res"
 if ! wait_for_text "$symlink_alias/src/Original.mjs" 'value = 2' \
   || ! wait_for_text "$symlink_alias/src/Linked.mjs" 'value = 2'; then
@@ -1109,6 +1136,7 @@ if ! wait_for_file "$post_build_cmi/src/B.mjs"; then
   cat "$post_build_cmi/watch.log" >&2
   exit 1
 fi
+wait_for_initial_build "$post_build_cmi/watch.log"
 rm "$post_build_cmi/allow-post-build"
 printf 'let value = "changed"\n' >"$post_build_cmi/src/A.res"
 if ! wait_for_text "$post_build_cmi/watch.log" \
@@ -1270,7 +1298,11 @@ if "$port" build "$deletion_retry" \
   echo "a fresh build forgot deleted-dependency invalidation" >&2
   exit 1
 fi
-grep 'b.cmi' "$deletion_retry/retry.log" >/dev/null
+if ! grep 'Compiled 2 modules' "$deletion_retry/retry.log" >/dev/null; then
+  cat "$deletion_retry/retry.log" >&2
+  echo "deleted dependency did not invalidate its consumer after parse recovery" >&2
+  exit 1
+fi
 
 "$port" build "$namespace_repair" >/dev/null
 namespace_repair_destination="$namespace_repair/packages/dep/lib/ocaml/Ns.cmj"
@@ -1308,6 +1340,7 @@ if ! wait_for_file "$publication_cmi/src/B.mjs"; then
   cat "$publication_cmi/watch.log" >&2
   exit 1
 fi
+wait_for_initial_build "$publication_cmi/watch.log"
 touch "$publication_cmi/fail-publication"
 printf 'let value = "changed"\n' >"$publication_cmi/src/A.res"
 if ! wait_for_file "$publication_cmi/publication-failed" || \
@@ -1332,6 +1365,7 @@ if ! wait_for_file "$retained_cycle/src/A.mjs"; then
   cat "$retained_cycle/watch.log" >&2
   exit 1
 fi
+wait_for_initial_build "$retained_cycle/watch.log"
 printf 'let value: int = "broken"\n' >"$retained_cycle/src/A.res"
 if ! wait_for_text "$retained_cycle/watch.log" 'expected to have type'; then
   cat "$retained_cycle/watch.log" >&2
@@ -1397,6 +1431,7 @@ if ! wait_for_count "$retained_parse_log" REWATCH_PARSE_WARNING 1 || \
   cat "$retained_parse_log" >&2
   exit 1
 fi
+wait_for_initial_build "$retained_parse_log"
 initial_a_parse_count=$(grep -c -- '-bs-ast.*A.res' "$retained_parse_calls")
 printf 'let other = 2\n' >"$retained_parse/src/B.res"
 if ! wait_for_count "$retained_parse_log" REWATCH_PARSE_WARNING 2; then
@@ -1464,6 +1499,7 @@ if ! wait_for_file "$duplicate_selection/src/Main.mjs"; then
   cat "$duplicate_selection/watch.log" >&2
   exit 1
 fi
+wait_for_initial_build "$duplicate_selection/watch.log"
 printf 'let value = 3\n' \
   >"$duplicate_selection/node_modules/shared/src/Shared.res"
 if ! wait_for_text \
@@ -1486,6 +1522,7 @@ if ! wait_for_text "$transitive_local_output" 'value = 1'; then
   cat "$transitive_local_watch/watch.log" >&2
   exit 1
 fi
+wait_for_initial_build "$transitive_local_watch/watch.log"
 printf 'let value = 2\n' \
   >"$transitive_local_watch/packages/local/src/Local.res"
 if ! wait_for_text "$transitive_local_output" 'value = 2'; then
@@ -1525,6 +1562,7 @@ if ! wait_for_count "$warning_watch_log" 'unused value unusedValue' 1; then
   cat "$warning_watch_log" >&2
   exit 1
 fi
+wait_for_initial_build "$warning_watch_log"
 warning_a_calls=$(grep -c 'WarningA.ast' "$warning_call_log" || true)
 test "$warning_a_calls" -gt 0
 printf '\nlet changed = 1\n' >> "$warning_replay/src/B.res"
@@ -1550,6 +1588,7 @@ if ! wait_for_file "$watch_basic/src/A.js"; then
   cat "$watch_basic/restart.log" >&2
   exit 1
 fi
+wait_for_initial_build "$watch_basic/restart.log"
 kill -TERM "$watch_restart_pid"
 wait "$watch_restart_pid"
 test ! -f "$watch_basic/lib/watch.lock"
@@ -1655,8 +1694,14 @@ background_pids="$background_pids $second_build_pid"
 wait_for_text "$lock_basic/second.log" "Waiting for other build to finish"
 test ! -f "$lock_basic/src/A.mjs"
 touch "$release_marker"
-wait "$first_build_pid"
-wait "$second_build_pid"
+if ! wait "$first_build_pid"; then
+  cat "$lock_basic/first.log" >&2
+  exit 1
+fi
+if ! wait "$second_build_pid"; then
+  cat "$lock_basic/second.log" >&2
+  exit 1
+fi
 test -f "$lock_basic/src/A.mjs"
 test ! -f "$workspace_build_lock"
 
@@ -1676,6 +1721,7 @@ if ! wait_for_file "$feature_dependencies/lib/watch.lock"; then
   cat "$feature_dependencies/watch.log" >&2
   exit 1
 fi
+wait_for_initial_build "$feature_dependencies/watch.log"
 printf 'let value = 2\n' \
   >"$feature_dependencies/packages/dep-union/extra/UnionExtra.res"
 if ! wait_for_text \
