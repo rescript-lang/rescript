@@ -139,6 +139,8 @@ let spawn ~env ~cwd ~program ~args ~stdin ~stdout ~stderr =
 
 let null_device = "NUL"
 
+external current_process_id : unit -> int = "rewatch_windows_current_process_id"
+
 let process_id process = process.wait_id
 let release_process process = close_process_job process.job
 

@@ -36,7 +36,7 @@ if [[ -z ${RESCRIPT_BSC_EXE:-} || -z ${RESCRIPT_RUNTIME:-} ]]; then
 fi
 real_bsc=$RESCRIPT_BSC_EXE
 runtime=$RESCRIPT_RUNTIME
-counting_bsc="$repo_root/rewatch-ocaml/tests/counting-bsc.sh"
+counting_bsc="$repo_root/_build/default/tests/rewatch_ounit_tests/rewatch_bsc_test_proxy.exe"
 
 work_root=$(mktemp -d "${TMPDIR:-/tmp}/rewatch-watch-performance.XXXXXX")
 declare -A pids=()
@@ -141,6 +141,7 @@ start_watcher() {
   : >"$work_root/$implementation.bsc"
   setsid env \
     RESCRIPT_BSC_EXE="$counting_bsc" \
+    REWATCH_BSC_PROXY_MODE=counting \
     RESCRIPT_RUNTIME="$runtime" \
     REWATCH_REAL_BSC="$real_bsc" \
     REWATCH_BSC_CALL_LOG="$work_root/$implementation.bsc" \

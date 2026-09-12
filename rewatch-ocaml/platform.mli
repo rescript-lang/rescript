@@ -34,6 +34,7 @@ val spawn :
 
 val null_device : string
 
+val current_process_id : unit -> int
 val process_id : process -> int
 val release_process : process -> unit
 

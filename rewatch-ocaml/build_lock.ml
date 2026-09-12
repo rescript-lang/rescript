@@ -126,7 +126,7 @@ let with_build ?(poll = fun () -> ()) root action =
   let lock_dir = Filename.concat root "lib" in
   File_util.ensure_dir lock_dir;
   let path = Filename.concat lock_dir "build.lock" in
-  let pid = string_of_int (Unix.getpid ()) in
+  let pid = string_of_int (Platform.current_process_id ()) in
   with_candidate ~lock_dir ".build-lock-" pid (fun candidate ->
       let rec acquire attempts =
         poll ();
@@ -144,8 +144,9 @@ let with_build ?(poll = fun () -> ()) root action =
           | Some owner when not (valid_owner owner) ->
             raise (malformed_error ())
           | Some owner when process_is_active ~poll owner ->
-            if attempts = 1200 then
+            if attempts = 1200 then (
               print_endline "Waiting for other build to finish...";
+              flush stdout);
             retry_delay poll;
             acquire (attempts - 1)
           | _ ->
@@ -158,7 +159,7 @@ let with_watch root action =
   let lock_dir = Filename.concat root "lib" in
   File_util.ensure_dir lock_dir;
   let path = Filename.concat lock_dir "watch.lock" in
-  let pid = string_of_int (Unix.getpid ()) in
+  let pid = string_of_int (Platform.current_process_id ()) in
   with_candidate ~lock_dir ".watch-lock-" pid (fun candidate ->
       let rec acquire attempts =
         if attempts = 0 then
