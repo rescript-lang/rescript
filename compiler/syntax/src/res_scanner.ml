@@ -574,12 +574,12 @@ let scan_escape scanner =
   Token.Codepoint {c = codepoint; original = contents}
 
 let scan_regex ~start_pos:opening_pos ~prefix_length scanner =
+  let start_pos = position scanner in
   (* The normal token is / or /.; restart at its ASCII opening delimiter. *)
   scanner.offset <- scanner.offset - prefix_length;
   scanner.offset16 <- opening_pos.Lexing.pos_cnum - opening_pos.pos_bol;
   scanner.ch <- '/';
   next scanner;
-  let start_pos = position scanner in
   let buf = Buffer.create 0 in
   let first_char_offset = scanner.offset in
   let last_offset_in_buf = ref first_char_offset in
@@ -623,7 +623,10 @@ let scan_regex ~start_pos:opening_pos ~prefix_length scanner =
     | ch when ch == '\n' || ch == hacky_eof_char ->
       let end_pos = position scanner in
       scanner.err ~start_pos ~end_pos (Diagnostics.message "unterminated regex");
-      ("", "")
+      let pattern =
+        result ~first_char_offset ~last_char_offset:scanner.offset
+      in
+      (pattern, "")
     | '\\' ->
       next scanner;
       next scanner;
