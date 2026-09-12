@@ -2923,7 +2923,13 @@ and parse_jsx_prop p : Parsetree.jsx_prop option =
         | Equal ->
           Parser.next p;
           let optional = Parser.optional p Question in
-          let attr_expr = parse_primary_expr ~operand:(parse_atomic_expr p) p in
+          let attr_expr =
+            match Parser.peek p with
+            | (Forwardslash as token) when Parser.peek2 p = GreaterThan ->
+              Parser.err p (Diagnostics.unexpected token p.breadcrumbs);
+              Recover.default_expr ()
+            | _ -> parse_primary_expr ~operand:(parse_atomic_expr p) p
+          in
           Some (Parsetree.JSXPropValue ({txt = name; loc}, optional, attr_expr))
         | _ -> Some (Parsetree.JSXPropPunning (false, {txt = name; loc})))
     | Some (_name, _loc, `Upper) ->
