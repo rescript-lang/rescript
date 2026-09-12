@@ -42,6 +42,19 @@ wait_for_next_build() {
     "$completed_builds" 30
 }
 
+wait_for_tracked_outputs() {
+  local timeout
+  timeout=$(platform_timeout 30)
+  while [ "$timeout" -gt 0 ]; do
+    if [ -z "$(git ls-files --deleted -- '*.mjs')" ]; then
+      return 0
+    fi
+    sleep 1
+    timeout=$((timeout - 1))
+  done
+  return 1
+}
+
 # Change the suffix in rescript.json (same approach as suffix test)
 replace "s/.mjs/.res.mjs/g" rescript.json
 if ! wait_for_next_build; then
@@ -85,10 +98,10 @@ fi
 # look like an incremental source edit and obscure the configuration transition
 # this test is intended to verify.
 replace "s/.res.mjs/.mjs/g" rescript.json
-if wait_for_next_build; then
+if wait_for_next_build && wait_for_tracked_outputs; then
   success "Rebuild after configuration restore completed"
 else
-  error "Configuration restore did not settle"
+  error "Configuration restore did not settle or restore tracked outputs"
   restore_tracked_files ./src/Test.res
   exit_watcher
   exit 1

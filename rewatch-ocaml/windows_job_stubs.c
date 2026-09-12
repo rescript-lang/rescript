@@ -26,6 +26,28 @@
 
 #include <windows.h>
 
+#ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
+#define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
+#endif
+
+static void rewatch_windows_enable_vt_for_handle(DWORD stream)
+{
+  HANDLE handle = GetStdHandle(stream);
+  DWORD mode;
+  if (handle != NULL && handle != INVALID_HANDLE_VALUE &&
+      GetConsoleMode(handle, &mode)) {
+    SetConsoleMode(handle, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+  }
+}
+
+CAMLprim value rewatch_windows_enable_virtual_terminal_processing(value unit)
+{
+  CAMLparam1(unit);
+  rewatch_windows_enable_vt_for_handle(STD_OUTPUT_HANDLE);
+  rewatch_windows_enable_vt_for_handle(STD_ERROR_HANDLE);
+  CAMLreturn(Val_unit);
+}
+
 CAMLprim value rewatch_windows_directory_identity(value path_value)
 {
   CAMLparam1(path_value);
@@ -357,6 +379,12 @@ CAMLprim value rewatch_windows_current_process_id(value unit_value)
 }
 
 #else
+
+CAMLprim value rewatch_windows_enable_virtual_terminal_processing(value unit)
+{
+  (void)unit;
+  caml_invalid_argument("Windows virtual terminal support is unavailable");
+}
 
 CAMLprim value rewatch_windows_directory_identity(value path_value)
 {

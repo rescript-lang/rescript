@@ -143,8 +143,7 @@ let prepare_incremental previous changes (attempt : Build_attempt.t)
         ("Generating AST for module: " ^ name));
   let parse_completed =
     Output.Progress.start_grouped attempt.progress ~step:"1/2"
-      ~symbol:Platform.parse_symbol
-      ~label:"Parsing"
+      ~symbol:Platform.parse_symbol ~label:"Parsing"
       (List.map
          (fun source ->
            source.package.root ^ "\000" ^ source.source.module_.Source.name)

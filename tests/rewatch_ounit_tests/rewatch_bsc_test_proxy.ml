@@ -11,11 +11,9 @@ let append_line path line =
   output_char channel '\n';
   close_out channel
 
-let remove_if_present path =
-  try Sys.remove path with Sys_error _ -> ()
+let remove_if_present path = try Sys.remove path with Sys_error _ -> ()
 
-let has_argument expected =
-  Array.exists (String.equal expected) Sys.argv
+let has_argument expected = Array.exists (String.equal expected) Sys.argv
 
 let output_argument () =
   let rec loop index =
@@ -26,7 +24,8 @@ let output_argument () =
   loop 1
 
 let basename path =
-  path |> String.map (fun character -> if character = '\\' then '/' else character)
+  path
+  |> String.map (fun character -> if character = '\\' then '/' else character)
   |> Filename.basename
 
 let arguments () =
@@ -44,7 +43,9 @@ let run_compiler () =
   let program = getenv "REWATCH_REAL_BSC" in
   let argv = Array.copy Sys.argv in
   argv.(0) <- program;
-  let pid = Unix.create_process program argv Unix.stdin Unix.stdout Unix.stderr in
+  let pid =
+    Unix.create_process program argv Unix.stdin Unix.stdout Unix.stderr
+  in
   match snd (Unix.waitpid [] pid) with
   | Unix.WEXITED status -> status
   | Unix.WSIGNALED signal | Unix.WSTOPPED signal -> 128 + signal
@@ -73,20 +74,24 @@ let before_compiler mode is_parse =
     | Some release -> wait_for_file release
     | None -> Unix.sleepf 5.0);
   if mode = "counting" || mode = "parse-warning-log" then
-    append_line (getenv "REWATCH_BSC_CALL_LOG")
+    append_line
+      (getenv "REWATCH_BSC_CALL_LOG")
       (String.concat " " (arguments ()))
 
 let after_compiler mode is_parse status =
   if status = 0 && mode = "parse-warning" && is_parse then
     prerr_endline "PARSE_WARNING_MARKER";
-  if status = 0 && mode = "parse-warning-log" && is_parse then (
-    let source = getenv "REWATCH_PARSE_WARNING_SOURCE" in
-    if Array.exists (fun argument -> basename argument = source) Sys.argv then
-      prerr_endline "REWATCH_PARSE_WARNING");
-  if status = 0 && mode = "fail-late-publication" && not is_parse
-     && Array.exists (fun argument -> basename argument = "A.ast") Sys.argv
-     && Sys.file_exists (getenv "REWATCH_FAIL_PUBLICATION")
-     && not (Sys.file_exists (getenv "REWATCH_PUBLICATION_FAILED"))
+  (if status = 0 && mode = "parse-warning-log" && is_parse then
+     let source = getenv "REWATCH_PARSE_WARNING_SOURCE" in
+     if Array.exists (fun argument -> basename argument = source) Sys.argv then
+       prerr_endline "REWATCH_PARSE_WARNING");
+  if
+    status = 0
+    && mode = "fail-late-publication"
+    && (not is_parse)
+    && Array.exists (fun argument -> basename argument = "A.ast") Sys.argv
+    && Sys.file_exists (getenv "REWATCH_FAIL_PUBLICATION")
+    && not (Sys.file_exists (getenv "REWATCH_PUBLICATION_FAILED"))
   then (
     let destination = getenv "REWATCH_PUBLICATION_DESTINATION" in
     remove_if_present destination;
@@ -97,26 +102,26 @@ let () =
   let mode = getenv "REWATCH_BSC_PROXY_MODE" in
   let is_parse = has_argument "-bs-ast" in
   before_compiler mode is_parse;
-  if mode = "delete-parse-sources" && is_parse then (
-    let marker = getenv "REWATCH_SOURCES_DELETED" in
-    if not (Sys.file_exists marker) then (
-      remove_if_present (getenv "REWATCH_SOURCE_A");
-      remove_if_present (getenv "REWATCH_SOURCE_B");
-      touch marker));
+  (if mode = "delete-parse-sources" && is_parse then
+     let marker = getenv "REWATCH_SOURCES_DELETED" in
+     if not (Sys.file_exists marker) then (
+       remove_if_present (getenv "REWATCH_SOURCE_A");
+       remove_if_present (getenv "REWATCH_SOURCE_B");
+       touch marker));
   let status = run_compiler () in
   after_compiler mode is_parse status;
-  if status = 0 then
-    if mode = "delete-source" && not is_parse then (
-      let marker = getenv "REWATCH_SOURCE_DELETED" in
-      if not (Sys.file_exists marker) then (
-        remove_if_present (getenv "REWATCH_SOURCE_TO_DELETE");
-        touch marker))
-    else if mode = "delete-ast" && is_parse then
-      match output_argument () with
-      | None -> ()
-      | Some output ->
-        let marker = getenv "REWATCH_AST_DELETED" in
-        if not (Sys.file_exists marker) then (
-          remove_if_present output;
-          touch marker);
+  (if status = 0 then
+     if mode = "delete-source" && not is_parse then (
+       let marker = getenv "REWATCH_SOURCE_DELETED" in
+       if not (Sys.file_exists marker) then (
+         remove_if_present (getenv "REWATCH_SOURCE_TO_DELETE");
+         touch marker))
+     else if mode = "delete-ast" && is_parse then
+       match output_argument () with
+       | None -> ()
+       | Some output ->
+         let marker = getenv "REWATCH_AST_DELETED" in
+         if not (Sys.file_exists marker) then (
+           remove_if_present output;
+           touch marker));
   exit status

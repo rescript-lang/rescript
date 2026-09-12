@@ -60,6 +60,12 @@ fi
 export RESCRIPT_BSC_EXE RESCRIPT_RUNTIME
 work="$root/tmp/rewatch-ocaml/test-$$"
 mkdir -p "$work"
+if REWATCH_REAL_BSC="$RESCRIPT_BSC_EXE" REWATCH_BSC_PROXY_MODE=parse-warning \
+  "$test_proxy" -rewatch-invalid-option \
+  >"$work/proxy-invalid.out" 2>"$work/proxy-invalid.err"; then
+  echo "rewatch compiler test proxy discarded a compiler failure" >&2
+  exit 1
+fi
 cp -R "$root/rewatch-ocaml/tests/basic" "$work/basic"
 cp -R "$root/rewatch-ocaml/tests/basic" "$work/cleanup-lifecycle"
 cp -R "$root/rewatch-ocaml/tests/basic" "$work/cleanup-failure"
@@ -117,6 +123,20 @@ cp -R "$root/rewatch-ocaml/tests/shared-dep" \
   "$work/package-output-dependency/node_modules/dep"
 cp -R "$root/rewatch-ocaml/tests/external-boundary" "$work/external-boundary"
 cp -R "$root/rewatch-ocaml/tests/post-build" "$work/post-build"
+if $windows_posix_shell; then
+  cp -R "$root/rewatch-ocaml/tests/post-build" "$work/quoted-post-build"
+  NODE_EXE=$(native_path "$(command -v node)") \
+    CONFIG_PATH=$(native_path "$work/quoted-post-build/rescript.json") \
+    node - <<'NODE'
+const fs = require("fs");
+const config = {
+  name: "quoted-post-build",
+  sources: "src",
+  "js-post-build": {cmd: `"${process.env.NODE_EXE}" --version`},
+};
+fs.writeFileSync(process.env.CONFIG_PATH, JSON.stringify(config));
+NODE
+fi
 cp -R "$root/rewatch-ocaml/tests/out-of-source" "$work/out-of-source"
 cp -R "$root/rewatch-ocaml/tests/ppx-filter" "$work/ppx-filter"
 cp -R "$root/rewatch-ocaml/tests/namespace" "$work/namespace"
@@ -1995,6 +2015,10 @@ test -f "$external_boundary/external/src/Foo.js"
 
 "$port" build "$post_build"
 test -f "$post_build/src/Main.js"
+if $windows_posix_shell; then
+  "$port" build "$work/quoted-post-build"
+  test -f "$work/quoted-post-build/src/Main.js"
+fi
 
 "$port" build "$ppx_filter"
 test -f "$ppx_filter/src/Main.js"

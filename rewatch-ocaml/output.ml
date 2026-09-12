@@ -152,7 +152,9 @@ let compilation_failed_message ~color ~step ~count ~seconds =
 type compilation_label = Standard | Initial | Incremental
 
 let finished_compilation_message ~label ~warnings ~seconds =
-  let status = if warnings then Platform.warning_symbol else Platform.success_symbol in
+  let status =
+    if warnings then Platform.warning_symbol else Platform.success_symbol
+  in
   let kind =
     match label with
     | Standard -> ""

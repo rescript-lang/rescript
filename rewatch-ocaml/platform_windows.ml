@@ -1,10 +1,15 @@
 let path_separator = ';'
 let terminal_supports_color_without_term = true
+let inherit_streaming_terminal_stdin = true
+
+external enable_virtual_terminal_processing : unit -> unit
+  = "rewatch_windows_enable_virtual_terminal_processing"
 
 let configure_standard_streams () =
   set_binary_mode_in stdin true;
   set_binary_mode_out stdout true;
-  set_binary_mode_out stderr true
+  set_binary_mode_out stderr true;
+  enable_virtual_terminal_processing ()
 let clean_symbol = "[clean] "
 let parse_symbol = "[parse] "
 let build_symbol = "[build] "
@@ -13,7 +18,9 @@ let warning_symbol = "[warn] "
 let error_symbol = "[error] "
 let normalize_path_for_comparison path =
   path |> String.lowercase_ascii
-  |> String.map (function '/' -> '\\' | character -> character)
+  |> String.map (function
+    | '/' -> '\\'
+    | character -> character)
 
 let strip_verbatim_prefix path =
   if String.starts_with ~prefix:"\\\\?\\UNC\\" path then
@@ -117,7 +124,7 @@ let serialize_command_line ~program ~args =
   match args with
   | ["/D"; "/V:OFF"; "/S"; "/C"; command] ->
     String.concat " " [quote_argument program; "/D"; "/V:OFF"; "/S"; "/C"]
-    ^ " " ^ command
+    ^ " \"" ^ command ^ "\""
   | _ -> program :: args |> List.map quote_argument |> String.concat " "
 
 let spawn ~env ~cwd ~program ~args ~stdin ~stdout ~stderr =

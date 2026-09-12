@@ -10,15 +10,14 @@ let write_file path contents =
     (fun () -> output_string channel contents)
 
 let path root relative =
-  relative |> String.split_on_char '/'
-  |> File_util.path_of_parts root
+  relative |> String.split_on_char '/' |> File_util.path_of_parts root
 
 let symlink_if_supported target link =
   try
     Unix.symlink target link;
     true
-  with
-  | Unix.Unix_error ((Unix.EPERM | Unix.EACCES), _, _) when Sys.win32 -> false
+  with Unix.Unix_error ((Unix.EPERM | Unix.EACCES), _, _) when Sys.win32 ->
+    false
 
 let with_temp_dir prefix action =
   let path = Filename.temp_file prefix "" in

@@ -126,7 +126,11 @@
    (<> %{profile} browser)
    (= %{system} mingw64)
    (= %{architecture} amd64)))
- (targets bsc.exe rescript-editor-analysis.exe rescript-tools.exe rescript.exe)
+ (targets
+  bsc.exe
+  rescript-editor-analysis.exe
+  rescript-tools.exe
+  rescript.exe)
  (deps
   ../bsc/rescript_compiler_main.exe
   ../../analysis/bin/main.exe

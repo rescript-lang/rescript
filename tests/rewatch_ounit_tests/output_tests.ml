@@ -14,7 +14,8 @@ let tests =
     "interactive cleanup phase format";
   check
     (Output.compiler_cleanup_message ~color:false ~step:"1/3"
-    = Printf.sprintf "\027[2K\r[1/3] %sCleaned previous build due to compiler update"
+    = Printf.sprintf
+        "\027[2K\r[1/3] %sCleaned previous build due to compiler update"
         Platform.clean_symbol)
     "interactive compiler cleanup format";
   check
