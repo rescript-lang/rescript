@@ -46,13 +46,20 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
           Native_watcher.refresh watcher ~paths:(scope.paths @ symlink_paths)
         with
         | Error _ as error -> error
-        | Ok () ->
-          let after_refresh, updated_symlink_paths, symlink_targets =
-            Watch_snapshot.create_with_symlink_paths digest_cache scope
-          in
-          if updated_symlink_paths = symlink_paths then
-            Ok (after_refresh, symlink_targets)
-          else loop (remaining - 1) updated_symlink_paths
+        | Ok () -> (
+          match Watch_snapshot.create_with_symlink_paths digest_cache scope with
+          | Watch_snapshot.Registration_failed {message; snapshot} ->
+            ignore snapshot;
+            Error message
+          | Watch_snapshot.Ready
+              {
+                snapshot = after_refresh;
+                paths = updated_symlink_paths;
+                targets = symlink_targets;
+              } ->
+            if updated_symlink_paths = symlink_paths then
+              Ok (after_refresh, symlink_targets)
+            else loop (remaining - 1) updated_symlink_paths)
     in
     loop 8 symlink_paths
   in
@@ -216,18 +223,30 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
         ~changes:(Some (Watch_snapshot.changes_between previous current))
       |> finish_rebuild;
       let new_scope = Watch_scope.discover ~root ~prod ~features ~filter in
-      let after_build, symlink_paths, _ =
-        Watch_snapshot.create_with_symlink_paths digest_cache new_scope
-      in
-      finish_reconciliation watcher ~old_scope:build_scope ~new_scope
-        ~before:before_build ~after:after_build ~symlink_paths)
+      match Watch_snapshot.create_with_symlink_paths digest_cache new_scope with
+      | Watch_snapshot.Registration_failed {snapshot; message} ->
+        let snapshot =
+          Watch_snapshot.reconciliation_baseline ~old_scope:build_scope
+            ~new_scope before_build snapshot
+        in
+        Some {message; scope = new_scope; snapshot}
+      | Watch_snapshot.Ready {snapshot; paths; targets} ->
+        ignore targets;
+        finish_reconciliation watcher ~old_scope:build_scope ~new_scope
+          ~before:before_build ~after:snapshot ~symlink_paths:paths)
     else
       let new_scope = Watch_scope.discover ~root ~prod ~features ~filter in
-      let after_refresh, symlink_paths, _ =
-        Watch_snapshot.create_with_symlink_paths digest_cache new_scope
-      in
-      finish_reconciliation watcher ~old_scope:scope ~new_scope ~before:current
-        ~after:after_refresh ~symlink_paths
+      match Watch_snapshot.create_with_symlink_paths digest_cache new_scope with
+      | Watch_snapshot.Registration_failed {snapshot; message} ->
+        let snapshot =
+          Watch_snapshot.reconciliation_baseline ~old_scope:scope ~new_scope
+            current snapshot
+        in
+        Some {message; scope = new_scope; snapshot}
+      | Watch_snapshot.Ready {snapshot; paths; targets} ->
+        ignore targets;
+        finish_reconciliation watcher ~old_scope:scope ~new_scope
+          ~before:current ~after:snapshot ~symlink_paths:paths
   and finish_reconciliation watcher ~(old_scope : Watch_scope.t)
       ~(new_scope : Watch_scope.t) ~before ~after ~symlink_paths =
     let baseline =
@@ -244,36 +263,42 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
     (fun _ -> stop ())
     (fun () ->
       let scope = Watch_scope.discover ~root ~prod ~features ~filter in
-      let before_build, symlink_paths, _ =
-        Watch_snapshot.create_with_symlink_paths digest_cache scope
-      in
-      (* Install handles before the initial build so an edit made as soon as its
-       output appears cannot land in a blind interval between compilation and
-       watcher setup. Snapshot reconciliation below consumes any event queued
-       while compiler subprocesses were running. *)
-      match native_create ~paths:(scope.paths @ symlink_paths) with
-      | Error message ->
+      match Watch_snapshot.create_with_symlink_paths digest_cache scope with
+      | Watch_snapshot.Registration_failed {snapshot; message} ->
         report_native_fallback message;
         ignore (build ~poll ~changes:None);
         let scope = Watch_scope.discover ~root ~prod ~features ~filter in
-        polling_loop scope before_build
-      | Ok watcher ->
-        let fallback =
-          Fun.protect
-            (fun () ->
-              ignore (build ~poll ~changes:None);
-              (* The following snapshot is authoritative for changes that arrived
-               during the build. Pump and discard callbacks already queued for
-               that interval so they do not request the same rebuild twice. *)
-              ignore (Native_watcher.drain watcher);
-              native_reconcile watcher scope before_build)
-            ~finally:(fun () -> Native_watcher.close watcher)
-        in
-        Option.iter
-          (fun fallback ->
-            report_native_fallback fallback.message;
-            polling_loop fallback.scope fallback.snapshot)
-          fallback)
+        polling_loop scope snapshot
+      | Watch_snapshot.Ready
+          {snapshot = before_build; paths = symlink_paths; targets} -> (
+        ignore targets;
+        (* Install handles before the initial build so an edit made as soon as its
+           output appears cannot land in a blind interval between compilation and
+           watcher setup. Snapshot reconciliation below consumes any event queued
+           while compiler subprocesses were running. *)
+        match native_create ~paths:(scope.paths @ symlink_paths) with
+        | Error message ->
+          report_native_fallback message;
+          ignore (build ~poll ~changes:None);
+          let scope = Watch_scope.discover ~root ~prod ~features ~filter in
+          polling_loop scope before_build
+        | Ok watcher ->
+          let fallback =
+            Fun.protect
+              (fun () ->
+                ignore (build ~poll ~changes:None);
+                (* The following snapshot is authoritative for changes that arrived
+                   during the build. Pump and discard callbacks already queued for
+                   that interval so they do not request the same rebuild twice. *)
+                ignore (Native_watcher.drain watcher);
+                native_reconcile watcher scope before_build)
+              ~finally:(fun () -> Native_watcher.close watcher)
+          in
+          Option.iter
+            (fun fallback ->
+              report_native_fallback fallback.message;
+              polling_loop fallback.scope fallback.snapshot)
+            fallback))
 
 let run_with_native_create ~native_create ~report_native_fallback ~root ~prod
     ~features ~filter ~clear_screen ~show_progress ~verbosity ~build =

@@ -12,6 +12,14 @@ type state =
 
 type entry = {path: string; state: state}
 
+type registration =
+  | Ready of {
+      snapshot: entry list;
+      paths: Native_watcher.watch_path list;
+      targets: string list;
+    }
+  | Registration_failed of {snapshot: entry list; message: string}
+
 val equal : entry list -> entry list -> bool
 
 val create :
@@ -23,7 +31,7 @@ val create :
 val create_with_symlink_paths :
   (string, float * float * int * string) Hashtbl.t ->
   Watch_scope.t ->
-  entry list * Native_watcher.watch_path list * string list
+  registration
 
 val changes_between : entry list -> entry list -> change list
 
