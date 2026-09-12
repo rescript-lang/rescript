@@ -65,7 +65,8 @@ let clear_stale ?poll ~candidate path =
         match read_owner path with
         | Some owner when not (valid_owner owner) -> raise (malformed_error ())
         | Some owner when process_is_active ?poll owner -> ()
-        | _ -> File_util.remove_file_best_effort path);
+        | Some _ -> File_util.remove_file_best_effort path
+        | None -> ());
     true
   with Unix.Unix_error (Unix.EEXIST, _, _) ->
     (match read_owner takeover with

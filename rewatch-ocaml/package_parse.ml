@@ -27,6 +27,22 @@ let run ~(package : Build_types.graph_package)
   List.iter
     (fun path -> Hashtbl.replace dirty_parse_path_set path ())
     dirty_parse_paths;
+  List.iter
+    (fun path ->
+      Filename.concat root path |> Platform.normalize_path_for_comparison
+      |> Build_session.mark_parse_pending attempt.session)
+    dirty_parse_paths;
+  let dirty_modules = Hashtbl.create (List.length package.graph_modules) in
+  List.iter
+    (fun module_ ->
+      let paths =
+        module_.Source.implementation :: Option.to_list module_.Source.interface
+      in
+      if List.exists (Hashtbl.mem dirty_parse_path_set) paths then (
+        Hashtbl.replace dirty_modules module_.Source.name ();
+        let key = Source.compiler_basename config module_.Source.name in
+        (Build_state.find_exn build_state key).compile_dirty <- true))
+    package.graph_modules;
   let parse_paths_to_run =
     dirty_parse_paths
     |> List.filter (fun path ->
@@ -100,15 +116,4 @@ let run ~(package : Build_types.graph_package)
             File_util.remove_file path;
             Compile_assets.refresh_ast compile_assets ~source ~path)
           !warning_asts);
-  let dirty_modules = Hashtbl.create (List.length package.graph_modules) in
-  List.iter
-    (fun module_ ->
-      let paths =
-        module_.Source.implementation :: Option.to_list module_.Source.interface
-      in
-      if List.exists (Hashtbl.mem dirty_parse_path_set) paths then (
-        Hashtbl.replace dirty_modules module_.Source.name ();
-        let key = Source.compiler_basename config module_.Source.name in
-        (Build_state.find_exn build_state key).compile_dirty <- true))
-    package.graph_modules;
   dirty_modules

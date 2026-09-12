@@ -225,15 +225,21 @@ let snapshot ?(on_source_symlink = fun _ -> ()) digest_cache scope =
       digest
   in
   let add_file path stat acc =
-    if Hashtbl.mem seen_files path then acc
-    else
-      let digest = digest path stat in
-      {
-        path;
-        state =
-          File {modified = stat.Unix.st_mtime; size = stat.Unix.st_size; digest};
-      }
-      :: acc
+    try
+      if Hashtbl.mem seen_files path then acc
+      else
+        let digest = digest path stat in
+        {
+          path;
+          state =
+            File
+              {modified = stat.Unix.st_mtime; size = stat.Unix.st_size; digest};
+        }
+        :: acc
+    with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) ->
+      Hashtbl.remove seen_files path;
+      Hashtbl.remove digest_cache path;
+      acc
   in
   let matches_source source path =
     Option.fold ~none:true

@@ -24,6 +24,11 @@ type publication =
   | Published of publish_result
   | Failed_after_cmi_publication of {error: exn; cmi_change: cmi_change}
 
+type recorded_publication =
+  | No_publication
+  | Publication_succeeded of string
+  | Publication_failed of string
+
 let capture_publication publish =
   try Published (publish ()) with
   | Publication_failure (error, cmi_change) ->
@@ -168,21 +173,26 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
             value = scheduled;
           })
   in
-  let record_result (scheduled : scheduled_module) ~is_interface path result =
+  let record_publication (scheduled : scheduled_module) ~is_interface path =
     let publication = Atomic.exchange scheduled.publication None in
-    let result, publication_error, cmi_change =
-      match publication with
-      | Some (Published {stderr; cmi_change}) ->
-        ({result with Process.stderr}, None, Some cmi_change)
-      | Some (Failed_after_cmi_publication {error; cmi_change}) ->
-        (result, Some (Printexc.to_string error), Some cmi_change)
-      | None -> (result, None, None)
+    match publication with
+    | Some (Published {stderr; cmi_change}) ->
+      refresh_published_cmi scheduled cmi_change;
+      scheduled.record_published_outputs ~is_interface path;
+      Publication_succeeded stderr
+    | Some (Failed_after_cmi_publication {error; cmi_change}) ->
+      refresh_published_cmi scheduled cmi_change;
+      scheduled.record_published_outputs ~is_interface path;
+      Publication_failed (Printexc.to_string error)
+    | None -> No_publication
+  in
+  let record_result (scheduled : scheduled_module) ~is_interface path result =
+    let result, publication_error =
+      match record_publication scheduled ~is_interface path with
+      | Publication_succeeded stderr -> ({result with Process.stderr}, None)
+      | Publication_failed message -> (result, Some message)
+      | No_publication -> (result, None)
     in
-    Option.iter
-      (fun cmi_change ->
-        refresh_published_cmi scheduled cmi_change;
-        scheduled.record_published_outputs ~is_interface path)
-      cmi_change;
     let message =
       match publication_error with
       | Some message ->
@@ -238,10 +248,23 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
       scheduled.messages <- message :: scheduled.messages;
       false
   in
+  let invalidate_persistent_freshness (scheduled : scheduled_module) =
+    let ocaml_dir = Filename.dirname scheduled.cmi_path in
+    scheduled.source.Source.implementation
+    :: Option.to_list scheduled.source.Source.interface
+    |> List.iter (fun source ->
+        let path = Build_artifacts.published_ast_path ~ocaml_dir source in
+        File_util.remove_file path;
+        Compile_assets.refresh_ast compile_assets
+          ~source:(Filename.concat scheduled.package_root source)
+          ~path)
+  in
   let complete_module (scheduled : scheduled_module) =
     scheduled.phase <- Done;
     Output.Progress.advance progress;
-    if scheduled.messages <> [] then raise Module_failed
+    if scheduled.messages <> [] then (
+      invalidate_persistent_freshness scheduled;
+      raise Module_failed)
     else (
       finish_successful_compile scheduled;
       incr completed_modules)
@@ -254,6 +277,24 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
     | {output; task} :: remaining ->
       scheduled.phase <- Post_build {output; remaining};
       Some task
+  in
+  let reconcile_unconsumed_publications () =
+    List.iter
+      (fun (scheduled : scheduled_module) ->
+        let source =
+          match scheduled.phase with
+          | Interface path -> Some (true, path)
+          | Implementation path -> Some (false, path)
+          | Start | Post_build _ | Done -> None
+        in
+        Option.iter
+          (fun (is_interface, path) ->
+            match record_publication scheduled ~is_interface path with
+            | Publication_failed message ->
+              scheduled.messages <- message :: scheduled.messages
+            | No_publication | Publication_succeeded _ -> ())
+          source)
+      scheduled_modules
   in
   let scheduler_failed =
     try
@@ -310,7 +351,11 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
           | Some _, (Start | Done) ->
             raise (Project_context.Error "invalid compiler scheduler state"));
       false
-    with Module_failed -> true
+    with exn -> (
+      reconcile_unconsumed_publications ();
+      match exn with
+      | Module_failed -> true
+      | _ -> raise exn)
   in
   Output.Progress.finish progress;
   Output.trace ~verbosity

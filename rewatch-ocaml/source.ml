@@ -105,66 +105,72 @@ let scan_source ~root (source : Config.source) ~discover_modules ~on_missing
     let gentype_here = Traversal_coverage.visits_current gentype in
     let gentype_children = Traversal_coverage.visits_descendants gentype in
     if gentype_here then gentype_dirs := relative :: !gentype_dirs;
-    let entries =
-      try File_util.directory_entries absolute |> List.sort String.compare
-      with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) ->
-        if discover_here || discover_children then on_missing absolute;
-        []
-    in
-    let record_candidate relative_path absolute_path metadata =
-      present_files := absolute_path :: !present_files;
-      if collect_inventory then
-        inventory_files := absolute_path :: !inventory_files;
-      if discover_here && metadata.Unix.st_kind = Unix.S_REG then
-        match source_kind relative_path with
-        | None -> ()
-        | Some kind ->
-          candidates :=
-            {
-              file = {path = relative_path; modified = metadata.Unix.st_mtime};
-              kind;
-              is_dev = source.is_dev;
-            }
-            :: !candidates
-    in
-    List.iter
-      (fun name ->
-        let relative_path = Filename.concat relative name in
-        let absolute_path = Filename.concat root relative_path in
-        match Unix.lstat absolute_path with
-        | metadata -> (
-          match metadata.Unix.st_kind with
-          | Unix.S_DIR ->
-            if collect_inventory || discover_children || gentype_children then
-              let identity =
-                Platform.directory_identity ~path:absolute_path metadata
-              in
-              scan_directory ~relative:relative_path ~collect_inventory
-                ~discover_requested:discover_children
-                ~collect_gentype:gentype_children ~identity
-          | Unix.S_LNK -> (
-            match Unix.stat absolute_path with
-            | target_metadata -> (
-              match target_metadata.Unix.st_kind with
-              | Unix.S_DIR ->
-                if collect_inventory then
-                  inventory_files := absolute_path :: !inventory_files;
-                if discover_children || gentype_children then
-                  let identity =
-                    Platform.directory_identity ~path:absolute_path
-                      target_metadata
-                  in
-                  scan_directory ~relative:relative_path
-                    ~collect_inventory:false
-                    ~discover_requested:discover_children
-                    ~collect_gentype:gentype_children ~identity
-              | _ ->
-                record_candidate relative_path absolute_path target_metadata)
-            | exception Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) ->
-              ())
-          | _ -> record_candidate relative_path absolute_path metadata)
-        | exception Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> ())
-      entries
+    if
+      collect_inventory
+      || discovery <> Traversal_coverage.Skip
+      || gentype <> Traversal_coverage.Skip
+    then
+      let entries =
+        try File_util.directory_entries absolute |> List.sort String.compare
+        with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) ->
+          if discover_here || discover_children then on_missing absolute;
+          []
+      in
+      let record_candidate relative_path absolute_path metadata =
+        present_files := absolute_path :: !present_files;
+        if collect_inventory then
+          inventory_files := absolute_path :: !inventory_files;
+        if discover_here && metadata.Unix.st_kind = Unix.S_REG then
+          match source_kind relative_path with
+          | None -> ()
+          | Some kind ->
+            candidates :=
+              {
+                file = {path = relative_path; modified = metadata.Unix.st_mtime};
+                kind;
+                is_dev = source.is_dev;
+              }
+              :: !candidates
+      in
+      List.iter
+        (fun name ->
+          let relative_path = Filename.concat relative name in
+          let absolute_path = Filename.concat root relative_path in
+          match Unix.lstat absolute_path with
+          | metadata -> (
+            match metadata.Unix.st_kind with
+            | Unix.S_DIR ->
+              if collect_inventory || discover_children || gentype_children then
+                let identity =
+                  Platform.directory_identity ~path:absolute_path metadata
+                in
+                scan_directory ~relative:relative_path ~collect_inventory
+                  ~discover_requested:discover_children
+                  ~collect_gentype:gentype_children ~identity
+            | Unix.S_LNK -> (
+              match Unix.stat absolute_path with
+              | target_metadata -> (
+                match target_metadata.Unix.st_kind with
+                | Unix.S_DIR ->
+                  if collect_inventory then
+                    inventory_files := absolute_path :: !inventory_files;
+                  if discover_children || gentype_children then
+                    let identity =
+                      Platform.directory_identity ~path:absolute_path
+                        target_metadata
+                    in
+                    scan_directory ~relative:relative_path
+                      ~collect_inventory:false
+                      ~discover_requested:discover_children
+                      ~collect_gentype:gentype_children ~identity
+                | _ ->
+                  record_candidate relative_path absolute_path target_metadata)
+              | exception Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _)
+                ->
+                ())
+            | _ -> record_candidate relative_path absolute_path metadata)
+          | exception Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> ())
+        entries
   in
   let relative = source.dir in
   let absolute = Filename.concat root relative in

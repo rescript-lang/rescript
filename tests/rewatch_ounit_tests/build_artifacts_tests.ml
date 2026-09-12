@@ -117,6 +117,48 @@ let tests =
         [old_output; old_map; working_output; working_map]);
   with_temp_dir (fun root ->
       let config_path = Filename.concat root "rescript.json" in
+      let old_source = Filename.concat root "src/A.res" in
+      let new_source = Filename.concat root "src/nested/A.res" in
+      let ocaml_dir = Filename.concat root "lib/ocaml" in
+      let published_ast = Filename.concat ocaml_dir "A.ast" in
+      let working_ast = Filename.concat root "lib/bs/src/A.ast" in
+      write_file config_path
+        {|{"name":"moved-source","sources":{"dir":"src","subdirs":true}}|};
+      write_file new_source "let value = 1";
+      write_file published_ast
+        ("Caml1999X\nDependency\n" ^ old_source ^ "\nbinary payload");
+      write_file working_ast "old working AST";
+      let config = Config.load_root root in
+      let module_ : Source.module_ =
+        {
+          name = "A";
+          implementation = "src/nested/A.res";
+          interface = None;
+          is_dev = false;
+        }
+      in
+      let compile_assets = Compile_assets.create [ocaml_dir] in
+      let result =
+        Build_artifacts.cleanup_stale ~ocaml_files:[published_ast]
+          ~ast_sources:
+            [
+              {Compile_assets.ast_path = published_ast; source_path = old_source};
+            ]
+          ~source_files:[new_source] ~root ~ocaml_dir ~is_local:true config
+          [module_]
+      in
+      check
+        (not (Sys.file_exists published_ast || Sys.file_exists working_ast))
+        "moving a source invalidates the AST associated with its old path";
+      check
+        (List.mem "A" result.removed_modules)
+        "moving a source marks its module for recompilation";
+      check
+        (Build_freshness.source_is_not_older_than_ast compile_assets ~root
+           ~source_mtimes:(Hashtbl.create 0) module_.implementation)
+        "a moved source cannot reuse the published AST for its old path");
+  with_temp_dir (fun root ->
+      let config_path = Filename.concat root "rescript.json" in
       let old_source = Filename.concat root "old/Foo.res" in
       let old_output = Filename.concat root "old/Foo.js" in
       let old_map = old_output ^ ".map" in
