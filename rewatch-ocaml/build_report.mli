@@ -1,4 +1,7 @@
 type t
+(** Reporting owns presentation state independently of build execution. This
+    keeps terminal progress, timing, and final diagnostics from influencing
+    cleanup or retained-state transitions. *)
 
 val create :
   started_at:float ->

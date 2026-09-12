@@ -1,3 +1,7 @@
+(** A watch scope records both known sources and unresolved dependency
+    candidates. Missing candidates stay in the scope so installing or repairing
+    a dependency can wake the watcher without restarting it. *)
+
 type source_root = {
   directory: string;
   recursive: bool;

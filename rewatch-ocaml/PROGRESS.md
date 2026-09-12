@@ -35,7 +35,7 @@ boundaries. In particular:
 
 ## Latest quality evidence
 
-At checkpoint `3db0c177aa`, the implementation passed:
+At checkpoint `a3ff5e36af`, the implementation passed:
 
 - all 42 OUnit2 rewatch groups;
 - the focused OCaml integration, configuration, command-validation,
@@ -48,12 +48,11 @@ At checkpoint `3db0c177aa`, the implementation passed:
 The temporary pull-request OPAM cache override has also been removed from the
 shared setup action and both workflows; only push runs now save caches.
 
-The last repository-wide `make test-all` run passed formatting, compiler and
-runtime tests, GenType, analysis, tools, and the canonical rewatch suite until
-the missing-source watcher case exposed an over-strict `realpath`. That defect
-was fixed before `3db0c177aa`; its focused case and the complete canonical
-rewatch suite then passed. The final release gate will repeat `make test-all`
-as one uninterrupted run.
+The final repository-wide `opam exec -- make test-all` gate ran uninterrupted
+on a native case-sensitive filesystem and passed formatting, all 300 compiler
+OUnit tests, runtime and build tests, GenType, analysis, tools, and the complete
+canonical rewatch suite, including its watcher cases. Package executable and
+artifact-manifest checks also pass.
 
 Reanalyze master (`ad9894832fcd33bb0e1f799e1573d1b9b4f2c9af`) currently reports
 only nine reviewed analyzer limitations: optional arguments exercised by tests
@@ -72,13 +71,13 @@ live_interfaces=$(find rewatch-ocaml -maxdepth 1 -name '*.mli' -print | paste -s
 
 ## Performance and equivalence checkpoint
 
-The powered, idle-host seven-run release gate at `3db0c177aa` measured:
+The powered, idle-host seven-run release gate at `7ca5b38e6b` measured:
 
 | Measure | Rust | OCaml | OCaml/Rust |
 |---|---:|---:|---:|
-| Clean-build median wall time | 4.523 s | 4.723 s | 1.044x |
-| Median summed process-tree RSS | 1,828,740 KiB | 1,895,356 KiB | 1.036x |
-| Peak process-tree tasks | 74 | 125 | 1.689x |
+| Clean-build median wall time | 4.434 s | 4.703 s | 1.061x |
+| Median summed process-tree RSS | 1,075,760 KiB | 1,151,240 KiB | 1.070x |
+| Peak process-tree tasks | 56 | 106 | 1.893x |
 | Retained-watch edit median | 130 ms | 149 ms | 1.146x |
 
 The authoritative wall-time and RSS limit is 1.25x. Retained-watch latency has
@@ -97,6 +96,12 @@ Compiler work matched exactly:
 Complete post-build file sets and all byte-stable generated artifacts were
 identical. The retained gate also observed exactly seven parser and seven
 compiler calls for each implementation and byte-identical generated output.
+The final OCaml clean sample took 5.579 s while the host was briefly disconnected
+from power. It did not change the seven-run median and is retained as an
+environmentally disturbed raw sample, not evidence of a regression. On a
+separate 1,425-module macOS project, observed averages were approximately 9.6 s
+for Rust and 11.5 s for OCaml (about 1.20x), which independently remains within
+the gate's intended same-ballpark range.
 
 Filesystem tracing found no unexplained compiler-work or file-open difference.
 The compiler subprocesses performed identical work, and driver-plus-inherited
@@ -121,8 +126,8 @@ The current source-size snapshot using cloc 2.04 is:
 |---|---:|
 | Rust production, excluding telemetry | 7,809 |
 | Rust inline unit tests, excluding telemetry | 2,773 |
-| OCaml production, including both platform backends | 10,859 |
-| OCaml tests and fixtures | 9,194 |
+| OCaml production, including both platform backends | 11,187 |
+| OCaml tests and fixtures | 9,485 |
 | OCaml benchmark tooling | 1,032 |
 
 Line count is diagnostic, not an acceptance target. The larger OCaml total
@@ -221,22 +226,15 @@ runtime validation is outside this PR. The follow-up must verify:
 - static/package artifact construction before Windows CI and npm packages switch
   their default `rescript.exe` to OCaml.
 
-## Remaining order
+## Completion state
 
-1. Run two rounds of three independent Astra xhigh whole-port reviews, followed
-   by an adversarial review. Each round covers correctness and Rust parity,
-   ownership/naming/module structure and idiomatic OCaml, and measured or
-   asymptotic performance risks. Findings must distinguish port regressions,
-   Rust-inherited behavior, demonstrated costs, and speculative opportunities.
-2. Address confirmed findings and repeat focused validation after each material
-   change until no material finding remains.
-3. Run the final release-quality gate, including one uninterrupted
-   `make test-all`, packaging/artifact checks, formatting, Reanalyze, and a final
-   clean-worktree/process check.
-4. Perform the broad source-comment pass last. Comments must start with why,
-   provide enough context for readers who are not OCaml/build-system/platform
-   specialists, and stand on their own unless compatibility itself is the
-   reason. Follow it with a narrow formatting/build check.
+The independent and adversarial whole-port reviews, implementation cleanup,
+performance/equivalence gate, maintained-documentation pass, release test gate,
+and deliberately last source-comment pass are complete. The comments focus on
+why ownership and recovery boundaries exist, provide context for readers who
+are not OCaml/build-system/platform specialists, and stand on their own unless
+compatibility itself is the reason. The post-comment formatting, build,
+executable-package, and Reanalyze checks pass.
 
 Native Windows execution remains a later PR and is not a blocker for these
 remaining non-Windows release steps.

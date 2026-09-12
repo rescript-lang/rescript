@@ -1,4 +1,8 @@
 type t
+(** A session keeps only state that must survive from one watch build to the
+    next. Per-attempt diagnostics, counters, and cleanup actions deliberately
+    live in {!Build_attempt} so a failed attempt cannot leak transient state
+    into its successor. *)
 
 type prepared = {
   compiler_context: Compiler_info.context;
@@ -14,6 +18,9 @@ type source_reference = {
   absolute_path: string;
 }
 
+(** Cycle results are cached because ordinary implementation edits do not
+    change dependency edges. [Unknown_cycle] means that graph analysis is
+    required; [Known_cycle None] means it ran and found an acyclic graph. *)
 type cycle_cache =
   | Unknown_cycle
   | Known_cycle of Module_graph.cycle_info option

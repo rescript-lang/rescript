@@ -1,3 +1,6 @@
+(** Graph indexing is shared by cycle analysis and subprocess scheduling, but
+    their input contracts differ. The validation policy makes replacement or
+    rejection of duplicate and unknown nodes an explicit caller decision. *)
 type validation =
   | Replace_duplicates_and_ignore_unknown
   | Reject_invalid of {

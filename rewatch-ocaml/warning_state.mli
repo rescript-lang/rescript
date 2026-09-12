@@ -4,6 +4,9 @@ type entry = {
   path: string;
   output: string;
 }
+(** Warning output survives retained watch attempts so unchanged warning-bearing
+    modules can replay diagnostics. Watch shutdown uses the stored paths to
+    invalidate freshness markers for the next process invocation. *)
 
 type t
 

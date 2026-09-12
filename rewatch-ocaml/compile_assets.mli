@@ -1,4 +1,8 @@
 type entry = {path: string; modified: float}
+(** This index avoids repeatedly scanning [lib/ocaml] while retaining the source
+    provenance embedded in AST headers. Mutating refresh operations must be
+    called whenever publication changes the corresponding filesystem entry. *)
+
 type ast_source = {ast_path: string; source_path: string}
 type t
 

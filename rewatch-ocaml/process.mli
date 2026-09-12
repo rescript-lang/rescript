@@ -1,3 +1,8 @@
+(** Process scheduling has two policies but one child-lifecycle owner. Parallel
+    lists stop immediately on interruption; dependency graphs can stop admitting
+    new work while already-started children drain. {!Process_child} owns the
+    operating-system resources in both cases. *)
+
 type result = {status: Unix.process_status; stdout: string; stderr: string}
 type job = {program: string; args: string list; cwd: string}
 type task
@@ -28,6 +33,9 @@ val run_parallel_map :
   result list
 
 type 'a work = {key: string; dependencies: string list; value: 'a}
+
+(* [Stop_new_work] preserves results from children that already started while
+    ensuring no newly ready dependency is launched after a build failure. *)
 type failure_action = Abort_immediately | Stop_new_work
 
 val run_dependency_graph :

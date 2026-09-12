@@ -3072,3 +3072,29 @@ mutation that the former per-executable process isolation had hidden. Moving
 the shared shell suite from `rewatch/tests` to a future `tests/rewatch_tests`
 location is intentionally outside this PR because it would create unrelated
 Rust, CI, and tooling path churn.
+
+The final review and release rounds closed watcher recovery races around source
+symlinks, artifact refresh after cleanup, canonical package identity, and
+removed-dependency invalidation. In the last case, dependent AST deletion was
+moved into attempt cleanup: the current build can retain the existing AST for
+the useful source-level diagnostic, while finalization still persists pending
+work if the attempt fails or is interrupted. This restored exact canonical
+parser-work parity without weakening recovery.
+
+At `7ca5b38e6b`, the powered seven-run performance gate measured clean-build
+medians of 4.434 s for Rust and 4.703 s for OCaml (1.061x), with exact clean,
+unchanged, and edited compiler work and identical stable artifacts. A 5.579 s
+OCaml outlier coincided with a brief loss of external power and did not affect
+the median. A separate 1,425-module macOS project measured approximately 9.6 s
+for Rust and 11.5 s for OCaml on average. The final cloc 2.04 snapshot at
+`a3ff5e36af` records 7,809 Rust production lines excluding telemetry and 11,187
+OCaml production lines including both platform implementations.
+
+The release gate at `a3ff5e36af` passed an uninterrupted
+`opam exec -- make test-all` run on a native case-sensitive filesystem. This
+included formatting, 300 compiler OUnit tests, runtime/build/GenType/analysis/
+tools suites, and every canonical rewatch integration and watcher test. The
+focused parity gates, executable-package check, artifact manifest check, and
+the final Reanalyze audit also passed; Reanalyze reported only the nine reviewed
+cross-module or externally exercised analyzer limitations and no newly unused
+production code.

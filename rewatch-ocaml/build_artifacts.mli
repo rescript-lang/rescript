@@ -3,6 +3,10 @@ type cleanup_result = {
   previous_ast_count: int;
   present_public_outputs: (string, unit) Hashtbl.t;
 }
+(** Artifact cleanup first classifies ownership and builds a deletion plan.
+    Public JavaScript, source maps, and compiler artifacts are then removed as
+    one unit so an earlier deletion cannot erase evidence needed for a later
+    ownership decision. *)
 
 val lib_path : string -> string -> string
 val relative_output_directory : string -> Config.package_spec -> string

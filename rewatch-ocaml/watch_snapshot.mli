@@ -1,9 +1,16 @@
+(** Native filesystem events are treated as wakeups rather than authoritative
+    edits. Snapshots provide the content baseline needed to coalesce duplicate
+    events and to detect changes that arrive while a build is running. *)
+
 type change_kind = Added | Removed | Modified
 type change = {path: string; kind: change_kind}
 
 type file = {modified: float; size: int; digest: string}
 type dependency = {modified: float; size: int}
 
+(** Dependency candidates need states distinct from ordinary files: a missing
+    candidate is meaningful and must remain observable, whereas [Unreadable]
+    represents a filesystem failure that must not be treated as deletion. *)
 type state =
   | File of file
   | Dependency_candidate of dependency

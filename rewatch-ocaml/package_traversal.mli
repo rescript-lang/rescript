@@ -1,3 +1,7 @@
+(** Traversal centralizes dependency admission and feature aggregation while
+    leaving command-specific failure policy to its [resolve] callback. This is
+    why build, watch, and format can share graph semantics without sharing all
+    recovery behavior. *)
 type dependency_kind = Regular | Development
 
 val source_discovery_prod : prod:bool -> is_local:bool -> bool

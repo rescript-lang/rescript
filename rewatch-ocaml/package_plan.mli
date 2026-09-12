@@ -1,3 +1,7 @@
+(** A package plan freezes discovery and configuration decisions that are
+    stable across retained watch attempts. Compilation-specific arguments are
+    stored separately so per-attempt dirtiness does not require rediscovery. *)
+
 type dependency = {
   declaration: Config.dependency;
   directory: string;
