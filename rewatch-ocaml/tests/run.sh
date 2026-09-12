@@ -1162,11 +1162,12 @@ grep 'value = 1' "$moved_source/src/nested/A.mjs" >/dev/null
   >"$parse_publication/watch.log" 2>&1 &
 parse_publication_pid=$!
 background_pids="$background_pids $parse_publication_pid"
-if ! wait_for_file "$parse_publication/src/A.mjs"; then
+parse_destination="$parse_publication/lib/ocaml/A.res"
+if ! wait_for_file "$parse_destination"; then
   cat "$parse_publication/watch.log" >&2
+  echo "initial watch did not publish $parse_destination" >&2
   exit 1
 fi
-parse_destination="$parse_publication/lib/ocaml/A.res"
 rm "$parse_destination"
 mkdir "$parse_destination"
 printf 'let value = 2\n' >"$parse_publication/src/A.res"
@@ -1188,11 +1189,12 @@ wait "$parse_publication_pid" 2>/dev/null || true
   >"$multi_package_pending/watch.log" 2>&1 &
 multi_package_pending_pid=$!
 background_pids="$background_pids $multi_package_pending_pid"
-if ! wait_for_file "$multi_package_pending/src/Main.mjs"; then
+dep1_destination="$multi_package_pending/packages/dep1/lib/ocaml/A.res"
+if ! wait_for_file "$dep1_destination"; then
   cat "$multi_package_pending/watch.log" >&2
+  echo "initial watch did not publish $dep1_destination" >&2
   exit 1
 fi
-dep1_destination="$multi_package_pending/packages/dep1/lib/ocaml/A.res"
 rm "$dep1_destination"
 mkdir "$dep1_destination"
 printf 'let value = 2\n' >"$multi_package_pending/packages/dep2/src/B.res"
@@ -1216,11 +1218,12 @@ wait "$multi_package_pending_pid" 2>/dev/null || true
   >"$full_watch_recovery/watch.log" 2>&1 &
 full_watch_recovery_pid=$!
 background_pids="$background_pids $full_watch_recovery_pid"
-if ! wait_for_file "$full_watch_recovery/src/A.mjs"; then
+full_watch_destination="$full_watch_recovery/lib/ocaml/C.res"
+if ! wait_for_file "$full_watch_destination"; then
   cat "$full_watch_recovery/watch.log" >&2
+  echo "initial watch did not publish $full_watch_destination" >&2
   exit 1
 fi
-full_watch_destination="$full_watch_recovery/lib/ocaml/C.res"
 rm "$full_watch_destination"
 mkdir "$full_watch_destination"
 rm "$full_watch_recovery/src/B.res"
