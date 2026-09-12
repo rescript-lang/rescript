@@ -1155,8 +1155,16 @@ grep 'value = 2' "$post_build_retry/src/A.mjs" >/dev/null
 "$port" build "$moved_source"
 mv "$moved_source/src/A.res" "$moved_source/src/nested/A.res"
 "$port" build "$moved_source"
-test ! -f "$moved_source/src/A.mjs"
-grep 'value = 1' "$moved_source/src/nested/A.mjs" >/dev/null
+if [ -f "$moved_source/src/A.mjs" ]; then
+  echo "moved source left its old generated output" >&2
+  find "$moved_source" -type f -print >&2
+  exit 1
+fi
+if ! grep 'value = 1' "$moved_source/src/nested/A.mjs" >/dev/null; then
+  echo "moved source did not produce the expected nested output" >&2
+  find "$moved_source" -type f -print >&2
+  exit 1
+fi
 
 "$port" watch "$parse_publication" \
   >"$parse_publication/watch.log" 2>&1 &
@@ -1168,8 +1176,16 @@ if ! wait_for_file "$parse_destination"; then
   echo "initial watch did not publish $parse_destination" >&2
   exit 1
 fi
-rm "$parse_destination"
-mkdir "$parse_destination"
+if ! rm "$parse_destination"; then
+  cat "$parse_publication/watch.log" >&2
+  echo "could not remove published parse artifact $parse_destination" >&2
+  exit 1
+fi
+if ! mkdir "$parse_destination"; then
+  cat "$parse_publication/watch.log" >&2
+  echo "could not obstruct parse publication at $parse_destination" >&2
+  exit 1
+fi
 printf 'let value = 2\n' >"$parse_publication/src/A.res"
 if ! wait_for_text "$parse_publication/watch.log" "$parse_destination"; then
   cat "$parse_publication/watch.log" >&2
