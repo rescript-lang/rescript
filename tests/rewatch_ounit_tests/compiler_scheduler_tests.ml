@@ -58,10 +58,10 @@ let tests =
         Compiler_scheduler.create ~key
           ~dependencies:state.Build_state.dependencies ~source ~state ~cmi_path
           ~prepare:(fun () -> ())
-          ~compile:(fun ~is_interface:_ _path ->
+          ~compile:(fun ~source_kind:_ _path ->
             if key = "B" then incr b_compilations;
             process_job ())
-          ~publish:(fun ~is_interface:_ _path _result ->
+          ~publish:(fun ~source_kind:_ _path _result ->
             write_file cmi_path
               (if key = "A" then "new interface" else "dependent interface");
             if key = "A" && !fail_a_publication then (
@@ -72,7 +72,7 @@ let tests =
                 stderr = "";
                 cmi_change = (if key = "A" then Cmi_changed else Cmi_unchanged);
               })
-          ~record_published_outputs:(fun ~is_interface:_ _path ->
+          ~record_published_outputs:(fun ~source_kind:_ _path ->
             check
               (Thread.id (Thread.self ()) = scheduler_thread)
               "the scheduler thread owns the shared output inventory";
@@ -159,9 +159,9 @@ let tests =
               ~state
               ~cmi_path:(Filename.concat ocaml_dir (key ^ ".cmi"))
               ~prepare
-              ~compile:(fun ~is_interface:_ _path -> process_job ())
+              ~compile:(fun ~source_kind:_ _path -> process_job ())
               ~publish
-              ~record_published_outputs:(fun ~is_interface:_ _path -> ())
+              ~record_published_outputs:(fun ~source_kind:_ _path -> ())
               ~post_build:(fun _ -> [])
               ~package_root:root ~is_local:true
               ~mark_warning:(fun _ -> ()))
@@ -170,14 +170,14 @@ let tests =
         [
           abort_candidate "AbortA" []
             (fun () -> ())
-            (fun ~is_interface:_ _path _result ->
+            (fun ~source_kind:_ _path _result ->
               write_file (Filename.concat ocaml_dir "AbortA.cmi") "new A";
               write_file published_marker "";
               wait_for release_marker 5000;
               Compiler_scheduler.{stderr = ""; cmi_change = Cmi_changed});
           abort_candidate "AbortC" []
             (fun () -> ())
-            (fun ~is_interface:_ _path _result ->
+            (fun ~source_kind:_ _path _result ->
               wait_for published_marker 5000;
               write_file (Filename.concat ocaml_dir "AbortC.cmi") "new C";
               Compiler_scheduler.{stderr = ""; cmi_change = Cmi_changed});
@@ -185,10 +185,10 @@ let tests =
             (fun () ->
               write_file release_marker "";
               raise Exit)
-            (fun ~is_interface:_ _path _result -> assert false);
+            (fun ~source_kind:_ _path _result -> assert false);
           abort_candidate "AbortD" ["AbortA"]
             (fun () -> ())
-            (fun ~is_interface:_ _path _result -> assert false);
+            (fun ~source_kind:_ _path _result -> assert false);
         ]
       in
       let aborted =

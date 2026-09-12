@@ -259,7 +259,7 @@ let compiler_job_tests =
           ~common_args:
             (Compiler_args.compiler_common_arguments ~config ~runtime:"runtime"
                ~dependency_dirs:[] ~watch:false ~gentype_dependency_args:[])
-          module_ ~is_interface:false "src/A.res"
+          module_ ~source_kind:Source.Implementation "src/A.res"
       in
       let rec argument_after expected = function
         | argument :: value :: _ when argument = expected -> Some value

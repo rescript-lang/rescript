@@ -109,13 +109,16 @@ let compiler_common_arguments ~(config : Config.t) ~runtime ~dependency_dirs
   @ ["-bs-package-name"; config.name; "-bs-project-root"; config.root]
 
 let compiler_arguments_with_common ~(config : Config.t) ~common_args
-    ~module_name ~is_interface ~has_interface ~path =
+    ~module_name ~source_kind ~has_interface ~path =
   let interface_args =
-    if (not is_interface) && has_interface then ["-bs-read-cmi"] else []
+    match source_kind with
+    | Source.Implementation when has_interface -> ["-bs-read-cmi"]
+    | Source.Implementation | Source.Interface -> []
   in
   let output_args =
-    if is_interface then []
-    else
+    match source_kind with
+    | Source.Interface -> []
+    | Source.Implementation ->
       List.concat_map
         (fun spec -> ["-bs-package-output"; package_output config path spec])
         config.package_specs
@@ -125,10 +128,10 @@ let compiler_arguments_with_common ~(config : Config.t) ~common_args
   @ [Source.ast_path path]
 
 let compiler_arguments ~(config : Config.t) ~runtime ~dependency_dirs
-    ~module_name ~is_interface ~has_interface ~watch ~gentype_dependency_args
+    ~module_name ~source_kind ~has_interface ~watch ~gentype_dependency_args
     ~path =
   compiler_arguments_with_common ~config
     ~common_args:
       (compiler_common_arguments ~config ~runtime ~dependency_dirs ~watch
          ~gentype_dependency_args)
-    ~module_name ~is_interface ~has_interface ~path
+    ~module_name ~source_kind ~has_interface ~path

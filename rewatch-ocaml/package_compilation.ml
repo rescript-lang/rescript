@@ -82,17 +82,19 @@ let run ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
           File_util.ensure_dir (Filename.dirname output))
         config.package_specs
     in
-    let compile_process module_ ~is_interface path =
+    let compile_process module_ ~source_kind path =
       Compiler_process.compile_job ~bsc:prepared.compiler_context.bsc_path
         ~build_dir ~config
         ~common_args:
           (if module_.Source.is_dev then
              prepared_package.development_common_args
            else prepared_package.regular_common_args)
-        module_ ~is_interface path
+        module_ ~source_kind path
     in
-    let record_published_outputs ~is_interface path =
-      if not is_interface then
+    let record_published_outputs ~source_kind path =
+      match source_kind with
+      | Source.Interface -> ()
+      | Source.Implementation ->
         List.iter
           (fun spec ->
             let output = Build_artifacts.generated_js_path config path spec in
@@ -124,11 +126,11 @@ let run ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
               Compiler_scheduler.create ~key ~dependencies:state.dependencies
                 ~source:module_ ~state ~cmi_path
                 ~prepare:(fun () -> prepare_outputs module_)
-                ~compile:(fun ~is_interface path ->
-                  compile_process module_ ~is_interface path)
-                ~publish:(fun ~is_interface path result ->
+                ~compile:(fun ~source_kind path ->
+                  compile_process module_ ~source_kind path)
+                ~publish:(fun ~source_kind path result ->
                   Compiler_process.publish ~build_dir ~ocaml_dir ~is_local
-                    ~config ~is_interface path result)
+                    ~config ~source_kind path result)
                 ~record_published_outputs
                 ~post_build:(Compiler_process.post_build_tasks config)
                 ~package_root:config.root ~is_local

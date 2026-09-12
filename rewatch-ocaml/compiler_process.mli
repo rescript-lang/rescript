@@ -20,7 +20,7 @@ val compile_job :
   config:Config.t ->
   common_args:string list ->
   Source.module_ ->
-  is_interface:bool ->
+  source_kind:Source.source_kind ->
   string ->
   Process.job
 
@@ -32,7 +32,7 @@ val publish :
   ocaml_dir:string ->
   is_local:bool ->
   config:Config.t ->
-  is_interface:bool ->
+  source_kind:Source.source_kind ->
   string ->
   Process.result ->
   Compiler_scheduler.publish_result

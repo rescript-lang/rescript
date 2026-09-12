@@ -44,9 +44,10 @@ type scheduled_module = {
   cmi_path: string;
   publication: publication option Atomic.t;
   prepare: unit -> unit;
-  compile: is_interface:bool -> string -> Process.job;
-  publish: is_interface:bool -> string -> Process.result -> publish_result;
-  record_published_outputs: is_interface:bool -> string -> unit;
+  compile: source_kind:Source.source_kind -> string -> Process.job;
+  publish:
+    source_kind:Source.source_kind -> string -> Process.result -> publish_result;
+  record_published_outputs: source_kind:Source.source_kind -> string -> unit;
   post_build: string -> post_build_task list;
   package_root: string;
   is_local: bool;
@@ -187,22 +188,22 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
     |> List.of_seq
   in
   let works = module_works @ namespace_works in
-  let record_publication (scheduled : scheduled_module) ~is_interface path =
+  let record_publication (scheduled : scheduled_module) ~source_kind path =
     let publication = Atomic.exchange scheduled.publication None in
     match publication with
     | Some (Published {stderr; cmi_change}) ->
       refresh_published_cmi scheduled cmi_change;
-      scheduled.record_published_outputs ~is_interface path;
+      scheduled.record_published_outputs ~source_kind path;
       Publication_succeeded stderr
     | Some (Failed_after_cmi_publication {error; cmi_change}) ->
       refresh_published_cmi scheduled cmi_change;
-      scheduled.record_published_outputs ~is_interface path;
+      scheduled.record_published_outputs ~source_kind path;
       Publication_failed (Printexc.to_string error)
     | None -> No_publication
   in
-  let record_result (scheduled : scheduled_module) ~is_interface path result =
+  let record_result (scheduled : scheduled_module) ~source_kind path result =
     let result, publication_error =
-      match record_publication scheduled ~is_interface path with
+      match record_publication scheduled ~source_kind path with
       | Publication_succeeded stderr -> ({result with Process.stderr}, None)
       | Publication_failed message -> (result, Some message)
       | No_publication -> (result, None)
@@ -236,14 +237,14 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
       message;
     Option.is_none message
   in
-  let compilation_task (scheduled : scheduled_module) ~is_interface path =
-    let job = scheduled.compile ~is_interface path in
+  let compilation_task (scheduled : scheduled_module) ~source_kind path =
+    let job = scheduled.compile ~source_kind path in
     Atomic.set scheduled.publication None;
     Process.task job ~on_result:(fun result ->
         (if Process.succeeded result then
            let publication =
              capture_publication (fun () ->
-                 scheduled.publish ~is_interface path result)
+                 scheduled.publish ~source_kind path result)
            in
            Atomic.set scheduled.publication (Some publication));
         result)
@@ -297,13 +298,13 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
       (fun (scheduled : scheduled_module) ->
         let source =
           match scheduled.phase with
-          | Interface path -> Some (true, path)
-          | Implementation path -> Some (false, path)
+          | Interface path -> Some (Source.Interface, path)
+          | Implementation path -> Some (Source.Implementation, path)
           | Start | Post_build _ | Done -> None
         in
         Option.iter
-          (fun (is_interface, path) ->
-            match record_publication scheduled ~is_interface path with
+          (fun (source_kind, path) ->
+            match record_publication scheduled ~source_kind path with
             | Publication_failed message ->
               scheduled.messages <- message :: scheduled.messages
             | No_publication | Publication_succeeded _ -> ())
@@ -339,28 +340,38 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
                   Output.Progress.debug progress ~verbosity
                     ("Compiling interface file: " ^ scheduled.key);
                   scheduled.phase <- Interface path;
-                  Some (compilation_task scheduled ~is_interface:true path)
+                  Some
+                    (compilation_task scheduled ~source_kind:Source.Interface
+                       path)
                 | None ->
                   let path = scheduled.source.Source.implementation in
                   Output.Progress.debug progress ~verbosity
                     ("Compiling file: " ^ scheduled.key);
                   scheduled.phase <- Implementation path;
-                  Some (compilation_task scheduled ~is_interface:false path))
+                  Some
+                    (compilation_task scheduled
+                       ~source_kind:Source.Implementation path))
               else (
                 scheduled.phase <- Done;
                 incr completed_modules;
                 Output.Progress.advance progress;
                 None)
             | Some result, Interface path ->
-              ignore (record_result scheduled ~is_interface:true path result);
+              ignore
+                (record_result scheduled ~source_kind:Source.Interface path
+                   result);
               let path = scheduled.source.Source.implementation in
               Output.Progress.debug progress ~verbosity
                 ("Compiling file: " ^ scheduled.key);
               scheduled.phase <- Implementation path;
-              Some (compilation_task scheduled ~is_interface:false path)
+              Some
+                (compilation_task scheduled ~source_kind:Source.Implementation
+                   path)
             | Some result, Implementation path ->
-              if record_result scheduled ~is_interface:false path result then
-                continue_post_build scheduled (scheduled.post_build path)
+              if
+                record_result scheduled ~source_kind:Source.Implementation path
+                  result
+              then continue_post_build scheduled (scheduled.post_build path)
               else (
                 complete_module scheduled;
                 None)

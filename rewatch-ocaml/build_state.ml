@@ -51,10 +51,13 @@ let dependency_tree_compiled_after ?(namespace_freshness = Hashtbl.create 4)
       | None ->
         let modified =
           dependency.dependencies
-          |> List.filter_map (fun key -> latest_cmi (find_exn state key))
-          |> List.fold_left max neg_infinity
-          |> fun modified ->
-          if modified = neg_infinity then None else Some modified
+          |> List.fold_left
+               (fun latest key ->
+                 match (latest, latest_cmi (find_exn state key)) with
+                 | None, member -> member
+                 | latest, None -> latest
+                 | Some latest, Some member -> Some (max latest member))
+               None
         in
         Hashtbl.add namespace_freshness dependency.key modified;
         modified)

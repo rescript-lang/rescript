@@ -23,7 +23,7 @@ val compiler_arguments :
   runtime:string ->
   dependency_dirs:string list ->
   module_name:string ->
-  is_interface:bool ->
+  source_kind:Source.source_kind ->
   has_interface:bool ->
   watch:bool ->
   gentype_dependency_args:string list ->
@@ -42,7 +42,7 @@ val compiler_arguments_with_common :
   config:Config.t ->
   common_args:string list ->
   module_name:string ->
-  is_interface:bool ->
+  source_kind:Source.source_kind ->
   has_interface:bool ->
   path:string ->
   string list
