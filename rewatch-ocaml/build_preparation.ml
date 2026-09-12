@@ -171,7 +171,8 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
             List.map (fun path -> (package, path, group)) dirty_paths))
   in
   let parse_completed =
-    Output.Progress.start_grouped attempt.progress ~step:parse_step ~symbol:"🧱 "
+    Output.Progress.start_grouped attempt.progress ~step:parse_step
+      ~symbol:Platform.parse_symbol
       ~label:"Parsing"
       (List.map (fun (_, _, group) -> group) parse_entries)
   in

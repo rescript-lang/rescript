@@ -7,6 +7,17 @@ ocaml=${2:-$root/_build/default/rewatch-ocaml/rescript_ocaml.exe}
 rust=$(realpath "$rust")
 ocaml=$(realpath "$ocaml")
 work=$(mktemp -d "${TMPDIR:-/tmp}/rewatch-interactive-output-XXXXXX")
+windows_posix_shell=false
+case $(uname -s) in
+  CYGWIN*|MINGW*|MSYS*) windows_posix_shell=true ;;
+esac
+command_path() {
+  if $windows_posix_shell; then
+    cygpath -am "$1"
+  else
+    printf '%s\n' "$1"
+  fi
+}
 active_script_pid=""
 cleanup() {
   if [ -n "$active_script_pid" ]; then
@@ -21,6 +32,13 @@ if ! command -v script >/dev/null 2>&1; then
   echo "Interactive output gate requires the util-linux script command" >&2
   exit 1
 fi
+
+normalize_output() {
+  sed -E $'s/\033\\[[0-9;]*[[:alpha:]]//g' \
+    | sed -e 's/\[clean\]/🧹/g' -e 's/\[parse\]/🧱/g' \
+        -e 's/\[build\]/🤺/g' -e 's/\[ok\]/✅/g' \
+        -e 's/\[warn\]/⚠️/g' -e 's/\[error\]/❌/g'
+}
 
 for implementation in rust ocaml; do
   mkdir -p "$work/$implementation/src"
@@ -49,6 +67,7 @@ cat >"$work/after-build-marker.sh" <<'EOF'
 printf '%s\n' AFTER_BUILD_MARKER
 EOF
 chmod +x "$work/after-build-marker.sh"
+printf 'console.log("AFTER_BUILD_MARKER")\n' >"$work/after-build-marker.js"
 
 cat >"$work/parse-warning-bsc.sh" <<'EOF'
 #!/bin/sh
@@ -68,11 +87,22 @@ chmod +x "$work/parse-warning-bsc.sh"
 
 export RESCRIPT_BSC_EXE=${RESCRIPT_BSC_EXE:-$root/_build/default/compiler/bsc/rescript_compiler_main.exe}
 export RESCRIPT_RUNTIME=${RESCRIPT_RUNTIME:-$root/packages/@rescript/runtime}
+parse_warning_bsc="$work/parse-warning-bsc.sh"
+after_build_command="$work/after-build-marker.sh"
+if $windows_posix_shell; then
+  RESCRIPT_BSC_EXE=$(command_path "$RESCRIPT_BSC_EXE")
+  RESCRIPT_RUNTIME=$(command_path "$RESCRIPT_RUNTIME")
+  parse_warning_bsc=$(command_path \
+    "$root/_build/default/tests/rewatch_ounit_tests/rewatch_bsc_test_proxy.exe")
+  after_build_command="node $(command_path "$work/after-build-marker.js")"
+fi
 
 capture() {
   implementation=$1
   executable=$2
   transcript="$work/$implementation.tty"
+  command_executable=$(command_path "$executable")
+  command_project=$(command_path "$work/$implementation")
   if [ "$(uname -s)" = Darwin ]; then
     script -q "$transcript" env -u NO_COLOR \
       "TERM=xterm" \
@@ -83,11 +113,11 @@ capture() {
       "$executable" build "$work/$implementation" --no-timing >/dev/null
   else
     script -qefc \
-      "env -u NO_COLOR TERM=xterm CLICOLOR=1 CLICOLOR_FORCE=0 RESCRIPT_BSC_EXE=$RESCRIPT_BSC_EXE RESCRIPT_RUNTIME=$RESCRIPT_RUNTIME $executable build $work/$implementation --no-timing" \
+      "env -u NO_COLOR TERM=xterm CLICOLOR=1 CLICOLOR_FORCE=0 RESCRIPT_BSC_EXE=$RESCRIPT_BSC_EXE RESCRIPT_RUNTIME=$RESCRIPT_RUNTIME $command_executable build $command_project --no-timing" \
       "$transcript" >/dev/null
   fi
   tr '\r' '\n' <"$transcript" \
-    | sed -E $'s/\033\\[[0-9;]*[[:alpha:]]//g' \
+    | normalize_output \
     | grep -E '^\[[123]/3\] .* (Cleaned|Parsed|Compiled) |^✅ Finished compilation in ' \
     >"$work/$implementation.phases"
 }
@@ -104,7 +134,7 @@ require_spinner_frames() {
     exit 1
   fi
   tr '\r' '\n' <"$work/$implementation.tty" \
-    | sed -E $'s/\033\\[[0-9;]*[[:alpha:]]//g' \
+    | normalize_output \
     >"$work/$implementation.frames"
   if ! grep -E '^\[2/3\] 🧱 Parsing\.\.\. .+ [0-9]+/1' \
       "$work/$implementation.frames" >/dev/null || \
@@ -146,22 +176,24 @@ capture_parse_warning_order() {
   executable=$2
   transcript="$work/$implementation-parse-warning.tty"
   project="$work/$implementation-parse-warning"
+  command_executable=$(command_path "$executable")
+  command_project=$(command_path "$project")
   if [ "$(uname -s)" = Darwin ]; then
     script -q "$transcript" env -u NO_COLOR \
       "TERM=xterm" \
       "CLICOLOR=1" \
       "CLICOLOR_FORCE=0" \
       "REAL_BSC_EXE=$RESCRIPT_BSC_EXE" \
-      "RESCRIPT_BSC_EXE=$work/parse-warning-bsc.sh" \
+      "RESCRIPT_BSC_EXE=$parse_warning_bsc" \
       "RESCRIPT_RUNTIME=$RESCRIPT_RUNTIME" \
       "$executable" build "$project" --no-timing >/dev/null
   else
     script -qefc \
-      "env -u NO_COLOR TERM=xterm CLICOLOR=1 CLICOLOR_FORCE=0 REAL_BSC_EXE=$RESCRIPT_BSC_EXE RESCRIPT_BSC_EXE=$work/parse-warning-bsc.sh RESCRIPT_RUNTIME=$RESCRIPT_RUNTIME $executable build $project --no-timing" \
+      "env -u NO_COLOR TERM=xterm CLICOLOR=1 CLICOLOR_FORCE=0 REAL_BSC_EXE=$RESCRIPT_BSC_EXE REWATCH_REAL_BSC=$RESCRIPT_BSC_EXE REWATCH_BSC_PROXY_MODE=parse-warning RESCRIPT_BSC_EXE=$parse_warning_bsc RESCRIPT_RUNTIME=$RESCRIPT_RUNTIME $command_executable build $command_project --no-timing" \
       "$transcript" >/dev/null
   fi
   tr '\r' '\n' <"$transcript" \
-    | sed -E $'s/\033\\[[0-9;]*[[:alpha:]]//g' \
+    | normalize_output \
     | grep -E '(^\[[123]/3\] .* Parsed |PARSE_WARNING_MARKER)' \
     >"$work/$implementation-parse-warning.order"
 }
@@ -191,6 +223,8 @@ capture_after_build_order() {
   executable=$2
   transcript="$work/$implementation-after-build.tty"
   project="$work/$implementation-after-build"
+  command_executable=$(command_path "$executable")
+  command_project=$(command_path "$project")
   if [ "$(uname -s)" = Darwin ]; then
     script -q "$transcript" env -u NO_COLOR \
       "TERM=xterm" \
@@ -198,15 +232,15 @@ capture_after_build_order() {
       "CLICOLOR_FORCE=0" \
       "RESCRIPT_BSC_EXE=$RESCRIPT_BSC_EXE" \
       "RESCRIPT_RUNTIME=$RESCRIPT_RUNTIME" \
-      "$executable" build --after-build "$work/after-build-marker.sh" \
+      "$executable" build --after-build "$after_build_command" \
       "$project" --no-timing >/dev/null
   else
     script -qefc \
-      "env -u NO_COLOR TERM=xterm CLICOLOR=1 CLICOLOR_FORCE=0 RESCRIPT_BSC_EXE=$RESCRIPT_BSC_EXE RESCRIPT_RUNTIME=$RESCRIPT_RUNTIME $executable build --after-build $work/after-build-marker.sh $project --no-timing" \
+      "env -u NO_COLOR TERM=xterm CLICOLOR=1 CLICOLOR_FORCE=0 RESCRIPT_BSC_EXE=$RESCRIPT_BSC_EXE RESCRIPT_RUNTIME=$RESCRIPT_RUNTIME $command_executable build --after-build '$after_build_command' $command_project --no-timing" \
       "$transcript" >/dev/null
   fi
   tr '\r' '\n' <"$transcript" \
-    | sed -E $'s/\033\\[[0-9;]*[[:alpha:]]//g' \
+    | normalize_output \
     | grep -E '^(✅ Finished compilation in |AFTER_BUILD_MARKER$)' \
     | sed -E 's/in [0-9]+\.[0-9]+s$/in 0.00s/' \
     >"$work/$implementation-after-build.order"
@@ -233,6 +267,8 @@ capture_quiet_build() {
   implementation=$1
   executable=$2
   transcript="$work/$implementation-quiet.tty"
+  command_executable=$(command_path "$executable")
+  command_project=$(command_path "$work/$implementation")
   if [ "$(uname -s)" = Darwin ]; then
     script -q "$transcript" env -u NO_COLOR \
       "TERM=xterm" \
@@ -243,7 +279,7 @@ capture_quiet_build() {
       "$executable" -q build "$work/$implementation" >/dev/null
   else
     script -qefc \
-      "env -u NO_COLOR TERM=xterm CLICOLOR=1 CLICOLOR_FORCE=0 RESCRIPT_BSC_EXE=$RESCRIPT_BSC_EXE RESCRIPT_RUNTIME=$RESCRIPT_RUNTIME $executable -q build $work/$implementation" \
+      "env -u NO_COLOR TERM=xterm CLICOLOR=1 CLICOLOR_FORCE=0 RESCRIPT_BSC_EXE=$RESCRIPT_BSC_EXE RESCRIPT_RUNTIME=$RESCRIPT_RUNTIME $command_executable -q build $command_project" \
       "$transcript" >/dev/null
   fi
   if tr '\r' '\n' <"$transcript" \
@@ -261,6 +297,8 @@ capture_clean() {
   implementation=$1
   executable=$2
   transcript="$work/$implementation-clean.tty"
+  command_executable=$(command_path "$executable")
+  command_project=$(command_path "$work/$implementation")
   if [ "$(uname -s)" = Darwin ]; then
     script -q "$transcript" env -u NO_COLOR \
       "TERM=xterm" \
@@ -269,13 +307,13 @@ capture_clean() {
       "$executable" clean "$work/$implementation" >/dev/null
   else
     script -qefc \
-      "env -u NO_COLOR TERM=xterm CLICOLOR=1 CLICOLOR_FORCE=0 $executable clean $work/$implementation" \
+      "env -u NO_COLOR TERM=xterm CLICOLOR=1 CLICOLOR_FORCE=0 $command_executable clean $command_project" \
       "$transcript" >/dev/null
   fi
   # The initial generic label is overwritten by the first package label on the
   # same terminal line, so it is not part of the visible phase sequence.
   tr '\r' '\n' <"$transcript" \
-    | sed -E $'s/\033\\[[0-9;]*[[:alpha:]]//g' \
+    | normalize_output \
     | grep -E '^\[[12]/2\] 🧹 (Cleaning|Cleaned)' \
     | awk '$0 != "[1/2] 🧹 Cleaning compiler assets..."' \
     | sed -E 's/in [0-9]+\.[0-9]+s$/in 0.00s/' \
@@ -311,6 +349,8 @@ capture_quiet_clean() {
   implementation=$1
   executable=$2
   transcript="$work/$implementation-clean-quiet.tty"
+  command_executable=$(command_path "$executable")
+  command_project=$(command_path "$work/$implementation")
   if [ "$(uname -s)" = Darwin ]; then
     script -q "$transcript" env -u NO_COLOR \
       "TERM=xterm" \
@@ -319,7 +359,7 @@ capture_quiet_clean() {
       "$executable" -q clean "$work/$implementation" >/dev/null
   else
     script -qefc \
-      "env -u NO_COLOR TERM=xterm CLICOLOR=1 CLICOLOR_FORCE=0 $executable -q clean $work/$implementation" \
+      "env -u NO_COLOR TERM=xterm CLICOLOR=1 CLICOLOR_FORCE=0 $command_executable -q clean $command_project" \
       "$transcript" >/dev/null
   fi
   if tr '\r' '\n' <"$transcript" | grep -E '(Cleaning|Cleaned)' >/dev/null; then
@@ -369,6 +409,8 @@ capture_watch_rebuild() {
   local executable=$2
   local project="$work/$implementation-watch"
   local transcript="$work/$implementation-watch.tty"
+  local command_executable=$(command_path "$executable")
+  local command_project=$(command_path "$project")
   if [ "$(uname -s)" = Darwin ]; then
     script -q "$transcript" env -u NO_COLOR \
       "TERM=xterm" \
@@ -379,7 +421,7 @@ capture_watch_rebuild() {
       "$executable" watch --clear-screen "$project" >/dev/null &
   else
     script -qefc \
-      "env -u NO_COLOR TERM=xterm CLICOLOR=1 CLICOLOR_FORCE=0 RESCRIPT_BSC_EXE=$RESCRIPT_BSC_EXE RESCRIPT_RUNTIME=$RESCRIPT_RUNTIME $executable watch --clear-screen $project" \
+      "env -u NO_COLOR TERM=xterm CLICOLOR=1 CLICOLOR_FORCE=0 RESCRIPT_BSC_EXE=$RESCRIPT_BSC_EXE RESCRIPT_RUNTIME=$RESCRIPT_RUNTIME $command_executable watch --clear-screen $command_project" \
       "$transcript" >/dev/null &
   fi
   active_script_pid=$!
@@ -411,7 +453,8 @@ capture_watch_rebuild() {
   wait "$active_script_pid"
   active_script_pid=""
   tr '\r' '\n' <"$work/$implementation-watch-phases.tty" \
-    | sed -E $'s/\033\\[[0-9;]*[[:alpha:]]//g; s/in [0-9]+\\.[0-9]+s/in <TIME>/' \
+    | normalize_output \
+    | sed -E 's/in [0-9]+\.[0-9]+s/in <TIME>/' \
     >"$work/$implementation-watch.normalized"
   awk '
     /^\[[123]\/3\] .* (Cleaned|Parsed|Compiled) / ||
@@ -425,7 +468,7 @@ capture_watch_rebuild() {
     "$work/$implementation-watch.normalized" \
     >"$work/$implementation-watch.phases"
   tr '\r' '\n' <"$transcript" \
-    | sed -E $'s/\033\\[[0-9;]*[[:alpha:]]//g' \
+    | normalize_output \
     >"$work/$implementation-watch.presentation"
   rebuilds=$(grep -cF 'Change detected. Rebuilding...' \
     "$work/$implementation-watch.presentation" || true)
@@ -497,6 +540,8 @@ capture_initial_failure_recovery() {
   local executable=$2
   local project="$work/$implementation-initial-failure-watch"
   local transcript="$work/$implementation-initial-failure-watch.tty"
+  local command_executable=$(command_path "$executable")
+  local command_project=$(command_path "$project")
   if [ "$(uname -s)" = Darwin ]; then
     script -q "$transcript" env -u NO_COLOR \
       "TERM=xterm" \
@@ -507,7 +552,7 @@ capture_initial_failure_recovery() {
       "$executable" watch --clear-screen "$project" >/dev/null &
   else
     script -qefc \
-      "env -u NO_COLOR TERM=xterm CLICOLOR=1 CLICOLOR_FORCE=0 RESCRIPT_BSC_EXE=$RESCRIPT_BSC_EXE RESCRIPT_RUNTIME=$RESCRIPT_RUNTIME $executable watch --clear-screen $project" \
+      "env -u NO_COLOR TERM=xterm CLICOLOR=1 CLICOLOR_FORCE=0 RESCRIPT_BSC_EXE=$RESCRIPT_BSC_EXE RESCRIPT_RUNTIME=$RESCRIPT_RUNTIME $command_executable watch --clear-screen $command_project" \
       "$transcript" >/dev/null &
   fi
   active_script_pid=$!
@@ -522,7 +567,8 @@ capture_initial_failure_recovery() {
   wait "$active_script_pid"
   active_script_pid=""
   tr '\r' '\n' <"$transcript" \
-    | sed -E $'s/\033\\[[0-9;]*[[:alpha:]]//g; s/in [0-9]+\\.[0-9]+s/in <TIME>/' \
+    | normalize_output \
+    | sed -E 's/in [0-9]+\.[0-9]+s/in <TIME>/' \
     | sed -n '/Change detected\. Rebuilding\.\.\./,$p' \
     | grep -E '^(Change detected|\[[12]/2\] .* (Parsed|Compiled) |✅ Finished incremental compilation)' \
     | awk '{ print } /✅ Finished incremental compilation/ { exit }' \
@@ -561,7 +607,9 @@ capture_partial_initial_failure_recovery() {
   local executable=$2
   local project="$work/$implementation-partial-initial-failure-watch"
   local transcript="$work/$implementation-partial-initial-failure-watch.log"
-  "$executable" watch "$project" >"$transcript" 2>&1 &
+  local command_executable=$(command_path "$executable")
+  local command_project=$(command_path "$project")
+  "$command_executable" watch "$command_project" >"$transcript" 2>&1 &
   active_script_pid=$!
   if ! wait_for_text "$transcript" "expected to have type" 1; then return 1; fi
   printf 'let answer = A.value + 1\n' >"$project/src/B.res"
@@ -588,6 +636,8 @@ capture_warning_watch() {
   local executable=$2
   local project="$work/$implementation-warning-watch"
   local transcript="$work/$implementation-warning-watch.tty"
+  local command_executable=$(command_path "$executable")
+  local command_project=$(command_path "$project")
   if [ "$(uname -s)" = Darwin ]; then
     script -q "$transcript" env -u NO_COLOR \
       "TERM=xterm" \
@@ -598,7 +648,7 @@ capture_warning_watch() {
       "$executable" watch "$project" >/dev/null &
   else
     script -qefc \
-      "env -u NO_COLOR TERM=xterm CLICOLOR=1 CLICOLOR_FORCE=0 RESCRIPT_BSC_EXE=$RESCRIPT_BSC_EXE RESCRIPT_RUNTIME=$RESCRIPT_RUNTIME $executable watch $project" \
+      "env -u NO_COLOR TERM=xterm CLICOLOR=1 CLICOLOR_FORCE=0 RESCRIPT_BSC_EXE=$RESCRIPT_BSC_EXE RESCRIPT_RUNTIME=$RESCRIPT_RUNTIME $command_executable watch $command_project" \
       "$transcript" >/dev/null &
   fi
   active_script_pid=$!

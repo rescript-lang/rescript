@@ -52,6 +52,8 @@ let () =
       remove_if_present (getenv "REWATCH_SOURCE_B");
       touch marker));
   let status = run_compiler () in
+  if status = 0 && mode = "parse-warning" && is_parse then
+    prerr_endline "PARSE_WARNING_MARKER";
   if status = 0 then
     if mode = "delete-source" && not is_parse then (
       let marker = getenv "REWATCH_SOURCE_DELETED" in
