@@ -1,7 +1,6 @@
 type cleanup_result = {
   removed_modules: string list;
   previous_ast_count: int;
-  deferred_artifacts: string list;
   present_public_outputs: (string, unit) Hashtbl.t;
 }
 
@@ -23,7 +22,8 @@ val cleanup_stale :
   ?ast_sources:Compile_assets.ast_source list ->
   ?source_files:string list ->
   ?present_source_files:string list ->
-  ?on_deferred_artifact:(string -> unit) ->
+  on_removed_module:(string -> unit) ->
+  on_deferred_artifact:(string -> unit) ->
   root:string ->
   ocaml_dir:string ->
   is_local:bool ->

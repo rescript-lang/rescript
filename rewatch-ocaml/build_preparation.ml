@@ -56,6 +56,7 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
              ~root:package.root ~ocaml_dir:package.ocaml_dir
              ~source_files:package.source_files
              ~present_source_files:package.present_source_files
+             ~on_removed_module:ignore
              ~on_deferred_artifact:File_util.remove_file
              ~is_local:package.is_local package.compile_config package.modules);
         Compiler_info.clean_package package.config;
@@ -68,6 +69,23 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
     |> List.map (fun (package : Package_plan.t) -> package.ocaml_dir)
     |> Compile_assets.create
   in
+  let registered_removed_modules = Hashtbl.create 16 in
+  let invalidate_removed_module module_name =
+    if not (Hashtbl.mem registered_removed_modules module_name) then (
+      Hashtbl.add registered_removed_modules module_name ();
+      Hashtbl.replace attempt.removed_modules module_name ();
+      Build_session.mark_module_removed attempt.session module_name;
+      package_plans
+      |> List.concat_map (fun (package : Package_plan.t) ->
+          Compile_assets.ast_sources compile_assets package.ocaml_dir)
+      |> List.iter (fun (ast_source : Compile_assets.ast_source) ->
+          let dependencies =
+            try Some (Ast_header.read ast_source.ast_path).dependencies
+            with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> None
+          in
+          if Option.fold ~none:false ~some:(List.mem module_name) dependencies
+          then File_util.remove_file ast_source.ast_path))
+  in
   List.iter
     (fun (package : Package_plan.t) ->
       let cleanup =
@@ -78,6 +96,7 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
           ~root:package.root ~ocaml_dir:package.ocaml_dir
           ~source_files:package.source_files
           ~present_source_files:package.present_source_files
+          ~on_removed_module:invalidate_removed_module
           ~on_deferred_artifact:(fun path ->
             Build_attempt.defer_artifact_cleanup attempt [path])
           ~is_local:package.is_local package.compile_config package.modules
@@ -86,11 +105,7 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
       attempt.cleaned <- attempt.cleaned + List.length cleanup.removed_modules;
       attempt.previous_asts <-
         attempt.previous_asts + cleanup.previous_ast_count;
-      List.iter
-        (fun module_name ->
-          Hashtbl.replace attempt.removed_modules module_name ();
-          Build_session.mark_module_removed attempt.session module_name)
-        cleanup.removed_modules)
+      ())
     package_plans;
   on_cleanup (Unix.gettimeofday () -. cleanup_started);
   let parse_started = Unix.gettimeofday () in
@@ -145,21 +160,6 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
     Module_graph.initialize ~root_config ~package_plans ~compile_assets
       ~failed_parse_paths
   in
-  let package_ocaml_dirs = Hashtbl.create (List.length package_plans) in
-  List.iter
-    (fun (package : Package_plan.t) ->
-      Hashtbl.replace package_ocaml_dirs package.root package.ocaml_dir)
-    package_plans;
-  List.iter
-    (fun (node : Module_graph.module_node) ->
-      if List.exists (Hashtbl.mem attempt.removed_modules) node.raw_dependencies
-      then
-        match Hashtbl.find_opt package_ocaml_dirs node.package_root with
-        | Some ocaml_dir ->
-          File_util.remove_file
-            (Build_artifacts.published_ast_path ~ocaml_dir node.source_path)
-        | None -> ())
-    graph.nodes;
   List.iter
     (fun path ->
       if not (Hashtbl.mem attempt.preliminary_parses path) then

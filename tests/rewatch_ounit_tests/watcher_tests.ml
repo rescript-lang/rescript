@@ -72,7 +72,14 @@ let tests =
                 Watch_snapshot.
                   {path = Filename.concat root "B.res"; kind = Added};
               ]))
-        "unknown content events request structural reconciliation");
+        "unknown content events request structural reconciliation";
+      Sys.remove source;
+      Unix.mkdir source 0o755;
+      check
+        (Option.is_some
+           (Watch_snapshot.update_entries digest_cache previous
+              [Watch_snapshot.{path = source; kind = Modified}]))
+        "a transient snapshot read failure preserves the rebuild baseline");
   let root = Filename.temp_file "rewatch-watcher-lifecycle-" "" in
   Sys.remove root;
   Unix.mkdir root 0o700;

@@ -6,6 +6,13 @@ let write_file = Test_support.write_file
 
 let with_temp_dir = Test_support.with_temp_dir "rewatch-build-artifacts-"
 
+let cleanup_stale ?ocaml_files ?ast_sources ?source_files ?present_source_files
+    ?(on_removed_module = ignore) ?(on_deferred_artifact = ignore) ~root
+    ~ocaml_dir ~is_local config modules =
+  Build_artifacts.cleanup_stale ?ocaml_files ?ast_sources ?source_files
+    ?present_source_files ~on_removed_module ~on_deferred_artifact ~root
+    ~ocaml_dir ~is_local config modules
+
 let tests =
   "build_artifacts_tests" >:: fun _context ->
   with_temp_dir (fun root ->
@@ -37,8 +44,11 @@ let tests =
           published_cmi;
         ];
       let config = Config.load_root root in
+      let deferred_artifacts = ref [] in
       let result =
-        Build_artifacts.cleanup_stale
+        cleanup_stale
+          ~on_deferred_artifact:(fun path ->
+            deferred_artifacts := path :: !deferred_artifacts)
           ~ocaml_files:[published_ast; published_cmi]
           ~ast_sources:
             [{Compile_assets.ast_path = published_ast; source_path = source}]
@@ -63,8 +73,8 @@ let tests =
         (Sys.file_exists working_cmi)
         "a directly mapped working CMI remains available through compilation";
       check
-        (result.deferred_artifacts = [working_cmi])
-        "direct cleanup returns the working CMI for deferred removal";
+        (!deferred_artifacts = [working_cmi])
+        "direct cleanup transfers ownership of the deferred working CMI";
       check
         (result.removed_modules = ["Old"])
         "a removed AST records its module for invalidation");
@@ -78,9 +88,8 @@ let tests =
       write_file working_cmt "working";
       let config = Config.load_root root in
       ignore
-        (Build_artifacts.cleanup_stale ~ocaml_files:[published_cmt]
-           ~ast_sources:[] ~source_files:[] ~root ~ocaml_dir ~is_local:true
-           config []);
+        (cleanup_stale ~ocaml_files:[published_cmt] ~ast_sources:[]
+           ~source_files:[] ~root ~ocaml_dir ~is_local:true config []);
       check
         (not (Sys.file_exists working_cmt))
         "unmapped legacy artifacts fall back to the recursive working inventory");
@@ -106,7 +115,7 @@ let tests =
         }
       in
       ignore
-        (Build_artifacts.cleanup_stale ~ocaml_files:[] ~ast_sources:[]
+        (cleanup_stale ~ocaml_files:[] ~ast_sources:[]
            ~source_files:[old_output; old_map] ~root ~ocaml_dir ~is_local:true
            config [moved_module]);
       List.iter
@@ -139,7 +148,7 @@ let tests =
       in
       let compile_assets = Compile_assets.create [ocaml_dir] in
       let result =
-        Build_artifacts.cleanup_stale ~ocaml_files:[published_ast]
+        cleanup_stale ~ocaml_files:[published_ast]
           ~ast_sources:
             [
               {Compile_assets.ast_path = published_ast; source_path = old_source};
@@ -180,7 +189,7 @@ let tests =
         ];
       let config = Config.load_root root in
       ignore
-        (Build_artifacts.cleanup_stale ~ocaml_files:[published_ast]
+        (cleanup_stale ~ocaml_files:[published_ast]
            ~ast_sources:
              [
                {
@@ -214,7 +223,7 @@ let tests =
         [public_output; public_map; working_output; working_map; published_ast];
       let config = Config.load_root root in
       ignore
-        (Build_artifacts.cleanup_stale ~ocaml_files:[published_ast]
+        (cleanup_stale ~ocaml_files:[published_ast]
            ~ast_sources:
              [{Compile_assets.ast_path = published_ast; source_path = source}]
            ~source_files:[public_output; public_map]
@@ -242,9 +251,9 @@ let tests =
         }
       in
       let result =
-        Build_artifacts.cleanup_stale ~ocaml_files:[] ~ast_sources:[]
-          ~source_files:[output] ~present_source_files:[output] ~root ~ocaml_dir
-          ~is_local:true config [module_]
+        cleanup_stale ~ocaml_files:[] ~ast_sources:[] ~source_files:[output]
+          ~present_source_files:[output] ~root ~ocaml_dir ~is_local:true config
+          [module_]
       in
       check
         (Hashtbl.mem result.present_public_outputs output)
@@ -269,9 +278,8 @@ let tests =
         }
       in
       ignore
-        (Build_artifacts.cleanup_stale ~ocaml_files:[published_cmti]
-           ~ast_sources:[] ~source_files:[] ~root ~ocaml_dir ~is_local:true
-           config [module_]);
+        (cleanup_stale ~ocaml_files:[published_cmti] ~ast_sources:[]
+           ~source_files:[] ~root ~ocaml_dir ~is_local:true config [module_]);
       List.iter
         (fun path ->
           check
@@ -292,7 +300,7 @@ let tests =
         [generated_output; authored_output; published_ast];
       let config = Config.load_root root in
       ignore
-        (Build_artifacts.cleanup_stale ~ocaml_files:[published_ast]
+        (cleanup_stale ~ocaml_files:[published_ast]
            ~ast_sources:
              [
                {

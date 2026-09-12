@@ -58,7 +58,7 @@ let publish_compiler_artifacts ~artifact_dir ~ocaml_dir ~basename artifacts =
     raise (Compiler_scheduler.Publication_failure (error, !cmi_change))
 
 let namespace_task ~bsc ~runtime ~build_dir ~ocaml_dir ~entry ~package_dirty
-    namespace modules =
+    ~force namespace modules =
   let mlmap = Filename.concat build_dir (namespace ^ ".mlmap") in
   let contents =
     let buffer = Buffer.create 128 in
@@ -81,10 +81,21 @@ let namespace_task ~bsc ~runtime ~build_dir ~ocaml_dir ~entry ~package_dirty
   let outputs_exist =
     ["cmi"; "cmj"; "cmt"; "mlmap"]
     |> List.for_all (fun extension ->
-        File_util.exists
+        File_util.is_regular_file
           (Filename.concat ocaml_dir (namespace ^ "." ^ extension)))
   in
-  if not (package_dirty || mlmap_changed || not outputs_exist) then None
+  let published_mlmap_matches =
+    try
+      File_util.read_file (Filename.concat ocaml_dir (namespace ^ ".mlmap"))
+      = contents
+    with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> false
+  in
+  if
+    not
+      (force || package_dirty || mlmap_changed
+      || (not published_mlmap_matches)
+      || not outputs_exist)
+  then None
   else
     Some
       Compiler_scheduler.

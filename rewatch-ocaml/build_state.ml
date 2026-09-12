@@ -87,9 +87,8 @@ let mark_dependents_compile_dirty ?(visited = Hashtbl.create 8) state module_ =
     if not (Hashtbl.mem visited dependent) then (
       Hashtbl.add visited dependent ();
       let dependent_module = find_exn state dependent in
-      dependent_module.compile_dirty <- true;
       match dependent_module.kind with
-      | Source_module -> ()
+      | Source_module -> dependent_module.compile_dirty <- true
       | Namespace_map -> String_set.iter mark dependent_module.dependents)
   in
   String_set.iter mark module_.dependents

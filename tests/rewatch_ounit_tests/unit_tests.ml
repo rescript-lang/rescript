@@ -561,6 +561,28 @@ let graph_and_diagnostic_tests _context =
   check
     (shortest_cycle = ["ShortA"; "ShortB"; "ShortA"])
     "cycle diagnostics select the shortest cycle deterministically";
+  let long_tail =
+    List.init 2_000 (fun index ->
+        let name = Printf.sprintf "Tail%04d" index in
+        let dependency =
+          if index = 1_999 then "CycleA"
+          else Printf.sprintf "Tail%04d" (index + 1)
+        in
+        node name [dependency])
+  in
+  let tail_cycle =
+    Graph.shortest_cycle
+      (long_tail
+      @ [
+          node "CycleA" ["CycleB"];
+          node "CycleB" ["CycleC"];
+          node "CycleC" ["CycleA"];
+        ])
+      ~name:fst ~deps:snd
+  in
+  check
+    (tail_cycle = Some ["CycleA"; "CycleB"; "CycleC"; "CycleA"])
+    "cycle search ignores an acyclic tail leading into a longer cycle";
   let cycle_blocked =
     Graph.cycle_blocked_nodes
       [
