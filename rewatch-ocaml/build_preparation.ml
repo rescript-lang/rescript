@@ -201,6 +201,6 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
   in
   Build_session.install_prepared attempt.session prepared;
   let cycle = Module_graph.find_cycle nodes namespace_maps build_state in
-  Build_session.set_graph_has_cycle attempt.session (Option.is_some cycle);
+  Build_session.set_graph_cycle attempt.session cycle;
   attempt.parse_seconds <- Unix.gettimeofday () -. parse_started;
   {prepared; cycle}

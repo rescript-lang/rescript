@@ -26,8 +26,8 @@ val find_namespace_maps : t -> string -> Module_graph.namespace_map list option
 val add_namespace_map : t -> Module_graph.namespace_map -> unit
 val find_namespace_map : t -> string -> Module_graph.namespace_map
 val namespace_map_values : t -> Module_graph.namespace_map list
-val graph_has_cycle : t -> bool
-val set_graph_has_cycle : t -> bool -> unit
+val graph_cycle : t -> Module_graph.cycle_info option
+val set_graph_cycle : t -> Module_graph.cycle_info option -> unit
 val add_package_plan : t -> Package_plan.t -> unit
 val find_package_plan : t -> string -> Package_plan.t option
 val iter_package_plans : t -> (string -> Package_plan.t -> unit) -> unit
