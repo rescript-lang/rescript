@@ -12,6 +12,14 @@ type state =
 
 type entry = {path: string; state: state}
 
+type registration =
+  | Ready of {
+      snapshot: entry list;
+      paths: Native_watcher.watch_path list;
+      targets: string list;
+    }
+  | Registration_failed of {snapshot: entry list; message: string}
+
 let entry_equal first second =
   first.path = second.path
   &&
@@ -231,22 +239,33 @@ let create_with_symlink_paths digest_cache scope =
       ~on_source_symlink:(fun target -> targets := target :: !targets)
       digest_cache scope
   in
-  let paths =
-    !targets
-    |> List.sort_uniq String.compare
-    |> List.filter_map (fun target ->
-        try Filename.dirname target |> nearest_existing_ancestor
-        with Unix.Unix_error _ | Sys_error _ -> None)
-    |> List.concat_map (fun directory ->
-        let parent = Filename.dirname directory in
-        let directories =
-          if parent = directory then [directory] else [directory; parent]
-        in
-        List.map
-          (fun directory -> Native_watcher.{directory; recursive = false})
-          directories)
+  let targets = List.sort_uniq String.compare !targets in
+  let rec resolve_paths paths = function
+    | [] -> Ok paths
+    | target :: rest -> (
+      try
+        match Filename.dirname target |> nearest_existing_ancestor with
+        | None -> resolve_paths paths rest
+        | Some directory ->
+          let parent = Filename.dirname directory in
+          let directories =
+            if parent = directory then [directory] else [directory; parent]
+          in
+          let paths =
+            List.rev_append
+              (List.map
+                 (fun directory ->
+                   Native_watcher.{directory; recursive = false})
+                 directories)
+              paths
+          in
+          resolve_paths paths rest
+      with (Unix.Unix_error _ | Sys_error _) as error ->
+        Error (Printexc.to_string error))
   in
-  (snapshot, paths, List.sort_uniq String.compare !targets)
+  match resolve_paths [] targets with
+  | Ok paths -> Ready {snapshot; paths; targets}
+  | Error message -> Registration_failed {snapshot; message}
 
 let changes_between before after =
   (* A content snapshot deliberately treats native events only as wakeups. The
