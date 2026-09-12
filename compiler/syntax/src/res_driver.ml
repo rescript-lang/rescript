@@ -68,8 +68,8 @@ let parsing_engine =
           | _ as diagnostics -> (true, diagnostics)
         in
         {
-          filename = engine.scanner.filename;
-          source = engine.scanner.src;
+          filename = engine.filename;
+          source = engine.source;
           parsetree = structure;
           diagnostics;
           invalid;
@@ -85,8 +85,8 @@ let parsing_engine =
           | _ as diagnostics -> (true, diagnostics)
         in
         {
-          filename = engine.scanner.filename;
-          source = engine.scanner.src;
+          filename = engine.filename;
+          source = engine.source;
           parsetree = structure;
           diagnostics;
           invalid;
@@ -102,8 +102,8 @@ let parsing_engine =
           | _ as diagnostics -> (true, diagnostics)
         in
         {
-          filename = engine.scanner.filename;
-          source = engine.scanner.src;
+          filename = engine.filename;
+          source = engine.source;
           parsetree = signature;
           diagnostics;
           invalid;
@@ -119,8 +119,8 @@ let parsing_engine =
           | _ as diagnostics -> (true, diagnostics)
         in
         {
-          filename = engine.scanner.filename;
-          source = engine.scanner.src;
+          filename = engine.filename;
+          source = engine.source;
           parsetree = signature;
           diagnostics;
           invalid;
@@ -140,8 +140,8 @@ let parse_implementation_from_source ~display_filename ~source =
     | _ as diagnostics -> (true, diagnostics)
   in
   {
-    filename = engine.scanner.filename;
-    source = engine.scanner.src;
+    filename = engine.filename;
+    source = engine.source;
     parsetree = structure;
     diagnostics;
     invalid;
@@ -157,8 +157,8 @@ let parse_interface_from_source ~display_filename ~source =
     | _ as diagnostics -> (true, diagnostics)
   in
   {
-    filename = engine.scanner.filename;
-    source = engine.scanner.src;
+    filename = engine.filename;
+    source = engine.source;
     parsetree = signature;
     diagnostics;
     invalid;

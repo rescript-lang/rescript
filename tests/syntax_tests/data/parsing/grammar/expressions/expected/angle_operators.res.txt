@@ -1,0 +1,20 @@
+type nonrec 'a nested = 'a array option array
+let (value : int nested) = [|(Some [|1|])|]
+let (value : int array array array) = [|[|[|1|]|]|]
+let make [arity:1]() = (Some [|[|1|]|] : int array array option)
+let optional [arity:1]?value:(value : int array option)  = value
+let shifts [arity:3]a b c =
+  ((a >> b), (a >>> b), (a << b), (a >= b), (a <= b))
+let precedence [arity:3]a b c =
+  (((a + b) >> (c + 1)) >= (a << b)) && ((a >>> b) <= c)
+let call =
+  f ((a >> b), (a >= b)) (fun [arity:1]x -> (Some [|x|] : int array option))
+let comment = a >>> b
+let template = `prefix ${(a >> 2) >= b} suffix`
+let regex = [%re {js|/[<>]+>>=/g|js}]
+let jsx = <div title=((a >= b)[@res.braces ]) data-value=((a >> 1)
+  [@res.braces ])><span>((a << 1)[@res.braces ])</span>
+  <>((`value ${a >>> 1}`)[@res.braces ])</></div>
+let expressionAfterType = (value : int array) >= other
+let diamond = {js|💎|js}
+let located = a >>> b

@@ -2,8 +2,6 @@ module Diagnostics = Res_diagnostics
 module Token = Res_token
 module Comment = Res_comment
 
-type mode = Diamond
-
 (* We hide the implementation detail of the scanner reading character. Our char
    will also contain the special -1 value to indicate end-of-file. This isn't
    ideal; we should clean this up *)
@@ -24,20 +22,7 @@ type t = {
       (* current number of utf16 code units since line start *)
   mutable line_offset: int; (* current line offset *)
   mutable lnum: int; (* current line number *)
-  mutable mode: mode list;
 }
-
-let set_diamond_mode scanner = scanner.mode <- Diamond :: scanner.mode
-
-let pop_mode scanner mode =
-  match scanner.mode with
-  | m :: ms when m = mode -> scanner.mode <- ms
-  | _ -> ()
-
-let in_diamond_mode scanner =
-  match scanner.mode with
-  | Diamond :: _ -> true
-  | _ -> false
 
 let position scanner =
   Lexing.
@@ -166,7 +151,6 @@ let make ~filename src =
     offset16 = 0;
     line_offset = 0;
     lnum = 1;
-    mode = [];
   }
 
 (* generic helpers *)
@@ -589,8 +573,13 @@ let scan_escape scanner =
   (* TODO: do we know it's \' ? *)
   Token.Codepoint {c = codepoint; original = contents}
 
-let scan_regex scanner =
+let scan_regex ~start_pos:opening_pos ~prefix_length scanner =
   let start_pos = position scanner in
+  (* The normal token is / or /.; restart at its ASCII opening delimiter. *)
+  scanner.offset <- scanner.offset - prefix_length;
+  scanner.offset16 <- opening_pos.Lexing.pos_cnum - opening_pos.pos_bol;
+  scanner.ch <- '/';
+  next scanner;
   let buf = Buffer.create 0 in
   let first_char_offset = scanner.offset in
   let last_offset_in_buf = ref first_char_offset in
@@ -634,7 +623,10 @@ let scan_regex scanner =
     | ch when ch == '\n' || ch == hacky_eof_char ->
       let end_pos = position scanner in
       scanner.err ~start_pos ~end_pos (Diagnostics.message "unterminated regex");
-      ("", "")
+      let pattern =
+        result ~first_char_offset ~last_char_offset:scanner.offset
+      in
+      (pattern, "")
     | '\\' ->
       next scanner;
       next scanner;
@@ -651,7 +643,7 @@ let scan_regex scanner =
   in
   let pattern, flags = scan () in
   let end_pos = position scanner in
-  (start_pos, end_pos, Token.Regex (pattern, flags))
+  (opening_pos, end_pos, Token.Regex (pattern, flags))
 
 let scan_single_line_comment scanner =
   let start_off = scanner.offset in
@@ -720,9 +712,6 @@ let scan_multi_line_comment scanner =
 let scan_template_literal_token scanner =
   let start_off = scanner.offset in
 
-  (* if starting } here, consume it *)
-  if scanner.ch == '}' then next scanner;
-
   let start_pos = position scanner in
 
   let rec scan () =
@@ -771,6 +760,25 @@ let scan_template_literal_token scanner =
   let token = scan () in
   let end_pos = position scanner in
   (start_pos, end_pos, token)
+
+(* Leave >= and shift operators to the expression parser so type-argument
+   delimiters need no scanner mode. Consume an immediately adjacent suffix
+   without skipping whitespace or scanning the next operand. *)
+let scan_binary_operator scanner token =
+  match (token, scanner.ch) with
+  | Token.LessThan, '<' ->
+    next scanner;
+    Token.LeftShift
+  | GreaterThan, '=' ->
+    next scanner;
+    Token.GreaterEqual
+  | GreaterThan, '>' ->
+    next scanner;
+    if scanner.ch = '>' then (
+      next scanner;
+      Token.RightShiftUnsigned)
+    else Token.RightShift
+  | _ -> token
 
 let rec scan scanner =
   skip_whitespace scanner;
@@ -941,30 +949,11 @@ let rec scan scanner =
       | _ ->
         next scanner;
         Token.Plus)
-    | '>' when not (in_diamond_mode scanner) -> (
-      match peek scanner with
-      | '=' ->
-        next2 scanner;
-        Token.GreaterEqual
-      | '>' -> (
-        match peek2 scanner with
-        | '>' ->
-          next3 scanner;
-          Token.RightShiftUnsigned
-        | _ ->
-          next2 scanner;
-          Token.RightShift)
-      | _ ->
-        next scanner;
-        Token.GreaterThan)
     | '>' ->
       next scanner;
       Token.GreaterThan
     | '<' -> (
       match peek scanner with
-      | '<' when not (in_diamond_mode scanner) ->
-        next2 scanner;
-        Token.LeftShift
       | '=' ->
         next2 scanner;
         Token.LessEqual

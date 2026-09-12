@@ -34,6 +34,8 @@ let test_constructor_argument_locations _ =
       in
       let pat_loc = pattern_args_loc pat in
       let expr_loc = expression_args_loc expr in
+      OUnit.assert_equal pat_loc.loc_end pat.ppat_loc.loc_end;
+      OUnit.assert_equal expr_loc.loc_end expr.pexp_loc.loc_end;
       let equals = String.index source '=' in
       let assert_span start finish (loc : Location.t) =
         OUnit.assert_equal start loc.loc_start.pos_cnum;
@@ -75,11 +77,14 @@ let test_constructor_argument_locations _ =
     [
       "let Pair /* pattern */ (a, b) = Pair /* expression */ (1, 2)";
       "let Pair((a, b)) = Pair((1, 2))";
+      "let Pair(a, b) /* after pattern */ = Pair(1, 2) /* after expression */";
+      "let M.Pair(a, b) = M.Pair(1, 2)\n/* trailing comment */";
       "let Single(a) = Single(1)";
       "let Unit() = Unit()";
       "let Empty = Empty";
       "let #Pair /* pattern */ (a, b) = #Pair /* expression */ (1, 2)";
       "let #Pair((a, b)) = #Pair((1, 2))";
+      "let #Pair(a, b) /* after pattern */ = #Pair(1, 2) /* after expression */";
       "let #Single(a) = #Single(1)";
       "let #Unit() = #Unit()";
       "let #Empty = #Empty";

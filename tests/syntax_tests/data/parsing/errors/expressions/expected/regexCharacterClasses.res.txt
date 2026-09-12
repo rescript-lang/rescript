@@ -4,6 +4,7 @@
 
   1 │ let re = /[]/]/
   2 │ 
+  3 │ let r = /.
 
   I'm not sure what to parse here when looking at "]".
 
@@ -13,8 +14,21 @@
 
   1 │ let re = /[]/]/
   2 │ 
+  3 │ let r = /.
+
+  unterminated regex
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/expressions/regexCharacterClasses.res:3:11
+
+  1 │ let re = /[]/]/
+  2 │ 
+  3 │ let r = /.
+  4 │ 
 
   unterminated regex
 
 let re = [%re {js|/[]/|js}]
 ;;[%re {js|//|js}]
+let r = [%re {js|/./|js}]

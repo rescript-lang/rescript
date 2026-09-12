@@ -1,0 +1,13 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/structure/attributeMissingParen.res:3:10-4:0
+
+  1 │ let a = 1
+  2 │ @attr(
+  3 │ let b = 2
+  4 │ 
+
+  Did you forget a `)` here?
+
+let a = 1
+;;[%rescript.exprhole ][@@attr let b = 2]

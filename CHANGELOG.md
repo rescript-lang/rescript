@@ -38,6 +38,8 @@
 
 - Fix `reanalyze` reporting labels and variant cases of a re-exported type (`type y = x = {...}`) as dead in the editor. The re-export linking existed only in the batch pipeline, while the editor runs the reactive one; both are now the same pipeline. The `reanalyze -reactive` flag is gone with it, since analysis is always reactive. https://github.com/rescript-lang/rescript/issues/8647
 - Fix `reanalyze` reporting record labels reached through a record coercion as dead. The typed tree now keeps the source type of a coercion, so reading a label on the target counts as reading the source label of the same name. https://github.com/rescript-lang/rescript/issues/8643
+- Fix speculative parser lookahead suppressing syntax errors for malformed attributes and inline records in non-arrow external declarations. https://github.com/rescript-lang/rescript/pull/8633
+- Preserve list elements when recovering from unexpected delimiters, and report invalid type-argument parentheses at their opening. https://github.com/rescript-lang/rescript/pull/8633
 - Fix constant folding of pattern matches on unboxed variants whose payload overlaps a literal constructor, so inlined calls agree with runtime matching. Reject multi-argument unboxed constructors instead of crashing. https://github.com/rescript-lang/rescript/pull/8631
 - Fix escaped backticks and interpolation openers in backquoted `%raw`, `%ffi`, and `%re` payloads leaking into emitted JavaScript. https://github.com/rescript-lang/rescript/pull/8630
 - Fix the side-effect analysis treating bigint exponentiation and bounds-checked array and string reads as pure, which let dead-code elimination drop an unused one that throws: `let _ = 2n ** -1n` no longer raised. https://github.com/rescript-lang/rescript/pull/8617
@@ -81,6 +83,7 @@
 
 #### :house: Internal
 
+- Refactor parser token handling to separate inspection (`peek`/`peek2`) from consumption, removing Diamond mode and `prev_end_pos` bookkeeping and moving missing JSX prop recovery from an editor-analysis regex heuristic into the parser. https://github.com/rescript-lang/rescript/pull/8633
 - Developer playground: Make panes resizable with wrapping text. https://github.com/rescript-lang/rescript/pull/8628
 - Normalize Lambda terms where they are built: a match guard stays structured data until its fallthrough is known, and `apply` and `mk_builtin` go through the folding constructors. https://github.com/rescript-lang/rescript/pull/8615
 - Replace non-escaping local mutable blocks with scalar bindings when all uses are direct field accesses, generalizing reference unboxing to multi-field records and references captured by JavaScript closures. https://github.com/rescript-lang/rescript/pull/8617
