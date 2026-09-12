@@ -92,34 +92,7 @@ let load path =
     | `Assoc fields -> fields
     | _ -> fail path "configuration must be an object"
   in
-  reject_duplicate_fields path "configuration"
-    [
-      "name";
-      "sources";
-      "package-specs";
-      "warnings";
-      "suffix";
-      "dependencies";
-      "bs-dependencies";
-      "dev-dependencies";
-      "bs-dev-dependencies";
-      "features";
-      "ppx-flags";
-      "compiler-flags";
-      "bsc-flags";
-      "namespace";
-      "jsx";
-      "sourceMap";
-      "experimental-features";
-      "gentypeconfig";
-      "js-post-build";
-      "editor";
-      "reanalyze";
-      "namespace-entry";
-      "allowed-dependents";
-      "path";
-    ]
-    fields;
+  reject_duplicate_fields path "configuration" configuration_fields fields;
   let name =
     match member "name" fields with
     | Some value -> string path "name" value
@@ -181,7 +154,8 @@ let load path =
     match optional_member "warnings" fields with
     | None -> []
     | Some (`Assoc warning_fields) ->
-      reject_duplicate_fields path "warnings" ["number"; "error"] warning_fields;
+      reject_duplicate_fields path "warnings" Config_decode.warning_fields
+        warning_fields;
       let number =
         match optional_member "number" warning_fields with
         | None -> []
@@ -215,9 +189,7 @@ let load path =
     match optional_member "jsx" fields with
     | None -> []
     | Some (`Assoc jsx) ->
-      reject_duplicate_fields path "jsx"
-        ["version"; "module"; "mode"; "v3-dependencies"; "preserve"]
-        jsx;
+      reject_duplicate_fields path "jsx" jsx_fields jsx;
       let version =
         match optional_member "version" jsx with
         | None -> []
@@ -333,7 +305,7 @@ let load path =
     match optional_member "js-post-build" fields with
     | None -> None
     | Some (`Assoc fields) -> (
-      reject_duplicate_fields path "js-post-build" ["cmd"] fields;
+      reject_duplicate_fields path "js-post-build" js_post_build_fields fields;
       match member "cmd" fields with
       | Some value -> Some (string path "js-post-build.cmd" value)
       | None -> fail path "field \"js-post-build\" is missing \"cmd\"")
@@ -352,17 +324,7 @@ let load path =
       |> List.map (fun (name, value) -> (name, strings path "features" value))
     | Some _ -> fail path "field \"features\" must be an object"
   in
-  let unsupported_fields =
-    [
-      "ignored-dirs";
-      "generators";
-      "cut-generators";
-      "pp-flags";
-      "entries";
-      "bs-external-includes";
-    ]
-    |> List.filter (fun field -> Option.is_some (member field fields))
-  in
+  let unsupported = Config_decode.unsupported_fields fields in
   let deprecated =
     (if Filename.basename path = "bsconfig.json" then
        ["  - filename 'bsconfig.json' — rename to 'rescript.json'"]
@@ -404,7 +366,7 @@ let load path =
   in
   let diagnostics =
     deprecation_diagnostics
-    @ (unsupported_fields
+    @ (unsupported
       |> List.map (fun field ->
           Printf.sprintf
             "The field '%s' found in the package config of '%s' is not \

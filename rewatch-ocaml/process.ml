@@ -359,44 +359,35 @@ let with_worker_pool ~max_jobs notifier action =
 
 let run_dependency_graph_with_notifier ~max_jobs ~on_failure ~poll notifier
     works ~next =
-  let count = List.length works in
-  let by_key = Hashtbl.create count in
-  List.iter
-    (fun work ->
-      if Hashtbl.mem by_key work.key then
-        raise (Error ("duplicate subprocess work key: " ^ work.key));
-      Hashtbl.add by_key work.key work)
-    works;
-  let dependents = Hashtbl.create count in
-  let dependencies_by_key = Hashtbl.create count in
+  let graph =
+    Graph.create_index works
+      ~name:(fun work -> work.key)
+      ~deps:(fun work -> work.dependencies)
+      ~validation:
+        (Graph.Reject_invalid
+           {
+             duplicate_node =
+               (fun key -> Error ("duplicate subprocess work key: " ^ key));
+             unknown_dependency =
+               (fun ~node ~dependency ->
+                 Error
+                   (Printf.sprintf
+                      "unknown dependency %s for subprocess work %s" dependency
+                      node));
+           })
+  in
+  let count = Graph.node_count graph in
   let pending = Hashtbl.create count in
   List.iter
     (fun work ->
-      let dependencies = List.sort_uniq String.compare work.dependencies in
-      Hashtbl.add dependencies_by_key work.key dependencies;
-      List.iter
-        (fun dependency ->
-          if not (Hashtbl.mem by_key dependency) then
-            raise
-              (Error
-                 (Printf.sprintf "unknown dependency %s for subprocess work %s"
-                    dependency work.key));
-          let current =
-            Hashtbl.find_opt dependents dependency |> Option.value ~default:[]
-          in
-          Hashtbl.replace dependents dependency (work :: current))
-        dependencies;
-      Hashtbl.add pending work.key (List.length dependencies))
+      Hashtbl.add pending work.key (Graph.dependency_count graph work.key))
     works;
   let priorities = Hashtbl.create count in
   let remaining_dependents = Hashtbl.create count in
   let leaves = Queue.create () in
   List.iter
     (fun work ->
-      let dependent_count =
-        Hashtbl.find_opt dependents work.key
-        |> Option.value ~default:[] |> List.length
-      in
+      let dependent_count = List.length (Graph.dependents graph work.key) in
       Hashtbl.add remaining_dependents work.key dependent_count;
       if dependent_count = 0 then (
         Hashtbl.add priorities work.key 1;
@@ -407,7 +398,7 @@ let run_dependency_graph_with_notifier ~max_jobs ~on_failure ~poll notifier
     let key = Queue.take leaves in
     incr prioritized;
     let key_priority = Hashtbl.find priorities key in
-    Hashtbl.find dependencies_by_key key
+    Graph.dependencies graph key
     |> List.iter (fun dependency ->
         let candidate = key_priority + 1 in
         let current =
@@ -422,10 +413,7 @@ let run_dependency_graph_with_notifier ~max_jobs ~on_failure ~poll notifier
   let () =
     if !prioritized <> count then
       let cycle =
-        Graph.shortest_cycle works
-          ~name:(fun work -> work.key)
-          ~deps:(fun work -> work.dependencies)
-        |> Option.value ~default:[]
+        Graph.shortest_cycle_in_index graph |> Option.value ~default:[]
       in
       let details =
         match cycle with
@@ -454,12 +442,11 @@ let run_dependency_graph_with_notifier ~max_jobs ~on_failure ~poll notifier
   in
   let complete work =
     incr completed;
-    Hashtbl.find_opt dependents work.key
-    |> Option.value ~default:[]
-    |> List.iter (fun dependent ->
-        let remaining = Hashtbl.find pending dependent.key - 1 in
-        Hashtbl.replace pending dependent.key remaining;
-        if remaining = 0 then add_ready dependent)
+    Graph.dependents graph work.key
+    |> List.iter (fun dependent_key ->
+        let remaining = Hashtbl.find pending dependent_key - 1 in
+        Hashtbl.replace pending dependent_key remaining;
+        if remaining = 0 then add_ready (Graph.find_node graph dependent_key))
   in
   let rec fill pool =
     if (not !stopped) && !in_flight < max_jobs then
@@ -467,7 +454,7 @@ let run_dependency_graph_with_notifier ~max_jobs ~on_failure ~poll notifier
       | None -> ()
       | Some ((_, key) as ready_key) ->
         ready := Work_ready.remove ready_key !ready;
-        let work = Hashtbl.find by_key key in
+        let work = Graph.find_node graph key in
         (try
            match next work.value None with
            | None -> complete work

@@ -391,8 +391,9 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
                 namespace = package.graph_compile_config.namespace;
                 allowed_dependencies =
                   List.map
-                    (fun (dependency : Config.dependency) -> dependency.name)
-                    package.graph_dependencies;
+                    (fun (dependency : Build_types.graph_dependency) ->
+                      dependency.declaration.name)
+                    package.graph_dependency_directories;
                 raw_dependencies;
               }
             :: !nodes)

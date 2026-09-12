@@ -1,36 +1,85 @@
-let cycle_blocked_nodes nodes ~name ~deps =
-  let count = List.length nodes in
-  let by_name = Hashtbl.create count in
-  List.iter (fun node -> Hashtbl.replace by_name (name node) node) nodes;
-  let dependents = Hashtbl.create count in
-  let pending = Hashtbl.create count in
+type validation =
+  | Replace_duplicates_and_ignore_unknown
+  | Reject_invalid of {
+      duplicate_node: string -> exn;
+      unknown_dependency: node:string -> dependency:string -> exn;
+    }
+
+type 'a index = {
+  nodes_by_name: (string, 'a) Hashtbl.t;
+  dependencies_by_name: (string, string list) Hashtbl.t;
+  dependents_by_name: (string, string list) Hashtbl.t;
+}
+
+let create_index nodes ~name ~deps ~validation =
+  let nodes_by_name = Hashtbl.create (List.length nodes) in
   List.iter
     (fun node ->
       let node_name = name node in
-      let dependency_count = ref 0 in
-      let seen_dependencies = Hashtbl.create 8 in
-      deps node
-      |> List.iter (fun dependency ->
-          if
-            Hashtbl.mem by_name dependency
-            && not (Hashtbl.mem seen_dependencies dependency)
-          then (
-            Hashtbl.add seen_dependencies dependency ();
-            incr dependency_count;
-            let current =
-              Hashtbl.find_opt dependents dependency |> Option.value ~default:[]
-            in
-            Hashtbl.replace dependents dependency (node_name :: current)));
-      Hashtbl.replace pending node_name !dependency_count)
+      match Hashtbl.find_opt nodes_by_name node_name with
+      | None -> Hashtbl.add nodes_by_name node_name node
+      | Some _ -> (
+        match validation with
+        | Replace_duplicates_and_ignore_unknown ->
+          Hashtbl.replace nodes_by_name node_name node
+        | Reject_invalid {duplicate_node; unknown_dependency = _} ->
+          raise (duplicate_node node_name)))
     nodes;
+  let dependencies_by_name = Hashtbl.create (Hashtbl.length nodes_by_name) in
+  let dependents_by_name = Hashtbl.create (Hashtbl.length nodes_by_name) in
+  Hashtbl.iter
+    (fun node_name node ->
+      let dependencies =
+        deps node
+        |> List.sort_uniq String.compare
+        |> List.filter (fun dependency ->
+            if Hashtbl.mem nodes_by_name dependency then true
+            else
+              match validation with
+              | Replace_duplicates_and_ignore_unknown -> false
+              | Reject_invalid {duplicate_node = _; unknown_dependency} ->
+                raise (unknown_dependency ~node:node_name ~dependency))
+      in
+      Hashtbl.add dependencies_by_name node_name dependencies;
+      List.iter
+        (fun dependency ->
+          let dependents =
+            Hashtbl.find_opt dependents_by_name dependency
+            |> Option.value ~default:[]
+          in
+          Hashtbl.replace dependents_by_name dependency (node_name :: dependents))
+        dependencies)
+    nodes_by_name;
+  {nodes_by_name; dependencies_by_name; dependents_by_name}
+
+let node_count index = Hashtbl.length index.nodes_by_name
+let find_node index name = Hashtbl.find index.nodes_by_name name
+
+let dependencies index name =
+  Hashtbl.find_opt index.dependencies_by_name name |> Option.value ~default:[]
+
+let dependents index name =
+  Hashtbl.find_opt index.dependents_by_name name |> Option.value ~default:[]
+
+let dependency_count index name = List.length (dependencies index name)
+
+let cycle_blocked_nodes nodes ~name ~deps =
+  let index =
+    create_index nodes ~name ~deps
+      ~validation:Replace_duplicates_and_ignore_unknown
+  in
+  let pending = Hashtbl.create (node_count index) in
+  Hashtbl.iter
+    (fun node_name _ ->
+      Hashtbl.add pending node_name (dependency_count index node_name))
+    index.nodes_by_name;
   let ready = Queue.create () in
   Hashtbl.iter (fun key count -> if count = 0 then Queue.add key ready) pending;
-  let removed = Hashtbl.create count in
+  let removed = Hashtbl.create (node_count index) in
   while not (Queue.is_empty ready) do
     let key = Queue.take ready in
     Hashtbl.replace removed key ();
-    Hashtbl.find_opt dependents key
-    |> Option.value ~default:[]
+    dependents index key
     |> List.iter (fun dependent ->
         let count = Hashtbl.find pending dependent - 1 in
         Hashtbl.replace pending dependent count;
@@ -57,15 +106,7 @@ let canonical_cycle cycle =
     let canonical = split [] nodes in
     canonical @ [smallest]
 
-let shortest_cycle nodes ~name ~deps =
-  let by_name = Hashtbl.create (List.length nodes) in
-  List.iter (fun node -> Hashtbl.replace by_name (name node) node) nodes;
-  let sorted_dependencies = Hashtbl.create (List.length nodes) in
-  List.iter
-    (fun node ->
-      Hashtbl.replace sorted_dependencies (name node)
-        (deps node |> List.sort_uniq String.compare))
-    nodes;
+let shortest_cycle_in_index index =
   let best = ref None in
   let consider cycle =
     let cycle = canonical_cycle cycle in
@@ -79,13 +120,12 @@ let shortest_cycle nodes ~name ~deps =
         || (cycle_length = current_length && cycle < current)
       then best := Some cycle
   in
-  nodes
-  |> List.sort (fun left right -> String.compare (name left) (name right))
-  |> List.iter (fun start_node ->
-      let start = name start_node in
+  index.nodes_by_name |> Hashtbl.to_seq_keys |> List.of_seq
+  |> List.sort String.compare
+  |> List.iter (fun start ->
       let queue = Queue.create () in
-      let parents = Hashtbl.create (List.length nodes) in
-      let distances = Hashtbl.create (List.length nodes) in
+      let parents = Hashtbl.create (node_count index) in
+      let distances = Hashtbl.create (node_count index) in
       Hashtbl.add distances start 0;
       Queue.add start queue;
       let found = ref false in
@@ -98,26 +138,25 @@ let shortest_cycle nodes ~name ~deps =
           | Some cycle -> distance + 2 <= List.length cycle
         in
         if can_improve then
-          match Hashtbl.find_opt by_name current with
-          | None -> ()
-          | Some node ->
-            Hashtbl.find sorted_dependencies (name node)
-            |> List.iter (fun dependency ->
-                if dependency = start then (
-                  let rec path_to_start acc node_name =
-                    if node_name = start then start :: acc
-                    else
-                      path_to_start (node_name :: acc)
-                        (Hashtbl.find parents node_name)
-                  in
-                  consider (path_to_start [] current @ [start]);
-                  found := true)
-                else if
-                  Hashtbl.mem by_name dependency
-                  && not (Hashtbl.mem distances dependency)
-                then (
-                  Hashtbl.add parents dependency current;
-                  Hashtbl.add distances dependency (distance + 1);
-                  Queue.add dependency queue))
+          dependencies index current
+          |> List.iter (fun dependency ->
+              if dependency = start then (
+                let rec path_to_start acc node_name =
+                  if node_name = start then start :: acc
+                  else
+                    path_to_start (node_name :: acc)
+                      (Hashtbl.find parents node_name)
+                in
+                consider (path_to_start [] current @ [start]);
+                found := true)
+              else if not (Hashtbl.mem distances dependency) then (
+                Hashtbl.add parents dependency current;
+                Hashtbl.add distances dependency (distance + 1);
+                Queue.add dependency queue))
       done);
   !best
+
+let shortest_cycle nodes ~name ~deps =
+  create_index nodes ~name ~deps
+    ~validation:Replace_duplicates_and_ignore_unknown
+  |> shortest_cycle_in_index

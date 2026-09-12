@@ -12,7 +12,6 @@ type graph_package = {
   graph_compile_config: Config.t;
   graph_build_dir: string;
   graph_ocaml_dir: string;
-  graph_dependencies: Config.dependency list;
   graph_dependency_directories: graph_dependency list;
   graph_gentype_dependency_args: string list;
   graph_modules: Source.module_ list;

@@ -87,16 +87,6 @@ let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
         | None -> config
         | Some value -> {config with warning_flags = ["-warn-error"; value]}
       in
-      let dependency_requests =
-        List.map
-          (fun (resolved : Package_traversal.resolved) -> resolved.request)
-          discovered_package.dependencies
-      in
-      let dependencies =
-        List.map
-          (fun (request : Package_traversal.request) -> request.declaration)
-          dependency_requests
-      in
       let dependency_directories =
         List.map
           (fun (resolved : Package_traversal.resolved) ->
@@ -165,7 +155,6 @@ let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
           graph_compile_config = compile_config;
           graph_build_dir = build_dir;
           graph_ocaml_dir = ocaml_dir;
-          graph_dependencies = dependencies;
           graph_dependency_directories = dependency_directories;
           graph_gentype_dependency_args =
             Compiler_args.gentype_dependency_args_from_paths compile_config
