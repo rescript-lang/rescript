@@ -14,8 +14,16 @@ trap 'rm -rf "$work"' EXIT
 mkdir -p "$work/src" "$work/node_modules/dep/lib/ocaml" "$work/node_modules/ppx"
 printf 'let value = 1\n' >"$work/src/A.res"
 
-export RESCRIPT_BSC_EXE=${RESCRIPT_BSC_EXE:-$root/_build/default/compiler/bsc/rescript_compiler_main.exe}
-export RESCRIPT_RUNTIME=${RESCRIPT_RUNTIME:-$root/packages/@rescript/runtime}
+default_bsc=$root/_build/default/compiler/bsc/rescript_compiler_main.exe
+default_runtime=$root/packages/@rescript/runtime
+case $(uname -s) in
+  MINGW*|MSYS*)
+    default_bsc=$(cygpath -w "$default_bsc")
+    default_runtime=$(cygpath -w "$default_runtime")
+    ;;
+esac
+export RESCRIPT_BSC_EXE=${RESCRIPT_BSC_EXE:-$default_bsc}
+export RESCRIPT_RUNTIME=${RESCRIPT_RUNTIME:-$default_runtime}
 
 checked=0
 divergences=0

@@ -177,6 +177,18 @@ let process_parallel_tests _context =
   check
     (List.sort compare !completed_indices = [0; 1; 2])
     "parallel subprocess completion reports every input index once";
+  let recycled_handle_results =
+    List.init 64 (fun index ->
+        process_job ["--process-result"; string_of_int index; ""; "0"])
+    |> Process.run_parallel ~max_jobs:4
+  in
+  check
+    (List.mapi
+       (fun index (result : Process.result) ->
+         result.stdout = string_of_int index)
+       recycled_handle_results
+    |> List.for_all Fun.id)
+    "rapid subprocess completion cannot confuse recycled Windows handles";
   let lazy_root = Filename.temp_file "rewatch-lazy-jobs-" "" in
   Sys.remove lazy_root;
   Unix.mkdir lazy_root 0o755;

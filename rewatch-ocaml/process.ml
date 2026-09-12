@@ -52,7 +52,7 @@ let run_parallel_map_with_notifier ~max_jobs ~poll ~on_complete notifier values
       Signal_restore.protect deferred_signals (fun () ->
           active :=
             List.filter
-              (fun running -> Child.pid running <> Child.pid child)
+              (fun running -> running != child)
               !active;
           Child.release_running child;
           results.(Child.payload child) <- Some result;

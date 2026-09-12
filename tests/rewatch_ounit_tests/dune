@@ -3,6 +3,11 @@
  (action
   (copy ../../rewatch-ocaml/platform_windows.ml %{target})))
 
+(executable
+ (name rewatch_bsc_test_proxy)
+ (modules rewatch_bsc_test_proxy)
+ (libraries unix))
+
 (test
  (name rewatch_ounit_tests_main)
  ; Several cases launch this executable to test concurrent subprocess capture.
