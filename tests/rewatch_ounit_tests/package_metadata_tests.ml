@@ -51,4 +51,20 @@ let tests =
         | Error message ->
           String.starts_with ~prefix:"Could not parse package.json:" message
         | Ok _ -> false)
-        "malformed package metadata is rejected")
+        "malformed package metadata is rejected";
+      let config_path = Filename.concat root "rescript.json" in
+      write_file config_path {|{"name":"external","future-field":true}|};
+      let config = Config.load config_path in
+      check_equal []
+        (Package_diagnostics.for_package ~is_local:false config)
+        "unknown fields in external packages are not reported";
+      write_file config_path
+        {|{"name":"external","bsc-flags":[],"future-field":true}|};
+      let config = Config.load config_path in
+      let diagnostics =
+        Package_diagnostics.for_package ~is_local:false config
+      in
+      check_equal 1 (List.length diagnostics)
+        "only deprecations are reported for external packages";
+      assert_bool "the external diagnostic is the deprecation"
+        (Test_support.contains_text (List.hd diagnostics) "bsc-flags"))

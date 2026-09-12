@@ -63,7 +63,8 @@ let issue_tracker_url package_root =
   with Sys_error _ | Yojson.Json_error _ -> None
 
 let for_package ~is_local (config : Config.t) =
-  if is_local || config.deprecation_diagnostics = [] then config.diagnostics
+  if is_local then config.diagnostics
+  else if config.deprecation_diagnostics = [] then []
   else
     let report_suffix =
       issue_tracker_url config.root
