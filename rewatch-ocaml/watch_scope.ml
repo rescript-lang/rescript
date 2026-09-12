@@ -108,7 +108,7 @@ let discover ~root ~prod ~features ~filter =
               |> Option.value ~default:None
             in
             Source.active_sources config
-              ~prod:(Package_graph.source_discovery_prod ~prod ~is_local)
+              ~prod:(Package_traversal.source_discovery_prod ~prod ~is_local)
               ~features:requested
             |> List.iter (fun source ->
                 let directory = Filename.concat config.root source.Config.dir in

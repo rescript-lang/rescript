@@ -95,9 +95,10 @@ let candidate_requires_compile candidate = candidate.state.compile_dirty
 let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
     ~mark_compiled ~mark_had_warnings ~progress ~compile_step ~namespace_count
     ~verbosity =
+  let dirty_propagation = Hashtbl.create 16 in
   let refresh_published_cmi (scheduled : scheduled_module) cmi_change =
-    Build_state.record_published_cmi build_state ~compile_assets scheduled.state
-      ~path:scheduled.cmi_path cmi_change
+    Build_state.record_published_cmi ~dirty_propagation build_state
+      ~compile_assets scheduled.state ~path:scheduled.cmi_path cmi_change
   in
   let finish_successful_compile (scheduled : scheduled_module) =
     let cmt_path = Filename.remove_extension scheduled.cmi_path ^ ".cmt" in

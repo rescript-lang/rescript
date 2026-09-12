@@ -30,7 +30,7 @@ val update_entries :
   (string, float * float * int * string) Hashtbl.t ->
   entry list ->
   change list ->
-  entry list
+  entry list option
 
 val polling_build_changes :
   previous:entry list ->

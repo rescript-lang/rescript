@@ -46,6 +46,17 @@ let tests =
       check
         (not (File_util.files_equal missing first))
         "a missing file should not compare equal";
+      if not Sys.win32 then (
+        let fifo = Filename.concat root "stream" in
+        Unix.mkfifo fifo 0o600;
+        let writer =
+          Thread.create (fun () -> File_util.write_file fifo "streamed") ()
+        in
+        let contents = File_util.read_file fifo in
+        Thread.join writer;
+        check (contents = "streamed")
+          "whole-file reads consume streams whose initial length is zero";
+        File_util.remove_file fifo);
       let large_source = Filename.concat root "large-source" in
       let large_copy = Filename.concat root "large-copy" in
       let large_contents =

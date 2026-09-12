@@ -656,13 +656,13 @@ let graph_and_diagnostic_tests _context =
         "critical external warnings are retained without unrelated warnings")
     ["\n"; "\r\n"];
   check
-    (not (Package_graph.source_discovery_prod ~prod:false ~is_local:true))
+    (not (Package_traversal.source_discovery_prod ~prod:false ~is_local:true))
     "development sources are enabled for a local development build";
   check
-    (Package_graph.source_discovery_prod ~prod:true ~is_local:true)
+    (Package_traversal.source_discovery_prod ~prod:true ~is_local:true)
     "production builds exclude local development sources";
   check
-    (Package_graph.source_discovery_prod ~prod:false ~is_local:false)
+    (Package_traversal.source_discovery_prod ~prod:false ~is_local:false)
     "installed dependencies always exclude development sources";
   check (Build_lock.valid_owner "0") "zero is a valid serialized u32 owner";
   check

@@ -3,6 +3,8 @@ exception Package_error of string
 
 type dependency_context
 
+val canonical_project_root : string -> string
+
 val nearest_config_path : string -> string option
 
 val workspace_lock_root_for : Config.t -> string

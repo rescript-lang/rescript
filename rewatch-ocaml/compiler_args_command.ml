@@ -42,7 +42,7 @@ let run path =
     Package_resolution.create
       ~diagnostic_mode:Package_resolution.Suppress_diagnostics root_config
   in
-  let config = Build_artifacts.with_root_options package_config root_config in
+  let config = Config.with_root_options package_config root_config in
   let relative = Project_context.relative_to config.root source in
   let contents =
     try File_util.read_file source with

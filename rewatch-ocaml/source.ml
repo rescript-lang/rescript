@@ -88,8 +88,9 @@ let interface_mismatch_error implementation interface =
    subdirs setting reaches. Keeping the views in one walk gives every consumer
    the same filesystem snapshot without weakening stale-output cleanup. *)
 let scan_source ~root (source : Config.source) ~discover_modules ~on_missing
-    ~visited_dirs ~collect_inventory ~collect_gentype ~visited_gentype_dirs
-    candidates inventory_files present_files gentype_dirs =
+    ~visited_dirs ~visited_inventory_dirs ~collect_inventory ~collect_gentype
+    ~visited_gentype_dirs candidates inventory_files present_files gentype_dirs
+    =
   let rec scan_directory ~relative ~collect_inventory ~discover_requested
       ~collect_gentype ~identity =
     let absolute = Filename.concat root relative in
@@ -100,13 +101,20 @@ let scan_source ~root (source : Config.source) ~discover_modules ~on_missing
     in
     let discovery = coverage visited_dirs discover_requested in
     let gentype = coverage visited_gentype_dirs collect_gentype in
+    let inventory =
+      if collect_inventory then
+        Traversal_coverage.admit visited_inventory_dirs identity ~recursive:true
+      else Traversal_coverage.Skip
+    in
     let discover_here = Traversal_coverage.visits_current discovery in
     let discover_children = Traversal_coverage.visits_descendants discovery in
+    let inventory_here = Traversal_coverage.visits_current inventory in
+    let inventory_children = Traversal_coverage.visits_descendants inventory in
     let gentype_here = Traversal_coverage.visits_current gentype in
     let gentype_children = Traversal_coverage.visits_descendants gentype in
     if gentype_here then gentype_dirs := relative :: !gentype_dirs;
     if
-      collect_inventory
+      inventory <> Traversal_coverage.Skip
       || discovery <> Traversal_coverage.Skip
       || gentype <> Traversal_coverage.Skip
     then
@@ -118,7 +126,7 @@ let scan_source ~root (source : Config.source) ~discover_modules ~on_missing
       in
       let record_candidate relative_path absolute_path metadata =
         present_files := absolute_path :: !present_files;
-        if collect_inventory then
+        if inventory_here then
           inventory_files := absolute_path :: !inventory_files;
         if discover_here && metadata.Unix.st_kind = Unix.S_REG then
           match source_kind relative_path with
@@ -140,11 +148,13 @@ let scan_source ~root (source : Config.source) ~discover_modules ~on_missing
           | metadata -> (
             match metadata.Unix.st_kind with
             | Unix.S_DIR ->
-              if collect_inventory || discover_children || gentype_children then
+              if inventory_children || discover_children || gentype_children
+              then
                 let identity =
                   Platform.directory_identity ~path:absolute_path metadata
                 in
-                scan_directory ~relative:relative_path ~collect_inventory
+                scan_directory ~relative:relative_path
+                  ~collect_inventory:inventory_children
                   ~discover_requested:discover_children
                   ~collect_gentype:gentype_children ~identity
             | Unix.S_LNK -> (
@@ -152,7 +162,7 @@ let scan_source ~root (source : Config.source) ~discover_modules ~on_missing
               | target_metadata -> (
                 match target_metadata.Unix.st_kind with
                 | Unix.S_DIR ->
-                  if collect_inventory then
+                  if inventory_here then
                     inventory_files := absolute_path :: !inventory_files;
                   if discover_children || gentype_children then
                     let identity =
@@ -207,6 +217,10 @@ let scan_source ~root (source : Config.source) ~discover_modules ~on_missing
 
 let resolve_active_features (config : Config.t) requested =
   let active_features = Hashtbl.create 16 in
+  let features = Hashtbl.create (List.length config.features) in
+  List.iter
+    (fun (name, implied) -> Hashtbl.replace features name implied)
+    config.features;
   let raise_feature_cycle feature visiting =
     let chain = List.rev (feature :: visiting) |> String.concat " -> " in
     raise (Error ("Cycle detected in `features` map: " ^ chain))
@@ -215,7 +229,7 @@ let resolve_active_features (config : Config.t) requested =
     if List.mem feature visiting then raise_feature_cycle feature visiting;
     if not (Hashtbl.mem active_features feature) then (
       Hashtbl.add active_features feature ();
-      match List.assoc_opt feature config.features with
+      match Hashtbl.find_opt features feature with
       | None -> ()
       | Some implied ->
         List.iter (fun name -> activate name (feature :: visiting)) implied)
@@ -254,6 +268,7 @@ let scan_sources ~on_missing (config : Config.t) ~prod ~features
   in
   let all_features = features = None in
   let visited_dirs = Hashtbl.create 32 in
+  let visited_inventory_dirs = Hashtbl.create 32 in
   let visited_gentype_dirs = Hashtbl.create 32 in
   let files = ref [] in
   let inventory_files = ref [] in
@@ -271,7 +286,7 @@ let scan_sources ~on_missing (config : Config.t) ~prod ~features
         source_is_active ~prod ~all_features ~active_features source
       in
       scan_source ~root:config.root source ~discover_modules ~on_missing
-        ~visited_dirs ~collect_inventory
+        ~visited_dirs ~visited_inventory_dirs ~collect_inventory
         ~collect_gentype:(collect_gentype && feature_enabled)
         ~visited_gentype_dirs files inventory_files present_files gentype_dirs);
   {

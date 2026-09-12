@@ -72,26 +72,6 @@ let generated_output_details path =
 let is_generated_output_path path =
   Option.is_some (generated_output_details path)
 
-let with_root_options (config : Config.t) (root_config : Config.t) =
-  {
-    config with
-    (* Every package in one invocation must use the root project's requested
-       module systems and suffixes. This produces consistent output and ensures
-       dependency CMIs advertise a module system that their dependents can
-       consume. *)
-    package_specs = root_config.package_specs;
-    suffix = root_config.suffix;
-    jsx_args = root_config.jsx_args;
-    source_map_args = root_config.source_map_args;
-    source_map_dev = root_config.source_map_dev;
-    experimental_args = root_config.experimental_args;
-    gentype_args =
-      (if config.gentype_args = [] then []
-       else
-         config.gentype_args
-         @ ["-bs-gentype-bsb-project-root"; root_config.root]);
-  }
-
 type cleanup_result = {
   removed_modules: string list;
   previous_ast_count: int;
@@ -100,7 +80,8 @@ type cleanup_result = {
 }
 
 let cleanup_stale ?ocaml_files ?ast_sources ?source_files ?present_source_files
-    ~root ~ocaml_dir ~is_local (config : Config.t) modules =
+    ?(on_deferred_artifact = fun _ -> ()) ~root ~ocaml_dir ~is_local
+    (config : Config.t) modules =
   let build_dir = lib_path root "bs" in
   (* Keep one inventory of each artifact tree to avoid repeating directory and
      metadata work during every cleanup phase. Paths removed below can safely
@@ -313,8 +294,9 @@ let cleanup_stale ?ocaml_files ?ast_sources ?source_files ?present_source_files
         working_paths basename
         |> List.iter (fun build_path ->
             if defer_working_cmi_until_after_compile basename then
-              if File_util.exists build_path then
-                deferred_artifacts := build_path :: !deferred_artifacts
+              if File_util.exists build_path then (
+                on_deferred_artifact build_path;
+                deferred_artifacts := build_path :: !deferred_artifacts)
               else ()
             else File_util.remove_file build_path)));
   let relative_under directory path =

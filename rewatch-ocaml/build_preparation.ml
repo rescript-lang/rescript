@@ -56,6 +56,7 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
              ~root:package.root ~ocaml_dir:package.ocaml_dir
              ~source_files:package.source_files
              ~present_source_files:package.present_source_files
+             ~on_deferred_artifact:File_util.remove_file
              ~is_local:package.is_local package.compile_config package.modules);
         Compiler_info.clean_package package.config;
         attempt.compiler_cleaned <- true);
@@ -77,16 +78,18 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
           ~root:package.root ~ocaml_dir:package.ocaml_dir
           ~source_files:package.source_files
           ~present_source_files:package.present_source_files
+          ~on_deferred_artifact:(fun path ->
+            Build_attempt.defer_artifact_cleanup attempt [path])
           ~is_local:package.is_local package.compile_config package.modules
       in
       Build_attempt.set_cleanup_result attempt package.root cleanup;
-      Build_attempt.defer_artifact_cleanup attempt cleanup.deferred_artifacts;
       attempt.cleaned <- attempt.cleaned + List.length cleanup.removed_modules;
       attempt.previous_asts <-
         attempt.previous_asts + cleanup.previous_ast_count;
       List.iter
         (fun module_name ->
-          Hashtbl.replace attempt.removed_modules module_name ())
+          Hashtbl.replace attempt.removed_modules module_name ();
+          Build_session.mark_module_removed attempt.session module_name)
         cleanup.removed_modules)
     package_plans;
   on_cleanup (Unix.gettimeofday () -. cleanup_started);
@@ -142,6 +145,21 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
     Module_graph.initialize ~root_config ~package_plans ~compile_assets
       ~failed_parse_paths
   in
+  let package_ocaml_dirs = Hashtbl.create (List.length package_plans) in
+  List.iter
+    (fun (package : Package_plan.t) ->
+      Hashtbl.replace package_ocaml_dirs package.root package.ocaml_dir)
+    package_plans;
+  List.iter
+    (fun (node : Module_graph.module_node) ->
+      if List.exists (Hashtbl.mem attempt.removed_modules) node.raw_dependencies
+      then
+        match Hashtbl.find_opt package_ocaml_dirs node.package_root with
+        | Some ocaml_dir ->
+          File_util.remove_file
+            (Build_artifacts.published_ast_path ~ocaml_dir node.source_path)
+        | None -> ())
+    graph.nodes;
   List.iter
     (fun path ->
       if not (Hashtbl.mem attempt.preliminary_parses path) then

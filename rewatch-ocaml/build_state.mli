@@ -36,9 +36,11 @@ val dependency_tree_compiled_after :
   bool
 val set_dependencies : t -> key:string -> string list -> unit
 
-val mark_dependents_compile_dirty : t -> module_ -> unit
+val mark_dependents_compile_dirty :
+  ?visited:(string, unit) Hashtbl.t -> t -> module_ -> unit
 
 val record_published_cmi :
+  ?dirty_propagation:(string, unit) Hashtbl.t ->
   t ->
   compile_assets:Compile_assets.t ->
   module_ ->

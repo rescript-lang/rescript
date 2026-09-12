@@ -107,54 +107,82 @@ let canonical_cycle cycle =
     canonical @ [smallest]
 
 let shortest_cycle_in_index index =
-  let best = ref None in
-  let best_length = ref max_int in
-  let consider cycle =
-    let cycle = canonical_cycle cycle in
-    match !best with
-    | None ->
-      best := Some cycle;
-      best_length := List.length cycle
-    | Some current ->
-      let cycle_length = List.length cycle in
-      if
-        cycle_length < !best_length
-        || (cycle_length = !best_length && cycle < current)
-      then (
-        best := Some cycle;
-        best_length := cycle_length)
+  let names =
+    index.nodes_by_name |> Hashtbl.to_seq_keys |> List.of_seq
+    |> List.sort String.compare
   in
-  index.nodes_by_name |> Hashtbl.to_seq_keys |> List.of_seq
-  |> List.sort String.compare
-  |> List.iter (fun start ->
-      let queue = Queue.create () in
-      let parents = Hashtbl.create 16 in
-      let distances = Hashtbl.create 16 in
-      Hashtbl.add distances start 0;
-      Queue.add start queue;
-      let found = ref false in
-      while (not !found) && not (Queue.is_empty queue) do
-        let current = Queue.take queue in
-        let distance = Hashtbl.find distances current in
-        let can_improve = distance + 2 <= !best_length in
-        if can_improve then
-          dependencies index current
-          |> List.iter (fun dependency ->
-              if dependency = start then (
-                let rec path_to_start acc node_name =
-                  if node_name = start then start :: acc
-                  else
-                    path_to_start (node_name :: acc)
-                      (Hashtbl.find parents node_name)
-                in
-                consider (path_to_start [] current @ [start]);
-                found := true)
-              else if not (Hashtbl.mem distances dependency) then (
-                Hashtbl.add parents dependency current;
-                Hashtbl.add distances dependency (distance + 1);
-                Queue.add dependency queue))
-      done);
-  !best
+  let edges = Hashtbl.create (Hashtbl.length index.dependencies_by_name) in
+  List.iter
+    (fun name ->
+      List.iter
+        (fun dependency -> Hashtbl.replace edges (name, dependency) ())
+        (dependencies index name))
+    names;
+  match List.find_opt (fun name -> Hashtbl.mem edges (name, name)) names with
+  | Some name -> Some [name; name]
+  | None -> (
+    let two_node_cycle =
+      names
+      |> List.find_map (fun name ->
+          dependencies index name
+          |> List.filter (fun dependency -> name < dependency)
+          |> List.sort String.compare
+          |> List.find_map (fun dependency ->
+              if Hashtbl.mem edges (dependency, name) then
+                Some [name; dependency; name]
+              else None))
+    in
+    match two_node_cycle with
+    | Some _ as cycle -> cycle
+    | None ->
+      let best = ref None in
+      let best_length = ref max_int in
+      let consider cycle =
+        let cycle = canonical_cycle cycle in
+        match !best with
+        | None ->
+          best := Some cycle;
+          best_length := List.length cycle
+        | Some current ->
+          let cycle_length = List.length cycle in
+          if
+            cycle_length < !best_length
+            || (cycle_length = !best_length && cycle < current)
+          then (
+            best := Some cycle;
+            best_length := cycle_length)
+      in
+      List.iter
+        (fun start ->
+          let queue = Queue.create () in
+          let parents = Hashtbl.create 16 in
+          let distances = Hashtbl.create 16 in
+          Hashtbl.add distances start 0;
+          Queue.add start queue;
+          let found = ref false in
+          while (not !found) && not (Queue.is_empty queue) do
+            let current = Queue.take queue in
+            let distance = Hashtbl.find distances current in
+            let can_improve = distance + 2 <= !best_length in
+            if can_improve then
+              dependencies index current
+              |> List.iter (fun dependency ->
+                  if dependency = start then (
+                    let rec path_to_start acc node_name =
+                      if node_name = start then start :: acc
+                      else
+                        path_to_start (node_name :: acc)
+                          (Hashtbl.find parents node_name)
+                    in
+                    consider (path_to_start [] current @ [start]);
+                    found := true)
+                  else if not (Hashtbl.mem distances dependency) then (
+                    Hashtbl.add parents dependency current;
+                    Hashtbl.add distances dependency (distance + 1);
+                    Queue.add dependency queue))
+          done)
+        names;
+      !best)
 
 let shortest_cycle nodes ~name ~deps =
   create_index nodes ~name ~deps

@@ -253,33 +253,38 @@ let update_entries digest_cache previous changes =
   List.iter
     (fun (change : change) -> Hashtbl.replace changed change.path change.kind)
     changes;
-  previous
-  |> List.filter_map (fun entry ->
-      match Hashtbl.find_opt changed entry.path with
-      | None -> Some entry
-      | Some Removed ->
-        Hashtbl.remove digest_cache entry.path;
-        None
-      | Some (Added | Modified) -> (
-        try
-          let stat = Unix.stat entry.path in
-          let digest = File_util.digest_file entry.path |> Digest.to_hex in
-          Hashtbl.replace digest_cache entry.path
-            (stat.Unix.st_mtime, stat.Unix.st_ctime, stat.Unix.st_size, digest);
-          Some
-            {
-              path = entry.path;
-              state =
-                File
-                  {
-                    modified = stat.Unix.st_mtime;
-                    size = stat.Unix.st_size;
-                    digest;
-                  };
-            }
-        with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) ->
+  let updated =
+    previous
+    |> List.filter_map (fun entry ->
+        match Hashtbl.find_opt changed entry.path with
+        | None -> Some entry
+        | Some Removed ->
+          Hashtbl.remove changed entry.path;
           Hashtbl.remove digest_cache entry.path;
-          None))
+          None
+        | Some (Added | Modified) -> (
+          Hashtbl.remove changed entry.path;
+          try
+            let stat = Unix.stat entry.path in
+            let digest = File_util.digest_file entry.path |> Digest.to_hex in
+            Hashtbl.replace digest_cache entry.path
+              (stat.Unix.st_mtime, stat.Unix.st_ctime, stat.Unix.st_size, digest);
+            Some
+              {
+                path = entry.path;
+                state =
+                  File
+                    {
+                      modified = stat.Unix.st_mtime;
+                      size = stat.Unix.st_size;
+                      digest;
+                    };
+              }
+          with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) ->
+            Hashtbl.remove digest_cache entry.path;
+            None))
+  in
+  if Hashtbl.length changed = 0 then Some updated else None
 
 let polling_build_changes ~previous ~trigger ~before_build =
   if equal trigger previous then [] else changes_between previous before_build

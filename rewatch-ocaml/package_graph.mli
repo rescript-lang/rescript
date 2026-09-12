@@ -1,5 +1,3 @@
-val source_discovery_prod : prod:bool -> is_local:bool -> bool
-
 val discover :
   root_config:Config.t ->
   prod:bool ->

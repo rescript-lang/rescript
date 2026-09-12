@@ -45,19 +45,39 @@ let source_is_dev (config : t) relative_path =
   | None -> false
   | Some source_parent ->
     let comparable = Platform.normalize_path_for_comparison in
-    List.exists
+    List.find_map
       (fun (source : source) ->
-        if not source.is_dev then false
-        else
-          match canonical (Filename.concat config.root source.dir) with
-          | None -> false
-          | Some directory ->
+        match canonical (Filename.concat config.root source.dir) with
+        | None -> None
+        | Some directory ->
+          if
             comparable source_parent = comparable directory
             || source.recurse
                && String.starts_with
                     ~prefix:(Filename.concat directory "" |> comparable)
-                    (comparable source_parent))
+                    (comparable source_parent)
+          then Some source.is_dev
+          else None)
       config.sources
+    |> Option.value ~default:false
+
+(* Every package in one invocation must use the root project's effective
+   compiler options so dependencies expose outputs their consumers can use. *)
+let with_root_options (config : t) (root_config : t) =
+  {
+    config with
+    package_specs = root_config.package_specs;
+    suffix = root_config.suffix;
+    jsx_args = root_config.jsx_args;
+    source_map_args = root_config.source_map_args;
+    source_map_dev = root_config.source_map_dev;
+    experimental_args = root_config.experimental_args;
+    gentype_args =
+      (if config.gentype_args = [] then []
+       else
+         config.gentype_args
+         @ ["-bs-gentype-bsb-project-root"; root_config.root]);
+  }
 
 let load path =
   let requested_path = path in

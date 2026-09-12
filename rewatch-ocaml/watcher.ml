@@ -5,31 +5,10 @@ type change = Watch_snapshot.change = {path: string; kind: change_kind}
 type build_result = Succeeded | Failed
 type rebuild_kind = Incremental | Full
 
-type file_snapshot = Watch_snapshot.file = {
-  modified: float;
-  size: int;
-  digest: string;
-}
-
-type dependency_snapshot = Watch_snapshot.dependency = {
-  modified: float;
-  size: int;
-}
-
-type snapshot_state = Watch_snapshot.state =
-  | File of file_snapshot
-  | Dependency_candidate of dependency_snapshot
-  | Missing_dependency_candidate
-
-type snapshot_entry = Watch_snapshot.entry = {
-  path: string;
-  state: snapshot_state;
-}
-
 type fallback = {
   message: string;
   scope: Watch_scope.t;
-  snapshot: snapshot_entry list;
+  snapshot: Watch_snapshot.entry list;
 }
 
 let with_signal_handlers handler f =
@@ -219,21 +198,14 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
       in
       match direct with
       | Some [] -> native_loop watcher scope symlink_targets previous
-      | Some changes ->
-        if
-          List.for_all
-            (fun (change : change) ->
-              List.exists (fun entry -> entry.path = change.path) previous)
-            changes
-        then (
+      | Some changes -> (
+        match Watch_snapshot.update_entries digest_cache previous changes with
+        | Some before_build ->
           Output.debug ~verbosity "doing Incremental";
           begin_rebuild Incremental;
-          let before_build =
-            Watch_snapshot.update_entries digest_cache previous changes
-          in
           build ~poll ~changes:(Some changes) |> finish_rebuild;
-          native_loop watcher scope symlink_targets before_build)
-        else native_reconcile watcher scope previous
+          native_loop watcher scope symlink_targets before_build
+        | None -> native_reconcile watcher scope previous)
       | None -> native_reconcile watcher scope previous)
   and native_reconcile watcher (scope : Watch_scope.t) previous =
     let current = Watch_snapshot.create digest_cache scope in
@@ -323,8 +295,6 @@ let run =
 
 module For_test = struct
   let is_control_file_name = Watch_scope.is_control_file_name
-  let polling_build_changes = Watch_snapshot.polling_build_changes
-  let changes_are_incremental = Watch_snapshot.changes_are_incremental
 
   let run_with_native_failure ~message ~on_fallback =
     run_with_native_create

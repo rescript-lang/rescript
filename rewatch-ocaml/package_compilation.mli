@@ -1,4 +1,4 @@
-val run :
+val prepare :
   package:Package_plan.t ->
   prepared:Build_session.prepared ->
   prepared_package:Package_plan.compilation ->
