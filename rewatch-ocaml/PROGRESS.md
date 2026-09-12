@@ -35,9 +35,9 @@ boundaries. In particular:
 
 ## Latest quality evidence
 
-At checkpoint `e258487586`, the implementation passed:
+At checkpoint `3db0c177aa`, the implementation passed:
 
-- all 39 OUnit2 rewatch groups;
+- all 42 OUnit2 rewatch groups;
 - the focused OCaml integration, configuration, command-validation,
   interactive-output, and verbose-output gates;
 - the complete installed-package canonical rewatch suite;
@@ -51,12 +51,12 @@ shared setup action and both workflows; only push runs now save caches.
 The last repository-wide `make test-all` run passed formatting, compiler and
 runtime tests, GenType, analysis, tools, and the canonical rewatch suite until
 the missing-source watcher case exposed an over-strict `realpath`. That defect
-was fixed at `e258487586`; its focused case and the complete canonical rewatch
-suite then passed. The final release gate will repeat `make test-all` as one
-uninterrupted run.
+was fixed before `3db0c177aa`; its focused case and the complete canonical
+rewatch suite then passed. The final release gate will repeat `make test-all`
+as one uninterrupted run.
 
 Reanalyze master (`ad9894832fcd33bb0e1f799e1573d1b9b4f2c9af`) currently reports
-only ten reviewed analyzer limitations: optional arguments exercised by tests
+only nine reviewed analyzer limitations: optional arguments exercised by tests
 or external entry points, cross-module exception construction/handling, and
 private exception aliases. Any additional report fails the no-dead-code gate.
 Build bytecode CMTs before the audit with:
@@ -72,14 +72,14 @@ live_interfaces=$(find rewatch-ocaml -maxdepth 1 -name '*.mli' -print | paste -s
 
 ## Performance and equivalence checkpoint
 
-The powered, idle-host seven-run release gate at `e258487586` measured:
+The powered, idle-host seven-run release gate at `3db0c177aa` measured:
 
 | Measure | Rust | OCaml | OCaml/Rust |
 |---|---:|---:|---:|
-| Clean-build median wall time | 4.445 s | 4.673 s | 1.051x |
-| Median summed process-tree RSS | 1,653,820 KiB | 1,730,560 KiB | 1.046x |
-| Peak process-tree tasks | 74 | 127 | 1.716x |
-| Retained-watch edit median | 141 ms | 150 ms | 1.064x |
+| Clean-build median wall time | 4.523 s | 4.723 s | 1.044x |
+| Median summed process-tree RSS | 1,828,740 KiB | 1,895,356 KiB | 1.036x |
+| Peak process-tree tasks | 74 | 125 | 1.689x |
+| Retained-watch edit median | 130 ms | 149 ms | 1.146x |
 
 The authoritative wall-time and RSS limit is 1.25x. Retained-watch latency has
 a separate 1.50x limit because notification and polling granularity dominate
@@ -98,13 +98,17 @@ Complete post-build file sets and all byte-stable generated artifacts were
 identical. The retained gate also observed exactly seven parser and seven
 compiler calls for each implementation and byte-identical generated output.
 
-Filesystem tracing found no unexplained algorithmic extra-work pattern. On a
-clean build OCaml made more metadata calls (14,836 versus 12,018), but fewer
-opens (13,055 versus 13,492), creates (112 versus 492), and the same removals.
-On unchanged and one-edit builds OCaml made fewer metadata and open calls than
-Rust overall. Inside a long-lived watcher, one edit used 32 versus 25 metadata
-calls and 39 versus 38 opens. The small retained delta is concentrated in
-artifact/output safety checks, not package or source rediscovery.
+Filesystem tracing found no unexplained compiler-work or file-open difference.
+The compiler subprocesses performed identical work, and driver-plus-inherited
+clean-build opens were effectively equal (about 8,110 for OCaml and 8,120 for
+Rust). OCaml performed about 2,387 additional driver-side metadata operations,
+concentrated in repeated source and build-directory existence checks during
+artifact publication. Caching those checks would need to preserve recovery when
+directories are deleted during a build, so it remains a measured, documented
+future optimization rather than a risky parity change. On unchanged and
+one-edit builds OCaml made fewer metadata and open calls overall. Inside a
+long-lived watcher, one edit used 32 versus 25 metadata calls and 38 opens for
+both implementations.
 
 The reproducible methodology and tooling are documented in
 [`bench/README.md`](bench/README.md). Absolute times are host-specific; work
@@ -115,10 +119,10 @@ The current source-size snapshot using cloc 2.04 is:
 
 | Scope | Code lines |
 |---|---:|
-| Rust production, excluding telemetry | 7,818 |
+| Rust production, excluding telemetry | 7,809 |
 | Rust inline unit tests, excluding telemetry | 2,773 |
-| OCaml production, including both platform backends | 10,500 |
-| OCaml tests and fixtures | 8,764 |
+| OCaml production, including both platform backends | 10,859 |
+| OCaml tests and fixtures | 9,194 |
 | OCaml benchmark tooling | 1,032 |
 
 Line count is diagnostic, not an acceptance target. The larger OCaml total
@@ -219,12 +223,17 @@ runtime validation is outside this PR. The follow-up must verify:
 
 ## Remaining order
 
-1. Wait for the external reviewer, then address final whole-port review rounds
-   until no material finding remains.
-2. Run the final release-quality gate, including one uninterrupted
+1. Run two rounds of three independent Astra xhigh whole-port reviews, followed
+   by an adversarial review. Each round covers correctness and Rust parity,
+   ownership/naming/module structure and idiomatic OCaml, and measured or
+   asymptotic performance risks. Findings must distinguish port regressions,
+   Rust-inherited behavior, demonstrated costs, and speculative opportunities.
+2. Address confirmed findings and repeat focused validation after each material
+   change until no material finding remains.
+3. Run the final release-quality gate, including one uninterrupted
    `make test-all`, packaging/artifact checks, formatting, Reanalyze, and a final
    clean-worktree/process check.
-3. Perform the broad source-comment pass last. Comments must start with why,
+4. Perform the broad source-comment pass last. Comments must start with why,
    provide enough context for readers who are not OCaml/build-system/platform
    specialists, and stand on their own unless compatibility itself is the
    reason. Follow it with a narrow formatting/build check.
