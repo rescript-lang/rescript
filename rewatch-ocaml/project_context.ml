@@ -156,17 +156,20 @@ let require_dependency_directory ~context package_root
             dependency.name context.current_root directory))
   | Some directory -> directory
 
-let relative_to root path =
+let relative_to_opt root path =
   let prefix = Filename.concat root "" in
   let comparable = Platform.normalize_path_for_comparison in
-  if comparable path = comparable root then "."
+  if comparable path = comparable root then Some "."
   else if String.starts_with ~prefix:(comparable prefix) (comparable path) then
-    String.sub path (String.length prefix)
-      (String.length path - String.length prefix)
-  else raise (Error (path ^ " is not inside " ^ root))
+    Some
+      (String.sub path (String.length prefix)
+         (String.length path - String.length prefix))
+  else None
 
-let relative_to_opt root path =
-  try Some (relative_to root path) with Error _ -> None
+let relative_to root path =
+  match relative_to_opt root path with
+  | Some relative -> relative
+  | None -> raise (Error (path ^ " is not inside " ^ root))
 
 let relative_or_absolute ~root path =
   Option.value (relative_to_opt root path) ~default:path

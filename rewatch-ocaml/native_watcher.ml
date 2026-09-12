@@ -31,12 +31,18 @@ let is_compiler_artifact_directory path =
 let directories_under paths =
   let visited = Hashtbl.create 64 in
   let rec walk acc directory =
-    match Platform.canonicalize_path directory with
-    | canonical ->
+    let directory =
+      try
+        let canonical = Platform.canonicalize_path directory in
+        Some (canonical, File_util.directory_entries canonical)
+      with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> None
+    in
+    match directory with
+    | Some (canonical, entries) ->
       if Hashtbl.mem visited canonical then acc
       else (
         Hashtbl.add visited canonical ();
-        File_util.directory_entries canonical
+        entries
         |> List.fold_left
              (fun acc name ->
                let path = Filename.concat canonical name in
@@ -49,7 +55,7 @@ let directories_under paths =
                    ->
                    acc)
              (canonical :: acc))
-    | exception Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> acc
+    | None -> acc
   in
   paths
   |> List.fold_left
@@ -89,6 +95,12 @@ let remove_handles watcher =
     (List.map (fun watched -> watched.handle) watcher.handles);
   watcher.handles <- []
 
+let close watcher =
+  remove_handles watcher;
+  ignore (Luv.Timer.stop watcher.timer);
+  close_timer watcher.loop watcher.timer;
+  ignore (Luv.Loop.close watcher.loop)
+
 let directory_identity directory =
   try
     let metadata = Unix.stat directory in
@@ -113,13 +125,12 @@ let install_handles watcher identified_directories =
   List.iter
     (fun watched -> Hashtbl.add existing watched.directory ())
     watcher.handles;
-  let added = ref [] in
   let install (directory, identity) =
     if not (Hashtbl.mem existing directory) then
       match Luv.FS_event.init ~loop:watcher.loop () with
       | Error error -> watcher.error <- Some (error_message error)
       | Ok handle ->
-        added := {directory; identity; handle} :: !added;
+        watcher.handles <- {directory; identity; handle} :: watcher.handles;
         Luv.FS_event.start handle directory (function
           | Ok (filename, events) ->
             let path =
@@ -143,7 +154,6 @@ let install_handles watcher identified_directories =
             Luv.Loop.stop watcher.loop)
   in
   List.iter install identified_directories;
-  watcher.handles <- watcher.handles @ List.rev !added;
   match watcher.error with
   | None -> Ok ()
   | Some message -> Error message
@@ -160,20 +170,26 @@ let create_with_directory_identity ~directory_identity ~paths =
       let watcher =
         {loop; timer; handles = []; changes = []; stopped = false; error = None}
       in
-      let installed =
-        match
-          identify_directories ~directory_identity (directories_under paths)
-        with
-        | Error _ as error -> error
-        | Ok directories -> install_handles watcher directories
+      let fail message =
+        try
+          close watcher;
+          Error message
+        with cleanup_error ->
+          Error
+            (Printf.sprintf "%s (native watcher cleanup failed: %s)" message
+               (Printexc.to_string cleanup_error))
       in
-      match installed with
+      match
+        try
+          match
+            identify_directories ~directory_identity (directories_under paths)
+          with
+          | Error _ as error -> error
+          | Ok directories -> install_handles watcher directories
+        with error -> Error (Printexc.to_string error)
+      with
       | Ok () -> Ok watcher
-      | Error _ as error ->
-        remove_handles watcher;
-        close_timer loop timer;
-        ignore (Luv.Loop.close loop);
-        error))
+      | Error message -> fail message))
 
 let create = create_with_directory_identity ~directory_identity
 
@@ -259,12 +275,6 @@ let refresh_with_directory_identity ~directory_identity watcher ~paths =
     install_handles watcher identified_directories
 
 let refresh = refresh_with_directory_identity ~directory_identity
-
-let close watcher =
-  remove_handles watcher;
-  ignore (Luv.Timer.stop watcher.timer);
-  close_timer watcher.loop watcher.timer;
-  ignore (Luv.Loop.close watcher.loop)
 
 module For_test = struct
   let create_with_directory_identity = create_with_directory_identity

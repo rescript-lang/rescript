@@ -424,8 +424,8 @@ let update_snapshot_entries digest_cache previous changes =
         Hashtbl.remove entries change.path;
         Hashtbl.remove digest_cache change.path
       | Added | Modified -> (
-        match Unix.stat change.path with
-        | stat ->
+        try
+          let stat = Unix.stat change.path in
           let digest = File_util.digest_file change.path |> Digest.to_hex in
           Hashtbl.replace digest_cache change.path
             (stat.Unix.st_mtime, stat.Unix.st_ctime, stat.Unix.st_size, digest);
@@ -440,7 +440,7 @@ let update_snapshot_entries digest_cache previous changes =
                     digest;
                   };
             }
-        | exception Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) ->
+        with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) ->
           Hashtbl.remove entries change.path;
           Hashtbl.remove digest_cache change.path))
     changes;
