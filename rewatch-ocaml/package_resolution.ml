@@ -1,11 +1,4 @@
-type dependency = {
-  declaration: Config.dependency;
-  directory: string;
-  config: Config.t;
-  is_local: bool;
-}
-
-type dependency_identity = {directory: string; config: Config.t; is_local: bool}
+type dependency = {directory: string; config: Config.t; is_local: bool}
 
 type diagnostic_mode = Report_diagnostics | Suppress_diagnostics
 
@@ -13,8 +6,8 @@ type t = {
   root_config: Config.t;
   context: Project_context.dependency_context;
   loaded: (string, Config.t) Hashtbl.t;
-  edges: (string * string, dependency_identity) Hashtbl.t;
-  selected: (string, dependency_identity) Hashtbl.t;
+  edges: (string * string, dependency) Hashtbl.t;
+  selected: (string, dependency) Hashtbl.t;
   reported_duplicates: (string * string, unit) Hashtbl.t;
   diagnostic_mode: diagnostic_mode;
 }
@@ -51,18 +44,10 @@ let dependency_path resolution ~package_root name =
 let dependency_candidates resolution ~package_root name =
   Project_context.dependency_candidates_in resolution.context package_root name
 
-let with_declaration declaration (identity : dependency_identity) =
-  {
-    declaration;
-    directory = identity.directory;
-    config = identity.config;
-    is_local = identity.is_local;
-  }
-
 let resolve resolution ~package_root (declaration : Config.dependency) =
   let edge_key = (package_root, declaration.name) in
   match Hashtbl.find_opt resolution.edges edge_key with
-  | Some identity -> with_declaration declaration identity
+  | Some identity -> identity
   | None ->
     let candidate =
       Project_context.require_dependency_directory ~context:resolution.context
@@ -109,4 +94,4 @@ let resolve resolution ~package_root (declaration : Config.dependency) =
         identity
     in
     Hashtbl.add resolution.edges edge_key dependency;
-    with_declaration declaration dependency
+    dependency

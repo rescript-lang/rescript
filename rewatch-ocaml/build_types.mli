@@ -4,6 +4,12 @@ type graph_dependency = {
   kind: Package_traversal.dependency_kind;
 }
 
+type compilation_kind =
+  | One_shot
+  | Initial_watch
+  | Incremental_watch
+  | Full_watch
+
 type graph_package = {
   graph_root: string;
   graph_build_owner: string;

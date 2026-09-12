@@ -137,6 +137,168 @@ let resolved_dependencies ~find_module ~find_namespace_maps
   |> List.filter (fun dependency -> dependency <> node.key)
   |> List.sort_uniq String.compare
 
+type initialized = {
+  nodes: Build_types.global_module list;
+  namespace_maps: Build_types.namespace_map list;
+  build_state: Build_state.t;
+}
+
+let initialize ~(root_config : Config.t) ~graph_packages ~compile_assets
+    ~(attempt : Build_attempt.t) ~failed_parse_paths =
+  let nodes = ref [] in
+  List.iter
+    (fun (package : Build_types.graph_package) ->
+      List.iter
+        (fun module_ ->
+          let dependencies path =
+            if
+              Hashtbl.mem failed_parse_paths
+                (Filename.concat package.graph_root path)
+            then []
+            else
+              Compiler_process.ast_dependencies
+                ~build_dir:package.graph_build_dir (Source.ast_path path)
+          in
+          let raw_dependencies =
+            List.sort_uniq String.compare
+              (dependencies module_.Source.implementation
+              @
+              match module_.Source.interface with
+              | None -> []
+              | Some path -> dependencies path)
+          in
+          let compiler_base =
+            Source.compiler_basename package.graph_compile_config
+              module_.Source.name
+          in
+          (if Option.is_none (Compile_assets.cmt compile_assets compiler_base)
+           then
+             let implementation =
+               Filename.concat package.graph_root module_.Source.implementation
+             in
+             if not (Hashtbl.mem attempt.preliminary_parses implementation) then
+               Hashtbl.replace attempt.preliminary_parses implementation
+                 Build_types.Use_existing_ast);
+          nodes :=
+            Build_types.
+              {
+                key = compiler_base;
+                package_name = package.graph_config.name;
+                package_root = package.graph_root;
+                source_path = module_.Source.implementation;
+                namespace = package.graph_compile_config.namespace;
+                allowed_dependencies =
+                  List.map
+                    (fun (dependency : Build_types.graph_dependency) ->
+                      dependency.declaration.name)
+                    package.graph_dependency_directories;
+                raw_dependencies;
+              }
+            :: !nodes)
+        package.graph_modules)
+    graph_packages;
+  let nodes =
+    List.sort
+      (fun (first : Build_types.global_module) second ->
+        String.compare first.key second.key)
+      !nodes
+  in
+  let by_key : (string, Build_types.global_module) Hashtbl.t =
+    Hashtbl.create (List.length nodes)
+  in
+  List.iter
+    (fun (node : Build_types.global_module) ->
+      match Hashtbl.find_opt by_key node.key with
+      | None -> Hashtbl.add by_key node.key node
+      | Some previous ->
+        raise
+          (Source.duplicate_error ~display_root:root_config.root "" node.key
+             (Filename.concat previous.package_root previous.source_path)
+             (Filename.concat node.package_root node.source_path)))
+    nodes;
+  Hashtbl.iter
+    (fun key node -> Build_session.add_global_module attempt.session key node)
+    by_key;
+  let namespace_maps =
+    graph_packages
+    |> List.filter_map (fun (package : Build_types.graph_package) ->
+        let namespace = package.Build_types.graph_compile_config.namespace in
+        let namespace_details =
+          match namespace with
+          | Config.No_namespace -> None
+          | Config.Namespace name -> Some (name, name, None)
+          | Config.Namespace_with_entry {name; entry} ->
+            Some ("@" ^ name, name, Some entry)
+        in
+        namespace_details
+        |> Option.map (fun (compiler_name, name, namespace_entry) ->
+            let members =
+              Source.namespace_members ~entry:namespace_entry
+                package.graph_modules
+              |> List.map (fun module_ ->
+                  Source.compiler_basename package.graph_compile_config
+                    module_.Source.name)
+              |> List.sort_uniq String.compare
+            in
+            Build_types.
+              {
+                key = Build_types.namespace_map_key package.graph_root;
+                compiler_name;
+                namespace = name;
+                package_name = package.graph_config.name;
+                package_root = package.graph_root;
+                members;
+              }))
+  in
+  List.iter
+    (fun (namespace_map : Build_types.namespace_map) ->
+      Build_session.add_namespace_map attempt.session namespace_map)
+    namespace_maps;
+  let source_graph_nodes =
+    List.map
+      (fun (node : Build_types.global_module) ->
+        ( node,
+          resolved_dependencies ~find_module:(Hashtbl.find_opt by_key)
+            ~find_namespace_maps:
+              (Build_session.find_namespace_maps attempt.session)
+            node ))
+      nodes
+  in
+  let build_state =
+    Build_state.create
+      (List.length source_graph_nodes + List.length namespace_maps)
+  in
+  let modified = Option.map (fun entry -> entry.Compile_assets.modified) in
+  List.iter
+    (fun ((node : Build_types.global_module), _) ->
+      Build_state.add build_state ~key:node.key ~kind:Build_state.Source_module
+        ~last_compiled_cmi:
+          (Compile_assets.cmi compile_assets node.key |> modified)
+        ~last_compiled_cmt:
+          (Compile_assets.cmt compile_assets node.key |> modified))
+    source_graph_nodes;
+  List.iter
+    (fun (namespace_map : Build_types.namespace_map) ->
+      Build_state.add build_state ~key:namespace_map.key
+        ~kind:Build_state.Namespace_map
+        ~last_compiled_cmi:
+          (Compile_assets.cmi compile_assets namespace_map.compiler_name
+          |> modified)
+        ~last_compiled_cmt:
+          (Compile_assets.cmt compile_assets namespace_map.compiler_name
+          |> modified))
+    namespace_maps;
+  List.iter
+    (fun ((node : Build_types.global_module), dependencies) ->
+      Build_state.set_dependencies build_state ~key:node.key dependencies)
+    source_graph_nodes;
+  List.iter
+    (fun (namespace_map : Build_types.namespace_map) ->
+      Build_state.set_dependencies build_state ~key:namespace_map.key
+        namespace_map.members)
+    namespace_maps;
+  {nodes; namespace_maps; build_state}
+
 let find_cycle modules namespace_maps build_state =
   let nodes_by_key =
     Hashtbl.create (List.length modules + List.length namespace_maps)

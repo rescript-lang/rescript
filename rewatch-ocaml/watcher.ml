@@ -156,8 +156,8 @@ let watch_context ~root ~prod ~features ~filter =
           add_path package_root false;
           try
             let requested =
-              Feature_requests.find graph.feature_requests package_root
-              |> Option.map Feature_requests.to_option
+              Package_traversal.find_feature_selection graph package_root
+              |> Option.map Package_traversal.feature_selection_to_option
               |> Option.value ~default:None
             in
             Source.active_sources config

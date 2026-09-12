@@ -72,8 +72,9 @@ let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
       let discovered_package = Hashtbl.find packages_by_root root in
       let is_local = discovered_package.Package_traversal.is_local in
       let features =
-        match Feature_requests.find discovered.feature_requests root with
-        | Some features -> Feature_requests.to_option features
+        match Package_traversal.find_feature_selection discovered root with
+        | Some features ->
+          Package_traversal.feature_selection_to_option features
         | None -> None
       in
       let config = discovered_package.config in

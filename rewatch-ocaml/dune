@@ -30,7 +30,6 @@
   config
   project_context
   package_resolution
-  feature_requests
   package_traversal
   platform_common
   platform
@@ -41,7 +40,6 @@
   source
   graph
   module_graph
-  package_metadata
   package_diagnostics
   package_graph
   compiler_args

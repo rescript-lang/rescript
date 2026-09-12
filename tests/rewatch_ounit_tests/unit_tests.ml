@@ -114,18 +114,25 @@ let process_job args =
   {Process.program = test_executable (); args; cwd = Sys.getcwd ()}
 
 let feature_request_tests _context =
-  let feature_requests = Feature_requests.create () in
-  Feature_requests.add feature_requests "package" (Some ["browser"]);
-  Feature_requests.add feature_requests "package" (Some ["native"; "browser"]);
+  let feature_requests =
+    Package_traversal.For_test.create_feature_requests ()
+  in
+  Package_traversal.For_test.add_feature_request feature_requests "package"
+    (Some ["browser"]);
+  Package_traversal.For_test.add_feature_request feature_requests "package"
+    (Some ["native"; "browser"]);
   check
-    (Feature_requests.find feature_requests "package"
-    = Some (Feature_requests.Selected ["browser"; "native"]))
+    (Package_traversal.For_test.find_feature_selection feature_requests
+       "package"
+    = Some (Package_traversal.Selected_features ["browser"; "native"]))
     "feature requests merge and deduplicate named selections";
-  Feature_requests.add feature_requests "package" None;
-  Feature_requests.add feature_requests "package" (Some ["ignored"]);
+  Package_traversal.For_test.add_feature_request feature_requests "package" None;
+  Package_traversal.For_test.add_feature_request feature_requests "package"
+    (Some ["ignored"]);
   check
-    (Feature_requests.find feature_requests "package"
-    = Some Feature_requests.All)
+    (Package_traversal.For_test.find_feature_selection feature_requests
+       "package"
+    = Some Package_traversal.All_features)
     "an unrestricted feature request dominates named selections"
 
 let string_util_tests _context =
