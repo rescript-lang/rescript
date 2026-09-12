@@ -161,22 +161,23 @@ let run ~(package : Build_types.graph_package)
           package_dirty
           || attempt.freshness_mode = Build_attempt.Initialize_freshness
         then
-          Compiler_process.namespace_job ~bsc:prepared.compiler_context.bsc_path
+          Compiler_process.namespace_task
+            ~bsc:prepared.compiler_context.bsc_path
             ~runtime:prepared.compiler_context.runtime_path ~build_dir
             ~ocaml_dir
             ~entry:(Config.namespace_entry config.namespace)
             ~package_dirty compiler_name modules
-          |> Option.iter (fun (job, finish_namespace) ->
+          |> Option.iter (fun namespace_task ->
               let cmi_path =
                 Filename.concat ocaml_dir (compiler_name ^ ".cmi")
               in
               let finish result =
                 if not (Process.succeeded result) then
-                  ignore (finish_namespace result)
+                  ignore (namespace_task.Compiler_scheduler.publish result)
                 else
                   match
                     Compiler_scheduler.capture_publication (fun () ->
-                        finish_namespace result)
+                        namespace_task.Compiler_scheduler.publish result)
                   with
                   | Compiler_scheduler.Published {cmi_change; _} ->
                     Build_state.record_published_cmi build_state ~compile_assets
@@ -192,7 +193,9 @@ let run ~(package : Build_types.graph_package)
                       namespace_state ~path:cmi_path cmi_change;
                     raise error
               in
-              attempt.namespace_jobs <- (job, finish) :: attempt.namespace_jobs));
+              attempt.namespace_jobs <-
+                Build_attempt.{job = namespace_task.job; finish}
+                :: attempt.namespace_jobs));
     attempt.compile_candidates <- candidates @ attempt.compile_candidates;
     Build_attempt.register_cleanup attempt (fun () ->
         if not watch then

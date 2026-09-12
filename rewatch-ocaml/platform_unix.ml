@@ -21,8 +21,14 @@ let resolve_program =
   Platform_common.resolve_program ~path_separator ~executable_extensions
     ~search_directories ~executable_is_usable
 
+type command = {env: Spawn.Env.t option; program: string; args: string list}
+
 let post_build_command ~command ~output =
-  (None, "/bin/sh", ["-c"; command ^ " " ^ Filename.quote output])
+  {
+    env = None;
+    program = "/bin/sh";
+    args = ["-c"; command ^ " " ^ Filename.quote output];
+  }
 
 type process = int
 

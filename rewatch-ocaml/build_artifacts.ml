@@ -226,7 +226,8 @@ let cleanup_stale ?ocaml_files ?ast_sources ?source_files ?present_source_files
     Hashtbl.replace mapped_source_directories key (directory :: directories)
   in
   List.iter
-    (fun (_, source) ->
+    (fun (ast_source : Compile_assets.ast_source) ->
+      let source = ast_source.source_path in
       Project_context.relative_to_opt root source
       |> Option.iter (fun relative_source ->
           let directory = Filename.dirname relative_source in
@@ -321,7 +322,8 @@ let cleanup_stale ?ocaml_files ?ast_sources ?source_files ?present_source_files
             ~build_relative:(relative_under root output_path)
             output_path));
   ast_sources
-  |> List.iter (fun (_, source) ->
+  |> List.iter (fun (ast_source : Compile_assets.ast_source) ->
+      let source = ast_source.source_path in
       Project_context.relative_to_opt root source
       |> Option.iter (fun relative_source ->
           List.iter

@@ -1,8 +1,9 @@
 type entry = {path: string; modified: float}
+type ast_source = {ast_path: string; source_path: string}
 
 type t = {
   files_by_directory: (string, string list) Hashtbl.t;
-  ast_sources_by_directory: (string, (string * string) list) Hashtbl.t;
+  ast_sources_by_directory: (string, ast_source list) Hashtbl.t;
   ast_by_source: (string, entry) Hashtbl.t;
   cmi_by_module: (string, entry) Hashtbl.t;
   cmt_by_module: (string, entry) Hashtbl.t;
@@ -81,7 +82,10 @@ let create directories =
             | _ -> None)
       in
       Hashtbl.replace state.ast_sources_by_directory directory
-        (List.map (fun (entry, source) -> (entry.path, source)) ast_sources);
+        (List.map
+           (fun (entry, source) ->
+             {ast_path = entry.path; source_path = source})
+           ast_sources);
       List.iter
         (fun (entry, source) ->
           Hashtbl.replace state.ast_by_source source entry)

@@ -22,7 +22,7 @@ val with_root_options : Config.t -> Config.t -> Config.t
 
 val cleanup_stale :
   ?ocaml_files:string list ->
-  ?ast_sources:(string * string) list ->
+  ?ast_sources:Compile_assets.ast_source list ->
   ?source_files:string list ->
   ?present_source_files:string list ->
   root:string ->

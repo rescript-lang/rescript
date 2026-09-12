@@ -3013,6 +3013,15 @@ deliberately best-effort. Configuration source classification likewise ignores
 only paths that disappeared during inspection. The 38 OUnit groups and focused
 integration suite pass after the change.
 
+The naming and interface round removed an unused broad `Build_types` open and
+made artifact provenance, namespace compilation work, post-build work, and
+platform hook commands named records instead of positional tuples. The record
+types preserve the distinction between a subprocess result that still needs
+artifact publication and a namespace job whose publication has already been
+finalized into build-state updates. The Unix build, dormant Windows platform
+module type-check, 38 OUnit groups, focused integration suite, and current
+ten-false-positive dead-code baseline all pass.
+
 1. Run multiple rounds of the final implementation/code-quality gate, including
    ownership, naming, duplication, dead-code, illegal-state, filesystem,
    resource-lifecycle, and platform-boundary audits.
