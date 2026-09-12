@@ -1269,7 +1269,7 @@ run_case build-malformed-package-json reject reject build \
   "$work/malformed-package-json"
 require_both_errors_contain build-malformed-package-json \
   'Could not initialize build: Could not parse package.json:'
-run_case build-mismatched-dependency-name panic accept build \
+run_case build-mismatched-dependency-name panic reject build \
   "$work/mismatched-dependency"
 run_case build-missing-dependency exit2 exit2 build "$work/missing-dependency"
 require_both_errors_contain build-missing-dependency \

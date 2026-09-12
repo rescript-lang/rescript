@@ -123,13 +123,20 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
           Platform.normalize_path_for_comparison target = comparable)
         symlink_targets
     in
+    let contains_symlink_target path =
+      List.exists
+        (fun target ->
+          Project_context.path_is_within_canonical ~root:path target)
+        symlink_targets
+    in
     List.iter
       (fun (event : Native_watcher.change) ->
         match (event.kind, event.path) with
         | _, None -> requires_reconciliation := true
         | Native_watcher.Structural, Some path ->
           if
-            is_symlink_target path || is_source_path path
+            contains_symlink_target path
+            || is_source_path path
             || Watch_scope.path_in_scope scope path
             || Native_watcher.watches_directory watcher path
             || (is_in_source_tree path && File_util.is_directory path)
