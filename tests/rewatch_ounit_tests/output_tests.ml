@@ -46,11 +46,12 @@ let tests =
     = "\027[2K\r[2/2] ❌ Compiled 3 modules in 1.50s")
     "interactive failed compilation phase format";
   check
-    (Output.finished_compilation_message ~kind:None ~warnings:false ~seconds:1.5
+    (Output.finished_compilation_message ~label:Output.Standard ~warnings:false
+       ~seconds:1.5
     = "\027[2K\r✅ Finished compilation in 1.50s")
     "clean completion format";
   check
-    (Output.finished_compilation_message ~kind:(Some "incremental")
+    (Output.finished_compilation_message ~label:Output.Incremental
        ~warnings:true ~seconds:1.5
     = "\027[2K\r⚠️ Finished incremental compilation with warnings in 1.50s")
     "warning completion format";

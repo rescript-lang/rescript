@@ -27,9 +27,9 @@ let compile_step report =
 
 let output_kind report =
   match report.compilation_kind with
-  | Build_attempt.Initial_watch -> Some "initial"
-  | Build_attempt.Incremental_watch -> Some "incremental"
-  | Build_attempt.One_shot | Build_attempt.Full_watch -> None
+  | Build_attempt.Initial_watch -> Output.Initial
+  | Build_attempt.Incremental_watch -> Output.Incremental
+  | Build_attempt.One_shot | Build_attempt.Full_watch -> Output.Standard
 
 let prepare report ~success ~compile_seconds =
   let attempt = report.attempt in
@@ -81,7 +81,7 @@ let report_completion report diagnostics =
       if report.no_timing then 0. else Unix.gettimeofday () -. report.started_at
     in
     Printf.printf "\n%s\n%!"
-      (Output.finished_compilation_message ~kind:(output_kind report)
+      (Output.finished_compilation_message ~label:(output_kind report)
          ~warnings:
            (report.attempt.had_warnings || diagnostics <> []
            || Warning_state.entries

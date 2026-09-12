@@ -153,7 +153,7 @@ let string_util_tests _context =
         (String_util.contains value substring = expected)
         (Printf.sprintf "substring search for %S in %S" substring value))
 
-let process_tests _context =
+let process_parallel_tests _context =
   let test_executable = test_executable () in
   check
     (Process.default_max_jobs >= 1 && Process.default_max_jobs <= 32)
@@ -210,8 +210,12 @@ let process_tests _context =
       false
     with Process.Error _ -> true
   in
-  check invalid_parallel_bound_rejected "parallel subprocess bound is validated";
-  let graph_work key dependencies = Process.{key; dependencies; value = key} in
+  check invalid_parallel_bound_rejected "parallel subprocess bound is validated"
+
+let graph_work key dependencies = Process.{key; dependencies; value = key}
+
+let process_cancellation_tests _context =
+  let test_executable = test_executable () in
   let cancellation_polls = ref 0 in
   let dependency_graph_cancelled =
     let exception Cancel in
@@ -270,28 +274,30 @@ let process_tests _context =
   in
   check process_cancelled
     "single subprocess cancellation terminates the active process";
-  (if not Sys.win32 then
-     let descendant_pipe_polls = ref 0 in
-     let started = Unix.gettimeofday () in
-     let descendant_pipe_cancelled =
-       let exception Cancel in
-       try
-         Process.run_dependency_graph
-           [graph_work "descendant-pipe" []]
-           ~poll:(fun () ->
-             incr descendant_pipe_polls;
-             if !descendant_pipe_polls = 2 then raise Cancel)
-           ~next:(fun _ result ->
-             match result with
-             | None ->
-               Some (Process.task (process_job ["--exit-with-descendant"]))
-             | Some _ -> None);
-         false
-       with Cancel -> true
-     in
-     check
-       (descendant_pipe_cancelled && Unix.gettimeofday () -. started < 1.)
-       "an exited parent with descendant-held pipes remains cancellable");
+  if not Sys.win32 then
+    let descendant_pipe_polls = ref 0 in
+    let started = Unix.gettimeofday () in
+    let descendant_pipe_cancelled =
+      let exception Cancel in
+      try
+        Process.run_dependency_graph
+          [graph_work "descendant-pipe" []]
+          ~poll:(fun () ->
+            incr descendant_pipe_polls;
+            if !descendant_pipe_polls = 2 then raise Cancel)
+          ~next:(fun _ result ->
+            match result with
+            | None ->
+              Some (Process.task (process_job ["--exit-with-descendant"]))
+            | Some _ -> None);
+        false
+      with Cancel -> true
+    in
+    check
+      (descendant_pipe_cancelled && Unix.gettimeofday () -. started < 1.)
+      "an exited parent with descendant-held pipes remains cancellable"
+
+let process_dependency_graph_tests _context =
   let graph_completion_order = ref [] in
   let graph_completed = Hashtbl.create 3 in
   Process.run_dependency_graph ~max_jobs:1
@@ -1035,7 +1041,9 @@ let tests =
   >::: [
          "feature_requests" >:: feature_request_tests;
          "string_util" >:: string_util_tests;
-         "process" >:: process_tests;
+         "process_parallel" >:: process_parallel_tests;
+         "process_cancellation" >:: process_cancellation_tests;
+         "process_dependency_graph" >:: process_dependency_graph_tests;
          "platform" >:: platform_tests;
          "scheduler" >:: scheduler_tests;
          "graph_and_diagnostics" >:: graph_and_diagnostic_tests;

@@ -52,8 +52,10 @@ val compiling_message :
 val compilation_failed_message :
   color:bool -> step:string -> count:int -> seconds:float -> string
 
+type compilation_label = Standard | Initial | Incremental
+
 val finished_compilation_message :
-  kind:string option -> warnings:bool -> seconds:float -> string
+  label:compilation_label -> warnings:bool -> seconds:float -> string
 
 val should_clear_screen :
   clear_screen:bool -> show_progress:bool -> interactive:bool -> bool

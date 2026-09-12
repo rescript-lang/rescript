@@ -148,9 +148,16 @@ let compilation_failed_message ~color ~step ~count ~seconds =
   Printf.sprintf "%s%s ❌ Compiled %d modules in %.2fs" line_clear
     (format_step ~color step) count seconds
 
-let finished_compilation_message ~kind ~warnings ~seconds =
+type compilation_label = Standard | Initial | Incremental
+
+let finished_compilation_message ~label ~warnings ~seconds =
   let status = if warnings then "⚠️ " else "✅ " in
-  let kind = Option.fold ~none:"" ~some:(fun value -> value ^ " ") kind in
+  let kind =
+    match label with
+    | Standard -> ""
+    | Initial -> "initial "
+    | Incremental -> "incremental "
+  in
   let warning_suffix = if warnings then " with warnings" else "" in
   Printf.sprintf "%s%sFinished %scompilation%s in %.2fs" line_clear status kind
     warning_suffix seconds
