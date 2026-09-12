@@ -10,3 +10,5 @@ val prepare :
 
 val remove_compiler_assets : t -> on_clean:(string -> unit) -> unit
 val remove_generated_outputs : t -> unit
+val run :
+  poll:(unit -> unit) -> verbosity:int -> folder:string -> prod:bool -> unit
