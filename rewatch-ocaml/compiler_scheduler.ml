@@ -7,12 +7,17 @@ type cmi_change = Build_state.cmi_change =
 exception Publication_failure of exn * cmi_change
 
 type publish_result = {stderr: string; cmi_change: cmi_change}
+type namespace_task = {
+  job: Process.job;
+  publish: Process.result -> publish_result;
+}
+type post_build_task = {output: string; task: Process.task}
 
 type phase =
   | Start
   | Interface of string
   | Implementation of string
-  | Post_build of string * (string * Process.task) list
+  | Post_build of {output: string; remaining: post_build_task list}
   | Done
 
 type publication =
@@ -37,7 +42,7 @@ type scheduled_module = {
   compile: is_interface:bool -> string -> Process.job;
   publish: is_interface:bool -> string -> Process.result -> publish_result;
   record_published_outputs: is_interface:bool -> string -> unit;
-  post_build: string -> (string * Process.task) list;
+  post_build: string -> post_build_task list;
   package_root: string;
   is_local: bool;
   mark_warning: string -> unit;
@@ -246,8 +251,8 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
     | [] ->
       complete_module scheduled;
       None
-    | (output, task) :: remaining ->
-      scheduled.phase <- Post_build (output, remaining);
+    | {output; task} :: remaining ->
+      scheduled.phase <- Post_build {output; remaining};
       Some task
   in
   let scheduler_failed =
@@ -295,7 +300,7 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
             else (
               complete_module scheduled;
               None)
-          | Some result, Post_build (output, remaining) ->
+          | Some result, Post_build {output; remaining} ->
             if record_post_build_result scheduled output result then
               continue_post_build scheduled remaining
             else (

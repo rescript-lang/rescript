@@ -3,8 +3,9 @@ val directory_identity : path:string -> Unix.stats -> string
 val canonicalize_path : string -> string
 val resolve_program : cwd:string -> string -> string
 
-val post_build_command :
-  command:string -> output:string -> Spawn.Env.t option * string * string list
+type command = {env: Spawn.Env.t option; program: string; args: string list}
+
+val post_build_command : command:string -> output:string -> command
 
 type process
 

@@ -1,7 +1,5 @@
 exception Error = Project_context.Error
 
-open Build_types
-
 type cycle_info = {
   cycle: string list;
   blocked: string list;
@@ -227,7 +225,7 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
   in
   let cleanup_started = Unix.gettimeofday () in
   List.iter
-    (fun package ->
+    (fun (package : Build_types.graph_package) ->
       let package_context =
         Compiler_info.for_package compiler_context
           ~build_root:package.graph_build_owner package.graph_compile_config
@@ -262,11 +260,12 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
     graph_packages;
   let compile_assets =
     graph_packages
-    |> List.map (fun package -> package.graph_ocaml_dir)
+    |> List.map (fun (package : Build_types.graph_package) ->
+        package.graph_ocaml_dir)
     |> Compile_assets.create
   in
   List.iter
-    (fun package ->
+    (fun (package : Build_types.graph_package) ->
       let cleanup =
         Build_artifacts.cleanup_stale
           ~ocaml_files:
@@ -293,7 +292,7 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
   let parse_started = Unix.gettimeofday () in
   let parse_entries =
     graph_packages
-    |> List.concat_map (fun package ->
+    |> List.concat_map (fun (package : Build_types.graph_package) ->
         package.graph_modules
         |> List.concat_map (fun module_ ->
             let paths =
@@ -322,13 +321,14 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
   in
   let parse_results =
     Process.run_parallel_map ?poll:attempt.process_poll
-      ~on_complete:parse_completed parse_entries ~job:(fun (package, path, _) ->
+      ~on_complete:parse_completed parse_entries
+      ~job:(fun ((package : Build_types.graph_package), path, _) ->
         Compiler_process.parse_job ~bsc ~build_dir:package.graph_build_dir
           ~config:package.graph_compile_config path)
   in
   let failed_parse_paths = Hashtbl.create 8 in
   List.iter2
-    (fun (package, path, _) result ->
+    (fun ((package : Build_types.graph_package), path, _) result ->
       let absolute_path = Filename.concat package.graph_root path in
       let outcome = Build_types.preliminary_parse result in
       Hashtbl.replace attempt.preliminary_parses absolute_path outcome;
@@ -339,7 +339,7 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
     parse_entries parse_results;
   let nodes = ref [] in
   List.iter
-    (fun package ->
+    (fun (package : Build_types.graph_package) ->
       List.iter
         (fun module_ ->
           let intf_dependencies =
@@ -380,18 +380,19 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
                Hashtbl.replace attempt.preliminary_parses implementation
                  Build_types.Use_existing_ast);
           nodes :=
-            {
-              key = compiler_base;
-              package_name = package.graph_config.name;
-              package_root = package.graph_root;
-              source_path = module_.Source.implementation;
-              namespace = package.graph_compile_config.namespace;
-              allowed_dependencies =
-                List.map
-                  (fun (dependency : Config.dependency) -> dependency.name)
-                  package.graph_dependencies;
-              raw_dependencies;
-            }
+            Build_types.
+              {
+                key = compiler_base;
+                package_name = package.graph_config.name;
+                package_root = package.graph_root;
+                source_path = module_.Source.implementation;
+                namespace = package.graph_compile_config.namespace;
+                allowed_dependencies =
+                  List.map
+                    (fun (dependency : Config.dependency) -> dependency.name)
+                    package.graph_dependencies;
+                raw_dependencies;
+              }
             :: !nodes)
         package.graph_modules)
     graph_packages;
@@ -419,7 +420,7 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
     by_key;
   let namespace_maps =
     graph_packages
-    |> List.filter_map (fun package ->
+    |> List.filter_map (fun (package : Build_types.graph_package) ->
         let namespace = package.Build_types.graph_compile_config.namespace in
         let namespace_details =
           match namespace with
@@ -500,7 +501,8 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
     (fun (package : Build_types.graph_package) ->
       let regular_dependency_dirs, development_dependency_dirs =
         List.fold_left
-          (fun (regular, development) dependency ->
+          (fun (regular, development)
+               (dependency : Build_types.graph_dependency) ->
             let directory =
               Build_artifacts.lib_path dependency.directory "ocaml"
             in
@@ -534,7 +536,7 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
           })
     graph_packages;
   Build_session.install_prepared attempt.session
-    {compiler_context; compile_assets; build_state; packages};
+    Build_types.{compiler_context; compile_assets; build_state; packages};
   let cycle = find_cycle nodes namespace_maps build_state in
   Build_session.set_graph_has_cycle attempt.session (Option.is_some cycle);
   attempt.parse_seconds <- Unix.gettimeofday () -. parse_started;

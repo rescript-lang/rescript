@@ -107,9 +107,12 @@ let run_namespace_jobs (attempt : Build_attempt.t) =
         attempt.parse_seconds +. (Unix.gettimeofday () -. started_at))
     (fun () ->
       let results =
-        Process.run_parallel ?poll:attempt.process_poll (List.map fst jobs)
+        Process.run_parallel ?poll:attempt.process_poll
+          (List.map (fun job -> job.Build_attempt.job) jobs)
       in
-      List.iter2 (fun (_, finish) result -> finish result) jobs results);
+      List.iter2
+        (fun job result -> job.Build_attempt.finish result)
+        jobs results);
   List.length jobs
 
 let write_source_dirs (root_config : Config.t) (attempt : Build_attempt.t) =

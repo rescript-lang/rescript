@@ -32,6 +32,8 @@ let resolve_program =
   Platform_common.resolve_program ~path_separator ~executable_extensions
     ~search_directories ~executable_is_usable
 
+type command = {env: Spawn.Env.t option; program: string; args: string list}
+
 let post_build_command ~command ~output =
   let variable = "REWATCH_JS_POST_BUILD_FILE" in
   let prefix = String.lowercase_ascii (variable ^ "=") in
@@ -42,9 +44,11 @@ let post_build_command ~command ~output =
     |> List.cons (variable ^ "=" ^ output)
     |> Spawn.Env.of_list
   in
-  ( Some environment,
-    "cmd.exe",
-    ["/D"; "/V:OFF"; "/S"; "/C"; command ^ " \"%" ^ variable ^ "%\""] )
+  {
+    env = Some environment;
+    program = "cmd.exe";
+    args = ["/D"; "/V:OFF"; "/S"; "/C"; command ^ " \"%" ^ variable ^ "%\""];
+  }
 
 let is_batch_file program =
   List.mem

@@ -3,7 +3,7 @@ val parse_job :
   bsc:string -> build_dir:string -> config:Config.t -> string -> Process.job
 val ast_dependencies : build_dir:string -> string -> string list
 
-val namespace_job :
+val namespace_task :
   bsc:string ->
   runtime:string ->
   build_dir:string ->
@@ -12,7 +12,7 @@ val namespace_job :
   package_dirty:bool ->
   string ->
   Source.module_ list ->
-  (Process.job * (Process.result -> Compiler_scheduler.publish_result)) option
+  Compiler_scheduler.namespace_task option
 
 val compile_job :
   bsc:string ->
@@ -24,7 +24,8 @@ val compile_job :
   string ->
   Process.job
 
-val post_build_tasks : Config.t -> string -> (string * Process.task) list
+val post_build_tasks :
+  Config.t -> string -> Compiler_scheduler.post_build_task list
 
 val publish :
   build_dir:string ->

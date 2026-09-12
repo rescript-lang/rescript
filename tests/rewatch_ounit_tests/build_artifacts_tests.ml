@@ -40,7 +40,8 @@ let tests =
       let result =
         Build_artifacts.cleanup_stale
           ~ocaml_files:[published_ast; published_cmi]
-          ~ast_sources:[(published_ast, source)]
+          ~ast_sources:
+            [{Compile_assets.ast_path = published_ast; source_path = source}]
           ~source_files:[public_output; public_map]
           ~root ~ocaml_dir ~is_local:true config []
       in
@@ -138,7 +139,13 @@ let tests =
       let config = Config.load_root root in
       ignore
         (Build_artifacts.cleanup_stale ~ocaml_files:[published_ast]
-           ~ast_sources:[(published_ast, old_source)]
+           ~ast_sources:
+             [
+               {
+                 Compile_assets.ast_path = published_ast;
+                 source_path = old_source;
+               };
+             ]
            ~source_files:[] ~root ~ocaml_dir ~is_local:true config []);
       List.iter
         (fun path ->
@@ -166,7 +173,8 @@ let tests =
       let config = Config.load_root root in
       ignore
         (Build_artifacts.cleanup_stale ~ocaml_files:[published_ast]
-           ~ast_sources:[(published_ast, source)]
+           ~ast_sources:
+             [{Compile_assets.ast_path = published_ast; source_path = source}]
            ~source_files:[public_output; public_map]
            ~root ~ocaml_dir ~is_local:true config []);
       List.iter

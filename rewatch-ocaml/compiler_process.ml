@@ -57,7 +57,7 @@ let publish_compiler_artifacts ~artifact_dir ~ocaml_dir ~basename artifacts =
   with error ->
     raise (Compiler_scheduler.Publication_failure (error, !cmi_change))
 
-let namespace_job ~bsc ~runtime ~build_dir ~ocaml_dir ~entry ~package_dirty
+let namespace_task ~bsc ~runtime ~build_dir ~ocaml_dir ~entry ~package_dirty
     namespace modules =
   let mlmap = Filename.concat build_dir (namespace ^ ".mlmap") in
   let contents =
@@ -87,33 +87,38 @@ let namespace_job ~bsc ~runtime ~build_dir ~ocaml_dir ~entry ~package_dirty
   if not (package_dirty || mlmap_changed || not outputs_exist) then None
   else
     Some
-      ( Process.
-          {
-            program = bsc;
-            args =
-              [
-                "-runtime-path";
-                runtime;
-                "-w";
-                "-49";
-                "-color";
-                "always";
-                "-no-alias-deps";
-                Filename.basename mlmap;
-              ];
-            cwd = build_dir;
-          },
-        fun result ->
-          if not (Process.succeeded result) then
-            raise
-              (Compiler_scheduler.Build_failure
-                 (result.Process.stderr ^ result.stdout));
-          let cmi_change =
-            publish_compiler_artifacts ~artifact_dir:build_dir ~ocaml_dir
-              ~basename:namespace
-              [Cmi; Required "cmj"; Required "cmt"; Required "mlmap"]
-          in
-          Compiler_scheduler.{stderr = result.stderr; cmi_change} )
+      Compiler_scheduler.
+        {
+          job =
+            Process.
+              {
+                program = bsc;
+                args =
+                  [
+                    "-runtime-path";
+                    runtime;
+                    "-w";
+                    "-49";
+                    "-color";
+                    "always";
+                    "-no-alias-deps";
+                    Filename.basename mlmap;
+                  ];
+                cwd = build_dir;
+              };
+          publish =
+            (fun result ->
+              if not (Process.succeeded result) then
+                raise
+                  (Compiler_scheduler.Build_failure
+                     (result.Process.stderr ^ result.stdout));
+              let cmi_change =
+                publish_compiler_artifacts ~artifact_dir:build_dir ~ocaml_dir
+                  ~basename:namespace
+                  [Cmi; Required "cmj"; Required "cmt"; Required "mlmap"]
+              in
+              Compiler_scheduler.{stderr = result.stderr; cmi_change});
+        }
 
 let post_build_tasks (config : Config.t) path =
   match config.js_post_build with
@@ -122,8 +127,19 @@ let post_build_tasks (config : Config.t) path =
     List.map
       (fun spec ->
         let output = Build_artifacts.generated_js_path config path spec in
-        let env, program, args = Platform.post_build_command ~command ~output in
-        (output, Process.task ?env Process.{program; args; cwd = config.root}))
+        let command = Platform.post_build_command ~command ~output in
+        Compiler_scheduler.
+          {
+            output;
+            task =
+              Process.task ?env:command.env
+                Process.
+                  {
+                    program = command.program;
+                    args = command.args;
+                    cwd = config.root;
+                  };
+          })
       config.package_specs
 
 let compile_job ~bsc ~build_dir ~(config : Config.t) ~common_args

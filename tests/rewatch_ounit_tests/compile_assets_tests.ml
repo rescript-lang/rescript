@@ -34,7 +34,8 @@ let tests =
         = List.sort String.compare [ast; cleanup_only; first; second])
         "the flat cleanup inventory retains only managed compiler assets";
       check
-        (Compile_assets.ast_sources state root = [(ast, source)])
+        (Compile_assets.ast_sources state root
+        = [{Compile_assets.ast_path = ast; source_path = source}])
         "published ASTs retain their encoded absolute source location";
       check
         (Compile_assets.ast state source

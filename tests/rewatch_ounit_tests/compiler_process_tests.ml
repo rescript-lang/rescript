@@ -14,8 +14,8 @@ let tests =
             ("new " ^ extension))
         ["cmi"; "cmj"; "cmt"];
       File_util.ensure_dir (Filename.concat ocaml_dir "Ns.cmj");
-      let _, publish =
-        Compiler_process.namespace_job ~bsc:"unused" ~runtime:"unused"
+      let namespace_task =
+        Compiler_process.namespace_task ~bsc:"unused" ~runtime:"unused"
           ~build_dir ~ocaml_dir ~entry:None ~package_dirty:true "Ns" []
         |> Option.get
       in
@@ -23,7 +23,8 @@ let tests =
         Process.{status = Unix.WEXITED 0; stdout = ""; stderr = ""}
       in
       match
-        Compiler_scheduler.capture_publication (fun () -> publish result)
+        Compiler_scheduler.capture_publication (fun () ->
+            namespace_task.Compiler_scheduler.publish result)
       with
       | Compiler_scheduler.Failed_after_cmi_publication
           {cmi_change = Compiler_scheduler.Cmi_changed; _} ->

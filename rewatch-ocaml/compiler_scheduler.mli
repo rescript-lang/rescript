@@ -6,6 +6,11 @@ type cmi_change = Build_state.cmi_change =
 exception Publication_failure of exn * cmi_change
 
 type publish_result = {stderr: string; cmi_change: cmi_change}
+type namespace_task = {
+  job: Process.job;
+  publish: Process.result -> publish_result;
+}
+type post_build_task = {output: string; task: Process.task}
 
 type publication =
   | Published of publish_result
@@ -26,7 +31,7 @@ val create :
   compile:(is_interface:bool -> string -> Process.job) ->
   publish:(is_interface:bool -> string -> Process.result -> publish_result) ->
   record_published_outputs:(is_interface:bool -> string -> unit) ->
-  post_build:(string -> (string * Process.task) list) ->
+  post_build:(string -> post_build_task list) ->
   package_root:string ->
   is_local:bool ->
   mark_warning:(string -> unit) ->
