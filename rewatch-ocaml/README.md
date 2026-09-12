@@ -4,6 +4,39 @@ This directory contains the OCaml port of the ReScript build system. Linux and
 macOS packages use it experimentally as `rescript`; the Rust implementation
 remains available as `rescript-rust`. Windows packages continue to use Rust.
 
+## Status
+
+The non-Windows implementation, parity, performance, and release-quality gates
+are complete. The final Linux clean-build gate measured a 4.434 s Rust median
+and a 4.703 s OCaml median (1.061x), with identical compiler work, generated-file
+sets, and byte-stable artifacts. A separate 1,425-module macOS project measured
+approximately 9.6 s for Rust and 11.5 s for OCaml (about 1.20x). Absolute timing
+is host-specific; the reproducible method and complete resource/work results
+are in [`bench/README.md`](bench/README.md).
+
+The final uninterrupted `make test-all` run passed all compiler, runtime,
+build, GenType, analysis, tools, and canonical rewatch tests. The port has 42
+OUnit2 cases; all 136 Rust unit tests have reviewed mappings, and all 48 shared
+integration tests run against the packaged OCaml executable. Reanalyze reports
+no unreviewed dead production code.
+
+OpenTelemetry is deliberately omitted, and source filters support the documented
+common Rust/Re regular-expression subset rather than every Rust-regex construct.
+No non-Windows correctness defect remains open. Native Windows execution is not
+part of this PR; the implementation stays in the tree for a separately tested
+follow-up while Windows packages continue to use Rust.
+
+## Documentation
+
+- This README is the maintained implementation, architecture, build, packaging,
+  and platform-status entry point.
+- [`PARITY_CHECKLIST.md`](PARITY_CHECKLIST.md) is the behavior-by-behavior
+  contract and validation inventory.
+- [`bench/README.md`](bench/README.md) documents reproducible performance,
+  filesystem-work, resource, artifact, and source-size gates.
+- [`IMPLEMENTATION_HISTORY.md`](IMPLEMENTATION_HISTORY.md) is an archive of the
+  implementation and review journey, not a second current-status document.
+
 ## Build
 
 From the repository root, with the dependencies declared in `rescript.opam`
@@ -120,11 +153,6 @@ export RESCRIPT_BSC_EXE RESCRIPT_RUNTIME
 bash rewatch/tests/compile/01-basic-compile.sh
 ```
 
-See `PROGRESS.md` for the maintained status, latest measurements, deferred work,
-and release inventories. `IMPLEMENTATION_HISTORY.md` preserves the detailed
-chronological review and validation record. `PARITY_CHECKLIST.md` defines the
-behavior-by-behavior validation and output contracts.
-
 ## Packaging checks
 
 The release inventory uses the repository's existing Dune promotion and npm
@@ -168,7 +196,6 @@ Windows-targeting C compiler and its matching OCaml header directory. Watch mode
 uses long-lived filesystem-event handles through Luv/libuv and retains the
 snapshot-based polling loop only as a runtime fallback. Job assignment and
 pipe-tree cancellation, the native watcher, and the lock lifecycle still
-require native Windows runtime verification in that follow-up. `PROGRESS.md`
-tracks the handoff. Shared path
+require native Windows runtime verification in that follow-up. Shared path
 construction uses OCaml's `Filename` APIs so Windows separators and drive roots
 are not hard-coded assumptions.
