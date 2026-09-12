@@ -42,7 +42,7 @@ let rec prepare_tree ~seen ~(package : Build_types.graph_package) ~watch
   File_util.ensure_dir package.graph_build_dir;
   File_util.ensure_dir package.graph_ocaml_dir;
   Compiler_log.initialize root;
-  Hashtbl.replace attempt.initialized_logs root ();
+  Build_attempt.mark_log_initialized attempt root;
   let prepared = Build_session.prepared_exn attempt.session in
   let prepared_package =
     Build_session.prepared_package_exn attempt.session root

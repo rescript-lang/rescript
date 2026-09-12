@@ -193,10 +193,9 @@ let run ~(package : Build_types.graph_package)
                       namespace_state ~path:cmi_path cmi_change;
                     raise error
               in
-              attempt.namespace_jobs <-
-                Build_attempt.{job = namespace_task.job; finish}
-                :: attempt.namespace_jobs));
-    attempt.compile_candidates <- candidates @ attempt.compile_candidates;
+              Build_attempt.add_namespace_job attempt
+                Build_attempt.{job = namespace_task.job; finish}));
+    Build_attempt.add_compile_candidates attempt candidates;
     Build_attempt.register_cleanup attempt (fun () ->
         if not watch then
           Hashtbl.iter

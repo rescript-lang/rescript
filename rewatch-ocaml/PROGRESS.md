@@ -3022,6 +3022,14 @@ finalized into build-state updates. The Unix build, dormant Windows platform
 module type-check, 38 OUnit groups, focused integration suite, and current
 ten-false-positive dead-code baseline all pass.
 
+The attempt-lifecycle round moved pending namespace jobs, compiler candidates,
+artifact cleanup, and initialized compiler logs behind owning `Build_attempt`
+operations. Scheduling and finalization now consume these collections exactly
+once instead of directly reading and mutating shared lists and tables. This
+enforces the lifecycle contract without adding getters for ordinary phase data.
+A focused drain-once test brings the suite to 39 OUnit groups; the integration
+suite and dead-code baseline remain clean.
+
 1. Run multiple rounds of the final implementation/code-quality gate, including
    ownership, naming, duplication, dead-code, illegal-state, filesystem,
    resource-lifecycle, and platform-boundary audits.
