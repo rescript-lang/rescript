@@ -1,7 +1,10 @@
 let error message = raise (Project_context.Error message)
 
-let runtime_path root =
-  try Toolchain.runtime ~find_package:(Project_context.dependency_path root)
+let runtime_path resolution package_root =
+  try
+    Toolchain.runtime
+      ~find_package:
+        (Package_resolution.dependency_path resolution ~package_root)
   with Toolchain.Error message -> error message
 
 let source_error path message =
@@ -35,6 +38,10 @@ let run path =
       Config.load root_config_path
     else package_config
   in
+  let resolution =
+    Package_resolution.create
+      ~diagnostic_mode:Package_resolution.Suppress_diagnostics root_config
+  in
   let config = Build_artifacts.with_root_options package_config root_config in
   let relative = Project_context.relative_to config.root source in
   let contents =
@@ -57,7 +64,10 @@ let run path =
   let dependency_dirs =
     dependencies
     |> List.filter_map (fun (required, (dependency : Config.dependency)) ->
-        match Project_context.dependency_path config.root dependency.name with
+        match
+          Package_resolution.dependency_path resolution
+            ~package_root:config.root dependency.name
+        with
         | Some directory -> Some (Build_artifacts.lib_path directory "ocaml")
         | None when not required -> None
         | None ->
@@ -65,7 +75,7 @@ let run path =
             (Printf.sprintf "Expected to find dependent package %s of %s"
                dependency.name config.name))
   in
-  let runtime = runtime_path config.root in
+  let runtime = runtime_path resolution config.root in
   let compiler_args =
     Compiler_args.compiler_arguments ~config ~runtime ~dependency_dirs
       ~module_name:(Source.module_name source)

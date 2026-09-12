@@ -239,6 +239,29 @@ printf 'let value = 1\n' >"$post_build_cmi/src/A.res"
 printf 'let dependent = A.value + 1\n' >"$post_build_cmi/src/B.res"
 touch "$post_build_cmi/allow-post-build"
 
+post_build_retry="$work/post-build-retry"
+mkdir -p "$post_build_retry/src"
+printf '%s\n' \
+  '{"name":"post-build-retry","sources":"src","package-specs":{"module":"esmodule","in-source":true,"suffix":".mjs"},"js-post-build":{"cmd":"node -e \"process.exit(require('\''fs'\'').existsSync('\''allow-post-build'\'') ? 0 : 7)\""}}' \
+  >"$post_build_retry/rescript.json"
+printf 'let value = 1\n' >"$post_build_retry/src/A.res"
+touch "$post_build_retry/allow-post-build"
+
+parse_publication="$work/parse-publication"
+mkdir -p "$parse_publication/src"
+printf '%s\n' \
+  '{"name":"parse-publication","sources":"src","package-specs":{"module":"esmodule","in-source":true,"suffix":".mjs"}}' \
+  >"$parse_publication/rescript.json"
+printf 'let value = 1\n' >"$parse_publication/src/A.res"
+printf 'let other = 1\n' >"$parse_publication/src/B.res"
+
+moved_source="$work/moved-source"
+mkdir -p "$moved_source/src/nested"
+printf '%s\n' \
+  '{"name":"moved-source","sources":{"dir":"src","subdirs":true},"package-specs":{"module":"esmodule","in-source":true,"suffix":".mjs"}}' \
+  >"$moved_source/rescript.json"
+printf 'let value = 1\n' >"$moved_source/src/A.res"
+
 publication_cmi="$work/publication-cmi"
 mkdir -p "$publication_cmi/src"
 printf '%s\n' \
@@ -954,6 +977,57 @@ if ! wait_for_text "$post_build_cmi/watch.log" 'This has type:'; then
 fi
 kill -TERM "$post_build_cmi_pid"
 wait "$post_build_cmi_pid" 2>/dev/null || true
+
+"$port" build "$post_build_retry"
+rm "$post_build_retry/allow-post-build"
+printf 'let value = 2\n' >"$post_build_retry/src/A.res"
+if "$port" build "$post_build_retry" \
+  >"$post_build_retry/first-failure.log" 2>&1; then
+  echo "post-build failure unexpectedly succeeded" >&2
+  exit 1
+fi
+if "$port" build "$post_build_retry" \
+  >"$post_build_retry/retry-failure.log" 2>&1; then
+  echo "a fresh build forgot the failed post-build command" >&2
+  exit 1
+fi
+grep 'js-post-build command failed' \
+  "$post_build_retry/retry-failure.log" >/dev/null
+touch "$post_build_retry/allow-post-build"
+"$port" build "$post_build_retry"
+grep 'value = 2' "$post_build_retry/src/A.mjs" >/dev/null
+
+"$port" build "$moved_source"
+mv "$moved_source/src/A.res" "$moved_source/src/nested/A.res"
+"$port" build "$moved_source"
+test ! -f "$moved_source/src/A.mjs"
+grep 'value = 1' "$moved_source/src/nested/A.mjs" >/dev/null
+
+"$port" watch "$parse_publication" \
+  >"$parse_publication/watch.log" 2>&1 &
+parse_publication_pid=$!
+background_pids="$background_pids $parse_publication_pid"
+if ! wait_for_file "$parse_publication/src/A.mjs"; then
+  cat "$parse_publication/watch.log" >&2
+  exit 1
+fi
+parse_destination="$parse_publication/lib/ocaml/A.res"
+rm "$parse_destination"
+mkdir "$parse_destination"
+printf 'let value = 2\n' >"$parse_publication/src/A.res"
+if ! wait_for_text "$parse_publication/watch.log" "$parse_destination"; then
+  cat "$parse_publication/watch.log" >&2
+  exit 1
+fi
+rmdir "$parse_destination"
+printf 'let other = 2\n' >"$parse_publication/src/B.res"
+if ! wait_for_text "$parse_publication/src/A.mjs" 'value = 2'; then
+  cat "$parse_publication/watch.log" >&2
+  echo "parse publication failure forgot the changed source" >&2
+  exit 1
+fi
+kill -TERM "$parse_publication_pid"
+wait "$parse_publication_pid" 2>/dev/null || true
 
 publication_destination="$publication_cmi/lib/bs/src/A.res"
 env RESCRIPT_BSC_EXE="$root/rewatch-ocaml/tests/fail-late-publication-bsc.sh" \

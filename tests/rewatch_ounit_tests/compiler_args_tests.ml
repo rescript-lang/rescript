@@ -155,4 +155,29 @@ let tests =
          with Project_context.Error message ->
            Test_support.contains_text message "Could not read source file"
            && Test_support.contains_text message missing_source)
-        "missing compiler-args sources produce a contextual error")
+        "missing compiler-args sources produce a contextual error");
+  Test_support.with_temp_dir "rewatch-compiler-args-workspace-" (fun outer ->
+      let workspace = Filename.concat outer "workspace" in
+      let package = Filename.concat workspace "packages/app" in
+      let source = Filename.concat package "src/App.res" in
+      let outside_dependency = Filename.concat outer "node_modules/outside" in
+      write_file source "let value = 1\n";
+      write_file
+        (Filename.concat workspace "rescript.json")
+        {|{"name":"workspace","sources":[],"dependencies":["app"]}|};
+      write_file
+        (Filename.concat package "rescript.json")
+        {|{"name":"app","sources":"src","dependencies":["outside"]}|};
+      File_util.ensure_dir (Filename.concat workspace "node_modules");
+      Unix.symlink
+        (Filename.concat workspace "../workspace/packages/app")
+        (Filename.concat workspace "node_modules/app");
+      File_util.ensure_dir outside_dependency;
+      check
+        (try
+           ignore (Build.compiler_args source);
+           false
+         with Project_context.Error message ->
+           Test_support.contains_text message
+             "Expected to find dependent package outside of app")
+        "compiler-args does not search above a workspace dependency boundary")

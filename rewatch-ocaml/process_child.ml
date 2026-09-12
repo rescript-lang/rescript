@@ -44,11 +44,11 @@ type 'a running = {
   child_wait: child_wait;
 }
 
-type capture_pipes =
-  (Unix.file_descr * Unix.file_descr) * (Unix.file_descr * Unix.file_descr)
-
 type launch_ownership = {
-  mutable pipes: capture_pipes option;
+  mutable stdout_read: Unix.file_descr option;
+  mutable stdout_write: Unix.file_descr option;
+  mutable stderr_read: Unix.file_descr option;
+  mutable stderr_write: Unix.file_descr option;
   mutable stdout_capture: capture option;
   mutable stderr_capture: capture option;
   mutable process: Platform.process option;
@@ -58,7 +58,10 @@ type launch_ownership = {
 
 let empty_launch_ownership () =
   {
-    pipes = None;
+    stdout_read = None;
+    stdout_write = None;
+    stderr_read = None;
+    stderr_write = None;
     stdout_capture = None;
     stderr_capture = None;
     process = None;
@@ -179,9 +182,7 @@ let start_capture ?on_chunk descriptor : capture =
                        | None -> Buffer.contents output |> decode_utf8_lossy))
                with exn -> Error exn))
         ()
-    with exn ->
-      close_noerr descriptor;
-      raise exn
+    with exn -> raise exn
   in
   {thread; outcome}
 
@@ -224,41 +225,41 @@ let start_child_wait pid notifier stdout_capture stderr_capture : child_wait =
 
 let fail_launch ownership deferred_signals launch_error =
   Option.iter
-    (fun ((stdout_read, stdout_write), (stderr_read, stderr_write)) ->
-      Option.iter
-        (fun process ->
-          let pid = Platform.process_id process in
-          let root_reaped =
-            match ownership.child_wait with
-            | Some wait -> Option.is_some (Atomic.get wait.direct_outcome)
-            | None -> false
-          in
-          if not (Platform.signal_process_tree ~root_reaped process Sys.sigkill)
-          then ownership.termination_failed <- true;
-          if
-            (not ownership.termination_failed)
-            && Option.is_none ownership.child_wait
-          then try ignore (Unix.waitpid [] pid) with Unix.Unix_error _ -> ())
-        ownership.process;
-      close_noerr stdout_write;
-      close_noerr stderr_write;
-      if Option.is_none ownership.stdout_capture then close_noerr stdout_read;
-      if Option.is_none ownership.stderr_capture then close_noerr stderr_read;
-      match ownership.child_wait with
-      | Some wait when not ownership.termination_failed ->
-        Thread.join wait.thread
-      | Some _ -> ()
-      | None
-        when (not ownership.termination_failed)
-             && Option.is_some ownership.process ->
-        Option.iter
-          (fun (capture : capture) -> Thread.join capture.thread)
-          ownership.stdout_capture;
-        Option.iter
-          (fun (capture : capture) -> Thread.join capture.thread)
-          ownership.stderr_capture
-      | None -> ())
-    ownership.pipes;
+    (fun process ->
+      let pid = Platform.process_id process in
+      let root_reaped =
+        match ownership.child_wait with
+        | Some wait -> Option.is_some (Atomic.get wait.direct_outcome)
+        | None -> false
+      in
+      if not (Platform.signal_process_tree ~root_reaped process Sys.sigkill)
+      then ownership.termination_failed <- true;
+      if
+        (not ownership.termination_failed)
+        && Option.is_none ownership.child_wait
+      then try ignore (Unix.waitpid [] pid) with Unix.Unix_error _ -> ())
+    ownership.process;
+  List.iter
+    (fun descriptor -> Option.iter close_noerr descriptor)
+    [
+      ownership.stdout_write;
+      ownership.stderr_write;
+      ownership.stdout_read;
+      ownership.stderr_read;
+    ];
+  (match ownership.child_wait with
+  | Some wait when not ownership.termination_failed -> Thread.join wait.thread
+  | Some _ -> ()
+  | None
+    when (not ownership.termination_failed) && Option.is_some ownership.process
+    ->
+    Option.iter
+      (fun (capture : capture) -> Thread.join capture.thread)
+      ownership.stdout_capture;
+    Option.iter
+      (fun (capture : capture) -> Thread.join capture.thread)
+      ownership.stderr_capture
+  | None -> ());
   let release_error =
     try
       Option.iter Platform.release_process ownership.process;
@@ -291,11 +292,16 @@ let launch ?env ?stdout_chunk ?stderr_chunk ?(defer_signals = true) ~notifier
   let ownership = empty_launch_ownership () in
   try
     let pipes = Platform.create_capture_pipes () in
-    ownership.pipes <- Some pipes;
     let (stdout_read, stdout_write), (stderr_read, stderr_write) = pipes in
+    ownership.stdout_read <- Some stdout_read;
+    ownership.stdout_write <- Some stdout_write;
+    ownership.stderr_read <- Some stderr_read;
+    ownership.stderr_write <- Some stderr_write;
     let stdout = start_capture ?on_chunk:stdout_chunk stdout_read in
+    ownership.stdout_read <- None;
     ownership.stdout_capture <- Some stdout;
     let stderr = start_capture ?on_chunk:stderr_chunk stderr_read in
+    ownership.stderr_read <- None;
     ownership.stderr_capture <- Some stderr;
     let process =
       Platform.spawn ~env ~cwd:job.cwd ~program:job.program ~args:job.args
@@ -303,7 +309,9 @@ let launch ?env ?stdout_chunk ?stderr_chunk ?(defer_signals = true) ~notifier
     in
     ownership.process <- Some process;
     let pid = Platform.process_id process in
+    ownership.stdout_write <- None;
     close_noerr stdout_write;
+    ownership.stderr_write <- None;
     close_noerr stderr_write;
     let wait = start_child_wait pid notifier stdout stderr in
     ownership.child_wait <- Some wait;

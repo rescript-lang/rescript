@@ -169,6 +169,25 @@ let cleanup_stale ?ocaml_files ?ast_sources ?source_files ?present_source_files
     modules;
   let expected_artifacts = Hashtbl.create (List.length modules * 8) in
   let owned_output_names = Hashtbl.create (List.length modules * 2) in
+  let current_sources = Hashtbl.create (List.length modules * 2) in
+  List.iter
+    (fun module_ ->
+      module_.Source.implementation :: Option.to_list module_.Source.interface
+      |> List.iter (fun source ->
+          Filename.concat root source |> Platform.normalize_path_for_comparison
+          |> fun source -> Hashtbl.replace current_sources source ()))
+    modules;
+  let stale_ast_basenames = Hashtbl.create 8 in
+  List.iter
+    (fun (ast_source : Compile_assets.ast_source) ->
+      let source =
+        Platform.normalize_path_for_comparison ast_source.source_path
+      in
+      if not (Hashtbl.mem current_sources source) then
+        Hashtbl.replace stale_ast_basenames
+          (Filename.basename ast_source.ast_path)
+          ())
+    ast_sources;
   let add_expected base extensions =
     List.iter
       (fun extension ->
@@ -261,7 +280,11 @@ let cleanup_stale ?ocaml_files ?ast_sources ?source_files ?present_source_files
   |> List.iter (fun path ->
       let basename = Filename.basename path in
       let managed = Compile_assets.is_managed_basename basename in
-      if managed && not (Hashtbl.mem expected_artifacts basename) then (
+      if
+        managed
+        && ((not (Hashtbl.mem expected_artifacts basename))
+           || Hashtbl.mem stale_ast_basenames basename)
+      then (
         if Filename.check_suffix basename ".ast" then
           removed_modules := Source.module_name basename :: !removed_modules
         else if Filename.check_suffix basename ".iast" then
