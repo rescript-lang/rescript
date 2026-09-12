@@ -521,10 +521,25 @@ let platform_tests _context =
     = "/toolchain/compiler.exe")
     "Windows preserves absolute executable paths";
   check
-    (Platform_windows.serialize_command_line ~program:"cmd.exe"
+    (Platform_windows.serialize_command_line ~shell_command_is_quoted:false
+       ~program:"cmd.exe"
        ~args:["/D"; "/V:OFF"; "/S"; "/C"; {|echo "hello world"|}]
     = {|cmd.exe /D /V:OFF /S /C "echo "hello world""|})
-    "Windows wraps the complete cmd.exe command for /S parsing"
+    "Windows wraps the complete cmd.exe command for /S parsing";
+  let quoted_batch =
+    Filename.quote_command {|C:\Program Files\tool.cmd|} ["--version"]
+  in
+  check
+    (Platform_windows.serialize_command_line ~shell_command_is_quoted:true
+       ~program:"cmd.exe"
+       ~args:["/D"; "/V:OFF"; "/S"; "/C"; quoted_batch]
+    = "cmd.exe /D /V:OFF /S /C " ^ quoted_batch)
+    "Windows does not wrap an already quoted batch command twice";
+  if Sys.win32 then
+    check
+      (Process.run ~cwd:(Sys.getcwd ()) "npm.cmd" ["--version"]
+      |> Process.succeeded)
+      "Windows launches a batch executable resolved under Program Files"
 
 let scheduler_tests _context =
   let test_executable = test_executable () in

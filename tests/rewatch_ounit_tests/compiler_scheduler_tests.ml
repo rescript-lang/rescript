@@ -146,6 +146,8 @@ let tests =
       let abort_c = Build_state.find_exn abort_state "AbortC" in
       abort_a.compile_dirty <- true;
       abort_c.compile_dirty <- true;
+      let abort_a_ast = Filename.concat ocaml_dir "AbortA.ast" in
+      write_file abort_a_ast "published AST";
       let published_marker = Filename.concat root "abort-a-published" in
       let release_marker = Filename.concat root "abort-a-release" in
       let rec wait_for path remaining =
@@ -166,7 +168,13 @@ let tests =
               ~compile:(fun ~source_kind:_ _path -> process_job ())
               ~publish
               ~record_published_outputs:(fun ~source_kind:_ _path -> ())
-              ~post_build:(fun _ -> [])
+              ~post_build:(fun output ->
+                if key = "AbortA" then
+                  [
+                    Compiler_scheduler.
+                      {output; task = Process.task (process_job ())};
+                  ]
+                else [])
               ~package_root:root ~is_local:true
               ~mark_warning:(fun _ -> ()))
       in
@@ -211,6 +219,9 @@ let tests =
       check aborted "an operational scheduler failure aborts the attempt";
       check (Build_state.find_exn abort_state "AbortD").compile_dirty
         "CMI publication completed during abort still invalidates dependents";
+      check
+        (not (Sys.file_exists abort_a_ast))
+        "abort before post-build scheduling invalidates persistent freshness";
       let interrupted_state = Build_state.create 1 in
       Build_state.add interrupted_state ~key:"Interrupted"
         ~kind:Build_state.Source_module ~last_compiled_cmi:(Some 0.)
