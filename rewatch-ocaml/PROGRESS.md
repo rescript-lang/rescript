@@ -2992,6 +2992,17 @@ conservative lock policy without encoding three meanings as `bool option`.
 Two traversal-policy tests bring the OUnit suite to 38 groups; the focused
 integration suite also passes.
 
+The following ownership round split subprocess lifecycle from scheduling.
+`Process_child` now owns capture descriptors, reader and waiter threads,
+partially launched processes, completion notification, cancellation, and
+platform-process release behind an abstract running-child type. `Process`
+remains the public facade and retains the two deliberately separate scheduling
+policies: ordered parallel lists and dependency graphs. Callers therefore keep
+the same API, while neither scheduler can inspect or reconstruct child-resource
+ownership. The complete OUnit suite and focused OCaml integration suite pass,
+and the dead-code audit adds no report beyond the previously reviewed analyzer
+limitations.
+
 1. Run multiple rounds of the final implementation/code-quality gate, including
    ownership, naming, duplication, dead-code, illegal-state, filesystem,
    resource-lifecycle, and platform-boundary audits.
