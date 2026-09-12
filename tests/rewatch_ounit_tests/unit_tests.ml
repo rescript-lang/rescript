@@ -85,6 +85,7 @@ let () =
         (Spawn.spawn ~prog:executable ~argv:[executable; "--sleep"; "2"] ());
       exit 0
     | "-format" -> (
+      if Sys.win32 then set_binary_mode_out stdout true;
       match
         ( Sys.getenv_opt "REWATCH_FORMAT_TEST_ROOT",
           Sys.getenv_opt "REWATCH_FORMAT_INVENTORY_TEST_ROOT" )
@@ -407,7 +408,9 @@ let platform_tests _context =
         (fun () ->
           let requested = if Sys.win32 then "worker" else command in
           check
-            (Platform.resolve_program ~cwd:path_root requested = executable)
+            (Platform.normalize_path_for_comparison
+               (Platform.resolve_program ~cwd:path_root requested)
+            = Platform.normalize_path_for_comparison executable)
             "PATH lookup skips directories and applies platform executable \
              suffixes";
           check
@@ -420,8 +423,9 @@ let platform_tests _context =
             File_util.copy_existing_file ~ensure_parent:true test_executable
               cwd_executable;
             check
-              (Platform.resolve_program ~cwd:path_root "current"
-              = cwd_executable)
+              (Platform.normalize_path_for_comparison
+                 (Platform.resolve_program ~cwd:path_root "current")
+              = Platform.normalize_path_for_comparison cwd_executable)
               "Windows executable lookup searches cwd with PATHEXT")
           else
             let literal_directory = Filename.concat path_root "literal " in
@@ -446,13 +450,14 @@ let platform_tests _context =
               = literal_executable)
               "Unix PATH lookup preserves whitespace in directory names"));
   check
-    (Platform_windows.tasklist_has_process ~pid:123
-       {|"rescript.exe","123","Console","1","10,000 K"|})
+    (Platform_windows.tasklist_probe ~pid:123
+       {|"rescript.exe","123","Console","1","10,000 K"|}
+    = Platform_windows.Process_found)
     "Windows tasklist output recognizes a matching ReScript process";
   check
-    (not
-       (Platform_windows.tasklist_has_process ~pid:124
-          {|"rescript.exe","123","Console","1","10,000 K"|}))
+    (Platform_windows.tasklist_probe ~pid:124
+       {|"rescript.exe","123","Console","1","10,000 K"|}
+    = Platform_windows.Process_absent)
     "Windows tasklist output rejects a different process ID";
   check
     (Platform_windows.tasklist_probe ~pid:123 "tasklist failed"
@@ -749,7 +754,7 @@ let lock_tests _context =
     ~finally:(fun () ->
       Option.iter
         (fun pid ->
-          (try Unix.kill pid Sys.sigterm with Unix.Unix_error _ -> ());
+          touch_file (Filename.concat lock_root "release");
           try ignore (Unix.waitpid [] pid) with Unix.Unix_error _ -> ())
         !lock_owner_pid;
       File_util.remove_tree lock_root)
@@ -775,18 +780,15 @@ let lock_tests _context =
             (not (Sys.file_exists lock))
             "releasing a build lock twice is harmless");
       check (not (Sys.file_exists lock)) "released build lock is removed";
-      let lock_owner_executable =
-        Filename.concat lock_root "rescript-lock-owner"
-      in
-      File_util.copy_existing_file ~ensure_parent:false test_executable
-        lock_owner_executable;
-      Unix.chmod lock_owner_executable 0o755;
       let owner_pid =
-        Spawn.spawn ~prog:lock_owner_executable
-          ~argv:[lock_owner_executable; "--wait-forever"]
+        Spawn.spawn ~prog:test_executable
+          ~argv:[test_executable; "--wait-for-release"; lock_root]
           ()
       in
       lock_owner_pid := Some owner_pid;
+      check
+        (wait_for_file (Filename.concat lock_root "child-started"))
+        "the active lock owner starts";
       write_owner lock (string_of_int owner_pid);
       let lock_polls = ref 0 in
       let lock_wait_cancelled =
@@ -804,7 +806,7 @@ let lock_tests _context =
       check
         (Build_lock.read_owner lock = Some (string_of_int owner_pid))
         "cancelling a lock wait preserves the active owner's lock";
-      Unix.kill owner_pid Sys.sigterm;
+      touch_file (Filename.concat lock_root "release");
       ignore (Unix.waitpid [] owner_pid);
       lock_owner_pid := None;
       File_util.remove_file lock)

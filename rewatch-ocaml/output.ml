@@ -114,7 +114,8 @@ let colors_enabled_with ~getenv ~win32 ~interactive =
   || nonzero "CLICOLOR_FORCE" false
 
 let colors_enabled ~interactive =
-  colors_enabled_with ~getenv:Sys.getenv_opt ~win32:Sys.win32 ~interactive
+  colors_enabled_with ~getenv:Sys.getenv_opt
+    ~win32:Platform.terminal_supports_color_without_term ~interactive
 
 let cleanup_message ~color ~step ~cleaned ~total ~seconds =
   Printf.sprintf "%s%s 🧹 Cleaned %d/%d in %.2fs" line_clear

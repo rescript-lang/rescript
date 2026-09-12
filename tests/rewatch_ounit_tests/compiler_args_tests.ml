@@ -169,15 +169,17 @@ let tests =
         (Filename.concat package "rescript.json")
         {|{"name":"app","sources":"src","dependencies":["outside"]}|};
       File_util.ensure_dir (Filename.concat workspace "node_modules");
-      Unix.symlink
-        (Filename.concat workspace "../workspace/packages/app")
-        (Filename.concat workspace "node_modules/app");
-      File_util.ensure_dir outside_dependency;
-      check
-        (try
-           ignore (Compiler_args_command.run source);
-           false
-         with Project_context.Error message ->
-           Test_support.contains_text message
-             "Expected to find dependent package outside of app")
-        "compiler-args does not search above a workspace dependency boundary")
+      if
+        Test_support.symlink_if_supported
+          (Test_support.path workspace "../workspace/packages/app")
+          (Test_support.path workspace "node_modules/app")
+      then (
+        File_util.ensure_dir outside_dependency;
+        check
+          (try
+             ignore (Compiler_args_command.run source);
+             false
+           with Project_context.Error message ->
+             Test_support.contains_text message
+               "Expected to find dependent package outside of app")
+          "compiler-args does not search above a workspace dependency boundary"))

@@ -7,6 +7,7 @@ val normalize_path_for_comparison : string -> string
 val directory_identity : path:string -> Unix.stats -> string
 val canonicalize_path : string -> string
 val resolve_program : cwd:string -> string -> string
+val terminal_supports_color_without_term : bool
 
 type command = {env: Spawn.Env.t option; program: string; args: string list}
 

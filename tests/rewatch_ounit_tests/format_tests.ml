@@ -108,12 +108,12 @@ let tests =
         && Sys.file_exists (second ^ ".started"))
         "formatter subprocesses overlap rather than running serially");
   with_temp_dir (fun root ->
-      let root_source = Filename.concat root "src/App.res" in
-      let orphan_interface = Filename.concat root "src/Orphan.resi" in
-      let duplicate_one = Filename.concat root "src/one/Duplicate.res" in
-      let duplicate_two = Filename.concat root "src/two/Duplicate.res" in
+      let root_source = Test_support.path root "src/App.res" in
+      let orphan_interface = Test_support.path root "src/Orphan.resi" in
+      let duplicate_one = Test_support.path root "src/one/Duplicate.res" in
+      let duplicate_two = Test_support.path root "src/two/Duplicate.res" in
       let installed_source =
-        Filename.concat root "node_modules/installed/src/Installed.res"
+        Test_support.path root "node_modules/installed/src/Installed.res"
       in
       write_file
         (Filename.concat root "rescript.json")
@@ -123,7 +123,7 @@ let tests =
       write_file duplicate_one "let value = 1\n";
       write_file duplicate_two "let value = 2\n";
       write_file
-        (Filename.concat root "node_modules/installed/rescript.json")
+        (Test_support.path root "node_modules/installed/rescript.json")
         {|{"name":"installed","sources":["src"]}|};
       write_file installed_source "let value = 2\n";
       let previous = Sys.getcwd () in

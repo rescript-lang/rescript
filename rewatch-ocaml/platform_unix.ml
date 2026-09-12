@@ -1,4 +1,5 @@
 let path_separator = ':'
+let terminal_supports_color_without_term = false
 let normalize_path_for_comparison value = value
 let directory_identity ~path:_ metadata =
   Printf.sprintf "%d:%d" metadata.Unix.st_dev metadata.Unix.st_ino

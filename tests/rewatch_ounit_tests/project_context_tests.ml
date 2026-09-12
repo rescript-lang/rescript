@@ -16,9 +16,9 @@ let tests =
   Fun.protect
     ~finally:(fun () -> File_util.remove_tree root)
     (fun () ->
-      let dependency = Filename.concat root "packages/dependency" in
-      let dev_dependency = Filename.concat root "packages/dev-dependency" in
-      let unlisted = Filename.concat root "packages/unlisted" in
+      let dependency = Test_support.path root "packages/dependency" in
+      let dev_dependency = Test_support.path root "packages/dev-dependency" in
+      let unlisted = Test_support.path root "packages/unlisted" in
       List.iter File_util.ensure_dir [dependency; dev_dependency; unlisted];
       write_config root
         {|{
@@ -71,7 +71,7 @@ let tests =
         = Filename.concat (Filename.concat root "node_modules") "@scope/pkg")
         "dependency candidates start with the package-local node_modules path";
       check
-        (not (List.mem (Filename.concat root "packages/pkg") candidates))
+        (not (List.mem (Test_support.path root "packages/pkg") candidates))
         "workspace package directories are not implicit dependency candidates";
       check
         (Project_context.dependency_path root "dependency" = None)
@@ -97,32 +97,34 @@ let tests =
         "a workspace package checks only its own and the workspace node_modules";
       let node_modules = Filename.concat root "node_modules" in
       File_util.ensure_dir node_modules;
-      Unix.symlink "../packages/dependency"
-        (Filename.concat node_modules "dependency");
-      Unix.symlink "../packages/dev-dependency"
-        (Filename.concat node_modules "dev-dependency");
-      let root_context =
-        Project_context.dependency_context (Config.load_root root)
-      in
-      check
-        (Project_context.dependency_is_local_canonical root_context dependency)
-        "a workspace-root invocation owns linked workspace dependencies";
-      check
-        (Project_context.dependency_is_local_canonical root_context
-           dev_dependency)
-        "a workspace-root invocation owns linked development dependencies";
-      let resolution = Package_resolution.create (Config.load_root root) in
-      let first =
-        Package_resolution.resolve resolution ~package_root:root
-          Config.{name = "dependency"; features = Some ["first"]}
-      in
-      let second =
-        Package_resolution.resolve resolution ~package_root:root
-          Config.{name = "dependency"; features = Some ["second"]}
-      in
-      check
-        (first.directory = second.directory && first.config = second.config)
-        "cached dependency resolution reuses only package identity";
+      if
+        Test_support.symlink_if_supported "../packages/dependency"
+          (Filename.concat node_modules "dependency")
+      then (
+        Unix.symlink "../packages/dev-dependency"
+          (Filename.concat node_modules "dev-dependency");
+        let root_context =
+          Project_context.dependency_context (Config.load_root root)
+        in
+        check
+          (Project_context.dependency_is_local_canonical root_context dependency)
+          "a workspace-root invocation owns linked workspace dependencies";
+        check
+          (Project_context.dependency_is_local_canonical root_context
+             dev_dependency)
+          "a workspace-root invocation owns linked development dependencies";
+        let resolution = Package_resolution.create (Config.load_root root) in
+        let first =
+          Package_resolution.resolve resolution ~package_root:root
+            Config.{name = "dependency"; features = Some ["first"]}
+        in
+        let second =
+          Package_resolution.resolve resolution ~package_root:root
+            Config.{name = "dependency"; features = Some ["second"]}
+        in
+        check
+          (first.directory = second.directory && first.config = second.config)
+          "cached dependency resolution reuses only package identity");
       let repository_tmp = Filename.concat (Sys.getcwd ()) "tmp" in
       File_util.ensure_dir repository_tmp;
       let standalone =
@@ -136,7 +138,7 @@ let tests =
         ~finally:(fun () -> File_util.remove_tree standalone)
         (fun () ->
           write_config standalone {|{"name":"unlisted-standalone"}|};
-          let source = Filename.concat standalone "src/A.res" in
+          let source = Test_support.path standalone "src/A.res" in
           write_file source "let value = 1\n";
           check
             (Project_context.workspace_lock_root standalone = standalone)

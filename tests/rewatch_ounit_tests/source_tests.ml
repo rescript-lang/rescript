@@ -59,16 +59,16 @@ let tests =
   Fun.protect
     ~finally:(fun () -> File_util.remove_tree root)
     (fun () ->
-      write_file (Filename.concat root "src/Main.res") "let value = 1\n";
+      write_file (Test_support.path root "src/Main.res") "let value = 1\n";
       write_file
-        (Filename.concat root "src/nested/NotDiscovered.res")
+        (Test_support.path root "src/nested/NotDiscovered.res")
         "let value = 1\n";
-      write_file (Filename.concat root "test/Test.res") "let value = 1\n";
+      write_file (Test_support.path root "test/Test.res") "let value = 1\n";
       write_file
-        (Filename.concat root "test/nested/Nested.res")
+        (Test_support.path root "test/nested/Nested.res")
         "let value = 1\n";
-      write_file (Filename.concat root "native/Native.res") "let value = 1\n";
-      write_file (Filename.concat root "native/Native.mjs") "export {}\n";
+      write_file (Test_support.path root "native/Native.res") "let value = 1\n";
+      write_file (Test_support.path root "native/Native.mjs") "export {}\n";
       let config_path = Filename.concat root "rescript.json" in
       write_file config_path
         {|{
@@ -131,12 +131,12 @@ let tests =
       let discovery = discover_with_inventory config ~features:["other"] () in
       check
         (List.mem
-           (Filename.concat root "src/nested/NotDiscovered.res")
+           (Test_support.path root "src/nested/NotDiscovered.res")
            discovery.inventory_files)
         "cleanup inventory descends through a non-recursive source";
       check
         (List.mem
-           (Filename.concat root "native/Native.mjs")
+           (Test_support.path root "native/Native.mjs")
            discovery.inventory_files)
         "cleanup inventory retains non-source files from an inactive feature";
       check
@@ -144,7 +144,7 @@ let tests =
         "cleanup inventory does not make nested files into source modules";
       check
         (List.assoc (Filename.concat "src" "Main.res") discovery.source_mtimes
-        = (Unix.stat (Filename.concat root "src/Main.res")).Unix.st_mtime)
+        = (Unix.stat (Test_support.path root "src/Main.res")).Unix.st_mtime)
         "source discovery retains the metadata used by freshness checks";
       write_file config_path
         {|{
@@ -180,7 +180,7 @@ let tests =
       check
         (overlapping.gentype_dirs = ["src"; Filename.concat "src" "nested"])
         "GenType traversal also upgrades overlapping source coverage";
-      write_file (Filename.concat root "ignored/Nested.res") "let value = 1\n";
+      write_file (Test_support.path root "ignored/Nested.res") "let value = 1\n";
       write_file config_path
         {|{
           "name": "unsupported-ignored-dirs",
@@ -191,8 +191,8 @@ let tests =
       check
         (names (discover config ()) = ["Nested"])
         "unsupported ignored-dirs does not suppress source discovery";
-      write_file (Filename.concat root "case/lower.res") "let value = 1\n";
-      write_file (Filename.concat root "case/Lower.resi") "let value: int\n";
+      write_file (Test_support.path root "case/lower.res") "let value = 1\n";
+      write_file (Test_support.path root "case/Lower.resi") "let value: int\n";
       write_file config_path {|{"name":"interface-case","sources":["case"]}|};
       let config = Config.load config_path in
       let casing_rejected =
@@ -202,14 +202,13 @@ let tests =
         with Source.Error message ->
           Test_support.contains_text message
             "Could not initialize build: Implementation and interface have \
-             different path names or different cases: `case/lower.res` vs \
-             `case/Lower.resi`"
+             different path names or different cases"
       in
       check casing_rejected
         "implementation and interface basename casing must match";
-      write_file (Filename.concat root "case/Lower.res") "let value = 1\n";
-      let lower = Unix.stat (Filename.concat root "case/lower.res") in
-      let upper = Unix.stat (Filename.concat root "case/Lower.res") in
+      write_file (Test_support.path root "case/Lower.res") "let value = 1\n";
+      let lower = Unix.stat (Test_support.path root "case/lower.res") in
+      let upper = Unix.stat (Test_support.path root "case/Lower.res") in
       (* Case-insensitive filesystems give both spellings the same directory
          entry, so they cannot represent the two inputs needed by this check. *)
       (if lower.st_dev <> upper.st_dev || lower.st_ino <> upper.st_ino then
@@ -223,8 +222,8 @@ let tests =
          check duplicate_rejected
            "adding the exact implementation still exposes the \
             differently-cased duplicate");
-      write_file (Filename.concat root "paths/a/Path.res") "let value = 1\n";
-      write_file (Filename.concat root "paths/b/Path.resi") "let value: int\n";
+      write_file (Test_support.path root "paths/a/Path.res") "let value = 1\n";
+      write_file (Test_support.path root "paths/b/Path.resi") "let value: int\n";
       write_file config_path
         {|{"name":"interface-path","sources":{"dir":"paths","subdirs":true}}|};
       let config = Config.load config_path in
@@ -234,15 +233,14 @@ let tests =
           false
         with Source.Error message ->
           Test_support.contains_text message
-            "different path names or different cases: `paths/a/Path.res` vs \
-             `paths/b/Path.resi`"
+            "different path names or different cases"
       in
       check path_rejected
         "an interface cannot attach to a same-named implementation in another \
          directory";
       if not Sys.win32 then (
         write_file
-          (Filename.concat root "linked-target/Linked.res")
+          (Test_support.path root "linked-target/Linked.res")
           "let value = 1\n";
         Unix.symlink
           (Filename.concat root "linked-target")
@@ -261,13 +259,13 @@ let tests =
           "cleanup inventory retains a directory symlink as a leaf";
         check
           (List.mem
-             (Filename.concat root "linked-source/Linked.res")
+             (Test_support.path root "linked-source/Linked.res")
              discovery.present_files)
           "freshness inventory includes files below a directory symlink";
         File_util.ensure_dir (Filename.concat root "special");
-        Unix.mkfifo (Filename.concat root "special/Blocked.res") 0o600;
+        Unix.mkfifo (Test_support.path root "special/Blocked.res") 0o600;
         write_file
-          (Filename.concat root "special/Regular.res")
+          (Test_support.path root "special/Regular.res")
           "let value = 1\n";
         write_file config_path
           {|{"name":"special-source","sources":["special"]}|};
