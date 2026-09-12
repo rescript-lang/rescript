@@ -32,6 +32,35 @@ let tests =
   check
     (not (Source.is_non_exotic_module_name ""))
     "empty module names are excluded without indexing an absent character";
+  let namespace_modules =
+    [
+      Source.
+        {
+          name = "Entry";
+          implementation = "Entry.res";
+          interface = None;
+          is_dev = false;
+        };
+      Source.
+        {
+          name = "Member";
+          implementation = "Member.res";
+          interface = None;
+          is_dev = false;
+        };
+      Source.
+        {
+          name = "Member-with-dash";
+          implementation = "Member-with-dash.res";
+          interface = None;
+          is_dev = false;
+        };
+    ]
+  in
+  check
+    (names (Source.namespace_members ~entry:(Some "Entry") namespace_modules)
+    = ["Member"])
+    "namespace membership excludes the entry and exotic module names";
   let root = Filename.temp_file "rewatch-ocaml-sources-" "" in
   Sys.remove root;
   Unix.mkdir root 0o755;
@@ -243,4 +272,18 @@ let tests =
           (List.mem
              (Filename.concat root "linked-source/Linked.res")
              discovery.present_files)
-          "freshness inventory includes files below a directory symlink"))
+          "freshness inventory includes files below a directory symlink";
+        File_util.ensure_dir (Filename.concat root "special");
+        Unix.mkfifo (Filename.concat root "special/Blocked.res") 0o600;
+        write_file
+          (Filename.concat root "special/Regular.res")
+          "let value = 1\n";
+        write_file config_path
+          {|{"name":"special-source","sources":["special"]}|};
+        let discovered =
+          Config.load config_path |> fun config -> discover config ()
+        in
+        check
+          (names discovered = ["Regular"])
+          "source discovery excludes FIFOs even when their names have source \
+           extensions"))

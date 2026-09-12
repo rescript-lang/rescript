@@ -38,3 +38,11 @@ let process_is_active ~probe value =
   with
   | Failure _ | Unix.Unix_error (Unix.ESRCH, _, _) -> false
   | Unix.Unix_error (Unix.EPERM, _, _) -> true
+
+let create_capture_pipes () =
+  let stdout = Spawn.safe_pipe () in
+  try (stdout, Spawn.safe_pipe ())
+  with exn ->
+    Unix.close (fst stdout);
+    Unix.close (snd stdout);
+    raise exn

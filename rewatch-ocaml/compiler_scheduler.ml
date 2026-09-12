@@ -16,8 +16,15 @@ type phase =
   | Done
 
 type publication =
-  | Published of {stderr: string; cmi_change: cmi_change}
+  | Published of publish_result
   | Failed_after_cmi_publication of {error: exn; cmi_change: cmi_change}
+
+let capture_publication publish =
+  try Published (publish ()) with
+  | Publication_failure (error, cmi_change) ->
+    Failed_after_cmi_publication {error; cmi_change}
+  | error ->
+    Failed_after_cmi_publication {error; cmi_change = Cmi_change_unknown}
 
 type scheduled_module = {
   key: string;
@@ -206,16 +213,8 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
     Process.task job ~on_result:(fun result ->
         (if Process.succeeded result then
            let publication =
-             try
-               let published = scheduled.publish ~is_interface path result in
-               Published
-                 {stderr = published.stderr; cmi_change = published.cmi_change}
-             with
-             | Publication_failure (error, cmi_change) ->
-               Failed_after_cmi_publication {error; cmi_change}
-             | error ->
-               Failed_after_cmi_publication
-                 {error; cmi_change = Cmi_change_unknown}
+             capture_publication (fun () ->
+                 scheduled.publish ~is_interface path result)
            in
            Atomic.set scheduled.publication (Some publication));
         result)

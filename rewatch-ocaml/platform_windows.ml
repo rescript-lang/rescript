@@ -114,13 +114,7 @@ let spawn ~env ~cwd ~program ~args ~stdout ~stderr =
 let process_id process = process.wait_id
 let release_process process = close_process_job process.job
 
-let create_capture_pipes () =
-  let stdout = Spawn.safe_pipe () in
-  try (stdout, Spawn.safe_pipe ())
-  with exn ->
-    Unix.close (fst stdout);
-    Unix.close (snd stdout);
-    raise exn
+let create_capture_pipes = Platform_common.create_capture_pipes
 
 let signal_process_tree ~root_reaped:_ process _signal =
   terminate_process_job process.job

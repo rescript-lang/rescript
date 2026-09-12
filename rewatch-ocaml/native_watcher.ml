@@ -31,35 +31,35 @@ let is_compiler_artifact_directory path =
 let directories_under paths =
   let visited = Hashtbl.create 64 in
   let rec walk acc directory =
-    try
-      let canonical = Platform.canonicalize_path directory in
+    match Platform.canonicalize_path directory with
+    | canonical ->
       if Hashtbl.mem visited canonical then acc
       else (
         Hashtbl.add visited canonical ();
-        Sys.readdir canonical |> Array.to_list
+        File_util.directory_entries canonical
         |> List.fold_left
              (fun acc name ->
                let path = Filename.concat canonical name in
                if is_compiler_artifact_directory path then acc
                else
-                 try
-                   let stat = Unix.stat path in
+                 match Unix.stat path with
+                 | stat ->
                    if stat.Unix.st_kind = Unix.S_DIR then walk acc path else acc
-                 with error ->
-                   if File_util.path_is_missing path then acc else raise error)
+                 | exception Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _)
+                   ->
+                   acc)
              (canonical :: acc))
-    with error ->
-      if File_util.path_is_missing directory then acc else raise error
+    | exception Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> acc
   in
   paths
   |> List.fold_left
        (fun directories path ->
          if path.recursive then walk directories path.directory
          else
-           try Platform.canonicalize_path path.directory :: directories
-           with error ->
-             if File_util.path_is_missing path.directory then directories
-             else raise error)
+           match Platform.canonicalize_path path.directory with
+           | canonical -> canonical :: directories
+           | exception Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) ->
+             directories)
        []
   |> List.sort_uniq String.compare
 

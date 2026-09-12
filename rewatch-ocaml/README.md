@@ -141,9 +141,10 @@ scope.
 
 ## Platform status
 
-Windows support is required for completion, even though runtime verification is
-not available in the current Linux development environment. Unix subprocesses
-use the cross-platform `spawn` library. Windows uses a narrow native
+The Windows implementation remains in the tree, but Windows continues to ship
+and run the Rust implementation. Native Windows verification and switching the
+platform default are deferred to a separate follow-up PR. Unix subprocesses use
+the cross-platform `spawn` library. Windows uses a narrow native
 `CreateProcessW` owner so it can establish Job Object ownership before a child
 starts running.
 Compiler output is captured through close-on-exec pipes drained by blocking
@@ -155,7 +156,7 @@ Windows-targeting C compiler and its matching OCaml header directory. Watch mode
 uses long-lived filesystem-event handles through Luv/libuv and retains the
 snapshot-based polling loop only as a runtime fallback. Job assignment and
 pipe-tree cancellation, the native watcher, and the lock lifecycle still
-require native Windows runtime verification.
-`PROGRESS.md` tracks the remaining portability blockers. Shared path
+require native Windows runtime verification in that follow-up. `PROGRESS.md`
+tracks the handoff. Shared path
 construction uses OCaml's `Filename` APIs so Windows separators and drive roots
 are not hard-coded assumptions.

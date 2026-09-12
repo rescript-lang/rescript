@@ -10,7 +10,7 @@ type t = {
 
 let ast_source_location path =
   try (Ast_header.read path).source
-  with error -> if File_util.path_is_missing path then None else raise error
+  with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> None
 
 let cleanup_extensions =
   [".cmi"; ".cmj"; ".cmt"; ".cmti"; ".ast"; ".iast"; ".res"; ".resi"; ".mlmap"]
@@ -24,9 +24,8 @@ let state_extension = function
 
 let read_directory directory =
   let names =
-    try Sys.readdir directory |> Array.to_list
-    with error ->
-      if File_util.path_is_missing directory then [] else raise error
+    try File_util.directory_entries directory
+    with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> []
   in
   let files =
     names
@@ -44,8 +43,7 @@ let read_directory directory =
             let metadata = Unix.stat path in
             if metadata.Unix.st_kind = Unix.S_DIR then None
             else Some ({path; modified = metadata.Unix.st_mtime}, name)
-          with error ->
-            if File_util.path_is_missing path then None else raise error)
+          with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> None)
   in
   (files, state_entries)
 

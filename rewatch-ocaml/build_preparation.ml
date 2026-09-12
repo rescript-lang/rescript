@@ -430,11 +430,8 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
         namespace_details
         |> Option.map (fun (compiler_name, name, namespace_entry) ->
             let members =
-              package.graph_modules
-              |> List.filter (fun module_ ->
-                  Some module_.Source.name <> namespace_entry)
-              |> List.filter (fun module_ ->
-                  Source.is_non_exotic_module_name module_.Source.name)
+              Source.namespace_members ~entry:namespace_entry
+                package.graph_modules
               |> List.map (fun module_ ->
                   Source.compiler_basename package.graph_compile_config
                     module_.Source.name)

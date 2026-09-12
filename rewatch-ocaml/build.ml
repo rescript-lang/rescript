@@ -14,7 +14,7 @@ type retained_build = {
 (* Build kind controls which persistent markers and diagnostics may be reused.
    Keeping all four states explicit prevents an initial watch build from being
    mistaken for either a disposable command or a retained incremental edit. *)
-type compilation_kind =
+type compilation_kind = Build_report.compilation_kind =
   | One_shot
   | Initial_watch
   | Incremental_watch
@@ -326,16 +326,6 @@ let prepare_incremental previous changes (stats : Build_types.t) =
     cycle)
   else None
 
-let run_all actions =
-  let first_error = ref None in
-  List.iter
-    (fun action ->
-      try action ()
-      with error ->
-        if Option.is_none !first_error then first_error := Some error)
-    actions;
-  Option.iter raise !first_error
-
 let run_with_warning_state ~poll ~warning_state ~previous ~changes
     ~compilation_kind ~no_timing ~verbosity ~folder ~prod ~features ~warn_error
     ~after_build ~filter ~on_state =
@@ -357,12 +347,6 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
     match compilation_kind with
     | One_shot | Full_watch -> true
     | Initial_watch | Incremental_watch -> false
-  in
-  let output_kind =
-    match compilation_kind with
-    | Initial_watch -> Some "initial"
-    | Incremental_watch -> Some "incremental"
-    | One_shot | Full_watch -> None
   in
   let root = project_root folder in
   let root_config =
@@ -397,26 +381,15 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
      needed to recover incrementally on the next edit. Publish ownership before
      any fallible phase starts. *)
   on_state {root_config; build_lock_root; stats};
-  let finalize_logs () =
-    let package_roots =
-      stats.initialized_logs |> Hashtbl.to_seq_keys |> List.of_seq
-    in
-    Hashtbl.clear stats.initialized_logs;
-    run_all
-      ((fun () -> Output.Progress.finish progress)
-      :: List.map
-           (fun package_root () -> Compiler_log.finalize package_root)
-           package_roots)
-  in
-  let artifacts_cleaned = ref false in
+  let finalization = Build_finalization.create ~stats ~progress in
+  let finalize_logs () = Build_finalization.finalize_logs finalization in
   let cleanup_after_build () =
-    if not !artifacts_cleaned then (
-      artifacts_cleaned := true;
-      let cleanup = Build_types.take_cleanup stats in
-      run_all
-        (cleanup.actions
-        @ List.map (fun path () -> File_util.remove_file path) cleanup.artifacts
-        ))
+    Build_finalization.cleanup_artifacts finalization
+  in
+  let report =
+    Build_report.create ~started_at ~interactive ~show_progress ~colors
+      ~no_timing ~compilation_kind ~stats ~finalize_logs
+      ~write_metadata:(fun () -> write_source_dirs root_config stats)
   in
   let build_ninja_written = ref false in
   let write_build_ninja_once () =
@@ -427,75 +400,8 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
   let phase_seconds seconds = if no_timing then 0. else seconds in
   let parse_step = if is_rebuild then "1/2" else "2/3" in
   let compile_step = if is_rebuild then "2/2" else "3/3" in
-  let prepare_report ~success ~compile_seconds =
-    (* Finalize compiler logs before replaying warnings and configuration
-       diagnostics so persisted and terminal output describe the same completed
-       build, in deterministic module and package order. *)
-    finalize_logs ();
-    if stats.attempt_kind = Build_types.Full_attempt then
-      write_source_dirs root_config stats;
-    if show_progress then
-      if interactive then
-        if success then
-          print_endline
-            (Output.compiling_message ~color:colors ~step:compile_step
-               ~count:stats.compiled ~seconds:compile_seconds)
-        else
-          prerr_endline
-            (Output.compilation_failed_message ~color:colors ~step:compile_step
-               ~count:stats.compiled ~seconds:compile_seconds)
-      else (
-        (match compilation_kind with
-        | One_shot | Initial_watch | Full_watch ->
-          Printf.printf "Cleaned %d/%d\n%!" stats.cleaned stats.previous_asts
-        | Incremental_watch -> ());
-        Printf.printf "Parsed %d source files\n%!" stats.parsed;
-        if success then Printf.printf "Compiled %d modules\n%!" stats.compiled
-        else Printf.eprintf "Compiled %d modules\n%!" stats.compiled);
-    let diagnostics =
-      match compilation_kind with
-      | Incremental_watch | Full_watch -> []
-      | One_shot | Initial_watch ->
-        stats.diagnostics |> List.rev |> List.sort_uniq String.compare
-    in
-    let warning_entries =
-      Warning_state.entries (Build_types.warning_state stats)
-    in
-    warning_entries
-    |> List.iter (fun entry -> prerr_string entry.Warning_state.output);
-    if warning_entries <> [] && diagnostics = [] then prerr_newline ();
-    flush stderr;
-    if diagnostics <> [] then
-      diagnostics
-      |> List.map (fun diagnostic ->
-          if colors then Output.yellow diagnostic else diagnostic)
-      |> String.concat "\n\n" |> prerr_endline;
-    diagnostics
-  in
-  let report_completion diagnostics =
-    if interactive && show_progress then
-      let seconds =
-        if no_timing then 0. else Unix.gettimeofday () -. started_at
-      in
-      Printf.printf "\n%s\n%!"
-        (Output.finished_compilation_message ~kind:output_kind
-           ~warnings:
-             (stats.had_warnings || diagnostics <> []
-             || Warning_state.entries (Build_types.warning_state stats) <> [])
-           ~seconds)
-    else if watch && show_progress then
-      Printf.printf "Finished %scompilation\n%!"
-        (match compilation_kind with
-        | Initial_watch -> "initial "
-        | Incremental_watch -> "incremental "
-        | One_shot | Full_watch -> "")
-  in
-  let report ~success ~compile_seconds =
-    let diagnostics = prepare_report ~success ~compile_seconds in
-    if success then report_completion diagnostics
-  in
   let report_failure ~compile_seconds output =
-    report ~success:false ~compile_seconds;
+    Build_report.report report ~success:false ~compile_seconds;
     prerr_string output;
     prerr_newline ();
     cleanup_after_build ();
@@ -506,18 +412,7 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
         ^ "See Errors Above"))
   in
   let report_parse_failure output =
-    finalize_logs ();
-    (if interactive && show_progress then
-       prerr_endline
-         (Output.parsing_failed_message ~color:colors
-            ~step:(if is_rebuild then "1/2" else "2/3")
-            ~seconds:(if no_timing then 0. else stats.parse_seconds))
-     else if show_progress then
-       match compilation_kind with
-       | One_shot | Initial_watch | Full_watch ->
-         Printf.printf "Cleaned %d/%d\n%!" stats.cleaned stats.previous_asts
-       | Incremental_watch -> ());
-    prerr_endline output;
+    Build_report.report_parse_failure report ~output;
     cleanup_after_build ();
     write_build_ninja_once ();
     raise
@@ -620,7 +515,7 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
       |> List.iter (fun package_root -> Compiler_log.append package_root output);
       report_failure ~compile_seconds output
     | None, None ->
-      let diagnostics = prepare_report ~success:true ~compile_seconds in
+      let diagnostics = Build_report.prepare_success report ~compile_seconds in
       Option.iter
         (fun (prepared : Build_types.prepared) ->
           let context = prepared.compiler_context in
@@ -632,19 +527,21 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
               in
               Compiler_info.write_package package_context package.graph_config))
         (Build_types.prepared stats);
-      if compilation_kind = One_shot then report_completion diagnostics;
+      if compilation_kind = One_shot then
+        Build_report.report_completion report diagnostics;
       cleanup_after_build ();
       write_build_ninja_once ();
       release_build_lock ();
       Option.iter
         (fun command -> After_build.run ?poll:process_poll ~root command)
         after_build;
-      if compilation_kind <> One_shot then report_completion diagnostics
+      if compilation_kind <> One_shot then
+        Build_report.report_completion report diagnostics
   in
   Build_lock.with_build ~poll build_lock_root
     (fun ~release:release_build_lock ->
       Fun.protect
-        ~finally:(fun () -> run_all [cleanup_after_build; finalize_logs])
+        ~finally:(fun () -> Build_finalization.finish finalization)
         (fun () ->
           try execute ~release_build_lock with
           | Build_failure output -> report_failure ~compile_seconds:0. output

@@ -1,11 +1,7 @@
 exception Error of string
 
 let strip_path path message =
-  let prefix = path ^ ": " in
-  if String.starts_with ~prefix message then
-    String.sub message (String.length prefix)
-      (String.length message - String.length prefix)
-  else message
+  String_util.strip_prefix ~prefix:(path ^ ": ") message
 
 let with_file_error ~action path f =
   try f () with

@@ -7,8 +7,9 @@ let ensure_dir path =
      Windows volume root unchanged, so stop at that fixed point and let mkdir
      surface the native filesystem error. *)
   let is_directory path =
-    try (Unix.stat path).Unix.st_kind = Unix.S_DIR
-    with Sys_error _ | Unix.Unix_error _ -> false
+    match Unix.stat path with
+    | metadata -> metadata.Unix.st_kind = Unix.S_DIR
+    | exception Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> false
   in
   let mkdir path =
     try Unix.mkdir path 0o755
@@ -27,10 +28,18 @@ let ensure_dir path =
   loop path
 
 let read_file path =
-  let channel = open_in_bin path in
+  let descriptor = Unix.openfile path [Unix.O_RDONLY] 0 in
+  let channel = Unix.in_channel_of_descr descriptor in
   Fun.protect
     ~finally:(fun () -> close_in_noerr channel)
     (fun () -> really_input_string channel (in_channel_length channel))
+
+let digest_file path =
+  let descriptor = Unix.openfile path [Unix.O_RDONLY] 0 in
+  let channel = Unix.in_channel_of_descr descriptor in
+  Fun.protect
+    ~finally:(fun () -> close_in_noerr channel)
+    (fun () -> Digest.channel channel (-1))
 
 let with_output_channel channel write =
   try
@@ -51,6 +60,19 @@ let append_file path contents =
   in
   with_output_channel channel (fun channel -> output_string channel contents)
 
+let directory_entries path =
+  let directory = Unix.opendir path in
+  Fun.protect
+    ~finally:(fun () -> Unix.closedir directory)
+    (fun () ->
+      let rec read entries =
+        match Unix.readdir directory with
+        | "." | ".." -> read entries
+        | name -> read (name :: entries)
+        | exception End_of_file -> List.rev entries
+      in
+      read [])
+
 let write_file_atomic ?(ensure_parent = true) ?perm path contents =
   if ensure_parent then ensure_dir (Filename.dirname path);
   (* A temporary file must have a cleanup owner before a watch signal can
@@ -65,8 +87,9 @@ let write_file_atomic ?(ensure_parent = true) ?perm path contents =
     match perm with
     | Some _ as perm -> perm
     | None -> (
-      try Some (Unix.stat path).Unix.st_perm
-      with Sys_error _ | Unix.Unix_error _ -> None)
+      match Unix.stat path with
+      | metadata -> Some metadata.Unix.st_perm
+      | exception Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> None)
   in
   try
     let candidate =
@@ -95,7 +118,8 @@ let write_file_atomic ?(ensure_parent = true) ?perm path contents =
    avoiding repeated metadata probes when publishing many files. *)
 let copy_existing_file ~ensure_parent source destination =
   if ensure_parent then ensure_dir (Filename.dirname destination);
-  let input_channel = open_in_bin source in
+  let input_descriptor = Unix.openfile source [Unix.O_RDONLY] 0 in
+  let input_channel = Unix.in_channel_of_descr input_descriptor in
   Fun.protect
     ~finally:(fun () -> close_in_noerr input_channel)
     (fun () ->
@@ -110,18 +134,11 @@ let copy_existing_file ~ensure_parent source destination =
           in
           copy ()))
 
-let path_is_missing path =
-  try
-    ignore (Unix.stat path);
-    false
-  with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> true
-
 let copy_optional_existing_file ?(ensure_parent = true) source destination =
   try copy_existing_file ~ensure_parent source destination
-  with (Sys_error _ | Unix.Unix_error _) as error ->
-    if path_is_missing source then
-      try Sys.remove destination with Sys_error _ -> ()
-    else raise error
+  with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> (
+    try Unix.unlink destination
+    with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> ())
 
 let stat_opt path =
   try Some (Unix.stat path)
@@ -136,11 +153,13 @@ let files_equal first second =
     | Some second_stat ->
       first_stat.Unix.st_size = second_stat.Unix.st_size
       &&
-      let first_channel = open_in_bin first in
+      let first_descriptor = Unix.openfile first [Unix.O_RDONLY] 0 in
+      let first_channel = Unix.in_channel_of_descr first_descriptor in
       Fun.protect
         ~finally:(fun () -> close_in_noerr first_channel)
         (fun () ->
-          let second_channel = open_in_bin second in
+          let second_descriptor = Unix.openfile second [Unix.O_RDONLY] 0 in
+          let second_channel = Unix.in_channel_of_descr second_descriptor in
           Fun.protect
             ~finally:(fun () -> close_in_noerr second_channel)
             (fun () ->
@@ -180,9 +199,6 @@ let copy_file_if_different ?(ensure_parent = true) source destination =
   if changed then copy_existing_file ~ensure_parent source destination;
   changed
 
-let copy_file_if_changed ?ensure_parent source destination =
-  ignore (copy_file_if_different ?ensure_parent source destination)
-
 let modification_time path =
   stat_opt path |> Option.map (fun metadata -> metadata.Unix.st_mtime)
 
@@ -193,8 +209,8 @@ let remove_file path =
 let rec remove_tree path =
   match (Unix.lstat path).Unix.st_kind with
   | Unix.S_DIR ->
-    Sys.readdir path
-    |> Array.iter (fun name -> remove_tree (Filename.concat path name));
+    directory_entries path
+    |> List.iter (fun name -> remove_tree (Filename.concat path name));
     Unix.rmdir path
   | _ -> Unix.unlink path
   | exception Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> ()
@@ -203,14 +219,16 @@ let remove_file_best_effort path =
   try remove_file path with Sys_error _ | Unix.Unix_error _ -> ()
 
 let rec files_under directory =
-  try
-    match (Unix.lstat directory).Unix.st_kind with
-    | Unix.S_DIR ->
-      Sys.readdir directory |> Array.to_list
-      |> List.concat_map (fun name ->
-          files_under (Filename.concat directory name))
-    (* Following links during recursion could leave the requested tree or enter
-       a cycle. Follow one only to omit dangling links from the result. *)
-    | Unix.S_LNK when not (Sys.file_exists directory) -> []
+  match (Unix.lstat directory).Unix.st_kind with
+  | Unix.S_DIR ->
+    directory_entries directory
+    |> List.concat_map (fun name ->
+        files_under (Filename.concat directory name))
+  (* Following links during recursion could leave the requested tree or enter
+     a cycle. Follow one only to omit dangling links from the result. *)
+  | Unix.S_LNK -> (
+    match Unix.stat directory with
     | _ -> [directory]
-  with Sys_error _ | Unix.Unix_error _ -> []
+    | exception Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> [])
+  | _ -> [directory]
+  | exception Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> []

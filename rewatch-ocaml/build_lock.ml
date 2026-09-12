@@ -3,21 +3,10 @@ type watch = {path: string; pid: string}
 let read_owner_contents = File_util.read_file
 
 let read_owner path =
-  try Some (read_owner_contents path) with Sys_error _ -> None
-
-let read_owner_for_release path =
-  (* Lock release must distinguish a missing file from an unreadable one so a
-     transient sharing or permission error cannot be mistaken for successful
-     cleanup. stat confirms absence after the ordinary owner read fails. *)
   try Some (read_owner_contents path)
-  with Sys_error _ as read_error ->
-    let exists =
-      try
-        ignore (Unix.stat path);
-        true
-      with Unix.Unix_error (Unix.ENOENT, _, _) -> false
-    in
-    if exists then raise read_error else None
+  with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> None
+
+let read_owner_for_release = read_owner
 
 let valid_owner value =
   match Int64.of_string_opt value with

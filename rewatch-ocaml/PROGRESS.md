@@ -5,8 +5,11 @@ Reference Rust implementation: `2e532c7f6587d4201befd00ced516e267c90fe73`.
 ## Current milestone
 
 The complete applicable canonical `rewatch/tests` suite now passes with the
-experimental `rescript_ocaml.exe`. Milestone 6 remains open for native Windows
-validation, the final comment pass, and the release-quality whole-port review.
+experimental `rescript_ocaml.exe`. Milestone 6 remains open for the final
+implementation and code-quality work, performance/equivalence verification,
+documentation, review, release-quality, and comment passes. The Windows
+implementation remains in the tree, but native Windows validation and changing
+the Windows default are deferred to a separate follow-up PR.
 Stable Linux performance/resource measurement, macOS testing, and the
 non-comment maintainability cleanup are complete. The configuration,
 Rust-source validation,
@@ -2924,19 +2927,63 @@ and representation changes; after selecting the final simple substring scan,
 the affected build, unit, focused integration, configuration, command, and
 output-parity gates were rerun successfully.
 
-1. In the Windows VM, finish the watcher/lock and path audit and run the native
-   build, unit, focused, and canonical Bash suites. Address findings there and
-   finish with an x64 Windows confidence run where available.
-2. Immediately before the final release-quality gate, perform the broad comment
-   pass for ownership, concurrency, platform, and algorithmic invariants that
-   are not apparent from the code itself. Comments should start with why the
-   code or invariant is needed, provide enough context for readers who are not
-   specialists in every relevant OCaml, build-system, compiler, or
-   operating-system detail, and stand on their own rather than explaining code
-   mainly by comparison with Rust unless compatibility itself is the reason.
-3. Rerun the complete release-quality gate, perform the final two-scope
-   whole-port review, and publish the final report with the compatibility-oddity,
-   Rust-fix, and future-performance inventories.
+The quiet-host release benchmark at checkpoint `f8c0a7bc0` measured a 4.871 s
+OCaml median versus 4.594 s for Rust (1.060x), with 1,652,256 versus 1,562,792
+KiB median summed process-tree RSS (1.057x). Clean, unchanged, and edit compiler
+work again matched exactly at 1031/512/7/512/40/1, 4/2/0/2/1/0, and
+6/3/0/3/1/0. Complete file sets and byte-stable generated artifacts were
+identical. This supersedes the earlier 1.078x checkpoint as the most recent
+stable baseline; it does not by itself prove that later cleanup remains neutral,
+so the reordered performance gate will repeat the measurement after the state
+split and final implementation cleanup.
+
+The next source review identified duplicated namespace publication and several
+filesystem-policy copies. Namespace and ordinary module publication now share
+the CMI comparison/copy operation and typed partial-failure bookkeeping, so a
+later namespace artifact-copy failure cannot discard a CMI invalidation.
+Namespace-map generation and dependency-graph membership use one member
+selection policy. Source and artifact traversal catch only missing-path errors
+at the individual filesystem operation; callback, cancellation, permission, and
+I/O failures remain visible. Source discovery admits only regular files as
+compiler inputs, preventing a source-named FIFO or device from blocking the
+compiler. Recursive artifact inventory likewise treats only a missing path or
+dangling link as empty.
+
+Freshness now acquires cached or filesystem metadata separately and applies one
+`source >= artifact` policy in both paths. Capture-pipe creation and diagnostic
+prefix stripping have one implementation, and watcher event classification
+uses its existing directory predicate. Build artifact/log finalization and
+build-result presentation have dedicated owners, reducing the central build
+transaction without exposing individual mutable-state getters. Focused tests
+cover namespace CMI bookkeeping after a later copy failure, shared namespace
+membership, and exclusion of source-named FIFOs.
+
+This review-fix batch passes 34 OUnit groups, the focused integration suite,
+all 297 configuration cases, all 111 command-validation cases, interactive and
+verbose output parity, and the full `opam exec -- make test-all` repository
+gate. Reanalyze reports only the same ten reviewed false positives; removing the
+now-unused `copy_file_if_changed` wrapper prevented the shared publication
+cleanup from adding an eleventh report.
+
+1. Finish the current external-review findings and commit the verified result.
+2. Split the retained build/session state from per-attempt state currently
+   combined under `Build_types`, then run the final implementation/code-quality
+   gate.
+3. Run the stable performance and work-equivalence gate while the host is idle.
+4. Consolidate maintained documentation, without starting the broad source
+   comment pass.
+5. Wait for reviewer availability, then address final whole-port external review
+   rounds until no material finding remains.
+6. Run the final release-quality gate.
+7. Perform the broad comment pass last. Comments should start with why, provide
+   enough context for non-specialists, and stand on their own rather than using
+   Rust as the explanation unless compatibility itself is the reason. Follow it
+   with a narrow formatting/build check.
+
+Native Windows runtime verification, Windows watcher/process/lock validation,
+and switching Windows CI or packages to the OCaml executable are explicitly
+outside this PR. The implementation and cross-platform type-checking remain so
+the later Windows PR starts from the same architecture.
 
 The future filesystem-performance ideas documented above do not block
 completion of the compatibility port.

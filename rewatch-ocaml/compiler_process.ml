@@ -21,16 +21,49 @@ let parse_job ~bsc ~build_dir ~(config : Config.t) path =
 let ast_dependencies ~build_dir ast =
   (Ast_header.read (Filename.concat build_dir ast)).dependencies
 
+type compiler_artifact = Cmi | Required of string | Optional of string
+
+let publish_compiler_artifacts ~artifact_dir ~ocaml_dir ~basename artifacts =
+  let cmi_change = ref Compiler_scheduler.Cmi_change_unknown in
+  try
+    List.iter
+      (fun artifact ->
+        let extension =
+          match artifact with
+          | Cmi -> "cmi"
+          | Required name | Optional name -> name
+        in
+        let source =
+          Filename.concat artifact_dir (basename ^ "." ^ extension)
+        in
+        let destination =
+          Filename.concat ocaml_dir (basename ^ "." ^ extension)
+        in
+        match artifact with
+        | Cmi ->
+          cmi_change :=
+            if
+              File_util.copy_file_if_different ~ensure_parent:false source
+                destination
+            then Compiler_scheduler.Cmi_changed
+            else Compiler_scheduler.Cmi_unchanged
+        | Required _ ->
+          File_util.copy_existing_file ~ensure_parent:false source destination
+        | Optional _ ->
+          File_util.copy_optional_existing_file ~ensure_parent:false source
+            destination)
+      artifacts;
+    !cmi_change
+  with error ->
+    raise (Compiler_scheduler.Publication_failure (error, !cmi_change))
+
 let namespace_job ~bsc ~runtime ~build_dir ~ocaml_dir ~entry ~package_dirty
     namespace modules =
   let mlmap = Filename.concat build_dir (namespace ^ ".mlmap") in
   let contents =
     let buffer = Buffer.create 128 in
     Buffer.add_string buffer "randjbuildsystem\n";
-    modules
-    |> List.filter (fun module_ -> Some module_.Source.name <> entry)
-    |> List.filter (fun module_ ->
-        Source.is_non_exotic_module_name module_.Source.name)
+    Source.namespace_members ~entry modules
     |> List.map (fun module_ -> module_.Source.name)
     |> List.sort String.compare
     |> List.iter (fun name ->
@@ -39,7 +72,8 @@ let namespace_job ~bsc ~runtime ~build_dir ~ocaml_dir ~entry ~package_dirty
     Buffer.contents buffer
   in
   let previous_contents =
-    try Some (File_util.read_file mlmap) with Sys_error _ -> None
+    try Some (File_util.read_file mlmap)
+    with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> None
   in
   let mlmap_changed = previous_contents <> Some contents in
   if mlmap_changed then
@@ -74,17 +108,12 @@ let namespace_job ~bsc ~runtime ~build_dir ~ocaml_dir ~entry ~package_dirty
             raise
               (Compiler_scheduler.Build_failure
                  (result.Process.stderr ^ result.stdout));
-          File_util.copy_file_if_changed ~ensure_parent:false
-            (Filename.concat build_dir (namespace ^ ".cmi"))
-            (Filename.concat ocaml_dir (namespace ^ ".cmi"));
-          File_util.copy_existing_file ~ensure_parent:false
-            (Filename.concat build_dir (namespace ^ ".cmj"))
-            (Filename.concat ocaml_dir (namespace ^ ".cmj"));
-          File_util.copy_existing_file ~ensure_parent:false
-            (Filename.concat build_dir (namespace ^ ".cmt"))
-            (Filename.concat ocaml_dir (namespace ^ ".cmt"));
-          File_util.copy_existing_file ~ensure_parent:false mlmap
-            (Filename.concat ocaml_dir (namespace ^ ".mlmap")) )
+          let cmi_change =
+            publish_compiler_artifacts ~artifact_dir:build_dir ~ocaml_dir
+              ~basename:namespace
+              [Cmi; Required "cmj"; Required "cmt"; Required "mlmap"]
+          in
+          Compiler_scheduler.{stderr = result.stderr; cmi_change} )
 
 let post_build_tasks (config : Config.t) path =
   match config.js_post_build with
@@ -115,32 +144,12 @@ let publish ~build_dir ~ocaml_dir ~is_local ~(config : Config.t) ~is_interface
   in
   let basename = Source.compiler_asset_basename config path in
   let artifact_dir = Filename.concat build_dir (Filename.dirname path) in
-  let extensions =
-    if is_interface then ["cmi"; "cmti"] else ["cmi"; "cmj"; "cmt"]
-  in
   let cmi_change = ref Compiler_scheduler.Cmi_change_unknown in
   try
-    List.iter
-      (fun extension ->
-        let source =
-          Filename.concat artifact_dir (basename ^ "." ^ extension)
-        in
-        let destination =
-          Filename.concat ocaml_dir (basename ^ "." ^ extension)
-        in
-        if extension = "cmi" then
-          cmi_change :=
-            if
-              File_util.copy_file_if_different ~ensure_parent:false source
-                destination
-            then Compiler_scheduler.Cmi_changed
-            else Compiler_scheduler.Cmi_unchanged
-        else if extension = "cmt" || extension = "cmti" then
-          File_util.copy_optional_existing_file ~ensure_parent:false source
-            destination
-        else
-          File_util.copy_existing_file ~ensure_parent:false source destination)
-      extensions;
+    cmi_change :=
+      publish_compiler_artifacts ~artifact_dir ~ocaml_dir ~basename
+        (if is_interface then [Cmi; Optional "cmti"]
+         else [Cmi; Required "cmj"; Optional "cmt"]);
     let source = Filename.concat config.root path in
     let build_source = Filename.concat build_dir path in
     File_util.ensure_dir (Filename.dirname build_source);
@@ -166,5 +175,6 @@ let publish ~build_dir ~ocaml_dir ~is_local ~(config : Config.t) ~is_interface
             else File_util.remove_file (build_output ^ ".map")))
         config.package_specs;
     Compiler_scheduler.{stderr; cmi_change = !cmi_change}
-  with exn ->
-    raise (Compiler_scheduler.Publication_failure (exn, !cmi_change))
+  with
+  | Compiler_scheduler.Publication_failure _ as error -> raise error
+  | error -> raise (Compiler_scheduler.Publication_failure (error, !cmi_change))
