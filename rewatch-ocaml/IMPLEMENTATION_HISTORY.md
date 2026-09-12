@@ -1,13 +1,14 @@
 # OCaml rewatch implementation history
 
 This archive preserves the chronological implementation, review, validation,
-and benchmark record. For the maintained current status and remaining gates,
-see [`PROGRESS.md`](PROGRESS.md). For the behavior-by-behavior contract, see
+and benchmark record. It intentionally contains superseded milestones and is
+not maintained as a current status document. For the maintained overview, see
+[`README.md`](README.md); for the behavior-by-behavior contract, see
 [`PARITY_CHECKLIST.md`](PARITY_CHECKLIST.md).
 
 Reference Rust implementation: `2e532c7f6587d4201befd00ced516e267c90fe73`.
 
-## Current milestone
+## Historical milestone snapshots
 
 The complete applicable canonical `rewatch/tests` suite now passes with the
 experimental `rescript_ocaml.exe`. Milestone 6 remains open for the final

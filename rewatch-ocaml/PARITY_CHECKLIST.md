@@ -67,8 +67,9 @@ these owners and record each check below (splitting rows as needed):
 
 For every Rust check, the final inventory must name its Rust source location,
 OCaml source location, and focused or canonical test. A missing check is an open
-gap. A deliberate difference needs a rationale and regression test in
-`PROGRESS.md`; similar wording alone is not proof of equivalent behavior.
+gap. A deliberate difference needs a rationale and regression test recorded in
+this checklist or the implementation README; similar wording alone is not proof
+of equivalent behavior.
 
 | Validation area | Current evidence | Status |
 | --- | --- | --- |
