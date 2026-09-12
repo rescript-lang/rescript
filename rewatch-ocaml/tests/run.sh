@@ -279,6 +279,12 @@ printf '%s\n' \
   >"$atomic_save/rescript.json"
 printf 'let value = 1\n' >"$atomic_save/src/Main.res"
 
+missing_nested_source="$work/missing-nested-source"
+mkdir -p "$missing_nested_source"
+printf '%s\n' \
+  '{"name":"missing-nested-source","sources":"generated/nested","package-specs":{"module":"esmodule","in-source":true,"suffix":".mjs"}}' \
+  >"$missing_nested_source/rescript.json"
+
 directory_symlink="$work/directory-symlink"
 mkdir -p "$directory_symlink/shared"
 printf '%s\n' \
@@ -1122,6 +1128,27 @@ if ! wait_for_file_gone "$watch_basic/src/New.js"; then
   exit 1
 fi
 test ! -f "$watch_basic/src/New.js"
+
+# A shallow watch on the nearest existing ancestor must advance one directory
+# at a time until a configured nested source root exists. The slash in the JSON
+# path also exercises native separator normalization on Windows.
+"$port" watch "$missing_nested_source" \
+  >"$missing_nested_source/watch.log" 2>&1 &
+missing_nested_source_pid=$!
+background_pids="$background_pids $missing_nested_source_pid"
+wait_for_initial_build "$missing_nested_source/watch.log"
+mkdir "$missing_nested_source/generated"
+sleep 1
+mkdir "$missing_nested_source/generated/nested"
+sleep 1
+printf 'let value = 1\n' \
+  >"$missing_nested_source/generated/nested/Main.res"
+if ! wait_for_file "$missing_nested_source/generated/nested/Main.mjs"; then
+  cat "$missing_nested_source/watch.log" >&2
+  exit 1
+fi
+kill -TERM "$missing_nested_source_pid"
+wait "$missing_nested_source_pid" 2>/dev/null || true
 
 # A successfully published interface must invalidate its dependents even when
 # the corresponding implementation fails and aborts the rest of that build.
