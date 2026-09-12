@@ -35,6 +35,7 @@
   platform_common
   platform
   signal_restore
+  traversal_coverage
   process
   source
   graph

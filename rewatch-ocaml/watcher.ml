@@ -242,12 +242,19 @@ let snapshot ?(on_source_symlink = fun _ -> ()) digest_cache scope =
   in
   let rec walk source recursive dir acc =
     match Platform.canonicalize_path dir with
-    | canonical ->
-      let previous = Hashtbl.find_opt visited_directories canonical in
-      if previous = Some true || (previous = Some false && not recursive) then
-        acc
-      else (
-        Hashtbl.replace visited_directories canonical recursive;
+    | canonical -> (
+      let admission =
+        Traversal_coverage.admit visited_directories canonical ~recursive
+      in
+      match admission with
+      | Traversal_coverage.Skip -> acc
+      | Traversal_coverage.Visit_current
+      | Traversal_coverage.Visit_current_and_descendants
+      | Traversal_coverage.Visit_descendants ->
+        let visit_current = Traversal_coverage.visits_current admission in
+        let visit_descendants =
+          Traversal_coverage.visits_descendants admission
+        in
         let entries =
           try File_util.directory_entries dir
           with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> []
@@ -260,7 +267,7 @@ let snapshot ?(on_source_symlink = fun _ -> ()) digest_cache scope =
               match stat.Unix.st_kind with
               | Unix.S_DIR ->
                 if
-                  (not recursive)
+                  (not visit_descendants)
                   || Native_watcher.is_compiler_artifact_directory path
                 then acc
                 else walk source true path acc
@@ -269,7 +276,7 @@ let snapshot ?(on_source_symlink = fun _ -> ()) digest_cache scope =
                   Option.is_some (Source.source_kind path)
                   && matches_source source path
                 in
-                (if is_source_name then
+                (if visit_current && is_source_name then
                    match Unix.readlink path with
                    | target ->
                      let target =
@@ -292,21 +299,24 @@ let snapshot ?(on_source_symlink = fun _ -> ()) digest_cache scope =
                 match Unix.stat path with
                 | target -> (
                   match target.Unix.st_kind with
-                  | Unix.S_DIR when recursive -> walk source true path acc
-                  | Unix.S_REG when is_source_name -> add_file path target acc
+                  | Unix.S_DIR when visit_descendants ->
+                    walk source true path acc
+                  | Unix.S_REG when visit_current && is_source_name ->
+                    add_file path target acc
                   | _ -> acc)
                 | exception Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _)
                   ->
                   acc)
               | Unix.S_REG
-                when Option.is_some (Source.source_kind path)
+                when visit_current
+                     && Option.is_some (Source.source_kind path)
                      && matches_source source path ->
                 add_file path stat acc
               | _ -> acc)
             | exception Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) ->
               acc)
-          acc entries)
-    | exception Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> acc
+          acc entries
+      | exception Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> acc)
   in
   let add_control_files acc root =
     control_file_names

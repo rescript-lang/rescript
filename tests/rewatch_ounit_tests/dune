@@ -33,6 +33,7 @@
   source_tests
   test_support
   toolchain_tests
+  traversal_coverage_tests
   unit_tests
   warning_state_tests
   watcher_tests)

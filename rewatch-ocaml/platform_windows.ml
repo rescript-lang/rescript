@@ -203,6 +203,8 @@ let parse_tasklist_csv_line line =
   in
   if length = 0 then None else parse_field [] 0
 
+type tasklist_probe = Process_found | Process_absent | Malformed_output
+
 let tasklist_probe ~pid output =
   let lines =
     output |> String.trim |> String.split_on_char '\n' |> List.map String.trim
@@ -214,19 +216,22 @@ let tasklist_probe ~pid output =
       Option.is_some (int_of_string_opt row_pid)
     | Some _ | None -> false
   in
-  if lines = [] || not (List.for_all valid_row rows) then None
-  else
-    Some
-      (List.exists
-         (function
-           | Some [image; row_pid; _session; _session_number; _memory] ->
-             String.starts_with ~prefix:"rescript"
-               (String.lowercase_ascii image)
-             && row_pid = string_of_int pid
-           | Some _ | None -> false)
-         rows)
+  if lines = [] || not (List.for_all valid_row rows) then Malformed_output
+  else if
+    List.exists
+      (function
+        | Some [image; row_pid; _session; _session_number; _memory] ->
+          String.starts_with ~prefix:"rescript" (String.lowercase_ascii image)
+          && row_pid = string_of_int pid
+        | Some _ | None -> false)
+      rows
+  then Process_found
+  else Process_absent
 
-let tasklist_has_process ~pid output = tasklist_probe ~pid output = Some true
+let tasklist_has_process ~pid output =
+  match tasklist_probe ~pid output with
+  | Process_found -> true
+  | Process_absent | Malformed_output -> false
 
 let probe_process ~run pid =
   let tasklist =
@@ -236,8 +241,10 @@ let probe_process ~run pid =
     | None -> "tasklist.exe"
   in
   match run tasklist ["/FO"; "CSV"; "/NH"] with
-  | Some (Unix.WEXITED 0, stdout) ->
-    Option.value (tasklist_probe ~pid stdout) ~default:true
+  | Some (Unix.WEXITED 0, stdout) -> (
+    match tasklist_probe ~pid stdout with
+    | Process_found | Malformed_output -> true
+    | Process_absent -> false)
   | Some _ | None -> true
 
 let process_is_active ~run value =
