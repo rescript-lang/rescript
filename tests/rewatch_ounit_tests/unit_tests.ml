@@ -390,7 +390,32 @@ let process_dependency_graph_tests _context =
   check
     (!drained_failures = 2 && deterministic_failure = Some "a")
     "dependency scheduler drains active work and reports errors \
-     deterministically"
+     deterministically";
+  let started = ref [] in
+  let continued_independent_work =
+    try
+      Process.run_dependency_graph ~max_jobs:1
+        [
+          graph_work "a" [];
+          graph_work "b" [];
+          graph_work "c" ["a"];
+        ]
+        ~on_failure:(fun _ -> Process.Continue_independent_work)
+        ~next:(fun key result ->
+          match result with
+          | None ->
+            started := key :: !started;
+            Some (Process.task (process_job ["--process-result"; ""; ""; "0"]))
+          | Some _ when key = "a" -> raise (Failure key)
+          | Some _ -> None);
+      false
+    with Failure key when key = "a" -> true | _ -> false
+  in
+  check
+    (continued_independent_work && List.mem "b" !started
+    && not (List.mem "c" !started))
+    "dependency scheduler can finish independent work after a failure without \
+     starting its dependents"
 
 let platform_tests _context =
   let test_executable = test_executable () in

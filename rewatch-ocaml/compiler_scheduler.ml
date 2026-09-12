@@ -316,10 +316,12 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
     try
       Process.run_dependency_graph ?poll
         works
-        (* A module failure stops new work while subprocesses that already own
-           resources finish, matching the command-level failure policy. *)
+        (* Rust's parallel scheduler may already have independent work in
+           flight when a module fails. Finish all ready, independent work here
+           so the same diagnostics do not depend on the host's worker count;
+           dependents of the failed module remain blocked. *)
         ~on_failure:(function
-          | Module_failed -> Process.Stop_new_work
+          | Module_failed -> Process.Continue_independent_work
           | _ -> Process.Abort_immediately)
         ~next:(fun item result ->
           match item with
