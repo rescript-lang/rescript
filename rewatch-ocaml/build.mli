@@ -1,8 +1,3 @@
-val clean :
-  poll:(unit -> unit) -> verbosity:int -> folder:string -> prod:bool -> unit
-
-val compiler_args : string -> string
-
 val run :
   poll:(unit -> unit) ->
   verbosity:int ->

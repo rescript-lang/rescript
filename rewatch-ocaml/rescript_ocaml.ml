@@ -66,9 +66,9 @@ let run_command ~poll = function
     Format.format_stdin ~poll extension
   | Cli.Format (Cli.Format_files {check; paths}) ->
     Format.run_files ~poll ~check paths
-  | Cli.Compiler_args path -> print_endline (Build.compiler_args path)
+  | Cli.Compiler_args path -> print_endline (Compiler_args_command.run path)
   | Cli.Clean {verbosity; folder; prod} ->
-    Build.clean ~poll ~verbosity ~folder ~prod
+    Clean.run ~poll ~verbosity ~folder ~prod
 
 let run = function
   | Cli.Watch _ as command -> run_command ~poll:(fun () -> ()) command

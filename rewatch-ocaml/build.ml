@@ -52,59 +52,6 @@ let project_root folder =
            the specified project folder does not exist: " ^ folder));
   Platform.canonicalize_path folder
 
-let clean ~poll ~verbosity ~folder ~prod =
-  let root = project_root folder in
-  let show_progress = verbosity >= 0 in
-  let interactive = Unix.isatty Unix.stdout && Unix.isatty Unix.stderr in
-  let colors = Output.colors_enabled ~interactive in
-  let print_cleaning ~step target =
-    if interactive && show_progress then
-      Printf.printf "%s%!"
-        (Output.cleaning_command_message ~color:colors ~step target)
-  in
-  let print_cleaned ~step ~target ~started_at =
-    if interactive && show_progress then
-      print_endline
-        (Output.cleaned_command_message ~color:colors ~step ~target
-           ~seconds:(Unix.gettimeofday () -. started_at))
-  in
-  Build_lock.with_build ~poll (Project_context.workspace_lock_root root)
-    (fun ~release:_ ->
-      poll ();
-      let root_config = Config.load_root root in
-      let resolution = Package_resolution.create root_config in
-      let visited = Hashtbl.create 32 in
-      let cleanup =
-        Clean.prepare ~root_config ~resolution ~seen:visited ~prod
-          ~is_local:true
-      in
-      let compiler_assets = "compiler assets" in
-      let compiler_started = Unix.gettimeofday () in
-      Clean.remove_compiler_assets cleanup ~on_clean:(fun name ->
-          if show_progress then
-            if interactive then print_cleaning ~step:"1/2" name
-            else Printf.printf "Cleaning %s\n%!" name);
-      print_cleaned ~step:"1/2" ~target:compiler_assets
-        ~started_at:compiler_started;
-      poll ();
-      let suffixes =
-        root_config.package_specs
-        |> List.filter_map (fun (spec : Config.package_spec) ->
-            if spec.in_source then
-              Some (Config.package_spec_suffix root_config spec)
-            else None)
-        |> String.concat ", "
-      in
-      let generated_files = suffixes ^ " files" in
-      let generated_started = Unix.gettimeofday () in
-      print_cleaning ~step:"2/2" generated_files;
-      Clean.remove_generated_outputs cleanup;
-      poll ();
-      print_cleaned ~step:"2/2" ~target:generated_files
-        ~started_at:generated_started)
-
-let compiler_args = Compiler_args_command.run
-
 let run_scheduled_modules (attempt : Build_attempt.t)
     (prepared : Build_session.prepared) ~compile_step ~namespace_count =
   Compiler_scheduler.run ~poll:attempt.process_poll
