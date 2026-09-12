@@ -53,6 +53,8 @@
   build_artifacts
   build_freshness
   build_types
+  build_session
+  build_attempt
   build_finalization
   build_report
   build_preparation

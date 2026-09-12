@@ -30,7 +30,7 @@ val run :
   warn_error:string option ->
   filter:Source_filter.t option ->
   watch:bool ->
-  stats:Build_types.t ->
+  attempt:Build_attempt.t ->
   parse_step:string ->
   on_cleanup:(float -> unit) ->
   cycle_info option

@@ -1,7 +1,7 @@
 let run ~(package : Build_types.graph_package)
     ~(prepared : Build_types.prepared)
-    ~(prepared_package : Build_types.prepared_package) ~(stats : Build_types.t)
-    ~removed_module_names =
+    ~(prepared_package : Build_types.prepared_package)
+    ~(attempt : Build_attempt.t) ~removed_module_names =
   let root = package.graph_root in
   let is_local = package.graph_is_local in
   let config = package.graph_compile_config in
@@ -13,11 +13,11 @@ let run ~(package : Build_types.graph_package)
     prepared_package.parse_paths
     |> List.filter (fun path ->
         let forced =
-          Hashtbl.mem stats.preliminary_parses (Filename.concat root path)
+          Hashtbl.mem attempt.preliminary_parses (Filename.concat root path)
         in
-        match stats.attempt_kind with
-        | Build_types.Retained_attempt -> forced
-        | Build_types.Full_attempt ->
+        match attempt.freshness_mode with
+        | Build_attempt.Reuse_freshness -> forced
+        | Build_attempt.Initialize_freshness ->
           Hashtbl.mem removed_module_names (Source.module_name path)
           || forced
           || Build_freshness.source_is_not_older_than_ast compile_assets ~root
@@ -30,19 +30,20 @@ let run ~(package : Build_types.graph_package)
   let parse_paths_to_run =
     dirty_parse_paths
     |> List.filter (fun path ->
-        not (Hashtbl.mem stats.preliminary_parses (Filename.concat root path)))
+        not (Hashtbl.mem attempt.preliminary_parses (Filename.concat root path)))
   in
   let parsed =
     List.map2
       (fun path result -> (path, Build_types.preliminary_parse result))
       parse_paths_to_run
-      (Process.run_parallel_map ?poll:stats.process_poll parse_paths_to_run
+      (Process.run_parallel_map ?poll:attempt.process_poll parse_paths_to_run
          ~job:
            (Compiler_process.parse_job ~bsc:prepared.compiler_context.bsc_path
               ~build_dir ~config))
     @ (dirty_parse_paths
       |> List.filter_map (fun path ->
-          Hashtbl.find_opt stats.preliminary_parses (Filename.concat root path)
+          Hashtbl.find_opt attempt.preliminary_parses
+            (Filename.concat root path)
           |> Option.map (fun result -> (path, result))))
   in
   let warning_asts = ref [] in
@@ -56,10 +57,10 @@ let run ~(package : Build_types.graph_package)
           else Compiler_process.retain_critical_external_warnings stderr
         in
         if stderr <> "" then (
-          stats.had_warnings <- true;
+          attempt.had_warnings <- true;
           Compiler_log.append root stderr;
-          stats.parse_messages <-
-            Build_types.Parse_warning stderr :: stats.parse_messages);
+          attempt.parse_messages <-
+            Build_types.Parse_warning stderr :: attempt.parse_messages);
         let ast = Source.ast_path path in
         if is_local && stderr <> "" then
           warning_asts := (absolute_path, ast) :: !warning_asts;
@@ -75,24 +76,24 @@ let run ~(package : Build_types.graph_package)
           (Filename.concat config.root path)
           (Filename.concat ocaml_dir (Filename.basename path));
         if is_local && stderr <> "" then
-          Build_types.mark_parse_pending stats pending_path
-        else Build_types.clear_parse_pending stats pending_path
+          Build_session.mark_parse_pending attempt.session pending_path
+        else Build_session.clear_parse_pending attempt.session pending_path
       in
       match result with
       | Build_types.Parse_failed {stdout; stderr} ->
-        Build_types.mark_parse_pending stats pending_path;
+        Build_session.mark_parse_pending attempt.session pending_path;
         let output =
           Printf.sprintf "Error in %s:\n%s%s" config.name stderr stdout
         in
         Compiler_log.append root output;
-        stats.parse_messages <-
-          Build_types.Parse_error output :: stats.parse_messages
+        attempt.parse_messages <-
+          Build_types.Parse_error output :: attempt.parse_messages
       | Build_types.Parsed_successfully {stderr} ->
         publish_successful_parse stderr
       | Build_types.Use_existing_ast -> publish_successful_parse "")
     parsed;
   if !warning_asts <> [] then
-    Build_types.register_cleanup stats (fun () ->
+    Build_attempt.register_cleanup attempt (fun () ->
         List.iter
           (fun (source, ast) ->
             let path = Filename.concat ocaml_dir (Filename.basename ast) in

@@ -4,6 +4,7 @@ let () =
   run_test_tt_main
     ("rewatch"
     >::: [
+           Build_attempt_tests.tests;
            Build_artifacts_tests.tests;
            Build_state_tests.tests;
            Clean_tests.tests;

@@ -13,7 +13,7 @@ val create :
   colors:bool ->
   no_timing:bool ->
   compilation_kind:compilation_kind ->
-  stats:Build_types.t ->
+  attempt:Build_attempt.t ->
   finalize_logs:(unit -> unit) ->
   write_metadata:(unit -> unit) ->
   t

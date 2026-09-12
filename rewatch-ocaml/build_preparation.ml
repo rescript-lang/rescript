@@ -209,11 +209,11 @@ let find_cycle modules namespace_maps build_state =
     Some {cycle; blocked = List.map name blocked_nodes; nodes_by_key}
 
 let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
-    ~(stats : Build_types.t) ~parse_step ~on_cleanup =
+    ~(attempt : Build_attempt.t) ~parse_step ~on_cleanup =
   let bsc = bsc_path () in
   let graph_packages =
     Package_graph.discover ~root_config ~prod ~features ~warn_error ~filter
-      ~stats
+      ~attempt
   in
   validate_visible_namespaces ~root_config graph_packages;
   let runtime = runtime_path root_config.root in
@@ -256,7 +256,7 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
              ~is_local:package.graph_is_local package.graph_compile_config
              package.graph_modules);
         Compiler_info.clean_package package.graph_config;
-        stats.compiler_cleaned <- true);
+        attempt.compiler_cleaned <- true);
       File_util.ensure_dir package.graph_build_dir;
       File_util.ensure_dir package.graph_ocaml_dir)
     graph_packages;
@@ -279,13 +279,14 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
           ~is_local:package.graph_is_local package.graph_compile_config
           package.graph_modules
       in
-      Build_types.set_cleanup_result stats package.graph_root cleanup;
-      Build_types.defer_artifact_cleanup stats cleanup.deferred_artifacts;
-      stats.cleaned <- stats.cleaned + List.length cleanup.removed_modules;
-      stats.previous_asts <- stats.previous_asts + cleanup.previous_ast_count;
+      Build_attempt.set_cleanup_result attempt package.graph_root cleanup;
+      Build_attempt.defer_artifact_cleanup attempt cleanup.deferred_artifacts;
+      attempt.cleaned <- attempt.cleaned + List.length cleanup.removed_modules;
+      attempt.previous_asts <-
+        attempt.previous_asts + cleanup.previous_ast_count;
       List.iter
         (fun module_name ->
-          Hashtbl.replace stats.removed_modules module_name ())
+          Hashtbl.replace attempt.removed_modules module_name ())
         cleanup.removed_modules)
     graph_packages;
   on_cleanup (Unix.gettimeofday () -. cleanup_started);
@@ -307,7 +308,7 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
                     ~source_mtimes:package.graph_source_mtimes path)
             in
             if dirty_paths <> [] then
-              Output.debug ~verbosity:stats.verbosity
+              Output.debug ~verbosity:attempt.verbosity
                 ("Generating AST for module: "
                 ^ Source.compiler_basename package.graph_compile_config
                     module_.Source.name);
@@ -315,12 +316,12 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
             List.map (fun path -> (package, path, group)) dirty_paths))
   in
   let parse_completed =
-    Output.Progress.start_grouped stats.progress ~step:parse_step ~symbol:"🧱 "
+    Output.Progress.start_grouped attempt.progress ~step:parse_step ~symbol:"🧱 "
       ~label:"Parsing"
       (List.map (fun (_, _, group) -> group) parse_entries)
   in
   let parse_results =
-    Process.run_parallel_map ?poll:stats.process_poll
+    Process.run_parallel_map ?poll:attempt.process_poll
       ~on_complete:parse_completed parse_entries ~job:(fun (package, path, _) ->
         Compiler_process.parse_job ~bsc ~build_dir:package.graph_build_dir
           ~config:package.graph_compile_config path)
@@ -330,7 +331,7 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
     (fun (package, path, _) result ->
       let absolute_path = Filename.concat package.graph_root path in
       let outcome = Build_types.preliminary_parse result in
-      Hashtbl.replace stats.preliminary_parses absolute_path outcome;
+      Hashtbl.replace attempt.preliminary_parses absolute_path outcome;
       match outcome with
       | Build_types.Parse_failed _ ->
         Hashtbl.replace failed_parse_paths absolute_path ()
@@ -375,8 +376,8 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
              let implementation =
                Filename.concat package.graph_root module_.Source.implementation
              in
-             if not (Hashtbl.mem stats.preliminary_parses implementation) then
-               Hashtbl.replace stats.preliminary_parses implementation
+             if not (Hashtbl.mem attempt.preliminary_parses implementation) then
+               Hashtbl.replace attempt.preliminary_parses implementation
                  Build_types.Use_existing_ast);
           nodes :=
             {
@@ -414,7 +415,7 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
              (Filename.concat node.package_root node.source_path)))
     nodes;
   Hashtbl.iter
-    (fun key node -> Build_types.add_global_module stats key node)
+    (fun key node -> Build_session.add_global_module attempt.session key node)
     by_key;
   let namespace_maps =
     graph_packages
@@ -449,14 +450,15 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
   in
   List.iter
     (fun (namespace_map : Build_types.namespace_map) ->
-      Build_types.add_namespace_map stats namespace_map)
+      Build_session.add_namespace_map attempt.session namespace_map)
     namespace_maps;
   let source_graph_nodes =
     List.map
       (fun (node : Build_types.global_module) ->
         ( node,
           resolved_dependencies ~find_module:(Hashtbl.find_opt by_key)
-            ~find_namespace_maps:(Build_types.find_namespace_maps stats)
+            ~find_namespace_maps:
+              (Build_session.find_namespace_maps attempt.session)
             node ))
       nodes
   in
@@ -531,9 +533,9 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
             parse_paths;
           })
     graph_packages;
-  Build_types.install_prepared stats
+  Build_session.install_prepared attempt.session
     {compiler_context; compile_assets; build_state; packages};
   let cycle = find_cycle nodes namespace_maps build_state in
-  Build_types.set_graph_has_cycle stats (Option.is_some cycle);
-  stats.parse_seconds <- Unix.gettimeofday () -. parse_started;
+  Build_session.set_graph_has_cycle attempt.session (Option.is_some cycle);
+  attempt.parse_seconds <- Unix.gettimeofday () -. parse_started;
   cycle

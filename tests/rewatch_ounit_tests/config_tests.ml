@@ -151,15 +151,15 @@ let gentype_discovery_tests =
       write_file path
         {|{"name":"gentype-subdirs","sources":{"dir":"src","subdirs":true},"gentypeconfig":{}}|};
       let config = Config.load path in
-      let stats =
-        Build_types.create ~warning_state:(Warning_state.create ())
+      let attempt =
+        Build_attempt.create_full ~warning_state:(Warning_state.create ())
           ~process_poll:None
           ~progress:(Output.Progress.create ~enabled:false ~color:false)
           ~verbosity:0
       in
       let package =
         Package_graph.discover ~root_config:config ~prod:false ~features:None
-          ~warn_error:None ~filter:None ~stats
+          ~warn_error:None ~filter:None ~attempt
         |> List.hd
       in
       check
