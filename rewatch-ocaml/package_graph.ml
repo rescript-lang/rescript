@@ -65,7 +65,7 @@ let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
       Hashtbl.add packages_by_root package.config.root package)
     discovered.packages;
   let visited = Hashtbl.create 32 in
-  let graph_packages = ref [] in
+  let package_plans = ref [] in
   let rec visit root =
     if not (Hashtbl.mem visited root) then (
       Hashtbl.add visited root ();
@@ -85,11 +85,11 @@ let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
         | None -> config
         | Some value -> {config with warning_flags = ["-warn-error"; value]}
       in
-      let dependency_directories =
+      let dependencies =
         List.map
           (fun (resolved : Package_traversal.resolved) ->
             let request = resolved.request in
-            Build_types.
+            Package_plan.
               {
                 declaration = request.declaration;
                 directory = resolved.dependency.directory;
@@ -98,9 +98,9 @@ let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
           discovered_package.dependencies
       in
       List.iter
-        (fun (dependency : Build_types.graph_dependency) ->
+        (fun (dependency : Package_plan.dependency) ->
           visit dependency.directory)
-        dependency_directories;
+        dependencies;
       let discovery =
         Output.debug ~verbosity:attempt.verbosity
           ("Building source file-tree for package: " ^ config.name);
@@ -144,29 +144,30 @@ let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
       List.iter
         (fun (path, modified) -> Hashtbl.replace source_mtimes path modified)
         discovery.source_mtimes;
-      let package : Build_types.graph_package =
-        {
-          graph_root = root;
-          graph_build_owner = (if owns_outputs then root else root_config.root);
-          graph_is_local = is_local;
-          graph_config = config;
-          graph_compile_config = compile_config;
-          graph_build_dir = build_dir;
-          graph_ocaml_dir = ocaml_dir;
-          graph_dependency_directories = dependency_directories;
-          graph_gentype_dependency_args =
-            Compiler_args.gentype_dependency_args_from_paths compile_config
-              (List.map
-                 (fun (dependency : Build_types.graph_dependency) ->
-                   (dependency.declaration, dependency.directory))
-                 dependency_directories);
-          graph_modules = modules;
-          graph_source_mtimes = source_mtimes;
-          graph_source_files = discovery.inventory_files;
-          graph_present_source_files = discovery.present_files;
-        }
+      let package : Package_plan.t =
+        Package_plan.
+          {
+            root;
+            build_owner = (if owns_outputs then root else root_config.root);
+            is_local;
+            config;
+            compile_config;
+            build_dir;
+            ocaml_dir;
+            dependencies;
+            gentype_dependency_args =
+              Compiler_args.gentype_dependency_args_from_paths compile_config
+                (List.map
+                   (fun (dependency : Package_plan.dependency) ->
+                     (dependency.declaration, dependency.directory))
+                   dependencies);
+            modules;
+            source_mtimes;
+            source_files = discovery.inventory_files;
+            present_source_files = discovery.present_files;
+          }
       in
-      Build_session.add_graph_package attempt.session package;
+      Build_session.add_package_plan attempt.session package;
       List.iter
         (fun module_ ->
           module_.Source.implementation
@@ -175,10 +176,10 @@ let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
               let absolute_path = Filename.concat root relative_path in
               Build_session.add_source_reference attempt.session
                 (Platform.normalize_path_for_comparison absolute_path)
-                Build_types.
+                Build_session.
                   {package_root = root; module_; relative_path; absolute_path}))
         modules;
-      graph_packages := package :: !graph_packages)
+      package_plans := package :: !package_plans)
   in
   visit root_config.root;
-  !graph_packages
+  !package_plans

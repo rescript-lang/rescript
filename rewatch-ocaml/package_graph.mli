@@ -7,4 +7,4 @@ val discover :
   warn_error:string option ->
   filter:Source_filter.t option ->
   attempt:Build_attempt.t ->
-  Build_types.graph_package list
+  Package_plan.t list

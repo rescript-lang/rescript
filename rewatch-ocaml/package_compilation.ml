@@ -1,16 +1,14 @@
-let run ~(package : Build_types.graph_package)
-    ~(prepared : Build_types.prepared)
-    ~(prepared_package : Build_types.prepared_package)
-    ~(attempt : Build_attempt.t) ~watch ~removed_module_names
-    ~parse_dirty_modules =
-  let root = package.graph_root in
-  let is_local = package.graph_is_local in
-  let config = package.graph_compile_config in
+let run ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
+    ~(prepared_package : Package_plan.compilation) ~(attempt : Build_attempt.t)
+    ~watch ~removed_module_names ~parse_dirty_modules =
+  let root = package.root in
+  let is_local = package.is_local in
+  let config = package.compile_config in
   let build_state = prepared.build_state in
   let compile_assets = prepared.compile_assets in
-  let build_dir = package.graph_build_dir in
-  let ocaml_dir = package.graph_ocaml_dir in
-  let modules = package.graph_modules in
+  let build_dir = package.build_dir in
+  let ocaml_dir = package.ocaml_dir in
+  let modules = package.modules in
   let cleanup =
     match Build_attempt.find_cleanup_result attempt root with
     | Some result -> result
@@ -73,7 +71,7 @@ let run ~(package : Build_types.graph_package)
         state.compile_dirty <-
           state.compile_dirty || module_is_dirty module_ state)
       modules;
-  if not (Build_types.has_parse_error attempt.parse_messages) then (
+  if not (Build_attempt.has_parse_error attempt.parse_messages) then (
     attempt.parsed <- attempt.parsed + Hashtbl.length parse_dirty_modules;
     let compile_warning_paths = Hashtbl.create 8 in
     let prepare_outputs module_ =
@@ -149,7 +147,7 @@ let run ~(package : Build_types.graph_package)
     |> Option.iter (fun compiler_name ->
         let namespace_map =
           Build_session.find_namespace_map attempt.session
-            (Build_types.namespace_map_key root)
+            (Module_graph.namespace_map_key root)
         in
         let namespace_state =
           Build_state.find_exn build_state namespace_map.key

@@ -1,7 +1,7 @@
 val run :
-  package:Build_types.graph_package ->
-  prepared:Build_types.prepared ->
-  prepared_package:Build_types.prepared_package ->
+  package:Package_plan.t ->
+  prepared:Build_session.prepared ->
+  prepared_package:Package_plan.compilation ->
   attempt:Build_attempt.t ->
   watch:bool ->
   removed_module_names:(string, unit) Hashtbl.t ->

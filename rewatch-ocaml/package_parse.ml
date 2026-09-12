@@ -1,14 +1,13 @@
-let run ~(package : Build_types.graph_package)
-    ~(prepared : Build_types.prepared)
-    ~(prepared_package : Build_types.prepared_package)
-    ~(attempt : Build_attempt.t) ~removed_module_names =
-  let root = package.graph_root in
-  let is_local = package.graph_is_local in
-  let config = package.graph_compile_config in
+let run ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
+    ~(prepared_package : Package_plan.compilation) ~(attempt : Build_attempt.t)
+    ~removed_module_names =
+  let root = package.root in
+  let is_local = package.is_local in
+  let config = package.compile_config in
   let build_state = prepared.build_state in
   let compile_assets = prepared.compile_assets in
-  let build_dir = package.graph_build_dir in
-  let ocaml_dir = package.graph_ocaml_dir in
+  let build_dir = package.build_dir in
+  let ocaml_dir = package.ocaml_dir in
   let dirty_parse_paths =
     prepared_package.parse_paths
     |> List.filter (fun path ->
@@ -21,7 +20,7 @@ let run ~(package : Build_types.graph_package)
           Hashtbl.mem removed_module_names (Source.module_name path)
           || forced
           || Build_freshness.source_is_not_older_than_ast compile_assets ~root
-               ~source_mtimes:package.graph_source_mtimes path)
+               ~source_mtimes:package.source_mtimes path)
   in
   let dirty_parse_path_set = Hashtbl.create (List.length dirty_parse_paths) in
   List.iter
@@ -32,7 +31,7 @@ let run ~(package : Build_types.graph_package)
       Filename.concat root path |> Platform.normalize_path_for_comparison
       |> Build_session.mark_parse_pending attempt.session)
     dirty_parse_paths;
-  let dirty_modules = Hashtbl.create (List.length package.graph_modules) in
+  let dirty_modules = Hashtbl.create (List.length package.modules) in
   List.iter
     (fun module_ ->
       let paths =
@@ -42,7 +41,7 @@ let run ~(package : Build_types.graph_package)
         Hashtbl.replace dirty_modules module_.Source.name ();
         let key = Source.compiler_basename config module_.Source.name in
         (Build_state.find_exn build_state key).compile_dirty <- true))
-    package.graph_modules;
+    package.modules;
   let parse_paths_to_run =
     dirty_parse_paths
     |> List.filter (fun path ->
@@ -50,7 +49,7 @@ let run ~(package : Build_types.graph_package)
   in
   let parsed =
     List.map2
-      (fun path result -> (path, Build_types.preliminary_parse result))
+      (fun path result -> (path, Build_attempt.preliminary_parse result))
       parse_paths_to_run
       (Process.run_parallel_map ?poll:attempt.process_poll parse_paths_to_run
          ~job:
@@ -75,7 +74,7 @@ let run ~(package : Build_types.graph_package)
           attempt.had_warnings <- true;
           Compiler_log.append root stderr;
           attempt.parse_messages <-
-            Build_types.Parse_warning stderr :: attempt.parse_messages);
+            Build_attempt.Parse_warning stderr :: attempt.parse_messages);
         let ast = Source.ast_path path in
         if is_local && stderr <> "" then
           Build_attempt.register_cleanup attempt (fun () ->
@@ -99,16 +98,16 @@ let run ~(package : Build_types.graph_package)
         else Build_session.clear_parse_pending attempt.session pending_path
       in
       match result with
-      | Build_types.Parse_failed {stdout; stderr} ->
+      | Build_attempt.Parse_failed {stdout; stderr} ->
         Build_session.mark_parse_pending attempt.session pending_path;
         let output =
           Printf.sprintf "Error in %s:\n%s%s" config.name stderr stdout
         in
         Compiler_log.append root output;
         attempt.parse_messages <-
-          Build_types.Parse_error output :: attempt.parse_messages
-      | Build_types.Parsed_successfully {stderr} ->
+          Build_attempt.Parse_error output :: attempt.parse_messages
+      | Build_attempt.Parsed_successfully {stderr} ->
         publish_successful_parse stderr
-      | Build_types.Use_existing_ast -> publish_successful_parse "")
+      | Build_attempt.Use_existing_ast -> publish_successful_parse "")
     parsed;
   dirty_modules

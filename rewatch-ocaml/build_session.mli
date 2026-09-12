@@ -1,26 +1,40 @@
 type t
 
+type prepared = {
+  compiler_context: Compiler_info.context;
+  compile_assets: Compile_assets.t;
+  build_state: Build_state.t;
+  packages: (string, Package_plan.compilation) Hashtbl.t;
+}
+
+type source_reference = {
+  package_root: string;
+  module_: Source.module_;
+  relative_path: string;
+  absolute_path: string;
+}
+
 val create : warning_state:Warning_state.t -> t
 val is_ready : t -> bool
-val prepared : t -> Build_types.prepared option
-val install_prepared : t -> Build_types.prepared -> unit
+val prepared : t -> prepared option
+val install_prepared : t -> prepared -> unit
 val mark_freshness_initialized : t -> unit
-val find_global_module : t -> string -> Build_types.global_module option
-val add_global_module : t -> string -> Build_types.global_module -> unit
-val global_module_values : t -> Build_types.global_module list
-val find_namespace_maps : t -> string -> Build_types.namespace_map list option
-val add_namespace_map : t -> Build_types.namespace_map -> unit
-val find_namespace_map : t -> string -> Build_types.namespace_map
-val namespace_map_values : t -> Build_types.namespace_map list
+val find_global_module : t -> string -> Module_graph.module_node option
+val add_global_module : t -> string -> Module_graph.module_node -> unit
+val global_module_values : t -> Module_graph.module_node list
+val find_namespace_maps : t -> string -> Module_graph.namespace_map list option
+val add_namespace_map : t -> Module_graph.namespace_map -> unit
+val find_namespace_map : t -> string -> Module_graph.namespace_map
+val namespace_map_values : t -> Module_graph.namespace_map list
 val graph_has_cycle : t -> bool
 val set_graph_has_cycle : t -> bool -> unit
-val add_graph_package : t -> Build_types.graph_package -> unit
-val find_graph_package : t -> string -> Build_types.graph_package option
-val iter_graph_packages :
-  t -> (string -> Build_types.graph_package -> unit) -> unit
-val graph_package_values : t -> Build_types.graph_package Seq.t
-val add_source_reference : t -> string -> Build_types.source_reference -> unit
-val find_source_reference : t -> string -> Build_types.source_reference option
+val add_package_plan : t -> Package_plan.t -> unit
+val find_package_plan : t -> string -> Package_plan.t option
+val iter_package_plans : t -> (string -> Package_plan.t -> unit) -> unit
+val package_plan_values : t -> Package_plan.t Seq.t
+val publish_compiler_info : t -> (Package_plan.t -> unit) -> unit
+val add_source_reference : t -> string -> source_reference -> unit
+val find_source_reference : t -> string -> source_reference option
 val pending_parse_paths : t -> string list
 val mark_parse_pending : t -> string -> unit
 val clear_parse_pending : t -> string -> unit

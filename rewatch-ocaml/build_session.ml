@@ -1,18 +1,35 @@
+type prepared = {
+  compiler_context: Compiler_info.context;
+  compile_assets: Compile_assets.t;
+  build_state: Build_state.t;
+  packages: (string, Package_plan.compilation) Hashtbl.t;
+}
+
+type source_reference = {
+  package_root: string;
+  module_: Source.module_;
+  relative_path: string;
+  absolute_path: string;
+}
+
 type readiness =
   | Not_prepared
-  | Freshness_pending of Build_types.prepared
-  | Ready of Build_types.prepared
+  | Freshness_pending of prepared
+  | Ready of prepared
+
+type compiler_info_state = Needs_publication | Published
 
 type t = {
-  global_modules: (string, Build_types.global_module) Hashtbl.t;
-  namespace_maps: (string, Build_types.namespace_map) Hashtbl.t;
-  namespace_maps_by_name: (string, Build_types.namespace_map list) Hashtbl.t;
+  global_modules: (string, Module_graph.module_node) Hashtbl.t;
+  namespace_maps: (string, Module_graph.namespace_map) Hashtbl.t;
+  namespace_maps_by_name: (string, Module_graph.namespace_map list) Hashtbl.t;
   mutable graph_has_cycle: bool;
-  graph_packages: (string, Build_types.graph_package) Hashtbl.t;
-  source_index: (string, Build_types.source_reference) Hashtbl.t;
+  package_plans: (string, Package_plan.t) Hashtbl.t;
+  source_index: (string, source_reference) Hashtbl.t;
   pending_parse_paths: (string, unit) Hashtbl.t;
   public_outputs: (string, (string, unit) Hashtbl.t) Hashtbl.t;
   mutable readiness: readiness;
+  mutable compiler_info_state: compiler_info_state;
   warning_state: Warning_state.t;
 }
 
@@ -22,11 +39,12 @@ let create ~warning_state =
     namespace_maps = Hashtbl.create 16;
     namespace_maps_by_name = Hashtbl.create 16;
     graph_has_cycle = false;
-    graph_packages = Hashtbl.create 32;
+    package_plans = Hashtbl.create 32;
     source_index = Hashtbl.create 64;
     pending_parse_paths = Hashtbl.create 16;
     public_outputs = Hashtbl.create 32;
     readiness = Not_prepared;
+    compiler_info_state = Needs_publication;
     warning_state;
   }
 
@@ -61,7 +79,8 @@ let find_namespace_maps session name =
   Hashtbl.find_opt session.namespace_maps_by_name name
 
 let add_namespace_map session namespace_map =
-  Hashtbl.add session.namespace_maps namespace_map.Build_types.key namespace_map;
+  Hashtbl.add session.namespace_maps namespace_map.Module_graph.key
+    namespace_map;
   let existing =
     find_namespace_maps session namespace_map.namespace
     |> Option.value ~default:[]
@@ -77,14 +96,20 @@ let namespace_map_values session =
 let graph_has_cycle session = session.graph_has_cycle
 let set_graph_has_cycle session value = session.graph_has_cycle <- value
 
-let add_graph_package session package =
-  Hashtbl.replace session.graph_packages package.Build_types.graph_root package
+let add_package_plan session package =
+  Hashtbl.replace session.package_plans package.Package_plan.root package
 
-let find_graph_package session root =
-  Hashtbl.find_opt session.graph_packages root
+let find_package_plan session root = Hashtbl.find_opt session.package_plans root
 
-let iter_graph_packages session f = Hashtbl.iter f session.graph_packages
-let graph_package_values session = Hashtbl.to_seq_values session.graph_packages
+let iter_package_plans session f = Hashtbl.iter f session.package_plans
+let package_plan_values session = Hashtbl.to_seq_values session.package_plans
+
+let publish_compiler_info session write =
+  match session.compiler_info_state with
+  | Published -> ()
+  | Needs_publication ->
+    Hashtbl.iter (fun _ package -> write package) session.package_plans;
+    session.compiler_info_state <- Published
 
 let add_source_reference session normalized_path source =
   Hashtbl.replace session.source_index normalized_path source

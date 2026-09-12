@@ -1,5 +1,29 @@
 type freshness_mode = Initialize_freshness | Reuse_freshness
 
+type compilation_kind =
+  | One_shot
+  | Initial_watch
+  | Incremental_watch
+  | Full_watch
+
+type parse_message = Parse_warning of string | Parse_error of string
+
+let has_parse_error messages =
+  List.exists
+    (function
+      | Parse_error _ -> true
+      | Parse_warning _ -> false)
+    messages
+
+type preliminary_parse =
+  | Parsed_successfully of {stderr: string}
+  | Parse_failed of {stdout: string; stderr: string}
+  | Use_existing_ast
+
+let preliminary_parse result =
+  if Process.succeeded result then Parsed_successfully {stderr = result.stderr}
+  else Parse_failed {stdout = result.stdout; stderr = result.stderr}
+
 type cleanup_batch = {actions: (unit -> unit) list; artifacts: string list}
 type namespace_job = {job: Process.job; finish: Process.result -> unit}
 
@@ -25,10 +49,10 @@ type t = {
   mutable parsed: int;
   mutable compiled: int;
   mutable parse_seconds: float;
-  mutable parse_messages: Build_types.parse_message list;
+  mutable parse_messages: parse_message list;
   mutable diagnostics: string list;
   removed_modules: (string, unit) Hashtbl.t;
-  preliminary_parses: (string, Build_types.preliminary_parse) Hashtbl.t;
+  preliminary_parses: (string, preliminary_parse) Hashtbl.t;
   blocked_modules: (string, unit) Hashtbl.t;
   namespace_freshness: (string, float option) Hashtbl.t;
   pending_work: pending_work;

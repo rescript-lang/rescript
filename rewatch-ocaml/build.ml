@@ -23,7 +23,7 @@ type attempt_request =
 (* Build kind controls which persistent markers and diagnostics may be reused.
    Keeping all four states explicit prevents an initial watch build from being
    mistaken for either a disposable command or a retained incremental edit. *)
-type compilation_kind = Build_types.compilation_kind =
+type compilation_kind = Build_attempt.compilation_kind =
   | One_shot
   | Initial_watch
   | Incremental_watch
@@ -40,8 +40,8 @@ let previous_build = function
   | One_shot_attempt | Initial_watch_attempt | Full_watch_attempt -> None
 
 type incremental_source = {
-  package: Build_types.graph_package;
-  source: Build_types.source_reference;
+  package: Package_plan.t;
+  source: Build_session.source_reference;
 }
 
 let project_root folder =
@@ -106,7 +106,7 @@ let clean ~poll ~verbosity ~folder ~prod =
 let compiler_args = Compiler_args_command.run
 
 let run_scheduled_modules (attempt : Build_attempt.t)
-    (prepared : Build_types.prepared) ~compile_step ~namespace_count =
+    (prepared : Build_session.prepared) ~compile_step ~namespace_count =
   Compiler_scheduler.run ~poll:attempt.process_poll
     ~warning_state:(Build_session.warning_state attempt.session)
     ~compile_assets:prepared.compile_assets ~build_state:prepared.build_state
@@ -137,10 +137,8 @@ let write_build_ninja (attempt : Build_attempt.t) =
   (* This empty file is a cache-invalidation marker consumed by editor tooling,
      not a serialized build plan. Only commands that reconstruct the project
      graph call this function. *)
-  Build_session.iter_graph_packages attempt.session (fun _ package ->
-      let path =
-        Filename.concat package.Build_types.graph_build_dir "build.ninja"
-      in
+  Build_session.iter_package_plans attempt.session (fun _ package ->
+      let path = Filename.concat package.Package_plan.build_dir "build.ninja" in
       let channel = open_out_bin path in
       close_out channel)
 
@@ -159,8 +157,7 @@ let incremental_sources (previous : retained_build) changes =
       | Some source ->
         let package =
           match
-            Build_session.find_graph_package previous.session
-              source.package_root
+            Build_session.find_package_plan previous.session source.package_root
           with
           | Some package -> package
           | None -> raise Full_rebuild_required
@@ -180,7 +177,7 @@ let incremental_sources (previous : retained_build) changes =
   List.rev !sources
 
 let prepare_incremental previous changes (attempt : Build_attempt.t)
-    (prepared : Build_types.prepared) =
+    (prepared : Build_session.prepared) =
   (* A retained edit reparses only the reported paths, then replaces the
      affected modules' dependency edges in memory. This keeps the long-lived
      graph coherent without rediscovering the package tree. *)
@@ -192,14 +189,14 @@ let prepare_incremental previous changes (attempt : Build_attempt.t)
       Build_session.mark_parse_pending attempt.session
         (Platform.normalize_path_for_comparison source.source.absolute_path);
       let key =
-        Source.compiler_basename source.package.graph_compile_config
+        Source.compiler_basename source.package.compile_config
           source.source.module_.Source.name
       in
       (Build_state.find_exn prepared.build_state key).compile_dirty <- true)
     sources;
   sources
   |> List.map (fun source ->
-      Source.compiler_basename source.package.graph_compile_config
+      Source.compiler_basename source.package.compile_config
         source.source.module_.Source.name)
   |> List.sort_uniq String.compare
   |> List.iter (fun name ->
@@ -210,31 +207,28 @@ let prepare_incremental previous changes (attempt : Build_attempt.t)
       ~label:"Parsing"
       (List.map
          (fun source ->
-           source.package.graph_root ^ "\000"
-           ^ source.source.module_.Source.name)
+           source.package.root ^ "\000" ^ source.source.module_.Source.name)
          sources)
   in
   let results =
     Process.run_parallel_map ?poll:attempt.process_poll
       ~on_complete:parse_completed sources ~job:(fun source ->
-        Compiler_process.parse_job ~bsc
-          ~build_dir:source.package.graph_build_dir
-          ~config:source.package.graph_compile_config
-          source.source.relative_path)
+        Compiler_process.parse_job ~bsc ~build_dir:source.package.build_dir
+          ~config:source.package.compile_config source.source.relative_path)
   in
   let affected_modules = Hashtbl.create (List.length sources) in
   let dependencies_changed = ref false in
   List.iter2
     (fun source result ->
       Hashtbl.replace attempt.preliminary_parses source.source.absolute_path
-        (Build_types.preliminary_parse result);
+        (Build_attempt.preliminary_parse result);
       (try
          let modified = (Unix.stat source.source.absolute_path).Unix.st_mtime in
-         Hashtbl.replace source.package.graph_source_mtimes
+         Hashtbl.replace source.package.source_mtimes
            source.source.relative_path modified
        with Unix.Unix_error _ | Sys_error _ -> raise Full_rebuild_required);
       let key =
-        Source.compiler_basename source.package.graph_compile_config
+        Source.compiler_basename source.package.compile_config
           source.source.module_.Source.name
       in
       let parse_failed = not (Process.succeeded result) in
@@ -251,8 +245,7 @@ let prepare_incremental previous changes (attempt : Build_attempt.t)
       if not changed_parse_failed then
         let dependencies path =
           Compiler_process.ast_dependencies
-            ~build_dir:package.Build_types.graph_build_dir
-            (Source.ast_path path)
+            ~build_dir:package.Package_plan.build_dir (Source.ast_path path)
         in
         let raw_dependencies =
           List.sort_uniq String.compare
@@ -335,11 +328,11 @@ let run_with_warning_state ~poll ~warning_state ~request ~no_timing ~verbosity
   let parse_output messages =
     messages
     |> List.map (function
-        | Build_types.Parse_warning output | Build_types.Parse_error output ->
-        output)
+        | Build_attempt.Parse_warning output | Build_attempt.Parse_error output
+        -> output)
     |> String.concat ""
   in
-  let parse_failed = Build_types.has_parse_error in
+  let parse_failed = Build_attempt.has_parse_error in
   (* A watch build must retain the attempted state even when later parsing or
      compilation fails, because its successful ASTs and artifact inventory are
      needed to recover incrementally on the next edit. Publish ownership before
@@ -439,7 +432,7 @@ let run_with_warning_state ~poll ~warning_state ~request ~no_timing ~verbosity
           cycle_info.blocked)
       cycle;
     let root_package =
-      match Build_session.find_graph_package attempt.session root with
+      match Build_session.find_package_plan attempt.session root with
       | Some package -> package
       | None -> raise (Error ("Package graph was not prepared for " ^ root))
     in
@@ -481,7 +474,7 @@ let run_with_warning_state ~poll ~warning_state ~request ~no_timing ~verbosity
       let output = format_cycle cycle_info.cycle cycle_info.nodes_by_key in
       cycle_info.cycle
       |> List.filter_map (Hashtbl.find_opt cycle_info.nodes_by_key)
-      |> List.map (fun node -> node.Module_graph.package_root)
+      |> List.map (fun (node : Module_graph.cycle_node) -> node.package_root)
       |> List.sort_uniq String.compare
       |> List.iter (fun package_root -> Compiler_log.append package_root output);
       report_failure ~compile_seconds output
@@ -493,13 +486,13 @@ let run_with_warning_state ~poll ~warning_state ~request ~no_timing ~verbosity
         Build_report.print_success_details report ~compile_seconds
       in
       let context = prepared.compiler_context in
-      Build_session.iter_graph_packages attempt.session (fun _ package ->
+      Build_session.publish_compiler_info attempt.session (fun package ->
           let package_context =
             Compiler_info.for_package context
-              ~build_root:package.Build_types.graph_build_owner
-              package.graph_compile_config
+              ~build_root:package.Package_plan.build_owner
+              package.compile_config
           in
-          Compiler_info.write_package package_context package.graph_config);
+          Compiler_info.write_package package_context package.config);
       if compilation_kind = One_shot then
         Build_report.report_completion report diagnostics;
       Build_attempt.cleanup_artifacts attempt;

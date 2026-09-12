@@ -1,5 +1,5 @@
 type result = {
-  prepared: Build_types.prepared;
+  prepared: Build_session.prepared;
   cycle: Module_graph.cycle_info option;
 }
 

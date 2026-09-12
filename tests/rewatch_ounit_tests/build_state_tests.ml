@@ -81,7 +81,7 @@ let tests =
       is_dev = false;
     }
   in
-  let entry : Build_types.global_module =
+  let entry : Module_graph.module_node =
     {
       key = "Entry";
       package_name = "package";
@@ -93,9 +93,9 @@ let tests =
       raw_dependencies = [];
     }
   in
-  let namespace_map : Build_types.namespace_map =
+  let namespace_map : Module_graph.namespace_map =
     {
-      key = Build_types.namespace_map_key "root";
+      key = Module_graph.namespace_map_key "root";
       compiler_name = "@Namespace";
       namespace = "Namespace";
       package_name = "package";

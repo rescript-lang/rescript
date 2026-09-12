@@ -79,10 +79,11 @@ and `package_build.ml` sequences those phases. `build.ml` retains transaction
 orchestration and aggregate dispatch, while `build_report.ml` owns presentation.
 `build_preparation.ml` consumes the prepared packages to initialize compiler
 context, clean stale assets, and run the preliminary parse; `module_graph.ml`
-owns dependency resolution and cycle analysis. `build_types.ml` contains
-passive graph and preparation records, `build_session.ml` owns state retained
-across watch rebuilds, and `build_attempt.ml` owns diagnostics, counters,
-scheduled work, and final cleanup for one build attempt. `source_dirs.ml` owns
+owns dependency resolution, graph-node identities, and cycle analysis.
+`package_plan.ml` owns immutable per-package build inputs, `build_session.ml`
+owns prepared state retained across watch rebuilds, and `build_attempt.ml` owns
+attempt kinds, parse outcomes, diagnostics, counters, scheduled work, and final
+cleanup for one build attempt. `source_dirs.ml` owns
 source-directory metadata projection and serialization. `process_child.ml`
 owns the lifecycle of one subprocess while `process.ml` owns scheduling.
 Command-level post-build execution and its error handling live in

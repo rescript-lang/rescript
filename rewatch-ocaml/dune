@@ -38,6 +38,7 @@
   process_child
   process
   source
+  package_plan
   graph
   module_graph
   package_diagnostics
@@ -53,7 +54,6 @@
   build_lock
   build_artifacts
   build_freshness
-  build_types
   build_session
   build_attempt
   build_report

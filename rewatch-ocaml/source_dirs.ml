@@ -34,28 +34,28 @@ let write ~root ~dirs ~packages ~scans =
 
 let write_build ~(root_config : Config.t) session =
   let packages =
-    Build_session.graph_package_values session
+    Build_session.package_plan_values session
     |> List.of_seq
-    |> List.sort (fun (left : Build_types.graph_package) right ->
-        String.compare left.graph_root right.graph_root)
+    |> List.sort (fun (left : Package_plan.t) right ->
+        String.compare left.root right.root)
   in
   packages
   |> List.iter (fun package ->
-      if package.Build_types.graph_root <> root_config.root then
+      if package.Package_plan.root <> root_config.root then
         File_util.remove_file
-          (File_util.path_of_parts package.graph_root
+          (File_util.path_of_parts package.root
              ["lib"; "bs"; ".sourcedirs.json"]));
   let local_packages =
-    List.filter (fun package -> package.Build_types.graph_is_local) packages
+    List.filter (fun package -> package.Package_plan.is_local) packages
   in
   let source_directories package =
-    package.Build_types.graph_modules
+    package.Package_plan.modules
     |> List.map (fun module_ -> Filename.dirname module_.Source.implementation)
     |> List.sort_uniq String.compare
   in
   let relative_package_root package =
-    if package.Build_types.graph_root = root_config.root then ""
-    else Project_context.relative_to root_config.root package.graph_root
+    if package.Package_plan.root = root_config.root then ""
+    else Project_context.relative_to root_config.root package.root
   in
   let dirs =
     local_packages
@@ -70,9 +70,9 @@ let write_build ~(root_config : Config.t) session =
   let package_roots = Hashtbl.create 16 in
   local_packages
   |> List.iter (fun package ->
-      package.Build_types.graph_dependency_directories
+      package.Package_plan.dependencies
       |> List.iter (fun dependency ->
-          Hashtbl.replace package_roots dependency.Build_types.declaration.name
+          Hashtbl.replace package_roots dependency.Package_plan.declaration.name
             dependency.directory));
   let package_roots =
     Hashtbl.to_seq package_roots
