@@ -1,5 +1,5 @@
 type t = {
-  stats: Build_types.t;
+  attempt: Build_attempt.t;
   progress: Output.Progress.t;
   mutable artifacts_cleaned: bool;
   mutable logs_finalized: bool;
@@ -15,13 +15,13 @@ let run_all actions =
     actions;
   Option.iter raise !first_error
 
-let create ~stats ~progress =
-  {stats; progress; artifacts_cleaned = false; logs_finalized = false}
+let create ~attempt ~progress =
+  {attempt; progress; artifacts_cleaned = false; logs_finalized = false}
 
 let cleanup_artifacts finalization =
   if not finalization.artifacts_cleaned then (
     finalization.artifacts_cleaned <- true;
-    let cleanup = Build_types.take_cleanup finalization.stats in
+    let cleanup = Build_attempt.take_cleanup finalization.attempt in
     run_all
       (cleanup.actions
       @ List.map (fun path () -> File_util.remove_file path) cleanup.artifacts))
@@ -30,9 +30,10 @@ let finalize_logs finalization =
   if not finalization.logs_finalized then (
     finalization.logs_finalized <- true;
     let package_roots =
-      finalization.stats.initialized_logs |> Hashtbl.to_seq_keys |> List.of_seq
+      finalization.attempt.initialized_logs |> Hashtbl.to_seq_keys
+      |> List.of_seq
     in
-    Hashtbl.clear finalization.stats.initialized_logs;
+    Hashtbl.clear finalization.attempt.initialized_logs;
     run_all
       ((fun () -> Output.Progress.finish finalization.progress)
       :: List.map

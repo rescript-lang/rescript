@@ -6,5 +6,5 @@ val discover :
   features:string list option ->
   warn_error:string option ->
   filter:Source_filter.t option ->
-  stats:Build_types.t ->
+  attempt:Build_attempt.t ->
   Build_types.graph_package list

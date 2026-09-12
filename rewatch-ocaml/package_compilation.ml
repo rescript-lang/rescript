@@ -1,7 +1,8 @@
 let run ~(package : Build_types.graph_package)
     ~(prepared : Build_types.prepared)
-    ~(prepared_package : Build_types.prepared_package) ~(stats : Build_types.t)
-    ~watch ~removed_module_names ~parse_dirty_modules =
+    ~(prepared_package : Build_types.prepared_package)
+    ~(attempt : Build_attempt.t) ~watch ~removed_module_names
+    ~parse_dirty_modules =
   let root = package.graph_root in
   let is_local = package.graph_is_local in
   let config = package.graph_compile_config in
@@ -11,7 +12,7 @@ let run ~(package : Build_types.graph_package)
   let ocaml_dir = package.graph_ocaml_dir in
   let modules = package.graph_modules in
   let cleanup =
-    match Build_types.find_cleanup_result stats root with
+    match Build_attempt.find_cleanup_result attempt root with
     | Some result -> result
     | None ->
       raise
@@ -38,7 +39,7 @@ let run ~(package : Build_types.graph_package)
         config.package_specs
     in
     let raw_dependencies =
-      match Build_types.find_global_module stats global_key with
+      match Build_session.find_global_module attempt.session global_key with
       | Some node -> node.raw_dependencies
       | None ->
         raise
@@ -48,7 +49,7 @@ let run ~(package : Build_types.graph_package)
     let dependency_is_newer dependency =
       let dependency_state = Build_state.find_exn build_state dependency in
       Build_state.dependency_tree_compiled_after
-        ~namespace_freshness:stats.namespace_freshness build_state state
+        ~namespace_freshness:attempt.namespace_freshness build_state state
         dependency_state
     in
     Hashtbl.mem parse_dirty_modules module_.Source.name
@@ -60,11 +61,11 @@ let run ~(package : Build_types.graph_package)
     || (not outputs_exist)
     || List.exists (Hashtbl.mem removed_module_names) raw_dependencies
     || List.exists
-         (fun dependency -> Hashtbl.mem stats.removed_modules dependency)
+         (fun dependency -> Hashtbl.mem attempt.removed_modules dependency)
          raw_dependencies
     || List.exists dependency_is_newer state.dependencies
   in
-  if stats.attempt_kind = Build_types.Full_attempt then
+  if attempt.freshness_mode = Build_attempt.Initialize_freshness then
     List.iter
       (fun module_ ->
         let key = Source.compiler_basename config module_.Source.name in
@@ -72,8 +73,8 @@ let run ~(package : Build_types.graph_package)
         state.compile_dirty <-
           state.compile_dirty || module_is_dirty module_ state)
       modules;
-  if not (Build_types.has_parse_error stats.parse_messages) then (
-    stats.parsed <- stats.parsed + Hashtbl.length parse_dirty_modules;
+  if not (Build_types.has_parse_error attempt.parse_messages) then (
+    attempt.parsed <- attempt.parsed + Hashtbl.length parse_dirty_modules;
     let compile_warning_paths = Hashtbl.create 8 in
     let prepare_outputs module_ =
       let path = module_.Source.implementation in
@@ -108,7 +109,7 @@ let run ~(package : Build_types.graph_package)
         (fun module_ ->
           let key = Source.compiler_basename config module_.Source.name in
           let state = Build_state.find_exn build_state key in
-          if Hashtbl.mem stats.blocked_modules key then None
+          if Hashtbl.mem attempt.blocked_modules key then None
           else
             let cmi_path =
               Filename.concat ocaml_dir
@@ -147,7 +148,7 @@ let run ~(package : Build_types.graph_package)
     Config.namespace_compiler_name config.namespace
     |> Option.iter (fun compiler_name ->
         let namespace_map =
-          Build_types.find_namespace_map stats
+          Build_session.find_namespace_map attempt.session
             (Build_types.namespace_map_key root)
         in
         let namespace_state =
@@ -156,7 +157,10 @@ let run ~(package : Build_types.graph_package)
         let package_dirty =
           List.exists Compiler_scheduler.candidate_requires_compile candidates
         in
-        if package_dirty || stats.attempt_kind = Build_types.Full_attempt then
+        if
+          package_dirty
+          || attempt.freshness_mode = Build_attempt.Initialize_freshness
+        then
           Compiler_process.namespace_job ~bsc:prepared.compiler_context.bsc_path
             ~runtime:prepared.compiler_context.runtime_path ~build_dir
             ~ocaml_dir
@@ -188,9 +192,9 @@ let run ~(package : Build_types.graph_package)
                       namespace_state ~path:cmi_path cmi_change;
                     raise error
               in
-              stats.namespace_jobs <- (job, finish) :: stats.namespace_jobs));
-    stats.compile_candidates <- candidates @ stats.compile_candidates;
-    Build_types.register_cleanup stats (fun () ->
+              attempt.namespace_jobs <- (job, finish) :: attempt.namespace_jobs));
+    attempt.compile_candidates <- candidates @ attempt.compile_candidates;
+    Build_attempt.register_cleanup attempt (fun () ->
         if not watch then
           Hashtbl.iter
             (fun path () -> File_util.remove_file path)

@@ -2965,17 +2965,33 @@ gate. Reanalyze reports only the same ten reviewed false positives; removing the
 now-unused `copy_file_if_changed` wrapper prevented the shared publication
 cleanup from adding an eleventh report.
 
-1. Finish the current external-review findings and commit the verified result.
-2. Split the retained build/session state from per-attempt state currently
-   combined under `Build_types`, then run the final implementation/code-quality
-   gate.
-3. Run the stable performance and work-equivalence gate while the host is idle.
-4. Consolidate maintained documentation, without starting the broad source
+The former `Build_types.t` state container is now split by lifetime.
+`Build_types` contains passive graph, parse-result, and prepared-context values;
+the abstract `Build_session` owns graph indexes, readiness, pending parses,
+warning state, and output inventories retained by watch mode; and
+`Build_attempt` owns one build's diagnostics, counters, scheduled work, and
+cleanup lifecycle. Retained builds now store the session directly instead of a
+previous attempt record. Output-presence inventories remain session state, but
+the cleanup decisions derived from them belong only to the current attempt.
+This removes the previous shallow record copy and makes session readiness and
+the attempt's freshness mode explicit at construction. Two focused
+state-lifetime tests bring
+the OUnit suite to 36 groups: they verify that diagnostics, failures, and
+cleanup actions do not cross attempts while the output-presence inventory does.
+The split passes the focused integration and parity gates and the complete
+`opam exec -- make test-all` repository gate. Reanalyze still reports exactly
+the same ten previously reviewed false positives and no new dead code.
+
+1. Run multiple rounds of the final implementation/code-quality gate, including
+   ownership, naming, duplication, dead-code, illegal-state, filesystem,
+   resource-lifecycle, and platform-boundary audits.
+2. Run the stable performance and work-equivalence gate while the host is idle.
+3. Consolidate maintained documentation, without starting the broad source
    comment pass.
-5. Wait for reviewer availability, then address final whole-port external review
+4. Wait for reviewer availability, then address final whole-port external review
    rounds until no material finding remains.
-6. Run the final release-quality gate.
-7. Perform the broad comment pass last. Comments should start with why, provide
+5. Run the final release-quality gate.
+6. Perform the broad comment pass last. Comments should start with why, provide
    enough context for non-specialists, and stand on their own rather than using
    Rust as the explanation unless compatibility itself is the reason. Follow it
    with a narrow formatting/build check.

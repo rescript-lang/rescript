@@ -77,8 +77,11 @@ per-package parsing, dirty-state preparation, and compiler-job construction,
 and `build.ml` retains command/reporting orchestration and aggregate dispatch.
 `build_preparation.ml` consumes the prepared packages to initialize compiler
 context, clean stale assets, run the preliminary parse, and construct global
-dependency/build state. Command-level post-build execution and its error
-handling live in `after_build.ml`.
+dependency/build state. `build_types.ml` contains passive graph and preparation
+records, `build_session.ml` owns state retained across watch rebuilds, and
+`build_attempt.ml` owns diagnostics, counters, scheduled work, and cleanup for
+one build attempt. Command-level post-build execution and its error handling
+live in `after_build.ml`.
 Genuinely platform-specific behavior is consolidated behind a `Platform`
 boundary rather than mixed into those modules. Unix and Windows modules now own
 executable lookup, subprocess creation, signal deferral, and process-tree

@@ -12,6 +12,7 @@
   (run %{test} -runner sequential))
  (modules
   rewatch_ounit_tests_main
+  build_attempt_tests
   build_artifacts_tests
   build_state_tests
   clean_tests

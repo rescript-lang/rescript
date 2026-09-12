@@ -20,7 +20,7 @@ let dependent_is_allowed allowed_dependents dependent =
     allowed_dependents
 
 let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
-    ~(stats : Build_types.t) =
+    ~(attempt : Build_attempt.t) =
   Package_diagnostics.validate_metadata root_config;
   let resolution = Package_resolution.create root_config in
   let unallowed_dependencies = ref [] in
@@ -29,7 +29,7 @@ let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
   in
   List.iter
     (fun (package : Package_traversal.package) ->
-      Output.debug ~verbosity:stats.verbosity
+      Output.debug ~verbosity:attempt.verbosity
         ("Parsing package: " ^ package.config.name);
       List.iter
         (fun (resolved : Package_traversal.resolved) ->
@@ -60,7 +60,7 @@ let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
          ^ "\nUpdate allowed-dependents in the dependency rescript.json files."
           )));
   Feature_requests.iter discovered.feature_requests (fun root features ->
-      Build_types.set_active_features stats root
+      Build_session.set_active_features attempt.session root
         (Feature_requests.to_option features));
   let packages_by_root = Hashtbl.create (List.length discovered.packages) in
   List.iter
@@ -75,7 +75,7 @@ let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
       let discovered_package = Hashtbl.find packages_by_root root in
       let is_local = discovered_package.Package_traversal.is_local in
       let features =
-        match Build_types.find_active_features stats root with
+        match Build_session.find_active_features attempt.session root with
         | Some features -> features
         | None -> None
       in
@@ -114,7 +114,7 @@ let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
           visit dependency.directory)
         dependency_directories;
       let discovery =
-        Output.debug ~verbosity:stats.verbosity
+        Output.debug ~verbosity:attempt.verbosity
           ("Building source file-tree for package: " ^ config.name);
         Source.discover_with_inventory config
           ~prod:(source_discovery_prod ~prod ~is_local)
@@ -179,14 +179,14 @@ let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
           graph_present_source_files = discovery.present_files;
         }
       in
-      Build_types.add_graph_package stats package;
+      Build_session.add_graph_package attempt.session package;
       List.iter
         (fun module_ ->
           module_.Source.implementation
           :: Option.to_list module_.Source.interface
           |> List.iter (fun relative_path ->
               let absolute_path = Filename.concat root relative_path in
-              Build_types.add_source_reference stats
+              Build_session.add_source_reference attempt.session
                 (Platform.normalize_path_for_comparison absolute_path)
                 Build_types.
                   {package_root = root; module_; relative_path; absolute_path}))
