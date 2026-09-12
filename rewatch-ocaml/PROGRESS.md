@@ -2851,15 +2851,42 @@ depending on polymorphic comparison.
 
 The live names are command entry points called by the separately compiled
 executable, which is outside the scanned directory. Unmodified Reanalyze
-currently reports seven false positives on OCaml 5.5 CMTs: the test-supplied
+currently reports ten false positives on OCaml 5.5 CMTs: the test-supplied
 `max_jobs`, `on_complete`, and `bisect_enabled` optional arguments, and the
 `Publication_failure`, `Config_types.Error`, and `Process.Interrupted`
-cross-module exceptions. Each reported argument and exception was checked
-against its source call, construction, and handler. Any new report outside that
-reviewed set fails the gate. A temporary analyzer experiment confirmed that
-accepting declaration locations within the corresponding signature item
-removes the optional-argument reports; it was not added to this repository
-because changing Reanalyze is outside the port.
+cross-module exceptions. Reanalyze also reports the private `Package_error` and
+`Build_failure` exception aliases in `Build` and `Package_build`; their local
+handlers use those aliases, but the analyzer does not connect alias patterns to
+the original exception declarations. Each reported argument and exception was
+checked against its source call, construction, and handler. Any new report
+outside that reviewed set fails the gate. A temporary analyzer experiment
+confirmed that accepting declaration locations within the corresponding
+signature item removes the optional-argument reports; it was not added to this
+repository because changing Reanalyze is outside the port.
+
+The source audit after `960ae779f3` found six further cleanup opportunities.
+Buffered stdin-format writes now use the close-error-propagating file writer,
+and missing copy sources fail independently of the destination-directory
+policy. Package traversal now has one graph walk that owns visited packages,
+resolved edges, locality, and aggregated feature requests; build and format use
+its strict resolver, while watch supplies an explicit recovery resolver for
+broken and not-yet-installed dependencies. Build materialization reuses those
+resolved edges instead of resolving them a second time.
+
+Published CMI/CMT timestamps and dependent invalidation now pass through
+`Build_state` transitions for both source modules and namespace maps. Warning
+cleanup records published AST paths when the warning occurs instead of
+repeatedly searching the package module list. Parse-error classification and
+dependency-kind variants have one owner. Finally, the idempotent
+`Signal_restore` primitive owns restoration and exception precedence for lock,
+atomic-file, formatting, and subprocess setup while resource cleanup remains
+local. This remains compatible with OCaml 5.0 and does not use
+`Mutex.protect`.
+
+This audit batch passes all 32 OUnit groups, the focused integration suite, all
+297 configuration cases, all 111 command-validation cases, interactive-output
+parity, the reviewed Reanalyze gate, and `opam exec -- make test-all`, including
+the installed OCaml binary running the canonical build/clean/format/watch suite.
 
 1. In the Windows VM, finish the watcher/lock and path audit and run the native
    build, unit, focused, and canonical Bash suites. Address findings there and

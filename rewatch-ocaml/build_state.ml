@@ -1,6 +1,7 @@
 module String_set = Set.Make (String)
 
 type module_kind = Source_module | Namespace_map
+type cmi_change = Cmi_changed | Cmi_unchanged | Cmi_change_unknown
 
 type module_ = {
   key: string;
@@ -90,3 +91,20 @@ let mark_dependents_compile_dirty state module_ =
       | Namespace_map -> String_set.iter mark dependent_module.dependents)
   in
   String_set.iter mark module_.dependents
+
+let record_published_cmi state ~compile_assets module_ ~path change =
+  Compile_assets.refresh_cmi compile_assets ~key:module_.key ~path;
+  module_.last_compiled_cmi <-
+    Compile_assets.cmi compile_assets module_.key
+    |> Option.map (fun entry -> entry.Compile_assets.modified);
+  match change with
+  | Cmi_unchanged -> ()
+  | Cmi_changed | Cmi_change_unknown ->
+    mark_dependents_compile_dirty state module_
+
+let record_successful_compile ~compile_assets module_ ~cmt_path =
+  Compile_assets.refresh_cmt compile_assets ~key:module_.key ~path:cmt_path;
+  module_.last_compiled_cmt <-
+    Compile_assets.cmt compile_assets module_.key
+    |> Option.map (fun entry -> entry.Compile_assets.modified);
+  module_.compile_dirty <- false

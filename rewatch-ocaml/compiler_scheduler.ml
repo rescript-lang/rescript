@@ -1,6 +1,9 @@
 exception Build_failure of string
 exception Module_failed
-type cmi_change = Cmi_changed | Cmi_unchanged | Cmi_change_unknown
+type cmi_change = Build_state.cmi_change =
+  | Cmi_changed
+  | Cmi_unchanged
+  | Cmi_change_unknown
 exception Publication_failure of exn * cmi_change
 
 type publish_result = {stderr: string; cmi_change: cmi_change}
@@ -73,21 +76,13 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
     ~mark_compiled ~mark_had_warnings ~progress ~compile_step ~namespace_count
     ~verbosity =
   let refresh_published_cmi (scheduled : scheduled_module) cmi_change =
-    Compile_assets.refresh_cmi compile_assets ~key:scheduled.key
-      ~path:scheduled.cmi_path;
-    scheduled.state.last_compiled_cmi <-
-      Compile_assets.cmi compile_assets scheduled.key
-      |> Option.map (fun entry -> entry.Compile_assets.modified);
-    if cmi_change <> Cmi_unchanged then
-      Build_state.mark_dependents_compile_dirty build_state scheduled.state
+    Build_state.record_published_cmi build_state ~compile_assets scheduled.state
+      ~path:scheduled.cmi_path cmi_change
   in
   let finish_successful_compile (scheduled : scheduled_module) =
     let cmt_path = Filename.remove_extension scheduled.cmi_path ^ ".cmt" in
-    Compile_assets.refresh_cmt compile_assets ~key:scheduled.key ~path:cmt_path;
-    scheduled.state.last_compiled_cmt <-
-      Compile_assets.cmt compile_assets scheduled.key
-      |> Option.map (fun entry -> entry.Compile_assets.modified);
-    scheduled.state.compile_dirty <- false
+    Build_state.record_successful_compile ~compile_assets scheduled.state
+      ~cmt_path
   in
   let warning_paths =
     candidates |> List.concat_map (fun candidate -> candidate.warning_paths)

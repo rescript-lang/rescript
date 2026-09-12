@@ -34,13 +34,6 @@ type fallback = {
   snapshot: snapshot_entry list;
 }
 
-type dependency_watch =
-  | Resolved_dependency of Package_resolution.dependency
-  | Broken_dependency of string
-  | Missing_dependency_directory of string
-  | Missing_dependency_path of string
-  | Unresolved_dependency of string
-
 let control_file_names = ["rescript.json"; "bsconfig.json"]
 let is_control_file_name name = List.mem name control_file_names
 
@@ -61,9 +54,6 @@ let watch_context ~root ~prod ~features ~filter =
       Package_resolution.create
         ~diagnostic_mode:Package_resolution.Suppress_diagnostics root_config
     in
-    let visited = Hashtbl.create 32 in
-    let packages = Hashtbl.create 32 in
-    let requested_features = Feature_requests.create () in
     let roots = ref [root] in
     let paths = ref [] in
     let sources = ref [] in
@@ -93,97 +83,78 @@ let watch_context ~root ~prod ~features ~filter =
               add_path canonical_existing false)
           with Sys_error _ | Unix.Unix_error _ -> ())
     in
-    let rec visit ~is_local ~features (config : Config.t) =
-      Feature_requests.add requested_features config.root features;
-      if Hashtbl.mem visited config.root then ()
-      else (
-        Hashtbl.add visited config.root ();
-        if is_local then (
-          Hashtbl.add packages config.root (config, true);
-          add_path config.root false);
-        let dependencies = Package_traversal.requests ~prod ~is_local config in
-        let dependency_watches =
-          List.map
-            (fun (request : Package_traversal.request) ->
-              let dependency = request.declaration in
-              match
-                Package_resolution.dependency_path resolution
-                  ~package_root:config.root dependency.name
-              with
-              | Some directory when Config.exists_in_root directory -> (
-                try
-                  Resolved_dependency
-                    (Package_resolution.resolve resolution
-                       ~package_root:config.root dependency)
-                with
-                | Project_context.Package_error _ | Project_context.Error _ ->
-                  Broken_dependency directory)
-              | None -> Unresolved_dependency dependency.name
-              | Some directory
-                when (not (Config.exists_in_root directory))
-                     && is_directory directory ->
-                Missing_dependency_directory directory
-              | Some path -> Missing_dependency_path path)
-            dependencies
-        in
-        List.iter
-          (function
-            | Resolved_dependency resolved when resolved.is_local ->
-              if not (Hashtbl.mem visited resolved.directory) then (
-                roots := resolved.directory :: !roots;
-                add_path resolved.directory false);
-              visit ~is_local:true ~features:resolved.declaration.features
-                resolved.config
-            | Resolved_dependency resolved ->
-              visit ~is_local:false ~features:resolved.declaration.features
-                resolved.config
-            | Broken_dependency directory ->
+    let graph =
+      Package_traversal.traverse ~root_config ~prod ~features
+        ~resolve:(fun config request ->
+          let dependency = request.Package_traversal.declaration in
+          match
+            Package_resolution.dependency_path resolution
+              ~package_root:config.root dependency.name
+          with
+          | Some directory when Config.exists_in_root directory -> (
+            try
+              let resolved =
+                Package_traversal.resolve resolution ~package_root:config.root
+                  request
+              in
+              if resolved.dependency.is_local then (
+                roots := resolved.dependency.directory :: !roots;
+                add_path resolved.dependency.directory false);
+              Some resolved
+            with Project_context.Package_error _ | Project_context.Error _ ->
               (* A broken dependency configuration must remain watched so fixing
-             that file can recover the long-lived command. *)
+                 that file can recover the long-lived command. *)
               roots := directory :: !roots;
               add_path directory false;
-              Hashtbl.replace visited directory ()
-            | Missing_dependency_directory directory ->
-              (* The parent watch is needed because removing or replacing the
-             watched directory itself is not reported consistently by every
-             filesystem backend. It also detects a newly installed candidate
-             that should take priority over a lower resolution. *)
-              roots := directory :: !roots;
-              unresolved := directory :: !unresolved;
-              add_path (Filename.dirname directory) false;
-              add_path directory false
-            | Missing_dependency_path path ->
-              (* A non-directory candidate may be replaced with an install. Watch
-             its parent and retain its type in the snapshot until that happens. *)
-              unresolved := path :: !unresolved;
-              add_path (Filename.dirname path) false
-            | Unresolved_dependency name ->
-              watch_unresolved_dependency config.root name)
-          dependency_watches)
+              None)
+          | None ->
+            watch_unresolved_dependency config.root dependency.name;
+            None
+          | Some directory when is_directory directory ->
+            (* The parent watch is needed because removing or replacing the
+               watched directory itself is not reported consistently by every
+               filesystem backend. It also detects a newly installed candidate
+               that should take priority over a lower resolution. *)
+            roots := directory :: !roots;
+            unresolved := directory :: !unresolved;
+            add_path (Filename.dirname directory) false;
+            add_path directory false;
+            None
+          | Some path ->
+            (* A non-directory candidate may be replaced with an install. Watch
+               its parent and retain its type in the snapshot until that happens. *)
+            unresolved := path :: !unresolved;
+            add_path (Filename.dirname path) false;
+            None)
     in
-    visit ~is_local:true ~features root_config;
-    Hashtbl.iter
-      (fun package_root ((config : Config.t), is_local) ->
-        try
-          let requested =
-            Feature_requests.find requested_features package_root
-            |> Option.map Feature_requests.to_option
-            |> Option.value ~default:None
-          in
-          Source.active_sources config
-            ~prod:(Package_graph.source_discovery_prod ~prod ~is_local)
-            ~features:requested
-          |> List.iter (fun source ->
-              let directory = Filename.concat config.root source.Config.dir in
-              let filter =
-                if package_root = root_config.root then filter else None
-              in
-              sources :=
-                {directory; recursive = source.recurse; filter} :: !sources;
-              let existing = nearest_existing_directory config.root directory in
-              add_path existing (existing = directory && source.recurse))
-        with Source.Error _ -> ())
-      packages;
+    graph.packages
+    |> List.iter (fun (package : Package_traversal.package) ->
+        if package.is_local then (
+          let package_root = package.config.root in
+          let config = package.config in
+          let is_local = package.is_local in
+          add_path package_root false;
+          try
+            let requested =
+              Feature_requests.find graph.feature_requests package_root
+              |> Option.map Feature_requests.to_option
+              |> Option.value ~default:None
+            in
+            Source.active_sources config
+              ~prod:(Package_graph.source_discovery_prod ~prod ~is_local)
+              ~features:requested
+            |> List.iter (fun source ->
+                let directory = Filename.concat config.root source.Config.dir in
+                let filter =
+                  if package_root = root_config.root then filter else None
+                in
+                sources :=
+                  {directory; recursive = source.recurse; filter} :: !sources;
+                let existing =
+                  nearest_existing_directory config.root directory
+                in
+                add_path existing (existing = directory && source.recurse))
+          with Source.Error _ -> ()));
     let deduplicated_paths = Hashtbl.create (List.length !paths) in
     List.iter
       (fun (path : Native_watcher.watch_path) ->

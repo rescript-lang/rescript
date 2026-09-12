@@ -43,43 +43,22 @@ let package_sources (package : discovered_package) =
    diagnostics and the eventual local file set cannot drift apart. *)
 let discover_package_graph (current : Config.t) =
   let resolution = Package_resolution.create current in
-  let package_configs = Hashtbl.create 32 in
-  let reserved_packages = Hashtbl.create 32 in
-  let feature_requests = Feature_requests.create () in
   Package_diagnostics.validate_metadata current;
-  Hashtbl.add package_configs current.root (current, true);
-  Hashtbl.add reserved_packages current.root ();
-  let rec visit ~is_local (config : Config.t) =
-    let pending =
-      Package_traversal.requests ~prod:false ~is_local config
-      |> List.filter_map (fun request ->
-          let resolved =
-            Package_traversal.resolve resolution ~package_root:config.root
-              request
-          in
-          Package_traversal.add_feature_request feature_requests resolved;
-          let dependency = resolved.dependency in
-          if Hashtbl.mem reserved_packages dependency.directory then None
-          else (
-            Hashtbl.add reserved_packages dependency.directory ();
-            Some dependency))
-    in
-    List.iter
-      (fun (dependency : Package_resolution.dependency) ->
-        Package_diagnostics.report_missing_sources ~is_root:false
-          dependency.config;
-        Hashtbl.add package_configs dependency.directory
-          (dependency.config, dependency.is_local);
-        visit ~is_local:dependency.is_local dependency.config)
-      pending
+  let graph =
+    Package_traversal.discover ~root_config:current ~prod:false ~features:None
+      ~resolution
   in
-  visit ~is_local:true current;
-  Hashtbl.to_seq package_configs
-  |> Seq.map (fun (package_root, ((config : Config.t), is_local)) ->
+  graph.packages
+  |> List.map (fun (package : Package_traversal.package) ->
+      let config = package.config in
+      let is_local = package.is_local in
+      Package_diagnostics.report_missing_sources
+        ~is_root:(config.root = current.root)
+        config;
       let features =
         if config.root = current.root then None
         else
-          match Feature_requests.find feature_requests package_root with
+          match Feature_requests.find graph.feature_requests config.root with
           | None | Some Feature_requests.All -> None
           | Some (Feature_requests.Selected requested) ->
             (try ignore (Source.resolve_active_features config requested)
@@ -97,7 +76,6 @@ let discover_package_graph (current : Config.t) =
           ~on_missing:(Package_diagnostics.report_missing_source_folder config)
       in
       {config; files})
-  |> List.of_seq
 
 let files_in_scope () =
   let current_directory = Sys.getcwd () in
@@ -181,9 +159,7 @@ let format_files_with_bsc ?max_jobs ?poll ~bsc ~check files =
         else write_file path result.stdout;
       None
   in
-  (match max_jobs with
-  | None -> Process.run_dependency_graph ?poll works ~next
-  | Some max_jobs -> Process.run_dependency_graph ?poll ~max_jobs works ~next);
+  Process.run_dependency_graph ?max_jobs ?poll works ~next;
   if !incorrect > 0 then (
     prerr_endline (format_check_summary !incorrect);
     raise (Error "Formatting check failed"))
@@ -232,13 +208,7 @@ let format_stdin ?poll extension =
   let bsc = bsc () in
   (* The temporary pathname needs a cleanup owner before termination can
      interrupt the command, otherwise an early signal can leave it behind. *)
-  let restore_deferred_signals = Platform.defer_termination_signals () in
-  let signals_restored = ref false in
-  let restore_signals () =
-    if not !signals_restored then (
-      signals_restored := true;
-      restore_deferred_signals ())
-  in
+  let deferred_signals = Signal_restore.create ~defer:true in
   let temporary = ref None in
   let remove_temporary () =
     Option.iter
@@ -249,22 +219,13 @@ let format_stdin ?poll extension =
     let path = Filename.temp_file "rescript-ocaml-format-" extension in
     temporary := Some path;
     Fun.protect ~finally:remove_temporary (fun () ->
-        restore_signals ();
+        Signal_restore.restore deferred_signals;
         let contents = read_stdin_interruptibly ?poll () in
-        let output = open_out_bin path in
-        Fun.protect
-          ~finally:(fun () -> close_out_noerr output)
-          (fun () -> output_string output contents);
+        File_util.write_file path contents;
         print_string (formatted ?poll ~bsc ~target:"stdin" path))
   with exn ->
     remove_temporary ();
-    let exn =
-      try
-        restore_signals ();
-        exn
-      with signal_exn -> signal_exn
-    in
-    raise exn
+    raise (Signal_restore.exception_after_restore deferred_signals exn)
 
 let run_files ?poll ~check paths =
   let bsc = bsc () in

@@ -48,7 +48,7 @@ let tests =
         String.init 150_000 (fun index -> Char.chr (index mod 251))
       in
       write_file large_source large_contents;
-      File_util.copy_existing_file large_source large_copy;
+      File_util.copy_existing_file ~ensure_parent:true large_source large_copy;
       check
         (File_util.files_equal large_source large_copy)
         "streaming copies preserve files spanning multiple buffer reads";
@@ -130,6 +130,18 @@ let tests =
       done;
       check_descriptor_count descriptors_before_failed_copies
         "failed destination acquisition should close the source";
+      [true; false]
+      |> List.iter (fun ensure_parent ->
+          let missing_source_failure_is_reported =
+            try
+              ignore
+                (File_util.copy_file_if_different ~ensure_parent missing
+                   (Filename.concat root "missing-copy"));
+              false
+            with Sys_error _ | Unix.Unix_error _ -> true
+          in
+          check missing_source_failure_is_reported
+            "directory creation policy must not change missing-source semantics");
       let atomic = Filename.concat root "atomic" in
       write_file atomic "previous";
       if not Sys.win32 then Unix.chmod atomic 0o640;
