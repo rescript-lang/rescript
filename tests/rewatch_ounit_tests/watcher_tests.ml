@@ -14,8 +14,19 @@ let tests =
   check
     (Watcher.For_test.is_control_file_name "rescript.json"
     && Watcher.For_test.is_control_file_name "bsconfig.json"
-    && not (Watcher.For_test.is_control_file_name "package.json"))
-    "only compiler configuration files trigger control-file rebuilds";
+    && Watcher.For_test.is_control_file_name "package.json")
+    "configuration and package identity files trigger control-file rebuilds";
+  Test_support.with_temp_dir "rewatch-watch-scope-metadata-" (fun root ->
+      Test_support.write_file
+        (Filename.concat root "rescript.json")
+        {|{"name":"root","sources":"src"}|};
+      Test_support.write_file (Filename.concat root "package.json") "{invalid";
+      let scope =
+        Watch_scope.discover ~root ~prod:false ~features:None ~filter:None
+      in
+      check
+        (Watch_scope.path_in_scope scope (Filename.concat root "package.json"))
+        "malformed package metadata remains in recoverable watch scope");
   let snapshot path digest =
     [Watch_snapshot.{path; state = File {modified = 1.; size = 1; digest}}]
   in

@@ -14,6 +14,7 @@ cp -R "$root/rewatch-ocaml/tests/basic" "$work/basic"
 cp -R "$root/rewatch-ocaml/tests/basic" "$work/cleanup-lifecycle"
 cp -R "$root/rewatch-ocaml/tests/basic" "$work/cleanup-failure"
 cp -R "$root/rewatch-ocaml/tests/basic" "$work/suffix-removal"
+cp -R "$root/rewatch-ocaml/tests/basic" "$work/suffix-failure"
 cp -R "$root/rewatch-ocaml/tests/basic" "$work/packaged-basic"
 cp -R "$root/rewatch-ocaml/tests/basic" "$work/runtime-discovery"
 mkdir -p "$work/no-bin-annot/src"
@@ -86,6 +87,7 @@ basic="$work/basic"
 cleanup_lifecycle="$work/cleanup-lifecycle"
 cleanup_failure="$work/cleanup-failure"
 suffix_removal="$work/suffix-removal"
+suffix_failure="$work/suffix-failure"
 packaged_basic="$work/packaged-basic"
 runtime_discovery="$work/runtime-discovery"
 no_bin_annot="$work/no-bin-annot"
@@ -825,6 +827,24 @@ if "$port" build "$suffix_removal" >/dev/null 2>&1; then
   exit 1
 fi
 test ! -e "$suffix_removal/src/A.custom"
+
+sed 's/"suffix": "\.mjs"/"suffix": ".custom"/' \
+  "$suffix_failure/rescript.json" >"$suffix_failure/rescript.next"
+mv "$suffix_failure/rescript.next" "$suffix_failure/rescript.json"
+"$port" build "$suffix_failure" >/dev/null
+test -f "$suffix_failure/src/A.custom"
+printf 'let value: int = "broken"\n' >"$suffix_failure/src/A.res"
+if "$port" build "$suffix_failure" >/dev/null 2>&1; then
+  echo "invalid source unexpectedly compiled before suffix change" >&2
+  exit 1
+fi
+printf 'let value = 41\n' >"$suffix_failure/src/A.res"
+sed 's/"suffix": "\.custom"/"suffix": ".js"/' \
+  "$suffix_failure/rescript.json" >"$suffix_failure/rescript.next"
+mv "$suffix_failure/rescript.next" "$suffix_failure/rescript.json"
+"$port" build "$suffix_failure" >/dev/null
+test ! -e "$suffix_failure/src/A.custom"
+test -f "$suffix_failure/src/A.js"
 
 # A successful parse must remain compile-dirty when another file aborts the
 # same build before compilation starts.

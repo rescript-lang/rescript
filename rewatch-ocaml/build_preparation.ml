@@ -74,13 +74,17 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
                 package.compile_config previous_specs
             in
             let previous_implementations =
-              Compile_assets.ast_sources previous_compile_assets
-                package.ocaml_dir
-              |> List.filter_map (fun (source : Compile_assets.ast_source) ->
-                  if Filename.check_suffix source.ast_path ".iast" then None
-                  else
-                    Project_context.relative_to_opt package.root
-                      source.source_path)
+              List.map
+                (fun (module_ : Source.module_) -> module_.implementation)
+                package.modules
+              @ (Compile_assets.ast_sources previous_compile_assets
+                   package.ocaml_dir
+                |> List.filter_map (fun (source : Compile_assets.ast_source) ->
+                    if Filename.check_suffix source.ast_path ".iast" then None
+                    else
+                      Project_context.relative_to_opt package.root
+                        source.source_path))
+              |> List.sort_uniq String.compare
             in
             Build_artifacts.remove_public_outputs previous_config
               previous_implementations);
@@ -103,9 +107,11 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
       File_util.ensure_dir package.ocaml_dir)
     package_plans;
   let compile_assets =
-    package_plans
-    |> List.map (fun (package : Package_plan.t) -> package.ocaml_dir)
-    |> Compile_assets.create
+    if attempt.compiler_cleaned then
+      package_plans
+      |> List.map (fun (package : Package_plan.t) -> package.ocaml_dir)
+      |> Compile_assets.create
+    else previous_compile_assets
   in
   List.iter
     (fun (package : Package_plan.t) ->
