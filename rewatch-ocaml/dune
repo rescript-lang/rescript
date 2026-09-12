@@ -36,6 +36,7 @@
   platform
   signal_restore
   traversal_coverage
+  process_child
   process
   source
   graph
