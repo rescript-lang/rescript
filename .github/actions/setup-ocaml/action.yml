@@ -11,10 +11,6 @@ inputs:
   cache-prefix:
     description: Cache namespace and version.
     required: true
-  save-pr-cache:
-    description: Save a cache scoped to the current pull request.
-    required: false
-    default: "false"
   dependency-flags:
     description: Flags passed to opam install after the package path.
     required: false
@@ -136,10 +132,8 @@ runs:
 
     - name: Cache OPAM environment
       # Caches created by pull_request runs are scoped to that PR's merge ref
-      # and cannot seed other PRs or branches. Keep this opt-in so ordinary PRs
-      # do not create large one-off caches while long-running branches can reuse
-      # their own environment.
-      if: steps.cache.outputs.cache-hit != 'true' && (github.event_name == 'push' || inputs.save-pr-cache == 'true')
+      # and cannot seed other PRs or branches, so only push runs save them.
+      if: steps.cache.outputs.cache-hit != 'true' && github.event_name == 'push'
       uses: actions/cache/save@v6
       with:
         path: |
