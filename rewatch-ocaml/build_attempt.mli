@@ -2,6 +2,8 @@ type freshness_mode = Initialize_freshness | Reuse_freshness
 
 type cleanup_batch = {actions: (unit -> unit) list; artifacts: string list}
 type namespace_job = {job: Process.job; finish: Process.result -> unit}
+type pending_work
+type finalization_state
 
 type t = {
   freshness_mode: freshness_mode;
@@ -17,13 +19,9 @@ type t = {
   removed_modules: (string, unit) Hashtbl.t;
   preliminary_parses: (string, Build_types.preliminary_parse) Hashtbl.t;
   blocked_modules: (string, unit) Hashtbl.t;
-  initialized_logs: (string, unit) Hashtbl.t;
   namespace_freshness: (string, float option) Hashtbl.t;
-  mutable namespace_jobs: namespace_job list;
-  mutable compile_candidates: Compiler_scheduler.candidate list;
-  cleanup_results: (string, Build_artifacts.cleanup_result) Hashtbl.t;
-  mutable cleanup_actions: (unit -> unit) list;
-  mutable artifact_cleanup: string list;
+  pending_work: pending_work;
+  finalization: finalization_state;
   mutable compiler_cleaned: bool;
   mutable had_warnings: bool;
   process_poll: (unit -> unit) option;
@@ -50,3 +48,9 @@ val defer_artifact_cleanup : t -> string list -> unit
 val take_cleanup : t -> cleanup_batch
 val set_cleanup_result : t -> string -> Build_artifacts.cleanup_result -> unit
 val find_cleanup_result : t -> string -> Build_artifacts.cleanup_result option
+val add_namespace_job : t -> namespace_job -> unit
+val take_namespace_jobs : t -> namespace_job list
+val add_compile_candidates : t -> Compiler_scheduler.candidate list -> unit
+val take_compile_candidates : t -> Compiler_scheduler.candidate list
+val mark_log_initialized : t -> string -> unit
+val take_initialized_logs : t -> string list

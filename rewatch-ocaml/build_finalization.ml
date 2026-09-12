@@ -30,10 +30,8 @@ let finalize_logs finalization =
   if not finalization.logs_finalized then (
     finalization.logs_finalized <- true;
     let package_roots =
-      finalization.attempt.initialized_logs |> Hashtbl.to_seq_keys
-      |> List.of_seq
+      Build_attempt.take_initialized_logs finalization.attempt
     in
-    Hashtbl.clear finalization.attempt.initialized_logs;
     run_all
       ((fun () -> Output.Progress.finish finalization.progress)
       :: List.map

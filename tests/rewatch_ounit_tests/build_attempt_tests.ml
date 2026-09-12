@@ -45,6 +45,30 @@ let output_inventory_survives_without_cleanup_work _context =
   assert_bool "the stable output inventory is retained"
     (Hashtbl.mem cleanup.present_public_outputs "src/A.js")
 
+let pending_work_and_logs_are_drained_once _context =
+  let attempt = create_full () in
+  let process_job =
+    Process.{program = "unused"; args = []; cwd = Sys.getcwd ()}
+  in
+  Build_attempt.add_namespace_job attempt
+    Build_attempt.{job = process_job; finish = ignore};
+  let build_state = Build_state.create 1 in
+  Build_state.add build_state ~key:"A" ~kind:Build_state.Source_module
+    ~last_compiled_cmi:None ~last_compiled_cmt:None;
+  let candidate =
+    Compiler_scheduler.candidate ~key:"A"
+      ~state:(Build_state.find_exn build_state "A") ~warning_paths:[]
+      ~make:(fun () -> failwith "unused")
+  in
+  Build_attempt.add_compile_candidates attempt [candidate];
+  Build_attempt.mark_log_initialized attempt "package";
+  assert_equal 1 (List.length (Build_attempt.take_namespace_jobs attempt));
+  assert_equal [] (Build_attempt.take_namespace_jobs attempt);
+  assert_equal 1 (List.length (Build_attempt.take_compile_candidates attempt));
+  assert_equal [] (Build_attempt.take_compile_candidates attempt);
+  assert_equal ["package"] (Build_attempt.take_initialized_logs attempt);
+  assert_equal [] (Build_attempt.take_initialized_logs attempt)
+
 let tests =
   "build_attempt_tests"
   >::: [
@@ -52,4 +76,6 @@ let tests =
          >:: retained_attempts_start_with_fresh_attempt_state;
          "output inventory survives without cleanup work"
          >:: output_inventory_survives_without_cleanup_work;
+         "pending work and logs are drained once"
+         >:: pending_work_and_logs_are_drained_once;
        ]

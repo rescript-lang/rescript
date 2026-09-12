@@ -92,14 +92,14 @@ let run_scheduled_modules (attempt : Build_attempt.t) ~compile_step
   Compiler_scheduler.run ~poll:attempt.process_poll
     ~warning_state:(Build_session.warning_state attempt.session)
     ~compile_assets:prepared.compile_assets ~build_state:prepared.build_state
-    ~candidates:attempt.compile_candidates
+    ~candidates:(Build_attempt.take_compile_candidates attempt)
     ~mark_compiled:(fun () -> attempt.compiled <- attempt.compiled + 1)
     ~mark_had_warnings:(fun () -> attempt.had_warnings <- true)
     ~progress:attempt.progress ~compile_step ~namespace_count
     ~verbosity:attempt.verbosity
 
 let run_namespace_jobs (attempt : Build_attempt.t) =
-  let jobs = List.rev attempt.namespace_jobs in
+  let jobs = Build_attempt.take_namespace_jobs attempt in
   let started_at = Unix.gettimeofday () in
   Fun.protect
     ~finally:(fun () ->
