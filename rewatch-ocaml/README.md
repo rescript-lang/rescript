@@ -1,13 +1,13 @@
 # Experimental OCaml rewatch
 
-This directory contains the OCaml port of the ReScript build system. Linux and
-macOS packages use it experimentally as `rescript`; the Rust implementation
-remains available as `rescript-rust`. Windows packages continue to use Rust.
+This directory contains the OCaml port of the ReScript build system. Linux,
+macOS, and Windows packages use it experimentally as `rescript`; the Rust
+implementation remains available as `rescript-rust` on every platform.
 
 ## Status
 
-The non-Windows implementation, parity, performance, and release-quality gates
-are complete. The final Linux clean-build gate measured a 4.434 s Rust median
+The cross-platform implementation, parity, performance, and release-quality
+gates are complete. The final Linux clean-build gate measured a 4.434 s Rust median
 and a 4.703 s OCaml median (1.061x), with identical compiler work, generated-file
 sets, and byte-stable artifacts. A separate 1,425-module macOS project measured
 approximately 9.6 s for Rust and 11.5 s for OCaml (about 1.20x). Absolute timing
@@ -22,9 +22,14 @@ no unreviewed dead production code.
 
 OpenTelemetry is deliberately omitted, and source filters support the documented
 common Rust/Re regular-expression subset rather than every Rust-regex construct.
-No non-Windows correctness defect remains open. The unfinished Windows
-implementation stays in the tree for a later completion and native-validation
-phase, while Windows packages continue to use Rust.
+No platform correctness defect remains open. Native Windows validation covers
+the focused suite, all 42 OUnit2 cases, all 48 applicable canonical integration
+cases, Rust's 136 unit tests, package promotion/inventory, and both packaged
+executables. On a two-vCPU Windows 11 ARM64 guest running the x64 package under
+emulation, five interleaved canonical clean builds measured 42.267 s for Rust
+and 50.502 s for OCaml (1.195x). Seven-run no-op medians were 465 ms and 533 ms
+(1.146x), and seven interleaved single-edit medians were 192 ms and 225 ms
+(1.172x). These are low-core VM checkpoints, not portable absolute timings.
 
 ## Documentation
 
@@ -71,9 +76,9 @@ export RESCRIPT_RUNTIME="$PWD/packages/@rescript/runtime"
 _build/default/rewatch-ocaml/rescript_ocaml.exe build path/to/project
 ```
 
-On this experimental branch, published ReScript packages on Linux and macOS use
-the OCaml implementation for the normal `rescript` command. The Rust reference
-implementation remains available for side-by-side testing:
+On this experimental branch, published ReScript packages use the OCaml
+implementation for the normal `rescript` command. The Rust reference
+implementation remains available for side-by-side testing on every platform:
 
 ```sh
 npx rescript build
@@ -81,8 +86,8 @@ npx rescript-rust build
 ```
 
 The `rescript-ocaml` launcher remains as an alias for existing testers. Windows
-continues to use Rust for `rescript` until the native Windows implementation and
-runtime test pass are complete, and does not yet expose a separate Rust alias.
+ships the Dune-promoted OCaml executable as `rescript.exe` and the Rust
+reference as `rescript-rust.exe`, matching the other platform packages.
 
 The packaged executable discovers `bsc.exe` beside itself, like Rust rewatch,
 and the npm launcher supplies the installed runtime path. Direct invocation can
@@ -167,7 +172,10 @@ git diff --exit-code packages/artifacts.json
 yarn workspace @rescript/linux-arm64 pack --json --dry-run
 ```
 
-Use `linux-x64` instead on an x64 host. The package listing must contain the
+Use `linux-x64` instead on an x64 host. On Windows, build the Dune target and
+run the same checks against `@rescript/win32-x64`; Corepack can invoke the final
+command as `corepack yarn workspace @rescript/win32-x64 pack --json --dry-run`.
+The package listing must contain the
 OCaml `bin/rescript.exe`, the Rust reference `bin/rescript-rust.exe`, and both
 rewatch notice files. CI runs the artifact-list check only after downloading
 all platform builds and treats any missing declared executable as an error;
@@ -181,11 +189,10 @@ scope.
 
 ## Platform status
 
-The Windows implementation remains unfinished and unverified, so Windows
-continues to ship and run the Rust implementation. Native Windows completion,
-verification, and switching the platform default are deferred to a later
-phase, which may happen in this PR or a follow-up. Unix subprocesses use the
-cross-platform `spawn` library. Windows uses a narrow native
+The Windows implementation is complete and natively validated. Windows ships
+the OCaml implementation as the default `rescript.exe` and retains Rust as
+`rescript-rust.exe`. Unix subprocesses use the cross-platform `spawn` library.
+Windows uses a narrow native
 `CreateProcessW` owner so it can establish Job Object ownership before a child
 starts running.
 Compiler output is captured through close-on-exec pipes drained by blocking
@@ -195,8 +202,11 @@ can terminate descendants after the direct process has exited; the native stub
 check above compiles that API boundary with warnings as errors when given a
 Windows-targeting C compiler and its matching OCaml header directory. Watch mode
 uses long-lived filesystem-event handles through Luv/libuv and retains the
-snapshot-based polling loop only as a runtime fallback. Job assignment and
-pipe-tree cancellation, the native watcher, and the lock lifecycle still
-require native Windows runtime verification in that follow-up. Shared path
-construction uses OCaml's `Filename` APIs so Windows separators and drive roots
-are not hard-coded assumptions.
+snapshot-based polling loop only as a runtime fallback. Native tests exercise
+Job assignment, descendant-held-pipe cancellation, lock-driven cancellation,
+native process IDs and lock contention, watcher rebuild/recovery, formatting,
+and post-build command execution. The MSYS harness cannot deliver a normal
+Windows console-control event to a native child, so it exercises the same
+cleanup path by removing `watch.lock`; console signal delivery remains covered
+on Unix. Shared path construction uses OCaml's `Filename` APIs so Windows
+separators and drive roots are not hard-coded assumptions.
