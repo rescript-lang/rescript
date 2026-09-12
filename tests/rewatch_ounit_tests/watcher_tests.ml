@@ -27,6 +27,24 @@ let tests =
       check
         (Watch_scope.path_in_scope scope (Filename.concat root "package.json"))
         "malformed package metadata remains in recoverable watch scope");
+  Test_support.with_temp_dir "rewatch-missing-source-scope-" (fun root ->
+      Test_support.write_file
+        (Filename.concat root "rescript.json")
+        {|{"name":"root","sources":"generated/nested"}|};
+      let scope =
+        Watch_scope.discover ~root ~prod:false ~features:None ~filter:None
+      in
+      let generated = Filename.concat root "generated" in
+      let nested = Filename.concat generated "nested" in
+      check
+        (Watch_scope.path_is_source_ancestor scope generated)
+        "an existing ancestor of a missing source root triggers reconciliation";
+      check
+        (Watch_scope.path_is_in_source_tree scope nested)
+        "native separators match a slash-delimited configured source root";
+      check
+        (Watch_scope.path_in_scope scope (Filename.concat nested "Main.res"))
+        "source files use platform-normalized directory comparisons");
   let snapshot path digest =
     [Watch_snapshot.{path; state = File {modified = 1.; size = 1; digest}}]
   in

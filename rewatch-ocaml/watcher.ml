@@ -106,16 +106,7 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
     let changes = ref [] in
     let requires_reconciliation = ref false in
     let is_source_path path = Option.is_some (Source.source_kind path) in
-    let is_in_source_tree path =
-      List.exists
-        (fun (source : Watch_scope.source_root) ->
-          path = source.directory
-          || source.recursive
-             && String.starts_with
-                  ~prefix:(source.directory ^ Filename.dir_sep)
-                  path)
-        scope.sources
-    in
+    let is_in_source_tree = Watch_scope.path_is_in_source_tree scope in
     let is_symlink_target path =
       let comparable = Platform.normalize_path_for_comparison path in
       List.exists
@@ -140,6 +131,7 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
             || Watch_scope.path_in_scope scope path
             || Native_watcher.watches_directory watcher path
             || (is_in_source_tree path && File_util.is_directory path)
+            || Watch_scope.path_is_source_ancestor scope path
           then requires_reconciliation := true
         | Native_watcher.Content, Some path ->
           if is_symlink_target path then requires_reconciliation := true

@@ -11,6 +11,29 @@ type t = {
   unresolved: string list;
 }
 
+let comparable_path = Platform.normalize_path_for_comparison
+
+let is_same_or_below ~directory path =
+  let directory = comparable_path directory in
+  let path = comparable_path path in
+  path = directory
+  || String.starts_with ~prefix:(directory ^ Filename.dir_sep) path
+
+let path_is_in_source_tree scope path =
+  List.exists
+    (fun source ->
+      let path = comparable_path path in
+      let directory = comparable_path source.directory in
+      path = directory
+      || source.recursive
+         && String.starts_with ~prefix:(directory ^ Filename.dir_sep) path)
+    scope.sources
+
+let path_is_source_ancestor scope path =
+  List.exists
+    (fun source -> is_same_or_below ~directory:path source.directory)
+    scope.sources
+
 let control_file_names = ["rescript.json"; "bsconfig.json"; "package.json"]
 let is_control_file_name name = List.mem name control_file_names
 
@@ -165,12 +188,14 @@ let path_in_scope scope path =
     Option.is_some (Source.source_kind path)
     && List.exists
          (fun source ->
+           let source_directory = comparable_path source.directory in
+           let file_directory = comparable_path (Filename.dirname path) in
            let in_directory =
-             Filename.dirname path = source.directory
+             file_directory = source_directory
              || source.recursive
                 && String.starts_with
-                     ~prefix:(source.directory ^ Filename.dir_sep)
-                     path
+                     ~prefix:(source_directory ^ Filename.dir_sep)
+                     file_directory
            in
            in_directory
            && Option.fold ~none:true
