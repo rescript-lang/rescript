@@ -297,9 +297,11 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
   let reconcile_unconsumed_publications () =
     List.iter
       (fun (scheduled : scheduled_module) ->
-        (match scheduled.phase with
-        | Post_build _ -> invalidate_persistent_freshness scheduled
-        | Start | Interface _ | Implementation _ | Done -> ());
+        let attempt_is_incomplete =
+          match scheduled.phase with
+          | Interface _ | Implementation _ | Post_build _ -> true
+          | Start | Done -> false
+        in
         let source =
           match scheduled.phase with
           | Interface path -> Some (Source.Interface, path)
@@ -312,7 +314,8 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
             | Publication_failed message ->
               scheduled.messages <- message :: scheduled.messages
             | No_publication | Publication_succeeded _ -> ())
-          source)
+          source;
+        if attempt_is_incomplete then invalidate_persistent_freshness scheduled)
       scheduled_modules
   in
   let scheduler_failed =

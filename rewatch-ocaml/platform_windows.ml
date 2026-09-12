@@ -120,11 +120,14 @@ let ensure_no_null label value =
 let program_for_working_directory ~cwd program =
   if Filename.is_relative program then Filename.concat cwd program else program
 
-let serialize_command_line ~program ~args =
+let serialize_command_line ~shell_command_is_quoted ~program ~args =
   match args with
   | ["/D"; "/V:OFF"; "/S"; "/C"; command] ->
+    let command =
+      if shell_command_is_quoted then command else "\"" ^ command ^ "\""
+    in
     String.concat " " [quote_argument program; "/D"; "/V:OFF"; "/S"; "/C"]
-    ^ " \"" ^ command ^ "\""
+    ^ " " ^ command
   | _ -> program :: args |> List.map quote_argument |> String.concat " "
 
 let spawn ~env ~cwd ~program ~args ~stdin ~stdout ~stderr =
@@ -132,13 +135,17 @@ let spawn ~env ~cwd ~program ~args ~stdin ~stdout ~stderr =
   ensure_no_null "working directory" cwd;
   ensure_no_null "program" program;
   List.iter (ensure_no_null "argument") args;
-  let program, args =
+  let program, args, shell_command_is_quoted =
     if is_batch_file program then
       let command = Filename.quote_command program args in
-      (resolve_program ~cwd "cmd.exe", ["/D"; "/V:OFF"; "/S"; "/C"; command])
-    else (program, args)
+      ( resolve_program ~cwd "cmd.exe",
+        ["/D"; "/V:OFF"; "/S"; "/C"; command],
+        true )
+    else (program, args, false)
   in
-  let command_line = serialize_command_line ~program ~args in
+  let command_line =
+    serialize_command_line ~shell_command_is_quoted ~program ~args
+  in
   let program = program_for_working_directory ~cwd program in
   (* Starting suspended closes the only interval in which a child could create
      descendants before the job owns its process tree. *)
