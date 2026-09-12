@@ -22,9 +22,9 @@ no unreviewed dead production code.
 
 OpenTelemetry is deliberately omitted, and source filters support the documented
 common Rust/Re regular-expression subset rather than every Rust-regex construct.
-No non-Windows correctness defect remains open. Native Windows execution is not
-part of this PR; the implementation stays in the tree for a separately tested
-follow-up while Windows packages continue to use Rust.
+No non-Windows correctness defect remains open. The unfinished Windows
+implementation stays in the tree for a later completion and native-validation
+phase, while Windows packages continue to use Rust.
 
 ## Documentation
 
@@ -181,10 +181,11 @@ scope.
 
 ## Platform status
 
-The Windows implementation remains in the tree, but Windows continues to ship
-and run the Rust implementation. Native Windows verification and switching the
-platform default are deferred to a separate follow-up PR. Unix subprocesses use
-the cross-platform `spawn` library. Windows uses a narrow native
+The Windows implementation remains unfinished and unverified, so Windows
+continues to ship and run the Rust implementation. Native Windows completion,
+verification, and switching the platform default are deferred to a later
+phase, which may happen in this PR or a follow-up. Unix subprocesses use the
+cross-platform `spawn` library. Windows uses a narrow native
 `CreateProcessW` owner so it can establish Job Object ownership before a child
 starts running.
 Compiler output is captured through close-on-exec pipes drained by blocking
