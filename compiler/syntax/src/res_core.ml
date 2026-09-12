@@ -2925,7 +2925,7 @@ and parse_jsx_prop p : Parsetree.jsx_prop option =
           let optional = Parser.optional p Question in
           let attr_expr =
             match Parser.peek p with
-            | (Forwardslash as token) when Parser.peek2 p = GreaterThan ->
+            | Forwardslash as token when Parser.peek2 p = GreaterThan ->
               Parser.err p (Diagnostics.unexpected token p.breadcrumbs);
               Recover.default_expr ()
             | _ -> parse_primary_expr ~operand:(parse_atomic_expr p) p
