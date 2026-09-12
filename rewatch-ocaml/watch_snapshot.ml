@@ -235,7 +235,8 @@ let create_with_symlink_paths digest_cache scope =
     !targets
     |> List.sort_uniq String.compare
     |> List.filter_map (fun target ->
-        Filename.dirname target |> nearest_existing_ancestor)
+        try Filename.dirname target |> nearest_existing_ancestor
+        with Unix.Unix_error _ | Sys_error _ -> None)
     |> List.concat_map (fun directory ->
         let parent = Filename.dirname directory in
         let directories =

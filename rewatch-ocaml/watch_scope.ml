@@ -11,7 +11,7 @@ type t = {
   unresolved: string list;
 }
 
-let control_file_names = ["rescript.json"; "bsconfig.json"]
+let control_file_names = ["rescript.json"; "bsconfig.json"; "package.json"]
 let is_control_file_name name = List.mem name control_file_names
 
 let discover ~root ~prod ~features ~filter =
@@ -146,7 +146,9 @@ let discover ~root ~prod ~features ~filter =
       sources = !sources;
       unresolved = List.sort_uniq String.compare !unresolved;
     }
-  with Config.Error _ ->
+  with
+  | Config.Error _ | Project_context.Error _ | Project_context.Package_error _
+  ->
     {
       roots = [root];
       paths = [Native_watcher.{directory = root; recursive = false}];

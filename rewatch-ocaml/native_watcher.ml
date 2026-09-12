@@ -261,24 +261,30 @@ let refresh_with_directory_identity ~directory_identity watcher ~paths =
      them before pumping close callbacks so a newly reported handle failure is
      preserved and makes the caller fall back to polling. *)
   watcher.error <- None;
-  let directories = directories_under paths in
-  match identify_directories ~directory_identity directories with
+  match
+    try Ok (directories_under paths)
+    with (Unix.Unix_error _ | Sys_error _) as error ->
+      Error (Printexc.to_string error)
+  with
   | Error _ as error -> error
-  | Ok identified_directories ->
-    let desired = Hashtbl.create (List.length directories) in
-    List.iter
-      (fun (directory, identity) -> Hashtbl.add desired directory identity)
-      identified_directories;
-    let kept, removed =
-      List.partition
-        (fun watched ->
-          Hashtbl.find_opt desired watched.directory = Some watched.identity)
-        watcher.handles
-    in
-    close_fs_handles watcher.loop
-      (List.map (fun watched -> watched.handle) removed);
-    watcher.handles <- kept;
-    install_handles watcher identified_directories
+  | Ok directories -> (
+    match identify_directories ~directory_identity directories with
+    | Error _ as error -> error
+    | Ok identified_directories ->
+      let desired = Hashtbl.create (List.length directories) in
+      List.iter
+        (fun (directory, identity) -> Hashtbl.add desired directory identity)
+        identified_directories;
+      let kept, removed =
+        List.partition
+          (fun watched ->
+            Hashtbl.find_opt desired watched.directory = Some watched.identity)
+          watcher.handles
+      in
+      close_fs_handles watcher.loop
+        (List.map (fun watched -> watched.handle) removed);
+      watcher.handles <- kept;
+      install_handles watcher identified_directories)
 
 let refresh = refresh_with_directory_identity ~directory_identity
 
