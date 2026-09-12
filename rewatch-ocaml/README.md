@@ -92,8 +92,11 @@ Genuinely platform-specific behavior is consolidated behind a `Platform`
 boundary rather than mixed into those modules. Unix and Windows modules now own
 executable lookup, subprocess creation, signal deferral, and process-tree
 termination as well as lock-owner PID probing and capture-pipe creation. The
-native watcher has a separate, narrow cross-platform boundary over libuv, and
-portable `Filename`-based path and artifact logic remains shared.
+native watcher has a separate, narrow cross-platform boundary over libuv.
+`watch_scope.ml` owns package/source selection and watch paths,
+`watch_snapshot.ml` owns filesystem baselines and diffs, and `watcher.ml` owns
+event reconciliation and rebuild lifecycle. Portable `Filename`-based path and
+artifact logic remains shared.
 
 ## Test
 

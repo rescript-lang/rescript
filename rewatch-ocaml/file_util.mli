@@ -1,4 +1,5 @@
 val path_of_parts : string -> string list -> string
+val is_directory : string -> bool
 val ensure_dir : string -> unit
 val read_file : string -> string
 val digest_file : string -> Digest.t
