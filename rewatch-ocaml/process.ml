@@ -88,7 +88,7 @@ let run_parallel ?max_jobs ?poll ?on_complete jobs =
   run_parallel_map ?max_jobs ?poll ?on_complete jobs ~job:Fun.id
 
 type 'a work = {key: string; dependencies: string list; value: 'a}
-type failure_action = Abort_immediately | Stop_new_work
+type failure_action = Abort_immediately | Stop_new_work | Continue_independent_work
 
 module Work_ready = Set.Make (struct
   type t = int * string
@@ -437,6 +437,7 @@ let run_dependency_graph_with_notifier ~max_jobs ~on_failure ~poll notifier
     | Stop_new_work ->
       stopped := true;
       errors := (work.key, exn) :: !errors
+    | Continue_independent_work -> errors := (work.key, exn) :: !errors
   in
   let complete work =
     incr completed;

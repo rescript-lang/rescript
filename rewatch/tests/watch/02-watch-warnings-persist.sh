@@ -17,7 +17,8 @@ fi
 
 # Wait until a pattern appears in a file (with timeout in seconds, default 30)
 wait_for_pattern() {
-  local file="$1"; local pattern="$2"; local timeout="${3:-30}"
+  local file="$1"; local pattern="$2"; local timeout
+  timeout=$(platform_timeout "${3:-30}")
   while [ "$timeout" -gt 0 ]; do
     grep -q "$pattern" "$file" 2>/dev/null && return 0
     sleep 1
@@ -28,7 +29,8 @@ wait_for_pattern() {
 
 # Wait until a pattern appears N times in a file (with timeout in seconds, default 30)
 wait_for_pattern_count() {
-  local file="$1"; local pattern="$2"; local count="$3"; local timeout="${4:-30}"
+  local file="$1"; local pattern="$2"; local count="$3"; local timeout
+  timeout=$(platform_timeout "${4:-30}")
   while [ "$timeout" -gt 0 ]; do
     local current_count=$(grep -c "$pattern" "$file" 2>/dev/null || echo "0")
     [ "$current_count" -ge "$count" ] && return 0

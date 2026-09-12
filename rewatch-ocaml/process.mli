@@ -35,8 +35,10 @@ val run_parallel_map :
 type 'a work = {key: string; dependencies: string list; value: 'a}
 
 (* [Stop_new_work] preserves results from children that already started while
-    ensuring no newly ready dependency is launched after a build failure. *)
-type failure_action = Abort_immediately | Stop_new_work
+    ensuring no newly ready dependency is launched after a build failure.
+    [Continue_independent_work] also drains work that was already ready, while
+    failed prerequisites continue to block their dependents. *)
+type failure_action = Abort_immediately | Stop_new_work | Continue_independent_work
 
 val run_dependency_graph :
   ?max_jobs:int ->
