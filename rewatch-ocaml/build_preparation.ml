@@ -54,9 +54,17 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
       Hashtbl.add registered_removed_modules module_name ();
       Hashtbl.replace attempt.removed_modules module_name ();
       Build_session.mark_module_removed attempt.session module_name;
-      Hashtbl.find_opt dependents_by_raw_dependency module_name
-      |> Option.value ~default:[]
-      |> List.iter File_util.remove_file)
+      let dependent_asts =
+        Hashtbl.find_opt dependents_by_raw_dependency module_name
+        |> Option.value ~default:[]
+      in
+      (* A cleanup failure can end the attempt before dependency preparation
+         records why consumers need recompilation. Remove their freshness
+         markers when the attempt finishes so the next invocation cannot reuse
+         them, while the current invocation can still compile from the existing
+         AST and report the source-level missing-module error. *)
+      Build_attempt.register_cleanup attempt (fun () ->
+          List.iter File_util.remove_file dependent_asts))
   in
   let cleanup_started = Unix.gettimeofday () in
   List.iter
