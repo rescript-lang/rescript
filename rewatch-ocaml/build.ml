@@ -1,8 +1,7 @@
 exception Error = Project_context.Error
 exception Package_error = Project_context.Package_error
-exception Stop_watch = Watcher.Stop
 exception Build_failure = Compiler_scheduler.Build_failure
-exception Parse_failure = Package_build.Parse_failure
+exception Parse_failure of string
 exception Reported_failure of string
 exception Full_rebuild_required
 

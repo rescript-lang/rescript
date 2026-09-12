@@ -1,7 +1,6 @@
 exception Error of string
 
 val write_file : string -> string -> unit
-val files_in_scope : unit -> string list
 val formatting_error : string -> string -> string
 val format_check_summary : int -> string
 

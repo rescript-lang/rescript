@@ -113,7 +113,7 @@ let await_notification notifier generation =
       done;
       notifier.generation)
 
-let with_completion_notifier ?(ticker_enabled = false) action =
+let with_completion_notifier ~ticker_enabled action =
   (* The scheduler needs immediate child completion without repeatedly asking
      the operating system about every running PID. A condition variable wakes
      it when status and captured output are both ready; one ticker also wakes a
@@ -322,8 +322,7 @@ let launch ?env ?stdout_chunk ?stderr_chunk ?(defer_signals = true) ~notifier
     {payload; process; pid; child_wait = wait}
   with exn -> fail_launch ownership restore_signals exn
 
-let wait_for_running ?(poll = fun () -> ()) ?(defer_signals = true) notifier
-    active =
+let wait_for_running ~poll ?(defer_signals = true) notifier active =
   let rec find_completed = function
     | [] -> None
     | (child : _ running) :: rest -> (
@@ -913,7 +912,7 @@ let run_dependency_graph ?(max_jobs = default_max_jobs)
         run_dependency_graph_with_notifier ~max_jobs ~on_failure ~poll notifier
           works ~next)
 
-let run_one ?env ?poll ?stdout_chunk ?stderr_chunk ~cwd program args =
+let run_one ?poll ?stdout_chunk ?stderr_chunk ~cwd program args =
   let poll, ticker_enabled =
     match poll with
     | Some poll -> (poll, true)
@@ -921,8 +920,7 @@ let run_one ?env ?poll ?stdout_chunk ?stderr_chunk ~cwd program args =
   in
   with_completion_notifier ~ticker_enabled (fun notifier ->
       let child =
-        launch ?env ?stdout_chunk ?stderr_chunk ~notifier ()
-          {program; args; cwd}
+        launch ?stdout_chunk ?stderr_chunk ~notifier () {program; args; cwd}
       in
       let reaped = ref false in
       try
@@ -937,12 +935,12 @@ let run_one ?env ?poll ?stdout_chunk ?stderr_chunk ~cwd program args =
         if not !reaped then terminate_running [child];
         raise exn)
 
-let run ?env ?poll ~cwd program args = run_one ?env ?poll ~cwd program args
+let run ?poll ~cwd program args = run_one ?poll ~cwd program args
 
-let run_streaming ?env ?poll ~cwd program args =
+let run_streaming ?poll ~cwd program args =
   let write channel bytes count =
     output channel bytes 0 count;
     flush channel
   in
-  run_one ?env ?poll ~stdout_chunk:(write stdout) ~stderr_chunk:(write stderr)
-    ~cwd program args
+  run_one ?poll ~stdout_chunk:(write stdout) ~stderr_chunk:(write stderr) ~cwd
+    program args

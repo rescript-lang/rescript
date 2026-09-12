@@ -1,7 +1,3 @@
-exception Error of string
-exception Package_error of string
-exception Stop_watch
-
 val clean :
   poll:(unit -> unit) -> verbosity:int -> folder:string -> prod:bool -> unit
 
