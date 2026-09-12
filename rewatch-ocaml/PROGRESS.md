@@ -3003,6 +3003,16 @@ ownership. The complete OUnit suite and focused OCaml integration suite pass,
 and the dead-code audit adds no report beyond the previously reviewed analyzer
 limitations.
 
+The filesystem-contract round replaced production `Sys.file_exists` decisions
+with one `File_util.exists` operation that treats only a genuinely missing path
+or missing parent as absence. Build preparation, freshness, artifact cleanup,
+dependency lookup, toolchain discovery, configuration discovery, and watcher
+reconciliation now propagate permission and I/O failures instead of silently
+changing policy. Executable probing inside the platform PATH search remains
+deliberately best-effort. Configuration source classification likewise ignores
+only paths that disappeared during inspection. The 38 OUnit groups and focused
+integration suite pass after the change.
+
 1. Run multiple rounds of the final implementation/code-quality gate, including
    ownership, naming, duplication, dead-code, illegal-state, filesystem,
    resource-lifecycle, and platform-boundary audits.

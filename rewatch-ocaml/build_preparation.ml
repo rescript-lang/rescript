@@ -504,7 +504,7 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
             let directory =
               Build_artifacts.lib_path dependency.directory "ocaml"
             in
-            if not (Sys.file_exists directory) then (regular, development)
+            if not (File_util.exists directory) then (regular, development)
             else
               match dependency.kind with
               | Package_traversal.Regular -> (directory :: regular, development)

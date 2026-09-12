@@ -81,7 +81,7 @@ let namespace_job ~bsc ~runtime ~build_dir ~ocaml_dir ~entry ~package_dirty
   let outputs_exist =
     ["cmi"; "cmj"; "cmt"; "mlmap"]
     |> List.for_all (fun extension ->
-        Sys.file_exists
+        File_util.exists
           (Filename.concat ocaml_dir (namespace ^ "." ^ extension)))
   in
   if not (package_dirty || mlmap_changed || not outputs_exist) then None
@@ -166,10 +166,10 @@ let publish ~build_dir ~ocaml_dir ~is_local ~(config : Config.t) ~is_interface
                 spec
             in
             File_util.ensure_dir (Filename.dirname build_output);
-            if Sys.file_exists output then
+            if File_util.exists output then
               File_util.copy_existing_file ~ensure_parent:false output
                 build_output;
-            if Sys.file_exists (output ^ ".map") then
+            if File_util.exists (output ^ ".map") then
               File_util.copy_existing_file ~ensure_parent:false
                 (output ^ ".map") (build_output ^ ".map")
             else File_util.remove_file (build_output ^ ".map")))

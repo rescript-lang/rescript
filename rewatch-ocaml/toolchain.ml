@@ -2,7 +2,7 @@ exception Error of string
 
 let canonical_existing ~message path =
   try
-    if Sys.file_exists path then Platform.canonicalize_path path
+    if File_util.exists path then Platform.canonicalize_path path
     else raise (Error (message path))
   with
   | Unix.Unix_error (error, function_name, argument) ->

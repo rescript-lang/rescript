@@ -26,17 +26,17 @@ let namespaced_module_name namespace module_name =
 
 let path_in_root root =
   let current = Filename.concat root "rescript.json" in
-  if Sys.file_exists current then current
+  if File_util.exists current then current
   else Filename.concat root "bsconfig.json"
 
 let exists_in_root root =
-  Sys.file_exists (Filename.concat root "rescript.json")
-  || Sys.file_exists (Filename.concat root "bsconfig.json")
+  File_util.exists (Filename.concat root "rescript.json")
+  || File_util.exists (Filename.concat root "bsconfig.json")
 
 let source_is_dev (config : t) relative_path =
   let canonical path =
     try Some (Platform.canonicalize_path path)
-    with Unix.Unix_error _ | Sys_error _ -> None
+    with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> None
   in
   let source_parent =
     Filename.concat config.root relative_path |> Filename.dirname |> canonical

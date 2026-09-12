@@ -144,6 +144,8 @@ let stat_opt path =
   try Some (Unix.stat path)
   with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> None
 
+let exists path = Option.is_some (stat_opt path)
+
 let files_equal first second =
   match stat_opt first with
   | None -> false

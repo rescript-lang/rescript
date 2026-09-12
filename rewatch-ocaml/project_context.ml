@@ -60,11 +60,9 @@ let dependency_context (current : Config.t) =
         (Filename.concat current.root "node_modules")
         dependency.name
     in
-    try
-      Sys.file_exists candidate
-      && is_local_dependency_canonical ~workspace:current.root
-           (Platform.canonicalize_path candidate)
-    with Sys_error _ | Unix.Unix_error _ -> false
+    File_util.exists candidate
+    && is_local_dependency_canonical ~workspace:current.root
+         (Platform.canonicalize_path candidate)
   in
   let is_monorepo_root =
     List.exists has_local_dependency
@@ -122,10 +120,8 @@ let dependency_candidates_in context package_root name =
 
 let dependency_path_in context package_root name =
   let existing_realpath path =
-    try
-      if Sys.file_exists path then Some (Platform.canonicalize_path path)
-      else None
-    with Sys_error _ | Unix.Unix_error _ -> None
+    if File_util.exists path then Some (Platform.canonicalize_path path)
+    else None
   in
   dependency_candidates_in context package_root name
   |> List.find_map existing_realpath
