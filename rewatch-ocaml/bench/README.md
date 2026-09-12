@@ -30,13 +30,13 @@ checks instead. The default
 acceptance threshold requires both OCaml medians to be no more than 125% of
 Rust.
 
-The latest powered, idle-host seven-run gate at `e258487586` measured a 4.445 s
-Rust clean-build median and a 4.673 s OCaml median (1.051x). Median summed
-process-tree RSS was 1,653,820 KiB and 1,730,560 KiB respectively (1.046x).
+The latest powered, idle-host seven-run gate at `3db0c177aa` measured a 4.523 s
+Rust clean-build median and a 4.723 s OCaml median (1.044x). Median summed
+process-tree RSS was 1,828,740 KiB and 1,895,356 KiB respectively (1.036x).
 Clean, unchanged, and one-edit compiler work matched exactly, and the complete
 post-build file sets and byte-stable artifacts were identical. The companion
-seven-edit retained-watch gate measured 141 ms for Rust and 150 ms for OCaml
-(1.064x), with identical compiler work and stable resources. These values are
+seven-edit retained-watch gate measured 130 ms for Rust and 149 ms for OCaml
+(1.146x), with identical compiler work and stable resources. These values are
 a reproducible checkpoint, not portable absolute expectations.
 
 This is one part of equivalence checking, not a substitute for the test suites.
@@ -131,6 +131,18 @@ to the same project artifact or discovery path as the primary evidence of
 superfluous orchestration work. The existing compiler-work and artifact checks
 must remain enabled so fewer filesystem calls cannot conceal skipped work.
 
+At `3db0c177aa`, process attribution showed identical compiler-subprocess
+metadata/open work and effectively equal driver-plus-inherited clean-build open
+counts (about 8,110 for OCaml and 8,120 for Rust). OCaml made about 2,387 more
+driver-side metadata calls, led by repeated checks of source and `lib/bs`
+directories during artifact publication. Unchanged and single-edit process
+runs used fewer metadata and open calls in OCaml. The clean-build difference is
+therefore understood rather than an unexplained algorithmic discrepancy. A
+future cache for already-created publication directories may remove it, but it
+must be scoped to one attempt and recover correctly if a directory is removed
+concurrently. Preserve the raw trace or repeat the process-attributed audit
+before making that tradeoff.
+
 For the ordinary-edit path inside one long-lived watcher, run:
 
 ```sh
@@ -194,7 +206,7 @@ code, or too few explanatory comments can also reduce the number. Behavioral
 and work equivalence, platform support, performance, module size, and review
 findings remain the actual quality gates.
 
-The `e258487586` snapshot with cloc 2.04 contains 7,818 Rust production lines
-after excluding telemetry and 10,500 OCaml production lines including both
+The `3db0c177aa` snapshot with cloc 2.04 contains 7,809 Rust production lines
+after excluding telemetry and 10,859 OCaml production lines including both
 platform backends. Rust inline unit tests account for 2,773 lines; OCaml tests
-and fixtures account for 8,764 lines, and the benchmark tooling for 1,032.
+and fixtures account for 9,194 lines, and the benchmark tooling for 1,032.
