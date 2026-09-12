@@ -14,6 +14,10 @@ type source_reference = {
   absolute_path: string;
 }
 
+type cycle_cache =
+  | Unknown_cycle
+  | Known_cycle of Module_graph.cycle_info option
+
 val create : warning_state:Warning_state.t -> t
 val is_ready : t -> bool
 val prepared : t -> prepared option
@@ -26,7 +30,8 @@ val find_namespace_maps : t -> string -> Module_graph.namespace_map list option
 val add_namespace_map : t -> Module_graph.namespace_map -> unit
 val find_namespace_map : t -> string -> Module_graph.namespace_map
 val namespace_map_values : t -> Module_graph.namespace_map list
-val graph_cycle : t -> Module_graph.cycle_info option
+val graph_cycle : t -> cycle_cache
+val invalidate_graph_cycle : t -> unit
 val set_graph_cycle : t -> Module_graph.cycle_info option -> unit
 val add_package_plan : t -> Package_plan.t -> unit
 val find_package_plan : t -> string -> Package_plan.t option
@@ -38,6 +43,8 @@ val find_source_reference : t -> string -> source_reference option
 val pending_parse_paths : t -> string list
 val mark_parse_pending : t -> string -> unit
 val clear_parse_pending : t -> string -> unit
+val mark_module_removed : t -> string -> unit
+val pending_removed_modules : t -> string list
 
 val set_public_outputs : t -> string -> (string, unit) Hashtbl.t -> unit
 val iter_public_outputs :

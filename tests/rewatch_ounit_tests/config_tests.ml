@@ -87,6 +87,20 @@ let loading_tests =
       check config.sources_defined
         "an explicit empty sources field does not trigger the missing-field \
          warning";
+      File_util.ensure_dir (Filename.concat root "src/dev");
+      write_file (Filename.concat root "src/dev/Foo.res") "let value = 1\n";
+      write_file path
+        {|{"name":"overlap","sources":[{"dir":"src","subdirs":true},{"dir":"src/dev","type":"dev"}]}|};
+      let config = Config.load path in
+      check
+        (not (Config.source_is_dev config "src/dev/Foo.res"))
+        "the first applicable source declaration determines development scope";
+      write_file path
+        {|{"name":"overlap","sources":[{"dir":"src/dev","type":"dev"},{"dir":"src","subdirs":true}]}|};
+      let config = Config.load path in
+      check
+        (Config.source_is_dev config "src/dev/Foo.res")
+        "development scope follows source declaration order";
       write_file path
         {|{"name":"@testrepo/deprecated-config","namespace":true}|};
       let config = Config.load path in

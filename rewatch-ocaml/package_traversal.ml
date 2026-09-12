@@ -1,5 +1,7 @@
 type dependency_kind = Regular | Development
 
+let source_discovery_prod ~prod ~is_local = prod || not is_local
+
 type request = {kind: dependency_kind; declaration: Config.dependency}
 
 type resolved = {request: request; dependency: Package_resolution.dependency}

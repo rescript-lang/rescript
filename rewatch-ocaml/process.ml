@@ -519,17 +519,17 @@ let run_one ?poll ?stdout_chunk ?stderr_chunk ?stdin ~cwd program args =
         Child.launch ?stdout_chunk ?stderr_chunk ?stdin ~notifier ()
           {program; args; cwd}
       in
-      let reaped = ref false in
+      let completion_received = ref false in
       try
         let (_, result), deferred_signals =
           Child.wait_for_running ~poll notifier [child]
         in
-        reaped := true;
+        completion_received := true;
         Signal_restore.protect deferred_signals (fun () ->
             Child.release_running child;
             result)
       with exn ->
-        if not !reaped then Child.terminate_running [child];
+        if not !completion_received then Child.terminate_running [child];
         raise exn)
 
 let run ?poll ~cwd program args = run_one ?poll ~cwd program args

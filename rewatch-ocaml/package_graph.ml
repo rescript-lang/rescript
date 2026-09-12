@@ -1,7 +1,5 @@
 exception Error = Project_context.Error
 
-let source_discovery_prod ~prod ~is_local = prod || not is_local
-
 let with_gentype_source_dirs directories (config : Config.t) =
   if config.gentype_args = [] then config
   else
@@ -105,7 +103,7 @@ let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
         Output.debug ~verbosity:attempt.verbosity
           ("Building source file-tree for package: " ^ config.name);
         Source.discover_with_inventory config
-          ~prod:(source_discovery_prod ~prod ~is_local)
+          ~prod:(Package_traversal.source_discovery_prod ~prod ~is_local)
           ~features
           ~filter:(if root = root_config.root then filter else None)
           ~on_missing:(Package_diagnostics.report_missing_source_folder config)
@@ -123,7 +121,7 @@ let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
       in
       let compile_config =
         let config = with_gentype_source_dirs discovery.gentype_dirs config in
-        let inherited = Build_artifacts.with_root_options config root_config in
+        let inherited = Config.with_root_options config root_config in
         let output_config =
           if owns_outputs then
             {

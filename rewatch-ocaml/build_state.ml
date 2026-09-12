@@ -82,8 +82,7 @@ let set_dependencies state ~key dependencies =
         String_set.add key dependency_module.dependents)
     dependencies
 
-let mark_dependents_compile_dirty state module_ =
-  let visited = Hashtbl.create 8 in
+let mark_dependents_compile_dirty ?(visited = Hashtbl.create 8) state module_ =
   let rec mark dependent =
     if not (Hashtbl.mem visited dependent) then (
       Hashtbl.add visited dependent ();
@@ -95,15 +94,16 @@ let mark_dependents_compile_dirty state module_ =
   in
   String_set.iter mark module_.dependents
 
-let record_published_cmi state ~compile_assets module_ ~path change =
+let record_published_cmi ?dirty_propagation state ~compile_assets module_ ~path
+    change =
+  (match change with
+  | Cmi_unchanged -> ()
+  | Cmi_changed | Cmi_change_unknown ->
+    mark_dependents_compile_dirty ?visited:dirty_propagation state module_);
   Compile_assets.refresh_cmi compile_assets ~key:module_.key ~path;
   module_.last_compiled_cmi <-
     Compile_assets.cmi compile_assets module_.key
-    |> Option.map (fun entry -> entry.Compile_assets.modified);
-  match change with
-  | Cmi_unchanged -> ()
-  | Cmi_changed | Cmi_change_unknown ->
-    mark_dependents_compile_dirty state module_
+    |> Option.map (fun entry -> entry.Compile_assets.modified)
 
 let record_successful_compile ~compile_assets module_ ~cmt_path =
   Compile_assets.refresh_cmt compile_assets ~key:module_.key ~path:cmt_path;

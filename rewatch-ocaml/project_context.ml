@@ -1,6 +1,14 @@
 exception Error of string
 exception Package_error of string
 
+let canonical_project_root folder =
+  if not (File_util.exists folder) then
+    raise
+      (Error
+         ("Could not start Rescript build: Could not write lockfile because \
+           the specified project folder does not exist: " ^ folder));
+  Platform.canonicalize_path folder
+
 type dependency_context = {
   current_root: string;
   workspace_root: string;

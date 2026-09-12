@@ -67,7 +67,7 @@ let discover_package_graph (current : Config.t) =
       in
       let files =
         Source.discover_files config
-          ~prod:(Package_graph.source_discovery_prod ~prod:false ~is_local)
+          ~prod:(Package_traversal.source_discovery_prod ~prod:false ~is_local)
           ~features ~filter:None
           ~on_missing:(Package_diagnostics.report_missing_source_folder config)
       in

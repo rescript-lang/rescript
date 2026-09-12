@@ -18,13 +18,12 @@ val remove_public_outputs : Config.t -> Source.module_ list -> unit
 
 val is_generated_output_path : string -> bool
 
-val with_root_options : Config.t -> Config.t -> Config.t
-
 val cleanup_stale :
   ?ocaml_files:string list ->
   ?ast_sources:Compile_assets.ast_source list ->
   ?source_files:string list ->
   ?present_source_files:string list ->
+  ?on_deferred_artifact:(string -> unit) ->
   root:string ->
   ocaml_dir:string ->
   is_local:bool ->

@@ -5,16 +5,6 @@ type package = {
   implementation_files: string list;
 }
 
-type t = package list
-
-let project_root folder =
-  if not (File_util.exists folder) then
-    raise
-      (Project_context.Error
-         ("Could not start Rescript build: Could not write lockfile because \
-           the specified project folder does not exist: " ^ folder));
-  Platform.canonicalize_path folder
-
 (* The complete cleanup plan is validated before deletion starts so a malformed
    dependency cannot leave only the packages visited before it partially
    cleaned. The resulting order remains dependency-first for progress output. *)
@@ -50,9 +40,7 @@ let prepare ~(root_config : Config.t) ~resolution ~seen ~prod ~is_local =
             ~on_missing:
               (Package_diagnostics.report_missing_source_folder config)
         in
-        let output_config =
-          Build_artifacts.with_root_options config root_config
-        in
+        let output_config = Config.with_root_options config root_config in
         packages :=
           {root; name = config.name; output_config; implementation_files}
           :: !packages))
@@ -87,7 +75,7 @@ let remove_generated_outputs packages =
     packages
 
 let run ~poll ~verbosity ~folder ~prod =
-  let root = project_root folder in
+  let root = Project_context.canonical_project_root folder in
   let show_progress = verbosity >= 0 in
   let interactive = Unix.isatty Unix.stdout && Unix.isatty Unix.stderr in
   let colors = Output.colors_enabled ~interactive in

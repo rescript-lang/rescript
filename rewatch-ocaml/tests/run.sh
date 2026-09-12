@@ -153,6 +153,10 @@ namespace_restart="$work/namespace-restart"
 cp -R "$namespace_invalidation" "$namespace_restart"
 printf 'let value: int = Ns.A.value\n' >"$namespace_restart/src/Main.res"
 
+namespace_repair="$work/namespace-repair"
+cp -R "$namespace_invalidation" "$namespace_repair"
+printf 'let other = 1\n' >"$namespace_repair/src/Other.res"
+
 interface_failure_recovery="$work/interface-failure-recovery"
 mkdir -p "$interface_failure_recovery/src"
 printf '%s\n' \
@@ -287,6 +291,9 @@ printf '%s\n' \
 printf 'let value = B.value\n' >"$full_watch_recovery/src/A.res"
 printf 'let value = 1\n' >"$full_watch_recovery/src/B.res"
 printf 'let value = 1\n' >"$full_watch_recovery/src/C.res"
+
+deletion_retry="$work/deletion-retry"
+cp -R "$full_watch_recovery" "$deletion_retry"
 
 moved_source="$work/moved-source"
 mkdir -p "$moved_source/src/nested"
@@ -1098,14 +1105,18 @@ if ! wait_for_file "$full_watch_recovery/src/A.mjs"; then
   cat "$full_watch_recovery/watch.log" >&2
   exit 1
 fi
+full_watch_destination="$full_watch_recovery/lib/ocaml/C.res"
+rm "$full_watch_destination"
+mkdir "$full_watch_destination"
 rm "$full_watch_recovery/src/B.res"
-printf 'let value =\n' >"$full_watch_recovery/src/C.res"
+printf 'let value = 2\n' >"$full_watch_recovery/src/C.res"
 if ! wait_for_text "$full_watch_recovery/watch.log" \
-  'Error in full-watch-recovery'; then
+  "$full_watch_destination"; then
   cat "$full_watch_recovery/watch.log" >&2
   exit 1
 fi
-printf 'let value = 2\n' >"$full_watch_recovery/src/C.res"
+rmdir "$full_watch_destination"
+printf 'let value = 3\n' >"$full_watch_recovery/src/C.res"
 if ! wait_for_text "$full_watch_recovery/watch.log" \
   'I/O error: ../ocaml/b.cmi'; then
   cat "$full_watch_recovery/watch.log" >&2
@@ -1114,6 +1125,44 @@ if ! wait_for_text "$full_watch_recovery/watch.log" \
 fi
 kill -TERM "$full_watch_recovery_pid"
 wait "$full_watch_recovery_pid" 2>/dev/null || true
+
+"$port" build "$deletion_retry" >/dev/null
+rm "$deletion_retry/src/B.res"
+printf 'let value =\n' >"$deletion_retry/src/C.res"
+if "$port" build "$deletion_retry" >/dev/null 2>&1; then
+  echo "deletion plus parse failure unexpectedly succeeded" >&2
+  exit 1
+fi
+printf 'let value = 2\n' >"$deletion_retry/src/C.res"
+if "$port" build "$deletion_retry" \
+  >"$deletion_retry/retry.log" 2>&1; then
+  echo "a fresh build forgot deleted-dependency invalidation" >&2
+  exit 1
+fi
+grep 'b.cmi' "$deletion_retry/retry.log" >/dev/null
+
+"$port" build "$namespace_repair" >/dev/null
+namespace_repair_destination="$namespace_repair/packages/dep/lib/ocaml/Ns.cmj"
+rm "$namespace_repair_destination"
+mkdir "$namespace_repair_destination"
+"$port" watch "$namespace_repair" >"$namespace_repair/watch.log" 2>&1 &
+namespace_repair_pid=$!
+background_pids="$background_pids $namespace_repair_pid"
+if ! wait_for_text "$namespace_repair/watch.log" \
+  "$namespace_repair_destination"; then
+  cat "$namespace_repair/watch.log" >&2
+  exit 1
+fi
+rmdir "$namespace_repair_destination"
+printf 'let other = 2\n' >"$namespace_repair/src/Other.res"
+if ! wait_for_file "$namespace_repair_destination" \
+  || ! wait_for_text "$namespace_repair/src/Other.mjs" 'other = 2'; then
+  cat "$namespace_repair/watch.log" >&2
+  echo "failed namespace repair was not retried" >&2
+  exit 1
+fi
+kill -TERM "$namespace_repair_pid"
+wait "$namespace_repair_pid" 2>/dev/null || true
 
 publication_destination="$publication_cmi/lib/bs/src/A.res"
 env RESCRIPT_BSC_EXE="$root/rewatch-ocaml/tests/fail-late-publication-bsc.sh" \

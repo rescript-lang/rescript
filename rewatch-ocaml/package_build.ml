@@ -49,5 +49,5 @@ let rec prepare_tree ~seen ~(package : Package_plan.t) ~prepared ~watch
     Package_parse.run ~package ~prepared ~prepared_package ~attempt
       ~removed_module_names
   in
-  Package_compilation.run ~package ~prepared ~prepared_package ~attempt ~watch
-    ~removed_module_names ~parse_dirty_modules
+  Package_compilation.prepare ~package ~prepared ~prepared_package ~attempt
+    ~watch ~removed_module_names ~parse_dirty_modules

@@ -1,4 +1,4 @@
-let run ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
+let prepare ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
     ~(prepared_package : Package_plan.compilation) ~(attempt : Build_attempt.t)
     ~watch ~removed_module_names ~parse_dirty_modules =
   let root = package.root in
@@ -158,7 +158,7 @@ let run ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
           List.exists Compiler_scheduler.candidate_requires_compile candidates
         in
         if
-          package_dirty
+          package_dirty || namespace_state.compile_dirty
           || attempt.freshness_mode = Build_attempt.Initialize_freshness
         then
           Compiler_process.namespace_task
@@ -168,6 +168,7 @@ let run ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
             ~entry:(Config.namespace_entry config.namespace)
             ~package_dirty compiler_name modules
           |> Option.iter (fun namespace_task ->
+              namespace_state.compile_dirty <- true;
               let cmi_path =
                 Filename.concat ocaml_dir (compiler_name ^ ".cmi")
               in

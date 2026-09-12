@@ -44,14 +44,6 @@ type incremental_source = {
   source: Build_session.source_reference;
 }
 
-let project_root folder =
-  if not (File_util.exists folder) then
-    raise
-      (Error
-         ("Could not start Rescript build: Could not write lockfile because \
-           the specified project folder does not exist: " ^ folder));
-  Platform.canonicalize_path folder
-
 let run_scheduled_modules (attempt : Build_attempt.t)
     (prepared : Build_session.prepared) ~compile_step ~namespace_count =
   Compiler_scheduler.run ~poll:attempt.process_poll
@@ -164,7 +156,7 @@ let prepare_incremental previous changes (attempt : Build_attempt.t)
           ~config:source.package.compile_config source.source.relative_path)
   in
   let affected_modules = Hashtbl.create (List.length sources) in
-  let dependencies_changed = ref false in
+  let dependency_updates = ref [] in
   List.iter2
     (fun source result ->
       Hashtbl.replace attempt.preliminary_parses source.source.absolute_path
@@ -207,18 +199,23 @@ let prepare_incremental previous changes (attempt : Build_attempt.t)
           | Some node -> node
           | None -> raise Full_rebuild_required
         in
-        if node.raw_dependencies <> raw_dependencies then (
-          dependencies_changed := true;
-          node.raw_dependencies <- raw_dependencies;
-          Build_state.set_dependencies prepared.build_state ~key
-            (Module_graph.resolved_dependencies
-               ~find_module:(Build_session.find_global_module attempt.session)
-               ~find_namespace_maps:
-                 (Build_session.find_namespace_maps attempt.session)
-               node)))
+        if node.raw_dependencies <> raw_dependencies then
+          dependency_updates :=
+            (key, node, raw_dependencies) :: !dependency_updates)
     affected_modules;
   attempt.parse_seconds <- Unix.gettimeofday () -. started_at;
-  if !dependencies_changed then (
+  if !dependency_updates <> [] then (
+    Build_session.invalidate_graph_cycle attempt.session;
+    List.iter
+      (fun (key, node, raw_dependencies) ->
+        node.Module_graph.raw_dependencies <- raw_dependencies;
+        Build_state.set_dependencies prepared.build_state ~key
+          (Module_graph.resolved_dependencies
+             ~find_module:(Build_session.find_global_module attempt.session)
+             ~find_namespace_maps:
+               (Build_session.find_namespace_maps attempt.session)
+             node))
+      !dependency_updates;
     let cycle =
       Module_graph.find_cycle
         (Build_session.global_module_values attempt.session)
@@ -227,7 +224,18 @@ let prepare_incremental previous changes (attempt : Build_attempt.t)
     in
     Build_session.set_graph_cycle attempt.session cycle;
     cycle)
-  else Build_session.graph_cycle attempt.session
+  else
+    match Build_session.graph_cycle attempt.session with
+    | Build_session.Known_cycle cycle -> cycle
+    | Build_session.Unknown_cycle ->
+      let cycle =
+        Module_graph.find_cycle
+          (Build_session.global_module_values attempt.session)
+          (Build_session.namespace_map_values attempt.session)
+          prepared.build_state
+      in
+      Build_session.set_graph_cycle attempt.session cycle;
+      cycle
 
 let run_with_warning_state ~poll ~warning_state ~request ~no_timing ~verbosity
     ~folder ~prod ~features ~warn_error ~after_build ~filter ~on_state =
@@ -251,7 +259,7 @@ let run_with_warning_state ~poll ~warning_state ~request ~no_timing ~verbosity
     | One_shot | Full_watch -> true
     | Initial_watch | Incremental_watch -> false
   in
-  let root = project_root folder in
+  let root = Project_context.canonical_project_root folder in
   let root_config =
     match previous_build request with
     | Some previous -> previous.root_config
@@ -485,7 +493,7 @@ let remove_compile_warning_freshness warning_state =
 
 let watch ~verbosity ~folder ~prod ~features ~warn_error ~after_build ~filter
     ~clear_screen =
-  let root = project_root folder in
+  let root = Project_context.canonical_project_root folder in
   let warning_state = Warning_state.create () in
   let initial_build = ref true in
   let retained = ref None in

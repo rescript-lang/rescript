@@ -18,15 +18,19 @@ type readiness =
   | Ready of prepared
 
 type compiler_info_state = Needs_publication | Published
+type cycle_cache =
+  | Unknown_cycle
+  | Known_cycle of Module_graph.cycle_info option
 
 type t = {
   global_modules: (string, Module_graph.module_node) Hashtbl.t;
   namespace_maps: (string, Module_graph.namespace_map) Hashtbl.t;
   namespace_maps_by_name: (string, Module_graph.namespace_map list) Hashtbl.t;
-  mutable graph_cycle: Module_graph.cycle_info option;
+  mutable graph_cycle: cycle_cache;
   package_plans: (string, Package_plan.t) Hashtbl.t;
   source_index: (string, source_reference) Hashtbl.t;
   pending_parse_paths: (string, unit) Hashtbl.t;
+  pending_removed_modules: (string, unit) Hashtbl.t;
   public_outputs: (string, (string, unit) Hashtbl.t) Hashtbl.t;
   mutable readiness: readiness;
   mutable compiler_info_state: compiler_info_state;
@@ -38,10 +42,11 @@ let create ~warning_state =
     global_modules = Hashtbl.create 64;
     namespace_maps = Hashtbl.create 16;
     namespace_maps_by_name = Hashtbl.create 16;
-    graph_cycle = None;
+    graph_cycle = Unknown_cycle;
     package_plans = Hashtbl.create 32;
     source_index = Hashtbl.create 64;
     pending_parse_paths = Hashtbl.create 16;
+    pending_removed_modules = Hashtbl.create 16;
     public_outputs = Hashtbl.create 32;
     readiness = Not_prepared;
     compiler_info_state = Needs_publication;
@@ -63,7 +68,9 @@ let install_prepared session prepared =
 
 let mark_freshness_initialized session =
   match session.readiness with
-  | Freshness_pending prepared -> session.readiness <- Ready prepared
+  | Freshness_pending prepared ->
+    session.readiness <- Ready prepared;
+    Hashtbl.clear session.pending_removed_modules
   | Ready _ -> ()
   | Not_prepared -> invalid_arg "build state has not been prepared"
 
@@ -94,7 +101,8 @@ let namespace_map_values session =
   Hashtbl.to_seq_values session.namespace_maps |> List.of_seq
 
 let graph_cycle session = session.graph_cycle
-let set_graph_cycle session cycle = session.graph_cycle <- cycle
+let invalidate_graph_cycle session = session.graph_cycle <- Unknown_cycle
+let set_graph_cycle session cycle = session.graph_cycle <- Known_cycle cycle
 
 let add_package_plan session package =
   Hashtbl.replace session.package_plans package.Package_plan.root package
@@ -125,6 +133,12 @@ let mark_parse_pending session path =
 
 let clear_parse_pending session path =
   Hashtbl.remove session.pending_parse_paths path
+
+let mark_module_removed session name =
+  Hashtbl.replace session.pending_removed_modules name ()
+
+let pending_removed_modules session =
+  session.pending_removed_modules |> Hashtbl.to_seq_keys |> List.of_seq
 
 let set_public_outputs session root outputs =
   Hashtbl.replace session.public_outputs root outputs

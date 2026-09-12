@@ -75,6 +75,9 @@ let create ~freshness_mode ~session ~process_poll ~progress ~verbosity =
             deferred_artifacts = [];
             present_public_outputs;
           });
+  let removed_modules = Hashtbl.create 16 in
+  Build_session.pending_removed_modules session
+  |> List.iter (fun name -> Hashtbl.replace removed_modules name ());
   {
     freshness_mode;
     session;
@@ -85,7 +88,7 @@ let create ~freshness_mode ~session ~process_poll ~progress ~verbosity =
     parse_seconds = 0.;
     parse_messages = [];
     diagnostics = [];
-    removed_modules = Hashtbl.create 16;
+    removed_modules;
     preliminary_parses = Hashtbl.create 16;
     blocked_modules = Hashtbl.create 16;
     namespace_freshness = Hashtbl.create 16;

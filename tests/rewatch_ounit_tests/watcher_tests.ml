@@ -17,26 +17,62 @@ let tests =
     && not (Watcher.For_test.is_control_file_name "package.json"))
     "only compiler configuration files trigger control-file rebuilds";
   let snapshot path digest =
-    [Watcher.{path; state = File {modified = 1.; size = 1; digest}}]
+    [Watch_snapshot.{path; state = File {modified = 1.; size = 1; digest}}]
   in
   let previous = snapshot "A.res" "old-a" @ snapshot "B.res" "old-b" in
   let trigger = snapshot "A.res" "new-a" @ snapshot "B.res" "old-b" in
   let before_build = snapshot "A.res" "new-a" @ snapshot "B.res" "new-b" in
   let polling_changes =
-    Watcher.For_test.polling_build_changes ~previous ~trigger ~before_build
+    Watch_snapshot.polling_build_changes ~previous ~trigger ~before_build
   in
   check
-    (List.map (fun (change : Watcher.change) -> change.path) polling_changes
+    (List.map
+       (fun (change : Watch_snapshot.change) -> change.path)
+       polling_changes
     = ["A.res"; "B.res"])
     "polling includes edits that arrive after the triggering snapshot";
   check
-    (Watcher.For_test.changes_are_incremental polling_changes)
+    (Watch_snapshot.changes_are_incremental polling_changes)
     "polling source modifications use incremental presentation";
   check
     (not
-       (Watcher.For_test.changes_are_incremental
-          [Watcher.{path = "rescript.json"; kind = Modified}]))
+       (Watch_snapshot.changes_are_incremental
+          [Watch_snapshot.{path = "rescript.json"; kind = Modified}]))
     "polling control-file changes use full-rebuild presentation";
+  Test_support.with_temp_dir "rewatch-snapshot-update-" (fun root ->
+      let source = Filename.concat root "A.res" in
+      Test_support.write_file source "let value = 1\n";
+      let digest_cache = Hashtbl.create 1 in
+      let stat = Unix.stat source in
+      let previous =
+        Watch_snapshot.
+          [
+            {
+              path = source;
+              state =
+                File
+                  {
+                    modified = stat.Unix.st_mtime;
+                    size = stat.Unix.st_size;
+                    digest = Digest.file source |> Digest.to_hex;
+                  };
+            };
+          ]
+      in
+      Test_support.write_file source "let value = 2\n";
+      check
+        (Option.is_some
+           (Watch_snapshot.update_entries digest_cache previous
+              [Watch_snapshot.{path = source; kind = Modified}]))
+        "known content events update the retained snapshot";
+      check
+        (Option.is_none
+           (Watch_snapshot.update_entries digest_cache previous
+              [
+                Watch_snapshot.
+                  {path = Filename.concat root "B.res"; kind = Added};
+              ]))
+        "unknown content events request structural reconciliation");
   let root = Filename.temp_file "rewatch-watcher-lifecycle-" "" in
   Sys.remove root;
   Unix.mkdir root 0o700;

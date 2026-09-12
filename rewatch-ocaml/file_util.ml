@@ -32,7 +32,17 @@ let read_file path =
   let channel = Unix.in_channel_of_descr descriptor in
   Fun.protect
     ~finally:(fun () -> close_in_noerr channel)
-    (fun () -> really_input_string channel (in_channel_length channel))
+    (fun () ->
+      let contents = Buffer.create 4096 in
+      let chunk = Bytes.create 65536 in
+      let rec read () =
+        match input channel chunk 0 (Bytes.length chunk) with
+        | 0 -> Buffer.contents contents
+        | count ->
+          Buffer.add_subbytes contents chunk 0 count;
+          read ()
+      in
+      read ())
 
 let digest_file path =
   let descriptor = Unix.openfile path [Unix.O_RDONLY; Unix.O_CLOEXEC] 0 in

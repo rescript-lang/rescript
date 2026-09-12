@@ -31,31 +31,33 @@ let is_compiler_artifact_directory path =
 let directories_under paths =
   let visited = Hashtbl.create 64 in
   let rec walk acc directory =
-    let directory =
-      try
-        let canonical = Platform.canonicalize_path directory in
-        Some (canonical, File_util.directory_entries canonical)
-      with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> None
-    in
-    match directory with
-    | Some (canonical, entries) ->
+    match Platform.canonicalize_path directory with
+    | canonical -> (
       if Hashtbl.mem visited canonical then acc
-      else (
-        Hashtbl.add visited canonical ();
-        entries
-        |> List.fold_left
-             (fun acc name ->
-               let path = Filename.concat canonical name in
-               if is_compiler_artifact_directory path then acc
-               else
-                 match Unix.stat path with
-                 | stat ->
-                   if stat.Unix.st_kind = Unix.S_DIR then walk acc path else acc
-                 | exception Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _)
-                   ->
-                   acc)
-             (canonical :: acc))
-    | None -> acc
+      else
+        let entries =
+          try Some (File_util.directory_entries canonical)
+          with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> None
+        in
+        match entries with
+        | None -> acc
+        | Some entries ->
+          Hashtbl.add visited canonical ();
+          entries
+          |> List.fold_left
+               (fun acc name ->
+                 let path = Filename.concat canonical name in
+                 if is_compiler_artifact_directory path then acc
+                 else
+                   match Unix.stat path with
+                   | stat ->
+                     if stat.Unix.st_kind = Unix.S_DIR then walk acc path
+                     else acc
+                   | exception
+                       Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) ->
+                     acc)
+               (canonical :: acc))
+    | exception Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> acc
   in
   paths
   |> List.fold_left
