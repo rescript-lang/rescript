@@ -30,6 +30,15 @@ checks instead. The default
 acceptance threshold requires both OCaml medians to be no more than 125% of
 Rust.
 
+The latest powered, idle-host seven-run gate at `e258487586` measured a 4.445 s
+Rust clean-build median and a 4.673 s OCaml median (1.051x). Median summed
+process-tree RSS was 1,653,820 KiB and 1,730,560 KiB respectively (1.046x).
+Clean, unchanged, and one-edit compiler work matched exactly, and the complete
+post-build file sets and byte-stable artifacts were identical. The companion
+seven-edit retained-watch gate measured 141 ms for Rust and 150 ms for OCaml
+(1.064x), with identical compiler work and stable resources. These values are
+a reproducible checkpoint, not portable absolute expectations.
+
 This is one part of equivalence checking, not a substitute for the test suites.
 Before accepting a performance increment, also run the OCaml unit/focused tests
 and the canonical Rust rewatch integration suite against the OCaml executable:
@@ -184,3 +193,8 @@ can indicate less machinery, but missing compatibility, weak tests, compressed
 code, or too few explanatory comments can also reduce the number. Behavioral
 and work equivalence, platform support, performance, module size, and review
 findings remain the actual quality gates.
+
+The `e258487586` snapshot with cloc 2.04 contains 7,818 Rust production lines
+after excluding telemetry and 10,500 OCaml production lines including both
+platform backends. Rust inline unit tests account for 2,773 lines; OCaml tests
+and fixtures account for 8,764 lines, and the benchmark tooling for 1,032.
