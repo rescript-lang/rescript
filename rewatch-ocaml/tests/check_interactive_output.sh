@@ -69,31 +69,14 @@ EOF
 chmod +x "$work/after-build-marker.sh"
 printf 'console.log("AFTER_BUILD_MARKER")\n' >"$work/after-build-marker.js"
 
-cat >"$work/parse-warning-bsc.sh" <<'EOF'
-#!/bin/sh
-status=0
-"$REAL_BSC_EXE" "$@" || status=$?
-if [ "$status" -eq 0 ]; then
-  for argument in "$@"; do
-    if [ "$argument" = -bs-ast ]; then
-      printf '%s\n' PARSE_WARNING_MARKER >&2
-      break
-    fi
-  done
-fi
-exit "$status"
-EOF
-chmod +x "$work/parse-warning-bsc.sh"
-
 export RESCRIPT_BSC_EXE=${RESCRIPT_BSC_EXE:-$root/_build/default/compiler/bsc/rescript_compiler_main.exe}
 export RESCRIPT_RUNTIME=${RESCRIPT_RUNTIME:-$root/packages/@rescript/runtime}
-parse_warning_bsc="$work/parse-warning-bsc.sh"
+parse_warning_bsc="$root/_build/default/tests/rewatch_ounit_tests/rewatch_bsc_test_proxy.exe"
 after_build_command="$work/after-build-marker.sh"
 if $windows_posix_shell; then
   RESCRIPT_BSC_EXE=$(command_path "$RESCRIPT_BSC_EXE")
   RESCRIPT_RUNTIME=$(command_path "$RESCRIPT_RUNTIME")
-  parse_warning_bsc=$(command_path \
-    "$root/_build/default/tests/rewatch_ounit_tests/rewatch_bsc_test_proxy.exe")
+  parse_warning_bsc=$(command_path "$parse_warning_bsc")
   after_build_command="node $(command_path "$work/after-build-marker.js")"
 fi
 
@@ -183,7 +166,8 @@ capture_parse_warning_order() {
       "TERM=xterm" \
       "CLICOLOR=1" \
       "CLICOLOR_FORCE=0" \
-      "REAL_BSC_EXE=$RESCRIPT_BSC_EXE" \
+      "REWATCH_REAL_BSC=$RESCRIPT_BSC_EXE" \
+      "REWATCH_BSC_PROXY_MODE=parse-warning" \
       "RESCRIPT_BSC_EXE=$parse_warning_bsc" \
       "RESCRIPT_RUNTIME=$RESCRIPT_RUNTIME" \
       "$executable" build "$project" --no-timing >/dev/null

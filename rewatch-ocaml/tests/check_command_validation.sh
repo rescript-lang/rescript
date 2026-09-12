@@ -6,9 +6,7 @@ rust=${1:-$root/rewatch/target/debug/rescript}
 ocaml=${2:-$root/_build/default/rewatch-ocaml/rescript_ocaml.exe}
 rust=$(realpath "$rust")
 ocaml=$(realpath "$ocaml")
-delete_source_bsc="$root/rewatch-ocaml/tests/delete-source-bsc.sh"
-delete_parse_sources_bsc="$root/rewatch-ocaml/tests/delete-parse-sources-bsc.sh"
-delete_ast_bsc="$root/rewatch-ocaml/tests/delete-ast-bsc.sh"
+bsc_test_proxy="$root/_build/default/tests/rewatch_ounit_tests/rewatch_bsc_test_proxy.exe"
 work=$(mktemp -d "${TMPDIR:-/tmp}/rewatch-command-validation-XXXXXX")
 # Compiler diagnostics contain canonical paths. Resolve platform aliases such
 # as macOS's /var -> /private/var before deriving paths used for comparison.
@@ -25,11 +23,11 @@ case $(uname -s) in
     native_short_work=${native_work/"$native_user"/"$native_short_user"}
     bsc_test_proxy=$(cygpath -aw \
       "$root/_build/default/tests/rewatch_ounit_tests/rewatch_bsc_test_proxy.exe")
-    delete_source_bsc=$bsc_test_proxy
-    delete_parse_sources_bsc=$bsc_test_proxy
-    delete_ast_bsc=$bsc_test_proxy
     ;;
 esac
+delete_source_bsc=$bsc_test_proxy
+delete_parse_sources_bsc=$bsc_test_proxy
+delete_ast_bsc=$bsc_test_proxy
 lock_owner_pid() {
   local shell_pid=$1
   if $windows_posix_shell; then

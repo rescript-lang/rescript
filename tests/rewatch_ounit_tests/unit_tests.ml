@@ -773,7 +773,8 @@ let lock_tests _context =
     (fun () ->
       Build_lock.with_build lock_root (fun ~release ->
           check
-            (Build_lock.read_owner lock = Some (string_of_int (Unix.getpid ())))
+            (Build_lock.read_owner lock
+            = Some (string_of_int (Platform.current_process_id ())))
             "stale build lock is replaced";
           check
             (not (Sys.file_exists takeover))

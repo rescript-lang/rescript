@@ -350,6 +350,12 @@ CAMLprim value rewatch_windows_close_process_job(value job_value)
   CAMLreturn(Val_unit);
 }
 
+CAMLprim value rewatch_windows_current_process_id(value unit_value)
+{
+  (void)unit_value;
+  return Val_long(GetCurrentProcessId());
+}
+
 #else
 
 CAMLprim value rewatch_windows_directory_identity(value path_value)
@@ -395,6 +401,12 @@ CAMLprim value rewatch_windows_close_process_job(value job_value)
 {
   (void)job_value;
   caml_invalid_argument("Windows process jobs are unavailable");
+}
+
+CAMLprim value rewatch_windows_current_process_id(value unit_value)
+{
+  (void)unit_value;
+  caml_invalid_argument("Windows process IDs are unavailable");
 }
 
 #endif

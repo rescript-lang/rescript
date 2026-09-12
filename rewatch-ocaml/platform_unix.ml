@@ -48,6 +48,7 @@ let spawn ~env ~cwd ~program ~args ~stdin ~stdout ~stderr =
 
 let null_device = "/dev/null"
 
+let current_process_id = Unix.getpid
 let process_id process = process
 let release_process _process = ()
 

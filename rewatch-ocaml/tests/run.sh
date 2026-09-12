@@ -7,6 +7,56 @@ port="$port_directory/$(basename "$port")"
 root=$(CDPATH= cd -- "$(dirname "$0")/../.." && pwd)
 : "${RESCRIPT_BSC_EXE:=$root/_build/default/compiler/bsc/rescript_compiler_main.exe}"
 : "${RESCRIPT_RUNTIME:=$root/packages/@rescript/runtime}"
+test_proxy="$root/_build/default/tests/rewatch_ounit_tests/rewatch_bsc_test_proxy.exe"
+windows_posix_shell=false
+case $(uname -s) in
+  CYGWIN*|MINGW*|MSYS*) windows_posix_shell=true ;;
+esac
+native_path() {
+  if $windows_posix_shell; then cygpath -am "$1"; else printf '%s\n' "$1"; fi
+}
+assert_no_test_proxy_processes() {
+  if $windows_posix_shell; then
+    if ! powershell.exe -NoProfile -NonInteractive -Command \
+      'if (Get-Process -Name rewatch_bsc_test_proxy -ErrorAction SilentlyContinue) { exit 1 }'; then
+      echo "rewatch compiler test proxy was left running" >&2
+      powershell.exe -NoProfile -NonInteractive -Command \
+        'Get-Process -Name rewatch_bsc_test_proxy -ErrorAction SilentlyContinue | Format-Table -AutoSize' >&2
+      exit 1
+    fi
+  elif test -n "$(pgrep -f rewatch_bsc_test_proxy || true)"; then
+    echo "rewatch compiler test proxy was left running" >&2
+    exit 1
+  fi
+}
+directory_link() {
+  link_target=$1
+  link_path=$2
+  if $windows_posix_shell; then
+    LINK_PATH=$(cygpath -aw "$link_path") TARGET_PATH=$(cygpath -aw "$link_target") \
+      powershell.exe -NoProfile -NonInteractive -Command \
+        '$ErrorActionPreference = "Stop"; $null = New-Item -ItemType Junction -Path $env:LINK_PATH -Target $env:TARGET_PATH'
+  else
+    ln -s "$link_target" "$link_path"
+  fi
+}
+file_link_if_supported() {
+  link_target=$1
+  link_path=$2
+  if $windows_posix_shell; then
+    LINK_PATH=$(cygpath -aw "$link_path") TARGET_PATH=$(cygpath -aw "$link_target") \
+      powershell.exe -NoProfile -NonInteractive -Command \
+        '$ErrorActionPreference = "Stop"; $null = New-Item -ItemType SymbolicLink -Path $env:LINK_PATH -Target $env:TARGET_PATH' \
+        >/dev/null 2>&1
+  else
+    ln -s "$link_target" "$link_path"
+  fi
+}
+if $windows_posix_shell; then
+  RESCRIPT_BSC_EXE=$(native_path "$RESCRIPT_BSC_EXE")
+  RESCRIPT_RUNTIME=$(native_path "$RESCRIPT_RUNTIME")
+  test_proxy=$(native_path "$test_proxy")
+fi
 export RESCRIPT_BSC_EXE RESCRIPT_RUNTIME
 work="$root/tmp/rewatch-ocaml/test-$$"
 mkdir -p "$work"
@@ -33,7 +83,7 @@ cp -R "$root/rewatch-ocaml/tests/package-output-dependency" \
   "$work/package-output-dependency"
 mkdir -p "$work/feature-dependencies/node_modules"
 for dependency in consumer dep-union dep-transitive dep-empty; do
-  ln -s "../packages/$dependency" \
+  directory_link "$work/feature-dependencies/packages/$dependency" \
     "$work/feature-dependencies/node_modules/$dependency"
 done
 unlinked_dependency="$work/unlinked-dependency"
@@ -77,7 +127,7 @@ cp -R "$root/rewatch-ocaml/tests/namespace-collision" \
   "$work/namespace-collision"
 mkdir -p "$work/namespace-collision/node_modules"
 for dependency in namespace-one namespace-two; do
-  ln -s "../packages/$dependency" \
+  directory_link "$work/namespace-collision/packages/$dependency" \
     "$work/namespace-collision/node_modules/$dependency"
 done
 cp -R "$root/rewatch-ocaml/tests/source-map" "$work/source-map"
@@ -128,10 +178,12 @@ printf '%s\n' '{"name":"dep"}' \
   >"$package_name_mismatch/packages/dep/package.json"
 printf 'let value = 1\n' \
   >"$package_name_mismatch/packages/dep/src/Dep.res"
-ln -s ../packages/dep "$package_name_mismatch/node_modules/dep"
-
 config_cleanup_invalidation="$work/config-cleanup-invalidation"
 cp -R "$package_name_mismatch" "$config_cleanup_invalidation"
+directory_link "$package_name_mismatch/packages/dep" \
+  "$package_name_mismatch/node_modules/dep"
+directory_link "$config_cleanup_invalidation/packages/dep" \
+  "$config_cleanup_invalidation/node_modules/dep"
 printf '%s\n' '{"name":"dep","sources":"src"}' \
   >"$config_cleanup_invalidation/packages/dep/rescript.json"
 
@@ -157,7 +209,7 @@ printf '%s\n' \
   >"$transitive_local_watch/packages/local/rescript.json"
 printf 'let value = 1\n' \
   >"$transitive_local_watch/packages/local/src/Local.res"
-ln -s ../../../packages/local \
+directory_link "$transitive_local_watch/packages/local" \
   "$transitive_local_watch/node_modules/external/node_modules/local"
 
 namespace_invalidation="$work/namespace-invalidation"
@@ -175,9 +227,6 @@ printf 'let value = 1\n' \
   >"$namespace_invalidation/packages/dep/src/A.res"
 printf 'let value = 2\n' \
   >"$namespace_invalidation/packages/dep/src/B.res"
-ln -s ../packages/dep \
-  "$namespace_invalidation/node_modules/namespace-dep"
-
 namespace_restart="$work/namespace-restart"
 cp -R "$namespace_invalidation" "$namespace_restart"
 printf 'let value: int = Ns.A.value\n' >"$namespace_restart/src/Main.res"
@@ -185,6 +234,11 @@ printf 'let value: int = Ns.A.value\n' >"$namespace_restart/src/Main.res"
 namespace_repair="$work/namespace-repair"
 cp -R "$namespace_invalidation" "$namespace_repair"
 printf 'let other = 1\n' >"$namespace_repair/src/Other.res"
+for project in "$namespace_invalidation" "$namespace_restart" \
+  "$namespace_repair"; do
+  directory_link "$project/packages/dep" \
+    "$project/node_modules/namespace-dep"
+done
 
 interface_failure_recovery="$work/interface-failure-recovery"
 mkdir -p "$interface_failure_recovery/src"
@@ -211,7 +265,7 @@ printf '%s\n' \
   '{"name":"directory-symlink","sources":[{"dir":"src","subdirs":true}],"package-specs":{"module":"esmodule","in-source":true,"suffix":".mjs"}}' \
   >"$directory_symlink/rescript.json"
 printf 'let value = 1\n' >"$directory_symlink/shared/Linked.res"
-ln -s shared "$directory_symlink/src"
+directory_link "$directory_symlink/shared" "$directory_symlink/src"
 
 recursive_lib="$work/recursive-lib"
 mkdir -p "$recursive_lib/src/lib"
@@ -234,7 +288,8 @@ printf '%s\n' \
   >"$filtered_dependency/packages/dep/rescript.json"
 printf 'let value = 1\n' \
   >"$filtered_dependency/packages/dep/src/Helper.res"
-ln -s '../packages/dep' "$filtered_dependency/node_modules/dep"
+directory_link "$filtered_dependency/packages/dep" \
+  "$filtered_dependency/node_modules/dep"
 
 symlink_source="$work/symlink-source"
 mkdir -p "$symlink_source/src" "$symlink_source/shared"
@@ -242,7 +297,11 @@ printf '%s\n' \
   '{"name":"symlink-source","sources":"src","package-specs":{"module":"esmodule","in-source":true,"suffix":".mjs"}}' \
   >"$symlink_source/rescript.json"
 printf 'let value = 1\n' >"$symlink_source/shared/Source.js"
-ln -s '../shared/Source.js' "$symlink_source/src/Linked.res"
+file_symlinks_supported=true
+if ! file_link_if_supported "$symlink_source/shared/Source.js" \
+    "$symlink_source/src/Linked.res"; then
+  file_symlinks_supported=false
+fi
 
 symlink_alias="$work/symlink-alias"
 mkdir -p "$symlink_alias/src"
@@ -250,7 +309,10 @@ printf '%s\n' \
   '{"name":"symlink-alias","sources":"src","package-specs":{"module":"esmodule","in-source":true,"suffix":".mjs"}}' \
   >"$symlink_alias/rescript.json"
 printf 'let value = 1\n' >"$symlink_alias/src/Original.res"
-ln -s Original.res "$symlink_alias/src/Linked.res"
+if $file_symlinks_supported; then
+  file_link_if_supported "$symlink_alias/src/Original.res" \
+    "$symlink_alias/src/Linked.res"
+fi
 
 multiple_cycles="$work/multiple-cycles"
 mkdir -p "$multiple_cycles/src"
@@ -309,8 +371,10 @@ printf '%s\n' \
   >"$multi_package_pending/packages/dep2/rescript.json"
 printf 'let value = 1\n' \
   >"$multi_package_pending/packages/dep2/src/B.res"
-ln -s ../packages/dep1 "$multi_package_pending/node_modules/dep1"
-ln -s ../packages/dep2 "$multi_package_pending/node_modules/dep2"
+directory_link "$multi_package_pending/packages/dep1" \
+  "$multi_package_pending/node_modules/dep1"
+directory_link "$multi_package_pending/packages/dep2" \
+  "$multi_package_pending/node_modules/dep2"
 
 full_watch_recovery="$work/full-watch-recovery"
 mkdir -p "$full_watch_recovery/src"
@@ -388,9 +452,11 @@ printf '%s\n' \
   >"$duplicate_selection/packages/nested-shared/rescript.json"
 printf 'let value = 2\n' \
   >"$duplicate_selection/packages/nested-shared/src/Shared.res"
-ln -s ../packages/a "$duplicate_selection/node_modules/a"
-ln -s ../packages/shared "$duplicate_selection/node_modules/shared"
-ln -s ../../nested-shared \
+directory_link "$duplicate_selection/packages/a" \
+  "$duplicate_selection/node_modules/a"
+directory_link "$duplicate_selection/packages/shared" \
+  "$duplicate_selection/node_modules/shared"
+directory_link "$duplicate_selection/packages/nested-shared" \
   "$duplicate_selection/packages/a/node_modules/shared"
 
 external_duplicate_base="$work/external-duplicate"
@@ -428,8 +494,9 @@ printf '%s\n' \
   '{"name":"cycle-dep","sources":"src","dependencies":["external-cycle-root"]}' \
   >"$external_cycle_dependency/rescript.json"
 printf 'let value = Root.value\n' >"$external_cycle_dependency/src/CycleDep.res"
-ln -s ../../store/cycle-dep "$external_cycle/node_modules/cycle-dep"
-ln -s ../../../project \
+directory_link "$external_cycle_dependency" \
+  "$external_cycle/node_modules/cycle-dep"
+directory_link "$external_cycle" \
   "$external_cycle_dependency/node_modules/external-cycle-root"
 
 external_namespace="$external_diagnostics_base/namespace-project"
@@ -446,7 +513,7 @@ for namespace_dependency_name in ns-one ns-two; do
     >"$external_diagnostics_base/store/$namespace_dependency_name/rescript.json"
   printf 'let value = 1\n' \
     >"$external_diagnostics_base/store/$namespace_dependency_name/src/Value.res"
-  ln -s "../../store/$namespace_dependency_name" \
+  directory_link "$external_diagnostics_base/store/$namespace_dependency_name" \
     "$external_namespace/node_modules/$namespace_dependency_name"
 done
 
@@ -479,16 +546,31 @@ runtime_path=$(CDPATH= cd -- \
   "$runtime_discovery/node_modules/@rescript/runtime" && pwd)
 runtime_args=$(env -u RESCRIPT_RUNTIME \
   "$port" compiler-args "$runtime_discovery/src/A.res")
-printf '%s\n' "$runtime_args" | grep -F "\"$runtime_path\"" >/dev/null
+RUNTIME_PATH=$(native_path "$runtime_path") node -e '
+  let input = "";
+  process.stdin.setEncoding("utf8");
+  process.stdin.on("data", chunk => input += chunk);
+  process.stdin.on("end", () => {
+    const args = JSON.parse(input).compiler_args;
+    const index = args.indexOf("-runtime-path");
+    const normalize = value => value.replaceAll("\\", "/").toLowerCase();
+    if (index < 0 || normalize(args[index + 1]) !== normalize(process.env.RUNTIME_PATH)) {
+      process.exit(1);
+    }
+  });
+' <<EOF
+$runtime_args
+EOF
 
 missing_project="$work/does-not-exist"
 if "$port" build "$missing_project" >"$work/missing-project.log" 2>&1; then
   echo "build unexpectedly accepted a missing project folder" >&2
   exit 1
 fi
-grep -F \
-  "Could not start Rescript build: Could not write lockfile because the specified project folder does not exist: $missing_project" \
-  "$work/missing-project.log" >/dev/null
+missing_project_native=$(native_path "$missing_project")
+tr '\\' '/' <"$work/missing-project.log" | grep -F \
+  "Could not start Rescript build: Could not write lockfile because the specified project folder does not exist: $missing_project_native" \
+  >/dev/null
 
 compiler_args_json=$("$port" compiler-args "$basic/src/A.res")
 printf '%s\n' "$compiler_args_json" | grep '"compiler_args"' >/dev/null
@@ -555,12 +637,26 @@ wait_for_file() {
   return 1
 }
 
+obstruct_file_with_directory() {
+  path=$1
+  attempts=0
+  while [ "$attempts" -lt 200 ]; do
+    rm -f "$path"
+    if mkdir "$path" 2>/dev/null; then
+      return 0
+    fi
+    attempts=$((attempts + 1))
+    sleep 0.01
+  done
+  return 1
+}
+
 wait_for_text() {
   file="$1"
   pattern="$2"
   attempts=0
   while [ "$attempts" -lt 200 ]; do
-    if grep -q "$pattern" "$file" 2>/dev/null; then
+    if grep -Fq "$pattern" "$file" 2>/dev/null; then
       return 0
     fi
     attempts=$((attempts + 1))
@@ -578,13 +674,29 @@ wait_for_initial_build() {
   fi
 }
 
+wait_for_any_text() {
+  file="$1"
+  shift
+  attempts=0
+  while [ "$attempts" -lt 200 ]; do
+    for pattern in "$@"; do
+      if grep -Fq "$pattern" "$file" 2>/dev/null; then
+        return 0
+      fi
+    done
+    attempts=$((attempts + 1))
+    sleep 0.1
+  done
+  return 1
+}
+
 wait_for_count() {
   file="$1"
   pattern="$2"
   expected="$3"
   attempts=0
   while [ "$attempts" -lt 200 ]; do
-    count=$(grep -c "$pattern" "$file" 2>/dev/null) || count=0
+    count=$(grep -c -- "$pattern" "$file" 2>/dev/null) || count=0
     if [ "$count" -ge "$expected" ]; then
       return 0
     fi
@@ -620,6 +732,31 @@ wait_for_pid_gone() {
   return 1
 }
 
+remove_file_with_retry() {
+  file=$1
+  attempts=0
+  while [ "$attempts" -lt 200 ]; do
+    if rm -f "$file" 2>/dev/null; then
+      return 0
+    fi
+    attempts=$((attempts + 1))
+    sleep 0.01
+  done
+  echo "could not remove $file" >&2
+  return 1
+}
+
+stop_watch() {
+  project=$1
+  pid=$2
+  if $windows_posix_shell; then
+    remove_file_with_retry "$project/lib/watch.lock"
+  else
+    kill -TERM "$pid"
+  fi
+  wait "$pid"
+}
+
 remove_obstruction_directory() {
   directory="$1"
   if ! rmdir "$directory" 2>/dev/null && [ -e "$directory" ]; then
@@ -638,33 +775,39 @@ grep -F "Error formatting stdin:" "$work/format-invalid.err" >/dev/null
 
 format_stdin_tmp="$work/format-stdin-tmp"
 format_stdin_fifo="$work/format-stdin.fifo"
-mkdir -p "$format_stdin_tmp"
-mkfifo "$format_stdin_fifo"
-exec 9<>"$format_stdin_fifo"
-TMPDIR="$format_stdin_tmp" "$port" format --stdin .res \
-  <"$format_stdin_fifo" >"$work/format-signal.out" \
-  2>"$work/format-signal.err" &
-format_stdin_pid=$!
-background_pids="$background_pids $format_stdin_pid"
-attempts=0
-while [ "$attempts" -lt 100 ] && [ -z "$(find "$format_stdin_tmp" -type f -print -quit)" ]; do
-  attempts=$((attempts + 1))
-  sleep 0.05
-done
-if [ "$attempts" -eq 100 ]; then
-  echo "stdin formatter did not start reading" >&2
-  exit 1
-fi
-kill -TERM "$format_stdin_pid"
-if ! wait_for_pid_gone "$format_stdin_pid"; then
-  echo "stdin formatter did not respond to termination" >&2
-  exit 1
-fi
-wait "$format_stdin_pid" 2>/dev/null || true
-exec 9>&-
-if find "$format_stdin_tmp" -type f -print -quit | grep . >/dev/null; then
-  echo "stdin formatter left a temporary file after termination" >&2
-  exit 1
+# MSYS kill forcibly terminates native processes instead of delivering a
+# Windows console control event. Keep the real signal assertions on Unix;
+# Windows exercises the same cleanup path through watch.lock removal below.
+if ! $windows_posix_shell; then
+  mkdir -p "$format_stdin_tmp"
+  mkfifo "$format_stdin_fifo"
+  exec 9<>"$format_stdin_fifo"
+  TMPDIR="$format_stdin_tmp" "$port" format --stdin .res \
+    <"$format_stdin_fifo" >"$work/format-signal.out" \
+    2>"$work/format-signal.err" &
+  format_stdin_pid=$!
+  background_pids="$background_pids $format_stdin_pid"
+  attempts=0
+  while [ "$attempts" -lt 100 ] && \
+    [ -z "$(find "$format_stdin_tmp" -type f -print -quit)" ]; do
+    attempts=$((attempts + 1))
+    sleep 0.05
+  done
+  if [ "$attempts" -eq 100 ]; then
+    echo "stdin formatter did not start reading" >&2
+    exit 1
+  fi
+  kill -TERM "$format_stdin_pid"
+  if ! wait_for_pid_gone "$format_stdin_pid"; then
+    echo "stdin formatter did not respond to termination" >&2
+    exit 1
+  fi
+  wait "$format_stdin_pid" 2>/dev/null || true
+  exec 9>&-
+  if find "$format_stdin_tmp" -type f -print -quit | grep . >/dev/null; then
+    echo "stdin formatter left a temporary file after termination" >&2
+    exit 1
+  fi
 fi
 
 printf 'let unformatted=1\n' >"$work/unformatted.res"
@@ -673,8 +816,9 @@ if "$port" format --check "$work/unformatted.res" \
   echo "format check unexpectedly accepted an unformatted file" >&2
   exit 1
 fi
-grep -F "[format check] $work/unformatted.res" \
-  "$work/format-check.err" >/dev/null
+unformatted_native=$(native_path "$work/unformatted.res")
+tr '\\' '/' <"$work/format-check.err" | \
+  grep -F "[format check] $unformatted_native" >/dev/null
 grep -F "The file listed above needs formatting" \
   "$work/format-check.err" >/dev/null
 grep -F "Formatting check failed" "$work/format-check.err" >/dev/null
@@ -691,8 +835,9 @@ if (cd "$basic/src" && "$port" format --check) \
   echo "format unexpectedly searched above the current directory" >&2
   exit 1
 fi
-grep -F "Could not read rescript.json at $basic/src" \
-  "$work/format-nested.err" >/dev/null
+basic_src_native=$(native_path "$basic/src")
+tr '\\' '/' <"$work/format-nested.err" | \
+  grep -F "Could not read rescript.json at $basic_src_native" >/dev/null
 
 rm -rf "$basic/lib" "$cycle/lib" "$failure/lib"
 rm -rf "$legacy_config/lib"
@@ -714,8 +859,8 @@ rm -rf "$namespace/lib"
 rm -rf "$namespace_entry/lib"
 rm -rf "$source_map/lib"
 mkdir -p "$monorepo/node_modules"
-ln -s ../packages/consumer "$monorepo/node_modules/consumer"
-ln -s ../packages/dep "$monorepo/node_modules/dep"
+directory_link "$monorepo/packages/consumer" "$monorepo/node_modules/consumer"
+directory_link "$monorepo/packages/dep" "$monorepo/node_modules/dep"
 
 # A command run from a listed workspace package may resolve sibling packages,
 # but those siblings are ordinary dependencies for this invocation. In
@@ -735,14 +880,15 @@ node - "$monorepo/packages/consumer/lib/bs/.sourcedirs.json" \
 const fs = require("fs");
 const [sourceDirsPath, dependencyPath] = process.argv.slice(2);
 const sourceDirs = JSON.parse(fs.readFileSync(sourceDirsPath, "utf8"));
+const normalize = value => value.replaceAll("\\", "/");
 if (JSON.stringify(sourceDirs.dirs) !== JSON.stringify(["src"])) {
   throw new Error(`unexpected direct-package source dirs: ${JSON.stringify(sourceDirs.dirs)}`);
 }
-if (sourceDirs.cmt_scan.length !== 1 || sourceDirs.cmt_scan[0].build_root !== "lib/bs") {
+if (sourceDirs.cmt_scan.length !== 1 || normalize(sourceDirs.cmt_scan[0].build_root) !== "lib/bs") {
   throw new Error(`unexpected direct-package scan plan: ${JSON.stringify(sourceDirs.cmt_scan)}`);
 }
 const packages = new Map(sourceDirs.pkgs);
-if (packages.get("dep") !== dependencyPath) {
+if (normalize(packages.get("dep")) !== normalize(dependencyPath)) {
   throw new Error(`missing absolute sibling dependency path: ${JSON.stringify(sourceDirs.pkgs)}`);
 }
 NODE
@@ -775,7 +921,7 @@ printf '\nlet streamedAfterBuild = 1\n' >>"$basic/src/A.res"
 after_build_release="$basic/after-build-release"
 after_build_log="$basic/after-build-stream.log"
 "$port" build --after-build \
-  "$root/rewatch-ocaml/tests/stream-after-build.sh $after_build_release" \
+  "node $(native_path "$root/rewatch-ocaml/tests/stream-after-build.js") $(native_path "$after_build_release")" \
   "$basic" >"$after_build_log" 2>&1 &
 after_build_pid=$!
 background_pids="$background_pids $after_build_pid"
@@ -1016,10 +1162,11 @@ grep 'Compiled 0 modules' "$directory_symlink/unchanged.log" >/dev/null
 atomic_release="$atomic_save/release"
 atomic_started="$atomic_save/compile-started"
 touch "$atomic_release"
-env RESCRIPT_BSC_EXE="$root/rewatch-ocaml/tests/block-compile-bsc.sh" \
-  REWATCH_OCAML_REAL_BSC="$RESCRIPT_BSC_EXE" \
-  REWATCH_OCAML_RELEASE_FILE="$atomic_release" \
-  REWATCH_OCAML_COMPILE_STARTED="$atomic_started" \
+env RESCRIPT_BSC_EXE="$test_proxy" \
+  REWATCH_REAL_BSC="$RESCRIPT_BSC_EXE" \
+  REWATCH_BSC_PROXY_MODE=block-compile \
+  REWATCH_OCAML_RELEASE_FILE="$(native_path "$atomic_release")" \
+  REWATCH_OCAML_COMPILE_STARTED="$(native_path "$atomic_started")" \
   "$port" watch "$atomic_save" >"$atomic_save/watch.log" 2>&1 &
 atomic_save_pid=$!
 background_pids="$background_pids $atomic_save_pid"
@@ -1089,45 +1236,47 @@ if "$port" build --warn-error A "$filtered_dependency" \
   exit 1
 fi
 
-"$port" watch "$symlink_source" >"$symlink_source/watch.log" 2>&1 &
-symlink_source_pid=$!
-background_pids="$background_pids $symlink_source_pid"
-if ! wait_for_file "$symlink_source/src/Linked.mjs"; then
-  cat "$symlink_source/watch.log" >&2
-  exit 1
-fi
-wait_for_initial_build "$symlink_source/watch.log"
-printf 'let value = 2\n' >"$symlink_source/shared/Source.js"
-if ! wait_for_text "$symlink_source/src/Linked.mjs" 'value = 2'; then
-  cat "$symlink_source/watch.log" >&2
-  exit 1
-fi
-symlink_replacement=$(mktemp "${TMPDIR:-/tmp}/rewatch-symlink-target.XXXXXX")
-printf 'let value = 3\n' >"$symlink_replacement"
-mv "$symlink_replacement" "$symlink_source/shared/Source.js"
-if ! wait_for_text "$symlink_source/src/Linked.mjs" 'value = 3'; then
-  cat "$symlink_source/watch.log" >&2
-  exit 1
-fi
-kill -TERM "$symlink_source_pid"
-wait "$symlink_source_pid" 2>/dev/null || true
+if $file_symlinks_supported; then
+  "$port" watch "$symlink_source" >"$symlink_source/watch.log" 2>&1 &
+  symlink_source_pid=$!
+  background_pids="$background_pids $symlink_source_pid"
+  if ! wait_for_file "$symlink_source/src/Linked.mjs"; then
+    cat "$symlink_source/watch.log" >&2
+    exit 1
+  fi
+  wait_for_initial_build "$symlink_source/watch.log"
+  printf 'let value = 2\n' >"$symlink_source/shared/Source.js"
+  if ! wait_for_text "$symlink_source/src/Linked.mjs" 'value = 2'; then
+    cat "$symlink_source/watch.log" >&2
+    exit 1
+  fi
+  symlink_replacement=$(mktemp "${TMPDIR:-/tmp}/rewatch-symlink-target.XXXXXX")
+  printf 'let value = 3\n' >"$symlink_replacement"
+  mv "$symlink_replacement" "$symlink_source/shared/Source.js"
+  if ! wait_for_text "$symlink_source/src/Linked.mjs" 'value = 3'; then
+    cat "$symlink_source/watch.log" >&2
+    exit 1
+  fi
+  kill -TERM "$symlink_source_pid"
+  wait "$symlink_source_pid" 2>/dev/null || true
 
-"$port" watch "$symlink_alias" >"$symlink_alias/watch.log" 2>&1 &
-symlink_alias_pid=$!
-background_pids="$background_pids $symlink_alias_pid"
-if ! wait_for_file "$symlink_alias/src/Linked.mjs"; then
-  cat "$symlink_alias/watch.log" >&2
-  exit 1
+  "$port" watch "$symlink_alias" >"$symlink_alias/watch.log" 2>&1 &
+  symlink_alias_pid=$!
+  background_pids="$background_pids $symlink_alias_pid"
+  if ! wait_for_file "$symlink_alias/src/Linked.mjs"; then
+    cat "$symlink_alias/watch.log" >&2
+    exit 1
+  fi
+  wait_for_initial_build "$symlink_alias/watch.log"
+  printf 'let value = 2\n' >"$symlink_alias/src/Original.res"
+  if ! wait_for_text "$symlink_alias/src/Original.mjs" 'value = 2' \
+    || ! wait_for_text "$symlink_alias/src/Linked.mjs" 'value = 2'; then
+    cat "$symlink_alias/watch.log" >&2
+    exit 1
+  fi
+  kill -TERM "$symlink_alias_pid"
+  wait "$symlink_alias_pid" 2>/dev/null || true
 fi
-wait_for_initial_build "$symlink_alias/watch.log"
-printf 'let value = 2\n' >"$symlink_alias/src/Original.res"
-if ! wait_for_text "$symlink_alias/src/Original.mjs" 'value = 2' \
-  || ! wait_for_text "$symlink_alias/src/Linked.mjs" 'value = 2'; then
-  cat "$symlink_alias/watch.log" >&2
-  exit 1
-fi
-kill -TERM "$symlink_alias_pid"
-wait "$symlink_alias_pid" 2>/dev/null || true
 
 "$port" watch "$post_build_cmi" >"$post_build_cmi/watch.log" 2>&1 &
 post_build_cmi_pid=$!
@@ -1209,7 +1358,8 @@ if ! mkdir "$parse_destination"; then
   exit 1
 fi
 printf 'let value = 2\n' >"$parse_publication/src/A.res"
-if ! wait_for_text "$parse_publication/watch.log" "$parse_destination"; then
+if ! wait_for_text "$parse_publication/watch.log" \
+  "$(basename "$parse_destination")"; then
   cat "$parse_publication/watch.log" >&2
   exit 1
 fi
@@ -1235,11 +1385,11 @@ if ! wait_for_text "$multi_package_pending/watch.log" \
   echo "initial watch did not finish and publish $dep1_destination" >&2
   exit 1
 fi
-rm "$dep1_destination"
-mkdir "$dep1_destination"
+obstruct_file_with_directory "$dep1_destination"
 printf 'let value = 2\n' >"$multi_package_pending/packages/dep2/src/B.res"
 printf 'let value = 2\n' >"$multi_package_pending/packages/dep1/src/A.res"
-if ! wait_for_text "$multi_package_pending/watch.log" "$dep1_destination"; then
+if ! wait_for_text "$multi_package_pending/watch.log" \
+  "$(basename "$dep1_destination")"; then
   cat "$multi_package_pending/watch.log" >&2
   exit 1
 fi
@@ -1266,12 +1416,11 @@ if ! wait_for_text "$full_watch_recovery/watch.log" \
   echo "initial watch did not finish and publish $full_watch_destination" >&2
   exit 1
 fi
-rm "$full_watch_destination"
-mkdir "$full_watch_destination"
+obstruct_file_with_directory "$full_watch_destination"
 rm "$full_watch_recovery/src/B.res"
 printf 'let value = 2\n' >"$full_watch_recovery/src/C.res"
 if ! wait_for_text "$full_watch_recovery/watch.log" \
-  "$full_watch_destination"; then
+  "$(basename "$full_watch_destination")"; then
   cat "$full_watch_recovery/watch.log" >&2
   exit 1
 fi
@@ -1306,13 +1455,12 @@ fi
 
 "$port" build "$namespace_repair" >/dev/null
 namespace_repair_destination="$namespace_repair/packages/dep/lib/ocaml/Ns.cmj"
-rm "$namespace_repair_destination"
-mkdir "$namespace_repair_destination"
+obstruct_file_with_directory "$namespace_repair_destination"
 "$port" watch "$namespace_repair" >"$namespace_repair/watch.log" 2>&1 &
 namespace_repair_pid=$!
 background_pids="$background_pids $namespace_repair_pid"
 if ! wait_for_text "$namespace_repair/watch.log" \
-  "$namespace_repair_destination"; then
+  "$(basename "$namespace_repair_destination")"; then
   cat "$namespace_repair/watch.log" >&2
   exit 1
 fi
@@ -1328,11 +1476,12 @@ kill -TERM "$namespace_repair_pid"
 wait "$namespace_repair_pid" 2>/dev/null || true
 
 publication_destination="$publication_cmi/lib/bs/src/A.res"
-env RESCRIPT_BSC_EXE="$root/rewatch-ocaml/tests/fail-late-publication-bsc.sh" \
+env RESCRIPT_BSC_EXE="$test_proxy" \
   REWATCH_REAL_BSC="$RESCRIPT_BSC_EXE" \
-  REWATCH_FAIL_PUBLICATION="$publication_cmi/fail-publication" \
-  REWATCH_PUBLICATION_FAILED="$publication_cmi/publication-failed" \
-  REWATCH_PUBLICATION_DESTINATION="$publication_destination" \
+  REWATCH_BSC_PROXY_MODE=fail-late-publication \
+  REWATCH_FAIL_PUBLICATION="$(native_path "$publication_cmi/fail-publication")" \
+  REWATCH_PUBLICATION_FAILED="$(native_path "$publication_cmi/publication-failed")" \
+  REWATCH_PUBLICATION_DESTINATION="$(native_path "$publication_destination")" \
   "$port" watch "$publication_cmi" >"$publication_cmi/watch.log" 2>&1 &
 publication_cmi_pid=$!
 background_pids="$background_pids $publication_cmi_pid"
@@ -1419,9 +1568,10 @@ wait "$initial_failure_freshness_pid" 2>/dev/null || true
 # cleanly. An unrelated edit must not compile an older AST or forget diagnostics.
 retained_parse_log="$retained_parse/watch.log"
 retained_parse_calls="$retained_parse/bsc-calls.log"
-env RESCRIPT_BSC_EXE="$root/rewatch-ocaml/tests/parse-warning-bsc.sh" \
+env RESCRIPT_BSC_EXE="$test_proxy" \
   REWATCH_REAL_BSC="$RESCRIPT_BSC_EXE" \
-  REWATCH_BSC_CALL_LOG="$retained_parse_calls" \
+  REWATCH_BSC_PROXY_MODE=parse-warning-log \
+  REWATCH_BSC_CALL_LOG="$(native_path "$retained_parse_calls")" \
   REWATCH_PARSE_WARNING_SOURCE=A.res \
   "$port" watch "$retained_parse" >"$retained_parse_log" 2>&1 &
 retained_parse_pid=$!
@@ -1438,16 +1588,23 @@ if ! wait_for_count "$retained_parse_log" REWATCH_PARSE_WARNING 2; then
   cat "$retained_parse_log" >&2
   exit 1
 fi
+if ! wait_for_count "$retained_parse_calls" '-bs-ast.*A.res' \
+  "$((initial_a_parse_count + 1))"; then
+  cat "$retained_parse_calls" >&2
+  exit 1
+fi
 warning_a_parse_count=$(grep -c -- '-bs-ast.*A.res' "$retained_parse_calls")
 test "$warning_a_parse_count" -gt "$initial_a_parse_count"
 printf 'let value =\n' >"$retained_parse/src/A.res"
-if ! wait_for_count "$retained_parse_log" 'Error in retained-parse' 1; then
+if ! wait_for_count "$retained_parse_log" \
+  'This let-binding misses an expression' 1; then
   cat "$retained_parse_log" >&2
   exit 1
 fi
 failed_a_parse_count=$(grep -c -- '-bs-ast.*A.res' "$retained_parse_calls")
 printf 'let other = 3\n' >"$retained_parse/src/B.res"
-if ! wait_for_count "$retained_parse_log" 'Error in retained-parse' 2; then
+if ! wait_for_count "$retained_parse_log" \
+  'This let-binding misses an expression' 2; then
   cat "$retained_parse_log" >&2
   exit 1
 fi
@@ -1464,16 +1621,16 @@ wait "$retained_parse_pid" 2>/dev/null || true
 
 "$port" build "$duplicate_selection" >/dev/null
 "$port" build "$external_duplicate" >"$external_duplicate/build.log" 2>&1
-grep -F "$external_duplicate_base/node_modules/shared" \
-  "$external_duplicate/build.log" >/dev/null
+tr '\\' '/' <"$external_duplicate/build.log" | \
+  grep -F 'node_modules/shared (chosen)' >/dev/null
 if "$port" build "$external_cycle" \
   >"$external_cycle/build.log" 2>&1; then
   echo "external dependency cycle unexpectedly built" >&2
   exit 1
 fi
 grep -F "circular dependency" "$external_cycle/build.log" >/dev/null
-grep -F "$external_cycle_dependency/src/CycleDep.res" \
-  "$external_cycle/build.log" >/dev/null
+tr '\\' '/' <"$external_cycle/build.log" | \
+  grep -F 'store/cycle-dep/src/CycleDep.res' >/dev/null
 if "$port" build "$external_namespace" \
   >"$external_namespace/build.log" 2>&1; then
   echo "external namespace collision unexpectedly built" >&2
@@ -1481,8 +1638,8 @@ if "$port" build "$external_namespace" \
 fi
 grep -F "Namespace SharedNs is provided by both" \
   "$external_namespace/build.log" >/dev/null
-grep -F "$external_diagnostics_base/store/ns-one" \
-  "$external_namespace/build.log" >/dev/null
+tr '\\' '/' <"$external_namespace/build.log" | \
+  grep -F 'store/ns-one' >/dev/null
 mkdir -p \
   "$duplicate_selection/node_modules/a/node_modules/shared/lib/ocaml"
 printf 'preserve nested duplicate\n' \
@@ -1533,28 +1690,33 @@ kill -TERM "$transitive_local_watch_pid"
 wait "$transitive_local_watch_pid" 2>/dev/null || true
 
 dev_include_call_log="$dev_include_order/bsc-calls.log"
-env RESCRIPT_BSC_EXE="$root/rewatch-ocaml/tests/counting-bsc.sh" \
+env RESCRIPT_BSC_EXE="$test_proxy" \
   REWATCH_REAL_BSC="$RESCRIPT_BSC_EXE" \
-  REWATCH_BSC_CALL_LOG="$dev_include_call_log" \
+  REWATCH_BSC_PROXY_MODE=counting \
+  REWATCH_BSC_CALL_LOG="$(native_path "$dev_include_call_log")" \
   "$port" build "$dev_include_order" >/dev/null
 node - "$dev_include_call_log" \
   "$dev_include_order/node_modules/development/lib/ocaml" \
   "$dev_include_order/node_modules/regular/lib/ocaml" <<'EOF'
 const fs = require("fs");
 const [log, development, regular] = process.argv.slice(2);
+const normalize = value => value.replaceAll("\\", "/");
 const command = fs.readFileSync(log, "utf8").split("\n")
   .find(line => line.includes("Test.ast") && !line.includes("-bs-ast"));
-if (!command || command.indexOf(development) < 0 ||
-    command.indexOf(development) > command.indexOf(regular)) {
+const normalizedCommand = command === undefined ? "" : normalize(command);
+if (!command || normalizedCommand.indexOf(normalize(development)) < 0 ||
+    normalizedCommand.indexOf(normalize(development)) >
+      normalizedCommand.indexOf(normalize(regular))) {
   process.exit(1);
 }
 EOF
 
 warning_call_log="$warning_replay/bsc-calls.log"
 warning_watch_log="$warning_replay/watch.log"
-env RESCRIPT_BSC_EXE="$root/rewatch-ocaml/tests/counting-bsc.sh" \
+env RESCRIPT_BSC_EXE="$test_proxy" \
   REWATCH_REAL_BSC="$RESCRIPT_BSC_EXE" \
-  REWATCH_BSC_CALL_LOG="$warning_call_log" \
+  REWATCH_BSC_PROXY_MODE=counting \
+  REWATCH_BSC_CALL_LOG="$(native_path "$warning_call_log")" \
   "$port" watch "$warning_replay" >"$warning_watch_log" 2>&1 &
 warning_watch_pid=$!
 background_pids="$background_pids $warning_watch_pid"
@@ -1572,10 +1734,8 @@ if ! wait_for_count "$warning_watch_log" 'unused value unusedValue' 2; then
 fi
 warning_a_calls_after=$(grep -c 'WarningA.ast' "$warning_call_log" || true)
 test "$warning_a_calls_after" -eq "$warning_a_calls"
-kill -TERM "$warning_watch_pid"
-wait "$warning_watch_pid"
-kill -TERM "$watch_pid"
-wait "$watch_pid"
+stop_watch "$warning_replay" "$warning_watch_pid"
+stop_watch "$watch_basic" "$watch_pid"
 test ! -f "$watch_basic/lib/watch.lock"
 
 # Watch startup shares normal build initialization, so deleting a public output
@@ -1589,18 +1749,17 @@ if ! wait_for_file "$watch_basic/src/A.js"; then
   exit 1
 fi
 wait_for_initial_build "$watch_basic/restart.log"
-kill -TERM "$watch_restart_pid"
-wait "$watch_restart_pid"
+stop_watch "$watch_basic" "$watch_restart_pid"
 test ! -f "$watch_basic/lib/watch.lock"
 
+if ! $windows_posix_shell; then
 interrupt_basic="$work/interrupt-basic"
 cp -R "$root/rewatch-ocaml/tests/basic" "$interrupt_basic"
-cp "$root/rewatch-ocaml/tests/slow-bsc.sh" "$interrupt_basic/slow-bsc.sh"
-chmod +x "$interrupt_basic/slow-bsc.sh"
 child_marker="$interrupt_basic/child-started"
-REWATCH_OCAML_CHILD_STARTED="$child_marker" \
-REWATCH_OCAML_REAL_BSC="$RESCRIPT_BSC_EXE" \
-RESCRIPT_BSC_EXE="$interrupt_basic/slow-bsc.sh" \
+REWATCH_OCAML_CHILD_STARTED="$(native_path "$child_marker")" \
+REWATCH_REAL_BSC="$RESCRIPT_BSC_EXE" \
+REWATCH_BSC_PROXY_MODE=slow \
+RESCRIPT_BSC_EXE="$test_proxy" \
 "$port" watch "$interrupt_basic" >"$interrupt_basic/watch.log" 2>&1 &
 interrupt_pid=$!
 background_pids="$background_pids $interrupt_pid"
@@ -1613,20 +1772,18 @@ test -f "$child_marker"
 kill -TERM "$interrupt_pid"
 wait "$interrupt_pid"
 test ! -f "$interrupt_basic/lib/watch.lock"
-test -z "$(pgrep -f "$interrupt_basic/slow-bsc.sh" || true)"
+assert_no_test_proxy_processes
 test -z "$(find "$interrupt_basic" -name '.rewatch-ocaml-*.log' -print)"
 
 # One-shot commands must unwind through the same process and lock owners when
 # the shell terminates them during compiler work.
 interrupt_build="$work/interrupt-build"
 cp -R "$root/rewatch-ocaml/tests/basic" "$interrupt_build"
-cp "$root/rewatch-ocaml/tests/slow-bsc.sh" \
-  "$interrupt_build/slow-bsc.sh"
-chmod +x "$interrupt_build/slow-bsc.sh"
 build_child_marker="$interrupt_build/child-started"
-REWATCH_OCAML_CHILD_STARTED="$build_child_marker" \
-REWATCH_OCAML_REAL_BSC="$RESCRIPT_BSC_EXE" \
-RESCRIPT_BSC_EXE="$interrupt_build/slow-bsc.sh" \
+REWATCH_OCAML_CHILD_STARTED="$(native_path "$build_child_marker")" \
+REWATCH_REAL_BSC="$RESCRIPT_BSC_EXE" \
+REWATCH_BSC_PROXY_MODE=slow \
+RESCRIPT_BSC_EXE="$test_proxy" \
 "$port" build "$interrupt_build" >"$interrupt_build/build.log" 2>&1 &
 interrupt_build_pid=$!
 background_pids="$background_pids $interrupt_build_pid"
@@ -1638,21 +1795,20 @@ interrupt_build_status=$?
 set -e
 test "$interrupt_build_status" -eq 143
 test ! -f "$interrupt_build/lib/build.lock"
-test -z "$(pgrep -f "$interrupt_build/slow-bsc.sh" || true)"
+assert_no_test_proxy_processes
 test -z "$(find "$interrupt_build" -name '.rewatch-ocaml-*.log' -print)"
+fi
 
 # Removing watch.lock is the shell-suite shutdown protocol. It must interrupt
 # an in-progress compiler batch just as SIGTERM does, rather than waiting for
 # every queued module to finish.
 lock_interrupt_basic="$work/lock-interrupt-basic"
 cp -R "$root/rewatch-ocaml/tests/basic" "$lock_interrupt_basic"
-cp "$root/rewatch-ocaml/tests/slow-bsc.sh" \
-  "$lock_interrupt_basic/slow-bsc.sh"
-chmod +x "$lock_interrupt_basic/slow-bsc.sh"
 lock_child_marker="$lock_interrupt_basic/child-started"
-REWATCH_OCAML_CHILD_STARTED="$lock_child_marker" \
-REWATCH_OCAML_REAL_BSC="$RESCRIPT_BSC_EXE" \
-RESCRIPT_BSC_EXE="$lock_interrupt_basic/slow-bsc.sh" \
+REWATCH_OCAML_CHILD_STARTED="$(native_path "$lock_child_marker")" \
+REWATCH_REAL_BSC="$RESCRIPT_BSC_EXE" \
+REWATCH_BSC_PROXY_MODE=slow \
+RESCRIPT_BSC_EXE="$test_proxy" \
 "$port" watch "$lock_interrupt_basic" \
   >"$lock_interrupt_basic/watch.log" 2>&1 &
 lock_interrupt_pid=$!
@@ -1661,27 +1817,26 @@ if ! wait_for_file "$lock_child_marker"; then
   cat "$lock_interrupt_basic/watch.log" >&2
   exit 1
 fi
-rm -f "$lock_interrupt_basic/lib/watch.lock"
+remove_file_with_retry "$lock_interrupt_basic/lib/watch.lock"
 if ! wait_for_pid_gone "$lock_interrupt_pid"; then
   echo "watcher did not stop during compiler work after watch.lock removal" >&2
   exit 1
 fi
 wait "$lock_interrupt_pid"
-test -z "$(pgrep -f "$lock_interrupt_basic/slow-bsc.sh" || true)"
+assert_no_test_proxy_processes
 
 lock_basic="$work/lock-basic"
 cp -R "$root/rewatch-ocaml/tests/basic" "$lock_basic"
-cp "$root/rewatch-ocaml/tests/slow-bsc.sh" "$lock_basic/slow-bsc.sh"
-chmod +x "$lock_basic/slow-bsc.sh"
 rm -rf "$lock_basic/lib"
 rm -f "$lock_basic/src/A.mjs" "$lock_basic/src/B.mjs" \
   "$lock_basic/src/WithInterface.mjs"
 first_marker="$lock_basic/first-child-started"
 release_marker="$lock_basic/release-first-build"
-REWATCH_OCAML_CHILD_STARTED="$first_marker" \
-REWATCH_OCAML_RELEASE_FILE="$release_marker" \
-REWATCH_OCAML_REAL_BSC="$RESCRIPT_BSC_EXE" \
-RESCRIPT_BSC_EXE="$lock_basic/slow-bsc.sh" \
+REWATCH_OCAML_CHILD_STARTED="$(native_path "$first_marker")" \
+REWATCH_OCAML_RELEASE_FILE="$(native_path "$release_marker")" \
+REWATCH_REAL_BSC="$RESCRIPT_BSC_EXE" \
+REWATCH_BSC_PROXY_MODE=slow \
+RESCRIPT_BSC_EXE="$test_proxy" \
   "$port" build "$lock_basic" >"$lock_basic/first.log" 2>&1 &
 first_build_pid=$!
 background_pids="$background_pids $first_build_pid"
@@ -1817,8 +1972,10 @@ test -f "$standalone_output/node_modules/dep/lib/bs/compiler-info.json"
 test -f "$standalone_output/node_modules/dep/src/Dep.js"
 
 mkdir -p "$external_boundary/project/node_modules"
-ln -s ../packages/main "$external_boundary/project/node_modules/main"
-ln -s ../../external "$external_boundary/project/node_modules/external"
+directory_link "$external_boundary/project/packages/main" \
+  "$external_boundary/project/node_modules/main"
+directory_link "$external_boundary/external" \
+  "$external_boundary/project/node_modules/external"
 "$port" build --warn-error A "$external_boundary/project" \
   >"$external_boundary/build.log" 2>&1
 grep "Please report this to the package maintainer: https://example.com/external/issues" \
@@ -1849,25 +2006,28 @@ rm -f "$out_of_source/src/Main.res"
 test ! -f "$out_of_source/lib/es6/src/Main.js"
 
 namespace_call_log="$namespace/bsc-calls.log"
-env RESCRIPT_BSC_EXE="$root/rewatch-ocaml/tests/counting-bsc.sh" \
+env RESCRIPT_BSC_EXE="$test_proxy" \
   REWATCH_REAL_BSC="$RESCRIPT_BSC_EXE" \
-  REWATCH_BSC_CALL_LOG="$namespace_call_log" \
+  REWATCH_BSC_PROXY_MODE=counting \
+  REWATCH_BSC_CALL_LOG="$(native_path "$namespace_call_log")" \
 "$port" build "$namespace"
 test -f "$namespace/lib/ocaml/A-Widget.cmi"
 test -f "$namespace/src/B.js"
 : > "$namespace_call_log"
-env RESCRIPT_BSC_EXE="$root/rewatch-ocaml/tests/counting-bsc.sh" \
+env RESCRIPT_BSC_EXE="$test_proxy" \
   REWATCH_REAL_BSC="$RESCRIPT_BSC_EXE" \
-  REWATCH_BSC_CALL_LOG="$namespace_call_log" \
+  REWATCH_BSC_PROXY_MODE=counting \
+  REWATCH_BSC_CALL_LOG="$(native_path "$namespace_call_log")" \
   "$port" build "$namespace"
 if grep -F 'Widget.mlmap' "$namespace_call_log" >/dev/null; then
   echo "unchanged build unexpectedly recompiled its namespace" >&2
   exit 1
 fi
 printf '\nlet changed = 1\n' >> "$namespace/src/B.res"
-env RESCRIPT_BSC_EXE="$root/rewatch-ocaml/tests/counting-bsc.sh" \
+env RESCRIPT_BSC_EXE="$test_proxy" \
   REWATCH_REAL_BSC="$RESCRIPT_BSC_EXE" \
-  REWATCH_BSC_CALL_LOG="$namespace_call_log" \
+  REWATCH_BSC_PROXY_MODE=counting \
+  REWATCH_BSC_CALL_LOG="$(native_path "$namespace_call_log")" \
   "$port" build "$namespace"
 grep -F 'Widget.mlmap' "$namespace_call_log" >/dev/null
 
