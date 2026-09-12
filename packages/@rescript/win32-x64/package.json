@@ -51,6 +51,8 @@
   "files": [
     "bin.js",
     "bin.d.ts",
+    "THIRD_PARTY_NOTICES_REWATCH.md",
+    "RE_LICENSE.md",
     "bin/"
   ],
   "exports": "./bin.js",

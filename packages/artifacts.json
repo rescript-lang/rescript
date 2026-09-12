@@ -894,6 +894,8 @@
     "package.json"
   ],
   "@rescript/win32-x64": [
+    "RE_LICENSE.md",
+    "THIRD_PARTY_NOTICES_REWATCH.md",
     "bin.d.ts",
     "bin.js",
     "bin/.gitkeep",
