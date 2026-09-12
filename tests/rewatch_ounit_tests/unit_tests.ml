@@ -420,13 +420,16 @@ let platform_tests _context =
           {|"rescript.exe","123","Console","1","10,000 K"|}))
     "Windows tasklist output rejects a different process ID";
   check
-    (Platform_windows.tasklist_probe ~pid:123 "tasklist failed" = None)
+    (Platform_windows.tasklist_probe ~pid:123 "tasklist failed"
+    = Platform_windows.Malformed_output)
     "malformed Windows tasklist output is inconclusive";
   check
-    (Platform_windows.tasklist_probe ~pid:123 {|"tasklist failed"|} = None)
+    (Platform_windows.tasklist_probe ~pid:123 {|"tasklist failed"|}
+    = Platform_windows.Malformed_output)
     "unexpected Windows tasklist CSV schema is inconclusive";
   check
-    (Platform_windows.tasklist_probe ~pid:123 {|"rescript.exe","12|} = None)
+    (Platform_windows.tasklist_probe ~pid:123 {|"rescript.exe","12|}
+    = Platform_windows.Malformed_output)
     "truncated Windows tasklist CSV is inconclusive";
   check
     (Platform_windows.process_is_active ~run:(fun _ _ -> None) "123")

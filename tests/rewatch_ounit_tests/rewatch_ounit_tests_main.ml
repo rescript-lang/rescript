@@ -23,6 +23,7 @@ let () =
            Project_context_tests.tests;
            Source_tests.tests;
            Toolchain_tests.tests;
+           Traversal_coverage_tests.tests;
            Unit_tests.tests;
            Warning_state_tests.tests;
            Watcher_tests.tests;

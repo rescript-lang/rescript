@@ -94,24 +94,16 @@ let scan_source ~root (source : Config.source) ~discover_modules ~on_missing
       ~collect_gentype ~identity =
     let absolute = Filename.concat root relative in
     let coverage table requested =
-      if not requested then (false, false)
-      else
-        match Hashtbl.find_opt table identity with
-        | None ->
-          Hashtbl.add table identity source.recurse;
-          (true, source.recurse)
-        | Some true -> (false, false)
-        | Some false when source.recurse ->
-          Hashtbl.replace table identity true;
-          (false, true)
-        | Some false -> (false, false)
+      if requested then
+        Traversal_coverage.admit table identity ~recursive:source.recurse
+      else Traversal_coverage.Skip
     in
-    let discover_here, discover_children =
-      coverage visited_dirs discover_requested
-    in
-    let gentype_here, gentype_children =
-      coverage visited_gentype_dirs collect_gentype
-    in
+    let discovery = coverage visited_dirs discover_requested in
+    let gentype = coverage visited_gentype_dirs collect_gentype in
+    let discover_here = Traversal_coverage.visits_current discovery in
+    let discover_children = Traversal_coverage.visits_descendants discovery in
+    let gentype_here = Traversal_coverage.visits_current gentype in
+    let gentype_children = Traversal_coverage.visits_descendants gentype in
     if gentype_here then gentype_dirs := relative :: !gentype_dirs;
     let entries =
       try File_util.directory_entries absolute |> List.sort String.compare

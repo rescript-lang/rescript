@@ -2982,6 +2982,16 @@ The split passes the focused integration and parity gates and the complete
 `opam exec -- make test-all` repository gate. Reanalyze still reports exactly
 the same ten previously reviewed false positives and no new dead code.
 
+The first internal code-quality round replaced the last internal optional-bool
+state encodings. Source discovery and watcher snapshot traversal now share a
+normal-variant `Traversal_coverage` policy that distinguishes a first shallow
+visit, a first recursive visit, a shallow-to-recursive upgrade, and work that
+is already covered. The Windows process-list parser likewise reports
+`Process_found`, `Process_absent`, or `Malformed_output`, preserving its
+conservative lock policy without encoding three meanings as `bool option`.
+Two traversal-policy tests bring the OUnit suite to 38 groups; the focused
+integration suite also passes.
+
 1. Run multiple rounds of the final implementation/code-quality gate, including
    ownership, naming, duplication, dead-code, illegal-state, filesystem,
    resource-lifecycle, and platform-boundary audits.
