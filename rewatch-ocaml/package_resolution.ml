@@ -13,9 +13,9 @@ type t = {
   root_config: Config.t;
   context: Project_context.dependency_context;
   loaded: (string, Config.t) Hashtbl.t;
-  edges: (string, dependency_identity) Hashtbl.t;
+  edges: (string * string, dependency_identity) Hashtbl.t;
   selected: (string, dependency_identity) Hashtbl.t;
-  reported_duplicates: (string, unit) Hashtbl.t;
+  reported_duplicates: (string * string, unit) Hashtbl.t;
   diagnostic_mode: diagnostic_mode;
 }
 
@@ -60,7 +60,7 @@ let with_declaration declaration (identity : dependency_identity) =
   }
 
 let resolve resolution ~package_root (declaration : Config.dependency) =
-  let edge_key = package_root ^ "\000" ^ declaration.name in
+  let edge_key = (package_root, declaration.name) in
   match Hashtbl.find_opt resolution.edges edge_key with
   | Some identity -> with_declaration declaration identity
   | None ->
@@ -72,7 +72,7 @@ let resolve resolution ~package_root (declaration : Config.dependency) =
       match Hashtbl.find_opt resolution.selected declaration.name with
       | Some selected ->
         (if selected.directory <> candidate then
-           let key = declaration.name ^ "\000" ^ candidate in
+           let key = (declaration.name, candidate) in
            if
              resolution.diagnostic_mode = Report_diagnostics
              && not (Hashtbl.mem resolution.reported_duplicates key)

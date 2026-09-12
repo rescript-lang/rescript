@@ -8,6 +8,10 @@ let temporary_directory () =
   Unix.mkdir path 0o700;
   Unix.realpath path
 
+let descriptor_count () =
+  try Some (Array.length (Sys.readdir "/proc/self/fd"))
+  with Sys_error _ -> None
+
 let tests =
   "native_watcher_tests" >:: fun _context ->
   let root = temporary_directory () in
@@ -35,6 +39,25 @@ let tests =
       | Ok watcher ->
         Native_watcher.close watcher;
         assert_failure "identity failure did not reject watcher creation");
+      let descriptors_before_exception = descriptor_count () in
+      for _ = 1 to 16 do
+        match
+          Native_watcher.For_test.create_with_directory_identity
+            ~directory_identity:(fun _ -> raise Exit)
+            ~paths
+        with
+        | Error message when Test_support.contains_text message "Exit" -> ()
+        | Error message ->
+          assert_failure ("unexpected identity exception: " ^ message)
+        | Ok watcher ->
+          Native_watcher.close watcher;
+          assert_failure "identity exception did not reject watcher creation"
+      done;
+      (match (descriptors_before_exception, descriptor_count ()) with
+      | Some before, Some after ->
+        check (before = after)
+          "exceptional watcher creation should release acquired descriptors"
+      | None, _ | _, None -> ());
       match Native_watcher.create ~paths with
       | Error message -> failwith ("native watcher initialization: " ^ message)
       | Ok watcher ->

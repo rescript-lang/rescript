@@ -83,36 +83,34 @@ let write_file_atomic ?(ensure_parent = true) ?perm path contents =
   let remove_temporary path =
     try Sys.remove path with Sys_error _ | Unix.Unix_error _ -> ()
   in
-  let perm =
-    match perm with
-    | Some _ as perm -> perm
-    | None -> (
-      match Unix.stat path with
-      | metadata -> Some metadata.Unix.st_perm
-      | exception Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> None)
-  in
-  try
-    let candidate =
-      Filename.temp_file ~temp_dir:(Filename.dirname path) ".rewatch-write-"
-        ".tmp"
-    in
-    temporary := Some candidate;
-    Fun.protect
-      ~finally:(fun () -> Option.iter remove_temporary !temporary)
-      (fun () ->
-        Signal_restore.restore creation_signals;
-        Option.iter (Unix.chmod candidate) perm;
-        write_file candidate contents;
-        let publish_signals = Signal_restore.create ~defer:true in
-        try
+  Fun.protect
+    ~finally:(fun () -> Option.iter remove_temporary !temporary)
+    (fun () ->
+      let candidate, perm =
+        Signal_restore.protect creation_signals (fun () ->
+            let perm =
+              match perm with
+              | Some _ as perm -> perm
+              | None -> (
+                match Unix.stat path with
+                | metadata -> Some metadata.Unix.st_perm
+                | exception Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _)
+                  ->
+                  None)
+            in
+            let candidate =
+              Filename.temp_file ~temp_dir:(Filename.dirname path)
+                ".rewatch-write-" ".tmp"
+            in
+            temporary := Some candidate;
+            (candidate, perm))
+      in
+      Option.iter (Unix.chmod candidate) perm;
+      write_file candidate contents;
+      let publish_signals = Signal_restore.create ~defer:true in
+      Signal_restore.protect publish_signals (fun () ->
           Sys.rename candidate path;
-          temporary := None;
-          Signal_restore.restore publish_signals
-        with exn ->
-          raise (Signal_restore.exception_after_restore publish_signals exn))
-  with exn ->
-    Option.iter remove_temporary !temporary;
-    raise (Signal_restore.exception_after_restore creation_signals exn)
+          temporary := None))
 
 (* Callers that already created the destination directory may skip that work,
    avoiding repeated metadata probes when publishing many files. *)

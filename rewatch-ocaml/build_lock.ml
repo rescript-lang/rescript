@@ -106,8 +106,8 @@ let with_acquired ~candidate ~path ~pid ~deferred_signals action =
   Fun.protect
     ~finally:(fun () -> release lock)
     (fun () ->
-      unlink_existing candidate;
-      Signal_restore.restore deferred_signals;
+      Signal_restore.protect deferred_signals (fun () ->
+          unlink_existing candidate);
       action lock)
 
 let retry_delay poll =
