@@ -57,8 +57,9 @@ let control_file_names = ["rescript.json"; "bsconfig.json"]
 let is_control_file_name name = List.mem name control_file_names
 
 let is_directory path =
-  try (Unix.stat path).Unix.st_kind = Unix.S_DIR
-  with error -> if File_util.path_is_missing path then false else raise error
+  match File_util.stat_opt path with
+  | Some metadata -> metadata.Unix.st_kind = Unix.S_DIR
+  | None -> false
 
 let rec nearest_existing_ancestor path =
   if is_directory path then Some (Platform.canonicalize_path path)
@@ -100,8 +101,7 @@ let watch_context ~root ~prod ~features ~filter =
                 wakes reconciliation, which advances the watch toward the complete
                 candidate without expanding all of node_modules. *)
               add_path canonical_existing false)
-          with error ->
-            if File_util.path_is_missing existing then () else raise error)
+          with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> ())
     in
     let graph =
       Package_traversal.traverse ~root_config ~prod ~features
@@ -219,7 +219,7 @@ let snapshot ?(on_source_symlink = fun _ -> ()) digest_cache scope =
            && size = stat.Unix.st_size ->
       digest
     | _ ->
-      let digest = Digest.file path |> Digest.to_hex in
+      let digest = File_util.digest_file path |> Digest.to_hex in
       Hashtbl.replace digest_cache path
         (stat.Unix.st_mtime, stat.Unix.st_ctime, stat.Unix.st_size, digest);
       digest
@@ -240,23 +240,23 @@ let snapshot ?(on_source_symlink = fun _ -> ()) digest_cache scope =
       ~some:(fun filter -> Source_filter.matches_basename filter path)
       source.filter
   in
-  let missing_or_raise path fallback error =
-    if File_util.path_is_missing path then fallback else raise error
-  in
   let rec walk source recursive dir acc =
-    try
-      let canonical = Platform.canonicalize_path dir in
+    match Platform.canonicalize_path dir with
+    | canonical ->
       let previous = Hashtbl.find_opt visited_directories canonical in
       if previous = Some true || (previous = Some false && not recursive) then
         acc
       else (
         Hashtbl.replace visited_directories canonical recursive;
-        let entries = Sys.readdir dir |> Array.to_list in
+        let entries =
+          try File_util.directory_entries dir
+          with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> []
+        in
         List.fold_left
           (fun acc name ->
             let path = Filename.concat dir name in
-            try
-              let stat = Unix.lstat path in
+            match Unix.lstat path with
+            | stat -> (
               match stat.Unix.st_kind with
               | Unix.S_DIR ->
                 if
@@ -270,43 +270,55 @@ let snapshot ?(on_source_symlink = fun _ -> ()) digest_cache scope =
                   && matches_source source path
                 in
                 (if is_source_name then
-                   try
-                     let target = Unix.readlink path in
+                   match Unix.readlink path with
+                   | target ->
                      let target =
                        if Filename.is_relative target then
                          Filename.concat (Filename.dirname path) target
                        else target
                      in
                      let target =
-                       try Platform.canonicalize_path target
-                       with error -> missing_or_raise target target error
+                       match Platform.canonicalize_path target with
+                       | canonical -> canonical
+                       | exception
+                           Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _)
+                         ->
+                         target
                      in
                      on_source_symlink target
-                   with error -> missing_or_raise path () error);
-                let target = Unix.stat path in
-                match target.Unix.st_kind with
-                | Unix.S_DIR when recursive -> walk source true path acc
-                | Unix.S_REG when is_source_name -> add_file path target acc
-                | _ -> acc)
+                   | exception
+                       Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) ->
+                     ());
+                match Unix.stat path with
+                | target -> (
+                  match target.Unix.st_kind with
+                  | Unix.S_DIR when recursive -> walk source true path acc
+                  | Unix.S_REG when is_source_name -> add_file path target acc
+                  | _ -> acc)
+                | exception Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _)
+                  ->
+                  acc)
               | Unix.S_REG
                 when Option.is_some (Source.source_kind path)
                      && matches_source source path ->
                 add_file path stat acc
-              | _ -> acc
-            with error -> missing_or_raise path acc error)
+              | _ -> acc)
+            | exception Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) ->
+              acc)
           acc entries)
-    with error -> missing_or_raise dir acc error
+    | exception Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> acc
   in
   let add_control_files acc root =
     control_file_names
     |> List.fold_left
          (fun acc name ->
            let path = Filename.concat root name in
-           try
-             let stat = Unix.stat path in
+           match Unix.stat path with
+           | stat ->
              if stat.Unix.st_kind = Unix.S_REG then add_file path stat acc
              else acc
-           with error -> missing_or_raise path acc error)
+           | exception Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) ->
+             acc)
          acc
   in
   let result =
@@ -317,8 +329,8 @@ let snapshot ?(on_source_symlink = fun _ -> ()) digest_cache scope =
     |> fun acc ->
     List.fold_left
       (fun acc path ->
-        try
-          let stat = Unix.lstat path in
+        match Unix.lstat path with
+        | stat ->
           Hashtbl.replace seen_files path ();
           {
             path;
@@ -327,10 +339,8 @@ let snapshot ?(on_source_symlink = fun _ -> ()) digest_cache scope =
                 {modified = stat.Unix.st_mtime; size = stat.Unix.st_size};
           }
           :: acc
-        with error ->
-          if File_util.path_is_missing path then
-            {path; state = Missing_dependency_candidate} :: acc
-          else raise error)
+        | exception Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) ->
+          {path; state = Missing_dependency_candidate} :: acc)
       acc scope.unresolved
     |> List.sort compare
   in
@@ -403,9 +413,9 @@ let update_snapshot_entries digest_cache previous changes =
         Hashtbl.remove entries change.path;
         Hashtbl.remove digest_cache change.path
       | Added | Modified -> (
-        try
-          let stat = Unix.stat change.path in
-          let digest = Digest.file change.path |> Digest.to_hex in
+        match Unix.stat change.path with
+        | stat ->
+          let digest = File_util.digest_file change.path |> Digest.to_hex in
           Hashtbl.replace digest_cache change.path
             (stat.Unix.st_mtime, stat.Unix.st_ctime, stat.Unix.st_size, digest);
           Hashtbl.replace entries change.path
@@ -419,11 +429,9 @@ let update_snapshot_entries digest_cache previous changes =
                     digest;
                   };
             }
-        with error ->
-          if File_util.path_is_missing change.path then (
-            Hashtbl.remove entries change.path;
-            Hashtbl.remove digest_cache change.path)
-          else raise error))
+        | exception Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) ->
+          Hashtbl.remove entries change.path;
+          Hashtbl.remove digest_cache change.path))
     changes;
   Hashtbl.to_seq_values entries |> List.of_seq |> List.sort compare
 
@@ -571,11 +579,6 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
                   ~prefix:(source.directory ^ Filename.dir_sep)
                   path)
         scope.sources
-    in
-    let is_directory path =
-      try (Unix.stat path).Unix.st_kind = Unix.S_DIR
-      with error ->
-        if File_util.path_is_missing path then false else raise error
     in
     let is_symlink_target path =
       let comparable = Platform.normalize_path_for_comparison path in

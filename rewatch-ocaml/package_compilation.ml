@@ -166,27 +166,27 @@ let run ~(package : Build_types.graph_package)
               let cmi_path =
                 Filename.concat ocaml_dir (compiler_name ^ ".cmi")
               in
-              let digest_before =
-                try Some (Digest.file cmi_path)
-                with Sys_error _ | Unix.Unix_error _ -> None
-              in
               let finish result =
-                finish_namespace result;
-                let digest_after =
-                  try Some (Digest.file cmi_path)
-                  with Sys_error _ | Unix.Unix_error _ -> None
-                in
-                let cmi_change =
-                  if digest_before = digest_after then Build_state.Cmi_unchanged
-                  else Build_state.Cmi_changed
-                in
-                Build_state.record_published_cmi build_state ~compile_assets
-                  namespace_state ~path:cmi_path cmi_change;
-                let cmt_path =
-                  Filename.concat ocaml_dir (compiler_name ^ ".cmt")
-                in
-                Build_state.record_successful_compile ~compile_assets
-                  namespace_state ~cmt_path
+                if not (Process.succeeded result) then
+                  ignore (finish_namespace result)
+                else
+                  match
+                    Compiler_scheduler.capture_publication (fun () ->
+                        finish_namespace result)
+                  with
+                  | Compiler_scheduler.Published {cmi_change; _} ->
+                    Build_state.record_published_cmi build_state ~compile_assets
+                      namespace_state ~path:cmi_path cmi_change;
+                    let cmt_path =
+                      Filename.concat ocaml_dir (compiler_name ^ ".cmt")
+                    in
+                    Build_state.record_successful_compile ~compile_assets
+                      namespace_state ~cmt_path
+                  | Compiler_scheduler.Failed_after_cmi_publication
+                      {error; cmi_change} ->
+                    Build_state.record_published_cmi build_state ~compile_assets
+                      namespace_state ~path:cmi_path cmi_change;
+                    raise error
               in
               stats.namespace_jobs <- (job, finish) :: stats.namespace_jobs));
     stats.compile_candidates <- candidates @ stats.compile_candidates;

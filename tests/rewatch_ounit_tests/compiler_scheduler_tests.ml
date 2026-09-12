@@ -124,4 +124,19 @@ let tests =
         (Hashtbl.length output_inventory = 256)
         "scheduler-owned publication inventory updates survive table growth";
       check (!c_candidates_built = 0)
-        "an unaffected module does not construct compiler callbacks")
+        "an unaffected module does not construct compiler callbacks";
+      let marker = Failure "copy after CMI failed" in
+      match
+        Compiler_scheduler.capture_publication (fun () ->
+            raise
+              (Compiler_scheduler.Publication_failure
+                 (marker, Compiler_scheduler.Cmi_changed)))
+      with
+      | Compiler_scheduler.Failed_after_cmi_publication
+          {error; cmi_change = Compiler_scheduler.Cmi_changed}
+        when error == marker ->
+        ()
+      | _ ->
+        assert_failure
+          "publication capture must retain a CMI change across later copy \
+           failure")

@@ -7,6 +7,12 @@ exception Publication_failure of exn * cmi_change
 
 type publish_result = {stderr: string; cmi_change: cmi_change}
 
+type publication =
+  | Published of publish_result
+  | Failed_after_cmi_publication of {error: exn; cmi_change: cmi_change}
+
+val capture_publication : (unit -> publish_result) -> publication
+
 type scheduled_module
 type candidate
 

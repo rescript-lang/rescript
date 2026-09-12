@@ -14,3 +14,9 @@ let contains value substring =
     start <= last_start && (matches_at start 0 || search (start + 1))
   in
   search 0
+
+let strip_prefix ~prefix value =
+  if String.starts_with ~prefix value then
+    String.sub value (String.length prefix)
+      (String.length value - String.length prefix)
+  else value

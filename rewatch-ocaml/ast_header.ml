@@ -1,7 +1,8 @@
 type t = {dependencies: string list; source: string option}
 
 let read path =
-  let channel = open_in_bin path in
+  let descriptor = Unix.openfile path [Unix.O_RDONLY] 0 in
+  let channel = Unix.in_channel_of_descr descriptor in
   Fun.protect
     ~finally:(fun () -> close_in_noerr channel)
     (fun () ->

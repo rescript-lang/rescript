@@ -19,6 +19,7 @@
   compile_assets_tests
   compiler_args_tests
   compiler_info_tests
+  compiler_process_tests
   compiler_scheduler_tests
   config_tests
   file_util_tests

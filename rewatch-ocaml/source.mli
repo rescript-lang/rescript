@@ -20,6 +20,7 @@ type source_kind = Implementation | Interface
 val source_kind : string -> source_kind option
 val module_name : string -> string
 val is_non_exotic_module_name : string -> bool
+val namespace_members : entry:string option -> module_ list -> module_ list
 
 val duplicate_error :
   display_root:string -> string -> string -> string -> string -> exn

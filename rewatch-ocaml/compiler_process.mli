@@ -12,7 +12,7 @@ val namespace_job :
   package_dirty:bool ->
   string ->
   Source.module_ list ->
-  (Process.job * (Process.result -> unit)) option
+  (Process.job * (Process.result -> Compiler_scheduler.publish_result)) option
 
 val compile_job :
   bsc:string ->

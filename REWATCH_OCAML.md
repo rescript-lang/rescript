@@ -181,9 +181,6 @@ whole-port maintainability pass before release:
 - Audit optional booleans and other encodings with unnamed states. Prefer a
   normal variant when each state has distinct meaning so invalid combinations
   are unrepresentable and compiler errors name the missing case.
-- Add comments for ownership, concurrency, platform, cleanup, and algorithmic
-  invariants that are not evident from the code. Do not add comments that merely
-  paraphrase statements.
 - Document the unit, focused, canonical, full-repository, work-equivalence,
   performance, filesystem-call, and source-size tooling so future changes can
   reproduce the gates.
@@ -193,7 +190,9 @@ whole-port maintainability pass before release:
   temporary output across success, failure, interruption, and partial-launch
   paths.
 - Audit the platform boundary for hidden Unix assumptions and type-check both
-  selected and unselected implementations; complete the native Windows run.
+  selected and unselected implementations. Keep the Windows implementation in
+  the tree, but defer native Windows runtime validation and switching Windows
+  from Rust to a separate follow-up PR.
 - Review dependency maintenance, licenses/notices, static packaging, and the
   final npm artifact manifest.
 - Remove the temporary `save-pr-cache` setup-OCaml input and its
@@ -215,6 +214,11 @@ whole-port maintainability pass before release:
 **Gate:** The whole-port review has no unresolved material correctness,
 resource, portability, maintainability, documentation, or packaging finding,
 and all behavior/performance gates still pass after cleanup.
+
+After that release-quality gate, perform the broad source-comment pass for
+ownership, concurrency, platform, cleanup, and algorithmic invariants that are
+not evident from the code. Do not add comments that merely paraphrase
+statements. Run formatting and a build check after this comment-only pass.
 
 ## Models
 

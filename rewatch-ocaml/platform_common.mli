@@ -8,3 +8,6 @@ val resolve_program :
   string
 
 val process_is_active : probe:(int -> bool) -> string -> bool
+val create_capture_pipes :
+  unit ->
+  (Unix.file_descr * Unix.file_descr) * (Unix.file_descr * Unix.file_descr)
