@@ -1,9 +1,7 @@
-type dependency_kind = Regular_dependency | Development_dependency
-
 type graph_dependency = {
   declaration: Config.dependency;
   directory: string;
-  kind: dependency_kind;
+  kind: Package_traversal.dependency_kind;
 }
 
 type graph_package = {
@@ -45,6 +43,14 @@ type namespace_map = {
 let namespace_map_key package_root = "\000namespace:" ^ package_root
 
 type parse_message = Parse_warning of string | Parse_error of string
+
+let has_parse_error messages =
+  List.exists
+    (function
+      | Parse_error _ -> true
+      | Parse_warning _ -> false)
+    messages
+
 type attempt_kind = Full_attempt | Retained_attempt
 
 type preliminary_parse =

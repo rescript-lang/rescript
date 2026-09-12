@@ -132,7 +132,7 @@ let with_completion_notifier ~ticker_enabled action =
     in
     if continue then send_tick ()
   in
-  let restore_signals = Platform.defer_termination_signals () in
+  let deferred_signals = Signal_restore.create ~defer:true in
   let ticker = ref None in
   let stopped = ref false in
   let stop () =
@@ -146,17 +146,11 @@ let with_completion_notifier ~ticker_enabled action =
   try
     if ticker_enabled then ticker := Some (Thread.create send_tick ());
     Fun.protect ~finally:stop (fun () ->
-        restore_signals ();
+        Signal_restore.restore deferred_signals;
         action notifier)
   with exn ->
     stop ();
-    let exn =
-      try
-        restore_signals ();
-        exn
-      with signal_exn -> signal_exn
-    in
-    raise exn
+    raise (Signal_restore.exception_after_restore deferred_signals exn)
 
 let close_noerr descriptor =
   try Unix.close descriptor with Unix.Unix_error _ -> ()
@@ -231,7 +225,7 @@ let start_child_wait pid notifier stdout_capture stderr_capture : child_wait =
   in
   {thread; direct_outcome; outcome}
 
-let fail_launch ownership restore_signals launch_error =
+let fail_launch ownership deferred_signals launch_error =
   Option.iter
     (fun ((stdout_read, stdout_write), (stderr_read, stderr_write)) ->
       Option.iter
@@ -276,7 +270,7 @@ let fail_launch ownership restore_signals launch_error =
   in
   let restore_error =
     try
-      restore_signals ();
+      Signal_restore.restore deferred_signals;
       None
     with signal_exn -> Some signal_exn
   in
@@ -296,9 +290,7 @@ let launch ?env ?stdout_chunk ?stderr_chunk ?(defer_signals = true) ~notifier
   (* Capture descriptors need a cleanup owner before asynchronous watch
      termination can raise. Signals are therefore deferred across pipe
      acquisition and restored only after every descriptor has an owner. *)
-  let restore_signals =
-    if defer_signals then Platform.defer_termination_signals () else Fun.id
-  in
+  let deferred_signals = Signal_restore.create ~defer:defer_signals in
   let ownership = empty_launch_ownership () in
   try
     let pipes = Platform.create_capture_pipes () in
@@ -318,9 +310,9 @@ let launch ?env ?stdout_chunk ?stderr_chunk ?(defer_signals = true) ~notifier
     close_noerr stderr_write;
     let wait = start_child_wait pid notifier stdout stderr in
     ownership.child_wait <- Some wait;
-    restore_signals ();
+    Signal_restore.restore deferred_signals;
     {payload; process; pid; child_wait = wait}
-  with exn -> fail_launch ownership restore_signals exn
+  with exn -> fail_launch ownership deferred_signals exn
 
 let wait_for_running ~poll ?(defer_signals = true) notifier active =
   let rec find_completed = function
@@ -333,30 +325,14 @@ let wait_for_running ~poll ?(defer_signals = true) notifier active =
   let rec wait generation =
     match find_completed active with
     | Some (child, Ok result) ->
-      let restore_signals =
-        if defer_signals then Platform.defer_termination_signals () else Fun.id
-      in
-      ((child, result), restore_signals)
+      let deferred_signals = Signal_restore.create ~defer:defer_signals in
+      ((child, result), deferred_signals)
     | Some (_, Error exn) -> raise exn
     | None ->
       poll ();
       await_notification notifier generation |> wait
   in
   notifier_generation notifier |> wait
-
-let with_signal_restore restore_signals action =
-  try
-    let result = action () in
-    restore_signals ();
-    result
-  with exn ->
-    let exn =
-      try
-        restore_signals ();
-        exn
-      with signal_exn -> signal_exn
-    in
-    raise exn
 
 let signal_running (children : _ running list) =
   if children <> [] then (
@@ -440,10 +416,10 @@ let run_parallel_map_with_notifier ~max_jobs ~poll ~on_complete notifier values
     match !active with
     | [] -> ()
     | _ ->
-      let (child, result), restore_signals =
+      let (child, result), deferred_signals =
         wait_for_running ~poll notifier !active
       in
-      with_signal_restore restore_signals (fun () ->
+      Signal_restore.protect deferred_signals (fun () ->
           active :=
             List.filter (fun running -> running.pid <> child.pid) !active;
           release_running child;
@@ -592,9 +568,9 @@ let run_pool_task pool payload task =
     in
     let completion =
       match wait_result with
-      | Ok ((_, result), restore_signals) ->
+      | Ok ((_, result), deferred_signals) ->
         let completion =
-          with_signal_restore restore_signals (fun () ->
+          Signal_restore.protect deferred_signals (fun () ->
               try Task_completed (payload, task.on_result result)
               with exn -> Task_failed (payload, exn))
         in
@@ -924,11 +900,11 @@ let run_one ?poll ?stdout_chunk ?stderr_chunk ~cwd program args =
       in
       let reaped = ref false in
       try
-        let (_, result), restore_signals =
+        let (_, result), deferred_signals =
           wait_for_running ~poll notifier [child]
         in
         reaped := true;
-        with_signal_restore restore_signals (fun () ->
+        Signal_restore.protect deferred_signals (fun () ->
             release_running child;
             result)
       with exn ->

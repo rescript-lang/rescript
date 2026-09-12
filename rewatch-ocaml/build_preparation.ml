@@ -516,9 +516,8 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
             if not (Sys.file_exists directory) then (regular, development)
             else
               match dependency.kind with
-              | Build_types.Regular_dependency ->
-                (directory :: regular, development)
-              | Build_types.Development_dependency ->
+              | Package_traversal.Regular -> (directory :: regular, development)
+              | Package_traversal.Development ->
                 (regular, directory :: development))
           ([], []) package.graph_dependency_directories
         |> fun (regular, development) -> (List.rev regular, List.rev development)

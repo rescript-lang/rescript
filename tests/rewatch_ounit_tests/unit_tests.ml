@@ -364,7 +364,8 @@ let platform_tests _context =
       let command = if Sys.win32 then "worker.exe" else "worker" in
       Unix.mkdir (Filename.concat first command) 0o755;
       let executable = Filename.concat second command in
-      File_util.copy_file test_executable executable;
+      File_util.copy_existing_file ~ensure_parent:true test_executable
+        executable;
       Unix.chmod executable 0o755;
       let previous_path = Sys.getenv_opt "PATH" in
       let separator = if Sys.win32 then ";" else ":" in
@@ -385,7 +386,8 @@ let platform_tests _context =
             "an explicit current-directory executable does not use PATH";
           if Sys.win32 then (
             let cwd_executable = Filename.concat path_root "current.exe" in
-            File_util.copy_file test_executable cwd_executable;
+            File_util.copy_existing_file ~ensure_parent:true test_executable
+              cwd_executable;
             check
               (Platform.resolve_program ~cwd:path_root "current"
               = cwd_executable)

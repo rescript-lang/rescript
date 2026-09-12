@@ -51,21 +51,12 @@ let append_file path contents =
   in
   with_output_channel channel (fun channel -> output_string channel contents)
 
-let restore_after_exception restore_signals exn =
-  let exn =
-    try
-      restore_signals ();
-      exn
-    with signal_exn -> signal_exn
-  in
-  raise exn
-
 let write_file_atomic ?(ensure_parent = true) ?perm path contents =
   if ensure_parent then ensure_dir (Filename.dirname path);
   (* A temporary file must have a cleanup owner before a watch signal can
      interrupt the command. Publishing is also signal-deferred so the final
      path always names either the previous complete file or the replacement. *)
-  let restore_creation_signals = Platform.defer_termination_signals () in
+  let creation_signals = Signal_restore.create ~defer:true in
   let temporary = ref None in
   let remove_temporary path =
     try Sys.remove path with Sys_error _ | Unix.Unix_error _ -> ()
@@ -86,22 +77,23 @@ let write_file_atomic ?(ensure_parent = true) ?perm path contents =
     Fun.protect
       ~finally:(fun () -> Option.iter remove_temporary !temporary)
       (fun () ->
-        restore_creation_signals ();
+        Signal_restore.restore creation_signals;
         Option.iter (Unix.chmod candidate) perm;
         write_file candidate contents;
-        let restore_publish_signals = Platform.defer_termination_signals () in
+        let publish_signals = Signal_restore.create ~defer:true in
         try
           Sys.rename candidate path;
           temporary := None;
-          restore_publish_signals ()
-        with exn -> restore_after_exception restore_publish_signals exn)
+          Signal_restore.restore publish_signals
+        with exn ->
+          raise (Signal_restore.exception_after_restore publish_signals exn))
   with exn ->
     Option.iter remove_temporary !temporary;
-    restore_after_exception restore_creation_signals exn
+    raise (Signal_restore.exception_after_restore creation_signals exn)
 
 (* Callers that already created the destination directory may skip that work,
    avoiding repeated metadata probes when publishing many files. *)
-let copy_existing_file ?(ensure_parent = true) source destination =
+let copy_existing_file ~ensure_parent source destination =
   if ensure_parent then ensure_dir (Filename.dirname destination);
   let input_channel = open_in_bin source in
   Fun.protect
@@ -130,9 +122,6 @@ let copy_optional_existing_file ?(ensure_parent = true) source destination =
     if source_is_missing then
       try Sys.remove destination with Sys_error _ -> ()
     else raise error
-
-let copy_file source destination =
-  if Sys.file_exists source then copy_existing_file source destination
 
 let stat_opt path =
   try Some (Unix.stat path) with Sys_error _ | Unix.Unix_error _ -> None
@@ -187,9 +176,7 @@ let files_equal first second =
 
 let copy_file_if_different ?(ensure_parent = true) source destination =
   let changed = not (files_equal source destination) in
-  if changed then
-    if ensure_parent then copy_file source destination
-    else copy_existing_file ~ensure_parent:false source destination;
+  if changed then copy_existing_file ~ensure_parent source destination;
   changed
 
 let copy_file_if_changed ?ensure_parent source destination =

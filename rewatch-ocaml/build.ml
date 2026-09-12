@@ -385,13 +385,7 @@ let run_with_warning_state ~process_poll ~poll ~warning_state ~previous ~changes
         output)
     |> String.concat ""
   in
-  let parse_failed messages =
-    List.exists
-      (function
-        | Build_types.Parse_error _ -> true
-        | Build_types.Parse_warning _ -> false)
-      messages
-  in
+  let parse_failed = Build_types.has_parse_error in
   (* A watch build must retain the attempted state even when later parsing or
      compilation fails, because its successful ASTs and artifact inventory are
      needed to recover incrementally on the next edit. Publish ownership before

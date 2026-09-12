@@ -1,6 +1,7 @@
 module String_set : Set.S with type elt = string
 
 type module_kind = Source_module | Namespace_map
+type cmi_change = Cmi_changed | Cmi_unchanged | Cmi_change_unknown
 
 type module_ = {
   key: string;
@@ -36,3 +37,14 @@ val dependency_tree_compiled_after :
 val set_dependencies : t -> key:string -> string list -> unit
 
 val mark_dependents_compile_dirty : t -> module_ -> unit
+
+val record_published_cmi :
+  t ->
+  compile_assets:Compile_assets.t ->
+  module_ ->
+  path:string ->
+  cmi_change ->
+  unit
+
+val record_successful_compile :
+  compile_assets:Compile_assets.t -> module_ -> cmt_path:string -> unit

@@ -1,10 +1,3 @@
-let has_parse_error messages =
-  List.exists
-    (function
-      | Build_types.Parse_error _ -> true
-      | Build_types.Parse_warning _ -> false)
-    messages
-
 let run ~(package : Build_types.graph_package) ~(stats : Build_types.t) ~watch
     ~removed_module_names ~parse_dirty_modules =
   let root = package.graph_root in
@@ -79,9 +72,9 @@ let run ~(package : Build_types.graph_package) ~(stats : Build_types.t) ~watch
         state.compile_dirty <-
           state.compile_dirty || module_is_dirty module_ state)
       modules;
-  if not (has_parse_error stats.parse_messages) then (
+  if not (Build_types.has_parse_error stats.parse_messages) then (
     stats.parsed <- stats.parsed + Hashtbl.length parse_dirty_modules;
-    let compile_warning_modules = Hashtbl.create 8 in
+    let compile_warning_paths = Hashtbl.create 8 in
     let prepare_outputs module_ =
       let path = module_.Source.implementation in
       List.iter
@@ -140,9 +133,13 @@ let run ~(package : Build_types.graph_package) ~(stats : Build_types.t) ~watch
                 ~record_published_outputs
                 ~post_build:(Compiler_process.post_build_tasks config)
                 ~package_root:config.root ~is_local
-                ~mark_warning:(fun path ->
-                  Hashtbl.replace compile_warning_modules
-                    (Source.module_name path) ())
+                ~mark_warning:(fun _path ->
+                  module_.Source.implementation
+                  :: Option.to_list module_.Source.interface
+                  |> List.iter (fun path ->
+                      Hashtbl.replace compile_warning_paths
+                        (Build_artifacts.published_ast_path ~ocaml_dir path)
+                        ()))
             in
             Some (Compiler_scheduler.candidate ~key ~state ~warning_paths ~make))
         modules
@@ -179,23 +176,17 @@ let run ~(package : Build_types.graph_package) ~(stats : Build_types.t) ~watch
                   try Some (Digest.file cmi_path)
                   with Sys_error _ | Unix.Unix_error _ -> None
                 in
-                Compile_assets.refresh_cmi compile_assets ~key:compiler_name
-                  ~path:cmi_path;
+                let cmi_change =
+                  if digest_before = digest_after then Build_state.Cmi_unchanged
+                  else Build_state.Cmi_changed
+                in
+                Build_state.record_published_cmi build_state ~compile_assets
+                  namespace_state ~path:cmi_path cmi_change;
                 let cmt_path =
                   Filename.concat ocaml_dir (compiler_name ^ ".cmt")
                 in
-                Compile_assets.refresh_cmt compile_assets ~key:compiler_name
-                  ~path:cmt_path;
-                namespace_state.last_compiled_cmi <-
-                  Compile_assets.cmi compile_assets compiler_name
-                  |> Option.map (fun entry -> entry.Compile_assets.modified);
-                namespace_state.last_compiled_cmt <-
-                  Compile_assets.cmt compile_assets compiler_name
-                  |> Option.map (fun entry -> entry.Compile_assets.modified);
-                namespace_state.compile_dirty <- false;
-                if digest_before <> digest_after then
-                  Build_state.mark_dependents_compile_dirty build_state
-                    namespace_state
+                Build_state.record_successful_compile ~compile_assets
+                  namespace_state ~cmt_path
               in
               stats.namespace_jobs <- (job, finish) :: stats.namespace_jobs));
     stats.compile_candidates <- candidates @ stats.compile_candidates;
@@ -203,15 +194,6 @@ let run ~(package : Build_types.graph_package) ~(stats : Build_types.t) ~watch
       (fun () ->
         if not watch then
           Hashtbl.iter
-            (fun module_name () ->
-              modules
-              |> List.find_opt (fun module_ ->
-                  module_.Source.name = module_name)
-              |> Option.iter (fun module_ ->
-                  module_.Source.implementation
-                  :: Option.to_list module_.Source.interface
-                  |> List.iter (fun path ->
-                      File_util.remove_file
-                        (Build_artifacts.published_ast_path ~ocaml_dir path))))
-            compile_warning_modules)
+            (fun path () -> File_util.remove_file path)
+            compile_warning_paths)
       :: stats.compile_cleanup)

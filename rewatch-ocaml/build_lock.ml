@@ -43,7 +43,7 @@ let with_candidate ~lock_dir prefix pid action =
      watcher's signal handlers raise asynchronous exceptions. Without this
      protected setup, a signal could leave the temporary file or its output
      channel behind between two otherwise ordinary OCaml expressions. *)
-  let restore_signals = Platform.defer_termination_signals () in
+  let deferred_signals = Signal_restore.create ~defer:true in
   let candidate = ref None in
   let channel = ref None in
   try
@@ -58,18 +58,13 @@ let with_candidate ~lock_dir prefix pid action =
     Fun.protect
       ~finally:(fun () -> File_util.remove_file_best_effort path)
       (fun () ->
-        restore_signals ();
+        Signal_restore.restore deferred_signals;
         action path)
   with exception_raised ->
     Option.iter close_out_noerr !channel;
     Option.iter File_util.remove_file_best_effort !candidate;
-    let exception_raised =
-      try
-        restore_signals ();
-        exception_raised
-      with signal_exception -> signal_exception
-    in
-    raise exception_raised
+    raise
+      (Signal_restore.exception_after_restore deferred_signals exception_raised)
 
 let clear_stale ?poll ~candidate path =
   let takeover = path ^ ".takeover" in
@@ -89,12 +84,6 @@ let clear_stale ?poll ~candidate path =
     | _ -> File_util.remove_file_best_effort takeover);
     false
 
-let restore_after_exception restore_signals exception_raised =
-  try
-    restore_signals ();
-    exception_raised
-  with signal_exception -> signal_exception
-
 let unlink_existing path =
   try Unix.unlink path with Unix.Unix_error (Unix.ENOENT, _, _) -> ()
 
@@ -109,7 +98,7 @@ let release lock =
     lock.released <- true)
 
 let attempt_link ~candidate ~path =
-  let restore_signals = Platform.defer_termination_signals () in
+  let deferred_signals = Signal_restore.create ~defer:true in
   let linked =
     try
       Unix.link candidate path;
@@ -117,17 +106,19 @@ let attempt_link ~candidate ~path =
     with
     | Unix.Unix_error (Unix.EEXIST, _, _) -> false
     | exception_raised ->
-      raise (restore_after_exception restore_signals exception_raised)
+      raise
+        (Signal_restore.exception_after_restore deferred_signals
+           exception_raised)
   in
-  (linked, restore_signals)
+  (linked, deferred_signals)
 
-let with_acquired ~candidate ~path ~pid ~restore_signals action =
+let with_acquired ~candidate ~path ~pid ~deferred_signals action =
   let lock = {path; pid; released = false} in
   Fun.protect
     ~finally:(fun () -> release lock)
     (fun () ->
       unlink_existing candidate;
-      restore_signals ();
+      Signal_restore.restore deferred_signals;
       action lock)
 
 let retry_delay poll =
@@ -147,12 +138,12 @@ let with_build ?(poll = fun () -> ()) root action =
           raise
             (Project_context.Error
                "Timed out waiting for another ReScript build to finish");
-        let linked, restore_signals = attempt_link ~candidate ~path in
+        let linked, deferred_signals = attempt_link ~candidate ~path in
         if linked then
-          with_acquired ~candidate ~path ~pid ~restore_signals (fun lock ->
+          with_acquired ~candidate ~path ~pid ~deferred_signals (fun lock ->
               action ~release:(fun () -> release lock))
         else (
-          restore_signals ();
+          Signal_restore.restore deferred_signals;
           match read_owner path with
           | Some owner when not (valid_owner owner) ->
             raise (malformed_error ())
@@ -178,12 +169,12 @@ let with_watch root action =
           raise
             (Project_context.Error
                "Timed out recovering a stale ReScript watch lock");
-        let linked, restore_signals = attempt_link ~candidate ~path in
+        let linked, deferred_signals = attempt_link ~candidate ~path in
         if linked then
-          with_acquired ~candidate ~path ~pid ~restore_signals (fun _ ->
+          with_acquired ~candidate ~path ~pid ~deferred_signals (fun _ ->
               action {path; pid})
         else (
-          restore_signals ();
+          Signal_restore.restore deferred_signals;
           match read_owner path with
           | Some owner when not (valid_owner owner) ->
             raise (malformed_error ())

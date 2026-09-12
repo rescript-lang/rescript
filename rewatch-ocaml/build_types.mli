@@ -1,9 +1,7 @@
-type dependency_kind = Regular_dependency | Development_dependency
-
 type graph_dependency = {
   declaration: Config.dependency;
   directory: string;
-  kind: dependency_kind;
+  kind: Package_traversal.dependency_kind;
 }
 
 type graph_package = {
@@ -45,6 +43,7 @@ type namespace_map = {
 val namespace_map_key : string -> string
 
 type parse_message = Parse_warning of string | Parse_error of string
+val has_parse_error : parse_message list -> bool
 type attempt_kind = Full_attempt | Retained_attempt
 
 type preliminary_parse =

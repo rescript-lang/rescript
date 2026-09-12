@@ -1,5 +1,8 @@
 exception Build_failure of string
-type cmi_change = Cmi_changed | Cmi_unchanged | Cmi_change_unknown
+type cmi_change = Build_state.cmi_change =
+  | Cmi_changed
+  | Cmi_unchanged
+  | Cmi_change_unknown
 exception Publication_failure of exn * cmi_change
 
 type publish_result = {stderr: string; cmi_change: cmi_change}
