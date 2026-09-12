@@ -75,19 +75,10 @@ type source_reference = {
   absolute_path: string;
 }
 
-type retained = {
-  active_features: (string, string list option) Hashtbl.t;
-  global_modules: (string, global_module) Hashtbl.t;
-  namespace_maps: (string, namespace_map) Hashtbl.t;
-  namespace_maps_by_name: (string, namespace_map list) Hashtbl.t;
-  mutable graph_has_cycle: bool;
-  graph_packages: (string, graph_package) Hashtbl.t;
-  source_index: (string, source_reference) Hashtbl.t;
-  pending_parse_paths: (string, unit) Hashtbl.t;
-  cleanup_results: (string, Build_artifacts.cleanup_result) Hashtbl.t;
-  mutable preparation: preparation;
-  warning_state: Warning_state.t;
-}
+type retained
+
+type cleanup_lifecycle
+type cleanup_batch = {actions: (unit -> unit) list; artifacts: string list}
 
 type t = {
   attempt_kind: attempt_kind;
@@ -104,10 +95,9 @@ type t = {
   blocked_modules: (string, unit) Hashtbl.t;
   initialized_logs: (string, unit) Hashtbl.t;
   namespace_freshness: (string, float option) Hashtbl.t;
-  mutable deferred_artifact_cleanup: string list;
   mutable namespace_jobs: (Process.job * (Process.result -> unit)) list;
   mutable compile_candidates: Compiler_scheduler.candidate list;
-  mutable compile_cleanup: (unit -> unit) list;
+  cleanup_lifecycle: cleanup_lifecycle;
   mutable compiler_cleaned: bool;
   retained: retained;
   mutable had_warnings: bool;
@@ -135,3 +125,31 @@ val prepared : t -> prepared option
 val install_prepared : t -> prepared -> unit
 val mark_freshness_initialized : t -> unit
 val prepared_package_exn : t -> string -> prepared_package
+val find_active_features : t -> string -> string list option option
+val set_active_features : t -> string -> string list option -> unit
+val find_global_module : t -> string -> global_module option
+val add_global_module : t -> string -> global_module -> unit
+val global_module_values : t -> global_module list
+val find_namespace_maps : t -> string -> namespace_map list option
+val add_namespace_map : t -> namespace_map -> unit
+val find_namespace_map : t -> string -> namespace_map
+val namespace_map_values : t -> namespace_map list
+val graph_has_cycle : t -> bool
+val set_graph_has_cycle : t -> bool -> unit
+val add_graph_package : t -> graph_package -> unit
+val find_graph_package : t -> string -> graph_package option
+val iter_graph_packages : t -> (string -> graph_package -> unit) -> unit
+val graph_package_values : t -> graph_package Seq.t
+val add_source_reference : t -> string -> source_reference -> unit
+val find_source_reference : t -> string -> source_reference option
+val pending_parse_paths : t -> string list
+val mark_parse_pending : t -> string -> unit
+val clear_parse_pending : t -> string -> unit
+
+val set_cleanup_result : t -> string -> Build_artifacts.cleanup_result -> unit
+
+val find_cleanup_result : t -> string -> Build_artifacts.cleanup_result option
+val warning_state : t -> Warning_state.t
+val register_cleanup : t -> (unit -> unit) -> unit
+val defer_artifact_cleanup : t -> string list -> unit
+val take_cleanup : t -> cleanup_batch

@@ -15,6 +15,9 @@ type discovery = {
 
 exception Error of string
 
+type source_kind = Implementation | Interface
+
+val source_kind : string -> source_kind option
 val module_name : string -> string
 val is_non_exotic_module_name : string -> bool
 

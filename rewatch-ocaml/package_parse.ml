@@ -1,10 +1,10 @@
-let run ~(package : Build_types.graph_package) ~(stats : Build_types.t)
+let run ~(package : Build_types.graph_package)
+    ~(prepared : Build_types.prepared)
+    ~(prepared_package : Build_types.prepared_package) ~(stats : Build_types.t)
     ~removed_module_names =
   let root = package.graph_root in
   let is_local = package.graph_is_local in
   let config = package.graph_compile_config in
-  let prepared = Build_types.prepared_exn stats in
-  let prepared_package = Build_types.prepared_package_exn stats root in
   let build_state = prepared.build_state in
   let compile_assets = prepared.compile_assets in
   let build_dir = package.graph_build_dir in
@@ -75,12 +75,12 @@ let run ~(package : Build_types.graph_package) ~(stats : Build_types.t)
           (Filename.concat config.root path)
           (Filename.concat ocaml_dir (Filename.basename path));
         if is_local && stderr <> "" then
-          Hashtbl.replace stats.retained.pending_parse_paths pending_path ()
-        else Hashtbl.remove stats.retained.pending_parse_paths pending_path
+          Build_types.mark_parse_pending stats pending_path
+        else Build_types.clear_parse_pending stats pending_path
       in
       match result with
       | Build_types.Parse_failed {stdout; stderr} ->
-        Hashtbl.replace stats.retained.pending_parse_paths pending_path ();
+        Build_types.mark_parse_pending stats pending_path;
         let output =
           Printf.sprintf "Error in %s:\n%s%s" config.name stderr stdout
         in
@@ -92,15 +92,13 @@ let run ~(package : Build_types.graph_package) ~(stats : Build_types.t)
       | Build_types.Use_existing_ast -> publish_successful_parse "")
     parsed;
   if !warning_asts <> [] then
-    stats.compile_cleanup <-
-      (fun () ->
+    Build_types.register_cleanup stats (fun () ->
         List.iter
           (fun (source, ast) ->
             let path = Filename.concat ocaml_dir (Filename.basename ast) in
             File_util.remove_file path;
             Compile_assets.refresh_ast compile_assets ~source ~path)
-          !warning_asts)
-      :: stats.compile_cleanup;
+          !warning_asts);
   let dirty_modules = Hashtbl.create (List.length package.graph_modules) in
   List.iter
     (fun module_ ->

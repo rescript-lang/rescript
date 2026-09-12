@@ -259,21 +259,7 @@ let cleanup_stale ?ocaml_files ?ast_sources ?source_files ?present_source_files
   ocaml_files
   |> List.iter (fun path ->
       let basename = Filename.basename path in
-      let managed =
-        List.exists
-          (Filename.check_suffix basename)
-          [
-            ".cmi";
-            ".cmj";
-            ".cmt";
-            ".cmti";
-            ".ast";
-            ".iast";
-            ".res";
-            ".resi";
-            ".mlmap";
-          ]
-      in
+      let managed = Compile_assets.is_managed_basename basename in
       if managed && not (Hashtbl.mem expected_artifacts basename) then (
         if Filename.check_suffix basename ".ast" then
           removed_modules := Source.module_name basename :: !removed_modules

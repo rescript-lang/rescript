@@ -17,7 +17,7 @@ let tests =
     && not (Watcher.For_test.is_control_file_name "package.json"))
     "only compiler configuration files trigger control-file rebuilds";
   let snapshot path digest =
-    [Watcher.{path; modified = 1.; size = 1; digest}]
+    [Watcher.{path; state = File {modified = 1.; size = 1; digest}}]
   in
   let previous = snapshot "A.res" "old-a" @ snapshot "B.res" "old-b" in
   let trigger = snapshot "A.res" "new-a" @ snapshot "B.res" "old-b" in

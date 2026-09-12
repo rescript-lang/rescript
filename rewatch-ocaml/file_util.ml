@@ -110,21 +110,22 @@ let copy_existing_file ~ensure_parent source destination =
           in
           copy ()))
 
+let path_is_missing path =
+  try
+    ignore (Unix.stat path);
+    false
+  with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> true
+
 let copy_optional_existing_file ?(ensure_parent = true) source destination =
   try copy_existing_file ~ensure_parent source destination
   with (Sys_error _ | Unix.Unix_error _) as error ->
-    let source_is_missing =
-      try
-        ignore (Unix.stat source);
-        false
-      with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> true
-    in
-    if source_is_missing then
+    if path_is_missing source then
       try Sys.remove destination with Sys_error _ -> ()
     else raise error
 
 let stat_opt path =
-  try Some (Unix.stat path) with Sys_error _ | Unix.Unix_error _ -> None
+  try Some (Unix.stat path)
+  with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> None
 
 let files_equal first second =
   match stat_opt first with

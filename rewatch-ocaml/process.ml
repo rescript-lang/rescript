@@ -158,33 +158,40 @@ let close_noerr descriptor =
 let start_capture ?on_chunk descriptor : capture =
   let outcome = ref None in
   let thread =
-    Thread.create
-      (fun () ->
-        outcome :=
-          Some
-            (try
-               let output = Buffer.create 4096 in
-               let bytes = Bytes.create 65536 in
-               let rec read () =
-                 try
-                   match Unix.read descriptor bytes 0 (Bytes.length bytes) with
-                   | 0 -> ()
-                   | count ->
-                     (match on_chunk with
-                     | Some on_chunk -> on_chunk bytes count
-                     | None -> Buffer.add_subbytes output bytes 0 count);
-                     read ()
-                 with Unix.Unix_error (Unix.EINTR, _, _) -> read ()
-               in
-               Fun.protect ~finally:(fun () -> close_noerr descriptor) read;
-               Ok
-                 (match on_chunk with
-                 | Some _ -> ""
-                 | None -> Buffer.contents output |> decode_utf8_lossy)
-             with exn ->
-               close_noerr descriptor;
-               Error exn))
-      ()
+    try
+      Thread.create
+        (fun () ->
+          outcome :=
+            Some
+              (try
+                 Fun.protect
+                   ~finally:(fun () -> close_noerr descriptor)
+                   (fun () ->
+                     let output = Buffer.create 4096 in
+                     let bytes = Bytes.create 65536 in
+                     let rec read () =
+                       try
+                         match
+                           Unix.read descriptor bytes 0 (Bytes.length bytes)
+                         with
+                         | 0 -> ()
+                         | count ->
+                           (match on_chunk with
+                           | Some on_chunk -> on_chunk bytes count
+                           | None -> Buffer.add_subbytes output bytes 0 count);
+                           read ()
+                       with Unix.Unix_error (Unix.EINTR, _, _) -> read ()
+                     in
+                     read ();
+                     Ok
+                       (match on_chunk with
+                       | Some _ -> ""
+                       | None -> Buffer.contents output |> decode_utf8_lossy))
+               with exn -> Error exn))
+        ()
+    with exn ->
+      close_noerr descriptor;
+      raise exn
   in
   {thread; outcome}
 

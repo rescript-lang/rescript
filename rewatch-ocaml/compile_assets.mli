@@ -1,6 +1,7 @@
 type entry = {path: string; modified: float}
 type t
 
+val is_managed_basename : string -> bool
 val create : string list -> t
 val files : t -> string -> string list
 val ast_sources : t -> string -> (string * string) list

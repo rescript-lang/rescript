@@ -12,14 +12,14 @@ and cycle_node = {
 }
 
 val resolved_dependencies :
-  (string, Build_types.global_module) Hashtbl.t ->
-  (string, Build_types.namespace_map list) Hashtbl.t ->
+  find_module:(string -> Build_types.global_module option) ->
+  find_namespace_maps:(string -> Build_types.namespace_map list option) ->
   Build_types.global_module ->
   string list
 
 val find_cycle :
-  (string, Build_types.global_module) Hashtbl.t ->
-  (string, Build_types.namespace_map) Hashtbl.t ->
+  Build_types.global_module list ->
+  Build_types.namespace_map list ->
   Build_state.t ->
   cycle_info option
 
