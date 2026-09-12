@@ -5,8 +5,6 @@ val is_ready : t -> bool
 val prepared : t -> Build_types.prepared option
 val install_prepared : t -> Build_types.prepared -> unit
 val mark_freshness_initialized : t -> unit
-val find_active_features : t -> string -> string list option option
-val set_active_features : t -> string -> string list option -> unit
 val find_global_module : t -> string -> Build_types.global_module option
 val add_global_module : t -> string -> Build_types.global_module -> unit
 val global_module_values : t -> Build_types.global_module list

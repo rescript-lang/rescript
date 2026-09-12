@@ -25,7 +25,6 @@ type t = {
   mutable parse_seconds: float;
   mutable parse_messages: Build_types.parse_message list;
   mutable diagnostics: string list;
-  mutable failure: string option;
   removed_modules: (string, unit) Hashtbl.t;
   preliminary_parses: (string, Build_types.preliminary_parse) Hashtbl.t;
   blocked_modules: (string, unit) Hashtbl.t;
@@ -34,6 +33,8 @@ type t = {
   finalization: finalization_state;
   mutable compiler_cleaned: bool;
   mutable had_warnings: bool;
+  mutable artifacts_cleaned: bool;
+  mutable logs_finalized: bool;
   process_poll: (unit -> unit) option;
   progress: Output.Progress.t;
   verbosity: int;
@@ -60,7 +61,6 @@ let create ~freshness_mode ~session ~process_poll ~progress ~verbosity =
     parse_seconds = 0.;
     parse_messages = [];
     diagnostics = [];
-    failure = None;
     removed_modules = Hashtbl.create 16;
     preliminary_parses = Hashtbl.create 16;
     blocked_modules = Hashtbl.create 16;
@@ -75,6 +75,8 @@ let create ~freshness_mode ~session ~process_poll ~progress ~verbosity =
       };
     compiler_cleaned = false;
     had_warnings = false;
+    artifacts_cleaned = false;
+    logs_finalized = false;
     process_poll;
     progress;
     verbosity;
@@ -144,3 +146,35 @@ let take_initialized_logs attempt =
   in
   Hashtbl.clear attempt.finalization.initialized_logs;
   roots
+
+let run_all actions =
+  let first_error = ref None in
+  List.iter
+    (fun action ->
+      try action ()
+      with error ->
+        if Option.is_none !first_error then first_error := Some error)
+    actions;
+  Option.iter raise !first_error
+
+let cleanup_artifacts attempt =
+  if not attempt.artifacts_cleaned then (
+    attempt.artifacts_cleaned <- true;
+    let cleanup = take_cleanup attempt in
+    run_all
+      (cleanup.actions
+      @ List.map (fun path () -> File_util.remove_file path) cleanup.artifacts))
+
+let finalize_logs attempt =
+  if not attempt.logs_finalized then (
+    attempt.logs_finalized <- true;
+    let package_roots = take_initialized_logs attempt in
+    run_all
+      ((fun () -> Output.Progress.finish attempt.progress)
+      :: List.map
+           (fun package_root () -> Compiler_log.finalize package_root)
+           package_roots))
+
+let finish_attempt attempt =
+  run_all
+    [(fun () -> cleanup_artifacts attempt); (fun () -> finalize_logs attempt)]

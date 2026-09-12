@@ -9,7 +9,6 @@ let create_full () =
 let retained_attempts_start_with_fresh_attempt_state _context =
   let first = create_full () in
   first.diagnostics <- ["old diagnostic"];
-  first.failure <- Some "old failure";
   Build_attempt.register_cleanup first ignore;
   let second =
     Build_attempt.create_retained ~session:first.session ~process_poll:None
@@ -18,7 +17,6 @@ let retained_attempts_start_with_fresh_attempt_state _context =
   in
   assert_equal Build_attempt.Initialize_freshness second.freshness_mode;
   assert_equal [] second.diagnostics;
-  assert_equal None second.failure;
   assert_equal [] (Build_attempt.take_cleanup second).actions
 
 let output_inventory_survives_without_cleanup_work _context =

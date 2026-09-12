@@ -114,72 +114,6 @@ let run_namespace_jobs (attempt : Build_attempt.t) =
         jobs results);
   List.length jobs
 
-let write_source_dirs (root_config : Config.t) (attempt : Build_attempt.t) =
-  let packages =
-    Build_session.graph_package_values attempt.session
-    |> List.of_seq
-    |> List.sort (fun (left : Build_types.graph_package) right ->
-        String.compare left.graph_root right.graph_root)
-  in
-  packages
-  |> List.iter (fun package ->
-      if package.Build_types.graph_root <> root_config.root then
-        File_util.remove_file
-          (File_util.path_of_parts package.graph_root
-             ["lib"; "bs"; ".sourcedirs.json"]));
-  let local_packages =
-    List.filter (fun package -> package.Build_types.graph_is_local) packages
-  in
-  let source_directories package =
-    package.Build_types.graph_modules
-    |> List.map (fun module_ -> Filename.dirname module_.Source.implementation)
-    |> List.sort_uniq String.compare
-  in
-  let relative_package_root package =
-    if package.Build_types.graph_root = root_config.root then ""
-    else Project_context.relative_to root_config.root package.graph_root
-  in
-  let dirs =
-    local_packages
-    |> List.concat_map (fun package ->
-        let relative_root = relative_package_root package in
-        source_directories package
-        |> List.map (fun directory ->
-            if relative_root = "" then directory
-            else Filename.concat relative_root directory))
-    |> List.sort_uniq String.compare
-  in
-  let package_roots = Hashtbl.create 16 in
-  local_packages
-  |> List.iter (fun package ->
-      package.Build_types.graph_dependency_directories
-      |> List.iter (fun dependency ->
-          Hashtbl.replace package_roots dependency.Build_types.declaration.name
-            dependency.directory));
-  let package_roots =
-    Hashtbl.to_seq package_roots
-    |> List.of_seq
-    |> List.sort (fun (left, _) (right, _) -> String.compare left right)
-  in
-  let scans =
-    local_packages
-    |> List.map (fun package ->
-        let relative_root = relative_package_root package in
-        let build_root =
-          if relative_root = "" then File_util.path_of_parts "" ["lib"; "bs"]
-          else File_util.path_of_parts relative_root ["lib"; "bs"]
-        in
-        Source_dirs.
-          {
-            build_root;
-            scan_dirs = source_directories package;
-            also_scan_build_root = true;
-          })
-    |> List.sort (fun (left : Source_dirs.scan) right ->
-        String.compare left.build_root right.build_root)
-  in
-  Source_dirs.write ~root:root_config.root ~dirs ~packages:package_roots ~scans
-
 let write_build_ninja (attempt : Build_attempt.t) =
   (* This empty file is a cache-invalidation marker consumed by editor tooling,
      not a serialized build plan. Only commands that reconstruct the project
@@ -308,7 +242,7 @@ let prepare_incremental previous changes (attempt : Build_attempt.t)
           dependencies_changed := true;
           node.raw_dependencies <- raw_dependencies;
           Build_state.set_dependencies prepared.build_state ~key
-            (Build_preparation.resolved_dependencies
+            (Module_graph.resolved_dependencies
                ~find_module:(Build_session.find_global_module attempt.session)
                ~find_namespace_maps:
                  (Build_session.find_namespace_maps attempt.session)
@@ -317,7 +251,7 @@ let prepare_incremental previous changes (attempt : Build_attempt.t)
   attempt.parse_seconds <- Unix.gettimeofday () -. started_at;
   if !dependencies_changed || Build_session.graph_has_cycle attempt.session then (
     let cycle =
-      Build_preparation.find_cycle
+      Module_graph.find_cycle
         (Build_session.global_module_values attempt.session)
         (Build_session.namespace_map_values attempt.session)
         prepared.build_state
@@ -382,15 +316,9 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
      needed to recover incrementally on the next edit. Publish ownership before
      any fallible phase starts. *)
   on_state {root_config; build_lock_root; session = attempt.session};
-  let finalization = Build_finalization.create ~attempt ~progress in
-  let finalize_logs () = Build_finalization.finalize_logs finalization in
-  let cleanup_after_build () =
-    Build_finalization.cleanup_artifacts finalization
-  in
   let report =
     Build_report.create ~started_at ~interactive ~show_progress ~colors
-      ~no_timing ~compilation_kind ~attempt ~finalize_logs
-      ~write_metadata:(fun () -> write_source_dirs root_config attempt)
+      ~no_timing ~compilation_kind ~attempt
   in
   let build_ninja_written = ref false in
   let write_build_ninja_once () =
@@ -402,10 +330,13 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
   let parse_step = if is_rebuild then "1/2" else "2/3" in
   let compile_step = if is_rebuild then "2/2" else "3/3" in
   let report_failure ~compile_seconds output =
+    Build_attempt.finalize_logs attempt;
+    if attempt.freshness_mode = Build_attempt.Initialize_freshness then
+      Source_dirs.write_build ~root_config attempt.session;
     Build_report.report report ~success:false ~compile_seconds;
     prerr_string output;
     prerr_newline ();
-    cleanup_after_build ();
+    Build_attempt.cleanup_artifacts attempt;
     write_build_ninja_once ();
     raise
       (Reported_failure
@@ -413,16 +344,17 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
         ^ "See Errors Above"))
   in
   let report_parse_failure output =
+    Build_attempt.finalize_logs attempt;
     Build_report.report_parse_failure report ~output;
-    cleanup_after_build ();
+    Build_attempt.cleanup_artifacts attempt;
     write_build_ninja_once ();
     raise
       (Reported_failure
          "Incremental build failed. Error: \027[2K\r  Could not parse Source \
           Files")
   in
-  let format_cycle cycle
-      (by_key : (string, Build_preparation.cycle_node) Hashtbl.t) =
+  let format_cycle cycle (by_key : (string, Module_graph.cycle_node) Hashtbl.t)
+      =
     let format_node name =
       match Hashtbl.find_opt by_key name with
       | None -> name
@@ -473,7 +405,7 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
     if attempt.compiler_cleaned && show_progress && not interactive then
       print_endline "Cleaned previous build due to compiler update";
     Option.iter
-      (fun (cycle_info : Build_preparation.cycle_info) ->
+      (fun (cycle_info : Module_graph.cycle_info) ->
         List.iter
           (fun name -> Hashtbl.replace attempt.blocked_modules name ())
           cycle_info.blocked)
@@ -505,24 +437,30 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
     prerr_string parse_output;
     flush stderr;
     let compile_started = Unix.gettimeofday () in
-    (try run_scheduled_modules attempt prepared ~compile_step ~namespace_count
-     with Build_failure output ->
-       if Option.is_none attempt.failure then attempt.failure <- Some output);
+    let compile_failure =
+      try
+        run_scheduled_modules attempt prepared ~compile_step ~namespace_count;
+        None
+      with Build_failure output -> Some output
+    in
     Output.Progress.finish progress;
     let compile_seconds =
       phase_seconds (Unix.gettimeofday () -. compile_started)
     in
-    match (attempt.failure, cycle) with
+    match (compile_failure, cycle) with
     | Some output, _ -> report_failure ~compile_seconds output
     | None, Some cycle_info ->
       let output = format_cycle cycle_info.cycle cycle_info.nodes_by_key in
       cycle_info.cycle
       |> List.filter_map (Hashtbl.find_opt cycle_info.nodes_by_key)
-      |> List.map (fun node -> node.Build_preparation.package_root)
+      |> List.map (fun node -> node.Module_graph.package_root)
       |> List.sort_uniq String.compare
       |> List.iter (fun package_root -> Compiler_log.append package_root output);
       report_failure ~compile_seconds output
     | None, None ->
+      Build_attempt.finalize_logs attempt;
+      if attempt.freshness_mode = Build_attempt.Initialize_freshness then
+        Source_dirs.write_build ~root_config attempt.session;
       let diagnostics = Build_report.prepare_success report ~compile_seconds in
       let context = prepared.compiler_context in
       Build_session.iter_graph_packages attempt.session (fun _ package ->
@@ -534,7 +472,7 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
           Compiler_info.write_package package_context package.graph_config);
       if compilation_kind = One_shot then
         Build_report.report_completion report diagnostics;
-      cleanup_after_build ();
+      Build_attempt.cleanup_artifacts attempt;
       write_build_ninja_once ();
       release_build_lock ();
       Option.iter
@@ -546,7 +484,7 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
   Build_lock.with_build ~poll build_lock_root
     (fun ~release:release_build_lock ->
       Fun.protect
-        ~finally:(fun () -> Build_finalization.finish finalization)
+        ~finally:(fun () -> Build_attempt.finish_attempt attempt)
         (fun () ->
           try execute ~release_build_lock with
           | Build_failure output -> report_failure ~compile_seconds:0. output

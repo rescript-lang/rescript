@@ -12,12 +12,10 @@ type t = {
   no_timing: bool;
   compilation_kind: compilation_kind;
   attempt: Build_attempt.t;
-  finalize_logs: unit -> unit;
-  write_metadata: unit -> unit;
 }
 
 let create ~started_at ~interactive ~show_progress ~colors ~no_timing
-    ~compilation_kind ~attempt ~finalize_logs ~write_metadata =
+    ~compilation_kind ~attempt =
   {
     started_at;
     interactive;
@@ -26,8 +24,6 @@ let create ~started_at ~interactive ~show_progress ~colors ~no_timing
     no_timing;
     compilation_kind;
     attempt;
-    finalize_logs;
-    write_metadata;
   }
 
 let compile_step report =
@@ -43,9 +39,6 @@ let output_kind report =
 
 let prepare report ~success ~compile_seconds =
   let attempt = report.attempt in
-  report.finalize_logs ();
-  if attempt.freshness_mode = Build_attempt.Initialize_freshness then
-    report.write_metadata ();
   if report.show_progress then
     if report.interactive then
       if success then
@@ -115,7 +108,6 @@ let prepare_success report ~compile_seconds =
   prepare report ~success:true ~compile_seconds
 
 let report_parse_failure report ~output =
-  report.finalize_logs ();
   (if report.interactive && report.show_progress then
      prerr_endline
        (Output.parsing_failed_message ~color:report.colors

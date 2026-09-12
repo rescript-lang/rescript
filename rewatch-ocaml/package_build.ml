@@ -1,5 +1,4 @@
 exception Error = Project_context.Error
-exception Build_failure = Compiler_scheduler.Build_failure
 
 let prepare_removed_modules ~(package : Build_types.graph_package)
     (attempt : Build_attempt.t) =
@@ -33,13 +32,9 @@ let rec prepare_tree ~seen ~(package : Build_types.graph_package) ~prepared
       if not (Hashtbl.mem seen root) then
         match Build_session.find_graph_package attempt.session root with
         | None -> ()
-        | Some dependency_package -> (
-          try
-            prepare_tree ~seen ~package:dependency_package ~prepared ~watch
-              ~attempt
-          with Build_failure output ->
-            if Option.is_none attempt.failure then
-              attempt.failure <- Some output))
+        | Some dependency_package ->
+          prepare_tree ~seen ~package:dependency_package ~prepared ~watch
+            ~attempt)
     package.graph_dependency_directories;
   File_util.ensure_dir package.graph_build_dir;
   File_util.ensure_dir package.graph_ocaml_dir;
