@@ -1,5 +1,10 @@
 let path_separator = ';'
 let terminal_supports_color_without_term = true
+
+let configure_standard_streams () =
+  set_binary_mode_in stdin true;
+  set_binary_mode_out stdout true;
+  set_binary_mode_out stderr true
 let normalize_path_for_comparison path =
   path |> String.lowercase_ascii
   |> String.map (function '/' -> '\\' | character -> character)
