@@ -38,7 +38,10 @@ type 'a work = {key: string; dependencies: string list; value: 'a}
     ensuring no newly ready dependency is launched after a build failure.
     [Continue_independent_work] also drains work that was already ready, while
     failed prerequisites continue to block their dependents. *)
-type failure_action = Abort_immediately | Stop_new_work | Continue_independent_work
+type failure_action =
+  | Abort_immediately
+  | Stop_new_work
+  | Continue_independent_work
 
 val run_dependency_graph :
   ?max_jobs:int ->

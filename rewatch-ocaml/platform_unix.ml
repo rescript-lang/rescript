@@ -1,5 +1,6 @@
 let path_separator = ':'
 let terminal_supports_color_without_term = false
+let inherit_streaming_terminal_stdin = false
 let configure_standard_streams () = ()
 let clean_symbol = "🧹 "
 let parse_symbol = "🧱 "

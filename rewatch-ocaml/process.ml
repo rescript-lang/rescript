@@ -50,10 +50,7 @@ let run_parallel_map_with_notifier ~max_jobs ~poll ~on_complete notifier values
         Child.wait_for_running ~poll notifier !active
       in
       Signal_restore.protect deferred_signals (fun () ->
-          active :=
-            List.filter
-              (fun running -> running != child)
-              !active;
+          active := List.filter (fun running -> running != child) !active;
           Child.release_running child;
           results.(Child.payload child) <- Some result;
           on_complete (Child.payload child));
@@ -88,7 +85,10 @@ let run_parallel ?max_jobs ?poll ?on_complete jobs =
   run_parallel_map ?max_jobs ?poll ?on_complete jobs ~job:Fun.id
 
 type 'a work = {key: string; dependencies: string list; value: 'a}
-type failure_action = Abort_immediately | Stop_new_work | Continue_independent_work
+type failure_action =
+  | Abort_immediately
+  | Stop_new_work
+  | Continue_independent_work
 
 module Work_ready = Set.Make (struct
   type t = int * string
@@ -541,7 +541,9 @@ let run_streaming ?poll ~cwd program args =
     flush channel
   in
   let stdin =
-    if Unix.isatty Unix.stdin then Child.Null_stdin else Child.Inherit_stdin
+    if Platform.inherit_streaming_terminal_stdin || not (Unix.isatty Unix.stdin)
+    then Child.Inherit_stdin
+    else Child.Null_stdin
   in
   run_one ?poll ~stdout_chunk:(write stdout) ~stderr_chunk:(write stderr) ~stdin
     ~cwd program args

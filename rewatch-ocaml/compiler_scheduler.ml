@@ -145,8 +145,8 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
     |> List.filter (fun candidate -> Hashtbl.mem universe candidate.key)
     |> List.map (fun candidate -> candidate.make ())
   in
-  Output.Progress.start progress ~step:compile_step ~symbol:Platform.build_symbol
-    ~label:"Compiling"
+  Output.Progress.start progress ~step:compile_step
+    ~symbol:Platform.build_symbol ~label:"Compiling"
     ~total:(namespace_count + List.length scheduled_modules);
   for _ = 1 to namespace_count do
     Output.Progress.advance progress
@@ -297,6 +297,9 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
   let reconcile_unconsumed_publications () =
     List.iter
       (fun (scheduled : scheduled_module) ->
+        (match scheduled.phase with
+        | Post_build _ -> invalidate_persistent_freshness scheduled
+        | Start | Interface _ | Implementation _ | Done -> ());
         let source =
           match scheduled.phase with
           | Interface path -> Some (Source.Interface, path)

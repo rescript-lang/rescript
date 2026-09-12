@@ -87,7 +87,10 @@ npx rescript-rust build
 
 The `rescript-ocaml` launcher remains as an alias for existing testers. Windows
 ships the Dune-promoted OCaml executable as `rescript.exe` and the Rust
-reference as `rescript-rust.exe`, matching the other platform packages.
+reference as `rescript-rust.exe`, matching the other platform packages. The
+x64 package declares compatibility with ARM64 Windows because Windows runs
+these x64 executables through its emulation layer; the launcher maps native
+ARM64 Node to that package.
 
 The packaged executable discovers `bsc.exe` beside itself, like Rust rewatch,
 and the npm launcher supplies the installed runtime path. Direct invocation can
@@ -208,5 +211,10 @@ native process IDs and lock contention, watcher rebuild/recovery, formatting,
 and post-build command execution. The MSYS harness cannot deliver a normal
 Windows console-control event to a native child, so it exercises the same
 cleanup path by removing `watch.lock`; console signal delivery remains covered
-on Unix. Shared path construction uses OCaml's `Filename` APIs so Windows
+on Unix. Windows streaming `--after-build` commands inherit terminal stdin while
+remaining in their Job Object. Unix terminal stdin is intentionally withheld
+from these commands because their separately owned process group would be
+stopped by `SIGTTIN`; redirected stdin is inherited, and full terminal input
+requires a future PTY relay that preserves process-tree cancellation. Shared
+path construction uses OCaml's `Filename` APIs so Windows
 separators and drive roots are not hard-coded assumptions.

@@ -78,10 +78,10 @@ let loading_tests =
       let shared_config = Filename.concat shared "rescript.json" in
       write_file shared_config {|{"name":"symlinked-config"}|};
       let symlinked_config = Filename.concat project "rescript.json" in
-      if Test_support.symlink_if_supported shared_config symlinked_config then (
-        let config = Config.load symlinked_config in
-        check (config.root = project)
-          "a configuration symlink does not relocate the project root");
+      (if Test_support.symlink_if_supported shared_config symlinked_config then
+         let config = Config.load symlinked_config in
+         check (config.root = project)
+           "a configuration symlink does not relocate the project root");
       write_file path {|{"name":"empty-sources","sources":[]}|};
       let config = Config.load path in
       check config.sources_defined

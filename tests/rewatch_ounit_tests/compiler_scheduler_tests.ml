@@ -9,6 +9,10 @@ let process_job () =
   Process.
     {program = executable; args = ["--process-result"; ""; ""; "0"]; cwd = "."}
 
+let wait_for_release_job root =
+  let executable = Unix.realpath Sys.executable_name in
+  Process.{program = executable; args = ["--wait-for-release"; root]; cwd = "."}
+
 let with_temp_dir = Test_support.with_temp_dir "rewatch-scheduler-"
 
 let source name =
@@ -207,6 +211,68 @@ let tests =
       check aborted "an operational scheduler failure aborts the attempt";
       check (Build_state.find_exn abort_state "AbortD").compile_dirty
         "CMI publication completed during abort still invalidates dependents";
+      let interrupted_state = Build_state.create 1 in
+      Build_state.add interrupted_state ~key:"Interrupted"
+        ~kind:Build_state.Source_module ~last_compiled_cmi:(Some 0.)
+        ~last_compiled_cmt:(Some 0.);
+      let interrupted_module =
+        Build_state.find_exn interrupted_state "Interrupted"
+      in
+      interrupted_module.compile_dirty <- true;
+      let interrupted_ast = Filename.concat ocaml_dir "Interrupted.ast" in
+      let interrupted_cmi = Filename.concat ocaml_dir "Interrupted.cmi" in
+      let interrupted_hook_root = Filename.concat root "interrupted-hook" in
+      Unix.mkdir interrupted_hook_root 0o755;
+      write_file interrupted_ast "published AST";
+      let interrupted_candidate =
+        Compiler_scheduler.candidate ~key:"Interrupted"
+          ~state:interrupted_module ~warning_paths:[] ~make:(fun () ->
+            Compiler_scheduler.create ~key:"Interrupted" ~dependencies:[]
+              ~source:(source "Interrupted") ~state:interrupted_module
+              ~cmi_path:interrupted_cmi
+              ~prepare:(fun () -> ())
+              ~compile:(fun ~source_kind:_ _path -> process_job ())
+              ~publish:(fun ~source_kind:_ _path _result ->
+                write_file interrupted_cmi "published CMI";
+                Compiler_scheduler.{stderr = ""; cmi_change = Cmi_changed})
+              ~record_published_outputs:(fun ~source_kind:_ _path -> ())
+              ~post_build:(fun output ->
+                [
+                  Compiler_scheduler.
+                    {
+                      output;
+                      task =
+                        Process.task
+                          (wait_for_release_job interrupted_hook_root);
+                    };
+                ])
+              ~package_root:root ~is_local:true
+              ~mark_warning:(fun _ -> ()))
+      in
+      let hook_interrupted =
+        try
+          Compiler_scheduler.run
+            ~poll:
+              (Some
+                 (fun () ->
+                   if
+                     Sys.file_exists
+                       (Filename.concat interrupted_hook_root "child-started")
+                   then raise Exit))
+            ~warning_state:(Warning_state.create ())
+            ~compile_assets:(Compile_assets.create [ocaml_dir])
+            ~build_state:interrupted_state ~candidates:[interrupted_candidate]
+            ~mark_compiled:(fun () -> ())
+            ~mark_had_warnings:(fun () -> ())
+            ~progress:(Output.Progress.create ~enabled:false ~color:false)
+            ~compile_step:"1/1" ~namespace_count:0 ~verbosity:0;
+          false
+        with Exit -> true
+      in
+      check hook_interrupted "a running post-build hook can be interrupted";
+      check
+        (not (Sys.file_exists interrupted_ast))
+        "interrupted post-build invalidates persistent compiler freshness";
       let marker = Failure "copy after CMI failed" in
       match
         Compiler_scheduler.capture_publication (fun () ->

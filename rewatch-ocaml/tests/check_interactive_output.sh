@@ -68,6 +68,12 @@ printf '%s\n' AFTER_BUILD_MARKER
 EOF
 chmod +x "$work/after-build-marker.sh"
 printf 'console.log("AFTER_BUILD_MARKER")\n' >"$work/after-build-marker.js"
+cat >"$work/after-build-input.js" <<'EOF'
+process.stdin.setEncoding("utf8");
+process.stdin.once("data", input => {
+  console.log(`AFTER_BUILD_INPUT:${input.trim()}`);
+});
+EOF
 
 export RESCRIPT_BSC_EXE=${RESCRIPT_BSC_EXE:-$root/_build/default/compiler/bsc/rescript_compiler_main.exe}
 export RESCRIPT_RUNTIME=${RESCRIPT_RUNTIME:-$root/packages/@rescript/runtime}
@@ -246,6 +252,25 @@ for implementation in rust ocaml; do
     exit 1
   fi
 done
+
+if $windows_posix_shell; then
+  for implementation in rust ocaml; do
+    if [ "$implementation" = rust ]; then executable=$rust; else executable=$ocaml; fi
+    command_executable=$(command_path "$executable")
+    command_project=$(command_path "$work/$implementation-after-build")
+    input_script=$(command_path "$work/after-build-input.js")
+    transcript="$work/$implementation-after-build-input.tty"
+    printf 'from-terminal\n' | script -qefc \
+      "env -u NO_COLOR TERM=xterm CLICOLOR=1 CLICOLOR_FORCE=0 RESCRIPT_BSC_EXE=$RESCRIPT_BSC_EXE RESCRIPT_RUNTIME=$RESCRIPT_RUNTIME $command_executable build --after-build 'node $input_script' $command_project --no-timing" \
+      "$transcript" >/dev/null
+    if ! tr '\r' '\n' <"$transcript" \
+      | grep -F 'AFTER_BUILD_INPUT:from-terminal' >/dev/null; then
+      echo "$implementation did not pass terminal input to --after-build" >&2
+      cat "$transcript" >&2
+      exit 1
+    fi
+  done
+fi
 
 capture_quiet_build() {
   implementation=$1

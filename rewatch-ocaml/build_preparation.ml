@@ -172,8 +172,7 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
   in
   let parse_completed =
     Output.Progress.start_grouped attempt.progress ~step:parse_step
-      ~symbol:Platform.parse_symbol
-      ~label:"Parsing"
+      ~symbol:Platform.parse_symbol ~label:"Parsing"
       (List.map (fun (_, _, group) -> group) parse_entries)
   in
   let parse_results =

@@ -395,11 +395,7 @@ let process_dependency_graph_tests _context =
   let continued_independent_work =
     try
       Process.run_dependency_graph ~max_jobs:1
-        [
-          graph_work "a" [];
-          graph_work "b" [];
-          graph_work "c" ["a"];
-        ]
+        [graph_work "a" []; graph_work "b" []; graph_work "c" ["a"]]
         ~on_failure:(fun _ -> Process.Continue_independent_work)
         ~next:(fun key result ->
           match result with
@@ -409,7 +405,9 @@ let process_dependency_graph_tests _context =
           | Some _ when key = "a" -> raise (Failure key)
           | Some _ -> None);
       false
-    with Failure key when key = "a" -> true | _ -> false
+    with
+    | Failure key when key = "a" -> true
+    | _ -> false
   in
   check
     (continued_independent_work && List.mem "b" !started
@@ -525,9 +523,8 @@ let platform_tests _context =
   check
     (Platform_windows.serialize_command_line ~program:"cmd.exe"
        ~args:["/D"; "/V:OFF"; "/S"; "/C"; {|echo "hello world"|}]
-    = {|cmd.exe /D /V:OFF /S /C echo "hello world"|})
-    "Windows preserves cmd.exe shell syntax without executable-argument \
-     re-quoting"
+    = {|cmd.exe /D /V:OFF /S /C "echo "hello world""|})
+    "Windows wraps the complete cmd.exe command for /S parsing"
 
 let scheduler_tests _context =
   let test_executable = test_executable () in

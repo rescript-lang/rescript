@@ -23,6 +23,10 @@ export function runBuildSystem(executable) {
   const handleSignal = signal => {
     if (forwardedSignal) return;
     forwardedSignal = true;
+    // Ctrl+C is delivered to every process attached to the Windows console.
+    // child.kill("SIGINT") uses TerminateProcess there and can kill the build
+    // system before its console handler releases locks and owned descendants.
+    if (process.platform === "win32" && signal === "SIGINT") return;
     try {
       if (child.exitCode === null && child.signalCode == null) {
         child.kill(signal);
