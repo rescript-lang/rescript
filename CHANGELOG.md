@@ -36,12 +36,15 @@
 
 #### :bug: Bug fix
 
+- Fix `reanalyze` reporting labels and variant cases of a re-exported type (`type y = x = {...}`) as dead in the editor. The re-export linking existed only in the batch pipeline, while the editor runs the reactive one; both are now the same pipeline. The `reanalyze -reactive` flag is gone with it, since analysis is always reactive. https://github.com/rescript-lang/rescript/issues/8647
+- Fix `reanalyze` reporting record labels reached through a record coercion as dead. The typed tree now keeps the source type of a coercion, so reading a label on the target counts as reading the source label of the same name. https://github.com/rescript-lang/rescript/issues/8643
 - Fix speculative parser lookahead suppressing syntax errors for malformed attributes and inline records in non-arrow external declarations. https://github.com/rescript-lang/rescript/pull/8633
 - Preserve list elements when recovering from unexpected delimiters, and report invalid type-argument parentheses at their opening. https://github.com/rescript-lang/rescript/pull/8633
 - Fix constant folding of pattern matches on unboxed variants whose payload overlaps a literal constructor, so inlined calls agree with runtime matching. Reject multi-argument unboxed constructors instead of crashing. https://github.com/rescript-lang/rescript/pull/8631
 - Fix escaped backticks and interpolation openers in backquoted `%raw`, `%ffi`, and `%re` payloads leaking into emitted JavaScript. https://github.com/rescript-lang/rescript/pull/8630
 - Fix the side-effect analysis treating bigint exponentiation and bounds-checked array and string reads as pure, which let dead-code elimination drop an unused one that throws: `let _ = 2n ** -1n` no longer raised. https://github.com/rescript-lang/rescript/pull/8617
 - Preserve record field `@as` annotations when formatting object types containing spreads. https://github.com/rescript-lang/rescript/pull/8619
+- Fix lost leading comments on labeled callbacks and unstable formatting of trailing callback comments. https://github.com/rescript-lang/rescript/pull/8627
 - Fix record-field completion inside constructor tuple payloads and for their destructured bindings, including both supported tuple spellings and polymorphic variants. https://github.com/rescript-lang/rescript/pull/8610
 - Limit constructor signature help to the argument parentheses, excluding whitespace and comments between the constructor name and its arguments, and keep unary tuple payloads on parameter zero. https://github.com/rescript-lang/rescript/pull/8610
 - Fix excessive parentheses and indentation in function assignments to refs, align record and array assignment formatting across refs and fields, and preserve function return-type parentheses and consistent JSX fragment layout in callbacks. https://github.com/rescript-lang/rescript/pull/8611

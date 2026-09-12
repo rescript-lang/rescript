@@ -16,6 +16,11 @@ type optional_arg_call = {
 
 type function_ref = {pos_from: Lexing.position; pos_to: Lexing.position}
 
+type coercion = {
+  source_type_paths: Dce_path.t list;
+  target_type_paths: Dce_path.t list;
+}
+
 type optional_arg_value_escape = {
   pos_from: Lexing.position;
   pos_to: Lexing.position;
@@ -28,6 +33,7 @@ type t = {
   optional_arg_calls: optional_arg_call list;
   function_refs: function_ref list;
   optional_arg_value_escapes: optional_arg_value_escape list;
+  coercions: coercion list;
 }
 
 type builder = {
@@ -35,6 +41,7 @@ type builder = {
   mutable optional_arg_calls: optional_arg_call list;
   mutable function_refs: function_ref list;
   mutable optional_arg_value_escapes: optional_arg_value_escape list;
+  mutable coercions: coercion list;
 }
 
 (** {2 Builder API} *)
@@ -45,6 +52,7 @@ let create_builder () : builder =
     optional_arg_calls = [];
     function_refs = [];
     optional_arg_value_escapes = [];
+    coercions = [];
   }
 
 let add_exception_ref (b : builder) ~exception_path ~loc_from =
@@ -62,6 +70,9 @@ let add_optional_arg_value_escape (b : builder) ~pos_from ~pos_to =
   b.optional_arg_value_escapes <-
     {pos_from; pos_to} :: b.optional_arg_value_escapes
 
+let add_coercion (b : builder) ~source_type_paths ~target_type_paths =
+  b.coercions <- {source_type_paths; target_type_paths} :: b.coercions
+
 (** {2 Merge API} *)
 
 let merge_all (builders : builder list) : t =
@@ -75,11 +86,13 @@ let merge_all (builders : builder list) : t =
   let optional_arg_value_escapes =
     builders |> List.concat_map (fun b -> b.optional_arg_value_escapes)
   in
+  let coercions = builders |> List.concat_map (fun b -> b.coercions) in
   {
     exception_refs;
     optional_arg_calls;
     function_refs;
     optional_arg_value_escapes;
+    coercions;
   }
 
 (** {2 Builder extraction for reactive merge} *)
@@ -90,15 +103,5 @@ let builder_to_t (builder : builder) : t =
     optional_arg_calls = builder.optional_arg_calls;
     function_refs = builder.function_refs;
     optional_arg_value_escapes = builder.optional_arg_value_escapes;
+    coercions = builder.coercions;
   }
-
-(** {2 Processing API} *)
-
-let process_exception_refs (t : t) ~refs ~file_deps ~find_exception ~config =
-  t.exception_refs
-  |> List.iter (fun {exception_path; loc_from} ->
-      match find_exception exception_path with
-      | None -> ()
-      | Some loc_to ->
-        Dead_common.add_value_reference ~config ~refs ~file_deps
-          ~binding:Location.none ~add_file_reference:true ~loc_from ~loc_to)

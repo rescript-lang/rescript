@@ -1,3 +1,7 @@
+(* Full argument span used for comment attachment and printing. For labeled
+ * and optional arguments it starts at the label and ends at the expression. *)
+val argument_loc : Asttypes.arg_label * Parsetree.expression -> Location.t
+
 (* Restructures a nested tree of arrow types into its args & returnType
  * The parsetree contains: a => b => c => d, for printing purposes
  * we restructure the tree into (a, b, c) and its returnType d *)

@@ -118,6 +118,21 @@ Run the `Dev Containers: Rebuild and Reopen in Container` action to get started.
 
 You can also open this dev container with [GitHub Codespaces](https://github.com/features/codespaces/).
 
+Alternatively, install the [Dev Container CLI](https://github.com/devcontainers/cli) through npm:
+
+```sh
+npm install -g @devcontainers/cli
+```
+
+Then create the development container and open a shell in it:
+
+```sh
+devcontainer up --workspace-folder .
+devcontainer exec --workspace-folder . zsh
+```
+
+Use the Dev Container tooling rather than building `.devcontainer/Dockerfile` directly. The tooling installs the features declared in `devcontainer.json`, including Node.js, and runs the post-create command. A plain `docker build` does not apply these features or lifecycle commands.
+
 ## Building the Compiler
 
 Main targets:

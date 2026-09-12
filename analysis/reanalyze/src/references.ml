@@ -19,8 +19,6 @@ type refs_table = Pos_set.t Pos_hash.t
 
 type builder = {value_refs_from: refs_table; type_refs_from: refs_table}
 
-type t = {value_refs_from: refs_table; type_refs_from: refs_table}
-
 (* ===== Builder API ===== *)
 
 let create_builder () : builder =
@@ -31,36 +29,6 @@ let add_value_ref (builder : builder) ~pos_to ~pos_from =
 
 let add_type_ref (builder : builder) ~pos_to ~pos_from =
   add_set builder.type_refs_from pos_from pos_to
-
-let merge_into_builder ~(from : builder) ~(into : builder) =
-  Pos_hash.iter
-    (fun pos refs ->
-      refs
-      |> Pos_set.iter (fun to_pos -> add_set into.value_refs_from pos to_pos))
-    from.value_refs_from;
-  Pos_hash.iter
-    (fun pos refs ->
-      refs
-      |> Pos_set.iter (fun to_pos -> add_set into.type_refs_from pos to_pos))
-    from.type_refs_from
-
-let merge_all (builders : builder list) : t =
-  let result = create_builder () in
-  builders
-  |> List.iter (fun builder -> merge_into_builder ~from:builder ~into:result);
-  {
-    value_refs_from = result.value_refs_from;
-    type_refs_from = result.type_refs_from;
-  }
-
-let freeze_builder (builder : builder) : t =
-  (* Zero-copy freeze - builder should not be used after this *)
-  {
-    value_refs_from = builder.value_refs_from;
-    type_refs_from = builder.type_refs_from;
-  }
-
-(* ===== Builder extraction for reactive merge ===== *)
 
 let builder_value_refs_from_list (builder : builder) :
     (Lexing.position * Pos_set.t) list =
@@ -73,14 +41,3 @@ let builder_type_refs_from_list (builder : builder) :
   Pos_hash.fold
     (fun pos refs acc -> (pos, refs) :: acc)
     builder.type_refs_from []
-
-let create ~value_refs_from ~type_refs_from : t =
-  {value_refs_from; type_refs_from}
-
-(* ===== Read-only API ===== *)
-
-let iter_value_refs_from (t : t) f = Pos_hash.iter f t.value_refs_from
-let iter_type_refs_from (t : t) f = Pos_hash.iter f t.type_refs_from
-
-let value_refs_from_length (t : t) = Pos_hash.length t.value_refs_from
-let type_refs_from_length (t : t) = Pos_hash.length t.type_refs_from

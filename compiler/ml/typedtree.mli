@@ -117,7 +117,18 @@ and expression = {
 
 and exp_extra =
   | Texp_constraint of core_type  (** E : T *)
-  | Texp_coerce of core_type  (** E :> T           [Texp_coerce T]
+  | Texp_coerce of {
+      source_type: type_expr;
+      target: core_type;
+      target_type: type_expr;
+    }
+      (** E :> T           [Texp_coerce {source_type; target; target_type}]
+
+            [target] is T as written. [source_type] is the inferred type of E,
+            which the surface syntax never spells out, and [target_type] is the
+            type of T; both are head-expanded, so a consumer without a typing
+            environment can still relate them - e.g. to pair up the record
+            labels a coercion projects.
          *)
   | Texp_open of override_flag * Path.t * Longident.t loc * Env.t
       (** let open[!] M in    [Texp_open (!, P, M, env)]

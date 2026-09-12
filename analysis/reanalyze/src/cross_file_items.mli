@@ -18,6 +18,14 @@ type optional_arg_call = {
 
 type function_ref = {pos_from: Lexing.position; pos_to: Lexing.position}
 
+type coercion = {
+  source_type_paths: Dce_path.t list;
+  target_type_paths: Dce_path.t list;
+}
+(** A record coercion [(e :> Target.t)], as the candidate paths of the source
+    and target types. The two types can live in different files, so the labels
+    are paired up after all declarations are known. *)
+
 type optional_arg_value_escape = {
   pos_from: Lexing.position;
   pos_to: Lexing.position;
@@ -30,6 +38,7 @@ type t = {
   optional_arg_calls: optional_arg_call list;
   function_refs: function_ref list;
   optional_arg_value_escapes: optional_arg_value_escape list;
+  coercions: coercion list;
 }
 (** Immutable cross-file items - for processing after merge *)
 
@@ -60,6 +69,13 @@ val add_optional_arg_value_escape :
   builder -> pos_from:Lexing.position -> pos_to:Lexing.position -> unit
 (** Record an optional-arg function used as a first-class value. *)
 
+val add_coercion :
+  builder ->
+  source_type_paths:Dce_path.t list ->
+  target_type_paths:Dce_path.t list ->
+  unit
+(** Record a record coercion, to be resolved against the declarations later. *)
+
 (** {2 Merge API} *)
 
 val merge_all : builder list -> t
@@ -69,17 +85,6 @@ val merge_all : builder list -> t
 
 val builder_to_t : builder -> t
 (** Convert builder to t for reactive merge *)
-
-(** {2 Processing API - for after merge} *)
-
-val process_exception_refs :
-  t ->
-  refs:References.builder ->
-  file_deps:File_deps.builder ->
-  find_exception:(Dce_path.t -> Location.t option) ->
-  config:Dce_config.t ->
-  unit
-(** Process cross-file exception references. *)
 
 (** {2 Optional Args State} *)
 

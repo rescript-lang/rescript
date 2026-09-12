@@ -16,6 +16,7 @@ type t = {
   (* Reactive type/exception dependencies *)
   type_deps: Reactive_type_deps.t;
   exception_refs: Reactive_exception_refs.t;
+  coercion_refs: Reactive_coercions.t;
 }
 (** All derived reactive collections from per-file data *)
 
@@ -90,6 +91,7 @@ let create (source : (string, Dce_file_processing.file_data option) Reactive.t)
             function_refs = a.function_refs @ b.function_refs;
             optional_arg_value_escapes =
               a.optional_arg_value_escapes @ b.optional_arg_value_escapes;
+            coercions = a.coercions @ b.coercions;
           })
       ()
   in
@@ -143,6 +145,21 @@ let create (source : (string, Dce_file_processing.file_data option) Reactive.t)
       ~exception_refs:exception_refs_collection
   in
 
+  (* Extract coercions from cross_file_items, keyed by the coercion itself so
+     the same coercion seen in several files collapses to one entry *)
+  let coercions_collection =
+    Reactive.flat_map ~name:"coercions_collection" cross_file_items
+      ~f:(fun _path items ->
+        items.Cross_file_items.coercions
+        |> List.map (fun (c : Cross_file_items.coercion) -> (c, ())))
+      ()
+  in
+
+  (* Create reactive coercion label linking *)
+  let coercion_refs =
+    Reactive_coercions.create ~decls ~coercions:coercions_collection
+  in
+
   {
     decls;
     annotations;
@@ -153,126 +170,7 @@ let create (source : (string, Dce_file_processing.file_data option) Reactive.t)
     files;
     type_deps;
     exception_refs;
+    coercion_refs;
   }
 
 (** {1 Conversion to solver-ready format} *)
-
-(** Convert reactive decls to Declarations.t for solver *)
-let freeze_decls (t : t) : Declarations.t =
-  let result = Pos_hash.create 256 in
-  Reactive.iter (fun pos decl -> Pos_hash.replace result pos decl) t.decls;
-  Declarations.create_from_hashtbl result
-
-(** Convert reactive annotations to FileAnnotations.t for solver *)
-let freeze_annotations (t : t) : File_annotations.t =
-  let result = Pos_hash.create 256 in
-  Reactive.iter (fun pos ann -> Pos_hash.replace result pos ann) t.annotations;
-  File_annotations.create_from_hashtbl result
-
-(** Convert reactive refs to References.t for solver.
-    Includes type-label deps and exception refs from reactive computations. *)
-let freeze_refs (t : t) : References.t =
-  let value_refs_from = Pos_hash.create 256 in
-  let type_refs_from = Pos_hash.create 256 in
-
-  (* Helper to add to refs_from hashtable *)
-  let add_to_from tbl pos_from pos_to =
-    let existing =
-      match Pos_hash.find_opt tbl pos_from with
-      | Some s -> s
-      | None -> Pos_set.empty
-    in
-    Pos_hash.replace tbl pos_from (Pos_set.add pos_to existing)
-  in
-
-  (* Merge per-file value refs_from *)
-  Reactive.iter
-    (fun pos_from pos_to_set ->
-      Pos_set.iter
-        (fun pos_to -> add_to_from value_refs_from pos_from pos_to)
-        pos_to_set)
-    t.value_refs_from;
-
-  (* Merge per-file type refs_from *)
-  Reactive.iter
-    (fun pos_from pos_to_set ->
-      Pos_set.iter
-        (fun pos_to -> add_to_from type_refs_from pos_from pos_to)
-        pos_to_set)
-    t.type_refs_from;
-
-  (* Add type-label dependency refs from all sources *)
-  let add_type_refs_from reactive =
-    Reactive.iter
-      (fun pos_from pos_to_set ->
-        Pos_set.iter
-          (fun pos_to -> add_to_from type_refs_from pos_from pos_to)
-          pos_to_set)
-      reactive
-  in
-  add_type_refs_from t.type_deps.all_type_refs_from;
-
-  (* Add exception refs (to value refs_from) *)
-  Reactive.iter
-    (fun pos_from pos_to_set ->
-      Pos_set.iter
-        (fun pos_to -> add_to_from value_refs_from pos_from pos_to)
-        pos_to_set)
-    t.exception_refs.resolved_refs_from;
-
-  References.create ~value_refs_from ~type_refs_from
-
-(** Collect all cross-file items *)
-let collect_cross_file_items (t : t) : Cross_file_items.t =
-  let exception_refs = ref [] in
-  let optional_arg_calls = ref [] in
-  let function_refs = ref [] in
-  let optional_arg_value_escapes = ref [] in
-  Reactive.iter
-    (fun _path items ->
-      exception_refs := items.Cross_file_items.exception_refs @ !exception_refs;
-      optional_arg_calls :=
-        items.Cross_file_items.optional_arg_calls @ !optional_arg_calls;
-      function_refs := items.Cross_file_items.function_refs @ !function_refs;
-      optional_arg_value_escapes :=
-        items.Cross_file_items.optional_arg_value_escapes
-        @ !optional_arg_value_escapes)
-    t.cross_file_items;
-  {
-    Cross_file_items.exception_refs = !exception_refs;
-    optional_arg_calls = !optional_arg_calls;
-    function_refs = !function_refs;
-    optional_arg_value_escapes = !optional_arg_value_escapes;
-  }
-
-(** Convert reactive file deps to FileDeps.t for solver.
-    Includes file deps from exception refs. *)
-let freeze_file_deps (t : t) : File_deps.t =
-  let files =
-    let result = ref File_set.empty in
-    Reactive.iter (fun path () -> result := File_set.add path !result) t.files;
-    !result
-  in
-  let deps = File_deps.File_hash.create 256 in
-  Reactive.iter
-    (fun from_file to_files ->
-      File_deps.File_hash.replace deps from_file to_files)
-    t.file_deps_map;
-  (* Add file deps from exception refs - iterate value_refs_from *)
-  Reactive.iter
-    (fun pos_from pos_to_set ->
-      Pos_set.iter
-        (fun pos_to ->
-          let from_file = pos_from.Lexing.pos_fname in
-          let to_file = pos_to.Lexing.pos_fname in
-          if from_file <> to_file then
-            let existing =
-              match File_deps.File_hash.find_opt deps from_file with
-              | Some s -> s
-              | None -> File_set.empty
-            in
-            File_deps.File_hash.replace deps from_file
-              (File_set.add to_file existing))
-        pos_to_set)
-    t.exception_refs.resolved_refs_from;
-  File_deps.create ~files ~deps

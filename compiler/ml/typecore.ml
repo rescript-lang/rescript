@@ -3394,7 +3394,15 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
         exp_attributes = arg.exp_attributes;
         exp_env = env;
         exp_extra =
-          (Texp_coerce cty', loc, sexp.pexp_attributes) :: arg.exp_extra;
+          ( Texp_coerce
+              {
+                source_type = expand_head env arg.exp_type;
+                target = cty';
+                target_type = expand_head env ty';
+              },
+            loc,
+            sexp.pexp_attributes )
+          :: arg.exp_extra;
       }
   | Pexp_object_literal sfields ->
     (* Fields are typed in source order. A duplicate name is typed against the

@@ -1,19 +1,10 @@
-(** Abstraction over cross-file items storage.
+(** Iteration over cross-file items held in the reactive collection. *)
 
-    Allows iteration over optional arg calls and function refs from either:
-    - [Frozen]: Collected [CrossFileItems.t] 
-    - [Reactive]: Direct iteration over reactive collection (no intermediate allocation) *)
-
-type t =
-  | Frozen of Cross_file_items.t
-  | Reactive of (string, Cross_file_items.t) Reactive.t
-      (** Cross-file items store with exposed constructors for pattern matching *)
-
-val of_frozen : Cross_file_items.t -> t
-(** Wrap a frozen [CrossFileItems.t] *)
+type t
+(** Abstract cross-file items store *)
 
 val of_reactive : (string, Cross_file_items.t) Reactive.t -> t
-(** Wrap reactive collection directly (no intermediate collection) *)
+(** Wrap the reactive collection (no intermediate collection) *)
 
 val iter_optional_arg_calls :
   t -> (Cross_file_items.optional_arg_call -> unit) -> unit

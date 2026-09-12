@@ -68,157 +68,33 @@ let add_declaration ~config ~decls ~file ~(module_path : Module_path.t)
       decls
   | _ -> ()
 
-module Path_map = Map.Make (struct
-  type t = Dce_path.t
+(* A record coercion [(e :> Target.t)] views the source record through the
+   target's labels: reading a target label is a read of the source label of the
+   same name. The edge runs target -> source only - reading a source label says
+   nothing about the target's.
 
-  let compare = Stdlib.compare
-end)
+   The batch and the reactive pipelines share this rule and the shape of a
+   record-label declaration below, and differ only in how they index
+   declarations and how they record an edge. *)
+(* Use raw declaration positions, not [declGetLoc], because references are keyed
+   by raw positions (decl.pos). [declGetLoc] applies [posAdjustment] (e.g. +2 for
+   OtherVariant), which is intended for reporting locations, not for reference
+   graph keys. *)
+let decl_raw_loc (decl : Decl.t) : Location.t =
+  {Location.loc_start = decl.pos; loc_end = decl.pos_end; loc_ghost = false}
 
-let process_type_label_dependencies ~config ~decls ~refs =
-  (* Use raw declaration positions, not [declGetLoc], because references are keyed
-     by raw positions (decl.pos). [declGetLoc] applies [posAdjustment] (e.g. +2
-     for OtherVariant), which is intended for reporting locations, not for
-     reference graph keys. *)
-  let decl_raw_loc (decl : Decl.t) : Location.t =
-    {Location.loc_start = decl.pos; loc_end = decl.pos_end; loc_ghost = false}
-  in
-  (* Build an index from full label path -> list of locations *)
-  let index =
-    Declarations.fold
-      (fun _pos decl acc ->
-        match decl.Decl.decl_kind with
-        | RecordLabel | VariantCase ->
-          let loc = decl |> decl_raw_loc in
-          let path = decl.path in
-          let existing =
-            Path_map.find_opt path acc |> Option.value ~default:[]
-          in
-          Path_map.add path (loc :: existing) acc
-        | _ -> acc)
-      decls Path_map.empty
-  in
-  (* Inner-module duplicates: if the same full path appears multiple times (e.g. from signature+structure),
-     connect them together. *)
-  index
-  |> Path_map.iter (fun _key locs ->
-      match locs with
-      | [] | [_] -> ()
-      | loc0 :: rest ->
-        rest
-        |> List.iter (fun loc ->
-            extend_type_dependencies ~config ~refs loc loc0;
-            if not Config.report_types_dead_only_in_interface then
-              extend_type_dependencies ~config ~refs loc0 loc));
+let record_label_of_decl (decl : Decl.t) =
+  match (decl.decl_kind, decl.path) with
+  | RecordLabel, label :: type_path ->
+    Some (type_path, (label, decl |> decl_raw_loc))
+  | _ -> None
 
-  (* Cross-file impl<->intf linking, modeled after the previous lookup logic. *)
-  let hd_opt = function
-    | [] -> None
-    | x :: _ -> Some x
-  in
-  let find_one path =
-    match Path_map.find_opt path index with
-    | None -> None
-    | Some locs -> hd_opt locs
-  in
-
-  let is_interface_of_pathToType (path_to_type : Dce_path.t) =
-    match List.rev path_to_type with
-    | module_name_tag :: _ -> (
-      try (module_name_tag |> Name.to_string).[0] <> '+'
-      with Invalid_argument _ -> true)
-    | [] -> true
-  in
-
-  Declarations.iter
-    (fun _pos decl ->
-      match decl.Decl.decl_kind with
-      | RecordLabel | VariantCase -> (
-        match decl.path with
-        | [] -> ()
-        | type_label_name :: path_to_type -> (
-          let loc = decl |> decl_raw_loc in
-          let is_interface = is_interface_of_pathToType path_to_type in
-          if not is_interface then
-            let path_1 = path_to_type |> Dce_path.module_to_interface in
-            let path_2 = path_1 |> Dce_path.type_to_interface in
-            let path1 = type_label_name :: path_1 in
-            let path2 = type_label_name :: path_2 in
-            match find_one path1 with
-            | Some loc1 ->
-              extend_type_dependencies ~config ~refs loc loc1;
-              if not Config.report_types_dead_only_in_interface then
-                extend_type_dependencies ~config ~refs loc1 loc
-            | None -> (
-              match find_one path2 with
-              | Some loc2 ->
-                extend_type_dependencies ~config ~refs loc loc2;
-                if not Config.report_types_dead_only_in_interface then
-                  extend_type_dependencies ~config ~refs loc2 loc
-              | None -> ())
-          else
-            let path_1 = path_to_type |> Dce_path.module_to_implementation in
-            let path1 = type_label_name :: path_1 in
-            match find_one path1 with
-            | None -> ()
-            | Some loc1 ->
-              extend_type_dependencies ~config ~refs loc1 loc;
-              if not Config.report_types_dead_only_in_interface then
-                extend_type_dependencies ~config ~refs loc loc1))
+let pair_coercion_labels ~source_labels ~target_labels ~add_edge =
+  target_labels
+  |> List.iter (fun (label, (target_loc : Location.t)) ->
+      match List.assoc_opt label source_labels with
+      | Some (source_loc : Location.t)
+        when (not source_loc.loc_ghost) && (not target_loc.loc_ghost)
+             && source_loc.loc_start <> target_loc.loc_start ->
+        add_edge ~source_loc ~target_loc
       | _ -> ())
-    decls;
-
-  (* Link fields of re-exported types (type y = x = {...}) to original type fields.
-     We store the manifest type path on the label declarations themselves, and
-     derive the set of re-export relationships here. To preserve stable output
-     ordering, we process types bottom-to-top (by their first label position)
-     and fields top-to-bottom (by their label position). *)
-  let compare_pos (p1 : Lexing.position) (p2 : Lexing.position) =
-    match compare p1.Lexing.pos_fname p2.Lexing.pos_fname with
-    | 0 -> compare p1.Lexing.pos_cnum p2.Lexing.pos_cnum
-    | c -> c
-  in
-  (* currentTypePath -> (rep_pos, manifestTypePath, (pos, fieldName, currentLoc) list) *)
-  let groups :
-      ( Dce_path.t,
-        Lexing.position
-        * Dce_path.t
-        * (Lexing.position * Name.t * Location.t) list )
-      Hashtbl.t =
-    Hashtbl.create 32
-  in
-  Declarations.iter
-    (fun _pos decl ->
-      match (decl.Decl.decl_kind, decl.manifest_type_path, decl.path) with
-      | ( (RecordLabel | VariantCase),
-          Some manifest_type_path,
-          field_name :: current_type_path ) -> (
-        let item = (decl.pos, field_name, decl_raw_loc decl) in
-        match Hashtbl.find_opt groups current_type_path with
-        | None ->
-          Hashtbl.replace groups current_type_path
-            (decl.pos, manifest_type_path, [item])
-        | Some (rep_pos, mtp0, items) ->
-          (* manifestTypePath should be stable for a given currentTypePath *)
-          let rep_pos =
-            if compare_pos decl.pos rep_pos < 0 then decl.pos else rep_pos
-          in
-          Hashtbl.replace groups current_type_path (rep_pos, mtp0, item :: items)
-        )
-      | _ -> ())
-    decls;
-
-  groups |> Hashtbl.to_seq |> List.of_seq
-  |> List.map (fun (current_type_path, (rep_pos, manifest_type_path, items)) ->
-      (rep_pos, current_type_path, manifest_type_path, items))
-  (* Later (lower) types first *)
-  |> List.fast_sort (fun (p1, _, _, _) (p2, _, _, _) -> compare_pos p2 p1)
-  |> List.iter (fun (_rep_pos, _currentTypePath, manifest_type_path, items) ->
-      items
-      |> List.fast_sort (fun (p1, _, _) (p2, _, _) -> compare_pos p1 p2)
-      |> List.iter (fun (_pos, field_name, current_loc) ->
-          let manifest_field_path = field_name :: manifest_type_path in
-          match find_one manifest_field_path with
-          | None -> ()
-          | Some manifest_loc ->
-            extend_type_dependencies ~config ~refs current_loc manifest_loc;
-            extend_type_dependencies ~config ~refs manifest_loc current_loc))

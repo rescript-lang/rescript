@@ -28,6 +28,55 @@ let x: int
 
 let () = print_endline "✅ multi printer api tests"
 
+let () =
+  let filename =
+    Filename.concat data_dir "printer/comments/callbackTrailing.res"
+  in
+  let source = IO.read_file ~filename in
+  let parse source =
+    let result =
+      Res_driver.parse_implementation_from_source ~display_filename:filename
+        ~source
+    in
+    assert (not result.invalid);
+    result
+  in
+  let format ~width result =
+    Res_printer.print_implementation ~width result.Res_driver.parsetree
+      ~comments:result.comments
+  in
+  let comment_texts result =
+    List.map
+      (fun comment -> String.trim (Res_comment.txt comment))
+      result.Res_driver.comments
+  in
+  List.iter
+    (fun width ->
+      let original = parse source in
+      let printed = format ~width original in
+      let reparsed = parse printed in
+      if comment_texts original <> comment_texts reparsed then
+        failwith
+          (Printf.sprintf
+             "Callback formatting changed comments at width %d.\n\
+              Source:\n\
+              %s\n\
+              Printed:\n\
+              %s"
+             width source printed);
+      let reprinted = format ~width reparsed in
+      if printed <> reprinted then
+        failwith
+          (Printf.sprintf
+             "Callback comment formatting is unstable at width %d.\n\
+              First pass:\n\
+              %s\n\
+              Second pass:\n\
+              %s"
+             width printed reprinted))
+    [20; 40; 80; 100; 120];
+  print_endline "✅ callback trailing comments are stable at multiple widths"
+
 module Outcome_printer_tests = struct
   let signature_to_outcome structure =
     Lazy.force Res_outcome_printer.setup;
