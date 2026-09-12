@@ -53,8 +53,15 @@ let run path =
   let parser_args =
     Compiler_args.parser_arguments ~config ~contents ~path:relative
   in
-  let is_interface = Filename.check_suffix source ".resi" in
-  let has_interface = (not is_interface) && File_util.exists (source ^ "i") in
+  let source_kind =
+    if Filename.check_suffix source ".resi" then Source.Interface
+    else Source.Implementation
+  in
+  let has_interface =
+    match source_kind with
+    | Source.Implementation -> File_util.exists (source ^ "i")
+    | Source.Interface -> false
+  in
   let dependencies =
     (if Config.source_is_dev config relative then
        List.map (fun dependency -> (false, dependency)) config.dev_dependencies
@@ -79,7 +86,7 @@ let run path =
   let compiler_args =
     Compiler_args.compiler_arguments ~config ~runtime ~dependency_dirs
       ~module_name:(Source.module_name source)
-      ~is_interface ~has_interface ~watch:false ~gentype_dependency_args:[]
+      ~source_kind ~has_interface ~watch:false ~gentype_dependency_args:[]
       ~path:relative
   in
   Yojson.Safe.pretty_to_string

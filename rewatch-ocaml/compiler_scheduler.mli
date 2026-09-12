@@ -28,9 +28,13 @@ val create :
   state:Build_state.module_ ->
   cmi_path:string ->
   prepare:(unit -> unit) ->
-  compile:(is_interface:bool -> string -> Process.job) ->
-  publish:(is_interface:bool -> string -> Process.result -> publish_result) ->
-  record_published_outputs:(is_interface:bool -> string -> unit) ->
+  compile:(source_kind:Source.source_kind -> string -> Process.job) ->
+  publish:
+    (source_kind:Source.source_kind ->
+    string ->
+    Process.result ->
+    publish_result) ->
+  record_published_outputs:(source_kind:Source.source_kind -> string -> unit) ->
   post_build:(string -> post_build_task list) ->
   package_root:string ->
   is_local:bool ->

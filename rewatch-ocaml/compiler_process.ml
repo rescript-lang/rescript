@@ -143,16 +143,16 @@ let post_build_tasks (config : Config.t) path =
       config.package_specs
 
 let compile_job ~bsc ~build_dir ~(config : Config.t) ~common_args
-    (module_ : Source.module_) ~is_interface path =
+    (module_ : Source.module_) ~source_kind path =
   let args =
     Compiler_args.compiler_arguments_with_common ~config ~common_args
-      ~module_name:module_.name ~is_interface
+      ~module_name:module_.name ~source_kind
       ~has_interface:(Option.is_some module_.interface)
       ~path
   in
   Process.{program = bsc; args; cwd = build_dir}
 
-let publish ~build_dir ~ocaml_dir ~is_local ~(config : Config.t) ~is_interface
+let publish ~build_dir ~ocaml_dir ~is_local ~(config : Config.t) ~source_kind
     path result =
   let stderr =
     if is_local then result.Process.stderr
@@ -164,15 +164,18 @@ let publish ~build_dir ~ocaml_dir ~is_local ~(config : Config.t) ~is_interface
   try
     cmi_change :=
       publish_compiler_artifacts ~artifact_dir ~ocaml_dir ~basename
-        (if is_interface then [Cmi; Optional "cmti"]
-         else [Cmi; Required "cmj"; Optional "cmt"]);
+        (match source_kind with
+        | Source.Interface -> [Cmi; Optional "cmti"]
+        | Source.Implementation -> [Cmi; Required "cmj"; Optional "cmt"]);
     let source = Filename.concat config.root path in
     let build_source = Filename.concat build_dir path in
     File_util.ensure_dir (Filename.dirname build_source);
     File_util.copy_existing_file ~ensure_parent:false source build_source;
     File_util.copy_existing_file ~ensure_parent:false source
       (Filename.concat ocaml_dir (Filename.basename path));
-    if not is_interface then
+    (match source_kind with
+    | Source.Interface -> ()
+    | Source.Implementation ->
       List.iter
         (fun spec ->
           if spec.Config.in_source then (
@@ -189,7 +192,7 @@ let publish ~build_dir ~ocaml_dir ~is_local ~(config : Config.t) ~is_interface
               File_util.copy_existing_file ~ensure_parent:false
                 (output ^ ".map") (build_output ^ ".map")
             else File_util.remove_file (build_output ^ ".map")))
-        config.package_specs;
+        config.package_specs);
     Compiler_scheduler.{stderr; cmi_change = !cmi_change}
   with
   | Compiler_scheduler.Publication_failure _ as error -> raise error
