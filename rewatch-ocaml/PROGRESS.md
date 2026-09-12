@@ -45,6 +45,9 @@ At checkpoint `e258487586`, the implementation passed:
   Windows implementation type-checking;
 - formatting and the reviewed Reanalyze dead-code gate.
 
+The temporary pull-request OPAM cache override has also been removed from the
+shared setup action and both workflows; only push runs now save caches.
+
 The last repository-wide `make test-all` run passed formatting, compiler and
 runtime tests, GenType, analysis, tools, and the canonical rewatch suite until
 the missing-source watcher case exposed an over-strict `realpath`. That defect

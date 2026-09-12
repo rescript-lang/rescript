@@ -45,7 +45,6 @@ jobs:
           compiler: ${{ env.OCAML_COMPILER }}
           os: ${{ env.OS }}
           cache-prefix: opam-coverage-v1
-          save-pr-cache: ${{ github.head_ref == 'rewatch-ocaml' }}
           dependency-flags: --deps-only --with-test --with-dev-setup
 
       - name: Install OCaml coverage tooling
