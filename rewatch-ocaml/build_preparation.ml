@@ -13,6 +13,8 @@ and cycle_node = {
   display_name: string;
 }
 
+type result = {prepared: Build_types.prepared; cycle: cycle_info option}
+
 let bsc_path () =
   try Toolchain.bsc () with Toolchain.Error message -> raise (Error message)
 
@@ -535,9 +537,11 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
             parse_paths;
           })
     graph_packages;
-  Build_session.install_prepared attempt.session
-    Build_types.{compiler_context; compile_assets; build_state; packages};
+  let prepared =
+    Build_types.{compiler_context; compile_assets; build_state; packages}
+  in
+  Build_session.install_prepared attempt.session prepared;
   let cycle = find_cycle nodes namespace_maps build_state in
   Build_session.set_graph_has_cycle attempt.session (Option.is_some cycle);
   attempt.parse_seconds <- Unix.gettimeofday () -. parse_started;
-  cycle
+  {prepared; cycle}

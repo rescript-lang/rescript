@@ -3030,6 +3030,14 @@ enforces the lifecycle contract without adding getters for ordinary phase data.
 A focused drain-once test brings the suite to 39 OUnit groups; the integration
 suite and dead-code baseline remain clean.
 
+The final phase-boundary audit made prepared build context a required value
+after initialization. Full preparation returns the context together with its
+cycle result; retained preparation validates and supplies the existing context;
+package traversal and compiler scheduling then receive it explicitly. The two
+exception-raising session accessors for recovering prepared state were removed,
+so later phases cannot conceal an initialization-order mistake behind a lookup.
+All 39 OUnit groups and the focused integration suite pass.
+
 1. Run multiple rounds of the final implementation/code-quality gate, including
    ownership, naming, duplication, dead-code, illegal-state, filesystem,
    resource-lifecycle, and platform-boundary audits.

@@ -2,11 +2,9 @@ type t
 
 val create : warning_state:Warning_state.t -> t
 val is_ready : t -> bool
-val prepared_exn : t -> Build_types.prepared
 val prepared : t -> Build_types.prepared option
 val install_prepared : t -> Build_types.prepared -> unit
 val mark_freshness_initialized : t -> unit
-val prepared_package_exn : t -> string -> Build_types.prepared_package
 val find_active_features : t -> string -> string list option option
 val set_active_features : t -> string -> string list option -> unit
 val find_global_module : t -> string -> Build_types.global_module option

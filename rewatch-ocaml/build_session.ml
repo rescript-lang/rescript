@@ -37,11 +37,6 @@ let is_ready session =
   | Ready _ -> true
   | _ -> false
 
-let prepared_exn session =
-  match session.readiness with
-  | Freshness_pending prepared | Ready prepared -> prepared
-  | Not_prepared -> invalid_arg "build state has not been prepared"
-
 let prepared session =
   match session.readiness with
   | Freshness_pending prepared | Ready prepared -> Some prepared
@@ -55,12 +50,6 @@ let mark_freshness_initialized session =
   | Freshness_pending prepared -> session.readiness <- Ready prepared
   | Ready _ -> ()
   | Not_prepared -> invalid_arg "build state has not been prepared"
-
-let prepared_package_exn session root =
-  let prepared = prepared_exn session in
-  match Hashtbl.find_opt prepared.packages root with
-  | Some package -> package
-  | None -> invalid_arg ("package has not been prepared: " ^ root)
 
 let find_active_features session root =
   Hashtbl.find_opt session.active_features root

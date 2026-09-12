@@ -86,9 +86,8 @@ let clean ~poll ~verbosity ~folder ~prod =
 
 let compiler_args = Compiler_args_command.run
 
-let run_scheduled_modules (attempt : Build_attempt.t) ~compile_step
-    ~namespace_count =
-  let prepared = Build_session.prepared_exn attempt.session in
+let run_scheduled_modules (attempt : Build_attempt.t)
+    (prepared : Build_types.prepared) ~compile_step ~namespace_count =
   Compiler_scheduler.run ~poll:attempt.process_poll
     ~warning_state:(Build_session.warning_state attempt.session)
     ~compile_assets:prepared.compile_assets ~build_state:prepared.build_state
@@ -227,16 +226,12 @@ let incremental_sources (previous : retained_build) changes =
   |> List.sort String.compare |> List.iter add;
   List.rev !sources
 
-let prepare_incremental previous changes (attempt : Build_attempt.t) =
+let prepare_incremental previous changes (attempt : Build_attempt.t)
+    (prepared : Build_types.prepared) =
   (* A retained edit reparses only the reported paths, then replaces the
      affected modules' dependency edges in memory. This keeps the long-lived
      graph coherent without rediscovering the package tree. *)
   let sources = incremental_sources previous changes in
-  let prepared =
-    match Build_session.prepared attempt.session with
-    | Some prepared -> prepared
-    | None -> raise Full_rebuild_required
-  in
   let bsc = prepared.compiler_context.bsc_path in
   let started_at = Unix.gettimeofday () in
   sources
@@ -451,22 +446,28 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
   in
   let execute ~release_build_lock =
     poll ();
-    let cycle =
+    let prepared, cycle =
       match (previous, changes) with
-      | Some previous, Some changes ->
-        prepare_incremental previous changes attempt
+      | Some previous, Some changes -> (
+        match Build_session.prepared attempt.session with
+        | Some prepared ->
+          (prepared, prepare_incremental previous changes attempt prepared)
+        | None -> raise Full_rebuild_required)
       | Some _, None -> raise Full_rebuild_required
       | None, _ ->
-        Build_preparation.run ~root_config ~prod ~features ~warn_error ~filter
-          ~watch ~attempt ~parse_step ~on_cleanup:(fun seconds ->
-            if interactive && show_progress && not is_rebuild then (
-              if attempt.compiler_cleaned then
+        let preparation =
+          Build_preparation.run ~root_config ~prod ~features ~warn_error ~filter
+            ~watch ~attempt ~parse_step ~on_cleanup:(fun seconds ->
+              if interactive && show_progress && not is_rebuild then (
+                if attempt.compiler_cleaned then
+                  print_endline
+                    (Output.compiler_cleanup_message ~color:colors ~step:"1/3");
                 print_endline
-                  (Output.compiler_cleanup_message ~color:colors ~step:"1/3");
-              print_endline
-                (Output.cleanup_message ~color:colors ~step:"1/3"
-                   ~cleaned:attempt.cleaned ~total:attempt.previous_asts
-                   ~seconds:(phase_seconds seconds))))
+                  (Output.cleanup_message ~color:colors ~step:"1/3"
+                     ~cleaned:attempt.cleaned ~total:attempt.previous_asts
+                     ~seconds:(phase_seconds seconds))))
+        in
+        (preparation.prepared, preparation.cycle)
     in
     poll ();
     if attempt.compiler_cleaned && show_progress && not interactive then
@@ -482,8 +483,8 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
       | Some package -> package
       | None -> raise (Error ("Package graph was not prepared for " ^ root))
     in
-    Package_build.prepare_tree ~seen:visited ~package:root_package ~watch
-      ~attempt;
+    Package_build.prepare_tree ~seen:visited ~package:root_package ~prepared
+      ~watch ~attempt;
     Build_session.mark_freshness_initialized attempt.session;
     let parse_messages = parse_messages () in
     let parse_output = parse_output parse_messages in
@@ -504,7 +505,7 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
     prerr_string parse_output;
     flush stderr;
     let compile_started = Unix.gettimeofday () in
-    (try run_scheduled_modules attempt ~compile_step ~namespace_count
+    (try run_scheduled_modules attempt prepared ~compile_step ~namespace_count
      with Build_failure output ->
        if Option.is_none attempt.failure then attempt.failure <- Some output);
     Output.Progress.finish progress;
@@ -523,17 +524,14 @@ let run_with_warning_state ~poll ~warning_state ~previous ~changes
       report_failure ~compile_seconds output
     | None, None ->
       let diagnostics = Build_report.prepare_success report ~compile_seconds in
-      Option.iter
-        (fun (prepared : Build_types.prepared) ->
-          let context = prepared.compiler_context in
-          Build_session.iter_graph_packages attempt.session (fun _ package ->
-              let package_context =
-                Compiler_info.for_package context
-                  ~build_root:package.Build_types.graph_build_owner
-                  package.graph_compile_config
-              in
-              Compiler_info.write_package package_context package.graph_config))
-        (Build_session.prepared attempt.session);
+      let context = prepared.compiler_context in
+      Build_session.iter_graph_packages attempt.session (fun _ package ->
+          let package_context =
+            Compiler_info.for_package context
+              ~build_root:package.Build_types.graph_build_owner
+              package.graph_compile_config
+          in
+          Compiler_info.write_package package_context package.graph_config);
       if compilation_kind = One_shot then
         Build_report.report_completion report diagnostics;
       cleanup_after_build ();

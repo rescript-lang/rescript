@@ -11,6 +11,8 @@ and cycle_node = {
   display_name: string;
 }
 
+type result = {prepared: Build_types.prepared; cycle: cycle_info option}
+
 val resolved_dependencies :
   find_module:(string -> Build_types.global_module option) ->
   find_namespace_maps:(string -> Build_types.namespace_map list option) ->
@@ -33,4 +35,4 @@ val run :
   attempt:Build_attempt.t ->
   parse_step:string ->
   on_cleanup:(float -> unit) ->
-  cycle_info option
+  result

@@ -18,8 +18,8 @@ let prepare_removed_modules ~(package : Build_types.graph_package)
     cleanup.removed_modules;
   removed
 
-let rec prepare_tree ~seen ~(package : Build_types.graph_package) ~watch
-    ~(attempt : Build_attempt.t) =
+let rec prepare_tree ~seen ~(package : Build_types.graph_package) ~prepared
+    ~watch ~(attempt : Build_attempt.t) =
   let root = package.graph_root in
   Hashtbl.replace seen root ();
   attempt.diagnostics <-
@@ -34,7 +34,9 @@ let rec prepare_tree ~seen ~(package : Build_types.graph_package) ~watch
         match Build_session.find_graph_package attempt.session root with
         | None -> ()
         | Some dependency_package -> (
-          try prepare_tree ~seen ~package:dependency_package ~watch ~attempt
+          try
+            prepare_tree ~seen ~package:dependency_package ~prepared ~watch
+              ~attempt
           with Build_failure output ->
             if Option.is_none attempt.failure then
               attempt.failure <- Some output))
@@ -43,9 +45,11 @@ let rec prepare_tree ~seen ~(package : Build_types.graph_package) ~watch
   File_util.ensure_dir package.graph_ocaml_dir;
   Compiler_log.initialize root;
   Build_attempt.mark_log_initialized attempt root;
-  let prepared = Build_session.prepared_exn attempt.session in
   let prepared_package =
-    Build_session.prepared_package_exn attempt.session root
+    match Hashtbl.find_opt prepared.Build_types.packages root with
+    | Some package -> package
+    | None ->
+      raise (Error ("Package build was not prepared for " ^ package.graph_root))
   in
   let removed_module_names = prepare_removed_modules ~package attempt in
   let parse_dirty_modules =
