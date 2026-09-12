@@ -30,10 +30,6 @@ let resolve resolution ~package_root request =
       Package_resolution.resolve resolution ~package_root request.declaration;
   }
 
-let add_feature_request feature_requests resolved =
-  Feature_requests.add feature_requests resolved.dependency.directory
-    resolved.request.declaration.features
-
 let traverse ~root_config ~prod ~features ~resolve =
   let visited = Hashtbl.create 32 in
   let feature_requests = Feature_requests.create () in
@@ -48,7 +44,6 @@ let traverse ~root_config ~prod ~features ~resolve =
       in
       List.iter
         (fun resolved ->
-          add_feature_request feature_requests resolved;
           visit ~is_local:resolved.dependency.is_local
             ~features:resolved.request.declaration.features
             resolved.dependency.config)

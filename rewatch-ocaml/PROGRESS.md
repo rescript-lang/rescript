@@ -2888,6 +2888,42 @@ This audit batch passes all 32 OUnit groups, the focused integration suite, all
 parity, the reviewed Reanalyze gate, and `opam exec -- make test-all`, including
 the installed OCaml binary running the canonical build/clean/format/watch suite.
 
+The following ownership audit removed another set of overlapping contracts.
+Subprocess capture descriptors now have exactly one cleanup owner, including
+reader-thread creation failures. Build cleanup is drained before execution,
+attempts every registered action, and cannot prevent compiler-log finalization;
+the first failure is reported after the remaining cleanup has run. One-shot and
+watch orchestration now derive process polling and watch behavior from the
+compilation kind instead of accepting redundant parameters.
+
+Retained graph state and cleanup queues are abstract outside `Build_types`.
+Callers use owning lookup, update, iteration, and drain operations, while package
+parsing and compilation receive their already-prepared context explicitly.
+Filesystem inspection treats only `ENOENT` and `ENOTDIR` as absence in artifact
+and watcher state; other inspection failures remain visible. Managed artifact
+suffixes, source kinds, and GenType field names each have one definition.
+Watcher snapshots distinguish ordinary files, present dependency candidates,
+and missing candidates with a normal variant rather than fabricated timestamps
+and digest strings. Source scanning likewise uses named records and an
+`Implementation | Interface` variant instead of positional tuples and booleans.
+Feature requests are registered once per traversal edge.
+
+`String_util.contains` no longer allocates a substring at every candidate
+position. OCaml 5.5 supplies `String.includes`, but the supported OCaml 5.0
+baseline does not. The compatibility implementation therefore uses a small
+allocation-free character scan. Its searched affixes are short PPX markers, so
+the simpler scan avoids both regular-expression setup and the data structures
+of a general-purpose substring algorithm. Focused tests cover empty, exact,
+overlapping, prefix, suffix, absent, and longer-than-input cases.
+
+This checkpoint passes all 33 OUnit groups, the focused integration suite, all
+297 configuration cases, all 111 command-validation cases, interactive and
+verbose output parity, and the reviewed Reanalyze gate. The complete
+`opam exec -- make test-all` repository gate also passed across the ownership
+and representation changes; after selecting the final simple substring scan,
+the affected build, unit, focused integration, configuration, command, and
+output-parity gates were rerun successfully.
+
 1. In the Windows VM, finish the watcher/lock and path audit and run the native
    build, unit, focused, and canonical Bash suites. Address findings there and
    finish with an x64 Windows confidence run where available.

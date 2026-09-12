@@ -45,9 +45,11 @@ let directories_under paths =
                  try
                    let stat = Unix.stat path in
                    if stat.Unix.st_kind = Unix.S_DIR then walk acc path else acc
-                 with Sys_error _ | Unix.Unix_error _ -> acc)
+                 with error ->
+                   if File_util.path_is_missing path then acc else raise error)
              (canonical :: acc))
-    with Sys_error _ | Unix.Unix_error _ -> acc
+    with error ->
+      if File_util.path_is_missing directory then acc else raise error
   in
   paths
   |> List.fold_left
@@ -55,7 +57,9 @@ let directories_under paths =
          if path.recursive then walk directories path.directory
          else
            try Platform.canonicalize_path path.directory :: directories
-           with Sys_error _ | Unix.Unix_error _ -> directories)
+           with error ->
+             if File_util.path_is_missing path.directory then directories
+             else raise error)
        []
   |> List.sort_uniq String.compare
 

@@ -10,10 +10,13 @@ type t = {
 
 let ast_source_location path =
   try (Ast_header.read path).source
-  with Sys_error _ | Unix.Unix_error _ -> None
+  with error -> if File_util.path_is_missing path then None else raise error
 
 let cleanup_extensions =
   [".cmi"; ".cmj"; ".cmt"; ".cmti"; ".ast"; ".iast"; ".res"; ".resi"; ".mlmap"]
+
+let is_managed_basename basename =
+  List.exists (Filename.check_suffix basename) cleanup_extensions
 
 let state_extension = function
   | ".ast" | ".iast" | ".cmi" | ".cmt" -> true
@@ -22,7 +25,8 @@ let state_extension = function
 let read_directory directory =
   let names =
     try Sys.readdir directory |> Array.to_list
-    with Unix.Unix_error _ | Sys_error _ -> []
+    with error ->
+      if File_util.path_is_missing directory then [] else raise error
   in
   let files =
     names
@@ -40,7 +44,8 @@ let read_directory directory =
             let metadata = Unix.stat path in
             if metadata.Unix.st_kind = Unix.S_DIR then None
             else Some ({path; modified = metadata.Unix.st_mtime}, name)
-          with Unix.Unix_error _ | Sys_error _ -> None)
+          with error ->
+            if File_util.path_is_missing path then None else raise error)
   in
   (files, state_entries)
 
@@ -102,7 +107,8 @@ let cmt state key = Hashtbl.find_opt state.cmt_by_module key
 let replace_from_path table key path =
   try
     Hashtbl.replace table key {path; modified = (Unix.stat path).Unix.st_mtime}
-  with Unix.Unix_error _ | Sys_error _ -> Hashtbl.remove table key
+  with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) ->
+    Hashtbl.remove table key
 
 let refresh_cmi state ~key ~path =
   replace_from_path state.cmi_by_module key path

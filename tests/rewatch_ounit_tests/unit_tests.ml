@@ -128,6 +128,24 @@ let feature_request_tests _context =
     = Some Feature_requests.All)
     "an unrestricted feature request dominates named selections"
 
+let string_util_tests _context =
+  [
+    ("", "", true);
+    ("value", "", true);
+    ("", "value", false);
+    ("abc", "abc", true);
+    ("prefix-value", "prefix", true);
+    ("value-suffix", "suffix", true);
+    ("abababca", "ababca", true);
+    ("aaaaaaaaab", "aaaab", true);
+    ("aaaaaaaaaa", "aaaab", false);
+    ("short", "longer", false);
+  ]
+  |> List.iter (fun (value, substring, expected) ->
+      check
+        (String_util.contains value substring = expected)
+        (Printf.sprintf "substring search for %S in %S" substring value))
+
 let process_tests _context =
   let test_executable = test_executable () in
   check
@@ -993,6 +1011,7 @@ let tests =
   "unit_tests"
   >::: [
          "feature_requests" >:: feature_request_tests;
+         "string_util" >:: string_util_tests;
          "process" >:: process_tests;
          "platform" >:: platform_tests;
          "scheduler" >:: scheduler_tests;

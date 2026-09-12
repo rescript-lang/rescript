@@ -101,6 +101,13 @@ type retained = {
   warning_state: Warning_state.t;
 }
 
+type cleanup_lifecycle = {
+  mutable actions: (unit -> unit) list;
+  mutable artifacts: string list;
+}
+
+type cleanup_batch = {actions: (unit -> unit) list; artifacts: string list}
+
 type t = {
   attempt_kind: attempt_kind;
   mutable cleaned: int;
@@ -116,10 +123,9 @@ type t = {
   blocked_modules: (string, unit) Hashtbl.t;
   initialized_logs: (string, unit) Hashtbl.t;
   namespace_freshness: (string, float option) Hashtbl.t;
-  mutable deferred_artifact_cleanup: string list;
   mutable namespace_jobs: (Process.job * (Process.result -> unit)) list;
   mutable compile_candidates: Compiler_scheduler.candidate list;
-  mutable compile_cleanup: (unit -> unit) list;
+  cleanup_lifecycle: cleanup_lifecycle;
   mutable compiler_cleaned: bool;
   retained: retained;
   mutable had_warnings: bool;
@@ -144,10 +150,9 @@ let create_attempt ~attempt_kind ~retained ~process_poll ~progress ~verbosity =
     blocked_modules = Hashtbl.create 16;
     initialized_logs = Hashtbl.create 16;
     namespace_freshness = Hashtbl.create 16;
-    deferred_artifact_cleanup = [];
     namespace_jobs = [];
     compile_candidates = [];
-    compile_cleanup = [];
+    cleanup_lifecycle = {actions = []; artifacts = []};
     compiler_cleaned = false;
     retained;
     had_warnings = false;
@@ -227,3 +232,87 @@ let prepared_package_exn stats root =
   match Hashtbl.find_opt prepared.packages root with
   | Some package -> package
   | None -> invalid_arg ("package has not been prepared: " ^ root)
+
+let find_active_features stats root =
+  Hashtbl.find_opt stats.retained.active_features root
+
+let set_active_features stats root features =
+  Hashtbl.replace stats.retained.active_features root features
+
+let find_global_module stats key =
+  Hashtbl.find_opt stats.retained.global_modules key
+
+let add_global_module stats key module_ =
+  Hashtbl.add stats.retained.global_modules key module_
+
+let global_module_values stats =
+  Hashtbl.to_seq_values stats.retained.global_modules |> List.of_seq
+
+let find_namespace_maps stats name =
+  Hashtbl.find_opt stats.retained.namespace_maps_by_name name
+
+let add_namespace_map stats namespace_map =
+  Hashtbl.add stats.retained.namespace_maps namespace_map.key namespace_map;
+  let existing =
+    find_namespace_maps stats namespace_map.namespace
+    |> Option.value ~default:[]
+  in
+  Hashtbl.replace stats.retained.namespace_maps_by_name namespace_map.namespace
+    (namespace_map :: existing)
+
+let find_namespace_map stats key =
+  Hashtbl.find stats.retained.namespace_maps key
+
+let namespace_map_values stats =
+  Hashtbl.to_seq_values stats.retained.namespace_maps |> List.of_seq
+let graph_has_cycle stats = stats.retained.graph_has_cycle
+let set_graph_has_cycle stats value = stats.retained.graph_has_cycle <- value
+
+let add_graph_package stats package =
+  Hashtbl.replace stats.retained.graph_packages package.graph_root package
+
+let find_graph_package stats root =
+  Hashtbl.find_opt stats.retained.graph_packages root
+
+let iter_graph_packages stats f = Hashtbl.iter f stats.retained.graph_packages
+
+let graph_package_values stats =
+  Hashtbl.to_seq_values stats.retained.graph_packages
+
+let add_source_reference stats normalized_path source =
+  Hashtbl.replace stats.retained.source_index normalized_path source
+
+let find_source_reference stats normalized_path =
+  Hashtbl.find_opt stats.retained.source_index normalized_path
+
+let pending_parse_paths stats =
+  stats.retained.pending_parse_paths |> Hashtbl.to_seq_keys |> List.of_seq
+
+let mark_parse_pending stats path =
+  Hashtbl.replace stats.retained.pending_parse_paths path ()
+
+let clear_parse_pending stats path =
+  Hashtbl.remove stats.retained.pending_parse_paths path
+
+let set_cleanup_result stats root result =
+  Hashtbl.replace stats.retained.cleanup_results root result
+
+let find_cleanup_result stats root =
+  Hashtbl.find_opt stats.retained.cleanup_results root
+
+let warning_state stats = stats.retained.warning_state
+
+let register_cleanup stats action =
+  let cleanup = stats.cleanup_lifecycle in
+  cleanup.actions <- action :: cleanup.actions
+
+let defer_artifact_cleanup stats paths =
+  let cleanup = stats.cleanup_lifecycle in
+  cleanup.artifacts <- paths @ cleanup.artifacts
+
+let take_cleanup stats =
+  let cleanup = stats.cleanup_lifecycle in
+  let batch = {actions = cleanup.actions; artifacts = cleanup.artifacts} in
+  cleanup.actions <- [];
+  cleanup.artifacts <- [];
+  batch

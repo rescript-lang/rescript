@@ -108,6 +108,9 @@ let tests =
   let namespace_maps = Hashtbl.create 1 in
   Hashtbl.add namespace_maps namespace_map.namespace [namespace_map];
   check
-    (Build_preparation.resolved_dependencies modules namespace_maps entry
+    (Build_preparation.resolved_dependencies
+       ~find_module:(Hashtbl.find_opt modules)
+       ~find_namespace_maps:(Hashtbl.find_opt namespace_maps)
+       entry
     = [namespace_map.key])
     "namespace entry implicitly depends on its namespace map"

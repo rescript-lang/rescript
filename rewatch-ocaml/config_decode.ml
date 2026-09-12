@@ -221,6 +221,16 @@ let nested_unknown_fields parent supported = function
         else Some (Printf.sprintf "%s.?.%s" parent name))
   | _ -> []
 
+let gentype_fields =
+  [
+    "module";
+    "moduleResolution";
+    "exportInterfaces";
+    "generatedFileExtension";
+    "shims";
+    "debug";
+  ]
+
 let unknown_fields fields =
   fields
   |> List.concat_map (fun (name, value) ->
@@ -230,17 +240,7 @@ let unknown_fields fields =
         nested_unknown_fields name
           ["version"; "module"; "mode"; "v3-dependencies"; "preserve"]
           value
-      | "gentypeconfig" ->
-        nested_unknown_fields name
-          [
-            "module";
-            "moduleResolution";
-            "exportInterfaces";
-            "generatedFileExtension";
-            "shims";
-            "debug";
-          ]
-          value
+      | "gentypeconfig" -> nested_unknown_fields name gentype_fields value
       | "js-post-build" -> nested_unknown_fields name ["cmd"] value
       | _ -> if List.mem name supported_fields then [] else [name])
 
@@ -285,16 +285,7 @@ let package_specs_use_alias alias = function
 let gentype_args path configured_suffix package_specs_value dependencies =
   function
   | `Assoc fields ->
-    reject_duplicate_fields path "gentypeconfig"
-      [
-        "module";
-        "moduleResolution";
-        "exportInterfaces";
-        "generatedFileExtension";
-        "shims";
-        "debug";
-      ]
-      fields;
+    reject_duplicate_fields path "gentypeconfig" gentype_fields fields;
     let module_ =
       match optional_member "module" fields with
       | None -> (

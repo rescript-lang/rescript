@@ -1,17 +1,17 @@
-let run ~(package : Build_types.graph_package) ~(stats : Build_types.t) ~watch
-    ~removed_module_names ~parse_dirty_modules =
+let run ~(package : Build_types.graph_package)
+    ~(prepared : Build_types.prepared)
+    ~(prepared_package : Build_types.prepared_package) ~(stats : Build_types.t)
+    ~watch ~removed_module_names ~parse_dirty_modules =
   let root = package.graph_root in
   let is_local = package.graph_is_local in
   let config = package.graph_compile_config in
-  let prepared = Build_types.prepared_exn stats in
-  let prepared_package = Build_types.prepared_package_exn stats root in
   let build_state = prepared.build_state in
   let compile_assets = prepared.compile_assets in
   let build_dir = package.graph_build_dir in
   let ocaml_dir = package.graph_ocaml_dir in
   let modules = package.graph_modules in
   let cleanup =
-    match Hashtbl.find_opt stats.retained.cleanup_results root with
+    match Build_types.find_cleanup_result stats root with
     | Some result -> result
     | None ->
       raise
@@ -38,7 +38,7 @@ let run ~(package : Build_types.graph_package) ~(stats : Build_types.t) ~watch
         config.package_specs
     in
     let raw_dependencies =
-      match Hashtbl.find_opt stats.retained.global_modules global_key with
+      match Build_types.find_global_module stats global_key with
       | Some node -> node.raw_dependencies
       | None ->
         raise
@@ -147,7 +147,7 @@ let run ~(package : Build_types.graph_package) ~(stats : Build_types.t) ~watch
     Config.namespace_compiler_name config.namespace
     |> Option.iter (fun compiler_name ->
         let namespace_map =
-          Hashtbl.find stats.retained.namespace_maps
+          Build_types.find_namespace_map stats
             (Build_types.namespace_map_key root)
         in
         let namespace_state =
@@ -190,10 +190,8 @@ let run ~(package : Build_types.graph_package) ~(stats : Build_types.t) ~watch
               in
               stats.namespace_jobs <- (job, finish) :: stats.namespace_jobs));
     stats.compile_candidates <- candidates @ stats.compile_candidates;
-    stats.compile_cleanup <-
-      (fun () ->
+    Build_types.register_cleanup stats (fun () ->
         if not watch then
           Hashtbl.iter
             (fun path () -> File_util.remove_file path)
-            compile_warning_paths)
-      :: stats.compile_cleanup)
+            compile_warning_paths))

@@ -4,7 +4,15 @@ type change_kind = Added | Removed | Modified
 type change = {path: string; kind: change_kind}
 type build_result = Succeeded | Failed
 
-type snapshot_entry = {path: string; modified: float; size: int; digest: string}
+type file_snapshot = {modified: float; size: int; digest: string}
+type dependency_snapshot = {modified: float; size: int}
+
+type snapshot_state =
+  | File of file_snapshot
+  | Dependency_candidate of dependency_snapshot
+  | Missing_dependency_candidate
+
+type snapshot_entry = {path: string; state: snapshot_state}
 
 module For_test : sig
   val is_control_file_name : string -> bool

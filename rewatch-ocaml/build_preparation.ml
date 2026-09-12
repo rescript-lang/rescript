@@ -74,9 +74,8 @@ let validate_visible_namespaces ~(root_config : Config.t)
                         namespace (display previous) (display package)
                         (display consumer))))))
 
-let resolve_dependency
-    (modules_by_key : (string, Build_types.global_module) Hashtbl.t)
-    namespace_maps_by_name (node : Build_types.global_module) dependency =
+let resolve_dependency ~find_module ~find_namespace_maps
+    (node : Build_types.global_module) dependency =
   let raw_name = dependency_head dependency in
   let local_name =
     match
@@ -90,7 +89,7 @@ let resolve_dependency
     dependency_node.Build_types.package_name = node.package_name
     || List.mem dependency_node.package_name node.allowed_dependencies
   in
-  match Hashtbl.find_opt modules_by_key local_key with
+  match find_module local_key with
   | Some dependency_node when is_visible dependency_node -> [local_key]
   | _ when Config.namespace_name node.namespace = Some raw_name ->
     (* A qualified reference is recorded in the compiler dependency header by
@@ -98,7 +97,7 @@ let resolve_dependency
        would make it depend on every module exported by the package. *)
     []
   | _ -> (
-    match Hashtbl.find_opt modules_by_key raw_name with
+    match find_module raw_name with
     | Some dependency_node when is_visible dependency_node -> [raw_name]
     | _ -> (
       let explicit_namespaced_module =
@@ -106,7 +105,7 @@ let resolve_dependency
         | namespace :: module_name :: _ ->
           [module_name ^ "-" ^ namespace; module_name ^ "-@" ^ namespace]
           |> List.find_opt (fun key ->
-              match Hashtbl.find_opt modules_by_key key with
+              match find_module key with
               | Some dependency_node
                 when Config.namespace_name dependency_node.Build_types.namespace
                      = Some namespace
@@ -118,7 +117,7 @@ let resolve_dependency
       match explicit_namespaced_module with
       | Some key -> [key]
       | None ->
-        Hashtbl.find_opt namespace_maps_by_name raw_name
+        find_namespace_maps raw_name
         |> Option.value ~default:[]
         |> List.filter_map (fun (namespace_map : Build_types.namespace_map) ->
             if
@@ -127,19 +126,18 @@ let resolve_dependency
             then Some namespace_map.key
             else None)))
 
-let resolved_dependencies
-    (modules_by_key : (string, Build_types.global_module) Hashtbl.t)
-    namespace_maps_by_name (node : Build_types.global_module) =
+let resolved_dependencies ~find_module ~find_namespace_maps
+    (node : Build_types.global_module) =
   let parsed =
     node.raw_dependencies
     |> List.concat_map
-         (resolve_dependency modules_by_key namespace_maps_by_name node)
+         (resolve_dependency ~find_module ~find_namespace_maps node)
   in
   let implicit_namespace_entry =
     match node.namespace with
     | Config.Namespace_with_entry {name = namespace; entry}
       when Source.module_name node.source_path = entry ->
-      Hashtbl.find_opt namespace_maps_by_name namespace
+      find_namespace_maps namespace
       |> Option.value ~default:[]
       |> List.find_map (fun (namespace_map : Build_types.namespace_map) ->
           if namespace_map.package_root = node.package_root then
@@ -154,13 +152,13 @@ let resolved_dependencies
   |> List.filter (fun dependency -> dependency <> node.key)
   |> List.sort_uniq String.compare
 
-let find_cycle modules_by_key namespace_maps build_state =
+let find_cycle modules namespace_maps build_state =
   let nodes_by_key =
-    Hashtbl.create
-      (Hashtbl.length modules_by_key + Hashtbl.length namespace_maps)
+    Hashtbl.create (List.length modules + List.length namespace_maps)
   in
-  Hashtbl.iter
-    (fun key (node : Build_types.global_module) ->
+  List.iter
+    (fun (node : Build_types.global_module) ->
+      let key = node.key in
       let module_name = Source.module_name node.source_path in
       let display_name =
         match node.namespace with
@@ -177,9 +175,10 @@ let find_cycle modules_by_key namespace_maps build_state =
           source_path = Some node.source_path;
           display_name;
         })
-    modules_by_key;
-  Hashtbl.iter
-    (fun key (namespace_map : Build_types.namespace_map) ->
+    modules;
+  List.iter
+    (fun (namespace_map : Build_types.namespace_map) ->
+      let key = namespace_map.key in
       Hashtbl.add nodes_by_key key
         {
           key;
@@ -280,9 +279,8 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
           ~is_local:package.graph_is_local package.graph_compile_config
           package.graph_modules
       in
-      Hashtbl.replace stats.retained.cleanup_results package.graph_root cleanup;
-      stats.deferred_artifact_cleanup <-
-        cleanup.deferred_artifacts @ stats.deferred_artifact_cleanup;
+      Build_types.set_cleanup_result stats package.graph_root cleanup;
+      Build_types.defer_artifact_cleanup stats cleanup.deferred_artifacts;
       stats.cleaned <- stats.cleaned + List.length cleanup.removed_modules;
       stats.previous_asts <- stats.previous_asts + cleanup.previous_ast_count;
       List.iter
@@ -416,7 +414,7 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
              (Filename.concat node.package_root node.source_path)))
     nodes;
   Hashtbl.iter
-    (fun key node -> Hashtbl.add stats.retained.global_modules key node)
+    (fun key node -> Build_types.add_global_module stats key node)
     by_key;
   let namespace_maps =
     graph_packages
@@ -454,20 +452,14 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
   in
   List.iter
     (fun (namespace_map : Build_types.namespace_map) ->
-      Hashtbl.add stats.retained.namespace_maps namespace_map.key namespace_map;
-      let maps =
-        Hashtbl.find_opt stats.retained.namespace_maps_by_name
-          namespace_map.namespace
-        |> Option.value ~default:[]
-      in
-      Hashtbl.replace stats.retained.namespace_maps_by_name
-        namespace_map.namespace (namespace_map :: maps))
+      Build_types.add_namespace_map stats namespace_map)
     namespace_maps;
   let source_graph_nodes =
     List.map
       (fun (node : Build_types.global_module) ->
         ( node,
-          resolved_dependencies by_key stats.retained.namespace_maps_by_name
+          resolved_dependencies ~find_module:(Hashtbl.find_opt by_key)
+            ~find_namespace_maps:(Build_types.find_namespace_maps stats)
             node ))
       nodes
   in
@@ -544,10 +536,7 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
     graph_packages;
   Build_types.install_prepared stats
     {compiler_context; compile_assets; build_state; packages};
-  let cycle =
-    find_cycle stats.retained.global_modules stats.retained.namespace_maps
-      build_state
-  in
-  stats.retained.graph_has_cycle <- Option.is_some cycle;
+  let cycle = find_cycle nodes namespace_maps build_state in
+  Build_types.set_graph_has_cycle stats (Option.is_some cycle);
   stats.parse_seconds <- Unix.gettimeofday () -. parse_started;
   cycle

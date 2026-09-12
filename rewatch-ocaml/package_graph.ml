@@ -60,7 +60,7 @@ let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
          ^ "\nUpdate allowed-dependents in the dependency rescript.json files."
           )));
   Feature_requests.iter discovered.feature_requests (fun root features ->
-      Hashtbl.replace stats.retained.active_features root
+      Build_types.set_active_features stats root
         (Feature_requests.to_option features));
   let packages_by_root = Hashtbl.create (List.length discovered.packages) in
   List.iter
@@ -75,7 +75,7 @@ let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
       let discovered_package = Hashtbl.find packages_by_root root in
       let is_local = discovered_package.Package_traversal.is_local in
       let features =
-        match Hashtbl.find_opt stats.retained.active_features root with
+        match Build_types.find_active_features stats root with
         | Some features -> features
         | None -> None
       in
@@ -179,14 +179,14 @@ let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
           graph_present_source_files = discovery.present_files;
         }
       in
-      Hashtbl.replace stats.retained.graph_packages root package;
+      Build_types.add_graph_package stats package;
       List.iter
         (fun module_ ->
           module_.Source.implementation
           :: Option.to_list module_.Source.interface
           |> List.iter (fun relative_path ->
               let absolute_path = Filename.concat root relative_path in
-              Hashtbl.replace stats.retained.source_index
+              Build_types.add_source_reference stats
                 (Platform.normalize_path_for_comparison absolute_path)
                 Build_types.
                   {package_root = root; module_; relative_path; absolute_path}))

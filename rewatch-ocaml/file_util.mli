@@ -12,6 +12,7 @@ val copy_existing_file : ensure_parent:bool -> string -> string -> unit
 val copy_optional_existing_file :
   ?ensure_parent:bool -> string -> string -> unit
 
+val path_is_missing : string -> bool
 val files_equal : string -> string -> bool
 val copy_file_if_different : ?ensure_parent:bool -> string -> string -> bool
 val copy_file_if_changed : ?ensure_parent:bool -> string -> string -> unit
