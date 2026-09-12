@@ -1,5 +1,8 @@
 let path_separator = ';'
-let normalize_path_for_comparison = String.lowercase_ascii
+let terminal_supports_color_without_term = true
+let normalize_path_for_comparison path =
+  path |> String.lowercase_ascii
+  |> String.map (function '/' -> '\\' | character -> character)
 
 let strip_verbatim_prefix path =
   if String.starts_with ~prefix:"\\\\?\\UNC\\" path then
@@ -241,11 +244,6 @@ let tasklist_probe ~pid output =
       rows
   then Process_found
   else Process_absent
-
-let tasklist_has_process ~pid output =
-  match tasklist_probe ~pid output with
-  | Process_found -> true
-  | Process_absent | Malformed_output -> false
 
 let probe_process ~run pid =
   let tasklist =

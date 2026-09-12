@@ -17,16 +17,16 @@ let tests =
   "build_artifacts_tests" >:: fun _context ->
   with_temp_dir (fun root ->
       let config_path = Filename.concat root "rescript.json" in
-      let source = Filename.concat root "src/Old.res" in
-      let public_output = Filename.concat root "src/Old.bs.js" in
+      let source = Test_support.path root "src/Old.res" in
+      let public_output = Test_support.path root "src/Old.bs.js" in
       let public_map = public_output ^ ".map" in
-      let build_dir = Filename.concat root "lib/bs" in
+      let build_dir = Test_support.path root "lib/bs" in
       let working_dir = Filename.concat build_dir "src" in
       let working_ast = Filename.concat working_dir "Old.ast" in
       let working_cmi = Filename.concat working_dir "Old-Ns.cmi" in
       let working_output = Filename.concat working_dir "Old.bs.js" in
       let working_map = working_output ^ ".map" in
-      let ocaml_dir = Filename.concat root "lib/ocaml" in
+      let ocaml_dir = Test_support.path root "lib/ocaml" in
       let published_ast = Filename.concat ocaml_dir "Old.ast" in
       let published_cmi = Filename.concat ocaml_dir "Old-Ns.cmi" in
       write_file config_path
@@ -80,9 +80,9 @@ let tests =
         "a removed AST records its module for invalidation");
   with_temp_dir (fun root ->
       let config_path = Filename.concat root "rescript.json" in
-      let ocaml_dir = Filename.concat root "lib/ocaml" in
+      let ocaml_dir = Test_support.path root "lib/ocaml" in
       let published_cmt = Filename.concat ocaml_dir "Legacy.cmt" in
-      let working_cmt = Filename.concat root "lib/bs/nested/Legacy.cmt" in
+      let working_cmt = Test_support.path root "lib/bs/nested/Legacy.cmt" in
       write_file config_path {|{"name":"cleanup"}|};
       write_file published_cmt "published";
       write_file working_cmt "working";
@@ -95,11 +95,11 @@ let tests =
         "unmapped legacy artifacts fall back to the recursive working inventory");
   with_temp_dir (fun root ->
       let config_path = Filename.concat root "rescript.json" in
-      let old_output = Filename.concat root "src/A.js" in
+      let old_output = Test_support.path root "src/A.js" in
       let old_map = old_output ^ ".map" in
-      let working_output = Filename.concat root "lib/bs/src/A.js" in
+      let working_output = Test_support.path root "lib/bs/src/A.js" in
       let working_map = working_output ^ ".map" in
-      let ocaml_dir = Filename.concat root "lib/ocaml" in
+      let ocaml_dir = Test_support.path root "lib/ocaml" in
       write_file config_path
         {|{"name":"cleanup-map","sources":{"dir":"src","subdirs":true},"package-specs":{"module":"esmodule","in-source":true}}|};
       List.iter
@@ -126,11 +126,11 @@ let tests =
         [old_output; old_map; working_output; working_map]);
   with_temp_dir (fun root ->
       let config_path = Filename.concat root "rescript.json" in
-      let old_source = Filename.concat root "src/A.res" in
-      let new_source = Filename.concat root "src/nested/A.res" in
-      let ocaml_dir = Filename.concat root "lib/ocaml" in
+      let old_source = Test_support.path root "src/A.res" in
+      let new_source = Test_support.path root "src/nested/A.res" in
+      let ocaml_dir = Test_support.path root "lib/ocaml" in
       let published_ast = Filename.concat ocaml_dir "A.ast" in
-      let working_ast = Filename.concat root "lib/bs/src/A.ast" in
+      let working_ast = Test_support.path root "lib/bs/src/A.ast" in
       write_file config_path
         {|{"name":"moved-source","sources":{"dir":"src","subdirs":true}}|};
       write_file new_source "let value = 1";
@@ -168,12 +168,12 @@ let tests =
         "a moved source cannot reuse the published AST for its old path");
   with_temp_dir (fun root ->
       let config_path = Filename.concat root "rescript.json" in
-      let old_source = Filename.concat root "old/Foo.res" in
-      let old_output = Filename.concat root "old/Foo.js" in
+      let old_source = Test_support.path root "old/Foo.res" in
+      let old_output = Test_support.path root "old/Foo.js" in
       let old_map = old_output ^ ".map" in
-      let working_output = Filename.concat root "lib/bs/old/Foo.js" in
+      let working_output = Test_support.path root "lib/bs/old/Foo.js" in
       let working_map = working_output ^ ".map" in
-      let ocaml_dir = Filename.concat root "lib/ocaml" in
+      let ocaml_dir = Test_support.path root "lib/ocaml" in
       let published_ast = Filename.concat ocaml_dir "Foo.ast" in
       write_file config_path
         {|{"name":"cleanup-removed-source-dir","sources":"src","package-specs":{"module":"esmodule","in-source":true}}|};
@@ -207,14 +207,14 @@ let tests =
         [old_output; old_map; working_output; working_map]);
   with_temp_dir (fun root ->
       let config_path = Filename.concat root "rescript.json" in
-      let source = Filename.concat root "src/Custom.res" in
-      let public_output = Filename.concat root "src/Custom.generated.js" in
+      let source = Test_support.path root "src/Custom.res" in
+      let public_output = Test_support.path root "src/Custom.generated.js" in
       let public_map = public_output ^ ".map" in
       let working_output =
-        Filename.concat root "lib/bs/src/Custom.generated.js"
+        Test_support.path root "lib/bs/src/Custom.generated.js"
       in
       let working_map = working_output ^ ".map" in
-      let ocaml_dir = Filename.concat root "lib/ocaml" in
+      let ocaml_dir = Test_support.path root "lib/ocaml" in
       let published_ast = Filename.concat ocaml_dir "Custom.ast" in
       write_file config_path
         {|{"name":"custom-cleanup","sources":"src","package-specs":{"module":"esmodule","in-source":true,"suffix":".generated.js"}}|};
@@ -236,8 +236,8 @@ let tests =
         [public_output; public_map; working_output; working_map]);
   with_temp_dir (fun root ->
       let config_path = Filename.concat root "rescript.json" in
-      let output = Filename.concat root "src/Present.output" in
-      let ocaml_dir = Filename.concat root "lib/ocaml" in
+      let output = Test_support.path root "src/Present.output" in
+      let ocaml_dir = Test_support.path root "lib/ocaml" in
       write_file config_path
         {|{"name":"custom-freshness","sources":"src","package-specs":{"module":"esmodule","in-source":true,"suffix":".output"}}|};
       write_file output "generated";
@@ -260,8 +260,8 @@ let tests =
         "custom suffix outputs participate in unchanged-build freshness");
   with_temp_dir (fun root ->
       let config_path = Filename.concat root "rescript.json" in
-      let ocaml_dir = Filename.concat root "lib/ocaml" in
-      let working_dir = Filename.concat root "lib/bs/src" in
+      let ocaml_dir = Test_support.path root "lib/ocaml" in
+      let working_dir = Test_support.path root "lib/bs/src" in
       let published_cmti = Filename.concat ocaml_dir "A.cmti" in
       let working_cmti = Filename.concat working_dir "A.cmti" in
       write_file config_path
@@ -288,10 +288,10 @@ let tests =
         [published_cmti; working_cmti]);
   with_temp_dir (fun root ->
       let config_path = Filename.concat root "rescript.json" in
-      let old_source = Filename.concat root "src/generated/A.res" in
-      let generated_output = Filename.concat root "src/generated/A.js" in
-      let authored_output = Filename.concat root "src/handwritten/A.js" in
-      let ocaml_dir = Filename.concat root "lib/ocaml" in
+      let old_source = Test_support.path root "src/generated/A.res" in
+      let generated_output = Test_support.path root "src/generated/A.js" in
+      let authored_output = Test_support.path root "src/handwritten/A.js" in
+      let ocaml_dir = Test_support.path root "lib/ocaml" in
       let published_ast = Filename.concat ocaml_dir "A.ast" in
       write_file config_path
         {|{"name":"owned-output-path","sources":{"dir":"src","subdirs":true},"package-specs":{"module":"esmodule","in-source":true}}|};

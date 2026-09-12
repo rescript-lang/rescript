@@ -17,7 +17,7 @@ let tests =
       let second = Filename.concat root "example.cmt" in
       let unrelated = Filename.concat root "notes.txt" in
       let cleanup_only = Filename.concat root "Example.cmj" in
-      let source = Filename.concat root "src/Example.res" in
+      let source = Test_support.path root "src/Example.res" in
       let ast = Filename.concat root "Example.ast" in
       let nested = Filename.concat root "nested" in
       write first "cmi";

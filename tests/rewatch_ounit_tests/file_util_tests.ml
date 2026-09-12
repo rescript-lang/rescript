@@ -28,7 +28,7 @@ let tests =
     ~finally:(fun () -> File_util.remove_tree root)
     (fun () ->
       let first = Filename.concat root "first" in
-      let second = Filename.concat root "nested/second" in
+      let second = Test_support.path root "nested/second" in
       let missing = Filename.concat root "missing" in
       write_file first "same";
       write_file second "same";
@@ -130,7 +130,7 @@ let tests =
         (not (Sys.file_exists optional_copy))
         "a stale optional destination should be removed when its source is \
          absent";
-      let missing_destination = Filename.concat root "absent/optional-copy" in
+      let missing_destination = Test_support.path root "absent/optional-copy" in
       let descriptors_before_failed_copies = descriptor_count () in
       for _ = 1 to 32 do
         let destination_failure_is_reported =

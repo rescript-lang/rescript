@@ -52,6 +52,8 @@ let read_directory directory =
 let module_key name =
   name |> Filename.remove_extension |> String.capitalize_ascii
 
+let source_key = Platform.normalize_path_for_comparison
+
 let add_module_artifact state (entry, name) =
   match Filename.extension name with
   | ".cmi" -> Hashtbl.replace state.cmi_by_module (module_key name) entry
@@ -95,7 +97,7 @@ let create directories =
       List.iter
         (fun (entry, source, dependencies) ->
           Hashtbl.replace state.ast_dependencies entry.path dependencies;
-          Hashtbl.replace state.ast_by_source source entry)
+          Hashtbl.replace state.ast_by_source (source_key source) entry)
         ast_sources;
       List.iter (add_module_artifact state) state_entries);
   state
@@ -111,7 +113,7 @@ let ast_sources state directory =
 let ast_dependencies state path =
   Hashtbl.find_opt state.ast_dependencies path |> Option.value ~default:[]
 
-let ast state source = Hashtbl.find_opt state.ast_by_source source
+let ast state source = Hashtbl.find_opt state.ast_by_source (source_key source)
 
 let cmi state key = Hashtbl.find_opt state.cmi_by_module key
 let cmt state key = Hashtbl.find_opt state.cmt_by_module key
@@ -129,4 +131,4 @@ let refresh_cmt state ~key ~path =
   replace_from_path state.cmt_by_module key path
 
 let refresh_ast state ~source ~path =
-  replace_from_path state.ast_by_source source path
+  replace_from_path state.ast_by_source (source_key source) path
