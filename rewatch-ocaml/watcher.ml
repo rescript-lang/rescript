@@ -242,6 +242,7 @@ let snapshot ?(on_source_symlink = fun _ -> ()) digest_cache scope =
   in
   let rec walk source recursive dir acc =
     match Platform.canonicalize_path dir with
+    | exception Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> acc
     | canonical -> (
       let admission =
         Traversal_coverage.admit visited_directories canonical ~recursive
