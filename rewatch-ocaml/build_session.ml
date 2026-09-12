@@ -4,7 +4,6 @@ type readiness =
   | Ready of Build_types.prepared
 
 type t = {
-  active_features: (string, string list option) Hashtbl.t;
   global_modules: (string, Build_types.global_module) Hashtbl.t;
   namespace_maps: (string, Build_types.namespace_map) Hashtbl.t;
   namespace_maps_by_name: (string, Build_types.namespace_map list) Hashtbl.t;
@@ -19,7 +18,6 @@ type t = {
 
 let create ~warning_state =
   {
-    active_features = Hashtbl.create 16;
     global_modules = Hashtbl.create 64;
     namespace_maps = Hashtbl.create 16;
     namespace_maps_by_name = Hashtbl.create 16;
@@ -50,12 +48,6 @@ let mark_freshness_initialized session =
   | Freshness_pending prepared -> session.readiness <- Ready prepared
   | Ready _ -> ()
   | Not_prepared -> invalid_arg "build state has not been prepared"
-
-let find_active_features session root =
-  Hashtbl.find_opt session.active_features root
-
-let set_active_features session root features =
-  Hashtbl.replace session.active_features root features
 
 let find_global_module session key = Hashtbl.find_opt session.global_modules key
 

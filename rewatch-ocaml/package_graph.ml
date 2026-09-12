@@ -59,9 +59,6 @@ let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
          ^ details
          ^ "\nUpdate allowed-dependents in the dependency rescript.json files."
           )));
-  Feature_requests.iter discovered.feature_requests (fun root features ->
-      Build_session.set_active_features attempt.session root
-        (Feature_requests.to_option features));
   let packages_by_root = Hashtbl.create (List.length discovered.packages) in
   List.iter
     (fun (package : Package_traversal.package) ->
@@ -75,8 +72,8 @@ let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
       let discovered_package = Hashtbl.find packages_by_root root in
       let is_local = discovered_package.Package_traversal.is_local in
       let features =
-        match Build_session.find_active_features attempt.session root with
-        | Some features -> features
+        match Feature_requests.find discovered.feature_requests root with
+        | Some features -> Feature_requests.to_option features
         | None -> None
       in
       let config = discovered_package.config in

@@ -14,8 +14,6 @@ val create :
   no_timing:bool ->
   compilation_kind:compilation_kind ->
   attempt:Build_attempt.t ->
-  finalize_logs:(unit -> unit) ->
-  write_metadata:(unit -> unit) ->
   t
 
 val report : t -> success:bool -> compile_seconds:float -> unit

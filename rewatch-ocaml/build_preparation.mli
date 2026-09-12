@@ -1,29 +1,7 @@
-type cycle_info = {
-  cycle: string list;
-  blocked: string list;
-  nodes_by_key: (string, cycle_node) Hashtbl.t;
+type result = {
+  prepared: Build_types.prepared;
+  cycle: Module_graph.cycle_info option;
 }
-
-and cycle_node = {
-  key: string;
-  package_root: string;
-  source_path: string option;
-  display_name: string;
-}
-
-type result = {prepared: Build_types.prepared; cycle: cycle_info option}
-
-val resolved_dependencies :
-  find_module:(string -> Build_types.global_module option) ->
-  find_namespace_maps:(string -> Build_types.namespace_map list option) ->
-  Build_types.global_module ->
-  string list
-
-val find_cycle :
-  Build_types.global_module list ->
-  Build_types.namespace_map list ->
-  Build_state.t ->
-  cycle_info option
 
 val run :
   root_config:Config.t ->

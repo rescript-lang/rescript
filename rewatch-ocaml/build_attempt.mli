@@ -15,7 +15,6 @@ type t = {
   mutable parse_seconds: float;
   mutable parse_messages: Build_types.parse_message list;
   mutable diagnostics: string list;
-  mutable failure: string option;
   removed_modules: (string, unit) Hashtbl.t;
   preliminary_parses: (string, Build_types.preliminary_parse) Hashtbl.t;
   blocked_modules: (string, unit) Hashtbl.t;
@@ -24,6 +23,8 @@ type t = {
   finalization: finalization_state;
   mutable compiler_cleaned: bool;
   mutable had_warnings: bool;
+  mutable artifacts_cleaned: bool;
+  mutable logs_finalized: bool;
   process_poll: (unit -> unit) option;
   progress: Output.Progress.t;
   verbosity: int;
@@ -54,3 +55,6 @@ val add_compile_candidates : t -> Compiler_scheduler.candidate list -> unit
 val take_compile_candidates : t -> Compiler_scheduler.candidate list
 val mark_log_initialized : t -> string -> unit
 val take_initialized_logs : t -> string list
+val cleanup_artifacts : t -> unit
+val finalize_logs : t -> unit
+val finish_attempt : t -> unit

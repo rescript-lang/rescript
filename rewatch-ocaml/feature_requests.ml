@@ -13,7 +13,6 @@ let add requests root request =
       (Selected (List.sort_uniq String.compare (current @ requested)))
 
 let find requests root = Hashtbl.find_opt requests root
-let mem requests root = Hashtbl.mem requests root
 let iter requests action = Hashtbl.iter action requests
 let to_option = function
   | All -> None
