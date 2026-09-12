@@ -24,5 +24,4 @@ val relative_to : string -> string -> string
 val relative_to_opt : string -> string -> string option
 val relative_or_absolute : root:string -> string -> string
 val display_path : root:string -> string -> string
-val is_local_dependency_canonical : workspace:string -> string -> bool
 val path_is_within_canonical : root:string -> string -> bool

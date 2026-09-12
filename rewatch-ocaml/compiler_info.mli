@@ -27,9 +27,7 @@ val make_context :
 
 val for_package : context -> build_root:string -> Config.t -> context
 
-val path : string -> string
 val owns_outputs : Config.t -> bool
-val matches : context -> Config.t -> bool
 
 val changed_package_output_specs :
   context -> Config.t -> package_output_spec list option

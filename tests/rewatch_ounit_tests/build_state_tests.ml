@@ -89,7 +89,7 @@ let tests =
       source_path = entry_source.implementation;
       namespace =
         Config.Namespace_with_entry {name = "Namespace"; entry = "Entry"};
-      allowed_dependencies = [];
+      visible_packages = Hashtbl.create 0;
       raw_dependencies = [];
     }
   in

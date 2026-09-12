@@ -37,7 +37,9 @@ let tests =
         (not (Compiler_info.needs_clean initial config))
         "matching compiler information is retained";
       check (Sys.file_exists marker) "matching artifacts remain";
-      let info_path = Compiler_info.path root in
+      let info_path =
+        File_util.path_of_parts root ["lib"; "bs"; "compiler-info.json"]
+      in
       Unix.utimes info_path 1_000_000_000. 1_000_000_000.;
       Compiler_info.write_package initial config;
       check
@@ -78,11 +80,11 @@ let tests =
         (Filename.concat root "rescript.json")
         {|{"name":"compiler-info-test","sources":["src"],"suffix":".mjs"}|};
       check
-        (Compiler_info.matches context decoded)
+        (not (Compiler_info.needs_clean context decoded))
         "compiler metadata uses the bytes associated with the decoded config";
       let changed = Config.load_root root in
       check
-        (not (Compiler_info.matches context changed))
+        (Compiler_info.needs_clean context changed)
         "reloading changed configuration produces a new fingerprint");
   with_temp_dir (fun root ->
       let config = config root in
@@ -183,5 +185,5 @@ let tests =
         "the previous standalone layout remains available for ownership \
          transfer";
       check
-        (Compiler_info.matches standalone dependency)
+        (not (Compiler_info.needs_clean standalone dependency))
         "standalone dependency metadata remains intact")

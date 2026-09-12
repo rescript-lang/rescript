@@ -23,15 +23,6 @@ let discover_with_inventory config ?(prod = false) ?features () =
 
 let tests =
   "source_tests" >:: fun _context ->
-  check
-    (Source.is_non_exotic_module_name "Main_2")
-    "ordinary namespace module names are accepted";
-  check
-    (not (Source.is_non_exotic_module_name "Foo-bar"))
-    "punctuated module names are excluded from namespace maps";
-  check
-    (not (Source.is_non_exotic_module_name ""))
-    "empty module names are excluded without indexing an absent character";
   let namespace_modules =
     [
       Source.

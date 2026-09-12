@@ -68,5 +68,4 @@ val take_compile_candidates : t -> Compiler_scheduler.candidate list
 val mark_log_initialized : t -> string -> unit
 val cleanup_artifacts : t -> unit
 val finalize_logs : t -> unit
-val finish_attempt : t -> unit
 val protect : t -> (unit -> 'a) -> 'a

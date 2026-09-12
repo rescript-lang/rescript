@@ -1,6 +1,5 @@
 include module type of Config_types
 
-val namespace_from_package_name : string -> string
 val namespace_name : namespace -> string option
 val namespace_entry : namespace -> string option
 val namespace_compiler_name : namespace -> string option

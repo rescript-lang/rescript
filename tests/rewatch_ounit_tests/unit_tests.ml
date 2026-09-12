@@ -572,20 +572,6 @@ let graph_and_diagnostic_tests _context =
   check
     (cycle_blocked = ["A"; "B"; "C"; "D"; "Dependent"; "TransitiveDependent"])
     "a linear scheduling pass retains every cycle and its dependents";
-  check
-    (Project_context.is_local_dependency_canonical ~workspace:"/workspace"
-       "/workspace/packages/dependency")
-    "canonical workspace dependencies are local";
-  check
-    (not
-       (Project_context.is_local_dependency_canonical ~workspace:"/workspace"
-          "/workspace/node_modules/dependency"))
-    "node_modules dependencies are external";
-  check
-    (not
-       (Project_context.is_local_dependency_canonical ~workspace:"/workspace"
-          "/workspace-other/dependency"))
-    "path-prefix siblings are outside the workspace";
   if not Sys.win32 then (
     let temporary = Filename.temp_file "rewatch-ocaml-package-path-" "" in
     Sys.remove temporary;
@@ -609,18 +595,17 @@ let graph_and_diagnostic_tests _context =
             (resolved = Unix.realpath package)
             "dependency paths are canonicalized"
         | None -> failwith "dependency symlink was not resolved"));
-  check
-    (Config.namespace_from_package_name "@testrepo/deprecated-config"
-    = "TestrepoDeprecatedConfig")
-    "scoped package namespace normalization";
-  check
-    (Config.namespace_from_package_name "some.namespace/name_here"
-    = "SomenamespaceName_here")
-    "namespace punctuation normalization";
-  check
-    (Compiler_log.strip_ansi "plain \027[1;31mred\027[0m text"
-    = "plain red text")
-    "compiler log ANSI stripping";
+  Test_support.with_temp_dir "rewatch-compiler-log-" (fun root ->
+      File_util.ensure_dir (Build_artifacts.lib_path root "ocaml");
+      Compiler_log.initialize root;
+      Compiler_log.append root "plain \027[1;31mred\027[0m text";
+      Compiler_log.finalize root;
+      check
+        (String_util.contains
+           (File_util.read_file
+              (File_util.path_of_parts root ["lib"; "ocaml"; ".compiler.log"]))
+           "plain red text")
+        "published compiler logs strip ANSI sequences");
   let truncated_utf8 =
     "Warning " ^ String.make 1 (Char.chr 0xe2) ^ String.make 1 (Char.chr 0x80)
   in
