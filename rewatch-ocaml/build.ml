@@ -26,7 +26,7 @@ type incremental_source = {
 }
 
 let project_root folder =
-  if not (Sys.file_exists folder) then
+  if not (File_util.exists folder) then
     raise
       (Error
          ("Could not start Rescript build: Could not write lockfile because \

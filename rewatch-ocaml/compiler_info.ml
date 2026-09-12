@@ -146,12 +146,12 @@ let config_with_package_output_specs (config : Config.t) specs =
   {config with package_specs}
 
 let previous_build_exists root =
-  Sys.file_exists
+  File_util.exists
     (File_util.path_of_parts root ["lib"; "ocaml"; ".compiler.log"])
 
 let needs_clean context (config : Config.t) =
   let info_path = path config.root in
-  if Sys.file_exists info_path then not (matches context config)
+  if File_util.exists info_path then not (matches context config)
   else previous_build_exists config.root
 
 let clean_package (config : Config.t) =

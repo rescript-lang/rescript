@@ -100,7 +100,7 @@ let run ~(package : Build_types.graph_package)
             let output = Build_artifacts.generated_js_path config path spec in
             [output; output ^ ".map"]
             |> List.iter (fun path ->
-                if Sys.file_exists path then
+                if File_util.exists path then
                   Hashtbl.replace cleanup.present_public_outputs path ()))
           config.package_specs
     in

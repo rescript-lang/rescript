@@ -82,7 +82,7 @@ let watch_context ~root ~prod ~features ~filter =
       paths := Native_watcher.{directory; recursive} :: !paths
     in
     let rec nearest_existing_directory package_root directory =
-      if Sys.file_exists directory then directory
+      if File_util.exists directory then directory
       else
         let parent = Filename.dirname directory in
         if parent = directory || directory = package_root then package_root
@@ -614,7 +614,7 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
           if is_symlink_target path then requires_reconciliation := true
           else if is_source_path path then
             if path_in_scope scope path then
-              if Sys.file_exists path then
+              if File_util.exists path then
                 changes := {path; kind = Modified} :: !changes
               else requires_reconciliation := true
             else requires_reconciliation := true

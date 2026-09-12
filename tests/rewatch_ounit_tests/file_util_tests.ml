@@ -32,6 +32,10 @@ let tests =
       let missing = Filename.concat root "missing" in
       write_file first "same";
       write_file second "same";
+      check (File_util.exists first) "an existing path should be reported";
+      check
+        (not (File_util.exists missing))
+        "a missing path should be reported as absent";
       check
         (File_util.files_equal first second)
         "equal file contents should compare equal";

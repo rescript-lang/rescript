@@ -8,17 +8,19 @@ let last_member name = function
 
 let package_name package_root =
   let path = Filename.concat package_root "package.json" in
-  if not (Sys.file_exists path) then Ok None
-  else
-    try
+  try
+    if not (File_util.exists path) then Ok None
+    else
       let json = Yojson.Safe.from_file path in
       match last_member "name" json with
       | Some (`String name) -> Ok (Some name)
       | Some _ | None -> Ok None
-    with
-    | Sys_error message -> Error ("Could not read package.json: " ^ message)
-    | Yojson.Json_error message ->
-      Error ("Could not parse package.json: " ^ message)
+  with
+  | Sys_error message -> Error ("Could not read package.json: " ^ message)
+  | Unix.Unix_error (error, _, _) ->
+    Error ("Could not read package.json: " ^ Unix.error_message error)
+  | Yojson.Json_error message ->
+    Error ("Could not parse package.json: " ^ message)
 
 let url_value = function
   | `String value -> Some value

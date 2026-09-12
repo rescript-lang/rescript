@@ -163,7 +163,7 @@ let cleanup_stale ?ocaml_files ?ast_sources ?source_files ?present_source_files
           in
           if
             (not (Hashtbl.mem present_public_outputs output))
-            && Sys.file_exists output
+            && File_util.exists output
           then Hashtbl.replace present_public_outputs output ())
         config.package_specs)
     modules;
@@ -269,7 +269,7 @@ let cleanup_stale ?ocaml_files ?ast_sources ?source_files ?present_source_files
         working_paths basename
         |> List.iter (fun build_path ->
             if defer_working_cmi_until_after_compile basename then
-              if Sys.file_exists build_path then
+              if File_util.exists build_path then
                 deferred_artifacts := build_path :: !deferred_artifacts
               else ()
             else File_util.remove_file build_path)));
@@ -304,7 +304,7 @@ let cleanup_stale ?ocaml_files ?ast_sources ?source_files ?present_source_files
         (* A map alone is not enough provenance to delete a public file. The
             mirrored output has the same relative path below lib/bs, so probe
             that one path instead of scanning the entire working tree. *)
-        (is_local && Sys.file_exists (Filename.concat build_dir build_relative)))
+        (is_local && File_util.exists (Filename.concat build_dir build_relative)))
   in
   let planned_outputs = Hashtbl.create 16 in
   let plan_output ~build_relative path =

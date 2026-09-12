@@ -47,7 +47,7 @@ let run path =
     Compiler_args.parser_arguments ~config ~contents ~path:relative
   in
   let is_interface = Filename.check_suffix source ".resi" in
-  let has_interface = (not is_interface) && Sys.file_exists (source ^ "i") in
+  let has_interface = (not is_interface) && File_util.exists (source ^ "i") in
   let dependencies =
     (if Config.source_is_dev config relative then
        List.map (fun dependency -> (false, dependency)) config.dev_dependencies
