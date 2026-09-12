@@ -505,6 +505,34 @@ let scheduler_tests _context =
 
 let graph_and_diagnostic_tests _context =
   let node name deps = (name, deps) in
+  let reject_invalid =
+    Graph.Reject_invalid
+      {
+        duplicate_node = (fun name -> Failure ("duplicate:" ^ name));
+        unknown_dependency =
+          (fun ~node ~dependency -> Failure (node ^ "->" ^ dependency));
+      }
+  in
+  let indexed =
+    Graph.create_index
+      [node "A" ["B"; "B"]; node "B" []]
+      ~name:fst ~deps:snd ~validation:reject_invalid
+  in
+  check
+    (Graph.dependencies indexed "A" = ["B"]
+    && Graph.dependents indexed "B" = ["A"]
+    && Graph.dependency_count indexed "A" = 1)
+    "the shared graph index normalizes forward, reverse, and pending edges";
+  assert_raises (Failure "duplicate:A") (fun () ->
+      ignore
+        (Graph.create_index
+           [node "A" []; node "A" []]
+           ~name:fst ~deps:snd ~validation:reject_invalid));
+  assert_raises (Failure "A->Missing") (fun () ->
+      ignore
+        (Graph.create_index
+           [node "A" ["Missing"]]
+           ~name:fst ~deps:snd ~validation:reject_invalid));
   let shortest_cycle =
     Graph.shortest_cycle
       [

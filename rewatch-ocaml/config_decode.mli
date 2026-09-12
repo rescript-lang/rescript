@@ -12,8 +12,15 @@ val last_member : string -> (string * 'a) list -> 'a option
 val last_optional_member :
   string -> (string * Yojson.Safe.t) list -> Yojson.Safe.t option
 
+type field_policy
+
+val configuration_fields : field_policy
+val warning_fields : field_policy
+val jsx_fields : field_policy
+val js_post_build_fields : field_policy
+
 val reject_duplicate_fields :
-  string -> string -> string list -> (string * 'a) list -> unit
+  string -> string -> field_policy -> (string * 'a) list -> unit
 
 val string : string -> string -> Yojson.Safe.t -> string
 val strings : string -> string -> Yojson.Safe.t -> string list
@@ -32,6 +39,7 @@ val parse_sources :
   string -> (string * Yojson.Safe.t) list -> Config_types.source list
 
 val unknown_fields : (string * Yojson.Safe.t) list -> string list
+val unsupported_fields : (string * 'a) list -> string list
 val parse_package_spec : string -> Yojson.Safe.t -> Config_types.package_spec
 val package_specs_use_alias : string -> Yojson.Safe.t -> bool
 

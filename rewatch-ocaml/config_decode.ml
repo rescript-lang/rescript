@@ -37,11 +37,84 @@ let last_optional_member name fields =
   | None | Some `Null -> None
   | value -> value
 
-let reject_duplicate_fields path context known fields =
+type field_policy = {known: string list; duplicate_checked: string list}
+
+let reject_all_duplicates known = {known; duplicate_checked = known}
+
+let unsupported_configuration_fields =
+  [
+    "ignored-dirs";
+    "generators";
+    "cut-generators";
+    "pp-flags";
+    "entries";
+    "bs-external-includes";
+  ]
+
+let configuration_duplicate_fields =
+  [
+    "name";
+    "sources";
+    "package-specs";
+    "warnings";
+    "suffix";
+    "dependencies";
+    "bs-dependencies";
+    "dev-dependencies";
+    "bs-dev-dependencies";
+    "features";
+    "ppx-flags";
+    "compiler-flags";
+    "bsc-flags";
+    "namespace";
+    "jsx";
+    "sourceMap";
+    "experimental-features";
+    "gentypeconfig";
+    "js-post-build";
+    "editor";
+    "reanalyze";
+    "namespace-entry";
+    "allowed-dependents";
+    "path";
+  ]
+
+let configuration_fields =
+  {
+    known = configuration_duplicate_fields @ unsupported_configuration_fields;
+    duplicate_checked = configuration_duplicate_fields;
+  }
+
+let warning_fields = reject_all_duplicates ["number"; "error"]
+
+let jsx_fields =
+  reject_all_duplicates
+    ["version"; "module"; "mode"; "v3-dependencies"; "preserve"]
+
+let gentype_fields =
+  reject_all_duplicates
+    [
+      "module";
+      "moduleResolution";
+      "exportInterfaces";
+      "generatedFileExtension";
+      "shims";
+      "debug";
+    ]
+
+let js_post_build_fields = reject_all_duplicates ["cmd"]
+let dependency_fields = reject_all_duplicates ["name"; "features"]
+
+let source_fields = reject_all_duplicates ["dir"; "subdirs"; "type"; "feature"]
+
+let package_spec_fields =
+  reject_all_duplicates ["module"; "in-source"; "suffix"]
+
+let reject_duplicate_fields path context policy fields =
   let seen = Hashtbl.create (List.length fields) in
   List.iter
     (fun (name, _) ->
-      if List.mem name known then
+      if List.mem name policy.duplicate_checked then
         if Hashtbl.mem seen name then
           fail path (Printf.sprintf "duplicate field %S in %s" name context)
         else Hashtbl.add seen name ())
@@ -93,7 +166,7 @@ let compiler_flags path field = function
 let dependency_name path = function
   | `String value -> {name = value; features = None}
   | `Assoc fields -> (
-    reject_duplicate_fields path "dependency" ["name"; "features"] fields;
+    reject_duplicate_fields path "dependency" dependency_fields fields;
     match member "name" fields with
     | Some value ->
       let features =
@@ -132,9 +205,7 @@ let rec sources_of_json path inherited_dir forced_dev inherited_feature =
       };
     ]
   | `Assoc fields ->
-    reject_duplicate_fields path "source"
-      ["dir"; "subdirs"; "type"; "feature"]
-      fields;
+    reject_duplicate_fields path "source" source_fields fields;
     let dir =
       match member "dir" fields with
       | Some value -> Filename.concat inherited_dir (string path "dir" value)
@@ -175,40 +246,6 @@ let parse_sources path fields =
     List.concat_map (sources_of_json path "" None None) values
   | Some value -> sources_of_json path "" None None value
 
-let supported_fields =
-  [
-    "name";
-    "sources";
-    "dependencies";
-    "bs-dependencies";
-    "dev-dependencies";
-    "bs-dev-dependencies";
-    "compiler-flags";
-    "bsc-flags";
-    "package-specs";
-    "suffix";
-    "namespace";
-    "namespace-entry";
-    "allowed-dependents";
-    "path";
-    "features";
-    "ignored-dirs";
-    "generators";
-    "cut-generators";
-    "pp-flags";
-    "entries";
-    "bs-external-includes";
-    "warnings";
-    "ppx-flags";
-    "jsx";
-    "gentypeconfig";
-    "reanalyze";
-    "editor";
-    "experimental-features";
-    "js-post-build";
-    "sourceMap";
-  ]
-
 let nested_unknown_fields parent supported = function
   | `Assoc fields ->
     fields
@@ -217,33 +254,24 @@ let nested_unknown_fields parent supported = function
         else Some (Printf.sprintf "%s.?.%s" parent name))
   | _ -> []
 
-let gentype_fields =
-  [
-    "module";
-    "moduleResolution";
-    "exportInterfaces";
-    "generatedFileExtension";
-    "shims";
-    "debug";
-  ]
-
 let unknown_fields fields =
   fields
   |> List.concat_map (fun (name, value) ->
       match name with
-      | "warnings" -> nested_unknown_fields name ["number"; "error"] value
-      | "jsx" ->
-        nested_unknown_fields name
-          ["version"; "module"; "mode"; "v3-dependencies"; "preserve"]
-          value
-      | "gentypeconfig" -> nested_unknown_fields name gentype_fields value
-      | "js-post-build" -> nested_unknown_fields name ["cmd"] value
-      | _ -> if List.mem name supported_fields then [] else [name])
+      | "warnings" -> nested_unknown_fields name warning_fields.known value
+      | "jsx" -> nested_unknown_fields name jsx_fields.known value
+      | "gentypeconfig" -> nested_unknown_fields name gentype_fields.known value
+      | "js-post-build" ->
+        nested_unknown_fields name js_post_build_fields.known value
+      | _ -> if List.mem name configuration_fields.known then [] else [name])
+
+let unsupported_fields fields =
+  unsupported_configuration_fields
+  |> List.filter (fun field -> Option.is_some (member field fields))
 
 let parse_package_spec path = function
   | `Assoc fields ->
-    reject_duplicate_fields path "package-specs entry"
-      ["module"; "in-source"; "suffix"]
+    reject_duplicate_fields path "package-specs entry" package_spec_fields
       fields;
     let module_format =
       match member "module" fields with
