@@ -145,7 +145,7 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
     |> List.filter (fun candidate -> Hashtbl.mem universe candidate.key)
     |> List.map (fun candidate -> candidate.make ())
   in
-  Output.Progress.start progress ~step:compile_step ~symbol:"🤺 "
+  Output.Progress.start progress ~step:compile_step ~symbol:Platform.build_symbol
     ~label:"Compiling"
     ~total:(namespace_count + List.length scheduled_modules);
   for _ = 1 to namespace_count do

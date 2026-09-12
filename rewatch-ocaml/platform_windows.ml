@@ -5,6 +5,12 @@ let configure_standard_streams () =
   set_binary_mode_in stdin true;
   set_binary_mode_out stdout true;
   set_binary_mode_out stderr true
+let clean_symbol = "[clean] "
+let parse_symbol = "[parse] "
+let build_symbol = "[build] "
+let success_symbol = "[ok] "
+let warning_symbol = "[warn] "
+let error_symbol = "[error] "
 let normalize_path_for_comparison path =
   path |> String.lowercase_ascii
   |> String.map (function '/' -> '\\' | character -> character)

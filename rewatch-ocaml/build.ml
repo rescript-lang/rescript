@@ -142,7 +142,8 @@ let prepare_incremental previous changes (attempt : Build_attempt.t)
       Output.debug ~verbosity:attempt.verbosity
         ("Generating AST for module: " ^ name));
   let parse_completed =
-    Output.Progress.start_grouped attempt.progress ~step:"1/2" ~symbol:"🧱 "
+    Output.Progress.start_grouped attempt.progress ~step:"1/2"
+      ~symbol:Platform.parse_symbol
       ~label:"Parsing"
       (List.map
          (fun source ->
