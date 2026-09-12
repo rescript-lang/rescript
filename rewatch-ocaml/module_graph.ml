@@ -170,7 +170,7 @@ let initialize ~(root_config : Config.t) ~package_plans ~compile_assets
       let visible_packages =
         Hashtbl.create (List.length package.dependencies + 1)
       in
-      Hashtbl.replace visible_packages package.config.name ();
+      Hashtbl.replace visible_packages package.name ();
       List.iter
         (fun (dependency : Package_plan.dependency) ->
           Hashtbl.replace visible_packages dependency.declaration.name ())
@@ -204,7 +204,7 @@ let initialize ~(root_config : Config.t) ~package_plans ~compile_assets
           nodes :=
             {
               key = compiler_base;
-              package_name = package.config.name;
+              package_name = package.name;
               package_root = package.root;
               source_path = module_.Source.implementation;
               namespace = package.compile_config.namespace;
@@ -256,7 +256,7 @@ let initialize ~(root_config : Config.t) ~package_plans ~compile_assets
               key = namespace_map_key package.root;
               compiler_name;
               namespace = name;
-              package_name = package.config.name;
+              package_name = package.name;
               package_root = package.root;
               members;
             }))

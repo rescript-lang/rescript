@@ -25,18 +25,16 @@ let generated_build_js_path ~build_dir (config : Config.t) path
   Filename.concat build_dir
     (Filename.remove_extension path ^ Config.package_spec_suffix config spec)
 
-let remove_public_outputs (config : Config.t) modules =
+let remove_public_outputs (config : Config.t) implementation_paths =
   List.iter
-    (fun module_ ->
+    (fun implementation ->
       List.iter
         (fun spec ->
-          let output =
-            generated_js_path config module_.Source.implementation spec
-          in
+          let output = generated_js_path config implementation spec in
           File_util.remove_file output;
           File_util.remove_file (output ^ ".map"))
         config.package_specs)
-    modules
+    implementation_paths
 
 let generated_output_suffixes =
   [
@@ -65,12 +63,6 @@ let generated_output_details_for_suffixes suffixes path =
             suffix,
             output_path )
       else None)
-
-let generated_output_details path =
-  generated_output_details_for_suffixes generated_output_suffixes path
-
-let is_generated_output_path path =
-  Option.is_some (generated_output_details path)
 
 type cleanup_result = {
   removed_modules: string list;
@@ -140,8 +132,8 @@ let cleanup_stale ?ocaml_files ?ast_sources ?source_files ?present_source_files
   let present_public_outputs = Hashtbl.create 64 in
   present_source_files @ List.concat_map snd output_files
   |> List.iter (fun path ->
-      if Option.is_some (output_details path) then
-        Hashtbl.replace present_public_outputs path ());
+      if Option.is_some (output_details path) && File_util.is_regular_file path
+      then Hashtbl.replace present_public_outputs path ());
   (* Expected outputs may use arbitrary configured suffixes, including suffixes
      that do not resemble JavaScript. Probe those paths directly rather than
      treating a filename heuristic as the source of truth. *)

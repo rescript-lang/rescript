@@ -99,19 +99,25 @@ let report_missing_sources ~is_root (config : Config.t) =
        %!"
       config.name config.root
 
-let validate_metadata (config : Config.t) =
+let package_identity ~report_diagnostics (config : Config.t) =
   match package_name config.root with
   | Error message ->
     raise (Project_context.Error ("Could not initialize build: " ^ message))
   | Ok (Some package_name) when package_name <> config.name ->
-    Printf.eprintf
-      "WARN:\n\n\
-       Package name mismatch for %s:\n\
-       The package.json name is %S, while the rescript.json name is %S\n\
-       This inconsistency will cause issues with package resolution.\n\n\
-       %!"
-      config.root package_name config.name
-  | Ok (Some _) | Ok None -> ()
+    if report_diagnostics then
+      Printf.eprintf
+        "WARN:\n\n\
+         Package name mismatch for %s:\n\
+         The package.json name is %S, while the rescript.json name is %S\n\
+         This inconsistency will cause issues with package resolution.\n\n\
+         %!"
+        config.root package_name config.name;
+    package_name
+  | Ok (Some package_name) -> package_name
+  | Ok None -> config.name
+
+let validate_metadata config =
+  ignore (package_identity ~report_diagnostics:true config)
 
 module For_test = struct
   let package_name = package_name

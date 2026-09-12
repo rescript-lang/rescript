@@ -28,9 +28,17 @@ let executable_is_usable candidate =
   try (Unix.stat candidate).Unix.st_kind = Unix.S_REG
   with Unix.Unix_error _ -> false
 
+let normalize_path_directory directory =
+  let directory = String.trim directory in
+  let length = String.length directory in
+  if length >= 2 && directory.[0] = '"' && directory.[length - 1] = '"' then
+    String.sub directory 1 (length - 2)
+  else directory
+
 let resolve_program =
   Platform_common.resolve_program ~path_separator ~executable_extensions
-    ~search_directories ~executable_is_usable
+    ~search_directories ~normalize_directory:normalize_path_directory
+    ~executable_is_usable
 
 type command = {env: Spawn.Env.t option; program: string; args: string list}
 
