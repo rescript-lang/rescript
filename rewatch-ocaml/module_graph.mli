@@ -17,7 +17,7 @@ type module_node = {
   package_root: string;
   source_path: string;
   namespace: Config.namespace;
-  allowed_dependencies: string list;
+  visible_packages: (string, unit) Hashtbl.t;
   mutable raw_dependencies: string list;
 }
 

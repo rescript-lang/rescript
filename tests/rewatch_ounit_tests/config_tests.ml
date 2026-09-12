@@ -88,6 +88,18 @@ let loading_tests =
         "an explicit empty sources field does not trigger the missing-field \
          warning";
       write_file path
+        {|{"name":"@testrepo/deprecated-config","namespace":true}|};
+      let config = Config.load path in
+      check
+        (config.namespace = Config.Namespace "TestrepoDeprecatedConfig")
+        "a boolean namespace is derived from a scoped package name";
+      write_file path
+        {|{"name":"namespace-test","namespace":"some.namespace/name_here"}|};
+      let config = Config.load path in
+      check
+        (config.namespace = Config.Namespace "SomenamespaceName_here")
+        "namespace punctuation is normalized while decoding";
+      write_file path
         {|{
           "name": "unknown-fields",
           "sources": {"dir": "src", "nested-source-key": true},

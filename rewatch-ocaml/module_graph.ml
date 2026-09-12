@@ -17,7 +17,7 @@ type module_node = {
   package_root: string;
   source_path: string;
   namespace: Config.namespace;
-  allowed_dependencies: string list;
+  visible_packages: (string, unit) Hashtbl.t;
   mutable raw_dependencies: string list;
 }
 
@@ -95,8 +95,7 @@ let resolve_dependency ~find_module ~find_namespace_maps (node : module_node)
   in
   let local_key = Config.namespaced_module_name node.namespace local_name in
   let is_visible (dependency_node : module_node) =
-    dependency_node.package_name = node.package_name
-    || List.mem dependency_node.package_name node.allowed_dependencies
+    Hashtbl.mem node.visible_packages dependency_node.package_name
   in
   match find_module local_key with
   | Some dependency_node when is_visible dependency_node -> [local_key]
@@ -125,10 +124,8 @@ let resolve_dependency ~find_module ~find_namespace_maps (node : module_node)
         find_namespace_maps raw_name
         |> Option.value ~default:[]
         |> List.filter_map (fun (namespace_map : namespace_map) ->
-            if
-              namespace_map.package_name = node.package_name
-              || List.mem namespace_map.package_name node.allowed_dependencies
-            then Some namespace_map.key
+            if Hashtbl.mem node.visible_packages namespace_map.package_name then
+              Some namespace_map.key
             else None)))
 
 let resolved_dependencies ~find_module ~find_namespace_maps (node : module_node)
@@ -170,6 +167,14 @@ let initialize ~(root_config : Config.t) ~package_plans ~compile_assets
   let use_existing_ast_paths = ref [] in
   List.iter
     (fun (package : Package_plan.t) ->
+      let visible_packages =
+        Hashtbl.create (List.length package.dependencies + 1)
+      in
+      Hashtbl.replace visible_packages package.config.name ();
+      List.iter
+        (fun (dependency : Package_plan.dependency) ->
+          Hashtbl.replace visible_packages dependency.declaration.name ())
+        package.dependencies;
       List.iter
         (fun module_ ->
           let dependencies path =
@@ -203,11 +208,7 @@ let initialize ~(root_config : Config.t) ~package_plans ~compile_assets
               package_root = package.root;
               source_path = module_.Source.implementation;
               namespace = package.compile_config.namespace;
-              allowed_dependencies =
-                List.map
-                  (fun (dependency : Package_plan.dependency) ->
-                    dependency.declaration.name)
-                  package.dependencies;
+              visible_packages;
               raw_dependencies;
             }
             :: !nodes)
