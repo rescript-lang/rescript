@@ -36,7 +36,7 @@
 
 #### :bug: Bug fix
 
-- Fix speculative parser lookahead suppressing later syntax errors or emitting duplicate deprecation warnings. https://github.com/rescript-lang/rescript/pull/8633
+- Fix speculative parser lookahead suppressing syntax errors for malformed attributes and inline records in non-arrow external declarations. https://github.com/rescript-lang/rescript/pull/8633
 - Preserve list elements when recovering from unexpected delimiters, and report invalid type-argument parentheses at their opening. https://github.com/rescript-lang/rescript/pull/8633
 - Fix constant folding of pattern matches on unboxed variants whose payload overlaps a literal constructor, so inlined calls agree with runtime matching. Reject multi-argument unboxed constructors instead of crashing. https://github.com/rescript-lang/rescript/pull/8631
 - Fix escaped backticks and interpolation openers in backquoted `%raw`, `%ffi`, and `%re` payloads leaking into emitted JavaScript. https://github.com/rescript-lang/rescript/pull/8630

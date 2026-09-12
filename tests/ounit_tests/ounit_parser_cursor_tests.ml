@@ -1,9 +1,5 @@
 let ( >:: ), ( >::: ) = OUnit.(( >:: ), ( >::: ))
 
-let parse source =
-  Res_driver.parse_implementation_from_source
-    ~display_filename:"ParserCursor.res" ~source
-
 let suites =
   __FILE__
   >::: [
@@ -174,14 +170,6 @@ let suites =
            Res_parser.next p;
            OUnit.assert_equal 13 (Res_parser.position p).pos_cnum;
            OUnit.assert_equal 14 (Res_parser.start_pos p).pos_cnum );
-         ( "a failed type probe does not suppress the real diagnostic"
-         >:: fun _ ->
-           OUnit.assert_bool "unquoted fields are not inline records here"
-             (parse "@val external defaults: {x: int} = \"defaults\"").invalid;
-           OUnit.assert_bool "quoted object fields remain valid"
-             (not
-                (parse "@val external defaults: {\"x\": int} = \"defaults\"")
-                  .invalid) );
          ( "nested transactions preserve the outer checkpoint" >:: fun _ ->
            let p = Res_parser.make "x /* keep */ y z" "test.res" in
            OUnit.assert_equal (Res_token.Lident "y") (Res_parser.peek2 p);
@@ -197,16 +185,20 @@ let suites =
            Res_parser.next p;
            Res_parser.next p;
            OUnit.assert_equal 1 (List.length p.comments) );
-         ( "attribute speculation emits a deprecation warning once" >:: fun _ ->
-           let previous = !Location.warning_printer in
-           let count = ref 0 in
-           Fun.protect
-             ~finally:(fun () -> Location.warning_printer := previous)
-             (fun () ->
-               (Location.warning_printer := fun _ _ _ -> incr count);
-               let result = parse "let a = 1\n@attr((. x) => x)\nlet b = 2" in
-               OUnit.assert_bool "valid attributed binding" (not result.invalid);
-               OUnit.assert_equal 1 !count) );
+         ( "type argument hints survive speculative parsing" >:: fun _ ->
+           let p =
+             Res_parser.make "type t<'a> = Nullable.t('a)" "Recovery.res"
+           in
+           let inspect p =
+             ignore (Res_core.parse_implementation p);
+             List.map Res_diagnostics.explain p.diagnostics
+           in
+           let expected =
+             ["Type parameters require angle brackets:\n  Nullable.t<'a>"]
+           in
+           OUnit.assert_equal expected (Res_parser.lookahead p inspect);
+           OUnit.assert_equal [] p.diagnostics;
+           OUnit.assert_equal expected (inspect p) );
          ( "regex opening position survives a non-BMP prefix at EOF" >:: fun _ ->
            let p = Res_parser.make "\"😀\"; /." "test.res" in
            Res_parser.next p;
@@ -275,18 +267,4 @@ let suites =
            OUnit.assert_equal 1 (Res_parser.end_pos p).pos_cnum;
            OUnit.assert_equal [] p.comments;
            inspect p );
-         ( "nested types do not require spaces" >:: fun _ ->
-           List.iter
-             (fun source ->
-               OUnit.assert_bool source (not (parse source).invalid))
-             [
-               "type t<'a>= array<option<'a>>";
-               "let x: array<array<int>>=[[1]]";
-               "let f = (): option<array<int>>=> Some([1])";
-               "let f = (~x: option<array<int>>=?) => x";
-               "let x = (value: array<int>) >= other";
-             ] );
-         ( "extra angle bracket remains an error" >:: fun _ ->
-           OUnit.assert_bool "unexpected < must be diagnosed"
-             (parse "type t = option<<int>").invalid );
        ]

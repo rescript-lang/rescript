@@ -56,9 +56,113 @@
    8 │ type t = option<<node<int>>
    9 │ type t = option(<node<int>>)
   10 │ 
+  11 │ type t = option(int)
 
   Type parameters require angle brackets:
   option<node<int>>
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/typexpr/typeConstructorArgs.res:11:16
+
+   9 │ type t = option(<node<int>>)
+  10 │ 
+  11 │ type t = option(int)
+  12 │ type t = pair<option(<node<int>>), string>
+  13 │ type t = pair(option(<node<int>>), string)
+
+  Type parameters require angle brackets:
+  option<int>
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/typexpr/typeConstructorArgs.res:12:21
+
+  10 │ 
+  11 │ type t = option(int)
+  12 │ type t = pair<option(<node<int>>), string>
+  13 │ type t = pair(option(<node<int>>), string)
+  14 │ type t = pair(int, string)
+
+  Type parameters require angle brackets:
+  option<node<int>>
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/typexpr/typeConstructorArgs.res:13:14
+
+  11 │ type t = option(int)
+  12 │ type t = pair<option(<node<int>>), string>
+  13 │ type t = pair(option(<node<int>>), string)
+  14 │ type t = pair(int, string)
+  15 │ type t = option(<int)
+
+  Type parameters require angle brackets:
+  pair<option<node<int>>, string>
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/typexpr/typeConstructorArgs.res:14:14
+
+  12 │ type t = pair<option(<node<int>>), string>
+  13 │ type t = pair(option(<node<int>>), string)
+  14 │ type t = pair(int, string)
+  15 │ type t = option(<int)
+  16 │ type t = option<<int>
+
+  Type parameters require angle brackets:
+  pair<int, string>
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/typexpr/typeConstructorArgs.res:15:16
+
+  13 │ type t = pair(option(<node<int>>), string)
+  14 │ type t = pair(int, string)
+  15 │ type t = option(<int)
+  16 │ type t = option<<int>
+  17 │ let after = 1
+
+  Type parameters require angle brackets:
+  option<int>
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/typexpr/typeConstructorArgs.res:16:17
+
+  14 │ type t = pair(int, string)
+  15 │ type t = option(<int)
+  16 │ type t = option<<int>
+  17 │ let after = 1
+  18 │ 
+
+  I'm not sure what to parse here when looking at "<".
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/typexpr/typeConstructorArgs.res:19:16
+
+  17 │ let after = 1
+  18 │ 
+  19 │ type a = option(<int>)
+  20 │ type b = option(<string>)
+  21 │ let after = 1
+
+  Type parameters require angle brackets:
+  option<int>
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/typexpr/typeConstructorArgs.res:20:16
+
+  18 │ 
+  19 │ type a = option(<int>)
+  20 │ type b = option(<string>)
+  21 │ let after = 1
+  22 │ 
+
+  Type parameters require angle brackets:
+  option<string>
 
 type nonrec 'a node = {
   _value: 'a Nullable.t }
@@ -66,3 +170,13 @@ type nonrec 'a t = 'a Belt.Map.t
 type nonrec 'a t = private 'a Belt.Map.t
 type nonrec t = int node option
 type nonrec t = int node option
+type nonrec t = int option
+type nonrec t = (int node option, string) pair
+type nonrec t = (int node option, string) pair
+type nonrec t = (int, string) pair
+type nonrec t = int option
+type nonrec t = int option
+let after = 1
+type nonrec a = int option
+type nonrec b = string option
+let after = 1

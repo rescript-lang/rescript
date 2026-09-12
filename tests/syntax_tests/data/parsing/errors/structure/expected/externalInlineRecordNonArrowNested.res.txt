@@ -1,0 +1,11 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/structure/externalInlineRecordNonArrowNested.res:2:33
+
+  1 │ @val
+  2 │ external maybeDefaults: option<{x: int}> = "defaults"
+  3 │ 
+
+  An inline record type declaration is only allowed in a variant constructor's declaration or nested inside of a record type declaration
+
+external maybeDefaults : < x: int   >  option = "defaults"[@@val ]
