@@ -54,9 +54,9 @@ let discover_package_graph (current : Config.t) =
       let features =
         if config.root = current.root then None
         else
-          match Feature_requests.find graph.feature_requests config.root with
-          | None | Some Feature_requests.All -> None
-          | Some (Feature_requests.Selected requested) ->
+          match Package_traversal.find_feature_selection graph config.root with
+          | None | Some Package_traversal.All_features -> None
+          | Some (Package_traversal.Selected_features requested) ->
             (try ignore (Source.resolve_active_features config requested)
              with Source.Error message ->
                raise

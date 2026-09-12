@@ -1,11 +1,6 @@
 type t
 
-type dependency = {
-  declaration: Config.dependency;
-  directory: string;
-  config: Config.t;
-  is_local: bool;
-}
+type dependency = {directory: string; config: Config.t; is_local: bool}
 
 type diagnostic_mode = Report_diagnostics | Suppress_diagnostics
 

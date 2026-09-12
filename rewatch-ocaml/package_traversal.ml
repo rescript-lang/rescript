@@ -6,7 +6,27 @@ type resolved = {request: request; dependency: Package_resolution.dependency}
 
 type package = {config: Config.t; is_local: bool; dependencies: resolved list}
 
-type graph = {packages: package list; feature_requests: Feature_requests.t}
+type feature_selection = All_features | Selected_features of string list
+type feature_requests = (string, feature_selection) Hashtbl.t
+type graph = {packages: package list; feature_requests: feature_requests}
+
+let add_feature_request requests root request =
+  match (Hashtbl.find_opt requests root, request) with
+  | None, None -> Hashtbl.add requests root All_features
+  | None, Some requested ->
+    Hashtbl.add requests root (Selected_features requested)
+  | Some All_features, _ | Some _, None ->
+    Hashtbl.replace requests root All_features
+  | Some (Selected_features current), Some requested ->
+    Hashtbl.replace requests root
+      (Selected_features (List.sort_uniq String.compare (current @ requested)))
+
+let find_feature_selection graph root =
+  Hashtbl.find_opt graph.feature_requests root
+
+let feature_selection_to_option = function
+  | All_features -> None
+  | Selected_features features -> Some features
 
 let dependency_kind_name = function
   | Regular -> "dependencies"
@@ -32,10 +52,10 @@ let resolve resolution ~package_root request =
 
 let traverse ~root_config ~prod ~features ~resolve =
   let visited = Hashtbl.create 32 in
-  let feature_requests = Feature_requests.create () in
+  let feature_requests = Hashtbl.create 32 in
   let packages = ref [] in
   let rec visit ~is_local ~features (config : Config.t) =
-    Feature_requests.add feature_requests config.root features;
+    add_feature_request feature_requests config.root features;
     if not (Hashtbl.mem visited config.root) then (
       Hashtbl.add visited config.root ();
       let dependencies =
@@ -56,3 +76,9 @@ let traverse ~root_config ~prod ~features ~resolve =
 let discover ~root_config ~prod ~features ~resolution =
   traverse ~root_config ~prod ~features ~resolve:(fun config request ->
       Some (resolve resolution ~package_root:config.root request))
+
+module For_test = struct
+  let create_feature_requests () = Hashtbl.create 4
+  let add_feature_request = add_feature_request
+  let find_feature_selection requests root = Hashtbl.find_opt requests root
+end

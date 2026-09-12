@@ -121,10 +121,8 @@ let tests =
           Config.{name = "dependency"; features = Some ["second"]}
       in
       check
-        (first.directory = second.directory
-        && first.declaration.features = Some ["first"]
-        && second.declaration.features = Some ["second"])
-        "cached dependency identity retains each declaration's feature request";
+        (first.directory = second.directory && first.config = second.config)
+        "cached dependency resolution reuses only package identity";
       let repository_tmp = Filename.concat (Sys.getcwd ()) "tmp" in
       File_util.ensure_dir repository_tmp;
       let standalone =

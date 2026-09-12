@@ -1,6 +1,5 @@
 type freshness_mode = Initialize_freshness | Reuse_freshness
 
-type cleanup_batch = {actions: (unit -> unit) list; artifacts: string list}
 type namespace_job = {job: Process.job; finish: Process.result -> unit}
 type pending_work
 type finalization_state
@@ -44,7 +43,6 @@ val create_retained :
 
 val register_cleanup : t -> (unit -> unit) -> unit
 val defer_artifact_cleanup : t -> string list -> unit
-val take_cleanup : t -> cleanup_batch
 val set_cleanup_result : t -> string -> Build_artifacts.cleanup_result -> unit
 val find_cleanup_result : t -> string -> Build_artifacts.cleanup_result option
 val add_namespace_job : t -> namespace_job -> unit
@@ -52,7 +50,6 @@ val take_namespace_jobs : t -> namespace_job list
 val add_compile_candidates : t -> Compiler_scheduler.candidate list -> unit
 val take_compile_candidates : t -> Compiler_scheduler.candidate list
 val mark_log_initialized : t -> string -> unit
-val take_initialized_logs : t -> string list
 val cleanup_artifacts : t -> unit
 val finalize_logs : t -> unit
 val finish_attempt : t -> unit
