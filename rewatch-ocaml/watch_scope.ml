@@ -51,8 +51,9 @@ let discover ~root ~prod ~features ~filter =
           with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> ())
     in
     let graph =
-      Package_traversal.traverse ~root_config ~prod ~features
-        ~resolve:(fun config request ->
+      Package_traversal.traverse ~root_config
+        ~root_name:(Package_resolution.root_package_name resolution)
+        ~prod ~features ~resolve:(fun config request ->
           let dependency = request.Package_traversal.declaration in
           match
             Package_resolution.dependency_path resolution

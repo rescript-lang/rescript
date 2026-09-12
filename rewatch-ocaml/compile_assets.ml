@@ -4,13 +4,14 @@ type ast_source = {ast_path: string; source_path: string}
 type t = {
   files_by_directory: (string, string list) Hashtbl.t;
   ast_sources_by_directory: (string, ast_source list) Hashtbl.t;
+  ast_dependencies: (string, string list) Hashtbl.t;
   ast_by_source: (string, entry) Hashtbl.t;
   cmi_by_module: (string, entry) Hashtbl.t;
   cmt_by_module: (string, entry) Hashtbl.t;
 }
 
-let ast_source_location path =
-  try (Ast_header.read path).source
+let ast_header path =
+  try Some (Ast_header.read path)
   with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> None
 
 let cleanup_extensions =
@@ -62,6 +63,7 @@ let create directories =
     {
       files_by_directory = Hashtbl.create (List.length directories);
       ast_sources_by_directory = Hashtbl.create (List.length directories);
+      ast_dependencies = Hashtbl.create 64;
       ast_by_source = Hashtbl.create 64;
       cmi_by_module = Hashtbl.create 64;
       cmt_by_module = Hashtbl.create 64;
@@ -76,18 +78,23 @@ let create directories =
         state_entries
         |> List.filter_map (fun (entry, name) ->
             match Filename.extension name with
-            | ".ast" | ".iast" ->
-              ast_source_location entry.path
-              |> Option.map (fun source -> (entry, source))
+            | ".ast" | ".iast" -> (
+              match ast_header entry.path with
+              | Some header ->
+                Option.map
+                  (fun source -> (entry, source, header.dependencies))
+                  header.Ast_header.source
+              | None -> None)
             | _ -> None)
       in
       Hashtbl.replace state.ast_sources_by_directory directory
         (List.map
-           (fun (entry, source) ->
+           (fun (entry, source, _) ->
              {ast_path = entry.path; source_path = source})
            ast_sources);
       List.iter
-        (fun (entry, source) ->
+        (fun (entry, source, dependencies) ->
+          Hashtbl.replace state.ast_dependencies entry.path dependencies;
           Hashtbl.replace state.ast_by_source source entry)
         ast_sources;
       List.iter (add_module_artifact state) state_entries);
@@ -100,6 +107,9 @@ let files state directory =
 let ast_sources state directory =
   Hashtbl.find_opt state.ast_sources_by_directory directory
   |> Option.value ~default:[]
+
+let ast_dependencies state path =
+  Hashtbl.find_opt state.ast_dependencies path |> Option.value ~default:[]
 
 let ast state source = Hashtbl.find_opt state.ast_by_source source
 

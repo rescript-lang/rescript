@@ -6,7 +6,12 @@ type request = {kind: dependency_kind; declaration: Config.dependency}
 
 type resolved = {request: request; dependency: Package_resolution.dependency}
 
-type package = {config: Config.t; is_local: bool; dependencies: resolved list}
+type package = {
+  name: string;
+  config: Config.t;
+  is_local: bool;
+  dependencies: resolved list;
+}
 
 type feature_selection = All_features | Selected_features of string list
 type feature_requests
@@ -22,6 +27,7 @@ val resolve : Package_resolution.t -> package_root:string -> request -> resolved
 
 val traverse :
   root_config:Config.t ->
+  root_name:string ->
   prod:bool ->
   features:string list option ->
   resolve:(Config.t -> request -> resolved option) ->

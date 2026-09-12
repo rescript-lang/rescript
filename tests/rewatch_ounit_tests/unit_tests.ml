@@ -422,7 +422,29 @@ let platform_tests _context =
             check
               (Platform.resolve_program ~cwd:path_root "current"
               = cwd_executable)
-              "Windows executable lookup searches cwd with PATHEXT")));
+              "Windows executable lookup searches cwd with PATHEXT")
+          else
+            let literal_directory = Filename.concat path_root "literal " in
+            let trimmed_directory = Filename.concat path_root "literal" in
+            Unix.mkdir literal_directory 0o755;
+            Unix.mkdir trimmed_directory 0o755;
+            let literal_executable =
+              Filename.concat literal_directory command
+            in
+            let trimmed_executable =
+              Filename.concat trimmed_directory command
+            in
+            File_util.copy_existing_file ~ensure_parent:true test_executable
+              literal_executable;
+            File_util.copy_existing_file ~ensure_parent:true test_executable
+              trimmed_executable;
+            Unix.chmod literal_executable 0o755;
+            Unix.chmod trimmed_executable 0o755;
+            Unix.putenv "PATH" literal_directory;
+            check
+              (Platform.resolve_program ~cwd:path_root command
+              = literal_executable)
+              "Unix PATH lookup preserves whitespace in directory names"));
   check
     (Platform_windows.tasklist_has_process ~pid:123
        {|"rescript.exe","123","Console","1","10,000 K"|})

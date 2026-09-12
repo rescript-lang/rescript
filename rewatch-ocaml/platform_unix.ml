@@ -19,7 +19,7 @@ let executable_is_usable candidate =
 
 let resolve_program =
   Platform_common.resolve_program ~path_separator ~executable_extensions
-    ~search_directories ~executable_is_usable
+    ~search_directories ~normalize_directory:Fun.id ~executable_is_usable
 
 type command = {env: Spawn.Env.t option; program: string; args: string list}
 

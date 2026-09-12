@@ -6,6 +6,7 @@ val is_managed_basename : string -> bool
 val create : string list -> t
 val files : t -> string -> string list
 val ast_sources : t -> string -> ast_source list
+val ast_dependencies : t -> string -> string list
 val ast : t -> string -> entry option
 val cmi : t -> string -> entry option
 val cmt : t -> string -> entry option

@@ -8,6 +8,7 @@ type state =
   | File of file
   | Dependency_candidate of dependency
   | Missing_dependency_candidate
+  | Unreadable
 
 type entry = {path: string; state: state}
 

@@ -6,7 +6,12 @@ type request = {kind: dependency_kind; declaration: Config.dependency}
 
 type resolved = {request: request; dependency: Package_resolution.dependency}
 
-type package = {config: Config.t; is_local: bool; dependencies: resolved list}
+type package = {
+  name: string;
+  config: Config.t;
+  is_local: bool;
+  dependencies: resolved list;
+}
 
 type feature_selection = All_features | Selected_features of string list
 module String_set = Set.Make (String)
@@ -64,11 +69,11 @@ let resolve resolution ~package_root request =
       Package_resolution.resolve resolution ~package_root request.declaration;
   }
 
-let traverse ~root_config ~prod ~features ~resolve =
+let traverse ~root_config ~root_name ~prod ~features ~resolve =
   let visited = Hashtbl.create 32 in
   let feature_requests = Hashtbl.create 32 in
   let packages = ref [] in
-  let rec visit ~is_local ~features (config : Config.t) =
+  let rec visit ~name ~is_local ~features (config : Config.t) =
     add_feature_request feature_requests config.root features;
     if not (Hashtbl.mem visited config.root) then (
       Hashtbl.add visited config.root ();
@@ -79,16 +84,19 @@ let traverse ~root_config ~prod ~features ~resolve =
       List.iter
         (fun resolved ->
           visit ~is_local:resolved.dependency.is_local
+            ~name:resolved.dependency.name
             ~features:resolved.request.declaration.features
             resolved.dependency.config)
         dependencies;
-      packages := {config; is_local; dependencies} :: !packages)
+      packages := {name; config; is_local; dependencies} :: !packages)
   in
-  visit ~is_local:true ~features root_config;
+  visit ~name:root_name ~is_local:true ~features root_config;
   {packages = !packages; feature_requests}
 
 let discover ~root_config ~prod ~features ~resolution =
-  traverse ~root_config ~prod ~features ~resolve:(fun config request ->
+  traverse ~root_config
+    ~root_name:(Package_resolution.root_package_name resolution) ~prod ~features
+    ~resolve:(fun config request ->
       Some (resolve resolution ~package_root:config.root request))
 
 module For_test = struct

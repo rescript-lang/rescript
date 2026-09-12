@@ -29,6 +29,35 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
         (root_config.jsx_args @ root_config.experimental_args)
       ~package_output_specs:(Compiler_info.package_output_specs root_config)
   in
+  let previous_compile_assets =
+    package_plans
+    |> List.map (fun (package : Package_plan.t) -> package.ocaml_dir)
+    |> Compile_assets.create
+  in
+  let registered_removed_modules = Hashtbl.create 16 in
+  let dependents_by_raw_dependency = Hashtbl.create 64 in
+  package_plans
+  |> List.concat_map (fun (package : Package_plan.t) ->
+      Compile_assets.ast_sources previous_compile_assets package.ocaml_dir)
+  |> List.iter (fun (ast_source : Compile_assets.ast_source) ->
+      Compile_assets.ast_dependencies previous_compile_assets
+        ast_source.ast_path
+      |> List.iter (fun dependency ->
+          let dependents =
+            Hashtbl.find_opt dependents_by_raw_dependency dependency
+            |> Option.value ~default:[]
+          in
+          Hashtbl.replace dependents_by_raw_dependency dependency
+            (ast_source.ast_path :: dependents)));
+  let invalidate_removed_module module_name =
+    if not (Hashtbl.mem registered_removed_modules module_name) then (
+      Hashtbl.add registered_removed_modules module_name ();
+      Hashtbl.replace attempt.removed_modules module_name ();
+      Build_session.mark_module_removed attempt.session module_name;
+      Hashtbl.find_opt dependents_by_raw_dependency module_name
+      |> Option.value ~default:[]
+      |> List.iter File_util.remove_file)
+  in
   let cleanup_started = Unix.gettimeofday () in
   List.iter
     (fun (package : Package_plan.t) ->
@@ -44,19 +73,28 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
               Compiler_info.config_with_package_output_specs
                 package.compile_config previous_specs
             in
+            let previous_implementations =
+              Compile_assets.ast_sources previous_compile_assets
+                package.ocaml_dir
+              |> List.filter_map (fun (source : Compile_assets.ast_source) ->
+                  if Filename.check_suffix source.ast_path ".iast" then None
+                  else
+                    Project_context.relative_to_opt package.root
+                      source.source_path)
+            in
             Build_artifacts.remove_public_outputs previous_config
-              package.modules);
-        let compile_assets = Compile_assets.create [package.ocaml_dir] in
+              previous_implementations);
         ignore
           (Build_artifacts.cleanup_stale
              ~ocaml_files:
-               (Compile_assets.files compile_assets package.ocaml_dir)
+               (Compile_assets.files previous_compile_assets package.ocaml_dir)
              ~ast_sources:
-               (Compile_assets.ast_sources compile_assets package.ocaml_dir)
+               (Compile_assets.ast_sources previous_compile_assets
+                  package.ocaml_dir)
              ~root:package.root ~ocaml_dir:package.ocaml_dir
              ~source_files:package.source_files
              ~present_source_files:package.present_source_files
-             ~on_removed_module:ignore
+             ~on_removed_module:invalidate_removed_module
              ~on_deferred_artifact:File_util.remove_file
              ~is_local:package.is_local package.compile_config package.modules);
         Compiler_info.clean_package package.config;
@@ -68,23 +106,6 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
     package_plans
     |> List.map (fun (package : Package_plan.t) -> package.ocaml_dir)
     |> Compile_assets.create
-  in
-  let registered_removed_modules = Hashtbl.create 16 in
-  let invalidate_removed_module module_name =
-    if not (Hashtbl.mem registered_removed_modules module_name) then (
-      Hashtbl.add registered_removed_modules module_name ();
-      Hashtbl.replace attempt.removed_modules module_name ();
-      Build_session.mark_module_removed attempt.session module_name;
-      package_plans
-      |> List.concat_map (fun (package : Package_plan.t) ->
-          Compile_assets.ast_sources compile_assets package.ocaml_dir)
-      |> List.iter (fun (ast_source : Compile_assets.ast_source) ->
-          let dependencies =
-            try Some (Ast_header.read ast_source.ast_path).dependencies
-            with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> None
-          in
-          if Option.fold ~none:false ~some:(List.mem module_name) dependencies
-          then File_util.remove_file ast_source.ast_path))
   in
   List.iter
     (fun (package : Package_plan.t) ->

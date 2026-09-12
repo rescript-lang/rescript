@@ -8,6 +8,7 @@ type state =
   | File of file
   | Dependency_candidate of dependency
   | Missing_dependency_candidate
+  | Unreadable
 
 type entry = {path: string; state: state}
 
@@ -22,9 +23,12 @@ let entry_equal first second =
   | Dependency_candidate first, Dependency_candidate second ->
     first.modified = second.modified && first.size = second.size
   | Missing_dependency_candidate, Missing_dependency_candidate -> true
-  | File _, (Dependency_candidate _ | Missing_dependency_candidate)
-  | Dependency_candidate _, (File _ | Missing_dependency_candidate)
-  | Missing_dependency_candidate, (File _ | Dependency_candidate _) ->
+  | Unreadable, Unreadable -> true
+  | File _, (Dependency_candidate _ | Missing_dependency_candidate | Unreadable)
+  | Dependency_candidate _, (File _ | Missing_dependency_candidate | Unreadable)
+  | Missing_dependency_candidate, (File _ | Dependency_candidate _ | Unreadable)
+  | Unreadable, (File _ | Dependency_candidate _ | Missing_dependency_candidate)
+    ->
     false
 
 let equal = List.equal entry_equal
@@ -39,6 +43,11 @@ let create ?(on_source_symlink = fun _ -> ()) digest_cache
     (scope : Watch_scope.t) =
   let visited_directories = Hashtbl.create 64 in
   let seen_files = Hashtbl.create 256 in
+  let unreadable path acc =
+    Hashtbl.replace seen_files path ();
+    Hashtbl.remove digest_cache path;
+    {path; state = Unreadable} :: acc
+  in
   let digest path stat =
     Hashtbl.replace seen_files path ();
     (* Native events are only wakeups; a content snapshot decides whether to
@@ -66,10 +75,12 @@ let create ?(on_source_symlink = fun _ -> ()) digest_cache
               {modified = stat.Unix.st_mtime; size = stat.Unix.st_size; digest};
         }
         :: acc
-    with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) ->
+    with
+    | Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) ->
       Hashtbl.remove seen_files path;
       Hashtbl.remove digest_cache path;
       acc
+    | Unix.Unix_error _ | Sys_error _ -> unreadable path acc
   in
   let matches_source (source : Watch_scope.source_root) path =
     Option.fold ~none:true
@@ -79,6 +90,7 @@ let create ?(on_source_symlink = fun _ -> ()) digest_cache
   let rec walk (source : Watch_scope.source_root) recursive dir acc =
     match Platform.canonicalize_path dir with
     | exception Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> acc
+    | exception (Unix.Unix_error _ | Sys_error _) -> unreadable dir acc
     | canonical -> (
       let admission =
         Traversal_coverage.admit visited_directories canonical ~recursive
@@ -93,66 +105,80 @@ let create ?(on_source_symlink = fun _ -> ()) digest_cache
           Traversal_coverage.visits_descendants admission
         in
         let entries =
-          try File_util.directory_entries dir
-          with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> []
+          try Some (File_util.directory_entries dir) with
+          | Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> Some []
+          | Unix.Unix_error _ | Sys_error _ -> None
         in
-        List.fold_left
-          (fun acc name ->
-            let path = Filename.concat dir name in
-            match Unix.lstat path with
-            | stat -> (
-              match stat.Unix.st_kind with
-              | Unix.S_DIR ->
-                if
-                  (not visit_descendants)
-                  || Native_watcher.is_compiler_artifact_directory path
-                then acc
-                else walk source true path acc
-              | Unix.S_LNK -> (
-                let is_source_name =
-                  Option.is_some (Source.source_kind path)
-                  && matches_source source path
-                in
-                (if visit_current && is_source_name then
-                   match Unix.readlink path with
-                   | target ->
-                     let target =
-                       if Filename.is_relative target then
-                         Filename.concat (Filename.dirname path) target
-                       else target
-                     in
-                     let target =
-                       match Platform.canonicalize_path target with
-                       | canonical -> canonical
+        Option.fold ~none:(unreadable dir acc)
+          ~some:
+            (List.fold_left
+               (fun acc name ->
+                 let path = Filename.concat dir name in
+                 match Unix.lstat path with
+                 | stat -> (
+                   match stat.Unix.st_kind with
+                   | Unix.S_DIR ->
+                     if
+                       (not visit_descendants)
+                       || Native_watcher.is_compiler_artifact_directory path
+                     then acc
+                     else walk source true path acc
+                   | Unix.S_LNK -> (
+                     try
+                       let is_source_name =
+                         Option.is_some (Source.source_kind path)
+                         && matches_source source path
+                       in
+                       (if visit_current && is_source_name then
+                          match Unix.readlink path with
+                          | target ->
+                            let target =
+                              if Filename.is_relative target then
+                                Filename.concat (Filename.dirname path) target
+                              else target
+                            in
+                            let target =
+                              match Platform.canonicalize_path target with
+                              | canonical -> canonical
+                              | exception
+                                  Unix.Unix_error
+                                    ((Unix.ENOENT | Unix.ENOTDIR), _, _) ->
+                                target
+                            in
+                            on_source_symlink target
+                          | exception
+                              Unix.Unix_error
+                                ((Unix.ENOENT | Unix.ENOTDIR), _, _) ->
+                            ());
+                       match Unix.stat path with
+                       | target -> (
+                         match target.Unix.st_kind with
+                         | Unix.S_DIR when visit_descendants ->
+                           walk source true path acc
+                         | Unix.S_REG when visit_current && is_source_name ->
+                           add_file path target acc
+                         | _ -> acc)
                        | exception
                            Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _)
                          ->
-                         target
-                     in
-                     on_source_symlink target
-                   | exception
-                       Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) ->
-                     ());
-                match Unix.stat path with
-                | target -> (
-                  match target.Unix.st_kind with
-                  | Unix.S_DIR when visit_descendants ->
-                    walk source true path acc
-                  | Unix.S_REG when visit_current && is_source_name ->
-                    add_file path target acc
-                  | _ -> acc)
-                | exception Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _)
-                  ->
-                  acc)
-              | Unix.S_REG
-                when visit_current
-                     && Option.is_some (Source.source_kind path)
-                     && matches_source source path ->
-                add_file path stat acc
-              | _ -> acc)
-            | exception Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) ->
-              acc)
-          acc entries
+                         acc
+                       | exception (Unix.Unix_error _ | Sys_error _) ->
+                         unreadable path acc
+                     with Unix.Unix_error _ | Sys_error _ ->
+                       unreadable path acc)
+                   | Unix.S_REG
+                     when visit_current
+                          && Option.is_some (Source.source_kind path)
+                          && matches_source source path ->
+                     add_file path stat acc
+                   | _ -> acc)
+                 | exception Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _)
+                   ->
+                   acc
+                 | exception (Unix.Unix_error _ | Sys_error _) ->
+                   unreadable path acc)
+               acc)
+          entries
       | exception Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> acc)
   in
   let add_control_files acc root =
@@ -165,7 +191,8 @@ let create ?(on_source_symlink = fun _ -> ()) digest_cache
              if stat.Unix.st_kind = Unix.S_REG then add_file path stat acc
              else acc
            | exception Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) ->
-             acc)
+             acc
+           | exception (Unix.Unix_error _ | Sys_error _) -> unreadable path acc)
          acc
   in
   let result =
@@ -187,7 +214,8 @@ let create ?(on_source_symlink = fun _ -> ()) digest_cache
           }
           :: acc
         | exception Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) ->
-          {path; state = Missing_dependency_candidate} :: acc)
+          {path; state = Missing_dependency_candidate} :: acc
+        | exception (Unix.Unix_error _ | Sys_error _) -> unreadable path acc)
       acc scope.unresolved
     |> List.sort compare
   in

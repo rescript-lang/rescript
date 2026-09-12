@@ -13,6 +13,7 @@ mkdir -p "$work"
 cp -R "$root/rewatch-ocaml/tests/basic" "$work/basic"
 cp -R "$root/rewatch-ocaml/tests/basic" "$work/cleanup-lifecycle"
 cp -R "$root/rewatch-ocaml/tests/basic" "$work/cleanup-failure"
+cp -R "$root/rewatch-ocaml/tests/basic" "$work/suffix-removal"
 cp -R "$root/rewatch-ocaml/tests/basic" "$work/packaged-basic"
 cp -R "$root/rewatch-ocaml/tests/basic" "$work/runtime-discovery"
 mkdir -p "$work/no-bin-annot/src"
@@ -84,6 +85,7 @@ cp -R "$root/rewatch-ocaml/tests/monorepo" "$work/monorepo"
 basic="$work/basic"
 cleanup_lifecycle="$work/cleanup-lifecycle"
 cleanup_failure="$work/cleanup-failure"
+suffix_removal="$work/suffix-removal"
 packaged_basic="$work/packaged-basic"
 runtime_discovery="$work/runtime-discovery"
 no_bin_annot="$work/no-bin-annot"
@@ -107,6 +109,29 @@ namespace_collision="$work/namespace-collision"
 source_map="$work/source-map"
 warning_replay="$work/warning-replay"
 monorepo="$work/monorepo"
+
+package_name_mismatch="$work/package-name-mismatch"
+mkdir -p "$package_name_mismatch/src" \
+  "$package_name_mismatch/packages/dep/src" \
+  "$package_name_mismatch/node_modules"
+printf '%s\n' \
+  '{"name":"root","sources":"src","dependencies":["dep"]}' \
+  >"$package_name_mismatch/rescript.json"
+printf '%s\n' '{"name":"root"}' >"$package_name_mismatch/package.json"
+printf 'let value: int = Dep.value\n' \
+  >"$package_name_mismatch/src/Main.res"
+printf '%s\n' '{"name":"old-name","sources":"src"}' \
+  >"$package_name_mismatch/packages/dep/rescript.json"
+printf '%s\n' '{"name":"dep"}' \
+  >"$package_name_mismatch/packages/dep/package.json"
+printf 'let value = 1\n' \
+  >"$package_name_mismatch/packages/dep/src/Dep.res"
+ln -s ../packages/dep "$package_name_mismatch/node_modules/dep"
+
+config_cleanup_invalidation="$work/config-cleanup-invalidation"
+cp -R "$package_name_mismatch" "$config_cleanup_invalidation"
+printf '%s\n' '{"name":"dep","sources":"src"}' \
+  >"$config_cleanup_invalidation/packages/dep/rescript.json"
 
 transitive_local_watch="$work/transitive-local-watch"
 mkdir -p "$transitive_local_watch/src" \
@@ -765,6 +790,41 @@ if "$port" build "$cleanup_failure" \
   exit 1
 fi
 grep -F 'A' "$cleanup_failure/retry.log" >/dev/null
+
+"$port" build "$config_cleanup_invalidation" >/dev/null
+printf '%s\n' '{"name":"dep","sources":[]}' \
+  >"$config_cleanup_invalidation/packages/dep/rescript.json"
+if "$port" build "$config_cleanup_invalidation" \
+  >"$config_cleanup_invalidation/removal.log" 2>&1; then
+  echo "config cleanup forgot a removed dependency" >&2
+  exit 1
+fi
+grep -F 'Dep' "$config_cleanup_invalidation/removal.log" >/dev/null
+
+"$port" build "$package_name_mismatch" >/dev/null
+printf 'let value = "changed"\n' \
+  >"$package_name_mismatch/packages/dep/src/Dep.res"
+if "$port" build "$package_name_mismatch" \
+  >"$package_name_mismatch/mismatch.log" 2>&1; then
+  echo "package metadata mismatch dropped a dependency edge" >&2
+  exit 1
+fi
+grep -F 'string' "$package_name_mismatch/mismatch.log" >/dev/null
+
+sed 's/"suffix": "\.mjs"/"suffix": ".custom"/' \
+  "$suffix_removal/rescript.json" >"$suffix_removal/rescript.next"
+mv "$suffix_removal/rescript.next" "$suffix_removal/rescript.json"
+"$port" build "$suffix_removal" >/dev/null
+test -f "$suffix_removal/src/A.custom"
+rm "$suffix_removal/src/A.res"
+sed 's/"suffix": "\.custom"/"suffix": ".js"/' \
+  "$suffix_removal/rescript.json" >"$suffix_removal/rescript.next"
+mv "$suffix_removal/rescript.next" "$suffix_removal/rescript.json"
+if "$port" build "$suffix_removal" >/dev/null 2>&1; then
+  echo "suffix change with a removed dependency unexpectedly succeeded" >&2
+  exit 1
+fi
+test ! -e "$suffix_removal/src/A.custom"
 
 # A successful parse must remain compile-dirty when another file aborts the
 # same build before compilation starts.

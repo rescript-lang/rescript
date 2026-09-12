@@ -19,7 +19,6 @@ let dependent_is_allowed allowed_dependents dependent =
 
 let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
     ~(attempt : Build_attempt.t) =
-  Package_diagnostics.validate_metadata root_config;
   let resolution = Package_resolution.create root_config in
   let unallowed_dependencies = ref [] in
   let discovered =
@@ -145,6 +144,7 @@ let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
       let package : Package_plan.t =
         Package_plan.
           {
+            name = discovered_package.name;
             root;
             build_owner = (if owns_outputs then root else root_config.root);
             is_local;

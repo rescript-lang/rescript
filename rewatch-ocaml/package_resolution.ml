@@ -1,4 +1,9 @@
-type dependency = {directory: string; config: Config.t; is_local: bool}
+type dependency = {
+  name: string;
+  directory: string;
+  config: Config.t;
+  is_local: bool;
+}
 
 type diagnostic_mode = Report_diagnostics | Suppress_diagnostics
 
@@ -10,6 +15,7 @@ type t = {
   selected: (string, dependency) Hashtbl.t;
   reported_duplicates: (string * string, unit) Hashtbl.t;
   diagnostic_mode: diagnostic_mode;
+  root_package_name: string;
 }
 
 let create ?(diagnostic_mode = Report_diagnostics) root_config =
@@ -23,6 +29,10 @@ let create ?(diagnostic_mode = Report_diagnostics) root_config =
     selected = Hashtbl.create 32;
     reported_duplicates = Hashtbl.create 8;
     diagnostic_mode;
+    root_package_name =
+      Package_diagnostics.package_identity
+        ~report_diagnostics:(diagnostic_mode = Report_diagnostics)
+        root_config;
   }
 
 let load_config resolution root =
@@ -30,8 +40,6 @@ let load_config resolution root =
   | Some config -> config
   | None ->
     let config = Config.load_root root in
-    if resolution.diagnostic_mode = Report_diagnostics then
-      Package_diagnostics.validate_metadata config;
     Hashtbl.add resolution.loaded root config;
     config
 
@@ -43,6 +51,8 @@ let dependency_path resolution ~package_root name =
 
 let dependency_candidates resolution ~package_root name =
   Project_context.dependency_candidates_in resolution.context package_root name
+
+let root_package_name resolution = resolution.root_package_name
 
 let resolve resolution ~package_root (declaration : Config.dependency) =
   let edge_key = (package_root, declaration.name) in
@@ -85,6 +95,11 @@ let resolve resolution ~package_root (declaration : Config.dependency) =
         in
         let identity =
           {
+            name =
+              Package_diagnostics.package_identity
+                ~report_diagnostics:
+                  (resolution.diagnostic_mode = Report_diagnostics)
+                config;
             directory = candidate;
             config;
             is_local = is_local resolution candidate;
