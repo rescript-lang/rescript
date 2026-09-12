@@ -38,18 +38,7 @@ val run_dependency_graph :
   next:('a -> result option -> task option) ->
   unit
 
-val run :
-  ?env:Spawn.Env.t ->
-  ?poll:(unit -> unit) ->
-  cwd:string ->
-  string ->
-  string list ->
-  result
+val run : ?poll:(unit -> unit) -> cwd:string -> string -> string list -> result
 
 val run_streaming :
-  ?env:Spawn.Env.t ->
-  ?poll:(unit -> unit) ->
-  cwd:string ->
-  string ->
-  string list ->
-  result
+  ?poll:(unit -> unit) -> cwd:string -> string -> string list -> result

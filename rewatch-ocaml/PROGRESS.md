@@ -156,10 +156,11 @@ remain excluded. Package discovery, build preparation, clean, format, and watch
 all consume the same context decision. Focused tests cover both a workspace-root
 invocation and a direct child-package invocation, while integration coverage
 keeps a sibling's missing development dependency dormant and inspects the
-resulting `.sourcedirs.json`. `Build.Error` and `Build.Package_error` remain
-exception aliases so command exit classes and existing callers retain their
-contract. This removes roughly one hundred lines from `build.ml` without adding
-a facade layer or changing filesystem work.
+resulting `.sourcedirs.json`. Build-internal exception aliases preserve concise
+control flow, while the command entry point catches their owning module's
+exception directly instead of exposing redundant aliases through `Build`'s
+interface. This removes roughly one hundred lines from `build.ml` without
+adding a facade layer or changing filesystem work.
 
 Compiler-log lifecycle now lives in `compiler_log.ml`, matching Rust's
 `build/logs.rs` responsibility. The module owns log paths, initialization,
@@ -2826,6 +2827,39 @@ mutex helper remains. A fresh `opam exec -- make test-all` at `c7780d735`
 passed formatting, compiler/runtime, GenType, analysis, tools, and the complete
 installed-package rewatch suite on Linux. This is the checkpoint for the next
 fresh source review before comments are added.
+
+A dead-code audit used Reanalyze master at
+`ad9894832fcd33bb0e1f799e1573d1b9b4f2c9af`. Build the current Rewatch CMTs and
+the analyzer, then run it with every Rewatch interface treated as an external
+entry boundary:
+
+```sh
+opam exec -- dune build rewatch-ocaml tests/rewatch_ounit_tests
+live_interfaces=$(find rewatch-ocaml -maxdepth 1 -name '*.mli' -print | paste -sd, -)
+/path/to/reanalyze/_build/default/src/Reanalyze.exe \
+  -dce-cmt _build/default/rewatch-ocaml \
+  -live-paths "$live_interfaces" \
+  -live-names watch,run_files,format_stdin
+```
+
+The audit removed unused one-shot process environment parameters, made
+always-supplied notifier/wait arguments mandatory, deleted an unused standalone
+dependency-candidate wrapper, narrowed internal compiler-argument and format
+helpers, and removed exception re-exports that callers did not need. Snapshot
+equality now names every field that determines a watcher change instead of
+depending on polymorphic comparison.
+
+The live names are command entry points called by the separately compiled
+executable, which is outside the scanned directory. Unmodified Reanalyze
+currently reports seven false positives on OCaml 5.5 CMTs: the test-supplied
+`max_jobs`, `on_complete`, and `bisect_enabled` optional arguments, and the
+`Publication_failure`, `Config_types.Error`, and `Process.Interrupted`
+cross-module exceptions. Each reported argument and exception was checked
+against its source call, construction, and handler. Any new report outside that
+reviewed set fails the gate. A temporary analyzer experiment confirmed that
+accepting declaration locations within the corresponding signature item
+removes the optional-argument reports; it was not added to this repository
+because changing Reanalyze is outside the port.
 
 1. In the Windows VM, finish the watcher/lock and path audit and run the native
    build, unit, focused, and canonical Bash suites. Address findings there and

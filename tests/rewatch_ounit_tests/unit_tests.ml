@@ -85,9 +85,18 @@ let () =
         (Spawn.spawn ~prog:executable ~argv:[executable; "--sleep"; "2"] ());
       exit 0
     | "-format" -> (
-      match Sys.getenv_opt "REWATCH_FORMAT_TEST_ROOT" with
-      | None -> ()
-      | Some root ->
+      match
+        ( Sys.getenv_opt "REWATCH_FORMAT_TEST_ROOT",
+          Sys.getenv_opt "REWATCH_FORMAT_INVENTORY_TEST_ROOT" )
+      with
+      | _, Some root ->
+        let source = argument 2 in
+        let marker = Digest.string source |> Digest.to_hex in
+        touch_file (Filename.concat root marker);
+        print_string (read_file source);
+        exit 0
+      | None, None -> ()
+      | Some root, None ->
         let source = argument 2 in
         touch_file
           (Filename.concat root (Filename.basename source ^ ".started"));
@@ -954,7 +963,7 @@ let dependency_validation_tests _context =
                 ~verbosity:0 ~folder:dependency_root ~prod:false ~features:None
                 ~warn_error:None ~after_build:None ~filter:None ~no_timing:false;
               false
-            with Build.Error message ->
+            with Project_context.Error message ->
               if
                 Test_support.contains_text message
                   "app dependencies: restricted"
@@ -972,7 +981,7 @@ let dependency_validation_tests _context =
                 ~verbosity:0 ~folder:dependency_root ~prod:false ~features:None
                 ~warn_error:None ~after_build:None ~filter:None ~no_timing:false;
               false
-            with Build.Error message ->
+            with Project_context.Error message ->
               Test_support.contains_text message
                 "app dev-dependencies: restricted"
           in

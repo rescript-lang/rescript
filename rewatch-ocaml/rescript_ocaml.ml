@@ -81,17 +81,17 @@ let () =
     | Cli.Run command -> run command
     | Cli.Exit code -> exit code
   with
-  | Build.Package_error message ->
+  | Project_context.Package_error message ->
     prerr_endline message;
     exit 2
   | Config.Error message
   | Source.Error message
-  | Build.Error message
+  | Project_context.Error message
   | Process.Error message
   | Format.Error message ->
     prerr_endline message;
     exit 1
-  | Build.Stop_watch -> exit 0
+  | Watcher.Stop -> exit 0
   | Process.Interrupted exit_code -> exit exit_code
   | (Sys_error _ as exn) | (Unix.Unix_error _ as exn) ->
     prerr_endline (Printexc.to_string exn);

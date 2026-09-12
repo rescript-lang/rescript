@@ -62,7 +62,9 @@ let tests =
         = "/external/dependency")
         "diagnostic paths outside the project remain absolute";
       let candidates =
-        Project_context.dependency_candidates root "@scope/pkg"
+        Project_context.dependency_candidates_in
+          (Project_context.dependency_context (Config.load_root root))
+          root "@scope/pkg"
       in
       check
         (List.hd candidates

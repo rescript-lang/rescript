@@ -138,7 +138,7 @@ let tests =
             try
               ignore (compiler_args source);
               None
-            with Build.Error message -> Some message)
+            with Project_context.Error message -> Some message)
       in
       check
         (match missing_dependency_error with
@@ -152,7 +152,7 @@ let tests =
         (try
            ignore (Build.compiler_args missing_source);
            false
-         with Build.Error message ->
+         with Project_context.Error message ->
            Test_support.contains_text message "Could not read source file"
            && Test_support.contains_text message missing_source)
         "missing compiler-args sources produce a contextual error")

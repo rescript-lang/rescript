@@ -127,22 +127,37 @@ let tests =
         {|{"name":"installed","sources":["src"]}|};
       write_file installed_source "let value = 2\n";
       let previous = Sys.getcwd () in
-      let files =
-        Fun.protect
-          ~finally:(fun () -> Unix.chdir previous)
-          (fun () ->
-            Unix.chdir root;
-            Format.files_in_scope ())
+      let previous_bsc = Sys.getenv_opt "RESCRIPT_BSC_EXE" in
+      let previous_inventory_root =
+        Sys.getenv_opt "REWATCH_FORMAT_INVENTORY_TEST_ROOT"
       in
+      let marker path =
+        Filename.concat root (Digest.string path |> Digest.to_hex)
+      in
+      Unix.putenv "RESCRIPT_BSC_EXE" (Unix.realpath Sys.executable_name);
+      Unix.putenv "REWATCH_FORMAT_INVENTORY_TEST_ROOT" root;
+      Fun.protect
+        ~finally:(fun () ->
+          Unix.chdir previous;
+          (match previous_bsc with
+          | Some value -> Unix.putenv "RESCRIPT_BSC_EXE" value
+          | None -> Test_support.unsetenv "RESCRIPT_BSC_EXE");
+          match previous_inventory_root with
+          | Some value -> Unix.putenv "REWATCH_FORMAT_INVENTORY_TEST_ROOT" value
+          | None -> Test_support.unsetenv "REWATCH_FORMAT_INVENTORY_TEST_ROOT")
+        (fun () ->
+          Unix.chdir root;
+          Format.run_files ~check:true []);
       check
-        (List.mem root_source files)
+        (Sys.file_exists (marker root_source))
         "implicit format includes the current package";
       check
-        (List.mem orphan_interface files)
+        (Sys.file_exists (marker orphan_interface))
         "implicit format includes an orphan interface";
       check
-        (List.mem duplicate_one files && List.mem duplicate_two files)
+        (Sys.file_exists (marker duplicate_one)
+        && Sys.file_exists (marker duplicate_two))
         "implicit format does not impose compilation module uniqueness";
       check
-        (not (List.mem installed_source files))
+        (not (Sys.file_exists (marker installed_source)))
         "implicit format does not rewrite installed node_modules dependencies")

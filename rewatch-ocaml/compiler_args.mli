@@ -12,11 +12,8 @@ val compiler_flags :
   string list
 
 val with_local_warning_policy : is_local:bool -> Config.t -> Config.t
-val package_output : Config.t -> string -> Config.package_spec -> string
 val gentype_dependency_args_from_paths :
   Config.t -> (Config.dependency * string) list -> string list
-
-val namespace_args : Config.t -> string -> string list
 
 val parser_arguments :
   config:Config.t -> contents:string -> path:string -> string list

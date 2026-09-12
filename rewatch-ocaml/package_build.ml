@@ -1,6 +1,5 @@
 exception Error = Project_context.Error
 exception Build_failure = Compiler_scheduler.Build_failure
-exception Parse_failure of string
 
 let prepare_removed_modules ~(package : Build_types.graph_package)
     (stats : Build_types.t) =

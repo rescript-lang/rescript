@@ -138,9 +138,6 @@ let standalone_dependency_context root =
     include_workspace_dependencies = true;
   }
 
-let dependency_candidates root name =
-  dependency_candidates_in (standalone_dependency_context root) root name
-
 let dependency_path root name =
   dependency_path_in (standalone_dependency_context root) root name
 

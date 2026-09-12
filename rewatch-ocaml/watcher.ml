@@ -20,6 +20,14 @@ type watch_scope = {
 
 type snapshot_entry = {path: string; modified: float; size: int; digest: string}
 
+let snapshot_entry_equal first second =
+  first.path = second.path
+  && first.modified = second.modified
+  && first.size = second.size
+  && first.digest = second.digest
+
+let snapshot_equal = List.equal snapshot_entry_equal
+
 type fallback = {
   message: string;
   scope: watch_scope;
@@ -378,7 +386,8 @@ let changes_between before after =
     (fun path before_entry ->
       match Hashtbl.find_opt after_by_path path with
       | None -> changes := {path; kind = Removed} :: !changes
-      | Some after_entry when before_entry <> after_entry ->
+      | Some after_entry
+        when not (snapshot_entry_equal before_entry after_entry) ->
         changes := {path; kind = Modified} :: !changes
       | Some _ -> ())
     before_by_path;
@@ -421,7 +430,8 @@ let update_snapshot_entries digest_cache previous changes =
   Hashtbl.to_seq_values entries |> List.of_seq |> List.sort compare
 
 let polling_build_changes ~previous ~trigger ~before_build =
-  if trigger = previous then [] else changes_between previous before_build
+  if snapshot_equal trigger previous then []
+  else changes_between previous before_build
 
 let changes_are_incremental changes =
   changes <> []
@@ -612,7 +622,7 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
   let rec polling_loop scope previous =
     if keep_running () then
       let current = snapshot digest_cache scope in
-      if current <> previous then (
+      if not (snapshot_equal current previous) then (
         let build_scope = watch_context ~root ~prod ~features ~filter in
         let before_build = snapshot digest_cache build_scope in
         let changes =
@@ -637,7 +647,8 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
         (* Keep the snapshot from before the rebuild when another edit lands
            during compilation. Otherwise that edit would become the new baseline
            and an atomic configuration rewrite could be missed. *)
-        if after_build <> baseline then polling_loop new_scope baseline
+        if not (snapshot_equal after_build baseline) then
+          polling_loop new_scope baseline
         else polling_loop new_scope after_build)
       else (
         delay 0.2;
@@ -668,7 +679,7 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
       | None -> native_reconcile watcher scope previous)
   and native_reconcile watcher scope previous =
     let current = snapshot digest_cache scope in
-    if current <> previous then (
+    if not (snapshot_equal current previous) then (
       Output.debug ~verbosity "doing Full";
       begin_rebuild Full;
       let build_scope = watch_context ~root ~prod ~features ~filter in
@@ -694,7 +705,7 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
     match refresh_and_snapshot watcher ~symlink_paths new_scope with
     | Error message -> Some {message; scope = new_scope; snapshot = baseline}
     | Ok (registered_snapshot, symlink_targets) ->
-      if registered_snapshot <> baseline then
+      if not (snapshot_equal registered_snapshot baseline) then
         native_reconcile watcher new_scope baseline
       else native_loop watcher new_scope symlink_targets registered_snapshot
   in
