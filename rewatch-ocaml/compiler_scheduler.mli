@@ -1,4 +1,9 @@
 exception Build_failure of string
+
+(* CMI change has an explicit unknown case because a later publication failure
+    must not erase the fact that an interface may already have become visible.
+    Unknown therefore invalidates conservatively instead of pretending that the
+    CMI was unchanged. *)
 type cmi_change = Build_state.cmi_change =
   | Cmi_changed
   | Cmi_unchanged
@@ -12,6 +17,9 @@ type namespace_task = {
 }
 type post_build_task = {output: string; task: Process.task}
 
+(* Publication can fail after the CMI was copied. The partial outcome is kept
+    so dependents are still invalidated even though the module itself remains
+    dirty for retry. *)
 type publication =
   | Published of publish_result
   | Failed_after_cmi_publication of {error: exn; cmi_change: cmi_change}

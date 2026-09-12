@@ -1,3 +1,7 @@
+(** A running child is abstract so descriptors, reader threads, the waiter, and
+    the platform process handle always have one cleanup owner. Callers may wait,
+    cancel, or release it, but cannot reconstruct a partially owned child. *)
+
 type result = {status: Unix.process_status; stdout: string; stderr: string}
 type job = {program: string; args: string list; cwd: string}
 type stdin_policy = Inherit_stdin | Null_stdin

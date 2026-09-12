@@ -7,6 +7,10 @@ type context = {
   inherited_compiler_args: string list;
   package_output_specs: package_output_spec list;
 }
+(** Compiler information fingerprints effective inputs rather than only the
+    package's own JSON. Root-level JSX, experimental options, runtime identity,
+    and output layout can all change dependency output without changing a
+    dependency configuration file. *)
 
 and package_output_spec = {
   module_format: Config.module_format;

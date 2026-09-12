@@ -1,5 +1,12 @@
+(** An attempt owns all mutable work and reporting state for one build. This
+    boundary lets finalization drain cleanup exactly once while the associated
+    {!Build_session} remains reusable after failures. *)
+
 type freshness_mode = Initialize_freshness | Reuse_freshness
 
+(** The compilation kind makes output and recovery policy explicit. In
+    particular, an initial watch build cannot assume that retained freshness
+    has already been initialized. *)
 type compilation_kind =
   | One_shot
   | Initial_watch
@@ -9,6 +16,9 @@ type compilation_kind =
 type parse_message = Parse_warning of string | Parse_error of string
 val has_parse_error : parse_message list -> bool
 
+(** Preliminary parsing distinguishes successful new ASTs, failed source text,
+    and deliberately retained ASTs. Keeping these cases explicit prevents a
+    failed parse from being mistaken for an unchanged source. *)
 type preliminary_parse =
   | Parsed_successfully of {stderr: string}
   | Parse_failed of {stdout: string; stderr: string}

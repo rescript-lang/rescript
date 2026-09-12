@@ -1,3 +1,8 @@
+(** Namespace maps are graph nodes because adding or removing a namespace
+    member can invalidate consumers even when no ordinary source dependency
+    name changes. The graph therefore contains both source modules and these
+    synthetic nodes. *)
+
 type cycle_info = {
   cycle: string list;
   blocked: string list;

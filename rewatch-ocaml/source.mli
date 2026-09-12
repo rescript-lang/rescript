@@ -1,3 +1,7 @@
+(** Discovery keeps filesystem files separate from compilable modules. Commands
+    such as formatting can operate on orphan interfaces and duplicate basenames,
+    while compilation uses [module_] after pairing and duplicate validation. *)
+
 type module_ = {
   name: string;
   implementation: string;

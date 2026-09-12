@@ -1,4 +1,7 @@
 type t
+(** Resolution caches package identity, not declaration-specific feature
+    requests. The same installed package may be reached through multiple edges
+    whose requested features must remain distinct for later aggregation. *)
 
 type dependency = {
   name: string;

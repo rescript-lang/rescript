@@ -1,4 +1,7 @@
 type t
+(** A native watcher is only a low-latency notification source. Callers must
+    reconcile notifications against {!Watch_snapshot}; operating systems may
+    merge, duplicate, reorder, or omit the pathname attached to an event. *)
 
 type change_kind = Content | Structural
 type change = {path: string option; kind: change_kind}

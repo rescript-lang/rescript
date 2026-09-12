@@ -1,6 +1,11 @@
 module String_set : Set.S with type elt = string
 
+(** Build state is the authoritative mutable dependency and freshness store.
+    Compile-asset indexes supply filesystem metadata, but publication updates
+    graph dirtiness here so every successful or partial CMI publication follows
+    the same invalidation path. *)
 type module_kind = Source_module | Namespace_map
+
 type cmi_change = Cmi_changed | Cmi_unchanged | Cmi_change_unknown
 
 type module_ = {
@@ -38,6 +43,9 @@ val set_dependencies : t -> key:string -> string list -> unit
 
 val mark_dependents_compile_dirty :
   ?visited:(string, unit) Hashtbl.t -> t -> module_ -> unit
+(** Transitive propagation is required because a dependent may publish a
+    byte-identical CMI after recompilation. Marking only direct dependents would
+    then lose pending work below it. *)
 
 val record_published_cmi :
   ?dirty_propagation:(string, unit) Hashtbl.t ->

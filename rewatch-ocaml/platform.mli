@@ -1,3 +1,8 @@
+(** Platform-specific filesystem and process operations live behind this
+    interface because path identity, command-line quoting, handle inheritance,
+    and process-tree termination have materially different Unix and Windows
+    contracts. Higher layers should not infer those rules from path strings. *)
+
 val normalize_path_for_comparison : string -> string
 val directory_identity : path:string -> Unix.stats -> string
 val canonicalize_path : string -> string
