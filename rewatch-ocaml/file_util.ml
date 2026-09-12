@@ -1,16 +1,16 @@
 let path_of_parts root parts = List.fold_left Filename.concat root parts
 
+let is_directory path =
+  match Unix.stat path with
+  | metadata -> metadata.Unix.st_kind = Unix.S_DIR
+  | exception Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> false
+
 let ensure_dir path =
   (* OCaml's standard library has no recursive directory-creation primitive.
      Another process may win a mkdir race, but EEXIST is success only when the
      resulting path is a directory. Filename.dirname may return an unavailable
      Windows volume root unchanged, so stop at that fixed point and let mkdir
      surface the native filesystem error. *)
-  let is_directory path =
-    match Unix.stat path with
-    | metadata -> metadata.Unix.st_kind = Unix.S_DIR
-    | exception Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> false
-  in
   let mkdir path =
     try Unix.mkdir path 0o755
     with Unix.Unix_error (Unix.EEXIST, _, _) as error ->

@@ -65,6 +65,8 @@
   compile_assets
   build_state
   native_watcher
+  watch_scope
+  watch_snapshot
   watcher
   toolchain
   compiler_info
