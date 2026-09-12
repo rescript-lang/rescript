@@ -218,16 +218,16 @@ let prepare_incremental previous changes (attempt : Build_attempt.t)
                node)))
     affected_modules;
   attempt.parse_seconds <- Unix.gettimeofday () -. started_at;
-  if !dependencies_changed || Build_session.graph_has_cycle attempt.session then (
+  if !dependencies_changed then (
     let cycle =
       Module_graph.find_cycle
         (Build_session.global_module_values attempt.session)
         (Build_session.namespace_map_values attempt.session)
         prepared.build_state
     in
-    Build_session.set_graph_has_cycle attempt.session (Option.is_some cycle);
+    Build_session.set_graph_cycle attempt.session cycle;
     cycle)
-  else None
+  else Build_session.graph_cycle attempt.session
 
 let run_with_warning_state ~poll ~warning_state ~request ~no_timing ~verbosity
     ~folder ~prod ~features ~warn_error ~after_build ~filter ~on_state =

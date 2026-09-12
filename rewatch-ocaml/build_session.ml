@@ -23,7 +23,7 @@ type t = {
   global_modules: (string, Module_graph.module_node) Hashtbl.t;
   namespace_maps: (string, Module_graph.namespace_map) Hashtbl.t;
   namespace_maps_by_name: (string, Module_graph.namespace_map list) Hashtbl.t;
-  mutable graph_has_cycle: bool;
+  mutable graph_cycle: Module_graph.cycle_info option;
   package_plans: (string, Package_plan.t) Hashtbl.t;
   source_index: (string, source_reference) Hashtbl.t;
   pending_parse_paths: (string, unit) Hashtbl.t;
@@ -38,7 +38,7 @@ let create ~warning_state =
     global_modules = Hashtbl.create 64;
     namespace_maps = Hashtbl.create 16;
     namespace_maps_by_name = Hashtbl.create 16;
-    graph_has_cycle = false;
+    graph_cycle = None;
     package_plans = Hashtbl.create 32;
     source_index = Hashtbl.create 64;
     pending_parse_paths = Hashtbl.create 16;
@@ -93,8 +93,8 @@ let find_namespace_map session key = Hashtbl.find session.namespace_maps key
 let namespace_map_values session =
   Hashtbl.to_seq_values session.namespace_maps |> List.of_seq
 
-let graph_has_cycle session = session.graph_has_cycle
-let set_graph_has_cycle session value = session.graph_has_cycle <- value
+let graph_cycle session = session.graph_cycle
+let set_graph_cycle session cycle = session.graph_cycle <- cycle
 
 let add_package_plan session package =
   Hashtbl.replace session.package_plans package.Package_plan.root package
