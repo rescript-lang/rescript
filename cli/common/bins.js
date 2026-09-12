@@ -6,7 +6,13 @@ const minimumNodeVersion = "20.11.0";
  * @typedef {import("@rescript/linux-x64")} BinaryModuleExports
  */
 
-const target = `${process.platform}-${process.arch}`;
+// Windows on ARM runs the published x64 toolchain through the OS emulation
+// layer. Native ARM64 Node must therefore resolve the same package as x64 Node.
+const binaryArch =
+  process.platform === "win32" && process.arch === "arm64"
+    ? "x64"
+    : process.arch;
+const target = `${process.platform}-${binaryArch}`;
 
 const supportedPlatforms = [
   "darwin-arm64",

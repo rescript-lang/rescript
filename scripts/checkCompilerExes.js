@@ -22,10 +22,12 @@ const syncDir = path.join(
 );
 
 let ok = true;
-const executables = ["bsc", "rescript-editor-analysis", "rescript-tools"];
-if (process.platform !== "win32") {
-  executables.push("rescript");
-}
+const executables = [
+  "bsc",
+  "rescript-editor-analysis",
+  "rescript-tools",
+  "rescript",
+];
 
 for (const exe of executables) {
   const promoted = path.join(binDir, `${exe}.exe`);

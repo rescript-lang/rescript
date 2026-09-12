@@ -7,7 +7,7 @@ import { runBuildSystem } from "./common/runBuildSystem.js";
 
 if (rescript_ocaml_exe === undefined) {
   console.error(
-    "The experimental OCaml build system is not available on Windows yet.",
+    "The OCaml build-system binary is not available for this platform.",
   );
   process.exit(1);
 } else {

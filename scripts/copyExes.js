@@ -31,7 +31,7 @@ if (shouldCopyRewatch) {
   copyExe(
     path.join(rewatchDir, "target", "release"),
     "rescript",
-    process.platform === "win32" ? "rescript" : "rescript-rust",
+    "rescript-rust",
   );
 }
 

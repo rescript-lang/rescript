@@ -128,6 +128,14 @@ runs:
       run: |
         opam repository add rescript-overrides "$GITHUB_WORKSPACE/.github/opam-repository"
         read -ra dependency_flags <<< "$DEPENDENCY_FLAGS"
+        if [[ "$RUNNER_OS" == "Windows" ]]; then
+          export AR=x86_64-w64-mingw32-ar
+          export RANLIB=x86_64-w64-mingw32-ranlib
+          export STRIP=x86_64-w64-mingw32-strip
+          export NM=x86_64-w64-mingw32-nm
+          export DLLTOOL=x86_64-w64-mingw32-dlltool
+          export OBJDUMP=x86_64-w64-mingw32-objdump
+        fi
         opam install . "${dependency_flags[@]}"
 
     - name: Cache OPAM environment

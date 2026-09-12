@@ -21,10 +21,17 @@ import { artifactListFile, projectDir } from "#dev/paths";
  */
 async function getArtifacts(pkg) {
   const args = ["workspace", pkg, "pack", "--json", "--dry-run"];
-
   const files = [];
 
-  const child = spawn("yarn", args, { stdio: ["ignore", "pipe", "inherit"] });
+  const command =
+    process.platform === "win32" ? (process.env.ComSpec ?? "cmd.exe") : "yarn";
+  const commandArgs =
+    process.platform === "win32"
+      ? ["/d", "/s", "/c", "yarn.cmd", ...args]
+      : args;
+  const child = spawn(command, commandArgs, {
+    stdio: ["ignore", "pipe", "inherit"],
+  });
 
   const exitCode = new Promise((resolve, reject) => {
     child.once("error", reject);

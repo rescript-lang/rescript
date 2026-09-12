@@ -79,12 +79,8 @@ $(YARN_INSTALL_STAMP): $(YARN_INSTALL_SOURCES)
 
 REWATCH_SOURCES = $(shell find rewatch/src -name '*.rs') rewatch/Cargo.toml rewatch/Cargo.lock rewatch/rust-toolchain.toml
 RESCRIPT_EXE = $(BIN_DIR)/rescript.exe
-ifeq ($(OS),Windows_NT)
-	PACKAGED_RUST_EXE := $(RESCRIPT_EXE)
-else
-	RESCRIPT_RUST_EXE := $(BIN_DIR)/rescript-rust.exe
-	PACKAGED_RUST_EXE := $(RESCRIPT_RUST_EXE)
-endif
+RESCRIPT_RUST_EXE := $(BIN_DIR)/rescript-rust.exe
+PACKAGED_RUST_EXE := $(RESCRIPT_RUST_EXE)
 ifdef CI
 	REWATCH_PROFILE := release
 	REWATCH_CARGO_FLAGS := --release
@@ -109,10 +105,7 @@ clean-rewatch:
 
 COMPILER_SOURCE_DIRS := compiler tests analysis tools rewatch-ocaml
 COMPILER_SOURCES = $(shell find $(COMPILER_SOURCE_DIRS) -type f \( -name '*.ml' -o -name '*.mli' -o -name '*.c' -o -name '*.h' -o -name '*.dune' -o -name dune -o -name dune-project \))
-COMPILER_BIN_NAMES := bsc rescript-editor-analysis rescript-tools
-ifneq ($(OS),Windows_NT)
-COMPILER_BIN_NAMES += rescript
-endif
+COMPILER_BIN_NAMES := bsc rescript-editor-analysis rescript-tools rescript
 COMPILER_EXES := $(addsuffix .exe,$(addprefix $(BIN_DIR)/,$(COMPILER_BIN_NAMES)))
 
 compiler: $(COMPILER_EXES)
