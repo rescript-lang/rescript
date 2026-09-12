@@ -280,9 +280,15 @@ let update_entries digest_cache previous changes =
                       digest;
                     };
               }
-          with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) ->
+          with
+          | Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) ->
             Hashtbl.remove digest_cache entry.path;
-            None))
+            None
+          | Unix.Unix_error _ | Sys_error _ ->
+            (* Preserve the old baseline so the caller still runs the build.
+               Source diagnostics then remain inside the watcher's recoverable
+               build boundary instead of terminating the watch loop here. *)
+            Some entry))
   in
   if Hashtbl.length changed = 0 then Some updated else None
 

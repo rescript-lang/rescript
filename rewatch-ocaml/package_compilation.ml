@@ -100,7 +100,7 @@ let prepare ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
             let output = Build_artifacts.generated_js_path config path spec in
             [output; output ^ ".map"]
             |> List.iter (fun path ->
-                if File_util.exists path then
+                if File_util.is_regular_file path then
                   Hashtbl.replace cleanup.present_public_outputs path ()))
           config.package_specs
     in
@@ -166,7 +166,8 @@ let prepare ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
             ~runtime:prepared.compiler_context.runtime_path ~build_dir
             ~ocaml_dir
             ~entry:(Config.namespace_entry config.namespace)
-            ~package_dirty compiler_name modules
+            ~package_dirty ~force:namespace_state.compile_dirty compiler_name
+            modules
           |> Option.iter (fun namespace_task ->
               namespace_state.compile_dirty <- true;
               let cmi_path =

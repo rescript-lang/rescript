@@ -9,22 +9,34 @@ type resolved = {request: request; dependency: Package_resolution.dependency}
 type package = {config: Config.t; is_local: bool; dependencies: resolved list}
 
 type feature_selection = All_features | Selected_features of string list
-type feature_requests = (string, feature_selection) Hashtbl.t
+module String_set = Set.Make (String)
+
+type accumulated_features = All_requested | Selected_requested of String_set.t
+
+type feature_requests = (string, accumulated_features) Hashtbl.t
 type graph = {packages: package list; feature_requests: feature_requests}
 
 let add_feature_request requests root request =
   match (Hashtbl.find_opt requests root, request) with
-  | None, None -> Hashtbl.add requests root All_features
+  | None, None -> Hashtbl.add requests root All_requested
   | None, Some requested ->
-    Hashtbl.add requests root (Selected_features requested)
-  | Some All_features, _ | Some _, None ->
-    Hashtbl.replace requests root All_features
-  | Some (Selected_features current), Some requested ->
+    Hashtbl.add requests root
+      (Selected_requested (String_set.of_list requested))
+  | Some All_requested, _ | Some _, None ->
+    Hashtbl.replace requests root All_requested
+  | Some (Selected_requested current), Some requested ->
     Hashtbl.replace requests root
-      (Selected_features (List.sort_uniq String.compare (current @ requested)))
+      (Selected_requested
+         (List.fold_left
+            (fun features feature -> String_set.add feature features)
+            current requested))
 
 let find_feature_selection graph root =
   Hashtbl.find_opt graph.feature_requests root
+  |> Option.map (function
+    | All_requested -> All_features
+    | Selected_requested features ->
+      Selected_features (String_set.elements features))
 
 let feature_selection_to_option = function
   | All_features -> None
@@ -82,5 +94,10 @@ let discover ~root_config ~prod ~features ~resolution =
 module For_test = struct
   let create_feature_requests () = Hashtbl.create 4
   let add_feature_request = add_feature_request
-  let find_feature_selection requests root = Hashtbl.find_opt requests root
+  let find_feature_selection requests root =
+    Hashtbl.find_opt requests root
+    |> Option.map (function
+      | All_requested -> All_features
+      | Selected_requested features ->
+        Selected_features (String_set.elements features))
 end

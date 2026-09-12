@@ -12,6 +12,7 @@ work="$root/tmp/rewatch-ocaml/test-$$"
 mkdir -p "$work"
 cp -R "$root/rewatch-ocaml/tests/basic" "$work/basic"
 cp -R "$root/rewatch-ocaml/tests/basic" "$work/cleanup-lifecycle"
+cp -R "$root/rewatch-ocaml/tests/basic" "$work/cleanup-failure"
 cp -R "$root/rewatch-ocaml/tests/basic" "$work/packaged-basic"
 cp -R "$root/rewatch-ocaml/tests/basic" "$work/runtime-discovery"
 mkdir -p "$work/no-bin-annot/src"
@@ -82,6 +83,7 @@ cp -R "$root/rewatch-ocaml/tests/warning-replay" "$work/warning-replay"
 cp -R "$root/rewatch-ocaml/tests/monorepo" "$work/monorepo"
 basic="$work/basic"
 cleanup_lifecycle="$work/cleanup-lifecycle"
+cleanup_failure="$work/cleanup-failure"
 packaged_basic="$work/packaged-basic"
 runtime_discovery="$work/runtime-discovery"
 no_bin_annot="$work/no-bin-annot"
@@ -746,6 +748,23 @@ if "$port" build "$cleanup_lifecycle" >/dev/null 2>&1; then
 fi
 test ! -f "$cleanup_lifecycle/lib/bs/src/A.cmi"
 test ! -f "$cleanup_lifecycle/lib/ocaml/A.cmi"
+
+# Destructive cleanup must invalidate consumers before a later deletion error
+# can abort the command and erase the removed module's AST provenance.
+"$port" build "$cleanup_failure" >/dev/null
+rm "$cleanup_failure/src/A.res" "$cleanup_failure/src/A.mjs"
+mkdir "$cleanup_failure/src/A.mjs"
+if "$port" build "$cleanup_failure" >/dev/null 2>&1; then
+  echo "cleanup with an obstructing output unexpectedly succeeded" >&2
+  exit 1
+fi
+rmdir "$cleanup_failure/src/A.mjs"
+if "$port" build "$cleanup_failure" \
+  >"$cleanup_failure/retry.log" 2>&1; then
+  echo "cleanup failure forgot the removed dependency" >&2
+  exit 1
+fi
+grep -F 'A' "$cleanup_failure/retry.log" >/dev/null
 
 # A successful parse must remain compile-dirty when another file aborts the
 # same build before compilation starts.

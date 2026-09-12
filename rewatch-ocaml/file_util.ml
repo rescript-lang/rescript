@@ -33,8 +33,12 @@ let read_file path =
   Fun.protect
     ~finally:(fun () -> close_in_noerr channel)
     (fun () ->
-      let contents = Buffer.create 4096 in
-      let chunk = Bytes.create 65536 in
+      let expected_size = (Unix.fstat descriptor).Unix.st_size in
+      let contents = Buffer.create (max 16 expected_size) in
+      (* A small initial chunk avoids allocating 64 KiB for tiny files such as
+         the watch lock. The loop still handles streams and files that grow
+         while they are being read. *)
+      let chunk = Bytes.create (max 1 (min 65536 (max 4096 expected_size))) in
       let rec read () =
         match input channel chunk 0 (Bytes.length chunk) with
         | 0 -> Buffer.contents contents
@@ -43,6 +47,11 @@ let read_file path =
           read ()
       in
       read ())
+
+let is_regular_file path =
+  match Unix.stat path with
+  | metadata -> metadata.Unix.st_kind = Unix.S_REG
+  | exception Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> false
 
 let digest_file path =
   let descriptor = Unix.openfile path [Unix.O_RDONLY; Unix.O_CLOEXEC] 0 in

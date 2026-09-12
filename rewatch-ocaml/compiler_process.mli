@@ -10,6 +10,7 @@ val namespace_task :
   ocaml_dir:string ->
   entry:string option ->
   package_dirty:bool ->
+  force:bool ->
   string ->
   Source.module_ list ->
   Compiler_scheduler.namespace_task option

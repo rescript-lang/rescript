@@ -135,6 +135,61 @@ let shortest_cycle_in_index index =
     match two_node_cycle with
     | Some _ as cycle -> cycle
     | None ->
+      let next_index = ref 0 in
+      let indices = Hashtbl.create (List.length names) in
+      let lowlinks = Hashtbl.create (List.length names) in
+      let on_stack = Hashtbl.create (List.length names) in
+      let stack = Stack.create () in
+      let components = ref [] in
+      let rec visit name =
+        let index_value = !next_index in
+        incr next_index;
+        Hashtbl.add indices name index_value;
+        Hashtbl.add lowlinks name index_value;
+        Stack.push name stack;
+        Hashtbl.add on_stack name ();
+        dependencies index name
+        |> List.iter (fun dependency ->
+            match Hashtbl.find_opt indices dependency with
+            | None ->
+              visit dependency;
+              Hashtbl.replace lowlinks name
+                (min
+                   (Hashtbl.find lowlinks name)
+                   (Hashtbl.find lowlinks dependency))
+            | Some dependency_index when Hashtbl.mem on_stack dependency ->
+              Hashtbl.replace lowlinks name
+                (min (Hashtbl.find lowlinks name) dependency_index)
+            | Some _ -> ());
+        if Hashtbl.find lowlinks name = index_value then (
+          let component = ref [] in
+          let complete = ref false in
+          while not !complete do
+            let member = Stack.pop stack in
+            Hashtbl.remove on_stack member;
+            component := member :: !component;
+            complete := member = name
+          done;
+          components := !component :: !components)
+      in
+      List.iter
+        (fun name -> if not (Hashtbl.mem indices name) then visit name)
+        names;
+      let component_by_name = Hashtbl.create (List.length names) in
+      !components
+      |> List.iteri (fun component_id component ->
+          if List.length component > 1 then
+            List.iter
+              (fun name -> Hashtbl.add component_by_name name component_id)
+              component);
+      let same_cyclic_component left right =
+        match
+          ( Hashtbl.find_opt component_by_name left,
+            Hashtbl.find_opt component_by_name right )
+        with
+        | Some left, Some right -> left = right
+        | _ -> false
+      in
       let best = ref None in
       let best_length = ref max_int in
       let consider cycle =
@@ -152,8 +207,9 @@ let shortest_cycle_in_index index =
             best := Some cycle;
             best_length := cycle_length)
       in
-      List.iter
-        (fun start ->
+      names
+      |> List.filter (Hashtbl.mem component_by_name)
+      |> List.iter (fun start ->
           let queue = Queue.create () in
           let parents = Hashtbl.create 16 in
           let distances = Hashtbl.create 16 in
@@ -167,7 +223,8 @@ let shortest_cycle_in_index index =
             if can_improve then
               dependencies index current
               |> List.iter (fun dependency ->
-                  if dependency = start then (
+                  if not (same_cyclic_component start dependency) then ()
+                  else if dependency = start then (
                     let rec path_to_start acc node_name =
                       if node_name = start then start :: acc
                       else
@@ -180,8 +237,7 @@ let shortest_cycle_in_index index =
                     Hashtbl.add parents dependency current;
                     Hashtbl.add distances dependency (distance + 1);
                     Queue.add dependency queue))
-          done)
-        names;
+          done);
       !best)
 
 let shortest_cycle nodes ~name ~deps =

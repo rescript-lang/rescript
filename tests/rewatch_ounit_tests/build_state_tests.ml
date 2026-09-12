@@ -64,8 +64,8 @@ let tests =
   Build_state.mark_dependents_compile_dirty namespace_state
     (Build_state.find_exn namespace_state "A");
   check
-    (namespace.compile_dirty && consumer.compile_dirty)
-    "namespace-map invalidation propagates to namespace consumers";
+    ((not namespace.compile_dirty) && consumer.compile_dirty)
+    "namespace-map barriers propagate invalidation without scheduling map work";
   consumer.compile_dirty <- false;
   consumer.last_compiled_cmt <- Some 2.;
   (Build_state.find_exn namespace_state "A").last_compiled_cmi <- Some 3.;

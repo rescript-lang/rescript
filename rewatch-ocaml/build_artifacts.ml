@@ -75,12 +75,11 @@ let is_generated_output_path path =
 type cleanup_result = {
   removed_modules: string list;
   previous_ast_count: int;
-  deferred_artifacts: string list;
   present_public_outputs: (string, unit) Hashtbl.t;
 }
 
 let cleanup_stale ?ocaml_files ?ast_sources ?source_files ?present_source_files
-    ?(on_deferred_artifact = fun _ -> ()) ~root ~ocaml_dir ~is_local
+    ~on_removed_module ~on_deferred_artifact ~root ~ocaml_dir ~is_local
     (config : Config.t) modules =
   let build_dir = lib_path root "bs" in
   (* Keep one inventory of each artifact tree to avoid repeating directory and
@@ -155,7 +154,7 @@ let cleanup_stale ?ocaml_files ?ast_sources ?source_files ?present_source_files
           in
           if
             (not (Hashtbl.mem present_public_outputs output))
-            && File_util.exists output
+            && File_util.is_regular_file output
           then Hashtbl.replace present_public_outputs output ())
         config.package_specs)
     modules;
@@ -229,7 +228,6 @@ let cleanup_stale ?ocaml_files ?ast_sources ?source_files ?present_source_files
   |> Option.iter (fun namespace ->
       add_expected namespace [".cmi"; ".cmj"; ".cmt"; ".mlmap"]);
   let removed_modules = ref [] in
-  let deferred_artifacts = ref [] in
   (* Once the published CMI is removed, bsc still consults the working CMI to
      produce its source-located missing-module diagnostic. Keep only that copy
      through compilation; the command finalizer removes every deferred path. *)
@@ -286,18 +284,18 @@ let cleanup_stale ?ocaml_files ?ast_sources ?source_files ?present_source_files
         && ((not (Hashtbl.mem expected_artifacts basename))
            || Hashtbl.mem stale_ast_basenames basename)
       then (
-        if Filename.check_suffix basename ".ast" then
-          removed_modules := Source.module_name basename :: !removed_modules
-        else if Filename.check_suffix basename ".iast" then
-          removed_modules := Source.module_name basename :: !removed_modules;
+        if
+          Filename.check_suffix basename ".ast"
+          || Filename.check_suffix basename ".iast"
+        then (
+          let module_name = Source.module_name basename in
+          on_removed_module module_name;
+          removed_modules := module_name :: !removed_modules);
         File_util.remove_file path;
         working_paths basename
         |> List.iter (fun build_path ->
             if defer_working_cmi_until_after_compile basename then
-              if File_util.exists build_path then (
-                on_deferred_artifact build_path;
-                deferred_artifacts := build_path :: !deferred_artifacts)
-              else ()
+              on_deferred_artifact build_path
             else File_util.remove_file build_path)));
   let relative_under directory path =
     let prefix = directory ^ Filename.dir_sep in
@@ -376,6 +374,5 @@ let cleanup_stale ?ocaml_files ?ast_sources ?source_files ?present_source_files
   {
     removed_modules = !removed_modules;
     previous_ast_count = !previous_ast_count;
-    deferred_artifacts = !deferred_artifacts;
     present_public_outputs;
   }

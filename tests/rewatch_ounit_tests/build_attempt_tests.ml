@@ -32,7 +32,6 @@ let output_inventory_survives_without_cleanup_work _context =
       {
         removed_modules = ["Old"];
         previous_ast_count = 2;
-        deferred_artifacts = ["old.cmi"];
         present_public_outputs = outputs;
       };
   let second =
@@ -43,7 +42,6 @@ let output_inventory_survives_without_cleanup_work _context =
   let cleanup = Build_attempt.find_cleanup_result second "root" |> Option.get in
   assert_equal [] cleanup.removed_modules;
   assert_equal 0 cleanup.previous_ast_count;
-  assert_equal [] cleanup.deferred_artifacts;
   assert_bool "the stable output inventory is retained"
     (Hashtbl.mem cleanup.present_public_outputs "src/A.js")
 

@@ -217,6 +217,7 @@ let scan_source ~root (source : Config.source) ~discover_modules ~on_missing
 
 let resolve_active_features (config : Config.t) requested =
   let active_features = Hashtbl.create 16 in
+  let visiting_features = Hashtbl.create 16 in
   let features = Hashtbl.create (List.length config.features) in
   List.iter
     (fun (name, implied) -> Hashtbl.replace features name implied)
@@ -226,13 +227,18 @@ let resolve_active_features (config : Config.t) requested =
     raise (Error ("Cycle detected in `features` map: " ^ chain))
   in
   let rec activate feature visiting =
-    if List.mem feature visiting then raise_feature_cycle feature visiting;
+    if Hashtbl.mem visiting_features feature then
+      raise_feature_cycle feature visiting;
     if not (Hashtbl.mem active_features feature) then (
-      Hashtbl.add active_features feature ();
+      Hashtbl.add visiting_features feature ();
       match Hashtbl.find_opt features feature with
-      | None -> ()
+      | None ->
+        Hashtbl.remove visiting_features feature;
+        Hashtbl.add active_features feature ()
       | Some implied ->
-        List.iter (fun name -> activate name (feature :: visiting)) implied)
+        List.iter (fun name -> activate name (feature :: visiting)) implied;
+        Hashtbl.remove visiting_features feature;
+        Hashtbl.add active_features feature ())
   in
   List.iter (fun feature -> activate feature []) requested;
   active_features

@@ -173,6 +173,7 @@ CAMLprim value rewatch_windows_spawn_owned(value env_value,
       !duplicate_standard_handle(stdout_value, &job->stdout_handle) ||
       !duplicate_standard_handle(stderr_value, &job->stderr_handle)) {
     error = GetLastError();
+    rewatch_windows_release_launch_resources(job);
     caml_win32_maperr(error);
     uerror("DuplicateHandle", Nothing);
   }

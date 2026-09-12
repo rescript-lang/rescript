@@ -69,12 +69,7 @@ let create ~freshness_mode ~session ~process_poll ~progress ~verbosity =
   Build_session.iter_public_outputs session (fun root present_public_outputs ->
       Hashtbl.add cleanup_results root
         Build_artifacts.
-          {
-            removed_modules = [];
-            previous_ast_count = 0;
-            deferred_artifacts = [];
-            present_public_outputs;
-          });
+          {removed_modules = []; previous_ast_count = 0; present_public_outputs});
   let removed_modules = Hashtbl.create 16 in
   Build_session.pending_removed_modules session
   |> List.iter (fun name -> Hashtbl.replace removed_modules name ());
