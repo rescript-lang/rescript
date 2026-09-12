@@ -106,20 +106,15 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
       File_util.ensure_dir package.build_dir;
       File_util.ensure_dir package.ocaml_dir)
     package_plans;
-  let compile_assets =
-    if attempt.compiler_cleaned then
-      package_plans
-      |> List.map (fun (package : Package_plan.t) -> package.ocaml_dir)
-      |> Compile_assets.create
-    else previous_compile_assets
-  in
   List.iter
     (fun (package : Package_plan.t) ->
       let cleanup =
         Build_artifacts.cleanup_stale
-          ~ocaml_files:(Compile_assets.files compile_assets package.ocaml_dir)
+          ~ocaml_files:
+            (Compile_assets.files previous_compile_assets package.ocaml_dir)
           ~ast_sources:
-            (Compile_assets.ast_sources compile_assets package.ocaml_dir)
+            (Compile_assets.ast_sources previous_compile_assets
+               package.ocaml_dir)
           ~root:package.root ~ocaml_dir:package.ocaml_dir
           ~source_files:package.source_files
           ~present_source_files:package.present_source_files
@@ -134,6 +129,14 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
         attempt.previous_asts + cleanup.previous_ast_count;
       ())
     package_plans;
+  let compile_assets =
+    if attempt.compiler_cleaned || Hashtbl.length registered_removed_modules > 0
+    then
+      package_plans
+      |> List.map (fun (package : Package_plan.t) -> package.ocaml_dir)
+      |> Compile_assets.create
+    else previous_compile_assets
+  in
   on_cleanup (Unix.gettimeofday () -. cleanup_started);
   let parse_started = Unix.gettimeofday () in
   let parse_entries =
