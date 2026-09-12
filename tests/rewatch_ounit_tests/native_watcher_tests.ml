@@ -86,6 +86,23 @@ let tests =
               assert_failure "refresh preserves exactly one queued change"
             | Native_watcher.Stopped | Native_watcher.Failed _ ->
               assert_failure "refresh preserves a previously queued change");
+            let checks = ref 0 in
+            (match
+               Native_watcher.wait watcher ~keep_running:(fun () ->
+                   incr checks;
+                   if !checks = 1 then true else raise Exit)
+             with
+            | Native_watcher.Failed message
+              when Test_support.contains_text message "Exit" ->
+              ()
+            | Native_watcher.Changed _ | Native_watcher.Stopped
+            | Native_watcher.Failed _ ->
+              assert_failure
+                "an exception in the timer callback becomes a native failure");
+            (match Native_watcher.refresh watcher ~paths with
+            | Error message ->
+              failwith ("native watcher callback recovery: " ^ message)
+            | Ok () -> ());
             Native_watcher.For_test.queue_change watcher;
             (match
                Native_watcher.wait watcher ~keep_running:(fun () -> false)

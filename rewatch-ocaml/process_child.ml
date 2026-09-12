@@ -1,5 +1,6 @@
 type result = {status: Unix.process_status; stdout: string; stderr: string}
 type job = {program: string; args: string list; cwd: string}
+type stdin_policy = Inherit_stdin | Null_stdin
 
 exception Error of string
 
@@ -45,6 +46,7 @@ type 'a running = {
 }
 
 type launch_ownership = {
+  mutable stdin: Unix.file_descr option;
   mutable stdout_read: Unix.file_descr option;
   mutable stdout_write: Unix.file_descr option;
   mutable stderr_read: Unix.file_descr option;
@@ -58,6 +60,7 @@ type launch_ownership = {
 
 let empty_launch_ownership () =
   {
+    stdin = None;
     stdout_read = None;
     stdout_write = None;
     stderr_read = None;
@@ -246,6 +249,7 @@ let fail_launch ownership deferred_signals launch_error =
       ownership.stderr_write;
       ownership.stdout_read;
       ownership.stderr_read;
+      ownership.stdin;
     ];
   (match ownership.child_wait with
   | Some wait when not ownership.termination_failed -> Thread.join wait.thread
@@ -283,8 +287,8 @@ let fail_launch ownership deferred_signals launch_error =
   in
   raise error
 
-let launch ?env ?stdout_chunk ?stderr_chunk ?(defer_signals = true) ~notifier
-    payload job =
+let launch ?env ?stdout_chunk ?stderr_chunk ?(stdin = Null_stdin)
+    ?(defer_signals = true) ~notifier payload job =
   (* Capture descriptors need a cleanup owner before asynchronous watch
      termination can raise. Signals are therefore deferred across pipe
      acquisition and restored only after every descriptor has an owner. *)
@@ -303,12 +307,24 @@ let launch ?env ?stdout_chunk ?stderr_chunk ?(defer_signals = true) ~notifier
     let stderr = start_capture ?on_chunk:stderr_chunk stderr_read in
     ownership.stderr_read <- None;
     ownership.stderr_capture <- Some stderr;
+    let stdin =
+      match stdin with
+      | Inherit_stdin -> Unix.stdin
+      | Null_stdin ->
+        let descriptor =
+          Unix.openfile Platform.null_device [Unix.O_RDONLY; Unix.O_CLOEXEC] 0
+        in
+        ownership.stdin <- Some descriptor;
+        descriptor
+    in
     let process =
       Platform.spawn ~env ~cwd:job.cwd ~program:job.program ~args:job.args
-        ~stdout:stdout_write ~stderr:stderr_write
+        ~stdin ~stdout:stdout_write ~stderr:stderr_write
     in
     ownership.process <- Some process;
     let pid = Platform.process_id process in
+    Option.iter close_noerr ownership.stdin;
+    ownership.stdin <- None;
     ownership.stdout_write <- None;
     close_noerr stdout_write;
     ownership.stderr_write <- None;

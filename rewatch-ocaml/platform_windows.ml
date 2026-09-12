@@ -98,7 +98,7 @@ let serialize_command_line ~program ~args =
     ^ " " ^ command
   | _ -> program :: args |> List.map quote_argument |> String.concat " "
 
-let spawn ~env ~cwd ~program ~args ~stdout ~stderr =
+let spawn ~env ~cwd ~program ~args ~stdin ~stdout ~stderr =
   let program = resolve_program ~cwd program in
   ensure_no_null "working directory" cwd;
   ensure_no_null "program" program;
@@ -113,7 +113,9 @@ let spawn ~env ~cwd ~program ~args ~stdout ~stderr =
   let program = program_for_working_directory ~cwd program in
   (* Starting suspended closes the only interval in which a child could create
      descendants before the job owns its process tree. *)
-  spawn_owned ~env ~cwd ~program ~command_line ~stdin:Unix.stdin ~stdout ~stderr
+  spawn_owned ~env ~cwd ~program ~command_line ~stdin ~stdout ~stderr
+
+let null_device = "NUL"
 
 let process_id process = process.wait_id
 let release_process process = close_process_job process.job

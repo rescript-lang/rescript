@@ -1,5 +1,6 @@
 type result = {status: Unix.process_status; stdout: string; stderr: string}
 type job = {program: string; args: string list; cwd: string}
+type stdin_policy = Inherit_stdin | Null_stdin
 
 exception Error of string
 
@@ -23,6 +24,7 @@ val launch :
   ?env:Spawn.Env.t ->
   ?stdout_chunk:(bytes -> int -> unit) ->
   ?stderr_chunk:(bytes -> int -> unit) ->
+  ?stdin:stdin_policy ->
   ?defer_signals:bool ->
   notifier:completion_notifier ->
   'a ->

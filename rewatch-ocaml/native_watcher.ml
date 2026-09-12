@@ -214,9 +214,13 @@ let wait watcher ~keep_running =
   | Some result -> result
   | None -> (
     let check_running () =
-      if not (keep_running ()) then (
-        watcher.stopped <- true;
-        Luv.Loop.stop watcher.loop)
+      try
+        if not (keep_running ()) then (
+          watcher.stopped <- true;
+          Luv.Loop.stop watcher.loop)
+      with error ->
+        watcher.error <- Some (Printexc.to_string error);
+        Luv.Loop.stop watcher.loop
     in
     (match Luv.Timer.start ~repeat:100 watcher.timer 100 check_running with
     | Ok () -> ()

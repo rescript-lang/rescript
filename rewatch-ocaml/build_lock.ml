@@ -104,12 +104,18 @@ let attempt_link ~candidate ~path =
 
 let with_acquired ~candidate ~path ~pid ~deferred_signals action =
   let lock = {path; pid; released = false} in
-  Fun.protect
-    ~finally:(fun () -> release lock)
-    (fun () ->
-      Signal_restore.protect deferred_signals (fun () ->
-          unlink_existing candidate);
-      action lock)
+  match
+    Signal_restore.protect deferred_signals (fun () ->
+        unlink_existing candidate);
+    action lock
+  with
+  | result ->
+    release lock;
+    result
+  | exception original -> (
+    match release lock with
+    | () -> raise original
+    | exception cleanup_error -> raise cleanup_error)
 
 let retry_delay poll =
   (try ignore (Unix.select [] [] [] 0.05)

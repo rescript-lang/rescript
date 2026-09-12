@@ -203,16 +203,14 @@ let run_pool_task pool payload task =
     in
     let completion =
       match wait_result with
-      | Ok ((_, result), deferred_signals) ->
-        let completion =
-          Signal_restore.protect deferred_signals (fun () ->
-              try Task_completed (payload, task.on_result result)
-              with exn -> Task_failed (payload, exn))
-        in
-        Child.await_termination child;
+      | Ok ((_, result), deferred_signals) -> (
         remove_active pool active;
-        release_active active;
-        completion
+        try
+          Signal_restore.protect deferred_signals (fun () ->
+              Child.await_termination child;
+              release_active active;
+              Task_completed (payload, task.on_result result))
+        with exn -> Task_failed (payload, exn))
       | Error exn -> (
         let termination =
           try
@@ -220,17 +218,17 @@ let run_pool_task pool payload task =
             Termination_confirmed
           with cancellation_exn -> Termination_unconfirmed cancellation_exn
         in
-        (match termination with
-        | Termination_confirmed ->
-          Child.await_termination child;
-          remove_active pool active;
-          release_active active
-        | Termination_unconfirmed _ ->
-          remove_active pool active;
-          release_active_after_completion active);
         match termination with
-        | Termination_confirmed -> Task_failed (payload, exn)
+        | Termination_confirmed -> (
+          remove_active pool active;
+          try
+            Child.await_termination child;
+            release_active active;
+            Task_failed (payload, exn)
+          with release_exn -> Task_failed (payload, release_exn))
         | Termination_unconfirmed cancellation_exn ->
+          remove_active pool active;
+          release_active_after_completion active;
           Task_failed (payload, cancellation_exn))
     in
     complete_pool_task pool completion
@@ -510,7 +508,7 @@ let run_dependency_graph ?(max_jobs = default_max_jobs)
         run_dependency_graph_with_notifier ~max_jobs ~on_failure ~poll notifier
           works ~next)
 
-let run_one ?poll ?stdout_chunk ?stderr_chunk ~cwd program args =
+let run_one ?poll ?stdout_chunk ?stderr_chunk ?stdin ~cwd program args =
   let poll, ticker_enabled =
     match poll with
     | Some poll -> (poll, true)
@@ -518,7 +516,7 @@ let run_one ?poll ?stdout_chunk ?stderr_chunk ~cwd program args =
   in
   Child.with_completion_notifier ~ticker_enabled (fun notifier ->
       let child =
-        Child.launch ?stdout_chunk ?stderr_chunk ~notifier ()
+        Child.launch ?stdout_chunk ?stderr_chunk ?stdin ~notifier ()
           {program; args; cwd}
       in
       let reaped = ref false in
@@ -541,5 +539,8 @@ let run_streaming ?poll ~cwd program args =
     output channel bytes 0 count;
     flush channel
   in
-  run_one ?poll ~stdout_chunk:(write stdout) ~stderr_chunk:(write stderr) ~cwd
-    program args
+  let stdin =
+    if Unix.isatty Unix.stdin then Child.Null_stdin else Child.Inherit_stdin
+  in
+  run_one ?poll ~stdout_chunk:(write stdout) ~stderr_chunk:(write stderr) ~stdin
+    ~cwd program args

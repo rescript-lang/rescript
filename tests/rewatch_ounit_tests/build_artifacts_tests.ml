@@ -277,4 +277,34 @@ let tests =
           check
             (not (Sys.file_exists path))
             ("removing an interface removes " ^ path))
-        [published_cmti; working_cmti])
+        [published_cmti; working_cmti]);
+  with_temp_dir (fun root ->
+      let config_path = Filename.concat root "rescript.json" in
+      let old_source = Filename.concat root "src/generated/A.res" in
+      let generated_output = Filename.concat root "src/generated/A.js" in
+      let authored_output = Filename.concat root "src/handwritten/A.js" in
+      let ocaml_dir = Filename.concat root "lib/ocaml" in
+      let published_ast = Filename.concat ocaml_dir "A.ast" in
+      write_file config_path
+        {|{"name":"owned-output-path","sources":{"dir":"src","subdirs":true},"package-specs":{"module":"esmodule","in-source":true}}|};
+      List.iter
+        (fun path -> write_file path "contents")
+        [generated_output; authored_output; published_ast];
+      let config = Config.load_root root in
+      ignore
+        (Build_artifacts.cleanup_stale ~ocaml_files:[published_ast]
+           ~ast_sources:
+             [
+               {
+                 Compile_assets.ast_path = published_ast;
+                 source_path = old_source;
+               };
+             ]
+           ~source_files:[generated_output; authored_output]
+           ~root ~ocaml_dir ~is_local:true config []);
+      check
+        (not (Sys.file_exists generated_output))
+        "cleanup removes the output at the historical source location";
+      check
+        (Sys.file_exists authored_output)
+        "cleanup preserves unrelated JavaScript with the same basename")

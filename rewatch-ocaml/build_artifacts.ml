@@ -116,7 +116,18 @@ let cleanup_stale ?ocaml_files ?ast_sources ?source_files ?present_source_files
      Keep the recursive walk lazy for malformed or legacy ASTs that cannot be
      mapped; normal unchanged builds must not inventory the whole lib/bs tree. *)
   let ast_sources = Option.value ast_sources ~default:[] in
-  let fallback_build_files = lazy (File_util.files_under build_dir) in
+  let fallback_build_files_by_basename =
+    lazy
+      (let by_basename = Hashtbl.create 32 in
+       File_util.files_under build_dir
+       |> List.iter (fun path ->
+           let basename = Filename.basename path in
+           let paths =
+             Hashtbl.find_opt by_basename basename |> Option.value ~default:[]
+           in
+           Hashtbl.replace by_basename basename (path :: paths));
+       by_basename)
+  in
   let source_files =
     match source_files with
     | Some files -> files
@@ -178,15 +189,24 @@ let cleanup_stale ?ocaml_files ?ast_sources ?source_files ?present_source_files
           |> fun source -> Hashtbl.replace current_sources source ()))
     modules;
   let stale_ast_basenames = Hashtbl.create 8 in
+  let removed_output_paths = Hashtbl.create 8 in
   List.iter
     (fun (ast_source : Compile_assets.ast_source) ->
       let source =
         Platform.normalize_path_for_comparison ast_source.source_path
       in
-      if not (Hashtbl.mem current_sources source) then
+      if not (Hashtbl.mem current_sources source) then (
         Hashtbl.replace stale_ast_basenames
           (Filename.basename ast_source.ast_path)
-          ())
+          ();
+        Project_context.relative_to_opt root ast_source.source_path
+        |> Option.iter (fun relative_source ->
+            List.iter
+              (fun spec ->
+                Hashtbl.replace removed_output_paths
+                  (generated_js_path config relative_source spec)
+                  ())
+              config.package_specs)))
     ast_sources;
   let add_expected base extensions =
     List.iter
@@ -273,8 +293,8 @@ let cleanup_stale ?ocaml_files ?ast_sources ?source_files ?present_source_files
     match directly_mapped_working_paths basename with
     | _ :: _ as paths -> paths
     | [] ->
-      Lazy.force fallback_build_files
-      |> List.filter (fun path -> Filename.basename path = basename)
+      Hashtbl.find_opt (Lazy.force fallback_build_files_by_basename) basename
+      |> Option.value ~default:[]
   in
   ocaml_files
   |> List.iter (fun path ->
@@ -316,19 +336,15 @@ let cleanup_stale ?ocaml_files ?ast_sources ?source_files ?present_source_files
     modules;
   let should_remove_output ~build_relative path =
     output_details path
-    |> Option.fold ~none:false ~some:(fun (name, suffix, output_path) ->
-        Hashtbl.mem owned_output_names name
-        && (not (Hashtbl.mem expected_outputs output_path))
-        &&
-        let removed =
-          List.mem (String.capitalize_ascii name) !removed_modules
-        in
-        (removed && List.mem suffix configured_suffixes)
-        ||
-        (* A map alone is not enough provenance to delete a public file. The
+    |> Option.fold ~none:false ~some:(fun (name, _, output_path) ->
+        (not (Hashtbl.mem expected_outputs output_path))
+        && (Hashtbl.mem removed_output_paths output_path
+           || Hashtbl.mem owned_output_names name
+              (* A map alone is not enough provenance to delete a public file. The
             mirrored output has the same relative path below lib/bs, so probe
             that one path instead of scanning the entire working tree. *)
-        (is_local && File_util.exists (Filename.concat build_dir build_relative)))
+              && is_local
+              && File_util.exists (Filename.concat build_dir build_relative)))
   in
   let planned_outputs = Hashtbl.create 16 in
   let plan_output ~build_relative path =

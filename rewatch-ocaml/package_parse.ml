@@ -62,7 +62,6 @@ let run ~(package : Build_types.graph_package)
             (Filename.concat root path)
           |> Option.map (fun result -> (path, result))))
   in
-  let warning_asts = ref [] in
   List.iter
     (fun (path, result) ->
       let absolute_path = Filename.concat root path in
@@ -79,7 +78,11 @@ let run ~(package : Build_types.graph_package)
             Build_types.Parse_warning stderr :: attempt.parse_messages);
         let ast = Source.ast_path path in
         if is_local && stderr <> "" then
-          warning_asts := (absolute_path, ast) :: !warning_asts;
+          Build_attempt.register_cleanup attempt (fun () ->
+              let path = Filename.concat ocaml_dir (Filename.basename ast) in
+              File_util.remove_file path;
+              Compile_assets.refresh_ast compile_assets ~source:absolute_path
+                ~path);
         let published_ast =
           Build_artifacts.published_ast_path ~ocaml_dir path
         in
@@ -108,12 +111,4 @@ let run ~(package : Build_types.graph_package)
         publish_successful_parse stderr
       | Build_types.Use_existing_ast -> publish_successful_parse "")
     parsed;
-  if !warning_asts <> [] then
-    Build_attempt.register_cleanup attempt (fun () ->
-        List.iter
-          (fun (source, ast) ->
-            let path = Filename.concat ocaml_dir (Filename.basename ast) in
-            File_util.remove_file path;
-            Compile_assets.refresh_ast compile_assets ~source ~path)
-          !warning_asts);
   dirty_modules

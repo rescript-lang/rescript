@@ -76,16 +76,17 @@ ReScript output paths, publication, ownership, and stale-artifact
 cleanup. `package_graph.ml` owns package discovery; `package_parse.ml` and
 `package_compilation.ml` own per-package parsing and compiler-job construction;
 and `package_build.ml` sequences those phases. `build.ml` retains transaction
-orchestration and aggregate dispatch, while `build_report.ml` and
-`build_finalization.ml` own presentation and final cleanup.
+orchestration and aggregate dispatch, while `build_report.ml` owns presentation.
 `build_preparation.ml` consumes the prepared packages to initialize compiler
-context, clean stale assets, run the preliminary parse, and construct global
-dependency/build state. `build_types.ml` contains passive graph and preparation
-records, `build_session.ml` owns state retained across watch rebuilds, and
-`build_attempt.ml` owns diagnostics, counters, scheduled work, and cleanup for
-one build attempt. `process_child.ml` owns the lifecycle of one subprocess while
-`process.ml` owns scheduling. Command-level post-build execution and its error
-handling live in `after_build.ml`.
+context, clean stale assets, and run the preliminary parse; `module_graph.ml`
+owns dependency resolution and cycle analysis. `build_types.ml` contains
+passive graph and preparation records, `build_session.ml` owns state retained
+across watch rebuilds, and `build_attempt.ml` owns diagnostics, counters,
+scheduled work, and final cleanup for one build attempt. `source_dirs.ml` owns
+source-directory metadata projection and serialization. `process_child.ml`
+owns the lifecycle of one subprocess while `process.ml` owns scheduling.
+Command-level post-build execution and its error handling live in
+`after_build.ml`.
 Genuinely platform-specific behavior is consolidated behind a `Platform`
 boundary rather than mixed into those modules. Unix and Windows modules now own
 executable lookup, subprocess creation, signal deferral, and process-tree
