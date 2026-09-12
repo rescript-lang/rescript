@@ -1,7 +1,8 @@
 # Experimental OCaml rewatch
 
-This directory contains the separately named OCaml port of the ReScript build
-system. It does not replace the Rust `rescript` executable.
+This directory contains the OCaml port of the ReScript build system. Linux and
+macOS packages use it experimentally as `rescript`; the Rust implementation
+remains available as `rescript-rust`. Windows packages continue to use Rust.
 
 ## Build
 
@@ -72,16 +73,19 @@ in `config_decode.ml`, and `config.ml` retains the top-level loader and
 runtime/path queries. `file_util.ml` owns general portable path, directory,
 copy, comparison, inventory, and removal operations; `build_artifacts.ml` owns
 ReScript output paths, publication, ownership, and stale-artifact
-cleanup. `package_graph.ml` owns package discovery, `package_build.ml` owns
-per-package parsing, dirty-state preparation, and compiler-job construction,
-and `build.ml` retains command/reporting orchestration and aggregate dispatch.
+cleanup. `package_graph.ml` owns package discovery; `package_parse.ml` and
+`package_compilation.ml` own per-package parsing and compiler-job construction;
+and `package_build.ml` sequences those phases. `build.ml` retains transaction
+orchestration and aggregate dispatch, while `build_report.ml` and
+`build_finalization.ml` own presentation and final cleanup.
 `build_preparation.ml` consumes the prepared packages to initialize compiler
 context, clean stale assets, run the preliminary parse, and construct global
 dependency/build state. `build_types.ml` contains passive graph and preparation
 records, `build_session.ml` owns state retained across watch rebuilds, and
 `build_attempt.ml` owns diagnostics, counters, scheduled work, and cleanup for
-one build attempt. Command-level post-build execution and its error handling
-live in `after_build.ml`.
+one build attempt. `process_child.ml` owns the lifecycle of one subprocess while
+`process.ml` owns scheduling. Command-level post-build execution and its error
+handling live in `after_build.ml`.
 Genuinely platform-specific behavior is consolidated behind a `Platform`
 boundary rather than mixed into those modules. Unix and Windows modules now own
 executable lookup, subprocess creation, signal deferral, and process-tree
@@ -111,10 +115,10 @@ export RESCRIPT_BSC_EXE RESCRIPT_RUNTIME
 bash rewatch/tests/compile/01-basic-compile.sh
 ```
 
-See `PROGRESS.md` for verified coverage, measurements, review results, and
-remaining compatibility or platform gaps. `PARITY_CHECKLIST.md` defines the
-separate validation-inventory and interactive-output gates that must be closed
-before replacement.
+See `PROGRESS.md` for the maintained status, latest measurements, deferred work,
+and release inventories. `IMPLEMENTATION_HISTORY.md` preserves the detailed
+chronological review and validation record. `PARITY_CHECKLIST.md` defines the
+behavior-by-behavior validation and output contracts.
 
 ## Packaging checks
 
