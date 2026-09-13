@@ -1433,8 +1433,16 @@ run_case build-malformed-package-json reject reject build \
   "$work/malformed-package-json"
 require_both_errors_contain build-malformed-package-json \
   'Could not initialize build: Could not parse package.json:'
-run_case build-mismatched-dependency-name panic reject build \
+run_case build-mismatched-dependency-name panic exit2 build \
   "$work/mismatched-dependency"
+strip_ansi "$work/ocaml.err" >"$work/ocaml.err.plain"
+if ! grep -F \
+    "resolved package identity 'different-name' does not match the requested dependency name" \
+    "$work/ocaml.err.plain" >/dev/null; then
+  echo "build-mismatched-dependency-name: OCaml did not reject the conflicting identity" >&2
+  cat "$work/ocaml.out" "$work/ocaml.err" >&2
+  exit 1
+fi
 run_case build-missing-dependency exit2 exit2 build "$work/missing-dependency"
 require_both_errors_contain build-missing-dependency \
   "Could not build package tree reading dependency 'absent' at path '$work/missing-dependency'. Error:"

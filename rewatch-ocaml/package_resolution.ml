@@ -93,13 +93,22 @@ let resolve resolution ~package_root (declaration : Config.dependency) =
                      Error: %s"
                     declaration.name resolution.root_config.root message))
         in
+        let name =
+          Package_diagnostics.package_identity
+            ~report_diagnostics:(resolution.diagnostic_mode = Report_diagnostics)
+            config
+        in
+        if name <> declaration.name then
+          raise
+            (Project_context.Package_error
+               (Printf.sprintf
+                  "Could not build package tree reading dependency '%s' at \
+                   path '%s'. Error: resolved package identity '%s' does not \
+                   match the requested dependency name"
+                  declaration.name candidate name));
         let identity =
           {
-            name =
-              Package_diagnostics.package_identity
-                ~report_diagnostics:
-                  (resolution.diagnostic_mode = Report_diagnostics)
-                config;
+            name;
             directory = candidate;
             config;
             is_local = is_local resolution candidate;
