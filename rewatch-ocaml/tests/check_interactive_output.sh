@@ -59,6 +59,9 @@ if ! command -v script >/dev/null 2>&1; then
   exit 1
 fi
 
+# macOS buffers typescript files for up to 30 seconds unless -F is used. The
+# watcher checks below must observe each message as soon as it is written.
+
 normalize_output() {
   sed -E $'s/\033\\[[0-9;]*[[:alpha:]]//g' \
     | sed -e 's/\[clean\]/🧹/g' -e 's/\[parse\]/🧱/g' \
@@ -119,7 +122,7 @@ capture() {
   command_executable=$(command_path "$executable")
   command_project=$(command_path "$work/$implementation")
   if [ "$(uname -s)" = Darwin ]; then
-    script -q "$transcript" env -u NO_COLOR \
+    script -qF "$transcript" env -u NO_COLOR \
       "TERM=xterm" \
       "CLICOLOR=1" \
       "CLICOLOR_FORCE=0" \
@@ -195,7 +198,7 @@ capture_parse_warning_order() {
   command_executable=$(command_path "$executable")
   command_project=$(command_path "$project")
   if [ "$(uname -s)" = Darwin ]; then
-    script -q "$transcript" env -u NO_COLOR \
+    script -qF "$transcript" env -u NO_COLOR \
       "TERM=xterm" \
       "CLICOLOR=1" \
       "CLICOLOR_FORCE=0" \
@@ -244,7 +247,7 @@ capture_after_build_order() {
   command_executable=$(command_path "$executable")
   command_project=$(command_path "$project")
   if [ "$(uname -s)" = Darwin ]; then
-    script -q "$transcript" env -u NO_COLOR \
+    script -qF "$transcript" env -u NO_COLOR \
       "TERM=xterm" \
       "CLICOLOR=1" \
       "CLICOLOR_FORCE=0" \
@@ -308,7 +311,7 @@ capture_quiet_build() {
   command_executable=$(command_path "$executable")
   command_project=$(command_path "$work/$implementation")
   if [ "$(uname -s)" = Darwin ]; then
-    script -q "$transcript" env -u NO_COLOR \
+    script -qF "$transcript" env -u NO_COLOR \
       "TERM=xterm" \
       "CLICOLOR=1" \
       "CLICOLOR_FORCE=0" \
@@ -339,7 +342,7 @@ capture_clean() {
   command_executable=$(command_path "$executable")
   command_project=$(command_path "$work/$implementation")
   if [ "$(uname -s)" = Darwin ]; then
-    script -q "$transcript" env -u NO_COLOR \
+    script -qF "$transcript" env -u NO_COLOR \
       "TERM=xterm" \
       "CLICOLOR=1" \
       "CLICOLOR_FORCE=0" \
@@ -392,7 +395,7 @@ capture_quiet_clean() {
   command_executable=$(command_path "$executable")
   command_project=$(command_path "$work/$implementation")
   if [ "$(uname -s)" = Darwin ]; then
-    script -q "$transcript" env -u NO_COLOR \
+    script -qF "$transcript" env -u NO_COLOR \
       "TERM=xterm" \
       "CLICOLOR=1" \
       "CLICOLOR_FORCE=0" \
@@ -470,7 +473,7 @@ capture_watch_rebuild() {
   local command_executable=$(command_path "$executable")
   local command_project=$(command_path "$project")
   if [ "$(uname -s)" = Darwin ]; then
-    script -q "$transcript" env -u NO_COLOR \
+    script -qF "$transcript" env -u NO_COLOR \
       "TERM=xterm" \
       "CLICOLOR=1" \
       "CLICOLOR_FORCE=0" \
@@ -602,7 +605,7 @@ capture_initial_failure_recovery() {
   local command_executable=$(command_path "$executable")
   local command_project=$(command_path "$project")
   if [ "$(uname -s)" = Darwin ]; then
-    script -q "$transcript" env -u NO_COLOR \
+    script -qF "$transcript" env -u NO_COLOR \
       "TERM=xterm" \
       "CLICOLOR=1" \
       "CLICOLOR_FORCE=0" \
@@ -700,7 +703,7 @@ capture_warning_watch() {
   local command_executable=$(command_path "$executable")
   local command_project=$(command_path "$project")
   if [ "$(uname -s)" = Darwin ]; then
-    script -q "$transcript" env -u NO_COLOR \
+    script -qF "$transcript" env -u NO_COLOR \
       "TERM=xterm" \
       "CLICOLOR=1" \
       "CLICOLOR_FORCE=0" \
