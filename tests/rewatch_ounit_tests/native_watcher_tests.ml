@@ -58,6 +58,37 @@ let tests =
         check (before = after)
           "exceptional watcher creation should release acquired descriptors"
       | None, _ | _, None -> ());
+      (match Native_watcher.create ~paths:[] with
+      | Error message ->
+        failwith ("native watcher timer initialization: " ^ message)
+      | Ok timer_watcher ->
+        Fun.protect
+          (fun () ->
+            let checks = ref 0 in
+            (match
+               Native_watcher.wait timer_watcher ~keep_running:(fun () ->
+                   incr checks;
+                   if !checks = 1 then true else raise Exit)
+             with
+            | Native_watcher.Failed message
+              when Test_support.contains_text message "Exit" ->
+              ()
+            | Native_watcher.Changed _ | Native_watcher.Stopped
+            | Native_watcher.Failed _ ->
+              assert_failure
+                "an exception in the timer callback becomes a native failure");
+            (match Native_watcher.refresh timer_watcher ~paths:[] with
+            | Error message ->
+              failwith ("native watcher callback recovery: " ^ message)
+            | Ok () -> ());
+            match
+              Native_watcher.wait timer_watcher ~keep_running:(fun () -> false)
+            with
+            | Native_watcher.Stopped -> ()
+            | Native_watcher.Changed _ | Native_watcher.Failed _ ->
+              assert_failure
+                "a native watcher remains usable after a timer callback fails")
+          ~finally:(fun () -> Native_watcher.close timer_watcher));
       match Native_watcher.create ~paths with
       | Error message -> failwith ("native watcher initialization: " ^ message)
       | Ok watcher ->
@@ -86,23 +117,6 @@ let tests =
               assert_failure "refresh preserves exactly one queued change"
             | Native_watcher.Stopped | Native_watcher.Failed _ ->
               assert_failure "refresh preserves a previously queued change");
-            let checks = ref 0 in
-            (match
-               Native_watcher.wait watcher ~keep_running:(fun () ->
-                   incr checks;
-                   if !checks = 1 then true else raise Exit)
-             with
-            | Native_watcher.Failed message
-              when Test_support.contains_text message "Exit" ->
-              ()
-            | Native_watcher.Changed _ | Native_watcher.Stopped
-            | Native_watcher.Failed _ ->
-              assert_failure
-                "an exception in the timer callback becomes a native failure");
-            (match Native_watcher.refresh watcher ~paths with
-            | Error message ->
-              failwith ("native watcher callback recovery: " ^ message)
-            | Ok () -> ());
             Native_watcher.For_test.queue_change watcher;
             (match
                Native_watcher.wait watcher ~keep_running:(fun () -> false)

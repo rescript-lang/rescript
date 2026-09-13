@@ -152,6 +152,11 @@ sh rewatch-ocaml/tests/run.sh \
   "$PWD/_build/default/rewatch-ocaml/rescript_ocaml.exe"
 ```
 
+The interactive-output parity gate requires the `script` PTY utility. Windows
+CI skips that gate when `script` is unavailable; Windows output formatting is
+still covered by unit tests, while redirected and verbose behavior is covered
+by the platform-independent parity gates.
+
 The canonical integration suite can use the port through its existing override:
 
 ```sh
