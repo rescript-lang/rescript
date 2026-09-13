@@ -251,7 +251,8 @@ let argv_is_utf_8 argv = Array.for_all String.is_valid_utf_8 argv
 (* Bare project folders must select the default build command, even though
    Cmdliner otherwise treats them as unknown commands. Move global options
    behind the selected command and expand short help/version clusters because
-   Cmdliner's standard display options only provide long names. *)
+   Cmdliner's standard display options only provide long names. A root display
+   request takes precedence over otherwise invalid implicit-build arguments. *)
 let normalize_argv argv =
   let is_short_global_cluster argument =
     let length = String.length argument in
@@ -345,11 +346,10 @@ let normalize_argv argv =
       | None ->
         let globals, others = partition_implicit arguments in
         if
-          others = []
-          && List.exists
-               (fun argument ->
-                 requests_help argument || requests_version argument)
-               globals
+          List.exists
+            (fun argument ->
+              requests_help argument || requests_version argument)
+            globals
         then executable :: globals
         else executable :: "build" :: (globals @ others)
     in
