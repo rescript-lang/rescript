@@ -11,4 +11,10 @@ let use = f(/a/i, /b/m)
 let expressionAttributes = @foo /a/g
 let choice = flag ? /a/i : /b/m
 let indexed = /a/g["lastIndex"]
+let jsxPlain = <Comp value={/abc/} />
+let jsxValue = <Comp value={/>/} />
+let jsxValueSpace = <Comp value={/ >/} />
+let jsxValueTab = <Comp value={/	>/} />
+let jsxValueUnicode = <Comp value={/é>/u} />
+let jsxValueDollar = <Comp value={/$>/} />
 let jsxField = <Comp value=(/>/).source />
