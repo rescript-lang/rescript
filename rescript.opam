@@ -9,7 +9,6 @@ bug-reports: "https://github.com/rescript-lang/rescript-compiler/issues"
 depends: [
   "ocaml" {>= "5.0.0"}
   "dune" {>= "3.17"}
-  "base" {>= "v0.16.3"}
   "ppxlib" {>= "0.38.0"}
   "ppx_deriving" {build}
   "ppx_gen_rec" {build}

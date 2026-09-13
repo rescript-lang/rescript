@@ -3,5 +3,4 @@
 (library
  (name collections)
  (wrapped false)
- (modules Flow_map Flow_set SSet StringKey)
- (libraries base))
+ (modules Flow_map Flow_set SSet StringKey))

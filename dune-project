@@ -21,8 +21,6 @@
   (ocaml
    (>= 5.0.0))
   dune
-  (base
-   (>= v0.16.3))
   (ppxlib
    (>= 0.38.0))
   (ppx_deriving :build)
