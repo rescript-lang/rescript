@@ -1120,22 +1120,30 @@ if [ -n "$(find "$work/malformed-lock/lib" -maxdepth 1 \
   exit 1
 fi
 printf '{ invalid json\n' >"$work/watch-lock-order/rescript.json"
-# A live lock owner must have the executable name expected by the command under
-# test. Release packages deliberately give the Rust and OCaml binaries different
-# names, so sharing one dummy owner would make the first command discard the lock.
+# A copied MSYS utility keeps its original Windows image name and is therefore
+# rejected as an unrelated lock owner. Run the implementation under test as a
+# real watcher so both process identity and the native PID match production.
 for implementation in rust ocaml; do
   case "$implementation" in
     rust) executable=$rust ;;
     ocaml) executable=$ocaml ;;
   esac
   owner_dir="$work/watch-lock-owner-$implementation"
-  owner_executable="$owner_dir/$(basename "$executable")"
-  mkdir -p "$owner_dir"
-  cp "$(command -v sleep)" "$owner_executable"
-  "$owner_executable" 60 &
+  mkdir -p "$owner_dir/src"
+  printf '{"name":"watch-lock-owner-%s","sources":["src"]}\n' \
+    "$implementation" >"$owner_dir/rescript.json"
+  printf 'let value = 1\n' >"$owner_dir/src/A.res"
+  "$executable" watch "$owner_dir" \
+    >"$owner_dir/watch.out" 2>"$owner_dir/watch.err" &
   watch_lock_owner_pid=$!
   background_pids="$background_pids $watch_lock_owner_pid"
-  printf '%s' "$(lock_owner_pid "$watch_lock_owner_pid")" \
+  wait_for_text "$owner_dir/watch.out" "Finished initial compilation"
+  native_owner_pid=$(lock_owner_pid "$watch_lock_owner_pid")
+  if [ -z "$native_owner_pid" ]; then
+    echo "watch-lock-before-config: could not resolve $implementation owner PID" >&2
+    exit 1
+  fi
+  printf '%s' "$native_owner_pid" \
     >"$work/watch-lock-order/lib/watch.lock"
   set +e
   "$executable" watch "$work/watch-lock-order" \
