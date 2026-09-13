@@ -98,11 +98,12 @@ let tests =
       let node_modules = Filename.concat root "node_modules" in
       File_util.ensure_dir node_modules;
       if
-        Test_support.symlink_if_supported "../packages/dependency"
+        Test_support.symlink_if_supported ~to_dir:true "../packages/dependency"
           (Filename.concat node_modules "dependency")
+        && Test_support.symlink_if_supported ~to_dir:true
+             "../packages/dev-dependency"
+             (Filename.concat node_modules "dev-dependency")
       then (
-        Unix.symlink "../packages/dev-dependency"
-          (Filename.concat node_modules "dev-dependency");
         let root_context =
           Project_context.dependency_context (Config.load_root root)
         in
