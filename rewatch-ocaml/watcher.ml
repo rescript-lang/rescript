@@ -120,6 +120,12 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
           Project_context.path_is_within_canonical ~root:path target)
         symlink_targets
     in
+    let is_directly_in_watched_directory path =
+      (* A rename may be reported only under its old child name. Reconcile any
+         structural change in an explicitly watched directory so restoring a
+         missing source or symlink target cannot be overlooked. *)
+      Native_watcher.watches_directory watcher (Filename.dirname path)
+    in
     List.iter
       (fun (event : Native_watcher.change) ->
         match (event.kind, event.path) with
@@ -130,6 +136,7 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
             || is_source_path path
             || Watch_scope.path_in_scope scope path
             || Native_watcher.watches_directory watcher path
+            || is_directly_in_watched_directory path
             || (is_in_source_tree path && File_util.is_directory path)
             || Watch_scope.path_is_source_ancestor scope path
             || Watch_scope.path_is_unresolved_ancestor scope path
